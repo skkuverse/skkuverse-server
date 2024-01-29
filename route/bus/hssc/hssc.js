@@ -2,7 +2,9 @@ const express = require("express");
 const router = express.Router();
 module.exports = router;
 
-const busStations = [
+const getHSSCBusList = require("./fetchhssc.js");
+
+let HSSCStations = [
   {
     stationName: "정차소(인문.농구장)",
     stationNumber: null,
@@ -95,9 +97,30 @@ const busStations = [
   },
 ];
 
-// Define a route for the bus list
-router.get("/v1/list", (req, res) => {
-  res.json(busStations);
+router.get("/v1/buslocation", async (req, res) => {
+  // real
+  response = await getHSSCBusList.getHSSCBusList();
+  res.json(response);
+
+  // test
+  // res.json([
+  //   {
+  //     sequence: "1",
+  //     stationName: "몰라임마",
+  //     carNumber: "101",
+  //     eventDate: "상관없어 임마",
+  //     estimatedTime: 50,
+  //   },
+  //   {
+  //     sequence: "3",
+  //     stationName: "몰라임마",
+  //     carNumber: "1022",
+  //     eventDate: "상관없어 임마",
+  //     estimatedTime: 0,
+  //   },
+  // ]);
 });
 
-router.get("v1/dynmaic", (req, res) => {});
+router.get("/v1/busstation", (req, res) => {
+  res.json(HSSCStations);
+});
