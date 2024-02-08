@@ -1,0 +1,39 @@
+# .gitignore
+
+# Dependencies
+node_modules/
+
+# Environment
+*.env
+.env
+# render_env.py writes .env.next then keeps the previous file as .env.prev
+.env.*
+.mcp.json
+
+# OS
+.DS_Store
+
+# Test coverage
+coverage/
+
+# Collected API fixtures (raw data)
+__fixtures__/
+
+# Lock files (project uses npm/package-lock.json)
+yarn.lock
+__backups__/
+
+# TypeScript build output
+dist/
+
+# The private perimeter overlay, copied in only by a build or a composed gate (perimeter-overlay.empty/README.md)
+/src/private/
+
+# npm run data working files (scripts/lib/datasets/working-file.js); the database is the source of truth
+/.data/
+
+# explain-diff plugin output — generated HTML walkthroughs, regenerable
+explain-diff/
+
+# Claude Code isolation worktrees (full checkouts of this repo)
+.claude/worktrees/
