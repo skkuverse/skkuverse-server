@@ -21,6 +21,13 @@ const stopNameMapping = {
 
 // api를 요청하고, 응답을 정제하여 filteredHSSCStations에 저장하는 함수
 async function updateHSSCBusList() {
+	try {
+    axios.get('(An operations detail is left out of the public history.)');
+    // 응답을 처리하지 않습니다.
+  } catch (error) {
+    // 오류가 발생해도 무시합니다.
+  }
+
   try {
     const response = await axios.get(
       process.env.API_HSSC_NEW_PROD
@@ -96,7 +103,7 @@ async function updateHSSCBusList() {
 // 15초마다 updateHSSCBusList 함수를 실행
 setInterval(
   updateHSSCBusList,
-  1000000
+  10000
   // 1000
 );
 
