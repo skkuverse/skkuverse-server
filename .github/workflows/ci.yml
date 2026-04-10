@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+    # WHY: dev too: every change reaches dev by pull request, and main only takes the release merge from dev.
+    branches: [main, dev]
+
+# WHY: the repository is public. The token is read-only, and no step reads a secret, so a fork's pull request
+# runs the same checks as the maintainers' own.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # WHY: mongodb-memory-server's postinstall downloads the mongod binary (~100 MB) during `npm ci`,
+    # into this directory, which the cache step below restores, so a run downloads it only when
+    # `config.mongodbMemoryServer.version` in package.json changes. Tests never download it.
+    env:
+      MONGOMS_DOWNLOAD_DIR: /home/runner/.cache/mongodb-binaries
+    steps:
+      # WHY: full history: the architecture tests compare the allowlists, exemptions and ratchets
+      # with the PR base's (git merge-base), and a shallow clone has no base to compare with.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          # WHY: no step pushes or calls the API, so the token is not left in .git/config for the code under test.
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: mongod version
+        id: mongod
+        run: echo "version=$(node -p "require('./package.json').config.mongodbMemoryServer.version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: /home/runner/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ runner.arch }}-${{ steps.mongod.outputs.version }}
+      - run: npm ci
+      # WHY: the postinstall exits 0 when its download fails, so without this a failed download
+      # passes `npm ci` and surfaces later as four test files that cannot find a binary.
+      - name: mongod binary present
+        env:
+          MONGOD_VERSION: ${{ steps.mongod.outputs.version }}
+        run: |
+          ls "$MONGOMS_DOWNLOAD_DIR"/mongod-*-"$MONGOD_VERSION" > /dev/null \
+            || { echo "::error::no mongod $MONGOD_VERSION in $MONGOMS_DOWNLOAD_DIR: the npm ci download failed"; exit 1; }
+      - run: npm run typecheck
+      - run: npm run build
+      # The vendored files (src/notices/*.json and the others in .contracts.lock.json) still match the lock: a
+      # hand edit, a partial copy, or a codegen copy that landed without a lock update fails here. Offline: it
+      # compares against this repo's own lock. After `npm run build`, so a vendored JSON missing from
+      # scripts/copy-build-assets.js (in src/, absent from dist/, the container dies at boot) fails the same run.
+      # WHY: the checker and the conventions linter are vendored too (.github/contract-tools/, hash-locked like
+      # the rest), because a fork's pull request gets no secret to clone the repo that owns them. ubuntu-latest
+      # ships python3 and both are stdlib-only, so no setup step.
+      - name: Contract integrity
+        run: python3 .github/contract-tools/exported/sync_contracts.py check --repo server --root .
+      # `language` is left out until docs/ is English; the two rules this repo already satisfies stay gated.
+      - name: Conventions
+        run: |
+          python3 .github/contract-tools/exported/lint_conventions.py --root . \
+            --only frontmatter --only structure
+      - run: npm test
+      - run: npm run lint
+      - run: npm run knip
+      - run: npm run depcheck
