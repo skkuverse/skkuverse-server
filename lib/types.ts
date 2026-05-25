@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 export type SupportedLang = "ko" | "en" | "zh";
 
 // (A perimeter detail is left out of the public history.)
@@ -10,6 +12,11 @@ declare global {
       // narrow this with a type guard or assertion at the route layer.
       lang?: SupportedLang;
       uid?: string;
+      // pino-http installs `log` on every request; preserve original
+      // fail-loud behavior — accessing `.warn` on undefined throws → 500
+      // → ops alert. Tests using miniApp without pino-http hit the same
+      // throw path, matching original .js semantics.
+      log: Logger;
     }
     interface Response {
       success(data: unknown, meta?: Record<string, unknown>): void;
