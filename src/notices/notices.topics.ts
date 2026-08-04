@@ -8,6 +8,7 @@ import type { CategoryConfig } from "./types";
 
 // (An operations detail is left out of the public history.)
 //
+//
 const TOPIC_CAP = 30;
 
 // Minimal shape — buildTopics only reads sourceId. Compatible with the
