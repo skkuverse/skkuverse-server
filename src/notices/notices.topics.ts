@@ -6,7 +6,9 @@
 import { categories } from "./tabConfig";
 import type { CategoryConfig } from "./types";
 
-const TOPIC_CAP = 10; // sendNotification function rejects > 10.
+// (An operations detail is left out of the public history.)
+//
+const TOPIC_CAP = 30;
 
 // Minimal shape — buildTopics only reads sourceId. Compatible with the
 // fully-typed NoticeDoc (PR3-3) as well as test fixtures that pass
