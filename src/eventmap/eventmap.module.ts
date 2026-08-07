@@ -1,17 +1,24 @@
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 
+import { BusRateLimitMiddleware } from "../common/private-file";
+import { EventMapMaterializerService } from "./eventmap-materializer.service";
+import { EventMapController } from "./eventmap.controller";
+import { PrivateFile } from "./private-file";
 import { EventMapService } from "./eventmap.service";
 
 /**
- * EventMapModule — the event map storage layer (skkuverse#13, Phase 1).
+ * (A perimeter detail is left out of the public history.)
  *
- * No controller and no middleware on purpose: nothing is served yet. The module
- * exists so EventMapService's onModuleInit runs at boot and creates the
- * collections' indexes. Phase 2 (#14) adds the /eventmap controller, the
- * internal publish route and its rate-limit / shared-secret wiring.
+ *
+ *
  */
 @Module({
-  providers: [EventMapService],
+  controllers: [EventMapController, PrivateFile],
+  providers: [EventMapService, EventMapMaterializerService],
   exports: [EventMapService],
 })
-export class EventMapModule {}
+export class EventMapModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(BusRateLimitMiddleware).forRoutes("eventmap");
+  }
+}
