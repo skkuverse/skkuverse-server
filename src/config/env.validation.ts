@@ -59,6 +59,7 @@ export function findMissingRequired(): string[] {
     ["ad.dbName", devDbName(process.env.MONGO_AD_DB_NAME), "MONGO_AD_DB_NAME"],
     ["notices.dbName", devDbName(process.env.MONGO_NOTICES_DB_NAME), "MONGO_NOTICES_DB_NAME"],
     ["eventmap.dbName", devDbName(process.env.MONGO_EVENTMAP_DB_NAME), "MONGO_EVENTMAP_DB_NAME"],
+    ["miniapps.dbName", devDbName(process.env.MONGO_MINIAPPS_DB_NAME), "MONGO_MINIAPPS_DB_NAME"],
     ["notices.serviceStartDate", process.env.NOTICES_SERVICE_START_DATE, "NOTICES_SERVICE_START_DATE"],
     ["notices.dispatch.functionUrl", process.env.FCM_FUNCTION_URL, "FCM_FUNCTION_URL"],
     ["notices.dispatch.apiKey", process.env.FCM_API_KEY, "FCM_API_KEY"],
