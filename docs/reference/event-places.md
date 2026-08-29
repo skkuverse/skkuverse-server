@@ -1,0 +1,433 @@
+---
+title: Event Places — Storage, Authoring and Operations
+type: reference
+status: accepted
+owner: spencer0124
+last-updated: 2026-10-27
+audience: internal
+---
+
+# Event Places
+
+> How a festival's booths are stored, authored and switched on. The WIRE they reach the app over is
+> [map-overlays-api.md](map-overlays-api.md) — one shared marker schema for booths and buildings alike.
+> Cross-repo ownership is umbrella ADR 0004.
+
+## 1. Summary
+
+| | |
+| --- | --- |
+| Collections | `places`, `activations` (database: `MONGO_EVENTMAP_DB_NAME`) |
+| Served by | `GET /map/overlays/event`, `GET /map/overlays/event/details` and `GET /map/config` — there is no `/eventmap` route |
+| Authored by | `scripts/data/<layerSetId>-places.json` → `npm run eventmap:import` |
+| Switched by | `npm run eventmap -- open\|close` |
+| Structure tier | the `map-layer-sets` dataset (content database), one entry per `layerSetId` — layers, chips, category table; `npm run data -- push map-layer-sets` |
+
+### 1.1 What this replaced
+
+There were three tiers and a publish pipeline: `places` (plots) joined to `sessions` (one occupancy
+interval each) and `activations`, materialized every 60 s into versioned, hashed, per-language
+`snapshots` served `immutable, max-age=1y`.
+
+One session per interval meant a booth open on both festival days was **two documents**, so the app
+listed every place twice with nothing on the card to tell the rows apart. The plots were day-scoped
+too — `nsc-daybooth-01`, `nsc-nightbar-d1-02` and `nsc-nightbar-d2-03` sat on one coordinate — which
+is why the map needed a clock filter to stay legible at all.
+
+The days are `hours` on a single document now. The snapshot tier, the materializer, both routes and
+the whole notion of a plot separate from its occupant are gone.
+
+## 2. `places` — one operating entity
+
+One document is one booth, one bar, one 화장실. Not a thing-on-a-day.
+
+```ts
+interface MapPlaceDoc {
+  _id: string;                 // "eskara-2026-bar-01" — layer set prefixed
+  layerSetId: string;
+  campus: "hssc" | "nsc";
+  category: string;            // OPEN string → layerId via the config's table
+  location: OverlayGeometry;   // RFC 7946 Point | LineString | Polygon, [lng, lat]
+  title: I18n;
+  subtitle?: I18n | null;
+  hours: { startAt: Date; endAt: Date | null; label?: I18n | null }[];   // [] = always open
+  fields: { label: I18n; value: I18n }[];    // ordered card rows
+  actions: PlaceAction[];
+  order: number;
+  detail?: PlaceDetailDoc | null;            // the sheet body — see §5.3
+  updatedAt: Date;
+}
+```
+
+Three rules the code states once and only once:
+
+- **`hours: []` means always open, and only that.** The old `startAt: null, endAt: null` had to mean
+  both an always-on 화장실 and a rain-cancelled bar, which is exactly why a `status` field had to
+  exist to tell them apart. There is no `lifecycle` here — a cancelled booth is **deleted** — so
+  there is no second meaning left to encode.
+- **Every window has a start; its end may be unannounced.** Omit `endAt` (or write `null`) when
+  the organiser gave an opening time only — the 팔찌 배부 booths close when the artist stage does.
+  The start still gates such a window, so it is not a second way to say "no limit"; a window
+  without a start is refused, because that one would be. Nothing invents an end: the layer set's
+  activation takes the festival off the map. An optional `label` names a window when one place
+  runs differently across its windows (`단체 입장`, then `개별 입장`).
+- **`category` is an OPEN string.** An unmapped value lands on the config's fallback layer rather
+  than vanishing, because a booth nobody can see is not a failure anyone can report.
+
+`_id` is prefixed with the layer set so two festivals may each hold a `bar-01`, and so an id read off
+a deep link says which festival it belongs to.
+
+## 3. `activations` — the ops lever
+
+```ts
+interface ActivationDoc {
+  _id: string;                 // layerSetId
+  activeFrom: Date | null;     // null = unbounded
+  activeUntil: Date | null;
+  enabled: boolean;            // one-field kill switch
+  updatedAt: Date;
+}
+```
+
+This tier survived the snapshot deletion deliberately. The window could have moved into the config
+file, which would have made `activeLayerSet` pure and synchronous and deleted a fair amount of
+error-swallowing at the `/map/config` seam. Keeping it in Mongo is what buys a kill switch that does
+not need a deploy — see §6.2.
+
+## 4. Indexes
+
+Three, created by `MapService.onModuleInit` (`src/map/map.repository.ts`):
+
+| Index | Why |
+| --- | --- |
+| `places {layerSetId: 1}` | The one scan the projection makes. No lifecycle key — there is no lifecycle. |
+| `places {location: "2dsphere"}` | **Not** a query index. It is what makes Mongo reject a malformed coordinate pair at insert, which is the cheapest available guard against the `[lng, lat]` swap (ADR 0004 invariant 3). For a ring it also refuses an unclosed loop, fewer than four positions, a self-intersection and a hole outside its exterior — all free. It does **not** check winding: a reversed ring stores silently, which is why that is normalised at projection time instead. |
+| `activations {enabled: 1, activeFrom: -1}` | The liveness read on every `/map/config`. Compound because `findActiveActivation` sorts by `activeFrom` — a single-key index would serve the equality and leave an in-memory sort stage on the one read path this file claims is index-shaped. |
+
+## 5. Authoring
+
+One file per layer set: `scripts/data/<layerSetId>-places.json`.
+
+```json
+{
+  "layerSetId": "eskara-2026",
+  "campus": "nsc",
+  "places": [
+    {
+      "id": "bar-01",
+      "category": "bar",
+      "lat": 37.294749,
+      "lng": 126.97076,
+      "title": "슈퍼 정통 X 경영 브라더스",
+      "subtitle": "연합 주점",
+      "hours": [
+        { "startAt": "2026-08-27T18:00:00+09:00", "endAt": "2026-08-28T00:00:00+09:00" },
+        { "startAt": "2026-08-28T18:00:00+09:00", "endAt": "2026-08-29T00:00:00+09:00" }
+      ],
+      "fields": [{ "label": "메뉴", "value": "골뱅이소면 · 감자튀김 · 하이볼" }],
+      "order": 70
+    }
+  ]
+}
+```
+
+- **A bare string is Korean shorthand** for `{"ko": …}`. The sheet is hand-typed and overwhelmingly
+  Korean-only, so requiring the object form on every string would be noise around the few that carry
+  a translation.
+- **A coordinate you type is named; a coordinate you paste is GeoJSON.** A booth carries `lat`/`lng`,
+  which the reader turns into a GeoJSON Point — the one conversion site on the write path. A zone or a
+  route line carries a `geometry` key holding a GeoJSON `Polygon` or `LineString` **pasted verbatim**
+  from geojson.io or QGIS, which is stored and served untouched. A place has one or the other; both,
+  or neither, is a rejected sheet.
+
+  The split is not taste. A fifty-vertex ring is not hand-typed, and asking an author to transcribe a
+  tool's `[lng, lat]` output into named pairs is exactly where a swap gets introduced. The pasted form
+  removes every transcription step between the drawing tool and the wire.
+
+  ```jsonc
+  {
+    "id": "zone-main-stage", "category": "zone", "order": 5, "title": "메인 무대 존",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [[
+        [126.9712, 37.2951], [126.9715, 37.2951],
+        [126.9715, 37.2949], [126.9712, 37.2949], [126.9712, 37.2951]
+      ]]
+    }
+  }
+  ```
+
+  The reader checks closure, a minimum of four positions per ring, and the same `abs(lat) > 90` swap
+  detector a named pair gets — so a wholesale `[lat, lng]` paste is caught on the first vertex rather
+  than drawn across the Yellow Sea. It deliberately does **not** check winding: rejecting a paste for
+  an orientation the author cannot see would make a good sheet unimportable for an invisible reason,
+  and the projection normalises it anyway.
+
+- **A drawn-but-not-tappable shape** is authored by setting `interactive: false` on its **category**
+  in the layer set's `itemDefaults`, which yields `tap: null` on the wire. Per category, because two
+  categories may share a layer — so one 구역 layer holds tappable stage zones and an inert boundary.
+- **A shape that should open a list, not a sheet**, sets `tapChip` to a chip id on its category. A
+  tap then runs that chip (its layers, camera and list), and the place gets no sheet
+  ([map-overlays-api.md §2.6](map-overlays-api.md)).
+- **A place with no spot of its own** (placed on the day, stacked on an area's point) sets
+  `locationAccuracy: "area"` on its category. The app then opens its sheet tall instead of low
+  beside the map ([map-overlays-api.md §2.7](map-overlays-api.md)).
+- **Occupants with no fixed spot stack under a head.** When the council gives an area but no
+  per-occupant positions, the occupants all take the area's one point, together with a head place
+  that names the area. The 2026 food trucks share the road in front of dormitory Shin-gwan A with `food-zone-pin`, and the area is
+  drawn by the `food-zone` ring. Both categories carry `tapChip: eskara26_view_food`, so tapping
+  either runs the food-truck chip instead of opening a sheet. The head's category needs a higher `pinPriority` than the
+  occupants', and its `hours` must cover theirs. Then the map always draws the head, and each
+  occupant stays reachable through its list row. The clash test allows a shared coordinate with
+  overlapping hours only under such a head
+  ([map-overlays-api.md §3.4](map-overlays-api.md)).
+- **A window crossing midnight** is written with the next day's date — a stall open 18:00 to 00:00
+  ends at `00:00` on the following morning, as the 2025 pubs did.
+- **`order` has no default.** A silent `0` would make list order arbitrary while looking deliberate.
+- **Which day a place is on is never written.** The list's 1일차 / 2일차 tabs are the layer set
+  config's `day` facet, and the server puts a place in a day when one of its `hours` windows starts
+  inside it ([map-overlays-api.md §8.8](map-overlays-api.md)). A place's windows must each start
+  inside a configured day, or it appears in no day tab; a test over the committed sheet enforces
+  that.
+- **`facets` carries the `tag` filters**, as option ids per facet: `"facets": { "org": ["council"] }`
+  (총학생회) or `["club"]` (학생단체) on a 부스. The reader checks only the shape. A test over the
+  committed sheet checks it against the config: every booth tagged exactly once with an offered
+  value, and no `hours` facet authored. The server drops, and logs, a value the config does not
+  offer.
+- **`orderByOption` is a per-option `order`**, for a list the council orders separately per day:
+  `"orderByOption": { "day1": 3, "day2": 11 }`. `order` is still required, because it is the
+  fallback and the pin tiebreak. A 부스 needs an entry for every day it is on; the same test
+  enforces it.
+- **A webview action stays root-relative.** Resolving it needs `WEBVIEW_ORIGIN`, which is server
+  config; an importer holding its own copy would disagree with the server the moment it changed. The
+  projection resolves at serve time, and drops a button it cannot resolve.
+- **A page of a registered mini app is a `miniapp` action, not `external`.** Write the target, not the
+  URL: `"actionType": "miniapp", "actionValue": "eskara-2026/eskara/wristband"`. It opens inside the
+  mini-app shell, under that mini app's name and badge, instead of the generic web view. The importer
+  refuses a target whose id the stored `miniapps` dataset does not register, read from the content
+  database on the same side as its eventmap database (`MONGO_CONTENT_DB_NAME`, `_dev` unless
+  `NODE_ENV=production`), so a typo fails the import rather than shipping a sheet with the button
+  silently missing. With no registry stored there, it refuses to run. The grammar is in
+  [map-overlays-api.md §2.0](map-overlays-api.md).
+
+### 5.3 A place's `detail` — the sheet body
+
+What a tapped place's sheet shows beyond its pin: an operator, a menu, photos, notices. Served on its
+own route, `GET /map/overlays/event/details` ([map-overlays-api.md §5.4](map-overlays-api.md)), never on
+the overlay. The shape is the app's `PlaceDetail` — a typed head and an ordered list of blocks the
+author composes — declared in `src/map/event-details/map-event-details.wire.ts`.
+
+```json
+{
+  "id": "truck-oyabong", "category": "food", "lat": 37.29542, "lng": 126.971501, "order": 20,
+  "title": "오야봉", "subtitle": "야끼소바 · 오꼬노미야끼",
+  "detail": {
+    "kind": "foodTruck",
+    "blocks": [
+      { "type": "table", "id": "menu", "rows": [{ "label": "소고기 야끼소바", "value": "11,000원" }] },
+      {
+        "type": "image", "id": "photo-1", "caption": "소고기 야끼소바",
+        "url": "https://media.skkuverse.com/eskara-2026/food-trucks/truck-oyabong/01-9961d281.jpg"
+      }
+    ]
+  }
+}
+```
+
+The reader is **strict here**, unlike its tolerance for unknown keys elsewhere: a misspelled optional
+key (`captoin`) would otherwise import clean and render as nothing. Absent optional values become an
+explicit `null` (`isUnion`: `false`), never `undefined` — a stored `undefined` comes back as `null` and
+would re-diff on every import.
+
+| Key | Rule |
+| --- | --- |
+| `kind` | required; one of `pub`, `booth`, `promo`, `foodTruck`, `goods`, `facility`, `stage`, `etc`. Closed in the app, so a new one ships there first |
+| `org`, `locationLabel` | optional text |
+| `isUnion` | optional real boolean; default `false` |
+| `blocks[]` | `id` unique within the place; `type` one of `text` (`body`), `list` (`items[]`: `emoji?`, `title`, `description?`), `table` (`rows[]`: `label`, `value`), `image` (`url`, `caption?`), `notice` (`items[]` of text); every block takes an optional `title`; lists non-empty |
+| `image.url` | on `https://media.skkuverse.com` only (`MEDIA_ORIGIN`) — see below |
+| `actions[]` | `id` unique; `link` (`label`, absolute https `url`) or `instagram` (`label`, `profileUrl` = `https://www.instagram.com/<username>`, `postUrl` = a `/p/`, `/reel/` or `/reels/` link or `null`); at most one `instagram` |
+
+A bad detail rejects its whole place, the same verdict every other field gets.
+
+- **Put the first `table` first when it is the point.** The app lifts the first table into the
+  collapsed card and uses the first `image` as its hero, so a truck opens on its menu.
+- **Photos live in the R2 media bucket**, `skkuverse-media`, served at `https://media.skkuverse.com`.
+  The reader checks only the URL's text and never fetches it, so **upload before you import** — an
+  imported key with no object behind it is a blank image on every phone. Keys carry a hash of the
+  content (`<layerSetId>/<purpose>/<placeId>/<nn>-<sha256[:8]>.jpg`) and are uploaded with
+  `Cache-Control: public, max-age=31536000, immutable`, so an object is **never overwritten**: a
+  replaced photo is a new key, a new URL, and no device or edge ever holds a stale copy.
+
+  ```bash
+  npx wrangler@4 r2 object put skkuverse-media/<key> --file <photo.jpg> --remote \
+    --content-type image/jpeg --cache-control "public, max-age=31536000, immutable"
+  curl -sI https://media.skkuverse.com/<key>   # 200, image/jpeg
+  ```
+
+### 5.1 The old keys fail loudly
+
+`days`, `slot`, `startOffsetMin`, `endOffsetMin`, `hoursLabel`, `lifecycle`, `placeId`, the tenant
+triplet, and the root-level `timeBase` and `sessions` are all **rejected by name**, each naming its
+replacement.
+
+`days: [1, 2]` is the one that matters: it is the key the old importer expanded into `-d1` and `-d2`
+documents, which is the duplication this format exists to remove. A pasted old-format file has to
+fail rather than import each place once and silently lose its second day.
+
+### 5.2 Why JSON and not a spreadsheet
+
+`hours`, `fields` and `actions` are lists. A CSV cell cannot carry one without inventing a separator
+to get wrong later — the same argument the previous sessions reader made for itself. The coordinate
+survey used to be a CSV because a plot was flat; a place is not.
+
+## 6. Operations
+
+### 6.1 Loading content
+
+```bash
+# Validate and report. Writes nothing.
+NODE_ENV=production npm run eventmap:import -- --file <sheet> --dry-run
+
+# Import. Creates the activation if absent, DISABLED, and can never re-enable one.
+NODE_ENV=production npm run eventmap:import -- --file <sheet>
+
+# Remove places that have left the sheet.
+NODE_ENV=production npm run eventmap:import -- --file <sheet> --delete-missing
+```
+
+`--file` has no default. The committed `scripts/data/eskara-2026-places.json` carries placeholder
+Instagram handles (`example_club_NN`) and says so in its `_readme`, so with `NODE_ENV=production` the
+importer refuses it, and any sheet marked the same way, before it connects. Production imports the real
+sheet, which is kept outside this repository; the committed one serves `_dev`
+(`npm run eventmap:revive-dev`).
+
+Nothing is written if any place is rejected: a half-imported map is worse than none, because the
+missing booths are invisible and the ones that made it look authoritative.
+
+`--delete-missing` really deletes — there is no `lifecycle: "retired"` to fall back on. It is opt-in
+because a truncated sheet plus an automatic delete is how a festival disappears mid-afternoon.
+
+The first import after `detail` shipped reports **every** place as updated, once: the stored documents
+have no `detail` key and the reader now writes `null`. That is the only time an unchanged sheet
+rewrites `updatedAt`.
+
+### 6.1.1 The one-time cutover from the pre-collapse schema
+
+**`--delete-missing` is mandatory the first time, and `sessions`/`snapshots` have to go with it.**
+
+The old `places` documents carry the same `layerSetId` and are keyed `nsc-*`, while the reader now
+emits `<layerSetId>-*` ids — so an ordinary import does not overwrite them, it sits beside them. They
+have `name` where the projection reads `title` and no `hours` at all. The place read skips them and
+logs a count, so the map still serves; but 62 skipped places with nothing drawn is not a state to
+leave production in.
+
+```bash
+NODE_ENV=production npm run eventmap:import -- --file <sheet> --dry-run       # lists them as orphans
+NODE_ENV=production npm run eventmap:import -- --file <sheet> --delete-missing
+```
+
+Then drop the two collections the snapshot tier left behind, which nothing reads and no index
+covers:
+
+```javascript
+db.sessions.drop()
+db.snapshots.drop()
+```
+
+### 6.2 The window — and the kill switch
+
+`scripts/eventmap-window.js` is the only lever that decides whether anybody sees the event map.
+
+```bash
+npm run eventmap -- status --prod
+npm run eventmap -- open --prod --minutes 10
+npm run eventmap -- close --prod
+```
+
+**`--prod`, not `NODE_ENV`.** Every other script here resolves its database from `NODE_ENV`, which is
+right for an importer: the dangerous direction is the one you have to type. It is the wrong mechanism
+here, because an env var is silently lost the moment a command is pasted across two lines, and the
+failure is invisible — a cheerful success against a database nobody meant to touch. That happened on
+the first real run. Omit the flag and the target is `<name>_dev`, printed on its own line either way.
+
+`open` defaults to **15 minutes**, not open-ended: a rehearsal is the common case and a forgotten
+`enabled: true` is the expensive mistake, so `activeUntil` is a dead man's switch. A real festival
+states its length once, deliberately. The script never creates an activation — an unknown id is an
+error rather than an upsert, so a typo cannot look like a success.
+
+`--no-expiry` writes `activeUntil: null` and gives up that switch. It is right in exactly two
+situations, and "I do not want to pick a number" is neither:
+
+1. **Nothing that can render the layer set is deployed.** Check the shipped tree, not the branch —
+   `main` containing the code proves nothing about what users have.
+2. **A long event whose end is genuinely unknown**, where a wrong `activeUntil` would drop the map
+   mid-festival — a worse failure than a forgotten one.
+
+`status` prints `NO EXPIRY — stays up until somebody runs close` on every read in that state, which
+is the only thing standing between "we meant to leave it up" and "nobody remembered it was up".
+
+**This is why the activation stayed in Mongo.** `close` is the kill switch for a rain cancellation or
+anything else going wrong, and it takes effect without a deploy. Each api replica caches the
+activation, the overlays and the details for a few seconds (`EVENT_CACHE_TTL_MS` in
+`src/map/map.constants.ts`), so `/map/config` turns over about one TTL later and the overlay
+routes about two. An `activeUntil` passing is exact — a cached activation is re-checked against the clock
+on every request. On top of that, `/map/overlays/event` is `public, max-age=60`, so a booth already
+fetched can linger on a device for up to a minute. **Rehearse before the festival**, not during one.
+
+### 6.3 Staging before the window opens
+
+Import at any time. `/map/config` advertises no festival layers and `/map/overlays/event` returns `[]`
+until `activeFrom`, so content can sit on production with zero exposure.
+
+### 6.4 When the database refuses with `SSL alert number 80`
+
+A connection accepted and then dropped before the handshake completes is the database refusing the
+source address, not a client TLS fault. If the network synthesizes IPv6 addresses for IPv4-only hosts
+(NAT64), the connection may leave from an address other than the one you expect; prefix the command
+with `NODE_OPTIONS=--dns-result-order=ipv4first`, which both npm scripts already carry.
+
+### 6.5 Replaying a past festival on `_dev`
+
+```bash
+npm run eventmap:revive-dev                    # sync _dev to the sheet, open a 240-minute dev window
+npm run eventmap:revive-dev -- --minutes 30    # shorter window
+npm run eventmap -- close                      # end it early (no --prod: _dev)
+```
+
+It refuses `NODE_ENV=production` and `--prod`, and runs both steps with `NODE_ENV=development`. Only a
+local server reads `_dev`, so point a dev build at it (`EXPO_PUBLIC_BASE_URL`,
+[test-the-app-against-a-local-server.md](../how-to/test-the-app-against-a-local-server.md)); beta and
+TestFlight builds call production. The campus banners are a committed file: reverse-apply their
+takedown commit on a local checkout to see them too. The home layout is the `home-layout` dataset
+since 2026-10-19: push the festival layout to `_dev` with `npm run data`
+([configure-home.md](../how-to/configure-home.md)).
+
+## 7. Source of truth (file map)
+
+| Concern | File |
+| --- | --- |
+| Stored documents | `src/map/map.document.ts` |
+| I/O + indexes | `src/map/map.repository.ts` (no `seedIfEmpty` — there is no sensible default event) |
+| Places → map overlays | `src/map/event/map-event.mapper.ts` — see [map-overlays-api.md](map-overlays-api.md) |
+| Places → sheet details | `src/map/event-details/map-event-details.mapper.ts`, shape in `src/map/event-details/map-event-details.wire.ts` |
+| Media host rule | `MEDIA_ORIGIN` in `src/infra/origins.ts`, `src/infra/media-url.ts` |
+| Live layer set + usable config | `src/map/layer-set/map-layer-set.service.ts` |
+| Structure read + per-set validation | `src/map/layer-set/map-layer-set.repository.ts`, `storedLayerSets` in `src/map/layer-set/map-layer-set.schema.ts` |
+| Structure types and push checks | `src/map/layer-set/map-layer-set.schema.ts` (`layerSetFile`, `checkedLayerSet`, `layerSetsDataset`); `presentationFor` in `src/map/map.rules.ts` |
+| Layers, chips, name, emoji, camera, category table | the `map-layer-sets` dataset (content database), edited with `npm run data` ([configure-map-overlays.md](../how-to/configure-map-overlays.md#add-or-edit-a-festival)) |
+| Sheet → documents (pure) | `scripts/lib/map-places-file.js` |
+| Importer | `scripts/import-eventmap-places.js` + `scripts/lib/eventmap-db.js` |
+| Authored content | `scripts/data/eskara-2026-places.json` |
+| Window + kill switch | `scripts/eventmap-window.js` |
+| Replay on `_dev` | `scripts/eventmap-revive-dev.js` |
+| DB + collection names | `src/infra/config.ts` `eventmap` block |
+| Tests | `__tests__/nest/map/` |
+
+## 8. Related
+
+- [how-to/configure-map-overlays.md](../how-to/configure-map-overlays.md) — the runbook: what can be drawn, which tier to edit, and what to check when a shape does not appear
+
+- [map-overlays-api.md](map-overlays-api.md) — the shared marker schema and the `/map/*` routes
+- Umbrella ADR 0004: event map layer ownership
+- Shuttle 증차 is a **separate** system — `bus_overrides` + `scripts/seed-eskara.js`. Link via a `route` action; do not rebuild it here.
