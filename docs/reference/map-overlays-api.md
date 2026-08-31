@@ -1,0 +1,1618 @@
+---
+title: Map Overlays API Reference
+type: reference
+status: accepted
+owner: spencer0124
+last-updated: 2026-10-25
+audience: internal
+---
+
+# Map Overlays API
+
+> The one overlay schema every layer of the campus map draws — pins, zones and route lines alike —
+> the two layer flags that say when a layer is visible and who may change it, the chips that move the
+> camera and swap layer sets, and the five endpoints that carry them. Cross-repo ownership is
+> umbrella ADR 0004;
+> the festival's storage, authoring and ops tiers are [event-places.md](event-places.md).
+
+## 1. Summary
+
+| | |
+| --- | --- |
+| Routes | `GET /map/config`, `GET /map/overlays/campus`, `GET /map/overlays/transit`, `GET /map/overlays/event`, `GET /map/overlays/event/details` |
+| Auth | none on all five |
+| Rate limit | `GeneralRateLimitMiddleware`, applied to the `/map` prefixes in `MapModule.configure` |
+| Wire schema | `src/map/map.wire.ts` (overlays), `src/shared/geojson.types.ts` (geometry), `src/map/config/map-config.wire.ts` (chips) |
+| Producers | `src/map/campus/map-campus.mapper.ts` (buildings + campus geometry), `src/map/transit/map-transit.mapper.ts` (the Jongno bus route lines and the HSSC shuttle's loop), `src/map/event/map-event.mapper.ts` (event places), `src/map/event-details/map-event-details.mapper.ts` (their sheet bodies) |
+| Layer catalogue | `src/map/map.constants.ts` — the base layers, and the projection of a festival's `layers[]` from its config |
+| Chips | `src/map/layer-set/` — the base chips (`map-layer-set.constants.ts`), the projection of a festival's `chips[]` and the synthesised reset chip (`map-layer-set.mapper.ts`), and the validators both go through (`map-layer-set.rules.ts`) |
+| Response builder | `src/map/config/map-config.mapper.ts` |
+| Envelope | `{ meta: {}, data: { overlays: [ … ] } }` (no `meta.lang` on a response a shared cache may store; `/map/config` keeps `{ lang }`), `Vary: Accept-Language`, `X-Response-Time` |
+| Tests | `__tests__/nest/map/` |
+
+A building and a booth are **the same kind of thing, addressed the same way** (umbrella ADR 0004
+invariant 1). Before this contract they were not: the festival shipped its own manifest, snapshot,
+cache and marker component beside the base map's, which is a second rendering system for the same
+picture. Every producer now imports the types in `map.wire.ts`, so a field can no longer be
+added to one and forgotten in the others.
+
+The same invariant, applied one level down, is why a zone is not a separate resource: **a zone is a
+place whose geometry happens to be an area.** Pins, polygons and lines ship in ONE heterogeneous
+collection per data source, tagged by `kind`, rather than being split across routes by geometry. That
+is also the mainstream shape — RFC 7946 puts no homogeneity constraint on a collection, and Mapbox,
+Leaflet, the Google Data Layer and Naver's own JS `Data` layer all take a mixed collection and
+dispatch per feature. Splitting would mean two fetches to draw one festival, two activation reads
+that can disagree, and a tappable zone landing outside the query that backs the detail sheet.
+
+The cost is stated plainly: **a client downloads a whole source even for layers it has switched off.**
+Campus is one fetch per client per day and the festival payload is small on a 60-second TTL, so this
+is the right trade here. If a source ever gets heavy the answer is to SPLIT THE SOURCE — never a
+`?layers=` filter, which fragments the edge cache across every combination of toggles.
+
+> [!NOTE]
+> This is now the **only** wire the festival travels on. The snapshot tier that used to carry the
+> list and card content — `/eventmap/manifest`, `/eventmap/snapshot`, the materializer, the
+> `snapshots` collection — is deleted, and the marker carries `subtitle`, `hours`, `fields` and
+> `actions` in its place. Storage, authoring and the kill switch are
+> [event-places.md](event-places.md).
+
+## 2. The overlay schema
+
+Every overlay on every layer, from either producer, is exactly this object plus the two fields its
+`kind` adds. Nothing is optional except `text.zh` — a building fills the booth-shaped half with stated
+emptiness rather than omitting it, because an absent field is a second thing for the client to branch
+on.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `kind` | `"marker" \| "polygon" \| "path"` | Which renderer draws it. An **open** enum — see §2.3 |
+| `geometry` | RFC 7946 `Point` / `Polygon` / `LineString` | The geometry, **verbatim** — see §2.4 |
+| `id` | `string` | Unique **within its layer** — a building id, a place id, a shape slug. NOT unique across layers: one building is drawn once per building layer and both overlays carry the same value, so the client's key has to be layer id plus this |
+| `layerId` | `string` | Which layer draws this overlay. The server decides membership; the client filters on it. Always one of the ids `GET /map/config` advertises |
+| `campus` | `"hssc" \| "nsc"` | The `Campus` literal from `src/building/building.types.ts` |
+| `text` | `I18nWire` | The string this overlay **displays** — a building number, a building name, a booth title, a zone name. For a marker, the layer's `markerStyle` decides how it is drawn |
+| `subtitle` | `I18nWire \| null` | What this marker is, under its name — a tenant, a department. `null` for every building |
+| `hours` | `TimeWindow[]` | Every interval this place is open, in authored order. **Empty means always open** |
+| `fields` | `{ label: I18nWire; value: I18nWire }[]` | Card rows in authored order, each carrying its own label. Empty for a building |
+| `actions` | `MarkerAction[]` | Sheet buttons in authored order. Empty for a building |
+| `order` | `number` | Author's sort position, and the last tiebreak in a coordinate collision. Lower wins |
+| `facets` | `Record<string, string[]>` | The list-facet options this overlay is in, keyed by facet id — `{ "day": ["day1", "day2"], "org": ["council"] }`. Every facet of the live layer set has a key, `[]` where the overlay is in none. `{}` on every campus overlay. See §8.8 |
+| `orderByOption` | `Record<string, number>` | Sort position inside one facet option — a booth's running order per day. Read only by a list whose sort is scoped to that facet; `{}` when none was authored. See §8.8 |
+| `pinPriority` | `number` | **`kind: "marker"` only.** Second step of the collision ladder, from the layer set's category table. Higher wins. `0` for a building |
+| `locationAccuracy` | `"exact" \| "area"` | **`kind: "marker"` only.** Whether the point is the place's spot or only names the area it is in, from the layer set's category table. `"exact"` for a building — see §2.7 |
+| `tap` | `MarkerTap \| null` | What a tap resolves to: a place to open, a chip to run (§2.6), or `null` for a backdrop (§2.5) |
+
+`pinPriority` is on the marker arm alone rather than present-and-ignored elsewhere. Two overlapping
+zones are a design choice, not a collision to resolve, so a union makes the field *unrepresentable* on
+a polygon rather than merely unused — the bar this contract applies everywhere: every combination of
+fields must be meaningful.
+
+```ts
+interface I18nWire { ko: string; en: string; zh?: string }
+
+/** Both bounds real. Half-bounded is not expressible — see §3. */
+interface TimeWindow { startAt: string; endAt: string | null; label: I18nWire | null }
+
+interface MarkerAction {
+  id: string;
+  label: I18nWire;
+  actionType: "content" | "route" | "webview" | "external" | "miniapp";
+  actionValue: string;
+  style?: "primary" | "secondary";
+}
+
+type MarkerTap =
+  | { kind: "skku_building"; placeId: string }
+  | { kind: "event"; placeId: string }
+  | { kind: "chip"; chipId: string };
+
+type MapOverlay =
+  | (OverlayBase & { kind: "marker";  geometry: GeoJsonPoint; pinPriority: number;
+                    locationAccuracy: "exact" | "area" })
+  | (OverlayBase & { kind: "polygon"; geometry: GeoJsonPolygon })
+  | (OverlayBase & { kind: "path";    geometry: GeoJsonLineString });
+```
+
+For an event overlay `placeId` is the **place's own id**, so two booths sharing one plot are two taps.
+They used to be two sessions collapsing onto one plot id, which is what made a tap ambiguous and
+needed a stack to resolve.
+
+### 2.3 `kind` names the renderer, not the geometry — and it is an open enum
+
+The tag says which component draws the overlay. That is a deliberate choice over tagging the geometry,
+and the argument is the extension path rather than what ships today.
+
+The client's overlay set has four components — path, polyline, arrowhead path, multi-path — that all
+consume the **same** geometry, a coordinate sequence, and differ only in how they paint it. A
+geometry-shaped tag cannot tell them apart at all; it would need a `renderAs` field beside the
+geometry, which is this union again, only hidden somewhere nothing can validate it. Three more of the
+SDK's overlays have no RFC 7946 representation whatsoever: GeoJSON has no circle type and no raster
+concept, and a `MultiLineString` is one geometry with one properties bag, so per-part colours have
+nowhere to live. Every stack that supports these puts them outside the feature model for the same
+reason — Mapbox makes an image a separate *source type*, KML makes `<GroundOverlay>` a separate
+element, MapKit a separate class.
+
+Reserved, written down and not built. Each is a straight addition:
+
+```ts
+// | { kind: "polyline";      geometry: GeoJsonLineString }            // dashes, cap/join
+// | { kind: "arrowheadPath"; geometry: GeoJsonLineString }            // headSizeRatio
+// | { kind: "circle";        center: LatLng; radiusM: number }        // no GeoJSON equivalent
+// | { kind: "multiPath";     parts: PathPart[]; progress: number }    // per-part colour
+// | { kind: "groundImage";   bounds: LatLngBounds; imageUrl: string } // no GeoJSON equivalent
+```
+
+**The contract for an unrecognised `kind` — four rules, and they bind the client:**
+
+1. **Skip, never fail.** Drop it from rendering, log a warning. One new overlay type must never blank
+   a screen on an old build.
+2. **Skip at the smallest granularity.** Drop the single overlay, keep the layer and every sibling. A
+   layer with forty markers and one unknown ground image renders forty markers.
+3. **Adding a `kind` is non-breaking**; removing or repurposing one is breaking. This enum is open and
+   this sentence is the notice that it is, per Google AIP-180's requirement that an open enum say so.
+4. **Model it with a `default:` returning null**, never an exhaustive switch asserting `never`. That
+   assertion is precisely what turns an additive server change into a crash on an old build.
+
+### 2.4 Geometry is RFC 7946, verbatim, and the server converts nothing
+
+`geometry` is a real GeoJSON Geometry object: `[longitude, latitude]` — §3.1.1, "precisely in that
+order" — in WGS 84, the only CRS the spec allows.
+
+It is the **same object** that sits in Mongo, and the same object the ops sheet pasted in. There is no
+converter anywhere on the server, and that is the design rather than an accident: an axis swap can only
+be introduced at a conversion, and swapped Seoul coordinates land in the Yellow Sea without ever
+throwing. Removing the conversion is a stronger guarantee than guarding one. It also means an
+off-the-shelf GeoJSON validator can be pointed at either end.
+
+**Polygon rings carry two guarantees**, and they are the one thing the projection does touch:
+
+- **Closed** — the last position repeats the first, so every ring has at least four positions.
+- **Wound per RFC 7946 §3.1.6** — the exterior ring counter-clockwise, every hole clockwise.
+
+Winding is normalised on the way out, not on the way in. Mongo's `2dsphere` index rejects an unclosed
+ring, a self-intersecting loop and a hole outside its exterior at insert, but it does **not** check
+orientation — a reversed ring stores silently. Normalising at projection time also covers hand-edited
+Mongo documents, which an import-time-only fix would miss entirely, and keeps the shoelace in one
+implementation (`scripts/` is CommonJS and outside tsconfig, so an importer doing it would need a
+second copy). The operation reorders ring elements only and never touches a position's contents, so it
+cannot reintroduce a swap.
+
+> [!IMPORTANT]
+> The client's polygon overlay wants the **opposite** winding — exterior clockwise, holes
+> counter-clockwise — and its own documentation warns that a wrongly wound ring may "draw abnormally or
+> not receive events", i.e. a zone that is visible but cannot be tapped. That reversal belongs in one
+> named, tested client adapter, alongside the `[lng, lat]` → `{ latitude, longitude }` rename it
+> already has to do. It is deliberately **not** done server-side: emitting the SDK's direction under a
+> `"type": "Polygon"` key would ship invalid GeoJSON labelled as GeoJSON, which is worse than either
+> convention honestly stated.
+
+Note also what this payload is **not** called. It is not a `FeatureCollection`: three of the reserved
+kinds have no geometry at all, so the document could never be valid RFC 7946, and a generic consumer
+that trusted the label would mis-render it. `overlays` says what it is.
+
+### 2.5 `tap: null` is how a backdrop is drawn
+
+An overlay that is drawn and not pressable — a 통제 구간 outline, a campus boundary — carries
+`tap: null`. That spelling already existed for a marker with nothing to open, so background geometry
+needs no new field on the wire.
+
+Which places are inert is authored per **category**, in the layer set's
+`itemDefaults.byCategory[…].interactive` (absent means `true`; never fail closed). Per category rather
+than per layer, because two categories may map to one layer — so a single 구역 layer holds tappable
+stage zones and an inert boundary without inventing a second layer. And not derived from "has no
+`fields` or `actions`": adding one card row must never silently turn a backdrop into a button.
+
+### 2.6 `tap.kind: "chip"` runs a chip instead of opening a place
+
+Some shapes stand for a whole list rather than one place. The 2026 food-truck zone is the case: its
+17 trucks have no spots of their own. A tap on such an overlay carries
+`{ kind: "chip", chipId }`, and the client runs that chip exactly as the chip row would, with its
+layers, camera and list. No sheet opens and none is served: the details route skips the category.
+
+It is authored per category like `interactive`, as `itemDefaults.byCategory[…].tapChip` (absent or
+`null` means an ordinary place tap). The config refuses a `tapChip` that names no authored chip, or
+one set on an `interactive: false` category. A client built before the kind existed parses the tap as
+`null` (`parseMarkerTap`'s fail-soft) and draws the overlay inert, so shipping it breaks no installed
+app.
+
+### 2.7 `locationAccuracy`: whether a pin is the place's spot
+
+A marker's `locationAccuracy` is `"exact"` unless its point names only the area the place is somewhere
+in. The 2026 food trucks are the case. They are placed along the road in front of dormitory Shin-gwan A on the day and stacked on the
+council's one point, so they carry `"area"`.
+
+It states a fact about the place, not a rendering instruction; the client decides what follows. Today
+that is a place sheet that opens at its tallest detent: the lower detent exists to keep the pin in view
+beside the sheet, and an area pin has nothing to show there. It is authored per category as
+`itemDefaults.byCategory[…].locationAccuracy` (absent means `"exact"`). Buildings are always
+`"exact"`. It is marker-only, like `pinPriority`, because a zone is an area by construction. A
+client that predates the field ignores it and opens the sheet low, as before.
+
+### 2.0 `actionValue` is always complete by the time it ships
+
+A `webview` value is authored root-relative (`/eskara/entry`) and resolved against `WEBVIEW_ORIGIN`
+at serve time, so the client only ever sees an absolute URL — a relative string handed to a URL
+opener is the shape of an open redirect. `route` is the exception and stays root-relative, because it
+reaches the app's own navigator rather than an opener. An `external` value is an `https://` URL that
+parses with a host and carries no userinfo. No `route`, `external` or `webview` value carries
+whitespace, a `\`, a control character or a format character: the URL parser folds `\` into `/` and
+drops or encodes the rest, so the page opened would not be the one written. Each type's rule is
+`toLinkProblem` in `src/shared/link-action.util.ts`.
+
+`miniapp` is the other exception: its value is a **mini-app target**, `<miniAppId>[<root-relative
+path>]` — `eskara-2026` opens that mini app at its registered `startUrl`, and
+`eskara-2026/eskara/wristband` opens that page inside the mini-app shell. It ships exactly as
+authored; the app resolves the path against the `startUrl` it fetched from `GET /miniapps/:id` and
+falls back to `startUrl` if the result leaves that origin. The server drops a target whose id is not
+registered, or whose path could name another host (`//…`, `/\…`). The grammar lives in
+`parseMiniAppTarget` in `src/shared/miniapp-target.util.ts` and is shared with the app's `/m/<target>` deep link and with
+mini-app pushes.
+
+A button whose label is blank in every language, or whose value is wrong for its type, is **dropped**
+and the booth is served without it. Ops authored the value; losing a button is recoverable in a way
+that dropping the booth is not.
+
+### 2.1 `text` ships every language, and is not resolved server-side
+
+`text` carries what we hold rather than the one string in the request's language, because the two
+producers hold different sets: a building has `{ko, en}` only (`BuildingDoc.name`), while an
+ops-authored booth title may also carry `zh`. Resolving server-side would mean picking one and
+discarding the rest.
+
+`ko` is the source language and always present. `en` falls back to `ko` when the English string is
+missing — and **missing means the empty string, not `null`**: both writers of the buildings
+collection coalesce a missing English name to `""`, so a `??` fallback there is dead code that ships
+blank English labels, and TypeScript cannot flag it because `name.en` is declared non-optional.
+`zh` is omitted entirely when nobody authored one, which is the normal case for a building.
+
+### 2.2 `displayNo` and `skkuId` are gone
+
+Two fields left the wire when the schema was unified:
+
+- **`displayNo` folded into `text`.** The two building layers are the same documents differing only
+  in which field becomes the visible string, so `text` means "what this marker displays" and
+  `markerStyle` decides how to draw it.
+- **`skkuId` folded into `tap`.** `placeId` is a **string for every kind**, including a building
+  whose id is numeric in Mongo. One addressing scheme is the whole point; the client narrows it back
+  to a number inside its building branch, where `/building/:id` needs one.
+
+## 3. Why `hours` is an array, and why there is no `status`
+
+Openness is a pure function of the device clock and the windows:
+
+```text
+hours.length === 0 || hours.some(w => now >= w.startAt && (w.endAt === null || now < w.endAt))
+```
+
+An **empty list means always open**, and it means only that.
+
+### 3.1 An array, because a place is not a day
+
+`hours` replaced a scalar `startAt`/`endAt` pair. With one window per document, a booth open on both
+festival days had to be **two documents** — and the app's list, which renders one row per document,
+showed every place twice with nothing on the card to tell the rows apart. In prod that was 28 `bar`
+documents over 18 real bars.
+
+Every window has a start. Its end is `null` when it has not been announced — the 팔찌 배부 booths
+close when the artist stage does — and the client prints such a window as `14:00~`. That is not a
+second way to say "no limit": the start still gates it, so the place reads closed until then. A
+window without a start is refused, because it would be exactly the ambiguity §3.2 describes. The
+server never invents an end; the layer set's activation takes the whole festival off the map.
+
+`label` names a window when one place runs differently across its windows — the 성균인 booth's
+`단체 입장` then `개별 입장`. `null` otherwise.
+
+### 3.2 No `status`
+
+`status` was only ever a cache of the arithmetic above, and caching it forced the old
+both-bounds-null to mean two opposite things depending on a sibling field: an always-on 화장실, and a
+rain-cancelled truck. That ambiguity is what made the field load-bearing rather than redundant.
+
+A **cancellation is expressed by not serving the marker at all** — a cancelled place is deleted from
+the sheet, not flagged. That is what frees `[]` to mean one thing.
+
+### 3.3 Hours do not decide what is drawn
+
+The client does **not** hide a marker outside its windows. Opening hours are here to be filtered on
+and displayed; the pin filtering they used to drive was how the old map coped with a crowded field,
+which was a workaround for the day-split rather than a feature. Layers and chips do that job now, and
+a genuine coordinate collision is resolved with `pinPriority` and `hours` — see §3.4.
+
+Because the bounds are absolute instants rather than wall-clock strings, a device in the wrong
+timezone still derives correctly. A device whose clock is genuinely wrong does not, and that is
+accepted rather than corrected. The side benefit is the one that matters on the day: the map keeps
+telling the truth on a dead network.
+
+**The exception, and it is on the other axis.** A layer's `defaultVisibleWhen` (§4) *does* decide
+something by the clock — but it decides a **default**, which the user overrides, not what may be
+drawn. The distinction is worth keeping sharp:
+
+| | Says | Overridable |
+| --- | --- | --- |
+| A marker's `hours` | *this place is open then* | n/a — it never hides the pin |
+| A layer's `defaultVisibleWhen` | *this layer starts on then* | yes, by a toggle or a chip |
+
+So a 주점 pin still exists at noon; its layer merely starts off. A deep link opens it regardless,
+because deep links resolve against every marker rather than the visible set.
+
+That axis is **wall-clock** where this one is instants, and §4.2 says why.
+
+### 3.4 Two markers on one coordinate
+
+The server drops, merges and clock-filters nothing; it ships every place of the live set with
+everything the client needs to disambiguate. The client keeps one pin per coordinate, choosing by:
+
+1. **open right now** — `hours.length === 0 || hours.some(w => now >= w.startAt && (w.endAt === null || now < w.endAt))`
+2. tie → highest `pinPriority`
+3. tie → next opening soonest
+4. tie → lowest `order`, then `id`
+
+**Openness comes first, and the ordering is load-bearing rather than arbitrary.** A coordinate is
+shared for exactly one reason on this map: a spot is used by different occupants at different times.
+The west strip was booths from 11:00 and bars from 18:00, and the mock `daybooth-01` shared
+`126.971096, 37.295473` with two bars precisely because it was the same stall re-striped at dusk. Only
+step 1 knows that. With `pinPriority` first, the operations desk would spend its entire 11:00–18:00
+window hidden behind a bar that is shut, because `bar` outranks `booth` on a number that cannot see
+the clock.
+
+`pinPriority` still decides between two places that are open at once — a stage over a 화장실 — which
+is the question it was always answering. Step 3 then covers the hours when nothing on that spot is
+open: the pin becomes whichever occupant is next, so an overnight map still points at the right
+stall. A suppressed marker keeps its list row.
+
+Step 2 cannot separate two bars sharing a plot — both are `category: bar`, both priority 30 — and it
+does not need to, because their windows are one night apart and step 1 has already answered.
+
+> [!IMPORTANT]
+> **The ladder can only resolve a collision the clock can see.** Two places open at the *same*
+> moment on the *same* point fall through to `order`, and the loser is then never on the map at any
+> time. That is a data error, not a rendering one, so it is caught at import instead: a test over the
+> committed sheet rejects any two places whose windows overlap on one coordinate.
+>
+> It has fired for real. The 2025 부스전 sheet numbered two booths "2" and two booths "4", and both
+> pairs were surveyed as a single interpolated point with identical hours — genuinely two stalls, so
+> the fix was two coordinates, a quarter of the strip's own step (~1.3 m) apart.
+
+**The one deliberate exception is a stack under a head.** The 2026 food trucks have no plots: the
+council places them along the road in front of dormitory Shin-gwan A on the day and sent one point for the whole area. All 17 share
+that point with `food-zone-pin` (captioned "푸드트럭"), whose `pinPriority` (25) beats a truck's (20) and
+whose windows cover every truck's. Step 1 therefore never ranks a truck above it, and step 2 always
+does. The pin names the area, never one vendor on a spot that vendor may not hold. Tapping it,
+or the zone's ring, runs the food-truck chip (§2.6) rather than opening a sheet. The trucks lose
+the pin **on purpose** and keep their list rows. A truck chosen from the list is drawn on the spot,
+because the client ranks the selected place above the whole ladder. The import test allows a shared
+coordinate with overlapping hours only under such a head: a strictly higher `pinPriority` and
+windows covering every other member's. Anything else still fails.
+
+## 4. Layer flags — `defaultVisibleWhen` and `userConfigurable`
+
+Two independent axes on every layer entry in `GET /map/config`:
+
+| Flag | Question it answers |
+| --- | --- |
+| `defaultVisibleWhen` | **When** the layer is on to begin with |
+| `userConfigurable` | **Who may change it** |
+
+`userConfigurable` is the shape Firefox ships as `{Value, Status}` and GeoServer as
+`enabled`/`advertised`. Both of its combinations against a layer that starts on, and both against one
+that starts off, are meaningful:
+
+| starts on | `userConfigurable` | Meaning | Example |
+| --- | --- | --- | --- |
+| yes | `false` | Always-on background layer | a base layer the product does not let you remove |
+| yes | `true` | Ordinary toggle | 건물번호, 건물이름, most festival layers |
+| no | `true` | Opt-in | 편의시설 — looked up when wanted, not carried on screen all festival |
+| no | `false` | Defined but inert — a kill switch | a layer shipped dark, switched on by a config change alone |
+
+### 4.0 `defaultVisibleWhen` — a tagged union, not a flag beside a schedule
+
+```ts
+interface DailyWindow { start: string; end: string }   // "HH:MM", 24-hour, half-open [start, end)
+
+type LayerDefaultVisibility =
+  | { kind: "always" }
+  | { kind: "never" }
+  | { kind: "scheduled"; windows: DailyWindow[] };      // >= 1 window
+```
+
+`start > end` wraps past midnight, which is the natural spelling for a night layer —
+`{ start: "18:00", end: "00:00" }`, as the 2025 주점 ran — and needs no special case. Midnight is `"00:00"`; `"24:00"` is
+rejected at load so there is one spelling of it.
+
+This replaced a `defaultVisible: boolean`, and it is a union rather than that boolean **beside** a
+window list because the pair could hold combinations that mean nothing: `false` with windows is a
+flat contradiction, `true` with windows makes the boolean dead data, and an empty list is a second
+spelling of "no schedule". The bar for two flags sitting side by side is the one `userConfigurable`
+clears above — every combination meaningful — and that pair would not have cleared it. The same
+call has been made twice before in this domain: `MapChipAction` is tagged on `kind` rather than
+carrying a flat `actionType`/`actionValue` pair (§8.1), and a `status` scalar was **deleted** from
+beside `hours` because the two could contradict each other (§3.2).
+
+A layer that is on all day is `{ "kind": "always" }`, which is the one spelling of that — a
+`scheduled` entry with no windows is refused and names it.
+
+### 4.1 The server does not evaluate it
+
+`defaultVisibleWhen` ships as authored and the **device** resolves it against its own clock. This is
+the same contract `/map/overlays/event` already relies on — "opening and closing times ride in the
+payload, so a booth changes state on the device's clock without a refetch" (§5.3) — and it is what
+keeps `/map/config` a deterministic response with a stable ETag. A server-side "is it on now" would
+make the body vary by the second and cache nowhere.
+
+### 4.2 Why this axis is wall-clock where `hours` are instants
+
+A place's `hours` describe one booth on one festival day; a layer's default says "주점 belongs to the
+evening", which is the same sentence on every day of every festival. Written as instants that
+sentence would restate the festival's dates in a second committed file, and a date slip touching only
+one of them is silent.
+
+The timezone guarantee of §3.3 is **not** given up, because the client derives the current minute
+from the epoch — `(Date.now() + 9h) % 86_400_000` — and never from the device's local hour.
+`Date.now()` is UTC epoch milliseconds and a device's zone setting only changes how a time is
+*formatted*, so a phone set to New York still flips 주점 on at 18:00 KST. The fixed +09:00 is exact
+rather than approximate: Korea has had no DST since 1988.
+
+`config.timezone` is therefore validated against a closed list of one, `Asia/Seoul`. It is an
+**authoring** guard and nothing else: the field is still read by no code and is **not** served — the
+client hardcodes +09:00, and the zone never crosses the wire. What the narrowing buys is that a
+config claiming a zone the client cannot resolve is refused at load instead of quietly meaning
+something other than it says. It was a free-form non-empty string until this axis gave it something
+to be wrong about; `"Asia/Seuol"` used to pass.
+
+### 4.3 Resolution order on the client
+
+Four tiers, and `defaultVisibleWhen` is the last resort:
+
+```text
+forced[id] ?? chipNarrowing[id] ?? userToggle[id] ?? defaultVisibleAt(layer, now)
+```
+
+`forced` outranks a chip because a `userConfigurable: false` layer is out of a chip's reach too
+(§4.4 rule 3), and a chip's narrowing outranks the stored toggle because a tap is the more recent
+statement of intent. Every tier is a **fallback, not an assignment** — §4.4 rule 4 says why writing
+any of them into storage destroys a preference, and quotes the tail of this chain rather than a
+second one. This is the paragraph a client implements from.
+
+### 4.4 Four contract rules
+
+1. **An absent `userConfigurable` means `true`. Never fail closed.** This follows GeoServer ("a
+   layer is advertised by default") and Esri's `listMode` default of "show". An old client that has
+   never heard of the field keeps every control it had, and a new client reading an old server's
+   response does not silently lock the map. The server's own list is explicit on every entry anyway,
+   so a new layer cannot forget to decide.
+2. **It governs the affordance, not the capability.** A non-configurable layer still renders, is
+   still deep-linkable, and is still returned by its marker endpoint. Only the control disappears.
+   QGIS says it outright about `LayerFlag::Private`: flags are "used for the UI but are not
+   preventing any API call." Nothing here is an authorization boundary.
+3. **A chip may not change it either.** A chip tap is a user-initiated change, so `false` here puts
+   the layer out of a chip's reach as well as out of the sheet's (§8.2). The one `false` on this wire
+   is `campus_geometry`, the layer that exists so `campus_shapes` documents have a `layerId` they may
+   legally name — so a chip has to leave it alone too, not only the sheet.
+4. **The client must shadow a stored toggle, not overwrite it.** A user's persisted visibility choice
+   survives a layer becoming non-configurable and comes back when it becomes configurable again. The
+   resolution is the fallback chain of §4.3, not an assignment. Writing the forced value into
+   storage would destroy a preference the user cannot re-express while the control is hidden, and —
+   since the last tier now varies with the clock — would also freeze a schedule the moment it was
+   first read.
+
+## 5. Endpoints
+
+One route per **data source**, not per layer: buildings come from the buildings collection, the bus
+lines from the bus module (the Jongno lines' `jongro_route_paths` and the HSSC loop's `hssc-route-line`
+dataset), festival booths from the event map's `places`. See §6 for why layers within a source share one.
+
+### 5.1 `GET /map/config`
+
+No `Cache-Control` of its own. The route returns plainly through the global `ResponseInterceptor`, so
+it carries Express's auto-generated `ETag` plus `Vary: Accept-Language` from `LangMiddleware` and
+nothing else.
+
+It became `async` when the event marker layers joined the list — they are present only while an
+activation window is open, which is a Mongo read. **That read is contained**: any failure inside
+`map-config.service.ts` logs and returns `[]`, so the route keeps the never-fails property it had when
+it was synchronous. Until the event layers existed this endpoint had no DB dependency at all, and
+the app's fallback for a failed config is a bundled default holding no booth layers **but also no
+building layers** — so letting a Mongo hiccup here propagate would trade a missing festival for a
+blank campus map.
+
+Response, abridged to two event layers of the six, `lang=ko`, with a window open:
+
+```json
+{
+  "meta": { "lang": "ko" },
+  "data": {
+    "naver": { "styleId": "<NAVER_MAP_STYLE_ID>" },
+    "campuses": [
+      {
+        "id": "hssc",
+        "label": "인사캠",
+        "centerLat": 37.587241,
+        "centerLng": 126.992858,
+        "defaultZoom": 15.8,
+        "defaultTilt": 0,
+        "defaultBearing": 0,
+        "radiusM": 1000
+      },
+      {
+        "id": "nsc",
+        "label": "자과캠",
+        "centerLat": 37.29358,
+        "centerLng": 126.974942,
+        "defaultZoom": 15.8,
+        "defaultTilt": 0,
+        "defaultBearing": 6,
+        "radiusM": 1000
+      }
+    ],
+    "layers": [
+      {
+        "id": "building_numbers",
+        "markerStyle": "numberCircle",
+        "label": "건물번호",
+        "defaultVisibleWhen": { "kind": "always" },
+        "userConfigurable": true,
+        "endpoint": "/map/overlays/campus",
+        "chipGroupId": null,
+        "style": { "size": 16 }
+      },
+      {
+        "id": "building_labels",
+        "markerStyle": "textLabel",
+        "label": "건물이름",
+        "defaultVisibleWhen": { "kind": "always" },
+        "userConfigurable": true,
+        "endpoint": "/map/overlays/campus",
+        "chipGroupId": null,
+        "style": { "captionTextSize": 7, "zIndex": 100000 }
+      },
+      {
+        "id": "eskara26_bar",
+        "markerStyle": "placeDot",
+        "label": "주점",
+        "defaultVisibleWhen": {
+          "kind": "scheduled",
+          "windows": [{ "start": "18:00", "end": "04:00" }]
+        },
+        "userConfigurable": true,
+        "endpoint": "/map/overlays/event",
+        "chipGroupId": "eskara-2026",
+        "style": { "color": "F04452", "width": 22, "height": 30, "captionTextSize": 9 }
+      }
+    ],
+    "chips": [
+      {
+        "id": "eskara26_view_bar",
+        "label": "주점",
+        "icon": { "kind": "emoji", "emoji": "🍺" },
+        "action": {
+          "kind": "focus",
+          "camera": {
+            "lat": 37.295187,
+            "lng": 126.970977,
+            "zoom": 17.0,
+            "tilt": 0,
+            "bearing": 6,
+            "durationMs": 500
+          },
+          "layerIds": ["eskara26_bar"]
+        }
+      }
+    ],
+    "cameraDefaults": {
+      "markerFocus": { "zoom": 17.5, "tilt": 0, "bearing": 0, "durationMs": 500 },
+      "campusFocus": { "durationMs": 500 }
+    }
+  }
+}
+```
+
+`style.color` is **bare hex with no `#`**, the convention the app's `toCssColor` expects and the one
+the commented-out bus polyline layers already use. `label` is resolved against `meta.lang` through
+`src/infra/i18n.ts` — the labels are the one part of the map that is language-dependent, which is why
+the envelope varies on `Accept-Language` while the marker data does not.
+
+`campuses[].radiusM` is how far from the centre still counts as being on a campus; it belongs to the
+campus reconciliation feature rather than to markers, and its derivation is in `map-config.service.ts`.
+
+`layers[].style` carries the **marker geometry** the app used to hardcode: `size` was `DOT_SIZE`,
+`width`/`height` were `PIN_WIDTH`/`PIN_HEIGHT` (the tintable base icon's natural proportions, so a
+client honouring them does not distort the tint), and `zIndex` was the label layer's `globalZIndex`.
+All four are read from the wire as of app `ced0352`. Every member stays optional, so a server
+sending none of them renders exactly as one that never had the field.
+
+Sizing, for a layer that wants to depart from the defaults: `width`/`height` size the **selected**
+marker whatever shape it takes — a selected disc uses `width` as its diameter — and `size` sizes the
+**unselected** disc. Sending neither is the ordinary case.
+
+> [!NOTE]
+> **There is no `style.shape` on this wire, and the absence is the setting.** A place marker draws as
+> a small dot and is promoted to a pin only when it is selected; the client owns that default and
+> reads an absent `shape` as `dotThenPin`. Sending the value explicitly would freeze a default that
+> is meant to move with the app that draws it, so every festival layer is left saying nothing and
+> `MapLayerStyle` has no such member. Send `shape` only to opt ONE layer OUT — `pin` for a handful of
+> landmark markers, say — and never spell a shape into `markerStyle`, a closed allowlist whose
+> unrecognised members fall through to the building-number rendering and would draw every booth as a
+> green numbered circle on an older build. The axis is specified in skkuverse-app
+> `docs/reference/map-config-api-spec.md`; `src/map/config/map-config.service.spec.ts` pins that this
+> server sends nothing.
+
+Colour is deliberately **not** moved for the building layers. Their fill and the placeDot tint fall
+back to `SdsColors.brand`, a design token that resolves per theme; a hex from here cannot. Geometry
+is theme-independent and belongs on the wire, colour that comes from a token does not. The festival
+layers do send `color`, because a category colour is content rather than theme.
+
+`chips` is the chip contract — see §8. `cameraDefaults` holds the camera settings for the moves the
+app makes on its own rather than at a chip's request; `markerFocus` was `zoom: 17.5` and
+`duration: 500` repeated at three call sites in the client, which meant a chip's camera and a
+marker-tap camera were configured in two places that could disagree about how close "close" is.
+`campusFocus` carries only a duration, because a campus's zoom, tilt and bearing already sit on its
+`CampusEntry`.
+
+### 5.2 `GET /map/overlays/campus`
+
+`Cache-Control: public, max-age=86400` — or **`no-store`** on the degraded branch.
+
+Everything permanent on the campus map, in one response: every building in **both** building layers,
+plus the hand-authored `campus_shapes` collection — footprints, boundaries, walking paths. No
+parameters.
+
+The two reads run concurrently and the shapes read is caught, so campus geometry can fail without
+taking the buildings with it. That keeps `degraded` meaning exactly one thing — *the buildings fell
+back* — which is what the caching rule below is written against.
+
+A day is right for the normal path because the buildings collection changes when the university
+renames or renumbers something, which is not a thing that happens during a user's session.
+
+**The degraded fallback must not be cached, and the reason is a TTL mismatch that is easy to miss.**
+When the buildings collection comes back empty the producer serves a small hardcoded set
+(`FALLBACK_MARKERS`) so a cold or broken database still shows something recognisable rather than a
+blank campus, and it flags the response `degraded`. Meanwhile `listAllBuildings` caches whatever the
+query returned — `[]` included — for five minutes, while this route's normal TTL is a day. A brief
+empty read during a re-seed or a migration would therefore pin the fallback map into every client and
+edge cache for 24 hours, on a stable URL with no version stamp and no revalidation to bust it. The
+event sibling self-heals from the same failure inside its 60-second TTL; this route needs the
+explicit guard to match.
+
+`degraded` is a **server-side signal and never reaches the wire** — the response body is `{ markers }`
+either way.
+
+Three filters apply independently, so a building lands on two layers, one, or none:
+
+| Condition | Effect |
+| --- | --- |
+| coordinates not finite | dropped entirely — the buildings writer has parsed SKKU's coordinates with `parseFloat` and written `NaN` unguarded, and `NaN` serialises to `null` on a field this schema declares `number` |
+| no `displayNo` | absent from `building_numbers`, still named on `building_labels` |
+| no `name.ko` | absent from `building_labels` — a nameless marker is invisible but still occupies a tap target and a collision slot |
+
+Response:
+
+```json
+{
+  "meta": {},
+  "data": {
+    "markers": [
+      {
+        "id": "2",
+        "layerId": "building_numbers",
+        "campus": "hssc",
+        "lat": 37.587361,
+        "lng": 126.994479,
+        "text": { "ko": "1", "en": "1" },
+        "startAt": null,
+        "endAt": null,
+        "tap": { "kind": "skku_building", "placeId": "2" }
+      },
+      {
+        "id": "2",
+        "layerId": "building_labels",
+        "campus": "hssc",
+        "lat": 37.587361,
+        "lng": 126.994479,
+        "text": { "ko": "수선관", "en": "Suseon Hall" },
+        "startAt": null,
+        "endAt": null,
+        "tap": { "kind": "skku_building", "placeId": "2" }
+      }
+    ]
+  }
+}
+```
+
+The repeated `id` across the two entries is the documented case from §2, not a collision. Note also
+that the fallback path emits `tap: null` on purpose: those markers exist precisely because the
+buildings collection is empty, so there is no document for `/building/:id` to return and a tap could
+only open a sheet that fails.
+
+### 5.3 `GET /map/overlays/event`
+
+`Cache-Control: public, max-age=60`.
+
+> [!NOTE]
+> **Origin cache.** Each api replica also caches this body, the details body (§5.4) and the
+> activation lookup `/map/config` shares, for `EVENT_CACHE_TTL_MS` (`src/map/map.constants.ts`).
+> Concurrent requests share one load, so the database sees at most one scan per replica per TTL
+> however many clients open the map. An expired body is served while its reload runs, and a failed
+> reload keeps serving the last good body, with a warning, for up to `EVENT_STALE_WINDOW_MS` — so a
+> database blip never holds a request, and nobody can change the places during one either, so that
+> body is still the freshest one there is.
+
+Every place of the currently active layer set. An empty list rather than an error when no festival is live — the app asks for this endpoint whenever
+the layer is configured, and "no festival today" is an ordinary answer. When nothing is active it does
+not touch Mongo at all. The same answer, with one warning per process, when an activation names a
+layer set this build has no usable config for (§8.6): a category table the server cannot trust is not
+one it draws from.
+
+Named for the **mechanism**, not the festival. Whichever layer set is live is served here, and the
+app never sees the URL except as `layers[].endpoint` in `/map/config` — so next year's festival
+changes no route and no client.
+
+Each marker's `layerId` is the place's `category` resolved through the layer set's `itemDefaults` by
+`presentationFor` — **one table, one resolver** — which is what keeps a 주점 pin on the layer the
+주점 chip shows.
+
+A minute, because this URL is **stable rather than version-stamped** and so can never be immutable. A
+minute is long enough for the edge to absorb a festival-day burst, and short enough that an ops
+correction — a booth moved, a set cancelled — is live before anyone walks there. The **window
+arithmetic does not need a short TTL**: opening and closing times ride in the payload, so a booth
+changes state on the device's clock with no refetch.
+
+**One document, one marker, one cursor.** There is no join and no lifecycle filter. This used to read
+`places` and `sessions` and emit a marker per session — one occupancy interval each — so a booth open
+on both festival days produced two markers with identical everything. The days are `hours` on a
+single document now, so the join, the orphan counter and the whole notion of a plot separate from its
+occupant are gone. Two booths genuinely sharing a coordinate are two documents with two taps, and the
+client picks a pin between them (§3.4).
+
+Response:
+
+```json
+{
+  "meta": {},
+  "data": {
+    "markers": [
+      {
+        "id": "eskara-2026-d1-cse-booth",
+        "layerId": "eskara26_booth",
+        "campus": "nsc",
+        "lat": 37.294452,
+        "lng": 126.971747,
+        "text": { "ko": "우끼끼친", "en": "Ukkikki", "zh": "乌key" },
+        "startAt": "2026-09-16T07:00:00.000Z",
+        "endAt": "2026-09-16T11:00:00.000Z",
+        "tap": { "kind": "event", "placeId": "nsc-plaza-a3" }
+      },
+      {
+        "id": "eskara-2026-toilet-a",
+        "layerId": "eskara26_facility",
+        "campus": "nsc",
+        "lat": 37.294118,
+        "lng": 126.972004,
+        "text": { "ko": "화장실", "en": "Toilets" },
+        "startAt": null,
+        "endAt": null,
+        "tap": { "kind": "event", "placeId": "nsc-plaza-b1" }
+      }
+    ]
+  }
+}
+```
+
+The second marker is the always-on case §3 exists to protect: both bounds null, drawn whenever the
+layer is on, with no `status` beside it to make that ambiguous.
+
+> [!NOTE]
+> Both marker responses carry no `meta.lang`. The marker **data** is language-independent (`text`
+> carries every language we hold), and Cloudflare keys its edge copy without `Accept-Language`, so a
+> `lang` in the envelope would be whichever requester filled the cache. `ResponseInterceptor` leaves it
+> out of every response with a `public` or `s-maxage` `Cache-Control`; the `no-store` degraded campus
+> response keeps it. `Vary: Accept-Language` from `LangMiddleware` is still sent, and Cloudflare ignores it.
+
+### 5.4 `GET /map/overlays/event/details`
+
+`Cache-Control: public, max-age=60`.
+
+The sheet body behind each event pin — an operator, a menu, photos, notices — keyed by the id the
+overlay's `tap.placeId` carries. Only places that carry a detail appear; a place without one is simply
+absent, and the app draws its sheet from the overlay alone.
+
+```json
+{
+  "meta": {},
+  "data": {
+    "details": {
+      "eskara-2026-truck-oyabong": {
+        "placeId": "eskara-2026-truck-oyabong",
+        "kind": "foodTruck",
+        "org": null,
+        "isUnion": false,
+        "locationLabel": null,
+        "actions": [],
+        "blocks": [
+          {
+            "type": "table", "id": "menu", "title": null,
+            "rows": [{ "label": { "ko": "소고기 야끼소바", "en": "소고기 야끼소바" }, "value": { "ko": "11,000원", "en": "11,000원" } }]
+          },
+          {
+            "type": "image", "id": "photo-1", "title": null,
+            "url": "https://media.skkuverse.com/eskara-2026/food-trucks/truck-oyabong/01-9961d281.jpg",
+            "caption": { "ko": "소고기 야끼소바", "en": "소고기 야끼소바" }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+The shape is the app's `PlaceDetail` (skkuverse-app `packages/shared/src/types/placeDetail.ts`),
+mirrored one-to-one in `src/map/event-details/map-event-details.wire.ts`. Text follows §2.1: every language, `en`
+filled from `ko`, `zh` only when authored.
+
+**A separate route, not a field on the overlay.** The overlay is what the map, the list and the
+collision ladder all read; the detail is read by the sheet alone. Folding it in would ship every menu
+and photo URL to a client that only wanted to draw pins, and widen a type every renderer touches. The
+app fetches this once beside the overlays and looks a place up when its sheet rises. Old builds never
+call it, so adding it changed nothing for them.
+
+**Same gate, same TTL as §5.3.** No live festival is `{ "details": {} }` without a Mongo read, and a
+menu correction is live on the same minute as a pin correction. It sits under `map/overlays` on
+purpose: the rate limit in `MapModule` covers the prefix, so the route needed no new entry there.
+
+Two enums, deliberately different:
+
+| Field | Openness | Consequence |
+| --- | --- | --- |
+| block `type` (`text`, `list`, `table`, `image`, `notice`) | **open** — the app drops a block type it does not know, alone | a new type can ship here before every installed app draws it |
+| `kind` (`pub`, `booth`, `promo`, `foodTruck`, `goods`, `facility`, `stage`, `etc`) | **closed** — the app's union has no fallback | a new kind ships in the app first |
+
+**Every image is on `https://media.skkuverse.com`** (`MEDIA_ORIGIN`, `src/infra/origins.ts`) — the R2
+media bucket. The importer refuses any other host, and this producer re-checks with the server's own
+`isMediaUrl` and drops an off-host image block alone. A `link` action is an absolute https URL; an
+`instagram` action's `profileUrl` is exactly `instagram.com/<username>` and its `postUrl` a
+`/p/`, `/reel/` or `/reels/` link or `null` — the forms the app actually opens.
+
+**Fail soft, as narrowly as possible, and logged.** The importer already refuses a malformed detail,
+so these checks exist for a hand edit in Mongo. A broken block or action is dropped on its own; a
+detail is dropped whole only when its `kind` or its lists are unreadable; a place the overlay route
+would not serve, or one on an inert category, gets no detail. One warning line per request names
+every drop. The one outcome ruled out is a 500: `toWire` dereferences `.ko`, so an unchecked block
+missing its body would take every sheet of the festival down with it.
+
+### 5.5 `GET /map/overlays/transit`
+
+`Cache-Control: public, max-age=3600` — or **`public, max-age=60`** on the degraded branch, and `503` when no line can be read.
+
+The Jongno village bus lines 종로02, 07 and 08, one `kind: "path"` overlay per route, in the order of
+`JONGRO_ROUTES` (`src/bus/bus.constants.ts`), then the HSSC shuttle's loop. No parameters. The geometry is the bus module's stored line
+(`jongro_route_paths`, synced from TOPIS `busRouteInfo/getRoutePath` once a day), served as stored:
+`[lng, lat]` in TOPIS order, a loop left unclosed, 252 / 241 / 488 points on 2026-10-18. `tap` is
+`null`, so a line is a backdrop; `text` names the route in every language; the place-only fields are
+stated empty.
+
+Each overlay's `layerId` is `<route id>_route`. The four layers are in `BASE_LAYERS`, opt-in, in
+this order:
+
+| Layer | Label (ko / en / zh) |
+| --- | --- |
+| `jongro02_route` | 종로02 노선 / Jongno 02 Route / 钟路02路线 |
+| `jongro08_route` | 종로08 노선 / Jongno 08 Route / 钟路08路线 |
+| `jongro07_route` | 종로07 노선 / Jongno 07 Route / 钟路07路线 |
+| `hssc_route` | 인사캠 셔틀버스 노선 / HSSC Shuttle Bus Route / 人文校区班车路线 |
+
+Every one has `defaultVisibleWhen: { kind: "never" }`, `userConfigurable: true`, `chipGroupId: null` and `tabs: ["transit"]` (§8.9);
+the Jongno ones share the same style, `{ color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20",
+minZoom: 12 }`: the opt-in row of §4, so an installed app keeps a tile in its filter sheet and fetches
+this route only once a user turns a line on. The app's `MapRouteOverlay` reads `color`, `width`,
+`outlineWidth`, `outlineColor`, `minZoom` and `maxZoom`, and no `zIndex`; NAVER draws a path beneath
+every marker, so the lines never cover a building label.
+
+**The HSSC loop.** The `hssc` overlay is the shuttle's road as its buses drive it, measured from their
+GPS on 2026-10-20, 22 and 23 and stored as the `hssc-route-line` dataset ([ADR 0018, D9](../decisions/0018-hssc-arrival-estimates.md)):
+235 points over 3,692 m, closed (its last point repeats its first), starting at 농구장, served as stored.
+It is named as `/bus/config` names the line (인사캠 셔틀버스 / HSSC Shuttle Bus / 人文校区班车), and drawn in
+the HSSC card's SKKU green, `{ color: "003626", width: 5, outlineWidth: 1.5, outlineColor: "FFFFFF",
+minZoom: 12 }`: a white edge, since the Jongno lines' dark green edge would vanish against a near-black
+line. Its layer is last, so it lies above 08 and 07 where they share a road. A push of the dataset reaches
+the origin within a minute and a client within the hour this route is cached.
+
+**One green.** Every Jongno route is drawn in the village-bus green `4CAF50`, the map's own constant: a push of
+a route's card colour (`themeColor` in `jongro-route-attributes`) never moves it, and the route test
+pins `4CAF50` for every Jongno route layer. A colour per route was tried and rejected by the owner. The dark-green edge (`1B5E20`) keeps the line
+legible over the green of parks and the campus, where a white edge or none washes out. Telling
+overlapping routes apart is the job of tone, edge and direction arrows, as NAVER Map does for a route's
+two directions; a later app change draws the selected route vivid, with direction chevrons and a `zIndex`
+above the others, and the rest pale.
+
+#### Draw order
+
+종로07 and 08 share about 60% of 07's line (02 overlaps neither), and 07 must lie on top. The server
+cannot send a draw order the app reads (`MapRouteOverlay` passes no `zIndex`), so it relies on what
+the installed app (`origin/main`) does:
+
+- `CampusScreen` renders one `MapOverlayLayer` per layer in `/map/config` order, and each draws only
+  the overlays whose `layerId` is its own. The order of overlays in this response decides nothing,
+  since every route has its own layer.
+- `@mj-studio/react-native-naver-map` 2.9 adds an overlay to the native map when it mounts and ignores
+  the child index (iOS `insertReactSubview`, Android `addOverlay`). Both route layers read this one
+  cached response, so when both are on they mount in the same commit, in layer order.
+- NAVER draws the later of two overlays with equal `zIndex` on top. **Unverified** on a device.
+
+So `jongro08_route` is listed before `jongro07_route`, which also puts 08's tile before 07's in the
+filter sheet. A user who turns 07 on first and 08 later still gets 08 on top until the map remounts:
+the order a layer is turned on in is the app's, not the server's.
+
+**The degraded branch.** No line is committed with the code. When a configured route has no stored
+line (a fresh database before the poller's first daily sync, which runs at its start), the response
+leaves that route's overlay out, the bus module logs `bus.jongro.path_missing` at error (at most once a
+minute), and the response is sent with `public, max-age=60` instead of an hour, so the line appears within a minute of
+being written. When the read fails, the bus module serves the lines it read last for up to a day
+(`ROUTE_PATHS_STALE_WINDOW_MS`); a read that fails with nothing read before answers `503`
+`{ "error": { "code": "JONGRO_ROUTE_PATHS_UNAVAILABLE", … } }` rather than an empty overlay a shared
+cache would keep, and so does every request for the next 30 s (`ROUTE_PATHS_RETRY_MS`) before the
+store is read again. With no HSSC line ever read (the dataset missing, invalid or unreadable, logged at
+error as `bus.hssc_route_line.missing`, `.invalid` or `.read_failed`), the response serves the Jongno
+lines alone, exactly as they would be served with it, with `public, max-age=60`; once read, the line serves
+through failed reads for a day. `degraded` never reaches the body.
+
+The stations TOPIS answers with each line are stored but not drawn yet, and the HSSC overlay carries none either: the place-dot marker ignores a
+layer's `zIndex`, so a stop caption could win over a building name. A stop layer waits for that app
+change.
+
+```json
+{
+  "meta": {},
+  "data": {
+    "overlays": [
+      {
+        "kind": "path",
+        "id": "jongro07",
+        "layerId": "jongro07_route",
+        "campus": "hssc",
+        "text": { "ko": "종로07", "en": "Jongno 07", "zh": "钟路07" },
+        "subtitle": null,
+        "hours": [],
+        "fields": [],
+        "actions": [],
+        "order": 1,
+        "facets": {},
+        "orderByOption": {},
+        "tap": null,
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [[126.9921543446, 37.5881571127], [126.9921650734, 37.5881358585]]
+        }
+      }
+    ]
+  }
+}
+```
+
+## 6. Why layers share endpoints
+
+Both building layers point at `/map/overlays/campus`, the four route line layers at
+`/map/overlays/transit`, and every festival layer at `/map/overlays/event`.
+
+Since a layer no longer names a renderer, layers sharing an endpoint are free to draw different
+things: one layer can hold pins, a zone and a route line at once, and two layers over one source still
+cost one fetch. What a layer selects is its `layerId`; what draws an overlay is its own `kind`.
+
+The app keys its marker cache on the **endpoint string** (`['map', 'layer', 'markers', endpoint]`),
+so layers sharing one URL share a single fetch and a single cache entry, and each renders its own
+subset:
+
+```ts
+markers.filter((m) => m.layerId === layer.id)
+```
+
+That is two toggles for one fetch where 건물번호 and 건물이름 used to cost two requests for the same
+documents, and one small payload where six `?category=` endpoints would be six round trips. Turning a
+second layer on over the same source is then free at the network layer, which is what makes the
+filter grid feel instant on a festival network.
+
+The trade is that a layer cannot be fetched in isolation. That is acceptable precisely because the
+layers sharing an endpoint share a data source: filtering them apart server-side would send the same
+documents twice.
+
+## 7. The festival layer set
+
+A festival's layers are **authored in its layer set** — one entry of the `map-layer-sets` dataset,
+`layers[]`, pushed with `npm run data` — and present in `GET /map/config` only while that layer set's activation window is open.
+The window is the on/off lever (`npm run eventmap open|close`), so a festival starts and ends with no
+deploy and the layers simply stop existing afterwards rather than lingering as dead toggles.
+
+Each entry is `{ id, label: {ko, en?, zh?}, color, defaultVisibleWhen }` and nothing else: `color` is
+content (a category colour is a fact about the event), and everything about how a festival pin is
+*drawn* — `markerStyle: "placeDot"`, the pin geometry — is the map's business, applied to every
+festival alike by `eventLayerSpecs` in `src/map/map.constants.ts`. Every festival layer is
+`userConfigurable: true`; one that ships `{ "kind": "never" }` is the opt-in tier (편의시설), not a
+locked background layer. Its `chipGroupId` is the **layer set id**, so two festivals could never share
+a chip group.
+
+Which category lands on which layer is `itemDefaults.byCategory[<category>].layerId` in the same
+file, with `itemDefaults.fallback.layerId` for anything unmapped. That table is the **only** place
+the mapping exists; the materializer and this route both resolve through it
+([event-places.md](event-places.md)). A layer id that collides with a base layer, a
+`layerId` that names no layer, or a set where every layer is `{ "kind": "never" }` is a rejected
+config (§8.6).
+
+**How to author the schedules**, which the layer set cannot say about itself: windows on two layers of one
+group should be authored to hand over rather than overlap, because two crowded layers drawn at once
+is the problem `defaultVisibleWhen` exists to solve — half-open bounds make `[11:00, 18:00)` and
+`[18:00, 00:00)` exactly adjacent. Hand over around the whole clock, too: a gap between the last
+window and the first is a stretch when the map opens with neither layer drawn, which is what
+23:00–11:00 was until 2026-09-27 (the pair now meets at 18:00 and at 04:00). A layer window is an OPS choice, not a rollup of its places'
+`hours`: a booth whose own hours run past its layer's window is still a marker the user can turn on,
+and its pin is one chip away.
+
+The values as served for ESKARA 2026 are its entry in the `map-layer-sets` dataset — pull it with
+`npm run data -- pull map-layer-sets` rather than read a copy here.
+
+Next year's festival is therefore a new entry in `map-layer-sets`, pushed with `npm run data`, plus
+Mongo content. No route, no TypeScript, no client branch, no deploy: the ids inside the set are the
+festival's to choose, and `eskara26_*` is a choice, not a requirement.
+
+### 7.1 The fallback layer — the one that is not a bug
+
+`SessionDoc.category` is an **open string on purpose**: "전시" next year must be a Mongo edit, not a
+deploy. The layer table is a config file. Those two facts collide, and an unmapped category has no
+entry to belong to.
+
+It resolves to `itemDefaults.fallback.layerId` rather than vanishing, because **a booth missing from
+the festival map is not a failure anyone can see or report**. A booth in the wrong bucket is visible
+and fixable; a booth nobody drew is silent. The importer prints the distinct categories it is about
+to write for exactly this comparison.
+
+## 8. Chips
+
+A layer answers *what is drawn*. A chip answers *where should I be looking, and what should be on
+while I look there*. Chips ship inside `GET /map/config`, beside `layers`, and are entirely
+server-decided: the app renders a pill and dispatches on `action.kind` without interpreting it.
+
+They exist because the reorg in this document **orphaned the map's only server-driven chip row**. The
+event map's chips used to filter snapshot *items*; once booths became ordinary marker layers there
+were no snapshot items on the map screen left to filter, so `<EventMapChipRow />` was removed from
+`CampusScreen` as a control that would visibly do nothing. What remained in that spot was
+`CampusChipRow.tsx`, a hardcoded mock whose own header says the list "is what gets deleted" when an
+endpoint lands. This is that endpoint.
+
+> [!NOTE]
+> `MapChip` is the **wire**. The **authored** form of a festival chip is `EventChipDef` in the layer
+> set's config — `{ id, emoji, layerIds, label?, camera? }` — and `src/map/layer-set/map-layer-set.mapper.ts` projects it
+> into this shape, resolving the camera and adding the synthesised reset chip (§8.5). This is the only chip
+> vocabulary there is — the predicate chips the deleted snapshot used to ship went with the pins they
+> filtered.
+
+### 8.1 The schema
+
+```ts
+interface CameraMotion { zoom: number; tilt: number; bearing: number; durationMs: number }
+interface MapCamera extends CameraMotion { lat: number; lng: number }
+
+type MapChipAction =
+  | { kind: "webview"; url: string }
+  | { kind: "focus"; camera: MapCamera; layerIds: string[] }
+  | { kind: "link"; actionType: "miniapp" | "external" | "webview" | "route"; actionValue: string }
+  | { kind: "layers"; layerIds: string[]; camera: MapCamera | null };
+
+interface MapChip {
+  id: string;
+  label: string;                                  // pick(label, lang), resolved server-side
+  icon: { kind: "emoji"; emoji: string } | null;
+  action: MapChipAction;
+  isReset: boolean;                               // true on exactly the synthesised chip
+  list: MapChipList | null;                       // the list this chip opens — §8.8
+  tabs?: ("map" | "transit")[];                   // absent: the map tab only — §8.9
+  opensIn?: "map" | "transit";                    // absent: the tab it was tapped on — §8.9
+}
+```
+
+`isReset` says a tap means **stop narrowing** rather than "show these layers". It is stated on the
+wire because it stopped being derivable: a client used to recognise the reset chip by comparing what
+it names against the layers that are on by default, and with `defaultVisibleWhen` that comparison
+depends on the time of day — at 19:00 the reset chip no longer describes the default view.
+`action.layerIds` still declares the group the chip is scoped to, the way it does for every chip;
+`isReset` says what the tap means within it. It is `false` on every authored chip rather than
+omitted, for the same reason `icon` ships `null`: an absent field is a second thing to branch on.
+
+Discriminated on `kind`, matching `MarkerTap` in this same domain rather than the flat
+`actionType` + `actionValue: string` pair the home screen's SDUI uses. That pair cannot carry a
+camera, and encoding one as JSON inside a string would put a second parser on the wire.
+
+`webview` reuses the name **and the validator** of the SDUI action type it corresponds to
+(`src/shared/webview-url.util.ts`), so there is one rule for what counts as a usable web view URL rather
+than two. Authored values are root-relative and are resolved against `WEBVIEW_ORIGIN` before they
+ship, so a client never receives a relative string to hand to an opener. There is deliberately **no
+`title`**: the client already holds the chip's `label`, and a page a chip opened is titled by that
+chip. No chip uses this variant today (§8.5) — it is documented as part of the schema, and its rules
+are enforced whenever one returns.
+
+`link` carries exactly the link shape the home tiles, banners and transit items use
+(`linkActionType` in `src/shared/link-action.wire.ts`), so a chip can open what any other
+server-driven link opens: a mini app, an https page, a web view page or an app route. It changes no
+layer and moves no camera. It is checked by the same `isBrokenLinkAction` and served by the same
+`toServedActionValue` (`src/shared/link-action.util.ts`): a `webview` value is authored root-relative
+and ships absolute, every other value ships as written. App builds whose `CHIP_ACTION_KINDS`
+(`skkuverse-app/packages/shared/src/map/parser.ts`) lacks `link` drop such a chip, so on them it is
+invisible rather than broken. Only `BASE_CHIPS` authors `link` chips; a festival file's chips are
+`focus` chips.
+
+`layers` turns on every layer it names and touches no other. Unlike `focus` it asks no chip group, so
+it may name base layers such as the route lines, which carry `chipGroupId: null`. A `null` camera
+means the camera does not move. Builds whose chip parser lacks `layers` drop the chip
+(`chipActionSchema` in `skkuverse-app/apps/mobile/src/features/map/map-config.schema.ts`, and
+`CHIP_ACTION_KINDS` in `packages/shared/src/map/parser.ts` on app `main`). Only `BASE_CHIPS` may author one, and none does today.
+
+### 8.2 What a chip tap may change — two rules
+
+**First, which kind of tap it is.** A chip carrying `isReset: true` (§8.1) CLEARS its group's
+narrowing rather than applying one: every layer in the group falls back to
+`userToggle ?? defaultVisibleAt` (§4.3), and the camera still moves. The two rules below describe a
+**narrowing** tap. Reading rule 1 over the reset chip would set every layer it names to on — turning
+주점 on at noon, which is the crowding `defaultVisibleWhen` exists to remove. That is why `isReset` is
+on the wire at all: `layerIds` still says which group the chip may touch, and can no longer say what
+the resulting view should be (§8.5).
+
+1. **Only layers sharing the `chipGroupId` of the layers it names.** The chip's `layerIds` resolve to
+   one group; every layer in that group is set (named → on, unnamed sibling → off); every layer
+   outside it is untouched. An **empty** `layerIds` resolves no group, so the chip moves the camera
+   and changes nothing — that is the camera-only chip, and it is why the field is not nullable.
+2. **Never a `userConfigurable: false` layer** — §4.4 rule 3. A chip tap is a user-initiated change,
+   and that flag already answers who may make one. That quadrant has one occupant, `campus_geometry`,
+   so this is a live rule rather than a reserved one.
+
+Together these are what let a festival chip swap the six festival layers while 건물번호 and 건물이름
+stay visible **and** stay user-toggleable. Neither "exclusive over everything" nor "purely additive"
+does that: the first turns the baseline off, the second cannot give a clean single-purpose view.
+
+### 8.3 Why `chipGroupId` is declared, never inferred
+
+The tempting shortcut is to read the group off `endpoint` — layers sharing a data source already
+share a URL, so today the two agree exactly. It is the wrong key. `endpoint` is a **cache** key: the
+app keys its marker query on that string so two building layers cost one fetch (§6). Merging or
+splitting a route for network reasons would then silently redraw the chip boundaries, and the
+symptom — "tapping 무대 hid 건물번호" — would have no line of code to blame.
+
+Declaring it follows what the GIS tools settled on. Leaflet's grouped layer control takes an explicit
+`exclusiveGroups` option naming which groups behave like radio buttons; ArcGIS service metadata
+carries an `EXCLUSIVE=TRUE` flag on a group description. In both, group membership and exclusivity
+are properties of the layer, kept separate from where the layer's data comes from.
+
+| Layer | `chipGroupId` |
+| --- | --- |
+| `building_numbers`, `building_labels` | `null` — no chip may ever change them |
+| every festival layer | the layer set id, e.g. `"eskara-2026"` |
+
+`null` is a meaningful value here, not an omission.
+
+### 8.4 Why chips ride inside `/map/config`
+
+A chip's `layerIds` reference layer ids. Serving both in one document means the reference **cannot
+disagree with the layer list on the wire** — there is no window in which the app holds a fresh chip
+list and a stale layer list. The same reasoning drives the single activation read: layers and chips
+ask "is a festival live" once between them, so the window cannot close midway and leave chips
+pointing at layers that are no longer in the response.
+
+It also costs nothing. The app already fetches this document.
+
+### 8.5 The chips served
+
+The row always opens with the **base chips**, `BASE_CHIPS` in
+`src/map/layer-set/map-layer-set.constants.ts`: four `link` chips, 건물지도 (route `/map/hssc`),
+건물코드 (route `/search`), 분실물 (web view `/skku/lostandfound`) and 문의하기 (external, the Kakao
+channel chat), each with `isReset: false` and `list: null`. They are the campus sheet's former service
+buttons; the first four tiles of the home grid carry the same links for builds that drop a `link`
+chip. While a layer set is live, **the reset chip, then every chip authored in the layer set's
+config**, in file order, follow them. Outside an activation window `chips` is the base chips alone.
+
+**The reset chip is synthesised, not authored.** Its id is `<layerSetId>_all` (`eskara-2026_all`), its
+label is the festival's `name`, its icon the festival's `emoji`, it carries `isReset: true`, and its
+`layerIds` are exactly the layers that come on by **themselves** — `always` plus `scheduled`, not
+literally every layer. That distinction is load-bearing: a layer that ships `{ "kind": "never" }`
+(편의시설) must stay out of it, or the way back would reach something the user never opted into and
+leave no chip that returns to the ordinary festival view. A `scheduled` layer belongs in the set
+precisely because it comes on by itself once its window opens.
+
+`isReset` and `layerIds` are not redundant. `layerIds` is how **any** chip declares which group it
+may change, and emptying it here would leave the reset chip with no group at all — so a second
+festival's reset chip could not be told from this one's. What `layerIds` can no longer do is describe
+the resulting *view*, because a scheduled layer's default depends on the time of day and only the
+client knows what time it is.
+
+Deriving the list from the layer definitions is what makes drift impossible; a hand-written copy of
+the same ids is the parallel structure that quietly stops turning one category back on. The id form
+is a wire rule the app may key on (it logs `map_chip` taps by chip id), which is why it is written
+down here and in `resetChip()` rather than left to a template string.
+
+An authored chip is `{ id, emoji, layerIds, label?, camera? }`. It names one or more of the layer
+set's own layers and flies to its own `camera` when it carries one, the config's otherwise; the reset
+chip always takes the config's. A chip camera is **whole or absent** — validated by the same
+`asCamera` as the config's, so a chip that sets only `zoom` is refused rather than inheriting the
+other five fields. It exists because the layers a chip shows are not all in one place: ESKARA 2026's
+통제구역 chip steps back from the shared zoom and recentres on 운용재, because the zones are long
+north-south bands whose southern tip otherwise sits under the bottom sheet. (The values themselves
+live in the config, not here, so this sentence cannot drift from them.) A single-layer chip authors
+no `label` and reads as its layer does, and the validator refuses one that does. The chip row and
+the filter sheet name the same layer, and two copies of that name drift: until 2026-09-25 the
+푸드트럭 chip sat over a layer the filter sheet called 먹거리, and the `Bar` pill over `Bars`. To
+rename a chip, rename its layer. A chip spanning several layers has no such default and must say
+what it means.
+
+Festival chips are gated by the **same activation window** as the festival layers, so a festival
+starts and ends with no deploy and its chips stop existing rather than lingering as dead buttons.
+
+### 8.6 Validation is fail-loud where a PR fixes it, fail-soft where the base map can keep serving
+
+One validator, `validateChipSpecs(specs, catalogue)`, checks a chip row against the catalogue it will
+be served beside and **returns** every problem it finds, accumulated. Two callers, two consequences:
+
+| Row | When | On failure |
+| --- | --- | --- |
+| `BASE_CHIPS` against `BASE_LAYERS` | when Nest builds `MapLayerSetService` | throws `FATAL [map chips]` — repo TypeScript, a PR fixes it, the boot must not proceed |
+| `BASE_CHIPS`' `link` actions against the mini-app registry, by `assertValidLinkChips` | when Nest builds `MapLayerSetService` | throws `FATAL [map chips]`, as above; `validateChipSpecs` leaves a `link` chip to this check, because only Nest provides the registry |
+| the festival row (reset chip + authored chips) against **the full served catalogue** (base + festival layers) | at push, `layerSetsDataset` through `npm run data`; again at read, `checkedLayerSet` in `storedLayerSets` (`src/map/layer-set/map-layer-set.schema.ts`) | the push is **refused**, naming the set and the path; a stored set that fails at read (a schema tightened by a deploy) is **left out**: logged once per revision with its issues, and while it is live `/map/config` serves the base layers only — the festival is off the campus map until a fixed set is pushed, and every other set keeps serving |
+
+The last row is a deliberate posture with a cost worth naming: a bad set takes the whole festival off
+the map rather than degrading part of it. That is preferred to drawing from a category
+table the server could not validate, and 건물번호 keeps serving throughout.
+
+The rules:
+
+| Rule | Where |
+| --- | --- |
+| a festival layer id does not reuse a base layer id | `crossReferenceIssue` |
+| every `itemDefaults.*.layerId` and every chip `layerIds[]` entry names a layer of the set | `crossReferenceIssue` (`layerId`), `validateChipSpecs` (chips) |
+| every named layer has a non-null `chipGroupId` | `validateChipSpecs` |
+| a chip's `layerIds` do not straddle two groups | `validateChipSpecs` |
+| chip ids are unique — including against the synthesised reset chip's | `validateChipSpecs`, the only place that collision is visible at all |
+| a `webview` URL passes `toWebviewUrl` | `validateChipSpecs` |
+| a `layers` chip names at least one layer, and each is in the catalogue; no chip group is asked | `validateChipSpecs` |
+| a `link` action passes `isBrokenLinkAction` (a known mini-app target, an https URL, a web view URL, a root-relative route) | `assertValidLinkChips` |
+| at least one layer is not `defaultVisibleWhen.kind: "never"`, so the reset chip is scoped to something | `crossReferenceIssue` |
+| every `DailyWindow` bound is `"HH:MM"` on a 24-hour clock — `"24:00"` and `"7:00"` refused | `layerSetFile` |
+| a `DailyWindow`'s bounds differ; `start > end` is legal and wraps past midnight | `layerSetFile` |
+| `kind: "scheduled"` carries at least one window, and no other `kind` carries a `windows` key | `layerSetFile` |
+| a set's `timezone` is `Asia/Seoul` — the one zone the wall-clock contract can honour (§4.2) | `layerSetFile` |
+| a multi-layer chip carries a label; `layerIds` is non-empty; `color` is bare six-digit hex | `layerSetFile` |
+
+There is no translation-miss case any more. Labels are inline `{ko, en?, zh?}` on the layer and the
+chip, resolved with the one `pick()` in `src/infra/i18n.ts`, so a label with no `ko` is a rejected
+config and a base layer with no label does not compile.
+
+### 8.7 Reserved: the "nearby" chip
+
+The third chip kind — markers within N metres of a position — is written down and **not** built, so
+that adding it stays additive:
+
+```ts
+| { kind: "nearby"; origin: "device" | "camera"; radiusM: number;
+    endpoint: string; layerIds: string[] }
+```
+
+`origin` is on the wire rather than fixed in the client because one chip can reasonably mean "near
+me" and another "near what I am looking at", and only the server knows which. See §9.6 for the client
+constraint it will run into.
+
+### 8.8 Lists — facets and sort
+
+The app lists places while a chip is narrowed, so a list's filters and sort ride on its **chip**
+as `list`. `null` means an unfiltered list in `order`: the reset chip, and any chip a festival
+authored no list for.
+
+```ts
+interface MapChipList {
+  facets: {
+    id: string;
+    label: string;                                 // pick(label, lang)
+    select: "required" | "optional";
+    options: {
+      id: string;
+      label: string;
+      window: { startAt: string; endAt: string } | null;   // hours facets only
+    }[];
+  }[];
+  sort:
+    | { key: "order"; scopeFacetId: string | null }
+    | { key: "title"; scopeFacetId: null };
+}
+```
+
+**A facet is defined once per festival and chosen per list.** "1일차 / 2일차" means the same thing
+for booths, pubs and trucks, so the layer set config holds one `day` facet and each chip's `list`
+names the facets it shows and how it sorts. ESKARA 2026:
+
+| Chip | Facets | Sort |
+| --- | --- | --- |
+| 부스 | `day`, `org` (총학생회 / 학생단체) | `order` scoped to `day` — the council orders booths per day |
+| 주점 | `day` | `order` |
+| 푸드트럭 | `day` | `title` — 가나다 |
+
+**The server decides membership; the client matches ids.** Each overlay carries `facets` (§2), so
+the client never does date arithmetic:
+
+- An `hours` facet's option holds a place when one of its windows **starts** inside the option's
+  window. Starting, not overlapping, so a pub closing past the cut-over stays on the night it
+  opened; a pub open both nights has two windows and is in both days. `hours: []` is always open,
+  so it is in every option. The option windows are absolute instants in the config, so the server
+  compares instants with no timezone arithmetic (§3).
+- A `tag` facet's option holds a place when the place authored it under `facets.<id>`
+  ([event-places.md §5](event-places.md)). A value the config does not offer is dropped from the
+  wire and logged.
+
+**The client's rules:**
+
+- `required`: a single choice with no 전체. It opens on the option whose `window` contains now,
+  otherwise the nearest one still to come, otherwise the last. ESKARA 2026's 일자 is required
+  because a plot holds a different pub each night, so two days at once would stack two places on
+  one pin.
+- `optional`: a checklist headed by 전체, which it opens on. ESKARA 2026's 운영.
+- **Filter.** Keep an overlay when, for every facet not holding all its options,
+  `overlay.facets[facet.id]` shares an option id with what is checked.
+- **Sort,** then by `id`:
+  - `order`: with a scope, sort first by the index of the first CHECKED option of `scopeFacetId` the
+    overlay is in, then by `overlay.orderByOption[that option] ?? overlay.order`. With one day
+    checked, that is the day's running order. With both checked, it is day 1's order followed by
+    the day-2-only places in day 2's order. With `scopeFacetId: null` it is just `order`.
+  - `title`: `overlay.text.ko` in code-point order. Hangul syllables are encoded in 가나다 order, so
+    this needs no `Intl`.
+
+Option ids are unique across the whole config, not just within a facet, so an `orderByOption` key
+names one option without a facet prefix. A sort scope must be one of the same list's facets. Both
+rules are enforced at push and at read (§8.6).
+
+Everything here is additive. An app that predates it drops `list`, `facets` and `orderByOption` in
+its parsers and keeps listing places unfiltered in `order`.
+
+### 8.9 Tabs
+
+The app's map tab and transit tab share one map, and each tab draws it through its own lens
+(app ADR 0022). A layer's or a chip's `tabs` names the tabs whose lens shows it. A layer is still
+subject to `defaultVisibleWhen` on a tab that lists it. An absent `tabs` means `["map"]`. Builds
+released before app ADR 0022 ignore the field and show every layer and chip in the map tab. A build
+that parses it applies it only under the shared-map shell; a build that still chose its shell by
+`features.sharedMapShell` on `/app/config`, which the server no longer serves, shows them as those
+builds do. A chip's `opensIn` names the
+tab a tap switches to; absent, the tap stays on the tab it was made on.
+
+A chip runs where its result shows. The transit tab's chips are a billboard for the map tab: a chip
+whose result is on the map lists both tabs and names `opensIn: "map"`, so a tap on the transit tab
+switches to the map tab and turns the chip on there. A `link` chip opens a page, not a result on the
+map, so it names no `opensIn` and runs on the tab it was tapped on. For now the transit tab shows the
+map tab's chips: `building_map`, `lost_found` and `inquiry` list both tabs.
+
+An empty `tabs` means the chip appears in no tab of the shared-map shell. Builds and shells that
+ignore `tabs` keep it in the map tab, so an empty `tabs` retires a chip from the shared-map shell
+alone. The `building_code` chip has one because the shell's search field does its job.
+
+| Layer or chip | `tabs` |
+| --- | --- |
+| `building_numbers`, `building_labels`, `campus_geometry` | `["map", "transit"]` |
+| the route line layers (`jongro02_route`, `jongro08_route`, `jongro07_route`, `hssc_route`) | `["transit"]` |
+| the `building_map`, `lost_found` and `inquiry` chips | `["map", "transit"]` |
+| every festival layer and every festival chip | absent: the map tab only |
+| the `building_code` chip | `[]`: no tab of the shared-map shell, the map tab elsewhere |
+
+A route line layer keeps `chipGroupId: null` on the transit tab. Installed builds read a grouped
+layer as festival content and hide its toggle, so grouping the route lines would take the Jongno
+route toggles away from them. A chip that turns a route line on is therefore a `layers` chip, which
+asks no group, never a `focus` chip.
+
+No chip turns the route lines on. The app's transit tab draws a picked bus's line by turning its
+`<groupId>_route` layer on from this list, so the route line layers stay on `/map/config` without
+a chip.
+
+## 9. Known gaps
+
+Stated plainly, because each one is a real constraint on the next deploy rather than a nicety.
+
+### 9.0 The overlay collections replace the marker routes wholesale
+
+`/map/markers/campus` and `/map/markers/event` are **gone**, not deprecated, and so are the two legacy
+`/map/overlays` handlers — a hardcoded building table behind `?category=` that the v2 migration
+orphaned, and a jongro polyline lookup that no client rendered. Deleting the
+second is what freed this prefix: its `@Get(":overlayId")` would have swallowed `/map/overlays/campus`
+and answered `404 Overlay 'campus' not found`.
+
+**This is not compatible with the shipped app, and no deploy order makes it so.** The marker routes
+answer 404, `lat`/`lng` left the wire for `geometry`, and `layers[].type` is gone. Chosen knowingly:
+splitting overlays by geometry was the thing to remove, and the two halves land inside one release.
+
+The client-side runbook is
+[how-to/migrate-app-to-map-overlays.md](../how-to/migrate-app-to-map-overlays.md).
+In short: parse `data.overlays` and dispatch on
+`kind`; read `geometry.coordinates` as `[lng, lat]` and rename to `{ latitude, longitude }`; reverse
+every polygon ring for the SDK's opposite winding (§2.4); drop `layers[].type` from `MapLayerDef` and
+choose the renderer per overlay instead; and give the `kind` switch a `default:` that returns null,
+per §2.3 rule 4.
+
+**Status, 2026-09-20.** The app half is written. `f8ad32b` on skkuverse-app `dev` carries the overlay
+parser, the polygon and path renderers, and the layer-style members §9.7 used to list as unread;
+nothing in that repository's source names `/map/markers` any more. It is **not** on that repository's
+`main`, which settles less than it looks like it does — that repo has published OTAs by hand before,
+so `main` is not a record of what users run. Whether the half has reached anyone is answered by
+probing a build, never by reading a branch or this paragraph.
+
+The sections below predate this change. §9.1 in particular describes a compatibility matrix against a
+build that could still read `/map/markers/*`, and is kept as history rather than as current guidance.
+
+### 9.1 Deploy order — the app half is prerequisite, not follow-up
+
+This server change is **not compatible with the shipped app**, and no deploy order makes it so.
+Chosen knowingly: the wire that named a festival had to go, and the two halves land inside one
+release. What an app built before its half sees against this server:
+
+| Surface | Shipped app + this server |
+| --- | --- |
+| Festival pins | drawn — the app reads `layers[].endpoint` from `/map/config`, so `/map/overlays/event` is found. It reads absent `startAt`/`endAt` as `null`, which its own rule calls "always visible", so every pin draws unconditionally — which is the new intent anyway |
+| Chips | work — server-driven, dispatched on `action.kind` |
+| Tapping a pin | **inert** — `tap.kind: "event"` is not in the app's `TAP_KINDS` allowlist, and an unknown kind leaves the marker drawn but untappable |
+| List / peek sheet | **gone** — `/eventmap/manifest` 404s, the app catches it and reports "inactive" |
+| `skkuverse://map?place=event:…` | dropped — `PLACE_KINDS` does not carry `event` |
+
+Every intermediate state degrades correctly rather than blanking the campus map, which is what let
+the server land in five commits without the app blocking any of them. **That property does not
+survive `defaultVisibleWhen` — see §9.8, which is a deploy gate rather than a known gap.** The app-side change is:
+`TAP_KINDS` / `PLACE_KINDS` / the `CampusScreen` switch learn `event`; the whole snapshot client is
+deleted; the list, card and peek sheet render from markers; and one pure function resolves a
+coordinate collision (§3.4). Until it ships, the festival map is a picture with no taps.
+
+### 9.2 The `<kind>:<placeId>` deep link
+
+The link is literally the two fields of `tap`, so it can never disagree with the marker it came from:
+
+```text
+skkuverse://map?place=event:nsc-truck-05
+skkuverse://map?place=skku_building:2
+```
+
+The app's `PLACE_ID_RE` (`apps/mobile/app/+native-intent.tsx` in skkuverse-app) accepts both this and
+the bare `?place=<placeId>` form already; what it lacks is `event` in its `PLACE_KINDS` allowlist,
+which is part of the app half above. An earlier revision of this section said the colon was rejected
+— it is not, and has not been for some time.
+
+**Umbrella ADR 0004 invariant 1 still specifies the bare form and needs amending** to match. The same
+amendment retires invariant 2's "unrecognised predicate node evaluates `false`" — there is no
+predicate on the wire — in favour of the marker-level rule: a marker whose `layerId` the app cannot
+resolve is dropped and counted.
+
+### 9.3 `userConfigurable` is consumed — closed
+
+Recorded here as a gap, and it is not one any more. As of app `a519ca0` the flag is declared on
+`MapLayerDef` (`packages/shared/src/types/map.ts`), parsed with rule 1's absent-means-`true` default
+(`packages/shared/src/map/parser.ts`), and read in two places: `isLayerVisible`
+(`packages/shared/src/map/chips.ts`) makes `false` the top tier of §4.3's resolution chain, and the
+filter sheet drops the tile for it. The app's own tests pin both directions of rule 1.
+
+So §4 describes shipped behaviour rather than a promise about the wire. What made the gap safe while
+it lasted is still the reason rule 1 is spelled the way it is: absent meant `true`, so a client that
+had never heard of the flag behaved exactly as if every layer were configurable.
+
+### 9.4 Next year's festival is data
+
+Nothing that is not data names the festival any more: the route is `/map/overlays/event`, the tap
+kind is `event`, the chip group is the layer set id, and the layers, chips, labels, colours, camera,
+name and emoji are all in the festival's entry of the `map-layer-sets` dataset. `eskara27` is a new
+entry pushed with `npm run data`, and Mongo content, with no deploy. That is ADR 0004 invariant 1
+— "next year's event arrives as data" — honoured, after an earlier revision of this section chose to
+violate it for unambiguity.
+
+What stays festival-named is chosen, not required: the **layer and chip ids inside the set**
+(`eskara26_bar`, `eskara26_view_bar`). A generic `event_bar` would let a user's 주점 toggle survive
+into next year's festival; a festival-named one does not, and does not need to — it is a different
+festival — while a log line, a deep link or a bug report can still say which one. The base-map layer
+store in the app is ephemeral (`packages/shared/src/store/map.ts`, no `persist`), so neither choice
+accumulates dead keys.
+
+### 9.5 A chip camera cannot be honoured in one call
+
+The client's map SDK splits the camera across two mechanisms.
+`NaverMapViewRef.animateCameraTo` takes `{latitude, longitude, zoom, duration, easing, pivot}` and
+**not** `tilt` or `bearing`; the declarative `camera` prop carries `tilt` and `bearing` and has **no
+duration**. So a chip whose `tilt` and `bearing` are both `0` goes through `animateCameraTo` and gets
+its `durationMs`, and any other chip goes through the prop and animates at the SDK's own pace.
+
+Every chip served today is `tilt: 0, bearing: 0`, so nothing is currently lost. The server sends the
+whole `CameraMotion` regardless: this is a client mechanism limit, and trimming the payload to match
+it would bake the limitation into the wire.
+
+### 9.6 A nearby chip will thrash the client's marker cache
+
+`useLayerMarkers` keys its query on the **endpoint string** (`['map','layer','markers',endpoint]`) —
+that is precisely why this reorg stripped `?overlay=` (§6). A nearby URL carrying
+`?lat=&lng=&radiusM=` would mint a fresh cache entry per camera position.
+
+So §8.7's chip kind needs its own client hook with a quantised key, not `useLayerMarkers`. Recorded
+now because the constraint belongs to the design, not to the day it is discovered.
+
+### 9.7 The polygon style knobs, and why this section stopped inventorying them
+
+A six-row table stood here first, headed "as of this deploy the client reads **none** of it". It was
+closed, deleted, and replaced with a paragraph naming four members that remained unread — and that
+paragraph went stale the same way, inside three weeks. It said `MapLayerStyle` in
+`packages/shared/src/types/map.ts` declared none of `outlineWidth`, `fillOpacity`, `minZoom` and
+`maxZoom`, so the server's values were parsed away; and that the polyline overlay still derived its
+border as `style?.outlineColor ? 1 : 0`, the workaround `outlineWidth` was added to replace. As of
+app `f8ad32b` all four are declared, all four are read by `parseLayerStyle`, and the polyline reads
+`outlineWidth` directly — the workaround survives only as a comment naming what it replaced.
+
+The first version warned that "a per-field inventory of another repository's HEAD ages into a
+confident falsehood". It was right, and then it did it again in the correction. So the warning is
+restated as a rule: **this document does not inventory what another repository reads.** That is a
+fact about a build, it moves without this file being opened, and a stale inventory here is worse than
+no inventory — it is read as current.
+
+What stays is the direction of failure, which is this repository's to guarantee. Every style member
+is optional, and the client's parsers ignore keys they do not know. A layer sending a knob an older
+build cannot read draws with that build's own defaults rather than erroring; a layer sending none
+renders exactly as one that never had the field. That symmetry is what makes a mixed fleet safe, and
+it is the only claim in this section that needs no checking against another repository.
+
+One inventory does belong here, because the subject is local: `maxZoom` is declared in
+`MapLayerStyle` (`src/map/map.constants.ts`) and set by no layer. `campus_geometry` sends
+`fillOpacity`, `outlineWidth` and `minZoom`; `EVENT_SHAPE_STYLE` sends the first two on every festival
+layer, which is why a festival zone needs no style of its own.
+
+When any of this reaches users is §9.0's question rather than this section's — these knobs are read by
+the overlay renderer the app half brings, so they arrive with it or not at all.
+
+### 9.8 `defaultVisibleWhen` blanks the campus map until the app half ships
+
+Unlike §9.1, this one does **not** degrade. `defaultVisible` left the wire, and the shipped app
+parses it as `(raw.defaultVisible as boolean) ?? false` — the one field in that parser that fails
+CLOSED, where its neighbours `userConfigurable` and `chipGroupId` carry comments saying they must
+not. The store then seeds each layer's visibility from it once and the render loop drops anything
+false, so against this server an install with no persisted toggle draws **nothing**: not 건물번호,
+not 건물이름, not a single booth. `/map/config` is served live and needs no OTA, so this reaches
+every install the moment it deploys, and it takes the base campus map with it rather than only the
+festival.
+
+So the order is the one §9.1's title already states, and this time it is load-bearing: **the app half
+is a prerequisite.** It must parse `defaultVisibleWhen` and resolve §4.3's chain, and be adopted,
+before this server reaches production. It ships JS-only over OTA, so adoption is not gated on a store
+release.
+
+The alternative was a derived `defaultVisible` kept on the wire for one release and then removed.
+It was rejected deliberately: it puts two fields answering one question back on the wire — the
+shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can give for free.
+
+## 10. Source of truth (file map)
+
+| Concern | File |
+| --- | --- |
+| Wire schema, every producer | `src/map/map.wire.ts` |
+| GeoJSON vocabulary, storage and wire | `src/shared/geojson.types.ts` |
+| Ring winding and closure | `src/shared/ring-winding.util.ts` |
+| Campus geometry storage | `CampusShapeDoc` in `src/building/building.document.ts`, `campus_shapes` in the building DB |
+| Campus geometry authoring | `scripts/data/campus-shapes.json` → `npm run campus:shapes` |
+| Base layer catalogue, festival layer projection, `chipGroupId`, marker geometry | `src/map/map.constants.ts` |
+| Base chips, festival chip projection, the reset chip, the one chip validator | `src/map/layer-set/map-layer-set.mapper.ts` |
+| Chip wire schema | `src/map/config/map-config.wire.ts` |
+| Response builder, campuses, activation lookup | `src/map/config/map-config.mapper.ts` |
+| Buildings + campus geometry → overlays, empty-DB fallback | `src/map/campus/map-campus.mapper.ts` |
+| Jongno route lines → overlays | `src/map/transit/map-transit.mapper.ts` |
+| Jongno route lines: storage, TOPIS sync | `src/bus/route-path/` (`jongro_route_paths`) |
+| Event places → overlays | `src/map/event/map-event.mapper.ts` |
+| Event places → sheet details, and the serve-time checks | `src/map/event-details/map-event-details.mapper.ts` |
+| Detail shape (stored and wire) | `src/map/event-details/map-event-details.wire.ts` |
+| Media host and its URL rule | `MEDIA_ORIGIN` in `src/infra/origins.ts`, `src/infra/media-url.ts` |
+| "Which layer set is live, and is its config usable" | `src/map/layer-set/map-layer-set.service.ts` |
+| Festival layers, chips, labels, colours, camera, category → layer table | the `map-layer-sets` dataset (`npm run data`), parsed by `checkedLayerSet` in `src/map/layer-set/map-layer-set.schema.ts` |
+| Category → presentation resolver (both producers) | `presentationFor` in `src/map/layer-set/map-layer-set.schema.ts` |
+| `DailyWindow`, `LayerDefaultVisibility`, and why this axis is wall-clock | `src/map/layer-set/map-layer-set.schema.ts` |
+| List facets and sort (`EventFacetDef`, `EventChipListDef`), and their wire form (`MapChipList`) | `src/map/layer-set/map-layer-set.schema.ts`, `src/map/config/map-config.wire.ts` |
+| Facet membership per overlay (`facetsOf`) | `src/map/event/map-event.mapper.ts` |
+| HTTP + `Cache-Control` | `src/map/config/map-config.controller.ts`, `src/map/campus/map-campus.controller.ts`, `src/map/transit/map-transit.controller.ts` |
+| Module wiring, rate limit, endpoint inventory | `src/map/map.module.ts` |
+| Campus labels | `src/infra/i18n.ts` (`map.campus.*`) — layer and chip labels are inline `{ko, en?, zh?}` on their specs, resolved with `pick()` from the same module |
+| Building documents | `src/building/building.repository.ts` |
+| Event documents + activation window | `src/map/map.repository.ts`, `src/map/map.document.ts` |
+| Sheet → documents, and the importer | `scripts/lib/map-places-file.js`, `scripts/import-eventmap-places.js` |
+| Tests | `__tests__/nest/map/` |
+
+## 11. Related
+
+- [how-to/configure-map-overlays.md](../how-to/configure-map-overlays.md) — the runbook: what can be drawn, which tier to edit, and what to check when a shape does not appear
+
+- [event-places.md](event-places.md) — the festival's storage, authoring and ops tiers
+- Umbrella ADR 0004: event map layer ownership
+- [skkuverse-app `docs/explanation/shared-map.md`](https://github.com/skkuverse/skkuverse-app/blob/main/docs/explanation/shared-map.md) — the client side
+- [docs/README.md](../README.md) — writing rules
