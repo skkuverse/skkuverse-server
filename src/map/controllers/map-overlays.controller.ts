@@ -62,4 +62,16 @@ export class MapOverlaysController {
     res.set("Cache-Control", "public, max-age=60");
     sendSuccess(req, res, data);
   }
+
+  /**
+   * (A perimeter detail is left out of the public history.)
+   *
+   *
+   */
+  @Get("event/details")
+  async eventDetails(@Req() req: Request, @Res() res: Response): Promise<void> {
+    const data = await this.map.getEventPlaceDetails();
+    res.set("Cache-Control", "public, max-age=60");
+    sendSuccess(req, res, data);
+  }
 }
