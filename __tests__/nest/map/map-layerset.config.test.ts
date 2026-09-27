@@ -434,13 +434,28 @@ describe("assertValidConfig — identity and shape", () => {
 
 
 describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
+  it("hands booths and bars over around the whole clock, so one is always drawn", () => {
+    // 23:00-11:00 used to leave both off, and the map opened with neither.
+    const config = assertValidConfig(raw());
+    const windowOf = (id: string) => {
+      const when = config.layers.find((l) => l.id === id)!.defaultVisibleWhen;
+      if (when.kind !== "scheduled") throw new Error(`${id} is not scheduled`);
+      expect(when.windows).toHaveLength(1);
+      return when.windows[0]!;
+    };
+    const booth = windowOf("eskara26_booth");
+    const bar = windowOf("eskara26_bar");
+    expect(bar.start).toBe(booth.end);
+    expect(booth.start).toBe(bar.end);
+  });
+
   it("keeps a scheduled layer's windows, wrapping past midnight included", () => {
     const config = assertValidConfig(raw());
     const bar = config.layers.find((l) => l.id === "eskara26_bar")!;
-    // The council's sheet runs every 2026 pub 18:00-23:00.
+    // Bars are the map's default from 18:00 until 04:00 the next morning.
     expect(bar.defaultVisibleWhen).toEqual({
       kind: "scheduled",
-      windows: [{ start: "18:00", end: "23:00" }],
+      windows: [{ start: "18:00", end: "04:00" }],
     });
 
     // No shipped layer wraps any more (the 2025 주점 ran to 00:00), so the
@@ -458,7 +473,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
     const booth = config.layers.find((l) => l.id === "eskara26_booth")!;
     expect(booth.defaultVisibleWhen).toEqual({
       kind: "scheduled",
-      windows: [{ start: "11:00", end: "18:00" }],
+      windows: [{ start: "04:00", end: "18:00" }],
     });
   });
 
