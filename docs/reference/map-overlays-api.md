@@ -561,16 +561,6 @@ Response, abridged to two event layers of the six, `lang=ko`, with a window open
         "style": { "captionTextSize": 7, "zIndex": 100000 }
       },
       {
-        "id": "eskara26_stage",
-        "markerStyle": "placeDot",
-        "label": "공연",
-        "defaultVisibleWhen": { "kind": "always" },
-        "userConfigurable": true,
-        "endpoint": "/map/overlays/event",
-        "chipGroupId": "eskara-2026",
-        "style": { "color": "F76CA0", "width": 22, "height": 30, "captionTextSize": 9 }
-      },
-      {
         "id": "eskara26_bar",
         "markerStyle": "placeDot",
         "label": "주점",
@@ -586,20 +576,20 @@ Response, abridged to two event layers of the six, `lang=ko`, with a window open
     ],
     "chips": [
       {
-        "id": "eskara26_view_stage",
-        "label": "공연",
-        "icon": { "kind": "emoji", "emoji": "🎤" },
+        "id": "eskara26_view_bar",
+        "label": "주점",
+        "icon": { "kind": "emoji", "emoji": "🍺" },
         "action": {
           "kind": "focus",
           "camera": {
-            "lat": 37.295129,
-            "lng": 126.971234,
-            "zoom": 17.5,
+            "lat": 37.295187,
+            "lng": 126.970977,
+            "zoom": 17.0,
             "tilt": 0,
-            "bearing": 0,
+            "bearing": 6,
             "durationMs": 500
           },
-          "layerIds": ["eskara26_stage"]
+          "layerIds": ["eskara26_bar"]
         }
       }
     ],

@@ -277,7 +277,7 @@ describe("assertValidConfig — the festival is served BESIDE the base map", () 
     const config = raw();
     config.layers[0].id = "building_numbers";
     for (const p of Object.values(config.itemDefaults.byCategory)) {
-      if ((p as { layerId: string }).layerId === "eskara26_stage") (p as { layerId: string }).layerId = "building_numbers";
+      if ((p as { layerId: string }).layerId === "eskara26_bar") (p as { layerId: string }).layerId = "building_numbers";
     }
     config.chips[0].layerIds = ["building_numbers"];
     expect(() => assertValidConfig(config)).toThrow(

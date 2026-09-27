@@ -18,18 +18,6 @@
   "timezone": "Asia/Seoul",
   "layers": [
     {
-      "id": "eskara26_stage",
-      "label": {
-        "ko": "공연",
-        "en": "Stages",
-        "zh": "演出"
-      },
-      "color": "F76CA0",
-      "defaultVisibleWhen": {
-        "kind": "always"
-      }
-    },
-    {
       "id": "eskara26_bar",
       "label": {
         "ko": "주점",
@@ -123,18 +111,6 @@
         "zh": "入场手环发放"
       },
       "color": "7048E8",
-      "defaultVisibleWhen": {
-        "kind": "always"
-      }
-    },
-    {
-      "id": "eskara26_etc",
-      "label": {
-        "ko": "기타",
-        "en": "Other",
-        "zh": "其他"
-      },
-      "color": "8B95A1",
       "defaultVisibleWhen": {
         "kind": "always"
       }
@@ -353,10 +329,6 @@
         "pinPriority": 25,
         "tapChip": "eskara26_view_food"
       },
-      "stage": {
-        "layerId": "eskara26_stage",
-        "pinPriority": 40
-      },
       "facility": {
         "layerId": "eskara26_facility",
         "pinPriority": 10
@@ -387,7 +359,7 @@
       }
     },
     "fallback": {
-      "layerId": "eskara26_etc",
+      "layerId": "eskara26_booth",
       "pinPriority": 0
     }
   }
