@@ -320,7 +320,7 @@ describe("validateChipSpecs — every rule, reported together", () => {
     // for the building layer. Once a second group exists the straddle message
     // must name it specifically.
     const errors = validateChipSpecs(
-      asSpecs([focusSpec(["eskara26_stage", "building_labels"])]),
+      asSpecs([focusSpec(["eskara26_booth", "building_labels"])]),
       CATALOGUE,
     );
     expect(errors.length).toBeGreaterThan(0);
@@ -351,7 +351,7 @@ describe("validateChipSpecs — every rule, reported together", () => {
 
   it("rejects a duplicate chip id", () => {
     const errors = validateChipSpecs(
-      asSpecs([focusSpec(["eskara26_stage"]), focusSpec(["eskara26_bar"])]),
+      asSpecs([focusSpec(["eskara26_booth"]), focusSpec(["eskara26_bar"])]),
       CATALOGUE,
     );
     expect(errors).toEqual([expect.stringMatching(/duplicate chip id "test_chip"/)]);

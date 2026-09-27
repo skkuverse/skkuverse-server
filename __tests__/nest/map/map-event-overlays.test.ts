@@ -254,14 +254,14 @@ describe("getEventOverlays", () => {
     // on the same layer the 주점 chip shows.
     const docs = [
       place({ _id: "bar-1", category: "bar" }),
-      place({ _id: "stage-1", category: "stage" }),
+      place({ _id: "booth-1", category: "booth" }),
       place({ _id: "unmapped-1", category: "전시" }),
     ];
     arrange(docs);
 
     const { overlays: markers } = await getEventOverlays();
 
-    expect(markers.map((m) => m.id).sort()).toEqual(["bar-1", "stage-1", "unmapped-1"]);
+    expect(markers.map((m) => m.id).sort()).toEqual(["bar-1", "booth-1", "unmapped-1"]);
     for (const marker of markers) {
       const category = docs.find((d) => d._id === marker.id)!.category;
       const presentation = presentationFor(CONFIG, category);
