@@ -172,14 +172,14 @@ describe("GET /map/config (real MapService)", () => {
       res.body.data.chips.filter((c: { isReset: boolean }) => c.isReset),
     ).toHaveLength(1);
 
-    // A scheduled layer's windows survive serialization as authored: the
-    // council's 18:00-23:00 for every 2026 pub.
+    // A scheduled layer's windows survive serialization as authored,
+    // including one that wraps past midnight.
     const barLayer = res.body.data.layers.find(
       (l: { id: string }) => l.id === "eskara26_bar",
     );
     expect(barLayer.defaultVisibleWhen).toEqual({
       kind: "scheduled",
-      windows: [{ start: "18:00", end: "23:00" }],
+      windows: [{ start: "18:00", end: "04:00" }],
     });
     // The bar chip's label is the layer's plural, not the singular the chip
     // used to author for itself.

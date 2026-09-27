@@ -566,7 +566,7 @@ Response, abridged to two event layers of the six, `lang=ko`, with a window open
         "label": "주점",
         "defaultVisibleWhen": {
           "kind": "scheduled",
-          "windows": [{ "start": "18:00", "end": "23:00" }]
+          "windows": [{ "start": "18:00", "end": "04:00" }]
         },
         "userConfigurable": true,
         "endpoint": "/map/overlays/event",
@@ -923,7 +923,9 @@ config (§8.6).
 **How to author the schedules**, which the file cannot say about itself: windows on two layers of one
 group should be authored to hand over rather than overlap, because two crowded layers drawn at once
 is the problem `defaultVisibleWhen` exists to solve — half-open bounds make `[11:00, 18:00)` and
-`[18:00, 00:00)` exactly adjacent. A layer window is an OPS choice, not a rollup of its places'
+`[18:00, 00:00)` exactly adjacent. Hand over around the whole clock, too: a gap between the last
+window and the first is a stretch when the map opens with neither layer drawn, which is what
+23:00–11:00 was until 2026-09-27 (the pair now meets at 18:00 and at 04:00). A layer window is an OPS choice, not a rollup of its places'
 `hours`: a booth whose own hours run past its layer's window is still a marker the user can turn on,
 and its pin is one chip away.
 
