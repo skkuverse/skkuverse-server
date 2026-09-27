@@ -3733,6 +3733,40 @@
       "hours": [],
       "order": 203
     },
+    {
+      "id": "main-stage",
+      "category": "main_stage",
+      "title": {
+        "ko": "메인 스테이지",
+        "en": "Main stage"
+      },
+      "hours": [],
+      "order": 204,
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [126.970561215, 37.29510494],
+            [126.970695978, 37.295093672],
+            [126.970724306, 37.295308086],
+            [126.970589544, 37.295319354],
+            [126.970561215, 37.29510494]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "main-stage-label",
+      "category": "main_stage_label",
+      "lat": 37.29520651296672,
+      "lng": 126.97064276079352,
+      "title": {
+        "ko": "메인 스테이지",
+        "en": "Main stage"
+      },
+      "hours": [],
+      "order": 205
+    },
 
     {
       "id": "wristband-skku",
