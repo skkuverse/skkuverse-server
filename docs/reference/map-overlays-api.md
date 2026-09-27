@@ -531,9 +531,9 @@ Response, abridged to two event layers of the six, `lang=ko`, with a window open
       {
         "id": "nsc",
         "label": "자과캠",
-        "centerLat": 37.29358,
-        "centerLng": 126.974942,
-        "defaultZoom": 15.8,
+        "centerLat": 37.295129,
+        "centerLng": 126.971234,
+        "defaultZoom": 16.5,
         "defaultTilt": 0,
         "defaultBearing": 6,
         "radiusM": 1000
