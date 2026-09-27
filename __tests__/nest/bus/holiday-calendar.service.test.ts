@@ -22,6 +22,10 @@ jest.mock("date-holidays", () =>
 );
 
 import { HolidayCalendarService } from "../../../src/bus/schedule/holiday-calendar.service";
+import {
+  lookupRestDay,
+  parseRestDays,
+} from "../../../src/bus/schedule/holiday-calendar";
 
 let service: HolidayCalendarService;
 
@@ -41,5 +45,48 @@ describe("HolidayCalendarService.getNonOperatingDayLabel", () => {
 
   it("returns null for an ordinary weekday", () => {
     expect(service.getNonOperatingDayLabel("2026-03-02")).toBeNull();
+  });
+});
+
+describe("SKKU annual rest days (real skku-rest-days.json)", () => {
+  it("closes 공자탄신일 on 09-28 every year", () => {
+    expect(service.getNonOperatingDayLabel("2026-09-28")).toBe("공자탄신일");
+    expect(service.getNonOperatingDayLabel("2027-09-28")).toBe("공자탄신일");
+  });
+
+  it("closes 건학기념일 on 09-25 every year", () => {
+    expect(service.getNonOperatingDayLabel("2028-09-25")).toBe("건학기념일");
+  });
+
+  it("leaves the days around them alone", () => {
+    expect(service.getNonOperatingDayLabel("2026-09-29")).toBeNull();
+  });
+});
+
+describe("parseRestDays / lookupRestDay", () => {
+  it("prefers an exact date over the annual rule", () => {
+    const days = parseRestDays({
+      "09-28": "공자탄신일",
+      "2030-09-28": "공자탄신일 (특별)",
+    });
+    expect(lookupRestDay(days, "2030-09-28")).toBe("공자탄신일 (특별)");
+    expect(lookupRestDay(days, "2031-09-28")).toBe("공자탄신일");
+    expect(lookupRestDay(days, "2031-09-27")).toBeNull();
+  });
+
+  it("skips underscore documentation keys", () => {
+    const days = parseRestDays({ _comment: "docs", _example: 1 });
+    expect(days.exact.size + days.annual.size).toBe(0);
+  });
+
+  it("throws on a key that is neither YYYY-MM-DD nor MM-DD", () => {
+    expect(() => parseRestDays({ "2026-9-28": "공자탄신일" })).toThrow(
+      /neither YYYY-MM-DD nor MM-DD/,
+    );
+  });
+
+  it("throws on a non-string or empty label", () => {
+    expect(() => parseRestDays({ "09-28": true })).toThrow(/non-empty string/);
+    expect(() => parseRestDays({ "09-28": "" })).toThrow(/non-empty string/);
   });
 });
