@@ -104,6 +104,19 @@
       "markerStyle": "textLabel"
     },
     {
+      "id": "eskara26_main_stage",
+      "label": {
+        "ko": "메인 스테이지",
+        "en": "Main stage",
+        "zh": "主舞台"
+      },
+      "color": "A61E4D",
+      "defaultVisibleWhen": {
+        "kind": "always"
+      },
+      "markerStyle": "textLabel"
+    },
+    {
       "id": "eskara26_entry",
       "label": {
         "ko": "입장 팔찌 배부",
@@ -349,6 +362,16 @@
       },
       "control_entry_label": {
         "layerId": "eskara26_control_entry",
+        "pinPriority": 0,
+        "interactive": false
+      },
+      "main_stage": {
+        "layerId": "eskara26_main_stage",
+        "pinPriority": 0,
+        "interactive": false
+      },
+      "main_stage_label": {
+        "layerId": "eskara26_main_stage",
         "pinPriority": 0,
         "interactive": false
       },
