@@ -357,13 +357,13 @@ describe("MapService", () => {
 
     // PIN_WIDTH x PIN_HEIGHT — the tintable base icon's natural proportions, so
     // a client honouring them does not distort the tint.
-    const stage = byId.get("eskara26_stage")!;
-    expect(stage.style).toMatchObject({ width: 22, height: 30 });
+    const bar = byId.get("eskara26_bar")!;
+    expect(bar.style).toMatchObject({ width: 22, height: 30 });
     // Colour still ships for the festival layers: a category colour is content,
     // and it comes from the config. The building layers deliberately send none
     // — their fill is a design token that resolves per theme, and a hex from
     // here cannot.
-    expect(stage.style!.color).toBe(CONFIG.layers.find((l) => l.id === "eskara26_stage")!.color);
+    expect(bar.style!.color).toBe(CONFIG.layers.find((l) => l.id === "eskara26_bar")!.color);
     expect(byId.get("building_numbers")!.style!.color).toBeUndefined();
   });
 
