@@ -159,6 +159,58 @@ describe("JongroPollerService", () => {
     });
   });
 
+  describe("registry drift warning", () => {
+    const logger = require("../../../src/infra/logger");
+    const r07 = jongroRoutes.find((r) => r.code === "07")!;
+    const fullList07 = Object.entries(r07.mapping).map(([stId, s]) => ({
+      stId,
+      staOrd: String(s.sequence),
+      stNm: s.stationName,
+      arsId: "",
+      plainNo1: "",
+      mkTm: "",
+      arrmsg1: "",
+    }));
+    const driftWarnsFor = (code: string) =>
+      (logger.warn as jest.Mock).mock.calls.filter(
+        ([ctx, msg]) => ctx?.code === code && String(msg).includes("drifted"),
+      );
+    // axios returns the same body for every URL, so only 07's lists are
+    // meaningful here; 02 is expected to warn and is ignored.
+    const respondWith = (itemList: unknown[]) =>
+      axios.get.mockResolvedValue({
+        data: { msgHeader: { headerCd: "0" }, msgBody: { itemList } },
+      });
+
+    it("stays quiet when TOPIS lists exactly the registry stops", async () => {
+      respondWith(fullList07);
+      await runTickAndFlush();
+      expect(driftWarnsFor("07")).toHaveLength(0);
+    });
+
+    it("warns once, naming the unmapped TOPIS stop", async () => {
+      const extra = { ...fullList07[0]!, stId: "100000999", stNm: "새정류소", staOrd: "23" };
+      respondWith([...fullList07, extra]);
+      await runTickAndFlush();
+      await runTickAndFlush();
+      const warns = driftWarnsFor("07");
+      expect(warns).toHaveLength(1);
+      expect(warns[0]![0]).toMatchObject({
+        unmapped: [{ stId: "100000999", stNm: "새정류소", staOrd: "23" }],
+        missing: [],
+      });
+    });
+
+    it("names registry stops that TOPIS no longer lists", async () => {
+      respondWith(fullList07.filter((i) => i.stId !== "100000423"));
+      await runTickAndFlush();
+      expect(driftWarnsFor("07")[0]![0]).toMatchObject({
+        unmapped: [],
+        missing: [{ topisId: "100000423", stationName: "비천당" }],
+      });
+    });
+  });
+
   describe("error handling", () => {
     it("handles API error without crash (state stays undefined)", async () => {
       axios.get.mockRejectedValue(new Error("Network error"));

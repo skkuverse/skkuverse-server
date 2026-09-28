@@ -3,6 +3,7 @@ import axios from "axios";
 import moment from "moment-timezone";
 import logger from "../../infra/logger";
 import type {
+  JongroListItem,
   JongroListResponse,
   JongroLocResponse,
   JongroStationMapping,
@@ -56,6 +57,8 @@ export class JongroPollerService implements OnModuleInit {
   private filteredBusStations: Record<string, JongroListEntry[]> = {};
   private filteredBusLocations: Record<string, JongroLocEntry[]> = {};
   private busStationTimes: Record<string, Record<string, string>> = {};
+  // Route codes whose registry drift has already been logged by this process.
+  private driftWarned = new Set<string>();
 
   private readonly mappingByCode: Record<
     string,
@@ -222,6 +225,8 @@ export class JongroPollerService implements OnModuleInit {
       const apiData = env?.msgBody?.itemList;
       if (!apiData) return;
 
+      this.warnOnRegistryDrift(code, apiData);
+
       this.filteredBusStations[code] = apiData.map(
         (item): JongroListEntry => {
           const { stId, staOrd, stNm, plainNo1, mkTm, arsId, arrmsg1 } = item;
@@ -250,6 +255,35 @@ export class JongroPollerService implements OnModuleInit {
         "[jongro] Failed to update bus list",
       );
     }
+  }
+
+  // getArrInfoByRouteAll lists every stop on the route on every tick, so it
+  // doubles as a free check that `jongro-routes.json` still matches TOPIS.
+  // When TOPIS adds, drops or renumbers stops, buses and ETAs at the unmapped
+  // stops silently vanish. This makes that show up in the logs rather than in
+  // a user report. It compares ID sets, not counts: a loop route may list its
+  // first stop again as the last ord (02 does). Warns once per route per
+  // process; renames are harmless because ETAs match by ID.
+  private warnOnRegistryDrift(
+    code: string,
+    apiData: ReadonlyArray<JongroListItem>,
+  ): void {
+    if (this.driftWarned.has(code)) return;
+    const mapping = this.mappingByCode[code];
+    if (!mapping) return;
+    const topisIds = new Set(apiData.map((item) => item.stId));
+    const unmapped = apiData
+      .filter((item) => !mapping[item.stId])
+      .map((item) => ({ stId: item.stId, stNm: item.stNm, staOrd: item.staOrd }));
+    const missing = Object.entries(mapping)
+      .filter(([topisId]) => !topisIds.has(topisId))
+      .map(([topisId, s]) => ({ topisId, stationName: s.stationName }));
+    if (unmapped.length === 0 && missing.length === 0) return;
+    this.driftWarned.add(code);
+    logger.warn(
+      { code, unmapped, missing },
+      "[jongro] jongro-routes.json has drifted from TOPIS — resync the registry",
+    );
   }
 
   getJongroBusList(code: string): JongroListEntry[] | undefined {

@@ -41,9 +41,9 @@ describe("jongro.registry — URL builders match the legacy prod URLs", () => {
     );
   });
 
-  it("builds the 종로07 loc URL identically (endOrd=19)", () => {
-    expect(buildJongroLocUrl("100900004", 19, FIXED_KEY)).toBe(
-      `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRouteSt?serviceKey=${FIXED_KEY}&busRouteId=100900004&startOrd=1&endOrd=19&resultType=json`,
+  it("builds the 종로07 loc URL identically (endOrd=22)", () => {
+    expect(buildJongroLocUrl("100900004", 22, FIXED_KEY)).toBe(
+      `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRouteSt?serviceKey=${FIXED_KEY}&busRouteId=100900004&startOrd=1&endOrd=22&resultType=json`,
     );
   });
 });
@@ -57,11 +57,11 @@ describe("jongro.registry — derived routes from jongro-routes.json", () => {
     expect(jongroRoutes[1]!.code).toBe("07");
   });
 
-  it("preserves station counts (02=26, 07=19) and first/last flags", () => {
+  it("preserves station counts (02=26, 07=22) and first/last flags", () => {
     const r02 = getJongroRouteById("jongro02")!;
     const r07 = getJongroRouteByCode("07")!;
     expect(r02.stations).toHaveLength(26);
-    expect(r07.stations).toHaveLength(19);
+    expect(r07.stations).toHaveLength(22);
 
     expect(r02.stations[0]!.isFirstStation).toBe(true);
     expect(r02.stations[0]!.stationName).toBe("성균관대학교");
@@ -70,8 +70,8 @@ describe("jongro.registry — derived routes from jongro-routes.json", () => {
 
     expect(r07.stations[0]!.isFirstStation).toBe(true);
     expect(r07.stations[0]!.stationName).toBe("명륜새마을금고");
-    expect(r07.stations[18]!.isLastStation).toBe(true);
-    expect(r07.stations[18]!.stationName).toBe("성균관대학교");
+    expect(r07.stations[21]!.isLastStation).toBe(true);
+    expect(r07.stations[21]!.stationName).toBe("유림회관앞");
 
     expect(r02.stations[12]!.isRotationStation).toBe(true);
     expect(r07.stations[7]!.isRotationStation).toBe(true);
@@ -92,6 +92,22 @@ describe("jongro.registry — derived routes from jongro-routes.json", () => {
     expect(r02.mapping["100900204"]).toEqual({ sequence: 1, stationName: "성균관대학교" });
     expect(r07.mapping["100900197"]).toEqual({ sequence: 1, stationName: "명륜새마을금고" });
     expect(r07.mapping["100900028"]).toEqual({ sequence: 8, stationName: "방송통신대앞" });
+  });
+
+  // 비천당 was added to 종로07 in both directions (2026-09). The two stops share
+  // a name, so only their TOPIS IDs tell them apart.
+  it("maps both 종로07 비천당 stops to their own campus leg", () => {
+    const r07 = getJongroRouteById("jongro07")!;
+    expect(r07.mapping["100000423"]).toEqual({ sequence: 16, stationName: "비천당" });
+    expect(r07.mapping["100000424"]).toEqual({ sequence: 20, stationName: "비천당" });
+    expect(r07.stations[14]!.stationName).toBe("성균관대정문");
+    expect(r07.stations[16]!.stationName).toBe("600주년기념관");
+    expect(r07.stations[18]!.stationName).toBe("학생회관");
+    expect(r07.stations[20]!.stationName).toBe("성균관대정문");
+  });
+
+  it("builds the 종로07 loc URL over every TOPIS ord", () => {
+    expect(getJongroRouteByCode("07")!.locUrl).toContain("&endOrd=22&");
   });
 
   it("preserves transferLines on metro-connected stops", () => {
