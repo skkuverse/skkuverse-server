@@ -57,31 +57,36 @@ describe("jongro.registry — derived routes from jongro-routes.json", () => {
     expect(jongroRoutes[1]!.code).toBe("07");
   });
 
-  it("preserves station counts (02=26, 07=22) and first/last flags", () => {
+  // The registry is TOPIS's stop list verbatim: stations[i] is TOPIS ord i+1.
+  it("preserves station counts (02=27, 07=22) and first/last flags in TOPIS order", () => {
     const r02 = getJongroRouteById("jongro02")!;
     const r07 = getJongroRouteByCode("07")!;
-    expect(r02.stations).toHaveLength(26);
+    expect(r02.stations).toHaveLength(27);
     expect(r07.stations).toHaveLength(22);
 
+    // 02 closes its loop: TOPIS lists 성균관대학교 at ord 1 and again at ord 27.
     expect(r02.stations[0]!.isFirstStation).toBe(true);
     expect(r02.stations[0]!.stationName).toBe("성균관대학교");
-    expect(r02.stations[25]!.isLastStation).toBe(true);
     expect(r02.stations[25]!.stationName).toBe("성대후문.와룡공원");
+    expect(r02.stations[26]!.isLastStation).toBe(true);
+    expect(r02.stations[26]!.stationName).toBe("성균관대학교");
 
     expect(r07.stations[0]!.isFirstStation).toBe(true);
-    expect(r07.stations[0]!.stationName).toBe("명륜새마을금고");
+    expect(r07.stations[0]!.stationName).toBe("성균관대운동장");
     expect(r07.stations[21]!.isLastStation).toBe(true);
-    expect(r07.stations[21]!.stationName).toBe("유림회관앞");
+    expect(r07.stations[21]!.stationName).toBe("600주년기념관");
 
     expect(r02.stations[12]!.isRotationStation).toBe(true);
-    expect(r07.stations[7]!.isRotationStation).toBe(true);
+    expect(r07.stations[12]!.isRotationStation).toBe(true);
+    expect(r07.stations[12]!.stationName).toBe("방송통신대앞");
   });
 
   it("derives sequence (1-based string) and stationNumber from arsId", () => {
     const r02 = getJongroRouteByCode("02")!;
     expect(r02.stations[0]!.sequence).toBe("1");
     expect(r02.stations[0]!.stationNumber).toBe("01881");
-    expect(r02.stations[25]!.sequence).toBe("26");
+    expect(r02.stations[26]!.sequence).toBe("27");
+    expect(r02.stations[26]!.stationNumber).toBe("01881");
   });
 
   it("derives the topisId→{sequence,stationName} mapping correctly", () => {
@@ -90,24 +95,35 @@ describe("jongro.registry — derived routes from jongro-routes.json", () => {
 
     expect(r02.mapping["100900086"]).toEqual({ sequence: 10, stationName: "헌법재판소.안국역" });
     expect(r02.mapping["100900204"]).toEqual({ sequence: 1, stationName: "성균관대학교" });
-    expect(r07.mapping["100900197"]).toEqual({ sequence: 1, stationName: "명륜새마을금고" });
-    expect(r07.mapping["100900028"]).toEqual({ sequence: 8, stationName: "방송통신대앞" });
+    expect(r07.mapping["100900197"]).toEqual({ sequence: 6, stationName: "명륜새마을금고" });
+    expect(r07.mapping["100900028"]).toEqual({ sequence: 13, stationName: "방송통신대앞" });
+  });
+
+  // A bus whose last passed stop is the terminal has just left it, so the
+  // loop-closing repeat must not steal the mapping from ord 1.
+  it("maps a loop-closing repeat to its first ord, and lists every ord in topisIds", () => {
+    const r02 = getJongroRouteById("jongro02")!;
+    expect(r02.mapping["100900204"]).toEqual({ sequence: 1, stationName: "성균관대학교" });
+    expect(r02.topisIds).toHaveLength(27);
+    expect(r02.topisIds[0]).toBe("100900204");
+    expect(r02.topisIds[26]).toBe("100900204");
   });
 
   // 비천당 was added to 종로07 in both directions (2026-09). The two stops share
   // a name, so only their TOPIS IDs tell them apart.
   it("maps both 종로07 비천당 stops to their own campus leg", () => {
     const r07 = getJongroRouteById("jongro07")!;
-    expect(r07.mapping["100000423"]).toEqual({ sequence: 16, stationName: "비천당" });
-    expect(r07.mapping["100000424"]).toEqual({ sequence: 20, stationName: "비천당" });
-    expect(r07.stations[14]!.stationName).toBe("성균관대정문");
-    expect(r07.stations[16]!.stationName).toBe("600주년기념관");
-    expect(r07.stations[18]!.stationName).toBe("학생회관");
-    expect(r07.stations[20]!.stationName).toBe("성균관대정문");
+    expect(r07.mapping["100000423"]).toEqual({ sequence: 21, stationName: "비천당" });
+    expect(r07.mapping["100000424"]).toEqual({ sequence: 3, stationName: "비천당" });
+    expect(r07.stations[19]!.stationName).toBe("성균관대정문");
+    expect(r07.stations[21]!.stationName).toBe("600주년기념관");
+    expect(r07.stations[1]!.stationName).toBe("학생회관");
+    expect(r07.stations[3]!.stationName).toBe("성균관대정문");
   });
 
   it("builds the 종로07 loc URL over every TOPIS ord", () => {
     expect(getJongroRouteByCode("07")!.locUrl).toContain("&endOrd=22&");
+    expect(getJongroRouteByCode("02")!.locUrl).toContain("&endOrd=27&");
   });
 
   it("preserves transferLines on metro-connected stops", () => {
@@ -186,14 +202,26 @@ describe("jongro.registry — validation (fail-loud surfaces)", () => {
     expect(errors.some((e) => e.includes("id: must match"))).toBe(true);
   });
 
+  const stn = (topisId: string, first = false, last = false) => ({
+    stationName: topisId, arsId: topisId, topisId,
+    isFirstStation: first, isLastStation: last, isRotationStation: false, transferLines: [],
+  });
+  const routeOf = (...stations: unknown[]) => [
+    { id: "jongro99", busRouteId: "1", themeColor: "4CAF50", iconType: "village", refreshInterval: 40, stations },
+  ];
+
   it("rejects duplicate topisId within a route", () => {
-    const { errors } = validateRoutes([
-      { id: "jongro99", busRouteId: "1", themeColor: "4CAF50", iconType: "village", refreshInterval: 40, stations: [
-        { stationName: "a", arsId: "1", topisId: "DUP", isFirstStation: true, isLastStation: false, isRotationStation: false, transferLines: [] },
-        { stationName: "b", arsId: "2", topisId: "DUP", isFirstStation: false, isLastStation: true, isRotationStation: false, transferLines: [] },
-      ] },
-    ]);
+    const { errors } = validateRoutes(routeOf(stn("DUP", true), stn("DUP"), stn("t3", false, true)));
     expect(errors.some((e) => e.includes('duplicate "DUP"'))).toBe(true);
+  });
+
+  it("accepts the last stop repeating the first (TOPIS loop close)", () => {
+    expect(validateRoutes(routeOf(stn("A", true), stn("B"), stn("A", false, true))).errors).toEqual([]);
+  });
+
+  it("rejects the last stop repeating a middle stop", () => {
+    const { errors } = validateRoutes(routeOf(stn("A", true), stn("B"), stn("B", false, true)));
+    expect(errors.some((e) => e.includes('duplicate "B"'))).toBe(true);
   });
 });
 

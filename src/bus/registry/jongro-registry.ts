@@ -198,9 +198,16 @@ export function validateRoutes(raw: unknown): ValidationResult {
       if (typeof s.arsId !== "string" || s.arsId.length === 0) {
         errors.push(`${sp}.arsId: required non-empty string`);
       }
+      // TOPIS closes some loops by listing the first stop again as the last
+      // ord (02: 성균관대학교 at ord 1 and 27). That repeat is allowed; any
+      // other duplicate is a copy-paste error.
+      const closesLoop =
+        j === r.stations.length - 1 &&
+        j > 0 &&
+        s.topisId === (r.stations[0] as Record<string, unknown> | null)?.topisId;
       if (typeof s.topisId !== "string" || s.topisId.length === 0) {
         errors.push(`${sp}.topisId: required non-empty string`);
-      } else if (seenTopis.has(s.topisId)) {
+      } else if (seenTopis.has(s.topisId) && !closesLoop) {
         errors.push(`${sp}.topisId: duplicate "${s.topisId}" within route`);
       } else {
         seenTopis.add(s.topisId);
@@ -271,6 +278,10 @@ export interface JongroRoute {
   readonly locUrl: string;
   readonly stations: ReadonlyArray<JongroStation>;
   readonly mapping: Readonly<JongroStationMapping>;
+  // TOPIS station ID per ord: topisIds[staOrd - 1]. The registry lists stops
+  // in TOPIS order, so this is how an ETA row finds its stop even when a loop
+  // repeats its terminal (where `mapping` alone is ambiguous).
+  readonly topisIds: ReadonlyArray<string>;
 }
 
 function deriveStations(raw: JongroRouteStation[]): JongroStation[] {
@@ -287,10 +298,14 @@ function deriveStations(raw: JongroRouteStation[]): JongroStation[] {
   }));
 }
 
+// First occurrence wins for a loop-closing repeat. A bus whose last passed
+// stop is the terminal has just left it, so it belongs at ord 1, not at the
+// arrival ord.
 function deriveMapping(raw: JongroRouteStation[]): JongroStationMapping {
   const m: JongroStationMapping = {};
   for (let i = 0; i < raw.length; i++) {
     const s = raw[i]!;
+    if (m[s.topisId]) continue;
     m[s.topisId] = { sequence: i + 1, stationName: s.stationName };
   }
   return m;
@@ -311,6 +326,7 @@ function buildRoute(raw: JongroRouteConfig): JongroRoute {
     locUrl: buildJongroLocUrl(raw.busRouteId, raw.stations.length, serviceKey),
     stations: deriveStations(raw.stations),
     mapping: deriveMapping(raw.stations),
+    topisIds: raw.stations.map((s) => s.topisId),
   };
   return deepFreeze(route);
 }
