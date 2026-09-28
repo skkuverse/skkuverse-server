@@ -53,7 +53,7 @@ export class RealtimeController {
           const busList =
             (await this.cache.cachedRead(`jongro_stations_${route.code}`)) ??
             this.jongro.getJongroBusList(route.code);
-          return buildStationEtas(route.stations, busList);
+          return buildStationEtas(route.mapping, busList);
         },
       };
     }
