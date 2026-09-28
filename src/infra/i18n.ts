@@ -66,6 +66,16 @@ const translations: Translations = {
     en: "SKKU Sports Ground ↔ 600th Anniversary Hall",
     zh: "成均馆大学运动场 ↔ 600周年纪念馆",
   },
+  "buslist.jongro08.title": {
+    ko: "종로 08",
+    en: "Jongro 08",
+    zh: "钟路 08",
+  },
+  "buslist.jongro08.subtitle": {
+    ko: "명륜3가 ↔ 종로5가",
+    en: "Myeongnyun 3-ga ↔ Jongno 5-ga",
+    zh: "明伦3街 ↔ 钟路5街",
+  },
   "buslist.fasttrack.subtitle": {
     ko: "테스트 버스",
     en: "Test Bus",
@@ -102,6 +112,11 @@ const translations: Translations = {
     ko: "종로 07",
     en: "Jongro 07",
     zh: "钟路 07",
+  },
+  "busconfig.label.jongro08": {
+    ko: "종로 08",
+    en: "Jongro 08",
+    zh: "钟路 08",
   },
   "busconfig.label.fasttrack": {
     ko: "패스트트랙",
