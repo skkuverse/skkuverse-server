@@ -1,4 +1,4 @@
-import type { HsscStation, JongroStation } from "../types";
+import type { JongroStationMapping } from "../types";
 
 /**
  * Realtime transform helpers — verbatim port of the private helpers in
@@ -10,7 +10,8 @@ import type { HsscStation, JongroStation } from "../types";
  *  - mapBuses: `parseInt(b.sequence, 10) - 1` (1-based → 0-based stationIndex)
  *    and the conditional spread `...(b.latitude != null && { latitude })` so
  *    latitude/longitude keys are present ONLY when non-null.
- *  - buildStationEtas: matches by stationName, drops idx === -1 or missing eta.
+ *  - buildStationEtas: drops unmapped stations and rows with no eta. (It no
+ *    longer matches by name; see the function comment.)
  *  - currentTimeString: en-US 12h Asia/Seoul "hh:mm AM/PM".
  */
 
@@ -31,7 +32,7 @@ export interface MappedBus {
 }
 
 interface RawBusListItem {
-  stationName: string;
+  stationId: string;
   eta?: string;
 }
 
@@ -54,17 +55,21 @@ export function mapBuses(rawBuses: unknown): MappedBus[] {
 }
 
 // Builds stationEtas from Jongro busList API data.
-// Matches by stationName (API's staOrd may not match our ordering).
+// Matches by TOPIS station ID (the busList `stationId` is TOPIS `stId`, the same
+// key as the registry mapping). Matching by name broke twice: TOPIS renames
+// stops without notice, and a loop route passes the same-named stop in both
+// directions (07's 성균관대정문, 02's 가회동주민센터), so a name lookup piled
+// both ETAs onto the first occurrence.
 export function buildStationEtas(
-  stations: ReadonlyArray<HsscStation | JongroStation>,
+  mapping: Readonly<JongroStationMapping>,
   busList: unknown,
 ): StationEta[] {
   if (!Array.isArray(busList)) return [];
   return (busList as RawBusListItem[])
     .map((bus): StationEta | null => {
-      const idx = stations.findIndex((s) => s.stationName === bus.stationName);
-      if (idx === -1 || !bus.eta) return null;
-      return { stationIndex: idx, eta: bus.eta };
+      const station = mapping[bus.stationId];
+      if (!station || !bus.eta) return null;
+      return { stationIndex: station.sequence - 1, eta: bus.eta };
     })
     .filter((x): x is StationEta => x !== null);
 }
