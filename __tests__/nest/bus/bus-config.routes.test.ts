@@ -6,7 +6,7 @@
  * BusCacheService is overridden (cachedRead → null) so no DB is touched during
  * app init / any incidental cache reads. Asserts group shape, 404
  * GROUP_NOT_FOUND, 304, per-language ETag difference, and the hssc (11 stations,
- * lastStationIndex 10, refreshInterval 10) / jongro07 (19 stations,
+ * lastStationIndex 10, refreshInterval 10) / jongro07 (22 stations,
  * refreshInterval 40) screen contents.
  */
 
@@ -125,7 +125,8 @@ describe("GET /bus/config/:groupId", () => {
     const screen = res.body.data.screen;
     expect(screen.dataEndpoint).toBe("/bus/realtime/data/jongro07");
     expect(screen.refreshInterval).toBe(40);
-    expect(screen.stations).toHaveLength(19);
+    expect(screen.stations).toHaveLength(22);
+    expect(screen.lastStationIndex).toBe(21);
     expect(screen.routeOverlay).toBeNull();
   });
 });
