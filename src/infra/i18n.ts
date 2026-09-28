@@ -52,7 +52,7 @@ const translations: Translations = {
     zh: "钟路 02",
   },
   "buslist.jongro02.subtitle": {
-    ko: "성균관대학교 ↔ 종각역YMCA",
+    ko: "성균관대학교 ↔ 종각역.YMCA",
     en: "SKKU ↔ Jonggak Stn. YMCA",
     zh: "成均馆大学 ↔ 钟阁站YMCA",
   },
@@ -62,9 +62,9 @@ const translations: Translations = {
     zh: "钟路 07",
   },
   "buslist.jongro07.subtitle": {
-    ko: "명륜새마을금고 ↔ 명륜새마을금고",
-    en: "Myeongnyun Saemaul Geumgo ↔ Myeongnyun Saemaul Geumgo",
-    zh: "明伦新村金库 ↔ 明伦新村金库",
+    ko: "성균관대운동장 ↔ 600주년기념관",
+    en: "SKKU Sports Ground ↔ 600th Anniversary Hall",
+    zh: "成均馆大学运动场 ↔ 600周年纪念馆",
   },
   "buslist.fasttrack.subtitle": {
     ko: "테스트 버스",

@@ -148,8 +148,9 @@ describe("JongroPollerService", () => {
 
       const result = service.getJongroBusLocation("07");
       expect(result).toHaveLength(1);
+      // 명륜새마을금고 is TOPIS ord 6; the registry mirrors TOPIS order.
       expect(result![0]).toMatchObject({
-        sequence: "1",
+        sequence: "6",
         stationName: "명륜새마을금고",
         carNumber: "5537",
         latitude: "37.587",
@@ -161,52 +162,89 @@ describe("JongroPollerService", () => {
 
   describe("registry drift warning", () => {
     const logger = require("../../../src/infra/logger");
-    const r07 = jongroRoutes.find((r) => r.code === "07")!;
-    const fullList07 = Object.entries(r07.mapping).map(([stId, s]) => ({
-      stId,
-      staOrd: String(s.sequence),
-      stNm: s.stationName,
-      arsId: "",
-      plainNo1: "",
-      mkTm: "",
-      arrmsg1: "",
-    }));
+    // What TOPIS would return when it matches the registry exactly: one row per
+    // ord, including 02's loop-closing repeat of 성균관대학교 at ord 27.
+    const topisListFor = (code: string) => {
+      const route = jongroRoutes.find((r) => r.code === code)!;
+      return route.topisIds.map((stId, idx) => ({
+        stId,
+        staOrd: String(idx + 1),
+        stNm: route.stations[idx]!.stationName,
+        arsId: "",
+        plainNo1: "",
+        mkTm: "",
+        arrmsg1: "",
+      }));
+    };
     const driftWarnsFor = (code: string) =>
       (logger.warn as jest.Mock).mock.calls.filter(
         ([ctx, msg]) => ctx?.code === code && String(msg).includes("drifted"),
       );
-    // axios returns the same body for every URL, so only 07's lists are
-    // meaningful here; 02 is expected to warn and is ignored.
+    // axios returns the same body for every URL, so each case asserts only on
+    // the route its list was built for; the other route is expected to warn.
     const respondWith = (itemList: unknown[]) =>
       axios.get.mockResolvedValue({
         data: { msgHeader: { headerCd: "0" }, msgBody: { itemList } },
       });
 
     it("stays quiet when TOPIS lists exactly the registry stops", async () => {
-      respondWith(fullList07);
+      respondWith(topisListFor("07"));
       await runTickAndFlush();
       expect(driftWarnsFor("07")).toHaveLength(0);
     });
 
-    it("warns once, naming the unmapped TOPIS stop", async () => {
-      const extra = { ...fullList07[0]!, stId: "100000999", stNm: "새정류소", staOrd: "23" };
-      respondWith([...fullList07, extra]);
+    it("stays quiet on 02's loop-closing repeat of its first stop", async () => {
+      respondWith(topisListFor("02"));
+      await runTickAndFlush();
+      expect(driftWarnsFor("02")).toHaveLength(0);
+    });
+
+    it("warns once, naming a stop TOPIS added", async () => {
+      const list = topisListFor("07");
+      const extra = { ...list[0]!, stId: "100000999", stNm: "새정류소", staOrd: "23" };
+      respondWith([...list, extra]);
       await runTickAndFlush();
       await runTickAndFlush();
       const warns = driftWarnsFor("07");
       expect(warns).toHaveLength(1);
       expect(warns[0]![0]).toMatchObject({
-        unmapped: [{ stId: "100000999", stNm: "새정류소", staOrd: "23" }],
+        mismatched: [{ staOrd: "23", stId: "100000999", stNm: "새정류소", expected: null }],
+        missing: [],
+        renamed: [],
+      });
+    });
+
+    it("names reordered stops by ord", async () => {
+      const list = topisListFor("07");
+      const [a, b] = [list[0]!, list[1]!];
+      respondWith([{ ...b, staOrd: "1" }, { ...a, staOrd: "2" }, ...list.slice(2)]);
+      await runTickAndFlush();
+      expect(driftWarnsFor("07")[0]![0]).toMatchObject({
+        mismatched: [
+          { staOrd: "1", stId: b.stId, expected: a.stId },
+          { staOrd: "2", stId: a.stId, expected: b.stId },
+        ],
         missing: [],
       });
     });
 
-    it("names registry stops that TOPIS no longer lists", async () => {
-      respondWith(fullList07.filter((i) => i.stId !== "100000423"));
+    it("names registry ords that TOPIS no longer lists", async () => {
+      respondWith(topisListFor("07").slice(0, -1));
       await runTickAndFlush();
       expect(driftWarnsFor("07")[0]![0]).toMatchObject({
-        unmapped: [],
-        missing: [{ topisId: "100000423", stationName: "비천당" }],
+        mismatched: [],
+        missing: [{ staOrd: "22", topisId: "100900219", stationName: "600주년기념관" }],
+      });
+    });
+
+    it("names renamed stops", async () => {
+      const list = topisListFor("07");
+      respondWith([{ ...list[0]!, stNm: "새이름" }, ...list.slice(1)]);
+      await runTickAndFlush();
+      expect(driftWarnsFor("07")[0]![0]).toMatchObject({
+        mismatched: [],
+        missing: [],
+        renamed: [{ staOrd: "1", stNm: "새이름", registryName: "성균관대운동장" }],
       });
     });
   });
