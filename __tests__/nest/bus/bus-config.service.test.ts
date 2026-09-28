@@ -15,10 +15,10 @@ beforeEach(() => {
 });
 
 describe("getBusGroups", () => {
-  it("returns groups array with 5 items", () => {
+  it("returns groups array with 6 items", () => {
     const groups = service.getBusGroups("ko");
     expect(Array.isArray(groups)).toBe(true);
-    expect(groups).toHaveLength(5);
+    expect(groups).toHaveLength(6);
   });
 
   it("each group has id, screenType, label, visibility, card, screen", () => {
@@ -93,9 +93,9 @@ describe("getBusGroups", () => {
     }
   });
 
-  it("group order is hssc, campus, fasttrack, jongro02, jongro07", () => {
+  it("group order is hssc, campus, fasttrack, jongro02, jongro07, jongro08", () => {
     const ids = service.getBusGroups("ko").map((g: any) => g.id);
-    expect(ids).toEqual(["hssc", "campus", "fasttrack", "jongro02", "jongro07"]);
+    expect(ids).toEqual(["hssc", "campus", "fasttrack", "jongro02", "jongro07", "jongro08"]);
   });
 
   it("English translations differ from Korean", () => {

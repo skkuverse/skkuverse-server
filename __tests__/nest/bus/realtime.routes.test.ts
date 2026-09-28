@@ -93,6 +93,12 @@ describe("GET /bus/realtime/data/:groupId", () => {
     expect(res.body.data).toMatchObject({ groupId: "jongro07", buses: [], stationEtas: [] });
   });
 
+  it("jongro08 → 200 with empty buses/stationEtas when getters return undefined", async () => {
+    const res = await request(httpServer).get("/bus/realtime/data/jongro08");
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ groupId: "jongro08", buses: [], stationEtas: [] });
+  });
+
   it("unknown groupId → 404 GROUP_NOT_FOUND", async () => {
     const res = await request(httpServer).get("/bus/realtime/data/nope");
     expect(res.status).toBe(404);

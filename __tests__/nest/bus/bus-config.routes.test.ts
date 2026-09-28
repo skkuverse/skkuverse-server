@@ -34,11 +34,11 @@ afterAll(async () => {
 });
 
 describe("GET /bus/config", () => {
-  it("returns a groups array of 5", async () => {
+  it("returns a groups array of 6", async () => {
     const res = await request(httpServer).get("/bus/config");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data.groups)).toBe(true);
-    expect(res.body.data.groups).toHaveLength(5);
+    expect(res.body.data.groups).toHaveLength(6);
     expect(res.headers.etag).toMatch(/^"[a-f0-9]{32}"$/);
     expect(res.headers["cache-control"]).toContain("max-age=300");
   });
@@ -128,5 +128,15 @@ describe("GET /bus/config/:groupId", () => {
     expect(screen.stations).toHaveLength(22);
     expect(screen.lastStationIndex).toBe(21);
     expect(screen.routeOverlay).toBeNull();
+  });
+
+  it("jongro08 has its label, subtitle and 31-stop screen", async () => {
+    const res = await request(httpServer).get("/bus/config/jongro08");
+    const g = res.body.data;
+    expect(g.label).toBe("종로 08");
+    expect(g.card.subtitle).toBe("명륜3가 ↔ 종로5가");
+    expect(g.screen.dataEndpoint).toBe("/bus/realtime/data/jongro08");
+    expect(g.screen.stations).toHaveLength(31);
+    expect(g.screen.lastStationIndex).toBe(30);
   });
 });
