@@ -49,12 +49,32 @@ describe("jongro.registry — URL builders match the legacy prod URLs", () => {
 });
 
 describe("jongro.registry — derived routes from jongro-routes.json", () => {
-  it("loads both 02 and 07 in order", () => {
-    expect(jongroRoutes).toHaveLength(2);
+  it("loads 02, 07 and 08 in order", () => {
+    expect(jongroRoutes).toHaveLength(3);
     expect(jongroRoutes[0]!.id).toBe("jongro02");
     expect(jongroRoutes[0]!.code).toBe("02");
     expect(jongroRoutes[1]!.id).toBe("jongro07");
     expect(jongroRoutes[1]!.code).toBe("07");
+    expect(jongroRoutes[2]!.id).toBe("jongro08");
+    expect(jongroRoutes[2]!.code).toBe("08");
+  });
+
+  it("builds 종로08 from TOPIS route 100900005: 31 stops, 회차 at 재향군인회관", () => {
+    const r08 = getJongroRouteById("jongro08")!;
+    expect(r08.busRouteId).toBe("100900005");
+    expect(r08.stations).toHaveLength(31);
+    expect(r08.locUrl).toContain("&endOrd=31&");
+    expect(r08.stations[0]!.isFirstStation).toBe(true);
+    expect(r08.stations[0]!.stationName).toBe("명륜3가종점");
+    expect(r08.stations[30]!.isLastStation).toBe(true);
+    expect(r08.stations[30]!.stationName).toBe("샘미용실.종로구청소년상담복지센터");
+    expect(r08.stations.filter((s) => s.isRotationStation).map((s) => s.stationName)).toEqual([
+      "서울특별시재향군인회관",
+    ]);
+    expect(r08.stations[15]!.isRotationStation).toBe(true);
+    expect(r08.stations[16]!.stationName).toBe("종로5가역.광장시장");
+    expect(r08.stations[16]!.transferLines).toEqual([{ line: "1", color: "0052A4" }]);
+    expect(r08.stations[9]!.transferLines).toEqual([{ line: "4", color: "00A5DE" }]);
   });
 
   // The registry is TOPIS's stop list verbatim: stations[i] is TOPIS ord i+1.
@@ -231,7 +251,7 @@ describe("jongroRoutesProvider — fail-loud factory (NO silent ?? [])", () => {
       .useFactory;
     const routes = factory();
     expect(Array.isArray(routes)).toBe(true);
-    expect(routes.length).toBe(2);
+    expect(routes.length).toBe(3);
     // Same object as the re-exported registry.
     expect(routes).toBe(jongroRoutes);
   });

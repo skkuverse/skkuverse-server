@@ -62,8 +62,9 @@ function buildJongroGroup(route: JongroRoute, lang: SupportedLang) {
 const etagCache: Map<string, string> = new Map();
 
 /**
- * Returns ordered array of 5 bus groups for the client SDUI.
- * Order: hssc, campus, fasttrack, jongro02, jongro07
+ * Returns ordered array of bus groups for the client SDUI.
+ * Order: hssc, campus, fasttrack, then every jongro route in registry order
+ * (jongro02, jongro07, jongro08).
  */
 function getBusGroups(lang: SupportedLang = "ko") {
   return [

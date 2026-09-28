@@ -65,5 +65,45 @@
       { "stationName": "비천당", "arsId": "01620", "topisId": "100000423", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
       { "stationName": "600주년기념관", "arsId": "01616", "topisId": "100900219", "isFirstStation": false, "isLastStation": true, "isRotationStation": false, "transferLines": [] }
     ]
+  },
+  {
+    "id": "jongro08",
+    "busRouteId": "100900005",
+    "themeColor": "4CAF50",
+    "iconType": "village",
+    "refreshInterval": 40,
+    "stations": [
+      { "stationName": "명륜3가종점", "arsId": "01503", "topisId": "100900040", "isFirstStation": true, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "샘미용실.종로구청소년상담복지센터", "arsId": "01511", "topisId": "100900032", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "양현관", "arsId": "01520", "topisId": "100900021", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "명륜시장.성대후문", "arsId": "01531", "topisId": "100900046", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "새마을금고", "arsId": "01542", "topisId": "100900064", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "서울국제고등학교", "arsId": "01512", "topisId": "100900031", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "국민생활관", "arsId": "01521", "topisId": "100900017", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "혜화초등학교", "arsId": "01532", "topisId": "100900003", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "혜화우체국", "arsId": "01543", "topisId": "100900063", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "혜화역4번출구", "arsId": "01876", "topisId": "100900027", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [{ "line": "4", "color": "00A5DE" }] },
+      { "stationName": "혜화역3번출구.서울대병원입구", "arsId": "01221", "topisId": "100000125", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [{ "line": "4", "color": "00A5DE" }] },
+      { "stationName": "방송통신대앞", "arsId": "01877", "topisId": "100900028", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "이화사거리", "arsId": "01572", "topisId": "100900090", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "연지공원앞.현대그룹빌딩", "arsId": "01223", "topisId": "100000127", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "원남동", "arsId": "01198", "topisId": "100000102", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "서울특별시재향군인회관", "arsId": "01249", "topisId": "100000153", "isFirstStation": false, "isLastStation": false, "isRotationStation": true, "transferLines": [] },
+      { "stationName": "종로5가역.광장시장", "arsId": "01794", "topisId": "100900191", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [{ "line": "1", "color": "0052A4" }] },
+      { "stationName": "종로5가역.중부교육지원청", "arsId": "01725", "topisId": "100900107", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [{ "line": "1", "color": "0052A4" }] },
+      { "stationName": "효제초교.연동교회.김마리아활동터", "arsId": "01879", "topisId": "100900033", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "이화사거리", "arsId": "01815", "topisId": "100900128", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "방송통신대.이화장", "arsId": "01219", "topisId": "100000123", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "혜화역2번출구.마로니에공원", "arsId": "01220", "topisId": "100000124", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [{ "line": "4", "color": "00A5DE" }] },
+      { "stationName": "혜화역1번출구", "arsId": "01592", "topisId": "100900075", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [{ "line": "4", "color": "00A5DE" }] },
+      { "stationName": "혜화동로터리", "arsId": "01841", "topisId": "100900200", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "혜화초등학교", "arsId": "01847", "topisId": "100900151", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "국민생활관", "arsId": "01852", "topisId": "100900201", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "서울국제고등학교", "arsId": "01858", "topisId": "100900171", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "새마을금고", "arsId": "01862", "topisId": "100900169", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "명륜시장.성대후문", "arsId": "01864", "topisId": "100900004", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "양현관", "arsId": "01866", "topisId": "100900008", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
+      { "stationName": "샘미용실.종로구청소년상담복지센터", "arsId": "01869", "topisId": "100900012", "isFirstStation": false, "isLastStation": true, "isRotationStation": false, "transferLines": [] }
+    ]
   }
 ]
