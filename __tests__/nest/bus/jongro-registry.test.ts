@@ -182,10 +182,10 @@ describe("jongro.registry — derived routes from jongro-routes.json", () => {
   });
 
   it("carries the transfer badges added from the 2026-09 review", () => {
-    const lines = (code: string, name: string, nth = 0) =>
-      getJongroRouteByCode(code)!
-        .stations.filter((s) => s.stationName === name)
-        [nth]!.transferLines.map((t) => t.line);
+    const lines = (code: string, name: string, nth = 0) => {
+      const matches = getJongroRouteByCode(code)!.stations.filter((s) => s.stationName === name);
+      return matches[nth]!.transferLines.map((t) => t.line);
+    };
     expect(lines("08", "서울특별시재향군인회관")).toEqual(["1"]);
     expect(lines("08", "효제초교.연동교회.김마리아활동터")).toEqual(["1"]);
     expect(lines("08", "방송통신대앞")).toEqual(["4"]);
