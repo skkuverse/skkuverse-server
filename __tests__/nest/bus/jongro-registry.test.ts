@@ -146,6 +146,59 @@ describe("jongro.registry — derived routes from jongro-routes.json", () => {
     expect(getJongroRouteByCode("02")!.locUrl).toContain("&endOrd=27&");
   });
 
+  // A stop served by several routes (07/08 share ten) or listed twice (02's
+  // loop close) is one physical stop, so it must show the same subway badges
+  // everywhere; a badge edited on one route only would drift silently.
+  it("gives every occurrence of a stop the same transferLines", () => {
+    const byStop = new Map<string, string>();
+    const mismatches: string[] = [];
+    const raw = require("../../../src/bus/registry/jongro-routes.json") as Array<{
+      id: string;
+      stations: Array<{ topisId: string; stationName: string; transferLines: unknown[] }>;
+    }>;
+    for (const route of raw) {
+      for (const s of route.stations) {
+        const lines = JSON.stringify(s.transferLines);
+        const seen = byStop.get(s.topisId);
+        if (seen === undefined) byStop.set(s.topisId, lines);
+        else if (seen !== lines) mismatches.push(`${route.id} ${s.stationName} (${s.topisId})`);
+      }
+    }
+    expect(mismatches).toEqual([]);
+  });
+
+  it("uses one color per subway line across every route", () => {
+    const colorByLine = new Map<string, Set<string>>();
+    for (const route of jongroRoutes) {
+      for (const s of route.stations) {
+        for (const t of s.transferLines) {
+          if (!colorByLine.has(t.line)) colorByLine.set(t.line, new Set());
+          colorByLine.get(t.line)!.add(t.color);
+        }
+      }
+    }
+    const conflicting = [...colorByLine].filter(([, colors]) => colors.size > 1);
+    expect(conflicting).toEqual([]);
+  });
+
+  it("carries the transfer badges added from the 2026-09 review", () => {
+    const lines = (code: string, name: string, nth = 0) =>
+      getJongroRouteByCode(code)!
+        .stations.filter((s) => s.stationName === name)
+        [nth]!.transferLines.map((t) => t.line);
+    expect(lines("08", "서울특별시재향군인회관")).toEqual(["1"]);
+    expect(lines("08", "효제초교.연동교회.김마리아활동터")).toEqual(["1"]);
+    expect(lines("08", "방송통신대앞")).toEqual(["4"]);
+    expect(lines("07", "성대입구")).toEqual(["4"]);
+    expect(lines("07", "방송통신대앞")).toEqual(["4"]);
+    expect(lines("02", "종로2가.탑골공원")).toEqual(["1", "3", "5"]);
+    expect(lines("02", "조계사")).toEqual(["1"]);
+    expect(lines("02", "재동초등학교")).toEqual(["3"]);
+    expect(lines("02", "아름다운가게.정독도서관")).toEqual(["3"]);
+    expect(lines("02", "가회동주민센터", 0)).toEqual(["3"]);
+    expect(lines("02", "가회동주민센터", 1)).toEqual(["3"]);
+  });
+
   it("preserves transferLines on metro-connected stops", () => {
     const r02 = getJongroRouteByCode("02")!;
     expect(r02.stations[11]!.transferLines).toEqual([
