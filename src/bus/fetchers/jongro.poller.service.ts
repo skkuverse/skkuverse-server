@@ -64,6 +64,7 @@ export class JongroPollerService implements OnModuleInit {
     string,
     Readonly<JongroStationMapping>
   >;
+  private readonly routeByCode: Record<string, JongroRoute>;
 
   constructor(
     private readonly registry: PollerRegistryService,
@@ -75,6 +76,9 @@ export class JongroPollerService implements OnModuleInit {
     // suffix to preserve byte-identical bus_cache document IDs.
     this.mappingByCode = Object.fromEntries(
       this.jongroRoutes.map((r) => [r.code, r.mapping]),
+    );
+    this.routeByCode = Object.fromEntries(
+      this.jongroRoutes.map((r) => [r.code, r]),
     );
   }
 
@@ -258,30 +262,60 @@ export class JongroPollerService implements OnModuleInit {
   }
 
   // getArrInfoByRouteAll lists every stop on the route on every tick, so it
-  // doubles as a free check that `jongro-routes.json` still matches TOPIS.
-  // When TOPIS adds, drops or renumbers stops, buses and ETAs at the unmapped
-  // stops silently vanish. This makes that show up in the logs rather than in
-  // a user report. It compares ID sets, not counts: a loop route may list its
-  // first stop again as the last ord (02 does). Warns once per route per
-  // process; renames are harmless because ETAs match by ID.
+  // doubles as a free check that `jongro-routes.json` still mirrors TOPIS.
+  // The registry is TOPIS's stop list verbatim (ord i ⇔ stations[i-1], same
+  // name), so the check is exact: a stop whose ID differs at its ord (added,
+  // dropped or reordered), a registry ord TOPIS no longer lists, or a rename.
+  // When stops move, buses and ETAs land on the wrong stop or vanish, so this
+  // puts it in the logs rather than in a user report. Once per route per process.
   private warnOnRegistryDrift(
     code: string,
     apiData: ReadonlyArray<JongroListItem>,
   ): void {
     if (this.driftWarned.has(code)) return;
-    const mapping = this.mappingByCode[code];
-    if (!mapping) return;
-    const topisIds = new Set(apiData.map((item) => item.stId));
-    const unmapped = apiData
-      .filter((item) => !mapping[item.stId])
-      .map((item) => ({ stId: item.stId, stNm: item.stNm, staOrd: item.staOrd }));
-    const missing = Object.entries(mapping)
-      .filter(([topisId]) => !topisIds.has(topisId))
-      .map(([topisId, s]) => ({ topisId, stationName: s.stationName }));
-    if (unmapped.length === 0 && missing.length === 0) return;
+    const route = this.routeByCode[code];
+    if (!route) return;
+    const seenOrds = new Set<number>();
+    const mismatched: Array<{
+      staOrd: string;
+      stId: string;
+      stNm: string;
+      expected: string | null;
+    }> = [];
+    const renamed: Array<{
+      staOrd: string;
+      stNm: string;
+      registryName: string;
+    }> = [];
+    for (const item of apiData) {
+      const idx = parseInt(item.staOrd, 10) - 1;
+      seenOrds.add(idx);
+      const expected = route.topisIds[idx];
+      if (expected !== item.stId) {
+        mismatched.push({
+          staOrd: item.staOrd,
+          stId: item.stId,
+          stNm: item.stNm,
+          expected: expected ?? null,
+        });
+        continue;
+      }
+      const registryName = route.stations[idx]!.stationName;
+      if (registryName !== item.stNm) {
+        renamed.push({ staOrd: item.staOrd, stNm: item.stNm, registryName });
+      }
+    }
+    const missing = route.topisIds
+      .map((topisId, idx) => ({
+        staOrd: String(idx + 1),
+        topisId,
+        stationName: route.stations[idx]!.stationName,
+      }))
+      .filter((_, idx) => !seenOrds.has(idx));
+    if (mismatched.length === 0 && missing.length === 0 && renamed.length === 0) return;
     this.driftWarned.add(code);
     logger.warn(
-      { code, unmapped, missing },
+      { code, mismatched, missing, renamed },
       "[jongro] jongro-routes.json has drifted from TOPIS — resync the registry",
     );
   }
