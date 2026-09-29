@@ -36,7 +36,18 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch contract tooling
-        run: git clone --depth 1 https://github.com/spencer0124/skkuverse "$RUNNER_TEMP/sv"
+        # The umbrella repo is private; clone it with its read-only deploy key
+        # and GitHub's pinned host key.
+        env:
+          UMBRELLA_DEPLOY_KEY: ${{ secrets.UMBRELLA_DEPLOY_KEY }}
+        run: |
+          key="$RUNNER_TEMP/umbrella_key"
+          printf '%s\n' "$UMBRELLA_DEPLOY_KEY" > "$key"
+          chmod 600 "$key"
+          echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > "$RUNNER_TEMP/known_hosts"
+          GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$RUNNER_TEMP/known_hosts" \
+            git clone --depth 1 git@github.com:spencer0124/skkuverse.git "$RUNNER_TEMP/sv"
+          rm -f "$key"
 
       - name: Pull upstream contract state
         # `shell: bash` is load-bearing: the implicit shell is `bash -e {0}`,
