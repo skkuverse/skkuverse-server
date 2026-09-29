@@ -125,36 +125,68 @@ describe("allowed request", () => {
     expect(res.body.error.code).toBe("FORBIDDEN");
   });
 
-  it("413 when the upstream declares a body over the cap", async () => {
+  it("502 when the upstream declares a body over the cap", async () => {
     mockedGet.mockResolvedValueOnce(
       upstream("", { "content-type": "application/pdf", "content-length": String(200 * 1024 * 1024) }),
     );
     const res = await request(httpServer)
       .get(PROXY)
       .query({ url: "https://www.skku.edu/_attach/big.pdf" });
-    expect(res.status).toBe(413);
+    expect(res.status).toBe(502);
+    expect(res.body.error.code).toBe("UPSTREAM_TOO_LARGE");
   });
 });
 
-describe("script-capable content types", () => {
-  it.each(["text/html; charset=utf-8", "image/svg+xml", "application/javascript", "application/xhtml+xml"])(
-    "%s is served inline inside a sandbox CSP",
+describe("inline content-type policy", () => {
+  it.each([
+    "text/html; charset=utf-8",
+    "TEXT/HTML",
+    "image/svg+xml",
+    "application/javascript",
+    "application/xhtml+xml",
+    "application/rss+xml",
+    "application/atom+xml",
+    "text/xsl",
+    "text/plain",
+    "multipart/x-mixed-replace; boundary=x",
+  ])("%s is served inline inside a sandbox CSP", async (contentType) => {
+    mockedGet.mockResolvedValueOnce(upstream("<script>alert(1)</script>", { "content-type": contentType }));
+    // Headers are what's under test; skip supertest's body parsing (it
+    // would try to decode the multipart case).
+    const res = await request(httpServer)
+      .get(PROXY)
+      .query({ url: "https://www.skku.edu/_attach/x" })
+      .parse((r, cb) => {
+        const stream = r as unknown as Readable;
+        stream.resume();
+        stream.on("end", () => cb(null, null));
+      });
+    expect(res.status).toBe(200);
+    expect(res.headers["content-security-policy"]).toBe("sandbox; default-src 'none'");
+    expect(res.headers["x-content-type-options"]).toBe("nosniff");
+  });
+
+  it.each(["image/gif", "image/png", "image/jpeg", "application/pdf", "video/mp4"])(
+    "%s keeps rendering without the sandbox header",
     async (contentType) => {
-      mockedGet.mockResolvedValueOnce(upstream("<script>alert(1)</script>", { "content-type": contentType }));
+      mockedGet.mockResolvedValueOnce(upstream("GIF89a", { "content-type": contentType }));
       const res = await request(httpServer)
         .get(PROXY)
-        .query({ url: "https://www.skku.edu/_attach/x" });
+        .query({ url: "https://www.skku.edu/_attach/x.bin" });
       expect(res.status).toBe(200);
-      expect(res.headers["content-security-policy"]).toBe("sandbox; default-src 'none'");
+      expect(res.headers["content-security-policy"]).toBeUndefined();
     },
   );
 
-  it("images keep rendering without the sandbox header", async () => {
-    mockedGet.mockResolvedValueOnce(upstream("GIF89a", { "content-type": "image/gif" }));
+  it("destroys the body stream of a rejected (non-2xx) upstream response", async () => {
+    const body = Readable.from([Buffer.from("err")]);
+    mockedGet.mockRejectedValueOnce(
+      Object.assign(new Error("Request failed with status code 404"), { response: { data: body } }),
+    );
     const res = await request(httpServer)
       .get(PROXY)
-      .query({ url: "https://www.skku.edu/_attach/x.gif" });
-    expect(res.status).toBe(200);
-    expect(res.headers["content-security-policy"]).toBeUndefined();
+      .query({ url: "https://www.skku.edu/_attach/missing.pdf" });
+    expect(res.status).toBe(500);
+    expect(body.destroyed).toBe(true);
   });
 });
