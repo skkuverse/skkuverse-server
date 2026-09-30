@@ -14,6 +14,7 @@
 const insertSentNotification = jest.fn();
 const recordDelivery = jest.fn();
 const listSentNotifications = jest.fn();
+const recordDeliveryFailure = jest.fn();
 const ensureIndexes = jest.fn();
 const postToFcmFunction = jest.fn();
 
@@ -21,6 +22,7 @@ jest.mock("../../../src/miniapps/miniapps.data", () => ({
   ensureIndexes: (...a: unknown[]) => ensureIndexes(...a),
   insertSentNotification: (...a: unknown[]) => insertSentNotification(...a),
   recordDelivery: (...a: unknown[]) => recordDelivery(...a),
+  recordDeliveryFailure: (...a: unknown[]) => recordDeliveryFailure(...a),
   listSentNotifications: (...a: unknown[]) => listSentNotifications(...a),
 }));
 
@@ -50,6 +52,7 @@ beforeEach(() => {
   service = new MiniAppNotificationsService();
   insertSentNotification.mockResolvedValue(undefined);
   recordDelivery.mockResolvedValue(undefined);
+  recordDeliveryFailure.mockResolvedValue(undefined);
   postToFcmFunction.mockResolvedValue({ sent: 12, failed: 1, cleanedUp: 1 });
 });
 
@@ -96,6 +99,48 @@ describe("send — the feed entry and the delivery", () => {
     expect("error" in result ? result.error : "").toContain("boom");
     // The entry stays. Nothing deletes it, and no delivery is recorded over it.
     expect(recordDelivery).not.toHaveBeenCalled();
+  });
+
+  it("says outcome: delivered on success", async () => {
+    const result = await service.send("eskara-2026", validDraft);
+    expect("outcome" in result ? result.outcome : null).toBe("delivered");
+    expect(recordDeliveryFailure).not.toHaveBeenCalled();
+  });
+
+  // The outcome decides whether an operator may retry. A wrong "not_sent"
+  // makes every subscriber get the announcement twice.
+  describe("classifying a failed call — may the operator retry?", () => {
+    const withStatus = (status: number) =>
+      Object.assign(new Error(`sendNotification ${status}: x`), { status });
+    const abort = () => Object.assign(new Error("This operation was aborted"), { name: "AbortError" });
+
+    it.each([
+      ["a 400 (payload refused before any send)", withStatus(400), "not_sent"],
+      ["a 401 (key refused before any send)", withStatus(401), "not_sent"],
+      ["a 500 (the function may have failed mid-batch)", withStatus(500), "unknown"],
+      ["a 503", withStatus(503), "unknown"],
+      ["a timeout (the function keeps sending after we stop waiting)", abort(), "unknown"],
+      ["a network error (the request may have arrived)", new TypeError("fetch failed"), "unknown"],
+    ])("%s → %s", async (_label, err, outcome) => {
+      postToFcmFunction.mockRejectedValue(err);
+      const result = await service.send("eskara-2026", validDraft);
+      expect("outcome" in result ? result.outcome : null).toBe(outcome);
+      expect("delivery" in result ? result.delivery : undefined).toBeNull();
+      // Stored on the row, so the console's history says the same after a reload.
+      const written = insertSentNotification.mock.calls[0][0];
+      expect(recordDeliveryFailure).toHaveBeenCalledWith(written._id, {
+        outcome,
+        error: expect.any(String),
+      });
+      expect(recordDelivery).not.toHaveBeenCalled();
+    });
+
+    it("still answers when recording the failure fails too", async () => {
+      postToFcmFunction.mockRejectedValue(abort());
+      recordDeliveryFailure.mockRejectedValue(new Error("atlas down"));
+      const result = await service.send("eskara-2026", validDraft);
+      expect("outcome" in result ? result.outcome : null).toBe("unknown");
+    });
   });
 
   it("reports DELIVERED when the multicast succeeded but recording it failed", async () => {
@@ -289,12 +334,12 @@ describe("feed cache — reads every client makes must not scale Mongo ops", () 
     expect(en[0].title).toBe("English");
   });
 
-  it("reloads once the TTL has passed", async () => {
+  it("reloads once the TTL has passed, and serves the NEW rows — never a stale copy", async () => {
     await service.feed("eskara-2026", "ko");
     clock += FEED_CACHE_TTL_MS + 1;
-    await service.feed("eskara-2026", "ko");
-    // Inside the stale window the expired value is served while a reload runs.
-    await Promise.resolve();
+    listSentNotifications.mockResolvedValue([{ ...doc, _id: "n2" }]);
+    const [entry] = await service.feed("eskara-2026", "ko");
+    expect(entry.id).toBe("n2");
     expect(listSentNotifications).toHaveBeenCalledTimes(2);
   });
 
@@ -307,6 +352,17 @@ describe("feed cache — reads every client makes must not scale Mongo ops", () 
 
   it("drops this mini app's cache on send, so the sender's replica shows it at once", async () => {
     await service.feed("eskara-2026", "ko");
+    await service.send("eskara-2026", validDraft);
+    await service.feed("eskara-2026", "ko");
+    expect(listSentNotifications).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears AFTER the insert, so a read racing the insert cannot pin the old feed", async () => {
+    // A feed read that lands while the insert is in flight caches the pre-insert
+    // rows. Only a clear that runs after the insert throws that away.
+    insertSentNotification.mockImplementation(async () => {
+      await service.feed("eskara-2026", "ko");
+    });
     await service.send("eskara-2026", validDraft);
     await service.feed("eskara-2026", "ko");
     expect(listSentNotifications).toHaveBeenCalledTimes(2);
@@ -346,12 +402,41 @@ describe("history — the operator's view, delivery included", () => {
         id: "n1",
         title_ko: "우천 안내",
         body_ko: "지연",
+        title_en: null,
+        body_en: null,
         actionType: "route",
         actionValue: "/miniapp-feed/eskara-2026",
         sentAt: "2026-10-01T09:00:00.000Z",
         delivery: { sent: 812, failed: 3, cleanedUp: 2 },
+        deliveryError: null,
       },
     ]);
+  });
+
+  it("carries a failed call's outcome, and null for a row missing the fields", async () => {
+    listSentNotifications.mockResolvedValue([
+      {
+        _id: "n3",
+        miniAppId: "eskara-2026",
+        title_ko: "t",
+        body_ko: "b",
+        sentAt: new Date("2026-10-01T09:00:00.000Z"),
+        delivery: null,
+        deliveryError: { outcome: "unknown", error: "This operation was aborted" },
+      },
+      {
+        _id: "n4",
+        miniAppId: "eskara-2026",
+        title_ko: "t",
+        body_ko: "b",
+        sentAt: new Date("2026-10-01T09:00:00.000Z"),
+      },
+    ]);
+    const [failed, legacy] = await service.history("eskara-2026");
+    expect(failed.deliveryError).toEqual({ outcome: "unknown", error: "This operation was aborted" });
+    expect(legacy.delivery).toBeNull();
+    expect(legacy.deliveryError).toBeNull();
+    expect(legacy.title_en).toBeNull();
   });
 
   it("reports an undelivered entry as delivery: null", async () => {
