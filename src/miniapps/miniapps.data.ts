@@ -1,5 +1,5 @@
 import type { Collection } from "mongodb";
-import { getClient } from "../infra/db";
+import { getClient, HOT_READ_MAX_TIME_MS } from "../infra/db";
 import config from "../infra/config";
 import logger from "../infra/logger";
 import type { SentNotificationDoc } from "./types";
@@ -51,7 +51,7 @@ export async function listSentNotifications(
   limit: number,
 ): Promise<SentNotificationDoc[]> {
   return getSentNotificationsCollection()
-    .find({ miniAppId })
+    .find({ miniAppId }, { maxTimeMS: HOT_READ_MAX_TIME_MS })
     .sort({ sentAt: -1 })
     .limit(limit)
     .toArray();

@@ -234,3 +234,21 @@ export interface MiniAppNotificationEntry {
   actionType?: string;
   actionValue?: string;
 }
+
+/**
+ * One entry as the internal history returns it, for the operator console.
+ *
+ * Unlike the public feed it keeps `delivery`, because that is what the operator
+ * acts on: how many devices a send reached, and whether an entry was never
+ * delivered (`null`) and may be retried. It also keeps the raw Korean pair, since
+ * the console shows what was typed rather than a per-language projection.
+ */
+export interface MiniAppNotificationHistoryEntry {
+  id: string;
+  title_ko: string;
+  body_ko: string;
+  actionType?: string;
+  actionValue?: string;
+  sentAt: string;
+  delivery: SentNotificationDoc["delivery"];
+}

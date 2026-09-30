@@ -35,13 +35,19 @@ jest.mock("../../../src/infra/logger", () => ({
   debug: jest.fn(),
 }));
 
-import { MiniAppNotificationsService } from "../../../src/miniapps/miniapps-notifications.service";
+import {
+  FEED_CACHE_TTL_MS,
+  MiniAppNotificationsService,
+} from "../../../src/miniapps/miniapps-notifications.service";
 
-const service = new MiniAppNotificationsService();
+// Fresh per test: the feed is cached per instance, so a shared instance would
+// carry one test's rows into the next.
+let service: MiniAppNotificationsService;
 const validDraft = { title_ko: "우천 안내", body_ko: "공연이 30분 지연됩니다." };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  service = new MiniAppNotificationsService();
   insertSentNotification.mockResolvedValue(undefined);
   recordDelivery.mockResolvedValue(undefined);
   postToFcmFunction.mockResolvedValue({ sent: 12, failed: 1, cleanedUp: 1 });
@@ -240,5 +246,128 @@ describe("feed", () => {
     const [entry] = await service.feed("eskara-2026", "ko");
     expect(entry).not.toHaveProperty("delivery");
     expect(entry).not.toHaveProperty("title_ko");
+  });
+});
+
+describe("feed cache — reads every client makes must not scale Mongo ops", () => {
+  const doc = {
+    _id: "n1",
+    miniAppId: "eskara-2026",
+    title_ko: "한국어",
+    body_ko: "본문",
+    title_en: "English",
+    body_en: "Body",
+    sentAt: new Date("2026-09-01T03:00:00.000Z"),
+    delivery: { sent: 1, failed: 0, cleanedUp: 0 },
+  };
+  let clock = 1_000_000;
+
+  beforeEach(() => {
+    clock = 1_000_000;
+    jest.spyOn(Date, "now").mockImplementation(() => clock);
+    listSentNotifications.mockResolvedValue([doc]);
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("serves repeated reads from one query while fresh", async () => {
+    await Promise.all([
+      service.feed("eskara-2026", "ko"),
+      service.feed("eskara-2026", "ko"),
+      service.feed("eskara-2026", "ko"),
+    ]);
+    await service.feed("eskara-2026", "ko");
+    expect(listSentNotifications).toHaveBeenCalledTimes(1);
+  });
+
+  it("shares one query across languages — the language is applied after the read", async () => {
+    const ko = await service.feed("eskara-2026", "ko");
+    const en = await service.feed("eskara-2026", "en");
+    expect(listSentNotifications).toHaveBeenCalledTimes(1);
+    expect(ko[0].title).toBe("한국어");
+    expect(en[0].title).toBe("English");
+  });
+
+  it("reloads once the TTL has passed", async () => {
+    await service.feed("eskara-2026", "ko");
+    clock += FEED_CACHE_TTL_MS + 1;
+    await service.feed("eskara-2026", "ko");
+    // Inside the stale window the expired value is served while a reload runs.
+    await Promise.resolve();
+    expect(listSentNotifications).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps separate caches per mini app", async () => {
+    await service.feed("eskara-2026", "ko");
+    await service.feed("hssc", "ko");
+    expect(listSentNotifications).toHaveBeenCalledTimes(2);
+    expect(listSentNotifications.mock.calls.map((c) => c[0])).toEqual(["eskara-2026", "hssc"]);
+  });
+
+  it("drops this mini app's cache on send, so the sender's replica shows it at once", async () => {
+    await service.feed("eskara-2026", "ko");
+    await service.send("eskara-2026", validDraft);
+    await service.feed("eskara-2026", "ko");
+    expect(listSentNotifications).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not cache a failed read", async () => {
+    listSentNotifications.mockRejectedValueOnce(new Error("atlas down"));
+    await expect(service.feed("eskara-2026", "ko")).rejects.toThrow("atlas down");
+    const [entry] = await service.feed("eskara-2026", "ko");
+    expect(entry.id).toBe("n1");
+    expect(listSentNotifications).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("history — the operator's view, delivery included", () => {
+  it("returns the delivery record the public feed hides, uncached", async () => {
+    const doc = {
+      _id: "n1",
+      miniAppId: "eskara-2026",
+      title_ko: "우천 안내",
+      body_ko: "지연",
+      title_en: null,
+      body_en: null,
+      actionType: "route",
+      actionValue: "/miniapp-feed/eskara-2026",
+      sentAt: new Date("2026-10-01T09:00:00.000Z"),
+      delivery: { sent: 812, failed: 3, cleanedUp: 2 },
+    };
+    listSentNotifications.mockResolvedValue([doc]);
+
+    const first = await service.history("eskara-2026");
+    await service.history("eskara-2026");
+
+    expect(listSentNotifications).toHaveBeenCalledTimes(2);
+    expect(first).toEqual([
+      {
+        id: "n1",
+        title_ko: "우천 안내",
+        body_ko: "지연",
+        actionType: "route",
+        actionValue: "/miniapp-feed/eskara-2026",
+        sentAt: "2026-10-01T09:00:00.000Z",
+        delivery: { sent: 812, failed: 3, cleanedUp: 2 },
+      },
+    ]);
+  });
+
+  it("reports an undelivered entry as delivery: null", async () => {
+    listSentNotifications.mockResolvedValue([
+      {
+        _id: "n2",
+        miniAppId: "eskara-2026",
+        title_ko: "t",
+        body_ko: "b",
+        title_en: null,
+        body_en: null,
+        sentAt: new Date("2026-10-01T09:00:00.000Z"),
+        delivery: null,
+      },
+    ]);
+    const [entry] = await service.history("eskara-2026");
+    expect(entry.delivery).toBeNull();
   });
 });
