@@ -275,6 +275,12 @@ export interface MiniAppNotificationHistoryEntry {
   actionValue?: string;
   sentAt: string;
   delivery: SentNotificationDoc["delivery"];
-  /** Why `delivery` is null, and whether that may be retried; null otherwise. */
+  /**
+   * Why `delivery` is null, and whether that may be retried; null otherwise.
+   * BOTH null means the call is still running, or it finished but its result
+   * was never saved (a failed record, a crashed process, a row from before
+   * this field) — treat that as `unknown`: check the Cloud Function log for the
+   * notificationId before resending.
+   */
   deliveryError: DeliveryError | null;
 }
