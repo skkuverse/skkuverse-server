@@ -109,6 +109,22 @@ Add a `link` tile:
 
 A `route` to a screen that an installed build does not have lands that build on its not-found screen. Link to a new screen only once the release carrying it is out.
 
+### Show a mini app's live feed
+
+Add a `miniapp_feed` section where the card should sit:
+
+```json
+{
+  "type": "miniapp_feed",
+  "id": "eskara_feed",
+  "miniAppId": "eskara-2026",
+  "title": { "ko": "에스카라 실시간 소식", "en": "ESKARA live updates" },
+  "limit": 3
+}
+```
+
+The app fetches the entries itself from `GET /miniapps/:id/notifications` (cached per replica, see [miniapps-api.md](../reference/miniapps-api.md) §5.1) and hides the card while the feed is empty. `miniAppId` must be registered; `title` is optional; `limit` is 1–10 and defaults to 3. Builds that predate the section type drop it, so it is safe to place before every device has the release that draws it. Remove the section to take the card down; no release is needed.
+
 ## Troubleshooting
 
 - **The server will not start and the log starts with `home layout:`**: the message names the field that failed. Common causes are a misspelt key (unknown keys are refused), a mini-app id missing from the registry, or an id placed in two grids.

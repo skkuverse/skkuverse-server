@@ -1,8 +1,8 @@
 import type { Collection } from "mongodb";
-import { getClient } from "../infra/db";
+import { getClient, HOT_READ_MAX_TIME_MS } from "../infra/db";
 import config from "../infra/config";
 import logger from "../infra/logger";
-import type { SentNotificationDoc } from "./types";
+import type { DeliveryError, SentNotificationDoc } from "./types";
 
 /**
  * Mongo access for the mini-app broadcast feed.
@@ -46,12 +46,17 @@ export async function recordDelivery(
   await getSentNotificationsCollection().updateOne({ _id: id }, { $set: { delivery } });
 }
 
+/** Record why the call failed, so the history can say whether to retry. */
+export async function recordDeliveryFailure(id: string, deliveryError: DeliveryError): Promise<void> {
+  await getSentNotificationsCollection().updateOne({ _id: id }, { $set: { deliveryError } });
+}
+
 export async function listSentNotifications(
   miniAppId: string,
   limit: number,
 ): Promise<SentNotificationDoc[]> {
   return getSentNotificationsCollection()
-    .find({ miniAppId })
+    .find({ miniAppId }, { maxTimeMS: HOT_READ_MAX_TIME_MS })
     .sort({ sentAt: -1 })
     .limit(limit)
     .toArray();

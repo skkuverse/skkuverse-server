@@ -31,6 +31,10 @@ export const ASPECT_RATIO_MIN = 1;
 export const ASPECT_RATIO_MAX = 6;
 export const AUTO_ROTATE_SEC_MIN = 2;
 export const AUTO_ROTATE_SEC_MAX = 30;
+/** A home card is a glance, not the feed: past a handful it belongs on the feed screen. */
+export const MINIAPP_FEED_LIMIT_MIN = 1;
+export const MINIAPP_FEED_LIMIT_MAX = 10;
+export const MINIAPP_FEED_LIMIT_DEFAULT = 3;
 
 /**
  * The keys each object may carry. The loader reads these names only, so a
@@ -39,6 +43,7 @@ export const AUTO_ROTATE_SEC_MAX = 30;
 const LAYOUT_KEYS = new Set(["version", "sections"]);
 const CAROUSEL_KEYS = new Set(["type", "id", "aspectRatio", "autoRotateSec", "items"]);
 const GRID_KEYS = new Set(["type", "id", "title", "tiles"]);
+const FEED_KEYS = new Set(["type", "id", "miniAppId", "title", "limit"]);
 const ID_TILE_KEYS = new Set(["kind", "id"]);
 const LINK_TILE_KEYS = new Set(["kind", "id", "title", "icon", "actionType", "actionValue"]);
 const EMOJI_ICON_KEYS = new Set(["kind", "emoji"]);
@@ -257,6 +262,32 @@ function assertGrid(
   });
 }
 
+function assertMiniAppFeed(
+  where: string,
+  section: Record<string, unknown>,
+  registeredMiniApps: ReadonlySet<string>,
+): void {
+  assertKnownKeys(where, section, FEED_KEYS);
+  // An unregistered id would be a card whose feed GET 404s on every device.
+  if (typeof section.miniAppId !== "string" || !registeredMiniApps.has(section.miniAppId)) {
+    fail(`${where}.miniAppId "${String(section.miniAppId)}" is not a registered mini app`);
+  }
+  if (section.title !== undefined) assertI18n(`${where}.title`, section.title);
+  if (section.limit !== undefined) {
+    const { limit } = section;
+    if (
+      typeof limit !== "number" ||
+      !Number.isInteger(limit) ||
+      limit < MINIAPP_FEED_LIMIT_MIN ||
+      limit > MINIAPP_FEED_LIMIT_MAX
+    ) {
+      fail(
+        `${where}.limit must be an integer ${MINIAPP_FEED_LIMIT_MIN}-${MINIAPP_FEED_LIMIT_MAX}`,
+      );
+    }
+  }
+}
+
 function assertUniqueId(where: string, id: unknown, ids: Set<string>): void {
   if (typeof id !== "string" || !SLUG_RE.test(id)) fail(`${where}.id must be a slug`);
   // Section and banner ids share one namespace: both are analytics item ids.
@@ -287,8 +318,10 @@ function assertHomeLayout(raw: unknown, registeredMiniApps: ReadonlySet<string>)
       assertCarousel(where, section, ids, true);
     } else if (section.type === "tile_grid") {
       assertGrid(where, section, registeredMiniApps, placedTiles);
+    } else if (section.type === "miniapp_feed") {
+      assertMiniAppFeed(where, section, registeredMiniApps);
     } else {
-      fail(`${where}.type must be "banner_carousel" or "tile_grid"`);
+      fail(`${where}.type must be "banner_carousel", "tile_grid" or "miniapp_feed"`);
     }
   });
 }

@@ -61,7 +61,7 @@ export class MiniAppsController {
     if (!this.miniApps.getDetail(id)) {
       throw new AppError("MINIAPP_NOT_FOUND", `Unknown mini-app id: ${id}`, 404);
     }
-    res.set("Cache-Control", "public, max-age=15");
+    res.set("Cache-Control", "public, max-age=3");
     return this.notifications.feed(id, (req.lang ?? "ko") as SupportedLang);
   }
 
