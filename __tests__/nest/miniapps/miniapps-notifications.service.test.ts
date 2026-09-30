@@ -117,6 +117,8 @@ describe("send — the feed entry and the delivery", () => {
     it.each([
       ["a 400 (payload refused before any send)", withStatus(400), "not_sent"],
       ["a 401 (key refused before any send)", withStatus(401), "not_sent"],
+      ["a 429 (the platform had no instance; the function never ran)", withStatus(429), "not_sent"],
+      ["a 408 (not on the allowlist — fails safe)", withStatus(408), "unknown"],
       ["a 500 (the function may have failed mid-batch)", withStatus(500), "unknown"],
       ["a 503", withStatus(503), "unknown"],
       ["a timeout (the function keeps sending after we stop waiting)", abort(), "unknown"],
@@ -290,6 +292,7 @@ describe("feed", () => {
     listSentNotifications.mockResolvedValue([doc]);
     const [entry] = await service.feed("eskara-2026", "ko");
     expect(entry).not.toHaveProperty("delivery");
+    expect(entry).not.toHaveProperty("deliveryError");
     expect(entry).not.toHaveProperty("title_ko");
   });
 });
