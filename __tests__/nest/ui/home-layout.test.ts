@@ -209,3 +209,57 @@ describe("resolveHomeLayout", () => {
     });
   });
 });
+
+describe("miniapp_feed section", () => {
+  function feed(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      type: "miniapp_feed",
+      id: "eskara_feed",
+      miniAppId: "eskara-2026",
+      title: { ko: "에스카라 실시간 소식", en: "ESKARA live" },
+      limit: 3,
+      ...overrides,
+    };
+  }
+
+  it("accepts a well-formed feed section", () => {
+    expect(() => loadHomeLayout(layout(carousel(), feed(), grid()))).not.toThrow();
+  });
+
+  it("accepts one with no title and no limit", () => {
+    expect(() =>
+      loadHomeLayout(layout(feed({ title: undefined, limit: undefined }))),
+    ).not.toThrow();
+  });
+
+  it("rejects a mini app the registry does not know", () => {
+    expect(() => loadHomeLayout(layout(feed({ miniAppId: "no-such-app" })))).toThrow(
+      /not a registered mini app/,
+    );
+  });
+
+  it("rejects an unknown key, so a misspelling cannot pass boot and do nothing", () => {
+    expect(() => loadHomeLayout(layout(feed({ limt: 3 })))).toThrow(/limt/);
+  });
+
+  it.each([0, 11, 2.5, "3"])("rejects limit %p", (limit) => {
+    expect(() => loadHomeLayout(layout(feed({ limit })))).toThrow(/limit/);
+  });
+
+  it("shares the section id namespace", () => {
+    expect(() => loadHomeLayout(layout(carousel(), feed({ id: "home_top" })))).toThrow(
+      /duplicate id/,
+    );
+  });
+
+  it("resolves to the wire shape with the title in the request language and a default limit", () => {
+    const source = loadHomeLayout(
+      layout(feed(), feed({ id: "bare", title: undefined, limit: undefined })),
+    );
+    const { sections } = resolveHomeLayout("en", new Date(), source);
+    expect(sections).toEqual([
+      { type: "miniapp_feed", id: "eskara_feed", miniAppId: "eskara-2026", title: "ESKARA live", limit: 3 },
+      { type: "miniapp_feed", id: "bare", miniAppId: "eskara-2026", limit: 3 },
+    ]);
+  });
+});

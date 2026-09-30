@@ -14,7 +14,7 @@ import path from "path";
 import { pick } from "../../infra/i18n";
 import type { I18n, SupportedLang } from "../../infra/types";
 import { map as miniAppRegistry, resolveLogo } from "../../miniapps/miniapps";
-import { assertValidHomeLayout } from "./home-layout.schema";
+import { assertValidHomeLayout, MINIAPP_FEED_LIMIT_DEFAULT } from "./home-layout.schema";
 import type {
   HomeBannerCarousel,
   HomeBannerCarouselRaw,
@@ -109,6 +109,15 @@ function toWireSection(section: HomeSectionRaw, lang: SupportedLang, now: number
       id: section.id,
       ...(section.title !== undefined ? { title: text(section.title, lang) } : {}),
       tiles: section.tiles.map((tile) => toWireTile(tile, lang)),
+    };
+  }
+  if (section.type === "miniapp_feed") {
+    return {
+      type: "miniapp_feed",
+      id: section.id,
+      miniAppId: section.miniAppId,
+      ...(section.title !== undefined ? { title: text(section.title, lang) } : {}),
+      limit: section.limit ?? MINIAPP_FEED_LIMIT_DEFAULT,
     };
   }
   // Kept even when every image has expired and no default was placed: the app

@@ -19,6 +19,13 @@
       ]
     },
     {
+      "type": "miniapp_feed",
+      "id": "eskara_feed",
+      "miniAppId": "eskara-2026",
+      "title": { "ko": "에스카라 실시간 소식", "en": "ESKARA live updates", "zh": "ESKARA 实时消息" },
+      "limit": 3
+    },
+    {
       "type": "tile_grid",
       "id": "main",
       "tiles": [

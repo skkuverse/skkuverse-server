@@ -126,7 +126,25 @@ export interface HomeTileGridRaw {
   tiles: HomeTileRaw[];
 }
 
-export type HomeSectionRaw = HomeBannerCarouselRaw | HomeTileGridRaw;
+/**
+ * A short, live list of a mini app's broadcast feed (GET /miniapps/:id/notifications),
+ * drawn natively on home — for ESKARA, the announcements the student council
+ * pushes during the festival. The app fetches the entries itself; this section
+ * only says where the card sits and which feed it reads. Builds that predate the
+ * type drop the section, so placing it is safe at any time.
+ */
+export interface HomeMiniAppFeedRaw {
+  type: "miniapp_feed";
+  id: string;
+  /** A registered mini app; its feed is the one shown. */
+  miniAppId: string;
+  /** Card heading. Absent means the app's own default heading. */
+  title?: I18n;
+  /** How many entries the card shows. Defaults to MINIAPP_FEED_LIMIT_DEFAULT. */
+  limit?: number;
+}
+
+export type HomeSectionRaw = HomeBannerCarouselRaw | HomeTileGridRaw | HomeMiniAppFeedRaw;
 
 export interface HomeLayoutRaw {
   version: number;
@@ -172,7 +190,16 @@ export interface HomeTileGrid {
   tiles: HomeTile[];
 }
 
-export type HomeSection = HomeBannerCarousel | HomeTileGrid;
+export interface HomeMiniAppFeed {
+  type: "miniapp_feed";
+  id: string;
+  miniAppId: string;
+  title?: string;
+  /** Always present on the wire; the default is applied server-side. */
+  limit: number;
+}
+
+export type HomeSection = HomeBannerCarousel | HomeTileGrid | HomeMiniAppFeed;
 
 export interface HomeLayout {
   version: number;
