@@ -215,14 +215,36 @@ export interface SentNotificationDoc {
   actionValue?: string;
   sentAt: Date;
   /**
-   * What the Cloud Function reported, or null when the call failed.
+   * What the Cloud Function reported, or null when the call did not return a
+   * result.
    *
-   * Null is a real state, not a missing value: the entry was published to the
-   * feed and not delivered. Deleting the row on a failed send would be the same
+   * Null does NOT mean "not delivered": after a timeout, a network error or a
+   * 5xx the function may have sent to some or all devices. `deliveryError`
+   * says which case it was. Deleting the row on a failed call would be the same
    * feed/delivery drift in the other direction, which is what ADR 0002's added
    * consequence warns about.
    */
   delivery: { sent: number; failed: number; cleanedUp: number } | null;
+  /** Set when the call failed; absent on success and on rows that predate it. */
+  deliveryError?: DeliveryError;
+}
+
+/**
+ * Whether a failed call may be retried.
+ *
+ *  - `not_sent` — the function refused the request (4xx: payload or key) before
+ *    sending anything. Retrying is safe.
+ *  - `unknown`  — a timeout, a network error, or a 5xx. The function keeps
+ *    sending after the caller stops waiting, and a 5xx can come from a failure
+ *    part-way through its batches, so devices may already have it. Do NOT
+ *    retry until the Cloud Function log for the notificationId says otherwise
+ *    (`miniapp.dispatch.complete` / `sendNotification failed`).
+ */
+export type DeliveryOutcome = "delivered" | "not_sent" | "unknown";
+
+export interface DeliveryError {
+  outcome: Exclude<DeliveryOutcome, "delivered">;
+  error: string;
 }
 
 /** One entry as the public feed returns it. `_id` is renamed on the wire. */
@@ -239,16 +261,20 @@ export interface MiniAppNotificationEntry {
  * One entry as the internal history returns it, for the operator console.
  *
  * Unlike the public feed it keeps `delivery`, because that is what the operator
- * acts on: how many devices a send reached, and whether an entry was never
- * delivered (`null`) and may be retried. It also keeps the raw Korean pair, since
+ * acts on: how many devices a send reached, and — through `deliveryError` —
+ * whether a failed call may be retried (`not_sent`) or must not be (`unknown`). It also keeps the raw Korean pair, since
  * the console shows what was typed rather than a per-language projection.
  */
 export interface MiniAppNotificationHistoryEntry {
   id: string;
   title_ko: string;
   body_ko: string;
+  title_en: string | null;
+  body_en: string | null;
   actionType?: string;
   actionValue?: string;
   sentAt: string;
   delivery: SentNotificationDoc["delivery"];
+  /** Why `delivery` is null, and whether that may be retried; null otherwise. */
+  deliveryError: DeliveryError | null;
 }
