@@ -14,6 +14,7 @@
 import fs from "fs";
 import path from "path";
 import config from "../../infra/config";
+import logger from "../../infra/logger";
 import type {
   JongroRouteConfig,
   JongroRouteStation,
@@ -31,7 +32,7 @@ const SEOUL_BUS_BASE = "http://ws.bus.go.kr/api/rest";
 // ── Helpers ──
 
 function fatal(message: string): void {
-  console.error(`FATAL [jongro.registry]: ${message}`);
+  logger.fatal({ module: "bus.jongroRegistry" }, message);
   if (!isTest) process.exit(1);
 }
 
@@ -120,7 +121,7 @@ export function validateServiceKey(key: unknown): string[] {
   // shape errors if a non-empty bad key is provided.
   const surfaced = isTest ? keyErrs.filter((e) => !e.includes("is required")) : keyErrs;
   if (surfaced.length > 0) {
-    for (const e of surfaced) console.error(`FATAL [jongro.registry]: ${e}`);
+    for (const e of surfaced) logger.fatal({ module: "bus.jongroRegistry" }, e);
     fatal(`SEOUL_BUS_SERVICE_KEY invalid (${surfaced.length} error(s))`);
     if (!isTest) {
       // `fatal` already process.exited in non-test, but guard anyway in case
@@ -337,7 +338,7 @@ const rawData = loadJSON("jongro-routes.json");
 const { errors } = validateRoutes(rawData);
 if (errors.length > 0) {
   for (const e of errors) {
-    console.error(`FATAL [jongro.registry]: ${e}`);
+    logger.fatal({ module: "bus.jongroRegistry" }, e);
   }
   fatal(`${errors.length} validation error(s) in jongro-routes.json`);
   // (An agent tooling note is left out of the public history.)
