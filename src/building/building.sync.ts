@@ -342,9 +342,15 @@ async function phase2(
         const errUpdate = {
           $set: { "sync.detailError": reason?.message || "unknown" },
         };
+        // Best effort: the sync goes on without the error note.
+        const noteFailed = (err: unknown): void =>
+          logger.warn(
+            { event: "building.sync.error_note_failed", skkuId, err },
+            "Could not record the buildInfo failure on the building",
+          );
         await Promise.all([
-          rawCol.updateOne({ _id: skkuId }, errUpdate).catch(() => {}),
-          enrichedCol.updateOne({ _id: skkuId }, errUpdate).catch(() => {}),
+          rawCol.updateOne({ _id: skkuId }, errUpdate).catch(noteFailed),
+          enrichedCol.updateOne({ _id: skkuId }, errUpdate).catch(noteFailed),
         ]);
       }
     }

@@ -3,6 +3,11 @@ import moment from "moment-timezone";
 import { getClient } from "../../infra/db";
 import config from "../../infra/config";
 import logger from "../../infra/logger";
+import { createLogThrottle } from "../../infra/log-throttle";
+
+// Both are evaluated per request; once an hour per service is enough to see them.
+const invalidSuspendThrottle = createLogThrottle(60 * 60_000);
+const noDataThrottle = createLogThrottle(60 * 60_000);
 import { ensureScheduleIndexes } from "./schedule-db";
 import type {
   BusOverrideDoc,
@@ -236,10 +241,18 @@ export class ScheduleService implements OnModuleInit {
         const mUntil = moment(suspUntil, "YYYY-MM-DD", true);
 
         if (!mFrom.isValid() || !mUntil.isValid() || mFrom.isAfter(mUntil)) {
-          logger.warn(
-            { event: "bus.schedule.suspend_config_invalid", serviceId, suspend: svcCfg.suspend },
-            "invalid suspend config, ignoring",
-          );
+          const ticket = invalidSuspendThrottle.take(`${serviceId} ${JSON.stringify(svcCfg.suspend)}`);
+          if (ticket) {
+            logger.warn(
+              {
+                event: "bus.schedule.suspend_config_invalid",
+                serviceId,
+                suspend: svcCfg.suspend,
+                suppressed: ticket.suppressed,
+              },
+              "invalid suspend config, ignoring",
+            );
+          }
         } else if (today.isBetween(mFrom, mUntil, "day", "[]")) {
           const resumeDate = mUntil.clone().add(1, "day").format("YYYY-MM-DD");
           return {
@@ -304,10 +317,13 @@ export class ScheduleService implements OnModuleInit {
 
     // No schedule found within 2 weeks and no suspend config → data gap
     if (!selectedDate) {
-      logger.warn(
-        { event: "bus.schedule.no_data", serviceId },
-        "no schedule data found within 2 weeks (noData)",
-      );
+      const ticket = noDataThrottle.take(serviceId);
+      if (ticket) {
+        logger.warn(
+          { event: "bus.schedule.no_data", serviceId, suppressed: ticket.suppressed },
+          "no schedule data found within 2 weeks (noData)",
+        );
+      }
       return {
         serviceId,
         status: "noData",
