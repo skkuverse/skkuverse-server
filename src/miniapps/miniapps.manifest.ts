@@ -42,10 +42,6 @@ export const CACHE_TTL_MS = 5 * 60 * 1000;
  */
 const STALE_FOREVER_MS = Number.MAX_SAFE_INTEGER;
 
-function errMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
 /** The first-party origin to fetch a manifest from, or null when this id is not first-party. */
 export function firstPartyOrigin(startUrl: string): string | null {
   let url: URL;
@@ -144,8 +140,8 @@ export class MiniAppsManifestService implements OnModuleInit {
       // down mini app must not stop another mini app's prefetch or the app itself.
       loader.get().catch((err: unknown) => {
         logger.warn(
-          { miniAppId: detail.id, origin, err: errMessage(err) },
-          "[miniapps] manifest prefetch failed; serving the registry's own shell for now",
+          { event: "miniapps.manifest.prefetch_failed", miniAppId: detail.id, origin, err },
+          "Manifest prefetch failed; serving the registry's own shell for now",
         );
       });
     }
@@ -178,8 +174,8 @@ export class MiniAppsManifestService implements OnModuleInit {
       return await this.loaderFor(detail.id, origin).get();
     } catch (err) {
       logger.warn(
-        { miniAppId: detail.id, origin, err: errMessage(err) },
-        "[miniapps] manifest fetch failed; serving the registry's own shell",
+        { event: "miniapps.manifest.fetch_failed", miniAppId: detail.id, origin, err },
+        "Manifest fetch failed; serving the registry's own shell",
       );
       return {};
     }

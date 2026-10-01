@@ -57,7 +57,7 @@ export class NoticesDataService implements OnModuleInit {
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           await ensureNoticeIndexes();
-          logger.info({ attempt }, "[notices] Indexes ensured");
+          logger.info({ event: "notices.indexes.ensured", attempt }, "Indexes ensured");
           lastErr = null;
           break;
         } catch (err) {
@@ -69,14 +69,14 @@ export class NoticesDataService implements OnModuleInit {
       }
       if (lastErr) {
         logger.error(
-          { err: (lastErr as { message?: string }).message },
-          "[notices] Index setup failed after 3 attempts — list queries will full-scan",
+          { event: "notices.indexes.failed", err: lastErr },
+          "Index setup failed after 3 attempts — list queries will full-scan",
         );
       }
     } catch (err) {
       logger.error(
-        { err: (err as { message?: string }).message },
-        "[notices] Index setup crashed",
+        { event: "notices.indexes.crashed", err },
+        "Index setup crashed",
       );
     }
   }

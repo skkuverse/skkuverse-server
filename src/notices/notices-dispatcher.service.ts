@@ -150,12 +150,13 @@ export class NoticesDispatcherService {
       // let it pass silently.
       logger.warn(
         {
+          event: "notices.dispatch.topics_truncated",
           topicCount: topics.length,
           cap: TOPIC_CAP,
           memberCount: members.length,
           sourceIds: members.map((m) => m.sourceId),
         },
-        "[dispatch] topic union exceeds cap — truncating",
+        "Push topic union exceeds cap — truncating",
       );
       topics = topics.slice(0, TOPIC_CAP);
     }
@@ -177,11 +178,12 @@ export class NoticesDispatcherService {
       }
       logger.info(
         {
+          event: "notices.dispatch.skipped_no_topics",
           noticeId: String(members[0]?._id),
           sourceId: members[0]?.sourceId,
           memberCount: members.length,
         },
-        "[dispatch] skipped: no topics",
+        "Push skipped: no topics",
       );
       return { result: "skippedNoTopics" };
     }
@@ -198,13 +200,14 @@ export class NoticesDispatcherService {
     if (members.length > 1) {
       logger.info(
         {
+          event: "notices.dispatch.group_merged",
           memberCount: members.length,
           sourceIds: members.map((m) => m.sourceId),
           topicCount: topics.length,
           articleNo: representative.articleNo,
           title: representative.title,
         },
-        "[dispatch] group merged",
+        "Push group merged",
       );
     }
 
@@ -226,6 +229,7 @@ export class NoticesDispatcherService {
       }
       logger.info(
         {
+          event: "notices.dispatch.sent",
           noticeId: payload.noticeId,
           topics: topics.length,
           memberCount: members.length,
@@ -233,7 +237,7 @@ export class NoticesDispatcherService {
           failed: fnResponse.failed,
           cleanedUp: fnResponse.cleanedUp,
         },
-        "[dispatch] sent",
+        "Push sent",
       );
       return { result: "sent", fnResponse };
     } catch (err: unknown) {
@@ -255,12 +259,13 @@ export class NoticesDispatcherService {
       }
       logger.warn(
         {
+          event: "notices.dispatch.failed",
           noticeId: payload.noticeId,
           topics: topics.length,
           memberCount: members.length,
-          err: errMessage,
+          err,
         },
-        "[dispatch] failed",
+        "Push failed",
       );
       return { result: "failed", error: err };
     }
@@ -397,9 +402,12 @@ export class NoticesDispatcherService {
         durationMs: Date.now() - startedAt,
       };
       if (processed > 0) {
-        logger.info(summary, "[dispatch] sweep complete");
+        logger.info({ event: "notices.dispatch.sweep_completed", ...summary }, "Dispatch sweep complete");
       } else {
-        logger.debug(summary, "[dispatch] sweep complete (empty)");
+        logger.debug(
+          { event: "notices.dispatch.sweep_empty", ...summary },
+          "Dispatch sweep complete (empty)",
+        );
       }
       return summary;
     } finally {

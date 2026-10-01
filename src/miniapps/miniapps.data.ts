@@ -31,7 +31,7 @@ export function getSentNotificationsCollection(): Collection<SentNotificationDoc
  */
 export async function ensureIndexes(): Promise<void> {
   await getSentNotificationsCollection().createIndex({ miniAppId: 1, sentAt: -1 });
-  logger.info("[miniapps] indexes ensured");
+  logger.info({ event: "miniapps.indexes.ensured" }, "Indexes ensured");
 }
 
 export async function insertSentNotification(doc: SentNotificationDoc): Promise<void> {

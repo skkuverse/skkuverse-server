@@ -93,7 +93,7 @@ describe("PollerRegistryService", () => {
       jest.advanceTimersByTime(3000); // 3 ticks while still pending
       expect(fn).toHaveBeenCalledTimes(1);
       expect(logger.warn).toHaveBeenCalledWith(
-        { name: "slow" },
+        { event: "poller.skipped_in_flight", name: "slow" },
         "Poller skipped: previous run still in flight",
       );
       expect(logger.warn).toHaveBeenCalledTimes(3);
@@ -120,7 +120,11 @@ describe("PollerRegistryService", () => {
       await Promise.resolve();
 
       expect(logger.error).toHaveBeenCalledWith(
-        { err: "boom", name: "flaky" },
+        {
+          event: "poller.rejected",
+          err: expect.objectContaining({ message: "boom" }),
+          name: "flaky",
+        },
         "Poller fn rejected",
       );
 

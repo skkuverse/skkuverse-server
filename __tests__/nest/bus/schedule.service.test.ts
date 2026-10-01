@@ -454,7 +454,7 @@ describe("resolveSmartSchedule", () => {
     expect(result!.from).toBeNull();
     expect(result!.days).toHaveLength(0);
     expect(logger.warn).toHaveBeenCalledWith(
-      { serviceId: "fasttrack-inja" },
+      { event: "bus.schedule.no_data", serviceId: "fasttrack-inja" },
       expect.stringContaining("noData"),
     );
     jest.useRealTimers();
@@ -637,7 +637,10 @@ describe("resolveSmartSchedule", () => {
     ensureScheduleIndexes.mockRejectedValueOnce(new Error("idx boom"));
     await expect(service.onModuleInit()).resolves.toBeUndefined();
     expect(logger.warn).toHaveBeenCalledWith(
-      { err: "idx boom" },
+      {
+        event: "bus.schedule.indexes_failed",
+        err: expect.objectContaining({ message: "idx boom" }),
+      },
       expect.stringContaining("ensureScheduleIndexes failed"),
     );
   });

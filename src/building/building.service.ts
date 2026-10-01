@@ -39,11 +39,11 @@ export class BuildingService implements OnModuleInit {
     // Non-fatal index setup — mirrors index.ts:197-203 (warn-and-continue).
     try {
       await ensureIndexes();
-      logger.info("[building] Indexes ensured");
+      logger.info({ event: "building.indexes.ensured" }, "Indexes ensured");
     } catch (err) {
       logger.warn(
-        { err: (err as { message?: string }).message },
-        "[building] Index setup failed",
+        { event: "building.indexes.failed", err },
+        "Index setup failed",
       );
     }
   }

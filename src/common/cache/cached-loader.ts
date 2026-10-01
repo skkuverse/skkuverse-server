@@ -87,11 +87,8 @@ export function createCachedLoader<T>(
             // Back off one TTL before retrying, but never past the window.
             freshUntil = Math.min(now + ttlMs, until);
             logger.warn(
-              {
-                err: err instanceof Error ? err.message : String(err),
-                ageMs: now - value.loadedAt,
-              },
-              `[cache] ${name}: reload failed, serving the last good value`,
+              { event: "cache.reload_failed", cache: name, err, ageMs: now - value.loadedAt },
+              "Cache reload failed, serving the last good value",
             );
             return value.data;
           }

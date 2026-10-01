@@ -87,7 +87,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // err serializer strips request config, so an axios error's cookies and
     // query-string keys stay out.
     logger.error(
-      { err: exception, method: req.method, path: req.path },
+      { event: "http.unhandled_error", err: exception, method: req.method, path: req.path },
       "Unhandled request error",
     );
     // The one request-path error that becomes a Sentry Issue. AppError and

@@ -30,6 +30,7 @@ import { clearActiveEventCache } from "../../../src/map/map-active-layerset";
 import { clearEventOverlaysCache } from "../../../src/map/map-event-overlays.data";
 import { clearEventDetailsCache } from "../../../src/map/map-event-details.data";
 import { HOT_READ_MAX_TIME_MS } from "../../../src/infra/db";
+import { logText } from "../../helpers/log-text";
 
 // The event read path is cached per process; each test starts cold.
 beforeEach(() => {
@@ -92,7 +93,7 @@ function truckDetail(over: Record<string, unknown> = {}) {
 /** The one warning line, when a drop is expected. */
 function warned(): string {
   expect(mockLogger.warn).toHaveBeenCalledTimes(1);
-  return mockLogger.warn.mock.calls[0]![0] as string;
+  return logText(mockLogger.warn.mock.calls[0]);
 }
 
 describe("getEventPlaceDetails", () => {

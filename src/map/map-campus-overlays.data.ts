@@ -75,7 +75,14 @@ const FALLBACK_MARKERS: FallbackMarker[] = [
   { id: "hssc_31", code: "31", name: "퇴계인문관",    campus: "hssc", lat: 37.589184, lng: 126.991539 },
   { id: "hssc_32", code: "32", name: "다산경제관",    campus: "hssc", lat: 37.589053, lng: 126.992435 },
   { id: "hssc_33", code: "33", name: "경영대학",      campus: "hssc", lat: 37.588572, lng: 126.992666 },
-  { id: "hssc_61", code: "61", name: "국제관",        campus: "hssc", lat: 37.587882, lng: 126.991079 },
+  {
+    id: "hssc_61",
+    code: "61",
+    name: "국제관",
+    campus: "hssc",
+    lat: 37.587882,
+    lng: 126.991079,
+  },
   { id: "hssc_62", code: "62", name: "경영대학신관",  campus: "hssc", lat: 37.58816,  lng: 126.990868 },
   // ── NSC (자과캠) ──
   { id: "nsc_1",   code: "1",  name: "자연과학캠퍼스", campus: "nsc",  lat: 37.29358,  lng: 126.974942 },
@@ -321,7 +328,8 @@ function toShapeOverlays(docs: CampusShapeDoc[]): MapOverlay[] {
 
   if (skipped.length > 0) {
     logger.warn(
-      `[map] ${skipped.length} campus shape(s) skipped: ${skipped.join("; ")}`,
+      { event: "map.campus.shapes_skipped", count: skipped.length, skipped },
+      "Campus shapes skipped",
     );
   }
   return overlays;
@@ -347,7 +355,10 @@ async function getCampusOverlays(): Promise<{
     // the buildings with it — the exact inverse of what this function is for.
     (async () => toShapeOverlays(await getAllCampusShapes()))().catch(
       (err: unknown) => {
-        logger.warn({ err }, "[map] campus shapes failed; serving buildings only");
+        logger.warn(
+          { event: "map.campus.shapes_failed", err },
+          "Campus shapes failed; serving buildings only",
+        );
         return [] as MapOverlay[];
       },
     ),

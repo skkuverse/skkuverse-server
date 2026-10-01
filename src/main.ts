@@ -100,11 +100,11 @@ async function bootstrap(): Promise<void> {
   // Mirrors index.ts:164-171.
   try {
     await pingDb();
-    logger.info("[db] MongoDB connected");
+    logger.info({ event: "db.connected" }, "MongoDB connected");
   } catch (err) {
     logger.warn(
-      { err: (err as { message?: string }).message },
-      "[db] MongoDB connection failed",
+      { event: "db.connect_failed", err },
+      "MongoDB connection failed",
     );
   }
 
@@ -114,11 +114,11 @@ async function bootstrap(): Promise<void> {
   // (runs during app.init() above), matching the Express boot path.
   try {
     await app.get(BusCacheService).ensureIndex();
-    logger.info("[bus_cache] TTL index ensured");
+    logger.info({ event: "bus.cache.index_ensured" }, "bus_cache TTL index ensured");
   } catch (err) {
     logger.warn(
-      { err: (err as { message?: string }).message },
-      "[bus_cache] Index setup failed",
+      { event: "bus.cache.index_failed", err },
+      "bus_cache TTL index setup failed",
     );
   }
 
@@ -127,15 +127,15 @@ async function bootstrap(): Promise<void> {
   if (role === "poller") {
     // Poller-only: run lifecycle hooks (onApplicationBootstrap starts pollers)
     // but do NOT bind an HTTP listener. Mirrors index.ts:236-248.
-    logger.info({ role }, "Running in poller-only mode");
+    logger.info({ event: "app.poller_mode", role }, "Running in poller-only mode");
     await app.init();
     let shuttingDownPoller = false;
     const shutdownPoller = async (signal: NodeJS.Signals): Promise<void> => {
       if (shuttingDownPoller) return;
       shuttingDownPoller = true;
-      logger.info({ signal }, "Shutting down poller...");
+      logger.info({ event: "app.shutdown_started", signal }, "Shutting down poller...");
       const forceExit = setTimeout(() => {
-        logger.error("Shutdown timed out, forcing exit");
+        logger.error({ event: "app.shutdown_timed_out" }, "Shutdown timed out, forcing exit");
         process.exit(1);
       }, 5000);
       forceExit.unref();
@@ -154,6 +154,7 @@ async function bootstrap(): Promise<void> {
   await app.listen(config.port);
   logger.info(
     {
+      event: "app.started",
       mode: config.getModeLabel(),
       port: config.port,
       db: config.mongo.dbName,
@@ -168,9 +169,9 @@ async function bootstrap(): Promise<void> {
   const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
     if (shuttingDown) return;
     shuttingDown = true;
-    logger.info({ signal }, "Shutting down...");
+    logger.info({ event: "app.shutdown_started", signal }, "Shutting down...");
     const forceExit = setTimeout(() => {
-      logger.error("Shutdown timed out, forcing exit");
+      logger.error({ event: "app.shutdown_timed_out" }, "Shutdown timed out, forcing exit");
       process.exit(1);
     }, 5000);
     forceExit.unref();
@@ -194,16 +195,22 @@ function exitAfterFlush(): void {
   void Sentry.flush(2000).finally(() => process.exit(1));
 }
 process.on("uncaughtException", (err, origin) => {
-  logger.fatal({ err, origin }, "Uncaught exception — exiting");
+  logger.fatal(
+    { event: "process.uncaught_exception", err, origin },
+    "Uncaught exception — exiting",
+  );
   exitAfterFlush();
 });
 process.on("unhandledRejection", (reason) => {
-  logger.fatal({ err: reason }, "Unhandled promise rejection — exiting");
+  logger.fatal(
+    { event: "process.unhandled_rejection", err: reason },
+    "Unhandled promise rejection — exiting",
+  );
   exitAfterFlush();
 });
 
 bootstrap().catch((err) => {
-  logger.fatal({ err }, "Nest bootstrap failed");
+  logger.fatal({ event: "app.bootstrap_failed", err }, "Nest bootstrap failed");
   Sentry.captureException(err);
   exitAfterFlush();
 });
