@@ -3,10 +3,10 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import express from "express";
-import { randomUUID } from "crypto";
 import helmet from "helmet";
-import pinoHttp from "pino-http";
 import logger from "./infra/logger";
+import { mountRequestLogging } from "./infra/http-logging";
+import { PinoNestLogger } from "./infra/nest-logger";
 import config from "./infra/config";
 import { closeClient, ping as pingDb } from "./infra/db";
 import { AppModule } from "./app.module";
@@ -23,8 +23,8 @@ import { BusCacheService } from "./bus/cache/bus-cache.service";
 /**
  * NestJS entrypoint — parallel to index.ts (the Express app keeps running
  * unchanged). Reproduces the index.ts bootstrap faithfully:
- *  - helmet, pino-http (same genReqId / customProps → installs req.log),
- *    express.json(100kb), trust proxy 1
+ *  - helmet, request logging (infra/http-logging.ts: request id + log
+ *    context + pino-http), express.json(100kb), trust proxy 1
  *  - global ResponseInterceptor + HttpExceptionFilter (LangMiddleware is wired
  *    in AppModule.configure)
  *  - ROLE branch (poller: init only, no listen; api/combined: listen)
@@ -32,27 +32,11 @@ import { BusCacheService } from "./bus/cache/bus-cache.service";
  */
 async function bootstrap(): Promise<void> {
   // Use a pre-built Express instance so we can attach the raw middleware
-  // (pino-http, helmet, json) BEFORE Nest's middleware system runs — matching
-  // the Express order in index.ts (pino-http at :39 → langMiddleware at :54).
+  // (helmet, request logging, json) BEFORE Nest's middleware system runs.
   const expressInstance = express();
   expressInstance.set("trust proxy", 1);
   expressInstance.use(helmet());
-  expressInstance.use(
-    pinoHttp({
-      logger,
-      genReqId: (req, res) => {
-        const existing = req.headers["x-request-id"];
-        if (existing) return existing as string;
-        const id = randomUUID();
-        res.setHeader("X-Request-Id", id);
-        return id;
-      },
-      customProps: (req) => ({
-        appVersion: req.headers["x-app-version"] || null,
-        platform: req.headers["x-platform"] || null,
-      }),
-    }),
-  );
+  mountRequestLogging(expressInstance);
   expressInstance.use(express.json({ limit: "100kb" }));
 
   // LangMiddleware MUST run app-wide before any handler (sets req.lang +
@@ -80,7 +64,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(
     AppModule,
     new ExpressAdapter(expressInstance),
-    { bufferLogs: false, bodyParser: false },
+    { logger: new PinoNestLogger(), bodyParser: false },
   );
 
   // CORS, scoped to the first-party web origins in infra/origins.ts.
@@ -143,10 +127,10 @@ async function bootstrap(): Promise<void> {
     logger.info({ role }, "Running in poller-only mode");
     await app.init();
     let shuttingDownPoller = false;
-    const shutdownPoller = async (): Promise<void> => {
+    const shutdownPoller = async (signal: NodeJS.Signals): Promise<void> => {
       if (shuttingDownPoller) return;
       shuttingDownPoller = true;
-      logger.info("Shutting down poller...");
+      logger.info({ signal }, "Shutting down poller...");
       const forceExit = setTimeout(() => {
         logger.error("Shutdown timed out, forcing exit");
         process.exit(1);
@@ -177,10 +161,10 @@ async function bootstrap(): Promise<void> {
 
   // Graceful shutdown — mirrors index.ts:267-285.
   let shuttingDown = false;
-  const shutdown = async (): Promise<void> => {
+  const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
     if (shuttingDown) return;
     shuttingDown = true;
-    logger.info("Shutting down...");
+    logger.info({ signal }, "Shutting down...");
     const forceExit = setTimeout(() => {
       logger.error("Shutdown timed out, forcing exit");
       process.exit(1);
@@ -194,7 +178,19 @@ async function bootstrap(): Promise<void> {
   process.on("SIGINT", shutdown);
 }
 
+// Without these, Node prints a crash to stderr as plain text and exits, and
+// the reason never reaches the JSON log. Exiting is kept: after an uncaught
+// error the process state is unknown, and the container restarts it.
+process.on("uncaughtException", (err, origin) => {
+  logger.fatal({ err, origin }, "Uncaught exception — exiting");
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  logger.fatal({ err: reason }, "Unhandled promise rejection — exiting");
+  process.exit(1);
+});
+
 bootstrap().catch((err) => {
-  logger.error({ err }, "Nest bootstrap failed");
+  logger.fatal({ err }, "Nest bootstrap failed");
   process.exit(1);
 });

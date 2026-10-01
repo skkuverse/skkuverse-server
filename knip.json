@@ -5,7 +5,7 @@
     "__tests__/**/*.test.{js,ts}"
   ],
   "project": ["**/*.{js,ts}"],
-  "ignoreDependencies": ["@logtail/pino", "pino-pretty"],
+  "ignoreDependencies": ["pino-pretty"],
   "rules": {
     "exports": "off",
     "types": "off",

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import logger from "./logger";
 
 // --- Environment flags ---
 const NODE_ENV: string = process.env.NODE_ENV || "development";
@@ -216,11 +217,9 @@ const required: ReadonlyArray<readonly [string, unknown, string]> = [
 
 const missing = required
   .filter(([, value]) => !value)
-  .map(([name, , envVar]) => `  ${name} (env: ${envVar})`);
+  .map(([name, , envVar]) => ({ name, env: envVar }));
 if (missing.length > 0) {
-  console.error(
-    `FATAL: Missing required config — set these env vars:\n${missing.join("\n")}`,
-  );
+  logger.fatal({ missing }, "Missing required config — set the env vars in `missing`");
   if (!isTest) {
     process.exit(1);
   }
