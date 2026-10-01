@@ -20,9 +20,8 @@ import { ExpressAdapter } from "@nestjs/platform-express";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import express from "express";
-import pinoHttp from "pino-http";
+import { mountRequestLogging } from "../../../src/infra/http-logging";
 import request from "supertest";
-import logger from "../../../src/infra/logger";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
 import { ConfigModule } from "../../../src/config/config.module";
 import { AppFeatureModule } from "../../../src/app/app-feature.module";
@@ -41,7 +40,7 @@ let httpServer: import("http").Server;
 beforeAll(async () => {
   const expressInstance = express();
   expressInstance.set("trust proxy", 1);
-  expressInstance.use(pinoHttp({ logger, autoLogging: false }));
+  mountRequestLogging(expressInstance);
   expressInstance.use(express.json({ limit: "100kb" }));
   const lang = new LangMiddleware();
   expressInstance.use((req, res, next) =>
