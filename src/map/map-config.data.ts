@@ -3,6 +3,10 @@ import type { EventMapConfig } from "./map-layerset.types";
 import config from "../infra/config";
 import { pick, t } from "../infra/i18n";
 import logger from "../infra/logger";
+import { createLogThrottle } from "../infra/log-throttle";
+
+// Per request while the lookup keeps failing.
+const lookupFailedThrottle = createLogThrottle(60_000);
 import type { SupportedLang } from "../infra/types";
 import type { CameraMotion, MapChip } from "./map-chip.types";
 import { getChips } from "./map-chips.data";
@@ -106,10 +110,13 @@ async function activeEvent(): Promise<EventMapConfig | null> {
   try {
     return await activeEventConfig(new Date());
   } catch (err) {
-    logger.warn(
-      { event: "map.event_layers.lookup_failed", err },
-      "Event layer lookup failed, serving base layers only",
-    );
+    const ticket = lookupFailedThrottle.take("event-layers");
+    if (ticket) {
+      logger.warn(
+        { event: "map.event_layers.lookup_failed", err, suppressed: ticket.suppressed },
+        "Event layer lookup failed, serving base layers only",
+      );
+    }
     return null;
   }
 }

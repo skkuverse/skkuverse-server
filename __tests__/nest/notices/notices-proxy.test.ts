@@ -178,15 +178,29 @@ describe("inline content-type policy", () => {
     },
   );
 
-  it("destroys the body stream of a rejected (non-2xx) upstream response", async () => {
+  it("answers 502 for a non-2xx upstream, and destroys its body stream", async () => {
     const body = Readable.from([Buffer.from("err")]);
     mockedGet.mockRejectedValueOnce(
-      Object.assign(new Error("Request failed with status code 404"), { response: { data: body } }),
+      Object.assign(new Error("Request failed with status code 404"), {
+        response: { status: 404, data: body },
+      }),
     );
     const res = await request(httpServer)
       .get(PROXY)
       .query({ url: "https://www.skku.edu/_attach/missing.pdf" });
-    expect(res.status).toBe(500);
+    // A dead link on the school's site is not a fault here: no 500, no Issue.
+    expect(res.status).toBe(502);
+    expect(res.body.error.code).toBe("UPSTREAM_ERROR");
     expect(body.destroyed).toBe(true);
+  });
+
+  it("answers 502 when the upstream times out", async () => {
+    mockedGet.mockRejectedValueOnce(
+      Object.assign(new Error("timeout of 15000ms exceeded"), { code: "ECONNABORTED" }),
+    );
+    const res = await request(httpServer)
+      .get(PROXY)
+      .query({ url: "https://www.skku.edu/_attach/slow.pdf" });
+    expect(res.status).toBe(502);
   });
 });
