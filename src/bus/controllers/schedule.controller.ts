@@ -7,6 +7,7 @@ import { ScheduleService } from "../schedule/schedule.service";
 import serviceConfig from "../schedule/service-config";
 import { AppError } from "../../common/app-error";
 import { sendSuccess } from "../../common/send-success";
+import { createLogThrottle } from "../../infra/log-throttle";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -16,6 +17,10 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * envelope, NO X-Response-Time, NO ETag/Cache-Control re-set (exact Express
  * behavior). ETag strings + Cache-Control (public, max-age=300) byte-identical.
  */
+// Still called by old app builds; an hourly line per service with a count of
+// the calls in between says how many remain without a line per request.
+const weekCallThrottle = createLogThrottle(60 * 60_000);
+
 @Controller("bus/schedule")
 export class ScheduleController {
   constructor(private readonly schedule: ScheduleService) {}
@@ -35,10 +40,13 @@ export class ScheduleController {
   ): Promise<void> {
     // pino-http attaches `log` to req. Preserve fail-loud: if req.log is
     // undefined this throws → 500 (matches pre-TS Express behavior).
-    req.log.warn(
-      { event: "bus.schedule.week_endpoint_called", serviceId },
-      "deprecated: /week endpoint called, use /smart",
-    );
+    const ticket = weekCallThrottle.take(serviceId);
+    if (ticket) {
+      req.log.warn(
+        { event: "bus.schedule.week_endpoint_called", serviceId, suppressed: ticket.suppressed },
+        "deprecated: /week endpoint called, use /smart",
+      );
+    }
 
     if (from !== undefined && !DATE_RE.test(from)) {
       throw new AppError(
