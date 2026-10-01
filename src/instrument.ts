@@ -8,6 +8,8 @@
  * What becomes an Issue (the free plan allows 5k error events a month) is kept
  * deliberate:
  *  - unknown errors that reach the exception filter (5xx) — captured there;
+ *  - a poller being declared failing, once per failing spell — captured by
+ *    the poller registry;
  *  - uncaught exceptions and unhandled rejections — the SDK's own handlers.
  * Error-level log lines are NOT promoted to Issues (`error.levels: []`). A
  * poller logs an error on every failed tick; during an upstream outage that is

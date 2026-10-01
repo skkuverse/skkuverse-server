@@ -1,9 +1,9 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import axios from "axios";
 import config from "../../infra/config";
-import logger from "../../infra/logger";
 import { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { BusCacheService } from "../cache/bus-cache.service";
+import { UpstreamError } from "./upstream-error";
 
 // 혜화역 API 응답에서 우리가 읽는 부분만. itemList[0].arrmsg1만 사용.
 interface HyehwaStationItem {
@@ -12,6 +12,7 @@ interface HyehwaStationItem {
 }
 
 interface HyehwaStationResponse {
+  msgHeader?: { headerCd?: string; headerMsg?: string };
   msgBody?: {
     itemList?: HyehwaStationItem[];
   };
@@ -33,43 +34,29 @@ export class StationPollerService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.registry.registerPoller(
-      () => {
-        this.updateStation().catch((err: unknown) =>
-          logger.error(
-            { event: "bus.station.poll_failed", err },
-            "Poller error",
-          ),
-        );
-      },
-      40000,
-      "station",
-    );
+    // The registry logs failures as state transitions; see its header.
+    this.registry.registerPoller(() => this.updateStation(), 40000, "station");
   }
 
   private async updateStation(): Promise<void> {
-    try {
-      const response = await axios.get<HyehwaStationResponse>(
-        config.api.stationHyehwa!,
-        { timeout: 10000 },
-      );
-      // 원본의 response.data?.msgBody?.itemList optional chaining 그대로 보존.
-      const apiData = response.data?.msgBody?.itemList;
-      if (!apiData) return; // API error / malformed response → keep previous state
-      // apiData[0].arrmsg1 — apiData 길이 0이면 NO_INFO 사용.
-      this.arrmsg1 = apiData.length === 0 ? "정보 없음" : apiData[0]!.arrmsg1;
-      this.cache.write("station", this.arrmsg1).catch((err: unknown) =>
-        logger.warn(
-          { event: "bus.station.cache_write_failed", err },
-          "Failed to write bus_cache",
-        ),
-      );
-    } catch (error) {
-      logger.error(
-        { event: "bus.station.update_failed", err: error },
-        "Failed to update station info",
-      );
+    const response = await axios.get<HyehwaStationResponse>(
+      config.api.stationHyehwa!,
+      { timeout: 10000 },
+    );
+    // 원본의 response.data?.msgBody?.itemList optional chaining 그대로 보존.
+    // "0" = data, "4" = no result (keep the previous message); anything else
+    // is an upstream error — an expired or throttled service key, for one.
+    const header = response.data?.msgHeader;
+    if (header?.headerCd === "4") return;
+    if (header?.headerCd && header.headerCd !== "0") {
+      throw new UpstreamError("TOPIS error code", "station", header.headerCd, header.headerMsg);
     }
+    const apiData = response.data?.msgBody?.itemList;
+    // Keeps the previous message. This was a silent return until 2026-10.
+    if (!apiData) throw new UpstreamError("Station response has no itemList", "station");
+    // apiData[0].arrmsg1 — apiData 길이 0이면 NO_INFO 사용.
+    this.arrmsg1 = apiData.length === 0 ? "정보 없음" : apiData[0]!.arrmsg1;
+    await this.cache.write("station", this.arrmsg1);
   }
 
   getStationInfo(): string {

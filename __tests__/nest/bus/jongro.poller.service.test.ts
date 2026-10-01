@@ -26,35 +26,38 @@ import type { BusCacheService } from "../../../src/bus/cache/bus-cache.service";
 
 const axios = require("axios");
 
-let capturedTick: () => void;
+let capturedTicks: Array<() => unknown> = [];
 const registryStub = {
-  registerPoller: jest.fn((fn: () => void) => {
-    capturedTick = fn;
+  registerPoller: jest.fn((fn: () => unknown) => {
+    capturedTicks.push(fn);
   }),
 } as unknown as PollerRegistryService;
 const cacheStub = { write: jest.fn().mockResolvedValue(undefined) } as unknown as BusCacheService;
 
 let service: JongroPollerService;
 
-async function runTickAndFlush(): Promise<void> {
-  capturedTick();
-  // Flush the per-route list+loc promises (no setInterval involved).
-  for (let i = 0; i < 10; i++) await Promise.resolve();
+/** Runs every route's tick; returns their outcomes (a failed tick rejects). */
+async function runTickAndFlush(): Promise<PromiseSettledResult<unknown>[]> {
+  return Promise.allSettled(capturedTicks.map((tick) => tick()));
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
+  capturedTicks = [];
   service = new JongroPollerService(registryStub, cacheStub, jongroRoutes);
   service.onModuleInit();
 });
 
 describe("JongroPollerService", () => {
-  it("onModuleInit registers a 40s 'jongro' poller", () => {
-    expect(registryStub.registerPoller).toHaveBeenCalledWith(
-      expect.any(Function),
-      40000,
-      "jongro",
-    );
+  it("onModuleInit registers one 40s poller per route", () => {
+    for (const route of jongroRoutes) {
+      expect(registryStub.registerPoller).toHaveBeenCalledWith(
+        expect.any(Function),
+        40000,
+        `jongro-${route.code}`,
+      );
+    }
+    expect(registryStub.registerPoller).toHaveBeenCalledTimes(jongroRoutes.length);
   });
 
   describe("getJongroBusList", () => {
@@ -250,10 +253,22 @@ describe("JongroPollerService", () => {
   });
 
   describe("error handling", () => {
-    it("handles API error without crash (state stays undefined)", async () => {
+    it("rejects each route's tick on an API error; state stays undefined", async () => {
       axios.get.mockRejectedValue(new Error("Network error"));
-      await runTickAndFlush();
+      const outcomes = await runTickAndFlush();
+      expect(outcomes.every((o) => o.status === "rejected")).toBe(true);
       expect(service.getJongroBusList("07")).toBeUndefined();
+    });
+
+    it("rejects on a TOPIS error code, carrying the code", async () => {
+      axios.get.mockResolvedValue({
+        data: { msgHeader: { headerCd: "7", headerMsg: "인증 실패" }, msgBody: { itemList: null } },
+      });
+      const [first] = await runTickAndFlush();
+      expect(first).toMatchObject({
+        status: "rejected",
+        reason: expect.objectContaining({ name: "UpstreamError", headerCd: "7" }),
+      });
     });
 
     it("handles empty itemList → empty list array", async () => {
