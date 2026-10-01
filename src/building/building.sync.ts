@@ -101,8 +101,8 @@ async function phase1(syncTime: Date): Promise<CampusItem[] | null> {
   for (const { cd, name } of CAMPUS_CODES) {
     const items = await fetchBuildList(cd);
     logger.info(
-      { campus: name, count: items.length },
-      "[building-sync] Phase 1: fetched buildList",
+      { event: "building.sync.buildlist_fetched", campus: name, count: items.length },
+      "Phase 1: fetched buildList",
     );
     for (const item of items) {
       allItems.push({ item, campus: name });
@@ -112,8 +112,8 @@ async function phase1(syncTime: Date): Promise<CampusItem[] | null> {
   // Sanity check
   if (allItems.length < MIN_BUILDINGS) {
     logger.warn(
-      { count: allItems.length },
-      "[building-sync] Suspiciously few buildings, aborting",
+      { event: "building.sync.aborted_few_buildings", count: allItems.length },
+      "Suspiciously few buildings, aborting",
     );
     return null;
   }
@@ -166,11 +166,12 @@ async function phase1(syncTime: Date): Promise<CampusItem[] | null> {
   const rawResult = await rawCol.bulkWrite(rawOps, { ordered: false });
   logger.info(
     {
+      event: "building.sync.raw_upserted",
       matched: rawResult.matchedCount,
       upserted: rawResult.upsertedCount,
       modified: rawResult.modifiedCount,
     },
-    "[building-sync] Phase 1: raw upserted",
+    "Phase 1: raw upserted",
   );
 
   // Enrich changed buildings → upsert enriched layer
@@ -201,16 +202,18 @@ async function phase1(syncTime: Date): Promise<CampusItem[] | null> {
     });
     logger.info(
       {
+        event: "building.sync.enriched",
         changed: changedIds.size,
         matched: enrichResult.matchedCount,
         upserted: enrichResult.upsertedCount,
         modified: enrichResult.modifiedCount,
       },
-      "[building-sync] Phase 1: enriched buildings updated",
+      "Phase 1: enriched buildings updated",
     );
   } else {
     logger.info(
-      "[building-sync] Phase 1: no changes detected, skipping enrichment",
+      { event: "building.sync.enrich_skipped" },
+      "Phase 1: no changes detected, skipping enrichment",
     );
   }
 
@@ -329,11 +332,12 @@ async function phase2(
         const reason = r.reason as { message?: string } | null | undefined;
         logger.warn(
           {
+            event: "building.sync.buildinfo_failed",
             skkuId,
             buildNo: failedItem.item.buildNo,
-            err: reason?.message,
+            err: reason,
           },
-          "[building-sync] Phase 2: buildInfo failed",
+          "Phase 2: buildInfo failed",
         );
         const errUpdate = {
           $set: { "sync.detailError": reason?.message || "unknown" },
@@ -350,12 +354,13 @@ async function phase2(
     const result = await spacesCol.bulkWrite(spacesOps, { ordered: false });
     logger.info(
       {
+        event: "building.sync.buildinfo_upserted",
         matched: result.matchedCount,
         upserted: result.upsertedCount,
         processed,
         errors,
       },
-      "[building-sync] Phase 2: buildInfo spaces upserted",
+      "Phase 2: buildInfo spaces upserted",
     );
   }
 
@@ -382,8 +387,8 @@ async function phase3(syncTime: Date): Promise<number> {
   for (const { cd, name } of CAMPUS_CODES) {
     const items = await fetchSpaceList(cd);
     logger.info(
-      { campus: name, count: items.length },
-      "[building-sync] Phase 3: fetched spaceList",
+      { event: "building.sync.spacelist_fetched", campus: name, count: items.length },
+      "Phase 3: fetched spaceList",
     );
     for (const item of items) {
       allSpaces.push({ item, campus: name });
@@ -425,15 +430,19 @@ async function phase3(syncTime: Date): Promise<number> {
   if (ops.length > 0) {
     const result = await spacesCol.bulkWrite(ops, { ordered: false });
     logger.info(
-      { matched: result.matchedCount, upserted: result.upsertedCount },
-      "[building-sync] Phase 3: spaceList upserted",
+      {
+        event: "building.sync.spacelist_upserted",
+        matched: result.matchedCount,
+        upserted: result.upsertedCount,
+      },
+      "Phase 3: spaceList upserted",
     );
   }
 
   if (allSpaces.length < MIN_SPACES) {
     logger.warn(
-      { count: allSpaces.length },
-      "[building-sync] Suspiciously few spaces, skipping stale delete",
+      { event: "building.sync.stale_delete_skipped", count: allSpaces.length },
+      "Suspiciously few spaces, skipping stale delete",
     );
     return allSpaces.length;
   }
@@ -443,8 +452,8 @@ async function phase3(syncTime: Date): Promise<number> {
   });
   if (deleteResult.deletedCount > 0) {
     logger.info(
-      { deleted: deleteResult.deletedCount },
-      "[building-sync] Phase 3: stale spaces deleted",
+      { event: "building.sync.stale_deleted", deleted: deleteResult.deletedCount },
+      "Phase 3: stale spaces deleted",
     );
   }
 
@@ -467,8 +476,8 @@ async function syncBuildings(): Promise<void> {
       await phase2(allItems, syncTime);
     } catch (err) {
       logger.error(
-        { err: (err as { message?: string }).message },
-        "[building-sync] Phase 2 failed",
+        { event: "building.sync.phase2_failed", err },
+        "Phase 2 failed",
       );
     }
 
@@ -478,8 +487,8 @@ async function syncBuildings(): Promise<void> {
       spacesCount = await phase3(syncTime);
     } catch (err) {
       logger.error(
-        { err: (err as { message?: string }).message },
-        "[building-sync] Phase 3 failed, skipping stale delete",
+        { event: "building.sync.phase3_failed", err },
+        "Phase 3 failed, skipping stale delete",
       );
     }
 
@@ -487,13 +496,18 @@ async function syncBuildings(): Promise<void> {
 
     const elapsed = Date.now() - start;
     logger.info(
-      { buildings: allItems.length, spaces: spacesCount, elapsed },
-      "[building-sync] Complete",
+      {
+        event: "building.sync.completed",
+        buildings: allItems.length,
+        spaces: spacesCount,
+        elapsed,
+      },
+      "Building sync complete",
     );
   } catch (err) {
     logger.error(
-      { err: (err as { message?: string }).message },
-      "[building-sync] Sync failed",
+      { event: "building.sync.failed", err },
+      "Building sync failed",
     );
   }
 }

@@ -65,8 +65,8 @@ export class HsscPollerService implements OnModuleInit {
       () => {
         this.updateHSSCBusList().catch((err: unknown) =>
           logger.error(
-            { err: err instanceof Error ? err.message : String(err) },
-            "[hssc] Poller error",
+            { event: "bus.hssc.poll_failed", err },
+            "Poller error",
           ),
         );
       },
@@ -86,8 +86,8 @@ export class HsscPollerService implements OnModuleInit {
       const apiData = response.data;
       if (!Array.isArray(apiData)) {
         logger.warn(
-          { shape: typeof apiData },
-          "[hssc] Unexpected response shape (not an array)",
+          { event: "bus.hssc.unexpected_shape", shape: typeof apiData },
+          "Unexpected response shape (not an array)",
         );
         return;
       }
@@ -97,8 +97,8 @@ export class HsscPollerService implements OnModuleInit {
         this.cache.write("hssc", this.filteredHSSCStations).catch(
           (err: unknown) =>
             logger.warn(
-              { err: err instanceof Error ? err.message : String(err) },
-              "[hssc] Failed to write bus_cache",
+              { event: "bus.hssc.cache_write_failed", err },
+              "Failed to write bus_cache",
             ),
         );
         return;
@@ -169,14 +169,14 @@ export class HsscPollerService implements OnModuleInit {
       this.cache.write("hssc", this.filteredHSSCStations).catch(
         (err: unknown) =>
           logger.warn(
-            { err: err instanceof Error ? err.message : String(err) },
-            "[hssc] Failed to write bus_cache",
+            { event: "bus.hssc.cache_write_failed", err },
+            "Failed to write bus_cache",
           ),
       );
     } catch (error: unknown) {
       logger.error(
-        { err: error instanceof Error ? error.message : String(error) },
-        "[hssc] Failed to update bus list",
+        { event: "bus.hssc.update_failed", err: error },
+        "Failed to update bus list",
       );
     }
   }

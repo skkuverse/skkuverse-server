@@ -69,9 +69,11 @@ describe("activeEventConfig", () => {
     await expect(activeEventConfig(NOW)).resolves.toBeNull();
 
     expect(mockLogger.warn).toHaveBeenCalledTimes(1);
-    expect(mockLogger.warn.mock.calls[0]![0]).toMatch(
-      /activation "eskara-2099" is live but this build has no config for it/,
-    );
+    expect(mockLogger.warn.mock.calls[0]![0]).toMatchObject({
+      event: "map.eventmap.activation_unservable",
+      activationId: "eskara-2099",
+      reason: "no_config_in_build",
+    });
   });
 
   it("is null for a layer set whose config was rejected, naming the rejection", async () => {
@@ -86,7 +88,11 @@ describe("activeEventConfig", () => {
     await expect(activeEventConfig(NOW)).resolves.toBeNull();
 
     expect(mockLogger.warn).toHaveBeenCalledTimes(1);
-    expect(mockLogger.warn.mock.calls[0]![0]).toMatch(/its config was rejected: .*layerId "nope"/);
+    expect(mockLogger.warn.mock.calls[0]![0]).toMatchObject({
+      activationId: "eskara-2077",
+      reason: "config_rejected",
+      configError: expect.stringMatching(/layerId "nope"/),
+    });
   });
 });
 
@@ -141,7 +147,10 @@ describe("activeEventConfig — origin cache", () => {
 
     expect(config?.layerSetId).toBe("eskara-2026");
     expect(mockLogger.warn).toHaveBeenCalledTimes(1);
-    expect(mockLogger.warn.mock.calls[0]![1]).toMatch(/event activation: reload failed/);
+    expect(mockLogger.warn.mock.calls[0]![0]).toMatchObject({
+      event: "cache.reload_failed",
+      cache: "event activation",
+    });
   });
 
   it("stops covering for the database past the stale window", async () => {

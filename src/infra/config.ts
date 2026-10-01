@@ -233,7 +233,10 @@ const missing = required
   .filter(([, value]) => !value)
   .map(([name, , envVar]) => ({ name, env: envVar }));
 if (missing.length > 0) {
-  logger.fatal({ missing }, "Missing required config — set the env vars in `missing`");
+  logger.fatal(
+    { event: "config.missing_required", missing },
+    "Missing required config — set the env vars in `missing`",
+  );
   if (!isTest) {
     process.exit(1);
   }

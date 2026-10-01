@@ -579,7 +579,10 @@ function loadOne(fileName: string): [string, LoadedConfig] {
     // Loud, but not fatal: /map/config keeps serving the base layers, so the
     // campus map is intact and only the festival is missing. Silence here would
     // look exactly like "the festival is over".
-    logger.error({ err: message, fileName }, "[map] Layer set config rejected");
+    logger.error(
+      { event: "map.layerset.config_rejected", err, fileName },
+      "Layer set config rejected",
+    );
     return [layerSetIdFromFile, { config: null, error: message }];
   }
 }

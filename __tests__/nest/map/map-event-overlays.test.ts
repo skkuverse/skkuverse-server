@@ -32,6 +32,7 @@ import { clearActiveEventCache } from "../../../src/map/map-active-layerset";
 import { clearEventOverlaysCache } from "../../../src/map/map-event-overlays.data";
 import { HOT_READ_MAX_TIME_MS } from "../../../src/infra/db";
 import { EVENT_CACHE_TTL_MS } from "../../../src/map/map-event-cache";
+import { logText } from "../../helpers/log-text";
 
 // The event read path is cached per process; each test starts cold.
 beforeEach(() => {
@@ -535,7 +536,7 @@ describe("getEventOverlays", () => {
 
       expect(markers.map((m) => m.id)).toEqual(["eskara-2026-booth-01"]);
       expect(mockLogger.warn).toHaveBeenCalledTimes(1);
-      expect(String(mockLogger.warn.mock.calls[0])).toMatch(/1/);
+      expect(logText(mockLogger.warn.mock.calls[0])).toMatch(/1/);
     });
 
     it("skips a document whose window has no start", async () => {
@@ -734,9 +735,7 @@ describe("getEventOverlays — zones and route lines", () => {
 
     expect(overlays).toHaveLength(1);
     expect(overlays[0]!.id).toBe("eskara-2026-booth-01");
-    expect(mockLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("not renderable"),
-    );
+    expect(logText(mockLogger.warn.mock.calls.at(-1))).toMatch(/not renderable/);
   });
 });
 
@@ -807,7 +806,7 @@ describe("getEventOverlays — list facets", () => {
     const o = await facetsFor({ facets: { org: ["council", "sponsor", "council"], price: ["cheap"] } });
     expect(o.facets.org).toEqual(["council"]);
     expect(o.facets).not.toHaveProperty("price");
-    const [message] = mockLogger.warn.mock.calls.at(-1)!;
+    const message = logText(mockLogger.warn.mock.calls.at(-1));
     expect(message).toMatch(/facets\.org has no option "sponsor"/);
     expect(message).toMatch(/facets\.price is not a facet/);
   });
@@ -815,13 +814,13 @@ describe("getEventOverlays — list facets", () => {
   it("ignores a hand-authored day — the day comes from hours, never twice", async () => {
     const o = await facetsFor({ hours: [at("2026-10-01T18:00:00")], facets: { day: ["day2"] } });
     expect(o.facets.day).toEqual(["day1"]);
-    expect(mockLogger.warn.mock.calls.at(-1)![0]).toMatch(/facets\.day is derived from hours/);
+    expect(logText(mockLogger.warn.mock.calls.at(-1))).toMatch(/facets\.day is derived from hours/);
   });
 
   it("carries orderByOption through, dropping keys that name no option and non-numbers", async () => {
     const o = await facetsFor({ orderByOption: { day1: 3, day2: 11, day3: 1, org: 2, council: "x" } });
     expect(o.orderByOption).toEqual({ day1: 3, day2: 11 });
-    expect(mockLogger.warn.mock.calls.at(-1)![0]).toMatch(/orderByOption\.day3/);
+    expect(logText(mockLogger.warn.mock.calls.at(-1))).toMatch(/orderByOption\.day3/);
   });
 
   it("does not choke on a malformed facets value typed straight into Mongo", async () => {

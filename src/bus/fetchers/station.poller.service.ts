@@ -37,8 +37,8 @@ export class StationPollerService implements OnModuleInit {
       () => {
         this.updateStation().catch((err: unknown) =>
           logger.error(
-            { err: (err as { message?: string }).message },
-            "[station] Poller error",
+            { event: "bus.station.poll_failed", err },
+            "Poller error",
           ),
         );
       },
@@ -60,14 +60,14 @@ export class StationPollerService implements OnModuleInit {
       this.arrmsg1 = apiData.length === 0 ? "정보 없음" : apiData[0]!.arrmsg1;
       this.cache.write("station", this.arrmsg1).catch((err: unknown) =>
         logger.warn(
-          { err: (err as { message?: string }).message },
-          "[station] Failed to write bus_cache",
+          { event: "bus.station.cache_write_failed", err },
+          "Failed to write bus_cache",
         ),
       );
     } catch (error) {
       logger.error(
-        { err: (error as { message?: string }).message },
-        "[station] Failed to update station info",
+        { event: "bus.station.update_failed", err: error },
+        "Failed to update station info",
       );
     }
   }

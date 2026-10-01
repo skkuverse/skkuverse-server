@@ -350,7 +350,12 @@ async function loadEventOverlays(): Promise<{ overlays: MapOverlay[] }> {
     // other sixty with it, and a silent skip would leave a booth missing from
     // the map with nothing anywhere saying why.
     logger.warn(
-      `[map] ${all.length - docs.length} place(s) in "${config.layerSetId}" are not renderable and were skipped`,
+      {
+        event: "map.event_overlays.places_unrenderable",
+        layerSetId: config.layerSetId,
+        count: all.length - docs.length,
+      },
+      "Places not renderable, skipped",
     );
   }
 
@@ -421,13 +426,25 @@ async function loadEventOverlays(): Promise<{ overlays: MapOverlay[] }> {
 
   if (droppedActions.length > 0) {
     logger.warn(
-      `[map] ${droppedActions.length} sheet button(s) dropped in "${config.layerSetId}": ${droppedActions.join("; ")}`,
+      {
+        event: "map.event_overlays.actions_dropped",
+        layerSetId: config.layerSetId,
+        count: droppedActions.length,
+        dropped: droppedActions,
+      },
+      "Sheet buttons dropped",
     );
   }
 
   if (droppedFacets.length > 0) {
     logger.warn(
-      `[map] ${droppedFacets.length} list facet value(s) dropped in "${config.layerSetId}": ${droppedFacets.join("; ")}`,
+      {
+        event: "map.event_overlays.facets_dropped",
+        layerSetId: config.layerSetId,
+        count: droppedFacets.length,
+        dropped: droppedFacets,
+      },
+      "List facet values dropped",
     );
   }
 

@@ -311,7 +311,13 @@ async function loadEventPlaceDetails(): Promise<EventPlaceDetails> {
 
   if (dropped.length > 0) {
     logger.warn(
-      `[map] ${dropped.length} place-detail item(s) dropped in "${config.layerSetId}": ${dropped.join("; ")}`,
+      {
+        event: "map.event_details.items_dropped",
+        layerSetId: config.layerSetId,
+        count: dropped.length,
+        dropped,
+      },
+      "Place-detail items dropped",
     );
   }
   return { details };
