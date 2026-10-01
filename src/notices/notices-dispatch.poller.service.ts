@@ -45,8 +45,7 @@ export class NoticesDispatchPollerService implements OnModuleInit {
           try {
             await this.dispatcher.sweepPending("cron");
           } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
-            logger.error({ err: message }, "[dispatch] cron sweep failed");
+            logger.error({ event: "notices.dispatch.sweep_failed", err }, "Cron sweep failed");
           }
         },
         config.notices.dispatch.sweepCronIntervalMs,
@@ -54,7 +53,8 @@ export class NoticesDispatchPollerService implements OnModuleInit {
       );
     } else {
       logger.debug(
-        "[dispatch] DISPATCH_SWEEP_ENABLED not set; safety-net cron disabled (ping-only mode)",
+        { event: "notices.dispatch.sweep_disabled" },
+        "DISPATCH_SWEEP_ENABLED not set; safety-net cron disabled (ping-only mode)",
       );
     }
   }

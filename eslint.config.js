@@ -38,6 +38,11 @@ const sharedGlobals = {
   AbortSignal: "readonly",
 };
 
+// A call to the shared pino logger or a request's `req.log`.
+const LOG_CALL =
+  ":matches(CallExpression[callee.object.name='logger'], CallExpression[callee.object.property.name='log'])" +
+  "[callee.property.name=/^(trace|debug|info|warn|error|fatal)$/]";
+
 const jestGlobals = {
   describe: "readonly",
   it: "readonly",
@@ -88,6 +93,36 @@ module.exports = [
       // no-shadow base rule also disabled in TS (TS-specific version handles enums/types correctly)
       "no-shadow": "off",
       "@typescript-eslint/no-shadow": "error",
+    },
+  },
+  {
+    // Log line conventions (docs/reference/logging.md). A line is found by its
+    // `event`, not its wording, and a stack survives only as an Error object:
+    //   logger.warn({ event: "bus.hssc.fetch_failed", err }, "HSSC fetch failed")
+    files: ["src/**/*.ts"],
+    rules: {
+      "no-console": "error",
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: `${LOG_CALL}[arguments.0.type!='ObjectExpression']`,
+          message:
+            "Log calls take a fields object first: logger.info({ event: \"domain.subject.verb\", ... }, \"message\").",
+        },
+        {
+          selector: `${LOG_CALL} > ObjectExpression.arguments:first-child:not(:has(> Property[key.name='event']))`,
+          message: "Log fields need an `event` key (domain.subject.verb) — it is what a query or alert matches on.",
+        },
+        {
+          selector: `${LOG_CALL} > TemplateLiteral[expressions.length>0]`,
+          message: "Keep the message static and put the values in fields, so the line can be grouped and queried.",
+        },
+        {
+          selector: `${LOG_CALL} > ObjectExpression > Property[key.name='err'][value.type!='Identifier']`,
+          message:
+            "Pass the Error itself as `err` (`{ err }`), not its message — the serializer keeps the type and stack and strips request config.",
+        },
+      ],
     },
   },
   {

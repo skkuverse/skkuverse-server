@@ -34,8 +34,8 @@ export class BuildingSyncService implements OnModuleInit {
       () =>
         syncBuildings().catch((err: unknown) =>
           logger.error(
-            { err: (err as { message?: string }).message },
-            "[building-sync] Poller error",
+            { event: "building.sync.poller_failed", err },
+            "Poller error",
           ),
         ),
       config.building.syncIntervalMs,

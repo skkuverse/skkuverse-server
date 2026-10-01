@@ -36,7 +36,7 @@ export class ScheduleController {
     // pino-http attaches `log` to req. Preserve fail-loud: if req.log is
     // undefined this throws → 500 (matches pre-TS Express behavior).
     req.log.warn(
-      { serviceId },
+      { event: "bus.schedule.week_endpoint_called", serviceId },
       "deprecated: /week endpoint called, use /smart",
     );
 

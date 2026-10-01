@@ -62,7 +62,7 @@ async function ensureIndexes(): Promise<void> {
     activations.createIndex({ enabled: 1, activeFrom: -1 }),
   ]);
 
-  logger.info("[map] Indexes ensured");
+  logger.info({ event: "map.indexes.ensured" }, "Indexes ensured");
 }
 
 // --- Read paths -------------------------------------------------------------

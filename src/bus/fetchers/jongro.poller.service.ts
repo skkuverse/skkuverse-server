@@ -90,20 +90,22 @@ export class JongroPollerService implements OnModuleInit {
             (err: unknown) =>
               logger.error(
                 {
-                  err: err instanceof Error ? err.message : String(err),
+                  event: "bus.jongro.list_poll_failed",
+                  err,
                   code: route.code,
                 },
-                "[jongro] Poller error (list)",
+                "Poller error (list)",
               ),
           );
           this.updateJongroBusLocation(route.locUrl, route.code).catch(
             (err: unknown) =>
               logger.error(
                 {
-                  err: err instanceof Error ? err.message : String(err),
+                  event: "bus.jongro.location_poll_failed",
+                  err,
                   code: route.code,
                 },
-                "[jongro] Poller error (location)",
+                "Poller error (location)",
               ),
           );
         }
@@ -125,8 +127,13 @@ export class JongroPollerService implements OnModuleInit {
       const cd = env?.msgHeader?.headerCd;
       if (cd && !isUsableHeaderCd(cd)) {
         logger.warn(
-          { headerCd: cd, headerMsg: env.msgHeader?.headerMsg, code },
-          "[jongro] Upstream error code (location)",
+          {
+            event: "bus.jongro.location_upstream_error",
+            headerCd: cd,
+            headerMsg: env.msgHeader?.headerMsg,
+            code,
+          },
+          "Upstream error code (location)",
         );
         return;
       }
@@ -144,7 +151,10 @@ export class JongroPollerService implements OnModuleInit {
       if (!mapping) {
         // Surface an unregistered code explicitly instead of letting `!` turn
         // into undefined.<lastStnId> swallowed by the outer try/catch.
-        logger.warn({ code }, "[jongro] Unknown route code — not in registry");
+        logger.warn(
+          { event: "bus.jongro.unknown_route", code },
+          "Unknown route code — not in registry",
+        );
         return;
       }
       this.filteredBusLocations[code] = apiData
@@ -152,7 +162,10 @@ export class JongroPollerService implements OnModuleInit {
           const { lastStnId, tmX, tmY, plainNo } = item;
           const stationInfo = mapping[lastStnId];
           if (!stationInfo) {
-            logger.debug({ lastStnId, code }, "[jongro] Unmapped station ID");
+            logger.debug(
+              { event: "bus.jongro.unmapped_station", lastStnId, code },
+              "Unmapped station ID",
+            );
             return null;
           }
 
@@ -200,14 +213,14 @@ export class JongroPollerService implements OnModuleInit {
         .write(`jongro_locations_${code}`, this.filteredBusLocations[code])
         .catch((err: unknown) =>
           logger.warn(
-            { err: err instanceof Error ? err.message : String(err) },
-            "[jongro] Failed to write bus_cache (locations)",
+            { event: "bus.jongro.cache_write_failed", err },
+            "Failed to write bus_cache (locations)",
           ),
         );
     } catch (error: unknown) {
       logger.error(
-        { err: error instanceof Error ? error.message : String(error) },
-        "[jongro] Failed to update bus location",
+        { event: "bus.jongro.location_update_failed", err: error },
+        "Failed to update bus location",
       );
     }
   }
@@ -221,8 +234,13 @@ export class JongroPollerService implements OnModuleInit {
       const cd = env?.msgHeader?.headerCd;
       if (cd && !isUsableHeaderCd(cd)) {
         logger.warn(
-          { headerCd: cd, headerMsg: env.msgHeader?.headerMsg, code },
-          "[jongro] Upstream error code (list)",
+          {
+            event: "bus.jongro.list_upstream_error",
+            headerCd: cd,
+            headerMsg: env.msgHeader?.headerMsg,
+            code,
+          },
+          "Upstream error code (list)",
         );
         return;
       }
@@ -249,14 +267,14 @@ export class JongroPollerService implements OnModuleInit {
         .write(`jongro_stations_${code}`, this.filteredBusStations[code])
         .catch((err: unknown) =>
           logger.warn(
-            { err: err instanceof Error ? err.message : String(err) },
-            "[jongro] Failed to write bus_cache (stations)",
+            { event: "bus.jongro.cache_write_failed", err },
+            "Failed to write bus_cache (stations)",
           ),
         );
     } catch (error: unknown) {
       logger.error(
-        { err: error instanceof Error ? error.message : String(error) },
-        "[jongro] Failed to update bus list",
+        { event: "bus.jongro.list_update_failed", err: error },
+        "Failed to update bus list",
       );
     }
   }
@@ -315,8 +333,8 @@ export class JongroPollerService implements OnModuleInit {
     if (mismatched.length === 0 && missing.length === 0 && renamed.length === 0) return;
     this.driftWarned.add(code);
     logger.warn(
-      { code, mismatched, missing, renamed },
-      "[jongro] jongro-routes.json has drifted from TOPIS — resync the registry",
+      { event: "bus.jongro.registry_drift", code, mismatched, missing, renamed },
+      "jongro-routes.json has drifted from TOPIS — resync the registry",
     );
   }
 
