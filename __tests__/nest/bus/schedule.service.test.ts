@@ -454,7 +454,7 @@ describe("resolveSmartSchedule", () => {
     expect(result!.from).toBeNull();
     expect(result!.days).toHaveLength(0);
     expect(logger.warn).toHaveBeenCalledWith(
-      { event: "bus.schedule.no_data", serviceId: "fasttrack-inja" },
+      { event: "bus.schedule.no_data", serviceId: "fasttrack-inja", suppressed: 0 },
       expect.stringContaining("noData"),
     );
     jest.useRealTimers();

@@ -1,6 +1,9 @@
 import { getAllBuildings, getAllCampusShapes } from "../building/building.data";
 import type { Campus, CampusShapeDoc } from "../building/types";
 import logger from "../infra/logger";
+import { createLogThrottle } from "../infra/log-throttle";
+
+const skippedThrottle = createLogThrottle(60 * 60_000);
 import { BASE_LAYERS, type BaseLayerId } from "./map-layers.data";
 import type { MapOverlay, OverlayBase } from "./map-overlay.types";
 import {
@@ -326,9 +329,17 @@ function toShapeOverlays(docs: CampusShapeDoc[]): MapOverlay[] {
     }
   }
 
-  if (skipped.length > 0) {
+  // Projected on every request from cached shapes: the same skip repeats
+  // until the data is fixed, so once an hour per distinct set.
+  const ticket = skipped.length > 0 ? skippedThrottle.take(skipped.join("|")) : null;
+  if (ticket) {
     logger.warn(
-      { event: "map.campus.shapes_skipped", count: skipped.length, skipped },
+      {
+        event: "map.campus.shapes_skipped",
+        count: skipped.length,
+        skipped,
+        suppressed: ticket.suppressed,
+      },
       "Campus shapes skipped",
     );
   }

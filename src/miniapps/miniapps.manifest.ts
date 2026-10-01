@@ -22,6 +22,9 @@
  */
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import logger from "../infra/logger";
+import { createLogThrottle } from "../infra/log-throttle";
+
+const fetchFailedThrottle = createLogThrottle(10 * 60_000);
 import { FIRST_PARTY_MINIAPP_ORIGINS } from "../infra/origins";
 import { createCachedLoader, type CachedLoader } from "../common/cache/cached-loader";
 import { MANIFEST_PATH, parseShellFields, type ShellConfig } from "./shell";
@@ -173,10 +176,20 @@ export class MiniAppsManifestService implements OnModuleInit {
     try {
       return await this.loaderFor(detail.id, origin).get();
     } catch (err) {
-      logger.warn(
-        { event: "miniapps.manifest.fetch_failed", miniAppId: detail.id, origin, err },
-        "Manifest fetch failed; serving the registry's own shell",
-      );
+      // Per detail request until a manifest has loaded once.
+      const ticket = fetchFailedThrottle.take(detail.id);
+      if (ticket) {
+        logger.warn(
+          {
+            event: "miniapps.manifest.fetch_failed",
+            miniAppId: detail.id,
+            origin,
+            err,
+            suppressed: ticket.suppressed,
+          },
+          "Manifest fetch failed; serving the registry's own shell",
+        );
+      }
       return {};
     }
   }
