@@ -13,6 +13,7 @@
  */
 import fs from "fs";
 import path from "path";
+import logger from "../infra/logger";
 import type {
   SourceConfig,
   CategoryConfig,
@@ -25,7 +26,7 @@ const isTest = process.env.NODE_ENV === "test";
 // ── Helpers ──
 
 function fatal(message: string): void {
-  console.error(`FATAL [tabConfig]: ${message}`);
+  logger.fatal({ module: "notices.tabConfig" }, message);
   if (!isTest) process.exit(1);
 }
 

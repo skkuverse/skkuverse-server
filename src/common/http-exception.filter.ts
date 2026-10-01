@@ -81,7 +81,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     // Unhandled error → generic 500. Mirrors index.ts:156-159's BARE
     // res.status(500).json(...): NO X-Response-Time header (parity).
-    logger.error({ err: exception }, "Unhandled request error");
+    // reqId comes from the request's log context (infra/log-context.ts); the
+    // err serializer strips request config, so an axios error's cookies and
+    // query-string keys stay out.
+    logger.error(
+      { err: exception, method: req.method, path: req.path },
+      "Unhandled request error",
+    );
     res
       .status(500)
       .json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
