@@ -151,6 +151,16 @@ const config = {
     serviceAccount: process.env.FIREBASE_SERVICE_ACCOUNT || null,
   },
 
+  // Error and log collection (src/instrument.ts). Required in production;
+  // the literal "disabled" turns it off explicitly (docker-compose.local-verify.yml).
+  // GIT_SHA is baked into the image at build time (Dockerfile ARG).
+  sentry: {
+    dsn: process.env.SENTRY_DSN,
+    enabled: !!process.env.SENTRY_DSN && process.env.SENTRY_DSN !== "disabled",
+    environment: process.env.SENTRY_ENVIRONMENT || NODE_ENV,
+    release: process.env.GIT_SHA || undefined,
+  },
+
   app: {
     ios: {
       minVersion: process.env.APP_IOS_MIN_VERSION || "1.0.0",
@@ -213,6 +223,10 @@ const required: ReadonlyArray<readonly [string, unknown, string]> = [
     config.notices.dispatch.internalToken,
     "INTERNAL_DISPATCH_TOKEN",
   ],
+  // Production must report errors somewhere; elsewhere Sentry is opt-in.
+  ...(isProduction
+    ? ([["sentry.dsn", config.sentry.dsn, "SENTRY_DSN"]] as const)
+    : []),
 ];
 
 const missing = required

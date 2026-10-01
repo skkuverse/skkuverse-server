@@ -58,6 +58,15 @@ export function maskUrl(url: string): string {
   return `${prefix}${parsed.pathname}${parsed.search}`;
 }
 
+/** A bare query string (no `?`) with secret-looking values masked. */
+export function maskQuery(query: string): string {
+  const params = new URLSearchParams(query);
+  for (const name of [...params.keys()]) {
+    if (SECRET_PARAM.test(name)) params.set(name, REDACTED);
+  }
+  return params.toString();
+}
+
 export function pickHeaders(
   headers: Record<string, string | string[] | undefined>,
 ): Record<string, string> {

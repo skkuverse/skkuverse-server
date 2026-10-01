@@ -1,0 +1,69 @@
+/**
+ * (A credential detail is left out of the public history.)
+ *
+ */
+import type { Breadcrumb, ErrorEvent, Log } from "@sentry/nestjs";
+import { maskQuery, maskUrl, pickHeaders } from "./log-redact";
+
+export function scrubEvent(event: ErrorEvent): ErrorEvent {
+  const request = event.request;
+  if (request) {
+    if (request.headers) request.headers = pickHeaders(request.headers);
+    if (typeof request.url === "string") request.url = maskUrl(request.url);
+    if (typeof request.query_string === "string") {
+      request.query_string = maskQuery(request.query_string);
+    } else if (request.query_string !== undefined) {
+      delete request.query_string;
+    }
+    delete request.cookies;
+    delete request.data;
+  }
+  if (event.breadcrumbs) {
+    event.breadcrumbs = event.breadcrumbs.map((b) => scrubBreadcrumb(b)).filter((b) => b !== null);
+  }
+  return event;
+}
+
+export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
+  const data = breadcrumb.data;
+  if (data) {
+    if (typeof data.url === "string") data.url = maskUrl(data.url);
+    // The query of an outgoing call travels separately from its url.
+    delete data["http.query"];
+    delete data["http.fragment"];
+  }
+  return breadcrumb;
+}
+
+/** Keys stop at three segments: `err.http.status`, `req.headers.user-agent`. */
+const MAX_FLATTEN_DEPTH = 2;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function flattenInto(
+  out: Record<string, unknown>,
+  prefix: string,
+  value: unknown,
+  depth: number,
+): void {
+  if (isPlainObject(value) && depth < MAX_FLATTEN_DEPTH) {
+    for (const [key, v] of Object.entries(value)) flattenInto(out, `${prefix}.${key}`, v, depth + 1);
+    return;
+  }
+  out[prefix] = value;
+}
+
+/**
+ * Sentry stores a nested attribute as one JSON string, which cannot be
+ * filtered on. Flattening `{ res: { statusCode: 500 } }` to `res.statusCode`
+ * makes "every 5xx in the last hour" a query. Anything deeper than three key
+ * segments stays one JSON string.
+ */
+export function flattenLogAttributes(log: Log): Log {
+  if (!log.attributes) return log;
+  const flat: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(log.attributes)) flattenInto(flat, key, value, 0);
+  return { ...log, attributes: flat };
+}
