@@ -32,6 +32,11 @@ COPY --from=builder --chown=node:node /app/dist ./dist
 USER node
 EXPOSE 3000
 
+# The commit this image was built from — Sentry's `release` (src/infra/config.ts).
+# Last, so a new commit invalidates no layer above.
+ARG GIT_SHA
+ENV GIT_SHA=$GIT_SHA
+
 # /health/ready: lib/db pingDb() + (role==="api" OR pollers.isReady()).
 # docker-compose.yml의 api-1/api-2 healthcheck와 별개로 Dockerfile-level도 유지
 # — `docker run` 단독 사용 시도 healthcheck 동작.

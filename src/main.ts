@@ -1,5 +1,8 @@
+// Must stay first: Sentry instruments http and Express as they are loaded.
+import "./instrument";
 import "reflect-metadata";
 
+import * as Sentry from "@sentry/nestjs";
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import express from "express";
@@ -138,6 +141,7 @@ async function bootstrap(): Promise<void> {
       forceExit.unref();
       await app.close(); // triggers onApplicationShutdown → stopAll()
       await closeClient();
+      await Sentry.close(2000); // send buffered logs before the process goes
       process.exit(0);
     };
     process.on("SIGTERM", shutdownPoller);
@@ -172,6 +176,7 @@ async function bootstrap(): Promise<void> {
     forceExit.unref();
     await app.close(); // runs onApplicationShutdown → stopAll()
     await closeClient();
+    await Sentry.close(2000); // send buffered logs before the process goes
     process.exit(0);
   };
   process.on("SIGTERM", shutdown);
@@ -181,16 +186,24 @@ async function bootstrap(): Promise<void> {
 // Without these, Node prints a crash to stderr as plain text and exits, and
 // the reason never reaches the JSON log. Exiting is kept: after an uncaught
 // error the process state is unknown, and the container restarts it.
+//
+// Sentry's own handlers (registered by instrument.ts, so they run first)
+// capture the error; because these handlers exist, Sentry leaves the exit to
+// us, and the flush gives the event up to 2 s to leave.
+function exitAfterFlush(): void {
+  void Sentry.flush(2000).finally(() => process.exit(1));
+}
 process.on("uncaughtException", (err, origin) => {
   logger.fatal({ err, origin }, "Uncaught exception — exiting");
-  process.exit(1);
+  exitAfterFlush();
 });
 process.on("unhandledRejection", (reason) => {
   logger.fatal({ err: reason }, "Unhandled promise rejection — exiting");
-  process.exit(1);
+  exitAfterFlush();
 });
 
 bootstrap().catch((err) => {
   logger.fatal({ err }, "Nest bootstrap failed");
-  process.exit(1);
+  Sentry.captureException(err);
+  exitAfterFlush();
 });
