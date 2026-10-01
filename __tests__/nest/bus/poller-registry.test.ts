@@ -2,9 +2,9 @@
  * Nest port of pollers.test.ts — exercises PollerRegistryService directly.
  *
  * Strategy mirrors the Express test:
- *   - lib/logger is mocked so the in-flight guard / rejection messages can be
- *     asserted verbatim ("Poller skipped: previous run still in flight",
- *     "Poller fn rejected").
+ *   - the logger and Sentry are mocked, so the state-transition lines (failing,
+ *     still failing, recovered), the one Issue per failing spell and the cron
+ *     check-ins can be asserted.
  *   - Fake timers drive setInterval deterministically.
  *   - A fresh service is constructed per test (no module-scoped state to reset
  *     — the registry/intervalIds live on the instance).
@@ -19,10 +19,23 @@ jest.mock("../../../src/infra/logger", () => ({
   error: jest.fn(),
   debug: jest.fn(),
 }));
+jest.mock("@sentry/nestjs", () => ({
+  captureException: jest.fn(),
+  captureCheckIn: jest.fn(),
+}));
 
 import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
 
 const logger = require("../../../src/infra/logger");
+const Sentry = require("@sentry/nestjs");
+
+/** Lets the settled tick's outcome handlers run. */
+async function settle(): Promise<void> {
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+}
+
+const events = (mock: jest.Mock): string[] =>
+  mock.mock.calls.map(([fields]) => (fields as { event: string }).event);
 
 describe("PollerRegistryService", () => {
   let registry: PollerRegistryService;
@@ -92,11 +105,13 @@ describe("PollerRegistryService", () => {
 
       jest.advanceTimersByTime(3000); // 3 ticks while still pending
       expect(fn).toHaveBeenCalledTimes(1);
-      expect(logger.warn).toHaveBeenCalledWith(
+      // A skipped tick is routine for a slow upstream: debug, not warn.
+      expect(logger.debug).toHaveBeenCalledWith(
         { event: "poller.skipped_in_flight", name: "slow" },
         "Poller skipped: previous run still in flight",
       );
-      expect(logger.warn).toHaveBeenCalledTimes(3);
+      expect(logger.debug).toHaveBeenCalledTimes(3);
+      expect(logger.warn).not.toHaveBeenCalled();
 
       resolveFn!();
       await Promise.resolve();
@@ -106,31 +121,143 @@ describe("PollerRegistryService", () => {
       expect(fn).toHaveBeenCalledTimes(2);
     });
 
-    it("resets inFlight after fn rejects, logs the error, allows next tick", async () => {
+    it("resets inFlight after fn rejects and allows the next tick", async () => {
       let calls = 0;
       const fn = jest.fn(() => {
         calls += 1;
-        return calls === 1
-          ? Promise.reject(new Error("boom"))
-          : Promise.resolve();
+        return calls === 1 ? Promise.reject(new Error("boom")) : Promise.resolve();
       });
       registry.registerPoller(fn, 1000, "flaky");
       registry.startAll();
-      await Promise.resolve();
-      await Promise.resolve();
-
-      expect(logger.error).toHaveBeenCalledWith(
-        {
-          event: "poller.rejected",
-          err: expect.objectContaining({ message: "boom" }),
-          name: "flaky",
-        },
-        "Poller fn rejected",
-      );
+      await settle();
 
       jest.advanceTimersByTime(1000);
-      await Promise.resolve();
+      await settle();
       expect(fn).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("failure state transitions", () => {
+    it("declares a fast poller failing on its third failure in a row, once", async () => {
+      const fn = jest.fn(() => Promise.reject(new Error("upstream down")));
+      registry.registerPoller(fn, 1000, "fast");
+      registry.startAll();
+      await settle();
+      for (let i = 0; i < 4; i++) {
+        jest.advanceTimersByTime(1000);
+        await settle();
+      }
+
+      // Ticks 1–2: debug only. Tick 3: one error line and one Issue. 4–5: quiet.
+      expect(events(logger.error)).toEqual(["poller.failing"]);
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "fast", failures: 3 }),
+        "Poller failing",
+      );
+      expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+      expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
+        tags: { poller: "fast" },
+      });
+      expect(events(logger.debug).filter((e) => e === "poller.tick_failed")).toHaveLength(4);
+      expect(registry.failingPollers()).toEqual(["fast"]);
+    });
+
+    it("lets a single failed tick pass without an error line", async () => {
+      let calls = 0;
+      const fn = jest.fn(() => (++calls === 1 ? Promise.reject(new Error("blip")) : undefined));
+      registry.registerPoller(fn, 1000, "blippy");
+      registry.startAll();
+      await settle();
+      jest.advanceTimersByTime(1000);
+      await settle();
+
+      expect(logger.error).not.toHaveBeenCalled();
+      expect(logger.info.mock.calls.map(([f]: [{ event: string }]) => f.event)).not.toContain(
+        "poller.recovered",
+      );
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+    });
+
+    it("declares a slow poller on its first failure, and logs its recovery", async () => {
+      let calls = 0;
+      const fn = jest.fn(() => (++calls === 1 ? Promise.reject(new Error("sweep failed")) : undefined));
+      registry.registerPoller(fn, 60_000, "slow");
+      registry.startAll();
+      await settle();
+      expect(events(logger.error)).toEqual(["poller.failing"]);
+
+      jest.advanceTimersByTime(60_000);
+      await settle();
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.objectContaining({ event: "poller.recovered", name: "slow", failures: 1 }),
+        "Poller recovered",
+      );
+      expect(registry.failingPollers()).toEqual([]);
+    });
+
+    it("counts a synchronous throw as a failure", async () => {
+      registry.registerPoller(
+        () => {
+          throw new Error("sync");
+        },
+        60_000,
+        "thrower",
+      );
+      registry.startAll();
+      await settle();
+      expect(events(logger.error)).toEqual(["poller.failing"]);
+    });
+
+    it("reminds every 15 minutes while a poller stays down", async () => {
+      registry.registerPoller(() => Promise.reject(new Error("down")), 60_000, "down");
+      registry.startAll();
+      await settle();
+      for (let i = 0; i < 16; i++) {
+        jest.advanceTimersByTime(60_000);
+        await settle();
+      }
+      expect(events(logger.warn)).toEqual(["poller.still_failing"]);
+      expect(logger.error).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Sentry cron heartbeat", () => {
+    it("checks in ok every 5 minutes, and error while a poller is failing", async () => {
+      let failing = false;
+      registry.registerPoller(
+        () => (failing ? Promise.reject(new Error("x")) : undefined),
+        60_000,
+        "p",
+      );
+      registry.startAll();
+      await settle();
+
+      jest.advanceTimersByTime(5 * 60_000);
+      await settle();
+      expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
+        { monitorSlug: "skkuverse-pollers", status: "ok" },
+        expect.objectContaining({ schedule: { type: "interval", value: 5, unit: "minute" } }),
+      );
+
+      failing = true;
+      // Fake timers do not run promise callbacks between timers, so let the
+      // failed tick settle before the next check-in is due.
+      jest.advanceTimersByTime(60_000);
+      await settle();
+      jest.advanceTimersByTime(4 * 60_000);
+      await settle();
+      expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
+        { monitorSlug: "skkuverse-pollers", status: "error" },
+        expect.anything(),
+      );
+    });
+
+    it("stops checking in after stopAll", () => {
+      registry.registerPoller(jest.fn(), 60_000, "p");
+      registry.startAll();
+      registry.stopAll();
+      jest.advanceTimersByTime(10 * 60_000);
+      expect(Sentry.captureCheckIn).not.toHaveBeenCalled();
     });
   });
 

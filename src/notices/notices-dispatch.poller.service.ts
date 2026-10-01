@@ -41,13 +41,8 @@ export class NoticesDispatchPollerService implements OnModuleInit {
   onModuleInit(): void {
     if (process.env.DISPATCH_SWEEP_ENABLED === "true") {
       this.registry.registerPoller(
-        async () => {
-          try {
-            await this.dispatcher.sweepPending("cron");
-          } catch (err: unknown) {
-            logger.error({ event: "notices.dispatch.sweep_failed", err }, "Cron sweep failed");
-          }
-        },
+        // A failed sweep is reported by the registry (one per failing spell).
+        () => this.dispatcher.sweepPending("cron"),
         config.notices.dispatch.sweepCronIntervalMs,
         "notices-dispatch-sweep",
       );
