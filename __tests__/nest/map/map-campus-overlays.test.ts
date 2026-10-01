@@ -19,6 +19,7 @@ jest.mock("../../../src/building/building.data", () => ({
 }));
 
 import { getCampusOverlays } from "../../../src/map/map-campus-overlays.data";
+import { logText } from "../../helpers/log-text";
 
 const RING: [number, number][] = [
   [126.9704, 37.2901],
@@ -349,9 +350,7 @@ describe("getCampusOverlays — hand-authored campus geometry", () => {
     const { overlays } = await getCampusOverlays();
 
     expect(overlays.every((o) => o.kind === "marker")).toBe(true);
-    expect(mockLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("typo_layer"),
-    );
+    expect(logText(mockLogger.warn.mock.calls[0])).toContain("typo_layer");
   });
 
   it("skips a structurally broken ring rather than blanking the campus", async () => {
@@ -368,9 +367,7 @@ describe("getCampusOverlays — hand-authored campus geometry", () => {
     expect(overlays).toHaveLength(2);
     expect(overlays.every((o) => o.kind === "marker")).toBe(true);
     expect(degraded).toBe(false);
-    expect(mockLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("not drawable"),
-    );
+    expect(logText(mockLogger.warn.mock.calls[0])).toContain("not drawable");
   });
 
   it("keeps serving the buildings when the PROJECTION throws, not just the read", async () => {

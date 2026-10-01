@@ -107,7 +107,8 @@ async function activeEvent(): Promise<EventMapConfig | null> {
     return await activeEventConfig(new Date());
   } catch (err) {
     logger.warn(
-      `[map] event layer lookup failed, serving base layers only: ${String(err)}`,
+      { event: "map.event_layers.lookup_failed", err },
+      "Event layer lookup failed, serving base layers only",
     );
     return null;
   }

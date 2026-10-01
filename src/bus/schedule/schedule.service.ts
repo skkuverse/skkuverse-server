@@ -82,8 +82,8 @@ export class ScheduleService implements OnModuleInit {
       await ensureScheduleIndexes();
     } catch (err: unknown) {
       logger.warn(
-        { err: err instanceof Error ? err.message : String(err) },
-        "[schedule] ensureScheduleIndexes failed (non-fatal)",
+        { event: "bus.schedule.indexes_failed", err },
+        "ensureScheduleIndexes failed (non-fatal)",
       );
     }
   }
@@ -237,7 +237,7 @@ export class ScheduleService implements OnModuleInit {
 
         if (!mFrom.isValid() || !mUntil.isValid() || mFrom.isAfter(mUntil)) {
           logger.warn(
-            { serviceId, suspend: svcCfg.suspend },
+            { event: "bus.schedule.suspend_config_invalid", serviceId, suspend: svcCfg.suspend },
             "invalid suspend config, ignoring",
           );
         } else if (today.isBetween(mFrom, mUntil, "day", "[]")) {
@@ -305,7 +305,7 @@ export class ScheduleService implements OnModuleInit {
     // No schedule found within 2 weeks and no suspend config → data gap
     if (!selectedDate) {
       logger.warn(
-        { serviceId },
+        { event: "bus.schedule.no_data", serviceId },
         "no schedule data found within 2 weeks (noData)",
       );
       return {

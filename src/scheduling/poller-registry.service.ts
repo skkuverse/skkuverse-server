@@ -43,11 +43,14 @@ export class PollerRegistryService
 
   startAll(): void {
     this.intervalIds = this.registeredPollers.map(({ fn, intervalMs, name }) => {
-      logger.info({ name, intervalMs }, "Starting poller");
+      logger.info({ event: "poller.started", name, intervalMs }, "Starting poller");
       let inFlight = false;
       const guarded = (): void => {
         if (inFlight) {
-          logger.warn({ name }, "Poller skipped: previous run still in flight");
+          logger.warn(
+            { event: "poller.skipped_in_flight", name },
+            "Poller skipped: previous run still in flight",
+          );
           return;
         }
         inFlight = true;
@@ -55,7 +58,8 @@ export class PollerRegistryService
           .catch((err: unknown) =>
             logger.error(
               {
-                err: err instanceof Error ? err.message : String(err),
+                event: "poller.rejected",
+                err,
                 name,
               },
               "Poller fn rejected",

@@ -54,7 +54,10 @@ export class MapService implements OnModuleInit {
     try {
       await ensureIndexes();
     } catch (err) {
-      logger.warn({ err }, "[map] ensureIndexes failed — continuing without them");
+      logger.warn(
+        { event: "map.indexes.failed", err },
+        "ensureIndexes failed — continuing without them",
+      );
     }
   }
 

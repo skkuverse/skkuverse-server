@@ -26,7 +26,7 @@ const isTest = process.env.NODE_ENV === "test";
 // ── Helpers ──
 
 function fatal(message: string): void {
-  logger.fatal({ module: "notices.tabConfig" }, message);
+  logger.fatal({ event: "notices.tabconfig.invalid" }, message);
   if (!isTest) process.exit(1);
 }
 

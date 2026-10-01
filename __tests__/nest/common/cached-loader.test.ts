@@ -112,7 +112,7 @@ describe("createCachedLoader", () => {
     await expect(cache.get()).resolves.toBe("a");
     await settle();
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]![1]).toMatch(/\[cache\] places: reload failed/);
+    expect(warn.mock.calls[0]![0]).toMatchObject({ event: "cache.reload_failed", cache: "places" });
 
     // Inside the back-off window: no new load, no new warning.
     now += 4_999;
