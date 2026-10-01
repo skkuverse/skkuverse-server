@@ -4,8 +4,10 @@ import {
   type ArgumentsHost,
   type ExceptionFilter,
 } from "@nestjs/common";
+import * as Sentry from "@sentry/nestjs";
 import type { Request, Response } from "express";
 import logger from "../infra/logger";
+import { currentLogContext } from "../infra/log-context";
 import { AppError } from "./app-error";
 
 /**
@@ -88,6 +90,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
       { err: exception, method: req.method, path: req.path },
       "Unhandled request error",
     );
+    // The one request-path error that becomes a Sentry Issue. AppError and
+    // HttpException above are answers, not faults. The tag joins the Issue to
+    // this request's log lines.
+    Sentry.withScope((scope) => {
+      const reqId = currentLogContext()?.reqId;
+      if (reqId) scope.setTag("request_id", reqId);
+      Sentry.captureException(exception);
+    });
     res
       .status(500)
       .json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
