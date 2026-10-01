@@ -3,10 +3,10 @@ import axios from "axios";
 import moment from "moment-timezone";
 import "moment/locale/ko";
 import config from "../../infra/config";
-import logger from "../../infra/logger";
 import type { HsscBusItem } from "../types";
 import { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { BusCacheService } from "../cache/bus-cache.service";
+import { UpstreamError } from "./upstream-error";
 
 export interface NormalizedHsscItem extends HsscBusItem {
   sequence: string;
@@ -61,124 +61,93 @@ export class HsscPollerService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.registry.registerPoller(
-      () => {
-        this.updateHSSCBusList().catch((err: unknown) =>
-          logger.error(
-            { event: "bus.hssc.poll_failed", err },
-            "Poller error",
-          ),
-        );
-      },
-      10000,
-      "hssc",
-    );
+    // The registry logs failures as state transitions; see its header.
+    this.registry.registerPoller(() => this.updateHSSCBusList(), 10000, "hssc");
   }
 
   async updateHSSCBusList(): Promise<void> {
-    try {
-      // Defensive: receive as unknown; HSSC server has been stable but we don't
-      // give a generic to axios — that would silently rubber-stamp any shape.
-      const response = await axios.get<unknown>(config.api.hsscNew!, {
-        timeout: 10000,
-      });
+    // Defensive: receive as unknown; HSSC server has been stable but we don't
+    // give a generic to axios — that would silently rubber-stamp any shape.
+    const response = await axios.get<unknown>(config.api.hsscNew!, {
+      timeout: 10000,
+    });
 
-      const apiData = response.data;
-      if (!Array.isArray(apiData)) {
-        logger.warn(
-          { event: "bus.hssc.unexpected_shape", shape: typeof apiData },
-          "Unexpected response shape (not an array)",
+    const apiData = response.data;
+    if (!Array.isArray(apiData)) {
+      // Keeps the previous state; the registry reports it if it persists.
+      throw new UpstreamError(`HSSC response is not an array (${typeof apiData})`, "hssc");
+    }
+    if (apiData.length === 0) {
+      // Empty array = no buses currently running. Drain stale filter naturally.
+      this.filteredHSSCStations = [];
+      // api replicas read bus_cache, so a failed write is a failed tick.
+      await this.cache.write("hssc", this.filteredHSSCStations);
+      return;
+    }
+
+    const items = apiData as HsscBusItem[];
+    const currentTime = moment().tz("Asia/Seoul");
+
+    const updatedData: NormalizedHsscItem[] = items
+      .map((item) => {
+        const existingItem = this.filteredHSSCStations.find(
+          (station) =>
+            station.line_no === item.line_no &&
+            station.stop_no === item.stop_no,
         );
-        return;
-      }
-      if (apiData.length === 0) {
-        // Empty array = no buses currently running. Drain stale filter naturally.
-        this.filteredHSSCStations = [];
-        this.cache.write("hssc", this.filteredHSSCStations).catch(
-          (err: unknown) =>
-            logger.warn(
-              { event: "bus.hssc.cache_write_failed", err },
-              "Failed to write bus_cache",
-            ),
-        );
-        return;
-      }
 
-      const items = apiData as HsscBusItem[];
-      const currentTime = moment().tz("Asia/Seoul");
-
-      const updatedData: NormalizedHsscItem[] = items
-        .map((item) => {
-          const existingItem = this.filteredHSSCStations.find(
-            (station) =>
-              station.line_no === item.line_no &&
-              station.stop_no === item.stop_no,
-          );
-
-          let eventDateTime: moment.Moment;
-          if (existingItem && existingItem.eventDate) {
-            eventDateTime = moment.tz(
-              existingItem.eventDate,
-              "YYYY-MM-DD HH:mm:ss",
-              "Asia/Seoul",
-            );
-          } else {
-            eventDateTime = moment.tz(
-              item.get_date,
-              "YYYY-MM-DD a h:mm:ss",
-              "ko",
-              "Asia/Seoul",
-            );
-          }
-
-          const timeDiff =
-            (currentTime.valueOf() - eventDateTime.valueOf()) / 1000;
-          const realsequence = toLinearSequence(parseInt(item.seq, 10));
-
-          return {
-            ...item,
-            sequence: realsequence.toString(),
-            stationName: stopNameMapping[item.stop_name] || item.stop_name,
-            carNumber: "0000",
-            eventDate: eventDateTime.format("YYYY-MM-DD HH:mm:ss"),
-            estimatedTime: Math.round(Math.abs(timeDiff)),
-            isLastBus: false,
-
-            line_no: item.line_no,
-            stop_no: item.stop_no,
-            get_date: item.get_date,
-          };
-        })
-        .filter((item) => {
-          const staleMinutes =
-            item.stationName === TURNAROUND_STATION
-              ? STALE_MINUTES_TURNAROUND
-              : STALE_MINUTES_DEFAULT;
-          const itemTime = moment.tz(
-            item.eventDate,
+        let eventDateTime: moment.Moment;
+        if (existingItem && existingItem.eventDate) {
+          eventDateTime = moment.tz(
+            existingItem.eventDate,
             "YYYY-MM-DD HH:mm:ss",
             "Asia/Seoul",
           );
-          const cutoff = moment()
-            .tz("Asia/Seoul")
-            .subtract(staleMinutes, "minutes");
-          return !itemTime.isBefore(cutoff);
-        });
+        } else {
+          eventDateTime = moment.tz(
+            item.get_date,
+            "YYYY-MM-DD a h:mm:ss",
+            "ko",
+            "Asia/Seoul",
+          );
+        }
 
-      this.filteredHSSCStations = updatedData;
-      this.cache.write("hssc", this.filteredHSSCStations).catch(
-        (err: unknown) =>
-          logger.warn(
-            { event: "bus.hssc.cache_write_failed", err },
-            "Failed to write bus_cache",
-          ),
-      );
-    } catch (error: unknown) {
-      logger.error(
-        { event: "bus.hssc.update_failed", err: error },
-        "Failed to update bus list",
-      );
-    }
+        const timeDiff =
+          (currentTime.valueOf() - eventDateTime.valueOf()) / 1000;
+        const realsequence = toLinearSequence(parseInt(item.seq, 10));
+
+        return {
+          ...item,
+          sequence: realsequence.toString(),
+          stationName: stopNameMapping[item.stop_name] || item.stop_name,
+          carNumber: "0000",
+          eventDate: eventDateTime.format("YYYY-MM-DD HH:mm:ss"),
+          estimatedTime: Math.round(Math.abs(timeDiff)),
+          isLastBus: false,
+
+          line_no: item.line_no,
+          stop_no: item.stop_no,
+          get_date: item.get_date,
+        };
+      })
+      .filter((item) => {
+        const staleMinutes =
+          item.stationName === TURNAROUND_STATION
+            ? STALE_MINUTES_TURNAROUND
+            : STALE_MINUTES_DEFAULT;
+        const itemTime = moment.tz(
+          item.eventDate,
+          "YYYY-MM-DD HH:mm:ss",
+          "Asia/Seoul",
+        );
+        const cutoff = moment()
+          .tz("Asia/Seoul")
+          .subtract(staleMinutes, "minutes");
+        return !itemTime.isBefore(cutoff);
+      });
+
+    this.filteredHSSCStations = updatedData;
+    await this.cache.write("hssc", this.filteredHSSCStations);
   }
 
   getHSSCBusList(): NormalizedHsscItem[] {

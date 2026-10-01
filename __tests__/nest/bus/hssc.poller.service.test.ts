@@ -137,16 +137,24 @@ describe("HsscPollerService", () => {
       expect(service.getHSSCBusList()).toEqual([]);
     });
 
-    it("handles API error without crash", async () => {
+    // Failures reject so the poller registry can count them (it logs the
+    // transitions); the served list stays as it was.
+    it("rejects on an API error and keeps the previous state", async () => {
       axios.get.mockRejectedValue(new Error("Network error"));
-      await service.updateHSSCBusList();
+      await expect(service.updateHSSCBusList()).rejects.toThrow("Network error");
       expect(service.getHSSCBusList()).toEqual([]);
     });
 
-    it("ignores a non-array response shape (keeps previous state)", async () => {
+    it("rejects a non-array response shape and keeps the previous state", async () => {
       axios.get.mockResolvedValue({ data: { unexpected: true } });
-      await service.updateHSSCBusList();
+      await expect(service.updateHSSCBusList()).rejects.toThrow(/not an array/);
       expect(service.getHSSCBusList()).toEqual([]);
+    });
+
+    it("rejects when the bus_cache write fails — api replicas would serve stale data", async () => {
+      axios.get.mockResolvedValue({ data: [] });
+      (cacheStub.write as jest.Mock).mockRejectedValueOnce(new Error("mongo down"));
+      await expect(service.updateHSSCBusList()).rejects.toThrow("mongo down");
     });
   });
 });
