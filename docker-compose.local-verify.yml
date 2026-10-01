@@ -57,6 +57,9 @@ x-api-dev-env: &api-dev-env
   - MONGO_NOTICES_DB_NAME=skku_notices_dev
   - MONGO_EVENTMAP_DB_NAME=eventmap_dev
   - MONGO_MINIAPPS_DB_NAME=miniapps_dev
+  # Production requires SENTRY_DSN; a local run must not report into prod's
+  # project, so it is switched off by name (src/infra/config.ts).
+  - SENTRY_DSN=disabled
 
 services:
   poller:
@@ -71,6 +74,7 @@ services:
       - MONGO_NOTICES_DB_NAME=skku_notices_dev
       - MONGO_EVENTMAP_DB_NAME=eventmap_dev
       - MONGO_MINIAPPS_DB_NAME=miniapps_dev
+      - SENTRY_DSN=disabled
 
   api-1:
     environment: *api-dev-env
