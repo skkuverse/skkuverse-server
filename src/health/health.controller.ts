@@ -6,7 +6,7 @@ import { createLogThrottle } from "../infra/log-throttle";
 import { PollerRegistryService } from "../scheduling/poller-registry.service";
 
 /**
- * (An operations detail is left out of the public history.)
+ * (A perimeter detail is left out of the public history.)
  */
 const dbDownThrottle = createLogThrottle(60_000);
 
