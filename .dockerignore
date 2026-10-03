@@ -3,6 +3,10 @@ node_modules
 .DS_Store
 .env
 *.env
+# Backups and variants (.env.bak.*, .env.bak-before-sentry, ...) hold the same
+# production secrets; `COPY . .` in the builder stage would put them in a
+# cached layer on the host.
+.env.*
 npm-debug.log
 coverage/
 __tests__/
