@@ -68,7 +68,7 @@ The single most useful question before any change: **does this need a deploy?**
 
 ## Prerequisites
 
-- `MONGO_URL` and the DB names in `.env` — see `.env.example`. The importers
+- `MONGO_URL` and the DB names in `.env` — render it with `npm run env:pull`. The importers
   resolve the `_dev` suffix from `NODE_ENV` exactly as the server does, so an
   import with `NODE_ENV` unset writes to the dev database.
 - A drawing tool that exports RFC 7946 GeoJSON: [geojson.io](https://geojson.io)

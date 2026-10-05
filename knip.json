@@ -6,6 +6,7 @@
   ],
   "project": ["**/*.{js,ts}"],
   "ignoreDependencies": ["pino-pretty"],
+  "ignoreBinaries": ["python3"],
   "rules": {
     "exports": "off",
     "types": "off",
