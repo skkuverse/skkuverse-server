@@ -45,6 +45,7 @@ function apiUrl(prodKey: string, devKey: string): string | undefined {
 export function findMissingRequired(): string[] {
   const required: ReadonlyArray<readonly [string, unknown, string]> = [
     ["mongo.url", process.env.MONGO_URL, "MONGO_URL"],
+    ["mongo.dbName", devDbName(process.env.MONGO_DB_NAME_BUS_CAMPUS), "MONGO_DB_NAME_BUS_CAMPUS"],
     [
       "api.hsscNew",
       apiUrl("API_HSSC_NEW_PROD", "API_HSSC_NEW_DEV"),
@@ -62,6 +63,10 @@ export function findMissingRequired(): string[] {
     ["notices.dispatch.functionUrl", process.env.FCM_FUNCTION_URL, "FCM_FUNCTION_URL"],
     ["notices.dispatch.apiKey", process.env.FCM_API_KEY, "FCM_API_KEY"],
     ["notices.dispatch.internalToken", process.env.INTERNAL_DISPATCH_TOKEN, "INTERNAL_DISPATCH_TOKEN"],
+    // Production must report errors somewhere; elsewhere Sentry is opt-in.
+    ...(isProduction
+      ? ([["sentry.dsn", process.env.SENTRY_DSN, "SENTRY_DSN"]] as const)
+      : []),
   ];
 
   return required

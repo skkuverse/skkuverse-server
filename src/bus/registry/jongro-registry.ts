@@ -98,7 +98,7 @@ export function buildJongroLocUrl(
 export function validateServiceKey(key: unknown): string[] {
   const errs: string[] = [];
   if (typeof key !== "string" || key.length === 0) {
-    errs.push("SEOUL_BUS_SERVICE_KEY is required (see .env.example)");
+    errs.push("SEOUL_BUS_SERVICE_KEY is required (see config/env.prd.keys)");
     return errs;
   }
   // URL-encoded keys contain only alphanumerics, `%`, and the unreserved
