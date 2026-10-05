@@ -55,6 +55,11 @@ jobs:
         # exit status and a failing pull would look successful. Naming bash
         # explicitly gets `bash --noprofile --norc -eo pipefail {0}`.
         shell: bash
+        # The producers are private repositories (umbrella ADR 0007), and this
+        # workflow's own GITHUB_TOKEN reads only this repo. FLEET_READ_TOKEN is
+        # the fleet's read-only token, synced from Doppler the CI config.
+        env:
+          FLEET_READ_TOKEN: ${{ secrets.FLEET_READ_TOKEN }}
         run: |
           python3 "$RUNNER_TEMP/sv/exported/sync_contracts.py" pull --repo server --root . \
             | tee "$RUNNER_TEMP/pull.txt"
