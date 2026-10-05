@@ -94,9 +94,11 @@ jobs:
           # own integrity check is green — it is merge-ready, not a chore.
           body="$(printf 'Upstream SSOT moved and this repo is behind. Opened automatically by `.github/workflows/contracts-sync.yml`.\n\nThe vendored files **and** `.contracts.lock.json` are both updated here, so the integrity check on this PR is green — review the diff and merge.\n\n```\n%s\n```\n\nContract definitions: https://github.com/spencer0124/skkuverse/blob/main/contracts/manifest.json\n' "$(cat "$RUNNER_TEMP/pull.txt")")"
 
-          if gh pr view "$SYNC_BRANCH" --json number >/dev/null 2>&1; then
-            gh pr edit "$SYNC_BRANCH" --body "$body"
-            echo "updated the existing sync PR"
+          # Open PRs only: `gh pr view <branch>` also matches a CLOSED PR, which then got edited instead.
+          existing="$(gh pr list --head "$SYNC_BRANCH" --state open --json number -q '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --body "$body"
+            echo "updated the existing sync PR #$existing"
           else
             gh pr create --base "$BASE" --head "$SYNC_BRANCH" \
               --title "chore(contracts): sync vendored config from upstream SSOT" \
