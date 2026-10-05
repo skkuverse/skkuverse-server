@@ -198,6 +198,7 @@ const config = {
 //
 const required: ReadonlyArray<readonly [string, unknown, string]> = [
   ["mongo.url", config.mongo.url, "MONGO_URL"],
+  ["mongo.dbName", config.mongo.dbName, "MONGO_DB_NAME_BUS_CAMPUS"],
   ["api.hsscNew", config.api.hsscNew, "API_HSSC_NEW_PROD"],
   ["api.seoulBusServiceKey", config.api.seoulBusServiceKey, "SEOUL_BUS_SERVICE_KEY"],
   ["api.stationHyehwa", config.api.stationHyehwa, "API_STATION_HEWA"],
