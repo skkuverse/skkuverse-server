@@ -13,7 +13,7 @@ audience: internal
 
 ## 사전 준비
 
-- 로컬 `.env`에 notices 관련 required 변수 세팅 (누락 시 strict config가 crash — [decisions/0004](../decisions/0004-strict-config-pre-deploy-dry-load.md)). 목록은 `.env.example`의 REQUIRED 섹션이 SSOT.
+- Local `.env` rendered with `npm run env:pull`. A missing required variable crashes the strict config ([decisions/0004](../decisions/0004-strict-config-pre-deploy-dry-load.md)); the names are listed in `config/env.dev.keys`.
 - dev DB(`skku_notices_dev` 계열) 접근 가능.
 
 ## 정적 검증
