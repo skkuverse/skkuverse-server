@@ -3,7 +3,7 @@ title: Configure the Home Screen
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-09-26
+last-updated: 2026-10-05
 audience: internal
 ---
 
@@ -111,7 +111,7 @@ A `route` to a screen that an installed build does not have lands that build on 
 
 ### Show a mini app's live feed
 
-Add a `miniapp_feed` section where the card should sit:
+Add a `miniapp_feed` section where the card should sit. This is the section ESKARA 2026 ran during the festival; it was removed from the live layout on 2026-10-05:
 
 ```json
 {
@@ -123,7 +123,7 @@ Add a `miniapp_feed` section where the card should sit:
 }
 ```
 
-The app fetches the entries itself from `GET /miniapps/:id/notifications` (cached per replica, see [miniapps-api.md](../reference/miniapps-api.md) §5.1) and hides the card while the feed is empty. `miniAppId` must be registered; `title` is optional; `limit` is 1–10 and defaults to 3. Builds that predate the section type drop it, so it is safe to place before every device has the release that draws it. Remove the section to take the card down; no release is needed.
+The app fetches the entries itself from `GET /miniapps/:id/notifications` (cached per replica, see [miniapps-api.md](../reference/miniapps-api.md) §5.1). It always draws the card: an empty feed shows a placeholder line, and for a mini app with push, a device that would not receive it sees the card ask for notifications instead. `miniAppId` must be registered; `title` is optional; `limit` is 1–10 and defaults to 3. Builds that predate the section type drop it, so it is safe to place before every device has the release that draws it. Remove the section to take the card down; no release is needed.
 
 ## Troubleshooting
 
