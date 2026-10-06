@@ -23,7 +23,11 @@ export function loggerOptions(): LoggerOptions {
     formatters: {
       level: (label) => ({ level: label }),
     },
-    mixin: () => currentLogContext() ?? {},
+    // A copy, never the store itself: pino's default mixinMergeStrategy is
+    // Object.assign(mixinObject, lineFields), so returning the store would write
+    // every line's fields into the request context, and every later line of
+    // that request (the access line included) would carry them.
+    mixin: () => ({ ...currentLogContext() }),
     serializers: { err: serializeError },
     redact: { paths: REDACT_PATHS, censor: "[REDACTED]" },
   };

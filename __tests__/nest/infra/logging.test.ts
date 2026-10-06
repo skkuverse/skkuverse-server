@@ -15,6 +15,7 @@ import request from "supertest";
 import { AxiosError, AxiosHeaders } from "axios";
 import { loggerOptions } from "../../../src/infra/logger-options";
 import { mountRequestLogging, resolveRequestId } from "../../../src/infra/http-logging";
+import { runWithLogContext } from "../../../src/infra/log-context";
 import { maskUrl, serializeError } from "../../../src/infra/log-redact";
 import { PinoNestLogger } from "../../../src/infra/nest-logger";
 import sharedLogger from "../../../src/infra/logger";
@@ -98,6 +99,16 @@ describe("request logging", () => {
     expect(access.reqId).toBe(id);
   });
 
+  it("keeps a service line's fields off the access line", async () => {
+    const out = capture();
+    await request(buildApp(out.logger)).get("/ok").expect(200);
+    await settle();
+
+    const access = out.lines.find((l) => l.msg === "request completed")!;
+    expect(access.reqId).toBeDefined();
+    expect(access).not.toHaveProperty("event");
+  });
+
   it("levels the access line by status and skips health probes", async () => {
     const out = capture();
     const app = buildApp(out.logger);
@@ -126,6 +137,27 @@ describe("request logging", () => {
     expect(line!.service).toBe("skkuverse-server");
     expect(line!.role).toBeDefined();
     expect(line!.reqId).toBeUndefined();
+  });
+});
+
+describe("log context", () => {
+  // Until 2026-10 pino's default merge wrote each line's fields into the
+  // request's context, so every later line of the request (the access line
+  // included) carried them: one event counted twice, an `err` on a 200.
+  it("does not carry one line's fields into the next line of the same request", () => {
+    const out = capture();
+    runWithLogContext({ reqId: "req-1" }, () => {
+      out.logger.info({ event: "test.first", cached: true, err: new Error("boom") }, "first");
+      out.logger.info("second");
+    });
+
+    const [first, second] = out.lines;
+    expect(first).toMatchObject({ event: "test.first", cached: true, reqId: "req-1" });
+    expect(first!.err).toBeDefined();
+    expect(second!.reqId).toBe("req-1");
+    expect(second).not.toHaveProperty("event");
+    expect(second).not.toHaveProperty("cached");
+    expect(second).not.toHaveProperty("err");
   });
 });
 
