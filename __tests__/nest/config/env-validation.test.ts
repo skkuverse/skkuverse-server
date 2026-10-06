@@ -108,3 +108,22 @@ describe("env.validation api.hsscNew parity with lib/config apiUrl()", () => {
     );
   });
 });
+
+describe("env.validation AI_API_URL", () => {
+  // GET /notices/overview cannot work without it, and there is no default.
+  it("reports AI_API_URL as missing when it is unset", () => {
+    const saved = process.env.AI_API_URL;
+    delete process.env.AI_API_URL;
+    try {
+      jest.isolateModules(() => {
+        const mod = require("../../../src/config/env.validation");
+        expect(mod.findMissingRequired()).toContain(
+          "  notices.overview.aiApiUrl (env: AI_API_URL)",
+        );
+      });
+    } finally {
+      if (saved === undefined) delete process.env.AI_API_URL;
+      else process.env.AI_API_URL = saved;
+    }
+  });
+});

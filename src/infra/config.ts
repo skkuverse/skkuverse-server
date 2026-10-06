@@ -82,6 +82,14 @@ const config = {
     // date could expose notices the ops team intended to hide.
     serviceStartDate: process.env.NOTICES_SERVICE_START_DATE,
 
+    // AI overview for a search (GET /notices/overview). The ai service is
+    // skkuverse-ai on the shared `skkuverse` docker network; its contract is
+    // owned there (docs/notice-overview-api.md). Strict: no default — a missing
+    // URL must fail boot, not silently disable the feature.
+    overview: {
+      aiApiUrl: process.env.AI_API_URL,
+    },
+
     // FCM dispatch via deployed Cloud Function. Trigger is the crawler's
     // cycle-end ping; the cron is a safety net only.
     dispatch: {
@@ -224,6 +232,7 @@ const required: ReadonlyArray<readonly [string, unknown, string]> = [
     config.notices.dispatch.internalToken,
     "INTERNAL_DISPATCH_TOKEN",
   ],
+  ["notices.overview.aiApiUrl", config.notices.overview.aiApiUrl, "AI_API_URL"],
   // Production must report errors somewhere; elsewhere Sentry is opt-in.
   ...(isProduction
     ? ([["sentry.dsn", config.sentry.dsn, "SENTRY_DSN"]] as const)
