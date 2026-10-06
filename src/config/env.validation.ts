@@ -63,6 +63,7 @@ export function findMissingRequired(): string[] {
     ["notices.dispatch.functionUrl", process.env.FCM_FUNCTION_URL, "FCM_FUNCTION_URL"],
     ["notices.dispatch.apiKey", process.env.FCM_API_KEY, "FCM_API_KEY"],
     ["notices.dispatch.internalToken", process.env.INTERNAL_DISPATCH_TOKEN, "INTERNAL_DISPATCH_TOKEN"],
+    ["notices.overview.aiApiUrl", process.env.AI_API_URL, "AI_API_URL"],
     // Production must report errors somewhere; elsewhere Sentry is opt-in.
     ...(isProduction
       ? ([["sentry.dsn", process.env.SENTRY_DSN, "SENTRY_DSN"]] as const)
