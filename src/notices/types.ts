@@ -87,6 +87,9 @@ export interface NoticeDoc {
   department?: string | null;
   views?: number;
   contentHash?: string | null;
+  // Plain-text body. Not projected by the list or detail reads; the search
+  // overview sends it to skkuverse-ai as summary-independent evidence.
+  contentText?: string | null;
   cleanMarkdown?: string | null;
   attachments?: NoticeAttachment[];
   editCount?: number;
@@ -102,6 +105,9 @@ export interface NoticeDoc {
   summaryLocations?: unknown[];
   summaryDetails?: unknown;
   summaryModel?: string | null;
+  // contentHash the summary was generated from. Differs from contentHash when
+  // the body changed after summarization (the summary is stale).
+  summaryContentHash?: string | null;
 
   // Crawler-domain flags
   isDeleted?: boolean | null;
