@@ -813,7 +813,7 @@ describe("자과캠 통학셔틀 resolution (built from scripts/data/commute-sch
     for (const day of gy!.days.filter((d) => d.display === "schedule")) {
       expect(day.notices.map((n) => n.text)).toEqual([
         "시범 운행 · 무료 · 킹고M QR 탑승",
-        "등교 강남역 → 양재역(5분 뒤) → 자과캠\n하교 자과캠 → 양재역 → 강남역",
+        "등교: 강남역 → 양재역 → 자과캠\n하교: 자과캠 → 양재역 → 강남역",
       ]);
     }
     mockSchedules = docsFor("commute-jeongja");
