@@ -18,11 +18,7 @@ module.exports = {
   collectCoverage: true,
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov"],
-  coveragePathIgnorePatterns: [
-    "/node_modules/",
-    "/__tests__/helpers/",
-    "building\\.sync\\.ts$", // external API sync — integration-only
-  ],
+  coveragePathIgnorePatterns: ["/node_modules/", "/__tests__/helpers/"],
   coverageThreshold: {
     global: {
       branches: 60,
