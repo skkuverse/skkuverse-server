@@ -12,15 +12,12 @@ import { AppError } from "./app-error";
 
 /**
  * Global error filter. Renders { error: { code, message } } with the correct
- * status + X-Response-Time, mirroring lib/responseHelper.ts res.error and the
- * index.ts errorHandler / 404 handler.
+ * status + X-Response-Time.
  *
  *  - AppError            → { code, message } at httpStatus.
- *  - NotFoundException   → { NOT_FOUND, "<METHOD> <path> not found" } at 404
- *                          (matches index.ts:150-152 message format).
+ *  - NotFoundException   → { NOT_FOUND, "<METHOD> <path> not found" } at 404.
  *  - other HttpException → best-effort code/message at its status.
- *  - unknown error       → 500 INTERNAL_ERROR "Internal server error"
- *                          (matches index.ts:156-159).
+ *  - unknown error       → 500 INTERNAL_ERROR "Internal server error".
  */
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -33,12 +30,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    // X-Response-Time parity: Express sets this ONLY on app-handled errors that
-    // go through res.error (AppError-mapped 400/404 and the unmatched-route
-    // 404 — responseHelper.ts:14). The generic unhandled-error 500 in
-    // index.ts:156-159 uses a BARE res.status(500).json(...) and does NOT set
-    // the header. So we compute + set it per-branch below, omitting it on the
-    // final unknown-error 500 to stay byte-compatible.
+    // X-Response-Time is set on every answered error (AppError, the
+    // unmatched-route 404, other HttpExceptions) but NOT on the final
+    // unknown-error 500, so it is computed + set per-branch below.
     const setResponseTime = (): void => {
       const start = req.__startNs ?? process.hrtime.bigint();
       const ms = Number(process.hrtime.bigint() - start) / 1e6;
@@ -55,7 +49,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
-      // Nest's default 404 (unmatched route) — reproduce index.ts 404 message.
+      // Nest's default 404 (unmatched route) — replaced by our own message.
       if (status === 404) {
         setResponseTime();
         res.status(404).json({
@@ -81,8 +75,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    // Unhandled error → generic 500. Mirrors index.ts:156-159's BARE
-    // res.status(500).json(...): NO X-Response-Time header (parity).
+    // Unhandled error → generic 500, with NO X-Response-Time header.
     // reqId comes from the request's log context (infra/log-context.ts); the
     // err serializer strips request config, so an axios error's cookies and
     // query-string keys stay out.

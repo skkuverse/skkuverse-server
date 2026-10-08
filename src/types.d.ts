@@ -1,7 +1,6 @@
-// Express Request augmentation for the NestJS app (additive; mirrors lib/types.ts
-// but adds __startNs used by the X-Response-Time machinery in src/common).
-// We do NOT edit lib/types.ts; this file lives under src/ and is picked up by
-// tsconfig include "src/**/*".
+// Express Request augmentation for the NestJS app (additive; repeats
+// src/infra/types.ts and adds __startNs used by the X-Response-Time machinery
+// in src/common). Picked up by tsconfig include "src/**/*".
 import type { Logger } from "pino";
 
 declare global {
@@ -10,9 +9,9 @@ declare global {
       lang?: import("./infra/types").SupportedLang;
       uid?: string;
       log: Logger;
-      // Stashed by LangMiddleware at the front of the chain so sendSuccess()
-      // and HttpExceptionFilter can compute X-Response-Time identically to
-      // lib/responseHelper.ts (which captures start at request entry).
+      // Stashed by LangMiddleware at the front of the chain so every
+      // X-Response-Time (sendSuccess(), HttpExceptionFilter, ...) is measured
+      // from request entry.
       __startNs?: bigint;
     }
     interface Response {
