@@ -7,7 +7,9 @@ import { buildTopics, TOPIC_CAP } from "./topics.bridge";
  */
 @Injectable()
 export class TopicsService {
-  /** Max topics per notice (10; sendNotification rejects more). */
+  /**
+   * (An operations detail is left out of the public history.)
+   */
   readonly TOPIC_CAP = TOPIC_CAP;
 
   /** Map a notice document → its FCM topic strings (≤ TOPIC_CAP). */
