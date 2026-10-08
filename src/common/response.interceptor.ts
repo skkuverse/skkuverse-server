@@ -11,15 +11,15 @@ import { map, type Observable } from "rxjs";
  * Global success-envelope interceptor.
  *
  * Bus controllers use @Res() + sendSuccess() and write the response directly
- * (for ETag/304 + extra-meta parity), so for those handlers this interceptor is
+ * (for ETag/304 + extra meta), so for those handlers this interceptor is
  * a no-op: when a handler already wrote the response (res.headersSent) or
  * returned undefined (the @Res() void return), we pass the value through
  * untouched. Health endpoints are also @Res() raw JSON (not enveloped) and are
  * skipped the same way.
  *
  * For any plain handler that DOES return a value, we wrap it in the standard
- * envelope { meta: { lang, ... }, data } and set X-Response-Time — matching
- * lib/responseHelper.ts res.success.
+ * envelope { meta: { lang, ... }, data } and set X-Response-Time — the same
+ * envelope sendSuccess() writes.
  */
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {

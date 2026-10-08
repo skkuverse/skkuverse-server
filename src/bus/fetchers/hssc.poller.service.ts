@@ -45,11 +45,10 @@ function toLinearSequence(seq: number): number {
 }
 
 /**
- * HSSC campus shuttle poller — exact port of features/bus/hssc.fetcher.ts.
+ * HSSC campus shuttle poller.
  *
  * In-memory state (`filteredHSSCStations`) held on the singleton instance.
- * Self-registers a 10s poller in onModuleInit. Fire-and-forget cache writes
- * + stale filtering thresholds + transform math preserved verbatim.
+ * Self-registers a 10s poller in onModuleInit.
  */
 @Injectable()
 export class HsscPollerService implements OnModuleInit {

@@ -1,9 +1,9 @@
 /**
- * Nest port of schedule-routes.test.ts — integration over the real
- * ScheduleController (@Res() ETag/304) with ScheduleService overridden by the
- * same MOCK_WEEK/MOCK_SMART/MOCK_SUSPENDED/MOCK_NODATA fixtures.
+ * Integration over the real ScheduleController (@Res() ETag/304) with
+ * ScheduleService overridden by the MOCK_WEEK/MOCK_SMART/MOCK_SUSPENDED/
+ * MOCK_NODATA fixtures.
  *
- * Asserts byte-parity: envelope shape, 200/404 status + error codes, ETag
+ * Asserts the wire format: envelope shape, 200/404 status + error codes, ETag
  * format regexes ("week-…"/"smart-…"), 304 on If-None-Match, Cache-Control
  * max-age=300, i18n message presence/absence per status + en translations, and
  * X-Response-Time present on 200 but ABSENT on 304.

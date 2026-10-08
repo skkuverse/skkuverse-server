@@ -5,7 +5,7 @@ import { AppError } from "../../common/app-error";
 import { sendSuccess } from "../../common/send-success";
 
 /**
- * GET /bus/route/:routeId — port of features/bus/route-overlay.routes.ts.
+ * GET /bus/route/:routeId.
  *
  * Unknown routeId → 404 NOT_FOUND `Route '<id>' not found` (exact message). No
  * Cache-Control. Known route → { color, coords } enveloped.

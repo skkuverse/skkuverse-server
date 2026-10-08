@@ -20,8 +20,7 @@ interface HyehwaStationResponse {
 }
 
 /**
- * 혜화역 정류장 안내 메시지 poller — exact port of
- * features/station/station.fetcher.ts. 매 40초 polling으로 갱신.
+ * 혜화역 정류장 안내 메시지 poller. 매 40초 polling으로 갱신.
  */
 @Injectable()
 export class StationPollerService implements OnModuleInit {
@@ -43,7 +42,6 @@ export class StationPollerService implements OnModuleInit {
       config.api.stationHyehwa!,
       { timeout: 10000 },
     );
-    // 원본의 response.data?.msgBody?.itemList optional chaining 그대로 보존.
     // "0" = data, "4" = no result (keep the previous message); anything else
     // is an upstream error — an expired or throttled service key, for one.
     const header = response.data?.msgHeader;

@@ -24,8 +24,7 @@ import { LangMiddleware } from "./common/lang.middleware";
 import { BusCacheService } from "./bus/cache/bus-cache.service";
 
 /**
- * NestJS entrypoint — parallel to index.ts (the Express app keeps running
- * unchanged). Reproduces the index.ts bootstrap faithfully:
+ * NestJS entrypoint:
  *  - helmet, request logging (infra/http-logging.ts: request id + log
  *    context + pino-http), express.json(100kb), trust proxy 1
  *  - global ResponseInterceptor + HttpExceptionFilter (LangMiddleware is wired
@@ -46,9 +45,8 @@ async function bootstrap(): Promise<void> {
   // req.__startNs + Vary: Accept-Language). Nest's AppModule.configure
   // forRoutes("*") does NOT fire against a pre-built ExpressAdapter instance
   // (verified: zero middleware invocations for "*", "(.*)", "{*path}",
-  // "*path"), so we mount it as raw express middleware here — exactly mirroring
-  // Express index.ts `app.use(langMiddleware)` and the test helper
-  // build-bus-app.ts. Placed after express.json so the order matches Express.
+  // "*path"), so we mount it as raw express middleware here, after express.json,
+  // in the same place as the test helper build-bus-app.ts.
   const langMiddleware = new LangMiddleware();
   expressInstance.use((req, res, next) =>
     langMiddleware.use(req as never, res as never, next),
@@ -97,7 +95,6 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
 
   // Verify MongoDB connectivity (non-fatal — bus/station read from cache).
-  // Mirrors index.ts:164-171.
   try {
     await pingDb();
     logger.info({ event: "db.connected" }, "MongoDB connected");
@@ -108,10 +105,9 @@ async function bootstrap(): Promise<void> {
     );
   }
 
-  // Ensure bus_cache TTL index exists (non-fatal) — mirrors index.ts:181-187.
-  // Express runs this unconditionally (NOT ROLE-gated), so the port does too.
-  // ensureScheduleIndexes() parity is handled by ScheduleService.onModuleInit
-  // (runs during app.init() above), matching the Express boot path.
+  // Ensure bus_cache TTL index exists (non-fatal). Runs for every ROLE (NOT
+  // ROLE-gated). The schedule indexes are ensured by
+  // ScheduleService.onModuleInit instead.
   try {
     await app.get(BusCacheService).ensureIndex();
     logger.info({ event: "bus.cache.index_ensured" }, "bus_cache TTL index ensured");
@@ -126,7 +122,7 @@ async function bootstrap(): Promise<void> {
 
   if (role === "poller") {
     // Poller-only: run lifecycle hooks (onApplicationBootstrap starts pollers)
-    // but do NOT bind an HTTP listener. Mirrors index.ts:236-248.
+    // but do NOT bind an HTTP listener.
     logger.info({ event: "app.poller_mode", role }, "Running in poller-only mode");
     await app.init();
     let shuttingDownPoller = false;
@@ -164,7 +160,7 @@ async function bootstrap(): Promise<void> {
     "Server started (NestJS)",
   );
 
-  // Graceful shutdown — mirrors index.ts:267-285.
+  // Graceful shutdown.
   let shuttingDown = false;
   const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
     if (shuttingDown) return;

@@ -1,10 +1,19 @@
 import crypto from "crypto";
-import { t } from "../../infra/i18n";
+import { pick, t } from "../../infra/i18n";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
 import { HSSCStations } from "./hssc.stations";
 import { jongroRoutes, type JongroRoute } from "../registry/jongro-registry";
-import type { HsscStation, JongroStation } from "../types";
+import { buildStreetViewUrl } from "../schedule/naver-street-view";
+import { stopCatalog } from "../schedule/schedule-stops";
+import type {
+  HsscStation,
+  JongroStation,
+  LatLng,
+  ScheduleStop,
+  ScheduleStopCatalog,
+  StopExit,
+} from "../types";
 
 type AnyStation = HsscStation | JongroStation;
 
@@ -59,12 +68,144 @@ function buildJongroGroup(route: JongroRoute, lang: SupportedLang) {
   };
 }
 
+interface ServedStop {
+  id: string;
+  name: string;
+  detail?: string;
+  coords?: LatLng;
+  photoUrl?: string;
+  streetViewUrl?: string;
+  exit?: StopExit;
+  walkPath?: LatLng[];
+}
+
+interface ServedSequenceStop {
+  label: string;
+  action: "board" | "alight";
+  timing: "scheduled" | "estimated";
+  stopId?: string;
+  note?: string;
+  detail?: string;
+}
+
+/**
+ * A stop as one language's client sees it. Optional fields appear only when
+ * the catalog sets their source, so a stop with no photo has no `photoUrl` key.
+ * The photo is the variant whose labels are in the request language, else the
+ * original — not chained through English like text, because the original has
+ * no words and reads the same in every language.
+ */
+function serveStop(stop: ScheduleStop, lang: SupportedLang): ServedStop {
+  const served: ServedStop = { id: stop.id, name: pick(stop.name, lang)! };
+  const detail = pick(stop.detail, lang);
+  if (detail !== null) served.detail = detail;
+  if (stop.coords) served.coords = stop.coords;
+  if (stop.photo) served.photoUrl = stop.photo.localized?.[lang] ?? stop.photo.original;
+  if (stop.panorama) served.streetViewUrl = buildStreetViewUrl(stop.panorama);
+  if (stop.exit && stop.walkPath) {
+    served.exit = stop.exit;
+    served.walkPath = stop.walkPath;
+  }
+  return served;
+}
+
+/**
+ * The stop sequences of some services and the catalog stops they reference,
+ * for one language. A sequence stop is named by its catalog stop or its own
+ * label; `stops` lists each referenced catalog stop once, in order of first
+ * reference. A service without sequences is absent from `sequences`.
+ */
+function resolveStopSequences(
+  serviceIds: readonly string[],
+  lang: SupportedLang,
+  catalog: Readonly<ScheduleStopCatalog> = stopCatalog,
+): { sequences: Record<string, Record<string, ServedSequenceStop[]>>; stops: ServedStop[] } {
+  const sequences: Record<string, Record<string, ServedSequenceStop[]>> = {};
+  const referenced: string[] = [];
+  // The catalog loader already refused a sequence naming an unknown stop.
+  const byId = (id: string) => catalog.stops.find((s) => s.id === id)!;
+  for (const serviceId of serviceIds) {
+    const byRouteType = catalog.sequences[serviceId];
+    if (!byRouteType) continue;
+    sequences[serviceId] = Object.fromEntries(
+      Object.entries(byRouteType).map(([routeType, seq]) => [
+        routeType,
+        seq.map((st) => {
+          const name = st.stopId ? byId(st.stopId).name : st.label;
+          const served: ServedSequenceStop = { label: pick(name, lang)!, action: st.action, timing: st.timing };
+          if (st.stopId) {
+            served.stopId = st.stopId;
+            if (!referenced.includes(st.stopId)) referenced.push(st.stopId);
+          }
+          const note = pick(st.note, lang);
+          if (note !== null) served.note = note;
+          const detail = pick(st.detail, lang);
+          if (detail !== null) served.detail = detail;
+          return served;
+        }),
+      ]),
+    );
+  }
+  const stops = referenced.map((id) => serveStop(byId(id), lang));
+  return { sequences, stops };
+}
+
+const COMMUTE_SERVICE_IDS = [
+  "commute-jeongja",
+  "commute-jamsil",
+  "commute-dogok",
+  "commute-gangnam-yangjae",
+  "commute-gwanggyo",
+] as const;
+
+/**
+ * 자과캠 통학셔틀 (pilot, 2026-10-19..2026-12-18): one service per route, runs
+ * typed by direction (`up` 등교, `down` 하교). Each run is one entry; its
+ * `stopTimes` give the time at every stop of the service's sequence for that
+ * direction (boarding stops, then where riders get off), so the 강남·양재 bus is
+ * one row that boards at 강남 and 양재. The first group to use the v2 fields:
+ * `serviceSelector`, `services[].stopSequences`, `screen.stops`. Builds that
+ * predate them ignore the keys and render the v1 screen.
+ */
+function buildCommuteGroup(lang: SupportedLang) {
+  const { sequences, stops } = resolveStopSequences(COMMUTE_SERVICE_IDS, lang);
+  return {
+    id: "commute",
+    screenType: "schedule",
+    label: t("busconfig.label.commute", lang),
+    visibility: { type: "dateRange", from: "2026-10-19", until: "2026-12-18" },
+    card: {
+      themeColor: "003626",
+      iconType: "shuttle",
+      busTypeText: t("buslist.hssc.busTypeText", lang),
+      subtitle: t("buslist.commute.subtitle", lang),
+    },
+    screen: {
+      defaultServiceId: "commute-jeongja",
+      serviceSelector: "chips",
+      services: COMMUTE_SERVICE_IDS.map((serviceId) => ({
+        serviceId,
+        label: t(`busconfig.service.${serviceId}`, lang),
+        endpoint: `/bus/schedule/data/${serviceId}/smart`,
+        ...(sequences[serviceId] ? { stopSequences: sequences[serviceId] } : {}),
+      })),
+      heroCard: null,
+      routeBadges: [
+        { id: "up", label: t("busconfig.badge.up", lang), color: "003626" },
+        { id: "down", label: t("busconfig.badge.down", lang), color: "1565C0" },
+      ],
+      ...(stops.length > 0 ? { stops } : {}),
+      features: [{ type: "info", url: `${WEBVIEW_ORIGIN}/bus/commute/info` }],
+    },
+  };
+}
+
 const etagCache: Map<string, string> = new Map();
 
 /**
  * Returns ordered array of bus groups for the client SDUI.
- * Order: hssc, campus, fasttrack, then every jongro route in registry order
- * (jongro02, jongro07, jongro08).
+ * Order: hssc, campus, fasttrack, commute, then every jongro route in registry
+ * order (jongro02, jongro07, jongro08).
  */
 function getBusGroups(lang: SupportedLang = "ko") {
   return [
@@ -162,7 +303,10 @@ function getBusGroups(lang: SupportedLang = "ko") {
       },
     },
 
-    // 4..N. Jongro routes (realtime) — generated from `jongro-routes.json`.
+    // 4. 자과캠 통학셔틀 (schedule, pilot window)
+    buildCommuteGroup(lang),
+
+    // 5..N. Jongro routes (realtime) — generated from `jongro-routes.json`.
     ...jongroRoutes.map((r) => buildJongroGroup(r, lang)),
   ];
 }
@@ -224,4 +368,5 @@ export {
   getGroupById,
   computeGroupEtag,
   mapStations,
+  resolveStopSequences,
 };

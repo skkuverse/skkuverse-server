@@ -1,9 +1,7 @@
 /**
- * Nest port of bus-config.test.ts — BusConfigService delegates to the pure
- * features/bus/bus-config.data functions, so the ETag bytes + group ordering
- * are byte-identical. Asserting through the service confirms the delegation
- * preserves every contract the Express test pins (5 groups, ordering, per-lang
- * ETag difference, md5 hex format, unknown→null).
+ * BusConfigService delegates to the pure bus-config.data functions. Asserting
+ * through the service confirms the delegation keeps every contract (5 groups,
+ * ordering, per-lang ETag difference, md5 hex format, unknown→null).
  */
 
 import { BusConfigService } from "../../../src/bus/bus-config/bus-config.service";
@@ -15,10 +13,10 @@ beforeEach(() => {
 });
 
 describe("getBusGroups", () => {
-  it("returns groups array with 6 items", () => {
+  it("returns groups array with 7 items", () => {
     const groups = service.getBusGroups("ko");
     expect(Array.isArray(groups)).toBe(true);
-    expect(groups).toHaveLength(6);
+    expect(groups).toHaveLength(7);
   });
 
   it("each group has id, screenType, label, visibility, card, screen", () => {
@@ -86,16 +84,18 @@ describe("getBusGroups", () => {
     expect(fasttrack.visibility.until).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it("non-fasttrack groups have visibility.type always", () => {
-    const nonFt = service.getBusGroups("ko").filter((g: any) => g.id !== "fasttrack");
+  it("groups other than fasttrack and commute have visibility.type always", () => {
+    const nonFt = service
+      .getBusGroups("ko")
+      .filter((g: any) => g.id !== "fasttrack" && g.id !== "commute");
     for (const g of nonFt as any[]) {
       expect(g.visibility).toEqual({ type: "always" });
     }
   });
 
-  it("group order is hssc, campus, fasttrack, jongro02, jongro07, jongro08", () => {
+  it("group order is hssc, campus, fasttrack, commute, jongro02, jongro07, jongro08", () => {
     const ids = service.getBusGroups("ko").map((g: any) => g.id);
-    expect(ids).toEqual(["hssc", "campus", "fasttrack", "jongro02", "jongro07", "jongro08"]);
+    expect(ids).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
   });
 
   it("English translations differ from Korean", () => {

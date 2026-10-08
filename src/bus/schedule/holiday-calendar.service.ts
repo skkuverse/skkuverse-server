@@ -2,10 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { getNonOperatingDayLabel } from "./holiday-calendar";
 
 /**
- * Korean holiday / SKKU rest-day calendar — delegates to the inlined
- * holiday-calendar (read-only). The original reads skku-rest-days.json via
+ * Korean holiday / SKKU rest-day calendar — delegates to ./holiday-calendar
+ * (read-only). That module reads skku-rest-days.json via
  * fs.readFileSync(__dirname,...) at module load (fail-loud if missing in dist)
- * and computes KR public holidays via date-holidays. Delegating preserves that
+ * and computes KR public holidays via date-holidays. Delegating keeps that
  * file-read fail-loud and the exact label-precedence (SKKU manual list wins
  * over public-holiday calendar).
  *
