@@ -4,7 +4,7 @@ import { PollerRegistryService } from "./poller-registry.service";
 
 /**
  * @Global scheduling module. Provides PollerRegistryService (the manual
- * setInterval-based registry — exact port of lib/pollers.ts; deliberately NOT
+ * setInterval-based registry; deliberately NOT
  * @nestjs/schedule @Interval decorators, which lack the in-flight guard +
  * warm-up immediate run + .catch().finally() semantics the tests pin).
  *

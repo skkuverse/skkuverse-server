@@ -1,10 +1,10 @@
 /**
- * Nest port of bus-cache.test.ts — BusCacheService is the exact port of
- * lib/busCache.ts (raw mongodb driver via lib/db.getClient(), 5s in-mem layer).
+ * BusCacheService (raw mongodb driver via getClient() in src/infra/db.ts, 5s
+ * in-mem layer).
  *
- * Mocks lib/db + lib/config exactly as the Express test does, then instantiates
- * the service directly. Asserts the same TTL index name, upsert shape,
- * _id-as-key, and the in-mem cachedRead behavior (memory hit, null caching).
+ * Mocks src/infra/db.ts + src/infra/config.ts, then instantiates the service
+ * directly. Asserts the TTL index name, upsert shape, _id-as-key, and the
+ * in-mem cachedRead behavior (memory hit, null caching).
  */
 
 const mockCreateIndex = jest.fn().mockResolvedValue("ttl_updatedAt");
@@ -36,8 +36,7 @@ let busCache: BusCacheService;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  // Fresh instance each test so the in-mem map starts empty (matches the
-  // module-scoped memCache reset via jest.resetModules in the Express test).
+  // Fresh instance each test so the in-mem map starts empty.
   busCache = new BusCacheService();
 });
 

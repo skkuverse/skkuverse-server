@@ -17,15 +17,18 @@ import type { CursorPayload, NoticeDoc } from "./types";
 // by app code, origin TBD). Without the hint, multi-source $in queries
 // pick the 2-key and incur an in-memory SORT stage because the sort
 // spec {date, _id} extends past what the 2-key covers.
-// Verified prod measurement Phase 0a 2026-04-26: with hint, multiIn
-// keysExamined drops 904 → 465 (-49%), executionTime 9ms → 3ms (-67%).
+// Measured on prod 2026-04-26 (Phase 0a), before ADR 0007, so the hint
+// target was the 4-key predecessor index named below: hinting cut multiIn
+// keysExamined 904 → 465 (-49%) and executionTime 9ms → 3ms (-67%). The
+// 3-key index leads with the same (sourceId, date) and is hinted for the
+// same reason; these figures were not taken against it.
 //
 // `crawledAt` sat between date and _id until ADR 0007 removed it from the
 // sort — the crawler rewrites it every 30 minutes, so it reordered rows
-// that shared a date. The predecessor index
-// `sourceId_1_date_-1_crawledAt_-1__id_-1` is deliberately left in place
-// for one release: a rolling deploy keeps an old replica hinting it, and
-// hint() against a missing index throws BadValue.
+// that shared a date. The server no longer creates or hints the
+// predecessor index `sourceId_1_date_-1_crawledAt_-1__id_-1`. It can be
+// dropped from a database once no deployed version hints it: hint()
+// against a missing index throws BadValue.
 const FORCE_INDEX = { sourceId: 1, date: -1, _id: -1 };
 
 // Inclusion projection — lightweight list items. Heavy fields

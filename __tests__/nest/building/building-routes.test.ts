@@ -1,12 +1,11 @@
 /**
- * Nest port of building-routes.test.ts — integration over BuildingController
- * (3 endpoints, validation branches, i18n campusLabel injection, English
- * fallback, space grouping + counts meta).
+ * Integration over BuildingController (3 endpoints, validation branches, i18n
+ * campusLabel injection, English fallback, space grouping + counts meta).
  *
  * BuildingService is overridden with a stub (its real onModuleInit would call
- * ensureIndexes() → lib/db, hanging without Mongo). The controller's own logic
- * (withCampusLabel / fillEnFallback / displayNo grouping) is exercised against
- * the stubbed data, so the envelope + meta bytes mirror the Express route file.
+ * ensureIndexes() → src/infra/db.ts, hanging without Mongo). The controller's
+ * own logic (withCampusLabel / fillEnFallback / displayNo grouping) is
+ * exercised against the stubbed data.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";

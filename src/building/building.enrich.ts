@@ -80,8 +80,8 @@ function parseElevatorStatus(text: string): ElevatorStatus | null {
   const m = text.match(/승강기 기능 상태\s*[:：]\s*(.+)/);
   if (!m) return null;
   const raw = m[1]!.trim();
-  // 원본 .js (enrich.js:71): unknown 값은 raw 그대로 전달. ElevatorStatus가 string도
-  // 포함하는 이유. 새 narrowing이 아니므로 같은 동작 유지.
+  // An unknown value is passed through raw, which is why ElevatorStatus
+  // includes string.
   return ELEVATOR_STATUS_MAP[raw] || raw;
 }
 
@@ -122,8 +122,8 @@ function parseBarrierFree(
   const startMatch = text.match(BF_START_RE);
   if (!startMatch) return null;
 
-  // 비-global regex의 성공 match는 .index를 항상 가짐 (MDN). TS는 number|undefined
-  // 로 모델링하므로 `!`로 type-system 단언. 원본 .js는 그대로 startMatch.index 사용.
+  // A successful non-global regex match always has .index (MDN); TS types it
+  // number|undefined, so `!` asserts it.
   const matchIndex = startMatch.index!;
   const cleanDescription = text.slice(0, matchIndex).trim();
   const bfText = text.slice(matchIndex);

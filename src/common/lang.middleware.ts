@@ -5,12 +5,11 @@ import { SUPPORTED_LANGS, type SupportedLang } from "../infra/types";
 const SUPPORTED: readonly SupportedLang[] = SUPPORTED_LANGS;
 
 /**
- * Port of lib/langMiddleware.ts. Sets req.lang (default "ko") parsed from the
- * Accept-Language first token, and Vary: Accept-Language on every response.
+ * Sets req.lang (default "ko") parsed from the Accept-Language first token,
+ * and Vary: Accept-Language on every response.
  *
  * Also stashes req.__startNs = process.hrtime.bigint() — this is the request
- * entry point for the X-Response-Time computation, mirroring lib/responseHelper
- * (which Express mounts right after langMiddleware). Both sendSuccess() and
+ * entry point for the X-Response-Time computation. Both sendSuccess() and
  * HttpExceptionFilter read this value.
  */
 @Injectable()
