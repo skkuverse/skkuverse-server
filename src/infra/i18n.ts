@@ -129,8 +129,8 @@ const translations: Translations = {
     zh: "快速通道",
   },
   "busconfig.label.commute": {
-    ko: "자과캠 통학셔틀",
-    en: "NSC Commuter Shuttle",
+    ko: "자과캠 통학 셔틀버스",
+    en: "NSC Commuter Shuttle Bus",
     zh: "自然校区通学班车",
   },
 
@@ -198,16 +198,6 @@ const translations: Translations = {
     ko: "하교",
     en: "From campus",
     zh: "放学",
-  },
-  "busconfig.badge.up-gangnam": {
-    ko: "강남 승차",
-    en: "Board Gangnam",
-    zh: "江南上车",
-  },
-  "busconfig.badge.up-yangjae": {
-    ko: "양재 승차",
-    en: "Board Yangjae",
-    zh: "良才上车",
   },
 
   // Bus config: direction labels

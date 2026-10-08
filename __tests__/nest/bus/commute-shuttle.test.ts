@@ -25,7 +25,9 @@ type Doc = {
 const commuteDocs: Doc[] = buildDocuments(parseTimetableFile(JSON.parse(fs.readFileSync(COMMUTE_FILE, "utf8"))));
 
 function runs(serviceId: string): string[] {
-  return commuteDocs.find((d) => d.serviceId === serviceId)!.entries.map((e) => `${e.routeType} ${e.time}`);
+  return commuteDocs
+    .find((d) => d.serviceId === serviceId)!
+    .entries.map((e) => `${e.routeType} ${e.time}${e.notes ? ` (${e.notes})` : ""}`);
 }
 
 describe("commute timetable (spec scenarios)", () => {
@@ -44,12 +46,12 @@ describe("commute timetable (spec scenarios)", () => {
     expect(runs("commute-dogok")).toEqual(["up 07:40", "up 09:40", "down 16:30", "down 18:45"]);
   });
 
-  it("강남·양재: two boarding stops five minutes apart, then 하교", () => {
+  it("강남·양재: one entry per run at the 강남 time, the 양재 time in its notes", () => {
     expect(runs("commute-gangnam-yangjae")).toEqual([
-      "up-gangnam 07:40", "up-yangjae 07:45",
-      "up-gangnam 08:55", "up-yangjae 09:00",
-      "up-gangnam 10:25", "up-yangjae 10:30",
-      "up-gangnam 11:55", "up-yangjae 12:00",
+      "up 07:40 (양재 07:45)",
+      "up 08:55 (양재 09:00)",
+      "up 10:25 (양재 10:30)",
+      "up 11:55 (양재 12:00)",
       "down 17:00", "down 18:00", "down 19:15", "down 20:15",
     ]);
   });
@@ -85,14 +87,12 @@ describe("commute group config", () => {
     for (const label of labels) expect([...label].length).toBeLessThanOrEqual(5);
   });
 
-  it("is labeled 자과캠 통학셔틀 and has a badge for each direction", () => {
+  it("is labeled 자과캠 통학 셔틀버스 and has a badge for each direction", () => {
     const group = commute("ko");
-    expect(group.label).toBe("자과캠 통학셔틀");
+    expect(group.label).toBe("자과캠 통학 셔틀버스");
     expect(group.screen.routeBadges.map((b: { id: string; label: string }) => `${b.id}:${b.label}`)).toEqual([
       "up:등교",
       "down:하교",
-      "up-gangnam:강남 승차",
-      "up-yangjae:양재 승차",
     ]);
   });
 
@@ -153,7 +153,7 @@ describe("commute boarding (spec scenarios, from the committed catalog)", () => 
       "commute-jeongja": ["up", "down"],
       "commute-jamsil": ["up", "down"],
       "commute-dogok": ["up", "down"],
-      "commute-gangnam-yangjae": ["up-gangnam", "up-yangjae", "down"],
+      "commute-gangnam-yangjae": ["up", "up", "down"],
       "commute-gwanggyo": ["up", "down"],
     };
     for (const s of services()) {
@@ -182,6 +182,14 @@ describe("commute boarding (spec scenarios, from the committed catalog)", () => 
       "commute-gangnam-yangjae": "양재역 3번 출구 앞 → 강남역 사거리 전 중앙버스차로 정류장",
       "commute-gwanggyo": "광교중앙역 1번 출구 앞",
     });
+  });
+
+  it("강남·양재 등교 runs board at 강남, then 양재", () => {
+    const gy = services().find((s) => s.serviceId === "commute-gangnam-yangjae")!;
+    expect(gy.boarding.filter((b) => b.routeTypes.includes("up")).map((b) => b.stopId)).toEqual([
+      "gangnam-exit5",
+      "yangjae-exit2",
+    ]);
   });
 
   it("하교 drop-off order: 양재 before the 강남 bus stop", () => {

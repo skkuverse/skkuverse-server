@@ -2,7 +2,7 @@
   "semester": "2026-2 pilot",
   "effectiveFrom": "2026-10-19",
   "effectiveUntil": "2026-12-18",
-  "routeTypes": ["up-gangnam", "up-yangjae", "up", "down"],
+  "routeTypes": ["up", "down"],
   "patterns": [
     {
       "patternId": "pilot",
@@ -44,14 +44,10 @@
       "days": [1, 2, 3, 4, 5],
       "serviceIds": ["commute-gangnam-yangjae"],
       "entries": [
-        { "time": "07:40", "routeType": "up-gangnam", "busCount": 1, "notes": null },
-        { "time": "07:45", "routeType": "up-yangjae", "busCount": 1, "notes": null },
-        { "time": "08:55", "routeType": "up-gangnam", "busCount": 1, "notes": null },
-        { "time": "09:00", "routeType": "up-yangjae", "busCount": 1, "notes": null },
-        { "time": "10:25", "routeType": "up-gangnam", "busCount": 1, "notes": null },
-        { "time": "10:30", "routeType": "up-yangjae", "busCount": 1, "notes": null },
-        { "time": "11:55", "routeType": "up-gangnam", "busCount": 1, "notes": null },
-        { "time": "12:00", "routeType": "up-yangjae", "busCount": 1, "notes": null },
+        { "time": "07:40", "routeType": "up", "busCount": 1, "notes": "양재 07:45" },
+        { "time": "08:55", "routeType": "up", "busCount": 1, "notes": "양재 09:00" },
+        { "time": "10:25", "routeType": "up", "busCount": 1, "notes": "양재 10:30" },
+        { "time": "11:55", "routeType": "up", "busCount": 1, "notes": "양재 12:00" },
         { "time": "17:00", "routeType": "down", "busCount": 1, "notes": null },
         { "time": "18:00", "routeType": "down", "busCount": 1, "notes": null },
         { "time": "19:15", "routeType": "down", "busCount": 1, "notes": null },
