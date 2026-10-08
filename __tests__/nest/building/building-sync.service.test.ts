@@ -1,13 +1,24 @@
 /**
  * Unit test for BuildingSyncService — verifies it registers syncBuildings()
  * with the Nest PollerRegistry under name "building-sync" at the configured
- * interval, and that the registered wrapper swallows a syncBuildings rejection
- * (logs `building.sync.poller_failed`, never rethrows). syncBuildings is
- * mocked so neither the DB nor the SKKU API is touched.
+ * interval, and that a syncBuildings rejection reaches the registry unchanged,
+ * so a failed sync is declared failing like any other poller. syncBuildings is
+ * mocked so neither the DB nor the SKKU API is touched; the logger and Sentry
+ * are mocked for the registry.
  */
 
 jest.mock("../../../src/building/building.sync", () => ({
   syncBuildings: jest.fn(),
+}));
+jest.mock("../../../src/infra/logger", () => ({
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+}));
+jest.mock("@sentry/nestjs", () => ({
+  captureException: jest.fn(),
+  captureCheckIn: jest.fn(),
 }));
 
 import config from "../../../src/infra/config";
@@ -17,16 +28,27 @@ import { PollerRegistryService } from "../../../src/scheduling/poller-registry.s
 
 const mockedSync = syncBuildings as jest.MockedFunction<typeof syncBuildings>;
 
+/** Lets the registry's outcome handlers for the warm-up run settle. */
+async function settle(): Promise<void> {
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+}
+
+let registry: PollerRegistryService;
+
 beforeEach(() => {
   jest.clearAllMocks();
+  registry = new PollerRegistryService();
+});
+
+afterEach(() => {
+  registry.stopAll();
 });
 
 describe("BuildingSyncService.onModuleInit", () => {
   it("registers a 'building-sync' poller at config.building.syncIntervalMs", () => {
-    const registry = new PollerRegistryService();
     const spy = jest.spyOn(registry, "registerPoller");
-    const svc = new BuildingSyncService(registry);
-    svc.onModuleInit();
+
+    new BuildingSyncService(registry).onModuleInit();
 
     expect(spy).toHaveBeenCalledTimes(1);
     const [fn, intervalMs, name] = spy.mock.calls[0]!;
@@ -35,25 +57,38 @@ describe("BuildingSyncService.onModuleInit", () => {
     expect(typeof fn).toBe("function");
   });
 
-  it("registered fn invokes syncBuildings and swallows its rejection", async () => {
-    const registry = new PollerRegistryService();
+  it("registered fn passes a syncBuildings rejection to the registry unchanged", async () => {
     const spy = jest.spyOn(registry, "registerPoller");
     new BuildingSyncService(registry).onModuleInit();
     const fn = spy.mock.calls[0]![0];
+    const syncError = new AggregateError([new Error("crawl failed")], "phase 1 failed");
+    mockedSync.mockRejectedValueOnce(syncError);
 
-    mockedSync.mockRejectedValueOnce(new Error("crawl failed"));
-    await expect(Promise.resolve(fn())).resolves.toBeUndefined();
+    const outcome = Promise.resolve(fn());
+
+    await expect(outcome).rejects.toBe(syncError);
     expect(mockedSync).toHaveBeenCalledTimes(1);
   });
 
   it("registered fn resolves on syncBuildings success", async () => {
-    const registry = new PollerRegistryService();
     const spy = jest.spyOn(registry, "registerPoller");
     new BuildingSyncService(registry).onModuleInit();
     const fn = spy.mock.calls[0]![0];
-
     mockedSync.mockResolvedValueOnce(undefined);
-    await expect(Promise.resolve(fn())).resolves.toBeUndefined();
+
+    const outcome = Promise.resolve(fn());
+
+    await expect(outcome).resolves.toBeUndefined();
     expect(mockedSync).toHaveBeenCalledTimes(1);
+  });
+
+  it("a failed sync makes the registry declare 'building-sync' failing", async () => {
+    new BuildingSyncService(registry).onModuleInit();
+    mockedSync.mockRejectedValueOnce(new Error("crawl failed"));
+
+    registry.startAll();
+    await settle();
+
+    expect(registry.failingPollers()).toEqual(["building-sync"]);
   });
 });

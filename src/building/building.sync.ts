@@ -92,7 +92,7 @@ interface CampusItem {
   campus: Campus;
 }
 
-async function phase1(syncTime: Date): Promise<CampusItem[] | null> {
+async function phase1(syncTime: Date): Promise<CampusItem[]> {
   const rawCol = getRawBuildingsCollection();
   const enrichedCol = getBuildingsCollection();
   const allItems: CampusItem[] = [];
@@ -108,13 +108,12 @@ async function phase1(syncTime: Date): Promise<CampusItem[] | null> {
     }
   }
 
-  // Sanity check
+  // Sanity check: a short list means SKKU answered without usable data (an
+  // empty body, a renamed field), so nothing is written and the run fails.
   if (allItems.length < MIN_BUILDINGS) {
-    logger.warn(
-      { event: "building.sync.aborted_few_buildings", count: allItems.length },
-      "Suspiciously few buildings, aborting",
+    throw new Error(
+      `buildList returned ${allItems.length} buildings, fewer than ${MIN_BUILDINGS}; nothing written`,
     );
-    return null;
   }
 
   // Load existing raw docs for change detection (single query, 78 docs)
@@ -467,54 +466,77 @@ async function phase3(syncTime: Date): Promise<number> {
 
 // --- Main sync ---
 
+interface PhaseFailure {
+  phase: string;
+  err: unknown;
+}
+
+/** The run's one rejection: the failed phases by name, their errors in `errors`. */
+function syncFailed(failures: PhaseFailure[]): AggregateError {
+  return new AggregateError(
+    failures.map((f) => f.err),
+    `Building sync failed in ${failures.map((f) => f.phase).join(" and ")}`,
+  );
+}
+
+/**
+ * One sync run: phase 1 buildList → raw + enriched layers, phase 2 buildInfo →
+ * attachments + spaces, phase 3 spaceList → spaces + stale delete.
+ *
+ * Reports by resolving or rejecting, and logs no failure itself: the poller
+ * registry turns a rejection into `poller.failing` and a Sentry Issue. Phase 1
+ * failing (a fetch error, or a list too short to trust) ends the run. Phase 2
+ * or 3 failing does not: the later phases and clearCache() still run (a phase 3
+ * failure skips the stale delete), and the run rejects afterwards. Either way
+ * the rejection is one AggregateError naming every failed phase, with the
+ * original errors in `errors`. Only a run with no failure logs
+ * `building.sync.completed`.
+ */
 async function syncBuildings(): Promise<void> {
   const syncTime = new Date();
   const start = Date.now();
 
+  // Phase 1: buildList → raw + enriched (two-layer)
+  let allItems: CampusItem[];
   try {
-    // Phase 1: buildList → raw + enriched (two-layer)
-    const allItems = await phase1(syncTime);
-    if (!allItems) return;
-
-    // Phase 2: buildInfo → attachments (both layers) + spaces
-    try {
-      await phase2(allItems, syncTime);
-    } catch (err) {
-      logger.error(
-        { event: "building.sync.phase2_failed", err },
-        "Phase 2 failed",
-      );
-    }
-
-    // Phase 3: spaceList → spaces upsert + stale delete
-    let spacesCount = 0;
-    try {
-      spacesCount = await phase3(syncTime);
-    } catch (err) {
-      logger.error(
-        { event: "building.sync.phase3_failed", err },
-        "Phase 3 failed, skipping stale delete",
-      );
-    }
-
-    clearCache();
-
-    const elapsed = Date.now() - start;
-    logger.info(
-      {
-        event: "building.sync.completed",
-        buildings: allItems.length,
-        spaces: spacesCount,
-        elapsed,
-      },
-      "Building sync complete",
-    );
+    allItems = await phase1(syncTime);
   } catch (err) {
-    logger.error(
-      { event: "building.sync.failed", err },
-      "Building sync failed",
-    );
+    throw syncFailed([{ phase: "phase 1 (buildList)", err }]);
   }
+
+  const failures: PhaseFailure[] = [];
+
+  // Phase 2: buildInfo → attachments (both layers) + spaces
+  try {
+    await phase2(allItems, syncTime);
+  } catch (err) {
+    failures.push({ phase: "phase 2 (buildInfo)", err });
+  }
+
+  // Phase 3: spaceList → spaces upsert + stale delete
+  let spacesCount = 0;
+  try {
+    spacesCount = await phase3(syncTime);
+  } catch (err) {
+    failures.push({ phase: "phase 3 (spaceList)", err });
+  }
+
+  clearCache();
+
+  if (failures.length > 0) {
+    throw syncFailed(failures);
+  }
+
+  const elapsed = Date.now() - start;
+  logger.info(
+    {
+      event: "building.sync.completed",
+      buildings: allItems.length,
+      spaces: spacesCount,
+      elapsed,
+    },
+    "Building sync complete",
+  );
 }
 
 // Scheduling is owned by BuildingSyncService, which registers syncBuildings with
