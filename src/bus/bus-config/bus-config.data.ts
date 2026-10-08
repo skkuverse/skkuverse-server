@@ -144,8 +144,9 @@ const COMMUTE_SERVICE_IDS = [
 
 /**
  * 자과캠 통학셔틀 (pilot, 2026-10-19..2026-12-18): one service per route, runs
- * typed by direction (`up` 등교, `down` 하교; the 강남·양재 bus boards at two
- * stops, so its morning runs are `up-gangnam` and `up-yangjae`). The first
+ * typed by direction (`up` 등교, `down` 하교). The 강남·양재 bus boards at two
+ * stops five minutes apart; each run is one entry at the 강남 time, with the
+ * 양재 time in its notes, and its boarding lists both stops in order. The first
  * group to use the v2 fields: `serviceSelector`, `services[].boarding`,
  * `screen.stops`. Builds that predate them ignore the keys and render the v1
  * screen.
@@ -176,8 +177,6 @@ function buildCommuteGroup(lang: SupportedLang) {
       routeBadges: [
         { id: "up", label: t("busconfig.badge.up", lang), color: "003626" },
         { id: "down", label: t("busconfig.badge.down", lang), color: "1565C0" },
-        { id: "up-gangnam", label: t("busconfig.badge.up-gangnam", lang), color: "003626" },
-        { id: "up-yangjae", label: t("busconfig.badge.up-yangjae", lang), color: "003626" },
       ],
       ...(stops.length > 0 ? { stops } : {}),
       // Empty until skkuverse-web serves /bus/commute/info: the web view answers

@@ -160,14 +160,30 @@ describe("validateStopCatalog", () => {
     expect(errorsFor(raw)).toEqual(["boarding commute-jeongja[0]: routeTypes must be a non-empty list of names"]);
   });
 
-  it("rejects a route type repeated within one service", () => {
+  it("accepts one route type boarding at several stops", () => {
+    const second: Record<string, unknown> = { ...validStop(), id: "second-stop" };
+    delete second.exit;
+    delete second.walkPath;
+    const raw = {
+      stops: [validStop(), second],
+      boarding: {
+        "commute-jeongja": [
+          { routeTypes: ["up"], stopId: "jeongja-exit3" },
+          { routeTypes: ["up"], stopId: "second-stop" },
+        ],
+      },
+    };
+    expect(errorsFor(raw)).toEqual([]);
+  });
+
+  it("rejects a route type boarding at the same stop twice", () => {
     const raw = catalog(validStop(), {
       "commute-jeongja": [
         { routeTypes: ["up"], stopId: "jeongja-exit3" },
         { routeTypes: ["down", "up"], stopId: "jeongja-exit3" },
       ],
     });
-    expect(errorsFor(raw)).toEqual(["boarding commute-jeongja[1]: route type up appears in more than one entry"]);
+    expect(errorsFor(raw)).toEqual(["boarding commute-jeongja[1]: route type up boards at jeongja-exit3 twice"]);
   });
 
   it("rejects an alight line without Korean text", () => {

@@ -443,7 +443,7 @@
     "commute-gangnam-yangjae": [
       {
         "routeTypes": [
-          "up-gangnam"
+          "up"
         ],
         "stopId": "gangnam-exit5",
         "alight": {
@@ -454,7 +454,7 @@
       },
       {
         "routeTypes": [
-          "up-yangjae"
+          "up"
         ],
         "stopId": "yangjae-exit2",
         "alight": {

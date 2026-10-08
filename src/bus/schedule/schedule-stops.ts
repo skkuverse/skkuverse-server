@@ -190,7 +190,10 @@ export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<s
       errors.push(`${label}: must be a non-empty array`);
       continue;
     }
-    const seenRouteTypes = new Set<string>();
+    // A route type may board at several stops (the 강남·양재 runs board at
+    // 강남, then 양재): its entries list them in the order the bus reaches
+    // them. The same route type at the same stop twice is a copy-paste error.
+    const seenAtStop = new Set<string>();
     entries.forEach((e, i) => {
       const at = `${label}[${i}]`;
       if (!isPlainObject(e)) {
@@ -201,8 +204,9 @@ export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<s
         errors.push(`${at}: routeTypes must be a non-empty list of names`);
       } else {
         for (const rt of e.routeTypes) {
-          if (seenRouteTypes.has(rt)) errors.push(`${at}: route type ${rt} appears in more than one entry`);
-          seenRouteTypes.add(rt);
+          const key = `${rt}@${String(e.stopId)}`;
+          if (seenAtStop.has(key)) errors.push(`${at}: route type ${rt} boards at ${String(e.stopId)} twice`);
+          seenAtStop.add(key);
         }
       }
       if (typeof e.stopId !== "string" || !stopIds.has(e.stopId)) {
