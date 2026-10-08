@@ -56,8 +56,8 @@ export interface CursorPayload {
 
 // --- NoticeDoc (MongoDB notices collection) ---
 // Field set derived from notices.transform's read sites. Optional fields are
-// optional in real docs — verified by transform's `?? null` / `?? 0`
-// fallbacks in the original .js. Summary fields are present only when the
+// optional in real docs — verified by notices.transform's `?? null` / `?? 0`
+// fallbacks. Summary fields are present only when the
 // AI summarizer has populated them (summaryAt is the gate).
 export interface SummaryPeriod {
   startDate?: string;
