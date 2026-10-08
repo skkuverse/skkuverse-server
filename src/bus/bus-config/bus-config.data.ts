@@ -84,6 +84,7 @@ interface ServedSequenceStop {
   action: "board" | "alight";
   timing: "scheduled" | "estimated";
   stopId?: string;
+  short?: string;
   detail?: string;
 }
 
@@ -136,6 +137,8 @@ function resolveStopSequences(
             served.stopId = st.stopId;
             if (!referenced.includes(st.stopId)) referenced.push(st.stopId);
           }
+          const short = pick(st.short, lang);
+          if (short !== null) served.short = short;
           const detail = pick(st.detail, lang);
           if (detail !== null) served.detail = detail;
           return served;
@@ -192,9 +195,7 @@ function buildCommuteGroup(lang: SupportedLang) {
         { id: "down", label: t("busconfig.badge.down", lang), color: "1565C0" },
       ],
       ...(stops.length > 0 ? { stops } : {}),
-      // Empty until skkuverse-web serves /bus/commute/info: the web view answers
-      // any path with HTTP 200, so a link to a missing page fails silently.
-      features: [],
+      features: [{ type: "info", url: `${WEBVIEW_ORIGIN}/bus/commute/info` }],
     },
   };
 }

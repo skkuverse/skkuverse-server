@@ -47,16 +47,16 @@ describe("commute timetable (spec scenarios: departure → arrival per run)", ()
     expect(runs("commute-dogok")).toEqual(["up 07:40→08:45", "up 09:40→10:15", "down 16:30→17:45", "down 18:45→20:30"]);
   });
 
-  it("강남·양재: one row per bus — 강남, then 양재, then campus; 하교 drops at 양재 (time unknown), then 강남", () => {
+  it("강남·양재: one row per bus — 강남, then 양재, then campus; 하교 drops at 양재 (5 min before 강남), then 강남", () => {
     expect(runs("commute-gangnam-yangjae")).toEqual([
       "up 07:40→07:45→08:45",
       "up 08:55→09:00→10:15",
       "up 10:25→10:30→11:45",
       "up 11:55→12:00→13:15",
-      "down 17:00→?→18:20",
-      "down 18:00→?→19:20",
-      "down 19:15→?→21:05",
-      "down 20:15→?→22:05",
+      "down 17:00→18:15→18:20",
+      "down 18:00→19:15→19:20",
+      "down 19:15→21:00→21:05",
+      "down 20:15→22:00→22:05",
     ]);
   });
 
@@ -231,6 +231,23 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
       expect(stop.streetViewUrl).toBeDefined();
       expect(stop).not.toHaveProperty("exit");
       expect(stop).not.toHaveProperty("walkPath");
+    }
+  });
+
+  it("short names for the timetable row: the station, and 자과캠 for the campus stops", () => {
+    const shorts = (serviceId: string, rt: string, lang: "ko" | "en" | "zh" = "ko") =>
+      sequences(serviceId, lang)[rt]!.map((st) => (st as SeqStop & { short?: string }).short);
+    expect(shorts("commute-gangnam-yangjae", "up")).toEqual(["강남", "양재", "자과캠"]);
+    expect(shorts("commute-gangnam-yangjae", "down")).toEqual(["자과캠", "양재", "강남"]);
+    expect(shorts("commute-gangnam-yangjae", "up", "en")).toEqual(["Gangnam", "Yangjae", "NSC"]);
+    for (const [serviceId, station] of [
+      ["commute-jeongja", "정자"],
+      ["commute-jamsil", "잠실"],
+      ["commute-dogok", "도곡"],
+      ["commute-gwanggyo", "광교중앙"],
+    ]) {
+      expect(shorts(serviceId!, "up")).toEqual([station, "자과캠"]);
+      expect(shorts(serviceId!, "down")).toEqual(["자과캠", station]);
     }
   });
 
