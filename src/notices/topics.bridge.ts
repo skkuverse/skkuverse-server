@@ -4,18 +4,15 @@
  * `src/notices/` that needs topic mapping imports from HERE, never from
  * `./notices.topics` directly.
  *
- * WHY A RUNTIME REQUIRE INSTEAD OF A STATIC `import`:
- * `./notices.topics` statically imports `{ categories }` from `./tabConfig`, so
- * any static `import` of notices.topics pulls tabConfig.ts into the
- * *type-checking program*. Under `tsconfig.test.json` (which sets
- * `noImplicitAny: false`, disabling TS "evolving array" inference) tabConfig.ts's
- * idiomatic `const sources = []; sources.push(...)` then fails to type-check
- * (`sources` collapses to `never[]`) — a spurious error. A CommonJS
- * `require(...)` adds no type-program edge, so the test program never pulls
- * tabConfig.ts in through this path. tabConfig.ts is
- * still fully (and more strictly) type-checked under the root `tsconfig.json`
- * (`noImplicitAny: true`), so nothing is left unchecked — this only stops the lax
- * test program from re-checking it under an incompatible flag.
+ * WHY A RUNTIME REQUIRE INSTEAD OF A STATIC `import` — the original reason no
+ * longer holds. `./notices.topics` statically imports `./tabConfig`, and the
+ * require was there to keep tabConfig.ts out of the `tsconfig.test.json`
+ * program: with `noImplicitAny: false` its untyped `const sources = []`
+ * collapsed to `never[]` and failed to type-check. Both halves are gone: that
+ * array is now typed, and tabconfig.service.ts imports tabConfig.ts statically,
+ * so the test program includes and type-checks it anyway. A static import of
+ * `./notices.topics` here would type-check under both tsconfigs; the require
+ * keeps nothing out.
  *
  * The require result is bound to LOCAL, precise types that mirror the real
  * `notices.topics` exports — NOT `any`. A shape/signature mismatch (e.g. the
