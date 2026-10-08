@@ -4,12 +4,11 @@ import { StationService } from "../station/station.service";
 import { sendSuccess } from "../../common/send-success";
 
 /**
- * GET /bus/station/:stationId — port of features/station/station.routes.ts
- * mounted at /bus/station.
+ * GET /bus/station/:stationId, mounted at /bus/station.
  *
  * Non-"01592" → empty array, no totalCount meta. "01592" → exact 2-element body
- * + { totalCount: 2 } meta. The service composes the body (reusing the original
- * computeAllStationEtas) so ETA strings + literals are byte-identical.
+ * + { totalCount: 2 } meta. The service composes the body, with the ETA strings
+ * from computeAllStationEtas.
  */
 @Controller("bus/station")
 export class StationController {

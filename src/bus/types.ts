@@ -139,7 +139,7 @@ export interface JongroStationMapping {
   };
 }
 
-// service.config.js
+// service-config.ts
 export interface ServiceNotice {
   style: "info" | "warning" | "error" | string;
   text: string;
@@ -179,8 +179,8 @@ export interface NaverDirectionsResponse {
 
 // --- MongoDB documents (bus_overrides, bus_schedules) ---
 // `entries` and `notices` are typed as required even though they're only
-// strictly needed on `type: "replace"`. This matches the original .js's
-// assumption that admin tooling produces well-formed docs — a malformed
+// strictly needed on `type: "replace"`, on the assumption that admin
+// tooling produces well-formed docs — a malformed
 // override doc throws at runtime (fail-loud), which is intentional: the
 // alert reaches ops via logger.error instead of silently degrading.
 export interface BusOverrideDoc {

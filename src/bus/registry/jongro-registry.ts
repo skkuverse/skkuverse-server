@@ -4,7 +4,7 @@
  * Loads `jongro-routes.json` (the single source of truth for every Jongro
  * route's static data: busRouteId, station list + TOPIS lastStnId mapping,
  * UI metadata), validates structure at startup with fail-fast semantics
- * (same pattern as `features/notices/tabConfig.ts`), and exposes a frozen
+ * (same pattern as `src/notices/tabConfig.ts`), and exposes a frozen
  * derived registry. Adding a route = one JSON entry; fetcher, realtime
  * route, and SDUI config all iterate this registry.
  *
@@ -90,7 +90,7 @@ export function buildJongroLocUrl(
 
 // ── Service-key validation (fail-loud at top, before any URL composition) ──
 
-// Catches: (a) `lib/config.ts` `required[]` getting accidentally bypassed in
+// Catches: (a) `src/infra/config.ts` `required[]` getting accidentally bypassed in
 // a future refactor (#10), and (b) an operator pasting a *raw* base64 key
 // instead of a URL-encoded one — TOPIS would parse `serviceKey=AAA+BBB=` as
 // two query params and silently reject auth, but the symptom looks like a
