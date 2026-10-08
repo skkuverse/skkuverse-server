@@ -49,10 +49,9 @@ function toRawDoc(
   item: SkkuBuildListItem,
   campus: Campus,
 ): Omit<BuildingRawDoc, "_id"> {
-  // 원본 .js는 `parseFloat(item.latitude)` 그대로 호출 — undefined일 경우 NaN.
-  // `as string` 단언은 type-system 보정으로 같은 런타임 의미(undefined → NaN) 유지.
-  // (`?? ""`로 default를 넣으면 새로운 narrowing이 되어 defensive narrowing 금지 규칙
-  // 위반 — parseFloat("")도 NaN이라 결과는 같지만 코드 의도가 달라짐.)
+  // `as string` is a type-system assertion only: an undefined latitude still
+  // reaches parseFloat and yields NaN. (A `?? ""` default would be defensive
+  // narrowing — parseFloat("") is NaN too, but the intent would differ.)
   const lat = parseFloat(item.latitude as string);
   const lng = parseFloat(item.longtitude as string); // SKKU typo
 
@@ -327,8 +326,8 @@ async function phase2(
         errors++;
         const failedItem = batch[results.indexOf(r)]!;
         const skkuId = parseInt(failedItem.item.id, 10);
-        // r.reason 타입은 unknown (Promise rejection은 무엇이든 가능). 원본 .js의
-        // `r.reason?.message` optional chaining을 그대로 유지 — 새 narrowing 아님.
+        // r.reason is unknown (a Promise rejection can be anything); the cast
+        // only types it for the log line.
         const reason = r.reason as { message?: string } | null | undefined;
         logger.warn(
           {
@@ -520,6 +519,5 @@ async function syncBuildings(): Promise<void> {
 
 // Scheduling is owned by BuildingSyncService, which registers syncBuildings with
 // the Nest PollerRegistry (ROLE-gated). No module-load side-effect registration
-// here — the legacy lib/pollers-style registry (src/infra/pollers.ts) was removed
-// as dead code (it was registered-into but never started).
+// here.
 export { syncBuildings };

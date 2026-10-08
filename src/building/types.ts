@@ -11,17 +11,17 @@ import { ObjectId } from "mongodb";
 // 알림 효과 — type 단계에서도 사실관계를 명시한다.
 
 export interface SkkuBuildListItem {
-  id: string;                    // 숫자 문자열, parseInt로 사용 (sync.js:109)
+  id: string;                    // 숫자 문자열, parseInt로 사용 (building.sync.ts)
   buildNo: string | null;        // facility는 null/없음
   buildNm?: string;
   buildNmEng?: string;
   krText?: string;
   enText?: string;
-  latitude?: string;             // parseFloat로 변환 (sync.js:35)
-  longtitude?: string;           // SKKU typo, parseFloat로 변환 (sync.js:36)
+  latitude?: string;             // parseFloat로 변환 (building.sync.ts)
+  longtitude?: string;           // SKKU typo, parseFloat로 변환 (building.sync.ts)
   filePath?: string;
   encodeNm?: string;
-  handicappedElevatorYn?: string; // "Y" 비교만 (sync.js:52)
+  handicappedElevatorYn?: string; // "Y" 비교만 (building.sync.ts)
   handicappedToiletYn?: string;
   createDt?: string;
   updateDt?: string;
@@ -47,7 +47,7 @@ export interface SkkuBuildInfoFloor {
   floor_nm?: string;
   floor_nm_eng?: string;
   spcae_nm?: string;             // SKKU typo (spcae instead of space)
-  // "undefined" 문자열로 오는 경우 있음 (sync.js:243 명시 처리).
+  // "undefined" 문자열로 오는 경우 있음 (building.sync.ts 명시 처리).
   spcae_nm_eng?: string;
   [k: string]: unknown;
 }
@@ -65,7 +65,7 @@ export interface SkkuSpaceListItem {
   floorNm?: string;
   floorNmEng?: string;
   spcaeNm?: string;              // SKKU typo
-  // "undefined" 문자열로 오는 경우 있음 (sync.js:329 명시 처리).
+  // "undefined" 문자열로 오는 경우 있음 (building.sync.ts 명시 처리).
   spcaeNmEng?: string;
   buildNm?: string;
   buildNmEng?: string;
@@ -116,7 +116,7 @@ export type ElevatorStatus =
   | "arrival_button"
   | "none"
   | "not_operating"
-  | string;                       // 원본 fallback (enrich.js:71): unknown 값은 raw 그대로 전달
+  | string;                       // fallback (building.enrich.ts): unknown 값은 raw 그대로 전달
 
 export interface BarrierFreeSection {
   label: string | null;
@@ -195,7 +195,7 @@ export interface SpaceDoc {
 // --- connections doc ---
 // 건물-건물 연결 (e.g. 지하 통로). 양방향: a/b 어느 쪽이든 skkuId로 lookup.
 // "a→b"와 "b→a"는 의미상 동일한 doc이지만, fromFloor/toFloor가 다르게 보고됨
-// (lookup 방향에 따라 self/other 결정 — building.data.js:239-249).
+// (lookup 방향에 따라 self/other 결정 — building.data.ts getConnectionsForBuilding).
 export interface ConnectionDoc {
   _id?: ObjectId;
   campus: Campus;
@@ -203,7 +203,7 @@ export interface ConnectionDoc {
   b: { skkuId: number; floor: { ko: string; en: string } };
 }
 
-// 양방향 lookup 후 정규화된 응답 shape (building.data.js:243-250).
+// 양방향 lookup 후 정규화된 응답 shape (building.data.ts getConnectionsForBuilding).
 export interface ConnectionResponseItem {
   targetSkkuId: number;
   targetBuildNo: string | null;

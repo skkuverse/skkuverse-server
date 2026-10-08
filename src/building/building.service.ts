@@ -19,24 +19,20 @@ import type {
 
 /**
  * BuildingService — thin @Injectable wrapper over the validated, read-only
- * building.data module (raw mongodb driver via lib/db, NOT
+ * building.data module (raw mongodb driver via src/infra/db.ts, NOT
  * Mongoose). Every method delegates 1:1 — no reimplementation, no defensive
  * narrowing — so query shapes, the 5-min getAllBuildings in-memory cache, the
- * forced projections, and the displayNo/floor-sort helpers stay byte-identical
- * to the Express app.
+ * forced projections, and the displayNo/floor-sort helpers live only in
+ * building.data.
  *
- * onModuleInit reproduces index.ts:197-203 exactly: ensureIndexes() is called
- * in a NON-FATAL try/catch (warn-and-continue) so a missing DB at boot logs
- * "[building] Index setup failed" without crashing — same fail-soft contract as
- * Express. The success log "[building] Indexes ensured" is reproduced verbatim.
- *
- * getAllBuildings is EXPORTED (public) because MapModule injects BuildingService
- * to enrich map markers in the next phase.
+ * onModuleInit calls ensureIndexes() in a NON-FATAL try/catch
+ * (warn-and-continue) so a missing DB at boot logs "Index setup failed"
+ * without crashing.
  */
 @Injectable()
 export class BuildingService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
-    // Non-fatal index setup — mirrors index.ts:197-203 (warn-and-continue).
+    // Non-fatal index setup (warn-and-continue).
     try {
       await ensureIndexes();
       logger.info({ event: "building.indexes.ensured" }, "Indexes ensured");
@@ -48,7 +44,6 @@ export class BuildingService implements OnModuleInit {
     }
   }
 
-  /** Cross-module dependency: MapModule injects this for marker enrichment. */
   getAllBuildings(campus?: Campus | null): Promise<BuildingDoc[]> {
     return getAllBuildings(campus);
   }
