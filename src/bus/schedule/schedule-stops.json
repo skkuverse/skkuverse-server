@@ -372,11 +372,21 @@
       "up": [
         {
           "stopId": "jeongja-exit3",
+          "short": {
+            "ko": "정자",
+            "en": "Jeongja",
+            "zh": "亭子"
+          },
           "action": "board",
           "timing": "scheduled"
         },
         {
           "label": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
+          "short": {
             "ko": "자과캠",
             "en": "NSC",
             "zh": "自然校区"
@@ -393,6 +403,11 @@
       "down": [
         {
           "stopId": "nsc-opposite",
+          "short": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
           "action": "board",
           "timing": "scheduled"
         },
@@ -401,6 +416,11 @@
             "ko": "정자역 2번 출구 앞",
             "en": "Jeongja Stn. Exit 2",
             "zh": "亭子站 2号出口"
+          },
+          "short": {
+            "ko": "정자",
+            "en": "Jeongja",
+            "zh": "亭子"
           },
           "action": "alight",
           "timing": "estimated"
@@ -411,11 +431,21 @@
       "up": [
         {
           "stopId": "jamsil-exit4",
+          "short": {
+            "ko": "잠실",
+            "en": "Jamsil",
+            "zh": "蚕室"
+          },
           "action": "board",
           "timing": "scheduled"
         },
         {
           "label": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
+          "short": {
             "ko": "자과캠",
             "en": "NSC",
             "zh": "自然校区"
@@ -432,6 +462,11 @@
       "down": [
         {
           "stopId": "nsc-opposite",
+          "short": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
           "action": "board",
           "timing": "scheduled"
         },
@@ -440,6 +475,11 @@
             "ko": "잠실역 5번 출구 앞",
             "en": "Jamsil Stn. Exit 5",
             "zh": "蚕室站 5号出口"
+          },
+          "short": {
+            "ko": "잠실",
+            "en": "Jamsil",
+            "zh": "蚕室"
           },
           "action": "alight",
           "timing": "estimated"
@@ -450,11 +490,21 @@
       "up": [
         {
           "stopId": "dogok-exit1",
+          "short": {
+            "ko": "도곡",
+            "en": "Dogok",
+            "zh": "道谷"
+          },
           "action": "board",
           "timing": "scheduled"
         },
         {
           "label": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
+          "short": {
             "ko": "자과캠",
             "en": "NSC",
             "zh": "自然校区"
@@ -471,6 +521,11 @@
       "down": [
         {
           "stopId": "nsc-opposite",
+          "short": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
           "action": "board",
           "timing": "scheduled"
         },
@@ -479,6 +534,11 @@
             "ko": "도곡역 4번 출구 앞",
             "en": "Dogok Stn. Exit 4",
             "zh": "道谷站 4号出口"
+          },
+          "short": {
+            "ko": "도곡",
+            "en": "Dogok",
+            "zh": "道谷"
           },
           "action": "alight",
           "timing": "estimated"
@@ -489,16 +549,31 @@
       "up": [
         {
           "stopId": "gangnam-exit5",
+          "short": {
+            "ko": "강남",
+            "en": "Gangnam",
+            "zh": "江南"
+          },
           "action": "board",
           "timing": "scheduled"
         },
         {
           "stopId": "yangjae-exit2",
+          "short": {
+            "ko": "양재",
+            "en": "Yangjae",
+            "zh": "良才"
+          },
           "action": "board",
           "timing": "scheduled"
         },
         {
           "label": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
+          "short": {
             "ko": "자과캠",
             "en": "NSC",
             "zh": "自然校区"
@@ -515,6 +590,11 @@
       "down": [
         {
           "stopId": "nsc-opposite",
+          "short": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
           "action": "board",
           "timing": "scheduled"
         },
@@ -523,6 +603,11 @@
             "ko": "양재역 3번 출구 앞",
             "en": "Yangjae Stn. Exit 3",
             "zh": "良才站 3号出口"
+          },
+          "short": {
+            "ko": "양재",
+            "en": "Yangjae",
+            "zh": "良才"
           },
           "action": "alight",
           "timing": "estimated"
@@ -533,6 +618,11 @@
             "en": "Median bus stop before Gangnam Station intersection",
             "zh": "江南站十字路口前中央公交车站"
           },
+          "short": {
+            "ko": "강남",
+            "en": "Gangnam",
+            "zh": "江南"
+          },
           "action": "alight",
           "timing": "estimated"
         }
@@ -542,11 +632,21 @@
       "up": [
         {
           "stopId": "gwanggyo-exit4",
+          "short": {
+            "ko": "광교중앙",
+            "en": "Gwanggyo Jungang",
+            "zh": "光教中央"
+          },
           "action": "board",
           "timing": "scheduled"
         },
         {
           "label": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
+          "short": {
             "ko": "자과캠",
             "en": "NSC",
             "zh": "自然校区"
@@ -563,6 +663,11 @@
       "down": [
         {
           "stopId": "nsc-opposite",
+          "short": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
           "action": "board",
           "timing": "scheduled"
         },
@@ -571,6 +676,11 @@
             "ko": "광교중앙역 1번 출구 앞",
             "en": "Gwanggyo Jungang Stn. Exit 1",
             "zh": "光教中央站 1号出口"
+          },
+          "short": {
+            "ko": "광교중앙",
+            "en": "Gwanggyo Jungang",
+            "zh": "光教中央"
           },
           "action": "alight",
           "timing": "estimated"

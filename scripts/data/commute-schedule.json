@@ -48,10 +48,10 @@
         { "time": "08:55", "routeType": "up", "busCount": 1, "notes": "양재 09:00", "stopTimes": ["08:55", "09:00", "10:15"] },
         { "time": "10:25", "routeType": "up", "busCount": 1, "notes": "양재 10:30", "stopTimes": ["10:25", "10:30", "11:45"] },
         { "time": "11:55", "routeType": "up", "busCount": 1, "notes": "양재 12:00", "stopTimes": ["11:55", "12:00", "13:15"] },
-        { "time": "17:00", "routeType": "down", "busCount": 1, "notes": "양재 먼저 하차", "stopTimes": ["17:00", null, "18:20"] },
-        { "time": "18:00", "routeType": "down", "busCount": 1, "notes": "양재 먼저 하차", "stopTimes": ["18:00", null, "19:20"] },
-        { "time": "19:15", "routeType": "down", "busCount": 1, "notes": "양재 먼저 하차", "stopTimes": ["19:15", null, "21:05"] },
-        { "time": "20:15", "routeType": "down", "busCount": 1, "notes": "양재 먼저 하차", "stopTimes": ["20:15", null, "22:05"] }
+        { "time": "17:00", "routeType": "down", "busCount": 1, "notes": "양재 먼저 하차", "stopTimes": ["17:00", "18:15", "18:20"] },
+        { "time": "18:00", "routeType": "down", "busCount": 1, "notes": "양재 먼저 하차", "stopTimes": ["18:00", "19:15", "19:20"] },
+        { "time": "19:15", "routeType": "down", "busCount": 1, "notes": "양재 먼저 하차", "stopTimes": ["19:15", "21:00", "21:05"] },
+        { "time": "20:15", "routeType": "down", "busCount": 1, "notes": "양재 먼저 하차", "stopTimes": ["20:15", "22:00", "22:05"] }
       ]
     },
     {

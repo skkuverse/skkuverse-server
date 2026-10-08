@@ -128,6 +128,24 @@ describe("resolveStopSequences", () => {
     });
   });
 
+  it("serves a short name only when the sequence stop has one, resolved like text", () => {
+    const withShort: ScheduleStopCatalog = {
+      ...catalog,
+      sequences: {
+        "commute-jeongja": {
+          up: [
+            { stopId: "jeongja-exit3", short: { ko: "정자", en: "Jeongja" }, action: "board", timing: "scheduled" },
+            CAMPUS,
+          ],
+        },
+      },
+    };
+    const up = (lang: SupportedLang) => resolveStopSequences(["commute-jeongja"], lang, withShort).sequences["commute-jeongja"]!.up!;
+    expect(up("ko")[0]!.short).toBe("정자");
+    expect(up("zh")[0]!.short).toBe("Jeongja");
+    expect(up("ko")[1]).not.toHaveProperty("short");
+  });
+
   it("resolves text zh → en → ko", () => {
     const { stops, sequences } = resolveStopSequences(["commute-jeongja"], "zh", catalog);
     expect(stops[0]!.name).toBe("Jeongja Stn. Exit 3");

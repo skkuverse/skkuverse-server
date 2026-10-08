@@ -221,9 +221,11 @@ export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<s
           const labelErr = i18nError(st.label);
           if (labelErr) errors.push(`${sp}: label ${labelErr}`);
         }
-        if ("detail" in st) {
-          const detailErr = i18nError(st.detail);
-          if (detailErr) errors.push(`${sp}: detail ${detailErr}`);
+        for (const field of ["short", "detail"] as const) {
+          if (field in st) {
+            const err = i18nError(st[field]);
+            if (err) errors.push(`${sp}: ${field} ${err}`);
+          }
         }
         if (st.action !== "board" && st.action !== "alight") {
           errors.push(`${sp}: action must be "board" or "alight"`);

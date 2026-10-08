@@ -113,7 +113,7 @@ describe("GET /bus/config/:groupId", () => {
     expect(group.screen.defaultServiceId).toBe("commute-jeongja");
     expect(group.screen.serviceSelector).toBe("chips");
     expect(group.screen).not.toHaveProperty("showBusCount");
-    expect(group.screen.features).toEqual([]);
+    expect(group.screen.features).toEqual([{ type: "info", url: "https://webview.skkuverse.com/bus/commute/info" }]);
   });
 
   it("campus screen has services[] and routeBadges", async () => {
