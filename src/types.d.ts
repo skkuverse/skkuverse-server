@@ -1,23 +1,30 @@
-// Express Request augmentation for the NestJS app (additive; mirrors lib/types.ts
-// but adds __startNs used by the X-Response-Time machinery in src/common).
-// We do NOT edit lib/types.ts; this file lives under src/ and is picked up by
-// tsconfig include "src/**/*".
+// Express Request augmentation for the NestJS app. Picked up by tsconfig
+// include "src/**/*"; tsconfig.test.json lists this file by name.
+// req.lang is set by LangMiddleware; req.uid by FirebaseAuthMiddleware.
+// req.log is set by pino-http (declared here because pino-http only augments
+// http.IncomingMessage, and the augmentation does not propagate to
+// Express.Request reliably across all consumer setups).
 import type { Logger } from "pino";
+import type { SupportedLang } from "./infra/types";
 
 declare global {
   namespace Express {
     interface Request {
-      lang?: import("./infra/types").SupportedLang;
+      // Optional because middleware mounted before LangMiddleware (request
+      // logging in main.ts) receives Request before req.lang is populated.
+      // Consumers must `?? "ko"` or null-check; handlers behind LangMiddleware
+      // can narrow this with a type guard or assertion at the route layer.
+      lang?: SupportedLang;
       uid?: string;
+      // pino-http installs `log` on every request. Declared non-optional so a
+      // missing logger fails loud — accessing `.warn` on undefined throws →
+      // 500 → ops alert. A test app without request logging hits the same
+      // throw path.
       log: Logger;
-      // Stashed by LangMiddleware at the front of the chain so sendSuccess()
-      // and HttpExceptionFilter can compute X-Response-Time identically to
-      // lib/responseHelper.ts (which captures start at request entry).
+      // Stashed by LangMiddleware at the front of the chain so every
+      // X-Response-Time (sendSuccess(), HttpExceptionFilter, ...) is measured
+      // from request entry.
       __startNs?: bigint;
-    }
-    interface Response {
-      success(data: unknown, meta?: Record<string, unknown>): void;
-      error(statusCode: number, code: string, message: string): void;
     }
   }
 }

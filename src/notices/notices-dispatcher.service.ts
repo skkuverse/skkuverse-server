@@ -13,28 +13,26 @@ import { buildTopics, TOPIC_CAP } from "./topics.bridge";
 import type { NoticeDoc } from "./types";
 
 /**
- * NoticesDispatcherService — exact port of notices.dispatcher.ts
- * as an @Injectable SINGLETON. The module-scoped `sweepInFlight` flag of the
- * Express version becomes private instance state here (Nest providers are
- * singletons by default, so this is the same one-flag-per-process semantics).
+ * NoticesDispatcherService — an @Injectable SINGLETON. The `sweepInFlight`
+ * flag is private instance state (Nest providers are singletons by default,
+ * so there is one flag per process).
  *
- * The port from notices.dispatcher.ts changed nothing. One thing has changed
- * since, and only one — the age gate moved from `crawledAt` to the notice's
- * publication `date` (ADR 0008). Everything below still holds:
+ * The age gate is on the notice's publication `date`, not `crawledAt`
+ * (ADR 0008). The contract:
  *  - claim-lease findOneAndUpdate filter (pushedAt:null, aiSummaryAt $type date,
  *    publication-date age-gate via maxAgeDays, pushAttempts $not $gte
  *    maxAttempts, isDeleted $ne true, dispatchClaimedAt lease via
  *    claimLeaseMs);
  *  - sweepPending(triggerSource, opts?) + claimNext + dispatchGroup;
- *  - postToFunction → Node fetch to FCM_FUNCTION_URL with X-API-Key + an
- *    AbortController fcmTimeoutMs abort;
+ *  - postToFunction → common/fcm-client: Node fetch to FCM_FUNCTION_URL with
+ *    X-API-Key + an AbortController fcmTimeoutMs abort;
  *  - the catch-handler lease-release invariant (try-side updateOne failure
  *    bounces into the catch's release updateOne — pinned by tests);
- *  - the SweepSummary shape + log strings ("[dispatch] ...").
+ *  - the SweepSummary shape + log events (`notices.dispatch.*`).
  *
- * Raw mongodb driver via the shared getNoticesCollection() (lib/db), NOT
- * Mongoose. buildTopics is reused from the existing module. No new ?? [] /
- * typeof guards: the original throw/skip paths are preserved verbatim.
+ * Raw mongodb driver via the shared getNoticesCollection() (notices.data over
+ * src/infra/db.ts), NOT Mongoose. buildTopics comes from topics.bridge. No
+ * ?? [] / typeof guards: the throw/skip paths stay fail-loud.
  *
  * sweepPending is the public entry point for the internal controller + the
  * safety-net cron poller.
@@ -89,8 +87,8 @@ export interface SweepSummary {
 
 @Injectable()
 export class NoticesDispatcherService {
-  // Was module-scoped `let sweepInFlight` in notices.dispatcher.ts — now
-  // private instance state on the singleton provider. Same single-flight scope.
+  // Private instance state on the singleton provider: one single-flight flag
+  // per process.
   private sweepInFlight = false;
 
   private buildPayload(notice: NoticeDoc, topics: string[]): FcmPayload {

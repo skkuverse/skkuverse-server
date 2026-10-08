@@ -1,9 +1,9 @@
 /**
- * Nest port of holiday-calendar.test.ts — HolidayCalendarService delegates to
- * features/bus/holiday-calendar.getNonOperatingDayLabel.
+ * HolidayCalendarService delegates to holiday-calendar's
+ * getNonOperatingDayLabel.
  *
- * date-holidays MUST be mocked (loading the real lib under ts-jest hangs — see
- * the original test's header comment). We stub it to verify wiring: SKKU-first
+ * date-holidays MUST be mocked (loading the real lib under ts-jest hangs). We
+ * stub it to verify wiring: SKKU-first
  * lookup, public-type filtering, and null for ordinary days.
  */
 

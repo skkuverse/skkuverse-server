@@ -5,17 +5,14 @@ import { UiService } from "../ui/ui.service";
 import { sendSuccess } from "../../common/send-success";
 
 /**
- * Port of the /ui routes (mounted at /ui, generalLimiter, no auth —
- * index.ts:136). Three SDUI home endpoints. Each uses @Res() + sendSuccess so
- * the dynamic extra-meta (busListCount / itemCount) lands in meta exactly like
- * the Express res.success(data, { busListCount }) / res.success(data, { itemCount })
- * calls. /home/campus carries no extra meta — res.success(data) — but still
- * goes through sendSuccess for an identical { meta: { lang }, data } envelope +
+ * Mounted at /ui, generalLimiter, no auth. Three SDUI home endpoints. Each
+ * uses @Res() + sendSuccess so the dynamic extra-meta (busListCount /
+ * itemCount) lands in meta. /home/campus carries no extra meta but still goes
+ * through sendSuccess for the same { meta: { lang }, data } envelope +
  * X-Response-Time header.
  *
  * lang = req.lang ?? "ko" (LangMiddleware sets req.lang at runtime; the ?? is a
- * type-system guard mirroring the Express `as SupportedLang` cast, not new
- * defensive narrowing).
+ * type-system guard, not defensive narrowing).
  */
 @Controller("ui")
 export class UiController {

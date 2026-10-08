@@ -11,7 +11,8 @@
  *     turns a covered lookup into a collection scan would only show up during
  *     the one week of the year the collection is being read constantly.
  *
- * lib/db + lib/logger are mocked as __tests__/nest/map/map-indexes.test.ts does.
+ * src/infra/db.ts + src/infra/logger.ts are mocked as
+ * __tests__/nest/map/map-indexes.test.ts does.
  */
 const findOne = jest.fn();
 const toArray = jest.fn();

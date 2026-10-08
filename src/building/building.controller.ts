@@ -21,7 +21,7 @@ interface BilingualText {
   en?: string;
 }
 
-/** Add campusLabel to a building document. (Port of building.routes.ts:25-34.) */
+/** Add campusLabel to a building document. */
 function withCampusLabel<T extends { campus: Campus }>(
   building: T,
   lang: SupportedLang,
@@ -32,26 +32,24 @@ function withCampusLabel<T extends { campus: Campus }>(
   };
 }
 
-/** Fill empty .en with .ko for bilingual fields. (Port of building.routes.ts:36-39.) */
+/** Fill empty .en with .ko for bilingual fields. */
 function fillEnFallback(obj: BilingualText | undefined): void {
   if (obj && !obj.en && obj.ko) obj.en = obj.ko;
 }
 
-// langMiddleware runs before this controller (mounted globally in main.ts), so
-// req.lang is guaranteed at runtime; `as SupportedLang` mirrors the route file's
-// `reqLang` cast (the original .js passed req.lang straight to t()).
+// LangMiddleware runs before this controller (mounted globally in main.ts), so
+// req.lang is guaranteed at runtime; `as SupportedLang` only drops the
+// optional from its type.
 function reqLang(req: Request): SupportedLang {
   return req.lang as SupportedLang;
 }
 
 /**
- * Port of the /building routes (mounted at /building, no auth,
- * generalLimiter). All three endpoints use @Res() + sendSuccess so the success
- * envelope — including /search's extra meta (keyword/buildingCount/spaceCount/
- * counts) — is byte-identical to res.success(data, meta). Validation throws
- * AppError(code, message, status) instead of res.error, preserving exact
- * status/code/message. The withCampusLabel / fillEnFallback / displayNo grouping
- * logic is reproduced verbatim from the route file.
+ * Mounted at /building, no auth, generalLimiter. All three endpoints use
+ * @Res() + sendSuccess so the success envelope carries /search's extra meta
+ * (keyword/buildingCount/spaceCount/counts). Validation throws
+ * AppError(code, message, status), which HttpExceptionFilter renders with that
+ * exact status/code/message.
  */
 @Controller("building")
 export class BuildingController {

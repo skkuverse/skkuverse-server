@@ -1,8 +1,7 @@
 /**
- * Unit test for BuildingService — verifies it delegates 1:1 to
- * features/building/building.data (mocked) and that onModuleInit reproduces the
- * index.ts:197-203 NON-FATAL ensureIndexes contract (success logs + swallowed
- * failure, never throws).
+ * Unit test for BuildingService — verifies it delegates 1:1 to building.data
+ * (mocked) and that onModuleInit keeps the NON-FATAL ensureIndexes contract
+ * (success logs + swallowed failure, never throws).
  */
 
 jest.mock("../../../src/building/building.data", () => ({

@@ -1,7 +1,6 @@
 /**
- * Nest port of bus-config-routes.test.ts — integration over BusConfigController
- * (@Res() ETag/304). BusConfigService delegates to the real pure
- * features/bus/bus-config.data functions, so ETags + group bytes are identical.
+ * Integration over BusConfigController (@Res() ETag/304). BusConfigService
+ * delegates to the real pure bus-config.data functions.
  *
  * BusCacheService is overridden (cachedRead → null) so no DB is touched during
  * app init / any incidental cache reads. Asserts group shape, 404

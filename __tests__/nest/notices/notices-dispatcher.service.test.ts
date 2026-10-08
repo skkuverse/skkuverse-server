@@ -1,16 +1,9 @@
 /**
- * Behavioral coverage for NoticesDispatcherService — the NestJS port of
- * features/notices/notices.dispatcher.ts.
+ * Behavioral coverage for NoticesDispatcherService, run against the real
+ * service (the route tests override it with a stub) so an edit (filter typo,
+ * reordered $inc, dropped clearTimeout, broken catch-fallback) is caught.
  *
- * The original Express dispatcher is heavily pinned by
- * __tests__/notices-dispatch.test.ts, but that suite imports
- * features/notices/notices.dispatcher directly and gives ZERO protection to the
- * ported src/notices/notices-dispatcher.service.ts (the only Nest test importing
- * the service overrides it with a stub). This file ports those same invariants
- * against the real service so a future edit (filter typo, reordered $inc, dropped
- * clearTimeout, broken catch-fallback) is caught through the Nest surface too.
- *
- * Mocking strategy mirrors the Express test: stub lib/db before the dispatcher's
+ * Mocking strategy: stub src/infra/db.ts before the dispatcher's
  * getNoticesCollection() consumes it, so the real claimNext/dispatchGroup/sweepPending
  * logic runs against our controlled mockCollection rather than a live Mongo.
  * The service has no Nest-injected deps (it imports getNoticesCollection,
@@ -59,7 +52,7 @@ jest.mock("../../../src/infra/db", () => ({
 }));
 
 // Imported AFTER the jest.mock so getNoticesCollection (used inside the service)
-// resolves the stubbed lib/db.
+// resolves the stubbed src/infra/db.ts.
 import { NoticesDispatcherService } from "../../../src/notices/notices-dispatcher.service";
 import config from "../../../src/infra/config";
 import type { NoticeDoc } from "../../../src/notices/types";

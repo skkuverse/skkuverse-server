@@ -187,8 +187,8 @@ const config = {
   api: {
     hsscNew: apiUrl("API_HSSC_NEW_PROD", "API_HSSC_NEW_DEV"),
     // Shared Seoul TOPIS service key (URL-encoded). Per-route facts
-    // (busRouteId, station count) live in `features/bus/jongro-routes.json`
-    // and the fetcher composes the list/loc URLs at module load.
+    // (busRouteId, station count) live in `src/bus/registry/jongro-routes.json`
+    // and the registry composes the list/loc URLs at module load.
     seoulBusServiceKey: process.env.SEOUL_BUS_SERVICE_KEY,
     stationHyehwa: process.env.API_STATION_HEWA,
   },

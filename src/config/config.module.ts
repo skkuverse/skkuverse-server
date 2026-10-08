@@ -9,7 +9,7 @@ import { validateEnv } from "./env.validation";
  * - NestConfigModule.forRoot({ isGlobal, validate }) runs validateEnv() at
  *   bootstrap; the `validate` hook throws on any missing required env var
  *   (fail-loud, NestJS-native — does NOT process.exit).
- * - AppConfigService is the typed accessor (delegates to lib/config).
+ * - AppConfigService is the typed accessor (delegates to src/infra/config.ts).
  * - APP_CONFIG_VALIDATION is a belt-and-suspenders provider whose useFactory
  *   also runs validateEnv() during DI graph construction, so the crash fires
  *   even if a future refactor changes how NestConfigModule's validate is wired.
@@ -19,7 +19,7 @@ import { validateEnv } from "./env.validation";
   imports: [
     NestConfigModule.forRoot({
       isGlobal: true,
-      ignoreEnvFile: true, // lib/config already loads dotenv; don't double-load
+      ignoreEnvFile: true, // src/infra/config.ts loads dotenv itself; don't double-load
       validate: (cfg: Record<string, unknown>) => {
         validateEnv();
         return cfg;

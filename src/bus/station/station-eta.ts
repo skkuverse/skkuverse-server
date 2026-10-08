@@ -1,7 +1,7 @@
-// 혜화역(승차장) 정류장에서 HSSC 셔틀 ETA 계산 — `computeEta`는 pure function이고
-// __tests__/station-eta.test.js에서 직접 unit-test됨. 테스트가 `computeEta(station,
-// null)`과 `computeEta(station, undefined)` 모두 호출하므로 busData 시그너처가
-// nullable union을 받아야 한다 (원본 .js의 `if (!Array.isArray(busData))` invariant).
+// HSSC shuttle ETA at the 혜화역(승차장) stop. `computeEta` is a pure function.
+// busData is a nullable union and any non-array yields NO_INFO
+// (`if (!Array.isArray(busData))`), because StationService passes bus_cache's
+// untyped value straight through.
 
 interface StationEntry {
   sequence: number;

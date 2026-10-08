@@ -111,17 +111,17 @@ function pickPattern(
 }
 
 /**
- * Schedule resolution engine — exact port of features/bus/schedule.data.ts.
+ * Schedule resolution engine.
  *
  * 1-hour in-mem cache held on the instance. Reads bus_overrides /
- * bus_schedules from the bus_campus DB via lib/db.getClient() +
- * config.mongo.dbName (driver-level, byte-identical queries). The 4-step
- * precedence (override → holiday → pattern → fallback) and the
- * "intentionally NOT defensive" override.entries/notices access preserved.
+ * bus_schedules from the bus_campus DB via src/infra/db.ts getClient() +
+ * config.mongo.dbName (driver-level queries). 4-step precedence: override →
+ * holiday → pattern → fallback; the override.entries/notices access is
+ * intentionally NOT defensive.
  *
- * onModuleInit ensures the compound indexes (port of ensureScheduleIndexes),
- * mirroring index.ts startup. Failure is warned, not fatal (matches the
- * index-ensure try/catch in the Express boot path / main.ts).
+ * onModuleInit ensures the compound indexes (ensureScheduleIndexes in
+ * schedule-db.ts). Failure is warned, not fatal (like the bus_cache index
+ * ensure in main.ts).
  */
 @Injectable()
 export class ScheduleService implements OnModuleInit {

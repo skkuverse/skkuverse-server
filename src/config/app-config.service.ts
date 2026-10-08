@@ -2,13 +2,13 @@ import { Injectable } from "@nestjs/common";
 import config from "../infra/config";
 
 /**
- * Typed, read-only accessor over the existing lib/config.ts singleton.
+ * Typed, read-only accessor over the src/infra/config.ts singleton.
  *
- * We delegate to lib/config rather than re-reading process.env so the resolved
- * values (devDbName/apiUrl/getModeLabel + the USE_PROD_API forcing in prod) are
- * IDENTICAL to the Express app — single source of truth, no drift. Importing
- * lib/config also (re)triggers its own fail-loud process.exit(1) outside test,
- * complementing the Nest-native throw in env.validation.ts.
+ * We delegate to it rather than re-reading process.env so the resolved values
+ * (devDbName/apiUrl/getModeLabel + the USE_PROD_API forcing in prod) come from
+ * one place — single source of truth, no drift. Importing src/infra/config.ts
+ * also triggers its own fail-loud process.exit(1) outside test, complementing
+ * the Nest-native throw in env.validation.ts.
  */
 @Injectable()
 export class AppConfigService {

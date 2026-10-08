@@ -1,9 +1,8 @@
 /**
- * Nest port of the /ui home-endpoint assertions from
- * __tests__/static-endpoints.test.ts — integration over UiController
- * (@Res() + sendSuccess). UiService delegates to the real pure features/ui/*
- * functions, so the SDUI payload bytes, i18n text, and meta counts are identical
- * to the Express routes.
+ * The /ui home-endpoint assertions — integration over UiController
+ * (@Res() + sendSuccess). UiService delegates to the real pure src/ui/ui/*
+ * functions, so the SDUI payloads, i18n text, and meta counts come from the
+ * real code.
  *
  * No DB/axios is touched (UiModule reads only static config + i18n). Asserts the
  * dynamic meta.busListCount / meta.itemCount, item shapes, lang defaulting, the
