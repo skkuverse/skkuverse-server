@@ -57,6 +57,9 @@ export class OverviewCache<T> {
           name: "notices.overview",
           ttlMs: this.ttlMs,
           load,
+          // Each miss is an LLM call, and the key already carries every
+          // candidate's contentHash, so a re-crawled notice is a new key anyway.
+          keepWhenCacheOff: true,
         }),
         createdAt: now,
       };

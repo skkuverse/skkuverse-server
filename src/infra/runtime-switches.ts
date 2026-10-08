@@ -13,14 +13,25 @@
  *   | PUSH_DELIVERY   | live       | suppressed  | live |
  *   | RATE_LIMIT      | on         | off         | on   |
  *   | BUILDING_SYNC   | on         | off         | on   |
+ *   | CACHE           | on         | off         | on   |
  *
- * An explicit value overrides the default, within two refusals:
+ * CACHE is not a side effect but the same kind of local-only difference: with
+ * it off, a change to a _dev database shows on the next request instead of
+ * after a TTL. It bypasses the in-process caches (common/cache/cached-loader.ts,
+ * the bus timetable, the ad placements) and rewrites every Cache-Control to
+ * no-store (common/no-store.ts), which keeps the phone's HTTP cache from
+ * answering for the server. The AI overview and mini-app manifest caches stay
+ * on: one saves an LLM call per request, the other a fetch to a production
+ * origin, and neither holds _dev data.
+ *
+ * An explicit value overrides the default, within these refusals:
  *
  *   - PUSH_DELIVERY=live in development. There is no safe way to send from a
  *     laptop, so there is no switch for it.
- *   - RATE_LIMIT=off in production. A production override may only reduce
- *     outbound effects (push suppressed, building sync off — what
- *     docker-compose.local-verify.yml sets), never remove a guard.
+ *   - RATE_LIMIT=off or CACHE=off in production. A production override may
+ *     only reduce outbound effects (push suppressed, building sync off — what
+ *     docker-compose.local-verify.yml sets), never remove a guard or put the
+ *     full request rate on Atlas.
  *
  * PUSH_DELIVERY=suppressed in production drops pushes; it does not pause them.
  * The dispatcher still claims each notice and stamps pushedAt, so nothing is
@@ -43,9 +54,15 @@ export interface RuntimeSwitches {
   pushDelivery: PushDelivery;
   rateLimitEnabled: boolean;
   buildingSyncEnabled: boolean;
+  cacheEnabled: boolean;
 }
 
-export const RUNTIME_SWITCH_NAMES = ["PUSH_DELIVERY", "RATE_LIMIT", "BUILDING_SYNC"] as const;
+export const RUNTIME_SWITCH_NAMES = [
+  "PUSH_DELIVERY",
+  "RATE_LIMIT",
+  "BUILDING_SYNC",
+  "CACHE",
+] as const;
 
 /** Same reading as config.ts: anything but production or test is development. */
 export function runtimeMode(nodeEnv: string | undefined): RuntimeMode {
@@ -97,11 +114,18 @@ export function resolveRuntimeSwitches(
   const buildingSync =
     readEnum(env, "BUILDING_SYNC", ["on", "off"] as const, errors) ?? (local ? "off" : "on");
 
+  let cache = readEnum(env, "CACHE", ["on", "off"] as const, errors) ?? (local ? "off" : "on");
+  if (mode === "production" && cache === "off") {
+    errors.push("CACHE=off is refused in production");
+    cache = "on";
+  }
+
   return {
     switches: {
       pushDelivery,
       rateLimitEnabled: rateLimit === "on",
       buildingSyncEnabled: buildingSync === "on",
+      cacheEnabled: cache === "on",
     },
     errors,
   };

@@ -20,10 +20,15 @@ A local server holds credentials that reach real people. The dev Doppler config 
 | `PUSH_DELIVERY` | `suppressed` | `live` | `postToFcmFunction` logs `push.delivery.suppressed` and returns `{ sent: 0 }` without calling the Cloud Function. Callers record it as a completed send, so `_dev` notices get `pushedAt`. |
 | `RATE_LIMIT` | `off` | `on` | All four limiters skip. Locally every simulator request comes from one loopback address. |
 | `BUILDING_SYNC` | `off` | `on` | The `building-sync` poller is not registered. Its warm-up crawls all of `campusMap.do` and rewrites `skkumap_dev` on every boot, and nodemon reboots on every save. |
+| `CACHE` | `off` | `on` | A change to a `_dev` database shows on the next request. Every `createCachedLoader` (buildings, campus shapes, the event map, the mini-app feed), the bus timetable cache and the ad placement cache load on every call, and every `Cache-Control` is rewritten to `no-store` so the phone's HTTP cache never answers for the server. |
+
+`CACHE=off` leaves three caches on. The AI overview cache saves an LLM call per request; its key changes when the crawler rewrites a notice's `contentHash`, but a hand edit of a body or `summary*` field in `_dev` stays cached for 30 minutes (restart to drop it). The mini-app manifest cache holds files from production origins, not `_dev` data. The 5-second `bus_cache` read cache is shorter than the app's poll interval.
 
 Development also accepts loopback CORS origins (`http://localhost:*`, `http://127.0.0.1:*`), for a web dev server on the same machine. The native app is not subject to CORS.
 
 The bus pollers (HSSC, Jongro, station) keep running locally, because the bus screens need them.
+
+Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuilds `.ts`, a second watcher re-runs `scripts/copy-build-assets.js` when any `src/**/*.json` changes (only the files listed there reach `dist/`), and nodemon restarts on either. Data read once at boot (notice tabs, mini-app registry, home layout, timetable stops) changes only through that restart.
 
 ## Prerequisites
 
@@ -38,7 +43,7 @@ The bus pollers (HSSC, Jongro, station) keep running locally, because the bus sc
    npm run dev
    ```
 
-   The `Server started (NestJS)` line shows the switches as resolved: `push: "suppressed"`, `rateLimit: "off"`, `buildingSync: "off"`.
+   The `Server started (NestJS)` line shows the switches as resolved: `push: "suppressed"`, `rateLimit: "off"`, `buildingSync: "off"`, `cache: "off"`.
 
 2. In `skkuverse-app/apps/mobile/.env`, set `EXPO_PUBLIC_BASE_URL` for the device:
 
@@ -65,11 +70,12 @@ Set it on the command, like `USE_PROD_API`. These are per-run values: they are n
 ```bash
 RATE_LIMIT=on npm run dev        # reproduce a 429, or while a tunnel is up
 BUILDING_SYNC=on npm run dev     # crawl campusMap.do into skkumap_dev
+CACHE=on npm run dev             # check a TTL, a stale fallback or a Cache-Control value
 ```
 
 `BUILDING_SYNC=on` crawls on every boot, and `npm run dev` reboots on every save, so turn it on for a single run.
 
-Two combinations refuse to boot (`config.invalid_runtime_switch`): `PUSH_DELIVERY=live` in development, and `RATE_LIMIT=off` in production. A real push is checked after deploying, in production.
+Three combinations refuse to boot (`config.invalid_runtime_switch`): `PUSH_DELIVERY=live` in development, and `RATE_LIMIT=off` or `CACHE=off` in production. A real push is checked after deploying, in production.
 
 ## What still reaches production
 
@@ -90,7 +96,9 @@ Sentry is off locally: the dev keys carry no `SENTRY_DSN`.
 | The app still shows production data | The native build was not redone, or `EAS_BUILD_PROFILE`/`RELEASE_CHANNEL` is `beta`/`production`. On the iOS simulator, check the baked value: `grep -rao '"baseUrl":"[^"]*"' "$(xcrun simctl get_app_container booted com.example.skkumap)/EXConstants.bundle/app.config"` |
 | Android cannot connect to `localhost` | Inside the emulator `localhost` is the emulator. Use `10.0.2.2` or `adb reverse`. |
 | A phone cannot connect | The phone is on a different network, or the macOS firewall blocks node. A `cloudflared` tunnel avoids both. |
-| Boot fails with `config.invalid_runtime_switch` | A switch has a value outside its enum, or one of the two refused combinations. |
+| A change in a `_dev` database does not show, and no request reaches the server log | The phone's HTTP cache is answering from an earlier run with `CACHE=on` (`max-age` up to 24 h, kept across app restarts). Clear the app's storage or reinstall it once. |
+| A change does not show, and the request does reach the server | The data is read once at boot (notice tabs, mini-app registry, home layout): save any `.ts` or `.json` file under `src/` to restart, or the screen caches it in the app (React Query `staleTime`): pull to refresh or reopen the screen. |
+| Boot fails with `config.invalid_runtime_switch` | A switch has a value outside its enum, or one of the three refused combinations. |
 | A local web page gets no `Access-Control-Allow-Origin` | Only `http://localhost:*` and `http://127.0.0.1:*` are allowed in development, not LAN addresses. |
 
 ## Related

@@ -29,16 +29,26 @@ describe("runtimeMode", () => {
 });
 
 describe("resolveRuntimeSwitches defaults", () => {
-  it("production keeps every side effect on", () => {
+  it("production keeps every side effect and cache on", () => {
     expect(resolveRuntimeSwitches({}, "production")).toEqual({
-      switches: { pushDelivery: "live", rateLimitEnabled: true, buildingSyncEnabled: true },
+      switches: {
+        pushDelivery: "live",
+        rateLimitEnabled: true,
+        buildingSyncEnabled: true,
+        cacheEnabled: true,
+      },
       errors: [],
     });
   });
 
-  it("development turns every outbound side effect and the limiter off", () => {
+  it("development turns every outbound side effect, the limiter and the caches off", () => {
     expect(resolveRuntimeSwitches({}, "development")).toEqual({
-      switches: { pushDelivery: "suppressed", rateLimitEnabled: false, buildingSyncEnabled: false },
+      switches: {
+        pushDelivery: "suppressed",
+        rateLimitEnabled: false,
+        buildingSyncEnabled: false,
+        cacheEnabled: false,
+      },
       errors: [],
     });
   });
@@ -60,14 +70,15 @@ describe("resolveRuntimeSwitches defaults", () => {
 });
 
 describe("resolveRuntimeSwitches overrides", () => {
-  it("development may turn the limiter and the building sync on", () => {
+  it("development may turn the limiter, the building sync and the caches on", () => {
     const { switches, errors } = resolveRuntimeSwitches(
-      { RATE_LIMIT: "on", BUILDING_SYNC: "on" },
+      { RATE_LIMIT: "on", BUILDING_SYNC: "on", CACHE: "on" },
       "development",
     );
     expect(errors).toEqual([]);
     expect(switches.rateLimitEnabled).toBe(true);
     expect(switches.buildingSyncEnabled).toBe(true);
+    expect(switches.cacheEnabled).toBe(true);
   });
 
   it("refuses PUSH_DELIVERY=live in development, and stays suppressed", () => {
@@ -93,10 +104,17 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(switches.rateLimitEnabled).toBe(true);
   });
 
+  it("refuses CACHE=off in production, and keeps the caches on", () => {
+    const { switches, errors } = resolveRuntimeSwitches({ CACHE: "off" }, "production");
+    expect(errors).toEqual(["CACHE=off is refused in production"]);
+    expect(switches.cacheEnabled).toBe(true);
+  });
+
   it.each([
     ["PUSH_DELIVERY", "dry-run"],
     ["RATE_LIMIT", "true"],
     ["BUILDING_SYNC", "OFF"],
+    ["CACHE", "no-store"],
   ])("reports %s=%s instead of coercing it", (name, value) => {
     for (const mode of ["production", "development", "test"] as const) {
       const { errors } = resolveRuntimeSwitches({ [name]: value }, mode);
@@ -137,6 +155,12 @@ describe("validateEnv refuses an invalid switch", () => {
     expect(
       validateWith({ NODE_ENV: "production", RATE_LIMIT: "off", SENTRY_DSN: "disabled" }),
     ).toThrow(/RATE_LIMIT=off is refused in production/);
+  });
+
+  it("throws on CACHE=off in production", () => {
+    expect(
+      validateWith({ NODE_ENV: "production", CACHE: "off", SENTRY_DSN: "disabled" }),
+    ).toThrow(/CACHE=off is refused in production/);
   });
 
   it("passes on the development defaults", () => {

@@ -184,6 +184,14 @@ const config = {
     enabled: switches.rateLimitEnabled,
   },
 
+  // CACHE. While false, createCachedLoader and the timetable and ad caches load
+  // on every call, and common/no-store.ts rewrites every Cache-Control to
+  // no-store, so a _dev database change shows on the next request. Off in
+  // development.
+  cache: {
+    enabled: switches.cacheEnabled,
+  },
+
   // Error and log collection (src/instrument.ts). Required in production;
   // the literal "disabled" turns it off explicitly (docker-compose.local-verify.yml).
   // GIT_SHA is baked into the image at build time (Dockerfile ARG).
@@ -227,11 +235,17 @@ const config = {
   },
 
   /** The runtime switches as they resolved, for the boot log line. */
-  getSideEffectsSummary(): { push: string; rateLimit: string; buildingSync: string } {
+  getSideEffectsSummary(): {
+    push: string;
+    rateLimit: string;
+    buildingSync: string;
+    cache: string;
+  } {
     return {
       push: switches.pushDelivery,
       rateLimit: switches.rateLimitEnabled ? "on" : "off",
       buildingSync: switches.buildingSyncEnabled ? "on" : "off",
+      cache: switches.cacheEnabled ? "on" : "off",
     };
   },
 };

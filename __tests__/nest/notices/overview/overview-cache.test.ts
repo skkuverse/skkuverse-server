@@ -31,3 +31,24 @@ describe("OverviewCache", () => {
     expect(load).toHaveBeenCalledTimes(4);
   });
 });
+
+describe("OverviewCache with CACHE=off", () => {
+  // Every other createCachedLoader passes through under CACHE=off; this one is
+  // exempt, because each miss is an LLM call.
+  const config = require("../../../../src/infra/config");
+  afterEach(() => {
+    config.cache.enabled = true;
+  });
+
+  it("still answers a repeated key from the cache", async () => {
+    config.cache.enabled = false;
+    const cache = new OverviewCache<string>(60_000, 10);
+    const load = jest.fn(async () => "v");
+
+    await cache.get("k", load);
+    const second = await cache.get("k", load);
+
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(second).toEqual({ value: "v", cached: true });
+  });
+});
