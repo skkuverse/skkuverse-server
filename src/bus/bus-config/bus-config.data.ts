@@ -84,7 +84,7 @@ interface ServedSequenceStop {
   action: "board" | "alight";
   timing: "scheduled" | "estimated";
   stopId?: string;
-  short?: string;
+  note?: string;
   detail?: string;
 }
 
@@ -137,8 +137,8 @@ function resolveStopSequences(
             served.stopId = st.stopId;
             if (!referenced.includes(st.stopId)) referenced.push(st.stopId);
           }
-          const short = pick(st.short, lang);
-          if (short !== null) served.short = short;
+          const note = pick(st.note, lang);
+          if (note !== null) served.note = note;
           const detail = pick(st.detail, lang);
           if (detail !== null) served.detail = detail;
           return served;

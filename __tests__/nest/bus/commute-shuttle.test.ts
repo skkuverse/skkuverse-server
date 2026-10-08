@@ -234,20 +234,26 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     }
   });
 
-  it("short names for the timetable row: the station, and 자과캠 for the campus stops", () => {
-    const shorts = (serviceId: string, rt: string, lang: "ko" | "en" | "zh" = "ko") =>
-      sequences(serviceId, lang)[rt]!.map((st) => (st as SeqStop & { short?: string }).short);
-    expect(shorts("commute-gangnam-yangjae", "up")).toEqual(["강남", "양재", "자과캠"]);
-    expect(shorts("commute-gangnam-yangjae", "down")).toEqual(["자과캠", "양재", "강남"]);
-    expect(shorts("commute-gangnam-yangjae", "up", "en")).toEqual(["Gangnam", "Yangjae", "NSC"]);
+  it("notes for the timetable's notes column: station or 자과캠, with 탑승/하차, in 8 characters or fewer", () => {
+    const notes = (serviceId: string, rt: string, lang: "ko" | "en" | "zh" = "ko") =>
+      sequences(serviceId, lang)[rt]!.map((st) => (st as SeqStop & { note?: string }).note);
+    expect(notes("commute-gangnam-yangjae", "up")).toEqual(["강남 탑승", "양재 탑승", "자과캠 하차"]);
+    expect(notes("commute-gangnam-yangjae", "down")).toEqual(["자과캠 탑승", "양재 하차", "강남 하차"]);
+    expect(notes("commute-gangnam-yangjae", "up", "en")).toEqual(["Board · Gangnam", "Board · Yangjae", "Get off · NSC"]);
+    expect(notes("commute-gangnam-yangjae", "down", "zh")).toEqual(["自然校区上车", "良才下车", "江南下车"]);
     for (const [serviceId, station] of [
       ["commute-jeongja", "정자"],
       ["commute-jamsil", "잠실"],
       ["commute-dogok", "도곡"],
       ["commute-gwanggyo", "광교중앙"],
     ]) {
-      expect(shorts(serviceId!, "up")).toEqual([station, "자과캠"]);
-      expect(shorts(serviceId!, "down")).toEqual(["자과캠", station]);
+      expect(notes(serviceId!, "up")).toEqual([`${station} 탑승`, "자과캠 하차"]);
+      expect(notes(serviceId!, "down")).toEqual(["자과캠 탑승", `${station} 하차`]);
+    }
+    for (const s of services()) {
+      for (const seq of Object.values(s.stopSequences)) {
+        for (const st of seq) expect([...((st as SeqStop & { note?: string }).note ?? "")].length).toBeLessThanOrEqual(8);
+      }
     }
   });
 

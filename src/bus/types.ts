@@ -250,9 +250,9 @@ export interface ScheduleStop {
 export interface SequenceStop {
   stopId?: string;
   label?: I18n;
-  // A short name for tight places such as the timetable row ("강남"), where
-  // `label` or the catalog name ("강남역 5번 출구") is too long.
-  short?: I18n;
+  // The timetable's notes column at this stop ("강남 탑승"). It lives here, in
+  // the language-aware config, because schedule responses are not localized.
+  note?: I18n;
   detail?: I18n;
   action: "board" | "alight";
   timing: "scheduled" | "estimated";
