@@ -372,10 +372,10 @@
       "up": [
         {
           "stopId": "jeongja-exit3",
-          "short": {
-            "ko": "정자",
-            "en": "Jeongja",
-            "zh": "亭子"
+          "note": {
+            "ko": "정자 탑승",
+            "en": "Board · Jeongja",
+            "zh": "亭子上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -386,10 +386,10 @@
             "en": "NSC",
             "zh": "自然校区"
           },
-          "short": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
+          "note": {
+            "ko": "자과캠 하차",
+            "en": "Get off · NSC",
+            "zh": "自然校区下车"
           },
           "detail": {
             "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
@@ -403,10 +403,10 @@
       "down": [
         {
           "stopId": "nsc-opposite",
-          "short": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
+          "note": {
+            "ko": "자과캠 탑승",
+            "en": "Board · NSC",
+            "zh": "自然校区上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -417,10 +417,10 @@
             "en": "Jeongja Stn. Exit 2",
             "zh": "亭子站 2号出口"
           },
-          "short": {
-            "ko": "정자",
-            "en": "Jeongja",
-            "zh": "亭子"
+          "note": {
+            "ko": "정자 하차",
+            "en": "Get off · Jeongja",
+            "zh": "亭子下车"
           },
           "action": "alight",
           "timing": "estimated"
@@ -431,10 +431,10 @@
       "up": [
         {
           "stopId": "jamsil-exit4",
-          "short": {
-            "ko": "잠실",
-            "en": "Jamsil",
-            "zh": "蚕室"
+          "note": {
+            "ko": "잠실 탑승",
+            "en": "Board · Jamsil",
+            "zh": "蚕室上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -445,10 +445,10 @@
             "en": "NSC",
             "zh": "自然校区"
           },
-          "short": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
+          "note": {
+            "ko": "자과캠 하차",
+            "en": "Get off · NSC",
+            "zh": "自然校区下车"
           },
           "detail": {
             "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
@@ -462,10 +462,10 @@
       "down": [
         {
           "stopId": "nsc-opposite",
-          "short": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
+          "note": {
+            "ko": "자과캠 탑승",
+            "en": "Board · NSC",
+            "zh": "自然校区上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -476,10 +476,10 @@
             "en": "Jamsil Stn. Exit 5",
             "zh": "蚕室站 5号出口"
           },
-          "short": {
-            "ko": "잠실",
-            "en": "Jamsil",
-            "zh": "蚕室"
+          "note": {
+            "ko": "잠실 하차",
+            "en": "Get off · Jamsil",
+            "zh": "蚕室下车"
           },
           "action": "alight",
           "timing": "estimated"
@@ -490,10 +490,10 @@
       "up": [
         {
           "stopId": "dogok-exit1",
-          "short": {
-            "ko": "도곡",
-            "en": "Dogok",
-            "zh": "道谷"
+          "note": {
+            "ko": "도곡 탑승",
+            "en": "Board · Dogok",
+            "zh": "道谷上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -504,10 +504,10 @@
             "en": "NSC",
             "zh": "自然校区"
           },
-          "short": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
+          "note": {
+            "ko": "자과캠 하차",
+            "en": "Get off · NSC",
+            "zh": "自然校区下车"
           },
           "detail": {
             "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
@@ -521,10 +521,10 @@
       "down": [
         {
           "stopId": "nsc-opposite",
-          "short": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
+          "note": {
+            "ko": "자과캠 탑승",
+            "en": "Board · NSC",
+            "zh": "自然校区上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -535,10 +535,10 @@
             "en": "Dogok Stn. Exit 4",
             "zh": "道谷站 4号出口"
           },
-          "short": {
-            "ko": "도곡",
-            "en": "Dogok",
-            "zh": "道谷"
+          "note": {
+            "ko": "도곡 하차",
+            "en": "Get off · Dogok",
+            "zh": "道谷下车"
           },
           "action": "alight",
           "timing": "estimated"
@@ -549,20 +549,20 @@
       "up": [
         {
           "stopId": "gangnam-exit5",
-          "short": {
-            "ko": "강남",
-            "en": "Gangnam",
-            "zh": "江南"
+          "note": {
+            "ko": "강남 탑승",
+            "en": "Board · Gangnam",
+            "zh": "江南上车"
           },
           "action": "board",
           "timing": "scheduled"
         },
         {
           "stopId": "yangjae-exit2",
-          "short": {
-            "ko": "양재",
-            "en": "Yangjae",
-            "zh": "良才"
+          "note": {
+            "ko": "양재 탑승",
+            "en": "Board · Yangjae",
+            "zh": "良才上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -573,10 +573,10 @@
             "en": "NSC",
             "zh": "自然校区"
           },
-          "short": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
+          "note": {
+            "ko": "자과캠 하차",
+            "en": "Get off · NSC",
+            "zh": "自然校区下车"
           },
           "detail": {
             "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
@@ -590,10 +590,10 @@
       "down": [
         {
           "stopId": "nsc-opposite",
-          "short": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
+          "note": {
+            "ko": "자과캠 탑승",
+            "en": "Board · NSC",
+            "zh": "自然校区上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -604,10 +604,10 @@
             "en": "Yangjae Stn. Exit 3",
             "zh": "良才站 3号出口"
           },
-          "short": {
-            "ko": "양재",
-            "en": "Yangjae",
-            "zh": "良才"
+          "note": {
+            "ko": "양재 하차",
+            "en": "Get off · Yangjae",
+            "zh": "良才下车"
           },
           "action": "alight",
           "timing": "estimated"
@@ -618,10 +618,10 @@
             "en": "Median bus stop before Gangnam Station intersection",
             "zh": "江南站十字路口前中央公交车站"
           },
-          "short": {
-            "ko": "강남",
-            "en": "Gangnam",
-            "zh": "江南"
+          "note": {
+            "ko": "강남 하차",
+            "en": "Get off · Gangnam",
+            "zh": "江南下车"
           },
           "action": "alight",
           "timing": "estimated"
@@ -632,10 +632,10 @@
       "up": [
         {
           "stopId": "gwanggyo-exit4",
-          "short": {
-            "ko": "광교중앙",
-            "en": "Gwanggyo Jungang",
-            "zh": "光教中央"
+          "note": {
+            "ko": "광교중앙 탑승",
+            "en": "Board · Gwanggyo Jungang",
+            "zh": "光教中央上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -646,10 +646,10 @@
             "en": "NSC",
             "zh": "自然校区"
           },
-          "short": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
+          "note": {
+            "ko": "자과캠 하차",
+            "en": "Get off · NSC",
+            "zh": "自然校区下车"
           },
           "detail": {
             "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
@@ -663,10 +663,10 @@
       "down": [
         {
           "stopId": "nsc-opposite",
-          "short": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
+          "note": {
+            "ko": "자과캠 탑승",
+            "en": "Board · NSC",
+            "zh": "自然校区上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -677,10 +677,10 @@
             "en": "Gwanggyo Jungang Stn. Exit 1",
             "zh": "光教中央站 1号出口"
           },
-          "short": {
-            "ko": "광교중앙",
-            "en": "Gwanggyo Jungang",
-            "zh": "光教中央"
+          "note": {
+            "ko": "광교중앙 하차",
+            "en": "Get off · Gwanggyo Jungang",
+            "zh": "光教中央下车"
           },
           "action": "alight",
           "timing": "estimated"

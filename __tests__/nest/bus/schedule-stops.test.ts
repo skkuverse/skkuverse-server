@@ -216,9 +216,9 @@ describe("validateStopCatalog", () => {
     expect(errorsFor(raw)).toEqual([]);
   });
 
-  it("rejects a short name without Korean text", () => {
-    expect(errorsFor(catalog(validStop(), seq({ ...BOARD, short: { en: "Jeongja" } }, CAMPUS)))).toEqual([
-      "sequences commute-jeongja.up[0]: short has no Korean text",
+  it("rejects a note without Korean text", () => {
+    expect(errorsFor(catalog(validStop(), seq({ ...BOARD, note: { en: "Board · Jeongja" } }, CAMPUS)))).toEqual([
+      "sequences commute-jeongja.up[0]: note has no Korean text",
     ]);
   });
 

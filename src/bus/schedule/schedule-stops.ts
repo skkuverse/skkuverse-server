@@ -221,7 +221,7 @@ export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<s
           const labelErr = i18nError(st.label);
           if (labelErr) errors.push(`${sp}: label ${labelErr}`);
         }
-        for (const field of ["short", "detail"] as const) {
+        for (const field of ["note", "detail"] as const) {
           if (field in st) {
             const err = i18nError(st[field]);
             if (err) errors.push(`${sp}: ${field} ${err}`);
