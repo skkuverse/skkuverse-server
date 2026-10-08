@@ -21,6 +21,7 @@ import {
 import { CORS_METHODS, corsOrigins } from "./infra/origins";
 import { HttpExceptionFilter } from "./common/http-exception.filter";
 import { LangMiddleware } from "./common/lang.middleware";
+import { forceNoStore } from "./common/no-store";
 import { BusCacheService } from "./bus/cache/bus-cache.service";
 
 /**
@@ -57,6 +58,10 @@ async function bootstrap(): Promise<void> {
   // Must run before any handler — see the docblock. The eventmap 304 branches
   // return before setting headers of their own, which is the case this exists for.
   expressInstance.use(exposeResponseHeaders);
+
+  // CACHE=off (the development default): every Cache-Control becomes no-store,
+  // so the phone's HTTP cache never answers for this server.
+  if (!config.cache.enabled) expressInstance.use(forceNoStore);
 
   // bodyParser:false is REQUIRED: with a pre-built ExpressAdapter, Nest's
   // registerParserMiddleware → ExpressAdapter.isMiddlewareApplied reads the
@@ -164,7 +169,7 @@ async function bootstrap(): Promise<void> {
       db: config.mongo.dbName,
       api: config.useProdApi ? "PROD" : "DEV",
       role,
-      // push / rateLimit / buildingSync as resolved (infra/runtime-switches.ts)
+      // push / rateLimit / buildingSync / cache as resolved (infra/runtime-switches.ts)
       ...config.getSideEffectsSummary(),
     },
     "Server started (NestJS)",

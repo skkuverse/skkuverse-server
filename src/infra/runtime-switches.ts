@@ -7,6 +7,7 @@
  *
  *
  *
+ *
  */
 
 export type RuntimeMode = "production" | "development" | "test";
@@ -16,9 +17,15 @@ export interface RuntimeSwitches {
   pushDelivery: PushDelivery;
   rateLimitEnabled: boolean;
   buildingSyncEnabled: boolean;
+  cacheEnabled: boolean;
 }
 
-export const RUNTIME_SWITCH_NAMES = ["PUSH_DELIVERY", "RATE_LIMIT", "BUILDING_SYNC"] as const;
+export const RUNTIME_SWITCH_NAMES = [
+  "PUSH_DELIVERY",
+  "RATE_LIMIT",
+  "BUILDING_SYNC",
+  "CACHE",
+] as const;
 
 /** Same reading as config.ts: anything but production or test is development. */
 export function runtimeMode(nodeEnv: string | undefined): RuntimeMode {
@@ -70,11 +77,18 @@ export function resolveRuntimeSwitches(
   const buildingSync =
     readEnum(env, "BUILDING_SYNC", ["on", "off"] as const, errors) ?? (local ? "off" : "on");
 
+  let cache = readEnum(env, "CACHE", ["on", "off"] as const, errors) ?? (local ? "off" : "on");
+  if (mode === "production" && cache === "off") {
+    errors.push("CACHE=off is refused in production");
+    cache = "on";
+  }
+
   return {
     switches: {
       pushDelivery,
       rateLimitEnabled: rateLimit === "on",
       buildingSyncEnabled: buildingSync === "on",
+      cacheEnabled: cache === "on",
     },
     errors,
   };

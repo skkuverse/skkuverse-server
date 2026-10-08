@@ -18,6 +18,7 @@ jest.mock("../../../src/infra/db", () => ({
 
 jest.mock("../../../src/infra/config", () => ({
   mongo: { dbName: "test_db" },
+  cache: { enabled: true },
 }));
 
 jest.mock("../../../src/infra/logger", () => ({
@@ -291,6 +292,19 @@ describe("resolveWeek", () => {
 
     await resolveWeek("campus-inja", "2026-03-09");
     expect(mockCollection.mock.calls.length).toBe(callCount);
+  });
+
+  it("CACHE=off: every call re-queries DB", async () => {
+    const config = require("../../../src/infra/config");
+    config.cache.enabled = false;
+    try {
+      await resolveWeek("campus-inja", "2026-03-09");
+      const callCount = mockCollection.mock.calls.length;
+      await resolveWeek("campus-inja", "2026-03-09");
+      expect(mockCollection.mock.calls.length).toBe(callCount * 2);
+    } finally {
+      config.cache.enabled = true;
+    }
   });
 
   it("after 1hr TTL, re-queries DB", async () => {
