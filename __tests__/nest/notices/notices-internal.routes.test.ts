@@ -32,7 +32,7 @@ beforeAll(async () => {
   app = await buildNoticesApp([
     { provide: NoticesDispatcherService, useValue: dispatcher },
     // Stub the data service so its real onModuleInit (ensureNoticeIndexes →
-    // lib/db) doesn't hang init without Mongo. The internal route never touches it.
+    // src/infra/db.ts) doesn't hang init without Mongo. The internal route never touches it.
     {
       provide: NoticesDataService,
       useValue: { onModuleInit: jest.fn() },

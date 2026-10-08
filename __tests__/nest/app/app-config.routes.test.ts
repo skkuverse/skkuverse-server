@@ -1,7 +1,6 @@
 /**
- * Nest port integration test for AppConfigFeatureController (GET /app/config) —
- * port of features/app/app.routes.ts. There is no pre-existing Express test for
- * this route (it's a trivial static passthrough), so this is the parity guard.
+ * Integration test for AppConfigFeatureController (GET /app/config), a trivial
+ * static passthrough.
  *
  * Builds a NestExpressApplication mirroring main.ts's pipeline for this route:
  *   pino-http → express.json → LangMiddleware (req.lang + __startNs + Vary)

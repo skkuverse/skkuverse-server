@@ -1,6 +1,6 @@
 /**
- * Pins the main.ts production bootstrap wiring that the adversarial parity
- * review found broken and untested:
+ * Pins the main.ts production bootstrap wiring that a review found broken and
+ * untested:
  *
  *  1. NestFactory.create on a PRE-BUILT ExpressAdapter MUST pass
  *     { bodyParser: false }. Otherwise app.init() runs
@@ -77,7 +77,7 @@ function buildLikeMainTs(opts: {
   })();
 }
 
-describe("main.ts bootstrap wiring (parity regression pins)", () => {
+describe("main.ts bootstrap wiring (regression pins)", () => {
   it("boots with { bodyParser: false } on a pre-built ExpressAdapter (express 4.22)", async () => {
     const app = await buildLikeMainTs({ bodyParser: false, mountLang: true });
     const res = await request(app.getHttpServer()).get("/ping");
