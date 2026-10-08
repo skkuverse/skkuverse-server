@@ -1,10 +1,19 @@
 import crypto from "crypto";
-import { t } from "../../infra/i18n";
+import { pick, t } from "../../infra/i18n";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
 import { HSSCStations } from "./hssc.stations";
 import { jongroRoutes, type JongroRoute } from "../registry/jongro-registry";
-import type { HsscStation, JongroStation } from "../types";
+import { buildStreetViewUrl } from "../schedule/naver-street-view";
+import { stopCatalog } from "../schedule/schedule-stops";
+import type {
+  HsscStation,
+  JongroStation,
+  LatLng,
+  ScheduleStop,
+  ScheduleStopCatalog,
+  StopExit,
+} from "../types";
 
 type AnyStation = HsscStation | JongroStation;
 
@@ -59,12 +68,131 @@ function buildJongroGroup(route: JongroRoute, lang: SupportedLang) {
   };
 }
 
+interface ServedStop {
+  id: string;
+  name: string;
+  detail?: string;
+  coords?: LatLng;
+  photoUrl?: string;
+  streetViewUrl?: string;
+  exit?: StopExit;
+  walkPath?: LatLng[];
+}
+
+interface ServedBoarding {
+  routeTypes: string[];
+  stopId: string;
+  alight?: string;
+}
+
+/**
+ * A stop as one language's client sees it. Optional fields appear only when
+ * the catalog sets their source, so a stop with no photo has no `photoUrl` key.
+ * The photo is the variant whose labels are in the request language, else the
+ * original — not chained through English like text, because the original has
+ * no words and reads the same in every language.
+ */
+function serveStop(stop: ScheduleStop, lang: SupportedLang): ServedStop {
+  const served: ServedStop = { id: stop.id, name: pick(stop.name, lang)! };
+  const detail = pick(stop.detail, lang);
+  if (detail !== null) served.detail = detail;
+  if (stop.coords) served.coords = stop.coords;
+  if (stop.photo) served.photoUrl = stop.photo.localized?.[lang] ?? stop.photo.original;
+  if (stop.panorama) served.streetViewUrl = buildStreetViewUrl(stop.panorama);
+  if (stop.exit && stop.walkPath) {
+    served.exit = stop.exit;
+    served.walkPath = stop.walkPath;
+  }
+  return served;
+}
+
+/**
+ * The boarding entries of some services and the stops they reference, for one
+ * language. `stops` lists each referenced stop once, in order of first
+ * reference; a service with no boarding is absent from `boarding`.
+ */
+function resolveBoarding(
+  serviceIds: readonly string[],
+  lang: SupportedLang,
+  catalog: Readonly<ScheduleStopCatalog> = stopCatalog,
+): { boarding: Record<string, ServedBoarding[]>; stops: ServedStop[] } {
+  const boarding: Record<string, ServedBoarding[]> = {};
+  const referenced: string[] = [];
+  for (const serviceId of serviceIds) {
+    const entries = catalog.boarding[serviceId];
+    if (!entries || entries.length === 0) continue;
+    boarding[serviceId] = entries.map((e) => {
+      if (!referenced.includes(e.stopId)) referenced.push(e.stopId);
+      const served: ServedBoarding = { routeTypes: [...e.routeTypes], stopId: e.stopId };
+      const alight = pick(e.alight, lang);
+      if (alight !== null) served.alight = alight;
+      return served;
+    });
+  }
+  // The catalog loader already refused a boarding entry naming an unknown stop.
+  const stops = referenced.map((id) => serveStop(catalog.stops.find((s) => s.id === id)!, lang));
+  return { boarding, stops };
+}
+
+const COMMUTE_SERVICE_IDS = [
+  "commute-jeongja",
+  "commute-jamsil",
+  "commute-dogok",
+  "commute-gangnam-yangjae",
+  "commute-gwanggyo",
+] as const;
+
+/**
+ * 자과캠 통학셔틀 (pilot, 2026-10-19..2026-12-18): one service per route, runs
+ * typed by direction (`up` 등교, `down` 하교; the 강남·양재 bus boards at two
+ * stops, so its morning runs are `up-gangnam` and `up-yangjae`). The first
+ * group to use the v2 fields: `serviceSelector`, `services[].boarding`,
+ * `screen.stops`. Builds that predate them ignore the keys and render the v1
+ * screen.
+ */
+function buildCommuteGroup(lang: SupportedLang) {
+  const { boarding, stops } = resolveBoarding(COMMUTE_SERVICE_IDS, lang);
+  return {
+    id: "commute",
+    screenType: "schedule",
+    label: t("busconfig.label.commute", lang),
+    visibility: { type: "dateRange", from: "2026-10-19", until: "2026-12-18" },
+    card: {
+      themeColor: "003626",
+      iconType: "shuttle",
+      busTypeText: t("buslist.hssc.busTypeText", lang),
+      subtitle: t("buslist.commute.subtitle", lang),
+    },
+    screen: {
+      defaultServiceId: "commute-jeongja",
+      serviceSelector: "chips",
+      services: COMMUTE_SERVICE_IDS.map((serviceId) => ({
+        serviceId,
+        label: t(`busconfig.service.${serviceId}`, lang),
+        endpoint: `/bus/schedule/data/${serviceId}/smart`,
+        ...(boarding[serviceId] ? { boarding: boarding[serviceId] } : {}),
+      })),
+      heroCard: null,
+      routeBadges: [
+        { id: "up", label: t("busconfig.badge.up", lang), color: "003626" },
+        { id: "down", label: t("busconfig.badge.down", lang), color: "1565C0" },
+        { id: "up-gangnam", label: t("busconfig.badge.up-gangnam", lang), color: "003626" },
+        { id: "up-yangjae", label: t("busconfig.badge.up-yangjae", lang), color: "003626" },
+      ],
+      ...(stops.length > 0 ? { stops } : {}),
+      // Empty until skkuverse-web serves /bus/commute/info: the web view answers
+      // any path with HTTP 200, so a link to a missing page fails silently.
+      features: [],
+    },
+  };
+}
+
 const etagCache: Map<string, string> = new Map();
 
 /**
  * Returns ordered array of bus groups for the client SDUI.
- * Order: hssc, campus, fasttrack, then every jongro route in registry order
- * (jongro02, jongro07, jongro08).
+ * Order: hssc, campus, fasttrack, commute, then every jongro route in registry
+ * order (jongro02, jongro07, jongro08).
  */
 function getBusGroups(lang: SupportedLang = "ko") {
   return [
@@ -162,7 +290,10 @@ function getBusGroups(lang: SupportedLang = "ko") {
       },
     },
 
-    // 4..N. Jongro routes (realtime) — generated from `jongro-routes.json`.
+    // 4. 자과캠 통학셔틀 (schedule, pilot window)
+    buildCommuteGroup(lang),
+
+    // 5..N. Jongro routes (realtime) — generated from `jongro-routes.json`.
     ...jongroRoutes.map((r) => buildJongroGroup(r, lang)),
   ];
 }
@@ -224,4 +355,5 @@ export {
   getGroupById,
   computeGroupEtag,
   mapStations,
+  resolveBoarding,
 };

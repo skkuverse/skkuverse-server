@@ -5,9 +5,10 @@ import config from "../../infra/config";
 import logger from "../../infra/logger";
 import { createLogThrottle } from "../../infra/log-throttle";
 
-// Both are evaluated per request; once an hour per service is enough to see them.
+// All are evaluated per request; once an hour per service is enough to see them.
 const invalidSuspendThrottle = createLogThrottle(60 * 60_000);
 const noDataThrottle = createLogThrottle(60 * 60_000);
+const patternConflictThrottle = createLogThrottle(60 * 60_000);
 import { ensureScheduleIndexes } from "./schedule-db";
 import type {
   BusOverrideDoc,
@@ -61,6 +62,52 @@ function isSelectable(day: DayResolution): boolean {
     day.display === "schedule" ||
     (day.display === "noService" && day.notices.length > 0)
   );
+}
+
+/** Dates are YYYY-MM-DD, so string order is date order. */
+function patternApplies(p: BusScheduleDoc, dateStr: string, dayOfWeek: number): boolean {
+  return (
+    p.days.includes(dayOfWeek) &&
+    (p.effectiveFrom === undefined || p.effectiveFrom <= dateStr) &&
+    (p.effectiveUntil === undefined || dateStr <= p.effectiveUntil)
+  );
+}
+
+/**
+ * The pattern a date resolves to. Two that apply at once are a data error
+ * (the timetable tool refuses to write one), so the latest `effectiveFrom`
+ * wins — an absent one counts as earliest — with `patternId` as the tiebreak,
+ * so every replica serves the same timetable whatever order Mongo returns.
+ */
+function pickPattern(
+  serviceId: string,
+  dateStr: string,
+  patterns: BusScheduleDoc[],
+  dayOfWeek: number,
+): BusScheduleDoc | undefined {
+  const applying = patterns.filter((p) => patternApplies(p, dateStr, dayOfWeek));
+  if (applying.length <= 1) return applying[0];
+
+  const sorted = [...applying].sort(
+    (a, b) =>
+      (b.effectiveFrom ?? "").localeCompare(a.effectiveFrom ?? "") ||
+      a.patternId.localeCompare(b.patternId),
+  );
+  const ticket = patternConflictThrottle.take(serviceId);
+  if (ticket) {
+    logger.error(
+      {
+        event: "bus.schedule.pattern_conflict",
+        serviceId,
+        date: dateStr,
+        patternIds: sorted.map((p) => p.patternId),
+        served: sorted[0]!.patternId,
+        suppressed: ticket.suppressed,
+      },
+      "several schedule patterns apply to one date",
+    );
+  }
+  return sorted[0];
 }
 
 /**
@@ -190,10 +237,8 @@ export class ScheduleService implements OnModuleInit {
           notices = [];
           label = restDayLabel;
         } else {
-          // Step 3: Check patterns
-          const matchedPattern = patterns.find((p) =>
-            p.days.includes(dayOfWeek),
-          );
+          // Step 3: the pattern whose weekdays and effective range cover the date
+          const matchedPattern = pickPattern(serviceId, dateStr, patterns, dayOfWeek);
 
           if (matchedPattern) {
             display = "schedule";

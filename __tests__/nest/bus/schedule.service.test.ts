@@ -339,6 +339,125 @@ describe("resolveWeek", () => {
   });
 });
 
+describe("pattern effective ranges", () => {
+  const entry = (time: string) => ({ index: 1, time, routeType: "regular", busCount: 1, notes: null });
+  const pilot = {
+    serviceId: "campus-inja",
+    patternId: "pilot",
+    days: [1, 2, 3, 4, 5],
+    effectiveFrom: "2026-10-19",
+    effectiveUntil: "2026-12-18",
+    entries: [entry("07:40")],
+  };
+
+  it("a date before the range falls back to the non-operating display", async () => {
+    mockSchedules = [pilot];
+    const result = await resolveWeek("campus-inja", "2026-10-12");
+    for (const day of result!.days.slice(0, 5)) {
+      expect(day.display).toBe("hidden");
+      expect(day.schedule).toEqual([]);
+    }
+  });
+
+  it("the first and last dates of the range serve the pattern", async () => {
+    mockSchedules = [pilot];
+    const first = await resolveWeek("campus-inja", "2026-10-19");
+    expect(first!.days[0].display).toBe("schedule");
+    expect((first!.days[0].schedule[0] as { time: string }).time).toBe("07:40");
+
+    const last = await resolveWeek("campus-inja", "2026-12-14");
+    expect(last!.days[4].date).toBe("2026-12-18");
+    expect(last!.days[4].display).toBe("schedule");
+  });
+
+  it("a date after the range does not apply the pattern", async () => {
+    mockSchedules = [pilot];
+    const result = await resolveWeek("campus-inja", "2026-12-21");
+    expect(result!.days[0].date).toBe("2026-12-21");
+    expect(result!.days[0].display).toBe("hidden");
+  });
+
+  it("a pattern with neither bound applies on every listed weekday", async () => {
+    mockSchedules = [{ serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [entry("08:00")] }];
+    for (const from of ["2020-01-06", "2026-10-19", "2031-06-02"]) {
+      const result = await resolveWeek("campus-inja", from);
+      expect(result!.days[0].display).toBe("schedule");
+    }
+  });
+
+  it("a replace override wins on a date outside every range", async () => {
+    mockSchedules = [pilot];
+    mockOverrides = [
+      { serviceId: "campus-inja", date: "2026-10-14", type: "replace", label: "시범 운행", notices: [], entries: [entry("09:00")] },
+    ];
+    const result = await resolveWeek("campus-inja", "2026-10-12");
+    expect(result!.days[2].display).toBe("schedule");
+    expect((result!.days[2].schedule[0] as { time: string }).time).toBe("09:00");
+    expect(result!.days[1].display).toBe("hidden");
+  });
+
+  it("a holiday inside the range resolves to no service with its label", async () => {
+    mockSchedules = [pilot];
+    getNonOperatingDayLabel.mockImplementation((d: string) => (d === "2026-10-21" ? "휴일" : null));
+    const result = await resolveWeek("campus-inja", "2026-10-19");
+    expect(result!.days[2].display).toBe("noService");
+    expect(result!.days[2].label).toBe("휴일");
+    expect(result!.days[1].display).toBe("schedule");
+  });
+
+  it("two applying patterns: the later effectiveFrom is served and one error names both", async () => {
+    mockSchedules = [
+      { serviceId: "campus-jain", patternId: "old-weekday", days: [1, 2, 3, 4, 5], entries: [entry("08:00")] },
+      { serviceId: "campus-jain", patternId: "new-weekday", days: [1, 2, 3, 4, 5], effectiveFrom: "2026-10-19", entries: [entry("09:30")] },
+    ];
+    const result = await resolveWeek("campus-jain", "2026-10-19");
+    expect((result!.days[1].schedule[0] as { time: string }).time).toBe("09:30");
+
+    const conflicts = logger.error.mock.calls.filter(
+      ([fields]: [{ event?: string }]) => fields.event === "bus.schedule.pattern_conflict",
+    );
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0][0]).toMatchObject({
+      serviceId: "campus-jain",
+      patternIds: ["new-weekday", "old-weekday"],
+      served: "new-weekday",
+    });
+  });
+});
+
+describe("resolveSmartSchedule across a range start", () => {
+  const pilot = {
+    serviceId: "campus-inja",
+    patternId: "pilot",
+    days: [1, 2, 3, 4, 5],
+    effectiveFrom: "2026-10-19",
+    entries: [{ index: 1, time: "07:40", routeType: "regular", busCount: 1, notes: null }],
+  };
+
+  afterEach(() => jest.useRealTimers());
+
+  it("opens on the first day of a range that starts next week", async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-10-14T03:00:00.000Z")); // Wed 12:00 KST
+    mockSchedules = [pilot];
+
+    const result = await resolveSmartSchedule("campus-inja");
+    expect(result).toMatchObject({ status: "active", from: "2026-10-19", selectedDate: "2026-10-19" });
+    // No field or status a pre-range client does not already handle.
+    expect(Object.keys(result!).sort()).toEqual(["days", "from", "selectedDate", "serviceId", "status"]);
+  });
+
+  it("reports noData when the range starts two weeks out", async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-10-05T03:00:00.000Z")); // Mon 12:00 KST
+    mockSchedules = [pilot];
+
+    const result = await resolveSmartSchedule("campus-inja");
+    expect(result).toMatchObject({ status: "noData", from: null, selectedDate: null, days: [] });
+    expect(Object.keys(result!).sort()).toEqual(["days", "from", "selectedDate", "serviceId", "status"]);
+  });
+});
+
 describe("resolveSmartSchedule", () => {
   it("on a weekday with schedule, selectedDate = today and hidden days filtered", async () => {
     jest.useFakeTimers();
@@ -658,5 +777,49 @@ describe("clearCacheForService", () => {
 
     await resolveWeek("campus-inja", "2026-03-09");
     expect(mockCollection.mock.calls.length).toBeGreaterThan(callsBefore);
+  });
+});
+
+describe("자과캠 통학셔틀 resolution (built from scripts/data/commute-schedule.json)", () => {
+  // The committed file, built the way the tool writes it, served from the
+  // mocked collection: what prod resolves after `npm run schedule --create`.
+  const fs = require("fs");
+  const path = require("path");
+  const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
+  const commuteDocs: Array<{ serviceId: string }> = buildDocuments(
+    parseTimetableFile(
+      JSON.parse(fs.readFileSync(path.join(__dirname, "../../../scripts/data/commute-schedule.json"), "utf8")),
+    ),
+  );
+  const docsFor = (serviceId: string) => commuteDocs.filter((d) => d.serviceId === serviceId);
+
+  it("hides the weekend of the first week", async () => {
+    mockSchedules = docsFor("commute-jamsil");
+    const week = await resolveWeek("commute-jamsil", "2026-10-19");
+    expect(week!.days.slice(0, 5).map((d) => d.display)).toEqual(Array(5).fill("schedule"));
+    expect(week!.days[5]).toMatchObject({ date: "2026-10-24", display: "hidden" });
+    expect(week!.days[6]).toMatchObject({ date: "2026-10-25", display: "hidden" });
+  });
+
+  it("serves no timetable after the pilot", async () => {
+    mockSchedules = docsFor("commute-dogok");
+    const week = await resolveWeek("commute-dogok", "2026-12-21");
+    expect(week!.days[0]).toMatchObject({ date: "2026-12-21", display: "hidden", schedule: [] });
+  });
+
+  it("opens every operating day with the pilot notice", async () => {
+    for (const serviceId of [
+      "commute-jeongja",
+      "commute-jamsil",
+      "commute-dogok",
+      "commute-gangnam-yangjae",
+      "commute-gwanggyo",
+    ]) {
+      mockSchedules = docsFor(serviceId);
+      const week = await resolveWeek(serviceId, "2026-11-02");
+      for (const day of week!.days.filter((d) => d.display === "schedule")) {
+        expect(day.notices[0]!.text).toMatch(/시범 운행.*무료.*킹고M QR/);
+      }
+    }
   });
 });

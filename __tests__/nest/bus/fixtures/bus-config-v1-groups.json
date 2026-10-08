@@ -1,0 +1,26 @@
+{
+  "campus:ko": {
+    "json": "{\"id\":\"campus\",\"screenType\":\"schedule\",\"label\":\"인자셔틀\",\"visibility\":{\"type\":\"always\"},\"card\":{\"themeColor\":\"003626\",\"iconType\":\"shuttle\",\"busTypeText\":\"성대\",\"subtitle\":\"인사캠 ↔ 자과캠\"},\"screen\":{\"defaultServiceId\":\"campus-inja\",\"services\":[{\"serviceId\":\"campus-inja\",\"label\":\"인사캠 → 자과캠\",\"endpoint\":\"/bus/schedule/data/campus-inja/smart\"},{\"serviceId\":\"campus-jain\",\"label\":\"자과캠 → 인사캠\",\"endpoint\":\"/bus/schedule/data/campus-jain/smart\"}],\"heroCard\":null,\"routeBadges\":[{\"id\":\"regular\",\"label\":\"일반\",\"color\":\"003626\"},{\"id\":\"hakbu\",\"label\":\"학부대학\",\"color\":\"1565C0\"}],\"features\":[{\"type\":\"info\",\"url\":\"https://webview.skkuverse.com/bus/campus/info\"}]}}",
+    "etag": "\"1fc86ca56059ea2b9c15136219f410c1\""
+  },
+  "campus:en": {
+    "json": "{\"id\":\"campus\",\"screenType\":\"schedule\",\"label\":\"INJA Shuttle\",\"visibility\":{\"type\":\"always\"},\"card\":{\"themeColor\":\"003626\",\"iconType\":\"shuttle\",\"busTypeText\":\"SKKU\",\"subtitle\":\"HSSC ↔ NSC\"},\"screen\":{\"defaultServiceId\":\"campus-inja\",\"services\":[{\"serviceId\":\"campus-inja\",\"label\":\"HSSC → NSC\",\"endpoint\":\"/bus/schedule/data/campus-inja/smart\"},{\"serviceId\":\"campus-jain\",\"label\":\"NSC → HSSC\",\"endpoint\":\"/bus/schedule/data/campus-jain/smart\"}],\"heroCard\":null,\"routeBadges\":[{\"id\":\"regular\",\"label\":\"Regular\",\"color\":\"003626\"},{\"id\":\"hakbu\",\"label\":\"Undergraduate\",\"color\":\"1565C0\"}],\"features\":[{\"type\":\"info\",\"url\":\"https://webview.skkuverse.com/bus/campus/info\"}]}}",
+    "etag": "\"ffdda5314dad52ee4b2d633501bc306b\""
+  },
+  "campus:zh": {
+    "json": "{\"id\":\"campus\",\"screenType\":\"schedule\",\"label\":\"仁自班车\",\"visibility\":{\"type\":\"always\"},\"card\":{\"themeColor\":\"003626\",\"iconType\":\"shuttle\",\"busTypeText\":\"成大\",\"subtitle\":\"人文校区 ↔ 自然校区\"},\"screen\":{\"defaultServiceId\":\"campus-inja\",\"services\":[{\"serviceId\":\"campus-inja\",\"label\":\"人文校区 → 自然校区\",\"endpoint\":\"/bus/schedule/data/campus-inja/smart\"},{\"serviceId\":\"campus-jain\",\"label\":\"自然校区 → 人文校区\",\"endpoint\":\"/bus/schedule/data/campus-jain/smart\"}],\"heroCard\":null,\"routeBadges\":[{\"id\":\"regular\",\"label\":\"一般\",\"color\":\"003626\"},{\"id\":\"hakbu\",\"label\":\"本科学院\",\"color\":\"1565C0\"}],\"features\":[{\"type\":\"info\",\"url\":\"https://webview.skkuverse.com/bus/campus/info\"}]}}",
+    "etag": "\"d9301d91074f7e8da6d86b8ffccd4e1b\""
+  },
+  "fasttrack:ko": {
+    "json": "{\"id\":\"fasttrack\",\"screenType\":\"schedule\",\"label\":\"패스트트랙\",\"visibility\":{\"type\":\"dateRange\",\"from\":\"2026-03-01\",\"until\":\"2026-03-07\"},\"card\":{\"themeColor\":\"E65100\",\"iconType\":\"shuttle\",\"busTypeText\":\"패스트트랙\",\"subtitle\":\"테스트 버스\"},\"screen\":{\"defaultServiceId\":\"fasttrack-inja\",\"services\":[{\"serviceId\":\"fasttrack-inja\",\"label\":\"인사캠 → 자과캠\",\"endpoint\":\"/bus/schedule/data/fasttrack-inja/smart\"}],\"heroCard\":null,\"routeBadges\":[{\"id\":\"fasttrack\",\"label\":\"패스트트랙\",\"color\":\"E65100\"}],\"features\":[]}}",
+    "etag": "\"4f6fee2758bf1070a75636cb98761ee0\""
+  },
+  "fasttrack:en": {
+    "json": "{\"id\":\"fasttrack\",\"screenType\":\"schedule\",\"label\":\"Fasttrack\",\"visibility\":{\"type\":\"dateRange\",\"from\":\"2026-03-01\",\"until\":\"2026-03-07\"},\"card\":{\"themeColor\":\"E65100\",\"iconType\":\"shuttle\",\"busTypeText\":\"Fasttrack\",\"subtitle\":\"Test Bus\"},\"screen\":{\"defaultServiceId\":\"fasttrack-inja\",\"services\":[{\"serviceId\":\"fasttrack-inja\",\"label\":\"HSSC → NSC\",\"endpoint\":\"/bus/schedule/data/fasttrack-inja/smart\"}],\"heroCard\":null,\"routeBadges\":[{\"id\":\"fasttrack\",\"label\":\"Fasttrack\",\"color\":\"E65100\"}],\"features\":[]}}",
+    "etag": "\"5443b894d94bfdb0637e86664f3a2c4d\""
+  },
+  "fasttrack:zh": {
+    "json": "{\"id\":\"fasttrack\",\"screenType\":\"schedule\",\"label\":\"快速通道\",\"visibility\":{\"type\":\"dateRange\",\"from\":\"2026-03-01\",\"until\":\"2026-03-07\"},\"card\":{\"themeColor\":\"E65100\",\"iconType\":\"shuttle\",\"busTypeText\":\"快速通道\",\"subtitle\":\"测试巴士\"},\"screen\":{\"defaultServiceId\":\"fasttrack-inja\",\"services\":[{\"serviceId\":\"fasttrack-inja\",\"label\":\"人文校区 → 自然校区\",\"endpoint\":\"/bus/schedule/data/fasttrack-inja/smart\"}],\"heroCard\":null,\"routeBadges\":[{\"id\":\"fasttrack\",\"label\":\"快速通道\",\"color\":\"E65100\"}],\"features\":[]}}",
+    "etag": "\"9d07bf3721fb66209d3d10f2958287e3\""
+  }
+}

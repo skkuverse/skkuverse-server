@@ -1,6 +1,7 @@
 {
   "semester": "2026-2",
   "effectiveFrom": "2026-08-31",
+  "routeTypes": ["regular", "hakbu"],
   "patterns": [
     {
       "patternId": "weekday",

@@ -81,6 +81,11 @@ const translations: Translations = {
     en: "Test Bus",
     zh: "测试巴士",
   },
+  "buslist.commute.subtitle": {
+    ko: "역 ↔ 자과캠 시범 운행",
+    en: "Stations ↔ NSC pilot",
+    zh: "地铁站 ↔ 自然校区 试运行",
+  },
   "buslist.hssc.busTypeText": {
     ko: "성대",
     en: "SKKU",
@@ -123,6 +128,11 @@ const translations: Translations = {
     en: "Fasttrack",
     zh: "快速通道",
   },
+  "busconfig.label.commute": {
+    ko: "자과캠 통학셔틀",
+    en: "NSC Commuter Shuttle",
+    zh: "自然校区通学班车",
+  },
 
   // Bus config: service tab labels
   "busconfig.service.campus-inja": {
@@ -134,6 +144,33 @@ const translations: Translations = {
     ko: "자과캠 → 인사캠",
     en: "NSC → HSSC",
     zh: "自然校区 → 人文校区",
+  },
+  // Commute routes: kept to five Korean characters or fewer, because builds
+  // without the chips selector render them as a five-way segmented control.
+  "busconfig.service.commute-jeongja": {
+    ko: "정자",
+    en: "Jeongja",
+    zh: "亭子",
+  },
+  "busconfig.service.commute-jamsil": {
+    ko: "잠실",
+    en: "Jamsil",
+    zh: "蚕室",
+  },
+  "busconfig.service.commute-dogok": {
+    ko: "도곡",
+    en: "Dogok",
+    zh: "道谷",
+  },
+  "busconfig.service.commute-gangnam-yangjae": {
+    ko: "강남·양재",
+    en: "Gangnam·Yangjae",
+    zh: "江南·良才",
+  },
+  "busconfig.service.commute-gwanggyo": {
+    ko: "광교중앙",
+    en: "Gwanggyo Jungang",
+    zh: "光教中央",
   },
 
   // Bus config: route badge labels
@@ -151,6 +188,26 @@ const translations: Translations = {
     ko: "패스트트랙",
     en: "Fasttrack",
     zh: "快速通道",
+  },
+  "busconfig.badge.up": {
+    ko: "등교",
+    en: "To campus",
+    zh: "上学",
+  },
+  "busconfig.badge.down": {
+    ko: "하교",
+    en: "From campus",
+    zh: "放学",
+  },
+  "busconfig.badge.up-gangnam": {
+    ko: "강남 승차",
+    en: "Board Gangnam",
+    zh: "江南上车",
+  },
+  "busconfig.badge.up-yangjae": {
+    ko: "양재 승차",
+    en: "Board Yangjae",
+    zh: "良才上车",
   },
 
   // Bus config: direction labels
