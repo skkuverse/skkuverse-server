@@ -1,5 +1,6 @@
 import "dotenv/config";
 import logger from "./logger";
+import { resolveRuntimeSwitches, runtimeMode } from "./runtime-switches";
 
 // --- Environment flags ---
 const NODE_ENV: string = process.env.NODE_ENV || "development";
@@ -11,6 +12,13 @@ const isDevelopment = !isProduction && !isTest;
 const USE_PROD_API = isProduction
   ? true
   : process.env.USE_PROD_API === "true";
+
+// Outbound side effects a local run must not cause (push, crawl) and the
+// limiter. Defaults per mode and the refused combinations: runtime-switches.ts.
+const { switches, errors: switchErrors } = resolveRuntimeSwitches(
+  process.env,
+  runtimeMode(NODE_ENV),
+);
 
 // --- Helpers ---
 
@@ -70,6 +78,10 @@ const config = {
     syncIntervalMs:
       parseInt(process.env.BUILDING_SYNC_INTERVAL_MS || "", 10) ||
       7 * 24 * 60 * 60 * 1000, // 7 days
+    // BUILDING_SYNC. Off in development: the poller's warm-up crawls all of
+    // campusMap.do and rewrites skkumap_dev on every boot, and nodemon reboots
+    // on every save.
+    syncEnabled: switches.buildingSyncEnabled,
   },
 
   notices: {
@@ -159,6 +171,19 @@ const config = {
     serviceAccount: process.env.FIREBASE_SERVICE_ACCOUNT || null,
   },
 
+  // PUSH_DELIVERY. "suppressed" makes common/fcm-client.ts log the payload and
+  // report an empty delivery instead of calling the Cloud Function.
+  push: {
+    delivery: switches.pushDelivery,
+  },
+
+  // RATE_LIMIT. Every express-rate-limit instance skips while this is false
+  // (infra/rateLimitKeys.ts). Off in development, where every simulator
+  // request arrives from the same loopback address.
+  rateLimit: {
+    enabled: switches.rateLimitEnabled,
+  },
+
   // Error and log collection (src/instrument.ts). Required in production;
   // the literal "disabled" turns it off explicitly (docker-compose.local-verify.yml).
   // GIT_SHA is baked into the image at build time (Dockerfile ARG).
@@ -199,6 +224,15 @@ const config = {
     if (isDevelopment) return "DEVELOPMENT (dev DB + dev API)";
     if (isTest) return "TEST";
     return `UNKNOWN (NODE_ENV=${NODE_ENV})`;
+  },
+
+  /** The runtime switches as they resolved, for the boot log line. */
+  getSideEffectsSummary(): { push: string; rateLimit: string; buildingSync: string } {
+    return {
+      push: switches.pushDelivery,
+      rateLimit: switches.rateLimitEnabled ? "on" : "off",
+      buildingSync: switches.buildingSyncEnabled ? "on" : "off",
+    };
   },
 };
 
@@ -246,6 +280,16 @@ if (missing.length > 0) {
   logger.fatal(
     { event: "config.missing_required", missing },
     "Missing required config — set the env vars in `missing`",
+  );
+  if (!isTest) {
+    process.exit(1);
+  }
+}
+
+if (switchErrors.length > 0) {
+  logger.fatal(
+    { event: "config.invalid_runtime_switch", errors: switchErrors },
+    "Invalid runtime switch — fix the env vars named in `errors`",
   );
   if (!isTest) {
     process.exit(1);

@@ -26,7 +26,7 @@ import { Test } from "@nestjs/testing";
 import express from "express";
 import request from "supertest";
 import { LangMiddleware } from "../../src/common/lang.middleware";
-import { CORS_METHODS, CORS_ORIGINS, WEBVIEW_ORIGIN } from "../../src/infra/origins";
+import { CORS_METHODS, corsOrigins, WEBVIEW_ORIGIN } from "../../src/infra/origins";
 import { EXPOSED_RESPONSE_HEADERS } from "../../src/common/expose-headers";
 
 @Controller("ping")
@@ -45,6 +45,8 @@ function buildLikeMainTs(opts: {
   bodyParser?: false;
   mountLang: boolean;
   cors?: boolean;
+  /** main.ts passes config.isDevelopment. */
+  isDevelopment?: boolean;
 }): Promise<NestExpressApplication> {
   return (async () => {
     const expressInstance = express();
@@ -65,7 +67,7 @@ function buildLikeMainTs(opts: {
     );
     if (opts.cors) {
       app.enableCors({
-        origin: [...CORS_ORIGINS],
+        origin: corsOrigins(opts.isDevelopment === true),
         methods: [...CORS_METHODS],
         exposedHeaders: EXPOSED_RESPONSE_HEADERS,
         credentials: false,
@@ -189,5 +191,55 @@ describe("CORS policy", () => {
       .get("/ping")
       .set("Origin", WEBVIEW_ORIGIN);
     expect(res.headers["access-control-expose-headers"]).toContain("ETag");
+  });
+
+  it("grants nothing to a loopback origin outside development", async () => {
+    const res = await request(app.getHttpServer())
+      .get("/ping")
+      .set("Origin", "http://localhost:5173");
+    expect(res.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+});
+
+/**
+ * Development adds loopback origins, so a web dev server on this machine (the
+ * webview SPA's vite) can read a local API. Nothing broader: not a LAN address,
+ * not a host that merely starts with "localhost".
+ */
+describe("CORS policy in development", () => {
+  let app: NestExpressApplication;
+
+  beforeAll(async () => {
+    app = await buildLikeMainTs({
+      bodyParser: false,
+      mountLang: true,
+      cors: true,
+      isDevelopment: true,
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it.each(["http://localhost:5173", "http://127.0.0.1:8081", "http://localhost"])(
+    "allows %s",
+    async (origin) => {
+      const res = await request(app.getHttpServer()).get("/ping").set("Origin", origin);
+      expect(res.headers["access-control-allow-origin"]).toBe(origin);
+    },
+  );
+
+  it.each(["http://192.168.0.5:5173", "http://localhost.evil.test", "https://localhost:5173"])(
+    "grants nothing to %s",
+    async (origin) => {
+      const res = await request(app.getHttpServer()).get("/ping").set("Origin", origin);
+      expect(res.headers["access-control-allow-origin"]).toBeUndefined();
+    },
+  );
+
+  it("still allows the webview origin", async () => {
+    const res = await request(app.getHttpServer()).get("/ping").set("Origin", WEBVIEW_ORIGIN);
+    expect(res.headers["access-control-allow-origin"]).toBe(WEBVIEW_ORIGIN);
   });
 });

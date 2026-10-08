@@ -46,6 +46,20 @@ describe("BuildingSyncService.onModuleInit", () => {
     expect(mockedSync).toHaveBeenCalledTimes(1);
   });
 
+  it("registers nothing when BUILDING_SYNC resolved to off (the development default)", () => {
+    const saved = config.building.syncEnabled;
+    config.building.syncEnabled = false;
+    try {
+      const registry = new PollerRegistryService();
+      const spy = jest.spyOn(registry, "registerPoller");
+      new BuildingSyncService(registry).onModuleInit();
+      expect(spy).not.toHaveBeenCalled();
+      expect(mockedSync).not.toHaveBeenCalled();
+    } finally {
+      config.building.syncEnabled = saved;
+    }
+  });
+
   it("registered fn resolves on syncBuildings success", async () => {
     const registry = new PollerRegistryService();
     const spy = jest.spyOn(registry, "registerPoller");

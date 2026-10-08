@@ -191,5 +191,17 @@ export const BRIDGE_ORIGINS = [WEBVIEW_ORIGIN, ...FIRST_PARTY_MINIAPP_ORIGINS] a
  */
 export const CORS_ORIGINS = [WEBVIEW_ORIGIN] as const;
 
+/**
+ * A web dev server on this machine (the webview SPA's vite on :5173, say)
+ * reading a local API. Development only: production never sees a loopback
+ * origin from a real user, and the native app is not subject to CORS at all.
+ */
+export const LOCAL_DEV_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
+/** The `origin` list main.ts hands to enableCors(). */
+export function corsOrigins(isDevelopment: boolean): Array<string | RegExp> {
+  return isDevelopment ? [...CORS_ORIGINS, LOCAL_DEV_ORIGIN] : [...CORS_ORIGINS];
+}
+
 /** GET and HEAD are the whole of what a browser needs here; OPTIONS is the preflight itself. */
 export const CORS_METHODS = ["GET", "HEAD", "OPTIONS"] as const;
