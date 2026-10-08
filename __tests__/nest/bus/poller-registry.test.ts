@@ -222,30 +222,68 @@ describe("PollerRegistryService", () => {
   });
 
   describe("Sentry cron heartbeat", () => {
-    it("checks in ok every 5 minutes, and error while a poller is failing", async () => {
+    const WEEK_MS = 7 * 24 * 60 * 60_000;
+
+    /** Advances one interval at a time, letting each tick's outcome settle. */
+    async function tick(intervalMs: number, times: number): Promise<void> {
+      for (let i = 0; i < times; i++) {
+        jest.advanceTimersByTime(intervalMs);
+        await settle();
+      }
+    }
+
+    it("checks in ok every 5 minutes, and error while a fast poller is failing", async () => {
       let failing = false;
       registry.registerPoller(
         () => (failing ? Promise.reject(new Error("x")) : undefined),
-        60_000,
+        10_000,
         "p",
       );
       registry.startAll();
       await settle();
 
-      jest.advanceTimersByTime(5 * 60_000);
-      await settle();
+      await tick(10_000, 30);
       expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
         { monitorSlug: "skkuverse-pollers", status: "ok" },
         expect.objectContaining({ schedule: { type: "interval", value: 5, unit: "minute" } }),
       );
 
       failing = true;
-      // Fake timers do not run promise callbacks between timers, so let the
-      // failed tick settle before the next check-in is due.
-      jest.advanceTimersByTime(60_000);
+      await tick(10_000, 30);
+      expect(registry.failingPollers()).toEqual(["p"]);
+      expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
+        { monitorSlug: "skkuverse-pollers", status: "error" },
+        expect.anything(),
+      );
+    });
+
+    it("checks in ok while only a slow poller is failing, which still reports through its own Issue", async () => {
+      registry.registerPoller(() => Promise.reject(new Error("crawl failed")), WEEK_MS, "weekly");
+      registry.startAll();
       await settle();
-      jest.advanceTimersByTime(4 * 60_000);
+
+      await tick(60_000, 5);
+
+      expect(registry.failingPollers()).toEqual(["weekly"]);
+      expect(events(logger.error)).toEqual(["poller.failing"]);
+      expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
+        tags: { poller: "weekly" },
+      });
+      expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
+        { monitorSlug: "skkuverse-pollers", status: "ok" },
+        expect.anything(),
+      );
+    });
+
+    it("checks in error when a slow and a fast poller are both failing", async () => {
+      registry.registerPoller(() => Promise.reject(new Error("crawl failed")), WEEK_MS, "weekly");
+      registry.registerPoller(() => Promise.reject(new Error("upstream down")), 10_000, "fast");
+      registry.startAll();
       await settle();
+
+      await tick(10_000, 30);
+
+      expect(registry.failingPollers()).toEqual(["weekly", "fast"]);
       expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
         { monitorSlug: "skkuverse-pollers", status: "error" },
         expect.anything(),
