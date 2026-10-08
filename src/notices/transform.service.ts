@@ -14,12 +14,12 @@ import type { NoticeDoc } from "./types";
  * TransformService — thin @Injectable delegate over the validated
  * notices.transform pure functions. NO DB.
  *
- * Preserves the transform shapes (toListItem 4-field brief summary;
- * toDetailItem full summary incl. `text`), the empty-string→null /
- * `?? 0` invariants, and the KST-fixed selectEffectivePeriod best-pick
- * exactly — every method forwards verbatim. VALID_SUMMARY_TYPES is
- * re-exposed for the controller's `?type=` validation (same Set the
- * Express route uses) so the INVALID_PARAMS branch stays byte-identical.
+ * Every method forwards unchanged, so the transform shapes (toListItem
+ * 4-field brief summary; toDetailItem full summary incl. `text`), the
+ * empty-string→null / `?? 0` invariants, and the KST-fixed
+ * selectEffectivePeriod best-pick live only in notices.transform.
+ * VALID_SUMMARY_TYPES is re-exposed for the controller's `?type=` validation
+ * (the INVALID_PARAMS branch).
  */
 @Injectable()
 export class TransformService {

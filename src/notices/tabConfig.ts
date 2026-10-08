@@ -208,7 +208,7 @@ function buildTabsResponse(lang: "ko" | "en"): TabsResponse {
 
     if (cat.tabMode === "fixed") {
       // Validation above (lines ~93-100) proves sourceMap.has(cat.sourceId).
-      // Non-null assertion preserves original .js fail-loud semantics: a
+      // Non-null assertion keeps this fail-loud: a
       // missing source would TypeError on `source.name` → 500 → ops alert,
       // rather than silently dropping the tab. (a private note)
       const source = sourceMap.get(cat.sourceId)!;

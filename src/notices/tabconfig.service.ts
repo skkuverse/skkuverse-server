@@ -9,15 +9,15 @@ import type {
 } from "./types";
 
 /**
- * TabConfigService — NestJS port of the notices tabConfig loader.
+ * TabConfigService — the notices tabConfig loader as a Nest provider.
  *
  * Loads + validates categories.json and sources.json and pre-computes the
  * Object.freeze'd per-language tabs response served by GET /notices/tabs.
  *
- * FAIL-LOUD AT BOOTSTRAP: the original module does `process.exit(1)` on any
+ * FAIL-LOUD AT BOOTSTRAP: ./tabConfig.ts does `process.exit(1)` on any
  * validation failure at require()-time. We cannot delegate to it without
  * importing that exit-on-load side effect, so the load+validate logic is
- * ported here verbatim with the single change that `fatal` THROWS instead of
+ * duplicated here with the single change that `fatal` THROWS instead of
  * `process.exit(1)`. The throw is raised inside `load()`, invoked from the
  * provider factory (see tabconfig.provider.ts) so a bad JSON config crashes
  * the Nest app at boot rather than silently degrading the /notices/tabs
@@ -30,8 +30,8 @@ import type {
 
 const CONFIG_DIR = __dirname;
 
-// Element type of the picker tab's `sources` array. Byte-identical to the
-// shape built by the original tabConfig.ts (and structurally to the
+// Element type of the picker tab's `sources` array. Same shape as the one
+// ./tabConfig.ts builds (and structurally the
 // `TabPickerSource` member of the shared `Tab` union in
 // ./types.ts). Declared standalone — NOT derived via a
 // conditional/indexed access on `Tab` — to avoid perturbing TS's deferred
@@ -62,7 +62,7 @@ export class TabConfigService {
 
   /**
    * Loaded, validated, frozen tabs response keyed by language ("ko" | "en").
-   * zh falls back to "en" at the controller (mirrors notices.routes.ts:31).
+   * zh falls back to "en" at the controller.
    */
   get responseByLang(): Readonly<
     Record<"ko" | "en", Readonly<TabsResponse>>
@@ -260,11 +260,11 @@ export class TabConfigService {
     this.loaded = true;
   }
 
-  // ── Helpers (ported from the notices tabConfig loader) ──
+  // ── Helpers (duplicated from ./tabConfig.ts) ──
 
   /**
-   * FAIL-LOUD: the original `fatal` does `console.error` + `process.exit(1)`.
-   * In NestJS we THROW so bootstrap aborts loudly without silent defaulting.
+   * FAIL-LOUD: ./tabConfig.ts's `fatal` logs + `process.exit(1)`s. Here we
+   * THROW so bootstrap aborts loudly without silent defaulting.
    */
   private fatal(message: string): never {
     throw new Error(`FATAL [tabConfig]: ${message}`);
@@ -301,7 +301,7 @@ export class TabConfigService {
 
       if (cat.tabMode === "fixed") {
         // Validation above proves sourceMap.has(cat.sourceId). Non-null
-        // assertion preserves the original fail-loud semantics.
+        // assertion keeps a violation fail-loud.
         const source = sourceMap.get(cat.sourceId)!;
         tabs.push({
           key: cat.id,

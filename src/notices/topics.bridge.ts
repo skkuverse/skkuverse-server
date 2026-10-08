@@ -10,10 +10,9 @@
  * *type-checking program*. Under `tsconfig.test.json` (which sets
  * `noImplicitAny: false`, disabling TS "evolving array" inference) tabConfig.ts's
  * idiomatic `const sources = []; sources.push(...)` then fails to type-check
- * (`sources` collapses to `never[]`) — a spurious error in a file this port must
- * NOT modify. The legacy Express tests never surfaced it because they reach the
- * runtime via CommonJS `require(...)`, which adds no type-program edge; the
- * NestJS tests are the first to pull it in via static `import`. tabConfig.ts is
+ * (`sources` collapses to `never[]`) — a spurious error. A CommonJS
+ * `require(...)` adds no type-program edge, so the test program never pulls
+ * tabConfig.ts in through this path. tabConfig.ts is
  * still fully (and more strictly) type-checked under the root `tsconfig.json`
  * (`noImplicitAny: true`), so nothing is left unchecked — this only stops the lax
  * test program from re-checking it under an incompatible flag.
@@ -22,12 +21,12 @@
  * `notices.topics` exports — NOT `any`. A shape/signature mismatch (e.g. the
  * module renaming an export) surfaces as a runtime `undefined`/TypeError at
  * first use rather than being silently swallowed: there is no `?? []` or
- * defensive narrowing here (preserves the original module's fail-loud
- * contract). Runtime behavior is byte-identical to importing notices.topics
+ * defensive narrowing here (keeps notices.topics' fail-loud contract).
+ * Runtime behavior is byte-identical to importing notices.topics
  * directly — same function object, same TOPIC_CAP value.
  */
 
-// Mirrors notices.topics.ts:24 `buildTopics` and the
+// Mirrors notices.topics.ts `buildTopics` and the
 // NoticeForTopic param it reads (only `sourceId` is consumed).
 type BuildTopics = (
   noticeDoc: { sourceId?: string } | null | undefined,
