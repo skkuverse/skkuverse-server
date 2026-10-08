@@ -134,14 +134,14 @@ describe("resolveStopSequences", () => {
       sequences: {
         "commute-jeongja": {
           up: [
-            { stopId: "jeongja-exit3", note: { ko: "정자 탑승", en: "Board · Jeongja" }, action: "board", timing: "scheduled" },
+            { stopId: "jeongja-exit3", note: { ko: "정자역 탑승", en: "Board · Jeongja" }, action: "board", timing: "scheduled" },
             CAMPUS,
           ],
         },
       },
     };
     const up = (lang: SupportedLang) => resolveStopSequences(["commute-jeongja"], lang, withNote).sequences["commute-jeongja"]!.up!;
-    expect(up("ko")[0]!.note).toBe("정자 탑승");
+    expect(up("ko")[0]!.note).toBe("정자역 탑승");
     expect(up("zh")[0]!.note).toBe("Board · Jeongja");
     expect(up("ko")[1]).not.toHaveProperty("note");
   });
