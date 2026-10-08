@@ -144,8 +144,8 @@ async function getBuildingOverlays(): Promise<{
   degraded: boolean;
 }> {
   const buildings = await getAllBuildings();
-  // getAllBuildings always returns an array; the optional chaining is preserved
-  // from the original route file rather than newly narrowed.
+  // getAllBuildings always returns an array, so `?.` never short-circuits
+  // here.
   if (!buildings?.length) return formatFallback();
 
   const overlays: MapOverlay[] = [];
