@@ -1,15 +1,14 @@
 /**
  * Nest-native fail-loud env validation.
  *
- * lib/config.ts already calls process.exit(1) (outside test) when any required
- * env var is missing — and the reused lib modules (lib/db, lib/busCache,
- * features/bus/*) import lib/config, so that crash fires during bootstrap. But
- * the hard constraint requires NestJS to THROW at bootstrap rather than rely on
+ * src/infra/config.ts already calls process.exit(1) (outside test) when any
+ * required env var is missing — and src/infra/db.ts and the bus modules import
+ * it, so that crash fires during bootstrap. But the hard constraint requires NestJS to THROW at bootstrap rather than rely on
  * an imported module's process.exit. So we replicate the EXACT same required[]
  * list here and throw. Both layers fail loud; neither defaults silently.
  *
- * Test mode (NODE_ENV === "test") skips the throw, mirroring lib/config's
- * `if (!isTest) process.exit(1)` guard.
+ * Test mode (NODE_ENV === "test") skips the throw, as src/infra/config.ts
+ * guards its exit with `if (!isTest) process.exit(1)`.
  */
 
 const NODE_ENV: string = process.env.NODE_ENV || "development";
@@ -17,7 +16,7 @@ const isProduction = NODE_ENV === "production";
 const isTest = NODE_ENV === "test";
 const isDevelopment = !isProduction && !isTest;
 
-// Mirror lib/config.ts USE_PROD_API: production forces prod API (mistake-proof),
+// Same as src/infra/config.ts USE_PROD_API: production forces prod API (mistake-proof),
 // otherwise honors the USE_PROD_API flag.
 const USE_PROD_API = isProduction ? true : process.env.USE_PROD_API === "true";
 
@@ -27,10 +26,11 @@ function devDbName(baseName: string | undefined): string | undefined {
   return isDevelopment ? `${baseName}_dev` : baseName;
 }
 
-// Exact mirror of lib/config.ts apiUrl(): when not using the prod API, prefer
-// the _DEV value but fall back to _PROD. This is what lib/config validates as
-// the RESOLVED `api.hsscNew` value — so a dev who sets only API_HSSC_NEW_DEV
-// (leaving API_HSSC_NEW_PROD empty) PASSES Express's required[] check and boots.
+// Exact mirror of src/infra/config.ts apiUrl(): when not using the prod API,
+// prefer the _DEV value but fall back to _PROD. This is what src/infra/config.ts
+// validates as the RESOLVED `api.hsscNew` value — so a dev who sets only
+// API_HSSC_NEW_DEV (leaving API_HSSC_NEW_PROD empty) PASSES its required[]
+// check and boots.
 // Reading process.env.API_HSSC_NEW_PROD directly here would over-crash the
 // Development / Staging-check modes the config table supports.
 function apiUrl(prodKey: string, devKey: string): string | undefined {
@@ -78,7 +78,7 @@ export function findMissingRequired(): string[] {
 /**
  * Fail-loud validation called at ConfigModule construction (a provider
  * useFactory). Throws — does NOT process.exit — so Nest crashes the bootstrap
- * loudly. Skipped in test mode (mirrors lib/config `if (!isTest)`).
+ * loudly. Skipped in test mode (as src/infra/config.ts skips its exit).
  */
 export function validateEnv(): void {
   if (isTest) return;

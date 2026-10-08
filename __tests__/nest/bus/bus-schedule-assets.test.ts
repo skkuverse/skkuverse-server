@@ -1,0 +1,31 @@
+/**
+ * The build-asset registration guard for the bus schedule's JSON files,
+ * modeled on map-config-assets.test.ts.
+ *
+ * `tsc` does not copy JSON, so every file a module reads at runtime must be
+ * staged into dist/ by scripts/copy-build-assets.js. A miss breaks production
+ * only — the dev watcher and jest read src/ — and for these two the symptom is
+ * an api that exits at boot (the stop catalog, the rest-day calendar).
+ */
+import fs from "fs";
+import path from "path";
+
+const ROOT = path.join(__dirname, "../../..");
+const SCHEDULE_DIR = path.join(ROOT, "src/bus/schedule");
+const ASSET_SCRIPT = path.join(ROOT, "scripts/copy-build-assets.js");
+
+describe("bus schedule JSON assets", () => {
+  it("lists the boarding-stop catalog in copy-build-assets.js", () => {
+    const assetScript = fs.readFileSync(ASSET_SCRIPT, "utf8");
+    expect(assetScript).toContain('["src/bus/schedule/schedule-stops.json", "dist/src/bus/schedule/schedule-stops.json"]');
+  });
+
+  it("lists every JSON file in src/bus/schedule", () => {
+    const assetScript = fs.readFileSync(ASSET_SCRIPT, "utf8");
+    const onDisk = fs.readdirSync(SCHEDULE_DIR).filter((f) => f.endsWith(".json"));
+    expect(onDisk.length).toBeGreaterThan(0);
+    for (const fileName of onDisk) {
+      expect(assetScript).toContain(`dist/src/bus/schedule/${fileName}`);
+    }
+  });
+});

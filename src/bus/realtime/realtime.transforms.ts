@@ -1,12 +1,11 @@
 import type { JongroStationMapping } from "../types";
 
 /**
- * Realtime transform helpers — verbatim port of the private helpers in
- * features/bus/realtime.routes.ts (mapBuses / buildStationEtas /
- * currentTimeString). Exported here so the RealtimeController (next agent) and
- * its tests can import them.
+ * Realtime transform helpers (mapBuses / buildStationEtas /
+ * currentTimeString). Exported here so the RealtimeController and its tests
+ * can import them.
  *
- * CRITICAL parity points preserved exactly:
+ * CRITICAL behaviors:
  *  - mapBuses: `parseInt(b.sequence, 10) - 1` (1-based → 0-based stationIndex)
  *    and the conditional spread `...(b.latitude != null && { latitude })` so
  *    latitude/longitude keys are present ONLY when non-null.

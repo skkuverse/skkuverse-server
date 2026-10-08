@@ -6,7 +6,7 @@ import type { JongroRoute } from "./jongro-registry";
  *
  * The useFactory references `jongroRoutes` inside the DI graph construction so
  * the fail-loud (service-key + jongro-routes.json validation in
- * features/bus/jongro.registry) surfaces at BOOTSTRAP, not lazily on first
+ * ./jongro-registry) surfaces at BOOTSTRAP, not lazily on first
  * import. Belt-and-suspenders empty/invalid check throws explicitly — NO
  * `?? []` silent fallback (per a private note).
  */

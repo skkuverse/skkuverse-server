@@ -8,7 +8,7 @@ import type { HomeLayout } from "../home/home-layout.types";
 
 /**
  * SDUI home payloads — DELEGATES to the validated ui/* pure functions
- * (read-only shared import) for byte-parity. No reimplementation.
+ * (read-only shared import). No reimplementation.
  *
  * getBusList → ui.buslist, which itself imports getBusGroups from
  * bus/bus-config.data at module level (the SAME singleton + etagCache
@@ -17,11 +17,10 @@ import type { HomeLayout } from "../home/home-layout.types";
  * identical bus-group bytes — the date-range visibility filter (moment
  * Asia/Seoul) and screenRoute mapping live entirely inside ui.buslist.
  *
- * getScrollComponent is a pure i18n-templated literal via lib/i18n.
+ * getScrollComponent is a pure i18n-templated literal via src/infra/i18n.ts.
  * getCampusSections adds the banner carousel from campus-banners.json, resolved
- * per request like the home layout. All three default lang to "ko", matching the Express routes which
- * forward req.lang (req.lang is always set by LangMiddleware at runtime; the
- * default mirrors the original .js fallback).
+ * per request like the home layout. All three default lang to "ko"; the
+ * controller forwards req.lang, which LangMiddleware always sets at runtime.
  */
 @Injectable()
 export class UiService {

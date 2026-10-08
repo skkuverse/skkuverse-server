@@ -21,6 +21,8 @@ import { getBusGroups } from "../../../src/bus/bus-config/bus-config.data";
 // is a require rather than an import.
 const {
   buildDocuments,
+  diffRange,
+  findOverlaps,
   parseTimetableFile,
 } = require("../../../scripts/lib/campus-schedule-file");
 
@@ -28,10 +30,12 @@ const REAL_FILE = path.join(__dirname, "../../../scripts/data/campus-schedule.js
 const realTimetable = JSON.parse(fs.readFileSync(REAL_FILE, "utf8"));
 
 /** A minimal valid file; each test bends one thing about it. */
-function makeFile(entries: unknown[]) {
+function makeFile(entries: unknown[], extra: Record<string, unknown> = {}) {
   return {
     semester: "2026-2",
     effectiveFrom: "2026-08-31",
+    routeTypes: ["regular", "hakbu"],
+    ...extra,
     patterns: [
       {
         patternId: "weekday",
@@ -106,6 +110,40 @@ describe("the committed timetable", () => {
   });
 });
 
+describe("every committed timetable file", () => {
+  // The tool is plain CommonJS and cannot import service-config.ts or the
+  // badges, so the cross-file contract is checked here, for each file.
+  const DATA_DIR = path.join(__dirname, "../../../scripts/data");
+  const files = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith("-schedule.json"));
+  const serviceConfig = require("../../../src/bus/schedule/service-config").default;
+
+  it("finds both shuttles' files", () => {
+    expect(files.sort()).toEqual(["campus-schedule.json", "commute-schedule.json"]);
+  });
+
+  describe.each(files)("%s", (file) => {
+    const docs = buildDocuments(parseTimetableFile(JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), "utf8"))));
+    const groups = getBusGroups("ko") as Array<{
+      id: string;
+      screenType: string;
+      screen: { services?: Array<{ serviceId: string }>; routeBadges?: Array<{ id: string }> };
+    }>;
+
+    it("names only services that serviceConfig defines", () => {
+      for (const doc of docs) expect(Object.keys(serviceConfig)).toContain(doc.serviceId);
+    });
+
+    it("uses only route types that have a badge in the group listing the service", () => {
+      for (const doc of docs) {
+        const group = groups.find((g) => g.screen.services?.some((s) => s.serviceId === doc.serviceId));
+        expect(group).toBeDefined();
+        const badgeIds = group!.screen.routeBadges!.map((b) => b.id);
+        for (const entry of doc.entries) expect(badgeIds).toContain(entry.routeType);
+      }
+    });
+  });
+});
+
 describe("parseTimetableFile rejects", () => {
   it("a hand-written index, by name", () => {
     // The whole reason buildDocuments derives index from position: a
@@ -128,9 +166,24 @@ describe("parseTimetableFile rejects", () => {
     expect(() => parseTimetableFile(makeFile([{ ...OK_ENTRY, busCount }]))).toThrow(/busCount/);
   });
 
-  it("an unknown routeType", () => {
-    expect(() => parseTimetableFile(makeFile([{ ...OK_ENTRY, routeType: "fasttrack" }]))).toThrow(
-      /routeType must be one of/,
+  it("a routeType the file does not declare, naming the pattern and the time", () => {
+    const file = makeFile([{ ...OK_ENTRY, routeType: "hakbu" }], { routeTypes: ["up", "down"] });
+    expect(() => parseTimetableFile(file)).toThrow(/^weekday 08:00: routeType must be one of the declared up\/down/);
+  });
+
+  it.each([[undefined], [[]], [["up", "up"]], [["up", ""]]])("a routeTypes declaration of %p", (routeTypes) => {
+    expect(() => parseTimetableFile(makeFile([OK_ENTRY], { routeTypes }))).toThrow(/routeTypes must be/);
+  });
+
+  it("an effectiveUntil earlier than effectiveFrom", () => {
+    expect(() => parseTimetableFile(makeFile([OK_ENTRY], { effectiveUntil: "2026-08-30" }))).toThrow(
+      /effectiveUntil 2026-08-30 is earlier than effectiveFrom 2026-08-31/,
+    );
+  });
+
+  it("a malformed effectiveUntil", () => {
+    expect(() => parseTimetableFile(makeFile([OK_ENTRY], { effectiveUntil: "2026-12" }))).toThrow(
+      /effectiveUntil must be YYYY-MM-DD/,
     );
   });
 
@@ -156,11 +209,104 @@ describe("parseTimetableFile rejects", () => {
   });
 
   it("two patterns of one service claiming the same weekday", () => {
-    // ScheduleService.resolveWeek uses patterns.find(...) — first match over an
-    // unordered scan. An overlap does not error at runtime, it silently serves
-    // one of two timetables, possibly differing between api-1 and api-2.
+    // Both share the file's range, so both would apply on that weekday. At
+    // runtime the engine only logs a pattern_conflict and serves one of them.
     const file = makeFile([OK_ENTRY]);
     file.patterns.push({ ...file.patterns[0]!, patternId: "other" });
     expect(() => parseTimetableFile(file)).toThrow(/claimed by more than one pattern/);
+  });
+});
+
+describe("stopTimes", () => {
+  const withStops = (stopTimes: unknown) => makeFile([{ ...OK_ENTRY, stopTimes }]);
+
+  it("are written into the document when present, and absent otherwise", () => {
+    const [withTimes] = buildDocuments(parseTimetableFile(withStops(["08:00", null, "09:10"])));
+    expect(withTimes.entries[0].stopTimes).toEqual(["08:00", null, "09:10"]);
+    const [plain] = buildDocuments(parseTimetableFile(makeFile([OK_ENTRY])));
+    expect(plain.entries[0]).not.toHaveProperty("stopTimes");
+  });
+
+  it.each([
+    [["08:00"], /at least two stops/],
+    ["08:00", /at least two stops/],
+    [["08:00", "9:10"], /HH:mm or null/],
+    [["07:55", "09:10"], /stopTimes\[0\] must equal time/],
+    [["08:00", "09:10", "08:30"], /must not go back in time — 08:30 follows 09:10/],
+  ])("rejects stopTimes %p", (stopTimes, message) => {
+    expect(() => parseTimetableFile(withStops(stopTimes))).toThrow(message);
+  });
+});
+
+describe("declared route-type order", () => {
+  it("sorts same-minute entries by the file's order, not a fixed one", () => {
+    const entries = [
+      { ...OK_ENTRY, routeType: "hakbu" },
+      { ...OK_ENTRY, routeType: "regular" },
+    ];
+    expect(() => parseTimetableFile(makeFile(entries, { routeTypes: ["hakbu", "regular"] }))).not.toThrow();
+  });
+});
+
+describe("the effective range in built documents", () => {
+  it("writes effectiveFrom into every document, and no effectiveUntil when the file has none", () => {
+    for (const doc of buildDocuments(parseTimetableFile(makeFile([OK_ENTRY])))) {
+      expect(doc.effectiveFrom).toBe("2026-08-31");
+      expect(doc).not.toHaveProperty("effectiveUntil");
+    }
+  });
+
+  it("writes effectiveUntil when the file declares it", () => {
+    const docs = buildDocuments(parseTimetableFile(makeFile([OK_ENTRY], { effectiveUntil: "2026-12-18" })));
+    expect(docs[0]).toMatchObject({ effectiveFrom: "2026-08-31", effectiveUntil: "2026-12-18" });
+  });
+
+  it("reports a range drift the way check mode prints it", () => {
+    expect(diffRange({ effectiveFrom: "2026-08-31" }, { effectiveFrom: "2026-08-31", effectiveUntil: "2026-12-18" })).toEqual([
+      'effectiveUntil null -> "2026-12-18"',
+    ]);
+    expect(diffRange({ days: [1] }, { effectiveFrom: "2026-08-31" })).toEqual(['effectiveFrom null -> "2026-08-31"']);
+    expect(diffRange({ effectiveFrom: "2026-08-31" }, { effectiveFrom: "2026-08-31" })).toEqual([]);
+  });
+});
+
+describe("findOverlaps", () => {
+  const doc = (patternId: string, days: number[], effectiveFrom?: string, effectiveUntil?: string) => ({
+    serviceId: "commute-jeongja",
+    patternId,
+    days,
+    ...(effectiveFrom ? { effectiveFrom } : {}),
+    ...(effectiveUntil ? { effectiveUntil } : {}),
+  });
+
+  it("refuses a pattern whose weekdays and range overlap another one", () => {
+    const target = doc("pilot", [1, 2, 3, 4, 5], "2026-10-19", "2026-12-18");
+    const other = doc("draft", [5], "2026-12-01", "2026-12-31");
+    expect(findOverlaps([target], [other])).toEqual([{ target, other }]);
+  });
+
+  it("accepts back-to-back ranges on the same weekdays", () => {
+    const target = doc("pilot", [1, 2, 3, 4, 5], "2026-10-19", "2026-12-18");
+    const next = doc("winter", [1, 2, 3, 4, 5], "2026-12-21");
+    expect(findOverlaps([target], [next])).toEqual([]);
+  });
+
+  it("accepts overlapping ranges on disjoint weekdays", () => {
+    const target = doc("weekday", [1, 2, 3, 4], "2026-08-31");
+    const friday = doc("friday-old", [5], "2026-03-02");
+    expect(findOverlaps([target], [friday])).toEqual([]);
+  });
+
+  it("refuses a bounded pattern over an unbounded one", () => {
+    const target = doc("pilot", [1, 2, 3, 4, 5], "2026-10-19", "2026-12-18");
+    const legacy = doc("weekday", [1, 2, 3, 4]);
+    expect(findOverlaps([target], [legacy])).toHaveLength(1);
+  });
+
+  it("ignores another service, and a document the file itself rewrites", () => {
+    const target = doc("pilot", [1, 2, 3, 4, 5], "2026-10-19");
+    const sameKey = doc("pilot", [1, 2, 3, 4, 5]);
+    const otherService = { ...doc("weekday", [1, 2, 3, 4, 5]), serviceId: "commute-jamsil" };
+    expect(findOverlaps([target], [sameKey, otherService])).toEqual([]);
   });
 });

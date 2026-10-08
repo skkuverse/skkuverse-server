@@ -32,7 +32,7 @@ beforeAll(async () => {
   app = await buildNoticesApp([
     { provide: NoticesDispatcherService, useValue: dispatcher },
     // Stub the data service so its real onModuleInit (ensureNoticeIndexes →
-    // lib/db) doesn't hang init without Mongo. The internal route never touches it.
+    // src/infra/db.ts) doesn't hang init without Mongo. The internal route never touches it.
     {
       provide: NoticesDataService,
       useValue: { onModuleInit: jest.fn() },
@@ -93,7 +93,8 @@ describe("POST /internal/notices/dispatch-pending", () => {
 
   it("is NOT rate-limited and requires NO Firebase auth (no Bearer needed)", async () => {
     dispatcher.sweepPending.mockResolvedValue(okSummary("internal"));
-    // (A perimeter detail is left out of the public history.)
+    // No Authorization header, no rate-limit middleware — a valid token alone
+    // succeeds, confirming the internal route is bare.
     const res = await request(httpServer)
       .post("/internal/notices/dispatch-pending")
       .set("X-Internal-Token", config.notices.dispatch.internalToken as string)

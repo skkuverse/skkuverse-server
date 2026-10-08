@@ -11,12 +11,11 @@ import { AppFeatureService, type AppClientConfig } from "./app-feature.service";
 const CONFIG_CACHE_CONTROL = "public, max-age=300";
 
 /**
- * GET /app/config — port of the /app/config route.
+ * GET /app/config.
  *
  * Mounted with generalLimiter and NO auth. Returns the data object; the global
- * ResponseInterceptor wraps it in the { meta, data } envelope — identical to
- * `res.success({ ios, android })`. `passthrough` keeps that envelope while the
- * handler sets Cache-Control.
+ * ResponseInterceptor wraps it in the { meta, data } envelope. `passthrough`
+ * keeps that envelope while the handler sets Cache-Control.
  */
 @Controller("app")
 export class AppConfigFeatureController {

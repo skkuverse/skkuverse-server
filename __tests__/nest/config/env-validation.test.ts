@@ -1,13 +1,13 @@
 /**
- * Pins env.validation.findMissingRequired() parity with lib/config.ts's
+ * Pins env.validation.findMissingRequired() to src/infra/config.ts's
  * required[] — specifically the api.hsscNew entry, the only one resolved via
  * apiUrl() (DEV-preferred-with-PROD-fallback) rather than read straight off
  * process.env.
  *
- * The parity bug: reading process.env.API_HSSC_NEW_PROD directly made the Nest
- * validator over-crash in Development / Staging-check modes where a dev sets
- * only API_HSSC_NEW_DEV (leaving _PROD empty) — a config lib/config accepts and
- * Express boots on. The fix mirrors apiUrl().
+ * The bug this pins: reading process.env.API_HSSC_NEW_PROD directly made the
+ * Nest validator over-crash in Development / Staging-check modes where a dev
+ * sets only API_HSSC_NEW_DEV (leaving _PROD empty) — a config
+ * src/infra/config.ts accepts. The fix mirrors apiUrl().
  *
  * findMissingRequired() reads NODE_ENV / USE_PROD_API at MODULE LOAD time
  * (top-level consts), so each scenario sets env then jest.isolateModules() to
@@ -48,11 +48,11 @@ function hsscMissing(missing: string[]): boolean {
   return missing.some((m) => m.includes("api.hsscNew"));
 }
 
-describe("env.validation api.hsscNew parity with lib/config apiUrl()", () => {
+describe("env.validation api.hsscNew matches src/infra/config.ts apiUrl()", () => {
   // Baseline: jest.setup.ts defines all other required vars, so api.hsscNew is
   // the only entry that flips based on the HSSC env we control here.
 
-  it("Development with only API_HSSC_NEW_DEV set → NOT missing (matches Express boot)", () => {
+  it("Development with only API_HSSC_NEW_DEV set → NOT missing (src/infra/config.ts accepts it)", () => {
     withEnv(
       {
         NODE_ENV: "development",

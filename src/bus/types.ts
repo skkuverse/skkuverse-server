@@ -6,6 +6,7 @@
  * an `unknown` index signature so future use sites can add types as needed
  * without churning the wrapper. Defensive narrowing happens inside fetchers.
  */
+import type { I18n, SupportedLang } from "../infra/types";
 
 // --- HSSC (campus shuttle, custom university API) ---
 // Response is a bare JSON array. No envelope.
@@ -138,7 +139,7 @@ export interface JongroStationMapping {
   };
 }
 
-// service.config.js
+// service-config.ts
 export interface ServiceNotice {
   style: "info" | "warning" | "error" | string;
   text: string;
@@ -178,8 +179,8 @@ export interface NaverDirectionsResponse {
 
 // --- MongoDB documents (bus_overrides, bus_schedules) ---
 // `entries` and `notices` are typed as required even though they're only
-// strictly needed on `type: "replace"`. This matches the original .js's
-// assumption that admin tooling produces well-formed docs — a malformed
+// strictly needed on `type: "replace"`, on the assumption that admin
+// tooling produces well-formed docs — a malformed
 // override doc throws at runtime (fail-loud), which is intentional: the
 // alert reaches ops via logger.error instead of silently degrading.
 export interface BusOverrideDoc {
@@ -196,4 +197,70 @@ export interface BusScheduleDoc {
   patternId: string;
   days: number[]; // isoWeekday list (1-7)
   entries: unknown[];
+  // Inclusive YYYY-MM-DD bounds. A missing bound is open, so a pattern with
+  // neither applies on every listed weekday, as before ranges existed.
+  effectiveFrom?: string;
+  effectiveUntil?: string;
+}
+
+// --- Boarding-stop catalog (src/bus/schedule/schedule-stops.json) ---
+
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+/** An original capture plus overlay variants whose labels are in one language. */
+export interface StopPhoto {
+  original: string;
+  localized?: Partial<Record<SupportedLang, string>>;
+}
+
+/** A NAVER street view frame: which panorama, and where the view points. */
+export interface StopPanorama {
+  panoId: string;
+  pan: number;
+  tilt: number;
+  fov: number;
+}
+
+export interface StopExit {
+  number: number;
+  coords: LatLng;
+}
+
+export interface ScheduleStop {
+  id: string;
+  name: I18n;
+  detail?: I18n;
+  coords?: LatLng;
+  photo?: StopPhoto;
+  panorama?: StopPanorama;
+  // Set together: the subway exit riders walk from, and the path from it.
+  exit?: StopExit;
+  walkPath?: LatLng[];
+}
+
+/**
+ * One stop of a run, in the order the bus reaches it. Either a catalog stop
+ * (which brings its photo, street view and exit) or a plain label. `timing`
+ * says whether the time the timetable gives for this stop is the published
+ * schedule or the school's estimate.
+ */
+export interface SequenceStop {
+  stopId?: string;
+  label?: I18n;
+  // The timetable's notes column at this stop ("강남역 탑승"). It lives here, in
+  // the language-aware config, because schedule responses are not localized.
+  note?: I18n;
+  detail?: I18n;
+  action: "board" | "alight";
+  timing: "scheduled" | "estimated";
+}
+
+export interface ScheduleStopCatalog {
+  stops: ScheduleStop[];
+  // serviceId → routeType → the stops of every run of that route type, in
+  // order. An entry's `stopTimes` gives the time at each, index for index.
+  sequences: Record<string, Record<string, SequenceStop[]>>;
 }

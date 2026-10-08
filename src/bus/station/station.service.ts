@@ -8,14 +8,11 @@ import { HsscPollerService } from "../fetchers/hssc.poller.service";
 import { StationPollerService } from "../fetchers/station.poller.service";
 
 /**
- * /bus/station/:stationId handler body — port of
- * features/station/station.routes.ts.
+ * /bus/station/:stationId handler body.
  *
  * For non-01592 stationIds returns an empty array (no totalCount meta). For
- * "01592" composes the exact 2-element body + { totalCount: 2 } meta. Reuses
- * the original computeAllStationEtas / StationHSSCStations (read-only) so the
- * ETA strings stay identical, and preserves the boundary cast + ternary (no
- * narrowing change).
+ * "01592" composes the exact 2-element body + { totalCount: 2 } meta, with the
+ * ETA strings from computeAllStationEtas / StationHSSCStations (./station-eta).
  */
 @Injectable()
 export class StationService {
@@ -32,10 +29,10 @@ export class StationService {
       return { data: [] };
     }
 
-    // 원본의 `?? getHSSCBusList()` cache-fallback 패턴 그대로 — cachedRead가 null
-    // 반환 시 in-memory fetcher로 fallback. 새 narrowing 아님. cachedRead는 unknown
-    // 반환 (bus_cache는 catch-all KV) — computeAllStationEtas 내부 Array.isArray
-    // 검사가 non-array를 처리하므로 boundary cast로 type-system bookkeeping만.
+    // `?? getHSSCBusList()` cache fallback: when cachedRead returns null, fall
+    // back to the in-memory fetcher. cachedRead returns unknown (bus_cache is a
+    // catch-all KV) — computeAllStationEtas's own Array.isArray check handles a
+    // non-array, so the boundary cast is type-system bookkeeping only.
     const dynamicBusData =
       (await this.cache.cachedRead("hssc")) ?? this.hssc.getHSSCBusList();
     const stationsWithEta = computeAllStationEtas(
