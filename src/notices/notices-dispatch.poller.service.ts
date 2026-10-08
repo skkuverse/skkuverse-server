@@ -5,31 +5,22 @@ import { PollerRegistryService } from "../scheduling/poller-registry.service";
 import { NoticesDispatcherService } from "./notices-dispatcher.service";
 
 /**
- * NoticesDispatchPollerService — port of notices.dispatch.poller.ts.
+ * NoticesDispatchPollerService.
  *
  * Safety-net cron sweep for FCM dispatch. Primary trigger is the crawler's
  * cycle-end ping to the internal route; this cron only recovers when that ping
- * is lost. Registration is gated on DISPATCH_SWEEP_ENABLED === "true" exactly
- * as the Express version — api-only pods (or any pod without the flag) never
- * register the poller and only log the debug "ping-only mode" line.
+ * is lost. Registration is gated on DISPATCH_SWEEP_ENABLED === "true" —
+ * api-only pods (or any pod without the flag) never register the poller and
+ * only log the debug "ping-only mode" line.
  *
  * When enabled, registers sweepPending("cron") with the Nest PollerRegistry at
  * config.notices.dispatch.sweepCronIntervalMs (default 30 min), name
- * "notices-dispatch-sweep" — identical interval/name/wrapper as the legacy
- * registerPoller call (notices.dispatch.poller.ts:23-34), including the .catch
- * shape that logs "[dispatch] cron sweep failed".
+ * "notices-dispatch-sweep".
  *
  * Gating: PollerRegistryService.onApplicationBootstrap only startAll()s when
- * ROLE !== "api" (same as index.ts poller startup), so an api replica that
- * somehow set the flag would register but never run the sweep — and even if it
- * ran, sweepPending's in-process single-flight + cross-instance atomic claim
- * prevent double-dispatch.
- *
- * NOTE — no double-run: the Nest app NEVER imports
- * notices.dispatch.poller (that module's top-level
- * registerPoller side-effect lands in the LEGACY lib/pollers registry, which
- * bootstrap never starts). This service is the single driver, and it registers
- * with THIS Nest PollerRegistry only.
+ * ROLE !== "api", so an api replica that somehow set the flag would register
+ * but never run the sweep — and even if it ran, sweepPending's in-process
+ * single-flight + cross-instance atomic claim prevent double-dispatch.
  */
 @Injectable()
 export class NoticesDispatchPollerService implements OnModuleInit {

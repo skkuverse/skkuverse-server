@@ -1,15 +1,14 @@
 /**
- * Nest port of __tests__/notices-routes.test.ts — integration over
- * NoticesController (tabs / source / multi / detail / proxy CORP), validation
- * branches, toListItem/toDetailItem projection, route ordering, and the
- * q-search parsing/pass-through.
+ * Integration over NoticesController (tabs / source / multi / detail / proxy
+ * CORP), validation branches, toListItem/toDetailItem projection, route
+ * ordering, and the q-search parsing/pass-through.
  *
  * NoticesDataService is overridden with a stub (its real onModuleInit would call
- * ensureNoticeIndexes() → lib/db, hanging without Mongo; its finder methods hit
- * the collection). TabConfigService + SourcesService load the real, committed
- * categories.json / sources.json, so the tabs response + INVALID_SOURCE_ID
- * guard exercise the same bytes the Express route does. The envelope + meta come
- * from sendSuccess (controller @Res()), byte-identical to res.success.
+ * ensureNoticeIndexes() → src/infra/db.ts, hanging without Mongo; its finder
+ * methods hit the collection). TabConfigService + SourcesService load the real,
+ * committed categories.json / sources.json, so the tabs response +
+ * INVALID_SOURCE_ID guard run on real data. The envelope + meta come from
+ * sendSuccess (controller @Res()).
  */
 
 import fs from "fs";

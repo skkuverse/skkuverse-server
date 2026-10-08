@@ -1,12 +1,11 @@
 /**
- * Nest port of hssc-transform.test.ts — HsscPollerService is the exact port of
- * features/bus/hssc.fetcher.ts.
+ * HsscPollerService transform.
  *
- * The Express test drives the transform via a setInterval tick; here we call
- * updateHSSCBusList() directly (deterministic, no fake-timer plumbing) with
- * axios mocked. The registry + cache deps are inert stubs. lib/config is the
- * real module (jest.setup supplies API_HSSC_NEW_PROD). Stale thresholds,
- * stopNameMapping, and the circular→linear sequence math are asserted verbatim.
+ * Calls updateHSSCBusList() directly (deterministic, no fake-timer plumbing)
+ * with axios mocked. The registry + cache deps are inert stubs.
+ * src/infra/config.ts is the real module (jest.setup supplies
+ * API_HSSC_NEW_PROD). Stale thresholds, stopNameMapping, and the
+ * circular→linear sequence math are asserted exactly.
  */
 
 jest.mock("axios", () => ({ get: jest.fn() }));

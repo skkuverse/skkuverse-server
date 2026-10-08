@@ -1,15 +1,13 @@
 /**
- * Nest port of schedule-data.test.ts — ScheduleService is the exact port of
- * features/bus/schedule.data.ts.
+ * ScheduleService.
  *
- * Same mocking strategy as the Express test: lib/db (driver-level reads),
- * lib/config (dbName), lib/logger, and the holiday calendar feature module
- * (HolidayCalendarService delegates to it). features/bus/schedule-db is mocked
- * so onModuleInit's ensureScheduleIndexes is a no-op.
+ * Mocks src/infra/db.ts (driver-level reads), src/infra/config.ts (dbName),
+ * src/infra/logger.ts, and the holiday calendar module (HolidayCalendarService
+ * delegates to it). schedule-db is mocked so onModuleInit's
+ * ensureScheduleIndexes is a no-op.
  *
  * The service holds its 1-hr cache on the instance, so we new it up per test.
- * serviceConfig is the same shared object the Express test mutates, so the
- * suspend-window tests mutate it identically.
+ * serviceConfig is a shared object, and the suspend-window tests mutate it.
  */
 
 jest.mock("../../../src/infra/db", () => ({
@@ -51,7 +49,7 @@ const mockFind = jest.fn();
 const mockCollection = jest.fn();
 
 let service: ScheduleService;
-// Convenience wrappers so the test bodies mirror the Express functional style.
+// Convenience wrappers so the test bodies read as plain function calls.
 const resolveWeek = (...args: [string, string?]) => service.resolveWeek(...args);
 const resolveSmartSchedule = (id: string) => service.resolveSmartSchedule(id);
 const clearCache = () => service.clearCache();

@@ -21,13 +21,13 @@ interface GroupConfigEntry {
 }
 
 /**
- * GET /bus/realtime/data/:groupId — port of features/bus/realtime.routes.ts.
+ * GET /bus/realtime/data/:groupId.
  *
  * GROUP_CONFIG is built per-request from the injected poller getters + cache +
- * the validated JONGRO_ROUTES registry (so cache keys jongro_locations_<code> /
- * jongro_stations_<code> and station ordering are byte-identical). The
- * `?? getter()` cache-fallback pattern is preserved verbatim — NOT new
- * narrowing. mapBuses/buildStationEtas/currentTimeString are the verbatim
+ * the validated JONGRO_ROUTES registry (cache keys jongro_locations_<code> /
+ * jongro_stations_<code>, station ordering from the registry). Each getter
+ * reads bus_cache first and falls back to the poller's in-memory value
+ * (`?? getter()`). mapBuses/buildStationEtas/currentTimeString are the shared
  * transforms (conditional latitude/longitude spread, parseInt-1).
  *
  * Cache-Control: no-store. meta extra: { currentTime, totalBuses }.
