@@ -13,7 +13,7 @@
 # Why production rather than development: the image is built with
 # `npm ci --omit=dev`, so pino-pretty is absent, and the logger needs it outside
 # production (src/infra/logger.ts) — a development boot of this image fails.
-# Production mode is also the behavior being verified (JSON logs, swagger off,
+# Production mode is also the behavior being verified (JSON logs,
 # USE_PROD_API forced).
 #
 # Databases: in production mode devDbName() is a no-op, so every database name

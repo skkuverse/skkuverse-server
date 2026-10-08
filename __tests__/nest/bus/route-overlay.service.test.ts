@@ -1,6 +1,5 @@
 /**
- * RouteOverlayService — port of the ROUTES map in route-overlay.routes.ts.
- * Both jongro routes use color "4CAF50" with their respective coords; unknown
+ * RouteOverlayService — the ROUTES map. Both jongro routes use color "4CAF50" with their respective coords; unknown
  * id → undefined (the controller turns that into 404 NOT_FOUND).
  */
 

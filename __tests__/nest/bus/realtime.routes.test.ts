@@ -1,9 +1,9 @@
 /**
  * Integration over RealtimeController (GET /bus/realtime/data/:groupId).
  * Overrides the fetcher getters + cache (cachedRead → null so it falls back to
- * the getters), mirroring the Express helpers/mocks (hssc → [], jongro →
- * undefined). Asserts Cache-Control: no-store, meta.{currentTime,totalBuses},
- * data.{groupId,buses,stationEtas}, and 404 GROUP_NOT_FOUND for unknown groups.
+ * the getters; hssc → [], jongro → undefined). Asserts Cache-Control:
+ * no-store, meta.{currentTime,totalBuses}, data.{groupId,buses,stationEtas},
+ * and 404 GROUP_NOT_FOUND for unknown groups.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";

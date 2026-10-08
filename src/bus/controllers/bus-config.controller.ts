@@ -6,8 +6,7 @@ import { AppError } from "../../common/app-error";
 import { sendSuccess } from "../../common/send-success";
 
 /**
- * Port of features/bus/bus-config.routes.ts (mounted at /bus/config). Both
- * endpoints use @Res() for ETag/304. Per-language ETag (ko ≠ en). The
+ * Mounted at /bus/config. Both endpoints use @Res() for ETag/304. Per-language ETag (ko ≠ en). The
  * :groupId 404 GROUP_NOT_FOUND check precedes the 304 check (order matters —
  * unknown group is 404 even with If-None-Match). 304 → res.status(304).end()
  * only. Root + :groupId coexist on one controller; :groupId won't capture root.
@@ -17,7 +16,7 @@ export class BusConfigController {
   constructor(private readonly busConfig: BusConfigService) {}
 
   /**
-   * GET /bus/config — ordered groups array with ETag caching. Sync in Express.
+   * GET /bus/config — ordered groups array with ETag caching.
    */
   @Get()
   getConfig(@Req() req: Request, @Res() res: Response): void {

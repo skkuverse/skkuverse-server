@@ -1,8 +1,6 @@
 /**
- * Nest port of jongro-registry.test.ts — exercised through the src re-export
- * (src/bus/registry/jongro-registry.ts re-exports features/bus/jongro.registry
- * verbatim) so the derived registry / URL builders / freeze semantics are
- * proven byte-identical via the path the BusModule actually imports.
+ * Exercises src/bus/registry/jongro-registry.ts, the module BusModule
+ * imports: the derived registry, URL builders and freeze semantics.
  *
  * Plus the jongroRoutesProvider useFactory: it must surface the registry at
  * bootstrap (fail-loud) and reject an empty/invalid array with NO silent ?? [].

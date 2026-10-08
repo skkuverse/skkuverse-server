@@ -22,12 +22,11 @@ import { MiniAppsModule } from "./miniapps/miniapps.module";
  * wildcard forRoutes binding does NOT fire against the pre-built ExpressAdapter
  * instance main.ts uses (empirically verified — "*"/"(.*)"/"{*path}"/"*path"
  * all produce zero invocations). Instead main.ts mounts LangMiddleware as raw
- * app-level express middleware before NestFactory.create, exactly mirroring
- * Express index.ts `app.use(langMiddleware)` and the build-bus-app.ts test
- * helper, so req.lang + req.__startNs + Vary are set on every request. The
- * per-route bus rate limiter is still applied inside BusModule.configure()
- * (exact prefixes, which DO fire), preserving the Express lang → limiter →
- * handler order.
+ * app-level express middleware before NestFactory.create, as the
+ * build-bus-app.ts test helper does, so req.lang + req.__startNs + Vary are set
+ * on every request. The per-route bus rate limiter is still applied inside
+ * BusModule.configure() (exact prefixes, which DO fire), so the order is
+ * lang → limiter → handler.
  */
 @Module({
   imports: [

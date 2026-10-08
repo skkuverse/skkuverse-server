@@ -1,9 +1,7 @@
 /**
- * Nest port of bus-config.test.ts — BusConfigService delegates to the pure
- * features/bus/bus-config.data functions, so the ETag bytes + group ordering
- * are byte-identical. Asserting through the service confirms the delegation
- * preserves every contract the Express test pins (5 groups, ordering, per-lang
- * ETag difference, md5 hex format, unknown→null).
+ * BusConfigService delegates to the pure bus-config.data functions. Asserting
+ * through the service confirms the delegation keeps every contract (5 groups,
+ * ordering, per-lang ETag difference, md5 hex format, unknown→null).
  */
 
 import { BusConfigService } from "../../../src/bus/bus-config/bus-config.service";

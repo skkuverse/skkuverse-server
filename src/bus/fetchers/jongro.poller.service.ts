@@ -44,12 +44,13 @@ function isUsableHeaderCd(cd: string | undefined): boolean {
 }
 
 /**
- * Jongro shuttle poller — exact port of features/bus/jongro.fetcher.ts.
+ * Jongro shuttle poller.
  *
  * Per-route in-mem state held on the singleton. Iterates the validated
  * JONGRO_ROUTES registry. Single 40s poller tick polls list + loc for every
- * registered route. Cache keys `jongro_locations_<code>` /
- * `jongro_stations_<code>` preserved byte-identical via registry `code`.
+ * registered route. Cache keys are `jongro_locations_<code>` /
+ * `jongro_stations_<code>` from the registry `code`; RealtimeController reads
+ * them back by the same `code`.
  */
 @Injectable()
 export class JongroPollerService implements OnModuleInit {
@@ -73,8 +74,8 @@ export class JongroPollerService implements OnModuleInit {
     @Inject(JONGRO_ROUTES)
     private readonly jongroRoutes: ReadonlyArray<JongroRoute>,
   ) {
-    // Derived from the registry once. `code` ("02","07",…) stays the cache-key
-    // suffix to preserve byte-identical bus_cache document IDs.
+    // Derived from the registry once. `code` ("02","07",…) is the cache-key
+    // suffix of the bus_cache document IDs.
     this.mappingByCode = Object.fromEntries(
       this.jongroRoutes.map((r) => [r.code, r.mapping]),
     );

@@ -12,10 +12,9 @@ type BusGroup = ReturnType<typeof getBusGroups>[number];
 function isVisible(visibility: BusGroup["visibility"], now: moment.Moment): boolean {
   if (visibility.type === "always") return true;
   if (visibility.type === "dateRange") {
-    // bus-config.data의 dateRange variant은 from/until을 항상 함께 정의 (literal
-    // 정의 사이트에서 함께 set). 그러나 TS는 visibility.type을 literal로 좁히지 못해
-    // (PR2가 as const 안 붙임) from/until이 string|undefined로 추론됨. 원본 .js는
-    // 직접 접근했으므로 같은 invariant를 `!`로 type-system에 약속.
+    // bus-config.data's dateRange variant always sets from/until together, but
+    // TS does not narrow them off visibility.type (no `as const` there), so
+    // they type as string|undefined; `!` states the invariant.
     const from = moment.tz(visibility.from!, "YYYY-MM-DD", TZ).startOf("day");
     const until = moment.tz(visibility.until!, "YYYY-MM-DD", TZ).endOf("day");
     return now.isBetween(from, until, null, "[]");

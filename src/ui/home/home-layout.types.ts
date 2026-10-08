@@ -87,10 +87,10 @@ export interface HomeMiniAppTile {
 }
 
 /**
- * A game bundled into the app (skkuverse-app `features/games`). Name and icon
- * come from the app, and a build that does not ship the game drops the tile.
- * The server cannot know which games a build carries, so it checks the shape
- * of the id only.
+ * A game bundled into the app (`skkuverse-app/apps/mobile/src/features/games`).
+ * Name and icon come from the app, and a build that does not ship the game
+ * drops the tile. The server cannot know which games a build carries, so it
+ * checks the shape of the id only.
  */
 export interface HomeGameTile {
   kind: "game";

@@ -12,10 +12,9 @@ import { createLogThrottle } from "../../infra/log-throttle";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Port of features/bus/schedule.routes.ts. Both endpoints use @Res() for
- * ETag/304 control. The 304 path is `res.status(304).end()` — NO body, NO
- * envelope, NO X-Response-Time, NO ETag/Cache-Control re-set (exact Express
- * behavior). ETag strings + Cache-Control (public, max-age=300) byte-identical.
+ * Both endpoints use @Res() for ETag/304 control. The 304 path is
+ * `res.status(304).end()` — NO body, NO envelope, NO X-Response-Time, NO
+ * ETag/Cache-Control re-set. Cache-Control is public, max-age=300.
  */
 // Still called by old app builds; an hourly line per service with a count of
 // the calls in between says how many remain without a line per request.
@@ -31,15 +30,15 @@ export class ScheduleController {
   @Get("data/:serviceId/week")
   async getWeek(
     @Param("serviceId") serviceId: string,
-    // Preserve original .js coercion: `?from=A&from=B` arrives as string[],
-    // passed to DATE_RE.test() which coerces to "A,B" → fails → 400. Read as
-    // `any` and pass through unchanged — NO type guard / narrowing.
+    // `?from=A&from=B` arrives as string[], passed to DATE_RE.test() which
+    // coerces to "A,B" → fails → 400. Read as `any` and pass through
+    // unchanged — NO type guard / narrowing.
     @Query("from") from: any,
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    // pino-http attaches `log` to req. Preserve fail-loud: if req.log is
-    // undefined this throws → 500 (matches pre-TS Express behavior).
+    // pino-http attaches `log` to req. Fail-loud on purpose: if req.log is
+    // undefined this throws → 500 (see the `log` note in infra/types.ts).
     const ticket = weekCallThrottle.take(serviceId);
     if (ticket) {
       req.log.warn(

@@ -8,22 +8,22 @@ interface CacheEntry {
 }
 
 /**
- * Dual-layer bus cache — exact port of lib/busCache.ts.
+ * Dual-layer bus cache.
  *
  * In-memory layer (default 5s TTL) over a Mongo `bus_cache` catch-all KV store
  * (TTL index 60s on `_updatedAt`). Uses the raw mongodb driver via
- * lib/db.getClient() + config.mongo (NOT Mongoose) so cache documents, the
- * `_id`-as-string key, and the TTL index name (`ttl_updatedAt`) are
- * byte-identical to the Express app. Collection name honors the
+ * src/infra/db.ts getClient() + config.mongo (NOT Mongoose) so cache documents,
+ * the `_id`-as-string key, and the TTL index name (`ttl_updatedAt`) match what
+ * the collection already holds. Collection name honors the
  * MONGO_CACHE_COLLECTION override via config.mongo.collections.busCache.
  *
- * Each instance owns its own in-memory map (matching the module-scoped
- * `memCache` in the original — a single DI singleton preserves that scope).
+ * Each instance owns its own in-memory map; as a DI singleton that is one map
+ * per process.
  */
 @Injectable()
 export class BusCacheService {
   // Collection generic intentionally untyped at this layer — bus_cache is a
-  // catch-all key/value store (mirrors lib/busCache.ts comment).
+  // catch-all key/value store.
   private memCache: Record<string, CacheEntry> = {};
 
   private getCollection() {
@@ -40,8 +40,7 @@ export class BusCacheService {
   }
 
   async write(key: string, data: unknown): Promise<void> {
-    // `_id` is a string key by design (cache namespace); cast through `never`
-    // exactly as lib/busCache.ts does.
+    // `_id` is a string key by design (cache namespace); cast through `never`.
     await this.getCollection().updateOne(
       { _id: key } as never,
       { $set: { data, _updatedAt: new Date() } },
