@@ -131,7 +131,7 @@ interface TabFixed {
     campus: string | null;
   };
 }
-interface TabPickerSource {
+export interface TabPickerSource {
   id: string;
   name: string;
   campus: string | null;

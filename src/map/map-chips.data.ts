@@ -81,7 +81,7 @@ export const BASE_CHIPS: readonly MapChipSpec[] = [];
  *
  * Errors accumulate rather than throwing on the first one, so a bad edit is
  * fixed in a single pass instead of one boot per mistake — the shape
- * `tabconfig.service.ts` uses for the same reason. Returned rather than thrown
+ * `tabConfig.ts` uses for the same reason. Returned rather than thrown
  * because the two callers want different failures: the import-time check on
  * `BASE_CHIPS` is fatal, the config-load check on a festival's chips rejects the
  * config and leaves the base map serving.
