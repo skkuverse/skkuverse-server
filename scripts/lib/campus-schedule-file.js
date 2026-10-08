@@ -31,6 +31,39 @@ function entryRank(entry, routeTypes) {
   return `${entry.time}#${routeRank}`;
 }
 
+/**
+ * `stopTimes` lists the time at each stop of the run, in the order the bus
+ * reaches them; the stop sequence itself (names, board/alight, scheduled or
+ * estimated) is the service's in src/bus/schedule/schedule-stops.json, and a
+ * jest test checks the two have the same length. `null` is a time nobody
+ * knows (only allowed at an estimated stop — also checked by that test). The
+ * first stop is where the run departs, so it must equal `time`, which every
+ * client already reads.
+ */
+function checkStopTimes(entry, patternId) {
+  const at = `${patternId} ${entry.time}`;
+  const { stopTimes } = entry;
+  if (!Array.isArray(stopTimes) || stopTimes.length < 2) {
+    throw new Error(`${at}: stopTimes must list at least two stops`);
+  }
+  for (const t of stopTimes) {
+    if (t !== null && (typeof t !== "string" || !TIME_RE.test(t))) {
+      throw new Error(`${at}: stopTimes must be HH:mm or null, got ${JSON.stringify(t)}`);
+    }
+  }
+  if (stopTimes[0] !== entry.time) {
+    throw new Error(`${at}: stopTimes[0] must equal time, got ${JSON.stringify(stopTimes[0])}`);
+  }
+  let previous = "";
+  for (const t of stopTimes) {
+    if (t === null) continue;
+    if (t < previous) {
+      throw new Error(`${at}: stopTimes must not go back in time — ${t} follows ${previous}`);
+    }
+    previous = t;
+  }
+}
+
 function entryKey(entry) {
   return `${entry.time}|${entry.routeType}`;
 }
@@ -132,7 +165,7 @@ function parseTimetableFile(raw) {
         throw new Error(`${patternId}: entry must not carry "index" — it is derived from position`);
       }
       const unknownKeys = Object.keys(entry).filter(
-        (k) => !["time", "routeType", "busCount", "notes"].includes(k),
+        (k) => !["time", "routeType", "busCount", "notes", "stopTimes"].includes(k),
       );
       if (unknownKeys.length > 0) {
         throw new Error(`${patternId}: unknown entry key(s) ${unknownKeys.join(", ")}`);
@@ -154,6 +187,9 @@ function parseTimetableFile(raw) {
         throw new Error(
           `${patternId} ${entry.time}: notes must be null or a non-empty string, got ${JSON.stringify(entry.notes)}`,
         );
+      }
+      if ("stopTimes" in entry) {
+        checkStopTimes(entry, patternId);
       }
 
       const key = entryKey(entry);
@@ -196,6 +232,8 @@ function buildDocuments(timetable) {
           routeType: entry.routeType,
           busCount: entry.busCount,
           notes: entry.notes,
+          // Only when the file has them, so 인자셔틀 documents stay byte-identical.
+          ...(entry.stopTimes ? { stopTimes: [...entry.stopTimes] } : {}),
         })),
       };
       if (timetable.effectiveUntil !== undefined) {
@@ -268,7 +306,11 @@ function diffEntries(currentEntries, targetEntries, routeTypes) {
     const before = current.get(key);
     if (!before) {
       lines.push({ kind: "add", entry });
-    } else if (before.busCount !== entry.busCount || (before.notes ?? null) !== entry.notes) {
+    } else if (
+      before.busCount !== entry.busCount ||
+      (before.notes ?? null) !== entry.notes ||
+      JSON.stringify(before.stopTimes ?? null) !== JSON.stringify(entry.stopTimes ?? null)
+    ) {
       lines.push({ kind: "change", entry, before });
     }
   }

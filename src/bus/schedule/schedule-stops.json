@@ -367,137 +367,215 @@
       }
     }
   ],
-  "boarding": {
-    "commute-jeongja": [
-      {
-        "routeTypes": [
-          "up"
-        ],
-        "stopId": "jeongja-exit3",
-        "alight": {
-          "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
-          "en": "Near N Center → CNS Center → near Industry-Academic Cooperation Center → near Student Center",
-          "zh": "N中心附近 → CNS中心 → 产学合作中心附近 → 学生会馆附近"
+  "sequences": {
+    "commute-jeongja": {
+      "up": [
+        {
+          "stopId": "jeongja-exit3",
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "label": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
+          "detail": {
+            "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
+            "en": "Near N Center → CNS Center → near Industry-Academic Cooperation Center → near Student Center",
+            "zh": "N中心附近 → CNS中心 → 产学合作中心附近 → 学生会馆附近"
+          },
+          "action": "alight",
+          "timing": "estimated"
         }
-      },
-      {
-        "routeTypes": [
-          "down"
-        ],
-        "stopId": "nsc-opposite",
-        "alight": {
-          "ko": "정자역 2번 출구 앞",
-          "en": "Jeongja Stn. Exit 2",
-          "zh": "亭子站 2号出口"
+      ],
+      "down": [
+        {
+          "stopId": "nsc-opposite",
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "label": {
+            "ko": "정자역 2번 출구 앞",
+            "en": "Jeongja Stn. Exit 2",
+            "zh": "亭子站 2号出口"
+          },
+          "action": "alight",
+          "timing": "estimated"
         }
-      }
-    ],
-    "commute-jamsil": [
-      {
-        "routeTypes": [
-          "up"
-        ],
-        "stopId": "jamsil-exit4",
-        "alight": {
-          "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
-          "en": "Near N Center → CNS Center → near Industry-Academic Cooperation Center → near Student Center",
-          "zh": "N中心附近 → CNS中心 → 产学合作中心附近 → 学生会馆附近"
+      ]
+    },
+    "commute-jamsil": {
+      "up": [
+        {
+          "stopId": "jamsil-exit4",
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "label": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
+          "detail": {
+            "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
+            "en": "Near N Center → CNS Center → near Industry-Academic Cooperation Center → near Student Center",
+            "zh": "N中心附近 → CNS中心 → 产学合作中心附近 → 学生会馆附近"
+          },
+          "action": "alight",
+          "timing": "estimated"
         }
-      },
-      {
-        "routeTypes": [
-          "down"
-        ],
-        "stopId": "nsc-opposite",
-        "alight": {
-          "ko": "잠실역 5번 출구 앞",
-          "en": "Jamsil Stn. Exit 5",
-          "zh": "蚕室站 5号出口"
+      ],
+      "down": [
+        {
+          "stopId": "nsc-opposite",
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "label": {
+            "ko": "잠실역 5번 출구 앞",
+            "en": "Jamsil Stn. Exit 5",
+            "zh": "蚕室站 5号出口"
+          },
+          "action": "alight",
+          "timing": "estimated"
         }
-      }
-    ],
-    "commute-dogok": [
-      {
-        "routeTypes": [
-          "up"
-        ],
-        "stopId": "dogok-exit1",
-        "alight": {
-          "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
-          "en": "Near N Center → CNS Center → near Industry-Academic Cooperation Center → near Student Center",
-          "zh": "N中心附近 → CNS中心 → 产学合作中心附近 → 学生会馆附近"
+      ]
+    },
+    "commute-dogok": {
+      "up": [
+        {
+          "stopId": "dogok-exit1",
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "label": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
+          "detail": {
+            "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
+            "en": "Near N Center → CNS Center → near Industry-Academic Cooperation Center → near Student Center",
+            "zh": "N中心附近 → CNS中心 → 产学合作中心附近 → 学生会馆附近"
+          },
+          "action": "alight",
+          "timing": "estimated"
         }
-      },
-      {
-        "routeTypes": [
-          "down"
-        ],
-        "stopId": "nsc-opposite",
-        "alight": {
-          "ko": "도곡역 4번 출구 앞",
-          "en": "Dogok Stn. Exit 4",
-          "zh": "道谷站 4号出口"
+      ],
+      "down": [
+        {
+          "stopId": "nsc-opposite",
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "label": {
+            "ko": "도곡역 4번 출구 앞",
+            "en": "Dogok Stn. Exit 4",
+            "zh": "道谷站 4号出口"
+          },
+          "action": "alight",
+          "timing": "estimated"
         }
-      }
-    ],
-    "commute-gangnam-yangjae": [
-      {
-        "routeTypes": [
-          "up"
-        ],
-        "stopId": "gangnam-exit5",
-        "alight": {
-          "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
-          "en": "Near N Center → CNS Center → near Industry-Academic Cooperation Center → near Student Center",
-          "zh": "N中心附近 → CNS中心 → 产学合作中心附近 → 学生会馆附近"
+      ]
+    },
+    "commute-gangnam-yangjae": {
+      "up": [
+        {
+          "stopId": "gangnam-exit5",
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "stopId": "yangjae-exit2",
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "label": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
+          "detail": {
+            "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
+            "en": "Near N Center → CNS Center → near Industry-Academic Cooperation Center → near Student Center",
+            "zh": "N中心附近 → CNS中心 → 产学合作中心附近 → 学生会馆附近"
+          },
+          "action": "alight",
+          "timing": "estimated"
         }
-      },
-      {
-        "routeTypes": [
-          "up"
-        ],
-        "stopId": "yangjae-exit2",
-        "alight": {
-          "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
-          "en": "Near N Center → CNS Center → near Industry-Academic Cooperation Center → near Student Center",
-          "zh": "N中心附近 → CNS中心 → 产学合作中心附近 → 学生会馆附近"
+      ],
+      "down": [
+        {
+          "stopId": "nsc-opposite",
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "label": {
+            "ko": "양재역 3번 출구 앞",
+            "en": "Yangjae Stn. Exit 3",
+            "zh": "良才站 3号出口"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        },
+        {
+          "label": {
+            "ko": "강남역 사거리 전 중앙버스차로 정류장",
+            "en": "Median bus stop before Gangnam Station intersection",
+            "zh": "江南站十字路口前中央公交车站"
+          },
+          "action": "alight",
+          "timing": "estimated"
         }
-      },
-      {
-        "routeTypes": [
-          "down"
-        ],
-        "stopId": "nsc-opposite",
-        "alight": {
-          "ko": "양재역 3번 출구 앞 → 강남역 사거리 전 중앙버스차로 정류장",
-          "en": "Yangjae Stn. Exit 3 → median bus stop before Gangnam Station intersection",
-          "zh": "良才站 3号出口 → 江南站十字路口前中央公交车站"
+      ]
+    },
+    "commute-gwanggyo": {
+      "up": [
+        {
+          "stopId": "gwanggyo-exit4",
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "label": {
+            "ko": "자과캠",
+            "en": "NSC",
+            "zh": "自然校区"
+          },
+          "detail": {
+            "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
+            "en": "Near N Center → CNS Center → near Industry-Academic Cooperation Center → near Student Center",
+            "zh": "N中心附近 → CNS中心 → 产学合作中心附近 → 学生会馆附近"
+          },
+          "action": "alight",
+          "timing": "estimated"
         }
-      }
-    ],
-    "commute-gwanggyo": [
-      {
-        "routeTypes": [
-          "up"
-        ],
-        "stopId": "gwanggyo-exit4",
-        "alight": {
-          "ko": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근",
-          "en": "Near N Center → CNS Center → near Industry-Academic Cooperation Center → near Student Center",
-          "zh": "N中心附近 → CNS中心 → 产学合作中心附近 → 学生会馆附近"
+      ],
+      "down": [
+        {
+          "stopId": "nsc-opposite",
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "label": {
+            "ko": "광교중앙역 1번 출구 앞",
+            "en": "Gwanggyo Jungang Stn. Exit 1",
+            "zh": "光教中央站 1号出口"
+          },
+          "action": "alight",
+          "timing": "estimated"
         }
-      },
-      {
-        "routeTypes": [
-          "down"
-        ],
-        "stopId": "nsc-opposite",
-        "alight": {
-          "ko": "광교중앙역 1번 출구 앞",
-          "en": "Gwanggyo Jungang Stn. Exit 1",
-          "zh": "光教中央站 1号出口"
-        }
-      }
-    ]
+      ]
+    }
   }
 }

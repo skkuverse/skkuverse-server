@@ -1,5 +1,5 @@
 /**
- * Schedule config v2: the boarding helper, the street view link, and the rule
+ * Schedule config v2: the stop-sequence helper, the street view link, and the rule
  * that groups using no v2 field serialize exactly as before (design D5).
  *
  * The fixture was captured from `getGroupById` / `computeGroupEtag` on the code
@@ -12,7 +12,7 @@ import path from "path";
 import {
   computeGroupEtag,
   getGroupById,
-  resolveBoarding,
+  resolveStopSequences,
 } from "../../../src/bus/bus-config/bus-config.data";
 import { buildStreetViewUrl } from "../../../src/bus/schedule/naver-street-view";
 import type { ScheduleStopCatalog } from "../../../src/bus/types";
@@ -61,8 +61,14 @@ describe("buildStreetViewUrl", () => {
   });
 });
 
-describe("resolveBoarding", () => {
+describe("resolveStopSequences", () => {
   const MEDIA = "https://media.skkuverse.com/commute/stops";
+  const CAMPUS = {
+    label: { ko: "자과캠", en: "NSC" },
+    detail: { ko: "N센터 인근 → 학생회관 인근", en: "Near N Center → near Student Center" },
+    action: "alight" as const,
+    timing: "estimated" as const,
+  };
   const catalog: ScheduleStopCatalog = {
     stops: [
       {
@@ -84,50 +90,68 @@ describe("resolveBoarding", () => {
       { id: "nsc-opposite", name: { ko: "N센터 건너편", en: "Across from N Center", zh: "N中心对面" } },
       { id: "unused", name: { ko: "쓰이지 않는 정류장" } },
     ],
-    boarding: {
-      "commute-jeongja": [
-        { routeTypes: ["up"], stopId: "jeongja-exit3", alight: { ko: "N센터 인근", en: "Near N Center" } },
-        { routeTypes: ["down"], stopId: "nsc-opposite", alight: { ko: "정자역 2번 출구 앞" } },
-      ],
-      "commute-jamsil": [{ routeTypes: ["down"], stopId: "nsc-opposite" }],
+    sequences: {
+      "commute-jeongja": {
+        up: [{ stopId: "jeongja-exit3", action: "board", timing: "scheduled" }, CAMPUS],
+        down: [
+          { stopId: "nsc-opposite", action: "board", timing: "scheduled" },
+          { label: { ko: "정자역 2번 출구 앞" }, action: "alight", timing: "estimated" },
+        ],
+      },
+      "commute-jamsil": {
+        down: [{ stopId: "nsc-opposite", action: "board", timing: "scheduled" }, CAMPUS],
+      },
     },
   };
 
-  it("lists only referenced stops, each once, in order of first reference", () => {
-    const { stops } = resolveBoarding(["commute-jeongja", "commute-jamsil", "commute-dogok"], "ko", catalog);
+  it("lists only referenced catalog stops, each once, in order of first reference", () => {
+    const { stops } = resolveStopSequences(["commute-jeongja", "commute-jamsil", "commute-dogok"], "ko", catalog);
     expect(stops.map((s) => s.id)).toEqual(["jeongja-exit3", "nsc-opposite"]);
   });
 
-  it("omits a service without boarding", () => {
-    const { boarding } = resolveBoarding(["commute-jeongja", "commute-dogok"], "ko", catalog);
-    expect(Object.keys(boarding)).toEqual(["commute-jeongja"]);
+  it("omits a service without sequences", () => {
+    const { sequences } = resolveStopSequences(["commute-jeongja", "commute-dogok"], "ko", catalog);
+    expect(Object.keys(sequences)).toEqual(["commute-jeongja"]);
+  });
+
+  it("names a catalog stop by its name and a plain stop by its label, with action and timing", () => {
+    const { sequences } = resolveStopSequences(["commute-jeongja"], "ko", catalog);
+    expect(sequences["commute-jeongja"]).toEqual({
+      up: [
+        { label: "정자역 3번 출구", action: "board", timing: "scheduled", stopId: "jeongja-exit3" },
+        { label: "자과캠", action: "alight", timing: "estimated", detail: "N센터 인근 → 학생회관 인근" },
+      ],
+      down: [
+        { label: "N센터 건너편", action: "board", timing: "scheduled", stopId: "nsc-opposite" },
+        { label: "정자역 2번 출구 앞", action: "alight", timing: "estimated" },
+      ],
+    });
   });
 
   it("resolves text zh → en → ko", () => {
-    const { stops, boarding } = resolveBoarding(["commute-jeongja"], "zh", catalog);
+    const { stops, sequences } = resolveStopSequences(["commute-jeongja"], "zh", catalog);
     expect(stops[0]!.name).toBe("Jeongja Stn. Exit 3");
     expect(stops[0]!.detail).toBe("파리바게뜨 앞");
     expect(stops[1]!.name).toBe("N中心对面");
-    expect(boarding["commute-jeongja"]!.map((b) => b.alight)).toEqual(["Near N Center", "정자역 2번 출구 앞"]);
+    expect(sequences["commute-jeongja"]!.up!.map((st) => st.label)).toEqual(["Jeongja Stn. Exit 3", "NSC"]);
   });
 
   it("serves the photo variant for the language, else the original", () => {
-    const photo = (lang: SupportedLang) => resolveBoarding(["commute-jeongja"], lang, catalog).stops[0]!.photoUrl;
+    const photo = (lang: SupportedLang) => resolveStopSequences(["commute-jeongja"], lang, catalog).stops[0]!.photoUrl;
     expect(photo("zh")).toBe(`${MEDIA}/jeongja-exit3/zh-22222222.jpg`);
     expect(photo("ko")).toBe(`${MEDIA}/jeongja-exit3/ko-11111111.jpg`);
     expect(photo("en")).toBe(`${MEDIA}/jeongja-exit3/original-00000000.jpg`);
   });
 
   it("builds the street view link and passes the exit and path through", () => {
-    const stop = resolveBoarding(["commute-jeongja"], "ko", catalog).stops[0]!;
+    const stop = resolveStopSequences(["commute-jeongja"], "ko", catalog).stops[0]!;
     expect(stop.streetViewUrl).toBe(VERIFIED_LINK);
     expect(stop.exit).toEqual({ number: 3, coords: { lat: 37.365922, lng: 127.107774 } });
     expect(stop.walkPath).toHaveLength(2);
   });
 
   it("emits no key for a field the catalog does not set", () => {
-    const { stops, boarding } = resolveBoarding(["commute-jamsil"], "ko", catalog);
+    const { stops } = resolveStopSequences(["commute-jamsil"], "ko", catalog);
     expect(stops[0]).toEqual({ id: "nsc-opposite", name: "N센터 건너편" });
-    expect(boarding["commute-jamsil"]![0]).toEqual({ routeTypes: ["down"], stopId: "nsc-opposite" });
   });
 });

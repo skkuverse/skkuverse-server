@@ -217,6 +217,27 @@ describe("parseTimetableFile rejects", () => {
   });
 });
 
+describe("stopTimes", () => {
+  const withStops = (stopTimes: unknown) => makeFile([{ ...OK_ENTRY, stopTimes }]);
+
+  it("are written into the document when present, and absent otherwise", () => {
+    const [withTimes] = buildDocuments(parseTimetableFile(withStops(["08:00", null, "09:10"])));
+    expect(withTimes.entries[0].stopTimes).toEqual(["08:00", null, "09:10"]);
+    const [plain] = buildDocuments(parseTimetableFile(makeFile([OK_ENTRY])));
+    expect(plain.entries[0]).not.toHaveProperty("stopTimes");
+  });
+
+  it.each([
+    [["08:00"], /at least two stops/],
+    ["08:00", /at least two stops/],
+    [["08:00", "9:10"], /HH:mm or null/],
+    [["07:55", "09:10"], /stopTimes\[0\] must equal time/],
+    [["08:00", "09:10", "08:30"], /must not go back in time — 08:30 follows 09:10/],
+  ])("rejects stopTimes %p", (stopTimes, message) => {
+    expect(() => parseTimetableFile(withStops(stopTimes))).toThrow(message);
+  });
+});
+
 describe("declared route-type order", () => {
   it("sorts same-minute entries by the file's order, not a fixed one", () => {
     const entries = [

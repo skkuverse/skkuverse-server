@@ -2,11 +2,13 @@
  * Boarding-stop catalog for schedule groups.
  *
  * `schedule-stops.json` is the single source of truth for where each run of a
- * schedule service boards: the stops (names, photos, street view frame, the
- * subway exit and the walk from it) and, per service, which route types board
- * at which stop. It is a committed file rather than data in `service-config.ts`
- * so that a later change can serve the same catalog to skkuverse-web's info
- * pages.
+ * schedule service stops: the boarding stops (names, photos, street view
+ * frame, the subway exit and the walk from it) and, per service and route
+ * type, the sequence of stops every run passes — where riders board and where
+ * they get off, and whether the timetable's time there is scheduled or an
+ * estimate. A timetable entry's `stopTimes` gives one time per sequence stop.
+ * It is a committed file rather than data in `service-config.ts` so that a
+ * later change can serve the same catalog to skkuverse-web's info pages.
  *
  * Validated at module load with the fail-fast pattern of
  * `../registry/jongro-registry.ts`: a bad catalog exits the process, because a
@@ -167,8 +169,8 @@ function stopErrors(stop: Record<string, unknown>, label: string): string[] {
  */
 export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<string>): string[] {
   const errors: string[] = [];
-  if (!isPlainObject(raw) || !Array.isArray(raw.stops) || !isPlainObject(raw.boarding)) {
-    return ["schedule-stops.json must be { stops: [], boarding: {} }"];
+  if (!isPlainObject(raw) || !Array.isArray(raw.stops) || !isPlainObject(raw.sequences)) {
+    return ["schedule-stops.json must be { stops: [], sequences: {} }"];
   }
 
   const stopIds = new Set<string>();
@@ -183,40 +185,60 @@ export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<s
     errors.push(...stopErrors(s, label));
   });
 
-  for (const [serviceId, entries] of Object.entries(raw.boarding)) {
-    const label = `boarding ${serviceId}`;
+  for (const [serviceId, byRouteType] of Object.entries(raw.sequences)) {
+    const label = `sequences ${serviceId}`;
     if (!knownServiceIds.has(serviceId)) errors.push(`${label}: unknown service`);
-    if (!Array.isArray(entries) || entries.length === 0) {
-      errors.push(`${label}: must be a non-empty array`);
+    if (!isPlainObject(byRouteType) || Object.keys(byRouteType).length === 0) {
+      errors.push(`${label}: must map route types to stop sequences`);
       continue;
     }
-    // A route type may board at several stops (the 강남·양재 runs board at
-    // 강남, then 양재): its entries list them in the order the bus reaches
-    // them. The same route type at the same stop twice is a copy-paste error.
-    const seenAtStop = new Set<string>();
-    entries.forEach((e, i) => {
-      const at = `${label}[${i}]`;
-      if (!isPlainObject(e)) {
-        errors.push(`${at}: must be an object`);
-        return;
+    for (const [routeType, seq] of Object.entries(byRouteType)) {
+      const at = `${label}.${routeType}`;
+      if (!Array.isArray(seq) || seq.length < 2) {
+        errors.push(`${at}: must list at least two stops`);
+        continue;
       }
-      if (!Array.isArray(e.routeTypes) || e.routeTypes.length === 0 || !e.routeTypes.every(isNonBlank)) {
-        errors.push(`${at}: routeTypes must be a non-empty list of names`);
-      } else {
-        for (const rt of e.routeTypes) {
-          const key = `${rt}@${String(e.stopId)}`;
-          if (seenAtStop.has(key)) errors.push(`${at}: route type ${rt} boards at ${String(e.stopId)} twice`);
-          seenAtStop.add(key);
+      const seen = new Set<string>();
+      seq.forEach((st, i) => {
+        const sp = `${at}[${i}]`;
+        if (!isPlainObject(st)) {
+          errors.push(`${sp}: must be an object`);
+          return;
         }
+        const hasStop = "stopId" in st;
+        const hasLabel = "label" in st;
+        if (hasStop === hasLabel) {
+          errors.push(`${sp}: needs exactly one of stopId and label`);
+        } else if (hasStop) {
+          if (typeof st.stopId !== "string" || !stopIds.has(st.stopId)) {
+            errors.push(`${sp}: unknown stop id ${JSON.stringify(st.stopId)}`);
+          } else if (seen.has(st.stopId)) {
+            errors.push(`${sp}: stop ${st.stopId} appears twice`);
+          } else {
+            seen.add(st.stopId);
+          }
+        } else {
+          const labelErr = i18nError(st.label);
+          if (labelErr) errors.push(`${sp}: label ${labelErr}`);
+        }
+        if ("detail" in st) {
+          const detailErr = i18nError(st.detail);
+          if (detailErr) errors.push(`${sp}: detail ${detailErr}`);
+        }
+        if (st.action !== "board" && st.action !== "alight") {
+          errors.push(`${sp}: action must be "board" or "alight"`);
+        }
+        if (st.timing !== "scheduled" && st.timing !== "estimated") {
+          errors.push(`${sp}: timing must be "scheduled" or "estimated"`);
+        }
+      });
+      // The run departs from its first stop, and a run nobody gets off is not one.
+      const first = seq[0] as Record<string, unknown> | undefined;
+      if (isPlainObject(first) && first.action !== "board") errors.push(`${at}: the first stop must be a boarding stop`);
+      if (!seq.some((st) => isPlainObject(st) && st.action === "alight")) {
+        errors.push(`${at}: must have at least one alighting stop`);
       }
-      if (typeof e.stopId !== "string" || !stopIds.has(e.stopId)) {
-        errors.push(`${at}: unknown stop id ${JSON.stringify(e.stopId)}`);
-      }
-      if ("alight" in e) {
-        const alightErr = i18nError(e.alight);
-        if (alightErr) errors.push(`${at}: alight ${alightErr}`);
-      }
-    });
+    }
   }
 
   return errors;
@@ -238,7 +260,7 @@ function fatal(message: string): void {
 }
 
 function loadCatalog(): ScheduleStopCatalog {
-  const empty: ScheduleStopCatalog = { stops: [], boarding: {} };
+  const empty: ScheduleStopCatalog = { stops: [], sequences: {} };
   let raw: unknown;
   try {
     raw = JSON.parse(fs.readFileSync(path.join(__dirname, "schedule-stops.json"), "utf8"));

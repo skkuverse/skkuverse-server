@@ -241,14 +241,23 @@ export interface ScheduleStop {
   walkPath?: LatLng[];
 }
 
-/** Where the runs of some route types board, and where they let riders off. */
-export interface BoardingEntry {
-  routeTypes: string[];
-  stopId: string;
-  alight?: I18n;
+/**
+ * One stop of a run, in the order the bus reaches it. Either a catalog stop
+ * (which brings its photo, street view and exit) or a plain label. `timing`
+ * says whether the time the timetable gives for this stop is the published
+ * schedule or the school's estimate.
+ */
+export interface SequenceStop {
+  stopId?: string;
+  label?: I18n;
+  detail?: I18n;
+  action: "board" | "alight";
+  timing: "scheduled" | "estimated";
 }
 
 export interface ScheduleStopCatalog {
   stops: ScheduleStop[];
-  boarding: Record<string, BoardingEntry[]>;
+  // serviceId → routeType → the stops of every run of that route type, in
+  // order. An entry's `stopTimes` gives the time at each, index for index.
+  sequences: Record<string, Record<string, SequenceStop[]>>;
 }

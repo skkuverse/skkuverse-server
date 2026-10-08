@@ -20,47 +20,56 @@ type Doc = {
   days: number[];
   effectiveFrom: string;
   effectiveUntil?: string;
-  entries: Array<{ time: string; routeType: string; busCount: number; notes: string | null }>;
+  entries: Array<{ time: string; routeType: string; busCount: number; notes: string | null; stopTimes?: Array<string | null> }>;
 };
 const commuteDocs: Doc[] = buildDocuments(parseTimetableFile(JSON.parse(fs.readFileSync(COMMUTE_FILE, "utf8"))));
 
+/** "up 07:40→07:45→08:45": the time at each stop of the run, "?" where unknown. */
 function runs(serviceId: string): string[] {
   return commuteDocs
     .find((d) => d.serviceId === serviceId)!
-    .entries.map((e) => `${e.routeType} ${e.time}${e.notes ? ` (${e.notes})` : ""}`);
+    .entries.map((e) => `${e.routeType} ${(e.stopTimes ?? []).map((t) => t ?? "?").join("→")}`);
 }
 
-describe("commute timetable (spec scenarios)", () => {
+describe("commute timetable (spec scenarios: departure → arrival per run)", () => {
   it("정자", () => {
     expect(runs("commute-jeongja")).toEqual([
-      "up 07:45", "up 09:20", "up 11:00",
-      "down 16:30", "down 18:30", "down 20:30",
+      "up 07:45→08:25", "up 09:20→10:05", "up 11:00→11:45",
+      "down 16:30→17:15", "down 18:30→19:15", "down 20:30→21:15",
     ]);
   });
 
   it("잠실", () => {
-    expect(runs("commute-jamsil")).toEqual(["up 07:30", "up 10:20", "down 18:00", "down 21:00"]);
+    expect(runs("commute-jamsil")).toEqual(["up 07:30→08:40", "up 10:20→11:40", "down 18:00→19:20", "down 21:00→22:20"]);
   });
 
   it("도곡", () => {
-    expect(runs("commute-dogok")).toEqual(["up 07:40", "up 09:40", "down 16:30", "down 18:45"]);
+    expect(runs("commute-dogok")).toEqual(["up 07:40→08:45", "up 09:40→10:15", "down 16:30→17:45", "down 18:45→20:30"]);
   });
 
-  it("강남·양재: one entry per run at the 강남 time, the 양재 time in its notes", () => {
+  it("강남·양재: one row per bus — 강남, then 양재, then campus; 하교 drops at 양재 (time unknown), then 강남", () => {
     expect(runs("commute-gangnam-yangjae")).toEqual([
-      "up 07:40 (양재 07:45)",
-      "up 08:55 (양재 09:00)",
-      "up 10:25 (양재 10:30)",
-      "up 11:55 (양재 12:00)",
-      "down 17:00", "down 18:00", "down 19:15", "down 20:15",
+      "up 07:40→07:45→08:45",
+      "up 08:55→09:00→10:15",
+      "up 10:25→10:30→11:45",
+      "up 11:55→12:00→13:15",
+      "down 17:00→?→18:20",
+      "down 18:00→?→19:20",
+      "down 19:15→?→21:05",
+      "down 20:15→?→22:05",
     ]);
   });
 
   it("광교중앙", () => {
     expect(runs("commute-gwanggyo")).toEqual([
-      "up 08:00", "up 08:30", "up 09:00", "up 09:30", "up 10:00", "up 10:30",
-      "down 16:30", "down 17:00", "down 17:30", "down 18:00", "down 18:30", "down 19:00",
+      "up 08:00→08:35", "up 08:30→09:05", "up 09:00→09:35", "up 09:30→10:05", "up 10:00→10:35", "up 10:30→11:05",
+      "down 16:30→17:05", "down 17:00→17:35", "down 17:30→18:05", "down 18:00→18:35", "down 18:30→19:05", "down 19:00→19:35",
     ]);
+  });
+
+  it("keeps the 양재 time in notes for clients that do not read stopTimes", () => {
+    const gy = commuteDocs.find((d) => d.serviceId === "commute-gangnam-yangjae")!;
+    for (const e of gy.entries.filter((x) => x.routeType === "up")) expect(e.notes).toBe(`양재 ${e.stopTimes![1]}`);
   });
 
   it("one bus per run, weekdays only, over the pilot window", () => {
@@ -128,74 +137,79 @@ describe("commute card visibility", () => {
   });
 });
 
-describe("commute boarding (spec scenarios, from the committed catalog)", () => {
+describe("commute stop sequences (spec scenarios, from the committed catalog)", () => {
   const CAMPUS_SEQUENCE = "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근";
+  type SeqStop = { label: string; action: string; timing: string; stopId?: string; detail?: string };
   const services = (lang: "ko" | "en" | "zh" = "ko") =>
-    commute(lang).screen.services as Array<{
-      serviceId: string;
-      boarding: Array<{ routeTypes: string[]; stopId: string; alight?: string }>;
-    }>;
-  const stops = (lang: "ko" | "en" | "zh" = "ko") =>
-    commute(lang).screen.stops as Array<Record<string, any>>;
+    commute(lang).screen.services as Array<{ serviceId: string; stopSequences: Record<string, SeqStop[]> }>;
+  const sequences = (serviceId: string, lang: "ko" | "en" | "zh" = "ko") =>
+    services(lang).find((s) => s.serviceId === serviceId)!.stopSequences;
+  const stops = (lang: "ko" | "en" | "zh" = "ko") => commute(lang).screen.stops as Array<Record<string, any>>;
   const stopById = (id: string, lang: "ko" | "en" | "zh" = "ko") => stops(lang).find((s) => s.id === id)!;
+  const brief = (seq: SeqStop[]) => seq.map((st) => `${st.action}:${st.label}:${st.timing}`);
 
-  it("정자 boarding", () => {
-    const jeongja = services().find((s) => s.serviceId === "commute-jeongja")!;
-    const up = jeongja.boarding.find((b) => b.routeTypes.includes("up"))!;
-    const down = jeongja.boarding.find((b) => b.routeTypes.includes("down"))!;
-    expect(stopById(up.stopId)).toMatchObject({ name: "정자역 3번 출구", detail: "파리바게뜨 앞" });
-    expect(stopById(down.stopId).name).toBe("N센터 건너편");
+  it("정자 boarding: the run boards at 정자역 3번 출구 and arrives at campus (estimated)", () => {
+    const seq = sequences("commute-jeongja");
+    expect(brief(seq.up!)).toEqual(["board:정자역 3번 출구:scheduled", "alight:자과캠:estimated"]);
+    expect(stopById(seq.up![0]!.stopId!)).toMatchObject({ name: "정자역 3번 출구", detail: "파리바게뜨 앞" });
+    expect(brief(seq.down!)).toEqual(["board:N센터 건너편:scheduled", "alight:정자역 2번 출구 앞:estimated"]);
   });
 
-  it("every route type of every service boards somewhere, and each is a badge of the group", () => {
-    const badgeIds = commute().screen.routeBadges.map((b: { id: string }) => b.id);
-    const expected: Record<string, string[]> = {
-      "commute-jeongja": ["up", "down"],
-      "commute-jamsil": ["up", "down"],
-      "commute-dogok": ["up", "down"],
-      "commute-gangnam-yangjae": ["up", "up", "down"],
-      "commute-gwanggyo": ["up", "down"],
-    };
+  it("강남·양재: 등교 boards at 강남, then 양재; 하교 drops at 양재, then 강남", () => {
+    const seq = sequences("commute-gangnam-yangjae");
+    expect(brief(seq.up!)).toEqual([
+      "board:강남역 5번 출구:scheduled",
+      "board:양재역 2번 출구:scheduled",
+      "alight:자과캠:estimated",
+    ]);
+    expect(brief(seq.down!)).toEqual([
+      "board:N센터 건너편:scheduled",
+      "alight:양재역 3번 출구 앞:estimated",
+      "alight:강남역 사거리 전 중앙버스차로 정류장:estimated",
+    ]);
+  });
+
+  it("Drop-off sequence: every 등교 run ends at campus, with the campus stops in order as detail", () => {
     for (const s of services()) {
-      const routeTypes = s.boarding.flatMap((b) => b.routeTypes);
-      expect(routeTypes.sort()).toEqual([...expected[s.serviceId]!].sort());
-      for (const rt of routeTypes) expect(badgeIds).toContain(rt);
+      const last = s.stopSequences.up!.at(-1)!;
+      expect(last).toMatchObject({ action: "alight", label: "자과캠", detail: CAMPUS_SEQUENCE });
     }
   });
 
-  it("Drop-off sequence: every 등교 run lets riders off at the campus stops in order", () => {
-    for (const s of services()) {
-      for (const b of s.boarding.filter((e) => e.routeTypes.some((rt) => rt.startsWith("up")))) {
-        expect(b.alight).toBe(CAMPUS_SEQUENCE);
+  it("하교 drop-off spots match the school's 2026-10-08 answer", () => {
+    const drops = Object.fromEntries(
+      services().map((s) => [s.serviceId, s.stopSequences.down!.filter((st) => st.action === "alight").map((st) => st.label)]),
+    );
+    expect(drops).toEqual({
+      "commute-jeongja": ["정자역 2번 출구 앞"],
+      "commute-jamsil": ["잠실역 5번 출구 앞"],
+      "commute-dogok": ["도곡역 4번 출구 앞"],
+      "commute-gangnam-yangjae": ["양재역 3번 출구 앞", "강남역 사거리 전 중앙버스차로 정류장"],
+      "commute-gwanggyo": ["광교중앙역 1번 출구 앞"],
+    });
+  });
+
+  it("every run's stopTimes match its sequence: one time per stop, unknown only where estimated", () => {
+    // The tool is CommonJS and cannot see the catalog, so this is where the two files meet.
+    for (const doc of commuteDocs) {
+      const seq = sequences(doc.serviceId);
+      expect(Object.keys(seq).sort()).toEqual([...new Set(doc.entries.map((e) => e.routeType))].sort());
+      for (const e of doc.entries) {
+        const stopsOfRun = seq[e.routeType]!;
+        expect(`${doc.serviceId} ${e.time} ${e.stopTimes!.length}`).toBe(`${doc.serviceId} ${e.time} ${stopsOfRun.length}`);
+        e.stopTimes!.forEach((t, k) => {
+          if (t === null) expect(`${doc.serviceId} ${e.time} #${k} ${stopsOfRun[k]!.timing}`).toBe(`${doc.serviceId} ${e.time} #${k} estimated`);
+        });
       }
     }
   });
 
-  it("하교 drop-off lines match the school's 2026-10-08 answer", () => {
-    const down = Object.fromEntries(
-      services().map((s) => [s.serviceId, s.boarding.find((b) => b.routeTypes.includes("down"))!.alight]),
-    );
-    expect(down).toEqual({
-      "commute-jeongja": "정자역 2번 출구 앞",
-      "commute-jamsil": "잠실역 5번 출구 앞",
-      "commute-dogok": "도곡역 4번 출구 앞",
-      "commute-gangnam-yangjae": "양재역 3번 출구 앞 → 강남역 사거리 전 중앙버스차로 정류장",
-      "commute-gwanggyo": "광교중앙역 1번 출구 앞",
-    });
-  });
-
-  it("강남·양재 등교 runs board at 강남, then 양재", () => {
-    const gy = services().find((s) => s.serviceId === "commute-gangnam-yangjae")!;
-    expect(gy.boarding.filter((b) => b.routeTypes.includes("up")).map((b) => b.stopId)).toEqual([
-      "gangnam-exit5",
-      "yangjae-exit2",
-    ]);
-  });
-
-  it("하교 drop-off order: 양재 before the 강남 bus stop", () => {
-    const gy = services().find((s) => s.serviceId === "commute-gangnam-yangjae")!;
-    const alight = gy.boarding.find((b) => b.routeTypes.includes("down"))!.alight!;
-    expect(alight.indexOf("양재역 3번 출구")).toBeLessThan(alight.indexOf("강남역"));
+  it("every route type of every service has a sequence, and each is a badge of the group", () => {
+    const badgeIds = commute().screen.routeBadges.map((b: { id: string }) => b.id);
+    for (const s of services()) {
+      expect(Object.keys(s.stopSequences).sort()).toEqual(["down", "up"]);
+      for (const rt of Object.keys(s.stopSequences)) expect(badgeIds).toContain(rt);
+    }
   });
 
   it("Station stop in English: its en photo, a street view link, the exit and the path", () => {
@@ -220,9 +234,11 @@ describe("commute boarding (spec scenarios, from the committed catalog)", () => 
     }
   });
 
-  it("each station's photo variant matches the request language", () => {
-    for (const lang of ["ko", "zh"] as const) {
-      expect(stopById("yangjae-exit2", lang).photoUrl).toContain(`/yangjae-exit2/${lang}-`);
-    }
+  it("labels translate with the request language", () => {
+    expect(sequences("commute-gangnam-yangjae", "en").up!.map((st) => st.label)).toEqual([
+      "Gangnam Stn. Exit 5",
+      "Yangjae Stn. Exit 2",
+      "NSC",
+    ]);
   });
 });

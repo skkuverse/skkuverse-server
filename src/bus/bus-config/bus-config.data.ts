@@ -79,10 +79,12 @@ interface ServedStop {
   walkPath?: LatLng[];
 }
 
-interface ServedBoarding {
-  routeTypes: string[];
-  stopId: string;
-  alight?: string;
+interface ServedSequenceStop {
+  label: string;
+  action: "board" | "alight";
+  timing: "scheduled" | "estimated";
+  stopId?: string;
+  detail?: string;
 }
 
 /**
@@ -107,31 +109,42 @@ function serveStop(stop: ScheduleStop, lang: SupportedLang): ServedStop {
 }
 
 /**
- * The boarding entries of some services and the stops they reference, for one
- * language. `stops` lists each referenced stop once, in order of first
- * reference; a service with no boarding is absent from `boarding`.
+ * The stop sequences of some services and the catalog stops they reference,
+ * for one language. A sequence stop is named by its catalog stop or its own
+ * label; `stops` lists each referenced catalog stop once, in order of first
+ * reference. A service without sequences is absent from `sequences`.
  */
-function resolveBoarding(
+function resolveStopSequences(
   serviceIds: readonly string[],
   lang: SupportedLang,
   catalog: Readonly<ScheduleStopCatalog> = stopCatalog,
-): { boarding: Record<string, ServedBoarding[]>; stops: ServedStop[] } {
-  const boarding: Record<string, ServedBoarding[]> = {};
+): { sequences: Record<string, Record<string, ServedSequenceStop[]>>; stops: ServedStop[] } {
+  const sequences: Record<string, Record<string, ServedSequenceStop[]>> = {};
   const referenced: string[] = [];
+  // The catalog loader already refused a sequence naming an unknown stop.
+  const byId = (id: string) => catalog.stops.find((s) => s.id === id)!;
   for (const serviceId of serviceIds) {
-    const entries = catalog.boarding[serviceId];
-    if (!entries || entries.length === 0) continue;
-    boarding[serviceId] = entries.map((e) => {
-      if (!referenced.includes(e.stopId)) referenced.push(e.stopId);
-      const served: ServedBoarding = { routeTypes: [...e.routeTypes], stopId: e.stopId };
-      const alight = pick(e.alight, lang);
-      if (alight !== null) served.alight = alight;
-      return served;
-    });
+    const byRouteType = catalog.sequences[serviceId];
+    if (!byRouteType) continue;
+    sequences[serviceId] = Object.fromEntries(
+      Object.entries(byRouteType).map(([routeType, seq]) => [
+        routeType,
+        seq.map((st) => {
+          const name = st.stopId ? byId(st.stopId).name : st.label;
+          const served: ServedSequenceStop = { label: pick(name, lang)!, action: st.action, timing: st.timing };
+          if (st.stopId) {
+            served.stopId = st.stopId;
+            if (!referenced.includes(st.stopId)) referenced.push(st.stopId);
+          }
+          const detail = pick(st.detail, lang);
+          if (detail !== null) served.detail = detail;
+          return served;
+        }),
+      ]),
+    );
   }
-  // The catalog loader already refused a boarding entry naming an unknown stop.
-  const stops = referenced.map((id) => serveStop(catalog.stops.find((s) => s.id === id)!, lang));
-  return { boarding, stops };
+  const stops = referenced.map((id) => serveStop(byId(id), lang));
+  return { sequences, stops };
 }
 
 const COMMUTE_SERVICE_IDS = [
@@ -144,15 +157,15 @@ const COMMUTE_SERVICE_IDS = [
 
 /**
  * 자과캠 통학셔틀 (pilot, 2026-10-19..2026-12-18): one service per route, runs
- * typed by direction (`up` 등교, `down` 하교). The 강남·양재 bus boards at two
- * stops five minutes apart; each run is one entry at the 강남 time, with the
- * 양재 time in its notes, and its boarding lists both stops in order. The first
- * group to use the v2 fields: `serviceSelector`, `services[].boarding`,
- * `screen.stops`. Builds that predate them ignore the keys and render the v1
- * screen.
+ * typed by direction (`up` 등교, `down` 하교). Each run is one entry; its
+ * `stopTimes` give the time at every stop of the service's sequence for that
+ * direction (boarding stops, then where riders get off), so the 강남·양재 bus is
+ * one row that boards at 강남 and 양재. The first group to use the v2 fields:
+ * `serviceSelector`, `services[].stopSequences`, `screen.stops`. Builds that
+ * predate them ignore the keys and render the v1 screen.
  */
 function buildCommuteGroup(lang: SupportedLang) {
-  const { boarding, stops } = resolveBoarding(COMMUTE_SERVICE_IDS, lang);
+  const { sequences, stops } = resolveStopSequences(COMMUTE_SERVICE_IDS, lang);
   return {
     id: "commute",
     screenType: "schedule",
@@ -171,7 +184,7 @@ function buildCommuteGroup(lang: SupportedLang) {
         serviceId,
         label: t(`busconfig.service.${serviceId}`, lang),
         endpoint: `/bus/schedule/data/${serviceId}/smart`,
-        ...(boarding[serviceId] ? { boarding: boarding[serviceId] } : {}),
+        ...(sequences[serviceId] ? { stopSequences: sequences[serviceId] } : {}),
       })),
       heroCard: null,
       routeBadges: [
@@ -354,5 +367,5 @@ export {
   getGroupById,
   computeGroupEtag,
   mapStations,
-  resolveBoarding,
+  resolveStopSequences,
 };
