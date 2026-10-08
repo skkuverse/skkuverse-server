@@ -15,10 +15,10 @@ beforeEach(() => {
 });
 
 describe("getBusGroups", () => {
-  it("returns groups array with 6 items", () => {
+  it("returns groups array with 7 items", () => {
     const groups = service.getBusGroups("ko");
     expect(Array.isArray(groups)).toBe(true);
-    expect(groups).toHaveLength(6);
+    expect(groups).toHaveLength(7);
   });
 
   it("each group has id, screenType, label, visibility, card, screen", () => {
@@ -86,16 +86,18 @@ describe("getBusGroups", () => {
     expect(fasttrack.visibility.until).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it("non-fasttrack groups have visibility.type always", () => {
-    const nonFt = service.getBusGroups("ko").filter((g: any) => g.id !== "fasttrack");
+  it("groups other than fasttrack and commute have visibility.type always", () => {
+    const nonFt = service
+      .getBusGroups("ko")
+      .filter((g: any) => g.id !== "fasttrack" && g.id !== "commute");
     for (const g of nonFt as any[]) {
       expect(g.visibility).toEqual({ type: "always" });
     }
   });
 
-  it("group order is hssc, campus, fasttrack, jongro02, jongro07, jongro08", () => {
+  it("group order is hssc, campus, fasttrack, commute, jongro02, jongro07, jongro08", () => {
     const ids = service.getBusGroups("ko").map((g: any) => g.id);
-    expect(ids).toEqual(["hssc", "campus", "fasttrack", "jongro02", "jongro07", "jongro08"]);
+    expect(ids).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
   });
 
   it("English translations differ from Korean", () => {

@@ -6,6 +6,7 @@
  * an `unknown` index signature so future use sites can add types as needed
  * without churning the wrapper. Defensive narrowing happens inside fetchers.
  */
+import type { I18n, SupportedLang } from "../infra/types";
 
 // --- HSSC (campus shuttle, custom university API) ---
 // Response is a bare JSON array. No envelope.
@@ -196,4 +197,58 @@ export interface BusScheduleDoc {
   patternId: string;
   days: number[]; // isoWeekday list (1-7)
   entries: unknown[];
+  // Inclusive YYYY-MM-DD bounds. A missing bound is open, so a pattern with
+  // neither applies on every listed weekday, as before ranges existed.
+  effectiveFrom?: string;
+  effectiveUntil?: string;
+}
+
+// --- Boarding-stop catalog (src/bus/schedule/schedule-stops.json) ---
+
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+/** An original capture plus overlay variants whose labels are in one language. */
+export interface StopPhoto {
+  original: string;
+  localized?: Partial<Record<SupportedLang, string>>;
+}
+
+/** A NAVER street view frame: which panorama, and where the view points. */
+export interface StopPanorama {
+  panoId: string;
+  pan: number;
+  tilt: number;
+  fov: number;
+}
+
+export interface StopExit {
+  number: number;
+  coords: LatLng;
+}
+
+export interface ScheduleStop {
+  id: string;
+  name: I18n;
+  detail?: I18n;
+  coords?: LatLng;
+  photo?: StopPhoto;
+  panorama?: StopPanorama;
+  // Set together: the subway exit riders walk from, and the path from it.
+  exit?: StopExit;
+  walkPath?: LatLng[];
+}
+
+/** Where the runs of some route types board, and where they let riders off. */
+export interface BoardingEntry {
+  routeTypes: string[];
+  stopId: string;
+  alight?: I18n;
+}
+
+export interface ScheduleStopCatalog {
+  stops: ScheduleStop[];
+  boarding: Record<string, BoardingEntry[]>;
 }

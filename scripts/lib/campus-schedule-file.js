@@ -1,28 +1,33 @@
 /**
- * Pure parse/build/diff for the committed campus shuttle timetable.
+ * Pure parse/build/diff for the committed shuttle timetables.
  *
  * Kept separate from set-campus-schedule.js so this module stays importable by
  * jest without inheriting argv parsing, dotenv or process.exit — the same split
  * map-places-file.js has from import-eventmap-places.js. Requiring this file
  * has no side effects and it never opens a connection.
  *
- * The timetable itself lives in scripts/data/campus-schedule.json, which is the
- * single source of truth for what bus_schedules is supposed to contain. It is a
+ * Each timetable lives in a file under scripts/data/ (campus-schedule.json for
+ * 인자셔틀, commute-schedule.json for 통학셔틀), which is the single source of
+ * truth for what bus_schedules is supposed to contain for its services. It is a
  * committed file rather than a script constant so that a semester change is a
  * reviewable git diff, and so a wrong timetable can be reverted rather than
  * re-typed.
+ *
+ * A file declares its own route types: they are the join key with the app's
+ * badges, and each shuttle has different ones.
  */
-const ROUTE_TYPES = ["regular", "hakbu"];
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Sort key for entries: time ascending, and regular before hakbu at the same
- * time. Not cosmetic — the diff in diffEntries is keyed on (time, routeType),
- * and a stable declared order is what lets the reader trust that a `-` line and
- * a `+` line at the same minute are really two different buses.
+ * Sort key for entries: time ascending, then the file's declared route-type
+ * order at the same time. Not cosmetic — the diff in diffEntries is keyed on
+ * (time, routeType), and a stable declared order is what lets the reader trust
+ * that a `-` line and a `+` line at the same minute are really two different
+ * buses.
  */
-function entryRank(entry) {
-  const routeRank = ROUTE_TYPES.indexOf(entry.routeType);
+function entryRank(entry, routeTypes) {
+  const routeRank = String(routeTypes.indexOf(entry.routeType)).padStart(2, "0");
   return `${entry.time}#${routeRank}`;
 }
 
@@ -42,8 +47,27 @@ function parseTimetableFile(raw) {
   if (typeof raw.semester !== "string" || !raw.semester) {
     throw new Error("timetable.semester must be a non-empty string");
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw.effectiveFrom || "")) {
+  if (!DATE_RE.test(raw.effectiveFrom || "")) {
     throw new Error("timetable.effectiveFrom must be YYYY-MM-DD");
+  }
+  if (raw.effectiveUntil !== undefined) {
+    if (!DATE_RE.test(raw.effectiveUntil)) {
+      throw new Error("timetable.effectiveUntil must be YYYY-MM-DD when present");
+    }
+    if (raw.effectiveUntil < raw.effectiveFrom) {
+      throw new Error(
+        `timetable.effectiveUntil ${raw.effectiveUntil} is earlier than effectiveFrom ${raw.effectiveFrom}`,
+      );
+    }
+  }
+  const { routeTypes } = raw;
+  if (
+    !Array.isArray(routeTypes) ||
+    routeTypes.length === 0 ||
+    !routeTypes.every((t) => typeof t === "string" && t) ||
+    new Set(routeTypes).size !== routeTypes.length
+  ) {
+    throw new Error("timetable.routeTypes must be a non-empty list of distinct route-type names");
   }
   if (!Array.isArray(raw.patterns) || raw.patterns.length === 0) {
     throw new Error("timetable.patterns must be a non-empty array");
@@ -80,10 +104,10 @@ function parseTimetableFile(raw) {
       }
       seenPatternKeys.add(key);
 
-      // Two patterns of one service must never claim the same weekday.
-      // ScheduleService.resolveWeek uses patterns.find(...) — the FIRST match
-      // over an unordered collection scan — so an overlap does not error, it
-      // silently serves one of two timetables, possibly differing per replica.
+      // Two patterns of one service in one file must never claim the same
+      // weekday: they share the file's range, so both would apply to every such
+      // date. ScheduleService only logs a pattern_conflict and serves one of
+      // them; the file is where the mistake can still be refused.
       const claimed = daysByService.get(serviceId) || new Set();
       for (const day of days) {
         if (claimed.has(day)) {
@@ -116,9 +140,9 @@ function parseTimetableFile(raw) {
       if (typeof entry.time !== "string" || !TIME_RE.test(entry.time)) {
         throw new Error(`${patternId}: entry.time must be HH:mm 24h, got ${JSON.stringify(entry.time)}`);
       }
-      if (!ROUTE_TYPES.includes(entry.routeType)) {
+      if (!routeTypes.includes(entry.routeType)) {
         throw new Error(
-          `${patternId} ${entry.time}: routeType must be one of ${ROUTE_TYPES.join("/")}, got ${JSON.stringify(entry.routeType)}`,
+          `${patternId} ${entry.time}: routeType must be one of the declared ${routeTypes.join("/")}, got ${JSON.stringify(entry.routeType)}`,
         );
       }
       if (!Number.isInteger(entry.busCount) || entry.busCount < 1) {
@@ -138,10 +162,10 @@ function parseTimetableFile(raw) {
       }
       seenEntryKeys.add(key);
 
-      const rank = entryRank(entry);
+      const rank = entryRank(entry, routeTypes);
       if (rank < previousRank) {
         throw new Error(
-          `${patternId}: entries must be sorted by time then routeType — ${entry.time} ${entry.routeType} follows ${previousRank.split("#")[0]}`,
+          `${patternId}: entries must be sorted by time then declared routeType order — ${entry.time} ${entry.routeType} follows ${previousRank.split("#")[0]}`,
         );
       }
       previousRank = rank;
@@ -153,16 +177,19 @@ function parseTimetableFile(raw) {
 
 /**
  * Expands the patterns into the bus_schedules documents, one per
- * (serviceId, patternId). index is assigned here from array position.
+ * (serviceId, patternId). index is assigned here from array position, and the
+ * file's range is written into every document: the engine reads it per
+ * pattern, and replaceOne drops an effectiveUntil the file stops declaring.
  */
 function buildDocuments(timetable) {
   const docs = [];
   for (const pattern of timetable.patterns) {
     for (const serviceId of pattern.serviceIds) {
-      docs.push({
+      const doc = {
         serviceId,
         patternId: pattern.patternId,
         days: [...pattern.days],
+        effectiveFrom: timetable.effectiveFrom,
         entries: pattern.entries.map((entry, i) => ({
           index: i + 1,
           time: entry.time,
@@ -170,10 +197,59 @@ function buildDocuments(timetable) {
           busCount: entry.busCount,
           notes: entry.notes,
         })),
-      });
+      };
+      if (timetable.effectiveUntil !== undefined) {
+        doc.effectiveUntil = timetable.effectiveUntil;
+      }
+      docs.push(doc);
     }
   }
   return docs;
+}
+
+/** The range lines of a document diff; empty when both bounds agree. */
+function diffRange(current, target) {
+  const lines = [];
+  for (const field of ["effectiveFrom", "effectiveUntil"]) {
+    const before = current?.[field] ?? null;
+    const after = target[field] ?? null;
+    if (before !== after) {
+      lines.push(`${field} ${JSON.stringify(before)} -> ${JSON.stringify(after)}`);
+    }
+  }
+  return lines;
+}
+
+function rangesOverlap(a, b) {
+  const aFrom = a.effectiveFrom ?? "0000-01-01";
+  const aUntil = a.effectiveUntil ?? "9999-12-31";
+  const bFrom = b.effectiveFrom ?? "0000-01-01";
+  const bUntil = b.effectiveUntil ?? "9999-12-31";
+  return aFrom <= bUntil && bFrom <= aUntil;
+}
+
+/**
+ * Pairs of patterns that would both apply to some date: a document the file
+ * writes, and one already in the database for the same service under another
+ * patternId, sharing a weekday with an overlapping range. Writing either would
+ * leave the engine to pick one (ScheduleService logs pattern_conflict), so the
+ * tool refuses. Ranges that only meet end to end — one ending 2026-12-18, the
+ * next starting 2026-12-21 — do not overlap.
+ */
+function findOverlaps(targetDocs, existingDocs) {
+  const targetKeys = new Set(targetDocs.map((d) => `${d.serviceId}/${d.patternId}`));
+  const overlaps = [];
+  for (const target of targetDocs) {
+    for (const other of existingDocs) {
+      if (other.serviceId !== target.serviceId) continue;
+      if (targetKeys.has(`${other.serviceId}/${other.patternId}`)) continue;
+      const sharedDay = target.days.some((day) => (other.days || []).includes(day));
+      if (sharedDay && rangesOverlap(target, other)) {
+        overlaps.push({ target, other });
+      }
+    }
+  }
+  return overlaps;
 }
 
 /**
@@ -183,7 +259,7 @@ function buildDocuments(timetable) {
  * `index` on every later entry, so a positional diff renders ten spurious
  * changes and buries the two that matter.
  */
-function diffEntries(currentEntries, targetEntries) {
+function diffEntries(currentEntries, targetEntries, routeTypes) {
   const current = new Map((currentEntries || []).map((e) => [entryKey(e), e]));
   const target = new Map(targetEntries.map((e) => [entryKey(e), e]));
 
@@ -202,15 +278,16 @@ function diffEntries(currentEntries, targetEntries) {
     }
   }
 
-  lines.sort((a, b) => entryRank(a.entry).localeCompare(entryRank(b.entry)));
+  lines.sort((a, b) => entryRank(a.entry, routeTypes).localeCompare(entryRank(b.entry, routeTypes)));
   return lines;
 }
 
 module.exports = {
-  ROUTE_TYPES,
   buildDocuments,
   diffEntries,
+  diffRange,
   entryKey,
   entryRank,
+  findOverlaps,
   parseTimetableFile,
 };

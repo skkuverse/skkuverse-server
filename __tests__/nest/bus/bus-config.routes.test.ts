@@ -34,11 +34,11 @@ afterAll(async () => {
 });
 
 describe("GET /bus/config", () => {
-  it("returns a groups array of 6", async () => {
+  it("returns a groups array of 7", async () => {
     const res = await request(httpServer).get("/bus/config");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data.groups)).toBe(true);
-    expect(res.body.data.groups).toHaveLength(6);
+    expect(res.body.data.groups).toHaveLength(7);
     expect(res.headers.etag).toMatch(/^"[a-f0-9]{32}"$/);
     expect(res.headers["cache-control"]).toContain("max-age=300");
   });
@@ -96,6 +96,24 @@ describe("GET /bus/config/:groupId", () => {
     expect(ko.headers.etag).toBeDefined();
     expect(en.headers.etag).toBeDefined();
     expect(ko.headers.etag).not.toBe(en.headers.etag);
+  });
+
+  it("commute serves the spec's group config", async () => {
+    const res = await request(httpServer).get("/bus/config/commute");
+    expect(res.status).toBe(200);
+    const group = res.body.data;
+    expect(group.screenType).toBe("schedule");
+    expect(group.screen.services.map((s: { serviceId: string }) => s.serviceId)).toEqual([
+      "commute-jeongja",
+      "commute-jamsil",
+      "commute-dogok",
+      "commute-gangnam-yangjae",
+      "commute-gwanggyo",
+    ]);
+    expect(group.screen.defaultServiceId).toBe("commute-jeongja");
+    expect(group.screen.serviceSelector).toBe("chips");
+    expect(group.screen).not.toHaveProperty("showBusCount");
+    expect(group.screen.features).toEqual([]);
   });
 
   it("campus screen has services[] and routeBadges", async () => {
