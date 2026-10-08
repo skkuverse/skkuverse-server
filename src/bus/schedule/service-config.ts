@@ -48,7 +48,7 @@ const serviceConfig: ServiceConfigMap = {
           // One bus serves both stations; the explicit line break keeps iOS
           // from breaking a word in the middle.
           ...(serviceId === "commute-gangnam-yangjae"
-            ? [{ style: "info", text: "등교 강남역 → 양재역(5분 뒤) → 자과캠\n하교 자과캠 → 양재역 → 강남역" }]
+            ? [{ style: "info", text: "등교: 강남역 → 양재역 → 자과캠\n하교: 자과캠 → 양재역 → 강남역" }]
             : []),
         ],
         suspend: null,
