@@ -5,10 +5,10 @@
  * MapService is overridden with a stub so the controllers' envelope/meta wiring
  * is exercised without the real data modules (no DB, no config coupling).
  * BuildingService is overridden too because MapModule imports BuildingModule,
- * whose real onModuleInit would hit lib/db. The src/map/*.data modules are
+ * whose real onModuleInit would hit the DB. The src/map/*.data modules are
  * covered by map-campus-overlays.test.ts and map-event-overlays.test.ts.
  *
- * Envelope parity:
+ * Envelope:
  *  - /map/config → plain return → ResponseInterceptor wraps in
  *    { meta: { lang }, data } with X-Response-Time.
  *  - /map/overlays/* → @Res() + sendSuccess → same envelope, plus Cache-Control.

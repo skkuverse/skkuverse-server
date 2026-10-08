@@ -2,8 +2,8 @@
  * Unit test for BuildingSyncService — verifies it registers syncBuildings()
  * with the Nest PollerRegistry under name "building-sync" at the configured
  * interval, and that the registered wrapper swallows a syncBuildings rejection
- * (logs "[building-sync] Poller error", never rethrows). syncBuildings is
- * mocked so neither lib/db nor the SKKU API is touched.
+ * (logs `building.sync.poller_failed`, never rethrows). syncBuildings is
+ * mocked so neither the DB nor the SKKU API is touched.
  */
 
 jest.mock("../../../src/building/building.sync", () => ({

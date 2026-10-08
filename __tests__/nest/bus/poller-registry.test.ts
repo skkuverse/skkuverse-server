@@ -1,7 +1,7 @@
 /**
- * Nest port of pollers.test.ts — exercises PollerRegistryService directly.
+ * Exercises PollerRegistryService directly.
  *
- * Strategy mirrors the Express test:
+ * Strategy:
  *   - the logger and Sentry are mocked, so the state-transition lines (failing,
  *     still failing, recovered), the one Issue per failing spell and the cron
  *     check-ins can be asserted.

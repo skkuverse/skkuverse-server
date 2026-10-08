@@ -52,7 +52,7 @@ describe("GET /bus/route/:routeId", () => {
     expect(res.body.error.message).toBe("Route 'nope' not found");
   });
 
-  it("an unexpected throw → 500 INTERNAL_ERROR (no X-Response-Time, matching Express bare 500)", async () => {
+  it("an unexpected throw → 500 INTERNAL_ERROR (no X-Response-Time)", async () => {
     jest.spyOn(app.get(RouteOverlayService), "getRoute").mockImplementation(() => {
       throw new Error("boom");
     });
@@ -60,9 +60,8 @@ describe("GET /bus/route/:routeId", () => {
     expect(res.status).toBe(500);
     expect(res.body.error.code).toBe("INTERNAL_ERROR");
     expect(res.body.error.message).toBe("Internal server error");
-    // Parity: Express's generic errorHandler used a bare
-    // res.status(500).json(...) and did NOT set X-Response-Time. The Nest
-    // filter must omit it on this unknown-error 500 branch too.
+    // HttpExceptionFilter omits X-Response-Time on this unknown-error 500
+    // branch.
     expect(res.headers["x-response-time"]).toBeUndefined();
   });
 });

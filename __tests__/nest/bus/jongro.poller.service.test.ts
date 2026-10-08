@@ -1,14 +1,13 @@
 /**
- * Nest port of jongro-transform.test.ts — JongroPollerService is the exact port
- * of features/bus/jongro.fetcher.ts.
+ * JongroPollerService transform.
  *
  * The single 40s poller tick iterates the registry and calls the (private)
  * list + loc updaters per route. We capture the registered tick fn via the
  * registry stub and invoke it directly (deterministic, no fake timers), with
  * axios mocked to return the same shape to every URL — so both registered codes
- * ("02","07") get populated, matching the Express test's "both get the same
- * data" behavior. carNumber slice(-4), the stId→staOrd mapping, and the
- * location station-name mapping are asserted verbatim.
+ * ("02","07") get populated with the same data. carNumber slice(-4), the
+ * stId→staOrd mapping, and the location station-name mapping are asserted
+ * exactly.
  */
 
 jest.mock("axios", () => ({ get: jest.fn() }));
