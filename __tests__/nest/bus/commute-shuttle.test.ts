@@ -69,7 +69,7 @@ describe("commute timetable (spec scenarios: departure → arrival per run)", ()
 
   it("keeps the 양재 time in notes for clients that do not read stopTimes", () => {
     const gy = commuteDocs.find((d) => d.serviceId === "commute-gangnam-yangjae")!;
-    for (const e of gy.entries.filter((x) => x.routeType === "up")) expect(e.notes).toBe(`양재 ${e.stopTimes![1]}`);
+    for (const e of gy.entries.filter((x) => x.routeType === "up")) expect(e.notes).toBe(`양재역 ${e.stopTimes![1]}`);
   });
 
   it("one bus per run, weekdays only, over the pilot window", () => {
@@ -237,18 +237,18 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   it("notes for the timetable's notes column: station or 자과캠, with 탑승/하차, in 8 characters or fewer", () => {
     const notes = (serviceId: string, rt: string, lang: "ko" | "en" | "zh" = "ko") =>
       sequences(serviceId, lang)[rt]!.map((st) => (st as SeqStop & { note?: string }).note);
-    expect(notes("commute-gangnam-yangjae", "up")).toEqual(["강남 탑승", "양재 탑승", "자과캠 하차"]);
-    expect(notes("commute-gangnam-yangjae", "down")).toEqual(["자과캠 탑승", "양재 하차", "강남 하차"]);
-    expect(notes("commute-gangnam-yangjae", "up", "en")).toEqual(["Board · Gangnam", "Board · Yangjae", "Get off · NSC"]);
-    expect(notes("commute-gangnam-yangjae", "down", "zh")).toEqual(["自然校区上车", "良才下车", "江南下车"]);
+    expect(notes("commute-gangnam-yangjae", "up")).toEqual(["강남역 탑승", "양재역 탑승", "자과캠 하차"]);
+    expect(notes("commute-gangnam-yangjae", "down")).toEqual(["자과캠 탑승", "양재역 하차", "강남역 하차"]);
+    expect(notes("commute-gangnam-yangjae", "up", "en")).toEqual(["Board · Gangnam Stn.", "Board · Yangjae Stn.", "Get off · NSC"]);
+    expect(notes("commute-gangnam-yangjae", "down", "zh")).toEqual(["自然校区上车", "良才站下车", "江南站下车"]);
     for (const [serviceId, station] of [
       ["commute-jeongja", "정자"],
       ["commute-jamsil", "잠실"],
       ["commute-dogok", "도곡"],
       ["commute-gwanggyo", "광교중앙"],
     ]) {
-      expect(notes(serviceId!, "up")).toEqual([`${station} 탑승`, "자과캠 하차"]);
-      expect(notes(serviceId!, "down")).toEqual(["자과캠 탑승", `${station} 하차`]);
+      expect(notes(serviceId!, "up")).toEqual([`${station}역 탑승`, "자과캠 하차"]);
+      expect(notes(serviceId!, "down")).toEqual(["자과캠 탑승", `${station}역 하차`]);
     }
     for (const s of services()) {
       for (const seq of Object.values(s.stopSequences)) {

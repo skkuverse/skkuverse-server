@@ -373,9 +373,9 @@
         {
           "stopId": "jeongja-exit3",
           "note": {
-            "ko": "정자 탑승",
-            "en": "Board · Jeongja",
-            "zh": "亭子上车"
+            "ko": "정자역 탑승",
+            "en": "Board · Jeongja Stn.",
+            "zh": "亭子站上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -418,9 +418,9 @@
             "zh": "亭子站 2号出口"
           },
           "note": {
-            "ko": "정자 하차",
-            "en": "Get off · Jeongja",
-            "zh": "亭子下车"
+            "ko": "정자역 하차",
+            "en": "Get off · Jeongja Stn.",
+            "zh": "亭子站下车"
           },
           "action": "alight",
           "timing": "estimated"
@@ -432,9 +432,9 @@
         {
           "stopId": "jamsil-exit4",
           "note": {
-            "ko": "잠실 탑승",
-            "en": "Board · Jamsil",
-            "zh": "蚕室上车"
+            "ko": "잠실역 탑승",
+            "en": "Board · Jamsil Stn.",
+            "zh": "蚕室站上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -477,9 +477,9 @@
             "zh": "蚕室站 5号出口"
           },
           "note": {
-            "ko": "잠실 하차",
-            "en": "Get off · Jamsil",
-            "zh": "蚕室下车"
+            "ko": "잠실역 하차",
+            "en": "Get off · Jamsil Stn.",
+            "zh": "蚕室站下车"
           },
           "action": "alight",
           "timing": "estimated"
@@ -491,9 +491,9 @@
         {
           "stopId": "dogok-exit1",
           "note": {
-            "ko": "도곡 탑승",
-            "en": "Board · Dogok",
-            "zh": "道谷上车"
+            "ko": "도곡역 탑승",
+            "en": "Board · Dogok Stn.",
+            "zh": "道谷站上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -536,9 +536,9 @@
             "zh": "道谷站 4号出口"
           },
           "note": {
-            "ko": "도곡 하차",
-            "en": "Get off · Dogok",
-            "zh": "道谷下车"
+            "ko": "도곡역 하차",
+            "en": "Get off · Dogok Stn.",
+            "zh": "道谷站下车"
           },
           "action": "alight",
           "timing": "estimated"
@@ -550,9 +550,9 @@
         {
           "stopId": "gangnam-exit5",
           "note": {
-            "ko": "강남 탑승",
-            "en": "Board · Gangnam",
-            "zh": "江南上车"
+            "ko": "강남역 탑승",
+            "en": "Board · Gangnam Stn.",
+            "zh": "江南站上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -560,9 +560,9 @@
         {
           "stopId": "yangjae-exit2",
           "note": {
-            "ko": "양재 탑승",
-            "en": "Board · Yangjae",
-            "zh": "良才上车"
+            "ko": "양재역 탑승",
+            "en": "Board · Yangjae Stn.",
+            "zh": "良才站上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -605,9 +605,9 @@
             "zh": "良才站 3号出口"
           },
           "note": {
-            "ko": "양재 하차",
-            "en": "Get off · Yangjae",
-            "zh": "良才下车"
+            "ko": "양재역 하차",
+            "en": "Get off · Yangjae Stn.",
+            "zh": "良才站下车"
           },
           "action": "alight",
           "timing": "estimated"
@@ -619,9 +619,9 @@
             "zh": "江南站十字路口前中央公交车站"
           },
           "note": {
-            "ko": "강남 하차",
-            "en": "Get off · Gangnam",
-            "zh": "江南下车"
+            "ko": "강남역 하차",
+            "en": "Get off · Gangnam Stn.",
+            "zh": "江南站下车"
           },
           "action": "alight",
           "timing": "estimated"
@@ -633,9 +633,9 @@
         {
           "stopId": "gwanggyo-exit4",
           "note": {
-            "ko": "광교중앙 탑승",
-            "en": "Board · Gwanggyo Jungang",
-            "zh": "光教中央上车"
+            "ko": "광교중앙역 탑승",
+            "en": "Board · Gwanggyo Jungang Stn.",
+            "zh": "光教中央站上车"
           },
           "action": "board",
           "timing": "scheduled"
@@ -678,9 +678,9 @@
             "zh": "光教中央站 1号出口"
           },
           "note": {
-            "ko": "광교중앙 하차",
-            "en": "Get off · Gwanggyo Jungang",
-            "zh": "光教中央下车"
+            "ko": "광교중앙역 하차",
+            "en": "Get off · Gwanggyo Jungang Stn.",
+            "zh": "光教中央站下车"
           },
           "action": "alight",
           "timing": "estimated"
