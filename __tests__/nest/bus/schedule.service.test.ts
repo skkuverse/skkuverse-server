@@ -807,6 +807,20 @@ describe("자과캠 통학셔틀 resolution (built from scripts/data/commute-sch
     expect(week!.days[0]).toMatchObject({ date: "2026-12-21", display: "hidden", schedule: [] });
   });
 
+  it("adds the via-route notice second, on the 강남·양재 tab only", async () => {
+    mockSchedules = docsFor("commute-gangnam-yangjae");
+    const gy = await resolveWeek("commute-gangnam-yangjae", "2026-11-02");
+    for (const day of gy!.days.filter((d) => d.display === "schedule")) {
+      expect(day.notices.map((n) => n.text)).toEqual([
+        "시범 운행 · 무료 · 킹고M QR 탑승",
+        "등교 강남역 → 양재역(5분 뒤) → 자과캠\n하교 자과캠 → 양재역 → 강남역",
+      ]);
+    }
+    mockSchedules = docsFor("commute-jeongja");
+    const jeongja = await resolveWeek("commute-jeongja", "2026-11-02");
+    expect(jeongja!.days[0]!.notices).toHaveLength(1);
+  });
+
   it("opens every operating day with the pilot notice", async () => {
     for (const serviceId of [
       "commute-jeongja",

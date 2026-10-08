@@ -1,5 +1,5 @@
 /**
- * The boarding-stop catalog validator: one case per rule in the
+ * The boarding-stop catalog validator (stops and stop sequences): one case per rule in the
  * bus-schedule-config spec, each asserting the error names its stop or
  * service. The committed catalog itself is checked against the built config in
  * bus-config.service.test.ts.
@@ -27,13 +27,20 @@ function validStop(): Record<string, unknown> {
   };
 }
 
-function catalog(stop: Record<string, unknown> = validStop(), boarding?: unknown) {
+const CAMPUS = { label: { ko: "자과캠" }, action: "alight", timing: "estimated" };
+
+function catalog(stop: Record<string, unknown> = validStop(), sequences?: unknown) {
   return {
     stops: [stop],
-    boarding: boarding ?? {
-      "commute-jeongja": [{ routeTypes: ["up"], stopId: "jeongja-exit3", alight: { ko: "N센터 인근" } }],
+    sequences: sequences ?? {
+      "commute-jeongja": { up: [{ stopId: "jeongja-exit3", action: "board", timing: "scheduled" }, CAMPUS] },
     },
   };
+}
+
+/** One route type's sequence for commute-jeongja. */
+function seq(...stops: unknown[]) {
+  return { "commute-jeongja": { up: stops } };
 }
 
 function errorsFor(raw: unknown): string[] {
@@ -42,7 +49,7 @@ function errorsFor(raw: unknown): string[] {
 
 describe("validateStopCatalog", () => {
   it("accepts the empty catalog and a complete stop", () => {
-    expect(errorsFor({ stops: [], boarding: {} })).toEqual([]);
+    expect(errorsFor({ stops: [], sequences: {} })).toEqual([]);
     expect(errorsFor(catalog())).toEqual([]);
   });
 
@@ -53,11 +60,11 @@ describe("validateStopCatalog", () => {
   });
 
   it("rejects a malformed root", () => {
-    expect(errorsFor([])).toEqual(["schedule-stops.json must be { stops: [], boarding: {} }"]);
+    expect(errorsFor([])).toEqual(["schedule-stops.json must be { stops: [], sequences: {} }"]);
   });
 
   it("rejects a duplicate stop id", () => {
-    const raw = { stops: [validStop(), validStop()], boarding: {} };
+    const raw = { stops: [validStop(), validStop()], sequences: {} };
     expect(errorsFor(raw)).toEqual(["stop jeongja-exit3: duplicate id"]);
   });
 
@@ -145,51 +152,76 @@ describe("validateStopCatalog", () => {
     expect(errorsFor(catalog(stop))[0]).toMatch(/^stop jeongja-exit3: walkPath is \d+ m, longer than 500 m$/);
   });
 
-  it("rejects a boarding entry naming an unknown stop, naming the service and the id", () => {
-    const raw = catalog(validStop(), { "commute-jeongja": [{ routeTypes: ["up"], stopId: "nowhere" }] });
-    expect(errorsFor(raw)).toEqual(['boarding commute-jeongja[0]: unknown stop id "nowhere"']);
+  const BOARD = { stopId: "jeongja-exit3", action: "board", timing: "scheduled" };
+
+  it("rejects a sequence naming an unknown stop, naming the service and the id", () => {
+    const raw = catalog(validStop(), seq({ ...BOARD, stopId: "nowhere" }, CAMPUS));
+    expect(errorsFor(raw)).toEqual(['sequences commute-jeongja.up[0]: unknown stop id "nowhere"']);
   });
 
-  it("rejects boarding for an unknown service", () => {
-    const raw = catalog(validStop(), { "commute-typo": [{ routeTypes: ["up"], stopId: "jeongja-exit3" }] });
-    expect(errorsFor(raw)).toEqual(["boarding commute-typo: unknown service"]);
+  it("rejects sequences for an unknown service", () => {
+    const raw = catalog(validStop(), { "commute-typo": { up: [BOARD, CAMPUS] } });
+    expect(errorsFor(raw)).toEqual(["sequences commute-typo: unknown service"]);
   });
 
-  it("rejects an empty routeTypes", () => {
-    const raw = catalog(validStop(), { "commute-jeongja": [{ routeTypes: [], stopId: "jeongja-exit3" }] });
-    expect(errorsFor(raw)).toEqual(["boarding commute-jeongja[0]: routeTypes must be a non-empty list of names"]);
+  it("rejects a sequence of one stop", () => {
+    expect(errorsFor(catalog(validStop(), seq(BOARD)))).toEqual([
+      "sequences commute-jeongja.up: must list at least two stops",
+    ]);
   });
 
-  it("accepts one route type boarding at several stops", () => {
+  it("rejects a stop with both or neither of stopId and label", () => {
+    const both = { ...CAMPUS, stopId: "jeongja-exit3" };
+    const neither = { action: "alight", timing: "estimated" };
+    for (const bad of [both, neither]) {
+      expect(errorsFor(catalog(validStop(), seq(BOARD, bad)))).toEqual([
+        "sequences commute-jeongja.up[1]: needs exactly one of stopId and label",
+      ]);
+    }
+  });
+
+  it("rejects the same catalog stop twice in one sequence", () => {
+    expect(errorsFor(catalog(validStop(), seq(BOARD, BOARD, CAMPUS)))).toEqual([
+      "sequences commute-jeongja.up[1]: stop jeongja-exit3 appears twice",
+    ]);
+  });
+
+  it("rejects an unknown action or timing", () => {
+    expect(errorsFor(catalog(validStop(), seq({ ...BOARD, action: "stop" }, CAMPUS)))).toContain(
+      'sequences commute-jeongja.up[0]: action must be "board" or "alight"',
+    );
+    expect(errorsFor(catalog(validStop(), seq(BOARD, { ...CAMPUS, timing: "approx" })))).toEqual([
+      'sequences commute-jeongja.up[1]: timing must be "scheduled" or "estimated"',
+    ]);
+  });
+
+  it("rejects a run that does not start by boarding, or never lets anyone off", () => {
+    expect(errorsFor(catalog(validStop(), seq(CAMPUS, BOARD)))).toEqual([
+      "sequences commute-jeongja.up: the first stop must be a boarding stop",
+    ]);
+    const second = { label: { ko: "다른 정류장" }, action: "board", timing: "scheduled" };
+    expect(errorsFor(catalog(validStop(), seq(BOARD, second)))).toEqual([
+      "sequences commute-jeongja.up: must have at least one alighting stop",
+    ]);
+  });
+
+  it("accepts a run that boards at two stops (the 강남·양재 shape)", () => {
     const second: Record<string, unknown> = { ...validStop(), id: "second-stop" };
     delete second.exit;
     delete second.walkPath;
     const raw = {
       stops: [validStop(), second],
-      boarding: {
-        "commute-jeongja": [
-          { routeTypes: ["up"], stopId: "jeongja-exit3" },
-          { routeTypes: ["up"], stopId: "second-stop" },
-        ],
-      },
+      sequences: seq(BOARD, { stopId: "second-stop", action: "board", timing: "scheduled" }, CAMPUS),
     };
     expect(errorsFor(raw)).toEqual([]);
   });
 
-  it("rejects a route type boarding at the same stop twice", () => {
-    const raw = catalog(validStop(), {
-      "commute-jeongja": [
-        { routeTypes: ["up"], stopId: "jeongja-exit3" },
-        { routeTypes: ["down", "up"], stopId: "jeongja-exit3" },
-      ],
-    });
-    expect(errorsFor(raw)).toEqual(["boarding commute-jeongja[1]: route type up boards at jeongja-exit3 twice"]);
-  });
-
-  it("rejects an alight line without Korean text", () => {
-    const raw = catalog(validStop(), {
-      "commute-jeongja": [{ routeTypes: ["up"], stopId: "jeongja-exit3", alight: { en: "N Center" } }],
-    });
-    expect(errorsFor(raw)).toEqual(["boarding commute-jeongja[0]: alight has no Korean text"]);
+  it("rejects a label or detail without Korean text", () => {
+    expect(errorsFor(catalog(validStop(), seq(BOARD, { ...CAMPUS, label: { en: "NSC" } })))).toEqual([
+      "sequences commute-jeongja.up[1]: label has no Korean text",
+    ]);
+    expect(errorsFor(catalog(validStop(), seq(BOARD, { ...CAMPUS, detail: { ko: " " } })))).toEqual([
+      "sequences commute-jeongja.up[1]: detail has no Korean text",
+    ]);
   });
 });
