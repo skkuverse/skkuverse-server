@@ -1,4 +1,5 @@
 import config from "../infra/config";
+import logger from "../infra/logger";
 
 /**
  * The one place this codebase POSTs to the `sendNotification` Cloud Function.
@@ -27,10 +28,37 @@ export interface FcmResponse {
 export type FcmPayload = Record<string, unknown> & { type: string };
 
 /**
- * Throws on a non-2xx with `status` attached, so callers can distinguish
- * "the function rejected this payload" from "the network went away".
+ * What a suppressed send reports: delivered to nobody, failed for nobody. The
+ * callers treat it as a completed send, so a local run still exercises the
+ * whole claim → push → record path against its _dev databases.
+ */
+const SUPPRESSED_RESPONSE: Readonly<FcmResponse> = Object.freeze({
+  sent: 0,
+  failed: 0,
+  cleanedUp: 0,
+  suppressed: true,
+});
+
+/**
+ * (An operations detail is left out of the public history.)
+ *
  */
 export async function postToFcmFunction(payload: FcmPayload): Promise<FcmResponse> {
+  if (config.push.delivery === "suppressed") {
+    logger.info(
+      {
+        event: "push.delivery.suppressed",
+        type: payload.type,
+        noticeId: payload.noticeId,
+        miniAppId: payload.miniAppId,
+        notificationId: payload.notificationId,
+        topics: payload.topics,
+        title_ko: payload.title_ko,
+      },
+      "Push suppressed (PUSH_DELIVERY=suppressed); the Cloud Function was not called",
+    );
+    return { ...SUPPRESSED_RESPONSE };
+  }
   const { functionUrl, apiKey, fcmTimeoutMs } = config.notices.dispatch;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), fcmTimeoutMs);

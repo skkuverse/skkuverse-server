@@ -1,48 +1,39 @@
 # docker-compose.local-verify.yml
 #
-# 로컬에서 production 컨테이너 토폴로지(poller + api 레플리카 전부)를 그대로
-# 띄워서 "서버에 배포됐을 때 서비스 서빙이 제대로 되는가"를 검증하기 위한 override.
-# base docker-compose.yml 과 함께 -f 로 결합해 사용한다:
+# Runs the production container topology (the poller and every api replica) on
+# a laptop, to check that the build serves correctly before a dev → main deploy.
+# Combine it with the base file:
 #
-#   npm run verify:serve        # 기동 (detached + build)
-#   npm run verify:serve:down   # 정리
+#   npm run verify:serve        # build and start, detached
+#   npm run verify:serve:down   # tear down
 #
-# ──────────────────────────────────────────────────────────────────────────
-# 설계 핵심: NODE_ENV 는 production 을 유지하고, DB "이름"만 _dev 로 바꾼다.
-# ──────────────────────────────────────────────────────────────────────────
-# 왜 NODE_ENV=development 가 아니라 production 인가:
-#   prod 이미지는 Dockerfile 에서 `npm ci --omit=dev` 로 빌드돼 devDependency 인
-#   pino-pretty 가 없다. 그런데 lib/logger.ts 는 non-production 모드에서 pino-pretty
-#   transport 를 요구한다(logger.ts:8-10) → NODE_ENV=development 로 prod 이미지를
-#   띄우면 "unable to determine transport target for pino-pretty" 로 부팅 자체가
-#   실패한다. 따라서 NODE_ENV=production 을 유지해야 진짜 prod 와 동일한 거동
-#   (JSON 로깅 / swagger off / USE_PROD_API 강제)으로 검증된다.
+# NODE_ENV stays production; only the data plane and the outbound side effects
+# are switched off.
 #
-# 그러면 DB 격리는 어떻게? production 모드에선 config.devDbName() 가 no-op 이므로,
-# DB "이름" 환경변수를 직접 _dev 값으로 덮어쓴다. 아래 5개가 우리가 write 하는 DB:
-#   bus_campus / skkubus_ads / skkumap / skku_notices / eventmap / miniapps
-#   → 각각 *_dev.
-#   prod DB 는 절대 건드리지 않는다.
-#   (INJA/JAIN 셔틀 스케줄·map DB 는 read-only 라 override 불필요 — 읽기뿐.)
+# Why production rather than development: the image is built with
+# `npm ci --omit=dev`, so pino-pretty is absent, and the logger needs it outside
+# production (src/infra/logger.ts) — a development boot of this image fails.
+# Production mode is also the behavior being verified (JSON logs, swagger off,
+# USE_PROD_API forced).
 #
-# ⚠️ 새 DB 를 추가하면 반드시 여기에도 추가할 것. env_file: .env 가 prod 이름을
-# 그대로 주입하고 production 모드에선 devDbName() 이 no-op 이라, 빠뜨리면 조용히
-# prod DB 에 write 한다. eventmap 이 실제로 그 상태였다(skkuverse#14):
-# materializer poller 가 prod `eventmap` 에 스냅샷을 발행할 뻔했다.
+# Databases: in production mode devDbName() is a no-op, so every database name
+# the server writes is overridden to its _dev name here — bus_campus,
+# skkubus_ads, skkumap, skku_notices, eventmap, miniapps. A new database must be
+# added here too: env_file .env injects the production names, and one left out
+# is written to in production. eventmap was in exactly that state once
+# (skkuverse#14).
 #
-# 그리고 DISPATCH_SWEEP_ENABLED=false 로 FCM dispatch sweep poller 등록을 막아
-# (notices.dispatch.poller.ts:22) 로컬 poller 가 실제 유저에게 푸시를 보내는 경로를
-# 원천 차단한다. base 의 poller 는 이 값이 true 이므로 반드시 덮어써야 한다.
-#
-# 결과: 진짜 prod 와 동일한 런타임 거동 + 데이터 평면만 _dev.
-#
-# ⚠️ "FCM 0건" 은 더 이상 무조건 참이 아니다. DISPATCH_SWEEP_ENABLED=false 는
-#    공지 sweep 만 막는다. skkuverse#17 이후 EventMapMaterializerService 가 새
-#    스냅샷 버전을 쓸 때 eventmap-refresh 사일런트 푸시를 직접 쏘는데, 이 poller
-#    는 여기서도 돈다. eventmap_dev 의 activation 문서에 notifyMiniAppId 가
-#    (prod 를 복사해서) 들어 있으면, 로컬 verify 가 **실제 구독자 기기로** 푸시를
-#    보낸다. 데이터 평면이 _dev 여도 FCM 은 _dev 가 아니다.
-#    → verify 용 activation 에는 notifyMiniAppId 를 비워 둘 것.
+# Side effects (src/infra/runtime-switches.ts):
+#   - PUSH_DELIVERY=suppressed: every push — the notices sweep, POST
+#     /internal/notices/dispatch-pending, a mini-app send — is logged instead of
+#     sent. The laptop's .env points at the same Cloud Function production uses,
+#     and it pushes by topic to every real subscriber.
+#   - BUILDING_SYNC=off: no campusMap.do crawl on every container start.
+#   - DISPATCH_SWEEP_ENABLED=false on the poller: the base file sets it true;
+#     with push suppressed the sweep would only mark _dev notices pushed.
+#   - SENTRY_DSN=disabled: production requires a DSN, and a local run must not
+#     report into prod's project.
+# __tests__/nest/infra/runtime-switches.test.ts fails if a block loses one.
 
 # Every api replica gets the same _dev overrides. A replica missing from this
 # file would boot with the production database names from .env —
@@ -57,9 +48,9 @@ x-api-dev-env: &api-dev-env
   - MONGO_NOTICES_DB_NAME=skku_notices_dev
   - MONGO_EVENTMAP_DB_NAME=eventmap_dev
   - MONGO_MINIAPPS_DB_NAME=miniapps_dev
-  # Production requires SENTRY_DSN; a local run must not report into prod's
-  # project, so it is switched off by name (src/infra/config.ts).
   - SENTRY_DSN=disabled
+  - PUSH_DELIVERY=suppressed
+  - BUILDING_SYNC=off
 
 services:
   poller:
@@ -75,6 +66,8 @@ services:
       - MONGO_EVENTMAP_DB_NAME=eventmap_dev
       - MONGO_MINIAPPS_DB_NAME=miniapps_dev
       - SENTRY_DSN=disabled
+      - PUSH_DELIVERY=suppressed
+      - BUILDING_SYNC=off
 
   api-1:
     environment: *api-dev-env
