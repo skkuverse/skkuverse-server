@@ -10,12 +10,10 @@ import {
 export type BusGroup = ReturnType<typeof getBusGroups>[number];
 
 /**
- * SDUI bus-group config + ETags — DELEGATES to features/bus/bus-config.data
- * (read-only shared import). This is the single most important parity lever:
+ * SDUI bus-group config + ETags — DELEGATES to ./bus-config.data.
  * getBusGroups/computeEtag produce ETags via JSON.stringify with exact field
- * ordering, and the per-lang etagCache lives in the original module. Importing
- * + calling guarantees byte-identical ETag strings and group bytes — NO
- * reimplementation.
+ * ordering, and the per-lang etagCache lives in that module, so this service
+ * only forwards — NO reimplementation.
  */
 @Injectable()
 export class BusConfigService {

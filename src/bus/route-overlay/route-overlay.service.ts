@@ -8,10 +8,9 @@ interface RouteOverlay {
 }
 
 /**
- * Route overlay lookup — port of features/bus/route-overlay.routes.ts ROUTES
- * map. Both jongro routes use color "4CAF50". getRoute returns undefined for
- * an unknown id; the controller turns that into AppError("NOT_FOUND", …, 404),
- * matching the Express handler.
+ * Route overlay lookup over the ROUTES map. Both jongro routes use color
+ * "4CAF50". getRoute returns undefined for an unknown id; the controller turns
+ * that into AppError("NOT_FOUND", …, 404).
  */
 @Injectable()
 export class RouteOverlayService {
