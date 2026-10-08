@@ -1,6 +1,5 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import config from "../infra/config";
-import logger from "../infra/logger";
 import { syncBuildings } from "./building.sync";
 import { PollerRegistryService } from "../scheduling/poller-registry.service";
 
@@ -8,8 +7,9 @@ import { PollerRegistryService } from "../scheduling/poller-registry.service";
  * BuildingSyncService — registers building.sync's syncBuildings() (SKKU
  * campusMap.do crawl → raw/enriched/spaces upsert) with the Nest
  * PollerRegistry. Interval = config.building.syncIntervalMs (~7 days), name
- * "building-sync". The wrapper catches a rejected sync and logs it
- * (`building.sync.poller_failed`).
+ * "building-sync". Registered as is: a failed run rejects, and the registry
+ * logs it as `poller.failing` and opens a Sentry Issue on the first failure
+ * (a slow poller), like every other poller.
  *
  * Gating: PollerRegistryService.onApplicationBootstrap only startAll()s when
  * ROLE !== "api", so an api replica registers but never runs the sync — no
@@ -24,13 +24,7 @@ export class BuildingSyncService implements OnModuleInit {
 
   onModuleInit(): void {
     this.registry.registerPoller(
-      () =>
-        syncBuildings().catch((err: unknown) =>
-          logger.error(
-            { event: "building.sync.poller_failed", err },
-            "Poller error",
-          ),
-        ),
+      syncBuildings,
       config.building.syncIntervalMs,
       "building-sync",
     );
