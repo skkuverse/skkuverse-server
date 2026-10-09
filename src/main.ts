@@ -17,11 +17,11 @@ import { ResponseInterceptor } from "./common/response.interceptor";
 import {
   EXPOSED_RESPONSE_HEADERS,
   exposeResponseHeaders,
-} from "./common/expose-headers";
+} from "./common/expose-headers.middleware";
 import { CORS_METHODS, corsOrigins } from "./infra/origins";
 import { HttpExceptionFilter } from "./common/http-exception.filter";
 import { LangMiddleware } from "./common/lang.middleware";
-import { forceNoStore } from "./common/no-store";
+import { forceNoStore } from "./common/no-store.middleware";
 import { BusCacheService } from "./bus/cache/bus-cache.service";
 
 /**
@@ -78,7 +78,7 @@ async function bootstrap(): Promise<void> {
   //
   // Added when apps/webview gained its first fetch (the mini-app notification
   // feed, skkuverse#17). Until then the API sent no Access-Control-Allow-Origin
-  // and answered OPTIONS with 404, which common/expose-headers.ts documents —
+  // and answered OPTIONS with 404, which common/expose-headers.middleware.ts documents —
   // and which meant a cross-origin fetch failed before it could read anything.
   //
   // Read-only methods, no credentials. Everything reachable this way is already

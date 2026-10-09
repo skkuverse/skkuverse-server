@@ -147,7 +147,7 @@ describe("validateEnv refuses an invalid switch", () => {
         for (const k of touched) delete process.env[k];
         Object.assign(process.env, env);
         jest.isolateModules(() => {
-          require("../../../src/config/env.validation").validateEnv();
+          require("../../../src/infra/required-env").validateEnv();
         });
       } finally {
         for (const [k, v] of saved) {

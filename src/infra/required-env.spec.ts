@@ -1,5 +1,5 @@
 /**
- * Pins env.validation.findMissingRequired() to the resolution
+ * Pins findMissingRequired() to the resolution
  * src/infra/config.ts uses (both read src/infra/required-env.ts) —
  * specifically the api.hsscNew entry, the only one resolved via apiUrl()
  * (DEV-preferred-with-PROD-fallback) rather than read straight off
@@ -33,7 +33,7 @@ function withEnv(
       else process.env[k] = env[k];
     }
     jest.isolateModules(() => {
-      const mod = require("../../../src/config/env.validation");
+      const mod = require("./required-env");
       fn(mod.findMissingRequired);
     });
   } finally {
@@ -48,7 +48,7 @@ function hsscMissing(missing: string[]): boolean {
   return missing.some((m) => m.includes("api.hsscNew"));
 }
 
-describe("env.validation api.hsscNew matches src/infra/config.ts apiUrl()", () => {
+describe("findMissingRequired api.hsscNew matches src/infra/config.ts apiUrl()", () => {
   // Baseline: jest.setup.ts defines all other required vars, so api.hsscNew is
   // the only entry that flips based on the HSSC env we control here.
 
@@ -109,14 +109,14 @@ describe("env.validation api.hsscNew matches src/infra/config.ts apiUrl()", () =
   });
 });
 
-describe("env.validation AI_API_URL", () => {
+describe("findMissingRequired AI_API_URL", () => {
   // GET /notices/overview cannot work without it, and there is no default.
   it("reports AI_API_URL as missing when it is unset", () => {
     const saved = process.env.AI_API_URL;
     delete process.env.AI_API_URL;
     try {
       jest.isolateModules(() => {
-        const mod = require("../../../src/config/env.validation");
+        const mod = require("./required-env");
         expect(mod.findMissingRequired()).toContain(
           "  notices.overview.aiApiUrl (env: AI_API_URL)",
         );

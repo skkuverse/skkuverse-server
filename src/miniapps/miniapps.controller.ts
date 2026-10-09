@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { AppError } from "../common/app-error";
+import { AppError } from "../common/app.error";
 import { MiniAppsService } from "./miniapps.service";
 import { MiniAppNotificationsService } from "./miniapps-notifications.service";
 import { MiniAppsManifestService } from "./miniapps.manifest";

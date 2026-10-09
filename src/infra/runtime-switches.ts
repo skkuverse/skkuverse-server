@@ -18,9 +18,9 @@
  *
  * CACHE is not a side effect but the same kind of local-only difference: with
  * it off, a change to a _dev database shows on the next request instead of
- * after a TTL. It bypasses the in-process caches (common/cache/cached-loader.ts,
+ * after a TTL. It bypasses the in-process caches (infra/cached-loader.ts,
  * the bus timetable, the ad placements) and rewrites every Cache-Control to
- * no-store (common/no-store.ts), which keeps the phone's HTTP cache from
+ * no-store (common/no-store.middleware.ts), which keeps the phone's HTTP cache from
  * answering for the server. The AI overview and mini-app manifest caches stay
  * on: one saves an LLM call per request, the other a fetch to a production
  * origin, and neither holds _dev data.
@@ -47,7 +47,7 @@
  * tests expect 429s.
  *
  * Both fail-loud layers call this — src/infra/config.ts exits on `errors`,
- * src/config/env.validation.ts throws on them — so the two cannot disagree.
+ * validateEnv() in src/infra/required-env.ts throws on them — so the two cannot disagree.
  * These are per-run values like USE_PROD_API and ROLE: they are not in Doppler
  * or config/env.*.keys, and __tests__/nest/infra/runtime-switches.test.ts fails
  * if production's compose file or key list ever sets one.

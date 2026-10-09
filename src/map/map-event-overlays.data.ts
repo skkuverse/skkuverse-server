@@ -1,4 +1,4 @@
-import { createCachedLoader } from "../common/cache/cached-loader";
+import { createCachedLoader } from "../infra/cached-loader";
 import { hasAnyText } from "../infra/i18n";
 import logger from "../infra/logger";
 import { ROOT_RELATIVE_PATH_RE, toWebviewUrl } from "../infra/webview-url";

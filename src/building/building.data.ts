@@ -1,5 +1,5 @@
 import type { Collection } from "mongodb";
-import { createCachedLoader } from "../common/cache/cached-loader";
+import { createCachedLoader } from "../infra/cached-loader";
 import { getClient, HOT_READ_MAX_TIME_MS } from "../infra/db";
 import config from "../infra/config";
 import type {

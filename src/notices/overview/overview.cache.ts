@@ -1,7 +1,7 @@
 import {
   createCachedLoader,
   type CachedLoader,
-} from "../../common/cache/cached-loader";
+} from "../../infra/cached-loader";
 
 /**
  * Per-replica keyed cache for generated overviews (design D6).

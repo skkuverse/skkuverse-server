@@ -11,9 +11,9 @@
  */
 import fs from "fs";
 import path from "path";
-import config from "../../../src/infra/config";
-import logger from "../../../src/infra/logger";
-import { postToFcmFunction } from "../../../src/common/fcm-client";
+import config from "../infra/config";
+import logger from "../infra/logger";
+import { postToFcmFunction } from "./fcm.client";
 
 const notice = {
   type: "notice",
@@ -97,16 +97,17 @@ describe("postToFcmFunction with PUSH_DELIVERY=live", () => {
 
 describe("postToFcmFunction is the only way to the Cloud Function", () => {
   // Where the URL and key may appear in code: read from env and validated
-  // (config.ts, required-env.ts) and used (fcm-client.ts). A fetch to the
-  // function anywhere else would bypass PUSH_DELIVERY.
-  const allowed = new Set(["infra/config.ts", "infra/required-env.ts", "common/fcm-client.ts"]);
+  // (config.ts, required-env.ts) and used (fcm.client.ts). A fetch to the
+  // function anywhere else would bypass PUSH_DELIVERY. Specs are not code.
+  const allowed = new Set(["infra/config.ts", "infra/required-env.ts", "common/fcm.client.ts"]);
   const reference = /\bfunctionUrl\b|\bFCM_FUNCTION_URL\b|\bFCM_API_KEY\b|dispatch\.apiKey\b/;
 
   it("no other file in src/ reads the function URL or key", () => {
-    const root = path.join(__dirname, "../../../src");
+    const root = path.join(__dirname, "..");
     const offenders = fs
       .readdirSync(root, { recursive: true, encoding: "utf8" })
-      .filter((rel) => rel.endsWith(".ts") && !allowed.has(rel.split(path.sep).join("/")))
+      .filter((rel) => rel.endsWith(".ts") && !rel.endsWith(".spec.ts"))
+      .filter((rel) => !allowed.has(rel.split(path.sep).join("/")))
       .filter((rel) =>
         fs
           .readFileSync(path.join(root, rel), "utf8")

@@ -1,4 +1,4 @@
-import { createCachedLoader } from "../common/cache/cached-loader";
+import { createCachedLoader } from "../infra/cached-loader";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { hasAnyText } from "../infra/i18n";
 import logger from "../infra/logger";

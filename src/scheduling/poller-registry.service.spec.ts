@@ -13,7 +13,7 @@
  * ROLE-gating (ROLE=api → no startAll) and onApplicationShutdown → stopAll.
  */
 
-jest.mock("../../../src/infra/logger", () => ({
+jest.mock("../infra/logger", () => ({
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
@@ -24,9 +24,9 @@ jest.mock("@sentry/nestjs", () => ({
   captureCheckIn: jest.fn(),
 }));
 
-import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
+import { PollerRegistryService } from "./poller-registry.service";
 
-const logger = require("../../../src/infra/logger");
+const logger = require("../infra/logger");
 const Sentry = require("@sentry/nestjs");
 
 /** Lets the settled tick's outcome handlers run. */

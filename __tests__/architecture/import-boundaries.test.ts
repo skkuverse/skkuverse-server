@@ -63,7 +63,7 @@ describe("import boundary blocks apply as specified", () => {
       'import { BusConfigService } from "../../bus/bus-config/bus-config.service";',
       'import { BusModule } from "../../bus/bus.module";',
       'import type { BusGroup } from "../../bus/types";',
-      'import { AppError } from "../../common/app-error";',
+      'import { AppError } from "../../common/app.error";',
       'import { escapeRegex } from "../../shared/regex.util";',
       'import { campus } from "../ui.campus";',
       'import { x } from "../../ui/ui.service";',
