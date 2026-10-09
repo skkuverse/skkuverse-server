@@ -195,8 +195,21 @@ const config = {
   // SHUTTLE_ETA. While false, the shuttle arrival-estimate pollers are not
   // registered, so no NAVER Directions or TMAP call is made; serving still
   // applies stored estimates. Off in development.
+  //
+  // The credentials are required even then, so a rendered .env without them
+  // fails at boot instead of at a poller's first tick. NAVER is the NCP
+  // application the crawler also uses. TMAP is one SK open API app for dev and
+  // prd (its terms count several apps for one service as abuse), so
+  // development gets a small share of its 1,000 daily calls.
   shuttleEta: {
     enabled: switches.shuttleEtaEnabled,
+    naver: {
+      keyId: process.env.NAVER_API_KEY_ID,
+      key: process.env.NAVER_API_KEY,
+    },
+    tmapAppKey: process.env.TMAP_APP_KEY,
+    naverDailyCap: 1000,
+    tmapDailyCap: isProduction ? 900 : 50,
   },
 
   // Error and log collection (src/instrument.ts). Required in production;
@@ -290,6 +303,9 @@ const required: ReadonlyArray<readonly [string, unknown, string]> = [
     "INTERNAL_DISPATCH_TOKEN",
   ],
   ["notices.overview.aiApiUrl", config.notices.overview.aiApiUrl, "AI_API_URL"],
+  ["shuttleEta.naver.keyId", config.shuttleEta.naver.keyId, "NAVER_API_KEY_ID"],
+  ["shuttleEta.naver.key", config.shuttleEta.naver.key, "NAVER_API_KEY"],
+  ["shuttleEta.tmapAppKey", config.shuttleEta.tmapAppKey, "TMAP_APP_KEY"],
   // Production must report errors somewhere; elsewhere Sentry is opt-in.
   ...(isProduction
     ? ([["sentry.dsn", config.sentry.dsn, "SENTRY_DSN"]] as const)

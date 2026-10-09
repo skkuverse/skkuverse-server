@@ -65,6 +65,9 @@ export function findMissingRequired(): string[] {
     ["notices.dispatch.apiKey", process.env.FCM_API_KEY, "FCM_API_KEY"],
     ["notices.dispatch.internalToken", process.env.INTERNAL_DISPATCH_TOKEN, "INTERNAL_DISPATCH_TOKEN"],
     ["notices.overview.aiApiUrl", process.env.AI_API_URL, "AI_API_URL"],
+    ["shuttleEta.naver.keyId", process.env.NAVER_API_KEY_ID, "NAVER_API_KEY_ID"],
+    ["shuttleEta.naver.key", process.env.NAVER_API_KEY, "NAVER_API_KEY"],
+    ["shuttleEta.tmapAppKey", process.env.TMAP_APP_KEY, "TMAP_APP_KEY"],
     // Production must report errors somewhere; elsewhere Sentry is opt-in.
     ...(isProduction
       ? ([["sentry.dsn", process.env.SENTRY_DSN, "SENTRY_DSN"]] as const)
