@@ -12,7 +12,8 @@ import type {
   LatLng,
   ScheduleStop,
   ScheduleStopCatalog,
-  StopExit,
+  StopGuide,
+  StopMap,
 } from "../types";
 
 type AnyStation = HsscStation | JongroStation;
@@ -75,8 +76,7 @@ interface ServedStop {
   coords?: LatLng;
   photoUrl?: string;
   streetViewUrl?: string;
-  exit?: StopExit;
-  walkPath?: LatLng[];
+  map?: StopMap;
 }
 
 interface ServedSequenceStop {
@@ -86,6 +86,24 @@ interface ServedSequenceStop {
   stopId?: string;
   note?: string;
   detail?: string;
+}
+
+/**
+ * A stop's guide as its map card: places become markers labeled in the request
+ * language, walks become paths. Both arrays are always present, so an empty
+ * guide serves the pin-only `{ markers: [], paths: [] }`.
+ */
+function serveMap(guide: StopGuide, lang: SupportedLang): StopMap {
+  return {
+    markers: (guide.places ?? []).map((p) => ({
+      id: p.id,
+      kind: p.kind,
+      label: pick(p.name, lang)!,
+      number: p.number,
+      coords: p.coords,
+    })),
+    paths: (guide.walks ?? []).map((w) => ({ kind: "walk" as const, from: w.from, to: w.to, points: w.path })),
+  };
 }
 
 /**
@@ -102,10 +120,8 @@ function serveStop(stop: ScheduleStop, lang: SupportedLang): ServedStop {
   if (stop.coords) served.coords = stop.coords;
   if (stop.photo) served.photoUrl = stop.photo.localized?.[lang] ?? stop.photo.original;
   if (stop.panorama) served.streetViewUrl = buildStreetViewUrl(stop.panorama);
-  if (stop.exit && stop.walkPath) {
-    served.exit = stop.exit;
-    served.walkPath = stop.walkPath;
-  }
+  // The loader refuses a guide on a stop without coordinates.
+  if (stop.guide) served.map = serveMap(stop.guide, lang);
   return served;
 }
 
