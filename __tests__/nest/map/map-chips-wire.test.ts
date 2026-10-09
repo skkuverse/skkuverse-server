@@ -8,12 +8,9 @@
  * This is the only test that reads the bytes a client would receive.
  */
 
-// No DB in either direction: buildings fall back, and "no festival" is stated
-// rather than inferred from an absent Mongo client.
-jest.mock("../../../src/building/building.data", () => ({
-  getAllBuildings: jest.fn().mockResolvedValue([]),
-}));
-
+// No DB in either direction: buildings fall back (BuildingService is stubbed
+// below), and "no festival" is stated rather than inferred from an absent Mongo
+// client.
 jest.mock("../../../src/map/map-places.data", () => ({
   findActiveActivation: jest.fn(),
   getPlacesCollection: jest.fn(),
@@ -54,7 +51,14 @@ describe("GET /map/config (real MapService)", () => {
     // Only BuildingService is stubbed, and only to keep its onModuleInit
     // ensureIndexes off a database. MapService itself is the real one.
     app = await buildMapApp([
-      { provide: BuildingService, useValue: { onModuleInit: jest.fn() } },
+      {
+        provide: BuildingService,
+        useValue: {
+          onModuleInit: jest.fn(),
+          getAllBuildings: jest.fn().mockResolvedValue([]),
+          getAllCampusShapes: jest.fn().mockResolvedValue([]),
+        },
+      },
     ]);
     httpServer = app.getHttpServer();
   });

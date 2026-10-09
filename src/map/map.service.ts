@@ -6,6 +6,7 @@ import { getMapConfig } from "./map-config.data";
 import { getEventOverlays } from "./map-event-overlays.data";
 import { getEventPlaceDetails } from "./map-event-details.data";
 import { getCampusOverlays } from "./map-campus-overlays.data";
+import { BuildingService } from "../building/building.service";
 
 /**
  * MapService — thin @Injectable wrapper over the validated, read-only map/*
@@ -18,13 +19,9 @@ import { getCampusOverlays } from "./map-campus-overlays.data";
  * split by geometry, which would have meant two fetches to draw one festival
  * and a tappable zone landing outside the query that backs the detail sheet.
  *
- * NOTE: getCampusOverlays delegates straight to map/map-campus-overlays.data,
- * which itself calls building/building.data — `getAllBuildings` (with the
- * 5-min in-memory cache + FALLBACK_MARKERS empty-DB path) and
- * `getAllCampusShapes`. MapModule imports BuildingModule for the
- * dependency-graph linkage (BuildingService.onModuleInit ensureIndexes runs
- * once, which is also what creates the campus_shapes indexes) — no logic
- * duplicated.
+ * getCampusOverlays reads buildings and campus shapes through BuildingService,
+ * which BuildingModule exports and MapModule imports; map-campus-overlays.data
+ * adds the FALLBACK_MARKERS empty-DB path.
  *
  * The legacy `/map/overlays?category=` and `/map/overlays/:overlayId` handlers
  * are gone, along with the hardcoded building table and the jongro coordinate
@@ -42,6 +39,8 @@ import { getCampusOverlays } from "./map-campus-overlays.data";
  */
 @Injectable()
 export class MapService implements OnModuleInit {
+  constructor(private readonly building: BuildingService) {}
+
   /**
    * ensureIndexes() inside ONE non-fatal try/catch, following AdDataService.
    * Index creation is a startup nicety, not a serving prerequisite: an Atlas
@@ -66,7 +65,7 @@ export class MapService implements OnModuleInit {
   }
 
   getCampusOverlays(): ReturnType<typeof getCampusOverlays> {
-    return getCampusOverlays();
+    return getCampusOverlays(this.building);
   }
 
   getEventOverlays(): ReturnType<typeof getEventOverlays> {
