@@ -9,11 +9,17 @@ import type {
   SpaceDoc,
 } from "./building.document";
 import type { AnyBulkWriteOperation } from "mongodb";
+import { t } from "../infra/i18n";
+import type { SupportedLang } from "../infra/types";
 import type {
+  BilingualText,
+  Campus,
   ConnectionResponseItem,
   FloorGroup,
+  SpaceGroup,
   SpaceSource,
   SyncedSpace,
+  WithCampusLabel,
 } from "./building.types";
 
 // Bump this when enrichment logic changes to trigger re-enrichment of all buildings
@@ -303,12 +309,75 @@ function toSpaceUpsert(
   };
 }
 
+// --- Responses ---
+
+function campusLabel(campus: Campus, lang: SupportedLang): string {
+  return t(`map.campus.${campus}.label`, lang);
+}
+
+function withCampusLabel<T extends { campus: Campus }>(item: T, lang: SupportedLang): WithCampusLabel<T> {
+  return { ...item, campusLabel: campusLabel(item.campus, lang) };
+}
+
+/** An empty English side shows the Korean one. */
+function withEnFallback<T extends Partial<BilingualText> | undefined>(text: T): T {
+  if (text && !text.en && text.ko) return { ...text, en: text.ko };
+  return text;
+}
+
+/**
+ * Search rooms grouped by building, in row order so the relevance ranking
+ * survives grouping. `skkuIdByBuildNo` joins each group to its building.
+ */
+function groupSpacesByBuilding(
+  spaces: readonly SpaceDoc[],
+  skkuIdByBuildNo: ReadonlyMap<string, number>,
+  lang: SupportedLang,
+): SpaceGroup[] {
+  const groups = new Map<string, SpaceGroup>();
+  for (const space of spaces) {
+    const s = {
+      ...space,
+      name: withEnFallback(space.name),
+      buildingName: withEnFallback(space.buildingName),
+      floor: withEnFallback(space.floor),
+    };
+    let group = groups.get(s.buildNo);
+    if (!group) {
+      group = {
+        skkuId: skkuIdByBuildNo.get(s.buildNo) || null,
+        buildNo: s.buildNo,
+        displayNo: toDisplayNo(s.buildNo, s.campus),
+        campus: s.campus,
+        campusLabel: campusLabel(s.campus, lang),
+        buildingName: s.buildingName,
+        items: [],
+      };
+      groups.set(s.buildNo, group);
+    }
+    group.items.push({ spaceCd: s.spaceCd, name: s.name, floor: s.floor });
+  }
+  return [...groups.values()];
+}
+
+/** A building's floors with the English fallback applied to floor and space names. */
+function withFloorEnFallback(floors: readonly FloorGroup[]): FloorGroup[] {
+  return floors.map((f) => ({
+    ...f,
+    floor: withEnFallback(f.floor),
+    spaces: f.spaces.map((s) => ({ ...s, name: withEnFallback(s.name) })),
+  }));
+}
+
 export {
   ENRICH_VERSION,
   ELEVATOR_STATUS_MAP,
   enrichBuilding,
   groupByFloor,
+  groupSpacesByBuilding,
   parseBarrierFree,
   toConnectionItems,
   toSpaceUpsert,
+  withCampusLabel,
+  withFloorEnFallback,
 };
