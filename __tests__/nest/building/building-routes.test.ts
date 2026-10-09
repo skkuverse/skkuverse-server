@@ -2,15 +2,15 @@
  * Integration over BuildingController (3 endpoints, validation branches, i18n
  * campusLabel injection, English fallback, space grouping + counts meta).
  *
- * BuildingService is overridden with a stub (its real onModuleInit would call
- * ensureIndexes() → src/infra/db.ts, hanging without Mongo). The controller's
- * own logic (withCampusLabel / fillEnFallback / displayNo grouping) is
- * exercised against the stubbed data.
+ * BuildingRepository is overridden with a stub (its real onModuleInit would
+ * create indexes through src/infra/db.ts, hanging without Mongo), so the real
+ * controller and BuildingService (campus label, English fallback, displayNo
+ * grouping) run against the stubbed data.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { BuildingService } from "../../../src/building/building.service";
+import { BuildingRepository } from "../../../src/building/building.repository";
 import { buildBuildingApp } from "../../helpers/nest/build-building-app";
 
 let app: NestExpressApplication;
@@ -35,7 +35,7 @@ beforeAll(async () => {
     searchBuildings: jest.fn(),
     searchSpaces: jest.fn(),
   };
-  app = await buildBuildingApp([{ provide: BuildingService, useValue: svc }]);
+  app = await buildBuildingApp([{ provide: BuildingRepository, useValue: svc }]);
   httpServer = app.getHttpServer();
 });
 

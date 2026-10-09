@@ -62,3 +62,24 @@ export interface BuildingDetail {
   attachments: BuildingAttachment[];
   spaces: SyncedSpace[];
 }
+
+// --- Use-case results (BuildingService) ---
+
+export type WithCampusLabel<T> = T & { campusLabel: string };
+
+export interface SpaceGroupItem {
+  spaceCd: string;
+  name: BilingualText;
+  floor: BilingualText;
+}
+
+/** The search's rooms, grouped by building in row (relevance) order. */
+export interface SpaceGroup {
+  skkuId: number | null;
+  buildNo: string;
+  displayNo: string | null;
+  campus: Campus;
+  campusLabel: string;
+  buildingName: BilingualText | undefined;
+  items: SpaceGroupItem[];
+}
