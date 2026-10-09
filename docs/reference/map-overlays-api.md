@@ -69,7 +69,7 @@ on.
 | `geometry` | RFC 7946 `Point` / `Polygon` / `LineString` | The geometry, **verbatim** — see §2.4 |
 | `id` | `string` | Unique **within its layer** — a building id, a place id, a shape slug. NOT unique across layers: one building is drawn once per building layer and both overlays carry the same value, so the client's key has to be layer id plus this |
 | `layerId` | `string` | Which layer draws this overlay. The server decides membership; the client filters on it. Always one of the ids `GET /map/config` advertises |
-| `campus` | `"hssc" \| "nsc"` | The `Campus` literal from `src/building/types.ts` |
+| `campus` | `"hssc" \| "nsc"` | The `Campus` literal from `src/building/building.types.ts` |
 | `text` | `I18nWire` | The string this overlay **displays** — a building number, a building name, a booth title, a zone name. For a marker, the layer's `markerStyle` decides how it is drawn |
 | `subtitle` | `I18nWire \| null` | What this marker is, under its name — a tenant, a department. `null` for every building |
 | `hours` | `TimeWindow[]` | Every interval this place is open, in authored order. **Empty means always open** |
@@ -1407,7 +1407,7 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 | Wire schema, every producer | `src/map/map-overlay.types.ts` |
 | GeoJSON vocabulary, storage and wire | `src/shared/geojson.types.ts` |
 | Ring winding and closure | `src/shared/ring-winding.util.ts` |
-| Campus geometry storage | `CampusShapeDoc` in `src/building/types.ts`, `campus_shapes` in the building DB |
+| Campus geometry storage | `CampusShapeDoc` in `src/building/building.document.ts`, `campus_shapes` in the building DB |
 | Campus geometry authoring | `scripts/data/campus-shapes.json` → `npm run campus:shapes` |
 | Base layer catalogue, festival layer projection, `chipGroupId`, marker geometry | `src/map/map-layers.data.ts` |
 | Base chips, festival chip projection, the reset chip, the one chip validator | `src/map/map-chips.data.ts` |

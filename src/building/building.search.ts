@@ -30,7 +30,8 @@ import {
   getBuildingsCollection,
   getSpacesCollection,
 } from "./building.data";
-import type { BuildingDoc, Campus, SpaceDoc } from "./types";
+import type { BuildingDoc, SpaceDoc } from "./building.document";
+import type { Campus } from "./building.types";
 
 // --- Row caps: two bands ---
 //

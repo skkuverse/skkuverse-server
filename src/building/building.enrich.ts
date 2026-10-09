@@ -4,7 +4,7 @@ import type {
   BarrierFreeSection,
   BuildingRawDoc,
   ElevatorStatus,
-} from "./types";
+} from "./building.document";
 
 // Bump this when enrichment logic changes to trigger re-enrichment of all buildings
 const ENRICH_VERSION = 1;

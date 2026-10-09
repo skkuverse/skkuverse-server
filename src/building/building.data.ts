@@ -5,13 +5,11 @@ import config from "../infra/config";
 import type {
   BuildingDoc,
   BuildingRawDoc,
-  Campus,
   CampusShapeDoc,
   ConnectionDoc,
-  ConnectionResponseItem,
-  FloorGroup,
   SpaceDoc,
-} from "./types";
+} from "./building.document";
+import type { Campus, ConnectionResponseItem, FloorGroup } from "./building.types";
 
 // --- In-memory cache (5 min TTL) ---
 const CACHE_TTL_MS = 5 * 60 * 1000;

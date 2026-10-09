@@ -9,13 +9,8 @@ import {
 } from "./building.data";
 import { searchBuildings, searchSpaces } from "./building.search";
 import type { RankedSearchResult } from "./building.search";
-import type {
-  BuildingDoc,
-  Campus,
-  ConnectionResponseItem,
-  FloorGroup,
-  SpaceDoc,
-} from "./types";
+import type { BuildingDoc, SpaceDoc } from "./building.document";
+import type { Campus, ConnectionResponseItem, FloorGroup } from "./building.types";
 
 /**
  * BuildingService — thin @Injectable wrapper over the validated, read-only
