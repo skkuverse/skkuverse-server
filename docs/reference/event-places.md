@@ -399,6 +399,20 @@ the source IP, not a client TLS fault. Two causes, and they look identical:
    variable rather than a hardcoded `family: 4` in the driver options. Both npm scripts already carry
    it, since those are the commands somebody runs while something is going wrong.
 
+### 6.5 Replaying a past festival on `_dev`
+
+```bash
+npm run eventmap:revive-dev                    # sync _dev to the sheet, open a 240-minute dev window
+npm run eventmap:revive-dev -- --minutes 30    # shorter window
+npm run eventmap -- close                      # end it early (no --prod: _dev)
+```
+
+It refuses `NODE_ENV=production` and `--prod`, and runs both steps with `NODE_ENV=development`. Only a
+local server reads `_dev`, so point a dev build at it (`EXPO_PUBLIC_BASE_URL`,
+[test-the-app-against-a-local-server.md](../how-to/test-the-app-against-a-local-server.md)); beta and
+TestFlight builds call production. The home layout and campus banners are committed files, not data:
+reverse-apply their takedown commit on a local checkout to see them too.
+
 ## 7. Source of truth (file map)
 
 | Concern | File |
@@ -416,6 +430,7 @@ the source IP, not a client TLS fault. Two causes, and they look identical:
 | Importer | `scripts/import-eventmap-places.js` + `scripts/lib/eventmap-db.js` |
 | Authored content | `scripts/data/eskara-2026-places.json` |
 | Window + kill switch | `scripts/eventmap-window.js` |
+| Replay on `_dev` | `scripts/eventmap-revive-dev.js` |
 | DB + collection names | `src/infra/config.ts` `eventmap` block |
 | Tests | `__tests__/nest/map/` |
 
