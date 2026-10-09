@@ -1,8 +1,9 @@
 /**
  * The 인자셔틀 group on schedule v2, against the inja-shuttle spec: its stops
- * (the school's 관리팀 answer of 2026-10-08, and the 학부대학 notice where it
- * differs), the four stop sequences and their notes, and the rule that a
- * client reading only v1 fields sees the same group as before v2.
+ * (the school's 관리팀 answer of 2026-10-08 and the school's shuttle page, which
+ * give the regular and the 학부대학 runs the same spots), one route per
+ * direction for both route types, the notes, and the rule that a client
+ * reading only v1 fields sees the same group as before v2.
  */
 import fs from "fs";
 import path from "path";
@@ -45,7 +46,6 @@ const SCHOOL: Record<string, LatLng> = {
   "hssc-600th": { lat: 37.587258, lng: 126.993904 },
   "nsc-opposite": { lat: 37.292492, lng: 126.975077 },
   "nsc-n-center": { lat: 37.292298, lng: 126.975057 },
-  "nsc-welfare": { lat: 37.293999, lng: 126.973183 },
 };
 
 describe("campus group config", () => {
@@ -73,25 +73,24 @@ describe("campus group config", () => {
 });
 
 describe("인자셔틀 stops and sequences (spec scenarios)", () => {
-  it("Stop sequences per direction: board first (scheduled), then each drop-off in order (estimated)", () => {
+  it("Stop sequences per direction: board at one campus (scheduled), get off at the other (estimated)", () => {
     expect(brief(sequences("campus-inja").regular!)).toEqual([
       "board:hssc-bus-lot:scheduled",
       "alight:nsc-n-center:estimated",
-      "alight:nsc-welfare:estimated",
-    ]);
-    expect(brief(sequences("campus-inja").hakbu!)).toEqual([
-      "board:hssc-bus-lot:scheduled",
-      "alight:nsc-n-center:estimated",
-      "alight:nsc-cns:estimated",
     ]);
     expect(brief(sequences("campus-jain").regular!)).toEqual([
       "board:nsc-opposite:scheduled",
       "alight:hssc-600th:estimated",
     ]);
-    expect(brief(sequences("campus-jain").hakbu!)).toEqual([
-      "board:nsc-n-center:scheduled",
-      "alight:hssc-bus-lot:estimated",
-    ]);
+  });
+
+  it("학부대학 runs use the regular stops: one route per direction", () => {
+    for (const serviceId of ["campus-inja", "campus-jain"]) {
+      for (const lang of LANGS) {
+        const { regular, hakbu } = sequences(serviceId, lang);
+        expect(hakbu).toEqual(regular);
+      }
+    }
   });
 
   it("인사캠 boarding stop: 학생회관 버스 주차장, its detail mentions 600주년기념관", () => {
@@ -114,21 +113,8 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
     expect(commuteBoard).toBe("nsc-opposite");
   });
 
-  it("학부대학 boards across the road from the regular shuttle", () => {
-    const regular = sequences("campus-jain").regular![0]!.stopId;
-    const hakbu = sequences("campus-jain").hakbu![0]!.stopId;
-    expect(regular).not.toBe(hakbu);
-    expect([stopById(regular!).name, stopById(hakbu!).name]).toEqual(["N센터 건너편", "N센터 앞"]);
-  });
-
-  it("N센터 앞 is one stop: the 인→자 drop-offs and the 학부대학 자→인 boarding there share a stopId", () => {
-    const atNCenter = [
-      ...sequences("campus-inja").regular!,
-      ...sequences("campus-inja").hakbu!,
-      ...sequences("campus-jain").hakbu!,
-    ].filter((st) => st.label === "N센터 앞");
-    expect(atNCenter).toHaveLength(3);
-    expect(new Set(atNCenter.map((st) => st.stopId))).toEqual(new Set(["nsc-n-center"]));
+  it("자과캠 boarding stop is named as on the school's shuttle page: N센터 맞은편", () => {
+    expect(stopById("nsc-opposite").name).toBe("N센터 맞은편");
   });
 
   it("Stop notes name the place: 탑승 first, 하차 after, at most eight characters, in every language", () => {
@@ -148,7 +134,8 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
         });
       }
     }
-    expect(sequences("campus-inja").regular!.map((st) => st.note)).toEqual(["인사캠 탑승", "N센터 앞 하차", "복지회관 하차"]);
+    expect(sequences("campus-inja").regular!.map((st) => st.note)).toEqual(["인사캠 탑승", "자과캠 하차"]);
+    expect(sequences("campus-jain").regular!.map((st) => st.note)).toEqual(["자과캠 탑승", "인사캠 하차"]);
   });
 
   it.each(LANGS)("Boarding stop (%s): the capture alone as its photo, and a street view link", (lang) => {
@@ -160,7 +147,7 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
           .map((st) => st.stopId!),
       ),
     );
-    expect([...boarding].sort()).toEqual(["hssc-bus-lot", "nsc-n-center", "nsc-opposite"]);
+    expect([...boarding].sort()).toEqual(["hssc-bus-lot", "nsc-opposite"]);
     for (const id of boarding) {
       const stop = stopById(id, lang);
       expect(stop.photoUrl).toMatch(new RegExp(`^https://media\\.skkuverse\\.com/[a-z]+/stops/${id}/original-[0-9a-f]{8}\\.jpg$`));
@@ -168,8 +155,8 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
     }
   });
 
-  it("Drop-off stop: 복지회관 앞 has coordinates and a map", () => {
-    const stop = stopById("nsc-welfare");
+  it("Drop-off stop: N센터 앞 has coordinates and a map", () => {
+    const stop = stopById("nsc-n-center");
     expect(stop.coords).toBeDefined();
     expect(stop.map).toEqual({ markers: [], paths: [] });
   });
