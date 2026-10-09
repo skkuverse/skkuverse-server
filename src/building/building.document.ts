@@ -4,40 +4,44 @@ import type { Campus } from "./building.types";
 
 /** One type per collection in the building DB, and the shapes they nest. */
 
-// --- buildings_raw doc ---
-// 외부 응답의 SKKU 필드를 우리 형태로 정규화. enrichment 전 단계.
-// buildNo가 null이면 facility(시설물); enriched 단계에서 type="facility"가 됨.
-// sync 메타(listAt/detailAt/detailError)는 phase 별로 partial 채움.
+/**
+ * buildings_raw: SKKU's buildList entry in our shape, before enrichment. A
+ * null buildNo marks a facility (type "facility" once enriched). The sync
+ * fills `sync` phase by phase.
+ */
 export interface BuildingRawDoc {
-  _id: number;                   // SKKU id
+  /** The SKKU id. */
+  _id: number;
   buildNo: string | null;
   campus: Campus;
   name: { ko: string; en: string };
   description: { ko: string; en: string };
-  // GeoJSON Point. coordinates는 [경도, 위도] 순서 (Mongo 2dsphere 규약).
+  /** GeoJSON Point, [lng, lat] (the 2dsphere order). */
   location: {
     type: "Point";
     coordinates: [number, number];
   };
   image: { url: string | null; filename: string | null };
   accessibility: { elevator: boolean; toilet: boolean };
-  // Phase 2에서 채워짐. 빈 빌딩이면 빈 배열.
+  /** Written by sync phase 2 (buildInfo); [] for a building without photos. */
   attachments?: BuildingAttachment[];
   skkuCreatedAt: string | null;
   skkuUpdatedAt: string | null;
   sync?: { listAt?: Date; detailAt?: Date | null; detailError?: string | null };
 }
 
-// --- BF (barrier-free) 파싱 결과 ---
-// description.ko의 "*배리어프리 편의시설 안내" 블록을 파싱한 결과.
-// 다층 빌딩은 sections 여러 개 (A동, B동 등 label 분리). 단층/단일 sections는 1개.
-// parseError가 있으면 BF 블록은 감지됐으나 파서가 sections를 못 만든 경우.
+// --- Barrier-free details ---
+// Parsed from the "*배리어프리 편의시설 안내" block of description.ko. A building
+// with several wings has one section per label (A동, B동); otherwise one.
+// `parseError` means the block was found but yielded no sections.
+
+/** A known status, or SKKU's raw text when it is not one of them. */
 export type ElevatorStatus =
   | "arrival"
   | "arrival_button"
   | "none"
   | "not_operating"
-  | string;                       // fallback (building.mapper.ts): unknown 값은 raw 그대로 전달
+  | string;
 
 export interface BarrierFreeSection {
   label: string | null;
@@ -66,17 +70,16 @@ export interface BuildingAttachment {
   alt: string;
 }
 
-// --- buildings doc (enriched) ---
-// BuildingRawDoc + 파생 필드. enrichBuilding이 dot-path $set 객체를 반환하므로
-// 이 type은 read 결과(완성된 nested doc) 기준. _id, buildNo, displayNo, type,
-// campus, name, description, location, image, attachments, accessibility,
-// enrichVersion, skkuCreatedAt, skkuUpdatedAt 모두 enriched layer에 존재한다고
-// 약속(다만 sync/updatedAt/extensions는 query projection으로 빠질 수 있음).
+/**
+ * buildings: the raw layer plus derived fields, as read. (enrichBuilding
+ * writes it as a dot-path $set.) `sync`, `updatedAt` and `extensions` are
+ * projected out of most reads.
+ */
 export interface BuildingDoc {
   _id: number;
   buildNo: string | null;
   displayNo: string | null;
-  // facility = buildNo가 null인 시설물 (예: E센터의 외부 부속물).
+  /** A facility has no buildNo (an outbuilding, a gate). */
   type: "building" | "facility";
   campus: Campus;
   name: { ko: string; en: string };
@@ -97,9 +100,10 @@ export interface BuildingDoc {
   extensions?: Record<string, unknown>;
 }
 
-// --- spaces doc ---
-// (spaceCd, buildNo, campus) unique. sources는 어느 sync phase에서 발견했는지
-// 누적 ($addToSet). buildInfo = Phase 2 (floorItem 경유), spaceList = Phase 3.
+/**
+ * spaces: unique on (spaceCd, buildNo, campus). `sources` accumulates which
+ * listing reported the space: buildInfo (sync phase 2) and/or spaceList (3).
+ */
 export interface SpaceDoc {
   _id?: ObjectId;
   spaceCd: string;
@@ -113,10 +117,11 @@ export interface SpaceDoc {
   syncedAt?: Date;
 }
 
-// --- connections doc ---
-// 건물-건물 연결 (e.g. 지하 통로). 양방향: a/b 어느 쪽이든 skkuId로 lookup.
-// "a→b"와 "b→a"는 의미상 동일한 doc이지만, fromFloor/toFloor가 다르게 보고됨
-// (lookup 방향에 따라 self/other 결정 — building.mapper.ts toConnectionItems).
+/**
+ * connections: a passage between two buildings (an underground walkway). It
+ * is undirected; looked up from either side, that side's floor is `fromFloor`
+ * (toConnectionItems in building.mapper.ts).
+ */
 export interface ConnectionDoc {
   _id?: ObjectId;
   campus: Campus;

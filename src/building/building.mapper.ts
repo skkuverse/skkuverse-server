@@ -185,10 +185,9 @@ function parseBarrierFree(
 
 // --- Enrichment pipeline ---
 
-// enrichBuilding의 반환은 Mongo $set용 dot-path 객체. nested 필드("name.ko",
-// "accessibility.elevator" 등)와 일반 필드가 섞여 있어 BuildingDoc과 직접 일치
-// 시키지 않는다. update 시점에 받는 컬렉션 driver가 dot-path를 받아 nested로
-// merge하므로, 반환 type은 의도적으로 느슨하게 unknown index를 쓴다.
+// enrichBuilding returns a $set of dot paths ("accessibility.detail") mixed
+// with whole fields, which matches no document type; the driver merges the
+// dot paths into the nested document, so the type is a loose record.
 export type EnrichmentSetUpdate = Record<string, unknown>;
 
 /**
