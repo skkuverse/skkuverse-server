@@ -3,6 +3,7 @@ jest.mock("../../../src/infra/logger", () => ({
   default: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
 }));
 
+import config from "../../../src/infra/config";
 import logger from "../../../src/infra/logger";
 import { createCachedLoader } from "../../../src/common/cache/cached-loader";
 
@@ -225,5 +226,45 @@ describe("createCachedLoader", () => {
     expect(() =>
       createCachedLoader({ name: "t", ttlMs: 1, load, staleWindowMs: -1 }),
     ).toThrow(/staleWindowMs must be >= 0/);
+  });
+});
+
+/**
+ * CACHE=off, the development default: a _dev database change must show on the
+ * next request, so every get() loads. A loader marked keepWhenCacheOff (the AI
+ * overview, the mini-app manifests) keeps caching.
+ */
+describe("createCachedLoader with CACHE=off", () => {
+  beforeEach(() => {
+    config.cache.enabled = false;
+  });
+  afterEach(() => {
+    config.cache.enabled = true;
+  });
+
+  it("loads on every get(), even inside the TTL", async () => {
+    const load = jest.fn().mockResolvedValueOnce("a").mockResolvedValueOnce("b");
+    const cache = createCachedLoader({ name: "t", ttlMs: 5_000, load });
+
+    await expect(cache.get()).resolves.toBe("a");
+    await expect(cache.get()).resolves.toBe("b");
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it("propagates a failed load instead of serving a stale value", async () => {
+    const load = jest.fn().mockResolvedValueOnce("a").mockRejectedValueOnce(new Error("down"));
+    const cache = createCachedLoader({ name: "t", ttlMs: 5_000, staleWindowMs: 60_000, load });
+
+    await cache.get();
+    await expect(cache.get()).rejects.toThrow("down");
+  });
+
+  it("keeps caching a loader marked keepWhenCacheOff", async () => {
+    const load = jest.fn().mockResolvedValue("a");
+    const cache = createCachedLoader({ name: "t", ttlMs: 5_000, load, keepWhenCacheOff: true });
+
+    await cache.get();
+    await cache.get();
+    expect(load).toHaveBeenCalledTimes(1);
   });
 });

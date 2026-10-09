@@ -122,12 +122,21 @@ describe("every committed timetable file", () => {
   });
 
   describe.each(files)("%s", (file) => {
-    const docs = buildDocuments(parseTimetableFile(JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), "utf8"))));
-    const groups = getBusGroups("ko") as Array<{
+    const docs: Array<{
+      serviceId: string;
+      entries: Array<{ time: string; routeType: string; notes: string | null; stopTimes?: Array<string | null> }>;
+    }> = buildDocuments(parseTimetableFile(JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), "utf8"))));
+    type SeqStop = { timing: string; note?: string };
+    const groups = getBusGroups("ko") as unknown as Array<{
       id: string;
       screenType: string;
-      screen: { services?: Array<{ serviceId: string }>; routeBadges?: Array<{ id: string }> };
+      screen: {
+        services?: Array<{ serviceId: string; stopSequences?: Record<string, SeqStop[]> }>;
+        routeBadges?: Array<{ id: string }>;
+      };
     }>;
+    const service = (serviceId: string) =>
+      groups.flatMap((g) => g.screen.services ?? []).find((s) => s.serviceId === serviceId);
 
     it("names only services that serviceConfig defines", () => {
       for (const doc of docs) expect(Object.keys(serviceConfig)).toContain(doc.serviceId);
@@ -141,6 +150,48 @@ describe("every committed timetable file", () => {
         for (const entry of doc.entries) expect(badgeIds).toContain(entry.routeType);
       }
     });
+
+    // The tool is CommonJS and cannot see the stop catalog, so this is where the two files meet.
+    it("gives every route type a stop sequence, and every sequence route type a badge", () => {
+      for (const doc of docs) {
+        const group = groups.find((g) => g.screen.services?.some((s) => s.serviceId === doc.serviceId))!;
+        const badgeIds = group.screen.routeBadges!.map((b) => b.id);
+        const seq = service(doc.serviceId)!.stopSequences ?? {};
+        for (const rt of new Set(doc.entries.map((e) => e.routeType))) {
+          expect(`${doc.serviceId}.${rt}`).toBe(`${doc.serviceId}.${rt in seq ? rt : "(no sequence)"}`);
+        }
+        for (const rt of Object.keys(seq)) expect(badgeIds).toContain(rt);
+      }
+    });
+
+    it("gives every run one stop time per sequence stop, null only where the stop is estimated", () => {
+      for (const doc of docs) {
+        const seq = service(doc.serviceId)!.stopSequences!;
+        for (const e of doc.entries) {
+          const stops = seq[e.routeType]!;
+          const at = `${doc.serviceId} ${e.routeType} ${e.time}`;
+          expect(`${at} ${e.stopTimes?.length}`).toBe(`${at} ${stops.length}`);
+          e.stopTimes!.forEach((t, k) => {
+            if (t === null) expect(`${at} #${k} ${stops[k]!.timing}`).toBe(`${at} #${k} estimated`);
+          });
+        }
+      }
+    });
+
+    it("keeps every sequence stop note to eight characters, for the timetable's notes column", () => {
+      for (const doc of docs) {
+        for (const seq of Object.values(service(doc.serviceId)!.stopSequences!)) {
+          for (const st of seq) expect([...(st.note ?? "")].length).toBeLessThanOrEqual(8);
+        }
+      }
+    });
+  });
+
+  it("gives every 인자셔틀 entry notes: null (the 특이사항 column is dropped)", () => {
+    const docs = buildDocuments(parseTimetableFile(realTimetable));
+    for (const doc of docs) {
+      for (const e of doc.entries) expect(`${doc.serviceId} ${e.time} ${e.notes}`).toBe(`${doc.serviceId} ${e.time} null`);
+    }
   });
 });
 

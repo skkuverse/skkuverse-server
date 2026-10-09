@@ -7,9 +7,10 @@
  *
  * Mirrors notices/sources.ts, including the __dirname path resolution: at
  * runtime this is dist/src/miniapps/, and scripts/copy-build-assets.js stages
- * the JSON next to the compiled .js so fs.readFileSync resolves. Adding a JSON
- * file here without registering it there breaks production only — the dev
- * watcher reads from src and never notices.
+ * the JSON next to the compiled .js so fs.readFileSync resolves. `npm run dev`
+ * runs from dist/ as well, and its watcher re-runs that script when a JSON file
+ * under src/ changes — so a file not registered there is missing in dev too,
+ * unless an old copy is still sitting in dist/.
  */
 import fs from "fs";
 import path from "path";

@@ -158,6 +158,9 @@ export class MiniAppsManifestService implements OnModuleInit {
       ttlMs: CACHE_TTL_MS,
       staleWindowMs: STALE_FOREVER_MS,
       load: () => fetchManifestShellFields(origin),
+      // The manifest lives on the mini app's production origin, not in a _dev
+      // database; uncached, every detail open would wait on that fetch.
+      keepWhenCacheOff: true,
     });
     this.loaders.set(id, loader);
     return loader;

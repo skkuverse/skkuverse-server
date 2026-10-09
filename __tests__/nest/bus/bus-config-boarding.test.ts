@@ -4,13 +4,16 @@
  *
  * The fixture was captured from `getGroupById` / `computeGroupEtag` on the code
  * as it stood before v2 (2026-10-08). If it ever has to be re-captured, the
- * change that does so is changing what installed apps receive for 인자셔틀 —
- * say so in the commit.
+ * change that does so is changing what installed apps receive — say so in the
+ * commit. The `campus` group left it when it gained v2 fields (add-inja-shuttle-
+ * schedule-v2); campus-shuttle.test.ts checks its v1 fields against
+ * fixtures/bus-config-campus-v1.json instead.
  */
 import fs from "fs";
 import path from "path";
 import {
   computeGroupEtag,
+  getBusGroups,
   getGroupById,
   resolveStopSequences,
 } from "../../../src/bus/bus-config/bus-config.data";
@@ -81,13 +84,30 @@ describe("resolveStopSequences", () => {
           localized: { ko: `${MEDIA}/jeongja-exit3/ko-11111111.jpg`, zh: `${MEDIA}/jeongja-exit3/zh-22222222.jpg` },
         },
         panorama: { panoId: "oCt8OYgXgYopNL-f4h4MAw", pan: -53, tilt: 0, fov: 80 },
-        exit: { number: 3, coords: { lat: 37.365922, lng: 127.107774 } },
-        walkPath: [
-          { lat: 37.365922, lng: 127.107774 },
-          { lat: 37.365499, lng: 127.107906 },
-        ],
+        guide: {
+          places: [
+            {
+              id: "exit3",
+              kind: "subwayExit",
+              number: 3,
+              name: { ko: "3번 출구", en: "Exit 3", zh: "3号出口" },
+              coords: { lat: 37.365922, lng: 127.107774 },
+            },
+          ],
+          walks: [
+            {
+              from: "exit3",
+              to: "stop",
+              path: [
+                { lat: 37.365922, lng: 127.107774 },
+                { lat: 37.365499, lng: 127.107906 },
+              ],
+            },
+          ],
+        },
       },
       { id: "nsc-opposite", name: { ko: "N센터 건너편", en: "Across from N Center", zh: "N中心对面" } },
+      { id: "nsc-welfare", name: { ko: "복지회관 앞" }, coords: { lat: 37.293999, lng: 126.973183 }, guide: {} },
       { id: "unused", name: { ko: "쓰이지 않는 정류장" } },
     ],
     sequences: {
@@ -100,6 +120,12 @@ describe("resolveStopSequences", () => {
       },
       "commute-jamsil": {
         down: [{ stopId: "nsc-opposite", action: "board", timing: "scheduled" }, CAMPUS],
+      },
+      "commute-gwanggyo": {
+        down: [
+          { stopId: "nsc-opposite", action: "board", timing: "scheduled" },
+          { stopId: "nsc-welfare", action: "alight", timing: "estimated" },
+        ],
       },
     },
   };
@@ -161,15 +187,56 @@ describe("resolveStopSequences", () => {
     expect(photo("en")).toBe(`${MEDIA}/jeongja-exit3/original-00000000.jpg`);
   });
 
-  it("builds the street view link and passes the exit and path through", () => {
+  it("builds the street view link", () => {
     const stop = resolveStopSequences(["commute-jeongja"], "ko", catalog).stops[0]!;
     expect(stop.streetViewUrl).toBe(VERIFIED_LINK);
-    expect(stop.exit).toEqual({ number: 3, coords: { lat: 37.365922, lng: 127.107774 } });
-    expect(stop.walkPath).toHaveLength(2);
   });
 
-  it("emits no key for a field the catalog does not set", () => {
+  it.each([
+    ["ko", "3번 출구"],
+    ["en", "Exit 3"],
+    ["zh", "3号出口"],
+  ] as const)("serves the guide as a map, the exit labeled in %s", (lang, label) => {
+    const stop = resolveStopSequences(["commute-jeongja"], lang, catalog).stops[0]!;
+    expect(stop.map).toEqual({
+      markers: [{ id: "exit3", kind: "subwayExit", label, number: 3, coords: { lat: 37.365922, lng: 127.107774 } }],
+      paths: [
+        {
+          kind: "walk",
+          from: "exit3",
+          to: "stop",
+          points: [
+            { lat: 37.365922, lng: 127.107774 },
+            { lat: 37.365499, lng: 127.107906 },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("Pin-only stop: an empty guide serves empty markers and paths, with coords", () => {
+    const stop = resolveStopSequences(["commute-gwanggyo"], "ko", catalog).stops.find((s) => s.id === "nsc-welfare")!;
+    expect(stop).toEqual({
+      id: "nsc-welfare",
+      name: "복지회관 앞",
+      coords: { lat: 37.293999, lng: 126.973183 },
+      map: { markers: [], paths: [] },
+    });
+  });
+
+  it("emits no key for a field the catalog does not set: no guide, no map", () => {
     const { stops } = resolveStopSequences(["commute-jamsil"], "ko", catalog);
     expect(stops[0]).toEqual({ id: "nsc-opposite", name: "N센터 건너편" });
+  });
+});
+
+describe("Retired fields", () => {
+  it.each(["ko", "en", "zh"] as const)("no served stop of any group has exit or walkPath (%s)", (lang) => {
+    const stops = getBusGroups(lang).flatMap((g) => ((g.screen as { stops?: object[] }).stops ?? []) as object[]);
+    expect(stops.length).toBeGreaterThan(0);
+    for (const stop of stops) {
+      expect(stop).not.toHaveProperty("exit");
+      expect(stop).not.toHaveProperty("walkPath");
+    }
   });
 });

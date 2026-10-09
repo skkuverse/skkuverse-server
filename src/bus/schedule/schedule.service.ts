@@ -154,9 +154,10 @@ export class ScheduleService implements OnModuleInit {
     const monday = ref.clone().isoWeekday(1).startOf("day");
     const from = monday.format("YYYY-MM-DD");
 
-    // Check cache
+    // Check cache. CACHE=off (the development default) reads the DB every
+    // time, so `npm run schedule` against _dev shows without a restart.
     const cacheKey = `${serviceId}:${from}`;
-    const cached = this.cache.get(cacheKey);
+    const cached = config.cache.enabled ? this.cache.get(cacheKey) : undefined;
     if (cached && Date.now() - cached.time < CACHE_TTL_MS) {
       // Return with potentially different requestedFrom
       return { ...cached.data, requestedFrom };

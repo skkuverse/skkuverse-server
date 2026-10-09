@@ -1,0 +1,225 @@
+{
+  "_about": "SYNTHETIC, not a TMAP response: the TMAP terms forbid using API data more than 24 hours after storing it. Shaped after the live 타임머신 probe of 2026-10-09 (tasks.md 9.1) for campus-inja.regular (학생회관 버스 주차장 -> N센터 앞 -> 복지회관 앞), predictionType arrival: a FeatureCollection whose first Point (S) carries totalTime (s) and the times, LineStrings carry each segment's time (s), the waypoint is a B1 Point and the goal an E Point, and a bare B1 echo of the sent waypoint follows E. Times, distances and route points are made up.",
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          126.993655,
+          37.587355
+        ]
+      },
+      "properties": {
+        "totalDistance": 43500,
+        "totalTime": 4620,
+        "totalFare": 1000,
+        "taxiFare": 44800,
+        "departureTime": "2026-10-12T10:00:00+0900",
+        "arrivalTime": "2026-10-12T11:17:00+0900",
+        "index": 0,
+        "pointIndex": 0,
+        "name": "",
+        "description": "synthetic",
+        "nextRoadName": "일반도로",
+        "turnType": 200,
+        "pointType": "S"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            126.993655,
+            37.587355
+          ],
+          [
+            126.9901,
+            37.56
+          ]
+        ]
+      },
+      "properties": {
+        "index": 1,
+        "lineIndex": 0,
+        "name": "일반도로",
+        "description": "synthetic",
+        "distance": 9000,
+        "time": 1200,
+        "roadType": 0,
+        "facilityType": 11
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          126.9901,
+          37.56
+        ]
+      },
+      "properties": {
+        "index": 2,
+        "pointIndex": 1,
+        "name": "",
+        "description": "synthetic",
+        "nextRoadName": "일반도로",
+        "turnType": 12,
+        "pointType": "N"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            126.9901,
+            37.56
+          ],
+          [
+            126.982,
+            37.4
+          ]
+        ]
+      },
+      "properties": {
+        "index": 3,
+        "lineIndex": 1,
+        "name": "일반도로",
+        "description": "synthetic",
+        "distance": 18000,
+        "time": 1800,
+        "roadType": 0,
+        "facilityType": 11
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          126.982,
+          37.4
+        ]
+      },
+      "properties": {
+        "index": 4,
+        "pointIndex": 2,
+        "name": "",
+        "description": "synthetic",
+        "nextRoadName": "일반도로",
+        "turnType": 13,
+        "pointType": "N"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            126.982,
+            37.4
+          ],
+          [
+            126.975037,
+            37.292428
+          ]
+        ]
+      },
+      "properties": {
+        "index": 5,
+        "lineIndex": 2,
+        "name": "일반도로",
+        "description": "synthetic",
+        "distance": 15500,
+        "time": 1500,
+        "roadType": 0,
+        "facilityType": 11
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          126.975037,
+          37.292428
+        ]
+      },
+      "properties": {
+        "index": 6,
+        "pointIndex": 3,
+        "name": "",
+        "description": "synthetic",
+        "nextRoadName": "일반도로",
+        "turnType": 0,
+        "pointType": "B1"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            126.975037,
+            37.292428
+          ],
+          [
+            126.973246,
+            37.29397
+          ]
+        ]
+      },
+      "properties": {
+        "index": 7,
+        "lineIndex": 3,
+        "name": "일반도로",
+        "description": "synthetic",
+        "distance": 1000,
+        "time": 120,
+        "roadType": 0,
+        "facilityType": 11
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          126.973246,
+          37.29397
+        ]
+      },
+      "properties": {
+        "index": 8,
+        "pointIndex": 4,
+        "name": "",
+        "description": "synthetic",
+        "nextRoadName": "일반도로",
+        "turnType": 201,
+        "pointType": "E"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          126.975057,
+          37.292298
+        ]
+      },
+      "properties": {
+        "name": "",
+        "pointType": "B1"
+      }
+    }
+  ]
+}

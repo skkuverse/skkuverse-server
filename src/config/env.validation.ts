@@ -10,6 +10,7 @@
  * Test mode (NODE_ENV === "test") skips the throw, as src/infra/config.ts
  * guards its exit with `if (!isTest) process.exit(1)`.
  */
+import { resolveRuntimeSwitches, runtimeMode } from "../infra/runtime-switches";
 
 const NODE_ENV: string = process.env.NODE_ENV || "development";
 const isProduction = NODE_ENV === "production";
@@ -87,5 +88,11 @@ export function validateEnv(): void {
     throw new Error(
       `FATAL: Missing required config — set these env vars:\n${missing.join("\n")}`,
     );
+  }
+  // The same resolver config.ts exits on, so the two layers refuse the same
+  // switches.
+  const { errors } = resolveRuntimeSwitches(process.env, runtimeMode(NODE_ENV));
+  if (errors.length > 0) {
+    throw new Error(`FATAL: Invalid runtime switch:\n  ${errors.join("\n  ")}`);
   }
 }

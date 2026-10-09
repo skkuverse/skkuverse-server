@@ -1,3 +1,4 @@
+import config from "../../infra/config";
 import logger from "../../infra/logger";
 
 /**
@@ -23,6 +24,11 @@ import logger from "../../infra/logger";
  *
  * The cached value is shared across callers. Consumers must treat it as
  * read-only (serializing it into a response is fine).
+ *
+ * CACHE=off (the development default, infra/runtime-switches.ts) turns every
+ * loader into a pass-through: each get() calls `load`, so a change to a _dev
+ * database shows on the next request. `keepWhenCacheOff` exempts a loader
+ * whose load costs more than staleness does locally.
  */
 
 export interface CachedLoaderOptions<T> {
@@ -36,6 +42,11 @@ export interface CachedLoaderOptions<T> {
    * after one fails. Default 0: an expired value is never served.
    */
   staleWindowMs?: number;
+  /**
+   * Keep caching under CACHE=off. For a load that costs more than staleness
+   * does on a laptop (an LLM call, a fetch to a production origin).
+   */
+  keepWhenCacheOff?: boolean;
 }
 
 export interface CachedLoader<T> {
@@ -104,6 +115,10 @@ export function createCachedLoader<T>(
 
   return {
     get(): Promise<T> {
+      // Read per call, like the limiters' skip, so a test can flip it.
+      if (!config.cache.enabled && !opts.keepWhenCacheOff) {
+        return Promise.resolve().then(load);
+      }
       const now = Date.now();
       if (value && now < freshUntil) return Promise.resolve(value.data);
       if (value && now < staleUntil()) {

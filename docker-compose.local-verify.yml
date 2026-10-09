@@ -1,45 +1,41 @@
 # docker-compose.local-verify.yml
 #
-# Override that runs the production container topology (the poller + every api
-# replica) locally, to check that the server serves correctly once deployed.
-# Combine it with the base docker-compose.yml via -f:
+# Runs the production container topology (the poller and every api replica) on
+# a laptop, to check that the build serves correctly before a dev → main deploy.
+# Combine it with the base file:
 #
-#   npm run verify:serve        # start (detached + build)
+#   npm run verify:serve        # build and start, detached
 #   npm run verify:serve:down   # tear down
 #
-# ──────────────────────────────────────────────────────────────────────────
-# Design: keep NODE_ENV=production and switch only the DB *names* to _dev.
-# ──────────────────────────────────────────────────────────────────────────
-# Why production and not development:
-#   the prod image is built with `npm ci --omit=dev` (Dockerfile), so the
-#   devDependency pino-pretty is not in it, and src/infra/logger.ts
-#   (buildTransport) asks for the pino-pretty transport outside production and
-#   test. The prod image started with NODE_ENV=development fails to boot with
-#   "unable to determine transport target for pino-pretty". Keeping
-#   NODE_ENV=production verifies the real prod behavior (JSON logging,
-#   USE_PROD_API forced).
+# NODE_ENV stays production; only the data plane and the outbound side effects
+# are switched off.
 #
-# DB isolation: in production mode config.devDbName() is a no-op, so the DB
-# name env vars are overridden with _dev values directly. These are the six
-# DBs we write:
-#   bus_campus / skkubus_ads / skkumap / skku_notices / eventmap / miniapps
-#   → each *_dev. The prod DBs are never touched.
+# Why production rather than development: the image is built with
+# `npm ci --omit=dev`, so pino-pretty is absent, and the logger needs it outside
+# production (src/infra/logger.ts) — a development boot of this image fails.
+# Production mode is also the behavior being verified (JSON logs,
+# USE_PROD_API forced).
 #
-# ⚠️ Add every new DB here too. env_file: .env injects the prod names and
-# devDbName() is a no-op in production, so a missing one silently writes to the
-# prod DB. eventmap was once in exactly that state (skkuverse#14).
+# Databases: in production mode devDbName() is a no-op, so every database name
+# the server writes is overridden to its _dev name here — bus_campus,
+# skkubus_ads, skkumap, skku_notices, eventmap, miniapps. A new database must be
+# added here too: env_file .env injects the production names, and one left out
+# is written to in production. eventmap was in exactly that state once
+# (skkuverse#14).
 #
-# DISPATCH_SWEEP_ENABLED=false keeps the FCM dispatch sweep poller from
-# registering (src/notices/notices-dispatch.poller.service.ts), so the local
-# poller cannot push to real users. The base poller sets it to true, so it must
-# be overridden.
-#
-# Result: the same runtime behavior as prod, with only the data plane on _dev.
-#
-# ⚠️ FCM has no _dev. With the sweep off nothing pushes on its own, but the
-#    internal POST routes (/internal/notices/dispatch-pending,
-#    /internal/miniapps/:id/notifications) still send real pushes to real
-#    subscribers when called with the internal token.
+# Side effects (src/infra/runtime-switches.ts):
+#   - PUSH_DELIVERY=suppressed: every push — the notices sweep, POST
+#     /internal/notices/dispatch-pending, a mini-app send — is logged instead of
+#     sent. The laptop's .env points at the same Cloud Function production uses,
+#     and it pushes by topic to every real subscriber.
+#   - BUILDING_SYNC=off: no campusMap.do crawl on every container start.
+#   - SHUTTLE_ETA=off: no NAVER Directions or TMAP call, which use metered
+#     keys and would write estimates into bus_campus_dev.
+#   - DISPATCH_SWEEP_ENABLED=false on the poller: the base file sets it true;
+#     with push suppressed the sweep would only mark _dev notices pushed.
+#   - SENTRY_DSN=disabled: production requires a DSN, and a local run must not
+#     report into prod's project.
+# __tests__/nest/infra/runtime-switches.test.ts fails if a block loses one.
 
 # Every api replica gets the same _dev overrides. A replica missing from this
 # file would boot with the production database names from .env —
@@ -54,9 +50,10 @@ x-api-dev-env: &api-dev-env
   - MONGO_NOTICES_DB_NAME=skku_notices_dev
   - MONGO_EVENTMAP_DB_NAME=eventmap_dev
   - MONGO_MINIAPPS_DB_NAME=miniapps_dev
-  # Production requires SENTRY_DSN; a local run must not report into prod's
-  # project, so it is switched off by name (src/infra/config.ts).
   - SENTRY_DSN=disabled
+  - PUSH_DELIVERY=suppressed
+  - BUILDING_SYNC=off
+  - SHUTTLE_ETA=off
 
 services:
   poller:
@@ -72,6 +69,9 @@ services:
       - MONGO_EVENTMAP_DB_NAME=eventmap_dev
       - MONGO_MINIAPPS_DB_NAME=miniapps_dev
       - SENTRY_DSN=disabled
+      - PUSH_DELIVERY=suppressed
+      - BUILDING_SYNC=off
+      - SHUTTLE_ETA=off
 
   api-1:
     environment: *api-dev-env

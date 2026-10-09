@@ -4,7 +4,8 @@
  * service. The committed catalog itself is checked against the built config in
  * bus-config.service.test.ts.
  */
-import { stopCatalog, validateStopCatalog } from "../../../src/bus/schedule/schedule-stops";
+import { etaOptIns, stopCatalog, validateStopCatalog } from "../../../src/bus/schedule/schedule-stops";
+import serviceConfig from "../../../src/bus/schedule/service-config";
 
 const SERVICES = new Set(["commute-jeongja"]);
 const MEDIA = "https://media.skkuverse.com/commute/stops/jeongja-exit3";
@@ -22,9 +23,25 @@ function validStop(): Record<string, unknown> {
       localized: { ko: `${MEDIA}/ko-0123abcd.jpg`, en: `${MEDIA}/en-0123abcd.jpg`, zh: `${MEDIA}/zh-0123abcd.jpg` },
     },
     panorama: { panoId: "4MWo62oDv4KAFMmR86SRaA", pan: -75, tilt: 0, fov: 80 },
-    exit: { number: 3, coords: { ...EXIT } },
-    walkPath: [{ ...EXIT }, { lat: 37.3657, lng: 127.10785 }, { ...STOP }],
+    guide: {
+      places: [exitPlace()],
+      walks: [{ from: "exit3", to: "stop", path: [{ ...EXIT }, { lat: 37.3657, lng: 127.10785 }, { ...STOP }] }],
+    },
   };
+}
+
+function exitPlace(): Record<string, unknown> {
+  return { id: "exit3", kind: "subwayExit", number: 3, name: { ko: "3번 출구", en: "Exit 3" }, coords: { ...EXIT } };
+}
+
+/** The valid stop with its guide replaced. */
+function withGuide(guide: unknown, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return { ...validStop(), guide, ...extra };
+}
+
+/** The valid stop's single walk with some fields replaced. */
+function walk(fields: Record<string, unknown>) {
+  return { from: "exit3", to: "stop", path: [{ ...EXIT }, { ...STOP }], ...fields };
 }
 
 const CAMPUS = { label: { ko: "자과캠" }, action: "alight", timing: "estimated" };
@@ -53,10 +70,12 @@ describe("validateStopCatalog", () => {
     expect(errorsFor(catalog())).toEqual([]);
   });
 
-  it("the committed catalog loaded without errors", () => {
+  it("the committed catalog loaded without errors, estimates opt-ins included", () => {
     // The module would have exited (or, under test, served an empty catalog)
     // on any error; the file is checked through the built config elsewhere.
-    expect(validateStopCatalog(stopCatalog, new Set(Object.keys(require("../../../src/bus/schedule/service-config").default)))).toEqual([]);
+    const config = require("../../../src/bus/schedule/service-config").default;
+    expect(validateStopCatalog(stopCatalog, new Set(Object.keys(config)), etaOptIns(config))).toEqual([]);
+    expect(stopCatalog.stops.length).toBeGreaterThan(0);
   });
 
   it("rejects a malformed root", () => {
@@ -121,35 +140,94 @@ describe("validateStopCatalog", () => {
     expect(errors[0]).toContain(`stop jeongja-exit3: ${message}`);
   });
 
-  it("rejects an exit without a walking path, and a path without an exit", () => {
-    const noPath = validStop();
-    delete noPath.walkPath;
-    const noExit = validStop();
-    delete noExit.exit;
-    for (const stop of [noPath, noExit]) {
-      expect(errorsFor(catalog(stop))).toEqual(["stop jeongja-exit3: exit and walkPath must be set together"]);
+  it("accepts an empty guide (pin-only) and an exit marker with no walk", () => {
+    expect(errorsFor(catalog(withGuide({})))).toEqual([]);
+    expect(errorsFor(catalog(withGuide({ places: [exitPlace()] })))).toEqual([]);
+  });
+
+  it("rejects a guide on a stop without coordinates", () => {
+    const stop = withGuide({});
+    delete stop.coords;
+    expect(errorsFor(catalog(stop))).toEqual(["stop jeongja-exit3: guide needs the stop's coordinates"]);
+  });
+
+  it("rejects a blank, repeated or reserved place id", () => {
+    expect(errorsFor(catalog(withGuide({ places: [{ ...exitPlace(), id: " " }] })))).toEqual([
+      "stop jeongja-exit3: guide.places[0] needs a non-empty id",
+    ]);
+    expect(errorsFor(catalog(withGuide({ places: [exitPlace(), exitPlace()] })))).toEqual([
+      "stop jeongja-exit3: guide.places[1]: duplicate place id exit3",
+    ]);
+    expect(errorsFor(catalog(withGuide({ places: [{ ...exitPlace(), id: "stop" }] })))).toEqual([
+      'stop jeongja-exit3: guide.places[0]: id "stop" is reserved for the stop itself',
+    ]);
+  });
+
+  it("rejects a reserved or unknown place kind", () => {
+    for (const kind of ["place", "stop", undefined]) {
+      expect(errorsFor(catalog(withGuide({ places: [{ ...exitPlace(), kind }] })))).toEqual([
+        `stop jeongja-exit3: guide.places[0]: kind must be "subwayExit", not ${JSON.stringify(kind)}`,
+      ]);
     }
   });
 
-  it("rejects a walking path of one point", () => {
-    const stop = { ...validStop(), walkPath: [{ ...EXIT }] };
-    expect(errorsFor(catalog(stop))).toEqual(["stop jeongja-exit3: walkPath must have at least two points"]);
+  it.each([[0], [100], [1.5], ["3"]])("rejects the exit number %p", (number) => {
+    expect(errorsFor(catalog(withGuide({ places: [{ ...exitPlace(), number }] })))).toEqual([
+      "stop jeongja-exit3: guide.places[0]: number must be an integer in 1..99",
+    ]);
   });
 
-  it("rejects a walking path that does not start at the exit", () => {
-    const stop = { ...validStop(), walkPath: [{ lat: 37.3659, lng: 127.1077 }, { ...STOP }] };
-    expect(errorsFor(catalog(stop))).toEqual(["stop jeongja-exit3: walkPath must start at the exit's coordinates"]);
+  it("rejects a place without a Korean name, or outside South Korea", () => {
+    expect(errorsFor(catalog(withGuide({ places: [{ ...exitPlace(), name: { en: "Exit 3" } }] })))).toEqual([
+      "stop jeongja-exit3: guide.places[0]: name has no Korean text",
+    ]);
+    expect(errorsFor(catalog(withGuide({ places: [{ ...exitPlace(), coords: { lat: EXIT.lng, lng: EXIT.lat } }] })))).toEqual([
+      "stop jeongja-exit3: guide.places[0]: coords must be { lat, lng } inside South Korea",
+    ]);
   });
 
-  it("rejects a walking path that ends elsewhere", () => {
-    const stop = { ...validStop(), walkPath: [{ ...EXIT }, { lat: 37.3655, lng: 127.1079 }] };
-    expect(errorsFor(catalog(stop))).toEqual(["stop jeongja-exit3: walkPath must end at the stop's coordinates"]);
+  it("rejects a walk of one point", () => {
+    const guide = { places: [exitPlace()], walks: [walk({ path: [{ ...EXIT }] })] };
+    expect(errorsFor(catalog(withGuide(guide)))).toEqual(["stop jeongja-exit3: guide.walks[0]: path must have at least two points"]);
   });
 
-  it("rejects a walking path longer than 500 m", () => {
-    const far = { lat: 37.371, lng: 127.1077 }; // about 560 m north of the exit
-    const stop = { ...validStop(), coords: far, walkPath: [{ ...EXIT }, far] };
-    expect(errorsFor(catalog(stop))[0]).toMatch(/^stop jeongja-exit3: walkPath is \d+ m, longer than 500 m$/);
+  it("rejects a walk that does not start at its from end", () => {
+    const guide = { places: [exitPlace()], walks: [walk({ path: [{ lat: 37.3659, lng: 127.1077 }, { ...STOP }] })] };
+    expect(errorsFor(catalog(withGuide(guide)))).toEqual(["stop jeongja-exit3: guide.walks[0]: path must start at exit3's coordinates"]);
+  });
+
+  it("rejects a walk that does not end at its to end", () => {
+    const guide = { places: [exitPlace()], walks: [walk({ path: [{ ...EXIT }, { lat: 37.3655, lng: 127.1079 }] })] };
+    expect(errorsFor(catalog(withGuide(guide)))).toEqual(["stop jeongja-exit3: guide.walks[0]: path must end at stop's coordinates"]);
+  });
+
+  it('rejects a walk without exactly one "stop" end', () => {
+    for (const ends of [{ from: "exit3", to: "exit3" }, { from: "stop", to: "stop" }]) {
+      const guide = { places: [exitPlace()], walks: [walk(ends)] };
+      expect(errorsFor(catalog(withGuide(guide)))).toEqual(['stop jeongja-exit3: guide.walks[0] must have exactly one "stop" end']);
+    }
+  });
+
+  it("rejects a walk to a place the stop does not have", () => {
+    const guide = { places: [exitPlace()], walks: [walk({ from: "exit4" })] };
+    expect(errorsFor(catalog(withGuide(guide)))).toEqual(['stop jeongja-exit3: guide.walks[0]: "exit4" is not a place of this stop']);
+  });
+
+  it("rejects a walk longer than 500 m (spec scenario: 620 m)", () => {
+    const far = { lat: 37.371498, lng: EXIT.lng }; // 620 m north of the exit
+    const guide = { places: [exitPlace()], walks: [walk({ path: [{ ...EXIT }, far] })] };
+    expect(errorsFor(catalog(withGuide(guide, { coords: far })))).toEqual([
+      "stop jeongja-exit3: guide.walks[0]: path is 620 m, longer than 500 m",
+    ]);
+  });
+
+  it("rejects the legacy exit and walkPath fields, saying they moved to guide", () => {
+    expect(errorsFor(catalog({ ...validStop(), walkPath: [{ ...EXIT }, { ...STOP }] }))).toEqual([
+      "stop jeongja-exit3: walkPath moved to guide (guide.places and guide.walks)",
+    ]);
+    expect(errorsFor(catalog({ ...validStop(), exit: { number: 3, coords: { ...EXIT } } }))).toEqual([
+      "stop jeongja-exit3: exit moved to guide (guide.places and guide.walks)",
+    ]);
   });
 
   const BOARD = { stopId: "jeongja-exit3", action: "board", timing: "scheduled" };
@@ -207,8 +285,6 @@ describe("validateStopCatalog", () => {
 
   it("accepts a run that boards at two stops (the 강남·양재 shape)", () => {
     const second: Record<string, unknown> = { ...validStop(), id: "second-stop" };
-    delete second.exit;
-    delete second.walkPath;
     const raw = {
       stops: [validStop(), second],
       sequences: seq(BOARD, { stopId: "second-stop", action: "board", timing: "scheduled" }, CAMPUS),
@@ -229,5 +305,89 @@ describe("validateStopCatalog", () => {
     expect(errorsFor(catalog(validStop(), seq(BOARD, { ...CAMPUS, detail: { ko: " " } })))).toEqual([
       "sequences commute-jeongja.up[1]: detail has no Korean text",
     ]);
+  });
+
+  describe("walk direction matches how the stop is used", () => {
+    const ALIGHT = { stopId: "jeongja-exit3", action: "alight", timing: "estimated" };
+    const NSC_BOARD = { label: { ko: "N센터 건너편" }, action: "board", timing: "scheduled" };
+    const dropOff = () =>
+      withGuide({ places: [exitPlace()], walks: [walk({ from: "stop", to: "exit3", path: [{ ...STOP }, { ...EXIT }] })] });
+
+    it("rejects a walk to the stop where some sequence alights, naming the stop and the sequence", () => {
+      const raw = catalog(validStop(), { "commute-jeongja": { up: [BOARD, CAMPUS], down: [NSC_BOARD, ALIGHT] } });
+      expect(errorsFor(raw)).toEqual([
+        "sequences commute-jeongja.down[1]: stop jeongja-exit3 has a walk to the stop (boarding), but this sequence alights there",
+      ]);
+    });
+
+    it("rejects a walk from the stop where some sequence boards", () => {
+      expect(errorsFor(catalog(dropOff()))).toEqual([
+        "sequences commute-jeongja.up[0]: stop jeongja-exit3 has a walk from the stop (alighting), but this sequence boards there",
+      ]);
+    });
+
+    it("accepts a walk from a drop-off, and a stop used both ways with no walk", () => {
+      expect(errorsFor(catalog(dropOff(), seq(NSC_BOARD, ALIGHT)))).toEqual([]);
+      const both = withGuide({ places: [exitPlace()] });
+      expect(errorsFor(catalog(both, { "commute-jeongja": { up: [BOARD, CAMPUS], down: [NSC_BOARD, ALIGHT] } }))).toEqual([]);
+    });
+  });
+  describe("sequences opted in to arrival estimates", () => {
+    const UP = new Map([["commute-jeongja", ["up"]]]);
+    const errorsWithEta = (raw: unknown, optIns: Map<string, string[]> = UP) => validateStopCatalog(raw, SERVICES, optIns);
+
+    it("Opted-in sequence without coordinates: names the service, the route type and the stop", () => {
+      const noCoords: Record<string, unknown> = { ...validStop() };
+      delete noCoords.coords;
+      delete noCoords.guide;
+      const drop = { id: "drop", name: { ko: "하차" }, coords: { ...STOP } };
+      const raw = {
+        stops: [noCoords, drop],
+        sequences: seq(BOARD, { stopId: "drop", action: "alight", timing: "estimated" }),
+      };
+      expect(errorsWithEta(raw)).toEqual([
+        "sequences commute-jeongja.up[0]: opted in to estimates, but stop jeongja-exit3 has no coordinates",
+      ]);
+    });
+
+    it("refuses a label stop, which has no coordinates to route through", () => {
+      expect(errorsWithEta(catalog())).toEqual([
+        "sequences commute-jeongja.up[1]: opted in to estimates, but is a label, not a catalog stop with coordinates",
+      ]);
+    });
+
+    it("refuses an opt-in without a sequence, a sequence of more than 7 stops, no estimated stop, or an estimated start", () => {
+      expect(errorsWithEta(catalog(), new Map([["commute-jeongja", ["down"]]]))).toEqual([
+        "sequences commute-jeongja.down: opted in to estimates but has no stop sequence",
+      ]);
+      const stops = Array.from({ length: 8 }, (_, i) => ({ id: `s${i}`, name: { ko: `정류장 ${i}` }, coords: { ...STOP } }));
+      const eight = stops.map((st, i) => ({
+        stopId: st.id,
+        action: i === 0 ? "board" : "alight",
+        timing: i === 0 ? "scheduled" : "estimated",
+      }));
+      expect(errorsWithEta({ stops, sequences: seq(...eight) })).toEqual([
+        "sequences commute-jeongja.up: opted in to estimates with 8 stops, more than 7",
+      ]);
+      const allScheduled = eight.slice(0, 2).map((st) => ({ ...st, timing: "scheduled" }));
+      expect(errorsWithEta({ stops, sequences: seq(...allScheduled) })).toEqual([
+        "sequences commute-jeongja.up: opted in to estimates, but has no estimated stop",
+      ]);
+      const estimatedStart = eight.slice(0, 2).map((st) => ({ ...st, timing: "estimated" }));
+      expect(errorsWithEta({ stops, sequences: seq(...estimatedStart) })).toEqual([
+        "sequences commute-jeongja.up: opted in to estimates, but its first stop is not scheduled",
+      ]);
+    });
+
+    it("leaves the commute shuttle out: its 등교 sequences end at a label stop, so opting it in would fail", () => {
+      const optIns = etaOptIns(serviceConfig);
+      expect([...optIns.keys()].filter((id) => id.startsWith("commute-"))).toEqual([]);
+      expect(Object.fromEntries(optIns)).toEqual({ "campus-inja": ["regular"], "campus-jain": ["regular", "hakbu"] });
+      const allServices = new Set(Object.keys(serviceConfig));
+      const commuteIn = new Map([["commute-jeongja", ["up"]]]);
+      expect(validateStopCatalog(stopCatalog, allServices, commuteIn)).toEqual([
+        "sequences commute-jeongja.up[1]: opted in to estimates, but is a label, not a catalog stop with coordinates",
+      ]);
+    });
   });
 });
