@@ -50,6 +50,7 @@ jest.mock("../../../src/infra/logger", () => mockLogger);
 
 import { ensureIndexes } from "../../../src/map/map-places.data";
 import { MapService } from "../../../src/map/map.service";
+import type { BuildingService } from "../../../src/building/building.service";
 
 /** Every (collection, keys, options?) call, as JSON for comparison. */
 function indexSpecs(): string[] {
@@ -63,7 +64,7 @@ describe("MapService.onModuleInit", () => {
   });
 
   it("creates every index the contract lists", async () => {
-    await new MapService().onModuleInit();
+    await new MapService({} as BuildingService).onModuleInit();
 
     expect(createIndex).toHaveBeenCalledTimes(3);
     expect(mockLogger.warn).not.toHaveBeenCalled();
@@ -117,7 +118,7 @@ describe("MapService.onModuleInit", () => {
 
     // Resolves rather than rejecting: a rejected onModuleInit aborts Nest's
     // bootstrap, which is exactly the outage this catch exists to prevent.
-    await expect(new MapService().onModuleInit()).resolves.toBeUndefined();
+    await expect(new MapService({} as BuildingService).onModuleInit()).resolves.toBeUndefined();
     expect(mockLogger.warn).toHaveBeenCalled();
   });
 });

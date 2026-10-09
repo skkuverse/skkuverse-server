@@ -73,7 +73,7 @@ const VIOLATORS = {
   ],
   features: {
     app: ["src/app/app-feature.service.ts"],
-    map: ["src/map/map-campus-overlays.data.ts", "src/map/map-event-overlays.data.ts"],
+    map: ["src/map/map-event-overlays.data.ts"],
     ui: ["src/ui/home/home-layout.schema.ts", "src/ui/home/home-layout.ts", "src/ui/ui/ui.buslist.ts"],
   },
 };

@@ -1,5 +1,4 @@
-import { getAllBuildings, getAllCampusShapes } from "../building/building.data";
-import type { CampusShapeDoc } from "../building/building.document";
+import type { BuildingDoc, CampusShapeDoc } from "../building/building.document";
 import type { Campus } from "../building/building.types";
 import logger from "../infra/logger";
 import { createLogThrottle } from "../infra/log-throttle";
@@ -50,6 +49,12 @@ import { toWirePolygon } from "../shared/ring-winding.util";
  * layer that fetches successfully and draws nothing, with no error anywhere. As
  * `BaseLayerId` that mismatch is a compile error instead of a blank campus.
  */
+/** The building reads this module needs; MapService passes the exported BuildingService. */
+export interface CampusSource {
+  getAllBuildings(): Promise<BuildingDoc[]>;
+  getAllCampusShapes(): Promise<CampusShapeDoc[]>;
+}
+
 const LAYER_NUMBERS: BaseLayerId = "building_numbers";
 const LAYER_LABELS: BaseLayerId = "building_labels";
 
@@ -140,11 +145,11 @@ function formatFallback(): { overlays: MapOverlay[]; degraded: true } {
  * client and edge cache for 24 hours, on a stable URL with no version stamp and
  * no revalidation to bust it.
  */
-async function getBuildingOverlays(): Promise<{
+async function getBuildingOverlays(source: CampusSource): Promise<{
   overlays: MapOverlay[];
   degraded: boolean;
 }> {
-  const buildings = await getAllBuildings();
+  const buildings = await source.getAllBuildings();
   // getAllBuildings always returns an array, so `?.` never short-circuits
   // here.
   if (!buildings?.length) return formatFallback();
@@ -356,16 +361,16 @@ function toShapeOverlays(docs: CampusShapeDoc[]): MapOverlay[] {
  * therefore continues to mean exactly one thing — the buildings fell back —
  * so the controller's caching decision keeps the meaning it was written for.
  */
-async function getCampusOverlays(): Promise<{
+async function getCampusOverlays(source: CampusSource): Promise<{
   overlays: MapOverlay[];
   degraded: boolean;
 }> {
   const [buildings, shapeOverlays] = await Promise.all([
-    getBuildingOverlays(),
+    getBuildingOverlays(source),
     // The catch wraps the PROJECTION as well as the read. Wrapping only the
     // read would leave a throw inside `toShapeOverlays` free to escape and take
     // the buildings with it — the exact inverse of what this function is for.
-    (async () => toShapeOverlays(await getAllCampusShapes()))().catch(
+    (async () => toShapeOverlays(await source.getAllCampusShapes()))().catch(
       (err: unknown) => {
         logger.warn(
           { event: "map.campus.shapes_failed", err },

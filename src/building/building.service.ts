@@ -3,13 +3,14 @@ import logger from "../infra/logger";
 import {
   ensureIndexes,
   getAllBuildings,
+  getAllCampusShapes,
   getBuildingBySkkuId,
   getConnectionsForBuilding,
   getFloorsByBuildNo,
 } from "./building.data";
 import { searchBuildings, searchSpaces } from "./building.search";
 import type { RankedSearchResult } from "./building.search";
-import type { BuildingDoc, SpaceDoc } from "./building.document";
+import type { BuildingDoc, CampusShapeDoc, SpaceDoc } from "./building.document";
 import type { Campus, ConnectionResponseItem, FloorGroup } from "./building.types";
 
 /**
@@ -41,6 +42,11 @@ export class BuildingService implements OnModuleInit {
 
   getAllBuildings(campus?: Campus | null): Promise<BuildingDoc[]> {
     return getAllBuildings(campus);
+  }
+
+  /** Every campus shape, in authored order (the campus map overlay). */
+  getAllCampusShapes(): Promise<CampusShapeDoc[]> {
+    return getAllCampusShapes();
   }
 
   getBuildingBySkkuId(skkuId: number): Promise<BuildingDoc | null> {
