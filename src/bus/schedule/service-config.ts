@@ -7,18 +7,14 @@ import type { ServiceConfigMap } from "../types";
 const serviceConfig: ServiceConfigMap = {
   "campus-inja": {
     nonOperatingDayDisplay: "hidden",
-    notices: [
-      { style: "info", text: "주말, 공휴일, 학교 휴일 운행 없음" },
-    ],
+    notices: [],
     suspend: null,
     respectsKoreanHolidays: true,
     eta: { routeTypes: ["regular", "hakbu"] },
   },
   "campus-jain": {
     nonOperatingDayDisplay: "hidden",
-    notices: [
-      { style: "info", text: "주말, 공휴일, 학교 휴일 운행 없음" },
-    ],
+    notices: [],
     suspend: null,
     respectsKoreanHolidays: true,
     eta: { routeTypes: ["regular", "hakbu"] },
