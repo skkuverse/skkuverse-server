@@ -77,6 +77,27 @@ describe("import boundary blocks apply as specified", () => {
     for (const line of bad) expect(lint(rules, "src/ui/home/x.ts", line)).toHaveLength(1);
   });
 
+  it("lets a spec import the shared test helpers, and bounds deep folders too", () => {
+    expect(
+      lint(block("boundaries/feature/building/depth-1").rules!, "src/building/x.spec.ts", 'import { b } from "../../__tests__/helpers/nest/build-building-app";'),
+    ).toEqual([]);
+    expect(
+      lint(block("boundaries/feature/bus/depth-4").rules!, "src/bus/a/b/c/x.ts", 'import { m } from "../../../../map/map-places.data";'),
+    ).toHaveLength(1);
+  });
+
+  it("covers every top-level folder of src/ that is not shared code", () => {
+    const featureBlocks = new Set(
+      blocks.map((b) => b.name!.match(/^boundaries\/feature\/([^/]+)\//)?.[1]).filter(Boolean),
+    );
+    const shared = new Set(["common", "config", "infra", "scheduling", "shared"]);
+    const topLevel = fs
+      .readdirSync(path.join(ROOT, "src"), { withFileTypes: true })
+      .filter((d) => d.isDirectory() && !shared.has(d.name))
+      .map((d) => d.name);
+    expect([...featureBlocks].sort()).toEqual(topLevel.sort());
+  });
+
   it("shared/ imports no feature, infra/ imports neither common/ nor a feature", () => {
     expect(lint(block("boundaries/shared").rules!, "src/shared/x.util.ts", 'import { a } from "../map/a";')).toHaveLength(1);
     expect(lint(block("boundaries/shared").rules!, "src/shared/x.util.ts", 'import { a } from "../infra/a";')).toEqual([]);

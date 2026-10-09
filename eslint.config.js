@@ -50,8 +50,14 @@ const LOG_CALL =
 // __tests__/architecture/import-boundaries.test.ts fails when a listed file no
 // longer violates, so each list only shrinks as modules are migrated.
 
-const FEATURES = ["ad", "app", "building", "bus", "health", "map", "miniapps", "notices", "ui"];
 const SHARED_DIRS = ["common", "config", "infra", "scheduling", "shared"];
+// Every other top-level folder of src/ is a feature, so a new module is
+// bounded from its first file.
+const FEATURES = require("fs")
+  .readdirSync(require("path").join(__dirname, "src"), { withFileTypes: true })
+  .filter((d) => d.isDirectory() && !SHARED_DIRS.includes(d.name))
+  .map((d) => d.name)
+  .sort();
 
 const GET_CLIENT_PATTERN = {
   regex: "(?:^|/)infra/db$|^\\./db$",
@@ -80,9 +86,10 @@ const VIOLATORS = {
 /** One block per feature and folder depth: the regex knows how many `../` leave the module. */
 function featureBoundaryBlocks() {
   return FEATURES.flatMap((feature) =>
-    [1, 2, 3].map((depth) => {
+    [1, 2, 3, 4, 5].map((depth) => {
       const up = "\\.\\./".repeat(depth);
-      const stay = [...SHARED_DIRS, feature].join("|");
+      // A spec may import the shared test helpers.
+      const stay = [...SHARED_DIRS, feature, "\\.\\./__tests__"].join("|");
       return {
         name: `boundaries/feature/${feature}/depth-${depth}`,
         files: [`src/${feature}/${"*/".repeat(depth - 1)}*.ts`],
