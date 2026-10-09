@@ -191,6 +191,20 @@ module.exports = [
     },
   },
   {
+    // Size ratchets (ADR 0010, D9): each limit is today's worst file or
+    // function, so nothing grows past it. Lower them as modules are migrated;
+    // never raise one. Errors, not warnings: lint allows no warnings.
+    name: "size-ratchets",
+    files: ["src/**/*.ts"],
+    ignores: ["src/**/*.spec.ts"],
+    rules: {
+      "max-lines": ["error", { max: 440, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": ["error", { max: 122, skipBlankLines: true, skipComments: true }],
+      complexity: ["error", 47],
+      "max-params": ["error", 7],
+    },
+  },
+  {
     name: "boundaries/get-client",
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.repository.ts", "src/**/*.spec.ts", "src/infra/db.ts", ...VIOLATORS.getClient],
