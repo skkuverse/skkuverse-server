@@ -49,7 +49,7 @@
  *
  * ## What this does NOT do
  *
- * It never creates an activation — `import-eventmap-csv.js` owns that, with
+ * It never creates an activation — `import-eventmap-places.js` owns that, with
  * $setOnInsert so it can only ever create one disabled. An unknown layer set is
  * an error here rather than an upsert, because the failure this prevents is
  * enabling a typo'd id and wondering why nothing appeared.
@@ -194,7 +194,7 @@ async function main() {
       // success and leave a stray document behind.
       console.error(
         `\nNo activation for "${args.layerSetId}". ` +
-          "Run import-eventmap-csv.js first — it creates one, disabled.",
+          "Run `npm run eventmap:import` first — it creates one, disabled.",
       );
       process.exit(1);
     }
