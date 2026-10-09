@@ -3,7 +3,7 @@
  * @Injectable delegates forward 1:1 to the validated src/notices/* modules (so
  * the critical logic — cursor encoding, search validation, transform shapes,
  * source map, tab config — is exercised through the Nest surface), plus the
- * topics.bridge exports the dispatcher uses.
+ * notices.topics exports the dispatcher uses.
  *
  * No DB / no HTTP here — pure delegation.
  */
@@ -12,7 +12,7 @@ import { CursorService, InvalidCursorError } from "../../../src/notices/cursor.s
 import { NoticesSearchService } from "../../../src/notices/search.service";
 import { TransformService } from "../../../src/notices/transform.service";
 import { SourcesService } from "../../../src/notices/sources.service";
-import { buildTopics, TOPIC_CAP } from "../../../src/notices/topics.bridge";
+import { buildTopics, TOPIC_CAP } from "../../../src/notices/notices.topics";
 import { TabConfigService } from "../../../src/notices/tabconfig.service";
 import { responseByLang } from "../../../src/notices/tabConfig";
 import { encodeCursor } from "../../../src/notices/notices.cursor";
@@ -98,9 +98,8 @@ describe("SourcesService", () => {
   });
 });
 
-// topics.bridge is what NoticesDispatcherService imports buildTopics and
-// TOPIC_CAP from.
-describe("topics.bridge", () => {
+// NoticesDispatcherService imports buildTopics and TOPIC_CAP from here.
+describe("notices.topics", () => {
   // (An operations detail is left out of the public history.)
   it("TOPIC_CAP is 30 (at most the Cloud Function's PUSH_FUNCTION_NAME_01)", () => {
     expect(TOPIC_CAP).toBe(30);
