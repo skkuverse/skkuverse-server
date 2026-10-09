@@ -133,23 +133,42 @@ describe("resolveWeek", () => {
   });
 
   it("override type replace → display schedule with override entries and merged notices", async () => {
-    mockSchedules = [
-      { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
-    ];
-    mockOverrides = [
-      { serviceId: "campus-inja", date: "2026-03-09", type: "replace", label: "ESKARA 1일차", notices: [{ style: "warning", text: "특별 운행" }], entries: [{ index: 1, time: "10:00", routeType: "fasttrack", busCount: 2, notes: "special" }] },
-    ];
+    // campus-inja carries no service notice of its own, so the test sets one:
+    // the merge must not depend on the copy service-config.ts holds today.
+    const savedNotices = serviceConfig["campus-inja"].notices;
+    serviceConfig["campus-inja"].notices = [{ style: "info", text: "서비스 공지" }];
+    try {
+      mockSchedules = [
+        { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
+      ];
+      mockOverrides = [
+        { serviceId: "campus-inja", date: "2026-03-09", type: "replace", label: "ESKARA 1일차", notices: [{ style: "warning", text: "특별 운행" }], entries: [{ index: 1, time: "10:00", routeType: "fasttrack", busCount: 2, notes: "special" }] },
+      ];
 
-    const result = await resolveWeek("campus-inja", "2026-03-09");
-    const monday = result!.days[0];
-    expect(monday.display).toBe("schedule");
-    expect(monday.label).toBe("ESKARA 1일차");
-    expect((monday.schedule[0] as { time: string }).time).toBe("10:00");
-    const serviceNotices = monday.notices.filter((n) => n.source === "service");
-    const overrideNotices = monday.notices.filter((n) => n.source === "override");
-    expect(serviceNotices.length).toBeGreaterThan(0);
-    expect(overrideNotices).toHaveLength(1);
-    expect(overrideNotices[0].text).toBe("특별 운행");
+      const result = await resolveWeek("campus-inja", "2026-03-09");
+      const monday = result!.days[0];
+      expect(monday.display).toBe("schedule");
+      expect(monday.label).toBe("ESKARA 1일차");
+      expect((monday.schedule[0] as { time: string }).time).toBe("10:00");
+      expect(monday.notices).toEqual([
+        { style: "info", text: "서비스 공지", source: "service" },
+        { style: "warning", text: "특별 운행", source: "override" },
+      ]);
+    } finally {
+      serviceConfig["campus-inja"].notices = savedNotices;
+    }
+  });
+
+  it("campus-inja and campus-jain schedule days carry no service notice", async () => {
+    for (const serviceId of ["campus-inja", "campus-jain"]) {
+      mockSchedules = [
+        { serviceId, patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
+      ];
+
+      const result = await resolveWeek(serviceId, "2026-03-09");
+      expect(result!.days[0].display).toBe("schedule");
+      expect(result!.days[0].notices).toEqual([]);
+    }
   });
 
   it("override type noService → display noService, empty schedule/notices, label set", async () => {
