@@ -9,14 +9,15 @@
  *   - every listed name is read somewhere in src/, so no dead key is rendered;
  *   - no listed name is also set inline in docker-compose.yml, where the inline
  *     value would silently win over the rendered one;
- *   - config.ts and env.validation.ts require the same variables, so the two
- *     fail-loud layers cannot drift apart.
+ *   - config.ts and env.validation.ts both check the one required list in
+ *     src/infra/required-env.ts, so the two fail-loud layers cannot drift apart.
  *
  * Files are read with patterns rather than parsers: their shape is fixed and
  * the repo avoids the dependency.
  */
 import fs from "fs";
 import path from "path";
+import { requiredValues } from "../../../src/infra/required-env";
 
 const root = path.join(__dirname, "../../..");
 const read = (rel: string) => fs.readFileSync(path.join(root, rel), "utf8");
@@ -28,12 +29,6 @@ function allowlist(rel: string): string[] {
     .filter(Boolean);
 }
 
-/** Env var names in a `const required ... = [ ... ];` block. */
-function requiredNames(rel: string): Set<string> {
-  const block = read(rel).match(/const required[^=]*=\s*\[([\s\S]*?)\n\s*\];/);
-  if (!block) throw new Error(`no required[] block in ${rel}`);
-  return new Set([...block[1]!.matchAll(/"([A-Z][A-Z0-9_]*)",?\s*\]/g)].map((m) => m[1]!));
-}
 
 function sourceFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -46,12 +41,12 @@ function sourceFiles(dir: string): string[] {
 
 const PRD = allowlist("config/env.prd.keys");
 const DEV = allowlist("config/env.dev.keys");
-const configRequired = requiredNames("src/infra/config.ts");
-const nestRequired = requiredNames("src/config/env.validation.ts");
+// Production adds SENTRY_DSN, so its list is the longest.
+const REQUIRED = requiredValues({ NODE_ENV: "production" }).map((v) => v.env);
 
 /** Run findMissingRequired() with exactly `names` set, under `nodeEnv`. */
 function missingWithOnly(names: string[], nodeEnv: string): string[] {
-  const touched = new Set([...configRequired, ...names, "NODE_ENV", "USE_PROD_API", "API_HSSC_NEW_DEV"]);
+  const touched = new Set([...REQUIRED, ...names, "NODE_ENV", "USE_PROD_API", "API_HSSC_NEW_DEV"]);
   const saved = new Map([...touched].map((k) => [k, process.env[k]]));
   try {
     for (const k of touched) delete process.env[k];
@@ -71,8 +66,11 @@ function missingWithOnly(names: string[], nodeEnv: string): string[] {
 }
 
 describe("config/env.*.keys — the names render_env.py writes", () => {
-  it("config.ts and env.validation.ts require the same variables", () => {
-    expect([...nestRequired].sort()).toEqual([...configRequired].sort());
+  it("config.ts and env.validation.ts check the shared list and keep none of their own", () => {
+    for (const rel of ["src/infra/config.ts", "src/config/env.validation.ts"]) {
+      expect(read(rel)).toMatch(/from "(?:\.\.\/infra|\.)\/required-env"/);
+      expect(read(rel)).not.toMatch(/const required\b/);
+    }
   });
 
   it.each([

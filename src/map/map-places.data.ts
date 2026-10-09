@@ -22,7 +22,7 @@ import type { ActivationDoc, MapPlaceDoc } from "./map-places.types";
 // --- Collection helpers ---
 //
 // dbName is guaranteed a string by the startup validation in infra/config.ts
-// (required[] has an eventmap.dbName entry → missing env var is process.exit(1)),
+// (infra/required-env.ts has an eventmap.dbName entry → missing env var is process.exit(1)),
 // which is what justifies the non-null assertion. Same pattern as ad.data.ts.
 
 function getPlacesCollection(): Collection<MapPlaceDoc> {

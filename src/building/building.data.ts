@@ -20,7 +20,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 
 function getBuildingsCollection(): Collection<BuildingDoc> {
   // building.dbName은 src/infra/config.ts startup validation에서 string 보장됨
-  // (required[] 미들에 entry 있음 → 미설정이면 process.exit(1)). non-null 정당화.
+  // (infra/required-env.ts에 entry 있음 → 미설정이면 process.exit(1)). non-null 정당화.
   return getClient()
     .db(config.building.dbName!)
     .collection<BuildingDoc>(config.building.collections.buildings);

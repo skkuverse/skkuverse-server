@@ -1,7 +1,8 @@
 /**
- * Pins env.validation.findMissingRequired() to src/infra/config.ts's
- * required[] — specifically the api.hsscNew entry, the only one resolved via
- * apiUrl() (DEV-preferred-with-PROD-fallback) rather than read straight off
+ * Pins env.validation.findMissingRequired() to the resolution
+ * src/infra/config.ts uses (both read src/infra/required-env.ts) —
+ * specifically the api.hsscNew entry, the only one resolved via apiUrl()
+ * (DEV-preferred-with-PROD-fallback) rather than read straight off
  * process.env.
  *
  * The bug this pins: reading process.env.API_HSSC_NEW_PROD directly made the
@@ -9,9 +10,8 @@
  * sets only API_HSSC_NEW_DEV (leaving _PROD empty) — a config
  * src/infra/config.ts accepts. The fix mirrors apiUrl().
  *
- * findMissingRequired() reads NODE_ENV / USE_PROD_API at MODULE LOAD time
- * (top-level consts), so each scenario sets env then jest.isolateModules() to
- * re-evaluate the module fresh.
+ * Each scenario sets env, then loads the module fresh with
+ * jest.isolateModules().
  */
 
 const HSSC_KEYS = ["API_HSSC_NEW_PROD", "API_HSSC_NEW_DEV"] as const;

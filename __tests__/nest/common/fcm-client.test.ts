@@ -97,9 +97,9 @@ describe("postToFcmFunction with PUSH_DELIVERY=live", () => {
 
 describe("postToFcmFunction is the only way to the Cloud Function", () => {
   // Where the URL and key may appear in code: read from env and validated
-  // (config.ts, env.validation.ts) and used (fcm-client.ts). A fetch to the
+  // (config.ts, required-env.ts) and used (fcm-client.ts). A fetch to the
   // function anywhere else would bypass PUSH_DELIVERY.
-  const allowed = new Set(["infra/config.ts", "config/env.validation.ts", "common/fcm-client.ts"]);
+  const allowed = new Set(["infra/config.ts", "infra/required-env.ts", "common/fcm-client.ts"]);
   const reference = /\bfunctionUrl\b|\bFCM_FUNCTION_URL\b|\bFCM_API_KEY\b|dispatch\.apiKey\b/;
 
   it("no other file in src/ reads the function URL or key", () => {
