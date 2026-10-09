@@ -30,39 +30,56 @@
         "tilt": 0,
         "fov": 80
       },
-      "exit": {
-        "number": 3,
-        "coords": {
-          "lat": 37.365922,
-          "lng": 127.107774
-        }
-      },
-      "walkPath": [
-        {
-          "lat": 37.365922,
-          "lng": 127.107774
-        },
-        {
-          "lat": 37.365882,
-          "lng": 127.107844
-        },
-        {
-          "lat": 37.365712,
-          "lng": 127.107844
-        },
-        {
-          "lat": 37.365699,
-          "lng": 127.107876
-        },
-        {
-          "lat": 37.365581,
-          "lng": 127.107876
-        },
-        {
-          "lat": 37.365499,
-          "lng": 127.107906
-        }
-      ]
+      "guide": {
+        "places": [
+          {
+            "id": "exit3",
+            "kind": "subwayExit",
+            "number": 3,
+            "name": {
+              "ko": "3번 출구",
+              "en": "Exit 3",
+              "zh": "3号出口"
+            },
+            "coords": {
+              "lat": 37.365922,
+              "lng": 127.107774
+            }
+          }
+        ],
+        "walks": [
+          {
+            "from": "exit3",
+            "to": "stop",
+            "path": [
+              {
+                "lat": 37.365922,
+                "lng": 127.107774
+              },
+              {
+                "lat": 37.365882,
+                "lng": 127.107844
+              },
+              {
+                "lat": 37.365712,
+                "lng": 127.107844
+              },
+              {
+                "lat": 37.365699,
+                "lng": 127.107876
+              },
+              {
+                "lat": 37.365581,
+                "lng": 127.107876
+              },
+              {
+                "lat": 37.365499,
+                "lng": 127.107906
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "jamsil-exit4",
@@ -94,31 +111,48 @@
         "tilt": 0,
         "fov": 80
       },
-      "exit": {
-        "number": 4,
-        "coords": {
-          "lat": 37.512743,
-          "lng": 127.099156
-        }
-      },
-      "walkPath": [
-        {
-          "lat": 37.512743,
-          "lng": 127.099156
-        },
-        {
-          "lat": 37.512704,
-          "lng": 127.099055
-        },
-        {
-          "lat": 37.512281,
-          "lng": 127.097237
-        },
-        {
-          "lat": 37.512278,
-          "lng": 127.097033
-        }
-      ]
+      "guide": {
+        "places": [
+          {
+            "id": "exit4",
+            "kind": "subwayExit",
+            "number": 4,
+            "name": {
+              "ko": "4번 출구",
+              "en": "Exit 4",
+              "zh": "4号出口"
+            },
+            "coords": {
+              "lat": 37.512743,
+              "lng": 127.099156
+            }
+          }
+        ],
+        "walks": [
+          {
+            "from": "exit4",
+            "to": "stop",
+            "path": [
+              {
+                "lat": 37.512743,
+                "lng": 127.099156
+              },
+              {
+                "lat": 37.512704,
+                "lng": 127.099055
+              },
+              {
+                "lat": 37.512281,
+                "lng": 127.097237
+              },
+              {
+                "lat": 37.512278,
+                "lng": 127.097033
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "dogok-exit1",
@@ -150,27 +184,44 @@
         "tilt": 8,
         "fov": 80
       },
-      "exit": {
-        "number": 1,
-        "coords": {
-          "lat": 37.490911,
-          "lng": 127.054844
-        }
-      },
-      "walkPath": [
-        {
-          "lat": 37.490911,
-          "lng": 127.054844
-        },
-        {
-          "lat": 37.490854,
-          "lng": 127.05478
-        },
-        {
-          "lat": 37.4907,
-          "lng": 127.054417
-        }
-      ]
+      "guide": {
+        "places": [
+          {
+            "id": "exit1",
+            "kind": "subwayExit",
+            "number": 1,
+            "name": {
+              "ko": "1번 출구",
+              "en": "Exit 1",
+              "zh": "1号出口"
+            },
+            "coords": {
+              "lat": 37.490911,
+              "lng": 127.054844
+            }
+          }
+        ],
+        "walks": [
+          {
+            "from": "exit1",
+            "to": "stop",
+            "path": [
+              {
+                "lat": 37.490911,
+                "lng": 127.054844
+              },
+              {
+                "lat": 37.490854,
+                "lng": 127.05478
+              },
+              {
+                "lat": 37.4907,
+                "lng": 127.054417
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "gangnam-exit5",
@@ -202,31 +253,48 @@
         "tilt": 10,
         "fov": 80
       },
-      "exit": {
-        "number": 5,
-        "coords": {
-          "lat": 37.495333,
-          "lng": 127.02863
-        }
-      },
-      "walkPath": [
-        {
-          "lat": 37.495333,
-          "lng": 127.02863
-        },
-        {
-          "lat": 37.495215,
-          "lng": 127.028675
-        },
-        {
-          "lat": 37.49449,
-          "lng": 127.028998
-        },
-        {
-          "lat": 37.494424,
-          "lng": 127.029091
-        }
-      ]
+      "guide": {
+        "places": [
+          {
+            "id": "exit5",
+            "kind": "subwayExit",
+            "number": 5,
+            "name": {
+              "ko": "5번 출구",
+              "en": "Exit 5",
+              "zh": "5号出口"
+            },
+            "coords": {
+              "lat": 37.495333,
+              "lng": 127.02863
+            }
+          }
+        ],
+        "walks": [
+          {
+            "from": "exit5",
+            "to": "stop",
+            "path": [
+              {
+                "lat": 37.495333,
+                "lng": 127.02863
+              },
+              {
+                "lat": 37.495215,
+                "lng": 127.028675
+              },
+              {
+                "lat": 37.49449,
+                "lng": 127.028998
+              },
+              {
+                "lat": 37.494424,
+                "lng": 127.029091
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "yangjae-exit2",
@@ -258,35 +326,52 @@
         "tilt": 0,
         "fov": 80
       },
-      "exit": {
-        "number": 2,
-        "coords": {
-          "lat": 37.485018,
-          "lng": 127.033534
-        }
-      },
-      "walkPath": [
-        {
-          "lat": 37.485018,
-          "lng": 127.033534
-        },
-        {
-          "lat": 37.485172,
-          "lng": 127.033487
-        },
-        {
-          "lat": 37.48531,
-          "lng": 127.03341
-        },
-        {
-          "lat": 37.485372,
-          "lng": 127.033378
-        },
-        {
-          "lat": 37.485406,
-          "lng": 127.033382
-        }
-      ]
+      "guide": {
+        "places": [
+          {
+            "id": "exit2",
+            "kind": "subwayExit",
+            "number": 2,
+            "name": {
+              "ko": "2번 출구",
+              "en": "Exit 2",
+              "zh": "2号出口"
+            },
+            "coords": {
+              "lat": 37.485018,
+              "lng": 127.033534
+            }
+          }
+        ],
+        "walks": [
+          {
+            "from": "exit2",
+            "to": "stop",
+            "path": [
+              {
+                "lat": 37.485018,
+                "lng": 127.033534
+              },
+              {
+                "lat": 37.485172,
+                "lng": 127.033487
+              },
+              {
+                "lat": 37.48531,
+                "lng": 127.03341
+              },
+              {
+                "lat": 37.485372,
+                "lng": 127.033378
+              },
+              {
+                "lat": 37.485406,
+                "lng": 127.033382
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "gwanggyo-exit4",
@@ -318,27 +403,44 @@
         "tilt": 5,
         "fov": 80
       },
-      "exit": {
-        "number": 4,
-        "coords": {
-          "lat": 37.288187,
-          "lng": 127.052357
-        }
-      },
-      "walkPath": [
-        {
-          "lat": 37.288187,
-          "lng": 127.052357
-        },
-        {
-          "lat": 37.288168,
-          "lng": 127.0524
-        },
-        {
-          "lat": 37.287931,
-          "lng": 127.052631
-        }
-      ]
+      "guide": {
+        "places": [
+          {
+            "id": "exit4",
+            "kind": "subwayExit",
+            "number": 4,
+            "name": {
+              "ko": "4번 출구",
+              "en": "Exit 4",
+              "zh": "4号出口"
+            },
+            "coords": {
+              "lat": 37.288187,
+              "lng": 127.052357
+            }
+          }
+        ],
+        "walks": [
+          {
+            "from": "exit4",
+            "to": "stop",
+            "path": [
+              {
+                "lat": 37.288187,
+                "lng": 127.052357
+              },
+              {
+                "lat": 37.288168,
+                "lng": 127.0524
+              },
+              {
+                "lat": 37.287931,
+                "lng": 127.052631
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "nsc-opposite",
@@ -364,7 +466,279 @@
         "pan": 84,
         "tilt": 12,
         "fov": 80
+      },
+      "guide": {}
+    },
+    {
+      "id": "jeongja-exit2",
+      "name": {
+        "ko": "정자역 2번 출구 앞",
+        "en": "Jeongja Stn. Exit 2",
+        "zh": "亭子站 2号出口"
+      },
+      "coords": {
+        "lat": 37.366014,
+        "lng": 127.10836
+      },
+      "guide": {
+        "places": [
+          {
+            "id": "exit2",
+            "kind": "subwayExit",
+            "number": 2,
+            "name": {
+              "ko": "2번 출구",
+              "en": "Exit 2",
+              "zh": "2号出口"
+            },
+            "coords": {
+              "lat": 37.366095,
+              "lng": 127.108414
+            }
+          }
+        ]
       }
+    },
+    {
+      "id": "jamsil-exit5",
+      "name": {
+        "ko": "잠실역 5번 출구 앞",
+        "en": "Jamsil Stn. Exit 5",
+        "zh": "蚕室站 5号出口"
+      },
+      "coords": {
+        "lat": 37.513114,
+        "lng": 127.098842
+      },
+      "guide": {
+        "places": [
+          {
+            "id": "exit5",
+            "kind": "subwayExit",
+            "number": 5,
+            "name": {
+              "ko": "5번 출구",
+              "en": "Exit 5",
+              "zh": "5号出口"
+            },
+            "coords": {
+              "lat": 37.513133,
+              "lng": 127.098907
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "dogok-exit4",
+      "name": {
+        "ko": "도곡역 4번 출구 앞",
+        "en": "Dogok Stn. Exit 4",
+        "zh": "道谷站 4号出口"
+      },
+      "coords": {
+        "lat": 37.490607,
+        "lng": 127.055048
+      },
+      "guide": {
+        "places": [
+          {
+            "id": "exit4",
+            "kind": "subwayExit",
+            "number": 4,
+            "name": {
+              "ko": "4번 출구",
+              "en": "Exit 4",
+              "zh": "4号出口"
+            },
+            "coords": {
+              "lat": 37.49054,
+              "lng": 127.055081
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "yangjae-exit3",
+      "name": {
+        "ko": "양재역 3번 출구 앞",
+        "en": "Yangjae Stn. Exit 3",
+        "zh": "良才站 3号出口"
+      },
+      "coords": {
+        "lat": 37.48499,
+        "lng": 127.034064
+      },
+      "guide": {
+        "places": [
+          {
+            "id": "exit3",
+            "kind": "subwayExit",
+            "number": 3,
+            "name": {
+              "ko": "3번 출구",
+              "en": "Exit 3",
+              "zh": "3号出口"
+            },
+            "coords": {
+              "lat": 37.485008,
+              "lng": 127.03418
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "gwanggyo-exit1",
+      "name": {
+        "ko": "광교중앙역 1번 출구 앞",
+        "en": "Gwanggyo Jungang Stn. Exit 1",
+        "zh": "光教中央站 1号出口"
+      },
+      "coords": {
+        "lat": 37.287978,
+        "lng": 127.052104
+      },
+      "guide": {
+        "places": [
+          {
+            "id": "exit1",
+            "kind": "subwayExit",
+            "number": 1,
+            "name": {
+              "ko": "1번 출구",
+              "en": "Exit 1",
+              "zh": "1号出口"
+            },
+            "coords": {
+              "lat": 37.287918,
+              "lng": 127.052047
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "gangnam-median",
+      "name": {
+        "ko": "강남역 사거리 전 중앙버스차로 정류장",
+        "en": "Median bus stop before Gangnam Station intersection",
+        "zh": "江南站十字路口前中央公交车站"
+      },
+      "coords": {
+        "lat": 37.495049,
+        "lng": 127.029076
+      },
+      "guide": {}
+    },
+    {
+      "id": "hssc-bus-lot",
+      "name": {
+        "ko": "학생회관 버스 주차장",
+        "en": "Student Union bus parking lot",
+        "zh": "学生会馆巴士停车场"
+      },
+      "detail": {
+        "ko": "600주년기념관 맞은편",
+        "en": "Across from the 600th Anniversary Hall",
+        "zh": "600周年纪念馆对面"
+      },
+      "coords": {
+        "lat": 37.587367,
+        "lng": 126.993643
+      },
+      "photo": {
+        "original": "https://media.skkuverse.com/bus/stops/hssc-bus-lot/original-b431e3b1.jpg"
+      },
+      "panorama": {
+        "panoId": "oCt8OYgXgYopNL-f4h4MAw",
+        "pan": -24,
+        "tilt": 0,
+        "fov": 80
+      },
+      "guide": {}
+    },
+    {
+      "id": "hssc-600th",
+      "name": {
+        "ko": "600주년기념관 앞",
+        "en": "600th Anniversary Hall",
+        "zh": "600周年纪念馆前"
+      },
+      "detail": {
+        "ko": "학생회관 버스 주차장 건너편",
+        "en": "Across the road from the Student Union bus parking lot",
+        "zh": "学生会馆巴士停车场对面"
+      },
+      "coords": {
+        "lat": 37.587258,
+        "lng": 126.993904
+      },
+      "guide": {}
+    },
+    {
+      "id": "nsc-n-center",
+      "name": {
+        "ko": "N센터 앞",
+        "en": "N Center",
+        "zh": "N中心前"
+      },
+      "detail": {
+        "ko": "N센터 쪽 인도",
+        "en": "On the N Center side of the road",
+        "zh": "N中心一侧人行道"
+      },
+      "coords": {
+        "lat": 37.292298,
+        "lng": 126.975057
+      },
+      "photo": {
+        "original": "https://media.skkuverse.com/bus/stops/nsc-n-center/original-53c0cde5.jpg"
+      },
+      "panorama": {
+        "panoId": "YntS5LxXHav0lPF1zQf9tA",
+        "pan": 152,
+        "tilt": 2,
+        "fov": 80
+      },
+      "guide": {}
+    },
+    {
+      "id": "nsc-welfare",
+      "name": {
+        "ko": "복지회관 앞",
+        "en": "Welfare Hall",
+        "zh": "福利会馆前"
+      },
+      "detail": {
+        "ko": "학생회관 인근",
+        "en": "Near the Student Union",
+        "zh": "学生会馆附近"
+      },
+      "coords": {
+        "lat": 37.293999,
+        "lng": 126.973183
+      },
+      "guide": {}
+    },
+    {
+      "id": "nsc-cns",
+      "name": {
+        "ko": "CNS센터 앞",
+        "en": "CNS Center",
+        "zh": "CNS中心前"
+      },
+      "detail": {
+        "ko": "CNS센터 정문 앞 횡단보도",
+        "en": "At the crosswalk by the CNS Center main entrance",
+        "zh": "CNS中心正门前人行横道"
+      },
+      "coords": {
+        "lat": 37.294388,
+        "lng": 126.977671
+      },
+      "guide": {}
     }
   ],
   "sequences": {
@@ -412,11 +786,7 @@
           "timing": "scheduled"
         },
         {
-          "label": {
-            "ko": "정자역 2번 출구 앞",
-            "en": "Jeongja Stn. Exit 2",
-            "zh": "亭子站 2号出口"
-          },
+          "stopId": "jeongja-exit2",
           "note": {
             "ko": "정자역 하차",
             "en": "Get off · Jeongja Stn.",
@@ -471,11 +841,7 @@
           "timing": "scheduled"
         },
         {
-          "label": {
-            "ko": "잠실역 5번 출구 앞",
-            "en": "Jamsil Stn. Exit 5",
-            "zh": "蚕室站 5号出口"
-          },
+          "stopId": "jamsil-exit5",
           "note": {
             "ko": "잠실역 하차",
             "en": "Get off · Jamsil Stn.",
@@ -530,11 +896,7 @@
           "timing": "scheduled"
         },
         {
-          "label": {
-            "ko": "도곡역 4번 출구 앞",
-            "en": "Dogok Stn. Exit 4",
-            "zh": "道谷站 4号出口"
-          },
+          "stopId": "dogok-exit4",
           "note": {
             "ko": "도곡역 하차",
             "en": "Get off · Dogok Stn.",
@@ -599,11 +961,7 @@
           "timing": "scheduled"
         },
         {
-          "label": {
-            "ko": "양재역 3번 출구 앞",
-            "en": "Yangjae Stn. Exit 3",
-            "zh": "良才站 3号出口"
-          },
+          "stopId": "yangjae-exit3",
           "note": {
             "ko": "양재역 하차",
             "en": "Get off · Yangjae Stn.",
@@ -613,11 +971,7 @@
           "timing": "estimated"
         },
         {
-          "label": {
-            "ko": "강남역 사거리 전 중앙버스차로 정류장",
-            "en": "Median bus stop before Gangnam Station intersection",
-            "zh": "江南站十字路口前中央公交车站"
-          },
+          "stopId": "gangnam-median",
           "note": {
             "ko": "강남역 하차",
             "en": "Get off · Gangnam Stn.",
@@ -672,15 +1026,123 @@
           "timing": "scheduled"
         },
         {
-          "label": {
-            "ko": "광교중앙역 1번 출구 앞",
-            "en": "Gwanggyo Jungang Stn. Exit 1",
-            "zh": "光教中央站 1号出口"
-          },
+          "stopId": "gwanggyo-exit1",
           "note": {
             "ko": "광교중앙역 하차",
             "en": "Get off · Gwanggyo Jungang Stn.",
             "zh": "光教中央站下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        }
+      ]
+    },
+    "campus-inja": {
+      "regular": [
+        {
+          "stopId": "hssc-bus-lot",
+          "note": {
+            "ko": "인사캠 탑승",
+            "en": "Board · HSSC",
+            "zh": "人文校区上车"
+          },
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "stopId": "nsc-n-center",
+          "note": {
+            "ko": "N센터 앞 하차",
+            "en": "Get off · N Center",
+            "zh": "N中心前下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        },
+        {
+          "stopId": "nsc-welfare",
+          "note": {
+            "ko": "복지회관 하차",
+            "en": "Get off · Welfare Hall",
+            "zh": "福利会馆下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        }
+      ],
+      "hakbu": [
+        {
+          "stopId": "hssc-bus-lot",
+          "note": {
+            "ko": "학생회관 탑승",
+            "en": "Board · Student Union",
+            "zh": "学生会馆上车"
+          },
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "stopId": "nsc-n-center",
+          "note": {
+            "ko": "N센터 앞 하차",
+            "en": "Get off · N Center",
+            "zh": "N中心前下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        },
+        {
+          "stopId": "nsc-cns",
+          "note": {
+            "ko": "CNS센터 하차",
+            "en": "Get off · CNS Center",
+            "zh": "CNS中心下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        }
+      ]
+    },
+    "campus-jain": {
+      "regular": [
+        {
+          "stopId": "nsc-opposite",
+          "note": {
+            "ko": "자과캠 탑승",
+            "en": "Board · NSC",
+            "zh": "自然校区上车"
+          },
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "stopId": "hssc-600th",
+          "note": {
+            "ko": "인사캠 하차",
+            "en": "Get off · HSSC",
+            "zh": "人文校区下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        }
+      ],
+      "hakbu": [
+        {
+          "stopId": "nsc-n-center",
+          "note": {
+            "ko": "N센터 앞 탑승",
+            "en": "Board · N Center",
+            "zh": "N中心前上车"
+          },
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "stopId": "hssc-bus-lot",
+          "note": {
+            "ko": "학생회관 하차",
+            "en": "Get off · Student Union",
+            "zh": "学生会馆下车"
           },
           "action": "alight",
           "timing": "estimated"

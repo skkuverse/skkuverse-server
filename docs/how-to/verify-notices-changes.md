@@ -46,7 +46,7 @@ npm test            # jest — notices 스위트 포함
 
 `notices-dispatcher.service.ts` / poller / internal controller를 고쳤다면:
 
-- `POST /internal/notices/dispatch-pending`에 `X-Internal-Token`으로 호출 → sweep 카운트 응답.
+- `POST /internal/notices/dispatch-pending`에 `X-Internal-Token`으로 호출 → sweep 카운트 응답. A local run sends nothing: `PUSH_DELIVERY` resolves to `suppressed` in development, so each push is logged as `push.delivery.suppressed` and the claimed `_dev` notices are marked `pushedAt` ([test-the-app-against-a-local-server.md](test-the-app-against-a-local-server.md)).
 - claim-lease 동시성: 같은 후보를 두 번 sweep해도 두 번 발송 안 됨 (lease 유효).
 - config 변경(dispatch 상수·FCM URL)이면 배포 전 pre-deploy dry-load가 잡는지 확인 ([decisions/0004](../decisions/0004-strict-config-pre-deploy-dry-load.md)).
 

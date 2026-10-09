@@ -2,8 +2,9 @@
  * Boarding-stop catalog for schedule groups.
  *
  * `schedule-stops.json` is the single source of truth for where each run of a
- * schedule service stops: the boarding stops (names, photos, street view
- * frame, the subway exit and the walk from it) and, per service and route
+ * schedule service stops: the stops (names, photos, street view frame, and the
+ * map guide — the subway exit and the walk between it and the stop) and, per
+ * service and route
  * type, the sequence of stops every run passes — where riders board and where
  * they get off, and whether the timetable's time there is scheduled or an
  * estimate. A timetable entry's `stopTimes` gives one time per sequence stop.
@@ -29,6 +30,10 @@ const isTest = process.env.NODE_ENV === "test";
 
 const PANO_ID_RE = /^[A-Za-z0-9_-]{22}$/;
 const MAX_WALK_M = 500;
+// One directions call covers a run: start, up to five waypoints, goal.
+const MAX_ETA_STOPS = 7;
+// The walk end that means the stop itself; never a place id.
+const STOP_END = "stop";
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -134,40 +139,182 @@ function stopErrors(stop: Record<string, unknown>, label: string): string[] {
     }
   }
 
-  const hasExit = "exit" in stop;
-  const hasPath = "walkPath" in stop;
-  if (hasExit !== hasPath) {
-    errors.push(`${label}: exit and walkPath must be set together`);
-  } else if (hasExit) {
-    const exit = stop.exit;
-    const walk = stop.walkPath;
-    if (!isPlainObject(exit) || !isIntIn(exit.number, 1, 99) || !isKoreanLatLng(exit.coords)) {
-      errors.push(`${label}: exit must be { number, coords } with coords inside South Korea`);
-    } else if (!Array.isArray(walk) || walk.length < 2) {
-      errors.push(`${label}: walkPath must have at least two points`);
-    } else if (!walk.every(isKoreanLatLng)) {
-      errors.push(`${label}: every walkPath point must be { lat, lng } inside South Korea`);
-    } else if (!sameLatLng(walk[0]!, exit.coords)) {
-      errors.push(`${label}: walkPath must start at the exit's coordinates`);
-    } else if (!isKoreanLatLng(stop.coords) || !sameLatLng(walk[walk.length - 1]!, stop.coords)) {
-      errors.push(`${label}: walkPath must end at the stop's coordinates`);
+  for (const legacy of ["exit", "walkPath"]) {
+    if (legacy in stop) errors.push(`${label}: ${legacy} moved to guide (guide.places and guide.walks)`);
+  }
+  if ("guide" in stop) errors.push(...guideErrors(stop, label));
+
+  return errors;
+}
+
+/**
+ * The map guide: typed places around the stop and walks between them and the
+ * stop. Only what today's app can draw is accepted (design D3): a reserved
+ * kind written now would reach builds that cannot render it.
+ */
+function guideErrors(stop: Record<string, unknown>, label: string): string[] {
+  const errors: string[] = [];
+  const guide = stop.guide;
+  if (!isPlainObject(guide)) return [`${label}: guide must be an object`];
+  // A map with no position to center on is not one.
+  if (!isKoreanLatLng(stop.coords)) errors.push(`${label}: guide needs the stop's coordinates`);
+
+  // Place id → coordinates, for the places a walk may end at.
+  const places = new Map<string, LatLng>();
+  if ("places" in guide) {
+    if (!Array.isArray(guide.places)) {
+      errors.push(`${label}: guide.places must be an array`);
     } else {
-      let meters = 0;
-      for (let i = 1; i < walk.length; i++) meters += haversineM(walk[i - 1]!, walk[i]!);
-      if (meters > MAX_WALK_M) {
-        errors.push(`${label}: walkPath is ${Math.round(meters)} m, longer than ${MAX_WALK_M} m`);
-      }
+      const seen = new Set<string>();
+      guide.places.forEach((p, i) => {
+        const at = `${label}: guide.places[${i}]`;
+        if (!isPlainObject(p)) {
+          errors.push(`${at} must be an object`);
+          return;
+        }
+        const idOk = isNonBlank(p.id) && p.id !== STOP_END && !seen.has(p.id);
+        if (!isNonBlank(p.id)) errors.push(`${at} needs a non-empty id`);
+        else if (p.id === STOP_END) errors.push(`${at}: id "${STOP_END}" is reserved for the stop itself`);
+        else if (seen.has(p.id)) errors.push(`${at}: duplicate place id ${p.id}`);
+        if (isNonBlank(p.id)) seen.add(p.id);
+        if (p.kind !== "subwayExit") errors.push(`${at}: kind must be "subwayExit", not ${JSON.stringify(p.kind)}`);
+        else if (!isIntIn(p.number, 1, 99)) errors.push(`${at}: number must be an integer in 1..99`);
+        const nameErr = i18nError(p.name);
+        if (nameErr) errors.push(`${at}: name ${nameErr}`);
+        if (!isKoreanLatLng(p.coords)) errors.push(`${at}: coords must be { lat, lng } inside South Korea`);
+        else if (idOk) places.set(p.id as string, p.coords);
+      });
+    }
+  }
+
+  if ("walks" in guide) {
+    if (!Array.isArray(guide.walks)) {
+      errors.push(`${label}: guide.walks must be an array`);
+    } else {
+      guide.walks.forEach((w, i) => {
+        const at = `${label}: guide.walks[${i}]`;
+        if (!isPlainObject(w)) {
+          errors.push(`${at} must be an object`);
+          return;
+        }
+        const ends = [w.from, w.to];
+        if (ends.filter((e) => e === STOP_END).length !== 1) {
+          errors.push(`${at} must have exactly one "${STOP_END}" end`);
+          return;
+        }
+        const other = ends.find((e) => e !== STOP_END);
+        if (typeof other !== "string" || !places.has(other)) {
+          errors.push(`${at}: ${JSON.stringify(other)} is not a place of this stop`);
+          return;
+        }
+        const points = w.path;
+        if (!Array.isArray(points) || points.length < 2) {
+          errors.push(`${at}: path must have at least two points`);
+        } else if (!points.every(isKoreanLatLng)) {
+          errors.push(`${at}: every path point must be { lat, lng } inside South Korea`);
+        } else if (isKoreanLatLng(stop.coords)) {
+          const stopCoords = stop.coords;
+          const endCoords = (end: unknown) => (end === STOP_END ? stopCoords : places.get(end as string)!);
+          if (!sameLatLng(points[0]!, endCoords(w.from))) {
+            errors.push(`${at}: path must start at ${String(w.from)}'s coordinates`);
+          } else if (!sameLatLng(points[points.length - 1]!, endCoords(w.to))) {
+            errors.push(`${at}: path must end at ${String(w.to)}'s coordinates`);
+          } else {
+            let meters = 0;
+            for (let k = 1; k < points.length; k++) meters += haversineM(points[k - 1]!, points[k]!);
+            if (meters > MAX_WALK_M) {
+              errors.push(`${at}: path is ${Math.round(meters)} m, longer than ${MAX_WALK_M} m`);
+            }
+          }
+        }
+      });
     }
   }
 
   return errors;
 }
 
+/** Stop ids by which way their walks go: to the stop (boarding) or from it (alighting). */
+function walkDirections(stops: unknown[]): { toStop: Set<string>; fromStop: Set<string> } {
+  const toStop = new Set<string>();
+  const fromStop = new Set<string>();
+  for (const s of stops) {
+    if (!isPlainObject(s) || !isNonBlank(s.id) || !isPlainObject(s.guide) || !Array.isArray(s.guide.walks)) continue;
+    for (const w of s.guide.walks) {
+      // A walk without exactly one stop end is already reported by guideErrors.
+      if (!isPlainObject(w) || (w.to === STOP_END) === (w.from === STOP_END)) continue;
+      if (w.to === STOP_END) toStop.add(s.id);
+      else fromStop.add(s.id);
+    }
+  }
+  return { toStop, fromStop };
+}
+
+/**
+ * A sequence opted in to arrival estimates is sent to a directions API as one
+ * route, so every stop needs coordinates, and there must be a departure to
+ * measure from and a drop-off to estimate.
+ */
+function etaErrors(
+  stops: unknown[],
+  sequences: Record<string, unknown>,
+  etaRouteTypes: ReadonlyMap<string, readonly string[]>,
+): string[] {
+  const errors: string[] = [];
+  const coordsById = new Map<string, boolean>();
+  for (const s of stops) {
+    if (isPlainObject(s) && isNonBlank(s.id)) coordsById.set(s.id, isKoreanLatLng(s.coords));
+  }
+  for (const [serviceId, routeTypes] of etaRouteTypes) {
+    for (const routeType of routeTypes) {
+      const at = `sequences ${serviceId}.${routeType}`;
+      const byRouteType = sequences[serviceId];
+      const seq = isPlainObject(byRouteType) ? byRouteType[routeType] : undefined;
+      if (!Array.isArray(seq)) {
+        errors.push(`${at}: opted in to estimates but has no stop sequence`);
+        continue;
+      }
+      if (seq.length > MAX_ETA_STOPS) {
+        errors.push(`${at}: opted in to estimates with ${seq.length} stops, more than ${MAX_ETA_STOPS}`);
+      }
+      seq.forEach((st, i) => {
+        if (!isPlainObject(st)) return;
+        if (typeof st.stopId !== "string") {
+          errors.push(`${at}[${i}]: opted in to estimates, but is a label, not a catalog stop with coordinates`);
+        } else if (coordsById.get(st.stopId) === false) {
+          errors.push(`${at}[${i}]: opted in to estimates, but stop ${st.stopId} has no coordinates`);
+        }
+      });
+      const first = seq[0];
+      if (isPlainObject(first) && first.timing !== "scheduled") {
+        errors.push(`${at}: opted in to estimates, but its first stop is not scheduled`);
+      }
+      if (!seq.some((st) => isPlainObject(st) && st.timing === "estimated")) {
+        errors.push(`${at}: opted in to estimates, but has no estimated stop`);
+      }
+    }
+  }
+  return errors;
+}
+
+/** serviceId → the route types `service-config.ts` opts in to arrival estimates. */
+export function etaOptIns(config: typeof serviceConfig): Map<string, readonly string[]> {
+  return new Map(
+    Object.entries(config)
+      .filter(([, entry]) => entry.eta)
+      .map(([serviceId, entry]) => [serviceId, entry.eta!.routeTypes]),
+  );
+}
+
 /**
  * Every problem with a raw catalog, each naming its stop or service. Empty
  * means valid. Pure, so tests can drive bad inputs without the process exit.
  */
-export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<string>): string[] {
+export function validateStopCatalog(
+  raw: unknown,
+  knownServiceIds: ReadonlySet<string>,
+  etaRouteTypes: ReadonlyMap<string, readonly string[]> = new Map(),
+): string[] {
   const errors: string[] = [];
   if (!isPlainObject(raw) || !Array.isArray(raw.stops) || !isPlainObject(raw.sequences)) {
     return ["schedule-stops.json must be { stops: [], sequences: {} }"];
@@ -184,6 +331,7 @@ export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<s
     stopIds.add(s.id);
     errors.push(...stopErrors(s, label));
   });
+  const walks = walkDirections(raw.stops);
 
   for (const [serviceId, byRouteType] of Object.entries(raw.sequences)) {
     const label = `sequences ${serviceId}`;
@@ -217,6 +365,13 @@ export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<s
           } else {
             seen.add(st.stopId);
           }
+          // A walk is drawn one way; a stop used the other way would show riders the wrong arrow.
+          if (st.action === "alight" && walks.toStop.has(st.stopId as string)) {
+            errors.push(`${sp}: stop ${String(st.stopId)} has a walk to the stop (boarding), but this sequence alights there`);
+          }
+          if (st.action === "board" && walks.fromStop.has(st.stopId as string)) {
+            errors.push(`${sp}: stop ${String(st.stopId)} has a walk from the stop (alighting), but this sequence boards there`);
+          }
         } else {
           const labelErr = i18nError(st.label);
           if (labelErr) errors.push(`${sp}: label ${labelErr}`);
@@ -243,6 +398,7 @@ export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<s
     }
   }
 
+  errors.push(...etaErrors(raw.stops, raw.sequences, etaRouteTypes));
   return errors;
 }
 
@@ -270,7 +426,7 @@ function loadCatalog(): ScheduleStopCatalog {
     fatal(`Cannot load schedule-stops.json: ${err instanceof Error ? err.message : String(err)}`);
     return empty;
   }
-  const errors = validateStopCatalog(raw, new Set(Object.keys(serviceConfig)));
+  const errors = validateStopCatalog(raw, new Set(Object.keys(serviceConfig)), etaOptIns(serviceConfig));
   if (errors.length > 0) {
     for (const e of errors) logger.fatal({ event: "bus.schedule_stops.invalid" }, e);
     fatal(`schedule-stops.json invalid (${errors.length} error(s))`);

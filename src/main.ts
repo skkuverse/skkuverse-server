@@ -18,9 +18,10 @@ import {
   EXPOSED_RESPONSE_HEADERS,
   exposeResponseHeaders,
 } from "./common/expose-headers";
-import { CORS_METHODS, CORS_ORIGINS } from "./infra/origins";
+import { CORS_METHODS, corsOrigins } from "./infra/origins";
 import { HttpExceptionFilter } from "./common/http-exception.filter";
 import { LangMiddleware } from "./common/lang.middleware";
+import { forceNoStore } from "./common/no-store";
 import { BusCacheService } from "./bus/cache/bus-cache.service";
 
 /**
@@ -56,6 +57,10 @@ async function bootstrap(): Promise<void> {
   // return before setting headers of their own, which is the case this exists for.
   expressInstance.use(exposeResponseHeaders);
 
+  // CACHE=off (the development default): every Cache-Control becomes no-store,
+  // so the phone's HTTP cache never answers for this server.
+  if (!config.cache.enabled) expressInstance.use(forceNoStore);
+
   // bodyParser:false is REQUIRED: with a pre-built ExpressAdapter, Nest's
   // registerParserMiddleware → ExpressAdapter.isMiddlewareApplied reads the
   // `app.router` getter, which express@4.22 removed and now THROWS
@@ -68,7 +73,8 @@ async function bootstrap(): Promise<void> {
     { logger: new PinoNestLogger(), bodyParser: false },
   );
 
-  // CORS, scoped to the first-party web origins in infra/origins.ts.
+  // CORS, scoped to the first-party web origins in infra/origins.ts (plus
+  // loopback origins in development, for a local web dev server).
   //
   // Added when apps/webview gained its first fetch (the mini-app notification
   // feed, skkuverse#17). Until then the API sent no Access-Control-Allow-Origin
@@ -80,7 +86,7 @@ async function bootstrap(): Promise<void> {
   // an allowed origin cannot preflight a POST to /internal/*, so the token check
   // there is never the only thing standing between a page and a send.
   app.enableCors({
-    origin: [...CORS_ORIGINS],
+    origin: corsOrigins(config.isDevelopment),
     methods: [...CORS_METHODS],
     // The same header exposeResponseHeaders already sets. Nest would
     // overwrite that header on CORS-handled responses, and the 304 branches it
@@ -123,7 +129,10 @@ async function bootstrap(): Promise<void> {
   if (role === "poller") {
     // Poller-only: run lifecycle hooks (onApplicationBootstrap starts pollers)
     // but do NOT bind an HTTP listener.
-    logger.info({ event: "app.poller_mode", role }, "Running in poller-only mode");
+    logger.info(
+      { event: "app.poller_mode", role, ...config.getSideEffectsSummary() },
+      "Running in poller-only mode",
+    );
     await app.init();
     let shuttingDownPoller = false;
     const shutdownPoller = async (signal: NodeJS.Signals): Promise<void> => {
@@ -156,6 +165,8 @@ async function bootstrap(): Promise<void> {
       db: config.mongo.dbName,
       api: config.useProdApi ? "PROD" : "DEV",
       role,
+      // push / rateLimit / buildingSync / cache / shuttleEta as resolved (infra/runtime-switches.ts)
+      ...config.getSideEffectsSummary(),
     },
     "Server started (NestJS)",
   );

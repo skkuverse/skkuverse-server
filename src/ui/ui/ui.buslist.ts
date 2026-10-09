@@ -12,11 +12,8 @@ type BusGroup = ReturnType<typeof getBusGroups>[number];
 function isVisible(visibility: BusGroup["visibility"], now: moment.Moment): boolean {
   if (visibility.type === "always") return true;
   if (visibility.type === "dateRange") {
-    // bus-config.data's dateRange variant always sets from/until together, but
-    // TS does not narrow them off visibility.type (no `as const` there), so
-    // they type as string|undefined; `!` states the invariant.
-    const from = moment.tz(visibility.from!, "YYYY-MM-DD", TZ).startOf("day");
-    const until = moment.tz(visibility.until!, "YYYY-MM-DD", TZ).endOf("day");
+    const from = moment.tz(visibility.from, "YYYY-MM-DD", TZ).startOf("day");
+    const until = moment.tz(visibility.until, "YYYY-MM-DD", TZ).endOf("day");
     return now.isBetween(from, until, null, "[]");
   }
   return true;

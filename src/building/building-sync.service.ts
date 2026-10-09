@@ -1,5 +1,6 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import config from "../infra/config";
+import logger from "../infra/logger";
 import { syncBuildings } from "./building.sync";
 import { PollerRegistryService } from "../scheduling/poller-registry.service";
 
@@ -23,6 +24,16 @@ export class BuildingSyncService implements OnModuleInit {
   constructor(private readonly registry: PollerRegistryService) {}
 
   onModuleInit(): void {
+    // BUILDING_SYNC=off (the development default): not registered at all. The
+    // registry's warm-up would otherwise crawl campusMap.do and rewrite
+    // skkumap_dev on every boot — every save, under nodemon.
+    if (!config.building.syncEnabled) {
+      logger.info(
+        { event: "building.sync.disabled" },
+        "Building sync not registered (BUILDING_SYNC=off)",
+      );
+      return;
+    }
     this.registry.registerPoller(
       syncBuildings,
       config.building.syncIntervalMs,

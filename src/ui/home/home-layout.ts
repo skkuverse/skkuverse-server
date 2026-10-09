@@ -7,7 +7,8 @@
  *
  * Mirrors miniapps/miniapps.ts, including the __dirname path resolution: at
  * runtime this is dist/src/ui/home/, and scripts/copy-build-assets.js stages the
- * JSON next to the compiled .js. Forgetting that entry breaks production only.
+ * JSON next to the compiled .js. Forgetting that entry crashes every run from
+ * dist/ (`npm run dev` and production); tests read src/ and still pass.
  */
 import fs from "fs";
 import path from "path";
