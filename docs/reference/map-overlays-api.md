@@ -21,7 +21,7 @@ audience: internal
 | --- | --- |
 | Routes | `GET /map/config`, `GET /map/overlays/campus`, `GET /map/overlays/event`, `GET /map/overlays/event/details` |
 | Auth | none on all four |
-| Rate limit | `BusRateLimitMiddleware`, applied to the `/map` prefixes in `MapModule.configure` |
+| Rate limit | `GeneralRateLimitMiddleware`, applied to the `/map` prefixes in `MapModule.configure` |
 | Wire schema | `src/map/map-overlay.types.ts` (overlays), `src/map/geo/geojson.types.ts` (geometry), `src/map/map-chip.types.ts` (chips) |
 | Producers | `src/map/map-campus-overlays.data.ts` (buildings + campus geometry), `src/map/map-event-overlays.data.ts` (event places), `src/map/map-event-details.data.ts` (their sheet bodies) |
 | Layer catalogue | `src/map/map-layers.data.ts` — the base layers, and the projection of a festival's `layers[]` from its config |

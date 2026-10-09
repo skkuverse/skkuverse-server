@@ -3,7 +3,7 @@
  *
  * Builds a NestExpressApplication mirroring main.ts's pipeline for these routes:
  *   pino-http → express.json → LangMiddleware (req.lang + __startNs + Vary)
- *     → BusRateLimitMiddleware (MiniAppsModule.configure forRoutes("miniapps"))
+ *     → GeneralRateLimitMiddleware (MiniAppsModule.configure forRoutes("miniapps"))
  *     → controller (plain return)
  *     → global ResponseInterceptor ({ meta, data } envelope)
  *     → HttpExceptionFilter.
