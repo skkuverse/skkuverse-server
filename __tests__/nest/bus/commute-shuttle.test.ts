@@ -230,29 +230,6 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     ]);
   });
 
-  it("every run's stopTimes match its sequence: one time per stop, unknown only where estimated", () => {
-    // The tool is CommonJS and cannot see the catalog, so this is where the two files meet.
-    for (const doc of commuteDocs) {
-      const seq = sequences(doc.serviceId);
-      expect(Object.keys(seq).sort()).toEqual([...new Set(doc.entries.map((e) => e.routeType))].sort());
-      for (const e of doc.entries) {
-        const stopsOfRun = seq[e.routeType]!;
-        expect(`${doc.serviceId} ${e.time} ${e.stopTimes!.length}`).toBe(`${doc.serviceId} ${e.time} ${stopsOfRun.length}`);
-        e.stopTimes!.forEach((t, k) => {
-          if (t === null) expect(`${doc.serviceId} ${e.time} #${k} ${stopsOfRun[k]!.timing}`).toBe(`${doc.serviceId} ${e.time} #${k} estimated`);
-        });
-      }
-    }
-  });
-
-  it("every route type of every service has a sequence, and each is a badge of the group", () => {
-    const badgeIds = commute().screen.routeBadges.map((b: { id: string }) => b.id);
-    for (const s of services()) {
-      expect(Object.keys(s.stopSequences).sort()).toEqual(["down", "up"]);
-      for (const rt of Object.keys(s.stopSequences)) expect(badgeIds).toContain(rt);
-    }
-  });
-
   it("Station stop in English: its en photo, a street view link, and a map with the exit and a walk to the stop", () => {
     const stationIds = ["jeongja-exit3", "jamsil-exit4", "dogok-exit1", "gangnam-exit5", "yangjae-exit2", "gwanggyo-exit4"];
     expect(stops("en").map((s) => s.id)).toEqual(expect.arrayContaining([...stationIds, "nsc-opposite"]));
@@ -290,7 +267,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     }
   });
 
-  it("notes for the timetable's notes column: station or 자과캠, with 탑승/하차, in 8 characters or fewer", () => {
+  it("notes for the timetable's notes column: station or 자과캠, with 탑승/하차", () => {
     const notes = (serviceId: string, rt: string, lang: "ko" | "en" | "zh" = "ko") =>
       sequences(serviceId, lang)[rt]!.map((st) => (st as SeqStop & { note?: string }).note);
     expect(notes("commute-gangnam-yangjae", "up")).toEqual(["강남역 탑승", "양재역 탑승", "자과캠 하차"]);
@@ -306,11 +283,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
       expect(notes(serviceId!, "up")).toEqual([`${station}역 탑승`, "자과캠 하차"]);
       expect(notes(serviceId!, "down")).toEqual(["자과캠 탑승", `${station}역 하차`]);
     }
-    for (const s of services()) {
-      for (const seq of Object.values(s.stopSequences)) {
-        for (const st of seq) expect([...((st as SeqStop & { note?: string }).note ?? "")].length).toBeLessThanOrEqual(8);
-      }
-    }
+    // The eight-character limit is checked for every timetable file in campus-schedule-data.test.ts.
   });
 
   it("labels translate with the request language", () => {

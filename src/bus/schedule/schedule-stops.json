@@ -631,6 +631,96 @@
         "lng": 127.029076
       },
       "guide": {}
+    },
+    {
+      "id": "hssc-bus-lot",
+      "name": {
+        "ko": "학생회관 버스 주차장",
+        "en": "Student Union bus parking lot",
+        "zh": "学生会馆巴士停车场"
+      },
+      "detail": {
+        "ko": "600주년기념관 맞은편",
+        "en": "Across from the 600th Anniversary Hall",
+        "zh": "600周年纪念馆对面"
+      },
+      "coords": {
+        "lat": 37.587367,
+        "lng": 126.993643
+      },
+      "guide": {}
+    },
+    {
+      "id": "hssc-600th",
+      "name": {
+        "ko": "600주년기념관 앞",
+        "en": "600th Anniversary Hall",
+        "zh": "600周年纪念馆前"
+      },
+      "detail": {
+        "ko": "학생회관 버스 주차장 건너편",
+        "en": "Across the road from the Student Union bus parking lot",
+        "zh": "学生会馆巴士停车场对面"
+      },
+      "coords": {
+        "lat": 37.587258,
+        "lng": 126.993904
+      },
+      "guide": {}
+    },
+    {
+      "id": "nsc-n-center",
+      "name": {
+        "ko": "N센터 앞",
+        "en": "N Center",
+        "zh": "N中心前"
+      },
+      "detail": {
+        "ko": "N센터 쪽 인도",
+        "en": "On the N Center side of the road",
+        "zh": "N中心一侧人行道"
+      },
+      "coords": {
+        "lat": 37.292298,
+        "lng": 126.975057
+      },
+      "guide": {}
+    },
+    {
+      "id": "nsc-welfare",
+      "name": {
+        "ko": "복지회관 앞",
+        "en": "Welfare Hall",
+        "zh": "福利会馆前"
+      },
+      "detail": {
+        "ko": "학생회관 인근",
+        "en": "Near the Student Union",
+        "zh": "学生会馆附近"
+      },
+      "coords": {
+        "lat": 37.293999,
+        "lng": 126.973183
+      },
+      "guide": {}
+    },
+    {
+      "id": "nsc-cns",
+      "name": {
+        "ko": "CNS센터 앞",
+        "en": "CNS Center",
+        "zh": "CNS中心前"
+      },
+      "detail": {
+        "ko": "CNS센터 정문 앞 횡단보도",
+        "en": "At the crosswalk by the CNS Center main entrance",
+        "zh": "CNS中心正门前人行横道"
+      },
+      "coords": {
+        "lat": 37.294388,
+        "lng": 126.977671
+      },
+      "guide": {}
     }
   ],
   "sequences": {
@@ -923,6 +1013,118 @@
             "ko": "광교중앙역 하차",
             "en": "Get off · Gwanggyo Jungang Stn.",
             "zh": "光教中央站下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        }
+      ]
+    },
+    "campus-inja": {
+      "regular": [
+        {
+          "stopId": "hssc-bus-lot",
+          "note": {
+            "ko": "인사캠 탑승",
+            "en": "Board · HSSC",
+            "zh": "人文校区上车"
+          },
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "stopId": "nsc-n-center",
+          "note": {
+            "ko": "N센터 앞 하차",
+            "en": "Get off · N Center",
+            "zh": "N中心前下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        },
+        {
+          "stopId": "nsc-welfare",
+          "note": {
+            "ko": "복지회관 하차",
+            "en": "Get off · Welfare Hall",
+            "zh": "福利会馆下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        }
+      ],
+      "hakbu": [
+        {
+          "stopId": "hssc-bus-lot",
+          "note": {
+            "ko": "학생회관 탑승",
+            "en": "Board · Student Union",
+            "zh": "学生会馆上车"
+          },
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "stopId": "nsc-n-center",
+          "note": {
+            "ko": "N센터 앞 하차",
+            "en": "Get off · N Center",
+            "zh": "N中心前下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        },
+        {
+          "stopId": "nsc-cns",
+          "note": {
+            "ko": "CNS센터 하차",
+            "en": "Get off · CNS Center",
+            "zh": "CNS中心下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        }
+      ]
+    },
+    "campus-jain": {
+      "regular": [
+        {
+          "stopId": "nsc-opposite",
+          "note": {
+            "ko": "자과캠 탑승",
+            "en": "Board · NSC",
+            "zh": "自然校区上车"
+          },
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "stopId": "hssc-600th",
+          "note": {
+            "ko": "인사캠 하차",
+            "en": "Get off · HSSC",
+            "zh": "人文校区下车"
+          },
+          "action": "alight",
+          "timing": "estimated"
+        }
+      ],
+      "hakbu": [
+        {
+          "stopId": "nsc-n-center",
+          "note": {
+            "ko": "N센터 앞 탑승",
+            "en": "Board · N Center",
+            "zh": "N中心前上车"
+          },
+          "action": "board",
+          "timing": "scheduled"
+        },
+        {
+          "stopId": "hssc-bus-lot",
+          "note": {
+            "ko": "학생회관 하차",
+            "en": "Get off · Student Union",
+            "zh": "学生会馆下车"
           },
           "action": "alight",
           "timing": "estimated"
