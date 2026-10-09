@@ -5,13 +5,16 @@
  *
  * Asserts the wire format: envelope shape, 200/404 status + error codes, ETag
  * format regexes ("week-…"/"smart-…"), 304 on If-None-Match, Cache-Control
- * max-age=300, i18n message presence/absence per status + en translations, and
- * X-Response-Time present on 200 but ABSENT on 304.
+ * max-age=300 (60 with arrival estimates), i18n message presence/absence per
+ * status + en translations, and X-Response-Time present on 200 but ABSENT on
+ * 304. The last block applies stored arrival estimates (spec
+ * shuttle-arrival-eta) through a ShuttleEtaService stub.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { ScheduleService } from "../../../src/bus/schedule/schedule.service";
+import { ShuttleEtaService, runKey, type ServedEstimate } from "../../../src/bus/eta/shuttle-eta.service";
 import { buildBusApp } from "../../helpers/nest/build-bus-app";
 
 const MOCK_WEEK = {
@@ -198,9 +201,12 @@ describe("GET /bus/schedule/data/:serviceId/smart", () => {
     expect(res2.status).toBe(304);
   });
 
-  it("sets Cache-Control header", async () => {
+  it("sets Cache-Control header: 60 s for a service with arrival estimates, 300 s otherwise", async () => {
     const res = await request(httpServer).get("/bus/schedule/data/campus-inja/smart");
-    expect(res.headers["cache-control"]).toContain("max-age=300");
+    expect(res.headers["cache-control"]).toBe("public, max-age=60");
+    resolveSmartSchedule.mockResolvedValue({ ...MOCK_SMART, serviceId: "commute-jeongja" });
+    const commute = await request(httpServer).get("/bus/schedule/data/commute-jeongja/smart");
+    expect(commute.headers["cache-control"]).toBe("public, max-age=300");
   });
 
   it("ETag format is smart-{serviceId}-{from}-{hash} for active", async () => {
@@ -262,5 +268,113 @@ describe("GET /bus/schedule/data/:serviceId/smart", () => {
       .get("/bus/schedule/data/campus-inja/smart")
       .set("Accept-Language", "en");
     expect(res.body.data.message).toBe("Schedule information is being prepared");
+  });
+});
+
+describe("GET …/smart with arrival estimates", () => {
+  let etaApp: NestExpressApplication;
+  let server: import("http").Server;
+  const smart = jest.fn();
+  const estimates = jest.fn();
+  const FETCHED = new Date("2026-10-12T00:20:00.000Z");
+
+  // A Monday of the 인자셔틀: one regular run at 10:00, stored with null drop-offs.
+  const inja = () => ({
+    serviceId: "campus-inja",
+    status: "active",
+    from: "2026-10-12",
+    selectedDate: "2026-10-12",
+    days: [
+      {
+        date: "2026-10-12",
+        dayOfWeek: 1,
+        display: "schedule",
+        label: null,
+        notices: [],
+        schedule: [
+          { index: 1, time: "07:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["07:00", null, null] },
+          { index: 2, time: "10:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["10:00", null, null] },
+        ],
+      },
+    ],
+  });
+  const estimate = (source: ServedEstimate["source"], offsetsSec = [0, 3060, 3180]): Map<string, ServedEstimate> =>
+    new Map([[runKey("campus-inja", "regular", "2026-10-12", "10:00"), { offsetsSec, source, updatedAt: FETCHED }]]);
+
+  beforeAll(async () => {
+    etaApp = await buildBusApp([
+      { provide: ScheduleService, useValue: { resolveWeek: jest.fn(), resolveSmartSchedule: smart, onModuleInit: jest.fn() } },
+      { provide: ShuttleEtaService, useValue: { estimates } },
+    ]);
+    server = etaApp.getHttpServer();
+  });
+  afterAll(async () => {
+    await etaApp.close();
+  });
+  beforeEach(() => {
+    smart.mockReset();
+    estimates.mockReset();
+  });
+
+  it.each(["live", "frozen", "predicted"] as const)("Live entry: fills the drop-offs and names the source (%s)", async (source) => {
+    smart.mockResolvedValue(inja());
+    estimates.mockResolvedValue(estimate(source));
+    const res = await request(server).get("/bus/schedule/data/campus-inja/smart");
+    const [early, run] = res.body.data.days[0].schedule;
+    expect(run.stopTimes).toEqual(["10:00", "10:51", "10:53"]);
+    expect(run.eta).toEqual({ source, updatedAt: "2026-10-12T00:20:00.000Z" });
+    expect(early.stopTimes).toEqual(["07:00", null, null]);
+    expect(early).not.toHaveProperty("eta");
+  });
+
+  it("New live value: the ETag changes with the estimate, and the header is max-age=60", async () => {
+    smart.mockResolvedValue(inja());
+    estimates.mockResolvedValue(estimate("live"));
+    const first = await request(server).get("/bus/schedule/data/campus-inja/smart");
+    smart.mockResolvedValue(inja());
+    estimates.mockResolvedValue(estimate("live", [0, 3360, 3480]));
+    const second = await request(server).get("/bus/schedule/data/campus-inja/smart");
+    expect(second.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", "10:56", "10:58"]);
+    expect(second.headers.etag).not.toBe(first.headers.etag);
+    expect(second.headers["cache-control"]).toBe("public, max-age=60");
+  });
+
+  it("Commute runs carry no estimate: the body and headers are what they were without estimates", async () => {
+    const commute = () => ({ ...inja(), serviceId: "commute-jeongja" });
+    smart.mockResolvedValue(commute());
+    estimates.mockResolvedValue(new Map());
+    const plain = await request(server).get("/bus/schedule/data/commute-jeongja/smart");
+    smart.mockResolvedValue(commute());
+    estimates.mockResolvedValue(new Map([[runKey("commute-jeongja", "regular", "2026-10-12", "10:00"), estimate("live").values().next().value!]]));
+    const res = await request(server).get("/bus/schedule/data/commute-jeongja/smart");
+    expect(JSON.stringify(res.body.data)).toBe(JSON.stringify(plain.body.data));
+    expect(res.headers.etag).toBe(plain.headers.etag);
+    expect(res.headers["cache-control"]).toBe("public, max-age=300");
+    expect(estimates).not.toHaveBeenCalled();
+  });
+
+  it("Estimate store unavailable: 200 with the stored stopTimes and no eta", async () => {
+    smart.mockResolvedValue(inja());
+    estimates.mockRejectedValue(new Error("connection pool closed"));
+    const res = await request(server).get("/bus/schedule/data/campus-inja/smart");
+    expect(res.status).toBe(200);
+    expect(res.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", null, null]);
+    expect(res.body.data.days[0].schedule[1]).not.toHaveProperty("eta");
+  });
+
+  it("leaves the cached schedule unmutated", async () => {
+    const cached = inja();
+    const before = JSON.stringify(cached);
+    smart.mockResolvedValue(cached);
+    estimates.mockResolvedValue(estimate("frozen"));
+    await request(server).get("/bus/schedule/data/campus-inja/smart");
+    expect(JSON.stringify(cached)).toBe(before);
+  });
+
+  it("ignores an estimate whose offsets no longer fit the sequence", async () => {
+    smart.mockResolvedValue(inja());
+    estimates.mockResolvedValue(estimate("live", [0, 3060]));
+    const res = await request(server).get("/bus/schedule/data/campus-inja/smart");
+    expect(res.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", null, null]);
   });
 });

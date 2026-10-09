@@ -162,24 +162,6 @@ export type ServiceConfigMap = Record<string, ServiceConfigEntry>;
 // Route overlay coords: [latitude, longitude][]
 export type RouteCoords = Array<[number, number]>;
 
-// --- Naver Directions API (driving ETA between campuses) ---
-export interface NaverDirectionsSummary {
-  duration: number;
-  distance: number;
-  [k: string]: unknown;
-}
-export interface NaverDirectionsResponse {
-  code: number;
-  message: string;
-  route?: {
-    traoptimal?: Array<{
-      summary: NaverDirectionsSummary;
-      [k: string]: unknown;
-    }>;
-    [k: string]: unknown;
-  };
-}
-
 // --- MongoDB documents (bus_overrides, bus_schedules) ---
 // `entries` and `notices` are typed as required even though they're only
 // strictly needed on `type: "replace"`, on the assumption that admin
