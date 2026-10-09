@@ -44,10 +44,7 @@ describe("src/ folders", () => {
     expectAllowlisted(
       "folders",
       nested
-        .map((d) => ({ d, below: files.filter((f) => f.startsWith(`${d}/`)) }))
-        // An empty directory is local debris: git does not track it.
-        .filter(({ d, below }) => below.length > 0 && folderViolation(d, below))
-        .map(({ d }) => d)
+        .filter((d) => folderViolation(d, files.filter((f) => f.startsWith(`${d}/`))))
         .map((d) => `${d}/`),
     );
   });

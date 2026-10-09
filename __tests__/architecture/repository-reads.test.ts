@@ -9,8 +9,10 @@
  *   - bounded when its options object literal has a `maxTimeMS` property, or
  *     a `.maxTimeMS(...)` call follows it in the cursor chain;
  *   - cached when it sits inside a `createCachedLoader(...)` call, or inside a
- *     method or function that a `createCachedLoader(...)` call in the same
- *     file names (`load: () => this.loadAll()`).
+ *     method or function that the loader's `load` callback calls
+ *     (`load: () => this.loadAll()`, `load: loadAll`).
+ *
+ * `maxTimeMS: 0` means no limit, so it does not count.
  *
  * `find`/`findOne` whose first argument is a function are Array methods, not
  * reads. The check is syntactic: an options object passed through a variable
@@ -37,15 +39,19 @@ function calleeName(call: ts.CallExpression): string | undefined {
   return undefined;
 }
 
+const isZero = (e: ts.Expression) => ts.isNumericLiteral(e) && Number(e.text) === 0;
+
 function hasMaxTimeMs(arg: ts.Expression | undefined): boolean {
   return (
     arg !== undefined &&
     ts.isObjectLiteralExpression(arg) &&
     arg.properties.some(
       (p) =>
-        (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) &&
-        ts.isIdentifier(p.name) &&
-        p.name.text === "maxTimeMS",
+        (ts.isShorthandPropertyAssignment(p) && p.name.text === "maxTimeMS") ||
+        (ts.isPropertyAssignment(p) &&
+          ts.isIdentifier(p.name) &&
+          p.name.text === "maxTimeMS" &&
+          !isZero(p.initializer)),
     )
   );
 }
@@ -54,7 +60,8 @@ function hasMaxTimeMs(arg: ts.Expression | undefined): boolean {
 function chainedMaxTimeMs(call: ts.CallExpression): boolean {
   let node: ts.Node = call;
   while (ts.isPropertyAccessExpression(node.parent) && ts.isCallExpression(node.parent.parent)) {
-    if (node.parent.name.text === "maxTimeMS") return true;
+    const bound = node.parent.parent.arguments[0];
+    if (node.parent.name.text === "maxTimeMS" && !(bound && isZero(bound))) return true;
     node = node.parent.parent;
   }
   return false;
@@ -94,12 +101,29 @@ export function unboundedReads(file: string, source: string): string[] {
 
   const visit = (node: ts.Node): void => {
     if (isLoaderCall(node)) {
+      // Only what `load` runs: its callees (`this.loadAll()`), or the function it names.
+      const options = node.arguments[0];
+      const load =
+        options && ts.isObjectLiteralExpression(options)
+          ? options.properties.find(
+              (p): p is ts.PropertyAssignment =>
+                ts.isPropertyAssignment(p) && ts.isIdentifier(p.name) && p.name.text === "load",
+            )?.initializer
+          : undefined;
+      const callee = (e: ts.Expression): string | undefined =>
+        ts.isPropertyAccessExpression(e) ? e.name.text : ts.isIdentifier(e) ? e.text : undefined;
       const collect = (n: ts.Node): void => {
-        if (ts.isPropertyAccessExpression(n)) loaderNames.add(n.name.text);
-        else if (ts.isIdentifier(n)) loaderNames.add(n.text);
+        if (ts.isCallExpression(n)) {
+          const name = callee(n.expression);
+          if (name) loaderNames.add(name);
+        }
         ts.forEachChild(n, collect);
       };
-      node.arguments.forEach(collect);
+      if (load) {
+        const named = callee(load);
+        if (named) loaderNames.add(named);
+        else collect(load);
+      }
     }
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       const name = node.expression.name.text;
@@ -174,6 +198,24 @@ export class FixtureRepository {
     expect(unboundedReads("src/x/fixture.repository.ts", FIXTURE)).toEqual([
       "src/x/fixture.repository.ts: countUnbounded countDocuments",
       "src/x/fixture.repository.ts: aggregateUnbounded aggregate",
+    ]);
+  });
+
+  it("counts only what the loader's load runs, and not a zero bound", () => {
+    const source = `
+export class R {
+  private readonly cache = createCachedLoader({ name: "x", ttlMs: config.ttl, load: () => this.loadAll() });
+  loadAll() { return this.c.find({}).toArray(); }
+  ttl() { return this.c.countDocuments({}); }
+  load(id: number) { return this.c.findOne({ _id: id }); }
+  zero() { return this.c.find({}, { maxTimeMS: 0 }).toArray(); }
+  zeroChained() { return this.c.find({}).maxTimeMS(0).toArray(); }
+}`;
+    expect(unboundedReads("src/x/r.repository.ts", source)).toEqual([
+      "src/x/r.repository.ts: ttl countDocuments",
+      "src/x/r.repository.ts: load findOne",
+      "src/x/r.repository.ts: zero find",
+      "src/x/r.repository.ts: zeroChained find",
     ]);
   });
 

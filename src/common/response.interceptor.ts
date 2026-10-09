@@ -17,8 +17,9 @@ class WithMeta<T> {
 }
 
 /**
- * Return `withMeta(data, { keyword, counts })` from a handler to add keys next
- * to `lang` in the envelope's `meta`. `lang` is always the request's.
+ * Return `withMeta(data, { keyword, counts })` from a handler to add keys after
+ * `lang` in the envelope's `meta`, as sendSuccess() does (a `lang` key in
+ * `meta` would replace the request's, so don't pass one).
  */
 export function withMeta<T>(data: T, meta: Readonly<Record<string, unknown>>): WithMeta<T> {
   return new WithMeta(data, meta);

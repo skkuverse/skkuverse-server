@@ -18,7 +18,9 @@ import { filesUnder, readSource, sourceFiles } from "../helpers/architecture/tre
 
 /** `src/...` sources listed in copy-build-assets.js, with their destinations. */
 export function listedAssets(script: string): Map<string, string> {
-  const pairs = [...script.matchAll(/\[\s*"(src\/[^"]+)",\s*"([^"]+)",?\s*\]/g)];
+  // A commented-out entry is not copied.
+  const code = script.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  const pairs = [...code.matchAll(/\[\s*"(src\/[^"]+)",\s*"([^"]+)",?\s*\]/g)];
   return new Map(pairs.map((m) => [m[1]!, m[2]!]));
 }
 
@@ -73,6 +75,7 @@ describe("path rules apply as specified", () => {
         "src/b/y.json",
         "dist/src/b/y.json",
       ],
+      // ["src/c/z.json", "dist/src/c/z.json"],
     ];`;
     expect([...listedAssets(script)]).toEqual([
       ["src/a/x.json", "dist/src/a/x.json"],

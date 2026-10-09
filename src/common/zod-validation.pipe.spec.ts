@@ -26,7 +26,10 @@ function errorOf(fn: () => unknown): AppError {
 }
 
 describe("ZodValidationPipe", () => {
-  const pipe = new ZodValidationPipe(searchQuery, { q: "MISSING_QUERY", campus: "INVALID_CAMPUS" });
+  const pipe = new ZodValidationPipe(searchQuery, "INVALID_PARAMS", {
+    q: "MISSING_QUERY",
+    campus: "INVALID_CAMPUS",
+  });
 
   it("returns the parsed value", () => {
     expect(pipe.transform({ q: "  도서 ", campus: "" })).toEqual({ q: "도서", campus: undefined });
@@ -48,6 +51,7 @@ describe("ZodValidationPipe", () => {
     const id = new ZodValidationPipe(
       z.coerce.number().int().positive({ error: "skkuId must be a positive integer" }),
       "INVALID_ID",
+      {},
       422,
     );
     expect(id.transform("42")).toBe(42);
@@ -58,8 +62,19 @@ describe("ZodValidationPipe", () => {
     });
   });
 
-  it("fails loudly when a failing field has no code", () => {
-    const partial = new ZodValidationPipe(searchQuery, { q: "MISSING_QUERY" });
-    expect(() => partial.transform({ q: "x", campus: "seoul" })).toThrow(/no error code for field "campus"/);
+  it("answers an issue with no field, or an unmapped one, with the default code", () => {
+    const range = z
+      .object({ from: z.number(), to: z.number() })
+      .superRefine((v, ctx) => {
+        if (v.from > v.to) ctx.addIssue({ code: "custom", message: "from must not be after to" });
+      });
+    const rangePipe = new ZodValidationPipe(range, "INVALID_PARAMS", { from: "INVALID_FROM" });
+    expect(errorOf(() => rangePipe.transform({ from: 2, to: 1 }))).toMatchObject({
+      code: "INVALID_PARAMS",
+      message: "from must not be after to",
+    });
+    expect(errorOf(() => rangePipe.transform("not an object")).code).toBe("INVALID_PARAMS");
+    expect(errorOf(() => rangePipe.transform({ from: 1, to: "x" })).code).toBe("INVALID_PARAMS");
+    expect(errorOf(() => rangePipe.transform({ from: "x", to: 1 })).code).toBe("INVALID_FROM");
   });
 });

@@ -15,7 +15,7 @@ export class BuildingController {
   // GET /building/list?campus=hssc
   @Get("list")
   list(
-    @Query(new ZodValidationPipe(buildingListQuery, { campus: "INVALID_CAMPUS" }))
+    @Query(new ZodValidationPipe(buildingListQuery, "INVALID_CAMPUS"))
     query: { campus?: "hssc" | "nsc" },
     @Req() req: Request,
   ) {
@@ -26,7 +26,10 @@ export class BuildingController {
   @Get("search")
   async search(
     @Query(
-      new ZodValidationPipe(buildingSearchQuery, { q: "MISSING_QUERY", campus: "INVALID_CAMPUS" }),
+      new ZodValidationPipe(buildingSearchQuery, "INVALID_PARAMS", {
+        q: "MISSING_QUERY",
+        campus: "INVALID_CAMPUS",
+      }),
     )
     query: { q: string; campus?: "hssc" | "nsc" },
     @Req() req: Request,
