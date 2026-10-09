@@ -12,6 +12,13 @@ import type {
 import { toSpaceUpsert, type EnrichmentSetUpdate } from "./building.mapper";
 import type { ListedBuilding, SpaceSource, SyncedSpace } from "./building.types";
 
+/**
+ * The sync runs weekly, off the request path: a stuck read fails the run
+ * instead of hanging it, and the bound is generous enough that a slow cluster
+ * does not.
+ */
+const SYNC_READ_MAX_TIME_MS = 30_000;
+
 function collection<T extends Document>(name: string): Collection<T> {
   return getClient().db(config.building.dbName!).collection<T>(name);
 }
@@ -25,14 +32,19 @@ function collection<T extends Document>(name: string): Collection<T> {
 export class BuildingSyncRepository {
   /** skkuUpdatedAt of every raw building, for change detection. */
   async findRawUpdatedAt(): Promise<Map<number, string | null>> {
-    const docs = await this.raw().find({}, { projection: { skkuUpdatedAt: 1 } }).toArray();
+    const docs = await this.raw()
+      .find({}, { projection: { skkuUpdatedAt: 1 }, maxTimeMS: SYNC_READ_MAX_TIME_MS })
+      .toArray();
     return new Map(docs.map((d) => [d._id, d.skkuUpdatedAt]));
   }
 
   /** Enriched buildings whose enrichVersion is not `version`. */
   async findIdsNotEnrichedAt(version: number): Promise<Set<number>> {
     const docs = await this.enriched()
-      .find({ enrichVersion: { $ne: version } }, { projection: { _id: 1 } })
+      .find(
+        { enrichVersion: { $ne: version } },
+        { projection: { _id: 1 }, maxTimeMS: SYNC_READ_MAX_TIME_MS },
+      )
       .toArray();
     return new Set(docs.map((d) => d._id));
   }
@@ -50,7 +62,7 @@ export class BuildingSyncRepository {
 
   findRawByIds(ids: Iterable<number>): Promise<BuildingRawDoc[]> {
     return this.raw()
-      .find({ _id: { $in: [...ids] } })
+      .find({ _id: { $in: [...ids] } }, { maxTimeMS: SYNC_READ_MAX_TIME_MS })
       .toArray();
   }
 
