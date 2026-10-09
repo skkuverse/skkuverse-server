@@ -1,5 +1,6 @@
 import { getAllBuildings, getAllCampusShapes } from "../building/building.data";
-import type { Campus, CampusShapeDoc } from "../building/types";
+import type { CampusShapeDoc } from "../building/building.document";
+import type { Campus } from "../building/building.types";
 import logger from "../infra/logger";
 import { createLogThrottle } from "../infra/log-throttle";
 

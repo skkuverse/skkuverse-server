@@ -1,4 +1,4 @@
-import type { Campus } from "../building/types";
+import type { Campus } from "../building/building.types";
 import type { LocationAccuracy } from "./map-layerset.types";
 import type {
   GeoJsonLineString,

@@ -8,18 +8,15 @@ import {
   getSpacesCollection,
 } from "./building.data";
 import { ENRICH_VERSION, enrichBuilding } from "./building.enrich";
+import type { BuildingAttachment, BuildingDoc, BuildingRawDoc, SpaceDoc } from "./building.document";
 import type {
-  BuildingAttachment,
-  BuildingDoc,
-  BuildingRawDoc,
   Campus,
   SkkuBuildInfoResponse,
   SkkuBuildListItem,
   SkkuBuildListResponse,
   SkkuSpaceListItem,
   SkkuSpaceListResponse,
-  SpaceDoc,
-} from "./types";
+} from "./building.types";
 
 const SKKU_API = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
 const CAMPUS_CODES: Array<{ cd: string; name: Campus }> = [

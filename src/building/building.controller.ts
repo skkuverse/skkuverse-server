@@ -7,11 +7,8 @@ import {
   BUILDING_SEARCH_LIMIT,
   SPACE_SEARCH_LIMIT,
 } from "./building.search";
-import type {
-  BuildingDoc,
-  Campus,
-  SpaceDoc,
-} from "./types";
+import type { BuildingDoc, SpaceDoc } from "./building.document";
+import type { Campus } from "./building.types";
 import { AppError } from "../common/app.error";
 import { sendSuccess } from "../common/response.interceptor";
 import { BuildingService } from "./building.service";

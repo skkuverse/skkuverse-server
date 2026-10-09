@@ -18,7 +18,7 @@
 // university, not about a feature — the whole repo (bus, map, ui, i18n,
 // building) already imports this one declaration, and a second copy would only
 // create two things to keep in sync for a value that cannot change.
-import type { Campus } from "../building/types";
+import type { Campus } from "../building/building.types";
 import type { I18n } from "../infra/types";
 import type { OverlayGeometry } from "../shared/geojson.types";
 import type { PlaceDetailOf } from "./map-place-detail.types";
