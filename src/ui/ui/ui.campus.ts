@@ -52,7 +52,9 @@ function getCampusServiceItems(lang: SupportedLang = "ko") {
       title: t("campus.inquiry.title", lang),
       emoji: "💬",
       actionType: "external",
-      actionValue: "http://pf.kakao.com/_cjxexdG/chat",
+      // https: the home grid's copy of this button must be https (home-layout
+      // schema), and http only redirects here.
+      actionValue: "https://pf.kakao.com/_cjxexdG/chat",
     },
   ];
 }
