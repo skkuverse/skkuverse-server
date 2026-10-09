@@ -4,8 +4,10 @@
  *
  * The fixture was captured from `getGroupById` / `computeGroupEtag` on the code
  * as it stood before v2 (2026-10-08). If it ever has to be re-captured, the
- * change that does so is changing what installed apps receive for 인자셔틀 —
- * say so in the commit.
+ * change that does so is changing what installed apps receive — say so in the
+ * commit. The `campus` group left it when it gained v2 fields (add-inja-shuttle-
+ * schedule-v2); campus-shuttle.test.ts checks its v1 fields against
+ * fixtures/bus-config-campus-v1.json instead.
  */
 import fs from "fs";
 import path from "path";

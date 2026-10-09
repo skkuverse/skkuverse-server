@@ -18,6 +18,12 @@ import type {
 
 type AnyStation = HsscStation | JongroStation;
 
+/** When the bus list shows a group: always, or from one KST date to another, inclusive. */
+type GroupVisibility = { type: "always" } | { type: "dateRange"; from: string; until: string };
+
+const always = (): GroupVisibility => ({ type: "always" });
+const dateRange = (from: string, until: string): GroupVisibility => ({ type: "dateRange", from, until });
+
 interface MappedStation {
   index: number;
   name: string;
@@ -51,7 +57,7 @@ function buildJongroGroup(route: JongroRoute, lang: SupportedLang) {
     id: route.id,
     screenType: "realtime" as const,
     label: t(`busconfig.label.${route.id}`, lang),
-    visibility: { type: "always" as const },
+    visibility: always(),
     card: {
       themeColor: route.themeColor,
       iconType: route.iconType,
@@ -166,6 +172,62 @@ function resolveStopSequences(
   return { sequences, stops };
 }
 
+type ServedSequences = ReturnType<typeof resolveStopSequences>["sequences"];
+
+/**
+ * A schedule group's service tabs, in the given order. A service with stop
+ * sequences carries them as `stopSequences`; one without has no key, so its
+ * entry serializes exactly as in v1.
+ */
+function scheduleServices(serviceIds: readonly string[], lang: SupportedLang, sequences: ServedSequences) {
+  return serviceIds.map((serviceId) => ({
+    serviceId,
+    label: t(`busconfig.service.${serviceId}`, lang),
+    endpoint: `/bus/schedule/data/${serviceId}/smart`,
+    ...(sequences[serviceId] ? { stopSequences: sequences[serviceId] } : {}),
+  }));
+}
+
+const CAMPUS_SERVICE_IDS = ["campus-inja", "campus-jain"] as const;
+
+/**
+ * 인자셔틀: the regular shuttle every weekday and the Friday 학부대학 runs, as
+ * route types `regular` and `hakbu`. Its v1 fields are exactly as before v2 (a
+ * build without the OTA reads the same group); v2 adds `stops` and each
+ * service's `stopSequences`. It keeps the segmented selector, so there is no
+ * `serviceSelector` key.
+ */
+function buildCampusGroup(lang: SupportedLang) {
+  const { sequences, stops } = resolveStopSequences(CAMPUS_SERVICE_IDS, lang);
+  return {
+    id: "campus",
+    screenType: "schedule",
+    label: t("busconfig.label.campus", lang),
+    visibility: always(),
+    card: {
+      themeColor: "003626",
+      iconType: "shuttle",
+      busTypeText: t("buslist.hssc.busTypeText", lang),
+      subtitle: t("buslist.inja.subtitle", lang),
+    },
+    screen: {
+      defaultServiceId: "campus-inja",
+      services: scheduleServices(CAMPUS_SERVICE_IDS, lang, sequences),
+      // Retired with GET /bus/campus/eta: the card's driving ETA came from a
+      // Naver Directions subscription that stopped authorizing. `null` is the
+      // shape the app already handles (fasttrack below) — it hides the card
+      // and never requests the ETA.
+      heroCard: null,
+      routeBadges: [
+        { id: "regular", label: t("busconfig.badge.regular", lang), color: "003626" },
+        { id: "hakbu", label: t("busconfig.badge.hakbu", lang), color: "1565C0" },
+      ],
+      ...(stops.length > 0 ? { stops } : {}),
+      features: [{ type: "info", url: `${WEBVIEW_ORIGIN}/bus/campus/info` }],
+    },
+  };
+}
+
 const COMMUTE_SERVICE_IDS = [
   "commute-jeongja",
   "commute-jamsil",
@@ -189,7 +251,7 @@ function buildCommuteGroup(lang: SupportedLang) {
     id: "commute",
     screenType: "schedule",
     label: t("busconfig.label.commute", lang),
-    visibility: { type: "dateRange", from: "2026-10-19", until: "2026-12-18" },
+    visibility: dateRange("2026-10-19", "2026-12-18"),
     card: {
       themeColor: "003626",
       iconType: "shuttle",
@@ -199,12 +261,7 @@ function buildCommuteGroup(lang: SupportedLang) {
     screen: {
       defaultServiceId: "commute-jeongja",
       serviceSelector: "chips",
-      services: COMMUTE_SERVICE_IDS.map((serviceId) => ({
-        serviceId,
-        label: t(`busconfig.service.${serviceId}`, lang),
-        endpoint: `/bus/schedule/data/${serviceId}/smart`,
-        ...(sequences[serviceId] ? { stopSequences: sequences[serviceId] } : {}),
-      })),
+      services: scheduleServices(COMMUTE_SERVICE_IDS, lang, sequences),
       heroCard: null,
       routeBadges: [
         { id: "up", label: t("busconfig.badge.up", lang), color: "003626" },
@@ -230,7 +287,7 @@ function getBusGroups(lang: SupportedLang = "ko") {
       id: "hssc",
       screenType: "realtime",
       label: t("busconfig.label.hssc", lang),
-      visibility: { type: "always" },
+      visibility: always(),
       card: {
         themeColor: "003626",
         iconType: "shuttle",
@@ -249,53 +306,15 @@ function getBusGroups(lang: SupportedLang = "ko") {
       },
     },
 
-    // 2. Campus (schedule)
-    {
-      id: "campus",
-      screenType: "schedule",
-      label: t("busconfig.label.campus", lang),
-      visibility: { type: "always" },
-      card: {
-        themeColor: "003626",
-        iconType: "shuttle",
-        busTypeText: t("buslist.hssc.busTypeText", lang),
-        subtitle: t("buslist.inja.subtitle", lang),
-      },
-      screen: {
-        defaultServiceId: "campus-inja",
-        services: [
-          {
-            serviceId: "campus-inja",
-            label: t("busconfig.service.campus-inja", lang),
-            endpoint: "/bus/schedule/data/campus-inja/smart",
-          },
-          {
-            serviceId: "campus-jain",
-            label: t("busconfig.service.campus-jain", lang),
-            endpoint: "/bus/schedule/data/campus-jain/smart",
-          },
-        ],
-        // Retired with GET /bus/campus/eta: the card's driving ETA came from a
-        // Naver Directions subscription that stopped authorizing. `null` is the
-        // shape the app already handles (fasttrack below) — it hides the card
-        // and never requests the ETA.
-        heroCard: null,
-        routeBadges: [
-          { id: "regular", label: t("busconfig.badge.regular", lang), color: "003626" },
-          { id: "hakbu", label: t("busconfig.badge.hakbu", lang), color: "1565C0" },
-        ],
-        features: [
-          { type: "info", url: `${WEBVIEW_ORIGIN}/bus/campus/info` },
-        ],
-      },
-    },
+    // 2. 인자셔틀 (schedule)
+    buildCampusGroup(lang),
 
     // 3. Fasttrack (schedule, date-limited)
     {
       id: "fasttrack",
       screenType: "schedule",
       label: t("busconfig.label.fasttrack", lang),
-      visibility: { type: "dateRange", from: "2026-03-01", until: "2026-03-07" },
+      visibility: dateRange("2026-03-01", "2026-03-07"),
       card: {
         themeColor: "E65100",
         iconType: "shuttle",
