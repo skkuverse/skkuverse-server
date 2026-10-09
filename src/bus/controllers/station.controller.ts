@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { StationService } from "../station/station.service";
-import { sendSuccess } from "../../common/send-success";
+import { sendSuccess } from "../../common/response.interceptor";
 
 /**
  * GET /bus/station/:stationId, mounted at /bus/station.

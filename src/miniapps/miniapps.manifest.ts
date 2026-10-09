@@ -12,7 +12,7 @@
  * third-party sites keep exactly their registry shell — this module never
  * reaches out to a host we do not operate.
  *
- * One `CachedLoader` per first-party id (`../common/cache/cached-loader.ts`):
+ * One `CachedLoader` per first-party id (`../infra/cached-loader.ts`):
  * 5-minute TTL, an effectively unbounded stale window, so once a manifest has
  * been fetched at least once, a down or slow origin never blocks a request —
  * `getShellFields` always falls back to `{}` (no override) rather than letting
@@ -26,7 +26,7 @@ import { createLogThrottle } from "../infra/log-throttle";
 
 const fetchFailedThrottle = createLogThrottle(10 * 60_000);
 import { FIRST_PARTY_MINIAPP_ORIGINS } from "../infra/origins";
-import { createCachedLoader, type CachedLoader } from "../common/cache/cached-loader";
+import { createCachedLoader, type CachedLoader } from "../infra/cached-loader";
 import { MANIFEST_PATH, parseShellFields, type ShellConfig } from "./shell";
 import { MiniAppsService } from "./miniapps.service";
 import type { MiniAppDetail } from "./types";

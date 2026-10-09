@@ -5,7 +5,7 @@ import {
   postToFcmFunction,
   type FcmPayload as FcmPayloadRecord,
   type FcmResponse,
-} from "../common/fcm-client";
+} from "../common/fcm.client";
 import logger from "../infra/logger";
 import { groupByDedupKey } from "./notices.dedup-key";
 import { getNoticesCollection } from "./notices.data";
@@ -24,7 +24,7 @@ import type { NoticeDoc } from "./types";
  *    maxAttempts, isDeleted $ne true, dispatchClaimedAt lease via
  *    claimLeaseMs);
  *  - sweepPending(triggerSource, opts?) + claimNext + dispatchGroup;
- *  - postToFunction → common/fcm-client: Node fetch to FCM_FUNCTION_URL with
+ *  - postToFunction → common/fcm.client: Node fetch to FCM_FUNCTION_URL with
  *    X-API-Key + an AbortController fcmTimeoutMs abort;
  *  - the catch-handler lease-release invariant (try-side updateOne failure
  *    bounces into the catch's release updateOne — pinned by tests);
@@ -110,7 +110,7 @@ export class NoticesDispatcherService {
   }
 
   /**
-   * Delegates to common/fcm-client. Kept as a method rather than inlined at the
+   * Delegates to common/fcm.client. Kept as a method rather than inlined at the
    * call site so the dispatcher's own tests keep their seam, and so the shape of
    * this class is unchanged by the extraction.
    */

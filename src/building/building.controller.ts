@@ -12,8 +12,8 @@ import type {
   Campus,
   SpaceDoc,
 } from "./types";
-import { AppError } from "../common/app-error";
-import { sendSuccess } from "../common/send-success";
+import { AppError } from "../common/app.error";
+import { sendSuccess } from "../common/response.interceptor";
 import { BuildingService } from "./building.service";
 
 interface BilingualText {

@@ -42,7 +42,7 @@ function missingWithOnly(names: string[], nodeEnv: string): string[] {
     process.env.NODE_ENV = nodeEnv;
     let missing: string[] = [];
     jest.isolateModules(() => {
-      missing = require("../../../src/config/env.validation").findMissingRequired();
+      missing = require("../../../src/infra/required-env").findMissingRequired();
     });
     return missing;
   } finally {
@@ -54,8 +54,8 @@ function missingWithOnly(names: string[], nodeEnv: string): string[] {
 }
 
 describe("config/env.*.keys — the names render_env.py writes", () => {
-  it("config.ts and env.validation.ts check the shared list and keep none of their own", () => {
-    for (const rel of ["src/infra/config.ts", "src/config/env.validation.ts"]) {
+  it("config.ts and ConfigModule check the shared list and keep none of their own", () => {
+    for (const rel of ["src/infra/config.ts", "src/config/config.module.ts"]) {
       expect(read(rel)).toMatch(/from "(?:\.\.\/infra|\.)\/required-env"/);
       expect(read(rel)).not.toMatch(/const required\b/);
     }

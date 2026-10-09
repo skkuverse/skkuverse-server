@@ -6,7 +6,7 @@
  */
 import express from "express";
 import request from "supertest";
-import { forceNoStore } from "../../../src/common/no-store";
+import { forceNoStore } from "./no-store.middleware";
 
 function app(): express.Express {
   const a = express();

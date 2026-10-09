@@ -17,7 +17,7 @@ import { loggerOptions } from "../../../src/infra/logger-options";
 import { runWithLogContext } from "../../../src/infra/log-context";
 import { flattenLogAttributes, scrubBreadcrumb, scrubEvent } from "../../../src/infra/sentry-scrub";
 import { HttpExceptionFilter } from "../../../src/common/http-exception.filter";
-import { AppError } from "../../../src/common/app-error";
+import { AppError } from "../../../src/common/app.error";
 
 const SECRETS = {
   bearer: "SECRET-ID-TOKEN",

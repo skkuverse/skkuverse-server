@@ -1,11 +1,11 @@
-jest.mock("../../../src/infra/logger", () => ({
+jest.mock("./logger", () => ({
   __esModule: true,
   default: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
 }));
 
-import config from "../../../src/infra/config";
-import logger from "../../../src/infra/logger";
-import { createCachedLoader } from "../../../src/common/cache/cached-loader";
+import config from "./config";
+import logger from "./logger";
+import { createCachedLoader } from "./cached-loader";
 
 const warn = logger.warn as jest.Mock;
 

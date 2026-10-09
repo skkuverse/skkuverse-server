@@ -1,6 +1,6 @@
 import { Controller, Get, Query, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { sendSuccess } from "../../common/send-success";
+import { sendSuccess } from "../../common/response.interceptor";
 import { NoticesOverviewService } from "./overview.service";
 
 /**

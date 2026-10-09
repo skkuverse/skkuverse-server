@@ -1,5 +1,5 @@
-import config from "../../infra/config";
-import logger from "../../infra/logger";
+import config from "./config";
+import logger from "./logger";
 
 /**
  * A single cached value with a TTL, loaded on demand.

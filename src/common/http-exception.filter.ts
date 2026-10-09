@@ -8,7 +8,7 @@ import * as Sentry from "@sentry/nestjs";
 import type { Request, Response } from "express";
 import logger from "../infra/logger";
 import { currentLogContext } from "../infra/log-context";
-import { AppError } from "./app-error";
+import { AppError } from "./app.error";
 
 /**
  * Global error filter. Renders { error: { code, message } } with the correct

@@ -26,7 +26,7 @@ jest.mock("../../../src/miniapps/miniapps.data", () => ({
   listSentNotifications: (...a: unknown[]) => listSentNotifications(...a),
 }));
 
-jest.mock("../../../src/common/fcm-client", () => ({
+jest.mock("../../../src/common/fcm.client", () => ({
   postToFcmFunction: (...a: unknown[]) => postToFcmFunction(...a),
 }));
 

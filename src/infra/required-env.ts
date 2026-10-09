@@ -2,12 +2,13 @@
  * How the environment resolves (mode, `_dev`/`_test` DB names, the API URL
  * fallback) and which values the server cannot start without.
  *
- * Side-effect free on purpose: importing infra/config.ts exits the process
- * when a required value is missing, while config/env.validation.ts must check
- * the same list and throw inside the Nest bootstrap instead. Both read it from
- * here, so the two fail-loud layers cannot drift apart. Each listed name must
- * also be in config/env.*.keys (__tests__/nest/config/env-manifest.test.ts).
+ * Side-effect free on purpose. Two layers fail loud on the same list:
+ * importing infra/config.ts exits the process when a required value is
+ * missing, and the Nest bootstrap must throw instead of relying on that exit,
+ * so ConfigModule calls validateEnv() below. Each listed name must also be in
+ * config/env.*.keys (__tests__/nest/config/env-manifest.test.ts).
  */
+import { resolveRuntimeSwitches, runtimeMode } from "./runtime-switches";
 
 export interface EnvMode {
   nodeEnv: string;
@@ -96,4 +97,30 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
 
 export function missingRequired(env: NodeJS.ProcessEnv): RequiredValue[] {
   return requiredValues(env).filter((v) => !v.value);
+}
+
+/** Missing required values as `  name (env: VAR)` lines. */
+export function findMissingRequired(env: NodeJS.ProcessEnv = process.env): string[] {
+  return missingRequired(env).map(({ name, env: key }) => `  ${name} (env: ${key})`);
+}
+
+/**
+ * The Nest bootstrap check (ConfigModule). Throws, never exits, so Nest fails
+ * the bootstrap loudly. Test mode skips it, as infra/config.ts skips its exit.
+ */
+export function validateEnv(env: NodeJS.ProcessEnv = process.env): void {
+  const { nodeEnv, isTest } = envMode(env);
+  if (isTest) return;
+  const missing = findMissingRequired(env);
+  if (missing.length > 0) {
+    throw new Error(
+      `FATAL: Missing required config — set these env vars:\n${missing.join("\n")}`,
+    );
+  }
+  // The same resolver config.ts exits on, so the two layers refuse the same
+  // switches.
+  const { errors } = resolveRuntimeSwitches(env, runtimeMode(nodeEnv));
+  if (errors.length > 0) {
+    throw new Error(`FATAL: Invalid runtime switch:\n  ${errors.join("\n  ")}`);
+  }
 }
