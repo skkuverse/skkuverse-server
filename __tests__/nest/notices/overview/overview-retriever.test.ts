@@ -62,7 +62,7 @@ describe("buildOverviewPipeline", () => {
         "_id", "sourceId", "articleNo", "title", "date", "department", "category",
         "summary", "summaryOneLiner", "summaryType", "summaryPeriods",
         "summaryLocations", "summaryDetails", "contentText", "contentHash",
-        "summaryContentHash",
+        "summaryContentHash", "summaryApplication",
       ].sort(),
     );
   });
