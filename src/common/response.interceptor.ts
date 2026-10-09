@@ -6,6 +6,23 @@ import {
 } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { map, type Observable } from "rxjs";
+import { CACHE_CONTROL_METADATA } from "./cache-control.decorator";
+
+/** A handler's value plus extra `meta` keys; built by withMeta(). */
+class WithMeta<T> {
+  constructor(
+    readonly data: T,
+    readonly meta: Readonly<Record<string, unknown>>,
+  ) {}
+}
+
+/**
+ * Return `withMeta(data, { keyword, counts })` from a handler to add keys next
+ * to `lang` in the envelope's `meta`. `lang` is always the request's.
+ */
+export function withMeta<T>(data: T, meta: Readonly<Record<string, unknown>>): WithMeta<T> {
+  return new WithMeta(data, meta);
+}
 
 /**
  * Global success-envelope interceptor.
@@ -19,7 +36,8 @@ import { map, type Observable } from "rxjs";
  *
  * For any plain handler that DOES return a value, we wrap it in the standard
  * envelope { meta: { lang, ... }, data } and set X-Response-Time — the same
- * envelope sendSuccess() writes.
+ * envelope sendSuccess() writes. A withMeta() value adds its keys to `meta`,
+ * and a handler marked @CacheControl(...) gets that Cache-Control header.
  */
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
@@ -33,9 +51,14 @@ export class ResponseInterceptor implements NestInterceptor {
           // @Res() handler already wrote the response (bus + health).
           return data;
         }
+        const cacheControl: unknown = Reflect.getMetadata(CACHE_CONTROL_METADATA, ctx.getHandler());
+        if (typeof cacheControl === "string") res.setHeader("Cache-Control", cacheControl);
         const start = req.__startNs ?? process.hrtime.bigint();
         const ms = Number(process.hrtime.bigint() - start) / 1e6;
         res.setHeader("X-Response-Time", `${ms.toFixed(1)}ms`);
+        if (data instanceof WithMeta) {
+          return { meta: { lang: req.lang, ...data.meta }, data: data.data };
+        }
         return { meta: { lang: req.lang }, data };
       }),
     );
