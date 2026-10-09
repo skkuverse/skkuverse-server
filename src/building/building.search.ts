@@ -25,8 +25,8 @@
  * performs the same buildNo -> displayNo mapping for the response.
  */
 import type { Document, Filter } from "mongodb";
+import { escapeRegex } from "../shared/regex.util";
 import {
-  escapeRegex,
   getBuildingsCollection,
   getSpacesCollection,
 } from "./building.data";

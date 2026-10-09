@@ -22,7 +22,7 @@ audience: internal
 | Routes | `GET /map/config`, `GET /map/overlays/campus`, `GET /map/overlays/event`, `GET /map/overlays/event/details` |
 | Auth | none on all four |
 | Rate limit | `GeneralRateLimitMiddleware`, applied to the `/map` prefixes in `MapModule.configure` |
-| Wire schema | `src/map/map-overlay.types.ts` (overlays), `src/map/geo/geojson.types.ts` (geometry), `src/map/map-chip.types.ts` (chips) |
+| Wire schema | `src/map/map-overlay.types.ts` (overlays), `src/shared/geojson.types.ts` (geometry), `src/map/map-chip.types.ts` (chips) |
 | Producers | `src/map/map-campus-overlays.data.ts` (buildings + campus geometry), `src/map/map-event-overlays.data.ts` (event places), `src/map/map-event-details.data.ts` (their sheet bodies) |
 | Layer catalogue | `src/map/map-layers.data.ts` — the base layers, and the projection of a festival's `layers[]` from its config |
 | Chips | `src/map/map-chips.data.ts` — the base chips, the projection of a festival's `chips[]`, the synthesised reset chip, and the one validator both go through |
@@ -1405,8 +1405,8 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 | Concern | File |
 | --- | --- |
 | Wire schema, every producer | `src/map/map-overlay.types.ts` |
-| GeoJSON vocabulary, storage and wire | `src/map/geo/geojson.types.ts` |
-| Ring winding and closure | `src/map/geo/ring-winding.ts` |
+| GeoJSON vocabulary, storage and wire | `src/shared/geojson.types.ts` |
+| Ring winding and closure | `src/shared/ring-winding.util.ts` |
 | Campus geometry storage | `CampusShapeDoc` in `src/building/types.ts`, `campus_shapes` in the building DB |
 | Campus geometry authoring | `scripts/data/campus-shapes.json` → `npm run campus:shapes` |
 | Base layer catalogue, festival layer projection, `chipGroupId`, marker geometry | `src/map/map-layers.data.ts` |

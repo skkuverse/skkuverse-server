@@ -17,8 +17,8 @@ import {
   rewindPolygon,
   rewindRing,
   signedArea,
-} from "../../../src/map/geo/ring-winding";
-import type { LinearRing } from "../../../src/map/geo/geojson.types";
+} from "./ring-winding.util";
+import type { LinearRing } from "./geojson.types";
 
 // Counter-clockwise in [lng, lat] — the RFC 7946 exterior direction.
 const CCW: LinearRing = [

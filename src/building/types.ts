@@ -1,4 +1,4 @@
-import type { OverlayGeometry } from "../map/geo/geojson.types";
+import type { OverlayGeometry } from "../shared/geojson.types";
 import { ObjectId } from "mongodb";
 
 // --- 외부 SKKU campusMap.do 응답 (3 modes: buildList / buildInfo / spaceList) ---

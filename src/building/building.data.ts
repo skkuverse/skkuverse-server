@@ -134,10 +134,6 @@ function floorSortKey(floorKo: string | null | undefined): number {
   return Infinity;
 }
 
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 // --- Query functions ---
 
 // Every /building/* request and the campus overlay route read this list, so it
@@ -300,6 +296,5 @@ export {
   getBuildingBySkkuId,
   getFloorsByBuildNo,
   getConnectionsForBuilding,
-  escapeRegex,
   clearCache,
 };

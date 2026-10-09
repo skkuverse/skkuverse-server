@@ -28,7 +28,7 @@ export type Position = [number, number];
 
 /**
  * One GeoJSON linear ring. Closed — the last position repeats the first — and
- * wound per RFC 7946 §3.1.6, which `geo/ring-winding.ts` enforces on write.
+ * wound per RFC 7946 §3.1.6, which `ring-winding.util.ts` enforces on write.
  */
 export type LinearRing = Position[];
 

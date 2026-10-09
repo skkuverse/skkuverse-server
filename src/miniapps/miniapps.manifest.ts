@@ -30,6 +30,7 @@ import { createCachedLoader, type CachedLoader } from "../infra/cached-loader";
 import { MANIFEST_PATH, parseShellFields, type ShellConfig } from "./shell";
 import { MiniAppsService } from "./miniapps.service";
 import type { MiniAppDetail } from "./types";
+import { isRecord } from "../shared/object.util";
 
 /** A manifest fetch aborts after this long — a slow origin must not hold up a request. */
 export const FETCH_TIMEOUT_MS = 3_000;
@@ -121,10 +122,6 @@ async function fetchManifestShellFields(origin: string): Promise<Partial<ShellCo
   } finally {
     clearTimeout(timer);
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 @Injectable()

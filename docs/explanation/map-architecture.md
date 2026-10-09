@@ -149,7 +149,7 @@ pressable.
   instruction; the app opens an area pin's sheet tall. It is marker-only for the same reason as
   `pinPriority`.
 
-### `geo/geojson.types.ts` and `geo/ring-winding.ts`
+### `src/shared/geojson.types.ts` and `src/shared/ring-winding.util.ts`
 
 The RFC 7946 vocabulary, shared by storage and the wire, and the one operation performed on it.
 
@@ -157,7 +157,7 @@ The geometry object in Mongo and the geometry object in the response are the SAM
 converter on the server, and that is the whole design: an axis swap can only be introduced at a
 conversion, and swapped Seoul coordinates land in the Yellow Sea without ever throwing.
 
-`ring-winding.ts` is the single exception, and it earns it. RFC 7946 §3.1.6 requires exterior rings
+`ring-winding.util.ts` is the single exception, and it earns it. RFC 7946 §3.1.6 requires exterior rings
 counter-clockwise; Mongo's `2dsphere` validates closure and self-intersection but **never orientation**,
 so a reversed ring stores silently and the client's polygon overlay then draws it wrong or refuses its
 taps. Normalisation runs on READ rather than in the importer for two reasons: `scripts/` is CommonJS and
