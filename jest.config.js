@@ -14,11 +14,15 @@ module.exports = {
   // Anything under __tests__/helpers is shared test infrastructure (mock factories,
   // app builders), not a test suite. Without this, Jest's default __tests__/**
   // matcher would treat each helper module as a test and fail it for having zero it() blocks.
-  testPathIgnorePatterns: ["/node_modules/", "/__tests__/helpers/"],
+  // Unit tests sit next to their sources as src/**/*.spec.ts (Jest's default
+  // testMatch finds them). `npm run build` leaves a dist/ copy of src/, which
+  // must never be collected or resolved as a second module tree.
+  testPathIgnorePatterns: ["/node_modules/", "/__tests__/helpers/", "/dist/"],
+  modulePathIgnorePatterns: ["/dist/"],
   collectCoverage: true,
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov"],
-  coveragePathIgnorePatterns: ["/node_modules/", "/__tests__/helpers/"],
+  coveragePathIgnorePatterns: ["/node_modules/", "/__tests__/helpers/", "\\.spec\\.ts$"],
   coverageThreshold: {
     global: {
       branches: 60,
