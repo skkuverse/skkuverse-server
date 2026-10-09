@@ -9,7 +9,7 @@ import {
 import logger from "../infra/logger";
 import { groupByDedupKey } from "./notices.dedup-key";
 import { getNoticesCollection } from "./notices.data";
-import { buildTopics, TOPIC_CAP } from "./topics.bridge";
+import { buildTopics, TOPIC_CAP } from "./notices.topics";
 import type { NoticeDoc } from "./types";
 
 /**
@@ -31,7 +31,7 @@ import type { NoticeDoc } from "./types";
  *  - the SweepSummary shape + log events (`notices.dispatch.*`).
  *
  * Raw mongodb driver via the shared getNoticesCollection() (notices.data over
- * src/infra/db.ts), NOT Mongoose. buildTopics comes from topics.bridge. No
+ * src/infra/db.ts), NOT Mongoose. No
  * ?? [] / typeof guards: the throw/skip paths stay fail-loud.
  *
  * sweepPending is the public entry point for the internal controller + the
