@@ -77,7 +77,7 @@ describe("commute timetable (spec scenarios: departure → arrival per run)", ()
     expect(commuteDocs).toHaveLength(5);
     for (const doc of commuteDocs) {
       expect(doc.days).toEqual([1, 2, 3, 4, 5]);
-      expect(doc.effectiveFrom).toBe("2026-10-19");
+      expect(doc.effectiveFrom).toBe("2026-10-20");
       expect(doc.effectiveUntil).toBe("2026-12-18");
       for (const entry of doc.entries) expect(entry.busCount).toBe(1);
     }
@@ -124,12 +124,17 @@ describe("commute card visibility", () => {
     return getBusList("ko").some((item) => item.groupId === "commute");
   };
 
-  it("is absent the minute before the pilot starts", () => {
-    expect(listedAt("2026-10-18T14:59:00.000Z")).toBe(false); // 2026-10-18 23:59 KST
+  it("is absent on Monday 2026-10-19, the opening day the school moved", () => {
+    expect(listedAt("2026-10-18T15:00:00.000Z")).toBe(false); // 2026-10-19 00:00 KST
+    expect(listedAt("2026-10-19T03:00:00.000Z")).toBe(false); // 2026-10-19 12:00 KST
   });
 
-  it("is present from the first day", () => {
-    expect(listedAt("2026-10-18T15:00:00.000Z")).toBe(true); // 2026-10-19 00:00 KST
+  it("is absent the minute before the pilot starts", () => {
+    expect(listedAt("2026-10-19T14:59:00.000Z")).toBe(false); // 2026-10-19 23:59 KST
+  });
+
+  it("is present from the first day, Tuesday 2026-10-20", () => {
+    expect(listedAt("2026-10-19T15:00:00.000Z")).toBe(true); // 2026-10-20 00:00 KST
   });
 
   it("is present until the end of the last day", () => {
@@ -153,7 +158,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     const seq = sequences("commute-jeongja");
     expect(brief(seq.up!)).toEqual(["board:정자역 3번 출구:scheduled", "alight:자과캠:estimated"]);
     expect(stopById(seq.up![0]!.stopId!)).toMatchObject({ name: "정자역 3번 출구", detail: "파리바게뜨 앞" });
-    expect(brief(seq.down!)).toEqual(["board:N센터 건너편:scheduled", "alight:정자역 2번 출구 앞:estimated"]);
+    expect(brief(seq.down!)).toEqual(["board:N센터 맞은편:scheduled", "alight:정자역 2번 출구 앞:estimated"]);
   });
 
   it("강남·양재: 등교 boards at 강남, then 양재; 하교 drops at 양재, then 강남", () => {
@@ -164,7 +169,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
       "alight:자과캠:estimated",
     ]);
     expect(brief(seq.down!)).toEqual([
-      "board:N센터 건너편:scheduled",
+      "board:N센터 맞은편:scheduled",
       "alight:양재역 3번 출구 앞:estimated",
       "alight:강남역 사거리 전 중앙버스차로 정류장:estimated",
     ]);

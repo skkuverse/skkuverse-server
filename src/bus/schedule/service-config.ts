@@ -12,8 +12,7 @@ const serviceConfig: ServiceConfigMap = {
     ],
     suspend: null,
     respectsKoreanHolidays: true,
-    // hakbu joins once its 인사캠 and CNS센터 stops are confirmed on site.
-    eta: { routeTypes: ["regular"] },
+    eta: { routeTypes: ["regular", "hakbu"] },
   },
   "campus-jain": {
     nonOperatingDayDisplay: "hidden",
@@ -31,7 +30,7 @@ const serviceConfig: ServiceConfigMap = {
     ],
     suspend: null,
   },
-  // 자과캠 통학셔틀, a pilot from 2026-10-19 to 2026-12-18: one service per
+  // 자과캠 통학셔틀, a pilot from 2026-10-20 to 2026-12-18: one service per
   // route. The pilot window itself lives on the timetable patterns
   // (scripts/data/commute-schedule.json), not here.
   ...Object.fromEntries(
