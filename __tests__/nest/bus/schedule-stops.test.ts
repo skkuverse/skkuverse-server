@@ -4,7 +4,8 @@
  * service. The committed catalog itself is checked against the built config in
  * bus-config.service.test.ts.
  */
-import { stopCatalog, validateStopCatalog } from "../../../src/bus/schedule/schedule-stops";
+import { etaOptIns, stopCatalog, validateStopCatalog } from "../../../src/bus/schedule/schedule-stops";
+import serviceConfig from "../../../src/bus/schedule/service-config";
 
 const SERVICES = new Set(["commute-jeongja"]);
 const MEDIA = "https://media.skkuverse.com/commute/stops/jeongja-exit3";
@@ -69,10 +70,12 @@ describe("validateStopCatalog", () => {
     expect(errorsFor(catalog())).toEqual([]);
   });
 
-  it("the committed catalog loaded without errors", () => {
+  it("the committed catalog loaded without errors, estimates opt-ins included", () => {
     // The module would have exited (or, under test, served an empty catalog)
     // on any error; the file is checked through the built config elsewhere.
-    expect(validateStopCatalog(stopCatalog, new Set(Object.keys(require("../../../src/bus/schedule/service-config").default)))).toEqual([]);
+    const config = require("../../../src/bus/schedule/service-config").default;
+    expect(validateStopCatalog(stopCatalog, new Set(Object.keys(config)), etaOptIns(config))).toEqual([]);
+    expect(stopCatalog.stops.length).toBeGreaterThan(0);
   });
 
   it("rejects a malformed root", () => {
@@ -327,6 +330,64 @@ describe("validateStopCatalog", () => {
       expect(errorsFor(catalog(dropOff(), seq(NSC_BOARD, ALIGHT)))).toEqual([]);
       const both = withGuide({ places: [exitPlace()] });
       expect(errorsFor(catalog(both, { "commute-jeongja": { up: [BOARD, CAMPUS], down: [NSC_BOARD, ALIGHT] } }))).toEqual([]);
+    });
+  });
+  describe("sequences opted in to arrival estimates", () => {
+    const UP = new Map([["commute-jeongja", ["up"]]]);
+    const errorsWithEta = (raw: unknown, optIns: Map<string, string[]> = UP) => validateStopCatalog(raw, SERVICES, optIns);
+
+    it("Opted-in sequence without coordinates: names the service, the route type and the stop", () => {
+      const noCoords: Record<string, unknown> = { ...validStop() };
+      delete noCoords.coords;
+      delete noCoords.guide;
+      const drop = { id: "drop", name: { ko: "하차" }, coords: { ...STOP } };
+      const raw = {
+        stops: [noCoords, drop],
+        sequences: seq(BOARD, { stopId: "drop", action: "alight", timing: "estimated" }),
+      };
+      expect(errorsWithEta(raw)).toEqual([
+        "sequences commute-jeongja.up[0]: opted in to estimates, but stop jeongja-exit3 has no coordinates",
+      ]);
+    });
+
+    it("refuses a label stop, which has no coordinates to route through", () => {
+      expect(errorsWithEta(catalog())).toEqual([
+        "sequences commute-jeongja.up[1]: opted in to estimates, but is a label, not a catalog stop with coordinates",
+      ]);
+    });
+
+    it("refuses an opt-in without a sequence, a sequence of more than 7 stops, no estimated stop, or an estimated start", () => {
+      expect(errorsWithEta(catalog(), new Map([["commute-jeongja", ["down"]]]))).toEqual([
+        "sequences commute-jeongja.down: opted in to estimates but has no stop sequence",
+      ]);
+      const stops = Array.from({ length: 8 }, (_, i) => ({ id: `s${i}`, name: { ko: `정류장 ${i}` }, coords: { ...STOP } }));
+      const eight = stops.map((st, i) => ({
+        stopId: st.id,
+        action: i === 0 ? "board" : "alight",
+        timing: i === 0 ? "scheduled" : "estimated",
+      }));
+      expect(errorsWithEta({ stops, sequences: seq(...eight) })).toEqual([
+        "sequences commute-jeongja.up: opted in to estimates with 8 stops, more than 7",
+      ]);
+      const allScheduled = eight.slice(0, 2).map((st) => ({ ...st, timing: "scheduled" }));
+      expect(errorsWithEta({ stops, sequences: seq(...allScheduled) })).toEqual([
+        "sequences commute-jeongja.up: opted in to estimates, but has no estimated stop",
+      ]);
+      const estimatedStart = eight.slice(0, 2).map((st) => ({ ...st, timing: "estimated" }));
+      expect(errorsWithEta({ stops, sequences: seq(...estimatedStart) })).toEqual([
+        "sequences commute-jeongja.up: opted in to estimates, but its first stop is not scheduled",
+      ]);
+    });
+
+    it("leaves the commute shuttle out: its 등교 sequences end at a label stop, so opting it in would fail", () => {
+      const optIns = etaOptIns(serviceConfig);
+      expect([...optIns.keys()].filter((id) => id.startsWith("commute-"))).toEqual([]);
+      expect(Object.fromEntries(optIns)).toEqual({ "campus-inja": ["regular"], "campus-jain": ["regular", "hakbu"] });
+      const allServices = new Set(Object.keys(serviceConfig));
+      const commuteIn = new Map([["commute-jeongja", ["up"]]]);
+      expect(validateStopCatalog(stopCatalog, allServices, commuteIn)).toEqual([
+        "sequences commute-jeongja.up[1]: opted in to estimates, but is a label, not a catalog stop with coordinates",
+      ]);
     });
   });
 });

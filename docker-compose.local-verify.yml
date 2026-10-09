@@ -29,6 +29,8 @@
 #     sent. The laptop's .env points at the same Cloud Function production uses,
 #     and it pushes by topic to every real subscriber.
 #   - BUILDING_SYNC=off: no campusMap.do crawl on every container start.
+#   - SHUTTLE_ETA=off: no NAVER Directions or TMAP call, which use metered
+#     keys and would write estimates into bus_campus_dev.
 #   - DISPATCH_SWEEP_ENABLED=false on the poller: the base file sets it true;
 #     with push suppressed the sweep would only mark _dev notices pushed.
 #   - SENTRY_DSN=disabled: production requires a DSN, and a local run must not
@@ -51,6 +53,7 @@ x-api-dev-env: &api-dev-env
   - SENTRY_DSN=disabled
   - PUSH_DELIVERY=suppressed
   - BUILDING_SYNC=off
+  - SHUTTLE_ETA=off
 
 services:
   poller:
@@ -68,6 +71,7 @@ services:
       - SENTRY_DSN=disabled
       - PUSH_DELIVERY=suppressed
       - BUILDING_SYNC=off
+      - SHUTTLE_ETA=off
 
   api-1:
     environment: *api-dev-env

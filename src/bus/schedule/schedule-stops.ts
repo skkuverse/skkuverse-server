@@ -30,6 +30,8 @@ const isTest = process.env.NODE_ENV === "test";
 
 const PANO_ID_RE = /^[A-Za-z0-9_-]{22}$/;
 const MAX_WALK_M = 500;
+// One directions call covers a run: start, up to five waypoints, goal.
+const MAX_ETA_STOPS = 7;
 // The walk end that means the stop itself; never a place id.
 const STOP_END = "stop";
 
@@ -249,10 +251,70 @@ function walkDirections(stops: unknown[]): { toStop: Set<string>; fromStop: Set<
 }
 
 /**
+ * A sequence opted in to arrival estimates is sent to a directions API as one
+ * route, so every stop needs coordinates, and there must be a departure to
+ * measure from and a drop-off to estimate.
+ */
+function etaErrors(
+  stops: unknown[],
+  sequences: Record<string, unknown>,
+  etaRouteTypes: ReadonlyMap<string, readonly string[]>,
+): string[] {
+  const errors: string[] = [];
+  const coordsById = new Map<string, boolean>();
+  for (const s of stops) {
+    if (isPlainObject(s) && isNonBlank(s.id)) coordsById.set(s.id, isKoreanLatLng(s.coords));
+  }
+  for (const [serviceId, routeTypes] of etaRouteTypes) {
+    for (const routeType of routeTypes) {
+      const at = `sequences ${serviceId}.${routeType}`;
+      const byRouteType = sequences[serviceId];
+      const seq = isPlainObject(byRouteType) ? byRouteType[routeType] : undefined;
+      if (!Array.isArray(seq)) {
+        errors.push(`${at}: opted in to estimates but has no stop sequence`);
+        continue;
+      }
+      if (seq.length > MAX_ETA_STOPS) {
+        errors.push(`${at}: opted in to estimates with ${seq.length} stops, more than ${MAX_ETA_STOPS}`);
+      }
+      seq.forEach((st, i) => {
+        if (!isPlainObject(st)) return;
+        if (typeof st.stopId !== "string") {
+          errors.push(`${at}[${i}]: opted in to estimates, but is a label, not a catalog stop with coordinates`);
+        } else if (coordsById.get(st.stopId) === false) {
+          errors.push(`${at}[${i}]: opted in to estimates, but stop ${st.stopId} has no coordinates`);
+        }
+      });
+      const first = seq[0];
+      if (isPlainObject(first) && first.timing !== "scheduled") {
+        errors.push(`${at}: opted in to estimates, but its first stop is not scheduled`);
+      }
+      if (!seq.some((st) => isPlainObject(st) && st.timing === "estimated")) {
+        errors.push(`${at}: opted in to estimates, but has no estimated stop`);
+      }
+    }
+  }
+  return errors;
+}
+
+/** serviceId → the route types `service-config.ts` opts in to arrival estimates. */
+export function etaOptIns(config: typeof serviceConfig): Map<string, readonly string[]> {
+  return new Map(
+    Object.entries(config)
+      .filter(([, entry]) => entry.eta)
+      .map(([serviceId, entry]) => [serviceId, entry.eta!.routeTypes]),
+  );
+}
+
+/**
  * Every problem with a raw catalog, each naming its stop or service. Empty
  * means valid. Pure, so tests can drive bad inputs without the process exit.
  */
-export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<string>): string[] {
+export function validateStopCatalog(
+  raw: unknown,
+  knownServiceIds: ReadonlySet<string>,
+  etaRouteTypes: ReadonlyMap<string, readonly string[]> = new Map(),
+): string[] {
   const errors: string[] = [];
   if (!isPlainObject(raw) || !Array.isArray(raw.stops) || !isPlainObject(raw.sequences)) {
     return ["schedule-stops.json must be { stops: [], sequences: {} }"];
@@ -336,6 +398,7 @@ export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<s
     }
   }
 
+  errors.push(...etaErrors(raw.stops, raw.sequences, etaRouteTypes));
   return errors;
 }
 
@@ -363,7 +426,7 @@ function loadCatalog(): ScheduleStopCatalog {
     fatal(`Cannot load schedule-stops.json: ${err instanceof Error ? err.message : String(err)}`);
     return empty;
   }
-  const errors = validateStopCatalog(raw, new Set(Object.keys(serviceConfig)));
+  const errors = validateStopCatalog(raw, new Set(Object.keys(serviceConfig)), etaOptIns(serviceConfig));
   if (errors.length > 0) {
     for (const e of errors) logger.fatal({ event: "bus.schedule_stops.invalid" }, e);
     fatal(`schedule-stops.json invalid (${errors.length} error(s))`);

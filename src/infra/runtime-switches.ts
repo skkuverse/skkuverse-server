@@ -8,6 +8,7 @@
  *
  *
  *
+ *
  */
 
 export type RuntimeMode = "production" | "development" | "test";
@@ -18,6 +19,7 @@ export interface RuntimeSwitches {
   rateLimitEnabled: boolean;
   buildingSyncEnabled: boolean;
   cacheEnabled: boolean;
+  shuttleEtaEnabled: boolean;
 }
 
 export const RUNTIME_SWITCH_NAMES = [
@@ -25,6 +27,7 @@ export const RUNTIME_SWITCH_NAMES = [
   "RATE_LIMIT",
   "BUILDING_SYNC",
   "CACHE",
+  "SHUTTLE_ETA",
 ] as const;
 
 /** Same reading as config.ts: anything but production or test is development. */
@@ -83,12 +86,16 @@ export function resolveRuntimeSwitches(
     cache = "on";
   }
 
+  const shuttleEta =
+    readEnum(env, "SHUTTLE_ETA", ["on", "off"] as const, errors) ?? (local ? "off" : "on");
+
   return {
     switches: {
       pushDelivery,
       rateLimitEnabled: rateLimit === "on",
       buildingSyncEnabled: buildingSync === "on",
       cacheEnabled: cache === "on",
+      shuttleEtaEnabled: shuttleEta === "on",
     },
     errors,
   };

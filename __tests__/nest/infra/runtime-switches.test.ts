@@ -30,6 +30,7 @@ describe("resolveRuntimeSwitches defaults", () => {
         rateLimitEnabled: true,
         buildingSyncEnabled: true,
         cacheEnabled: true,
+        shuttleEtaEnabled: true,
       },
       errors: [],
     });
@@ -42,6 +43,7 @@ describe("resolveRuntimeSwitches defaults", () => {
         rateLimitEnabled: false,
         buildingSyncEnabled: false,
         cacheEnabled: false,
+        shuttleEtaEnabled: false,
       },
       errors: [],
     });
@@ -73,6 +75,15 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(switches.rateLimitEnabled).toBe(true);
     expect(switches.buildingSyncEnabled).toBe(true);
     expect(switches.cacheEnabled).toBe(true);
+  });
+
+  it("development may turn the shuttle estimates on, and production may turn them off", () => {
+    const dev = resolveRuntimeSwitches({ SHUTTLE_ETA: "on" }, "development");
+    expect(dev.errors).toEqual([]);
+    expect(dev.switches.shuttleEtaEnabled).toBe(true);
+    const prod = resolveRuntimeSwitches({ SHUTTLE_ETA: "off" }, "production");
+    expect(prod.errors).toEqual([]);
+    expect(prod.switches.shuttleEtaEnabled).toBe(false);
   });
 
   it("refuses PUSH_DELIVERY=live in development, and stays suppressed", () => {
@@ -109,6 +120,7 @@ describe("resolveRuntimeSwitches overrides", () => {
     ["RATE_LIMIT", "true"],
     ["BUILDING_SYNC", "OFF"],
     ["CACHE", "no-store"],
+    ["SHUTTLE_ETA", "true"],
   ])("reports %s=%s instead of coercing it", (name, value) => {
     for (const mode of ["production", "development", "test"] as const) {
       const { errors } = resolveRuntimeSwitches({ [name]: value }, mode);
@@ -184,10 +196,11 @@ describe("where the switches may be set", () => {
     it.each([
       ["the api replicas", apiEnv],
       ["the poller", pollerEnv],
-    ])("%s suppress push and stop the building sync", (_label, env) => {
+    ])("%s suppress push and stop the building sync and the directions calls", (_label, env) => {
       expect(env).toBeDefined();
       expect(env).toMatch(/- PUSH_DELIVERY=suppressed\n/);
       expect(env).toMatch(/- BUILDING_SYNC=off\n/);
+      expect(env).toMatch(/- SHUTTLE_ETA=off\n/);
     });
   });
 });

@@ -192,6 +192,13 @@ const config = {
     enabled: switches.cacheEnabled,
   },
 
+  // SHUTTLE_ETA. While false, the shuttle arrival-estimate pollers are not
+  // registered, so no NAVER Directions or TMAP call is made; serving still
+  // applies stored estimates. Off in development.
+  shuttleEta: {
+    enabled: switches.shuttleEtaEnabled,
+  },
+
   // Error and log collection (src/instrument.ts). Required in production;
   // the literal "disabled" turns it off explicitly (docker-compose.local-verify.yml).
   // GIT_SHA is baked into the image at build time (Dockerfile ARG).
@@ -240,12 +247,14 @@ const config = {
     rateLimit: string;
     buildingSync: string;
     cache: string;
+    shuttleEta: string;
   } {
     return {
       push: switches.pushDelivery,
       rateLimit: switches.rateLimitEnabled ? "on" : "off",
       buildingSync: switches.buildingSyncEnabled ? "on" : "off",
       cache: switches.cacheEnabled ? "on" : "off",
+      shuttleEta: switches.shuttleEtaEnabled ? "on" : "off",
     };
   },
 };

@@ -12,6 +12,8 @@ const serviceConfig: ServiceConfigMap = {
     ],
     suspend: null,
     respectsKoreanHolidays: true,
+    // hakbu joins once its 인사캠 and CNS센터 stops are confirmed on site.
+    eta: { routeTypes: ["regular"] },
   },
   "campus-jain": {
     nonOperatingDayDisplay: "hidden",
@@ -20,6 +22,7 @@ const serviceConfig: ServiceConfigMap = {
     ],
     suspend: null,
     respectsKoreanHolidays: true,
+    eta: { routeTypes: ["regular", "hakbu"] },
   },
   "fasttrack-inja": {
     nonOperatingDayDisplay: "hidden",
