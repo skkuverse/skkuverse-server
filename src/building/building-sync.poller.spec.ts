@@ -7,10 +7,10 @@
  * are mocked for the registry.
  */
 
-jest.mock("../../../src/building/building.sync", () => ({
+jest.mock("./building.sync", () => ({
   syncBuildings: jest.fn(),
 }));
-jest.mock("../../../src/infra/logger", () => ({
+jest.mock("../infra/logger", () => ({
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
@@ -21,10 +21,10 @@ jest.mock("@sentry/nestjs", () => ({
   captureCheckIn: jest.fn(),
 }));
 
-import config from "../../../src/infra/config";
-import { syncBuildings } from "../../../src/building/building.sync";
-import { BuildingSyncService } from "../../../src/building/building-sync.service";
-import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
+import config from "../infra/config";
+import { syncBuildings } from "./building.sync";
+import { BuildingSyncService } from "./building-sync.service";
+import { PollerRegistryService } from "../scheduling/poller-registry.service";
 
 const mockedSync = syncBuildings as jest.MockedFunction<typeof syncBuildings>;
 
