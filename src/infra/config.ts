@@ -1,17 +1,11 @@
 import "dotenv/config";
 import logger from "./logger";
+import * as requiredEnv from "./required-env";
 import { resolveRuntimeSwitches, runtimeMode } from "./runtime-switches";
 
 // --- Environment flags ---
-const NODE_ENV: string = process.env.NODE_ENV || "development";
-const isProduction = NODE_ENV === "production";
-const isTest = NODE_ENV === "test";
-const isDevelopment = !isProduction && !isTest;
-
-// production에서는 항상 prod API 강제 (실수 방지)
-const USE_PROD_API = isProduction
-  ? true
-  : process.env.USE_PROD_API === "true";
+const mode = requiredEnv.envMode(process.env);
+const { nodeEnv: NODE_ENV, isProduction, isTest, isDevelopment, useProdApi: USE_PROD_API } = mode;
 
 // Outbound side effects a local run must not cause (push, crawl) and the
 // limiter. Defaults per mode and the refused combinations: runtime-switches.ts.
@@ -22,18 +16,8 @@ const { switches, errors: switchErrors } = resolveRuntimeSwitches(
 
 // --- Helpers ---
 
-// development → "_dev", test → "_test", production → 원본
-function devDbName(baseName: string | undefined): string | undefined {
-  if (!baseName) return baseName;
-  if (isTest) return `${baseName}_test`;
-  return isDevelopment ? `${baseName}_dev` : baseName;
-}
-
-// USE_PROD_API에 따라 API URL 선택. _DEV가 없으면 _PROD 폴백
-function apiUrl(prodKey: string, devKey: string): string | undefined {
-  if (USE_PROD_API) return process.env[prodKey];
-  return process.env[devKey] || process.env[prodKey];
-}
+const devDbName = (baseName: string | undefined) => requiredEnv.devDbName(mode, baseName);
+const apiUrl = (prodKey: string, devKey: string) => requiredEnv.apiUrl(mode, process.env, prodKey, devKey);
 
 // --- Config ---
 
@@ -273,48 +257,7 @@ const config = {
 };
 
 // (An operations detail is left out of the public history.)
-//
-const required: ReadonlyArray<readonly [string, unknown, string]> = [
-  ["mongo.url", config.mongo.url, "MONGO_URL"],
-  ["mongo.dbName", config.mongo.dbName, "MONGO_DB_NAME_BUS_CAMPUS"],
-  ["api.hsscNew", config.api.hsscNew, "API_HSSC_NEW_PROD"],
-  ["api.seoulBusServiceKey", config.api.seoulBusServiceKey, "SEOUL_BUS_SERVICE_KEY"],
-  ["api.stationHyehwa", config.api.stationHyehwa, "API_STATION_HEWA"],
-  ["naver.styleId", config.naver.styleId, "NAVER_MAP_STYLE_ID"],
-  ["building.dbName", config.building.dbName, "MONGO_BUILDING_DB_NAME"],
-  ["ad.dbName", config.ad.dbName, "MONGO_AD_DB_NAME"],
-  ["notices.dbName", config.notices.dbName, "MONGO_NOTICES_DB_NAME"],
-  ["eventmap.dbName", config.eventmap.dbName, "MONGO_EVENTMAP_DB_NAME"],
-  ["miniapps.dbName", config.miniapps.dbName, "MONGO_MINIAPPS_DB_NAME"],
-  [
-    "notices.serviceStartDate",
-    config.notices.serviceStartDate,
-    "NOTICES_SERVICE_START_DATE",
-  ],
-  [
-    "notices.dispatch.functionUrl",
-    config.notices.dispatch.functionUrl,
-    "FCM_FUNCTION_URL",
-  ],
-  ["notices.dispatch.apiKey", config.notices.dispatch.apiKey, "FCM_API_KEY"],
-  [
-    "notices.dispatch.internalToken",
-    config.notices.dispatch.internalToken,
-    "INTERNAL_DISPATCH_TOKEN",
-  ],
-  ["notices.overview.aiApiUrl", config.notices.overview.aiApiUrl, "AI_API_URL"],
-  ["shuttleEta.naver.keyId", config.shuttleEta.naver.keyId, "NAVER_API_KEY_ID"],
-  ["shuttleEta.naver.key", config.shuttleEta.naver.key, "NAVER_API_KEY"],
-  ["shuttleEta.tmapAppKey", config.shuttleEta.tmapAppKey, "TMAP_APP_KEY"],
-  // Production must report errors somewhere; elsewhere Sentry is opt-in.
-  ...(isProduction
-    ? ([["sentry.dsn", config.sentry.dsn, "SENTRY_DSN"]] as const)
-    : []),
-];
-
-const missing = required
-  .filter(([, value]) => !value)
-  .map(([name, , envVar]) => ({ name, env: envVar }));
+const missing = requiredEnv.missingRequired(process.env).map(({ name, env }) => ({ name, env }));
 if (missing.length > 0) {
   logger.fatal(
     { event: "config.missing_required", missing },
