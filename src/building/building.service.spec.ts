@@ -1,54 +1,26 @@
 /**
- * Unit test for BuildingService — verifies it delegates 1:1 to building.data
- * (mocked) and that onModuleInit keeps the NON-FATAL ensureIndexes contract
- * (success logs + swallowed failure, never throws).
+ * BuildingService delegates to BuildingRepository (a stub here).
  */
+import type { BuildingRepository } from "./building.repository";
+import { BuildingService } from "./building.service";
 
-jest.mock("./building.data", () => ({
-  ensureIndexes: jest.fn(),
+const mocked = {
   getAllBuildings: jest.fn(),
+  getAllCampusShapes: jest.fn(),
   getBuildingBySkkuId: jest.fn(),
   getFloorsByBuildNo: jest.fn(),
   getConnectionsForBuilding: jest.fn(),
-}));
-
-// Search moved out of building.data into its own module; the service delegates
-// there for the two ranked queries (counts now ride along with the rows, so the
-// former countSearch* pair no longer exists).
-jest.mock("./building.search", () => ({
   searchBuildings: jest.fn(),
   searchSpaces: jest.fn(),
-}));
-
-import * as data from "./building.data";
-import * as search from "./building.search";
-import { BuildingService } from "./building.service";
-
-const mocked = data as jest.Mocked<typeof data>;
-const mockedSearch = search as jest.Mocked<typeof search>;
+};
+const mockedSearch = mocked;
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe("BuildingService.onModuleInit (non-fatal ensureIndexes)", () => {
-  it("calls ensureIndexes on success", async () => {
-    mocked.ensureIndexes.mockResolvedValue(undefined);
-    const svc = new BuildingService();
-    await expect(svc.onModuleInit()).resolves.toBeUndefined();
-    expect(mocked.ensureIndexes).toHaveBeenCalledTimes(1);
-  });
-
-  it("swallows ensureIndexes failure (warn-and-continue, no throw)", async () => {
-    mocked.ensureIndexes.mockRejectedValue(new Error("no db"));
-    const svc = new BuildingService();
-    await expect(svc.onModuleInit()).resolves.toBeUndefined();
-    expect(mocked.ensureIndexes).toHaveBeenCalledTimes(1);
-  });
-});
-
 describe("BuildingService delegation", () => {
-  const svc = new BuildingService();
+  const svc = new BuildingService(mocked as unknown as BuildingRepository);
 
   it("getAllBuildings forwards campus arg", async () => {
     mocked.getAllBuildings.mockResolvedValue([]);

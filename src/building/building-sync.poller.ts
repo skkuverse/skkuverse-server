@@ -1,27 +1,21 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import config from "../infra/config";
 import logger from "../infra/logger";
-import { syncBuildings } from "./building.sync";
 import { PollerRegistryService } from "../scheduling/poller-registry.service";
+import { BuildingSyncService } from "./building-sync.service";
 
 /**
- * BuildingSyncService — registers building.sync's syncBuildings() (SKKU
- * campusMap.do crawl → raw/enriched/spaces upsert) with the Nest
- * PollerRegistry. Interval = config.building.syncIntervalMs (~7 days), name
- * "building-sync". Registered as is: a failed run rejects, and the registry
- * logs it as `poller.failing` and opens a Sentry Issue on the first failure
- * (a slow poller), like every other poller.
- *
- * Gating: PollerRegistryService.onApplicationBootstrap only startAll()s when
- * ROLE !== "api", so an api replica registers but never runs the sync — no
- * duplicate crawls across replicas.
- *
- * building.sync registers nothing when imported (see the note above its
- * export), so this service is the sync's only driver.
+ * Registers the building sync with the PollerRegistry: every
+ * config.building.syncIntervalMs (~7 days), as "building-sync". The registry
+ * starts pollers only when ROLE !== "api", so api replicas never crawl, and it
+ * reports a rejected run as `poller.failing` with a Sentry Issue.
  */
 @Injectable()
-export class BuildingSyncService implements OnModuleInit {
-  constructor(private readonly registry: PollerRegistryService) {}
+export class BuildingSyncPoller implements OnModuleInit {
+  constructor(
+    private readonly registry: PollerRegistryService,
+    private readonly sync: BuildingSyncService,
+  ) {}
 
   onModuleInit(): void {
     // BUILDING_SYNC=off (the development default): not registered at all. The
@@ -35,7 +29,7 @@ export class BuildingSyncService implements OnModuleInit {
       return;
     }
     this.registry.registerPoller(
-      syncBuildings,
+      () => this.sync.run(),
       config.building.syncIntervalMs,
       "building-sync",
     );

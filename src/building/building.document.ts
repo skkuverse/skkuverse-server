@@ -37,7 +37,7 @@ export type ElevatorStatus =
   | "arrival_button"
   | "none"
   | "not_operating"
-  | string;                       // fallback (building.enrich.ts): unknown 값은 raw 그대로 전달
+  | string;                       // fallback (building.mapper.ts): unknown 값은 raw 그대로 전달
 
 export interface BarrierFreeSection {
   label: string | null;
@@ -116,7 +116,7 @@ export interface SpaceDoc {
 // --- connections doc ---
 // 건물-건물 연결 (e.g. 지하 통로). 양방향: a/b 어느 쪽이든 skkuId로 lookup.
 // "a→b"와 "b→a"는 의미상 동일한 doc이지만, fromFloor/toFloor가 다르게 보고됨
-// (lookup 방향에 따라 self/other 결정 — building.data.ts getConnectionsForBuilding).
+// (lookup 방향에 따라 self/other 결정 — building.mapper.ts toConnectionItems).
 export interface ConnectionDoc {
   _id?: ObjectId;
   campus: Campus;
@@ -132,7 +132,7 @@ export interface ConnectionDoc {
  * A SIBLING COLLECTION rather than a field on `buildings`, for two reasons.
  * `buildings` is a mirror of SKKU's campusMap.do, re-synced on
  * `BUILDING_SYNC_INTERVAL_MS`, so its document shape is owned by
- * `building.sync.ts` and not by us — hand-authored geometry there survives
+ * the building sync and not by us — hand-authored geometry there survives
  * today's field-level `$set` but not one change to `replaceOne`. And decisively,
  * a campus boundary or a walking path has no building `_id` to hang off, so a
  * `footprint` field could only ever cover half of what this holds.

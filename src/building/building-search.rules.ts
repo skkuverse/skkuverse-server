@@ -1,9 +1,8 @@
 /**
- * Building / room search — matching, relevance ranking, and counts.
- *
- * Split out of building.data.ts (which stays collection plumbing) because the
- * ranking machinery is the part that needs dense unit tests, and most of it is
- * pure: a declarative tier table plus two compilers.
+ * Building / room search — matching, relevance ranking, and counts: a
+ * declarative tier table plus two compilers (one to a Mongo expression, one to
+ * a JS predicate the specs pin ranking intent with). BuildingRepository runs
+ * the pipelines these build.
  *
  * WHY THIS EXISTS AT ALL
  * ----------------------
@@ -21,15 +20,11 @@
  * SKKU codes every room as displayNo + floor + room: building 27 (buildNo 227,
  * displayNo "27") owns 27101, 27422, ... So "spaceCd starts with the query" is
  * literally "rooms in building N" — the top-tier signal is the university's own
- * numbering scheme, not an invented heuristic. toDisplayNo() in building.data.ts
+ * numbering scheme, not an invented heuristic. toDisplayNo() in building.rules.ts
  * performs the same buildNo -> displayNo mapping for the response.
  */
 import type { Document, Filter } from "mongodb";
 import { escapeRegex } from "../shared/regex.util";
-import {
-  getBuildingsCollection,
-  getSpacesCollection,
-} from "./building.data";
 import type { BuildingDoc, SpaceDoc } from "./building.document";
 import type { Campus } from "./building.types";
 
@@ -156,7 +151,7 @@ function tierRegex(mode: TierMode, escaped: string): string {
  * both spaceList-only records with empty names).
  *
  * The guard tests $type rather than using $ifNull, because $ifNull only covers
- * null and missing. building.sync.ts passes SKKU's JSON values straight through
+ * null and missing. building.client.ts passes SKKU's JSON values straight through
  * (`spaceCd: item.spaceCd`) and SkkuSpaceListItem.spaceCd: string is a
  * compile-time assertion about an EXTERNAL payload, not a runtime guarantee. If
  * SKKU ever emitted `"spaceCd": 27101` as a number, one such row would make
@@ -338,10 +333,10 @@ function toRankedResult<T>(facets: Array<RankedFacet<T>>): RankedSearchResult<T>
   };
 }
 
-// --- Queries ---
+// --- Pipelines ---
 
 /**
- * Ranked room search.
+ * The ranked room search pipeline.
  *
  * One $facet replaces the old three round-trips (rows + two countDocuments) and
  * removes any chance of rows and counts disagreeing. $addFields lives inside the
@@ -353,18 +348,14 @@ function toRankedResult<T>(facets: Array<RankedFacet<T>>): RankedSearchResult<T>
  * stable across the 7-day building-sync (Phase 3 deleteMany + re-upsert rewrites
  * physical document order, which the old sortless query exposed directly).
  */
-async function searchSpaces(
-  query: string,
-  campus?: Campus | null,
-): Promise<RankedSearchResult<SpaceDoc>> {
-  const col = getSpacesCollection();
+function spaceSearchPipeline(query: string, campus?: Campus | null): Document[] {
   const campusStage: Document[] = campus ? [{ $match: { campus } }] : [];
   const projectStage = {
     $project: { _id: 0, _score: 0, sources: 0, syncedAt: 0 },
   };
   const sortStage = { $sort: { _score: -1, spaceCd: 1 } };
 
-  const pipeline: Document[] = [
+  return [
     { $match: spaceKeywordFilter(query) },
     // Scored once here rather than inside each band: both bands read _score, so
     // hoisting it costs one pass instead of two.
@@ -390,31 +381,23 @@ async function searchSpaces(
       },
     },
   ];
-
-  const facets = await col
-    .aggregate<RankedFacet<SpaceDoc>>(pipeline, { maxTimeMS: 5000 })
-    .toArray();
-  return toRankedResult(facets);
 }
 
 /**
- * Ranked building search. Same shape as searchSpaces; the tiebreak is _id, the
- * SKKU-assigned integer id — building-sync upserts by { _id: skkuId } and never
- * deletes from this collection, so it is stable across syncs (unlike an
- * ObjectId, which a delete/reinsert cycle would regenerate).
+ * The ranked building search pipeline. Same shape as the room pipeline; the
+ * tiebreak is _id, the SKKU-assigned integer id — building-sync upserts by
+ * { _id: skkuId } and never deletes from this collection, so it is stable
+ * across syncs (unlike an ObjectId, which a delete/reinsert cycle would
+ * regenerate).
  */
-async function searchBuildings(
-  query: string,
-  campus?: Campus | null,
-): Promise<RankedSearchResult<BuildingDoc>> {
-  const col = getBuildingsCollection();
+function buildingSearchPipeline(query: string, campus?: Campus | null): Document[] {
   const campusStage: Document[] = campus ? [{ $match: { campus } }] : [];
   const projectStage = {
     $project: { _score: 0, extensions: 0, sync: 0, enrichVersion: 0 },
   };
   const sortStage = { $sort: { _score: -1, _id: 1 } };
 
-  const pipeline: Document[] = [
+  return [
     { $match: buildingKeywordFilter(query) },
     { $addFields: { _score: tiersToScoreExpr(BUILDING_TIERS, query) } },
     {
@@ -438,11 +421,6 @@ async function searchBuildings(
       },
     },
   ];
-
-  const facets = await col
-    .aggregate<RankedFacet<BuildingDoc>>(pipeline, { maxTimeMS: 5000 })
-    .toArray();
-  return toRankedResult(facets);
 }
 
 export {
@@ -455,12 +433,12 @@ export {
   SPACE_TIERS,
   SPACE_WEAK_LIMIT,
   buildingKeywordFilter,
+  buildingSearchPipeline,
   scoreLocally,
-  searchBuildings,
-  searchSpaces,
   spaceKeywordFilter,
+  spaceSearchPipeline,
   tierRegex,
   tiersToScoreExpr,
   toRankedResult,
 };
-export type { RankedSearchResult, RelevanceTier, SearchCounts, TierMode };
+export type { RankedFacet, RankedSearchResult, RelevanceTier, SearchCounts, TierMode };

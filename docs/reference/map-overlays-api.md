@@ -1427,7 +1427,7 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 | HTTP + `Cache-Control` | `src/map/controllers/map-config.controller.ts`, `src/map/controllers/map-overlays.controller.ts` |
 | Module wiring, rate limit, endpoint inventory | `src/map/map.module.ts` |
 | Campus labels | `src/infra/i18n.ts` (`map.campus.*`) — layer and chip labels are inline `{ko, en?, zh?}` on their specs, resolved with `pick()` from the same module |
-| Building documents | `src/building/building.data.ts` |
+| Building documents | `src/building/building.repository.ts` |
 | Event documents + activation window | `src/map/map-places.data.ts`, `src/map/map-places.types.ts` |
 | Sheet → documents, and the importer | `scripts/lib/map-places-file.js`, `scripts/import-eventmap-places.js` |
 | Tests | `__tests__/nest/map/` |

@@ -1,10 +1,20 @@
-import { toDisplayNo } from "./building.data";
+import { floorSortKey, toDisplayNo } from "./building.rules";
 import type {
   AccessibilityDetail,
   BarrierFreeSection,
+  BuildingDoc,
   BuildingRawDoc,
+  ConnectionDoc,
   ElevatorStatus,
+  SpaceDoc,
 } from "./building.document";
+import type { AnyBulkWriteOperation } from "mongodb";
+import type {
+  ConnectionResponseItem,
+  FloorGroup,
+  SpaceSource,
+  SyncedSpace,
+} from "./building.types";
 
 // Bump this when enrichment logic changes to trigger re-enrichment of all buildings
 const ENRICH_VERSION = 1;
@@ -173,7 +183,7 @@ function parseBarrierFree(
 // "accessibility.elevator" 등)와 일반 필드가 섞여 있어 BuildingDoc과 직접 일치
 // 시키지 않는다. update 시점에 받는 컬렉션 driver가 dot-path를 받아 nested로
 // merge하므로, 반환 type은 의도적으로 느슨하게 unknown index를 쓴다.
-type EnrichmentSetUpdate = Record<string, unknown>;
+export type EnrichmentSetUpdate = Record<string, unknown>;
 
 /**
  * Derive enriched fields from a raw building document.
@@ -208,4 +218,97 @@ function enrichBuilding(rawDoc: BuildingRawDoc): EnrichmentSetUpdate {
   };
 }
 
-export { ENRICH_VERSION, ELEVATOR_STATUS_MAP, parseBarrierFree, enrichBuilding };
+/** A building's spaces grouped by floor, lowest floor first (floorSortKey). */
+function groupByFloor(
+  spaces: ReadonlyArray<Pick<SpaceDoc, "spaceCd" | "name" | "floor" | "conspaceCd">>,
+): FloorGroup[] {
+  const floorMap = new Map<string, FloorGroup>();
+  for (const s of spaces) {
+    const key = s.floor?.ko || "unknown";
+    if (!floorMap.has(key)) {
+      floorMap.set(key, { floor: s.floor, spaces: [] });
+    }
+    floorMap.get(key)!.spaces.push({
+      spaceCd: s.spaceCd,
+      name: s.name,
+      conspaceCd: s.conspaceCd,
+    });
+  }
+  return Array.from(floorMap.values()).sort(
+    (a, b) => floorSortKey(a.floor?.ko) - floorSortKey(b.floor?.ko),
+  );
+}
+
+/**
+ * Connections as seen from `skkuId`. A connection doc is undirected (a/b), so
+ * the side matching `skkuId` is "from" and the other is the target, named from
+ * `targets` (the other buildings' docs).
+ */
+function toConnectionItems(
+  skkuId: number,
+  docs: readonly ConnectionDoc[],
+  targets: ReadonlyArray<Pick<BuildingDoc, "_id" | "buildNo" | "displayNo" | "name">>,
+): ConnectionResponseItem[] {
+  const buildingMap = new Map(targets.map((b) => [b._id, b]));
+  return docs.map((doc) => {
+    const isA = doc.a.skkuId === skkuId;
+    const self = isA ? doc.a : doc.b;
+    const other = isA ? doc.b : doc.a;
+    const target = buildingMap.get(other.skkuId);
+    return {
+      targetSkkuId: other.skkuId,
+      targetBuildNo: target?.buildNo || null,
+      targetDisplayNo: target?.displayNo || null,
+      targetName: target?.name || { ko: "", en: "" },
+      fromFloor: self.floor,
+      toFloor: other.floor,
+    };
+  });
+}
+
+/**
+ * The upsert for one space reported by either listing. Both write the same
+ * names; spaceList also owns `conspaceCd`, which a buildInfo insert starts as
+ * null. `sources` accumulates which listings reported the space.
+ */
+function toSpaceUpsert(
+  space: SyncedSpace,
+  source: SpaceSource,
+  syncTime: Date,
+): AnyBulkWriteOperation<SpaceDoc> {
+  const filter = { spaceCd: space.spaceCd, buildNo: space.buildNo, campus: space.campus };
+  const names = { floor: space.floor, name: space.name, buildingName: space.buildingName };
+  if (source === "buildInfo") {
+    return {
+      updateOne: {
+        filter,
+        update: {
+          $set: { ...names, syncedAt: syncTime },
+          $addToSet: { sources: source },
+          $setOnInsert: { conspaceCd: null },
+        },
+        upsert: true,
+      },
+    };
+  }
+  return {
+    updateOne: {
+      filter,
+      update: {
+        $set: { ...names, conspaceCd: space.conspaceCd, syncedAt: syncTime },
+        $addToSet: { sources: source },
+      },
+      upsert: true,
+    },
+  };
+}
+
+export {
+  ENRICH_VERSION,
+  ELEVATOR_STATUS_MAP,
+  enrichBuilding,
+  groupByFloor,
+  parseBarrierFree,
+  toConnectionItems,
+  toSpaceUpsert,
+};

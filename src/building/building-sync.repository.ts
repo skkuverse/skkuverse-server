@@ -1,0 +1,131 @@
+import { Injectable } from "@nestjs/common";
+import type { AnyBulkWriteOperation, BulkWriteResult, Collection, Document } from "mongodb";
+import config from "../infra/config";
+import { getClient } from "../infra/db";
+import logger from "../infra/logger";
+import type {
+  BuildingAttachment,
+  BuildingDoc,
+  BuildingRawDoc,
+  SpaceDoc,
+} from "./building.document";
+import { toSpaceUpsert, type EnrichmentSetUpdate } from "./building.mapper";
+import type { ListedBuilding, SpaceSource, SyncedSpace } from "./building.types";
+
+function collection<T extends Document>(name: string): Collection<T> {
+  return getClient().db(config.building.dbName!).collection<T>(name);
+}
+
+/**
+ * The building sync's reads and writes: the raw layer (buildings_raw), the
+ * enriched layer (buildings) and the spaces. Every write is an upsert keyed by
+ * SKKU's own ids, so a rerun converges.
+ */
+@Injectable()
+export class BuildingSyncRepository {
+  /** skkuUpdatedAt of every raw building, for change detection. */
+  async findRawUpdatedAt(): Promise<Map<number, string | null>> {
+    const docs = await this.raw().find({}, { projection: { skkuUpdatedAt: 1 } }).toArray();
+    return new Map(docs.map((d) => [d._id, d.skkuUpdatedAt]));
+  }
+
+  /** Enriched buildings whose enrichVersion is not `version`. */
+  async findIdsNotEnrichedAt(version: number): Promise<Set<number>> {
+    const docs = await this.enriched()
+      .find({ enrichVersion: { $ne: version } }, { projection: { _id: 1 } })
+      .toArray();
+    return new Set(docs.map((d) => d._id));
+  }
+
+  upsertRaw(listed: readonly ListedBuilding[], syncTime: Date): Promise<BulkWriteResult> {
+    const ops: AnyBulkWriteOperation<BuildingRawDoc>[] = listed.map(({ skkuId, doc }) => ({
+      updateOne: {
+        filter: { _id: skkuId },
+        update: { $set: { ...doc, "sync.listAt": syncTime } },
+        upsert: true,
+      },
+    }));
+    return this.raw().bulkWrite(ops, { ordered: false });
+  }
+
+  findRawByIds(ids: Iterable<number>): Promise<BuildingRawDoc[]> {
+    return this.raw()
+      .find({ _id: { $in: [...ids] } })
+      .toArray();
+  }
+
+  upsertEnriched(
+    entries: ReadonlyArray<{ skkuId: number; fields: EnrichmentSetUpdate }>,
+    syncTime: Date,
+  ): Promise<BulkWriteResult> {
+    const ops: AnyBulkWriteOperation<BuildingDoc>[] = entries.map(({ skkuId, fields }) => ({
+      updateOne: {
+        filter: { _id: skkuId },
+        update: {
+          $set: { ...fields, "sync.listAt": syncTime, updatedAt: syncTime },
+          $setOnInsert: { extensions: {} },
+        },
+        upsert: true,
+      },
+    }));
+    return this.enriched().bulkWrite(ops, { ordered: false });
+  }
+
+  /** Writes a building's photos to BOTH layers and clears its detail error. */
+  async setAttachments(
+    skkuId: number,
+    attachments: BuildingAttachment[],
+    syncTime: Date,
+  ): Promise<void> {
+    const update = {
+      $set: { attachments, "sync.detailAt": syncTime, "sync.detailError": null },
+    };
+    await Promise.all([
+      this.raw().updateOne({ _id: skkuId }, update),
+      this.enriched().updateOne({ _id: skkuId }, update),
+    ]);
+  }
+
+  /** Notes a failed buildInfo on both layers. Best effort: a failed note is logged, never thrown. */
+  async recordDetailError(skkuId: number, message: string): Promise<void> {
+    const update = { $set: { "sync.detailError": message } };
+    const noteFailed = (err: unknown): void =>
+      logger.warn(
+        { event: "building.sync.error_note_failed", skkuId, err },
+        "Could not record the buildInfo failure on the building",
+      );
+    await Promise.all([
+      this.raw().updateOne({ _id: skkuId }, update).catch(noteFailed),
+      this.enriched().updateOne({ _id: skkuId }, update).catch(noteFailed),
+    ]);
+  }
+
+  upsertSpaces(
+    spaces: readonly SyncedSpace[],
+    source: SpaceSource,
+    syncTime: Date,
+  ): Promise<BulkWriteResult> {
+    return this.spaces().bulkWrite(
+      spaces.map((space) => toSpaceUpsert(space, source, syncTime)),
+      { ordered: false },
+    );
+  }
+
+  /** Deletes the spaces this run did not see; returns how many. */
+  async deleteSpacesSyncedBefore(syncTime: Date): Promise<number> {
+    const result = await this.spaces().deleteMany({ syncedAt: { $lt: syncTime } });
+    return result.deletedCount;
+  }
+
+  private raw(): Collection<BuildingRawDoc> {
+    return collection<BuildingRawDoc>(config.building.collections.buildingsRaw);
+  }
+
+  private enriched(): Collection<BuildingDoc> {
+    return collection<BuildingDoc>(config.building.collections.buildings);
+  }
+
+  private spaces(): Collection<SpaceDoc> {
+    return collection<SpaceDoc>(config.building.collections.spaces);
+  }
+}
