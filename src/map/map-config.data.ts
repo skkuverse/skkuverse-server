@@ -147,11 +147,9 @@ async function getMapConfig(lang: SupportedLang = "ko"): Promise<MapConfigRespon
       {
         id: "nsc",
         label: t("map.campus.nsc.label", lang),
-        // Framed on the festival ground (the 에스카라 chip's camera, one zoom
-        // step out) for ESKARA 2026; the campus itself still fits inside radiusM.
-        centerLat: 37.295129,
-        centerLng: 126.971234,
-        defaultZoom: 16.5,
+        centerLat: 37.29358,
+        centerLng: 126.974942,
+        defaultZoom: 15.8,
         defaultTilt: 0,
         // The campus grid runs ~6° east of north (the stadium's long axis in
         // OSM, and what squares it on a simulator), so the camera turns by it.
