@@ -64,19 +64,26 @@ describe("committed home-layout.json", () => {
   });
 
   it.each(["ko", "en", "zh"] as const)(
-    "campus_services (%s): the campus sheet's four buttons, so a tap means the same thing on both",
+    "home_tiles (%s): the campus sheet's four buttons, then the games, in one grid",
     (lang) => {
       const resolved = resolveHomeLayout(lang, new Date());
-      expect(resolved.sections.map((s) => s.id)).toEqual(["home_top", "campus_services", "games"]);
-      const homeRow = resolved.sections.find((s) => s.id === "campus_services") as unknown as {
-        tiles: Array<{ kind: string; id: string; title: string; actionType: string; actionValue: string }>;
+      // One grid: the app puts a 24 pt gap after each grid, so a second grid
+      // for the games would read as a new section (2026-10-09).
+      expect(resolved.sections.map((s) => s.id)).toEqual(["home_top", "home_tiles"]);
+      const homeRow = resolved.sections.find((s) => s.id === "home_tiles") as unknown as {
+        tiles: Array<{ kind: string; id: string; title?: string; actionType?: string; actionValue?: string }>;
       };
       const sheet = getCampusSections(lang).sections.find((s) => s.type === "button_grid") as {
         items: Array<{ id: string; title: string; actionType: string; actionValue: string }>;
       };
-      expect(homeRow.tiles.map(({ kind, id, title, actionType, actionValue }) => ({ kind, id, title, actionType, actionValue }))).toEqual(
-        sheet.items.map(({ id, title, actionType, actionValue }) => ({ kind: "link", id, title, actionType, actionValue })),
-      );
+      // The four service tiles mean the same thing as the campus sheet's buttons.
+      expect(
+        homeRow.tiles.slice(0, 4).map(({ kind, id, title, actionType, actionValue }) => ({ kind, id, title, actionType, actionValue })),
+      ).toEqual(sheet.items.map(({ id, title, actionType, actionValue }) => ({ kind: "link", id, title, actionType, actionValue })));
+      expect(homeRow.tiles.slice(4)).toEqual([
+        { kind: "game", id: "subway-typing" },
+        { kind: "game", id: "wave-run" },
+      ]);
     },
   );
 });

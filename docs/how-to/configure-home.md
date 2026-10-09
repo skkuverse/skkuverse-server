@@ -94,7 +94,7 @@ The app only draws this section while its festival gate is open (`isFestivalUnlo
 
 Edit the `tile_grid` sections: reorder tiles, move a tile to another grid, add a grid, or add or remove a `title`. To add a new mini app, register it in `src/miniapps/` first (see [register-a-miniapp.md](register-a-miniapp.md)), since the layout refuses unknown ids.
 
-The `campus_services` grid (건물지도, 건물코드, 분실물, 문의하기) repeats the campus sheet's four buttons in [`src/ui/ui/ui.campus.ts`](../../src/ui/ui/ui.campus.ts), with the same ids, titles and actions; `home-layout.test.ts` fails when the two drift apart. The app's built-in fallback layout (skkuverse-app `packages/shared/src/home/defaults.ts`) carries the same grid.
+The `home_tiles` grid starts with the campus sheet's four buttons (건물지도, 건물코드, 분실물, 문의하기) from [`src/ui/ui/ui.campus.ts`](../../src/ui/ui/ui.campus.ts), with the same ids, titles and actions; `home-layout.test.ts` fails when the two drift apart. The games follow in the same grid, because the app puts a 24 pt gap after every grid: a second grid reads as a new section, while tiles in one grid wrap at the normal row spacing. The Hall of Fame card stays under the first grid that holds a game.
 
 ### Add a link to an app screen
 
