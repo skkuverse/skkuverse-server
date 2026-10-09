@@ -648,6 +648,15 @@
         "lat": 37.587367,
         "lng": 126.993643
       },
+      "photo": {
+        "original": "https://media.skkuverse.com/bus/stops/hssc-bus-lot/original-b431e3b1.jpg"
+      },
+      "panorama": {
+        "panoId": "oCt8OYgXgYopNL-f4h4MAw",
+        "pan": -24,
+        "tilt": 0,
+        "fov": 80
+      },
       "guide": {}
     },
     {
@@ -683,6 +692,15 @@
       "coords": {
         "lat": 37.292298,
         "lng": 126.975057
+      },
+      "photo": {
+        "original": "https://media.skkuverse.com/bus/stops/nsc-n-center/original-53c0cde5.jpg"
+      },
+      "panorama": {
+        "panoId": "YntS5LxXHav0lPF1zQf9tA",
+        "pan": 152,
+        "tilt": 2,
+        "fov": 80
       },
       "guide": {}
     },
