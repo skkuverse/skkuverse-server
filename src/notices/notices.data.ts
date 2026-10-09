@@ -53,6 +53,10 @@ const LIST_PROJECTION = Object.freeze({
   summaryType: 1,
   summaryPeriods: 1,
   summaryAt: 1,
+  // v2 badge inputs (notices.transform selectRoleBadge)
+  summaryVersion: 1,
+  summaryApplication: 1,
+  summaryDates: 1,
 });
 
 // Inclusion projection — detail. Adds cleanMarkdown + editHistory +

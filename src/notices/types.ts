@@ -67,6 +67,31 @@ export interface SummaryPeriod {
   label?: string;
 }
 
+// --- Summary v2 fields (skkuverse-ai refine-notice-summary-v2) ---
+// Written by the crawler only for summaryVersion >= 2. Times are ISO 8601 with
+// +09:00; an end with no time (or midnight, 24:00) is stored as the next day's
+// 00:00. role / status / endType are open enums: an unknown value is ignored,
+// never an error.
+export interface SummaryApplicationWindow {
+  startAt: string | null;
+  endAt: string | null;
+  openEnded: boolean;
+}
+
+export interface SummaryApplication {
+  status: string; // "dated" | "undated" | "none"
+  windows: SummaryApplicationWindow[];
+}
+
+export interface SummaryDate {
+  evidence: string;
+  subject: string;
+  role: string; // "announce" | "apply" | "due" | "happens" | "runs" | "other"
+  endType: string;
+  startAt: string | null;
+  endAt: string | null;
+}
+
 export interface NoticeAttachment {
   name: string;
   url: string;
@@ -108,6 +133,13 @@ export interface NoticeDoc {
   // contentHash the summary was generated from. Differs from contentHash when
   // the body changed after summarization (the summary is stale).
   summaryContentHash?: string | null;
+  // v2 (summaryVersion >= 2). Absent on notices summarized before v2.
+  summaryVersion?: number;
+  summaryPromptVersion?: string | null;
+  summaryApplication?: SummaryApplication | null;
+  summaryDates?: SummaryDate[];
+  summaryAsksToApply?: boolean;
+  summaryTerm?: string | null;
 
   // Crawler-domain flags
   isDeleted?: boolean | null;
