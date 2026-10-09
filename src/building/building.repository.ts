@@ -23,6 +23,12 @@ import type { Campus, ConnectionResponseItem, FloorGroup } from "./building.type
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
+/**
+ * Search scans every space (no index can serve it, see ensureIndexes), ~20 ms
+ * measured, so it gets more room than a hot point read.
+ */
+const SEARCH_MAX_TIME_MS = 5000;
+
 /** A collection of the building DB. Its name is required config, so it is set. */
 function collection<T extends Document>(name: string): Collection<T> {
   return getClient().db(config.building.dbName!).collection<T>(name);
@@ -148,7 +154,7 @@ export class BuildingRepository implements OnModuleInit {
   getBuildingBySkkuId(skkuId: number): Promise<BuildingDoc | null> {
     return this.buildings().findOne(
       { _id: skkuId },
-      { projection: { sync: 0, enrichVersion: 0 } },
+      { projection: { sync: 0, enrichVersion: 0 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
     );
   }
 
@@ -157,7 +163,10 @@ export class BuildingRepository implements OnModuleInit {
     const spaces = await this.spaces()
       .find(
         { buildNo },
-        { projection: { _id: 0, spaceCd: 1, name: 1, floor: 1, conspaceCd: 1 } },
+        {
+          projection: { _id: 0, spaceCd: 1, name: 1, floor: 1, conspaceCd: 1 },
+          maxTimeMS: HOT_READ_MAX_TIME_MS,
+        },
       )
       .toArray();
     return groupByFloor(spaces);
@@ -165,7 +174,10 @@ export class BuildingRepository implements OnModuleInit {
 
   async getConnectionsForBuilding(skkuId: number): Promise<ConnectionResponseItem[]> {
     const docs = await this.connections()
-      .find({ $or: [{ "a.skkuId": skkuId }, { "b.skkuId": skkuId }] })
+      .find(
+        { $or: [{ "a.skkuId": skkuId }, { "b.skkuId": skkuId }] },
+        { maxTimeMS: HOT_READ_MAX_TIME_MS },
+      )
       .toArray();
     if (!docs.length) return [];
 
@@ -179,7 +191,7 @@ export class BuildingRepository implements OnModuleInit {
     const targets = await this.buildings()
       .find(
         { _id: { $in: Array.from(relatedIds) } },
-        { projection: { _id: 1, buildNo: 1, displayNo: 1, name: 1 } },
+        { projection: { _id: 1, buildNo: 1, displayNo: 1, name: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
       )
       .toArray();
     return toConnectionItems(skkuId, docs, targets);
@@ -195,7 +207,7 @@ export class BuildingRepository implements OnModuleInit {
   ): Promise<RankedSearchResult<BuildingDoc>> {
     const facets = await this.buildings()
       .aggregate<RankedFacet<BuildingDoc>>(buildingSearchPipeline(query, campus), {
-        maxTimeMS: 5000,
+        maxTimeMS: SEARCH_MAX_TIME_MS,
       })
       .toArray();
     return toRankedResult(facets);
@@ -207,7 +219,7 @@ export class BuildingRepository implements OnModuleInit {
   ): Promise<RankedSearchResult<SpaceDoc>> {
     const facets = await this.spaces()
       .aggregate<RankedFacet<SpaceDoc>>(spaceSearchPipeline(query, campus), {
-        maxTimeMS: 5000,
+        maxTimeMS: SEARCH_MAX_TIME_MS,
       })
       .toArray();
     return toRankedResult(facets);
