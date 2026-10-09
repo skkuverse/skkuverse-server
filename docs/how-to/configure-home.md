@@ -3,7 +3,7 @@ title: Configure the Home Screen
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-05
+last-updated: 2026-10-09
 audience: internal
 ---
 
@@ -93,6 +93,8 @@ The app only draws this section while its festival gate is open (`isFestivalUnlo
 ### Rearrange the grids
 
 Edit the `tile_grid` sections: reorder tiles, move a tile to another grid, add a grid, or add or remove a `title`. To add a new mini app, register it in `src/miniapps/` first (see [register-a-miniapp.md](register-a-miniapp.md)), since the layout refuses unknown ids.
+
+The `campus_services` grid (건물지도, 건물코드, 분실물, 문의하기) repeats the campus sheet's four buttons in [`src/ui/ui/ui.campus.ts`](../../src/ui/ui/ui.campus.ts), with the same ids, titles and actions; `home-layout.test.ts` fails when the two drift apart. The app's built-in fallback layout (skkuverse-app `packages/shared/src/home/defaults.ts`) carries the same grid.
 
 ### Add a link to an app screen
 

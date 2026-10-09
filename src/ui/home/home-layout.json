@@ -12,6 +12,44 @@
     },
     {
       "type": "tile_grid",
+      "id": "campus_services",
+      "tiles": [
+        {
+          "kind": "link",
+          "id": "building_map",
+          "title": { "ko": "건물지도", "en": "Building Map", "zh": "建筑地图" },
+          "icon": { "kind": "emoji", "emoji": "🏢" },
+          "actionType": "route",
+          "actionValue": "/map/hssc"
+        },
+        {
+          "kind": "link",
+          "id": "building_code",
+          "title": { "ko": "건물코드", "en": "Building Code", "zh": "建筑编号" },
+          "icon": { "kind": "emoji", "emoji": "🔢" },
+          "actionType": "route",
+          "actionValue": "/search"
+        },
+        {
+          "kind": "link",
+          "id": "lost_found",
+          "title": { "ko": "분실물", "en": "Lost & Found", "zh": "失物招领" },
+          "icon": { "kind": "emoji", "emoji": "🧳" },
+          "actionType": "webview",
+          "actionValue": "https://webview.skkuverse.com/skku/lostandfound"
+        },
+        {
+          "kind": "link",
+          "id": "inquiry",
+          "title": { "ko": "문의하기", "en": "Inquiry", "zh": "咨询" },
+          "icon": { "kind": "emoji", "emoji": "💬" },
+          "actionType": "external",
+          "actionValue": "https://pf.kakao.com/_cjxexdG/chat"
+        }
+      ]
+    },
+    {
+      "type": "tile_grid",
       "id": "games",
       "tiles": [
         { "kind": "game", "id": "subway-typing" },
