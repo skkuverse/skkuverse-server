@@ -7,36 +7,15 @@
       "aspectRatio": 2.25,
       "autoRotateSec": 5,
       "items": [
-        {
-          "type": "image",
-          "id": "eskara-2026-panorama",
-          "imageUrl": "https://media.skkuverse.com/home/banners/eskara-2026-panorama-b9ed45de.jpg",
-          "alt": { "ko": "2026 ESKARA 초록의 파도", "en": "ESKARA 2026" },
-          "actionType": "miniapp",
-          "actionValue": "eskara-2026"
-        },
         { "type": "default" }
       ]
     },
     {
       "type": "tile_grid",
-      "id": "main",
-      "tiles": [
-        { "kind": "miniapp", "id": "eskara-2026" },
-        { "kind": "miniapp", "id": "inja" },
-        { "kind": "miniapp", "id": "timetable" },
-        { "kind": "miniapp", "id": "playlist" }
-      ]
-    },
-    {
-      "type": "tile_grid",
       "id": "games",
-      "title": { "ko": "미니게임", "en": "Mini games", "zh": "小游戏" },
       "tiles": [
         { "kind": "game", "id": "subway-typing" },
-        { "kind": "game", "id": "wave-run" },
-        { "kind": "miniapp", "id": "mukja" },
-        { "kind": "miniapp", "id": "booth-box" }
+        { "kind": "game", "id": "wave-run" }
       ]
     }
   ]

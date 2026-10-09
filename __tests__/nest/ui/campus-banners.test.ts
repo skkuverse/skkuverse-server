@@ -28,8 +28,15 @@ function carousel(overrides: Record<string, unknown> = {}): Record<string, unkno
 
 describe("committed campus-banners.json", () => {
   it("loads, so the module import in this file did not throw", () => {
-    const [first] = getCampusSections("ko").sections;
+    const [first] = getCampusSections("ko", new Date("2026-10-02T12:00:00+09:00")).sections;
     expect(first).toMatchObject({ type: "banner_carousel", id: "campus_banners" });
+  });
+
+  it("closes every ESKARA 2026 banner when the festival ends", () => {
+    const types = (iso: string) =>
+      getCampusSections("ko", new Date(iso)).sections.map((s) => s.type);
+    expect(types("2026-10-02T23:59:59+09:00")).toEqual(["banner_carousel", "button_grid"]);
+    expect(types("2026-10-03T00:00:00+09:00")).toEqual(["button_grid"]);
   });
 });
 
