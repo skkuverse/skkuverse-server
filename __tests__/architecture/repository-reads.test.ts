@@ -83,7 +83,10 @@ function insideLoader(node: ts.Node): boolean {
   return false;
 }
 
-/** Violations as `<file>:<line> <method>`. */
+/**
+ * Violations as `<file>: <enclosing method> <read>` (`#2`, `#3` for repeats), so
+ * an allowlist entry survives edits that move lines.
+ */
 export function unboundedReads(file: string, source: string): string[] {
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true);
   const loaderNames = new Set<string>();
@@ -120,9 +123,10 @@ export function unboundedReads(file: string, source: string): string[] {
       const fn = enclosingFunctionName(call);
       return !(fn !== undefined && loaderNames.has(fn));
     })
-    .map((call) => {
-      const line = sf.getLineAndCharacterOfPosition(call.getStart(sf)).line + 1;
-      return `${file}:${line} ${calleeName(call)}`;
+    .map((call) => `${file}: ${enclosingFunctionName(call) ?? "(module)"} ${calleeName(call)}`)
+    .map((key, i, all) => {
+      const n = all.slice(0, i).filter((k) => k === key).length;
+      return n === 0 ? key : `${key} #${n + 1}`;
     });
 }
 
@@ -168,14 +172,17 @@ export class FixtureRepository {
 
   it("flags only the unbounded, uncached reads", () => {
     expect(unboundedReads("src/x/fixture.repository.ts", FIXTURE)).toEqual([
-      "src/x/fixture.repository.ts:27 countDocuments",
-      "src/x/fixture.repository.ts:30 aggregate",
+      "src/x/fixture.repository.ts: countUnbounded countDocuments",
+      "src/x/fixture.repository.ts: aggregateUnbounded aggregate",
     ]);
   });
 
   it("does not accept an options variable", () => {
-    const source = "const opts = { maxTimeMS: 1 };\nexport const f = (c: any) => c.find({}, opts);";
-    expect(unboundedReads("src/x/y.repository.ts", source)).toEqual(["src/x/y.repository.ts:2 find"]);
+    const source = "const opts = { maxTimeMS: 1 };\nexport const f = (c: any) => [c.find({}, opts), c.find({})];";
+    expect(unboundedReads("src/x/y.repository.ts", source)).toEqual([
+      "src/x/y.repository.ts: f find",
+      "src/x/y.repository.ts: f find #2",
+    ]);
   });
 });
 
