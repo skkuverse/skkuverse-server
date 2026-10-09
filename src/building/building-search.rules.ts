@@ -4,16 +4,9 @@
  * a JS predicate the specs pin ranking intent with). BuildingRepository runs
  * the pipelines these build.
  *
- * WHY THIS EXISTS AT ALL
- * ----------------------
- * The previous implementation matched spaceCd by exact EQUALITY
- * (`{ spaceCd: query }`), so "27" never found room 27101 — a user had to type
- * the whole code. Rooms surfaced only when their building name happened to
- * contain the digits ("제2공학관27동"), which meant rooms in buildings with
- * digit-free names (법학관 20401, 퇴계인문관 32727) were unreachable by any
- * prefix of their own code. It also ran with no .sort() at all, so which rows
- * fell inside the limit was arbitrary physical order that reshuffled on every
- * building-sync.
+ * The ranking is ADR 0006 (docs/decisions/0006-building-search-relevance-ranking.md):
+ * a room is found by any prefix of its own code, and the order is total, so it
+ * survives the weekly sync.
  *
  * THE RANKING SIGNAL
  * ------------------
@@ -47,8 +40,8 @@ import type { Campus } from "./building.types";
 //
 //   q=27   -> 168 strong + <=100 weak
 //   q=298  -> 801 strong + <=100 weak
-//   q=연구  ->   0 strong + <=100 weak   (was 1000 flat)
-//   q=실    ->   0 strong + <=100 weak   (was 1000 flat)
+//   q=연구  ->   0 strong + <=100 weak
+//   q=실    ->   0 strong + <=100 weak
 //
 // meta.limits.truncated still reports any cut, so a truncated tail is never
 // presented as the whole result.
@@ -156,9 +149,8 @@ function tierRegex(mode: TierMode, escaped: string): string {
  * compile-time assertion about an EXTERNAL payload, not a runtime guarantee. If
  * SKKU ever emitted `"spaceCd": 27101` as a number, one such row would make
  * $regexMatch throw and every /building/search request would 500 — for every
- * query, not just ones touching that row. The old find({spaceCd: {$regex}})
- * simply failed to match instead, so an unguarded $ifNull would convert a
- * one-row data blip into a total endpoint outage.
+ * query, not just ones touching that row. A non-string must not match rather
+ * than throw, or one bad row becomes a total endpoint outage.
  *
  * Matching the `typeof cur === "string" ? cur : ""` in readPath also keeps the
  * JS twin and this compiler from disagreeing on non-string scalars.
@@ -245,9 +237,8 @@ function scoreLocally(
  * badge structurally unable to contradict the list.
  *
  * spaceCd is a SUBSTRING match, not equality — prefix-beats-substring is
- * expressed in SPACE_TIERS, keeping the filter a simple superset. The old
- * /^[\da-zA-Z]+$/ guard is gone: escapeRegex already neutralises metacharacters,
- * and that guard was why non-alphanumeric queries never touched spaceCd.
+ * expressed in SPACE_TIERS, keeping the filter a simple superset. Any query
+ * reaches spaceCd: escapeRegex neutralises metacharacters.
  */
 function spaceKeywordFilter(query: string): Filter<SpaceDoc> {
   const re = { $regex: escapeRegex(query), $options: "i" };
@@ -271,9 +262,8 @@ function buildingKeywordFilter(query: string): Filter<BuildingDoc> {
       { "name.ko": re },
       { "name.en": re },
       { "description.ko": re },
-      // Prefix, replacing the old exact-match-when-numeric branch, so "2" lists
-      // 20/21/.../27. No /^\d+$/ gate needed — a non-numeric query simply
-      // matches no displayNo.
+      // Prefix, so "2" lists 20/21/.../27. A non-numeric query simply matches
+      // no displayNo.
       { displayNo: { $regex: `^${escaped}`, $options: "i" } },
     ],
   };
@@ -313,8 +303,7 @@ function toRankedResult<T>(facets: Array<RankedFacet<T>>): RankedSearchResult<T>
   let hssc = 0;
   let nsc = 0;
   // $group on $campus emits _id: null for a doc missing the field; such a row
-  // belongs to neither campus and is excluded from the badge, which is the same
-  // thing the old per-campus countDocuments did.
+  // belongs to neither campus and is excluded from the badge.
   for (const row of facet.counts) {
     if (row._id === "hssc") hssc = row.n;
     else if (row._id === "nsc") nsc = row.n;
@@ -338,15 +327,13 @@ function toRankedResult<T>(facets: Array<RankedFacet<T>>): RankedSearchResult<T>
 /**
  * The ranked room search pipeline.
  *
- * One $facet replaces the old three round-trips (rows + two countDocuments) and
- * removes any chance of rows and counts disagreeing. $addFields lives inside the
- * rows facet: counts/total never read _score, so scoring the whole match set
- * would be wasted work.
+ * One $facet returns the rows and the counts together, so they cannot
+ * disagree. _score is computed once before the facet; the counts never read it.
  *
  * The { _score: -1, spaceCd: 1 } sort is a TOTAL order. The spaceCd tiebreak is
  * what makes "27" emit 27101, 27102, 27104, ... and what makes the response
- * stable across the 7-day building-sync (Phase 3 deleteMany + re-upsert rewrites
- * physical document order, which the old sortless query exposed directly).
+ * stable across the 7-day building-sync (phase 3's deleteMany + re-upsert
+ * rewrites physical document order).
  */
 function spaceSearchPipeline(query: string, campus?: Campus | null): Document[] {
   const campusStage: Document[] = campus ? [{ $match: { campus } }] : [];
