@@ -39,7 +39,8 @@ function sourceFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) return sourceFiles(full);
-    return entry.name.endsWith(".ts") ? [full] : [];
+    // A spec may name a variable without the app reading it.
+    return entry.name.endsWith(".ts") && !entry.name.endsWith(".spec.ts") ? [full] : [];
   });
 }
 
