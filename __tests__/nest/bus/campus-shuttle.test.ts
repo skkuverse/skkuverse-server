@@ -18,7 +18,15 @@ const V1: Record<string, { json: string }> = JSON.parse(
 
 type SeqStop = { label: string; action: string; timing: string; stopId?: string; note?: string };
 type Service = { serviceId: string; label: string; endpoint: string; stopSequences?: Record<string, SeqStop[]> };
-type Stop = { id: string; name: string; detail?: string; coords?: LatLng; map?: unknown; photoUrl?: string };
+type Stop = {
+  id: string;
+  name: string;
+  detail?: string;
+  coords?: LatLng;
+  map?: unknown;
+  photoUrl?: string;
+  streetViewUrl?: string;
+};
 type CampusGroup = { id: string; screen: { services: Service[]; stops?: Stop[]; [k: string]: unknown } };
 
 const LANGS: SupportedLang[] = ["ko", "en", "zh"];
@@ -141,6 +149,23 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
       }
     }
     expect(sequences("campus-inja").regular!.map((st) => st.note)).toEqual(["인사캠 탑승", "N센터 앞 하차", "복지회관 하차"]);
+  });
+
+  it.each(LANGS)("Boarding stop (%s): the capture alone as its photo, and a street view link", (lang) => {
+    const boarding = new Set(
+      campus(lang).screen.services.flatMap((s) =>
+        Object.values(s.stopSequences!)
+          .flat()
+          .filter((st) => st.action === "board")
+          .map((st) => st.stopId!),
+      ),
+    );
+    expect([...boarding].sort()).toEqual(["hssc-bus-lot", "nsc-n-center", "nsc-opposite"]);
+    for (const id of boarding) {
+      const stop = stopById(id, lang);
+      expect(stop.photoUrl).toMatch(new RegExp(`^https://media\\.skkuverse\\.com/[a-z]+/stops/${id}/original-[0-9a-f]{8}\\.jpg$`));
+      expect(stop.streetViewUrl).toMatch(/^https:\/\/inapp\.map\.naver\.com\/launchApp\/panorama\/street\?/);
+    }
   });
 
   it("Drop-off stop: 복지회관 앞 has coordinates and a map", () => {
