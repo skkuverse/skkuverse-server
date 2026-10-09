@@ -43,6 +43,71 @@ const LOG_CALL =
   ":matches(CallExpression[callee.object.name='logger'], CallExpression[callee.object.property.name='log'])" +
   "[callee.property.name=/^(trace|debug|info|warn|error|fatal)$/]";
 
+// ── Import boundaries (docs/decisions/0010-server-architecture.md, D3 and D9) ──
+//
+// Each boundary block is named `boundaries/...`. Its `ignores` hold the files
+// that broke the rule when it was added (VIOLATORS). Never add one:
+// __tests__/architecture/import-boundaries.test.ts fails when a listed file no
+// longer violates, so each list only shrinks as modules are migrated.
+
+const FEATURES = ["ad", "app", "building", "bus", "health", "map", "miniapps", "notices", "ui"];
+const SHARED_DIRS = ["common", "config", "infra", "scheduling", "shared"];
+
+const GET_CLIENT_PATTERN = {
+  regex: "(?:^|/)infra/db$|^\\./db$",
+  importNames: ["getClient"],
+  message: "Only a *.repository.ts reaches Mongo: add a named query to the module's repository.",
+};
+
+const VIOLATORS = {
+  getClient: [
+    "src/ad/ad.data.ts",
+    "src/building/building.data.ts",
+    "src/bus/cache/bus-cache.service.ts",
+    "src/bus/eta/eta-store.ts",
+    "src/bus/schedule/schedule-db.ts",
+    "src/bus/schedule/schedule.service.ts",
+    "src/map/map-places.data.ts",
+    "src/miniapps/miniapps.data.ts",
+    "src/notices/notices.data.ts",
+  ],
+  features: {
+    app: ["src/app/app-feature.service.ts"],
+    map: ["src/map/map-campus-overlays.data.ts", "src/map/map-event-overlays.data.ts"],
+    ui: ["src/ui/home/home-layout.schema.ts", "src/ui/home/home-layout.ts", "src/ui/ui/ui.buslist.ts"],
+  },
+};
+
+/** One block per feature and folder depth: the regex knows how many `../` leave the module. */
+function featureBoundaryBlocks() {
+  return FEATURES.flatMap((feature) =>
+    [1, 2, 3].map((depth) => {
+      const up = "\\.\\./".repeat(depth);
+      const stay = [...SHARED_DIRS, feature].join("|");
+      return {
+        name: `boundaries/feature/${feature}/depth-${depth}`,
+        files: [`src/${feature}/${"*/".repeat(depth - 1)}*.ts`],
+        ignores: (VIOLATORS.features[feature] ?? []).filter((f) => f.split("/").length === depth + 2),
+        rules: {
+          "@typescript-eslint/no-restricted-imports": [
+            "error",
+            {
+              patterns: [
+                {
+                  regex: `^${up}(?!(?:${stay})/)[^/]+/(?!.*\\.(?:module|service)$)`,
+                  allowTypeImports: true,
+                  message:
+                    "Feature modules meet through DI: import another module's *.module or *.service, use `import type` for its types, or move a pure helper to src/shared/.",
+                },
+              ],
+            },
+          ],
+        },
+      };
+    }),
+  );
+}
+
 const jestGlobals = {
   describe: "readonly",
   it: "readonly",
@@ -126,6 +191,49 @@ module.exports = [
     },
   },
   {
+    name: "boundaries/get-client",
+    files: ["src/**/*.ts"],
+    ignores: ["src/**/*.repository.ts", "src/**/*.spec.ts", "src/infra/db.ts", ...VIOLATORS.getClient],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [GET_CLIENT_PATTERN] }],
+    },
+  },
+  ...featureBoundaryBlocks(),
+  {
+    name: "boundaries/shared",
+    files: ["src/shared/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: `^(?:\\.\\./)+(?:${FEATURES.join("|")})/`,
+              message: "src/shared/ holds pure helpers and imports no feature module.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    name: "boundaries/infra",
+    files: ["src/infra/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: `^(?:\\.\\./)+(?:common|${FEATURES.join("|")})/`,
+              message: "src/infra/ wraps the outside world and the process; it imports neither common/ nor a feature.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // LEAF modules of the catalogue ⇄ layer-set seam. `map-layerset.config.ts`
     // runs `CONFIG_FILES.map(loadOne)` in its module body and imports these two
     // to validate a festival's chips against the served catalogue; if either
@@ -142,6 +250,9 @@ module.exports = [
         "error",
         {
           patterns: [
+            // This block replaces boundaries/get-client's options for these
+            // two files, so it carries that pattern too.
+            GET_CLIENT_PATTERN,
             {
               // Both spellings: these modules are siblings now, so the import
               // that would close the cycle is written "./map-layerset.config",
