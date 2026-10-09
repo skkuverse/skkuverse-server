@@ -28,7 +28,7 @@ const FETCHED = new Date("2026-10-12T00:20:00.000Z");
 const seqLength = (serviceId: string, routeType: string) =>
   serviceId === "campus-inja" && routeType === "regular" ? 3 : undefined;
 
-let frozenInDb: Array<{ _id: string }>;
+let frozenInDb: Array<{ _id: string; offsetsSec: number[] }>;
 const coll = {
   find: jest.fn(() => ({ toArray: async () => frozenInDb })),
   bulkWrite: jest.fn(async () => ({})),
@@ -76,10 +76,20 @@ describe("writeEtas", () => {
 
   it("skips a document that is already frozen", async () => {
     const doc = liveDoc(RUN, [0, 3000, 3200], FETCHED);
-    frozenInDb = [{ _id: doc._id }];
+    frozenInDb = [{ _id: doc._id, offsetsSec: [0, 2900, 3100] }];
     await expect(writeEtas([doc], seqLength)).resolves.toEqual({ written: 0, skippedFrozen: 1 });
-    expect(coll.find).toHaveBeenCalledWith({ _id: { $in: [doc._id] }, frozen: true }, { projection: { _id: 1 } });
+    expect(coll.find).toHaveBeenCalledWith(
+      { _id: { $in: [doc._id] }, frozen: true },
+      { projection: { _id: 1, offsetsSec: 1 } },
+    );
     expect(coll.bulkWrite).not.toHaveBeenCalled();
+  });
+
+  it("replaces a frozen document for another stop count: the catalog changed since it was fixed", async () => {
+    const doc = liveDoc(RUN, [0, 3000, 3200], FETCHED);
+    frozenInDb = [{ _id: doc._id, offsetsSec: [0, 3000] }];
+    await expect(writeEtas([doc], seqLength)).resolves.toEqual({ written: 1, skippedFrozen: 0 });
+    expect(coll.bulkWrite).toHaveBeenCalledTimes(1);
   });
 
   it("rejects offsets that do not fit the sequence, before writing anything", async () => {
