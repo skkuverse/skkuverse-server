@@ -224,9 +224,34 @@ export interface StopPanorama {
   fov: number;
 }
 
-export interface StopExit {
+/**
+ * A point around a stop that its map card shows. Only `subwayExit` exists;
+ * the validator refuses any other kind, so nothing is written that a shipped
+ * client cannot draw. The id `"stop"` is reserved for the stop itself.
+ */
+export interface GuidePlace {
+  id: string;
+  kind: "subwayExit";
   number: number;
+  // Per language ("3번 출구", "Exit 3"): t() has no templating.
+  name: I18n;
   coords: LatLng;
+}
+
+/**
+ * A walk in walking order, between the stop (`"stop"`) and one of its places.
+ * Boarding stops walk to `"stop"`, drop-offs walk from it.
+ */
+export interface GuideWalk {
+  from: string;
+  to: string;
+  path: LatLng[];
+}
+
+/** What a stop's map card draws besides the stop pin. An empty guide is a pin-only card. */
+export interface StopGuide {
+  places?: GuidePlace[];
+  walks?: GuideWalk[];
 }
 
 export interface ScheduleStop {
@@ -236,14 +261,34 @@ export interface ScheduleStop {
   coords?: LatLng;
   photo?: StopPhoto;
   panorama?: StopPanorama;
-  // Set together: the subway exit riders walk from, and the path from it.
-  exit?: StopExit;
-  walkPath?: LatLng[];
+  guide?: StopGuide;
+}
+
+// --- Served stop map (`screen.stops[].map`) ---
+
+export interface StopMapMarker {
+  id: string;
+  kind: "subwayExit";
+  label: string;
+  number: number;
+  coords: LatLng;
+}
+
+export interface StopMapPath {
+  kind: "walk";
+  from: string;
+  to: string;
+  points: LatLng[];
+}
+
+export interface StopMap {
+  markers: StopMapMarker[];
+  paths: StopMapPath[];
 }
 
 /**
  * One stop of a run, in the order the bus reaches it. Either a catalog stop
- * (which brings its photo, street view and exit) or a plain label. `timing`
+ * (which brings its photo, street view and map) or a plain label. `timing`
  * says whether the time the timetable gives for this stop is the published
  * schedule or the school's estimate.
  */
