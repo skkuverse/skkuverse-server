@@ -12,7 +12,7 @@
     },
     {
       "type": "tile_grid",
-      "id": "campus_services",
+      "id": "home_tiles",
       "tiles": [
         {
           "kind": "link",
@@ -45,13 +45,7 @@
           "icon": { "kind": "emoji", "emoji": "💬" },
           "actionType": "external",
           "actionValue": "https://pf.kakao.com/_cjxexdG/chat"
-        }
-      ]
-    },
-    {
-      "type": "tile_grid",
-      "id": "games",
-      "tiles": [
+        },
         { "kind": "game", "id": "subway-typing" },
         { "kind": "game", "id": "wave-run" }
       ]
