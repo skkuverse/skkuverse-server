@@ -19,8 +19,11 @@ export const buildingSearchQuery = z.object({
   campus,
 });
 
-/** GET /building/:skkuId, read with parseInt as it always has been ("12abc" is 12). */
+/**
+ * GET /building/:skkuId, read with parseInt as it always has been: "12abc" is
+ * 12, and an id too long for a double is Infinity, which finds nothing (404).
+ */
 export const skkuIdParam = z
   .string()
   .transform((s) => parseInt(s, 10))
-  .pipe(z.number({ error: INVALID_ID }).min(1, { error: INVALID_ID }));
+  .refine((id) => !Number.isNaN(id) && id >= 1, { error: INVALID_ID });

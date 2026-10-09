@@ -25,6 +25,10 @@ describe("building schemas", () => {
     expect(skkuIdParam.parse(raw)).toBe(id);
   });
 
+  it("pass an id too long for a double as Infinity, which then finds nothing", () => {
+    expect(skkuIdParam.parse("9".repeat(400))).toBe(Infinity);
+  });
+
   it.each(["0", "-3", "abc", "", "0x10"])("reject skkuId %j", (raw) => {
     const result = skkuIdParam.safeParse(raw);
     expect(result.success).toBe(false);
