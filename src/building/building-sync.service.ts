@@ -92,7 +92,7 @@ export class BuildingSyncService {
         { event: "building.sync.buildlist_fetched", campus, count: items.length },
         "Phase 1: fetched buildList",
       );
-      listed.push(...items);
+      for (const item of items) listed.push(item);
     }
 
     if (listed.length < MIN_BUILDINGS) {
@@ -160,7 +160,7 @@ export class BuildingSyncService {
         batch.map(async (building) => {
           const detail = await this.client.fetchBuildInfo(building);
           await this.store.setAttachments(building.skkuId, detail.attachments, syncTime);
-          spaces.push(...detail.spaces);
+          for (const space of detail.spaces) spaces.push(space);
           processed++;
         }),
       );
@@ -209,7 +209,7 @@ export class BuildingSyncService {
         { event: "building.sync.spacelist_fetched", campus, count: items.length },
         "Phase 3: fetched spaceList",
       );
-      spaces.push(...items);
+      for (const item of items) spaces.push(item);
     }
 
     if (spaces.length > 0) {

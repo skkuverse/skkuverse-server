@@ -39,6 +39,12 @@ import { toWirePolygon } from "../shared/ring-winding.util";
  * a missing name keeps it off 건물이름.
  */
 
+/** The building reads this module needs; MapService passes the exported BuildingService. */
+export interface CampusSource {
+  getAllBuildings(): Promise<BuildingDoc[]>;
+  getAllCampusShapes(): Promise<CampusShapeDoc[]>;
+}
+
 /**
  * Layer ids this module emits, typed against the catalogue rather than restated
  * as bare strings.
@@ -49,12 +55,6 @@ import { toWirePolygon } from "../shared/ring-winding.util";
  * layer that fetches successfully and draws nothing, with no error anywhere. As
  * `BaseLayerId` that mismatch is a compile error instead of a blank campus.
  */
-/** The building reads this module needs; MapService passes the exported BuildingService. */
-export interface CampusSource {
-  getAllBuildings(): Promise<BuildingDoc[]>;
-  getAllCampusShapes(): Promise<CampusShapeDoc[]>;
-}
-
 const LAYER_NUMBERS: BaseLayerId = "building_numbers";
 const LAYER_LABELS: BaseLayerId = "building_labels";
 
