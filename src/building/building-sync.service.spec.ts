@@ -1,13 +1,13 @@
 /**
- * syncBuildings' failure contract. The poller registry only learns about a
- * failed run if syncBuildings rejects, so:
+ * BuildingSyncService.run()'s failure contract. The poller registry only learns
+ * about a failed run if run() rejects, so:
  *  - phase 1 failing (a fetch error, or a buildList too short to trust) stops
  *    the run and rejects;
  *  - phase 2 or phase 3 failing lets the later phases and clearCache() run,
  *    then rejects once with an AggregateError naming every failed phase;
- *  - syncBuildings logs no error line itself — the registry does.
+ *  - run() logs no error line itself — the registry does.
  * axios, the building collections and the logger are mocked, so neither SKKU
- * nor MongoDB is reached.
+ * nor MongoDB is reached; the client and the sync repository are real.
  */
 
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
@@ -33,14 +33,24 @@ const mockDb = {
   spaces: fakeCollection(),
   clearCache: jest.fn(),
 };
-jest.mock("./building.data", () => ({
-  clearCache: () => mockDb.clearCache(),
-  getRawBuildingsCollection: () => mockDb.raw,
-  getBuildingsCollection: () => mockDb.enriched,
-  getSpacesCollection: () => mockDb.spaces,
+jest.mock("../infra/db", () => ({
+  getClient: () => ({
+    db: () => ({
+      collection: (name: string) =>
+        ({ buildings_raw: mockDb.raw, buildings: mockDb.enriched, spaces: mockDb.spaces })[name],
+    }),
+  }),
 }));
 
-import { syncBuildings } from "./building.sync";
+import { BuildingSyncRepository } from "./building-sync.repository";
+import { BuildingSyncService } from "./building-sync.service";
+import { BuildingClient } from "./building.client";
+import type { BuildingRepository } from "./building.repository";
+
+const service = new BuildingSyncService(new BuildingClient(), new BuildingSyncRepository(), {
+  clearCache: () => mockDb.clearCache(),
+} as unknown as BuildingRepository);
+const syncBuildings = (): Promise<void> => service.run();
 
 type Mode = "buildList" | "buildInfo" | "spaceList";
 
@@ -92,7 +102,7 @@ const loggedEvents = (mock: jest.Mock): string[] =>
 /** The rejection of a run that must fail. */
 async function failureOf(run: Promise<void>): Promise<AggregateError> {
   const outcome = await run.then(
-    () => new Error("expected syncBuildings to reject"),
+    () => new Error("expected run() to reject"),
     (err: unknown) => err,
   );
   expect(outcome).toBeInstanceOf(AggregateError);
@@ -106,7 +116,7 @@ beforeEach(() => {
   mockDb.spaces = fakeCollection();
 });
 
-describe("syncBuildings", () => {
+describe("BuildingSyncService.run", () => {
   it("resolves after a clean run, clears the cache and logs building.sync.completed", async () => {
     skkuApi();
 

@@ -46,12 +46,12 @@ import {
   SPACE_WEAK_LIMIT,
   buildingKeywordFilter,
   scoreLocally,
-  searchSpaces,
   spaceKeywordFilter,
   tierRegex,
   tiersToScoreExpr,
   toRankedResult,
-} from "./building.search";
+} from "./building-search.rules";
+import { BuildingRepository } from "./building.repository";
 
 /** Minimal room shape for scoring — only the paths the tier table reads. */
 function room(
@@ -246,7 +246,7 @@ describe("searchSpaces pipeline assembly", () => {
           ]),
       };
     });
-    return searchSpaces("27", campus).then(() => captured);
+    return new BuildingRepository().searchSpaces("27", campus).then(() => captured);
   }
 
   beforeEach(() => {

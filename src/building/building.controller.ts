@@ -2,11 +2,11 @@ import { Controller, Get, Param, Query, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { t } from "../infra/i18n";
 import type { SupportedLang } from "../infra/types";
-import { toDisplayNo } from "./building.data";
+import { toDisplayNo } from "./building.rules";
 import {
   BUILDING_SEARCH_LIMIT,
   SPACE_SEARCH_LIMIT,
-} from "./building.search";
+} from "./building-search.rules";
 import type { BuildingDoc, SpaceDoc } from "./building.document";
 import type { Campus } from "./building.types";
 import { AppError } from "../common/app.error";

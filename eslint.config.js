@@ -62,7 +62,6 @@ const GET_CLIENT_PATTERN = {
 const VIOLATORS = {
   getClient: [
     "src/ad/ad.data.ts",
-    "src/building/building.data.ts",
     "src/bus/cache/bus-cache.service.ts",
     "src/bus/eta/eta-store.ts",
     "src/bus/schedule/schedule-db.ts",

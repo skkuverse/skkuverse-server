@@ -36,18 +36,22 @@ jest.mock("../infra/db", () => ({
   })),
 }));
 
-import {
-  clearCache,
-  ensureIndexes,
-  getAllBuildings,
-  getAllCampusShapes,
-} from "./building.data";
+import { BuildingRepository } from "./building.repository";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 
 const HSSC = { _id: 1, campus: "hssc" };
 const NSC = { _id: 2, campus: "nsc" };
 const SHAPE = { _id: "wall", order: 1 };
 const FIVE_MIN = 5 * 60 * 1000;
+
+const repository = new BuildingRepository();
+const { clearCache, getAllBuildings, getAllCampusShapes } = {
+  clearCache: () => repository.clearCache(),
+  getAllBuildings: (...args: Parameters<BuildingRepository["getAllBuildings"]>) =>
+    repository.getAllBuildings(...args),
+  getAllCampusShapes: () => repository.getAllCampusShapes(),
+};
+const ensureIndexes = () => repository.ensureIndexes();
 
 let clock = 1_000_000;
 beforeEach(() => {
@@ -144,7 +148,7 @@ describe("getAllCampusShapes", () => {
  * call against `buildings` — and an index on the wrong collection is exactly
  * the mistake that is silent in production.
  */
-describe("building.data ensureIndexes", () => {
+describe("BuildingRepository.ensureIndexes", () => {
   it("creates a 2dsphere on campus_shapes.geometry — the insert-time ring guard", async () => {
     await ensureIndexes();
 
@@ -174,6 +178,23 @@ describe("building.data ensureIndexes", () => {
       "spaces",
       { spaceCd: 1, buildNo: 1, campus: 1 },
       { unique: true },
+    );
+  });
+});
+
+describe("BuildingRepository.onModuleInit", () => {
+  it("ensures the indexes and logs it", async () => {
+    await expect(repository.onModuleInit()).resolves.toBeUndefined();
+    expect(createIndex).toHaveBeenCalled();
+    expect(mockLogger.info).toHaveBeenCalledWith({ event: "building.indexes.ensured" }, expect.any(String));
+  });
+
+  it("swallows an index failure (warn-and-continue, no throw)", async () => {
+    createIndex.mockRejectedValueOnce(new Error("no db"));
+    await expect(repository.onModuleInit()).resolves.toBeUndefined();
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "building.indexes.failed" }),
+      expect.any(String),
     );
   });
 });
