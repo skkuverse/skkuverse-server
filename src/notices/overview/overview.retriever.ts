@@ -48,6 +48,7 @@ const CANDIDATE_PROJECTION = Object.freeze({
   contentText: 1,
   contentHash: 1,
   summaryContentHash: 1,
+  summaryApplication: 1,
 });
 
 export interface OverviewPipelineInput {

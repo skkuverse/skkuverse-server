@@ -55,4 +55,14 @@ describe("toAiNotice", () => {
     expect(sent).not.toHaveProperty("sourceId");
     expect(sent).not.toHaveProperty("articleNo");
   });
+
+  it("passes summaryApplication through, null when the notice has none", () => {
+    const application = {
+      status: "dated",
+      windows: [{ startAt: null, endAt: "2026-10-14T00:00:00+09:00", openEnded: false }],
+    };
+    const v2 = toAiNotice(candidate({ summaryApplication: application }));
+    expect(v2.summaryApplication).toEqual(application);
+    expect(toAiNotice(candidate()).summaryApplication).toBeNull();
+  });
 });
