@@ -153,6 +153,9 @@ export interface ServiceConfigEntry {
   // display:"noService" (see holiday-calendar.ts). Default off so adding a
   // new shuttle never silently suppresses its schedule.
   respectsKoreanHolidays?: boolean;
+  // Opt-in to computed arrival estimates (src/bus/eta/), per route type. Each
+  // one's stop sequence is checked when the stop catalog loads.
+  eta?: { routeTypes: string[] };
 }
 export type ServiceConfigMap = Record<string, ServiceConfigEntry>;
 

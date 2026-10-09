@@ -21,6 +21,7 @@ A local server holds credentials that reach real people. The dev Doppler config 
 | `RATE_LIMIT` | `off` | `on` | All four limiters skip. Locally every simulator request comes from one loopback address. |
 | `BUILDING_SYNC` | `off` | `on` | The `building-sync` poller is not registered. Its warm-up crawls all of `campusMap.do` and rewrites `skkumap_dev` on every boot, and nodemon reboots on every save. |
 | `CACHE` | `off` | `on` | A change to a `_dev` database shows on the next request. Every `createCachedLoader` (buildings, campus shapes, the event map, the mini-app feed), the bus timetable cache and the ad placement cache load on every call, and every `Cache-Control` is rewritten to `no-store` so the phone's HTTP cache never answers for the server. |
+| `SHUTTLE_ETA` | `off` | `on` | No NAVER Directions or TMAP call: the 인자셔틀 arrival-estimate jobs, which use metered keys, do not run. Smart schedules still apply whatever estimates `bus_campus_dev.shuttle_eta` holds. Production may set it `off`. |
 
 `CACHE=off` leaves three caches on. The AI overview cache saves an LLM call per request; its key changes when the crawler rewrites a notice's `contentHash`, but a hand edit of a body or `summary*` field in `_dev` stays cached for 30 minutes (restart to drop it). The mini-app manifest cache holds files from production origins, not `_dev` data. The 5-second `bus_cache` read cache is shorter than the app's poll interval.
 

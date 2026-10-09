@@ -165,7 +165,7 @@ async function bootstrap(): Promise<void> {
       db: config.mongo.dbName,
       api: config.useProdApi ? "PROD" : "DEV",
       role,
-      // push / rateLimit / buildingSync / cache as resolved (infra/runtime-switches.ts)
+      // push / rateLimit / buildingSync / cache / shuttleEta as resolved (infra/runtime-switches.ts)
       ...config.getSideEffectsSummary(),
     },
     "Server started (NestJS)",

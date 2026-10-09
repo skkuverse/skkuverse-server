@@ -14,6 +14,7 @@
  *   | RATE_LIMIT      | on         | off         | on   |
  *   | BUILDING_SYNC   | on         | off         | on   |
  *   | CACHE           | on         | off         | on   |
+ *   | SHUTTLE_ETA     | on         | off         | on   |
  *
  * CACHE is not a side effect but the same kind of local-only difference: with
  * it off, a change to a _dev database shows on the next request instead of
@@ -23,6 +24,11 @@
  * answering for the server. The AI overview and mini-app manifest caches stay
  * on: one saves an LLM call per request, the other a fetch to a production
  * origin, and neither holds _dev data.
+ *
+ * SHUTTLE_ETA gates the shuttle arrival-estimate pollers, which call NAVER
+ * Directions and TMAP with metered keys. Off, no directions call is made;
+ * serving still applies whatever estimates are stored. Production may turn it
+ * off, since that only removes outbound calls.
  *
  * An explicit value overrides the default, within these refusals:
  *
@@ -55,6 +61,7 @@ export interface RuntimeSwitches {
   rateLimitEnabled: boolean;
   buildingSyncEnabled: boolean;
   cacheEnabled: boolean;
+  shuttleEtaEnabled: boolean;
 }
 
 export const RUNTIME_SWITCH_NAMES = [
@@ -62,6 +69,7 @@ export const RUNTIME_SWITCH_NAMES = [
   "RATE_LIMIT",
   "BUILDING_SYNC",
   "CACHE",
+  "SHUTTLE_ETA",
 ] as const;
 
 /** Same reading as config.ts: anything but production or test is development. */
@@ -120,12 +128,16 @@ export function resolveRuntimeSwitches(
     cache = "on";
   }
 
+  const shuttleEta =
+    readEnum(env, "SHUTTLE_ETA", ["on", "off"] as const, errors) ?? (local ? "off" : "on");
+
   return {
     switches: {
       pushDelivery,
       rateLimitEnabled: rateLimit === "on",
       buildingSyncEnabled: buildingSync === "on",
       cacheEnabled: cache === "on",
+      shuttleEtaEnabled: shuttleEta === "on",
     },
     errors,
   };
