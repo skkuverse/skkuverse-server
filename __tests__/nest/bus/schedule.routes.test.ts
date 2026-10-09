@@ -292,13 +292,13 @@ describe("GET …/smart with arrival estimates", () => {
         label: null,
         notices: [],
         schedule: [
-          { index: 1, time: "07:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["07:00", null, null] },
-          { index: 2, time: "10:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["10:00", null, null] },
+          { index: 1, time: "07:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["07:00", null] },
+          { index: 2, time: "10:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["10:00", null] },
         ],
       },
     ],
   });
-  const estimate = (source: ServedEstimate["source"], offsetsSec = [0, 3060, 3180]): Map<string, ServedEstimate> =>
+  const estimate = (source: ServedEstimate["source"], offsetsSec = [0, 3060]): Map<string, ServedEstimate> =>
     new Map([[runKey("campus-inja", "regular", "2026-10-12", "10:00"), { offsetsSec, source, updatedAt: FETCHED }]]);
 
   beforeAll(async () => {
@@ -321,9 +321,9 @@ describe("GET …/smart with arrival estimates", () => {
     estimates.mockResolvedValue(estimate(source));
     const res = await request(server).get("/bus/schedule/data/campus-inja/smart");
     const [early, run] = res.body.data.days[0].schedule;
-    expect(run.stopTimes).toEqual(["10:00", "10:51", "10:53"]);
+    expect(run.stopTimes).toEqual(["10:00", "10:51"]);
     expect(run.eta).toEqual({ source, updatedAt: "2026-10-12T00:20:00.000Z" });
-    expect(early.stopTimes).toEqual(["07:00", null, null]);
+    expect(early.stopTimes).toEqual(["07:00", null]);
     expect(early).not.toHaveProperty("eta");
   });
 
@@ -332,9 +332,9 @@ describe("GET …/smart with arrival estimates", () => {
     estimates.mockResolvedValue(estimate("live"));
     const first = await request(server).get("/bus/schedule/data/campus-inja/smart");
     smart.mockResolvedValue(inja());
-    estimates.mockResolvedValue(estimate("live", [0, 3360, 3480]));
+    estimates.mockResolvedValue(estimate("live", [0, 3360]));
     const second = await request(server).get("/bus/schedule/data/campus-inja/smart");
-    expect(second.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", "10:56", "10:58"]);
+    expect(second.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", "10:56"]);
     expect(second.headers.etag).not.toBe(first.headers.etag);
     expect(second.headers["cache-control"]).toBe("public, max-age=60");
   });
@@ -358,7 +358,7 @@ describe("GET …/smart with arrival estimates", () => {
     estimates.mockRejectedValue(new Error("connection pool closed"));
     const res = await request(server).get("/bus/schedule/data/campus-inja/smart");
     expect(res.status).toBe(200);
-    expect(res.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", null, null]);
+    expect(res.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", null]);
     expect(res.body.data.days[0].schedule[1]).not.toHaveProperty("eta");
   });
 
@@ -373,8 +373,9 @@ describe("GET …/smart with arrival estimates", () => {
 
   it("ignores an estimate whose offsets no longer fit the sequence", async () => {
     smart.mockResolvedValue(inja());
-    estimates.mockResolvedValue(estimate("live", [0, 3060]));
+    // Fetched while the sequence had three stops.
+    estimates.mockResolvedValue(estimate("live", [0, 3060, 3180]));
     const res = await request(server).get("/bus/schedule/data/campus-inja/smart");
-    expect(res.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", null, null]);
+    expect(res.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", null]);
   });
 });

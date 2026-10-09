@@ -382,7 +382,7 @@ describe("validateStopCatalog", () => {
     it("leaves the commute shuttle out: its 등교 sequences end at a label stop, so opting it in would fail", () => {
       const optIns = etaOptIns(serviceConfig);
       expect([...optIns.keys()].filter((id) => id.startsWith("commute-"))).toEqual([]);
-      expect(Object.fromEntries(optIns)).toEqual({ "campus-inja": ["regular"], "campus-jain": ["regular", "hakbu"] });
+      expect(Object.fromEntries(optIns)).toEqual({ "campus-inja": ["regular", "hakbu"], "campus-jain": ["regular", "hakbu"] });
       const allServices = new Set(Object.keys(serviceConfig));
       const commuteIn = new Map([["commute-jeongja", ["up"]]]);
       expect(validateStopCatalog(stopCatalog, allServices, commuteIn)).toEqual([

@@ -7,7 +7,7 @@ import { BaselineEtaPoller } from "./baseline-eta-poller";
 import { DailyCap } from "./daily-cap";
 import { runsOn, upcomingRuns } from "./eta-runs";
 import { etaSequences, sequenceLengths } from "./eta-sequences";
-import { ensureEtaIndexes, readEtas, writeEtas } from "./eta-store";
+import { ensureEtaIndexes, readEtas, writeEtas, type ShuttleEtaDoc } from "./eta-store";
 import { LiveEtaPoller } from "./live-eta-poller";
 import { fetchNaverOffsets } from "./naver-directions";
 import { fetchTmapOffsets } from "./tmap-prediction";
@@ -16,6 +16,22 @@ const LIVE_INTERVAL_MS = 60_000;
 const BASELINE_INTERVAL_MS = 5 * 60_000;
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * The stored documents the pollers decide from, without those whose stop count
+ * no longer fits their sequence (the catalog changed since they were fetched).
+ * Serving already ignores them (design D9); dropping them here makes the
+ * pollers refetch at once instead of waiting for the next 04:00 or departure.
+ */
+export async function readFitting(
+  serviceIds: string[],
+  dates: string[],
+  lengths: (serviceId: string, routeType: string) => number | undefined,
+): Promise<ShuttleEtaDoc[]> {
+  return (await readEtas(serviceIds, dates)).filter(
+    (d) => d.offsetsSec.length === lengths(d.serviceId, d.routeType),
+  );
+}
 
 /**
  * Registers the two arrival-estimate pollers (design D10) with the registry,
@@ -48,7 +64,7 @@ export class ShuttleEtaPollerService implements OnModuleInit {
     const sequences = etaSequences();
     const lengths = sequenceLengths(sequences);
     const store = {
-      readEtas,
+      readEtas: (serviceIds: string[], dates: string[]) => readFitting(serviceIds, dates, lengths),
       writeEtas: (docs: Parameters<typeof writeEtas>[0]) => writeEtas(docs, lengths),
     };
 

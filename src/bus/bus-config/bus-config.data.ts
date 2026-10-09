@@ -237,7 +237,8 @@ const COMMUTE_SERVICE_IDS = [
 ] as const;
 
 /**
- * 자과캠 통학셔틀 (pilot, 2026-10-19..2026-12-18): one service per route, runs
+ * 자과캠 통학셔틀 (pilot, 2026-10-20..2026-12-18; the school moved the first
+ * day from Monday 10-19 to Tuesday 10-20): one service per route, runs
  * typed by direction (`up` 등교, `down` 하교). Each run is one entry; its
  * `stopTimes` give the time at every stop of the service's sequence for that
  * direction (boarding stops, then where riders get off), so the 강남·양재 bus is
@@ -251,7 +252,7 @@ function buildCommuteGroup(lang: SupportedLang) {
     id: "commute",
     screenType: "schedule",
     label: t("busconfig.label.commute", lang),
-    visibility: dateRange("2026-10-19", "2026-12-18"),
+    visibility: dateRange("2026-10-20", "2026-12-18"),
     card: {
       themeColor: "003626",
       iconType: "shuttle",

@@ -112,11 +112,13 @@ export async function writeEtas(
 
   const coll = collection();
   // One poller process writes, so reading first is enough to keep a fixed value fixed.
+  // A fixed value for another stop count (the catalog changed since) is no
+  // longer served, so it may be replaced.
   const frozen = await coll
-    .find({ _id: { $in: docs.map((d) => d._id) }, frozen: true }, { projection: { _id: 1 } })
+    .find({ _id: { $in: docs.map((d) => d._id) }, frozen: true }, { projection: { _id: 1, offsetsSec: 1 } })
     .toArray();
-  const frozenIds = new Set(frozen.map((d) => d._id));
-  const toWrite = docs.filter((d) => !frozenIds.has(d._id));
+  const frozenLength = new Map(frozen.map((d) => [d._id, d.offsetsSec.length]));
+  const toWrite = docs.filter((d) => frozenLength.get(d._id) !== d.offsetsSec.length);
   if (toWrite.length > 0) {
     await coll.bulkWrite(
       toWrite.map((d) => ({ replaceOne: { filter: { _id: d._id }, replacement: d, upsert: true } })),

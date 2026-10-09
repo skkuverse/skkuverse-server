@@ -1,7 +1,8 @@
 /**
  * Wiring of the arrival-estimate pollers: SHUTTLE_ETA gates registration, the
- * shuttle_eta indexes are ensured warn-and-continue, and the opted-in
- * sequences carry their stops' coordinates.
+ * shuttle_eta indexes are ensured warn-and-continue, the opted-in sequences
+ * carry their stops' coordinates, and documents for an old stop count are
+ * dropped before the pollers decide.
  */
 jest.mock("../../../src/infra/logger", () => ({
   info: jest.fn(),
@@ -18,13 +19,14 @@ jest.mock("../../../src/bus/eta/eta-store", () => ({
 
 import config from "../../../src/infra/config";
 import logger from "../../../src/infra/logger";
-import { ensureEtaIndexes } from "../../../src/bus/eta/eta-store";
+import { ensureEtaIndexes, readEtas } from "../../../src/bus/eta/eta-store";
 import { etaSequences, sequenceLengths } from "../../../src/bus/eta/eta-sequences";
-import { ShuttleEtaPollerService } from "../../../src/bus/eta/shuttle-eta-poller.service";
+import { readFitting, ShuttleEtaPollerService } from "../../../src/bus/eta/shuttle-eta-poller.service";
 import type { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
 import type { ScheduleService } from "../../../src/bus/schedule/schedule.service";
 
 const mockedEnsure = ensureEtaIndexes as jest.Mock;
+const mockedRead = readEtas as jest.Mock;
 const shuttleEta = config.shuttleEta as { enabled: boolean };
 
 function build() {
@@ -79,17 +81,30 @@ describe("etaSequences", () => {
   it("lists the opted-in route types with their stops' coordinates, in order", () => {
     const seqs = etaSequences();
     expect(seqs.map((s) => `${s.serviceId}.${s.routeType}:${s.stops.length}`)).toEqual([
-      "campus-inja.regular:3",
+      "campus-inja.regular:2",
+      "campus-inja.hakbu:2",
       "campus-jain.regular:2",
       "campus-jain.hakbu:2",
     ]);
     expect(seqs[0]!.stops).toEqual([
       { lat: 37.587367, lng: 126.993643 },
       { lat: 37.292298, lng: 126.975057 },
-      { lat: 37.293999, lng: 126.973183 },
     ]);
     const length = sequenceLengths(seqs);
     expect(length("campus-jain", "hakbu")).toBe(2);
-    expect(length("campus-inja", "hakbu")).toBeUndefined();
+    expect(length("commute-jamsil", "down")).toBeUndefined();
+  });
+});
+
+describe("readFitting", () => {
+  it("drops stored documents whose stop count no longer fits their sequence", async () => {
+    const doc = (routeType: string, offsetsSec: number[]) => ({ serviceId: "campus-inja", routeType, offsetsSec });
+    const stale = doc("regular", [0, 4500, 4620]); // fetched while the sequence had three stops
+    const fresh = doc("regular", [0, 4500]);
+    const hakbu = doc("hakbu", [0, 4400]);
+    mockedRead.mockResolvedValue([stale, fresh, hakbu]);
+    const lengths = (_s: string, routeType: string) => (routeType === "regular" || routeType === "hakbu" ? 2 : undefined);
+    await expect(readFitting(["campus-inja"], ["2026-10-12"], lengths)).resolves.toEqual([fresh, hakbu]);
+    expect(mockedRead).toHaveBeenCalledWith(["campus-inja"], ["2026-10-12"]);
   });
 });
