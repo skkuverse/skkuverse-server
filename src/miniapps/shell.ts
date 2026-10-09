@@ -1,3 +1,4 @@
+import { isRecord } from "../shared/object.util";
 /**
  * The shell a miniapp asks the app to draw around it.
  *
@@ -64,10 +65,6 @@ const BARS: ReadonlySet<string> = new Set<ShellBar>(["top", "bottom", "none"]);
 const HEADERS: ReadonlySet<string> = new Set<ShellHeader>(["opaque", "overlay"]);
 const STATUS_BARS: ReadonlySet<string> = new Set<ShellStatusBar>(["dark", "light"]);
 const HEX = /^#[0-9A-Fa-f]{6}$/;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function pick<T extends string>(value: unknown, allowed: ReadonlySet<string>): T | undefined {
   return typeof value === "string" && allowed.has(value) ? (value as T) : undefined;

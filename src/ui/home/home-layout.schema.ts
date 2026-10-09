@@ -20,6 +20,7 @@ import {
   type HomeActionType,
   type HomeLayoutRaw,
 } from "./home-layout.types";
+import { isRecord } from "../../shared/object.util";
 
 const SLUG_RE = /^[a-z0-9_-]+$/;
 const ABSOLUTE_HTTPS_RE = /^https:\/\/[^\s/][^\s]*$/;
@@ -77,10 +78,6 @@ function labelled(label: string, check: () => void): void {
   }
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function assertKnownKeys(where: string, value: Record<string, unknown>, allowed: Set<string>): void {
   for (const key of Object.keys(value)) {
     if (!allowed.has(key)) fail(`unknown key "${key}" in ${where}`);
@@ -88,7 +85,7 @@ function assertKnownKeys(where: string, value: Record<string, unknown>, allowed:
 }
 
 function assertI18n(where: string, value: unknown): asserts value is I18n {
-  if (!isObject(value)) fail(`${where} must be an object of languages`);
+  if (!isRecord(value)) fail(`${where} must be an object of languages`);
   assertKnownKeys(where, value, I18N_KEYS);
   for (const [lang, text] of Object.entries(value)) {
     if (typeof text !== "string" || text.trim() === "") {
@@ -180,7 +177,7 @@ function assertCarousel(
   let defaults = 0;
   items.forEach((item: unknown, i) => {
     const at = `${where}.items[${i}]`;
-    if (!isObject(item)) fail(`${at} must be an object`);
+    if (!isRecord(item)) fail(`${at} must be an object`);
     if (item.type === "default" && allowDefault) {
       assertKnownKeys(at, item, DEFAULT_KEYS);
       defaults += 1;
@@ -198,7 +195,7 @@ function assertCarousel(
 
 /** A link tile's icon: the registry's `emoji` or `media` logo spelling. */
 function assertIcon(where: string, icon: unknown): void {
-  if (!isObject(icon)) fail(`${where} must be an object`);
+  if (!isRecord(icon)) fail(`${where} must be an object`);
   if (icon.kind === "emoji") {
     assertKnownKeys(where, icon, EMOJI_ICON_KEYS);
     if (typeof icon.emoji !== "string" || !isSingleEmoji(icon.emoji)) {
@@ -217,7 +214,7 @@ function assertTile(
   tile: unknown,
   registeredMiniApps: ReadonlySet<string>,
 ): asserts tile is Record<string, unknown> & { id: string } {
-  if (!isObject(tile)) fail(`${where} must be an object`);
+  if (!isRecord(tile)) fail(`${where} must be an object`);
   if (typeof tile.id !== "string" || !SLUG_RE.test(tile.id)) fail(`${where}.id must be a slug`);
   switch (tile.kind) {
     case "miniapp":
@@ -303,7 +300,7 @@ export function assertValidHomeLayout(
 }
 
 function assertHomeLayout(raw: unknown, registeredMiniApps: ReadonlySet<string>): void {
-  if (!isObject(raw)) fail("root must be an object");
+  if (!isRecord(raw)) fail("root must be an object");
   assertKnownKeys("root", raw, LAYOUT_KEYS);
   if (raw.version !== HOME_LAYOUT_VERSION) fail(`version must be ${HOME_LAYOUT_VERSION}`);
   if (!Array.isArray(raw.sections)) fail("sections must be an array");
@@ -312,7 +309,7 @@ function assertHomeLayout(raw: unknown, registeredMiniApps: ReadonlySet<string>)
   const placedTiles = new Set<string>();
   raw.sections.forEach((section: unknown, i) => {
     const where = `sections[${i}]`;
-    if (!isObject(section)) fail(`${where} must be an object`);
+    if (!isRecord(section)) fail(`${where} must be an object`);
     assertUniqueId(where, section.id, ids);
     if (section.type === "banner_carousel") {
       assertCarousel(where, section, ids, true);
@@ -333,7 +330,7 @@ function assertHomeLayout(raw: unknown, registeredMiniApps: ReadonlySet<string>)
  */
 export function assertValidCampusCarousel(raw: unknown): asserts raw is CampusBannerCarouselRaw {
   labelled("campus banners", () => {
-    if (!isObject(raw)) fail("root must be an object");
+    if (!isRecord(raw)) fail("root must be an object");
     if (raw.type !== "banner_carousel") fail('type must be "banner_carousel"');
     const ids = new Set<string>();
     assertUniqueId("root", raw.id, ids);

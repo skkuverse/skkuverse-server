@@ -25,6 +25,7 @@ import { isMediaUrl } from "../../infra/media-url";
 import { SUPPORTED_LANGS } from "../../infra/types";
 import serviceConfig from "./service-config";
 import type { LatLng, ScheduleStopCatalog } from "../types";
+import { isRecord } from "../../shared/object.util";
 
 const isTest = process.env.NODE_ENV === "test";
 
@@ -35,17 +36,13 @@ const MAX_ETA_STOPS = 7;
 // The walk end that means the stop itself; never a place id.
 const STOP_END = "stop";
 
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
 function isNonBlank(v: unknown): v is string {
   return typeof v === "string" && v.trim() !== "";
 }
 
 /** `ko` required; `en`/`zh` optional but never blank when present. */
 function i18nError(v: unknown): string | null {
-  if (!isPlainObject(v)) return "must be an object with a Korean text";
+  if (!isRecord(v)) return "must be an object with a Korean text";
   if (!isNonBlank(v.ko)) return "has no Korean text";
   for (const lang of ["en", "zh"]) {
     if (lang in v && !isNonBlank(v[lang])) return `has a blank ${lang} text`;
@@ -56,7 +53,7 @@ function i18nError(v: unknown): string | null {
 /** South Korea, generously: a swapped lat/lng lands far outside it. */
 function isKoreanLatLng(v: unknown): v is LatLng {
   return (
-    isPlainObject(v) &&
+    isRecord(v) &&
     typeof v.lat === "number" &&
     typeof v.lng === "number" &&
     v.lat >= 33 &&
@@ -101,7 +98,7 @@ function stopErrors(stop: Record<string, unknown>, label: string): string[] {
 
   if ("photo" in stop) {
     const photo = stop.photo;
-    if (!isPlainObject(photo)) {
+    if (!isRecord(photo)) {
       errors.push(`${label}: photo must be an object`);
     } else {
       if (!("original" in photo)) {
@@ -110,7 +107,7 @@ function stopErrors(stop: Record<string, unknown>, label: string): string[] {
         errors.push(`${label}: photo.original is not a media.skkuverse.com URL`);
       }
       if ("localized" in photo) {
-        if (!isPlainObject(photo.localized)) {
+        if (!isRecord(photo.localized)) {
           errors.push(`${label}: photo.localized must be an object`);
         } else {
           for (const [lang, url] of Object.entries(photo.localized)) {
@@ -127,7 +124,7 @@ function stopErrors(stop: Record<string, unknown>, label: string): string[] {
 
   if ("panorama" in stop) {
     const p = stop.panorama;
-    if (!isPlainObject(p)) {
+    if (!isRecord(p)) {
       errors.push(`${label}: panorama must be an object`);
     } else {
       if (typeof p.panoId !== "string" || !PANO_ID_RE.test(p.panoId)) {
@@ -155,7 +152,7 @@ function stopErrors(stop: Record<string, unknown>, label: string): string[] {
 function guideErrors(stop: Record<string, unknown>, label: string): string[] {
   const errors: string[] = [];
   const guide = stop.guide;
-  if (!isPlainObject(guide)) return [`${label}: guide must be an object`];
+  if (!isRecord(guide)) return [`${label}: guide must be an object`];
   // A map with no position to center on is not one.
   if (!isKoreanLatLng(stop.coords)) errors.push(`${label}: guide needs the stop's coordinates`);
 
@@ -168,7 +165,7 @@ function guideErrors(stop: Record<string, unknown>, label: string): string[] {
       const seen = new Set<string>();
       guide.places.forEach((p, i) => {
         const at = `${label}: guide.places[${i}]`;
-        if (!isPlainObject(p)) {
+        if (!isRecord(p)) {
           errors.push(`${at} must be an object`);
           return;
         }
@@ -193,7 +190,7 @@ function guideErrors(stop: Record<string, unknown>, label: string): string[] {
     } else {
       guide.walks.forEach((w, i) => {
         const at = `${label}: guide.walks[${i}]`;
-        if (!isPlainObject(w)) {
+        if (!isRecord(w)) {
           errors.push(`${at} must be an object`);
           return;
         }
@@ -239,10 +236,10 @@ function walkDirections(stops: unknown[]): { toStop: Set<string>; fromStop: Set<
   const toStop = new Set<string>();
   const fromStop = new Set<string>();
   for (const s of stops) {
-    if (!isPlainObject(s) || !isNonBlank(s.id) || !isPlainObject(s.guide) || !Array.isArray(s.guide.walks)) continue;
+    if (!isRecord(s) || !isNonBlank(s.id) || !isRecord(s.guide) || !Array.isArray(s.guide.walks)) continue;
     for (const w of s.guide.walks) {
       // A walk without exactly one stop end is already reported by guideErrors.
-      if (!isPlainObject(w) || (w.to === STOP_END) === (w.from === STOP_END)) continue;
+      if (!isRecord(w) || (w.to === STOP_END) === (w.from === STOP_END)) continue;
       if (w.to === STOP_END) toStop.add(s.id);
       else fromStop.add(s.id);
     }
@@ -263,13 +260,13 @@ function etaErrors(
   const errors: string[] = [];
   const coordsById = new Map<string, boolean>();
   for (const s of stops) {
-    if (isPlainObject(s) && isNonBlank(s.id)) coordsById.set(s.id, isKoreanLatLng(s.coords));
+    if (isRecord(s) && isNonBlank(s.id)) coordsById.set(s.id, isKoreanLatLng(s.coords));
   }
   for (const [serviceId, routeTypes] of etaRouteTypes) {
     for (const routeType of routeTypes) {
       const at = `sequences ${serviceId}.${routeType}`;
       const byRouteType = sequences[serviceId];
-      const seq = isPlainObject(byRouteType) ? byRouteType[routeType] : undefined;
+      const seq = isRecord(byRouteType) ? byRouteType[routeType] : undefined;
       if (!Array.isArray(seq)) {
         errors.push(`${at}: opted in to estimates but has no stop sequence`);
         continue;
@@ -278,7 +275,7 @@ function etaErrors(
         errors.push(`${at}: opted in to estimates with ${seq.length} stops, more than ${MAX_ETA_STOPS}`);
       }
       seq.forEach((st, i) => {
-        if (!isPlainObject(st)) return;
+        if (!isRecord(st)) return;
         if (typeof st.stopId !== "string") {
           errors.push(`${at}[${i}]: opted in to estimates, but is a label, not a catalog stop with coordinates`);
         } else if (coordsById.get(st.stopId) === false) {
@@ -286,10 +283,10 @@ function etaErrors(
         }
       });
       const first = seq[0];
-      if (isPlainObject(first) && first.timing !== "scheduled") {
+      if (isRecord(first) && first.timing !== "scheduled") {
         errors.push(`${at}: opted in to estimates, but its first stop is not scheduled`);
       }
-      if (!seq.some((st) => isPlainObject(st) && st.timing === "estimated")) {
+      if (!seq.some((st) => isRecord(st) && st.timing === "estimated")) {
         errors.push(`${at}: opted in to estimates, but has no estimated stop`);
       }
     }
@@ -316,13 +313,13 @@ export function validateStopCatalog(
   etaRouteTypes: ReadonlyMap<string, readonly string[]> = new Map(),
 ): string[] {
   const errors: string[] = [];
-  if (!isPlainObject(raw) || !Array.isArray(raw.stops) || !isPlainObject(raw.sequences)) {
+  if (!isRecord(raw) || !Array.isArray(raw.stops) || !isRecord(raw.sequences)) {
     return ["schedule-stops.json must be { stops: [], sequences: {} }"];
   }
 
   const stopIds = new Set<string>();
   raw.stops.forEach((s, i) => {
-    if (!isPlainObject(s) || !isNonBlank(s.id)) {
+    if (!isRecord(s) || !isNonBlank(s.id)) {
       errors.push(`stops[${i}]: must be an object with a non-empty id`);
       return;
     }
@@ -336,7 +333,7 @@ export function validateStopCatalog(
   for (const [serviceId, byRouteType] of Object.entries(raw.sequences)) {
     const label = `sequences ${serviceId}`;
     if (!knownServiceIds.has(serviceId)) errors.push(`${label}: unknown service`);
-    if (!isPlainObject(byRouteType) || Object.keys(byRouteType).length === 0) {
+    if (!isRecord(byRouteType) || Object.keys(byRouteType).length === 0) {
       errors.push(`${label}: must map route types to stop sequences`);
       continue;
     }
@@ -349,7 +346,7 @@ export function validateStopCatalog(
       const seen = new Set<string>();
       seq.forEach((st, i) => {
         const sp = `${at}[${i}]`;
-        if (!isPlainObject(st)) {
+        if (!isRecord(st)) {
           errors.push(`${sp}: must be an object`);
           return;
         }
@@ -391,8 +388,8 @@ export function validateStopCatalog(
       });
       // The run departs from its first stop, and a run nobody gets off is not one.
       const first = seq[0] as Record<string, unknown> | undefined;
-      if (isPlainObject(first) && first.action !== "board") errors.push(`${at}: the first stop must be a boarding stop`);
-      if (!seq.some((st) => isPlainObject(st) && st.action === "alight")) {
+      if (isRecord(first) && first.action !== "board") errors.push(`${at}: the first stop must be a boarding stop`);
+      if (!seq.some((st) => isRecord(st) && st.action === "alight")) {
         errors.push(`${at}: must have at least one alighting stop`);
       }
     }

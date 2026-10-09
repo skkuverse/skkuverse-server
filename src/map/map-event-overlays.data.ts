@@ -15,14 +15,15 @@ import {
   type GeoJsonLineString,
   type GeoJsonPoint,
   type GeoJsonPolygon,
-} from "./geo/geojson.types";
-import { toWirePolygon } from "./geo/ring-winding";
+} from "../shared/geojson.types";
+import { toWirePolygon } from "../shared/ring-winding.util";
 import type {
   I18nWire,
   MapOverlay,
   MarkerAction,
   OverlayBase,
 } from "./map-overlay.types";
+import { isRecord } from "../shared/object.util";
 
 /**
  * Event places projected into the ORDINARY map-overlay schema.
@@ -272,7 +273,7 @@ function facetsOf(
   dropped: string[],
 ): Record<string, string[]> {
   const out: Record<string, string[]> = {};
-  const authored = isPlainObject(doc.facets) ? doc.facets : {};
+  const authored = isRecord(doc.facets) ? doc.facets : {};
   for (const facet of config.facets) {
     if (facet.source === "hours") {
       out[facet.id] = facet.options
@@ -313,7 +314,7 @@ function orderByOptionOf(
   dropped: string[],
 ): Record<string, number> {
   const out: Record<string, number> = {};
-  if (!isPlainObject(doc.orderByOption)) return out;
+  if (!isRecord(doc.orderByOption)) return out;
   const known = new Set(config.facets.flatMap((f) => f.options.map((o) => o.id)));
   for (const [key, value] of Object.entries(doc.orderByOption)) {
     if (known.has(key) && typeof value === "number" && Number.isFinite(value)) {
@@ -323,10 +324,6 @@ function orderByOptionOf(
     }
   }
   return out;
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**

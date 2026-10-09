@@ -8,7 +8,7 @@
 import { getClient } from "../infra/db";
 import config from "../infra/config";
 import { buildCursorFilter, encodeCursor } from "./notices.cursor";
-import { escapeRegex } from "./notices.search";
+import { escapeRegex } from "../shared/regex.util";
 import type { CursorPayload, NoticeDoc } from "./types";
 
 // 3-key compound index — declared in ensureNoticeIndexes(). We .hint()

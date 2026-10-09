@@ -11,8 +11,8 @@ import {
   type GeoJsonLineString,
   type GeoJsonPoint,
   type GeoJsonPolygon,
-} from "./geo/geojson.types";
-import { toWirePolygon } from "./geo/ring-winding";
+} from "../shared/geojson.types";
+import { toWirePolygon } from "../shared/ring-winding.util";
 
 /**
  * Everything permanent on the campus map, in one collection.

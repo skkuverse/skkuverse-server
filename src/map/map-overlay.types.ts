@@ -4,7 +4,7 @@ import type {
   GeoJsonLineString,
   GeoJsonPoint,
   GeoJsonPolygon,
-} from "./geo/geojson.types";
+} from "../shared/geojson.types";
 
 /**
  * The one overlay schema, shared by every layer the map draws.
