@@ -28,6 +28,7 @@ export type OverviewCandidate = Pick<
   | "contentText"
   | "contentHash"
   | "summaryContentHash"
+  | "summaryApplication"
 >;
 
 // --- skkuverse-ai request ---
@@ -47,6 +48,8 @@ export interface AiOverviewNotice {
   contentText: string | null;
   contentHash: string | null;
   summaryContentHash: string | null;
+  /** v2 application windows; the ai writes the notice's "신청: …" status line from it. */
+  summaryApplication: unknown;
 }
 
 export interface AiOverviewRequest {
@@ -78,6 +81,7 @@ export function toAiNotice(c: OverviewCandidate): AiOverviewNotice {
     contentText: c.contentText ?? null,
     contentHash: c.contentHash ?? null,
     summaryContentHash: c.summaryContentHash ?? null,
+    summaryApplication: c.summaryApplication ?? null,
   };
 }
 
