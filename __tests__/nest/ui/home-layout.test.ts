@@ -6,6 +6,7 @@
  * that must not start. Mini-app ids are checked against the real registry.
  */
 import { loadHomeLayout, resolveHomeLayout } from "../../../src/ui/home/home-layout";
+import { getCampusSections } from "../../../src/ui/ui/ui.campus";
 import type { HomeLayoutRaw } from "../../../src/ui/home/home-layout.types";
 
 const IMAGE_URL = "https://media.skkuverse.com/home/banners/test-00000000.jpg";
@@ -61,6 +62,23 @@ describe("committed home-layout.json", () => {
     expect(resolved.version).toBe(1);
     expect(resolved.sections.map((s) => s.type)).toContain("banner_carousel");
   });
+
+  it.each(["ko", "en", "zh"] as const)(
+    "campus_services (%s): the campus sheet's four buttons, so a tap means the same thing on both",
+    (lang) => {
+      const resolved = resolveHomeLayout(lang, new Date());
+      expect(resolved.sections.map((s) => s.id)).toEqual(["home_top", "campus_services", "games"]);
+      const homeRow = resolved.sections.find((s) => s.id === "campus_services") as unknown as {
+        tiles: Array<{ kind: string; id: string; title: string; actionType: string; actionValue: string }>;
+      };
+      const sheet = getCampusSections(lang).sections.find((s) => s.type === "button_grid") as {
+        items: Array<{ id: string; title: string; actionType: string; actionValue: string }>;
+      };
+      expect(homeRow.tiles.map(({ kind, id, title, actionType, actionValue }) => ({ kind, id, title, actionType, actionValue }))).toEqual(
+        sheet.items.map(({ id, title, actionType, actionValue }) => ({ kind: "link", id, title, actionType, actionValue })),
+      );
+    },
+  );
 });
 
 describe("assertValidHomeLayout (via loadHomeLayout)", () => {
