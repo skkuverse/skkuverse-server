@@ -86,6 +86,8 @@ Text (`alt`, `title`) is written as `{ "ko": ..., "en"?: ..., "zh"?: ... }`, and
 
 Add a banner the way the steps above describe, with keys under `campus/banners/`. The slot is 6:1. The ESKARA 2026 student banners are 2400 × 400 WebP, about 110 KB each: the app also opens a banner full screen, turned sideways, where its long edge spans the phone's height (about 2400 px on a 3x phone). Errors at boot start with `campus banners:`. The response also sends a 5-minute `Cache-Control`.
 
+The 28 ESKARA 2026 banners stay in the file with `endAt` set to the festival's end (`2026-10-03T00:00:00+09:00`), so the section is left out today. That is how to take a banner set down: an empty `items` is refused at boot, a closed window is not. To show them again for a UI test, move `endAt` on a local server only.
+
 The app only draws this section while its festival gate is open (`isFestivalUnlocked()` in skkuverse-app). A store build shows the campus sheet empty until the festival-day flip.
 
 ### Rearrange the grids

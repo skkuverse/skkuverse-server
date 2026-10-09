@@ -5,7 +5,8 @@
       "id": "inja",
       "name": "축제 인자셔틀",
       "order": 5,
-      "homeLogo": { "kind": "emoji", "emoji": "🚌" }
+      "homeLogo": { "kind": "emoji", "emoji": "🚌" },
+      "hidden": true
     },
     {
       "id": "eskara-2026",
@@ -15,31 +16,36 @@
       "shellLogo": {
         "kind": "media",
         "url": "https://media.skkuverse.com/miniapps/eskara-2026/logo-03a86934.jpg"
-      }
+      },
+      "hidden": true
     },
     {
       "id": "timetable",
       "name": "무대 타임테이블",
       "order": 6,
-      "homeLogo": { "kind": "emoji", "emoji": "📅" }
+      "homeLogo": { "kind": "emoji", "emoji": "📅" },
+      "hidden": true
     },
     {
       "id": "mukja",
       "name": "음식 룰렛",
       "order": 8,
-      "homeLogo": { "kind": "emoji", "emoji": "😋" }
+      "homeLogo": { "kind": "emoji", "emoji": "😋" },
+      "hidden": true
     },
     {
       "id": "playlist",
       "name": "플리 예습",
       "order": 7,
-      "homeLogo": { "kind": "emoji", "emoji": "🎧" }
+      "homeLogo": { "kind": "emoji", "emoji": "🎧" },
+      "hidden": true
     },
     {
       "id": "booth-box",
       "name": "랜덤 컨텐츠",
       "order": 9,
-      "homeLogo": { "kind": "emoji", "emoji": "🎁" }
+      "homeLogo": { "kind": "emoji", "emoji": "🎁" },
+      "hidden": true
     },
     {
       "id": "hssc",

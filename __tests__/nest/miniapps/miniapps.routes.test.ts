@@ -151,7 +151,18 @@ describe("GET /miniapps", () => {
     const hidden = res.body.data.miniApps
       .filter((m: { hidden?: boolean }) => m.hidden === true)
       .map((m: { id: string }) => m.id);
-    expect(hidden).toEqual(["hssc", "nsc", "skkuw", "skkuzine"]);
+    expect(hidden).toEqual([
+      "eskara-2026",
+      "inja",
+      "timetable",
+      "playlist",
+      "mukja",
+      "booth-box",
+      "hssc",
+      "nsc",
+      "skkuw",
+      "skkuzine",
+    ]);
     for (const entry of res.body.data.miniApps) {
       if ("hidden" in entry) expect(typeof entry.hidden).toBe("boolean");
     }
