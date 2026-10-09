@@ -23,13 +23,13 @@ const mockCollection = {
   aggregate: jest.fn(),
 };
 
-jest.mock("../../../src/infra/db", () => ({
+jest.mock("../infra/db", () => ({
   getClient: jest.fn(() => ({
     db: () => ({ collection: () => mockCollection }),
   })),
 }));
 
-jest.mock("../../../src/infra/logger", () => ({
+jest.mock("../infra/logger", () => ({
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
@@ -51,7 +51,7 @@ import {
   tierRegex,
   tiersToScoreExpr,
   toRankedResult,
-} from "../../../src/building/building.search";
+} from "./building.search";
 
 /** Minimal room shape for scoring — only the paths the tier table reads. */
 function room(

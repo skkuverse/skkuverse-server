@@ -4,7 +4,7 @@
  * (success logs + swallowed failure, never throws).
  */
 
-jest.mock("../../../src/building/building.data", () => ({
+jest.mock("./building.data", () => ({
   ensureIndexes: jest.fn(),
   getAllBuildings: jest.fn(),
   getBuildingBySkkuId: jest.fn(),
@@ -15,14 +15,14 @@ jest.mock("../../../src/building/building.data", () => ({
 // Search moved out of building.data into its own module; the service delegates
 // there for the two ranked queries (counts now ride along with the rows, so the
 // former countSearch* pair no longer exists).
-jest.mock("../../../src/building/building.search", () => ({
+jest.mock("./building.search", () => ({
   searchBuildings: jest.fn(),
   searchSpaces: jest.fn(),
 }));
 
-import * as data from "../../../src/building/building.data";
-import * as search from "../../../src/building/building.search";
-import { BuildingService } from "../../../src/building/building.service";
+import * as data from "./building.data";
+import * as search from "./building.search";
+import { BuildingService } from "./building.service";
 
 const mocked = data as jest.Mocked<typeof data>;
 const mockedSearch = search as jest.Mocked<typeof search>;

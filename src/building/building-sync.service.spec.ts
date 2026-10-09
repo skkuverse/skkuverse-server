@@ -11,7 +11,7 @@
  */
 
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
-jest.mock("../../../src/infra/logger", () => mockLogger);
+jest.mock("../infra/logger", () => mockLogger);
 
 const mockGet = jest.fn();
 jest.mock("axios", () => ({ get: mockGet }));
@@ -33,14 +33,14 @@ const mockDb = {
   spaces: fakeCollection(),
   clearCache: jest.fn(),
 };
-jest.mock("../../../src/building/building.data", () => ({
+jest.mock("./building.data", () => ({
   clearCache: () => mockDb.clearCache(),
   getRawBuildingsCollection: () => mockDb.raw,
   getBuildingsCollection: () => mockDb.enriched,
   getSpacesCollection: () => mockDb.spaces,
 }));
 
-import { syncBuildings } from "../../../src/building/building.sync";
+import { syncBuildings } from "./building.sync";
 
 type Mode = "buildList" | "buildInfo" | "spaceList";
 
