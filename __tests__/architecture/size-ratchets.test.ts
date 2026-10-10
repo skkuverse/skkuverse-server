@@ -8,6 +8,10 @@
  *
  * The worst values are measured by linting src/ with each limit at its
  * minimum and reading the sizes ESLint reports.
+ *
+ * The per-role caps of migrated modules (blocks "size/<role>") are held the
+ * same way: each `max-lines` within 10 of the largest file it covers, and none
+ * covering no file.
  */
 import { Linter } from "eslint";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
@@ -69,6 +73,27 @@ function worstSizes(): Record<RatchetRule, { size: number; where: string }> {
   return worst;
 }
 
+/** Non-blank, non-comment lines of a file, as `max-lines` counts them. */
+function codeLines(file: string, linter: Linter): number {
+  const rules: Linter.RulesRecord = {
+    "max-lines": ["error", { max: 1, skipBlankLines: true, skipComments: true }],
+  };
+  const messages = linter.verify(
+    readSource(file),
+    [{ files: ["**/*.ts"], languageOptions: { parser: tsparser }, rules }],
+    file,
+  );
+  const size = messages[0]?.message ? reportedSize(messages[0].message) : undefined;
+  return size ?? 1;
+}
+
+/** `src/<m>/**\/*.<role>.ts` as a test over a repo path. */
+function matchesGlob(glob: string, file: string): boolean {
+  const match = /^src\/([^/]+)\/\*\*\/\*\.([a-z]+)\.ts$/.exec(glob);
+  if (!match) throw new Error(`unexpected size/ glob ${glob}`);
+  return file.startsWith(`src/${match[1]}/`) && file.endsWith(`.${match[2]}.ts`);
+}
+
 describe("size ratchet measurement", () => {
   it("reads the size from each rule's message", () => {
     expect(reportedSize("File has too many lines (440). Maximum allowed is 1.")).toBe(440);
@@ -86,6 +111,23 @@ describe("size ratchets", () => {
       const { size, where } = worst[rule];
       return limit - size > MARGIN[rule]
         ? [`${rule}: limit ${limit}, worst ${size} (${where}); lower the limit to ${size}`]
+        : [];
+    });
+    expect(loose).toEqual([]);
+  });
+
+  it("per role sit at the largest file of that role in the migrated modules", () => {
+    const linter = new Linter({ configType: "flat" });
+    const files = sourceFiles();
+    const roleBlocks = config.filter((c) => c.name?.startsWith("size/"));
+    expect(roleBlocks.length).toBeGreaterThan(0);
+    const loose = roleBlocks.flatMap((b) => {
+      const entry = b.rules?.["max-lines"] as [string, { max: number }];
+      const covered = files.filter((f) => (b.files as string[]).some((g) => matchesGlob(g, f)));
+      if (covered.length === 0) return [`${b.name}: covers no file; delete it`];
+      const worst = Math.max(...covered.map((f) => codeLines(f, linter)));
+      return entry[1].max - worst > MARGIN["max-lines"]
+        ? [`${b.name}: limit ${entry[1].max}, largest ${worst}; lower the limit to ${worst + MARGIN["max-lines"]} or less`]
         : [];
     });
     expect(loose).toEqual([]);

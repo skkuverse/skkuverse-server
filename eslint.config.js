@@ -203,6 +203,35 @@ function featureBoundaryBlocks() {
   );
 }
 
+// Per-role size caps for migrated modules (ADR 0010, D9). Each is the largest
+// file of that role in a migrated module plus at most 10 lines
+// (__tests__/architecture/size-ratchets.test.ts keeps them there). A module
+// joins MIGRATED_MODULES when its migration lands; a file over its role's cap
+// is split, or its flow becomes a sub-module (D3).
+const MIGRATED_MODULES = ["building"];
+const ROLE_MAX_LINES = {
+  client: 159,
+  controller: 41,
+  document: 112,
+  mapper: 154,
+  module: 25,
+  poller: 36,
+  query: 175,
+  repository: 182,
+  rules: 80,
+  schema: 43,
+  service: 210,
+  types: 58,
+};
+
+function roleSizeBlocks() {
+  return Object.entries(ROLE_MAX_LINES).map(([role, max]) => ({
+    name: `size/${role}`,
+    files: MIGRATED_MODULES.map((m) => `src/${m}/**/*.${role}.ts`),
+    rules: { "max-lines": ["error", { max, skipBlankLines: true, skipComments: true }] },
+  }));
+}
+
 const jestGlobals = {
   describe: "readonly",
   it: "readonly",
@@ -277,6 +306,7 @@ module.exports = [
       "max-params": ["error", 7],
     },
   },
+  ...roleSizeBlocks(),
   {
     // Also keeps `.query` files to repositories: one block per file set, since
     // a later block replaces a rule's options rather than merging them.
