@@ -61,7 +61,7 @@ const SPACES_PER_CAMPUS = 2500;
 
 function buildItems(count: number) {
   return Array.from({ length: count }, (_, i) => ({
-    id: String(i + 1),
+    id: i + 1,
     buildNo: String(i + 1),
     buildNm: `건물 ${i + 1}`,
   }));
@@ -232,12 +232,12 @@ describe("BuildingSyncService.run, phase 2 per building", () => {
         case "buildList": {
           const base = params.campusCd === "1" ? 100 : 200;
           const buildings = Array.from({ length: BUILDINGS_PER_CAMPUS }, (_, i) => ({
-            id: String(base + i + 1),
+            id: base + i + 1,
             buildNo: String(base + i + 1),
             buildNm: `건물 ${base + i + 1}`,
           }));
           const facilities = Array.from({ length: facilitiesPerCampus }, (_, i) => ({
-            id: String(base + 90 + i),
+            id: base + 90 + i,
             buildNo: "",
             buildNm: `시설 ${base + 90 + i}`,
           }));
