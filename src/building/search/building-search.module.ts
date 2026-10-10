@@ -5,7 +5,7 @@ import { BuildingSearchRepository } from "./building-search.repository";
 import { BuildingSearchService } from "./building-search.service";
 
 /**
- * GET /building/search. It imports BuildingModule for BuildingService, whose
+ * GET /building/search. It imports BuildingModule for BuildingRepository, whose
  * cached building list joins each room group to its building. It shares the
  * /building prefix with the catalog, so app.module.ts registers it before
  * BuildingCatalogModule: Nest registers routes in module order, and

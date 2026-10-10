@@ -3,8 +3,9 @@ import type { BuildingDoc, CampusShapeDoc } from "./building.document";
 import { BuildingRepository } from "./building.repository";
 
 /**
- * What other modules and the building flows read through DI: the cached
- * building list (map, building search) and the campus shapes (map).
+ * The door other features read building through (ESLint lets them import
+ * only a module's `.module` and `.service`): the cached building list and the
+ * campus shapes, for map. The building flows inject BuildingRepository.
  */
 @Injectable()
 export class BuildingService {
