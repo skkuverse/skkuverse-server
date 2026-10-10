@@ -9,7 +9,7 @@ import type {
   BuildingRawDoc,
   SpaceDoc,
 } from "./building.document";
-import { toSpaceUpsert, type EnrichmentSetUpdate } from "./building.mapper";
+import { toSpaceUpsert, type EnrichmentSetUpdate } from "./building-sync.mapper";
 import type { ListedBuilding, SpaceSource, SyncedSpace } from "./building.types";
 
 /**

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { SupportedLang } from "../infra/types";
 import type { BuildingDoc, CampusShapeDoc } from "./building.document";
-import { toBuildingSearch, withCampusLabel, withFloorEnFallback } from "./building.mapper";
+import { toBuildingSearch, withCampusLabel, withFloorEnFallback } from "./building-sync.mapper";
 import { BuildingRepository } from "./building.repository";
 import type {
   BuildingDetail,
