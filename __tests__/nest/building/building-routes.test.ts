@@ -20,8 +20,9 @@ let svc: {
   onModuleInit: jest.Mock;
   listBuildings: jest.Mock;
   findBuildingBySkkuId: jest.Mock;
-  listFloorsByBuildNo: jest.Mock;
+  listSpacesByBuildNo: jest.Mock;
   listConnectionsBySkkuId: jest.Mock;
+  listBuildingsByIds: jest.Mock;
   searchBuildings: jest.Mock;
   searchSpaces: jest.Mock;
 };
@@ -31,8 +32,9 @@ beforeAll(async () => {
     onModuleInit: jest.fn(),
     listBuildings: jest.fn(),
     findBuildingBySkkuId: jest.fn(),
-    listFloorsByBuildNo: jest.fn(),
+    listSpacesByBuildNo: jest.fn(),
     listConnectionsBySkkuId: jest.fn(),
+    listBuildingsByIds: jest.fn(),
     searchBuildings: jest.fn(),
     searchSpaces: jest.fn(),
   };
@@ -326,20 +328,13 @@ describe("GET /building/:skkuId", () => {
       campus: "hssc",
       name: { ko: "법학관", en: "Law" },
     });
-    svc.listFloorsByBuildNo.mockResolvedValue([
-      {
-        floor: { ko: "1층", en: "" },
-        spaces: [{ spaceCd: "100-A101", name: { ko: "강의실", en: "" } }],
-      },
+    svc.listSpacesByBuildNo.mockResolvedValue([
+      { spaceCd: "100-A101", name: { ko: "강의실", en: "" }, floor: { ko: "1층", en: "" } },
     ]);
     svc.listConnectionsBySkkuId.mockResolvedValue([
-      {
-        targetSkkuId: 2,
-        targetBuildNo: "101",
-        fromFloor: { ko: "1층" },
-        toFloor: { ko: "1층" },
-      },
+      { a: { skkuId: 1, floor: { ko: "1층" } }, b: { skkuId: 2, floor: { ko: "1층" } } },
     ]);
+    svc.listBuildingsByIds.mockResolvedValue([{ _id: 2, buildNo: "101" }]);
 
     const res = await request(httpServer).get("/building/1");
     expect(res.status).toBe(200);
@@ -348,7 +343,7 @@ describe("GET /building/:skkuId", () => {
     expect(res.body.data.floors[0].floor.en).toBe("1층");
     expect(res.body.data.floors[0].spaces[0].name.en).toBe("강의실");
     expect(res.body.data.connections).toHaveLength(1);
-    expect(svc.listFloorsByBuildNo).toHaveBeenCalledWith("100");
+    expect(svc.listSpacesByBuildNo).toHaveBeenCalledWith("100");
     expect(svc.listConnectionsBySkkuId).toHaveBeenCalledWith(1);
   });
 });

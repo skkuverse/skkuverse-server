@@ -48,13 +48,12 @@ describe("GET /map/config (real MapService)", () => {
   let httpServer: ReturnType<NestExpressApplication["getHttpServer"]>;
 
   beforeAll(async () => {
-    // Only BuildingService is stubbed, and only to keep its onModuleInit
-    // ensureIndexes off a database. MapService itself is the real one.
+    // Only BuildingService is stubbed, to hand the campus overlay no buildings
+    // and no shapes. MapService itself is the real one.
     app = await buildMapApp([
       {
         provide: BuildingService,
         useValue: {
-          onModuleInit: jest.fn(),
           listAllBuildings: jest.fn().mockResolvedValue([]),
           listAllCampusShapes: jest.fn().mockResolvedValue([]),
         },

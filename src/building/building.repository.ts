@@ -6,12 +6,14 @@ import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
 import type {
   BuildingDoc,
+  BuildingLabel,
   CampusShapeDoc,
   ConnectionDoc,
+  ConnectionEnds,
+  FloorSpaceDoc,
   SpaceDoc,
 } from "./building.document";
-import { groupByFloor, toConnectionItems } from "./building.mapper";
-import type { BuildNo, BuildingConnection, Campus, FloorGroup, SkkuId } from "./building.types";
+import type { BuildNo, Campus, SkkuId } from "./building.types";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -116,9 +118,9 @@ export class BuildingRepository implements OnModuleInit {
     );
   }
 
-  async listFloorsByBuildNo(buildNo: BuildNo | null): Promise<FloorGroup[]> {
-    if (!buildNo) return [];
-    const spaces = await this.spaces()
+  /** The spaces of one building, for its floor list. */
+  listSpacesByBuildNo(buildNo: BuildNo): Promise<FloorSpaceDoc[]> {
+    return this.spaces()
       .find(
         { buildNo },
         {
@@ -127,32 +129,26 @@ export class BuildingRepository implements OnModuleInit {
         },
       )
       .toArray();
-    return groupByFloor(spaces);
   }
 
-  async listConnectionsBySkkuId(skkuId: SkkuId): Promise<BuildingConnection[]> {
-    const connections = await this.connections()
+  /** The connections that touch one building, from either side; only the two ends are read. */
+  listConnectionsBySkkuId(skkuId: SkkuId): Promise<ConnectionEnds[]> {
+    return this.connections()
       .find(
         { $or: [{ "a.skkuId": skkuId }, { "b.skkuId": skkuId }] },
-        { maxTimeMS: HOT_READ_MAX_TIME_MS },
+        { projection: { _id: 0, a: 1, b: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
       )
       .toArray();
-    if (!connections.length) return [];
+  }
 
-    const relatedIds = new Set<SkkuId>();
-    for (const connection of connections) {
-      relatedIds.add(connection.a.skkuId);
-      relatedIds.add(connection.b.skkuId);
-    }
-    relatedIds.delete(skkuId);
-
-    const targets = await this.buildings()
+  /** The numbers and names of the given buildings, to label the far side of a connection. */
+  listBuildingsByIds(ids: readonly SkkuId[]): Promise<BuildingLabel[]> {
+    return this.buildings()
       .find(
-        { _id: { $in: Array.from(relatedIds) } },
+        { _id: { $in: [...ids] } },
         { projection: { _id: 1, buildNo: 1, displayNo: 1, name: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
       )
       .toArray();
-    return toConnectionItems(skkuId, connections, targets);
   }
 
   /** Every campus shape, in authored order. */

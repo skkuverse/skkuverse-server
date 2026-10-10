@@ -1,5 +1,5 @@
 import { floorSortKey } from "./building.rules";
-import type { BuildingDoc, ConnectionDoc, SpaceDoc } from "./building.document";
+import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "./building.document";
 import { t } from "../infra/i18n";
 import type { SupportedLang } from "../infra/types";
 import type {
@@ -12,9 +12,7 @@ import type {
 } from "./building.types";
 
 /** A building's spaces grouped by floor, lowest floor first (floorSortKey). */
-function groupByFloor(
-  spaces: ReadonlyArray<Pick<SpaceDoc, "spaceCd" | "name" | "floor" | "conspaceCd">>,
-): FloorGroup[] {
+function groupByFloor(spaces: readonly FloorSpaceDoc[]): FloorGroup[] {
   const floorMap = new Map<string, FloorGroup>();
   for (const s of spaces) {
     const key = s.floor?.ko || "unknown";
@@ -39,8 +37,8 @@ function groupByFloor(
  */
 function toConnectionItems(
   skkuId: SkkuId,
-  docs: readonly ConnectionDoc[],
-  targets: ReadonlyArray<Pick<BuildingDoc, "_id" | "buildNo" | "displayNo" | "name">>,
+  docs: readonly ConnectionEnds[],
+  targets: readonly BuildingLabel[],
 ): BuildingConnection[] {
   const buildingMap = new Map(targets.map((b) => [b._id, b]));
   return docs.map((doc) => {
@@ -57,6 +55,17 @@ function toConnectionItems(
       toFloor: other.floor,
     };
   });
+}
+
+/** The buildings a building's connections lead to, itself excluded. */
+function toConnectedSkkuIds(skkuId: SkkuId, docs: readonly ConnectionEnds[]): SkkuId[] {
+  const ids = new Set<SkkuId>();
+  for (const doc of docs) {
+    ids.add(doc.a.skkuId);
+    ids.add(doc.b.skkuId);
+  }
+  ids.delete(skkuId);
+  return [...ids];
 }
 
 function campusLabel(campus: Campus, lang: SupportedLang): string {
@@ -82,4 +91,12 @@ function withFloorEnFallback(floors: readonly FloorGroup[]): FloorGroup[] {
   }));
 }
 
-export { campusLabel, groupByFloor, toConnectionItems, withCampusLabel, withEnFallback, withFloorEnFallback };
+export {
+  campusLabel,
+  groupByFloor,
+  toConnectedSkkuIds,
+  toConnectionItems,
+  withCampusLabel,
+  withEnFallback,
+  withFloorEnFallback,
+};

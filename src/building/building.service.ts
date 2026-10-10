@@ -1,9 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import type { SupportedLang } from "../infra/types";
 import type { BuildingDoc, CampusShapeDoc } from "./building.document";
-import { withCampusLabel, withFloorEnFallback } from "./building.mapper";
+import {
+  groupByFloor,
+  toConnectedSkkuIds,
+  toConnectionItems,
+  withCampusLabel,
+  withFloorEnFallback,
+} from "./building.mapper";
 import { BuildingRepository } from "./building.repository";
-import type { BuildingDetail, Campus, SkkuId, WithCampusLabel } from "./building.types";
+import type { BuildingConnection, BuildingDetail, Campus, SkkuId, WithCampusLabel } from "./building.types";
 
 @Injectable()
 export class BuildingService {
@@ -22,15 +28,23 @@ export class BuildingService {
   async detail(skkuId: SkkuId, lang: SupportedLang): Promise<BuildingDetail | null> {
     const building = await this.repository.findBuildingBySkkuId(skkuId);
     if (!building) return null;
-    const [floors, connections] = await Promise.all([
-      this.repository.listFloorsByBuildNo(building.buildNo),
-      this.repository.listConnectionsBySkkuId(skkuId),
+    const [spaces, connections] = await Promise.all([
+      building.buildNo ? this.repository.listSpacesByBuildNo(building.buildNo) : [],
+      this.listConnections(skkuId),
     ]);
     return {
       building: withCampusLabel(building, lang),
-      floors: withFloorEnFallback(floors),
+      floors: withFloorEnFallback(groupByFloor(spaces)),
       connections,
     };
+  }
+
+  /** A building's connections, each labelled with the building at its far end. */
+  private async listConnections(skkuId: SkkuId): Promise<BuildingConnection[]> {
+    const connections = await this.repository.listConnectionsBySkkuId(skkuId);
+    if (!connections.length) return [];
+    const targets = await this.repository.listBuildingsByIds(toConnectedSkkuIds(skkuId, connections));
+    return toConnectionItems(skkuId, connections, targets);
   }
 
   /** Every building, unlabeled: the read other modules (map, building search) get through the exported BuildingService. */
