@@ -89,4 +89,4 @@ function toBuildingSearch(
   };
 }
 
-export { groupSpacesByBuilding, toBuildingSearch };
+export { toBuildingSearch };
