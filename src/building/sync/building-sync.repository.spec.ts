@@ -1,8 +1,26 @@
-const mockCollections: Record<string, { bulkWrite: jest.Mock; createIndex: jest.Mock }> = {};
+/**
+ * BuildingSyncRepository's MongoDB operations, pinned literally until a real
+ * mongod runs them (harden-test-suite D6): the bulk upserts' dot paths and
+ * stamps, which layers each write reaches, the best-effort failure note, the
+ * stale-space delete's filter, and the indexes this repository owns.
+ * BuildingSyncService's tests run against an in-memory fake that follows
+ * these rules; this file is where the rules meet the driver.
+ */
+type MockCollection = {
+  bulkWrite: jest.Mock;
+  createIndex: jest.Mock;
+  updateOne: jest.Mock;
+  deleteMany: jest.Mock;
+  find: jest.Mock;
+};
+const mockCollections: Record<string, MockCollection> = {};
 const mockCollection = (name: string) =>
   (mockCollections[name] ??= {
     bulkWrite: jest.fn().mockResolvedValue({}),
     createIndex: jest.fn().mockResolvedValue("ok"),
+    updateOne: jest.fn().mockResolvedValue({}),
+    deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 }),
+    find: jest.fn(() => ({ toArray: jest.fn().mockResolvedValue([]) })),
   });
 
 jest.mock("../../infra/db", () => ({
@@ -14,8 +32,9 @@ jest.mock("../../infra/logger", () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
+import logger from "../../infra/logger";
 import type { BuildingRawDoc } from "../building.document";
-import type { BuildNo, SkkuId, SpaceCd } from "../building.types";
+import type { ApiId, BuildNo, SkkuId, SpaceCd } from "../building.types";
 import { enrichBuilding } from "./building-sync.mapper";
 import { BuildingSyncRepository } from "./building-sync.repository";
 import type { SyncedSpace } from "./building-sync.types";
@@ -59,10 +78,13 @@ beforeEach(() => {
  */
 describe("BuildingSyncRepository writes", () => {
   it("upserts an enriched building with dot-path fields and the sync stamps", async () => {
+    // Act
     await new BuildingSyncRepository().upsertEnriched(
       [{ skkuId: RAW._id, building: enrichBuilding(RAW) }],
       SYNC_STARTED_AT,
     );
+
+    // Assert
     expect(mockCollections.buildings!.bulkWrite).toHaveBeenCalledWith(
       [
         {
@@ -112,9 +134,14 @@ describe("BuildingSyncRepository writes", () => {
   });
 
   it("upserts a buildInfo space without touching conspaceCd, and a spaceList space with it", async () => {
+    // Arrange
     const repository = new BuildingSyncRepository();
+
+    // Act
     await repository.upsertSpaces([SPACE], "buildInfo", SYNC_STARTED_AT);
     await repository.upsertSpaces([SPACE], "spaceList", SYNC_STARTED_AT);
+
+    // Assert
     const filter = { spaceCd: "248101", buildNo: "248", campus: "hssc" };
     const names = {
       floor: { ko: "1층", en: "1F" },
@@ -157,9 +184,128 @@ describe("BuildingSyncRepository writes", () => {
   });
 });
 
+describe("BuildingSyncRepository raw and detail writes", () => {
+  const LISTED = { skkuId: RAW._id, apiId: 2 as ApiId, doc: (({ _id, ...doc }) => doc)(RAW) };
+  const ATTACHMENTS = [{ id: 12, url: "https://www.skku.edu/a.jpg", filename: "P2.jpg", alt: "" }];
+
+  it("upserts a listed building's raw layer by skkuId with the list stamp", async () => {
+    // Act
+    await new BuildingSyncRepository().upsertRaw([LISTED], SYNC_STARTED_AT);
+
+    // Assert
+    expect(mockCollections.buildings_raw!.bulkWrite).toHaveBeenCalledWith(
+      [
+        {
+          updateOne: {
+            filter: { _id: 2 },
+            update: { $set: { ...LISTED.doc, "sync.listAt": SYNC_STARTED_AT } },
+            upsert: true,
+          },
+        },
+      ],
+      { ordered: false },
+    );
+  });
+
+  it("writes a building's photos to both layers and clears its detail error", async () => {
+    // Act
+    await new BuildingSyncRepository().setAttachments(RAW._id, ATTACHMENTS, SYNC_STARTED_AT);
+
+    // Assert
+    const update = { $set: { attachments: ATTACHMENTS, "sync.detailAt": SYNC_STARTED_AT, "sync.detailError": null } };
+    expect(mockCollections.buildings_raw!.updateOne.mock.calls).toEqual([[{ _id: 2 }, update]]);
+    expect(mockCollections.buildings!.updateOne.mock.calls).toEqual([[{ _id: 2 }, update]]);
+  });
+
+  it("notes a failed buildInfo on both layers", async () => {
+    // Act
+    await new BuildingSyncRepository().recordDetailError(RAW._id, "HTTP 502");
+
+    // Assert
+    const update = { $set: { "sync.detailError": "HTTP 502" } };
+    expect(mockCollections.buildings_raw!.updateOne.mock.calls).toEqual([[{ _id: 2 }, update]]);
+    expect(mockCollections.buildings!.updateOne.mock.calls).toEqual([[{ _id: 2 }, update]]);
+  });
+
+  it.each([
+    ["buildings_raw", "buildings"],
+    ["buildings", "buildings_raw"],
+  ])("logs a failure note it cannot write on %s, still writes %s, and resolves", async (failing, other) => {
+    // Arrange
+    (logger.warn as jest.Mock).mockClear();
+    const noteError = new Error("not primary");
+    mockCollection(failing).updateOne.mockRejectedValueOnce(noteError);
+
+    // Act
+    const note = new BuildingSyncRepository().recordDetailError(RAW._id, "HTTP 502");
+
+    // Assert
+    await expect(note).resolves.toBeUndefined();
+    expect(mockCollection(other).updateOne).toHaveBeenCalledWith({ _id: 2 }, { $set: { "sync.detailError": "HTTP 502" } });
+    expect(logger.warn).toHaveBeenCalledWith(
+      { event: "building.sync.error_note_failed", skkuId: 2, err: noteError },
+      expect.any(String),
+    );
+  });
+});
+
+describe("BuildingSyncRepository reads and the stale delete", () => {
+  it("deletes the spaces stamped before this run and reports how many", async () => {
+    // Arrange
+    mockCollection("spaces").deleteMany.mockResolvedValueOnce({ deletedCount: 44 });
+
+    // Act
+    const deleted = await new BuildingSyncRepository().deleteSpacesSyncedBefore(SYNC_STARTED_AT);
+
+    // Assert
+    expect(deleted).toBe(44);
+    expect(mockCollections.spaces!.deleteMany).toHaveBeenCalledWith({ syncedAt: { $lt: SYNC_STARTED_AT } });
+  });
+
+  it("finds the enriched buildings written at any other enrich version", async () => {
+    // Arrange
+    mockCollection("buildings").find.mockReturnValueOnce({
+      toArray: jest.fn().mockResolvedValue([{ _id: 2 }, { _id: 7 }]),
+    });
+
+    // Act
+    const stale = await new BuildingSyncRepository().listSkkuIdsNotEnrichedAt(3);
+
+    // Assert
+    expect(stale).toEqual(new Set([2, 7]));
+    expect(mockCollections.buildings!.find).toHaveBeenCalledWith(
+      { enrichVersion: { $ne: 3 } },
+      expect.objectContaining({ projection: { _id: 1 } }),
+    );
+  });
+
+  it("maps each raw building to the update stamp SKKU last gave it", async () => {
+    // Arrange
+    mockCollection("buildings_raw").find.mockReturnValueOnce({
+      toArray: jest.fn().mockResolvedValue([
+        { _id: 2, skkuUpdatedAt: "2024-01-01" },
+        { _id: 7, skkuUpdatedAt: null },
+      ]),
+    });
+
+    // Act
+    const stamps = await new BuildingSyncRepository().listRawUpdatedAt();
+
+    // Assert
+    expect(stamps).toEqual(new Map([[2, "2024-01-01"], [7, null]]));
+    expect(mockCollections.buildings_raw!.find).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ projection: { skkuUpdatedAt: 1 } }),
+    );
+  });
+});
+
 describe("BuildingSyncRepository indexes", () => {
   it("owns the unique space key its upserts filter on and the raw layer's campus", async () => {
+    // Act
     await new BuildingSyncRepository().ensureIndexes();
+
+    // Assert
     expect(mockCollections.spaces!.createIndex.mock.calls).toEqual([
       [{ spaceCd: 1, buildNo: 1, campus: 1 }, { unique: true }],
     ]);
@@ -167,7 +313,10 @@ describe("BuildingSyncRepository indexes", () => {
   });
 
   it("owns the 2dsphere that guards the enriched location it writes", async () => {
+    // Act
     await new BuildingSyncRepository().ensureIndexes();
+
+    // Assert
     expect(mockCollections.buildings!.createIndex.mock.calls).toEqual([[{ location: "2dsphere" }]]);
   });
 });

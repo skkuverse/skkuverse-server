@@ -1,103 +1,137 @@
 /**
- * BuildingSyncService.run()'s failure contract. The poller registry only learns
- * about a failed run if run() rejects, so:
- *  - phase 1 failing (a fetch error, or a buildList too short to trust) stops
- *    the run and rejects;
- *  - phase 2 or phase 3 failing lets the later phases and clearCache() run,
- *    then rejects once with an AggregateError naming every failed phase;
- *  - run() logs no error line itself — the registry does.
- * axios, the building collections and the logger are mocked, so neither SKKU
- * nor MongoDB is reached; the client and the sync repository are real.
+ * BuildingSyncService.run() over a scripted client and in-memory repositories
+ * (the typed fakes in __tests__/helpers/fakes/building/). What it guards:
+ *  - the failure contract the poller registry relies on: phase 1 failing (a
+ *    fetch error, a list too short to trust, a raw building missing a field)
+ *    stops the run; phase 2 or 3 failing lets the later phases and the cache
+ *    clear run, then the run rejects once naming every failed phase; run()
+ *    logs no error line itself
+ *  - phase 1 re-enriches only the buildings SKKU changed or that an older
+ *    enrichment wrote
+ *  - phase 2 one building at a time: a failed building is noted on both layers
+ *    and left out, the rest still sync, at most five requests are in flight,
+ *    and more than half failing fails the phase after its summary
+ *  - phase 3 deletes the spaces this run did not see, unless spaceList listed
+ *    too few to trust
+ * The SKKU payload translation is building-sync.client.spec.ts's, and the exact
+ * MongoDB writes are building-sync.repository.spec.ts's.
  */
-
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
 
-const mockGet = jest.fn();
-jest.mock("axios", () => ({ get: mockGet }));
-
-function fakeCollection() {
-  return {
-    find: jest.fn(() => ({ toArray: jest.fn().mockResolvedValue([]) })),
-    bulkWrite: jest
-      .fn()
-      .mockResolvedValue({ matchedCount: 0, upsertedCount: 0, modifiedCount: 0 }),
-    updateOne: jest.fn().mockResolvedValue({}),
-    deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 }),
-  };
-}
-
-const mockDb = {
-  raw: fakeCollection(),
-  enriched: fakeCollection(),
-  spaces: fakeCollection(),
-  clearCache: jest.fn(),
-};
-jest.mock("../../infra/db", () => ({
-  getClient: () => ({
-    db: () => ({
-      collection: (name: string) =>
-        ({ buildings_raw: mockDb.raw, buildings: mockDb.enriched, spaces: mockDb.spaces })[name],
-    }),
-  }),
-}));
-
-import { BuildingSyncRepository } from "./building-sync.repository";
-import { BuildingSyncService } from "./building-sync.service";
-import { BuildingSyncClient } from "./building-sync.client";
+import { FakeBuildingRepository } from "../../../__tests__/helpers/fakes/building/building.repository.fake";
+import { FakeBuildingSyncClient } from "../../../__tests__/helpers/fakes/building/building-sync.client.fake";
+import { FakeBuildingSyncRepository } from "../../../__tests__/helpers/fakes/building/building-sync.repository.fake";
+import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import type { BuildingDoc, BuildingRawDoc } from "../building.document";
 import type { BuildingRepository } from "../building.repository";
+import type { ApiId, BuildNo, Campus, SkkuId, SpaceCd } from "../building.types";
+import type { BuildingSyncClient } from "./building-sync.client";
+import { ENRICH_VERSION, enrichBuilding } from "./building-sync.mapper";
+import type { BuildingSyncRepository } from "./building-sync.repository";
+import { BuildingSyncService } from "./building-sync.service";
+import type { ListedBuilding, SyncedSpace } from "./building-sync.types";
 
-const service = new BuildingSyncService(new BuildingSyncClient(), new BuildingSyncRepository(), {
-  clearCache: () => mockDb.clearCache(),
-} as unknown as BuildingRepository);
-const syncBuildings = (): Promise<void> => service.run();
-
-type Mode = "buildList" | "buildInfo" | "spaceList";
-
-/** 60 buildings in all: above the 50 the sync needs to trust the list. */
+/** 30 per campus, 60 in all: above the 50 the sync needs to trust the list. */
 const BUILDINGS_PER_CAMPUS = 30;
 /** 5000 spaces in all: enough for the sync to delete stale spaces. */
 const SPACES_PER_CAMPUS = 2500;
+const LAST_SYNC = new Date("2026-10-03T00:00:00Z");
 
-function buildItems(count: number) {
+/** A building as the client lists it. hssc buildings are 101-130, nsc 201-230; skkuId, SKKU's id and buildNo agree. */
+function listed(skkuId: number, campus: Campus, doc: Partial<ListedBuilding["doc"]> = {}): ListedBuilding {
+  return {
+    skkuId: skkuId as SkkuId,
+    apiId: skkuId as ApiId,
+    doc: {
+      buildNo: String(skkuId) as BuildNo,
+      campus,
+      name: { ko: `건물 ${skkuId}`, en: `Building ${skkuId}` },
+      description: { ko: "강의동", en: "Lecture hall" },
+      location: { type: "Point", coordinates: [126.99, 37.58] },
+      image: { url: null, filename: null },
+      accessibility: { elevator: false, toilet: false },
+      skkuCreatedAt: "2018-04-23",
+      skkuUpdatedAt: "2026-09-01",
+      ...doc,
+    },
+  };
+}
+
+function buildingsOf(campus: Campus, count = BUILDINGS_PER_CAMPUS): ListedBuilding[] {
+  const base = campus === "hssc" ? 100 : 200;
+  return Array.from({ length: count }, (_, i) => listed(base + i + 1, campus));
+}
+
+function spacesOf(campus: Campus, count = SPACES_PER_CAMPUS): SyncedSpace[] {
+  const buildNo = (campus === "hssc" ? "101" : "201") as BuildNo;
   return Array.from({ length: count }, (_, i) => ({
-    id: i + 1,
-    buildNo: String(i + 1),
-    buildNm: `건물 ${i + 1}`,
+    spaceCd: String(i + 1) as SpaceCd,
+    buildNo,
+    campus,
+    floor: { ko: "1층", en: "1F" },
+    name: { ko: `공간 ${i + 1}`, en: "" },
+    buildingName: { ko: `건물 ${buildNo}`, en: "" },
+    conspaceCd: `C${i + 1}`,
   }));
 }
 
-function spaceItems(count: number) {
-  return Array.from({ length: count }, (_, i) => ({
-    spaceCd: String(i + 1),
-    buildNo: "1",
-    spcaeNm: `공간 ${i + 1}`,
-  }));
+/** Each building's buildInfo: one photo and one room, `<buildNo>-101`. */
+const roomsOf = async (building: ListedBuilding) => ({
+  attachments: [{ id: building.skkuId, url: `https://www.skku.edu/${building.skkuId}.jpg`, filename: null, alt: "" }],
+  spaces: [
+    {
+      spaceCd: `${building.doc.buildNo}-101` as SpaceCd,
+      buildNo: building.doc.buildNo as BuildNo,
+      campus: building.doc.campus,
+      floor: { ko: "1층", en: "1F" },
+      name: { ko: "강의실", en: "" },
+      buildingName: building.doc.name,
+      conspaceCd: null,
+    },
+  ],
+});
+
+let client: FakeBuildingSyncClient;
+let repository: FakeBuildingSyncRepository;
+let buildings: FakeBuildingRepository;
+let service: BuildingSyncService;
+
+/** SKKU answers every mode with healthy data; a test overrides what it needs. */
+function healthySkku(): void {
+  client.buildLists = { hssc: buildingsOf("hssc"), nsc: buildingsOf("nsc") };
+  client.spaceLists = { hssc: spacesOf("hssc"), nsc: spacesOf("nsc") };
+  client.buildInfo = roomsOf;
 }
 
-/** Answers each campusMap.do mode with healthy data unless a test overrides it. */
-function skkuApi(overrides: Partial<Record<Mode, () => Promise<unknown>>> = {}): void {
-  mockGet.mockImplementation((_url: string, { params }: { params: { mode: Mode } }) => {
-    const override = overrides[params.mode];
-    if (override) return override();
-    switch (params.mode) {
-      case "buildList":
-        return Promise.resolve({ data: { buildItems: buildItems(BUILDINGS_PER_CAMPUS) } });
-      case "buildInfo":
-        return Promise.resolve({
-          data: { attachItem: [], floorItem: [{ space_cd: "101", spcae_nm: "강의실" }] },
-        });
-      case "spaceList":
-        return Promise.resolve({ data: { items: spaceItems(SPACES_PER_CAMPUS) } });
-    }
-  });
+/** Spaces a previous run stored that SKKU no longer lists. */
+function seedStaleSpaces(count: number): void {
+  for (let i = 0; i < count; i++) {
+    const spaceCd = `gone-${i}` as SpaceCd;
+    repository.spaces.set(`hssc/101/${spaceCd}`, {
+      spaceCd,
+      buildNo: "101" as BuildNo,
+      campus: "hssc",
+      floor: { ko: "1층", en: "1F" },
+      name: { ko: "철거된 방", en: "" },
+      conspaceCd: null,
+      sources: ["spaceList"],
+      syncedAt: LAST_SYNC,
+    });
+  }
 }
+const staleSpacesLeft = (): number => [...repository.spaces.keys()].filter((key) => key.includes("/gone-")).length;
 
-const calledModes = (): Mode[] =>
-  mockGet.mock.calls.map(([, opts]) => (opts as { params: { mode: Mode } }).params.mode);
+const infoFields = (event: string) => mockLogger.info.mock.calls.find(([fields]) => fields.event === event)?.[0];
+const warnings = (event: string) =>
+  mockLogger.warn.mock.calls.map(([fields]) => fields).filter((fields) => fields.event === event);
 
-const loggedEvents = (mock: jest.Mock): string[] =>
-  mock.mock.calls.map(([fields]) => (fields as { event: string }).event);
+/** [skkuId, message] of each building noted as failed on a layer, in list order. */
+const detailErrorsOn = (layer: Map<SkkuId, BuildingRawDoc | BuildingDoc>) =>
+  [...layer.values()].filter((doc) => doc.sync?.detailError).map((doc) => [doc._id, doc.sync?.detailError]);
+/** The skkuIds whose photos phase 2 wrote on a layer. */
+const photosWrittenOn = (layer: Map<SkkuId, BuildingRawDoc | BuildingDoc>) =>
+  [...layer.values()].filter((doc) => doc.sync?.detailAt).map((doc) => doc._id);
 
 /** The rejection of a run that must fail. */
 async function failureOf(run: Promise<void>): Promise<AggregateError> {
@@ -111,100 +145,237 @@ async function failureOf(run: Promise<void>): Promise<AggregateError> {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockDb.raw = fakeCollection();
-  mockDb.enriched = fakeCollection();
-  mockDb.spaces = fakeCollection();
+  client = new FakeBuildingSyncClient();
+  repository = new FakeBuildingSyncRepository();
+  buildings = new FakeBuildingRepository();
+  service = new BuildingSyncService(
+    asReal<BuildingSyncClient>(client),
+    asReal<BuildingSyncRepository>(repository),
+    asReal<BuildingRepository>(buildings),
+  );
 });
 
 describe("BuildingSyncService.run", () => {
-  it("resolves after a clean run, clears the cache and logs building.sync.completed", async () => {
-    skkuApi();
+  it("resolves after a clean run, deletes the stale spaces, clears the cache and logs building.sync.completed", async () => {
+    // Arrange
+    healthySkku();
+    seedStaleSpaces(3);
 
-    await syncBuildings();
+    // Act
+    const run = service.run();
 
-    expect(mockDb.clearCache).toHaveBeenCalledTimes(1);
-    expect(mockDb.spaces.deleteMany).toHaveBeenCalledTimes(1);
-    const completed = mockLogger.info.mock.calls.find(
-      ([fields]) => fields.event === "building.sync.completed",
-    );
-    expect(completed?.[0]).toMatchObject({ buildings: 60, spaces: 5000 });
+    // Assert
+    await expect(run).resolves.toBeUndefined();
+    expect(repository.raw.size).toBe(60);
+    expect(repository.enriched.size).toBe(60);
+    expect(staleSpacesLeft()).toBe(0);
+    expect(infoFields("building.sync.stale_deleted")).toMatchObject({ deleted: 3 });
+    expect(buildings.cacheClears).toBe(1);
+    expect(infoFields("building.sync.completed")).toMatchObject({ buildings: 60, spaces: 5000 });
     expect(mockLogger.error).not.toHaveBeenCalled();
   });
 
   it("rejects naming phase 1 when buildList fails, and writes nothing", async () => {
+    // Arrange
+    healthySkku();
     const fetchError = new Error("timeout of 30000ms exceeded");
-    skkuApi({ buildList: () => Promise.reject(fetchError) });
+    client.buildLists.hssc = fetchError;
 
-    const error = await failureOf(syncBuildings());
+    // Act
+    const error = await failureOf(service.run());
 
-    expect(error.message).toMatch(/phase 1/);
+    // Assert
+    expect(error.message).toBe("Building sync failed in phase 1 (buildList)");
     expect(error.errors).toEqual([fetchError]);
-    expect(calledModes()).toEqual(["buildList"]);
-    expect(mockDb.raw.bulkWrite).not.toHaveBeenCalled();
-    expect(mockDb.clearCache).not.toHaveBeenCalled();
-    expect(loggedEvents(mockLogger.info)).not.toContain("building.sync.completed");
+    expect(client.calls).toEqual([{ mode: "buildList", campus: "hssc" }]);
+    expect(repository.raw.size).toBe(0);
+    expect(buildings.cacheClears).toBe(0);
+    expect(infoFields("building.sync.completed")).toBeUndefined();
     expect(mockLogger.error).not.toHaveBeenCalled();
   });
 
   it("rejects naming phase 1 when buildList returns fewer than 50 buildings, and writes nothing", async () => {
-    skkuApi({
-      buildList: () => Promise.resolve({ data: { buildItems: buildItems(10) } }),
-    });
+    // Arrange
+    healthySkku();
+    client.buildLists = { hssc: buildingsOf("hssc", 10), nsc: buildingsOf("nsc", 10) };
 
-    const error = await failureOf(syncBuildings());
+    // Act
+    const error = await failureOf(service.run());
 
-    expect(error.message).toMatch(/phase 1/);
+    // Assert
+    expect(error.message).toBe("Building sync failed in phase 1 (buildList)");
     expect(error.errors).toHaveLength(1);
-    expect((error.errors[0] as Error).message).toMatch(/20 buildings/);
-    expect(mockDb.raw.bulkWrite).not.toHaveBeenCalled();
-    expect(mockDb.clearCache).not.toHaveBeenCalled();
+    expect((error.errors[0] as Error).message).toBe("buildList returned 20 buildings, fewer than 50; nothing written");
+    expect(repository.raw.size).toBe(0);
+    expect(buildings.cacheClears).toBe(0);
     expect(mockLogger.error).not.toHaveBeenCalled();
   });
 
   it("still runs phase 3 and clears the cache when phase 2 fails, then rejects naming phase 2", async () => {
-    skkuApi();
+    // Arrange
+    healthySkku();
+    seedStaleSpaces(3);
     const writeError = new Error("bulk write failed");
-    mockDb.spaces.bulkWrite.mockRejectedValueOnce(writeError);
+    repository.upsertSpacesFailures = [writeError];
 
-    const error = await failureOf(syncBuildings());
+    // Act
+    const error = await failureOf(service.run());
 
-    expect(error.message).toMatch(/phase 2/);
-    expect(error.message).not.toMatch(/phase 3/);
+    // Assert
+    expect(error.message).toBe("Building sync failed in phase 2 (buildInfo)");
     expect(error.errors).toEqual([writeError]);
-    expect(calledModes()).toContain("spaceList");
-    expect(mockDb.spaces.deleteMany).toHaveBeenCalledTimes(1);
-    expect(mockDb.clearCache).toHaveBeenCalledTimes(1);
-    expect(loggedEvents(mockLogger.info)).not.toContain("building.sync.completed");
+    expect(client.callsOf("spaceList")).toHaveLength(2);
+    expect(staleSpacesLeft()).toBe(0);
+    expect(buildings.cacheClears).toBe(1);
+    expect(infoFields("building.sync.completed")).toBeUndefined();
     expect(mockLogger.error).not.toHaveBeenCalled();
   });
 
   it("skips the stale delete but clears the cache when phase 3 fails, then rejects naming phase 3", async () => {
+    // Arrange
+    healthySkku();
+    seedStaleSpaces(3);
     const fetchError = new Error("socket hang up");
-    skkuApi({ spaceList: () => Promise.reject(fetchError) });
+    client.spaceLists.hssc = fetchError;
 
-    const error = await failureOf(syncBuildings());
+    // Act
+    const error = await failureOf(service.run());
 
-    expect(error.message).toMatch(/phase 3/);
-    expect(error.message).not.toMatch(/phase 2/);
+    // Assert
+    expect(error.message).toBe("Building sync failed in phase 3 (spaceList)");
     expect(error.errors).toEqual([fetchError]);
-    expect(mockDb.spaces.deleteMany).not.toHaveBeenCalled();
-    expect(mockDb.clearCache).toHaveBeenCalledTimes(1);
-    expect(loggedEvents(mockLogger.info)).not.toContain("building.sync.completed");
+    expect(staleSpacesLeft()).toBe(3);
+    expect(buildings.cacheClears).toBe(1);
+    expect(infoFields("building.sync.completed")).toBeUndefined();
     expect(mockLogger.error).not.toHaveBeenCalled();
   });
 
   it("rejects once, naming both phases in order, when phases 2 and 3 both fail", async () => {
+    // Arrange
+    healthySkku();
     const fetchError = new Error("socket hang up");
-    skkuApi({ spaceList: () => Promise.reject(fetchError) });
+    client.spaceLists.hssc = fetchError;
     const writeError = new Error("bulk write failed");
-    mockDb.spaces.bulkWrite.mockRejectedValueOnce(writeError);
+    repository.upsertSpacesFailures = [writeError];
 
-    const error = await failureOf(syncBuildings());
+    // Act
+    const error = await failureOf(service.run());
 
-    expect(error.message).toMatch(/phase 2.*phase 3/);
+    // Assert
+    expect(error.message).toBe("Building sync failed in phase 2 (buildInfo) and phase 3 (spaceList)");
     expect(error.errors).toEqual([writeError, fetchError]);
-    expect(mockDb.clearCache).toHaveBeenCalledTimes(1);
+    expect(buildings.cacheClears).toBe(1);
   });
+
+  it("keeps every stale space when spaceList lists fewer than 5000", async () => {
+    // Arrange
+    healthySkku();
+    client.spaceLists = { hssc: spacesOf("hssc", 2499), nsc: spacesOf("nsc", 2499) };
+    seedStaleSpaces(3);
+
+    // Act
+    const run = service.run();
+
+    // Assert
+    await expect(run).resolves.toBeUndefined();
+    expect(staleSpacesLeft()).toBe(3);
+    expect(warnings("building.sync.stale_delete_skipped")).toEqual([
+      { event: "building.sync.stale_delete_skipped", count: 4998 },
+    ]);
+    expect(infoFields("building.sync.completed")).toMatchObject({ spaces: 4998 });
+  });
+});
+
+/**
+ * Phase 1 enrichment. A building is re-enriched when it is new, when SKKU
+ * changed it since the last run, or when an older ENRICH_VERSION wrote it;
+ * the comparison must read the stamps before the raw upsert overwrites them. A
+ * raw building missing a field every production document has makes
+ * enrichment throw, so phase 1 fails after the raw upsert and before anything
+ * is enriched, instead of writing blank fields.
+ */
+describe("BuildingSyncService.run, phase 1 enrichment", () => {
+  /** The state a previous run left: every building raw and enriched at the current version. */
+  async function seedPreviousRun(): Promise<void> {
+    const previous = [...buildingsOf("hssc"), ...buildingsOf("nsc")];
+    await repository.upsertRaw(previous, LAST_SYNC);
+    await repository.upsertEnriched(
+      previous.map(({ skkuId, doc }) => ({ skkuId, building: enrichBuilding({ ...doc, _id: skkuId }) })),
+      LAST_SYNC,
+    );
+  }
+  const listedHssc = (): ListedBuilding[] => client.buildLists.hssc as ListedBuilding[];
+
+  it("enriches every building on a first run and completes", async () => {
+    // Arrange
+    healthySkku();
+
+    // Act
+    const run = service.run();
+
+    // Assert
+    await expect(run).resolves.toBeUndefined();
+    expect(repository.enriched.size).toBe(60);
+    expect(repository.enriched.get(101 as SkkuId)).toMatchObject({
+      name: { ko: "건물 101", en: "Building 101" },
+      displayNo: "1",
+      enrichVersion: ENRICH_VERSION,
+    });
+    expect(infoFields("building.sync.enriched")).toMatchObject({ changed: 60 });
+  });
+
+  it("re-enriches only a building SKKU changed and one an older version enriched", async () => {
+    // Arrange
+    healthySkku();
+    await seedPreviousRun();
+    listedHssc()[0] = listed(101, "hssc", { skkuUpdatedAt: "2026-10-01", name: { ko: "새 이름", en: "New name" } });
+    const olderVersion = repository.enriched.get(102 as SkkuId)!;
+    repository.enriched.set(102 as SkkuId, { ...olderVersion, enrichVersion: ENRICH_VERSION - 1 });
+
+    // Act
+    await service.run();
+
+    // Assert
+    expect(infoFields("building.sync.enriched")).toMatchObject({ changed: 2 });
+    expect(repository.enriched.get(101 as SkkuId)).toMatchObject({ name: { ko: "새 이름", en: "New name" } });
+    expect(repository.enriched.get(102 as SkkuId)?.enrichVersion).toBe(ENRICH_VERSION);
+    expect(repository.enriched.get(103 as SkkuId)?.updatedAt).toEqual(LAST_SYNC);
+  });
+
+  it("skips enrichment when no building changed", async () => {
+    // Arrange
+    healthySkku();
+    await seedPreviousRun();
+
+    // Act
+    await service.run();
+
+    // Assert
+    expect(infoFields("building.sync.enrich_skipped")).toBeDefined();
+    expect(infoFields("building.sync.enriched")).toBeUndefined();
+    expect(repository.enriched.get(101 as SkkuId)?.updatedAt).toEqual(LAST_SYNC);
+  });
+
+  it.each(["name", "description", "accessibility"])(
+    "rejects naming phase 1 when a changed raw building has no %s",
+    async (field) => {
+      // Arrange
+      healthySkku();
+      const broken = listed(101, "hssc");
+      delete (broken.doc as unknown as Record<string, unknown>)[field];
+      listedHssc()[0] = broken;
+
+      // Act
+      const error = await failureOf(service.run());
+
+      // Assert
+      expect(error.message).toBe("Building sync failed in phase 1 (buildList)");
+      expect(error.errors[0]).toBeInstanceOf(TypeError);
+      expect(repository.raw.size).toBe(60);
+      expect(repository.enriched.size).toBe(0);
+      expect(client.callsOf("buildInfo")).toEqual([]);
+    },
+  );
 });
 
 /**
@@ -212,87 +383,28 @@ describe("BuildingSyncService.run", () => {
  * fetch, or writing its photos) is noted on both layers and left out, and
  * every other building, in its batch and in later ones, still syncs. At most
  * five buildInfo requests are in flight at once, so the sync never floods
- * SKKU. Each building here has its own skkuId and buildNo (hssc 101-130, nsc
- * 201-230) and one room, `<buildNo>-101`.
+ * SKKU.
  */
 describe("BuildingSyncService.run, phase 2 per building", () => {
-  type CampusMapParams = { mode: Mode; campusCd?: string; buildNo?: string };
-
-  const roomsOf = (buildNo: string) =>
-    Promise.resolve({ data: { attachItem: [], floorItem: [{ space_cd: `${buildNo}-101`, spcae_nm: "강의실" }] } });
-
-  function campusMap(
-    { buildInfo = roomsOf, facilitiesPerCampus = 0 }: {
-      buildInfo?: (buildNo: string) => Promise<unknown>;
-      facilitiesPerCampus?: number;
-    } = {},
-  ): void {
-    mockGet.mockImplementation((_url: string, { params }: { params: CampusMapParams }) => {
-      switch (params.mode) {
-        case "buildList": {
-          const base = params.campusCd === "1" ? 100 : 200;
-          const buildings = Array.from({ length: BUILDINGS_PER_CAMPUS }, (_, i) => ({
-            id: base + i + 1,
-            buildNo: String(base + i + 1),
-            buildNm: `건물 ${base + i + 1}`,
-          }));
-          const facilities = Array.from({ length: facilitiesPerCampus }, (_, i) => ({
-            id: base + 90 + i,
-            buildNo: "",
-            buildNm: `시설 ${base + 90 + i}`,
-          }));
-          return Promise.resolve({ data: { buildItems: [...buildings, ...facilities] } });
-        }
-        case "buildInfo":
-          return buildInfo(params.buildNo!);
-        case "spaceList":
-          return Promise.resolve({ data: { items: spaceItems(SPACES_PER_CAMPUS) } });
-      }
-    });
-  }
-
-  type UpdateCall = [{ _id: number }, { $set: Record<string, unknown> }];
-  const updates = (collection: { updateOne: jest.Mock }): UpdateCall[] =>
-    collection.updateOne.mock.calls as UpdateCall[];
-  /** [skkuId, message] of each recordDetailError write on a layer. */
-  const detailErrorsOn = (collection: { updateOne: jest.Mock }) =>
-    updates(collection)
-      .filter(([, update]) => !("attachments" in update.$set))
-      .map(([filter, update]) => [filter._id, update.$set["sync.detailError"]]);
-  /** The skkuIds whose photos were written on a layer. */
-  const photosWrittenOn = (collection: { updateOne: jest.Mock }) =>
-    updates(collection)
-      .filter(([, update]) => "attachments" in update.$set)
-      .map(([filter]) => filter._id);
-  /** The spaceCds phase 2 upserted (its bulkWrite comes before phase 3's). */
-  const buildInfoRooms = (): string[] => {
-    const [ops] = mockDb.spaces.bulkWrite.mock.calls[0] as [Array<{ updateOne: { filter: { spaceCd: string } } }>];
-    return ops.map((op) => op.updateOne.filter.spaceCd);
-  };
-  const infoFields = (event: string) =>
-    mockLogger.info.mock.calls.find(([fields]) => fields.event === event)?.[0];
-
   it("notes a failed building on both layers, leaves its rooms out, and syncs every other batch", async () => {
     // Arrange
+    healthySkku();
     // 103 is in the first batch of five, 230 in the last.
     const firstBatchError = new Error("Request failed with status code 500");
     const lastBatchError = new Error("timeout of 30000ms exceeded");
-    campusMap({
-      buildInfo: (buildNo) =>
-        buildNo === "103"
-          ? Promise.reject(firstBatchError)
-          : buildNo === "230"
-            ? Promise.reject(lastBatchError)
-            : roomsOf(buildNo),
-    });
+    client.buildInfo = async (building) => {
+      if (building.skkuId === 103) throw firstBatchError;
+      if (building.skkuId === 230) throw lastBatchError;
+      return roomsOf(building);
+    };
 
     // Act
-    const run = syncBuildings();
+    const run = service.run();
 
     // Assert
     await expect(run).resolves.toBeUndefined();
-    expect(calledModes().filter((mode) => mode === "buildInfo")).toHaveLength(60);
-    for (const layer of [mockDb.raw, mockDb.enriched]) {
+    expect(client.callsOf("buildInfo")).toHaveLength(60);
+    for (const layer of [repository.raw, repository.enriched]) {
       expect(detailErrorsOn(layer)).toEqual([
         [103, "Request failed with status code 500"],
         [230, "timeout of 30000ms exceeded"],
@@ -301,15 +413,12 @@ describe("BuildingSyncService.run, phase 2 per building", () => {
       expect(photosWrittenOn(layer)).not.toContain(103);
       expect(photosWrittenOn(layer)).not.toContain(230);
     }
-    const rooms = buildInfoRooms();
+    const rooms = repository.spaceCdsFrom("buildInfo");
     expect(rooms).toHaveLength(58);
     expect(rooms).not.toContain("103-101");
     expect(rooms).not.toContain("230-101");
     expect(rooms).toContain("229-101");
-    const failures = mockLogger.warn.mock.calls
-      .map(([fields]) => fields)
-      .filter((fields) => fields.event === "building.sync.buildinfo_failed");
-    expect(failures).toEqual([
+    expect(warnings("building.sync.buildinfo_failed")).toEqual([
       { event: "building.sync.buildinfo_failed", skkuId: 103, buildNo: "103", err: firstBatchError },
       { event: "building.sync.buildinfo_failed", skkuId: 230, buildNo: "230", err: lastBatchError },
     ]);
@@ -319,85 +428,71 @@ describe("BuildingSyncService.run, phase 2 per building", () => {
 
   it("counts a building whose photos cannot be written as failed, with the write's message", async () => {
     // Arrange
-    campusMap();
-    const writeError = new Error("WriteConflict");
-    mockDb.raw.updateOne.mockImplementation((filter: { _id: number }, update: { $set: object }) =>
-      filter._id === 105 && "attachments" in update.$set ? Promise.reject(writeError) : Promise.resolve({}),
-    );
+    healthySkku();
+    repository.setAttachmentsFailures.set(105 as SkkuId, new Error("WriteConflict"));
 
     // Act
-    const run = syncBuildings();
+    const run = service.run();
 
     // Assert
     await expect(run).resolves.toBeUndefined();
-    expect(detailErrorsOn(mockDb.raw)).toEqual([[105, "WriteConflict"]]);
-    expect(detailErrorsOn(mockDb.enriched)).toEqual([[105, "WriteConflict"]]);
-    expect(buildInfoRooms()).not.toContain("105-101");
+    expect(detailErrorsOn(repository.raw)).toEqual([[105, "WriteConflict"]]);
+    expect(detailErrorsOn(repository.enriched)).toEqual([[105, "WriteConflict"]]);
+    expect(repository.spaceCdsFrom("buildInfo")).not.toContain("105-101");
     expect(infoFields("building.sync.buildinfo_upserted")).toMatchObject({ processed: 59, errors: 1 });
   });
 
   it("notes a failure whose error has no message as unknown", async () => {
     // Arrange
-    campusMap({ buildInfo: (buildNo) => (buildNo === "101" ? Promise.reject(new Error()) : roomsOf(buildNo)) });
+    healthySkku();
+    client.buildInfo = async (building) => {
+      if (building.skkuId === 101) throw new Error();
+      return roomsOf(building);
+    };
 
     // Act
-    await syncBuildings();
+    await service.run();
 
     // Assert
-    expect(detailErrorsOn(mockDb.raw)).toEqual([[101, "unknown"]]);
-  });
-
-  it("logs a failure note it cannot write and still completes the run", async () => {
-    // Arrange
-    campusMap({
-      buildInfo: (buildNo) => (buildNo === "101" ? Promise.reject(new Error("HTTP 502")) : roomsOf(buildNo)),
-    });
-    const noteError = new Error("not primary");
-    mockDb.enriched.updateOne.mockImplementation((_filter: unknown, update: { $set: object }) =>
-      "attachments" in update.$set ? Promise.resolve({}) : Promise.reject(noteError),
-    );
-
-    // Act
-    const run = syncBuildings();
-
-    // Assert
-    await expect(run).resolves.toBeUndefined();
-    expect(detailErrorsOn(mockDb.raw)).toEqual([[101, "HTTP 502"]]);
-    expect(mockLogger.warn).toHaveBeenCalledWith(
-      { event: "building.sync.error_note_failed", skkuId: 101, err: noteError },
-      expect.any(String),
-    );
-    expect(infoFields("building.sync.completed")).toBeDefined();
+    expect(detailErrorsOn(repository.raw)).toEqual([[101, "unknown"]]);
   });
 
   it("requests no buildInfo for a facility without a buildNo", async () => {
     // Arrange
-    campusMap({ facilitiesPerCampus: 2 });
+    healthySkku();
+    (client.buildLists.hssc as ListedBuilding[]).push(
+      listed(191, "hssc", { buildNo: null }),
+      listed(192, "hssc", { buildNo: null }),
+    );
+    (client.buildLists.nsc as ListedBuilding[]).push(
+      listed(291, "nsc", { buildNo: null }),
+      listed(292, "nsc", { buildNo: null }),
+    );
 
     // Act
-    await syncBuildings();
+    await service.run();
 
     // Assert
     expect(infoFields("building.sync.completed")).toMatchObject({ buildings: 64 });
-    expect(calledModes().filter((mode) => mode === "buildInfo")).toHaveLength(60);
+    expect(client.callsOf("buildInfo")).toHaveLength(60);
+    expect(client.callsOf("buildInfo").map((call) => call.skkuId)).not.toContain(191);
   });
 
   it("keeps at most five buildInfo requests in flight", async () => {
     // Arrange
+    healthySkku();
     let inFlight = 0;
     let mostInFlight = 0;
-    campusMap({
-      buildInfo: async (buildNo) => {
-        inFlight++;
-        mostInFlight = Math.max(mostInFlight, inFlight);
-        await new Promise((resolve) => setImmediate(resolve));
-        inFlight--;
-        return roomsOf(buildNo);
-      },
-    });
+    client.buildInfo = async (building) => {
+      inFlight++;
+      mostInFlight = Math.max(mostInFlight, inFlight);
+      await new Promise((resolve) => setImmediate(resolve));
+      inFlight--;
+      return roomsOf(building);
+    };
 
     // Act
-    await syncBuildings();
+    await service.run();
 
     // Assert
     // Five is a courtesy limit toward SKKU's server; raising it is a decision,
@@ -412,39 +507,37 @@ describe("BuildingSyncService.run, phase 2 per building", () => {
    * summary first, and phase 3 and the cache clear still run.
    */
   describe("when more than half of the buildInfo calls fail", () => {
-    /** Rejects buildInfo for the given buildNos, each with its own error. */
-    function failBuildInfo(failing: (buildNo: string) => boolean): Map<string, Error> {
-      const errors = new Map<string, Error>();
-      campusMap({
-        buildInfo: (buildNo) => {
-          if (!failing(buildNo)) return roomsOf(buildNo);
-          const error = new Error(`buildInfo ${buildNo} failed`);
-          errors.set(buildNo, error);
-          return Promise.reject(error);
-        },
-      });
+    /** Rejects buildInfo for the matching buildings, each with its own error. */
+    function failBuildInfo(failing: (skkuId: number) => boolean): Map<number, Error> {
+      const errors = new Map<number, Error>();
+      client.buildInfo = async (building) => {
+        if (!failing(building.skkuId)) return roomsOf(building);
+        const error = new Error(`buildInfo ${building.skkuId} failed`);
+        errors.set(building.skkuId, error);
+        throw error;
+      };
       return errors;
     }
     const summary = () => infoFields("building.sync.buildinfo_upserted");
 
     it("rejects naming phase 2 after recording every failure, and still runs phase 3", async () => {
       // Arrange
+      healthySkku();
+      seedStaleSpaces(3);
       const errors = failBuildInfo(() => true);
 
       // Act
-      const error = await failureOf(syncBuildings());
+      const error = await failureOf(service.run());
 
       // Assert
       expect(error.message).toBe("Building sync failed in phase 2 (buildInfo)");
       expect(error.errors).toHaveLength(1);
       const phaseError = error.errors[0] as Error;
       expect(phaseError.message).toBe("buildInfo failed for 60 of 60 buildings");
-      expect(phaseError.cause).toBe(errors.get("101"));
-      expect(detailErrorsOn(mockDb.raw)).toHaveLength(60);
-      expect(detailErrorsOn(mockDb.enriched)).toHaveLength(60);
-      expect(
-        mockLogger.warn.mock.calls.filter(([fields]) => fields.event === "building.sync.buildinfo_failed"),
-      ).toHaveLength(60);
+      expect(phaseError.cause).toBe(errors.get(101));
+      expect(detailErrorsOn(repository.raw)).toHaveLength(60);
+      expect(detailErrorsOn(repository.enriched)).toHaveLength(60);
+      expect(warnings("building.sync.buildinfo_failed")).toHaveLength(60);
       expect(summary()).toEqual({
         event: "building.sync.buildinfo_upserted",
         matched: 0,
@@ -452,35 +545,43 @@ describe("BuildingSyncService.run, phase 2 per building", () => {
         processed: 0,
         errors: 60,
       });
-      expect(calledModes()).toContain("spaceList");
-      expect(mockDb.spaces.deleteMany).toHaveBeenCalledTimes(1);
-      expect(mockDb.clearCache).toHaveBeenCalledTimes(1);
+      expect(client.callsOf("spaceList")).toHaveLength(2);
+      expect(staleSpacesLeft()).toBe(0);
+      expect(buildings.cacheClears).toBe(1);
       expect(infoFields("building.sync.completed")).toBeUndefined();
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
     it("upserts the rooms of the buildings that succeeded before rejecting at 31 of 60", async () => {
       // Arrange
-      failBuildInfo((buildNo) => buildNo.startsWith("1") || buildNo === "201");
+      healthySkku();
+      failBuildInfo((skkuId) => skkuId < 200 || skkuId === 201);
 
       // Act
-      const error = await failureOf(syncBuildings());
+      const error = await failureOf(service.run());
 
       // Assert
       expect((error.errors[0] as Error).message).toBe("buildInfo failed for 31 of 60 buildings");
-      const rooms = buildInfoRooms();
+      const rooms = repository.spaceCdsFrom("buildInfo");
       expect(rooms).toHaveLength(29);
       expect(rooms).not.toContain("201-101");
       expect(rooms).toContain("202-101");
-      expect(summary()).toMatchObject({ processed: 29, errors: 31 });
+      expect(summary()).toEqual({
+        event: "building.sync.buildinfo_upserted",
+        matched: 0,
+        upserted: 29,
+        processed: 29,
+        errors: 31,
+      });
     });
 
     it("resolves when exactly half fail", async () => {
       // Arrange
-      failBuildInfo((buildNo) => buildNo.startsWith("1"));
+      healthySkku();
+      failBuildInfo((skkuId) => skkuId < 200);
 
       // Act
-      const run = syncBuildings();
+      const run = service.run();
 
       // Assert
       await expect(run).resolves.toBeUndefined();
@@ -490,32 +591,32 @@ describe("BuildingSyncService.run, phase 2 per building", () => {
 
     it("names both phases, phase 2 first, when phase 3 fails too", async () => {
       // Arrange
-      const spaceListError = new Error("socket hang up");
+      healthySkku();
+      seedStaleSpaces(3);
       failBuildInfo(() => true);
-      const answer = mockGet.getMockImplementation()!;
-      mockGet.mockImplementation((url: string, opts: { params: { mode: Mode } }) =>
-        opts.params.mode === "spaceList" ? Promise.reject(spaceListError) : answer(url, opts),
-      );
+      const spaceListError = new Error("socket hang up");
+      client.spaceLists.hssc = spaceListError;
 
       // Act
-      const error = await failureOf(syncBuildings());
+      const error = await failureOf(service.run());
 
       // Assert
       expect(error.message).toBe("Building sync failed in phase 2 (buildInfo) and phase 3 (spaceList)");
       expect((error.errors[0] as Error).message).toBe("buildInfo failed for 60 of 60 buildings");
       expect(error.errors[1]).toBe(spaceListError);
-      expect(mockDb.spaces.deleteMany).not.toHaveBeenCalled();
-      expect(mockDb.clearCache).toHaveBeenCalledTimes(1);
+      expect(staleSpacesLeft()).toBe(3);
+      expect(buildings.cacheClears).toBe(1);
     });
   });
 
   describe("phase 2's summary log", () => {
     it("is written on a run that found no rooms, with nothing upserted", async () => {
       // Arrange
-      campusMap({ buildInfo: () => Promise.resolve({ data: { attachItem: [], floorItem: [] } }) });
+      healthySkku();
+      client.buildInfo = async () => ({ attachments: [], spaces: [] });
 
       // Act
-      await syncBuildings();
+      await service.run();
 
       // Assert
       expect(infoFields("building.sync.buildinfo_upserted")).toEqual({
@@ -525,17 +626,17 @@ describe("BuildingSyncService.run, phase 2 per building", () => {
         processed: 60,
         errors: 0,
       });
-      expect(mockDb.spaces.bulkWrite).toHaveBeenCalledTimes(1);
+      expect(repository.spaceUpserts).toEqual(["spaceList"]);
     });
 
     it("is skipped when the rooms' upsert throws, and phase 2 fails", async () => {
       // Arrange
-      campusMap();
+      healthySkku();
       const writeError = new Error("bulk write failed");
-      mockDb.spaces.bulkWrite.mockRejectedValueOnce(writeError);
+      repository.upsertSpacesFailures = [writeError];
 
       // Act
-      const error = await failureOf(syncBuildings());
+      const error = await failureOf(service.run());
 
       // Assert
       expect(error.message).toBe("Building sync failed in phase 2 (buildInfo)");
@@ -543,66 +644,4 @@ describe("BuildingSyncService.run, phase 2 per building", () => {
       expect(infoFields("building.sync.buildinfo_upserted")).toBeUndefined();
     });
   });
-});
-
-/**
- * Phase 1 enrichment on a raw building missing a field every production
- * document has: enrichment throws, so phase 1 fails the run after the raw
- * upsert and before anything is enriched, instead of writing blank fields.
- */
-describe("BuildingSyncService.run, phase 1 enrichment", () => {
-  const RAW = {
-    _id: 1,
-    buildNo: "1",
-    campus: "hssc",
-    name: { ko: "건물 1", en: "Building 1" },
-    description: { ko: "설명", en: "About" },
-    location: { type: "Point", coordinates: [126.99, 37.58] },
-    image: { url: null, filename: null },
-    accessibility: { elevator: false, toilet: false },
-    skkuCreatedAt: null,
-    skkuUpdatedAt: null,
-  };
-
-  /** Answers the changed-building read with `doc`; every other raw read finds nothing. */
-  function rawReadReturns(doc: Record<string, unknown>): void {
-    (mockDb.raw.find as jest.Mock).mockImplementation((filter: { _id?: { $in?: unknown[] } }) => ({
-      toArray: jest.fn().mockResolvedValue(filter?._id?.$in ? [doc] : []),
-    }));
-  }
-
-  it("enriches a complete changed raw building and completes the run", async () => {
-    // Arrange
-    skkuApi();
-    rawReadReturns(RAW);
-
-    // Act
-    const run = syncBuildings();
-
-    // Assert
-    await expect(run).resolves.toBeUndefined();
-    const [ops] = mockDb.enriched.bulkWrite.mock.calls[0] as [unknown[]];
-    expect(ops).toHaveLength(1);
-  });
-
-  it.each(["name", "description", "accessibility"])(
-    "rejects naming phase 1 when a changed raw building has no %s",
-    async (field) => {
-      // Arrange
-      skkuApi();
-      const broken: Record<string, unknown> = { ...RAW };
-      delete broken[field];
-      rawReadReturns(broken);
-
-      // Act
-      const error = await failureOf(syncBuildings());
-
-      // Assert
-      expect(error.message).toBe("Building sync failed in phase 1 (buildList)");
-      expect(error.errors[0]).toBeInstanceOf(TypeError);
-      expect(mockDb.raw.bulkWrite).toHaveBeenCalledTimes(1);
-      expect(mockDb.enriched.bulkWrite).not.toHaveBeenCalled();
-      expect(calledModes()).not.toContain("buildInfo");
-    },
-  );
 });

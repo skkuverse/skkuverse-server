@@ -43,10 +43,13 @@ afterEach(() => {
 
 describe("BuildingSyncPoller.onModuleInit", () => {
   it("registers a 'building-sync' poller at config.building.syncIntervalMs", () => {
+    // Arrange
     const spy = jest.spyOn(registry, "registerPoller");
 
+    // Act
     new BuildingSyncPoller(registry, sync).onModuleInit();
 
+    // Assert
     expect(spy).toHaveBeenCalledTimes(1);
     const [fn, intervalMs, name] = spy.mock.calls[0]!;
     expect(intervalMs).toBe(config.building.syncIntervalMs);
@@ -55,24 +58,32 @@ describe("BuildingSyncPoller.onModuleInit", () => {
   });
 
   it("registered fn passes a sync rejection to the registry unchanged", async () => {
+    // Arrange
     const spy = jest.spyOn(registry, "registerPoller");
     new BuildingSyncPoller(registry, sync).onModuleInit();
     const fn = spy.mock.calls[0]![0];
     const syncError = new AggregateError([new Error("crawl failed")], "phase 1 failed");
     mockedSync.mockRejectedValueOnce(syncError);
 
+    // Act
     const outcome = Promise.resolve(fn());
 
+    // Assert
     await expect(outcome).rejects.toBe(syncError);
     expect(mockedSync).toHaveBeenCalledTimes(1);
   });
 
   it("registers nothing when BUILDING_SYNC resolved to off (the development default)", () => {
+    // Arrange
     const saved = config.building.syncEnabled;
     config.building.syncEnabled = false;
     try {
       const spy = jest.spyOn(registry, "registerPoller");
+
+      // Act
       new BuildingSyncPoller(registry, sync).onModuleInit();
+
+      // Assert
       expect(spy).not.toHaveBeenCalled();
       expect(mockedSync).not.toHaveBeenCalled();
     } finally {
@@ -81,24 +92,30 @@ describe("BuildingSyncPoller.onModuleInit", () => {
   });
 
   it("registered fn resolves on sync success", async () => {
+    // Arrange
     const spy = jest.spyOn(registry, "registerPoller");
     new BuildingSyncPoller(registry, sync).onModuleInit();
     const fn = spy.mock.calls[0]![0];
     mockedSync.mockResolvedValueOnce(undefined);
 
+    // Act
     const outcome = Promise.resolve(fn());
 
+    // Assert
     await expect(outcome).resolves.toBeUndefined();
     expect(mockedSync).toHaveBeenCalledTimes(1);
   });
 
   it("a failed sync makes the registry declare 'building-sync' failing", async () => {
+    // Arrange
     new BuildingSyncPoller(registry, sync).onModuleInit();
     mockedSync.mockRejectedValueOnce(new Error("crawl failed"));
 
+    // Act
     registry.startAll();
     await settle();
 
+    // Assert
     expect(registry.failingPollers()).toEqual(["building-sync"]);
   });
 });
