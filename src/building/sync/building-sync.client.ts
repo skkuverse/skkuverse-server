@@ -121,8 +121,7 @@ export class BuildingSyncClient {
       timeout: REQUEST_TIMEOUT_MS,
     });
     return (data.buildItems || []).map((buildItem) => ({
-      // SKKU sends a number, but a numeric string must still parse to the same skkuId.
-      skkuId: parseInt(String(buildItem.id), 10) as SkkuId,
+      skkuId: buildItem.id as SkkuId,
       apiId: buildItem.id as ApiId,
       doc: toRawDoc(buildItem, campus),
     }));
