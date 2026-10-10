@@ -87,7 +87,6 @@ export class BuildingSyncRepository implements OnModuleInit {
 
   async ensureIndexes(): Promise<void> {
     await Promise.all([
-      this.raw().createIndex({ campus: 1 }),
       // No geo query runs: the 2dsphere makes Mongo reject a malformed point at upsert.
       this.enriched().createIndex({ location: "2dsphere" }),
       // The space upserts filter on this key; unique, so a listing cannot duplicate a room.
