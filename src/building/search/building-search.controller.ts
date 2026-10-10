@@ -1,5 +1,5 @@
-import { Controller, Get, Query, Req } from "@nestjs/common";
-import type { Request } from "express";
+import { Controller, Get, Query } from "@nestjs/common";
+import { Lang } from "../../http/lang.decorator";
 import { withMeta } from "../../http/response.interceptor";
 import { ZodValidationPipe } from "../../http/zod-validation.pipe";
 import type { SupportedLang } from "../../infra/types";
@@ -25,13 +25,9 @@ export class BuildingSearchController {
       }),
     )
     query: BuildingSearchQuery,
-    @Req() req: Request,
+    @Lang() lang: SupportedLang,
   ) {
-    const { data, meta } = await this.buildingSearch.search(
-      query.q,
-      query.campus ?? null,
-      req.lang as SupportedLang,
-    );
+    const { data, meta } = await this.buildingSearch.search(query.q, query.campus ?? null, lang);
     return withMeta(data, meta);
   }
 }
