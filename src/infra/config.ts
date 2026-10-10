@@ -13,7 +13,10 @@ const { switches, errors: switchErrors } = resolveRuntimeSwitches(
   runtimeMode(NODE_ENV),
 );
 
-const devDbName = (baseName: string | undefined) => requiredEnv.devDbName(mode, baseName);
+// Typed `string`: every DB name read through this is in required-env.ts's list,
+// so the missing-config exit at the end of this file runs before any caller
+// reads one (test mode skips that exit; jest.setup.ts sets every name).
+const devDbName = (baseName: string | undefined) => requiredEnv.devDbName(mode, baseName) as string;
 const apiUrl = (prodKey: string, devKey: string) => requiredEnv.apiUrl(mode, process.env, prodKey, devKey);
 
 const config = {

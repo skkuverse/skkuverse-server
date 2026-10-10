@@ -159,10 +159,10 @@ export class BuildingRepository implements OnModuleInit {
   }
 
   private buildings(): Collection<BuildingDoc> {
-    return mongoCollection<BuildingDoc>(config.building.dbName!, config.building.collections.buildings);
+    return mongoCollection<BuildingDoc>(config.building.dbName, config.building.collections.buildings);
   }
 
   private campusShapes(): Collection<CampusShapeDoc> {
-    return mongoCollection<CampusShapeDoc>(config.building.dbName!, config.building.collections.campusShapes);
+    return mongoCollection<CampusShapeDoc>(config.building.dbName, config.building.collections.campusShapes);
   }
 }
