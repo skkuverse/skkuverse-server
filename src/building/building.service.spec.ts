@@ -5,6 +5,7 @@
  */
 import type { BuildingRepository } from "./building.repository";
 import { BuildingService } from "./building.service";
+import type { SkkuId } from "./building.types";
 
 const repo = {
   listBuildings: jest.fn(),
@@ -64,7 +65,7 @@ describe("BuildingService.search", () => {
 describe("BuildingService.detail", () => {
   it("is null for an unknown building and asks for nothing else", async () => {
     repo.findBuildingBySkkuId.mockResolvedValue(null);
-    await expect(svc.detail(999, "ko")).resolves.toBeNull();
+    await expect(svc.detail(999 as SkkuId, "ko")).resolves.toBeNull();
     expect(repo.listFloorsByBuildNo).not.toHaveBeenCalled();
     expect(repo.listConnectionsBySkkuId).not.toHaveBeenCalled();
   });
@@ -75,7 +76,7 @@ describe("BuildingService.detail", () => {
     repo.listFloorsByBuildNo.mockResolvedValue(floors);
     repo.listConnectionsBySkkuId.mockResolvedValue([]);
 
-    const view = await svc.detail(3, "ko");
+    const view = await svc.detail(3 as SkkuId, "ko");
 
     expect(view?.floors[0]?.floor.en).toBe("1층");
     expect(view?.floors[0]?.spaces[0]?.name.en).toBe("실");

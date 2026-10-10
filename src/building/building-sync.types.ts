@@ -1,13 +1,13 @@
 import type { BuildingAttachment, BuildingRawDoc } from "./building.document";
-import type { BilingualText, Campus } from "./building.types";
+import type { ApiId, BilingualText, BuildNo, Campus, SkkuId, SpaceCd } from "./building.types";
 
 // What BuildingClient translates campusMap.do into.
 
 /** One building from buildList. */
 export interface ListedBuilding {
-  skkuId: number;
+  skkuId: SkkuId;
   /** The id as SKKU sent it; buildInfo takes it back verbatim. */
-  apiId: string;
+  apiId: ApiId;
   doc: Omit<BuildingRawDoc, "_id">;
 }
 
@@ -16,8 +16,8 @@ export type SpaceSource = "buildInfo" | "spaceList";
 
 /** A space as either listing reports it. */
 export interface SyncedSpace {
-  spaceCd: string;
-  buildNo: string;
+  spaceCd: SpaceCd;
+  buildNo: BuildNo;
   campus: Campus;
   floor: BilingualText;
   name: BilingualText;

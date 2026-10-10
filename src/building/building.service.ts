@@ -7,6 +7,7 @@ import type {
   BuildingDetail,
   BuildingSearch,
   Campus,
+  SkkuId,
   WithCampusLabel,
 } from "./building.types";
 
@@ -40,7 +41,7 @@ export class BuildingService {
   }
 
   /** GET /building/:skkuId: the building, its floors and connections; null if there is none. */
-  async detail(skkuId: number, lang: SupportedLang): Promise<BuildingDetail | null> {
+  async detail(skkuId: SkkuId, lang: SupportedLang): Promise<BuildingDetail | null> {
     const building = await this.repository.findBuildingBySkkuId(skkuId);
     if (!building) return null;
     const [floors, connections] = await Promise.all([

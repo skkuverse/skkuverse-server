@@ -19,7 +19,7 @@ import type {
   SpaceDoc,
 } from "./building.document";
 import { groupByFloor, toConnectionItems } from "./building.mapper";
-import type { Campus, BuildingConnection, FloorGroup } from "./building.types";
+import type { BuildNo, BuildingConnection, Campus, FloorGroup, SkkuId } from "./building.types";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -151,14 +151,14 @@ export class BuildingRepository implements OnModuleInit {
     return buildings.filter((b) => b.campus === campus);
   }
 
-  findBuildingBySkkuId(skkuId: number): Promise<BuildingDoc | null> {
+  findBuildingBySkkuId(skkuId: SkkuId): Promise<BuildingDoc | null> {
     return this.buildings().findOne(
       { _id: skkuId },
       { projection: { sync: 0, enrichVersion: 0 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
     );
   }
 
-  async listFloorsByBuildNo(buildNo: string | null): Promise<FloorGroup[]> {
+  async listFloorsByBuildNo(buildNo: BuildNo | null): Promise<FloorGroup[]> {
     if (!buildNo) return [];
     const spaces = await this.spaces()
       .find(
@@ -172,7 +172,7 @@ export class BuildingRepository implements OnModuleInit {
     return groupByFloor(spaces);
   }
 
-  async listConnectionsBySkkuId(skkuId: number): Promise<BuildingConnection[]> {
+  async listConnectionsBySkkuId(skkuId: SkkuId): Promise<BuildingConnection[]> {
     const connections = await this.connections()
       .find(
         { $or: [{ "a.skkuId": skkuId }, { "b.skkuId": skkuId }] },
@@ -181,7 +181,7 @@ export class BuildingRepository implements OnModuleInit {
       .toArray();
     if (!connections.length) return [];
 
-    const relatedIds = new Set<number>();
+    const relatedIds = new Set<SkkuId>();
     for (const connection of connections) {
       relatedIds.add(connection.a.skkuId);
       relatedIds.add(connection.b.skkuId);
