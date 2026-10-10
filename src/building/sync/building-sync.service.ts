@@ -5,6 +5,7 @@ import {
   MIN_BUILDINGS_TO_TRUST,
   MIN_SPACES_FOR_STALE_DELETE,
   needsEnrichment,
+  shouldFailBuildInfoPhase,
   toSyncError,
   type PhaseFailure,
 } from "./building-sync.rules";
@@ -24,9 +25,9 @@ export class BuildingSyncService {
     private readonly buildings: BuildingRepository,
   ) {}
 
-  // Logs no failure itself; the poller registry reports the rejection. Phase 1 failing
-  // ends the run; phases 2 and 3 run regardless, and the run then rejects with one
-  // AggregateError naming each failed phase (building-sync.service.spec.ts).
+  // Logs no failure itself; the poller registry reports the rejection. Phase 1 failing ends
+  // the run; phase 2 (more than half of buildInfo failing) and phase 3 never stop the next
+  // phase, and the run then rejects with one AggregateError naming each failed phase.
   async run(): Promise<void> {
     const syncStartedAt = new Date();
     const start = Date.now();
@@ -155,8 +156,7 @@ export class BuildingSyncService {
   private async syncBuildInfo(listed: readonly ListedBuilding[], syncStartedAt: Date): Promise<void> {
     const withBuildNo = listed.filter((building): building is ListedBuildingWithBuildNo => hasBuildNo(building.doc));
     const spaces: SyncedSpace[] = [];
-    let processed = 0;
-    let errors = 0;
+    const rejections: unknown[] = [];
 
     for (let i = 0; i < withBuildNo.length; i += BUILD_INFO_CONCURRENCY) {
       const batch = withBuildNo.slice(i, i + BUILD_INFO_CONCURRENCY);
@@ -167,26 +167,31 @@ export class BuildingSyncService {
       for (const [j, outcome] of outcomes.entries()) {
         if (outcome.status === "fulfilled") {
           for (const space of outcome.value) spaces.push(space);
-          processed++;
         } else {
-          errors++;
+          rejections.push(outcome.reason);
           await this.recordBuildInfoFailure(batch[j]!, outcome.reason);
         }
       }
     }
 
-    if (spaces.length > 0) {
-      const upsertResult = await this.repository.upsertSpaces(spaces, "buildInfo", syncStartedAt);
-      logger.info(
-        {
-          event: "building.sync.buildinfo_upserted",
-          matched: upsertResult.matchedCount,
-          upserted: upsertResult.upsertedCount,
-          processed,
-          errors,
-        },
-        "Phase 2: buildInfo spaces upserted",
-      );
+    const { matchedCount, upsertedCount } =
+      spaces.length > 0
+        ? await this.repository.upsertSpaces(spaces, "buildInfo", syncStartedAt)
+        : { matchedCount: 0, upsertedCount: 0 };
+    logger.info(
+      {
+        event: "building.sync.buildinfo_upserted",
+        matched: matchedCount,
+        upserted: upsertedCount,
+        processed: withBuildNo.length - rejections.length,
+        errors: rejections.length,
+      },
+      "Phase 2: buildInfo spaces upserted",
+    );
+
+    if (shouldFailBuildInfoPhase({ attempted: withBuildNo.length, failed: rejections.length })) {
+      const message = `buildInfo failed for ${rejections.length} of ${withBuildNo.length} buildings`;
+      throw new Error(message, { cause: rejections[0] });
     }
   }
 
