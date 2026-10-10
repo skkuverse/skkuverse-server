@@ -13,11 +13,11 @@ import { BuildingClient } from "./building.client";
 import { ENRICH_VERSION, enrichBuilding } from "./building-sync.mapper";
 import { BuildingRepository } from "./building.repository";
 import type { ListedBuilding, SyncedSpace } from "./building-sync.types";
-import type { Campus } from "./building.types";
+import type { BuildNo, Campus } from "./building.types";
 
 const CAMPUSES: readonly Campus[] = ["hssc", "nsc"];
 
-type WithBuildNo = ListedBuilding & { doc: { buildNo: string } };
+type WithBuildNo = ListedBuilding & { doc: { buildNo: BuildNo } };
 
 /**
  * Mirrors SKKU's campusMap.do into the building DB, weekly

@@ -12,6 +12,7 @@ import {
   type BuildingSearchQuery,
 } from "./building.schema";
 import { BuildingService } from "./building.service";
+import type { SkkuId } from "./building.types";
 
 /** /building: no auth, the general limiter (BuildingModule). */
 @Controller("building")
@@ -51,7 +52,7 @@ export class BuildingController {
   // GET /building/:skkuId
   @Get(":skkuId")
   async detail(
-    @Param("skkuId", new ZodValidationPipe(skkuIdParam, "INVALID_ID")) skkuId: number,
+    @Param("skkuId", new ZodValidationPipe(skkuIdParam, "INVALID_ID")) skkuId: SkkuId,
     @Req() req: Request,
   ) {
     const detail = await this.building.detail(skkuId, req.lang as SupportedLang);

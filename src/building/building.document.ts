@@ -1,6 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { OverlayGeometry } from "../shared/geojson.types";
-import type { Campus } from "./building.types";
+import type { BuildNo, Campus, DisplayNo, SkkuId, SpaceCd } from "./building.types";
 
 /** One type per collection in the building DB, and the shapes they nest. */
 
@@ -11,8 +11,8 @@ import type { Campus } from "./building.types";
  */
 export interface BuildingRawDoc {
   /** The SKKU id. */
-  _id: number;
-  buildNo: string | null;
+  _id: SkkuId;
+  buildNo: BuildNo | null;
   campus: Campus;
   name: { ko: string; en: string };
   description: { ko: string; en: string };
@@ -73,9 +73,9 @@ export interface BuildingAttachment {
  * projected out of most reads.
  */
 export interface BuildingDoc {
-  _id: number;
-  buildNo: string | null;
-  displayNo: string | null;
+  _id: SkkuId;
+  buildNo: BuildNo | null;
+  displayNo: DisplayNo | null;
   /** A facility has no buildNo (an outbuilding, a gate). */
   type: "building" | "facility";
   campus: Campus;
@@ -103,8 +103,8 @@ export interface BuildingDoc {
  */
 export interface SpaceDoc {
   _id?: ObjectId;
-  spaceCd: string;
-  buildNo: string;
+  spaceCd: SpaceCd;
+  buildNo: BuildNo;
   campus: Campus;
   floor: { ko: string; en: string };
   name: { ko: string; en: string };
@@ -122,8 +122,8 @@ export interface SpaceDoc {
 export interface ConnectionDoc {
   _id?: ObjectId;
   campus: Campus;
-  a: { skkuId: number; floor: { ko: string; en: string } };
-  b: { skkuId: number; floor: { ko: string; en: string } };
+  a: { skkuId: SkkuId; floor: { ko: string; en: string } };
+  b: { skkuId: SkkuId; floor: { ko: string; en: string } };
 }
 
 /**
@@ -165,7 +165,7 @@ export interface CampusShapeDoc {
    * tapping a footprint opens exactly the sheet its number pin opens. No join
    * and no new `MarkerTap` kind: one addressing scheme, as ADR 0004 requires.
    */
-  skkuId: number | null;
+  skkuId: SkkuId | null;
   order: number;
   updatedAt: Date;
 }

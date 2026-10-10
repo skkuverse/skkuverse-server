@@ -11,6 +11,7 @@ import type {
 } from "./building.document";
 import { toSpaceUpsert, type EnrichmentSetUpdate } from "./building-sync.mapper";
 import type { ListedBuilding, SpaceSource, SyncedSpace } from "./building-sync.types";
+import type { SkkuId } from "./building.types";
 
 /**
  * The sync runs weekly, off the request path: a stuck read fails the run
@@ -31,7 +32,7 @@ function collection<T extends Document>(name: string): Collection<T> {
 @Injectable()
 export class BuildingSyncRepository {
   /** skkuUpdatedAt of every raw building, for change detection. */
-  async listRawUpdatedAt(): Promise<Map<number, string | null>> {
+  async listRawUpdatedAt(): Promise<Map<SkkuId, string | null>> {
     const rawBuildings = await this.raw()
       .find({}, { projection: { skkuUpdatedAt: 1 }, maxTimeMS: SYNC_READ_MAX_TIME_MS })
       .toArray();
@@ -39,7 +40,7 @@ export class BuildingSyncRepository {
   }
 
   /** Enriched buildings whose enrichVersion is not `version`. */
-  async listIdsNotEnrichedAt(version: number): Promise<Set<number>> {
+  async listIdsNotEnrichedAt(version: number): Promise<Set<SkkuId>> {
     const staleBuildings = await this.enriched()
       .find(
         { enrichVersion: { $ne: version } },
@@ -60,14 +61,14 @@ export class BuildingSyncRepository {
     return this.raw().bulkWrite(ops, { ordered: false });
   }
 
-  listRawByIds(ids: Iterable<number>): Promise<BuildingRawDoc[]> {
+  listRawByIds(ids: Iterable<SkkuId>): Promise<BuildingRawDoc[]> {
     return this.raw()
       .find({ _id: { $in: [...ids] } }, { maxTimeMS: SYNC_READ_MAX_TIME_MS })
       .toArray();
   }
 
   upsertEnriched(
-    entries: ReadonlyArray<{ skkuId: number; fields: EnrichmentSetUpdate }>,
+    entries: ReadonlyArray<{ skkuId: SkkuId; fields: EnrichmentSetUpdate }>,
     syncStartedAt: Date,
   ): Promise<BulkWriteResult> {
     const ops: AnyBulkWriteOperation<BuildingDoc>[] = entries.map(({ skkuId, fields }) => ({
@@ -85,7 +86,7 @@ export class BuildingSyncRepository {
 
   /** Writes a building's photos to BOTH layers and clears its detail error. */
   async setAttachments(
-    skkuId: number,
+    skkuId: SkkuId,
     attachments: BuildingAttachment[],
     syncStartedAt: Date,
   ): Promise<void> {
@@ -99,7 +100,7 @@ export class BuildingSyncRepository {
   }
 
   /** Notes a failed buildInfo on both layers. Best effort: a failed note is logged, never thrown. */
-  async recordDetailError(skkuId: number, message: string): Promise<void> {
+  async recordDetailError(skkuId: SkkuId, message: string): Promise<void> {
     const update = { $set: { "sync.detailError": message } };
     const noteFailed = (err: unknown): void =>
       logger.warn(

@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import axios from "axios";
 import type { BuildingAttachment, BuildingRawDoc } from "./building.document";
 import type { BuildInfo, ListedBuilding, SyncedSpace } from "./building-sync.types";
-import type { BilingualText, Campus } from "./building.types";
+import type { ApiId, BilingualText, BuildNo, Campus, SkkuId, SpaceCd } from "./building.types";
 
 const CAMPUS_MAP_URL = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
 const CAMPUS_CODES: Readonly<Record<Campus, string>> = { hssc: "1", nsc: "2" };
@@ -107,7 +107,7 @@ function toRawDoc(item: SkkuBuildListItem, campus: Campus): Omit<BuildingRawDoc,
   const lng = parseFloat(item.longtitude as string);
 
   return {
-    buildNo: item.buildNo || null,
+    buildNo: (item.buildNo || null) as BuildNo | null,
     campus,
     name: text(item.buildNm, item.buildNmEng),
     description: text(item.krText, item.enText),
@@ -135,14 +135,14 @@ export class BuildingClient {
       timeout: REQUEST_TIMEOUT_MS,
     });
     return (data.buildItems || []).map((item) => ({
-      skkuId: parseInt(item.id, 10),
-      apiId: item.id,
+      skkuId: parseInt(item.id, 10) as SkkuId,
+      apiId: item.id as ApiId,
       doc: toRawDoc(item, campus),
     }));
   }
 
   async fetchBuildInfo(
-    building: ListedBuilding & { doc: { buildNo: string } },
+    building: ListedBuilding & { doc: { buildNo: BuildNo } },
   ): Promise<BuildInfo> {
     const { doc } = building;
     const { data } = await axios.get<SkkuBuildInfoResponse>(CAMPUS_MAP_URL, {
@@ -156,7 +156,7 @@ export class BuildingClient {
       alt: a.image_alt || "",
     }));
     const spaces: SyncedSpace[] = (data.floorItem || []).map((fi) => ({
-      spaceCd: fi.space_cd,
+      spaceCd: fi.space_cd as SpaceCd,
       buildNo: doc.buildNo,
       campus: doc.campus,
       floor: text(fi.floor_nm, fi.floor_nm_eng),
@@ -173,8 +173,8 @@ export class BuildingClient {
       timeout: REQUEST_TIMEOUT_MS,
     });
     return (data.items || []).map((item) => ({
-      spaceCd: item.spaceCd,
-      buildNo: item.buildNo,
+      spaceCd: item.spaceCd as SpaceCd,
+      buildNo: item.buildNo as BuildNo,
       campus,
       floor: text(item.floorNm, item.floorNmEng),
       name: spaceName(item.spcaeNm, item.spcaeNmEng),

@@ -5,10 +5,12 @@ import { t } from "../infra/i18n";
 import type { SupportedLang } from "../infra/types";
 import type {
   BilingualText,
+  BuildNo,
   BuildingConnection,
   BuildingSearch,
   Campus,
   FloorGroup,
+  SkkuId,
   SpaceGroup,
   WithCampusLabel,
 } from "./building.types";
@@ -40,7 +42,7 @@ function groupByFloor(
  * `targets` (the other buildings' docs).
  */
 function toConnectionItems(
-  skkuId: number,
+  skkuId: SkkuId,
   docs: readonly ConnectionDoc[],
   targets: ReadonlyArray<Pick<BuildingDoc, "_id" | "buildNo" | "displayNo" | "name">>,
 ): BuildingConnection[] {
@@ -81,7 +83,7 @@ function withEnFallback<T extends Partial<BilingualText> | undefined>(text: T): 
  */
 function groupSpacesByBuilding(
   spaces: readonly SpaceDoc[],
-  skkuIdByBuildNo: ReadonlyMap<string, number>,
+  skkuIdByBuildNo: ReadonlyMap<BuildNo, SkkuId>,
   lang: SupportedLang,
 ): SpaceGroup[] {
   const groups = new Map<string, SpaceGroup>();
@@ -130,9 +132,9 @@ function toBuildingSearch(
   allBuildings: readonly BuildingDoc[],
   lang: SupportedLang,
 ): BuildingSearch {
-  const skkuIdByBuildNo = new Map<string, number>(
+  const skkuIdByBuildNo = new Map<BuildNo, SkkuId>(
     allBuildings
-      .filter((b): b is BuildingDoc & { buildNo: string } => !!b.buildNo)
+      .filter((b): b is BuildingDoc & { buildNo: BuildNo } => !!b.buildNo)
       .map((b) => [b.buildNo, b._id]),
   );
 

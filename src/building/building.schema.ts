@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { SkkuId } from "./building.types";
 
 const INVALID_CAMPUS = "campus must be 'hssc' or 'nsc'";
 const MISSING_QUERY = "q parameter is required";
@@ -28,4 +29,5 @@ export type BuildingSearchQuery = z.output<typeof buildingSearchQuery>;
 export const skkuIdParam = z
   .string()
   .transform((s) => parseInt(s, 10))
-  .refine((id) => !Number.isNaN(id) && id >= 1, { error: INVALID_ID });
+  .refine((id) => !Number.isNaN(id) && id >= 1, { error: INVALID_ID })
+  .transform((id) => id as SkkuId);
