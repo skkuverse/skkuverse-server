@@ -1,7 +1,7 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import config from "../infra/config";
-import logger from "../infra/logger";
-import { PollerRegistryService } from "../scheduling/poller-registry.service";
+import config from "../../infra/config";
+import logger from "../../infra/logger";
+import { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { BuildingSyncService } from "./building-sync.service";
 
 /**

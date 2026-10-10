@@ -7,6 +7,7 @@ import { AppFeatureModule } from "./app/app-feature.module";
 import { UiModule } from "./ui/ui.module";
 import { AdModule } from "./ad/ad.module";
 import { BuildingModule } from "./building/building.module";
+import { BuildingSyncModule } from "./building/sync/building-sync.module";
 import { MapModule } from "./map/map.module";
 import { NoticesModule } from "./notices/notices.module";
 import { MiniAppsModule } from "./miniapps/miniapps.module";
@@ -38,6 +39,7 @@ import { MiniAppsModule } from "./miniapps/miniapps.module";
     UiModule,
     AdModule,
     BuildingModule,
+    BuildingSyncModule,
     MapModule,
     NoticesModule,
     MiniAppsModule,

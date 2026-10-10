@@ -11,7 +11,7 @@
  */
 
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
-jest.mock("../infra/logger", () => mockLogger);
+jest.mock("../../infra/logger", () => mockLogger);
 
 const mockGet = jest.fn();
 jest.mock("axios", () => ({ get: mockGet }));
@@ -33,7 +33,7 @@ const mockDb = {
   spaces: fakeCollection(),
   clearCache: jest.fn(),
 };
-jest.mock("../infra/db", () => ({
+jest.mock("../../infra/db", () => ({
   getClient: () => ({
     db: () => ({
       collection: (name: string) =>
@@ -44,10 +44,10 @@ jest.mock("../infra/db", () => ({
 
 import { BuildingSyncRepository } from "./building-sync.repository";
 import { BuildingSyncService } from "./building-sync.service";
-import { BuildingClient } from "./building.client";
-import type { BuildingRepository } from "./building.repository";
+import { BuildingSyncClient } from "./building-sync.client";
+import type { BuildingRepository } from "../building.repository";
 
-const service = new BuildingSyncService(new BuildingClient(), new BuildingSyncRepository(), {
+const service = new BuildingSyncService(new BuildingSyncClient(), new BuildingSyncRepository(), {
   clearCache: () => mockDb.clearCache(),
 } as unknown as BuildingRepository);
 const syncBuildings = (): Promise<void> => service.run();

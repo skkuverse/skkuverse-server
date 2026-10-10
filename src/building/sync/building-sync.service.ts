@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import logger from "../infra/logger";
+import logger from "../../infra/logger";
 import {
   BUILD_INFO_CONCURRENCY,
   MIN_BUILDINGS_TO_TRUST,
@@ -9,11 +9,11 @@ import {
   type PhaseFailure,
 } from "./building-sync.rules";
 import { BuildingSyncRepository } from "./building-sync.repository";
-import { BuildingClient } from "./building.client";
+import { BuildingSyncClient } from "./building-sync.client";
 import { ENRICH_VERSION, enrichBuilding } from "./building-sync.mapper";
-import { BuildingRepository } from "./building.repository";
+import { BuildingRepository } from "../building.repository";
 import type { ListedBuilding, SyncedSpace } from "./building-sync.types";
-import type { BuildNo, Campus } from "./building.types";
+import type { BuildNo, Campus } from "../building.types";
 
 const CAMPUSES: readonly Campus[] = ["hssc", "nsc"];
 
@@ -27,7 +27,7 @@ type WithBuildNo = ListedBuilding & { doc: { buildNo: BuildNo } };
 @Injectable()
 export class BuildingSyncService {
   constructor(
-    private readonly client: BuildingClient,
+    private readonly client: BuildingSyncClient,
     private readonly store: BuildingSyncRepository,
     private readonly buildings: BuildingRepository,
   ) {}
