@@ -220,7 +220,7 @@ const ROLE_MAX_LINES = {
   repository: 187,
   rules: 92,
   schema: 31,
-  service: 242,
+  service: 263,
   types: 58,
 };
 

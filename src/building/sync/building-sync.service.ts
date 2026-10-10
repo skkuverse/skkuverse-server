@@ -17,6 +17,13 @@ import { CAMPUSES, hasBuildNo } from "../building.rules";
 import type { SkkuId } from "../building.types";
 import type { ListedBuilding, ListedBuildingWithBuildNo, SyncedSpace } from "./building-sync.types";
 
+type BuildInfoOutcome = { building: ListedBuildingWithBuildNo } & ({ spaces: SyncedSpace[] } | { rejection: unknown });
+
+interface BuildInfoBatch {
+  spaces: SyncedSpace[];
+  rejections: unknown[];
+}
+
 @Injectable()
 export class BuildingSyncService {
   constructor(
@@ -155,25 +162,42 @@ export class BuildingSyncService {
 
   private async syncBuildInfo(listed: readonly ListedBuilding[], syncStartedAt: Date): Promise<void> {
     const withBuildNo = listed.filter((building): building is ListedBuildingWithBuildNo => hasBuildNo(building.doc));
-    const spaces: SyncedSpace[] = [];
-    const rejections: unknown[] = [];
-
+    const phase: BuildInfoBatch = { spaces: [], rejections: [] };
     for (let i = 0; i < withBuildNo.length; i += BUILD_INFO_CONCURRENCY) {
-      const batch = withBuildNo.slice(i, i + BUILD_INFO_CONCURRENCY);
-      const outcomes = await Promise.allSettled(
-        batch.map((building) => this.syncOneBuildInfo(building, syncStartedAt)),
-      );
+      const batch = await this.syncBuildInfoBatch(withBuildNo.slice(i, i + BUILD_INFO_CONCURRENCY), syncStartedAt);
+      phase.spaces.push(...batch.spaces);
+      phase.rejections.push(...batch.rejections);
+    }
+    await this.finishBuildInfoPhase({ attempted: withBuildNo.length, ...phase }, syncStartedAt);
+  }
 
-      for (const [j, outcome] of outcomes.entries()) {
-        if (outcome.status === "fulfilled") {
-          for (const space of outcome.value) spaces.push(space);
-        } else {
-          rejections.push(outcome.reason);
-          await this.recordBuildInfoFailure(batch[j]!, outcome.reason);
-        }
+  /** Runs the batch concurrently, then records its failures one at a time, in list order. */
+  private async syncBuildInfoBatch(batch: readonly ListedBuildingWithBuildNo[], syncStartedAt: Date): Promise<BuildInfoBatch> {
+    const outcomes = await Promise.all(batch.map((building) => this.syncOneBuildInfo(building, syncStartedAt)));
+    const result: BuildInfoBatch = { spaces: [], rejections: [] };
+    for (const outcome of outcomes) {
+      if ("spaces" in outcome) {
+        result.spaces.push(...outcome.spaces);
+      } else {
+        result.rejections.push(outcome.rejection);
+        await this.recordBuildInfoFailure(outcome.building, outcome.rejection);
       }
     }
+    return result;
+  }
 
+  private async syncOneBuildInfo(building: ListedBuildingWithBuildNo, syncStartedAt: Date): Promise<BuildInfoOutcome> {
+    try {
+      const detail = await this.client.fetchBuildInfo(building);
+      await this.repository.setAttachments(building.skkuId, detail.attachments, syncStartedAt);
+      return { building, spaces: detail.spaces };
+    } catch (rejection) {
+      return { building, rejection };
+    }
+  }
+
+  private async finishBuildInfoPhase(phase: BuildInfoBatch & { attempted: number }, syncStartedAt: Date): Promise<void> {
+    const { attempted, spaces, rejections } = phase;
     const { matchedCount, upsertedCount } =
       spaces.length > 0
         ? await this.repository.upsertSpaces(spaces, "buildInfo", syncStartedAt)
@@ -183,22 +207,16 @@ export class BuildingSyncService {
         event: "building.sync.buildinfo_upserted",
         matched: matchedCount,
         upserted: upsertedCount,
-        processed: withBuildNo.length - rejections.length,
+        processed: attempted - rejections.length,
         errors: rejections.length,
       },
       "Phase 2: buildInfo spaces upserted",
     );
 
-    if (shouldFailBuildInfoPhase({ attempted: withBuildNo.length, failed: rejections.length })) {
-      const message = `buildInfo failed for ${rejections.length} of ${withBuildNo.length} buildings`;
+    if (shouldFailBuildInfoPhase({ attempted, failed: rejections.length })) {
+      const message = `buildInfo failed for ${rejections.length} of ${attempted} buildings`;
       throw new Error(message, { cause: rejections[0] });
     }
-  }
-
-  private async syncOneBuildInfo(building: ListedBuildingWithBuildNo, syncStartedAt: Date): Promise<SyncedSpace[]> {
-    const detail = await this.client.fetchBuildInfo(building);
-    await this.repository.setAttachments(building.skkuId, detail.attachments, syncStartedAt);
-    return detail.spaces;
   }
 
   private async recordBuildInfoFailure(building: ListedBuildingWithBuildNo, rejection: unknown): Promise<void> {
