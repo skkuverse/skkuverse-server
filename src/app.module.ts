@@ -3,9 +3,10 @@ import { ConfigModule } from "./config/config.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
 import { HealthModule } from "./health/health.module";
 import { BusModule } from "./bus/bus.module";
-import { AppFeatureModule } from "./app/app-feature.module";
+import { AppConfigModule } from "./app-config/app-config.module";
 import { UiModule } from "./ui/ui.module";
-import { AdModule } from "./ad/ad.module";
+import { AdEventsModule } from "./ad/events/ad-events.module";
+import { AdPlacementsModule } from "./ad/placements/ad-placements.module";
 import { BuildingModule } from "./building/building.module";
 import { BuildingCatalogModule } from "./building/catalog/building-catalog.module";
 import { BuildingSearchModule } from "./building/search/building-search.module";
@@ -37,9 +38,10 @@ import { MiniAppsModule } from "./miniapps/miniapps.module";
     SchedulingModule,
     HealthModule,
     BusModule,
-    AppFeatureModule,
+    AppConfigModule,
     UiModule,
-    AdModule,
+    AdPlacementsModule,
+    AdEventsModule,
     BuildingModule,
     // Before BuildingCatalogModule: Nest registers routes in module order, and
     // /building/:skkuId would catch /building/search (route-order.test.ts).

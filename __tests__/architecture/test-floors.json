@@ -1,0 +1,66 @@
+{
+  "ad": {
+    "tests": 33,
+    "expects": 74
+  },
+  "app-config": {
+    "tests": 9,
+    "expects": 23
+  },
+  "architecture": {
+    "tests": 116,
+    "expects": 151
+  },
+  "building": {
+    "tests": 173,
+    "expects": 400
+  },
+  "bus": {
+    "tests": 433,
+    "expects": 949
+  },
+  "config": {
+    "tests": 6,
+    "expects": 8
+  },
+  "http": {
+    "tests": 29,
+    "expects": 72
+  },
+  "infra": {
+    "tests": 221,
+    "expects": 518
+  },
+  "map": {
+    "tests": 345,
+    "expects": 700
+  },
+  "miniapps": {
+    "tests": 145,
+    "expects": 248
+  },
+  "nest": {
+    "tests": 15,
+    "expects": 20
+  },
+  "notices": {
+    "tests": 234,
+    "expects": 524
+  },
+  "scheduling": {
+    "tests": 23,
+    "expects": 50
+  },
+  "scripts": {
+    "tests": 28,
+    "expects": 51
+  },
+  "shared": {
+    "tests": 28,
+    "expects": 39
+  },
+  "ui": {
+    "tests": 32,
+    "expects": 79
+  }
+}

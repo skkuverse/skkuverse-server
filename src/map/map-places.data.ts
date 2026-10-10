@@ -12,7 +12,7 @@ import type { ActivationDoc, MapPlaceDoc } from "./map-places.types";
 // turns a covered lookup into a collection scan during the one week of the year
 // it matters.
 //
-// There is deliberately NO seedIfEmpty(), unlike src/ad/ad.data.ts. Ads have a
+// There is deliberately NO seedIfEmpty(), unlike src/ad/ad.repository.ts. Ads have a
 // sensible default; an event does not. An auto-seeded phantom booth on a
 // production map is a worse failure than an empty map.
 //
@@ -23,7 +23,7 @@ import type { ActivationDoc, MapPlaceDoc } from "./map-places.types";
 //
 // dbName is guaranteed a string by the startup validation in infra/config.ts
 // (infra/required-env.ts has an eventmap.dbName entry → missing env var is process.exit(1)),
-// which is what justifies the non-null assertion. Same pattern as ad.data.ts.
+// which is what justifies the non-null assertion.
 
 function getPlacesCollection(): Collection<MapPlaceDoc> {
   return getClient()

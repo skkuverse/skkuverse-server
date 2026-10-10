@@ -53,8 +53,8 @@ for (const [src, dest] of assets) {
   process.stdout.write(`  copied ${src} → ${dest}\n`);
 }
 
-// tsc emits __tests__/helpers compiled output because they're in tsconfig.include
-// (needed for typecheck). Strip from dist/ so Docker COPY doesn't ship them.
+// tsconfig.build.json compiles src/ only, but tsc never cleans dist/: a
+// dist/__tests__ left by an older build would otherwise ship in the image.
 fs.rmSync("dist/__tests__", { recursive: true, force: true });
 process.stdout.write("  stripped dist/__tests__\n");
 
