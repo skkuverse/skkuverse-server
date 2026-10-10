@@ -219,9 +219,9 @@ const ROLE_MAX_LINES = {
   query: 175,
   repository: 182,
   rules: 80,
-  schema: 35,
+  schema: 34,
   service: 210,
-  types: 58,
+  types: 54,
 };
 
 function roleSizeBlocks() {

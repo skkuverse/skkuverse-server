@@ -7,6 +7,7 @@
 import type { Document, Filter } from "mongodb";
 import { escapeRegex } from "../../shared/regex.util";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
+import { CAMPUSES, isCampus } from "../building.rules";
 import type { Campus } from "../building.types";
 import {
   BUILDING_SEARCH_LIMIT,
@@ -138,14 +139,13 @@ function toRankedResult<T>(facets: readonly Document[]): RankedSearchResult<T> {
   if (!facet) {
     throw new Error("[building] search $facet returned no document");
   }
-  let hssc = 0;
-  let nsc = 0;
+  const campusCounts: Record<Campus, number> = { hssc: 0, nsc: 0 };
   // $group on $campus emits _id: null for a doc missing the field; such a row
   // belongs to neither campus and is excluded from the badge.
   for (const row of facet.counts) {
-    if (row._id === "hssc") hssc = row.n;
-    else if (row._id === "nsc") nsc = row.n;
+    if (isCampus(row._id)) campusCounts[row._id] = row.n;
   }
+  const campusTotal = CAMPUSES.reduce((sum, campus) => sum + campusCounts[campus], 0);
   // Concatenation preserves relevance order: every strong score is by
   // definition above every weak one, and each band is already sorted.
   const ranked = [...facet.strong, ...facet.weak];
@@ -154,7 +154,7 @@ function toRankedResult<T>(facets: readonly Document[]): RankedSearchResult<T> {
   const total = facet.total[0]?.n ?? 0;
   return {
     items: ranked,
-    counts: { hssc, nsc, total: hssc + nsc },
+    counts: { ...campusCounts, total: campusTotal },
     total,
     truncated: total > ranked.length,
   };

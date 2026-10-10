@@ -1,4 +1,5 @@
 import type { Brand } from "../shared/brand.types";
+import type { CAMPUSES } from "./building.rules";
 
 /** SKKU's building id: `_id` in buildings and buildings_raw, and the ends of a connection. */
 export type SkkuId = Brand<number, "SkkuId">;
@@ -15,8 +16,8 @@ export type SpaceCd = Brand<string, "SpaceCd">;
 /** The building id exactly as buildList sent it; buildInfo takes it back verbatim. */
 export type ApiId = Brand<string, "ApiId">;
 
-/** hssc = 인사캠, nsc = 자과캠. campusMap.do takes "1" | "2"; everything else uses these names. */
-export type Campus = "hssc" | "nsc";
+/** hssc = 인사캠, nsc = 자과캠. SKKU's own code for each is SKKU_CAMPUS_CODE. */
+export type Campus = (typeof CAMPUSES)[number];
 
 /** A bilingual text; a missing side is "". */
 export interface BilingualText {

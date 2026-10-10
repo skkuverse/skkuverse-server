@@ -2,15 +2,15 @@ import { z } from "zod";
 import type { OverlayGeometry } from "../shared/geojson.types";
 import { isDrawableGeometry } from "../shared/geojson.util";
 import type { CampusShapeDoc } from "./building.document";
+import { CAMPUSES } from "./building.rules";
 import type { SkkuId } from "./building.types";
 
 const INVALID_CAMPUS = "campus must be 'hssc' or 'nsc'";
 
+const campus = z.enum(CAMPUSES, { error: INVALID_CAMPUS });
+
 /** `campus` is optional; an empty value means no filter. */
-export const campusFilter = z.preprocess(
-  (v) => (v === "" ? undefined : v),
-  z.enum(["hssc", "nsc"], { error: INVALID_CAMPUS }).optional(),
-);
+export const campusFilter = z.preprocess((v) => (v === "" ? undefined : v), campus.optional());
 
 const bilingual = z.object({ ko: z.string(), en: z.string() });
 
@@ -24,7 +24,7 @@ const bilingual = z.object({ ko: z.string(), en: z.string() });
  */
 export const campusShapeDoc = z.object({
   _id: z.string(),
-  campus: z.enum(["hssc", "nsc"]),
+  campus,
   layerId: z.string(),
   geometry: z.custom<OverlayGeometry>(isDrawableGeometry),
   title: bilingual,
