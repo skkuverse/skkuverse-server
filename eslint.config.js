@@ -156,7 +156,6 @@ const VIOLATORS = {
   // and the service maps them.
   repository: [],
   getClient: [
-    "src/ad/ad.data.ts",
     "src/bus/cache/bus-cache.service.ts",
     "src/bus/eta/eta-store.ts",
     "src/bus/schedule/schedule-db.ts",
@@ -231,7 +230,7 @@ function featureBoundaryBlocks() {
 // counted (__tests__/architecture/size-ratchets.test.ts keeps them there). A
 // module joins MIGRATED_MODULES when its migration lands; a file over its
 // role's cap is split, or its flow becomes a sub-module (D3).
-const MIGRATED_MODULES = ["app-config", "building", "health"];
+const MIGRATED_MODULES = ["ad", "app-config", "building", "health"];
 const ROLE_MAX_LINES = {
   client: 178,
   controller: 47,
