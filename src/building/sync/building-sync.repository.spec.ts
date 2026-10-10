@@ -165,4 +165,9 @@ describe("BuildingSyncRepository indexes", () => {
     ]);
     expect(mockCollections.buildings_raw!.createIndex.mock.calls).toEqual([[{ campus: 1 }]]);
   });
+
+  it("owns the 2dsphere that guards the enriched location it writes", async () => {
+    await new BuildingSyncRepository().ensureIndexes();
+    expect(mockCollections.buildings!.createIndex.mock.calls).toEqual([[{ location: "2dsphere" }]]);
+  });
 });

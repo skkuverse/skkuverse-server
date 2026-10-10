@@ -212,15 +212,13 @@ describe("BuildingRepository.ensureIndexes", () => {
     expect(createIndex).not.toHaveBeenCalledWith("campus_shapes", { campus: 1 });
   });
 
-  it("leaves the existing collections' indexes alone", async () => {
+  it("creates no index on another collection", async () => {
     await ensureIndexes();
 
     // Regression guard for the one-line mistake this file is shaped to catch:
-    // adding a collection to ensureIndexes and hanging its indexes off the
-    // wrong handle.
-    expect(createIndex).toHaveBeenCalledWith("buildings", { location: "2dsphere" });
-    expect(createIndex).toHaveBeenCalledWith("buildings", { campus: 1 });
-    expect(createIndex).toHaveBeenCalledWith("spaces", { campus: 1 });
+    // hanging an index off the wrong handle. The buildings 2dsphere is the
+    // sync's (BuildingSyncRepository); nothing reads buildings or spaces by campus.
+    expect(createIndex.mock.calls.map(([collection]) => collection)).toEqual(["campus_shapes", "campus_shapes"]);
   });
 });
 
