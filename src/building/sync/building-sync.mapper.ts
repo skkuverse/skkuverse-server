@@ -5,7 +5,7 @@ import type { EnrichedBuilding } from "./building-sync.types";
 // Bump this when enrichment logic changes to trigger re-enrichment of all buildings
 const ENRICH_VERSION = 1;
 
-const ELEVATOR_STATUS_MAP: Record<string, ElevatorStatus> = {
+const ELEVATOR_STATUS_MAP: Readonly<Record<string, ElevatorStatus>> = {
   "층에 설 때만 음성 안내": "arrival",
   "층에 설 때, 버튼 누를 때 음성 안내": "arrival_button",
   "음성 안내 없음": "none",

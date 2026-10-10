@@ -11,12 +11,12 @@ export class BuildingService {
   constructor(private readonly repository: BuildingRepository) {}
 
   /** Every building, unlabeled. */
-  listAllBuildings(): Promise<BuildingDoc[]> {
+  listAllBuildings(): Promise<readonly BuildingDoc[]> {
     return this.repository.listBuildings();
   }
 
   /** Every campus outline. */
-  listAllCampusShapes(): Promise<CampusShapeDoc[]> {
+  listAllCampusShapes(): Promise<readonly CampusShapeDoc[]> {
     return this.repository.listCampusShapes();
   }
 }
