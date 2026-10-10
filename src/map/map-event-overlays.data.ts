@@ -10,12 +10,8 @@ import type { MapPlaceDoc, PlaceAction } from "./map-places.types";
 import { getPlacesCollection } from "./map-places.data";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import type { I18n } from "../infra/types";
-import {
-  isDrawableGeometry,
-  type GeoJsonLineString,
-  type GeoJsonPoint,
-  type GeoJsonPolygon,
-} from "../shared/geojson.types";
+import type { GeoJsonLineString, GeoJsonPoint, GeoJsonPolygon } from "../shared/geojson.types";
+import { isDrawableGeometry } from "../shared/geojson.util";
 import { toWirePolygon } from "../shared/ring-winding.util";
 import type {
   I18nWire,

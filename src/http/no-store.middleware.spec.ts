@@ -1,16 +1,16 @@
 /**
- * forceNoStore, mounted by main.ts under CACHE=off. Handlers set
+ * noStoreMiddleware, mounted by main.ts under CACHE=off. Handlers set
  * Cache-Control after middleware runs, so it must win however a route sets the
  * header — Express's res.set, a raw res.setHeader, or one Nest's @Header turns
  * into res.set.
  */
 import express from "express";
 import request from "supertest";
-import { forceNoStore } from "./no-store.middleware";
+import { noStoreMiddleware } from "./no-store.middleware";
 
 function app(): express.Express {
   const a = express();
-  a.use(forceNoStore);
+  a.use(noStoreMiddleware);
   a.get("/set", (_req, res) => {
     res.set("Cache-Control", "public, max-age=86400").json({ ok: true });
   });
@@ -31,7 +31,7 @@ function app(): express.Express {
   return a;
 }
 
-describe("forceNoStore", () => {
+describe("noStoreMiddleware", () => {
   it.each(["/set", "/raw", "/append", "/none"])("%s answers with Cache-Control: no-store", async (path) => {
     const res = await request(app()).get(path);
     expect(res.status).toBe(200);

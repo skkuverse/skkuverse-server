@@ -33,7 +33,7 @@ export const EXPOSED_RESPONSE_HEADERS = "ETag";
  * only on responses it handles as CORS, and the eventmap 304 branches this
  * middleware exists for return before that.
  */
-export function exposeResponseHeaders(
+export function exposeHeadersMiddleware(
   _req: Request,
   res: Response,
   next: NextFunction,

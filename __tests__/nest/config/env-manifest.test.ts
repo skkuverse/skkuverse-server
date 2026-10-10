@@ -44,7 +44,7 @@ const DEV = allowlist("config/env.dev.keys");
 // Production adds SENTRY_DSN, so its list is the longest.
 const REQUIRED = requiredValues({ NODE_ENV: "production" }).map((v) => v.env);
 
-/** Run findMissingRequired() with exactly `names` set, under `nodeEnv`. */
+/** Run describeMissingRequired() with exactly `names` set, under `nodeEnv`. */
 function missingWithOnly(names: string[], nodeEnv: string): string[] {
   const touched = new Set([...REQUIRED, ...names, "NODE_ENV", "USE_PROD_API", "API_HSSC_NEW_DEV"]);
   const saved = new Map([...touched].map((k) => [k, process.env[k]]));
@@ -54,7 +54,7 @@ function missingWithOnly(names: string[], nodeEnv: string): string[] {
     process.env.NODE_ENV = nodeEnv;
     let missing: string[] = [];
     jest.isolateModules(() => {
-      missing = require("../../../src/infra/required-env").findMissingRequired();
+      missing = require("../../../src/infra/required-env").describeMissingRequired();
     });
     return missing;
   } finally {
