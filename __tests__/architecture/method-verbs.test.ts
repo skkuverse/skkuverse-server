@@ -13,6 +13,11 @@
  *
  * A repository or client method without a return type is a violation: the
  * contract is read from the annotation, not inferred.
+ *
+ * A repository returns data, never a response (ADR 0010, D2): no public
+ * repository method names a type that an exported `.mapper` function returns
+ * (document types and brands aside). Response shapes are what mappers make,
+ * so a repository that returns one has done the service's job.
  */
 import ts from "typescript";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
@@ -131,6 +136,71 @@ export function methodVerbViolations(file: string, source: string): string[] {
   return out;
 }
 
+/** Names of the types referenced in a type node, type parameters excluded. */
+function typeNames(node: ts.TypeNode, typeParams: ReadonlySet<string>): string[] {
+  const names: string[] = [];
+  const visit = (n: ts.Node): void => {
+    if (ts.isTypeReferenceNode(n) && ts.isIdentifier(n.typeName) && !typeParams.has(n.typeName.text)) {
+      names.push(n.typeName.text);
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(node);
+  return names;
+}
+
+const typeParamsOf = (node: ts.SignatureDeclarationBase) => new Set((node.typeParameters ?? []).map((p) => p.name.text));
+
+/**
+ * The types exported `.mapper` functions return, minus `notData`: the types a
+ * repository must not return.
+ */
+export function mapperOutputTypes(
+  sources: ReadonlyArray<{ file: string; source: string }>,
+  notData: ReadonlySet<string>,
+): Set<string> {
+  const names = new Set<string>();
+  for (const { file, source } of sources) {
+    if (!file.endsWith(".mapper.ts")) continue;
+    const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true);
+    for (const fn of exportedFunctions(sf)) {
+      if (!fn.type) continue;
+      for (const name of typeNames(fn.type, typeParamsOf(fn))) if (!notData.has(name)) names.add(name);
+    }
+  }
+  return names;
+}
+
+/** Types any layer may hold: every type a `.document` file declares, and every brand. */
+export function dataTypeNames(sources: ReadonlyArray<{ file: string; source: string }>): Set<string> {
+  const names = new Set<string>();
+  for (const { file, source } of sources) {
+    const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true);
+    for (const s of sf.statements) {
+      if (!ts.isInterfaceDeclaration(s) && !ts.isTypeAliasDeclaration(s)) continue;
+      if (file.endsWith(".document.ts") || (ts.isTypeAliasDeclaration(s) && /^Brand</.test(s.type.getText(sf)))) {
+        names.add(s.name.text);
+      }
+    }
+  }
+  return names;
+}
+
+/** `<file>: <method>` for each public repository method whose return type names a mapper output. */
+export function repositoryReturnViolations(file: string, source: string, mapperOutputs: ReadonlySet<string>): string[] {
+  if (!file.endsWith(".repository.ts")) return [];
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true);
+  const out: string[] = [];
+  for (const cls of sf.statements.filter(ts.isClassDeclaration)) {
+    for (const m of cls.members) {
+      if (!ts.isMethodDeclaration(m) || !ts.isIdentifier(m.name) || !m.type) continue;
+      if (hasModifier(m, ts.SyntaxKind.PrivateKeyword) || hasModifier(m, ts.SyntaxKind.ProtectedKeyword)) continue;
+      if (typeNames(m.type, typeParamsOf(m)).some((name) => mapperOutputs.has(name))) out.push(`${file}: ${m.name.text}`);
+    }
+  }
+  return out;
+}
+
 describe("method verb rule applies as specified", () => {
   const repo = "src/x/x.repository.ts";
 
@@ -195,6 +265,52 @@ function withLabel(x: string) { return x; }
 function internal(): boolean { return true; }
 export { isGeometry, isOpen, openNow, toKey, withLabel };`;
     expect(methodVerbViolations(rules, source)).toEqual([`${rules}: isOpen`, `${rules}: openNow`]);
+  });
+});
+
+describe("repository return rule applies as specified", () => {
+  const mapper = {
+    file: "src/x/x.mapper.ts",
+    source: `
+export function groupByFloor(spaces: readonly SpaceDoc[]): FloorGroup[] { return []; }
+export function withLabel<T extends { campus: Campus }>(item: T): WithLabel<T> { return item as never; }
+export function toDoc(raw: RawDoc): XDoc { return raw as never; }
+function local(): Hidden { return null as never; }`,
+  };
+  const outputs = mapperOutputTypes([mapper], dataTypeNames([
+    { file: "src/x/x.document.ts", source: "export interface XDoc { a: 1 }" },
+    { file: "src/x/x.types.ts", source: "export type SkkuId = Brand<number, 'SkkuId'>;\nexport interface FloorGroup { a: 1 }" },
+  ]));
+
+  it("collects what exported mapper functions return, minus documents, brands and type parameters", () => {
+    expect([...outputs].sort()).toEqual(["FloorGroup", "WithLabel"]);
+  });
+
+  it("rejects a public repository method that returns a mapper output", () => {
+    const repo = "src/x/x.repository.ts";
+    const source = `
+export class XRepository {
+  listSpaces(buildNo: string): Promise<Array<Pick<SpaceDoc, "name">>> { return null as never; }
+  findDoc(id: number): Promise<XDoc | null> { return null as never; }
+  listFloors(buildNo: string): Promise<FloorGroup[]> { return null as never; }
+  private grouped(): FloorGroup[] { return []; }
+}`;
+    expect(repositoryReturnViolations(repo, source, outputs)).toEqual([`${repo}: listFloors`]);
+  });
+});
+
+describe("repositories", () => {
+  it("return no type a mapper produces", () => {
+    const files = sourceFiles();
+    const read = (f: string) => ({ file: f, source: readSource(f) });
+    const outputs = mapperOutputTypes(
+      files.filter((f) => f.endsWith(".mapper.ts")).map(read),
+      dataTypeNames(files.filter((f) => /\.(?:document|types)\.ts$/.test(f)).map(read)),
+    );
+    expectAllowlisted(
+      "repository-returns",
+      files.flatMap((f) => repositoryReturnViolations(f, readSource(f), outputs)),
+    );
   });
 });
 
