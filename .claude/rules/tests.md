@@ -19,4 +19,5 @@ paths:
 - Jest runs with `NODE_ENV=test`: DB names get `_test`, and missing config does not exit.
 - ts-jest only transpiles (`diagnostics: false`, lax `tsconfig.test.json`). Run `npm run typecheck` to catch type errors in tests.
 - Assert on logged fields with `__tests__/helpers/log-text.ts` instead of matching the message alone.
+- Mark the steps of every test body with one-line comments, exactly `// Arrange`, `// Act` and `// Assert`, in that order, so a reader sees where the setup ends and what is checked. Leave out `// Arrange` when there is nothing to set up, and write `// Act & Assert` when the call sits inside the `expect`. Any other comment goes on its own line below a marker. These markers are an exception to the rule that comments say only why. New test files follow this now; existing files get the markers when their module's tests are reworked (harden-test-suite 5.4 for building, the full check for the rest).
 - Coverage below `coverageThreshold` in `jest.config.js` fails `npm test`.
