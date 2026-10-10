@@ -1,21 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import axios from "axios";
 import type { BuildingAttachment, BuildingRawDoc } from "./building.document";
-import type {
-  BilingualText,
-  BuildInfo,
-  Campus,
-  ListedBuilding,
-  SyncedSpace,
-} from "./building.types";
+import type { BuildInfo, ListedBuilding, SyncedSpace } from "./building-sync.types";
+import type { BilingualText, Campus } from "./building.types";
 
 const CAMPUS_MAP_URL = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
 const CAMPUS_CODES: Readonly<Record<Campus, string>> = { hssc: "1", nsc: "2" };
 const REQUEST_TIMEOUT_MS = 30000;
 
-// --- campusMap.do payloads (buildList / buildInfo / spaceList) ---
-//
-// Only the fields read here are typed; the real responses carry 25+. SKKU's
+// The campusMap.do payloads (buildList, buildInfo, spaceList). Only the fields
+// read here are typed; the real responses carry 25+. SKKU's
 // misspellings are kept as sent (longtitude, spcaeNm, spcae_nm, spcae_nm_eng):
 // if SKKU ever fixes one silently, the field reads as "" rather than throwing,
 // and these names say which field to look at.
@@ -90,8 +84,6 @@ interface SkkuSpaceListResponse {
   items?: SkkuSpaceListItem[];
   [k: string]: unknown;
 }
-
-// --- Translation ---
 
 function imageUrl(filePath: string | undefined, encodeNm: string | undefined): string | null {
   if (!filePath || !encodeNm) return null;

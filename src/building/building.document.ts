@@ -30,8 +30,7 @@ export interface BuildingRawDoc {
   sync?: { listAt?: Date; detailAt?: Date | null; detailError?: string | null };
 }
 
-// --- Barrier-free details ---
-// Parsed from the "*배리어프리 편의시설 안내" block of description.ko. A building
+// Barrier-free details, parsed from the "*배리어프리 편의시설 안내" block of description.ko. A building
 // with several wings has one section per label (A동, B동); otherwise one.
 // `parseError` means the block was found but yielded no sections.
 
@@ -60,8 +59,6 @@ export interface AccessibilityDetail {
   sections: BarrierFreeSection[];
   parseError?: string;
 }
-
-// --- Common building shapes ---
 
 export interface BuildingAttachment {
   id: string;
@@ -129,7 +126,6 @@ export interface ConnectionDoc {
   b: { skkuId: number; floor: { ko: string; en: string } };
 }
 
-// --- campus_shapes doc ---
 /**
  * Permanent campus geometry: building footprints, the campus boundary, walking
  * paths. Hand-authored, imported by `scripts/import-campus-shapes.js`.

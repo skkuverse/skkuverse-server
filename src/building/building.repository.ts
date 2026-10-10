@@ -18,7 +18,7 @@ import type {
   ConnectionDoc,
   SpaceDoc,
 } from "./building.document";
-import { groupByFloor, toConnectionItems } from "./building-sync.mapper";
+import { groupByFloor, toConnectionItems } from "./building.mapper";
 import type { Campus, BuildingConnection, FloorGroup } from "./building.types";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
