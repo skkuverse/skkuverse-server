@@ -1,5 +1,5 @@
-import config from "../infra/config";
-import logger from "../infra/logger";
+import config from "./config";
+import logger from "./logger";
 
 /**
  * The one place this codebase POSTs to the `sendNotification` Cloud Function.

@@ -155,7 +155,7 @@ const config = {
     serviceAccount: process.env.FIREBASE_SERVICE_ACCOUNT || null,
   },
 
-  // PUSH_DELIVERY. "suppressed" makes http/fcm.client.ts log the payload and
+  // PUSH_DELIVERY. "suppressed" makes infra/fcm.ts log the payload and
   // report an empty delivery instead of calling the Cloud Function.
   push: {
     delivery: switches.pushDelivery,
