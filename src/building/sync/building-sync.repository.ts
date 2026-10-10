@@ -46,42 +46,46 @@ function toEnrichedSet(building: EnrichedBuilding): Record<string, unknown> {
   };
 }
 
-/**
- * The upsert for one space reported by either listing. Both write the same
- * names; spaceList also owns `conspaceCd`, which a buildInfo insert starts as
- * null. `sources` accumulates which listings reported the space.
- */
-function toSpaceUpsert(
-  space: SyncedSpace,
-  source: SpaceSource,
-  syncStartedAt: Date,
-): AnyBulkWriteOperation<SpaceDoc> {
-  const filter = { spaceCd: space.spaceCd, buildNo: space.buildNo, campus: space.campus };
-  const names = { floor: space.floor, name: space.name, buildingName: space.buildingName };
-  if (source === "buildInfo") {
-    return {
-      updateOne: {
-        filter,
-        update: {
-          $set: { ...names, syncedAt: syncStartedAt },
-          $addToSet: { sources: source },
-          $setOnInsert: { conspaceCd: null },
-        },
-        upsert: true,
-      },
-    };
-  }
+type SpaceUpsert = AnyBulkWriteOperation<SpaceDoc>;
+
+const spaceKey = (space: SyncedSpace) => ({ spaceCd: space.spaceCd, buildNo: space.buildNo, campus: space.campus });
+
+const spaceNames = (space: SyncedSpace) => ({ floor: space.floor, name: space.name, buildingName: space.buildingName });
+
+/** A space buildInfo reported. Only spaceList knows `conspaceCd`, so an insert starts it as null. */
+function toBuildInfoSpaceUpsert(space: SyncedSpace, syncStartedAt: Date): SpaceUpsert {
   return {
     updateOne: {
-      filter,
+      filter: spaceKey(space),
       update: {
-        $set: { ...names, conspaceCd: space.conspaceCd, syncedAt: syncStartedAt },
-        $addToSet: { sources: source },
+        $set: { ...spaceNames(space), syncedAt: syncStartedAt },
+        $addToSet: { sources: "buildInfo" },
+        $setOnInsert: { conspaceCd: null },
       },
       upsert: true,
     },
   };
 }
+
+/** A space spaceList reported, with the `conspaceCd` it owns. */
+function toSpaceListSpaceUpsert(space: SyncedSpace, syncStartedAt: Date): SpaceUpsert {
+  return {
+    updateOne: {
+      filter: spaceKey(space),
+      update: {
+        $set: { ...spaceNames(space), conspaceCd: space.conspaceCd, syncedAt: syncStartedAt },
+        $addToSet: { sources: "spaceList" },
+      },
+      upsert: true,
+    },
+  };
+}
+
+/** Both listings write the same names; `sources` accumulates which listings reported the space. */
+const SPACE_UPSERT_BY_SOURCE: Readonly<Record<SpaceSource, (space: SyncedSpace, syncStartedAt: Date) => SpaceUpsert>> = {
+  buildInfo: toBuildInfoSpaceUpsert,
+  spaceList: toSpaceListSpaceUpsert,
+};
 
 /**
  * The building sync's reads and writes: the raw layer (buildings_raw), the
@@ -194,7 +198,7 @@ export class BuildingSyncRepository implements OnModuleInit {
     syncStartedAt: Date,
   ): Promise<BulkWriteResult> {
     return this.spaces().bulkWrite(
-      spaces.map((space) => toSpaceUpsert(space, source, syncStartedAt)),
+      spaces.map((space) => SPACE_UPSERT_BY_SOURCE[source](space, syncStartedAt)),
       { ordered: false },
     );
   }
