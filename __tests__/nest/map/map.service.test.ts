@@ -65,8 +65,8 @@ const mockFindActiveActivation = findActiveActivation as jest.MockedFunction<
 describe("MapService", () => {
   // getCampusOverlays falls back to FALLBACK_MARKERS on an empty building list (no DB).
   const building = {
-    getAllBuildings: jest.fn().mockResolvedValue([]),
-    getAllCampusShapes: jest.fn().mockResolvedValue([]),
+    listAllBuildings: jest.fn().mockResolvedValue([]),
+    listAllCampusShapes: jest.fn().mockResolvedValue([]),
   } as unknown as BuildingService;
   const svc = new MapService(building);
 

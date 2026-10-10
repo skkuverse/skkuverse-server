@@ -55,8 +55,8 @@ describe("GET /map/config (real MapService)", () => {
         provide: BuildingService,
         useValue: {
           onModuleInit: jest.fn(),
-          getAllBuildings: jest.fn().mockResolvedValue([]),
-          getAllCampusShapes: jest.fn().mockResolvedValue([]),
+          listAllBuildings: jest.fn().mockResolvedValue([]),
+          listAllCampusShapes: jest.fn().mockResolvedValue([]),
         },
       },
     ]);

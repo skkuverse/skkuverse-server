@@ -304,15 +304,15 @@ function toRankedResult<T>(facets: Array<RankedFacet<T>>): RankedSearchResult<T>
   }
   // Concatenation preserves relevance order: every strong score is by
   // definition above every weak one, and each band is already sorted.
-  const items = [...facet.strong, ...facet.weak];
+  const ranked = [...facet.strong, ...facet.weak];
   // Not a silent fallback: $count legitimately emits zero documents when the
   // campus-scoped match set is empty.
   const total = facet.total[0]?.n ?? 0;
   return {
-    items,
+    items: ranked,
     counts: { hssc, nsc, total: hssc + nsc },
     total,
-    truncated: total > items.length,
+    truncated: total > ranked.length,
   };
 }
 

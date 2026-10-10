@@ -7,11 +7,11 @@ import type { BuildingRepository } from "./building.repository";
 import { BuildingService } from "./building.service";
 
 const repo = {
-  getAllBuildings: jest.fn(),
-  getAllCampusShapes: jest.fn(),
-  getBuildingBySkkuId: jest.fn(),
-  getFloorsByBuildNo: jest.fn(),
-  getConnectionsForBuilding: jest.fn(),
+  listBuildings: jest.fn(),
+  listCampusShapes: jest.fn(),
+  findBuildingBySkkuId: jest.fn(),
+  listFloorsByBuildNo: jest.fn(),
+  listConnectionsBySkkuId: jest.fn(),
   searchBuildings: jest.fn(),
   searchSpaces: jest.fn(),
 };
@@ -30,11 +30,11 @@ beforeEach(() => {
 
 describe("BuildingService.list", () => {
   it("asks for the campus (null for all) and labels each building", async () => {
-    repo.getAllBuildings.mockResolvedValue([{ _id: 1, campus: "nsc" }]);
+    repo.listBuildings.mockResolvedValue([{ _id: 1, campus: "nsc" }]);
     await expect(svc.list(null, "en")).resolves.toEqual({
       buildings: [{ _id: 1, campus: "nsc", campusLabel: "NSC" }],
     });
-    expect(repo.getAllBuildings).toHaveBeenCalledWith(null);
+    expect(repo.listBuildings).toHaveBeenCalledWith(null);
   });
 });
 
@@ -47,7 +47,7 @@ describe("BuildingService.search", () => {
         { spaceCd: "27102", buildNo: "227", campus: "nsc", name: { ko: "실2", en: "" }, floor: { ko: "1층", en: "" } },
       ]),
     );
-    repo.getAllBuildings.mockResolvedValue([{ _id: 22, buildNo: "227", campus: "nsc" }, { _id: 1, buildNo: null }]);
+    repo.listBuildings.mockResolvedValue([{ _id: 22, buildNo: "227", campus: "nsc" }, { _id: 1, buildNo: null }]);
 
     const { data, meta } = await svc.search("27", "nsc", "ko");
 
@@ -63,33 +63,33 @@ describe("BuildingService.search", () => {
 
 describe("BuildingService.detail", () => {
   it("is null for an unknown building and asks for nothing else", async () => {
-    repo.getBuildingBySkkuId.mockResolvedValue(null);
+    repo.findBuildingBySkkuId.mockResolvedValue(null);
     await expect(svc.detail(999, "ko")).resolves.toBeNull();
-    expect(repo.getFloorsByBuildNo).not.toHaveBeenCalled();
-    expect(repo.getConnectionsForBuilding).not.toHaveBeenCalled();
+    expect(repo.listFloorsByBuildNo).not.toHaveBeenCalled();
+    expect(repo.listConnectionsBySkkuId).not.toHaveBeenCalled();
   });
 
   it("fills the English fallback on floors without touching the repository's objects", async () => {
     const floors = [{ floor: { ko: "1층", en: "" }, spaces: [{ spaceCd: "1", name: { ko: "실", en: "" } }] }];
-    repo.getBuildingBySkkuId.mockResolvedValue({ _id: 3, buildNo: "102", campus: "hssc" });
-    repo.getFloorsByBuildNo.mockResolvedValue(floors);
-    repo.getConnectionsForBuilding.mockResolvedValue([]);
+    repo.findBuildingBySkkuId.mockResolvedValue({ _id: 3, buildNo: "102", campus: "hssc" });
+    repo.listFloorsByBuildNo.mockResolvedValue(floors);
+    repo.listConnectionsBySkkuId.mockResolvedValue([]);
 
     const view = await svc.detail(3, "ko");
 
     expect(view?.floors[0]?.floor.en).toBe("1층");
     expect(view?.floors[0]?.spaces[0]?.name.en).toBe("실");
     expect(floors[0]!.floor.en).toBe("");
-    expect(repo.getFloorsByBuildNo).toHaveBeenCalledWith("102");
+    expect(repo.listFloorsByBuildNo).toHaveBeenCalledWith("102");
   });
 });
 
 describe("BuildingService for MapService", () => {
   it("passes every building and the campus shapes through", async () => {
-    repo.getAllBuildings.mockResolvedValue([]);
-    repo.getAllCampusShapes.mockResolvedValue([{ _id: "wall" }]);
-    await svc.getAllBuildings();
-    expect(repo.getAllBuildings).toHaveBeenCalledWith();
-    await expect(svc.getAllCampusShapes()).resolves.toEqual([{ _id: "wall" }]);
+    repo.listBuildings.mockResolvedValue([]);
+    repo.listCampusShapes.mockResolvedValue([{ _id: "wall" }]);
+    await svc.listAllBuildings();
+    expect(repo.listBuildings).toHaveBeenCalledWith();
+    await expect(svc.listAllCampusShapes()).resolves.toEqual([{ _id: "wall" }]);
   });
 });

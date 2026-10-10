@@ -661,7 +661,7 @@ renames or renumbers something, which is not a thing that happens during a user'
 **The degraded fallback must not be cached, and the reason is a TTL mismatch that is easy to miss.**
 When the buildings collection comes back empty the producer serves a small hardcoded set
 (`FALLBACK_MARKERS`) so a cold or broken database still shows something recognisable rather than a
-blank campus, and it flags the response `degraded`. Meanwhile `getAllBuildings` caches whatever the
+blank campus, and it flags the response `degraded`. Meanwhile `listAllBuildings` caches whatever the
 query returned — `[]` included — for five minutes, while this route's normal TTL is a day. A brief
 empty read during a re-seed or a migration would therefore pin the fallback map into every client and
 edge cache for 24 hours, on a stable URL with no version stamp and no revalidation to bust it. The

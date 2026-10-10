@@ -17,10 +17,10 @@ let app: NestExpressApplication;
 let httpServer: import("http").Server;
 let svc: {
   onModuleInit: jest.Mock;
-  getAllBuildings: jest.Mock;
-  getBuildingBySkkuId: jest.Mock;
-  getFloorsByBuildNo: jest.Mock;
-  getConnectionsForBuilding: jest.Mock;
+  listBuildings: jest.Mock;
+  findBuildingBySkkuId: jest.Mock;
+  listFloorsByBuildNo: jest.Mock;
+  listConnectionsBySkkuId: jest.Mock;
   searchBuildings: jest.Mock;
   searchSpaces: jest.Mock;
 };
@@ -28,10 +28,10 @@ let svc: {
 beforeAll(async () => {
   svc = {
     onModuleInit: jest.fn(),
-    getAllBuildings: jest.fn(),
-    getBuildingBySkkuId: jest.fn(),
-    getFloorsByBuildNo: jest.fn(),
-    getConnectionsForBuilding: jest.fn(),
+    listBuildings: jest.fn(),
+    findBuildingBySkkuId: jest.fn(),
+    listFloorsByBuildNo: jest.fn(),
+    listConnectionsBySkkuId: jest.fn(),
     searchBuildings: jest.fn(),
     searchSpaces: jest.fn(),
   };
@@ -49,7 +49,7 @@ beforeEach(() => {
 
 describe("GET /building/list", () => {
   it("returns the full list with campusLabel injected (Korean default)", async () => {
-    svc.getAllBuildings.mockResolvedValue([
+    svc.listBuildings.mockResolvedValue([
       { _id: 1, buildNo: "100", campus: "hssc", name: { ko: "법학관", en: "Law" } },
       { _id: 2, buildNo: "200", campus: "nsc", name: { ko: "공학관", en: "Eng" } },
     ]);
@@ -59,11 +59,11 @@ describe("GET /building/list", () => {
     expect(res.body.data.buildings).toHaveLength(2);
     expect(res.body.data.buildings[0].campusLabel).toBe("인사캠");
     expect(res.body.data.buildings[1].campusLabel).toBe("자과캠");
-    expect(svc.getAllBuildings).toHaveBeenCalledWith(null);
+    expect(svc.listBuildings).toHaveBeenCalledWith(null);
   });
 
   it("filters by campus=hssc and uses English campusLabel on en lang", async () => {
-    svc.getAllBuildings.mockResolvedValue([
+    svc.listBuildings.mockResolvedValue([
       { _id: 1, buildNo: "100", campus: "hssc", name: { ko: "법학관", en: "Law" } },
     ]);
     const res = await request(httpServer)
@@ -72,14 +72,14 @@ describe("GET /building/list", () => {
     expect(res.status).toBe(200);
     expect(res.body.meta.lang).toBe("en");
     expect(res.body.data.buildings[0].campusLabel).toBe("HSSC");
-    expect(svc.getAllBuildings).toHaveBeenCalledWith("hssc");
+    expect(svc.listBuildings).toHaveBeenCalledWith("hssc");
   });
 
   it("accepts campus=nsc", async () => {
-    svc.getAllBuildings.mockResolvedValue([]);
+    svc.listBuildings.mockResolvedValue([]);
     const res = await request(httpServer).get("/building/list?campus=nsc");
     expect(res.status).toBe(200);
-    expect(svc.getAllBuildings).toHaveBeenCalledWith("nsc");
+    expect(svc.listBuildings).toHaveBeenCalledWith("nsc");
   });
 
   it("rejects invalid campus with 400 INVALID_CAMPUS", async () => {
@@ -87,7 +87,7 @@ describe("GET /building/list", () => {
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_CAMPUS");
     expect(res.body.error.message).toMatch(/hssc.*nsc/);
-    expect(svc.getAllBuildings).not.toHaveBeenCalled();
+    expect(svc.listBuildings).not.toHaveBeenCalled();
   });
 });
 
@@ -132,7 +132,7 @@ describe("GET /building/search", () => {
         { hssc: 1, nsc: 0 },
       ),
     );
-    svc.getAllBuildings.mockResolvedValue([
+    svc.listBuildings.mockResolvedValue([
       { _id: 1, buildNo: "100", campus: "hssc" },
     ]);
   }
@@ -189,7 +189,7 @@ describe("GET /building/search", () => {
   it("returns empty arrays + zero counts when nothing matches", async () => {
     svc.searchBuildings.mockResolvedValue(ranked([], { hssc: 0, nsc: 0 }));
     svc.searchSpaces.mockResolvedValue(ranked([], { hssc: 0, nsc: 0 }));
-    svc.getAllBuildings.mockResolvedValue([]);
+    svc.listBuildings.mockResolvedValue([]);
     const res = await request(httpServer).get("/building/search?q=zzz");
     expect(res.status).toBe(200);
     expect(res.body.data.buildings).toEqual([]);
@@ -232,7 +232,7 @@ describe("GET /building/search", () => {
       ),
     );
     svc.searchBuildings.mockResolvedValue(ranked([], { hssc: 0, nsc: 0 }));
-    svc.getAllBuildings.mockResolvedValue([]);
+    svc.listBuildings.mockResolvedValue([]);
 
     const res = await request(httpServer).get("/building/search?q=100");
     expect(res.body.meta.spaceCount).toBe(2);
@@ -265,7 +265,7 @@ describe("GET /building/search", () => {
       ),
     );
     svc.searchBuildings.mockResolvedValue(ranked([], { hssc: 0, nsc: 0 }));
-    svc.getAllBuildings.mockResolvedValue([]);
+    svc.listBuildings.mockResolvedValue([]);
 
     const res = await request(httpServer).get("/building/search?q=27");
     expect(
@@ -281,7 +281,7 @@ describe("GET /building/search", () => {
       total: 6173,
       truncated: true,
     });
-    svc.getAllBuildings.mockResolvedValue([]);
+    svc.listBuildings.mockResolvedValue([]);
 
     const res = await request(httpServer).get("/building/search?q=%EC%8B%A4");
     expect(res.body.meta.counts.space.total).toBe(6173);
@@ -296,7 +296,7 @@ describe("GET /building/:skkuId", () => {
     const res = await request(httpServer).get("/building/abc");
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_ID");
-    expect(svc.getBuildingBySkkuId).not.toHaveBeenCalled();
+    expect(svc.findBuildingBySkkuId).not.toHaveBeenCalled();
   });
 
   it("rejects skkuId=0 (must be positive)", async () => {
@@ -306,7 +306,7 @@ describe("GET /building/:skkuId", () => {
   });
 
   it("returns 404 NOT_FOUND when no building matches", async () => {
-    svc.getBuildingBySkkuId.mockResolvedValue(null);
+    svc.findBuildingBySkkuId.mockResolvedValue(null);
     const res = await request(httpServer).get("/building/999");
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("NOT_FOUND");
@@ -314,19 +314,19 @@ describe("GET /building/:skkuId", () => {
   });
 
   it("returns building + floors + connections with campusLabel and en-fallback", async () => {
-    svc.getBuildingBySkkuId.mockResolvedValue({
+    svc.findBuildingBySkkuId.mockResolvedValue({
       _id: 1,
       buildNo: "100",
       campus: "hssc",
       name: { ko: "법학관", en: "Law" },
     });
-    svc.getFloorsByBuildNo.mockResolvedValue([
+    svc.listFloorsByBuildNo.mockResolvedValue([
       {
         floor: { ko: "1층", en: "" },
         spaces: [{ spaceCd: "100-A101", name: { ko: "강의실", en: "" } }],
       },
     ]);
-    svc.getConnectionsForBuilding.mockResolvedValue([
+    svc.listConnectionsBySkkuId.mockResolvedValue([
       {
         targetSkkuId: 2,
         targetBuildNo: "101",
@@ -342,7 +342,7 @@ describe("GET /building/:skkuId", () => {
     expect(res.body.data.floors[0].floor.en).toBe("1층");
     expect(res.body.data.floors[0].spaces[0].name.en).toBe("강의실");
     expect(res.body.data.connections).toHaveLength(1);
-    expect(svc.getFloorsByBuildNo).toHaveBeenCalledWith("100");
-    expect(svc.getConnectionsForBuilding).toHaveBeenCalledWith(1);
+    expect(svc.listFloorsByBuildNo).toHaveBeenCalledWith("100");
+    expect(svc.listConnectionsBySkkuId).toHaveBeenCalledWith(1);
   });
 });

@@ -9,9 +9,9 @@ import type {
   SyncedSpace,
 } from "./building.types";
 
-const SKKU_API = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
+const CAMPUS_MAP_URL = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
 const CAMPUS_CODES: Readonly<Record<Campus, string>> = { hssc: "1", nsc: "2" };
-const TIMEOUT_MS = 30000;
+const REQUEST_TIMEOUT_MS = 30000;
 
 // --- campusMap.do payloads (buildList / buildInfo / spaceList) ---
 //
@@ -138,9 +138,9 @@ function toRawDoc(item: SkkuBuildListItem, campus: Campus): Omit<BuildingRawDoc,
 @Injectable()
 export class BuildingClient {
   async fetchBuildList(campus: Campus): Promise<ListedBuilding[]> {
-    const { data } = await axios.get<SkkuBuildListResponse>(SKKU_API, {
+    const { data } = await axios.get<SkkuBuildListResponse>(CAMPUS_MAP_URL, {
       params: { mode: "buildList", srSearchValue: "", campusCd: CAMPUS_CODES[campus] },
-      timeout: TIMEOUT_MS,
+      timeout: REQUEST_TIMEOUT_MS,
     });
     return (data.buildItems || []).map((item) => ({
       skkuId: parseInt(item.id, 10),
@@ -153,9 +153,9 @@ export class BuildingClient {
     building: ListedBuilding & { doc: { buildNo: string } },
   ): Promise<BuildInfo> {
     const { doc } = building;
-    const { data } = await axios.get<SkkuBuildInfoResponse>(SKKU_API, {
+    const { data } = await axios.get<SkkuBuildInfoResponse>(CAMPUS_MAP_URL, {
       params: { mode: "buildInfo", buildNo: doc.buildNo, id: building.apiId },
-      timeout: TIMEOUT_MS,
+      timeout: REQUEST_TIMEOUT_MS,
     });
     const attachments: BuildingAttachment[] = (data.attachItem || []).map((a) => ({
       id: a.id,
@@ -176,9 +176,9 @@ export class BuildingClient {
   }
 
   async fetchSpaceList(campus: Campus): Promise<SyncedSpace[]> {
-    const { data } = await axios.get<SkkuSpaceListResponse>(SKKU_API, {
+    const { data } = await axios.get<SkkuSpaceListResponse>(CAMPUS_MAP_URL, {
       params: { mode: "spaceList", srSearchValue: "", campusCd: CAMPUS_CODES[campus] },
-      timeout: TIMEOUT_MS,
+      timeout: REQUEST_TIMEOUT_MS,
     });
     return (data.items || []).map((item) => ({
       spaceCd: item.spaceCd,
