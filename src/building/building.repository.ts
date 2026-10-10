@@ -19,7 +19,7 @@ import type {
   SpaceDoc,
 } from "./building.document";
 import { groupByFloor, toConnectionItems } from "./building.mapper";
-import type { Campus, ConnectionResponseItem, FloorGroup } from "./building.types";
+import type { Campus, BuildingConnection, FloorGroup } from "./building.types";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -107,7 +107,7 @@ export class BuildingRepository implements OnModuleInit {
    * facet stage is capped at 100MB and CANNOT spill to disk (allowDiskUse does
    * not apply), and the emitted document is bound by the 16MB BSON limit.
    *
-   * The indexes below serve /building/list, getFloorsByBuildNo and the sync
+   * The indexes below serve /building/list, listFloorsByBuildNo and the sync
    * upserts — keep them.
    */
   async ensureIndexes(): Promise<void> {
@@ -145,20 +145,20 @@ export class BuildingRepository implements OnModuleInit {
     ]);
   }
 
-  async getAllBuildings(campus?: Campus | null): Promise<BuildingDoc[]> {
-    const docs = await this.allBuildings.get();
-    if (!campus) return docs;
-    return docs.filter((b) => b.campus === campus);
+  async listBuildings(campus?: Campus | null): Promise<BuildingDoc[]> {
+    const buildings = await this.allBuildings.get();
+    if (!campus) return buildings;
+    return buildings.filter((b) => b.campus === campus);
   }
 
-  getBuildingBySkkuId(skkuId: number): Promise<BuildingDoc | null> {
+  findBuildingBySkkuId(skkuId: number): Promise<BuildingDoc | null> {
     return this.buildings().findOne(
       { _id: skkuId },
       { projection: { sync: 0, enrichVersion: 0 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
     );
   }
 
-  async getFloorsByBuildNo(buildNo: string | null): Promise<FloorGroup[]> {
+  async listFloorsByBuildNo(buildNo: string | null): Promise<FloorGroup[]> {
     if (!buildNo) return [];
     const spaces = await this.spaces()
       .find(
@@ -172,19 +172,19 @@ export class BuildingRepository implements OnModuleInit {
     return groupByFloor(spaces);
   }
 
-  async getConnectionsForBuilding(skkuId: number): Promise<ConnectionResponseItem[]> {
-    const docs = await this.connections()
+  async listConnectionsBySkkuId(skkuId: number): Promise<BuildingConnection[]> {
+    const connections = await this.connections()
       .find(
         { $or: [{ "a.skkuId": skkuId }, { "b.skkuId": skkuId }] },
         { maxTimeMS: HOT_READ_MAX_TIME_MS },
       )
       .toArray();
-    if (!docs.length) return [];
+    if (!connections.length) return [];
 
     const relatedIds = new Set<number>();
-    for (const doc of docs) {
-      relatedIds.add(doc.a.skkuId);
-      relatedIds.add(doc.b.skkuId);
+    for (const connection of connections) {
+      relatedIds.add(connection.a.skkuId);
+      relatedIds.add(connection.b.skkuId);
     }
     relatedIds.delete(skkuId);
 
@@ -194,7 +194,7 @@ export class BuildingRepository implements OnModuleInit {
         { projection: { _id: 1, buildNo: 1, displayNo: 1, name: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
       )
       .toArray();
-    return toConnectionItems(skkuId, docs, targets);
+    return toConnectionItems(skkuId, connections, targets);
   }
 
   /**
@@ -226,7 +226,7 @@ export class BuildingRepository implements OnModuleInit {
   }
 
   /** Every campus shape, in authored order. */
-  getAllCampusShapes(): Promise<CampusShapeDoc[]> {
+  listCampusShapes(): Promise<CampusShapeDoc[]> {
     return this.campusShapesCache.get();
   }
 

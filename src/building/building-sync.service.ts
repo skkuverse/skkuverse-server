@@ -2,10 +2,10 @@ import { Injectable } from "@nestjs/common";
 import logger from "../infra/logger";
 import {
   BUILD_INFO_CONCURRENCY,
-  MIN_BUILDINGS,
-  MIN_SPACES,
+  MIN_BUILDINGS_TO_TRUST,
+  MIN_SPACES_FOR_STALE_DELETE,
   needsEnrichment,
-  syncFailed,
+  toSyncError,
   type PhaseFailure,
 } from "./building-sync.rules";
 import { BuildingSyncRepository } from "./building-sync.repository";
@@ -42,26 +42,26 @@ export class BuildingSyncService {
    * no failure logs `building.sync.completed`.
    */
   async run(): Promise<void> {
-    const syncTime = new Date();
+    const syncStartedAt = new Date();
     const start = Date.now();
 
     let listed: ListedBuilding[];
     try {
-      listed = await this.listBuildings(syncTime);
+      listed = await this.syncBuildList(syncStartedAt);
     } catch (err) {
-      throw syncFailed([{ phase: "phase 1 (buildList)", err }]);
+      throw toSyncError([{ phase: "phase 1 (buildList)", err }]);
     }
 
     const failures: PhaseFailure[] = [];
     try {
-      await this.syncDetails(listed, syncTime);
+      await this.syncBuildInfo(listed, syncStartedAt);
     } catch (err) {
       failures.push({ phase: "phase 2 (buildInfo)", err });
     }
 
-    let spacesCount = 0;
+    let spaceCount = 0;
     try {
-      spacesCount = await this.syncSpaces(syncTime);
+      spaceCount = await this.syncSpaceList(syncStartedAt);
     } catch (err) {
       failures.push({ phase: "phase 3 (spaceList)", err });
     }
@@ -69,14 +69,14 @@ export class BuildingSyncService {
     this.buildings.clearCache();
 
     if (failures.length > 0) {
-      throw syncFailed(failures);
+      throw toSyncError(failures);
     }
 
     logger.info(
       {
         event: "building.sync.completed",
         buildings: listed.length,
-        spaces: spacesCount,
+        spaces: spaceCount,
         elapsed: Date.now() - start,
       },
       "Building sync complete",
@@ -84,32 +84,32 @@ export class BuildingSyncService {
   }
 
   /** Phase 1: buildList → raw upsert → change detection → enrich. */
-  private async listBuildings(syncTime: Date): Promise<ListedBuilding[]> {
+  private async syncBuildList(syncStartedAt: Date): Promise<ListedBuilding[]> {
     const listed: ListedBuilding[] = [];
     for (const campus of CAMPUSES) {
-      const items = await this.client.fetchBuildList(campus);
+      const campusBuildings = await this.client.fetchBuildList(campus);
       logger.info(
-        { event: "building.sync.buildlist_fetched", campus, count: items.length },
+        { event: "building.sync.buildlist_fetched", campus, count: campusBuildings.length },
         "Phase 1: fetched buildList",
       );
-      for (const item of items) listed.push(item);
+      for (const building of campusBuildings) listed.push(building);
     }
 
-    if (listed.length < MIN_BUILDINGS) {
+    if (listed.length < MIN_BUILDINGS_TO_TRUST) {
       throw new Error(
-        `buildList returned ${listed.length} buildings, fewer than ${MIN_BUILDINGS}; nothing written`,
+        `buildList returned ${listed.length} buildings, fewer than ${MIN_BUILDINGS_TO_TRUST}; nothing written`,
       );
     }
 
-    const known = await this.store.findRawUpdatedAt();
-    const oldVersion = await this.store.findIdsNotEnrichedAt(ENRICH_VERSION);
+    const known = await this.store.listRawUpdatedAt();
+    const oldVersion = await this.store.listIdsNotEnrichedAt(ENRICH_VERSION);
     const changedIds = new Set(
       listed
         .filter((b) => needsEnrichment(known.get(b.skkuId), b.doc.skkuUpdatedAt, oldVersion.has(b.skkuId)))
         .map((b) => b.skkuId),
     );
 
-    const rawResult = await this.store.upsertRaw(listed, syncTime);
+    const rawResult = await this.store.upsertRaw(listed, syncStartedAt);
     logger.info(
       {
         event: "building.sync.raw_upserted",
@@ -128,10 +128,10 @@ export class BuildingSyncService {
       return listed;
     }
 
-    const changedRaw = await this.store.findRawByIds(changedIds);
+    const changedRaw = await this.store.listRawByIds(changedIds);
     const enrichResult = await this.store.upsertEnriched(
       changedRaw.map((raw) => ({ skkuId: raw._id, fields: enrichBuilding(raw) })),
-      syncTime,
+      syncStartedAt,
     );
     logger.info(
       {
@@ -147,7 +147,7 @@ export class BuildingSyncService {
   }
 
   /** Phase 2: buildInfo per building → photos on both layers + floor spaces. */
-  private async syncDetails(listed: readonly ListedBuilding[], syncTime: Date): Promise<void> {
+  private async syncBuildInfo(listed: readonly ListedBuilding[], syncStartedAt: Date): Promise<void> {
     // A facility (no buildNo) has no buildInfo.
     const withBuildNo = listed.filter((b): b is WithBuildNo => !!b.doc.buildNo);
     const spaces: SyncedSpace[] = [];
@@ -156,22 +156,22 @@ export class BuildingSyncService {
 
     for (let i = 0; i < withBuildNo.length; i += BUILD_INFO_CONCURRENCY) {
       const batch = withBuildNo.slice(i, i + BUILD_INFO_CONCURRENCY);
-      const results = await Promise.allSettled(
+      const outcomes = await Promise.allSettled(
         batch.map(async (building) => {
           const detail = await this.client.fetchBuildInfo(building);
-          await this.store.setAttachments(building.skkuId, detail.attachments, syncTime);
+          await this.store.setAttachments(building.skkuId, detail.attachments, syncStartedAt);
           for (const space of detail.spaces) spaces.push(space);
           processed++;
         }),
       );
 
-      for (const [j, result] of results.entries()) {
-        if (result.status !== "rejected") continue;
+      for (const [j, outcome] of outcomes.entries()) {
+        if (outcome.status !== "rejected") continue;
         errors++;
         const failed = batch[j]!;
         // The reason is unknown (a rejection can be anything); the cast only
         // types it for the log line.
-        const reason = result.reason as { message?: string } | null | undefined;
+        const reason = outcome.reason as { message?: string } | null | undefined;
         logger.warn(
           {
             event: "building.sync.buildinfo_failed",
@@ -186,12 +186,12 @@ export class BuildingSyncService {
     }
 
     if (spaces.length > 0) {
-      const result = await this.store.upsertSpaces(spaces, "buildInfo", syncTime);
+      const upsertResult = await this.store.upsertSpaces(spaces, "buildInfo", syncStartedAt);
       logger.info(
         {
           event: "building.sync.buildinfo_upserted",
-          matched: result.matchedCount,
-          upserted: result.upsertedCount,
+          matched: upsertResult.matchedCount,
+          upserted: upsertResult.upsertedCount,
           processed,
           errors,
         },
@@ -201,30 +201,30 @@ export class BuildingSyncService {
   }
 
   /** Phase 3: spaceList → spaces upsert + delete of the spaces SKKU no longer lists. */
-  private async syncSpaces(syncTime: Date): Promise<number> {
+  private async syncSpaceList(syncStartedAt: Date): Promise<number> {
     const spaces: SyncedSpace[] = [];
     for (const campus of CAMPUSES) {
-      const items = await this.client.fetchSpaceList(campus);
+      const campusSpaces = await this.client.fetchSpaceList(campus);
       logger.info(
-        { event: "building.sync.spacelist_fetched", campus, count: items.length },
+        { event: "building.sync.spacelist_fetched", campus, count: campusSpaces.length },
         "Phase 3: fetched spaceList",
       );
-      for (const item of items) spaces.push(item);
+      for (const space of campusSpaces) spaces.push(space);
     }
 
     if (spaces.length > 0) {
-      const result = await this.store.upsertSpaces(spaces, "spaceList", syncTime);
+      const upsertResult = await this.store.upsertSpaces(spaces, "spaceList", syncStartedAt);
       logger.info(
         {
           event: "building.sync.spacelist_upserted",
-          matched: result.matchedCount,
-          upserted: result.upsertedCount,
+          matched: upsertResult.matchedCount,
+          upserted: upsertResult.upsertedCount,
         },
         "Phase 3: spaceList upserted",
       );
     }
 
-    if (spaces.length < MIN_SPACES) {
+    if (spaces.length < MIN_SPACES_FOR_STALE_DELETE) {
       logger.warn(
         { event: "building.sync.stale_delete_skipped", count: spaces.length },
         "Suspiciously few spaces, skipping stale delete",
@@ -232,7 +232,7 @@ export class BuildingSyncService {
       return spaces.length;
     }
 
-    const deleted = await this.store.deleteSpacesSyncedBefore(syncTime);
+    const deleted = await this.store.deleteSpacesSyncedBefore(syncStartedAt);
     if (deleted > 0) {
       logger.info(
         { event: "building.sync.stale_deleted", deleted },

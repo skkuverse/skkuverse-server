@@ -16,7 +16,7 @@ import type {
   BilingualText,
   BuildingSearch,
   Campus,
-  ConnectionResponseItem,
+  BuildingConnection,
   FloorGroup,
   SpaceGroup,
   SpaceSource,
@@ -255,7 +255,7 @@ function toConnectionItems(
   skkuId: number,
   docs: readonly ConnectionDoc[],
   targets: ReadonlyArray<Pick<BuildingDoc, "_id" | "buildNo" | "displayNo" | "name">>,
-): ConnectionResponseItem[] {
+): BuildingConnection[] {
   const buildingMap = new Map(targets.map((b) => [b._id, b]));
   return docs.map((doc) => {
     const isA = doc.a.skkuId === skkuId;
@@ -281,7 +281,7 @@ function toConnectionItems(
 function toSpaceUpsert(
   space: SyncedSpace,
   source: SpaceSource,
-  syncTime: Date,
+  syncStartedAt: Date,
 ): AnyBulkWriteOperation<SpaceDoc> {
   const filter = { spaceCd: space.spaceCd, buildNo: space.buildNo, campus: space.campus };
   const names = { floor: space.floor, name: space.name, buildingName: space.buildingName };
@@ -290,7 +290,7 @@ function toSpaceUpsert(
       updateOne: {
         filter,
         update: {
-          $set: { ...names, syncedAt: syncTime },
+          $set: { ...names, syncedAt: syncStartedAt },
           $addToSet: { sources: source },
           $setOnInsert: { conspaceCd: null },
         },
@@ -302,7 +302,7 @@ function toSpaceUpsert(
     updateOne: {
       filter,
       update: {
-        $set: { ...names, conspaceCd: space.conspaceCd, syncedAt: syncTime },
+        $set: { ...names, conspaceCd: space.conspaceCd, syncedAt: syncStartedAt },
         $addToSet: { sources: source },
       },
       upsert: true,

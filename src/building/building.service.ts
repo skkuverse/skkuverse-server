@@ -19,7 +19,7 @@ export class BuildingService {
     campus: Campus | null,
     lang: SupportedLang,
   ): Promise<{ buildings: Array<WithCampusLabel<BuildingDoc>> }> {
-    const buildings = await this.repository.getAllBuildings(campus);
+    const buildings = await this.repository.listBuildings(campus);
     return { buildings: buildings.map((b) => withCampusLabel(b, lang)) };
   }
 
@@ -34,18 +34,18 @@ export class BuildingService {
     const [buildingResult, spaceResult, allBuildings] = await Promise.all([
       this.repository.searchBuildings(q, campus),
       this.repository.searchSpaces(q, campus),
-      this.repository.getAllBuildings(),
+      this.repository.listBuildings(),
     ]);
     return toBuildingSearch(q, buildingResult, spaceResult, allBuildings, lang);
   }
 
   /** GET /building/:skkuId: the building, its floors and connections; null if there is none. */
   async detail(skkuId: number, lang: SupportedLang): Promise<BuildingDetail | null> {
-    const building = await this.repository.getBuildingBySkkuId(skkuId);
+    const building = await this.repository.findBuildingBySkkuId(skkuId);
     if (!building) return null;
     const [floors, connections] = await Promise.all([
-      this.repository.getFloorsByBuildNo(building.buildNo),
-      this.repository.getConnectionsForBuilding(skkuId),
+      this.repository.listFloorsByBuildNo(building.buildNo),
+      this.repository.listConnectionsBySkkuId(skkuId),
     ]);
     return {
       building: withCampusLabel(building, lang),
@@ -54,13 +54,13 @@ export class BuildingService {
     };
   }
 
-  // --- Exported to MapService (the campus map overlay) ---
-
-  getAllBuildings(): Promise<BuildingDoc[]> {
-    return this.repository.getAllBuildings();
+  /** Every building, unlabeled: the read other modules get through the exported BuildingService. */
+  listAllBuildings(): Promise<BuildingDoc[]> {
+    return this.repository.listBuildings();
   }
 
-  getAllCampusShapes(): Promise<CampusShapeDoc[]> {
-    return this.repository.getAllCampusShapes();
+  /** Every campus outline, for other modules through the exported BuildingService. */
+  listAllCampusShapes(): Promise<CampusShapeDoc[]> {
+    return this.repository.listCampusShapes();
   }
 }

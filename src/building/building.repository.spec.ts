@@ -45,11 +45,11 @@ const SHAPE = { _id: "wall", order: 1 };
 const FIVE_MIN = 5 * 60 * 1000;
 
 const repository = new BuildingRepository();
-const { clearCache, getAllBuildings, getAllCampusShapes } = {
+const { clearCache, listBuildings, listCampusShapes } = {
   clearCache: () => repository.clearCache(),
-  getAllBuildings: (...args: Parameters<BuildingRepository["getAllBuildings"]>) =>
-    repository.getAllBuildings(...args),
-  getAllCampusShapes: () => repository.getAllCampusShapes(),
+  listBuildings: (...args: Parameters<BuildingRepository["listBuildings"]>) =>
+    repository.listBuildings(...args),
+  listCampusShapes: () => repository.listCampusShapes(),
 };
 const ensureIndexes = () => repository.ensureIndexes();
 
@@ -66,12 +66,12 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe("getAllBuildings", () => {
+describe("listBuildings", () => {
   it("scans once for concurrent requests, and filters the cached list by campus", async () => {
     const [all, hssc, nsc] = await Promise.all([
-      getAllBuildings(),
-      getAllBuildings("hssc"),
-      getAllBuildings("nsc"),
+      listBuildings(),
+      listBuildings("hssc"),
+      listBuildings("nsc"),
     ]);
     expect(all).toEqual([HSSC, NSC]);
     expect(hssc).toEqual([HSSC]);
@@ -83,31 +83,31 @@ describe("getAllBuildings", () => {
   });
 
   it("re-reads after clearCache(), which the building sync calls after writing", async () => {
-    await getAllBuildings();
+    await listBuildings();
     clearCache();
-    await getAllBuildings();
+    await listBuildings();
     expect(findFor.buildings).toHaveBeenCalledTimes(2);
   });
 
   it("re-reads once the TTL has passed", async () => {
-    await getAllBuildings();
+    await listBuildings();
     clock += FIVE_MIN;
-    await getAllBuildings();
+    await listBuildings();
     expect(findFor.buildings).toHaveBeenCalledTimes(2);
   });
 
   it("still surfaces a failed read, which is what marks the overlay degraded", async () => {
-    await getAllBuildings();
+    await listBuildings();
     toArrayFor.buildings!.mockRejectedValue(new Error("mongo down"));
     clock += FIVE_MIN;
-    await expect(getAllBuildings()).rejects.toThrow("mongo down");
+    await expect(listBuildings()).rejects.toThrow("mongo down");
   });
 });
 
-describe("getAllCampusShapes", () => {
+describe("listCampusShapes", () => {
   it("is cached like the buildings", async () => {
-    await Promise.all([getAllCampusShapes(), getAllCampusShapes()]);
-    await getAllCampusShapes();
+    await Promise.all([listCampusShapes(), listCampusShapes()]);
+    await listCampusShapes();
     expect(findFor.campus_shapes).toHaveBeenCalledTimes(1);
     expect(findFor.campus_shapes!.mock.calls[0]).toEqual([
       {},
@@ -116,19 +116,19 @@ describe("getAllCampusShapes", () => {
   });
 
   it("serves the last good shapes when a re-read fails, with a warning", async () => {
-    await getAllCampusShapes();
+    await listCampusShapes();
     toArrayFor.campus_shapes!.mockRejectedValue(new Error("mongo down"));
     clock += FIVE_MIN;
-    await expect(getAllCampusShapes()).resolves.toEqual([SHAPE]);
+    await expect(listCampusShapes()).resolves.toEqual([SHAPE]);
     // Answered from the old shapes at once; the failed reload logs behind it.
     await new Promise((resolve) => setImmediate(resolve));
     expect(mockLogger.warn).toHaveBeenCalledTimes(1);
   });
 
   it("re-reads after clearCache()", async () => {
-    await getAllCampusShapes();
+    await listCampusShapes();
     clearCache();
-    await getAllCampusShapes();
+    await listCampusShapes();
     expect(findFor.campus_shapes).toHaveBeenCalledTimes(2);
   });
 });
@@ -160,7 +160,7 @@ describe("BuildingRepository.ensureIndexes", () => {
   it("covers the one read there is, rather than a filter nothing uses", async () => {
     await ensureIndexes();
 
-    // `getAllCampusShapes` is `find({}).sort({order: 1, _id: 1})` — no campus
+    // `listCampusShapes` is `find({}).sort({order: 1, _id: 1})` — no campus
     // predicate anywhere — so this is the sort, not a filter.
     expect(createIndex).toHaveBeenCalledWith("campus_shapes", { order: 1, _id: 1 });
     expect(createIndex).not.toHaveBeenCalledWith("campus_shapes", { campus: 1 });

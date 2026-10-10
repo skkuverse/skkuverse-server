@@ -11,8 +11,8 @@ export interface BilingualText {
 
 // --- Responses ---
 
-/** A connection seen from one building (BuildingRepository.getConnectionsForBuilding). */
-export interface ConnectionResponseItem {
+/** A connection seen from one building (BuildingRepository.listConnectionsBySkkuId). */
+export interface BuildingConnection {
   targetSkkuId: number;
   targetBuildNo: string | null;
   targetDisplayNo: string | null;
@@ -113,5 +113,5 @@ export interface BuildingSearch {
 export interface BuildingDetail {
   building: WithCampusLabel<BuildingDoc>;
   floors: FloorGroup[];
-  connections: ConnectionResponseItem[];
+  connections: BuildingConnection[];
 }
