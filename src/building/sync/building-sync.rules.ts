@@ -6,6 +6,13 @@ export const MIN_SPACES_FOR_STALE_DELETE = 5000;
 
 export const BUILD_INFO_CONCURRENCY = 5;
 
+/** The 2026-10-09 run failed 0 of 59 buildInfo calls; all go to one SKKU host, so an outage fails most of them. */
+export const MAX_BUILD_INFO_FAILURE_RATIO = 0.5;
+
+export function shouldFailBuildInfoPhase({ attempted, failed }: { attempted: number; failed: number }): boolean {
+  return failed > attempted * MAX_BUILD_INFO_FAILURE_RATIO;
+}
+
 /** `knownUpdatedAt` is undefined for a building never seen before. */
 export function needsEnrichment({
   knownUpdatedAt,
