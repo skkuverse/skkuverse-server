@@ -3,15 +3,9 @@ import type { Collection } from "mongodb";
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
-import type {
-  BuildingDoc,
-  BuildingLabel,
-  ConnectionDoc,
-  ConnectionEnds,
-  FloorSpaceDoc,
-  SpaceDoc,
-} from "../building.document";
+import type { BuildingDoc, ConnectionDoc, SpaceDoc } from "../building.document";
 import type { BuildNo, SkkuId } from "../building.types";
+import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
 
 /**
  * The reads behind one building's page: the building, its spaces, its

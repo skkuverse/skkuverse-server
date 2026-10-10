@@ -16,6 +16,7 @@ ADR 0010 (`docs/decisions/0010-server-architecture.md`) is the decision; `src/bu
 ## Rules that need judgment
 
 - **Joins are the service's.** A repository method runs one query and returns documents or a projection of them. When a response needs two reads (a building's connections and the buildings at their far ends), the service makes both calls and a mapper puts them together.
+- **A projection belongs to the flow that reads it.** The root's `.document` holds each collection's shape, which several flows share. A `Pick` that only one flow's queries return lives in that flow's `.document`: `ConnectionEnds` in `src/building/catalog/building-catalog.document.ts`.
 - **An index belongs to the repository whose query it serves**, created in that repository's `onModuleInit` through `ensureIndexesAtBoot` (`src/infra/mongo.ts`). An index that guards a write (a unique key an upsert filters on) belongs to the writer.
 - **Rules, mapper or query.** A rule decides or computes (`toDisplayNo`, the tier tables). A mapper reshapes without deciding (`groupByFloor`). A query writes Mongo (`tiersToScoreExpr`). When a rule must reach the database, split it: the decision stays in `.rules`, its Mongo form goes to `.query`, and a spec pins that the two agree.
 - **A pure function that builds Mongo syntax is still Mongo.** A `$set`, a filter or a bulk operation belongs to the repository or a `.query`, never to a mapper.

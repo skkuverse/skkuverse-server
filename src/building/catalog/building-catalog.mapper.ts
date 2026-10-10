@@ -1,4 +1,4 @@
-import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "../building.document";
+import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
 import { withEnFallback } from "../building.mapper";
 import type { SkkuId } from "../building.types";
 import { floorSortKey } from "./building-catalog.rules";
