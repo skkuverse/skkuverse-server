@@ -1,3 +1,12 @@
+/**
+ * The search aggregation BuildingSearchRepository sends, pinned as structure:
+ * campus filters only inside the facet (the counts must span both campuses for
+ * the app's campus toggle), the score is computed once before the facet, and
+ * the strong and weak bands partition the match set under their own caps.
+ * These say what the pipeline object looks like, not which documents match or
+ * in what order; that query meaning is for a real-mongod spec
+ * (harden-test-suite D6), so add no new pins here.
+ */
 const mockCollection = {
   aggregate: jest.fn(),
 };
@@ -43,9 +52,12 @@ describe("searchSpaces pipeline assembly", () => {
     (pipeline[2] as { $facet: Record<string, Document[]> }).$facet;
 
   it("keeps campus inside the facet, never in the leading $match", async () => {
+    // Act
     const pipeline = await capturePipeline("nsc");
-    expect(JSON.stringify(pipeline[0])).not.toContain("campus");
     const facet = facetOf(pipeline);
+
+    // Assert
+    expect(JSON.stringify(pipeline[0])).not.toContain("campus");
     expect(facet.strong?.[0]).toEqual({ $match: { campus: "nsc" } });
     expect(facet.weak?.[0]).toEqual({ $match: { campus: "nsc" } });
     expect(facet.total?.[0]).toEqual({ $match: { campus: "nsc" } });
@@ -54,8 +66,11 @@ describe("searchSpaces pipeline assembly", () => {
   });
 
   it("omits the campus stage entirely when no campus is given", async () => {
+    // Act
     const pipeline = await capturePipeline();
     const facet = facetOf(pipeline);
+
+    // Assert
     expect(facet.strong?.[0]).toEqual({
       $match: { _score: { $gte: SPACE_STRONG_MIN_SCORE } },
     });
@@ -63,17 +78,23 @@ describe("searchSpaces pipeline assembly", () => {
   });
 
   it("scores once before the facet, not per band", async () => {
+    // Act
     const pipeline = await capturePipeline();
-    expect(pipeline[1]).toHaveProperty("$addFields._score");
     const facet = facetOf(pipeline);
+
+    // Assert
+    expect(pipeline[1]).toHaveProperty("$addFields._score");
     for (const band of [facet.strong, facet.weak]) {
       expect(JSON.stringify(band)).not.toContain("$addFields");
     }
   });
 
   it("splits the caps by band so a weak query cannot flood the client", async () => {
+    // Act
     const pipeline = await capturePipeline();
     const facet = facetOf(pipeline);
+
+    // Assert
     expect(facet.strong).toContainEqual({ $limit: SPACE_SEARCH_LIMIT });
     expect(facet.weak).toContainEqual({ $limit: SPACE_WEAK_LIMIT });
     // Bands must partition the match set — no row counted twice, none dropped.
