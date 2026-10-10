@@ -13,6 +13,7 @@ import { BuildingSyncClient } from "./building-sync.client";
 import { ENRICH_VERSION, enrichBuilding } from "./building-sync.mapper";
 import { BuildingRepository } from "../building.repository";
 import { CAMPUSES, hasBuildNo } from "../building.rules";
+import type { SkkuId } from "../building.types";
 import type { ListedBuilding, ListedBuildingWithBuildNo, SyncedSpace } from "./building-sync.types";
 
 /**
@@ -80,8 +81,18 @@ export class BuildingSyncService {
     );
   }
 
-  /** Phase 1: buildList → raw upsert → change detection → enrich. */
+  /** Phase 1: buildList → change detection → raw upsert → enrich. */
   private async syncBuildList(syncStartedAt: Date): Promise<ListedBuilding[]> {
+    const listed = await this.fetchTrustedBuildList();
+    // Detected before the raw upsert, which overwrites the skkuUpdatedAt it compares against.
+    const changedSkkuIds = await this.detectChangedSkkuIds(listed);
+    await this.upsertRawBuildings(listed, syncStartedAt);
+    await this.enrichChangedBuildings(changedSkkuIds, syncStartedAt);
+    return listed;
+  }
+
+  /** Both campuses' buildList; throws when it is too short to trust. */
+  private async fetchTrustedBuildList(): Promise<ListedBuilding[]> {
     const listed: ListedBuilding[] = [];
     for (const campus of CAMPUSES) {
       const campusBuildings = await this.client.fetchBuildList(campus);
@@ -97,10 +108,14 @@ export class BuildingSyncService {
         `buildList returned ${listed.length} buildings, fewer than ${MIN_BUILDINGS_TO_TRUST}; nothing written`,
       );
     }
+    return listed;
+  }
 
+  /** The listed buildings that need enrichment (see needsEnrichment). */
+  private async detectChangedSkkuIds(listed: readonly ListedBuilding[]): Promise<Set<SkkuId>> {
     const skkuUpdatedAtBySkkuId = await this.repository.listRawUpdatedAt();
     const skkuIdsEnrichedAtOldVersion = await this.repository.listSkkuIdsNotEnrichedAt(ENRICH_VERSION);
-    const changedSkkuIds = new Set(
+    return new Set(
       listed
         .filter((building) =>
           needsEnrichment({
@@ -111,7 +126,9 @@ export class BuildingSyncService {
         )
         .map((building) => building.skkuId),
     );
+  }
 
+  private async upsertRawBuildings(listed: readonly ListedBuilding[], syncStartedAt: Date): Promise<void> {
     const rawResult = await this.repository.upsertRaw(listed, syncStartedAt);
     logger.info(
       {
@@ -122,13 +139,15 @@ export class BuildingSyncService {
       },
       "Phase 1: raw upserted",
     );
+  }
 
+  private async enrichChangedBuildings(changedSkkuIds: ReadonlySet<SkkuId>, syncStartedAt: Date): Promise<void> {
     if (changedSkkuIds.size === 0) {
       logger.info(
         { event: "building.sync.enrich_skipped" },
         "Phase 1: no changes detected, skipping enrichment",
       );
-      return listed;
+      return;
     }
 
     const changedRaw = await this.repository.listRawBySkkuIds(changedSkkuIds);
@@ -146,7 +165,6 @@ export class BuildingSyncService {
       },
       "Phase 1: enriched buildings updated",
     );
-    return listed;
   }
 
   /** Phase 2: buildInfo per building → photos on both layers + floor spaces. */
@@ -214,6 +232,13 @@ export class BuildingSyncService {
 
   /** Phase 3: spaceList → spaces upsert + delete of the spaces SKKU no longer lists. */
   private async syncSpaceList(syncStartedAt: Date): Promise<number> {
+    const spaces = await this.fetchSpaceLists();
+    if (spaces.length > 0) await this.upsertListedSpaces(spaces, syncStartedAt);
+    await this.deleteStaleSpaces(spaces.length, syncStartedAt);
+    return spaces.length;
+  }
+
+  private async fetchSpaceLists(): Promise<SyncedSpace[]> {
     const spaces: SyncedSpace[] = [];
     for (const campus of CAMPUSES) {
       const campusSpaces = await this.client.fetchSpaceList(campus);
@@ -223,25 +248,29 @@ export class BuildingSyncService {
       );
       for (const space of campusSpaces) spaces.push(space);
     }
+    return spaces;
+  }
 
-    if (spaces.length > 0) {
-      const upsertResult = await this.repository.upsertSpaces(spaces, "spaceList", syncStartedAt);
-      logger.info(
-        {
-          event: "building.sync.spacelist_upserted",
-          matched: upsertResult.matchedCount,
-          upserted: upsertResult.upsertedCount,
-        },
-        "Phase 3: spaceList upserted",
-      );
-    }
+  private async upsertListedSpaces(spaces: readonly SyncedSpace[], syncStartedAt: Date): Promise<void> {
+    const upsertResult = await this.repository.upsertSpaces(spaces, "spaceList", syncStartedAt);
+    logger.info(
+      {
+        event: "building.sync.spacelist_upserted",
+        matched: upsertResult.matchedCount,
+        upserted: upsertResult.upsertedCount,
+      },
+      "Phase 3: spaceList upserted",
+    );
+  }
 
-    if (spaces.length < MIN_SPACES_FOR_STALE_DELETE) {
+  /** Deletes the spaces this run did not see, unless spaceList listed too few to trust. */
+  private async deleteStaleSpaces(listedCount: number, syncStartedAt: Date): Promise<void> {
+    if (listedCount < MIN_SPACES_FOR_STALE_DELETE) {
       logger.warn(
-        { event: "building.sync.stale_delete_skipped", count: spaces.length },
+        { event: "building.sync.stale_delete_skipped", count: listedCount },
         "Suspiciously few spaces, skipping stale delete",
       );
-      return spaces.length;
+      return;
     }
 
     const deleted = await this.repository.deleteSpacesSyncedBefore(syncStartedAt);
@@ -251,6 +280,5 @@ export class BuildingSyncService {
         "Phase 3: stale spaces deleted",
       );
     }
-    return spaces.length;
   }
 }
