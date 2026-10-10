@@ -1,15 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import type { SupportedLang } from "../infra/types";
 import type { BuildingDoc, CampusShapeDoc } from "./building.document";
-import { toBuildingSearch, withCampusLabel, withFloorEnFallback } from "./building.mapper";
+import { withCampusLabel, withFloorEnFallback } from "./building.mapper";
 import { BuildingRepository } from "./building.repository";
-import type {
-  BuildingDetail,
-  BuildingSearch,
-  Campus,
-  SkkuId,
-  WithCampusLabel,
-} from "./building.types";
+import type { BuildingDetail, Campus, SkkuId, WithCampusLabel } from "./building.types";
 
 @Injectable()
 export class BuildingService {
@@ -22,22 +16,6 @@ export class BuildingService {
   ): Promise<{ buildings: Array<WithCampusLabel<BuildingDoc>> }> {
     const buildings = await this.repository.listBuildings(campus);
     return { buildings: buildings.map((b) => withCampusLabel(b, lang)) };
-  }
-
-  /**
-   * GET /building/search: ranked buildings and rooms. Rooms are grouped by
-   * building and joined to its skkuId; `meta` carries the counts (campus-agnostic,
-   * for the app's campus toggle) and the row caps.
-   */
-  async search(q: string, campus: Campus | null, lang: SupportedLang): Promise<BuildingSearch> {
-    // Rows and counts arrive together (one $facet per collection), so the
-    // count cannot describe a different predicate than the list.
-    const [buildingResult, spaceResult, allBuildings] = await Promise.all([
-      this.repository.searchBuildings(q, campus),
-      this.repository.searchSpaces(q, campus),
-      this.repository.listBuildings(),
-    ]);
-    return toBuildingSearch(q, buildingResult, spaceResult, allBuildings, lang);
   }
 
   /** GET /building/:skkuId: the building, its floors and connections; null if there is none. */
@@ -55,7 +33,7 @@ export class BuildingService {
     };
   }
 
-  /** Every building, unlabeled: the read other modules get through the exported BuildingService. */
+  /** Every building, unlabeled: the read other modules (map, building search) get through the exported BuildingService. */
   listAllBuildings(): Promise<BuildingDoc[]> {
     return this.repository.listBuildings();
   }

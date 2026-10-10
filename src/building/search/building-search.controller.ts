@@ -1,0 +1,37 @@
+import { Controller, Get, Query, Req } from "@nestjs/common";
+import type { Request } from "express";
+import { withMeta } from "../../http/response.interceptor";
+import { ZodValidationPipe } from "../../http/zod-validation.pipe";
+import type { SupportedLang } from "../../infra/types";
+import { buildingSearchQuery, type BuildingSearchQuery } from "./building-search.schema";
+import { BuildingSearchService } from "./building-search.service";
+
+/**
+ * /building/search: no auth. The general limiter BuildingModule binds on
+ * /building covers it, so this module binds none (a second binding of the
+ * same limiter would count each request twice).
+ */
+@Controller("building")
+export class BuildingSearchController {
+  constructor(private readonly buildingSearch: BuildingSearchService) {}
+
+  // GET /building/search?q=도서&campus=nsc
+  @Get("search")
+  async search(
+    @Query(
+      new ZodValidationPipe(buildingSearchQuery, "INVALID_PARAMS", {
+        q: "MISSING_QUERY",
+        campus: "INVALID_CAMPUS",
+      }),
+    )
+    query: BuildingSearchQuery,
+    @Req() req: Request,
+  ) {
+    const { data, meta } = await this.buildingSearch.search(
+      query.q,
+      query.campus ?? null,
+      req.lang as SupportedLang,
+    );
+    return withMeta(data, meta);
+  }
+}

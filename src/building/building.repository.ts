@@ -4,13 +4,6 @@ import config from "../infra/config";
 import { createCachedLoader } from "../infra/cached-loader";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
-import {
-  buildingSearchPipeline,
-  spaceSearchPipeline,
-  toRankedResult,
-  type RankedFacet,
-  type RankedSearchResult,
-} from "./building-search.rules";
 import type {
   BuildingDoc,
   CampusShapeDoc,
@@ -23,15 +16,9 @@ import type { BuildNo, BuildingConnection, Campus, FloorGroup, SkkuId } from "./
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 /**
- * Search scans every space (no index can serve it, see ensureIndexes), ~20 ms
- * measured, so it gets more room than a hot point read.
- */
-const SEARCH_MAX_TIME_MS = 5000;
-
-/**
  * Reads of the building DB: the building list (cached), one building, its
- * floors and connections, ranked search, and the campus shapes (cached). Owns
- * the DB's indexes. Writes belong to BuildingSyncRepository.
+ * floors and connections, and the campus shapes (cached). Search is
+ * BuildingSearchRepository's; writes are BuildingSyncRepository's.
  */
 @Injectable()
 export class BuildingRepository implements OnModuleInit {
@@ -81,22 +68,9 @@ export class BuildingRepository implements OnModuleInit {
   }
 
   /**
-   * NOTE ON SEARCH: there is deliberately no index here for /building/search,
-   * and adding one would be cost without effect. A $or uses index-union only if
-   * EVERY branch is indexed; the search predicate ORs over name.ko / name.en /
-   * buildingName.* which are not, so the whole thing plans as SUBPLAN ->
-   * COLLSCAN and the spaceCd branch never gets its own IXSCAN. $options:"i"
-   * would disable prefix-anchoring anyway. Measured: ~20ms over 7691 spaces,
-   * and the endpoint went from six collection scans to two when rows and counts
-   * merged into one $facet. spaces is ~2.5MB and fully cached.
-   *
-   * If spaces ever grows ~10x, the fix is Atlas Search (autocomplete/edgeGram
-   * mapping on spaceCd), not a classic index. Watch the $facet ceiling too: each
-   * facet stage is capped at 100MB and CANNOT spill to disk (allowDiskUse does
-   * not apply), and the emitted document is bound by the 16MB BSON limit.
-   *
-   * The indexes below serve /building/list and listFloorsByBuildNo — keep
-   * them. The sync's own indexes are BuildingSyncRepository's.
+   * The indexes of the building reads: /building/list and listFloorsByBuildNo,
+   * connections and campus shapes. Search has deliberately none
+   * (BuildingSearchRepository); the sync's own are BuildingSyncRepository's.
    */
   async ensureIndexes(): Promise<void> {
     const buildings = this.buildings();
@@ -179,34 +153,6 @@ export class BuildingRepository implements OnModuleInit {
       )
       .toArray();
     return toConnectionItems(skkuId, connections, targets);
-  }
-
-  /**
-   * Ranked search. Rows and per-campus counts arrive together from one $facet,
-   * so the count can never describe a different predicate than the list.
-   */
-  async searchBuildings(
-    query: string,
-    campus?: Campus | null,
-  ): Promise<RankedSearchResult<BuildingDoc>> {
-    const facets = await this.buildings()
-      .aggregate<RankedFacet<BuildingDoc>>(buildingSearchPipeline(query, campus), {
-        maxTimeMS: SEARCH_MAX_TIME_MS,
-      })
-      .toArray();
-    return toRankedResult(facets);
-  }
-
-  async searchSpaces(
-    query: string,
-    campus?: Campus | null,
-  ): Promise<RankedSearchResult<SpaceDoc>> {
-    const facets = await this.spaces()
-      .aggregate<RankedFacet<SpaceDoc>>(spaceSearchPipeline(query, campus), {
-        maxTimeMS: SEARCH_MAX_TIME_MS,
-      })
-      .toArray();
-    return toRankedResult(facets);
   }
 
   /** Every campus shape, in authored order. */
