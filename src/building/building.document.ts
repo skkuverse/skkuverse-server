@@ -51,13 +51,11 @@ export interface BuildingRawDoc {
 // with several wings has one section per label (A동, B동); otherwise one.
 // `parseError` means the block was found but yielded no sections.
 
-/** A known status, or SKKU's raw text when it is not one of them. */
-export type ElevatorStatus =
-  | "arrival"
-  | "arrival_button"
-  | "none"
-  | "not_operating"
-  | string;
+/**
+ * A known status, or SKKU's raw text when it is not one of them. `string & {}`
+ * keeps the known names in the type, where a plain `| string` absorbs them.
+ */
+export type ElevatorStatus = "arrival" | "arrival_button" | "none" | "not_operating" | (string & {});
 
 export interface BarrierFreeSection {
   label: string | null;
