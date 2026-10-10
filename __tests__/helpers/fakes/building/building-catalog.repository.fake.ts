@@ -1,6 +1,7 @@
 /**
  * In-memory BuildingCatalogRepository over buildings, spaces and connections,
- * with the real queries' filters: a building by skkuId, a building's spaces by
+ * with the real queries' filters and projections (pinned in
+ * building-catalog.repository.spec.ts): a building by skkuId, a building's spaces by
  * buildNo, a connection from either end, and buildings by skkuId list. `reads`
  * names each read in order, for the tests where skipping a read is the
  * behavior. `failWith` makes every read reject.
@@ -24,7 +25,12 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
 
   async findBuildingBySkkuId(skkuId: SkkuId): Promise<BuildingDoc | null> {
     this.read("findBuildingBySkkuId");
-    return this.buildings.find((b) => b._id === skkuId) ?? null;
+    const building = this.buildings.find((b) => b._id === skkuId);
+    if (!building) return null;
+    const projected: Partial<BuildingDoc> = { ...building };
+    delete projected.sync;
+    delete projected.enrichVersion;
+    return projected as BuildingDoc;
   }
 
   async listSpacesByBuildNo(buildNo: BuildNo): Promise<FloorSpaceDoc[]> {

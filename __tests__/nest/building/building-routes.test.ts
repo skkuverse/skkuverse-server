@@ -292,6 +292,29 @@ describe("GET /building/:skkuId", () => {
     ]);
   });
 
+  it("never sends a building's sync bookkeeping, in the detail or the list", async () => {
+    // Arrange
+    const synced = {
+      ...LAW,
+      sync: { detailError: "HTTP 500", detailAt: new Date("2026-10-10T00:00:00Z") },
+      enrichVersion: 3,
+      extensions: { note: "internal" },
+    } as BuildingDoc;
+    catalog.buildings = [synced];
+    buildings.buildings = [synced];
+
+    // Act
+    const detail = await request(httpServer).get("/building/1");
+    const list = await request(httpServer).get("/building/list");
+
+    // Assert
+    expect(detail.body.data.building).not.toHaveProperty("sync");
+    expect(detail.body.data.building).not.toHaveProperty("enrichVersion");
+    expect(list.body.data.buildings[0]).not.toHaveProperty("sync");
+    expect(list.body.data.buildings[0]).not.toHaveProperty("enrichVersion");
+    expect(list.body.data.buildings[0]).not.toHaveProperty("extensions");
+  });
+
   it("answers 500 INTERNAL_ERROR when a space has no floor", async () => {
     // Arrange
     catalog.buildings = [LAW];
