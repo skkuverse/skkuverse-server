@@ -1,13 +1,6 @@
-import type { AnyBulkWriteOperation } from "mongodb";
 import { toDisplayNo } from "../building.rules";
-import type {
-  AccessibilityDetail,
-  BarrierFreeSection,
-  BuildingRawDoc,
-  ElevatorStatus,
-  SpaceDoc,
-} from "../building.document";
-import type { SpaceSource, SyncedSpace } from "./building-sync.types";
+import type { AccessibilityDetail, BarrierFreeSection, BuildingRawDoc, ElevatorStatus } from "../building.document";
+import type { EnrichedBuilding } from "./building-sync.types";
 
 // Bump this when enrichment logic changes to trigger re-enrichment of all buildings
 const ENRICH_VERSION = 1;
@@ -162,16 +155,8 @@ function parseBarrierFree(
   return { cleanDescription, detail: { sections } };
 }
 
-// enrichBuilding returns a $set of dot paths ("accessibility.detail") mixed
-// with whole fields, which matches no document type; the driver merges the
-// dot paths into the nested document, so the type is a loose record.
-export type EnrichmentSetUpdate = Record<string, unknown>;
-
-/**
- * Derive enriched fields from a raw building document.
- * Pure function — no side effects, no DB calls.
- */
-function enrichBuilding(rawDoc: BuildingRawDoc): EnrichmentSetUpdate {
+/** The fields derived from a raw building: display number, type, barrier-free detail. */
+function enrichBuilding(rawDoc: BuildingRawDoc): EnrichedBuilding {
   const parsed = parseBarrierFree(rawDoc.description?.ko);
 
   const descriptionKo = parsed
@@ -184,57 +169,21 @@ function enrichBuilding(rawDoc: BuildingRawDoc): EnrichmentSetUpdate {
     displayNo: toDisplayNo(rawDoc.buildNo, rawDoc.campus),
     type: rawDoc.buildNo ? "building" : "facility",
     campus: rawDoc.campus,
-    "name.ko": rawDoc.name?.ko || "",
-    "name.en": rawDoc.name?.en || "",
-    "description.ko": descriptionKo,
-    "description.en": rawDoc.description?.en || "",
+    name: { ko: rawDoc.name?.ko || "", en: rawDoc.name?.en || "" },
+    description: { ko: descriptionKo, en: rawDoc.description?.en || "" },
     location: rawDoc.location,
     image: rawDoc.image,
     attachments: rawDoc.attachments || [],
-    "accessibility.elevator": rawDoc.accessibility?.elevator || false,
-    "accessibility.toilet": rawDoc.accessibility?.toilet || false,
-    "accessibility.detail": accessibilityDetail,
+    accessibility: {
+      elevator: rawDoc.accessibility?.elevator || false,
+      toilet: rawDoc.accessibility?.toilet || false,
+      detail: accessibilityDetail,
+    },
     enrichVersion: ENRICH_VERSION,
     skkuCreatedAt: rawDoc.skkuCreatedAt,
     skkuUpdatedAt: rawDoc.skkuUpdatedAt,
   };
 }
 
-/**
- * The upsert for one space reported by either listing. Both write the same
- * names; spaceList also owns `conspaceCd`, which a buildInfo insert starts as
- * null. `sources` accumulates which listings reported the space.
- */
-function toSpaceUpsert(
-  space: SyncedSpace,
-  source: SpaceSource,
-  syncStartedAt: Date,
-): AnyBulkWriteOperation<SpaceDoc> {
-  const filter = { spaceCd: space.spaceCd, buildNo: space.buildNo, campus: space.campus };
-  const names = { floor: space.floor, name: space.name, buildingName: space.buildingName };
-  if (source === "buildInfo") {
-    return {
-      updateOne: {
-        filter,
-        update: {
-          $set: { ...names, syncedAt: syncStartedAt },
-          $addToSet: { sources: source },
-          $setOnInsert: { conspaceCd: null },
-        },
-        upsert: true,
-      },
-    };
-  }
-  return {
-    updateOne: {
-      filter,
-      update: {
-        $set: { ...names, conspaceCd: space.conspaceCd, syncedAt: syncStartedAt },
-        $addToSet: { sources: source },
-      },
-      upsert: true,
-    },
-  };
-}
 
-export { ELEVATOR_STATUS_MAP, ENRICH_VERSION, enrichBuilding, parseBarrierFree, toSpaceUpsert };
+export { ELEVATOR_STATUS_MAP, ENRICH_VERSION, enrichBuilding, parseBarrierFree };

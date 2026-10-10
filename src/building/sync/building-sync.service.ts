@@ -131,7 +131,7 @@ export class BuildingSyncService {
 
     const changedRaw = await this.store.listRawByIds(changedIds);
     const enrichResult = await this.store.upsertEnriched(
-      changedRaw.map((raw) => ({ skkuId: raw._id, fields: enrichBuilding(raw) })),
+      changedRaw.map((raw) => ({ skkuId: raw._id, building: enrichBuilding(raw) })),
       syncStartedAt,
     );
     logger.info(

@@ -13,7 +13,6 @@ import {
 } from "./building-search.rules";
 import type {
   BuildingDoc,
-  BuildingRawDoc,
   CampusShapeDoc,
   ConnectionDoc,
   SpaceDoc,
@@ -96,12 +95,11 @@ export class BuildingRepository implements OnModuleInit {
    * facet stage is capped at 100MB and CANNOT spill to disk (allowDiskUse does
    * not apply), and the emitted document is bound by the 16MB BSON limit.
    *
-   * The indexes below serve /building/list, listFloorsByBuildNo and the sync
-   * upserts — keep them.
+   * The indexes below serve /building/list and listFloorsByBuildNo — keep
+   * them. The sync's own indexes are BuildingSyncRepository's.
    */
   async ensureIndexes(): Promise<void> {
     const buildings = this.buildings();
-    const buildingsRaw = mongoCollection<BuildingRawDoc>(config.building.dbName!, config.building.collections.buildingsRaw);
     const spaces = this.spaces();
     const connections = this.connections();
     const campusShapes = this.campusShapes();
@@ -111,10 +109,7 @@ export class BuildingRepository implements OnModuleInit {
       buildings.createIndex({ campus: 1 }),
       buildings.createIndex({ buildNo: 1, campus: 1 }),
       buildings.createIndex({ location: "2dsphere" }),
-      // buildings_raw
-      buildingsRaw.createIndex({ campus: 1 }),
-      // spaces
-      spaces.createIndex({ spaceCd: 1, buildNo: 1, campus: 1 }, { unique: true }),
+      // spaces (the unique key the sync upserts on is BuildingSyncRepository's)
       spaces.createIndex({ buildNo: 1 }),
       spaces.createIndex({ campus: 1 }),
       // connections
