@@ -278,6 +278,8 @@ module.exports = [
       // TS handles undefined identifiers at compile time; the lint rule mis-flags
       // global type augmentations (NodeJS.Timeout, Express.Request, etc.).
       "no-undef": "off",
+      // tsc rejects a real redeclaration (TS2451); the base rule reads overload signatures as one.
+      "no-redeclare": "off",
       ...sharedRules,
       // no-shadow base rule also disabled in TS (TS-specific version handles enums/types correctly)
       "no-shadow": "off",
