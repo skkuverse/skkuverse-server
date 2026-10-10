@@ -4,7 +4,7 @@ import { campusLabel, withCampusLabel, withEnFallback } from "../building.mapper
 import { hasBuildNo, toDisplayNo } from "../building.rules";
 import type { BuildNo, SkkuId } from "../building.types";
 import { BUILDING_SEARCH_LIMIT, SPACE_SEARCH_LIMIT } from "./building-search.rules";
-import type { BuildingSearch, RankedSearchResult, SpaceGroup } from "./building-search.types";
+import type { BuildingSearch, RankedSearchResult, SearchLimit, SpaceGroup } from "./building-search.types";
 
 /**
  * Search rooms grouped by building, in row order so the relevance ranking
@@ -48,6 +48,15 @@ interface RankedSearch {
   spaces: RankedSearchResult<SpaceDoc>;
 }
 
+/** The skkuId of each numbered building, to join a room group to its building. */
+function toSkkuIdByBuildNo(allBuildings: readonly BuildingDoc[]): Map<BuildNo, SkkuId> {
+  return new Map(allBuildings.filter(hasBuildNo).map((building) => [building.buildNo, building._id]));
+}
+
+function toSearchLimit(limit: number, result: RankedSearchResult<unknown>): SearchLimit {
+  return { limit, total: result.total, truncated: result.truncated };
+}
+
 /**
  * GET /building/search's `data` and extra `meta`. Rooms are grouped by
  * building and joined to its skkuId through `allBuildings`.
@@ -57,14 +66,10 @@ function toBuildingSearch(
   allBuildings: readonly BuildingDoc[],
   lang: SupportedLang,
 ): BuildingSearch {
-  const skkuIdByBuildNo = new Map<BuildNo, SkkuId>(
-    allBuildings.filter(hasBuildNo).map((building) => [building.buildNo, building._id]),
-  );
-
   return {
     data: {
       buildings: buildingResult.items.map((b) => withCampusLabel(b, lang)),
-      spaces: groupSpacesByBuilding(spaceResult.items, skkuIdByBuildNo, lang),
+      spaces: groupSpacesByBuilding(spaceResult.items, toSkkuIdByBuildNo(allBuildings), lang),
     },
     meta: {
       keyword,
@@ -77,16 +82,8 @@ function toBuildingSearch(
       // agree; `truncated` records the cut on a pathological one-character
       // query rather than presenting it as the whole result.
       limits: {
-        building: {
-          limit: BUILDING_SEARCH_LIMIT,
-          total: buildingResult.total,
-          truncated: buildingResult.truncated,
-        },
-        space: {
-          limit: SPACE_SEARCH_LIMIT,
-          total: spaceResult.total,
-          truncated: spaceResult.truncated,
-        },
+        building: toSearchLimit(BUILDING_SEARCH_LIMIT, buildingResult),
+        space: toSearchLimit(SPACE_SEARCH_LIMIT, spaceResult),
       },
     },
   };
