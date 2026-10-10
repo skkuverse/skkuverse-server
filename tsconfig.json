@@ -30,7 +30,6 @@
     "dist",
     "coverage",
     "scripts/**/*",
-    "__tests__/**/*.test.ts",
-    "src/**/*.spec.ts"
+    "__tests__/**/*.test.ts"
   ]
 }
