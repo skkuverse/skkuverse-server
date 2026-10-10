@@ -367,3 +367,58 @@ describe("GET /building/:skkuId with a broken space", () => {
     expect(res.body.error).toEqual({ code: "INTERNAL_ERROR", message: "Internal server error" });
   });
 });
+
+/**
+ * A building response may be cached by clients for 300 s, matching the
+ * repository's in-process cache TTL, and varies by language. An error is never
+ * cacheable. CACHE=off turning this into no-store is no-store.middleware.spec's
+ * case: this builder does not mount that middleware.
+ */
+describe("Cache-Control on /building/*", () => {
+  const EMPTY = { items: [], counts: { hssc: 0, nsc: 0, total: 0 }, total: 0, truncated: false };
+
+  function seedReads(): void {
+    svc.listBuildings.mockResolvedValue([]);
+    svc.findBuildingBySkkuId.mockResolvedValue({ _id: 1, buildNo: "100", campus: "hssc", name: { ko: "법학관", en: "Law" } });
+    svc.listSpacesByBuildNo.mockResolvedValue([]);
+    svc.listConnectionsBySkkuId.mockResolvedValue([]);
+    svc.listBuildingsBySkkuIds.mockResolvedValue([]);
+    svc.searchBuildings.mockResolvedValue(EMPTY);
+    svc.searchSpaces.mockResolvedValue(EMPTY);
+  }
+
+  it.each(["/building/list", "/building/list?campus=hssc", "/building/1", "/building/search?q=law"])(
+    "lets clients cache %s for five minutes, per language",
+    async (path) => {
+      // Arrange
+      seedReads();
+
+      // Act
+      const res = await request(httpServer).get(path);
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(res.headers["cache-control"]).toBe("public, max-age=300");
+      expect(res.headers.vary).toMatch(/Accept-Language/i);
+    },
+  );
+
+  it.each([
+    ["an invalid campus", "/building/list?campus=mars", 400, () => undefined],
+    ["a missing query", "/building/search", 400, () => undefined],
+    ["an invalid id", "/building/abc", 400, () => undefined],
+    ["an unknown building", "/building/999", 404, () => svc.findBuildingBySkkuId.mockResolvedValue(null)],
+    ["a failed read", "/building/1", 500, () => svc.findBuildingBySkkuId.mockRejectedValue(new Error("pool closed"))],
+  ])("sends no Cache-Control on %s", async (_case, path, status, arrangeFailure) => {
+    // Arrange
+    seedReads();
+    arrangeFailure();
+
+    // Act
+    const res = await request(httpServer).get(path);
+
+    // Assert
+    expect(res.status).toBe(status);
+    expect(res.headers["cache-control"]).toBeUndefined();
+  });
+});
