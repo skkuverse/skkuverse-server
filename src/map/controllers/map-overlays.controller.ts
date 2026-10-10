@@ -1,6 +1,6 @@
 import { Controller, Get, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { sendSuccess } from "../../common/response.interceptor";
+import { sendSuccess } from "../../http/response.interceptor";
 import { MapService } from "../map.service";
 
 /**

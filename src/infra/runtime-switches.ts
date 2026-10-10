@@ -20,7 +20,7 @@
  * it off, a change to a _dev database shows on the next request instead of
  * after a TTL. It bypasses the in-process caches (infra/cached-loader.ts,
  * the bus timetable, the ad placements) and rewrites every Cache-Control to
- * no-store (common/no-store.middleware.ts), which keeps the phone's HTTP cache from
+ * no-store (http/no-store.middleware.ts), which keeps the phone's HTTP cache from
  * answering for the server. The AI overview and mini-app manifest caches stay
  * on: one saves an LLM call per request, the other a fetch to a production
  * origin, and neither holds _dev data.

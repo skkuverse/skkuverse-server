@@ -155,7 +155,7 @@ const config = {
     serviceAccount: process.env.FIREBASE_SERVICE_ACCOUNT || null,
   },
 
-  // PUSH_DELIVERY. "suppressed" makes common/fcm.client.ts log the payload and
+  // PUSH_DELIVERY. "suppressed" makes http/fcm.client.ts log the payload and
   // report an empty delivery instead of calling the Cloud Function.
   push: {
     delivery: switches.pushDelivery,
@@ -169,7 +169,7 @@ const config = {
   },
 
   // CACHE. While false, createCachedLoader and the timetable and ad caches load
-  // on every call, and common/no-store.middleware.ts rewrites every Cache-Control to
+  // on every call, and http/no-store.middleware.ts rewrites every Cache-Control to
   // no-store, so a _dev database change shows on the next request. Off in
   // development.
   cache: {
