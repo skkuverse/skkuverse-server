@@ -1,8 +1,29 @@
 import type { ObjectId } from "mongodb";
 import type { OverlayGeometry } from "../shared/geojson.types";
-import type { BuildNo, Campus, DisplayNo, SkkuId, SpaceCd } from "./building.types";
+import type { BilingualText, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd } from "./building.types";
 
 /** One type per collection in the building DB, and the shapes they nest. */
+
+/** GeoJSON Point, [lng, lat] (the 2dsphere order). */
+export interface GeoPoint {
+  type: "Point";
+  coordinates: [number, number];
+}
+
+export interface BuildingImage {
+  url: string | null;
+  filename: string | null;
+}
+
+/** What each sync phase stamps on a building. */
+export interface BuildingSyncStamps {
+  listAt?: Date;
+  detailAt?: Date | null;
+  detailError?: string | null;
+}
+
+/** Which listing reported a space; recorded in its `sources`. */
+export type SpaceSource = "buildInfo" | "spaceList";
 
 /**
  * buildings_raw: SKKU's buildList entry in our shape, before enrichment. A
@@ -14,20 +35,16 @@ export interface BuildingRawDoc {
   _id: SkkuId;
   buildNo: BuildNo | null;
   campus: Campus;
-  name: { ko: string; en: string };
-  description: { ko: string; en: string };
-  /** GeoJSON Point, [lng, lat] (the 2dsphere order). */
-  location: {
-    type: "Point";
-    coordinates: [number, number];
-  };
-  image: { url: string | null; filename: string | null };
+  name: BilingualText;
+  description: BilingualText;
+  location: GeoPoint;
+  image: BuildingImage;
   accessibility: { elevator: boolean; toilet: boolean };
   /** Written by sync phase 2 (buildInfo); [] for a building without photos. */
   attachments?: BuildingAttachment[];
   skkuCreatedAt: string | null;
   skkuUpdatedAt: string | null;
-  sync?: { listAt?: Date; detailAt?: Date | null; detailError?: string | null };
+  sync?: BuildingSyncStamps;
 }
 
 // Barrier-free details, parsed from the "*배리어프리 편의시설 안내" block of description.ko. A building
@@ -79,10 +96,10 @@ export interface BuildingDoc {
   /** A facility has no buildNo (an outbuilding, a gate). */
   type: "building" | "facility";
   campus: Campus;
-  name: { ko: string; en: string };
-  description: { ko: string; en: string };
-  location: { type: "Point"; coordinates: [number, number] };
-  image: { url: string | null; filename: string | null };
+  name: BilingualText;
+  description: BilingualText;
+  location: GeoPoint;
+  image: BuildingImage;
   attachments?: BuildingAttachment[];
   accessibility: {
     elevator: boolean;
@@ -92,7 +109,7 @@ export interface BuildingDoc {
   enrichVersion?: number;
   skkuCreatedAt: string | null;
   skkuUpdatedAt: string | null;
-  sync?: { listAt?: Date; detailAt?: Date | null; detailError?: string | null };
+  sync?: BuildingSyncStamps;
   updatedAt?: Date;
   extensions?: Record<string, unknown>;
 }
@@ -106,11 +123,11 @@ export interface SpaceDoc {
   spaceCd: SpaceCd;
   buildNo: BuildNo;
   campus: Campus;
-  floor: { ko: string; en: string };
-  name: { ko: string; en: string };
-  buildingName?: { ko: string; en: string };
+  floor: BilingualText;
+  name: BilingualText;
+  buildingName?: BilingualText;
   conspaceCd: string | null;
-  sources?: Array<"buildInfo" | "spaceList">;
+  sources?: SpaceSource[];
   syncedAt?: Date;
 }
 
@@ -122,8 +139,14 @@ export interface SpaceDoc {
 export interface ConnectionDoc {
   _id?: ObjectId;
   campus: Campus;
-  a: { skkuId: SkkuId; floor: { ko: string; en: string } };
-  b: { skkuId: SkkuId; floor: { ko: string; en: string } };
+  a: ConnectionEnd;
+  b: ConnectionEnd;
+}
+
+/** One side of a connection: the building and the floor the passage opens on. */
+export interface ConnectionEnd {
+  skkuId: SkkuId;
+  floor: BilingualText;
 }
 
 /** A connection's two ends: all the building detail reads of one. */
@@ -164,8 +187,8 @@ export interface CampusShapeDoc {
   layerId: string;
   /** GeoJSON, [lng, lat]. Served verbatim — see MapPlaceDoc.location. */
   geometry: OverlayGeometry;
-  title: { ko: string; en: string };
-  subtitle?: { ko: string; en: string } | null;
+  title: BilingualText;
+  subtitle?: BilingualText | null;
   /**
    * The building this shape outlines, or `null` for geometry that is not a
    * building — a boundary, a lawn, a path.
