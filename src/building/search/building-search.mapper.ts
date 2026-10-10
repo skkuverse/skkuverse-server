@@ -15,30 +15,30 @@ function groupSpacesByBuilding(
   skkuIdByBuildNo: ReadonlyMap<BuildNo, SkkuId>,
   lang: SupportedLang,
 ): SpaceGroup[] {
-  const groups = new Map<string, SpaceGroup>();
-  for (const space of spaces) {
-    const s = {
-      ...space,
-      name: withEnFallback(space.name),
-      buildingName: withEnFallback(space.buildingName),
-      floor: withEnFallback(space.floor),
+  const spaceGroupByBuildNo = new Map<string, SpaceGroup>();
+  for (const spaceDoc of spaces) {
+    const space = {
+      ...spaceDoc,
+      name: withEnFallback(spaceDoc.name),
+      buildingName: withEnFallback(spaceDoc.buildingName),
+      floor: withEnFallback(spaceDoc.floor),
     };
-    let group = groups.get(s.buildNo);
+    let group = spaceGroupByBuildNo.get(space.buildNo);
     if (!group) {
       group = {
-        skkuId: skkuIdByBuildNo.get(s.buildNo) || null,
-        buildNo: s.buildNo,
-        displayNo: toDisplayNo(s.buildNo, s.campus),
-        campus: s.campus,
-        campusLabel: campusLabel(s.campus, lang),
-        buildingName: s.buildingName,
+        skkuId: skkuIdByBuildNo.get(space.buildNo) || null,
+        buildNo: space.buildNo,
+        displayNo: toDisplayNo(space.buildNo, space.campus),
+        campus: space.campus,
+        campusLabel: campusLabel(space.campus, lang),
+        buildingName: space.buildingName,
         items: [],
       };
-      groups.set(s.buildNo, group);
+      spaceGroupByBuildNo.set(space.buildNo, group);
     }
-    group.items.push({ spaceCd: s.spaceCd, name: s.name, floor: s.floor });
+    group.items.push({ spaceCd: space.spaceCd, name: space.name, floor: space.floor });
   }
-  return [...groups.values()];
+  return [...spaceGroupByBuildNo.values()];
 }
 
 /**
