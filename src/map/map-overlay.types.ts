@@ -1,10 +1,10 @@
-import type { Campus } from "../building/types";
+import type { Campus } from "../building/building.types";
 import type { LocationAccuracy } from "./map-layerset.types";
 import type {
   GeoJsonLineString,
   GeoJsonPoint,
   GeoJsonPolygon,
-} from "./geo/geojson.types";
+} from "../shared/geojson.types";
 
 /**
  * The one overlay schema, shared by every layer the map draws.

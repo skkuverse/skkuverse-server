@@ -1,0 +1,129 @@
+/**
+ * Pins describeMissingRequired() to the resolution
+ * src/infra/config.ts uses (both read src/infra/required-env.ts) —
+ * specifically the api.hsscNew entry, the only one resolved via apiUrl()
+ * (DEV-preferred-with-PROD-fallback) rather than read straight off
+ * process.env.
+ *
+ * The bug this pins: reading process.env.API_HSSC_NEW_PROD directly made the
+ * Nest validator over-crash in Development / Staging-check modes where a dev
+ * sets only API_HSSC_NEW_DEV (leaving _PROD empty) — a config
+ * src/infra/config.ts accepts. The fix mirrors apiUrl().
+ *
+ * Each scenario sets env, then loads the module fresh with
+ * jest.isolateModules().
+ */
+
+const HSSC_KEYS = ["API_HSSC_NEW_PROD", "API_HSSC_NEW_DEV"] as const;
+
+function withEnv(
+  env: Record<string, string | undefined>,
+  fn: (findMissing: () => string[]) => void,
+): void {
+  const saved: Record<string, string | undefined> = {};
+  const keys = [
+    "NODE_ENV",
+    "USE_PROD_API",
+    ...HSSC_KEYS,
+  ];
+  for (const k of keys) saved[k] = process.env[k];
+  try {
+    for (const k of keys) {
+      if (env[k] === undefined) delete process.env[k];
+      else process.env[k] = env[k];
+    }
+    jest.isolateModules(() => {
+      const mod = require("./required-env");
+      fn(mod.describeMissingRequired);
+    });
+  } finally {
+    for (const k of keys) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+  }
+}
+
+function hsscMissing(missing: string[]): boolean {
+  return missing.some((m) => m.includes("api.hsscNew"));
+}
+
+describe("describeMissingRequired api.hsscNew matches src/infra/config.ts apiUrl()", () => {
+  // Baseline: jest.setup.ts defines all other required vars, so api.hsscNew is
+  // the only entry that flips based on the HSSC env we control here.
+
+  it("Development with only API_HSSC_NEW_DEV set → NOT missing (src/infra/config.ts accepts it)", () => {
+    withEnv(
+      {
+        NODE_ENV: "development",
+        USE_PROD_API: undefined,
+        API_HSSC_NEW_PROD: undefined,
+        API_HSSC_NEW_DEV: "http://hssc-dev",
+      },
+      (findMissing) => {
+        expect(hsscMissing(findMissing())).toBe(false);
+      },
+    );
+  });
+
+  it("Development with neither key set → missing", () => {
+    withEnv(
+      {
+        NODE_ENV: "development",
+        USE_PROD_API: undefined,
+        API_HSSC_NEW_PROD: undefined,
+        API_HSSC_NEW_DEV: undefined,
+      },
+      (findMissing) => {
+        expect(hsscMissing(findMissing())).toBe(true);
+      },
+    );
+  });
+
+  it("Staging-check (USE_PROD_API=true) with only API_HSSC_NEW_DEV → missing (prod key required)", () => {
+    withEnv(
+      {
+        NODE_ENV: "development",
+        USE_PROD_API: "true",
+        API_HSSC_NEW_PROD: undefined,
+        API_HSSC_NEW_DEV: "http://hssc-dev",
+      },
+      (findMissing) => {
+        expect(hsscMissing(findMissing())).toBe(true);
+      },
+    );
+  });
+
+  it("Production with only API_HSSC_NEW_PROD set → NOT missing", () => {
+    withEnv(
+      {
+        NODE_ENV: "production",
+        USE_PROD_API: undefined, // production forces USE_PROD_API
+        API_HSSC_NEW_PROD: "http://hssc-prod",
+        API_HSSC_NEW_DEV: undefined,
+      },
+      (findMissing) => {
+        expect(hsscMissing(findMissing())).toBe(false);
+      },
+    );
+  });
+});
+
+describe("describeMissingRequired AI_API_URL", () => {
+  // GET /notices/overview cannot work without it, and there is no default.
+  it("reports AI_API_URL as missing when it is unset", () => {
+    const saved = process.env.AI_API_URL;
+    delete process.env.AI_API_URL;
+    try {
+      jest.isolateModules(() => {
+        const mod = require("./required-env");
+        expect(mod.describeMissingRequired()).toContain(
+          "  notices.overview.aiApiUrl (env: AI_API_URL)",
+        );
+      });
+    } finally {
+      if (saved === undefined) delete process.env.AI_API_URL;
+      else process.env.AI_API_URL = saved;
+    }
+  });
+});

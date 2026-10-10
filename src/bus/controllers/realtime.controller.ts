@@ -12,8 +12,8 @@ import {
   buildStationEtas,
   currentTimeString,
 } from "../realtime/realtime.transforms";
-import { AppError } from "../../common/app-error";
-import { sendSuccess } from "../../common/send-success";
+import { AppError } from "../../http/app.error";
+import { sendSuccess } from "../../http/response.interceptor";
 
 interface GroupConfigEntry {
   getBuses: () => Promise<unknown>;

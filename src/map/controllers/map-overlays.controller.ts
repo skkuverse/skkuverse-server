@@ -1,6 +1,6 @@
 import { Controller, Get, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { sendSuccess } from "../../common/send-success";
+import { sendSuccess } from "../../http/response.interceptor";
 import { MapService } from "../map.service";
 
 /**
@@ -28,7 +28,7 @@ export class MapOverlaysController {
    * a user's session.
    *
    * The degraded fallback must NOT be cached, and the reason is a TTL mismatch
-   * that is easy to miss. `getAllBuildings` caches whatever the query
+   * that is easy to miss. `listAllBuildings` caches whatever the query
    * returned — `[]` included — for five minutes, while this route's normal TTL
    * is a day. A brief empty read during a re-seed would otherwise pin the
    * 12-building fallback into every client and edge cache for 24 hours, on a

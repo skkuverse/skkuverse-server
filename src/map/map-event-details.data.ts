@@ -1,4 +1,4 @@
-import { createCachedLoader } from "../common/cache/cached-loader";
+import { createCachedLoader } from "../infra/cached-loader";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { hasAnyText } from "../infra/i18n";
 import logger from "../infra/logger";
@@ -21,6 +21,7 @@ import {
 } from "./map-place-detail.types";
 import { getPlacesCollection } from "./map-places.data";
 import type { MapPlaceDoc } from "./map-places.types";
+import { isRecord } from "../shared/object.util";
 
 /**
  * Event places' DETAILS — the sheet body behind each pin, keyed by the same id
@@ -104,19 +105,13 @@ function isInstagramPostUrl(value: unknown): value is string {
 
 // --- Projection -------------------------------------------------------------
 
-type Loose = Record<string, unknown>;
-
-function isObject(value: unknown): value is Loose {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function isNonBlankId(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
 }
 
 /** Resolved text, or null when there is none in any language. */
 function textOrNull(value: unknown): I18nWire | null {
-  return isObject(value) && hasAnyText(value as unknown as I18n)
+  return isRecord(value) && hasAnyText(value as unknown as I18n)
     ? toWire(value as unknown as I18n)
     : null;
 }
@@ -134,7 +129,7 @@ function allOrNull<T>(value: unknown, read: (raw: unknown) => T | null): T[] | n
 }
 
 function toWireListItem(raw: unknown): PlaceListItemOf<I18nWire> | null {
-  if (!isObject(raw)) return null;
+  if (!isRecord(raw)) return null;
   const title = textOrNull(raw.title);
   if (!title) return null;
   return {
@@ -145,7 +140,7 @@ function toWireListItem(raw: unknown): PlaceListItemOf<I18nWire> | null {
 }
 
 function toWireTableRow(raw: unknown): PlaceTableRowOf<I18nWire> | null {
-  if (!isObject(raw)) return null;
+  if (!isRecord(raw)) return null;
   const label = textOrNull(raw.label);
   const value = textOrNull(raw.value);
   return label && value ? { label, value } : null;
@@ -153,7 +148,7 @@ function toWireTableRow(raw: unknown): PlaceTableRowOf<I18nWire> | null {
 
 /** One block, or null — with the reason pushed onto `dropped`. */
 function toWireBlock(raw: unknown, where: string, dropped: string[]): PlaceBlockWire | null {
-  if (!isObject(raw) || !isNonBlankId(raw.id)) {
+  if (!isRecord(raw) || !isNonBlankId(raw.id)) {
     dropped.push(`${where}: not a block with an id`);
     return null;
   }
@@ -201,7 +196,7 @@ function toWireDetailAction(
   where: string,
   dropped: string[],
 ): PlaceDetailActionWire | null {
-  if (!isObject(raw) || !isNonBlankId(raw.id)) {
+  if (!isRecord(raw) || !isNonBlankId(raw.id)) {
     dropped.push(`${where}: not an action with an id`);
     return null;
   }
@@ -241,7 +236,7 @@ function toWireDetailAction(
 function toWireDetail(doc: MapPlaceDoc, dropped: string[]): PlaceDetailWire | null {
   const raw: unknown = doc.detail;
   if (
-    !isObject(raw) ||
+    !isRecord(raw) ||
     !PLACE_KINDS.includes(raw.kind as PlaceKind) ||
     !Array.isArray(raw.blocks) ||
     !Array.isArray(raw.actions)

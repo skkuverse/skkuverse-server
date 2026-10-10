@@ -11,8 +11,8 @@
     "prestart": "npm run build",
     "dev": "npm run build && NODE_ENV=development npm run dev:watch",
     "dev:prod-api": "npm run build && NODE_ENV=development USE_PROD_API=true npm run dev:watch",
-    "dev:watch": "concurrently -k \"tsc --watch --preserveWatchOutput\" \"nodemon --watch dist dist/src/main.js\" \"nodemon --quiet --on-change-only --watch src --ext json --exec 'node scripts/copy-build-assets.js'\"",
-    "build": "tsc && node scripts/copy-build-assets.js",
+    "dev:watch": "concurrently -k \"tsc -p tsconfig.build.json --watch --preserveWatchOutput\" \"nodemon --watch dist dist/src/main.js\" \"nodemon --quiet --on-change-only --watch src --ext json --exec 'node scripts/copy-build-assets.js'\"",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-build-assets.js",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "jest",
     "lint": "eslint . && npm run lint:md",
@@ -50,7 +50,8 @@
     "pino": "10.3.1",
     "pino-http": "11.0.0",
     "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.2"
+    "rxjs": "7.8.2",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -90,7 +90,7 @@ export function buildJongroLocUrl(
 
 // ── Service-key validation (fail-loud at top, before any URL composition) ──
 
-// Catches: (a) `src/infra/config.ts` `required[]` getting accidentally bypassed in
+// Catches: (a) the required list in `src/infra/required-env.ts` getting accidentally bypassed in
 // a future refactor (#10), and (b) an operator pasting a *raw* base64 key
 // instead of a URL-encoded one — TOPIS would parse `serviceKey=AAA+BBB=` as
 // two query params and silently reject auth, but the symptom looks like a

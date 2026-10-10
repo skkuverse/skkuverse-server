@@ -4,6 +4,7 @@
  */
 import type { Breadcrumb, ErrorEvent, Log } from "@sentry/nestjs";
 import { maskQuery, maskUrl, pickHeaders } from "./log-redact";
+import { isRecord } from "../shared/object.util";
 
 export function scrubEvent(event: ErrorEvent): ErrorEvent {
   const request = event.request;
@@ -38,17 +39,13 @@ export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
 /** Keys stop at three segments: `err.http.status`, `req.headers.user-agent`. */
 const MAX_FLATTEN_DEPTH = 2;
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function flattenInto(
   out: Record<string, unknown>,
   prefix: string,
   value: unknown,
   depth: number,
 ): void {
-  if (isPlainObject(value) && depth < MAX_FLATTEN_DEPTH) {
+  if (isRecord(value) && depth < MAX_FLATTEN_DEPTH) {
     for (const [key, v] of Object.entries(value)) flattenInto(out, `${prefix}.${key}`, v, depth + 1);
     return;
   }

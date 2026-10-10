@@ -1,14 +1,8 @@
 /**
  * Unit test for MapService — confirms each method delegates 1:1 to the
- * src/map/* data modules (no reimplementation). building.data is mocked so
- * getCampusOverlays exercises the FALLBACK_MARKERS path with no DB.
+ * src/map/* data modules (no reimplementation). BuildingService is stubbed
+ * with no buildings, so getCampusOverlays exercises the FALLBACK_MARKERS path.
  */
-
-// Mock building.data so getCampusOverlays falls back (no DB).
-jest.mock("../../../src/building/building.data", () => ({
-  getAllBuildings: jest.fn().mockResolvedValue([]),
-  getAllCampusShapes: jest.fn().mockResolvedValue([]),
-}));
 
 // getMapConfig now consults the activation window to decide whether the event
 // marker layers exist. Mocked so "no festival" is stated rather than inferred
@@ -36,6 +30,7 @@ import type { EventMapConfig } from "../../../src/map/map-layerset.types";
 import { BASE_CHIPS } from "../../../src/map/map-chips.data";
 import { EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "../../../src/map/map-layers.data";
 import { MapService } from "../../../src/map/map.service";
+import type { BuildingService } from "../../../src/building/building.service";
 import { clearActiveEventCache } from "../../../src/map/map-active-layerset";
 import { EVENT_CACHE_TTL_MS } from "../../../src/map/map-event-cache";
 import { clearEventOverlaysCache } from "../../../src/map/map-event-overlays.data";
@@ -68,7 +63,12 @@ const mockFindActiveActivation = findActiveActivation as jest.MockedFunction<
 >;
 
 describe("MapService", () => {
-  const svc = new MapService();
+  // getCampusOverlays falls back to FALLBACK_MARKERS on an empty building list (no DB).
+  const building = {
+    listAllBuildings: jest.fn().mockResolvedValue([]),
+    listAllCampusShapes: jest.fn().mockResolvedValue([]),
+  } as unknown as BuildingService;
+  const svc = new MapService(building);
 
   beforeEach(() => {
     mockFindActiveActivation.mockReset();

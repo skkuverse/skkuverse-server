@@ -15,7 +15,7 @@
  *
  * WHAT THIS DOES NOT DO: winding. RFC 7946 wants exterior rings
  * counter-clockwise and holes clockwise, but that normalisation lives in
- * `src/map/geo/ring-winding.ts` and runs at projection time. Two reasons. This
+ * `src/shared/ring-winding.util.ts` and runs at projection time. Two reasons. This
  * directory is CommonJS and excluded from tsconfig, so doing it here would mean
  * a second copy of the shoelace — one rule, two implementations that can
  * disagree. And hand-editing Mongo is a blessed ops workflow, so an

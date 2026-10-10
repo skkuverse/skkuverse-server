@@ -3,11 +3,12 @@
  * skkuverse-ai response.
  *
  * The server→ai contract is owned by skkuverse-ai
- * (docs/notice-overview-api.md, openspec/changes/add-notice-overview). This
+ * (skkuverse-ai/docs/notice-overview-api.md, openspec/changes/add-notice-overview). This
  * file mirrors only what the server reads and sends; it does not redefine the
  * contract. Pure / no I/O.
  */
 import type { NoticeDoc } from "../types";
+import { isRecord } from "../../shared/object.util";
 
 /** What the overview reads from a notice: the ai's inputs plus the app's link target. */
 export type OverviewCandidate = Pick<
@@ -110,10 +111,6 @@ export interface AiOverviewResponse {
 
 const STATUSES: ReadonlySet<string> = new Set(["answered", "partial", "no_answer"]);
 const LANGS: ReadonlySet<string> = new Set(["ko", "en"]);
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
 
 function parseSentence(v: unknown): AiOverviewSentence | null {
   if (!isRecord(v)) return null;

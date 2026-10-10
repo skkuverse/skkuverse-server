@@ -13,6 +13,8 @@
 // is a require rather than an import.
 const { parseCampusShapesFile } = require("../../../scripts/lib/campus-shapes-file");
 
+import { campusShapeDoc } from "../../../src/building/building.schema";
+
 const RING = [
   [126.9944, 37.5873],
   [126.9954, 37.5873],
@@ -157,5 +159,21 @@ describe("parseCampusShapesFile", () => {
       "utf8",
     );
     expect(parseCampusShapesFile(real).errors).toEqual([]);
+  });
+
+  it("writes only documents the server's read schema accepts", () => {
+    // The importer and building.schema.ts's campusShapeDoc are two readings of
+    // one document. A shape the importer stores but the server's parse drops
+    // would vanish from the campus map with only a warning to show for it.
+    const fs = require("fs");
+    const path = require("path");
+    const real = fs.readFileSync(path.join(__dirname, "../../../scripts/data/campus-shapes.json"), "utf8");
+    const docs = [
+      ...parse().docs,
+      ...parse({ skkuId: null, title: { ko: "정문", en: "Main gate" }, subtitle: "인사캠" }).docs,
+      ...parseCampusShapesFile(real).docs,
+    ];
+    expect(docs.length).toBeGreaterThanOrEqual(2);
+    for (const doc of docs) expect(campusShapeDoc.safeParse(doc).success).toBe(true);
   });
 });

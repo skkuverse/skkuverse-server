@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { AppError } from "../../common/app-error";
+import { AppError } from "../../http/app.error";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
 import { NoticesSearchService } from "../search.service";

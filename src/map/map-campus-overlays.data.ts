@@ -1,18 +1,14 @@
-import { getAllBuildings, getAllCampusShapes } from "../building/building.data";
-import type { Campus, CampusShapeDoc } from "../building/types";
+import type { BuildingDoc, CampusShapeDoc } from "../building/building.document";
+import type { Campus } from "../building/building.types";
 import logger from "../infra/logger";
 import { createLogThrottle } from "../infra/log-throttle";
 
 const skippedThrottle = createLogThrottle(60 * 60_000);
 import { BASE_LAYERS, type BaseLayerId } from "./map-layers.data";
 import type { MapOverlay, OverlayBase } from "./map-overlay.types";
-import {
-  isDrawableGeometry,
-  type GeoJsonLineString,
-  type GeoJsonPoint,
-  type GeoJsonPolygon,
-} from "./geo/geojson.types";
-import { toWirePolygon } from "./geo/ring-winding";
+import type { GeoJsonLineString, GeoJsonPoint, GeoJsonPolygon } from "../shared/geojson.types";
+import { isDrawableGeometry } from "../shared/geojson.util";
+import { toWirePolygon } from "../shared/ring-winding.util";
 
 /**
  * Everything permanent on the campus map, in one collection.
@@ -38,6 +34,15 @@ import { toWirePolygon } from "./geo/ring-winding";
  * coordinates drop it entirely, a missing `displayNo` keeps it off 건물번호, and
  * a missing name keeps it off 건물이름.
  */
+
+/** The fields of a building this module reads. */
+type CampusBuilding = Pick<BuildingDoc, "_id" | "name" | "displayNo" | "location" | "campus">;
+
+/** The building reads this module needs; MapService passes the exported BuildingService. */
+export interface CampusSource {
+  listAllBuildings(): Promise<readonly CampusBuilding[]>;
+  listAllCampusShapes(): Promise<readonly CampusShapeDoc[]>;
+}
 
 /**
  * Layer ids this module emits, typed against the catalogue rather than restated
@@ -132,19 +137,19 @@ function formatFallback(): { overlays: MapOverlay[]; degraded: true } {
  * `degraded` tells the caller this is the 12-building fallback rather than the
  * real campus, so it can refuse to let the response be cached.
  *
- * It matters because of a TTL mismatch that is easy to miss: `getAllBuildings`
+ * It matters because of a TTL mismatch that is easy to miss: `listAllBuildings`
  * caches whatever the query returned — `[]` included — for five minutes, while
  * this route's normal Cache-Control is a day. A brief empty read during a
  * re-seed or a migration would otherwise pin a 12-building map into every
  * client and edge cache for 24 hours, on a stable URL with no version stamp and
  * no revalidation to bust it.
  */
-async function getBuildingOverlays(): Promise<{
+async function getBuildingOverlays(source: CampusSource): Promise<{
   overlays: MapOverlay[];
   degraded: boolean;
 }> {
-  const buildings = await getAllBuildings();
-  // getAllBuildings always returns an array, so `?.` never short-circuits
+  const buildings = await source.listAllBuildings();
+  // listAllBuildings always returns an array, so `?.` never short-circuits
   // here.
   if (!buildings?.length) return formatFallback();
 
@@ -157,8 +162,8 @@ async function getBuildingOverlays(): Promise<{
     // moves the building into the ocean.
     const [lng, lat] = b.location.coordinates;
 
-    // building.sync parses these with parseFloat and its own comment concedes
-    // "undefined → NaN", with no guard before the write. NaN serialises to
+    // The building sync's toRawDoc (building/sync/building-sync.client.ts) parses these with
+    // parseFloat, and a missing value becomes NaN with no guard before the write. NaN serialises to
     // `null` on a field this schema declares as `number`, so it is dropped here
     // rather than shipped as a lie. The app would discard it anyway; doing it
     // server-side keeps the payload honest.
@@ -210,8 +215,8 @@ async function getBuildingOverlays(): Promise<{
     }
 
     // `||`, not `??`. Both writers of this collection coalesce a missing
-    // English name to the EMPTY STRING rather than null — building.sync's
-    // `en: item.buildNmEng || ""` and building.enrich's `"name.en": … || ""` —
+    // English name to the EMPTY STRING rather than null — the building client's
+    // `text()` (`en || ""`) and enrichBuilding's `"name.en": … || ""` —
     // so `??` would pass `""` straight through and ship a blank English label.
     // TypeScript cannot catch that: `name.en` is declared non-optional, which
     // makes the `??` right operand unreachable without any diagnostic.
@@ -250,7 +255,7 @@ const BASE_LAYER_IDS: ReadonlySet<string> = new Set(BASE_LAYERS.map((l) => l.id)
  * the two can drift — and the symptom of drift is an overlay that downloads
  * fine and matches no layer, drawing nothing with no error anywhere.
  */
-function toShapeOverlays(docs: CampusShapeDoc[]): MapOverlay[] {
+function toShapeOverlays(docs: readonly CampusShapeDoc[]): MapOverlay[] {
   const overlays: MapOverlay[] = [];
   const skipped: string[] = [];
 
@@ -355,16 +360,16 @@ function toShapeOverlays(docs: CampusShapeDoc[]): MapOverlay[] {
  * therefore continues to mean exactly one thing — the buildings fell back —
  * so the controller's caching decision keeps the meaning it was written for.
  */
-async function getCampusOverlays(): Promise<{
+async function getCampusOverlays(source: CampusSource): Promise<{
   overlays: MapOverlay[];
   degraded: boolean;
 }> {
   const [buildings, shapeOverlays] = await Promise.all([
-    getBuildingOverlays(),
+    getBuildingOverlays(source),
     // The catch wraps the PROJECTION as well as the read. Wrapping only the
     // read would leave a throw inside `toShapeOverlays` free to escape and take
     // the buildings with it — the exact inverse of what this function is for.
-    (async () => toShapeOverlays(await getAllCampusShapes()))().catch(
+    (async () => toShapeOverlays(await source.listAllCampusShapes()))().catch(
       (err: unknown) => {
         logger.warn(
           { event: "map.campus.shapes_failed", err },
