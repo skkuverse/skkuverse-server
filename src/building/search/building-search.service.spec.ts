@@ -1,17 +1,17 @@
 /**
- * BuildingSearchService over a stubbed search repository and BuildingService.
+ * BuildingSearchService over a stubbed search repository and BuildingRepository.
  * The routes (__tests__/nest/building/building-routes.test.ts) pin the HTTP
  * shapes; this pins the join of rooms to their buildings and the meta.
  */
-import type { BuildingService } from "../building.service";
+import type { BuildingRepository } from "../building.repository";
 import type { BuildingSearchRepository } from "./building-search.repository";
 import { BuildingSearchService } from "./building-search.service";
 
 const searchRepo = { searchBuildings: jest.fn(), searchSpaces: jest.fn() };
-const buildings = { listAllBuildings: jest.fn() };
+const buildings = { listBuildings: jest.fn() };
 const svc = new BuildingSearchService(
   searchRepo as unknown as BuildingSearchRepository,
-  buildings as unknown as BuildingService,
+  buildings as unknown as BuildingRepository,
 );
 
 const ranked = (items: unknown[]) => ({
@@ -34,7 +34,7 @@ describe("BuildingSearchService.search", () => {
         { spaceCd: "27102", buildNo: "227", campus: "nsc", name: { ko: "실2", en: "" }, floor: { ko: "1층", en: "" } },
       ]),
     );
-    buildings.listAllBuildings.mockResolvedValue([{ _id: 22, buildNo: "227", campus: "nsc" }, { _id: 1, buildNo: null }]);
+    buildings.listBuildings.mockResolvedValue([{ _id: 22, buildNo: "227", campus: "nsc" }, { _id: 1, buildNo: null }]);
 
     const { data, meta } = await svc.search("27", "nsc", "ko");
 

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { SupportedLang } from "../../infra/types";
-import { BuildingService } from "../building.service";
+import { BuildingRepository } from "../building.repository";
 import type { Campus } from "../building.types";
 import { toBuildingSearch } from "./building-search.mapper";
 import { BuildingSearchRepository } from "./building-search.repository";
@@ -10,7 +10,7 @@ import type { BuildingSearch } from "./building-search.types";
 export class BuildingSearchService {
   constructor(
     private readonly repository: BuildingSearchRepository,
-    private readonly buildings: BuildingService,
+    private readonly buildings: BuildingRepository,
   ) {}
 
   /**
@@ -24,7 +24,7 @@ export class BuildingSearchService {
     const [buildings, spaces, allBuildings] = await Promise.all([
       this.repository.searchBuildings(keyword, campus),
       this.repository.searchSpaces(keyword, campus),
-      this.buildings.listAllBuildings(),
+      this.buildings.listBuildings(),
     ]);
     return toBuildingSearch({ keyword, buildings, spaces }, allBuildings, lang);
   }
