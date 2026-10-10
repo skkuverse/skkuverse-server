@@ -12,6 +12,7 @@ export const ROLES = new Set([
   "poller",
   "rules",
   "mapper",
+  "query",
   "config",
   "schema",
   "types",
