@@ -21,6 +21,10 @@ export interface FloorGroup {
   spaces: FloorSpace[];
 }
 
+export interface BuildingList {
+  buildings: Array<WithCampusLabel<BuildingDoc>>;
+}
+
 export interface BuildingDetail {
   building: WithCampusLabel<BuildingDoc>;
   floors: FloorGroup[];

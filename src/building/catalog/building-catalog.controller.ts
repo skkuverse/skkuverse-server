@@ -8,6 +8,7 @@ import { BUILDING_CACHE_CONTROL } from "../building.rules";
 import type { SkkuId } from "../building.types";
 import { buildingListQuery, skkuIdParam, type BuildingListQuery } from "./building-catalog.schema";
 import { BuildingCatalogService } from "./building-catalog.service";
+import type { BuildingDetail, BuildingList } from "./building-catalog.types";
 
 // (A perimeter detail is left out of the public history.)
 @Controller("building")
@@ -20,7 +21,7 @@ export class BuildingCatalogController {
     @Query(new ZodValidationPipe(buildingListQuery, "INVALID_CAMPUS"))
     query: BuildingListQuery,
     @Lang() lang: SupportedLang,
-  ) {
+  ): Promise<BuildingList> {
     return this.catalog.list(query.campus ?? null, lang);
   }
 
@@ -29,7 +30,7 @@ export class BuildingCatalogController {
   async detail(
     @Param("skkuId", new ZodValidationPipe(skkuIdParam, "INVALID_ID")) skkuId: SkkuId,
     @Lang() lang: SupportedLang,
-  ) {
+  ): Promise<BuildingDetail> {
     const detail = await this.catalog.detail(skkuId, lang);
     if (!detail) {
       throw new AppError("NOT_FOUND", `Building ${skkuId} not found`, 404);
