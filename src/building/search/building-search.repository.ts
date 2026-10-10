@@ -36,21 +36,21 @@ export class BuildingSearchRepository {
    * so the count can never describe a different predicate than the list.
    */
   async searchBuildings(
-    query: string,
+    keyword: string,
     campus?: Campus | null,
   ): Promise<RankedSearchResult<BuildingDoc>> {
     const facets = await this.buildings()
-      .aggregate(buildingSearchPipeline(query, campus), { maxTimeMS: SEARCH_MAX_TIME_MS })
+      .aggregate(buildingSearchPipeline(keyword, campus), { maxTimeMS: SEARCH_MAX_TIME_MS })
       .toArray();
     return toRankedResult<BuildingDoc>(facets);
   }
 
   async searchSpaces(
-    query: string,
+    keyword: string,
     campus?: Campus | null,
   ): Promise<RankedSearchResult<SpaceDoc>> {
     const facets = await this.spaces()
-      .aggregate(spaceSearchPipeline(query, campus), { maxTimeMS: SEARCH_MAX_TIME_MS })
+      .aggregate(spaceSearchPipeline(keyword, campus), { maxTimeMS: SEARCH_MAX_TIME_MS })
       .toArray();
     return toRankedResult<SpaceDoc>(facets);
   }

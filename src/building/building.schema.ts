@@ -5,9 +5,9 @@ import type { CampusShapeDoc } from "./building.document";
 import { CAMPUSES } from "./building.rules";
 import type { SkkuId } from "./building.types";
 
-const INVALID_CAMPUS = "campus must be 'hssc' or 'nsc'";
+const INVALID_CAMPUS_MESSAGE = "campus must be 'hssc' or 'nsc'";
 
-const campus = z.enum(CAMPUSES, { error: INVALID_CAMPUS });
+const campus = z.enum(CAMPUSES, { error: INVALID_CAMPUS_MESSAGE });
 
 /** `campus` is optional; an empty value means no filter. */
 export const campusFilter = z.preprocess((v) => (v === "" ? undefined : v), campus.optional());
