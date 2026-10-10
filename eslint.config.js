@@ -251,6 +251,20 @@ function migratedFunctionBlock() {
   };
 }
 
+// TypeScript rules a module meets once migrated (ADR 0010, D9). Every exported
+// function and public method declares its return type, so a controller states the
+// body it sends and a service the value its callers get.
+function migratedTypescriptBlock() {
+  return {
+    name: "migrated/typescript",
+    files: MIGRATED_MODULES.map((m) => `src/${m}/**/*.ts`),
+    ignores: ["src/**/*.spec.ts"],
+    rules: {
+      "@typescript-eslint/explicit-module-boundary-types": "error",
+    },
+  };
+}
+
 const jestGlobals = {
   describe: "readonly",
   it: "readonly",
@@ -329,6 +343,7 @@ module.exports = [
   },
   ...roleSizeBlocks(),
   migratedFunctionBlock(),
+  migratedTypescriptBlock(),
   {
     // Also keeps `.query` files to repositories: one block per file set, since
     // a later block replaces a rule's options rather than merging them.

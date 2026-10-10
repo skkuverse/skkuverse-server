@@ -1,13 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import type { SupportedLang } from "../../infra/types";
-import type { BuildingDoc } from "../building.document";
 import { withCampusLabel } from "../building.mapper";
 import { hasBuildNo } from "../building.rules";
 import { BuildingRepository } from "../building.repository";
-import type { Campus, SkkuId, WithCampusLabel } from "../building.types";
+import type { Campus, SkkuId } from "../building.types";
 import { groupByFloor, toConnectedSkkuIds, toBuildingConnections, withFloorEnFallback } from "./building-catalog.mapper";
 import { BuildingCatalogRepository } from "./building-catalog.repository";
-import type { BuildingConnection, BuildingDetail } from "./building-catalog.types";
+import type { BuildingConnection, BuildingDetail, BuildingList } from "./building-catalog.types";
 
 @Injectable()
 export class BuildingCatalogService {
@@ -16,10 +15,7 @@ export class BuildingCatalogService {
     private readonly buildings: BuildingRepository,
   ) {}
 
-  async list(
-    campus: Campus | null,
-    lang: SupportedLang,
-  ): Promise<{ buildings: Array<WithCampusLabel<BuildingDoc>> }> {
+  async list(campus: Campus | null, lang: SupportedLang): Promise<BuildingList> {
     const buildings = await this.buildings.listBuildings(campus);
     return { buildings: buildings.map((b) => withCampusLabel(b, lang)) };
   }
