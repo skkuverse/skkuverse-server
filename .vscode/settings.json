@@ -1,0 +1,10 @@
+{
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "*.module.ts": "${capture}.schema.ts",
+    "*.service.ts": "${capture}.rules.ts, ${capture}.mapper.ts, ${capture}.types.ts",
+    "*.repository.ts": "${capture}.query.ts, ${capture}.document.ts",
+    "*.ts": "${capture}.spec.ts"
+  }
+}
