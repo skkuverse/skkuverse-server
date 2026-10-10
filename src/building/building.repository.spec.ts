@@ -5,7 +5,8 @@
  * back to the database, a buildings failure still reaches the caller (that is
  * what marks the campus overlay degraded), and a shapes failure serves the last
  * good shapes rather than an outline-less map cached for a day. Also the indexes
- * the repository creates at boot, on the right collection.
+ * the repository creates at boot, on the right collection, and each read's
+ * projection and sort, which FakeBuildingRepository follows.
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../infra/logger", () => mockLogger);
@@ -15,10 +16,10 @@ const toArrayFor: Record<string, jest.Mock> = {
   campus_shapes: jest.fn(),
 };
 const findFor: Record<string, jest.Mock> = {};
+const sortFor: Record<string, jest.Mock> = {};
 for (const name of Object.keys(toArrayFor)) {
-  findFor[name] = jest.fn(() => ({
-    sort: jest.fn(() => ({ toArray: toArrayFor[name] })),
-  }));
+  sortFor[name] = jest.fn(() => ({ toArray: toArrayFor[name] }));
+  findFor[name] = jest.fn(() => ({ sort: sortFor[name] }));
 }
 
 // Records which COLLECTION each index was created on (see "ensureIndexes").
@@ -134,6 +135,28 @@ describe("listBuildings", () => {
 
     // Act & Assert
     await expect(listBuildings()).rejects.toThrow("mongo down");
+  });
+});
+
+describe("the reads' query objects", () => {
+  it("reads every building without its sync bookkeeping or extensions, in _id order", async () => {
+    // Act
+    await listBuildings();
+
+    // Assert
+    expect(findFor.buildings!.mock.calls[0]).toEqual([
+      {},
+      { projection: { extensions: 0, sync: 0, enrichVersion: 0 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+    ]);
+    expect(sortFor.buildings!.mock.calls[0]).toEqual([{ _id: 1 }]);
+  });
+
+  it("reads the campus shapes in their drawing order", async () => {
+    // Act
+    await listCampusShapes();
+
+    // Assert
+    expect(sortFor.campus_shapes!.mock.calls[0]).toEqual([{ order: 1, _id: 1 }]);
   });
 });
 
