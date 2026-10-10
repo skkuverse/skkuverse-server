@@ -69,10 +69,10 @@ const LOG_SYNTAX = [
   },
 ];
 
-// `.rules` and `.mapper` files are pure (ADR 0010, D1 and D4): no IO, and
-// the clock is passed in. Type imports stay allowed through the patterns
-// below because none of them names a module a pure file needs types from:
-// class-role files export no types, and Mongo types come from "mongodb".
+// `.rules`, `.mapper` and `.query` files are pure (ADR 0010, D1 and D4): no
+// IO, and the clock is passed in. Type imports stay allowed through the
+// patterns below because none of them names a module a pure file needs types
+// from: class-role files export no types.
 const PURE_IMPORT_PATTERNS = [
   {
     regex: "\\.(?:module|controller|service|repository|client|poller)$",
@@ -95,6 +95,20 @@ const PURE_IMPORT_PATTERNS = [
     message: "A pure file does no IO and knows no framework: move the call to a client, repository or service.",
   },
 ];
+
+// Mongo syntax lives in repositories and `.query` files only (ADR 0010, D2).
+// A rule or mapper may not import "mongodb", types included: a decision that
+// has to reach the database is split into the rule and its Mongo form.
+const MONGO_PATTERN = {
+  regex: "^mongodb$",
+  message:
+    "Rules and mappers speak the domain, not Mongo: put filters, pipelines and updates in the repository or a *.query.ts.",
+};
+
+const QUERY_IMPORT_PATTERN = {
+  regex: "\\.query$",
+  message: "Only a repository runs a query: import the *.query.ts from the module's repository.",
+};
 
 const CLOCK_SYNTAX = [
   {
@@ -130,6 +144,11 @@ const GET_CLIENT_PATTERN = {
 };
 
 const VIOLATORS = {
+  // Rules and mappers that build Mongo syntax (ADR 0010, D2).
+  pure: ["src/building/building-search.rules.ts", "src/building/building-sync.mapper.ts"],
+  // Repositories that import a mapper (ADR 0010, D2): they return documents,
+  // and the service maps them.
+  repository: ["src/building/building-sync.repository.ts", "src/building/building.repository.ts"],
   getClient: [
     "src/ad/ad.data.ts",
     "src/bus/cache/bus-cache.service.ts",
@@ -253,11 +272,32 @@ module.exports = [
     },
   },
   {
+    // Also keeps `.query` files to repositories: one block per file set, since
+    // a later block replaces a rule's options rather than merging them.
     name: "boundaries/get-client",
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.repository.ts", "src/**/*.spec.ts", "src/infra/db.ts", ...VIOLATORS.getClient],
     rules: {
-      "no-restricted-imports": ["error", { patterns: [GET_CLIENT_PATTERN] }],
+      "no-restricted-imports": ["error", { patterns: [GET_CLIENT_PATTERN, QUERY_IMPORT_PATTERN] }],
+    },
+  },
+  {
+    name: "boundaries/repository",
+    files: ["src/**/*.repository.ts"],
+    ignores: VIOLATORS.repository,
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "\\.(?:mapper|service|controller|poller|client)$",
+              message:
+                "A repository returns documents: the service maps them and calls clients and other services.",
+            },
+          ],
+        },
+      ],
     },
   },
   {
@@ -268,6 +308,20 @@ module.exports = [
     // it carries the log selectors along with the clock ones.
     name: "boundaries/pure",
     files: ["src/**/*.rules.ts", "src/**/*.mapper.ts"],
+    ignores: VIOLATORS.pure,
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { patterns: [...PURE_IMPORT_PATTERNS, MONGO_PATTERN, QUERY_IMPORT_PATTERN] },
+      ],
+      "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...CLOCK_SYNTAX],
+    },
+  },
+  {
+    // A `.query` builds Mongo syntax and runs nothing: pure like a rule, but
+    // "mongodb" types are its subject.
+    name: "boundaries/query",
+    files: ["src/**/*.query.ts"],
     rules: {
       "no-restricted-imports": ["error", { patterns: PURE_IMPORT_PATTERNS }],
       "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...CLOCK_SYNTAX],

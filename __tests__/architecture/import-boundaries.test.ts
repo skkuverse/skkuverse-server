@@ -47,6 +47,8 @@ describe("import boundary blocks apply as specified", () => {
         "boundaries/shared",
         "boundaries/infra",
         "boundaries/pure",
+        "boundaries/query",
+        "boundaries/repository",
       ]),
     );
   });
@@ -56,6 +58,29 @@ describe("import boundary blocks apply as specified", () => {
     expect(lint(rules, "src/building/x.controller.ts", 'import { getClient } from "../infra/db";')).toHaveLength(1);
     expect(lint(rules, "src/infra/x.ts", 'import { getClient } from "./db";')).toHaveLength(1);
     expect(lint(rules, "src/health/x.ts", 'import { ping, HOT_READ_MAX_TIME_MS } from "../infra/db";')).toEqual([]);
+  });
+
+  it("only a repository imports a .query, and a repository imports no mapper, service, controller, poller or client", () => {
+    const query = 'import { searchPipeline } from "./building-search.query";';
+    expect(lint(block("boundaries/get-client").rules!, "src/building/search/building-search.service.ts", query)).toHaveLength(1);
+    const repository = block("boundaries/repository").rules!;
+    const file = "src/building/search/building-search.repository.ts";
+    expect(lint(repository, file, query)).toEqual([]);
+    expect(lint(repository, file, 'import { getClient } from "../../infra/db";')).toEqual([]);
+    expect(lint(repository, file, 'import type { BuildingDoc } from "../building.document";')).toEqual([]);
+    for (const role of ["mapper", "service", "controller", "poller", "client"]) {
+      expect(lint(repository, file, `import { x } from "./building-search.${role}";`)).toHaveLength(1);
+    }
+  });
+
+  it("a .query is pure but speaks Mongo", () => {
+    const rules = block("boundaries/query").rules!;
+    const file = "src/building/search/building-search.query.ts";
+    expect(lint(rules, file, 'import type { Document, Filter } from "mongodb";')).toEqual([]);
+    expect(lint(rules, file, 'import { SPACE_TIERS } from "./building-search.rules";')).toEqual([]);
+    expect(lint(rules, file, 'import { getClient } from "../../infra/db";')).toHaveLength(1);
+    expect(lint(rules, file, 'import { X } from "./building-search.repository";')).toHaveLength(1);
+    expect(lint(rules, file, "export const now = () => Date.now();")).toHaveLength(1);
   });
 
   it("a feature reaches another only through its module, its services or `import type`", () => {
@@ -106,7 +131,7 @@ describe("import boundary blocks apply as specified", () => {
     expect(lint(block("boundaries/infra").rules!, "src/infra/x.ts", 'import { a } from "./logger";')).toEqual([]);
   });
 
-  it("a .rules or .mapper file does no IO and does not read the clock", () => {
+  it("a .rules or .mapper file does no IO, speaks no Mongo and does not read the clock", () => {
     const rules = block("boundaries/pure").rules!;
     const file = "src/building/x.rules.ts";
     for (const source of [
@@ -118,6 +143,9 @@ describe("import boundary blocks apply as specified", () => {
       'import { AppError } from "../http/zod-validation.pipe";',
       'import axios from "axios";',
       'import { Injectable } from "@nestjs/common";',
+      'import type { Filter } from "mongodb";',
+      'import { ObjectId } from "mongodb";',
+      'import { pipeline } from "./building.query";',
       "export const now = () => Date.now();",
       "export const today = () => new Date();",
     ]) {
@@ -127,7 +155,6 @@ describe("import boundary blocks apply as specified", () => {
       'import { t } from "../infra/i18n";',
       'import type { SupportedLang } from "../infra/types";',
       'import { AppError } from "../http/app.error";',
-      'import type { Filter } from "mongodb";',
       'import { escapeRegex } from "../shared/regex.util";',
       'import { toDisplayNo } from "./building.rules";',
       'import type { BuildingDoc } from "./building.document";',
