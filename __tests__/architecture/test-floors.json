@@ -8,8 +8,8 @@
     "expects": 23
   },
   "architecture": {
-    "tests": 114,
-    "expects": 150
+    "tests": 116,
+    "expects": 151
   },
   "building": {
     "tests": 173,
