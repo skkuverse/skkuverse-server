@@ -15,7 +15,7 @@ import type { PublicOf } from "../public-of";
 /** Rows in rank order. `total` and `truncated` stand for a match set larger than the rows returned. */
 type Seeded<T> = { items: T[]; counts?: RankedSearchResult<T>["counts"]; total?: number; truncated?: boolean };
 
-function ranked<T extends { campus: Campus }>(seeded: Seeded<T>, campus: Campus | null | undefined): RankedSearchResult<T> {
+function ranked<T extends { campus: Campus }>(seeded: Seeded<T>, campus: Campus | undefined): RankedSearchResult<T> {
   const items = campus ? seeded.items.filter((item) => item.campus === campus) : seeded.items;
   const hssc = seeded.items.filter((item) => item.campus === "hssc").length;
   const nsc = seeded.items.length - hssc;
@@ -30,14 +30,14 @@ function ranked<T extends { campus: Campus }>(seeded: Seeded<T>, campus: Campus 
 export class FakeBuildingSearchRepository implements PublicOf<BuildingSearchRepository> {
   buildings: Seeded<BuildingDoc> = { items: [] };
   spaces: Seeded<SpaceDoc> = { items: [] };
-  searches: Array<{ collection: "buildings" | "spaces"; keyword: string; campus: Campus | null | undefined }> = [];
+  searches: Array<{ collection: "buildings" | "spaces"; keyword: string; campus: Campus | undefined }> = [];
 
-  async searchBuildings(keyword: string, campus?: Campus | null): Promise<RankedSearchResult<BuildingDoc>> {
+  async searchBuildings(keyword: string, campus?: Campus): Promise<RankedSearchResult<BuildingDoc>> {
     this.searches.push({ collection: "buildings", keyword, campus });
     return ranked(this.buildings, campus);
   }
 
-  async searchSpaces(keyword: string, campus?: Campus | null): Promise<RankedSearchResult<SpaceDoc>> {
+  async searchSpaces(keyword: string, campus?: Campus): Promise<RankedSearchResult<SpaceDoc>> {
     this.searches.push({ collection: "spaces", keyword, campus });
     return ranked(this.spaces, campus);
   }

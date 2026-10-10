@@ -43,6 +43,19 @@ describe("BuildingCatalogService.list", () => {
   });
 });
 
+describe("BuildingCatalogService.list with no campus", () => {
+  it("lists every campus when the campus is undefined, the schema's value for none", async () => {
+    // Arrange
+    buildings.buildings = [LAW, ENGINEERING];
+
+    // Act
+    const list = await service.list(undefined, "ko");
+
+    // Assert
+    expect(list.buildings.map((b) => b._id)).toEqual([1, 3]);
+  });
+});
+
 describe("BuildingCatalogService.detail", () => {
   it("is null for an unknown building, and reads nothing after the lookup", async () => {
     // Act
