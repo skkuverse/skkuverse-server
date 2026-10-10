@@ -6,7 +6,7 @@
  * nor the SKKU API is touched; the logger and Sentry are mocked for the
  * registry.
  */
-jest.mock("../infra/logger", () => ({
+jest.mock("../../infra/logger", () => ({
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
@@ -17,10 +17,10 @@ jest.mock("@sentry/nestjs", () => ({
   captureCheckIn: jest.fn(),
 }));
 
-import config from "../infra/config";
+import config from "../../infra/config";
 import { BuildingSyncPoller } from "./building-sync.poller";
 import type { BuildingSyncService } from "./building-sync.service";
-import { PollerRegistryService } from "../scheduling/poller-registry.service";
+import { PollerRegistryService } from "../../scheduling/poller-registry.service";
 
 const mockedSync = jest.fn<Promise<void>, []>();
 const sync = { run: mockedSync } as unknown as BuildingSyncService;

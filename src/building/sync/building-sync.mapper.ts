@@ -1,12 +1,12 @@
 import type { AnyBulkWriteOperation } from "mongodb";
-import { toDisplayNo } from "./building.rules";
+import { toDisplayNo } from "../building.rules";
 import type {
   AccessibilityDetail,
   BarrierFreeSection,
   BuildingRawDoc,
   ElevatorStatus,
   SpaceDoc,
-} from "./building.document";
+} from "../building.document";
 import type { SpaceSource, SyncedSpace } from "./building-sync.types";
 
 // Bump this when enrichment logic changes to trigger re-enrichment of all buildings

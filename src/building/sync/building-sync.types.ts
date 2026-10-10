@@ -1,7 +1,7 @@
-import type { BuildingAttachment, BuildingRawDoc } from "./building.document";
-import type { ApiId, BilingualText, BuildNo, Campus, SkkuId, SpaceCd } from "./building.types";
+import type { BuildingAttachment, BuildingRawDoc } from "../building.document";
+import type { ApiId, BilingualText, BuildNo, Campus, SkkuId, SpaceCd } from "../building.types";
 
-// What BuildingClient translates campusMap.do into.
+// What BuildingSyncClient translates campusMap.do into.
 
 /** One building from buildList. */
 export interface ListedBuilding {

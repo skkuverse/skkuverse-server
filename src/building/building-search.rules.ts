@@ -141,7 +141,7 @@ function tierRegex(mode: TierMode, escaped: string): string {
  * both spaceList-only records with empty names).
  *
  * The guard tests $type rather than using $ifNull, because $ifNull only covers
- * null and missing. building.client.ts passes SKKU's JSON values straight through
+ * null and missing. The sync client (sync/building-sync.client.ts) passes SKKU's JSON values straight through
  * (`spaceCd: item.spaceCd`) and SkkuSpaceListItem.spaceCd: string is a
  * compile-time assertion about an EXTERNAL payload, not a runtime guarantee. If
  * SKKU ever emitted `"spaceCd": 27101` as a number, one such row would make

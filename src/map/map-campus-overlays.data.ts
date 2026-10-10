@@ -162,7 +162,7 @@ async function getBuildingOverlays(source: CampusSource): Promise<{
     // moves the building into the ocean.
     const [lng, lat] = b.location.coordinates;
 
-    // The building sync's toRawDoc (building.client.ts) parses these with
+    // The building sync's toRawDoc (building/sync/building-sync.client.ts) parses these with
     // parseFloat, and a missing value becomes NaN with no guard before the write. NaN serialises to
     // `null` on a field this schema declares as `number`, so it is dropped here
     // rather than shipped as a lie. The app would discard it anyway; doing it

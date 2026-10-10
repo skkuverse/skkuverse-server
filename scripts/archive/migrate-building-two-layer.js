@@ -14,7 +14,7 @@ require("dotenv").config();
 const { MongoClient } = require("mongodb");
 const fs = require("fs");
 const path = require("path");
-const { enrichBuilding, ENRICH_VERSION } = require("../../src/building/building-sync.mapper");
+const { enrichBuilding, ENRICH_VERSION } = require("../../src/building/sync/building-sync.mapper");
 
 // --- CLI flags ---
 const args = process.argv.slice(2);

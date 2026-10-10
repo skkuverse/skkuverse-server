@@ -1,17 +1,17 @@
 import { Injectable } from "@nestjs/common";
 import type { AnyBulkWriteOperation, BulkWriteResult, Collection } from "mongodb";
-import config from "../infra/config";
-import logger from "../infra/logger";
-import { mongoCollection } from "../infra/mongo";
+import config from "../../infra/config";
+import logger from "../../infra/logger";
+import { mongoCollection } from "../../infra/mongo";
 import type {
   BuildingAttachment,
   BuildingDoc,
   BuildingRawDoc,
   SpaceDoc,
-} from "./building.document";
+} from "../building.document";
 import { toSpaceUpsert, type EnrichmentSetUpdate } from "./building-sync.mapper";
 import type { ListedBuilding, SpaceSource, SyncedSpace } from "./building-sync.types";
-import type { SkkuId } from "./building.types";
+import type { SkkuId } from "../building.types";
 
 /**
  * The sync runs weekly, off the request path: a stuck read fails the run
