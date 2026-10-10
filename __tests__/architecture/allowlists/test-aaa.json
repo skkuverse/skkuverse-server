@@ -18,7 +18,6 @@
   "__tests__/nest/ad/ad-stats.service.test.ts",
   "__tests__/nest/ad/ad.routes.test.ts",
   "__tests__/nest/ad/weighted-random-select.test.ts",
-  "__tests__/nest/app/app-config.routes.test.ts",
   "__tests__/nest/bootstrap-wiring.test.ts",
   "__tests__/nest/bus/baseline-eta-poller.test.ts",
   "__tests__/nest/bus/bus-cache.service.test.ts",

@@ -1,18 +1,10 @@
 /**
- * Integration test for AppConfigFeatureController (GET /app/config), a trivial
- * static passthrough.
- *
- * Builds a NestExpressApplication mirroring main.ts's pipeline for this route:
- *   pino-http → express.json → LangMiddleware (req.lang + __startNs + Vary)
- *     → GeneralRateLimitMiddleware (AppFeatureModule.configure forRoutes("app"))
- *     → controller (plain return)
- *     → global ResponseInterceptor ({ meta, data } envelope)
- *     → HttpExceptionFilter.
- *
- * Asserts the { meta:{lang}, data:{ios, android, webview} } envelope with
- * ios/android shape (minVersion + updateUrl), the webview.bridgeOrigins
- * allowlist, per-language meta.lang, and that no auth is required (plain GET
- * succeeds).
+ * GET /app/config: the boot-time client config (version gates, the bridge
+ * allowlist, the web origin, first-party mini-app origins) in the standard
+ * envelope, cacheable for five minutes, with no auth. Runs main.ts's pipeline for
+ * this route: request logging, JSON body, LangMiddleware, the general limiter
+ * (AppConfigModule binds it on /app), the controller, ResponseInterceptor and
+ * HttpExceptionFilter.
  */
 import { Module } from "@nestjs/common";
 import { ExpressAdapter } from "@nestjs/platform-express";
@@ -23,15 +15,15 @@ import { mountRequestLogging } from "../../../src/infra/http-logging";
 import request from "supertest";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
 import { ConfigModule } from "../../../src/config/config.module";
-import { AppFeatureModule } from "../../../src/app/app-feature.module";
+import { AppConfigModule } from "../../../src/app-config/app-config.module";
 import { LangMiddleware } from "../../../src/http/lang.middleware";
 import { ResponseInterceptor } from "../../../src/http/response.interceptor";
 import { HttpExceptionFilter } from "../../../src/http/http-exception.filter";
 
 @Module({
-  imports: [ConfigModule, AppFeatureModule],
+  imports: [ConfigModule, AppConfigModule],
 })
-class TestAppFeatureModule {}
+class TestAppConfigModule {}
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -47,7 +39,7 @@ beforeAll(async () => {
   );
 
   const moduleRef = await Test.createTestingModule({
-    imports: [TestAppFeatureModule],
+    imports: [TestAppConfigModule],
   }).compile();
 
   app = moduleRef.createNestApplication<NestExpressApplication>(
@@ -66,7 +58,10 @@ afterAll(async () => {
 
 describe("GET /app/config", () => {
   it("returns { ios, android } in the standard envelope", async () => {
+    // Act
     const res = await request(httpServer).get("/app/config");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.meta.lang).toBe("ko");
     expect(res.body.data).toHaveProperty("ios");
@@ -78,12 +73,18 @@ describe("GET /app/config", () => {
   });
 
   it("is cacheable by clients and shared caches: boot-time, language-independent", async () => {
+    // Act
     const res = await request(httpServer).get("/app/config");
+
+    // Assert
     expect(res.headers["cache-control"]).toBe("public, max-age=300");
   });
 
   it("publishes webview.bridgeOrigins derived from infra/origins", async () => {
+    // Act
     const res = await request(httpServer).get("/app/config");
+
+    // Assert
     expect(res.status).toBe(200);
     // Derived rather than re-listed, so adding an origin does not mean editing
     // the same list in two places. This asserts the plumbing: whatever
@@ -95,7 +96,10 @@ describe("GET /app/config", () => {
   });
 
   it("grants the bridge to exactly these hosts, spelled out", async () => {
+    // Act
     const res = await request(httpServer).get("/app/config");
+
+    // Assert
     const origins = res.body.data.webview.bridgeOrigins as string[];
     // Deliberately literal rather than derived from BRIDGE_ORIGINS. The
     // assertion above passes whatever the constant happens to say, including a
@@ -124,7 +128,10 @@ describe("GET /app/config", () => {
   });
 
   it("maps each first-party mini-app origin to its mini app, spelled out", async () => {
+    // Act
     const res = await request(httpServer).get("/app/config");
+
+    // Assert
     // Literal for the same reason as the bridge list: the app opens any URL on
     // these origins in the named mini app's shell, so a wrong or missing entry
     // sends that page to the generic /webview and its "open in the app" gate.
@@ -143,7 +150,10 @@ describe("GET /app/config", () => {
     // The client compares these against `new URL(pageUrl).origin`, which is
     // always scheme+host+port with no trailing slash. A path or trailing slash
     // here would never match and would silently disable the bridge.
+    // Act
     const res = await request(httpServer).get("/app/config");
+
+    // Assert
     for (const origin of res.body.data.webview.bridgeOrigins as string[]) {
       expect(origin).toMatch(/^https:\/\//);
       expect(new URL(origin).origin).toBe(origin);
@@ -151,20 +161,29 @@ describe("GET /app/config", () => {
   });
 
   it("publishes web.origin so the client needn't hardcode the launcher host", async () => {
+    // Act
     const res = await request(httpServer).get("/app/config");
+
+    // Assert
     expect(res.body.data.web.origin).toBe(WEB_ORIGIN);
     expect(new URL(res.body.data.web.origin).origin).toBe(WEB_ORIGIN);
   });
 
   it("requires no auth (succeeds without a Bearer token)", async () => {
+    // Act
     const res = await request(httpServer).get("/app/config");
+
+    // Assert
     expect(res.status).toBe(200);
   });
 
   it("reflects the requested language in meta.lang", async () => {
+    // Act
     const res = await request(httpServer)
       .get("/app/config")
       .set("Accept-Language", "en");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.meta.lang).toBe("en");
     // Static config is language-independent; only meta.lang changes.
