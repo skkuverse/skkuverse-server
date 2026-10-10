@@ -10,9 +10,9 @@
  *     PascalCase(name) + PascalCase(role): `notice-dispatch.repository.ts`
  *     exports `NoticeDispatchRepository`. A `.error.ts` file may export several
  *     classes; each starts with PascalCase(name) and ends with `Error`.
- *   - exported types: a class-role file exports no interface or type alias.
- *     Exported types live in `.types`, `.document` or `.schema`; a type used
- *     inside one file stays there, unexported.
+ *   - exported types: only a `.types`, `.document` or `.schema` file exports an
+ *     interface or type alias; a type used inside one file stays there,
+ *     unexported. src/infra/ files, named by resource, are not checked.
  *   - main export: a class-role or `.decorator` file exports something named
  *     after the file, so either can be found from the other: a class
  *     `NoStoreMiddleware`, a function `noStoreMiddleware`, a decorator
@@ -96,11 +96,13 @@ function exportedTypes(source: string): string[] {
   });
 }
 
-/** `<file>: <type>` for each type a class-role file exports. */
+const TYPE_ROLES = new Set(["types", "document", "schema"]);
+
+/** `<file>: <type>` for each type a role file other than `.types`, `.document` or `.schema` exports. */
 export function exportedTypeViolations(file: string, source: string): string[] {
   if (EXEMPT.has(file) || file.endsWith(".spec.ts")) return [];
   const { parts } = parse(file);
-  if (parts.length !== 2 || !CLASS_ROLES.has(parts[1]!)) return [];
+  if (parts.length !== 2 || !ROLES.has(parts[1]!) || TYPE_ROLES.has(parts[1]!)) return [];
   return exportedTypes(source).map((name) => `${file}: ${name}`);
 }
 
@@ -263,7 +265,7 @@ describe("naming rules apply as specified", () => {
     expect(classNameViolations("src/building/building.types.ts", "export class Anything {}")).toEqual([]);
   });
 
-  it("keeps exported types out of class-role files", () => {
+  it("keeps exported types in .types, .document and .schema files", () => {
     const service = "src/building/building.service.ts";
     expect(
       exportedTypeViolations(
@@ -275,7 +277,13 @@ describe("naming rules apply as specified", () => {
       exportedTypeViolations(service, 'type C = 1;\nexport { type C };\nexport type { D } from "./d";'),
     ).toEqual([`${service}: C`, `${service}: D`]);
     expect(exportedTypeViolations("src/building/building.types.ts", "export interface A {}")).toEqual([]);
-    expect(exportedTypeViolations("src/building/building.rules.ts", "export type { A };")).toEqual([]);
+    expect(exportedTypeViolations("src/building/building.document.ts", "export interface A {}")).toEqual([]);
+    expect(exportedTypeViolations("src/building/building.schema.ts", "export type A = 1;")).toEqual([]);
+    for (const role of ["rules", "mapper", "query", "config", "util"]) {
+      const file = `src/building/building.${role}.ts`;
+      expect(exportedTypeViolations(file, "export interface A {}\nexport function a() {}")).toEqual([`${file}: A`]);
+    }
+    expect(exportedTypeViolations("src/infra/logger.ts", "export interface A {}")).toEqual([]);
     expect(exportedTypeViolations("src/building/building.service.spec.ts", "export interface A {}")).toEqual([]);
   });
 

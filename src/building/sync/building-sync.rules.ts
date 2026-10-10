@@ -1,3 +1,5 @@
+import type { PhaseFailure } from "./building-sync.types";
+
 /** Fewer listed buildings (78 exist) means SKKU answered without usable data: an empty body, a renamed field. */
 export const MIN_BUILDINGS_TO_TRUST = 50;
 
@@ -24,11 +26,6 @@ export function needsEnrichment({
   isEnrichedAtOldVersion: boolean;
 }): boolean {
   return knownUpdatedAt === undefined || knownUpdatedAt !== listedUpdatedAt || isEnrichedAtOldVersion;
-}
-
-export interface PhaseFailure {
-  phase: string;
-  err: unknown;
 }
 
 export function toSyncError(failures: readonly PhaseFailure[]): AggregateError {

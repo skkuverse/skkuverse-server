@@ -7,7 +7,6 @@ import {
   needsEnrichment,
   shouldFailBuildInfoPhase,
   toSyncError,
-  type PhaseFailure,
 } from "./building-sync.rules";
 import { BuildingSyncRepository } from "./building-sync.repository";
 import { BuildingSyncClient } from "./building-sync.client";
@@ -15,7 +14,7 @@ import { ENRICH_VERSION, enrichBuilding } from "./building-sync.mapper";
 import { BuildingRepository } from "../building.repository";
 import { CAMPUSES, hasBuildNo } from "../building.rules";
 import type { SkkuId } from "../building.types";
-import type { ListedBuilding, ListedBuildingWithBuildNo, SyncedSpace } from "./building-sync.types";
+import type { ListedBuilding, ListedBuildingWithBuildNo, PhaseFailure, SyncedSpace } from "./building-sync.types";
 
 type BuildInfoOutcome = { building: ListedBuildingWithBuildNo } & ({ spaces: SyncedSpace[] } | { rejection: unknown });
 

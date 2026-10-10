@@ -47,3 +47,8 @@ export interface BuildInfo {
   attachments: BuildingAttachment[];
   spaces: SyncedSpace[];
 }
+
+export interface PhaseFailure {
+  phase: string;
+  err: unknown;
+}
