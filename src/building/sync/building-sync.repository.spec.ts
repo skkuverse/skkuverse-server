@@ -301,7 +301,7 @@ describe("BuildingSyncRepository reads and the stale delete", () => {
 });
 
 describe("BuildingSyncRepository indexes", () => {
-  it("owns the unique space key its upserts filter on and the raw layer's campus", async () => {
+  it("owns the unique space key its upserts filter on, and no index on the raw layer", async () => {
     // Act
     await new BuildingSyncRepository().ensureIndexes();
 
@@ -309,7 +309,8 @@ describe("BuildingSyncRepository indexes", () => {
     expect(mockCollections.spaces!.createIndex.mock.calls).toEqual([
       [{ spaceCd: 1, buildNo: 1, campus: 1 }, { unique: true }],
     ]);
-    expect(mockCollections.buildings_raw!.createIndex.mock.calls).toEqual([[{ campus: 1 }]]);
+    // No query reads buildings_raw by campus; $indexStats showed 0 ops on campus_1 (2026-10-10).
+    expect(mockCollections.buildings_raw!.createIndex.mock.calls).toEqual([]);
   });
 
   it("owns the 2dsphere that guards the enriched location it writes", async () => {
