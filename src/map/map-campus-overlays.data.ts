@@ -40,8 +40,8 @@ type CampusBuilding = Pick<BuildingDoc, "_id" | "name" | "displayNo" | "location
 
 /** The building reads this module needs; MapService passes the exported BuildingService. */
 export interface CampusSource {
-  listAllBuildings(): Promise<CampusBuilding[]>;
-  listAllCampusShapes(): Promise<CampusShapeDoc[]>;
+  listAllBuildings(): Promise<readonly CampusBuilding[]>;
+  listAllCampusShapes(): Promise<readonly CampusShapeDoc[]>;
 }
 
 /**
@@ -255,7 +255,7 @@ const BASE_LAYER_IDS: ReadonlySet<string> = new Set(BASE_LAYERS.map((l) => l.id)
  * the two can drift — and the symptom of drift is an overlay that downloads
  * fine and matches no layer, drawing nothing with no error anywhere.
  */
-function toShapeOverlays(docs: CampusShapeDoc[]): MapOverlay[] {
+function toShapeOverlays(docs: readonly CampusShapeDoc[]): MapOverlay[] {
   const overlays: MapOverlay[] = [];
   const skipped: string[] = [];
 

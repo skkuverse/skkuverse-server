@@ -137,14 +137,14 @@ export class BuildingRepository implements OnModuleInit {
     ]);
   }
 
-  async listBuildings(campus?: Campus | null): Promise<BuildingDoc[]> {
+  async listBuildings(campus?: Campus | null): Promise<readonly BuildingDoc[]> {
     const buildings = await this.allBuildings.get();
     if (!campus) return buildings;
     return buildings.filter((b) => b.campus === campus);
   }
 
   /** Every campus shape, in authored order. */
-  listCampusShapes(): Promise<CampusShapeDoc[]> {
+  listCampusShapes(): Promise<readonly CampusShapeDoc[]> {
     return this.campusShapesCache.get();
   }
 
