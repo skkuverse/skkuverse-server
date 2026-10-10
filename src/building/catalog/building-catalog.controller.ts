@@ -1,16 +1,16 @@
 import { Controller, Get, Param, Query, Req } from "@nestjs/common";
 import type { Request } from "express";
-import { AppError } from "../http/app.error";
-import { ZodValidationPipe } from "../http/zod-validation.pipe";
-import type { SupportedLang } from "../infra/types";
-import { buildingListQuery, skkuIdParam, type BuildingListQuery } from "./building.schema";
-import { BuildingService } from "./building.service";
-import type { SkkuId } from "./building.types";
+import { AppError } from "../../http/app.error";
+import { ZodValidationPipe } from "../../http/zod-validation.pipe";
+import type { SupportedLang } from "../../infra/types";
+import type { SkkuId } from "../building.types";
+import { buildingListQuery, skkuIdParam, type BuildingListQuery } from "./building-catalog.schema";
+import { BuildingCatalogService } from "./building-catalog.service";
 
-/** /building/list and /building/:skkuId: no auth, the general limiter (BuildingModule). */
+/** /building/list and /building/:skkuId: no auth; the general limiter BuildingModule binds on /building covers them. */
 @Controller("building")
-export class BuildingController {
-  constructor(private readonly building: BuildingService) {}
+export class BuildingCatalogController {
+  constructor(private readonly catalog: BuildingCatalogService) {}
 
   // GET /building/list?campus=hssc
   @Get("list")
@@ -19,7 +19,7 @@ export class BuildingController {
     query: BuildingListQuery,
     @Req() req: Request,
   ) {
-    return this.building.list(query.campus ?? null, req.lang as SupportedLang);
+    return this.catalog.list(query.campus ?? null, req.lang as SupportedLang);
   }
 
   // GET /building/:skkuId
@@ -28,7 +28,7 @@ export class BuildingController {
     @Param("skkuId", new ZodValidationPipe(skkuIdParam, "INVALID_ID")) skkuId: SkkuId,
     @Req() req: Request,
   ) {
-    const detail = await this.building.detail(skkuId, req.lang as SupportedLang);
+    const detail = await this.catalog.detail(skkuId, req.lang as SupportedLang);
     if (!detail) {
       throw new AppError("NOT_FOUND", `Building ${skkuId} not found`, 404);
     }

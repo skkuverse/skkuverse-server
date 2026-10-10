@@ -1,5 +1,4 @@
 import type { Brand } from "../shared/brand.types";
-import type { BuildingDoc } from "./building.document";
 
 /** SKKU's building id: `_id` in buildings and buildings_raw, and the ends of a connection. */
 export type SkkuId = Brand<number, "SkkuId">;
@@ -25,32 +24,4 @@ export interface BilingualText {
   en: string;
 }
 
-/** A connection seen from one building (BuildingRepository.listConnectionsBySkkuId). */
-export interface BuildingConnection {
-  targetSkkuId: SkkuId;
-  targetBuildNo: BuildNo | null;
-  targetDisplayNo: DisplayNo | null;
-  targetName: BilingualText;
-  fromFloor: BilingualText;
-  toFloor: BilingualText;
-}
-
-/** One floor of a building with its spaces (GET /building/:skkuId `floors`). */
-export interface FloorSpace {
-  spaceCd: SpaceCd;
-  name: BilingualText;
-  conspaceCd?: string | null;
-}
-export interface FloorGroup {
-  floor: BilingualText;
-  spaces: FloorSpace[];
-}
-
 export type WithCampusLabel<T> = T & { campusLabel: string };
-
-/** GET /building/:skkuId */
-export interface BuildingDetail {
-  building: WithCampusLabel<BuildingDoc>;
-  floors: FloorGroup[];
-  connections: BuildingConnection[];
-}
