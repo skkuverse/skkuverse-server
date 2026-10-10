@@ -186,4 +186,4 @@ function enrichBuilding(rawDoc: BuildingRawDoc): EnrichedBuilding {
 }
 
 
-export { ELEVATOR_STATUS_MAP, ENRICH_VERSION, enrichBuilding, parseBarrierFree };
+export { ENRICH_VERSION, enrichBuilding };
