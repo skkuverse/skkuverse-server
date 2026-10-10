@@ -274,9 +274,9 @@ function migratedFunctionBlock() {
   };
 }
 
-// TypeScript rules a module meets once migrated (ADR 0010, D9). Every exported
-// function and public method declares its return type, so a controller states the
-// body it sends and a service the value its callers get.
+// TypeScript rules a module meets once migrated (ADR 0010, D9): every exported
+// function and public method declares its return type, and no `!` asserts a value
+// away; a regex group is read through captureGroups (src/shared/regex.util.ts).
 function migratedTypescriptBlock() {
   return {
     name: "migrated/typescript",
@@ -284,6 +284,7 @@ function migratedTypescriptBlock() {
     ignores: ["src/**/*.spec.ts"],
     rules: {
       "@typescript-eslint/explicit-module-boundary-types": "error",
+      "@typescript-eslint/no-non-null-assertion": "error",
     },
   };
 }
