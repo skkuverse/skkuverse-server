@@ -1,48 +1,68 @@
 /**
- * BuildingSearchService over a stubbed search repository and BuildingRepository.
- * The routes (__tests__/nest/building/building-routes.test.ts) pin the HTTP
- * shapes; this pins the join of rooms to their buildings and the meta.
+ * BuildingSearchService over in-memory repositories. What it guards: the
+ * keyword and campus reach both searches (ranking is the query's job), each
+ * room group is joined to its building's skkuId, and the meta carries row
+ * counts in the documented key order.
  */
+import { FakeBuildingRepository } from "../../../__tests__/helpers/fakes/building/building.repository.fake";
+import { FakeBuildingSearchRepository } from "../../../__tests__/helpers/fakes/building/building-search.repository.fake";
+import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import type { BuildingDoc, SpaceDoc } from "../building.document";
 import type { BuildingRepository } from "../building.repository";
 import type { BuildingSearchRepository } from "./building-search.repository";
 import { BuildingSearchService } from "./building-search.service";
 
-const searchRepo = { searchBuildings: jest.fn(), searchSpaces: jest.fn() };
-const buildings = { listBuildings: jest.fn() };
-const svc = new BuildingSearchService(
-  searchRepo as unknown as BuildingSearchRepository,
-  buildings as unknown as BuildingRepository,
-);
-
-const ranked = (items: unknown[]) => ({
-  items,
-  counts: { hssc: items.length, nsc: 0, total: items.length },
-  total: items.length,
-  truncated: false,
-});
+let search: FakeBuildingSearchRepository;
+let buildings: FakeBuildingRepository;
+let service: BuildingSearchService;
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  search = new FakeBuildingSearchRepository();
+  buildings = new FakeBuildingRepository();
+  service = new BuildingSearchService(asReal<BuildingSearchRepository>(search), asReal<BuildingRepository>(buildings));
 });
 
 describe("BuildingSearchService.search", () => {
+  it("searches both collections with the keyword and campus", async () => {
+    // Act
+    await service.search("27", "nsc", "ko");
+
+    // Assert
+    expect(search.searches).toEqual([
+      { collection: "buildings", keyword: "27", campus: "nsc" },
+      { collection: "spaces", keyword: "27", campus: "nsc" },
+    ]);
+  });
+
+  it("searches every campus when the campus is undefined, the schema's value for none", async () => {
+    // Act
+    await service.search("law", undefined, "ko");
+
+    // Assert
+    expect(search.searches.map((s) => s.campus)).toEqual([undefined, undefined]);
+  });
+
   it("joins each room group to its building's skkuId and reports row counts", async () => {
-    searchRepo.searchBuildings.mockResolvedValue(ranked([]));
-    searchRepo.searchSpaces.mockResolvedValue(
-      ranked([
+    // Arrange
+    search.spaces = {
+      items: [
         { spaceCd: "27101", buildNo: "227", campus: "nsc", name: { ko: "실", en: "" }, floor: { ko: "1층", en: "" } },
         { spaceCd: "27102", buildNo: "227", campus: "nsc", name: { ko: "실2", en: "" }, floor: { ko: "1층", en: "" } },
-      ]),
-    );
-    buildings.listBuildings.mockResolvedValue([{ _id: 22, buildNo: "227", campus: "nsc" }, { _id: 1, buildNo: null }]);
+      ] as SpaceDoc[],
+    };
+    buildings.buildings = [
+      { _id: 22, buildNo: "227", campus: "nsc" },
+      { _id: 1, buildNo: null, campus: "nsc" },
+    ] as BuildingDoc[];
 
-    const { data, meta } = await svc.search("27", "nsc", "ko");
+    // Act
+    const { data, meta } = await service.search("27", "nsc", "ko");
 
-    expect(searchRepo.searchSpaces).toHaveBeenCalledWith("27", "nsc");
+    // Assert
     expect(data.spaces).toEqual([
       expect.objectContaining({ skkuId: 22, buildNo: "227", displayNo: "27", items: expect.any(Array) }),
     ]);
-    expect(data.spaces[0]!.items.map((i) => i.name.en)).toEqual(["실", "실2"]);
+    expect(data.spaces[0]!.items.map((item) => item.name.en)).toEqual(["실", "실2"]);
     expect(meta).toMatchObject({ keyword: "27", buildingCount: 0, spaceCount: 2 });
     expect(Object.keys(meta)).toEqual(["keyword", "buildingCount", "spaceCount", "counts", "limits"]);
   });

@@ -100,7 +100,7 @@ export class BuildingRepository implements OnModuleInit {
     ]);
   }
 
-  async listBuildings(campus?: Campus | null): Promise<readonly BuildingDoc[]> {
+  async listBuildings(campus?: Campus): Promise<readonly BuildingDoc[]> {
     const buildings = await this.buildingsCache.get();
     if (!campus) return buildings;
     return buildings.filter((b) => b.campus === campus);
