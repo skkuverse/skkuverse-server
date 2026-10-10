@@ -544,3 +544,65 @@ describe("BuildingSyncService.run, phase 2 per building", () => {
     });
   });
 });
+
+/**
+ * Phase 1 enrichment on a raw building missing a field every production
+ * document has: enrichment throws, so phase 1 fails the run after the raw
+ * upsert and before anything is enriched, instead of writing blank fields.
+ */
+describe("BuildingSyncService.run, phase 1 enrichment", () => {
+  const RAW = {
+    _id: 1,
+    buildNo: "1",
+    campus: "hssc",
+    name: { ko: "건물 1", en: "Building 1" },
+    description: { ko: "설명", en: "About" },
+    location: { type: "Point", coordinates: [126.99, 37.58] },
+    image: { url: null, filename: null },
+    accessibility: { elevator: false, toilet: false },
+    skkuCreatedAt: null,
+    skkuUpdatedAt: null,
+  };
+
+  /** Answers the changed-building read with `doc`; every other raw read finds nothing. */
+  function rawReadReturns(doc: Record<string, unknown>): void {
+    (mockDb.raw.find as jest.Mock).mockImplementation((filter: { _id?: { $in?: unknown[] } }) => ({
+      toArray: jest.fn().mockResolvedValue(filter?._id?.$in ? [doc] : []),
+    }));
+  }
+
+  it("enriches a complete changed raw building and completes the run", async () => {
+    // Arrange
+    skkuApi();
+    rawReadReturns(RAW);
+
+    // Act
+    const run = syncBuildings();
+
+    // Assert
+    await expect(run).resolves.toBeUndefined();
+    const [ops] = mockDb.enriched.bulkWrite.mock.calls[0] as [unknown[]];
+    expect(ops).toHaveLength(1);
+  });
+
+  it.each(["name", "description", "accessibility"])(
+    "rejects naming phase 1 when a changed raw building has no %s",
+    async (field) => {
+      // Arrange
+      skkuApi();
+      const broken: Record<string, unknown> = { ...RAW };
+      delete broken[field];
+      rawReadReturns(broken);
+
+      // Act
+      const error = await failureOf(syncBuildings());
+
+      // Assert
+      expect(error.message).toBe("Building sync failed in phase 1 (buildList)");
+      expect(error.errors[0]).toBeInstanceOf(TypeError);
+      expect(mockDb.raw.bulkWrite).toHaveBeenCalledTimes(1);
+      expect(mockDb.enriched.bulkWrite).not.toHaveBeenCalled();
+      expect(calledModes()).not.toContain("buildInfo");
+    },
+  );
+});
