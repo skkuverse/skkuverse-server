@@ -159,31 +159,17 @@ export class BuildingSyncService {
     for (let i = 0; i < withBuildNo.length; i += BUILD_INFO_CONCURRENCY) {
       const batch = withBuildNo.slice(i, i + BUILD_INFO_CONCURRENCY);
       const outcomes = await Promise.allSettled(
-        batch.map(async (building) => {
-          const detail = await this.client.fetchBuildInfo(building);
-          await this.repository.setAttachments(building.skkuId, detail.attachments, syncStartedAt);
-          for (const space of detail.spaces) spaces.push(space);
-          processed++;
-        }),
+        batch.map((building) => this.syncOneBuildInfo(building, syncStartedAt)),
       );
 
       for (const [j, outcome] of outcomes.entries()) {
-        if (outcome.status !== "rejected") continue;
-        errors++;
-        const failed = batch[j]!;
-        // The reason is unknown (a rejection can be anything); the cast only
-        // types it for the log line.
-        const reason = outcome.reason as { message?: string } | null | undefined;
-        logger.warn(
-          {
-            event: "building.sync.buildinfo_failed",
-            skkuId: failed.skkuId,
-            buildNo: failed.doc.buildNo,
-            err: reason,
-          },
-          "Phase 2: buildInfo failed",
-        );
-        await this.repository.recordDetailError(failed.skkuId, reason?.message || "unknown");
+        if (outcome.status === "fulfilled") {
+          for (const space of outcome.value) spaces.push(space);
+          processed++;
+        } else {
+          errors++;
+          await this.recordBuildInfoFailure(batch[j]!, outcome.reason);
+        }
       }
     }
 
@@ -200,6 +186,30 @@ export class BuildingSyncService {
         "Phase 2: buildInfo spaces upserted",
       );
     }
+  }
+
+  /** One building's buildInfo: its photos written to both layers, its spaces returned. */
+  private async syncOneBuildInfo(building: ListedBuildingWithBuildNo, syncStartedAt: Date): Promise<SyncedSpace[]> {
+    const detail = await this.client.fetchBuildInfo(building);
+    await this.repository.setAttachments(building.skkuId, detail.attachments, syncStartedAt);
+    return detail.spaces;
+  }
+
+  /** Logs a building whose buildInfo failed and notes the failure on it. */
+  private async recordBuildInfoFailure(building: ListedBuildingWithBuildNo, rejection: unknown): Promise<void> {
+    // The reason is unknown (a rejection can be anything); the cast only
+    // types it for the log line.
+    const reason = rejection as { message?: string } | null | undefined;
+    logger.warn(
+      {
+        event: "building.sync.buildinfo_failed",
+        skkuId: building.skkuId,
+        buildNo: building.doc.buildNo,
+        err: reason,
+      },
+      "Phase 2: buildInfo failed",
+    );
+    await this.repository.recordDetailError(building.skkuId, reason?.message || "unknown");
   }
 
   /** Phase 3: spaceList → spaces upsert + delete of the spaces SKKU no longer lists. */
