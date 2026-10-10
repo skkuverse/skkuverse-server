@@ -1,8 +1,10 @@
 import { Controller, Get, Query } from "@nestjs/common";
+import { CacheControl } from "../../http/cache-control.decorator";
 import { Lang } from "../../http/lang.decorator";
 import { withMeta } from "../../http/response.interceptor";
 import { ZodValidationPipe } from "../../http/zod-validation.pipe";
 import type { SupportedLang } from "../../infra/types";
+import { BUILDING_CACHE_CONTROL } from "../building.rules";
 import { buildingSearchQuery, type BuildingSearchQuery } from "./building-search.schema";
 import { BuildingSearchService } from "./building-search.service";
 
@@ -12,6 +14,7 @@ export class BuildingSearchController {
   constructor(private readonly buildingSearch: BuildingSearchService) {}
 
   @Get("search")
+  @CacheControl(BUILDING_CACHE_CONTROL)
   async search(
     @Query(
       new ZodValidationPipe(buildingSearchQuery, "INVALID_PARAMS", {
