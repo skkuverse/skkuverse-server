@@ -10,6 +10,9 @@
  *     PascalCase(name) + PascalCase(role): `notice-dispatch.repository.ts`
  *     exports `NoticeDispatchRepository`. A `.error.ts` file may export several
  *     classes; each starts with PascalCase(name) and ends with `Error`.
+ *   - exported types: a class-role file exports no interface or type alias.
+ *     Exported types live in `.types`, `.document` or `.schema`; a type used
+ *     inside one file stays there, unexported.
  */
 import ts from "typescript";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
@@ -127,6 +130,31 @@ export function classNameViolations(file: string, source: string): string[] {
     .map((name) => `${file}: ${name}`);
 }
 
+/** Exported interfaces and type aliases, and the names in a type-only `export { … }`. */
+function exportedTypes(source: string): string[] {
+  const sf = ts.createSourceFile("x.ts", source, ts.ScriptTarget.ES2022, false);
+  return sf.statements.flatMap((s) => {
+    if (
+      (ts.isInterfaceDeclaration(s) || ts.isTypeAliasDeclaration(s)) &&
+      s.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
+    ) {
+      return [s.name.text];
+    }
+    if (ts.isExportDeclaration(s) && s.exportClause && ts.isNamedExports(s.exportClause)) {
+      return s.exportClause.elements.filter((e) => s.isTypeOnly || e.isTypeOnly).map((e) => e.name.text);
+    }
+    return [];
+  });
+}
+
+/** `<file>: <type>` for each type a class-role file exports. */
+export function exportedTypeViolations(file: string, source: string): string[] {
+  if (EXEMPT.has(file) || file.endsWith(".spec.ts")) return [];
+  const { parts } = parse(file);
+  if (parts.length !== 2 || !CLASS_ROLES.has(parts[1]!)) return [];
+  return exportedTypes(source).map((name) => `${file}: ${name}`);
+}
+
 describe("naming rules apply as specified", () => {
   it.each([
     "src/building/building.service.ts",
@@ -183,6 +211,22 @@ describe("naming rules apply as specified", () => {
     ).toEqual(["src/bus/eta/directions.error.ts: Other"]);
     expect(classNameViolations("src/building/building.types.ts", "export class Anything {}")).toEqual([]);
   });
+
+  it("keeps exported types out of class-role files", () => {
+    const service = "src/building/building.service.ts";
+    expect(
+      exportedTypeViolations(
+        service,
+        "export interface A {}\nexport type B = string;\ninterface Local {}\nexport class BuildingService {}",
+      ),
+    ).toEqual([`${service}: A`, `${service}: B`]);
+    expect(
+      exportedTypeViolations(service, 'type C = 1;\nexport { type C };\nexport type { D } from "./d";'),
+    ).toEqual([`${service}: C`, `${service}: D`]);
+    expect(exportedTypeViolations("src/building/building.types.ts", "export interface A {}")).toEqual([]);
+    expect(exportedTypeViolations("src/building/building.rules.ts", "export type { A };")).toEqual([]);
+    expect(exportedTypeViolations("src/building/building.service.spec.ts", "export interface A {}")).toEqual([]);
+  });
 });
 
 describe("src/ file and class names", () => {
@@ -200,6 +244,13 @@ describe("src/ file and class names", () => {
     expectAllowlisted(
       "class-name",
       files.flatMap((f) => classNameViolations(f, readSource(f))),
+    );
+  });
+
+  it("export no types from a class-role file", () => {
+    expectAllowlisted(
+      "exported-types",
+      files.flatMap((f) => exportedTypeViolations(f, readSource(f))),
     );
   });
 });
