@@ -404,4 +404,143 @@ describe("BuildingSyncService.run, phase 2 per building", () => {
     // not a refactor.
     expect(mostInFlight).toBe(5);
   });
+
+  /**
+   * More than half of the attempted buildings failing means SKKU is broken,
+   * not one building, so phase 2 fails the run (shouldFailBuildInfoPhase). It
+   * still records every failure, upserts the rooms it got and writes its
+   * summary first, and phase 3 and the cache clear still run.
+   */
+  describe("when more than half of the buildInfo calls fail", () => {
+    /** Rejects buildInfo for the given buildNos, each with its own error. */
+    function failBuildInfo(failing: (buildNo: string) => boolean): Map<string, Error> {
+      const errors = new Map<string, Error>();
+      campusMap({
+        buildInfo: (buildNo) => {
+          if (!failing(buildNo)) return roomsOf(buildNo);
+          const error = new Error(`buildInfo ${buildNo} failed`);
+          errors.set(buildNo, error);
+          return Promise.reject(error);
+        },
+      });
+      return errors;
+    }
+    const summary = () => infoFields("building.sync.buildinfo_upserted");
+
+    it("rejects naming phase 2 after recording every failure, and still runs phase 3", async () => {
+      // Arrange
+      const errors = failBuildInfo(() => true);
+
+      // Act
+      const error = await failureOf(syncBuildings());
+
+      // Assert
+      expect(error.message).toBe("Building sync failed in phase 2 (buildInfo)");
+      expect(error.errors).toHaveLength(1);
+      const phaseError = error.errors[0] as Error;
+      expect(phaseError.message).toBe("buildInfo failed for 60 of 60 buildings");
+      expect(phaseError.cause).toBe(errors.get("101"));
+      expect(detailErrorsOn(mockDb.raw)).toHaveLength(60);
+      expect(detailErrorsOn(mockDb.enriched)).toHaveLength(60);
+      expect(
+        mockLogger.warn.mock.calls.filter(([fields]) => fields.event === "building.sync.buildinfo_failed"),
+      ).toHaveLength(60);
+      expect(summary()).toEqual({
+        event: "building.sync.buildinfo_upserted",
+        matched: 0,
+        upserted: 0,
+        processed: 0,
+        errors: 60,
+      });
+      expect(calledModes()).toContain("spaceList");
+      expect(mockDb.spaces.deleteMany).toHaveBeenCalledTimes(1);
+      expect(mockDb.clearCache).toHaveBeenCalledTimes(1);
+      expect(infoFields("building.sync.completed")).toBeUndefined();
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it("upserts the rooms of the buildings that succeeded before rejecting at 31 of 60", async () => {
+      // Arrange
+      failBuildInfo((buildNo) => buildNo.startsWith("1") || buildNo === "201");
+
+      // Act
+      const error = await failureOf(syncBuildings());
+
+      // Assert
+      expect((error.errors[0] as Error).message).toBe("buildInfo failed for 31 of 60 buildings");
+      const rooms = buildInfoRooms();
+      expect(rooms).toHaveLength(29);
+      expect(rooms).not.toContain("201-101");
+      expect(rooms).toContain("202-101");
+      expect(summary()).toMatchObject({ processed: 29, errors: 31 });
+    });
+
+    it("resolves when exactly half fail", async () => {
+      // Arrange
+      failBuildInfo((buildNo) => buildNo.startsWith("1"));
+
+      // Act
+      const run = syncBuildings();
+
+      // Assert
+      await expect(run).resolves.toBeUndefined();
+      expect(summary()).toMatchObject({ processed: 30, errors: 30 });
+      expect(infoFields("building.sync.completed")).toBeDefined();
+    });
+
+    it("names both phases, phase 2 first, when phase 3 fails too", async () => {
+      // Arrange
+      const spaceListError = new Error("socket hang up");
+      failBuildInfo(() => true);
+      const answer = mockGet.getMockImplementation()!;
+      mockGet.mockImplementation((url: string, opts: { params: { mode: Mode } }) =>
+        opts.params.mode === "spaceList" ? Promise.reject(spaceListError) : answer(url, opts),
+      );
+
+      // Act
+      const error = await failureOf(syncBuildings());
+
+      // Assert
+      expect(error.message).toBe("Building sync failed in phase 2 (buildInfo) and phase 3 (spaceList)");
+      expect((error.errors[0] as Error).message).toBe("buildInfo failed for 60 of 60 buildings");
+      expect(error.errors[1]).toBe(spaceListError);
+      expect(mockDb.spaces.deleteMany).not.toHaveBeenCalled();
+      expect(mockDb.clearCache).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("phase 2's summary log", () => {
+    it("is written on a run that found no rooms, with nothing upserted", async () => {
+      // Arrange
+      campusMap({ buildInfo: () => Promise.resolve({ data: { attachItem: [], floorItem: [] } }) });
+
+      // Act
+      await syncBuildings();
+
+      // Assert
+      expect(infoFields("building.sync.buildinfo_upserted")).toEqual({
+        event: "building.sync.buildinfo_upserted",
+        matched: 0,
+        upserted: 0,
+        processed: 60,
+        errors: 0,
+      });
+      expect(mockDb.spaces.bulkWrite).toHaveBeenCalledTimes(1);
+    });
+
+    it("is skipped when the rooms' upsert throws, and phase 2 fails", async () => {
+      // Arrange
+      campusMap();
+      const writeError = new Error("bulk write failed");
+      mockDb.spaces.bulkWrite.mockRejectedValueOnce(writeError);
+
+      // Act
+      const error = await failureOf(syncBuildings());
+
+      // Assert
+      expect(error.message).toBe("Building sync failed in phase 2 (buildInfo)");
+      expect(error.errors).toEqual([writeError]);
+      expect(infoFields("building.sync.buildinfo_upserted")).toBeUndefined();
+    });
+  });
 });
