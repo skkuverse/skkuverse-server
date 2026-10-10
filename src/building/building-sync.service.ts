@@ -10,7 +10,7 @@ import {
 } from "./building-sync.rules";
 import { BuildingSyncRepository } from "./building-sync.repository";
 import { BuildingClient } from "./building.client";
-import { ENRICH_VERSION, enrichBuilding } from "./building.mapper";
+import { ENRICH_VERSION, enrichBuilding } from "./building-sync.mapper";
 import { BuildingRepository } from "./building.repository";
 import type { Campus, ListedBuilding, SyncedSpace } from "./building.types";
 
