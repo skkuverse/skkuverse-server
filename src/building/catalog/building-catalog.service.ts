@@ -16,7 +16,6 @@ export class BuildingCatalogService {
     private readonly buildings: BuildingRepository,
   ) {}
 
-  /** GET /building/list: every building, or one campus's, each with its campus label. */
   async list(
     campus: Campus | null,
     lang: SupportedLang,
@@ -25,7 +24,6 @@ export class BuildingCatalogService {
     return { buildings: buildings.map((b) => withCampusLabel(b, lang)) };
   }
 
-  /** GET /building/:skkuId: the building, its floors and connections; null if there is none. */
   async detail(skkuId: SkkuId, lang: SupportedLang): Promise<BuildingDetail | null> {
     const building = await this.repository.findBuildingBySkkuId(skkuId);
     if (!building) return null;
@@ -40,7 +38,6 @@ export class BuildingCatalogService {
     };
   }
 
-  /** A building's connections, each labelled with the building at its far end. */
   private async listConnections(skkuId: SkkuId): Promise<BuildingConnection[]> {
     const connections = await this.repository.listConnectionsBySkkuId(skkuId);
     if (!connections.length) return [];

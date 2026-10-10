@@ -4,14 +4,10 @@ import type { SkkuId } from "../building.types";
 
 const INVALID_ID_MESSAGE = "skkuId must be a positive integer";
 
-/** GET /building/list */
 export const buildingListQuery = z.object({ campus: campusFilter });
 export type BuildingListQuery = z.output<typeof buildingListQuery>;
 
-/**
- * GET /building/:skkuId, read with parseInt as it always has been: "12abc" is
- * 12, and an id too long for a double is Infinity, which finds nothing (404).
- */
+/** parseInt is the route's contract: "12abc" reads as 12, and an id too long for a double finds nothing (404). */
 export const skkuIdParam = z
   .string()
   .transform((s) => parseInt(s, 10))

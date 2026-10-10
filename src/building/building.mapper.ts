@@ -10,7 +10,6 @@ function withCampusLabel<T extends { campus: Campus }>(item: T, lang: SupportedL
   return { ...item, campusLabel: campusLabel(item.campus, lang) };
 }
 
-/** An empty English side shows the Korean one. */
 function withEnFallback<T extends Partial<BilingualText> | undefined>(text: T): T {
   if (text && !text.en && text.ko) return { ...text, en: text.ko };
   return text;
