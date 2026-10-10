@@ -9,10 +9,13 @@
  *     file.
  *   - docs: a `src/...` path cited in docs/, CLAUDE.md or .claude/rules/ that
  *     no longer exists sends a reader, or an agent, to code that is gone.
- *     docs/archive/ is exempt: it is a snapshot of how things were.
+ *     docs/archive/ is exempt: it is a snapshot of how things were. The other
+ *     way round, a comment in src/ that cites a `docs/...md` path points a
+ *     reader at a rationale (ADR 0010, D10), so that file must exist.
  */
 import fs from "fs";
 import path from "path";
+import { commentsOf } from "../helpers/architecture/comments";
 import { expectAllowlisted, ROOT } from "../helpers/architecture/ratchet";
 import { filesUnder, readSource, sourceFiles } from "../helpers/architecture/tree";
 
@@ -57,6 +60,11 @@ export function citedPaths(line: string): string[] {
     out.push(...expandBraces(raw));
   }
   return out;
+}
+
+/** The `docs/...md` paths a comment cites, anchors dropped. */
+export function citedDocs(comment: string): string[] {
+  return [...comment.matchAll(/(?:^|[^\w/.-])(docs\/[\w./-]+\.md)/g)].map((m) => m[1]!);
 }
 
 function docFiles(): string[] {
@@ -106,6 +114,14 @@ describe("path rules apply as specified", () => {
   ])("cites %j as %j", (line, expected) => {
     expect(citedPaths(line)).toEqual(expected);
   });
+
+  it.each([
+    ["// Why: docs/decisions/0006-building-search-relevance-ranking.md.", ["docs/decisions/0006-building-search-relevance-ranking.md"]],
+    ["/** See docs/explanation/map-architecture.md#campus-shapes */", ["docs/explanation/map-architecture.md"]],
+    ["// apps/web/docs/x.md and map-architecture.md", []],
+  ])("a comment %j cites %j", (comment, expected) => {
+    expect(citedDocs(comment)).toEqual(expected);
+  });
 });
 
 describe("JSON assets", () => {
@@ -147,5 +163,15 @@ describe("docs", () => {
         .map((p) => `${doc}: ${p}`),
     );
     expectAllowlisted("docs-paths", stale);
+  });
+
+  it("are cited from src/ comments only by paths that exist", () => {
+    const stale = sourceFiles().flatMap((file) =>
+      commentsOf(file, readSource(file))
+        .flatMap((c) => citedDocs(c.raw))
+        .filter((doc) => !fs.existsSync(path.join(ROOT, doc)))
+        .map((doc) => `${file}: ${doc}`),
+    );
+    expectAllowlisted("src-docs-paths", stale);
   });
 });

@@ -78,7 +78,7 @@ const config = {
 
     // AI overview for a search (GET /notices/overview). The ai service is
     // skkuverse-ai on the shared `skkuverse` docker network; its contract is
-    // owned there (docs/notice-overview-api.md). Strict: no default — a missing
+    // owned there (skkuverse-ai/docs/notice-overview-api.md). Strict: no default — a missing
     // URL must fail boot, not silently disable the feature.
     overview: {
       aiApiUrl: process.env.AI_API_URL,
