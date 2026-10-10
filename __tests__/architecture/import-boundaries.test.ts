@@ -58,6 +58,8 @@ describe("import boundary blocks apply as specified", () => {
     expect(lint(rules, "src/building/x.controller.ts", 'import { getClient } from "../infra/db";')).toHaveLength(1);
     expect(lint(rules, "src/infra/x.ts", 'import { getClient } from "./db";')).toHaveLength(1);
     expect(lint(rules, "src/health/x.ts", 'import { ping, HOT_READ_MAX_TIME_MS } from "../infra/db";')).toEqual([]);
+    expect(lint(rules, "src/building/x.service.ts", 'import { mongoCollection } from "../infra/mongo";')).toHaveLength(1);
+    expect(lint(rules, "src/building/x.service.ts", 'import { ensureIndexesAtBoot } from "../infra/mongo";')).toEqual([]);
   });
 
   it("only a repository imports a .query, and a repository imports no mapper, service, controller, poller or client", () => {
@@ -167,7 +169,9 @@ describe("import boundary blocks apply as specified", () => {
 
 describe("files listed in a boundary block's ignores", () => {
   const listed = blocks.flatMap((b) =>
-    (b.ignores ?? []).filter((p) => !/[*{}]/.test(p) && p !== "src/infra/db.ts").map((file) => ({ block: b, file })),
+    (b.ignores ?? [])
+      .filter((p) => !/[*{}]/.test(p) && p !== "src/infra/db.ts" && p !== "src/infra/mongo.ts")
+      .map((file) => ({ block: b, file })),
   );
 
   it("exist", () => {

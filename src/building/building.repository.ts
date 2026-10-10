@@ -1,9 +1,9 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import type { Collection, Document } from "mongodb";
+import type { Collection } from "mongodb";
 import config from "../infra/config";
 import { createCachedLoader } from "../infra/cached-loader";
-import { getClient, HOT_READ_MAX_TIME_MS } from "../infra/db";
-import logger from "../infra/logger";
+import { HOT_READ_MAX_TIME_MS } from "../infra/db";
+import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
 import {
   buildingSearchPipeline,
   spaceSearchPipeline,
@@ -28,11 +28,6 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
  * measured, so it gets more room than a hot point read.
  */
 const SEARCH_MAX_TIME_MS = 5000;
-
-/** A collection of the building DB. Its name is required config, so it is set. */
-function collection<T extends Document>(name: string): Collection<T> {
-  return getClient().db(config.building.dbName!).collection<T>(name);
-}
 
 /**
  * Reads of the building DB: the building list (cached), one building, its
@@ -82,14 +77,8 @@ export class BuildingRepository implements OnModuleInit {
         .toArray(),
   });
 
-  /** Index setup never fails the boot: it warns and the next boot retries. */
-  async onModuleInit(): Promise<void> {
-    try {
-      await this.ensureIndexes();
-      logger.info({ event: "building.indexes.ensured" }, "Indexes ensured");
-    } catch (err) {
-      logger.warn({ event: "building.indexes.failed", err }, "Index setup failed");
-    }
+  onModuleInit(): Promise<void> {
+    return ensureIndexesAtBoot("building", () => this.ensureIndexes());
   }
 
   /**
@@ -112,7 +101,7 @@ export class BuildingRepository implements OnModuleInit {
    */
   async ensureIndexes(): Promise<void> {
     const buildings = this.buildings();
-    const buildingsRaw = collection<BuildingRawDoc>(config.building.collections.buildingsRaw);
+    const buildingsRaw = mongoCollection<BuildingRawDoc>(config.building.dbName!, config.building.collections.buildingsRaw);
     const spaces = this.spaces();
     const connections = this.connections();
     const campusShapes = this.campusShapes();
@@ -237,18 +226,18 @@ export class BuildingRepository implements OnModuleInit {
   }
 
   private buildings(): Collection<BuildingDoc> {
-    return collection<BuildingDoc>(config.building.collections.buildings);
+    return mongoCollection<BuildingDoc>(config.building.dbName!, config.building.collections.buildings);
   }
 
   private spaces(): Collection<SpaceDoc> {
-    return collection<SpaceDoc>(config.building.collections.spaces);
+    return mongoCollection<SpaceDoc>(config.building.dbName!, config.building.collections.spaces);
   }
 
   private connections(): Collection<ConnectionDoc> {
-    return collection<ConnectionDoc>(config.building.collections.connections);
+    return mongoCollection<ConnectionDoc>(config.building.dbName!, config.building.collections.connections);
   }
 
   private campusShapes(): Collection<CampusShapeDoc> {
-    return collection<CampusShapeDoc>(config.building.collections.campusShapes);
+    return mongoCollection<CampusShapeDoc>(config.building.dbName!, config.building.collections.campusShapes);
   }
 }

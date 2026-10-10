@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import type { AnyBulkWriteOperation, BulkWriteResult, Collection, Document } from "mongodb";
+import type { AnyBulkWriteOperation, BulkWriteResult, Collection } from "mongodb";
 import config from "../infra/config";
-import { getClient } from "../infra/db";
 import logger from "../infra/logger";
+import { mongoCollection } from "../infra/mongo";
 import type {
   BuildingAttachment,
   BuildingDoc,
@@ -19,10 +19,6 @@ import type { SkkuId } from "./building.types";
  * does not.
  */
 const SYNC_READ_MAX_TIME_MS = 30_000;
-
-function collection<T extends Document>(name: string): Collection<T> {
-  return getClient().db(config.building.dbName!).collection<T>(name);
-}
 
 /**
  * The building sync's reads and writes: the raw layer (buildings_raw), the
@@ -131,14 +127,14 @@ export class BuildingSyncRepository {
   }
 
   private raw(): Collection<BuildingRawDoc> {
-    return collection<BuildingRawDoc>(config.building.collections.buildingsRaw);
+    return mongoCollection<BuildingRawDoc>(config.building.dbName!, config.building.collections.buildingsRaw);
   }
 
   private enriched(): Collection<BuildingDoc> {
-    return collection<BuildingDoc>(config.building.collections.buildings);
+    return mongoCollection<BuildingDoc>(config.building.dbName!, config.building.collections.buildings);
   }
 
   private spaces(): Collection<SpaceDoc> {
-    return collection<SpaceDoc>(config.building.collections.spaces);
+    return mongoCollection<SpaceDoc>(config.building.dbName!, config.building.collections.spaces);
   }
 }
