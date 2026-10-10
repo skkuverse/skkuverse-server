@@ -60,10 +60,10 @@ export class BuildingSearchRepository {
   }
 
   private buildings(): Collection<BuildingDoc> {
-    return mongoCollection<BuildingDoc>(config.building.dbName!, config.building.collections.buildings);
+    return mongoCollection<BuildingDoc>(config.building.dbName, config.building.collections.buildings);
   }
 
   private spaces(): Collection<SpaceDoc> {
-    return mongoCollection<SpaceDoc>(config.building.dbName!, config.building.collections.spaces);
+    return mongoCollection<SpaceDoc>(config.building.dbName, config.building.collections.spaces);
   }
 }
