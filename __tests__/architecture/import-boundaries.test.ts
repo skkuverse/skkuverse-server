@@ -46,6 +46,7 @@ describe("import boundary blocks apply as specified", () => {
         "boundaries/feature/ui/depth-2",
         "boundaries/shared",
         "boundaries/infra",
+        "boundaries/pure",
       ]),
     );
   });
@@ -103,6 +104,37 @@ describe("import boundary blocks apply as specified", () => {
     expect(lint(block("boundaries/shared").rules!, "src/shared/x.util.ts", 'import { a } from "../infra/a";')).toEqual([]);
     expect(lint(block("boundaries/infra").rules!, "src/infra/x.ts", 'import { a } from "../common/a";')).toHaveLength(1);
     expect(lint(block("boundaries/infra").rules!, "src/infra/x.ts", 'import { a } from "./logger";')).toEqual([]);
+  });
+
+  it("a .rules or .mapper file does no IO and does not read the clock", () => {
+    const rules = block("boundaries/pure").rules!;
+    const file = "src/building/x.rules.ts";
+    for (const source of [
+      'import { getClient } from "../infra/db";',
+      'import logger from "../infra/logger";',
+      'import { config } from "../infra/config";',
+      'import { BuildingRepository } from "./building.repository";',
+      'import { BuildingClient } from "./building.client";',
+      'import { AppError } from "../common/zod-validation.pipe";',
+      'import axios from "axios";',
+      'import { Injectable } from "@nestjs/common";',
+      "export const now = () => Date.now();",
+      "export const today = () => new Date();",
+    ]) {
+      expect(lint(rules, file, source)).toHaveLength(1);
+    }
+    for (const source of [
+      'import { t } from "../infra/i18n";',
+      'import type { SupportedLang } from "../infra/types";',
+      'import { AppError } from "../common/app.error";',
+      'import type { Filter } from "mongodb";',
+      'import { escapeRegex } from "../shared/regex.util";',
+      'import { toDisplayNo } from "./building.rules";',
+      'import type { BuildingDoc } from "./building.document";',
+      "export const at = (ms: number) => new Date(ms);",
+    ]) {
+      expect(lint(rules, file, source)).toEqual([]);
+    }
   });
 });
 

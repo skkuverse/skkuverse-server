@@ -43,6 +43,70 @@ const LOG_CALL =
   ":matches(CallExpression[callee.object.name='logger'], CallExpression[callee.object.property.name='log'])" +
   "[callee.property.name=/^(trace|debug|info|warn|error|fatal)$/]";
 
+// Log line conventions (docs/reference/logging.md). A line is found by its
+// `event`, not its wording, and a stack survives only as an Error object:
+//   logger.warn({ event: "bus.hssc.fetch_failed", err }, "HSSC fetch failed")
+// Shared because a later block that sets no-restricted-syntax replaces these
+// for its files.
+const LOG_SYNTAX = [
+  {
+    selector: `${LOG_CALL}[arguments.0.type!='ObjectExpression']`,
+    message:
+      "Log calls take a fields object first: logger.info({ event: \"domain.subject.verb\", ... }, \"message\").",
+  },
+  {
+    selector: `${LOG_CALL} > ObjectExpression.arguments:first-child:not(:has(> Property[key.name='event']))`,
+    message: "Log fields need an `event` key (domain.subject.verb) — it is what a query or alert matches on.",
+  },
+  {
+    selector: `${LOG_CALL} > TemplateLiteral[expressions.length>0]`,
+    message: "Keep the message static and put the values in fields, so the line can be grouped and queried.",
+  },
+  {
+    selector: `${LOG_CALL} > ObjectExpression > Property[key.name='err'][value.type!='Identifier']`,
+    message:
+      "Pass the Error itself as `err` (`{ err }`), not its message — the serializer keeps the type and stack and strips request config.",
+  },
+];
+
+// `.rules` and `.mapper` files are pure (ADR 0010, D1 and D4): no IO, and
+// the clock is passed in. Type imports stay allowed through the patterns
+// below because none of them names a module a pure file needs types from:
+// class-role files export no types, and Mongo types come from "mongodb".
+const PURE_IMPORT_PATTERNS = [
+  {
+    regex: "\\.(?:module|controller|service|repository|client|poller)$",
+    message: "A pure file does no IO: take the data as an argument; the service calls the repository or client.",
+  },
+  {
+    regex: "(?:^|/)infra/(?!(?:i18n|types)$)",
+    message: "A pure file reaches infra/ only for i18n lookups and types; take anything else as an argument.",
+  },
+  {
+    regex: "(?:^|/)common/(?!app\\.error$)",
+    message: "A pure file reaches common/ only for AppError; the HTTP pipeline stays out of rules and mappers.",
+  },
+  {
+    regex: "(?:^|/)scheduling/",
+    message: "A pure file does not schedule work; a poller registers it.",
+  },
+  {
+    regex: "^(?:axios|fs|node:fs|firebase-admin)$|^@(?:nestjs|sentry)/",
+    message: "A pure file does no IO and knows no framework: move the call to a client, repository or service.",
+  },
+];
+
+const CLOCK_SYNTAX = [
+  {
+    selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+    message: "A pure file does not read the clock: take `now` as an argument.",
+  },
+  {
+    selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+    message: "A pure file does not read the clock: take `now` as an argument.",
+  },
+];
+
 // ── Import boundaries (docs/decisions/0010-server-architecture.md, D3 and D9) ──
 //
 // Each boundary block is named `boundaries/...`. Its `ignores` hold the files
@@ -167,33 +231,11 @@ module.exports = [
     },
   },
   {
-    // Log line conventions (docs/reference/logging.md). A line is found by its
-    // `event`, not its wording, and a stack survives only as an Error object:
-    //   logger.warn({ event: "bus.hssc.fetch_failed", err }, "HSSC fetch failed")
+    // Log line conventions (LOG_SYNTAX above).
     files: ["src/**/*.ts"],
     rules: {
       "no-console": "error",
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: `${LOG_CALL}[arguments.0.type!='ObjectExpression']`,
-          message:
-            "Log calls take a fields object first: logger.info({ event: \"domain.subject.verb\", ... }, \"message\").",
-        },
-        {
-          selector: `${LOG_CALL} > ObjectExpression.arguments:first-child:not(:has(> Property[key.name='event']))`,
-          message: "Log fields need an `event` key (domain.subject.verb) — it is what a query or alert matches on.",
-        },
-        {
-          selector: `${LOG_CALL} > TemplateLiteral[expressions.length>0]`,
-          message: "Keep the message static and put the values in fields, so the line can be grouped and queried.",
-        },
-        {
-          selector: `${LOG_CALL} > ObjectExpression > Property[key.name='err'][value.type!='Identifier']`,
-          message:
-            "Pass the Error itself as `err` (`{ err }`), not its message — the serializer keeps the type and stack and strips request config.",
-        },
-      ],
+      "no-restricted-syntax": ["error", ...LOG_SYNTAX],
     },
   },
   {
@@ -216,6 +258,19 @@ module.exports = [
     ignores: ["src/**/*.repository.ts", "src/**/*.spec.ts", "src/infra/db.ts", ...VIOLATORS.getClient],
     rules: {
       "no-restricted-imports": ["error", { patterns: [GET_CLIENT_PATTERN] }],
+    },
+  },
+  {
+    // This block replaces boundaries/get-client's options for these files; its
+    // infra/ pattern covers infra/db. It uses the core rule because the feature
+    // blocks own @typescript-eslint/no-restricted-imports, and a later block
+    // replaces a rule's options rather than merging them. For the same reason
+    // it carries the log selectors along with the clock ones.
+    name: "boundaries/pure",
+    files: ["src/**/*.rules.ts", "src/**/*.mapper.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: PURE_IMPORT_PATTERNS }],
+      "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...CLOCK_SYNTAX],
     },
   },
   ...featureBoundaryBlocks(),
