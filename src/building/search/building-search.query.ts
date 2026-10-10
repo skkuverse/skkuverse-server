@@ -32,8 +32,8 @@ function pathMatches(path: string, regex: string): Document {
 }
 
 /** Case-insensitive rather than uppercased: one production spaceCd is lowercase (712115b). */
-function tiersToScoreExpr(
-  tiers: readonly RelevanceTier[],
+function tiersToScoreExpr<TDoc>(
+  tiers: readonly RelevanceTier<TDoc>[],
   keyword: string,
 ): Document {
   const escaped = escapeRegex(keyword);
@@ -103,9 +103,9 @@ function toRankedResult<T>(facets: readonly RankedFacet<T>[]): RankedSearchResul
   };
 }
 
-interface RankedSearchSpec {
+interface RankedSearchSpec<TDoc> {
   keywordFilter: (keyword: string) => Document;
-  tiers: readonly RelevanceTier[];
+  tiers: readonly RelevanceTier<TDoc>[];
   strongMinScore: number;
   strongLimit: number;
   weakLimit: number;
@@ -115,7 +115,7 @@ interface RankedSearchSpec {
 }
 
 /** spaceCd breaks ties: the sync's weekly delete and re-upsert reorders the documents on disk. */
-const SPACE_SEARCH: RankedSearchSpec = {
+const SPACE_SEARCH: RankedSearchSpec<SpaceDoc> = {
   keywordFilter: spaceKeywordFilter,
   tiers: SPACE_TIERS,
   strongMinScore: SPACE_STRONG_MIN_SCORE,
@@ -126,7 +126,7 @@ const SPACE_SEARCH: RankedSearchSpec = {
 };
 
 /** _id breaks ties: SKKU's integer id, which the sync upserts by and never deletes. */
-const BUILDING_SEARCH: RankedSearchSpec = {
+const BUILDING_SEARCH: RankedSearchSpec<BuildingDoc> = {
   keywordFilter: buildingKeywordFilter,
   tiers: BUILDING_TIERS,
   strongMinScore: BUILDING_STRONG_MIN_SCORE,
@@ -137,7 +137,7 @@ const BUILDING_SEARCH: RankedSearchSpec = {
 };
 
 /** One $facet returns the rows and the counts, so the counts cannot describe another predicate. */
-function rankedSearchPipeline(search: RankedSearchSpec, keyword: string, campus?: Campus | null): Document[] {
+function rankedSearchPipeline<TDoc>(search: RankedSearchSpec<TDoc>, keyword: string, campus?: Campus | null): Document[] {
   const campusStage: Document[] = campus ? [{ $match: { campus } }] : [];
   const projectStage = { $project: { ...search.projection } };
   const sortStage = { $sort: { _score: -1, ...search.tiebreak } };
