@@ -7,11 +7,12 @@ import type { BuildingConnection, FloorGroup } from "./building-catalog.types";
 function groupByFloor(spaces: readonly FloorSpaceDoc[]): FloorGroup[] {
   const floorGroupByFloorKo = new Map<string, FloorGroup>();
   for (const space of spaces) {
-    const floorKo = space.floor.ko;
-    if (!floorGroupByFloorKo.has(floorKo)) {
-      floorGroupByFloorKo.set(floorKo, { floor: space.floor, spaces: [] });
+    let floorGroup = floorGroupByFloorKo.get(space.floor.ko);
+    if (!floorGroup) {
+      floorGroup = { floor: space.floor, spaces: [] };
+      floorGroupByFloorKo.set(space.floor.ko, floorGroup);
     }
-    floorGroupByFloorKo.get(floorKo)!.spaces.push({
+    floorGroup.spaces.push({
       spaceCd: space.spaceCd,
       name: space.name,
       conspaceCd: space.conspaceCd,
