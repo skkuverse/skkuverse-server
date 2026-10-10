@@ -143,6 +143,12 @@ const GET_CLIENT_PATTERN = {
   message: "Only a *.repository.ts reaches Mongo: add a named query to the module's repository.",
 };
 
+const MONGO_COLLECTION_PATTERN = {
+  regex: "(?:^|/)infra/mongo$",
+  importNames: ["mongoCollection"],
+  message: "Only a *.repository.ts reaches Mongo: add a named query to the module's repository.",
+};
+
 const VIOLATORS = {
   // Rules and mappers that build Mongo syntax (ADR 0010, D2).
   pure: ["src/building/building-search.rules.ts", "src/building/building-sync.mapper.ts"],
@@ -276,9 +282,18 @@ module.exports = [
     // a later block replaces a rule's options rather than merging them.
     name: "boundaries/get-client",
     files: ["src/**/*.ts"],
-    ignores: ["src/**/*.repository.ts", "src/**/*.spec.ts", "src/infra/db.ts", ...VIOLATORS.getClient],
+    ignores: [
+      "src/**/*.repository.ts",
+      "src/**/*.spec.ts",
+      "src/infra/db.ts",
+      "src/infra/mongo.ts",
+      ...VIOLATORS.getClient,
+    ],
     rules: {
-      "no-restricted-imports": ["error", { patterns: [GET_CLIENT_PATTERN, QUERY_IMPORT_PATTERN] }],
+      "no-restricted-imports": [
+        "error",
+        { patterns: [GET_CLIENT_PATTERN, MONGO_COLLECTION_PATTERN, QUERY_IMPORT_PATTERN] },
+      ],
     },
   },
   {
