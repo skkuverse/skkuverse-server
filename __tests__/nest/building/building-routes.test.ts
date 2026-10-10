@@ -24,7 +24,7 @@ let svc: {
   findBuildingBySkkuId: jest.Mock;
   listSpacesByBuildNo: jest.Mock;
   listConnectionsBySkkuId: jest.Mock;
-  listBuildingsByIds: jest.Mock;
+  listBuildingsBySkkuIds: jest.Mock;
   searchBuildings: jest.Mock;
   searchSpaces: jest.Mock;
 };
@@ -36,7 +36,7 @@ beforeAll(async () => {
     findBuildingBySkkuId: jest.fn(),
     listSpacesByBuildNo: jest.fn(),
     listConnectionsBySkkuId: jest.fn(),
-    listBuildingsByIds: jest.fn(),
+    listBuildingsBySkkuIds: jest.fn(),
     searchBuildings: jest.fn(),
     searchSpaces: jest.fn(),
   };
@@ -337,7 +337,7 @@ describe("GET /building/:skkuId", () => {
     svc.listConnectionsBySkkuId.mockResolvedValue([
       { a: { skkuId: 1, floor: { ko: "1층" } }, b: { skkuId: 2, floor: { ko: "1층" } } },
     ]);
-    svc.listBuildingsByIds.mockResolvedValue([{ _id: 2, buildNo: "101" }]);
+    svc.listBuildingsBySkkuIds.mockResolvedValue([{ _id: 2, buildNo: "101" }]);
 
     const res = await request(httpServer).get("/building/1");
     expect(res.status).toBe(200);

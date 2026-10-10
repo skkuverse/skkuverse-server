@@ -28,7 +28,7 @@ function groupByFloor(spaces: readonly FloorSpaceDoc[]): FloorGroup[] {
  * the side matching `skkuId` is "from" and the other is the target, named from
  * `targets` (the other buildings' docs).
  */
-function toConnectionItems(
+function toBuildingConnections(
   skkuId: SkkuId,
   docs: readonly ConnectionEnds[],
   targets: readonly BuildingLabel[],
@@ -70,4 +70,4 @@ function withFloorEnFallback(floors: readonly FloorGroup[]): FloorGroup[] {
   }));
 }
 
-export { groupByFloor, toConnectedSkkuIds, toConnectionItems, withFloorEnFallback };
+export { groupByFloor, toConnectedSkkuIds, toBuildingConnections, withFloorEnFallback };

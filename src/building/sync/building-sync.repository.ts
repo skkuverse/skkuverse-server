@@ -114,7 +114,7 @@ export class BuildingSyncRepository implements OnModuleInit {
   }
 
   /** Enriched buildings whose enrichVersion is not `version`. */
-  async listIdsNotEnrichedAt(version: number): Promise<Set<SkkuId>> {
+  async listSkkuIdsNotEnrichedAt(version: number): Promise<Set<SkkuId>> {
     const staleBuildings = await this.enriched()
       .find(
         { enrichVersion: { $ne: version } },
@@ -135,9 +135,9 @@ export class BuildingSyncRepository implements OnModuleInit {
     return this.raw().bulkWrite(ops, { ordered: false });
   }
 
-  listRawByIds(ids: Iterable<SkkuId>): Promise<BuildingRawDoc[]> {
+  listRawBySkkuIds(skkuIds: Iterable<SkkuId>): Promise<BuildingRawDoc[]> {
     return this.raw()
-      .find({ _id: { $in: [...ids] } }, { maxTimeMS: SYNC_READ_MAX_TIME_MS })
+      .find({ _id: { $in: [...skkuIds] } }, { maxTimeMS: SYNC_READ_MAX_TIME_MS })
       .toArray();
   }
 

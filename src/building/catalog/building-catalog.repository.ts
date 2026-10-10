@@ -64,10 +64,10 @@ export class BuildingCatalogRepository implements OnModuleInit {
   }
 
   /** The numbers and names of the given buildings, to label the far side of a connection. */
-  listBuildingsByIds(ids: readonly SkkuId[]): Promise<BuildingLabel[]> {
+  listBuildingsBySkkuIds(skkuIds: readonly SkkuId[]): Promise<BuildingLabel[]> {
     return this.buildings()
       .find(
-        { _id: { $in: [...ids] } },
+        { _id: { $in: [...skkuIds] } },
         { projection: { _id: 1, buildNo: 1, displayNo: 1, name: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
       )
       .toArray();

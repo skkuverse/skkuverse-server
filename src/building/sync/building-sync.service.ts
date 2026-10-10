@@ -27,7 +27,7 @@ type WithBuildNo = ListedBuilding & { doc: { buildNo: BuildNo } };
 export class BuildingSyncService {
   constructor(
     private readonly client: BuildingSyncClient,
-    private readonly store: BuildingSyncRepository,
+    private readonly repository: BuildingSyncRepository,
     private readonly buildings: BuildingRepository,
   ) {}
 
@@ -101,15 +101,15 @@ export class BuildingSyncService {
       );
     }
 
-    const known = await this.store.listRawUpdatedAt();
-    const oldVersion = await this.store.listIdsNotEnrichedAt(ENRICH_VERSION);
+    const known = await this.repository.listRawUpdatedAt();
+    const oldVersion = await this.repository.listSkkuIdsNotEnrichedAt(ENRICH_VERSION);
     const changedIds = new Set(
       listed
         .filter((b) => needsEnrichment(known.get(b.skkuId), b.doc.skkuUpdatedAt, oldVersion.has(b.skkuId)))
         .map((b) => b.skkuId),
     );
 
-    const rawResult = await this.store.upsertRaw(listed, syncStartedAt);
+    const rawResult = await this.repository.upsertRaw(listed, syncStartedAt);
     logger.info(
       {
         event: "building.sync.raw_upserted",
@@ -128,8 +128,8 @@ export class BuildingSyncService {
       return listed;
     }
 
-    const changedRaw = await this.store.listRawByIds(changedIds);
-    const enrichResult = await this.store.upsertEnriched(
+    const changedRaw = await this.repository.listRawBySkkuIds(changedIds);
+    const enrichResult = await this.repository.upsertEnriched(
       changedRaw.map((raw) => ({ skkuId: raw._id, building: enrichBuilding(raw) })),
       syncStartedAt,
     );
@@ -159,7 +159,7 @@ export class BuildingSyncService {
       const outcomes = await Promise.allSettled(
         batch.map(async (building) => {
           const detail = await this.client.fetchBuildInfo(building);
-          await this.store.setAttachments(building.skkuId, detail.attachments, syncStartedAt);
+          await this.repository.setAttachments(building.skkuId, detail.attachments, syncStartedAt);
           for (const space of detail.spaces) spaces.push(space);
           processed++;
         }),
@@ -181,12 +181,12 @@ export class BuildingSyncService {
           },
           "Phase 2: buildInfo failed",
         );
-        await this.store.recordDetailError(failed.skkuId, reason?.message || "unknown");
+        await this.repository.recordDetailError(failed.skkuId, reason?.message || "unknown");
       }
     }
 
     if (spaces.length > 0) {
-      const upsertResult = await this.store.upsertSpaces(spaces, "buildInfo", syncStartedAt);
+      const upsertResult = await this.repository.upsertSpaces(spaces, "buildInfo", syncStartedAt);
       logger.info(
         {
           event: "building.sync.buildinfo_upserted",
@@ -213,7 +213,7 @@ export class BuildingSyncService {
     }
 
     if (spaces.length > 0) {
-      const upsertResult = await this.store.upsertSpaces(spaces, "spaceList", syncStartedAt);
+      const upsertResult = await this.repository.upsertSpaces(spaces, "spaceList", syncStartedAt);
       logger.info(
         {
           event: "building.sync.spacelist_upserted",
@@ -232,7 +232,7 @@ export class BuildingSyncService {
       return spaces.length;
     }
 
-    const deleted = await this.store.deleteSpacesSyncedBefore(syncStartedAt);
+    const deleted = await this.repository.deleteSpacesSyncedBefore(syncStartedAt);
     if (deleted > 0) {
       logger.info(
         { event: "building.sync.stale_deleted", deleted },

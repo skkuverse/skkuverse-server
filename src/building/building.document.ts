@@ -117,7 +117,7 @@ export interface SpaceDoc {
 /**
  * connections: a passage between two buildings (an underground walkway). It
  * is undirected; looked up from either side, that side's floor is `fromFloor`
- * (toConnectionItems in building.mapper.ts).
+ * (toBuildingConnections in catalog/building-catalog.mapper.ts).
  */
 export interface ConnectionDoc {
   _id?: ObjectId;

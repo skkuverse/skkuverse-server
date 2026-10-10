@@ -12,7 +12,7 @@ const repo = {
   findBuildingBySkkuId: jest.fn(),
   listSpacesByBuildNo: jest.fn(),
   listConnectionsBySkkuId: jest.fn(),
-  listBuildingsByIds: jest.fn(),
+  listBuildingsBySkkuIds: jest.fn(),
 };
 const buildings = { listBuildings: jest.fn() };
 const svc = new BuildingCatalogService(
@@ -47,7 +47,7 @@ describe("BuildingCatalogService.detail", () => {
     repo.listConnectionsBySkkuId.mockResolvedValue([]);
     await expect(svc.detail(4 as SkkuId, "ko")).resolves.toMatchObject({ floors: [], connections: [] });
     expect(repo.listSpacesByBuildNo).not.toHaveBeenCalled();
-    expect(repo.listBuildingsByIds).not.toHaveBeenCalled();
+    expect(repo.listBuildingsBySkkuIds).not.toHaveBeenCalled();
   });
 
   it("labels each connection with the building at its far end, read once", async () => {
@@ -57,13 +57,13 @@ describe("BuildingCatalogService.detail", () => {
       { a: { skkuId: 1, floor: { ko: "1층", en: "1F" } }, b: { skkuId: 2, floor: { ko: "2층", en: "2F" } } },
       { a: { skkuId: 3, floor: { ko: "B1", en: "B1" } }, b: { skkuId: 1, floor: { ko: "3층", en: "3F" } } },
     ]);
-    repo.listBuildingsByIds.mockResolvedValue([
+    repo.listBuildingsBySkkuIds.mockResolvedValue([
       { _id: 2, buildNo: "101", displayNo: "1", name: { ko: "경영관", en: "Business" } },
     ]);
 
     const view = await svc.detail(1 as SkkuId, "ko");
 
-    expect(repo.listBuildingsByIds).toHaveBeenCalledWith([2, 3]);
+    expect(repo.listBuildingsBySkkuIds).toHaveBeenCalledWith([2, 3]);
     expect(view?.connections).toEqual([
       {
         targetSkkuId: 2,
