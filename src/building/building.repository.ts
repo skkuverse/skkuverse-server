@@ -6,11 +6,12 @@ import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
+import { BUILDING_CACHE_TTL_MS } from "./building.rules";
 import { campusShapeDoc } from "./building.schema";
 import type { BuildingDoc, CampusShapeDoc } from "./building.document";
 import type { Campus } from "./building.types";
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CAMPUS_SHAPES_TTL_MS = 5 * 60 * 1000;
 
 const CAMPUS_SHAPES_STALE_WINDOW_MS = 60 * 60 * 1000;
 
@@ -52,7 +53,7 @@ export class BuildingRepository implements OnModuleInit {
   // marks itself degraded and is not cached.
   private readonly buildingsCache = createCachedLoader({
     name: "all buildings",
-    ttlMs: CACHE_TTL_MS,
+    ttlMs: BUILDING_CACHE_TTL_MS,
     load: () =>
       this.buildings()
         .find(
@@ -71,7 +72,7 @@ export class BuildingRepository implements OnModuleInit {
   // degraded, so it would serve the empty set as cacheable for a day.
   private readonly campusShapesCache = createCachedLoader({
     name: "campus shapes",
-    ttlMs: CACHE_TTL_MS,
+    ttlMs: CAMPUS_SHAPES_TTL_MS,
     staleWindowMs: CAMPUS_SHAPES_STALE_WINDOW_MS,
     load: async () => {
       const { shapes, invalid } = partitionCampusShapes(
