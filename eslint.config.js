@@ -216,7 +216,7 @@ const ROLE_MAX_LINES = {
   mapper: 140,
   module: 23,
   poller: 36,
-  query: 175,
+  query: 160,
   repository: 182,
   rules: 80,
   schema: 34,
