@@ -34,6 +34,14 @@ describe("BuildingSearchService.search", () => {
     ]);
   });
 
+  it("searches every campus when the campus is undefined, the schema's value for none", async () => {
+    // Act
+    await service.search("law", undefined, "ko");
+
+    // Assert
+    expect(search.searches.map((s) => s.campus)).toEqual([undefined, undefined]);
+  });
+
   it("joins each room group to its building's skkuId and reports row counts", async () => {
     // Arrange
     search.spaces = {
