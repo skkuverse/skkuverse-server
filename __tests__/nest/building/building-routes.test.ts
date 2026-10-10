@@ -1,16 +1,18 @@
 /**
- * Integration over BuildingController (3 endpoints, validation branches, i18n
+ * Integration over the /building routes: BuildingCatalogController (list,
+ * detail) and BuildingSearchController (3 endpoints, validation branches, i18n
  * campusLabel injection, English fallback, space grouping + counts meta).
  *
- * BuildingRepository is overridden with a stub (its real onModuleInit would
- * create indexes through src/infra/db.ts, hanging without Mongo), so the real
- * controller and BuildingService (campus label, English fallback, displayNo
- * grouping) run against the stubbed data.
+ * The repositories are overridden with one stub (BuildingRepository's real
+ * onModuleInit would create indexes through src/infra/db.ts, hanging without
+ * Mongo), so the real controllers and services (campus label, English
+ * fallback, displayNo grouping) run against the stubbed data.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BuildingRepository } from "../../../src/building/building.repository";
+import { BuildingCatalogRepository } from "../../../src/building/catalog/building-catalog.repository";
 import { BuildingSearchRepository } from "../../../src/building/search/building-search.repository";
 import { buildBuildingApp } from "../../helpers/nest/build-building-app";
 
@@ -38,10 +40,11 @@ beforeAll(async () => {
     searchBuildings: jest.fn(),
     searchSpaces: jest.fn(),
   };
-  // One stub serves both repositories: search reads went to
-  // BuildingSearchRepository when search became its own sub-module.
+  // One stub serves the three repositories the reads moved between when
+  // search and catalog became sub-modules.
   app = await buildBuildingApp([
     { provide: BuildingRepository, useValue: svc },
+    { provide: BuildingCatalogRepository, useValue: svc },
     { provide: BuildingSearchRepository, useValue: svc },
   ]);
   httpServer = app.getHttpServer();

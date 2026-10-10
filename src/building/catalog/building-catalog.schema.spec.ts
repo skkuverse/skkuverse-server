@@ -1,6 +1,6 @@
-import { buildingListQuery, skkuIdParam } from "./building.schema";
+import { buildingListQuery, skkuIdParam } from "./building-catalog.schema";
 
-describe("building schemas", () => {
+describe("building catalog schemas", () => {
   it("read campus as optional, an empty value as absent", () => {
     expect(buildingListQuery.parse({})).toEqual({ campus: undefined });
     expect(buildingListQuery.parse({ campus: "" })).toEqual({ campus: undefined });

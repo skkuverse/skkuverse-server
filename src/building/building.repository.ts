@@ -7,16 +7,8 @@ import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
 import { campusShapeDoc } from "./building.schema";
-import type {
-  BuildingDoc,
-  BuildingLabel,
-  CampusShapeDoc,
-  ConnectionDoc,
-  ConnectionEnds,
-  FloorSpaceDoc,
-  SpaceDoc,
-} from "./building.document";
-import type { BuildNo, Campus, SkkuId } from "./building.types";
+import type { BuildingDoc, CampusShapeDoc, ConnectionDoc, SpaceDoc } from "./building.document";
+import type { Campus } from "./building.types";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -153,46 +145,6 @@ export class BuildingRepository implements OnModuleInit {
     const buildings = await this.allBuildings.get();
     if (!campus) return buildings;
     return buildings.filter((b) => b.campus === campus);
-  }
-
-  findBuildingBySkkuId(skkuId: SkkuId): Promise<BuildingDoc | null> {
-    return this.buildings().findOne(
-      { _id: skkuId },
-      { projection: { sync: 0, enrichVersion: 0 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
-    );
-  }
-
-  /** The spaces of one building, for its floor list. */
-  listSpacesByBuildNo(buildNo: BuildNo): Promise<FloorSpaceDoc[]> {
-    return this.spaces()
-      .find(
-        { buildNo },
-        {
-          projection: { _id: 0, spaceCd: 1, name: 1, floor: 1, conspaceCd: 1 },
-          maxTimeMS: HOT_READ_MAX_TIME_MS,
-        },
-      )
-      .toArray();
-  }
-
-  /** The connections that touch one building, from either side; only the two ends are read. */
-  listConnectionsBySkkuId(skkuId: SkkuId): Promise<ConnectionEnds[]> {
-    return this.connections()
-      .find(
-        { $or: [{ "a.skkuId": skkuId }, { "b.skkuId": skkuId }] },
-        { projection: { _id: 0, a: 1, b: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
-      )
-      .toArray();
-  }
-
-  /** The numbers and names of the given buildings, to label the far side of a connection. */
-  listBuildingsByIds(ids: readonly SkkuId[]): Promise<BuildingLabel[]> {
-    return this.buildings()
-      .find(
-        { _id: { $in: [...ids] } },
-        { projection: { _id: 1, buildNo: 1, displayNo: 1, name: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
-      )
-      .toArray();
   }
 
   /** Every campus shape, in authored order. */
