@@ -4,7 +4,13 @@ import { AppError } from "../common/app.error";
 import { withMeta } from "../common/response.interceptor";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import type { SupportedLang } from "../infra/types";
-import { buildingListQuery, buildingSearchQuery, skkuIdParam } from "./building.schema";
+import {
+  buildingListQuery,
+  buildingSearchQuery,
+  skkuIdParam,
+  type BuildingListQuery,
+  type BuildingSearchQuery,
+} from "./building.schema";
 import { BuildingService } from "./building.service";
 
 /** /building: no auth, the general limiter (BuildingModule). */
@@ -16,7 +22,7 @@ export class BuildingController {
   @Get("list")
   list(
     @Query(new ZodValidationPipe(buildingListQuery, "INVALID_CAMPUS"))
-    query: { campus?: "hssc" | "nsc" },
+    query: BuildingListQuery,
     @Req() req: Request,
   ) {
     return this.building.list(query.campus ?? null, req.lang as SupportedLang);
@@ -31,7 +37,7 @@ export class BuildingController {
         campus: "INVALID_CAMPUS",
       }),
     )
-    query: { q: string; campus?: "hssc" | "nsc" },
+    query: BuildingSearchQuery,
     @Req() req: Request,
   ) {
     const { data, meta } = await this.building.search(

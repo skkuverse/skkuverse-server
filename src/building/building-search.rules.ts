@@ -19,7 +19,7 @@
 import type { Document, Filter } from "mongodb";
 import { escapeRegex } from "../shared/regex.util";
 import type { BuildingDoc, SpaceDoc } from "./building.document";
-import type { Campus } from "./building.types";
+import type { Campus, SearchCounts } from "./building.types";
 
 // --- Row caps: two bands ---
 //
@@ -271,12 +271,6 @@ function buildingKeywordFilter(query: string): Filter<BuildingDoc> {
 
 // --- Result shapes ---
 
-interface SearchCounts {
-  hssc: number;
-  nsc: number;
-  total: number;
-}
-
 interface RankedSearchResult<T> {
   items: T[];
   /** Campus-agnostic per-campus totals for the same keyword predicate. */
@@ -428,4 +422,4 @@ export {
   tiersToScoreExpr,
   toRankedResult,
 };
-export type { RankedFacet, RankedSearchResult, RelevanceTier, SearchCounts, TierMode };
+export type { RankedFacet, RankedSearchResult, RelevanceTier, TierMode };

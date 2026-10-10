@@ -1,39 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import type { SupportedLang } from "../infra/types";
-import { BUILDING_SEARCH_LIMIT, SPACE_SEARCH_LIMIT, type SearchCounts } from "./building-search.rules";
+import { BUILDING_SEARCH_LIMIT, SPACE_SEARCH_LIMIT } from "./building-search.rules";
 import type { BuildingDoc, CampusShapeDoc } from "./building.document";
 import { groupSpacesByBuilding, withCampusLabel, withFloorEnFallback } from "./building.mapper";
 import { BuildingRepository } from "./building.repository";
 import type {
+  BuildingDetail,
+  BuildingSearch,
   Campus,
-  ConnectionResponseItem,
-  FloorGroup,
-  SpaceGroup,
   WithCampusLabel,
 } from "./building.types";
-
-interface SearchLimit {
-  limit: number;
-  total: number;
-  truncated: boolean;
-}
-
-export interface BuildingSearch {
-  data: { buildings: Array<WithCampusLabel<BuildingDoc>>; spaces: SpaceGroup[] };
-  meta: {
-    keyword: string;
-    buildingCount: number;
-    spaceCount: number;
-    counts: { building: SearchCounts; space: SearchCounts };
-    limits: { building: SearchLimit; space: SearchLimit };
-  };
-}
-
-export interface BuildingDetailView {
-  building: WithCampusLabel<BuildingDoc>;
-  floors: FloorGroup[];
-  connections: ConnectionResponseItem[];
-}
 
 @Injectable()
 export class BuildingService {
@@ -100,7 +76,7 @@ export class BuildingService {
   }
 
   /** GET /building/:skkuId: the building, its floors and connections; null if there is none. */
-  async detail(skkuId: number, lang: SupportedLang): Promise<BuildingDetailView | null> {
+  async detail(skkuId: number, lang: SupportedLang): Promise<BuildingDetail | null> {
     const building = await this.repository.getBuildingBySkkuId(skkuId);
     if (!building) return null;
     const [floors, connections] = await Promise.all([
