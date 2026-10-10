@@ -4,9 +4,9 @@
  *
  * MapService is overridden with a stub so the controllers' envelope/meta wiring
  * is exercised without the real data modules (no DB, no config coupling).
- * BuildingService is overridden too because MapModule imports BuildingModule,
- * whose real onModuleInit would hit the DB. The src/map/*.data modules are
- * covered by map-campus-overlays.test.ts and map-event-overlays.test.ts.
+ * The builder stubs BuildingRepository, so the BuildingModule that MapModule
+ * imports touches no database. The src/map/*.data modules are covered by
+ * map-campus-overlays.test.ts and map-event-overlays.test.ts.
  *
  * Envelope:
  *  - /map/config → plain return → ResponseInterceptor wraps in
@@ -16,7 +16,6 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { MapService } from "../../../src/map/map.service";
-import { BuildingService } from "../../../src/building/building.service";
 import { buildMapApp } from "../../helpers/nest/build-map-app";
 
 let app: NestExpressApplication;
@@ -37,7 +36,6 @@ beforeAll(async () => {
   };
   app = await buildMapApp([
     { provide: MapService, useValue: svc },
-    { provide: BuildingService, useValue: { onModuleInit: jest.fn() } },
   ]);
   httpServer = app.getHttpServer();
 });

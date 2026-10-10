@@ -154,7 +154,7 @@ const VIOLATORS = {
   pure: [],
   // Repositories that import a mapper (ADR 0010, D2): they return documents,
   // and the service maps them.
-  repository: ["src/building/building.repository.ts"],
+  repository: [],
   getClient: [
     "src/ad/ad.data.ts",
     "src/bus/cache/bus-cache.service.ts",
