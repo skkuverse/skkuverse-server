@@ -1,5 +1,5 @@
 import type { AccessibilityDetail, BuildingAttachment, BuildingDoc, BuildingRawDoc } from "../building.document";
-import type { ApiId, BilingualText, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd } from "../building.types";
+import type { ApiId, BilingualText, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd, WithBuildNo } from "../building.types";
 
 // What BuildingSyncClient translates campusMap.do into.
 
@@ -10,6 +10,9 @@ export interface ListedBuilding {
   apiId: ApiId;
   doc: Omit<BuildingRawDoc, "_id">;
 }
+
+/** A listed building that has a buildInfo to fetch. */
+export type ListedBuildingWithBuildNo = ListedBuilding & { doc: WithBuildNo<ListedBuilding["doc"]> };
 
 /** Which listing reported a space; recorded in its `sources`. */
 export type SpaceSource = "buildInfo" | "spaceList";

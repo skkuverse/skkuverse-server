@@ -1,7 +1,7 @@
 import type { SupportedLang } from "../../infra/types";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
 import { campusLabel, withCampusLabel, withEnFallback } from "../building.mapper";
-import { toDisplayNo } from "../building.rules";
+import { hasBuildNo, toDisplayNo } from "../building.rules";
 import type { BuildNo, SkkuId } from "../building.types";
 import { BUILDING_SEARCH_LIMIT, SPACE_SEARCH_LIMIT } from "./building-search.rules";
 import type { BuildingSearch, RankedSearchResult, SpaceGroup } from "./building-search.types";
@@ -58,9 +58,7 @@ function toBuildingSearch(
   lang: SupportedLang,
 ): BuildingSearch {
   const skkuIdByBuildNo = new Map<BuildNo, SkkuId>(
-    allBuildings
-      .filter((b): b is BuildingDoc & { buildNo: BuildNo } => !!b.buildNo)
-      .map((b) => [b.buildNo, b._id]),
+    allBuildings.filter(hasBuildNo).map((building) => [building.buildNo, building._id]),
   );
 
   return {

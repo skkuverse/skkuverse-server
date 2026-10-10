@@ -1,4 +1,4 @@
-import type { BuildNo, Campus, DisplayNo } from "./building.types";
+import type { BuildNo, Campus, DisplayNo, WithBuildNo } from "./building.types";
 
 /** Every campus; `Campus` is derived from this list. */
 export const CAMPUSES = ["hssc", "nsc"] as const;
@@ -11,6 +11,11 @@ export const SKKU_CAMPUS_CODE: Readonly<Record<Campus, string>> = { hssc: "1", n
 
 export function isCampus(value: unknown): value is Campus {
   return (CAMPUSES as readonly unknown[]).includes(value);
+}
+
+/** A facility (an outbuilding, a gate) has no buildNo, and so no buildInfo, floors or displayNo. */
+export function hasBuildNo<T extends { buildNo: BuildNo | null }>(building: T): building is WithBuildNo<T> {
+  return !!building.buildNo;
 }
 
 /**

@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { SupportedLang } from "../../infra/types";
 import type { BuildingDoc } from "../building.document";
 import { withCampusLabel } from "../building.mapper";
+import { hasBuildNo } from "../building.rules";
 import { BuildingRepository } from "../building.repository";
 import type { Campus, SkkuId, WithCampusLabel } from "../building.types";
 import { groupByFloor, toConnectedSkkuIds, toBuildingConnections, withFloorEnFallback } from "./building-catalog.mapper";
@@ -29,7 +30,7 @@ export class BuildingCatalogService {
     const building = await this.repository.findBuildingBySkkuId(skkuId);
     if (!building) return null;
     const [spaces, connections] = await Promise.all([
-      building.buildNo ? this.repository.listSpacesByBuildNo(building.buildNo) : [],
+      hasBuildNo(building) ? this.repository.listSpacesByBuildNo(building.buildNo) : [],
       this.listConnections(skkuId),
     ]);
     return {

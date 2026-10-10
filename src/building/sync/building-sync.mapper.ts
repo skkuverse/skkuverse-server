@@ -1,4 +1,4 @@
-import { toDisplayNo } from "../building.rules";
+import { hasBuildNo, toDisplayNo } from "../building.rules";
 import type { AccessibilityDetail, BarrierFreeSection, BuildingRawDoc, ElevatorStatus } from "../building.document";
 import type { EnrichedBuilding } from "./building-sync.types";
 
@@ -167,7 +167,7 @@ function enrichBuilding(rawDoc: BuildingRawDoc): EnrichedBuilding {
   return {
     buildNo: rawDoc.buildNo,
     displayNo: toDisplayNo(rawDoc.buildNo, rawDoc.campus),
-    type: rawDoc.buildNo ? "building" : "facility",
+    type: hasBuildNo(rawDoc) ? "building" : "facility",
     campus: rawDoc.campus,
     name: { ko: rawDoc.name?.ko || "", en: rawDoc.name?.en || "" },
     description: { ko: descriptionKo, en: rawDoc.description?.en || "" },
