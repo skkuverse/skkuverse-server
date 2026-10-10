@@ -12,7 +12,9 @@
  * The per-role caps of migrated modules (blocks "size/<role>") are held the
  * same way: each `max-lines` within 10 of the largest file it covers, measured
  * with the block's own options (comment lines count, D10), and none covering no
- * file.
+ * file. So are their function caps (block "size-ratchets/migrated"): lines
+ * within 10 of the longest function, `max-depth`, `max-params` and
+ * `complexity` at the worst, over the migrated modules' files.
  */
 import { Linter } from "eslint";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
@@ -21,20 +23,26 @@ const tsparser = require("@typescript-eslint/parser");
 const config: Linter.Config[] = require("../../eslint.config.js");
 
 const RULES = ["max-lines", "max-lines-per-function", "complexity", "max-params"] as const;
-type RatchetRule = (typeof RULES)[number];
+const MIGRATED_RULES = ["max-lines-per-function", "max-depth", "complexity", "max-params"] as const;
+type RatchetRule = (typeof RULES)[number] | (typeof MIGRATED_RULES)[number];
 
 const MARGIN: Readonly<Record<RatchetRule, number>> = {
   "max-lines": 10,
   "max-lines-per-function": 10,
   complexity: 0,
   "max-params": 0,
+  "max-depth": 0,
 };
 
-const block = config.find((c) => c.name === "size-ratchets");
+function namedBlock(name: string): Linter.Config {
+  const found = config.find((c) => c.name === name);
+  if (!found) throw new Error(`no ESLint block named ${name}`);
+  return found;
+}
 
-function setting(rule: RatchetRule): { limit: number; options: Record<string, unknown> } {
-  const entry = block?.rules?.[rule];
-  if (!Array.isArray(entry)) throw new Error(`size-ratchets has no ${rule}`);
+function setting(rule: RatchetRule, name = "size-ratchets"): { limit: number; options: Record<string, unknown> } {
+  const entry = namedBlock(name).rules?.[rule];
+  if (!Array.isArray(entry)) throw new Error(`${name} has no ${rule}`);
   const value = entry[1] as number | { max: number };
   return typeof value === "number" ? { limit: value, options: {} } : { limit: value.max, options: value };
 }
@@ -45,28 +53,38 @@ export function reportedSize(message: string): number | undefined {
   return match ? Number(match[1] ?? match[2]) : undefined;
 }
 
-function worstSizes(): Record<RatchetRule, { size: number; where: string }> {
-  const rules: Linter.RulesRecord = {
-    "max-lines": ["error", { ...setting("max-lines").options, max: 1 }],
-    "max-lines-per-function": ["error", { ...setting("max-lines-per-function").options, max: 1 }],
-    complexity: ["error", 0],
-    "max-params": ["error", 0],
-  };
-  const worst = Object.fromEntries(RULES.map((r) => [r, { size: 0, where: "" }])) as Record<
+/** Each rule at its minimum, keeping the block's other options, so ESLint reports every size. */
+function atMinimum(rules: readonly RatchetRule[], name: string): Linter.RulesRecord {
+  return Object.fromEntries(
+    rules.map((rule) => {
+      const { options } = setting(rule, name);
+      const isObject = rule === "max-lines" || rule === "max-lines-per-function";
+      return [rule, ["error", isObject ? { ...options, max: 1 } : 0]];
+    }),
+  );
+}
+
+function worstSizes(
+  rules: readonly RatchetRule[] = RULES,
+  name = "size-ratchets",
+  files: readonly string[] = sourceFiles(),
+): Record<RatchetRule, { size: number; where: string }> {
+  const minimum = atMinimum(rules, name);
+  const worst = Object.fromEntries(rules.map((r) => [r, { size: 0, where: "" }])) as Record<
     RatchetRule,
     { size: number; where: string }
   >;
   const linter = new Linter({ configType: "flat" });
-  for (const file of sourceFiles()) {
+  for (const file of files) {
     const messages = linter.verify(
       readSource(file),
-      [{ files: ["**/*.ts"], languageOptions: { parser: tsparser }, rules }],
+      [{ files: ["**/*.ts"], languageOptions: { parser: tsparser }, rules: minimum }],
       file,
     );
     for (const m of messages) {
       const rule = m.ruleId as RatchetRule | null;
       const size = m.message ? reportedSize(m.message) : undefined;
-      if (rule && size !== undefined && RULES.includes(rule) && size > worst[rule].size) {
+      if (rule && size !== undefined && rules.includes(rule) && size > worst[rule].size) {
         worst[rule] = { size, where: `${file}:${m.line}` };
       }
     }
@@ -101,6 +119,7 @@ describe("size ratchet measurement", () => {
     expect(reportedSize("Method 'run' has too many lines (122). Maximum allowed is 1.")).toBe(122);
     expect(reportedSize("Function 'x' has a complexity of 47. Maximum allowed is 0.")).toBe(47);
     expect(reportedSize("Function 'x' has too many parameters (7). Maximum allowed is 0.")).toBe(7);
+    expect(reportedSize("Blocks are nested too deeply (3). Maximum allowed is 0.")).toBe(3);
   });
 });
 
@@ -112,6 +131,28 @@ describe("size ratchets", () => {
       const { size, where } = worst[rule];
       return limit - size > MARGIN[rule]
         ? [`${rule}: limit ${limit}, worst ${size} (${where}); lower the limit to ${size}`]
+        : [];
+    });
+    expect(loose).toEqual([]);
+  });
+
+  it("of the migrated modules' functions sit at the worst function they cover", () => {
+    const name = "size-ratchets/migrated";
+    const globs = namedBlock(name).files as string[];
+    const covered = sourceFiles().filter((f) =>
+      globs.some((g) => {
+        const match = /^src\/([^/]+)\/\*\*\/\*\.ts$/.exec(g);
+        if (!match) throw new Error(`unexpected ${name} glob ${g}`);
+        return f.startsWith(`src/${match[1]}/`);
+      }),
+    );
+    expect(covered.length).toBeGreaterThan(0);
+    const worst = worstSizes(MIGRATED_RULES, name, covered);
+    const loose = MIGRATED_RULES.flatMap((rule) => {
+      const { limit } = setting(rule, name);
+      const { size, where } = worst[rule];
+      return limit - size > MARGIN[rule]
+        ? [`${name} ${rule}: limit ${limit}, worst ${size} (${where}); lower the limit to ${size}`]
         : [];
     });
     expect(loose).toEqual([]);
