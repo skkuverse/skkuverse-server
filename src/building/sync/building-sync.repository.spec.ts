@@ -310,7 +310,10 @@ describe("BuildingSyncRepository indexes", () => {
       [{ spaceCd: 1, buildNo: 1, campus: 1 }, { unique: true }],
     ]);
     // No query reads buildings_raw by campus; $indexStats showed 0 ops on campus_1 (2026-10-10).
-    expect(mockCollections.buildings_raw!.createIndex.mock.calls).toEqual([]);
+    const indexed = Object.entries(mockCollections)
+      .filter(([, collection]) => collection.createIndex.mock.calls.length > 0)
+      .map(([name]) => name);
+    expect(indexed.sort()).toEqual(["buildings", "spaces"]);
   });
 
   it("owns the 2dsphere that guards the enriched location it writes", async () => {
