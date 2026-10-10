@@ -2,7 +2,7 @@ import { Controller, Get, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
 import type { SupportedLang } from "../../infra/types";
 import { UiService } from "../ui/ui.service";
-import { sendSuccess } from "../../common/response.interceptor";
+import { sendSuccess } from "../../http/response.interceptor";
 
 /**
  * Mounted at /ui, generalLimiter, no auth. Three SDUI home endpoints. Each

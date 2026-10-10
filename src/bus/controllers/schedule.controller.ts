@@ -9,8 +9,8 @@ import { stopCatalog } from "../schedule/schedule-stops";
 import serviceConfig from "../schedule/service-config";
 import { applyEstimates } from "../eta/apply-estimates";
 import { ShuttleEtaService } from "../eta/shuttle-eta.service";
-import { AppError } from "../../common/app.error";
-import { sendSuccess } from "../../common/response.interceptor";
+import { AppError } from "../../http/app.error";
+import { sendSuccess } from "../../http/response.interceptor";
 import { createLogThrottle } from "../../infra/log-throttle";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

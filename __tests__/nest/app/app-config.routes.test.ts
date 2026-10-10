@@ -24,9 +24,9 @@ import request from "supertest";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
 import { ConfigModule } from "../../../src/config/config.module";
 import { AppFeatureModule } from "../../../src/app/app-feature.module";
-import { LangMiddleware } from "../../../src/common/lang.middleware";
-import { ResponseInterceptor } from "../../../src/common/response.interceptor";
-import { HttpExceptionFilter } from "../../../src/common/http-exception.filter";
+import { LangMiddleware } from "../../../src/http/lang.middleware";
+import { ResponseInterceptor } from "../../../src/http/response.interceptor";
+import { HttpExceptionFilter } from "../../../src/http/http-exception.filter";
 
 @Module({
   imports: [ConfigModule, AppFeatureModule],

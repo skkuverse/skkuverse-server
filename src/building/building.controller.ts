@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Query, Req } from "@nestjs/common";
 import type { Request } from "express";
-import { AppError } from "../common/app.error";
-import { withMeta } from "../common/response.interceptor";
-import { ZodValidationPipe } from "../common/zod-validation.pipe";
+import { AppError } from "../http/app.error";
+import { withMeta } from "../http/response.interceptor";
+import { ZodValidationPipe } from "../http/zod-validation.pipe";
 import type { SupportedLang } from "../infra/types";
 import {
   buildingListQuery,

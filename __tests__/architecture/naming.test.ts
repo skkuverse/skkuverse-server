@@ -201,8 +201,8 @@ describe("naming rules apply as specified", () => {
       ),
     ).toEqual([]);
     expect(
-      classNameViolations("src/common/general-rate-limit.middleware.ts", "export class BusRateLimitMiddleware {}"),
-    ).toEqual(["src/common/general-rate-limit.middleware.ts: BusRateLimitMiddleware"]);
+      classNameViolations("src/http/general-rate-limit.middleware.ts", "export class BusRateLimitMiddleware {}"),
+    ).toEqual(["src/http/general-rate-limit.middleware.ts: BusRateLimitMiddleware"]);
     expect(
       classNameViolations(
         "src/bus/eta/directions.error.ts",

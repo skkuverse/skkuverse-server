@@ -83,8 +83,8 @@ const PURE_IMPORT_PATTERNS = [
     message: "A pure file reaches infra/ only for i18n lookups and types; take anything else as an argument.",
   },
   {
-    regex: "(?:^|/)common/(?!app\\.error$)",
-    message: "A pure file reaches common/ only for AppError; the HTTP pipeline stays out of rules and mappers.",
+    regex: "(?:^|/)http/(?!app\\.error$)",
+    message: "A pure file reaches http/ only for AppError; the HTTP pipeline stays out of rules and mappers.",
   },
   {
     regex: "(?:^|/)scheduling/",
@@ -114,7 +114,7 @@ const CLOCK_SYNTAX = [
 // __tests__/architecture/import-boundaries.test.ts fails when a listed file no
 // longer violates, so each list only shrinks as modules are migrated.
 
-const SHARED_DIRS = ["common", "config", "infra", "scheduling", "shared"];
+const SHARED_DIRS = ["config", "http", "infra", "scheduling", "shared"];
 // Every other top-level folder of src/ is a feature, so a new module is
 // bounded from its first file.
 const FEATURES = require("fs")
@@ -300,8 +300,8 @@ module.exports = [
         {
           patterns: [
             {
-              regex: `^(?:\\.\\./)+(?:common|${FEATURES.join("|")})/`,
-              message: "src/infra/ wraps the outside world and the process; it imports neither common/ nor a feature.",
+              regex: `^(?:\\.\\./)+(?:http|${FEATURES.join("|")})/`,
+              message: "src/infra/ wraps the outside world and the process; it imports neither http/ nor a feature.",
             },
           ],
         },

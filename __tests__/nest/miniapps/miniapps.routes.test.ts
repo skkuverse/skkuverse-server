@@ -38,9 +38,9 @@ import request from "supertest";
 import { MEDIA_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
 import { ConfigModule } from "../../../src/config/config.module";
 import { MiniAppsModule } from "../../../src/miniapps/miniapps.module";
-import { LangMiddleware } from "../../../src/common/lang.middleware";
-import { ResponseInterceptor } from "../../../src/common/response.interceptor";
-import { HttpExceptionFilter } from "../../../src/common/http-exception.filter";
+import { LangMiddleware } from "../../../src/http/lang.middleware";
+import { ResponseInterceptor } from "../../../src/http/response.interceptor";
+import { HttpExceptionFilter } from "../../../src/http/http-exception.filter";
 
 @Module({
   imports: [ConfigModule, MiniAppsModule],

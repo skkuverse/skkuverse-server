@@ -64,7 +64,7 @@ describe("import boundary blocks apply as specified", () => {
       'import { BusConfigService } from "../../bus/bus-config/bus-config.service";',
       'import { BusModule } from "../../bus/bus.module";',
       'import type { BusGroup } from "../../bus/types";',
-      'import { AppError } from "../../common/app.error";',
+      'import { AppError } from "../../http/app.error";',
       'import { escapeRegex } from "../../shared/regex.util";',
       'import { campus } from "../ui.campus";',
       'import { x } from "../../ui/ui.service";',
@@ -91,7 +91,7 @@ describe("import boundary blocks apply as specified", () => {
     const featureBlocks = new Set(
       blocks.map((b) => b.name!.match(/^boundaries\/feature\/([^/]+)\//)?.[1]).filter(Boolean),
     );
-    const shared = new Set(["common", "config", "infra", "scheduling", "shared"]);
+    const shared = new Set(["config", "http", "infra", "scheduling", "shared"]);
     const topLevel = fs
       .readdirSync(path.join(ROOT, "src"), { withFileTypes: true })
       .filter((d) => d.isDirectory() && !shared.has(d.name))
@@ -99,10 +99,10 @@ describe("import boundary blocks apply as specified", () => {
     expect([...featureBlocks].sort()).toEqual(topLevel.sort());
   });
 
-  it("shared/ imports no feature, infra/ imports neither common/ nor a feature", () => {
+  it("shared/ imports no feature, infra/ imports neither http/ nor a feature", () => {
     expect(lint(block("boundaries/shared").rules!, "src/shared/x.util.ts", 'import { a } from "../map/a";')).toHaveLength(1);
     expect(lint(block("boundaries/shared").rules!, "src/shared/x.util.ts", 'import { a } from "../infra/a";')).toEqual([]);
-    expect(lint(block("boundaries/infra").rules!, "src/infra/x.ts", 'import { a } from "../common/a";')).toHaveLength(1);
+    expect(lint(block("boundaries/infra").rules!, "src/infra/x.ts", 'import { a } from "../http/a";')).toHaveLength(1);
     expect(lint(block("boundaries/infra").rules!, "src/infra/x.ts", 'import { a } from "./logger";')).toEqual([]);
   });
 
@@ -115,7 +115,7 @@ describe("import boundary blocks apply as specified", () => {
       'import { config } from "../infra/config";',
       'import { BuildingRepository } from "./building.repository";',
       'import { BuildingClient } from "./building.client";',
-      'import { AppError } from "../common/zod-validation.pipe";',
+      'import { AppError } from "../http/zod-validation.pipe";',
       'import axios from "axios";',
       'import { Injectable } from "@nestjs/common";',
       "export const now = () => Date.now();",
@@ -126,7 +126,7 @@ describe("import boundary blocks apply as specified", () => {
     for (const source of [
       'import { t } from "../infra/i18n";',
       'import type { SupportedLang } from "../infra/types";',
-      'import { AppError } from "../common/app.error";',
+      'import { AppError } from "../http/app.error";',
       'import type { Filter } from "mongodb";',
       'import { escapeRegex } from "../shared/regex.util";',
       'import { toDisplayNo } from "./building.rules";',
