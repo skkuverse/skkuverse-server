@@ -151,7 +151,7 @@ const MONGO_COLLECTION_PATTERN = {
 
 const VIOLATORS = {
   // Rules and mappers that build Mongo syntax (ADR 0010, D2).
-  pure: ["src/building/building-search.rules.ts"],
+  pure: [],
   // Repositories that import a mapper (ADR 0010, D2): they return documents,
   // and the service maps them.
   repository: ["src/building/building.repository.ts"],

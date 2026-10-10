@@ -1,4 +1,4 @@
-import { buildingListQuery, buildingSearchQuery, skkuIdParam } from "./building.schema";
+import { buildingListQuery, skkuIdParam } from "./building.schema";
 
 describe("building schemas", () => {
   it("read campus as optional, an empty value as absent", () => {
@@ -6,14 +6,6 @@ describe("building schemas", () => {
     expect(buildingListQuery.parse({ campus: "" })).toEqual({ campus: undefined });
     expect(buildingListQuery.parse({ campus: "nsc", other: "x" })).toEqual({ campus: "nsc" });
     expect(buildingListQuery.safeParse({ campus: ["hssc", "nsc"] }).success).toBe(false);
-  });
-
-  it("trim q and reject a blank one", () => {
-    expect(buildingSearchQuery.parse({ q: "  도서 " })).toEqual({ q: "도서", campus: undefined });
-    expect(buildingSearchQuery.safeParse({ q: "   " }).success).toBe(false);
-    // A repeated q used to reach .trim() on an array and answer 500; it is now
-    // a 400 MISSING_QUERY like any other unusable q.
-    expect(buildingSearchQuery.safeParse({ q: ["a", "b"] }).success).toBe(false);
   });
 
   it.each([

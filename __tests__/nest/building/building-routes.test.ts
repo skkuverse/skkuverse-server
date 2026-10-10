@@ -11,6 +11,7 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BuildingRepository } from "../../../src/building/building.repository";
+import { BuildingSearchRepository } from "../../../src/building/search/building-search.repository";
 import { buildBuildingApp } from "../../helpers/nest/build-building-app";
 
 let app: NestExpressApplication;
@@ -35,7 +36,12 @@ beforeAll(async () => {
     searchBuildings: jest.fn(),
     searchSpaces: jest.fn(),
   };
-  app = await buildBuildingApp([{ provide: BuildingRepository, useValue: svc }]);
+  // One stub serves both repositories: search reads went to
+  // BuildingSearchRepository when search became its own sub-module.
+  app = await buildBuildingApp([
+    { provide: BuildingRepository, useValue: svc },
+    { provide: BuildingSearchRepository, useValue: svc },
+  ]);
   httpServer = app.getHttpServer();
 });
 

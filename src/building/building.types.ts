@@ -48,48 +48,6 @@ export interface FloorGroup {
 
 export type WithCampusLabel<T> = T & { campusLabel: string };
 
-export interface SpaceGroupItem {
-  spaceCd: SpaceCd;
-  name: BilingualText;
-  floor: BilingualText;
-}
-
-/** The search's rooms, grouped by building in row (relevance) order. */
-export interface SpaceGroup {
-  skkuId: SkkuId | null;
-  buildNo: BuildNo;
-  displayNo: DisplayNo | null;
-  campus: Campus;
-  campusLabel: string;
-  buildingName: BilingualText | undefined;
-  items: SpaceGroupItem[];
-}
-
-/** Per-campus totals for a keyword, whatever the campus filter (the app's campus toggle). */
-export interface SearchCounts {
-  hssc: number;
-  nsc: number;
-  total: number;
-}
-
-export interface SearchLimit {
-  limit: number;
-  total: number;
-  truncated: boolean;
-}
-
-/** GET /building/search: `data` and the extra `meta` the controller passes to withMeta. */
-export interface BuildingSearch {
-  data: { buildings: Array<WithCampusLabel<BuildingDoc>>; spaces: SpaceGroup[] };
-  meta: {
-    keyword: string;
-    buildingCount: number;
-    spaceCount: number;
-    counts: { building: SearchCounts; space: SearchCounts };
-    limits: { building: SearchLimit; space: SearchLimit };
-  };
-}
-
 /** GET /building/:skkuId */
 export interface BuildingDetail {
   building: WithCampusLabel<BuildingDoc>;
