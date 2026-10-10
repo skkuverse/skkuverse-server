@@ -206,3 +206,202 @@ describe("BuildingSyncService.run", () => {
     expect(mockDb.clearCache).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * Phase 2 one building at a time: a building whose buildInfo fails (the
+ * fetch, or writing its photos) is noted on both layers and left out, and
+ * every other building, in its batch and in later ones, still syncs. At most
+ * five buildInfo requests are in flight at once, so the sync never floods
+ * SKKU. Each building here has its own skkuId and buildNo (hssc 101-130, nsc
+ * 201-230) and one room, `<buildNo>-101`.
+ */
+describe("BuildingSyncService.run, phase 2 per building", () => {
+  type CampusMapParams = { mode: Mode; campusCd?: string; buildNo?: string };
+
+  const roomsOf = (buildNo: string) =>
+    Promise.resolve({ data: { attachItem: [], floorItem: [{ space_cd: `${buildNo}-101`, spcae_nm: "강의실" }] } });
+
+  function campusMap(
+    { buildInfo = roomsOf, facilitiesPerCampus = 0 }: {
+      buildInfo?: (buildNo: string) => Promise<unknown>;
+      facilitiesPerCampus?: number;
+    } = {},
+  ): void {
+    mockGet.mockImplementation((_url: string, { params }: { params: CampusMapParams }) => {
+      switch (params.mode) {
+        case "buildList": {
+          const base = params.campusCd === "1" ? 100 : 200;
+          const buildings = Array.from({ length: BUILDINGS_PER_CAMPUS }, (_, i) => ({
+            id: String(base + i + 1),
+            buildNo: String(base + i + 1),
+            buildNm: `건물 ${base + i + 1}`,
+          }));
+          const facilities = Array.from({ length: facilitiesPerCampus }, (_, i) => ({
+            id: String(base + 90 + i),
+            buildNo: "",
+            buildNm: `시설 ${base + 90 + i}`,
+          }));
+          return Promise.resolve({ data: { buildItems: [...buildings, ...facilities] } });
+        }
+        case "buildInfo":
+          return buildInfo(params.buildNo!);
+        case "spaceList":
+          return Promise.resolve({ data: { items: spaceItems(SPACES_PER_CAMPUS) } });
+      }
+    });
+  }
+
+  type UpdateCall = [{ _id: number }, { $set: Record<string, unknown> }];
+  const updates = (collection: { updateOne: jest.Mock }): UpdateCall[] =>
+    collection.updateOne.mock.calls as UpdateCall[];
+  /** [skkuId, message] of each recordDetailError write on a layer. */
+  const detailErrorsOn = (collection: { updateOne: jest.Mock }) =>
+    updates(collection)
+      .filter(([, update]) => !("attachments" in update.$set))
+      .map(([filter, update]) => [filter._id, update.$set["sync.detailError"]]);
+  /** The skkuIds whose photos were written on a layer. */
+  const photosWrittenOn = (collection: { updateOne: jest.Mock }) =>
+    updates(collection)
+      .filter(([, update]) => "attachments" in update.$set)
+      .map(([filter]) => filter._id);
+  /** The spaceCds phase 2 upserted (its bulkWrite comes before phase 3's). */
+  const buildInfoRooms = (): string[] => {
+    const [ops] = mockDb.spaces.bulkWrite.mock.calls[0] as [Array<{ updateOne: { filter: { spaceCd: string } } }>];
+    return ops.map((op) => op.updateOne.filter.spaceCd);
+  };
+  const infoFields = (event: string) =>
+    mockLogger.info.mock.calls.find(([fields]) => fields.event === event)?.[0];
+
+  it("notes a failed building on both layers, leaves its rooms out, and syncs every other batch", async () => {
+    // Arrange
+    // 103 is in the first batch of five, 230 in the last.
+    const firstBatchError = new Error("Request failed with status code 500");
+    const lastBatchError = new Error("timeout of 30000ms exceeded");
+    campusMap({
+      buildInfo: (buildNo) =>
+        buildNo === "103"
+          ? Promise.reject(firstBatchError)
+          : buildNo === "230"
+            ? Promise.reject(lastBatchError)
+            : roomsOf(buildNo),
+    });
+
+    // Act
+    const run = syncBuildings();
+
+    // Assert
+    await expect(run).resolves.toBeUndefined();
+    expect(calledModes().filter((mode) => mode === "buildInfo")).toHaveLength(60);
+    for (const layer of [mockDb.raw, mockDb.enriched]) {
+      expect(detailErrorsOn(layer)).toEqual([
+        [103, "Request failed with status code 500"],
+        [230, "timeout of 30000ms exceeded"],
+      ]);
+      expect(photosWrittenOn(layer)).toHaveLength(58);
+      expect(photosWrittenOn(layer)).not.toContain(103);
+      expect(photosWrittenOn(layer)).not.toContain(230);
+    }
+    const rooms = buildInfoRooms();
+    expect(rooms).toHaveLength(58);
+    expect(rooms).not.toContain("103-101");
+    expect(rooms).not.toContain("230-101");
+    expect(rooms).toContain("229-101");
+    const failures = mockLogger.warn.mock.calls
+      .map(([fields]) => fields)
+      .filter((fields) => fields.event === "building.sync.buildinfo_failed");
+    expect(failures).toEqual([
+      { event: "building.sync.buildinfo_failed", skkuId: 103, buildNo: "103", err: firstBatchError },
+      { event: "building.sync.buildinfo_failed", skkuId: 230, buildNo: "230", err: lastBatchError },
+    ]);
+    expect(infoFields("building.sync.buildinfo_upserted")).toMatchObject({ processed: 58, errors: 2 });
+    expect(infoFields("building.sync.completed")).toMatchObject({ buildings: 60 });
+  });
+
+  it("counts a building whose photos cannot be written as failed, with the write's message", async () => {
+    // Arrange
+    campusMap();
+    const writeError = new Error("WriteConflict");
+    mockDb.raw.updateOne.mockImplementation((filter: { _id: number }, update: { $set: object }) =>
+      filter._id === 105 && "attachments" in update.$set ? Promise.reject(writeError) : Promise.resolve({}),
+    );
+
+    // Act
+    const run = syncBuildings();
+
+    // Assert
+    await expect(run).resolves.toBeUndefined();
+    expect(detailErrorsOn(mockDb.raw)).toEqual([[105, "WriteConflict"]]);
+    expect(detailErrorsOn(mockDb.enriched)).toEqual([[105, "WriteConflict"]]);
+    expect(buildInfoRooms()).not.toContain("105-101");
+    expect(infoFields("building.sync.buildinfo_upserted")).toMatchObject({ processed: 59, errors: 1 });
+  });
+
+  it("notes a failure whose error has no message as unknown", async () => {
+    // Arrange
+    campusMap({ buildInfo: (buildNo) => (buildNo === "101" ? Promise.reject(new Error()) : roomsOf(buildNo)) });
+
+    // Act
+    await syncBuildings();
+
+    // Assert
+    expect(detailErrorsOn(mockDb.raw)).toEqual([[101, "unknown"]]);
+  });
+
+  it("logs a failure note it cannot write and still completes the run", async () => {
+    // Arrange
+    campusMap({
+      buildInfo: (buildNo) => (buildNo === "101" ? Promise.reject(new Error("HTTP 502")) : roomsOf(buildNo)),
+    });
+    const noteError = new Error("not primary");
+    mockDb.enriched.updateOne.mockImplementation((_filter: unknown, update: { $set: object }) =>
+      "attachments" in update.$set ? Promise.resolve({}) : Promise.reject(noteError),
+    );
+
+    // Act
+    const run = syncBuildings();
+
+    // Assert
+    await expect(run).resolves.toBeUndefined();
+    expect(detailErrorsOn(mockDb.raw)).toEqual([[101, "HTTP 502"]]);
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      { event: "building.sync.error_note_failed", skkuId: 101, err: noteError },
+      expect.any(String),
+    );
+    expect(infoFields("building.sync.completed")).toBeDefined();
+  });
+
+  it("requests no buildInfo for a facility without a buildNo", async () => {
+    // Arrange
+    campusMap({ facilitiesPerCampus: 2 });
+
+    // Act
+    await syncBuildings();
+
+    // Assert
+    expect(infoFields("building.sync.completed")).toMatchObject({ buildings: 64 });
+    expect(calledModes().filter((mode) => mode === "buildInfo")).toHaveLength(60);
+  });
+
+  it("keeps at most five buildInfo requests in flight", async () => {
+    // Arrange
+    let inFlight = 0;
+    let mostInFlight = 0;
+    campusMap({
+      buildInfo: async (buildNo) => {
+        inFlight++;
+        mostInFlight = Math.max(mostInFlight, inFlight);
+        await new Promise((resolve) => setImmediate(resolve));
+        inFlight--;
+        return roomsOf(buildNo);
+      },
+    });
+
+    // Act
+    await syncBuildings();
+
+    // Assert
+    // Five is a courtesy limit toward SKKU's server; raising it is a decision,
+    // not a refactor.
+    expect(mostInFlight).toBe(5);
+  });
+});
