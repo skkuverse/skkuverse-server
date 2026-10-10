@@ -1,9 +1,3 @@
-/**
- * The Mongo form of the building search (ADR 0006): the tier table of
- * building-search.rules.ts compiled into a $switch score, the keyword
- * filters, the ranked $facet pipeline with a spec per collection, and the
- * decoding of its one result document. BuildingSearchRepository runs them.
- */
 import type { Document, Filter } from "mongodb";
 import { escapeRegex } from "../../shared/regex.util";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
@@ -14,6 +8,7 @@ import {
   BUILDING_STRONG_MIN_SCORE,
   BUILDING_TIERS,
   BUILDING_WEAK_LIMIT,
+  NO_TIER_SCORE,
   SPACE_SEARCH_LIMIT,
   SPACE_STRONG_MIN_SCORE,
   SPACE_TIERS,
@@ -22,24 +17,9 @@ import {
 } from "./building-search.rules";
 import type { RankedFacet, RankedSearchResult, RelevanceTier } from "./building-search.types";
 
-/**
- * $regexMatch THROWS on non-string input, so every scored path is coerced first.
- * This is load-bearing, not defensive padding: two production `spaces` rows
- * already carry spaceCd: null (600주년기념관 buildNo 101, 의학관 buildNo 271 —
- * both spaceList-only records with empty names).
- *
- * The guard tests $type rather than using $ifNull, because $ifNull only covers
- * null and missing. The sync client (sync/building-sync.client.ts) passes SKKU's JSON values straight through
- * (`spaceCd: item.spaceCd`) and SkkuSpaceListItem.spaceCd: string is a
- * compile-time assertion about an EXTERNAL payload, not a runtime guarantee. If
- * SKKU ever emitted `"spaceCd": 27101` as a number, one such row would make
- * $regexMatch throw and every /building/search request would 500 — for every
- * query, not just ones touching that row. A non-string must not match rather
- * than throw, or one bad row becomes a total endpoint outage.
- *
- * Matching the `typeof cur === "string" ? cur : ""` in readPath also keeps the
- * JS twin and this compiler from disagreeing on non-string scalars.
- */
+// $regexMatch throws on a non-string, and two production rows have spaceCd: null.
+// `$type`, not `$ifNull`, so a numeric spaceCd from SKKU cannot fail every
+// search either (ADR 0006, Consequences).
 function pathMatches(path: string, regex: string): Document {
   const field = `$${path}`;
   return {
@@ -51,14 +31,7 @@ function pathMatches(path: string, regex: string): Document {
   };
 }
 
-/**
- * Compiles a tier table into a $switch yielding the winning tier's score.
- *
- * Matching is case-insensitive rather than uppercase-normalised: spaceCd is
- * mostly digits with uppercase suffixes (27114A, 70B101) but exactly one row is
- * lowercase (712115b, 의학관 의학교육연구실), and "i" is what the keyword
- * filter already uses — one convention across both stages.
- */
+/** Case-insensitive rather than uppercased: one production spaceCd is lowercase (712115b). */
 function tiersToScoreExpr(
   tiers: readonly RelevanceTier[],
   keyword: string,
@@ -71,30 +44,15 @@ function tiersToScoreExpr(
     if (!first) {
       throw new Error("[building] relevance tier declares no paths");
     }
-    // Single-path tiers skip the $or wrapper — smaller, more readable pipeline.
     return {
       case: cases.length === 1 ? first : { $or: cases },
       then: tier.score,
     };
   });
-  // default 0 means "passed the keyword filter but matched no tier", reachable
-  // only if filter and table drift apart. It sorts last rather than blending
-  // into a real tier.
-  return { $switch: { branches, default: 0 } };
+  return { $switch: { branches, default: NO_TIER_SCORE } };
 }
 
-/**
- * Keyword predicate for rooms.
- *
- * Campus-free BY DESIGN: `counts` must stay campus-agnostic because it feeds
- * the app's campus toggle badge, so campus is applied inside the rows facet
- * only. Sharing this one builder between rows and counts is what makes the
- * badge structurally unable to contradict the list.
- *
- * spaceCd is a SUBSTRING match, not equality — prefix-beats-substring is
- * expressed in SPACE_TIERS, keeping the filter a simple superset. Any query
- * reaches spaceCd: escapeRegex neutralises metacharacters.
- */
+/** Campus-free on purpose: the counts share it, and the app's campus toggle shows both campuses. */
 function spaceKeywordFilter(keyword: string): Filter<SpaceDoc> {
   const keywordPattern = { $regex: escapeRegex(keyword), $options: "i" };
   return {
@@ -108,7 +66,7 @@ function spaceKeywordFilter(keyword: string): Filter<SpaceDoc> {
   };
 }
 
-/** Keyword predicate for buildings. See BUILDING_TIERS on why not buildNo. */
+/** No buildNo, for the reason given on BUILDING_TIERS. */
 function buildingKeywordFilter(keyword: string): Filter<BuildingDoc> {
   const escaped = escapeRegex(keyword);
   const keywordPattern = { $regex: escaped, $options: "i" };
@@ -117,33 +75,25 @@ function buildingKeywordFilter(keyword: string): Filter<BuildingDoc> {
       { "name.ko": keywordPattern },
       { "name.en": keywordPattern },
       { "description.ko": keywordPattern },
-      // Prefix, so "2" lists 20/21/.../27. A non-numeric query simply matches
-      // no displayNo.
+      // A prefix, so "2" lists 20, 21 … 27.
       { displayNo: { $regex: `^${escaped}`, $options: "i" } },
     ],
   };
 }
 
-/** Decodes the one document a search pipeline's $facet emits. */
 function toRankedResult<T>(facets: readonly RankedFacet<T>[]): RankedSearchResult<T> {
   const facet = facets[0];
-  // $facet emits exactly one document by construction. An empty array means the
-  // pipeline shape changed — a programming error, not a runtime condition.
   if (!facet) {
     throw new Error("[building] search $facet returned no document");
   }
   const campusCounts: Record<Campus, number> = { hssc: 0, nsc: 0 };
-  // $group on $campus emits _id: null for a doc missing the field; such a row
-  // belongs to neither campus and is excluded from the badge.
+  // $group gives a document without `campus` the _id null: it counts for neither campus.
   for (const row of facet.counts) {
     if (isCampus(row._id)) campusCounts[row._id] = row.n;
   }
   const campusTotal = CAMPUSES.reduce((sum, campus) => sum + campusCounts[campus], 0);
-  // Concatenation preserves relevance order: every strong score is by
-  // definition above every weak one, and each band is already sorted.
   const ranked = [...facet.strong, ...facet.weak];
-  // Not a silent fallback: $count legitimately emits zero documents when the
-  // campus-scoped match set is empty.
+  // Not a silent fallback: $count emits no document when the match set is empty.
   const total = facet.total[0]?.n ?? 0;
   return {
     items: ranked,
@@ -153,7 +103,6 @@ function toRankedResult<T>(facets: readonly RankedFacet<T>[]): RankedSearchResul
   };
 }
 
-/** What differs between the two ranked searches; rankedSearchPipeline runs either. */
 interface RankedSearchSpec {
   keywordFilter: (keyword: string) => Document;
   tiers: readonly RelevanceTier[];
@@ -161,16 +110,11 @@ interface RankedSearchSpec {
   strongLimit: number;
   weakLimit: number;
   projection: Readonly<Record<string, 0>>;
-  /** The sort key after _score. It must make the sort a total order. */
+  /** Must make the sort a total order, so the response is stable across syncs. */
   tiebreak: Readonly<Record<string, 1>>;
 }
 
-/**
- * Rooms. The { _score: -1, spaceCd: 1 } sort is a TOTAL order. The spaceCd
- * tiebreak is what makes "27" emit 27101, 27102, 27104, ... and what makes the
- * response stable across the 7-day building-sync (phase 3's deleteMany +
- * re-upsert rewrites physical document order).
- */
+/** spaceCd breaks ties: the sync's weekly delete and re-upsert reorders the documents on disk. */
 const SPACE_SEARCH: RankedSearchSpec = {
   keywordFilter: spaceKeywordFilter,
   tiers: SPACE_TIERS,
@@ -181,12 +125,7 @@ const SPACE_SEARCH: RankedSearchSpec = {
   tiebreak: { spaceCd: 1 },
 };
 
-/**
- * Buildings. The tiebreak is _id, the SKKU-assigned integer id —
- * building-sync upserts by { _id: skkuId } and never deletes from this
- * collection, so it is stable across syncs (unlike an ObjectId, which a
- * delete/reinsert cycle would regenerate).
- */
+/** _id breaks ties: SKKU's integer id, which the sync upserts by and never deletes. */
 const BUILDING_SEARCH: RankedSearchSpec = {
   keywordFilter: buildingKeywordFilter,
   tiers: BUILDING_TIERS,
@@ -197,11 +136,7 @@ const BUILDING_SEARCH: RankedSearchSpec = {
   tiebreak: { _id: 1 },
 };
 
-/**
- * A ranked search pipeline. One $facet returns the rows and the counts
- * together, so they cannot disagree. _score is computed once before the facet;
- * the counts never read it.
- */
+/** One $facet returns the rows and the counts, so the counts cannot describe another predicate. */
 function rankedSearchPipeline(search: RankedSearchSpec, keyword: string, campus?: Campus | null): Document[] {
   const campusStage: Document[] = campus ? [{ $match: { campus } }] : [];
   const projectStage = { $project: { ...search.projection } };
@@ -209,8 +144,6 @@ function rankedSearchPipeline(search: RankedSearchSpec, keyword: string, campus?
 
   return [
     { $match: search.keywordFilter(keyword) },
-    // Scored once here rather than inside each band: both bands read _score, so
-    // hoisting it costs one pass instead of two.
     { $addFields: { _score: tiersToScoreExpr(search.tiers, keyword) } },
     {
       $facet: {
