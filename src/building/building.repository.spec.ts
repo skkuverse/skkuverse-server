@@ -44,7 +44,23 @@ import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 
 const HSSC = { _id: 1, campus: "hssc" };
 const NSC = { _id: 2, campus: "nsc" };
-const SHAPE = { _id: "wall", order: 1 };
+const RING = [
+  [126.9944, 37.5873],
+  [126.9954, 37.5873],
+  [126.9954, 37.5883],
+  [126.9944, 37.5883],
+  [126.9944, 37.5873],
+];
+const SHAPE = {
+  _id: "wall",
+  campus: "hssc",
+  layerId: "building_labels",
+  geometry: { type: "Polygon", coordinates: [RING] },
+  title: { ko: "담장", en: "Wall" },
+  subtitle: null,
+  skkuId: null,
+  order: 1,
+};
 const FIVE_MIN = 5 * 60 * 1000;
 
 const repository = new BuildingRepository();
@@ -114,8 +130,38 @@ describe("listCampusShapes", () => {
     expect(findFor.campus_shapes).toHaveBeenCalledTimes(1);
     expect(findFor.campus_shapes!.mock.calls[0]).toEqual([
       {},
-      { maxTimeMS: HOT_READ_MAX_TIME_MS },
+      {
+        projection: {
+          _id: 1,
+          campus: 1,
+          layerId: 1,
+          geometry: 1,
+          title: 1,
+          subtitle: 1,
+          skkuId: 1,
+          order: 1,
+        },
+        maxTimeMS: HOT_READ_MAX_TIME_MS,
+      },
     ]);
+  });
+
+  it("leaves out a shape that does not parse, logs it, and keeps the rest", async () => {
+    toArrayFor.campus_shapes!.mockResolvedValue([
+      SHAPE,
+      { ...SHAPE, _id: "broken-ring", geometry: { type: "Polygon", coordinates: [null] } },
+      { ...SHAPE, _id: "string-id", skkuId: "12" },
+      { ...SHAPE, _id: "extra", updatedAt: new Date(0), note: "ignored" },
+    ]);
+    await expect(listCampusShapes()).resolves.toEqual([SHAPE, { ...SHAPE, _id: "extra" }]);
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "building.campus_shapes.invalid",
+        count: 2,
+        invalid: ["broken-ring: geometry", "string-id: skkuId"],
+      }),
+      expect.any(String),
+    );
   });
 
   it("serves the last good shapes when a re-read fails, with a warning", async () => {

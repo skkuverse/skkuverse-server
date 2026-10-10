@@ -176,5 +176,6 @@ export interface CampusShapeDoc {
    */
   skkuId: SkkuId | null;
   order: number;
-  updatedAt: Date;
+  // The importer also writes `updatedAt`; nothing here reads it, so it is not
+  // read (building.schema.ts parses each document as read).
 }
