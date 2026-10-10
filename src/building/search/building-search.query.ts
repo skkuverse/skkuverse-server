@@ -1,8 +1,8 @@
 /**
  * The Mongo form of the building search (ADR 0006): the tier table of
  * building-search.rules.ts compiled into a $switch score, the keyword
- * filters, the two ranked $facet pipelines and the decoding of their one
- * result document. BuildingSearchRepository runs them.
+ * filters, the ranked $facet pipeline with a spec per collection, and the
+ * decoding of its one result document. BuildingSearchRepository runs them.
  */
 import type { Document, Filter } from "mongodb";
 import { escapeRegex } from "../../shared/regex.util";
@@ -160,83 +160,79 @@ function toRankedResult<T>(facets: readonly Document[]): RankedSearchResult<T> {
   };
 }
 
-/**
- * The ranked room search pipeline.
- *
- * One $facet returns the rows and the counts together, so they cannot
- * disagree. _score is computed once before the facet; the counts never read it.
- *
- * The { _score: -1, spaceCd: 1 } sort is a TOTAL order. The spaceCd tiebreak is
- * what makes "27" emit 27101, 27102, 27104, ... and what makes the response
- * stable across the 7-day building-sync (phase 3's deleteMany + re-upsert
- * rewrites physical document order).
- */
-function spaceSearchPipeline(keyword: string, campus?: Campus | null): Document[] {
-  const campusStage: Document[] = campus ? [{ $match: { campus } }] : [];
-  const projectStage = {
-    $project: { _id: 0, _score: 0, sources: 0, syncedAt: 0 },
-  };
-  const sortStage = { $sort: { _score: -1, spaceCd: 1 } };
-
-  return [
-    { $match: spaceKeywordFilter(keyword) },
-    // Scored once here rather than inside each band: both bands read _score, so
-    // hoisting it costs one pass instead of two.
-    { $addFields: { _score: tiersToScoreExpr(SPACE_TIERS, keyword) } },
-    {
-      $facet: {
-        strong: [
-          ...campusStage,
-          { $match: { _score: { $gte: SPACE_STRONG_MIN_SCORE } } },
-          sortStage,
-          { $limit: SPACE_SEARCH_LIMIT },
-          projectStage,
-        ],
-        weak: [
-          ...campusStage,
-          { $match: { _score: { $lt: SPACE_STRONG_MIN_SCORE } } },
-          sortStage,
-          { $limit: SPACE_WEAK_LIMIT },
-          projectStage,
-        ],
-        counts: [{ $group: { _id: "$campus", n: { $sum: 1 } } }],
-        total: [...campusStage, { $count: "n" }],
-      },
-    },
-  ];
+/** What differs between the two ranked searches; rankedSearchPipeline runs either. */
+interface RankedSearchSpec {
+  keywordFilter: (keyword: string) => Document;
+  tiers: readonly RelevanceTier[];
+  strongMinScore: number;
+  strongLimit: number;
+  weakLimit: number;
+  projection: Readonly<Record<string, 0>>;
+  /** The sort key after _score. It must make the sort a total order. */
+  tiebreak: Readonly<Record<string, 1>>;
 }
 
 /**
- * The ranked building search pipeline. Same shape as the room pipeline; the
- * tiebreak is _id, the SKKU-assigned integer id — building-sync upserts by
- * { _id: skkuId } and never deletes from this collection, so it is stable
- * across syncs (unlike an ObjectId, which a delete/reinsert cycle would
- * regenerate).
+ * Rooms. The { _score: -1, spaceCd: 1 } sort is a TOTAL order. The spaceCd
+ * tiebreak is what makes "27" emit 27101, 27102, 27104, ... and what makes the
+ * response stable across the 7-day building-sync (phase 3's deleteMany +
+ * re-upsert rewrites physical document order).
  */
-function buildingSearchPipeline(keyword: string, campus?: Campus | null): Document[] {
+const SPACE_SEARCH: RankedSearchSpec = {
+  keywordFilter: spaceKeywordFilter,
+  tiers: SPACE_TIERS,
+  strongMinScore: SPACE_STRONG_MIN_SCORE,
+  strongLimit: SPACE_SEARCH_LIMIT,
+  weakLimit: SPACE_WEAK_LIMIT,
+  projection: { _id: 0, _score: 0, sources: 0, syncedAt: 0 },
+  tiebreak: { spaceCd: 1 },
+};
+
+/**
+ * Buildings. The tiebreak is _id, the SKKU-assigned integer id —
+ * building-sync upserts by { _id: skkuId } and never deletes from this
+ * collection, so it is stable across syncs (unlike an ObjectId, which a
+ * delete/reinsert cycle would regenerate).
+ */
+const BUILDING_SEARCH: RankedSearchSpec = {
+  keywordFilter: buildingKeywordFilter,
+  tiers: BUILDING_TIERS,
+  strongMinScore: BUILDING_STRONG_MIN_SCORE,
+  strongLimit: BUILDING_SEARCH_LIMIT,
+  weakLimit: BUILDING_WEAK_LIMIT,
+  projection: { _score: 0, extensions: 0, sync: 0, enrichVersion: 0 },
+  tiebreak: { _id: 1 },
+};
+
+/**
+ * A ranked search pipeline. One $facet returns the rows and the counts
+ * together, so they cannot disagree. _score is computed once before the facet;
+ * the counts never read it.
+ */
+function rankedSearchPipeline(search: RankedSearchSpec, keyword: string, campus?: Campus | null): Document[] {
   const campusStage: Document[] = campus ? [{ $match: { campus } }] : [];
-  const projectStage = {
-    $project: { _score: 0, extensions: 0, sync: 0, enrichVersion: 0 },
-  };
-  const sortStage = { $sort: { _score: -1, _id: 1 } };
+  const projectStage = { $project: { ...search.projection } };
+  const sortStage = { $sort: { _score: -1, ...search.tiebreak } };
 
   return [
-    { $match: buildingKeywordFilter(keyword) },
-    { $addFields: { _score: tiersToScoreExpr(BUILDING_TIERS, keyword) } },
+    { $match: search.keywordFilter(keyword) },
+    // Scored once here rather than inside each band: both bands read _score, so
+    // hoisting it costs one pass instead of two.
+    { $addFields: { _score: tiersToScoreExpr(search.tiers, keyword) } },
     {
       $facet: {
         strong: [
           ...campusStage,
-          { $match: { _score: { $gte: BUILDING_STRONG_MIN_SCORE } } },
+          { $match: { _score: { $gte: search.strongMinScore } } },
           sortStage,
-          { $limit: BUILDING_SEARCH_LIMIT },
+          { $limit: search.strongLimit },
           projectStage,
         ],
         weak: [
           ...campusStage,
-          { $match: { _score: { $lt: BUILDING_STRONG_MIN_SCORE } } },
+          { $match: { _score: { $lt: search.strongMinScore } } },
           sortStage,
-          { $limit: BUILDING_WEAK_LIMIT },
+          { $limit: search.weakLimit },
           projectStage,
         ],
         counts: [{ $group: { _id: "$campus", n: { $sum: 1 } } }],
@@ -247,10 +243,11 @@ function buildingSearchPipeline(keyword: string, campus?: Campus | null): Docume
 }
 
 export {
+  BUILDING_SEARCH,
+  SPACE_SEARCH,
   buildingKeywordFilter,
-  buildingSearchPipeline,
+  rankedSearchPipeline,
   spaceKeywordFilter,
-  spaceSearchPipeline,
   tiersToScoreExpr,
   toRankedResult,
 };

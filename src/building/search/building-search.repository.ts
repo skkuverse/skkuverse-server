@@ -4,7 +4,7 @@ import config from "../../infra/config";
 import { mongoCollection } from "../../infra/mongo";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
 import type { Campus } from "../building.types";
-import { buildingSearchPipeline, spaceSearchPipeline, toRankedResult } from "./building-search.query";
+import { BUILDING_SEARCH, SPACE_SEARCH, rankedSearchPipeline, toRankedResult } from "./building-search.query";
 import type { RankedSearchResult } from "./building-search.types";
 
 /**
@@ -40,7 +40,7 @@ export class BuildingSearchRepository {
     campus?: Campus | null,
   ): Promise<RankedSearchResult<BuildingDoc>> {
     const facets = await this.buildings()
-      .aggregate(buildingSearchPipeline(keyword, campus), { maxTimeMS: SEARCH_MAX_TIME_MS })
+      .aggregate(rankedSearchPipeline(BUILDING_SEARCH, keyword, campus), { maxTimeMS: SEARCH_MAX_TIME_MS })
       .toArray();
     return toRankedResult<BuildingDoc>(facets);
   }
@@ -50,7 +50,7 @@ export class BuildingSearchRepository {
     campus?: Campus | null,
   ): Promise<RankedSearchResult<SpaceDoc>> {
     const facets = await this.spaces()
-      .aggregate(spaceSearchPipeline(keyword, campus), { maxTimeMS: SEARCH_MAX_TIME_MS })
+      .aggregate(rankedSearchPipeline(SPACE_SEARCH, keyword, campus), { maxTimeMS: SEARCH_MAX_TIME_MS })
       .toArray();
     return toRankedResult<SpaceDoc>(facets);
   }
