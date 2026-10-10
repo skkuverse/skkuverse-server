@@ -210,7 +210,7 @@ function featureBoundaryBlocks() {
 // is split, or its flow becomes a sub-module (D3).
 const MIGRATED_MODULES = ["building"];
 const ROLE_MAX_LINES = {
-  client: 159,
+  client: 157,
   controller: 41,
   document: 112,
   mapper: 154,

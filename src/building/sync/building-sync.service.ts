@@ -12,11 +12,8 @@ import { BuildingSyncRepository } from "./building-sync.repository";
 import { BuildingSyncClient } from "./building-sync.client";
 import { ENRICH_VERSION, enrichBuilding } from "./building-sync.mapper";
 import { BuildingRepository } from "../building.repository";
-import { CAMPUSES } from "../building.rules";
-import type { ListedBuilding, SyncedSpace } from "./building-sync.types";
-import type { BuildNo } from "../building.types";
-
-type WithBuildNo = ListedBuilding & { doc: { buildNo: BuildNo } };
+import { CAMPUSES, hasBuildNo } from "../building.rules";
+import type { ListedBuilding, ListedBuildingWithBuildNo, SyncedSpace } from "./building-sync.types";
 
 /**
  * Mirrors SKKU's campusMap.do into the building DB, weekly
@@ -154,8 +151,7 @@ export class BuildingSyncService {
 
   /** Phase 2: buildInfo per building → photos on both layers + floor spaces. */
   private async syncBuildInfo(listed: readonly ListedBuilding[], syncStartedAt: Date): Promise<void> {
-    // A facility (no buildNo) has no buildInfo.
-    const withBuildNo = listed.filter((b): b is WithBuildNo => !!b.doc.buildNo);
+    const withBuildNo = listed.filter((building): building is ListedBuildingWithBuildNo => hasBuildNo(building.doc));
     const spaces: SyncedSpace[] = [];
     let processed = 0;
     let errors = 0;

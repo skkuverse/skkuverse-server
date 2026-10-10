@@ -26,3 +26,6 @@ export interface BilingualText {
 }
 
 export type WithCampusLabel<T> = T & { campusLabel: string };
+
+/** A building, or its raw doc, narrowed to one that has a buildNo (not a facility). */
+export type WithBuildNo<T extends { buildNo: BuildNo | null }> = T & { buildNo: BuildNo };

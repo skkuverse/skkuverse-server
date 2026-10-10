@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import axios from "axios";
 import type { BuildingAttachment, BuildingRawDoc } from "../building.document";
 import { SKKU_CAMPUS_CODE } from "../building.rules";
-import type { BuildInfo, ListedBuilding, SyncedSpace } from "./building-sync.types";
+import type { BuildInfo, ListedBuilding, ListedBuildingWithBuildNo, SyncedSpace } from "./building-sync.types";
 import type { ApiId, BilingualText, BuildNo, Campus, SkkuId, SpaceCd } from "../building.types";
 
 const CAMPUS_MAP_URL = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
@@ -141,9 +141,7 @@ export class BuildingSyncClient {
     }));
   }
 
-  async fetchBuildInfo(
-    building: ListedBuilding & { doc: { buildNo: BuildNo } },
-  ): Promise<BuildInfo> {
+  async fetchBuildInfo(building: ListedBuildingWithBuildNo): Promise<BuildInfo> {
     const { doc } = building;
     const { data } = await axios.get<SkkuBuildInfoResponse>(CAMPUS_MAP_URL, {
       params: { mode: "buildInfo", buildNo: doc.buildNo, id: building.apiId },
