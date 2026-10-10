@@ -106,11 +106,11 @@ export class BuildingSyncService {
     const changedSkkuIds = new Set(
       listed
         .filter((building) =>
-          needsEnrichment(
-            skkuUpdatedAtBySkkuId.get(building.skkuId),
-            building.doc.skkuUpdatedAt,
-            skkuIdsEnrichedAtOldVersion.has(building.skkuId),
-          ),
+          needsEnrichment({
+            knownUpdatedAt: skkuUpdatedAtBySkkuId.get(building.skkuId),
+            listedUpdatedAt: building.doc.skkuUpdatedAt,
+            isEnrichedAtOldVersion: skkuIdsEnrichedAtOldVersion.has(building.skkuId),
+          }),
         )
         .map((building) => building.skkuId),
     );
