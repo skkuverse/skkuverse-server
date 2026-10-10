@@ -3,7 +3,6 @@ import logger from "./logger";
 import * as requiredEnv from "./required-env";
 import { resolveRuntimeSwitches, runtimeMode } from "./runtime-switches";
 
-// --- Environment flags ---
 const mode = requiredEnv.envMode(process.env);
 const { nodeEnv: NODE_ENV, isProduction, isTest, isDevelopment, useProdApi: USE_PROD_API } = mode;
 
@@ -14,12 +13,8 @@ const { switches, errors: switchErrors } = resolveRuntimeSwitches(
   runtimeMode(NODE_ENV),
 );
 
-// --- Helpers ---
-
 const devDbName = (baseName: string | undefined) => requiredEnv.devDbName(mode, baseName);
 const apiUrl = (prodKey: string, devKey: string) => requiredEnv.apiUrl(mode, process.env, prodKey, devKey);
-
-// --- Config ---
 
 const config = {
   env: NODE_ENV,
@@ -257,7 +252,7 @@ const config = {
 };
 
 // (An operations detail is left out of the public history.)
-const missing = requiredEnv.missingRequired(process.env).map(({ name, env }) => ({ name, env }));
+const missing = requiredEnv.listMissingRequired(process.env).map(({ name, env }) => ({ name, env }));
 if (missing.length > 0) {
   logger.fatal(
     { event: "config.missing_required", missing },

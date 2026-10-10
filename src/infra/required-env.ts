@@ -95,13 +95,13 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
   ];
 }
 
-export function missingRequired(env: NodeJS.ProcessEnv): RequiredValue[] {
+export function listMissingRequired(env: NodeJS.ProcessEnv): RequiredValue[] {
   return requiredValues(env).filter((v) => !v.value);
 }
 
 /** Missing required values as `  name (env: VAR)` lines. */
-export function findMissingRequired(env: NodeJS.ProcessEnv = process.env): string[] {
-  return missingRequired(env).map(({ name, env: key }) => `  ${name} (env: ${key})`);
+export function describeMissingRequired(env: NodeJS.ProcessEnv = process.env): string[] {
+  return listMissingRequired(env).map(({ name, env: key }) => `  ${name} (env: ${key})`);
 }
 
 /**
@@ -111,7 +111,7 @@ export function findMissingRequired(env: NodeJS.ProcessEnv = process.env): strin
 export function validateEnv(env: NodeJS.ProcessEnv = process.env): void {
   const { nodeEnv, isTest } = envMode(env);
   if (isTest) return;
-  const missing = findMissingRequired(env);
+  const missing = describeMissingRequired(env);
   if (missing.length > 0) {
     throw new Error(
       `FATAL: Missing required config — set these env vars:\n${missing.join("\n")}`,

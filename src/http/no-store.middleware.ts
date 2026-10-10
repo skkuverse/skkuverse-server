@@ -17,7 +17,7 @@ import type { NextFunction, Request, Response } from "express";
  * 304 handling are left alone: a revalidation is answered from a freshly
  * computed body, never from a cache.
  */
-export function forceNoStore(_req: Request, res: Response, next: NextFunction): void {
+export function noStoreMiddleware(_req: Request, res: Response, next: NextFunction): void {
   const setHeader = res.setHeader.bind(res);
   const appendHeader = res.appendHeader.bind(res);
   const isCacheControl = (name: string): boolean => name.toLowerCase() === "cache-control";

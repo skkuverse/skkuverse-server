@@ -6,12 +6,8 @@ import { createLogThrottle } from "../infra/log-throttle";
 const skippedThrottle = createLogThrottle(60 * 60_000);
 import { BASE_LAYERS, type BaseLayerId } from "./map-layers.data";
 import type { MapOverlay, OverlayBase } from "./map-overlay.types";
-import {
-  isDrawableGeometry,
-  type GeoJsonLineString,
-  type GeoJsonPoint,
-  type GeoJsonPolygon,
-} from "../shared/geojson.types";
+import type { GeoJsonLineString, GeoJsonPoint, GeoJsonPolygon } from "../shared/geojson.types";
+import { isDrawableGeometry } from "../shared/geojson.util";
 import { toWirePolygon } from "../shared/ring-winding.util";
 
 /**
