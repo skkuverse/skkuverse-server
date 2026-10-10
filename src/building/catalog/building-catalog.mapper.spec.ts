@@ -63,6 +63,13 @@ describe("groupByFloor", () => {
       ],
     });
   });
+  it("throws on a space without a floor rather than filing it under a made-up one", () => {
+    // Arrange
+    const floorless = { ...space("102", "1층"), floor: undefined } as unknown as FloorSpaceDoc;
+
+    // Act & Assert
+    expect(() => groupByFloor([space("101", "1층"), floorless])).toThrow(TypeError);
+  });
 });
 
 describe("toBuildingConnections", () => {

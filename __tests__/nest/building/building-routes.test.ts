@@ -350,3 +350,20 @@ describe("GET /building/:skkuId", () => {
     expect(svc.listConnectionsBySkkuId).toHaveBeenCalledWith(1);
   });
 });
+
+describe("GET /building/:skkuId with a broken space", () => {
+  it("answers 500 INTERNAL_ERROR when a space has no floor", async () => {
+    // Arrange
+    svc.findBuildingBySkkuId.mockResolvedValue({ _id: 1, buildNo: "100", campus: "hssc", name: { ko: "법학관", en: "Law" } });
+    svc.listSpacesByBuildNo.mockResolvedValue([{ spaceCd: "100-A101", name: { ko: "강의실", en: "" } }]);
+    svc.listConnectionsBySkkuId.mockResolvedValue([]);
+    svc.listBuildingsBySkkuIds.mockResolvedValue([]);
+
+    // Act
+    const res = await request(httpServer).get("/building/1");
+
+    // Assert
+    expect(res.status).toBe(500);
+    expect(res.body.error).toEqual({ code: "INTERNAL_ERROR", message: "Internal server error" });
+  });
+});
