@@ -5,11 +5,11 @@ import {
   postToFcmFunction,
   type FcmPayload as FcmPayloadRecord,
   type FcmResponse,
-} from "../common/fcm-client";
+} from "../infra/fcm";
 import logger from "../infra/logger";
 import { groupByDedupKey } from "./notices.dedup-key";
 import { getNoticesCollection } from "./notices.data";
-import { buildTopics, TOPIC_CAP } from "./topics.bridge";
+import { buildTopics, TOPIC_CAP } from "./notices.topics";
 import type { NoticeDoc } from "./types";
 
 /**
@@ -24,14 +24,14 @@ import type { NoticeDoc } from "./types";
  *    maxAttempts, isDeleted $ne true, dispatchClaimedAt lease via
  *    claimLeaseMs);
  *  - sweepPending(triggerSource, opts?) + claimNext + dispatchGroup;
- *  - postToFunction → common/fcm-client: Node fetch to FCM_FUNCTION_URL with
+ *  - postToFunction → infra/fcm: Node fetch to FCM_FUNCTION_URL with
  *    X-API-Key + an AbortController fcmTimeoutMs abort;
  *  - the catch-handler lease-release invariant (try-side updateOne failure
  *    bounces into the catch's release updateOne — pinned by tests);
  *  - the SweepSummary shape + log events (`notices.dispatch.*`).
  *
  * Raw mongodb driver via the shared getNoticesCollection() (notices.data over
- * src/infra/db.ts), NOT Mongoose. buildTopics comes from topics.bridge. No
+ * src/infra/db.ts), NOT Mongoose. No
  * ?? [] / typeof guards: the throw/skip paths stay fail-loud.
  *
  * sweepPending is the public entry point for the internal controller + the
@@ -110,7 +110,7 @@ export class NoticesDispatcherService {
   }
 
   /**
-   * Delegates to common/fcm-client. Kept as a method rather than inlined at the
+   * Delegates to infra/fcm. Kept as a method rather than inlined at the
    * call site so the dispatcher's own tests keep their seam, and so the shape of
    * this class is unchanged by the extraction.
    */

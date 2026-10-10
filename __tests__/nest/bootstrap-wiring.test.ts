@@ -25,9 +25,9 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import express from "express";
 import request from "supertest";
-import { LangMiddleware } from "../../src/common/lang.middleware";
+import { LangMiddleware } from "../../src/http/lang.middleware";
 import { CORS_METHODS, corsOrigins, WEBVIEW_ORIGIN } from "../../src/infra/origins";
-import { EXPOSED_RESPONSE_HEADERS } from "../../src/common/expose-headers";
+import { EXPOSED_RESPONSE_HEADERS } from "../../src/http/expose-headers.middleware";
 
 @Controller("ping")
 class PingController {

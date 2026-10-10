@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { AppConfigService } from "../config/app-config.service";
+import config from "../infra/config";
 import { BRIDGE_ORIGINS, WEB_ORIGIN } from "../infra/origins";
 import { firstPartyOrigins } from "../miniapps/miniapps";
 
@@ -45,8 +45,8 @@ export interface AppClientConfig {
  * AppFeatureService — the GET /app/config handler.
  *
  * Static passthrough: version gate straight from the resolved
- * src/infra/config.ts (via AppConfigService.app), bridge allowlist straight
- * from infra/origins. No DB, no caching, no auth.
+ * src/infra/config.ts, bridge allowlist straight from infra/origins. No DB,
+ * no caching, no auth.
  *
  * The allowlist rides here rather than on its own endpoint because the client
  * already fetches /app/config during boot (checkForceUpdate), so publishing it
@@ -56,11 +56,9 @@ export interface AppClientConfig {
  */
 @Injectable()
 export class AppFeatureService {
-  constructor(private readonly appConfig: AppConfigService) {}
-
   /** Returns the client app config: version gate, bridge allowlist, web origin, mini-app origins. */
   getConfig(): AppClientConfig {
-    const { ios, android } = this.appConfig.app;
+    const { ios, android } = config.app;
     return {
       ios,
       android,

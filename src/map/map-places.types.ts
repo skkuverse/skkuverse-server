@@ -18,9 +18,9 @@
 // university, not about a feature — the whole repo (bus, map, ui, i18n,
 // building) already imports this one declaration, and a second copy would only
 // create two things to keep in sync for a value that cannot change.
-import type { Campus } from "../building/types";
+import type { Campus } from "../building/building.types";
 import type { I18n } from "../infra/types";
-import type { OverlayGeometry } from "./geo/geojson.types";
+import type { OverlayGeometry } from "../shared/geojson.types";
 import type { PlaceDetailOf } from "./map-place-detail.types";
 
 // I18n is infra (`src/infra/types.ts`), because the map catalogue authors its
@@ -107,7 +107,7 @@ export interface MapPlaceDoc {
    * already is: Mongo rejects an unclosed ring, a ring with fewer than four
    * positions, a self-intersecting loop and a hole outside its exterior, all at
    * insert. It does NOT check winding — that is the importer's job, via
-   * `geo/ring-winding.ts`, because the wire serves this object verbatim.
+   * `shared/ring-winding.util.ts`, because the wire serves this object verbatim.
    */
   location: OverlayGeometry;
   title: I18n;

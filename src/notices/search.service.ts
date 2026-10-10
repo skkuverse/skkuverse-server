@@ -1,9 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import {
-  escapeRegex,
-  validateQ,
-  MAX_QUERY_CODEPOINTS,
-} from "./notices.search";
+import { escapeRegex } from "../shared/regex.util";
+import { validateQ, MAX_QUERY_CODEPOINTS } from "./notices.search";
 
 /**
  * NoticesSearchService — thin @Injectable delegate over the validated

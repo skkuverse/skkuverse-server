@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { RouteOverlayService } from "../route-overlay/route-overlay.service";
-import { AppError } from "../../common/app-error";
-import { sendSuccess } from "../../common/send-success";
+import { AppError } from "../../http/app.error";
+import { sendSuccess } from "../../http/response.interceptor";
 
 /**
  * GET /bus/route/:routeId.

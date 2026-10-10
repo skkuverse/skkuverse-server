@@ -13,15 +13,15 @@ import { PinoNestLogger } from "./infra/nest-logger";
 import config from "./infra/config";
 import { closeClient, ping as pingDb } from "./infra/db";
 import { AppModule } from "./app.module";
-import { ResponseInterceptor } from "./common/response.interceptor";
+import { ResponseInterceptor } from "./http/response.interceptor";
 import {
   EXPOSED_RESPONSE_HEADERS,
-  exposeResponseHeaders,
-} from "./common/expose-headers";
+  exposeHeadersMiddleware,
+} from "./http/expose-headers.middleware";
 import { CORS_METHODS, corsOrigins } from "./infra/origins";
-import { HttpExceptionFilter } from "./common/http-exception.filter";
-import { LangMiddleware } from "./common/lang.middleware";
-import { forceNoStore } from "./common/no-store";
+import { HttpExceptionFilter } from "./http/http-exception.filter";
+import { LangMiddleware } from "./http/lang.middleware";
+import { noStoreMiddleware } from "./http/no-store.middleware";
 import { BusCacheService } from "./bus/cache/bus-cache.service";
 
 /**
@@ -55,11 +55,11 @@ async function bootstrap(): Promise<void> {
 
   // Must run before any handler — see the docblock. The eventmap 304 branches
   // return before setting headers of their own, which is the case this exists for.
-  expressInstance.use(exposeResponseHeaders);
+  expressInstance.use(exposeHeadersMiddleware);
 
   // CACHE=off (the development default): every Cache-Control becomes no-store,
   // so the phone's HTTP cache never answers for this server.
-  if (!config.cache.enabled) expressInstance.use(forceNoStore);
+  if (!config.cache.enabled) expressInstance.use(noStoreMiddleware);
 
   // bodyParser:false is REQUIRED: with a pre-built ExpressAdapter, Nest's
   // registerParserMiddleware → ExpressAdapter.isMiddlewareApplied reads the
@@ -78,7 +78,7 @@ async function bootstrap(): Promise<void> {
   //
   // Added when apps/webview gained its first fetch (the mini-app notification
   // feed, skkuverse#17). Until then the API sent no Access-Control-Allow-Origin
-  // and answered OPTIONS with 404, which common/expose-headers.ts documents —
+  // and answered OPTIONS with 404, which http/expose-headers.middleware.ts documents —
   // and which meant a cross-origin fetch failed before it could read anything.
   //
   // Read-only methods, no credentials. Everything reachable this way is already
@@ -88,7 +88,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: corsOrigins(config.isDevelopment),
     methods: [...CORS_METHODS],
-    // The same header exposeResponseHeaders already sets. Nest would
+    // The same header exposeHeadersMiddleware already sets. Nest would
     // overwrite that header on CORS-handled responses, and the 304 branches it
     // exists for do not go through this path at all, so both are needed.
     exposedHeaders: EXPOSED_RESPONSE_HEADERS,

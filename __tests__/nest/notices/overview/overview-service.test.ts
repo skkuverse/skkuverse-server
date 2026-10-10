@@ -3,7 +3,7 @@
  * spec requirement: validation, no candidates, degradation, budget pause,
  * no answer, and the cache.
  */
-import { AppError } from "../../../../src/common/app-error";
+import { AppError } from "../../../../src/http/app.error";
 import type { AiOverviewResult } from "../../../../src/notices/overview/overview.ai-client";
 import {
   MAX_BUDGET_PAUSE_MS,

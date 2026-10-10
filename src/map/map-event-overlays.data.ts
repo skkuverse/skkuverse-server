@@ -1,4 +1,4 @@
-import { createCachedLoader } from "../common/cache/cached-loader";
+import { createCachedLoader } from "../infra/cached-loader";
 import { hasAnyText } from "../infra/i18n";
 import logger from "../infra/logger";
 import { ROOT_RELATIVE_PATH_RE, toWebviewUrl } from "../infra/webview-url";
@@ -10,19 +10,16 @@ import type { MapPlaceDoc, PlaceAction } from "./map-places.types";
 import { getPlacesCollection } from "./map-places.data";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import type { I18n } from "../infra/types";
-import {
-  isDrawableGeometry,
-  type GeoJsonLineString,
-  type GeoJsonPoint,
-  type GeoJsonPolygon,
-} from "./geo/geojson.types";
-import { toWirePolygon } from "./geo/ring-winding";
+import type { GeoJsonLineString, GeoJsonPoint, GeoJsonPolygon } from "../shared/geojson.types";
+import { isDrawableGeometry } from "../shared/geojson.util";
+import { toWirePolygon } from "../shared/ring-winding.util";
 import type {
   I18nWire,
   MapOverlay,
   MarkerAction,
   OverlayBase,
 } from "./map-overlay.types";
+import { isRecord } from "../shared/object.util";
 
 /**
  * Event places projected into the ORDINARY map-overlay schema.
@@ -272,7 +269,7 @@ function facetsOf(
   dropped: string[],
 ): Record<string, string[]> {
   const out: Record<string, string[]> = {};
-  const authored = isPlainObject(doc.facets) ? doc.facets : {};
+  const authored = isRecord(doc.facets) ? doc.facets : {};
   for (const facet of config.facets) {
     if (facet.source === "hours") {
       out[facet.id] = facet.options
@@ -313,7 +310,7 @@ function orderByOptionOf(
   dropped: string[],
 ): Record<string, number> {
   const out: Record<string, number> = {};
-  if (!isPlainObject(doc.orderByOption)) return out;
+  if (!isRecord(doc.orderByOption)) return out;
   const known = new Set(config.facets.flatMap((f) => f.options.map((o) => o.id)));
   for (const [key, value] of Object.entries(doc.orderByOption)) {
     if (known.has(key) && typeof value === "number" && Number.isFinite(value)) {
@@ -323,10 +320,6 @@ function orderByOptionOf(
     }
   }
   return out;
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**

@@ -3,7 +3,7 @@ title: The Map Module, In Reading Order
 type: explanation
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-09-24
+last-updated: 2026-10-10
 audience: internal
 ---
 
@@ -149,7 +149,7 @@ pressable.
   instruction; the app opens an area pin's sheet tall. It is marker-only for the same reason as
   `pinPriority`.
 
-### `geo/geojson.types.ts` and `geo/ring-winding.ts`
+### `src/shared/geojson.types.ts` and `src/shared/ring-winding.util.ts`
 
 The RFC 7946 vocabulary, shared by storage and the wire, and the one operation performed on it.
 
@@ -157,7 +157,7 @@ The geometry object in Mongo and the geometry object in the response are the SAM
 converter on the server, and that is the whole design: an axis swap can only be introduced at a
 conversion, and swapped Seoul coordinates land in the Yellow Sea without ever throwing.
 
-`ring-winding.ts` is the single exception, and it earns it. RFC 7946 §3.1.6 requires exterior rings
+`ring-winding.util.ts` is the single exception, and it earns it. RFC 7946 §3.1.6 requires exterior rings
 counter-clockwise; Mongo's `2dsphere` validates closure and self-intersection but **never orientation**,
 so a reversed ring stores silently and the client's polygon overlay then draws it wrong or refuses its
 taps. Normalisation runs on READ rather than in the importer for two reasons: `scripts/` is CommonJS and
@@ -305,6 +305,29 @@ underneath them.
 
 Both overlay producers pass Point and LineString geometry through **by reference**. Only a polygon's rings are
 touched, and only to normalise winding.
+
+### Campus shapes
+
+`campus_shapes` holds permanent campus geometry: building footprints, the campus boundary, walking
+paths. `scripts/import-campus-shapes.js` writes it, and the building module parses each document as it
+reads it (`campusShapeDoc` in `src/building/building.schema.ts`; the type is `CampusShapeDoc` in
+`src/building/building.document.ts`).
+
+It is a collection of its own rather than a `footprint` field on `buildings`, for two reasons.
+`buildings` mirrors SKKU's campusMap.do and is re-synced on `BUILDING_SYNC_INTERVAL_MS`, so the sync
+owns its document shape: authored geometry there survives the sync's field-by-field `$set`, but would
+not survive a switch to `replaceOne`. And a boundary or a path has no building `_id` to hang off, so a
+field on `buildings` could hold only half of what the collection holds. It lives in the building
+database beside `connections`, the other hand-authored collection there.
+
+A shape names a `BASE_LAYERS` entry by `layerId` directly, with no category table between. The event
+map has `presentationFor` so ops can invent a category mid-festival; permanent geometry has no such
+need, and the base layer list is repo TypeScript either way. A shape whose `layerId` names no layer is
+dropped and counted.
+
+`skkuId` links a footprint to its building. The overlay turns it into
+`tap: { kind: "skku_building", placeId: String(skkuId) }`, so tapping a footprint opens the same sheet
+as the building's number pin, with no join and no new tap kind.
 
 ## 8. Why the reading order is the import order
 

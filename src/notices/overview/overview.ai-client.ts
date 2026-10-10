@@ -10,7 +10,7 @@ import {
 /**
  * HTTP client for skkuverse-ai's POST /api/notices/overview.
  *
- * Contract: skkuverse-ai docs/notice-overview-api.md. The ai answers within
+ * Contract: skkuverse-ai/docs/notice-overview-api.md. The ai answers within
  * 20 s including one same-model retry, so anything shorter than 22 s would
  * cut it off mid-retry. Both an axios timeout and an AbortSignal are set: the
  * axios timeout alone is an idle-socket timer, and a server that trickles

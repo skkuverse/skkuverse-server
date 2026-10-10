@@ -21,8 +21,8 @@ audience: internal
 | --- | --- |
 | Routes | `GET /map/config`, `GET /map/overlays/campus`, `GET /map/overlays/event`, `GET /map/overlays/event/details` |
 | Auth | none on all four |
-| Rate limit | `BusRateLimitMiddleware`, applied to the `/map` prefixes in `MapModule.configure` |
-| Wire schema | `src/map/map-overlay.types.ts` (overlays), `src/map/geo/geojson.types.ts` (geometry), `src/map/map-chip.types.ts` (chips) |
+| Rate limit | `GeneralRateLimitMiddleware`, applied to the `/map` prefixes in `MapModule.configure` |
+| Wire schema | `src/map/map-overlay.types.ts` (overlays), `src/shared/geojson.types.ts` (geometry), `src/map/map-chip.types.ts` (chips) |
 | Producers | `src/map/map-campus-overlays.data.ts` (buildings + campus geometry), `src/map/map-event-overlays.data.ts` (event places), `src/map/map-event-details.data.ts` (their sheet bodies) |
 | Layer catalogue | `src/map/map-layers.data.ts` — the base layers, and the projection of a festival's `layers[]` from its config |
 | Chips | `src/map/map-chips.data.ts` — the base chips, the projection of a festival's `chips[]`, the synthesised reset chip, and the one validator both go through |
@@ -69,7 +69,7 @@ on.
 | `geometry` | RFC 7946 `Point` / `Polygon` / `LineString` | The geometry, **verbatim** — see §2.4 |
 | `id` | `string` | Unique **within its layer** — a building id, a place id, a shape slug. NOT unique across layers: one building is drawn once per building layer and both overlays carry the same value, so the client's key has to be layer id plus this |
 | `layerId` | `string` | Which layer draws this overlay. The server decides membership; the client filters on it. Always one of the ids `GET /map/config` advertises |
-| `campus` | `"hssc" \| "nsc"` | The `Campus` literal from `src/building/types.ts` |
+| `campus` | `"hssc" \| "nsc"` | The `Campus` literal from `src/building/building.types.ts` |
 | `text` | `I18nWire` | The string this overlay **displays** — a building number, a building name, a booth title, a zone name. For a marker, the layer's `markerStyle` decides how it is drawn |
 | `subtitle` | `I18nWire \| null` | What this marker is, under its name — a tenant, a department. `null` for every building |
 | `hours` | `TimeWindow[]` | Every interval this place is open, in authored order. **Empty means always open** |
@@ -661,7 +661,7 @@ renames or renumbers something, which is not a thing that happens during a user'
 **The degraded fallback must not be cached, and the reason is a TTL mismatch that is easy to miss.**
 When the buildings collection comes back empty the producer serves a small hardcoded set
 (`FALLBACK_MARKERS`) so a cold or broken database still shows something recognisable rather than a
-blank campus, and it flags the response `degraded`. Meanwhile `getAllBuildings` caches whatever the
+blank campus, and it flags the response `degraded`. Meanwhile `listAllBuildings` caches whatever the
 query returned — `[]` included — for five minutes, while this route's normal TTL is a day. A brief
 empty read during a re-seed or a migration would therefore pin the fallback map into every client and
 edge cache for 24 hours, on a stable URL with no version stamp and no revalidation to bust it. The
@@ -1405,9 +1405,9 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 | Concern | File |
 | --- | --- |
 | Wire schema, every producer | `src/map/map-overlay.types.ts` |
-| GeoJSON vocabulary, storage and wire | `src/map/geo/geojson.types.ts` |
-| Ring winding and closure | `src/map/geo/ring-winding.ts` |
-| Campus geometry storage | `CampusShapeDoc` in `src/building/types.ts`, `campus_shapes` in the building DB |
+| GeoJSON vocabulary, storage and wire | `src/shared/geojson.types.ts` |
+| Ring winding and closure | `src/shared/ring-winding.util.ts` |
+| Campus geometry storage | `CampusShapeDoc` in `src/building/building.document.ts`, `campus_shapes` in the building DB |
 | Campus geometry authoring | `scripts/data/campus-shapes.json` → `npm run campus:shapes` |
 | Base layer catalogue, festival layer projection, `chipGroupId`, marker geometry | `src/map/map-layers.data.ts` |
 | Base chips, festival chip projection, the reset chip, the one chip validator | `src/map/map-chips.data.ts` |
@@ -1427,7 +1427,7 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 | HTTP + `Cache-Control` | `src/map/controllers/map-config.controller.ts`, `src/map/controllers/map-overlays.controller.ts` |
 | Module wiring, rate limit, endpoint inventory | `src/map/map.module.ts` |
 | Campus labels | `src/infra/i18n.ts` (`map.campus.*`) — layer and chip labels are inline `{ko, en?, zh?}` on their specs, resolved with `pick()` from the same module |
-| Building documents | `src/building/building.data.ts` |
+| Building documents | `src/building/building.repository.ts` |
 | Event documents + activation window | `src/map/map-places.data.ts`, `src/map/map-places.types.ts` |
 | Sheet → documents, and the importer | `scripts/lib/map-places-file.js`, `scripts/import-eventmap-places.js` |
 | Tests | `__tests__/nest/map/` |

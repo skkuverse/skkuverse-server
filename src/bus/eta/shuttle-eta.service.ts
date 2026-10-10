@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { createCachedLoader } from "../../common/cache/cached-loader";
+import { createCachedLoader } from "../../infra/cached-loader";
 import { readUnexpiredEtas, type ShuttleEtaDoc } from "./eta-store";
 
 export type EtaSource = "frozen" | "live" | "predicted";

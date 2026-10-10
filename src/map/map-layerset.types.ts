@@ -6,7 +6,7 @@
 // Mongo. That boundary is the same one ADR 0004 invariant 2 draws between
 // failing loud and failing soft.
 
-import type { Campus } from "../building/types";
+import type { Campus } from "../building/building.types";
 import type { I18n } from "../infra/types";
 // Type-only, so this edge is erased at runtime. A chip camera is the map's own
 // shape; a layer set merely authors one.
