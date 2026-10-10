@@ -4,7 +4,6 @@ import type { SkkuId } from "../building.types";
 import { floorSortKey } from "./building-catalog.rules";
 import type { BuildingConnection, FloorGroup } from "./building-catalog.types";
 
-/** A building's spaces grouped by floor, lowest floor first (floorSortKey). */
 function groupByFloor(spaces: readonly FloorSpaceDoc[]): FloorGroup[] {
   const floorGroupByFloorKo = new Map<string, FloorGroup>();
   for (const space of spaces) {
@@ -23,11 +22,7 @@ function groupByFloor(spaces: readonly FloorSpaceDoc[]): FloorGroup[] {
   );
 }
 
-/**
- * Connections as seen from `skkuId`. A connection doc is undirected (a/b), so
- * the side matching `skkuId` is "from" and the other is the target, named from
- * `targets` (the other buildings' docs).
- */
+/** A connection is unordered, so the end matching `skkuId` is "from" and the other the target. */
 function toBuildingConnections(
   skkuId: SkkuId,
   connections: readonly ConnectionEnds[],
@@ -50,7 +45,6 @@ function toBuildingConnections(
   });
 }
 
-/** The buildings a building's connections lead to, itself excluded. */
 function toConnectedSkkuIds(skkuId: SkkuId, connections: readonly ConnectionEnds[]): SkkuId[] {
   const skkuIds = new Set<SkkuId>();
   for (const connection of connections) {
@@ -61,7 +55,6 @@ function toConnectedSkkuIds(skkuId: SkkuId, connections: readonly ConnectionEnds
   return [...skkuIds];
 }
 
-/** A building's floors with the English fallback applied to floor and space names. */
 function withFloorEnFallback(floors: readonly FloorGroup[]): FloorGroup[] {
   return floors.map((floorGroup) => ({
     ...floorGroup,

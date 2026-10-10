@@ -9,19 +9,12 @@ const INVALID_CAMPUS_MESSAGE = "campus must be 'hssc' or 'nsc'";
 
 const campus = z.enum(CAMPUSES, { error: INVALID_CAMPUS_MESSAGE });
 
-/** `campus` is optional; an empty value means no filter. */
 export const campusFilter = z.preprocess((v) => (v === "" ? undefined : v), campus.optional());
 
 const bilingual = z.object({ ko: z.string(), en: z.string() });
 
-/**
- * A `campus_shapes` document as the campus overlay reads it. The collection is
- * written outside src/ (scripts/import-campus-shapes.js) and cached, so it is
- * parsed where it is read (ADR 0010, D2): only the fields read are checked,
- * unknown ones are dropped, and a document that fails is left out and logged
- * rather than failing the map. The geometry check is the overlay's own
- * drawability guard, so a shape that passes here can be drawn.
- */
+// scripts/import-campus-shapes.js writes campus_shapes, so it is parsed where it is
+// read (ADR 0010, D2). A document that fails is left out and logged, not fatal to the map.
 export const campusShapeDoc = z.object({
   _id: z.string(),
   campus,

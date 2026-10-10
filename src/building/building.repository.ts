@@ -12,11 +12,9 @@ import type { Campus } from "./building.types";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-/** How long a failed reload keeps serving the last good campus shapes. */
 const CAMPUS_SHAPES_STALE_WINDOW_MS = 60 * 60 * 1000;
 
-// Every reload parses the same documents, so a bad one is reported once an
-// hour per distinct set, not every five minutes.
+// Every reload re-parses the same documents, so a bad set is reported hourly, not every TTL.
 const INVALID_SHAPES_LOG_INTERVAL_MS = 60 * 60 * 1000;
 
 const CAMPUS_SHAPE_FIELDS = {
@@ -30,7 +28,6 @@ const CAMPUS_SHAPE_FIELDS = {
   order: 1,
 } as const;
 
-/** The shapes that parse, and an `id: paths` line for each one that does not (ADR 0010, D2). */
 function partitionCampusShapes(docs: readonly unknown[]): { shapes: CampusShapeDoc[]; invalid: string[] } {
   const shapes: CampusShapeDoc[] = [];
   const invalid: string[] = [];
@@ -47,20 +44,12 @@ function partitionCampusShapes(docs: readonly unknown[]): { shapes: CampusShapeD
   return { shapes, invalid };
 }
 
-/**
- * The building module's shared reads: the building list and the campus shapes,
- * both cached, which catalog, search and the map module read and the sync
- * clears. A flow's own queries are its own repository's: catalog's,
- * search's and the sync's.
- */
 @Injectable()
 export class BuildingRepository implements OnModuleInit {
   private readonly invalidShapesThrottle = createLogThrottle(INVALID_SHAPES_LOG_INTERVAL_MS);
 
-  // Every /building/* request and the campus overlay route read this list, so
-  // it is cached, and concurrent misses share one scan. No stale window: a
-  // failed read still reaches the caller, which is what marks the overlay
-  // degraded.
+  // No stale window: a failed read must reach the map's campus overlay, which then
+  // marks itself degraded and is not cached.
   private readonly buildingsCache = createCachedLoader({
     name: "all buildings",
     ttlMs: CACHE_TTL_MS,
@@ -77,16 +66,9 @@ export class BuildingRepository implements OnModuleInit {
         .toArray(),
   });
 
-  /**
-   * Cached like the building list. The overlay route's 24-hour `Cache-Control`
-   * only helps a client that keeps an HTTP cache, and not every client does, so
-   * the database would otherwise see one read per map open. A correction reaches
-   * the route within one TTL, which is small next to that 24-hour client TTL. A
-   * failed reload serves the last good shapes for up to an hour, with a warning.
-   * Without that, the overlay route would drop the shapes from a response it
-   * still marks cacheable for a day (a shapes failure is not `degraded`), and the
-   * shapes change only a few times a year.
-   */
+  // The overlay's 24 h Cache-Control helps only clients with an HTTP cache. A failed
+  // reload serves the last good shapes: a shapes failure does not mark the overlay
+  // degraded, so it would serve the empty set as cacheable for a day.
   private readonly campusShapesCache = createCachedLoader({
     name: "campus shapes",
     ttlMs: CACHE_TTL_MS,
@@ -107,26 +89,12 @@ export class BuildingRepository implements OnModuleInit {
     return ensureIndexesAtBoot("building", () => this.ensureIndexes());
   }
 
-  /**
-   * The indexes of the campus shapes, the root's only indexed reads. A flow's
-   * own indexes sit with its queries: catalog's in BuildingCatalogRepository,
-   * the sync's in BuildingSyncRepository; search has deliberately none
-   * (BuildingSearchRepository).
-   */
   async ensureIndexes(): Promise<void> {
     const campusShapes = this.campusShapes();
 
     await Promise.all([
-      // campus_shapes. The 2dsphere is not for geo queries — none are run — it
-      // is there because Mongo rejects a malformed ring at insert, which is the
-      // cheapest guard we get against geometry that would fail to draw. Same
-      // reasoning as the places collection.
-      //
-      // The other one covers the ONE read there is, the campus shapes loader's
-      // `find({}).sort({order: 1, _id: 1})`. Not `{campus: 1}`: nothing filters
-      // by campus, and an index on a field no query names is a write cost with
-      // no reader.
       campusShapes.createIndex({ order: 1, _id: 1 }),
+      // No geo query runs: the 2dsphere makes Mongo reject a malformed ring at insert.
       campusShapes.createIndex({ geometry: "2dsphere" }),
     ]);
   }
@@ -137,18 +105,15 @@ export class BuildingRepository implements OnModuleInit {
     return buildings.filter((b) => b.campus === campus);
   }
 
-  /** Every campus shape, in authored order. */
   listCampusShapes(): Promise<readonly CampusShapeDoc[]> {
     return this.campusShapesCache.get();
   }
 
-  /** Drops both caches; the building sync calls it after a run. */
   clearCache(): void {
     this.buildingsCache.clear();
     this.campusShapesCache.clear();
   }
 
-  /** Left-out shapes are logged once per interval per distinct set. */
   private warnInvalidShapes(invalid: readonly string[]): void {
     const ticket = invalid.length > 0 ? this.invalidShapesThrottle.take(invalid.join("|")) : null;
     if (!ticket) return;

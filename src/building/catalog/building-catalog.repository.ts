@@ -7,18 +7,12 @@ import type { BuildingDoc, ConnectionDoc, SpaceDoc } from "../building.document"
 import type { BuildNo, SkkuId } from "../building.types";
 import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
 
-/**
- * The reads behind one building's page: the building, its spaces, its
- * connections and the buildings at their far ends. The cached building list
- * and the campus shapes are BuildingRepository's.
- */
 @Injectable()
 export class BuildingCatalogRepository implements OnModuleInit {
   onModuleInit(): Promise<void> {
     return ensureIndexesAtBoot("building.catalog", () => this.ensureIndexes());
   }
 
-  /** The indexes these reads use: a building's spaces, and a connection from either end. */
   async ensureIndexes(): Promise<void> {
     await Promise.all([
       this.spaces().createIndex({ buildNo: 1 }),
@@ -34,7 +28,6 @@ export class BuildingCatalogRepository implements OnModuleInit {
     );
   }
 
-  /** The spaces of one building, for its floor list. */
   listSpacesByBuildNo(buildNo: BuildNo): Promise<FloorSpaceDoc[]> {
     return this.spaces()
       .find(
@@ -47,7 +40,6 @@ export class BuildingCatalogRepository implements OnModuleInit {
       .toArray();
   }
 
-  /** The connections that touch one building, from either side; only the two ends are read. */
   listConnectionsBySkkuId(skkuId: SkkuId): Promise<ConnectionEnds[]> {
     return this.connections()
       .find(
@@ -57,7 +49,6 @@ export class BuildingCatalogRepository implements OnModuleInit {
       .toArray();
   }
 
-  /** The numbers and names of the given buildings, to label the far side of a connection. */
   listBuildingsBySkkuIds(skkuIds: readonly SkkuId[]): Promise<BuildingLabel[]> {
     return this.buildings()
       .find(

@@ -3,7 +3,7 @@ title: The Map Module, In Reading Order
 type: explanation
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-09-24
+last-updated: 2026-10-10
 audience: internal
 ---
 
@@ -305,6 +305,29 @@ underneath them.
 
 Both overlay producers pass Point and LineString geometry through **by reference**. Only a polygon's rings are
 touched, and only to normalise winding.
+
+### Campus shapes
+
+`campus_shapes` holds permanent campus geometry: building footprints, the campus boundary, walking
+paths. `scripts/import-campus-shapes.js` writes it, and the building module parses each document as it
+reads it (`campusShapeDoc` in `src/building/building.schema.ts`; the type is `CampusShapeDoc` in
+`src/building/building.document.ts`).
+
+It is a collection of its own rather than a `footprint` field on `buildings`, for two reasons.
+`buildings` mirrors SKKU's campusMap.do and is re-synced on `BUILDING_SYNC_INTERVAL_MS`, so the sync
+owns its document shape: authored geometry there survives the sync's field-by-field `$set`, but would
+not survive a switch to `replaceOne`. And a boundary or a path has no building `_id` to hang off, so a
+field on `buildings` could hold only half of what the collection holds. It lives in the building
+database beside `connections`, the other hand-authored collection there.
+
+A shape names a `BASE_LAYERS` entry by `layerId` directly, with no category table between. The event
+map has `presentationFor` so ops can invent a category mid-festival; permanent geometry has no such
+need, and the base layer list is repo TypeScript either way. A shape whose `layerId` names no layer is
+dropped and counted.
+
+`skkuId` links a footprint to its building. The overlay turns it into
+`tap: { kind: "skku_building", placeId: String(skkuId) }`, so tapping a footprint opens the same sheet
+as the building's number pin, with no join and no new tap kind.
 
 ## 8. Why the reading order is the import order
 
