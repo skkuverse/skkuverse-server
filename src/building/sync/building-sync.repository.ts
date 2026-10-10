@@ -100,12 +100,14 @@ export class BuildingSyncRepository implements OnModuleInit {
 
   /**
    * The indexes the sync's writes need: the unique key its space upserts
-   * filter on (it also keeps a listing from duplicating a room), and the raw
-   * layer's campus.
+   * filter on (it also keeps a listing from duplicating a room), the raw
+   * layer's campus, and a 2dsphere on the enriched `location`. No geo query
+   * runs; Mongo rejects a malformed GeoJSON point at upsert.
    */
   async ensureIndexes(): Promise<void> {
     await Promise.all([
       this.raw().createIndex({ campus: 1 }),
+      this.enriched().createIndex({ location: "2dsphere" }),
       this.spaces().createIndex({ spaceCd: 1, buildNo: 1, campus: 1 }, { unique: true }),
     ]);
   }

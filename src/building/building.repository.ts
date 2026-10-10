@@ -7,7 +7,7 @@ import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
 import { campusShapeDoc } from "./building.schema";
-import type { BuildingDoc, CampusShapeDoc, SpaceDoc } from "./building.document";
+import type { BuildingDoc, CampusShapeDoc } from "./building.document";
 import type { Campus } from "./building.types";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -108,22 +108,15 @@ export class BuildingRepository implements OnModuleInit {
   }
 
   /**
-   * The indexes of the building collection and the campus shapes. A flow's
+   * The indexes of the campus shapes, the root's only indexed reads. A flow's
    * own indexes sit with its queries: catalog's in BuildingCatalogRepository,
    * the sync's in BuildingSyncRepository; search has deliberately none
    * (BuildingSearchRepository).
    */
   async ensureIndexes(): Promise<void> {
-    const buildings = this.buildings();
-    const spaces = this.spaces();
     const campusShapes = this.campusShapes();
 
     await Promise.all([
-      // buildings (enriched)
-      buildings.createIndex({ campus: 1 }),
-      buildings.createIndex({ buildNo: 1, campus: 1 }),
-      buildings.createIndex({ location: "2dsphere" }),
-      spaces.createIndex({ campus: 1 }),
       // campus_shapes. The 2dsphere is not for geo queries — none are run — it
       // is there because Mongo rejects a malformed ring at insert, which is the
       // cheapest guard we get against geometry that would fail to draw. Same
@@ -167,10 +160,6 @@ export class BuildingRepository implements OnModuleInit {
 
   private buildings(): Collection<BuildingDoc> {
     return mongoCollection<BuildingDoc>(config.building.dbName!, config.building.collections.buildings);
-  }
-
-  private spaces(): Collection<SpaceDoc> {
-    return mongoCollection<SpaceDoc>(config.building.dbName!, config.building.collections.spaces);
   }
 
   private campusShapes(): Collection<CampusShapeDoc> {
