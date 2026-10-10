@@ -1,0 +1,65 @@
+import { z } from "zod";
+
+// Only what the mapping cannot do without is required (campusMap.do, measured 2026-10-10).
+// SKKU's misspellings stay as sent (longtitude, spcaeNm, spcae_nm): a silent fix upstream
+// fails the item instead of reading as "".
+const coordinate = z.string().refine((value) => Number.isFinite(parseFloat(value)));
+
+export const skkuBuildListResponse = z.object({ buildItems: z.array(z.unknown()) });
+
+export const skkuBuildListItem = z.object({
+  id: z.number().int().positive(),
+  buildNo: z.string().nullish(),
+  buildNm: z.string().min(1),
+  buildNmEng: z.string().optional(),
+  krText: z.string().optional(),
+  enText: z.string().optional(),
+  latitude: coordinate,
+  longtitude: coordinate,
+  filePath: z.string().optional(),
+  encodeNm: z.string().optional(),
+  handicappedElevatorYn: z.string().optional(),
+  handicappedToiletYn: z.string().optional(),
+  createDt: z.string().optional(),
+  updateDt: z.string().optional(),
+});
+
+export const skkuBuildInfoResponse = z.object({
+  attachItem: z.array(z.unknown()),
+  floorItem: z.array(z.unknown()),
+});
+
+export const skkuBuildInfoAttachment = z.object({
+  id: z.number().int(),
+  file_path: z.string().optional(),
+  encode_nm: z.string().optional(),
+  file_nm: z.string().optional(),
+  image_alt: z.string().optional(),
+});
+
+export const skkuBuildInfoFloor = z.object({
+  space_cd: z.string().min(1),
+  floor_nm: z.string(),
+  floor_nm_eng: z.string().optional(),
+  spcae_nm: z.string().optional(),
+  spcae_nm_eng: z.string().optional(),
+});
+
+export const skkuSpaceListResponse = z.object({ items: z.array(z.unknown()) });
+
+export const skkuSpaceListItem = z.object({
+  spaceCd: z.string().min(1),
+  buildNo: z.string().min(1),
+  floorNm: z.string(),
+  floorNmEng: z.string().optional(),
+  spcaeNm: z.string().optional(),
+  spcaeNmEng: z.string().optional(),
+  buildNm: z.string().optional(),
+  buildNmEng: z.string().optional(),
+  conspaceCd: z.string().nullish(),
+});
+
+export type SkkuBuildListItem = z.output<typeof skkuBuildListItem>;
+export type SkkuBuildInfoAttachment = z.output<typeof skkuBuildInfoAttachment>;
+export type SkkuBuildInfoFloor = z.output<typeof skkuBuildInfoFloor>;
+export type SkkuSpaceListItem = z.output<typeof skkuSpaceListItem>;
