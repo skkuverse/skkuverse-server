@@ -63,7 +63,7 @@ export class BuildingRepository implements OnModuleInit {
   // it is cached, and concurrent misses share one scan. No stale window: a
   // failed read still reaches the caller, which is what marks the overlay
   // degraded.
-  private readonly allBuildings = createCachedLoader({
+  private readonly buildingsCache = createCachedLoader({
     name: "all buildings",
     ttlMs: CACHE_TTL_MS,
     load: () =>
@@ -138,7 +138,7 @@ export class BuildingRepository implements OnModuleInit {
   }
 
   async listBuildings(campus?: Campus | null): Promise<readonly BuildingDoc[]> {
-    const buildings = await this.allBuildings.get();
+    const buildings = await this.buildingsCache.get();
     if (!campus) return buildings;
     return buildings.filter((b) => b.campus === campus);
   }
@@ -150,7 +150,7 @@ export class BuildingRepository implements OnModuleInit {
 
   /** Drops both caches; the building sync calls it after a run. */
   clearCache(): void {
-    this.allBuildings.clear();
+    this.buildingsCache.clear();
     this.campusShapesCache.clear();
   }
 

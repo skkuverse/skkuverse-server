@@ -4,7 +4,7 @@ import type { BuildingDoc } from "../building.document";
 import { withCampusLabel } from "../building.mapper";
 import { BuildingRepository } from "../building.repository";
 import type { Campus, SkkuId, WithCampusLabel } from "../building.types";
-import { groupByFloor, toConnectedSkkuIds, toConnectionItems, withFloorEnFallback } from "./building-catalog.mapper";
+import { groupByFloor, toConnectedSkkuIds, toBuildingConnections, withFloorEnFallback } from "./building-catalog.mapper";
 import { BuildingCatalogRepository } from "./building-catalog.repository";
 import type { BuildingConnection, BuildingDetail } from "./building-catalog.types";
 
@@ -43,7 +43,7 @@ export class BuildingCatalogService {
   private async listConnections(skkuId: SkkuId): Promise<BuildingConnection[]> {
     const connections = await this.repository.listConnectionsBySkkuId(skkuId);
     if (!connections.length) return [];
-    const targets = await this.repository.listBuildingsByIds(toConnectedSkkuIds(skkuId, connections));
-    return toConnectionItems(skkuId, connections, targets);
+    const targets = await this.repository.listBuildingsBySkkuIds(toConnectedSkkuIds(skkuId, connections));
+    return toBuildingConnections(skkuId, connections, targets);
   }
 }
