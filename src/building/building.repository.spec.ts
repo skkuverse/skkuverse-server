@@ -220,7 +220,7 @@ describe("BuildingRepository.ensureIndexes", () => {
     // wrong handle.
     expect(createIndex).toHaveBeenCalledWith("buildings", { location: "2dsphere" });
     expect(createIndex).toHaveBeenCalledWith("buildings", { campus: 1 });
-    expect(createIndex).toHaveBeenCalledWith("spaces", { buildNo: 1 });
+    expect(createIndex).toHaveBeenCalledWith("spaces", { campus: 1 });
   });
 });
 

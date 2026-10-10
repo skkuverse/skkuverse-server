@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Collection } from "mongodb";
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
-import { mongoCollection } from "../../infra/mongo";
+import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type {
   BuildingDoc,
   BuildingLabel,
@@ -19,7 +19,20 @@ import type { BuildNo, SkkuId } from "../building.types";
  * and the campus shapes are BuildingRepository's.
  */
 @Injectable()
-export class BuildingCatalogRepository {
+export class BuildingCatalogRepository implements OnModuleInit {
+  onModuleInit(): Promise<void> {
+    return ensureIndexesAtBoot("building.catalog", () => this.ensureIndexes());
+  }
+
+  /** The indexes these reads use: a building's spaces, and a connection from either end. */
+  async ensureIndexes(): Promise<void> {
+    await Promise.all([
+      this.spaces().createIndex({ buildNo: 1 }),
+      this.connections().createIndex({ "a.skkuId": 1 }),
+      this.connections().createIndex({ "b.skkuId": 1 }),
+    ]);
+  }
+
   findBuildingBySkkuId(skkuId: SkkuId): Promise<BuildingDoc | null> {
     return this.buildings().findOne(
       { _id: skkuId },

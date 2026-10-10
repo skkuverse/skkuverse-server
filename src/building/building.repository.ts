@@ -7,7 +7,7 @@ import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
 import { campusShapeDoc } from "./building.schema";
-import type { BuildingDoc, CampusShapeDoc, ConnectionDoc, SpaceDoc } from "./building.document";
+import type { BuildingDoc, CampusShapeDoc, SpaceDoc } from "./building.document";
 import type { Campus } from "./building.types";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -52,9 +52,10 @@ function toValidShapes(docs: readonly unknown[]): CampusShapeDoc[] {
 }
 
 /**
- * Reads of the building DB: the building list (cached), one building, its
- * floors and connections, and the campus shapes (cached). Search is
- * BuildingSearchRepository's; writes are BuildingSyncRepository's.
+ * The building module's shared reads: the building list and the campus shapes,
+ * both cached, which catalog, search and the map module read and the sync
+ * clears. A flow's own queries are its own repository's: catalog's,
+ * search's and the sync's.
  */
 @Injectable()
 export class BuildingRepository implements OnModuleInit {
@@ -106,14 +107,14 @@ export class BuildingRepository implements OnModuleInit {
   }
 
   /**
-   * The indexes of the building reads: /building/list and listFloorsByBuildNo,
-   * connections and campus shapes. Search has deliberately none
-   * (BuildingSearchRepository); the sync's own are BuildingSyncRepository's.
+   * The indexes of the building collection and the campus shapes. A flow's
+   * own indexes sit with its queries: catalog's in BuildingCatalogRepository,
+   * the sync's in BuildingSyncRepository; search has deliberately none
+   * (BuildingSearchRepository).
    */
   async ensureIndexes(): Promise<void> {
     const buildings = this.buildings();
     const spaces = this.spaces();
-    const connections = this.connections();
     const campusShapes = this.campusShapes();
 
     await Promise.all([
@@ -121,12 +122,7 @@ export class BuildingRepository implements OnModuleInit {
       buildings.createIndex({ campus: 1 }),
       buildings.createIndex({ buildNo: 1, campus: 1 }),
       buildings.createIndex({ location: "2dsphere" }),
-      // spaces (the unique key the sync upserts on is BuildingSyncRepository's)
-      spaces.createIndex({ buildNo: 1 }),
       spaces.createIndex({ campus: 1 }),
-      // connections
-      connections.createIndex({ "a.skkuId": 1 }),
-      connections.createIndex({ "b.skkuId": 1 }),
       // campus_shapes. The 2dsphere is not for geo queries — none are run — it
       // is there because Mongo rejects a malformed ring at insert, which is the
       // cheapest guard we get against geometry that would fail to draw. Same
@@ -164,10 +160,6 @@ export class BuildingRepository implements OnModuleInit {
 
   private spaces(): Collection<SpaceDoc> {
     return mongoCollection<SpaceDoc>(config.building.dbName!, config.building.collections.spaces);
-  }
-
-  private connections(): Collection<ConnectionDoc> {
-    return mongoCollection<ConnectionDoc>(config.building.dbName!, config.building.collections.connections);
   }
 
   private campusShapes(): Collection<CampusShapeDoc> {
