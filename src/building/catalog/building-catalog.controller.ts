@@ -22,7 +22,7 @@ export class BuildingCatalogController {
     query: BuildingListQuery,
     @Lang() lang: SupportedLang,
   ): Promise<BuildingList> {
-    return this.catalog.list(query.campus ?? null, lang);
+    return this.catalog.list(query.campus, lang);
   }
 
   @Get(":skkuId")

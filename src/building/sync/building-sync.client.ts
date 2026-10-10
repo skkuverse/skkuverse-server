@@ -1,81 +1,83 @@
 import { Injectable } from "@nestjs/common";
 import axios from "axios";
+import type { z } from "zod";
+import logger from "../../infra/logger";
 import type { BuildingAttachment, BuildingRawDoc } from "../building.document";
 import { SKKU_CAMPUS_CODE } from "../building.rules";
+import { shouldRejectPayload } from "./building-sync.rules";
+import {
+  skkuBuildInfoAttachment,
+  skkuBuildInfoFloor,
+  skkuBuildInfoResponse,
+  skkuBuildListItem,
+  skkuBuildListResponse,
+  skkuSpaceListItem,
+  skkuSpaceListResponse,
+  type SkkuBuildListItem,
+} from "./building-sync.schema";
 import type { BuildInfo, ListedBuilding, ListedBuildingWithBuildNo, SyncedSpace } from "./building-sync.types";
 import type { ApiId, BilingualText, BuildNo, Campus, SkkuId, SpaceCd } from "../building.types";
 
 const CAMPUS_MAP_URL = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
 const REQUEST_TIMEOUT_MS = 30000;
+const MAX_LOGGED_INVALID_ITEMS = 10;
 
-// Only the fields read are typed (the payloads carry 25+). SKKU's misspellings stay
-// as sent (longtitude, spcaeNm, spcae_nm): a silent fix upstream reads as "", and
-// the name says which field to check.
-interface SkkuBuildListItem {
-  id: number;
-  /** null or absent for a facility. */
-  buildNo: string | null;
-  buildNm?: string;
-  buildNmEng?: string;
-  krText?: string;
-  enText?: string;
-  latitude?: string;
-  longtitude?: string;
-  filePath?: string;
-  encodeNm?: string;
-  /** "Y" or anything else. */
-  handicappedElevatorYn?: string;
-  handicappedToiletYn?: string;
-  createDt?: string;
-  updateDt?: string;
-  [k: string]: unknown;
+type PayloadSource = "buildList" | "buildInfo attachItem" | "buildInfo floorItem" | "spaceList";
+
+interface PayloadList<T> {
+  source: PayloadSource;
+  scope: string;
+  items: readonly unknown[];
+  schema: z.ZodType<T>;
+  /** The field that names an item in the log; an item without it is named by its index. */
+  keyField: string;
 }
 
-interface SkkuBuildListResponse {
-  buildItems?: SkkuBuildListItem[];
-  [k: string]: unknown;
+function issuePaths(error: z.ZodError): string {
+  const paths = error.issues.map((issue) => issue.path.join(".") || "(root)");
+  return [...new Set(paths)].join(", ");
 }
 
-interface SkkuBuildInfoAttachment {
-  id: number;
-  file_path?: string;
-  encode_nm?: string;
-  file_nm?: string;
-  image_alt?: string;
-  [k: string]: unknown;
+/** A wrong response shape (a renamed or missing list) breaks every item at once, so it throws. */
+function parseResponse<T>(schema: z.ZodType<T>, data: unknown, where: string): T {
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error(`campusMap.do ${where} is not the expected shape: ${issuePaths(parsed.error)}`);
+  }
+  return parsed.data;
 }
 
-interface SkkuBuildInfoFloor {
-  space_cd: string;
-  floor_nm?: string;
-  floor_nm_eng?: string;
-  spcae_nm?: string;
-  spcae_nm_eng?: string;
-  [k: string]: unknown;
+function itemKey(item: unknown, keyField: string, index: number): string {
+  const key = typeof item === "object" && item !== null ? (item as Record<string, unknown>)[keyField] : undefined;
+  return typeof key === "number" || (typeof key === "string" && key !== "") ? String(key) : `#${index}`;
 }
 
-interface SkkuBuildInfoResponse {
-  attachItem?: SkkuBuildInfoAttachment[];
-  floorItem?: SkkuBuildInfoFloor[];
-  [k: string]: unknown;
-}
-
-interface SkkuSpaceListItem {
-  spaceCd: string;
-  buildNo: string;
-  floorNm?: string;
-  floorNmEng?: string;
-  spcaeNm?: string;
-  spcaeNmEng?: string;
-  buildNm?: string;
-  buildNmEng?: string;
-  conspaceCd?: string | null;
-  [k: string]: unknown;
-}
-
-interface SkkuSpaceListResponse {
-  items?: SkkuSpaceListItem[];
-  [k: string]: unknown;
+function parseItems<T>(list: PayloadList<T>): T[] {
+  const valid: T[] = [];
+  const invalid: string[] = [];
+  list.items.forEach((item, index) => {
+    const parsed = list.schema.safeParse(item);
+    if (parsed.success) valid.push(parsed.data);
+    else invalid.push(`${itemKey(item, list.keyField, index)}: ${issuePaths(parsed.error)}`);
+  });
+  const total = list.items.length;
+  if (invalid.length > 0) {
+    logger.warn(
+      {
+        event: "building.sync.payload_items_dropped",
+        source: list.source,
+        scope: list.scope,
+        dropped: invalid.length,
+        total,
+        invalid: invalid.slice(0, MAX_LOGGED_INVALID_ITEMS),
+      },
+      "SKKU payload items left out: they do not match the schema",
+    );
+  }
+  if (shouldRejectPayload({ total, invalid: invalid.length })) {
+    throw new Error(`campusMap.do ${list.source} (${list.scope}) returned ${invalid.length} invalid items of ${total}`);
+  }
+  return valid;
 }
 
 function imageUrl(filePath: string | undefined, encodeNm: string | undefined): string | null {
@@ -93,9 +95,8 @@ function spaceName(ko: string | undefined, en: string | undefined): BilingualTex
 }
 
 function toRawDoc(buildItem: SkkuBuildListItem, campus: Campus): Omit<BuildingRawDoc, "_id"> {
-  // `as string` is for the type only: an absent latitude still parses to NaN.
-  const lat = parseFloat(buildItem.latitude as string);
-  const lng = parseFloat(buildItem.longtitude as string);
+  const lat = parseFloat(buildItem.latitude);
+  const lng = parseFloat(buildItem.longtitude);
 
   return {
     buildNo: (buildItem.buildNo || null) as BuildNo | null,
@@ -116,13 +117,14 @@ function toRawDoc(buildItem: SkkuBuildListItem, campus: Campus): Omit<BuildingRa
 @Injectable()
 export class BuildingSyncClient {
   async fetchBuildList(campus: Campus): Promise<ListedBuilding[]> {
-    const { data } = await axios.get<SkkuBuildListResponse>(CAMPUS_MAP_URL, {
+    const { data } = await axios.get<unknown>(CAMPUS_MAP_URL, {
       params: { mode: "buildList", srSearchValue: "", campusCd: SKKU_CAMPUS_CODE[campus] },
       timeout: REQUEST_TIMEOUT_MS,
     });
-    return (data.buildItems || []).map((buildItem) => ({
-      // SKKU sends a number, but a numeric string must still parse to the same skkuId.
-      skkuId: parseInt(String(buildItem.id), 10) as SkkuId,
+    const { buildItems } = parseResponse(skkuBuildListResponse, data, `buildList (${campus})`);
+    const valid = parseItems({ source: "buildList", scope: campus, items: buildItems, schema: skkuBuildListItem, keyField: "id" });
+    return valid.map((buildItem) => ({
+      skkuId: buildItem.id as SkkuId,
       apiId: buildItem.id as ApiId,
       doc: toRawDoc(buildItem, campus),
     }));
@@ -130,22 +132,36 @@ export class BuildingSyncClient {
 
   async fetchBuildInfo(building: ListedBuildingWithBuildNo): Promise<BuildInfo> {
     const { doc } = building;
-    const { data } = await axios.get<SkkuBuildInfoResponse>(CAMPUS_MAP_URL, {
+    const { data } = await axios.get<unknown>(CAMPUS_MAP_URL, {
       params: { mode: "buildInfo", buildNo: doc.buildNo, id: building.apiId },
       timeout: REQUEST_TIMEOUT_MS,
     });
-    const attachments: BuildingAttachment[] = (data.attachItem || []).map((attachItem) => ({
-      id: attachItem.id,
-      url: imageUrl(attachItem.file_path, attachItem.encode_nm),
-      filename: attachItem.file_nm || null,
-      alt: attachItem.image_alt || "",
+    const scope = `buildNo ${doc.buildNo}`;
+    const { attachItem, floorItem } = parseResponse(skkuBuildInfoResponse, data, `buildInfo (${scope})`);
+    const attachments: BuildingAttachment[] = parseItems({
+      source: "buildInfo attachItem",
+      scope,
+      items: attachItem,
+      schema: skkuBuildInfoAttachment,
+      keyField: "id",
+    }).map((photo) => ({
+      id: photo.id,
+      url: imageUrl(photo.file_path, photo.encode_nm),
+      filename: photo.file_nm || null,
+      alt: photo.image_alt || "",
     }));
-    const spaces: SyncedSpace[] = (data.floorItem || []).map((floorItem) => ({
-      spaceCd: floorItem.space_cd as SpaceCd,
+    const spaces: SyncedSpace[] = parseItems({
+      source: "buildInfo floorItem",
+      scope,
+      items: floorItem,
+      schema: skkuBuildInfoFloor,
+      keyField: "space_cd",
+    }).map((floorSpace) => ({
+      spaceCd: floorSpace.space_cd as SpaceCd,
       buildNo: doc.buildNo,
       campus: doc.campus,
-      floor: text(floorItem.floor_nm, floorItem.floor_nm_eng),
-      name: spaceName(floorItem.spcae_nm, floorItem.spcae_nm_eng),
+      floor: text(floorSpace.floor_nm, floorSpace.floor_nm_eng),
+      name: spaceName(floorSpace.spcae_nm, floorSpace.spcae_nm_eng),
       buildingName: doc.name,
       conspaceCd: null,
     }));
@@ -153,11 +169,13 @@ export class BuildingSyncClient {
   }
 
   async fetchSpaceList(campus: Campus): Promise<SyncedSpace[]> {
-    const { data } = await axios.get<SkkuSpaceListResponse>(CAMPUS_MAP_URL, {
+    const { data } = await axios.get<unknown>(CAMPUS_MAP_URL, {
       params: { mode: "spaceList", srSearchValue: "", campusCd: SKKU_CAMPUS_CODE[campus] },
       timeout: REQUEST_TIMEOUT_MS,
     });
-    return (data.items || []).map((spaceItem) => ({
+    const { items } = parseResponse(skkuSpaceListResponse, data, `spaceList (${campus})`);
+    const valid = parseItems({ source: "spaceList", scope: campus, items, schema: skkuSpaceListItem, keyField: "spaceCd" });
+    return valid.map((spaceItem) => ({
       spaceCd: spaceItem.spaceCd as SpaceCd,
       buildNo: spaceItem.buildNo as BuildNo,
       campus,

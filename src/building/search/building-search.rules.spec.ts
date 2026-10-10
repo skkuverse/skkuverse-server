@@ -1,17 +1,13 @@
 /**
- * Unit tests for building/room search matching + relevance ranking.
+ * Building and room search matching and relevance ranking. Ranking is asserted
+ * through scoreLocally, the JS twin of the Mongo $switch compiled from the same
+ * tier table via the same tierRegex(), so ordering is pinned without a live
+ * MongoDB. The Mongo compiler and the facet decoding are pinned in
+ * building-search.query.spec.ts, the pipeline assembly in
+ * building-search.repository.spec.ts.
  *
- * These functions had NO direct coverage before: every building test stubbed
- * BuildingService wholesale, which is exactly how a `{ spaceCd: query }`
- * equality (rather than a regex) survived long enough to ship. See issue #91.
- *
- * Ranking intent is asserted through scoreLocally — the JS twin of the Mongo
- * $switch, compiled from the same tier table via the same tierRegex(). That
- * lets ordering be pinned without a live MongoDB. The Mongo compiler and the
- * facet decoding are pinned in building-search.query.spec.ts, the pipeline
- * assembly in building-search.repository.spec.ts.
- *
- * Two regression queries, chosen because they fail differently:
+ * Two regression queries (issue #91: a `{ spaceCd: query }` equality shipped
+ * instead of a regex), chosen because they fail differently:
  *   q=27  — the 168 rooms of 제2공학관27동 are already in the match set today
  *           (their building NAME contains "27"); they just lost the unsorted
  *           20-row window to dormitory noise. Pins ORDERING.
@@ -53,38 +49,47 @@ describe("room ranking (q=27) — the reported bug", () => {
   const dormNameOnly = room("29802001", "숙실(271)", "기숙사신관");
 
   it("ranks a spaceCd prefix hit above a code-substring hit above a name-only hit", () => {
+    // Act & Assert
     expect(scoreSpace("27", engineering)).toBe(50);
     expect(scoreSpace("27", dormCode)).toBe(20);
     expect(scoreSpace("27", dormNameOnly)).toBe(5);
   });
 
   it("scores every room of building 27 into one tier above all dorm noise", () => {
-    // The property that matters: the WHOLE prefix tier outranks the WHOLE rest,
-    // so no dormitory row can ever appear between two of building 27's rooms.
+    // Act
     const building27 = [
       room("27101", "측량기기성능검사실", "제2공학관27동"),
       room("27114A", "교육매체지원실", "제2공학관27동"),
       room("27422", "SSIT 강의실", "제2공학관27동"),
     ].map((r) => scoreSpace("27", r));
     const noise = [dormCode, dormNameOnly].map((r) => scoreSpace("27", r));
+
+    // Assert
+    // The property that matters: the WHOLE prefix tier outranks the WHOLE rest,
+    // so no dormitory row can ever appear between two of building 27's rooms.
     expect(new Set(building27)).toEqual(new Set([50]));
     expect(Math.min(...building27)).toBeGreaterThan(Math.max(...noise));
   });
 
   it("is not satisfied by the OLD equality predicate (regression guard)", () => {
+    // Arrange
     // The bug was `{ spaceCd: query }`. Reproduce it and assert it fails to find
     // the room, so this test would go red if the equality ever came back.
     const oldPredicateMatches = (q: string, cd: string): boolean => cd === q;
-    expect(oldPredicateMatches("27", "27101")).toBe(false);
-    // The shipped filter is a regex, and it does match.
+
+    // Act
     const or = spaceKeywordFilter("27").$or as Document[];
     const clause = or.find((c) => "spaceCd" in c) as {
       spaceCd: { $regex: string; $options: string };
     };
+
+    // Assert
+    expect(oldPredicateMatches("27", "27101")).toBe(false);
     expect(new RegExp(clause.spaceCd.$regex, "i").test("27101")).toBe(true);
   });
 
   it("ranks an exact code above a prefix match", () => {
+    // Act & Assert
     expect(scoreSpace("27101", engineering)).toBe(60);
     expect(scoreSpace("2710", engineering)).toBe(50);
   });
@@ -95,12 +100,16 @@ describe("room reachability (q=204) — rooms in a digit-free building", () => {
   const law = room("20401", "법학전문대학원열람실", "법학관");
 
   it("finds the room by a prefix of its code", () => {
+    // Act & Assert
     expect(scoreSpace("204", law)).toBe(50);
   });
 
   it("matches the room through the keyword filter (it did not before)", () => {
+    // Act
     const or = spaceKeywordFilter("204").$or as Document[];
     const spaceCdClause = or.find((c) => "spaceCd" in c);
+
+    // Assert
     // The bug was `{ spaceCd: "204" }` — an equality that 20401 never satisfies.
     expect(spaceCdClause).toEqual({
       spaceCd: { $regex: "204", $options: "i" },
@@ -110,19 +119,25 @@ describe("room reachability (q=204) — rooms in a digit-free building", () => {
 
 describe("scoring edge cases from real production rows", () => {
   it("does not throw on spaceCd: null and still scores via name", () => {
+    // Arrange
     // Two such rows exist: 600주년기념관 buildNo 101, 의학관 buildNo 271.
     const orphan = room(null, "숙실(271)", "기숙사신관");
+
+    // Act & Assert
     expect(() => scoreSpace("27", orphan)).not.toThrow();
     expect(scoreSpace("27", orphan)).toBe(5);
   });
 
   it("treats a non-string spaceCd as empty rather than matching it", () => {
+    // Arrange
     // If SKKU ever emits `"spaceCd": 27101` as a JSON number, sync passes it
     // straight through. The Mongo guard coerces it to "" ($regexMatch would
     // otherwise throw and 500 every request); readPath must agree, or the JS
     // twin would silently score a row the pipeline scores differently.
     const numeric = room(27101, "측량기기성능검사실", "제2공학관27동");
     const stringy = room("27101", "측량기기성능검사실", "제2공학관27동");
+
+    // Act & Assert
     expect(() => scoreSpace("27", numeric)).not.toThrow();
     // Falls back to the buildingName SUBSTRING tier (10) — "제2공학관27동" does
     // not start with "27" — instead of the spaceCd prefix tier (50) it would
@@ -132,14 +147,20 @@ describe("scoring edge cases from real production rows", () => {
   });
 
   it("matches the single lowercase spaceCd case-insensitively", () => {
+    // Arrange
     const med = room("712115b", "의학교육연구실", "의학관");
+
+    // Act & Assert
     expect(scoreSpace("712115b", med)).toBe(60);
     expect(scoreSpace("712115B", med)).toBe(60);
   });
 
   it("treats regex metacharacters literally", () => {
+    // Arrange
     const dotted = room("a.b", "x", "y");
     const literal = room("axb", "x", "y");
+
+    // Act & Assert
     expect(scoreSpace("a.b", dotted)).toBe(60);
     expect(scoreSpace("a.b", literal)).toBe(0);
   });
@@ -153,6 +174,7 @@ describe("building tiers", () => {
   });
 
   it("ranks exact displayNo above prefix above name above description", () => {
+    // Act & Assert
     expect(scoreLocally(BUILDING_TIERS, "27", b("27", "제2공학관27동"))).toBe(50);
     expect(scoreLocally(BUILDING_TIERS, "2", b("27", "제2공학관27동"))).toBe(40);
     expect(scoreLocally(BUILDING_TIERS, "법학", b("2", "법학관"))).toBe(30);
@@ -162,7 +184,10 @@ describe("building tiers", () => {
   });
 
   it("never matches buildNo — 27 must not surface 270/271/272", () => {
+    // Act
     const or = buildingKeywordFilter("27").$or as Document[];
+
+    // Assert
     expect(or.some((c) => "buildNo" in c)).toBe(false);
     expect(or).toContainEqual({
       displayNo: { $regex: "^27", $options: "i" },
@@ -172,6 +197,7 @@ describe("building tiers", () => {
 
 describe("row caps", () => {
   it("sizes the strong cap above the largest building and cuts the weak tail", () => {
+    // Assert
     // 기숙사신관 (buildNo 298) holds 801 rooms — the strong band must never
     // truncate a building. The weak band is what keeps q=실 (6173 matches) from
     // reaching a non-virtualized ScrollView.

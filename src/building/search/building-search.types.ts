@@ -1,12 +1,13 @@
+import type { StringPath } from "../../shared/string-path.types";
 import type { BuildingDoc } from "../building.document";
 import type { BilingualText, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd, WithCampusLabel } from "../building.types";
 
 export type TierMode = "exact" | "prefix" | "substring";
 
-export interface RelevanceTier {
+export interface RelevanceTier<TDoc> {
   /** Higher wins; spaced by 10 so a tier can be inserted between two. */
   readonly score: number;
-  readonly paths: readonly string[];
+  readonly paths: readonly StringPath<TDoc>[];
   readonly mode: TierMode;
 }
 

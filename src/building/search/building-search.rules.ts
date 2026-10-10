@@ -1,6 +1,7 @@
 // Why the tiers, bands and caps are what they are, with the production
 // measurements: docs/decisions/0006-building-search-relevance-ranking.md.
 import { escapeRegex } from "../../shared/regex.util";
+import type { BuildingDoc, SpaceDoc } from "../building.document";
 import type { RelevanceTier, TierMode } from "./building-search.types";
 
 // A building-number query returns whole buildings (the largest has 801 rooms);
@@ -20,7 +21,7 @@ const BUILDING_STRONG_MIN_SCORE = 20;
 /** Passed the keyword filter but matched no tier: reachable only if the filter and the tiers drift. */
 const NO_TIER_SCORE = 0;
 
-const SPACE_TIERS: readonly RelevanceTier[] = [
+const SPACE_TIERS: readonly RelevanceTier<SpaceDoc>[] = [
   { score: 60, paths: ["spaceCd"], mode: "exact" },
   { score: 50, paths: ["spaceCd"], mode: "prefix" },
   { score: 40, paths: ["buildingName.ko", "buildingName.en"], mode: "prefix" },
@@ -36,7 +37,7 @@ const SPACE_TIERS: readonly RelevanceTier[] = [
 
 // buildNo is deliberately absent: its leading digit is the campus code, so a
 // buildNo prefix on "27" would rank 270, 271 and 272 for building 27.
-const BUILDING_TIERS: readonly RelevanceTier[] = [
+const BUILDING_TIERS: readonly RelevanceTier<BuildingDoc>[] = [
   { score: 50, paths: ["displayNo"], mode: "exact" },
   { score: 40, paths: ["displayNo"], mode: "prefix" },
   { score: 30, paths: ["name.ko", "name.en"], mode: "prefix" },
@@ -68,8 +69,8 @@ function readPath(doc: Record<string, unknown>, path: string): string {
 }
 
 /** The JS reading of a tier table, so specs pin the ranking without Mongo. */
-function scoreLocally(
-  tiers: readonly RelevanceTier[],
+function scoreLocally<TDoc>(
+  tiers: readonly RelevanceTier<TDoc>[],
   keyword: string,
   doc: Record<string, unknown>,
 ): number {

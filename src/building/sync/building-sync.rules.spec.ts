@@ -3,9 +3,10 @@
  * broken, not one building. More than half of the attempted buildings failing
  * trips it; exactly half does not, and a run that attempted nothing never
  * fails. Also needsEnrichment (which listed buildings phase 1 re-enriches) and
- * toSyncError (the run's one rejection).
+ * toSyncError (the run's one rejection), and shouldRejectPayload (when a SKKU
+ * list has too many invalid items to trust, on the same boundary as phase 2).
  */
-import { needsEnrichment, shouldFailBuildInfoPhase, toSyncError } from "./building-sync.rules";
+import { needsEnrichment, shouldFailBuildInfoPhase, shouldRejectPayload, toSyncError } from "./building-sync.rules";
 
 describe("shouldFailBuildInfoPhase", () => {
   it.each([
@@ -54,5 +55,23 @@ describe("toSyncError", () => {
     expect(error).toBeInstanceOf(AggregateError);
     expect(error.message).toBe("Building sync failed in phase 2 (buildInfo) and phase 3 (spaceList)");
     expect(error.errors).toEqual([buildInfoError, spaceListError]);
+  });
+});
+
+describe("shouldRejectPayload", () => {
+  it.each([
+    [1, 1, true],
+    [2050, 2050, true],
+    [1026, 2050, true],
+    [6, 10, true],
+    [1025, 2050, false],
+    [5, 10, false],
+    [1, 2050, false],
+    [1, 5591, false],
+    [0, 25, false],
+    [0, 0, false],
+  ])("is %s-of-%s invalid → %s", (invalid, total, expected) => {
+    // Act & Assert
+    expect(shouldRejectPayload({ total, invalid })).toBe(expected);
   });
 });
