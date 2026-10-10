@@ -13,6 +13,14 @@
  *   - exported types: a class-role file exports no interface or type alias.
  *     Exported types live in `.types`, `.document` or `.schema`; a type used
  *     inside one file stays there, unexported.
+ *   - main export: a class-role or `.decorator` file exports something named
+ *     after the file, so either can be found from the other: a class
+ *     `NoStoreMiddleware`, a function `noStoreMiddleware`, a decorator
+ *     `CacheControl`.
+ *   - type files: a `.types` or `.document` file holds no runtime code.
+ *   - brand casts: a brand type (an alias of `Brand<…>` in a `.types` file) is
+ *     cast with `as` only where a value enters: `.client`, `.schema` and
+ *     `.rules` files, and specs.
  */
 import ts from "typescript";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
@@ -155,6 +163,108 @@ export function exportedTypeViolations(file: string, source: string): string[] {
   return exportedTypes(source).map((name) => `${file}: ${name}`);
 }
 
+const isExported = (node: ts.Node) =>
+  ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+
+/** Value names a file exports: classes, functions, variables, and the non-type names of `export { … }`. */
+function exportedValues(source: string): string[] {
+  const sf = ts.createSourceFile("x.ts", source, ts.ScriptTarget.ES2022, false);
+  return sf.statements.flatMap((s) => {
+    if ((ts.isClassDeclaration(s) || ts.isFunctionDeclaration(s)) && s.name && isExported(s)) return [s.name.text];
+    if (ts.isVariableStatement(s) && isExported(s)) {
+      return s.declarationList.declarations.flatMap((d) => (ts.isIdentifier(d.name) ? [d.name.text] : []));
+    }
+    if (ts.isExportDeclaration(s) && !s.isTypeOnly && s.exportClause && ts.isNamedExports(s.exportClause)) {
+      return s.exportClause.elements.filter((e) => !e.isTypeOnly).map((e) => e.name.text);
+    }
+    return [];
+  });
+}
+
+/** `<file>` when a class-role or decorator file exports values but none named after the file. */
+export function mainExportViolations(file: string, source: string): string[] {
+  if (EXEMPT.has(file) || file.endsWith(".spec.ts")) return [];
+  const { parts } = parse(file);
+  if (parts.length !== 2 || !(CLASS_ROLES.has(parts[1]!) || parts[1] === "decorator")) return [];
+  const base = parts[0]!.replace(/-/g, "").toLowerCase();
+  const values = exportedValues(source);
+  if (values.length === 0 || values.some((name) => name.toLowerCase().startsWith(base))) return [];
+  return [file];
+}
+
+/** `<file>: <name>` for each runtime statement in a `.types` or `.document` file. */
+export function typeFileViolations(file: string, source: string): string[] {
+  const { parts } = parse(file);
+  if (parts.length !== 2 || !["types", "document"].includes(parts[1]!)) return [];
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, false);
+  return sf.statements.flatMap((s) => {
+    if (
+      ts.isImportDeclaration(s) ||
+      ts.isInterfaceDeclaration(s) ||
+      ts.isTypeAliasDeclaration(s) ||
+      ts.isExportDeclaration(s) ||
+      (ts.canHaveModifiers(s) && (ts.getModifiers(s) ?? []).some((m) => m.kind === ts.SyntaxKind.DeclareKeyword))
+    ) {
+      return [];
+    }
+    const name =
+      (ts.isFunctionDeclaration(s) || ts.isClassDeclaration(s) || ts.isEnumDeclaration(s)) && s.name
+        ? s.name.text
+        : ts.isVariableStatement(s)
+          ? s.declarationList.declarations.map((d) => d.name.getText(sf)).join(", ")
+          : ts.SyntaxKind[s.kind];
+    return [`${file}: ${name}`];
+  });
+}
+
+/** Names of the type aliases declared as `Brand<…>` in the given `.types` sources. */
+export function brandNames(sources: ReadonlyArray<{ file: string; source: string }>): Set<string> {
+  const names = new Set<string>();
+  for (const { file, source } of sources) {
+    const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true);
+    for (const s of sf.statements) {
+      if (ts.isTypeAliasDeclaration(s) && /^Brand</.test(s.type.getText(sf))) names.add(s.name.text);
+    }
+  }
+  return names;
+}
+
+const MINTING_ROLES = new Set(["client", "schema", "rules"]);
+
+/** `<file>: as <Brand>` for each cast to a brand outside the files that mint them, `#n` on repeats. */
+export function brandCastViolations(file: string, source: string, brands: ReadonlySet<string>): string[] {
+  if (file.endsWith(".spec.ts")) return [];
+  const { parts } = parse(file);
+  if (parts.length === 2 && MINTING_ROLES.has(parts[1]!)) return [];
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true);
+  const seen = new Map<string, number>();
+  const out: string[] = [];
+  const brandIn = (type: ts.TypeNode): string | undefined => {
+    let found: string | undefined;
+    const visit = (n: ts.Node): void => {
+      if (!found && ts.isTypeReferenceNode(n) && ts.isIdentifier(n.typeName) && brands.has(n.typeName.text)) {
+        found = n.typeName.text;
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(type);
+    return found;
+  };
+  const visit = (n: ts.Node): void => {
+    if (ts.isAsExpression(n) || ts.isTypeAssertionExpression(n)) {
+      const brand = brandIn(n.type);
+      if (brand) {
+        const k = (seen.get(brand) ?? 0) + 1;
+        seen.set(brand, k);
+        out.push(`${file}: as ${brand}${k > 1 ? ` #${k}` : ""}`);
+      }
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(sf);
+  return out;
+}
+
 describe("naming rules apply as specified", () => {
   it.each([
     "src/building/building.service.ts",
@@ -227,6 +337,51 @@ describe("naming rules apply as specified", () => {
     expect(exportedTypeViolations("src/building/building.rules.ts", "export type { A };")).toEqual([]);
     expect(exportedTypeViolations("src/building/building.service.spec.ts", "export interface A {}")).toEqual([]);
   });
+
+  it("names a role file's main export after the file", () => {
+    expect(mainExportViolations("src/http/no-store.middleware.ts", "export function noStoreMiddleware() {}")).toEqual([]);
+    expect(mainExportViolations("src/http/no-store.middleware.ts", "export function forceNoStore() {}")).toEqual([
+      "src/http/no-store.middleware.ts",
+    ]);
+    expect(
+      mainExportViolations("src/http/cache-control.decorator.ts", "export const KEY = 1;\nexport const CacheControl = () => 1;"),
+    ).toEqual([]);
+    expect(mainExportViolations("src/x/x.rules.ts", "export function anything() {}")).toEqual([]);
+    expect(mainExportViolations("src/x/x.service.ts", "export type T = 1;")).toEqual([]);
+  });
+
+  it("keeps runtime code out of .types and .document files", () => {
+    const source = [
+      'import type { A } from "./a";',
+      "export interface B { a: A }",
+      "export type C = B;",
+      "declare const brand: unique symbol;",
+      "export function isB(v: unknown): v is B { return true; }",
+      "export const KINDS = ['a'] as const;",
+      "export enum Kind { A }",
+    ].join("\n");
+    expect(typeFileViolations("src/x/x.types.ts", source)).toEqual([
+      "src/x/x.types.ts: isB",
+      "src/x/x.types.ts: KINDS",
+      "src/x/x.types.ts: Kind",
+    ]);
+    expect(typeFileViolations("src/x/x.util.ts", source)).toEqual([]);
+  });
+
+  it("allows a brand cast only where a value enters", () => {
+    const brands = brandNames([
+      { file: "src/x/x.types.ts", source: 'export type XId = Brand<number, "XId">;\nexport type Other = number;' },
+    ]);
+    expect([...brands]).toEqual(["XId"]);
+    const cast = "const a = 1 as XId;\nconst b = (n || null) as XId | null;\nconst c = 2 as Other;";
+    expect(brandCastViolations("src/x/x.service.ts", cast, brands)).toEqual([
+      "src/x/x.service.ts: as XId",
+      "src/x/x.service.ts: as XId #2",
+    ]);
+    for (const file of ["src/x/x.client.ts", "src/x/x.schema.ts", "src/x/x.rules.ts", "src/x/x.service.spec.ts"]) {
+      expect(brandCastViolations(file, cast, brands)).toEqual([]);
+    }
+  });
 });
 
 describe("src/ file and class names", () => {
@@ -244,6 +399,30 @@ describe("src/ file and class names", () => {
     expectAllowlisted(
       "class-name",
       files.flatMap((f) => classNameViolations(f, readSource(f))),
+    );
+  });
+
+  it("name a role file's main export after the file", () => {
+    expectAllowlisted(
+      "main-export",
+      files.flatMap((f) => mainExportViolations(f, readSource(f))),
+    );
+  });
+
+  it("keep runtime code out of .types and .document files", () => {
+    expectAllowlisted(
+      "type-files",
+      files.flatMap((f) => typeFileViolations(f, readSource(f))),
+    );
+  });
+
+  it("cast to a brand only in client, schema, rules and spec files", () => {
+    const brands = brandNames(
+      files.filter((f) => f.endsWith(".types.ts")).map((f) => ({ file: f, source: readSource(f) })),
+    );
+    expectAllowlisted(
+      "brand-casts",
+      files.flatMap((f) => brandCastViolations(f, readSource(f), brands)),
     );
   });
 
