@@ -11,9 +11,9 @@
  */
 import fs from "fs";
 import path from "path";
-import config from "../infra/config";
-import logger from "../infra/logger";
-import { postToFcmFunction } from "./fcm.client";
+import config from "./config";
+import logger from "./logger";
+import { postToFcmFunction } from "./fcm";
 
 const notice = {
   type: "notice",
@@ -97,9 +97,9 @@ describe("postToFcmFunction with PUSH_DELIVERY=live", () => {
 
 describe("postToFcmFunction is the only way to the Cloud Function", () => {
   // Where the URL and key may appear in code: read from env and validated
-  // (config.ts, required-env.ts) and used (fcm.client.ts). A fetch to the
+  // (config.ts, required-env.ts) and used (fcm.ts). A fetch to the
   // function anywhere else would bypass PUSH_DELIVERY. Specs are not code.
-  const allowed = new Set(["infra/config.ts", "infra/required-env.ts", "http/fcm.client.ts"]);
+  const allowed = new Set(["infra/config.ts", "infra/required-env.ts", "infra/fcm.ts"]);
   const reference = /\bfunctionUrl\b|\bFCM_FUNCTION_URL\b|\bFCM_API_KEY\b|dispatch\.apiKey\b/;
 
   it("no other file in src/ reads the function URL or key", () => {
