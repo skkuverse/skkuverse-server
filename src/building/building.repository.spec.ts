@@ -4,7 +4,8 @@
  * concurrent requests cost one scan, a sync's clearCache() forces the next read
  * back to the database, a buildings failure still reaches the caller (that is
  * what marks the campus overlay degraded), and a shapes failure serves the last
- * good shapes rather than an outline-less map cached for a day.
+ * good shapes rather than an outline-less map cached for a day. Also the indexes
+ * the repository creates at boot, on the right collection.
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../infra/logger", () => mockLogger);
@@ -84,11 +85,14 @@ afterEach(() => {
 
 describe("listBuildings", () => {
   it("scans once for concurrent requests, and filters the cached list by campus", async () => {
+    // Act
     const [all, hssc, nsc] = await Promise.all([
       listBuildings(),
       listBuildings("hssc"),
       listBuildings("nsc"),
     ]);
+
+    // Assert
     expect(all).toEqual([HSSC, NSC]);
     expect(hssc).toEqual([HSSC]);
     expect(nsc).toEqual([NSC]);
@@ -99,31 +103,47 @@ describe("listBuildings", () => {
   });
 
   it("re-reads after clearCache(), which the building sync calls after writing", async () => {
+    // Arrange
     await listBuildings();
+
+    // Act
     clearCache();
     await listBuildings();
+
+    // Assert
     expect(findFor.buildings).toHaveBeenCalledTimes(2);
   });
 
   it("re-reads once the TTL has passed", async () => {
+    // Arrange
     await listBuildings();
     clock += FIVE_MIN;
+
+    // Act
     await listBuildings();
+
+    // Assert
     expect(findFor.buildings).toHaveBeenCalledTimes(2);
   });
 
   it("still surfaces a failed read, which is what marks the overlay degraded", async () => {
+    // Arrange
     await listBuildings();
     toArrayFor.buildings!.mockRejectedValue(new Error("mongo down"));
     clock += FIVE_MIN;
+
+    // Act & Assert
     await expect(listBuildings()).rejects.toThrow("mongo down");
   });
 });
 
 describe("listCampusShapes", () => {
   it("is cached like the buildings", async () => {
+    // Act
     await Promise.all([listCampusShapes(), listCampusShapes()]);
     await listCampusShapes();
+
+    // Assert
     expect(findFor.campus_shapes).toHaveBeenCalledTimes(1);
     expect(findFor.campus_shapes!.mock.calls[0]).toEqual([
       {},
@@ -144,12 +164,15 @@ describe("listCampusShapes", () => {
   });
 
   it("leaves out a shape that does not parse, logs it, and keeps the rest", async () => {
+    // Arrange
     toArrayFor.campus_shapes!.mockResolvedValue([
       SHAPE,
       { ...SHAPE, _id: "broken-ring", geometry: { type: "Polygon", coordinates: [null] } },
       { ...SHAPE, _id: "string-id", skkuId: "12" },
       { ...SHAPE, _id: "extra", updatedAt: new Date(0), note: "ignored" },
     ]);
+
+    // Act & Assert
     await expect(listCampusShapes()).resolves.toEqual([SHAPE, { ...SHAPE, _id: "extra" }]);
     expect(mockLogger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -162,9 +185,12 @@ describe("listCampusShapes", () => {
   });
 
   it("serves the last good shapes when a re-read fails, with a warning", async () => {
+    // Arrange
     await listCampusShapes();
     toArrayFor.campus_shapes!.mockRejectedValue(new Error("mongo down"));
     clock += FIVE_MIN;
+
+    // Act & Assert
     await expect(listCampusShapes()).resolves.toEqual([SHAPE]);
     // Answered from the old shapes at once; the failed reload logs behind it.
     await new Promise((resolve) => setImmediate(resolve));
@@ -172,9 +198,14 @@ describe("listCampusShapes", () => {
   });
 
   it("re-reads after clearCache()", async () => {
+    // Arrange
     await listCampusShapes();
+
+    // Act
     clearCache();
     await listCampusShapes();
+
+    // Assert
     expect(findFor.campus_shapes).toHaveBeenCalledTimes(2);
   });
 });
@@ -196,16 +227,20 @@ describe("listCampusShapes", () => {
  */
 describe("BuildingRepository.ensureIndexes", () => {
   it("creates a 2dsphere on campus_shapes.geometry — the insert-time ring guard", async () => {
+    // Act
     await ensureIndexes();
 
+    // Assert
     expect(createIndex).toHaveBeenCalledWith("campus_shapes", {
       geometry: "2dsphere",
     });
   });
 
   it("covers the one read there is, rather than a filter nothing uses", async () => {
+    // Act
     await ensureIndexes();
 
+    // Assert
     // `listCampusShapes` is `find({}).sort({order: 1, _id: 1})` — no campus
     // predicate anywhere — so this is the sort, not a filter.
     expect(createIndex).toHaveBeenCalledWith("campus_shapes", { order: 1, _id: 1 });
@@ -213,8 +248,10 @@ describe("BuildingRepository.ensureIndexes", () => {
   });
 
   it("creates no index on another collection", async () => {
+    // Act
     await ensureIndexes();
 
+    // Assert
     // Regression guard for the one-line mistake this file is shaped to catch:
     // hanging an index off the wrong handle. The buildings 2dsphere is the
     // sync's (BuildingSyncRepository); nothing reads buildings or spaces by campus.
@@ -224,13 +261,17 @@ describe("BuildingRepository.ensureIndexes", () => {
 
 describe("BuildingRepository.onModuleInit", () => {
   it("ensures the indexes and logs it", async () => {
+    // Act & Assert
     await expect(repository.onModuleInit()).resolves.toBeUndefined();
     expect(createIndex).toHaveBeenCalled();
     expect(mockLogger.info).toHaveBeenCalledWith({ event: "building.indexes.ensured" }, expect.any(String));
   });
 
   it("swallows an index failure (warn-and-continue, no throw)", async () => {
+    // Arrange
     createIndex.mockRejectedValueOnce(new Error("no db"));
+
+    // Act & Assert
     await expect(repository.onModuleInit()).resolves.toBeUndefined();
     expect(mockLogger.warn).toHaveBeenCalledWith(
       expect.objectContaining({ event: "building.indexes.failed" }),
