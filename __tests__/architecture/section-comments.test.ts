@@ -6,26 +6,52 @@
  * or a better name.
  *
  * A divider is a `//` line that opens with three or more `-`, three or more
- * `=`, or two or more `─`. Specs are not checked.
+ * `=`, or two or more `─`, or the same run as a line of a multi-line block
+ * comment; there a bare run underlines the line above it, which is then the
+ * heading (` * THE RANKING SIGNAL` over ` * -----`). Specs are not checked.
  */
+import { commentLines, commentsOf, numberedKeys } from "../helpers/architecture/comments";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
-const DIVIDER = /^\s*\/\/\s*(?:-{3,}|={3,}|─{2,})(?=\s|$)(.*)$/;
+const RULE = String.raw`(?:-{3,}|={3,}|─{2,})`;
+const DIVIDER = new RegExp(String.raw`^\s*\/\/\s*${RULE}(?=\s|$)(.*)$`);
+const BLOCK_DIVIDER = new RegExp(String.raw`^${RULE}(?=\s|$)(.*)$`);
+const TRAILING_RULE = new RegExp(String.raw`${RULE}\s*$`);
+
+function headingOf(rest: string): string {
+  return rest.replace(TRAILING_RULE, "").trim();
+}
+
+/** Dividers on `//` lines, as [line, heading]. */
+function lineDividers(source: string): Array<[number, string]> {
+  return source.split("\n").flatMap((line, i): Array<[number, string]> => {
+    const match = DIVIDER.exec(line);
+    return match ? [[i + 1, headingOf(match[1]!) || "(rule)"]] : [];
+  });
+}
+
+/** Dividers inside multi-line block comments, as [line, heading]. */
+function blockDividers(file: string, source: string): Array<[number, string]> {
+  return commentsOf(file, source)
+    .filter((c) => c.kind === "block" && c.endLine > c.line)
+    .flatMap((c) =>
+      commentLines(c).flatMap((text, i, lines): Array<[number, string]> => {
+        const match = BLOCK_DIVIDER.exec(text);
+        if (!match) return [];
+        const above = lines.slice(0, i).reverse().find((l) => l !== "");
+        return [[c.line + i, headingOf(match[1]!) || above || "(rule)"]];
+      }),
+    );
+}
 
 /** `<file>: <heading>` for each divider, `#n` on a repeated heading. */
 export function sectionCommentViolations(file: string, source: string): string[] {
-  const seen = new Map<string, number>();
-  const out: string[] = [];
-  for (const line of source.split("\n")) {
-    const match = DIVIDER.exec(line);
-    if (!match) continue;
-    const heading = match[1]!.replace(/(?:-{3,}|={3,}|─{2,})\s*$/, "").trim() || "(rule)";
-    const n = (seen.get(heading) ?? 0) + 1;
-    seen.set(heading, n);
-    out.push(`${file}: ${heading}${n > 1 ? ` #${n}` : ""}`);
-  }
-  return out;
+  const dividers = [...lineDividers(source), ...blockDividers(file, source)].sort((a, b) => a[0] - b[0]);
+  return numberedKeys(
+    file,
+    dividers.map(([, heading]) => heading),
+  );
 }
 
 describe("section comment rule applies as specified", () => {
@@ -44,6 +70,23 @@ describe("section comment rule applies as specified", () => {
       "src/x/x.ts: Import boundaries (D9)",
       "src/x/x.ts: (rule)",
       "src/x/x.ts: Sync #2",
+    ]);
+  });
+
+  it("finds a divider or an underline inside a multi-line block comment", () => {
+    const source = [
+      "/**",
+      " * Ranking.",
+      " *",
+      " * THE RANKING SIGNAL",
+      " * ------------------",
+      " * --- Bands ---",
+      " */",
+      "const a = 1;",
+    ].join("\n");
+    expect(sectionCommentViolations("src/x/x.ts", source)).toEqual([
+      "src/x/x.ts: THE RANKING SIGNAL",
+      "src/x/x.ts: Bands",
     ]);
   });
 

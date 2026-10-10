@@ -3,7 +3,7 @@
  * skkuverse-ai response.
  *
  * The server→ai contract is owned by skkuverse-ai
- * (docs/notice-overview-api.md, openspec/changes/add-notice-overview). This
+ * (skkuverse-ai/docs/notice-overview-api.md, openspec/changes/add-notice-overview). This
  * file mirrors only what the server reads and sends; it does not redefine the
  * contract. Pure / no I/O.
  */
