@@ -2,6 +2,7 @@
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.expand": false,
   "explorer.fileNesting.patterns": {
+    "building.module.ts": "building.*, *.json",
     "*.module.ts": "${capture}.schema.ts",
     "*.service.ts": "${capture}.rules.ts, ${capture}.mapper.ts, ${capture}.types.ts",
     "*.repository.ts": "${capture}.query.ts, ${capture}.document.ts",

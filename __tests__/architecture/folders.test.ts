@@ -21,9 +21,17 @@
  * controller and no poller at its root. Its first flow is a sub-module too
  * (`src/building/catalog/`), and the root keeps the module file and the code
  * its flows share, so every flow of a split module has the same shape.
+ *
+ * In the explorer, a split root's shared files fold under its module file:
+ * `.vscode/settings.json` holds one literal key per split root,
+ * `"<base>.module.ts": "<base>.*, *.json"`, and no literal key for any other
+ * module (a `*` pattern cannot tell `building.module.ts` from
+ * `building-search.module.ts`).
  */
+import fs from "fs";
+import path from "path";
 import { EXEMPT, ROLES, parse } from "../helpers/architecture/names";
-import { expectAllowlisted } from "../helpers/architecture/ratchet";
+import { ROOT, expectAllowlisted } from "../helpers/architecture/ratchet";
 import { dirsUnder, filesUnder } from "../helpers/architecture/tree";
 
 const SHARED_ROLES = new Set(["config", "http", "infra", "scheduling", "shared"]);
@@ -78,20 +86,52 @@ export function folderRoleViolations(files: readonly string[]): string[] {
   return out.sort();
 }
 
+/** The module files of feature folders that have a direct sub-module: the split roots (`src/app.module.ts` is not one). */
+export function splitRootModules(files: readonly string[]): string[] {
+  const modules = files.filter((f) => f.endsWith(".module.ts") && f.split("/").length > 2);
+  const dirOf = (f: string) => f.slice(0, f.lastIndexOf("/"));
+  const moduleDirs = modules.map(dirOf);
+  return modules
+    .filter((m) => moduleDirs.some((d) => d.startsWith(`${dirOf(m)}/`) && !d.slice(dirOf(m).length + 1).includes("/")))
+    .sort();
+}
+
 /** Each `.controller` or `.poller` sitting in a module folder that also has a sub-module. */
 export function splitRootViolations(files: readonly string[]): string[] {
-  const moduleDirs = new Set(
-    files.filter((f) => f.endsWith(".module.ts")).map((f) => f.slice(0, f.lastIndexOf("/"))),
-  );
-  const hasSubModule = (dir: string) =>
-    [...moduleDirs].some((d) => d.startsWith(`${dir}/`) && !d.slice(dir.length + 1).includes("/"));
+  const roots = new Set(splitRootModules(files).map((m) => m.slice(0, m.lastIndexOf("/"))));
   return files
     .filter((f) => /\.(?:controller|poller)\.ts$/.test(f))
-    .filter((f) => {
-      const dir = f.slice(0, f.lastIndexOf("/"));
-      return moduleDirs.has(dir) && hasSubModule(dir);
-    })
+    .filter((f) => roots.has(f.slice(0, f.lastIndexOf("/"))))
     .sort();
+}
+
+/**
+ * `<key>: …` for a split root whose explorer key is missing or differs, and
+ * for a literal module key that names no split root.
+ */
+export function explorerKeyViolations(files: readonly string[], patterns: Readonly<Record<string, string>>): string[] {
+  const normalize = (v: string) =>
+    v
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .join(", ");
+  const expected = new Map<string, string>();
+  for (const m of splitRootModules(files)) {
+    const base = m.slice(m.lastIndexOf("/") + 1).replace(/\.module\.ts$/, "");
+    expected.set(`${base}.module.ts`, `${base}.*, *.json`);
+  }
+  const out: string[] = [];
+  for (const [key, value] of expected) {
+    if (patterns[key] === undefined) out.push(`${key}: missing; add "${key}": "${value}"`);
+    else if (normalize(patterns[key]) !== value) out.push(`${key}: expected "${value}"`);
+  }
+  for (const key of Object.keys(patterns)) {
+    if (!key.includes("*") && key.endsWith(".module.ts") && !expected.has(key)) {
+      out.push(`${key}: not a split root; delete the key`);
+    }
+  }
+  return out.sort();
 }
 
 describe("folder rule applies as specified", () => {
@@ -187,6 +227,35 @@ describe("split-root rule applies as specified", () => {
   });
 });
 
+describe("explorer key rule applies as specified", () => {
+  const files = [
+    "src/app.module.ts",
+    "src/building/building.module.ts",
+    "src/building/catalog/building-catalog.module.ts",
+    "src/health/health.module.ts",
+  ];
+
+  it("accepts the split root's key and the role patterns", () => {
+    expect(
+      explorerKeyViolations(files, {
+        "building.module.ts": "building.*,  *.json",
+        "*.module.ts": "${capture}.schema.ts",
+        "*.ts": "${capture}.spec.ts",
+      }),
+    ).toEqual([]);
+  });
+
+  it("rejects a missing key, a different value and a key for a module that is not split", () => {
+    expect(explorerKeyViolations(files, { "health.module.ts": "health.*" })).toEqual([
+      'building.module.ts: missing; add "building.module.ts": "building.*, *.json"',
+      "health.module.ts: not a split root; delete the key",
+    ]);
+    expect(explorerKeyViolations(files, { "building.module.ts": "building.*" })).toEqual([
+      'building.module.ts: expected "building.*, *.json"',
+    ]);
+  });
+});
+
 describe("top-level folder rule applies as specified", () => {
   it("accepts shared roles and feature modules, and rejects anything else", () => {
     expect(
@@ -213,6 +282,13 @@ describe("src/ folders", () => {
 
   it("keep no flow at the root of a module that has a sub-module", () => {
     expectAllowlisted("split-root", splitRootViolations(filesUnder("src")));
+  });
+
+  it("of a split module fold under its module file in the explorer", () => {
+    const settings = JSON.parse(fs.readFileSync(path.join(ROOT, ".vscode/settings.json"), "utf8")) as {
+      "explorer.fileNesting.patterns": Record<string, string>;
+    };
+    expect(explorerKeyViolations(filesUnder("src"), settings["explorer.fileNesting.patterns"])).toEqual([]);
   });
 
   it("are sub-modules or JSON asset folders", () => {
