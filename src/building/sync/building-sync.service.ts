@@ -12,10 +12,9 @@ import { BuildingSyncRepository } from "./building-sync.repository";
 import { BuildingSyncClient } from "./building-sync.client";
 import { ENRICH_VERSION, enrichBuilding } from "./building-sync.mapper";
 import { BuildingRepository } from "../building.repository";
+import { CAMPUSES } from "../building.rules";
 import type { ListedBuilding, SyncedSpace } from "./building-sync.types";
-import type { BuildNo, Campus } from "../building.types";
-
-const CAMPUSES: readonly Campus[] = ["hssc", "nsc"];
+import type { BuildNo } from "../building.types";
 
 type WithBuildNo = ListedBuilding & { doc: { buildNo: BuildNo } };
 

@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import axios from "axios";
 import type { BuildingAttachment, BuildingRawDoc } from "../building.document";
+import { SKKU_CAMPUS_CODE } from "../building.rules";
 import type { BuildInfo, ListedBuilding, SyncedSpace } from "./building-sync.types";
 import type { ApiId, BilingualText, BuildNo, Campus, SkkuId, SpaceCd } from "../building.types";
 
 const CAMPUS_MAP_URL = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
-const CAMPUS_CODES: Readonly<Record<Campus, string>> = { hssc: "1", nsc: "2" };
 const REQUEST_TIMEOUT_MS = 30000;
 
 // The campusMap.do payloads (buildList, buildInfo, spaceList). Only the fields
@@ -131,7 +131,7 @@ function toRawDoc(item: SkkuBuildListItem, campus: Campus): Omit<BuildingRawDoc,
 export class BuildingSyncClient {
   async fetchBuildList(campus: Campus): Promise<ListedBuilding[]> {
     const { data } = await axios.get<SkkuBuildListResponse>(CAMPUS_MAP_URL, {
-      params: { mode: "buildList", srSearchValue: "", campusCd: CAMPUS_CODES[campus] },
+      params: { mode: "buildList", srSearchValue: "", campusCd: SKKU_CAMPUS_CODE[campus] },
       timeout: REQUEST_TIMEOUT_MS,
     });
     return (data.buildItems || []).map((item) => ({
@@ -169,7 +169,7 @@ export class BuildingSyncClient {
 
   async fetchSpaceList(campus: Campus): Promise<SyncedSpace[]> {
     const { data } = await axios.get<SkkuSpaceListResponse>(CAMPUS_MAP_URL, {
-      params: { mode: "spaceList", srSearchValue: "", campusCd: CAMPUS_CODES[campus] },
+      params: { mode: "spaceList", srSearchValue: "", campusCd: SKKU_CAMPUS_CODE[campus] },
       timeout: REQUEST_TIMEOUT_MS,
     });
     return (data.items || []).map((item) => ({

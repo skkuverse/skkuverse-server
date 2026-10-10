@@ -40,11 +40,7 @@ export interface SpaceGroup {
 }
 
 /** Per-campus totals for a keyword, whatever the campus filter (the app's campus toggle). */
-export interface SearchCounts {
-  hssc: number;
-  nsc: number;
-  total: number;
-}
+export type SearchCounts = Record<Campus, number> & { total: number };
 
 export interface SearchLimit {
   limit: number;
