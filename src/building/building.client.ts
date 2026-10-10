@@ -3,7 +3,7 @@ import axios from "axios";
 import type { BuildingAttachment, BuildingRawDoc } from "./building.document";
 import type {
   BilingualText,
-  BuildingDetail,
+  BuildInfo,
   Campus,
   ListedBuilding,
   SyncedSpace,
@@ -151,7 +151,7 @@ export class BuildingClient {
 
   async fetchBuildInfo(
     building: ListedBuilding & { doc: { buildNo: string } },
-  ): Promise<BuildingDetail> {
+  ): Promise<BuildInfo> {
     const { doc } = building;
     const { data } = await axios.get<SkkuBuildInfoResponse>(SKKU_API, {
       params: { mode: "buildInfo", buildNo: doc.buildNo, id: building.apiId },

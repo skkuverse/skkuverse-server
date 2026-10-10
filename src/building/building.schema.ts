@@ -12,12 +12,14 @@ const campus = z.preprocess(
 
 /** GET /building/list */
 export const buildingListQuery = z.object({ campus });
+export type BuildingListQuery = z.output<typeof buildingListQuery>;
 
 /** GET /building/search. `q` is declared first, so a request failing both reports MISSING_QUERY. */
 export const buildingSearchQuery = z.object({
   q: z.string({ error: MISSING_QUERY }).trim().min(1, { error: MISSING_QUERY }),
   campus,
 });
+export type BuildingSearchQuery = z.output<typeof buildingSearchQuery>;
 
 /**
  * GET /building/:skkuId, read with parseInt as it always has been: "12abc" is

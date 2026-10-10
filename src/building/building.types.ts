@@ -1,4 +1,4 @@
-import type { BuildingAttachment, BuildingRawDoc } from "./building.document";
+import type { BuildingAttachment, BuildingDoc, BuildingRawDoc } from "./building.document";
 
 /** hssc = 인사캠, nsc = 자과캠. campusMap.do takes "1" | "2"; everything else uses these names. */
 export type Campus = "hssc" | "nsc";
@@ -58,7 +58,7 @@ export interface SyncedSpace {
 }
 
 /** One building's buildInfo: its photos and the spaces on its floors. */
-export interface BuildingDetail {
+export interface BuildInfo {
   attachments: BuildingAttachment[];
   spaces: SyncedSpace[];
 }
@@ -82,4 +82,36 @@ export interface SpaceGroup {
   campusLabel: string;
   buildingName: BilingualText | undefined;
   items: SpaceGroupItem[];
+}
+
+/** Per-campus totals for a keyword, whatever the campus filter (the app's campus toggle). */
+export interface SearchCounts {
+  hssc: number;
+  nsc: number;
+  total: number;
+}
+
+export interface SearchLimit {
+  limit: number;
+  total: number;
+  truncated: boolean;
+}
+
+/** GET /building/search: `data` and the extra `meta` the controller passes to withMeta. */
+export interface BuildingSearch {
+  data: { buildings: Array<WithCampusLabel<BuildingDoc>>; spaces: SpaceGroup[] };
+  meta: {
+    keyword: string;
+    buildingCount: number;
+    spaceCount: number;
+    counts: { building: SearchCounts; space: SearchCounts };
+    limits: { building: SearchLimit; space: SearchLimit };
+  };
+}
+
+/** GET /building/:skkuId */
+export interface BuildingDetail {
+  building: WithCampusLabel<BuildingDoc>;
+  floors: FloorGroup[];
+  connections: ConnectionResponseItem[];
 }
