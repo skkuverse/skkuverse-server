@@ -4,12 +4,6 @@ import logger from "../../infra/logger";
 import { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { BuildingSyncService } from "./building-sync.service";
 
-/**
- * Registers the building sync with the PollerRegistry: every
- * config.building.syncIntervalMs (~7 days), as "building-sync". The registry
- * starts pollers only when ROLE !== "api", so api replicas never crawl, and it
- * reports a rejected run as `poller.failing` with a Sentry Issue.
- */
 @Injectable()
 export class BuildingSyncPoller implements OnModuleInit {
   constructor(
@@ -18,9 +12,8 @@ export class BuildingSyncPoller implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    // BUILDING_SYNC=off (the development default): not registered at all. The
-    // registry's warm-up would otherwise crawl campusMap.do and rewrite
-    // skkumap_dev on every boot — every save, under nodemon.
+    // BUILDING_SYNC=off, the development default: the registry's warm-up run would
+    // otherwise crawl campusMap.do and rewrite skkumap_dev on every nodemon restart.
     if (!config.building.syncEnabled) {
       logger.info(
         { event: "building.sync.disabled" },

@@ -2,7 +2,7 @@ import { hasBuildNo, toDisplayNo } from "../building.rules";
 import type { AccessibilityDetail, BarrierFreeSection, BuildingRawDoc, ElevatorStatus } from "../building.document";
 import type { EnrichedBuilding } from "./building-sync.types";
 
-// Bump this when enrichment logic changes to trigger re-enrichment of all buildings
+// Bump it when enrichBuilding changes: the next sync then re-enriches every building.
 const ENRICH_VERSION = 1;
 
 const ELEVATOR_STATUS_BY_TEXT: Readonly<Record<string, ElevatorStatus>> = {
@@ -12,11 +12,10 @@ const ELEVATOR_STATUS_BY_TEXT: Readonly<Record<string, ElevatorStatus>> = {
   "운영X": "not_operating",
 };
 
-// Matches the start of a BF block in description text.
-// Handles: "* 배리어프리", "*배리어프리", "*학생회관\n배리어프리"
+// SKKU starts the block as "* 배리어프리", "*배리어프리" or "*학생회관\n배리어프리".
 const BARRIER_FREE_START_RE = /\n\n\*\s*(?:[^\n]*\n)?배리어프리 편의시설 안내/;
 
-// Matches section headers within BF text, with optional label like (A동)
+// A section header, with an optional wing label such as (A동).
 const BARRIER_FREE_SECTION_RE =
   /\*\s*(?:[^\n]*\n)?배리어프리 편의시설 안내(?:\(([^)]+)\))?/g;
 
@@ -32,7 +31,7 @@ function parseRamp(
 }
 
 function parseToilet(text: string): { raw: string; count: number | null } | null {
-  // Handle typo "승장애인" prefix (_id:2 has it on elevator, but be safe)
+  // Unanchored, so SKKU's stray "승" prefix (building 2's elevator line) still matches.
   const match = text.match(/장애인 화장실\s*[:：]\s*(.+)/);
   if (!match) return null;
   const raw = match[1]!.trim();
@@ -45,7 +44,7 @@ function parseElevator(text: string): {
   total: number | null;
   accessible: number | null;
 } | null {
-  // Handle typo "승장애인 표시 승강기" (_id:2)
+  // SKKU's building 2 writes "승장애인 표시 승강기".
   const match = text.match(/(?:승)?장애인 표시 승강기\s*[:：]\s*(.+)/);
   if (!match) return null;
   const raw = match[1]!.trim();
@@ -70,8 +69,6 @@ function parseElevatorStatus(text: string): ElevatorStatus | null {
   const match = text.match(/승강기 기능 상태\s*[:：]\s*(.+)/);
   if (!match) return null;
   const raw = match[1]!.trim();
-  // An unknown value is passed through raw, which is why ElevatorStatus
-  // includes string.
   return ELEVATOR_STATUS_BY_TEXT[raw] || raw;
 }
 
@@ -98,7 +95,6 @@ interface BarrierFreeHeader {
   endIndex: number;
 }
 
-/** Every section header in a barrier-free block, in text order. */
 function findSectionHeaders(barrierFreeText: string): BarrierFreeHeader[] {
   return [...barrierFreeText.matchAll(BARRIER_FREE_SECTION_RE)].map((headerMatch) => ({
     label: headerMatch[1] || null,
@@ -107,7 +103,6 @@ function findSectionHeaders(barrierFreeText: string): BarrierFreeHeader[] {
   }));
 }
 
-/** Each header's section: the text up to the next header, parsed. */
 function toSections(barrierFreeText: string, headers: readonly BarrierFreeHeader[]): BarrierFreeSection[] {
   return headers.map((header, i) => {
     const end = headers[i + 1]?.index ?? barrierFreeText.length;
@@ -115,26 +110,18 @@ function toSections(barrierFreeText: string, headers: readonly BarrierFreeHeader
   });
 }
 
-/**
- * Parse barrier-free accessibility info from building description.
- *   - null: no BF text found
- *   - { cleanDescription, detail: { sections: [...] } }: parsed successfully
- *   - { cleanDescription: original, detail: { sections: [], parseError } }: BF detected but parse failed
- */
+/** null when the description has no barrier-free block. */
 function parseBarrierFree(
   descriptionKo: string | null | undefined,
 ): { cleanDescription: string; detail: AccessibilityDetail } | null {
   if (!descriptionKo) return null;
 
-  // Normalize line endings
   const text = descriptionKo.replace(/\r\n/g, "\n");
 
-  // Find BF block start
   const startMatch = text.match(BARRIER_FREE_START_RE);
   if (!startMatch) return null;
 
-  // A successful non-global regex match always has .index (MDN); TS types it
-  // number|undefined, so `!` asserts it.
+  // A successful non-global match always has .index; TypeScript types it optional.
   const matchIndex = startMatch.index!;
   const cleanDescription = text.slice(0, matchIndex).trim();
   const barrierFreeText = text.slice(matchIndex);
@@ -153,7 +140,6 @@ function parseBarrierFree(
   return { cleanDescription, detail: { sections: toSections(barrierFreeText, headers) } };
 }
 
-/** The fields derived from a raw building: display number, type, barrier-free detail. */
 function enrichBuilding(rawDoc: BuildingRawDoc): EnrichedBuilding {
   const parsed = parseBarrierFree(rawDoc.description?.ko);
 

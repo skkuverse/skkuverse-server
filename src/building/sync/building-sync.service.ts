@@ -16,11 +16,6 @@ import { CAMPUSES, hasBuildNo } from "../building.rules";
 import type { SkkuId } from "../building.types";
 import type { ListedBuilding, ListedBuildingWithBuildNo, SyncedSpace } from "./building-sync.types";
 
-/**
- * Mirrors SKKU's campusMap.do into the building DB, weekly
- * (BuildingSyncPoller): phase 1 buildList → raw + enriched layers, phase 2
- * buildInfo → photos + spaces, phase 3 spaceList → spaces + stale delete.
- */
 @Injectable()
 export class BuildingSyncService {
   constructor(
@@ -29,16 +24,9 @@ export class BuildingSyncService {
     private readonly buildings: BuildingRepository,
   ) {}
 
-  /**
-   * One sync run. Reports by resolving or rejecting, and logs no failure
-   * itself: the poller registry turns a rejection into `poller.failing` and a
-   * Sentry Issue. Phase 1 failing (a fetch error, or a list too short to trust)
-   * ends the run. Phase 2 or 3 failing does not: the later phases and the cache
-   * clear still run (a phase 3 failure skips the stale delete), and the run
-   * rejects afterwards. Either way the rejection is one AggregateError naming
-   * every failed phase, with the original errors in `errors`. Only a run with
-   * no failure logs `building.sync.completed`.
-   */
+  // Logs no failure itself; the poller registry reports the rejection. Phase 1 failing
+  // ends the run; phases 2 and 3 run regardless, and the run then rejects with one
+  // AggregateError naming each failed phase (building-sync.service.spec.ts).
   async run(): Promise<void> {
     const syncStartedAt = new Date();
     const start = Date.now();
@@ -81,7 +69,6 @@ export class BuildingSyncService {
     );
   }
 
-  /** Phase 1: buildList → change detection → raw upsert → enrich. */
   private async syncBuildList(syncStartedAt: Date): Promise<ListedBuilding[]> {
     const listed = await this.fetchTrustedBuildList();
     // Detected before the raw upsert, which overwrites the skkuUpdatedAt it compares against.
@@ -91,7 +78,6 @@ export class BuildingSyncService {
     return listed;
   }
 
-  /** Both campuses' buildList; throws when it is too short to trust. */
   private async fetchTrustedBuildList(): Promise<ListedBuilding[]> {
     const listed: ListedBuilding[] = [];
     for (const campus of CAMPUSES) {
@@ -111,7 +97,6 @@ export class BuildingSyncService {
     return listed;
   }
 
-  /** The listed buildings that need enrichment (see needsEnrichment). */
   private async detectChangedSkkuIds(listed: readonly ListedBuilding[]): Promise<Set<SkkuId>> {
     const skkuUpdatedAtBySkkuId = await this.repository.listRawUpdatedAt();
     const skkuIdsEnrichedAtOldVersion = await this.repository.listSkkuIdsNotEnrichedAt(ENRICH_VERSION);
@@ -167,7 +152,6 @@ export class BuildingSyncService {
     );
   }
 
-  /** Phase 2: buildInfo per building → photos on both layers + floor spaces. */
   private async syncBuildInfo(listed: readonly ListedBuilding[], syncStartedAt: Date): Promise<void> {
     const withBuildNo = listed.filter((building): building is ListedBuildingWithBuildNo => hasBuildNo(building.doc));
     const spaces: SyncedSpace[] = [];
@@ -206,17 +190,14 @@ export class BuildingSyncService {
     }
   }
 
-  /** One building's buildInfo: its photos written to both layers, its spaces returned. */
   private async syncOneBuildInfo(building: ListedBuildingWithBuildNo, syncStartedAt: Date): Promise<SyncedSpace[]> {
     const detail = await this.client.fetchBuildInfo(building);
     await this.repository.setAttachments(building.skkuId, detail.attachments, syncStartedAt);
     return detail.spaces;
   }
 
-  /** Logs a building whose buildInfo failed and notes the failure on it. */
   private async recordBuildInfoFailure(building: ListedBuildingWithBuildNo, rejection: unknown): Promise<void> {
-    // The reason is unknown (a rejection can be anything); the cast only
-    // types it for the log line.
+    // A rejection can be anything; the cast only types it for the log line.
     const reason = rejection as { message?: string } | null | undefined;
     logger.warn(
       {
@@ -230,7 +211,6 @@ export class BuildingSyncService {
     await this.repository.recordDetailError(building.skkuId, reason?.message || "unknown");
   }
 
-  /** Phase 3: spaceList → spaces upsert + delete of the spaces SKKU no longer lists. */
   private async syncSpaceList(syncStartedAt: Date): Promise<number> {
     const spaces = await this.fetchSpaceLists();
     if (spaces.length > 0) await this.upsertListedSpaces(spaces, syncStartedAt);
@@ -263,7 +243,6 @@ export class BuildingSyncService {
     );
   }
 
-  /** Deletes the spaces this run did not see, unless spaceList listed too few to trust. */
   private async deleteStaleSpaces(listedCount: number, syncStartedAt: Date): Promise<void> {
     if (listedCount < MIN_SPACES_FOR_STALE_DELETE) {
       logger.warn(
