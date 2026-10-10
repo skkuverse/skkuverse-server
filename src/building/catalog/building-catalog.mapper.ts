@@ -7,7 +7,7 @@ import type { BuildingConnection, FloorGroup } from "./building-catalog.types";
 function groupByFloor(spaces: readonly FloorSpaceDoc[]): FloorGroup[] {
   const floorGroupByFloorKo = new Map<string, FloorGroup>();
   for (const space of spaces) {
-    const floorKo = space.floor?.ko || "unknown";
+    const floorKo = space.floor.ko;
     if (!floorGroupByFloorKo.has(floorKo)) {
       floorGroupByFloorKo.set(floorKo, { floor: space.floor, spaces: [] });
     }
@@ -18,7 +18,7 @@ function groupByFloor(spaces: readonly FloorSpaceDoc[]): FloorGroup[] {
     });
   }
   return Array.from(floorGroupByFloorKo.values()).sort(
-    (a, b) => floorSortKey(a.floor?.ko) - floorSortKey(b.floor?.ko),
+    (a, b) => floorSortKey(a.floor.ko) - floorSortKey(b.floor.ko),
   );
 }
 

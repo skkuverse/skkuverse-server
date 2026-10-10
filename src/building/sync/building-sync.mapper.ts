@@ -111,11 +111,7 @@ function toSections(barrierFreeText: string, headers: readonly BarrierFreeHeader
 }
 
 /** null when the description has no barrier-free block. */
-function parseBarrierFree(
-  descriptionKo: string | null | undefined,
-): { cleanDescription: string; detail: AccessibilityDetail } | null {
-  if (!descriptionKo) return null;
-
+function parseBarrierFree(descriptionKo: string): { cleanDescription: string; detail: AccessibilityDetail } | null {
   const text = descriptionKo.replace(/\r\n/g, "\n");
 
   const startMatch = text.match(BARRIER_FREE_START_RE);
@@ -141,33 +137,27 @@ function parseBarrierFree(
 }
 
 function enrichBuilding(rawDoc: BuildingRawDoc): EnrichedBuilding {
-  const parsed = parseBarrierFree(rawDoc.description?.ko);
-
-  const descriptionKo = parsed
-    ? parsed.cleanDescription
-    : rawDoc.description?.ko || "";
-  const accessibilityDetail = parsed ? parsed.detail : null;
+  const parsed = parseBarrierFree(rawDoc.description.ko);
 
   return {
     buildNo: rawDoc.buildNo,
     displayNo: toDisplayNo(rawDoc.buildNo, rawDoc.campus),
     type: hasBuildNo(rawDoc) ? "building" : "facility",
     campus: rawDoc.campus,
-    name: { ko: rawDoc.name?.ko || "", en: rawDoc.name?.en || "" },
-    description: { ko: descriptionKo, en: rawDoc.description?.en || "" },
+    name: { ko: rawDoc.name.ko, en: rawDoc.name.en },
+    description: { ko: parsed ? parsed.cleanDescription : rawDoc.description.ko, en: rawDoc.description.en },
     location: rawDoc.location,
     image: rawDoc.image,
     attachments: rawDoc.attachments || [],
     accessibility: {
-      elevator: rawDoc.accessibility?.elevator || false,
-      toilet: rawDoc.accessibility?.toilet || false,
-      detail: accessibilityDetail,
+      elevator: rawDoc.accessibility.elevator,
+      toilet: rawDoc.accessibility.toilet,
+      detail: parsed ? parsed.detail : null,
     },
     enrichVersion: ENRICH_VERSION,
     skkuCreatedAt: rawDoc.skkuCreatedAt,
     skkuUpdatedAt: rawDoc.skkuUpdatedAt,
   };
 }
-
 
 export { ENRICH_VERSION, enrichBuilding };
