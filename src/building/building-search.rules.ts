@@ -21,9 +21,8 @@ import { escapeRegex } from "../shared/regex.util";
 import type { BuildingDoc, SpaceDoc } from "./building.document";
 import type { Campus, SearchCounts } from "./building.types";
 
-// --- Row caps: two bands ---
-//
-// A single flat cap cannot serve both goals at once. The product promise is
+// Row caps come in two bands, because a single flat cap cannot serve both
+// goals at once. The product promise is
 // "type 27, get building 27's rooms" — the largest building (기숙사신관, buildNo
 // 298) has 801 rooms, so a cap that never truncates a building must be ~1000.
 // But the same cap applied to a weak keyword hit is a liability: "연구" matches
@@ -65,8 +64,6 @@ const BUILDING_SEARCH_LIMIT = 100;
 const BUILDING_WEAK_LIMIT = 10;
 /** Cuts below the name-substring tier (20), leaving description-only (10) weak. */
 const BUILDING_STRONG_MIN_SCORE = 20;
-
-// --- Relevance tiers ---
 
 /** How a tier compares the query against a field. */
 type TierMode = "exact" | "prefix" | "substring";
@@ -226,8 +223,6 @@ function scoreLocally(
   return 0;
 }
 
-// --- Keyword filters ---
-
 /**
  * Keyword predicate for rooms.
  *
@@ -268,8 +263,6 @@ function buildingKeywordFilter(query: string): Filter<BuildingDoc> {
     ],
   };
 }
-
-// --- Result shapes ---
 
 interface RankedSearchResult<T> {
   items: T[];
@@ -315,8 +308,6 @@ function toRankedResult<T>(facets: Array<RankedFacet<T>>): RankedSearchResult<T>
     truncated: total > ranked.length,
   };
 }
-
-// --- Pipelines ---
 
 /**
  * The ranked room search pipeline.

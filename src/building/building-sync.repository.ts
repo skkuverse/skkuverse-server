@@ -10,7 +10,7 @@ import type {
   SpaceDoc,
 } from "./building.document";
 import { toSpaceUpsert, type EnrichmentSetUpdate } from "./building-sync.mapper";
-import type { ListedBuilding, SpaceSource, SyncedSpace } from "./building.types";
+import type { ListedBuilding, SpaceSource, SyncedSpace } from "./building-sync.types";
 
 /**
  * The sync runs weekly, off the request path: a stuck read fails the run

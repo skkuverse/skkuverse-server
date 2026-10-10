@@ -12,7 +12,8 @@ import { BuildingSyncRepository } from "./building-sync.repository";
 import { BuildingClient } from "./building.client";
 import { ENRICH_VERSION, enrichBuilding } from "./building-sync.mapper";
 import { BuildingRepository } from "./building.repository";
-import type { Campus, ListedBuilding, SyncedSpace } from "./building.types";
+import type { ListedBuilding, SyncedSpace } from "./building-sync.types";
+import type { Campus } from "./building.types";
 
 const CAMPUSES: readonly Campus[] = ["hssc", "nsc"];
 
