@@ -292,13 +292,13 @@ describe("GET /building/:skkuId", () => {
     ]);
   });
 
-  it("never sends a building's sync bookkeeping, in the detail or the list", async () => {
+  it("never sends a building's sync bookkeeping; extensions go in the detail only", async () => {
     // Arrange
     const synced = {
       ...LAW,
       sync: { detailError: "HTTP 500", detailAt: new Date("2026-10-10T00:00:00Z") },
       enrichVersion: 3,
-      extensions: { note: "internal" },
+      extensions: { indoorMap: "reserved" },
     } as BuildingDoc;
     catalog.buildings = [synced];
     buildings.buildings = [synced];
@@ -310,6 +310,9 @@ describe("GET /building/:skkuId", () => {
     // Assert
     expect(detail.body.data.building).not.toHaveProperty("sync");
     expect(detail.body.data.building).not.toHaveProperty("enrichVersion");
+    // The detail contract reserves extensions for future custom data
+    // (docs/archive/flutter-client-guides-2026-03.md); the list leaves it out to stay light.
+    expect(detail.body.data.building.extensions).toEqual({ indoorMap: "reserved" });
     expect(list.body.data.buildings[0]).not.toHaveProperty("sync");
     expect(list.body.data.buildings[0]).not.toHaveProperty("enrichVersion");
     expect(list.body.data.buildings[0]).not.toHaveProperty("extensions");
