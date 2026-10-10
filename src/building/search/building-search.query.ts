@@ -61,9 +61,9 @@ function pathMatches(path: string, regex: string): Document {
  */
 function tiersToScoreExpr(
   tiers: readonly RelevanceTier[],
-  query: string,
+  keyword: string,
 ): Document {
-  const escaped = escapeRegex(query);
+  const escaped = escapeRegex(keyword);
   const branches = tiers.map((tier) => {
     const regex = tierRegex(tier.mode, escaped);
     const cases = tier.paths.map((path) => pathMatches(path, regex));
@@ -95,8 +95,8 @@ function tiersToScoreExpr(
  * expressed in SPACE_TIERS, keeping the filter a simple superset. Any query
  * reaches spaceCd: escapeRegex neutralises metacharacters.
  */
-function spaceKeywordFilter(query: string): Filter<SpaceDoc> {
-  const keywordPattern = { $regex: escapeRegex(query), $options: "i" };
+function spaceKeywordFilter(keyword: string): Filter<SpaceDoc> {
+  const keywordPattern = { $regex: escapeRegex(keyword), $options: "i" };
   return {
     $or: [
       { spaceCd: keywordPattern },
@@ -109,8 +109,8 @@ function spaceKeywordFilter(query: string): Filter<SpaceDoc> {
 }
 
 /** Keyword predicate for buildings. See BUILDING_TIERS on why not buildNo. */
-function buildingKeywordFilter(query: string): Filter<BuildingDoc> {
-  const escaped = escapeRegex(query);
+function buildingKeywordFilter(keyword: string): Filter<BuildingDoc> {
+  const escaped = escapeRegex(keyword);
   const keywordPattern = { $regex: escaped, $options: "i" };
   return {
     $or: [
@@ -171,7 +171,7 @@ function toRankedResult<T>(facets: readonly Document[]): RankedSearchResult<T> {
  * stable across the 7-day building-sync (phase 3's deleteMany + re-upsert
  * rewrites physical document order).
  */
-function spaceSearchPipeline(query: string, campus?: Campus | null): Document[] {
+function spaceSearchPipeline(keyword: string, campus?: Campus | null): Document[] {
   const campusStage: Document[] = campus ? [{ $match: { campus } }] : [];
   const projectStage = {
     $project: { _id: 0, _score: 0, sources: 0, syncedAt: 0 },
@@ -179,10 +179,10 @@ function spaceSearchPipeline(query: string, campus?: Campus | null): Document[] 
   const sortStage = { $sort: { _score: -1, spaceCd: 1 } };
 
   return [
-    { $match: spaceKeywordFilter(query) },
+    { $match: spaceKeywordFilter(keyword) },
     // Scored once here rather than inside each band: both bands read _score, so
     // hoisting it costs one pass instead of two.
-    { $addFields: { _score: tiersToScoreExpr(SPACE_TIERS, query) } },
+    { $addFields: { _score: tiersToScoreExpr(SPACE_TIERS, keyword) } },
     {
       $facet: {
         strong: [
@@ -213,7 +213,7 @@ function spaceSearchPipeline(query: string, campus?: Campus | null): Document[] 
  * across syncs (unlike an ObjectId, which a delete/reinsert cycle would
  * regenerate).
  */
-function buildingSearchPipeline(query: string, campus?: Campus | null): Document[] {
+function buildingSearchPipeline(keyword: string, campus?: Campus | null): Document[] {
   const campusStage: Document[] = campus ? [{ $match: { campus } }] : [];
   const projectStage = {
     $project: { _score: 0, extensions: 0, sync: 0, enrichVersion: 0 },
@@ -221,8 +221,8 @@ function buildingSearchPipeline(query: string, campus?: Campus | null): Document
   const sortStage = { $sort: { _score: -1, _id: 1 } };
 
   return [
-    { $match: buildingKeywordFilter(query) },
-    { $addFields: { _score: tiersToScoreExpr(BUILDING_TIERS, query) } },
+    { $match: buildingKeywordFilter(keyword) },
+    { $addFields: { _score: tiersToScoreExpr(BUILDING_TIERS, keyword) } },
     {
       $facet: {
         strong: [

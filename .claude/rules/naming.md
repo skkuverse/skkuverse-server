@@ -78,5 +78,6 @@ One concept, one name (ADR 0010, D1). A module adds its section when it is migra
 | `EnrichedBuilding` | What `enrichBuilding` derives from a raw building; the sync repository writes it field by field | enrichment fields, `$set` |
 | tier, band | A ranking tier scores one kind of match; the strong and weak bands split results at `*_STRONG_MIN_SCORE` | level, bucket |
 | ranked result | Rows plus the campus counts the same predicate produced (`RankedSearchResult`) | search data |
+| `keyword` | The search text: `q` on the wire, `keyword` from the service down and in `meta` | `query` (the `.query` role), `term` |
 | campus shape | A `campus_shapes` document: an authored footprint, boundary or path | geometry doc |
 | catalog | Building's list-and-detail flow (`catalog/`): the list is the catalog, `:skkuId` one entry of it | list, detail, core, read |

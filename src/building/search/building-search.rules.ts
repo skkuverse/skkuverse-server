@@ -138,10 +138,10 @@ function readPath(doc: Record<string, unknown>, path: string): string {
  */
 function scoreLocally(
   tiers: readonly RelevanceTier[],
-  query: string,
+  keyword: string,
   doc: Record<string, unknown>,
 ): number {
-  const escaped = escapeRegex(query);
+  const escaped = escapeRegex(keyword);
   for (const tier of tiers) {
     const tierPattern = new RegExp(tierRegex(tier.mode, escaped), "i");
     if (tier.paths.some((path) => tierPattern.test(readPath(doc, path)))) return tier.score;
