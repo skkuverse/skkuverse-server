@@ -41,14 +41,19 @@ function groupSpacesByBuilding(
   return [...spaceGroupByBuildNo.values()];
 }
 
+/** What one search found: the keyword and the ranked result of each collection. */
+interface RankedSearch {
+  keyword: string;
+  buildings: RankedSearchResult<BuildingDoc>;
+  spaces: RankedSearchResult<SpaceDoc>;
+}
+
 /**
  * GET /building/search's `data` and extra `meta`. Rooms are grouped by
  * building and joined to its skkuId through `allBuildings`.
  */
 function toBuildingSearch(
-  q: string,
-  buildingResult: RankedSearchResult<BuildingDoc>,
-  spaceResult: RankedSearchResult<SpaceDoc>,
+  { keyword, buildings: buildingResult, spaces: spaceResult }: RankedSearch,
   allBuildings: readonly BuildingDoc[],
   lang: SupportedLang,
 ): BuildingSearch {
@@ -64,7 +69,7 @@ function toBuildingSearch(
       spaces: groupSpacesByBuilding(spaceResult.items, skkuIdByBuildNo, lang),
     },
     meta: {
-      keyword: q,
+      keyword,
       buildingCount: buildingResult.items.length,
       spaceCount: spaceResult.items.length,
       counts: { building: buildingResult.counts, space: spaceResult.counts },

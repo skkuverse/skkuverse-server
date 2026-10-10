@@ -14,14 +14,16 @@ export const BUILD_INFO_CONCURRENCY = 5;
  * A listed building is (re-)enriched when it is new, when SKKU changed it, or
  * when its enrichment predates the current ENRICH_VERSION.
  */
-export function needsEnrichment(
-  knownUpdatedAt: string | null | undefined,
-  listedUpdatedAt: string | null,
-  enrichedAtOldVersion: boolean,
-): boolean {
-  return (
-    knownUpdatedAt === undefined || knownUpdatedAt !== listedUpdatedAt || enrichedAtOldVersion
-  );
+export function needsEnrichment({
+  knownUpdatedAt,
+  listedUpdatedAt,
+  isEnrichedAtOldVersion,
+}: {
+  knownUpdatedAt: string | null | undefined;
+  listedUpdatedAt: string | null;
+  isEnrichedAtOldVersion: boolean;
+}): boolean {
+  return knownUpdatedAt === undefined || knownUpdatedAt !== listedUpdatedAt || isEnrichedAtOldVersion;
 }
 
 export interface PhaseFailure {
