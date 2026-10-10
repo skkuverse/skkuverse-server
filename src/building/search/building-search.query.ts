@@ -20,7 +20,7 @@ import {
   SPACE_WEAK_LIMIT,
   tierRegex,
 } from "./building-search.rules";
-import type { RankedSearchResult, RelevanceTier } from "./building-search.types";
+import type { RankedFacet, RankedSearchResult, RelevanceTier } from "./building-search.types";
 
 /**
  * $regexMatch THROWS on non-string input, so every scored path is coerced first.
@@ -124,16 +124,9 @@ function buildingKeywordFilter(keyword: string): Filter<BuildingDoc> {
   };
 }
 
-interface RankedFacet<T> {
-  strong: T[];
-  weak: T[];
-  counts: Array<{ _id: Campus | null; n: number }>;
-  total: Array<{ n: number }>;
-}
-
 /** Decodes the one document a search pipeline's $facet emits. */
-function toRankedResult<T>(facets: readonly Document[]): RankedSearchResult<T> {
-  const facet = facets[0] as RankedFacet<T> | undefined;
+function toRankedResult<T>(facets: readonly RankedFacet<T>[]): RankedSearchResult<T> {
+  const facet = facets[0];
   // $facet emits exactly one document by construction. An empty array means the
   // pipeline shape changed — a programming error, not a runtime condition.
   if (!facet) {

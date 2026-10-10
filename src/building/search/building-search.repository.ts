@@ -5,7 +5,7 @@ import { mongoCollection } from "../../infra/mongo";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
 import type { Campus } from "../building.types";
 import { BUILDING_SEARCH, SPACE_SEARCH, rankedSearchPipeline, toRankedResult } from "./building-search.query";
-import type { RankedSearchResult } from "./building-search.types";
+import type { RankedFacet, RankedSearchResult } from "./building-search.types";
 
 /**
  * Search scans every space (no index can serve it, see the class comment),
@@ -40,9 +40,11 @@ export class BuildingSearchRepository {
     campus?: Campus | null,
   ): Promise<RankedSearchResult<BuildingDoc>> {
     const facets = await this.buildings()
-      .aggregate(rankedSearchPipeline(BUILDING_SEARCH, keyword, campus), { maxTimeMS: SEARCH_MAX_TIME_MS })
+      .aggregate<RankedFacet<BuildingDoc>>(rankedSearchPipeline(BUILDING_SEARCH, keyword, campus), {
+        maxTimeMS: SEARCH_MAX_TIME_MS,
+      })
       .toArray();
-    return toRankedResult<BuildingDoc>(facets);
+    return toRankedResult(facets);
   }
 
   async searchSpaces(
@@ -50,9 +52,11 @@ export class BuildingSearchRepository {
     campus?: Campus | null,
   ): Promise<RankedSearchResult<SpaceDoc>> {
     const facets = await this.spaces()
-      .aggregate(rankedSearchPipeline(SPACE_SEARCH, keyword, campus), { maxTimeMS: SEARCH_MAX_TIME_MS })
+      .aggregate<RankedFacet<SpaceDoc>>(rankedSearchPipeline(SPACE_SEARCH, keyword, campus), {
+        maxTimeMS: SEARCH_MAX_TIME_MS,
+      })
       .toArray();
-    return toRankedResult<SpaceDoc>(facets);
+    return toRankedResult(facets);
   }
 
   private buildings(): Collection<BuildingDoc> {
