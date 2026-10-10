@@ -27,7 +27,7 @@ export class BuildingSearchController {
     query: BuildingSearchQuery,
     @Lang() lang: SupportedLang,
   ): Promise<WithMeta<BuildingSearch["data"]>> {
-    const { data, meta } = await this.buildingSearch.search(query.q, query.campus ?? null, lang);
+    const { data, meta } = await this.buildingSearch.search(query.q, query.campus, lang);
     return withMeta(data, meta);
   }
 }

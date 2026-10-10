@@ -13,7 +13,7 @@ export class BuildingSearchService {
     private readonly buildings: BuildingRepository,
   ) {}
 
-  async search(keyword: string, campus: Campus | null, lang: SupportedLang): Promise<BuildingSearch> {
+  async search(keyword: string, campus: Campus | undefined, lang: SupportedLang): Promise<BuildingSearch> {
     const [buildings, spaces, allBuildings] = await Promise.all([
       this.repository.searchBuildings(keyword, campus),
       this.repository.searchSpaces(keyword, campus),

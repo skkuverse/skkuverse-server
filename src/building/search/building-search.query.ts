@@ -137,7 +137,7 @@ const BUILDING_SEARCH: RankedSearchSpec<BuildingDoc> = {
 };
 
 /** One $facet returns the rows and the counts, so the counts cannot describe another predicate. */
-function rankedSearchPipeline<TDoc>(search: RankedSearchSpec<TDoc>, keyword: string, campus?: Campus | null): Document[] {
+function rankedSearchPipeline<TDoc>(search: RankedSearchSpec<TDoc>, keyword: string, campus?: Campus): Document[] {
   const campusStage: Document[] = campus ? [{ $match: { campus } }] : [];
   const projectStage = { $project: { ...search.projection } };
   const sortStage = { $sort: { _score: -1, ...search.tiebreak } };

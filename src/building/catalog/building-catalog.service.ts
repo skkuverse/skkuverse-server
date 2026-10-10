@@ -15,7 +15,7 @@ export class BuildingCatalogService {
     private readonly buildings: BuildingRepository,
   ) {}
 
-  async list(campus: Campus | null, lang: SupportedLang): Promise<BuildingList> {
+  async list(campus: Campus | undefined, lang: SupportedLang): Promise<BuildingList> {
     const buildings = await this.buildings.listBuildings(campus);
     return { buildings: buildings.map((b) => withCampusLabel(b, lang)) };
   }
