@@ -10,7 +10,7 @@ export type DisplayNo = Brand<string, "DisplayNo">;
 export type SpaceCd = Brand<string, "SpaceCd">;
 
 /** The building id exactly as buildList sent it: buildInfo takes it back verbatim. */
-export type ApiId = Brand<string, "ApiId">;
+export type ApiId = Brand<number, "ApiId">;
 
 export type Campus = (typeof CAMPUSES)[number];
 
