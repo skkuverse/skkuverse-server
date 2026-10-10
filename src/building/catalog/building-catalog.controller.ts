@@ -1,6 +1,6 @@
-import { Controller, Get, Param, Query, Req } from "@nestjs/common";
-import type { Request } from "express";
+import { Controller, Get, Param, Query } from "@nestjs/common";
 import { AppError } from "../../http/app.error";
+import { Lang } from "../../http/lang.decorator";
 import { ZodValidationPipe } from "../../http/zod-validation.pipe";
 import type { SupportedLang } from "../../infra/types";
 import type { SkkuId } from "../building.types";
@@ -17,18 +17,18 @@ export class BuildingCatalogController {
   list(
     @Query(new ZodValidationPipe(buildingListQuery, "INVALID_CAMPUS"))
     query: BuildingListQuery,
-    @Req() req: Request,
+    @Lang() lang: SupportedLang,
   ) {
-    return this.catalog.list(query.campus ?? null, req.lang as SupportedLang);
+    return this.catalog.list(query.campus ?? null, lang);
   }
 
   // GET /building/:skkuId
   @Get(":skkuId")
   async detail(
     @Param("skkuId", new ZodValidationPipe(skkuIdParam, "INVALID_ID")) skkuId: SkkuId,
-    @Req() req: Request,
+    @Lang() lang: SupportedLang,
   ) {
-    const detail = await this.catalog.detail(skkuId, req.lang as SupportedLang);
+    const detail = await this.catalog.detail(skkuId, lang);
     if (!detail) {
       throw new AppError("NOT_FOUND", `Building ${skkuId} not found`, 404);
     }
