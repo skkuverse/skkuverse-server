@@ -13,17 +13,10 @@ import type {
 import type { EnrichedBuilding, ListedBuilding, SyncedSpace } from "./building-sync.types";
 import type { SkkuId } from "../building.types";
 
-/**
- * The sync runs weekly, off the request path: a stuck read fails the run
- * instead of hanging it, and the bound is generous enough that a slow cluster
- * does not.
- */
+/** Off the request path: a stuck read fails the weekly run instead of hanging it, with room for a slow cluster. */
 const SYNC_READ_MAX_TIME_MS = 30_000;
 
-/**
- * An enriched building as a `$set` of dot paths: "name.ko" updates that one
- * field, where a whole-object `$set` would drop its siblings.
- */
+/** Dot paths, because a whole-object $set would drop the fields it does not name (sync stamps, extensions). */
 function toEnrichedSet(building: EnrichedBuilding): Record<string, unknown> {
   return {
     buildNo: building.buildNo,
@@ -52,7 +45,7 @@ const spaceKey = (space: SyncedSpace) => ({ spaceCd: space.spaceCd, buildNo: spa
 
 const spaceNames = (space: SyncedSpace) => ({ floor: space.floor, name: space.name, buildingName: space.buildingName });
 
-/** A space buildInfo reported. Only spaceList knows `conspaceCd`, so an insert starts it as null. */
+/** An insert starts `conspaceCd` as null: only spaceList reports it. */
 function toBuildInfoSpaceUpsert(space: SyncedSpace, syncStartedAt: Date): SpaceUpsert {
   return {
     updateOne: {
@@ -67,7 +60,6 @@ function toBuildInfoSpaceUpsert(space: SyncedSpace, syncStartedAt: Date): SpaceU
   };
 }
 
-/** A space spaceList reported, with the `conspaceCd` it owns. */
 function toSpaceListSpaceUpsert(space: SyncedSpace, syncStartedAt: Date): SpaceUpsert {
   return {
     updateOne: {
@@ -81,38 +73,28 @@ function toSpaceListSpaceUpsert(space: SyncedSpace, syncStartedAt: Date): SpaceU
   };
 }
 
-/** Both listings write the same names; `sources` accumulates which listings reported the space. */
 const SPACE_UPSERT_BY_SOURCE: Readonly<Record<SpaceSource, (space: SyncedSpace, syncStartedAt: Date) => SpaceUpsert>> = {
   buildInfo: toBuildInfoSpaceUpsert,
   spaceList: toSpaceListSpaceUpsert,
 };
 
-/**
- * The building sync's reads and writes: the raw layer (buildings_raw), the
- * enriched layer (buildings) and the spaces. Every write is an upsert keyed by
- * SKKU's own ids, so a rerun converges.
- */
+// Every write is an upsert keyed by SKKU's own ids, so a rerun converges.
 @Injectable()
 export class BuildingSyncRepository implements OnModuleInit {
   onModuleInit(): Promise<void> {
     return ensureIndexesAtBoot("building.sync", () => this.ensureIndexes());
   }
 
-  /**
-   * The indexes the sync's writes need: the unique key its space upserts
-   * filter on (it also keeps a listing from duplicating a room), the raw
-   * layer's campus, and a 2dsphere on the enriched `location`. No geo query
-   * runs; Mongo rejects a malformed GeoJSON point at upsert.
-   */
   async ensureIndexes(): Promise<void> {
     await Promise.all([
       this.raw().createIndex({ campus: 1 }),
+      // No geo query runs: the 2dsphere makes Mongo reject a malformed point at upsert.
       this.enriched().createIndex({ location: "2dsphere" }),
+      // The space upserts filter on this key; unique, so a listing cannot duplicate a room.
       this.spaces().createIndex({ spaceCd: 1, buildNo: 1, campus: 1 }, { unique: true }),
     ]);
   }
 
-  /** skkuUpdatedAt of every raw building, for change detection. */
   async listRawUpdatedAt(): Promise<Map<SkkuId, string | null>> {
     const rawBuildings = await this.raw()
       .find({}, { projection: { skkuUpdatedAt: 1 }, maxTimeMS: SYNC_READ_MAX_TIME_MS })
@@ -120,7 +102,6 @@ export class BuildingSyncRepository implements OnModuleInit {
     return new Map(rawBuildings.map((d) => [d._id, d.skkuUpdatedAt]));
   }
 
-  /** Enriched buildings whose enrichVersion is not `version`. */
   async listSkkuIdsNotEnrichedAt(version: number): Promise<Set<SkkuId>> {
     const staleBuildings = await this.enriched()
       .find(
@@ -165,7 +146,6 @@ export class BuildingSyncRepository implements OnModuleInit {
     return this.enriched().bulkWrite(ops, { ordered: false });
   }
 
-  /** Writes a building's photos to BOTH layers and clears its detail error. */
   async setAttachments(
     skkuId: SkkuId,
     attachments: BuildingAttachment[],
@@ -180,7 +160,7 @@ export class BuildingSyncRepository implements OnModuleInit {
     ]);
   }
 
-  /** Notes a failed buildInfo on both layers. Best effort: a failed note is logged, never thrown. */
+  /** Best effort: a note that fails to write is logged, never thrown. */
   async recordDetailError(skkuId: SkkuId, message: string): Promise<void> {
     const update = { $set: { "sync.detailError": message } };
     const noteFailed = (err: unknown): void =>
@@ -205,7 +185,6 @@ export class BuildingSyncRepository implements OnModuleInit {
     );
   }
 
-  /** Deletes the spaces this run did not see; returns how many. */
   async deleteSpacesSyncedBefore(syncStartedAt: Date): Promise<number> {
     const deleteResult = await this.spaces().deleteMany({ syncedAt: { $lt: syncStartedAt } });
     return deleteResult.deletedCount;

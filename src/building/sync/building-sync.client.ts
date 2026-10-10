@@ -8,12 +8,9 @@ import type { ApiId, BilingualText, BuildNo, Campus, SkkuId, SpaceCd } from "../
 const CAMPUS_MAP_URL = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
 const REQUEST_TIMEOUT_MS = 30000;
 
-// The campusMap.do payloads (buildList, buildInfo, spaceList). Only the fields
-// read here are typed; the real responses carry 25+. SKKU's
-// misspellings are kept as sent (longtitude, spcaeNm, spcae_nm, spcae_nm_eng):
-// if SKKU ever fixes one silently, the field reads as "" rather than throwing,
-// and these names say which field to look at.
-
+// Only the fields read are typed (the payloads carry 25+). SKKU's misspellings stay
+// as sent (longtitude, spcaeNm, spcae_nm): a silent fix upstream reads as "", and
+// the name says which field to check.
 interface SkkuBuildListItem {
   /** A numeric string. */
   id: string;
@@ -54,7 +51,6 @@ interface SkkuBuildInfoFloor {
   floor_nm?: string;
   floor_nm_eng?: string;
   spcae_nm?: string;
-  /** Sometimes the literal string "undefined". */
   spcae_nm_eng?: string;
   [k: string]: unknown;
 }
@@ -72,7 +68,6 @@ interface SkkuSpaceListItem {
   floorNm?: string;
   floorNmEng?: string;
   spcaeNm?: string;
-  /** Sometimes the literal string "undefined". */
   spcaeNmEng?: string;
   buildNm?: string;
   buildNmEng?: string;
@@ -99,10 +94,8 @@ function spaceName(ko: string | undefined, en: string | undefined): BilingualTex
   return { ko: ko || "", en: en === "undefined" ? "" : en || "" };
 }
 
-/** The raw building layer; derived fields (displayNo, type) belong to enrichment. */
 function toRawDoc(buildItem: SkkuBuildListItem, campus: Campus): Omit<BuildingRawDoc, "_id"> {
-  // `as string` is a type-system assertion only: an undefined latitude still
-  // reaches parseFloat and yields NaN, as it always has.
+  // `as string` is for the type only: an absent latitude still parses to NaN.
   const lat = parseFloat(buildItem.latitude as string);
   const lng = parseFloat(buildItem.longtitude as string);
 
@@ -122,11 +115,6 @@ function toRawDoc(buildItem: SkkuBuildListItem, campus: Campus): Omit<BuildingRa
   };
 }
 
-/**
- * SKKU's campusMap.do: the building list, one building's detail and the space
- * list. Every payload is translated here; nothing past this file sees SKKU's
- * field names.
- */
 @Injectable()
 export class BuildingSyncClient {
   async fetchBuildList(campus: Campus): Promise<ListedBuilding[]> {
