@@ -16,6 +16,11 @@
  * `src/building/sync/building-sync.service.ts`. A flow that needs a second
  * repository, mapper or controller becomes a sub-module, whatever its size; a
  * sub-module's name starts with its feature's (`building-sync`).
+ *
+ * A module folder that has a sub-module keeps no flow of its own: no
+ * controller and no poller at its root. Its first flow is a sub-module too
+ * (`src/building/catalog/`), and the root keeps the module file and the code
+ * its flows share, so every flow of a split module has the same shape.
  */
 import { EXEMPT, ROLES, parse } from "../helpers/architecture/names";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
@@ -71,6 +76,22 @@ export function folderRoleViolations(files: readonly string[]): string[] {
     for (const [role, n] of counts) if (n > 1) out.push(`${dir}/: ${role}`);
   }
   return out.sort();
+}
+
+/** Each `.controller` or `.poller` sitting in a module folder that also has a sub-module. */
+export function splitRootViolations(files: readonly string[]): string[] {
+  const moduleDirs = new Set(
+    files.filter((f) => f.endsWith(".module.ts")).map((f) => f.slice(0, f.lastIndexOf("/"))),
+  );
+  const hasSubModule = (dir: string) =>
+    [...moduleDirs].some((d) => d.startsWith(`${dir}/`) && !d.slice(dir.length + 1).includes("/"));
+  return files
+    .filter((f) => /\.(?:controller|poller)\.ts$/.test(f))
+    .filter((f) => {
+      const dir = f.slice(0, f.lastIndexOf("/"));
+      return moduleDirs.has(dir) && hasSubModule(dir);
+    })
+    .sort();
 }
 
 describe("folder rule applies as specified", () => {
@@ -134,6 +155,38 @@ describe("folder role rule applies as specified", () => {
   });
 });
 
+describe("split-root rule applies as specified", () => {
+  it("rejects a controller or poller at the root of a module that has a sub-module", () => {
+    expect(
+      splitRootViolations([
+        "src/building/building.module.ts",
+        "src/building/building.controller.ts",
+        "src/building/building-sync.poller.ts",
+        "src/building/search/building-search.module.ts",
+        "src/building/search/building-search.controller.ts",
+      ]),
+    ).toEqual(["src/building/building-sync.poller.ts", "src/building/building.controller.ts"]);
+  });
+
+  it("leaves a single-flow module and a split module's flows alone", () => {
+    expect(
+      splitRootViolations([
+        "src/health/health.module.ts",
+        "src/health/health.controller.ts",
+        "src/building/building.module.ts",
+        "src/building/building.service.ts",
+        "src/building/catalog/building-catalog.module.ts",
+        "src/building/catalog/building-catalog.controller.ts",
+        "src/building/sync/building-sync.module.ts",
+        "src/building/sync/building-sync.poller.ts",
+        "src/map/config/eskara-2026.json",
+        "src/map/map.module.ts",
+        "src/map/map-config.controller.ts",
+      ]),
+    ).toEqual([]);
+  });
+});
+
 describe("top-level folder rule applies as specified", () => {
   it("accepts shared roles and feature modules, and rejects anything else", () => {
     expect(
@@ -156,6 +209,10 @@ describe("src/ folders", () => {
 
   it("hold one file per role, named after their module", () => {
     expectAllowlisted("folder-roles", folderRoleViolations(filesUnder("src")));
+  });
+
+  it("keep no flow at the root of a module that has a sub-module", () => {
+    expectAllowlisted("split-root", splitRootViolations(filesUnder("src")));
   });
 
   it("are sub-modules or JSON asset folders", () => {
