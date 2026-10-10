@@ -1,16 +1,15 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, type OnModuleInit } from "@nestjs/common";
 import type { AnyBulkWriteOperation, BulkWriteResult, Collection } from "mongodb";
 import config from "../../infra/config";
 import logger from "../../infra/logger";
-import { mongoCollection } from "../../infra/mongo";
+import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type {
   BuildingAttachment,
   BuildingDoc,
   BuildingRawDoc,
   SpaceDoc,
 } from "../building.document";
-import { toSpaceUpsert, type EnrichmentSetUpdate } from "./building-sync.mapper";
-import type { ListedBuilding, SpaceSource, SyncedSpace } from "./building-sync.types";
+import type { EnrichedBuilding, ListedBuilding, SpaceSource, SyncedSpace } from "./building-sync.types";
 import type { SkkuId } from "../building.types";
 
 /**
@@ -21,12 +20,91 @@ import type { SkkuId } from "../building.types";
 const SYNC_READ_MAX_TIME_MS = 30_000;
 
 /**
+ * An enriched building as a `$set` of dot paths: "name.ko" updates that one
+ * field, where a whole-object `$set` would drop its siblings.
+ */
+function toEnrichedSet(building: EnrichedBuilding): Record<string, unknown> {
+  return {
+    buildNo: building.buildNo,
+    displayNo: building.displayNo,
+    type: building.type,
+    campus: building.campus,
+    "name.ko": building.name.ko,
+    "name.en": building.name.en,
+    "description.ko": building.description.ko,
+    "description.en": building.description.en,
+    location: building.location,
+    image: building.image,
+    attachments: building.attachments,
+    "accessibility.elevator": building.accessibility.elevator,
+    "accessibility.toilet": building.accessibility.toilet,
+    "accessibility.detail": building.accessibility.detail,
+    enrichVersion: building.enrichVersion,
+    skkuCreatedAt: building.skkuCreatedAt,
+    skkuUpdatedAt: building.skkuUpdatedAt,
+  };
+}
+
+/**
+ * The upsert for one space reported by either listing. Both write the same
+ * names; spaceList also owns `conspaceCd`, which a buildInfo insert starts as
+ * null. `sources` accumulates which listings reported the space.
+ */
+function toSpaceUpsert(
+  space: SyncedSpace,
+  source: SpaceSource,
+  syncStartedAt: Date,
+): AnyBulkWriteOperation<SpaceDoc> {
+  const filter = { spaceCd: space.spaceCd, buildNo: space.buildNo, campus: space.campus };
+  const names = { floor: space.floor, name: space.name, buildingName: space.buildingName };
+  if (source === "buildInfo") {
+    return {
+      updateOne: {
+        filter,
+        update: {
+          $set: { ...names, syncedAt: syncStartedAt },
+          $addToSet: { sources: source },
+          $setOnInsert: { conspaceCd: null },
+        },
+        upsert: true,
+      },
+    };
+  }
+  return {
+    updateOne: {
+      filter,
+      update: {
+        $set: { ...names, conspaceCd: space.conspaceCd, syncedAt: syncStartedAt },
+        $addToSet: { sources: source },
+      },
+      upsert: true,
+    },
+  };
+}
+
+/**
  * The building sync's reads and writes: the raw layer (buildings_raw), the
  * enriched layer (buildings) and the spaces. Every write is an upsert keyed by
  * SKKU's own ids, so a rerun converges.
  */
 @Injectable()
-export class BuildingSyncRepository {
+export class BuildingSyncRepository implements OnModuleInit {
+  onModuleInit(): Promise<void> {
+    return ensureIndexesAtBoot("building.sync", () => this.ensureIndexes());
+  }
+
+  /**
+   * The indexes the sync's writes need: the unique key its space upserts
+   * filter on (it also keeps a listing from duplicating a room), and the raw
+   * layer's campus.
+   */
+  async ensureIndexes(): Promise<void> {
+    await Promise.all([
+      this.raw().createIndex({ campus: 1 }),
+      this.spaces().createIndex({ spaceCd: 1, buildNo: 1, campus: 1 }, { unique: true }),
+    ]);
+  }
+
   /** skkuUpdatedAt of every raw building, for change detection. */
   async listRawUpdatedAt(): Promise<Map<SkkuId, string | null>> {
     const rawBuildings = await this.raw()
@@ -64,14 +142,14 @@ export class BuildingSyncRepository {
   }
 
   upsertEnriched(
-    entries: ReadonlyArray<{ skkuId: SkkuId; fields: EnrichmentSetUpdate }>,
+    entries: ReadonlyArray<{ skkuId: SkkuId; building: EnrichedBuilding }>,
     syncStartedAt: Date,
   ): Promise<BulkWriteResult> {
-    const ops: AnyBulkWriteOperation<BuildingDoc>[] = entries.map(({ skkuId, fields }) => ({
+    const ops: AnyBulkWriteOperation<BuildingDoc>[] = entries.map(({ skkuId, building }) => ({
       updateOne: {
         filter: { _id: skkuId },
         update: {
-          $set: { ...fields, "sync.listAt": syncStartedAt, updatedAt: syncStartedAt },
+          $set: { ...toEnrichedSet(building), "sync.listAt": syncStartedAt, updatedAt: syncStartedAt },
           $setOnInsert: { extensions: {} },
         },
         upsert: true,

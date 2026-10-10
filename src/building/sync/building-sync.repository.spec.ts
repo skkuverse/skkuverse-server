@@ -60,7 +60,7 @@ beforeEach(() => {
 describe("BuildingSyncRepository writes", () => {
   it("upserts an enriched building with dot-path fields and the sync stamps", async () => {
     await new BuildingSyncRepository().upsertEnriched(
-      [{ skkuId: RAW._id, fields: enrichBuilding(RAW) }],
+      [{ skkuId: RAW._id, building: enrichBuilding(RAW) }],
       SYNC_STARTED_AT,
     );
     expect(mockCollections.buildings!.bulkWrite).toHaveBeenCalledWith(
@@ -154,5 +154,15 @@ describe("BuildingSyncRepository writes", () => {
         { ordered: false },
       ],
     ]);
+  });
+});
+
+describe("BuildingSyncRepository indexes", () => {
+  it("owns the unique space key its upserts filter on and the raw layer's campus", async () => {
+    await new BuildingSyncRepository().ensureIndexes();
+    expect(mockCollections.spaces!.createIndex.mock.calls).toEqual([
+      [{ spaceCd: 1, buildNo: 1, campus: 1 }, { unique: true }],
+    ]);
+    expect(mockCollections.buildings_raw!.createIndex.mock.calls).toEqual([[{ campus: 1 }]]);
   });
 });
