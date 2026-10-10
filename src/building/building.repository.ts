@@ -3,7 +3,10 @@ import type { Collection } from "mongodb";
 import config from "../infra/config";
 import { createCachedLoader } from "../infra/cached-loader";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
+import { createLogThrottle } from "../infra/log-throttle";
+import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
+import { campusShapeDoc } from "./building.schema";
 import type {
   BuildingDoc,
   BuildingLabel,
@@ -16,6 +19,45 @@ import type {
 import type { BuildNo, Campus, SkkuId } from "./building.types";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
+
+const CAMPUS_SHAPE_FIELDS = {
+  _id: 1,
+  campus: 1,
+  layerId: 1,
+  geometry: 1,
+  title: 1,
+  subtitle: 1,
+  skkuId: 1,
+  order: 1,
+} as const;
+
+// Every reload parses the same documents, so a bad one is reported once an
+// hour per distinct set, not every five minutes.
+const invalidShapesThrottle = createLogThrottle(60 * 60_000);
+
+/** The shapes that parse; the others are left out and logged (ADR 0010, D2). */
+function toValidShapes(docs: readonly unknown[]): CampusShapeDoc[] {
+  const shapes: CampusShapeDoc[] = [];
+  const invalid: string[] = [];
+  for (const doc of docs) {
+    const parsed = campusShapeDoc.safeParse(doc);
+    if (parsed.success) {
+      shapes.push(parsed.data);
+    } else {
+      const id = (doc as { _id?: unknown })._id;
+      const paths = parsed.error.issues.map((issue) => issue.path.join(".") || "(root)");
+      invalid.push(`${String(id)}: ${[...new Set(paths)].join(", ")}`);
+    }
+  }
+  const ticket = invalid.length > 0 ? invalidShapesThrottle.take(invalid.join("|")) : null;
+  if (ticket) {
+    logger.warn(
+      { event: "building.campus_shapes.invalid", count: invalid.length, invalid, suppressed: ticket.suppressed },
+      "Campus shapes left out: they do not match the document schema",
+    );
+  }
+  return shapes;
+}
 
 /**
  * Reads of the building DB: the building list (cached), one building, its
@@ -58,11 +100,13 @@ export class BuildingRepository implements OnModuleInit {
     name: "campus shapes",
     ttlMs: CACHE_TTL_MS,
     staleWindowMs: 60 * 60 * 1000,
-    load: () =>
-      this.campusShapes()
-        .find({}, { maxTimeMS: HOT_READ_MAX_TIME_MS })
-        .sort({ order: 1, _id: 1 })
-        .toArray(),
+    load: async () =>
+      toValidShapes(
+        await this.campusShapes()
+          .find({}, { projection: CAMPUS_SHAPE_FIELDS, maxTimeMS: HOT_READ_MAX_TIME_MS })
+          .sort({ order: 1, _id: 1 })
+          .toArray(),
+      ),
   });
 
   onModuleInit(): Promise<void> {
