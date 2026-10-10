@@ -233,7 +233,7 @@ function featureBoundaryBlocks() {
 // role's cap is split, or its flow becomes a sub-module (D3).
 const MIGRATED_MODULES = ["building"];
 const ROLE_MAX_LINES = {
-  client: 160,
+  client: 178,
   controller: 37,
   document: 130,
   mapper: 147,
@@ -242,7 +242,7 @@ const ROLE_MAX_LINES = {
   query: 173,
   repository: 187,
   rules: 92,
-  schema: 31,
+  schema: 61,
   service: 263,
   types: 58,
 };

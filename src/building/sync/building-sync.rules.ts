@@ -15,6 +15,13 @@ export function shouldFailBuildInfoPhase({ attempted, failed }: { attempted: num
   return failed > attempted * MAX_BUILD_INFO_FAILURE_RATIO;
 }
 
+/** A rename upstream makes every item fail; today's real payloads hold at most 1 bad item in 5591. */
+export const MAX_INVALID_PAYLOAD_ITEM_RATIO = 0.5;
+
+export function shouldRejectPayload({ total, invalid }: { total: number; invalid: number }): boolean {
+  return invalid > total * MAX_INVALID_PAYLOAD_ITEM_RATIO;
+}
+
 /** `knownUpdatedAt` is undefined for a building never seen before. */
 export function needsEnrichment({
   knownUpdatedAt,
