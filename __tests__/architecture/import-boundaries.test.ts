@@ -167,6 +167,18 @@ describe("import boundary blocks apply as specified", () => {
   });
 });
 
+describe("boundaries/lang", () => {
+  it("rejects a controller that reads req.lang or casts to SupportedLang, and keeps the log selectors", () => {
+    const rules = block("boundaries/lang").rules!;
+    const file = "src/building/catalog/building-catalog.controller.ts";
+    expect(lint(rules, file, "const lang = req.lang;")).toHaveLength(1);
+    expect(lint(rules, file, 'const lang = (request.lang ?? "ko");')).toHaveLength(1);
+    expect(lint(rules, file, 'const lang = x as SupportedLang;')).toHaveLength(1);
+    expect(lint(rules, file, "function list(lang: SupportedLang) { return lang; }")).toEqual([]);
+    expect(lint(rules, file, 'logger.info("no fields");')).toHaveLength(1);
+  });
+});
+
 describe("files listed in a boundary block's ignores", () => {
   const listed = blocks.flatMap((b) =>
     (b.ignores ?? [])

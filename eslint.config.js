@@ -170,7 +170,30 @@ const VIOLATORS = {
     map: ["src/map/map-event-overlays.data.ts"],
     ui: ["src/ui/home/home-layout.schema.ts", "src/ui/home/home-layout.ts", "src/ui/ui/ui.buslist.ts"],
   },
+  // Controllers that read req.lang themselves instead of taking @Lang().
+  lang: [
+    "src/bus/controllers/bus-config.controller.ts",
+    "src/bus/controllers/schedule.controller.ts",
+    "src/map/controllers/map-config.controller.ts",
+    "src/miniapps/miniapps.controller.ts",
+    "src/notices/notices.controller.ts",
+    "src/notices/overview/overview.controller.ts",
+    "src/ui/controllers/ui.controller.ts",
+  ],
 };
+
+// A handler takes the language from @Lang() (src/http/lang.decorator.ts), which
+// throws when LangMiddleware did not run; a cast or a `?? "ko"` would hide that.
+const LANG_SYNTAX = [
+  {
+    selector: "MemberExpression[object.name=/^(?:req|request)$/][property.name='lang']",
+    message: "Take the language as a parameter: `@Lang() lang: SupportedLang` (src/http/lang.decorator.ts).",
+  },
+  {
+    selector: "TSAsExpression[typeAnnotation.typeName.name='SupportedLang']",
+    message: "Don't cast to SupportedLang: `@Lang()` hands a handler the request's language already typed.",
+  },
+];
 
 /** One block per feature and folder depth: the regex knows how many `../` leave the module. */
 function featureBoundaryBlocks() {
@@ -407,6 +430,16 @@ module.exports = [
     rules: {
       "no-restricted-imports": ["error", { patterns: PURE_IMPORT_PATTERNS }],
       "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...CLOCK_SYNTAX],
+    },
+  },
+  {
+    // This block replaces the src block's no-restricted-syntax for controllers,
+    // so it carries the log selectors along.
+    name: "boundaries/lang",
+    files: ["src/**/*.controller.ts"],
+    ignores: VIOLATORS.lang,
+    rules: {
+      "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...LANG_SYNTAX],
     },
   },
   ...featureBoundaryBlocks(),
