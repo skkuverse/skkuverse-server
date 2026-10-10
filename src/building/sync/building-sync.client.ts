@@ -100,25 +100,25 @@ function spaceName(ko: string | undefined, en: string | undefined): BilingualTex
 }
 
 /** The raw building layer; derived fields (displayNo, type) belong to enrichment. */
-function toRawDoc(item: SkkuBuildListItem, campus: Campus): Omit<BuildingRawDoc, "_id"> {
+function toRawDoc(buildItem: SkkuBuildListItem, campus: Campus): Omit<BuildingRawDoc, "_id"> {
   // `as string` is a type-system assertion only: an undefined latitude still
   // reaches parseFloat and yields NaN, as it always has.
-  const lat = parseFloat(item.latitude as string);
-  const lng = parseFloat(item.longtitude as string);
+  const lat = parseFloat(buildItem.latitude as string);
+  const lng = parseFloat(buildItem.longtitude as string);
 
   return {
-    buildNo: (item.buildNo || null) as BuildNo | null,
+    buildNo: (buildItem.buildNo || null) as BuildNo | null,
     campus,
-    name: text(item.buildNm, item.buildNmEng),
-    description: text(item.krText, item.enText),
+    name: text(buildItem.buildNm, buildItem.buildNmEng),
+    description: text(buildItem.krText, buildItem.enText),
     location: { type: "Point", coordinates: [lng, lat] },
-    image: { url: imageUrl(item.filePath, item.encodeNm), filename: item.encodeNm || null },
+    image: { url: imageUrl(buildItem.filePath, buildItem.encodeNm), filename: buildItem.encodeNm || null },
     accessibility: {
-      elevator: item.handicappedElevatorYn === "Y",
-      toilet: item.handicappedToiletYn === "Y",
+      elevator: buildItem.handicappedElevatorYn === "Y",
+      toilet: buildItem.handicappedToiletYn === "Y",
     },
-    skkuCreatedAt: item.createDt || null,
-    skkuUpdatedAt: item.updateDt || null,
+    skkuCreatedAt: buildItem.createDt || null,
+    skkuUpdatedAt: buildItem.updateDt || null,
   };
 }
 
@@ -134,10 +134,10 @@ export class BuildingSyncClient {
       params: { mode: "buildList", srSearchValue: "", campusCd: SKKU_CAMPUS_CODE[campus] },
       timeout: REQUEST_TIMEOUT_MS,
     });
-    return (data.buildItems || []).map((item) => ({
-      skkuId: parseInt(item.id, 10) as SkkuId,
-      apiId: item.id as ApiId,
-      doc: toRawDoc(item, campus),
+    return (data.buildItems || []).map((buildItem) => ({
+      skkuId: parseInt(buildItem.id, 10) as SkkuId,
+      apiId: buildItem.id as ApiId,
+      doc: toRawDoc(buildItem, campus),
     }));
   }
 
@@ -149,18 +149,18 @@ export class BuildingSyncClient {
       params: { mode: "buildInfo", buildNo: doc.buildNo, id: building.apiId },
       timeout: REQUEST_TIMEOUT_MS,
     });
-    const attachments: BuildingAttachment[] = (data.attachItem || []).map((a) => ({
-      id: a.id,
-      url: imageUrl(a.file_path, a.encode_nm),
-      filename: a.file_nm || null,
-      alt: a.image_alt || "",
+    const attachments: BuildingAttachment[] = (data.attachItem || []).map((attachItem) => ({
+      id: attachItem.id,
+      url: imageUrl(attachItem.file_path, attachItem.encode_nm),
+      filename: attachItem.file_nm || null,
+      alt: attachItem.image_alt || "",
     }));
-    const spaces: SyncedSpace[] = (data.floorItem || []).map((fi) => ({
-      spaceCd: fi.space_cd as SpaceCd,
+    const spaces: SyncedSpace[] = (data.floorItem || []).map((floorItem) => ({
+      spaceCd: floorItem.space_cd as SpaceCd,
       buildNo: doc.buildNo,
       campus: doc.campus,
-      floor: text(fi.floor_nm, fi.floor_nm_eng),
-      name: spaceName(fi.spcae_nm, fi.spcae_nm_eng),
+      floor: text(floorItem.floor_nm, floorItem.floor_nm_eng),
+      name: spaceName(floorItem.spcae_nm, floorItem.spcae_nm_eng),
       buildingName: doc.name,
       conspaceCd: null,
     }));
@@ -172,14 +172,14 @@ export class BuildingSyncClient {
       params: { mode: "spaceList", srSearchValue: "", campusCd: SKKU_CAMPUS_CODE[campus] },
       timeout: REQUEST_TIMEOUT_MS,
     });
-    return (data.items || []).map((item) => ({
-      spaceCd: item.spaceCd as SpaceCd,
-      buildNo: item.buildNo as BuildNo,
+    return (data.items || []).map((spaceItem) => ({
+      spaceCd: spaceItem.spaceCd as SpaceCd,
+      buildNo: spaceItem.buildNo as BuildNo,
       campus,
-      floor: text(item.floorNm, item.floorNmEng),
-      name: spaceName(item.spcaeNm, item.spcaeNmEng),
-      buildingName: text(item.buildNm, item.buildNmEng),
-      conspaceCd: item.conspaceCd || null,
+      floor: text(spaceItem.floorNm, spaceItem.floorNmEng),
+      name: spaceName(spaceItem.spcaeNm, spaceItem.spcaeNmEng),
+      buildingName: text(spaceItem.buildNm, spaceItem.buildNmEng),
+      conspaceCd: spaceItem.conspaceCd || null,
     }));
   }
 }

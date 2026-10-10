@@ -66,7 +66,7 @@ function tiersToScoreExpr(
   const escaped = escapeRegex(query);
   const branches = tiers.map((tier) => {
     const regex = tierRegex(tier.mode, escaped);
-    const cases = tier.paths.map((p) => pathMatches(p, regex));
+    const cases = tier.paths.map((path) => pathMatches(path, regex));
     const first = cases[0];
     if (!first) {
       throw new Error("[building] relevance tier declares no paths");
@@ -96,14 +96,14 @@ function tiersToScoreExpr(
  * reaches spaceCd: escapeRegex neutralises metacharacters.
  */
 function spaceKeywordFilter(query: string): Filter<SpaceDoc> {
-  const re = { $regex: escapeRegex(query), $options: "i" };
+  const keywordPattern = { $regex: escapeRegex(query), $options: "i" };
   return {
     $or: [
-      { spaceCd: re },
-      { "name.ko": re },
-      { "name.en": re },
-      { "buildingName.ko": re },
-      { "buildingName.en": re },
+      { spaceCd: keywordPattern },
+      { "name.ko": keywordPattern },
+      { "name.en": keywordPattern },
+      { "buildingName.ko": keywordPattern },
+      { "buildingName.en": keywordPattern },
     ],
   };
 }
@@ -111,12 +111,12 @@ function spaceKeywordFilter(query: string): Filter<SpaceDoc> {
 /** Keyword predicate for buildings. See BUILDING_TIERS on why not buildNo. */
 function buildingKeywordFilter(query: string): Filter<BuildingDoc> {
   const escaped = escapeRegex(query);
-  const re = { $regex: escaped, $options: "i" };
+  const keywordPattern = { $regex: escaped, $options: "i" };
   return {
     $or: [
-      { "name.ko": re },
-      { "name.en": re },
-      { "description.ko": re },
+      { "name.ko": keywordPattern },
+      { "name.en": keywordPattern },
+      { "description.ko": keywordPattern },
       // Prefix, so "2" lists 20/21/.../27. A non-numeric query simply matches
       // no displayNo.
       { displayNo: { $regex: `^${escaped}`, $options: "i" } },

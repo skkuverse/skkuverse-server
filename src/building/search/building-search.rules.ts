@@ -123,12 +123,12 @@ function tierRegex(mode: TierMode, escaped: string): string {
 
 /** Reads a dotted path, coercing anything non-string to "" (mirrors $ifNull). */
 function readPath(doc: Record<string, unknown>, path: string): string {
-  let cur: unknown = doc;
+  let current: unknown = doc;
   for (const key of path.split(".")) {
-    if (typeof cur !== "object" || cur === null) return "";
-    cur = (cur as Record<string, unknown>)[key];
+    if (typeof current !== "object" || current === null) return "";
+    current = (current as Record<string, unknown>)[key];
   }
-  return typeof cur === "string" ? cur : "";
+  return typeof current === "string" ? current : "";
 }
 
 /**
@@ -143,8 +143,8 @@ function scoreLocally(
 ): number {
   const escaped = escapeRegex(query);
   for (const tier of tiers) {
-    const re = new RegExp(tierRegex(tier.mode, escaped), "i");
-    if (tier.paths.some((p) => re.test(readPath(doc, p)))) return tier.score;
+    const tierPattern = new RegExp(tierRegex(tier.mode, escaped), "i");
+    if (tier.paths.some((path) => tierPattern.test(readPath(doc, path)))) return tier.score;
   }
   return 0;
 }

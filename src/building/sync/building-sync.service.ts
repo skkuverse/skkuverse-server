@@ -101,12 +101,18 @@ export class BuildingSyncService {
       );
     }
 
-    const known = await this.repository.listRawUpdatedAt();
-    const oldVersion = await this.repository.listSkkuIdsNotEnrichedAt(ENRICH_VERSION);
-    const changedIds = new Set(
+    const skkuUpdatedAtBySkkuId = await this.repository.listRawUpdatedAt();
+    const skkuIdsEnrichedAtOldVersion = await this.repository.listSkkuIdsNotEnrichedAt(ENRICH_VERSION);
+    const changedSkkuIds = new Set(
       listed
-        .filter((b) => needsEnrichment(known.get(b.skkuId), b.doc.skkuUpdatedAt, oldVersion.has(b.skkuId)))
-        .map((b) => b.skkuId),
+        .filter((building) =>
+          needsEnrichment(
+            skkuUpdatedAtBySkkuId.get(building.skkuId),
+            building.doc.skkuUpdatedAt,
+            skkuIdsEnrichedAtOldVersion.has(building.skkuId),
+          ),
+        )
+        .map((building) => building.skkuId),
     );
 
     const rawResult = await this.repository.upsertRaw(listed, syncStartedAt);
@@ -120,7 +126,7 @@ export class BuildingSyncService {
       "Phase 1: raw upserted",
     );
 
-    if (changedIds.size === 0) {
+    if (changedSkkuIds.size === 0) {
       logger.info(
         { event: "building.sync.enrich_skipped" },
         "Phase 1: no changes detected, skipping enrichment",
@@ -128,7 +134,7 @@ export class BuildingSyncService {
       return listed;
     }
 
-    const changedRaw = await this.repository.listRawBySkkuIds(changedIds);
+    const changedRaw = await this.repository.listRawBySkkuIds(changedSkkuIds);
     const enrichResult = await this.repository.upsertEnriched(
       changedRaw.map((raw) => ({ skkuId: raw._id, building: enrichBuilding(raw) })),
       syncStartedAt,
@@ -136,7 +142,7 @@ export class BuildingSyncService {
     logger.info(
       {
         event: "building.sync.enriched",
-        changed: changedIds.size,
+        changed: changedSkkuIds.size,
         matched: enrichResult.matchedCount,
         upserted: enrichResult.upsertedCount,
         modified: enrichResult.modifiedCount,

@@ -14,18 +14,18 @@ const ELEVATOR_STATUS_MAP: Readonly<Record<string, ElevatorStatus>> = {
 
 // Matches the start of a BF block in description text.
 // Handles: "* 배리어프리", "*배리어프리", "*학생회관\n배리어프리"
-const BF_START_RE = /\n\n\*\s*(?:[^\n]*\n)?배리어프리 편의시설 안내/;
+const BARRIER_FREE_START_RE = /\n\n\*\s*(?:[^\n]*\n)?배리어프리 편의시설 안내/;
 
 // Matches section headers within BF text, with optional label like (A동)
-const BF_SECTION_RE =
+const BARRIER_FREE_SECTION_RE =
   /\*\s*(?:[^\n]*\n)?배리어프리 편의시설 안내(?:\(([^)]+)\))?/g;
 
 function parseRamp(
   text: string,
 ): { available: boolean; note: string | null } | null {
-  const m = text.match(/경사로\s*[:：]\s*(.+)/);
-  if (!m) return null;
-  const raw = m[1]!.trim();
+  const match = text.match(/경사로\s*[:：]\s*(.+)/);
+  if (!match) return null;
+  const raw = match[1]!.trim();
   const available = !raw.toUpperCase().startsWith("X");
   const noteMatch = raw.match(/\((.+)\)/);
   return { available, note: noteMatch ? noteMatch[1]! : null };
@@ -33,9 +33,9 @@ function parseRamp(
 
 function parseToilet(text: string): { raw: string; count: number | null } | null {
   // Handle typo "승장애인" prefix (_id:2 has it on elevator, but be safe)
-  const m = text.match(/장애인 화장실\s*[:：]\s*(.+)/);
-  if (!m) return null;
-  const raw = m[1]!.trim();
+  const match = text.match(/장애인 화장실\s*[:：]\s*(.+)/);
+  if (!match) return null;
+  const raw = match[1]!.trim();
   const countMatch = raw.match(/총\s*(\d+)\s*개/);
   return { raw, count: countMatch ? parseInt(countMatch[1]!, 10) : null };
 }
@@ -46,9 +46,9 @@ function parseElevator(text: string): {
   accessible: number | null;
 } | null {
   // Handle typo "승장애인 표시 승강기" (_id:2)
-  const m = text.match(/(?:승)?장애인 표시 승강기\s*[:：]\s*(.+)/);
-  if (!m) return null;
-  const raw = m[1]!.trim();
+  const match = text.match(/(?:승)?장애인 표시 승강기\s*[:：]\s*(.+)/);
+  if (!match) return null;
+  const raw = match[1]!.trim();
   // "N대 중 M대" pattern (standard)
   const fullMatch = raw.match(/(\d+)\s*대\s*중\s*(\d+)\s*대/);
   if (fullMatch) {
@@ -67,19 +67,19 @@ function parseElevator(text: string): {
 }
 
 function parseElevatorStatus(text: string): ElevatorStatus | null {
-  const m = text.match(/승강기 기능 상태\s*[:：]\s*(.+)/);
-  if (!m) return null;
-  const raw = m[1]!.trim();
+  const match = text.match(/승강기 기능 상태\s*[:：]\s*(.+)/);
+  if (!match) return null;
+  const raw = match[1]!.trim();
   // An unknown value is passed through raw, which is why ElevatorStatus
   // includes string.
   return ELEVATOR_STATUS_MAP[raw] || raw;
 }
 
 function parseParking(text: string): number | null {
-  const m = text.match(/장애인 주차장\s*[:：]\s*(.+)/);
-  if (!m) return null;
-  const num = m[1]!.trim().match(/(\d+)/);
-  return num ? parseInt(num[1]!, 10) : null;
+  const match = text.match(/장애인 주차장\s*[:：]\s*(.+)/);
+  if (!match) return null;
+  const countMatch = match[1]!.trim().match(/(\d+)/);
+  return countMatch ? parseInt(countMatch[1]!, 10) : null;
 }
 
 function parseSection(text: string): Omit<BarrierFreeSection, "label"> {
@@ -107,29 +107,29 @@ function parseBarrierFree(
   const text = descriptionKo.replace(/\r\n/g, "\n");
 
   // Find BF block start
-  const startMatch = text.match(BF_START_RE);
+  const startMatch = text.match(BARRIER_FREE_START_RE);
   if (!startMatch) return null;
 
   // A successful non-global regex match always has .index (MDN); TS types it
   // number|undefined, so `!` asserts it.
   const matchIndex = startMatch.index!;
   const cleanDescription = text.slice(0, matchIndex).trim();
-  const bfText = text.slice(matchIndex);
+  const barrierFreeText = text.slice(matchIndex);
 
   // Find all section headers within BF text
-  interface BFHeader {
+  interface BarrierFreeHeader {
     label: string | null;
     index: number;
     endIndex: number;
   }
-  const headers: BFHeader[] = [];
-  let m: RegExpExecArray | null;
-  const re = new RegExp(BF_SECTION_RE.source, "g");
-  while ((m = re.exec(bfText)) !== null) {
+  const headers: BarrierFreeHeader[] = [];
+  let headerMatch: RegExpExecArray | null;
+  const sectionPattern = new RegExp(BARRIER_FREE_SECTION_RE.source, "g");
+  while ((headerMatch = sectionPattern.exec(barrierFreeText)) !== null) {
     headers.push({
-      label: m[1] || null,
-      index: m.index,
-      endIndex: m.index + m[0].length,
+      label: headerMatch[1] || null,
+      index: headerMatch.index,
+      endIndex: headerMatch.index + headerMatch[0].length,
     });
   }
 
@@ -147,8 +147,8 @@ function parseBarrierFree(
   for (let i = 0; i < headers.length; i++) {
     const start = headers[i]!.endIndex;
     const end =
-      i + 1 < headers.length ? headers[i + 1]!.index : bfText.length;
-    const sectionText = bfText.slice(start, end);
+      i + 1 < headers.length ? headers[i + 1]!.index : barrierFreeText.length;
+    const sectionText = barrierFreeText.slice(start, end);
     sections.push({ label: headers[i]!.label, ...parseSection(sectionText) });
   }
 
