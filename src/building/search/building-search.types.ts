@@ -12,6 +12,14 @@ export interface RelevanceTier {
   readonly mode: TierMode;
 }
 
+/** The one document a ranked search pipeline's $facet emits (building-search.query.ts). */
+export type RankedFacet<T> = {
+  strong: T[];
+  weak: T[];
+  counts: Array<{ _id: Campus | null; n: number }>;
+  total: Array<{ n: number }>;
+};
+
 /** A ranked search's rows, with what the same predicate counted. */
 export interface RankedSearchResult<T> {
   items: T[];
