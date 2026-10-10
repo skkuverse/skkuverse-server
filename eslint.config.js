@@ -213,7 +213,7 @@ const ROLE_MAX_LINES = {
   client: 157,
   controller: 41,
   document: 117,
-  mapper: 154,
+  mapper: 140,
   module: 23,
   poller: 36,
   query: 175,
