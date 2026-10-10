@@ -18,6 +18,7 @@ A name is how a reader, or an agent, finds code and understands it without a com
 | Repository and client verbs, and `.rules`/`.mapper` predicates, match the declared return type | `method-verbs.test.ts` |
 | No `// --- X ---` section dividers | `section-comments.test.ts` |
 | Top-level `src/` folders are shared roles or feature modules | `folders.test.ts` |
+| One file per role in a module folder, named after the folder's module (`building-sync.*` in `sync/`) | `folders.test.ts` |
 
 ## Picking a name
 
@@ -73,3 +74,7 @@ One concept, one name (ADR 0010, D1). A module adds its section when it is migra
 | space | A room or area inside a building | room |
 | buildList, buildInfo, spaceList | The three campusMap.do calls, and the sync phases named after them | |
 | raw, enriched | `buildings_raw` holds SKKU's data as sent; `buildings` holds it parsed and served | |
+| `EnrichedBuilding` | What `enrichBuilding` derives from a raw building; the sync repository writes it field by field | enrichment fields, `$set` |
+| tier, band | A ranking tier scores one kind of match; the strong and weak bands split results at `*_STRONG_MIN_SCORE` | level, bucket |
+| ranked result | Rows plus the campus counts the same predicate produced (`RankedSearchResult`) | search data |
+| campus shape | A `campus_shapes` document: an authored footprint, boundary or path | geometry doc |
