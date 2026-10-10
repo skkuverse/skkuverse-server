@@ -232,6 +232,25 @@ function roleSizeBlocks() {
   }));
 }
 
+// Function caps for migrated modules (ADR 0010, D9): the longest function plus at
+// most 10 lines, comment lines counted as in max-lines; depth, parameters and
+// complexity at the worst. Specs are left out: a describe callback is long by design.
+const MIGRATED_FUNCTION_LIMITS = {
+  "max-lines-per-function": ["error", { max: 40, skipBlankLines: true, skipComments: false }],
+  "max-depth": ["error", 2],
+  "max-params": ["error", 3],
+  complexity: ["error", 9],
+};
+
+function migratedFunctionBlock() {
+  return {
+    name: "size-ratchets/migrated",
+    files: MIGRATED_MODULES.map((m) => `src/${m}/**/*.ts`),
+    ignores: ["src/**/*.spec.ts"],
+    rules: MIGRATED_FUNCTION_LIMITS,
+  };
+}
+
 const jestGlobals = {
   describe: "readonly",
   it: "readonly",
@@ -309,6 +328,7 @@ module.exports = [
     },
   },
   ...roleSizeBlocks(),
+  migratedFunctionBlock(),
   {
     // Also keeps `.query` files to repositories: one block per file set, since
     // a later block replaces a rule's options rather than merging them.
