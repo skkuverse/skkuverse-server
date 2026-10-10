@@ -16,7 +16,7 @@ const SEARCH_MAX_TIME_MS = 5000;
 export class BuildingSearchRepository {
   async searchBuildings(
     keyword: string,
-    campus?: Campus | null,
+    campus?: Campus,
   ): Promise<RankedSearchResult<BuildingDoc>> {
     const facets = await this.buildings()
       .aggregate<RankedFacet<BuildingDoc>>(rankedSearchPipeline(BUILDING_SEARCH, keyword, campus), {
@@ -28,7 +28,7 @@ export class BuildingSearchRepository {
 
   async searchSpaces(
     keyword: string,
-    campus?: Campus | null,
+    campus?: Campus,
   ): Promise<RankedSearchResult<SpaceDoc>> {
     const facets = await this.spaces()
       .aggregate<RankedFacet<SpaceDoc>>(rankedSearchPipeline(SPACE_SEARCH, keyword, campus), {
