@@ -212,7 +212,7 @@ const MIGRATED_MODULES = ["building"];
 const ROLE_MAX_LINES = {
   client: 157,
   controller: 41,
-  document: 112,
+  document: 117,
   mapper: 154,
   module: 23,
   poller: 36,

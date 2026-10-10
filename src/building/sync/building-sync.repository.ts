@@ -8,8 +8,9 @@ import type {
   BuildingDoc,
   BuildingRawDoc,
   SpaceDoc,
+  SpaceSource,
 } from "../building.document";
-import type { EnrichedBuilding, ListedBuilding, SpaceSource, SyncedSpace } from "./building-sync.types";
+import type { EnrichedBuilding, ListedBuilding, SyncedSpace } from "./building-sync.types";
 import type { SkkuId } from "../building.types";
 
 /**
