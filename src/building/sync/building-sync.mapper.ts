@@ -92,6 +92,29 @@ function parseSection(text: string): Omit<BarrierFreeSection, "label"> {
   };
 }
 
+interface BarrierFreeHeader {
+  label: string | null;
+  index: number;
+  endIndex: number;
+}
+
+/** Every section header in a barrier-free block, in text order. */
+function findSectionHeaders(barrierFreeText: string): BarrierFreeHeader[] {
+  return [...barrierFreeText.matchAll(BARRIER_FREE_SECTION_RE)].map((headerMatch) => ({
+    label: headerMatch[1] || null,
+    index: headerMatch.index,
+    endIndex: headerMatch.index + headerMatch[0].length,
+  }));
+}
+
+/** Each header's section: the text up to the next header, parsed. */
+function toSections(barrierFreeText: string, headers: readonly BarrierFreeHeader[]): BarrierFreeSection[] {
+  return headers.map((header, i) => {
+    const end = headers[i + 1]?.index ?? barrierFreeText.length;
+    return { label: header.label, ...parseSection(barrierFreeText.slice(header.endIndex, end)) };
+  });
+}
+
 /**
  * Parse barrier-free accessibility info from building description.
  *   - null: no BF text found
@@ -116,23 +139,7 @@ function parseBarrierFree(
   const cleanDescription = text.slice(0, matchIndex).trim();
   const barrierFreeText = text.slice(matchIndex);
 
-  // Find all section headers within BF text
-  interface BarrierFreeHeader {
-    label: string | null;
-    index: number;
-    endIndex: number;
-  }
-  const headers: BarrierFreeHeader[] = [];
-  let headerMatch: RegExpExecArray | null;
-  const sectionPattern = new RegExp(BARRIER_FREE_SECTION_RE.source, "g");
-  while ((headerMatch = sectionPattern.exec(barrierFreeText)) !== null) {
-    headers.push({
-      label: headerMatch[1] || null,
-      index: headerMatch.index,
-      endIndex: headerMatch.index + headerMatch[0].length,
-    });
-  }
-
+  const headers = findSectionHeaders(barrierFreeText);
   if (headers.length === 0) {
     return {
       cleanDescription: text,
@@ -143,16 +150,7 @@ function parseBarrierFree(
     };
   }
 
-  const sections: BarrierFreeSection[] = [];
-  for (let i = 0; i < headers.length; i++) {
-    const start = headers[i]!.endIndex;
-    const end =
-      i + 1 < headers.length ? headers[i + 1]!.index : barrierFreeText.length;
-    const sectionText = barrierFreeText.slice(start, end);
-    sections.push({ label: headers[i]!.label, ...parseSection(sectionText) });
-  }
-
-  return { cleanDescription, detail: { sections } };
+  return { cleanDescription, detail: { sections: toSections(barrierFreeText, headers) } };
 }
 
 /** The fields derived from a raw building: display number, type, barrier-free detail. */
