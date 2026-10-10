@@ -1,3 +1,4 @@
+import { BUILDING_SEARCH_LIMIT, SPACE_SEARCH_LIMIT, type RankedSearchResult } from "./building-search.rules";
 import { floorSortKey, toDisplayNo } from "./building.rules";
 import type {
   AccessibilityDetail,
@@ -13,6 +14,7 @@ import { t } from "../infra/i18n";
 import type { SupportedLang } from "../infra/types";
 import type {
   BilingualText,
+  BuildingSearch,
   Campus,
   ConnectionResponseItem,
   FloorGroup,
@@ -368,13 +370,61 @@ function withFloorEnFallback(floors: readonly FloorGroup[]): FloorGroup[] {
   }));
 }
 
+/**
+ * GET /building/search's `data` and extra `meta`. Rooms are grouped by
+ * building and joined to its skkuId through `allBuildings`.
+ */
+function toBuildingSearch(
+  q: string,
+  buildingResult: RankedSearchResult<BuildingDoc>,
+  spaceResult: RankedSearchResult<SpaceDoc>,
+  allBuildings: readonly BuildingDoc[],
+  lang: SupportedLang,
+): BuildingSearch {
+  const skkuIdByBuildNo = new Map<string, number>(
+    allBuildings
+      .filter((b): b is BuildingDoc & { buildNo: string } => !!b.buildNo)
+      .map((b) => [b.buildNo, b._id]),
+  );
+
+  return {
+    data: {
+      buildings: buildingResult.items.map((b) => withCampusLabel(b, lang)),
+      spaces: groupSpacesByBuilding(spaceResult.items, skkuIdByBuildNo, lang),
+    },
+    meta: {
+      keyword: q,
+      buildingCount: buildingResult.items.length,
+      spaceCount: spaceResult.items.length,
+      counts: { building: buildingResult.counts, space: spaceResult.counts },
+      // Additive — the app's parseBuildingSearchResult reads only known keys.
+      // The row caps sit above any realistic query (the largest building has
+      // 801 rooms), which is what makes spaceCount and counts.space.total
+      // agree; `truncated` records the cut on a pathological one-character
+      // query rather than presenting it as the whole result.
+      limits: {
+        building: {
+          limit: BUILDING_SEARCH_LIMIT,
+          total: buildingResult.total,
+          truncated: buildingResult.truncated,
+        },
+        space: {
+          limit: SPACE_SEARCH_LIMIT,
+          total: spaceResult.total,
+          truncated: spaceResult.truncated,
+        },
+      },
+    },
+  };
+}
+
 export {
   ENRICH_VERSION,
   ELEVATOR_STATUS_MAP,
   enrichBuilding,
   groupByFloor,
-  groupSpacesByBuilding,
   parseBarrierFree,
+  toBuildingSearch,
   toConnectionItems,
   toSpaceUpsert,
   withCampusLabel,

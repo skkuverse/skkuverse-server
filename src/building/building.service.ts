@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { SupportedLang } from "../infra/types";
-import { BUILDING_SEARCH_LIMIT, SPACE_SEARCH_LIMIT } from "./building-search.rules";
 import type { BuildingDoc, CampusShapeDoc } from "./building.document";
-import { groupSpacesByBuilding, withCampusLabel, withFloorEnFallback } from "./building.mapper";
+import { toBuildingSearch, withCampusLabel, withFloorEnFallback } from "./building.mapper";
 import { BuildingRepository } from "./building.repository";
 import type {
   BuildingDetail,
@@ -37,42 +36,7 @@ export class BuildingService {
       this.repository.searchSpaces(q, campus),
       this.repository.getAllBuildings(),
     ]);
-
-    const skkuIdByBuildNo = new Map<string, number>(
-      allBuildings
-        .filter((b): b is BuildingDoc & { buildNo: string } => !!b.buildNo)
-        .map((b) => [b.buildNo, b._id]),
-    );
-
-    return {
-      data: {
-        buildings: buildingResult.items.map((b) => withCampusLabel(b, lang)),
-        spaces: groupSpacesByBuilding(spaceResult.items, skkuIdByBuildNo, lang),
-      },
-      meta: {
-        keyword: q,
-        buildingCount: buildingResult.items.length,
-        spaceCount: spaceResult.items.length,
-        counts: { building: buildingResult.counts, space: spaceResult.counts },
-        // Additive — the app's parseBuildingSearchResult reads only known keys.
-        // The row caps sit above any realistic query (the largest building has
-        // 801 rooms), which is what makes spaceCount and counts.space.total
-        // agree; `truncated` records the cut on a pathological one-character
-        // query rather than presenting it as the whole result.
-        limits: {
-          building: {
-            limit: BUILDING_SEARCH_LIMIT,
-            total: buildingResult.total,
-            truncated: buildingResult.truncated,
-          },
-          space: {
-            limit: SPACE_SEARCH_LIMIT,
-            total: spaceResult.total,
-            truncated: spaceResult.truncated,
-          },
-        },
-      },
-    };
+    return toBuildingSearch(q, buildingResult, spaceResult, allBuildings, lang);
   }
 
   /** GET /building/:skkuId: the building, its floors and connections; null if there is none. */
