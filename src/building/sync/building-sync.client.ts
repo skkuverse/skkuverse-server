@@ -12,8 +12,7 @@ const REQUEST_TIMEOUT_MS = 30000;
 // as sent (longtitude, spcaeNm, spcae_nm): a silent fix upstream reads as "", and
 // the name says which field to check.
 interface SkkuBuildListItem {
-  /** A numeric string. */
-  id: string;
+  id: number;
   /** null or absent for a facility. */
   buildNo: string | null;
   buildNm?: string;
@@ -38,7 +37,7 @@ interface SkkuBuildListResponse {
 }
 
 interface SkkuBuildInfoAttachment {
-  id: string;
+  id: number;
   file_path?: string;
   encode_nm?: string;
   file_nm?: string;
@@ -64,7 +63,6 @@ interface SkkuBuildInfoResponse {
 interface SkkuSpaceListItem {
   spaceCd: string;
   buildNo: string;
-  campus: string;
   floorNm?: string;
   floorNmEng?: string;
   spcaeNm?: string;
@@ -89,7 +87,7 @@ function text(ko: string | undefined, en: string | undefined): BilingualText {
   return { ko: ko || "", en: en || "" };
 }
 
-/** A space name: SKKU sends the literal string "undefined" for a missing English name. */
+/** A space name: SKKU omits a missing English name, or sends the literal string "undefined". */
 function spaceName(ko: string | undefined, en: string | undefined): BilingualText {
   return { ko: ko || "", en: en === "undefined" ? "" : en || "" };
 }
@@ -123,7 +121,8 @@ export class BuildingSyncClient {
       timeout: REQUEST_TIMEOUT_MS,
     });
     return (data.buildItems || []).map((buildItem) => ({
-      skkuId: parseInt(buildItem.id, 10) as SkkuId,
+      // SKKU sends a number, but a numeric string must still parse to the same skkuId.
+      skkuId: parseInt(String(buildItem.id), 10) as SkkuId,
       apiId: buildItem.id as ApiId,
       doc: toRawDoc(buildItem, campus),
     }));

@@ -65,7 +65,7 @@ export interface AccessibilityDetail {
 }
 
 export interface BuildingAttachment {
-  id: string;
+  id: number;
   url: string | null;
   filename: string | null;
   alt: string;
