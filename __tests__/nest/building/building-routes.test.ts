@@ -1,51 +1,56 @@
 /**
- * Integration over the /building routes: BuildingCatalogController (list,
- * detail) and BuildingSearchController (3 endpoints, validation branches, i18n
- * campusLabel injection, English fallback, space grouping + counts meta).
- *
- * The repositories are overridden with one stub (BuildingRepository's real
- * onModuleInit would create indexes through src/infra/db.ts, hanging without
- * Mongo), so the real controllers and services (campus label, English
- * fallback, displayNo grouping) run against the stubbed data.
+ * The /building routes through the real controllers, services, rules and
+ * mappers, with an in-memory fake per repository (design D11 of
+ * harden-test-suite). What it guards: query validation and its error bodies,
+ * the campus filter and labels per language, the English fallback, search
+ * grouping and meta, the detail's floors and connections, an internal error's
+ * body, and the Cache-Control a response may or may not carry.
  */
-
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
+import type { BuildingDoc, SpaceDoc } from "../../../src/building/building.document";
 import { BuildingRepository } from "../../../src/building/building.repository";
 import { BuildingCatalogRepository } from "../../../src/building/catalog/building-catalog.repository";
 import { BuildingSearchRepository } from "../../../src/building/search/building-search.repository";
+import { FakeBuildingCatalogRepository } from "../../helpers/fakes/building/building-catalog.repository.fake";
+import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
+import { FakeBuildingSearchRepository } from "../../helpers/fakes/building/building-search.repository.fake";
 import { buildBuildingApp } from "../../helpers/nest/build-building-app";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
-let svc: {
-  onModuleInit: jest.Mock;
-  listBuildings: jest.Mock;
-  findBuildingBySkkuId: jest.Mock;
-  listSpacesByBuildNo: jest.Mock;
-  listConnectionsBySkkuId: jest.Mock;
-  listBuildingsBySkkuIds: jest.Mock;
-  searchBuildings: jest.Mock;
-  searchSpaces: jest.Mock;
-};
+let buildings: FakeBuildingRepository;
+let catalog: FakeBuildingCatalogRepository;
+let search: FakeBuildingSearchRepository;
+
+function building(_id: number, buildNo: string | null, campus: "hssc" | "nsc", ko: string, en: string): BuildingDoc {
+  return { _id, buildNo, campus, name: { ko, en } } as BuildingDoc;
+}
+
+function room(spaceCd: string, buildNo: string, campus: "hssc" | "nsc", over: Partial<SpaceDoc> = {}): SpaceDoc {
+  return {
+    spaceCd,
+    buildNo,
+    campus,
+    name: { ko: `강의실 ${spaceCd}`, en: "" },
+    buildingName: { ko: `건물 ${buildNo}`, en: "" },
+    floor: { ko: "1층", en: "" },
+    conspaceCd: null,
+    ...over,
+  } as SpaceDoc;
+}
+
+const LAW = building(1, "100", "hssc", "법학관", "Law");
+const ENGINEERING = building(2, "200", "nsc", "공학관", "Eng");
 
 beforeAll(async () => {
-  svc = {
-    onModuleInit: jest.fn(),
-    listBuildings: jest.fn(),
-    findBuildingBySkkuId: jest.fn(),
-    listSpacesByBuildNo: jest.fn(),
-    listConnectionsBySkkuId: jest.fn(),
-    listBuildingsBySkkuIds: jest.fn(),
-    searchBuildings: jest.fn(),
-    searchSpaces: jest.fn(),
-  };
-  // One stub serves the three repositories the reads moved between when
-  // search and catalog became sub-modules.
+  buildings = new FakeBuildingRepository();
+  catalog = new FakeBuildingCatalogRepository();
+  search = new FakeBuildingSearchRepository();
   app = await buildBuildingApp([
-    { provide: BuildingRepository, useValue: svc },
-    { provide: BuildingCatalogRepository, useValue: svc },
-    { provide: BuildingSearchRepository, useValue: svc },
+    { provide: BuildingRepository, useValue: buildings },
+    { provide: BuildingCatalogRepository, useValue: catalog },
+    { provide: BuildingSearchRepository, useValue: search },
   ]);
   httpServer = app.getHttpServer();
 });
@@ -55,309 +60,242 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  Object.assign(buildings, new FakeBuildingRepository());
+  Object.assign(catalog, new FakeBuildingCatalogRepository());
+  Object.assign(search, new FakeBuildingSearchRepository());
 });
 
 describe("GET /building/list", () => {
-  it("returns the full list with campusLabel injected (Korean default)", async () => {
-    svc.listBuildings.mockResolvedValue([
-      { _id: 1, buildNo: "100", campus: "hssc", name: { ko: "법학관", en: "Law" } },
-      { _id: 2, buildNo: "200", campus: "nsc", name: { ko: "공학관", en: "Eng" } },
-    ]);
+  it("lists both campuses with Korean campus labels by default", async () => {
+    // Arrange
+    buildings.buildings = [LAW, ENGINEERING];
+
+    // Act
     const res = await request(httpServer).get("/building/list");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.meta.lang).toBe("ko");
-    expect(res.body.data.buildings).toHaveLength(2);
-    expect(res.body.data.buildings[0].campusLabel).toBe("인사캠");
-    expect(res.body.data.buildings[1].campusLabel).toBe("자과캠");
-    expect(svc.listBuildings).toHaveBeenCalledWith(null);
+    expect(res.body.data.buildings.map((b: BuildingDoc & { campusLabel: string }) => [b._id, b.campusLabel])).toEqual([
+      [1, "인사캠"],
+      [2, "자과캠"],
+    ]);
   });
 
-  it("filters by campus=hssc and uses English campusLabel on en lang", async () => {
-    svc.listBuildings.mockResolvedValue([
-      { _id: 1, buildNo: "100", campus: "hssc", name: { ko: "법학관", en: "Law" } },
-    ]);
-    const res = await request(httpServer)
-      .get("/building/list?campus=hssc")
-      .set("Accept-Language", "en-US");
+  it("filters by campus=hssc and labels in English for an English request", async () => {
+    // Arrange
+    buildings.buildings = [LAW, ENGINEERING];
+
+    // Act
+    const res = await request(httpServer).get("/building/list?campus=hssc").set("Accept-Language", "en-US");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.meta.lang).toBe("en");
-    expect(res.body.data.buildings[0].campusLabel).toBe("HSSC");
-    expect(svc.listBuildings).toHaveBeenCalledWith("hssc");
+    expect(res.body.data.buildings).toEqual([{ ...LAW, campusLabel: "HSSC" }]);
   });
 
-  it("accepts campus=nsc", async () => {
-    svc.listBuildings.mockResolvedValue([]);
+  it("filters by campus=nsc", async () => {
+    // Arrange
+    buildings.buildings = [LAW, ENGINEERING];
+
+    // Act
     const res = await request(httpServer).get("/building/list?campus=nsc");
+
+    // Assert
     expect(res.status).toBe(200);
-    expect(svc.listBuildings).toHaveBeenCalledWith("nsc");
+    expect(res.body.data.buildings.map((b: BuildingDoc) => b._id)).toEqual([2]);
   });
 
-  it("rejects invalid campus with 400 INVALID_CAMPUS", async () => {
+  it("rejects an unknown campus with 400 INVALID_CAMPUS", async () => {
+    // Act
     const res = await request(httpServer).get("/building/list?campus=mars");
+
+    // Assert
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("INVALID_CAMPUS");
-    expect(res.body.error.message).toMatch(/hssc.*nsc/);
-    expect(svc.listBuildings).not.toHaveBeenCalled();
+    expect(res.body.error).toEqual({ code: "INVALID_CAMPUS", message: "campus must be 'hssc' or 'nsc'" });
   });
 });
 
 describe("GET /building/search", () => {
-  // Rows and counts arrive together now — one ranked envelope per collection.
-  function ranked(items: unknown[], counts: { hssc: number; nsc: number }) {
-    const total = counts.hssc + counts.nsc;
-    return {
-      items,
-      counts: { ...counts, total },
-      total,
-      truncated: total > items.length,
-    };
-  }
+  it.each([
+    ["no q", "/building/search"],
+    ["a whitespace-only q", "/building/search?q=%20%20%20"],
+    ["a repeated q", "/building/search?q=a&q=b"],
+  ])("rejects %s with 400 MISSING_QUERY", async (_case, path) => {
+    // Act
+    const res = await request(httpServer).get(path);
 
-  function seedSearchHappyPath() {
-    svc.searchBuildings.mockResolvedValue(
-      ranked(
-        [
-          {
-            _id: 1,
-            buildNo: "100",
-            campus: "hssc",
-            name: { ko: "법학관", en: "Law" },
-          },
-        ],
-        { hssc: 1, nsc: 0 },
-      ),
-    );
-    svc.searchSpaces.mockResolvedValue(
-      ranked(
-        [
-          {
-            buildNo: "100",
-            campus: "hssc",
-            spaceCd: "100-A101",
-            name: { ko: "강의실", en: "" },
-            buildingName: { ko: "법학관", en: "" },
-            floor: { ko: "1층", en: "" },
-          },
-        ],
-        { hssc: 1, nsc: 0 },
-      ),
-    );
-    svc.listBuildings.mockResolvedValue([
-      { _id: 1, buildNo: "100", campus: "hssc" },
-    ]);
-  }
-
-  it("rejects missing q with 400 MISSING_QUERY", async () => {
-    const res = await request(httpServer).get("/building/search");
+    // Assert
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("MISSING_QUERY");
-    expect(svc.searchBuildings).not.toHaveBeenCalled();
+    expect(res.body.error).toEqual({ code: "MISSING_QUERY", message: "q parameter is required" });
+    expect(search.searches).toEqual([]);
   });
 
-  it("treats whitespace-only q as missing", async () => {
-    const res = await request(httpServer).get("/building/search?q=%20%20%20");
+  it("rejects an unknown campus with 400 INVALID_CAMPUS", async () => {
+    // Act
+    const res = await request(httpServer).get("/building/search?q=law&campus=mars");
+
+    // Assert
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("MISSING_QUERY");
+    expect(res.body.error).toEqual({ code: "INVALID_CAMPUS", message: "campus must be 'hssc' or 'nsc'" });
   });
 
-  it("rejects invalid campus with 400 INVALID_CAMPUS", async () => {
-    const res = await request(httpServer).get(
-      "/building/search?q=law&campus=mars",
-    );
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("INVALID_CAMPUS");
-  });
+  it("returns buildings, rooms grouped by building and per-campus counts", async () => {
+    // Arrange
+    search.buildings = { items: [LAW] };
+    search.spaces = { items: [room("100-A101", "100", "hssc")] };
+    buildings.buildings = [LAW];
 
-  it("returns buildings + grouped spaces + counts on the happy path", async () => {
-    seedSearchHappyPath();
+    // Act
     const res = await request(httpServer).get("/building/search?q=%EB%B2%95");
+
+    // Assert
     expect(res.status).toBe(200);
-    expect(res.body.meta.buildingCount).toBe(1);
-    expect(res.body.meta.spaceCount).toBe(1);
-    expect(res.body.meta.counts).toEqual({
-      building: { hssc: 1, nsc: 0, total: 1 },
-      space: { hssc: 1, nsc: 0, total: 1 },
+    expect(res.body.meta).toMatchObject({
+      keyword: "법",
+      buildingCount: 1,
+      spaceCount: 1,
+      counts: { building: { hssc: 1, nsc: 0, total: 1 }, space: { hssc: 1, nsc: 0, total: 1 } },
     });
     expect(res.body.data.buildings[0].campusLabel).toBe("인사캠");
     expect(res.body.data.spaces).toHaveLength(1);
-    const group = res.body.data.spaces[0];
-    expect(group.buildNo).toBe("100");
-    expect(group.skkuId).toBe(1);
-    expect(group.displayNo).toBe("0"); // "100" with "1" prefix stripped → "00" → "0"
-    expect(group.campusLabel).toBe("인사캠");
-    expect(group.items).toHaveLength(1);
-    expect(group.items[0].spaceCd).toBe("100-A101");
+    expect(res.body.data.spaces[0]).toMatchObject({
+      skkuId: 1,
+      buildNo: "100",
+      displayNo: "0",
+      campusLabel: "인사캠",
+      items: [{ spaceCd: "100-A101" }],
+    });
   });
 
-  it("fills empty .en with .ko on spaces (fillEnFallback)", async () => {
-    seedSearchHappyPath();
-    const res = await request(httpServer).get("/building/search?q=law");
-    const item = res.body.data.spaces[0].items[0];
-    expect(item.name.en).toBe(item.name.ko); // "강의실"
+  it("shows the Korean name where a room has no English one", async () => {
+    // Arrange
+    search.spaces = { items: [room("100-A101", "100", "hssc")] };
+
+    // Act
+    const res = await request(httpServer).get("/building/search?q=law").set("Accept-Language", "en");
+
+    // Assert
+    expect(res.body.data.spaces[0].items[0].name).toEqual({ ko: "강의실 100-A101", en: "강의실 100-A101" });
   });
 
-  it("returns empty arrays + zero counts when nothing matches", async () => {
-    svc.searchBuildings.mockResolvedValue(ranked([], { hssc: 0, nsc: 0 }));
-    svc.searchSpaces.mockResolvedValue(ranked([], { hssc: 0, nsc: 0 }));
-    svc.listBuildings.mockResolvedValue([]);
+  it("returns empty lists and zero counts when nothing matches", async () => {
+    // Act
     const res = await request(httpServer).get("/building/search?q=zzz");
+
+    // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.buildings).toEqual([]);
-    expect(res.body.data.spaces).toEqual([]);
-    expect(res.body.meta.buildingCount).toBe(0);
-    expect(res.body.meta.spaceCount).toBe(0);
+    expect(res.body.data).toEqual({ buildings: [], spaces: [] });
+    expect(res.body.meta).toMatchObject({ buildingCount: 0, spaceCount: 0 });
   });
 
-  it("passes campus filter through to data layer", async () => {
-    seedSearchHappyPath();
-    await request(httpServer).get("/building/search?q=law&campus=hssc");
-    expect(svc.searchBuildings).toHaveBeenCalledWith("law", "hssc");
-    expect(svc.searchSpaces).toHaveBeenCalledWith("law", "hssc");
+  it("narrows the rows to the campus asked for, while the counts still cover both campuses", async () => {
+    // Arrange
+    search.buildings = { items: [LAW, ENGINEERING] };
+    search.spaces = { items: [room("100-A101", "100", "hssc"), room("200-B101", "200", "nsc")] };
+
+    // Act
+    const res = await request(httpServer).get("/building/search?q=law&campus=hssc");
+
+    // Assert
+    expect(res.body.data.buildings.map((b: BuildingDoc) => b._id)).toEqual([1]);
+    expect(res.body.data.spaces.map((g: { buildNo: string }) => g.buildNo)).toEqual(["100"]);
+    expect(res.body.meta.counts).toEqual({
+      building: { hssc: 1, nsc: 1, total: 2 },
+      space: { hssc: 1, nsc: 1, total: 2 },
+    });
   });
 
-  it("spaceCount is the ROW count, not the group count", async () => {
-    // Two rooms in one building: the app renders spaceCount in the section
-    // header while data.spaces is the grouped list, so they legitimately differ.
-    svc.searchSpaces.mockResolvedValue(
-      ranked(
-        [
-          {
-            buildNo: "100",
-            campus: "hssc",
-            spaceCd: "10001",
-            name: { ko: "A", en: "" },
-            buildingName: { ko: "법학관", en: "" },
-            floor: { ko: "1층", en: "" },
-          },
-          {
-            buildNo: "100",
-            campus: "hssc",
-            spaceCd: "10002",
-            name: { ko: "B", en: "" },
-            buildingName: { ko: "법학관", en: "" },
-            floor: { ko: "1층", en: "" },
-          },
-        ],
-        { hssc: 2, nsc: 0 },
-      ),
-    );
-    svc.searchBuildings.mockResolvedValue(ranked([], { hssc: 0, nsc: 0 }));
-    svc.listBuildings.mockResolvedValue([]);
+  it("counts rooms, not groups, in spaceCount", async () => {
+    // Arrange
+    // The app shows spaceCount in the section header over the grouped list.
+    search.spaces = { items: [room("10001", "100", "hssc"), room("10002", "100", "hssc")] };
 
+    // Act
     const res = await request(httpServer).get("/building/search?q=100");
+
+    // Assert
     expect(res.body.meta.spaceCount).toBe(2);
     expect(res.body.data.spaces).toHaveLength(1);
     expect(res.body.data.spaces[0].items).toHaveLength(2);
   });
 
-  it("space groups follow row order, so relevance ranking survives grouping", async () => {
-    svc.searchSpaces.mockResolvedValue(
-      ranked(
-        [
-          {
-            buildNo: "227",
-            campus: "nsc",
-            spaceCd: "27101",
-            name: { ko: "측량기기성능검사실", en: "" },
-            buildingName: { ko: "제2공학관27동", en: "" },
-            floor: { ko: "1층", en: "" },
-          },
-          {
-            buildNo: "295",
-            campus: "nsc",
-            spaceCd: "95127",
-            name: { ko: "남자숙실(127)", en: "" },
-            buildingName: { ko: "기숙사지관", en: "" },
-            floor: { ko: "1층", en: "" },
-          },
-        ],
-        { hssc: 0, nsc: 2 },
-      ),
-    );
-    svc.searchBuildings.mockResolvedValue(ranked([], { hssc: 0, nsc: 0 }));
-    svc.listBuildings.mockResolvedValue([]);
+  it("keeps room groups in row order, so the relevance ranking survives grouping", async () => {
+    // Arrange
+    search.spaces = { items: [room("27101", "227", "nsc"), room("95127", "295", "nsc"), room("27102", "227", "nsc")] };
 
+    // Act
     const res = await request(httpServer).get("/building/search?q=27");
-    expect(
-      res.body.data.spaces.map((g: { buildNo: string }) => g.buildNo),
-    ).toEqual(["227", "295"]);
+
+    // Assert
+    expect(res.body.data.spaces.map((g: { buildNo: string }) => g.buildNo)).toEqual(["227", "295"]);
   });
 
-  it("reports truncation in meta.limits without disturbing meta.counts", async () => {
-    svc.searchBuildings.mockResolvedValue(ranked([], { hssc: 0, nsc: 0 }));
-    svc.searchSpaces.mockResolvedValue({
-      items: [],
-      counts: { hssc: 0, nsc: 6173, total: 6173 },
-      total: 6173,
-      truncated: true,
-    });
-    svc.listBuildings.mockResolvedValue([]);
+  it("reports truncation in meta.limits without changing meta.counts", async () => {
+    // Arrange
+    search.spaces = { items: [], counts: { hssc: 0, nsc: 6173, total: 6173 }, total: 6173, truncated: true };
 
+    // Act
     const res = await request(httpServer).get("/building/search?q=%EC%8B%A4");
+
+    // Assert
     expect(res.body.meta.counts.space.total).toBe(6173);
-    expect(res.body.meta.limits.space.truncated).toBe(true);
-    expect(res.body.meta.limits.space.total).toBe(6173);
-    expect(res.body.meta.limits.space.limit).toBe(1000);
+    expect(res.body.meta.limits.space).toEqual({ limit: 1000, total: 6173, truncated: true });
   });
 });
 
 describe("GET /building/:skkuId", () => {
-  it("rejects non-numeric skkuId with 400 INVALID_ID", async () => {
-    const res = await request(httpServer).get("/building/abc");
+  it.each(["abc", "0"])("rejects skkuId %j with 400 INVALID_ID before any read", async (skkuId) => {
+    // Act
+    const res = await request(httpServer).get(`/building/${skkuId}`);
+
+    // Assert
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("INVALID_ID");
-    expect(svc.findBuildingBySkkuId).not.toHaveBeenCalled();
+    expect(res.body.error).toEqual({ code: "INVALID_ID", message: "skkuId must be a positive integer" });
+    expect(catalog.reads).toEqual([]);
   });
 
-  it("rejects skkuId=0 (must be positive)", async () => {
-    const res = await request(httpServer).get("/building/0");
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("INVALID_ID");
-  });
-
-  it("returns 404 NOT_FOUND when no building matches", async () => {
-    svc.findBuildingBySkkuId.mockResolvedValue(null);
+  it("answers 404 NOT_FOUND naming the id when no building matches", async () => {
+    // Act
     const res = await request(httpServer).get("/building/999");
+
+    // Assert
     expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe("NOT_FOUND");
-    expect(res.body.error.message).toMatch(/999/);
+    expect(res.body.error).toEqual({ code: "NOT_FOUND", message: "Building 999 not found" });
   });
 
-  it("returns building + floors + connections with campusLabel and en-fallback", async () => {
-    svc.findBuildingBySkkuId.mockResolvedValue({
-      _id: 1,
-      buildNo: "100",
-      campus: "hssc",
-      name: { ko: "법학관", en: "Law" },
-    });
-    svc.listSpacesByBuildNo.mockResolvedValue([
-      { spaceCd: "100-A101", name: { ko: "강의실", en: "" }, floor: { ko: "1층", en: "" } },
-    ]);
-    svc.listConnectionsBySkkuId.mockResolvedValue([
-      { a: { skkuId: 1, floor: { ko: "1층" } }, b: { skkuId: 2, floor: { ko: "1층" } } },
-    ]);
-    svc.listBuildingsBySkkuIds.mockResolvedValue([{ _id: 2, buildNo: "101" }]);
+  it("returns the building, its own floors and its connections, labelled and with the English fallback", async () => {
+    // Arrange
+    catalog.buildings = [LAW, building(2, "101", "hssc", "경영관", "Business")];
+    catalog.spaces = [room("100-A101", "100", "hssc"), room("101-B101", "101", "hssc")];
+    catalog.connections = [{ a: { skkuId: 1, floor: { ko: "1층", en: "1F" } }, b: { skkuId: 2, floor: { ko: "2층", en: "2F" } } }] as never;
 
+    // Act
     const res = await request(httpServer).get("/building/1");
-    expect(res.status).toBe(200);
-    expect(res.body.data.building.campusLabel).toBe("인사캠");
-    expect(res.body.data.floors).toHaveLength(1);
-    expect(res.body.data.floors[0].floor.en).toBe("1층");
-    expect(res.body.data.floors[0].spaces[0].name.en).toBe("강의실");
-    expect(res.body.data.connections).toHaveLength(1);
-    expect(svc.listSpacesByBuildNo).toHaveBeenCalledWith("100");
-    expect(svc.listConnectionsBySkkuId).toHaveBeenCalledWith(1);
-  });
-});
 
-describe("GET /building/:skkuId with a broken space", () => {
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.building).toMatchObject({ _id: 1, campusLabel: "인사캠" });
+    expect(res.body.data.floors).toEqual([
+      { floor: { ko: "1층", en: "1층" }, spaces: [{ spaceCd: "100-A101", name: { ko: "강의실 100-A101", en: "강의실 100-A101" }, conspaceCd: null }] },
+    ]);
+    expect(res.body.data.connections).toEqual([
+      {
+        targetSkkuId: 2,
+        targetBuildNo: "101",
+        targetDisplayNo: null,
+        targetName: { ko: "경영관", en: "Business" },
+        fromFloor: { ko: "1층", en: "1F" },
+        toFloor: { ko: "2층", en: "2F" },
+      },
+    ]);
+  });
+
   it("answers 500 INTERNAL_ERROR when a space has no floor", async () => {
     // Arrange
-    svc.findBuildingBySkkuId.mockResolvedValue({ _id: 1, buildNo: "100", campus: "hssc", name: { ko: "법학관", en: "Law" } });
-    svc.listSpacesByBuildNo.mockResolvedValue([{ spaceCd: "100-A101", name: { ko: "강의실", en: "" } }]);
-    svc.listConnectionsBySkkuId.mockResolvedValue([]);
-    svc.listBuildingsBySkkuIds.mockResolvedValue([]);
+    catalog.buildings = [LAW];
+    catalog.spaces = [{ spaceCd: "100-A101", buildNo: "100", campus: "hssc", name: { ko: "강의실", en: "" } } as SpaceDoc];
 
     // Act
     const res = await request(httpServer).get("/building/1");
@@ -375,23 +313,12 @@ describe("GET /building/:skkuId with a broken space", () => {
  * case: this builder does not mount that middleware.
  */
 describe("Cache-Control on /building/*", () => {
-  const EMPTY = { items: [], counts: { hssc: 0, nsc: 0, total: 0 }, total: 0, truncated: false };
-
-  function seedReads(): void {
-    svc.listBuildings.mockResolvedValue([]);
-    svc.findBuildingBySkkuId.mockResolvedValue({ _id: 1, buildNo: "100", campus: "hssc", name: { ko: "법학관", en: "Law" } });
-    svc.listSpacesByBuildNo.mockResolvedValue([]);
-    svc.listConnectionsBySkkuId.mockResolvedValue([]);
-    svc.listBuildingsBySkkuIds.mockResolvedValue([]);
-    svc.searchBuildings.mockResolvedValue(EMPTY);
-    svc.searchSpaces.mockResolvedValue(EMPTY);
-  }
-
   it.each(["/building/list", "/building/list?campus=hssc", "/building/1", "/building/search?q=law"])(
     "lets clients cache %s for five minutes, per language",
     async (path) => {
       // Arrange
-      seedReads();
+      buildings.buildings = [LAW];
+      catalog.buildings = [LAW];
 
       // Act
       const res = await request(httpServer).get(path);
@@ -407,11 +334,11 @@ describe("Cache-Control on /building/*", () => {
     ["an invalid campus", "/building/list?campus=mars", 400, () => undefined],
     ["a missing query", "/building/search", 400, () => undefined],
     ["an invalid id", "/building/abc", 400, () => undefined],
-    ["an unknown building", "/building/999", 404, () => svc.findBuildingBySkkuId.mockResolvedValue(null)],
-    ["a failed read", "/building/1", 500, () => svc.findBuildingBySkkuId.mockRejectedValue(new Error("pool closed"))],
+    ["an unknown building", "/building/999", 404, () => undefined],
+    ["a failed read", "/building/1", 500, () => (catalog.failWith = new Error("pool closed"))],
   ])("sends no Cache-Control on %s", async (_case, path, status, arrangeFailure) => {
     // Arrange
-    seedReads();
+    catalog.buildings = [LAW];
     arrangeFailure();
 
     // Act
