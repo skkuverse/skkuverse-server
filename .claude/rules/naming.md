@@ -19,6 +19,7 @@ A name is how a reader, or an agent, finds code and understands it without a com
 | No `// --- X ---` section dividers | `section-comments.test.ts` |
 | Top-level `src/` folders are shared roles or feature modules | `folders.test.ts` |
 | One file per role in a module folder, named after the folder's module (`building-sync.*` in `sync/`) | `folders.test.ts` |
+| A module with a sub-module keeps no controller or poller at its root | `folders.test.ts` |
 
 ## Picking a name
 
@@ -78,3 +79,4 @@ One concept, one name (ADR 0010, D1). A module adds its section when it is migra
 | tier, band | A ranking tier scores one kind of match; the strong and weak bands split results at `*_STRONG_MIN_SCORE` | level, bucket |
 | ranked result | Rows plus the campus counts the same predicate produced (`RankedSearchResult`) | search data |
 | campus shape | A `campus_shapes` document: an authored footprint, boundary or path | geometry doc |
+| catalog | Building's list-and-detail flow (`catalog/`): the list is the catalog, `:skkuId` one entry of it | list, detail, core, read |
