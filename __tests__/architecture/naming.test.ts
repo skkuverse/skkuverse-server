@@ -24,69 +24,10 @@
  */
 import ts from "typescript";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
+import { CLASS_ROLES, EXEMPT, ROLES, parse } from "../helpers/architecture/names";
 import { readSource, filesUnder } from "../helpers/architecture/tree";
 
-const ROLES = new Set([
-  "module",
-  "controller",
-  "service",
-  "repository",
-  "client",
-  "poller",
-  "rules",
-  "mapper",
-  "config",
-  "schema",
-  "types",
-  "document",
-  "constants",
-  "error",
-  "middleware",
-  "filter",
-  "interceptor",
-  "pipe",
-  "decorator",
-  "util",
-]);
-
-const CLASS_ROLES = new Set([
-  "module",
-  "controller",
-  "service",
-  "repository",
-  "client",
-  "poller",
-  "error",
-  "middleware",
-  "filter",
-  "interceptor",
-  "pipe",
-]);
-
-const EXEMPT = new Set([
-  "src/main.ts",
-  "src/instrument.ts",
-  "src/app.module.ts",
-  "src/types.d.ts",
-  // Pinned by the umbrella repo's contract manifest (.contracts.lock.json).
-  "src/notices/notices.topics.ts",
-]);
-
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-interface ParsedName {
-  /** Dot-separated parts without `.ts`, `.spec` and `.generated`. */
-  parts: string[];
-  dir: string;
-}
-
-function parse(file: string): ParsedName {
-  const slash = file.lastIndexOf("/");
-  let parts = file.slice(slash + 1).replace(/\.ts$/, "").split(".");
-  if (parts.at(-1) === "spec") parts = parts.slice(0, -1);
-  if (parts.at(-1) === "generated") parts = parts.slice(0, -1);
-  return { parts, dir: file.slice(0, slash) };
-}
 
 const inInfra = (dir: string) => dir === "src/infra" || dir.startsWith("src/infra/");
 const inShared = (dir: string) => dir === "src/shared" || dir.startsWith("src/shared/");
