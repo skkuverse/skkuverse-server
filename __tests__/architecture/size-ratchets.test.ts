@@ -10,8 +10,9 @@
  * minimum and reading the sizes ESLint reports.
  *
  * The per-role caps of migrated modules (blocks "size/<role>") are held the
- * same way: each `max-lines` within 10 of the largest file it covers, and none
- * covering no file.
+ * same way: each `max-lines` within 10 of the largest file it covers, measured
+ * with the block's own options (comment lines count, D10), and none covering no
+ * file.
  */
 import { Linter } from "eslint";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
@@ -73,10 +74,10 @@ function worstSizes(): Record<RatchetRule, { size: number; where: string }> {
   return worst;
 }
 
-/** Non-blank, non-comment lines of a file, as `max-lines` counts them. */
-function codeLines(file: string, linter: Linter): number {
+/** A file's lines as `max-lines` counts them with `options`. */
+function countedLines(file: string, linter: Linter, options: Record<string, unknown>): number {
   const rules: Linter.RulesRecord = {
-    "max-lines": ["error", { max: 1, skipBlankLines: true, skipComments: true }],
+    "max-lines": ["error", { ...options, max: 1 }],
   };
   const messages = linter.verify(
     readSource(file),
@@ -125,7 +126,7 @@ describe("size ratchets", () => {
       const entry = b.rules?.["max-lines"] as [string, { max: number }];
       const covered = files.filter((f) => (b.files as string[]).some((g) => matchesGlob(g, f)));
       if (covered.length === 0) return [`${b.name}: covers no file; delete it`];
-      const worst = Math.max(...covered.map((f) => codeLines(f, linter)));
+      const worst = Math.max(...covered.map((f) => countedLines(f, linter, entry[1])));
       return entry[1].max - worst > MARGIN["max-lines"]
         ? [`${b.name}: limit ${entry[1].max}, largest ${worst}; lower the limit to ${worst + MARGIN["max-lines"]} or less`]
         : [];

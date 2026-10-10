@@ -204,31 +204,31 @@ function featureBoundaryBlocks() {
 }
 
 // Per-role size caps for migrated modules (ADR 0010, D9). Each is the largest
-// file of that role in a migrated module plus at most 10 lines
-// (__tests__/architecture/size-ratchets.test.ts keeps them there). A module
-// joins MIGRATED_MODULES when its migration lands; a file over its role's cap
-// is split, or its flow becomes a sub-module (D3).
+// file of that role in a migrated module plus at most 10 lines, comment lines
+// counted (__tests__/architecture/size-ratchets.test.ts keeps them there). A
+// module joins MIGRATED_MODULES when its migration lands; a file over its
+// role's cap is split, or its flow becomes a sub-module (D3).
 const MIGRATED_MODULES = ["building"];
 const ROLE_MAX_LINES = {
-  client: 157,
-  controller: 41,
-  document: 117,
-  mapper: 140,
-  module: 23,
-  poller: 36,
-  query: 160,
-  repository: 182,
-  rules: 80,
-  schema: 34,
-  service: 232,
-  types: 54,
+  client: 160,
+  controller: 37,
+  document: 130,
+  mapper: 154,
+  module: 18,
+  poller: 33,
+  query: 173,
+  repository: 187,
+  rules: 92,
+  schema: 31,
+  service: 242,
+  types: 58,
 };
 
 function roleSizeBlocks() {
   return Object.entries(ROLE_MAX_LINES).map(([role, max]) => ({
     name: `size/${role}`,
     files: MIGRATED_MODULES.map((m) => `src/${m}/**/*.${role}.ts`),
-    rules: { "max-lines": ["error", { max, skipBlankLines: true, skipComments: true }] },
+    rules: { "max-lines": ["error", { max, skipBlankLines: true, skipComments: false }] },
   }));
 }
 
@@ -295,12 +295,12 @@ module.exports = [
   {
     // Size ratchets (ADR 0010, D9): each limit is today's worst file or
     // function, so nothing grows past it. Lower them as modules are migrated;
-    // never raise one. Errors, not warnings: lint allows no warnings.
+    // never raise one. max-lines counts comment lines (D10). Errors, not warnings.
     name: "size-ratchets",
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.spec.ts"],
     rules: {
-      "max-lines": ["error", { max: 440, skipBlankLines: true, skipComments: true }],
+      "max-lines": ["error", { max: 553, skipBlankLines: true, skipComments: false }],
       "max-lines-per-function": ["error", { max: 122, skipBlankLines: true, skipComments: true }],
       complexity: ["error", 47],
       "max-params": ["error", 7],
