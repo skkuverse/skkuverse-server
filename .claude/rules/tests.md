@@ -9,7 +9,7 @@ paths:
 # Test conventions
 
 - Where a test lives (ADR 0010, D11):
-  - A unit test sits next to its source as `src/<path>/<name>.spec.ts`: `src/infra/cached-loader.spec.ts` tests `src/infra/cached-loader.ts`. Specs are excluded from `tsconfig.json` and `dist/` (the build fails if one gets there), from coverage, and from the size ratchets; `npm run typecheck` checks them through `tsconfig.test.json`.
+  - A unit test sits next to its source as `src/<path>/<name>.spec.ts`: `src/infra/cached-loader.spec.ts` tests `src/infra/cached-loader.ts`. Specs are excluded from `tsconfig.build.json`, so they never reach `dist/` (the build fails if one gets there). `tsconfig.json`, which the editor and `npm run typecheck` use, includes them. They are also excluded from coverage and from the size ratchets; `__tests__/` is checked through `tsconfig.test.json`.
   - (An operations detail is left out of the public history.)
   - The unit tests of a module not yet migrated stay in `__tests__/nest/<module>/` until its migration moves them.
   - `__tests__/architecture/` holds the architecture rules; `__tests__/helpers/` is shared infrastructure, excluded from collection and coverage (`jest.config.js`).

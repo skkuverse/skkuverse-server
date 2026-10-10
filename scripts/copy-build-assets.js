@@ -58,15 +58,16 @@ for (const [src, dest] of assets) {
 fs.rmSync("dist/__tests__", { recursive: true, force: true });
 process.stdout.write("  stripped dist/__tests__\n");
 
-// Unit tests live next to their sources as src/**/*.spec.ts and tsconfig.json
-// excludes them. A compiled spec in dist/ means that exclude was lost, and the
-// image would ship test code (and its jest.mock calls) to production.
+// Unit tests live next to their sources as src/**/*.spec.ts and
+// tsconfig.build.json excludes them. A compiled spec in dist/ means that
+// exclude was lost, and the image would ship test code (and its jest.mock
+// calls) to production.
 const specs = fs
   .readdirSync("dist", { recursive: true, encoding: "utf8" })
   .filter((f) => /\.spec\.js$/.test(f));
 if (specs.length > 0) {
   process.stderr.write(
-    `  dist/ contains compiled specs (check the exclude in tsconfig.json):\n${specs
+    `  dist/ contains compiled specs (check the exclude in tsconfig.build.json):\n${specs
       .map((f) => `    dist/${f}\n`)
       .join("")}`,
   );
