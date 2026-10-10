@@ -3,7 +3,7 @@ import { ConfigModule } from "./config/config.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
 import { HealthModule } from "./health/health.module";
 import { BusModule } from "./bus/bus.module";
-import { AppFeatureModule } from "./app/app-feature.module";
+import { AppConfigModule } from "./app-config/app-config.module";
 import { UiModule } from "./ui/ui.module";
 import { AdModule } from "./ad/ad.module";
 import { BuildingModule } from "./building/building.module";
@@ -37,7 +37,7 @@ import { MiniAppsModule } from "./miniapps/miniapps.module";
     SchedulingModule,
     HealthModule,
     BusModule,
-    AppFeatureModule,
+    AppConfigModule,
     UiModule,
     AdModule,
     BuildingModule,

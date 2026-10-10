@@ -1,29 +1,19 @@
-import { Controller, Get, Res } from "@nestjs/common";
-import type { Response } from "express";
-import { AppFeatureService, type AppClientConfig } from "./app-feature.service";
+import { Controller, Get } from "@nestjs/common";
+import { CacheControl } from "../http/cache-control.decorator";
+import { AppConfigService } from "./app-config.service";
+import type { AppClientConfig } from "./app-config.types";
 
-/**
- * Read from the environment at boot, identical for every client and every
- * language, so it may be cached by the client and by a shared cache in front of
- * the origin. Five minutes bounds how long a raised minimum version takes to
- * reach a cold start once the replicas restart with it.
- */
-const CONFIG_CACHE_CONTROL = "public, max-age=300";
+// Read at boot and the same for every client and language; five minutes bounds how long a
+// raised minimum version takes to reach a cold start once the replicas restart with it.
+const APP_CONFIG_CACHE_CONTROL = "public, max-age=300";
 
-/**
- * GET /app/config.
- *
- * Mounted with generalLimiter and NO auth. Returns the data object; the global
- * ResponseInterceptor wraps it in the { meta, data } envelope. `passthrough`
- * keeps that envelope while the handler sets Cache-Control.
- */
 @Controller("app")
-export class AppConfigFeatureController {
-  constructor(private readonly appFeature: AppFeatureService) {}
+export class AppConfigController {
+  constructor(private readonly appConfig: AppConfigService) {}
 
   @Get("config")
-  getConfig(@Res({ passthrough: true }) res: Response): AppClientConfig {
-    res.set("Cache-Control", CONFIG_CACHE_CONTROL);
-    return this.appFeature.getConfig();
+  @CacheControl(APP_CONFIG_CACHE_CONTROL)
+  getConfig(): AppClientConfig {
+    return this.appConfig.getConfig();
   }
 }

@@ -166,7 +166,7 @@ const VIOLATORS = {
     "src/notices/notices.data.ts",
   ],
   features: {
-    app: ["src/app/app-feature.service.ts"],
+    "app-config": ["src/app-config/app-config.service.ts"],
     map: ["src/map/map-event-overlays.data.ts"],
     ui: ["src/ui/home/home-layout.schema.ts", "src/ui/home/home-layout.ts", "src/ui/ui/ui.buslist.ts"],
   },

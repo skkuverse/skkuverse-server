@@ -2,61 +2,12 @@ import { Injectable } from "@nestjs/common";
 import config from "../infra/config";
 import { BRIDGE_ORIGINS, WEB_ORIGIN } from "../infra/origins";
 import { firstPartyOrigins } from "../miniapps/miniapps";
+import type { AppClientConfig } from "./app-config.types";
 
-interface PlatformGate {
-  minVersion: string;
-  updateUrl: string | null;
-}
-
-/**
- * Shape of GET /app/config. Declared once and reused by the controller so the
- * two can't drift (they previously repeated the literal type).
- *
- * ADDITIVE ONLY. Old clients read { ios, android } and ignore unknown keys, so
- * new sections are safe; removing or retyping an existing key is not.
- */
-export interface AppClientConfig {
-  ios: PlatformGate;
-  android: PlatformGate;
-  webview: {
-    /** Origins allowed to reach the native RN bridge. See infra/origins.ts. */
-    bridgeOrigins: string[];
-  };
-  web: {
-    /**
-     * Marketing/launcher origin the client builds mini-app share links and
-     * add-to-home-screen shortcuts against. Published so the client doesn't
-     * have to hardcode a second copy of a host this file already owns.
-     */
-    origin: string;
-  };
-  miniapps: {
-    /**
-     * First-party mini-app origin → its mini-app id. The client opens any URL
-     * on one of these origins in that mini app's shell instead of the generic
-     * /webview, where the page would show its "open in the app" gate. See
-     * FIRST_PARTY_MINIAPP_ORIGINS in infra/origins.ts.
-     */
-    origins: Record<string, string>;
-  };
-}
-
-/**
- * AppFeatureService — the GET /app/config handler.
- *
- * Static passthrough: version gate straight from the resolved
- * src/infra/config.ts, bridge allowlist straight from infra/origins. No DB,
- * no caching, no auth.
- *
- * The allowlist rides here rather than on its own endpoint because the client
- * already fetches /app/config during boot (checkForceUpdate), so publishing it
- * costs zero additional round-trips — and a security list the client needs
- * before its first webview opens must not depend on a second request that may
- * not have landed yet.
- */
+// The bridge allowlist rides on /app/config because the app already fetches it at boot:
+// the list is in hand before the first webview opens, with no second request to wait on.
 @Injectable()
-export class AppFeatureService {
-  /** Returns the client app config: version gate, bridge allowlist, web origin, mini-app origins. */
+export class AppConfigService {
   getConfig(): AppClientConfig {
     const { ios, android } = config.app;
     return {
