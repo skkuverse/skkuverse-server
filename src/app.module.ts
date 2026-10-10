@@ -41,6 +41,8 @@ import { MiniAppsModule } from "./miniapps/miniapps.module";
     UiModule,
     AdModule,
     BuildingModule,
+    // Before BuildingCatalogModule: Nest registers routes in module order, and
+    // /building/:skkuId would catch /building/search (route-order.test.ts).
     BuildingSearchModule,
     BuildingCatalogModule,
     BuildingSyncModule,

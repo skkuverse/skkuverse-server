@@ -6,16 +6,11 @@ import type { SupportedLang } from "../../infra/types";
 import { buildingSearchQuery, type BuildingSearchQuery } from "./building-search.schema";
 import { BuildingSearchService } from "./building-search.service";
 
-/**
- * /building/search: no auth. The general limiter BuildingModule binds on
- * /building covers it, so this module binds none (a second binding of the
- * same limiter would count each request twice).
- */
+// (A perimeter detail is left out of the public history.)
 @Controller("building")
 export class BuildingSearchController {
   constructor(private readonly buildingSearch: BuildingSearchService) {}
 
-  // GET /building/search?q=도서&campus=nsc
   @Get("search")
   async search(
     @Query(
