@@ -106,11 +106,12 @@ function countedLines(file: string, linter: Linter, options: Record<string, unkn
   return size ?? 1;
 }
 
-/** `src/<m>/**\/*.<role>.ts` as a test over a repo path. */
+/** `<folder>/**\/*<tail>` or a single file, as eslint.config.js derives them from the migrated scope. */
 function matchesGlob(glob: string, file: string): boolean {
-  const match = /^src\/([^/]+)\/\*\*\/\*\.([a-z]+)\.ts$/.exec(glob);
-  if (!match) throw new Error(`unexpected size/ glob ${glob}`);
-  return file.startsWith(`src/${match[1]}/`) && file.endsWith(`.${match[2]}.ts`);
+  if (!glob.includes("*")) return file === glob;
+  const match = /^(src\/(?:[\w-]+\/)+)\*\*\/\*((?:\.[a-z]+)?\.ts)$/.exec(glob);
+  if (!match) throw new Error(`unexpected migrated glob ${glob}`);
+  return file.startsWith(match[1]!) && file.endsWith(match[2]!);
 }
 
 describe("size ratchet measurement", () => {
@@ -139,13 +140,7 @@ describe("size ratchets", () => {
   it("of the migrated modules' functions sit at the worst function they cover", () => {
     const name = "size-ratchets/migrated";
     const globs = namedBlock(name).files as string[];
-    const covered = sourceFiles().filter((f) =>
-      globs.some((g) => {
-        const match = /^src\/([^/]+)\/\*\*\/\*\.ts$/.exec(g);
-        if (!match) throw new Error(`unexpected ${name} glob ${g}`);
-        return f.startsWith(`src/${match[1]}/`);
-      }),
-    );
+    const covered = sourceFiles().filter((f) => globs.some((g) => matchesGlob(g, f)));
     expect(covered.length).toBeGreaterThan(0);
     const worst = worstSizes(MIGRATED_RULES, name, covered);
     const loose = MIGRATED_RULES.flatMap((rule) => {

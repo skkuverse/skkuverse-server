@@ -228,9 +228,25 @@ function featureBoundaryBlocks() {
 // Per-role size caps for migrated modules (ADR 0010, D9). Each is the largest
 // file of that role in a migrated module plus at most 10 lines, comment lines
 // counted (__tests__/architecture/size-ratchets.test.ts keeps them there). A
-// module joins MIGRATED_MODULES when its migration lands; a file over its
-// role's cap is split, or its flow becomes a sub-module (D3).
-const MIGRATED_MODULES = ["ad", "app-config", "building", "health"];
+// file over its role's cap is split, or its flow becomes a sub-module (D3).
+//
+// The migrated scope lives in __tests__/architecture/migrated-scopes.json,
+// which the architecture tests read too: a folder ends in "/", a single file
+// does not. A module or file joins it when its migration lands.
+const MIGRATED_SCOPES = require("./__tests__/architecture/migrated-scopes.json");
+for (const scope of MIGRATED_SCOPES) {
+  if (!/^src\/(?:[\w-]+\/)+$|^src\/[\w./-]+\.ts$/.test(scope)) {
+    throw new Error(`migrated-scopes.json: "${scope}" is neither a src/ folder ending in "/" nor a .ts file`);
+  }
+}
+
+/** Globs over the migrated scope for files named `*<tail>`: `migratedGlobs(".service.ts")`. */
+function migratedGlobs(tail) {
+  return MIGRATED_SCOPES.flatMap((scope) =>
+    scope.endsWith("/") ? [`${scope}**/*${tail}`] : scope.endsWith(tail) ? [scope] : [],
+  );
+}
+
 const ROLE_MAX_LINES = {
   client: 178,
   controller: 47,
@@ -249,7 +265,7 @@ const ROLE_MAX_LINES = {
 function roleSizeBlocks() {
   return Object.entries(ROLE_MAX_LINES).map(([role, max]) => ({
     name: `size/${role}`,
-    files: MIGRATED_MODULES.map((m) => `src/${m}/**/*.${role}.ts`),
+    files: migratedGlobs(`.${role}.ts`),
     rules: { "max-lines": ["error", { max, skipBlankLines: true, skipComments: false }] },
   }));
 }
@@ -267,7 +283,7 @@ const MIGRATED_FUNCTION_LIMITS = {
 function migratedFunctionBlock() {
   return {
     name: "size-ratchets/migrated",
-    files: MIGRATED_MODULES.map((m) => `src/${m}/**/*.ts`),
+    files: migratedGlobs(".ts"),
     ignores: ["src/**/*.spec.ts"],
     rules: MIGRATED_FUNCTION_LIMITS,
   };
@@ -279,7 +295,7 @@ function migratedFunctionBlock() {
 function migratedTypescriptBlock() {
   return {
     name: "migrated/typescript",
-    files: MIGRATED_MODULES.map((m) => `src/${m}/**/*.ts`),
+    files: migratedGlobs(".ts"),
     ignores: ["src/**/*.spec.ts"],
     rules: {
       "@typescript-eslint/explicit-module-boundary-types": "error",
