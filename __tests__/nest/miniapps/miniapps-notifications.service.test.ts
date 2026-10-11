@@ -270,6 +270,39 @@ describe("send — a route is a root-relative path (B1)", () => {
   });
 });
 
+// define-boundary-contracts B2 (design D8b): webview and external take the home
+// layout's absolute-https rule; a third-party page stays allowed for both.
+describe("send — webview and external are https:// URLs with no whitespace (B2)", () => {
+  it.each([
+    ["webview", "an inner space", "https://x.test/a b"],
+    ["webview", "a trailing newline", "https://x.test/a\n"],
+    ["webview", "no host", "https://"],
+    ["external", "an inner space", "https://x.test/a b"],
+    ["external", "a trailing newline", "https://x.test/a\n"],
+    ["external", "no host", "https://"],
+  ])("rejects a %s value with %s, writing and sending nothing", async (actionType, _l, actionValue) => {
+    // Act
+    const result = await service.send("eskara-2026", { ...validDraft, actionType, actionValue });
+
+    // Assert
+    expect(result).toEqual({
+      problems: [`actionValue for ${actionType} must be an https:// URL with no whitespace`],
+    });
+    expect(insertSentNotification).not.toHaveBeenCalled();
+    expect(postToFcmFunction).not.toHaveBeenCalled();
+  });
+
+  it.each(["webview", "external"])("still accepts a third-party https:// page for %s", async (actionType) => {
+    // Act
+    await service.send("eskara-2026", { ...validDraft, actionType, actionValue: "https://x.test/a" });
+
+    // Assert
+    const payload = postToFcmFunction.mock.calls[0][0];
+    expect(payload.actionType).toBe(actionType);
+    expect(payload.actionValue).toBe("https://x.test/a");
+  });
+});
+
 describe("feed", () => {
   const doc = {
     _id: "n1",
