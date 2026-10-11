@@ -1,8 +1,9 @@
 /**
  * The Jest network guard (`__tests__/helpers/network-guard.ts`, harden-test-suite
  * design D5): every door to a host outside loopback refuses and names the host,
- * loopback stays open for supertest and real local sockets, and a refusal fails
- * the test file whose code made it, never the file a worker runs next.
+ * loopback stays open for supertest and real local sockets, a server listens on
+ * loopback only, and a refusal fails the test file whose code made it, never the
+ * file a worker runs next.
  */
 import { spawnSync } from "node:child_process";
 import dns from "node:dns";
@@ -15,6 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import tls from "node:tls";
 import { promisify } from "node:util";
+import request from "supertest";
 import { isLoopbackHost, takeBlockedConnections } from "../../helpers/network-guard";
 
 const EXTERNAL_HOST = "example.com";
@@ -149,6 +151,84 @@ describe("network guard: loopback", () => {
   ])("treats %s as loopback: %s", (host, expected) => {
     // Act & Assert
     expect(isLoopbackHost(host)).toBe(expected);
+  });
+});
+
+describe("network guard: servers", () => {
+  const servers: net.Server[] = [];
+
+  function newServer(): net.Server {
+    const server = http.createServer((_req, res) => res.end("ok"));
+    servers.push(server);
+    return server;
+  }
+
+  afterEach(async () => {
+    const listening = servers.splice(0).filter((server) => server.listening);
+    await Promise.all(listening.map((server) => new Promise<void>((resolve) => server.close(() => resolve()))));
+  });
+
+  it.each<[string, (server: net.Server) => unknown, string]>([
+    ["listen(0)", (server) => server.listen(0), "*:0"],
+    ["listen()", (server) => server.listen(), "*:0"],
+    ["listen({ port: 0 })", (server) => server.listen({ port: 0 }), "*:0"],
+    ['listen(0, "0.0.0.0")', (server) => server.listen(0, "0.0.0.0"), "0.0.0.0:0"],
+    ['listen({ port: 0, host: "::" })', (server) => server.listen({ port: 0, host: "::" }), "[::]:0"],
+  ])("refuses %s and names the caller", (_call, listen, target) => {
+    // Arrange
+    const server = newServer();
+
+    // Act
+    const error = thrownBy(() => listen(server));
+    const blocked = takeBlockedConnections();
+
+    // Assert
+    expect(error).toMatchObject({ name: "NetworkGuardError", code: "ENETWORKGUARD", target });
+    expect((error as Error).message).toContain(`${path.basename(__filename)}:`);
+    expect(server.listening).toBe(false);
+    expect(blocked).toEqual([target]);
+  });
+
+  it("refuses supertest's own listen on a server not yet listening, at the request", () => {
+    // Arrange
+    const server = newServer();
+
+    // Act
+    const error = thrownBy(() => request(server).get("/"));
+    const blocked = takeBlockedConnections();
+
+    // Assert
+    expect((error as Error).message).toContain("listen on every address (*:0)");
+    expect((error as Error).message).toContain('listen(0, "127.0.0.1")');
+    expect(blocked).toEqual(["*:0"]);
+  });
+
+  it.each(["127.0.0.1", "::1", "localhost"])("lets a server listen on %s", async (host) => {
+    // Arrange
+    const server = newServer();
+
+    // Act
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, host, resolve);
+    });
+
+    // Assert
+    expect(server.listening).toBe(true);
+    expect(takeBlockedConnections()).toEqual([]);
+  });
+
+  it("lets supertest reach a server already listening on 127.0.0.1", async () => {
+    // Arrange
+    const server = newServer();
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+
+    // Act
+    const res = await request(server).get("/");
+
+    // Assert
+    expect(res.text).toBe("ok");
+    expect(takeBlockedConnections()).toEqual([]);
   });
 });
 
