@@ -6,6 +6,13 @@
  * (AppConfigModule binds it on /app), the controller, ResponseInterceptor and
  * HttpExceptionFilter.
  */
+// AppConfigModule reads the mini-app registry through MiniAppsModule, whose feed
+// service creates its Mongo index at init and whose manifest service prefetches
+// each first-party manifest over the network; neither is part of this route.
+jest.mock("../../../src/miniapps/miniapps.data", () => ({
+  ensureIndexes: jest.fn(async () => undefined),
+}));
+
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
@@ -15,14 +22,17 @@ import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
+const realFetch = global.fetch;
 
 beforeAll(async () => {
+  global.fetch = jest.fn().mockRejectedValue(new Error("no network in tests")) as unknown as typeof fetch;
   app = await buildTestApp({ imports: [ConfigModule, AppConfigModule] });
   httpServer = app.getHttpServer();
 });
 
 afterAll(async () => {
   await app.close();
+  global.fetch = realFetch;
 });
 
 describe("GET /app/config", () => {
