@@ -16,7 +16,7 @@
 # Production mode is also the behavior being verified (JSON logs,
 # USE_PROD_API forced).
 #
-# Databases: in production mode devDbName() is a no-op, so every database name
+# Databases: in production mode dbNameFor() is a no-op, so every database name
 # the server writes is overridden to its _dev name here — bus_campus,
 # skkubus_ads, skkumap, skku_notices, eventmap, miniapps. A new database must be
 # added here too: env_file .env injects the production names, and one left out
