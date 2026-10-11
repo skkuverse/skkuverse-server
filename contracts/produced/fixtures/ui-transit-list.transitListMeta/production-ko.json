@@ -1,0 +1,6 @@
+{
+  "_about": "GET /ui/home/transitlist captured from production 2026-10-11 (stage 8a snapshot, Accept-Language ko); meta without lang",
+  "data": {
+    "busListCount": 5
+  }
+}

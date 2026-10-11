@@ -1,139 +1,50 @@
-/**
- * Home layout loader — GET /ui/home.
- *
- * Reads home-layout.json once at module load, validates it against the mini-app
- * registry (throws at boot on a bad file), and freezes it. Requests then only
- * resolve it: drop banners outside their window, pick one language.
- *
- * Mirrors miniapps/miniapps.ts, including the __dirname path resolution: at
- * runtime this is dist/src/ui/home/, and scripts/copy-build-assets.js stages the
- * JSON next to the compiled .js. Forgetting that entry crashes every run from
- * dist/ (`npm run dev` and production); tests read src/ and still pass.
- */
 import fs from "fs";
 import path from "path";
-import { pick } from "../../infra/i18n";
-import type { I18n, SupportedLang } from "../../infra/types";
-import { map as miniAppRegistry, resolveLogo } from "../../miniapps/miniapps";
-import { assertValidHomeLayout, MINIAPP_FEED_LIMIT_DEFAULT } from "./home-layout.schema";
-import type {
-  HomeBannerCarousel,
-  HomeBannerCarouselRaw,
-  HomeBannerImageRaw,
-  HomeBannerItem,
-  HomeLayout,
-  HomeLayoutRaw,
-  HomeSection,
-  HomeSectionRaw,
-  HomeTile,
-  HomeTileRaw,
-} from "./home-layout.types";
+import { isBrokenLinkAction, parseConfigFile, type BannerImageRaw } from "../ui.schema";
+import type { MiniAppRegistry } from "../ui.types";
+import { homeLayoutFile, type HomeLayoutRaw, type TileRaw } from "./ui-home.schema";
 
-/**
- * Validate and freeze a raw layout. Exported for tests, which feed it layouts
- * the committed file does not contain.
- */
-export function loadHomeLayout(raw: unknown): Readonly<HomeLayoutRaw> {
-  assertValidHomeLayout(raw, new Set(miniAppRegistry.keys()));
-  return Object.freeze(raw);
+// WHY: read next to the compiled file at runtime; scripts/copy-build-assets.js stages the JSON into dist/.
+const HOME_LAYOUT_FILE = path.join(__dirname, "home-layout.json");
+
+type SectionRaw = HomeLayoutRaw["sections"][number];
+type LinkTileRaw = Extract<TileRaw, { kind: "link" }>;
+
+const tilesOf = (section: SectionRaw): TileRaw[] => (section.type === "tile_grid" ? section.tiles : []);
+const isLinkTile = (tile: TileRaw): tile is LinkTileRaw => tile.kind === "link";
+
+function linksOf(section: SectionRaw): Array<BannerImageRaw | LinkTileRaw> {
+  const images = section.type === "banner_carousel" ? section.items.flatMap((i) => (i.type === "image" ? [i] : [])) : [];
+  return [...images, ...tilesOf(section).filter(isLinkTile)];
 }
 
-const layout = loadHomeLayout(
-  JSON.parse(fs.readFileSync(path.join(__dirname, "home-layout.json"), "utf8")),
-);
-
-/** `ko` is required and non-blank (schema), so the fallback is only for the type. */
-function text(value: I18n, lang: SupportedLang): string {
-  return pick(value, lang) ?? value.ko;
+function miniAppIdsOf(section: SectionRaw): string[] {
+  if (section.type === "miniapp_feed") return [section.miniAppId];
+  return tilesOf(section).flatMap((tile) => (tile.kind === "miniapp" ? [tile.id] : []));
 }
 
-function isShowing(item: HomeBannerImageRaw, now: number): boolean {
-  if (item.startAt !== undefined && now < Date.parse(item.startAt)) return false;
-  if (item.endAt !== undefined && now >= Date.parse(item.endAt)) return false;
-  return true;
+const isBrokenIcon = (tile: LinkTileRaw, registry: MiniAppRegistry): boolean =>
+  tile.icon.kind === "emoji" && !registry.isSingleEmoji(tile.icon.emoji);
+
+function registryIssues(layout: HomeLayoutRaw, registry: MiniAppRegistry): string[] {
+  const { sections } = layout;
+  const unregistered = sections.flatMap(miniAppIdsOf).filter((id) => !registry.map.has(id));
+  const brokenLinks = sections.flatMap(linksOf).filter((link) => isBrokenLinkAction(link, registry));
+  const brokenIcons = sections.flatMap(tilesOf).filter(isLinkTile).filter((tile) => isBrokenIcon(tile, registry));
+  return [
+    ...unregistered.map((id) => `"${id}" is not a registered mini app`),
+    ...brokenLinks.map((link) => `"${link.id}" actionValue "${link.actionValue}" is not valid for "${link.actionType}"`),
+    ...brokenIcons.map((tile) => `"${tile.id}" icon must be exactly one emoji`),
+  ];
 }
 
-/**
- * Built from named fields rather than `...raw`, so the on-disk window and the
- * untranslated text can never reach the wire.
- *
- * Exported for the campus sheet's carousel, which resolves the same way.
- */
-export function toWireCarousel(
-  section: HomeBannerCarouselRaw,
-  lang: SupportedLang,
-  now: number,
-): HomeBannerCarousel {
-  const items: HomeBannerItem[] = [];
-  for (const item of section.items) {
-    if (item.type === "default") {
-      items.push({ type: "default" });
-    } else if (isShowing(item, now)) {
-      items.push({
-        type: "image",
-        id: item.id,
-        imageUrl: item.imageUrl,
-        alt: text(item.alt, lang),
-        ...(item.actionType !== undefined
-          ? { actionType: item.actionType, actionValue: item.actionValue }
-          : {}),
-      });
-    }
-  }
-  return {
-    type: "banner_carousel",
-    id: section.id,
-    aspectRatio: section.aspectRatio,
-    autoRotateSec: section.autoRotateSec,
-    items,
-  };
+export function loadHomeLayout(raw: unknown, registry: MiniAppRegistry): Readonly<HomeLayoutRaw> {
+  const schema = homeLayoutFile.superRefine((layout, ctx) => {
+    for (const message of registryIssues(layout, registry)) ctx.addIssue({ code: "custom", message });
+  });
+  return Object.freeze(parseConfigFile("home layout", schema, raw));
 }
 
-function toWireTile(tile: HomeTileRaw, lang: SupportedLang): HomeTile {
-  if (tile.kind === "link") {
-    return {
-      kind: "link",
-      id: tile.id,
-      title: text(tile.title, lang),
-      icon: resolveLogo(tile.icon),
-      actionType: tile.actionType,
-      actionValue: tile.actionValue,
-    };
-  }
-  return { kind: tile.kind, id: tile.id };
-}
-
-function toWireSection(section: HomeSectionRaw, lang: SupportedLang, now: number): HomeSection {
-  if (section.type === "tile_grid") {
-    return {
-      type: "tile_grid",
-      id: section.id,
-      ...(section.title !== undefined ? { title: text(section.title, lang) } : {}),
-      tiles: section.tiles.map((tile) => toWireTile(tile, lang)),
-    };
-  }
-  if (section.type === "miniapp_feed") {
-    return {
-      type: "miniapp_feed",
-      id: section.id,
-      miniAppId: section.miniAppId,
-      ...(section.title !== undefined ? { title: text(section.title, lang) } : {}),
-      limit: section.limit ?? MINIAPP_FEED_LIMIT_DEFAULT,
-    };
-  }
-  // Kept even when every image has expired and no default was placed: the app
-  // draws its default banner for an empty carousel, never an empty slot.
-  return toWireCarousel(section, lang, now);
-}
-
-export function resolveHomeLayout(
-  lang: SupportedLang,
-  now: Date,
-  source: Readonly<HomeLayoutRaw> = layout,
-): HomeLayout {
-  const at = now.getTime();
-  return {
-    version: source.version,
-    sections: source.sections.map((section) => toWireSection(section, lang, at)),
-  };
+export function readHomeLayout(registry: MiniAppRegistry): Readonly<HomeLayoutRaw> {
+  return loadHomeLayout(JSON.parse(fs.readFileSync(HOME_LAYOUT_FILE, "utf8")), registry);
 }

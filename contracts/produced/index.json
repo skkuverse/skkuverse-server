@@ -69,5 +69,52 @@
     "source": "src/shared/link-action.wire.ts",
     "export": "linkActionType",
     "routes": []
+  },
+  "ui-campus.campusSheet": {
+    "source": "src/ui/campus/ui-campus.wire.ts",
+    "export": "campusSheet",
+    "routes": [
+      "GET ui/home/campus"
+    ]
+  },
+  "ui-home.homeLayout": {
+    "source": "src/ui/home/ui-home.wire.ts",
+    "export": "homeLayout",
+    "routes": [
+      "GET ui/home"
+    ]
+  },
+  "ui-scroll.scrollCards": {
+    "source": "src/ui/scroll/ui-scroll.wire.ts",
+    "export": "scrollCards",
+    "routes": [
+      "GET ui/home/scroll"
+    ]
+  },
+  "ui-scroll.scrollCardsMeta": {
+    "source": "src/ui/scroll/ui-scroll.wire.ts",
+    "export": "scrollCardsMeta",
+    "routes": [
+      "GET ui/home/scroll"
+    ]
+  },
+  "ui-transit-list.transitList": {
+    "source": "src/ui/transit-list/ui-transit-list.wire.ts",
+    "export": "transitList",
+    "routes": [
+      "GET ui/home/transitlist"
+    ]
+  },
+  "ui-transit-list.transitListMeta": {
+    "source": "src/ui/transit-list/ui-transit-list.wire.ts",
+    "export": "transitListMeta",
+    "routes": [
+      "GET ui/home/transitlist"
+    ]
+  },
+  "ui.bannerCarousel": {
+    "source": "src/ui/ui.wire.ts",
+    "export": "bannerCarousel",
+    "routes": []
   }
 }

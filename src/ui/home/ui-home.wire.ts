@@ -1,208 +1,52 @@
-/**
- * Home layout types — the server-side SSOT for GET /ui/home.
- *
- * Mirrored by packages/shared/src/home/schema.ts in skkuverse-app, which is a
- * CONSUMER of this shape. Keep the two in step: the client parses tolerantly,
- * so a mismatch degrades silently (a section or a banner page disappears)
- * rather than erroring.
- *
- * A grid is a list of tiles, each tagged with a `kind` that says where its name
- * and icon come from. A `miniapp` tile names a registered mini app by id only:
- * its name and logo stay in the registry (GET /miniapps), which the client
- * already holds and joins against, so a rename is one edit in one place. A
- * `game` tile names a game bundled into the app, which only the app can
- * resolve. A `link` tile carries its own text, icon and action, for anything
- * that is neither (an app screen, a page). The client drops a tile whose kind it
- * does not know, so a new kind never breaks a released build.
- *
- * Released clients never call this endpoint. They still draw one flat grid from
- * the registry's `order` + `hidden`, which is why `hidden` stays in index.json.
- */
-import type { I18n } from "../../infra/types";
-import type { MiniAppLogo, MiniAppLogoRaw } from "../../miniapps/types";
-import { linkActionType, type LinkActionType } from "../../shared/link-action.wire";
+import { z } from "zod";
+import { linkActionType } from "../../shared/link-action.wire";
+import { bannerCarousel } from "../ui.wire";
+
+/** WHY: an image at an absolute URL, or an emoji the app renders in Tossface. */
+const tileIcon = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("remote"), uri: z.string() }),
+  z.object({ kind: z.literal("emoji"), emoji: z.string() }),
+]);
+
+/** CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/home/schema.ts drops a tile of an unknown kind. */
+const tile = z.discriminatedUnion("kind", [
+  /** WHY: a registered mini app by id; its name and logo come from GET /miniapps. */
+  z.object({ kind: z.literal("miniapp"), id: z.string() }),
+  /** WHY: a game bundled into the app, which names and draws it; a build without it drops the tile. */
+  z.object({ kind: z.literal("game"), id: z.string() }),
+  z.object({
+    kind: z.literal("link"),
+    id: z.string(),
+    title: z.string(),
+    icon: tileIcon,
+    actionType: linkActionType,
+    actionValue: z.string(),
+  }),
+]);
+
+const tileGrid = z.object({
+  type: z.literal("tile_grid"),
+  id: z.string(),
+  title: z.string().optional(),
+  tiles: z.array(tile),
+});
+
+/** WHY: where a mini app's broadcast feed card sits; the app fetches the entries itself. */
+const miniAppFeed = z.object({
+  type: z.literal("miniapp_feed"),
+  id: z.string(),
+  miniAppId: z.string(),
+  title: z.string().optional(),
+  limit: z.int(),
+});
 
 /**
- * Bump only on BREAKING changes (removed/renamed/retyped field). A new section
- * type or banner item type is not breaking: clients skip what they do not know.
+ * CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/home/schema.ts parses this tolerantly and skips a
+ * section of an unknown type.
  */
-export const HOME_LAYOUT_VERSION = 1;
+export const homeLayout = z.object({
+  version: z.int(),
+  sections: z.array(z.discriminatedUnion("type", [bannerCarousel, tileGrid, miniAppFeed])),
+});
 
-/** Action types a banner may carry. A subset of the app's SDUI `ActionType`. */
-export const HOME_ACTION_TYPES = linkActionType.options;
-export type HomeActionType = LinkActionType;
-
-// ── On disk (home-layout.json) ──
-
-/** An uploaded image, optionally shown only inside [startAt, endAt). */
-export interface HomeBannerImageRaw {
-  type: "image";
-  /** Stable slug; the analytics item id for a tap. */
-  id: string;
-  /** Absolute URL on the media bucket, content-hashed and immutable. */
-  imageUrl: string;
-  /** Screen-reader label. Required: an image banner has no other text. */
-  alt: I18n;
-  actionType?: HomeActionType;
-  actionValue?: string;
-  /** ISO 8601 with an explicit offset. Absent means already showing. */
-  startAt?: string;
-  /** ISO 8601 with an explicit offset, exclusive. Absent means no end. */
-  endAt?: string;
-}
-
-/**
- * The app's own built-in banner (HeroBanner), placed where it sits in the list.
- * A list item rather than an `includeDefault` flag, so one entry decides both
- * whether the default shows and where in the rotation it falls.
- */
-export interface HomeBannerDefaultRaw {
-  type: "default";
-}
-
-export type HomeBannerItemRaw = HomeBannerImageRaw | HomeBannerDefaultRaw;
-
-export interface HomeBannerCarouselRaw {
-  type: "banner_carousel";
-  id: string;
-  /** width / height of every page in the slot. */
-  aspectRatio: number;
-  /** Seconds per page. 0 turns auto-rotation off. */
-  autoRotateSec: number;
-  items: HomeBannerItemRaw[];
-}
-
-/**
- * The campus sheet's carousel (src/ui/ui/campus-banners.json, served inside
- * GET /ui/home/campus). Same shape and rules as the home one, but images only:
- * the campus sheet has no built-in banner for a `default` item to stand for.
- */
-export interface CampusBannerCarouselRaw extends HomeBannerCarouselRaw {
-  items: HomeBannerImageRaw[];
-}
-
-/** A registered mini app. Name and logo come from the registry. */
-export interface HomeMiniAppTile {
-  kind: "miniapp";
-  id: string;
-}
-
-/**
- * A game bundled into the app (`skkuverse-app/apps/mobile/src/features/games`).
- * Name and icon come from the app, and a build that does not ship the game
- * drops the tile. The server cannot know which games a build carries, so it
- * checks the shape of the id only.
- */
-export interface HomeGameTile {
-  kind: "game";
-  id: string;
-}
-
-/** Link icons: one emoji or an image on the media bucket. */
-export type HomeTileIconRaw = Extract<MiniAppLogoRaw, { kind: "emoji" | "media" }>;
-
-/**
- * Anything that is neither: an app screen, a page. Carries its own text, icon
- * and action. A `route` to a screen that older builds lack lands them on
- * not-found, so add such a link only once the build carrying the screen is out.
- */
-export interface HomeLinkTileRaw {
-  kind: "link";
-  /** Stable slug; the analytics item id for a tap. */
-  id: string;
-  title: I18n;
-  icon: HomeTileIconRaw;
-  actionType: HomeActionType;
-  actionValue: string;
-}
-
-export type HomeTileRaw = HomeMiniAppTile | HomeGameTile | HomeLinkTileRaw;
-
-export interface HomeTileGridRaw {
-  type: "tile_grid";
-  id: string;
-  /** Section heading. Absent means the grid is drawn with no heading. */
-  title?: I18n;
-  /** In display order. */
-  tiles: HomeTileRaw[];
-}
-
-/**
- * A short, live list of a mini app's broadcast feed (GET /miniapps/:id/notifications),
- * drawn natively on home — for ESKARA, the announcements the student council
- * pushes during the festival. The app fetches the entries itself; this section
- * only says where the card sits and which feed it reads. Builds that predate the
- * type drop the section, so placing it is safe at any time.
- */
-export interface HomeMiniAppFeedRaw {
-  type: "miniapp_feed";
-  id: string;
-  /** A registered mini app; its feed is the one shown. */
-  miniAppId: string;
-  /** Card heading. Absent means the app's own default heading. */
-  title?: I18n;
-  /** How many entries the card shows. Defaults to MINIAPP_FEED_LIMIT_DEFAULT. */
-  limit?: number;
-}
-
-export type HomeSectionRaw = HomeBannerCarouselRaw | HomeTileGridRaw | HomeMiniAppFeedRaw;
-
-export interface HomeLayoutRaw {
-  version: number;
-  sections: HomeSectionRaw[];
-}
-
-// ── On the wire ──
-
-export interface HomeBannerImage {
-  type: "image";
-  id: string;
-  imageUrl: string;
-  alt: string;
-  actionType?: HomeActionType;
-  actionValue?: string;
-}
-
-export type HomeBannerItem = HomeBannerImage | HomeBannerDefaultRaw;
-
-export interface HomeBannerCarousel {
-  type: "banner_carousel";
-  id: string;
-  aspectRatio: number;
-  autoRotateSec: number;
-  items: HomeBannerItem[];
-}
-
-export interface HomeLinkTile {
-  kind: "link";
-  id: string;
-  title: string;
-  icon: MiniAppLogo;
-  actionType: HomeActionType;
-  actionValue: string;
-}
-
-export type HomeTile = HomeMiniAppTile | HomeGameTile | HomeLinkTile;
-
-export interface HomeTileGrid {
-  type: "tile_grid";
-  id: string;
-  title?: string;
-  tiles: HomeTile[];
-}
-
-export interface HomeMiniAppFeed {
-  type: "miniapp_feed";
-  id: string;
-  miniAppId: string;
-  title?: string;
-  /** Always present on the wire; the default is applied server-side. */
-  limit: number;
-}
-
-export type HomeSection = HomeBannerCarousel | HomeTileGrid | HomeMiniAppFeed;
-
-export interface HomeLayout {
-  version: number;
-  sections: HomeSection[];
-}
+export type HomeLayout = z.input<typeof homeLayout>;

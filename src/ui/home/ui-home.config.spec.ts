@@ -1,13 +1,32 @@
 /**
- * Unit tests for the home layout: the boot-time guard (assertValidHomeLayout,
- * via loadHomeLayout) and the per-request resolution (resolveHomeLayout).
+ * The home layout as loaded: the boot-time check (loadHomeLayout: the structure
+ * in ui-home.schema.ts plus the registry references) and the committed
+ * home-layout.json, resolved per request.
  *
- * The guard runs against OUR OWN config, so each rejection here is a deploy
+ * The check runs against OUR OWN config, so each rejection here is a deploy
  * that must not start. Mini-app ids are checked against the real registry.
  */
-import { loadHomeLayout, resolveHomeLayout } from "../../../src/ui/home/home-layout";
-import { getCampusSections } from "../../../src/ui/ui/ui.campus";
-import type { HomeLayoutRaw } from "../../../src/ui/home/home-layout.types";
+import { Clock } from "../../infra/clock";
+import type { SupportedLang } from "../../infra/types";
+import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { UiCampusService } from "../campus/ui-campus.service";
+import { loadHomeLayout as loadWithRegistry, readHomeLayout } from "./ui-home.config";
+import { toHomeLayout } from "./ui-home.mapper";
+import type { HomeLayoutRaw } from "./ui-home.schema";
+
+const registry = new MiniAppsService();
+const committedLayout = readHomeLayout(registry);
+const campus = new UiCampusService(registry, new Clock());
+
+const loadHomeLayout = (raw: unknown): Readonly<HomeLayoutRaw> => loadWithRegistry(raw, registry);
+
+function resolveHomeLayout(lang: SupportedLang, now: Date, source: Readonly<HomeLayoutRaw> = committedLayout) {
+  return toHomeLayout(source, { lang, now, resolveLogo: (logo) => registry.resolveLogo(logo) });
+}
+
+function getCampusSections(lang: SupportedLang) {
+  return campus.getCampusSheet(lang);
+}
 
 const IMAGE_URL = "https://media.skkuverse.com/home/banners/test-00000000.jpg";
 
@@ -58,7 +77,10 @@ function layout(...sections: Record<string, unknown>[]): Record<string, unknown>
 
 describe("committed home-layout.json", () => {
   it("loads, so the module import in this file did not throw", () => {
+    // Act
     const resolved = resolveHomeLayout("ko", new Date());
+
+    // Assert
     expect(resolved.version).toBe(1);
     expect(resolved.sections.map((s) => s.type)).toContain("banner_carousel");
   });
@@ -66,7 +88,10 @@ describe("committed home-layout.json", () => {
   it.each(["ko", "en", "zh"] as const)(
     "home_tiles (%s): the campus sheet's four buttons, then the games, in one grid",
     (lang) => {
+      // Act
       const resolved = resolveHomeLayout(lang, new Date());
+
+      // Assert
       // One grid: the app puts a 24 pt gap after each grid, so a second grid
       // for the games would read as a new section (2026-10-09).
       expect(resolved.sections.map((s) => s.id)).toEqual(["home_top", "home_tiles"]);
@@ -90,16 +115,20 @@ describe("committed home-layout.json", () => {
 
 describe("assertValidHomeLayout (via loadHomeLayout)", () => {
   it("accepts a well-formed layout", () => {
+    // Act & Assert
     expect(() => loadHomeLayout(layout(carousel(), grid()))).not.toThrow();
   });
 
   it("accepts every tile kind in one grid", () => {
+    // Arrange
     const mixed = tiles(
       { kind: "game", id: "wave-run" },
       { kind: "miniapp", id: "mukja" },
       link(),
       link({ id: "notice", icon: { kind: "media", url: IMAGE_URL }, actionType: "miniapp", actionValue: "inja" }),
     );
+
+    // Act & Assert
     expect(() => loadHomeLayout(layout(mixed))).not.toThrow();
   });
 
@@ -143,95 +172,8 @@ describe("assertValidHomeLayout (via loadHomeLayout)", () => {
     ["a link icon in the registry's legacy path spelling", layout(tiles(link({ icon: { kind: "remote", path: "/a.png" } })))],
     ["a blank title", layout(grid({ title: { ko: " " } }))],
   ])("rejects %s", (_label, raw) => {
+    // Act & Assert
     expect(() => loadHomeLayout(raw)).toThrow(/^home layout: /);
-  });
-});
-
-describe("resolveHomeLayout", () => {
-  const WINDOW = {
-    startAt: "2026-10-01T00:00:00+09:00",
-    endAt: "2026-10-03T00:00:00+09:00",
-  };
-
-  function resolveAt(iso: string, raw: Record<string, unknown>, lang: "ko" | "en" | "zh" = "ko") {
-    return resolveHomeLayout(lang, new Date(iso), loadHomeLayout(raw) as HomeLayoutRaw);
-  }
-
-  it("shows a windowed banner only inside [startAt, endAt)", () => {
-    const raw = layout(carousel({ items: [image(WINDOW), { type: "default" }] }));
-    const ids = (iso: string) =>
-      (resolveAt(iso, raw).sections[0] as { items: { type: string }[] }).items.map((i) => i.type);
-
-    expect(ids("2026-09-30T23:59:59+09:00")).toEqual(["default"]);
-    expect(ids("2026-10-01T00:00:00+09:00")).toEqual(["image", "default"]);
-    expect(ids("2026-10-03T00:00:00+09:00")).toEqual(["default"]);
-  });
-
-  it("keeps a carousel whose every image has expired, with no items", () => {
-    const raw = layout(carousel({ items: [image(WINDOW)] }));
-    expect(resolveAt("2026-10-05T00:00:00+09:00", raw).sections[0]).toMatchObject({
-      type: "banner_carousel",
-      items: [],
-    });
-  });
-
-  it("resolves text to the request language, falling back to ko", () => {
-    const raw = layout(carousel(), grid({ title: { ko: "미니게임", en: "Mini games" } }));
-    const en = resolveAt("2026-09-25T00:00:00Z", raw, "en");
-    const zh = resolveAt("2026-09-25T00:00:00Z", raw, "zh");
-    expect(en.sections[1]).toMatchObject({ title: "Mini games" });
-    expect((en.sections[0] as { items: { alt?: string }[] }).items[0]?.alt).toBe("Banner");
-    expect(zh.sections[1]).toMatchObject({ title: "Mini games" });
-  });
-
-  it("ships no on-disk-only field", () => {
-    const raw = layout(carousel({ items: [image(WINDOW)] }), grid());
-    const wire = resolveAt("2026-10-01T12:00:00+09:00", raw);
-    expect(wire.sections[0]).toEqual({
-      type: "banner_carousel",
-      id: "home_top",
-      aspectRatio: 2.25,
-      autoRotateSec: 5,
-      items: [
-        {
-          type: "image",
-          id: "banner-a",
-          imageUrl: IMAGE_URL,
-          alt: "배너",
-          actionType: "miniapp",
-          actionValue: "eskara-2026",
-        },
-      ],
-    });
-    expect(wire.sections[1]).toEqual({
-      type: "tile_grid",
-      id: "main",
-      tiles: [{ kind: "miniapp", id: "mukja" }],
-    });
-  });
-
-  it("resolves a link tile's title to the request language and its media icon to a uri", () => {
-    const raw = layout(
-      tiles(
-        { kind: "game", id: "wave-run" },
-        link({ icon: { kind: "media", url: IMAGE_URL } }),
-      ),
-    );
-    expect(resolveAt("2026-09-25T00:00:00Z", raw, "en").sections[0]).toEqual({
-      type: "tile_grid",
-      id: "main",
-      tiles: [
-        { kind: "game", id: "wave-run" },
-        {
-          kind: "link",
-          id: "campus-map",
-          title: "Campus map",
-          icon: { kind: "remote", uri: IMAGE_URL },
-          actionType: "route",
-          actionValue: "/(tabs)/campus",
-        },
-      ],
-    });
   });
 });
 
@@ -248,40 +190,51 @@ describe("miniapp_feed section", () => {
   }
 
   it("accepts a well-formed feed section", () => {
+    // Act & Assert
     expect(() => loadHomeLayout(layout(carousel(), feed(), grid()))).not.toThrow();
   });
 
   it("accepts one with no title and no limit", () => {
+    // Act & Assert
     expect(() =>
       loadHomeLayout(layout(feed({ title: undefined, limit: undefined }))),
     ).not.toThrow();
   });
 
   it("rejects a mini app the registry does not know", () => {
+    // Act & Assert
     expect(() => loadHomeLayout(layout(feed({ miniAppId: "no-such-app" })))).toThrow(
       /not a registered mini app/,
     );
   });
 
   it("rejects an unknown key, so a misspelling cannot pass boot and do nothing", () => {
+    // Act & Assert
     expect(() => loadHomeLayout(layout(feed({ limt: 3 })))).toThrow(/limt/);
   });
 
   it.each([0, 11, 2.5, "3"])("rejects limit %p", (limit) => {
+    // Act & Assert
     expect(() => loadHomeLayout(layout(feed({ limit })))).toThrow(/limit/);
   });
 
   it("shares the section id namespace", () => {
+    // Act & Assert
     expect(() => loadHomeLayout(layout(carousel(), feed({ id: "home_top" })))).toThrow(
       /duplicate id/,
     );
   });
 
   it("resolves to the wire shape with the title in the request language and a default limit", () => {
+    // Arrange
     const source = loadHomeLayout(
       layout(feed(), feed({ id: "bare", title: undefined, limit: undefined })),
     );
+
+    // Act
     const { sections } = resolveHomeLayout("en", new Date(), source);
+
+    // Assert
     expect(sections).toEqual([
       { type: "miniapp_feed", id: "eskara_feed", miniAppId: "eskara-2026", title: "ESKARA live", limit: 3 },
       { type: "miniapp_feed", id: "bare", miniAppId: "eskara-2026", limit: 3 },

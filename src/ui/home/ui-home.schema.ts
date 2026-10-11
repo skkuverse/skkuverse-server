@@ -1,339 +1,68 @@
-/**
- * Boot-time shape + referential-integrity check for the home layout.
- *
- * Same split as miniapps.schema.ts: this is OUR OWN config, so a typo is a bug
- * and throws at module load, before the deploy can serve anything. The client
- * receives the result as an untrusted payload and parses it tolerantly.
- *
- * The carousel rules also guard the campus sheet's carousel
- * (assertValidCampusCarousel), so both screens accept exactly the same banners.
- */
-import { isMediaUrl } from "../../infra/media-url";
-import type { I18n } from "../../infra/types";
-import { toWebviewUrl } from "../../infra/webview-url";
-import { isKnownMiniAppTarget } from "../../miniapps/miniapp-target";
-import { isSingleEmoji } from "../../miniapps/miniapps.schema";
-import {
-  HOME_ACTION_TYPES,
-  HOME_LAYOUT_VERSION,
-  type CampusBannerCarouselRaw,
-  type HomeActionType,
-  type HomeLayoutRaw,
-} from "./home-layout.types";
-import { isAbsoluteHttpsUrl, isRootRelativePath } from "../../shared/link-target.util";
-import { isRecord } from "../../shared/object.util";
+import { z } from "zod";
+import { linkActionType } from "../../shared/link-action.wire";
+import { findDuplicateId } from "../ui.rules";
+import { bannerImage, carouselFields, localizedText, mediaUrl, slug } from "../ui.schema";
+import * as limits from "./ui-home.rules";
 
-const SLUG_RE = /^[a-z0-9_-]+$/;
-const WHITESPACE_RE = /\s/;
-/** Refused unless it carries its own offset: a bare local time is read in the host's zone. */
-const OFFSET_RE = /(Z|[+-]\d{2}:\d{2})$/;
-
-export const ASPECT_RATIO_MIN = 1;
-export const ASPECT_RATIO_MAX = 6;
-export const AUTO_ROTATE_SEC_MIN = 2;
-export const AUTO_ROTATE_SEC_MAX = 30;
-/** A home card is a glance, not the feed: past a handful it belongs on the feed screen. */
-export const MINIAPP_FEED_LIMIT_MIN = 1;
-export const MINIAPP_FEED_LIMIT_MAX = 10;
-export const MINIAPP_FEED_LIMIT_DEFAULT = 3;
-
-/**
- * The keys each object may carry. The loader reads these names only, so a
- * misspelt `autoRotate` or `endsAt` would pass boot and quietly do nothing.
- */
-const LAYOUT_KEYS = new Set(["version", "sections"]);
-const CAROUSEL_KEYS = new Set(["type", "id", "aspectRatio", "autoRotateSec", "items"]);
-const GRID_KEYS = new Set(["type", "id", "title", "tiles"]);
-const FEED_KEYS = new Set(["type", "id", "miniAppId", "title", "limit"]);
-const ID_TILE_KEYS = new Set(["kind", "id"]);
-const LINK_TILE_KEYS = new Set(["kind", "id", "title", "icon", "actionType", "actionValue"]);
-const EMOJI_ICON_KEYS = new Set(["kind", "emoji"]);
-const MEDIA_ICON_KEYS = new Set(["kind", "url"]);
-const IMAGE_KEYS = new Set([
-  "type",
-  "id",
-  "imageUrl",
-  "alt",
-  "actionType",
-  "actionValue",
-  "startAt",
-  "endAt",
+const tileIcon = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("emoji"), emoji: z.string() }),
+  z.strictObject({ kind: z.literal("media"), url: mediaUrl }),
 ]);
-const DEFAULT_KEYS = new Set(["type"]);
-const I18N_KEYS = new Set(["ko", "en", "zh"]);
 
-/** Thrown by the checks below; each entry point prefixes it with the file it guards. */
-class SchemaError extends Error {}
+const linkFields = { title: localizedText, icon: tileIcon, actionType: linkActionType, actionValue: z.string() };
 
-function fail(message: string): never {
-  throw new SchemaError(message);
-}
+const tile = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("miniapp"), id: slug }),
+  // WHY: which games a build ships is the app's to know; a build without this one drops the tile.
+  z.strictObject({ kind: z.literal("game"), id: slug }),
+  z.strictObject({ kind: z.literal("link"), id: slug, ...linkFields }),
+]);
 
-function labelled(label: string, check: () => void): void {
-  try {
-    check();
-  } catch (err) {
-    if (err instanceof SchemaError) throw new Error(`${label}: ${err.message}`, { cause: err });
-    throw err;
-  }
-}
-
-function assertKnownKeys(where: string, value: Record<string, unknown>, allowed: Set<string>): void {
-  for (const key of Object.keys(value)) {
-    if (!allowed.has(key)) fail(`unknown key "${key}" in ${where}`);
-  }
-}
-
-function assertI18n(where: string, value: unknown): asserts value is I18n {
-  if (!isRecord(value)) fail(`${where} must be an object of languages`);
-  assertKnownKeys(where, value, I18N_KEYS);
-  for (const [lang, text] of Object.entries(value)) {
-    if (typeof text !== "string" || text.trim() === "") {
-      fail(`${where}.${lang} must be non-blank text`);
-    }
-  }
-  if (value.ko === undefined) fail(`${where}.ko is required`);
-}
-
-function parseInstant(where: string, value: unknown): number {
-  if (typeof value !== "string" || !OFFSET_RE.test(value)) {
-    fail(`${where} must be an ISO 8601 time with an explicit offset`);
-  }
-  const ms = Date.parse(value);
-  if (Number.isNaN(ms)) fail(`${where} is not a valid time`);
-  return ms;
-}
-
-/** Same per-type rules the event map applies to its sheet buttons. */
-function isValidActionValue(type: HomeActionType, value: string): boolean {
-  if (value === "" || WHITESPACE_RE.test(value)) return false;
-  switch (type) {
-    case "miniapp":
-      return isKnownMiniAppTarget(value);
-    case "external":
-      return isAbsoluteHttpsUrl(value);
-    case "webview":
-      return toWebviewUrl(value) !== null;
-    case "route":
-      return isRootRelativePath(value);
-  }
-}
-
-/** `actionType` + `actionValue`, both present. Shared by banners and link tiles. */
-function assertAction(where: string, item: Record<string, unknown>): void {
-  const { actionType, actionValue } = item;
-  if (!HOME_ACTION_TYPES.includes(actionType as HomeActionType)) {
-    fail(`${where}.actionType must be one of ${HOME_ACTION_TYPES.join(", ")}`);
-  }
-  if (
-    typeof actionValue !== "string" ||
-    !isValidActionValue(actionType as HomeActionType, actionValue)
-  ) {
-    fail(`${where}.actionValue "${String(actionValue)}" is not valid for "${String(actionType)}"`);
-  }
-}
-
-function assertBannerImage(where: string, item: Record<string, unknown>): void {
-  assertKnownKeys(where, item, IMAGE_KEYS);
-  if (!isMediaUrl(item.imageUrl)) fail(`${where}.imageUrl must be an object on the media bucket`);
-  assertI18n(`${where}.alt`, item.alt);
-
-  if ((item.actionType === undefined) !== (item.actionValue === undefined)) {
-    fail(`${where} needs both actionType and actionValue, or neither`);
-  }
-  if (item.actionType !== undefined) assertAction(where, item);
-
-  const start = item.startAt === undefined ? null : parseInstant(`${where}.startAt`, item.startAt);
-  const end = item.endAt === undefined ? null : parseInstant(`${where}.endAt`, item.endAt);
-  if (start !== null && end !== null && start >= end) fail(`${where}.startAt must be before endAt`);
-}
-
-function assertCarousel(
-  where: string,
-  section: Record<string, unknown>,
-  ids: Set<string>,
-  allowDefault: boolean,
-): void {
-  assertKnownKeys(where, section, CAROUSEL_KEYS);
-  const { aspectRatio, autoRotateSec, items } = section;
-  if (
-    typeof aspectRatio !== "number" ||
-    !(aspectRatio >= ASPECT_RATIO_MIN && aspectRatio <= ASPECT_RATIO_MAX)
-  ) {
-    fail(`${where}.aspectRatio must be a number from ${ASPECT_RATIO_MIN} to ${ASPECT_RATIO_MAX}`);
-  }
-  if (
-    typeof autoRotateSec !== "number" ||
-    !Number.isInteger(autoRotateSec) ||
-    (autoRotateSec !== 0 &&
-      (autoRotateSec < AUTO_ROTATE_SEC_MIN || autoRotateSec > AUTO_ROTATE_SEC_MAX))
-  ) {
-    fail(
-      `${where}.autoRotateSec must be 0 (off) or a whole number from ${AUTO_ROTATE_SEC_MIN} to ${AUTO_ROTATE_SEC_MAX}`,
-    );
-  }
-  if (!Array.isArray(items) || items.length === 0) fail(`${where}.items must be a non-empty array`);
-
-  let defaults = 0;
-  items.forEach((item: unknown, i) => {
-    const at = `${where}.items[${i}]`;
-    if (!isRecord(item)) fail(`${at} must be an object`);
-    if (item.type === "default" && allowDefault) {
-      assertKnownKeys(at, item, DEFAULT_KEYS);
-      defaults += 1;
-      return;
-    }
-    if (item.type !== "image") {
-      fail(`${at}.type must be ${allowDefault ? '"image" or "default"' : '"image"'}`);
-    }
-    assertUniqueId(at, item.id, ids);
-    assertBannerImage(at, item);
+const homeCarousel = z
+  .strictObject({
+    ...carouselFields,
+    items: z.array(z.discriminatedUnion("type", [bannerImage, z.strictObject({ type: z.literal("default") })])).min(1),
+  })
+  .refine((carousel) => carousel.items.filter((item) => item.type === "default").length <= 1, {
+    message: "may place the default banner once",
   });
-  // Two would be the same banner twice in one rotation.
-  if (defaults > 1) fail(`${where} may place the default banner once`);
-}
 
-/** A link tile's icon: the registry's `emoji` or `media` logo spelling. */
-function assertIcon(where: string, icon: unknown): void {
-  if (!isRecord(icon)) fail(`${where} must be an object`);
-  if (icon.kind === "emoji") {
-    assertKnownKeys(where, icon, EMOJI_ICON_KEYS);
-    if (typeof icon.emoji !== "string" || !isSingleEmoji(icon.emoji)) {
-      fail(`${where}.emoji must be exactly one emoji`);
-    }
-  } else if (icon.kind === "media") {
-    assertKnownKeys(where, icon, MEDIA_ICON_KEYS);
-    if (!isMediaUrl(icon.url)) fail(`${where}.url must be an object on the media bucket`);
-  } else {
-    fail(`${where}.kind must be "emoji" or "media"`);
-  }
-}
+const tileGrid = z.strictObject({
+  type: z.literal("tile_grid"),
+  id: slug,
+  title: localizedText.optional(),
+  tiles: z.array(tile).min(1),
+});
 
-function assertTile(
-  where: string,
-  tile: unknown,
-  registeredMiniApps: ReadonlySet<string>,
-): asserts tile is Record<string, unknown> & { id: string } {
-  if (!isRecord(tile)) fail(`${where} must be an object`);
-  if (typeof tile.id !== "string" || !SLUG_RE.test(tile.id)) fail(`${where}.id must be a slug`);
-  switch (tile.kind) {
-    case "miniapp":
-      assertKnownKeys(where, tile, ID_TILE_KEYS);
-      if (!registeredMiniApps.has(tile.id)) {
-        fail(`${where}.id "${tile.id}" is not a registered mini app`);
-      }
-      return;
-    case "game":
-      // Which games a build ships is the app's to know; a build without this
-      // one drops the tile.
-      assertKnownKeys(where, tile, ID_TILE_KEYS);
-      return;
-    case "link":
-      assertKnownKeys(where, tile, LINK_TILE_KEYS);
-      assertI18n(`${where}.title`, tile.title);
-      assertIcon(`${where}.icon`, tile.icon);
-      assertAction(where, tile);
-      return;
-    default:
-      fail(`${where}.kind must be "miniapp", "game" or "link"`);
-  }
-}
+const miniAppFeed = z.strictObject({
+  type: z.literal("miniapp_feed"),
+  id: slug,
+  miniAppId: z.string(),
+  title: localizedText.optional(),
+  limit: z.int().min(limits.MIN_MINIAPP_FEED_LIMIT).max(limits.MAX_MINIAPP_FEED_LIMIT).default(limits.DEFAULT_MINIAPP_FEED_LIMIT),
+});
 
-function assertGrid(
-  where: string,
-  section: Record<string, unknown>,
-  registeredMiniApps: ReadonlySet<string>,
-  placedTiles: Set<string>,
-): void {
-  assertKnownKeys(where, section, GRID_KEYS);
-  if (section.title !== undefined) assertI18n(`${where}.title`, section.title);
-  const { tiles } = section;
-  if (!Array.isArray(tiles) || tiles.length === 0) fail(`${where}.tiles must be a non-empty array`);
-  tiles.forEach((tile: unknown, i) => {
-    const at = `${where}.tiles[${i}]`;
-    assertTile(at, tile, registeredMiniApps);
-    // Twice on one screen is a tile the user sees duplicated. One namespace for
-    // every kind: the tile id is also the analytics item id for a tap.
-    if (placedTiles.has(tile.id)) fail(`tile "${tile.id}" is placed more than once`);
-    placedTiles.add(tile.id);
+const section = z.discriminatedUnion("type", [homeCarousel, tileGrid, miniAppFeed]);
+
+export const homeLayoutFile = z
+  .strictObject({ version: z.literal(limits.HOME_LAYOUT_VERSION), sections: z.array(section) })
+  .superRefine((layout, ctx) => {
+    // WHY: section and banner ids share one namespace, and tile ids another: each is an analytics item id.
+    const duplicateId = findDuplicateId(layout.sections.flatMap(sectionIds));
+    const duplicateTile = findDuplicateId(layout.sections.flatMap(tileIds));
+    if (duplicateId) ctx.addIssue({ code: "custom", message: `duplicate id "${duplicateId}"` });
+    if (duplicateTile) ctx.addIssue({ code: "custom", message: `tile "${duplicateTile}" is placed more than once` });
   });
+
+export type HomeLayoutRaw = z.output<typeof homeLayoutFile>;
+type SectionRaw = HomeLayoutRaw["sections"][number];
+export type TileRaw = Extract<SectionRaw, { type: "tile_grid" }>["tiles"][number];
+
+function sectionIds(raw: SectionRaw): string[] {
+  if (raw.type !== "banner_carousel") return [raw.id];
+  return [raw.id, ...raw.items.flatMap((item) => (item.type === "image" ? [item.id] : []))];
 }
 
-function assertMiniAppFeed(
-  where: string,
-  section: Record<string, unknown>,
-  registeredMiniApps: ReadonlySet<string>,
-): void {
-  assertKnownKeys(where, section, FEED_KEYS);
-  // An unregistered id would be a card whose feed GET 404s on every device.
-  if (typeof section.miniAppId !== "string" || !registeredMiniApps.has(section.miniAppId)) {
-    fail(`${where}.miniAppId "${String(section.miniAppId)}" is not a registered mini app`);
-  }
-  if (section.title !== undefined) assertI18n(`${where}.title`, section.title);
-  if (section.limit !== undefined) {
-    const { limit } = section;
-    if (
-      typeof limit !== "number" ||
-      !Number.isInteger(limit) ||
-      limit < MINIAPP_FEED_LIMIT_MIN ||
-      limit > MINIAPP_FEED_LIMIT_MAX
-    ) {
-      fail(
-        `${where}.limit must be an integer ${MINIAPP_FEED_LIMIT_MIN}-${MINIAPP_FEED_LIMIT_MAX}`,
-      );
-    }
-  }
-}
-
-function assertUniqueId(where: string, id: unknown, ids: Set<string>): void {
-  if (typeof id !== "string" || !SLUG_RE.test(id)) fail(`${where}.id must be a slug`);
-  // Section and banner ids share one namespace: both are analytics item ids.
-  if (ids.has(id)) fail(`duplicate id "${id}"`);
-  ids.add(id);
-}
-
-export function assertValidHomeLayout(
-  raw: unknown,
-  registeredMiniApps: ReadonlySet<string>,
-): asserts raw is HomeLayoutRaw {
-  labelled("home layout", () => assertHomeLayout(raw, registeredMiniApps));
-}
-
-function assertHomeLayout(raw: unknown, registeredMiniApps: ReadonlySet<string>): void {
-  if (!isRecord(raw)) fail("root must be an object");
-  assertKnownKeys("root", raw, LAYOUT_KEYS);
-  if (raw.version !== HOME_LAYOUT_VERSION) fail(`version must be ${HOME_LAYOUT_VERSION}`);
-  if (!Array.isArray(raw.sections)) fail("sections must be an array");
-
-  const ids = new Set<string>();
-  const placedTiles = new Set<string>();
-  raw.sections.forEach((section: unknown, i) => {
-    const where = `sections[${i}]`;
-    if (!isRecord(section)) fail(`${where} must be an object`);
-    assertUniqueId(where, section.id, ids);
-    if (section.type === "banner_carousel") {
-      assertCarousel(where, section, ids, true);
-    } else if (section.type === "tile_grid") {
-      assertGrid(where, section, registeredMiniApps, placedTiles);
-    } else if (section.type === "miniapp_feed") {
-      assertMiniAppFeed(where, section, registeredMiniApps);
-    } else {
-      fail(`${where}.type must be "banner_carousel", "tile_grid" or "miniapp_feed"`);
-    }
-  });
-}
-
-/**
- * The campus sheet's carousel (campus-banners.json): one carousel section on
- * its own, under the home rules minus the `default` item. That item is the home
- * screen's built-in HeroBanner, which the campus sheet does not have.
- */
-export function assertValidCampusCarousel(raw: unknown): asserts raw is CampusBannerCarouselRaw {
-  labelled("campus banners", () => {
-    if (!isRecord(raw)) fail("root must be an object");
-    if (raw.type !== "banner_carousel") fail('type must be "banner_carousel"');
-    const ids = new Set<string>();
-    assertUniqueId("root", raw.id, ids);
-    assertCarousel("root", raw, ids, false);
-  });
+function tileIds(raw: SectionRaw): string[] {
+  return raw.type === "tile_grid" ? raw.tiles.map((t) => t.id) : [];
 }

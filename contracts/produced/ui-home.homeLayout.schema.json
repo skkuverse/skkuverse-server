@@ -1,0 +1,263 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "banner_carousel"
+              },
+              "id": {
+                "type": "string"
+              },
+              "aspectRatio": {
+                "type": "number"
+              },
+              "autoRotateSec": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "image"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "imageUrl": {
+                          "type": "string"
+                        },
+                        "alt": {
+                          "type": "string"
+                        },
+                        "actionType": {
+                          "type": "string",
+                          "enum": [
+                            "miniapp",
+                            "external",
+                            "webview",
+                            "route"
+                          ]
+                        },
+                        "actionValue": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "id",
+                        "imageUrl",
+                        "alt"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "default"
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "aspectRatio",
+              "autoRotateSec",
+              "items"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "tile_grid"
+              },
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "tiles": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "miniapp"
+                        },
+                        "id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "id"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "game"
+                        },
+                        "id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "id"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "link"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "icon": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "remote"
+                                },
+                                "uri": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "uri"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "emoji"
+                                },
+                                "emoji": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "emoji"
+                              ]
+                            }
+                          ]
+                        },
+                        "actionType": {
+                          "type": "string",
+                          "enum": [
+                            "miniapp",
+                            "external",
+                            "webview",
+                            "route"
+                          ]
+                        },
+                        "actionValue": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "id",
+                        "title",
+                        "icon",
+                        "actionType",
+                        "actionValue"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "tiles"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "miniapp_feed"
+              },
+              "id": {
+                "type": "string"
+              },
+              "miniAppId": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "type",
+              "id",
+              "miniAppId",
+              "limit"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "version",
+    "sections"
+  ]
+}

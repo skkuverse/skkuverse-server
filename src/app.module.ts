@@ -5,6 +5,10 @@ import { HealthModule } from "./health/health.module";
 import { BusModule } from "./bus/bus.module";
 import { AppConfigModule } from "./app-config/app-config.module";
 import { UiModule } from "./ui/ui.module";
+import { UiHomeModule } from "./ui/home/ui-home.module";
+import { UiTransitListModule } from "./ui/transit-list/ui-transit-list.module";
+import { UiScrollModule } from "./ui/scroll/ui-scroll.module";
+import { UiCampusModule } from "./ui/campus/ui-campus.module";
 import { AdEventsModule } from "./ad/events/ad-events.module";
 import { AdPlacementsModule } from "./ad/placements/ad-placements.module";
 import { BuildingModule } from "./building/building.module";
@@ -40,6 +44,10 @@ import { MiniAppsModule } from "./miniapps/miniapps.module";
     BusModule,
     AppConfigModule,
     UiModule,
+    UiHomeModule,
+    UiTransitListModule,
+    UiScrollModule,
+    UiCampusModule,
     AdPlacementsModule,
     AdEventsModule,
     BuildingModule,
