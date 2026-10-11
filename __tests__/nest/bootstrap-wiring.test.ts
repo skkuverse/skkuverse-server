@@ -193,6 +193,27 @@ describe("CORS policy", () => {
     expect(res.headers["access-control-expose-headers"]).toContain("ETag");
   });
 
+  // WHY: exposeHeadersMiddleware existed to expose ETag on a 304 too. This app never mounts it, so
+  // the pass pins that enableCors alone covers the 304, and the middleware can go with no change.
+  it("still exposes ETag on a 304 revalidation, from the cors setup alone", async () => {
+    // Arrange
+    const first = await request(app.getHttpServer())
+      .get("/ping")
+      .set("Origin", WEBVIEW_ORIGIN);
+    const etag = String(first.headers["etag"]);
+
+    // Act
+    const res = await request(app.getHttpServer())
+      .get("/ping")
+      .set("Origin", WEBVIEW_ORIGIN)
+      .set("If-None-Match", etag);
+
+    // Assert
+    expect(first.headers["etag"]).toBeDefined();
+    expect(res.status).toBe(304);
+    expect(res.headers["access-control-expose-headers"]).toContain("ETag");
+  });
+
   it("grants nothing to a loopback origin outside development", async () => {
     const res = await request(app.getHttpServer())
       .get("/ping")
