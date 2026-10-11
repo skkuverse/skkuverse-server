@@ -13,7 +13,8 @@
         "explanation/ad-architecture.md",
         "explanation/app-config-architecture.md",
         "explanation/building-architecture.md",
-        "explanation/health-architecture.md"
+        "explanation/health-architecture.md",
+        "explanation/ui-architecture.md"
       ],
       "combine": "merge",
       "config": {

@@ -5,5 +5,6 @@
   "src/health/",
   "src/http/",
   "src/infra/",
-  "src/shared/"
+  "src/shared/",
+  "src/ui/"
 ]
