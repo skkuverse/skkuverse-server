@@ -515,6 +515,27 @@ module.exports = [
     },
   },
   {
+    // A `.wire` schema exports to JSON Schema for another repository (ADR 0010,
+    // D13): structure and the literals it names, nothing a refinement needs. Its
+    // one pattern also covers boundaries/get-client's, which it replaces here.
+    name: "boundaries/wire",
+    files: ["src/**/*.wire.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^(?!zod$)(?!.*\\.(?:wire|constants)$)",
+              message:
+                "A .wire file imports only zod, other .wire files and .constants: brands, transforms and refinements go in the .schema that wraps it.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // This block replaces the src block's no-restricted-syntax for controllers,
     // so it carries the log selectors along.
     name: "boundaries/lang",
