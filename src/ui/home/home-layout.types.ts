@@ -20,6 +20,7 @@
  */
 import type { I18n } from "../../infra/types";
 import type { MiniAppLogo, MiniAppLogoRaw } from "../../miniapps/types";
+import { linkActionType, type LinkActionType } from "../../shared/link-action.wire";
 
 /**
  * Bump only on BREAKING changes (removed/renamed/retyped field). A new section
@@ -28,8 +29,8 @@ import type { MiniAppLogo, MiniAppLogoRaw } from "../../miniapps/types";
 export const HOME_LAYOUT_VERSION = 1;
 
 /** Action types a banner may carry. A subset of the app's SDUI `ActionType`. */
-export const HOME_ACTION_TYPES = ["miniapp", "external", "webview", "route"] as const;
-export type HomeActionType = (typeof HOME_ACTION_TYPES)[number];
+export const HOME_ACTION_TYPES = linkActionType.options;
+export type HomeActionType = LinkActionType;
 
 // ── On disk (home-layout.json) ──
 

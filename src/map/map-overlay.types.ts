@@ -5,6 +5,7 @@ import type {
   GeoJsonPoint,
   GeoJsonPolygon,
 } from "../shared/geojson.types";
+import type { LinkActionType } from "../shared/link-action.wire";
 
 /**
  * The one overlay schema, shared by every layer the map draws.
@@ -94,7 +95,7 @@ export interface TimeWindow {
 export interface MarkerAction {
   id: string;
   label: I18nWire;
-  actionType: "content" | "route" | "webview" | "external" | "miniapp";
+  actionType: LinkActionType | "content";
   /**
    * A complete URL for `webview`/`external` (`webview` may be root-relative on
    * WEBVIEW_ORIGIN), an in-app path for `route`, the body itself for `content`,

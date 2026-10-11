@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
+import { isKnownMiniAppTarget } from "./miniapp-target";
 import * as registry from "./miniapps";
-import type { MiniAppDetail, MiniAppIndexEntry } from "./types";
+import { isSingleEmoji } from "./miniapps.schema";
+import type { MiniAppDetail, MiniAppIndexEntry, MiniAppLogo, MiniAppLogoRaw } from "./types";
 
 /**
  * MiniAppsService — thin @Injectable delegate over the validated registry
@@ -30,5 +32,21 @@ export class MiniAppsService {
   /** Detail for a slug, or undefined when unregistered. */
   getDetail(id: string): Readonly<MiniAppDetail> | undefined {
     return registry.map.get(id);
+  }
+
+  get firstPartyOrigins(): Readonly<Record<string, string>> {
+    return registry.firstPartyOrigins;
+  }
+
+  isKnownMiniAppTarget(value: unknown): boolean {
+    return isKnownMiniAppTarget(value);
+  }
+
+  resolveLogo(logo: MiniAppLogoRaw): MiniAppLogo {
+    return registry.resolveLogo(logo);
+  }
+
+  isSingleEmoji(value: string): boolean {
+    return isSingleEmoji(value);
   }
 }

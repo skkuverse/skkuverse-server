@@ -23,7 +23,7 @@
  * authority). The app checks the resolved origin again, because a deep link
  * never passes through this server.
  */
-import { ROOT_RELATIVE_PATH_RE } from "../infra/webview-url";
+import { ROOT_RELATIVE_PATH_RE } from "../shared/link-target.constants";
 import { map as registry } from "./miniapps";
 
 export interface MiniAppTarget {
