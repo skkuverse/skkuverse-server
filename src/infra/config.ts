@@ -159,9 +159,7 @@ const config = {
     delivery: switches.pushDelivery,
   },
 
-  // RATE_LIMIT. Every express-rate-limit instance skips while this is false
-  // (infra/rateLimitKeys.ts). Off in development, where every simulator
-  // request arrives from the same loopback address.
+  // (A perimeter detail is left out of the public history.)
   rateLimit: {
     enabled: switches.rateLimitEnabled,
   },
