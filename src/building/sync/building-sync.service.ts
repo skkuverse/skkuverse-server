@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import {
   BUILD_INFO_CONCURRENCY,
@@ -29,13 +30,14 @@ export class BuildingSyncService {
     private readonly client: BuildingSyncClient,
     private readonly repository: BuildingSyncRepository,
     private readonly buildings: BuildingRepository,
+    private readonly clock: Clock,
   ) {}
 
   // WHY: logs no failure itself; the poller registry reports the rejection. After phase 1, a failed
   // phase does not stop the next, so one bad SKKU endpoint leaves the others' data fresh.
   async run(): Promise<void> {
-    const syncStartedAt = new Date();
-    const start = Date.now();
+    const syncStartedAt = this.clock.now();
+    const start = syncStartedAt.getTime();
 
     let listed: ListedBuilding[];
     try {
@@ -69,7 +71,7 @@ export class BuildingSyncService {
         event: "building.sync.completed",
         buildings: listed.length,
         spaces: spaceCount,
-        elapsed: Date.now() - start,
+        elapsed: this.clock.now().getTime() - start,
       },
       "Building sync complete",
     );
