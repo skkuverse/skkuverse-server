@@ -3,7 +3,7 @@ import axios from "axios";
 import type { z } from "zod";
 import logger from "../../infra/logger";
 import type { BuildingAttachment, BuildingRawDoc } from "../building.document";
-import { SKKU_CAMPUS_CODE } from "../building.rules";
+import { SKKU_CAMPUS_CODE, toApiId } from "../building.rules";
 import { shouldRejectPayload } from "./building-sync.rules";
 import {
   skkuBuildInfoAttachment,
@@ -16,7 +16,7 @@ import {
   type SkkuBuildListItem,
 } from "./building-sync.schema";
 import type { BuildInfo, ListedBuilding, ListedBuildingWithBuildNo, SyncedSpace } from "./building-sync.types";
-import type { ApiId, BilingualText, BuildNo, Campus, SkkuId, SpaceCd } from "../building.types";
+import type { BilingualText, Campus } from "../building.types";
 
 const CAMPUS_MAP_URL = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
 const REQUEST_TIMEOUT_MS = 30000;
@@ -98,7 +98,7 @@ function toRawDoc(buildItem: SkkuBuildListItem, campus: Campus): Omit<BuildingRa
   const lng = parseFloat(buildItem.longtitude);
 
   return {
-    buildNo: (buildItem.buildNo || null) as BuildNo | null,
+    buildNo: buildItem.buildNo || null,
     campus,
     name: text(buildItem.buildNm, buildItem.buildNmEng),
     description: text(buildItem.krText, buildItem.enText),
@@ -123,8 +123,8 @@ export class BuildingSyncClient {
     const { buildItems } = parseResponse(skkuBuildListResponse, data, `buildList (${campus})`);
     const valid = parseItems({ source: "buildList", scope: campus, items: buildItems, schema: skkuBuildListItem, keyField: "id" });
     return valid.map((buildItem) => ({
-      skkuId: buildItem.id as SkkuId,
-      apiId: buildItem.id as ApiId,
+      skkuId: buildItem.id,
+      apiId: toApiId(buildItem.id),
       doc: toRawDoc(buildItem, campus),
     }));
   }
@@ -156,7 +156,7 @@ export class BuildingSyncClient {
       schema: skkuBuildInfoFloor,
       keyField: "space_cd",
     }).map((floorSpace) => ({
-      spaceCd: floorSpace.space_cd as SpaceCd,
+      spaceCd: floorSpace.space_cd,
       buildNo: doc.buildNo,
       campus: doc.campus,
       floor: text(floorSpace.floor_nm, floorSpace.floor_nm_eng),
@@ -175,8 +175,8 @@ export class BuildingSyncClient {
     const { items } = parseResponse(skkuSpaceListResponse, data, `spaceList (${campus})`);
     const valid = parseItems({ source: "spaceList", scope: campus, items, schema: skkuSpaceListItem, keyField: "spaceCd" });
     return valid.map((spaceItem) => ({
-      spaceCd: spaceItem.spaceCd as SpaceCd,
-      buildNo: spaceItem.buildNo as BuildNo,
+      spaceCd: spaceItem.spaceCd,
+      buildNo: spaceItem.buildNo,
       campus,
       floor: text(spaceItem.floorNm, spaceItem.floorNmEng),
       name: spaceName(spaceItem.spcaeNm, spaceItem.spcaeNmEng),

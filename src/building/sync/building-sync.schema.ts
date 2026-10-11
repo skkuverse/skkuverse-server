@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isBuildNo, isSkkuId, isSpaceCd } from "../building.rules";
 
 // QUIRK(skku): campusMap.do misspells longtitude, spcaeNm and spcae_nm, kept as sent. Only what the
 // mapping cannot do without is required (measured 2026-10-10).
@@ -7,8 +8,8 @@ const coordinate = z.string().refine((value) => Number.isFinite(parseFloat(value
 export const skkuBuildListResponse = z.object({ buildItems: z.array(z.unknown()) });
 
 export const skkuBuildListItem = z.object({
-  id: z.number().int().positive(),
-  buildNo: z.string().nullish(),
+  id: z.number().refine(isSkkuId),
+  buildNo: z.string().refine(isBuildNo).or(z.literal("")).nullish(),
   buildNm: z.string().min(1),
   buildNmEng: z.string().optional(),
   krText: z.string().optional(),
@@ -37,7 +38,7 @@ export const skkuBuildInfoAttachment = z.object({
 });
 
 export const skkuBuildInfoFloor = z.object({
-  space_cd: z.string().min(1),
+  space_cd: z.string().refine(isSpaceCd),
   floor_nm: z.string(),
   floor_nm_eng: z.string().optional(),
   spcae_nm: z.string().optional(),
@@ -47,8 +48,8 @@ export const skkuBuildInfoFloor = z.object({
 export const skkuSpaceListResponse = z.object({ items: z.array(z.unknown()) });
 
 export const skkuSpaceListItem = z.object({
-  spaceCd: z.string().min(1),
-  buildNo: z.string().min(1),
+  spaceCd: z.string().refine(isSpaceCd),
+  buildNo: z.string().refine(isBuildNo),
   floorNm: z.string(),
   floorNmEng: z.string().optional(),
   spcaeNm: z.string().optional(),
