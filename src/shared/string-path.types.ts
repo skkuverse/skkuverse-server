@@ -5,10 +5,6 @@ type Opaque =
   | { readonly _bsontype: string }
   | { readonly __brand: string };
 
-/**
- * A dotted path into T that ends at a string, a branded one included ("name.ko",
- * "spaceCd"). Arrays, dates, functions, number brands and BSON values such as ObjectId are not entered.
- */
 export type StringPath<T, Depth extends unknown[] = []> = Depth["length"] extends 3
   ? never
   : {
