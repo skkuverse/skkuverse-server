@@ -13,7 +13,7 @@ A name is how a reader, or an agent, finds code and understands it without a com
 | --- | --- |
 | File = `<meaning>.<role>.ts` from the closed role list, kebab-case | `naming.test.ts` |
 | Class = PascalCase(file base) + Role; a role file's main export is named after the file | `naming.test.ts` |
-| Exported types only in `.types`, `.document`, `.schema`; type files hold no runtime code | `naming.test.ts` |
+| Exported types only in `.types`, `.document`, `.schema`, `.wire`; type files hold no runtime code | `naming.test.ts` |
 | A brand is minted only by its one `is<Brand>`/`to<Brand>` in the declaring folder's `.rules`; casts only there or in specs | `naming.test.ts` |
 | Repository and client verbs, and `.rules`/`.mapper` predicates, match the declared return type | `method-verbs.test.ts` |
 | No `// --- X ---` section dividers | `section-comments.test.ts` |
@@ -62,6 +62,12 @@ Asked to name the same thing, two developers pick the same name about 7% of the 
 ## Glossary
 
 One concept, one name (ADR 0010, D1). A module adds its section when it is migrated.
+
+### Every module
+
+| Term | Meaning | Not |
+| --- | --- | --- |
+| wire | A shape a deployable of this repository writes to another repository (a response body, a push payload); its zod schema is in `<base>.wire.ts`, its type the `z.input` of that schema | `contract` (the `CONTRACT(<repo>):` tag, the umbrella's contracts), `dto` |
 
 ### building
 
