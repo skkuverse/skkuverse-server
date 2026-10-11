@@ -1,4 +1,4 @@
-import type { BuildNo, Campus, DisplayNo, WithBuildNo } from "./building.types";
+import type { ApiId, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd, WithBuildNo } from "./building.types";
 
 export const CAMPUSES = ["hssc", "nsc"] as const;
 
@@ -24,4 +24,22 @@ export function toDisplayNo(buildNo: BuildNo | null, campus: Campus): DisplayNo 
     return (buildNo.slice(1).replace(/^0+/, "") || "0") as DisplayNo;
   }
   return buildNo as string as DisplayNo;
+}
+
+/** QUIRK(skku): campusMap.do assigns building ids and publishes no spec; every id seen is a positive integer. */
+export function isSkkuId(id: number): id is SkkuId {
+  return Number.isSafeInteger(id) && id >= 1;
+}
+
+/** QUIRK(skku): buildInfo takes back the id buildList sent, the number stored as the SkkuId. */
+export function toApiId(id: SkkuId): ApiId {
+  return id as number as ApiId;
+}
+
+export function isBuildNo(buildNo: string): buildNo is BuildNo {
+  return buildNo !== "";
+}
+
+export function isSpaceCd(spaceCd: string): spaceCd is SpaceCd {
+  return spaceCd !== "";
 }
