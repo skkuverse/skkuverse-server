@@ -1,4 +1,6 @@
-export type BusGroupVisibility = { type: "always" } | { type: "dateRange"; from: string; until: string };
+export type BusGroupVisibility =
+  | { type: "always" }
+  | { type: "dateRange"; from: string; fromTime?: string; until: string };
 
 export interface BusGroupSource {
   id: string;

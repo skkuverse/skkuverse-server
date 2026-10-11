@@ -824,23 +824,23 @@ describe("자과캠 통학셔틀 resolution (built from scripts/data/commute-sch
   );
   const docsFor = (serviceId: string) => commuteDocs.filter((d) => d.serviceId === serviceId);
 
-  it("opens on Tuesday 2026-10-20 and hides Monday and the weekend of the first week", async () => {
+  it("runs Monday to Friday from Monday 2026-10-19 and hides the weekend of the first week", async () => {
     mockSchedules = docsFor("commute-jamsil");
     const week = await resolveWeek("commute-jamsil", "2026-10-19");
-    expect(week!.days[0]).toMatchObject({ date: "2026-10-19", display: "hidden", schedule: [] });
-    expect(week!.days.slice(1, 5).map((d) => d.display)).toEqual(Array(4).fill("schedule"));
-    expect(week!.days[1]!.date).toBe("2026-10-20");
+    expect(week!.days.slice(0, 5).map((d) => d.display)).toEqual(Array(5).fill("schedule"));
+    expect(week!.days[0]!.date).toBe("2026-10-19");
+    expect(week!.days[4]!.date).toBe("2026-10-23");
     expect(week!.days[5]).toMatchObject({ date: "2026-10-24", display: "hidden" });
     expect(week!.days[6]).toMatchObject({ date: "2026-10-25", display: "hidden" });
   });
 
-  it("opens the smart view on the first day the week before the pilot", async () => {
+  it("opens the smart view on the first day while the card is up before the pilot", async () => {
     jest.useFakeTimers();
-    jest.setSystemTime(new Date("2026-10-14T03:00:00.000Z")); // Wed 12:00 KST
+    jest.setSystemTime(new Date("2026-10-12T09:00:00.000Z")); // Mon 18:00 KST, the card's first minute
     try {
       mockSchedules = docsFor("commute-jeongja");
       const result = await resolveSmartSchedule("commute-jeongja");
-      expect(result).toMatchObject({ status: "active", from: "2026-10-19", selectedDate: "2026-10-20" });
+      expect(result).toMatchObject({ status: "active", from: "2026-10-19", selectedDate: "2026-10-19" });
     } finally {
       jest.useRealTimers();
     }
