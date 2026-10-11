@@ -110,6 +110,20 @@ const QUERY_IMPORT_PATTERN = {
   message: "Only a repository runs a query: import the *.query.ts from the module's repository.",
 };
 
+// Migrated feature modules read the time through `Clock` (design D13).
+const CLOCK_INJECT_SCOPES = ["src/building/**/*.ts", "src/ad/**/*.ts", "src/app-config/**/*.ts", "src/health/**/*.ts"];
+
+const CLOCK_INJECT_SYNTAX = [
+  {
+    selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+    message: "Read the time from the injected `Clock` (src/infra/clock.ts), not `new Date()`.",
+  },
+  {
+    selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+    message: "Read the time from the injected `Clock` (src/infra/clock.ts), not `Date.now()`.",
+  },
+];
+
 const CLOCK_SYNTAX = [
   {
     selector: "NewExpression[callee.name='Date'][arguments.length=0]",
@@ -456,6 +470,25 @@ module.exports = [
     ignores: VIOLATORS.lang,
     rules: {
       "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...LANG_SYNTAX],
+    },
+  },
+  {
+    // These blocks replace the earlier no-restricted-syntax of the same files, so
+    // they carry the log (and, for controllers, lang) selectors along. Rules,
+    // mappers and queries already ban the clock above.
+    name: "boundaries/clock",
+    files: CLOCK_INJECT_SCOPES,
+    ignores: ["**/*.spec.ts", "**/*.rules.ts", "**/*.mapper.ts", "**/*.query.ts", "**/*.controller.ts"],
+    rules: {
+      "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...CLOCK_INJECT_SYNTAX],
+    },
+  },
+  {
+    name: "boundaries/clock-controller",
+    files: CLOCK_INJECT_SCOPES.map((glob) => glob.replace("*.ts", "*.controller.ts")),
+    ignores: ["**/*.spec.ts"],
+    rules: {
+      "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...LANG_SYNTAX, ...CLOCK_INJECT_SYNTAX],
     },
   },
   ...featureBoundaryBlocks(),
