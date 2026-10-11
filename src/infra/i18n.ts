@@ -1,26 +1,14 @@
 import { SUPPORTED_LANGS, type I18n, type SupportedLang } from "./types";
 
 /**
- * Minimal i18n module.
- *
- * Two resolvers for two shapes of authored text:
- *
- *  - `t(key, lang)` for the KEYED table below — server-generated SDUI copy.
- *    Falls back `lang → ko → key`: every entry here is authored in all three
- *    languages by this repo, so a miss is a bug the key itself makes visible.
- *  - `pick(text, lang)` for an INLINE `{ko, en?, zh?}` object — event content,
- *    map layer and chip labels, anything authored beside the thing it names.
- *    Falls back `lang → en → ko`, blank treated as absent: ops authors `en`
- *    far more often than `zh`, and an empty string is a paste, not a value.
- *
- * Two chains on purpose, because the two kinds of author fail differently.
- * Korean is the source language in both.
+ * WHY: two fallback chains on purpose. `t()` over the keyed table: lang → ko → key, since every entry is
+ * authored here in all three, so a miss shows its key. `pick()` over inline text: lang → en → ko, blank
+ * as absent, since ops authors `en` far more often than `zh`.
  */
 type Translation = Partial<Record<SupportedLang, string>>;
 type Translations = Record<string, Translation>;
 
 const translations: Translations = {
-  // SDUI: buslist titles/subtitles
   "buslist.hssc.title": {
     ko: "인사캠 셔틀버스",
     en: "HSSC Shuttle Bus",
@@ -97,7 +85,6 @@ const translations: Translations = {
     zh: "村庄",
   },
 
-  // Bus config: group labels
   "busconfig.label.hssc": {
     ko: "인사캠 셔틀버스",
     en: "HSSC Shuttle Bus",
@@ -134,7 +121,6 @@ const translations: Translations = {
     zh: "自然校区通学班车",
   },
 
-  // Bus config: service tab labels
   "busconfig.service.campus-inja": {
     ko: "인사캠 → 자과캠",
     en: "HSSC → NSC",
@@ -145,7 +131,7 @@ const translations: Translations = {
     en: "NSC → HSSC",
     zh: "自然校区 → 人文校区",
   },
-  // Commute routes: kept to five Korean characters or fewer, because builds
+  // QUIRK(skkuverse-app): commute route labels stay at five Korean characters or fewer: builds
   // without the chips selector render them as a five-way segmented control.
   "busconfig.service.commute-jeongja": {
     ko: "정자",
@@ -173,7 +159,6 @@ const translations: Translations = {
     zh: "光教中央",
   },
 
-  // Bus config: route badge labels
   "busconfig.badge.regular": {
     ko: "일반",
     en: "Regular",
@@ -200,7 +185,6 @@ const translations: Translations = {
     zh: "放学",
   },
 
-  // Bus config: direction labels
   "busconfig.direction.inja": {
     ko: "인사캠 → 자과캠",
     en: "HSSC → NSC",
@@ -232,7 +216,6 @@ const translations: Translations = {
     zh: "一般",
   },
 
-  // Map config: campus labels
   "map.campus.hssc.label": {
     ko: "인사캠",
     en: "HSSC",
@@ -244,7 +227,6 @@ const translations: Translations = {
     zh: "自然校区",
   },
 
-  // SDUI: campus tab
   "campus.title": {
     ko: "캠퍼스 서비스",
     en: "Campus Services",
@@ -271,7 +253,6 @@ const translations: Translations = {
     zh: "咨询",
   },
 
-  // SDUI: scroll component
   "scroll.hsscMap.title": {
     ko: "인사캠 건물지도",
     en: "HSSC Building Map",
@@ -288,7 +269,6 @@ const translations: Translations = {
     zh: "失物招领",
   },
 
-  // Map overlays: building names (HSSC)
   "map.building.hssc.law": {
     ko: "법학관",
     en: "Law School",
@@ -350,14 +330,12 @@ const translations: Translations = {
     zh: "学生会馆",
   },
 
-  // Map overlays: building names (NSC)
   "map.building.nsc.campus": {
     ko: "자연과학캠퍼스",
     en: "Natural Sciences Campus",
     zh: "自然科学校区",
   },
 
-  // Schedule: empty-state messages
   "schedule.suspended": {
     ko: "운휴 기간입니다",
     en: "Service is suspended",
@@ -371,15 +349,8 @@ const translations: Translations = {
 };
 
 /**
- * Translate a key to the given language.
- * Falls back to Korean if the key or language is not found.
- */
-/**
- * text[lang] → text.en → text.ko, treating BLANK as absent.
- *
- * `??` alone would accept an ops-typed `en: ""` as a present value and render an
- * empty caption — the failure looks like a rendering bug rather than a data one,
- * so it survives a long time. Trim-and-skip costs nothing.
+ * WHY: blank counts as absent: `??` would render an ops-typed `en: ""` as an empty caption, a data bug
+ * that looks like a rendering one.
  */
 function pick(text: I18n | null | undefined, lang: SupportedLang): string | null {
   if (!text) return null;
@@ -389,19 +360,13 @@ function pick(text: I18n | null | undefined, lang: SupportedLang): string | null
   return null;
 }
 
-/**
- * Whether ANY language has usable text.
- *
- * Not the same as `pick(text, "ko") != null`: that tries `[ko, en, ko]` and so
- * cannot see a zh-only value. Using it as the drop test would discard a session
- * titled only in Chinese while logging "blank in every language" — a false
- * statement that sends the ops person looking in the wrong place.
- */
+/** WHY: not `pick(text, "ko") != null`, which tries [ko, en, ko] and so cannot see a zh-only value. */
 function hasAnyText(text: I18n | null | undefined): boolean {
   if (!text) return false;
-  return SUPPORTED_LANGS.some(
-    (lang) => typeof text[lang] === "string" && text[lang]!.trim() !== "",
-  );
+  return SUPPORTED_LANGS.some((lang) => {
+    const value = text[lang];
+    return typeof value === "string" && value.trim() !== "";
+  });
 }
 
 function t(key: string, lang: SupportedLang): string {
