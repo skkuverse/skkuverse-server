@@ -11,7 +11,7 @@ import ts from "typescript";
 import { z } from "zod";
 import { ROOT } from "../architecture/ratchet";
 import { readSource, sourceFiles } from "../architecture/tree";
-import { routeWireRefs, type RouteWireRefs } from "../architecture/wire-routes";
+import { routeWireRefs, type RouteWireRefs, type WireTypeRef } from "../architecture/wire-routes";
 
 export const INDEX_FILE = "index.json";
 export const SCHEMA_SUFFIX = ".schema.json";
@@ -95,16 +95,31 @@ export function schemaArtifact(schema: z.ZodType): string {
   return serialize(z.toJSONSchema(schema, { io: "input", target: "draft-7" }));
 }
 
+/** Whether a wire name a route references is this schema's export or one of its `z.input` aliases. */
+const isNamedBy = (s: WireSchema, ref: WireTypeRef) => ref.wireFile === s.source && s.names.has(ref.name);
+
 /** Each id, in order, with its source, export and the sorted routes whose payload types reference it. */
 export function contractIndex(schemas: readonly WireSchema[], routes: readonly RouteWireRefs[]): Record<string, IndexEntry> {
   const index: Record<string, IndexEntry> = {};
   for (const s of [...schemas].sort((a, b) => byString(a.id, b.id))) {
     const served = routes
-      .filter((r) => r.refs.some((ref) => ref.wireFile === s.source && s.names.has(ref.name)))
+      .filter((r) => r.refs.some((ref) => isNamedBy(s, ref)))
       .map((r) => r.route);
     index[s.id] = { source: s.source, export: s.exportName, routes: [...new Set(served)].sort(byString) };
   }
   return index;
+}
+
+/**
+ * `<route>: <wire file>#<name>` for each wire name a route references that maps
+ * to no id: an alias of a schema its file does not export, or a name that is
+ * no zod export at all.
+ */
+export function unpublishedWireRefs(schemas: readonly WireSchema[], routes: readonly RouteWireRefs[]): string[] {
+  const unpublished = routes.flatMap((r) =>
+    r.refs.filter((ref) => !schemas.some((s) => isNamedBy(s, ref))).map((ref) => `${r.route}: ${ref.wireFile}#${ref.name}`),
+  );
+  return [...new Set(unpublished)];
 }
 
 /** File name under `contracts/produced/` → content: `index.json` and one `<id>.schema.json` per schema. */

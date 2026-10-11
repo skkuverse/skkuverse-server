@@ -17,10 +17,24 @@
  *
  * The allowlist holds the routes that predate the rule; each refactor group
  * clears its own, and a new route is never on it.
+ *
+ * Each wire name a route references must also map to an id in
+ * `contracts/produced/index.json`: a schema its file exports, or a `z.input`
+ * alias of one. An alias of a schema the file keeps private satisfies `tsc`
+ * and the check above, yet no published contract describes the route. This
+ * check has no allowlist.
  */
+import { z } from "zod";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
-import { clientRoutes, unwiredRoutes } from "../helpers/architecture/wire-routes";
+import { clientRoutes, routeWireRefs, unwiredRoutes } from "../helpers/architecture/wire-routes";
+import {
+  sourceRoutes,
+  unpublishedWireRefs,
+  wireModules,
+  wireSchemas,
+  type WireModule,
+} from "../helpers/contracts/artifacts";
 
 describe("wire-routes rule applies as specified", () => {
   const imports = [
@@ -115,6 +129,50 @@ describe("wire-routes rule applies as specified", () => {
   });
 });
 
+describe("published-wire check applies as specified", () => {
+  const FILE = "src/x/x.controller.ts";
+  const wire: WireModule = {
+    file: "src/x/x.wire.ts",
+    source: [
+      'import { z } from "zod";',
+      "const xItem = z.object({ name: z.string() });",
+      "export const xList = z.object({ items: z.array(xItem) });",
+      "export type XItem = z.input<typeof xItem>;",
+      "export type XList = z.input<typeof xList>;",
+    ].join("\n"),
+    exports: { xList: z.object({ items: z.array(z.object({ name: z.string() })) }) },
+  };
+  const unpublished = (imports: string, returnType: string) =>
+    unpublishedWireRefs(
+      wireSchemas([wire]),
+      routeWireRefs(FILE, `${imports}\n@Controller("x")\nexport class XController {\n  @Get("x") x(): ${returnType} {}\n}`),
+    );
+
+  it("fails a z.input alias of a schema the wire file does not export, naming the route", () => {
+    // Act
+    const refs = unpublished('import type { XItem } from "./x.wire";', "Promise<XItem[]>");
+
+    // Assert
+    expect(refs).toEqual(["GET x/x: src/x/x.wire.ts#XItem"]);
+  });
+
+  it("passes a z.input alias of an exported schema", () => {
+    // Act
+    const refs = unpublished('import type { XList } from "./x.wire";', "Promise<XList>");
+
+    // Assert
+    expect(refs).toEqual([]);
+  });
+
+  it("passes a direct typeof of an exported schema", () => {
+    // Act
+    const refs = unpublished('import type * as XWire from "./x.wire";', "Promise<z.input<typeof XWire.xList>>");
+
+    // Assert
+    expect(refs).toEqual([]);
+  });
+});
+
 describe("routes", () => {
   it("declare what they send to a client through a .wire type", () => {
     // Arrange
@@ -128,5 +186,19 @@ describe("routes", () => {
     // An empty route list would pass the rule vacuously.
     expect(checked.length).toBeGreaterThan(20);
     expectAllowlisted("wire-routes", unwired);
+  });
+
+  it("reference only wire names that map to a published contract id", () => {
+    // Arrange
+    const schemas = wireSchemas(wireModules());
+    const routes = sourceRoutes();
+
+    // Act
+    const unpublished = unpublishedWireRefs(schemas, routes);
+
+    // Assert
+    // No wire reference at all would pass the check vacuously.
+    expect(routes.flatMap((r) => r.refs).length).toBeGreaterThan(5);
+    expect(unpublished).toEqual([]);
   });
 });
