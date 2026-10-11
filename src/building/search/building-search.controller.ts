@@ -10,7 +10,6 @@ import { buildingSearchQuery, type BuildingSearchQuery } from "./building-search
 import { BuildingSearchService } from "./building-search.service";
 import type { BuildingSearch } from "./building-search.types";
 
-// (A perimeter detail is left out of the public history.)
 @Controller("building")
 export class BuildingSearchController {
   constructor(private readonly buildingSearch: BuildingSearchService) {}

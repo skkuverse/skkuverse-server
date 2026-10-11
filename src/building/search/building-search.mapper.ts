@@ -6,7 +6,7 @@ import type { BuildNo, SkkuId } from "../building.types";
 import { BUILDING_SEARCH_LIMIT, SPACE_SEARCH_LIMIT } from "./building-search.rules";
 import type { BuildingSearch, RankedSearchResult, SearchLimit, SpaceGroup } from "./building-search.types";
 
-/** Groups keep first-seen order, so the relevance ranking survives grouping. */
+/** WHY: groups keep first-seen order, so the relevance ranking survives grouping. */
 function groupSpacesByBuilding(
   spaces: readonly SpaceDoc[],
   skkuIdByBuildNo: ReadonlyMap<BuildNo, SkkuId>,
@@ -67,7 +67,8 @@ function toBuildingSearch(
       buildingCount: buildingResult.items.length,
       spaceCount: spaceResult.items.length,
       counts: { building: buildingResult.counts, space: spaceResult.counts },
-      // The app's parseBuildingSearchResult ignores unknown keys, so meta can grow.
+      // CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/building/parser.ts ignores
+      // unknown meta keys, so meta can grow.
       limits: {
         building: toSearchLimit(BUILDING_SEARCH_LIMIT, buildingResult),
         space: toSearchLimit(SPACE_SEARCH_LIMIT, spaceResult),

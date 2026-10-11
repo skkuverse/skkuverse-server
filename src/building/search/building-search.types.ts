@@ -5,7 +5,7 @@ import type { BilingualText, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd, WithCa
 export type TierMode = "exact" | "prefix" | "substring";
 
 export interface RelevanceTier<TDoc> {
-  /** Higher wins; spaced by 10 so a tier can be inserted between two. */
+  /** WHY: higher wins; spaced by 10 so a tier can be inserted between two. */
   readonly score: number;
   readonly paths: readonly StringPath<TDoc>[];
   readonly mode: TierMode;
@@ -20,9 +20,8 @@ export type RankedFacet<T> = {
 
 export interface RankedSearchResult<T> {
   items: T[];
-  /** Campus-agnostic on purpose: the app's campus toggle shows both campuses. */
+  /** WHY: campus-agnostic, unlike `total`: the app's campus toggle shows both campuses. */
   counts: SearchCounts;
-  /** Campus-scoped, unlike `counts`. */
   total: number;
   truncated: boolean;
 }

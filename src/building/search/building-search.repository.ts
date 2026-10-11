@@ -7,11 +7,11 @@ import type { Campus } from "../building.types";
 import { BUILDING_SEARCH, SPACE_SEARCH, rankedSearchPipeline, toRankedResult } from "./building-search.query";
 import type { RankedFacet, RankedSearchResult } from "./building-search.types";
 
-/** A full scan of spaces, ~20 ms measured, so it gets more room than a hot point read. */
+/** EVIDENCE: a full scan of spaces, ~20 ms measured, so it gets more room than a hot point read. */
 const SEARCH_MAX_TIME_MS = 5000;
 
-// Deliberately no index: the $or has unindexed branches, so Mongo scans anyway.
-// Why, and what to do if spaces grows: ADR 0006, Consequences.
+// SEE: docs/decisions/0006-building-search-relevance-ranking.md ("Consequences"): no index on
+// purpose, as the $or has unindexed branches and Mongo scans anyway, and what to do if spaces grows.
 @Injectable()
 export class BuildingSearchRepository {
   async searchBuildings(
