@@ -332,6 +332,30 @@ describe("GET /building/:skkuId", () => {
   });
 });
 
+describe("GET /building/:skkuId at the safe-integer limit", () => {
+  it.each([
+    ["an id too long for a double", "9".repeat(400)],
+    ["2^53 + 1, which parseInt rounds to 2^53", "9007199254740993"],
+  ])("rejects %s with 400 INVALID_ID before any read", async (_case, skkuId) => {
+    // Act
+    const res = await request(httpServer).get(`/building/${skkuId}`);
+
+    // Assert
+    expect(res.status).toBe(400);
+    expect(res.body.error).toEqual({ code: "INVALID_ID", message: "skkuId must be a positive integer" });
+    expect(catalog.reads).toEqual([]);
+  });
+
+  it.each(["999", "9007199254740991"])("answers 404 NOT_FOUND for the unknown but valid id %s", async (skkuId) => {
+    // Act
+    const res = await request(httpServer).get(`/building/${skkuId}`);
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.body.error).toEqual({ code: "NOT_FOUND", message: `Building ${skkuId} not found` });
+  });
+});
+
 /**
  * A building response may be cached by clients for 300 s, matching the
  * repository's in-process cache TTL, and varies by language. An error is never
