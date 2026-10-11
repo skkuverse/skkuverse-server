@@ -1,14 +1,6 @@
 /**
- * Per-request log context.
- *
- * Services, data modules and the exception filter log through the shared
- * `logger` singleton, not `req.log`, so a request id has to reach them without
- * being passed down. The request middleware (infra/http-logging.ts) opens an
- * AsyncLocalStorage scope per request, and the logger's `mixin` copies the
- * store into every line written inside it.
- *
- * Outside a request (pollers, boot, shutdown) there is no store and lines carry
- * no reqId — which is itself the signal that a line is not request-driven.
+ * WHY: services log through the `logger` singleton, not `req.log`, so the request middleware opens
+ * this scope and the logger's mixin copies it into every line; a line without reqId ran outside a request.
  */
 import { AsyncLocalStorage } from "async_hooks";
 

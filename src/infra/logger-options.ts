@@ -3,16 +3,10 @@ import pino, { type LoggerOptions } from "pino";
 import { currentLogContext } from "./log-context";
 import { REDACT_PATHS, serializeError } from "./log-redact";
 
-/**
- * Everything about a log line's shape except where it goes and at what level.
- * Separate from logger.ts so tests can build a logger that writes to a buffer
- * with exactly the production options.
- */
+/** WHY: apart from logger.ts, so a test can build a logger that writes to a buffer with exactly these options. */
 export function loggerOptions(): LoggerOptions {
   return {
-    // `hostname` is the compose service name (api-1, poller, ...):
-    // docker-compose.yml sets it per service, so a line says which replica
-    // wrote it.
+    // WHY: docker-compose.yml sets `hostname` per service (api-1, poller), so a line names its replica.
     base: {
       pid: process.pid,
       hostname: os.hostname(),
@@ -23,10 +17,8 @@ export function loggerOptions(): LoggerOptions {
     formatters: {
       level: (label) => ({ level: label }),
     },
-    // A copy, never the store itself: pino's default mixinMergeStrategy is
-    // Object.assign(mixinObject, lineFields), so returning the store would write
-    // every line's fields into the request context, and every later line of
-    // that request (the access line included) would carry them.
+    // QUIRK(pino): the default mixinMergeStrategy is Object.assign(mixinObject, lineFields), so
+    // returning the store itself would write each line's fields into every later line of the request.
     mixin: () => ({ ...currentLogContext() }),
     serializers: { err: serializeError },
     redact: { paths: REDACT_PATHS, censor: "[REDACTED]" },

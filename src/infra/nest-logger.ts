@@ -1,20 +1,12 @@
-/**
- * Routes Nest's own framework logs through pino, so a boot writes JSON lines
- * like the rest of the app instead of Nest's coloured console text.
- *
- * Passed to NestFactory.create, so nothing is logged before it is in place.
- * Nest announces every module and route at boot (`InstanceLoader`,
- * `RoutesResolver`, `RouterExplorer` — over a hundred lines); those drop to
- * debug, which production does not write.
- */
 import type { LoggerService } from "@nestjs/common";
 import logger from "./logger";
 
+// WHY: Nest announces every module and route at boot, over a hundred lines; they drop to debug.
 const BOOT_CHATTER = new Set(["InstanceLoader", "RoutesResolver", "RouterExplorer"]);
 
 /**
- * Nest passes the context as the last string argument. A multi-line last
- * argument is a stack from error(message, stack), not a context.
+ * QUIRK(nest): the context is the last string argument, and a multi-line one is the stack of
+ * error(message, stack), not a context.
  */
 function split(params: unknown[]): { context?: string; rest: unknown[] } {
   const last = params[params.length - 1];
@@ -35,7 +27,6 @@ function write(
     logger[level]({ ...fields, err: message }, message.message);
     return;
   }
-  // error(message, stack, context): the stack arrives as a string.
   const stack = rest.find((p): p is string => typeof p === "string" && p.includes("\n"));
   if (stack) fields.stack = stack;
   logger[level](fields, typeof message === "string" ? message : JSON.stringify(message));
