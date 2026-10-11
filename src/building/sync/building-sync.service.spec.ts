@@ -1,6 +1,7 @@
 /**
- * BuildingSyncService.run() over a scripted client and in-memory repositories
- * (the typed fakes in __tests__/helpers/fakes/building/). What it guards:
+ * BuildingSyncService.run() over a scripted client, in-memory repositories
+ * (the typed fakes in __tests__/helpers/fakes/building/) and a fixed Clock.
+ * What it guards:
  *  - the failure contract the poller registry relies on: phase 1 failing (a
  *    fetch error, a list too short to trust, a raw building missing a field)
  *    stops the run; phase 2 or 3 failing lets the later phases and the cache
@@ -13,22 +14,25 @@
  *    and more than half failing fails the phase after its summary
  *  - phase 3 deletes the spaces this run did not see, unless spaceList listed
  *    too few to trust
+ *  - every write of a run is stamped with the Clock's time when the run
+ *    started, which is also the stale-delete cutoff
  * The SKKU payload translation is building-sync.client.spec.ts's, and the exact
  * MongoDB writes are building-sync.repository.spec.ts's.
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
 
+import { Test } from "@nestjs/testing";
 import { FakeBuildingRepository } from "../../../__tests__/helpers/fakes/building/building.repository.fake";
 import { FakeBuildingSyncClient } from "../../../__tests__/helpers/fakes/building/building-sync.client.fake";
 import { FakeBuildingSyncRepository } from "../../../__tests__/helpers/fakes/building/building-sync.repository.fake";
-import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { Clock } from "../../infra/clock";
 import type { BuildingDoc, BuildingRawDoc } from "../building.document";
-import type { BuildingRepository } from "../building.repository";
+import { BuildingRepository } from "../building.repository";
 import type { ApiId, BuildNo, Campus, SkkuId, SpaceCd } from "../building.types";
-import type { BuildingSyncClient } from "./building-sync.client";
+import { BuildingSyncClient } from "./building-sync.client";
 import { ENRICH_VERSION, enrichBuilding } from "./building-sync.mapper";
-import type { BuildingSyncRepository } from "./building-sync.repository";
+import { BuildingSyncRepository } from "./building-sync.repository";
 import { BuildingSyncService } from "./building-sync.service";
 import type { ListedBuilding, SyncedSpace } from "./building-sync.types";
 
@@ -37,6 +41,9 @@ const BUILDINGS_PER_CAMPUS = 30;
 /** 5000 spaces in all: enough for the sync to delete stale spaces. */
 const SPACES_PER_CAMPUS = 2500;
 const LAST_SYNC = new Date("2026-10-03T00:00:00Z");
+// Far from LAST_SYNC and from the real time, so a run that reads `new Date()` instead of the Clock
+// stamps its writes and cuts stale spaces at another instant.
+const CLOCK_NOW = new Date("2031-03-04T05:06:07.000Z");
 
 /** A building as the client lists it. hssc buildings are 101-130, nsc 201-230; skkuId, SKKU's id and buildNo agree. */
 function listed(skkuId: number, campus: Campus, doc: Partial<ListedBuilding["doc"]> = {}): ListedBuilding {
@@ -105,7 +112,7 @@ function healthySkku(): void {
 }
 
 /** Spaces a previous run stored that SKKU no longer lists. */
-function seedStaleSpaces(count: number): void {
+function seedStaleSpaces(count: number, syncedAt = LAST_SYNC): void {
   for (let i = 0; i < count; i++) {
     const spaceCd = `gone-${i}` as SpaceCd;
     repository.spaces.set(`hssc/101/${spaceCd}`, {
@@ -116,7 +123,7 @@ function seedStaleSpaces(count: number): void {
       name: { ko: "철거된 방", en: "" },
       conspaceCd: null,
       sources: ["spaceList"],
-      syncedAt: LAST_SYNC,
+      syncedAt,
     });
   }
 }
@@ -133,6 +140,9 @@ const detailErrorsOn = (layer: Map<SkkuId, BuildingRawDoc | BuildingDoc>) =>
 const photosWrittenOn = (layer: Map<SkkuId, BuildingRawDoc | BuildingDoc>) =>
   [...layer.values()].filter((doc) => doc.sync?.detailAt).map((doc) => doc._id);
 
+/** Each distinct instant among the stamps, as ISO text; a missing stamp shows as undefined. */
+const distinctInstants = (stamps: Array<Date | null | undefined>) => [...new Set(stamps.map((at) => at?.toISOString()))];
+
 /** The rejection of a run that must fail. */
 async function failureOf(run: Promise<void>): Promise<AggregateError> {
   const outcome = await run.then(
@@ -143,16 +153,22 @@ async function failureOf(run: Promise<void>): Promise<AggregateError> {
   return outcome as AggregateError;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
   client = new FakeBuildingSyncClient();
   repository = new FakeBuildingSyncRepository();
   buildings = new FakeBuildingRepository();
-  service = new BuildingSyncService(
-    asReal<BuildingSyncClient>(client),
-    asReal<BuildingSyncRepository>(repository),
-    asReal<BuildingRepository>(buildings),
-  );
+  const fakeClock: Clock = { now: () => CLOCK_NOW };
+  const moduleRef = await Test.createTestingModule({
+    providers: [
+      BuildingSyncService,
+      { provide: BuildingSyncClient, useValue: client },
+      { provide: BuildingSyncRepository, useValue: repository },
+      { provide: BuildingRepository, useValue: buildings },
+      { provide: Clock, useValue: fakeClock },
+    ],
+  }).compile();
+  service = moduleRef.get(BuildingSyncService);
 });
 
 describe("BuildingSyncService.run", () => {
@@ -283,6 +299,39 @@ describe("BuildingSyncService.run", () => {
       { event: "building.sync.stale_delete_skipped", count: 4998 },
     ]);
     expect(infoFields("building.sync.completed")).toMatchObject({ spaces: 4998 });
+  });
+
+  it("stamps every write of the run with the Clock's time", async () => {
+    // Arrange
+    healthySkku();
+
+    // Act
+    await service.run();
+
+    // Assert
+    const raw = [...repository.raw.values()];
+    const enriched = [...repository.enriched.values()];
+    const spaces = [...repository.spaces.values()];
+    expect(distinctInstants(raw.flatMap((doc) => [doc.sync?.listAt, doc.sync?.detailAt]))).toEqual([
+      CLOCK_NOW.toISOString(),
+    ]);
+    expect(
+      distinctInstants(enriched.flatMap((doc) => [doc.updatedAt, doc.sync?.listAt, doc.sync?.detailAt])),
+    ).toEqual([CLOCK_NOW.toISOString()]);
+    expect(distinctInstants(spaces.map((space) => space.syncedAt))).toEqual([CLOCK_NOW.toISOString()]);
+  });
+
+  it("deletes a space this run did not list that was stamped 1 ms before the Clock's time", async () => {
+    // Arrange
+    healthySkku();
+    seedStaleSpaces(3, new Date(CLOCK_NOW.getTime() - 1));
+
+    // Act
+    await service.run();
+
+    // Assert
+    expect(staleSpacesLeft()).toBe(0);
+    expect(infoFields("building.sync.stale_deleted")).toMatchObject({ deleted: 3 });
   });
 });
 

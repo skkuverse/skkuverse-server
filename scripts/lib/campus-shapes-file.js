@@ -85,6 +85,12 @@ function asShape(raw, i, errors) {
   // footprint inert.
   if (raw.skkuId !== null && (typeof raw.skkuId !== "number" || !Number.isInteger(raw.skkuId))) {
     own.push(`${where2}.skkuId must be an integer, or null for geometry with no building`);
+  } else if (raw.skkuId !== null && !(Number.isSafeInteger(raw.skkuId) && raw.skkuId >= 1)) {
+    // The same rule as isSkkuId in src/building/building.rules.ts, which this
+    // CommonJS script cannot import. A shape the server would drop vanishes
+    // from the map; __tests__/nest/map/campus-shapes-import.test.ts keeps the
+    // two in step.
+    own.push(`${where2}.skkuId must be a positive safe integer, the building id campusMap.do assigns`);
   }
 
   const geometry = asGeometry(raw.geometry, `${where2}.geometry`, own);

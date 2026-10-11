@@ -110,6 +110,33 @@ const QUERY_IMPORT_PATTERN = {
   message: "Only a repository runs a query: import the *.query.ts from the module's repository.",
 };
 
+// Migrated feature modules read the time through `Clock` (design D13).
+const CLOCK_INJECT_DIRS = ["src/building/", "src/ad/", "src/app-config/", "src/health/"];
+
+const CLOCK_INJECT_SYNTAX = [
+  {
+    selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+    message: "Read the time from the injected `Clock` (src/infra/clock.ts), not `new Date()`.",
+  },
+  {
+    selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+    message: "Read the time from the injected `Clock` (src/infra/clock.ts), not `Date.now()`.",
+  },
+];
+
+// A constructor lists injected dependencies, not an argument list: ESLint's max-params
+// counts both, so the migrated limit is the constructor's 4 and functions are held to 3 here.
+const PARAMS_SYNTAX = [
+  {
+    selector: ":function[params.length>3]:not(MethodDefinition[kind='constructor'] > FunctionExpression)",
+    message: "A function takes at most 3 parameters: pass an options object.",
+  },
+  {
+    selector: "MethodDefinition[kind='constructor'] > FunctionExpression[params.length>4]",
+    message: "A constructor takes at most 4 injected dependencies; split the class.",
+  },
+];
+
 const CLOCK_SYNTAX = [
   {
     selector: "NewExpression[callee.name='Date'][arguments.length=0]",
@@ -248,7 +275,7 @@ function migratedGlobs(tail) {
 }
 
 const ROLE_MAX_LINES = {
-  client: 178,
+  client: 173,
   controller: 47,
   document: 130,
   mapper: 147,
@@ -276,9 +303,48 @@ function roleSizeBlocks() {
 const MIGRATED_FUNCTION_LIMITS = {
   "max-lines-per-function": ["error", { max: 40, skipBlankLines: true, skipComments: false }],
   "max-depth": ["error", 2],
-  "max-params": ["error", 3],
+  // A constructor of 4 injected dependencies is allowed; PARAMS_SYNTAX holds functions to 3.
+  "max-params": ["error", 4],
   complexity: ["error", 9],
 };
+
+// no-restricted-syntax replaces rather than merges, so each kind of migrated file gets
+// one block with every selector it needs: log, its role's own, params, and the clock.
+function migratedSyntaxBlocks() {
+  const underClockDirs = MIGRATED_SCOPES.filter((scope) => CLOCK_INJECT_DIRS.some((dir) => scope.startsWith(dir)));
+  const elsewhere = MIGRATED_SCOPES.filter((scope) => !underClockDirs.includes(scope));
+  const globs = (scopes, tail) =>
+    scopes.flatMap((scope) => (scope.endsWith("/") ? [`${scope}**/*${tail}`] : scope.endsWith(tail) ? [scope] : []));
+  const pure = [".rules.ts", ".mapper.ts", ".query.ts"];
+  const blocks = [];
+  for (const [scopes, injectClock] of [
+    [underClockDirs, true],
+    [elsewhere, false],
+  ]) {
+    const clock = injectClock ? CLOCK_INJECT_SYNTAX : [];
+    blocks.push(
+      {
+        name: `migrated/syntax${injectClock ? "-clock" : ""}`,
+        files: globs(scopes, ".ts"),
+        ignores: ["**/*.spec.ts", ...pure.map((t) => `**/*${t}`), "**/*.controller.ts"],
+        rules: { "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...PARAMS_SYNTAX, ...clock] },
+      },
+      {
+        name: `migrated/syntax-controller${injectClock ? "-clock" : ""}`,
+        files: globs(scopes, ".controller.ts"),
+        ignores: ["**/*.spec.ts"],
+        rules: { "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...LANG_SYNTAX, ...PARAMS_SYNTAX, ...clock] },
+      },
+      {
+        name: `migrated/syntax-pure${injectClock ? "-clock" : ""}`,
+        files: pure.flatMap((t) => globs(scopes, t)),
+        ignores: ["**/*.spec.ts"],
+        rules: { "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...CLOCK_SYNTAX, ...PARAMS_SYNTAX] },
+      },
+    );
+  }
+  return blocks;
+}
 
 function migratedFunctionBlock() {
   return {
@@ -449,6 +515,27 @@ module.exports = [
     },
   },
   {
+    // A `.wire` schema exports to JSON Schema for another repository (ADR 0010,
+    // D13): structure and the literals it names, nothing a refinement needs. Its
+    // one pattern also covers boundaries/get-client's, which it replaces here.
+    name: "boundaries/wire",
+    files: ["src/**/*.wire.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^(?!zod$)(?!.*\\.(?:wire|constants)$)",
+              message:
+                "A .wire file imports only zod, other .wire files and .constants: brands, transforms and refinements go in the .schema that wraps it.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // This block replaces the src block's no-restricted-syntax for controllers,
     // so it carries the log selectors along.
     name: "boundaries/lang",
@@ -458,6 +545,7 @@ module.exports = [
       "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...LANG_SYNTAX],
     },
   },
+  ...migratedSyntaxBlocks(),
   ...featureBoundaryBlocks(),
   {
     name: "boundaries/shared",

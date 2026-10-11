@@ -6,17 +6,13 @@
  * minute, however often it is probed.
  */
 import { Global, Module } from "@nestjs/common";
-import { ExpressAdapter } from "@nestjs/platform-express";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { Test } from "@nestjs/testing";
-import express from "express";
 import request from "supertest";
 import { HealthModule } from "../../../src/health/health.module";
-import { HttpExceptionFilter } from "../../../src/http/http-exception.filter";
-import { ResponseInterceptor } from "../../../src/http/response.interceptor";
 import { ping } from "../../../src/infra/db";
 import logger from "../../../src/infra/logger";
 import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
+import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 jest.mock("../../../src/infra/db", () => ({ ping: jest.fn() }));
 
@@ -36,15 +32,7 @@ let httpServer: import("http").Server;
 const originalRole = process.env.ROLE;
 
 beforeAll(async () => {
-  const moduleRef = await Test.createTestingModule({
-    imports: [SchedulingStubModule, HealthModule],
-  }).compile();
-  app = moduleRef.createNestApplication<NestExpressApplication>(new ExpressAdapter(express()), {
-    bodyParser: false,
-  });
-  app.useGlobalInterceptors(new ResponseInterceptor());
-  app.useGlobalFilters(new HttpExceptionFilter());
-  await app.init();
+  app = await buildTestApp({ imports: [SchedulingStubModule, HealthModule] });
   httpServer = app.getHttpServer();
 });
 
