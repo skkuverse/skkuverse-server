@@ -13,8 +13,8 @@ export const campusFilter = z.preprocess((v) => (v === "" ? undefined : v), camp
 
 const bilingual = z.object({ ko: z.string(), en: z.string() });
 
-// scripts/import-campus-shapes.js writes campus_shapes, so it is parsed where it is
-// read (ADR 0010, D2). A document that fails is left out and logged, not fatal to the map.
+// CONTRACT(scripts): scripts/import-campus-shapes.js writes campus_shapes, so it is parsed where it
+// is read (ADR 0010, D2). A document that fails is left out and logged, not fatal to the map.
 export const campusShapeDoc = z.object({
   _id: z.string(),
   campus,
