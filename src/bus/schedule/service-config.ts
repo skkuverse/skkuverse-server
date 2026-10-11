@@ -26,8 +26,7 @@ const serviceConfig: ServiceConfigMap = {
     ],
     suspend: null,
   },
-  // 자과캠 통학셔틀, a pilot from 2026-10-20 to 2026-12-18: one service per
-  // route. The pilot window itself lives on the timetable patterns
+  // WHY: the 자과캠 통학셔틀 pilot window lives on its timetable patterns
   // (scripts/data/commute-schedule.json), not here.
   ...Object.fromEntries(
     [

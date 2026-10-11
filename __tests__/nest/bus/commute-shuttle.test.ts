@@ -84,7 +84,7 @@ describe("commute timetable (spec scenarios: departure → arrival per run)", ()
     expect(commuteDocs).toHaveLength(5);
     for (const doc of commuteDocs) {
       expect(doc.days).toEqual([1, 2, 3, 4, 5]);
-      expect(doc.effectiveFrom).toBe("2026-10-20");
+      expect(doc.effectiveFrom).toBe("2026-10-19");
       expect(doc.effectiveUntil).toBe("2026-12-18");
       for (const entry of doc.entries) expect(entry.busCount).toBe(1);
     }
@@ -131,17 +131,17 @@ describe("commute card visibility", () => {
     return getBusList("ko").some((item) => item.groupId === "commute");
   };
 
-  it("is absent on Monday 2026-10-19, the opening day the school moved", () => {
-    expect(listedAt("2026-10-18T15:00:00.000Z")).toBe(false); // 2026-10-19 00:00 KST
-    expect(listedAt("2026-10-19T03:00:00.000Z")).toBe(false); // 2026-10-19 12:00 KST
+  it("is absent the minute before the school's notice, 2026-10-12 18:00 KST", () => {
+    expect(listedAt("2026-10-11T15:00:00.000Z")).toBe(false); // 2026-10-12 00:00 KST
+    expect(listedAt("2026-10-12T08:59:00.000Z")).toBe(false); // 2026-10-12 17:59 KST
   });
 
-  it("is absent the minute before the pilot starts", () => {
-    expect(listedAt("2026-10-19T14:59:00.000Z")).toBe(false); // 2026-10-19 23:59 KST
+  it("is present from 2026-10-12 18:00 KST, a week before the first run", () => {
+    expect(listedAt("2026-10-12T09:00:00.000Z")).toBe(true); // 2026-10-12 18:00 KST
   });
 
-  it("is present from the first day, Tuesday 2026-10-20", () => {
-    expect(listedAt("2026-10-19T15:00:00.000Z")).toBe(true); // 2026-10-20 00:00 KST
+  it("stays present into the first run, Monday 2026-10-19", () => {
+    expect(listedAt("2026-10-18T15:00:00.000Z")).toBe(true); // 2026-10-19 00:00 KST
   });
 
   it("is present until the end of the last day", () => {
