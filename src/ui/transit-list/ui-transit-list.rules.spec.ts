@@ -22,4 +22,15 @@ describe("isBusGroupVisible", () => {
     // Act & Assert
     expect(isBusGroupVisible(pilot, new Date(iso))).toBe(expected);
   });
+
+  it.each([
+    ["2026-10-12T08:59:59.999Z", false],
+    ["2026-10-12T09:00:00.000Z", true],
+  ])("with a first-day time, at %s (18:00 KST) answers %p", (iso, expected) => {
+    // Arrange
+    const fromEvening = { type: "dateRange", from: "2026-10-12", fromTime: "18:00", until: "2026-12-18" } as const;
+
+    // Act & Assert
+    expect(isBusGroupVisible(fromEvening, new Date(iso))).toBe(expected);
+  });
 });

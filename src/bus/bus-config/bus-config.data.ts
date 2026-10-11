@@ -19,10 +19,13 @@ import type {
 type AnyStation = HsscStation | JongroStation;
 
 /** When the bus list shows a group: always, or from one KST date to another, inclusive. */
-type GroupVisibility = { type: "always" } | { type: "dateRange"; from: string; until: string };
+type GroupVisibility =
+  | { type: "always" }
+  | { type: "dateRange"; from: string; fromTime?: string; until: string };
 
 const always = (): GroupVisibility => ({ type: "always" });
-const dateRange = (from: string, until: string): GroupVisibility => ({ type: "dateRange", from, until });
+const dateRange = (from: string, until: string, fromTime?: string): GroupVisibility =>
+  fromTime === undefined ? { type: "dateRange", from, until } : { type: "dateRange", from, fromTime, until };
 
 interface MappedStation {
   index: number;
@@ -236,23 +239,15 @@ const COMMUTE_SERVICE_IDS = [
   "commute-gwanggyo",
 ] as const;
 
-/**
- * 자과캠 통학셔틀 (pilot, 2026-10-20..2026-12-18; the school moved the first
- * day from Monday 10-19 to Tuesday 10-20): one service per route, runs
- * typed by direction (`up` 등교, `down` 하교). Each run is one entry; its
- * `stopTimes` give the time at every stop of the service's sequence for that
- * direction (boarding stops, then where riders get off), so the 강남·양재 bus is
- * one row that boards at 강남 and 양재. The first group to use the v2 fields:
- * `serviceSelector`, `services[].stopSequences`, `screen.stops`. Builds that
- * predate them ignore the keys and render the v1 screen.
- */
+// WHY: the 자과캠 통학셔틀 card opens with the school's notice, a week before the first run
+// (2026-10-19), and its smart view opens on that run. SEE: docs/project-docs.md (Visibility)
 function buildCommuteGroup(lang: SupportedLang) {
   const { sequences, stops } = resolveStopSequences(COMMUTE_SERVICE_IDS, lang);
   return {
     id: "commute",
     screenType: "schedule",
     label: t("busconfig.label.commute", lang),
-    visibility: dateRange("2026-10-20", "2026-12-18"),
+    visibility: dateRange("2026-10-12", "2026-12-18", "18:00"),
     card: {
       themeColor: "003626",
       iconType: "shuttle",

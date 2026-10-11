@@ -1,6 +1,6 @@
 {
   "semester": "2026-2 pilot",
-  "effectiveFrom": "2026-10-20",
+  "effectiveFrom": "2026-10-19",
   "effectiveUntil": "2026-12-18",
   "routeTypes": ["up", "down"],
   "patterns": [
