@@ -250,6 +250,26 @@ describe("send — validation happens before anything is written", () => {
   });
 });
 
+// define-boundary-contracts B1 (design D8): a `route` that a URL parser reads as
+// another host, or that carries whitespace, is refused before anything is written.
+describe("send — a route is a root-relative path (B1)", () => {
+  it.each([
+    ["a protocol-relative URL", "//evil.com"],
+    ["a backslash authority", "/\\evil.com"],
+    ["a trailing newline", "/notices\n"],
+  ])("rejects a route that is %s, writing and sending nothing", async (_l, actionValue) => {
+    // Act
+    const result = await service.send("eskara-2026", { ...validDraft, actionType: "route", actionValue });
+
+    // Assert
+    expect(result).toEqual({
+      problems: ["actionValue for route must be a root-relative path (one leading /, no whitespace)"],
+    });
+    expect(insertSentNotification).not.toHaveBeenCalled();
+    expect(postToFcmFunction).not.toHaveBeenCalled();
+  });
+});
+
 describe("feed", () => {
   const doc = {
     _id: "n1",
