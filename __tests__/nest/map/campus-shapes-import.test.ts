@@ -46,8 +46,10 @@ function parse(over: Record<string, unknown> = {}, shapes?: unknown[]) {
 
 describe("parseCampusShapesFile", () => {
   it("reads a footprint into a storable document", () => {
+    // Act
     const { docs, errors } = parse();
 
+    // Assert
     expect(errors).toEqual([]);
     expect(docs).toHaveLength(1);
     expect(docs[0]).toMatchObject({
@@ -64,59 +66,80 @@ describe("parseCampusShapesFile", () => {
   });
 
   it("accepts null skkuId for geometry that is not a building", () => {
+    // Act
     // A campus boundary or a walking path. This is what makes it a backdrop:
     // the projection turns it into `tap: null`.
     const { docs, errors } = parse({ id: "hssc-boundary", skkuId: null });
 
+    // Assert
     expect(errors).toEqual([]);
     expect(docs[0].skkuId).toBeNull();
   });
 
   it("refuses an ABSENT skkuId rather than defaulting it", () => {
+    // Act
     // Absent is not the same as null. Forgetting the field must not silently
     // make a footprint inert — that would be a tap target quietly disappearing
     // with nothing anywhere saying why.
     const { docs, errors } = parse({ skkuId: undefined });
 
+    // Assert
     expect(docs).toHaveLength(0);
     expect(errors.join(" ")).toMatch(/skkuId must be an integer, or null/);
   });
 
   it("falls back to Korean when no English title is authored", () => {
+    // Act
     const { docs } = parse({ title: { ko: "금잔디" } });
+
+    // Assert
     expect(docs[0].title).toEqual({ ko: "금잔디", en: "금잔디" });
   });
 
   it("rejects an unknown campus", () => {
+    // Act
     const { docs, errors } = parse({ campus: "hsscc" });
+
+    // Assert
     expect(docs).toHaveLength(0);
     expect(errors.join(" ")).toMatch(/campus must be one of/);
   });
 
   it("rejects a blank layerId, which would draw nothing and say nothing", () => {
+    // Act
     const { docs, errors } = parse({ layerId: "" });
+
+    // Assert
     expect(docs).toHaveLength(0);
     expect(errors.join(" ")).toMatch(/layerId must be a non-empty string/);
   });
 
   it("rejects a missing order rather than defaulting it to 0", () => {
+    // Act
     const { errors } = parse({ order: undefined });
+
+    // Assert
     expect(errors.join(" ")).toMatch(/order must be a finite number/);
   });
 
   it("inherits the shared geometry guards", () => {
+    // Arrange
     // The same reader the event sheet uses, so a swapped paste is caught here
     // too rather than drawing a shape across the Yellow Sea.
     const swapped = RING.map(([lng, lat]) => [lat, lng]);
+
+    // Act
     const { docs, errors } = parse({
       geometry: { type: "Polygon", coordinates: [swapped] },
     });
 
+    // Assert
     expect(docs).toHaveLength(0);
     expect(errors.join(" ")).toMatch(/is not a longitude|may be swapped/);
   });
 
   it("rejects a duplicate id instead of silently overwriting its twin", () => {
+    // Arrange
     const one = {
       id: "dup",
       campus: "hssc",
@@ -126,8 +149,11 @@ describe("parseCampusShapesFile", () => {
       skkuId: null,
       order: 0,
     };
+
+    // Act
     const { docs, errors } = parse({}, [one, { ...one, title: "B" }]);
 
+    // Assert
     // On upsert the second would overwrite the first, leaving one shape missing
     // and the import reporting success.
     expect(docs).toHaveLength(1);
@@ -135,12 +161,16 @@ describe("parseCampusShapesFile", () => {
   });
 
   it("counts rows rather than messages when one shape has several problems", () => {
+    // Act
     const { docs } = parse({ campus: "nope", order: undefined, layerId: "" });
+
+    // Assert
     // One bad row is one rejected row, whatever it is wrong about.
     expect(docs).toHaveLength(0);
   });
 
   it("reports a malformed file rather than throwing", () => {
+    // Act & Assert
     expect(parseCampusShapesFile("{not json")).toEqual({
       docs: [],
       errors: [expect.stringContaining("not valid JSON")],
@@ -152,6 +182,7 @@ describe("parseCampusShapesFile", () => {
   });
 
   it("accepts the committed sheet, whatever is in it", () => {
+    // Arrange
     // The file ships empty and gets filled in as somebody draws. An empty
     // collection is an ordinary answer, not a broken one — but the file must
     // always parse, or the next import fails for a reason nobody expects.
@@ -161,21 +192,28 @@ describe("parseCampusShapesFile", () => {
       path.join(__dirname, "../../../scripts/data/campus-shapes.json"),
       "utf8",
     );
+
+    // Act & Assert
     expect(parseCampusShapesFile(real).errors).toEqual([]);
   });
 
   it("writes only documents the server's read schema accepts", () => {
+    // Arrange
     // The importer and building.schema.ts's campusShapeDoc are two readings of
     // one document. A shape the importer stores but the server's parse drops
     // would vanish from the campus map with only a warning to show for it.
     const fs = require("fs");
     const path = require("path");
     const real = fs.readFileSync(path.join(__dirname, "../../../scripts/data/campus-shapes.json"), "utf8");
+
+    // Act
     const docs = [
       ...parse().docs,
       ...parse({ skkuId: null, title: { ko: "정문", en: "Main gate" }, subtitle: "인사캠" }).docs,
       ...parseCampusShapesFile(real).docs,
     ];
+
+    // Assert
     expect(docs.length).toBeGreaterThanOrEqual(2);
     for (const doc of docs) expect(campusShapeDoc.safeParse(doc).success).toBe(true);
   });

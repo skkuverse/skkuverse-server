@@ -57,7 +57,7 @@
  * ## Propagation
  *
  * Neither direction is instant. Each api replica caches the activation and the
- * overlays for a few seconds (EVENT_CACHE_TTL_MS in src/map/map-event-cache.ts),
+ * overlays for a few seconds (EVENT_CACHE_TTL_MS in src/map/map.constants.ts),
  * so the layer list and the chip row turn over within seconds; on top of that
  * `/map/overlays/event` is `public, max-age=60`, so a booth already fetched can
  * linger on a device for up to a minute. About a minute worst case, then, before every device is back

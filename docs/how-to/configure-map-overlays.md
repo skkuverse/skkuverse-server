@@ -32,7 +32,7 @@ pins and shapes together — so a client draws the whole map with one fetch.
 | `groundImage` | No | No | an image pinned to a bounding box |
 
 The first three are real end to end. The rest are **reserved** — written down in
-the union's doc comment in `src/map/map-overlay.types.ts`, with the arm, the
+the union's doc comment in `src/map/map.wire.ts`, with the arm, the
 producer branch and the client component all still to build. See [Add a new overlay
 kind](#add-a-new-overlay-kind) for what that costs.
 
@@ -50,8 +50,8 @@ The single most useful question before any change: **does this need a deploy?**
   scripts/data/*.json ──► npm run <import> ──► Mongo ──► the overlay routes
        (repo, PR)                              (ops, live)      (60 s / 1 day TTL)
 
-  src/map/config/<layerSetId>.json ──► the festival's layers, chips, categories
-  src/map/map-layers.data.ts       ──► the permanent layers
+  src/map/layer-set/<layerSetId>.json ──► the festival's layers, chips, categories
+  src/map/map.constants.ts       ──► the permanent layers
        (repo, PR + deploy)
 ```
 
@@ -60,10 +60,10 @@ The single most useful question before any change: **does this need a deploy?**
 | A booth, zone or line's position, title, hours, buttons | the sheet, then re-import | No |
 | Add or remove a zone, a route line, a footprint | the sheet, then re-import | No |
 | Take the whole festival down now | the activation's `enabled` flag | No |
-| A layer's colour, opacity, outline, zoom bounds | the layer set JSON, or `map-layers.data.ts` | Yes |
+| A layer's colour, opacity, outline, zoom bounds | the layer set JSON, or `map.constants.ts` | Yes |
 | Which layer a booth category lands on | the layer set JSON's category table | Yes |
 | Whether a category is tappable | the layer set JSON's category table | Yes |
-| Add a permanent layer | `map-layers.data.ts` | Yes |
+| Add a permanent layer | `map.constants.ts` | Yes |
 | Add a new `kind` | the type union, a producer, and the client | Yes, plus an app release |
 
 ## Prerequisites
@@ -144,7 +144,7 @@ the `buildings` documents, which are a mirror of SKKU's own data.
    }
    ```
 
-   - **`layerId`** must name a layer in `BASE_LAYERS` (`map-layers.data.ts`).
+   - **`layerId`** must name a layer in `BASE_LAYERS` (`map.constants.ts`).
      There is no category table on this side — permanent geometry has no need to
      invent one mid-festival.
    - **`skkuId`** is the building this outlines, so tapping the footprint opens
@@ -159,7 +159,7 @@ the `buildings` documents, which are a mirror of SKKU's own data.
 `campus_geometry` ships **inert** — it draws nothing and offers no toggle —
 because it exists so campus shapes have a `layerId` to name, and nothing had
 been drawn when it landed. Once there is geometry worth showing, flip two fields
-on its entry in `map-layers.data.ts`:
+on its entry in `map.constants.ts`:
 
 ```ts
 defaultVisibleWhen: { kind: "always" },   // was { kind: "never" }
@@ -239,7 +239,7 @@ Two of these are not optional in practice, and the reason is the client's own
 defaults: its polygon overlay defaults `color` to **opaque black** and
 `outlineWidth` to **zero**, so a zone shipped without `fillOpacity` and an
 outline is a solid black blob with no border, hiding the booths inside it.
-`EVENT_SHAPE_STYLE` in `map-layers.data.ts` supplies both for every festival
+`EVENT_SHAPE_STYLE` in `map.constants.ts` supplies both for every festival
 layer, and derives the outline colour from the category colour.
 
 Festival layer colours are authored per layer in the layer set JSON, because a
@@ -253,7 +253,7 @@ Adding a `kind` is additive and non-breaking — an old client skips one it does
 not recognise, dropping that overlay and never its layer or its siblings. Three
 edits:
 
-1. **The union** — a new arm on `MapOverlay` in `map-overlay.types.ts`. Where
+1. **The union** — a new arm on `MapOverlay` in `map.wire.ts`. Where
    RFC 7946 can express the geometry, embed it verbatim under `geometry`;
    invent a shape only where the spec genuinely cannot, and use named
    `{ lat, lng }` fields when you do, since there is no spec to conform to and a

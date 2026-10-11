@@ -11,6 +11,7 @@ const { planSteps } = require("../../../scripts/eventmap-revive-dev");
 
 describe("eventmap-revive-dev — planSteps", () => {
   it("syncs the sheet into _dev, then opens a 240-minute dev window", () => {
+    // Act & Assert
     expect(planSteps([], {})).toEqual([
       ["import-eventmap-places.js", "--delete-missing"],
       ["eventmap-window.js", "open", "--minutes", "240"],
@@ -18,6 +19,7 @@ describe("eventmap-revive-dev — planSteps", () => {
   });
 
   it("passes --file to the import and --layer-set-id to both steps", () => {
+    // Act & Assert
     expect(
       planSteps(["--file", "x.json", "--layer-set-id", "eskara-2027", "--minutes", "30"], {}),
     ).toEqual([
@@ -31,10 +33,12 @@ describe("eventmap-revive-dev — planSteps", () => {
     ["--prod", ["--prod"], {}],
     ["--prod after other flags", ["--minutes", "30", "--prod"], {}],
   ])("refuses %s before planning anything", (_label, argv, env) => {
+    // Act & Assert
     expect(() => planSteps(argv, env)).toThrow(/^refusing: /);
   });
 
   it("rejects an unknown argument and a flag with no value", () => {
+    // Act & Assert
     expect(() => planSteps(["--delete-missing"], {})).toThrow(/unknown argument/);
     expect(() => planSteps(["--minutes"], {})).toThrow(/needs a value/);
     expect(() => planSteps(["--file", "--minutes", "5"], {})).toThrow(/needs a value/);

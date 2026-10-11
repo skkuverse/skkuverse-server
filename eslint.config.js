@@ -111,7 +111,7 @@ const QUERY_IMPORT_PATTERN = {
 };
 
 // Migrated feature modules read the time through `Clock` (design D13).
-const CLOCK_INJECT_DIRS = ["src/building/", "src/ad/", "src/app-config/", "src/health/", "src/ui/"];
+const CLOCK_INJECT_DIRS = ["src/building/", "src/ad/", "src/app-config/", "src/health/", "src/map/", "src/ui/"];
 
 const CLOCK_INJECT_SYNTAX = [
   {
@@ -187,18 +187,14 @@ const VIOLATORS = {
     "src/bus/eta/eta-store.ts",
     "src/bus/schedule/schedule-db.ts",
     "src/bus/schedule/schedule.service.ts",
-    "src/map/map-places.data.ts",
     "src/miniapps/miniapps.data.ts",
     "src/notices/notices.data.ts",
   ],
-  features: {
-    map: ["src/map/map-event-overlays.data.ts"],
-  },
+  features: {},
   // Controllers that read req.lang themselves instead of taking @Lang().
   lang: [
     "src/bus/controllers/bus-config.controller.ts",
     "src/bus/controllers/schedule.controller.ts",
-    "src/map/controllers/map-config.controller.ts",
     "src/miniapps/miniapps.controller.ts",
     "src/notices/notices.controller.ts",
     "src/notices/overview/overview.controller.ts",
@@ -376,6 +372,7 @@ const GLOSSARY_NOT = {
   "app-config": ["AppSettings", "forceUpdate"],
   building: ["buildingId", "buildingNo", "roomId", "level", "bucket", "searchData", "term", "geometryDoc"],
   health: ["isAlive", "isHealthy"],
+  map: ["festivalConfig", "layerConfig", "eventWindow", "currentFestival", "filterButton", "exclusiveGroup", "categoryStyle", "sheetBody", "isFallback"],
   ui: ["homeConfig", "widget", "slider", "period", "shortcut", "campusConfig", "busItem", "scrollItem"],
 };
 
@@ -385,6 +382,48 @@ function glossaryDenylistBlocks() {
     files: [`src/${module}/**/*.ts`],
     rules: { "id-denylist": ["error", ...names] },
   }));
+}
+
+
+// The layer-set loader (src/map/layer-set/map-layer-set.config.ts) reads its files when it is first imported, and
+// checks them against the catalogue and the chip rules. A file it imports that imported it back would hand the
+// loader a half-initialised module (`BASE_LAYERS` undefined at load, a TypeError naming nothing useful).
+// Each block carries the patterns of the block it replaces for its files.
+const LAYER_SET_LOADER_PATTERN = {
+  group: ["**/map-layer-set.config", "./map-layer-set.config"],
+  message: "the layer-set loader imports this file at load: importing it back closes a cycle.",
+};
+const LAYER_SET_LEAVES = [
+  "src/map/map.{constants,rules,mapper,schema,types}.ts",
+  "src/map/layer-set/map-layer-set.{constants,rules,mapper,schema,types}.ts",
+];
+
+function layerSetLeafBlocks() {
+  const isPure = (glob) => /rules|mapper/.test(glob);
+  return [
+    {
+      name: "layer-set-leaves",
+      files: LAYER_SET_LEAVES,
+      ignores: ["**/*.spec.ts", "src/map/**/*.{rules,mapper}.ts"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          { patterns: [GET_CLIENT_PATTERN, MONGO_COLLECTION_PATTERN, QUERY_IMPORT_PATTERN, LAYER_SET_LOADER_PATTERN] },
+        ],
+      },
+    },
+    {
+      name: "layer-set-leaves-pure",
+      files: LAYER_SET_LEAVES.flatMap((glob) => (isPure(glob) ? [glob.replace(/\{[^}]*\}/, "{rules,mapper}")] : [])),
+      ignores: ["**/*.spec.ts"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          { patterns: [...PURE_IMPORT_PATTERNS, MONGO_PATTERN, QUERY_IMPORT_PATTERN, LAYER_SET_LOADER_PATTERN] },
+        ],
+      },
+    },
+  ];
 }
 
 const jestGlobals = {
@@ -457,7 +496,7 @@ module.exports = [
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.spec.ts"],
     rules: {
-      "max-lines": ["error", { max: 553, skipBlankLines: true, skipComments: false }],
+      "max-lines": ["error", { max: 502, skipBlankLines: true, skipComments: false }],
       "max-lines-per-function": ["error", { max: 122, skipBlankLines: true, skipComments: true }],
       complexity: ["error", 47],
       "max-params": ["error", 7],
@@ -599,50 +638,7 @@ module.exports = [
       ],
     },
   },
-  {
-    // LEAF modules of the catalogue ⇄ layer-set seam. `map-layerset.config.ts`
-    // runs `CONFIG_FILES.map(loadOne)` in its module body and imports these two
-    // to validate a festival's chips against the served catalogue; if either
-    // ever imported it — or anything that does — back, the half-initialised
-    // module would be the one running loadOne, and `BASE_LAYERS` would be
-    // `undefined` inside the import-time check with a TypeError naming nothing
-    // useful. Their headers say so; this is what makes it fail lint instead.
-    //
-    // Living in one directory now does not make the cycle less real: these two
-    // are imported BY the loader, so nothing they import may reach it again.
-    files: ["src/map/map-layers.data.ts", "src/map/map-chips.data.ts"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            // This block replaces boundaries/get-client's options for these
-            // two files, so it carries that pattern too.
-            GET_CLIENT_PATTERN,
-            {
-              // Both spellings: these modules are siblings now, so the import
-              // that would close the cycle is written "./map-layerset.config",
-              // which a "**/"-only glob does not reliably match.
-              group: [
-                "**/map-layerset.config",
-                "./map-layerset.config",
-                "**/map-active-layerset",
-                "./map-active-layerset",
-                "**/map-places.data",
-                "./map-places.data",
-                "**/map-config.data",
-                "./map-config.data",
-                "**/map-event-overlays.data",
-                "./map-event-overlays.data",
-              ],
-              message:
-                "leaf module: this import closes a cycle through map-layerset.config (see the file header).",
-            },
-          ],
-        },
-      ],
-    },
-  },
+  ...layerSetLeafBlocks(),
   {
     files: ["__tests__/**/*.{js,ts}"],
     languageOptions: {

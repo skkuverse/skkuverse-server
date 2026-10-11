@@ -1,0 +1,186 @@
+{
+  "_about": "Synthetic: no festival was live at capture; generated 2026-10-11 by the real map services over an in-memory repository with the shipped eskara-2026 layer set and an open activation; a booth marker, an inert zone polygon and a path that taps to a chip",
+  "data": {
+    "overlays": [
+      {
+        "id": "eskara-2026-booth-01",
+        "layerId": "eskara26_booth",
+        "campus": "nsc",
+        "text": {
+          "ko": "우끼끼친",
+          "en": "Ukkikki"
+        },
+        "subtitle": {
+          "ko": "생명공학대학 학생회",
+          "en": "생명공학대학 학생회"
+        },
+        "hours": [
+          {
+            "startAt": "2026-10-01T09:00:00.000Z",
+            "endAt": "2026-10-01T15:00:00.000Z",
+            "label": {
+              "ko": "단체 입장",
+              "en": "Groups"
+            }
+          },
+          {
+            "startAt": "2026-10-02T09:00:00.000Z",
+            "endAt": null,
+            "label": null
+          }
+        ],
+        "fields": [
+          {
+            "label": {
+              "ko": "운영",
+              "en": "운영"
+            },
+            "value": {
+              "ko": "학생회",
+              "en": "학생회"
+            }
+          }
+        ],
+        "actions": [
+          {
+            "id": "map",
+            "label": {
+              "ko": "지도",
+              "en": "지도"
+            },
+            "actionType": "webview",
+            "actionValue": "https://webview.skkuverse.com/eskara/map",
+            "style": "primary"
+          },
+          {
+            "id": "band",
+            "label": {
+              "ko": "팔찌",
+              "en": "팔찌"
+            },
+            "actionType": "miniapp",
+            "actionValue": "eskara-2026/eskara/wristband"
+          }
+        ],
+        "order": 10,
+        "facets": {
+          "day": [
+            "day1",
+            "day2"
+          ],
+          "org": [
+            "council"
+          ]
+        },
+        "orderByOption": {
+          "day1": 3
+        },
+        "tap": {
+          "kind": "event",
+          "placeId": "eskara-2026-booth-01"
+        },
+        "kind": "marker",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            126.971747,
+            37.294452
+          ]
+        },
+        "pinPriority": 20,
+        "locationAccuracy": "exact"
+      },
+      {
+        "id": "eskara-2026-control-entry",
+        "layerId": "eskara26_control_entry",
+        "campus": "nsc",
+        "text": {
+          "ko": "출입 통제 구역",
+          "en": "출입 통제 구역"
+        },
+        "subtitle": null,
+        "hours": [],
+        "fields": [],
+        "actions": [],
+        "order": 1,
+        "facets": {
+          "day": [
+            "day1",
+            "day2"
+          ],
+          "org": []
+        },
+        "orderByOption": {},
+        "tap": null,
+        "kind": "polygon",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                126.9707,
+                37.2949
+              ],
+              [
+                126.9712,
+                37.2949
+              ],
+              [
+                126.9712,
+                37.2953
+              ],
+              [
+                126.9707,
+                37.2953
+              ],
+              [
+                126.9707,
+                37.2949
+              ]
+            ]
+          ]
+        }
+      },
+      {
+        "id": "eskara-2026-food-zone",
+        "layerId": "eskara26_food",
+        "campus": "nsc",
+        "text": {
+          "ko": "푸드트럭 구역",
+          "en": "푸드트럭 구역"
+        },
+        "subtitle": null,
+        "hours": [],
+        "fields": [],
+        "actions": [],
+        "order": 2,
+        "facets": {
+          "day": [
+            "day1",
+            "day2"
+          ],
+          "org": []
+        },
+        "orderByOption": {},
+        "tap": {
+          "kind": "chip",
+          "chipId": "eskara26_view_food"
+        },
+        "kind": "path",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              126.9716,
+              37.2958
+            ],
+            [
+              126.9717,
+              37.2966
+            ]
+          ]
+        }
+      }
+    ]
+  }
+}
