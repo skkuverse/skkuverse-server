@@ -1,3 +1,4 @@
+/** @CacheControl sets its header on a successful response only, never on an error. */
 import { Controller, Get, type INestApplication, Query } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
@@ -35,19 +36,28 @@ describe("@CacheControl", () => {
   afterAll(() => app.close());
 
   it("sets Cache-Control on a successful response", async () => {
+    // Act
     const res = await request(app.getHttpServer()).get("/t/cached");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.headers["cache-control"]).toBe("public, max-age=300");
   });
 
   it("never on an error response, which a shared cache would keep", async () => {
+    // Act
     const res = await request(app.getHttpServer()).get("/t/cached?fail=1");
+
+    // Assert
     expect(res.status).toBe(400);
     expect(res.headers["cache-control"]).toBeUndefined();
   });
 
   it("not on a handler without it", async () => {
+    // Act
     const res = await request(app.getHttpServer()).get("/t/uncached");
+
+    // Assert
     expect(res.headers["cache-control"]).toBeUndefined();
   });
 });

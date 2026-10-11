@@ -1,11 +1,17 @@
+/**
+ * escapeRegex makes user input match literally; captureGroups returns typed groups, null on no match,
+ * and throws on a missing group or a stateful pattern.
+ */
 import { captureGroups, escapeRegex } from "./regex.util";
 
 describe("escapeRegex", () => {
   it("escapes every metacharacter", () => {
+    // Act & Assert
     expect(escapeRegex(".*+?^${}()|[]\\")).toBe("\\.\\*\\+\\?\\^\\$\\{\\}\\(\\)\\|\\[\\]\\\\");
   });
 
   it("matches the input literally", () => {
+    // Act & Assert
     for (const input of ["a.b", "(27)", "c++", "1+1=2", "[x]", "도서관?"]) {
       expect(new RegExp(`^${escapeRegex(input)}$`).test(input)).toBe(true);
     }

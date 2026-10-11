@@ -33,13 +33,19 @@ function app(): express.Express {
 
 describe("noStoreMiddleware", () => {
   it.each(["/set", "/raw", "/append", "/none"])("%s answers with Cache-Control: no-store", async (path) => {
+    // Act
     const res = await request(app()).get(path);
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.headers["cache-control"]).toBe("no-store");
   });
 
   it("leaves every other header alone", async () => {
+    // Act
     const res = await request(app()).get("/other");
+
+    // Assert
     expect(res.headers["x-other"]).toBe("kept");
   });
 });
