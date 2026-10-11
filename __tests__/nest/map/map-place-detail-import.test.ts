@@ -14,19 +14,12 @@ import fs from "fs";
 import path from "path";
 import { MEDIA_ORIGIN } from "../../../src/infra/origins";
 import { isMediaUrl } from "../../../src/infra/media-url";
-import {
-  PLACE_BLOCK_TYPES,
-  PLACE_DETAIL_ACTION_TYPES,
-  PLACE_KINDS,
-} from "../../../src/map/map-place-detail.types";
-import { isAbsoluteHttpsUrl } from "../../../src/map/map-event-overlays.data";
-import {
-  isInstagramPostUrl,
-  isInstagramProfileUrl,
-} from "../../../src/map/map-event-details.data";
-import { getLayerSetConfig } from "../../../src/map/map-layerset.config";
+import { PLACE_BLOCK_TYPES, PLACE_DETAIL_ACTION_TYPES, PLACE_KINDS } from "../../../src/map/map.constants";
+import { isAbsoluteHttpsUrl } from "../../../src/shared/link-target.util";
+import { isInstagramPostUrl, isInstagramProfileUrl } from "../../../src/map/event-details/map-event-details.rules";
+import { getLayerSetConfig } from "../../../src/map/layer-set/map-layer-set.config";
 import { parseMiniAppTarget } from "../../../src/miniapps/miniapp-target";
-import { presentationFor } from "../../../src/map/map-layerset.types";
+import { presentationFor } from "../../../src/map/map.rules";
 
 // scripts/ is plain CommonJS excluded from tsconfig, so this is a require.
 const reader = require("../../../scripts/lib/map-places-file");
@@ -83,14 +76,19 @@ function fullDetail(): Record<string, unknown> {
 
 describe("parsePlacesFile — detail", () => {
   it("stores null when a place has no detail, so the key is always present", () => {
+    // Act
     const { docs, errors } = withDetail(undefined);
+
+    // Assert
     expect(errors).toEqual([]);
     expect(docs[0].detail).toBeNull();
   });
 
   it("reads a full detail, filling every optional value with an explicit null", () => {
+    // Act
     const { docs, errors } = withDetail(fullDetail());
 
+    // Assert
     expect(errors).toEqual([]);
     expect(docs[0].detail).toEqual({
       kind: "foodTruck",
@@ -137,9 +135,12 @@ describe("parsePlacesFile — detail", () => {
   });
 
   it("writes no undefined anywhere, so a re-import compares equal", () => {
+    // Act
     // BSON stores undefined as null, so an undefined here would differ from its
     // own stored copy on every import and stamp every place as changed forever.
     const { docs } = withDetail(fullDetail());
+
+    // Assert
     const walk = (v: unknown): void => {
       expect(v).not.toBeUndefined();
       if (v && typeof v === "object") Object.values(v).forEach(walk);
@@ -148,7 +149,10 @@ describe("parsePlacesFile — detail", () => {
   });
 
   it("keeps the whole place out when its detail is bad — one verdict per place", () => {
+    // Act
     const { docs, errors } = withDetail({ kind: "truck" });
+
+    // Assert
     expect(docs).toEqual([]);
     expect(errors).toHaveLength(1);
   });
@@ -206,12 +210,16 @@ describe("parsePlacesFile — detail", () => {
   ];
 
   it.each(rejections)("rejects %s", (_name, detail, message) => {
+    // Act
     const { docs, errors } = withDetail(detail);
+
+    // Assert
     expect(docs).toEqual([]);
     expect(errors.join(" ")).toMatch(message);
   });
 
   it("names every problem in one run, not the first", () => {
+    // Act
     const { errors } = withDetail({
       kind: "booth",
       blocks: [
@@ -219,6 +227,8 @@ describe("parsePlacesFile — detail", () => {
         { type: "image", id: "p", url: "https://example.com/a.jpg" },
       ],
     });
+
+    // Assert
     expect(errors).toHaveLength(2);
   });
 
@@ -230,7 +240,10 @@ describe("parsePlacesFile — detail", () => {
     ["a trailing newline", `${PHOTO}\n`],
     ["the bare origin", `${MEDIA_ORIGIN}/`],
   ])("rejects an image on %s", (_name, url) => {
+    // Act
     const { errors } = withDetail({ kind: "booth", blocks: [{ type: "image", id: "p", url }] });
+
+    // Assert
     expect(errors.join(" ")).toMatch(/must be an object on https:\/\/media\.skkuverse\.com/);
   });
 });
@@ -240,6 +253,7 @@ describe("the importer's copies agree with the server", () => {
   // each copy to its source; the serve path re-checks every URL anyway, so a
   // drift that slips past here drops a block rather than shipping a bad URL.
   it("holds the same constants", () => {
+    // Act & Assert
     expect(reader.MEDIA_ORIGIN).toBe(MEDIA_ORIGIN);
     expect(reader.PLACE_KINDS).toEqual([...PLACE_KINDS]);
     expect(reader.BLOCK_TYPES).toEqual([...PLACE_BLOCK_TYPES]);
@@ -277,12 +291,14 @@ describe("the importer's copies agree with the server", () => {
     ["isInstagramProfileUrl", reader.isInstagramProfileUrl, isInstagramProfileUrl],
     ["isInstagramPostUrl", reader.isInstagramPostUrl, isInstagramPostUrl],
   ])("%s gives the same verdict on every URL", (_name, copy, source) => {
+    // Act & Assert
     for (const url of URLS) {
       expect([url, copy(url)]).toEqual([url, (source as (v: unknown) => boolean)(url)]);
     }
   });
 
   it("parseMiniAppTarget gives the same parse on every value", () => {
+    // Arrange
     const TARGETS = [
       ...URLS,
       "eskara-2026",
@@ -298,6 +314,8 @@ describe("the importer's copies agree with the server", () => {
       "/eskara-2026/x",
       "eskara-2026?x=1",
     ];
+
+    // Act & Assert
     for (const value of TARGETS) {
       expect([value, reader.parseMiniAppTarget(value)]).toEqual([value, parseMiniAppTarget(value)]);
     }
@@ -312,6 +330,7 @@ describe("the committed sheet's food trucks", () => {
   const detailed = docs.filter((d: { detail: unknown }) => d.detail !== null);
 
   it("gives every truck a food-truck detail that opens on its menu", () => {
+    // Act & Assert
     expect(trucks.length).toBeGreaterThan(0);
     for (const t of trucks) {
       expect([t._id, t.detail?.kind]).toEqual([t._id, "foodTruck"]);
@@ -322,6 +341,7 @@ describe("the committed sheet's food trucks", () => {
   });
 
   it("puts every image on the media host, by the SERVER's rule", () => {
+    // Act & Assert
     // The reader already checked with its copy; this checks with the source, so
     // a drifted copy cannot let the committed sheet through with a URL the
     // server would drop.
@@ -333,9 +353,12 @@ describe("the committed sheet's food trucks", () => {
   });
 
   it("gives a detail only to places a tap can reach", () => {
+    // Arrange
     // A detail on an inert category is served to no one — the pin has no tap.
     const loaded = getLayerSetConfig(LAYER_SET_ID);
     if (!loaded?.config) throw new Error(`${LAYER_SET_ID} failed to load: ${loaded?.error}`);
+
+    // Act & Assert
     for (const d of detailed) {
       expect([d._id, presentationFor(loaded.config, d.category).interactive]).toEqual([d._id, true]);
     }

@@ -24,11 +24,10 @@ async function tryCreate(create: () => Promise<unknown>): Promise<Outcome> {
   }
 }
 
-// WHY: never fails the boot; the outcome is logged and the next boot tries again (ADR 0010, D2).
-export async function ensureIndexesAtBoot(
+async function runIndexSetup(
   scope: string,
   create: () => Promise<unknown>,
-  { attempts = 1, backoffMs = 1_000, failLevel = "warn" }: EnsureIndexesOptions = {},
+  { attempts = 1, backoffMs = 1_000, failLevel = "warn" }: EnsureIndexesOptions,
 ): Promise<void> {
   for (let attempt = 1; ; attempt++) {
     const outcome = await tryCreate(create);
@@ -42,4 +41,17 @@ export async function ensureIndexesAtBoot(
     }
     await new Promise((resolve) => setTimeout(resolve, backoffMs * attempt));
   }
+}
+
+const nextTurn = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+
+// WHY: never fails the boot, and holds it for one turn of the event loop at most: Nest awaits each
+// module's hooks in turn, so waiting on Atlas would add one timeout per module. A setup still waiting
+// on the database finishes in the background and logs its outcome then (ADR 0010, D2).
+export function ensureIndexesAtBoot(
+  scope: string,
+  create: () => Promise<unknown>,
+  options: EnsureIndexesOptions = {},
+): Promise<void> {
+  return Promise.race([runIndexSetup(scope, create, options), nextTurn()]);
 }

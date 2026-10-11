@@ -1,79 +1,88 @@
 /**
- * GET /map/config end to end, with the REAL MapService.
+ * GET /map/config end to end, through the production pipeline and the real
+ * map services.
  *
- * `map-routes.test.ts` mocks MapService to check the envelope, and
- * `map.service.test.ts` calls the data modules directly to check the shape.
- * Neither proves the two meet: a field could be built correctly and still be
- * dropped by a controller return type, an interceptor, or a serialization step.
- * This is the only test that reads the bytes a client would receive.
+ * `map.routes.test.ts` checks the envelope of every /map route, and
+ * `src/map/config/map-config.service.spec.ts` checks the shape the service
+ * builds. Neither proves the two meet: a field could be built correctly and
+ * still be dropped by a controller return type, an interceptor, or a
+ * serialization step. This is the test that reads the bytes a client receives.
  */
 
-// No DB in either direction: buildings fall back (BuildingService is stubbed
-// below), and "no festival" is stated rather than inferred from an absent Mongo
-// client.
-jest.mock("../../../src/map/map-places.data", () => ({
-  findActiveActivation: jest.fn(),
-  getPlacesCollection: jest.fn(),
-  getSessionsCollection: jest.fn(),
+// The event route's module reads the mini-app registry through MiniAppsModule,
+// whose feed service creates its Mongo index at init and whose manifest service
+// prefetches each first-party manifest over the network. Neither is part of
+// /map/config.
+jest.mock("../../../src/miniapps/miniapps.data", () => ({
+  ensureIndexes: jest.fn(async () => undefined),
 }));
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 
-import { getLayerSetConfig } from "../../../src/map/map-layerset.config";
-import { findActiveActivation } from "../../../src/map/map-places.data";
-import { BuildingService } from "../../../src/building/building.service";
-import { BASE_CHIPS } from "../../../src/map/map-chips.data";
-import { buildMapApp } from "../../helpers/nest/build-map-app";
-import { clearActiveEventCache } from "../../../src/map/map-active-layerset";
-import { clearEventOverlaysCache } from "../../../src/map/map-event-overlays.data";
-import { clearEventDetailsCache } from "../../../src/map/map-event-details.data";
+import { BuildingRepository } from "../../../src/building/building.repository";
+import { MapCampusModule } from "../../../src/map/campus/map-campus.module";
+import { MapConfigModule } from "../../../src/map/config/map-config.module";
+import { MapEventDetailsModule } from "../../../src/map/event-details/map-event-details.module";
+import { MapEventModule } from "../../../src/map/event/map-event.module";
+import { getLayerSetConfig } from "../../../src/map/layer-set/map-layer-set.config";
+import { BASE_CHIPS } from "../../../src/map/layer-set/map-layer-set.constants";
+import { MapLayerSetModule } from "../../../src/map/layer-set/map-layer-set.module";
+import { MapModule } from "../../../src/map/map.module";
+import { MapRepository } from "../../../src/map/map.repository";
+import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
+import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
+import { buildTestApp } from "../../helpers/nest/build-test-app";
 
-// The event read path is cached per process; each test starts cold.
-beforeEach(() => {
-  clearActiveEventCache();
-  clearEventOverlaysCache();
-  clearEventDetailsCache();
-});
-
-const mockFindActiveActivation = findActiveActivation as jest.MockedFunction<
-  typeof findActiveActivation
->;
+// No DB in either direction: buildings fall back (an empty fake), and "no
+// festival" is stated rather than inferred from an absent Mongo client.
+const mockFindActiveActivation = jest.fn<ReturnType<MapRepository["findActiveActivation"]>, [Date]>();
+const findActiveActivation: MapRepository["findActiveActivation"] = mockFindActiveActivation;
 
 // The real config loads with no mock; the counts below derive from it.
 const CONFIG = getLayerSetConfig("eskara-2026")!.config!;
 
-describe("GET /map/config (real MapService)", () => {
+describe("GET /map/config (real map services)", () => {
   let app: NestExpressApplication;
   let httpServer: ReturnType<NestExpressApplication["getHttpServer"]>;
+  const realFetch = global.fetch;
 
-  beforeAll(async () => {
-    // Only BuildingService is stubbed, to hand the campus overlay no buildings
-    // and no shapes. MapService itself is the real one.
-    app = await buildMapApp([
-      {
-        provide: BuildingService,
-        useValue: {
-          listAllBuildings: jest.fn().mockResolvedValue([]),
-          listAllCampusShapes: jest.fn().mockResolvedValue([]),
-        },
-      },
-    ]);
+  beforeAll(() => {
+    global.fetch = jest.fn().mockRejectedValue(new Error("no network in tests")) as unknown as typeof fetch;
+  });
+
+  // The activation is cached per app, so each test boots a cold one. Only the
+  // repositories are fakes: buildings and campus shapes empty, the activation
+  // read stated per test.
+  beforeEach(async () => {
+    const mapRepository = new FakeMapRepository();
+    mapRepository.findActiveActivation = findActiveActivation;
+    app = await buildTestApp({
+      imports: [MapModule, MapLayerSetModule, MapConfigModule, MapCampusModule, MapEventModule, MapEventDetailsModule],
+      overrides: [
+        { provide: BuildingRepository, useValue: new FakeBuildingRepository() },
+        { provide: MapRepository, useValue: mapRepository },
+      ],
+      role: "api",
+    });
     httpServer = app.getHttpServer();
-  });
-
-  afterAll(async () => {
-    await app.close();
-  });
-
-  beforeEach(() => {
     mockFindActiveActivation.mockReset();
     mockFindActiveActivation.mockResolvedValue(null);
   });
 
+  afterEach(async () => {
+    await app.close();
+  });
+
+  afterAll(() => {
+    global.fetch = realFetch;
+  });
+
   it("carries the chips and the camera defaults through the envelope", async () => {
+    // Act
     const res = await request(httpServer).get("/map/config");
 
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.meta).toEqual({ lang: "ko" });
 
@@ -105,14 +114,17 @@ describe("GET /map/config (real MapService)", () => {
   });
 
   it("adds the festival chips while an activation is open", async () => {
+    // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
 
+    // Act
     const res = await request(httpServer)
       .get("/map/config")
       .set("Accept-Language", "en");
 
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.meta.lang).toBe("en");
     // Reset chip plus every authored chip, in that order.
@@ -197,14 +209,16 @@ describe("GET /map/config (real MapService)", () => {
     // reaching a URL opener is the shape of an open redirect, which is why
     // toWebviewUrl resolves server-side rather than leaving the join to the
     // client — is unit-tested in __tests__/nest/infra/webview-url.test.ts, and
-    // map-chips.test.ts is where restoring this assertion gets prompted.
+    // src/map/map.rules.spec.ts is where restoring this assertion gets prompted.
     expect(
       res.body.data.chips.filter(
         (c: { action: { kind: string } }) => c.action.kind === "webview",
       ),
     ).toHaveLength(0);
   });
+
   it("serves each list's facets and sort, labels in the request's language", async () => {
+    // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
@@ -215,7 +229,11 @@ describe("GET /map/config (real MapService)", () => {
     const byId = (chips: Array<{ id: string; list: any }>, id: string) =>
       chips.find((c) => c.id === id)!;
 
+    // Act
     const ko = await chipsIn("ko");
+    const en = await chipsIn("en");
+
+    // Assert
     const booth = byId(ko, "eskara26_view_booth").list;
     expect(booth).toEqual({
       facets: [
@@ -256,7 +274,6 @@ describe("GET /map/config (real MapService)", () => {
     expect(byId(ko, "eskara-2026_all").list).toBeNull();
     expect(byId(ko, "eskara26_view_facility").list).toBeNull();
 
-    const en = await chipsIn("en");
     expect(byId(en, "eskara26_view_booth").list.facets[0].options[0].label).toBe("Oct 1 (Thu)");
     expect(byId(en, "eskara26_view_booth").list.facets[1].options[1].label).toBe("Student groups");
   });

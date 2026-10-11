@@ -70,6 +70,38 @@
     "export": "linkActionType",
     "routes": []
   },
+  "map-config.mapConfig": {
+    "source": "src/map/config/map-config.wire.ts",
+    "export": "mapConfig",
+    "routes": [
+      "GET map/config"
+    ]
+  },
+  "map-event-details.eventPlaceDetails": {
+    "source": "src/map/event-details/map-event-details.wire.ts",
+    "export": "eventPlaceDetails",
+    "routes": [
+      "GET map/overlays/event/details"
+    ]
+  },
+  "map.i18nText": {
+    "source": "src/map/map.wire.ts",
+    "export": "i18nText",
+    "routes": []
+  },
+  "map.mapOverlay": {
+    "source": "src/map/map.wire.ts",
+    "export": "mapOverlay",
+    "routes": []
+  },
+  "map.mapOverlays": {
+    "source": "src/map/map.wire.ts",
+    "export": "mapOverlays",
+    "routes": [
+      "GET map/overlays/campus",
+      "GET map/overlays/event"
+    ]
+  },
   "ui-campus.campusSheet": {
     "source": "src/ui/campus/ui-campus.wire.ts",
     "export": "campusSheet",

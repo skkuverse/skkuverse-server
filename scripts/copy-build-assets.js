@@ -37,13 +37,13 @@ const assets = [
   ["src/ui/home/home-layout.json", "dist/src/ui/home/home-layout.json"],
   // ui/campus/ui-campus.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/ui/campus/campus-banners.json", "dist/src/ui/campus/campus-banners.json"],
-  // eventmap/eventmap.config.ts reads these with fs.readFileSync(__dirname/config/<name>).
-  // Every entry in that module's CONFIG_FILES must appear here — it lists files
+  // map/layer-set/map-layer-set.config.ts reads these with fs.readFileSync(__dirname/<name>).
+  // Every entry in its LAYER_SET_FILES must appear here — it lists files
   // explicitly rather than readdir'ing precisely so a miss shows up as a named
   // ENOENT in the logs instead of a silently absent event map.
   [
-    "src/map/config/eskara-2026.json",
-    "dist/src/map/config/eskara-2026.json",
+    "src/map/layer-set/eskara-2026.json",
+    "dist/src/map/layer-set/eskara-2026.json",
   ],
 ];
 

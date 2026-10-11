@@ -20,6 +20,7 @@ const at = (minutes: number): Date => new Date(NOW.getTime() + minutes * 60_000)
 
 describe("eventmap-window — parseArgs", () => {
   it("defaults to a 15-minute window rather than an open-ended one", () => {
+    // Act & Assert
     // The dead man's switch is the default because a forgotten `enabled: true`
     // is the expensive mistake, not a window that closed too early.
     expect(parseArgs(["open"])).toEqual({
@@ -33,6 +34,7 @@ describe("eventmap-window — parseArgs", () => {
   });
 
   it("defaults to dev and requires --prod to name production", () => {
+    // Act & Assert
     // NODE_ENV was the original mechanism and it silently fell off the end of a
     // pasted line, opening a window on _dev while reporting success. A flag
     // cannot be dropped without also dropping the word next to it.
@@ -42,12 +44,14 @@ describe("eventmap-window — parseArgs", () => {
   });
 
   it("accepts a plain whole number of minutes", () => {
+    // Act & Assert
     expect(parseArgs(["open", "--minutes", "10"]).minutes).toBe(10);
     expect(parseArgs(["open", "--minutes", "1"]).minutes).toBe(1);
     expect(parseArgs(["open", "--minutes", "2880"]).minutes).toBe(2880);
   });
 
   it("rejects everything Number() would silently accept", () => {
+    // Act & Assert
     // "1e2" is the one that matters: Number("1e2") is 100 and Number.isInteger
     // says true, so an isInteger-only guard opens a 100-minute window for what
     // reads as a typo.
@@ -59,6 +63,7 @@ describe("eventmap-window — parseArgs", () => {
   });
 
   it("refuses --no-expiry together with --minutes", () => {
+    // Act & Assert
     // The two say opposite things about when the map comes down. Letting one
     // silently win is the wrong kind of helpful for this particular field.
     expect(() => parseArgs(["open", "--no-expiry", "--minutes", "30"])).toThrow(
@@ -67,6 +72,7 @@ describe("eventmap-window — parseArgs", () => {
   });
 
   it("refuses --no-expiry on anything but open", () => {
+    // Act & Assert
     for (const command of ["close", "status"]) {
       expect(() => parseArgs([command, "--no-expiry"])).toThrow(
         /--no-expiry only applies to open/,
@@ -75,12 +81,14 @@ describe("eventmap-window — parseArgs", () => {
   });
 
   it("requires exactly one command", () => {
+    // Act & Assert
     expect(() => parseArgs([])).toThrow(/expected one of \[status, open, close\]/);
     expect(() => parseArgs(["open", "close"])).toThrow(/two commands given/);
     expect(() => parseArgs(["enable"])).toThrow(/unknown argument: enable/);
   });
 
   it("takes a layer set id", () => {
+    // Act & Assert
     expect(parseArgs(["status", "--layer-set-id", "other-2027"]).layerSetId).toBe(
       "other-2027",
     );
@@ -100,10 +108,12 @@ describe("eventmap-window — isLive agrees with findActiveActivation", () => {
   ];
 
   it.each(cases)("%s", (_name, doc, expected) => {
+    // Act & Assert
     expect(isLive(doc, NOW)).toBe(expected);
   });
 
   it("treats activeUntil exactly at now as closed", () => {
+    // Act & Assert
     // The server's clause is `activeUntil: { $gt: now }`, so the window is
     // half-open. A `>=` here would report the map live for the one tick after
     // it actually went dark.
@@ -111,6 +121,7 @@ describe("eventmap-window — isLive agrees with findActiveActivation", () => {
   });
 
   it("treats activeFrom exactly at now as open", () => {
+    // Act & Assert
     // The matching clause is `$lte`, so a window opened "now" is live at once —
     // which is what `open` relies on to take effect without a second command.
     expect(isLive({ enabled: true, activeFrom: NOW, activeUntil: at(10) }, NOW)).toBe(true);

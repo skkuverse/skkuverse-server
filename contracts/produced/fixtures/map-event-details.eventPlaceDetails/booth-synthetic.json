@@ -1,0 +1,111 @@
+{
+  "_about": "Synthetic: no festival was live at capture; generated 2026-10-11 by the real map services over an in-memory repository with the shipped eskara-2026 layer set and an open activation; one booth with every block type and both action types",
+  "data": {
+    "details": {
+      "eskara-2026-booth-01": {
+        "placeId": "eskara-2026-booth-01",
+        "kind": "booth",
+        "org": {
+          "ko": "총학생회",
+          "en": "총학생회"
+        },
+        "isUnion": true,
+        "locationLabel": {
+          "ko": "102번 부스",
+          "en": "102번 부스"
+        },
+        "actions": [
+          {
+            "type": "instagram",
+            "id": "ig",
+            "label": {
+              "ko": "인스타그램",
+              "en": "인스타그램"
+            },
+            "profileUrl": "https://www.instagram.com/example_council",
+            "postUrl": "https://www.instagram.com/p/C1abc"
+          },
+          {
+            "type": "link",
+            "id": "web",
+            "label": {
+              "ko": "공지",
+              "en": "공지"
+            },
+            "url": "https://www.skku.edu/notice"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "text",
+            "id": "intro",
+            "title": null,
+            "body": {
+              "ko": "소개",
+              "en": "About"
+            }
+          },
+          {
+            "type": "list",
+            "id": "games",
+            "title": {
+              "ko": "게임",
+              "en": "게임"
+            },
+            "items": [
+              {
+                "emoji": "🎯",
+                "title": {
+                  "ko": "다트",
+                  "en": "다트"
+                },
+                "description": null
+              }
+            ]
+          },
+          {
+            "type": "table",
+            "id": "menu",
+            "title": {
+              "ko": "메뉴",
+              "en": "메뉴"
+            },
+            "rows": [
+              {
+                "label": {
+                  "ko": "닭꼬치",
+                  "en": "닭꼬치"
+                },
+                "value": {
+                  "ko": "5,000원",
+                  "en": "5,000원"
+                }
+              }
+            ]
+          },
+          {
+            "type": "image",
+            "id": "photo",
+            "title": null,
+            "url": "https://media.skkuverse.com/eskara-2026/booth-01.jpg",
+            "caption": {
+              "ko": "부스 사진",
+              "en": "부스 사진"
+            }
+          },
+          {
+            "type": "notice",
+            "id": "notes",
+            "title": null,
+            "items": [
+              {
+                "ko": "현금 결제만 가능",
+                "en": "현금 결제만 가능"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

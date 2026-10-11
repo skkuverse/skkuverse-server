@@ -5,6 +5,7 @@
   "src/health/",
   "src/http/",
   "src/infra/",
+  "src/map/",
   "src/shared/",
   "src/ui/"
 ]

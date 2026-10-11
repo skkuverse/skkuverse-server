@@ -1,0 +1,590 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "details": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "placeId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "pub",
+              "booth",
+              "promo",
+              "foodTruck",
+              "goods",
+              "facility",
+              "stage",
+              "etc"
+            ]
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "ko": {
+                    "type": "string"
+                  },
+                  "en": {
+                    "type": "string"
+                  },
+                  "zh": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ko",
+                  "en"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "isUnion": {
+            "type": "boolean"
+          },
+          "locationLabel": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "ko": {
+                    "type": "string"
+                  },
+                  "en": {
+                    "type": "string"
+                  },
+                  "zh": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ko",
+                  "en"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "instagram"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    },
+                    "profileUrl": {
+                      "type": "string"
+                    },
+                    "postUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id",
+                    "label",
+                    "profileUrl",
+                    "postUrl"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "link"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id",
+                    "label",
+                    "url"
+                  ]
+                }
+              ]
+            }
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "text"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "ko": {
+                              "type": "string"
+                            },
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "ko",
+                            "en"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "body": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id",
+                    "title",
+                    "body"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "list"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "ko": {
+                              "type": "string"
+                            },
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "ko",
+                            "en"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "emoji": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "object",
+                            "properties": {
+                              "ko": {
+                                "type": "string"
+                              },
+                              "en": {
+                                "type": "string"
+                              },
+                              "zh": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "ko",
+                              "en"
+                            ]
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "ko": {
+                                    "type": "string"
+                                  },
+                                  "en": {
+                                    "type": "string"
+                                  },
+                                  "zh": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "ko",
+                                  "en"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "emoji",
+                          "title",
+                          "description"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id",
+                    "title",
+                    "items"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "table"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "ko": {
+                              "type": "string"
+                            },
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "ko",
+                            "en"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": "object",
+                            "properties": {
+                              "ko": {
+                                "type": "string"
+                              },
+                              "en": {
+                                "type": "string"
+                              },
+                              "zh": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "ko",
+                              "en"
+                            ]
+                          },
+                          "value": {
+                            "type": "object",
+                            "properties": {
+                              "ko": {
+                                "type": "string"
+                              },
+                              "en": {
+                                "type": "string"
+                              },
+                              "zh": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "ko",
+                              "en"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "label",
+                          "value"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id",
+                    "title",
+                    "rows"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "image"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "ko": {
+                              "type": "string"
+                            },
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "ko",
+                            "en"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "type": "string"
+                    },
+                    "caption": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "ko": {
+                              "type": "string"
+                            },
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "ko",
+                            "en"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id",
+                    "title",
+                    "url",
+                    "caption"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "notice"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "ko": {
+                              "type": "string"
+                            },
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "ko",
+                            "en"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ko": {
+                            "type": "string"
+                          },
+                          "en": {
+                            "type": "string"
+                          },
+                          "zh": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "ko",
+                          "en"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "id",
+                    "title",
+                    "items"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "placeId",
+          "kind",
+          "org",
+          "isUnion",
+          "locationLabel",
+          "actions",
+          "blocks"
+        ]
+      }
+    }
+  },
+  "required": [
+    "details"
+  ]
+}

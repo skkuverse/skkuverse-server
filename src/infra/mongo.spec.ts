@@ -93,3 +93,36 @@ describe("ensureIndexesAtBoot", () => {
     expect(info).toHaveBeenCalledWith({ event: "notices.indexes.ensured" }, "Indexes ensured");
   });
 });
+
+describe("ensureIndexesAtBoot does not hold the boot", () => {
+  const settleAfterMs = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+  it("resolves while a setup still waits on the database, so the next setup does not wait for it", async () => {
+    // Arrange
+    const create = jest.fn(() => new Promise<void>(() => undefined));
+
+    // Act
+    const outcome = await Promise.race([
+      ensureIndexesAtBoot("building", create).then(() => "returned"),
+      settleAfterMs(50).then(() => "held"),
+    ]);
+
+    // Assert
+    expect(outcome).toBe("returned");
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs the outcome of a slow setup once it finishes after the boot went on", async () => {
+    // Arrange
+    const create = jest.fn(() => settleAfterMs(20));
+
+    // Act
+    await ensureIndexesAtBoot("building", create);
+    const loggedAtReturn = info.mock.calls.length;
+    await settleAfterMs(40);
+
+    // Assert
+    expect(loggedAtReturn).toBe(0);
+    expect(info).toHaveBeenCalledWith({ event: "building.indexes.ensured" }, "Indexes ensured");
+  });
+});

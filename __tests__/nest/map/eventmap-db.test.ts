@@ -37,26 +37,32 @@ const truck = docs.find((d: { detail: unknown }) => d.detail !== null);
 
 describe("upsertPlaces", () => {
   it("writes nothing when the sheet re-imports unchanged", async () => {
+    // Arrange
     // Through BSON, because that is what the stored copy really is. An
     // `undefined` anywhere in a parsed document would come back as `null`, and
     // every re-import would then stamp that place as changed.
     const { collection, bulkWrite } = collectionOf(docs.map(asStored));
 
+    // Act
     const result = await upsertPlaces(collection, docs, new Date());
 
+    // Assert
     expect(result).toEqual({ inserted: 0, updated: 0, unchanged: docs.length });
     expect(bulkWrite).not.toHaveBeenCalled();
   });
 
   it("writes a place whose ONLY change is its detail", async () => {
+    // Arrange
     const edited = {
       ...truck,
       detail: { ...truck.detail, blocks: truck.detail.blocks.slice(0, 1) },
     };
     const { collection, bulkWrite } = collectionOf([asStored(truck)]);
 
+    // Act
     await upsertPlaces(collection, [edited], new Date());
 
+    // Assert
     expect(bulkWrite).toHaveBeenCalledTimes(1);
     const [ops] = bulkWrite.mock.calls[0]!;
     expect(ops).toHaveLength(1);
@@ -65,6 +71,7 @@ describe("upsertPlaces", () => {
   });
 
   it("writes a place stored before `detail` existed, once", async () => {
+    // Arrange
     // The first import after this field shipped: the stored document has no key
     // at all, the reader now writes `null`. One write per such place, and then
     // the two agree.
@@ -73,8 +80,10 @@ describe("upsertPlaces", () => {
     delete before.detail;
     const { collection, bulkWrite } = collectionOf([asStored(before)]);
 
+    // Act
     await upsertPlaces(collection, [plain], new Date());
 
+    // Assert
     expect(bulkWrite).toHaveBeenCalledTimes(1);
   });
 });
