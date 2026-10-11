@@ -8,7 +8,6 @@
  */
 import fs from "fs";
 import path from "path";
-import ts from "typescript";
 import { ROOT } from "./ratchet";
 import { filesUnder, readSource } from "./tree";
 
@@ -249,26 +248,4 @@ export function namesRoute(diagram: string, route: string): boolean {
 /** A collection name on word boundaries: `buildings` is not in `buildings_raw`. */
 export function namesWord(diagram: string, word: string): boolean {
   return new RegExp(`\\b${escapeRegex(word)}\\b`).test(diagram);
-}
-
-/** `HISTORY_PHRASES`, read from history-comments.test.ts so both rules share one list. */
-export function historyPhrases(): Array<[string, RegExp]> {
-  // WHY: parsed, not imported: importing a test file registers its tests in the importer too.
-  const file = "__tests__/architecture/history-comments.test.ts";
-  const sf = ts.createSourceFile(file, readSource(file), ts.ScriptTarget.Latest, true);
-  const declaration = sf.statements
-    .filter(ts.isVariableStatement)
-    .flatMap((s) => [...s.declarationList.declarations])
-    .find((d) => ts.isIdentifier(d.name) && d.name.text === "HISTORY_PHRASES");
-  const list = declaration?.initializer;
-  if (!list || !ts.isArrayLiteralExpression(list)) throw new Error(`${file}: HISTORY_PHRASES is not an array literal`);
-  return list.elements.map((element) => {
-    const [phrase, pattern] = ts.isArrayLiteralExpression(element) ? element.elements : [];
-    if (!phrase || !ts.isStringLiteral(phrase) || pattern?.kind !== ts.SyntaxKind.RegularExpressionLiteral) {
-      throw new Error(`${file}: a HISTORY_PHRASES entry is not ["phrase", /regex/]`);
-    }
-    const literal = pattern.getText(sf);
-    const flagsAt = literal.lastIndexOf("/");
-    return [phrase.text, new RegExp(literal.slice(1, flagsAt), literal.slice(flagsAt + 1))];
-  });
 }

@@ -17,6 +17,7 @@
  */
 import path from "path";
 import ts from "typescript";
+import { HISTORY_PHRASES } from "../helpers/architecture/history";
 import { migratedScopes } from "../helpers/architecture/migrated";
 import {
   CONTEXT_HEADER,
@@ -27,7 +28,6 @@ import {
   docPathOf,
   existsInRepo,
   featureModules,
-  historyPhrases,
   linkTargets,
   linkTexts,
   migratedEntries,
@@ -58,7 +58,6 @@ const TABLE_HOMES = new Map([
   [GLOSSARY_HEADER, "Glossary"],
   [FIELD_HEADER, "Structure"],
 ]);
-const HISTORY = historyPhrases();
 
 export interface DocOptions {
   file: string;
@@ -168,7 +167,7 @@ function digitViolations(doc: ParsedDoc): string[] {
 function historyViolations(doc: ParsedDoc): string[] {
   return proseOrComment(doc).flatMap((l) => {
     const prose = linkTexts(withoutCodeSpans(l.text));
-    return HISTORY.filter(([, pattern]) => pattern.test(prose)).map(([phrase]) => `line ${l.n}: history phrase ${show(phrase)}`);
+    return HISTORY_PHRASES.filter(([, pattern]) => pattern.test(prose)).map(([phrase]) => `line ${l.n}: history phrase ${show(phrase)}`);
   });
 }
 
