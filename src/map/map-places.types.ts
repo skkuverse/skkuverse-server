@@ -21,6 +21,7 @@
 import type { Campus } from "../building/building.types";
 import type { I18n } from "../infra/types";
 import type { OverlayGeometry } from "../shared/geojson.types";
+import type { LinkActionType } from "../shared/link-action.wire";
 import type { PlaceDetailOf } from "./map-place-detail.types";
 
 // I18n is infra (`src/infra/types.ts`), because the map catalogue authors its
@@ -35,7 +36,7 @@ export type { Campus, I18n };
 export interface PlaceAction {
   id: string;
   label: I18n;
-  actionType: "content" | "route" | "webview" | "external" | "miniapp";
+  actionType: LinkActionType | "content";
   /**
    * A complete URL for `webview`/`external` (`webview` may be root-relative on
    * WEBVIEW_ORIGIN), an in-app path for `route`, the body itself for `content`,
