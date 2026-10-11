@@ -27,4 +27,8 @@
     "docs/cicd-and-branch-protection.md",
     "docs/archive/**"
   ]
+
+  // The module-doc heading rule (MD043) lives in docs/.markdownlint-cli2.jsonc:
+  // an `overrides` entry here never applies, because markdownlint-cli2 lints with
+  // the auto-discovered .markdownlint.jsonc beside this file instead of `config`.
 }

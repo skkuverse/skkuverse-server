@@ -1,0 +1,35 @@
+{
+  // Module docs (openspec module-docs spec, refactor design D16): the head and
+  // exactly these six H2 sections in this order, nothing deeper. The filter
+  // names the template and the migrated modules' docs only, relative to docs/;
+  // the module-docs test checks the list. It sits here, not in the root
+  // .markdownlint-cli2.jsonc, because an override there is silently ignored:
+  // markdownlint-cli2 0.23.1 prefers the auto-discovered root .markdownlint.jsonc
+  // over the `config` an override merges into.
+  "overrides": [
+    {
+      "filter": [
+        "_module-template.md",
+        "explanation/ad-architecture.md",
+        "explanation/app-config-architecture.md",
+        "explanation/building-architecture.md",
+        "explanation/health-architecture.md"
+      ],
+      "combine": "merge",
+      "config": {
+        "MD043": {
+          "headings": [
+            "?",
+            "## Context",
+            "## Glossary",
+            "## Structure",
+            "## Invariants",
+            "## Open questions",
+            "## Related"
+          ],
+          "match_case": true
+        }
+      }
+    }
+  ]
+}
