@@ -12,7 +12,7 @@ export class BuildingSyncPoller implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    // BUILDING_SYNC=off, the development default: the registry's warm-up run would
+    // WHY: BUILDING_SYNC=off is the development default: the registry's warm-up run would
     // otherwise crawl campusMap.do and rewrite skkumap_dev on every nodemon restart.
     if (!config.building.syncEnabled) {
       logger.info(

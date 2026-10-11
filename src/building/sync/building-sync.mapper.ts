@@ -3,7 +3,7 @@ import { hasBuildNo, toDisplayNo } from "../building.rules";
 import type { AccessibilityDetail, BarrierFreeSection, BuildingRawDoc, ElevatorStatus } from "../building.document";
 import type { EnrichedBuilding } from "./building-sync.types";
 
-// Bump it when enrichBuilding changes: the next sync then re-enriches every building.
+// WHY: bump it when enrichBuilding changes: the next sync then re-enriches every building.
 const ENRICH_VERSION = 1;
 
 const ELEVATOR_STATUS_BY_TEXT: Readonly<Record<string, ElevatorStatus>> = {
@@ -13,12 +13,16 @@ const ELEVATOR_STATUS_BY_TEXT: Readonly<Record<string, ElevatorStatus>> = {
   "운영X": "not_operating",
 };
 
-// SKKU starts the block as "* 배리어프리", "*배리어프리" or "*학생회관\n배리어프리".
+// QUIRK(skku): the block starts as "* 배리어프리", "*배리어프리" or "*학생회관\n배리어프리".
 const BARRIER_FREE_START_RE = /\n\n\*\s*(?:[^\n]*\n)?배리어프리 편의시설 안내/;
 
-// A section header, with an optional wing label such as (A동).
+// QUIRK(skku): a section header may carry a wing label, as in (A동).
 const BARRIER_FREE_SECTION_RE =
   /\*\s*(?:[^\n]*\n)?배리어프리 편의시설 안내(?:\(([^)]+)\))?/g;
+
+const ELEVATORS_TOTAL_AND_ACCESSIBLE_RE = /(\d+)\s*대\s*중\s*(\d+)\s*대/;
+
+const ELEVATORS_ACCESSIBLE_ONLY_RE = /(\d+)\s*대/;
 
 function parseRamp(
   text: string,
@@ -32,7 +36,6 @@ function parseRamp(
 }
 
 function parseToilet(text: string): { raw: string; count: number | null } | null {
-  // Unanchored, so SKKU's stray "승" prefix (building 2's elevator line) still matches.
   const toilet = captureGroups(text, /장애인 화장실\s*[:：]\s*(.+)/, 1);
   if (!toilet) return null;
   const raw = toilet[0].trim();
@@ -45,12 +48,11 @@ function parseElevator(text: string): {
   total: number | null;
   accessible: number | null;
 } | null {
-  // SKKU's building 2 writes "승장애인 표시 승강기".
+  // QUIRK(skku): one building's line reads "승장애인 표시 승강기".
   const elevator = captureGroups(text, /(?:승)?장애인 표시 승강기\s*[:：]\s*(.+)/, 1);
   if (!elevator) return null;
   const raw = elevator[0].trim();
-  // "N대 중 M대" pattern (standard)
-  const totalAndAccessible = captureGroups(raw, /(\d+)\s*대\s*중\s*(\d+)\s*대/, 2);
+  const totalAndAccessible = captureGroups(raw, ELEVATORS_TOTAL_AND_ACCESSIBLE_RE, 2);
   if (totalAndAccessible) {
     return {
       raw,
@@ -58,8 +60,7 @@ function parseElevator(text: string): {
       accessible: parseInt(totalAndAccessible[1], 10),
     };
   }
-  // "N대" alone — accessible count only, total unknown
-  const accessible = captureGroups(raw, /(\d+)\s*대/, 1);
+  const accessible = captureGroups(raw, ELEVATORS_ACCESSIBLE_ONLY_RE, 1);
   if (accessible) {
     return { raw, total: null, accessible: parseInt(accessible[0], 10) };
   }
@@ -111,7 +112,6 @@ function toSections(barrierFreeText: string, headers: readonly BarrierFreeHeader
   });
 }
 
-/** null when the description has no barrier-free block. */
 function parseBarrierFree(descriptionKo: string): { cleanDescription: string; detail: AccessibilityDetail } | null {
   const text = descriptionKo.replace(/\r\n/g, "\n");
 
