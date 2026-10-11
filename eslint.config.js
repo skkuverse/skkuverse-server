@@ -111,7 +111,7 @@ const QUERY_IMPORT_PATTERN = {
 };
 
 // Migrated feature modules read the time through `Clock` (design D13).
-const CLOCK_INJECT_DIRS = ["src/building/", "src/ad/", "src/app-config/", "src/health/"];
+const CLOCK_INJECT_DIRS = ["src/building/", "src/ad/", "src/app-config/", "src/health/", "src/ui/"];
 
 const CLOCK_INJECT_SYNTAX = [
   {
@@ -193,7 +193,6 @@ const VIOLATORS = {
   ],
   features: {
     map: ["src/map/map-event-overlays.data.ts"],
-    ui: ["src/ui/home/home-layout.schema.ts", "src/ui/home/home-layout.ts", "src/ui/ui/ui.buslist.ts"],
   },
   // Controllers that read req.lang themselves instead of taking @Lang().
   lang: [
@@ -203,7 +202,6 @@ const VIOLATORS = {
     "src/miniapps/miniapps.controller.ts",
     "src/notices/notices.controller.ts",
     "src/notices/overview/overview.controller.ts",
-    "src/ui/controllers/ui.controller.ts",
   ],
 };
 
@@ -378,6 +376,7 @@ const GLOSSARY_NOT = {
   "app-config": ["AppSettings", "forceUpdate"],
   building: ["buildingId", "buildingNo", "roomId", "level", "bucket", "searchData", "term", "geometryDoc"],
   health: ["isAlive", "isHealthy"],
+  ui: ["homeConfig", "widget", "slider", "period", "shortcut", "campusConfig", "busItem", "scrollItem"],
 };
 
 function glossaryDenylistBlocks() {

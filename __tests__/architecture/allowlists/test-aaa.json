@@ -92,9 +92,6 @@
   "__tests__/nest/notices/overview/overview-select.test.ts",
   "__tests__/nest/notices/overview/overview-service.test.ts",
   "__tests__/nest/notices/tabconfig-validation.test.ts",
-  "__tests__/nest/ui/campus-banners.test.ts",
-  "__tests__/nest/ui/home-layout.test.ts",
-  "__tests__/nest/ui/ui.routes.test.ts",
   "__tests__/scripts/compare-responses.test.ts",
   "src/scheduling/poller-registry.service.spec.ts"
 ]

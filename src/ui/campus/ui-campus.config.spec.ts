@@ -1,13 +1,27 @@
 /**
- * Unit tests for the campus sheet's banner carousel: the boot-time guard
- * (assertValidCampusCarousel, via loadCampusBanners) and how getCampusSections
- * places the resolved carousel.
+ * The campus sheet's banner carousel as loaded: the boot-time check
+ * (loadCampusBanners) and the committed campus-banners.json, resolved per
+ * request.
  *
- * The guard shares its carousel rules with the home layout (home-layout.test.ts
- * covers those one by one), so this file pins what differs for campus.
+ * The check shares its carousel rules with the home layout
+ * (ui-home.config.spec.ts covers those one by one), so this file pins what
+ * differs for campus.
  */
-import { getCampusSections, loadCampusBanners } from "../../../src/ui/ui/ui.campus";
-import type { CampusBannerCarouselRaw } from "../../../src/ui/home/home-layout.types";
+import { WEBVIEW_ORIGIN } from "../../infra/origins";
+import type { SupportedLang } from "../../infra/types";
+import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { loadCampusBanners as loadWithRegistry, readCampusBanners } from "./ui-campus.config";
+import { toCampusSheet } from "./ui-campus.mapper";
+import type { CampusBannerCarouselRaw } from "./ui-campus.schema";
+
+const registry = new MiniAppsService();
+const committedBanners = readCampusBanners(registry);
+
+const loadCampusBanners = (raw: unknown): Readonly<CampusBannerCarouselRaw> => loadWithRegistry(raw, registry);
+
+function getCampusSections(lang: SupportedLang, now: Date) {
+  return toCampusSheet({ banners: committedBanners, lang, now, webviewOrigin: WEBVIEW_ORIGIN });
+}
 
 const IMAGE_URL = "https://media.skkuverse.com/campus/banners/test-00000000.webp";
 
@@ -28,13 +42,19 @@ function carousel(overrides: Record<string, unknown> = {}): Record<string, unkno
 
 describe("committed campus-banners.json", () => {
   it("loads, so the module import in this file did not throw", () => {
+    // Act
     const [first] = getCampusSections("ko", new Date("2026-10-02T12:00:00+09:00")).sections;
+
+    // Assert
     expect(first).toMatchObject({ type: "banner_carousel", id: "campus_banners" });
   });
 
   it("closes every ESKARA 2026 banner when the festival ends", () => {
+    // Arrange
     const types = (iso: string) =>
       getCampusSections("ko", new Date(iso)).sections.map((s) => s.type);
+
+    // Act & Assert
     expect(types("2026-10-02T23:59:59+09:00")).toEqual(["banner_carousel", "button_grid"]);
     expect(types("2026-10-03T00:00:00+09:00")).toEqual(["button_grid"]);
   });
@@ -42,6 +62,7 @@ describe("committed campus-banners.json", () => {
 
 describe("assertValidCampusCarousel (via loadCampusBanners)", () => {
   it("accepts a 6:1 image-only carousel", () => {
+    // Act & Assert
     expect(() => loadCampusBanners(carousel())).not.toThrow();
   });
 
@@ -55,32 +76,7 @@ describe("assertValidCampusCarousel (via loadCampusBanners)", () => {
     ["an image off the media bucket", carousel({ items: [image({ imageUrl: "https://evil.com/a.webp" })] })],
     ["an empty items list", carousel({ items: [] })],
   ])("rejects %s", (_label, raw) => {
+    // Act & Assert
     expect(() => loadCampusBanners(raw)).toThrow(/^campus banners: /);
-  });
-});
-
-describe("getCampusSections", () => {
-  const WINDOW = { startAt: "2026-10-01T00:00:00+09:00", endAt: "2026-10-03T00:00:00+09:00" };
-
-  function sectionsAt(iso: string, raw: Record<string, unknown>) {
-    const banners = loadCampusBanners(raw) as CampusBannerCarouselRaw;
-    return getCampusSections("ko", new Date(iso), banners).sections;
-  }
-
-  it("puts the carousel before the service tiles, in wire shape", () => {
-    const sections = sectionsAt("2026-10-02T00:00:00+09:00", carousel({ items: [image(WINDOW)] }));
-    expect(sections.map((s) => s.type)).toEqual(["banner_carousel", "button_grid"]);
-    expect(sections[0]).toEqual({
-      type: "banner_carousel",
-      id: "campus_banners",
-      aspectRatio: 6,
-      autoRotateSec: 4,
-      items: [{ type: "image", id: "banner-a", imageUrl: IMAGE_URL, alt: "현수막" }],
-    });
-  });
-
-  it("drops the carousel once every banner is outside its window", () => {
-    const sections = sectionsAt("2026-10-03T00:00:00+09:00", carousel({ items: [image(WINDOW)] }));
-    expect(sections.map((s) => s.type)).toEqual(["button_grid"]);
   });
 });

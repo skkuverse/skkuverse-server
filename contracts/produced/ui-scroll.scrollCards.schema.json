@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string"
+      },
+      "icon": {
+        "type": "string"
+      },
+      "pageLink": {
+        "type": "string"
+      },
+      "color": {
+        "type": "string"
+      },
+      "pageWebviewLink": {
+        "type": "string"
+      },
+      "altPageLink": {
+        "type": "string"
+      },
+      "useAltPageLink": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "title",
+      "icon",
+      "pageLink",
+      "altPageLink",
+      "useAltPageLink"
+    ]
+  }
+}

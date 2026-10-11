@@ -1,0 +1,75 @@
+{
+  "_about": "GET /ui/home/transitlist captured from production 2026-10-11 (stage 8a snapshot, Accept-Language ko); whole data",
+  "data": [
+    {
+      "groupId": "hssc",
+      "card": {
+        "label": "인사캠 셔틀버스",
+        "themeColor": "003626",
+        "iconType": "shuttle",
+        "busTypeText": "성대",
+        "subtitle": "정차소(인문.농구장) ↔ 600주년 기념관"
+      },
+      "action": {
+        "route": "/bus/realtime",
+        "groupId": "hssc"
+      }
+    },
+    {
+      "groupId": "campus",
+      "card": {
+        "label": "인자셔틀",
+        "themeColor": "003626",
+        "iconType": "shuttle",
+        "busTypeText": "성대",
+        "subtitle": "인사캠 ↔ 자과캠"
+      },
+      "action": {
+        "route": "/bus/schedule",
+        "groupId": "campus"
+      }
+    },
+    {
+      "groupId": "jongro02",
+      "card": {
+        "label": "종로 02",
+        "themeColor": "4CAF50",
+        "iconType": "village",
+        "busTypeText": "마을",
+        "subtitle": "성균관대학교 ↔ 종각역.YMCA"
+      },
+      "action": {
+        "route": "/bus/realtime",
+        "groupId": "jongro02"
+      }
+    },
+    {
+      "groupId": "jongro07",
+      "card": {
+        "label": "종로 07",
+        "themeColor": "4CAF50",
+        "iconType": "village",
+        "busTypeText": "마을",
+        "subtitle": "성균관대운동장 ↔ 600주년기념관"
+      },
+      "action": {
+        "route": "/bus/realtime",
+        "groupId": "jongro07"
+      }
+    },
+    {
+      "groupId": "jongro08",
+      "card": {
+        "label": "종로 08",
+        "themeColor": "4CAF50",
+        "iconType": "village",
+        "busTypeText": "마을",
+        "subtitle": "명륜3가 ↔ 종로5가"
+      },
+      "action": {
+        "route": "/bus/realtime",
+        "groupId": "jongro08"
+      }
+    }
+  ]
+}

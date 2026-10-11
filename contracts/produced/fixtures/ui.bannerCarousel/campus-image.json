@@ -1,0 +1,17 @@
+{
+  "_about": "Synthetic, never captured: the campus carousel as served inside its window, which closed before the first capture; built from the first banner of src/ui/campus/campus-banners.json",
+  "data": {
+    "type": "banner_carousel",
+    "id": "campus_banners",
+    "aspectRatio": 6,
+    "autoRotateSec": 6,
+    "items": [
+      {
+        "type": "image",
+        "id": "eskara-2026-banner-01",
+        "imageUrl": "https://media.skkuverse.com/campus/banners/eskara-2026-01-c4967cf8.webp",
+        "alt": "청랑 현수막: 조선에~서~ 누가 돌아왔게~"
+      }
+    ]
+  }
+}
