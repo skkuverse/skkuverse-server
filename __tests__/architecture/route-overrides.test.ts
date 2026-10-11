@@ -121,7 +121,7 @@ export function routeOverrideViolations(file: string, text: string): string[] {
 }
 
 describe("route overrides rule applies as specified", () => {
-  const FILE = "__tests__/nest/bus/bus.routes.test.ts";
+  const FILE = "__tests__/nest/bus/schedule.routes.test.ts";
   const routeTest = (imports: string, overrides: string): string =>
     `${imports}\nimport { buildTestApp } from "../../helpers/nest/build-test-app";\n` +
     `beforeAll(async () => { app = await buildTestApp({ imports: [BusModule], overrides: [${overrides}] }); });\n`;
