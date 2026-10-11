@@ -14,11 +14,7 @@ import config from "./infra/config";
 import { closeClient, ping as pingDb } from "./infra/db";
 import { AppModule } from "./app.module";
 import { ResponseInterceptor } from "./http/response.interceptor";
-import {
-  EXPOSED_RESPONSE_HEADERS,
-  exposeHeadersMiddleware,
-} from "./http/expose-headers.middleware";
-import { CORS_METHODS, corsOrigins } from "./infra/origins";
+import { CORS_METHODS, corsOrigins, EXPOSED_RESPONSE_HEADERS } from "./infra/origins";
 import { HttpExceptionFilter } from "./http/http-exception.filter";
 import { LangMiddleware } from "./http/lang.middleware";
 import { noStoreMiddleware } from "./http/no-store.middleware";
@@ -28,8 +24,8 @@ import { BusCacheService } from "./bus/cache/bus-cache.service";
  * NestJS entrypoint:
  *  - helmet, request logging (infra/http-logging.ts: request id + log
  *    context + pino-http), express.json(100kb), trust proxy 1
- *  - global ResponseInterceptor + HttpExceptionFilter (LangMiddleware is wired
- *    in AppModule.configure)
+ *  - LangMiddleware, raw-mounted here (see below), and the global
+ *    ResponseInterceptor + HttpExceptionFilter
  *  - ROLE branch (poller: init only, no listen; api/combined: listen)
  *  - graceful shutdown (enableShutdownHooks + 5s force-exit + closeClient)
  */
@@ -53,10 +49,6 @@ async function bootstrap(): Promise<void> {
     langMiddleware.use(req as never, res as never, next),
   );
 
-  // Must run before any handler — see the docblock. The eventmap 304 branches
-  // return before setting headers of their own, which is the case this exists for.
-  expressInstance.use(exposeHeadersMiddleware);
-
   // CACHE=off (the development default): every Cache-Control becomes no-store,
   // so the phone's HTTP cache never answers for this server.
   if (!config.cache.enabled) expressInstance.use(noStoreMiddleware);
@@ -76,11 +68,6 @@ async function bootstrap(): Promise<void> {
   // CORS, scoped to the first-party web origins in infra/origins.ts (plus
   // loopback origins in development, for a local web dev server).
   //
-  // Added when apps/webview gained its first fetch (the mini-app notification
-  // feed, skkuverse#17). Until then the API sent no Access-Control-Allow-Origin
-  // and answered OPTIONS with 404, which http/expose-headers.middleware.ts documents —
-  // and which meant a cross-origin fetch failed before it could read anything.
-  //
   // Read-only methods, no credentials. Everything reachable this way is already
   // public to anyone with curl; what the narrow scope buys is that a browser at
   // an allowed origin cannot preflight a POST to /internal/*, so the token check
@@ -88,9 +75,6 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: corsOrigins(config.isDevelopment),
     methods: [...CORS_METHODS],
-    // The same header exposeHeadersMiddleware already sets. Nest would
-    // overwrite that header on CORS-handled responses, and the 304 branches it
-    // exists for do not go through this path at all, so both are needed.
     exposedHeaders: EXPOSED_RESPONSE_HEADERS,
     credentials: false,
     maxAge: 86400,

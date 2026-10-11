@@ -2,7 +2,7 @@ import type { ObjectId } from "mongodb";
 import type { OverlayGeometry } from "../shared/geojson.types";
 import type { BilingualText, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd } from "./building.types";
 
-/** GeoJSON order, [lng, lat], as the 2dsphere index requires. */
+/** QUIRK(mongo): GeoJSON order, [lng, lat]: the 2dsphere index reads the first as longitude. */
 export interface GeoPoint {
   type: "Point";
   coordinates: [number, number];
@@ -23,7 +23,7 @@ export type SpaceSource = "buildInfo" | "spaceList";
 
 export interface BuildingRawDoc {
   _id: SkkuId;
-  /** SKKU gives a facility (a gate, an outbuilding) no number. */
+  /** QUIRK(skku): a facility (a gate, an outbuilding) has no number. */
   buildNo: BuildNo | null;
   campus: Campus;
   name: BilingualText;
@@ -31,7 +31,7 @@ export interface BuildingRawDoc {
   location: GeoPoint;
   image: BuildingImage;
   accessibility: { elevator: boolean; toilet: boolean };
-  /** Absent on a facility, which phase 2 never fetches; [] when SKKU lists no photos. */
+  /** WHY: absent on a facility, whose buildInfo is never fetched; [] when SKKU lists no photos. */
   attachments?: BuildingAttachment[];
   skkuCreatedAt: string | null;
   skkuUpdatedAt: string | null;
@@ -39,8 +39,8 @@ export interface BuildingRawDoc {
 }
 
 /**
- * A known status, or SKKU's raw text when it is not one of them. `string & {}`
- * keeps the known names in the type, where a plain `| string` absorbs them.
+ * WHY: `string & {}` keeps the known names in the type, where a plain `| string` absorbs them;
+ * any other value is SKKU's raw text.
  */
 export type ElevatorStatus = "arrival" | "arrival_button" | "none" | "not_operating" | (string & {});
 
@@ -57,10 +57,9 @@ export interface BarrierFreeSection {
   parking: number | null;
 }
 
-/** Parsed from the barrier-free block SKKU writes into description.ko: one section per wing label (A동, B동), or one. */
+/** QUIRK(skku): SKKU writes a barrier-free block into description.ko, one section per wing label (A동, B동) or one. */
 export interface AccessibilityDetail {
   sections: BarrierFreeSection[];
-  /** The block was there but yielded no section. */
   parseError?: string;
 }
 
@@ -108,7 +107,7 @@ export interface SpaceDoc {
   syncedAt?: Date;
 }
 
-/** A passage between two buildings, hand-authored by scripts/seed-connections.js; a and b are unordered. */
+/** CONTRACT(scripts): hand-authored by scripts/seed-connections.js; `a` and `b` are unordered. */
 export interface ConnectionDoc {
   _id?: ObjectId;
   campus: Campus;
@@ -121,19 +120,17 @@ export interface ConnectionEnd {
   floor: BilingualText;
 }
 
-// Written by scripts/import-campus-shapes.js. Why its own collection and not a
+// CONTRACT(scripts): written by scripts/import-campus-shapes.js. Why a collection of its own and not a
 // field on buildings: docs/explanation/map-architecture.md, "Campus shapes".
 export interface CampusShapeDoc {
-  /** An authored slug ("hssc-boundary"), not an ObjectId. */
   _id: string;
   campus: Campus;
-  /** A BASE_LAYERS id, with no category table between (map-architecture.md, "Campus shapes"). */
+  /** SEE: docs/explanation/map-architecture.md ("Campus shapes"): a BASE_LAYERS id, no category table between. */
   layerId: string;
-  /** [lng, lat], served verbatim. */
   geometry: OverlayGeometry;
   title: BilingualText;
   subtitle?: BilingualText | null;
-  /** null for a boundary, lawn or path. The map gives a footprint the same tap as the building's pin. */
+  /** WHY: null for a boundary, lawn or path; with an id, the map gives the footprint the building pin's tap. */
   skkuId: SkkuId | null;
   order: number;
 }

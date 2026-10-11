@@ -25,12 +25,14 @@ describe("runtimeMode", () => {
     [undefined, "development"],
     ["staging", "development"],
   ] as const)("NODE_ENV=%s → %s", (nodeEnv, mode) => {
+    // Act & Assert
     expect(runtimeMode(nodeEnv)).toBe(mode);
   });
 });
 
 describe("resolveRuntimeSwitches defaults", () => {
   it("production keeps every side effect and cache on", () => {
+    // Act & Assert
     expect(resolveRuntimeSwitches({}, "production")).toEqual({
       switches: {
         pushDelivery: "live",
@@ -44,6 +46,7 @@ describe("resolveRuntimeSwitches defaults", () => {
   });
 
   it("development turns every outbound side effect, the limiter and the caches off", () => {
+    // Act & Assert
     expect(resolveRuntimeSwitches({}, "development")).toEqual({
       switches: {
         pushDelivery: "suppressed",
@@ -57,16 +60,20 @@ describe("resolveRuntimeSwitches defaults", () => {
   });
 
   it("test keeps production's defaults (fetch is mocked, limiter tests expect 429)", () => {
+    // Act & Assert
     expect(resolveRuntimeSwitches({}, "test").switches).toEqual(
       resolveRuntimeSwitches({}, "production").switches,
     );
   });
 
   it("treats an empty value as unset", () => {
+    // Act
     const { switches, errors } = resolveRuntimeSwitches(
       { PUSH_DELIVERY: "", RATE_LIMIT: "", BUILDING_SYNC: "" },
       "development",
     );
+
+    // Assert
     expect(errors).toEqual([]);
     expect(switches.pushDelivery).toBe("suppressed");
   });
@@ -74,10 +81,13 @@ describe("resolveRuntimeSwitches defaults", () => {
 
 describe("resolveRuntimeSwitches overrides", () => {
   it("development may turn the limiter, the building sync and the caches on", () => {
+    // Act
     const { switches, errors } = resolveRuntimeSwitches(
       { RATE_LIMIT: "on", BUILDING_SYNC: "on", CACHE: "on" },
       "development",
     );
+
+    // Assert
     expect(errors).toEqual([]);
     expect(switches.rateLimitEnabled).toBe(true);
     expect(switches.buildingSyncEnabled).toBe(true);
@@ -85,6 +95,7 @@ describe("resolveRuntimeSwitches overrides", () => {
   });
 
   it("development may turn the shuttle estimates on, and production may turn them off", () => {
+    // Act & Assert
     const dev = resolveRuntimeSwitches({ SHUTTLE_ETA: "on" }, "development");
     expect(dev.errors).toEqual([]);
     expect(dev.switches.shuttleEtaEnabled).toBe(true);
@@ -94,30 +105,42 @@ describe("resolveRuntimeSwitches overrides", () => {
   });
 
   it("refuses PUSH_DELIVERY=live in development, and stays suppressed", () => {
+    // Act
     const { switches, errors } = resolveRuntimeSwitches({ PUSH_DELIVERY: "live" }, "development");
+
+    // Assert
     expect(errors).toHaveLength(1);
     expect(errors[0]).toMatch(/PUSH_DELIVERY=live is refused/);
     expect(switches.pushDelivery).toBe("suppressed");
   });
 
   it("production may suppress push and stop the building sync (what local verify sets)", () => {
+    // Act
     const { switches, errors } = resolveRuntimeSwitches(
       { PUSH_DELIVERY: "suppressed", BUILDING_SYNC: "off" },
       "production",
     );
+
+    // Assert
     expect(errors).toEqual([]);
     expect(switches.pushDelivery).toBe("suppressed");
     expect(switches.buildingSyncEnabled).toBe(false);
   });
 
   it("refuses RATE_LIMIT=off in production, and keeps the limiter on", () => {
+    // Act
     const { switches, errors } = resolveRuntimeSwitches({ RATE_LIMIT: "off" }, "production");
+
+    // Assert
     expect(errors).toEqual(["RATE_LIMIT=off is refused in production"]);
     expect(switches.rateLimitEnabled).toBe(true);
   });
 
   it("refuses CACHE=off in production, and keeps the caches on", () => {
+    // Act
     const { switches, errors } = resolveRuntimeSwitches({ CACHE: "off" }, "production");
+
+    // Assert
     expect(errors).toEqual(["CACHE=off is refused in production"]);
     expect(switches.cacheEnabled).toBe(true);
   });
@@ -129,6 +152,7 @@ describe("resolveRuntimeSwitches overrides", () => {
     ["CACHE", "no-store"],
     ["SHUTTLE_ETA", "true"],
   ])("reports %s=%s instead of coercing it", (name, value) => {
+    // Act & Assert
     for (const mode of ["production", "development", "test"] as const) {
       const { errors } = resolveRuntimeSwitches({ [name]: value }, mode);
       expect(errors).toEqual([expect.stringContaining(`${name} must be one of`)]);
@@ -159,24 +183,28 @@ describe("validateEnv refuses an invalid switch", () => {
   }
 
   it("throws on PUSH_DELIVERY=live in development", () => {
+    // Act & Assert
     expect(validateWith({ NODE_ENV: "development", PUSH_DELIVERY: "live" })).toThrow(
       /Invalid runtime switch[\s\S]*PUSH_DELIVERY=live is refused/,
     );
   });
 
   it("throws on RATE_LIMIT=off in production", () => {
+    // Act & Assert
     expect(
       validateWith({ NODE_ENV: "production", RATE_LIMIT: "off", SENTRY_DSN: "disabled" }),
     ).toThrow(/RATE_LIMIT=off is refused in production/);
   });
 
   it("throws on CACHE=off in production", () => {
+    // Act & Assert
     expect(
       validateWith({ NODE_ENV: "production", CACHE: "off", SENTRY_DSN: "disabled" }),
     ).toThrow(/CACHE=off is refused in production/);
   });
 
   it("passes on the development defaults", () => {
+    // Act & Assert
     expect(validateWith({ NODE_ENV: "development" })).not.toThrow();
   });
 });
@@ -188,7 +216,10 @@ describe("where the switches may be set", () => {
   it.each(["docker-compose.yml", "config/env.prd.keys", "config/env.dev.keys"])(
     "%s sets none of them",
     (rel) => {
+      // Arrange
       const text = read(rel);
+
+      // Assert
       for (const name of RUNTIME_SWITCH_NAMES) {
         expect(text).not.toMatch(new RegExp(`\\b${name}\\b`));
       }
@@ -204,6 +235,7 @@ describe("where the switches may be set", () => {
       ["the api replicas", apiEnv],
       ["the poller", pollerEnv],
     ])("%s suppress push and stop the building sync and the directions calls", (_label, env) => {
+      // Assert
       expect(env).toBeDefined();
       expect(env).toMatch(/- PUSH_DELIVERY=suppressed\n/);
       expect(env).toMatch(/- BUILDING_SYNC=off\n/);

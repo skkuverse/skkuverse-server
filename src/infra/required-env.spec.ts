@@ -1,14 +1,11 @@
 /**
- * Pins describeMissingRequired() to the resolution
- * src/infra/config.ts uses (both read src/infra/required-env.ts) —
- * specifically the api.hsscNew entry, the only one resolved via apiUrl()
- * (DEV-preferred-with-PROD-fallback) rather than read straight off
- * process.env.
- *
- * The bug this pins: reading process.env.API_HSSC_NEW_PROD directly made the
- * Nest validator over-crash in Development / Staging-check modes where a dev
- * sets only API_HSSC_NEW_DEV (leaving _PROD empty) — a config
- * src/infra/config.ts accepts. The fix mirrors apiUrl().
+ * describeMissingRequired() resolves each required value the way
+ * src/infra/config.ts does. The api.hsscNew entry is the only one resolved
+ * through apiUrl() (DEV preferred, PROD as fallback) rather than read straight
+ * off process.env: reading API_HSSC_NEW_PROD directly would crash the Nest
+ * validator in Development mode when a dev sets only API_HSSC_NEW_DEV, a
+ * config src/infra/config.ts accepts. AI_API_URL has no default, so it is
+ * reported when unset.
  *
  * Each scenario sets env, then loads the module fresh with
  * jest.isolateModules().
@@ -53,6 +50,7 @@ describe("describeMissingRequired api.hsscNew matches src/infra/config.ts apiUrl
   // the only entry that flips based on the HSSC env we control here.
 
   it("Development with only API_HSSC_NEW_DEV set → NOT missing (src/infra/config.ts accepts it)", () => {
+    // Act & Assert
     withEnv(
       {
         NODE_ENV: "development",
@@ -67,6 +65,7 @@ describe("describeMissingRequired api.hsscNew matches src/infra/config.ts apiUrl
   });
 
   it("Development with neither key set → missing", () => {
+    // Act & Assert
     withEnv(
       {
         NODE_ENV: "development",
@@ -81,6 +80,7 @@ describe("describeMissingRequired api.hsscNew matches src/infra/config.ts apiUrl
   });
 
   it("Staging-check (USE_PROD_API=true) with only API_HSSC_NEW_DEV → missing (prod key required)", () => {
+    // Act & Assert
     withEnv(
       {
         NODE_ENV: "development",
@@ -95,6 +95,7 @@ describe("describeMissingRequired api.hsscNew matches src/infra/config.ts apiUrl
   });
 
   it("Production with only API_HSSC_NEW_PROD set → NOT missing", () => {
+    // Act & Assert
     withEnv(
       {
         NODE_ENV: "production",
@@ -112,8 +113,11 @@ describe("describeMissingRequired api.hsscNew matches src/infra/config.ts apiUrl
 describe("describeMissingRequired AI_API_URL", () => {
   // GET /notices/overview cannot work without it, and there is no default.
   it("reports AI_API_URL as missing when it is unset", () => {
+    // Arrange
     const saved = process.env.AI_API_URL;
     delete process.env.AI_API_URL;
+
+    // Act & Assert
     try {
       jest.isolateModules(() => {
         const mod = require("./required-env");

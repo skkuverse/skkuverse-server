@@ -31,9 +31,8 @@ export class BuildingSyncService {
     private readonly buildings: BuildingRepository,
   ) {}
 
-  // Logs no failure itself; the poller registry reports the rejection. Phase 1 failing ends
-  // the run; phase 2 (more than half of buildInfo failing) and phase 3 never stop the next
-  // phase, and the run then rejects with one AggregateError naming each failed phase.
+  // WHY: logs no failure itself; the poller registry reports the rejection. After phase 1, a failed
+  // phase does not stop the next, so one bad SKKU endpoint leaves the others' data fresh.
   async run(): Promise<void> {
     const syncStartedAt = new Date();
     const start = Date.now();
@@ -78,7 +77,7 @@ export class BuildingSyncService {
 
   private async syncBuildList(syncStartedAt: Date): Promise<ListedBuilding[]> {
     const listed = await this.fetchTrustedBuildList();
-    // Detected before the raw upsert, which overwrites the skkuUpdatedAt it compares against.
+    // WHY: detected before the raw upsert, which overwrites the skkuUpdatedAt it compares against.
     const changedSkkuIds = await this.detectChangedSkkuIds(listed);
     await this.upsertRawBuildings(listed, syncStartedAt);
     await this.enrichChangedBuildings(changedSkkuIds, syncStartedAt);
@@ -170,7 +169,6 @@ export class BuildingSyncService {
     await this.finishBuildInfoPhase({ attempted: withBuildNo.length, ...phase }, syncStartedAt);
   }
 
-  /** Runs the batch concurrently, then records its failures one at a time, in list order. */
   private async syncBuildInfoBatch(batch: readonly ListedBuildingWithBuildNo[], syncStartedAt: Date): Promise<BuildInfoBatch> {
     const outcomes = await Promise.all(batch.map((building) => this.syncOneBuildInfo(building, syncStartedAt)));
     const result: BuildInfoBatch = { spaces: [], rejections: [] };
@@ -219,7 +217,6 @@ export class BuildingSyncService {
   }
 
   private async recordBuildInfoFailure(building: ListedBuildingWithBuildNo, rejection: unknown): Promise<void> {
-    // A rejection can be anything; the cast only types it for the log line.
     const reason = rejection as { message?: string } | null | undefined;
     logger.warn(
       {

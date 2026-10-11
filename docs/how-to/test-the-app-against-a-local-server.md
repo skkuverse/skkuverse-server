@@ -3,7 +3,7 @@ title: Test the App Against a Local Server
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-08
+last-updated: 2026-10-11
 audience: internal
 ---
 
@@ -77,6 +77,8 @@ CACHE=on npm run dev             # check a TTL, a stale fallback or a Cache-Cont
 `BUILDING_SYNC=on` crawls on every boot, and `npm run dev` reboots on every save, so turn it on for a single run.
 
 Three combinations refuse to boot (`config.invalid_runtime_switch`): `PUSH_DELIVERY=live` in development, and `RATE_LIMIT=off` or `CACHE=off` in production. A real push is checked after deploying, in production.
+
+A production override may only reduce outbound effects (`PUSH_DELIVERY=suppressed`, `BUILDING_SYNC=off`, as `docker-compose.local-verify.yml` sets them). `PUSH_DELIVERY=suppressed` in production drops pushes rather than pausing them: the dispatcher still claims each notice and stamps `pushedAt`, so nothing is sent later. Tests keep production's defaults: every test mocks `fetch`, and the limiter tests expect 429s.
 
 ## What still reaches production
 

@@ -1,13 +1,3 @@
-/**
- * Request logging, mounted on the raw Express instance by main.ts and by every
- * test app builder, so tests run the production configuration.
- *
- * Order matters: the context middleware assigns the request id and opens the
- * AsyncLocalStorage scope first, then pino-http adopts that id (it only
- * generates one when `req.id` is unset) and binds `req.log`. Everything after
- * — handlers, services, the exception filter and pino-http's own access line —
- * runs inside the scope and carries `reqId`.
- */
 import { randomUUID } from "crypto";
 import type { Express, NextFunction, Request, Response } from "express";
 import type { IncomingMessage, ServerResponse } from "http";
@@ -17,18 +7,13 @@ import logger from "./logger";
 import { runWithLogContext } from "./log-context";
 import { serializeError, serializeRequest, serializeResponse } from "./log-redact";
 
-/** A client-supplied id is adopted only in this shape; anything else is replaced. */
 const VALID_REQUEST_ID = /^[A-Za-z0-9._-]{1,64}$/;
 
 function headerValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-/**
- * The client's X-Request-Id when well-formed, else Cloudflare's CF-Ray (present
- * on every proxied request, so the id matches Cloudflare's own logs), else a
- * fresh UUID for direct and local calls.
- */
+/** QUIRK(cloudflare): CF-Ray is on every proxied request, so the fallback id matches Cloudflare's logs. */
 export function resolveRequestId(headers: IncomingMessage["headers"]): string {
   const supplied = headerValue(headers["x-request-id"]);
   if (supplied && VALID_REQUEST_ID.test(supplied)) return supplied;
@@ -44,11 +29,7 @@ export function requestContext(req: Request, res: Response, next: NextFunction):
   runWithLogContext({ reqId: id }, next);
 }
 
-/**
- * 5xx is an error a person should see; a 4xx is the caller's mistake, worth a
- * warning except for the two every public API gets in bulk (expired tokens and
- * scanners probing paths).
- */
+/** WHY: 401 and 404 stay info: every public API gets them in bulk (expired tokens, scanners probing paths). */
 export function accessLogLevel(
   _req: IncomingMessage,
   res: ServerResponse,
@@ -59,7 +40,7 @@ export function accessLogLevel(
   return "info";
 }
 
-/** Health probes run every 30 s per container; their outcome is watched elsewhere. */
+/** WHY: health probes run every 30 s per container (docker-compose.yml), and are watched elsewhere. */
 function isHealthProbe(req: IncomingMessage): boolean {
   return (req.url ?? "").startsWith("/health");
 }
@@ -82,7 +63,10 @@ export function httpLoggerOptions(target: Logger = logger): Options {
   };
 }
 
-/** `target` exists for tests that capture output; production uses the shared logger. */
+/**
+ * WHY: requestContext first: pino-http adopts its `req.id` (genReqId), and everything after, the access
+ * line included, runs inside the scope that carries reqId.
+ */
 export function mountRequestLogging(app: Express, target: Logger = logger): void {
   app.use(requestContext);
   app.use(pinoHttp(httpLoggerOptions(target)));

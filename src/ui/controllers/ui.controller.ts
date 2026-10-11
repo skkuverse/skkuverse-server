@@ -2,7 +2,7 @@ import { Controller, Get, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
 import type { SupportedLang } from "../../infra/types";
 import { UiService } from "../ui/ui.service";
-import { sendSuccess } from "../../http/response.interceptor";
+import { sendSuccess, withMeta } from "../../http/response.interceptor";
 
 /**
  * Mounted at /ui, generalLimiter, no auth. Three SDUI home endpoints. Each
@@ -37,14 +37,14 @@ export class UiController {
   getTransitList(@Req() req: Request, @Res() res: Response): void {
     const lang = (req.lang ?? "ko") as SupportedLang;
     const busList = this.ui.getBusList(lang);
-    sendSuccess(req, res, busList, { busListCount: busList.length });
+    sendSuccess(req, res, withMeta(busList, { busListCount: busList.length }));
   }
 
   @Get("home/scroll")
   getScroll(@Req() req: Request, @Res() res: Response): void {
     const lang = (req.lang ?? "ko") as SupportedLang;
     const items = this.ui.getScrollComponent(lang);
-    sendSuccess(req, res, items, { itemCount: items.length });
+    sendSuccess(req, res, withMeta(items, { itemCount: items.length }));
   }
 
   /**

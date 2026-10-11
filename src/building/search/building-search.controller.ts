@@ -10,7 +10,6 @@ import { buildingSearchQuery, type BuildingSearchQuery } from "./building-search
 import { BuildingSearchService } from "./building-search.service";
 import type { BuildingSearch } from "./building-search.types";
 
-// (A perimeter detail is left out of the public history.)
 @Controller("building")
 export class BuildingSearchController {
   constructor(private readonly buildingSearch: BuildingSearchService) {}
@@ -20,8 +19,7 @@ export class BuildingSearchController {
   async search(
     @Query(
       new ZodValidationPipe(buildingSearchQuery, "INVALID_PARAMS", {
-        q: "MISSING_QUERY",
-        campus: "INVALID_CAMPUS",
+        fieldCodes: { q: "MISSING_QUERY", campus: "INVALID_CAMPUS" },
       }),
     )
     query: BuildingSearchQuery,
