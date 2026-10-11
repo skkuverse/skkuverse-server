@@ -1,0 +1,77 @@
+{
+  "_about": "GET /ui/home captured from production 2026-10-11 (stage 8a snapshot, Accept-Language en); whole data",
+  "data": {
+    "version": 1,
+    "sections": [
+      {
+        "type": "banner_carousel",
+        "id": "home_top",
+        "aspectRatio": 2.25,
+        "autoRotateSec": 5,
+        "items": [
+          {
+            "type": "default"
+          }
+        ]
+      },
+      {
+        "type": "tile_grid",
+        "id": "home_tiles",
+        "tiles": [
+          {
+            "kind": "link",
+            "id": "building_map",
+            "title": "Building Map",
+            "icon": {
+              "kind": "emoji",
+              "emoji": "🏢"
+            },
+            "actionType": "route",
+            "actionValue": "/map/hssc"
+          },
+          {
+            "kind": "link",
+            "id": "building_code",
+            "title": "Building Code",
+            "icon": {
+              "kind": "emoji",
+              "emoji": "🔢"
+            },
+            "actionType": "route",
+            "actionValue": "/search"
+          },
+          {
+            "kind": "link",
+            "id": "lost_found",
+            "title": "Lost & Found",
+            "icon": {
+              "kind": "emoji",
+              "emoji": "🧳"
+            },
+            "actionType": "webview",
+            "actionValue": "https://webview.skkuverse.com/skku/lostandfound"
+          },
+          {
+            "kind": "link",
+            "id": "inquiry",
+            "title": "Inquiry",
+            "icon": {
+              "kind": "emoji",
+              "emoji": "💬"
+            },
+            "actionType": "external",
+            "actionValue": "https://pf.kakao.com/_cjxexdG/chat"
+          },
+          {
+            "kind": "game",
+            "id": "subway-typing"
+          },
+          {
+            "kind": "game",
+            "id": "wave-run"
+          }
+        ]
+      }
+    ]
+  }
+}

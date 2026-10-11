@@ -193,7 +193,6 @@ const VIOLATORS = {
   ],
   features: {
     map: ["src/map/map-event-overlays.data.ts"],
-    ui: ["src/ui/home/home-layout.schema.ts", "src/ui/home/home-layout.ts", "src/ui/ui/ui.buslist.ts"],
   },
   // Controllers that read req.lang themselves instead of taking @Lang().
   lang: [
@@ -203,7 +202,6 @@ const VIOLATORS = {
     "src/miniapps/miniapps.controller.ts",
     "src/notices/notices.controller.ts",
     "src/notices/overview/overview.controller.ts",
-    "src/ui/controllers/ui.controller.ts",
   ],
 };
 

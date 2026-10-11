@@ -11,7 +11,14 @@ import fs from "fs";
 import path from "path";
 import { getBusGroups } from "../../../src/bus/bus-config/bus-config.data";
 import { haversineM } from "../../../src/bus/schedule/schedule-stops";
-import { getBusList } from "../../../src/ui/ui/ui.buslist";
+import { BusConfigService } from "../../../src/bus/bus-config/bus-config.service";
+import { Clock } from "../../../src/infra/clock";
+import type { SupportedLang } from "../../../src/infra/types";
+import { UiTransitListService } from "../../../src/ui/transit-list/ui-transit-list.service";
+
+// The transit list as the ui module serves it, reading the (faked) system time through Clock.
+const transitList = new UiTransitListService(new BusConfigService(), new Clock());
+const getBusList = (lang: SupportedLang) => transitList.listBusGroupCards(lang);
 
 const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
 

@@ -16,12 +16,17 @@
  * rather than by reading known field names, so a new webview link added to any
  * of these payloads is covered without this file being updated.
  */
-import { getCampusSections } from "../../../src/ui/ui/ui.campus";
+import { Clock } from "../../../src/infra/clock";
+import { MiniAppsService } from "../../../src/miniapps/miniapps.service";
+import { UiCampusService } from "../../../src/ui/campus/ui-campus.service";
 import fs from "fs";
 import path from "path";
-import { getScrollComponent } from "../../../src/ui/ui/ui.scroll";
+import { UiScrollService } from "../../../src/ui/scroll/ui-scroll.service";
 import { getBusGroups } from "../../../src/bus/bus-config/bus-config.data";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN } from "../../../src/infra/origins";
+
+const getCampusSections = () => new UiCampusService(new MiniAppsService(), new Clock()).getCampusSheet("ko");
+const getScrollComponent = () => new UiScrollService().listScrollCards("ko");
 
 /** Every string anywhere in `value` that names a webview host. */
 function webviewUrlsIn(value: unknown): string[] {
