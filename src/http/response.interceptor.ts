@@ -35,8 +35,10 @@ export function setResponseTime(req: Request, res: Response): void {
   res.setHeader("X-Response-Time", `${ms.toFixed(1)}ms`);
 }
 
-function successEnvelope(req: Request, data: unknown, meta: SuccessMeta = {}): SuccessEnvelope {
-  return { meta: { lang: req.lang, ...meta }, data };
+function successEnvelope(req: Request, data: unknown): SuccessEnvelope {
+  return data instanceof MetaEnvelope
+    ? { meta: { lang: req.lang, ...data.meta }, data: data.data }
+    : { meta: { lang: req.lang }, data };
 }
 
 function handlerWroteResponse(res: Response, data: unknown): boolean {
@@ -55,16 +57,13 @@ export class ResponseInterceptor implements NestInterceptor {
         const cacheControl: unknown = Reflect.getMetadata(CACHE_CONTROL_METADATA, ctx.getHandler());
         if (typeof cacheControl === "string") res.setHeader("Cache-Control", cacheControl);
         setResponseTime(req, res);
-        return data instanceof MetaEnvelope
-          ? successEnvelope(req, data.data, data.meta)
-          : successEnvelope(req, data);
+        return successEnvelope(req, data);
       }),
     );
   }
 }
 
-// eslint-disable-next-line max-params -- the @Res() handlers call it with four arguments until ADR 0010 D6 makes it internal to the interceptor
-export function sendSuccess(req: Request, res: Response, data: unknown, meta: SuccessMeta = {}): void {
+export function sendSuccess(req: Request, res: Response, data: unknown): void {
   setResponseTime(req, res);
-  res.json(successEnvelope(req, data, meta));
+  res.json(successEnvelope(req, data));
 }

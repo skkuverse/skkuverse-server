@@ -24,7 +24,7 @@ class EnvelopeController {
 
   @Get("raw")
   raw(@Req() req: Request, @Res() res: Response) {
-    sendSuccess(req, res, { a: 1 }, { keyword: "raw" });
+    sendSuccess(req, res, withMeta({ a: 1 }, { keyword: "raw" }));
   }
 
   @Get("error")
