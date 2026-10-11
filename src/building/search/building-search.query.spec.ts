@@ -1,15 +1,24 @@
 /**
  * The Mongo form of the search: the $switch compiler (it must agree with the
  * JS twin in building-search.rules.ts through tierRegex), the keyword filter's
- * campus-freedom, and the decoding of the $facet document.
+ * campus-freedom, the sort keys that make the order total, and the decoding of
+ * the $facet document.
  *
- * The compiler and filter tests are structure pins of the aggregation: they say
- * what the pipeline objects look like, not which documents match or in what
- * order. That query meaning is for a real-mongod spec (harden-test-suite D6), so
- * add no new pins here.
+ * The compiler, filter and sort tests are structure pins of the aggregation:
+ * they say what the pipeline objects look like, not which documents match or
+ * in what order they come back. That query meaning is for a real-mongod spec
+ * (harden-test-suite D6), so add no other pins here.
  */
+import type { Document } from "mongodb";
 import { SPACE_TIERS, tierRegex } from "./building-search.rules";
-import { spaceKeywordFilter, tiersToScoreExpr, toRankedResult } from "./building-search.query";
+import {
+  BUILDING_SEARCH,
+  SPACE_SEARCH,
+  rankedSearchPipeline,
+  spaceKeywordFilter,
+  tiersToScoreExpr,
+  toRankedResult,
+} from "./building-search.query";
 
 describe("tiersToScoreExpr — the Mongo compiler", () => {
   const expr = tiersToScoreExpr(SPACE_TIERS, "27") as {
@@ -55,6 +64,39 @@ describe("spaceKeywordFilter stays campus-free", () => {
   it.each(["27", "204", "도서관"])("has no campus key for q=%s", (q) => {
     // Act & Assert
     expect("campus" in spaceKeywordFilter(q)).toBe(false);
+  });
+});
+
+/** Each row facet's $sort as ordered pairs: toEqual ignores key order, and a $sort's key order is the sort. */
+function rowSorts(pipeline: Document[]): Array<Array<[string, unknown]>> {
+  const facet = pipeline.find((stage) => "$facet" in stage)?.["$facet"] as Record<string, Document[]>;
+  return ["strong", "weak"].map((name) => {
+    const sort = facet[name]?.find((stage) => "$sort" in stage)?.["$sort"] as Document;
+    return Object.entries(sort);
+  });
+}
+
+describe("rankedSearchPipeline — the sort is a total order", () => {
+  it("sorts spaces by score, then by their unique key spaceCd, buildNo, campus", () => {
+    // Act
+    const sorts = rowSorts(rankedSearchPipeline(SPACE_SEARCH, "312"));
+
+    // Assert
+    // spaceCd alone ties: 134 production spaceCds are shared across campuses
+    // (31214 is in buildNo 131 at hssc and in buildNo 231 at nsc). The unique
+    // key is all three; with less, tied rows come back in whatever order the
+    // weekly sync left them.
+    const unique = [["_score", -1], ["spaceCd", 1], ["buildNo", 1], ["campus", 1]];
+    expect(sorts).toEqual([unique, unique]);
+  });
+
+  it("sorts buildings by score, then by _id", () => {
+    // Act
+    const sorts = rowSorts(rankedSearchPipeline(BUILDING_SEARCH, "312"));
+
+    // Assert
+    const unique = [["_score", -1], ["_id", 1]];
+    expect(sorts).toEqual([unique, unique]);
   });
 });
 

@@ -85,6 +85,7 @@ function fakeHost(req: object): { host: ArgumentsHost; res: { statusCode?: numbe
 
 describe("error events", () => {
   it("carry no secret from the request or from outgoing-call breadcrumbs", async () => {
+    // Arrange
     Sentry.addBreadcrumb({
       category: "http",
       data: {
@@ -92,6 +93,8 @@ describe("error events", () => {
         "http.query": `serviceKey=${SECRETS.serviceKey}`,
       },
     });
+
+    // Act
     Sentry.captureEvent({
       message: "boom",
       request: {
@@ -109,6 +112,7 @@ describe("error events", () => {
     });
     await Sentry.flush(1000);
 
+    // Assert
     const text = sentText();
     for (const secret of Object.values(SECRETS)) expect(text).not.toContain(secret);
     const [event] = items("event");
@@ -118,14 +122,17 @@ describe("error events", () => {
   });
 
   it("are raised by the filter for unknown errors only, tagged with the request id", async () => {
+    // Arrange
     const filter = new HttpExceptionFilter();
     const req = { method: "GET", path: "/x" };
 
+    // Act
     filter.catch(new AppError("BAD", "bad input", 400), fakeHost(req).host);
     const { host, res } = fakeHost(req);
     runWithLogContext({ reqId: "req-123" }, () => filter.catch(new Error("kaboom"), host));
     await Sentry.flush(1000);
 
+    // Assert
     expect(res.statusCode).toBe(500);
     const events = items("event");
     expect(events).toHaveLength(1);
@@ -136,15 +143,19 @@ describe("error events", () => {
 
 describe("logs", () => {
   it("arrive redacted and flattened, info and above only", async () => {
+    // Arrange
     const logger = pino({ ...loggerOptions(), level: "debug" }, { write: () => {} });
     const err = new AxiosError("timeout", "ECONNABORTED", {
       url: `https://ws.bus.go.kr/x?serviceKey=${SECRETS.serviceKey}`,
       headers: new AxiosHeaders({ Cookie: SECRETS.cookie }),
     });
+
+    // Act
     logger.debug("not sent");
     logger.warn({ err, res: { statusCode: 502 }, req: { headers: { authorization: SECRETS.bearer } } }, "upstream");
     await Sentry.flush(1000);
 
+    // Assert
     expect(sentText()).not.toContain("not sent");
     for (const secret of Object.values(SECRETS)) expect(sentText()).not.toContain(secret);
     const [container] = items("log");
@@ -157,20 +168,27 @@ describe("logs", () => {
 
 describe("scrub helpers", () => {
   it("scrubBreadcrumb masks the url and drops the separate query", () => {
+    // Act
     const b = scrubBreadcrumb({ data: { url: "/a?token=x", "http.query": "token=x" } })!;
+
+    // Assert
     expect(b.data).toEqual({ url: "/a?token=%5BREDACTED%5D" });
   });
 
   it("scrubEvent leaves an event without a request alone", () => {
+    // Act & Assert
     expect(scrubEvent({ message: "m" } as never)).toEqual({ message: "m" });
   });
 
   it("flattenLogAttributes stops at three levels", () => {
+    // Act
     const out = flattenLogAttributes({
       level: "info",
       message: "m",
       attributes: { a: { b: { c: { d: 1 } } }, x: 1 },
     });
+
+    // Assert
     expect(out.attributes).toEqual({ "a.b.c": { d: 1 }, x: 1 });
   });
 });

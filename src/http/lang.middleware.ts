@@ -1,21 +1,14 @@
 import { Injectable, type NestMiddleware } from "@nestjs/common";
 import type { Request, Response, NextFunction } from "express";
 import { SUPPORTED_LANGS, type SupportedLang } from "../infra/types";
+import { startResponseTimer } from "./response.interceptor";
 
 const SUPPORTED: readonly SupportedLang[] = SUPPORTED_LANGS;
 
-/**
- * Sets req.lang (default "ko") parsed from the Accept-Language first token,
- * and Vary: Accept-Language on every response.
- *
- * Also stashes req.__startNs = process.hrtime.bigint() — this is the request
- * entry point for the X-Response-Time computation. Both sendSuccess() and
- * HttpExceptionFilter read this value.
- */
 @Injectable()
 export class LangMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction): void {
-    req.__startNs = process.hrtime.bigint();
+    startResponseTimer(req);
     const header = req.headers["accept-language"] || "ko";
     const primary = header.split(",")[0] ?? "ko";
     const candidate = (primary.split("-")[0] ?? "ko").toLowerCase();

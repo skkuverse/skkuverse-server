@@ -15,7 +15,7 @@ const CAMPUS_SHAPES_TTL_MS = 5 * 60 * 1000;
 
 const CAMPUS_SHAPES_STALE_WINDOW_MS = 60 * 60 * 1000;
 
-// Every reload re-parses the same documents, so a bad set is reported hourly, not every TTL.
+// WHY: every reload re-parses the same documents, so a bad set is reported hourly, not every TTL.
 const INVALID_SHAPES_LOG_INTERVAL_MS = 60 * 60 * 1000;
 
 const CAMPUS_SHAPE_FIELDS = {
@@ -49,7 +49,7 @@ function partitionCampusShapes(docs: readonly unknown[]): { shapes: CampusShapeD
 export class BuildingRepository implements OnModuleInit {
   private readonly invalidShapesThrottle = createLogThrottle(INVALID_SHAPES_LOG_INTERVAL_MS);
 
-  // No stale window: a failed read must reach the map's campus overlay, which then
+  // WHY: no stale window: a failed read must reach the map's campus overlay, which then
   // marks itself degraded and is not cached.
   private readonly buildingsCache = createCachedLoader({
     name: "all buildings",
@@ -67,9 +67,8 @@ export class BuildingRepository implements OnModuleInit {
         .toArray(),
   });
 
-  // The overlay's 24 h Cache-Control helps only clients with an HTTP cache. A failed
-  // reload serves the last good shapes: a shapes failure does not mark the overlay
-  // degraded, so it would serve the empty set as cacheable for a day.
+  // WHY: a failed reload serves the last good shapes: a shapes failure does not mark the
+  // overlay degraded, so an empty set would go out with its 24 h Cache-Control.
   private readonly campusShapesCache = createCachedLoader({
     name: "campus shapes",
     ttlMs: CAMPUS_SHAPES_TTL_MS,
@@ -95,7 +94,7 @@ export class BuildingRepository implements OnModuleInit {
 
     await Promise.all([
       campusShapes.createIndex({ order: 1, _id: 1 }),
-      // No geo query runs: the 2dsphere makes Mongo reject a malformed ring at insert.
+      // WHY: no geo query runs; the 2dsphere index makes Mongo reject a malformed ring at insert.
       campusShapes.createIndex({ geometry: "2dsphere" }),
     ]);
   }

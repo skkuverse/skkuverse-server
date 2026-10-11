@@ -13,10 +13,10 @@ import type {
 import type { EnrichedBuilding, ListedBuilding, SyncedSpace } from "./building-sync.types";
 import type { SkkuId } from "../building.types";
 
-/** Off the request path: a stuck read fails the weekly run instead of hanging it, with room for a slow cluster. */
+/** WHY: off the request path: a stuck read fails the weekly run instead of hanging it, with room for a slow cluster. */
 const SYNC_READ_MAX_TIME_MS = 30_000;
 
-/** Dot paths, because a whole-object $set would drop the fields it does not name (sync stamps, extensions). */
+/** WHY: dot paths, so the $set of name, description and accessibility keeps a subfield the sync does not write. */
 function toEnrichedSet(building: EnrichedBuilding): Record<string, unknown> {
   return {
     buildNo: building.buildNo,
@@ -45,7 +45,7 @@ const spaceKey = (space: SyncedSpace) => ({ spaceCd: space.spaceCd, buildNo: spa
 
 const spaceNames = (space: SyncedSpace) => ({ floor: space.floor, name: space.name, buildingName: space.buildingName });
 
-/** An insert starts `conspaceCd` as null: only spaceList reports it. */
+/** QUIRK(skku): only spaceList reports `conspaceCd`, so buildInfo sets it on insert only, never over spaceList's. */
 function toBuildInfoSpaceUpsert(space: SyncedSpace, syncStartedAt: Date): SpaceUpsert {
   return {
     updateOne: {
@@ -78,7 +78,7 @@ const SPACE_UPSERT_BY_SOURCE: Readonly<Record<SpaceSource, (space: SyncedSpace, 
   spaceList: toSpaceListSpaceUpsert,
 };
 
-// Every write is an upsert keyed by SKKU's own ids, so a rerun converges.
+// WHY: writes are keyed by SKKU's own ids, so a rerun converges.
 @Injectable()
 export class BuildingSyncRepository implements OnModuleInit {
   onModuleInit(): Promise<void> {
@@ -87,9 +87,9 @@ export class BuildingSyncRepository implements OnModuleInit {
 
   async ensureIndexes(): Promise<void> {
     await Promise.all([
-      // No geo query runs: the 2dsphere makes Mongo reject a malformed point at upsert.
+      // WHY: no geo query runs; the 2dsphere index makes Mongo reject a malformed point at upsert.
       this.enriched().createIndex({ location: "2dsphere" }),
-      // The space upserts filter on this key; unique, so a listing cannot duplicate a room.
+      // WHY: the space upserts filter on this key; unique, so a listing cannot duplicate a room.
       this.spaces().createIndex({ spaceCd: 1, buildNo: 1, campus: 1 }, { unique: true }),
     ]);
   }
@@ -159,7 +159,6 @@ export class BuildingSyncRepository implements OnModuleInit {
     ]);
   }
 
-  /** Best effort: a note that fails to write is logged, never thrown. */
   async recordDetailError(skkuId: SkkuId, message: string): Promise<void> {
     const update = { $set: { "sync.detailError": message } };
     const noteFailed = (err: unknown): void =>

@@ -17,7 +17,7 @@ import {
 } from "./building-search.rules";
 import type { RankedFacet, RankedSearchResult, RelevanceTier } from "./building-search.types";
 
-// $regexMatch throws on a non-string, and two production rows have spaceCd: null.
+// QUIRK(mongo): $regexMatch throws on a non-string, and two production rows have spaceCd: null.
 // `$type`, not `$ifNull`, so a numeric spaceCd from SKKU cannot fail every
 // search either (ADR 0006, Consequences).
 function pathMatches(path: string, regex: string): Document {
@@ -31,7 +31,7 @@ function pathMatches(path: string, regex: string): Document {
   };
 }
 
-/** Case-insensitive rather than uppercased: one production spaceCd is lowercase (712115b). */
+/** EVIDENCE: case-insensitive rather than uppercased: one production spaceCd is lowercase (712115b). */
 function tiersToScoreExpr<TDoc>(
   tiers: readonly RelevanceTier<TDoc>[],
   keyword: string,
@@ -52,7 +52,7 @@ function tiersToScoreExpr<TDoc>(
   return { $switch: { branches, default: NO_TIER_SCORE } };
 }
 
-/** Campus-free on purpose: the counts share it, and the app's campus toggle shows both campuses. */
+/** WHY: campus-free: the counts share it, and the app's campus toggle shows both campuses. */
 function spaceKeywordFilter(keyword: string): Filter<SpaceDoc> {
   const keywordPattern = { $regex: escapeRegex(keyword), $options: "i" };
   return {
@@ -66,7 +66,7 @@ function spaceKeywordFilter(keyword: string): Filter<SpaceDoc> {
   };
 }
 
-/** No buildNo, for the reason given on BUILDING_TIERS. */
+/** SEE: docs/decisions/0006-building-search-relevance-ranking.md ("Buildings match `displayNo`, never `buildNo`"). */
 function buildingKeywordFilter(keyword: string): Filter<BuildingDoc> {
   const escaped = escapeRegex(keyword);
   const keywordPattern = { $regex: escaped, $options: "i" };
@@ -75,7 +75,6 @@ function buildingKeywordFilter(keyword: string): Filter<BuildingDoc> {
       { "name.ko": keywordPattern },
       { "name.en": keywordPattern },
       { "description.ko": keywordPattern },
-      // A prefix, so "2" lists 20, 21 … 27.
       { displayNo: { $regex: `^${escaped}`, $options: "i" } },
     ],
   };
@@ -87,13 +86,13 @@ function toRankedResult<T>(facets: readonly RankedFacet<T>[]): RankedSearchResul
     throw new Error("[building] search $facet returned no document");
   }
   const campusCounts: Record<Campus, number> = { hssc: 0, nsc: 0 };
-  // $group gives a document without `campus` the _id null: it counts for neither campus.
+  // QUIRK(mongo): $group gives a document without `campus` the _id null: it counts for neither campus.
   for (const row of facet.counts) {
     if (isCampus(row._id)) campusCounts[row._id] = row.n;
   }
   const campusTotal = CAMPUSES.reduce((sum, campus) => sum + campusCounts[campus], 0);
   const ranked = [...facet.strong, ...facet.weak];
-  // Not a silent fallback: $count emits no document when the match set is empty.
+  // QUIRK(mongo): not a silent fallback: $count emits no document when the match set is empty.
   const total = facet.total[0]?.n ?? 0;
   return {
     items: ranked,
@@ -110,11 +109,11 @@ interface RankedSearchSpec<TDoc> {
   strongLimit: number;
   weakLimit: number;
   projection: Readonly<Record<string, 0>>;
-  /** Must make the sort a total order, so the response is stable across syncs. */
+  /** WHY: must make the sort a total order, so the response is stable across syncs. */
   tiebreak: Readonly<Record<string, 1>>;
 }
 
-/** spaceCd breaks ties: the sync's weekly delete and re-upsert reorders the documents on disk. */
+/** WHY: the unique key breaks ties: weekly sync upserts and deletes reorder documents, and a spaceCd repeats across campuses. */
 const SPACE_SEARCH: RankedSearchSpec<SpaceDoc> = {
   keywordFilter: spaceKeywordFilter,
   tiers: SPACE_TIERS,
@@ -122,10 +121,10 @@ const SPACE_SEARCH: RankedSearchSpec<SpaceDoc> = {
   strongLimit: SPACE_SEARCH_LIMIT,
   weakLimit: SPACE_WEAK_LIMIT,
   projection: { _id: 0, _score: 0, sources: 0, syncedAt: 0 },
-  tiebreak: { spaceCd: 1 },
+  tiebreak: { spaceCd: 1, buildNo: 1, campus: 1 },
 };
 
-/** _id breaks ties: SKKU's integer id, which the sync upserts by and never deletes. */
+/** WHY: _id breaks ties: SKKU's integer id, which the sync upserts by and never deletes. */
 const BUILDING_SEARCH: RankedSearchSpec<BuildingDoc> = {
   keywordFilter: buildingKeywordFilter,
   tiers: BUILDING_TIERS,
@@ -136,7 +135,7 @@ const BUILDING_SEARCH: RankedSearchSpec<BuildingDoc> = {
   tiebreak: { _id: 1 },
 };
 
-/** One $facet returns the rows and the counts, so the counts cannot describe another predicate. */
+/** WHY: one $facet returns the rows and the counts, so the counts cannot describe another predicate. */
 function rankedSearchPipeline<TDoc>(search: RankedSearchSpec<TDoc>, keyword: string, campus?: Campus): Document[] {
   const campusStage: Document[] = campus ? [{ $match: { campus } }] : [];
   const projectStage = { $project: { ...search.projection } };

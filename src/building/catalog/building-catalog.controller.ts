@@ -10,7 +10,6 @@ import { buildingListQuery, skkuIdParam, type BuildingListQuery } from "./buildi
 import { BuildingCatalogService } from "./building-catalog.service";
 import type { BuildingDetail, BuildingList } from "./building-catalog.types";
 
-// (A perimeter detail is left out of the public history.)
 @Controller("building")
 export class BuildingCatalogController {
   constructor(private readonly catalog: BuildingCatalogService) {}

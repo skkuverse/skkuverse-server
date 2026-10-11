@@ -1,7 +1,4 @@
-/**
- * Sentry.init options, apart from the init itself (src/instrument.ts) so a
- * test can run the SDK with exactly these options and inspect what it sends.
- */
+/** WHY: apart from the init (src/instrument.ts), so a test can run the SDK with exactly these options. */
 import * as Sentry from "@sentry/nestjs";
 import config from "./config";
 import { LOGGED_REQUEST_HEADERS } from "./log-redact";
@@ -12,9 +9,8 @@ export function sentryOptions(): Sentry.NodeOptions {
     dsn: config.sentry.dsn,
     environment: config.sentry.environment,
     release: config.sentry.release,
-    // v11 collects nearly everything by default. Collect what the log
-    // collects: the allowlisted headers, no cookies, bodies, user fields or
-    // stack-frame locals (a frame's locals can hold a token or a service key).
+    // QUIRK(sentry): v11 collects nearly everything by default. Collect only what the log does: no
+    // cookies, bodies, user fields or stack-frame locals, which can hold a token or a service key.
     dataCollection: {
       userInfo: false,
       cookies: false,

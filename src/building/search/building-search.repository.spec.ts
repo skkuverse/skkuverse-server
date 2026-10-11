@@ -105,7 +105,7 @@ describe("searchSpaces pipeline assembly", () => {
       $match: { _score: { $lt: SPACE_STRONG_MIN_SCORE } },
     });
     for (const band of [facet.strong, facet.weak]) {
-      expect(band).toContainEqual({ $sort: { _score: -1, spaceCd: 1 } });
+      expect(band).toContainEqual({ $sort: { _score: -1, spaceCd: 1, buildNo: 1, campus: 1 } });
       expect(band).toContainEqual({
         $project: { _id: 0, _score: 0, sources: 0, syncedAt: 0 },
       });

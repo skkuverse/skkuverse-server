@@ -1,3 +1,9 @@
+/**
+ * createCachedLoader: a single-flight TTL cache that never stores a failure,
+ * can answer from an expired value inside its stale window while it reloads,
+ * backs off one TTL after a failed reload, ignores a load that started before
+ * clear(), and loads on every get() when CACHE=off.
+ */
 jest.mock("./logger", () => ({
   __esModule: true,
   default: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
@@ -35,9 +41,11 @@ function deferred<T>() {
 
 describe("createCachedLoader", () => {
   it("serves a fresh value without reloading", async () => {
+    // Arrange
     const load = jest.fn().mockResolvedValue("a");
     const cache = createCachedLoader({ name: "t", ttlMs: 5_000, load });
 
+    // Act & Assert
     await expect(cache.get()).resolves.toBe("a");
     now += 4_999;
     await expect(cache.get()).resolves.toBe("a");
@@ -45,27 +53,35 @@ describe("createCachedLoader", () => {
   });
 
   it("reloads once the TTL has passed", async () => {
+    // Arrange
     const load = jest.fn().mockResolvedValueOnce("a").mockResolvedValueOnce("b");
     const cache = createCachedLoader({ name: "t", ttlMs: 5_000, load });
 
     await cache.get();
     now += 5_000;
+
+    // Act & Assert
     await expect(cache.get()).resolves.toBe("b");
     expect(load).toHaveBeenCalledTimes(2);
   });
 
   it("shares one in-flight load between concurrent misses", async () => {
+    // Arrange
     const d = deferred<string>();
     const load = jest.fn(() => d.promise);
     const cache = createCachedLoader({ name: "t", ttlMs: 5_000, load });
 
+    // Act
     const results = Promise.all([cache.get(), cache.get(), cache.get()]);
     d.resolve("a");
+
+    // Assert
     await expect(results).resolves.toEqual(["a", "a", "a"]);
     expect(load).toHaveBeenCalledTimes(1);
   });
 
   it("propagates a failure with no value to fall back on, and does not cache it", async () => {
+    // Arrange
     const load = jest
       .fn()
       .mockRejectedValueOnce(new Error("down"))
@@ -77,6 +93,7 @@ describe("createCachedLoader", () => {
       staleWindowMs: 60_000,
     });
 
+    // Act & Assert
     await expect(cache.get()).rejects.toThrow("down");
     // The very next call retries — the rejection was not stored.
     await expect(cache.get()).resolves.toBe("a");
@@ -84,6 +101,7 @@ describe("createCachedLoader", () => {
   });
 
   it("without staleWindowMs, a failed reload propagates even with an old value", async () => {
+    // Arrange
     const load = jest
       .fn()
       .mockResolvedValueOnce("a")
@@ -92,11 +110,14 @@ describe("createCachedLoader", () => {
 
     await cache.get();
     now += 5_000;
+
+    // Act & Assert
     await expect(cache.get()).rejects.toThrow("down");
     expect(warn).not.toHaveBeenCalled();
   });
 
   it("serves the last good value when a reload fails, warns once, and backs off one TTL", async () => {
+    // Arrange
     const load = jest
       .fn()
       .mockResolvedValueOnce("a")
@@ -110,6 +131,8 @@ describe("createCachedLoader", () => {
 
     await cache.get();
     now += 5_000;
+
+    // Act & Assert
     await expect(cache.get()).resolves.toBe("a");
     await settle();
     expect(warn).toHaveBeenCalledTimes(1);
@@ -124,6 +147,7 @@ describe("createCachedLoader", () => {
   });
 
   it("answers from an expired value at once, reloading behind it", async () => {
+    // Arrange
     const slow = deferred<string>();
     const load = jest
       .fn()
@@ -138,6 +162,8 @@ describe("createCachedLoader", () => {
 
     await cache.get();
     now += 5_000;
+
+    // Act & Assert
     // The reload is still pending, yet every caller is answered right away —
     // a slow or unreachable database never holds a request inside the window.
     await expect(cache.get()).resolves.toBe("a");
@@ -151,6 +177,7 @@ describe("createCachedLoader", () => {
   });
 
   it("stops serving stale past ttlMs + staleWindowMs", async () => {
+    // Arrange
     const load = jest
       .fn()
       .mockResolvedValueOnce("a")
@@ -164,10 +191,13 @@ describe("createCachedLoader", () => {
 
     await cache.get();
     now += 65_000;
+
+    // Act & Assert
     await expect(cache.get()).rejects.toThrow("down");
   });
 
   it("never lets the back-off carry a stale value past its bound", async () => {
+    // Arrange
     const load = jest
       .fn()
       .mockResolvedValueOnce("a")
@@ -181,6 +211,8 @@ describe("createCachedLoader", () => {
 
     await cache.get();
     now += 63_000; // stale, 2 s left on the bound
+
+    // Act & Assert
     await expect(cache.get()).resolves.toBe("a");
     await settle();
     now += 2_000; // back-off would run to +5 s, but the bound ends here
@@ -188,6 +220,7 @@ describe("createCachedLoader", () => {
   });
 
   it("does not let a load that started before clear() store its result", async () => {
+    // Arrange
     const first = deferred<string>();
     const load = jest
       .fn()
@@ -195,9 +228,12 @@ describe("createCachedLoader", () => {
       .mockResolvedValueOnce("fresh");
     const cache = createCachedLoader({ name: "t", ttlMs: 5_000, load });
 
+    // Act
     const pending = cache.get();
     cache.clear();
     first.resolve("old");
+
+    // Assert
     await expect(pending).resolves.toBe("old");
 
     await expect(cache.get()).resolves.toBe("fresh");
@@ -205,6 +241,7 @@ describe("createCachedLoader", () => {
   });
 
   it("turns a synchronous throw in load into a rejection", async () => {
+    // Arrange
     const cache = createCachedLoader<string>({
       name: "t",
       ttlMs: 5_000,
@@ -212,11 +249,16 @@ describe("createCachedLoader", () => {
         throw new Error("sync");
       },
     });
+
+    // Act & Assert
     await expect(cache.get()).rejects.toThrow("sync");
   });
 
   it("rejects a non-positive TTL or a negative stale window at construction", () => {
+    // Arrange
     const load = () => Promise.resolve(1);
+
+    // Act & Assert
     expect(() => createCachedLoader({ name: "t", ttlMs: 0, load })).toThrow(
       /ttlMs must be > 0/,
     );
@@ -243,28 +285,37 @@ describe("createCachedLoader with CACHE=off", () => {
   });
 
   it("loads on every get(), even inside the TTL", async () => {
+    // Arrange
     const load = jest.fn().mockResolvedValueOnce("a").mockResolvedValueOnce("b");
     const cache = createCachedLoader({ name: "t", ttlMs: 5_000, load });
 
+    // Act & Assert
     await expect(cache.get()).resolves.toBe("a");
     await expect(cache.get()).resolves.toBe("b");
     expect(load).toHaveBeenCalledTimes(2);
   });
 
   it("propagates a failed load instead of serving a stale value", async () => {
+    // Arrange
     const load = jest.fn().mockResolvedValueOnce("a").mockRejectedValueOnce(new Error("down"));
     const cache = createCachedLoader({ name: "t", ttlMs: 5_000, staleWindowMs: 60_000, load });
 
     await cache.get();
+
+    // Act & Assert
     await expect(cache.get()).rejects.toThrow("down");
   });
 
   it("keeps caching a loader marked keepWhenCacheOff", async () => {
+    // Arrange
     const load = jest.fn().mockResolvedValue("a");
     const cache = createCachedLoader({ name: "t", ttlMs: 5_000, load, keepWhenCacheOff: true });
 
+    // Act
     await cache.get();
     await cache.get();
+
+    // Assert
     expect(load).toHaveBeenCalledTimes(1);
   });
 });

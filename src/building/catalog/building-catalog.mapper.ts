@@ -23,7 +23,6 @@ function groupByFloor(spaces: readonly FloorSpaceDoc[]): FloorGroup[] {
   );
 }
 
-/** A connection is unordered, so the end matching `skkuId` is "from" and the other the target. */
 function toBuildingConnections(
   skkuId: SkkuId,
   connections: readonly ConnectionEnds[],

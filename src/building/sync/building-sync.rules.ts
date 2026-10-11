@@ -1,28 +1,28 @@
 import type { PhaseFailure } from "./building-sync.types";
 
-/** Fewer listed buildings (78 exist) means SKKU answered without usable data: an empty body, a renamed field. */
+/** EVIDENCE: 78 buildings exist; fewer listed means SKKU answered without usable data (an empty body, a renamed field). */
 export const MIN_BUILDINGS_TO_TRUST = 50;
 
-/** About 7700 spaces exist; deleting against a shorter list would drop real rooms. */
+/** EVIDENCE: about 7700 spaces exist; deleting against a shorter list would drop real rooms. */
 export const MIN_SPACES_FOR_STALE_DELETE = 5000;
 
 export const BUILD_INFO_CONCURRENCY = 5;
 
-/** The 2026-10-09 run failed 0 of 59 buildInfo calls; all go to one SKKU host, so an outage fails most of them. */
+/** EVIDENCE: the 2026-10-09 run failed 0 of 59 buildInfo calls; all go to one SKKU host, so an outage fails most. */
 export const MAX_BUILD_INFO_FAILURE_RATIO = 0.5;
 
 export function shouldFailBuildInfoPhase({ attempted, failed }: { attempted: number; failed: number }): boolean {
   return failed > attempted * MAX_BUILD_INFO_FAILURE_RATIO;
 }
 
-/** A rename upstream makes every item fail; today's real payloads hold at most 1 bad item in 5591. */
+/** EVIDENCE: a rename upstream makes every item fail; today's real payloads hold at most 1 bad item in 5591. */
 export const MAX_INVALID_PAYLOAD_ITEM_RATIO = 0.5;
 
 export function shouldRejectPayload({ total, invalid }: { total: number; invalid: number }): boolean {
   return invalid > total * MAX_INVALID_PAYLOAD_ITEM_RATIO;
 }
 
-/** `knownUpdatedAt` is undefined for a building never seen before. */
+/** WHY: `=== undefined`, not `== null`: undefined is a building never seen; null, one SKKU sends no updateDt for. */
 export function needsEnrichment({
   knownUpdatedAt,
   listedUpdatedAt,

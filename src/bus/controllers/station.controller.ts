@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { StationService } from "../station/station.service";
-import { sendSuccess } from "../../http/response.interceptor";
+import { sendSuccess, withMeta } from "../../http/response.interceptor";
 
 /**
  * GET /bus/station/:stationId, mounted at /bus/station.
@@ -22,7 +22,7 @@ export class StationController {
   ): Promise<void> {
     const result = await this.station.getStationArrivals(stationId);
     if (result.meta) {
-      sendSuccess(req, res, result.data, result.meta);
+      sendSuccess(req, res, withMeta(result.data, result.meta));
     } else {
       sendSuccess(req, res, result.data);
     }

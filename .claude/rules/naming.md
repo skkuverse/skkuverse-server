@@ -50,7 +50,7 @@ Asked to name the same thing, two developers pick the same name about 7% of the 
 - `data`, `info`, `item`, `result`, `value`, `obj`, `tmp`, `helper`, `manager` never stand alone. Add the domain noun: `upsertResult`, `campusSpaces`.
 - Abbreviations: `id`, `url`, `ms`, `db`, `api`, and an upstream's own field names (`spaceCd`, `buildNo`). Nothing else.
 - A one-letter name only inside a callback of three lines or fewer: `(b) => b.campus`.
-- A comment that says *what* becomes a name. When a comment is allowed at all, and how long it may be, is ADR 0010 D10: only what the code cannot carry, at most three lines.
+- A comment that says *what* becomes a name. When a comment is allowed at all, and how long it may be, is ADR 0010 D10: only what the code cannot carry, opening with a tag (`WHY:`, `QUIRK(<system>):`, `CONTRACT(<repo>):`, `EVIDENCE:`, `SEE: docs/…`; `comment-tags`), at most three lines.
 
 | The comment explained | It becomes |
 | --- | --- |

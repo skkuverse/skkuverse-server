@@ -1,6 +1,6 @@
 import { Controller, Get, Query, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { sendSuccess } from "../../http/response.interceptor";
+import { sendSuccess, withMeta } from "../../http/response.interceptor";
 import { NoticesOverviewService } from "./overview.service";
 
 /**
@@ -23,6 +23,6 @@ export class NoticesOverviewController {
       sourceIdsQuery,
       req.lang ?? "ko",
     );
-    sendSuccess(req, res, { overview }, meta);
+    sendSuccess(req, res, withMeta({ overview }, meta));
   }
 }

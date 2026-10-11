@@ -2,7 +2,7 @@
  * Every dependency in package.json is pinned to an exact version (CLAUDE.md,
  * Rules: "Dependencies are pinned to exact versions"). `.npmrc` sets
  * `save-exact`, but only for `npm install`; a range typed or pasted into
- * package.json by hand still lands, and a caret did. This fails on any range,
+ * package.json by hand still lands. This fails on any range,
  * tag or URL in dependencies, devDependencies, optionalDependencies and
  * overrides, and lists the offenders.
  */
@@ -30,6 +30,7 @@ function specs(value: unknown, prefix: string, out: Map<string, unknown>): void 
 
 describe("exact dependency versions in package.json", () => {
   it("accepts an exact version and rejects ranges and tags", () => {
+    // Act & Assert
     for (const spec of ["0.23.1", "11.1.24", "1.0.0-rc.1"]) expect(spec).toMatch(EXACT);
     for (const spec of ["^0.23.1", "~1.2.3", ">=1.0.0", "1.x", "1", "*", "latest", ""]) {
       expect(spec).not.toMatch(EXACT);
@@ -37,6 +38,7 @@ describe("exact dependency versions in package.json", () => {
   });
 
   it("pins every dependency exactly", () => {
+    // Act
     const all = new Map<string, unknown>();
     for (const section of SECTIONS) {
       if (pkg[section] !== undefined) specs(pkg[section], section, all);
@@ -44,6 +46,8 @@ describe("exact dependency versions in package.json", () => {
     const offenders = [...all]
       .filter(([, spec]) => typeof spec !== "string" || !EXACT.test(spec))
       .map(([name, spec]) => `${name}: ${JSON.stringify(spec)}`);
+
+    // Assert
     expect(offenders).toEqual([]);
   });
 });

@@ -29,7 +29,6 @@ interface PayloadList<T> {
   scope: string;
   items: readonly unknown[];
   schema: z.ZodType<T>;
-  /** The field that names an item in the log; an item without it is named by its index. */
   keyField: string;
 }
 
@@ -38,7 +37,7 @@ function issuePaths(error: z.ZodError): string {
   return [...new Set(paths)].join(", ");
 }
 
-/** A wrong response shape (a renamed or missing list) breaks every item at once, so it throws. */
+/** WHY: a wrong response shape (a renamed or missing list) breaks every item at once, so it throws. */
 function parseResponse<T>(schema: z.ZodType<T>, data: unknown, where: string): T {
   const parsed = schema.safeParse(data);
   if (!parsed.success) {
@@ -89,7 +88,7 @@ function text(ko: string | undefined, en: string | undefined): BilingualText {
   return { ko: ko || "", en: en || "" };
 }
 
-/** A space name: SKKU omits a missing English name, or sends the literal string "undefined". */
+/** QUIRK(skku): a space without an English name omits it or sends the literal string "undefined". */
 function spaceName(ko: string | undefined, en: string | undefined): BilingualText {
   return { ko: ko || "", en: en === "undefined" ? "" : en || "" };
 }

@@ -1,14 +1,13 @@
 /**
- * No line in src/ or __tests__/ may cite a file that no longer exists. The
- * Express app — index.ts, lib/ and features/ — was deleted when the server
- * moved to NestJS, and a comment that still points there sends a reader, or an
- * agent, looking for code that is gone, with claims about it nobody can check.
- * Comments describe the code as it is; git keeps the history.
+ * No line in src/ or __tests__/ may cite a file that does not exist. A comment
+ * that points at a missing file sends a reader, or an agent, looking for code
+ * that is not there, with claims about it nobody can check.
  *
- * Flagged: the deleted entrypoint (index.js / index.ts, with or without a line
- * number), a path that starts at lib/ or features/, and a __tests__/…test.ts
- * path that does not resolve. A path with a prefix (scripts/lib/, another
- * repo's apps/mobile/src/features/) is a different directory and passes.
+ * Flagged: an index.js / index.ts entrypoint (with or without a line number),
+ * a path that starts at lib/ or features/ (neither exists), and a
+ * __tests__/…test.ts path that does not resolve. A path with a prefix
+ * (scripts/lib/, another repo's apps/mobile/src/features/) is a different
+ * directory and passes.
  */
 import fs from "fs";
 import path from "path";
@@ -38,6 +37,7 @@ function tsFiles(dir: string): string[] {
 
 describe("no stale paths in src/ and __tests__/", () => {
   it("catches the deleted Express paths and nothing with a prefix", () => {
+    // Act & Assert
     for (const line of [
       "mirrors index.ts:164-171",
       "same as index.js",
@@ -60,6 +60,7 @@ describe("no stale paths in src/ and __tests__/", () => {
   });
 
   it("no line cites a deleted file", () => {
+    // Act
     const stale: string[] = [];
     for (const file of [...tsFiles("src"), ...tsFiles("__tests__")]) {
       fs.readFileSync(path.join(root, file), "utf8")
@@ -68,6 +69,8 @@ describe("no stale paths in src/ and __tests__/", () => {
           if (cites(line)) stale.push(`${file}:${i + 1}: ${line.trim()}`);
         });
     }
+
+    // Assert
     expect(stale).toEqual([]);
   });
 });

@@ -23,7 +23,6 @@ export interface SyncedSpace {
   floor: BilingualText;
   name: BilingualText;
   buildingName: BilingualText;
-  /** Only spaceList reports it; buildInfo leaves it null. */
   conspaceCd: string | null;
 }
 
