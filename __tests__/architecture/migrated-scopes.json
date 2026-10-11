@@ -2,5 +2,7 @@
   "src/ad/",
   "src/app-config/",
   "src/building/",
-  "src/health/"
+  "src/health/",
+  "src/http/",
+  "src/shared/"
 ]
