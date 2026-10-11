@@ -1,11 +1,11 @@
 /**
- * What a log line may contain, pinned.
- *
- * Until 2026-10 every access line carried the caller's request headers — the
- * Firebase token and X-Internal-Token included. These tests run the production
+ * What a log line may contain, pinned. These tests run the production
  * request-logging stack (infra/http-logging.ts) and the production logger
- * options against a buffer and require that no secret value appears anywhere
- * in the output, so a new serializer or a new log call cannot quietly reopen it.
+ * options against a buffer and require that no secret value (a Firebase token,
+ * X-Internal-Token, a cookie, a query service key) appears anywhere in the
+ * output, so a new serializer or a new log call cannot quietly leak one. They
+ * also pin request ids, the per-request log context, error serialization, the
+ * Nest logger adapter and the compose hostnames that name each line's host.
  */
 import fs from "fs";
 import path from "path";
@@ -65,7 +65,10 @@ function buildApp(logger: pino.Logger) {
 
 describe("request logging", () => {
   it("writes no header or query secret anywhere in the output", async () => {
+    // Arrange
     const out = capture();
+
+    // Act
     await request(buildApp(out.logger))
       .get(`/ok?serviceKey=${SECRETS.serviceKey}&q=hello`)
       .set("Authorization", `Bearer ${SECRETS.bearer}`)
@@ -75,6 +78,7 @@ describe("request logging", () => {
       .expect(200);
     await settle();
 
+    // Assert
     const text = out.raw.join("");
     for (const secret of Object.values(SECRETS)) expect(text).not.toContain(secret);
 
@@ -87,10 +91,14 @@ describe("request logging", () => {
   });
 
   it("gives every line of a request the same reqId, echoed in X-Request-Id", async () => {
+    // Arrange
     const out = capture();
+
+    // Act
     const res = await request(buildApp(out.logger)).get("/ok").expect(200);
     await settle();
 
+    // Assert
     const id = res.headers["x-request-id"];
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
     const service = out.lines.find((l) => l.event === "test.service")!;
@@ -100,18 +108,25 @@ describe("request logging", () => {
   });
 
   it("keeps a service line's fields off the access line", async () => {
+    // Arrange
     const out = capture();
+
+    // Act
     await request(buildApp(out.logger)).get("/ok").expect(200);
     await settle();
 
+    // Assert
     const access = out.lines.find((l) => l.msg === "request completed")!;
     expect(access.reqId).toBeDefined();
     expect(access).not.toHaveProperty("event");
   });
 
   it("levels the access line by status and skips health probes", async () => {
+    // Arrange
     const out = capture();
     const app = buildApp(out.logger);
+
+    // Act
     await request(app).get("/ok");
     await request(app).get("/bad");
     await request(app).get("/missing");
@@ -119,6 +134,7 @@ describe("request logging", () => {
     await request(app).get("/health/ready");
     await settle();
 
+    // Assert
     const levelOf = (url: string) =>
       out.lines.find((l) => (l.req as { url?: string } | undefined)?.url === url)?.level;
     expect(levelOf("/ok")).toBe("info");
@@ -129,8 +145,13 @@ describe("request logging", () => {
   });
 
   it("writes ISO timestamps, string levels and the service fields", () => {
+    // Arrange
     const out = capture();
+
+    // Act
     out.logger.info("x");
+
+    // Assert
     const [line] = out.lines;
     expect(line!.level).toBe("info");
     expect(line!.time).toMatch(/^\d{4}-\d{2}-\d{2}T/);
@@ -141,16 +162,20 @@ describe("request logging", () => {
 });
 
 describe("log context", () => {
-  // Until 2026-10 pino's default merge wrote each line's fields into the
-  // request's context, so every later line of the request (the access line
-  // included) carried them: one event counted twice, an `err` on a 200.
+  // pino's default merge writes each line's fields into the request's context,
+  // so every later line of the request (the access line included) would carry
+  // them: one event counted twice, an `err` on a 200.
   it("does not carry one line's fields into the next line of the same request", () => {
+    // Arrange
     const out = capture();
+
+    // Act
     runWithLogContext({ reqId: "req-1" }, () => {
       out.logger.info({ event: "test.first", cached: true, err: new Error("boom") }, "first");
       out.logger.info("second");
     });
 
+    // Assert
     const [first, second] = out.lines;
     expect(first).toMatchObject({ event: "test.first", cached: true, reqId: "req-1" });
     expect(first!.err).toBeDefined();
@@ -163,9 +188,11 @@ describe("log context", () => {
 
 describe("resolveRequestId", () => {
   it("adopts a well-formed client id", () => {
+    // Act & Assert
     expect(resolveRequestId({ "x-request-id": "abc-123" })).toBe("abc-123");
   });
   it("prefers CF-Ray over a generated id, and replaces a malformed client id", () => {
+    // Act & Assert
     expect(resolveRequestId({ "cf-ray": "8c1a2b3c4d5e6f70-ICN" })).toBe("8c1a2b3c4d5e6f70-ICN");
     expect(
       resolveRequestId({ "x-request-id": "bad id\n", "cf-ray": "8c1a2b3c4d5e6f70-ICN" }),
@@ -176,6 +203,7 @@ describe("resolveRequestId", () => {
 
 describe("error serialization", () => {
   it("keeps an axios error's place and drops its request config", () => {
+    // Arrange
     const config = {
       method: "get",
       url: `https://ws.bus.go.kr/api/rest/arrive?serviceKey=${SECRETS.serviceKey}&busRouteId=1`,
@@ -183,8 +211,11 @@ describe("error serialization", () => {
     };
     const err = new AxiosError("timeout of 10000ms exceeded", "ECONNABORTED", config);
     const out = capture();
+
+    // Act
     out.logger.error({ err }, "upstream failed");
 
+    // Assert
     const text = out.raw.join("");
     for (const secret of Object.values(SECRETS)) expect(text).not.toContain(secret);
     const logged = out.lines[0]!.err as Record<string, unknown>;
@@ -198,20 +229,25 @@ describe("error serialization", () => {
   });
 
   it("scrubs an axios error nested as a cause", () => {
+    // Arrange
     const inner = new AxiosError("bad", "ERR", {
       headers: new AxiosHeaders({ Cookie: SECRETS.cookie }),
     });
     const outer = new Error("wrapped", { cause: inner });
+
+    // Act & Assert
     expect(JSON.stringify(serializeError(outer))).not.toContain(SECRETS.cookie);
   });
 
   it("passes non-errors through", () => {
+    // Act & Assert
     expect(serializeError("plain")).toBe("plain");
   });
 });
 
 describe("maskUrl", () => {
   it("masks secret-looking parameters and keeps the rest", () => {
+    // Act & Assert
     expect(maskUrl("/a?token=1&page=2")).toBe("/a?token=%5BREDACTED%5D&page=2");
     expect(maskUrl("/a?api_key=1")).toBe("/a?api_key=%5BREDACTED%5D");
     expect(maskUrl("/plain")).toBe("/plain");
@@ -222,11 +258,16 @@ describe("PinoNestLogger", () => {
   afterEach(() => jest.restoreAllMocks());
 
   it("drops Nest's route and module announcements to debug", () => {
+    // Arrange
     const info = jest.spyOn(sharedLogger, "info");
     const debug = jest.spyOn(sharedLogger, "debug");
     const nest = new PinoNestLogger();
+
+    // Act
     nest.log("Mapped {/bus, GET} route", "RouterExplorer");
     nest.log("Nest application successfully started", "NestApplication");
+
+    // Assert
     expect(debug).toHaveBeenCalledWith({ module: "nest.RouterExplorer" }, "Mapped {/bus, GET} route");
     expect(info).toHaveBeenCalledWith(
       { module: "nest.NestApplication" },
@@ -235,8 +276,13 @@ describe("PinoNestLogger", () => {
   });
 
   it("keeps the stack from error(message, stack, context)", () => {
+    // Arrange
     const error = jest.spyOn(sharedLogger, "error");
+
+    // Act
     new PinoNestLogger().error("boom", "Error: boom\n    at x", "ExceptionHandler");
+
+    // Assert
     expect(error).toHaveBeenCalledWith(
       { module: "nest.ExceptionHandler", stack: "Error: boom\n    at x" },
       "boom",
@@ -248,12 +294,17 @@ describe("docker-compose hostnames", () => {
   // The `hostname` field of a line is os.hostname(); without an explicit
   // hostname it is a container id that changes on every deploy.
   it("names every service's host after the service", () => {
+    // Arrange
     const compose = fs.readFileSync(path.join(__dirname, "../../../docker-compose.yml"), "utf8");
+
+    // Act
     const services = compose.slice(
       compose.indexOf("\nservices:\n"),
       compose.indexOf("\nnetworks:\n"),
     );
     const blocks = [...services.matchAll(/^ {2}([a-z0-9-]+):\n((?: {4}.*\n|\n)*)/gm)];
+
+    // Assert
     expect(blocks.length).toBeGreaterThan(1);
     for (const [, name, body] of blocks) {
       expect(body).toMatch(new RegExp(`^ {4}hostname: ${name}$`, "m"));
