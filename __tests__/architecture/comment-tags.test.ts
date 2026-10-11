@@ -181,7 +181,7 @@ describe("comment tag rule applies as specified", () => {
     const source = "// Untagged.\nconst a = 1;";
 
     // Act
-    const checked = ["src/x/x.spec.ts", "__tests__/nest/x/x.test.ts", "src/x/x.ts"].map((f) =>
+    const checked = ["src/x/x.spec.ts", "__tests__/helpers/x.ts", "src/x/x.ts"].map((f) =>
       commentTagViolations(f, source, none),
     );
 

@@ -114,7 +114,7 @@ describe("shared comment rule applies as specified", () => {
     const source = "// WHY: src/building/ reads it.";
 
     // Act
-    const checked = ["src/bus/x.ts", "src/shared/x.spec.ts", "__tests__/nest/infra/x.test.ts", "src/shared/x.ts"].map(
+    const checked = ["src/bus/x.ts", "src/shared/x.spec.ts", "__tests__/helpers/x.ts", "src/shared/x.ts"].map(
       (f) => sharedCommentViolations(f, source, features),
     );
 

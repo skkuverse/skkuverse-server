@@ -75,7 +75,7 @@ describe("migrated scope rule applies as specified", () => {
       "src/building/x.ts: label",
       "src/bus/a.ts → src/building/b",
       "src/map/: types",
-      "__tests__/nest/ad/x.test.ts",
+      "__tests__/nest/ad/x.ts",
       "GET ad/placements",
       "GET nowhere",
     ];
@@ -88,7 +88,7 @@ describe("migrated scope rule applies as specified", () => {
       ["src/building/x.ts"],
       ["src/bus/a.ts"],
       ["src/map/"],
-      ["__tests__/nest/ad/x.test.ts"],
+      ["__tests__/nest/ad/x.ts"],
       ["src/ad/placements/ad-placements.controller.ts"],
       [],
     ]);
@@ -97,7 +97,7 @@ describe("migrated scope rule applies as specified", () => {
   it("flags entries in a folder scope, its __tests__/nest/ tests, a file scope and a route", () => {
     // Arrange
     const lists = new Map([
-      ["allowlists/a.json", ["src/building/x.ts: label", "src/buildings/y.ts", "__tests__/nest/building/z.test.ts"]],
+      ["allowlists/a.json", ["src/building/x.ts: label", "src/buildings/y.ts", "__tests__/nest/building/z.ts"]],
       ["allowlists/b.json", ["src/infra/config.ts: label", "src/infra/db.ts: label", "GET ad/placements"]],
     ]);
 
@@ -107,7 +107,7 @@ describe("migrated scope rule applies as specified", () => {
     // Assert
     expect(found).toEqual([
       "allowlists/a.json: src/building/x.ts: label",
-      "allowlists/a.json: __tests__/nest/building/z.test.ts",
+      "allowlists/a.json: __tests__/nest/building/z.ts",
       "allowlists/b.json: src/infra/config.ts: label",
       "allowlists/b.json: GET ad/placements",
     ]);
