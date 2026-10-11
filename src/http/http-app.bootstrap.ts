@@ -12,7 +12,7 @@ import { noStoreMiddleware } from "./no-store.middleware";
 import { ResponseInterceptor } from "./response.interceptor";
 
 /** WHY: main.ts and the route tests create the app differently, so the caller passes `create` and both get this pipeline. */
-export async function httpPipelineMiddleware(
+export async function bootstrapHttpApp(
   create: (
     adapter: ExpressAdapter,
     options: NestApplicationOptions,
