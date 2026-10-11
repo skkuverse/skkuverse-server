@@ -62,7 +62,7 @@ const TABLE_HOMES = new Map([
 export interface DocOptions {
   file: string;
   title: string;
-  /** The template keeps `<Module> Architecture`, `YYYY-MM-DD`, and links written for its copies in explanation/. */
+  /** The template keeps `<Module> Architecture` and `YYYY-MM-DD`. */
   template: boolean;
   /** The module serves a route other than `/health*` and `/internal/*`. */
   clientFacing: boolean;
@@ -171,8 +171,9 @@ function historyViolations(doc: ParsedDoc): string[] {
   });
 }
 
-function linkViolations(file: string, doc: ParsedDoc, exists: (rel: string) => boolean): string[] {
-  const dir = path.posix.dirname(file);
+/** Links resolve from where module docs live: the template's copies sit there too. */
+function linkViolations(doc: ParsedDoc, exists: (rel: string) => boolean): string[] {
+  const dir = path.posix.dirname(docPathOf("<module>"));
   return doc.lines
     .filter((l) => l.kind === "prose")
     .flatMap((l) =>
@@ -198,8 +199,7 @@ export function docViolations(text: string, opts: DocOptions): string[] {
     ...digitViolations(doc),
     ...historyViolations(doc),
     ...(doc.lineCount > MAX_LINES ? [`${doc.lineCount} lines, the cap is ${MAX_LINES}`] : []),
-    // WHY: the template's links are written for its copies, which live one folder down.
-    ...(opts.template ? [] : linkViolations(opts.file, doc, opts.exists)),
+    ...linkViolations(doc, opts.exists),
   ];
   return problems.map((p) => `${opts.file}: ${p}`);
 }
@@ -496,6 +496,20 @@ describe("module-docs rule applies as specified", () => {
     expect(asTemplate).toEqual([]);
     expect(asModuleDoc).toEqual(['last-updated is "YYYY-MM-DD", expected a YYYY-MM-DD date']);
     expect(datedTemplate).toEqual(['last-updated is "2026-10-11", expected YYYY-MM-DD']);
+  });
+
+  it("resolves the template's links from docs/explanation/, where its copies live", () => {
+    // Arrange
+    const exists = (rel: string) => EXISTS(rel) || rel === "docs/README.md";
+    const template = { file: "docs/_module-template.md", title: TEMPLATE_TITLE, template: true, exists };
+    const resolving = swap(TEMPLATE_DOC, "- [ADR 0010]", "- [Docs index](../README.md): writing rules\n- [ADR 0010]");
+    const fromDocs = swap(TEMPLATE_DOC, "- [ADR 0010]", "- [Docs index](README.md): writing rules\n- [ADR 0010]");
+
+    // Act & Assert
+    expect(docViolations(resolving, { ...OPTIONS, ...template })).toEqual([]);
+    expect(docViolations(fromDocs, { ...OPTIONS, ...template })).toEqual([
+      `docs/_module-template.md: line ${lineNo(fromDocs, "[Docs index]")}: link README.md does not resolve`,
+    ]);
   });
 
   it("fails the template when it drifts from the six sections", () => {
