@@ -19,8 +19,7 @@ export class BuildingSearchController {
   async search(
     @Query(
       new ZodValidationPipe(buildingSearchQuery, "INVALID_PARAMS", {
-        q: "MISSING_QUERY",
-        campus: "INVALID_CAMPUS",
+        fieldCodes: { q: "MISSING_QUERY", campus: "INVALID_CAMPUS" },
       }),
     )
     query: BuildingSearchQuery,
