@@ -7,7 +7,8 @@ import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
 import { parseEach } from "../shared/zod-list.util";
-import { BUILDING_CACHE_TTL_MS } from "./building.rules";
+import { SERVED_BUILDING_PROJECTION } from "./building.query";
+import { BUILDING_CACHE_TTL_MS } from "./building.constants";
 import { campusShapeDoc } from "./building.schema";
 import type { BuildingDoc, CampusShapeDoc } from "./building.document";
 import type { Campus } from "./building.types";
@@ -44,7 +45,7 @@ export class BuildingRepository implements OnModuleInit {
         .find(
           {},
           {
-            projection: { extensions: 0, sync: 0, enrichVersion: 0 },
+            projection: SERVED_BUILDING_PROJECTION,
             maxTimeMS: HOT_READ_MAX_TIME_MS,
           },
         )

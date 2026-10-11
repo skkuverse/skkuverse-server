@@ -14,14 +14,14 @@ interface SuccessEnvelope {
   data: unknown;
 }
 
-class MetaEnvelope<T> implements WithMeta<T> {
+class MetaEnvelope<T, M extends SuccessMeta> implements WithMeta<T, M> {
   constructor(
     readonly data: T,
-    readonly meta: SuccessMeta,
+    readonly meta: M,
   ) {}
 }
 
-export function withMeta<T>(data: T, meta: SuccessMeta): WithMeta<T> {
+export function withMeta<T, M extends SuccessMeta>(data: T, meta: M): WithMeta<T, M> {
   return new MetaEnvelope(data, meta);
 }
 

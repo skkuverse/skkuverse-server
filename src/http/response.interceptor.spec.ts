@@ -45,7 +45,7 @@ describe("ResponseInterceptor", () => {
     });
     app.useGlobalInterceptors(new ResponseInterceptor());
     app.useGlobalFilters(new HttpExceptionFilter());
-    await app.init();
+    await app.listen(0, "127.0.0.1");
   });
 
   afterAll(() => app.close());

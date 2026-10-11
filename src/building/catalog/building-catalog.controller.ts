@@ -4,11 +4,11 @@ import { CacheControl } from "../../http/cache-control.decorator";
 import { Lang } from "../../http/lang.decorator";
 import { ZodValidationPipe } from "../../http/zod-validation.pipe";
 import type { SupportedLang } from "../../infra/types";
-import { BUILDING_CACHE_CONTROL } from "../building.rules";
+import { BUILDING_CACHE_CONTROL } from "../building.constants";
 import type { SkkuId } from "../building.types";
 import { buildingListQuery, skkuIdParam, type BuildingListQuery } from "./building-catalog.schema";
 import { BuildingCatalogService } from "./building-catalog.service";
-import type { BuildingDetail, BuildingList } from "./building-catalog.types";
+import type { BuildingDetail, BuildingList } from "./building-catalog.wire";
 
 @Controller("building")
 export class BuildingCatalogController {

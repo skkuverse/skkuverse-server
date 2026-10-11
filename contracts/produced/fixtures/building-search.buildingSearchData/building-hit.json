@@ -1,0 +1,108 @@
+{
+  "_about": "GET /building/search?q=%EB%B2%95%ED%95%99%EA%B4%80 captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); rows trimmed to one building and one space group of at most two items, attachments and barrier-free sections to one",
+  "data": {
+    "buildings": [
+      {
+        "_id": 3,
+        "accessibility": {
+          "detail": {
+            "sections": [
+              {
+                "label": null,
+                "ramp": {
+                  "available": true,
+                  "note": null
+                },
+                "toilet": {
+                  "raw": "B2~F5, 총 14개 (층별로 남,여 각 1개) 1,2층은 남여 1개",
+                  "count": 14
+                },
+                "elevator": {
+                  "raw": "2대중 1대",
+                  "total": 2,
+                  "accessible": 1
+                },
+                "elevatorStatus": "arrival",
+                "parking": 2
+              }
+            ]
+          },
+          "elevator": true,
+          "toilet": true
+        },
+        "attachments": [
+          {
+            "id": 13,
+            "url": "https://www.skku.edu/_attach/image/2018/07/JfYTKgbaCWwMVVsSljqZ.jpg",
+            "filename": "P3.jpg",
+            "alt": ""
+          }
+        ],
+        "buildNo": "102",
+        "campus": "hssc",
+        "description": {
+          "en": "This is constructed in 2004 where School of law and Global leaders are located. It has a moot court, law library, Beopgoeul cafeteria, and Myeong-In Mandoo.\r\n\r\n* Area : 15221㎡ (three floors above ground and five Underground) \r\n* Year of completion : 2004",
+          "ko": "법학전문대학원 및 글로벌리더학부가 위치한 건물로 2004년에 준공되었으며, 지하 3층 및 지상 5층의 규모를 자랑한다. 모의법정, 법학도서관, 법고을식당, 명인만두 등이 자리하고 있다."
+        },
+        "displayNo": "2",
+        "image": {
+          "url": "https://www.skku.edu/_attach/image/2018/07/JfYTKgbaCWwMVVsSljqZ.jpg",
+          "filename": "JfYTKgbaCWwMVVsSljqZ.jpg"
+        },
+        "location": {
+          "type": "Point",
+          "coordinates": [
+            126.990506,
+            37.587441
+          ]
+        },
+        "name": {
+          "en": "Law School",
+          "ko": "법학관"
+        },
+        "skkuCreatedAt": "2018-04-23T00:34:19.000+00:00",
+        "skkuUpdatedAt": "2021-03-25T02:35:19.000+00:00",
+        "type": "building",
+        "updatedAt": "2026-03-18T09:22:45.612Z",
+        "campusLabel": "인사캠"
+      }
+    ],
+    "spaces": [
+      {
+        "skkuId": 3,
+        "buildNo": "102",
+        "displayNo": "2",
+        "campus": "hssc",
+        "campusLabel": "인사캠",
+        "buildingName": {
+          "ko": "법학관",
+          "en": "Law Building"
+        },
+        "items": [
+          {
+            "spaceCd": "20101A",
+            "name": {
+              "ko": "강의실",
+              "en": "Lecture Room"
+            },
+            "floor": {
+              "ko": "1층",
+              "en": "1F"
+            }
+          },
+          {
+            "spaceCd": "20101B",
+            "name": {
+              "ko": "강의실",
+              "en": "Lecture Room"
+            },
+            "floor": {
+              "ko": "1층",
+              "en": "1F"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

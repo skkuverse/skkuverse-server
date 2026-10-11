@@ -2,7 +2,8 @@ import { z } from "zod";
 import type { OverlayGeometry } from "../shared/geojson.types";
 import { isDrawableGeometry } from "../shared/geojson.util";
 import type { CampusShapeDoc } from "./building.document";
-import { CAMPUSES, isSkkuId } from "./building.rules";
+import { CAMPUSES } from "./building.constants";
+import { isSkkuId } from "./building.rules";
 
 const INVALID_CAMPUS_MESSAGE = "campus must be 'hssc' or 'nsc'";
 

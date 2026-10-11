@@ -1,7 +1,7 @@
 import { Controller, Get } from "@nestjs/common";
 import { CacheControl } from "../http/cache-control.decorator";
 import { AppConfigService } from "./app-config.service";
-import type { AppClientConfig } from "./app-config.types";
+import type { AppClientConfig } from "./app-config.wire";
 
 // WHY: the body is read at boot and the same for every client; five minutes bounds how long a raised
 // minimum version takes to reach a cold start once the replicas restart with it.

@@ -1,0 +1,7 @@
+{
+  "_about": "GET /building/search?q=zzqx captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); rows trimmed to one building and one space group of at most two items, attachments and barrier-free sections to one",
+  "data": {
+    "buildings": [],
+    "spaces": []
+  }
+}

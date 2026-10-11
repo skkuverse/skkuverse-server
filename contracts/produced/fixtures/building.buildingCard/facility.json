@@ -1,0 +1,39 @@
+{
+  "_about": "GET /building/list captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); facility 1 (no buildNo or displayNo)",
+  "data": {
+    "_id": 1,
+    "accessibility": {
+      "detail": null,
+      "elevator": false,
+      "toilet": false
+    },
+    "attachments": [],
+    "buildNo": null,
+    "campus": "hssc",
+    "description": {
+      "en": "The main gate of Humanities and Social Science Campus.",
+      "ko": "성균관대학교 인문사회과학캠퍼스의 정문이다."
+    },
+    "displayNo": null,
+    "image": {
+      "url": "https://www.skku.edu/_attach/image/2018/07/EUWaNcMcMYUCmumaSXFe.jpg",
+      "filename": "EUWaNcMcMYUCmumaSXFe.jpg"
+    },
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        126.997131,
+        37.584865
+      ]
+    },
+    "name": {
+      "en": "Main Gate",
+      "ko": "정문"
+    },
+    "skkuCreatedAt": "2018-04-23T00:34:04.000+00:00",
+    "skkuUpdatedAt": "2018-07-09T06:39:35.000+00:00",
+    "type": "facility",
+    "updatedAt": "2026-03-18T09:22:45.612Z",
+    "campusLabel": "인사캠"
+  }
+}

@@ -4,6 +4,7 @@ import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type { BuildingDoc, ConnectionDoc, SpaceDoc } from "../building.document";
+import { SERVED_BUILDING_WITH_EXTENSIONS_PROJECTION } from "../building.query";
 import type { BuildNo, SkkuId } from "../building.types";
 import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
 
@@ -24,7 +25,7 @@ export class BuildingCatalogRepository implements OnModuleInit {
   findBuildingBySkkuId(skkuId: SkkuId): Promise<BuildingDoc | null> {
     return this.buildings().findOne(
       { _id: skkuId },
-      { projection: { sync: 0, enrichVersion: 0 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+      { projection: SERVED_BUILDING_WITH_EXTENSIONS_PROJECTION, maxTimeMS: HOT_READ_MAX_TIME_MS },
     );
   }
 

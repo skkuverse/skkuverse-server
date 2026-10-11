@@ -1,5 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { OverlayGeometry } from "../shared/geojson.types";
+import type { BUILDING_TYPES } from "./building.constants";
 import type { BilingualText, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd } from "./building.types";
 
 /** QUIRK(mongo): GeoJSON order, [lng, lat]: the 2dsphere index reads the first as longitude. */
@@ -74,7 +75,7 @@ export interface BuildingDoc {
   _id: SkkuId;
   buildNo: BuildNo | null;
   displayNo: DisplayNo | null;
-  type: "building" | "facility";
+  type: (typeof BUILDING_TYPES)[number];
   campus: Campus;
   name: BilingualText;
   description: BilingualText;

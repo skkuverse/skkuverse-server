@@ -1,0 +1,528 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "building": {
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "buildNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "displayNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "building",
+            "facility"
+          ]
+        },
+        "campus": {
+          "type": "string",
+          "enum": [
+            "hssc",
+            "nsc"
+          ]
+        },
+        "campusLabel": {
+          "type": "string"
+        },
+        "name": {
+          "type": "object",
+          "properties": {
+            "ko": {
+              "type": "string"
+            },
+            "en": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "ko",
+            "en"
+          ]
+        },
+        "description": {
+          "type": "object",
+          "properties": {
+            "ko": {
+              "type": "string"
+            },
+            "en": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "ko",
+            "en"
+          ]
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "Point"
+            },
+            "coordinates": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "additionalItems": false,
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "type",
+            "coordinates"
+          ]
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "filename": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "url",
+            "filename"
+          ]
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "filename": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "alt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "url",
+              "filename",
+              "alt"
+            ]
+          }
+        },
+        "accessibility": {
+          "type": "object",
+          "properties": {
+            "elevator": {
+              "type": "boolean"
+            },
+            "toilet": {
+              "type": "boolean"
+            },
+            "detail": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "sections": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "ramp": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "available": {
+                                    "type": "boolean"
+                                  },
+                                  "note": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "available",
+                                  "note"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "toilet": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "raw": {
+                                    "type": "string"
+                                  },
+                                  "count": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "raw",
+                                  "count"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "elevator": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "raw": {
+                                    "type": "string"
+                                  },
+                                  "total": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "accessible": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "raw",
+                                  "total",
+                                  "accessible"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "elevatorStatus": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "parking": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "label",
+                          "ramp",
+                          "toilet",
+                          "elevator",
+                          "elevatorStatus",
+                          "parking"
+                        ]
+                      }
+                    },
+                    "parseError": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "sections"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "elevator",
+            "toilet",
+            "detail"
+          ]
+        },
+        "skkuCreatedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "skkuUpdatedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        },
+        "extensions": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "_id",
+        "buildNo",
+        "displayNo",
+        "type",
+        "campus",
+        "campusLabel",
+        "name",
+        "description",
+        "location",
+        "image",
+        "accessibility",
+        "skkuCreatedAt",
+        "skkuUpdatedAt"
+      ]
+    },
+    "floors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "floor": {
+            "type": "object",
+            "properties": {
+              "ko": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ko",
+              "en"
+            ]
+          },
+          "spaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "spaceCd": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": "object",
+                  "properties": {
+                    "ko": {
+                      "type": "string"
+                    },
+                    "en": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ko",
+                    "en"
+                  ]
+                },
+                "conspaceCd": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "spaceCd",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "floor",
+          "spaces"
+        ]
+      }
+    },
+    "connections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "targetSkkuId": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "targetBuildNo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "targetDisplayNo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "targetName": {
+            "type": "object",
+            "properties": {
+              "ko": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ko",
+              "en"
+            ]
+          },
+          "fromFloor": {
+            "type": "object",
+            "properties": {
+              "ko": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ko",
+              "en"
+            ]
+          },
+          "toFloor": {
+            "type": "object",
+            "properties": {
+              "ko": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ko",
+              "en"
+            ]
+          }
+        },
+        "required": [
+          "targetSkkuId",
+          "targetBuildNo",
+          "targetDisplayNo",
+          "targetName",
+          "fromFloor",
+          "toFloor"
+        ]
+      }
+    }
+  },
+  "required": [
+    "building",
+    "floors",
+    "connections"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "_about": "GET /building/search?q=%EB%B2%95%ED%95%99%EA%B4%80 captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); `meta` without the envelope's `lang`",
+  "data": {
+    "keyword": "법학관",
+    "buildingCount": 1,
+    "spaceCount": 100,
+    "counts": {
+      "building": {
+        "hssc": 1,
+        "nsc": 0,
+        "total": 1
+      },
+      "space": {
+        "hssc": 160,
+        "nsc": 0,
+        "total": 160
+      }
+    },
+    "limits": {
+      "building": {
+        "limit": 100,
+        "total": 1,
+        "truncated": false
+      },
+      "space": {
+        "limit": 1000,
+        "total": 160,
+        "truncated": true
+      }
+    }
+  }
+}

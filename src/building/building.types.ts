@@ -1,5 +1,5 @@
 import type { Brand } from "../shared/brand.types";
-import type { CAMPUSES } from "./building.rules";
+import type { CAMPUSES } from "./building.constants";
 
 export type SkkuId = Brand<number, "SkkuId">;
 
