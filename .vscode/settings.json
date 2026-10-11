@@ -4,7 +4,7 @@
   "explorer.fileNesting.patterns": {
     "ad.module.ts": "ad.*, *.json",
     "building.module.ts": "building.*, *.json",
-    "*.module.ts": "${capture}.schema.ts",
+    "*.module.ts": "${capture}.schema.ts, ${capture}.wire.ts",
     "*.service.ts": "${capture}.rules.ts, ${capture}.mapper.ts, ${capture}.types.ts",
     "*.repository.ts": "${capture}.query.ts, ${capture}.document.ts",
     "*.ts": "${capture}.spec.ts"
