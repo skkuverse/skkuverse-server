@@ -3,7 +3,7 @@ title: Map Overlays API Reference
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-09-24
+last-updated: 2026-10-11
 audience: internal
 ---
 
@@ -1062,7 +1062,7 @@ It also costs nothing. The app already fetches this document.
 
 While a layer set is live, the row is: **the reset chip, then every chip authored in the layer set's
 config**, in file order — followed by nothing else, because `BASE_CHIPS` is empty. 분실물 lived there
-and was removed, and that action is still reachable from the campus SDUI (`src/ui/ui/ui.campus.ts`).
+and was removed, and that action is still reachable from the campus SDUI (`src/ui/campus/ui-campus.mapper.ts`).
 So outside an activation window `chips` is `[]`, and a client must render nothing rather than an
 empty row. It stays a list because a permanent chip is an ordinary thing to want back.
 

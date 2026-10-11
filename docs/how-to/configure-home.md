@@ -3,7 +3,7 @@ title: Configure the Home Screen
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-09
+last-updated: 2026-10-11
 audience: internal
 ---
 
@@ -13,7 +13,7 @@ audience: internal
 
 ## Overview
 
-The layout lives in [`src/ui/home/home-layout.json`](../../src/ui/home/home-layout.json). It is validated when the module loads, so a bad file stops the deploy from starting instead of serving something broken. The rules are in `src/ui/home/home-layout.schema.ts`, and the wire types are in `src/ui/home/home-layout.types.ts`.
+The layout lives in [`src/ui/home/home-layout.json`](../../src/ui/home/home-layout.json). It is validated when the server boots, so a bad file stops the deploy from starting instead of serving something broken. The structure rules are in `src/ui/home/ui-home.schema.ts` (the carousel's in `src/ui/ui.schema.ts`), the checks against the mini-app registry in `src/ui/home/ui-home.config.ts`, and the served shape in `src/ui/home/ui-home.wire.ts`.
 
 The file has two kinds of section, drawn in the order they are listed:
 
@@ -79,7 +79,7 @@ Text (`alt`, `title`) is written as `{ "ko": ..., "en"?: ..., "zh"?: ... }`, and
 
 ### Campus sheet banners
 
-`GET /ui/home/campus` puts a second carousel above the four service tiles on the campus tab's sheet. It lives in [`src/ui/ui/campus-banners.json`](../../src/ui/ui/campus-banners.json) and is a single `banner_carousel` object, not a layout. The rules are the home carousel's, with two differences:
+`GET /ui/home/campus` puts a second carousel above the four service tiles on the campus tab's sheet. It lives in [`src/ui/campus/campus-banners.json`](../../src/ui/campus/campus-banners.json) and is a single `banner_carousel` object, not a layout. The rules are the home carousel's, with two differences:
 
 - **Images only.** `{ "type": "default" }` is refused, because the campus sheet has no built-in banner for it to stand for.
 - **No empty slot.** When every image is outside its window, the section is left out of the response, so the tiles move up.
@@ -94,7 +94,7 @@ The app only draws this section while its festival gate is open (`isFestivalUnlo
 
 Edit the `tile_grid` sections: reorder tiles, move a tile to another grid, add a grid, or add or remove a `title`. To add a new mini app, register it in `src/miniapps/` first (see [register-a-miniapp.md](register-a-miniapp.md)), since the layout refuses unknown ids.
 
-The `home_tiles` grid starts with the campus sheet's four buttons (건물지도, 건물코드, 분실물, 문의하기) from [`src/ui/ui/ui.campus.ts`](../../src/ui/ui/ui.campus.ts), with the same ids, titles and actions; `home-layout.test.ts` fails when the two drift apart. The games follow in the same grid, because the app puts a 24 pt gap after every grid: a second grid reads as a new section, while tiles in one grid wrap at the normal row spacing. The Hall of Fame card stays under the first grid that holds a game.
+The `home_tiles` grid starts with the campus sheet's four buttons (건물지도, 건물코드, 분실물, 문의하기) from [`src/ui/campus/ui-campus.mapper.ts`](../../src/ui/campus/ui-campus.mapper.ts), with the same ids, titles and actions; `ui-home.config.spec.ts` fails when the two drift apart. The games follow in the same grid, because the app puts a 24 pt gap after every grid: a second grid reads as a new section, while tiles in one grid wrap at the normal row spacing. The Hall of Fame card stays under the first grid that holds a game.
 
 ### Add a link to an app screen
 

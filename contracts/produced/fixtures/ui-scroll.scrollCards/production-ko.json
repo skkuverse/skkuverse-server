@@ -1,0 +1,28 @@
+{
+  "_about": "GET /ui/home/scroll captured from production 2026-10-11 (stage 8a snapshot, Accept-Language ko); whole data",
+  "data": [
+    {
+      "title": "인사캠 건물지도",
+      "icon": "Icons.outbound",
+      "pageLink": "/webview",
+      "altPageLink": "https://namu.wiki/w/%EB%8F%84%EB%A7%9D%EC%B3%90",
+      "useAltPageLink": false
+    },
+    {
+      "title": "자과캠 건물지도",
+      "icon": "Icons.outbound",
+      "pageLink": "/webview",
+      "altPageLink": "https://namu.wiki/w/%EB%8F%84%EB%A7%9D%EC%B3%90",
+      "useAltPageLink": false
+    },
+    {
+      "title": "분실물",
+      "icon": "Icons.bus_alert",
+      "pageLink": "/webview",
+      "color": "003626",
+      "pageWebviewLink": "https://webview.skkuverse.com/skku/lostandfound",
+      "altPageLink": "https://www.skku.edu/skku/campus/support/lost_and_found_2.do",
+      "useAltPageLink": false
+    }
+  ]
+}
