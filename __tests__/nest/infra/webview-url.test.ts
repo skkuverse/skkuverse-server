@@ -1,11 +1,10 @@
 /**
  * The webview URL rule, exercised directly rather than through a caller.
  *
- * Every case below was run against the real predicate before being written down,
- * because the interesting ones turn on `new URL` semantics that are easy to state
+ * The interesting cases turn on `new URL` semantics that are easy to state
  * wrongly from memory: it lowercases a host, drops a default port, strips
- * surrounding whitespace, and folds a backslash into a slash. Three of these
- * assertions exist because a plausible hand-rolled check gets them backwards.
+ * surrounding whitespace, and folds a backslash into a slash. A plausible
+ * hand-rolled check gets several of them backwards.
  */
 import { WEBVIEW_ORIGIN } from "../../../src/infra/origins";
 import { isOnWebviewOrigin, toWebviewUrl } from "../../../src/infra/webview-url";
@@ -26,11 +25,13 @@ describe("toWebviewUrl — accepts", () => {
 
   for (const [name, value] of cases) {
     it(name, () => {
+      // Act & Assert
       expect(toWebviewUrl(value)).not.toBeNull();
     });
   }
 
   it("joins the relative form and leaves the absolute form untouched", () => {
+    // Act & Assert
     // Returns the caller's string rather than url.href: normalising would rewrite
     // an ops-authored value (port dropped, host lowercased) with no one asking.
     expect(toWebviewUrl("/eskara/entry")).toBe(`${O}/eskara/entry`);
@@ -83,6 +84,7 @@ describe("toWebviewUrl — rejects", () => {
 
   for (const [name, value] of cases) {
     it(name, () => {
+      // Act & Assert
       expect(toWebviewUrl(value)).toBeNull();
     });
   }
@@ -90,6 +92,7 @@ describe("toWebviewUrl — rejects", () => {
 
 describe("isOnWebviewOrigin", () => {
   it("recognises our own host regardless of path, port or case", () => {
+    // Act & Assert
     expect(isOnWebviewOrigin(`${O}/eskara`)).toBe(true);
     expect(isOnWebviewOrigin(`${O}/`)).toBe(true);
     expect(isOnWebviewOrigin(`${O}:443/x`)).toBe(true);
@@ -97,6 +100,7 @@ describe("isOnWebviewOrigin", () => {
   });
 
   it("does not claim a third-party host", () => {
+    // Act & Assert
     // The gate that keeps our routing rule off other people's sites — and off the
     // registry's four third-party entries, which is what stops this from becoming
     // a boot failure.
@@ -109,6 +113,7 @@ describe("isOnWebviewOrigin", () => {
   });
 
   it("is false rather than throwing for something unparseable", () => {
+    // Act & Assert
     expect(isOnWebviewOrigin("not a url")).toBe(false);
     expect(isOnWebviewOrigin("/eskara/entry")).toBe(false);
   });
