@@ -1,5 +1,6 @@
-/** A handler's value plus extra `meta` keys, as withMeta() builds it for ResponseInterceptor. */
+export type SuccessMeta = Readonly<Record<string, unknown>> & { readonly lang?: never };
+
 export interface WithMeta<T> {
   readonly data: T;
-  readonly meta: Readonly<Record<string, unknown>>;
+  readonly meta: SuccessMeta;
 }
