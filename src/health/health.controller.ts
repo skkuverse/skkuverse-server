@@ -5,7 +5,7 @@ import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { PollerRegistryService } from "../scheduling/poller-registry.service";
 
-// Every container's healthcheck (30 s) and the uptime monitors probe /health/ready,
+// WHY: every container's healthcheck (30 s) and the uptime monitors probe /health/ready,
 // so a database outage logs once a minute instead of once per probe.
 const DB_DOWN_LOG_INTERVAL_MS = 60_000;
 
