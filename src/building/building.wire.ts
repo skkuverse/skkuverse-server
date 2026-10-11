@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CAMPUSES } from "./building.constants";
+import { BUILDING_TYPES, CAMPUSES } from "./building.constants";
 
 export const bilingualText = z.object({
   ko: z.string(),
@@ -28,7 +28,7 @@ export const buildingCard = z.object({
   /** QUIRK(skku): null for a facility, which has no number. */
   buildNo: z.string().nullable(),
   displayNo: z.string().nullable(),
-  type: z.enum(["building", "facility"]),
+  type: z.enum(BUILDING_TYPES),
   campus: z.enum(CAMPUSES),
   campusLabel: z.string(),
   name: bilingualText,

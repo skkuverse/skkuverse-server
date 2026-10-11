@@ -1,10 +1,6 @@
 import { CAMPUSES, SKKU_CAMPUS_CODE } from "./building.constants";
 import type { ApiId, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd, WithBuildNo } from "./building.types";
 
-export const BUILDING_CACHE_TTL_MS = 5 * 60 * 1000;
-
-export const BUILDING_CACHE_CONTROL = `public, max-age=${BUILDING_CACHE_TTL_MS / 1000}`;
-
 export function isCampus(value: unknown): value is Campus {
   return (CAMPUSES as readonly unknown[]).includes(value);
 }
