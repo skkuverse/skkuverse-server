@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import axios from "axios";
 import type { z } from "zod";
 import logger from "../../infra/logger";
+import { issuePaths, parseEach } from "../../shared/zod-list.util";
 import type { BuildingAttachment, BuildingRawDoc } from "../building.document";
 import { SKKU_CAMPUS_CODE, toApiId } from "../building.rules";
 import { shouldRejectPayload } from "./building-sync.rules";
@@ -32,11 +33,6 @@ interface PayloadList<T> {
   keyField: string;
 }
 
-function issuePaths(error: z.ZodError): string {
-  const paths = error.issues.map((issue) => issue.path.join(".") || "(root)");
-  return [...new Set(paths)].join(", ");
-}
-
 /** WHY: a wrong response shape (a renamed or missing list) breaks every item at once, so it throws. */
 function parseResponse<T>(schema: z.ZodType<T>, data: unknown, where: string): T {
   const parsed = schema.safeParse(data);
@@ -52,13 +48,7 @@ function itemKey(item: unknown, keyField: string, index: number): string {
 }
 
 function parseItems<T>(list: PayloadList<T>): T[] {
-  const valid: T[] = [];
-  const invalid: string[] = [];
-  list.items.forEach((item, index) => {
-    const parsed = list.schema.safeParse(item);
-    if (parsed.success) valid.push(parsed.data);
-    else invalid.push(`${itemKey(item, list.keyField, index)}: ${issuePaths(parsed.error)}`);
-  });
+  const { valid, invalid } = parseEach(list.items, list.schema, (item, index) => itemKey(item, list.keyField, index));
   const total = list.items.length;
   if (invalid.length > 0) {
     logger.warn(
