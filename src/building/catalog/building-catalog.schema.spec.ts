@@ -1,8 +1,8 @@
 /**
  * The catalog's request schemas: GET /building/list reads campus as optional
  * (an empty value is no filter, a repeated one is rejected), and
- * /building/:skkuId reads the id with parseInt and rejects anything that is
- * not a positive integer, with the message the 400 shows.
+ * /building/:skkuId reads the id with parseInt and rejects anything that does
+ * not read as a positive safe integer, with the message the 400 shows.
  */
 import { buildingListQuery, skkuIdParam } from "./building-catalog.schema";
 
@@ -25,12 +25,26 @@ describe("building catalog schemas", () => {
     expect(skkuIdParam.parse(raw)).toBe(id);
   });
 
-  it("pass an id too long for a double as Infinity, which then finds nothing", () => {
+  it.each(["0", "-3", "abc", "", "0x10"])("reject skkuId %j", (raw) => {
+    // Act
+    const result = skkuIdParam.safeParse(raw);
+
+    // Assert
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe("skkuId must be a positive integer");
+  });
+});
+
+describe("skkuIdParam at the safe-integer limit", () => {
+  it("reads the largest safe integer as itself", () => {
     // Act & Assert
-    expect(skkuIdParam.parse("9".repeat(400))).toBe(Infinity);
+    expect(skkuIdParam.parse("9007199254740991")).toBe(Number.MAX_SAFE_INTEGER);
   });
 
-  it.each(["0", "-3", "abc", "", "0x10"])("reject skkuId %j", (raw) => {
+  it.each([
+    ["an id too long for a double, which parseInt reads as Infinity", "9".repeat(400)],
+    ["2^53 + 1, which parseInt rounds to 2^53", "9007199254740993"],
+  ])("rejects %s", (_case, raw) => {
     // Act
     const result = skkuIdParam.safeParse(raw);
 

@@ -15,7 +15,9 @@ import { BuildingSearchRepository } from "../../../src/building/search/building-
 import { FakeBuildingCatalogRepository } from "../../helpers/fakes/building/building-catalog.repository.fake";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeBuildingSearchRepository } from "../../helpers/fakes/building/building-search.repository.fake";
-import { buildBuildingApp } from "../../helpers/nest/build-building-app";
+import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { BuildingCatalogModule } from "../../../src/building/catalog/building-catalog.module";
+import { BuildingSearchModule } from "../../../src/building/search/building-search.module";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -47,11 +49,15 @@ beforeAll(async () => {
   buildings = new FakeBuildingRepository();
   catalog = new FakeBuildingCatalogRepository();
   search = new FakeBuildingSearchRepository();
-  app = await buildBuildingApp([
-    { provide: BuildingRepository, useValue: buildings },
-    { provide: BuildingCatalogRepository, useValue: catalog },
-    { provide: BuildingSearchRepository, useValue: search },
-  ]);
+  app = await buildTestApp({
+    // app.module.ts order: search registers /building/search before catalog's /building/:skkuId.
+    imports: [BuildingSearchModule, BuildingCatalogModule],
+    overrides: [
+      { provide: BuildingRepository, useValue: buildings },
+      { provide: BuildingCatalogRepository, useValue: catalog },
+      { provide: BuildingSearchRepository, useValue: search },
+    ],
+  });
   httpServer = app.getHttpServer();
 });
 
@@ -329,6 +335,30 @@ describe("GET /building/:skkuId", () => {
     // Assert
     expect(res.status).toBe(500);
     expect(res.body.error).toEqual({ code: "INTERNAL_ERROR", message: "Internal server error" });
+  });
+});
+
+describe("GET /building/:skkuId at the safe-integer limit", () => {
+  it.each([
+    ["an id too long for a double", "9".repeat(400)],
+    ["2^53 + 1, which parseInt rounds to 2^53", "9007199254740993"],
+  ])("rejects %s with 400 INVALID_ID before any read", async (_case, skkuId) => {
+    // Act
+    const res = await request(httpServer).get(`/building/${skkuId}`);
+
+    // Assert
+    expect(res.status).toBe(400);
+    expect(res.body.error).toEqual({ code: "INVALID_ID", message: "skkuId must be a positive integer" });
+    expect(catalog.reads).toEqual([]);
+  });
+
+  it.each(["999", "9007199254740991"])("answers 404 NOT_FOUND for the unknown but valid id %s", async (skkuId) => {
+    // Act
+    const res = await request(httpServer).get(`/building/${skkuId}`);
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.body.error).toEqual({ code: "NOT_FOUND", message: `Building ${skkuId} not found` });
   });
 });
 

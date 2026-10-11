@@ -6,6 +6,7 @@ import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
+import { parseEach } from "../shared/zod-list.util";
 import { BUILDING_CACHE_TTL_MS } from "./building.rules";
 import { campusShapeDoc } from "./building.schema";
 import type { BuildingDoc, CampusShapeDoc } from "./building.document";
@@ -28,22 +29,6 @@ const CAMPUS_SHAPE_FIELDS = {
   skkuId: 1,
   order: 1,
 } as const;
-
-function partitionCampusShapes(docs: readonly unknown[]): { shapes: CampusShapeDoc[]; invalid: string[] } {
-  const shapes: CampusShapeDoc[] = [];
-  const invalid: string[] = [];
-  for (const doc of docs) {
-    const parsed = campusShapeDoc.safeParse(doc);
-    if (parsed.success) {
-      shapes.push(parsed.data);
-    } else {
-      const id = (doc as { _id?: unknown })._id;
-      const paths = parsed.error.issues.map((issue) => issue.path.join(".") || "(root)");
-      invalid.push(`${String(id)}: ${[...new Set(paths)].join(", ")}`);
-    }
-  }
-  return { shapes, invalid };
-}
 
 @Injectable()
 export class BuildingRepository implements OnModuleInit {
@@ -74,11 +59,13 @@ export class BuildingRepository implements OnModuleInit {
     ttlMs: CAMPUS_SHAPES_TTL_MS,
     staleWindowMs: CAMPUS_SHAPES_STALE_WINDOW_MS,
     load: async () => {
-      const { shapes, invalid } = partitionCampusShapes(
+      const { valid: shapes, invalid } = parseEach(
         await this.campusShapes()
           .find({}, { projection: CAMPUS_SHAPE_FIELDS, maxTimeMS: HOT_READ_MAX_TIME_MS })
           .sort({ order: 1, _id: 1 })
           .toArray(),
+        campusShapeDoc,
+        (doc) => String((doc as { _id?: unknown })._id),
       );
       this.warnInvalidShapes(invalid);
       return shapes;

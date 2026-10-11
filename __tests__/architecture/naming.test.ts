@@ -13,16 +13,25 @@
  *   - exported types: only a `.types`, `.document` or `.schema` file exports an
  *     interface or type alias; a type used inside one file stays there,
  *     unexported. src/infra/ files, named by resource, are not checked.
- *   - main export: a class-role or `.decorator` file exports something named
- *     after the file, so either can be found from the other: a class
- *     `NoStoreMiddleware`, a function `noStoreMiddleware`, a decorator
- *     `CacheControl`.
+ *   - main export: a class-role, `.decorator` or `.bootstrap` file exports
+ *     something named after the file, so either can be found from the other:
+ *     a class `NoStoreMiddleware`, a function `noStoreMiddleware`, a decorator
+ *     `CacheControl`. A `.bootstrap` file builds the app or applies the
+ *     app-wide pipeline, so its function opens with the verb:
+ *     `http-app.bootstrap.ts` exports `bootstrapHttpApp`.
  *   - type files: a `.types` or `.document` file holds no runtime code.
- *   - brand casts: a brand type (an alias of `Brand<…>` in a `.types` file) is
- *     cast with `as` only where a value enters: `.client`, `.schema` and
- *     `.rules` files, and specs.
+ *   - brands: a brand type (an alias of `Brand<…>` in a `.types` file) gets
+ *     its brand only from its one minter, a top-level function in the `.rules`
+ *     file of the folder that declares it: `is<Brand>`, a type predicate, or
+ *     `to<Brand>`, the only place `as <Brand>` appears. `brand-casts` reports a
+ *     cast, a type predicate, `z.custom<Brand>` or zod's `.brand<` anywhere
+ *     else in a non-spec source; specs may cast. `brand-minters` reports a
+ *     brand whose folder's `.rules` holds no minter, or more than one. Both
+ *     read syntax only, so a cast through an alias (`type X = SkkuId`) or a
+ *     generic `as T` is not seen.
  */
 import ts from "typescript";
+import { numberedKeys } from "../helpers/architecture/comments";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { CLASS_ROLES, EXEMPT, ROLES, parse } from "../helpers/architecture/names";
 import { readSource, filesUnder } from "../helpers/architecture/tree";
@@ -124,14 +133,17 @@ function exportedValues(source: string): string[] {
   });
 }
 
-/** `<file>` when a class-role or decorator file exports values but none named after the file. */
+const NAMED_EXPORT_ROLES = new Set([...CLASS_ROLES, "decorator", "bootstrap"]);
+
+/** `<file>` when a class-role, decorator or bootstrap file exports values but none named after the file. */
 export function mainExportViolations(file: string, source: string): string[] {
   if (EXEMPT.has(file) || file.endsWith(".spec.ts")) return [];
   const { parts } = parse(file);
-  if (parts.length !== 2 || !(CLASS_ROLES.has(parts[1]!) || parts[1] === "decorator")) return [];
+  if (parts.length !== 2 || !NAMED_EXPORT_ROLES.has(parts[1]!)) return [];
   const base = parts[0]!.replace(/-/g, "").toLowerCase();
+  const prefix = parts[1] === "bootstrap" ? `bootstrap${base}` : base;
   const values = exportedValues(source);
-  if (values.length === 0 || values.some((name) => name.toLowerCase().startsWith(base))) return [];
+  if (values.length === 0 || values.some((name) => name.toLowerCase().startsWith(prefix))) return [];
   return [file];
 }
 
@@ -160,52 +172,101 @@ export function typeFileViolations(file: string, source: string): string[] {
   });
 }
 
-/** Names of the type aliases declared as `Brand<…>` in the given `.types` sources. */
-export function brandNames(sources: ReadonlyArray<{ file: string; source: string }>): Set<string> {
-  const names = new Set<string>();
+/** Each type alias declared as `Brand<…>` in the given `.types` sources, mapped to the folder that declares it. */
+export function declaredBrands(sources: ReadonlyArray<{ file: string; source: string }>): Map<string, string> {
+  const folders = new Map<string, string>();
   for (const { file, source } of sources) {
-    const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true);
+    const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, false);
     for (const s of sf.statements) {
-      if (ts.isTypeAliasDeclaration(s) && /^Brand</.test(s.type.getText(sf))) names.add(s.name.text);
+      if (
+        ts.isTypeAliasDeclaration(s) &&
+        ts.isTypeReferenceNode(s.type) &&
+        ts.isIdentifier(s.type.typeName) &&
+        s.type.typeName.text === "Brand"
+      ) {
+        folders.set(s.name.text, parse(file).dir);
+      }
     }
   }
-  return names;
+  return folders;
 }
 
-const MINTING_ROLES = new Set(["client", "schema", "rules"]);
+/** The first brand a type names, alone or inside a union, an array, an object or a type argument. */
+function brandIn(type: ts.Node, brands: ReadonlyMap<string, string>): string | undefined {
+  if (ts.isTypeReferenceNode(type) && ts.isIdentifier(type.typeName) && brands.has(type.typeName.text)) {
+    return type.typeName.text;
+  }
+  return ts.forEachChild(type, (child) => brandIn(child, brands));
+}
 
-/** `<file>: as <Brand>` for each cast to a brand outside the files that mint them, `#n` on repeats. */
-export function brandCastViolations(file: string, source: string, brands: ReadonlySet<string>): string[] {
+/** The name of the top-level `function` declaration that holds `node`, if one does. */
+function enclosingFunctionName(node: ts.Node): string | undefined {
+  let top = node;
+  while (!ts.isSourceFile(top.parent)) top = top.parent;
+  return ts.isFunctionDeclaration(top) ? top.name?.text : undefined;
+}
+
+const calleeName = (call: ts.CallExpression): string | undefined =>
+  ts.isPropertyAccessExpression(call.expression)
+    ? call.expression.name.text
+    : ts.isIdentifier(call.expression)
+      ? call.expression.text
+      : undefined;
+
+const isRulesSource = (file: string) => !file.endsWith(".spec.ts") && parse(file).parts[1] === "rules";
+
+/**
+ * `<file>: as <Brand>`, `is <Brand>`, `z.custom<Brand>` or `.brand<` for each place a non-spec source
+ * mints a brand outside its minter (`to<Brand>` may cast, `is<Brand>` may narrow), `#n` on repeats.
+ */
+export function brandCastViolations(file: string, source: string, brands: ReadonlyMap<string, string>): string[] {
   if (file.endsWith(".spec.ts")) return [];
-  const { parts } = parse(file);
-  if (parts.length === 2 && MINTING_ROLES.has(parts[1]!)) return [];
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true);
-  const seen = new Map<string, number>();
-  const out: string[] = [];
-  const brandIn = (type: ts.TypeNode): string | undefined => {
-    let found: string | undefined;
-    const visit = (n: ts.Node): void => {
-      if (!found && ts.isTypeReferenceNode(n) && ts.isIdentifier(n.typeName) && brands.has(n.typeName.text)) {
-        found = n.typeName.text;
-      }
-      ts.forEachChild(n, visit);
-    };
-    visit(type);
-    return found;
-  };
+  const inMinter = (node: ts.Node, minter: string, brand: string) =>
+    isRulesSource(file) && parse(file).dir === brands.get(brand) && enclosingFunctionName(node) === minter;
+  const labels: string[] = [];
   const visit = (n: ts.Node): void => {
     if (ts.isAsExpression(n) || ts.isTypeAssertionExpression(n)) {
-      const brand = brandIn(n.type);
-      if (brand) {
-        const k = (seen.get(brand) ?? 0) + 1;
-        seen.set(brand, k);
-        out.push(`${file}: as ${brand}${k > 1 ? ` #${k}` : ""}`);
-      }
+      const brand = brandIn(n.type, brands);
+      if (brand && !inMinter(n, `to${brand}`, brand)) labels.push(`as ${brand}`);
+    } else if (ts.isTypePredicateNode(n) && n.type) {
+      const brand = brandIn(n.type, brands);
+      if (brand && !inMinter(n, `is${brand}`, brand)) labels.push(`is ${brand}`);
+    } else if (ts.isCallExpression(n) && n.typeArguments) {
+      const brand = n.typeArguments.map((t) => brandIn(t, brands)).find((b) => b !== undefined);
+      if (calleeName(n) === "custom" && brand) labels.push(`z.custom<${brand}>`);
+      if (calleeName(n) === "brand") labels.push(".brand<");
     }
     ts.forEachChild(n, visit);
   };
   visit(sf);
-  return out;
+  return numberedKeys(file, labels);
+}
+
+/**
+ * `<Brand>: 0 minters`, or `<Brand>: <n> minters (<file>#<function>, …)`, unless the `.rules` file of
+ * the folder that declares the brand holds exactly one top-level function `is<Brand>` or `to<Brand>`.
+ */
+export function brandMinterViolations(
+  brands: ReadonlyMap<string, string>,
+  rulesSources: ReadonlyArray<{ file: string; source: string }>,
+): string[] {
+  const minters = new Map<string, string[]>();
+  for (const { file, source } of rulesSources.filter((r) => isRulesSource(r.file))) {
+    const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, false);
+    for (const s of sf.statements) {
+      if (!ts.isFunctionDeclaration(s) || !s.name || !s.body) continue;
+      const brand = /^(?:is|to)(.+)$/.exec(s.name.text)?.[1];
+      if (brand && brands.get(brand) === parse(file).dir) {
+        minters.set(brand, [...(minters.get(brand) ?? []), `${file}#${s.name.text}`]);
+      }
+    }
+  }
+  return [...brands.keys()].sort().flatMap((brand) => {
+    const found = minters.get(brand) ?? [];
+    if (found.length === 1) return [];
+    return [found.length === 0 ? `${brand}: 0 minters` : `${brand}: ${found.length} minters (${found.join(", ")})`];
+  });
 }
 
 describe("naming rules apply as specified", () => {
@@ -216,6 +277,7 @@ describe("naming rules apply as specified", () => {
     "src/building/building.service.spec.ts",
     "src/shared/regex.util.ts",
     "src/shared/regex.util.spec.ts",
+    "src/http/http-app.bootstrap.ts",
     "src/infra/db.ts",
     "src/infra/db.spec.ts",
     "src/infra/nest-logger.ts",
@@ -279,7 +341,7 @@ describe("naming rules apply as specified", () => {
     expect(exportedTypeViolations("src/building/building.types.ts", "export interface A {}")).toEqual([]);
     expect(exportedTypeViolations("src/building/building.document.ts", "export interface A {}")).toEqual([]);
     expect(exportedTypeViolations("src/building/building.schema.ts", "export type A = 1;")).toEqual([]);
-    for (const role of ["rules", "mapper", "query", "config", "util"]) {
+    for (const role of ["rules", "mapper", "query", "config", "util", "bootstrap"]) {
       const file = `src/building/building.${role}.ts`;
       expect(exportedTypeViolations(file, "export interface A {}\nexport function a() {}")).toEqual([`${file}: A`]);
     }
@@ -295,6 +357,11 @@ describe("naming rules apply as specified", () => {
     expect(
       mainExportViolations("src/http/cache-control.decorator.ts", "export const KEY = 1;\nexport const CacheControl = () => 1;"),
     ).toEqual([]);
+    const bootstrap = "src/http/http-app.bootstrap.ts";
+    expect(mainExportViolations(bootstrap, "export async function bootstrapHttpApp() {}")).toEqual([]);
+    expect(mainExportViolations(bootstrap, "export async function httpPipelineMiddleware() {}")).toEqual([bootstrap]);
+    expect(mainExportViolations(bootstrap, "export async function httpApp() {}")).toEqual([bootstrap]);
+    expect(mainExportViolations(bootstrap, "export class HttpAppBootstrap {}")).toEqual([bootstrap]);
     expect(mainExportViolations("src/x/x.rules.ts", "export function anything() {}")).toEqual([]);
     expect(mainExportViolations("src/x/x.service.ts", "export type T = 1;")).toEqual([]);
   });
@@ -317,19 +384,127 @@ describe("naming rules apply as specified", () => {
     expect(typeFileViolations("src/x/x.util.ts", source)).toEqual([]);
   });
 
-  it("allows a brand cast only where a value enters", () => {
-    const brands = brandNames([
-      { file: "src/x/x.types.ts", source: 'export type XId = Brand<number, "XId">;\nexport type Other = number;' },
-    ]);
-    expect([...brands]).toEqual(["XId"]);
-    const cast = "const a = 1 as XId;\nconst b = (n || null) as XId | null;\nconst c = 2 as Other;";
-    expect(brandCastViolations("src/x/x.service.ts", cast, brands)).toEqual([
-      "src/x/x.service.ts: as XId",
-      "src/x/x.service.ts: as XId #2",
-    ]);
-    for (const file of ["src/x/x.client.ts", "src/x/x.schema.ts", "src/x/x.rules.ts", "src/x/x.service.spec.ts"]) {
-      expect(brandCastViolations(file, cast, brands)).toEqual([]);
-    }
+  const brandTypes = {
+    file: "src/x/x.types.ts",
+    source: [
+      'import type { Brand } from "../shared/brand.types";',
+      'export type XId = Brand<number, "XId">;',
+      'export type XCode = Brand<string, "XCode">;',
+      "export type Other = number;",
+      "export type Alias = XId;",
+    ].join("\n"),
+  };
+  const brands = declaredBrands([brandTypes]);
+
+  it("finds each Brand<…> alias and the folder that declares it", () => {
+    // Act & Assert
+    expect(brands).toEqual(
+      new Map([
+        ["XId", "src/x"],
+        ["XCode", "src/x"],
+      ]),
+    );
+  });
+
+  it.each([
+    [
+      "casts in a service, a non-brand cast left alone",
+      "src/x/x.service.ts",
+      "const a = 1 as XId;\nconst b = (n || null) as XId | null;\nconst c = 2 as Other;",
+      ["as XId", "as XId #2"],
+    ],
+    ["an angle-bracket assertion", "src/x/x.service.ts", "const a = <XId>1;", ["as XId"]],
+    ["a cast in a client, once a minting role", "src/x/x.client.ts", "const a = 1 as XId;", ["as XId"]],
+    ["a cast in a schema, once a minting role", "src/x/x.schema.ts", "const a = z.number().transform((n) => n as XId);", ["as XId"]],
+    ["a type predicate outside is<Brand>", "src/x/x.mapper.ts", "export function ok(v: number): v is XId { return v > 0; }", ["is XId"]],
+    ["z.custom of a brand", "src/x/x.schema.ts", "const a = z.custom<XId>((v) => typeof v === 'number');", ["z.custom<XId>"]],
+    ["zod's own brand", "src/x/x.schema.ts", 'const a = z.number().brand<"XId">();', [".brand<"]],
+    [
+      "a cast in the declaring .rules, outside to<Brand>",
+      "src/x/x.rules.ts",
+      "export function helper(n: number) { return n as XId; }",
+      ["as XId"],
+    ],
+    [
+      "a cast inside is<Brand>, which narrows instead",
+      "src/x/x.rules.ts",
+      "export function isXId(n: number): n is XId { return (n as XId) > 0; }",
+      ["as XId"],
+    ],
+    [
+      "a cast to one brand inside another brand's to<Brand>",
+      "src/x/x.rules.ts",
+      "export function toXCode(id: XId): XCode { return String(id as number as XId) as XCode; }",
+      ["as XId"],
+    ],
+    [
+      "a to<Brand> in another role of the declaring folder",
+      "src/x/x.mapper.ts",
+      "export function toXId(n: number): XId { return n as XId; }",
+      ["as XId"],
+    ],
+    [
+      "a minter in another folder's .rules",
+      "src/y/y.rules.ts",
+      "export function toXId(n: number): XId { return n as XId; }\nexport function isXCode(v: string): v is XCode { return v !== ''; }",
+      ["as XId", "is XCode"],
+    ],
+  ])("brand-casts reports %s", (_case, file, source, labels) => {
+    // Act & Assert
+    expect(brandCastViolations(file, source, brands)).toEqual(labels.map((label) => `${file}: ${label}`));
+  });
+
+  it.each([
+    ["the cast in to<Brand> of the declaring .rules", "src/x/x.rules.ts", "export function toXId(n: number): XId {\n  return n as XId;\n}"],
+    ["the predicate of is<Brand> there", "src/x/x.rules.ts", "export function isXCode(v: string): v is XCode { return v !== ''; }"],
+    ["any cast in a spec", "src/x/x.service.spec.ts", "const a = 1 as XId;\nfunction f(v: number): v is XId { return true; }"],
+  ])("brand-casts allows %s", (_case, file, source) => {
+    // Act & Assert
+    expect(brandCastViolations(file, source, brands)).toEqual([]);
+  });
+
+  it.each([
+    [
+      "one is<Brand> or to<Brand> per brand",
+      [["src/x/x.rules.ts", "export function isXId(n: number): n is XId { return n > 0; }\nfunction toXCode(n: XId) {}"]],
+      [],
+    ],
+    [
+      "an overloaded minter, counted once",
+      [
+        [
+          "src/x/x.rules.ts",
+          "function isXId(n: number): n is XId;\nfunction isXId(n: unknown): n is XId;\nfunction isXId(n: unknown) { return true; }\nfunction toXCode(n: XId) {}",
+        ],
+      ],
+      [],
+    ],
+    [
+      "0 minters",
+      [["src/x/x.rules.ts", "export function isXId(n: number): n is XId { return n > 0; }"]],
+      ["XCode: 0 minters"],
+    ],
+    [
+      "2 minters",
+      [["src/x/x.rules.ts", "function isXId(n: number) {}\nfunction toXId(n: number) {}\nfunction toXCode(n: XId) {}"]],
+      ["XId: 2 minters (src/x/x.rules.ts#isXId, src/x/x.rules.ts#toXId)"],
+    ],
+    [
+      "a minter in another folder's .rules or in another role, counted as none",
+      [
+        ["src/x/x.rules.ts", "function isXId(n: number) {}"],
+        ["src/y/y.rules.ts", "function toXCode(n: XId) {}"],
+        ["src/x/x.mapper.ts", "function toXCode(n: XId) {}"],
+        ["src/x/x.rules.spec.ts", "function toXCode(n: XId) {}"],
+      ],
+      ["XCode: 0 minters"],
+    ],
+  ])("brand-minters with %s", (_case, rules, expected) => {
+    // Arrange
+    const rulesSources = rules.map(([file, source]) => ({ file: file!, source: source! }));
+
+    // Act & Assert
+    expect(brandMinterViolations(brands, rulesSources)).toEqual(expected);
   });
 });
 
@@ -365,14 +540,28 @@ describe("src/ file and class names", () => {
     );
   });
 
-  it("cast to a brand only in client, schema, rules and spec files", () => {
-    const brands = brandNames(
-      files.filter((f) => f.endsWith(".types.ts")).map((f) => ({ file: f, source: readSource(f) })),
-    );
+  const sourcesEndingIn = (suffix: string) =>
+    files.filter((f) => f.endsWith(suffix)).map((f) => ({ file: f, source: readSource(f) }));
+
+  it("mint a brand only in its own minter", () => {
+    // Arrange
+    const brands = declaredBrands(sourcesEndingIn(".types.ts"));
+
+    // Assert
+    // A rename of Brand would empty the map and pass both brand rules vacuously.
+    expect(brands.size).toBeGreaterThan(0);
     expectAllowlisted(
       "brand-casts",
       files.flatMap((f) => brandCastViolations(f, readSource(f), brands)),
     );
+  });
+
+  it("mint each brand in exactly one is<Brand>/to<Brand> in the declaring folder's .rules file", () => {
+    // Arrange
+    const brands = declaredBrands(sourcesEndingIn(".types.ts"));
+
+    // Act & Assert
+    expectAllowlisted("brand-minters", brandMinterViolations(brands, sourcesEndingIn(".rules.ts")));
   });
 
   it("export no types from a class-role file", () => {

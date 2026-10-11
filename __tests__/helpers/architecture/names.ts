@@ -24,6 +24,7 @@ export const ROLES = new Set([
   "interceptor",
   "pipe",
   "decorator",
+  "bootstrap",
   "util",
 ]);
 

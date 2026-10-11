@@ -2,8 +2,7 @@ import { z } from "zod";
 import type { OverlayGeometry } from "../shared/geojson.types";
 import { isDrawableGeometry } from "../shared/geojson.util";
 import type { CampusShapeDoc } from "./building.document";
-import { CAMPUSES } from "./building.rules";
-import type { SkkuId } from "./building.types";
+import { CAMPUSES, isSkkuId } from "./building.rules";
 
 const INVALID_CAMPUS_MESSAGE = "campus must be 'hssc' or 'nsc'";
 
@@ -22,10 +21,6 @@ export const campusShapeDoc = z.object({
   geometry: z.custom<OverlayGeometry>(isDrawableGeometry),
   title: bilingual,
   subtitle: bilingual.nullish(),
-  skkuId: z
-    .number()
-    .int()
-    .nullable()
-    .transform((id) => id as SkkuId | null),
+  skkuId: z.number().refine(isSkkuId).nullable(),
   order: z.number(),
 }) satisfies z.ZodType<CampusShapeDoc>;

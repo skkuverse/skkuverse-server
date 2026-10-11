@@ -52,7 +52,7 @@ export function floorViolations(actual: Record<string, Counts>, floors: Record<s
 describe("test floor rules apply as specified", () => {
   it.each([
     ["src/building/sync/building-sync.client.spec.ts", "building"],
-    ["__tests__/nest/building/building-routes.test.ts", "building"],
+    ["__tests__/nest/building/building.routes.test.ts", "building"],
     ["__tests__/nest/bootstrap-wiring.test.ts", "nest"],
     ["__tests__/architecture/naming.test.ts", "architecture"],
     ["__tests__/scripts/compare-responses.test.ts", "scripts"],
