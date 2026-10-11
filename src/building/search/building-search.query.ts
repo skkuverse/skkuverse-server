@@ -1,7 +1,9 @@
 import type { Document, Filter } from "mongodb";
 import { escapeRegex } from "../../shared/regex.util";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
-import { CAMPUSES, isCampus } from "../building.rules";
+import { SERVED_BUILDING_PROJECTION } from "../building.query";
+import { CAMPUSES } from "../building.constants";
+import { isCampus } from "../building.rules";
 import type { Campus } from "../building.types";
 import {
   BUILDING_SEARCH_LIMIT,
@@ -131,7 +133,7 @@ const BUILDING_SEARCH: RankedSearchSpec<BuildingDoc> = {
   strongMinScore: BUILDING_STRONG_MIN_SCORE,
   strongLimit: BUILDING_SEARCH_LIMIT,
   weakLimit: BUILDING_WEAK_LIMIT,
-  projection: { _score: 0, extensions: 0, sync: 0, enrichVersion: 0 },
+  projection: { _score: 0, ...SERVED_BUILDING_PROJECTION },
   tiebreak: { _id: 1 },
 };
 

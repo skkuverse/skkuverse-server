@@ -1,6 +1,6 @@
 import type { StringPath } from "../../shared/string-path.types";
-import type { BuildingDoc } from "../building.document";
-import type { BilingualText, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd, WithCampusLabel } from "../building.types";
+import type { BilingualText, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd } from "../building.types";
+import type { BuildingSearchData, BuildingSearchMeta } from "./building-search.wire";
 
 export type TierMode = "exact" | "prefix" | "substring";
 
@@ -50,14 +50,8 @@ export interface SearchLimit {
   truncated: boolean;
 }
 
+/** WHY: the mapper's output; the controller sends `data` and adds `meta` through `withMeta`. */
 export interface BuildingSearch {
-  data: { buildings: Array<WithCampusLabel<BuildingDoc>>; spaces: SpaceGroup[] };
-  meta: {
-    keyword: string;
-    buildingCount: number;
-    spaceCount: number;
-    counts: { building: SearchCounts; space: SearchCounts };
-    limits: { building: SearchLimit; space: SearchLimit };
-  };
+  data: BuildingSearchData;
+  meta: BuildingSearchMeta;
 }
-

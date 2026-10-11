@@ -66,7 +66,7 @@ function buildLikeMainTs(opts: {
       new ExpressAdapter(expressInstance),
       opts.bodyParser === false ? { bodyParser: false } : {},
     );
-    await app.init();
+    await app.listen(0, "127.0.0.1");
     return app;
   })();
 }

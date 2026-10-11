@@ -1,0 +1,37 @@
+{
+  "_about": "GET /app/config captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); whole body",
+  "data": {
+    "ios": {
+      "minVersion": "3.5.0",
+      "updateUrl": "https://apps.apple.com/app/id6446813434"
+    },
+    "android": {
+      "minVersion": "3.5.0",
+      "updateUrl": "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus"
+    },
+    "webview": {
+      "bridgeOrigins": [
+        "https://webview.skkuverse.com",
+        "https://eskara.miniapp.skkuverse.com",
+        "https://mukja.mini.skkuverse.com",
+        "https://playlist.mini.skkuverse.com",
+        "https://booth-box.mini.skkuverse.com",
+        "https://inja.mini.skkuverse.com",
+        "https://timetable.mini.skkuverse.com"
+      ]
+    },
+    "web": {
+      "origin": "https://skkuverse.com"
+    },
+    "miniapps": {
+      "origins": {
+        "https://eskara.miniapp.skkuverse.com": "eskara-2026",
+        "https://mukja.mini.skkuverse.com": "mukja",
+        "https://playlist.mini.skkuverse.com": "playlist",
+        "https://booth-box.mini.skkuverse.com": "booth-box",
+        "https://inja.mini.skkuverse.com": "inja",
+        "https://timetable.mini.skkuverse.com": "timetable"
+      }
+    }
+  }
+}

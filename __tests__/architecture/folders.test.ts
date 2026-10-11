@@ -188,6 +188,22 @@ describe("folder role rule applies as specified", () => {
     ]);
   });
 
+  it("counts .wire as one role per folder, named after the folder's module", () => {
+    // Arrange
+    const oneEach = [
+      "src/building/building.module.ts",
+      "src/building/building.wire.ts",
+      "src/building/catalog/building-catalog.module.ts",
+      "src/building/catalog/building-catalog.wire.ts",
+    ];
+    const twoInOneFolder = ["src/x/x.module.ts", "src/x/x.wire.ts", "src/x/x-detail.wire.ts"];
+
+    // Act & Assert
+    expect(folderRoleViolations(oneEach)).toEqual([]);
+    expect(folderRoleViolations(twoInOneFolder)).toEqual(["src/x/: wire", "src/x/x-detail.wire.ts: base"]);
+    expect(folderRoleViolations(["src/x/x.module.ts", "src/x/y.wire.ts"])).toEqual(["src/x/y.wire.ts: base"]);
+  });
+
   it("leaves shared roles and folders without a module to the other rules", () => {
     expect(
       folderRoleViolations(["src/http/a.middleware.ts", "src/http/b.middleware.ts", "src/bus/controllers/x.controller.ts", "src/bus/controllers/y.controller.ts"]),

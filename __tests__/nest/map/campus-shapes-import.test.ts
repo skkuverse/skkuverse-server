@@ -6,13 +6,16 @@
  * nothing written when anything is wrong. The geometry rules themselves are
  * shared with the event sheet (`geojson-geometry.js`), so what is worth pinning
  * here is the half that differs — `layerId`, `skkuId`, and the all-or-nothing
- * accounting.
+ * accounting. This CommonJS script keeps its own copy of the server's `skkuId`
+ * rule and campus list, so both are pinned against `campusShapeDoc`, the
+ * server's reading of the same document.
  */
 
 // scripts/ is excluded from tsconfig (plain CommonJS operator tooling), so this
 // is a require rather than an import.
 const { parseCampusShapesFile } = require("../../../scripts/lib/campus-shapes-file");
 
+import { CAMPUSES } from "../../../src/building/building.constants";
 import { campusShapeDoc } from "../../../src/building/building.schema";
 
 const RING = [
@@ -213,5 +216,38 @@ describe("parseCampusShapesFile reads skkuId as the server does", () => {
     // Assert
     // A shape the importer writes but campusShapeDoc drops would vanish from the campus map.
     expect({ imported, served }).toEqual({ imported: accepted, served: accepted });
+  });
+});
+
+describe("parseCampusShapesFile reads campus as the server does", () => {
+  it.each<[unknown, boolean]>([
+    ...CAMPUSES.map((campus): [unknown, boolean] => [campus, true]),
+    ...CAMPUSES.map((campus): [unknown, boolean] => [campus.toUpperCase(), false]),
+    ...CAMPUSES.map((campus): [unknown, boolean] => [`${campus} `, false]),
+    ["", false],
+    ["seoul", false],
+    [null, false],
+  ])("gives campus %p the verdict campusShapeDoc gives it (accepted: %p)", (campus, accepted) => {
+    // Arrange
+    const stored = { ...parse().docs[0], campus };
+
+    // Act
+    const imported = parse({ campus }).docs.length === 1;
+    const served = campusShapeDoc.safeParse(stored).success;
+
+    // Assert
+    // A shape the importer writes but campusShapeDoc drops would vanish from the campus map.
+    expect({ imported, served }).toEqual({ imported: accepted, served: accepted });
+  });
+
+  it("lists exactly the server's campuses when it rejects one", () => {
+    // Act
+    const { errors } = parse({ campus: "seoul" });
+    const listed = (errors as string[]).map((e) => /\.campus must be one of \[(.*)\]$/.exec(e)?.[1]);
+
+    // Assert
+    // The script exports no list, so its error message is the one place its list shows.
+    expect(listed).toHaveLength(1);
+    expect(listed[0]?.split(", ").sort()).toEqual([...CAMPUSES].sort());
   });
 });

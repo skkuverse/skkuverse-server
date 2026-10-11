@@ -19,6 +19,7 @@ import { runWithLogContext } from "../../../src/infra/log-context";
 import { maskUrl, serializeError } from "../../../src/infra/log-redact";
 import { PinoNestLogger } from "../../../src/infra/nest-logger";
 import sharedLogger from "../../../src/infra/logger";
+import { LoopbackServers } from "../../helpers/nest/loopback-servers";
 
 const SECRETS = {
   bearer: "eyJhbGciOiJSUzI1NiJ9.SECRET-ID-TOKEN",
@@ -64,12 +65,16 @@ function buildApp(logger: pino.Logger) {
 }
 
 describe("request logging", () => {
+  const servers = new LoopbackServers();
+  afterEach(() => servers.closeAll());
+
   it("writes no header or query secret anywhere in the output", async () => {
     // Arrange
     const out = capture();
+    const server = await servers.serve(buildApp(out.logger));
 
     // Act
-    await request(buildApp(out.logger))
+    await request(server)
       .get(`/ok?serviceKey=${SECRETS.serviceKey}&q=hello`)
       .set("Authorization", `Bearer ${SECRETS.bearer}`)
       .set("X-Internal-Token", SECRETS.internal)
@@ -93,9 +98,10 @@ describe("request logging", () => {
   it("gives every line of a request the same reqId, echoed in X-Request-Id", async () => {
     // Arrange
     const out = capture();
+    const server = await servers.serve(buildApp(out.logger));
 
     // Act
-    const res = await request(buildApp(out.logger)).get("/ok").expect(200);
+    const res = await request(server).get("/ok").expect(200);
     await settle();
 
     // Assert
@@ -110,9 +116,10 @@ describe("request logging", () => {
   it("keeps a service line's fields off the access line", async () => {
     // Arrange
     const out = capture();
+    const server = await servers.serve(buildApp(out.logger));
 
     // Act
-    await request(buildApp(out.logger)).get("/ok").expect(200);
+    await request(server).get("/ok").expect(200);
     await settle();
 
     // Assert
@@ -124,14 +131,14 @@ describe("request logging", () => {
   it("levels the access line by status and skips health probes", async () => {
     // Arrange
     const out = capture();
-    const app = buildApp(out.logger);
+    const server = await servers.serve(buildApp(out.logger));
 
     // Act
-    await request(app).get("/ok");
-    await request(app).get("/bad");
-    await request(app).get("/missing");
-    await request(app).get("/boom");
-    await request(app).get("/health/ready");
+    await request(server).get("/ok");
+    await request(server).get("/bad");
+    await request(server).get("/missing");
+    await request(server).get("/boom");
+    await request(server).get("/health/ready");
     await settle();
 
     // Assert

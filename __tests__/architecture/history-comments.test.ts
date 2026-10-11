@@ -4,21 +4,9 @@
  * comment states the constraint that holds now. Specs are not checked.
  */
 import { commentBlocks, commentsOf, numberedKeys } from "../helpers/architecture/comments";
+import { HISTORY_PHRASES } from "../helpers/architecture/history";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
-
-/** Phrases that narrate history. "used to" counts only with a subject: "x is used to build" is not history. */
-export const HISTORY_PHRASES: ReadonlyArray<readonly [string, RegExp]> = [
-  ["used to", /(?<![.:;!?]\s|^|\b(?:is|are|be|been|being|was|were|get|gets|got|getting)\s)\bused to\b/i],
-  ["legacy", /\blegacy\b/i],
-  ["ported", /\bported\b/i],
-  ["byte-parity", /\bbyte[- ]parity\b/i],
-  ["as it always has", /\bas (?:it|they) always (?:has|have|had|did)\b/i],
-  ["previously", /\bpreviously\b/i],
-  ["replaced by", /\breplaced by\b|\bwas replaced\b/i],
-  ["formerly", /\bformerly\b/i],
-  ["before the refactor", /\bbefore the (?:refactor|port|migration)\b/i],
-];
 
 /** `<file>: <phrase>` for each comment that uses one, `#n` on a repeat. */
 export function historyCommentViolations(file: string, source: string): string[] {

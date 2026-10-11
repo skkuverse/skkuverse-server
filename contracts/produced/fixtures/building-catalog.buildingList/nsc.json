@@ -1,0 +1,86 @@
+{
+  "_about": "GET /building/list?campus=nsc captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); trimmed to one building and one facility, attachments and barrier-free sections to one",
+  "data": {
+    "buildings": [
+      {
+        "_id": 15,
+        "accessibility": {
+          "detail": null,
+          "elevator": false,
+          "toilet": false
+        },
+        "attachments": [
+          {
+            "id": 59,
+            "url": "https://www.skku.edu/_attach/image/2018/07/HIhzwLynuxdxSowDjJID.jpg",
+            "filename": "P03.jpg",
+            "alt": ""
+          }
+        ],
+        "buildNo": "203",
+        "campus": "nsc",
+        "description": {
+          "en": "This is constructed in 1981. There are administration office(Office of Student Services, Office of International Student Services, Career Development Team, Military Reserves & Civil Defense Management Officer), student cafeteria, club rooms, SKKU newspaper and Sungkyun Times etc.",
+          "ko": "1981년에 준공되었으며  종합행정실(학생지원팀, 외국인유학생지원팀, 학생인재개발팀, 비상계획관), 학생회관식당(행단골식당), 각종 동아리방과 성대신문사, 성균Times 등의 언론반 등이 위치해있다."
+        },
+        "displayNo": "3",
+        "image": {
+          "url": "https://www.skku.edu/_attach/image/2018/07/HIhzwLynuxdxSowDjJID.jpg",
+          "filename": "HIhzwLynuxdxSowDjJID.jpg"
+        },
+        "location": {
+          "type": "Point",
+          "coordinates": [
+            126.97355,
+            37.293872
+          ]
+        },
+        "name": {
+          "en": "Student Center",
+          "ko": "학생회관"
+        },
+        "skkuCreatedAt": "2018-04-23T00:53:24.000+00:00",
+        "skkuUpdatedAt": "2019-03-14T00:32:23.000+00:00",
+        "type": "building",
+        "updatedAt": "2026-03-18T09:22:45.612Z",
+        "campusLabel": "자과캠"
+      },
+      {
+        "_id": 7,
+        "accessibility": {
+          "detail": null,
+          "elevator": false,
+          "toilet": false
+        },
+        "attachments": [],
+        "buildNo": null,
+        "campus": "nsc",
+        "description": {
+          "en": "This is the main gate of SKKU Natural Science Campus.",
+          "ko": "성균관대학교 자연과학캠퍼스의 정문이다."
+        },
+        "displayNo": null,
+        "image": {
+          "url": "https://www.skku.edu/_attach/image/2018/07/bxjQLUxuCBdqSjZMecQI.jpg",
+          "filename": "bxjQLUxuCBdqSjZMecQI.jpg"
+        },
+        "location": {
+          "type": "Point",
+          "coordinates": [
+            126.974074,
+            37.290649
+          ]
+        },
+        "name": {
+          "en": "Main Gate",
+          "ko": "정문"
+        },
+        "skkuCreatedAt": "2018-04-23T00:52:10.000+00:00",
+        "skkuUpdatedAt": "2018-07-10T09:56:58.000+00:00",
+        "type": "facility",
+        "updatedAt": "2026-03-18T09:22:45.612Z",
+        "campusLabel": "자과캠"
+      }
+    ]
+  }
+}

@@ -10,16 +10,17 @@
  *     PascalCase(name) + PascalCase(role): `notice-dispatch.repository.ts`
  *     exports `NoticeDispatchRepository`. A `.error.ts` file may export several
  *     classes; each starts with PascalCase(name) and ends with `Error`.
- *   - exported types: only a `.types`, `.document` or `.schema` file exports an
- *     interface or type alias; a type used inside one file stays there,
- *     unexported. src/infra/ files, named by resource, are not checked.
+ *   - exported types: only a `.types`, `.document`, `.schema` or `.wire` file
+ *     exports an interface or type alias; a type used inside one file stays
+ *     there, unexported. src/infra/ files, named by resource, are not checked.
  *   - main export: a class-role, `.decorator` or `.bootstrap` file exports
  *     something named after the file, so either can be found from the other:
  *     a class `NoStoreMiddleware`, a function `noStoreMiddleware`, a decorator
  *     `CacheControl`. A `.bootstrap` file builds the app or applies the
  *     app-wide pipeline, so its function opens with the verb:
  *     `http-app.bootstrap.ts` exports `bootstrapHttpApp`.
- *   - type files: a `.types` or `.document` file holds no runtime code.
+ *   - type files: a `.types` or `.document` file holds no runtime code. A
+ *     `.wire` file is not one: it holds zod schemas and their `z.input` types.
  *   - brands: a brand type (an alias of `Brand<…>` in a `.types` file) gets
  *     its brand only from its one minter, a top-level function in the `.rules`
  *     file of the folder that declares it: `is<Brand>`, a type predicate, or
@@ -105,9 +106,9 @@ function exportedTypes(source: string): string[] {
   });
 }
 
-const TYPE_ROLES = new Set(["types", "document", "schema"]);
+const TYPE_ROLES = new Set(["types", "document", "schema", "wire"]);
 
-/** `<file>: <type>` for each type a role file other than `.types`, `.document` or `.schema` exports. */
+/** `<file>: <type>` for each type a role file other than `.types`, `.document`, `.schema` or `.wire` exports. */
 export function exportedTypeViolations(file: string, source: string): string[] {
   if (EXEMPT.has(file) || file.endsWith(".spec.ts")) return [];
   const { parts } = parse(file);
@@ -278,6 +279,7 @@ describe("naming rules apply as specified", () => {
     "src/shared/regex.util.ts",
     "src/shared/regex.util.spec.ts",
     "src/http/http-app.bootstrap.ts",
+    "src/x/x.wire.ts",
     "src/infra/db.ts",
     "src/infra/db.spec.ts",
     "src/infra/nest-logger.ts",
@@ -347,6 +349,20 @@ describe("naming rules apply as specified", () => {
     }
     expect(exportedTypeViolations("src/infra/logger.ts", "export interface A {}")).toEqual([]);
     expect(exportedTypeViolations("src/building/building.service.spec.ts", "export interface A {}")).toEqual([]);
+  });
+
+  it("lets a .wire file export its schemas' z.input types next to the schemas", () => {
+    // Arrange
+    const file = "src/x/x.wire.ts";
+    const source = [
+      'import { z } from "zod";',
+      "export const x = z.object({ name: z.string() });",
+      "export type X = z.input<typeof x>;",
+    ].join("\n");
+
+    // Act & Assert
+    expect(exportedTypeViolations(file, source)).toEqual([]);
+    expect(typeFileViolations(file, source)).toEqual([]);
   });
 
   it("names a role file's main export after the file", () => {

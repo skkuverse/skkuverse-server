@@ -26,7 +26,7 @@ A name is how a reader, or an agent, finds code and understands it without a com
 Asked to name the same thing, two developers pick the same name about 7% of the time. Naming in three explicit steps produced names judged better two to one (Feitelson et al., IEEE TSE 2022). So:
 
 1. **Concepts.** What must a reader know that the type does not say: what it is, its unit, its scope (one or many, raw or derived)?
-2. **Words.** Take each concept's word from the glossary below or from the module's existing names. Do not coin a synonym. Use whole words.
+2. **Words.** Take each concept's word from the module's glossary (its architecture doc), the shared terms below, or the module's existing names. Do not coin a synonym. Use whole words.
 3. **Shape.** Assemble them with the shapes below.
 
 ## Shapes
@@ -61,29 +61,10 @@ Asked to name the same thing, two developers pick the same name about 7% of the 
 
 ## Glossary
 
-One concept, one name (ADR 0010, D1). A module adds its section when it is migrated.
+One concept, one name (ADR 0010, D1). Each migrated module's glossary is the Glossary of its `docs/explanation/<module>-architecture.md`, whose Not column is an ESLint `id-denylist` block (`glossary/<module>` in `eslint.config.js`); `.claude/rules/<module>.md` loads it. This file keeps only the terms every module shares.
 
 ### Every module
 
 | Term | Meaning | Not |
 | --- | --- | --- |
 | wire | A shape a deployable of this repository writes to another repository (a response body, a push payload); its zod schema is in `<base>.wire.ts`, its type the `z.input` of that schema | `contract` (the `CONTRACT(<repo>):` tag, the umbrella's contracts), `dto` |
-
-### building
-
-| Term | Meaning | Not |
-| --- | --- | --- |
-| `skkuId` (`SkkuId`) | SKKU's building id; `_id` in `buildings` and `buildings_raw` | `id`, `buildingId` |
-| `apiId` (`ApiId`) | The same id exactly as buildList sent it; buildInfo takes it back verbatim | |
-| `buildNo` (`BuildNo`) | SKKU's building number (`"227"`); a facility has none | `buildingNo` |
-| `displayNo` (`DisplayNo`) | The number users see, derived by `toDisplayNo` | |
-| `spaceCd` (`SpaceCd`) | A room code | `roomId` |
-| space | A room or area inside a building | room |
-| buildList, buildInfo, spaceList | The three campusMap.do calls, and the sync phases named after them | |
-| raw, enriched | `buildings_raw` holds SKKU's data as sent; `buildings` holds it parsed and served | |
-| `EnrichedBuilding` | What `enrichBuilding` derives from a raw building; the sync repository writes it field by field | enrichment fields, `$set` |
-| tier, band | A ranking tier scores one kind of match; the strong and weak bands split results at `*_STRONG_MIN_SCORE` | level, bucket |
-| ranked result | Rows plus the campus counts the same predicate produced (`RankedSearchResult`) | search data |
-| `keyword` | The search text: `q` on the wire, `keyword` from the service down and in `meta` | `query` (the `.query` role), `term` |
-| campus shape | A `campus_shapes` document: an authored footprint, boundary or path | geometry doc |
-| catalog | Building's list-and-detail flow (`catalog/`): the list is the catalog, `:skkuId` one entry of it | list, detail, core, read |

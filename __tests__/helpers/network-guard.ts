@@ -8,6 +8,12 @@
  * cover a bare lookup. `globalThis.fetch` is wrapped too, so its refusal names
  * the URL at the call instead of surfacing as undici's "fetch failed".
  *
+ * `net.Server.prototype.listen`, which http and https servers inherit, refuses a
+ * bind on anything but a loopback host, naming its caller. Handed a server that
+ * is not listening, supertest calls `listen(0)`, which binds every address; macOS
+ * can give that listener a port another local process holds on 127.0.0.1, and
+ * that process then answers the test's request.
+ *
  * A refusal throws (fetch: rejects) at the call. Code under test often swallows
  * that error (a fire-and-forget prefetch, a poller), so the guard also rethrows
  * it from a microtask, which Jest reports against the running test or hook. A
@@ -26,11 +32,13 @@ import net from "node:net";
 const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(["localhost", "127.0.0.1", "::1"]);
 
 type Connect = typeof net.Socket.prototype.connect;
+type Listen = typeof net.Server.prototype.listen;
 type Lookup = typeof dns.lookup;
 type PromisesLookup = typeof dns.promises.lookup;
 
 interface Originals {
   connect: Connect;
+  listen: Listen;
   lookup: Lookup;
   promisesLookup: PromisesLookup;
 }
@@ -44,14 +52,17 @@ const ORIGINALS = Symbol.for("skkuverse.networkGuard.originals");
 const PENDING = Symbol.for("skkuverse.networkGuard.pending");
 const GUARDED = Symbol.for("skkuverse.networkGuard.guarded");
 
+const CONNECT_ADVICE = "Tests reach loopback only (127.0.0.1, ::1, localhost); stub fetch, axios or the client instead.";
+const LISTEN_ADVICE =
+  'A test server listens on loopback only: call app.listen(0, "127.0.0.1") or server.listen(0, "127.0.0.1") ' +
+  "before handing it to supertest, which otherwise listens on every address, where another local process " +
+  "holding the same port on 127.0.0.1 can answer the request.";
+
 export class NetworkGuardError extends Error {
   readonly code = "ENETWORKGUARD";
 
-  constructor(readonly target: string, via: string) {
-    super(
-      `Network guard: refused ${via} to ${target}. Tests reach loopback only ` +
-        "(127.0.0.1, ::1, localhost); stub fetch, axios or the client instead.",
-    );
+  constructor(readonly target: string, refused: string, advice: string) {
+    super(`Network guard: refused ${refused}. ${advice}`);
     this.name = "NetworkGuardError";
   }
 }
@@ -60,6 +71,7 @@ function originals(): Originals {
   const holder = net as unknown as Record<symbol, Originals | undefined>;
   holder[ORIGINALS] ??= {
     connect: net.Socket.prototype.connect,
+    listen: net.Server.prototype.listen,
     lookup: dns.lookup,
     promisesLookup: dns.promises.lookup,
   };
@@ -97,8 +109,10 @@ function reportStray(error: NetworkGuardError): void {
   writeStderr(`${trace}\n(Made by code a finished test file left running, so it fails no test.)\n`);
 }
 
-function refuse(target: string, via: string, door: (...args: never[]) => unknown): NetworkGuardError {
-  const error = new NetworkGuardError(target, via);
+type Door = (...args: never[]) => unknown;
+
+function refuse(target: string, refused: string, advice: string, door: Door): NetworkGuardError {
+  const error = new NetworkGuardError(target, refused, advice);
   // Starts the stack at the caller, which is the frame Jest prints.
   Error.captureStackTrace(error, door);
   if (isCallFromFinishedFile()) {
@@ -116,7 +130,10 @@ function refuse(target: string, via: string, door: (...args: never[]) => unknown
   return error;
 }
 
-/** The targets refused since the last call, as `host:port` (a lookup: `host`); they are not reported again. */
+/**
+ * The targets refused since the last call, as `host:port` (a lookup: `host`; a
+ * listen on every address: `*:port`); they are not reported again.
+ */
 export function takeBlockedConnections(): string[] {
   const pending = pendingRefusals();
   return pending.splice(0, pending.length).map((error) => error.target);
@@ -143,7 +160,8 @@ function guardConnect(original: Connect): Connect {
     const target = connectTarget(args);
     if (target && !isLoopbackHost(target.host)) {
       this.destroy();
-      throw refuse(`${target.host}:${String(target.port)}`, "connect", guardedConnect);
+      const address = `${target.host}:${String(target.port)}`;
+      throw refuse(address, `connect to ${address}`, CONNECT_ADVICE, guardedConnect);
     }
     return Reflect.apply(original, this, args) as net.Socket;
   } as Connect;
@@ -152,7 +170,7 @@ function guardConnect(original: Connect): Connect {
 function guardLookup<F extends Lookup | PromisesLookup>(original: F, via: string): F {
   const guarded = function guardedLookup(this: unknown, hostname: unknown, ...rest: unknown[]): unknown {
     if (typeof hostname === "string" && hostname !== "" && !isLoopbackHost(hostname)) {
-      const error = refuse(hostname, via, guardedLookup);
+      const error = refuse(hostname, `${via} to ${hostname}`, CONNECT_ADVICE, guardedLookup);
       if (via === "dns.promises.lookup") return Promise.reject(error);
       throw error;
     }
@@ -163,6 +181,49 @@ function guardLookup<F extends Lookup | PromisesLookup>(original: F, via: string
     Object.defineProperty(guarded, symbol, Object.getOwnPropertyDescriptor(original, symbol) ?? {});
   }
   return guarded as unknown as F;
+}
+
+/** Host and port a `Server#listen` call binds (no host: every address), or undefined for an IPC path. */
+function listenTarget(args: readonly unknown[]): { host: string | undefined; port: unknown } | undefined {
+  const [first, second] = args;
+  const options: unknown = Array.isArray(first) ? first[0] : first;
+  if (typeof options === "object" && options !== null) {
+    const { host, port, path } = options as { host?: unknown; port?: unknown; path?: unknown };
+    if (typeof path === "string" && path !== "") return undefined;
+    return { host: typeof host === "string" && host !== "" ? host : undefined, port };
+  }
+  if (typeof options === "string" && !/^\d+$/.test(options)) return undefined;
+  const port = typeof options === "number" || typeof options === "string" ? options : undefined;
+  return { host: typeof second === "string" && second !== "" ? second : undefined, port };
+}
+
+function isOwnCodeFrame(line: string): boolean {
+  return line.startsWith("at ") && line.includes("/") && !line.includes("node:") && !line.includes("/node_modules/");
+}
+
+/** The first frame below `door` outside Node and node_modules: the code that asked for the bind. */
+function callerOf(door: Door): string {
+  const site: { stack?: string } = {};
+  Error.captureStackTrace(site, door);
+  const frame = (site.stack ?? "").split("\n").map((line) => line.trim()).find(isOwnCodeFrame);
+  return frame === undefined ? "an unknown caller" : frame.slice("at ".length);
+}
+
+function listenAddress({ host, port }: { host: string | undefined; port: unknown }): string {
+  const shown = host === undefined ? "*" : host.includes(":") ? `[${host}]` : host;
+  return `${shown}:${String(port ?? 0)}`;
+}
+
+function guardListen(original: Listen): Listen {
+  return function guardedListen(this: net.Server, ...args: unknown[]): net.Server {
+    const target = listenTarget(args);
+    if (target && (target.host === undefined || !isLoopbackHost(target.host))) {
+      const address = listenAddress(target);
+      const on = target.host === undefined ? `every address (${address})` : address;
+      throw refuse(address, `listen on ${on} from ${callerOf(guardedListen)}`, LISTEN_ADVICE, guardedListen);
+    }
+    return Reflect.apply(original, this, args) as net.Server;
+  } as Listen;
 }
 
 function fetchTarget(input: unknown): string | undefined {
@@ -180,7 +241,9 @@ function fetchTarget(input: unknown): string | undefined {
 function guardFetch(original: typeof fetch): typeof fetch {
   const guarded = function guardedFetch(input: Parameters<typeof fetch>[0], init?: RequestInit): Promise<Response> {
     const target = fetchTarget(input);
-    if (target !== undefined) return Promise.reject(refuse(target, "fetch", guardedFetch));
+    if (target !== undefined) {
+      return Promise.reject(refuse(target, `fetch to ${target}`, CONNECT_ADVICE, guardedFetch));
+    }
     return original(input, init);
   };
   Object.defineProperty(guarded, GUARDED, { value: true });
@@ -190,6 +253,7 @@ function guardFetch(original: typeof fetch): typeof fetch {
 function installNetworkGuard(): void {
   const saved = originals();
   net.Socket.prototype.connect = guardConnect(saved.connect);
+  net.Server.prototype.listen = guardListen(saved.listen);
   Object.assign(dns, { lookup: guardLookup(saved.lookup, "dns.lookup") });
   Object.assign(dns.promises, { lookup: guardLookup(saved.promisesLookup, "dns.promises.lookup") });
   const contextFetch = globalThis.fetch as (typeof fetch & { [GUARDED]?: true }) | undefined;

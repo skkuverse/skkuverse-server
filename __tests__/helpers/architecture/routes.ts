@@ -1,7 +1,8 @@
 /**
  * Routes as Nest declares them: `@Controller(prefix)` on a class and
  * `@Get(path)` (or another HTTP method decorator) on its methods, read from the
- * source. Shared by the rate-limit coverage and route-order rules.
+ * source. Shared by the rate-limit coverage, route-order, migrated-scope and
+ * wire-routes rules.
  */
 import ts from "typescript";
 
@@ -11,6 +12,10 @@ export interface Route {
   controller: string;
   method: string;
   path: string;
+}
+
+export interface RouteHandler extends Route {
+  handler: ts.MethodDeclaration;
 }
 
 
@@ -43,10 +48,10 @@ export function pathArg(arg: ts.Expression | undefined): string | undefined {
   return undefined;
 }
 
-/** Routes declared in one file. A path that is not a literal throws: the rule cannot check it. */
-export function routesIn(file: string, source: string): Route[] {
+/** Routes declared in one file, each with its handler method. A path that is not a literal throws: the rule cannot check it. */
+export function routeHandlersIn(file: string, source: string): RouteHandler[] {
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true);
-  const routes: Route[] = [];
+  const routes: RouteHandler[] = [];
   for (const cls of sf.statements.filter(ts.isClassDeclaration)) {
     const ctrl = ts
       .getDecorators(cls)
@@ -61,10 +66,20 @@ export function routesIn(file: string, source: string): Route[] {
         if (!call || !HTTP_METHODS.has(call.name)) continue;
         const sub = pathArg(call.args[0]);
         if (sub === undefined) throw new Error(`${file}: @${call.name} path is not a literal`);
-        routes.push({ controller: cls.name.text, method: call.name.toUpperCase(), path: join(prefix, sub) });
+        routes.push({
+          controller: cls.name.text,
+          method: call.name.toUpperCase(),
+          path: join(prefix, sub),
+          handler: member,
+        });
       }
     }
   }
   return routes;
+}
+
+/** Routes declared in one file. A path that is not a literal throws: the rule cannot check it. */
+export function routesIn(file: string, source: string): Route[] {
+  return routeHandlersIn(file, source).map(({ controller, method, path }) => ({ controller, method, path }));
 }
 

@@ -6,6 +6,7 @@
  */
 import express from "express";
 import request from "supertest";
+import { LoopbackServers } from "../../__tests__/helpers/nest/loopback-servers";
 import { noStoreMiddleware } from "./no-store.middleware";
 
 function app(): express.Express {
@@ -32,9 +33,15 @@ function app(): express.Express {
 }
 
 describe("noStoreMiddleware", () => {
+  const servers = new LoopbackServers();
+  afterEach(() => servers.closeAll());
+
   it.each(["/set", "/raw", "/append", "/none"])("%s answers with Cache-Control: no-store", async (path) => {
+    // Arrange
+    const server = await servers.serve(app());
+
     // Act
-    const res = await request(app()).get(path);
+    const res = await request(server).get(path);
 
     // Assert
     expect(res.status).toBe(200);
@@ -42,8 +49,11 @@ describe("noStoreMiddleware", () => {
   });
 
   it("leaves every other header alone", async () => {
+    // Arrange
+    const server = await servers.serve(app());
+
     // Act
-    const res = await request(app()).get("/other");
+    const res = await request(server).get("/other");
 
     // Assert
     expect(res.headers["x-other"]).toBe("kept");
