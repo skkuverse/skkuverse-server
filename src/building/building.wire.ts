@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CAMPUSES } from "./building.constants";
 
 export const bilingualText = z.object({
   ko: z.string(),
@@ -28,7 +29,7 @@ export const buildingCard = z.object({
   buildNo: z.string().nullable(),
   displayNo: z.string().nullable(),
   type: z.enum(["building", "facility"]),
-  campus: z.enum(["hssc", "nsc"]),
+  campus: z.enum(CAMPUSES),
   campusLabel: z.string(),
   name: bilingualText,
   description: bilingualText,
