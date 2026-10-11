@@ -1,1 +1,68 @@
-{}
+{
+  "ad-events.recordedAdEvent": {
+    "source": "src/ad/events/ad-events.wire.ts",
+    "export": "recordedAdEvent",
+    "routes": [
+      "POST ad/events"
+    ]
+  },
+  "ad-placements.adPlacementsMeta": {
+    "source": "src/ad/placements/ad-placements.wire.ts",
+    "export": "adPlacementsMeta",
+    "routes": [
+      "GET ad/placements"
+    ]
+  },
+  "ad-placements.placementMap": {
+    "source": "src/ad/placements/ad-placements.wire.ts",
+    "export": "placementMap",
+    "routes": [
+      "GET ad/placements"
+    ]
+  },
+  "app-config.appClientConfig": {
+    "source": "src/app-config/app-config.wire.ts",
+    "export": "appClientConfig",
+    "routes": [
+      "GET app/config"
+    ]
+  },
+  "building-catalog.buildingDetail": {
+    "source": "src/building/catalog/building-catalog.wire.ts",
+    "export": "buildingDetail",
+    "routes": [
+      "GET building/:skkuId"
+    ]
+  },
+  "building-catalog.buildingList": {
+    "source": "src/building/catalog/building-catalog.wire.ts",
+    "export": "buildingList",
+    "routes": [
+      "GET building/list"
+    ]
+  },
+  "building-search.buildingSearchData": {
+    "source": "src/building/search/building-search.wire.ts",
+    "export": "buildingSearchData",
+    "routes": [
+      "GET building/search"
+    ]
+  },
+  "building-search.buildingSearchMeta": {
+    "source": "src/building/search/building-search.wire.ts",
+    "export": "buildingSearchMeta",
+    "routes": [
+      "GET building/search"
+    ]
+  },
+  "building.bilingualText": {
+    "source": "src/building/building.wire.ts",
+    "export": "bilingualText",
+    "routes": []
+  },
+  "building.buildingCard": {
+    "source": "src/building/building.wire.ts",
+    "export": "buildingCard",
+    "routes": []
+  }
+}

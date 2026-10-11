@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import type { SupportedLang } from "../../infra/types";
-import { withCampusLabel } from "../building.mapper";
+import { toBuildingCard } from "../building.mapper";
 import { hasBuildNo } from "../building.rules";
 import { BuildingRepository } from "../building.repository";
 import type { Campus, SkkuId } from "../building.types";
 import { groupByFloor, toConnectedSkkuIds, toBuildingConnections, withFloorEnFallback } from "./building-catalog.mapper";
 import { BuildingCatalogRepository } from "./building-catalog.repository";
-import type { BuildingConnection, BuildingDetail, BuildingList } from "./building-catalog.types";
+import type { BuildingConnection } from "./building-catalog.types";
+import type { BuildingDetail, BuildingList } from "./building-catalog.wire";
 
 @Injectable()
 export class BuildingCatalogService {
@@ -17,7 +18,7 @@ export class BuildingCatalogService {
 
   async list(campus: Campus | undefined, lang: SupportedLang): Promise<BuildingList> {
     const buildings = await this.buildings.listBuildings(campus);
-    return { buildings: buildings.map((b) => withCampusLabel(b, lang)) };
+    return { buildings: buildings.map((b) => toBuildingCard(b, lang)) };
   }
 
   async detail(skkuId: SkkuId, lang: SupportedLang): Promise<BuildingDetail | null> {
@@ -28,7 +29,7 @@ export class BuildingCatalogService {
       this.listConnections(skkuId),
     ]);
     return {
-      building: withCampusLabel(building, lang),
+      building: toBuildingCard(building, lang),
       floors: withFloorEnFallback(groupByFloor(spaces)),
       connections,
     };

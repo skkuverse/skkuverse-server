@@ -8,7 +8,7 @@ import type { SupportedLang } from "../../infra/types";
 import { BUILDING_CACHE_CONTROL } from "../building.rules";
 import { buildingSearchQuery, type BuildingSearchQuery } from "./building-search.schema";
 import { BuildingSearchService } from "./building-search.service";
-import type { BuildingSearch } from "./building-search.types";
+import type { BuildingSearchData, BuildingSearchMeta } from "./building-search.wire";
 
 @Controller("building")
 export class BuildingSearchController {
@@ -24,7 +24,7 @@ export class BuildingSearchController {
     )
     query: BuildingSearchQuery,
     @Lang() lang: SupportedLang,
-  ): Promise<WithMeta<BuildingSearch["data"]>> {
+  ): Promise<WithMeta<BuildingSearchData, BuildingSearchMeta>> {
     const { data, meta } = await this.buildingSearch.search(query.q, query.campus, lang);
     return withMeta(data, meta);
   }

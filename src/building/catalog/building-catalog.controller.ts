@@ -8,7 +8,7 @@ import { BUILDING_CACHE_CONTROL } from "../building.rules";
 import type { SkkuId } from "../building.types";
 import { buildingListQuery, skkuIdParam, type BuildingListQuery } from "./building-catalog.schema";
 import { BuildingCatalogService } from "./building-catalog.service";
-import type { BuildingDetail, BuildingList } from "./building-catalog.types";
+import type { BuildingDetail, BuildingList } from "./building-catalog.wire";
 
 @Controller("building")
 export class BuildingCatalogController {

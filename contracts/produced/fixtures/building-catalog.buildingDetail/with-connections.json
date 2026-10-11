@@ -1,0 +1,139 @@
+{
+  "_about": "GET /building/2 captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); floors trimmed to two, spaces per floor to two, attachments and barrier-free sections to one; `extensions` as served",
+  "data": {
+    "building": {
+      "_id": 2,
+      "accessibility": {
+        "detail": {
+          "sections": [
+            {
+              "label": null,
+              "ramp": {
+                "available": false,
+                "note": null
+              },
+              "toilet": {
+                "raw": "B2~1,5,6, 총 5개 (B2 남, B1~1,5,6 여 )",
+                "count": 5
+              },
+              "elevator": {
+                "raw": "3대 중 1대",
+                "total": 3,
+                "accessible": 1
+              },
+              "elevatorStatus": "arrival",
+              "parking": 4
+            }
+          ]
+        },
+        "elevator": true,
+        "toilet": true
+      },
+      "attachments": [
+        {
+          "id": 12,
+          "url": "https://www.skku.edu/_attach/image/2018/07/WdvZbhwLWznIHxqgvdLQ.jpg",
+          "filename": "P2.jpg",
+          "alt": ""
+        }
+      ],
+      "buildNo": "101",
+      "campus": "hssc",
+      "description": {
+        "en": "To commemorate the founding philosophy of the university, 600th Anniversary Hall was constructed on November 1999. The President’s office, Vice President’s office, and administrative offices occupy ten stories of this new building. Moreover, it contains also New Millennium Hall and Cho Byung Doo Int’l Conference Hall for the internal and external events. Besides, the Museum for the exhibitions and AEAS (Academy of East Asian Studies) are located in the building.",
+        "ko": "건학 600주년을 기념하기 위해서 1999년 11월에 완공되었다. 총장실, 부총장실을 비롯한 대학본부가 자리잡고 있으며, 각종 행사를 위한 대규모 공연장인 새천년홀과 조병두국제홀이 있다. 이 밖에 패컬티식당과 은행골, SUBWAY와 도미노피자가 입점해 있고, 수시로 전시회를 개최하는 박물관과 동아시아 연구의 메카인 동아시아학술원이 위치하고 있다."
+      },
+      "displayNo": "1",
+      "extensions": {},
+      "image": {
+        "url": "https://www.skku.edu/_attach/image/2018/07/WdvZbhwLWznIHxqgvdLQ.jpg",
+        "filename": "WdvZbhwLWznIHxqgvdLQ.jpg"
+      },
+      "location": {
+        "type": "Point",
+        "coordinates": [
+          126.994479,
+          37.587361
+        ]
+      },
+      "name": {
+        "en": "600th Anniversary Hall",
+        "ko": "600주년기념관"
+      },
+      "skkuCreatedAt": "2018-04-23T00:34:12.000+00:00",
+      "skkuUpdatedAt": "2021-03-25T02:38:41.000+00:00",
+      "type": "building",
+      "updatedAt": "2026-03-18T09:22:45.612Z",
+      "campusLabel": "인사캠"
+    },
+    "floors": [
+      {
+        "floor": {
+          "ko": "지하4층",
+          "en": "B4"
+        },
+        "spaces": [
+          {
+            "spaceCd": "1B401",
+            "name": {
+              "ko": "새천년홀하부(무대)",
+              "en": "Theater"
+            },
+            "conspaceCd": "101B4001"
+          },
+          {
+            "spaceCd": "1B402",
+            "name": {
+              "ko": "저수조",
+              "en": "Water-Tank"
+            },
+            "conspaceCd": "101B4002"
+          }
+        ]
+      },
+      {
+        "floor": {
+          "ko": "지하3층",
+          "en": "B3"
+        },
+        "spaces": [
+          {
+            "spaceCd": "1B301",
+            "name": {
+              "ko": "새천년홀(중간부)",
+              "en": "새천년홀(중간부)"
+            },
+            "conspaceCd": "101B3001"
+          },
+          {
+            "spaceCd": "1B302",
+            "name": {
+              "ko": "정화조 관리실",
+              "en": "정화조 관리실"
+            },
+            "conspaceCd": "101B3002"
+          }
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "targetSkkuId": 9,
+        "targetBuildNo": "109",
+        "targetDisplayNo": "9",
+        "targetName": {
+          "en": "International Hall",
+          "ko": "국제관"
+        },
+        "fromFloor": {
+          "ko": "지하2층",
+          "en": "B2"
+        },
+        "toFloor": {
+          "ko": "1층",
+          "en": "1F"
+        }
+      }
+    ]
+  }
+}
