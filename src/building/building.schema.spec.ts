@@ -4,7 +4,8 @@
  *    but hssc/nsc is rejected with the message the 400 shows;
  *  - `campusShapeDoc`: a shape document missing any field the overlay reads is
  *    rejected (the repository then leaves it out and logs it), a geometry the
- *    overlay cannot draw is rejected, and unknown fields are dropped.
+ *    overlay cannot draw is rejected, unknown fields are dropped, and a skkuId
+ *    is either null or a building id (a positive safe integer).
  * That every real document passes is checked where the importer writes them:
  * __tests__/nest/map/campus-shapes-import.test.ts.
  */
@@ -98,5 +99,26 @@ describe("campusShapeDoc", () => {
   ])("rejects %s", (_case, override) => {
     // Act & Assert
     expect(campusShapeDoc.safeParse({ ...SHAPE, ...override }).success).toBe(false);
+  });
+});
+
+describe("campusShapeDoc reads skkuId as a building id", () => {
+  it.each([0, -1, Number.MAX_SAFE_INTEGER + 1])("rejects skkuId %p at the path skkuId", (skkuId) => {
+    // Act
+    const result = campusShapeDoc.safeParse({ ...SHAPE, skkuId });
+
+    // Assert
+    expect(result.success).toBe(false);
+    // The repository logs a dropped shape by its issue paths, so the log names the field.
+    expect([...new Set(result.error?.issues.map((issue) => issue.path.join(".")))]).toEqual(["skkuId"]);
+  });
+
+  it.each([1, null])("accepts skkuId %p", (skkuId) => {
+    // Act
+    const result = campusShapeDoc.safeParse({ ...SHAPE, skkuId });
+
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.data?.skkuId).toBe(skkuId);
   });
 });
