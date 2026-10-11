@@ -15,9 +15,12 @@
  *     main.ts therefore mounts it as raw express middleware before
  *     NestFactory.create — this test asserts req.lang / Vary actually land.
  *
- * It mirrors main.ts's bootstrap pipeline against a minimal one-controller
- * module (no DB / external APIs), so it covers the wiring without the full
- * AppModule's env + Mongo requirements.
+ * The regression pins boot their own copy of the pipeline, because they vary
+ * exactly what it fixes (bodyParser, the raw LangMiddleware). The CORS policy
+ * runs through the production pipeline itself (bootstrapHttpApp, via
+ * buildTestApp). Both use a minimal one-controller module (no DB / external
+ * APIs), so they cover the wiring without the full AppModule's env + Mongo
+ * requirements.
  */
 import { Controller, Get, Module, Req } from "@nestjs/common";
 import { ExpressAdapter } from "@nestjs/platform-express";
@@ -26,8 +29,9 @@ import { Test } from "@nestjs/testing";
 import express from "express";
 import request from "supertest";
 import { LangMiddleware } from "../../src/http/lang.middleware";
-import { CORS_METHODS, corsOrigins, WEBVIEW_ORIGIN } from "../../src/infra/origins";
-import { EXPOSED_RESPONSE_HEADERS } from "../../src/infra/origins";
+import config from "../../src/infra/config";
+import { CORS_METHODS, WEBVIEW_ORIGIN } from "../../src/infra/origins";
+import { buildTestApp } from "../helpers/nest/build-test-app";
 
 @Controller("ping")
 class PingController {
@@ -44,9 +48,6 @@ class MiniModule {}
 function buildLikeMainTs(opts: {
   bodyParser?: false;
   mountLang: boolean;
-  cors?: boolean;
-  /** main.ts passes config.isDevelopment. */
-  isDevelopment?: boolean;
 }): Promise<NestExpressApplication> {
   return (async () => {
     const expressInstance = express();
@@ -65,15 +66,6 @@ function buildLikeMainTs(opts: {
       new ExpressAdapter(expressInstance),
       opts.bodyParser === false ? { bodyParser: false } : {},
     );
-    if (opts.cors) {
-      app.enableCors({
-        origin: corsOrigins(opts.isDevelopment === true),
-        methods: [...CORS_METHODS],
-        exposedHeaders: EXPOSED_RESPONSE_HEADERS,
-        credentials: false,
-        maxAge: 86400,
-      });
-    }
     await app.init();
     return app;
   })();
@@ -137,7 +129,7 @@ describe("CORS policy", () => {
   let app: NestExpressApplication;
 
   beforeAll(async () => {
-    app = await buildLikeMainTs({ bodyParser: false, mountLang: true, cors: true });
+    app = await buildTestApp({ imports: [MiniModule] });
   });
 
   afterAll(async () => {
@@ -229,18 +221,17 @@ describe("CORS policy", () => {
  */
 describe("CORS policy in development", () => {
   let app: NestExpressApplication;
+  let isDevelopment: jest.ReplaceProperty<boolean>;
 
   beforeAll(async () => {
-    app = await buildLikeMainTs({
-      bodyParser: false,
-      mountLang: true,
-      cors: true,
-      isDevelopment: true,
-    });
+    // WHY: bootstrapHttpApp reads config.isDevelopment when it builds the app, as main.ts does.
+    isDevelopment = jest.replaceProperty(config, "isDevelopment", true);
+    app = await buildTestApp({ imports: [MiniModule] });
   });
 
   afterAll(async () => {
     await app.close();
+    isDevelopment.restore();
   });
 
   it.each(["http://localhost:5173", "http://127.0.0.1:8081", "http://localhost"])(
