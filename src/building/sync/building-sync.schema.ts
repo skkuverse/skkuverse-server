@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-// Only what the mapping cannot do without is required (campusMap.do, measured 2026-10-10).
-// SKKU's misspellings stay as sent (longtitude, spcaeNm, spcae_nm): a silent fix upstream
-// fails the item instead of reading as "".
+// QUIRK(skku): campusMap.do misspells longtitude, spcaeNm and spcae_nm, kept as sent. Only what the
+// mapping cannot do without is required (measured 2026-10-10).
 const coordinate = z.string().refine((value) => Number.isFinite(parseFloat(value)));
 
 export const skkuBuildListResponse = z.object({ buildItems: z.array(z.unknown()) });
