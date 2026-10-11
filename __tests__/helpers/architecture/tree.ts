@@ -33,7 +33,12 @@ export function readSource(rel: string): string {
   return fs.readFileSync(path.join(ROOT, rel), "utf8");
 }
 
+/** A TypeScript source under src/ that is not a spec: what the src/ comment rules read. */
+export function isNonSpecSource(file: string): boolean {
+  return file.startsWith("src/") && file.endsWith(".ts") && !file.endsWith(".spec.ts");
+}
+
 /** The TypeScript sources under src/, excluding specs. */
 export function sourceFiles(): string[] {
-  return filesUnder("src").filter((f) => f.endsWith(".ts") && !f.endsWith(".spec.ts"));
+  return filesUnder("src").filter(isNonSpecSource);
 }
