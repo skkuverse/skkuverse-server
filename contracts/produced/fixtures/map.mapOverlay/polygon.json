@@ -1,0 +1,54 @@
+{
+  "_about": "Synthetic: no festival was live at capture; generated 2026-10-11 by the real map services over an in-memory repository with the shipped eskara-2026 layer set and an open activation; the inert zone of event-synthetic",
+  "data": {
+    "id": "eskara-2026-control-entry",
+    "layerId": "eskara26_control_entry",
+    "campus": "nsc",
+    "text": {
+      "ko": "출입 통제 구역",
+      "en": "출입 통제 구역"
+    },
+    "subtitle": null,
+    "hours": [],
+    "fields": [],
+    "actions": [],
+    "order": 1,
+    "facets": {
+      "day": [
+        "day1",
+        "day2"
+      ],
+      "org": []
+    },
+    "orderByOption": {},
+    "tap": null,
+    "kind": "polygon",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            126.9707,
+            37.2949
+          ],
+          [
+            126.9712,
+            37.2949
+          ],
+          [
+            126.9712,
+            37.2953
+          ],
+          [
+            126.9707,
+            37.2953
+          ],
+          [
+            126.9707,
+            37.2949
+          ]
+        ]
+      ]
+    }
+  }
+}

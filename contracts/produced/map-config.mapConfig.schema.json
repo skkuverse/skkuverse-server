@@ -1,0 +1,473 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "naver": {
+      "type": "object",
+      "properties": {
+        "styleId": {
+          "type": "string"
+        }
+      }
+    },
+    "campuses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "hssc",
+              "nsc"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "centerLat": {
+            "type": "number"
+          },
+          "centerLng": {
+            "type": "number"
+          },
+          "defaultZoom": {
+            "type": "number"
+          },
+          "defaultTilt": {
+            "type": "number"
+          },
+          "defaultBearing": {
+            "type": "number"
+          },
+          "radiusM": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "centerLat",
+          "centerLng",
+          "defaultZoom",
+          "defaultTilt",
+          "defaultBearing",
+          "radiusM"
+        ]
+      }
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "markerStyle": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "defaultVisibleWhen": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "always"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "never"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "scheduled"
+                  },
+                  "windows": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "string"
+                        },
+                        "end": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "end"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "windows"
+                ]
+              }
+            ]
+          },
+          "userConfigurable": {
+            "type": "boolean"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "chipGroupId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "style": {
+            "type": "object",
+            "properties": {
+              "color": {
+                "type": "string"
+              },
+              "outlineColor": {
+                "type": "string"
+              },
+              "outlineWidth": {
+                "type": "number"
+              },
+              "fillOpacity": {
+                "type": "number"
+              },
+              "minZoom": {
+                "type": "number"
+              },
+              "maxZoom": {
+                "type": "number"
+              },
+              "width": {
+                "type": "number"
+              },
+              "height": {
+                "type": "number"
+              },
+              "size": {
+                "type": "number"
+              },
+              "captionTextSize": {
+                "type": "number"
+              },
+              "zIndex": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "defaultVisibleWhen",
+          "userConfigurable",
+          "endpoint",
+          "chipGroupId"
+        ]
+      }
+    },
+    "chips": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "emoji"
+                  },
+                  "emoji": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "emoji"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "action": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "webview"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "url"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "focus"
+                  },
+                  "camera": {
+                    "type": "object",
+                    "properties": {
+                      "zoom": {
+                        "type": "number"
+                      },
+                      "tilt": {
+                        "type": "number"
+                      },
+                      "bearing": {
+                        "type": "number"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "lat": {
+                        "type": "number"
+                      },
+                      "lng": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "zoom",
+                      "tilt",
+                      "bearing",
+                      "durationMs",
+                      "lat",
+                      "lng"
+                    ]
+                  },
+                  "layerIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "camera",
+                  "layerIds"
+                ]
+              }
+            ]
+          },
+          "isReset": {
+            "type": "boolean"
+          },
+          "list": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "facets": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "select": {
+                          "type": "string",
+                          "enum": [
+                            "required",
+                            "optional"
+                          ]
+                        },
+                        "options": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "window": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "startAt": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                                      },
+                                      "endAt": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                                      }
+                                    },
+                                    "required": [
+                                      "startAt",
+                                      "endAt"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "label",
+                              "window"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "label",
+                        "select",
+                        "options"
+                      ]
+                    }
+                  },
+                  "sort": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "enum": [
+                          "order",
+                          "title"
+                        ]
+                      },
+                      "scopeFacetId": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "scopeFacetId"
+                    ]
+                  }
+                },
+                "required": [
+                  "facets",
+                  "sort"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "icon",
+          "action",
+          "isReset",
+          "list"
+        ]
+      }
+    },
+    "cameraDefaults": {
+      "type": "object",
+      "properties": {
+        "markerFocus": {
+          "type": "object",
+          "properties": {
+            "zoom": {
+              "type": "number"
+            },
+            "tilt": {
+              "type": "number"
+            },
+            "bearing": {
+              "type": "number"
+            },
+            "durationMs": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "zoom",
+            "tilt",
+            "bearing",
+            "durationMs"
+          ]
+        },
+        "campusFocus": {
+          "type": "object",
+          "properties": {
+            "durationMs": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "durationMs"
+          ]
+        }
+      },
+      "required": [
+        "markerFocus",
+        "campusFocus"
+      ]
+    }
+  },
+  "required": [
+    "naver",
+    "campuses",
+    "layers",
+    "chips",
+    "cameraDefaults"
+  ]
+}

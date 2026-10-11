@@ -1,83 +1,87 @@
 /**
- * Unit test for MapService — confirms each method delegates 1:1 to the
- * src/map/* data modules (no reimplementation). BuildingService is stubbed
- * with no buildings, so getCampusOverlays exercises the FALLBACK_MARKERS path.
+ * MapConfigService builds /map/config from the base map and the live layer
+ * set: layers, chips and camera defaults, labels resolved per language, and
+ * the base map kept when the festival lookup fails. One case runs
+ * MapCampusService over a building source with no buildings, so the campus
+ * overlays take the FALLBACK_MARKERS path.
  */
-
-// getMapConfig now consults the activation window to decide whether the event
-// marker layers exist. Mocked so "no festival" is stated rather than inferred
-// from an absent DB client — and so the live case can be exercised at all.
-jest.mock("../../../src/map/map-places.data", () => ({
-  findActiveActivation: jest.fn(),
-  getPlacesCollection: jest.fn(),
-  getSessionsCollection: jest.fn(),
-}));
 
 // The config module stays REAL — the file loads with no mock — but one test
 // needs to hand /map/config a layer set whose file failed validation, which
 // the shipped file (rightly) cannot be made to do from here.
-const actualConfigModule = jest.requireActual("../../../src/map/map-layerset.config");
+const actualConfigModule = jest.requireActual("../layer-set/map-layer-set.config");
 const mockGetLayerSetConfig = jest.fn(actualConfigModule.getLayerSetConfig);
-jest.mock("../../../src/map/map-layerset.config", () => ({
+jest.mock("../layer-set/map-layer-set.config", () => ({
   ...actualConfigModule,
   getLayerSetConfig: (...args: unknown[]) => mockGetLayerSetConfig(...args),
 }));
 
-import { getLayerSetConfig } from "../../../src/map/map-layerset.config";
-import { findActiveActivation } from "../../../src/map/map-places.data";
-import { pick } from "../../../src/infra/i18n";
-import type { EventMapConfig } from "../../../src/map/map-layerset.types";
-import { BASE_CHIPS } from "../../../src/map/map-chips.data";
-import { EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "../../../src/map/map-layers.data";
-import { MapService } from "../../../src/map/map.service";
-import type { BuildingService } from "../../../src/building/building.service";
-import { clearActiveEventCache } from "../../../src/map/map-active-layerset";
-import { EVENT_CACHE_TTL_MS } from "../../../src/map/map-event-cache";
-import { clearEventOverlaysCache } from "../../../src/map/map-event-overlays.data";
-import { clearEventDetailsCache } from "../../../src/map/map-event-details.data";
+import { pick } from "../../infra/i18n";
+import { Clock } from "../../infra/clock";
+import type { BuildingService } from "../../building/building.service";
+import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
+import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { MapCampusService } from "../campus/map-campus.service";
+import { getLayerSetConfig } from "../layer-set/map-layer-set.config";
+import { BASE_CHIPS } from "../layer-set/map-layer-set.constants";
+import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
+import { MapLayerSetService } from "../layer-set/map-layer-set.service";
+import { EVENT_CACHE_TTL_MS, EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "../map.constants";
+import type { MapRepository } from "../map.repository";
+import { MapConfigService } from "./map-config.service";
 
-// The event read path is cached per process; each test starts cold.
-beforeEach(() => {
-  clearActiveEventCache();
-  clearEventOverlaysCache();
-  clearEventDetailsCache();
-});
-
-/** 건물번호 + 건물이름. The bus polyline layers are commented out upstream. */
 // 건물번호, 건물이름, and the inert `campus_geometry` layer that exists so
 // campus_shapes documents have a layerId they can legally name.
 const BASE_LAYER_COUNT = 3;
 
 /**
- * The REAL shipped config. It loads with no mock — `map-layerset.config` reads the
- * file relative to its own directory — so every expectation below derives from
- * it rather than restating a count that the next festival would break.
+ * The REAL shipped config. It loads with no mock — the loader reads the file
+ * relative to its own directory — so every expectation below derives from it
+ * rather than restating a count that the next festival would break.
  */
 const loaded = getLayerSetConfig("eskara-2026");
 if (!loaded?.config) throw new Error(`eskara-2026 failed to load: ${loaded?.error}`);
 const CONFIG: EventMapConfig = loaded.config;
 const EVENT_LAYER_IDS = new Set(CONFIG.layers.map((l) => l.id));
 
-const mockFindActiveActivation = findActiveActivation as jest.MockedFunction<
-  typeof findActiveActivation
->;
+// "No festival" is stated rather than inferred from an absent DB client, and
+// the live case can be exercised at all.
+const mockFindActiveActivation = jest.fn<ReturnType<MapRepository["findActiveActivation"]>, [Date]>();
+const findActiveActivation: MapRepository["findActiveActivation"] = mockFindActiveActivation;
 
-describe("MapService", () => {
+describe("MapConfigService", () => {
   // getCampusOverlays falls back to FALLBACK_MARKERS on an empty building list (no DB).
   const building = {
     listAllBuildings: jest.fn().mockResolvedValue([]),
     listAllCampusShapes: jest.fn().mockResolvedValue([]),
   } as unknown as BuildingService;
-  const svc = new MapService(building);
+
+  let config: MapConfigService;
+  let campusService: MapCampusService;
+  // The event read path is cached per service instance; each test starts cold.
+  function freshServices(): void {
+    const repository = new FakeMapRepository();
+    repository.findActiveActivation = findActiveActivation;
+    config = new MapConfigService(new MapLayerSetService(asReal<MapRepository>(repository), new Clock()));
+    campusService = new MapCampusService(building);
+  }
+  const svc = {
+    getMapConfig: (lang: "ko" | "en" | "zh") => config.getMapConfig(lang),
+    getCampusOverlays: () => campusService.getCampusOverlays(),
+  };
 
   beforeEach(() => {
+    freshServices();
     mockFindActiveActivation.mockReset();
     mockFindActiveActivation.mockResolvedValue(null);
     mockGetLayerSetConfig.mockImplementation(actualConfigModule.getLayerSetConfig);
   });
 
   it("getMapConfig delegates to map-config.data (campus labels via i18n)", async () => {
+    // Act
     const ko = await svc.getMapConfig("ko");
+
+    // Assert
     expect(ko.campuses).toHaveLength(2);
     // The BASE layers and nothing else: no activation is live above.
     expect(ko.layers).toHaveLength(BASE_LAYER_COUNT);
@@ -86,12 +90,15 @@ describe("MapService", () => {
   });
 
   it("sends a userConfigurable flag on every layer", async () => {
+    // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
 
+    // Act
     const ko = await svc.getMapConfig("ko");
 
+    // Assert
     // Derived, not a magic 8: hardcoding the count couples a test about
     // visibility flags to the two commented-out bus layers staying commented,
     // and uncommenting them would fail here with a misleading diagnosis.
@@ -116,12 +123,15 @@ describe("MapService", () => {
   it.each(["ko", "en", "zh"] as const)(
     "resolves every layer label in %s as a STRING, through the one I18n resolver",
     async (lang) => {
+      // Arrange
       mockFindActiveActivation.mockResolvedValue({
         _id: "eskara-2026",
       } as Awaited<ReturnType<typeof findActiveActivation>>);
 
+      // Act
       const res = await svc.getMapConfig(lang);
 
+      // Assert
       for (const layer of res.layers) {
         // A `{ko, en, zh}` object leaking through the `...rest` spread would
         // serialize as JSON and render "[object Object]" in the filter grid.
@@ -135,11 +145,15 @@ describe("MapService", () => {
   );
 
   it("getMapConfig appends the live layer set's layers, as the config declares them", async () => {
+    // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
 
+    // Act
     const ko = await svc.getMapConfig("ko");
+
+    // Assert
     const eventLayers = ko.layers.filter((l) => EVENT_LAYER_IDS.has(l.id));
 
     expect(eventLayers).toHaveLength(CONFIG.layers.length);
@@ -171,11 +185,15 @@ describe("MapService", () => {
     // forgot CONFIG_FILES, or ops naming a set that does not exist yet. The
     // buildings must not disappear over it, and no chip may point at a layer
     // the same response does not carry.
+    // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2099",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
 
+    // Act
     const ko = await svc.getMapConfig("ko");
+
+    // Assert
     expect(ko.layers.map((l) => l.id)).toEqual(["building_numbers", "building_labels", "campus_geometry"]);
     expect(ko.chips.map((c) => c.id)).toEqual(BASE_CHIPS.map((c) => c.id));
   });
@@ -187,6 +205,7 @@ describe("MapService", () => {
     // rather than serve layers whose category table it cannot trust. The two
     // surfaces disagree for as long as the file is broken, which is the price
     // of never serving a layer set that failed validation.
+    // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
@@ -196,7 +215,10 @@ describe("MapService", () => {
       error: 'config.itemDefaults.fallback.layerId "nope" is not in config.layers',
     });
 
+    // Act
     const ko = await svc.getMapConfig("ko");
+
+    // Assert
     expect(ko.layers.map((l) => l.id)).toEqual(["building_numbers", "building_labels", "campus_geometry"]);
     expect(ko.chips.map((c) => c.id)).toEqual(BASE_CHIPS.map((c) => c.id));
   });
@@ -205,6 +227,7 @@ describe("MapService", () => {
     // The app caches a festival-less /map/config for minutes, so dropping the
     // event layers on one failed read would hide the festival long after the
     // database recovered. The cached activation covers the gap instead.
+    // Arrange
     let clock = Date.now();
     const spy = jest.spyOn(Date, "now").mockImplementation(() => clock);
     try {
@@ -213,10 +236,12 @@ describe("MapService", () => {
       } as Awaited<ReturnType<typeof findActiveActivation>>);
       const before = await svc.getMapConfig("ko");
 
+      // Act
       mockFindActiveActivation.mockRejectedValue(new Error("mongo down"));
       clock += EVENT_CACHE_TTL_MS;
       const during = await svc.getMapConfig("ko");
 
+      // Assert
       expect(during.layers.map((l) => l.id)).toEqual(before.layers.map((l) => l.id));
       expect(during.layers.some((l) => EVENT_LAYER_IDS.has(l.id))).toBe(true);
     } finally {
@@ -225,11 +250,15 @@ describe("MapService", () => {
   });
 
   it("getMapConfig keeps the base layers when the activation lookup throws", async () => {
+    // Arrange
     mockFindActiveActivation.mockRejectedValue(new Error("mongo down"));
 
+    // Act
     // The whole point of containing that read: a festival lookup failing must
     // not take 건물번호 down with it.
     const ko = await svc.getMapConfig("ko");
+
+    // Assert
     expect(ko.layers).toHaveLength(BASE_LAYER_COUNT);
     expect(ko.layers.map((l) => l.id)).toEqual([
       "building_numbers",
@@ -239,11 +268,15 @@ describe("MapService", () => {
   });
 
   it("declares a chipGroupId on every layer, null on the building layers", async () => {
+    // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
 
+    // Act
     const ko = await svc.getMapConfig("ko");
+
+    // Assert
     const groupById = new Map(ko.layers.map((l) => [l.id, l.chipGroupId]));
 
     // null is the load-bearing value, not an omission: it is what keeps 건물번호
@@ -258,6 +291,7 @@ describe("MapService", () => {
   });
 
   it("gates the chips on the same activation read as the layers", async () => {
+    // Act & Assert
     const dark = await svc.getMapConfig("ko");
     expect(dark.chips.map((c) => c.id)).toEqual(BASE_CHIPS.map((c) => c.id));
     // One request, one activation read. Two lookups could also disagree if the
@@ -269,7 +303,7 @@ describe("MapService", () => {
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
     // The activation is cached; drop it so the second request sees the change.
-    clearActiveEventCache();
+    freshServices();
 
     const live = await svc.getMapConfig("ko");
     // Reset chip plus every authored one.
@@ -277,11 +311,15 @@ describe("MapService", () => {
   });
 
   it("never names a layer the same response does not carry", async () => {
+    // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
 
+    // Act
     const ko = await svc.getMapConfig("ko");
+
+    // Assert
     const served = new Set(ko.layers.map((l) => l.id));
     const focusChips = ko.chips.filter((c) => c.action.kind === "focus");
 
@@ -299,18 +337,24 @@ describe("MapService", () => {
   });
 
   it("keeps the base chips when the activation lookup throws", async () => {
+    // Arrange
     mockFindActiveActivation.mockRejectedValue(new Error("mongo down"));
 
+    // Act
     // Containment covers chips too — a festival lookup failing must answer
     // "no festival" and leave the base row exactly as it is, the same way it
     // must not take 건물번호 down with the booths.
     const ko = await svc.getMapConfig("ko");
+
+    // Assert
     expect(ko.chips.map((c) => c.id)).toEqual(BASE_CHIPS.map((c) => c.id));
   });
 
   it("serves the camera settings the app used to hardcode", async () => {
+    // Act
     const ko = await svc.getMapConfig("ko");
 
+    // Assert
     // `zoom: 17.5` and `duration: 500` were literals at three call sites in
     // CampusScreen, so a chip's camera and a marker-tap camera were configured
     // in two places that could disagree about how close "close" is.
@@ -335,11 +379,15 @@ describe("MapService", () => {
   });
 
   it("serves the marker geometry the app used to hardcode", async () => {
+    // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
 
+    // Act
     const ko = await svc.getMapConfig("ko");
+
+    // Assert
     const byId = new Map(ko.layers.map((l) => [l.id, l]));
 
     // DOT_SIZE, and the label layer's globalZIndex.
@@ -368,11 +416,15 @@ describe("MapService", () => {
   });
 
   it("draws a festival zone as a fill with no outline", async () => {
+    // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
 
+    // Act
     const ko = await svc.getMapConfig("ko");
+
+    // Assert
     const zone = ko.layers.find((l) => l.id === "eskara26_control_entry")!;
     expect(zone).toBeDefined();
 
@@ -398,18 +450,22 @@ describe("MapService", () => {
 
   /**
    * Asserted on the WIRE rather than on the layer set JSON, and the difference
-   * is the point. `asEventLayer` in map-layerset.config.ts reads five named
+   * is the point. The layer-set schema (map-layer-set.schema.ts) reads five named
    * members out of each authored layer and builds a fresh object, so a "shape"
    * typed into eskara-2026.json is dropped and could never reach a response. A
    * test guarding the config file would pass while someone stamped a shape onto
    * EVENT_LAYER_STYLE, which is the edit that would actually ship one.
    */
   it("sends no style.shape, leaving every place marker on the client's dot-then-pin default", async () => {
+    // Arrange
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
 
+    // Act
     const ko = await svc.getMapConfig("ko");
+
+    // Assert
     // Selected by markerStyle rather than by the eskara ids: `placeDot` is the
     // only client branch that reads the shape axis, so this is exactly the set
     // the rule covers — and it picks up next year's festival for free.
@@ -447,8 +503,10 @@ describe("MapService", () => {
   it("getCampusOverlays delegates to map-campus-overlays.data, both layers in one call", async () => {
     // No overlay argument any more: one response carries both building layers,
     // so the app's endpoint-keyed cache serves two toggles from one fetch.
+    // Act
     const { overlays: markers, degraded } = await svc.getCampusOverlays();
 
+    // Assert
     // building.data is mocked to [] above, so this is the fallback path — and it
     // must say so, or the controller caches 12 hardcoded buildings for a day.
     expect(degraded).toBe(true);
@@ -466,5 +524,5 @@ describe("MapService", () => {
   // methods: getOverlaysByCategory and computeEtag served a hardcoded building
   // table that the v2 migration orphaned, and getOverlayById duplicated
   // GET /bus/route/:routeId with less in the payload. Their coverage moved to
-  // map-routes.test.ts, which now pins that both URLs 404.
+  // map.routes.test.ts, which now pins that both URLs 404.
 });

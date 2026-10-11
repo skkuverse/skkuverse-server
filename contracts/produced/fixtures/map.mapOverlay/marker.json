@@ -1,0 +1,91 @@
+{
+  "_about": "Synthetic: no festival was live at capture; generated 2026-10-11 by the real map services over an in-memory repository with the shipped eskara-2026 layer set and an open activation; the booth marker of event-synthetic",
+  "data": {
+    "id": "eskara-2026-booth-01",
+    "layerId": "eskara26_booth",
+    "campus": "nsc",
+    "text": {
+      "ko": "우끼끼친",
+      "en": "Ukkikki"
+    },
+    "subtitle": {
+      "ko": "생명공학대학 학생회",
+      "en": "생명공학대학 학생회"
+    },
+    "hours": [
+      {
+        "startAt": "2026-10-01T09:00:00.000Z",
+        "endAt": "2026-10-01T15:00:00.000Z",
+        "label": {
+          "ko": "단체 입장",
+          "en": "Groups"
+        }
+      },
+      {
+        "startAt": "2026-10-02T09:00:00.000Z",
+        "endAt": null,
+        "label": null
+      }
+    ],
+    "fields": [
+      {
+        "label": {
+          "ko": "운영",
+          "en": "운영"
+        },
+        "value": {
+          "ko": "학생회",
+          "en": "학생회"
+        }
+      }
+    ],
+    "actions": [
+      {
+        "id": "map",
+        "label": {
+          "ko": "지도",
+          "en": "지도"
+        },
+        "actionType": "webview",
+        "actionValue": "https://webview.skkuverse.com/eskara/map",
+        "style": "primary"
+      },
+      {
+        "id": "band",
+        "label": {
+          "ko": "팔찌",
+          "en": "팔찌"
+        },
+        "actionType": "miniapp",
+        "actionValue": "eskara-2026/eskara/wristband"
+      }
+    ],
+    "order": 10,
+    "facets": {
+      "day": [
+        "day1",
+        "day2"
+      ],
+      "org": [
+        "council"
+      ]
+    },
+    "orderByOption": {
+      "day1": 3
+    },
+    "tap": {
+      "kind": "event",
+      "placeId": "eskara-2026-booth-01"
+    },
+    "kind": "marker",
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        126.971747,
+        37.294452
+      ]
+    },
+    "pinPriority": 20,
+    "locationAccuracy": "exact"
+  }
+}
