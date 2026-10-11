@@ -2,7 +2,8 @@ import type { Document, Filter } from "mongodb";
 import { escapeRegex } from "../../shared/regex.util";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
 import { SERVED_BUILDING_PROJECTION } from "../building.query";
-import { CAMPUSES, isCampus } from "../building.rules";
+import { CAMPUSES } from "../building.constants";
+import { isCampus } from "../building.rules";
 import type { Campus } from "../building.types";
 import {
   BUILDING_SEARCH_LIMIT,
