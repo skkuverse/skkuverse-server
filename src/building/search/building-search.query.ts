@@ -113,7 +113,7 @@ interface RankedSearchSpec<TDoc> {
   tiebreak: Readonly<Record<string, 1>>;
 }
 
-/** WHY: spaceCd breaks ties: the sync's weekly upserts and deletes change the documents' natural order. */
+/** WHY: the unique key breaks ties: weekly sync upserts and deletes reorder documents, and a spaceCd repeats across campuses. */
 const SPACE_SEARCH: RankedSearchSpec<SpaceDoc> = {
   keywordFilter: spaceKeywordFilter,
   tiers: SPACE_TIERS,
@@ -121,7 +121,7 @@ const SPACE_SEARCH: RankedSearchSpec<SpaceDoc> = {
   strongLimit: SPACE_SEARCH_LIMIT,
   weakLimit: SPACE_WEAK_LIMIT,
   projection: { _id: 0, _score: 0, sources: 0, syncedAt: 0 },
-  tiebreak: { spaceCd: 1 },
+  tiebreak: { spaceCd: 1, buildNo: 1, campus: 1 },
 };
 
 /** WHY: _id breaks ties: SKKU's integer id, which the sync upserts by and never deletes. */
