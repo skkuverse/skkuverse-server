@@ -1,487 +1,110 @@
 ---
-title: The Map Module, In Reading Order
+title: Map Architecture
 type: explanation
-status: accepted
+status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-10
+last-updated: 2026-10-11
 audience: internal
 ---
 
-# The Map Module, In Reading Order
+# Map Architecture
 
-> Why `src/map/` is shaped the way it is, and the order to read it in. Opened alphabetically the module is a pile; opened in this order it is four short legs, each depending only on the one before it. Endpoint contracts live in [reference/map-overlays-api.md](../reference/map-overlays-api.md); the ops-side storage contract is [reference/event-places.md](../reference/event-places.md).
+> What `src/map/` serves under `/map`: the map's layers and chips, the campus overlays it mirrors from the building module, and a festival's places, overlays and sheets. Read it before you change a layer, a chip, the layer-set file or an overlay field.
 
-> [!NOTE]
-> `src/map/` is the SSOT. File and symbol names below are pointers to help you navigate, not enshrined
-> truth — no line numbers are quoted here on purpose, because they drift on every edit. Grep for the
-> symbol.
+## Context
 
-## 1. The four nouns
+Map owns two things: the base map's layer catalogue, and the festival structure tier, one layer-set JSON file per festival committed next to its loader. The buildings and campus shapes it draws are the building module's, and the festival's places and activations are written by ops scripts into Mongo; map only reads them. Each route is its own sub-module (`config/`, `campus/`, `event/`, `event-details/`), and `layer-set/` answers "which festival is live, and how is it drawn" for three of them; the root holds the places repository, the shared overlay wire and the base layers.
 
-Most confusion about this module is vocabulary, not code. Four things sound alike and are not.
-
-| Noun | What it is | Decides |
-| --- | --- | --- |
-| **layer** | One kind of thing with one on/off switch | What gets drawn, in what colour, behind which toggle |
-| **layer set** | One festival's whole bundle — its layers, chips, camera and category table — as one JSON file | Which festival's layers and chips exist right now |
-| **chip** | One pill in the row above the map | What a tap does: move the camera, and set which layers are on |
-| **chip group** | A `chipGroupId` field on every layer | Which layers a chip is allowed to switch off. `null` means none, ever |
-
-Only the first and third are visible on screen. A layer set and a chip group never draw a pixel — they
-are the rules that decide what fills the layer list and the chip row.
-
-Two consequences fall out of this and are worth holding onto:
-
-- **A layer is a switch, not a download.** Every festival layer points at one shared marker endpoint
-  (`EVENT_OVERLAYS_ENDPOINT`), and both building layers point at another. The app keys its overlay cache
-  on the endpoint string, so layers sharing a source cost one fetch between them; each renders the
-  subset of markers carrying its own `layerId`.
-- **A chip does two things at once.** It carries a camera *and* a list of layer ids. That pairing is
-  why chips exist instead of just more toggles.
-
-## 2. The territory: two requests, one chokepoint
-
-The module serves several endpoints, but only two are interesting, and they meet in the same function.
-
-```text
-  GET /map/config              GET /map/overlays/event
-         │                              │
-         ▼                              ▼
-  map-config.data              map-event-overlays.data
-         │                              │
-         └──────────────┬───────────────┘
-                        ▼
-              activeEventConfig()            <- map-active-layerset.ts
-                        │
-          ┌─────────────┴─────────────┐
-          ▼                           ▼
-  findActiveActivation()        getLayerSetConfig()
-  `activations` collection      `config/<layerSetId>.json`
-  MONGO, read per request       REPO, parsed once at import
-```
-
-Both endpoints ask the same question through the same small file. That is deliberate: asking
-separately would be two reads for one answer, and the two could disagree if the activation window
-closed between them — serving a chip row pointing at layers no longer in the response.
-
-> [!IMPORTANT]
-> The most useful single fact about this module: **the JSON config is read from disk exactly once, at
-> import; the Mongo activation is read on every request.** Editing a layer set's JSON needs a
-> redeploy. Flipping `enabled: false` on its activation takes the festival down without one.
-
-## 3. Ownership tiers
-
-The module is organised by who can change a thing, not by what the thing does. Every file belongs to
-one of three tiers, and knowing which one answers most "where do I edit this" questions.
-
-| Tier | What lives there | To change it |
-| --- | --- | --- |
-| **repo** | TypeScript, plus committed JSON under `src/map/config/` | PR and deploy |
-| **mongo** | The `places` and `activations` collections | Ops edit live, mid-festival, no deploy |
-| **wire** | The shapes the app receives (`MapOverlay`, `MapChip`, the config response) | Deploy *and* an app release |
-
-This split is also the fail-loud / fail-soft boundary, per the reasoning in
-[reference/event-places.md](../reference/event-places.md): a bad value in the repo tier is a developer
-mistake that a PR fixes, so it fails loudly at boot; a bad value in the Mongo tier is content, so it is
-logged and skipped while the rest of the map keeps serving.
-
-## 4. Leg 1 — the door
-
-Three thin files. Read them to learn what exists, then stop thinking about them; they hold almost no
-logic on purpose.
-
-- **`map.module.ts`** — the endpoint list and the rate limiter. The only file that shows the module's
-  full surface in one screen: four endpoints across two prefixes, `/map/config`,
-  `/map/overlays/{campus,event}` and `/map/overlays/event/details`. It imports `BuildingModule`, because the campus overlay path reaches
-  into the building feature for both its buildings and its `campus_shapes`. There is no poller: the
-  feature is purely HTTP.
-- **`controllers/`** — HTTP concerns only. Worth one careful read for the caching, which is where the
-  real decisions are. The campus route reads a `degraded` flag from its data module and downgrades to
-  `no-store` when the buildings projection fell back to its hardcoded list; without that, a brief empty
-  read during a re-seed would pin a near-empty campus into every client and edge cache for a day, on a
-  stable URL with nothing to bust it. The event route uses a much shorter TTL, short enough that an ops
-  correction is live before anyone walks there.
-- **`map.service.ts`** — delegates 1:1 to the data modules; it exists so Nest has something injectable.
-  One thing here is not delegation: `onModuleInit` calls `ensureIndexes()` inside a non-fatal
-  try/catch. It used to also hold a bus-route coordinate map imported from `src/bus/` — the one place
-  this module reached sideways into another feature's data — and that went with the legacy overlay
-  routes.
-
-## 5. Leg 2 — the contracts
-
-Five type files plus one tiny geometry module, zero runtime behaviour beyond a shoelace sum. Read them
-before touching any logic: their doc comments *are* the design record, and every later file is these
-shapes being filled in.
-
-### `map-overlay.types.ts`
-
-The most important file in the module. `MapOverlay` is the one drawable schema, shared by buildings,
-festival booths, zones and route lines alike. Buildings and booths used to ship different shapes, which
-is what forced the app to carry two rendering paths; every producer imports this now, so a field can no
-longer be added to one and forgotten in the others.
-
-Four things to understand before anything else:
-
-- `kind` — which renderer draws this overlay, and the SINGLE discriminant. It names the renderer rather
-  than the geometry, because four of the client's overlay components consume the same coordinate
-  sequence and differ only in how they paint it — a geometry-shaped tag could not tell them apart. It
-  is an OPEN enum: a client skips a `kind` it does not know, dropping that one overlay and never its
-  layer or its siblings.
-- `layerId` — which layer draws this overlay. Not unique across layers: one building is drawn once per
-  building layer, and both overlays share an `id`.
-- `hours: []` — an empty window list means **always open**, and that is its only meaning. There is
-  deliberately no `status` field; it was only ever a cache of this arithmetic, and it forced
-  "both bounds null" to mean two opposite things.
-- `pinPriority` — the *second* step of the client's collision ladder, after openness. Ordering it first
-  would hide an open booth behind a bar that is shut. It lives on the `marker` arm alone: two
-  overlapping zones are a design choice, not a collision, and a union makes it unrepresentable
-  elsewhere rather than merely unused.
-
-`MarkerTap` is a discriminated union. Its place arms (`skku_building`, `event`) carry a `placeId` that
-is a string for every kind, including buildings whose id is numeric in Mongo. One addressing scheme is
-the point, and it makes the deep link literally the two fields of the tap. Its `chip` arm carries a
-`chipId` instead. It is for a shape that stands for a list rather than being a place, like the
-2026 food-truck zone: the tap runs that chip. `tap: null` is how a backdrop is expressed: drawn, not
-pressable.
-
-- `locationAccuracy` — whether a marker's point is the place's spot (`"exact"`) or only names the area
-  it is somewhere in (`"area"`: the food trucks, placed on the day). It is a fact, not a rendering
-  instruction; the app opens an area pin's sheet tall. It is marker-only for the same reason as
-  `pinPriority`.
-
-### `src/shared/geojson.types.ts` and `src/shared/ring-winding.util.ts`
-
-The RFC 7946 vocabulary, shared by storage and the wire, and the one operation performed on it.
-
-The geometry object in Mongo and the geometry object in the response are the SAME object. There is no
-converter on the server, and that is the whole design: an axis swap can only be introduced at a
-conversion, and swapped Seoul coordinates land in the Yellow Sea without ever throwing.
-
-`ring-winding.util.ts` is the single exception, and it earns it. RFC 7946 §3.1.6 requires exterior rings
-counter-clockwise; Mongo's `2dsphere` validates closure and self-intersection but **never orientation**,
-so a reversed ring stores silently and the client's polygon overlay then draws it wrong or refuses its
-taps. Normalisation runs on READ rather than in the importer for two reasons: `scripts/` is CommonJS and
-outside tsconfig, so an importer doing this would need a second copy of the shoelace; and hand-editing
-Mongo is a blessed ops workflow, so an import-time-only fix would miss the edits most likely to be
-wrong. It reorders ring elements only, so it cannot transpose a `[lng, lat]`, and it returns the same
-object untouched when nothing needed changing.
-
-### `map-chip.types.ts`
-
-`MapChip`, `MapChipAction` and `MapCamera`. The action is discriminated on `kind` — a `webview` chip
-opens a page, a `focus` chip carries a camera and a `layerIds` array. The comment on that array states
-the two rules governing what a tap may change; they are enforced two files later, in `map-chips.data`.
-
-Also recorded here: a reserved third variant that is written down but not built, and a warning that the
-client cannot honour `tilt`/`bearing` and `durationMs` at the same time — an SDK limitation the server
-deliberately does not bake into the wire.
-
-### `map-layerset.types.ts`
-
-`EventMapConfig`, the authored shape of a festival JSON, plus `presentationFor` — the one resolver that
-turns a booth's `category` into a layer and a pin priority.
-
-```ts
-// map-layerset.types.ts — `Object.hasOwn`, not `??`: `category` is ops-typed
-// and `byCategory` is a plain object, so "constructor" or "toString" would
-// otherwise resolve to a prototype member — truthy, and not a presentation —
-// and the booth would ship with no layer, silently.
-return Object.hasOwn(byCategory, category) ? byCategory[category]! : fallback;
-```
-
-`category` is an **open** string edited in Mongo, so an unmapped value is content rather than a config
-bug: it falls back to the config's fallback layer rather than dropping the booth off the map.
-
-### `map-places.types.ts`
-
-The two stored document shapes. Nothing here is a wire type. `MapPlaceDoc` is one operating entity —
-this booth, on this spot, open during these intervals. `ActivationDoc` is the ops lever, and its
-`enabled` field is the whole reason the activation tier lives in Mongo rather than in the config file:
-it buys a kill switch that does not need a deploy.
-
-Note what is absent: no `lifecycle`, no `deletedAt`, no `status`. A cancelled booth is deleted, and
-that is exactly what frees `hours: []` to mean one thing.
-
-## 6. Leg 3 — the assembly
-
-Five files that build one `GET /map/config` response. Read them in this order; it is also the import
-order, and section 8 explains why that is enforced rather than conventional.
-
-1. **`map-layers.data.ts`** — the layer catalogue. `BASE_LAYERS` holds the building layers, hardcoded
-   and present every day of the year. `eventLayerSpecs()` manufactures the live festival's layers from
-   its config. `chipGroupOf()` resolves a layer id to its exclusivity group. A leaf module: it imports
-   only types, so nothing can create a cycle through it.
-
-   Two fields on the generated specs carry the whole festival story — `markerStyle` is hardcoded to
-   `placeDot`, which is how every festival marker gets the dot-then-pin drawing without the config
-   saying so, and `chipGroupId` is set to the layer set's own id, which is what makes each festival
-   its own fence. There is deliberately no `type` beside them: the overlay's own `kind` is the sole
-   discriminant (section 12), so a layer no longer names its renderer.
-
-2. **`map-chips.data.ts`** — the chip validator, the synthesised reset chip, and the spec → wire
-   projection. The validator accumulates errors rather than throwing on the first, so a bad edit is
-   fixed in one pass. `BASE_CHIPS` is validated **at import**, so an invalid permanent chip aborts the
-   boot rather than surfacing on the first request.
-
-   `resetChip()` is derived from the layer list, never authored: it names the layers belonging to the
-   festival's default view, which is not necessarily all of them — a layer that ships hidden stays out
-   of it. Deriving it is what makes drift impossible; a second hand-written list of the same ids is
-   exactly the parallel structure that quietly stops turning one category back on.
-
-3. **`map-layerset.config.ts`** — reads `config/*.json` off disk, validates every field, freezes the
-   result. Most of the file is hand-rolled primitive validators that each throw a message naming the
-   exact path; skim those and read `assertValidConfig` and `loadOne` properly.
-
-   `loadOne` is where the fail-soft posture lives: a rejected config is logged with the filename and
-   skipped, so `/map/config` keeps serving the base layers and only the festival is missing. Silence
-   here would look exactly like "the festival is over".
-
-   Near the end of `assertValidConfig`, the chip validator runs over the base chips *plus* the
-   festival's, against the base layers *plus* the festival's — the row exactly as it will be served.
-   That is the only place a collision with the synthesised reset chip can be caught at all, since that
-   chip is authored nowhere.
-
-4. **`map-active-layerset.ts`** — the smallest file in the module and the one to memorise. It answers
-   one question, "which layer set is live, and is its config usable?", and returns `null` for three
-   distinct causes: no festival today, an activation naming a layer set this build has no file for, or
-   a file that failed validation. None is a reason to fail a request, and each deploy-or-ops mistake is
-   logged once per process rather than once per request.
-
-5. **`map-config.data.ts`** — assembles the response. Two things to read closely. `activeEvent()` wraps
-   the lookup in a try/catch that answers "no festival" on failure, preserving the never-fails property
-   the route had before it had any DB dependency at all; without it a Mongo hiccup would trade a missing
-   festival for a blank campus map, because the app's own fallback config holds no building layers
-   either. And the layer list is built by concatenating the two origins and mapping over them **once**:
-
-   ```ts
-   // map-config.data.ts
-   const layerSpecs = event
-     ? [...BASE_LAYERS, ...eventLayerSpecs(event)]
-     : BASE_LAYERS;
-   ```
-
-   One mapping with a `...rest` spread, not a field-by-field copy, so a member added to `LayerSpec`
-   reaches the wire in one edit. The festival layers used to be built by a separate hand-copied
-   mapping, which meant a new member shipped on the buildings and was silently missing from the booths
-   with `tsc` green.
-
-   On the wire the two origins are indistinguishable — one flat `layers` array, no field marking where
-   a layer came from. That is what lets the app hold one renderer with no "festival mode" branch. It
-   also creates a shared namespace, which is why a festival layer reusing a base layer id is rejected
-   at config load.
-
-## 7. Leg 4 — the markers
-
-Where pins are produced. Two independent producers, one shared output schema, and the raw Mongo layer
-underneath them.
-
-- **`map-places.data.ts`** — collection getters, `ensureIndexes()`, and `findActiveActivation()`. The
-  sort on that query is not cosmetic: nothing stops ops enabling two overlapping layer sets, and an
-  unsorted `findOne` would let the poller and each api replica pick a different one, making the served
-  festival flap between requests. The `2dsphere` index is not for geo queries — none are run — it
-  exists because Mongo rejects a malformed coordinate pair at insert, which is the cheapest guard
-  against a `[lng, lat]` swap.
-- **`map-campus-overlays.data.ts`** — everything permanent, in one collection: buildings into marker
-  overlays, plus hand-authored `campus_shapes` into polygons and paths, plus a small hardcoded fallback
-  for an empty buildings collection. A building is emitted once per layer — same document, different
-  field in `text` — but that is the common case rather than a guarantee: three filters apply
-  independently, so a building can land on two layers, one, or none. Read the comments on the `||`
-  coalescing and the `Number.isFinite` guard; both document real upstream data defects that TypeScript
-  cannot catch. The two reads are concurrent and the shapes read is caught, so campus geometry can fail
-  without taking the campus map with it — which keeps `degraded` meaning exactly one thing.
-- **`map-event-overlays.data.ts`** — places into overlays, the other end of the same schema. The header
-  comment is the best summary of the event map's history in the repo, including the three fields that
-  were deleted and why. One unrenderable document is skipped and counted in the log rather than taking
-  the other sixty with it; a malformed sheet button is dropped and named, rather than dropping the whole
-  booth. `kind` is derived from the stored `geometry.type` rather than stored beside it, because a
-  second field saying the same thing could disagree with the first.
-
-- **`map-event-details.data.ts`** — the same documents again, projected into the sheet body a tapped
-  pin opens rather than into overlays. A separate route because only the sheet reads it. It reuses the
-  overlay producer's `toWire` and `isRenderable`, so text and "is this place servable" are decided in one
-  place, and re-checks every block and URL it serves: the importer already refused a bad detail, so
-  these checks exist for a hand edit in Mongo, where one block missing its body would otherwise throw
-  out of `toWire` and 500 every sheet.
-
-Both overlay producers pass Point and LineString geometry through **by reference**. Only a polygon's rings are
-touched, and only to normalise winding.
-
-### Campus shapes
-
-`campus_shapes` holds permanent campus geometry: building footprints, the campus boundary, walking
-paths. `scripts/import-campus-shapes.js` writes it, and the building module parses each document as it
-reads it (`campusShapeDoc` in `src/building/building.schema.ts`; the type is `CampusShapeDoc` in
-`src/building/building.document.ts`).
-
-It is a collection of its own rather than a `footprint` field on `buildings`, for two reasons.
-`buildings` mirrors SKKU's campusMap.do and is re-synced on `BUILDING_SYNC_INTERVAL_MS`, so the sync
-owns its document shape: authored geometry there survives the sync's field-by-field `$set`, but would
-not survive a switch to `replaceOne`. And a boundary or a path has no building `_id` to hang off, so a
-field on `buildings` could hold only half of what the collection holds. It lives in the building
-database beside `connections`, the other hand-authored collection there.
-
-A shape names a `BASE_LAYERS` entry by `layerId` directly, with no category table between. The event
-map has `presentationFor` so ops can invent a category mid-festival; permanent geometry has no such
-need, and the base layer list is repo TypeScript either way. A shape whose `layerId` names no layer is
-dropped and counted.
-
-`skkuId` links a footprint to its building. The overlay turns it into
-`tap: { kind: "skku_building", placeId: String(skkuId) }`, so tapping a footprint opens the same sheet
-as the building's number pin, with no join and no new tap kind.
-
-## 8. Why the reading order is the import order
-
-Leg 3 must be read in that sequence because the imports only run one way, and a lint rule keeps them
-that way.
-
-```text
-                       map-config.data          <- builds the response
-                              ▲
-                              │
-                      map-active-layerset       <- "which festival is live?"
-                              ▲
-                              │
-                      map-layerset.config       <- loads and validates the JSON
-                         ▲          ▲
-                         │          │
-             map-layers.data    map-chips.data  <- LEAVES: type-only imports
-                (catalogue)      (validator)
-```
-
-Chips reference layer ids, and a chip's `layerIds` must resolve to a `chipGroupId` to be validated —
-so the config loader needs both leaves at runtime, to check a festival against the full served
-catalogue. Keeping the catalogue and the validator in leaf modules is what makes that possible without
-a cycle. A back edge from either leaf would close one, and `eslint.config.js` refuses it by path: the
-rule is code, not prose.
-
-## 9. Boot time versus request time
-
-Getting this wrong is the most common way to be confused about the module. Roughly half the work
-happens once, at process start, and never again.
-
-| When | What runs | If it fails |
-| --- | --- | --- |
-| import | Base chips validated against base layers | Boot aborts — repo TypeScript, a PR fixes it |
-| import | Every `config/*.json` read, parsed, validated, frozen | Logged and skipped; the base map keeps serving |
-| boot | `ensureIndexes()` on `places` and `activations` | Warn and continue; indexes are a nicety, not a prerequisite |
-| per request | Activation lookup — is a festival live right now? | Caught; serves base layers only |
-| per request | Layer and chip lists built, labels resolved to `meta.lang` | — |
-| per request | Places scanned by `layerSetId` and projected to overlays | Unrenderable rows skipped and counted in the log |
-| per request | Polygon rings normalised to RFC 7946 winding | — (a degenerate ring is left alone) |
-| per request | Place details projected; blocks, actions and image hosts re-checked | One block, one action or one detail dropped and named in the log |
-
-The pattern behind that table: **fail loud where a PR fixes it, fail soft where content broke, and
-never fail the request.** The building layers must survive a typo in an ops spreadsheet.
-
-## 10. Change map
-
-The practical index. The last column is section 3's ownership split, applied.
-
-| To do this | Touch | Deploy? |
-| --- | --- | --- |
-| Take the festival down right now | `activations` doc → `enabled: false` | No |
-| Move a booth, fix a title, add a sheet button | `places` collection | No — live within the event route's TTL |
-| Add a festival zone or route line | the sheet's `geometry` key → `npm run eventmap:import` | No |
-| Make a category a backdrop rather than a tap target | the layer set JSON → `itemDefaults` → `interactive: false` | Yes |
-| Make a category's tap run a chip instead of opening a sheet | the layer set JSON → `itemDefaults` → `tapChip: "<chip id>"` | Yes, plus an app release for builds to act on it (older ones draw it inert) |
-| Say a category's pins name an area, not a spot | the layer set JSON → `itemDefaults` → `locationAccuracy: "area"` | Yes, plus an app release (older builds ignore it) |
-| Add a building footprint, a boundary, a path | `scripts/data/campus-shapes.json` → `npm run campus:shapes` | No |
-| Change festival dates | `activations` → `activeFrom` / `activeUntil` | No |
-| Add, rename or recolour a festival layer | the layer set JSON → `layers[]` | Yes |
-| Add a festival chip | the layer set JSON → `chips[]` | Yes |
-| Map a new booth category to a layer | the layer set JSON → `itemDefaults.byCategory` | Yes |
-| Add next year's festival | New JSON **and** `CONFIG_FILES` **and** `scripts/copy-build-assets.js` | Yes — three coordinated edits |
-| Add a permanent, off-season chip | `map-chips.data.ts` → `BASE_CHIPS` | Yes |
-| Bring the bus route lines back | Give them `campus_shapes` documents with LineString geometry | No |
-| Change how a pin is drawn (size, z-index) | `map-layers.data.ts` → `BASE_LAYERS[].style` or `EVENT_LAYER_STYLE` | No — the client reads these as of app `ced0352` |
-| Change a place's menu, photos or notices | upload new photos to R2 first, then the sheet's `detail` → `npm run eventmap:import` | No |
-| Add a detail block type | `map-place-detail.types.ts`, the importer's copy, the details producer, a client renderer | Yes, plus an app release to draw it — older builds drop it |
-| Add a field to every overlay | `map-overlay.types.ts`, then **every** producer | Yes, plus an app release |
-| Add a new overlay kind (circle, ground image) | A `MapOverlay` arm, a producer branch, a client renderer | Yes, plus an app release |
-
-> [!WARNING]
-> Adding a layer set is the three-edit row above, and forgetting the third breaks **production only** —
-> the dev server reads from `src/`, the built image reads from `dist/`. `map-config-assets.test.ts`
-> exists to make that failure loud at test time, and is the reason `CONFIG_FILES` is an explicit list
-> rather than a `readdirSync`.
-
-## 11. What the tests pin
-
-Under `__tests__/nest/map/`. When you change something, this is which one will shout — and reading a
-test is often faster than reading the file it covers.
-
-| Test | Pins |
-| --- | --- |
-| `map-layerset.config.test.ts` | Every validator rejection path, by exact message |
-| `map-chips.test.ts`, `map-chips-wire.test.ts` | The chip group rules, reset chip synthesis, spec → wire projection |
-| `map-active-layerset.test.ts`, `map-window.test.ts` | The chokepoint, and window arithmetic including null bounds |
-| `map-event-overlays.test.ts`, `map-overlay-coordinates.test.ts` | Projection, the unrenderable-row skip, `[lng, lat]` ordering |
-| `map-event-details.test.ts` | The detail projection, every fail-soft drop, and the committed sheet served whole through both producers |
-| `map-place-detail-import.test.ts` | The detail reader's rejections, the importer's copies agreeing with the server, the trucks' menu-first shape |
-| `eventmap-db.test.ts` | The import diff: a detail-only edit is written, an unchanged re-import writes nothing |
-| `map-campus-overlays.test.ts` | Both building layers from one call, campus geometry beside them, the degraded fallback |
-| `map-geometry.test.ts` | Winding and closure — the one guarantee Mongo does not give |
-| `map-overlay-interactive.test.ts` | `interactive: false` → `tap: null`, `tapChip` → a chip tap, one layer holding all three |
-| `map-places-import.test.ts` | The committed sheet: the clash test and its one sanctioned stack (the food-truck zone's head over 17 trucks) |
-| `campus-shapes-import.test.ts` | The campus authoring reader |
-| `building-indexes.test.ts` | The `campus_shapes` 2dsphere exists, on the right collection |
-| `map-config-assets.test.ts` | That every declared layer set is also in the build-asset copy list |
-
-## 12. What an overlay can be
-
-A recurring question, and it used to have a confusing answer because the renderer was named twice —
-once by the layer's `type` and once by the geometry. There is one discriminant now, `kind`, on the
-overlay itself.
-
-| `kind` | Server emits it | Client renders it | Geometry it carries |
+| System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
-| `marker` | Yes | Yes | RFC 7946 `Point` |
-| `polygon` | Yes | Yes | RFC 7946 `Polygon` (exterior + holes) |
-| `path` | Yes | Yes | RFC 7946 `LineString` |
-| `polyline` | Reserved | No | `LineString` — dashes, cap/join, a lower z-plane |
-| `arrowheadPath` | Reserved | No | `LineString` — `headSizeRatio` |
-| `circle` | Reserved | No | **none** — a centre and a radius in metres |
-| `multiPath` | Reserved | No | **none** — parts with per-part colour, one shared progress |
-| `groundImage` | Reserved | No | **none** — an image on a bounding box |
+| The layer-set files | — | Each festival's layers, chips, list facets and category table, shipped with a deploy | `getLayerSetConfig` |
+| `places` and `activations` (eventmap database) | `mongodb` | The festival's places, and the window that switches a layer set on | `MapRepository` |
+| The places importer (`scripts/lib/map-places-file.js`) | — | Places written to Mongo, checked by the same rules the server reads with | `renderablePlace` |
+| The building module | `skku` | Buildings and hand-authored campus shapes | `BuildingService`, injected into `MapCampusService` |
+| The mini-app registry | — | Which mini-app targets a sheet button may open | `MiniAppsService.isKnownMiniAppTarget` |
+| GeoJSON | `geojson` | The `[lng, lat]` position order and ring winding, served as stored | `map.wire.ts` |
+| The NAVER map SDK | `naver-map` | Polygon defaults the base and festival styles override | `BASE_LAYERS`, `EVENT_SHAPE_STYLE` |
+| JavaScript strings | `javascript` | `$` matching before a final newline, why action values are checked for whitespace | `isValidActionValue` |
+| skkuverse-app | — | Nothing; it reads the four routes | `GET /map/config` and the overlay routes |
 
-A **layer** no longer constrains any of this. It is a filter and a toggle, so one layer can draw pins, a
-zone and a route line together — turning on 부스 can show all three.
+## Glossary
 
-### Why the tag names the renderer and not the geometry
+| Term | Means | Derived from | Not |
+| --- | --- | --- | --- |
+| layer (`LayerSpec`) | One kind of thing with one toggle: what is drawn, its style, its endpoint and its chip group | `BASE_LAYERS`, `eventLayerSpecs` | — |
+| layer set (`EventMapConfig`) | One festival's layers, chips, facets, camera and category table, as one JSON file | `layerSetFile` in `map-layer-set.schema.ts` | `festivalConfig`, `layerConfig` |
+| activation (`ActivationDoc`) | The Mongo switch that makes a layer set live between `activeFrom` and `activeUntil` while `enabled` | `findActiveActivation` | `eventWindow` |
+| live event | The layer set whose activation is open now and whose file this build loaded | `MapLayerSetService.activeEventConfig` | `currentFestival` |
+| place (`MapPlaceDoc`) | One operating entity of a festival: a spot, its geometry, its windows and its buttons | the places importer | — |
+| overlay (`MapOverlay`) | One drawable thing, tagged by the renderer that draws it (`marker`, `polygon`, `path`) | `toEventOverlay`, the campus mappers | — |
+| chip (`MapChipSpec`) | One pill above the map: a camera, the layers it turns on, and the list it opens | `eventChipSpecs`, `BASE_CHIPS` | `filterButton` |
+| chip group | A layer's `chipGroupId`: the layers a chip may switch off; `null` means none ever | `LayerSpec.chipGroupId` | `exclusiveGroup` |
+| reset chip | The synthesised chip that goes back to the festival's default view | `resetChip` | — |
+| presentation (`ItemPresentation`) | A category's layer, pin priority, tap and location accuracy | `presentationFor` | `categoryStyle` |
+| facet | A list filter axis a chip may show; an `hours` facet is derived from a place's windows, a `tag` facet is authored | `facetsOf` | — |
+| sheet (`PlaceDetail`) | The body a tapped place opens: its head, buttons and blocks | `toPlaceDetail` | `sheetBody` |
+| degraded | The campus overlay fell back to `FALLBACK_MARKERS` because the buildings read was empty | `MapCampusService.getCampusOverlays` | `isFallback` |
 
-This is the load-bearing decision in the module, and the reserved rows above are the argument for it.
+## Structure
 
-`path`, `polyline`, `arrowheadPath` and `multiPath` all carry the **same** geometry — a coordinate
-sequence — and differ only in how they are painted. A geometry-shaped format cannot tell them apart at
-all; it would need a `renderAs` field beside the geometry, which is this union again, only hidden
-somewhere nothing can validate it. And `circle`, `multiPath` and `groundImage` have no RFC 7946
-representation whatsoever: GeoJSON has no circle type and no raster concept, and a `MultiLineString`
-is one geometry with one properties bag, so per-part colours have nowhere to live.
+```mermaid
+flowchart LR
+  file["layer-set JSON"] -->|getLayerSetConfig, checked at import| layerSet["MapLayerSetService"]
+  acts[("activations")] -->|findActiveActivation, cached| layerSet
+  places[("places")] -->|MapRepository| event["MapEventService"]
+  places -->|MapRepository| details["MapEventDetailsService"]
+  layerSet --> config["MapConfigService"]
+  layerSet --> event
+  layerSet --> details
+  building["BuildingService"] -->|buildings, campus shapes| campus["MapCampusService"]
+  miniapps["MiniAppsService"] -->|isKnownMiniAppTarget| event
+  config --> r1["GET /map/config"]
+  campus -->|CAMPUS_CACHE_CONTROL or DEGRADED_CACHE_CONTROL| r2["GET /map/overlays/campus"]
+  event -->|EVENT_CACHE_CONTROL| r3["GET /map/overlays/event"]
+  details -->|EVENT_CACHE_CONTROL| r4["GET /map/overlays/event/details"]
+  r1 --> screen["app: map screen"]
+  r2 --> screen
+  r3 --> screen
+  r4 --> sheet["app: place sheet"]
+```
 
-Every mapping stack that supports these puts them **outside** the feature model for the same reason —
-Mapbox makes an image a separate *source type*, KML makes `<GroundOverlay>` a separate element, MapKit
-a separate `MKOverlay` subclass. Every mobile map SDK's own hierarchy is renderer-shaped, and matching
-the SDK taxonomy is matching the domain.
+What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `skkuverse-app/packages/shared/src/map/placeDetail.ts`:
 
-The rule that keeps this from drifting into a private dialect: **where RFC 7946 can express the
-geometry, embed it verbatim under `geometry`; invent a shape only where the spec genuinely cannot.**
-Three documented exceptions is defensible; twenty is a format.
+| Field | App use |
+| --- | --- |
+| `/map/config` `campuses` | The campus toggle, each campus's camera, and `radiusM` to tell which campus the camera is on |
+| `/map/config` `layers` | The layer list and filter sheet; `defaultVisibleWhen`, `userConfigurable` and `style` decide what is on and how it draws |
+| `/map/config` `chips` | The chip row; a tap moves the camera, swaps layers within the chip group and opens the chip's list |
+| `/map/config` `cameraDefaults` | The camera for a marker tap, a search result and a campus switch |
+| overlay `kind`, `geometry`, `layerId` | The renderer and the layer that draws it; an unknown `kind` is skipped |
+| overlay `tap` | A building sheet, a place sheet, or a chip run; `null` draws a backdrop |
+| overlay `hours`, `facets`, `orderByOption`, `pinPriority` | The open-now filter, the chip's list filters and order, and the collision ladder |
+| overlay `fields` | Parsed, and drawn nowhere |
+| `/map/overlays/event/details` `details` | The sheet of a tapped place, looked up by its `tap.placeId` |
 
-### Adding one
+## Invariants
 
-A new `kind` is additive and non-breaking, in three edits: an arm on `MapOverlay`, a branch in whichever
-producer emits it, and a renderer plus a `LAYER_KINDS` entry on the client. A client that has not
-shipped the third simply skips it — dropping that one overlay, never its layer or its siblings.
+- A layer-set file is read and checked once, when `map-layer-set.config.ts` is first imported; a bad file is logged as `map.layerset.config_rejected` and skipped, so the base map keeps serving and only the festival is missing. Its messages name the exact path, and a spec pins them.
+- The loader's leaves (the root and layer-set rules, mappers, schemas, constants and types) never import the loader: an ESLint block refuses it, because the loader imports them at load.
+- A bad base chip stops the boot (`assertValidChipSpecs` at import); a bad festival file, place, button, block or facet value is dropped and logged, never thrown into a request.
+- The activation read is cached for `EVENT_CACHE_TTL_MS` with an `EVENT_STALE_WINDOW_MS` stale window, and a cached activation is still checked against the clock, so its window closes on time. `/map/config` answers with the base layers when the lookup fails.
+- Both event routes cache their whole projection on the same TTL, and both overlay collections are one response per data source, pins and shapes together.
+- A stored geometry is served as stored: points and lines by reference, polygon rings rewound (`toWirePolygon`); the only rebuilt pair is a building's, from its `location`.
+- The event map is timezone-free: windows and facet options are absolute instants, compared with no zone arithmetic.
+- `degraded` never reaches the wire, and the campus fallback is sent with `DEGRADED_CACHE_CONTROL`.
+- Only `MapModule` binds the general limiter on `/map/config` and `/map/overlays`; the sub-modules bind nothing.
+- The `.wire` files publish what is served today, including the campus overlay's string `placeId`.
 
-> [!NOTE]
-> That skip is a contract, not an implementation detail. A client must not model `kind` with an
-> exhaustive switch asserting `never`, which is precisely what turns an additive server change into a
-> crash on an old build.
+## Open questions
+
+- Cloudflare caches `/map/overlays/campus` for `CAMPUS_CACHE_CONTROL` and both event routes for `EVENT_CACHE_CONTROL` without varying on `Accept-Language`, so `meta.lang` on an edge hit can be another request's. The overlay bodies carry every language, so only `meta` is affected.
+- Overlay `fields` and the `content` action type parse in the app and draw nothing.
+- The places schema the server reads with (`renderablePlace`) is the renderable subset of what the importer writes, not the importer's whole rule set; a hand edit the importer would refuse can still be served if it renders.
 
 ## Related
 
-- [how-to/configure-map-overlays.md](../how-to/configure-map-overlays.md) — the runbook: what can be drawn, which tier to edit, and what to check when a shape does not appear
-- [reference/map-overlays-api.md](../reference/map-overlays-api.md) — the endpoint and overlay contract
-- [reference/event-places.md](../reference/event-places.md) — the `places` / `activations` storage contract and the window kill-switch runbook
-- [explanation/notices-architecture.md](notices-architecture.md) — the sibling explanation doc, same shape for a different feature
-- [docs/README.md](../README.md) — writing rules
+- [Map code map](../reference/map-code-map.md): where each part of `src/map/` lives, boot versus request time, and what to touch for each change
+- [Configure map overlays](../how-to/configure-map-overlays.md): what the map can draw and how to add or change it
+- [Map overlays API](../reference/map-overlays-api.md): the routes and the overlay contract
+- [Event places](../reference/event-places.md): the `places` and `activations` storage contract
+- [ADR 0010](../decisions/0010-server-architecture.md): the module shape
