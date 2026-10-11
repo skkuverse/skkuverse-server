@@ -49,6 +49,7 @@ describe("import boundary blocks apply as specified", () => {
         "boundaries/pure",
         "boundaries/query",
         "boundaries/repository",
+        "boundaries/wire",
       ]),
     );
   });
@@ -164,6 +165,52 @@ describe("import boundary blocks apply as specified", () => {
     ]) {
       expect(lint(rules, file, source)).toEqual([]);
     }
+  });
+});
+
+describe("boundaries/wire", () => {
+  const file = "src/infra/x.wire.ts";
+
+  it("lets a wire file import zod, another .wire and a .constants, wherever they sit", () => {
+    // Arrange
+    const rules = block("boundaries/wire").rules!;
+    const sources = [
+      'import { z } from "zod";',
+      'import { X_KINDS } from "./x.constants";',
+      'import { xPiece } from "./x.wire";',
+      'import { SHARED_PATTERN } from "../shared/x.constants";',
+      'import { mapPiece } from "../map/map.wire";',
+    ];
+
+    // Act
+    const reported = sources.filter((source) => lint(rules, file, source).length > 0);
+
+    // Assert
+    expect(reported).toEqual([]);
+  });
+
+  it("rejects every other import, a type-only one included", () => {
+    // Arrange
+    const rules = block("boundaries/wire").rules!;
+    const sources = [
+      'import { isX } from "./x.rules";',
+      'import type { X } from "./x.types";',
+      'import { xPipeline } from "./x.query";',
+      'import { getClient } from "./db";',
+      'import { config } from "./config";',
+      'import { z } from "zod/v4";',
+    ];
+
+    // Act
+    const counts = sources.map((source) => lint(rules, file, source).length);
+
+    // Assert
+    expect(counts).toEqual(sources.map(() => 1));
+  });
+
+  it("leaves a feature's wire import from src/infra/ to boundaries/infra", () => {
+    // Act & Assert
+    expect(lint(block("boundaries/infra").rules!, file, 'import { mapPiece } from "../map/map.wire";')).toHaveLength(1);
   });
 });
 
