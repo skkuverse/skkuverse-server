@@ -1,3 +1,8 @@
+// Every worker runs in UTC, as CI does (harden-test-suite design D5): a test
+// that leans on the host zone fails on a KST laptop too, instead of passing by
+// coincidence with production. Workers inherit this env; Node re-reads TZ on assignment.
+process.env.TZ = "UTC";
+
 module.exports = {
   testEnvironment: "node",
   setupFiles: ["<rootDir>/__tests__/helpers/network-guard.ts", "<rootDir>/jest.setup.ts"],
