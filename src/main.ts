@@ -9,19 +9,19 @@ import logger from "./infra/logger";
 import config from "./infra/config";
 import { closeClient, ping as pingDb } from "./infra/db";
 import { AppModule } from "./app.module";
-import { httpPipelineMiddleware } from "./http/http-pipeline.middleware";
+import { bootstrapHttpApp } from "./http/http-app.bootstrap";
 import { BusCacheService } from "./bus/cache/bus-cache.service";
 
 /**
  * NestJS entrypoint:
- *  - the HTTP pipeline (http/http-pipeline.middleware.ts): trust proxy,
+ *  - the HTTP pipeline (http/http-app.bootstrap.ts): trust proxy,
  *    helmet, request logging, JSON body, LangMiddleware, no-store, CORS,
  *    the Nest logger, the global ResponseInterceptor + HttpExceptionFilter
  *  - ROLE branch (poller: init only, no listen; api/combined: listen)
  *  - graceful shutdown (enableShutdownHooks + 5s force-exit + closeClient)
  */
 async function bootstrap(): Promise<void> {
-  const app = await httpPipelineMiddleware((adapter, options) =>
+  const app = await bootstrapHttpApp((adapter, options) =>
     NestFactory.create<NestExpressApplication>(AppModule, adapter, options),
   );
   app.enableShutdownHooks();
