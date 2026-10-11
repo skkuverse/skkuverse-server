@@ -10,7 +10,7 @@
  */
 import { isMediaUrl } from "../../infra/media-url";
 import type { I18n } from "../../infra/types";
-import { ROOT_RELATIVE_PATH_RE, toWebviewUrl } from "../../infra/webview-url";
+import { toWebviewUrl } from "../../infra/webview-url";
 import { isKnownMiniAppTarget } from "../../miniapps/miniapp-target";
 import { isSingleEmoji } from "../../miniapps/miniapps.schema";
 import {
@@ -20,10 +20,10 @@ import {
   type HomeActionType,
   type HomeLayoutRaw,
 } from "./home-layout.types";
+import { isAbsoluteHttpsUrl, isRootRelativePath } from "../../shared/link-target.util";
 import { isRecord } from "../../shared/object.util";
 
 const SLUG_RE = /^[a-z0-9_-]+$/;
-const ABSOLUTE_HTTPS_RE = /^https:\/\/[^\s/][^\s]*$/;
 const WHITESPACE_RE = /\s/;
 /** Refused unless it carries its own offset: a bare local time is read in the host's zone. */
 const OFFSET_RE = /(Z|[+-]\d{2}:\d{2})$/;
@@ -111,11 +111,11 @@ function isValidActionValue(type: HomeActionType, value: string): boolean {
     case "miniapp":
       return isKnownMiniAppTarget(value);
     case "external":
-      return ABSOLUTE_HTTPS_RE.test(value);
+      return isAbsoluteHttpsUrl(value);
     case "webview":
       return toWebviewUrl(value) !== null;
     case "route":
-      return ROOT_RELATIVE_PATH_RE.test(value);
+      return isRootRelativePath(value);
   }
 }
 
