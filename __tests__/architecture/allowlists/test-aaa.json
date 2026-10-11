@@ -63,7 +63,6 @@
   "__tests__/nest/map/map-places-import.test.ts",
   "__tests__/nest/map/map-places.data.test.ts",
   "__tests__/nest/map/map-revive-dev.test.ts",
-  "__tests__/nest/map/map-routes.test.ts",
   "__tests__/nest/map/map-window.test.ts",
   "__tests__/nest/map/map.service.test.ts",
   "__tests__/nest/miniapps/miniapp-target.test.ts",
