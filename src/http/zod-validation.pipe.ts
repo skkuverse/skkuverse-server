@@ -6,6 +6,7 @@ import { AppError } from "./app.error";
 // pipes concurrently, so which failing one answers would be undefined. zod reports issues in shape order.
 @Injectable()
 export class ZodValidationPipe<S extends z.ZodType> implements PipeTransform<unknown, z.output<S>> {
+  // eslint-disable-next-line max-params -- zod-validation.pipe.spec.ts constructs it with a status as the fourth argument
   constructor(
     private readonly schema: S,
     private readonly code: string,

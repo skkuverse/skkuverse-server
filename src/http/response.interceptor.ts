@@ -63,6 +63,7 @@ export class ResponseInterceptor implements NestInterceptor {
   }
 }
 
+// eslint-disable-next-line max-params -- the @Res() handlers call it with four arguments until ADR 0010 D6 makes it internal to the interceptor
 export function sendSuccess(req: Request, res: Response, data: unknown, meta: SuccessMeta = {}): void {
   setResponseTime(req, res);
   res.json(successEnvelope(req, data, meta));
