@@ -59,4 +59,4 @@ None.
 ## Related
 
 - [ADR 0010](../decisions/0010-server-architecture.md): the shape every migrated module follows
-- [Docs index](README.md): writing rules
+- [Docs index](../README.md): writing rules
