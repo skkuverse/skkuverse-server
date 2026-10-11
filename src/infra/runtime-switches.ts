@@ -1,14 +1,5 @@
 /**
  * (An operations detail is left out of the public history.)
- *
- *
- *
- *
- *
- *
- *
- *
- *
  */
 
 export type RuntimeMode = "production" | "development" | "test";
@@ -30,28 +21,58 @@ export const RUNTIME_SWITCH_NAMES = [
   "SHUTTLE_ETA",
 ] as const;
 
-/** Same reading as config.ts: anything but production or test is development. */
 export function runtimeMode(nodeEnv: string | undefined): RuntimeMode {
   if (nodeEnv === "production") return "production";
   if (nodeEnv === "test") return "test";
   return "development";
 }
 
-/**
- * Reads one enum env var. Unset (or empty) is `undefined`; a value outside
- * `allowed` is reported, never coerced to a default.
- */
-function readEnum<T extends string>(
-  env: NodeJS.ProcessEnv,
-  name: string,
-  allowed: readonly T[],
-  errors: string[],
-): T | undefined {
-  const raw = env[name];
-  if (raw === undefined || raw === "") return undefined;
-  if ((allowed as readonly string[]).includes(raw)) return raw as T;
-  errors.push(`${name} must be one of ${allowed.join(" | ")} (got "${raw}")`);
-  return undefined;
+type OnOff = "on" | "off";
+type EnumReader = <T extends string>(name: string, allowed: readonly T[]) => T | undefined;
+
+interface Resolution {
+  read: EnumReader;
+  mode: RuntimeMode;
+  errors: string[];
+}
+
+const ON_OFF: readonly OnOff[] = ["on", "off"];
+
+// WHY: a value outside `allowed` is reported, never coerced to the default.
+function enumReader(env: NodeJS.ProcessEnv, errors: string[]): EnumReader {
+  return <T extends string>(name: string, allowed: readonly T[]): T | undefined => {
+    const raw = env[name];
+    if (raw === undefined || raw === "") return undefined;
+    if ((allowed as readonly string[]).includes(raw)) return raw as T;
+    errors.push(`${name} must be one of ${allowed.join(" | ")} (got "${raw}")`);
+    return undefined;
+  };
+}
+
+function pushDelivery(r: Resolution): PushDelivery {
+  const local = r.mode === "development";
+  const value = r.read("PUSH_DELIVERY", ["live", "suppressed"] as const) ?? (local ? "suppressed" : "live");
+  if (local && value === "live") {
+    r.errors.push(
+      "PUSH_DELIVERY=live is refused in development: the Cloud Function pushes to every subscriber of a topic",
+    );
+    return "suppressed";
+  }
+  return value;
+}
+
+function isOn(r: Resolution, name: "RATE_LIMIT" | "BUILDING_SYNC" | "CACHE" | "SHUTTLE_ETA"): boolean {
+  return (r.read(name, ON_OFF) ?? (r.mode === "development" ? "off" : "on")) === "on";
+}
+
+// WHY: a production override may only reduce outbound effects, never remove a guard.
+function isGuardOn(r: Resolution, name: "RATE_LIMIT" | "CACHE"): boolean {
+  const on = isOn(r, name);
+  if (r.mode === "production" && !on) {
+    r.errors.push(`${name}=off is refused in production`);
+    return true;
+  }
+  return on;
 }
 
 export function resolveRuntimeSwitches(
@@ -59,43 +80,14 @@ export function resolveRuntimeSwitches(
   mode: RuntimeMode,
 ): { switches: RuntimeSwitches; errors: string[] } {
   const errors: string[] = [];
-  const local = mode === "development";
-
-  let pushDelivery: PushDelivery =
-    readEnum(env, "PUSH_DELIVERY", ["live", "suppressed"] as const, errors) ??
-    (local ? "suppressed" : "live");
-  if (local && pushDelivery === "live") {
-    errors.push(
-      "PUSH_DELIVERY=live is refused in development: the Cloud Function pushes to every subscriber of a topic",
-    );
-    pushDelivery = "suppressed";
-  }
-
-  let rateLimit = readEnum(env, "RATE_LIMIT", ["on", "off"] as const, errors) ?? (local ? "off" : "on");
-  if (mode === "production" && rateLimit === "off") {
-    errors.push("RATE_LIMIT=off is refused in production");
-    rateLimit = "on";
-  }
-
-  const buildingSync =
-    readEnum(env, "BUILDING_SYNC", ["on", "off"] as const, errors) ?? (local ? "off" : "on");
-
-  let cache = readEnum(env, "CACHE", ["on", "off"] as const, errors) ?? (local ? "off" : "on");
-  if (mode === "production" && cache === "off") {
-    errors.push("CACHE=off is refused in production");
-    cache = "on";
-  }
-
-  const shuttleEta =
-    readEnum(env, "SHUTTLE_ETA", ["on", "off"] as const, errors) ?? (local ? "off" : "on");
-
+  const r: Resolution = { read: enumReader(env, errors), mode, errors };
   return {
     switches: {
-      pushDelivery,
-      rateLimitEnabled: rateLimit === "on",
-      buildingSyncEnabled: buildingSync === "on",
-      cacheEnabled: cache === "on",
-      shuttleEtaEnabled: shuttleEta === "on",
+      pushDelivery: pushDelivery(r),
+      rateLimitEnabled: isGuardOn(r, "RATE_LIMIT"),
+      buildingSyncEnabled: isOn(r, "BUILDING_SYNC"),
+      cacheEnabled: isGuardOn(r, "CACHE"),
+      shuttleEtaEnabled: isOn(r, "SHUTTLE_ETA"),
     },
     errors,
   };
