@@ -64,5 +64,10 @@
     "source": "src/building/building.wire.ts",
     "export": "buildingCard",
     "routes": []
+  },
+  "link-action.linkActionType": {
+    "source": "src/shared/link-action.wire.ts",
+    "export": "linkActionType",
+    "routes": []
   }
 }

@@ -1,7 +1,7 @@
 import { createCachedLoader } from "../infra/cached-loader";
 import { hasAnyText } from "../infra/i18n";
 import logger from "../infra/logger";
-import { ROOT_RELATIVE_PATH_RE, toWebviewUrl } from "../infra/webview-url";
+import { toWebviewUrl } from "../infra/webview-url";
 import { isKnownMiniAppTarget } from "../miniapps/miniapp-target";
 import { activeEventConfig } from "./map-active-layerset";
 import { EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "./map-event-cache";
@@ -19,6 +19,7 @@ import type {
   MarkerAction,
   OverlayBase,
 } from "./map-overlay.types";
+import { isAbsoluteHttpsUrl, isRootRelativePath } from "../shared/link-target.util";
 import { isRecord } from "../shared/object.util";
 
 /**
@@ -82,7 +83,6 @@ function toWire(text: I18n): I18nWire {
 
 // --- Actions ----------------------------------------------------------------
 
-const ABSOLUTE_HTTPS_RE = /^https:\/\/[^\s/][^\s]*$/;
 const WHITESPACE_RE = /\s/;
 
 /**
@@ -95,15 +95,6 @@ const WHITESPACE_RE = /\s/;
  */
 function isCleanValue(value: string): boolean {
   return value.length > 0 && !WHITESPACE_RE.test(value);
-}
-
-/**
- * A complete https URL with nothing trailing — the rule for anything handed to a
- * URL opener. Shared with the place-detail producer's `link` actions, so the two
- * kinds of sheet button cannot disagree about what "external" accepts.
- */
-function isAbsoluteHttpsUrl(value: unknown): value is string {
-  return typeof value === "string" && isCleanValue(value) && ABSOLUTE_HTTPS_RE.test(value);
 }
 
 /**
@@ -125,7 +116,7 @@ function isValidActionValue(action: PlaceAction): boolean {
 
   switch (action.actionType) {
     case "route":
-      return ROOT_RELATIVE_PATH_RE.test(value);
+      return isRootRelativePath(value);
     case "webview":
       return toWebviewUrl(value) !== null;
     case "external":

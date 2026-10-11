@@ -1,15 +1,10 @@
+import { ROOT_RELATIVE_PATH_RE } from "../shared/link-target.constants";
 import { WEBVIEW_ORIGIN } from "./origins";
 
 /**
  * SEE: docs/explanation/web-origins.md — a malformed webview URL does not fail: it opens the wrong page
  * at HTTP 200 and nothing logs it, so the check has to be here.
  */
-
-/**
- * QUIRK(whatwg-url): `\` folds into `/` for special schemes, so `/\evil.com` resolves to
- * `https://evil.com/` exactly like `//evil.com`; both are refused.
- */
-export const ROOT_RELATIVE_PATH_RE = /^\/(?![/\\])[^\s]*$/;
 
 const WHITESPACE_RE = /\s/;
 
