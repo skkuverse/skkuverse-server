@@ -1,0 +1,32 @@
+{
+  "_about": "GET /building/search?q=31214 captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); `meta` without the envelope's `lang`",
+  "data": {
+    "keyword": "31214",
+    "buildingCount": 0,
+    "spaceCount": 2,
+    "counts": {
+      "building": {
+        "hssc": 0,
+        "nsc": 0,
+        "total": 0
+      },
+      "space": {
+        "hssc": 1,
+        "nsc": 1,
+        "total": 2
+      }
+    },
+    "limits": {
+      "building": {
+        "limit": 100,
+        "total": 0,
+        "truncated": false
+      },
+      "space": {
+        "limit": 1000,
+        "total": 2,
+        "truncated": false
+      }
+    }
+  }
+}

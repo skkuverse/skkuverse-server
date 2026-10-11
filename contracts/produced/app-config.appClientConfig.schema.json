@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "ios": {
+      "type": "object",
+      "properties": {
+        "minVersion": {
+          "type": "string"
+        },
+        "updateUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "minVersion",
+        "updateUrl"
+      ]
+    },
+    "android": {
+      "type": "object",
+      "properties": {
+        "minVersion": {
+          "type": "string"
+        },
+        "updateUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "minVersion",
+        "updateUrl"
+      ]
+    },
+    "webview": {
+      "type": "object",
+      "properties": {
+        "bridgeOrigins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "bridgeOrigins"
+      ]
+    },
+    "web": {
+      "type": "object",
+      "properties": {
+        "origin": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "origin"
+      ]
+    },
+    "miniapps": {
+      "type": "object",
+      "properties": {
+        "origins": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "origins"
+      ]
+    }
+  },
+  "required": [
+    "ios",
+    "android",
+    "webview",
+    "web",
+    "miniapps"
+  ]
+}

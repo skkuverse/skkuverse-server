@@ -287,6 +287,7 @@ const ROLE_MAX_LINES = {
   schema: 61,
   service: 263,
   types: 58,
+  wire: 60,
 };
 
 function roleSizeBlocks() {

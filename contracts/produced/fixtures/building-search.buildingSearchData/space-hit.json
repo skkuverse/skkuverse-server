@@ -1,0 +1,32 @@
+{
+  "_about": "GET /building/search?q=31214 captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); rows trimmed to one building and one space group of at most two items, attachments and barrier-free sections to one",
+  "data": {
+    "buildings": [],
+    "spaces": [
+      {
+        "skkuId": 10,
+        "buildNo": "131",
+        "displayNo": "31",
+        "campus": "hssc",
+        "campusLabel": "인사캠",
+        "buildingName": {
+          "ko": "퇴계인문관",
+          "en": "Toegye Hall of Humanities"
+        },
+        "items": [
+          {
+            "spaceCd": "31214",
+            "name": {
+              "ko": "킹고응원단",
+              "en": "킹고응원단"
+            },
+            "floor": {
+              "ko": "2층",
+              "en": "2F"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

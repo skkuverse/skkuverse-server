@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "keyword": {
+      "type": "string"
+    },
+    "buildingCount": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "spaceCount": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "counts": {
+      "type": "object",
+      "properties": {
+        "building": {
+          "type": "object",
+          "properties": {
+            "hssc": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "nsc": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "total": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "hssc",
+            "nsc",
+            "total"
+          ]
+        },
+        "space": {
+          "type": "object",
+          "properties": {
+            "hssc": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "nsc": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "total": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "hssc",
+            "nsc",
+            "total"
+          ]
+        }
+      },
+      "required": [
+        "building",
+        "space"
+      ]
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "building": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "total": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "truncated": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "limit",
+            "total",
+            "truncated"
+          ]
+        },
+        "space": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "total": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "truncated": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "limit",
+            "total",
+            "truncated"
+          ]
+        }
+      },
+      "required": [
+        "building",
+        "space"
+      ]
+    }
+  },
+  "required": [
+    "keyword",
+    "buildingCount",
+    "spaceCount",
+    "counts",
+    "limits"
+  ]
+}

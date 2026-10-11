@@ -1,5 +1,4 @@
-import type { BuildingDoc } from "../building.document";
-import type { BilingualText, BuildNo, DisplayNo, SkkuId, SpaceCd, WithCampusLabel } from "../building.types";
+import type { BilingualText, BuildNo, DisplayNo, SkkuId, SpaceCd } from "../building.types";
 
 export interface BuildingConnection {
   targetSkkuId: SkkuId;
@@ -19,14 +18,4 @@ export interface FloorSpace {
 export interface FloorGroup {
   floor: BilingualText;
   spaces: FloorSpace[];
-}
-
-export interface BuildingList {
-  buildings: Array<WithCampusLabel<BuildingDoc>>;
-}
-
-export interface BuildingDetail {
-  building: WithCampusLabel<BuildingDoc>;
-  floors: FloorGroup[];
-  connections: BuildingConnection[];
 }

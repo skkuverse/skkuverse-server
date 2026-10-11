@@ -1,6 +1,6 @@
 import type { SupportedLang } from "../../infra/types";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
-import { campusLabel, withCampusLabel, withEnFallback } from "../building.mapper";
+import { campusLabel, toBuildingCard, withEnFallback } from "../building.mapper";
 import { hasBuildNo, toDisplayNo } from "../building.rules";
 import type { BuildNo, SkkuId } from "../building.types";
 import { BUILDING_SEARCH_LIMIT, SPACE_SEARCH_LIMIT } from "./building-search.rules";
@@ -59,7 +59,7 @@ function toBuildingSearch(
 ): BuildingSearch {
   return {
     data: {
-      buildings: buildingResult.items.map((b) => withCampusLabel(b, lang)),
+      buildings: buildingResult.items.map((b) => toBuildingCard(b, lang)),
       spaces: groupSpacesByBuilding(spaceResult.items, toSkkuIdByBuildNo(allBuildings), lang),
     },
     meta: {
