@@ -11,7 +11,7 @@ ADR 0010 (`docs/decisions/0010-server-architecture.md`) is the decision; `src/bu
 
 1. **Which flow is it?** An endpoint, a poller, or a step one of them takes. Code for a flow lives in that flow's folder. If the folder already has a file of the role you need (a second repository, mapper, controller or rules file), the flow is a sub-module of its own: `src/<module>/<flow>/<module>-<flow>.module.ts`, imported by `src/app.module.ts`, importing its parent. Once a module has a sub-module, its first flow moves into a folder too (`src/building/catalog/`); the root keeps the module file and the code several flows share. Do not make folders by type (`controller/`, `services/`): the explorer nesting in `.vscode/settings.json` groups a folder's files instead.
 2. **Which role?** Talks HTTP: controller. Composes a use case: service. Reads or writes Mongo: repository. Builds Mongo syntax without running it: query. Calls a third party and translates its payload: client. Decides or computes: rules. Reshapes: mapper.
-3. **Who already owns it?** One concept has one home. Search the module's glossary in `naming.md` and its files before adding a new name or helper.
+3. **Who already owns it?** One concept has one home. Search the module's glossary in `docs/explanation/<module>-architecture.md` and its files before adding a new name or helper.
 
 ## Rules that need judgment
 
