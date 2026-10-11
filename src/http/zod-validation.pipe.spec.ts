@@ -31,8 +31,7 @@ function errorOf(fn: () => unknown): AppError {
 
 describe("ZodValidationPipe", () => {
   const pipe = new ZodValidationPipe(searchQuery, "INVALID_PARAMS", {
-    q: "MISSING_QUERY",
-    campus: "INVALID_CAMPUS",
+    fieldCodes: { q: "MISSING_QUERY", campus: "INVALID_CAMPUS" },
   });
 
   it("returns the parsed value", () => {
@@ -63,8 +62,7 @@ describe("ZodValidationPipe", () => {
     const id = new ZodValidationPipe(
       z.coerce.number().int().positive({ error: "skkuId must be a positive integer" }),
       "INVALID_ID",
-      {},
-      422,
+      { status: 422 },
     );
 
     // Act & Assert
@@ -83,7 +81,7 @@ describe("ZodValidationPipe", () => {
       .superRefine((v, ctx) => {
         if (v.from > v.to) ctx.addIssue({ code: "custom", message: "from must not be after to" });
       });
-    const rangePipe = new ZodValidationPipe(range, "INVALID_PARAMS", { from: "INVALID_FROM" });
+    const rangePipe = new ZodValidationPipe(range, "INVALID_PARAMS", { fieldCodes: { from: "INVALID_FROM" } });
 
     // Act & Assert
     expect(errorOf(() => rangePipe.transform({ from: 2, to: 1 }))).toMatchObject({
