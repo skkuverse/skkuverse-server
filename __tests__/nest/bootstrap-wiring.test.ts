@@ -193,8 +193,8 @@ describe("CORS policy", () => {
     expect(res.headers["access-control-expose-headers"]).toContain("ETag");
   });
 
-  // WHY: exposeHeadersMiddleware existed to expose ETag on a 304 too. This app never mounts it, so
-  // the pass pins that enableCors alone covers the 304, and the middleware can go with no change.
+  // WHY: a cross-origin client revalidates with the ETag, so a 304 must expose it too. The cors
+  // setup is the only thing that sets the expose header, and this pins that it covers the 304.
   it("still exposes ETag on a 304 revalidation, from the cors setup alone", async () => {
     // Arrange
     const first = await request(app.getHttpServer())
