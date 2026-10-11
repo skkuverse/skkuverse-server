@@ -111,7 +111,7 @@ const QUERY_IMPORT_PATTERN = {
 };
 
 // Migrated feature modules read the time through `Clock` (design D13).
-const CLOCK_INJECT_SCOPES = ["src/building/**/*.ts", "src/ad/**/*.ts", "src/app-config/**/*.ts", "src/health/**/*.ts"];
+const CLOCK_INJECT_DIRS = ["src/building/", "src/ad/", "src/app-config/", "src/health/"];
 
 const CLOCK_INJECT_SYNTAX = [
   {
@@ -121,6 +121,19 @@ const CLOCK_INJECT_SYNTAX = [
   {
     selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
     message: "Read the time from the injected `Clock` (src/infra/clock.ts), not `Date.now()`.",
+  },
+];
+
+// A constructor lists injected dependencies, not an argument list: ESLint's max-params
+// counts both, so the migrated limit is the constructor's 4 and functions are held to 3 here.
+const PARAMS_SYNTAX = [
+  {
+    selector: ":function[params.length>3]:not(MethodDefinition[kind='constructor'] > FunctionExpression)",
+    message: "A function takes at most 3 parameters: pass an options object.",
+  },
+  {
+    selector: "MethodDefinition[kind='constructor'] > FunctionExpression[params.length>4]",
+    message: "A constructor takes at most 4 injected dependencies; split the class.",
   },
 ];
 
@@ -262,7 +275,7 @@ function migratedGlobs(tail) {
 }
 
 const ROLE_MAX_LINES = {
-  client: 178,
+  client: 173,
   controller: 47,
   document: 130,
   mapper: 147,
@@ -290,9 +303,48 @@ function roleSizeBlocks() {
 const MIGRATED_FUNCTION_LIMITS = {
   "max-lines-per-function": ["error", { max: 40, skipBlankLines: true, skipComments: false }],
   "max-depth": ["error", 2],
-  "max-params": ["error", 3],
+  // A constructor of 4 injected dependencies is allowed; PARAMS_SYNTAX holds functions to 3.
+  "max-params": ["error", 4],
   complexity: ["error", 9],
 };
+
+// no-restricted-syntax replaces rather than merges, so each kind of migrated file gets
+// one block with every selector it needs: log, its role's own, params, and the clock.
+function migratedSyntaxBlocks() {
+  const underClockDirs = MIGRATED_SCOPES.filter((scope) => CLOCK_INJECT_DIRS.some((dir) => scope.startsWith(dir)));
+  const elsewhere = MIGRATED_SCOPES.filter((scope) => !underClockDirs.includes(scope));
+  const globs = (scopes, tail) =>
+    scopes.flatMap((scope) => (scope.endsWith("/") ? [`${scope}**/*${tail}`] : scope.endsWith(tail) ? [scope] : []));
+  const pure = [".rules.ts", ".mapper.ts", ".query.ts"];
+  const blocks = [];
+  for (const [scopes, injectClock] of [
+    [underClockDirs, true],
+    [elsewhere, false],
+  ]) {
+    const clock = injectClock ? CLOCK_INJECT_SYNTAX : [];
+    blocks.push(
+      {
+        name: `migrated/syntax${injectClock ? "-clock" : ""}`,
+        files: globs(scopes, ".ts"),
+        ignores: ["**/*.spec.ts", ...pure.map((t) => `**/*${t}`), "**/*.controller.ts"],
+        rules: { "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...PARAMS_SYNTAX, ...clock] },
+      },
+      {
+        name: `migrated/syntax-controller${injectClock ? "-clock" : ""}`,
+        files: globs(scopes, ".controller.ts"),
+        ignores: ["**/*.spec.ts"],
+        rules: { "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...LANG_SYNTAX, ...PARAMS_SYNTAX, ...clock] },
+      },
+      {
+        name: `migrated/syntax-pure${injectClock ? "-clock" : ""}`,
+        files: pure.flatMap((t) => globs(scopes, t)),
+        ignores: ["**/*.spec.ts"],
+        rules: { "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...CLOCK_SYNTAX, ...PARAMS_SYNTAX] },
+      },
+    );
+  }
+  return blocks;
+}
 
 function migratedFunctionBlock() {
   return {
@@ -472,25 +524,7 @@ module.exports = [
       "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...LANG_SYNTAX],
     },
   },
-  {
-    // These blocks replace the earlier no-restricted-syntax of the same files, so
-    // they carry the log (and, for controllers, lang) selectors along. Rules,
-    // mappers and queries already ban the clock above.
-    name: "boundaries/clock",
-    files: CLOCK_INJECT_SCOPES,
-    ignores: ["**/*.spec.ts", "**/*.rules.ts", "**/*.mapper.ts", "**/*.query.ts", "**/*.controller.ts"],
-    rules: {
-      "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...CLOCK_INJECT_SYNTAX],
-    },
-  },
-  {
-    name: "boundaries/clock-controller",
-    files: CLOCK_INJECT_SCOPES.map((glob) => glob.replace("*.ts", "*.controller.ts")),
-    ignores: ["**/*.spec.ts"],
-    rules: {
-      "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...LANG_SYNTAX, ...CLOCK_INJECT_SYNTAX],
-    },
-  },
+  ...migratedSyntaxBlocks(),
   ...featureBoundaryBlocks(),
   {
     name: "boundaries/shared",
