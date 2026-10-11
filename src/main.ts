@@ -4,84 +4,26 @@ import "reflect-metadata";
 
 import * as Sentry from "@sentry/nestjs";
 import { NestFactory } from "@nestjs/core";
-import { ExpressAdapter } from "@nestjs/platform-express";
-import express from "express";
-import helmet from "helmet";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import logger from "./infra/logger";
-import { mountRequestLogging } from "./infra/http-logging";
-import { PinoNestLogger } from "./infra/nest-logger";
 import config from "./infra/config";
 import { closeClient, ping as pingDb } from "./infra/db";
 import { AppModule } from "./app.module";
-import { ResponseInterceptor } from "./http/response.interceptor";
-import { CORS_METHODS, corsOrigins, EXPOSED_RESPONSE_HEADERS } from "./infra/origins";
-import { HttpExceptionFilter } from "./http/http-exception.filter";
-import { LangMiddleware } from "./http/lang.middleware";
-import { noStoreMiddleware } from "./http/no-store.middleware";
+import { httpPipelineMiddleware } from "./http/http-pipeline.middleware";
 import { BusCacheService } from "./bus/cache/bus-cache.service";
 
 /**
  * NestJS entrypoint:
- *  - helmet, request logging (infra/http-logging.ts: request id + log
- *    context + pino-http), express.json(100kb), trust proxy 1
- *  - LangMiddleware, raw-mounted here (see below), and the global
- *    ResponseInterceptor + HttpExceptionFilter
+ *  - the HTTP pipeline (http/http-pipeline.middleware.ts): trust proxy,
+ *    helmet, request logging, JSON body, LangMiddleware, no-store, CORS,
+ *    the Nest logger, the global ResponseInterceptor + HttpExceptionFilter
  *  - ROLE branch (poller: init only, no listen; api/combined: listen)
  *  - graceful shutdown (enableShutdownHooks + 5s force-exit + closeClient)
  */
 async function bootstrap(): Promise<void> {
-  // Use a pre-built Express instance so we can attach the raw middleware
-  // (helmet, request logging, json) BEFORE Nest's middleware system runs.
-  const expressInstance = express();
-  expressInstance.set("trust proxy", 1);
-  expressInstance.use(helmet());
-  mountRequestLogging(expressInstance);
-  expressInstance.use(express.json({ limit: "100kb" }));
-
-  // LangMiddleware MUST run app-wide before any handler (sets req.lang +
-  // req.__startNs + Vary: Accept-Language). Nest's AppModule.configure
-  // forRoutes("*") does NOT fire against a pre-built ExpressAdapter instance
-  // (verified: zero middleware invocations for "*", "(.*)", "{*path}",
-  // "*path"), so we mount it as raw express middleware here, after express.json,
-  // in the same place as the test helper build-bus-app.ts.
-  const langMiddleware = new LangMiddleware();
-  expressInstance.use((req, res, next) =>
-    langMiddleware.use(req as never, res as never, next),
+  const app = await httpPipelineMiddleware((adapter, options) =>
+    NestFactory.create<NestExpressApplication>(AppModule, adapter, options),
   );
-
-  // CACHE=off (the development default): every Cache-Control becomes no-store,
-  // so the phone's HTTP cache never answers for this server.
-  if (!config.cache.enabled) expressInstance.use(noStoreMiddleware);
-
-  // bodyParser:false is REQUIRED: with a pre-built ExpressAdapter, Nest's
-  // registerParserMiddleware → ExpressAdapter.isMiddlewareApplied reads the
-  // `app.router` getter, which express@4.22 removed and now THROWS
-  // ('app.router' is deprecated!) — crashing app.init(). Body parsing is
-  // already attached above (express.json), so skipping Nest's parser is safe
-  // and matches build-bus-app.ts.
-  const app = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(expressInstance),
-    { logger: new PinoNestLogger(), bodyParser: false },
-  );
-
-  // CORS, scoped to the first-party web origins in infra/origins.ts (plus
-  // loopback origins in development, for a local web dev server).
-  //
-  // Read-only methods, no credentials. Everything reachable this way is already
-  // public to anyone with curl; what the narrow scope buys is that a browser at
-  // an allowed origin cannot preflight a POST to /internal/*, so the token check
-  // there is never the only thing standing between a page and a send.
-  app.enableCors({
-    origin: corsOrigins(config.isDevelopment),
-    methods: [...CORS_METHODS],
-    exposedHeaders: EXPOSED_RESPONSE_HEADERS,
-    credentials: false,
-    maxAge: 86400,
-  });
-
-  app.useGlobalInterceptors(new ResponseInterceptor());
-  app.useGlobalFilters(new HttpExceptionFilter());
   app.enableShutdownHooks();
 
   // Verify MongoDB connectivity (non-fatal — bus/station read from cache).
