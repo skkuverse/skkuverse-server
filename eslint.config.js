@@ -370,6 +370,24 @@ function migratedTypescriptBlock() {
   };
 }
 
+// Each migrated module's forbidden synonyms: the backticked names in the Not
+// column of docs/explanation/<module>-architecture.md, nothing else (openspec
+// module-docs spec; the glossary-coverage test keeps the two in step).
+const GLOSSARY_NOT = {
+  ad: ["slot", "campaign", "defaultAds", "impression"],
+  "app-config": ["AppSettings", "forceUpdate"],
+  building: ["buildingId", "buildingNo", "roomId", "level", "bucket", "searchData", "term", "geometryDoc"],
+  health: ["isAlive", "isHealthy"],
+};
+
+function glossaryDenylistBlocks() {
+  return Object.entries(GLOSSARY_NOT).map(([module, names]) => ({
+    name: `glossary/${module}`,
+    files: [`src/${module}/**/*.ts`],
+    rules: { "id-denylist": ["error", ...names] },
+  }));
+}
+
 const jestGlobals = {
   describe: "readonly",
   it: "readonly",
@@ -449,6 +467,7 @@ module.exports = [
   ...roleSizeBlocks(),
   migratedFunctionBlock(),
   migratedTypescriptBlock(),
+  ...glossaryDenylistBlocks(),
   {
     // Also keeps `.query` files to repositories: one block per file set, since
     // a later block replaces a rule's options rather than merging them.
