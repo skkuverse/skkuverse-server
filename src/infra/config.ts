@@ -16,7 +16,7 @@ const { switches, errors: switchErrors } = resolveRuntimeSwitches(
 // Typed `string`: every DB name read through this is in required-env.ts's list,
 // so the missing-config exit at the end of this file runs before any caller
 // reads one (test mode skips that exit; jest.setup.ts sets every name).
-const devDbName = (baseName: string | undefined) => requiredEnv.devDbName(mode, baseName) as string;
+const dbNameFor = (baseName: string | undefined) => requiredEnv.dbNameFor(mode, baseName) as string;
 const apiUrl = (prodKey: string, devKey: string) => requiredEnv.apiUrl(mode, process.env, prodKey, devKey);
 
 const config = {
@@ -29,7 +29,7 @@ const config = {
 
   mongo: {
     url: process.env.MONGO_URL,
-    dbName: devDbName(process.env.MONGO_DB_NAME_BUS_CAMPUS),
+    dbName: dbNameFor(process.env.MONGO_DB_NAME_BUS_CAMPUS),
     collections: {
       busCache: process.env.MONGO_CACHE_COLLECTION || "bus_cache",
     },
@@ -39,7 +39,7 @@ const config = {
     // Strict: no fallback to MONGO_DB_NAME_BUS_CAMPUS. Missing MONGO_AD_DB_NAME
     // must crash loudly rather than silently redirecting ad writes to the
     // bus_campus DB. Required-array entry below enforces this at startup.
-    dbName: devDbName(process.env.MONGO_AD_DB_NAME),
+    dbName: dbNameFor(process.env.MONGO_AD_DB_NAME),
     collections: {
       ads: process.env.MONGO_AD_COLLECTION || "ads",
       adEvents: process.env.MONGO_AD_EVENTS_COLLECTION || "ad_events",
@@ -47,7 +47,7 @@ const config = {
   },
 
   building: {
-    dbName: devDbName(process.env.MONGO_BUILDING_DB_NAME),
+    dbName: dbNameFor(process.env.MONGO_BUILDING_DB_NAME),
     collections: {
       buildings: "buildings",
       buildingsRaw: "buildings_raw",
@@ -67,7 +67,7 @@ const config = {
   },
 
   notices: {
-    dbName: devDbName(process.env.MONGO_NOTICES_DB_NAME),
+    dbName: dbNameFor(process.env.MONGO_NOTICES_DB_NAME),
     collections: {
       notices: process.env.MONGO_NOTICES_COLLECTION || "notices",
     },
@@ -126,7 +126,7 @@ const config = {
   eventmap: {
     // Strict: no fallback. A missing MONGO_EVENTMAP_DB_NAME must crash at boot
     // rather than silently writing event content into bus_campus.
-    dbName: devDbName(process.env.MONGO_EVENTMAP_DB_NAME),
+    dbName: dbNameFor(process.env.MONGO_EVENTMAP_DB_NAME),
     collections: {
       activations: "activations",
       places: "places",
@@ -141,7 +141,7 @@ const config = {
     // Its own database rather than a collection inside eventmap's: one database
     // per domain is the pattern here (notices, ads, buildings, eventmap each
     // have one), and a mini-app feed outlives any single event map.
-    dbName: devDbName(process.env.MONGO_MINIAPPS_DB_NAME),
+    dbName: dbNameFor(process.env.MONGO_MINIAPPS_DB_NAME),
     collections: {
       sentNotifications: "sent_notifications",
     },

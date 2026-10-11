@@ -33,7 +33,7 @@ export function envMode(env: NodeJS.ProcessEnv): EnvMode {
 }
 
 /** development → `<name>_dev`, test → `<name>_test`, production → `<name>`. */
-export function devDbName(mode: EnvMode, baseName: string | undefined): string | undefined {
+export function dbNameFor(mode: EnvMode, baseName: string | undefined): string | undefined {
   if (!baseName) return baseName;
   if (mode.isTest) return `${baseName}_test`;
   return mode.isDevelopment ? `${baseName}_dev` : baseName;
@@ -63,7 +63,7 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
   const db = (name: string, key: string): RequiredValue => ({
     name,
     env: key,
-    value: devDbName(mode, env[key]),
+    value: dbNameFor(mode, env[key]),
   });
   const raw = (name: string, key: string): RequiredValue => ({ name, env: key, value: env[key] });
   return [
