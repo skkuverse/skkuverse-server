@@ -1,6 +1,5 @@
 /**
  * (A credential detail is left out of the public history.)
- *
  */
 import type { Breadcrumb, ErrorEvent, Log } from "@sentry/nestjs";
 import { maskQuery, maskUrl, pickHeaders } from "./log-redact";
@@ -29,38 +28,29 @@ export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
   const data = breadcrumb.data;
   if (data) {
     if (typeof data.url === "string") data.url = maskUrl(data.url);
-    // The query of an outgoing call travels separately from its url.
+    // QUIRK(sentry): an outgoing call's query and fragment travel apart from its url.
     delete data["http.query"];
     delete data["http.fragment"];
   }
   return breadcrumb;
 }
 
-/** Keys stop at three segments: `err.http.status`, `req.headers.user-agent`. */
 const MAX_FLATTEN_DEPTH = 2;
 
-function flattenInto(
-  out: Record<string, unknown>,
-  prefix: string,
-  value: unknown,
-  depth: number,
-): void {
-  if (isRecord(value) && depth < MAX_FLATTEN_DEPTH) {
-    for (const [key, v] of Object.entries(value)) flattenInto(out, `${prefix}.${key}`, v, depth + 1);
-    return;
-  }
-  out[prefix] = value;
-}
-
 /**
- * Sentry stores a nested attribute as one JSON string, which cannot be
- * filtered on. Flattening `{ res: { statusCode: 500 } }` to `res.statusCode`
- * makes "every 5xx in the last hour" a query. Anything deeper than three key
- * segments stays one JSON string.
+ * QUIRK(sentry): a nested attribute is stored as one JSON string, which cannot be filtered on;
+ * `res.statusCode` makes "every 5xx in the last hour" a query. Keys stop at three segments.
  */
 export function flattenLogAttributes(log: Log): Log {
   if (!log.attributes) return log;
   const flat: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(log.attributes)) flattenInto(flat, key, value, 0);
+  const put = (prefix: string, value: unknown, depth: number): void => {
+    if (isRecord(value) && depth < MAX_FLATTEN_DEPTH) {
+      for (const [key, v] of Object.entries(value)) put(`${prefix}.${key}`, v, depth + 1);
+      return;
+    }
+    flat[prefix] = value;
+  };
+  for (const [key, value] of Object.entries(log.attributes)) put(key, value, 0);
   return { ...log, attributes: flat };
 }

@@ -1,22 +1,11 @@
 /**
- * What may leave the process in a log line.
- *
- * Until 2026-10 pino-http's default request serializer wrote every request
- * header, so each access line carried the caller's Firebase `Authorization`
- * token and every call to /internal/* carried `X-Internal-Token` (a prod sample
- * of 2000 lines held 707 and 7 of them). The rule since then is an allowlist:
- * a header, query value or error field is logged only if it is named here.
- *
- * These helpers are pure so the Sentry hooks can reuse them on the same data.
+ * EVIDENCE: pino-http's default serializer logs every header: a prod sample of 2,000 access lines held
+ * 707 Firebase tokens and 7 X-Internal-Tokens. A header, query value or error field is logged only if named here.
  */
 import { stdSerializers } from "pino";
 import type { IncomingMessage } from "http";
 
-/**
- * Request headers worth a field in every access line. Nothing else is logged.
- * (x-app-version and x-platform are top-level `appVersion` / `platform`, set by
- * the access logger's customProps.)
- */
+// WHY: not x-app-version or x-platform: customProps logs them as top-level appVersion / platform.
 export const LOGGED_REQUEST_HEADERS = [
   "user-agent",
   "accept-language",
@@ -24,25 +13,18 @@ export const LOGGED_REQUEST_HEADERS = [
   "cf-ipcountry",
 ] as const;
 
-/** Query parameter names whose values are never logged. */
 const SECRET_PARAM = /key|token|secret|password|passwd|signature|sig$|auth|session/i;
 
 const REDACTED = "[REDACTED]";
 
 /**
- * Keys dropped from serialized errors at any depth. An axios error carries its
- * request config (headers with cookies, the URL with a service key) under
- * `config`, and the raw socket objects under `request` / `response`.
+ * QUIRK(axios): an error carries its request config (headers with cookies, a URL with a service key)
+ * under `config`, and the raw socket objects under `request` / `response`.
  */
 const DROPPED_ERROR_KEYS = new Set(["config", "request", "response", "headers"]);
 
 const MAX_ERROR_DEPTH = 4;
 
-/**
- * Path plus query, with the value of every secret-looking parameter masked.
- * Accepts absolute and relative URLs; anything unparseable is returned as its
- * path only (everything before `?`), never verbatim.
- */
 export function maskUrl(url: string): string {
   let parsed: URL;
   try {
@@ -58,7 +40,6 @@ export function maskUrl(url: string): string {
   return `${prefix}${parsed.pathname}${parsed.search}`;
 }
 
-/** A bare query string (no `?`) with secret-looking values masked. */
 export function maskQuery(query: string): string {
   const params = new URLSearchParams(query);
   for (const name of [...params.keys()]) {
@@ -87,8 +68,8 @@ interface LoggedRequest {
 }
 
 /**
- * pino-http hands the serializer a wrapped request whose `raw` is the Express
- * request; `ip` (resolved through `trust proxy`) is only on the raw one.
+ * QUIRK(pino-http): the serializer gets a wrapped request whose `raw` is the Express request, and `ip`
+ * (resolved through `trust proxy`) is only on the raw one.
  */
 export function serializeRequest(req: {
   id?: unknown;
@@ -130,30 +111,24 @@ interface AxiosLike {
   response?: { status?: number };
 }
 
-/**
- * pino's error serializer (type, message, stack, cause, enumerable fields),
- * minus request config and raw sockets at every depth. An axios error keeps
- * what a reader needs to place it: method, masked URL and response status.
- */
+function axiosHttpFields(axios: AxiosLike): { method?: string; url?: string; status?: number } {
+  const url = axios.config?.url;
+  return {
+    method: axios.config?.method?.toUpperCase(),
+    url: url ? maskUrl(new URL(url, axios.config?.baseURL ?? "http://placeholder.invalid").href) : undefined,
+    status: axios.response?.status,
+  };
+}
+
 export function serializeError(err: unknown): unknown {
   if (!(err instanceof Error)) return err;
   const base = scrub(stdSerializers.err(err), 0) as Record<string, unknown>;
   const axios = err as Error & AxiosLike;
-  if (axios.isAxiosError) {
-    const url = axios.config?.url;
-    base.http = {
-      method: axios.config?.method?.toUpperCase(),
-      url: url ? maskUrl(new URL(url, axios.config?.baseURL ?? "http://placeholder.invalid").href) : undefined,
-      status: axios.response?.status,
-    };
-  }
+  if (axios.isAxiosError) base.http = axiosHttpFields(axios);
   return base;
 }
 
-/**
- * Second line of defence for objects logged by hand (`logger.info({ headers })`).
- * The serializers above already keep these out of `req` and `err`.
- */
+// WHY: a second line of defence for objects logged by hand (`logger.info({ headers })`).
 export const REDACT_PATHS = [
   "req.headers.authorization",
   "req.headers.cookie",
