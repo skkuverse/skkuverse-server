@@ -44,3 +44,7 @@ export function corsOrigins(isDevelopment: boolean): Array<string | RegExp> {
 
 // WHY: read-only, so a browser at an allowed origin never gets past a preflight to POST /internal/*.
 export const CORS_METHODS = ["GET", "HEAD", "OPTIONS"] as const;
+
+// QUIRK(cors): `ETag` is not CORS-safelisted, so a browser client can read it to revalidate only once
+// it is exposed.
+export const EXPOSED_RESPONSE_HEADERS = "ETag";

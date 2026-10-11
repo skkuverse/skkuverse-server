@@ -27,7 +27,7 @@ import express from "express";
 import request from "supertest";
 import { LangMiddleware } from "../../src/http/lang.middleware";
 import { CORS_METHODS, corsOrigins, WEBVIEW_ORIGIN } from "../../src/infra/origins";
-import { EXPOSED_RESPONSE_HEADERS } from "../../src/http/expose-headers.middleware";
+import { EXPOSED_RESPONSE_HEADERS } from "../../src/infra/origins";
 
 @Controller("ping")
 class PingController {
