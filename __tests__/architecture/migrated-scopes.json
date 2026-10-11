@@ -4,5 +4,6 @@
   "src/building/",
   "src/health/",
   "src/http/",
+  "src/infra/",
   "src/shared/"
 ]
