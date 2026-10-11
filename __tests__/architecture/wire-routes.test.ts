@@ -18,89 +18,9 @@
  * The allowlist holds the routes that predate the rule; each refactor group
  * clears its own, and a new route is never on it.
  */
-import ts from "typescript";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
-import { routeHandlersIn, type RouteHandler } from "../helpers/architecture/routes";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
-
-const isWireSpecifier = (specifier: string) => /\.wire$/.test(specifier);
-
-const isExemptPath = (path: string) => path === "health" || path.startsWith("health/") || path.startsWith("internal/");
-
-/** The local names a file binds from `.wire` imports: named, default and namespace. */
-function wireImports(sf: ts.SourceFile): Set<string> {
-  const names = new Set<string>();
-  for (const s of sf.statements) {
-    if (!ts.isImportDeclaration(s) || !ts.isStringLiteral(s.moduleSpecifier) || !isWireSpecifier(s.moduleSpecifier.text)) {
-      continue;
-    }
-    const clause = s.importClause;
-    if (clause?.name) names.add(clause.name.text);
-    const bindings = clause?.namedBindings;
-    if (bindings && ts.isNamespaceImport(bindings)) names.add(bindings.name.text);
-    if (bindings && ts.isNamedImports(bindings)) bindings.elements.forEach((e) => names.add(e.name.text));
-  }
-  return names;
-}
-
-const leftmost = (name: ts.EntityName): string => (ts.isIdentifier(name) ? name.text : leftmost(name.left));
-
-/** Whether a type names a wire import anywhere: `X`, `Wire.X`, `X[]`, `X | null`, `typeof x`. */
-function referencesWire(type: ts.Node, wire: ReadonlySet<string>): boolean {
-  if (ts.isTypeReferenceNode(type) && wire.has(leftmost(type.typeName))) return true;
-  if (ts.isTypeQueryNode(type) && wire.has(leftmost(type.exprName))) return true;
-  if (
-    ts.isImportTypeNode(type) &&
-    ts.isLiteralTypeNode(type.argument) &&
-    ts.isStringLiteral(type.argument.literal) &&
-    isWireSpecifier(type.argument.literal.text)
-  ) {
-    return true;
-  }
-  return ts.forEachChild(type, (child) => referencesWire(child, wire) || undefined) ?? false;
-}
-
-const isReference = (type: ts.TypeNode | undefined, name: string): type is ts.TypeReferenceNode =>
-  !!type && ts.isTypeReferenceNode(type) && ts.isIdentifier(type.typeName) && type.typeName.text === name;
-
-/** The types that declare what a handler sends: `T` and `M` of `WithMeta<T, M>`, else the return type, inside `Promise`. */
-function payloadTypes(handler: ts.MethodDeclaration): Array<ts.TypeNode | undefined> {
-  let type = handler.type;
-  if (isReference(type, "Promise")) type = type.typeArguments?.[0];
-  if (isReference(type, "WithMeta")) return [type.typeArguments?.[0], type.typeArguments?.[1]];
-  return [type];
-}
-
-const decoratorNamed = (node: ts.HasDecorators, name: string): ts.CallExpression | undefined =>
-  (ts.getDecorators(node) ?? [])
-    .map((d) => d.expression)
-    .find((e): e is ts.CallExpression => ts.isCallExpression(e) && ts.isIdentifier(e.expression) && e.expression.text === name);
-
-function callsSendSuccess(node: ts.Node): boolean {
-  if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "sendSuccess") return true;
-  return ts.forEachChild(node, (child) => callsSendSuccess(child) || undefined) ?? false;
-}
-
-function writesOwnResponse(handler: ts.MethodDeclaration): boolean {
-  const res = handler.parameters.map((p) => decoratorNamed(p, "Res") ?? decoratorNamed(p, "Response")).find(Boolean);
-  if (!res || res.arguments.length > 0) return false;
-  return !handler.body || !callsSendSuccess(handler.body);
-}
-
-/** The routes in one file that serve JSON to a client: not internal, not health, not a raw response. */
-export function clientRoutes(file: string, source: string): RouteHandler[] {
-  return routeHandlersIn(file, source).filter((r) => !isExemptPath(r.path) && !writesOwnResponse(r.handler));
-}
-
-/** `<METHOD> <path>` for each client-facing route whose payload type, or `meta` type, names no `.wire` type. */
-export function unwiredRoutes(file: string, source: string): string[] {
-  return clientRoutes(file, source)
-    .filter((r) => {
-      const wire = wireImports(r.handler.getSourceFile());
-      return !payloadTypes(r.handler).every((type) => type !== undefined && referencesWire(type, wire));
-    })
-    .map((r) => `${r.method} ${r.path}`);
-}
+import { clientRoutes, unwiredRoutes } from "../helpers/architecture/wire-routes";
 
 describe("wire-routes rule applies as specified", () => {
   const imports = [
