@@ -14,6 +14,7 @@
         "explanation/app-config-architecture.md",
         "explanation/building-architecture.md",
         "explanation/health-architecture.md",
+        "explanation/map-architecture.md",
         "explanation/ui-architecture.md"
       ],
       "combine": "merge",
