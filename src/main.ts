@@ -14,11 +14,7 @@ import config from "./infra/config";
 import { closeClient, ping as pingDb } from "./infra/db";
 import { AppModule } from "./app.module";
 import { ResponseInterceptor } from "./http/response.interceptor";
-import {
-  EXPOSED_RESPONSE_HEADERS,
-  exposeHeadersMiddleware,
-} from "./http/expose-headers.middleware";
-import { CORS_METHODS, corsOrigins } from "./infra/origins";
+import { CORS_METHODS, corsOrigins, EXPOSED_RESPONSE_HEADERS } from "./infra/origins";
 import { HttpExceptionFilter } from "./http/http-exception.filter";
 import { LangMiddleware } from "./http/lang.middleware";
 import { noStoreMiddleware } from "./http/no-store.middleware";
@@ -53,8 +49,6 @@ async function bootstrap(): Promise<void> {
     langMiddleware.use(req as never, res as never, next),
   );
 
-  expressInstance.use(exposeHeadersMiddleware);
-
   // CACHE=off (the development default): every Cache-Control becomes no-store,
   // so the phone's HTTP cache never answers for this server.
   if (!config.cache.enabled) expressInstance.use(noStoreMiddleware);
@@ -81,8 +75,6 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: corsOrigins(config.isDevelopment),
     methods: [...CORS_METHODS],
-    // WHY: the cors package writes Access-Control-Expose-Headers on every response it sees, replacing
-    // the value exposeHeadersMiddleware set, so it gets the same one.
     exposedHeaders: EXPOSED_RESPONSE_HEADERS,
     credentials: false,
     maxAge: 86400,
