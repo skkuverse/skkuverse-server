@@ -6,49 +6,18 @@
  * (AppConfigModule binds it on /app), the controller, ResponseInterceptor and
  * HttpExceptionFilter.
  */
-import { Module } from "@nestjs/common";
-import { ExpressAdapter } from "@nestjs/platform-express";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { Test } from "@nestjs/testing";
-import express from "express";
-import { mountRequestLogging } from "../../../src/infra/http-logging";
 import request from "supertest";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
 import { ConfigModule } from "../../../src/config/config.module";
 import { AppConfigModule } from "../../../src/app-config/app-config.module";
-import { LangMiddleware } from "../../../src/http/lang.middleware";
-import { ResponseInterceptor } from "../../../src/http/response.interceptor";
-import { HttpExceptionFilter } from "../../../src/http/http-exception.filter";
-
-@Module({
-  imports: [ConfigModule, AppConfigModule],
-})
-class TestAppConfigModule {}
+import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 
 beforeAll(async () => {
-  const expressInstance = express();
-  expressInstance.set("trust proxy", 1);
-  mountRequestLogging(expressInstance);
-  expressInstance.use(express.json({ limit: "100kb" }));
-  const lang = new LangMiddleware();
-  expressInstance.use((req, res, next) =>
-    lang.use(req as never, res as never, next),
-  );
-
-  const moduleRef = await Test.createTestingModule({
-    imports: [TestAppConfigModule],
-  }).compile();
-
-  app = moduleRef.createNestApplication<NestExpressApplication>(
-    new ExpressAdapter(expressInstance),
-    { bodyParser: false },
-  );
-  app.useGlobalInterceptors(new ResponseInterceptor());
-  app.useGlobalFilters(new HttpExceptionFilter());
-  await app.init();
+  app = await buildTestApp({ imports: [ConfigModule, AppConfigModule] });
   httpServer = app.getHttpServer();
 });
 

@@ -15,7 +15,9 @@ import { BuildingSearchRepository } from "../../../src/building/search/building-
 import { FakeBuildingCatalogRepository } from "../../helpers/fakes/building/building-catalog.repository.fake";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeBuildingSearchRepository } from "../../helpers/fakes/building/building-search.repository.fake";
-import { buildBuildingApp } from "../../helpers/nest/build-building-app";
+import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { BuildingCatalogModule } from "../../../src/building/catalog/building-catalog.module";
+import { BuildingSearchModule } from "../../../src/building/search/building-search.module";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -47,11 +49,15 @@ beforeAll(async () => {
   buildings = new FakeBuildingRepository();
   catalog = new FakeBuildingCatalogRepository();
   search = new FakeBuildingSearchRepository();
-  app = await buildBuildingApp([
-    { provide: BuildingRepository, useValue: buildings },
-    { provide: BuildingCatalogRepository, useValue: catalog },
-    { provide: BuildingSearchRepository, useValue: search },
-  ]);
+  app = await buildTestApp({
+    // app.module.ts order: search registers /building/search before catalog's /building/:skkuId.
+    imports: [BuildingSearchModule, BuildingCatalogModule],
+    overrides: [
+      { provide: BuildingRepository, useValue: buildings },
+      { provide: BuildingCatalogRepository, useValue: catalog },
+      { provide: BuildingSearchRepository, useValue: search },
+    ],
+  });
   httpServer = app.getHttpServer();
 });
 
