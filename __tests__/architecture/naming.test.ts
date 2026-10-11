@@ -13,10 +13,12 @@
  *   - exported types: only a `.types`, `.document` or `.schema` file exports an
  *     interface or type alias; a type used inside one file stays there,
  *     unexported. src/infra/ files, named by resource, are not checked.
- *   - main export: a class-role or `.decorator` file exports something named
- *     after the file, so either can be found from the other: a class
- *     `NoStoreMiddleware`, a function `noStoreMiddleware`, a decorator
- *     `CacheControl`.
+ *   - main export: a class-role, `.decorator` or `.bootstrap` file exports
+ *     something named after the file, so either can be found from the other:
+ *     a class `NoStoreMiddleware`, a function `noStoreMiddleware`, a decorator
+ *     `CacheControl`. A `.bootstrap` file builds the app or applies the
+ *     app-wide pipeline, so its function opens with the verb:
+ *     `http-app.bootstrap.ts` exports `bootstrapHttpApp`.
  *   - type files: a `.types` or `.document` file holds no runtime code.
  *   - brand casts: a brand type (an alias of `Brand<…>` in a `.types` file) is
  *     cast with `as` only where a value enters: `.client`, `.schema` and
@@ -124,14 +126,17 @@ function exportedValues(source: string): string[] {
   });
 }
 
-/** `<file>` when a class-role or decorator file exports values but none named after the file. */
+const NAMED_EXPORT_ROLES = new Set([...CLASS_ROLES, "decorator", "bootstrap"]);
+
+/** `<file>` when a class-role, decorator or bootstrap file exports values but none named after the file. */
 export function mainExportViolations(file: string, source: string): string[] {
   if (EXEMPT.has(file) || file.endsWith(".spec.ts")) return [];
   const { parts } = parse(file);
-  if (parts.length !== 2 || !(CLASS_ROLES.has(parts[1]!) || parts[1] === "decorator")) return [];
+  if (parts.length !== 2 || !NAMED_EXPORT_ROLES.has(parts[1]!)) return [];
   const base = parts[0]!.replace(/-/g, "").toLowerCase();
+  const prefix = parts[1] === "bootstrap" ? `bootstrap${base}` : base;
   const values = exportedValues(source);
-  if (values.length === 0 || values.some((name) => name.toLowerCase().startsWith(base))) return [];
+  if (values.length === 0 || values.some((name) => name.toLowerCase().startsWith(prefix))) return [];
   return [file];
 }
 
@@ -216,6 +221,7 @@ describe("naming rules apply as specified", () => {
     "src/building/building.service.spec.ts",
     "src/shared/regex.util.ts",
     "src/shared/regex.util.spec.ts",
+    "src/http/http-app.bootstrap.ts",
     "src/infra/db.ts",
     "src/infra/db.spec.ts",
     "src/infra/nest-logger.ts",
@@ -279,7 +285,7 @@ describe("naming rules apply as specified", () => {
     expect(exportedTypeViolations("src/building/building.types.ts", "export interface A {}")).toEqual([]);
     expect(exportedTypeViolations("src/building/building.document.ts", "export interface A {}")).toEqual([]);
     expect(exportedTypeViolations("src/building/building.schema.ts", "export type A = 1;")).toEqual([]);
-    for (const role of ["rules", "mapper", "query", "config", "util"]) {
+    for (const role of ["rules", "mapper", "query", "config", "util", "bootstrap"]) {
       const file = `src/building/building.${role}.ts`;
       expect(exportedTypeViolations(file, "export interface A {}\nexport function a() {}")).toEqual([`${file}: A`]);
     }
@@ -295,6 +301,11 @@ describe("naming rules apply as specified", () => {
     expect(
       mainExportViolations("src/http/cache-control.decorator.ts", "export const KEY = 1;\nexport const CacheControl = () => 1;"),
     ).toEqual([]);
+    const bootstrap = "src/http/http-app.bootstrap.ts";
+    expect(mainExportViolations(bootstrap, "export async function bootstrapHttpApp() {}")).toEqual([]);
+    expect(mainExportViolations(bootstrap, "export async function httpPipelineMiddleware() {}")).toEqual([bootstrap]);
+    expect(mainExportViolations(bootstrap, "export async function httpApp() {}")).toEqual([bootstrap]);
+    expect(mainExportViolations(bootstrap, "export class HttpAppBootstrap {}")).toEqual([bootstrap]);
     expect(mainExportViolations("src/x/x.rules.ts", "export function anything() {}")).toEqual([]);
     expect(mainExportViolations("src/x/x.service.ts", "export type T = 1;")).toEqual([]);
   });
