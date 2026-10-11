@@ -177,3 +177,41 @@ describe("parseCampusShapesFile", () => {
     for (const doc of docs) expect(campusShapeDoc.safeParse(doc).success).toBe(true);
   });
 });
+
+describe("parseCampusShapesFile reads skkuId as the server does", () => {
+  it.each([0, -1, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects skkuId %p as not a building id and writes nothing",
+    (skkuId) => {
+      // Act
+      const { docs, errors } = parse({ skkuId });
+
+      // Assert
+      expect(docs).toHaveLength(0);
+      expect(errors).toEqual([
+        expect.stringMatching(/^shapes\[0\] \("bldg-2-footprint"\)\.skkuId\b.*positive safe integer/),
+      ]);
+    },
+  );
+
+  it.each([
+    [1, true],
+    [88, true],
+    [null, true],
+    [0, false],
+    [-1, false],
+    [2.5, false],
+    [Number.MAX_SAFE_INTEGER + 1, false],
+    ["2", false],
+  ])("gives skkuId %p the verdict campusShapeDoc gives it (accepted: %p)", (skkuId, accepted) => {
+    // Arrange
+    const stored = { ...parse().docs[0], skkuId };
+
+    // Act
+    const imported = parse({ skkuId }).docs.length === 1;
+    const served = campusShapeDoc.safeParse(stored).success;
+
+    // Assert
+    // A shape the importer writes but campusShapeDoc drops would vanish from the campus map.
+    expect({ imported, served }).toEqual({ imported: accepted, served: accepted });
+  });
+});
