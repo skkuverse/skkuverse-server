@@ -1,5 +1,6 @@
 /**
- * Unit tests for the campus → unified overlay projection.
+ * The campus → unified overlay projection, through MapCampusService over a
+ * stubbed BuildingService (the two reads it makes).
  *
  * The point of this suite is the SHAPE. Buildings, festival booths and
  * hand-authored campus geometry share one overlay schema, so the assertions
@@ -9,14 +10,18 @@
  */
 
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
-jest.mock("../../../src/infra/logger", () => mockLogger);
+jest.mock("../../infra/logger", () => mockLogger);
 
 const mockListAllBuildings = jest.fn();
 const mockListAllCampusShapes = jest.fn();
 const source = { listAllBuildings: mockListAllBuildings, listAllCampusShapes: mockListAllCampusShapes };
 
-import { getCampusOverlays } from "../../../src/map/map-campus-overlays.data";
-import { logText } from "../../helpers/log-text";
+import type { BuildingService } from "../../building/building.service";
+import { MapCampusService } from "./map-campus.service";
+import { logText } from "../../../__tests__/helpers/log-text";
+
+const getCampusOverlays = (from: typeof source) =>
+  new MapCampusService(from as unknown as BuildingService).getCampusOverlays();
 
 const RING: [number, number][] = [
   [126.9704, 37.2901],
@@ -64,10 +69,13 @@ describe("getCampusOverlays", () => {
   });
 
   it("emits one marker per layer for a building that has a number", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([building()]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
 
+    // Assert
     expect(markers.map((m) => m.layerId).sort()).toEqual([
       "building_labels",
       "building_numbers",
@@ -75,12 +83,15 @@ describe("getCampusOverlays", () => {
   });
 
   it("puts the number in text for one layer and the name in the other", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([building()]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
     const numbers = markers.find((m) => m.layerId === "building_numbers")!;
     const labels = markers.find((m) => m.layerId === "building_labels")!;
 
+    // Assert
     // `displayNo` no longer exists on the wire: `text` is "the string this
     // marker displays", and markerStyle decides how to draw it.
     expect(numbers.text).toEqual({ ko: "1", en: "1" });
@@ -88,10 +99,13 @@ describe("getCampusOverlays", () => {
   });
 
   it("un-swaps the GeoJSON coordinate pair", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([building()]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
 
+    // Assert
     // Latitude is the ~37 one. A swap raises no error anywhere; it just moves
     // the building into the Atlantic.
     // [lng, lat] — GeoJSON order. The fallback table is authored lat-first, so
@@ -103,10 +117,13 @@ describe("getCampusOverlays", () => {
   });
 
   it("addresses a building through the same tap envelope a booth uses", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([building({ _id: 42 })]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
 
+    // Assert
     // String on the wire even though the building id is numeric — one addressing
     // scheme for both kinds. The app parses it back inside the building branch.
     expect(markers[0]!.tap).toEqual({ kind: "skku_building", placeId: "42" });
@@ -114,10 +131,13 @@ describe("getCampusOverlays", () => {
   });
 
   it("gives every building an empty window list, meaning always open", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([building()]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
 
+    // Assert
     // Present and empty, not absent: the field is part of the shared schema, and
     // `[]` is the ONE spelling of "no opening-hours concept applies". A building
     // must never be hidden by an open-now filter.
@@ -125,10 +145,13 @@ describe("getCampusOverlays", () => {
   });
 
   it("fills the booth-shaped half of the shared schema with stated emptiness", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([building()]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
 
+    // Assert
     // Stated rather than omitted: one producer leaving a shared field undefined
     // is exactly what ADR 0004 invariant 1 exists to prevent, and an optional
     // field would be a second thing for the app to branch on.
@@ -146,16 +169,20 @@ describe("getCampusOverlays", () => {
   });
 
   it("omits a building with no number from the numbers layer only", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([building({ displayNo: null })]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
 
+    // Assert
     // Preserves the old `overlay=number` filter, which dropped these entirely.
     expect(markers).toHaveLength(1);
     expect(markers[0]!.layerId).toBe("building_labels");
   });
 
   it("falls back to Korean when the English name is the EMPTY STRING", async () => {
+    // Arrange
     // The shape the database actually produces. Both writers coalesce a missing
     // English name to "" rather than null — building.sync's
     // `en: item.buildNmEng || ""` — so a `??` fallback here would be dead code
@@ -165,21 +192,26 @@ describe("getCampusOverlays", () => {
       building({ name: { ko: "수선관", en: "" } }),
     ]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
     const labels = markers.find((m) => m.layerId === "building_labels")!;
 
+    // Assert
     expect(labels.text).toEqual({ ko: "수선관", en: "수선관" });
   });
 
   it("projects every building, not just the first", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([
       building({ _id: 1, displayNo: "1", name: { ko: "가", en: "A" } }),
       building({ _id: 2, displayNo: "2", name: { ko: "나", en: "B" } }),
       building({ _id: 3, displayNo: null, name: { ko: "다", en: "C" } }),
     ]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
 
+    // Assert
     // Two layers for the first two, labels only for the third. Without this
     // case a `return` inside the loop body would satisfy every other test here.
     expect(markers).toHaveLength(5);
@@ -189,18 +221,22 @@ describe("getCampusOverlays", () => {
   });
 
   it("drops a building with no name from the labels layer", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([
       building({ name: { ko: "", en: "" } }),
     ]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
 
+    // Assert
     // An unnamed marker draws nothing but still takes a tap target and a
     // collision slot. The booth producer already refuses this; so does this one.
     expect(markers.map((m) => m.layerId)).toEqual(["building_numbers"]);
   });
 
   it("drops a building whose coordinates failed to parse", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([
       building({ _id: 1 }),
       // building.sync uses parseFloat and concedes "undefined → NaN" with no
@@ -209,8 +245,10 @@ describe("getCampusOverlays", () => {
       building({ _id: 2, location: { type: "Point", coordinates: [NaN, NaN] } }),
     ]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
 
+    // Assert
     expect(new Set(markers.map((m) => m.id))).toEqual(new Set(["1"]));
     expect(
       markers.every((m) => m.geometry.coordinates.flat(2).every(Number.isFinite)),
@@ -218,18 +256,24 @@ describe("getCampusOverlays", () => {
   });
 
   it("flags the live path as not degraded", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([building()]);
 
+    // Act
     const { degraded } = await getCampusOverlays(source);
 
+    // Assert
     expect(degraded).toBe(false);
   });
 
   it("serves the empty-DB fallback in the same shape as the live path", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([]);
 
+    // Act
     const { overlays: markers, degraded } = await getCampusOverlays(source);
 
+    // Assert
     // The caller must be able to refuse to cache this. listAllBuildings holds an
     // empty result for 5 minutes; the route's normal TTL is a day, so without
     // this flag a momentary empty read pins 12 hardcoded buildings into every
@@ -258,10 +302,13 @@ describe("getCampusOverlays", () => {
   });
 
   it("keeps ids stable across the two layers of one building", async () => {
+    // Arrange
     mockListAllBuildings.mockResolvedValue([building({ _id: 7 })]);
 
+    // Act
     const { overlays: markers } = await getCampusOverlays(source);
 
+    // Assert
     // Same place, drawn twice. The app's React key is layerId + id, so sharing
     // an id across layers is correct rather than a collision.
     expect(new Set(markers.map((m) => m.id))).toEqual(new Set(["7"]));
@@ -275,10 +322,13 @@ describe("getCampusOverlays — hand-authored campus geometry", () => {
   });
 
   it("serves a footprint beside the building pins, in one collection", async () => {
+    // Arrange
     mockListAllCampusShapes.mockResolvedValue([shape()]);
 
+    // Act
     const { overlays } = await getCampusOverlays(source);
 
+    // Assert
     // Two building pins and one polygon, from one call. That is the whole
     // point of the unified route: a client draws the campus with one fetch.
     expect(overlays.map((o) => o.kind).sort()).toEqual([
@@ -289,49 +339,66 @@ describe("getCampusOverlays — hand-authored campus geometry", () => {
   });
 
   it("passes the stored ring through untouched, in GeoJSON order", async () => {
+    // Arrange
     mockListAllCampusShapes.mockResolvedValue([shape()]);
 
+    // Act
     const { overlays } = await getCampusOverlays(source);
     const polygon = overlays.find((o) => o.kind === "polygon")!;
 
+    // Assert
     // Identity, not tolerance. The server does no conversion here at all, and
     // that is precisely why a swap cannot be introduced.
     expect(polygon.geometry).toEqual({ type: "Polygon", coordinates: [RING] });
   });
 
   it("derives kind from the stored geometry rather than a second field", async () => {
+    // Arrange
     mockListAllCampusShapes.mockResolvedValue([
       shape({ _id: "path-1", geometry: { type: "LineString", coordinates: RING } }),
     ]);
 
+    // Act
     const { overlays } = await getCampusOverlays(source);
+
+    // Assert
     expect(overlays.find((o) => o.id === "path-1")!.kind).toBe("path");
   });
 
   it("addresses a footprint through the same tap envelope its number pin uses", async () => {
+    // Arrange
     mockListAllCampusShapes.mockResolvedValue([shape()]);
 
+    // Act
     const { overlays } = await getCampusOverlays(source);
     const polygon = overlays.find((o) => o.kind === "polygon")!;
 
+    // Assert
     // Tapping the outline must open the sheet the pin opens — one addressing
     // scheme, and a string placeId for a numeric Mongo id.
     expect(polygon.tap).toEqual({ kind: "skku_building", placeId: "2" });
   });
 
   it("leaves geometry that is not a building inert rather than tappable", async () => {
+    // Arrange
     mockListAllCampusShapes.mockResolvedValue([shape({ skkuId: null })]);
 
+    // Act
     const { overlays } = await getCampusOverlays(source);
+
+    // Assert
     expect(overlays.find((o) => o.kind === "polygon")!.tap).toBeNull();
   });
 
   it("fills the booth-shaped half of the schema with stated emptiness", async () => {
+    // Arrange
     mockListAllCampusShapes.mockResolvedValue([shape()]);
 
+    // Act
     const { overlays } = await getCampusOverlays(source);
     const polygon = overlays.find((o) => o.kind === "polygon")!;
 
+    // Assert
     expect(polygon.hours).toEqual([]);
     expect(polygon.fields).toEqual([]);
     expect(polygon.actions).toEqual([]);
@@ -339,18 +406,22 @@ describe("getCampusOverlays — hand-authored campus geometry", () => {
   });
 
   it("drops a shape naming no base layer, and says which one", async () => {
+    // Arrange
     // The base layer list is repo TypeScript and this id is hand-authored, so
     // they can drift. Drift otherwise shows up as an overlay that downloads
     // fine and matches no layer, drawing nothing with no error anywhere.
     mockListAllCampusShapes.mockResolvedValue([shape({ layerId: "typo_layer" })]);
 
+    // Act
     const { overlays } = await getCampusOverlays(source);
 
+    // Assert
     expect(overlays.every((o) => o.kind === "marker")).toBe(true);
     expect(logText(mockLogger.warn.mock.calls[0])).toContain("typo_layer");
   });
 
   it("skips a structurally broken ring rather than blanking the campus", async () => {
+    // Arrange
     // The failure mode this guard exists for: `coordinates: [null]` passes an
     // "is an array" check and then throws inside the winding pass — and the
     // throw would take the BUILDINGS with it, which is the inverse of what the
@@ -359,8 +430,10 @@ describe("getCampusOverlays — hand-authored campus geometry", () => {
       shape({ geometry: { type: "Polygon", coordinates: [null] } }),
     ]);
 
+    // Act
     const { overlays, degraded } = await getCampusOverlays(source);
 
+    // Assert
     expect(overlays).toHaveLength(2);
     expect(overlays.every((o) => o.kind === "marker")).toBe(true);
     expect(degraded).toBe(false);
@@ -368,6 +441,7 @@ describe("getCampusOverlays — hand-authored campus geometry", () => {
   });
 
   it("keeps serving the buildings when the PROJECTION throws, not just the read", async () => {
+    // Arrange
     // A guard cannot be relied on to be total forever. The catch has to wrap
     // the projection too, or the next unguarded shape does exactly what the
     // guard was added to prevent.
@@ -376,19 +450,24 @@ describe("getCampusOverlays — hand-authored campus geometry", () => {
       length: 1,
     } as never);
 
+    // Act
     const { overlays, degraded } = await getCampusOverlays(source);
 
+    // Assert
     expect(overlays).toHaveLength(2);
     expect(degraded).toBe(false);
   });
 
   it("keeps serving the buildings when the shapes read fails", async () => {
+    // Arrange
     // Campus geometry is an enhancement; the campus map is the product. A
     // failing collection must not blank the buildings with it.
     mockListAllCampusShapes.mockRejectedValue(new Error("atlas hiccup"));
 
+    // Act
     const { overlays, degraded } = await getCampusOverlays(source);
 
+    // Assert
     expect(overlays).toHaveLength(2);
     // `degraded` keeps meaning exactly one thing — the BUILDINGS fell back —
     // so the controller's caching decision keeps the meaning it was written for.

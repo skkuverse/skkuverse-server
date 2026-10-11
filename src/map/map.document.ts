@@ -1,167 +1,74 @@
-// Mongo documents for the map's event places (skkuverse#11).
-// Contract: docs/reference/event-places.md §2. Cross-repo ownership: umbrella ADR 0004.
-//
-// These are the stored documents; what the client sees is a `MapOverlay`
-// (`map-overlay.types.ts`), projected by `map-event-overlays.data.ts`.
-//
-// `location` is the ONE exception to "nothing here is a wire type": the stored
-// geometry object is served verbatim, byte for byte, with no conversion on the
-// server at all. That is deliberate — an axis swap can only be introduced at a
-// conversion, and swapped Seoul coordinates land in the Yellow Sea without ever
-// throwing. Removing the conversion is a stronger guarantee than guarding it.
-//
-// The layer SET — the developer-owned structure a festival is configured with —
-// lives in `map-layerset.types.ts`. The split is by who edits it: ops edit what
-// is here, a PR edits what is there.
-
-// Campus is IMPORTED, not mirrored. "hssc" | "nsc" is a fact about the
-// university, not about a feature — the whole repo (bus, map, ui, i18n,
-// building) already imports this one declaration, and a second copy would only
-// create two things to keep in sync for a value that cannot change.
 import type { Campus } from "../building/building.types";
 import type { I18n } from "../infra/types";
 import type { OverlayGeometry } from "../shared/geojson.types";
 import type { LinkActionType } from "../shared/link-action.wire";
-import type { PlaceDetailOf } from "./map-place-detail.types";
+import type { PLACE_KINDS } from "./map.constants";
 
-// I18n is infra (`src/infra/types.ts`), because the map catalogue authors its
-// labels in the same shape and both halves share one resolver. Re-exported so
-// the many call sites keep reading naturally.
-export type { Campus, I18n };
+// CONTRACT(scripts): scripts/lib/map-places-file.js and scripts/lib/eventmap-db.js write these documents.
+// SEE: docs/reference/event-places.md §2 for each field and who edits it.
 
-/**
- * One action on a sheet button. The server picks the type per button; the app
- * renders what it is handed and never interprets.
- */
 export interface PlaceAction {
   id: string;
   label: I18n;
   actionType: LinkActionType | "content";
-  /**
-   * A complete URL for `webview`/`external` (`webview` may be root-relative on
-   * WEBVIEW_ORIGIN), an in-app path for `route`, the body itself for `content`,
-   * and a mini-app target (`<miniAppId>[/path]`, src/miniapps/miniapp-target.ts)
-   * for `miniapp`. A relative string handed to a URL opener is the shape of an
-   * open redirect, which is why each type has its own rule.
-   */
   actionValue: string;
   style?: "primary" | "secondary";
 }
 
-/**
- * One interval this place is open. The START is always a real instant; the END
- * is one too, or `null` when it has not been announced.
- *
- * ABSOLUTE, not "18:00" strings: a bar running 18:00–02:00 crosses midnight, and
- * with instants "is it open" is `startAt <= now && (endAt === null || now < endAt)`
- * and nothing else.
- *
- * A `null` end is "open from here, end unannounced" — the 팔찌 배부 booths close
- * when the artist stage does, and the council posts that on the night. It is
- * NOT a second spelling of "always open": the start still gates it, so the place
- * reads closed until then. Nothing on this side invents an end for it either —
- * the layer set's activation (`activeUntil`) is what takes the whole festival,
- * open-ended windows included, off the map. A start-less window stays
- * inexpressible, which is what leaves an empty `hours` as the one spelling of
- * "always open".
- *
- * `label` names a window when one place runs differently across its windows —
- * the 성균인 booth's 단체 입장 then 개별 입장. Optional on the document because
- * places imported before it existed have no key; the reader writes `null`.
- */
+/** WHY: absolute instants, never "18:00": a window crossing midnight needs no date arithmetic. `endAt: null` is unannounced. */
 export interface OpeningWindow {
   startAt: Date;
   endAt: Date | null;
   label?: I18n | null;
 }
 
-/**
- * `places` — one operating entity: this booth, on this spot, open during these
- * intervals. The source of every event marker, and the ONLY tier there is.
- *
- * It used to be two: a `places` plot joined to N `sessions`, one session per
- * festival day. That model made a two-day booth two documents, so the list
- * rendered it twice with nothing to tell the rows apart — and it made the plots
- * themselves day-scoped, leaving three documents on one coordinate. The days
- * are `hours` now, and a document is a thing rather than a thing-on-a-day.
- *
- * There is no `lifecycle` and no `deletedAt`. A cancelled booth is DELETED, and
- * that is what lets an empty `hours` mean exactly one thing: with no cancelled
- * state to encode, "no windows" can only mean always open.
- */
+type PlaceBlockDoc =
+  | { type: "text"; id: string; title: I18n | null; body: I18n }
+  | { type: "list"; id: string; title: I18n | null; items: Array<{ emoji: string | null; title: I18n; description: I18n | null }> }
+  | { type: "table"; id: string; title: I18n | null; rows: Array<{ label: I18n; value: I18n }> }
+  | { type: "image"; id: string; title: I18n | null; url: string; caption: I18n | null }
+  | { type: "notice"; id: string; title: I18n | null; items: I18n[] };
+
+type PlaceDetailActionDoc =
+  | { type: "instagram"; id: string; label: I18n; profileUrl: string; postUrl: string | null }
+  | { type: "link"; id: string; label: I18n; url: string };
+
+export interface PlaceDetailDoc {
+  kind: (typeof PLACE_KINDS)[number];
+  org: I18n | null;
+  isUnion: boolean;
+  locationLabel: I18n | null;
+  actions: PlaceDetailActionDoc[];
+  blocks: PlaceBlockDoc[];
+}
+
 export interface MapPlaceDoc {
-  /** HUMAN-AUTHORED slug, not ObjectId — the ops sheet is keyed by it. */
-  _id: string; // "eskara-2026-bar-01"
+  /** WHY: a human-authored slug, not an ObjectId: the ops sheet is keyed by it. */
+  _id: string;
   layerSetId: string;
-  campus: Campus; // closed union: an unexpected value is a data bug
-  /** OPEN string — "전시" next year must be a Mongo edit, not a deploy. */
+  campus: Campus;
+  /** WHY: an open string: next year's category is a Mongo edit, not a deploy. */
   category: string;
-  /**
-   * GeoJSON, [lng, lat], as BuildingDoc.location. REQUIRED — a place without
-   * geometry cannot be drawn, and a nullable field would only defer the failure
-   * to render time. A place exists once surveyed, and not before.
-   *
-   * A Point is a booth, a Polygon is a zone, a LineString is a route — one
-   * collection, because a zone is a place whose geometry happens to be an area
-   * (umbrella ADR 0004 invariant 1 applied to geometry). Widening the union on
-   * the SAME field is what keeps the `2dsphere` index working as the guard it
-   * already is: Mongo rejects an unclosed ring, a ring with fewer than four
-   * positions, a self-intersecting loop and a hole outside its exterior, all at
-   * insert. It does NOT check winding — that is the importer's job, via
-   * `shared/ring-winding.util.ts`, because the wire serves this object verbatim.
-   */
   location: OverlayGeometry;
   title: I18n;
   subtitle?: I18n | null;
-  /** Empty = always open. See OpeningWindow. */
+  /** WHY: empty means always open, and nothing else: a cancelled place is deleted, not flagged. */
   hours: OpeningWindow[];
-  /** Card rows in authored order, each carrying its own label. */
-  fields: { label: I18n; value: I18n }[];
+  fields: Array<{ label: I18n; value: I18n }>;
   actions: PlaceAction[];
-  /** Sort position, and the last tiebreak when two places share a coordinate. */
   order: number;
-  /**
-   * Option ids per `tag`-sourced list facet — `{ org: ["council"] }`. Never an
-   * `hours` facet: a day is derived from `hours`, not authored twice. Absent on
-   * documents imported before list facets existed. See `EventFacetDef`.
-   */
   facets?: Record<string, string[]>;
-  /** Per-option sort position — `{ day1: 3, day2: 11 }`. See `OverlayBase.orderByOption`. */
   orderByOption?: Record<string, number>;
-  /**
-   * What the sheet says beyond the pin — see `map-place-detail.types.ts`.
-   * Served on its own route, never on the overlay.
-   *
-   * Optional for the reason `subtitle` is: a document written before this field
-   * existed has no key at all until its next import. The reader always writes it
-   * (`null` when the sheet has none), so after one import the key is present on
-   * every place and "absent" and "null" mean the same thing.
-   */
   detail?: PlaceDetailDoc | null;
   updatedAt: Date;
 }
 
-/** The stored detail: authored `I18n`, resolved to `I18nWire` at serve time. */
-export type PlaceDetailDoc = PlaceDetailOf<I18n>;
-
-/**
- * `activations` — the ops lever, and the only tier ops can change during the
- * event without a deploy. Rain delays and early closes are content events.
- */
 export interface ActivationDoc {
-  _id: string; // layerSetId, "eskara-2026"
-  activeFrom: Date | null; // null = unbounded
+  /** WHY: the layer set's id, so one activation per layer set. */
+  _id: string;
+  activeFrom: Date | null;
   activeUntil: Date | null;
-  /**
-   * One-field kill switch. `false` takes the event map down within the origin
-   * cache TTL (`map-event-cache.ts`) — the layers leave `/map/config` and
-   * `/map/overlays/event` returns nothing.
-   *
-   * This document is the whole reason the activation tier survived the snapshot
-   * deletion. The window could have moved into the config file, which would have
-   * made `activeLayerSet` pure and synchronous; keeping it in Mongo is what buys
-   * an ops kill switch that does not need a deploy.
-   */
+  /** WHY: the ops kill switch that needs no deploy; it is why activations live in Mongo, not the layer-set file. */
   enabled: boolean;
   updatedAt: Date;
 }

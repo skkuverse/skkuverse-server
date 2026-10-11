@@ -1,5 +1,8 @@
 /**
- * The chip contract served inside GET /map/config.
+ * The chip contract served inside GET /map/config: the chip validator and
+ * chipGroupOf (map.rules.ts), the festival's chip specs and reset chip
+ * (layer-set/map-layer-set.mapper.ts), and their projection to the wire
+ * (config/map-config.mapper.ts).
  *
  * Two kinds of assertion here, and they fail for different reasons:
  *
@@ -16,24 +19,21 @@
  * that come on by themselves, so it cannot drift from the layer list.
  */
 
-import { getLayerSetConfig } from "../../../src/map/map-layerset.config";
-import { pick } from "../../../src/infra/i18n";
-import type { EventMapConfig } from "../../../src/map/map-layerset.types";
-import { WEBVIEW_ORIGIN } from "../../../src/infra/origins";
-import {
-  BASE_LAYERS,
-  chipGroupOf,
-  eventLayerSpecs,
-} from "../../../src/map/map-layers.data";
-import {
-  assertValidChipSpecs,
-  BASE_CHIPS,
-  eventChipSpecs,
-  getChips,
-  resetChip,
-  validateChipSpecs,
-  type MapChipSpec,
-} from "../../../src/map/map-chips.data";
+import { pick } from "../infra/i18n";
+import { WEBVIEW_ORIGIN } from "../infra/origins";
+import type { SupportedLang } from "../infra/types";
+import { toMapChips } from "./config/map-config.mapper";
+import { getLayerSetConfig } from "./layer-set/map-layer-set.config";
+import { BASE_CHIPS } from "./layer-set/map-layer-set.constants";
+import { eventChipSpecs, eventLayerSpecs, resetChip } from "./layer-set/map-layer-set.mapper";
+import type { EventMapConfig } from "./layer-set/map-layer-set.schema";
+import type { MapChipSpec } from "./layer-set/map-layer-set.types";
+import { BASE_LAYERS } from "./map.constants";
+import { assertValidChipSpecs, chipGroupOf, validateChipSpecs } from "./map.rules";
+
+/** The chips /map/config serves for a live festival, or none: the projection the old getChips made. */
+const getChips = (lang: SupportedLang, event: EventMapConfig | null) =>
+  toMapChips(event ? [...BASE_CHIPS, ...eventChipSpecs(event)] : BASE_CHIPS, lang);
 
 const LANGS = ["ko", "en", "zh"] as const;
 
@@ -50,6 +50,7 @@ const asSpecs = (specs: unknown): MapChipSpec[] => specs as MapChipSpec[];
 
 describe("chip lists", () => {
   it("ships at least one festival chip", () => {
+    // Act & Assert
     // Guards every `for (const chip of ...)` below against vacuous truth.
     expect(eventChipSpecs(CONFIG).length).toBeGreaterThan(0);
   });
@@ -58,18 +59,25 @@ describe("chip lists", () => {
     // BASE_CHIPS being empty is a decision, not an oversight — 분실물 was
     // removed and the campus SDUI still carries that action. Asserting the
     // count means putting a permanent chip back has to be deliberate.
+    // Act & Assert
     expect(BASE_CHIPS).toHaveLength(0);
   });
 
   it("has no duplicate chip id across the served row", () => {
+    // Arrange
     const ids = SERVED.map((chip) => chip.id);
+
+    // Act & Assert
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
 
 describe("the reset chip", () => {
   it("comes first, and carries the festival's own name and emoji", () => {
+    // Act
     const [first] = eventChipSpecs(CONFIG);
+
+    // Assert
     expect(first).toEqual(resetChip(CONFIG));
     expect(first!.id).toBe("eskara-2026_all");
     expect(first!.emoji).toBe(CONFIG.emoji);
@@ -77,9 +85,11 @@ describe("the reset chip", () => {
   });
 
   it("scopes itself to the layers that come on by themselves", () => {
+    // Act
     const all = resetChip(CONFIG);
-    if (all.action.kind !== "focus") throw new Error("expected a focus chip");
 
+    // Assert
+    if (all.action.kind !== "focus") throw new Error("expected a focus chip");
     // Always-on AND scheduled: a scheduled layer comes on by itself when its
     // window opens, so it belongs to the set the reset chip is scoped to. Only
     // an opt-in layer is outside it.
@@ -103,6 +113,7 @@ describe("the reset chip", () => {
     // view, because a scheduled layer's default depends on the time of day.
     // `isReset` carries that meaning instead: stop narrowing, do not "show
     // these".
+    // Act & Assert
     expect(resetChip(CONFIG).isReset).toBe(true);
 
     const authored = eventChipSpecs(CONFIG).slice(1);
@@ -118,8 +129,11 @@ describe("the reset chip", () => {
   });
 
   it("is a fresh object per call — the config is shared across requests", () => {
+    // Act
     const a = resetChip(CONFIG);
     const b = resetChip(CONFIG);
+
+    // Assert
     expect(a).toEqual(b);
     expect(a).not.toBe(b);
     if (a.action.kind !== "focus" || b.action.kind !== "focus") throw new Error("focus");
@@ -130,33 +144,44 @@ describe("the reset chip", () => {
 
 describe("authored chips", () => {
   it("inherit the label of their one layer when none is authored", () => {
+    // Arrange
     // The shipped config authors every label (its chips read singular where the
     // layers read plural), so the convenience is exercised on a synthetic one.
     const unlabelled: EventMapConfig = {
       ...CONFIG,
       chips: [{ id: "x", emoji: "🍻", layerIds: ["eskara26_bar"] }],
     };
+    // Act
     const spec = eventChipSpecs(unlabelled).find((c) => c.id === "x")!;
+
+    // Assert
     const layer = CONFIG.layers.find((l) => l.id === "eskara26_bar")!;
     expect(spec.label).toEqual(layer.label);
     expect(spec.label).not.toBe(layer.label);
   });
 
   it("keep an authored label over the layer's", () => {
+    // Arrange
     const withLabel: EventMapConfig = {
       ...CONFIG,
       chips: [{ id: "x", emoji: "🍻", layerIds: ["eskara26_bar"], label: { ko: "야간 주점" } }],
     };
+    // Act
     const spec = eventChipSpecs(withLabel).find((c) => c.id === "x")!;
+
+    // Assert
     expect(spec.label).toEqual({ ko: "야간 주점" });
   });
 
   it("each fly to their own camera, or the config's when they author none", () => {
+    // Arrange
     // This test used to read "all point the camera where the config says" —
     // every chip shared one camera. Chips may now carry their own, so the rule is
     // per chip: the authored camera wins, the config's is the fallback, and the
     // reset chip (authored nowhere) is always the config's.
     const authoredById = new Map(CONFIG.chips.map((c) => [c.id, c]));
+
+    // Act & Assert
     for (const chip of eventChipSpecs(CONFIG)) {
       if (chip.action.kind !== "focus") throw new Error("expected focus");
       const authored = authoredById.get(chip.id);
@@ -165,6 +190,7 @@ describe("authored chips", () => {
   });
 
   it("fall back to the config's camera when a chip authors none", () => {
+    // Arrange
     // The shipped config authors a camera on every chip, so the fallback is
     // exercised on a synthetic one — it is what makes the field additive for a
     // config written before it existed.
@@ -172,7 +198,10 @@ describe("authored chips", () => {
       ...CONFIG,
       chips: [{ id: "x", emoji: "🍻", layerIds: ["eskara26_bar"] }],
     };
+    // Act
     const spec = eventChipSpecs(bare).find((c) => c.id === "x")!;
+
+    // Assert
     if (spec.action.kind !== "focus") throw new Error("expected focus");
     expect(spec.action.camera).toEqual(CONFIG.camera);
     // A copy, never the config's own frozen object.
@@ -180,6 +209,7 @@ describe("authored chips", () => {
   });
 
   it("copy an authored camera rather than hand it out by reference", () => {
+    // Arrange
     const withCamera: EventMapConfig = {
       ...CONFIG,
       chips: [
@@ -192,7 +222,11 @@ describe("authored chips", () => {
       ],
     };
     const authored = withCamera.chips[0]!.camera!;
+
+    // Act
     const spec = eventChipSpecs(withCamera).find((c) => c.id === "x")!;
+
+    // Assert
     if (spec.action.kind !== "focus") throw new Error("expected focus");
     expect(spec.action.camera).toEqual(authored);
     // The config is shared across every request, so a response must never
@@ -203,18 +237,27 @@ describe("authored chips", () => {
 
 describe("getChips", () => {
   it("serves only the base chips when no festival is live", () => {
+    // Act
     const chips = getChips("ko", null);
+
+    // Assert
     expect(chips.map((c) => c.id)).toEqual(BASE_CHIPS.map((c) => c.id));
   });
 
   it("adds the festival row while one is live: reset chip plus every authored chip", () => {
+    // Act
     const chips = getChips("ko", CONFIG);
+
+    // Assert
     expect(chips).toHaveLength(BASE_CHIPS.length + 1 + CONFIG.chips.length);
     expect(chips[BASE_CHIPS.length]!.id).toBe("eskara-2026_all");
   });
 
   it.each(LANGS)("resolves every chip label in %s through the one I18n resolver", (lang) => {
+    // Act
     const chips = getChips(lang, CONFIG);
+
+    // Assert
     for (const spec of SERVED) {
       const chip = chips.find((c) => c.id === spec.id)!;
       expect(chip.label).toBe(pick(spec.label, lang));
@@ -223,6 +266,7 @@ describe("getChips", () => {
   });
 
   it("gives every chip an emoji icon and a known action kind", () => {
+    // Act & Assert
     for (const chip of getChips("ko", CONFIG)) {
       expect(chip.icon).toEqual({ kind: "emoji", emoji: expect.any(String) });
       expect(["webview", "focus"]).toContain(chip.action.kind);
@@ -235,9 +279,11 @@ describe("focus actions", () => {
     getChips("ko", CONFIG).filter((chip) => chip.action.kind === "focus");
 
   it("name layers that all resolve to one non-null chip group", () => {
+    // Act
     const chips = focusChips();
-    expect(chips.length).toBeGreaterThan(0);
 
+    // Assert
+    expect(chips.length).toBeGreaterThan(0);
     for (const chip of chips) {
       if (chip.action.kind !== "focus") continue;
       const groups = new Set(
@@ -251,6 +297,7 @@ describe("focus actions", () => {
   });
 
   it("send a complete camera, coordinates inside Korea", () => {
+    // Act & Assert
     for (const chip of focusChips()) {
       if (chip.action.kind !== "focus") continue;
       const { lat, lng, zoom, tilt, bearing, durationMs } = chip.action.camera;
@@ -269,9 +316,12 @@ describe("focus actions", () => {
 
 describe("webview actions", () => {
   it("resolves every webview URL to an absolute one on our own origin", () => {
+    // Act
     const chips = getChips("ko", CONFIG).filter(
       (chip) => chip.action.kind === "webview",
     );
+
+    // Assert
     // None ship today — 분실물 was the only one. The count is asserted rather
     // than the loop simply left to run empty, so this cannot rot into a
     // silently vacuous test: adding a webview chip fails here, and the
@@ -300,17 +350,24 @@ describe("validateChipSpecs — every rule, reported together", () => {
   });
 
   it("accepts the row this server actually serves", () => {
+    // Act & Assert
     expect(validateChipSpecs(SERVED, CATALOGUE)).toEqual([]);
   });
 
   it("rejects a layer id that is not a layer", () => {
+    // Act
     const errors = validateChipSpecs(asSpecs([focusSpec(["eskara26_ghost"])]), CATALOGUE);
+
+    // Assert
     expect(errors).toEqual([expect.stringMatching(/eskara26_ghost.*is not a layer/)]);
   });
 
   it("rejects a layer no chip may reach", () => {
+    // Act
     // building_numbers is chipGroupId: null — the whole point of the flag.
     const errors = validateChipSpecs(asSpecs([focusSpec(["building_numbers"])]), CATALOGUE);
+
+    // Assert
     expect(errors).toEqual([expect.stringMatching(/building_numbers.*chipGroupId null/)]);
   });
 
@@ -319,20 +376,26 @@ describe("validateChipSpecs — every rule, reported together", () => {
     // case is built by pairing one with a null-group layer: the null rule fires
     // for the building layer. Once a second group exists the straddle message
     // must name it specifically.
+    // Act
     const errors = validateChipSpecs(
       asSpecs([focusSpec(["eskara26_booth", "building_labels"])]),
       CATALOGUE,
     );
+
+    // Assert
     expect(errors.length).toBeGreaterThan(0);
   });
 
   it("rejects a webview URL that does not land on our origin", () => {
+    // Act
     const errors = validateChipSpecs(
       asSpecs([
         { id: "evil", emoji: "\u{1F6A9}", label: { ko: "x" }, action: { kind: "webview", url: "https://evil.com/x" } },
       ]),
       CATALOGUE,
     );
+
+    // Assert
     expect(errors).toEqual([expect.stringMatching(/evil\.com/)]);
   });
 
@@ -340,33 +403,43 @@ describe("validateChipSpecs — every rule, reported together", () => {
     // `/eskara#/entry` keeps a real pathname, so an origin-and-path check waves
     // it through while the user lands on the wrong page. toWebviewUrl is the
     // one place that rule lives; this proves chips go through it.
+    // Act
     const errors = validateChipSpecs(
       asSpecs([
         { id: "fragment", emoji: "\u{1F6A9}", label: { ko: "x" }, action: { kind: "webview", url: "/eskara#/entry" } },
       ]),
       CATALOGUE,
     );
+
+    // Assert
     expect(errors).toEqual([expect.stringMatching(/eskara/)]);
   });
 
   it("rejects a duplicate chip id", () => {
+    // Act
     const errors = validateChipSpecs(
       asSpecs([focusSpec(["eskara26_booth"]), focusSpec(["eskara26_bar"])]),
       CATALOGUE,
     );
+
+    // Assert
     expect(errors).toEqual([expect.stringMatching(/duplicate chip id "test_chip"/)]);
   });
 
   it("accumulates rather than stopping at the first problem", () => {
+    // Act
     // One boot per mistake is the failure mode this exists to avoid.
     const errors = validateChipSpecs(
       asSpecs([focusSpec(["eskara26_ghost"], "a"), focusSpec(["building_numbers"], "b")]),
       CATALOGUE,
     );
+
+    // Assert
     expect(errors).toHaveLength(2);
   });
 
   it("assertValidChipSpecs throws the FATAL form the boot path expects", () => {
+    // Act & Assert
     expect(() => assertValidChipSpecs(asSpecs([focusSpec(["nope"])]), CATALOGUE)).toThrow(
       /^FATAL \[map chips\]/,
     );

@@ -20,23 +20,28 @@
 import fs from "fs";
 import path from "path";
 
-jest.mock("../../../src/map/map-places.data", () => ({
-  findActiveActivation: jest.fn(),
-  getPlacesCollection: jest.fn(),
+// The places collection, handed out by name; activations are read through a spy below.
+const mockPlaces = jest.fn();
+jest.mock("../../../src/infra/mongo", () => ({
+  ensureIndexesAtBoot: jest.fn(),
+  mongoCollection: (_db: string, name: string) => (name === "places" ? mockPlaces() : {}),
 }));
 
-import {
-  findActiveActivation,
-  getPlacesCollection,
-} from "../../../src/map/map-places.data";
-import { getEventOverlays } from "../../../src/map/map-event-overlays.data";
-import { clearActiveEventCache } from "../../../src/map/map-active-layerset";
-import { clearEventOverlaysCache } from "../../../src/map/map-event-overlays.data";
+import { Clock } from "../../../src/infra/clock";
+import { MiniAppsService } from "../../../src/miniapps/miniapps.service";
+import { MapEventService } from "../../../src/map/event/map-event.service";
+import { MapLayerSetService } from "../../../src/map/layer-set/map-layer-set.service";
+import { MapRepository } from "../../../src/map/map.repository";
 
-// The event read path is cached per process; each test starts cold.
+const mockFindActiveActivation = jest.spyOn(MapRepository.prototype, "findActiveActivation");
+
+let service: MapEventService;
+const getEventOverlays = () => service.getEventOverlays();
+
+// The event read path is cached per service; each test starts cold.
 beforeEach(() => {
-  clearActiveEventCache();
-  clearEventOverlaysCache();
+  const repository = new MapRepository();
+  service = new MapEventService(repository, new MapLayerSetService(repository, new Clock()), new MiniAppsService());
 });
 
 // scripts/ is excluded from tsconfig (plain CommonJS operator tooling), so this
@@ -49,13 +54,6 @@ const REAL_FILE = path.join(
 );
 
 const LAYER_SET_ID = "eskara-2026";
-
-const mockFindActiveActivation = findActiveActivation as jest.MockedFunction<
-  typeof findActiveActivation
->;
-const mockPlaces = getPlacesCollection as jest.MockedFunction<
-  typeof getPlacesCollection
->;
 
 /**
  * What the sheet authored for each place, keyed by the id the projection emits.
@@ -123,6 +121,7 @@ function positionsOf(overlay: { geometry: { coordinates: unknown } }): [number, 
 
 describe("event overlay coordinates, end to end from the survey sheet", () => {
   it("emits every place at the coordinates the sheet recorded", async () => {
+    // Arrange
     const raw = fs.readFileSync(REAL_FILE, "utf8");
     const { docs, errors } = parsePlacesFile(raw, { layerSetId: LAYER_SET_ID });
 
@@ -132,13 +131,15 @@ describe("event overlay coordinates, end to end from the survey sheet", () => {
     expect(docs.length).toBeGreaterThan(50);
 
     mockFindActiveActivation.mockResolvedValue({ _id: LAYER_SET_ID } as Awaited<
-      ReturnType<typeof findActiveActivation>
+      ReturnType<MapRepository["findActiveActivation"]>
     >);
     mockPlaces.mockReturnValue(collectionOf(docs));
 
+    // Act
     const { overlays: markers } = await getEventOverlays();
     const expected = sheetCoordsById();
 
+    // Assert
     expect(markers).toHaveLength(docs.length);
 
     for (const marker of markers) {
@@ -163,16 +164,19 @@ describe("event overlay coordinates, end to end from the survey sheet", () => {
   });
 
   it("puts every overlay on the Korean peninsula, not in the ocean", async () => {
+    // Arrange
     const raw = fs.readFileSync(REAL_FILE, "utf8");
     const { docs } = parsePlacesFile(raw, { layerSetId: LAYER_SET_ID });
 
     mockFindActiveActivation.mockResolvedValue({ _id: LAYER_SET_ID } as Awaited<
-      ReturnType<typeof findActiveActivation>
+      ReturnType<MapRepository["findActiveActivation"]>
     >);
     mockPlaces.mockReturnValue(collectionOf(docs));
 
+    // Act
     const { overlays: markers } = await getEventOverlays();
 
+    // Assert
     // The blunt version of the same check, and the one that would survive a
     // rewrite of everything above: a swap sends lat to ~126, which is not a
     // latitude South Korea has. 자과캠 sits near 37.29 N, 126.97 E.

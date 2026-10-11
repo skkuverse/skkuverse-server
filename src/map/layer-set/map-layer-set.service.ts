@@ -1,68 +1,68 @@
-import { createCachedLoader } from "../infra/cached-loader";
-import logger from "../infra/logger";
-import { EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "./map-event-cache";
-import { getLayerSetConfig } from "./map-layerset.config";
-import { findActiveActivation } from "./map-places.data";
-import type { EventMapConfig } from "./map-layerset.types";
+import { Injectable } from "@nestjs/common";
+import { createCachedLoader } from "../../infra/cached-loader";
+import { Clock } from "../../infra/clock";
+import logger from "../../infra/logger";
+import { BASE_LAYERS, EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "../map.constants";
+import { MapRepository } from "../map.repository";
+import type { LayerSpec } from "../map.types";
+import { getLayerSetConfig } from "./map-layer-set.config";
+import { BASE_CHIPS } from "./map-layer-set.constants";
+import { eventChipSpecs, eventLayerSpecs } from "./map-layer-set.mapper";
+import type { EventMapConfig } from "./map-layer-set.schema";
+import type { LoadedConfig, MapChipSpec } from "./map-layer-set.types";
 
-/**
- * "Which layer set is live, and is its config usable?" — answered once, here,
- * for every module that draws the festival beside the base map.
- *
- * Owned by the event map because both halves of the answer are its APIs: the
- * activation window (`map-places.data`) and the loaded structure tier
- * (`map-layerset.config`). `/map/config` and `/map/overlays/event` both ask, and
- * asking through one function is what keeps them answering identically — the
- * layer list, the chip row and the markers all appear and disappear together.
- *
- * Two ways to get `null` beyond "no festival today", and both are deploy or
- * ops mistakes worth ONE loud line: an activation naming a layer set this
- * build has no file for (`CONFIG_FILES` not updated), or a file that failed
- * validation (already logged at import by `map-layerset.config`, with the path).
- * Neither is a reason to fail a request — `/map/config` serves the buildings,
- * the markers route serves nothing — but a warn per request would bury the one
- * that matters, so each layer set is reported once per process.
- *
- * The activation read is cached (`map-event-cache.ts`): every route that draws
- * the festival asks this on every request, and the answer changes only when ops
- * edit the activation. A cached activation is still checked against `now`, so
- * its window closes on time even between reloads.
- */
+// SEE: docs/explanation/map-architecture.md (The live layer set): /map/config and the event routes ask this one service.
+@Injectable()
+export class MapLayerSetService {
+  private readonly reported = new Set<string>();
 
-/** Layer sets already complained about in this process. */
-const reported = new Set<string>();
+  private readonly activationCache = createCachedLoader({
+    name: "event activation",
+    ttlMs: EVENT_CACHE_TTL_MS,
+    staleWindowMs: EVENT_STALE_WINDOW_MS,
+    load: () => this.repository.findActiveActivation(this.clock.now()),
+  });
 
-const activationCache = createCachedLoader({
-  name: "event activation",
-  ttlMs: EVENT_CACHE_TTL_MS,
-  staleWindowMs: EVENT_STALE_WINDOW_MS,
-  load: () => findActiveActivation(new Date()),
-});
+  constructor(
+    private readonly repository: MapRepository,
+    private readonly clock: Clock,
+  ) {}
 
-/** Drops the cached activation. For tests, and for nothing else today. */
-export function clearActiveEventCache(): void {
-  activationCache.clear();
-}
+  activeEvent(): Promise<EventMapConfig | null> {
+    return this.activeEventConfig(this.clock.now());
+  }
 
-export async function activeEventConfig(now: Date): Promise<EventMapConfig | null> {
-  const activation = await activationCache.get();
-  if (!activation) return null;
-  if (activation.activeUntil && activation.activeUntil <= now) return null;
+  /** WHY: a cached activation is checked against `now` on every call, so its window closes on time between reloads. */
+  async activeEventConfig(now: Date): Promise<EventMapConfig | null> {
+    const activation = await this.activationCache.get();
+    if (!activation) return null;
+    if (activation.activeUntil && activation.activeUntil <= now) return null;
+    const loaded = getLayerSetConfig(activation._id);
+    if (loaded?.config) return loaded.config;
+    this.reportUnservable(activation._id, loaded);
+    return null;
+  }
 
-  const loaded = getLayerSetConfig(activation._id);
-  if (loaded?.config) return loaded.config;
+  servedLayerSpecs(event: EventMapConfig | null): readonly LayerSpec[] {
+    return event ? [...BASE_LAYERS, ...eventLayerSpecs(event)] : BASE_LAYERS;
+  }
 
-  if (!reported.has(activation._id)) {
-    reported.add(activation._id);
+  servedChipSpecs(event: EventMapConfig | null): readonly MapChipSpec[] {
+    return event ? [...BASE_CHIPS, ...eventChipSpecs(event)] : BASE_CHIPS;
+  }
+
+  // WHY: once per layer set per process: a warn per request would bury the one line that matters.
+  private reportUnservable(activationId: string, loaded: LoadedConfig | null): void {
+    if (this.reported.has(activationId)) return;
+    this.reported.add(activationId);
     logger.warn(
       {
         event: "map.eventmap.activation_unservable",
-        activationId: activation._id,
+        activationId,
         reason: loaded === null ? "no_config_in_build" : "config_rejected",
         configError: loaded?.error,
       },
       "Event map activation is live but unservable — serving no event layers",
     );
   }
-  return null;
 }

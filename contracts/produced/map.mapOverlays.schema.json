@@ -1,0 +1,1105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "overlays": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "layerId": {
+                "type": "string"
+              },
+              "campus": {
+                "type": "string",
+                "enum": [
+                  "hssc",
+                  "nsc"
+                ]
+              },
+              "text": {
+                "type": "object",
+                "properties": {
+                  "ko": {
+                    "type": "string"
+                  },
+                  "en": {
+                    "type": "string"
+                  },
+                  "zh": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ko",
+                  "en"
+                ]
+              },
+              "subtitle": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "ko": {
+                        "type": "string"
+                      },
+                      "en": {
+                        "type": "string"
+                      },
+                      "zh": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ko",
+                      "en"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "hours": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "startAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "endAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "label": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "ko": {
+                              "type": "string"
+                            },
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "ko",
+                            "en"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "startAt",
+                    "endAt",
+                    "label"
+                  ]
+                }
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    },
+                    "value": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "value"
+                  ]
+                }
+              },
+              "actions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    },
+                    "actionType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "miniapp",
+                            "external",
+                            "webview",
+                            "route"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "const": "content"
+                        }
+                      ]
+                    },
+                    "actionValue": {
+                      "type": "string"
+                    },
+                    "style": {
+                      "type": "string",
+                      "enum": [
+                        "primary",
+                        "secondary"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "actionType",
+                    "actionValue"
+                  ]
+                }
+              },
+              "order": {
+                "type": "number"
+              },
+              "facets": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "orderByOption": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "tap": {
+                "anyOf": [
+                  {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "skku_building"
+                          },
+                          "placeId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "placeId"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "event"
+                          },
+                          "placeId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "placeId"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "chip"
+                          },
+                          "chipId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "chipId"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "kind": {
+                "type": "string",
+                "const": "marker"
+              },
+              "geometry": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "Point"
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "items": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ],
+                    "additionalItems": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                },
+                "required": [
+                  "type",
+                  "coordinates"
+                ]
+              },
+              "pinPriority": {
+                "type": "number"
+              },
+              "locationAccuracy": {
+                "type": "string",
+                "enum": [
+                  "exact",
+                  "area"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "layerId",
+              "campus",
+              "text",
+              "subtitle",
+              "hours",
+              "fields",
+              "actions",
+              "order",
+              "facets",
+              "orderByOption",
+              "tap",
+              "kind",
+              "geometry",
+              "pinPriority",
+              "locationAccuracy"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "layerId": {
+                "type": "string"
+              },
+              "campus": {
+                "type": "string",
+                "enum": [
+                  "hssc",
+                  "nsc"
+                ]
+              },
+              "text": {
+                "type": "object",
+                "properties": {
+                  "ko": {
+                    "type": "string"
+                  },
+                  "en": {
+                    "type": "string"
+                  },
+                  "zh": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ko",
+                  "en"
+                ]
+              },
+              "subtitle": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "ko": {
+                        "type": "string"
+                      },
+                      "en": {
+                        "type": "string"
+                      },
+                      "zh": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ko",
+                      "en"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "hours": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "startAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "endAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "label": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "ko": {
+                              "type": "string"
+                            },
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "ko",
+                            "en"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "startAt",
+                    "endAt",
+                    "label"
+                  ]
+                }
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    },
+                    "value": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "value"
+                  ]
+                }
+              },
+              "actions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    },
+                    "actionType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "miniapp",
+                            "external",
+                            "webview",
+                            "route"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "const": "content"
+                        }
+                      ]
+                    },
+                    "actionValue": {
+                      "type": "string"
+                    },
+                    "style": {
+                      "type": "string",
+                      "enum": [
+                        "primary",
+                        "secondary"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "actionType",
+                    "actionValue"
+                  ]
+                }
+              },
+              "order": {
+                "type": "number"
+              },
+              "facets": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "orderByOption": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "tap": {
+                "anyOf": [
+                  {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "skku_building"
+                          },
+                          "placeId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "placeId"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "event"
+                          },
+                          "placeId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "placeId"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "chip"
+                          },
+                          "chipId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "chipId"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "kind": {
+                "type": "string",
+                "const": "polygon"
+              },
+              "geometry": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "Polygon"
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "number"
+                          }
+                        ],
+                        "additionalItems": false,
+                        "minItems": 2,
+                        "maxItems": 2
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "coordinates"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "layerId",
+              "campus",
+              "text",
+              "subtitle",
+              "hours",
+              "fields",
+              "actions",
+              "order",
+              "facets",
+              "orderByOption",
+              "tap",
+              "kind",
+              "geometry"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "layerId": {
+                "type": "string"
+              },
+              "campus": {
+                "type": "string",
+                "enum": [
+                  "hssc",
+                  "nsc"
+                ]
+              },
+              "text": {
+                "type": "object",
+                "properties": {
+                  "ko": {
+                    "type": "string"
+                  },
+                  "en": {
+                    "type": "string"
+                  },
+                  "zh": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ko",
+                  "en"
+                ]
+              },
+              "subtitle": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "ko": {
+                        "type": "string"
+                      },
+                      "en": {
+                        "type": "string"
+                      },
+                      "zh": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ko",
+                      "en"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "hours": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "startAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "endAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "label": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "ko": {
+                              "type": "string"
+                            },
+                            "en": {
+                              "type": "string"
+                            },
+                            "zh": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "ko",
+                            "en"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "startAt",
+                    "endAt",
+                    "label"
+                  ]
+                }
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    },
+                    "value": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "value"
+                  ]
+                }
+              },
+              "actions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "object",
+                      "properties": {
+                        "ko": {
+                          "type": "string"
+                        },
+                        "en": {
+                          "type": "string"
+                        },
+                        "zh": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ko",
+                        "en"
+                      ]
+                    },
+                    "actionType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "miniapp",
+                            "external",
+                            "webview",
+                            "route"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "const": "content"
+                        }
+                      ]
+                    },
+                    "actionValue": {
+                      "type": "string"
+                    },
+                    "style": {
+                      "type": "string",
+                      "enum": [
+                        "primary",
+                        "secondary"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "actionType",
+                    "actionValue"
+                  ]
+                }
+              },
+              "order": {
+                "type": "number"
+              },
+              "facets": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "orderByOption": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "tap": {
+                "anyOf": [
+                  {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "skku_building"
+                          },
+                          "placeId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "placeId"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "event"
+                          },
+                          "placeId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "placeId"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "chip"
+                          },
+                          "chipId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "chipId"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "kind": {
+                "type": "string",
+                "const": "path"
+              },
+              "geometry": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "LineString"
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ],
+                      "additionalItems": false,
+                      "minItems": 2,
+                      "maxItems": 2
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "coordinates"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "layerId",
+              "campus",
+              "text",
+              "subtitle",
+              "hours",
+              "fields",
+              "actions",
+              "order",
+              "facets",
+              "orderByOption",
+              "tap",
+              "kind",
+              "geometry"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "overlays"
+  ]
+}

@@ -1,52 +1,59 @@
 /**
- * The place-detail projection — `GET /map/overlays/event/details`.
+ * The place-detail projection — `GET /map/overlays/event/details`, through
+ * MapEventDetailsService over the real MapRepository (Mongo collections stubbed).
  *
  * The importer refuses a malformed detail, so on the happy path every check in
  * the producer passes. These tests are about the other path: a hand edit in
  * Mongo, which has no reader in front of it. The failure worth fearing there is
- * not a wrong sheet but a 500 — `toWire` dereferences `.ko`, so one block with a
+ * not a wrong sheet but a 500 — `toI18nText` reads `.ko`, so one block with a
  * missing body would take every sheet of the festival down with it. Every drop
  * below is therefore one block, one action, or at worst one detail.
  */
 
-jest.mock("../../../src/map/map-places.data", () => ({
-  findActiveActivation: jest.fn(),
-  getPlacesCollection: jest.fn(),
+// The two collections the repository opens: `places` through mockPlaces, so a
+// test can say no place was read, and `activations` through
+// mockFindActiveActivation.
+const mockPlaces = jest.fn();
+const mockFindActiveActivation = jest.fn();
+jest.mock("../../infra/mongo", () => ({
+  ensureIndexesAtBoot: jest.fn(async () => undefined),
+  mongoCollection: (_db: string, name: string) =>
+    name === "places" ? mockPlaces() : { findOne: (...args: unknown[]) => mockFindActiveActivation(...args) },
 }));
 
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
-jest.mock("../../../src/infra/logger", () => mockLogger);
+jest.mock("../../infra/logger", () => mockLogger);
 
 import fs from "fs";
 import path from "path";
-import {
-  findActiveActivation,
-  getPlacesCollection,
-} from "../../../src/map/map-places.data";
-import { MEDIA_ORIGIN } from "../../../src/infra/origins";
-import { getEventPlaceDetails } from "../../../src/map/map-event-details.data";
-import { getEventOverlays } from "../../../src/map/map-event-overlays.data";
-import { clearActiveEventCache } from "../../../src/map/map-active-layerset";
-import { clearEventOverlaysCache } from "../../../src/map/map-event-overlays.data";
-import { clearEventDetailsCache } from "../../../src/map/map-event-details.data";
-import { HOT_READ_MAX_TIME_MS } from "../../../src/infra/db";
-import { logText } from "../../helpers/log-text";
-
-// The event read path is cached per process; each test starts cold.
-beforeEach(() => {
-  clearActiveEventCache();
-  clearEventOverlaysCache();
-  clearEventDetailsCache();
-});
+import { Clock } from "../../infra/clock";
+import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
+import { MEDIA_ORIGIN } from "../../infra/origins";
+import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { MapEventService } from "../event/map-event.service";
+import { MapLayerSetService } from "../layer-set/map-layer-set.service";
+import { MapRepository } from "../map.repository";
+import { MapEventDetailsService } from "./map-event-details.service";
+import { logText } from "../../../__tests__/helpers/log-text";
 
 // scripts/ is plain CommonJS excluded from tsconfig, so this is a require.
 const { parsePlacesFile } = require("../../../scripts/lib/map-places-file");
 const REAL_FILE = path.join(__dirname, "../../../scripts/data/eskara-2026-places.json");
 
-const mockFindActiveActivation = findActiveActivation as jest.MockedFunction<
-  typeof findActiveActivation
->;
-const mockPlaces = getPlacesCollection as jest.MockedFunction<typeof getPlacesCollection>;
+const findActiveActivation = mockFindActiveActivation as jest.MockedFunction<MapRepository["findActiveActivation"]>;
+
+// Each service caches the event read path; each test starts with fresh ones.
+let detailsService: MapEventDetailsService;
+let eventService: MapEventService;
+beforeEach(() => {
+  findActiveActivation.mockReset();
+  const repository = new MapRepository();
+  const layerSet = new MapLayerSetService(repository, new Clock());
+  detailsService = new MapEventDetailsService(repository, layerSet);
+  eventService = new MapEventService(repository, layerSet, new MiniAppsService());
+});
+const getEventPlaceDetails = () => detailsService.getEventPlaceDetails();
+const getEventOverlays = () => eventService.getEventOverlays();
 
 const PHOTO = `${MEDIA_ORIGIN}/eskara-2026/food-trucks/truck-x/01-abcdef12.jpg`;
 
@@ -105,20 +112,33 @@ describe("getEventPlaceDetails", () => {
   });
 
   it("reads once for any number of concurrent requests", async () => {
+    // Arrange
     const find = arrange([]);
+
+    // Act
     await Promise.all([getEventPlaceDetails(), getEventPlaceDetails(), getEventPlaceDetails()]);
+
+    // Assert
     expect(find).toHaveBeenCalledTimes(1);
   });
 
   it("returns nothing, and reads nothing, when no festival is live", async () => {
+    // Arrange
     mockFindActiveActivation.mockResolvedValue(null);
+
+    // Act & Assert
     await expect(getEventPlaceDetails()).resolves.toEqual({ details: {} });
     expect(mockPlaces).not.toHaveBeenCalled();
   });
 
   it("asks Mongo for the live set's places that carry a detail, and only those", async () => {
+    // Arrange
     const find = arrange([]);
+
+    // Act
     await getEventPlaceDetails();
+
+    // Assert
     // `$ne: null` also excludes a document with no `detail` key at all — one
     // written before the field existed.
     expect(find).toHaveBeenCalledWith(
@@ -128,6 +148,7 @@ describe("getEventPlaceDetails", () => {
   });
 
   it("projects a detail onto the app's PlaceDetail, keyed by the tap id", async () => {
+    // Arrange
     arrange([
       place(
         truckDetail({
@@ -155,8 +176,10 @@ describe("getEventPlaceDetails", () => {
       ),
     ]);
 
+    // Act
     const { details } = await getEventPlaceDetails();
 
+    // Assert
     expect(details).toEqual({
       "eskara-2026-truck-x": {
         placeId: "eskara-2026-truck-x",
@@ -198,6 +221,7 @@ describe("getEventPlaceDetails", () => {
   });
 
   it("drops an image off the media host, and keeps the rest of the sheet", async () => {
+    // Arrange
     arrange([
       place(
         truckDetail({
@@ -209,8 +233,10 @@ describe("getEventPlaceDetails", () => {
       ),
     ]);
 
+    // Act
     const { details } = await getEventPlaceDetails();
 
+    // Assert
     expect(details["eskara-2026-truck-x"]!.blocks.map((b) => b.id)).toEqual(["menu"]);
     expect(warned()).toMatch(/photo-1: image url "https:\/\/i\.imgur\.com\/x\.jpg" is not on the media host/);
   });
@@ -223,10 +249,13 @@ describe("getEventPlaceDetails", () => {
     ["a notice holding a non-text item", { type: "notice", id: "n", title: null, items: [42] }, /notice block/],
     ["a block with no id", { type: "text", body: { ko: "x" } }, /not a block with an id/],
   ])("drops %s instead of failing the route", async (_name, block, reason) => {
+    // Arrange
     arrange([place(truckDetail({ blocks: [block] }))]);
 
+    // Act
     const { details } = await getEventPlaceDetails();
 
+    // Assert
     expect(details["eskara-2026-truck-x"]!.blocks).toEqual([]);
     expect(warned()).toMatch(reason);
   });
@@ -237,15 +266,19 @@ describe("getEventPlaceDetails", () => {
     ["a profile that is a post", { type: "instagram", id: "a", label: { ko: "x" }, profileUrl: "https://www.instagram.com/p/X" }, /not an Instagram profile/],
     ["an unknown action type", { type: "call", id: "a", label: { ko: "x" } }, /unknown action type "call"/],
   ])("drops an action with %s", async (_name, action, reason) => {
+    // Arrange
     arrange([place(truckDetail({ actions: [action] }))]);
 
+    // Act
     const { details } = await getEventPlaceDetails();
 
+    // Assert
     expect(details["eskara-2026-truck-x"]!.actions).toEqual([]);
     expect(warned()).toMatch(reason);
   });
 
   it("keeps an Instagram button whose post link is bad, pointing it at the profile", async () => {
+    // Arrange
     arrange([
       place(
         truckDetail({
@@ -262,8 +295,10 @@ describe("getEventPlaceDetails", () => {
       ),
     ]);
 
+    // Act
     const { details } = await getEventPlaceDetails();
 
+    // Assert
     expect(details["eskara-2026-truck-x"]!.actions).toEqual([
       expect.objectContaining({ id: "insta", postUrl: null }),
     ]);
@@ -275,39 +310,51 @@ describe("getEventPlaceDetails", () => {
     ["a detail that is not an object", "foodTruck"],
     ["blocks that are not a list", truckDetail({ blocks: null })],
   ])("drops the whole detail for %s, and serves the other places", async (_name, bad) => {
+    // Arrange
     arrange([place(bad), place(truckDetail(), { _id: "eskara-2026-truck-y" })]);
 
+    // Act
     const { details } = await getEventPlaceDetails();
 
+    // Assert
     expect(Object.keys(details)).toEqual(["eskara-2026-truck-y"]);
     expect(warned()).toMatch(/eskara-2026-truck-x: detail is unreadable/);
   });
 
   it("gives no detail to a place the overlay route would not serve", async () => {
+    // Arrange
     arrange([place(truckDetail(), { title: { ko: "" } })]);
 
+    // Act
     const { details } = await getEventPlaceDetails();
 
+    // Assert
     expect(details).toEqual({});
     expect(warned()).toMatch(/not renderable/);
   });
 
   it("gives no detail to a place on an inert category, which nothing can tap", async () => {
+    // Arrange
     // `control_entry_label` is authored `interactive: false` in eskara-2026.json.
     arrange([place(truckDetail(), { category: "control_entry_label" })]);
 
+    // Act
     const { details } = await getEventPlaceDetails();
 
+    // Assert
     expect(details).toEqual({});
     expect(warned()).toMatch(/is not tappable/);
   });
 
   it("gives no detail to a place whose tap runs a chip, which opens no sheet", async () => {
+    // Arrange
     // `food_zone` carries `tapChip: eskara26_view_food` in eskara-2026.json.
     arrange([place(truckDetail(), { category: "food_zone" })]);
 
+    // Act
     const { details } = await getEventPlaceDetails();
 
+    // Assert
     expect(details).toEqual({});
     expect(warned()).toMatch(/taps to chip "eskara26_view_food"/);
   });
@@ -318,6 +365,7 @@ describe("the committed sheet, importer to wire", () => {
   // REAL sheet through both, so a rule the importer lets through and the
   // producer would drop fails here rather than as a missing photo on a phone.
   it("serves every authored detail whole, each on a pin the overlay route taps", async () => {
+    // Arrange
     jest.clearAllMocks();
     const { docs, errors } = parsePlacesFile(fs.readFileSync(REAL_FILE, "utf8"), {
       layerSetId: "eskara-2026",
@@ -334,9 +382,11 @@ describe("the committed sheet, importer to wire", () => {
     }));
     mockPlaces.mockReturnValue({ find } as never);
 
+    // Act
     const { details } = await getEventPlaceDetails();
     const { overlays } = await getEventOverlays();
 
+    // Assert
     const authored = docs.filter((d: { detail: unknown }) => d.detail !== null);
     expect(authored.length).toBeGreaterThan(0);
     expect(Object.keys(details).sort()).toEqual(authored.map((d: { _id: string }) => d._id).sort());

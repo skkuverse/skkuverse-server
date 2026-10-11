@@ -1,78 +1,44 @@
-import { Injectable, type OnModuleInit } from "@nestjs/common";
-import { ensureIndexes } from "./map-places.data";
-import logger from "../infra/logger";
-import type { SupportedLang } from "../infra/types";
-import { getMapConfig } from "./map-config.data";
-import { getEventOverlays } from "./map-event-overlays.data";
-import { getEventPlaceDetails } from "./map-event-details.data";
-import { getCampusOverlays } from "./map-campus-overlays.data";
-import { BuildingService } from "../building/building.service";
+import { Injectable } from "@nestjs/common";
+import config from "../../infra/config";
+import { createLogThrottle } from "../../infra/log-throttle";
+import logger from "../../infra/logger";
+import type { SupportedLang } from "../../infra/types";
+import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
+import { MapLayerSetService } from "../layer-set/map-layer-set.service";
+import { LOOKUP_FAILED_LOG_INTERVAL_MS } from "./map-config.constants";
+import { toMapConfig } from "./map-config.mapper";
+import type { MapConfig } from "./map-config.wire";
 
-/**
- * MapService — thin @Injectable wrapper over the validated, read-only map/*
- * data modules (map-config.data, map-campus-overlays.data,
- * map-event-overlays.data, map-event-details.data). Every method delegates
- * 1:1 — no reimplementation, no defensive narrowing.
- *
- * Both overlay routes serve ONE heterogeneous collection per data source:
- * pins, zones and route lines together, told apart by `kind`. That replaced a
- * split by geometry, which would have meant two fetches to draw one festival
- * and a tappable zone landing outside the query that backs the detail sheet.
- *
- * getCampusOverlays reads buildings and campus shapes through BuildingService,
- * which BuildingModule exports and MapModule imports; map-campus-overlays.data
- * adds the FALLBACK_MARKERS empty-DB path.
- *
- * The legacy `/map/overlays?category=` and `/map/overlays/:overlayId` handlers
- * are gone, along with the hardcoded building table and the jongro coordinate
- * map they served. The first had been dead since the v2 migration pointed
- * `campus_buildings` at the marker route; the second was a strictly poorer
- * duplicate of `GET /bus/route/:routeId`, which carries `color` as well as
- * `coords`. Deleting them also removed the one place this module reached
- * sideways into another feature's data.
- *
- * No poller. There IS an onModuleInit, and it is inherited rather than native:
- * `ensureIndexes` used to hang off EventMapService, which existed to publish
- * snapshots. When the snapshot tier was deleted the indexes needed a home on a
- * module that still reads those collections, and this is it — /map is now their
- * only reader.
- */
 @Injectable()
-export class MapService implements OnModuleInit {
-  constructor(private readonly building: BuildingService) {}
+export class MapConfigService {
+  private readonly lookupFailedThrottle = createLogThrottle(LOOKUP_FAILED_LOG_INTERVAL_MS);
 
-  /**
-   * ensureIndexes() inside ONE non-fatal try/catch, following AdDataService.
-   * Index creation is a startup nicety, not a serving prerequisite: an Atlas
-   * hiccup during boot must not take the API down, and every index is
-   * idempotent so the next boot retries it. This runs on every process (poller
-   * + both api replicas); createIndex is idempotent, so the duplication is
-   * free, exactly as in ad/ and building/.
-   */
-  async onModuleInit(): Promise<void> {
+  constructor(private readonly layerSet: MapLayerSetService) {}
+
+  // WHY: one live-event read per request, shared by the layers and the chips, so the two cannot disagree.
+  async getMapConfig(lang: SupportedLang): Promise<MapConfig> {
+    const event = await this.activeEvent();
+    return toMapConfig({
+      lang,
+      styleId: config.naver.styleId,
+      layers: this.layerSet.servedLayerSpecs(event),
+      chips: this.layerSet.servedChipSpecs(event),
+    });
+  }
+
+  // WHY: a failed lookup serves the base layers: the app's fallback for a failed /map/config has no building layers.
+  private async activeEvent(): Promise<EventMapConfig | null> {
     try {
-      await ensureIndexes();
+      return await this.layerSet.activeEvent();
     } catch (err) {
-      logger.warn(
-        { event: "map.indexes.failed", err },
-        "ensureIndexes failed — continuing without them",
-      );
+      const ticket = this.lookupFailedThrottle.take("event-layers");
+      if (ticket) {
+        logger.warn(
+          { event: "map.event_layers.lookup_failed", err, suppressed: ticket.suppressed },
+          "Event layer lookup failed, serving base layers only",
+        );
+      }
+      return null;
     }
-  }
-
-  getMapConfig(lang: SupportedLang): ReturnType<typeof getMapConfig> {
-    return getMapConfig(lang);
-  }
-
-  getCampusOverlays(): ReturnType<typeof getCampusOverlays> {
-    return getCampusOverlays(this.building);
-  }
-
-  getEventOverlays(): ReturnType<typeof getEventOverlays> {
-    return getEventOverlays();
-  }
-
-  getEventPlaceDetails(): ReturnType<typeof getEventPlaceDetails> {
-    return getEventPlaceDetails();
   }
 }

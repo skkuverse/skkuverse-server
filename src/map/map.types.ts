@@ -1,220 +1,49 @@
-/**
- * The chip contract served inside `GET /map/config`.
- *
- * A chip is the control layers do not provide. A layer answers "what is drawn";
- * a chip answers "where should I be looking, and what should be on while I look
- * there". The server decides both; the app renders a pill and dispatches on
- * `action.kind` without interpreting it.
- *
- * The AUTHORED form of a festival chip is `EventChipDef` in
- * `map-layerset.types.ts` — id, emoji, the layers it names — and
- * `map-chips.data.ts` projects it into this shape, adding the camera and the
- * synthesised reset chip. This is the wire; that is the config.
- *
- * This file exists because the event map's chip row was removed from the map
- * screen when booths became ordinary marker layers — chips filtered snapshot
- * items, and the pins stopped coming from a snapshot. That left the map with a
- * hardcoded mock chip row (`CampusChipRow.tsx`) waiting for exactly this.
- */
+import type { I18n } from "../infra/types";
+import type { BASE_LAYERS } from "./map.constants";
 
-/**
- * How a camera moves, with no target.
- *
- * Split out from `MapCamera` because a chip and a marker-focus default want the
- * same four values and differ only in whether they carry their own coordinate:
- * a chip names where to go, `cameraDefaults.markerFocus` is applied to whatever
- * the user just tapped.
- *
- * ⚠️ The client cannot honour all four at once, and that is a limitation of the
- * map SDK rather than of this schema. `NaverMapViewRef.animateCameraTo` takes
- * `{latitude, longitude, zoom, duration, easing, pivot}` and NOT `tilt`/
- * `bearing`; the declarative `camera` prop carries `tilt`/`bearing` and has no
- * duration. So a camera with `tilt === 0 && bearing === 0` goes through
- * `animateCameraTo` and gets its `durationMs`, and any other camera goes
- * through the prop and animates at the SDK's own pace. The server sends the
- * whole thing regardless — picking the mechanism is the client's job, and
- * trimming the payload to match today's client would bake the limitation into
- * the wire.
- */
 export interface CameraMotion {
   zoom: number;
-  /** Degrees from vertical. 0 is straight down, which is the ordinary case. */
   tilt: number;
-  /** Heading in degrees, 0 = north, clockwise. */
   bearing: number;
   durationMs: number;
 }
 
-/** A camera motion that names its own target. */
 export interface MapCamera extends CameraMotion {
   lat: number;
   lng: number;
 }
 
-/**
- * Tagged so a second icon kind (a remote image, an SF Symbol) can arrive
- * without the emoji case having to grow a discriminating field of its own —
- * the shape `MarkerTap` uses in this same domain.
- */
-export type MapChipIcon = { kind: "emoji"; emoji: string };
+/** WHY: wall-clock "HH:MM", half-open `[start, end)`; `start > end` wraps past midnight. */
+export interface DailyWindow {
+  start: string;
+  end: string;
+}
 
-/**
- * What a chip tap resolves to.
- *
- * Discriminated on `kind`, matching `MarkerTap` in this same domain, rather
- * than on the flat `actionType` + `actionValue: string` pair the
- * home screen's SDUI uses. That pair cannot carry a camera, and encoding one as
- * JSON inside a string would put a second parser on the wire.
- *
- * `webview` deliberately reuses the name and the validator of the SDUI action
- * type it corresponds to (`src/infra/webview-url.ts`), so there is one rule for
- * what counts as a usable web view URL and not two.
- *
- * The reserved third variant is the "markers near a position" chip. It is
- * written down rather than built so that adding it stays additive:
- *
- *   | { kind: "nearby"; origin: "device" | "camera"; radiusM: number;
- *       endpoint: string; layerIds: string[] }
- *
- * `origin` is on the wire rather than fixed here because one chip can
- * reasonably mean "near me" and another "near what I am looking at", and only
- * the server knows which. ⚠️ It will also need its own client-side query hook:
- * `useLayerMarkers` keys its cache on the endpoint STRING, so a URL carrying
- * `?lat=&lng=&radiusM=` mints a fresh cache entry per camera position.
- */
-export type MapChipAction =
-  | {
-      kind: "webview";
-      /**
-       * Always absolute. A root-relative value is the preferred spelling in the
-       * source and is resolved against `WEBVIEW_ORIGIN` before it ships, so a
-       * relative string is never handed to a URL opener.
-       *
-       * No `title` beside it. The client already holds the chip's `label`, and
-       * the header title of a page a chip opened is that label — a chip reading
-       * 분실물 opens a page titled 분실물. A second string would be one more
-       * thing to keep in step for no reachable difference.
-       */
-      url: string;
-    }
-  | {
-      kind: "focus";
-      camera: MapCamera;
-      /**
-       * The layers this chip switches ON, and — through their shared
-       * `chipGroupId` — the set it switches OFF.
-       *
-       * Two rules govern what a tap may change, both stated on the layer side
-       * in `map-layers.data.ts`:
-       *
-       *  1. Only layers sharing the `chipGroupId` of the layers named here are
-       *     affected. Named → on, unnamed sibling → off, everything outside the
-       *     group → untouched.
-       *  2. A `userConfigurable: false` layer is never changed. A chip tap is a
-       *     user-initiated change, and that flag already answers who may make
-       *     one.
-       *
-       * An EMPTY array is the camera-only chip: no group is resolved, so no
-       * visibility changes. That is why this is not nullable — `[]` already
-       * says it, and a second spelling for the same state is a second thing to
-       * get wrong.
-       */
-      layerIds: string[];
-    };
+/** WHY: a tuple, so the schedule with no window that `always` already spells cannot be written in BASE_LAYERS. */
+export type LayerVisibility =
+  | { kind: "always" }
+  | { kind: "never" }
+  | { kind: "scheduled"; windows: [DailyWindow, ...DailyWindow[]] };
 
-export interface MapChip {
+export type MapLayerStyle = Partial<
+  Record<"outlineWidth" | "fillOpacity" | "minZoom" | "maxZoom" | "width" | "height" | "size" | "captionTextSize" | "zIndex", number>
+> & { color?: string; outlineColor?: string };
+
+export interface LayerSpec {
   id: string;
-  /**
-   * Resolved server-side from the spec's `{ko, en?, zh?}` with the event map's
-   * `pick`, the way layer labels are.
-   *
-   * Not shipped as `{ko, en, zh}` like an overlay's `text`: that field ships every
-   * language because its two producers hold different sets and resolving would
-   * discard some. A chip label has one producer — a festival's config, or this
-   * repo's base list — with the same fallback chain either way, so there is
-   * nothing to lose by picking.
-   */
-  label: string;
-  /**
-   * `null` is declared before it is reachable, on purpose. Every chip served
-   * today carries an emoji, so nothing sends `null` yet — but widening a
-   * non-nullable field LATER breaks every client already narrowed to the
-   * non-null type, and a text-only chip is an ordinary thing to want. Declaring
-   * it now costs one branch in the client and buys the ability to add one
-   * without a coordinated release, which is the same reasoning behind "an
-   * absent `userConfigurable` means true".
-   */
-  icon: MapChipIcon | null;
-  action: MapChipAction;
-  /**
-   * Does this chip mean STOP NARROWING, rather than "show these layers".
-   *
-   * Stated outright because it stopped being derivable. A client used to
-   * recognise the reset chip by comparing what it names against the layers that
-   * are on by default — and with `defaultVisibleWhen` that comparison depends on
-   * the time of day, so at 19:00 the reset chip no longer describes the default
-   * view. `action.layerIds` still says which GROUP the chip is scoped to, the
-   * way it does for every chip; this says what the tap MEANS within it.
-   *
-   * `false` on every authored chip rather than absent: an optional field is a
-   * second thing for the client to branch on, and this list already ships
-   * `icon: null` rather than omitting it.
-   */
-  isReset: boolean;
-  /**
-   * The filters and sort of the list this chip opens, or `null` for a chip
-   * whose list is unfiltered and in `order` — the reset chip, and any chip a
-   * festival authored no list for.
-   *
-   * On the chip because the app shows a list exactly while a chip is narrowed:
-   * the chip is the list's identity. Membership is NOT here — every overlay
-   * carries its own `facets`, so this says which axes to draw and the client
-   * only matches ids. `null` rather than absent, the way `icon` is.
-   */
-  list: MapChipList | null;
+  markerStyle?: string;
+  label: I18n;
+  defaultVisibleWhen: LayerVisibility;
+  userConfigurable: boolean;
+  endpoint: string;
+  chipGroupId: string | null;
+  style?: MapLayerStyle;
 }
 
-export interface MapChipFacetOption {
-  id: string;
-  /** Resolved per language, like the chip's own label. */
-  label: string;
-  /**
-   * Present on an `hours` facet's options, `null` on a tag's. The client uses
-   * it for one thing: opening a `required` facet on the option that is on
-   * now, else the nearest one to come. Membership was already decided by the
-   * server and rides on each overlay.
-   */
-  window: { startAt: string; endAt: string } | null;
-}
+export type BaseLayerId = (typeof BASE_LAYERS)[number]["id"];
 
-export interface MapChipFacet {
-  id: string;
-  label: string;
-  /**
-   * `required`: a single choice with no 전체, opening on the option whose
-   * `window` contains now, else the nearest one to come, else the last.
-   * `optional`: a checklist of any non-empty subset, opening on 전체.
-   */
-  select: "required" | "optional";
-  options: MapChipFacetOption[];
-}
+export type MapChipActionSpec =
+  | { kind: "webview"; url: string }
+  | { kind: "focus"; camera: MapCamera; layerIds: readonly string[] };
 
-/**
- * Filter: keep an overlay when, for every facet not holding all its options,
- * `overlay.facets[facet.id]` shares an option id with what is held.
- *
- * Sort, then by overlay `id`:
- *  - `order` with a scope: by the index of the first HELD option of
- *    `scopeFacetId` that the overlay is in, then `overlay.orderByOption[that
- *    option] ?? overlay.order`. With `scopeFacetId: null`, just `order`.
- *  - `title`: `overlay.text.ko` in code-point order, which is 가나다 order for
- *    Hangul syllables and needs no `Intl`.
- *
- * Contract: docs/reference/map-overlays-api.md §8.
- */
-export interface MapChipList {
-  facets: MapChipFacet[];
-  sort:
-    | { key: "order"; scopeFacetId: string | null }
-    | { key: "title"; scopeFacetId: null };
-}
+export type ConfigIssue = readonly [path: PropertyKey[], message: string];

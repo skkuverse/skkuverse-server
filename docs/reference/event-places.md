@@ -21,7 +21,7 @@ audience: internal
 | Served by | `GET /map/overlays/event`, `GET /map/overlays/event/details` and `GET /map/config` — there is no `/eventmap` route |
 | Authored by | `scripts/data/<layerSetId>-places.json` → `npm run eventmap:import` |
 | Switched by | `npm run eventmap -- open\|close` |
-| Structure tier | `src/map/config/<layerSetId>.json` — layers, chips, category table |
+| Structure tier | `src/map/layer-set/<layerSetId>.json` — layers, chips, category table |
 
 ### 1.1 What this replaced
 
@@ -96,7 +96,7 @@ not need a deploy — see §6.2.
 
 ## 4. Indexes
 
-Three, created by `MapService.onModuleInit` (`src/map/map-places.data.ts`):
+Three, created by `MapService.onModuleInit` (`src/map/map.repository.ts`):
 
 | Index | Why |
 | --- | --- |
@@ -213,7 +213,7 @@ One file per layer set: `scripts/data/<layerSetId>-places.json`.
 What a tapped place's sheet shows beyond its pin: an operator, a menu, photos, notices. Served on its
 own route, `GET /map/overlays/event/details` ([map-overlays-api.md §5.4](map-overlays-api.md)), never on
 the overlay. The shape is the app's `PlaceDetail` — a typed head and an ordered list of blocks the
-author composes — declared in `src/map/map-place-detail.types.ts`.
+author composes — declared in `src/map/event-details/map-event-details.wire.ts`.
 
 ```json
 {
@@ -362,7 +362,7 @@ is the only thing standing between "we meant to leave it up" and "nobody remembe
 **This is why the activation stayed in Mongo.** `close` is the kill switch for a rain cancellation or
 anything else going wrong, and it takes effect without a deploy. Each api replica caches the
 activation, the overlays and the details for a few seconds (`EVENT_CACHE_TTL_MS` in
-`src/map/map-event-cache.ts`), so `/map/config` turns over about one TTL later and the overlay
+`src/map/map.constants.ts`), so `/map/config` turns over about one TTL later and the overlay
 routes about two. An `activeUntil` passing is exact — a cached activation is re-checked against the clock
 on every request. On top of that, `/map/overlays/event` is `public, max-age=60`, so a booth already
 fetched can linger on a device for up to a minute. **Rehearse before the festival**, not during one.
@@ -417,15 +417,15 @@ reverse-apply their takedown commit on a local checkout to see them too.
 
 | Concern | File |
 | --- | --- |
-| Stored documents | `src/map/map-places.types.ts` |
-| I/O + indexes | `src/map/map-places.data.ts` (no `seedIfEmpty` — there is no sensible default event) |
-| Places → map overlays | `src/map/map-event-overlays.data.ts` — see [map-overlays-api.md](map-overlays-api.md) |
-| Places → sheet details | `src/map/map-event-details.data.ts`, shape in `src/map/map-place-detail.types.ts` |
+| Stored documents | `src/map/map.document.ts` |
+| I/O + indexes | `src/map/map.repository.ts` (no `seedIfEmpty` — there is no sensible default event) |
+| Places → map overlays | `src/map/event/map-event.mapper.ts` — see [map-overlays-api.md](map-overlays-api.md) |
+| Places → sheet details | `src/map/event-details/map-event-details.mapper.ts`, shape in `src/map/event-details/map-event-details.wire.ts` |
 | Media host rule | `MEDIA_ORIGIN` in `src/infra/origins.ts`, `src/infra/media-url.ts` |
-| Live layer set + usable config | `src/map/map-active-layerset.ts` |
-| Structure load + validation | `src/map/map-layerset.config.ts` |
-| Structure types, `presentationFor` | `src/map/map-layerset.types.ts` |
-| Layers, chips, name, emoji, camera, category table | `src/map/config/*.json` (+ `CONFIG_FILES` and `copy-build-assets.js`) |
+| Live layer set + usable config | `src/map/layer-set/map-layer-set.service.ts` |
+| Structure load + validation | `src/map/layer-set/map-layer-set.config.ts` |
+| Structure types, `presentationFor` | `src/map/layer-set/map-layer-set.schema.ts` |
+| Layers, chips, name, emoji, camera, category table | `src/map/layer-set/*.json` (+ `LAYER_SET_FILES` and `copy-build-assets.js`) |
 | Sheet → documents (pure) | `scripts/lib/map-places-file.js` |
 | Importer | `scripts/import-eventmap-places.js` + `scripts/lib/eventmap-db.js` |
 | Authored content | `scripts/data/eskara-2026-places.json` |

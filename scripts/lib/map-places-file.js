@@ -223,7 +223,7 @@ function asActions(value, where, errors) {
 
 // --- Place detail -----------------------------------------------------------
 //
-// The sheet body a tapped place opens (`src/map/map-place-detail.types.ts`).
+// The sheet body a tapped place opens (`src/map/event-details/map-event-details.wire.ts`).
 // STRICT, unlike the rest of this reader's tolerance for unknown keys: every
 // level refuses a key it does not know, because a misspelled optional key —
 // `captoin` — would otherwise import clean and render as nothing, which is the
@@ -234,17 +234,17 @@ function asActions(value, where, errors) {
 // __tests__/nest/map/map-places-import.test.ts pins each to its source, and the
 // serve path re-checks every URL anyway, so drift can only ever drop a block.
 
-/** src/map/map-place-detail.types.ts PLACE_KINDS — CLOSED on the client. */
+/** src/map/map.constants.ts PLACE_KINDS — CLOSED on the client. */
 const PLACE_KINDS = ["pub", "booth", "promo", "foodTruck", "goods", "facility", "stage", "etc"];
-/** src/map/map-place-detail.types.ts PLACE_BLOCK_TYPES. */
+/** src/map/map.constants.ts PLACE_BLOCK_TYPES. */
 const BLOCK_TYPES = ["text", "list", "table", "image", "notice"];
-/** src/map/map-place-detail.types.ts PLACE_DETAIL_ACTION_TYPES. */
+/** src/map/map.constants.ts PLACE_DETAIL_ACTION_TYPES. */
 const DETAIL_ACTION_TYPES = ["instagram", "link"];
 /** src/infra/origins.ts MEDIA_ORIGIN. */
 const MEDIA_ORIGIN = "https://media.skkuverse.com";
 
 const WHITESPACE_RE = /\s/;
-/** src/map/map-event-overlays.data.ts ABSOLUTE_HTTPS_RE. */
+/** src/shared/link-target.constants.ts ABSOLUTE_HTTPS_RE. */
 const ABSOLUTE_HTTPS_RE = /^https:\/\/[^\s/][^\s]*$/;
 const INSTAGRAM_HOSTS = ["instagram.com", "www.instagram.com"];
 /** Paths that are Instagram's own pages, not a username. */
@@ -266,7 +266,7 @@ function isMediaUrl(value) {
   return true;
 }
 
-/** Copy of src/map/map-event-details.data.ts `isAbsoluteHttpsUrl`. */
+/** Copy of src/shared/link-target.util.ts `isAbsoluteHttpsUrl`. */
 function isAbsoluteHttpsUrl(value) {
   return typeof value === "string" && !WHITESPACE_RE.test(value) && ABSOLUTE_HTTPS_RE.test(value);
 }
@@ -309,7 +309,7 @@ function instagramSegments(value) {
 }
 
 /**
- * Copy of src/map/map-event-details.data.ts `isInstagramProfileUrl`.
+ * Copy of src/map/event-details/map-event-details.rules.ts `isInstagramProfileUrl`.
  *
  * Mirrors what the app will actually open (skkuverse-app `instagram.ts`): a
  * profile is exactly one path segment that is not one of Instagram's own pages.
@@ -324,7 +324,7 @@ function isInstagramProfileUrl(value) {
   );
 }
 
-/** Copy of src/map/map-event-details.data.ts `isInstagramPostUrl`: `/p|reel|reels/<code>`. */
+/** Copy of src/map/event-details/map-event-details.rules.ts `isInstagramPostUrl`: `/p|reel|reels/<code>`. */
 function isInstagramPostUrl(value) {
   const segments = instagramSegments(value);
   return (

@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "ko": {
+      "type": "string"
+    },
+    "en": {
+      "type": "string"
+    },
+    "zh": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ko",
+    "en"
+  ]
+}

@@ -8,31 +8,33 @@
  * never reaching the body, sibling routes answering only for themselves, and
  * the four retired URLs staying gone.
  */
+// MapEventModule reads the mini-app registry through MiniAppsModule, whose feed
+// service creates its Mongo index at init and whose manifest service prefetches
+// each first-party manifest over the network. Neither is part of these routes.
+jest.mock("../../../src/miniapps/miniapps.data", () => ({
+  ensureIndexes: jest.fn(async () => undefined),
+}));
+
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import type { BuildingDoc, CampusShapeDoc } from "../../../src/building/building.document";
 import { BuildingRepository } from "../../../src/building/building.repository";
+import { MapCampusModule } from "../../../src/map/campus/map-campus.module";
+import { MapConfigModule } from "../../../src/map/config/map-config.module";
+import { MapEventDetailsModule } from "../../../src/map/event-details/map-event-details.module";
+import { MapEventModule } from "../../../src/map/event/map-event.module";
+import { MapLayerSetModule } from "../../../src/map/layer-set/map-layer-set.module";
+import type { ActivationDoc, MapPlaceDoc } from "../../../src/map/map.document";
 import { MapModule } from "../../../src/map/map.module";
+import { MapRepository } from "../../../src/map/map.repository";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
+import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
-
-// The event map's activations and places, as the stored documents.
-const mockActivations: Array<{ _id: string }> = [];
-const mockPlaces: Array<Record<string, unknown>> = [];
-jest.mock("../../../src/map/map-places.data", () => ({
-  ensureIndexes: jest.fn(async () => undefined),
-  findActiveActivation: jest.fn(async () => mockActivations[0] ?? null),
-  getPlacesCollection: jest.fn(() => ({
-    find: (filter: { layerSetId: string; detail?: unknown }) => ({
-      toArray: async () =>
-        mockPlaces.filter((p) => p.layerSetId === filter.layerSetId && (!("detail" in filter) || p.detail != null)),
-    }),
-  })),
-}));
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 let buildings: FakeBuildingRepository;
+const realFetch = global.fetch;
 
 const SUSEON = {
   _id: 2,
@@ -84,15 +86,20 @@ const BOOTH = {
     blocks: [{ type: "text", id: "intro", title: null, body: { ko: "소개" } }],
   },
   updatedAt: new Date("2026-10-01T00:00:00.000Z"),
-};
+} as unknown as MapPlaceDoc;
 
 beforeAll(async () => {
+  global.fetch = jest.fn().mockRejectedValue(new Error("no network in tests")) as unknown as typeof fetch;
   buildings = new FakeBuildingRepository();
-  mockActivations.push({ _id: "eskara-2026" });
-  mockPlaces.push(BOOTH);
+  const map = new FakeMapRepository();
+  map.activations = [{ _id: "eskara-2026", activeFrom: null, activeUntil: null, enabled: true } as ActivationDoc];
+  map.places = [BOOTH];
   app = await buildTestApp({
-    imports: [MapModule],
-    overrides: [{ provide: BuildingRepository, useValue: buildings }],
+    imports: [MapModule, MapLayerSetModule, MapConfigModule, MapCampusModule, MapEventModule, MapEventDetailsModule],
+    overrides: [
+      { provide: BuildingRepository, useValue: buildings },
+      { provide: MapRepository, useValue: map },
+    ],
     role: "api",
   });
   httpServer = app.getHttpServer();
@@ -100,6 +107,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
+  global.fetch = realFetch;
 });
 
 beforeEach(() => {

@@ -22,18 +22,18 @@ audience: internal
 | Routes | `GET /map/config`, `GET /map/overlays/campus`, `GET /map/overlays/event`, `GET /map/overlays/event/details` |
 | Auth | none on all four |
 | Rate limit | `GeneralRateLimitMiddleware`, applied to the `/map` prefixes in `MapModule.configure` |
-| Wire schema | `src/map/map-overlay.types.ts` (overlays), `src/shared/geojson.types.ts` (geometry), `src/map/map-chip.types.ts` (chips) |
-| Producers | `src/map/map-campus-overlays.data.ts` (buildings + campus geometry), `src/map/map-event-overlays.data.ts` (event places), `src/map/map-event-details.data.ts` (their sheet bodies) |
-| Layer catalogue | `src/map/map-layers.data.ts` — the base layers, and the projection of a festival's `layers[]` from its config |
-| Chips | `src/map/map-chips.data.ts` — the base chips, the projection of a festival's `chips[]`, the synthesised reset chip, and the one validator both go through |
-| Response builder | `src/map/map-config.data.ts` |
+| Wire schema | `src/map/map.wire.ts` (overlays), `src/shared/geojson.types.ts` (geometry), `src/map/config/map-config.wire.ts` (chips) |
+| Producers | `src/map/campus/map-campus.mapper.ts` (buildings + campus geometry), `src/map/event/map-event.mapper.ts` (event places), `src/map/event-details/map-event-details.mapper.ts` (their sheet bodies) |
+| Layer catalogue | `src/map/map.constants.ts` — the base layers, and the projection of a festival's `layers[]` from its config |
+| Chips | `src/map/layer-set/map-layer-set.mapper.ts` — the base chips, the projection of a festival's `chips[]`, the synthesised reset chip, and the one validator both go through |
+| Response builder | `src/map/config/map-config.mapper.ts` |
 | Envelope | `{ meta: { lang }, data: { overlays: [ … ] } }`, `Vary: Accept-Language`, `X-Response-Time` |
 | Tests | `__tests__/nest/map/` |
 
 A building and a booth are **the same kind of thing, addressed the same way** (umbrella ADR 0004
 invariant 1). Before this contract they were not: the festival shipped its own manifest, snapshot,
 cache and marker component beside the base map's, which is a second rendering system for the same
-picture. Every producer now imports the types in `map-overlay.types.ts`, so a field can no longer be
+picture. Every producer now imports the types in `map.wire.ts`, so a field can no longer be
 added to one and forgotten in the others.
 
 The same invariant, applied one level down, is why a zone is not a separate resource: **a zone is a
@@ -504,7 +504,7 @@ nothing else.
 
 It became `async` when the event marker layers joined the list — they are present only while an
 activation window is open, which is a Mongo read. **That read is contained**: any failure inside
-`map-config.data.ts` logs and returns `[]`, so the route keeps the never-fails property it had when
+`map-config.service.ts` logs and returns `[]`, so the route keeps the never-fails property it had when
 it was synchronous. Until the event layers existed this endpoint had no DB dependency at all, and
 the app's fallback for a failed config is a bundled default holding no booth layers **but also no
 building layers** — so letting a Mongo hiccup here propagate would trade a missing festival for a
@@ -607,7 +607,7 @@ the commented-out bus polyline layers already use. `label` is resolved against `
 the envelope varies on `Accept-Language` while the marker data does not.
 
 `campuses[].radiusM` is how far from the centre still counts as being on a campus; it belongs to the
-campus reconciliation feature rather than to markers, and its derivation is in `map-config.data.ts`.
+campus reconciliation feature rather than to markers, and its derivation is in `map-config.service.ts`.
 
 `layers[].style` carries the **marker geometry** the app used to hardcode: `size` was `DOT_SIZE`,
 `width`/`height` were `PIN_WIDTH`/`PIN_HEIGHT` (the tintable base icon's natural proportions, so a
@@ -628,7 +628,7 @@ marker whatever shape it takes — a selected disc uses `width` as its diameter 
 > landmark markers, say — and never spell a shape into `markerStyle`, a closed allowlist whose
 > unrecognised members fall through to the building-number rendering and would draw every booth as a
 > green numbered circle on an older build. The axis is specified in skkuverse-app
-> `docs/reference/map-config-api-spec.md`; `__tests__/nest/map/map.service.test.ts` pins that this
+> `docs/reference/map-config-api-spec.md`; `src/map/config/map-config.service.spec.ts` pins that this
 > server sends nothing.
 
 Colour is deliberately **not** moved for the building layers. Their fill and the placeDot tint fall
@@ -724,7 +724,7 @@ only open a sheet that fails.
 
 > [!NOTE]
 > **Origin cache.** Each api replica also caches this body, the details body (§5.4) and the
-> activation lookup `/map/config` shares, for `EVENT_CACHE_TTL_MS` (`src/map/map-event-cache.ts`).
+> activation lookup `/map/config` shares, for `EVENT_CACHE_TTL_MS` (`src/map/map.constants.ts`).
 > Concurrent requests share one load, so the database sees at most one scan per replica per TTL
 > however many clients open the map. An expired body is served while its reload runs, and a failed
 > reload keeps serving the last good body, with a warning, for up to `EVENT_STALE_WINDOW_MS` — so a
@@ -839,7 +839,7 @@ absent, and the app draws its sheet from the overlay alone.
 ```
 
 The shape is the app's `PlaceDetail` (skkuverse-app `packages/shared/src/types/placeDetail.ts`),
-mirrored one-to-one in `src/map/map-place-detail.types.ts`. Text follows §2.1: every language, `en`
+mirrored one-to-one in `src/map/event-details/map-event-details.wire.ts`. Text follows §2.1: every language, `en`
 filled from `ko`, `zh` only when authored.
 
 **A separate route, not a field on the overlay.** The overlay is what the map, the list and the
@@ -900,7 +900,7 @@ documents twice.
 
 ## 7. The festival layer set
 
-A festival's layers are **authored in its config** — `src/map/config/<layerSetId>.json`,
+A festival's layers are **authored in its config** — `src/map/layer-set/<layerSetId>.json`,
 `layers[]` — and present in `GET /map/config` only while that layer set's activation window is open.
 The window is the on/off lever (`npm run eventmap open|close`), so a festival starts and ends with no
 deploy and the layers simply stop existing afterwards rather than lingering as dead toggles.
@@ -908,7 +908,7 @@ deploy and the layers simply stop existing afterwards rather than lingering as d
 Each entry is `{ id, label: {ko, en?, zh?}, color, defaultVisibleWhen }` and nothing else: `color` is
 content (a category colour is a fact about the event), and everything about how a festival pin is
 *drawn* — `markerStyle: "placeDot"`, the pin geometry — is the map's business, applied to every
-festival alike by `eventLayerSpecs` in `src/map/map-layers.data.ts`. Every festival layer is
+festival alike by `eventLayerSpecs` in `src/map/map.constants.ts`. Every festival layer is
 `userConfigurable: true`; one that ships `{ "kind": "never" }` is the opt-in tier (편의시설), not a
 locked background layer. Its `chipGroupId` is the **layer set id**, so two festivals could never share
 a chip group.
@@ -931,7 +931,7 @@ and its pin is one chip away.
 
 The values as served for ESKARA 2026 are the file itself — read it rather than a copy here.
 
-Next year's festival is therefore a new JSON file (registered in `CONFIG_FILES` and
+Next year's festival is therefore a new JSON file (registered in `LAYER_SET_FILES` and
 `scripts/copy-build-assets.js`) plus Mongo content. No route, no TypeScript, no client branch: the
 ids inside the file are the festival's to choose, and `eskara26_*` is a choice, not a requirement.
 
@@ -961,7 +961,7 @@ endpoint lands. This is that endpoint.
 
 > [!NOTE]
 > `MapChip` is the **wire**. The **authored** form of a festival chip is `EventChipDef` in the layer
-> set's config — `{ id, emoji, layerIds, label?, camera? }` — and `src/map/map-chips.data.ts` projects it
+> set's config — `{ id, emoji, layerIds, label?, camera? }` — and `src/map/layer-set/map-layer-set.mapper.ts` projects it
 > into this shape, resolving the camera and adding the synthesised reset chip (§8.5). This is the only chip
 > vocabulary there is — the predicate chips the deleted snapshot used to ship went with the pins they
 > filtered.
@@ -1109,8 +1109,8 @@ be served beside and **returns** every problem it finds, accumulated. Two caller
 
 | Row | When | On failure |
 | --- | --- | --- |
-| `BASE_CHIPS` against `BASE_LAYERS` | module import, `src/map/map-chips.data.ts` | throws `FATAL [map chips]` — repo TypeScript, a PR fixes it, the boot must not proceed |
-| the festival row (reset chip + authored chips) against **the full served catalogue** (base + festival layers) | config load, `assertValidConfig` in `src/map/map-layerset.config.ts` | the layer set is **rejected**: logged once with the path, and `/map/config` serves the base layers only — the festival is off the campus map until the file is fixed |
+| `BASE_CHIPS` against `BASE_LAYERS` | module import, `src/map/layer-set/map-layer-set.mapper.ts` | throws `FATAL [map chips]` — repo TypeScript, a PR fixes it, the boot must not proceed |
+| the festival row (reset chip + authored chips) against **the full served catalogue** (base + festival layers) | config load, `assertValidConfig` in `src/map/layer-set/map-layer-set.config.ts` | the layer set is **rejected**: logged once with the path, and `/map/config` serves the base layers only — the festival is off the campus map until the file is fixed |
 
 The second row is a deliberate posture with a cost worth naming: a config typo takes the whole
 festival off the map rather than degrading part of it. That is preferred to drawing from a category
@@ -1137,7 +1137,7 @@ There is no translation-miss case any more. Labels are inline `{ko, en?, zh?}` o
 chip, resolved with the one `pick()` in `src/infra/i18n.ts`, so a label with no `ko` is a rejected
 config and a base layer with no label does not compile.
 
-`src/map/map-layers.data.ts` and `src/map/map-chips.data.ts` are **leaf modules** of this seam:
+`src/map/map.constants.ts` and `src/map/layer-set/map-layer-set.mapper.ts` are **leaf modules** of this seam:
 `eventmap.config.ts` imports them to validate at load, so they may never import it — or anything that
 does — back. `eslint.config.js` refuses such an import for those two files; the rule is executable,
 not prose.
@@ -1316,8 +1316,8 @@ had never heard of the flag behaved exactly as if every layer were configurable.
 
 Nothing that is not data names the festival any more: the route is `/map/overlays/event`, the tap
 kind is `event`, the chip group is the layer set id, and the layers, chips, labels, colours, camera,
-name and emoji are all in `src/map/config/<layerSetId>.json`. `eskara27` is a new file, a
-`CONFIG_FILES` entry, a `copy-build-assets.js` line, and Mongo content. That is ADR 0004 invariant 1
+name and emoji are all in `src/map/layer-set/<layerSetId>.json`. `eskara27` is a new file, a
+`LAYER_SET_FILES` entry, a `copy-build-assets.js` line, and Mongo content. That is ADR 0004 invariant 1
 — "next year's event arrives as data" — honoured, after an earlier revision of this section chose to
 violate it for unambiguity.
 
@@ -1373,7 +1373,7 @@ renders exactly as one that never had the field. That symmetry is what makes a m
 it is the only claim in this section that needs no checking against another repository.
 
 One inventory does belong here, because the subject is local: `maxZoom` is declared in
-`MapLayerStyle` (`src/map/map-layers.data.ts`) and set by no layer. `campus_geometry` sends
+`MapLayerStyle` (`src/map/map.constants.ts`) and set by no layer. `campus_geometry` sends
 `fillOpacity`, `outlineWidth` and `minZoom`; `EVENT_SHAPE_STYLE` sends the first two on every festival
 layer, which is why a festival zone needs no style of its own.
 
@@ -1404,31 +1404,31 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 
 | Concern | File |
 | --- | --- |
-| Wire schema, every producer | `src/map/map-overlay.types.ts` |
+| Wire schema, every producer | `src/map/map.wire.ts` |
 | GeoJSON vocabulary, storage and wire | `src/shared/geojson.types.ts` |
 | Ring winding and closure | `src/shared/ring-winding.util.ts` |
 | Campus geometry storage | `CampusShapeDoc` in `src/building/building.document.ts`, `campus_shapes` in the building DB |
 | Campus geometry authoring | `scripts/data/campus-shapes.json` → `npm run campus:shapes` |
-| Base layer catalogue, festival layer projection, `chipGroupId`, marker geometry | `src/map/map-layers.data.ts` |
-| Base chips, festival chip projection, the reset chip, the one chip validator | `src/map/map-chips.data.ts` |
-| Chip wire schema | `src/map/map-chip.types.ts` |
-| Response builder, campuses, activation lookup | `src/map/map-config.data.ts` |
-| Buildings + campus geometry → overlays, empty-DB fallback | `src/map/map-campus-overlays.data.ts` |
-| Event places → overlays | `src/map/map-event-overlays.data.ts` |
-| Event places → sheet details, and the serve-time checks | `src/map/map-event-details.data.ts` |
-| Detail shape (stored and wire) | `src/map/map-place-detail.types.ts` |
+| Base layer catalogue, festival layer projection, `chipGroupId`, marker geometry | `src/map/map.constants.ts` |
+| Base chips, festival chip projection, the reset chip, the one chip validator | `src/map/layer-set/map-layer-set.mapper.ts` |
+| Chip wire schema | `src/map/config/map-config.wire.ts` |
+| Response builder, campuses, activation lookup | `src/map/config/map-config.mapper.ts` |
+| Buildings + campus geometry → overlays, empty-DB fallback | `src/map/campus/map-campus.mapper.ts` |
+| Event places → overlays | `src/map/event/map-event.mapper.ts` |
+| Event places → sheet details, and the serve-time checks | `src/map/event-details/map-event-details.mapper.ts` |
+| Detail shape (stored and wire) | `src/map/event-details/map-event-details.wire.ts` |
 | Media host and its URL rule | `MEDIA_ORIGIN` in `src/infra/origins.ts`, `src/infra/media-url.ts` |
-| "Which layer set is live, and is its config usable" | `src/map/map-active-layerset.ts` |
-| Festival layers, chips, labels, colours, camera, category → layer table | `src/map/config/<layerSetId>.json` |
-| Category → presentation resolver (both producers) | `presentationFor` in `src/map/map-layerset.types.ts` |
-| `DailyWindow`, `LayerDefaultVisibility`, and why this axis is wall-clock | `src/map/map-layerset.types.ts` |
-| List facets and sort (`EventFacetDef`, `EventChipListDef`), and their wire form (`MapChipList`) | `src/map/map-layerset.types.ts`, `src/map/map-chip.types.ts` |
-| Facet membership per overlay (`facetsOf`) | `src/map/map-event-overlays.data.ts` |
-| HTTP + `Cache-Control` | `src/map/controllers/map-config.controller.ts`, `src/map/controllers/map-overlays.controller.ts` |
+| "Which layer set is live, and is its config usable" | `src/map/layer-set/map-layer-set.service.ts` |
+| Festival layers, chips, labels, colours, camera, category → layer table | `src/map/layer-set/<layerSetId>.json` |
+| Category → presentation resolver (both producers) | `presentationFor` in `src/map/layer-set/map-layer-set.schema.ts` |
+| `DailyWindow`, `LayerDefaultVisibility`, and why this axis is wall-clock | `src/map/layer-set/map-layer-set.schema.ts` |
+| List facets and sort (`EventFacetDef`, `EventChipListDef`), and their wire form (`MapChipList`) | `src/map/layer-set/map-layer-set.schema.ts`, `src/map/config/map-config.wire.ts` |
+| Facet membership per overlay (`facetsOf`) | `src/map/event/map-event.mapper.ts` |
+| HTTP + `Cache-Control` | `src/map/config/map-config.controller.ts`, `src/map/campus/map-campus.controller.ts` |
 | Module wiring, rate limit, endpoint inventory | `src/map/map.module.ts` |
 | Campus labels | `src/infra/i18n.ts` (`map.campus.*`) — layer and chip labels are inline `{ko, en?, zh?}` on their specs, resolved with `pick()` from the same module |
 | Building documents | `src/building/building.repository.ts` |
-| Event documents + activation window | `src/map/map-places.data.ts`, `src/map/map-places.types.ts` |
+| Event documents + activation window | `src/map/map.repository.ts`, `src/map/map.document.ts` |
 | Sheet → documents, and the importer | `scripts/lib/map-places-file.js`, `scripts/import-eventmap-places.js` |
 | Tests | `__tests__/nest/map/` |
 
