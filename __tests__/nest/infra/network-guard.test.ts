@@ -1,18 +1,24 @@
 /**
  * The Jest network guard (`__tests__/helpers/network-guard.ts`, harden-test-suite
  * design D5): every door to a host outside loopback refuses and names the host,
- * and loopback stays open for supertest and real local sockets.
+ * loopback stays open for supertest and real local sockets, and a refusal fails
+ * the test file whose code made it, never the file a worker runs next.
  */
+import { spawnSync } from "node:child_process";
 import dns from "node:dns";
+import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
 import type { AddressInfo } from "node:net";
+import os from "node:os";
+import path from "node:path";
 import tls from "node:tls";
 import { promisify } from "node:util";
 import { isLoopbackHost, takeBlockedConnections } from "../../helpers/network-guard";
 
 const EXTERNAL_HOST = "example.com";
+const ROOT = path.join(__dirname, "../../..");
 
 function thrownBy(act: () => unknown): unknown {
   try {
@@ -144,4 +150,88 @@ describe("network guard: loopback", () => {
     // Act & Assert
     expect(isLoopbackHost(host)).toBe(expected);
   });
+});
+
+interface JestJsonReport {
+  testResults: { name: string; assertionResults: { title: string; status: string; failureMessages: string[] }[] }[];
+}
+
+// Three files run in one worker, in name order. The first leaves an interval
+// running that makes its calls only once the second file's test has started.
+const WORKER_FIXTURES: Record<string, string> = {
+  "sequencer.js":
+    "module.exports = class { sort(tests) { return [...tests].sort((a, b) => a.path.localeCompare(b.path)); } cacheResults() {} };",
+  "1-leaves-calls-running.test.js": `
+    const net = require("node:net");
+    test("leaves calls running past the end of its file", () => {
+      const poll = setInterval(() => {
+        if (!net[Symbol.for("networkGuardFixture.nextFileRunning")]) return;
+        clearInterval(poll);
+        fetch("https://stray-fetch.example/").catch(() => undefined);
+        try { net.connect(443, "stray-connect.example"); } catch {}
+        net[Symbol.for("networkGuardFixture.strayCallsMade")] = true;
+      }, 10);
+    });`,
+  "2-runs-next.test.js": `
+    const net = require("node:net");
+    test("runs while the earlier file's calls are refused", async () => {
+      net[Symbol.for("networkGuardFixture.nextFileRunning")] = true;
+      while (!net[Symbol.for("networkGuardFixture.strayCallsMade")]) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    });`,
+  "3-swallows-its-own-call.test.js": `
+    const net = require("node:net");
+    test("swallows a refusal of its own", () => {
+      try { net.connect(443, "own-call.example"); } catch {}
+    });`,
+};
+
+describe("network guard: test files that share a worker", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "network-guard-"));
+  });
+
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("writes a refusal made by a finished file's leftover code to stderr instead of failing the next file", () => {
+    // Arrange
+    for (const [name, source] of Object.entries(WORKER_FIXTURES)) fs.writeFileSync(path.join(dir, name), source);
+    const config = {
+      rootDir: ROOT,
+      roots: [dir],
+      testMatch: ["**/*.test.js"],
+      testEnvironment: "node",
+      testSequencer: path.join(dir, "sequencer.js"),
+      setupFiles: [path.join(ROOT, "__tests__/helpers/network-guard.ts")],
+      transform: { "^.+\\.ts$": ["ts-jest", { diagnostics: false, tsconfig: path.join(ROOT, "tsconfig.test.json") }] },
+      collectCoverage: false,
+      watchman: false,
+    };
+
+    // Act
+    const run = spawnSync(
+      process.execPath,
+      [require.resolve("jest/bin/jest"), "--config", JSON.stringify(config), "--runInBand", "--json"],
+      { cwd: ROOT, encoding: "utf8", env: process.env, timeout: 60_000 },
+    );
+    const report = JSON.parse(run.stdout) as JestJsonReport;
+    const outcomes = report.testResults
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .flatMap((file) => file.assertionResults)
+      .map(({ title, status, failureMessages }) => [title, status, failureMessages.join("\n")]);
+
+    // Assert
+    expect(outcomes).toEqual([
+      ["leaves calls running past the end of its file", "passed", ""],
+      ["runs while the earlier file's calls are refused", "passed", ""],
+      ["swallows a refusal of its own", "failed", expect.stringContaining("refused connect to own-call.example:443")],
+    ]);
+    expect(run.stderr).toContain("refused fetch to stray-fetch.example:443");
+    expect(run.stderr).toContain("refused connect to stray-connect.example:443");
+  }, 60_000);
 });

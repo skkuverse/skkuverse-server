@@ -13,7 +13,13 @@
  * it from a microtask, which Jest reports against the running test or hook. A
  * test that expects a refusal takes it with `takeBlockedConnections()` in the
  * same tick.
+ *
+ * A worker runs its test files one after another, and Jest pins an uncaught
+ * error on whatever test is running. So a refusal made by code an earlier file
+ * left running (a timer, a poller) is written to stderr instead of rethrown: it
+ * would fail an unrelated test, with a blank message once that file is torn down.
  */
+import { AsyncResource, executionAsyncId } from "node:async_hooks";
 import dns from "node:dns";
 import net from "node:net";
 
@@ -31,6 +37,9 @@ interface Originals {
 
 // net and dns are the worker's real modules, shared by every test file,
 // while setupFiles runs once per file; the first run saves the unpatched ones.
+// Each file then wraps those originals afresh rather than patching once per
+// worker: a refusal is built in the running file's realm, and Jest blanks the
+// stack of every error built in a realm it has torn down.
 const ORIGINALS = Symbol.for("skkuverse.networkGuard.originals");
 const PENDING = Symbol.for("skkuverse.networkGuard.pending");
 const GUARDED = Symbol.for("skkuverse.networkGuard.guarded");
@@ -69,11 +78,33 @@ export function isLoopbackHost(host: string): boolean {
 
 // Captured at setup, before a test can install fake timers over it.
 const realQueueMicrotask = globalThis.queueMicrotask;
+const writeStderr = process.stderr.write.bind(process.stderr);
+
+// Async ids only grow, so a timer or socket callback whose resource is older
+// than this mark was started by an earlier file. Without async hooks a promise
+// continuation reports id 0, and counts as this file's.
+const FIRST_ASYNC_ID_OF_THIS_FILE = new AsyncResource("NetworkGuardFileStart").asyncId();
+
+function isCallFromFinishedFile(): boolean {
+  // `jest` is this file's own Jest object, so it knows when this file is torn down.
+  if (jest.isEnvironmentTornDown()) return true;
+  const asyncId = executionAsyncId();
+  return asyncId > 0 && asyncId < FIRST_ASYNC_ID_OF_THIS_FILE;
+}
+
+function reportStray(error: NetworkGuardError): void {
+  const trace = error.stack !== undefined && error.stack !== "" ? error.stack : error.message;
+  writeStderr(`${trace}\n(Made by code a finished test file left running, so it fails no test.)\n`);
+}
 
 function refuse(target: string, via: string, door: (...args: never[]) => unknown): NetworkGuardError {
   const error = new NetworkGuardError(target, via);
   // Starts the stack at the caller, which is the frame Jest prints.
   Error.captureStackTrace(error, door);
+  if (isCallFromFinishedFile()) {
+    reportStray(error);
+    return error;
+  }
   const pending = pendingRefusals();
   pending.push(error);
   realQueueMicrotask(() => {
