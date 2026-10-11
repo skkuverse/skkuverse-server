@@ -1,9 +1,9 @@
 /**
  * A role file whose test sits next to it has that test (ADR 0011, D1):
  * `x.rules.ts` → `x.rules.spec.ts` in the same folder. The roles are the pure
- * ones, `.rules`, `.mapper` and `.schema`, and the adapters, `.repository`,
- * `.client` and `.poller`. A `.rules` file that declares no function holds
- * constants only and needs none.
+ * ones, `.rules`, `.mapper`, `.schema` and the shared `.util`, and the
+ * adapters, `.repository`, `.client` and `.poller`. A `.rules` file that
+ * declares no function holds constants only and needs none.
  *
  * The other roles are tested elsewhere or by judgment: a controller and a
  * module by the route and architecture tests, a `.wire` by
@@ -21,7 +21,7 @@ import { filesUnder, readSource } from "../helpers/architecture/tree";
 
 const RULE = "sibling-specs";
 
-export const SPEC_ROLES = new Set(["rules", "mapper", "schema", "repository", "client", "poller"]);
+export const SPEC_ROLES = new Set(["rules", "mapper", "schema", "util", "repository", "client", "poller"]);
 
 const isCode = (node: ts.Node): boolean =>
   ts.isFunctionDeclaration(node) ||
@@ -101,7 +101,6 @@ describe("sibling spec rule applies as specified", () => {
       "src/x/x.constants.ts",
       "src/x/x.config.ts",
       "src/x/x.schema.generated.ts",
-      "src/shared/regex.util.ts",
       "src/infra/db.ts",
       "src/main.ts",
       "scripts/lib/x.rules.ts",
@@ -109,6 +108,14 @@ describe("sibling spec rule applies as specified", () => {
 
     // Act & Assert
     expect(missingSpecs(files, withFunctions)).toEqual([]);
+  });
+
+  it("asks a spec of each .util file in src/shared/, next to it", () => {
+    // Arrange
+    const files = ["src/shared/a.util.ts", "src/shared/a.util.spec.ts", "src/shared/b.util.ts", "src/shared/b.types.ts"];
+
+    // Act & Assert
+    expect(missingSpecs(files, withFunctions)).toEqual(["src/shared/b.util.ts"]);
   });
 
   it("asks no spec of a .rules file of constants only, but of one with a function and of a mapper of constants", () => {
