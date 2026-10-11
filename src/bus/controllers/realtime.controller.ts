@@ -13,7 +13,7 @@ import {
   currentTimeString,
 } from "../realtime/realtime.transforms";
 import { AppError } from "../../http/app.error";
-import { sendSuccess } from "../../http/response.interceptor";
+import { sendSuccess, withMeta } from "../../http/response.interceptor";
 
 interface GroupConfigEntry {
   getBuses: () => Promise<unknown>;
@@ -94,8 +94,10 @@ export class RealtimeController {
     sendSuccess(
       req,
       res,
-      { groupId, buses, stationEtas },
-      { currentTime: currentTimeString(), totalBuses: buses.length },
+      withMeta(
+        { groupId, buses, stationEtas },
+        { currentTime: currentTimeString(), totalBuses: buses.length },
+      ),
     );
   }
 }
