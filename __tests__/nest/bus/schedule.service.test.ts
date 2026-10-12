@@ -836,7 +836,7 @@ describe("자과캠 통학셔틀 resolution (built from scripts/data/commute-sch
 
   it("opens the smart view on the first day while the card is up before the pilot", async () => {
     jest.useFakeTimers();
-    jest.setSystemTime(new Date("2026-10-12T09:00:00.000Z")); // Mon 18:00 KST, the card's first minute
+    jest.setSystemTime(new Date("2026-10-12T02:55:00.000Z")); // Mon 11:55 KST, the card's first minute
     try {
       mockSchedules = docsFor("commute-jeongja");
       const result = await resolveSmartSchedule("commute-jeongja");
