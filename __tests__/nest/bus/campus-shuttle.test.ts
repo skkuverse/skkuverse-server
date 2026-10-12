@@ -174,3 +174,13 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
     }
   });
 });
+
+describe("인자셔틀 notices", () => {
+  const serviceConfig = require("../../../src/bus/schedule/service-config").default;
+
+  it.each(["campus-inja", "campus-jain"])("%s shows one ai banner: arrivals reflect live traffic", (serviceId) => {
+    expect(serviceConfig[serviceId].notices).toEqual([
+      { style: "ai", text: "도착 시간은 실시간 교통 상황을 반영해요" },
+    ]);
+  });
+});
