@@ -247,7 +247,7 @@ function buildCommuteGroup(lang: SupportedLang) {
     id: "commute",
     screenType: "schedule",
     label: t("busconfig.label.commute", lang),
-    visibility: dateRange("2026-10-12", "2026-12-18", "18:00"),
+    visibility: dateRange("2026-10-12", "2026-12-18", "11:55"),
     card: {
       themeColor: "003626",
       iconType: "shuttle",
