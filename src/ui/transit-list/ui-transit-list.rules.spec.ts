@@ -24,13 +24,13 @@ describe("isBusGroupVisible", () => {
   });
 
   it.each([
-    ["2026-10-12T08:59:59.999Z", false],
-    ["2026-10-12T09:00:00.000Z", true],
-  ])("with a first-day time, at %s (18:00 KST) answers %p", (iso, expected) => {
+    ["2026-10-12T02:54:59.999Z", false],
+    ["2026-10-12T02:55:00.000Z", true],
+  ])("with a first-day time, at %s (11:55 KST) answers %p", (iso, expected) => {
     // Arrange
-    const fromEvening = { type: "dateRange", from: "2026-10-12", fromTime: "18:00", until: "2026-12-18" } as const;
+    const fromNoon = { type: "dateRange", from: "2026-10-12", fromTime: "11:55", until: "2026-12-18" } as const;
 
     // Act & Assert
-    expect(isBusGroupVisible(fromEvening, new Date(iso))).toBe(expected);
+    expect(isBusGroupVisible(fromNoon, new Date(iso))).toBe(expected);
   });
 });
