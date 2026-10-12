@@ -159,7 +159,7 @@ describe("resolveWeek", () => {
     }
   });
 
-  it("campus-inja and campus-jain schedule days carry no service notice", async () => {
+  it("campus-inja and campus-jain schedule days carry the live-traffic ai notice", async () => {
     for (const serviceId of ["campus-inja", "campus-jain"]) {
       mockSchedules = [
         { serviceId, patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
@@ -167,7 +167,9 @@ describe("resolveWeek", () => {
 
       const result = await resolveWeek(serviceId, "2026-03-09");
       expect(result!.days[0].display).toBe("schedule");
-      expect(result!.days[0].notices).toEqual([]);
+      expect(result!.days[0].notices).toEqual([
+        { style: "ai", text: "도착 시간은 실시간 교통 상황을 반영해요", source: "service" },
+      ]);
     }
   });
 
