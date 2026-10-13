@@ -153,7 +153,7 @@ const CLOCK_SYNTAX = [
 // rule, registered again by a local plugin, so a block that sets one leaves the others alone.
 const CORE_RESTRICTED_SYNTAX = require("eslint/use-at-your-own-risk").builtinRules.get("no-restricted-syntax");
 const SRC_SYNTAX_PLUGIN = {
-  rules: { "zod-issues": CORE_RESTRICTED_SYNTAX },
+  rules: { "zod-issues": CORE_RESTRICTED_SYNTAX, literals: CORE_RESTRICTED_SYNTAX },
 };
 
 // A zod issue names where it is (ADR 0010, D5): parseConfigFile and the boot error print each
@@ -167,6 +167,21 @@ const ADD_ISSUE_SYNTAX = [
   {
     selector: `${ADD_ISSUE} > :matches(Literal, TemplateLiteral).arguments:first-child`,
     message: "Pass an issue object with its `path` (`path: []` when the issue is the whole value), not a bare message.",
+  },
+];
+
+// A color or a web view path is a value the app reads, kept in one place: a `.constants` file
+// (or the JSON config) holds it, and code imports its name.
+const HEX_COLOR = "/^#?[0-9A-Fa-f]{6}$/";
+const WEBVIEW_PATH = "/^\\/skku\\//";
+const LITERAL_SYNTAX = [
+  {
+    selector: `:matches(Literal[value=${HEX_COLOR}], TemplateLiteral[quasis.length=1] > TemplateElement[value.raw=${HEX_COLOR}])`,
+    message: "A six-digit hex color lives in a *.constants.ts file: import it by name.",
+  },
+  {
+    selector: `:matches(Literal[value=${WEBVIEW_PATH}], TemplateLiteral > TemplateElement:first-child[value.raw=${WEBVIEW_PATH}])`,
+    message: "A web view path (/skku/…) lives in a *.constants.ts file: import it by name.",
   },
 ];
 
@@ -213,6 +228,13 @@ const VIOLATORS = {
     "src/notices/notices.data.ts",
   ],
   features: {},
+  // Files that hold a hex color or a web view path outside a .constants file.
+  literals: [
+    "src/bus/bus-config/bus-config.data.ts",
+    "src/bus/bus-config/hssc.stations.ts",
+    "src/bus/route-overlay/route-overlay.service.ts",
+    "src/miniapps/shell.ts",
+  ],
   // Controllers that read req.lang themselves instead of taking @Lang().
   lang: [
     "src/bus/controllers/bus-config.controller.ts",
@@ -675,6 +697,14 @@ module.exports = [
     ignores: ["src/**/*.spec.ts"],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
     rules: { "src-syntax/zod-issues": ["error", ...ADD_ISSUE_SYNTAX] },
+  },
+  {
+    // A spec states the values it expects, so it is left out.
+    name: "boundaries/literals",
+    files: ["src/**/*.ts"],
+    ignores: ["src/**/*.spec.ts", "src/**/*.constants.ts", ...VIOLATORS.literals],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: { "src-syntax/literals": ["error", ...LITERAL_SYNTAX] },
   },
   {
     files: ["__tests__/**/*.{js,ts}"],
