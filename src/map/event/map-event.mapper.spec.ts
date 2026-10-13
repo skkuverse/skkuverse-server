@@ -4,15 +4,13 @@
  * windows as ISO instants, and its sheet buttons with the bad ones dropped
  * into the context's log.
  */
-import fs from "fs";
-import path from "path";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
-import { assertValidConfig } from "../layer-set/map-layer-set.config";
 import type { MapPlaceDoc } from "../map.document";
 import { toEventOverlay } from "./map-event.mapper";
 import type { EventOverlayContext } from "./map-event.types";
+import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 
-const CONFIG = assertValidConfig(JSON.parse(fs.readFileSync(path.join(__dirname, "../layer-set/eskara-2026.json"), "utf8")));
+const CONFIG = shippedLayerSet();
 
 function context(): EventOverlayContext {
   return { config: CONFIG, drops: { actions: [], facets: [] }, isKnownMiniAppTarget: () => true };

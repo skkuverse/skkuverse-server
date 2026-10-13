@@ -15,11 +15,10 @@ jest.mock("../layer-set/map-layer-set.config", () => ({
 }));
 
 import { pick } from "../../infra/i18n";
-import { Clock } from "../../infra/clock";
+import type { Clock } from "../../infra/clock";
 import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import { getLayerSetConfig } from "../layer-set/map-layer-set.config";
-import { BASE_CHIPS } from "../layer-set/map-layer-set.constants";
+import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS, EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "../map.constants";
@@ -35,9 +34,12 @@ const BASE_LAYER_COUNT = 3;
  * relative to its own directory — so every expectation below derives from it
  * rather than restating a count that the next festival would break.
  */
-const loaded = getLayerSetConfig("eskara-2026");
-if (!loaded?.config) throw new Error(`eskara-2026 failed to load: ${loaded?.error}`);
-const CONFIG: EventMapConfig = loaded.config;
+const CONFIG: EventMapConfig = shippedLayerSet();
+
+const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
+
+// The chips /map/config serves off-season, read through the layer-set service as the config service reads them.
+const BASE_CHIPS = new MapLayerSetService(asReal<MapRepository>(new FakeMapRepository()), CLOCK).servedChipSpecs(null);
 const EVENT_LAYER_IDS = new Set(CONFIG.layers.map((l) => l.id));
 
 // "No festival" is stated rather than inferred from an absent DB client, and
@@ -51,7 +53,7 @@ describe("MapConfigService", () => {
   function freshServices(): void {
     const repository = new FakeMapRepository();
     repository.findActiveActivation = findActiveActivation;
-    config = new MapConfigService(new MapLayerSetService(asReal<MapRepository>(repository), new Clock()));
+    config = new MapConfigService(new MapLayerSetService(asReal<MapRepository>(repository), CLOCK));
   }
   const svc = {
     getMapConfig: (lang: "ko" | "en" | "zh") => config.getMapConfig(lang),

@@ -43,7 +43,7 @@ The layer-set loader imports the root's and its own rules, mappers, schemas, con
 | --- | --- |
 | `src/map/layer-set/map-layer-set.config.spec.ts` | Every layer-set rejection, by its exact message |
 | `src/map/layer-set/map-layer-set.service.spec.ts` | The live-event answer, its cache and stale window, and the once-per-process warning |
-| `src/map/map.rules.spec.ts`, `__tests__/nest/map/map-chips-wire.test.ts` | The chip group rules, the reset chip, the chips as served |
+| `src/map/map.rules.spec.ts`, `src/map/layer-set/map-layer-set.mapper.spec.ts`, `src/map/config/map-config.mapper.spec.ts`, `__tests__/nest/map/map-chips-wire.test.ts` | The chip group rules; the reset chip and the shipped chip row; the chips as served |
 | `src/map/config/map-config.service.spec.ts` | The `/map/config` body with and without a festival |
 | `src/map/event/map-event.service.spec.ts`, `__tests__/nest/map/map-overlay-coordinates.test.ts` | The event projection, the unrenderable-place skip, `[lng, lat]` order |
 | `__tests__/nest/map/map-overlay-interactive.test.ts` | `interactive: false`, `tapChip`, and one layer holding all three kinds |
