@@ -179,6 +179,15 @@ describe("loadHomeLayout", () => {
     // Act & Assert
     expect(() => loadHomeLayout(raw)).toThrow(new RegExp(`^home layout: ${path.replaceAll(".", "\\.")}: `));
   });
+
+  it.each<[string, Record<string, unknown>, string]>([
+    ["a banner id repeated as a section id", layout(carousel(), grid({ id: "banner-a" })), 'sections.1.id: duplicate id "banner-a"'],
+    ["a section id repeated as a banner id", layout(grid({ id: "banner-a" }), carousel()), 'sections.1.items.0.id: duplicate id "banner-a"'],
+    ["a tile placed twice", layout(grid(), grid({ id: "more", tiles: [link(), link()] })), 'sections.1.tiles.1.id: tile "campus-map" is placed more than once'],
+  ])("names where %s repeats", (_label, raw, issue) => {
+    // Act & Assert
+    expect(() => loadHomeLayout(raw)).toThrow(`home layout: ${issue}`);
+  });
 });
 
 describe("miniapp_feed section", () => {
