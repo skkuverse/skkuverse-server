@@ -313,6 +313,29 @@ describe("MapCampusService.getCampusOverlays", () => {
     // an id across layers is correct rather than a collision.
     expect(new Set(markers.map((m) => m.id))).toEqual(new Set(["7"]));
   });
+
+  it("serves both building layers in one response, the fallback flagged degraded, with no buildings", async () => {
+    // Arrange
+    // One response carries both building layers, so the app's endpoint-keyed
+    // cache serves two toggles from one fetch.
+    mockListAllBuildings.mockResolvedValue([]);
+
+    // Act
+    const { overlays: markers, degraded } = await getCampusOverlays(source);
+
+    // Assert
+    // No buildings, so this is the fallback path — and it
+    // must say so, or the controller caches 12 hardcoded buildings for a day.
+    expect(degraded).toBe(true);
+
+    expect(markers.length).toBeGreaterThan(0);
+    expect(new Set(markers.map((m) => m.layerId))).toEqual(
+      new Set(["building_numbers", "building_labels"]),
+    );
+    // `displayNo` is gone from the wire — the visible string is always `text`.
+    expect(markers[0]).not.toHaveProperty("displayNo");
+    expect(markers[0]).not.toHaveProperty("skkuId");
+  });
 });
 
 describe("MapCampusService.getCampusOverlays — hand-authored campus geometry", () => {
