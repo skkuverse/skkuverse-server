@@ -8,7 +8,7 @@
  * holes included, needs four positions, the minimum that closes a triangle.
  * Anything else answers false instead of throwing.
  *
- * Every position is [lng, lat], GeoJSON order, around 자과캠.
+ * Every position is [lng, lat], GeoJSON order, around NSC.
  */
 import { isDrawableGeometry } from "./geojson.util";
 

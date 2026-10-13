@@ -8,10 +8,10 @@
  *
  * Two regression queries (issue #91: a `{ spaceCd: query }` equality shipped
  * instead of a regex), chosen because they fail differently:
- *   q=27  — the 168 rooms of 제2공학관27동 are already in the match set today
+ *   q=27  — the 168 rooms of Engineering Building II, wing 27, are already in the match set today
  *           (their building NAME contains "27"); they just lost the unsorted
  *           20-row window to dormitory noise. Pins ORDERING.
- *   q=204 — 법학관 has no digits in its name, so its rooms (20401, 20404, ...)
+ *   q=204 — the Law building has no digits in its name, so its rooms (20401, 20404, ...)
  *           are unreachable by any prefix of their own code. Pins RECALL.
  */
 
@@ -96,7 +96,7 @@ describe("room ranking (q=27) — the reported bug", () => {
 });
 
 describe("room reachability (q=204) — rooms in a digit-free building", () => {
-  // 법학관 contains no digits, so 20401 is reachable ONLY via its own code.
+  // The Law building's name contains no digits, so 20401 is reachable ONLY via its own code.
   const law = room("20401", "법학전문대학원열람실", "법학관");
 
   it("finds the room by a prefix of its code", () => {
@@ -120,7 +120,7 @@ describe("room reachability (q=204) — rooms in a digit-free building", () => {
 describe("scoring edge cases from real production rows", () => {
   it("does not throw on spaceCd: null and still scores via name", () => {
     // Arrange
-    // Two such rows exist: 600주년기념관 buildNo 101, 의학관 buildNo 271.
+    // Two such rows exist: the 600th Anniversary Hall (buildNo 101) and the Medicine building (buildNo 271).
     const orphan = room(null, "숙실(271)", "기숙사신관");
 
     // Act & Assert
@@ -139,7 +139,7 @@ describe("scoring edge cases from real production rows", () => {
 
     // Act & Assert
     expect(() => scoreSpace("27", numeric)).not.toThrow();
-    // Falls back to the buildingName SUBSTRING tier (10) — "제2공학관27동" does
+    // Falls back to the buildingName SUBSTRING tier (10) — the wing 27 building's name does
     // not start with "27" — instead of the spaceCd prefix tier (50) it would
     // have earned as a string. Demoted, never crashing.
     expect(scoreSpace("27", numeric)).toBe(10);
@@ -198,8 +198,8 @@ describe("building tiers", () => {
 describe("row caps", () => {
   it("sizes the strong cap above the largest building and cuts the weak tail", () => {
     // Assert
-    // 기숙사신관 (buildNo 298) holds 801 rooms — the strong band must never
-    // truncate a building. The weak band is what keeps q=실 (6173 matches) from
+    // The new dormitory (buildNo 298) holds 801 rooms — the strong band must never
+    // truncate a building. The weak band is what keeps the one-syllable query for "room" (6173 matches) from
     // reaching a non-virtualized ScrollView.
     expect(SPACE_SEARCH_LIMIT).toBeGreaterThan(801);
     expect(SPACE_WEAK_LIMIT).toBeLessThanOrEqual(100);

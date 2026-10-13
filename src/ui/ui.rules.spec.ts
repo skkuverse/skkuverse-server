@@ -1,11 +1,11 @@
 /**
  * The rules home and campus share: a banner shows inside its half-open window
- * [startAt, endAt), the first repeated id is named, and a link action is
+ * [startAt, endAt), the first repeat of an id is found where it repeats, and a link action is
  * checked by its type's rule (a registered mini-app target, an https URL, a
  * web view URL, a root-relative route), never with whitespace.
  */
 import { MiniAppsService } from "../miniapps/miniapps.service";
-import { findDuplicateId, isBannerShowing, isBrokenLinkAction } from "./ui.rules";
+import { findRepeatedId, isBannerShowing, isBrokenLinkAction } from "./ui.rules";
 
 const registry = new MiniAppsService();
 
@@ -33,12 +33,14 @@ describe("isBannerShowing", () => {
   });
 });
 
-describe("findDuplicateId", () => {
-  it("names the first id seen twice, and nothing when all differ", () => {
+describe("findRepeatedId", () => {
+  const ids = (...values: string[]): Array<{ id: string; at: number }> => values.map((id, at) => ({ id, at }));
+
+  it("finds the first id seen twice, at its repeat, and nothing when all differ", () => {
     // Act & Assert
-    expect(findDuplicateId(["a", "b", "c", "b", "a"])).toBe("b");
-    expect(findDuplicateId(["a", "b", "c"])).toBeUndefined();
-    expect(findDuplicateId([])).toBeUndefined();
+    expect(findRepeatedId(ids("a", "b", "c", "b", "a"))).toEqual({ id: "b", at: 3 });
+    expect(findRepeatedId(ids("a", "b", "c"))).toBeUndefined();
+    expect(findRepeatedId(ids())).toBeUndefined();
   });
 });
 

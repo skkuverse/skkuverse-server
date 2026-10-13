@@ -58,7 +58,7 @@ export interface BarrierFreeSection {
   parking: number | null;
 }
 
-/** QUIRK(skku): SKKU writes a barrier-free block into description.ko, one section per wing label (A동, B동) or one. */
+/** QUIRK(skku): SKKU writes a barrier-free block into description.ko, one section per wing label (wing A, wing B) or one. */
 export interface AccessibilityDetail {
   sections: BarrierFreeSection[];
   parseError?: string;
