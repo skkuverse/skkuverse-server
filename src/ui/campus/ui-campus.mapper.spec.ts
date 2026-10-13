@@ -28,7 +28,7 @@ function carousel(overrides: Record<string, unknown> = {}): Record<string, unkno
   };
 }
 
-describe("getCampusSections", () => {
+describe("toCampusSheet", () => {
   const WINDOW = { startAt: "2026-10-01T00:00:00+09:00", endAt: "2026-10-03T00:00:00+09:00" };
 
   function sectionsAt(iso: string, raw: Record<string, unknown>) {
