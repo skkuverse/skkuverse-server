@@ -240,7 +240,7 @@ describe("MapEventService.getEventOverlays", () => {
 
   it("serves an open-ended, labelled window rather than dropping the place", async () => {
     // Arrange
-    // A 팔찌 배부 booth: 단체 입장 until 14:00, then 개별 입장 with no announced
+    // A wristband booth: group entry until 14:00, then individual entry with no announced
     // end. The serve guard used to demand a Date on both sides, so a `null` end
     // would have skipped the whole booth with only a log line.
     arrange([
@@ -281,7 +281,7 @@ describe("MapEventService.getEventOverlays", () => {
     // Assert
     // `[]` has exactly ONE meaning — always open — which the old
     // `startAt: null, endAt: null` could not manage: it meant both an always-on
-    // 화장실 and a rain-cancelled bar, and `status` existed to tell them apart.
+    // restroom and a rain-cancelled bar, and `status` existed to tell them apart.
     expect(markers[0]!.hours).toEqual([]);
     expect(markers[0]!.layerId).toBe("eskara26_facility");
   });
@@ -289,8 +289,8 @@ describe("MapEventService.getEventOverlays", () => {
   it("files every place on the layer its category resolves to", async () => {
     // Arrange
     // `presentationFor` is the ONE table from a category to a layer. Going
-    // through it rather than reimplementing the mapping is what keeps a 주점 pin
-    // on the same layer the 주점 chip shows.
+    // through it rather than reimplementing the mapping is what keeps a bar pin
+    // on the same layer the bars chip shows.
     const docs = [
       place({ _id: "bar-1", category: "bar" }),
       place({ _id: "booth-1", category: "booth" }),
@@ -317,7 +317,7 @@ describe("MapEventService.getEventOverlays", () => {
 
   it("files an unmapped category under the fallback layer rather than dropping it", async () => {
     // Arrange
-    // `category` is an open string so next year's 전시 is a Mongo edit. A booth
+    // `category` is an open string so next year's exhibition category is a Mongo edit. A booth
     // nobody can see is not a reportable bug, so it lands somewhere visible.
     arrange([place({ category: "전시" })]);
 
@@ -396,7 +396,7 @@ describe("MapEventService.getEventOverlays", () => {
 
   it("keeps card fields in their authored order, with their labels", async () => {
     // Arrange
-    // Ordering and the human label "메뉴" are the only two things the deleted
+    // Ordering and the human label ("Menu" in Korean) are the only two things the deleted
     // cardTemplates bought. As data they cost nothing and survive a release.
     arrange([
       place({

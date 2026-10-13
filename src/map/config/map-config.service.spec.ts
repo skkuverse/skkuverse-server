@@ -30,7 +30,7 @@ import { EVENT_CACHE_TTL_MS, EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "../map
 import type { MapRepository } from "../map.repository";
 import { MapConfigService } from "./map-config.service";
 
-// 건물번호, 건물이름, and the inert `campus_geometry` layer that exists so
+// building_numbers, building_labels, and the inert `campus_geometry` layer that exists so
 // campus_shapes documents have a layerId they can legally name.
 const BASE_LAYER_COUNT = 3;
 
@@ -161,12 +161,12 @@ describe("MapConfigService", () => {
     expect(new Set(eventLayers.map((l) => l.endpoint))).toEqual(
       new Set(["/map/overlays/event"]),
     );
-    // defaultVisibleWhen is the config's, layer by layer — 편의시설 ships
-    // opt-in and 주점 ships scheduled, and both have to survive the projection
+    // defaultVisibleWhen is the config's, layer by layer — the amenities layer ships
+    // opt-in and the bars layer ships scheduled, and both have to survive the projection
     // intact. It rides to the wire through the `...rest` spread rather than a
     // named copy, so a shape change here is what would catch a regression.
     // markerStyle likewise: it used to be the constant "placeDot" on every
-    // festival layer, and the 통제구역 layers are where a config first chose
+    // festival layer, and the restricted-zone layers are where a config first chose
     // otherwise, so the wire has to follow the file rather than the old default.
     for (const def of CONFIG.layers) {
       const served = eventLayers.find((l) => l.id === def.id)!;
@@ -255,7 +255,7 @@ describe("MapConfigService", () => {
 
     // Act
     // The whole point of containing that read: a festival lookup failing must
-    // not take 건물번호 down with it.
+    // not take building_numbers down with it.
     const ko = await svc.getMapConfig("ko");
 
     // Assert
@@ -279,8 +279,8 @@ describe("MapConfigService", () => {
     // Assert
     const groupById = new Map(ko.layers.map((l) => [l.id, l.chipGroupId]));
 
-    // null is the load-bearing value, not an omission: it is what keeps 건물번호
-    // and 건물이름 visible and user-toggleable while a festival chip swaps the
+    // null is the load-bearing value, not an omission: it is what keeps building_numbers
+    // and building_labels visible and user-toggleable while a festival chip swaps the
     // six festival layers around them.
     expect(groupById.get("building_numbers")).toBeNull();
     expect(groupById.get("building_labels")).toBeNull();
@@ -343,7 +343,7 @@ describe("MapConfigService", () => {
     // Act
     // Containment covers chips too — a festival lookup failing must answer
     // "no festival" and leave the base row exactly as it is, the same way it
-    // must not take 건물번호 down with the booths.
+    // must not take building_numbers down with the booths.
     const ko = await svc.getMapConfig("ko");
 
     // Assert
@@ -428,7 +428,7 @@ describe("MapConfigService", () => {
     const zone = ko.layers.find((l) => l.id === "eskara26_control_entry")!;
     expect(zone).toBeDefined();
 
-    // Fill only, asked for by the 총학생회 on 2026-09-22. The two halves fail in
+    // Fill only, asked for by the student council on 2026-09-22. The two halves fail in
     // OPPOSITE directions, which is why both are asserted: drop `fillOpacity`
     // and the client's polygon falls back to opaque black over the booths it
     // covers; keep an `outlineWidth` and the border they asked us to remove is

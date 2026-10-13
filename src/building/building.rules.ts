@@ -9,7 +9,7 @@ export function hasBuildNo<T extends { buildNo: BuildNo | null }>(building: T): 
   return !!building.buildNo;
 }
 
-/** QUIRK(skku): a few buildings (E센터) have a buildNo without the campus digit, shown as is. */
+/** QUIRK(skku): a few buildings (the E Center) have a buildNo without the campus digit, shown as is. */
 export function toDisplayNo(buildNo: BuildNo | null, campus: Campus): DisplayNo | null {
   if (!buildNo) return null;
   if (buildNo.startsWith(SKKU_CAMPUS_CODE[campus])) {
