@@ -1,13 +1,11 @@
-import type { BannerImageRaw } from "./ui.schema";
+import type { LinkActionType } from "../shared/link-action.wire";
+import { isAbsoluteHttpsUrl, isRootRelativePath } from "../shared/link-target.util";
+import { webviewUrl, type BannerImageRaw } from "./ui.schema";
+import type { MiniAppRegistry } from "./ui.types";
 
-export const MIN_ASPECT_RATIO = 1;
-export const MAX_ASPECT_RATIO = 6;
-export const MIN_AUTO_ROTATE_SEC = 2;
-export const MAX_AUTO_ROTATE_SEC = 30;
+const WHITESPACE_RE = /\s/;
 
-export function isAutoRotateSec(sec: number): boolean {
-  return sec === 0 || (sec >= MIN_AUTO_ROTATE_SEC && sec <= MAX_AUTO_ROTATE_SEC);
-}
+type LinkAction = { actionType?: LinkActionType; actionValue?: string };
 
 export function isBannerShowing(image: Pick<BannerImageRaw, "startAt" | "endAt">, now: Date): boolean {
   const at = now.getTime();
@@ -17,4 +15,25 @@ export function isBannerShowing(image: Pick<BannerImageRaw, "startAt" | "endAt">
 
 export function findDuplicateId(ids: readonly string[]): string | undefined {
   return ids.find((id, index) => ids.indexOf(id) !== index);
+}
+
+// WHY: each type is checked as the event map checks its sheet buttons (`isValidActionValue`), so a link
+// valid in one is valid in the other; unlike the map, an absent action is not broken and there is no `content`.
+export function isBrokenLinkAction({ actionType, actionValue }: LinkAction, registry: MiniAppRegistry): boolean {
+  if (actionType === undefined || actionValue === undefined) return false;
+  if (actionValue === "" || WHITESPACE_RE.test(actionValue)) return true;
+  switch (actionType) {
+    case "miniapp":
+      return !registry.isKnownMiniAppTarget(actionValue);
+    case "external":
+      return !isAbsoluteHttpsUrl(actionValue);
+    case "webview":
+      return !webviewUrl.safeParse(actionValue).success;
+    case "route":
+      return !isRootRelativePath(actionValue);
+    default: {
+      const unknownType: never = actionType;
+      throw new Error(`unknown link actionType "${String(unknownType)}"`);
+    }
+  }
 }

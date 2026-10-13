@@ -31,7 +31,7 @@ Ui owns no data store. It serves two JSON files committed next to their readers,
 | home layout (`HomeLayout`) | The `GET /ui/home` body: a version and the sections the home screen draws in order | `toHomeLayout` over `home-layout.json` | `homeConfig` |
 | section | One entry of a layout or sheet, told apart by `type`; the app skips a type it does not know | the config files | `widget` |
 | banner carousel (`BannerCarousel`) | A rotating row of banners with an `aspectRatio` and an `autoRotateSec` | `toBannerCarousel` | `slider` |
-| banner (`BannerImageRaw`) | One uploaded image in a carousel, with its `alt` text and an optional action | `bannerImage` in `ui.schema.ts` | — |
+| banner (`BannerImageRaw`) | One uploaded image in a carousel, with its `alt` text and an optional action | `bannerImageFile` in `ui.schema.ts` | — |
 | default banner | The app's own built-in banner, placed by a `{ "type": "default" }` item on home only | `home-layout.json` | — |
 | window | A banner's `startAt` and `endAt`, each with an offset; the banner shows from the first and stops at the second | `isBannerShowing` | `period` |
 | tile (`TileRaw`) | One entry of a tile grid: a registered mini app, a game the app bundles, or a link with its own text and icon | `home-layout.json` | `shortcut` |

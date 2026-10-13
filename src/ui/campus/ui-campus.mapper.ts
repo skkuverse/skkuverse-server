@@ -1,5 +1,6 @@
 import { t } from "../../infra/i18n";
 import type { SupportedLang } from "../../infra/types";
+import { LOST_AND_FOUND_COLOR, LOST_AND_FOUND_PATH } from "../ui.constants";
 import { toBannerCarousel } from "../ui.mapper";
 import type { CampusBannerCarouselRaw } from "./ui-campus.schema";
 import type { CampusSheet } from "./ui-campus.wire";
@@ -26,11 +27,11 @@ function toCampusButtons(lang: SupportedLang, webviewOrigin: string): CampusButt
       title: lostFoundTitle,
       emoji: "🧳",
       actionType: "webview",
-      actionValue: `${webviewOrigin}/skku/lostandfound`,
+      actionValue: `${webviewOrigin}${LOST_AND_FOUND_PATH}`,
       webviewTitle: lostFoundTitle,
-      webviewColor: "003626",
+      webviewColor: LOST_AND_FOUND_COLOR,
     },
-    // WHY: https, as the home grid's copy of this button must be (ui.schema.ts); http only redirects here.
+    // WHY: https, as the home grid's copy of this button must be (`isBrokenLinkAction`); http only redirects here.
     { id: "inquiry", title: t("campus.inquiry.title", lang), emoji: "💬", actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" },
   ];
 }
