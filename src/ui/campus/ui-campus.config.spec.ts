@@ -8,7 +8,6 @@
  * differs for campus.
  */
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
-import type { SupportedLang } from "../../infra/types";
 import { MiniAppsService } from "../../miniapps/miniapps.service";
 import { loadCampusBanners as loadWithRegistry, readCampusBanners } from "./ui-campus.config";
 import { toCampusSheet } from "./ui-campus.mapper";
@@ -18,10 +17,6 @@ const registry = new MiniAppsService();
 const committedBanners = readCampusBanners(registry);
 
 const loadCampusBanners = (raw: unknown): Readonly<CampusBannerCarouselRaw> => loadWithRegistry(raw, registry);
-
-function getCampusSections(lang: SupportedLang, now: Date) {
-  return toCampusSheet({ banners: committedBanners, lang, now, webviewOrigin: WEBVIEW_ORIGIN });
-}
 
 const IMAGE_URL = "https://media.skkuverse.com/campus/banners/test-00000000.webp";
 
@@ -42,8 +37,11 @@ function carousel(overrides: Record<string, unknown> = {}): Record<string, unkno
 
 describe("committed campus-banners.json", () => {
   it("loads, so the module import in this file did not throw", () => {
+    // Arrange
+    const now = new Date("2026-10-02T12:00:00+09:00");
+
     // Act
-    const [first] = getCampusSections("ko", new Date("2026-10-02T12:00:00+09:00")).sections;
+    const [first] = toCampusSheet({ banners: committedBanners, lang: "ko", now, webviewOrigin: WEBVIEW_ORIGIN }).sections;
 
     // Assert
     expect(first).toMatchObject({ type: "banner_carousel", id: "campus_banners" });
@@ -52,7 +50,9 @@ describe("committed campus-banners.json", () => {
   it("closes every ESKARA 2026 banner when the festival ends", () => {
     // Arrange
     const types = (iso: string) =>
-      getCampusSections("ko", new Date(iso)).sections.map((s) => s.type);
+      toCampusSheet({ banners: committedBanners, lang: "ko", now: new Date(iso), webviewOrigin: WEBVIEW_ORIGIN }).sections.map(
+        (s) => s.type,
+      );
 
     // Act & Assert
     expect(types("2026-10-02T23:59:59+09:00")).toEqual(["banner_carousel", "button_grid"]);
@@ -60,7 +60,7 @@ describe("committed campus-banners.json", () => {
   });
 });
 
-describe("assertValidCampusCarousel (via loadCampusBanners)", () => {
+describe("loadCampusBanners", () => {
   it("accepts a 6:1 image-only carousel", () => {
     // Act & Assert
     expect(() => loadCampusBanners(carousel())).not.toThrow();
