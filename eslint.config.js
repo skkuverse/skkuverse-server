@@ -555,7 +555,8 @@ module.exports = [
     // src/ only: __tests__/, scripts/ and this file still nest some.
     name: "readability/src",
     files: ["src/**/*.ts"],
-    rules: { "no-nested-ternary": "error" },
+    // A comma operator packs two steps into one expression (`return (drops.push(x), null)`) to fit a cap.
+    rules: { "no-nested-ternary": "error", "no-sequences": ["error", { allowInParentheses: false }] },
   },
   {
     // Size ratchets (ADR 0010, D9): each limit is today's worst file or

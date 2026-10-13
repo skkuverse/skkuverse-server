@@ -56,12 +56,17 @@ const BLOCK_READERS: Readonly<Record<string, (raw: Raw, id: string, title: I18nT
   },
 };
 
+function drop(dropped: string[], reason: string): null {
+  dropped.push(reason);
+  return null;
+}
+
 // WHY: a bad block or button is dropped on its own and logged; the importer cannot see a hand edit in Mongo.
 function toBlock(raw: unknown, where: string, dropped: string[]): Block | null {
-  if (!isRecord(raw) || !isNonBlankId(raw.id)) return (dropped.push(`${where}: not a block with an id`), null);
+  if (!isRecord(raw) || !isNonBlankId(raw.id)) return drop(dropped, `${where}: not a block with an id`);
   const at = `${where}.${raw.id}`;
   const read = Object.hasOwn(BLOCK_READERS, String(raw.type)) ? BLOCK_READERS[String(raw.type)] : undefined;
-  if (!read) return (dropped.push(`${at}: unknown block type "${String(raw.type)}"`), null);
+  if (!read) return drop(dropped, `${at}: unknown block type "${String(raw.type)}"`);
   const block = read(raw, raw.id, textOrNull(raw.title));
   if (block) return block;
   dropped.push(raw.type === "image" ? `${at}: image url "${String(raw.url)}" is not on the media host` : `${at}: ${String(raw.type)} block is missing a required field`);
@@ -70,7 +75,7 @@ function toBlock(raw: unknown, where: string, dropped: string[]): Block | null {
 
 function toInstagramAction(raw: Raw, head: { id: string; label: I18nText; at: string }, dropped: string[]): DetailAction | null {
   if (!isInstagramProfileUrl(raw.profileUrl)) {
-    return (dropped.push(`${head.at}: profileUrl "${String(raw.profileUrl)}" is not an Instagram profile`), null);
+    return drop(dropped, `${head.at}: profileUrl "${String(raw.profileUrl)}" is not an Instagram profile`);
   }
   // WHY: a bad post URL costs the post, not the button: the profile still opens.
   const postUrl = isInstagramPostUrl(raw.postUrl) ? raw.postUrl : null;
@@ -79,20 +84,20 @@ function toInstagramAction(raw: Raw, head: { id: string; label: I18nText; at: st
 }
 
 function toDetailAction(raw: unknown, where: string, dropped: string[]): DetailAction | null {
-  if (!isRecord(raw) || !isNonBlankId(raw.id)) return (dropped.push(`${where}: not an action with an id`), null);
+  if (!isRecord(raw) || !isNonBlankId(raw.id)) return drop(dropped, `${where}: not an action with an id`);
   const at = `${where}.${raw.id}`;
   const label = textOrNull(raw.label);
-  if (!label) return (dropped.push(`${at}: label is blank in every language`), null);
+  if (!label) return drop(dropped, `${at}: label is blank in every language`);
   if (raw.type === "instagram") return toInstagramAction(raw, { id: raw.id, label, at }, dropped);
-  if (raw.type !== "link") return (dropped.push(`${at}: unknown action type "${String(raw.type)}"`), null);
+  if (raw.type !== "link") return drop(dropped, `${at}: unknown action type "${String(raw.type)}"`);
   if (isAbsoluteHttpsUrl(raw.url)) return { type: "link", id: raw.id, label, url: raw.url };
-  return (dropped.push(`${at}: url "${String(raw.url)}" is not an absolute https URL`), null);
+  return drop(dropped, `${at}: url "${String(raw.url)}" is not an absolute https URL`);
 }
 
 export function toPlaceDetail(doc: SheetPlaceDoc, dropped: string[]): PlaceDetail | null {
   const raw: unknown = doc.detail;
   if (!isRecord(raw) || !isPlaceKind(raw.kind) || !Array.isArray(raw.blocks) || !Array.isArray(raw.actions)) {
-    return (dropped.push(`${doc._id}: detail is unreadable (kind, blocks or actions)`), null);
+    return drop(dropped, `${doc._id}: detail is unreadable (kind, blocks or actions)`);
   }
   const blocks = raw.blocks.map((b, i) => toBlock(b, `${doc._id}.blocks[${i}]`, dropped));
   const actions = raw.actions.map((a, i) => toDetailAction(a, `${doc._id}.actions[${i}]`, dropped));

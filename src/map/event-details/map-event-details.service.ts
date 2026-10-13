@@ -34,7 +34,11 @@ export class MapEventDetailsService {
     const details: Record<string, PlaceDetail> = {};
     for (const doc of await this.repository.listPlacesWithDetailByLayerSetId(config.layerSetId)) {
       const reason = sheetlessReason(doc, config);
-      const detail = reason === null ? toPlaceDetail(doc, dropped) : (dropped.push(reason), null);
+      if (reason !== null) {
+        dropped.push(reason);
+        continue;
+      }
+      const detail = toPlaceDetail(doc, dropped);
       if (detail) details[doc._id] = detail;
     }
     if (dropped.length > 0) {
