@@ -2,7 +2,8 @@
  * In-memory BuildingCatalogRepository over buildings, spaces and connections,
  * with the real queries' filters and projections (pinned in
  * building-catalog.repository.spec.ts): a building by skkuId, a building's spaces by
- * buildNo, a connection from either end, and buildings by skkuId list. `reads`
+ * buildNo, a connection from either end (parsed by connectionEnds, as the real
+ * read does, so a malformed one is left out), and buildings by skkuId list. `reads`
  * names each read in order, for the tests where skipping a read is the
  * behavior. `failWith` makes every read reject.
  */
@@ -10,6 +11,7 @@ import type { BuildingDoc, SpaceDoc } from "../../../../src/building/building.do
 import type { BuildNo, SkkuId } from "../../../../src/building/building.types";
 import type { BuildingCatalogRepository } from "../../../../src/building/catalog/building-catalog.repository";
 import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "../../../../src/building/catalog/building-catalog.document";
+import { connectionEnds } from "../../../../src/building/catalog/building-catalog.schema";
 import type { PublicOf } from "../public-of";
 
 export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRepository> {
@@ -42,7 +44,12 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
 
   async listConnectionsBySkkuId(skkuId: SkkuId): Promise<ConnectionEnds[]> {
     this.read("listConnectionsBySkkuId");
-    return this.connections.filter((c) => c.a.skkuId === skkuId || c.b.skkuId === skkuId);
+    return this.connections
+      .filter((c) => c.a?.skkuId === skkuId || c.b?.skkuId === skkuId)
+      .flatMap((c) => {
+        const parsed = connectionEnds.safeParse(c);
+        return parsed.success ? [parsed.data] : [];
+      });
   }
 
   async listBuildingsBySkkuIds(skkuIds: readonly SkkuId[]): Promise<BuildingLabel[]> {

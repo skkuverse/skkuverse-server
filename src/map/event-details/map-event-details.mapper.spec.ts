@@ -4,7 +4,7 @@
  * only when its head is unreadable.
  */
 import type { MapPlaceDoc } from "../map.document";
-import { toPlaceDetail } from "./map-event-details.mapper";
+import { toPlaceSheet } from "./map-event-details.mapper";
 
 function place(detail: unknown): MapPlaceDoc {
   return { _id: "p", detail } as unknown as MapPlaceDoc;
@@ -12,10 +12,10 @@ function place(detail: unknown): MapPlaceDoc {
 
 const HEAD = { kind: "booth", org: { ko: "총학" }, isUnion: true, locationLabel: null, actions: [], blocks: [] };
 
-describe("toPlaceDetail", () => {
+describe("toPlaceSheet", () => {
   it("serves the head with text resolved and the fields in the app's order", () => {
     // Act
-    const detail = toPlaceDetail(place(HEAD), []);
+    const detail = toPlaceSheet(place(HEAD), []);
 
     // Assert
     expect(detail).toEqual({ placeId: "p", kind: "booth", org: { ko: "총학", en: "총학" }, isUnion: true, locationLabel: null, actions: [], blocks: [] });
@@ -27,7 +27,7 @@ describe("toPlaceDetail", () => {
     const dropped: string[] = [];
 
     // Act & Assert
-    expect(toPlaceDetail(place(detail), dropped)).toBeNull();
+    expect(toPlaceSheet(place(detail), dropped)).toBeNull();
     expect(dropped).toEqual(["p: detail is unreadable (kind, blocks or actions)"]);
   });
 
@@ -43,7 +43,7 @@ describe("toPlaceDetail", () => {
     ];
 
     // Act
-    const detail = toPlaceDetail(place({ ...HEAD, blocks }), dropped);
+    const detail = toPlaceSheet(place({ ...HEAD, blocks }), dropped);
 
     // Assert
     expect(detail?.blocks.map((b) => b.id)).toEqual(["intro", "menu"]);
@@ -63,7 +63,7 @@ describe("toPlaceDetail", () => {
     ];
 
     // Act
-    const detail = toPlaceDetail(place({ ...HEAD, actions }), dropped);
+    const detail = toPlaceSheet(place({ ...HEAD, actions }), dropped);
 
     // Assert
     expect(detail?.actions).toEqual([

@@ -2,7 +2,7 @@
  * The layer-set loader (src/map/layer-set/map-layer-set.config.ts) and the
  * file it ships. Contract: docs/reference/event-places.md §1.
  *
- * assertValidConfig draws the line between "a developer broke it" (blocks the
+ * parseLayerSetFile draws the line between "a developer broke it" (blocks the
  * layer set, with a message naming the exact path) and "ops typed something
  * new" (degrades at serve time). Only the first kind appears here: a broken
  * structure reference, an ambiguous window, a camera with a swapped pair or a
@@ -15,7 +15,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { assertValidConfig, getLayerSetConfig } from "./map-layer-set.config";
+import { getLayerSetConfig, parseLayerSetFile } from "./map-layer-set.config";
 
 const CONFIG_PATH = path.join(__dirname, "eskara-2026.json");
 const RAW = fs.readFileSync(CONFIG_PATH, "utf8");
@@ -42,7 +42,7 @@ describe("the shipped eskara-2026 config", () => {
 
   it("keeps every itemDefaults reference resolvable", () => {
     // Act
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
     const layerIds = new Set(config.layers.map((l) => l.id));
 
     // Assert
@@ -60,7 +60,7 @@ describe("the shipped eskara-2026 config", () => {
     // only place any of them is expressible. Colour is a property of the LAYER,
     // so two colours require two layers — splitting them is not organisation,
     // it is the mechanism. And "only when selected" is `never`, not a schedule.
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
     const entry = config.itemDefaults.byCategory.control_entry!;
     const vehicle = config.itemDefaults.byCategory.control_vehicle!;
 
@@ -96,7 +96,7 @@ describe("the shipped eskara-2026 config", () => {
     // read, not a place to open, so neither the area nor its word takes a tap.
     // The label keeps its own category anyway, so the day a zone becomes
     // tappable again its word does not quietly become a second tap target.
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
     const by = config.itemDefaults.byCategory;
 
     // Assert
@@ -140,7 +140,7 @@ describe("the shipped eskara-2026 config", () => {
     // Restricted zones: the zones are long north-south bands whose southern tip sat
     // under the sheet, so the chip steps back and recentres on Unyongjae
     // (building 49), nearer the middle of both zones than the sports field.
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
     const framed: Record<string, { lat: number; lng: number; zoom: number }> = {
       eskara26_view_bar: { lat: 37.295187, lng: 126.970977, zoom: 17 },
       eskara26_view_booth: { lat: 37.295187, lng: 126.970977, zoom: 17 },
@@ -179,7 +179,7 @@ describe("the shipped eskara-2026 config", () => {
     // The fallback is not thereby useless: it exists for a category typed into
     // MONGO at 22:00 (ADR 0004 invariant 2). Nothing in the reviewed sheet may
     // rely on it.
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
     const sheet = JSON.parse(
       fs.readFileSync(
         path.join(__dirname, "../../../scripts/data/eskara-2026-places.json"),
@@ -197,7 +197,7 @@ describe("the shipped eskara-2026 config", () => {
 
   it("keeps every chip pointing at layers that exist", () => {
     // Act
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
     const layerIds = new Set(config.layers.map((l) => l.id));
 
     // Assert
@@ -209,7 +209,7 @@ describe("the shipped eskara-2026 config", () => {
 
   it("has at least one layer on by default, so the reset chip restores something", () => {
     // Act
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
 
     // Assert
     expect(
@@ -218,7 +218,7 @@ describe("the shipped eskara-2026 config", () => {
   });
 });
 
-describe("assertValidConfig — structure→structure references block publication", () => {
+describe("parseLayerSetFile — structure→structure references block publication", () => {
   it("rejects an itemDefaults entry pointing at a layer that does not exist", () => {
     // Arrange
     // The whole point of the table: a category that resolves to no layer is a
@@ -227,7 +227,7 @@ describe("assertValidConfig — structure→structure references block publicati
     config.itemDefaults.byCategory.bar.layerId = "nope";
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /byCategory\["bar"\]\.layerId "nope" is not in config.layers/,
     );
   });
@@ -238,14 +238,14 @@ describe("assertValidConfig — structure→structure references block publicati
     config.itemDefaults.fallback.layerId = "nope";
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /fallback\.layerId "nope" is not in config.layers/,
     );
   });
 
   it("reads tapChip, absent meaning an ordinary place tap", () => {
     // Act
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
 
     // Assert
     expect(config.itemDefaults.byCategory.food_zone!.tapChip).toBe("eskara26_view_food");
@@ -260,14 +260,14 @@ describe("assertValidConfig — structure→structure references block publicati
     config.itemDefaults.byCategory.food_zone.tapChip = "nope";
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /byCategory\["food_zone"\]\.tapChip "nope" is not in config.chips/,
     );
   });
 
   it("reads locationAccuracy, absent meaning exact", () => {
     // Act
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
 
     // Assert
     expect(config.itemDefaults.byCategory.food!.locationAccuracy).toBe("area");
@@ -281,7 +281,7 @@ describe("assertValidConfig — structure→structure references block publicati
     config.itemDefaults.byCategory.food.locationAccuracy = "approximate";
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /byCategory\["food"\]\.locationAccuracy must be one of \[exact, area\]/,
     );
   });
@@ -292,7 +292,7 @@ describe("assertValidConfig — structure→structure references block publicati
     config.itemDefaults.byCategory.food_zone.interactive = false;
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /byCategory\["food_zone"\]\.tapChip is set on a category with interactive: false/,
     );
   });
@@ -306,13 +306,13 @@ describe("assertValidConfig — structure→structure references block publicati
     config.chips[0].layerIds = ["nope"];
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config.chips: chip "eskara26_view_bar": "nope" is not a layer/,
     );
   });
 });
 
-describe("assertValidConfig — the festival is served BESIDE the base map", () => {
+describe("parseLayerSetFile — the festival is served BESIDE the base map", () => {
   it("rejects a layer id the base map already uses", () => {
     // Arrange
     // /map/config serves both lists in one response and the app keys its
@@ -326,7 +326,7 @@ describe("assertValidConfig — the festival is served BESIDE the base map", () 
     config.chips[0].layerIds = ["building_numbers"];
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config.layers\[0\].id "building_numbers" collides with a base map layer/,
     );
   });
@@ -339,7 +339,7 @@ describe("assertValidConfig — the festival is served BESIDE the base map", () 
     config.chips[0].id = `${config.layerSetId}_all`;
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(/duplicate chip id "eskara-2026_all"/);
+    expect(() => parseLayerSetFile(config)).toThrow(/duplicate chip id "eskara-2026_all"/);
   });
 
   it("runs the served chip row through the same validator /map/config trusts", () => {
@@ -347,7 +347,7 @@ describe("assertValidConfig — the festival is served BESIDE the base map", () 
     // Belt and braces: every chip the config produces, reset chip included,
     // passes the map's own rules against the catalogue it will be served with.
     // A regression in either module shows up here, before a deploy.
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
 
     // Assert
     expect(config.chips.length).toBeGreaterThan(0);
@@ -355,14 +355,14 @@ describe("assertValidConfig — the festival is served BESIDE the base map", () 
   });
 });
 
-describe("assertValidConfig — identity and shape", () => {
+describe("parseLayerSetFile — identity and shape", () => {
   it("requires the event's name — it is the reset chip's label", () => {
     // Arrange
     const config = raw();
     delete config.name;
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(/config.name must be an object/);
+    expect(() => parseLayerSetFile(config)).toThrow(/config.name must be an object/);
   });
 
   it("requires the event's emoji — it is the reset chip's icon", () => {
@@ -371,7 +371,7 @@ describe("assertValidConfig — identity and shape", () => {
     config.emoji = "";
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(/config.emoji must be a non-empty string/);
+    expect(() => parseLayerSetFile(config)).toThrow(/config.emoji must be a non-empty string/);
   });
 
   it("rejects duplicate layer ids", () => {
@@ -380,7 +380,7 @@ describe("assertValidConfig — identity and shape", () => {
     config.layers.push({ ...config.layers[0] });
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(/config.layers has a duplicate id/);
+    expect(() => parseLayerSetFile(config)).toThrow(/config.layers has a duplicate id/);
   });
 
   it("rejects an empty layers array", () => {
@@ -389,7 +389,7 @@ describe("assertValidConfig — identity and shape", () => {
     config.layers = [];
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(/config.layers must not be empty/);
+    expect(() => parseLayerSetFile(config)).toThrow(/config.layers must not be empty/);
   });
 
   it("rejects a layer set where nothing is on by default", () => {
@@ -401,7 +401,7 @@ describe("assertValidConfig — identity and shape", () => {
     for (const layer of config.layers) layer.defaultVisibleWhen = { kind: "never" };
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /at least one layer that is not defaultVisibleWhen\.kind "never"/,
     );
   });
@@ -413,7 +413,7 @@ describe("assertValidConfig — identity and shape", () => {
     config.layers[0].color = "#F04452";
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(/color must be a 6-digit hex/);
+    expect(() => parseLayerSetFile(config)).toThrow(/color must be a 6-digit hex/);
   });
 
   it("rejects duplicate chip ids", () => {
@@ -422,7 +422,7 @@ describe("assertValidConfig — identity and shape", () => {
     config.chips.push({ ...config.chips[0] });
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(/duplicate chip id "eskara26_view_bar"/);
+    expect(() => parseLayerSetFile(config)).toThrow(/duplicate chip id "eskara26_view_bar"/);
   });
 
   it("rejects a chip naming no layers", () => {
@@ -434,7 +434,7 @@ describe("assertValidConfig — identity and shape", () => {
     config.chips[0].layerIds = [];
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(/config.chips\[0\].layerIds must not be empty/);
+    expect(() => parseLayerSetFile(config)).toThrow(/config.chips\[0\].layerIds must not be empty/);
   });
 
   it("refuses a label on a single-layer chip, and requires one otherwise", () => {
@@ -443,24 +443,24 @@ describe("assertValidConfig — identity and shape", () => {
     delete single.chips[0].label;
 
     // Act & Assert
-    expect(() => assertValidConfig(single)).not.toThrow();
+    expect(() => parseLayerSetFile(single)).not.toThrow();
 
     // The chip row and the filter sheet name one layer; a second copy of that
     // name is how the food-truck chip came to sit over the food layer.
     single.chips[0].label = { ko: "먹거리" };
-    expect(() => assertValidConfig(single)).toThrow(
+    expect(() => parseLayerSetFile(single)).toThrow(
       /config.chips\[0\].label must be omitted for a single-layer chip/,
     );
 
     const multi = raw();
     multi.chips[0].layerIds = [multi.layers[0].id, multi.layers[1].id];
     delete multi.chips[0].label;
-    expect(() => assertValidConfig(multi)).toThrow(
+    expect(() => parseLayerSetFile(multi)).toThrow(
       /config.chips\[0\].label is required when layerIds names more than one layer/,
     );
 
     multi.chips[0].label = { ko: "먹거리·주점" };
-    expect(() => assertValidConfig(multi)).not.toThrow();
+    expect(() => parseLayerSetFile(multi)).not.toThrow();
   });
 
   it("rejects swapped camera coordinates", () => {
@@ -469,7 +469,7 @@ describe("assertValidConfig — identity and shape", () => {
     config.camera = { ...config.camera, lat: 126.971234, lng: 37.295129 };
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(/lat and lng may be swapped/);
+    expect(() => parseLayerSetFile(config)).toThrow(/lat and lng may be swapped/);
   });
 
   it("requires every camera motion field — no silent defaults", () => {
@@ -478,7 +478,7 @@ describe("assertValidConfig — identity and shape", () => {
     delete config.camera.durationMs;
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config.camera.durationMs must be a finite number/,
     );
   });
@@ -493,7 +493,7 @@ describe("assertValidConfig — identity and shape", () => {
     delete config.chips[0].camera.durationMs;
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config\.chips\[0\]\.camera\.durationMs must be a finite number/,
     );
   });
@@ -505,7 +505,7 @@ describe("assertValidConfig — identity and shape", () => {
     config.chips[0].camera = { ...cam, lat: cam.lng, lng: cam.lat };
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config\.chips\[0\]\.camera\.lat .* lat and lng may be swapped/,
     );
   });
@@ -516,7 +516,7 @@ describe("assertValidConfig — identity and shape", () => {
     delete config.chips[0].camera;
 
     // Act & Assert
-    expect(assertValidConfig(config).chips[0]!.camera).toBeUndefined();
+    expect(parseLayerSetFile(config).chips[0]!.camera).toBeUndefined();
   });
 
   it("rejects an I18n object with no ko", () => {
@@ -525,16 +525,16 @@ describe("assertValidConfig — identity and shape", () => {
     config.layers[0].label = { en: "Bars" };
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(/label.ko must be a non-empty string/);
+    expect(() => parseLayerSetFile(config)).toThrow(/label.ko must be a non-empty string/);
   });
 });
 
 
-describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
+describe("parseLayerSetFile — defaultVisibleWhen, the WHEN axis", () => {
   it("hands booths and bars over around the whole clock, so one is always drawn", () => {
     // Act
     // 23:00-11:00 used to leave both off, and the map opened with neither.
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
 
     // Assert
     const windowOf = (id: string) => {
@@ -551,7 +551,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
 
   it("keeps a scheduled layer's windows, wrapping past midnight included", () => {
     // Act
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
     const bar = config.layers.find((l) => l.id === "eskara26_bar")!;
 
     // Assert
@@ -570,7 +570,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
       windows: [{ start: "18:00", end: "00:00" }],
     };
     expect(
-      assertValidConfig(wrapping).layers.find((l) => l.id === "eskara26_bar")!.defaultVisibleWhen,
+      parseLayerSetFile(wrapping).layers.find((l) => l.id === "eskara26_bar")!.defaultVisibleWhen,
     ).toEqual({ kind: "scheduled", windows: [{ start: "18:00", end: "00:00" }] });
 
     const booth = config.layers.find((l) => l.id === "eskara26_booth")!;
@@ -588,7 +588,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
     delete config.layers[0].defaultVisibleWhen;
 
     // Act & Assert
-    expect(assertValidConfig(config).layers[0]!.defaultVisibleWhen).toEqual({
+    expect(parseLayerSetFile(config).layers[0]!.defaultVisibleWhen).toEqual({
       kind: "always",
     });
   });
@@ -599,7 +599,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
     config.layers[0].defaultVisibleWhen = { kind: "sometimes" };
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config\.layers\[0\]\.defaultVisibleWhen\.kind must be one of \[always, never, scheduled\]/,
     );
   });
@@ -616,7 +616,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
     };
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config\.layers\[0\]\.defaultVisibleWhen\.windows is read only on kind "scheduled"/,
     );
   });
@@ -627,7 +627,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
     config.layers[0].defaultVisibleWhen = { kind: "scheduled", windows: [] };
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config\.layers\[0\]\.defaultVisibleWhen\.windows must not be empty/,
     );
   });
@@ -647,7 +647,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
           kind: "scheduled",
           windows: [{ start: "11:00", end: "23:00", [key]: bound }],
         };
-        expect(() => assertValidConfig(config)).toThrow(
+        expect(() => parseLayerSetFile(config)).toThrow(
           new RegExp(`config\\.layers\\[0\\]\\.defaultVisibleWhen\\.windows\\[0\\]\\.${key}`),
         );
       }
@@ -663,7 +663,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
     };
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /defaultVisibleWhen\.windows is read only on kind "scheduled"/,
     );
   });
@@ -674,7 +674,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
     config.layers[0].defaultVisibleWhen = { kind: "scheduled", windows };
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config\.layers\[0\]\.defaultVisibleWhen\.windows must be an array/,
     );
   });
@@ -687,7 +687,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
     config.layers[0].defaultVisibleWhen = null;
 
     // Act & Assert
-    expect(assertValidConfig(config).layers[0]!.defaultVisibleWhen).toEqual({
+    expect(parseLayerSetFile(config).layers[0]!.defaultVisibleWhen).toEqual({
       kind: "always",
     });
   });
@@ -701,7 +701,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
     };
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config\.layers\[0\]\.defaultVisibleWhen\.windows\[0\] has equal bounds/,
     );
   });
@@ -715,7 +715,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
     };
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).not.toThrow();
+    expect(() => parseLayerSetFile(config)).not.toThrow();
   });
 
   it("rejects a timezone the wire contract cannot honour", () => {
@@ -727,7 +727,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
     config.timezone = "Asia/Seuol";
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config\.timezone must be one of \[Asia\/Seoul\]/,
     );
   });
@@ -741,7 +741,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
  * layer or the place: two categories may map to one layer, so one "zones" layer
  * can hold tappable stage zones and an inert boundary without a second layer.
  */
-describe("assertValidConfig — interactive, the TAP axis", () => {
+describe("parseLayerSetFile — interactive, the TAP axis", () => {
   it("defaults an absent value to interactive — never fail closed", () => {
     // Arrange
     const config = raw();
@@ -751,7 +751,7 @@ describe("assertValidConfig — interactive, the TAP axis", () => {
     delete config.itemDefaults.fallback.interactive;
 
     // Act
-    const parsed = assertValidConfig(config);
+    const parsed = parseLayerSetFile(config);
 
     // Assert
     // A layer set written before this field existed must not silently lose
@@ -768,7 +768,7 @@ describe("assertValidConfig — interactive, the TAP axis", () => {
     config.itemDefaults.fallback.interactive = null;
 
     // Act & Assert
-    expect(assertValidConfig(config).itemDefaults.fallback.interactive).toBe(true);
+    expect(parseLayerSetFile(config).itemDefaults.fallback.interactive).toBe(true);
   });
 
   it("carries an explicit false through", () => {
@@ -777,7 +777,7 @@ describe("assertValidConfig — interactive, the TAP axis", () => {
     config.itemDefaults.fallback.interactive = false;
 
     // Act & Assert
-    expect(assertValidConfig(config).itemDefaults.fallback.interactive).toBe(false);
+    expect(parseLayerSetFile(config).itemDefaults.fallback.interactive).toBe(false);
   });
 
   it("refuses a non-boolean rather than coercing it", () => {
@@ -788,7 +788,7 @@ describe("assertValidConfig — interactive, the TAP axis", () => {
     config.itemDefaults.fallback.interactive = "false";
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       /config\.itemDefaults\.fallback\.interactive must be a boolean/,
     );
   });
@@ -800,13 +800,13 @@ describe("assertValidConfig — interactive, the TAP axis", () => {
     config.itemDefaults.byCategory[category!].interactive = 1;
 
     // Act & Assert
-    expect(() => assertValidConfig(config)).toThrow(
+    expect(() => parseLayerSetFile(config)).toThrow(
       new RegExp(`byCategory\\["${category}"\\]\\.interactive must be a boolean`),
     );
   });
 });
 
-describe("assertValidConfig — markerStyle, the HOW axis", () => {
+describe("parseLayerSetFile — markerStyle, the HOW axis", () => {
   /** The first layer with its markerStyle replaced (or deleted, for undefined). */
   function withMarkerStyle(value: unknown) {
     const config = raw();
@@ -819,14 +819,14 @@ describe("assertValidConfig — markerStyle, the HOW axis", () => {
     // Act & Assert
     // Additive for every config already on disk: a file written before the
     // field existed must mean exactly what it meant then.
-    expect(assertValidConfig(withMarkerStyle(undefined)).layers[0]!.markerStyle).toBe(
+    expect(parseLayerSetFile(withMarkerStyle(undefined)).layers[0]!.markerStyle).toBe(
       "placeDot",
     );
   });
 
   it("accepts textLabel, the bare caption a zone's name is drawn with", () => {
     // Act & Assert
-    expect(assertValidConfig(withMarkerStyle("textLabel")).layers[0]!.markerStyle).toBe(
+    expect(parseLayerSetFile(withMarkerStyle("textLabel")).layers[0]!.markerStyle).toBe(
       "textLabel",
     );
   });
@@ -839,20 +839,20 @@ describe("assertValidConfig — markerStyle, the HOW axis", () => {
       // an unrecognised member to the building-number branch, so this would not
       // error anywhere — every booth would become a green numbered circle. The
       // two building renderings are refused too; they mean nothing for a place.
-      expect(() => assertValidConfig(withMarkerStyle(value))).toThrow(
+      expect(() => parseLayerSetFile(withMarkerStyle(value))).toThrow(
         /layers\[0\]\.markerStyle must be one of \[placeDot, textLabel\]/,
       );
     },
   );
 });
 
-describe("assertValidConfig — list facets, the FILTER axis", () => {
+describe("parseLayerSetFile — list facets, the FILTER axis", () => {
   const chipById = (r: Record<string, any>, id: string) =>
     r.chips.find((c: { id: string }) => c.id === id);
 
   it("ships the council's three lists: days everywhere, org on booths, per-day booth order, 가나다 trucks", () => {
     // Act
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
     const listOf = (id: string) => config.chips.find((c) => c.id === id)!.list;
 
     // Assert
@@ -872,7 +872,7 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
 
   it("parses day bounds as instants and keeps tag options windowless", () => {
     // Act
-    const config = assertValidConfig(raw());
+    const config = parseLayerSetFile(raw());
     const day = config.facets.find((f) => f.id === "day")!;
 
     // Assert
@@ -890,10 +890,10 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     delete r.facets;
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).toThrow(/config\.facets must be an array/);
+    expect(() => parseLayerSetFile(r)).toThrow(/config\.facets must be an array/);
     r.facets = [];
     for (const chip of r.chips) delete chip.list;
-    expect(() => assertValidConfig(r)).not.toThrow();
+    expect(() => parseLayerSetFile(r)).not.toThrow();
   });
 
   it("rejects duplicate facet ids", () => {
@@ -902,7 +902,7 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     r.facets.push({ ...r.facets[1], options: [{ id: "x", label: { ko: "x" } }] });
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).toThrow(/config\.facets has a duplicate id "org"/);
+    expect(() => parseLayerSetFile(r)).toThrow(/config\.facets has a duplicate id "org"/);
   });
 
   it("rejects an option id reused in another facet — orderByOption keys must be unambiguous", () => {
@@ -911,7 +911,7 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     r.facets[1].options[0].id = "day1";
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).toThrow(/duplicate id "day1"/);
+    expect(() => parseLayerSetFile(r)).toThrow(/duplicate id "day1"/);
   });
 
   it("rejects overlapping day windows", () => {
@@ -920,7 +920,7 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     r.facets[0].options[1].from = "2026-10-02T05:00:00+09:00";
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).toThrow(/"day1" and "day2" overlap/);
+    expect(() => parseLayerSetFile(r)).toThrow(/"day1" and "day2" overlap/);
   });
 
   it("rejects a bound without an explicit offset — it would depend on the host's zone", () => {
@@ -929,7 +929,7 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     r.facets[0].options[0].from = "2026-10-01T06:00:00";
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).toThrow(/must carry an explicit offset/);
+    expect(() => parseLayerSetFile(r)).toThrow(/must carry an explicit offset/);
   });
 
   it("rejects from not before until", () => {
@@ -938,7 +938,7 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     r.facets[0].options[0].until = r.facets[0].options[0].from;
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).toThrow(/from must be before until/);
+    expect(() => parseLayerSetFile(r)).toThrow(/from must be before until/);
   });
 
   it("rejects a window on a tag option, which nothing would read", () => {
@@ -947,7 +947,7 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     r.facets[1].options[0].from = "2026-10-01T06:00:00+09:00";
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).toThrow(/is a tag option and must not carry from\/until/);
+    expect(() => parseLayerSetFile(r)).toThrow(/is a tag option and must not carry from\/until/);
   });
 
   it("rejects an unknown source or select rather than defaulting one", () => {
@@ -956,10 +956,10 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     r.facets[0].source = "date";
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).toThrow(/source must be one of \[hours, tag\]/);
+    expect(() => parseLayerSetFile(r)).toThrow(/source must be one of \[hours, tag\]/);
     const r2 = raw();
     delete r2.facets[1].select;
-    expect(() => assertValidConfig(r2)).toThrow(/select must be one of \[required, optional\]/);
+    expect(() => parseLayerSetFile(r2)).toThrow(/select must be one of \[required, optional\]/);
   });
 
   it("rejects a list naming a facet that does not exist", () => {
@@ -968,7 +968,7 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     chipById(r, "eskara26_view_bar").list.facetIds = ["day", "price"];
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).toThrow(/facetIds\[1\] "price" is not in config\.facets/);
+    expect(() => parseLayerSetFile(r)).toThrow(/facetIds\[1\] "price" is not in config\.facets/);
   });
 
   it("rejects a sort scope the list does not show", () => {
@@ -977,7 +977,7 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     chipById(r, "eskara26_view_bar").list.sort.scopeFacetId = "org";
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).toThrow(/"org" is not one of this list's facetIds/);
+    expect(() => parseLayerSetFile(r)).toThrow(/"org" is not one of this list's facetIds/);
   });
 
   it("accepts a sort scoped to a checklist facet — the order follows the first checked option", () => {
@@ -986,7 +986,7 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     chipById(r, "eskara26_view_booth").list.sort.scopeFacetId = "org";
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).not.toThrow();
+    expect(() => parseLayerSetFile(r)).not.toThrow();
   });
 
   it("rejects a scoped title sort, and requires scopeFacetId to be written", () => {
@@ -995,9 +995,9 @@ describe("assertValidConfig — list facets, the FILTER axis", () => {
     chipById(r, "eskara26_view_food").list.sort.scopeFacetId = "day";
 
     // Act & Assert
-    expect(() => assertValidConfig(r)).toThrow(/must be null when key is "title"/);
+    expect(() => parseLayerSetFile(r)).toThrow(/must be null when key is "title"/);
     const r2 = raw();
     delete chipById(r2, "eskara26_view_bar").list.sort.scopeFacetId;
-    expect(() => assertValidConfig(r2)).toThrow(/scopeFacetId is required/);
+    expect(() => parseLayerSetFile(r2)).toThrow(/scopeFacetId is required/);
   });
 });

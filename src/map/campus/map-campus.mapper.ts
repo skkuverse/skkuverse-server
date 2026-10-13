@@ -19,40 +19,40 @@ const noEventFields = (): Pick<MarkerBase, "hours" | "subtitle" | "fields" | "ac
 
 // WHY: no tap: these exist because the buildings collection is empty, so /building/:id would only fail.
 export function toFallbackOverlays(): MapOverlay[] {
-  return FALLBACK_MARKERS.flatMap((m) => {
+  return FALLBACK_MARKERS.flatMap((marker) => {
     const base: MarkerBase = {
       kind: "marker",
-      id: m.id,
-      campus: m.campus,
-      geometry: { type: "Point", coordinates: [m.lng, m.lat] },
+      id: marker.id,
+      campus: marker.campus,
+      geometry: { type: "Point", coordinates: [marker.lng, marker.lat] },
       ...noEventFields(),
       pinPriority: 0,
       locationAccuracy: "exact",
       tap: null,
     };
     return [
-      { ...base, layerId: LAYER_NUMBERS, text: { ko: m.code, en: m.code } },
-      { ...base, layerId: LAYER_LABELS, text: { ko: m.name, en: m.name } },
+      { ...base, layerId: LAYER_NUMBERS, text: { ko: marker.code, en: marker.code } },
+      { ...base, layerId: LAYER_LABELS, text: { ko: marker.name, en: marker.name } },
     ];
   });
 }
 
 // WHY: the one place a [lng, lat] pair is rebuilt rather than served as stored; the coordinates spec pins the order.
-function toBuildingOverlays(b: CampusBuilding): MapOverlay[] {
-  const [lng, lat] = b.location.coordinates;
+function toBuildingOverlays(building: CampusBuilding): MapOverlay[] {
+  const [lng, lat] = building.location.coordinates;
   const base: MarkerBase = {
     kind: "marker",
-    id: String(b._id),
-    campus: b.campus,
+    id: String(building._id),
+    campus: building.campus,
     geometry: { type: "Point", coordinates: [lng, lat] },
     ...noEventFields(),
     pinPriority: 0,
     locationAccuracy: "exact",
-    tap: { kind: "skku_building", placeId: String(b._id) },
+    tap: { kind: "skku_building", placeId: String(building._id) },
   };
   // QUIRK(skku): both building writers store a missing English name as "", so `||`, not `??`.
-  const names = b.name.ko ? [{ ...base, layerId: LAYER_LABELS, text: { ko: b.name.ko, en: b.name.en || b.name.ko } }] : [];
-  const numbers = b.displayNo ? [{ ...base, layerId: LAYER_NUMBERS, text: { ko: b.displayNo, en: b.displayNo } }] : [];
+  const names = building.name.ko ? [{ ...base, layerId: LAYER_LABELS, text: { ko: building.name.ko, en: building.name.en || building.name.ko } }] : [];
+  const numbers = building.displayNo ? [{ ...base, layerId: LAYER_NUMBERS, text: { ko: building.displayNo, en: building.displayNo } }] : [];
   return [...numbers, ...names];
 }
 

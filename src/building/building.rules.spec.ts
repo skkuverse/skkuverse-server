@@ -1,27 +1,12 @@
 /**
- * The building rules every sub-module shares: which values are campuses, which
- * buildings are facilities, the building number users see (buildNo without its
- * campus digit), and the one minter of each building brand: a skkuId is a
- * positive safe integer that every production id passes, apiId is the same
- * number, and buildNo and spaceCd are any non-empty string.
+ * The building rules every sub-module shares: which buildings are facilities,
+ * the building number users see (buildNo without its campus digit), and the
+ * one minter of each root building brand: a skkuId is a positive safe integer
+ * that every production id passes, and buildNo and spaceCd are any non-empty
+ * string.
  */
-import type { BuildNo, SkkuId } from "./building.types";
-import { hasBuildNo, isBuildNo, isCampus, isSkkuId, isSpaceCd, toApiId, toDisplayNo } from "./building.rules";
-
-describe("isCampus", () => {
-  it.each([
-    ["hssc", true],
-    ["nsc", true],
-    ["HSSC", false],
-    ["", false],
-    [null, false],
-    [undefined, false],
-    [1, false],
-  ])("%j → %s", (value, expected) => {
-    // Act & Assert
-    expect(isCampus(value)).toBe(expected);
-  });
-});
+import type { BuildNo } from "./building.types";
+import { hasBuildNo, isBuildNo, isSkkuId, isSpaceCd, toDisplayNo } from "./building.rules";
 
 describe("hasBuildNo", () => {
   it.each([
@@ -95,10 +80,5 @@ describe("building brand minters", () => {
   ])("isSpaceCd(%j) → %s", (spaceCd, expected) => {
     // Act & Assert
     expect(isSpaceCd(spaceCd)).toBe(expected);
-  });
-
-  it.each([1, 88, Number.MAX_SAFE_INTEGER])("toApiId(%p) is the same number", (id) => {
-    // Act & Assert
-    expect(toApiId(id as SkkuId)).toBe(id);
   });
 });

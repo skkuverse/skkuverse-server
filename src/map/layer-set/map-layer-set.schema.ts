@@ -59,7 +59,7 @@ export const layerSetFile = z
   .object({ camera: mapCamera, layers: z.array(layer), chips: z.array(chip), facets: z.array(facet), itemDefaults })
   .extend({ layerSetId: text, campus: z.enum(["hssc", "nsc"]), name: i18nTextFile, emoji: text, timezone: z.enum(["Asia/Seoul"]) });
 
-export type EventMapConfig = z.output<typeof layerSetFile>;
-export type EventFacetDef = EventMapConfig["facets"][number];
+export type LayerSet = z.output<typeof layerSetFile>;
+export type EventFacetDef = LayerSet["facets"][number];
 export type EventListSort = z.output<typeof sort>;
 export type ItemPresentation = z.output<typeof presentation>;

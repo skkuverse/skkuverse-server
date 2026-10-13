@@ -34,67 +34,67 @@ interface LoaderState<T> {
   generation: number;
 }
 
-function staleUntil<T>(s: LoaderState<T>): number {
-  return s.value && s.staleWindowMs > 0 ? s.value.loadedAt + s.ttlMs + s.staleWindowMs : 0;
+function staleUntil<T>(state: LoaderState<T>): number {
+  return state.value && state.staleWindowMs > 0 ? state.value.loadedAt + state.ttlMs + state.staleWindowMs : 0;
 }
 
-function storeLoaded<T>(s: LoaderState<T>, gen: number, data: T): T {
-  if (gen === s.generation) {
+function storeLoaded<T>(state: LoaderState<T>, gen: number, data: T): T {
+  if (gen === state.generation) {
     const now = Date.now();
-    s.value = { data, loadedAt: now };
-    s.freshUntil = now + s.ttlMs;
+    state.value = { data, loadedAt: now };
+    state.freshUntil = now + state.ttlMs;
   }
   return data;
 }
 
-function serveStaleOrThrow<T>(s: LoaderState<T>, gen: number, err: unknown): T {
+function serveStaleOrThrow<T>(state: LoaderState<T>, gen: number, err: unknown): T {
   const now = Date.now();
-  const until = staleUntil(s);
-  if (gen !== s.generation || !s.value || !(now < until)) throw err;
-  s.freshUntil = Math.min(now + s.ttlMs, until);
+  const until = staleUntil(state);
+  if (gen !== state.generation || !state.value || !(now < until)) throw err;
+  state.freshUntil = Math.min(now + state.ttlMs, until);
   logger.warn(
-    { event: "cache.reload_failed", cache: s.name, err, ageMs: now - s.value.loadedAt },
+    { event: "cache.reload_failed", cache: state.name, err, ageMs: now - state.value.loadedAt },
     "Cache reload failed, serving the last good value",
   );
-  return s.value.data;
+  return state.value.data;
 }
 
-function reload<T>(s: LoaderState<T>): Promise<T> {
-  const gen = s.generation;
+function reload<T>(state: LoaderState<T>): Promise<T> {
+  const gen = state.generation;
   const attempt: Promise<T> = Promise.resolve()
-    .then(s.load)
+    .then(state.load)
     .then(
-      (data) => storeLoaded(s, gen, data),
-      (err: unknown) => serveStaleOrThrow(s, gen, err),
+      (data) => storeLoaded(state, gen, data),
+      (err: unknown) => serveStaleOrThrow(state, gen, err),
     )
     .finally(() => {
-      if (s.inFlight === attempt) s.inFlight = null;
+      if (state.inFlight === attempt) state.inFlight = null;
     });
-  s.inFlight = attempt;
+  state.inFlight = attempt;
   return attempt;
 }
 
-function get<T>(s: LoaderState<T>): Promise<T> {
+function get<T>(state: LoaderState<T>): Promise<T> {
   // WHY: read per call, so a test can flip CACHE.
-  if (!config.cache.enabled && !s.opts.keepWhenCacheOff) {
-    return Promise.resolve().then(s.load);
+  if (!config.cache.enabled && !state.opts.keepWhenCacheOff) {
+    return Promise.resolve().then(state.load);
   }
   const now = Date.now();
-  if (s.value && now < s.freshUntil) return Promise.resolve(s.value.data);
-  if (s.value && now < staleUntil(s)) {
+  if (state.value && now < state.freshUntil) return Promise.resolve(state.value.data);
+  if (state.value && now < staleUntil(state)) {
     // WHY: unawaited: a failure inside the window logs itself; one that ends past it surfaces on the
     // next get(), which waits for its own reload.
-    if (!s.inFlight) reload(s).catch(() => undefined);
-    return Promise.resolve(s.value.data);
+    if (!state.inFlight) reload(state).catch(() => undefined);
+    return Promise.resolve(state.value.data);
   }
-  return s.inFlight ?? reload(s);
+  return state.inFlight ?? reload(state);
 }
 
-function clear<T>(s: LoaderState<T>): void {
-  s.generation += 1;
-  s.value = null;
-  s.freshUntil = 0;
-  s.inFlight = null;
+function clear<T>(state: LoaderState<T>): void {
+  state.generation += 1;
+  state.value = null;
+  state.freshUntil = 0;
+  state.inFlight = null;
 }
 
 export function createCachedLoader<T>(opts: CachedLoaderOptions<T>): CachedLoader<T> {

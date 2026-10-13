@@ -151,10 +151,21 @@ const CLOCK_SYNTAX = [
 // no-restricted-syntax replaces rather than merges across blocks, and the role blocks above each
 // set it for their files. The rules below run beside them under their own names: the same core
 // rule, registered again by a local plugin, so a block that sets one leaves the others alone.
-const CORE_RESTRICTED_SYNTAX = require("eslint/use-at-your-own-risk").builtinRules.get("no-restricted-syntax");
+const CORE_RULES = require("eslint/use-at-your-own-risk").builtinRules;
+const CORE_RESTRICTED_SYNTAX = CORE_RULES.get("no-restricted-syntax");
 const SRC_SYNTAX_PLUGIN = {
-  rules: { "zod-issues": CORE_RESTRICTED_SYNTAX, literals: CORE_RESTRICTED_SYNTAX },
+  rules: {
+    "zod-issues": CORE_RESTRICTED_SYNTAX,
+    literals: CORE_RESTRICTED_SYNTAX,
+    "spec-clock": CORE_RESTRICTED_SYNTAX,
+    // An alias of id-denylist, so the glossary/<module> blocks keep theirs.
+    "generic-names": CORE_RULES.get("id-denylist"),
+  },
 };
+
+// A name that says nothing on its own (.claude/rules/naming.md, Words). Only the ones no migrated
+// file uses: `data`, `item`, `value` and kin are also wire property names, so a denylist flags those.
+const GENERIC_NAMES = ["info", "obj", "tmp", "helper", "manager"];
 
 // A zod issue names where it is (ADR 0010, D5): parseConfigFile and the boot error print each
 // issue's path, and an issue without one reads `root:` wherever it sits.
@@ -182,6 +193,15 @@ const LITERAL_SYNTAX = [
   {
     selector: `:matches(Literal[value=${WEBVIEW_PATH}], TemplateLiteral > TemplateElement:first-child[value.raw=${WEBVIEW_PATH}])`,
     message: "A web view path (/skku/…) lives in a *.constants.ts file: import it by name.",
+  },
+];
+
+// A spec in a migrated scope passes a fixed clock (tests.md, "What to double"): the real Clock makes the
+// answer depend on the day the test runs, and lets one read see two different instants.
+const SPEC_CLOCK_SYNTAX = [
+  {
+    selector: "NewExpression[callee.name='Clock']",
+    message: "Pass a fixed fake clock (`const clock: Clock = { now: () => NOW }`), not the real Clock.",
   },
 ];
 
@@ -319,7 +339,7 @@ const ROLE_MAX_LINES = {
   module: 18,
   poller: 33,
   query: 173,
-  repository: 187,
+  repository: 133,
   rules: 92,
   schema: 61,
   service: 263,
@@ -382,6 +402,15 @@ function migratedSyntaxBlocks() {
     );
   }
   return blocks;
+}
+
+/** The specs of the migrated scope: `src/` specs, and a top-level module's `__tests__/nest/<module>/` tests. */
+function migratedSpecGlobs() {
+  return MIGRATED_SCOPES.flatMap((scope) => {
+    if (!scope.endsWith("/")) return [scope.replace(/\.ts$/, ".spec.ts")];
+    const topLevel = /^src\/([^/]+)\/$/.exec(scope);
+    return [`${scope}**/*.spec.ts`, ...(topLevel ? [`__tests__/nest/${topLevel[1]}/**/*.ts`] : [])];
+  });
 }
 
 function migratedFunctionBlock() {
@@ -537,7 +566,8 @@ module.exports = [
     // src/ only: __tests__/, scripts/ and this file still nest some.
     name: "readability/src",
     files: ["src/**/*.ts"],
-    rules: { "no-nested-ternary": "error" },
+    // A comma operator packs two steps into one expression (`return (drops.push(x), null)`) to fit a cap.
+    rules: { "no-nested-ternary": "error", "no-sequences": ["error", { allowInParentheses: false }] },
   },
   {
     // Size ratchets (ADR 0010, D9): each limit is today's worst file or
@@ -697,6 +727,19 @@ module.exports = [
     ignores: ["src/**/*.spec.ts"],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
     rules: { "src-syntax/zod-issues": ["error", ...ADD_ISSUE_SYNTAX] },
+  },
+  {
+    name: "naming/generic-names",
+    files: migratedGlobs(".ts"),
+    ignores: ["src/**/*.spec.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: { "src-syntax/generic-names": ["error", ...GENERIC_NAMES] },
+  },
+  {
+    name: "specs/fixed-clock",
+    files: migratedSpecGlobs(),
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: { "src-syntax/spec-clock": ["error", ...SPEC_CLOCK_SYNTAX] },
   },
   {
     // A spec states the values it expects, so it is left out.

@@ -12,6 +12,14 @@
  *     (or JSON). Specs state the values they expect and are left out. Its
  *     `ignores` lists the unmigrated files that broke it when it was added;
  *     import-boundaries.test.ts fails when one is fixed.
+ *   - `readability/src`: no comma operator in src/, parenthesised or not
+ *     (`return (dropped.push(reason), null)` packs two steps into one).
+ *   - `naming/generic-names`: in a migrated scope's sources, no name that
+ *     says nothing on its own (`info`, `obj`, `tmp`, `helper`, `manager`).
+ *   - `specs/fixed-clock`: a spec in a migrated scope (and a top-level
+ *     module's `__tests__/nest/<module>/` tests) never constructs the real
+ *     `Clock`; it passes a fixed fake, so one answer reads one instant and
+ *     does not depend on the day the test runs.
  */
 import { Linter } from "eslint";
 
@@ -29,7 +37,7 @@ function lint(name: string, file: string, source: string): Linter.LintMessage[] 
   const { plugins, rules } = block(name);
   return new Linter({ configType: "flat" }).verify(
     source,
-    [{ files: ["**/*.ts"], languageOptions: { parser: tsparser }, plugins, rules }],
+    [{ files: ["**/*.ts"], languageOptions: { parser: tsparser }, ...(plugins ? { plugins } : {}), rules }],
     file,
   );
 }
@@ -128,5 +136,63 @@ describe("boundaries/literals", () => {
 
     // Act & Assert
     expect(ignores).toEqual(expect.arrayContaining(["src/**/*.spec.ts", "src/**/*.constants.ts"]));
+  });
+});
+
+describe("specs/fixed-clock", () => {
+  it("rejects the real Clock in a spec, and passes a fixed fake", () => {
+    // Arrange
+    const file = "src/map/layer-set/map-layer-set.service.spec.ts";
+
+    // Act
+    const real = lint("specs/fixed-clock", file, "const service = new MapLayerSetService(repository, new Clock());");
+    const fake = lint("specs/fixed-clock", file, "const clock: Clock = { now: () => NOW };\nnew MapLayerSetService(repository, clock);");
+
+    // Assert
+    expect(real).toHaveLength(1);
+    expect(fake).toEqual([]);
+  });
+
+  it("covers the migrated scopes' specs and route tests, not an unmigrated module's", () => {
+    // Arrange
+    const { files = [] } = block("specs/fixed-clock");
+
+    // Act & Assert
+    expect(files).toEqual(expect.arrayContaining(["src/map/**/*.spec.ts", "__tests__/nest/map/**/*.ts", "__tests__/nest/infra/**/*.ts"]));
+    expect(files.some((glob) => String(glob).includes("bus"))).toBe(false);
+  });
+});
+
+describe("readability/src", () => {
+  it("rejects a comma operator, parenthesised or not, and passes a comma that separates", () => {
+    // Arrange
+    const file = "src/x/x.mapper.ts";
+
+    // Act
+    const packed = lint("readability/src", file, "function f(d: string[]) { return (d.push('x'), null); }");
+    const bare = lint("readability/src", file, "let a = 0; let b = 0; a++, b++;");
+    const separated = lint("readability/src", file, "const [a, b] = [1, 2]; f(a, b); for (let i = 0, j = 1; i < j; i++) {}");
+
+    // Assert
+    expect(packed).toHaveLength(1);
+    expect(bare).toHaveLength(1);
+    expect(separated).toEqual([]);
+  });
+});
+
+describe("naming/generic-names", () => {
+  it("rejects a name that says nothing on its own, and passes one with its domain noun", () => {
+    // Arrange
+    const file = "src/map/map.mapper.ts";
+
+    // Act
+    const generic = ["const info = 1;", "function f(obj: unknown) {}", "const tmp = [];", "const helper = () => 1;", "let manager;"].map(
+      (source) => lint("naming/generic-names", file, source).length,
+    );
+    const named = lint("naming/generic-names", file, "const placeInfo = 1; const upsertResult = 2;");
+
+    // Assert
+    expect(generic).toEqual([1, 1, 1, 1, 1]);
+    expect(named).toEqual([]);
   });
 });

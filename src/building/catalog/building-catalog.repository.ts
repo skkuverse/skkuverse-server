@@ -2,14 +2,23 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Collection } from "mongodb";
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
+import { createLogThrottle } from "../../infra/log-throttle";
+import logger from "../../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
+import { parseEach } from "../../shared/zod-list.util";
 import type { BuildingDoc, ConnectionDoc, SpaceDoc } from "../building.document";
 import { SERVED_BUILDING_WITH_EXTENSIONS_PROJECTION } from "../building.query";
 import type { BuildNo, SkkuId } from "../building.types";
 import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
+import { connectionEnds } from "./building-catalog.schema";
+
+// WHY: read on every detail request, so a bad connection is reported hourly, not per request.
+const INVALID_CONNECTIONS_LOG_INTERVAL_MS = 60 * 60 * 1000;
 
 @Injectable()
 export class BuildingCatalogRepository implements OnModuleInit {
+  private readonly invalidConnectionsThrottle = createLogThrottle(INVALID_CONNECTIONS_LOG_INTERVAL_MS);
+
   onModuleInit(): Promise<void> {
     return ensureIndexesAtBoot("building.catalog", () => this.ensureIndexes());
   }
@@ -41,13 +50,19 @@ export class BuildingCatalogRepository implements OnModuleInit {
       .toArray();
   }
 
-  listConnectionsBySkkuId(skkuId: SkkuId): Promise<ConnectionEnds[]> {
-    return this.connections()
-      .find(
-        { $or: [{ "a.skkuId": skkuId }, { "b.skkuId": skkuId }] },
-        { projection: { _id: 0, a: 1, b: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
-      )
-      .toArray();
+  async listConnectionsBySkkuId(skkuId: SkkuId): Promise<ConnectionEnds[]> {
+    const { valid: connections, invalid } = parseEach(
+      await this.connections()
+        .find(
+          { $or: [{ "a.skkuId": skkuId }, { "b.skkuId": skkuId }] },
+          { projection: { _id: 0, a: 1, b: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+        )
+        .toArray(),
+      connectionEnds,
+      (_doc, index) => `#${index}`,
+    );
+    this.warnInvalidConnections(skkuId, invalid);
+    return connections;
   }
 
   listBuildingsBySkkuIds(skkuIds: readonly SkkuId[]): Promise<BuildingLabel[]> {
@@ -57,6 +72,15 @@ export class BuildingCatalogRepository implements OnModuleInit {
         { projection: { _id: 1, buildNo: 1, displayNo: 1, name: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
       )
       .toArray();
+  }
+
+  private warnInvalidConnections(skkuId: SkkuId, invalid: readonly string[]): void {
+    const ticket = invalid.length > 0 ? this.invalidConnectionsThrottle.take(`${skkuId}:${invalid.join("|")}`) : null;
+    if (!ticket) return;
+    logger.warn(
+      { event: "building.connections.invalid", skkuId, count: invalid.length, invalid, suppressed: ticket.suppressed },
+      "Connections left out: they do not match the document schema",
+    );
   }
 
   private buildings(): Collection<BuildingDoc> {

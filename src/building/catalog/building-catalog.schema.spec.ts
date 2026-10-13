@@ -2,9 +2,11 @@
  * The catalog's request schemas: GET /building/list reads campus as optional
  * (an empty value is no filter, a repeated one is rejected), and
  * /building/:skkuId reads the id with parseInt and rejects anything that does
- * not read as a positive safe integer, with the message the 400 shows.
+ * not read as a positive safe integer, with the message the 400 shows. A
+ * stored connection parses with both ends, each a valid skkuId and a floor in
+ * Korean and English, kept as stored.
  */
-import { buildingListQuery, skkuIdParam } from "./building-catalog.schema";
+import { buildingListQuery, connectionEnds, skkuIdParam } from "./building-catalog.schema";
 
 describe("building catalog schemas", () => {
   it("read campus as optional, an empty value as absent", () => {
@@ -51,5 +53,36 @@ describe("skkuIdParam at the safe-integer limit", () => {
     // Assert
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toBe("skkuId must be a positive integer");
+  });
+});
+
+describe("connectionEnds", () => {
+  const CONNECTION = { a: { skkuId: 2, floor: { ko: "2층", en: "2F" } }, b: { skkuId: 3, floor: { ko: "3층", en: "3F" } } };
+
+  it("parses a seeded connection as stored, extra fields kept", () => {
+    // Arrange
+    const stored = { ...CONNECTION, a: { ...CONNECTION.a, floor: { ...CONNECTION.a.floor, zh: "2楼" }, note: "x" } };
+
+    // Act & Assert
+    expect(connectionEnds.parse(stored)).toEqual(stored);
+  });
+
+  it.each(Object.keys(connectionEnds.shape))("rejects a connection without %s", (end) => {
+    // Arrange
+    const connection: Record<string, unknown> = { ...CONNECTION };
+    delete connection[end];
+
+    // Act & Assert
+    expect(connectionEnds.safeParse(connection).success).toBe(false);
+  });
+
+  it.each([
+    ["an end without skkuId", { ...CONNECTION, a: { floor: CONNECTION.a.floor } }],
+    ["an end whose skkuId is not a positive integer", { ...CONNECTION, b: { ...CONNECTION.b, skkuId: 0 } }],
+    ["an end without a floor", { ...CONNECTION, a: { skkuId: 2 } }],
+    ["a floor without English", { ...CONNECTION, b: { ...CONNECTION.b, floor: { ko: "3층" } } }],
+  ])("rejects %s", (_case, stored) => {
+    // Act & Assert
+    expect(connectionEnds.safeParse(stored).success).toBe(false);
   });
 });

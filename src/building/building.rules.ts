@@ -1,9 +1,5 @@
-import { CAMPUSES, SKKU_CAMPUS_CODE } from "./building.constants";
-import type { ApiId, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd, WithBuildNo } from "./building.types";
-
-export function isCampus(value: unknown): value is Campus {
-  return (CAMPUSES as readonly unknown[]).includes(value);
-}
+import { SKKU_CAMPUS_CODE } from "./building.constants";
+import type { BuildNo, Campus, DisplayNo, SkkuId, SpaceCd, WithBuildNo } from "./building.types";
 
 export function hasBuildNo<T extends { buildNo: BuildNo | null }>(building: T): building is WithBuildNo<T> {
   return !!building.buildNo;
@@ -21,11 +17,6 @@ export function toDisplayNo(buildNo: BuildNo | null, campus: Campus): DisplayNo 
 /** QUIRK(skku): campusMap.do assigns building ids and publishes no spec; every id seen is a positive integer. */
 export function isSkkuId(id: number): id is SkkuId {
   return Number.isSafeInteger(id) && id >= 1;
-}
-
-/** QUIRK(skku): buildInfo takes back the id buildList sent, the number stored as the SkkuId. */
-export function toApiId(id: SkkuId): ApiId {
-  return id as number as ApiId;
 }
 
 export function isBuildNo(buildNo: string): buildNo is BuildNo {
