@@ -5,7 +5,8 @@
  * the strong and weak bands partition the match set under their own caps.
  * These say what the pipeline object looks like, not which documents match or
  * in what order; that query meaning is for a real-mongod spec
- * (harden-test-suite D6), so add no new pins here.
+ * (harden-test-suite D6), so add no new structure pins here. Each search is
+ * also pinned to the pipeline its query file builds, under the search bound.
  */
 const mockCollection = {
   aggregate: jest.fn(),
@@ -25,6 +26,7 @@ jest.mock("../../infra/logger", () => ({
 }));
 
 import type { Document } from "mongodb";
+import { BUILDING_SEARCH, SPACE_SEARCH, rankedSearchPipeline } from "./building-search.query";
 import { SPACE_SEARCH_LIMIT, SPACE_STRONG_MIN_SCORE, SPACE_WEAK_LIMIT } from "./building-search.rules";
 import { BuildingSearchRepository } from "./building-search.repository";
 
@@ -110,5 +112,30 @@ describe("BuildingSearchRepository.searchSpaces pipeline assembly", () => {
         $project: { _id: 0, _score: 0, sources: 0, syncedAt: 0 },
       });
     }
+  });
+});
+
+describe("BuildingSearchRepository reads", () => {
+  beforeEach(() => {
+    mockCollection.aggregate.mockReset();
+    mockCollection.aggregate.mockReturnValue({
+      toArray: jest.fn().mockResolvedValue([{ strong: [], weak: [], counts: [], total: [] }]),
+    });
+  });
+
+  it("searchBuildings sends the buildings pipeline its query file builds, bounded at 5 s", async () => {
+    // Act
+    await new BuildingSearchRepository().searchBuildings("법학", "hssc");
+
+    // Assert
+    expect(mockCollection.aggregate.mock.calls).toEqual([[rankedSearchPipeline(BUILDING_SEARCH, "법학", "hssc"), { maxTimeMS: 5000 }]]);
+  });
+
+  it("searchSpaces sends the spaces pipeline its query file builds, bounded at 5 s", async () => {
+    // Act
+    await new BuildingSearchRepository().searchSpaces("27");
+
+    // Assert
+    expect(mockCollection.aggregate.mock.calls).toEqual([[rankedSearchPipeline(SPACE_SEARCH, "27", undefined), { maxTimeMS: 5000 }]]);
   });
 });

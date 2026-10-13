@@ -1,6 +1,7 @@
 /**
  * In-memory MapRepository: activations and places, with the real reads'
- * filters and sort (pinned in src/map/map.repository.spec.ts). `failWith`
+ * filters and sort, which src/map/map.repository.spec.ts pins (each read
+ * there, by the repository-pins architecture test). `failWith`
  * makes the next reads reject, as a database error would.
  */
 import type { ActivationDoc, MapPlaceDoc } from "../../../../src/map/map.document";

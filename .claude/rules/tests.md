@@ -40,7 +40,7 @@ ADR 0011 (`docs/decisions/0011-test-strategy.md`) is the decision and its why; `
   - the time: inject `Clock` (`src/infra/clock.ts`) and override it with `{ provide: Clock, useValue: fakeClock }`; pure code takes the time as an argument. Don't spy on `Date.now`.
   - a module without a repository (`app-config`, `health`): no fake; the route test covers it
 - `jest.mock` of `src/infra/db` belongs only in a repository spec, of `axios` only in a client spec. A service spec uses fakes. Mocking `src/infra/logger` is fine anywhere. Unmigrated modules keep their module mocks until their rework.
-- A fake is `class Fake<Name> implements PublicOf<<Name>>` in `__tests__/helpers/fakes/<module>/<name>.<role>.fake.ts`, passed to a constructor with `asReal<T>(fake)` (`__tests__/helpers/fakes/public-of.ts`). Checked by `fake-shape`. It applies the real read's filter, projection and sort, and the repository spec pins that query object, so a change to one shows in the other.
+- A fake is `class Fake<Name> implements PublicOf<<Name>>` in `__tests__/helpers/fakes/<module>/<name>.<role>.fake.ts`, passed to a constructor with `asReal<T>(fake)` (`__tests__/helpers/fakes/public-of.ts`). Checked by `fake-shape`. It applies the real read's filter, projection and sort, and the repository spec pins that query object, so a change to one shows in the other: in a migrated scope, each public read of a repository is called in a test of its spec that asserts on a stub's calls (`repository-pins`).
 - Assert the returned value, the response or the fake's final state. Assert a call (`toHaveBeenCalled*`) only when the call is the behavior (one FCM send per notice, one AI call per cache window) or for an argument the response cannot show.
 
 ## Route tests
