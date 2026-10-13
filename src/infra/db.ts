@@ -41,8 +41,7 @@ async function closeClient(): Promise<void> {
 }
 
 async function ping(): Promise<void> {
-  const c = getClient();
-  await c.db("admin").command({ ping: 1 });
+  await getClient().db("admin").command({ ping: 1 });
 }
 
 export { getClient, closeClient, ping };

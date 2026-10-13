@@ -11,13 +11,13 @@ function instantIssue(value: unknown): string | null {
 
 type OptionRaw = { id: string; from?: unknown; until?: unknown };
 
-function windowIssues(o: OptionRaw, i: number): ConfigIssue[] {
+function windowIssues(option: OptionRaw, index: number): ConfigIssue[] {
   const bounds = (["from", "until"] as const).flatMap((key): ConfigIssue[] => {
-    const found = instantIssue(o[key]);
-    return found ? [[["options", i, key], found]] : [];
+    const found = instantIssue(option[key]);
+    return found ? [[["options", index, key], found]] : [];
   });
   if (bounds.length > 0) return bounds;
-  return Date.parse(String(o.from)) >= Date.parse(String(o.until)) ? [[["options", i, "from"], "must be before until"]] : [];
+  return Date.parse(String(option.from)) >= Date.parse(String(option.until)) ? [[["options", index, "from"], "must be before until"]] : [];
 }
 
 // WHY: one place per day, so a window start belongs to exactly one option: days may not overlap.
@@ -83,10 +83,11 @@ function presentationIssue({ itemDefaults, layers, chips }: LayerSet): string | 
     ["config.itemDefaults.fallback", itemDefaults.fallback] as const,
     ...Object.entries(itemDefaults.byCategory).map(([c, p]) => [`config.itemDefaults.byCategory["${c}"]`, p] as const),
   ];
-  for (const [where, p] of entries) {
-    if (!layers.some((l) => l.id === p.layerId)) return `${where}.layerId "${p.layerId}" is not in config.layers`;
-    if (p.tapChip !== null && !chips.some((c) => c.id === p.tapChip)) return `${where}.tapChip "${p.tapChip}" is not in config.chips`;
-    if (p.tapChip !== null && !p.interactive) return `${where}.tapChip is set on a category with interactive: false`;
+  for (const [where, presentation] of entries) {
+    const { layerId, tapChip, interactive } = presentation;
+    if (!layers.some((l) => l.id === layerId)) return `${where}.layerId "${layerId}" is not in config.layers`;
+    if (tapChip !== null && !chips.some((c) => c.id === tapChip)) return `${where}.tapChip "${tapChip}" is not in config.chips`;
+    if (tapChip !== null && !interactive) return `${where}.tapChip is set on a category with interactive: false`;
   }
   return null;
 }

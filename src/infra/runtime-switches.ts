@@ -51,11 +51,11 @@ function enumReader(env: NodeJS.ProcessEnv, errors: string[]): EnumReader {
   };
 }
 
-function pushDelivery(r: Resolution): PushDelivery {
-  const local = r.mode === "development";
-  const value = r.read("PUSH_DELIVERY", ["live", "suppressed"] as const) ?? (local ? "suppressed" : "live");
+function pushDelivery(resolution: Resolution): PushDelivery {
+  const local = resolution.mode === "development";
+  const value = resolution.read("PUSH_DELIVERY", ["live", "suppressed"] as const) ?? (local ? "suppressed" : "live");
   if (local && value === "live") {
-    r.errors.push(
+    resolution.errors.push(
       "PUSH_DELIVERY=live is refused in development: the Cloud Function pushes to every subscriber of a topic",
     );
     return "suppressed";
@@ -63,15 +63,15 @@ function pushDelivery(r: Resolution): PushDelivery {
   return value;
 }
 
-function isOn(r: Resolution, name: "RATE_LIMIT" | "BUILDING_SYNC" | "CACHE" | "SHUTTLE_ETA"): boolean {
-  return (r.read(name, ON_OFF) ?? (r.mode === "development" ? "off" : "on")) === "on";
+function isOn(resolution: Resolution, name: "RATE_LIMIT" | "BUILDING_SYNC" | "CACHE" | "SHUTTLE_ETA"): boolean {
+  return (resolution.read(name, ON_OFF) ?? (resolution.mode === "development" ? "off" : "on")) === "on";
 }
 
 // WHY: a production override may only reduce outbound effects, never remove a guard.
-function isGuardOn(r: Resolution, name: "RATE_LIMIT" | "CACHE"): boolean {
-  const on = isOn(r, name);
-  if (r.mode === "production" && !on) {
-    r.errors.push(`${name}=off is refused in production`);
+function isGuardOn(resolution: Resolution, name: "RATE_LIMIT" | "CACHE"): boolean {
+  const on = isOn(resolution, name);
+  if (resolution.mode === "production" && !on) {
+    resolution.errors.push(`${name}=off is refused in production`);
     return true;
   }
   return on;
@@ -82,14 +82,14 @@ export function resolveRuntimeSwitches(
   mode: RuntimeMode,
 ): { switches: RuntimeSwitches; errors: string[] } {
   const errors: string[] = [];
-  const r: Resolution = { read: enumReader(env, errors), mode, errors };
+  const resolution: Resolution = { read: enumReader(env, errors), mode, errors };
   return {
     switches: {
-      pushDelivery: pushDelivery(r),
-      rateLimitEnabled: isGuardOn(r, "RATE_LIMIT"),
-      buildingSyncEnabled: isOn(r, "BUILDING_SYNC"),
-      cacheEnabled: isGuardOn(r, "CACHE"),
-      shuttleEtaEnabled: isOn(r, "SHUTTLE_ETA"),
+      pushDelivery: pushDelivery(resolution),
+      rateLimitEnabled: isGuardOn(resolution, "RATE_LIMIT"),
+      buildingSyncEnabled: isOn(resolution, "BUILDING_SYNC"),
+      cacheEnabled: isGuardOn(resolution, "CACHE"),
+      shuttleEtaEnabled: isOn(resolution, "SHUTTLE_ETA"),
     },
     errors,
   };
