@@ -56,10 +56,10 @@ describe("the shipped eskara-2026 config", () => {
 
   it("gives the two 통제구역 their own layer, their own colour, and no default", () => {
     // Act
-    // Three things the 총학생회 asked for on 2026-09-22, and this file is the
+    // Three things the student council asked for on 2026-09-22, and this file is the
     // only place any of them is expressible. Colour is a property of the LAYER,
     // so two colours require two layers — splitting them is not organisation,
-    // it is the mechanism. And "선택 시에만" is `never`, not a schedule.
+    // it is the mechanism. And "only when selected" is `never`, not a schedule.
     const config = assertValidConfig(raw());
     const entry = config.itemDefaults.byCategory.control_entry!;
     const vehicle = config.itemDefaults.byCategory.control_vehicle!;
@@ -92,7 +92,7 @@ describe("the shipped eskara-2026 config", () => {
     // is what a toggle or a chip switches, so that is the whole mechanism by which
     // the two appear and disappear together.
     //
-    // All four are inert as of 2026-09-22: the 총학생회's zones are a backdrop to
+    // All four are inert as of 2026-09-22: the student council's zones are a backdrop to
     // read, not a place to open, so neither the area nor its word takes a tap.
     // The label keeps its own category anyway, so the day a zone becomes
     // tappable again its word does not quietly become a second tap target.
@@ -122,24 +122,24 @@ describe("the shipped eskara-2026 config", () => {
     // predicts, and a phone shows ~350 pt of map between the chip row and the
     // bottom sheet, with the target in its upper half.
     //
-    // 주점 and 부스: centred on the 대운동장 label, a step back at 17.0 — at the
+    // Bars and booths: centred on the main sports field's label, a step back at 17.0 — at the
     // festival's 17.5 the southern pubs sat under the sheet.
     //
-    // 푸드트럭: the trucks have no plots — they stand anywhere along 신관A 앞길 —
-    // so the chip frames the whole road, the 차량 통제 ring the zone reuses: on
-    // its centroid (the 차량 통제 label's own point), 176 m end to end. 17.2 shows
+    // Food trucks: the trucks have no plots — they stand anywhere along the road in
+    // front of Sinkwan A — so the chip frames the whole road, the vehicle-control
+    // ring the zone reuses: on its centroid (that label's own point), 176 m end to end. 17.2 shows
     // ~220 m across, from the 17.5 = 0.199 m/px calibration.
     //
-    // 편의시설: the ten points run ~360 m from 화장실 (주점 구역) to 제2과학관.
+    // Amenities: the ten points run ~360 m from the restroom in the bar zone to Science Building II.
     // 16.0 on `toilet-welfare`, the middle of them, is the framing of a
     // screenshot zoomed out by hand to show all ten.
     //
-    // 입장 팔찌 배부: halfway between 삼성학술정보관 (building 48) and the centroid of the
-    // three 팔찌 배부 부스 south of it, so both read at 17.0.
+    // Wristband handout: halfway between the Samsung Library (building 48) and the centroid
+    // of the three wristband booths south of it, so both read at 17.0.
     //
-    // 통제구역: the zones are long north-south bands whose southern tip sat
-    // under the sheet, so the chip steps back and recentres on 운용재
-    // (building 49), nearer the middle of both zones than 대운동장.
+    // Restricted zones: the zones are long north-south bands whose southern tip sat
+    // under the sheet, so the chip steps back and recentres on Unyongjae
+    // (building 49), nearer the middle of both zones than the sports field.
     const config = assertValidConfig(raw());
     const framed: Record<string, { lat: number; lng: number; zoom: number }> = {
       eskara26_view_bar: { lat: 37.295187, lng: 126.970977, zoom: 17 },
@@ -174,7 +174,7 @@ describe("the shipped eskara-2026 config", () => {
     // different clocks: the sheet reaches Mongo through an importer and needs no
     // release, while this config needs one. So a category added to the sheet and
     // forgotten here does not fail — it falls through `itemDefaults.fallback` to
-    // the grey 기타 layer and draws, which is the failure that looks like success.
+    // the grey "Other" layer and draws, which is the failure that looks like success.
     //
     // The fallback is not thereby useless: it exists for a category typed into
     // MONGO at 22:00 (ADR 0004 invariant 2). Nothing in the reviewed sheet may
@@ -446,7 +446,7 @@ describe("assertValidConfig — identity and shape", () => {
     expect(() => assertValidConfig(single)).not.toThrow();
 
     // The chip row and the filter sheet name one layer; a second copy of that
-    // name is how the 푸드트럭 chip came to sit over a 먹거리 layer.
+    // name is how the food-truck chip came to sit over the food layer.
     single.chips[0].label = { ko: "먹거리" };
     expect(() => assertValidConfig(single)).toThrow(
       /config.chips\[0\].label must be omitted for a single-layer chip/,
@@ -561,7 +561,7 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
       windows: [{ start: "18:00", end: "04:00" }],
     });
 
-    // No shipped layer wraps any more (the 2025 주점 ran to 00:00), so the
+    // No shipped layer wraps any more (the 2025 bars ran to 00:00), so the
     // wrap is authored here: 18:00 after 00:00 says "past midnight" rather
     // than being a swapped pair.
     const wrapping = raw();
@@ -736,9 +736,9 @@ describe("assertValidConfig — defaultVisibleWhen, the WHEN axis", () => {
 /**
  * `interactive` — the per-category switch that makes a place a backdrop.
  *
- * A drawn-but-not-pressable zone (a 통제 구간 outline) resolves to `tap: null`,
+ * A drawn-but-not-pressable zone (a restricted-area outline) resolves to `tap: null`,
  * a spelling that already existed. It sits on the CATEGORY rather than the
- * layer or the place: two categories may map to one layer, so one "구역" layer
+ * layer or the place: two categories may map to one layer, so one "zones" layer
  * can hold tappable stage zones and an inert boundary without a second layer.
  */
 describe("assertValidConfig — interactive, the TAP axis", () => {

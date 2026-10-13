@@ -23,7 +23,7 @@ export function addIssue(ctx: z.RefinementCtx, found: ConfigIssue | null): void 
   if (found) ctx.addIssue({ code: "custom", path: [...found[0]], message: found[1] });
 }
 
-export const i18nText = z
+export const i18nTextFile = z
   .object({ ko: text, en: text.nullish(), zh: text.nullish() })
   .transform(({ ko, en, zh }) => ({ ko, ...(en == null ? {} : { en }), ...(zh == null ? {} : { zh }) }));
 
@@ -47,6 +47,6 @@ export const renderablePlace = z.looseObject({
 // WHY: the URL rules read infra's origins, which rules and mappers may not import, so they parse through these.
 export const webviewUrl = z
   .string()
-  .transform((value, ctx) => toWebviewUrl(value) ?? (ctx.addIssue({ code: "custom", message: "is not a web view URL" }), z.NEVER));
+  .transform((value, ctx) => toWebviewUrl(value) ?? (ctx.addIssue({ code: "custom", path: [], message: "is not a web view URL" }), z.NEVER));
 
 export const mediaUrl = z.string().refine(isMediaUrl);

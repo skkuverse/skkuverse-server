@@ -8,7 +8,7 @@
  * invisible on this side and, on the client, makes Naver "draw abnormally or
  * not receive events" — a polygon that is there but cannot be tapped.
  *
- * Every position below is [lng, lat], GeoJSON order, around 자과캠.
+ * Every position below is [lng, lat], GeoJSON order, around NSC.
  */
 import {
   closeRing,

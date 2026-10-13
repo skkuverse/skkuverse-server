@@ -15,6 +15,8 @@ const tseslint = require("@typescript-eslint/eslint-plugin");
 const config: Linter.Config[] = require("../../eslint.config.js");
 
 const blocks = config.filter((c) => c.name?.startsWith("boundaries/"));
+// Every plugin a block may name: a block's rules are linted here without the rest of the config.
+const plugins = Object.assign({ "@typescript-eslint": tseslint }, ...config.map((c) => c.plugins ?? {}));
 
 function lint(rules: Linter.Config["rules"], file: string, source: string): Linter.LintMessage[] {
   const linter = new Linter({ configType: "flat" });
@@ -24,7 +26,7 @@ function lint(rules: Linter.Config["rules"], file: string, source: string): Lint
       {
         files: ["**/*.ts"],
         languageOptions: { parser: tsparser },
-        plugins: { "@typescript-eslint": tseslint },
+        plugins,
         rules,
       },
     ],

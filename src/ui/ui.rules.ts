@@ -13,8 +13,8 @@ export function isBannerShowing(image: Pick<BannerImageRaw, "startAt" | "endAt">
   return image.endAt === undefined || at < Date.parse(image.endAt);
 }
 
-export function findDuplicateId(ids: readonly string[]): string | undefined {
-  return ids.find((id, index) => ids.indexOf(id) !== index);
+export function findRepeatedId<T extends { id: string }>(items: readonly T[]): T | undefined {
+  return items.find((item, index) => items.findIndex((other) => other.id === item.id) !== index);
 }
 
 // WHY: each type is checked as the event map checks its sheet buttons (`isValidActionValue`), so a link
