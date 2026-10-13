@@ -28,15 +28,11 @@ export class MapLayerSetService {
     private readonly clock: Clock,
   ) {}
 
-  activeEvent(): Promise<EventMapConfig | null> {
-    return this.activeEventConfig(this.clock.now());
-  }
-
-  /** WHY: a cached activation is checked against `now` on every call, so its window closes on time between reloads. */
-  async activeEventConfig(now: Date): Promise<EventMapConfig | null> {
+  /** WHY: a cached activation is checked against the clock on every call, so its window closes on time between reloads. */
+  async activeEvent(): Promise<EventMapConfig | null> {
     const activation = await this.activationCache.get();
     if (!activation) return null;
-    if (activation.activeUntil && activation.activeUntil <= now) return null;
+    if (activation.activeUntil && activation.activeUntil <= this.clock.now()) return null;
     const loaded = getLayerSetConfig(activation._id);
     if (loaded?.config) return loaded.config;
     this.reportUnservable(activation._id, loaded);

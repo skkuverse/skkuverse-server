@@ -34,7 +34,7 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | layer (`LayerSpec`) | One kind of thing with one toggle: what is drawn, its style, its endpoint and its chip group | `BASE_LAYERS`, `eventLayerSpecs` | — |
 | layer set (`EventMapConfig`) | One festival's layers, chips, facets, camera and category table, as one JSON file | `layerSetFile` in `map-layer-set.schema.ts` | `festivalConfig`, `layerConfig` |
 | activation (`ActivationDoc`) | The Mongo switch that makes a layer set live between `activeFrom` and `activeUntil` while `enabled` | `findActiveActivation` | `eventWindow` |
-| live event | The layer set whose activation is open now and whose file this build loaded | `MapLayerSetService.activeEventConfig` | `currentFestival` |
+| live event | The layer set whose activation is open now and whose file this build loaded | `MapLayerSetService.activeEvent` | `currentFestival` |
 | place (`MapPlaceDoc`) | One operating entity of a festival: a spot, its geometry, its windows and its buttons | the places importer | — |
 | overlay (`MapOverlay`) | One drawable thing, tagged by the renderer that draws it (`marker`, `polygon`, `path`) | `toEventOverlay`, the campus mappers | — |
 | chip (`MapChipSpec`) | One pill above the map: a camera, the layers it turns on, and the list it opens | `eventChipSpecs`, `BASE_CHIPS` | `filterButton` |
