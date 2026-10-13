@@ -5,8 +5,9 @@
  * the real code, the committed config files and the real bus groups.
  *
  * Asserts the dynamic meta.busListCount / meta.itemCount, item shapes, lang
- * defaulting, the English i18n switch, the /home/campus section structure and
- * the Cache-Control of /home and /home/campus.
+ * defaulting, the English i18n switch, the /home/campus section structure, the
+ * Cache-Control of /home and /home/campus, and that /home/transitlist and
+ * /home/scroll send none.
  */
 // The home and campus flows read the mini-app registry through MiniAppsModule,
 // whose feed service creates its Mongo index at init and whose manifest service
@@ -95,6 +96,15 @@ describe("GET /ui/home/transitlist", () => {
     expect(res.body.meta.lang).toBe("en");
     expect(res.body.data[0].card.label).toBe("HSSC Shuttle Bus");
   });
+
+  it("sends no Cache-Control: a card appears on its window's first minute", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/transitlist");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.headers["cache-control"]).toBeUndefined();
+  });
 });
 
 describe("GET /ui/home/scroll", () => {
@@ -118,6 +128,15 @@ describe("GET /ui/home/scroll", () => {
       expect(item).toHaveProperty("pageLink");
       expect(item).toHaveProperty("useAltPageLink");
     }
+  });
+
+  it("sends no Cache-Control", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/scroll");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.headers["cache-control"]).toBeUndefined();
   });
 });
 
