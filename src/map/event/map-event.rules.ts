@@ -1,7 +1,7 @@
 import { hasAnyText } from "../../infra/i18n";
 import { isAbsoluteHttpsUrl, isRootRelativePath } from "../../shared/link-target.util";
 import { isRecord } from "../../shared/object.util";
-import type { EventFacetDef, EventMapConfig } from "../layer-set/map-layer-set.schema";
+import type { EventFacetDef, LayerSet } from "../layer-set/map-layer-set.schema";
 import type { OverlayPlaceDoc, PlaceAction } from "../map.document";
 import { webviewUrl } from "../map.schema";
 
@@ -55,29 +55,29 @@ function tagOptionsOf(doc: OverlayPlaceDoc, facet: EventFacetDef, dropped: strin
   return [...new Set(offered)];
 }
 
-function strayFacetKeys(doc: OverlayPlaceDoc, config: EventMapConfig): string[] {
+function strayFacetKeys(doc: OverlayPlaceDoc, layerSet: LayerSet): string[] {
   const authored = isRecord(doc.facets) ? Object.keys(doc.facets) : [];
   return authored.flatMap((key) => {
-    const facet = config.facets.find((f) => f.id === key);
+    const facet = layerSet.facets.find((f) => f.id === key);
     if (!facet) return [`${doc._id}: facets.${key} is not a facet`];
     return facet.source === "hours" ? [`${doc._id}: facets.${key} is derived from hours, not authored`] : [];
   });
 }
 
 /** WHY: every facet gets a key, so the app never reads a missing one as a filter answer; a bad value is logged, not thrown. */
-export function facetsOf(doc: OverlayPlaceDoc, config: EventMapConfig, dropped: string[]): Record<string, string[]> {
+export function facetsOf(doc: OverlayPlaceDoc, layerSet: LayerSet, dropped: string[]): Record<string, string[]> {
   const out: Record<string, string[]> = {};
-  for (const facet of config.facets) {
+  for (const facet of layerSet.facets) {
     out[facet.id] = facet.source === "hours" ? hoursOptionsOf(doc, facet) : tagOptionsOf(doc, facet, dropped);
   }
-  dropped.push(...strayFacetKeys(doc, config));
+  dropped.push(...strayFacetKeys(doc, layerSet));
   return out;
 }
 
-export function orderByOptionOf(doc: OverlayPlaceDoc, config: EventMapConfig, dropped: string[]): Record<string, number> {
+export function orderByOptionOf(doc: OverlayPlaceDoc, layerSet: LayerSet, dropped: string[]): Record<string, number> {
   const out: Record<string, number> = {};
   if (!isRecord(doc.orderByOption)) return out;
-  const known = new Set(config.facets.flatMap((f) => f.options.map((o) => o.id)));
+  const known = new Set(layerSet.facets.flatMap((f) => f.options.map((o) => o.id)));
   for (const [key, value] of Object.entries(doc.orderByOption)) {
     if (known.has(key) && typeof value === "number" && Number.isFinite(value)) out[key] = value;
     else dropped.push(`${doc._id}: orderByOption.${key} = ${JSON.stringify(value)}`);

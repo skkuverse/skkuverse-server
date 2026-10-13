@@ -19,7 +19,7 @@ import type { Clock } from "../../infra/clock";
 import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
-import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
+import type { LayerSet } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS, EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "../map.constants";
 import type { MapRepository } from "../map.repository";
@@ -34,7 +34,7 @@ const BASE_LAYER_COUNT = 3;
  * relative to its own directory — so every expectation below derives from it
  * rather than restating a count that the next festival would break.
  */
-const CONFIG: EventMapConfig = shippedLayerSet();
+const CONFIG: LayerSet = shippedLayerSet();
 
 const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
 

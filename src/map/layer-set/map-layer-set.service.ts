@@ -8,7 +8,7 @@ import type { LayerSpec } from "../map.types";
 import { getLayerSetConfig } from "./map-layer-set.config";
 import { BASE_CHIPS } from "./map-layer-set.constants";
 import { eventChipSpecs, eventLayerSpecs } from "./map-layer-set.mapper";
-import type { EventMapConfig } from "./map-layer-set.schema";
+import type { LayerSet } from "./map-layer-set.schema";
 import type { LoadedConfig, MapChipSpec } from "./map-layer-set.types";
 
 // SEE: docs/explanation/map-architecture.md (Structure): /map/config and the event routes ask this one service.
@@ -29,7 +29,7 @@ export class MapLayerSetService {
   ) {}
 
   /** WHY: a cached activation is checked against the clock on every call, so its window closes on time between reloads. */
-  async activeEvent(): Promise<EventMapConfig | null> {
+  async liveLayerSet(): Promise<LayerSet | null> {
     const activation = await this.activationCache.get();
     if (!activation) return null;
     if (activation.activeUntil && activation.activeUntil <= this.clock.now()) return null;
@@ -39,11 +39,11 @@ export class MapLayerSetService {
     return null;
   }
 
-  servedLayerSpecs(event: EventMapConfig | null): readonly LayerSpec[] {
+  servedLayerSpecs(event: LayerSet | null): readonly LayerSpec[] {
     return event ? [...BASE_LAYERS, ...eventLayerSpecs(event)] : BASE_LAYERS;
   }
 
-  servedChipSpecs(event: EventMapConfig | null): readonly MapChipSpec[] {
+  servedChipSpecs(event: LayerSet | null): readonly MapChipSpec[] {
     return event ? [...BASE_CHIPS, ...eventChipSpecs(event)] : BASE_CHIPS;
   }
 

@@ -145,7 +145,7 @@ describe("MapEventDetailsService.getEventPlaceDetails", () => {
     expect(find).toHaveBeenCalledWith("eskara-2026");
   });
 
-  it("projects a detail onto the app's PlaceDetail, keyed by the tap id", async () => {
+  it("projects a detail onto the app's PlaceSheet, keyed by the tap id", async () => {
     // Arrange
     arrange([
       place(

@@ -13,7 +13,7 @@ import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-se
 const CONFIG = shippedLayerSet();
 
 function context(): EventOverlayContext {
-  return { config: CONFIG, drops: { actions: [], facets: [] }, isKnownMiniAppTarget: () => true };
+  return { layerSet: CONFIG, drops: { actions: [], facets: [] }, isKnownMiniAppTarget: () => true };
 }
 
 function place(over: Partial<MapPlaceDoc> = {}): MapPlaceDoc {

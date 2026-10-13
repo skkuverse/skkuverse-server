@@ -14,7 +14,7 @@ import { BASE_LAYERS } from "../map.constants";
 import { assertValidChipSpecs, validateChipSpecs } from "../map.rules";
 import { BASE_CHIPS } from "./map-layer-set.constants";
 import { eventChipSpecs, eventLayerSpecs, resetChip, toConfigMessage, toConfigWords, toOptionWindow } from "./map-layer-set.mapper";
-import type { EventMapConfig } from "./map-layer-set.schema";
+import type { LayerSet } from "./map-layer-set.schema";
 
 const CONFIG = assertValidConfig(JSON.parse(fs.readFileSync(path.join(__dirname, "eskara-2026.json"), "utf8")));
 
@@ -196,7 +196,7 @@ describe("authored chips", () => {
     // Arrange
     // The shipped config authors every label (its chips read singular where the
     // layers read plural), so the convenience is exercised on a synthetic one.
-    const unlabelled: EventMapConfig = {
+    const unlabelled: LayerSet = {
       ...CONFIG,
       chips: [{ id: "x", emoji: "🍻", layerIds: ["eskara26_bar"] }],
     };
@@ -211,7 +211,7 @@ describe("authored chips", () => {
 
   it("keep an authored label over the layer's", () => {
     // Arrange
-    const withLabel: EventMapConfig = {
+    const withLabel: LayerSet = {
       ...CONFIG,
       chips: [{ id: "x", emoji: "🍻", layerIds: ["eskara26_bar"], label: { ko: "야간 주점" } }],
     };
@@ -243,7 +243,7 @@ describe("authored chips", () => {
     // The shipped config authors a camera on every chip, so the fallback is
     // exercised on a synthetic one — it is what makes the field additive for a
     // config written before it existed.
-    const bare: EventMapConfig = {
+    const bare: LayerSet = {
       ...CONFIG,
       chips: [{ id: "x", emoji: "🍻", layerIds: ["eskara26_bar"] }],
     };
@@ -259,7 +259,7 @@ describe("authored chips", () => {
 
   it("copy an authored camera rather than hand it out by reference", () => {
     // Arrange
-    const withCamera: EventMapConfig = {
+    const withCamera: LayerSet = {
       ...CONFIG,
       chips: [
         {

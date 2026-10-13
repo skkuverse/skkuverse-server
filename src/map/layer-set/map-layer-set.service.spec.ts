@@ -1,5 +1,5 @@
 /**
- * MapLayerSetService.activeEvent: "Which layer set is live, and is its
+ * MapLayerSetService.liveLayerSet: "Which layer set is live, and is its
  * config usable?" — the one answer both `/map/config` and the event routes read.
  * The time comes from a fake Clock, so the activation read and the window
  * check see the same instant.
@@ -39,10 +39,10 @@ const fakeClock: Clock = { now: () => now };
 
 // The activation read is cached per service; each test starts cold.
 let service: MapLayerSetService;
-/** The live event as the service answers at `at`. */
+/** The live layer set as the service answers at `at`. */
 const activeEventAt = (at: Date) => {
   now = at;
-  return service.activeEvent();
+  return service.liveLayerSet();
 };
 
 beforeEach(() => {
@@ -54,7 +54,7 @@ beforeEach(() => {
   service = new MapLayerSetService(asReal<MapRepository>(repository), fakeClock);
 });
 
-describe("MapLayerSetService.activeEvent", () => {
+describe("MapLayerSetService.liveLayerSet", () => {
   it("is null when no activation is live, and says nothing", async () => {
     // Arrange
     mockFindActiveActivation.mockResolvedValue(null);
@@ -115,7 +115,7 @@ describe("MapLayerSetService.activeEvent", () => {
   });
 });
 
-describe("MapLayerSetService.activeEvent — origin cache", () => {
+describe("MapLayerSetService.liveLayerSet — origin cache", () => {
   let clock = NOW.getTime();
   beforeEach(() => {
     clock = NOW.getTime();

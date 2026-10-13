@@ -1,5 +1,5 @@
 import { isAbsoluteHttpsUrl } from "../../shared/link-target.util";
-import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
+import type { LayerSet } from "../layer-set/map-layer-set.schema";
 import { PLACE_KINDS } from "../map.constants";
 import type { SheetPlaceDoc } from "../map.document";
 import { presentationFor } from "../map.rules";
@@ -40,8 +40,8 @@ export function isPlaceKind(value: unknown): value is (typeof PLACE_KINDS)[numbe
 }
 
 // WHY: only a place on a category whose tap opens a place has a sheet to open; the read already left out the undrawable.
-export function sheetlessReason(doc: Pick<SheetPlaceDoc, "_id" | "category">, config: EventMapConfig): string | null {
-  const presentation = presentationFor(config, doc.category);
+export function sheetlessReason(doc: Pick<SheetPlaceDoc, "_id" | "category">, layerSet: LayerSet): string | null {
+  const presentation = presentationFor(layerSet, doc.category);
   if (!presentation.interactive) return `${doc._id}: category "${doc.category}" is not tappable`;
   return presentation.tapChip ? `${doc._id}: category "${doc.category}" taps to chip "${presentation.tapChip}"` : null;
 }
