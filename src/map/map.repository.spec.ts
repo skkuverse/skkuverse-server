@@ -12,8 +12,8 @@
  *     prerequisite; an Atlas hiccup during boot must not take /map down.
  *
  * Queries. Each read's query object is pinned here, since FakeMapRepository
- * copies it; the places reads project only what their route reads and parse
- * each place, leaving out and logging one that is not renderable. The
+ * copies it; the reads project only what their route reads and parse each
+ * document, leaving out and logging one that is not usable. The
  * activation filter carries two invariants nothing downstream can
  * recover from: a window containing now with null read as unbounded, and a
  * deterministic sort, so replicas cannot disagree about which layer set is
@@ -199,9 +199,35 @@ describe("MapRepository.findActiveActivation", () => {
 
     // Assert
     expect(findOne.mock.calls[0]![1]).toEqual({
+      projection: { _id: 1, activeUntil: 1 },
       sort: { activeFrom: -1, _id: 1 },
       maxTimeMS: HOT_READ_MAX_TIME_MS,
     });
+  });
+
+  it("reads the live activation's id and end, an absent end as none", async () => {
+    // Arrange
+    findOne.mockResolvedValue({ _id: "eskara-2026" });
+
+    // Act & Assert
+    await expect(findActiveActivation(NOW)).resolves.toEqual({ _id: "eskara-2026", activeUntil: null });
+    expect(mockLogger.warn).not.toHaveBeenCalled();
+  });
+
+  it("reads an activation that does not parse as none, and logs it once an hour", async () => {
+    // Arrange
+    // An ObjectId typed by hand instead of the layer set's id: no layer set file can match it.
+    findOne.mockResolvedValue({ _id: { $oid: "652f00000000000000000001" }, activeUntil: null });
+    const fresh = new MapRepository();
+
+    // Act
+    const first = await fresh.findActiveActivation(NOW);
+    await fresh.findActiveActivation(NOW);
+
+    // Assert
+    expect(first).toBeNull();
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    expect(mockLogger.warn.mock.calls[0]?.[0]).toMatchObject({ event: "map.eventmap.activation_invalid" });
   });
 });
 

@@ -2,11 +2,11 @@
  * The shared map schemas: the place schemas MapRepository parses each read
  * through (one for the overlay route, one for the sheets; the same renderable
  * rules, kept in step with the places importer, scripts/lib/map-places-file.js,
- * boundary 4.3), and the camera, text and URL pieces the
+ * boundary 4.3), the live activation, and the camera, text and URL pieces the
  * layer-set schema and the mappers build on.
  */
 import { WEBVIEW_ORIGIN } from "../infra/origins";
-import { i18nTextFile, mapCamera, mediaUrl, overlayPlaceDoc, sheetPlaceDoc, webviewUrl } from "./map.schema";
+import { i18nTextFile, liveActivation, mapCamera, mediaUrl, overlayPlaceDoc, sheetPlaceDoc, webviewUrl } from "./map.schema";
 
 // The importer is CommonJS and outside tsconfig, so it is required.
 const { parsePlacesFile } = require("../../scripts/lib/map-places-file");
@@ -151,6 +151,26 @@ describe("overlayPlaceDoc and sheetPlaceDoc", () => {
     // Act & Assert
     expect(overlayPlaceDoc.safeParse(doc).success).toBe(true);
     expect(sheetPlaceDoc.safeParse(doc).success).toBe(true);
+  });
+});
+
+describe("liveActivation", () => {
+  it("reads the id and the end, an absent end as none", () => {
+    // Arrange
+    const until = new Date("2026-10-03T00:00:00Z");
+
+    // Act & Assert
+    expect(liveActivation.parse({ _id: "eskara-2026", activeUntil: until })).toEqual({ _id: "eskara-2026", activeUntil: until });
+    expect(liveActivation.parse({ _id: "eskara-2026", activeUntil: null })).toEqual({ _id: "eskara-2026", activeUntil: null });
+    expect(liveActivation.parse({ _id: "eskara-2026" })).toEqual({ _id: "eskara-2026", activeUntil: null });
+  });
+
+  it.each([
+    ["an id that is not a layer set id", { _id: 7, activeUntil: null }],
+    ["an end that is not a Date", { _id: "eskara-2026", activeUntil: "2026-10-03" }],
+  ])("refuses %s", (_case, doc) => {
+    // Act & Assert
+    expect(liveActivation.safeParse(doc).success).toBe(false);
   });
 });
 

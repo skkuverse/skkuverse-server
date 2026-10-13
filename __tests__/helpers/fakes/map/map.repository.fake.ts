@@ -2,13 +2,14 @@
  * In-memory MapRepository: activations and places, with the real reads'
  * filters and sort, which src/map/map.repository.spec.ts pins (each read
  * there, by the repository-pins architecture test), and the same parse:
- * a place that is not renderable is left out. Like the real projections, a
- * place read carries only the fields its route reads.
+ * a place that is not renderable is left out, and an activation that does not
+ * parse reads as none. Like the real projections, a place read carries only
+ * the fields its route reads and an activation only `_id` and `activeUntil`.
  * `failWith` makes the next reads reject, as a database error would.
  */
-import type { ActivationDoc, MapPlaceDoc, OverlayPlaceDoc, SheetPlaceDoc } from "../../../../src/map/map.document";
+import type { ActivationDoc, LiveActivation, MapPlaceDoc, OverlayPlaceDoc, SheetPlaceDoc } from "../../../../src/map/map.document";
 import type { MapRepository } from "../../../../src/map/map.repository";
-import { overlayPlaceDoc, sheetPlaceDoc } from "../../../../src/map/map.schema";
+import { liveActivation, overlayPlaceDoc, sheetPlaceDoc } from "../../../../src/map/map.schema";
 import type { PublicOf } from "../public-of";
 
 const isOpenAt = (a: ActivationDoc, now: Date): boolean =>
@@ -34,9 +35,12 @@ export class FakeMapRepository implements PublicOf<MapRepository> {
 
   async ensureIndexes(): Promise<void> {}
 
-  async findActiveActivation(now: Date): Promise<ActivationDoc | null> {
+  async findActiveActivation(now: Date): Promise<LiveActivation | null> {
     if (this.failWith) throw this.failWith;
-    return [...this.activations].filter((a) => isOpenAt(a, now)).sort(byNewestStart)[0] ?? null;
+    const activation = [...this.activations].filter((a) => isOpenAt(a, now)).sort(byNewestStart)[0];
+    if (!activation) return null;
+    const parsed = liveActivation.safeParse({ _id: activation._id, activeUntil: activation.activeUntil });
+    return parsed.success ? parsed.data : null;
   }
 
   async listPlacesByLayerSetId(layerSetId: string): Promise<OverlayPlaceDoc[]> {

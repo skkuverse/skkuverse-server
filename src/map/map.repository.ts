@@ -2,11 +2,12 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Collection } from "mongodb";
 import config from "../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
+import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
 import { parseEach } from "../shared/zod-list.util";
-import type { ActivationDoc, MapPlaceDoc, OverlayPlaceDoc, SheetPlaceDoc } from "./map.document";
-import { overlayPlaceDoc, sheetPlaceDoc } from "./map.schema";
+import type { ActivationDoc, LiveActivation, MapPlaceDoc, OverlayPlaceDoc, SheetPlaceDoc } from "./map.document";
+import { liveActivation, overlayPlaceDoc, sheetPlaceDoc } from "./map.schema";
 
 const OVERLAY_PLACE_FIELDS = {
   _id: 1,
@@ -25,10 +26,15 @@ const OVERLAY_PLACE_FIELDS = {
 
 const SHEET_PLACE_FIELDS = { _id: 1, category: 1, location: 1, title: 1, hours: 1, fields: 1, actions: 1, detail: 1 } as const;
 
+// WHY: read every TTL, so a bad activation is reported hourly, not every five seconds.
+const INVALID_ACTIVATION_LOG_INTERVAL_MS = 60 * 60 * 1000;
+
 const placeIdOf = (doc: unknown): string => String((doc as { _id?: unknown })._id);
 
 @Injectable()
 export class MapRepository implements OnModuleInit {
+  private readonly invalidActivationThrottle = createLogThrottle(INVALID_ACTIVATION_LOG_INTERVAL_MS);
+
   onModuleInit(): Promise<void> {
     return ensureIndexesAtBoot("map", () => this.ensureIndexes());
   }
@@ -47,8 +53,8 @@ export class MapRepository implements OnModuleInit {
    * QUIRK(mongodb): `{ field: null }` also matches a missing field, so an activation typed by hand with only
    * `enabled` is unbounded. WHY: sorted, with `_id` last, so replicas pick the same one of two overlapping sets.
    */
-  findActiveActivation(now: Date): Promise<ActivationDoc | null> {
-    return this.activations().findOne(
+  async findActiveActivation(now: Date): Promise<LiveActivation | null> {
+    const activation = await this.activations().findOne(
       {
         enabled: true,
         $and: [
@@ -56,8 +62,12 @@ export class MapRepository implements OnModuleInit {
           { $or: [{ activeUntil: null }, { activeUntil: { $gt: now } }] },
         ],
       },
-      { sort: { activeFrom: -1, _id: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+      { projection: { _id: 1, activeUntil: 1 }, sort: { activeFrom: -1, _id: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
     );
+    if (activation === null) return null;
+    const parsed = liveActivation.safeParse(activation);
+    if (!parsed.success) this.warnInvalidActivation(placeIdOf(activation));
+    return parsed.success ? parsed.data : null;
   }
 
   async listPlacesByLayerSetId(layerSetId: string): Promise<OverlayPlaceDoc[]> {
@@ -81,6 +91,15 @@ export class MapRepository implements OnModuleInit {
       );
     }
     return valid;
+  }
+
+  private warnInvalidActivation(activationId: string): void {
+    const ticket = this.invalidActivationThrottle.take(activationId);
+    if (!ticket) return;
+    logger.warn(
+      { event: "map.eventmap.activation_invalid", activationId, suppressed: ticket.suppressed },
+      "Live activation left out: it does not match the document schema",
+    );
   }
 
   private places(): Collection<MapPlaceDoc> {
