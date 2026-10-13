@@ -57,7 +57,7 @@ export const BASE_LAYERS = [
 
 export const EVENT_LAYER_STYLE = { width: 22, height: 30, captionTextSize: 9 } as const satisfies MapLayerStyle;
 
-// QUIRK(naver-map): a polygon without fillOpacity is opaque black. No outline: the 총학생회's choice, 2026-09-22.
+// QUIRK(naver-map): a polygon without fillOpacity is opaque black. No outline: the student council's choice, 2026-09-22.
 export const EVENT_SHAPE_STYLE = { fillOpacity: 0.18, outlineWidth: 0 } as const satisfies MapLayerStyle;
 
 // WHY: a minute: a stable URL cannot be immutable, and an ops correction must be live before anyone walks there.

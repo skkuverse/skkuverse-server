@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
+import { parseConfigFile } from "../../infra/config-file";
 import { isBrokenLinkAction } from "../ui.rules";
-import { parseConfigFile, type BannerImageRaw } from "../ui.schema";
+import type { BannerImageRaw } from "../ui.schema";
 import type { MiniAppRegistry } from "../ui.types";
 import { homeLayoutFile, type HomeLayoutRaw, type TileRaw } from "./ui-home.schema";
 
@@ -56,7 +57,7 @@ function registryIssues(layout: HomeLayoutRaw, registry: MiniAppRegistry): Array
 
 export function loadHomeLayout(raw: unknown, registry: MiniAppRegistry): Readonly<HomeLayoutRaw> {
   const schema = homeLayoutFile.superRefine((layout, ctx) => {
-    for (const issue of registryIssues(layout, registry)) ctx.addIssue({ code: "custom", ...issue });
+    for (const { path: at, message } of registryIssues(layout, registry)) ctx.addIssue({ code: "custom", path: at, message });
   });
   return Object.freeze(parseConfigFile("home layout", schema, raw));
 }
