@@ -175,6 +175,17 @@ describe("assertValidHomeLayout (via loadHomeLayout)", () => {
     // Act & Assert
     expect(() => loadHomeLayout(raw)).toThrow(/^home layout: /);
   });
+
+  it.each<[string, Record<string, unknown>, string]>([
+    ["an unregistered mini app tile", layout(grid(), grid({ id: "more", tiles: [{ kind: "miniapp", id: "nope" }] })), "sections.1.tiles.0.id"],
+    ["an unregistered feed", layout(grid(), { type: "miniapp_feed", id: "feed", miniAppId: "nope" }), "sections.1.miniAppId"],
+    ["a broken banner action", layout(carousel({ items: [{ type: "default" }, image({ actionValue: "nope" })] })), "sections.0.items.1.actionValue"],
+    ["a broken link tile action", layout(tiles({ kind: "game", id: "wave-run" }, link({ actionValue: "campus" }))), "sections.0.tiles.1.actionValue"],
+    ["a link icon of two emoji", layout(grid(), grid({ id: "more", tiles: [link({ icon: { kind: "emoji", emoji: "🗺️🗺️" } })] })), "sections.1.tiles.0.icon.emoji"],
+  ])("names the path of %s", (_label, raw, path) => {
+    // Act & Assert
+    expect(() => loadHomeLayout(raw)).toThrow(new RegExp(`^home layout: ${path.replaceAll(".", "\\.")}: `));
+  });
 });
 
 describe("miniapp_feed section", () => {

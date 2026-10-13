@@ -10,10 +10,11 @@ const CAMPUS_BANNERS_FILE = path.join(__dirname, "campus-banners.json");
 
 export function loadCampusBanners(raw: unknown, registry: MiniAppRegistry): Readonly<CampusBannerCarouselRaw> {
   const schema = campusBannersFile.superRefine((carousel, ctx) => {
-    for (const image of carousel.items.filter((item) => isBrokenLinkAction(item, registry))) {
+    carousel.items.forEach((image, i) => {
+      if (!isBrokenLinkAction(image, registry)) return;
       const message = `"${image.id}" actionValue "${image.actionValue}" is not valid for "${image.actionType}"`;
-      ctx.addIssue({ code: "custom", message });
-    }
+      ctx.addIssue({ code: "custom", path: ["items", i, "actionValue"], message });
+    });
   });
   return Object.freeze(parseConfigFile("campus banners", schema, raw));
 }
