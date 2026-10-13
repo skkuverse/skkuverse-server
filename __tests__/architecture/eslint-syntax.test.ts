@@ -12,6 +12,10 @@
  *     (or JSON). Specs state the values they expect and are left out. Its
  *     `ignores` lists the unmigrated files that broke it when it was added;
  *     import-boundaries.test.ts fails when one is fixed.
+ *   - `specs/fixed-clock`: a spec in a migrated scope (and a top-level
+ *     module's `__tests__/nest/<module>/` tests) never constructs the real
+ *     `Clock`; it passes a fixed fake, so one answer reads one instant and
+ *     does not depend on the day the test runs.
  */
 import { Linter } from "eslint";
 
@@ -128,5 +132,29 @@ describe("boundaries/literals", () => {
 
     // Act & Assert
     expect(ignores).toEqual(expect.arrayContaining(["src/**/*.spec.ts", "src/**/*.constants.ts"]));
+  });
+});
+
+describe("specs/fixed-clock", () => {
+  it("rejects the real Clock in a spec, and passes a fixed fake", () => {
+    // Arrange
+    const file = "src/map/layer-set/map-layer-set.service.spec.ts";
+
+    // Act
+    const real = lint("specs/fixed-clock", file, "const service = new MapLayerSetService(repository, new Clock());");
+    const fake = lint("specs/fixed-clock", file, "const clock: Clock = { now: () => NOW };\nnew MapLayerSetService(repository, clock);");
+
+    // Assert
+    expect(real).toHaveLength(1);
+    expect(fake).toEqual([]);
+  });
+
+  it("covers the migrated scopes' specs and route tests, not an unmigrated module's", () => {
+    // Arrange
+    const { files = [] } = block("specs/fixed-clock");
+
+    // Act & Assert
+    expect(files).toEqual(expect.arrayContaining(["src/map/**/*.spec.ts", "__tests__/nest/map/**/*.ts", "__tests__/nest/infra/**/*.ts"]));
+    expect(files.some((glob) => String(glob).includes("bus"))).toBe(false);
   });
 });
