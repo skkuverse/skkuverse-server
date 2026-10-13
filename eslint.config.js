@@ -489,6 +489,13 @@ module.exports = [
     },
   },
   {
+    // A nested ternary hides a decision: name it with an `if`, a lookup or a function.
+    // src/ only: __tests__/, scripts/ and this file still nest some.
+    name: "readability/src",
+    files: ["src/**/*.ts"],
+    rules: { "no-nested-ternary": "error" },
+  },
+  {
     // Size ratchets (ADR 0010, D9): each limit is today's worst file or
     // function, so nothing grows past it. Lower them as modules are migrated;
     // never raise one. max-lines counts comment lines (D10). Errors, not warnings.

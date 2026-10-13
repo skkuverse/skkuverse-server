@@ -85,9 +85,12 @@ export function toConfigWords(issue: z.core.$ZodRawIssue): string | undefined {
   return undefined;
 }
 
+function toPathSegment(key: PropertyKey, parentKey: PropertyKey | undefined): string {
+  if (typeof key === "number") return `[${key}]`;
+  return parentKey === "byCategory" ? `["${String(key)}"]` : `.${String(key)}`;
+}
+
 export function toConfigMessage(issue: Pick<z.core.$ZodIssue, "path" | "message">): string {
-  const at = issue.path
-    .map((key, i) => (typeof key === "number" ? `[${key}]` : issue.path[i - 1] === "byCategory" ? `["${String(key)}"]` : `.${String(key)}`))
-    .join("");
+  const at = issue.path.map((key, i) => toPathSegment(key, issue.path[i - 1])).join("");
   return `config${at} ${issue.message}`;
 }

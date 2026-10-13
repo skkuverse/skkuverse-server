@@ -1,4 +1,5 @@
 import { toWirePolygon } from "../../shared/ring-winding.util";
+import type { ItemPresentation } from "../layer-set/map-layer-set.schema";
 import type { MapPlaceDoc, PlaceAction } from "../map.document";
 import { toI18nText } from "../map.mapper";
 import { presentationFor } from "../map.rules";
@@ -30,6 +31,12 @@ function toOverlayActions(actions: readonly PlaceAction[], context: EventOverlay
   });
 }
 
+// WHY: `null` where the category is authored inert; a `tapChip` category runs that chip instead of opening a place.
+function toOverlayTap(presentation: ItemPresentation, placeId: string): OverlayBase["tap"] {
+  if (!presentation.interactive) return null;
+  return presentation.tapChip ? { kind: "chip", chipId: presentation.tapChip } : { kind: "event", placeId };
+}
+
 function toOverlayBase(doc: MapPlaceDoc, context: EventOverlayContext): OverlayBase {
   const { config, drops } = context;
   const presentation = presentationFor(config, doc.category);
@@ -49,12 +56,7 @@ function toOverlayBase(doc: MapPlaceDoc, context: EventOverlayContext): OverlayB
     order: doc.order,
     facets: facetsOf(doc, config, drops.facets),
     orderByOption: orderByOptionOf(doc, config, drops.facets),
-    // WHY: `null` where the category is authored inert; a `tapChip` category runs that chip instead of opening a place.
-    tap: !presentation.interactive
-      ? null
-      : presentation.tapChip
-        ? { kind: "chip", chipId: presentation.tapChip }
-        : { kind: "event", placeId: doc._id },
+    tap: toOverlayTap(presentation, doc._id),
   };
 }
 
