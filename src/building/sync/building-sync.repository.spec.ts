@@ -34,7 +34,8 @@ jest.mock("../../infra/logger", () => ({
 
 import logger from "../../infra/logger";
 import type { BuildingRawDoc } from "../building.document";
-import type { ApiId, BuildNo, SkkuId, SpaceCd } from "../building.types";
+import type { BuildNo, SkkuId, SpaceCd } from "../building.types";
+import type { ApiId } from "./building-sync.types";
 import { enrichBuilding } from "./building-sync.mapper";
 import { BuildingSyncRepository } from "./building-sync.repository";
 import type { SyncedSpace } from "./building-sync.types";
