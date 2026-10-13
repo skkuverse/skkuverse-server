@@ -2,7 +2,8 @@
  * BuildingCatalogRepository's driver calls: each read's filter and projection
  * (which FakeBuildingCatalogRepository follows; the building read is what keeps
  * `sync` out of /building/:skkuId), a building's connections found from either
- * end and read without their _id, and the boot indexes cover the
+ * end and read without their _id, parsed so a malformed one is left out and
+ * logged (connections are hand-authored), and the boot indexes cover the
  * catalog's reads (a building's spaces by buildNo, a connection from either
  * end). These pin the query objects; what they match against real data is for
  * a mongod spec (harden-test-suite D6).
@@ -10,6 +11,9 @@
 const find = jest.fn(() => ({ toArray: jest.fn().mockResolvedValue([]) }));
 const findOne = jest.fn((..._args: unknown[]) => Promise.resolve(null));
 const createIndex = jest.fn((..._args: unknown[]) => Promise.resolve("ok"));
+
+const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+jest.mock("../../infra/logger", () => mockLogger);
 
 jest.mock("../../infra/db", () => ({
   HOT_READ_MAX_TIME_MS: jest.requireActual("../../infra/db").HOT_READ_MAX_TIME_MS,
@@ -31,6 +35,7 @@ import { BuildingCatalogRepository } from "./building-catalog.repository";
 beforeEach(() => {
   find.mockClear();
   findOne.mockClear();
+  mockLogger.warn.mockClear();
 });
 
 describe("the reads' projections", () => {
@@ -78,6 +83,30 @@ describe("BuildingCatalogRepository.listConnectionsBySkkuId", () => {
       { $or: [{ "a.skkuId": 7 }, { "b.skkuId": 7 }] },
       { projection: { _id: 0, a: 1, b: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
     ]);
+  });
+
+  it("returns the connections that parse, as stored, and logs the rest once an hour", async () => {
+    // Arrange
+    const good = { a: { skkuId: 7, floor: { ko: "1층", en: "1F", zh: "1楼" } }, b: { skkuId: 9, floor: { ko: "2층", en: "2F" } } };
+    const noFloor = { a: { skkuId: 7 }, b: { skkuId: 9, floor: { ko: "2층", en: "2F" } } };
+    const badId = { a: { skkuId: 0, floor: { ko: "1층", en: "1F" } }, b: { skkuId: 7, floor: { ko: "2층", en: "2F" } } };
+    find.mockReturnValue({ toArray: jest.fn().mockResolvedValue([good, noFloor, badId]) });
+    const repository = new BuildingCatalogRepository();
+
+    // Act
+    const connections = await repository.listConnectionsBySkkuId(7 as SkkuId);
+    await repository.listConnectionsBySkkuId(7 as SkkuId);
+
+    // Assert
+    expect(connections).toEqual([good]);
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    expect(mockLogger.warn.mock.calls[0]?.[0]).toEqual({
+      event: "building.connections.invalid",
+      skkuId: 7,
+      count: 2,
+      invalid: ["#1: a.floor", "#2: a.skkuId"],
+      suppressed: 0,
+    });
   });
 });
 
