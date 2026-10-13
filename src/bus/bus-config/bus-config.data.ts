@@ -3,6 +3,7 @@ import { z } from "zod";
 import { pick, t } from "../../infra/i18n";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
+import type { BusGroup } from "./bus-config.types";
 import { HSSCStations } from "./hssc.stations";
 import { jongroRoutes, type JongroRoute } from "../registry/jongro-registry";
 import { buildStreetViewUrl } from "../schedule/naver-street-view";
@@ -374,8 +375,6 @@ function computeEtag(lang: SupportedLang = "ko"): string {
   etagCache.set(lang, etag);
   return etag;
 }
-
-type BusGroup = ReturnType<typeof getBusGroups>[number];
 
 /**
  * Returns a single group by id, or null if not found.
