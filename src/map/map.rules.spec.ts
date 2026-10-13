@@ -56,7 +56,7 @@ describe("chip lists", () => {
   });
 
   it("serves no chip row at all off-season", () => {
-    // BASE_CHIPS being empty is a decision, not an oversight — 분실물 was
+    // BASE_CHIPS being empty is a decision, not an oversight — lost and found was
     // removed and the campus SDUI still carries that action. Asserting the
     // count means putting a permanent chip back has to be deliberate.
     // Act & Assert
@@ -322,7 +322,7 @@ describe("webview actions", () => {
     );
 
     // Assert
-    // None ship today — 분실물 was the only one. The count is asserted rather
+    // None ship today — lost and found was the only one. The count is asserted rather
     // than the loop simply left to run empty, so this cannot rot into a
     // silently vacuous test: adding a webview chip fails here, and the
     // assertions below are already waiting for it. The rule itself lives in

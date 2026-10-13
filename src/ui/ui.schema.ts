@@ -2,7 +2,7 @@ import { z } from "zod";
 import { isMediaUrl } from "../infra/media-url";
 import { toWebviewUrl } from "../infra/webview-url";
 import { linkActionType } from "../shared/link-action.wire";
-import { MAX_ASPECT_RATIO, MAX_AUTO_ROTATE_SEC, MIN_ASPECT_RATIO, MIN_AUTO_ROTATE_SEC, isAutoRotateSec } from "./ui.constants";
+import { MAX_ASPECT_RATIO, MAX_AUTO_ROTATE_SEC, MIN_ASPECT_RATIO, MIN_AUTO_ROTATE_SEC } from "./ui.constants";
 
 const SLUG_RE = /^[a-z0-9_-]+$/;
 // WHY: a time without an offset would be read in the host's zone.
@@ -44,14 +44,7 @@ export const carouselFields = {
   aspectRatio: z.number().min(MIN_ASPECT_RATIO).max(MAX_ASPECT_RATIO),
   autoRotateSec: z
     .int()
-    .refine(isAutoRotateSec, `must be 0 (off) or a whole number from ${MIN_AUTO_ROTATE_SEC} to ${MAX_AUTO_ROTATE_SEC}`),
+    .refine((sec) => sec === 0 || (sec >= MIN_AUTO_ROTATE_SEC && sec <= MAX_AUTO_ROTATE_SEC), `must be 0 (off) or a whole number from ${MIN_AUTO_ROTATE_SEC} to ${MAX_AUTO_ROTATE_SEC}`),
 };
 
 export type BannerImageRaw = z.output<typeof bannerImageFile>;
-
-export function parseConfigFile<T>(label: string, schema: z.ZodType<T>, raw: unknown): T {
-  const parsed = schema.safeParse(raw);
-  if (parsed.success) return parsed.data;
-  const issues = parsed.error.issues.map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`);
-  throw new Error(`${label}: ${issues.join("; ")}`);
-}

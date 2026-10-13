@@ -87,4 +87,12 @@ describe("loadCampusBanners", () => {
     // Act & Assert
     expect(() => loadCampusBanners(raw)).toThrow(/^campus banners: items\.1\.actionValue: "b" actionValue "\/x" is not valid for "external"$/);
   });
+
+  it.each<[string, Record<string, unknown>, string]>([
+    ["an image id repeated", carousel({ items: [image(), image()] }), 'items.1.id: duplicate id "banner-a"'],
+    ["the carousel id repeated by an image", carousel({ items: [image({ id: "campus_banners" })] }), 'items.0.id: duplicate id "campus_banners"'],
+  ])("names where %s repeats", (_label, raw, issue) => {
+    // Act & Assert
+    expect(() => loadCampusBanners(raw)).toThrow(`campus banners: ${issue}`);
+  });
 });
