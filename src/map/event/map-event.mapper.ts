@@ -46,10 +46,10 @@ function toOverlayBase(doc: OverlayPlaceDoc, context: EventOverlayContext): Over
     campus: doc.campus,
     text: toI18nText(doc.title),
     subtitle: doc.subtitle ? toI18nText(doc.subtitle) : null,
-    hours: doc.hours.map((w) => ({
-      startAt: w.startAt.toISOString(),
-      endAt: w.endAt ? w.endAt.toISOString() : null,
-      label: w.label ? toI18nText(w.label) : null,
+    hours: doc.hours.map((openingWindow) => ({
+      startAt: openingWindow.startAt.toISOString(),
+      endAt: openingWindow.endAt ? openingWindow.endAt.toISOString() : null,
+      label: openingWindow.label ? toI18nText(openingWindow.label) : null,
     })),
     fields: doc.fields.map((f) => ({ label: toI18nText(f.label), value: toI18nText(f.value) })),
     actions: toOverlayActions(doc.actions, context),

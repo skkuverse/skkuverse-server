@@ -2,6 +2,6 @@
 // `toCssColor` prepends the `#`.
 const HEX6_RE = /^[0-9A-Fa-f]{6}$/;
 
-export function isHex6(s: unknown): boolean {
-  return typeof s === "string" && HEX6_RE.test(s);
+export function isHex6(value: unknown): boolean {
+  return typeof value === "string" && HEX6_RE.test(value);
 }

@@ -84,7 +84,7 @@ describe("spec mock rule applies as specified", () => {
     ["the Mongo client, through doMock", "src/x/x.service.spec.ts", 'jest.doMock("../infra/db");', ["jest.mock(src/infra/db)"]],
     ["axios", "src/x/x.mapper.spec.ts", 'jest.mock("axios", () => ({ get: jest.fn() }));', ["jest.mock(axios)"]],
     ["a spy on a repository's prototype", "src/x/x.service.spec.ts", 'jest.spyOn(XRepository.prototype, "findOne");', ["jest.spyOn(XRepository.prototype)"]],
-    ["a spy on a client's prototype", "__tests__/nest/x/x.routes.test.ts", 'jest.spyOn(XClient.prototype, "fetchList");', ["jest.spyOn(XClient.prototype)"]],
+    ["a spy on a client's prototype", "__tests__/nest/map/map.routes.test.ts", 'jest.spyOn(XClient.prototype, "fetchList");', ["jest.spyOn(XClient.prototype)"]],
   ])("refuses %s outside a boundary spec", (_case, file, source, problems) => {
     // Act & Assert
     expect(specMockViolations(file, source)).toEqual(problems.map((p) => `${file}: ${p}`));

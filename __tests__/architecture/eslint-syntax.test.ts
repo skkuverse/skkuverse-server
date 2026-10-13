@@ -14,6 +14,8 @@
  *     import-boundaries.test.ts fails when one is fixed.
  *   - `readability/src`: no comma operator in src/, parenthesised or not
  *     (`return (dropped.push(reason), null)` packs two steps into one).
+ *   - `naming/generic-names`: in a migrated scope's sources, no name that
+ *     says nothing on its own (`info`, `obj`, `tmp`, `helper`, `manager`).
  *   - `specs/fixed-clock`: a spec in a migrated scope (and a top-level
  *     module's `__tests__/nest/<module>/` tests) never constructs the real
  *     `Clock`; it passes a fixed fake, so one answer reads one instant and
@@ -175,5 +177,22 @@ describe("readability/src", () => {
     expect(packed).toHaveLength(1);
     expect(bare).toHaveLength(1);
     expect(separated).toEqual([]);
+  });
+});
+
+describe("naming/generic-names", () => {
+  it("rejects a name that says nothing on its own, and passes one with its domain noun", () => {
+    // Arrange
+    const file = "src/map/map.mapper.ts";
+
+    // Act
+    const generic = ["const info = 1;", "function f(obj: unknown) {}", "const tmp = [];", "const helper = () => 1;", "let manager;"].map(
+      (source) => lint("naming/generic-names", file, source).length,
+    );
+    const named = lint("naming/generic-names", file, "const placeInfo = 1; const upsertResult = 2;");
+
+    // Assert
+    expect(generic).toEqual([1, 1, 1, 1, 1]);
+    expect(named).toEqual([]);
   });
 });
