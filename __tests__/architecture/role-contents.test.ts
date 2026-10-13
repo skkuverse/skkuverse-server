@@ -13,8 +13,16 @@
  *
  * The allowlist holds the files of modules not yet migrated; a migrated scope
  * carries no entry (migrated-scopes.test.ts).
+ *
+ * A class role holds its class: in a migrated scope, a `.service`,
+ * `.controller`, `.repository`, `.client` or `.poller` file declares no
+ * top-level function, exported or not. A decision goes to `.rules`, a reshape
+ * to `.mapper`, Mongo syntax to `.query`, and a helper only the class uses
+ * becomes its private method. Constants and types may sit beside the class.
  */
 import ts from "typescript";
+import { expectExempted } from "../helpers/architecture/exemptions";
+import { inScope, migratedScopes } from "../helpers/architecture/migrated";
 import { parse } from "../helpers/architecture/names";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { filesUnder, readSource } from "../helpers/architecture/tree";
@@ -85,6 +93,16 @@ export function roleContentViolations(file: string, source: string): string[] {
   return functions.filter(isPredicate).map((fn) => `${file}: predicate ${fn.name}`);
 }
 
+const CLASS_ROLES_WITHOUT_FUNCTIONS = new Set(["service", "controller", "repository", "client", "poller"]);
+
+/** `<file>: top-level function <name>` for each function a class-role source declares beside its class. */
+export function classRoleFunctionViolations(file: string, source: string): string[] {
+  if (!file.startsWith("src/") || file.endsWith(".spec.ts")) return [];
+  if (!CLASS_ROLES_WITHOUT_FUNCTIONS.has(parse(file).parts.at(-1) ?? "")) return [];
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  return sf.statements.flatMap(localFunction).map((fn) => `${file}: top-level function ${fn.name}`);
+}
+
 describe("role contents rule applies as specified", () => {
   it.each([
     ["a .rules function declaration", "src/x/x.rules.ts", "export function toX(n: number): number { return n; }"],
@@ -139,5 +157,38 @@ describe("src/ .rules, .constants and .schema files", () => {
 
     // Act & Assert
     expectAllowlisted(RULE, files.flatMap((f) => roleContentViolations(f, readSource(f))));
+  });
+});
+
+describe("class role rule applies as specified", () => {
+  it.each([
+    ["a function declaration beside a service", "src/x/x.service.ts", "function reasonOf(): string { return ''; }\nexport class XService {}", ["reasonOf"]],
+    ["an exported arrow beside a controller", "src/x/x.controller.ts", "export const parseId = (raw: string) => Number(raw);\nexport class XController {}", ["parseId"]],
+    ["an arrow beside a repository", "src/x/x.repository.ts", "const idOf = (doc: unknown) => String(doc);\nexport class XRepository {}", ["idOf"]],
+  ])("fails %s", (_case, file, source, names) => {
+    // Act & Assert
+    expect(classRoleFunctionViolations(file, source)).toEqual(names.map((name) => `${file}: top-level function ${name}`));
+  });
+
+  it.each([
+    ["constants and types beside the class", "src/x/x.client.ts", "const URL = 'https://x';\ntype Raw = { a: 1 };\nexport class XClient { private toX() { return 1; } }"],
+    ["a function in another role", "src/x/x.rules.ts", "export function toX(): number { return 1; }"],
+    ["a spec", "src/x/x.service.spec.ts", "function arrange(): void {}"],
+  ])("passes %s", (_case, file, source) => {
+    // Act & Assert
+    expect(classRoleFunctionViolations(file, source)).toEqual([]);
+  });
+});
+
+describe("class-role files in migrated scopes", () => {
+  it("declare no function beside their class", () => {
+    // Arrange
+    const files = filesUnder("src").filter((f) => f.endsWith(".ts") && migratedScopes().some((scope) => inScope(f, scope)));
+
+    // Act
+    const violations = files.flatMap((f) => classRoleFunctionViolations(f, readSource(f)));
+
+    // Assert
+    expectExempted("class-role-functions", violations);
   });
 });

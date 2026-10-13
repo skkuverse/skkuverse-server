@@ -1,9 +1,11 @@
 /**
  * The Instagram links a sheet button may open (one profile segment that is
- * not one of Instagram's own pages, or a post), and the place kinds the app's
- * closed union accepts.
+ * not one of Instagram's own pages, or a post), the place kinds the app's
+ * closed union accepts, and which places have no sheet to open: a category
+ * authored inert, or one whose tap runs a chip.
  */
-import { isInstagramPostUrl, isInstagramProfileUrl, isNonBlankId, isPlaceKind } from "./map-event-details.rules";
+import { isInstagramPostUrl, isInstagramProfileUrl, isNonBlankId, isPlaceKind, sheetlessReason } from "./map-event-details.rules";
+import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 
 describe("isInstagramProfileUrl", () => {
   it.each([
@@ -40,5 +42,19 @@ describe("isNonBlankId and isPlaceKind", () => {
     expect(isNonBlankId(" ")).toBe(false);
     expect(isPlaceKind("foodTruck")).toBe(true);
     expect(isPlaceKind("concert")).toBe(false);
+  });
+});
+
+describe("sheetlessReason", () => {
+  const CONFIG = shippedLayerSet();
+
+  it.each([
+    ["a booth, which taps to its place", "booth", null],
+    ["a category the table does not list, which falls back to a tappable one", "전시", null],
+    ["a category authored interactive: false", "control_entry_label", 'p: category "control_entry_label" is not tappable'],
+    ["a category whose tap runs a chip", "food_zone", 'p: category "food_zone" taps to chip "eskara26_view_food"'],
+  ])("answers %s", (_case, category, reason) => {
+    // Act & Assert
+    expect(sheetlessReason({ _id: "p", category }, CONFIG)).toBe(reason);
   });
 });

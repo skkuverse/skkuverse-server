@@ -29,8 +29,6 @@ const SHEET_PLACE_FIELDS = { _id: 1, category: 1, location: 1, title: 1, hours: 
 // WHY: read every TTL, so a bad activation is reported hourly, not every five seconds.
 const INVALID_ACTIVATION_LOG_INTERVAL_MS = 60 * 60 * 1000;
 
-const placeIdOf = (doc: unknown): string => String((doc as { _id?: unknown })._id);
-
 @Injectable()
 export class MapRepository implements OnModuleInit {
   private readonly invalidActivationThrottle = createLogThrottle(INVALID_ACTIVATION_LOG_INTERVAL_MS);
@@ -66,13 +64,13 @@ export class MapRepository implements OnModuleInit {
     );
     if (activation === null) return null;
     const parsed = liveActivation.safeParse(activation);
-    if (!parsed.success) this.warnInvalidActivation(placeIdOf(activation));
+    if (!parsed.success) this.warnInvalidActivation(this.idOf(activation));
     return parsed.success ? parsed.data : null;
   }
 
   async listPlacesByLayerSetId(layerSetId: string): Promise<OverlayPlaceDoc[]> {
     const docs = await this.places().find({ layerSetId }, { projection: OVERLAY_PLACE_FIELDS, maxTimeMS: HOT_READ_MAX_TIME_MS }).toArray();
-    const { valid, invalid } = parseEach(docs, overlayPlaceDoc, placeIdOf);
+    const { valid, invalid } = parseEach(docs, overlayPlaceDoc, (doc) => this.idOf(doc));
     if (invalid.length > 0) {
       logger.warn({ event: "map.event_overlays.places_unrenderable", layerSetId, count: invalid.length }, "Places not renderable, skipped");
     }
@@ -83,7 +81,7 @@ export class MapRepository implements OnModuleInit {
     const docs = await this.places()
       .find({ layerSetId, detail: { $ne: null } }, { projection: SHEET_PLACE_FIELDS, maxTimeMS: HOT_READ_MAX_TIME_MS })
       .toArray();
-    const { valid, invalid } = parseEach(docs, sheetPlaceDoc, placeIdOf);
+    const { valid, invalid } = parseEach(docs, sheetPlaceDoc, (doc) => this.idOf(doc));
     if (invalid.length > 0) {
       logger.warn(
         { event: "map.event_details.places_unrenderable", layerSetId, count: invalid.length, invalid },
@@ -100,6 +98,10 @@ export class MapRepository implements OnModuleInit {
       { event: "map.eventmap.activation_invalid", activationId, suppressed: ticket.suppressed },
       "Live activation left out: it does not match the document schema",
     );
+  }
+
+  private idOf(doc: unknown): string {
+    return String((doc as { _id?: unknown })._id);
   }
 
   private places(): Collection<MapPlaceDoc> {

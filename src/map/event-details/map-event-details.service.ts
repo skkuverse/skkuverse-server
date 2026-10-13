@@ -1,21 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { createCachedLoader } from "../../infra/cached-loader";
 import logger from "../../infra/logger";
-import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "../map.constants";
-import type { SheetPlaceDoc } from "../map.document";
 import { MapRepository } from "../map.repository";
-import { presentationFor } from "../map.rules";
 import { toPlaceDetail } from "./map-event-details.mapper";
+import { sheetlessReason } from "./map-event-details.rules";
 import type { EventPlaceDetails, PlaceDetail } from "./map-event-details.wire";
-
-// WHY: only a place the overlay route serves, on a category whose tap opens a place, has a sheet to open.
-function sheetlessReason(doc: SheetPlaceDoc, config: EventMapConfig): string | null {
-  const presentation = presentationFor(config, doc.category);
-  if (!presentation.interactive) return `${doc._id}: category "${doc.category}" is not tappable`;
-  return presentation.tapChip ? `${doc._id}: category "${doc.category}" taps to chip "${presentation.tapChip}"` : null;
-}
 
 @Injectable()
 export class MapEventDetailsService {
