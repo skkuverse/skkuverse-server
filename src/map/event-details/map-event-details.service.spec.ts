@@ -1,6 +1,7 @@
 /**
  * The place-detail projection — `GET /map/overlays/event/details`, through
- * MapEventDetailsService over the real MapRepository (Mongo collections stubbed).
+ * MapEventDetailsService over FakeMapRepository; the sheet read's query is
+ * pinned in map.repository.spec.ts.
  *
  * The importer refuses a malformed detail, so on the happy path every check in
  * the producer passes. These tests are about the other path: a hand edit in
@@ -10,47 +11,49 @@
  * below is therefore one block, one action, or at worst one detail.
  */
 
-// The two collections the repository opens: `places` through mockPlaces, so a
-// test can say no place was read, and `activations` through
-// mockFindActiveActivation.
-const mockPlaces = jest.fn();
-const mockFindActiveActivation = jest.fn();
-jest.mock("../../infra/mongo", () => ({
-  ensureIndexesAtBoot: jest.fn(async () => undefined),
-  mongoCollection: (_db: string, name: string) =>
-    name === "places" ? mockPlaces() : { findOne: (...args: unknown[]) => mockFindActiveActivation(...args) },
-}));
-
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
 
 import fs from "fs";
 import path from "path";
-import { Clock } from "../../infra/clock";
-import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
+import type { Clock } from "../../infra/clock";
 import { MEDIA_ORIGIN } from "../../infra/origins";
 import { MiniAppsService } from "../../miniapps/miniapps.service";
 import { MapEventService } from "../event/map-event.service";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
-import { MapRepository } from "../map.repository";
+import type { MapPlaceDoc } from "../map.document";
+import type { MapRepository } from "../map.repository";
 import { MapEventDetailsService } from "./map-event-details.service";
 import { logText } from "../../../__tests__/helpers/log-text";
+import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
+import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 
 // scripts/ is plain CommonJS excluded from tsconfig, so this is a require.
 const { parsePlacesFile } = require("../../../scripts/lib/map-places-file");
 const REAL_FILE = path.join(__dirname, "../../../scripts/data/eskara-2026-places.json");
 
-const findActiveActivation = mockFindActiveActivation as jest.MockedFunction<MapRepository["findActiveActivation"]>;
+const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
+
+// The live activation, stated per test; the fake answers with it.
+const mockFindActiveActivation = jest.fn<ReturnType<MapRepository["findActiveActivation"]>, [Date]>();
+const findActiveActivation = mockFindActiveActivation;
+
+let repository: FakeMapRepository;
+// The sheet read, so a test can say no place was read.
+let mockPlaces: jest.SpyInstance<ReturnType<MapRepository["listPlacesWithDetailByLayerSetId"]>, [string]>;
 
 // Each service caches the event read path; each test starts with fresh ones.
 let detailsService: MapEventDetailsService;
 let eventService: MapEventService;
 beforeEach(() => {
   findActiveActivation.mockReset();
-  const repository = new MapRepository();
-  const layerSet = new MapLayerSetService(repository, new Clock());
-  detailsService = new MapEventDetailsService(repository, layerSet);
-  eventService = new MapEventService(repository, layerSet, new MiniAppsService());
+  repository = new FakeMapRepository();
+  repository.findActiveActivation = mockFindActiveActivation;
+  mockPlaces = jest.spyOn(repository, "listPlacesWithDetailByLayerSetId");
+  const real = asReal<MapRepository>(repository);
+  const layerSet = new MapLayerSetService(real, CLOCK);
+  detailsService = new MapEventDetailsService(real, layerSet);
+  eventService = new MapEventService(real, layerSet, new MiniAppsService());
 });
 const getEventPlaceDetails = () => detailsService.getEventPlaceDetails();
 const getEventOverlays = () => eventService.getEventOverlays();
@@ -58,9 +61,8 @@ const getEventOverlays = () => eventService.getEventOverlays();
 const PHOTO = `${MEDIA_ORIGIN}/eskara-2026/food-trucks/truck-x/01-abcdef12.jpg`;
 
 function arrange(docs: unknown[]) {
-  const find = jest.fn().mockReturnValue({ toArray: jest.fn().mockResolvedValue(docs) });
-  mockPlaces.mockReturnValue({ find } as never);
-  return find;
+  repository.places = docs as MapPlaceDoc[];
+  return mockPlaces;
 }
 
 function place(detail: unknown, over: Record<string, unknown> = {}) {
@@ -131,7 +133,7 @@ describe("MapEventDetailsService.getEventPlaceDetails", () => {
     expect(mockPlaces).not.toHaveBeenCalled();
   });
 
-  it("asks Mongo for the live set's places that carry a detail, and only those", async () => {
+  it("asks the repository for the live set's places that carry a sheet", async () => {
     // Arrange
     const find = arrange([]);
 
@@ -139,12 +141,8 @@ describe("MapEventDetailsService.getEventPlaceDetails", () => {
     await getEventPlaceDetails();
 
     // Assert
-    // `$ne: null` also excludes a document with no `detail` key at all — one
-    // written before the field existed.
-    expect(find).toHaveBeenCalledWith(
-      { layerSetId: "eskara-2026", detail: { $ne: null } },
-      { maxTimeMS: HOT_READ_MAX_TIME_MS },
-    );
+    // The `detail: { $ne: null }` filter is pinned in map.repository.spec.ts.
+    expect(find).toHaveBeenCalledWith("eskara-2026");
   });
 
   it("projects a detail onto the app's PlaceDetail, keyed by the tap id", async () => {
@@ -374,13 +372,8 @@ describe("the committed sheet, importer to wire", () => {
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
-    // Applies the one filter the producer relies on Mongo for.
-    const find = jest.fn((filter: { detail?: unknown }) => ({
-      toArray: jest
-        .fn()
-        .mockResolvedValue(filter.detail ? docs.filter((d: { detail: unknown }) => d.detail !== null) : docs),
-    }));
-    mockPlaces.mockReturnValue({ find } as never);
+    // The fake applies the one filter the producer relies on Mongo for.
+    repository.places = docs;
 
     // Act
     const { details } = await getEventPlaceDetails();
