@@ -1,10 +1,12 @@
 /**
  * The on-disk pieces home and campus share: a captured banner image parses and
- * a copy missing each required field does not; and a failed parse throws one
+ * a copy missing each required field does not; a carousel rotates never (0)
+ * or every 2 to 30 whole seconds; and a failed parse throws one
  * line that starts with the file's label and names each path.
  */
 import { z } from "zod";
-import { bannerImageFile, parseConfigFile } from "./ui.schema";
+import { MAX_AUTO_ROTATE_SEC, MIN_AUTO_ROTATE_SEC } from "./ui.constants";
+import { bannerImageFile, carouselFields, parseConfigFile } from "./ui.schema";
 
 const CAPTURED_IMAGE = {
   type: "image",
@@ -36,6 +38,32 @@ describe("bannerImageFile", () => {
 
     // Act & Assert
     expect(bannerImageFile.safeParse(rest).success).toBe(true);
+  });
+});
+
+describe("carouselFields", () => {
+  it.each([
+    [0, true],
+    [MIN_AUTO_ROTATE_SEC - 1, false],
+    [MIN_AUTO_ROTATE_SEC, true],
+    [MIN_AUTO_ROTATE_SEC + 1, true],
+    [MAX_AUTO_ROTATE_SEC - 1, true],
+    [MAX_AUTO_ROTATE_SEC, true],
+    [MAX_AUTO_ROTATE_SEC + 1, false],
+    [2.5, false],
+  ])("takes an autoRotateSec of %p: %p", (sec, expected) => {
+    // Act & Assert
+    expect(carouselFields.autoRotateSec.safeParse(sec).success).toBe(expected);
+  });
+
+  it("names the allowed rotations when it refuses one", () => {
+    // Act
+    const parsed = carouselFields.autoRotateSec.safeParse(MAX_AUTO_ROTATE_SEC + 1);
+
+    // Assert
+    expect(parsed.error?.issues.map((issue) => issue.message)).toEqual([
+      `must be 0 (off) or a whole number from ${MIN_AUTO_ROTATE_SEC} to ${MAX_AUTO_ROTATE_SEC}`,
+    ]);
   });
 });
 
