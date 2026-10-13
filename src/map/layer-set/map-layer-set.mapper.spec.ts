@@ -9,14 +9,14 @@
  */
 import fs from "fs";
 import path from "path";
-import { assertValidConfig } from "./map-layer-set.config";
+import { parseLayerSetFile } from "./map-layer-set.config";
 import { BASE_LAYERS } from "../map.constants";
 import { assertValidChipSpecs, validateChipSpecs } from "../map.rules";
 import { BASE_CHIPS } from "./map-layer-set.constants";
 import { eventChipSpecs, eventLayerSpecs, resetChip, toConfigMessage, toConfigWords, toOptionWindow } from "./map-layer-set.mapper";
 import type { LayerSet } from "./map-layer-set.schema";
 
-const CONFIG = assertValidConfig(JSON.parse(fs.readFileSync(path.join(__dirname, "eskara-2026.json"), "utf8")));
+const CONFIG = parseLayerSetFile(JSON.parse(fs.readFileSync(path.join(__dirname, "eskara-2026.json"), "utf8")));
 
 /** What /map/config serves while this festival is live. */
 const CATALOGUE = [...BASE_LAYERS, ...eventLayerSpecs(CONFIG)];
