@@ -79,4 +79,12 @@ describe("assertValidCampusCarousel (via loadCampusBanners)", () => {
     // Act & Assert
     expect(() => loadCampusBanners(raw)).toThrow(/^campus banners: /);
   });
+
+  it("names the path of a broken banner action", () => {
+    // Arrange
+    const raw = carousel({ items: [image(), image({ id: "b", actionType: "external", actionValue: "/x" })] });
+
+    // Act & Assert
+    expect(() => loadCampusBanners(raw)).toThrow(/^campus banners: items\.1\.actionValue: "b" actionValue "\/x" is not valid for "external"$/);
+  });
 });
