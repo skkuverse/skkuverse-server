@@ -3,6 +3,7 @@ import type { I18n } from "../../infra/types";
 import { isAbsoluteHttpsUrl } from "../../shared/link-target.util";
 import { isRecord } from "../../shared/object.util";
 import type { SheetPlaceDoc } from "../map.document";
+import { PLACE_BLOCK_TYPES, PLACE_DETAIL_ACTION_TYPES } from "../map.constants";
 import { toI18nText } from "../map.mapper";
 import { mediaUrl } from "../map.schema";
 import type { I18nText } from "../map.wire";
@@ -35,7 +36,7 @@ function toTableRow(raw: unknown): { label: I18nText; value: I18nText } | null {
   return label && value ? { label, value } : null;
 }
 
-const BLOCK_READERS: Readonly<Record<string, (raw: Raw, id: string, title: I18nText | null) => Block | null>> = {
+const BLOCK_READERS: Readonly<Record<(typeof PLACE_BLOCK_TYPES)[number], (raw: Raw, id: string, title: I18nText | null) => Block | null>> = {
   text: (raw, id, title) => {
     const body = textOrNull(raw.body);
     return body ? { type: "text", id, title, body } : null;
@@ -65,9 +66,9 @@ function drop(dropped: string[], reason: string): null {
 function toBlock(raw: unknown, where: string, dropped: string[]): Block | null {
   if (!isRecord(raw) || !isNonBlankId(raw.id)) return drop(dropped, `${where}: not a block with an id`);
   const at = `${where}.${raw.id}`;
-  const read = Object.hasOwn(BLOCK_READERS, String(raw.type)) ? BLOCK_READERS[String(raw.type)] : undefined;
-  if (!read) return drop(dropped, `${at}: unknown block type "${String(raw.type)}"`);
-  const block = read(raw, raw.id, textOrNull(raw.title));
+  const type = PLACE_BLOCK_TYPES.find((known) => known === String(raw.type));
+  if (!type) return drop(dropped, `${at}: unknown block type "${String(raw.type)}"`);
+  const block = BLOCK_READERS[type](raw, raw.id, textOrNull(raw.title));
   if (block) return block;
   dropped.push(raw.type === "image" ? `${at}: image url "${String(raw.url)}" is not on the media host` : `${at}: ${String(raw.type)} block is missing a required field`);
   return null;
@@ -88,8 +89,9 @@ function toDetailAction(raw: unknown, where: string, dropped: string[]): DetailA
   const at = `${where}.${raw.id}`;
   const label = textOrNull(raw.label);
   if (!label) return drop(dropped, `${at}: label is blank in every language`);
-  if (raw.type === "instagram") return toInstagramAction(raw, { id: raw.id, label, at }, dropped);
-  if (raw.type !== "link") return drop(dropped, `${at}: unknown action type "${String(raw.type)}"`);
+  const type = PLACE_DETAIL_ACTION_TYPES.find((known) => known === raw.type);
+  if (!type) return drop(dropped, `${at}: unknown action type "${String(raw.type)}"`);
+  if (type === "instagram") return toInstagramAction(raw, { id: raw.id, label, at }, dropped);
   if (isAbsoluteHttpsUrl(raw.url)) return { type: "link", id: raw.id, label, url: raw.url };
   return drop(dropped, `${at}: url "${String(raw.url)}" is not an absolute https URL`);
 }

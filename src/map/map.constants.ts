@@ -7,7 +7,7 @@ export const EVENT_CACHE_TTL_MS = 5_000;
 export const EVENT_STALE_WINDOW_MS = 10 * 60_000;
 
 // WHY: one route per data source; the app keys its overlay cache on the string, so layers sharing it cost one fetch.
-export const CAMPUS_OVERLAYS_ENDPOINT = "/map/overlays/campus";
+const CAMPUS_OVERLAYS_ENDPOINT = "/map/overlays/campus";
 export const EVENT_OVERLAYS_ENDPOINT = "/map/overlays/event";
 
 export const LOCATION_ACCURACIES = ["exact", "area"] as const;
