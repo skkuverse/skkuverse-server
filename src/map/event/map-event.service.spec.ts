@@ -20,7 +20,6 @@ jest.mock("../../infra/logger", () => mockLogger);
 
 import type { Clock } from "../../infra/clock";
 import { MiniAppsService } from "../../miniapps/miniapps.service";
-import { getLayerSetConfig } from "../layer-set/map-layer-set.config";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS } from "../map.constants";
 import type { MapPlaceDoc } from "../map.document";
@@ -30,6 +29,7 @@ import { MapEventService } from "./map-event.service";
 import { logText } from "../../../__tests__/helpers/log-text";
 import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 
 const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
 
@@ -60,9 +60,7 @@ beforeEach(() => {
   clearEventOverlaysCache();
 });
 
-const loaded = getLayerSetConfig("eskara-2026");
-if (!loaded?.config) throw new Error(`eskara-2026 failed to load: ${loaded?.error}`);
-const CONFIG = loaded.config;
+const CONFIG = shippedLayerSet();
 
 const DAY_1 = {
   startAt: new Date("2026-10-01T09:00:00.000Z"),
