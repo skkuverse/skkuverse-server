@@ -153,7 +153,7 @@ const CLOCK_SYNTAX = [
 // rule, registered again by a local plugin, so a block that sets one leaves the others alone.
 const CORE_RESTRICTED_SYNTAX = require("eslint/use-at-your-own-risk").builtinRules.get("no-restricted-syntax");
 const SRC_SYNTAX_PLUGIN = {
-  rules: { "zod-issues": CORE_RESTRICTED_SYNTAX, literals: CORE_RESTRICTED_SYNTAX },
+  rules: { "zod-issues": CORE_RESTRICTED_SYNTAX, literals: CORE_RESTRICTED_SYNTAX, "spec-clock": CORE_RESTRICTED_SYNTAX },
 };
 
 // A zod issue names where it is (ADR 0010, D5): parseConfigFile and the boot error print each
@@ -182,6 +182,15 @@ const LITERAL_SYNTAX = [
   {
     selector: `:matches(Literal[value=${WEBVIEW_PATH}], TemplateLiteral > TemplateElement:first-child[value.raw=${WEBVIEW_PATH}])`,
     message: "A web view path (/skku/…) lives in a *.constants.ts file: import it by name.",
+  },
+];
+
+// A spec in a migrated scope passes a fixed clock (tests.md, "What to double"): the real Clock makes the
+// answer depend on the day the test runs, and lets one read see two different instants.
+const SPEC_CLOCK_SYNTAX = [
+  {
+    selector: "NewExpression[callee.name='Clock']",
+    message: "Pass a fixed fake clock (`const clock: Clock = { now: () => NOW }`), not the real Clock.",
   },
 ];
 
@@ -382,6 +391,15 @@ function migratedSyntaxBlocks() {
     );
   }
   return blocks;
+}
+
+/** The specs of the migrated scope: `src/` specs, and a top-level module's `__tests__/nest/<module>/` tests. */
+function migratedSpecGlobs() {
+  return MIGRATED_SCOPES.flatMap((scope) => {
+    if (!scope.endsWith("/")) return [scope.replace(/\.ts$/, ".spec.ts")];
+    const topLevel = /^src\/([^/]+)\/$/.exec(scope);
+    return [`${scope}**/*.spec.ts`, ...(topLevel ? [`__tests__/nest/${topLevel[1]}/**/*.ts`] : [])];
+  });
 }
 
 function migratedFunctionBlock() {
@@ -697,6 +715,12 @@ module.exports = [
     ignores: ["src/**/*.spec.ts"],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
     rules: { "src-syntax/zod-issues": ["error", ...ADD_ISSUE_SYNTAX] },
+  },
+  {
+    name: "specs/fixed-clock",
+    files: migratedSpecGlobs(),
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: { "src-syntax/spec-clock": ["error", ...SPEC_CLOCK_SYNTAX] },
   },
   {
     // A spec states the values it expects, so it is left out.
