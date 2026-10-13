@@ -1,6 +1,6 @@
 import type { SupportedLang } from "../../infra/types";
 import { toBannerCarousel, toLocalizedText } from "../ui.mapper";
-import type { LogoResolver } from "../ui.types";
+import type { LogoResolver } from "./ui-home.types";
 import type { HomeLayoutRaw, TileRaw } from "./ui-home.schema";
 import type { HomeLayout } from "./ui-home.wire";
 

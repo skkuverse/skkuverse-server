@@ -5,8 +5,7 @@ import logger from "../../infra/logger";
 import { issuePaths, parseEach } from "../../shared/zod-list.util";
 import type { BuildingAttachment, BuildingRawDoc } from "../building.document";
 import { SKKU_CAMPUS_CODE } from "../building.constants";
-import { toApiId } from "../building.rules";
-import { shouldRejectPayload } from "./building-sync.rules";
+import { shouldRejectPayload, toApiId } from "./building-sync.rules";
 import {
   skkuBuildInfoAttachment,
   skkuBuildInfoFloor,
@@ -34,76 +33,6 @@ interface PayloadList<T> {
   keyField: string;
 }
 
-/** WHY: a wrong response shape (a renamed or missing list) breaks every item at once, so it throws. */
-function parseResponse<T>(schema: z.ZodType<T>, data: unknown, where: string): T {
-  const parsed = schema.safeParse(data);
-  if (!parsed.success) {
-    throw new Error(`campusMap.do ${where} is not the expected shape: ${issuePaths(parsed.error)}`);
-  }
-  return parsed.data;
-}
-
-function itemKey(item: unknown, keyField: string, index: number): string {
-  const key = typeof item === "object" && item !== null ? (item as Record<string, unknown>)[keyField] : undefined;
-  return typeof key === "number" || (typeof key === "string" && key !== "") ? String(key) : `#${index}`;
-}
-
-function parseItems<T>(list: PayloadList<T>): T[] {
-  const { valid, invalid } = parseEach(list.items, list.schema, (item, index) => itemKey(item, list.keyField, index));
-  const total = list.items.length;
-  if (invalid.length > 0) {
-    logger.warn(
-      {
-        event: "building.sync.payload_items_dropped",
-        source: list.source,
-        scope: list.scope,
-        dropped: invalid.length,
-        total,
-        invalid: invalid.slice(0, MAX_LOGGED_INVALID_ITEMS),
-      },
-      "SKKU payload items left out: they do not match the schema",
-    );
-  }
-  if (shouldRejectPayload({ total, invalid: invalid.length })) {
-    throw new Error(`campusMap.do ${list.source} (${list.scope}) returned ${invalid.length} invalid items of ${total}`);
-  }
-  return valid;
-}
-
-function imageUrl(filePath: string | undefined, encodeNm: string | undefined): string | null {
-  if (!filePath || !encodeNm) return null;
-  return `https://www.skku.edu${filePath}${encodeNm}`;
-}
-
-function text(ko: string | undefined, en: string | undefined): BilingualText {
-  return { ko: ko || "", en: en || "" };
-}
-
-/** QUIRK(skku): a space without an English name omits it or sends the literal string "undefined". */
-function spaceName(ko: string | undefined, en: string | undefined): BilingualText {
-  return { ko: ko || "", en: en === "undefined" ? "" : en || "" };
-}
-
-function toRawDoc(buildItem: SkkuBuildListItem, campus: Campus): Omit<BuildingRawDoc, "_id"> {
-  const lat = parseFloat(buildItem.latitude);
-  const lng = parseFloat(buildItem.longtitude);
-
-  return {
-    buildNo: buildItem.buildNo || null,
-    campus,
-    name: text(buildItem.buildNm, buildItem.buildNmEng),
-    description: text(buildItem.krText, buildItem.enText),
-    location: { type: "Point", coordinates: [lng, lat] },
-    image: { url: imageUrl(buildItem.filePath, buildItem.encodeNm), filename: buildItem.encodeNm || null },
-    accessibility: {
-      elevator: buildItem.handicappedElevatorYn === "Y",
-      toilet: buildItem.handicappedToiletYn === "Y",
-    },
-    skkuCreatedAt: buildItem.createDt || null,
-    skkuUpdatedAt: buildItem.updateDt || null,
-  };
-}
-
 @Injectable()
 export class BuildingSyncClient {
   async fetchBuildList(campus: Campus): Promise<ListedBuilding[]> {
@@ -111,12 +40,12 @@ export class BuildingSyncClient {
       params: { mode: "buildList", srSearchValue: "", campusCd: SKKU_CAMPUS_CODE[campus] },
       timeout: REQUEST_TIMEOUT_MS,
     });
-    const { buildItems } = parseResponse(skkuBuildListResponse, data, `buildList (${campus})`);
-    const valid = parseItems({ source: "buildList", scope: campus, items: buildItems, schema: skkuBuildListItem, keyField: "id" });
+    const { buildItems } = this.parseResponse(skkuBuildListResponse, data, `buildList (${campus})`);
+    const valid = this.parseItems({ source: "buildList", scope: campus, items: buildItems, schema: skkuBuildListItem, keyField: "id" });
     return valid.map((buildItem) => ({
       skkuId: buildItem.id,
       apiId: toApiId(buildItem.id),
-      doc: toRawDoc(buildItem, campus),
+      doc: this.toRawDoc(buildItem, campus),
     }));
   }
 
@@ -127,8 +56,8 @@ export class BuildingSyncClient {
       timeout: REQUEST_TIMEOUT_MS,
     });
     const scope = `buildNo ${doc.buildNo}`;
-    const { attachItem, floorItem } = parseResponse(skkuBuildInfoResponse, data, `buildInfo (${scope})`);
-    const attachments: BuildingAttachment[] = parseItems({
+    const { attachItem, floorItem } = this.parseResponse(skkuBuildInfoResponse, data, `buildInfo (${scope})`);
+    const attachments: BuildingAttachment[] = this.parseItems({
       source: "buildInfo attachItem",
       scope,
       items: attachItem,
@@ -136,11 +65,11 @@ export class BuildingSyncClient {
       keyField: "id",
     }).map((photo) => ({
       id: photo.id,
-      url: imageUrl(photo.file_path, photo.encode_nm),
+      url: this.toImageUrl(photo.file_path, photo.encode_nm),
       filename: photo.file_nm || null,
       alt: photo.image_alt || "",
     }));
-    const spaces: SyncedSpace[] = parseItems({
+    const spaces: SyncedSpace[] = this.parseItems({
       source: "buildInfo floorItem",
       scope,
       items: floorItem,
@@ -150,8 +79,8 @@ export class BuildingSyncClient {
       spaceCd: floorSpace.space_cd,
       buildNo: doc.buildNo,
       campus: doc.campus,
-      floor: text(floorSpace.floor_nm, floorSpace.floor_nm_eng),
-      name: spaceName(floorSpace.spcae_nm, floorSpace.spcae_nm_eng),
+      floor: this.toBilingualText(floorSpace.floor_nm, floorSpace.floor_nm_eng),
+      name: this.toSpaceName(floorSpace.spcae_nm, floorSpace.spcae_nm_eng),
       buildingName: doc.name,
       conspaceCd: null,
     }));
@@ -163,16 +92,86 @@ export class BuildingSyncClient {
       params: { mode: "spaceList", srSearchValue: "", campusCd: SKKU_CAMPUS_CODE[campus] },
       timeout: REQUEST_TIMEOUT_MS,
     });
-    const { items } = parseResponse(skkuSpaceListResponse, data, `spaceList (${campus})`);
-    const valid = parseItems({ source: "spaceList", scope: campus, items, schema: skkuSpaceListItem, keyField: "spaceCd" });
+    const { items } = this.parseResponse(skkuSpaceListResponse, data, `spaceList (${campus})`);
+    const valid = this.parseItems({ source: "spaceList", scope: campus, items, schema: skkuSpaceListItem, keyField: "spaceCd" });
     return valid.map((spaceItem) => ({
       spaceCd: spaceItem.spaceCd,
       buildNo: spaceItem.buildNo,
       campus,
-      floor: text(spaceItem.floorNm, spaceItem.floorNmEng),
-      name: spaceName(spaceItem.spcaeNm, spaceItem.spcaeNmEng),
-      buildingName: text(spaceItem.buildNm, spaceItem.buildNmEng),
+      floor: this.toBilingualText(spaceItem.floorNm, spaceItem.floorNmEng),
+      name: this.toSpaceName(spaceItem.spcaeNm, spaceItem.spcaeNmEng),
+      buildingName: this.toBilingualText(spaceItem.buildNm, spaceItem.buildNmEng),
       conspaceCd: spaceItem.conspaceCd || null,
     }));
+  }
+
+  /** WHY: a wrong response shape (a renamed or missing list) breaks every item at once, so it throws. */
+  private parseResponse<T>(schema: z.ZodType<T>, data: unknown, where: string): T {
+    const parsed = schema.safeParse(data);
+    if (!parsed.success) {
+      throw new Error(`campusMap.do ${where} is not the expected shape: ${issuePaths(parsed.error)}`);
+    }
+    return parsed.data;
+  }
+
+  private itemKey(item: unknown, keyField: string, index: number): string {
+    const key = typeof item === "object" && item !== null ? (item as Record<string, unknown>)[keyField] : undefined;
+    return typeof key === "number" || (typeof key === "string" && key !== "") ? String(key) : `#${index}`;
+  }
+
+  private parseItems<T>(list: PayloadList<T>): T[] {
+    const { valid, invalid } = parseEach(list.items, list.schema, (item, index) => this.itemKey(item, list.keyField, index));
+    const total = list.items.length;
+    if (invalid.length > 0) {
+      logger.warn(
+        {
+          event: "building.sync.payload_items_dropped",
+          source: list.source,
+          scope: list.scope,
+          dropped: invalid.length,
+          total,
+          invalid: invalid.slice(0, MAX_LOGGED_INVALID_ITEMS),
+        },
+        "SKKU payload items left out: they do not match the schema",
+      );
+    }
+    if (shouldRejectPayload({ total, invalid: invalid.length })) {
+      throw new Error(`campusMap.do ${list.source} (${list.scope}) returned ${invalid.length} invalid items of ${total}`);
+    }
+    return valid;
+  }
+
+  private toImageUrl(filePath: string | undefined, encodeNm: string | undefined): string | null {
+    if (!filePath || !encodeNm) return null;
+    return `https://www.skku.edu${filePath}${encodeNm}`;
+  }
+
+  private toBilingualText(ko: string | undefined, en: string | undefined): BilingualText {
+    return { ko: ko || "", en: en || "" };
+  }
+
+  /** QUIRK(skku): a space without an English name omits it or sends the literal string "undefined". */
+  private toSpaceName(ko: string | undefined, en: string | undefined): BilingualText {
+    return { ko: ko || "", en: en === "undefined" ? "" : en || "" };
+  }
+
+  private toRawDoc(buildItem: SkkuBuildListItem, campus: Campus): Omit<BuildingRawDoc, "_id"> {
+    const lat = parseFloat(buildItem.latitude);
+    const lng = parseFloat(buildItem.longtitude);
+
+    return {
+      buildNo: buildItem.buildNo || null,
+      campus,
+      name: this.toBilingualText(buildItem.buildNm, buildItem.buildNmEng),
+      description: this.toBilingualText(buildItem.krText, buildItem.enText),
+      location: { type: "Point", coordinates: [lng, lat] },
+      image: { url: this.toImageUrl(buildItem.filePath, buildItem.encodeNm), filename: buildItem.encodeNm || null },
+      accessibility: {
+        elevator: buildItem.handicappedElevatorYn === "Y",
+        toilet: buildItem.handicappedToiletYn === "Y",
+      },
+      skkuCreatedAt: buildItem.createDt || null,
+      skkuUpdatedAt: buildItem.updateDt || null,
+    };
   }
 }

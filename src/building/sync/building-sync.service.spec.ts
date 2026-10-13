@@ -29,7 +29,8 @@ import { FakeBuildingSyncRepository } from "../../../__tests__/helpers/fakes/bui
 import { Clock } from "../../infra/clock";
 import type { BuildingDoc, BuildingRawDoc } from "../building.document";
 import { BuildingRepository } from "../building.repository";
-import type { ApiId, BuildNo, Campus, SkkuId, SpaceCd } from "../building.types";
+import type { BuildNo, Campus, SkkuId, SpaceCd } from "../building.types";
+import type { ApiId } from "./building-sync.types";
 import { BuildingSyncClient } from "./building-sync.client";
 import { ENRICH_VERSION, enrichBuilding } from "./building-sync.mapper";
 import { BuildingSyncRepository } from "./building-sync.repository";

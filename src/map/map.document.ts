@@ -4,9 +4,6 @@ import type { OverlayGeometry } from "../shared/geojson.types";
 import type { LinkActionType } from "../shared/link-action.wire";
 import type { PLACE_KINDS } from "./map.constants";
 
-// CONTRACT(scripts): scripts/lib/map-places-file.js and scripts/lib/eventmap-db.js write these documents.
-// SEE: docs/reference/event-places.md §2 for each field and who edits it.
-
 export interface PlaceAction {
   id: string;
   label: I18n;
@@ -42,6 +39,8 @@ export interface PlaceDetailDoc {
   blocks: PlaceBlockDoc[];
 }
 
+// CONTRACT(scripts): scripts/lib/map-places-file.js builds places and scripts/lib/eventmap-db.js writes them.
+// SEE: docs/reference/event-places.md §2 for each field and who edits it.
 export interface MapPlaceDoc {
   /** WHY: a human-authored slug, not an ObjectId: the ops sheet is keyed by it. */
   _id: string;
@@ -63,6 +62,7 @@ export interface MapPlaceDoc {
   updatedAt: Date;
 }
 
+// CONTRACT(scripts): scripts/lib/eventmap-db.js and scripts/eventmap-window.js write activations; ops edit them by hand.
 export interface ActivationDoc {
   /** WHY: the layer set's id, so one activation per layer set. */
   _id: string;
@@ -72,3 +72,13 @@ export interface ActivationDoc {
   enabled: boolean;
   updatedAt: Date;
 }
+
+export type OverlayPlaceDoc = Pick<
+  MapPlaceDoc,
+  "_id" | "campus" | "category" | "location" | "title" | "subtitle" | "hours" | "fields" | "actions" | "order" | "facets" | "orderByOption"
+>;
+
+/** WHY: `detail` is read block by block and button by button, so the place read leaves it unknown. */
+export type SheetPlaceDoc = Pick<MapPlaceDoc, "_id" | "category" | "location" | "title" | "hours" | "fields" | "actions"> & { detail?: unknown };
+
+export type LiveActivation = Pick<ActivationDoc, "_id" | "activeUntil">;

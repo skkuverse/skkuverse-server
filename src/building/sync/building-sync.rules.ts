@@ -1,4 +1,5 @@
-import type { PhaseFailure } from "./building-sync.types";
+import type { SkkuId } from "../building.types";
+import type { ApiId, PhaseFailure } from "./building-sync.types";
 
 /** EVIDENCE: 78 buildings exist; fewer listed means SKKU answered without usable data (an empty body, a renamed field). */
 export const MIN_BUILDINGS_TO_TRUST = 50;
@@ -40,4 +41,9 @@ export function toSyncError(failures: readonly PhaseFailure[]): AggregateError {
     failures.map((f) => f.err),
     `Building sync failed in ${failures.map((f) => f.phase).join(" and ")}`,
   );
+}
+
+/** QUIRK(skku): buildInfo takes back the id buildList sent, the number stored as the SkkuId. */
+export function toApiId(id: SkkuId): ApiId {
+  return id as number as ApiId;
 }

@@ -1110,7 +1110,7 @@ be served beside and **returns** every problem it finds, accumulated. Two caller
 | Row | When | On failure |
 | --- | --- | --- |
 | `BASE_CHIPS` against `BASE_LAYERS` | module import, `src/map/layer-set/map-layer-set.mapper.ts` | throws `FATAL [map chips]` — repo TypeScript, a PR fixes it, the boot must not proceed |
-| the festival row (reset chip + authored chips) against **the full served catalogue** (base + festival layers) | config load, `assertValidConfig` in `src/map/layer-set/map-layer-set.config.ts` | the layer set is **rejected**: logged once with the path, and `/map/config` serves the base layers only — the festival is off the campus map until the file is fixed |
+| the festival row (reset chip + authored chips) against **the full served catalogue** (base + festival layers) | config load, `parseLayerSetFile` in `src/map/layer-set/map-layer-set.config.ts` | the layer set is **rejected**: logged once with the path, and `/map/config` serves the base layers only — the festival is off the campus map until the file is fixed |
 
 The second row is a deliberate posture with a cost worth naming: a config typo takes the whole
 festival off the map rather than degrading part of it. That is preferred to drawing from a category
@@ -1120,18 +1120,18 @@ The rules:
 
 | Rule | Where |
 | --- | --- |
-| a festival layer id does not reuse a base layer id | `assertValidConfig` |
-| every `itemDefaults.*.layerId` and every chip `layerIds[]` entry names a layer of the set | `assertValidConfig` (`layerId`), `validateChipSpecs` (chips) |
+| a festival layer id does not reuse a base layer id | `parseLayerSetFile` |
+| every `itemDefaults.*.layerId` and every chip `layerIds[]` entry names a layer of the set | `parseLayerSetFile` (`layerId`), `validateChipSpecs` (chips) |
 | every named layer has a non-null `chipGroupId` | `validateChipSpecs` |
 | a chip's `layerIds` do not straddle two groups | `validateChipSpecs` |
 | chip ids are unique — including against the synthesised reset chip's | `validateChipSpecs`, the only place that collision is visible at all |
 | a `webview` URL passes `toWebviewUrl` | `validateChipSpecs` |
-| at least one layer is not `defaultVisibleWhen.kind: "never"`, so the reset chip is scoped to something | `assertValidConfig` |
-| every `DailyWindow` bound is `"HH:MM"` on a 24-hour clock — `"24:00"` and `"7:00"` refused | `assertValidConfig` |
-| a `DailyWindow`'s bounds differ; `start > end` is legal and wraps past midnight | `assertValidConfig` |
-| `kind: "scheduled"` carries at least one window, and no other `kind` carries a `windows` key | `assertValidConfig` |
-| `config.timezone` is `Asia/Seoul` — the one zone the wall-clock contract can honour (§4.2) | `assertValidConfig` |
-| a multi-layer chip carries a label; `layerIds` is non-empty; `color` is bare six-digit hex | `assertValidConfig` |
+| at least one layer is not `defaultVisibleWhen.kind: "never"`, so the reset chip is scoped to something | `parseLayerSetFile` |
+| every `DailyWindow` bound is `"HH:MM"` on a 24-hour clock — `"24:00"` and `"7:00"` refused | `parseLayerSetFile` |
+| a `DailyWindow`'s bounds differ; `start > end` is legal and wraps past midnight | `parseLayerSetFile` |
+| `kind: "scheduled"` carries at least one window, and no other `kind` carries a `windows` key | `parseLayerSetFile` |
+| `config.timezone` is `Asia/Seoul` — the one zone the wall-clock contract can honour (§4.2) | `parseLayerSetFile` |
+| a multi-layer chip carries a label; `layerIds` is non-empty; `color` is bare six-digit hex | `parseLayerSetFile` |
 
 There is no translation-miss case any more. Labels are inline `{ko, en?, zh?}` on the layer and the
 chip, resolved with the one `pick()` in `src/infra/i18n.ts`, so a label with no `ko` is a rejected

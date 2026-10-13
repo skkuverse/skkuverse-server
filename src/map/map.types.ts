@@ -1,5 +1,4 @@
 import type { I18n } from "../infra/types";
-import type { BASE_LAYERS } from "./map.constants";
 
 export interface CameraMotion {
   zoom: number;
@@ -40,7 +39,6 @@ export interface LayerSpec {
   style?: MapLayerStyle;
 }
 
-export type BaseLayerId = (typeof BASE_LAYERS)[number]["id"];
 
 export type MapChipActionSpec =
   | { kind: "webview"; url: string }

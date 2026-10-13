@@ -8,10 +8,10 @@ import type { LayerSpec } from "../map.types";
 import { getLayerSetConfig } from "./map-layer-set.config";
 import { BASE_CHIPS } from "./map-layer-set.constants";
 import { eventChipSpecs, eventLayerSpecs } from "./map-layer-set.mapper";
-import type { EventMapConfig } from "./map-layer-set.schema";
+import type { LayerSet } from "./map-layer-set.schema";
 import type { LoadedConfig, MapChipSpec } from "./map-layer-set.types";
 
-// SEE: docs/explanation/map-architecture.md (The live layer set): /map/config and the event routes ask this one service.
+// SEE: docs/explanation/map-architecture.md (Structure): /map/config and the event routes ask this one service.
 @Injectable()
 export class MapLayerSetService {
   private readonly reported = new Set<string>();
@@ -28,26 +28,22 @@ export class MapLayerSetService {
     private readonly clock: Clock,
   ) {}
 
-  activeEvent(): Promise<EventMapConfig | null> {
-    return this.activeEventConfig(this.clock.now());
-  }
-
-  /** WHY: a cached activation is checked against `now` on every call, so its window closes on time between reloads. */
-  async activeEventConfig(now: Date): Promise<EventMapConfig | null> {
+  /** WHY: a cached activation is checked against the clock on every call, so its window closes on time between reloads. */
+  async liveLayerSet(): Promise<LayerSet | null> {
     const activation = await this.activationCache.get();
     if (!activation) return null;
-    if (activation.activeUntil && activation.activeUntil <= now) return null;
+    if (activation.activeUntil && activation.activeUntil <= this.clock.now()) return null;
     const loaded = getLayerSetConfig(activation._id);
     if (loaded?.config) return loaded.config;
     this.reportUnservable(activation._id, loaded);
     return null;
   }
 
-  servedLayerSpecs(event: EventMapConfig | null): readonly LayerSpec[] {
+  servedLayerSpecs(event: LayerSet | null): readonly LayerSpec[] {
     return event ? [...BASE_LAYERS, ...eventLayerSpecs(event)] : BASE_LAYERS;
   }
 
-  servedChipSpecs(event: EventMapConfig | null): readonly MapChipSpec[] {
+  servedChipSpecs(event: LayerSet | null): readonly MapChipSpec[] {
     return event ? [...BASE_CHIPS, ...eventChipSpecs(event)] : BASE_CHIPS;
   }
 

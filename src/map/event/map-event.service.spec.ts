@@ -1,7 +1,7 @@
 /**
  * MapEventService: the place → overlay projection behind GET /map/overlays/event,
- * run over the real repository, layer-set service and shipped layer-set config,
- * with the Mongo collections stubbed.
+ * run over FakeMapRepository, the real layer-set service and the shipped
+ * layer-set config. The places query itself is pinned in map.repository.spec.ts.
  *
  * One document in, one marker out. There is no join any more: a booth that runs
  * on both festival days is ONE document carrying two opening windows, which is
@@ -15,33 +15,35 @@
  * `zh` leaves a map whose layer labels are Chinese and whose booths are not.
  */
 
-// The places collection, handed out by name; activations are read through a spy below.
-const mockPlaces = jest.fn();
-jest.mock("../../infra/mongo", () => ({
-  ensureIndexesAtBoot: jest.fn(),
-  mongoCollection: (_db: string, name: string) => (name === "places" ? mockPlaces() : {}),
-}));
-
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
 
-import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
-import { Clock } from "../../infra/clock";
+import type { Clock } from "../../infra/clock";
 import { MiniAppsService } from "../../miniapps/miniapps.service";
-import { getLayerSetConfig } from "../layer-set/map-layer-set.config";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS } from "../map.constants";
-import { MapRepository } from "../map.repository";
+import type { MapPlaceDoc } from "../map.document";
+import type { MapRepository } from "../map.repository";
 import { presentationFor } from "../map.rules";
 import { MapEventService } from "./map-event.service";
 import { logText } from "../../../__tests__/helpers/log-text";
+import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
+import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 
-const mockFindActiveActivation = jest.spyOn(MapRepository.prototype, "findActiveActivation");
+const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
+
+// The live activation, stated per describe; every fresh fake answers with it.
+const mockFindActiveActivation = jest.fn<ReturnType<MapRepository["findActiveActivation"]>, [Date]>();
+
+let repository: FakeMapRepository;
+// The places read, so a test can say no place was read.
+let mockPlaces: jest.SpyInstance<ReturnType<MapRepository["listPlacesByLayerSetId"]>, [string]>;
 
 /** A cold service: the activation and overlay caches live on the instances. */
 function newService(): MapEventService {
-  const repository = new MapRepository();
-  return new MapEventService(repository, new MapLayerSetService(repository, new Clock()), new MiniAppsService());
+  const real = asReal<MapRepository>(repository);
+  return new MapEventService(real, new MapLayerSetService(real, CLOCK), new MiniAppsService());
 }
 
 let service: MapEventService;
@@ -50,22 +52,15 @@ const clearEventOverlaysCache = (): void => {
   service = newService();
 };
 
-// The event read path is cached per process; each test starts cold.
+// The event read path is cached per process; each test starts cold, over an empty fake.
 beforeEach(() => {
+  repository = new FakeMapRepository();
+  repository.findActiveActivation = mockFindActiveActivation;
+  mockPlaces = jest.spyOn(repository, "listPlacesByLayerSetId");
   clearEventOverlaysCache();
 });
 
-const loaded = getLayerSetConfig("eskara-2026");
-if (!loaded?.config) throw new Error(`eskara-2026 failed to load: ${loaded?.error}`);
-const CONFIG = loaded.config;
-
-/** A collection stub whose `find()` records its filter and yields `docs`. */
-function collectionOf(docs: unknown[]) {
-  const find = jest.fn().mockReturnValue({
-    toArray: jest.fn().mockResolvedValue(docs),
-  });
-  return { stub: { find } as never, find };
-}
+const CONFIG = shippedLayerSet();
 
 const DAY_1 = {
   startAt: new Date("2026-10-01T09:00:00.000Z"),
@@ -96,9 +91,8 @@ function place(over: Record<string, unknown> = {}) {
 }
 
 function arrange(docs: unknown[]) {
-  const p = collectionOf(docs);
-  mockPlaces.mockReturnValue(p.stub);
-  return { placesFind: p.find };
+  repository.places = docs as MapPlaceDoc[];
+  return { placesFind: mockPlaces };
 }
 
 describe("MapEventService.getEventOverlays", () => {
@@ -132,9 +126,7 @@ describe("MapEventService.getEventOverlays", () => {
       const { placesFind } = arrange([place()]);
       const first = await getEventOverlays();
 
-      placesFind.mockImplementation(() => ({
-        toArray: jest.fn().mockRejectedValue(new Error("mongo down")),
-      }));
+      placesFind.mockRejectedValue(new Error("mongo down"));
       clock += 2 * EVENT_CACHE_TTL_MS;
       await expect(getEventOverlays()).resolves.toBe(first);
     } finally {
@@ -214,11 +206,9 @@ describe("MapEventService.getEventOverlays", () => {
     // Assert
     // No lifecycle filter: a cancelled booth is DELETED, not flagged, so there
     // is no state left for a filter to exclude.
+    // The query object is pinned in map.repository.spec.ts.
     expect(placesFind).toHaveBeenCalledTimes(1);
-    expect(placesFind).toHaveBeenCalledWith(
-      { layerSetId: "eskara-2026" },
-      { maxTimeMS: HOT_READ_MAX_TIME_MS },
-    );
+    expect(placesFind).toHaveBeenCalledWith("eskara-2026");
   });
 
   it("keeps every opening window, in the order it was authored", async () => {
@@ -614,9 +604,8 @@ describe("MapEventService.getEventOverlays", () => {
       const { overlays: markers } = await getEventOverlays();
 
       // Assert
+      // The skip is counted and logged where the place is parsed: map.repository.spec.ts.
       expect(markers.map((m) => m.id)).toEqual(["eskara-2026-booth-01"]);
-      expect(mockLogger.warn).toHaveBeenCalledTimes(1);
-      expect(logText(mockLogger.warn.mock.calls[0])).toMatch(/1/);
     });
 
     it("skips a document whose window has no start", async () => {
@@ -854,9 +843,9 @@ describe("MapEventService.getEventOverlays — zones and route lines", () => {
     const { overlays } = await getEventOverlays();
 
     // Assert
+    // The count is logged where the place is parsed: map.repository.spec.ts.
     expect(overlays).toHaveLength(1);
     expect(overlays[0]!.id).toBe("eskara-2026-booth-01");
-    expect(logText(mockLogger.warn.mock.calls.at(-1))).toMatch(/not renderable/);
   });
 });
 

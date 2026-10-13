@@ -1,23 +1,19 @@
 import type { LayerSpec, MapLayerStyle } from "./map.types";
 
-// SEE: docs/explanation/map-architecture.md (Caching): an ops change reaches the origin about one TTL later.
+// SEE: docs/reference/map-code-map.md ("Boot time and request time"): an ops change reaches the origin a TTL later.
 export const EVENT_CACHE_TTL_MS = 5_000;
 
 // WHY: a database blip keeps the last good answer this long; ops cannot edit during a blip either.
 export const EVENT_STALE_WINDOW_MS = 10 * 60_000;
 
 // WHY: one route per data source; the app keys its overlay cache on the string, so layers sharing it cost one fetch.
-export const CAMPUS_OVERLAYS_ENDPOINT = "/map/overlays/campus";
+const CAMPUS_OVERLAYS_ENDPOINT = "/map/overlays/campus";
 export const EVENT_OVERLAYS_ENDPOINT = "/map/overlays/event";
 
 export const LOCATION_ACCURACIES = ["exact", "area"] as const;
 
 // CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/types/placeDetail.ts has a closed PlaceKind union.
 export const PLACE_KINDS = ["pub", "booth", "promo", "foodTruck", "goods", "facility", "stage", "etc"] as const;
-
-export const PLACE_BLOCK_TYPES = ["text", "list", "table", "image", "notice"] as const;
-
-export const PLACE_DETAIL_ACTION_TYPES = ["instagram", "link"] as const;
 
 export const BASE_LAYERS = [
   {

@@ -14,6 +14,10 @@
  * A repository or client method without a return type is a violation: the
  * contract is read from the annotation, not inferred.
  *
+ * In every non-spec src/ file, a top-level function named `assert…` returns
+ * `void` or an `asserts …` predicate: it throws or passes, and one that hands
+ * back what it read is a `parse…` or `load…`.
+ *
  * A repository returns data, never a response (ADR 0010, D2): no public
  * repository method names a type that an exported `.mapper` function returns
  * (document types and brands aside). Response shapes are what mappers make,
@@ -134,6 +138,30 @@ export function methodVerbViolations(file: string, source: string): string[] {
     }
   }
   return out;
+}
+
+const ASSERT_NAME = /^assert[A-Z]/;
+
+/** `<file>: <name>` for each top-level `assert…` function that returns something other than void or `asserts`. */
+export function assertVerbViolations(file: string, source: string): string[] {
+  if (file.endsWith(".spec.ts")) return [];
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true);
+  const functions = sf.statements.flatMap((s): Array<[string, ts.SignatureDeclarationBase]> => {
+    if (ts.isFunctionDeclaration(s) && s.name) return [[s.name.text, s]];
+    if (!ts.isVariableStatement(s)) return [];
+    return s.declarationList.declarations.flatMap((d): Array<[string, ts.SignatureDeclarationBase]> =>
+      ts.isIdentifier(d.name) && d.initializer && (ts.isArrowFunction(d.initializer) || ts.isFunctionExpression(d.initializer))
+        ? [[d.name.text, d.initializer]]
+        : [],
+    );
+  });
+  return functions
+    .filter(([name]) => ASSERT_NAME.test(name))
+    .filter(([, fn]) => {
+      const type = returnType(fn, sf);
+      return type === undefined || !(type === "void" || /^asserts /.test(type));
+    })
+    .map(([name]) => `${file}: ${name}`);
 }
 
 /** Names of the types referenced in a type node, type parameters excluded. */
@@ -268,6 +296,24 @@ export { isGeometry, isOpen, openNow, toKey, withLabel };`;
   });
 });
 
+describe("assert verb rule applies as specified", () => {
+  it("passes an assert that returns void or asserts, and fails one that returns what it read", () => {
+    // Arrange
+    const source = [
+      "export function assertValid(raw: unknown): void {}",
+      "function assertShape(raw: unknown): asserts raw is X {}",
+      "export const assertAsync = async (raw: unknown): Promise<void> => {};",
+      "export function assertValidConfig(raw: unknown): Config { return raw as Config; }",
+      "const assertUntyped = (raw: unknown) => raw;",
+      "export function parseConfig(raw: unknown): Config { return raw as Config; }",
+    ].join("\n");
+
+    // Act & Assert
+    expect(assertVerbViolations("src/x/x.config.ts", source)).toEqual(["src/x/x.config.ts: assertValidConfig", "src/x/x.config.ts: assertUntyped"]);
+    expect(assertVerbViolations("src/x/x.config.spec.ts", source)).toEqual([]);
+  });
+});
+
 describe("repository return rule applies as specified", () => {
   const mapper = {
     file: "src/x/x.mapper.ts",
@@ -321,5 +367,15 @@ describe("method verbs", () => {
       "method-verbs",
       files.flatMap((f) => methodVerbViolations(f, readSource(f))),
     );
+  });
+});
+
+describe("assert functions", () => {
+  it("return void or an asserts predicate", () => {
+    // Act
+    const violations = sourceFiles().flatMap((f) => assertVerbViolations(f, readSource(f)));
+
+    // Assert
+    expectAllowlisted("assert-verbs", violations);
   });
 });

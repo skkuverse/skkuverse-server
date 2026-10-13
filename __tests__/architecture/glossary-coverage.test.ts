@@ -9,7 +9,10 @@
  *     every route of the module's controllers, `<METHOD> <path>`, is in the
  *     flowchart;
  *   - the backticked identifiers of the Not column are exactly the names of the
- *     ESLint block `glossary/<m>`, which bans them in `src/<m>/**`.
+ *     ESLint block `glossary/<m>`, which bans them in `src/<m>/**`;
+ *   - a Term cell that names its code, `term (`Name`)`, says the term in the
+ *     name: each word of the term opens a word of the name (`scroll card`
+ *     and `ScrollCards`), so the glossary cannot make a mismatch official.
  *
  * And no module keeps its glossary in .claude/rules/naming.md. The template is
  * not a module, so it is not checked here.
@@ -165,7 +168,34 @@ export function glossaryViolations(input: GlossaryInput): string[] {
       .map((c) => `${module}: collection ${c} is not in the flowchart`),
     ...unique(input.routes).filter((r) => !namesRoute(diagram, r)).map((r) => `${module}: route ${r} is not in the flowchart`),
     ...denylistViolations(module, notNames, input.config),
+    ...glossary
+      .flatMap((t) => columnCells(t, "Term"))
+      .flatMap((cell) => termNameMismatch(cell) ?? [])
+      .map((mismatch) => `${module}: term ${mismatch} is not said in its code name`),
   ];
+}
+
+const TERM_WITH_NAME = /^(.+?)\s*\(`([A-Za-z_$][\w$]*)`\)$/;
+
+/** The lower-case words of a term or a code name: `layer set`, `ScrollCards` → scroll, cards; `skkuId` → skku, id. */
+export function wordsOf(text: string): string[] {
+  return text
+    .replace(/`/g, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((word) => word.toLowerCase());
+}
+
+/** A Term cell `term (`Name`)` whose name lacks a word of its term, as `term (Name)`; other cells pass. */
+export function termNameMismatch(cell: string): string | null {
+  const match = TERM_WITH_NAME.exec(cell.trim());
+  if (!match) return null;
+  const [, term, name] = match as unknown as [string, string, string];
+  const nameWords = wordsOf(name);
+  const isSaid = wordsOf(term).every((word) => nameWords.some((nameWord) => nameWord.startsWith(word)));
+  return isSaid ? null : `${term.trim()} (${name})`;
 }
 
 /** A `### <module>` heading in naming.md is a module glossary left behind. */
@@ -336,6 +366,32 @@ describe("glossary-coverage rule applies as specified", () => {
     expect(configCollections(config, "health")).toEqual([]);
     expect(configCollections(config, "app-config")).toEqual([]);
     expect(() => configCollections(config, "broken")).toThrow(/neither a string nor env/);
+  });
+
+  it.each([
+    ["layer (`LayerSpec`)", null],
+    ["scroll card (`ScrollCards`)", null],
+    ["`skkuId` (`SkkuId`)", null],
+    ["client config (`AppClientConfig`)", null],
+    ["campus shape (`CampusShapeDoc`)", null],
+    ["live event", null],
+    ["layer set (`EventMapConfig`)", "layer set (EventMapConfig)"],
+    ["sheet (`PlaceDetail`)", "sheet (PlaceDetail)"],
+    ["chip group (`MapChipSpec`)", "chip group (MapChipSpec)"],
+  ])("reads the term cell %j as a mismatch: %j", (cell, mismatch) => {
+    // Act & Assert
+    expect(termNameMismatch(cell)).toBe(mismatch);
+  });
+
+  it("names a term its code name does not say", () => {
+    // Arrange
+    const doc = DOC.replace("| route | One bus line |", "| route (`BusLine`) | One bus line |");
+
+    // Act
+    const violations = glossaryViolations({ ...INPUT, doc });
+
+    // Assert
+    expect(violations).toEqual(["bus: term route (BusLine) is not said in its code name"]);
   });
 
   it("fails a module glossary left in naming.md, and keeps the shared one", () => {
