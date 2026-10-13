@@ -11,7 +11,8 @@
  *  2. A failure is non-fatal. Index creation is a startup nicety, not a serving
  *     prerequisite; an Atlas hiccup during boot must not take /map down.
  *
- * Queries. The activation filter carries two invariants nothing downstream can
+ * Queries. Each read's query object is pinned here, since FakeMapRepository
+ * copies it. The activation filter carries two invariants nothing downstream can
  * recover from: a window containing now with null read as unbounded, and a
  * deterministic sort, so replicas cannot disagree about which layer set is
  * live. Every filter must match an index (docs/reference/event-places.md), or a
@@ -67,6 +68,8 @@ const NOW = new Date("2026-09-16T09:00:00.000Z");
 
 const repository = new MapRepository();
 const findActiveActivation = (now: Date) => repository.findActiveActivation(now);
+const listPlacesByLayerSetId = (layerSetId: string) => repository.listPlacesByLayerSetId(layerSetId);
+const listPlacesWithDetailByLayerSetId = (layerSetId: string) => repository.listPlacesWithDetailByLayerSetId(layerSetId);
 const ensureIndexes = () => repository.ensureIndexes();
 
 /** Every (collection, keys, options?) call, as JSON for comparison. */
@@ -183,5 +186,27 @@ describe("MapRepository.findActiveActivation", () => {
       sort: { activeFrom: -1, _id: 1 },
       maxTimeMS: HOT_READ_MAX_TIME_MS,
     });
+  });
+});
+
+describe("MapRepository.listPlacesByLayerSetId", () => {
+  it("reads one layer set's places, with no lifecycle filter, under the hot-read bound", async () => {
+    // Act
+    await listPlacesByLayerSetId("eskara-2026");
+
+    // Assert
+    // No lifecycle filter: a cancelled booth is deleted, not flagged.
+    expect(find.mock.calls).toEqual([[{ layerSetId: "eskara-2026" }, { maxTimeMS: HOT_READ_MAX_TIME_MS }]]);
+  });
+});
+
+describe("MapRepository.listPlacesWithDetailByLayerSetId", () => {
+  it("reads only the places of one layer set that carry a sheet", async () => {
+    // Act
+    await listPlacesWithDetailByLayerSetId("eskara-2026");
+
+    // Assert
+    // `$ne: null` also leaves out a place whose detail field is missing.
+    expect(find.mock.calls).toEqual([[{ layerSetId: "eskara-2026", detail: { $ne: null } }, { maxTimeMS: HOT_READ_MAX_TIME_MS }]]);
   });
 });
