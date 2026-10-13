@@ -38,8 +38,8 @@ function toOverlayTap(presentation: ItemPresentation, placeId: string): OverlayB
 }
 
 function toOverlayBase(doc: OverlayPlaceDoc, context: EventOverlayContext): OverlayBase {
-  const { config, drops } = context;
-  const presentation = presentationFor(config, doc.category);
+  const { layerSet, drops } = context;
+  const presentation = presentationFor(layerSet, doc.category);
   return {
     id: doc._id,
     layerId: presentation.layerId,
@@ -54,8 +54,8 @@ function toOverlayBase(doc: OverlayPlaceDoc, context: EventOverlayContext): Over
     fields: doc.fields.map((f) => ({ label: toI18nText(f.label), value: toI18nText(f.value) })),
     actions: toOverlayActions(doc.actions, context),
     order: doc.order,
-    facets: facetsOf(doc, config, drops.facets),
-    orderByOption: orderByOptionOf(doc, config, drops.facets),
+    facets: facetsOf(doc, layerSet, drops.facets),
+    orderByOption: orderByOptionOf(doc, layerSet, drops.facets),
     tap: toOverlayTap(presentation, doc._id),
   };
 }
@@ -69,7 +69,7 @@ export function toEventOverlay(doc: OverlayPlaceDoc, context: EventOverlayContex
   const { location } = doc;
   if (location.type === "Polygon") return { ...base, kind: "polygon", geometry: toWirePolygon(location) };
   if (location.type === "LineString") return { ...base, kind: "path", geometry: location };
-  const presentation = presentationFor(context.config, doc.category);
+  const presentation = presentationFor(context.layerSet, doc.category);
   return {
     ...base,
     kind: "marker",

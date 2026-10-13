@@ -32,9 +32,9 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | Term | Means | Derived from | Not |
 | --- | --- | --- | --- |
 | layer (`LayerSpec`) | One kind of thing with one toggle: what is drawn, its style, its endpoint and its chip group | `BASE_LAYERS`, `eventLayerSpecs` | — |
-| layer set (`EventMapConfig`) | One festival's layers, chips, facets, camera and category table, as one JSON file | `layerSetFile` in `map-layer-set.schema.ts` | `festivalConfig`, `layerConfig` |
+| layer set (`LayerSet`) | One festival's layers, chips, facets, camera and category table, as one JSON file | `layerSetFile` in `map-layer-set.schema.ts` | `festivalConfig`, `layerConfig` |
 | activation (`ActivationDoc`) | The Mongo switch that makes a layer set live between `activeFrom` and `activeUntil` while `enabled` | `findActiveActivation` | `eventWindow` |
-| live event | The layer set whose activation is open now and whose file this build loaded | `MapLayerSetService.activeEvent` | `currentFestival` |
+| live layer set | The layer set whose activation is open now and whose file this build loaded | `MapLayerSetService.liveLayerSet` | `currentFestival` |
 | place (`MapPlaceDoc`) | One operating entity of a festival: a spot, its geometry, its windows and its buttons | the places importer | — |
 | overlay (`MapOverlay`) | One drawable thing, tagged by the renderer that draws it (`marker`, `polygon`, `path`) | `toEventOverlay`, the campus mappers | — |
 | chip (`MapChipSpec`) | One pill above the map: a camera, the layers it turns on, and the list it opens | `eventChipSpecs`, `BASE_CHIPS` | `filterButton` |
@@ -42,7 +42,7 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | reset chip | The synthesised chip that goes back to the festival's default view | `resetChip` | — |
 | presentation (`ItemPresentation`) | A category's layer, pin priority, tap and location accuracy | `presentationFor` | `categoryStyle` |
 | facet | A list filter axis a chip may show; an `hours` facet is derived from a place's windows, a `tag` facet is authored | `facetsOf` | — |
-| sheet (`PlaceDetail`) | The body a tapped place opens: its head, buttons and blocks | `toPlaceDetail` | `sheetBody` |
+| sheet (`PlaceSheet`) | The body a tapped place opens: its head, buttons and blocks | `toPlaceSheet` | `sheetBody` |
 | degraded | The campus overlay fell back to `FALLBACK_MARKERS` because the buildings read was empty | `MapCampusService.getCampusOverlays` | `isFallback` |
 
 ## Structure

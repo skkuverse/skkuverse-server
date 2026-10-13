@@ -4,9 +4,9 @@ import logger from "../../infra/logger";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "../map.constants";
 import { MapRepository } from "../map.repository";
-import { toPlaceDetail } from "./map-event-details.mapper";
+import { toPlaceSheet } from "./map-event-details.mapper";
 import { sheetlessReason } from "./map-event-details.rules";
-import type { EventPlaceDetails, PlaceDetail } from "./map-event-details.wire";
+import type { EventPlaceDetails, PlaceSheet } from "./map-event-details.wire";
 
 @Injectable()
 export class MapEventDetailsService {
@@ -28,22 +28,22 @@ export class MapEventDetailsService {
   }
 
   private async loadEventPlaceDetails(): Promise<EventPlaceDetails> {
-    const config = await this.layerSet.activeEvent();
-    if (!config) return { details: {} };
+    const liveLayerSet = await this.layerSet.liveLayerSet();
+    if (!liveLayerSet) return { details: {} };
     const dropped: string[] = [];
-    const details: Record<string, PlaceDetail> = {};
-    for (const doc of await this.repository.listPlacesWithDetailByLayerSetId(config.layerSetId)) {
-      const reason = sheetlessReason(doc, config);
+    const details: Record<string, PlaceSheet> = {};
+    for (const doc of await this.repository.listPlacesWithDetailByLayerSetId(liveLayerSet.layerSetId)) {
+      const reason = sheetlessReason(doc, liveLayerSet);
       if (reason !== null) {
         dropped.push(reason);
         continue;
       }
-      const detail = toPlaceDetail(doc, dropped);
+      const detail = toPlaceSheet(doc, dropped);
       if (detail) details[doc._id] = detail;
     }
     if (dropped.length > 0) {
       logger.warn(
-        { event: "map.event_details.items_dropped", layerSetId: config.layerSetId, count: dropped.length, dropped },
+        { event: "map.event_details.items_dropped", layerSetId: liveLayerSet.layerSetId, count: dropped.length, dropped },
         "Place-detail items dropped",
       );
     }

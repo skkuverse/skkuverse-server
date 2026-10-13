@@ -6,11 +6,11 @@
  */
 import { assertValidConfig } from "./map-layer-set.config";
 import { crossReferenceIssue, optionIssues } from "./map-layer-set.rules";
-import type { EventMapConfig } from "./map-layer-set.schema";
+import type { LayerSet } from "./map-layer-set.schema";
 import fs from "fs";
 import path from "path";
 
-const CONFIG: EventMapConfig = assertValidConfig(JSON.parse(fs.readFileSync(path.join(__dirname, "eskara-2026.json"), "utf8")));
+const CONFIG: LayerSet = assertValidConfig(JSON.parse(fs.readFileSync(path.join(__dirname, "eskara-2026.json"), "utf8")));
 
 const day = (id: string, from: string, until: string): { id: string; from: string; until: string } => ({ id, from, until });
 

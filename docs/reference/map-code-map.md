@@ -33,7 +33,7 @@ The layer-set loader imports the root's and its own rules, mappers, schemas, con
 | import | Base chips checked against the base layers (`assertValidChipSpecs`) | The boot stops: repository code, a PR fixes it |
 | import | Every file in `LAYER_SET_FILES` read, checked, frozen | Logged and skipped; the base map keeps serving |
 | boot | `MapRepository.ensureIndexes` on `places` and `activations` | Logged; the boot does not wait for it |
-| per request | The live event: the cached activation, checked against the clock | Caught in `/map/config`, which serves the base layers |
+| per request | The live layer set: the cached activation, checked against the clock | Caught in `/map/config`, which serves the base layers |
 | per request | Layers and chips built, labels resolved to the request language | — |
 | per `EVENT_CACHE_TTL_MS` | Places read by layer set and projected to overlays and sheets | An unrenderable place, a bad button, block or facet value is dropped and logged |
 

@@ -3,7 +3,7 @@ import config from "../../infra/config";
 import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
-import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
+import type { LayerSet } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { LOOKUP_FAILED_LOG_INTERVAL_MS } from "./map-config.constants";
 import { toMapConfig } from "./map-config.mapper";
@@ -15,21 +15,21 @@ export class MapConfigService {
 
   constructor(private readonly layerSet: MapLayerSetService) {}
 
-  // WHY: one live-event read per request, shared by the layers and the chips, so the two cannot disagree.
+  // WHY: one live layer set read per request, shared by the layers and the chips, so the two cannot disagree.
   async getMapConfig(lang: SupportedLang): Promise<MapConfig> {
-    const event = await this.activeEvent();
+    const liveLayerSet = await this.liveLayerSet();
     return toMapConfig({
       lang,
       styleId: config.naver.styleId,
-      layers: this.layerSet.servedLayerSpecs(event),
-      chips: this.layerSet.servedChipSpecs(event),
+      layers: this.layerSet.servedLayerSpecs(liveLayerSet),
+      chips: this.layerSet.servedChipSpecs(liveLayerSet),
     });
   }
 
   // WHY: a failed lookup serves the base layers: the app's fallback for a failed /map/config has no building layers.
-  private async activeEvent(): Promise<EventMapConfig | null> {
+  private async liveLayerSet(): Promise<LayerSet | null> {
     try {
-      return await this.layerSet.activeEvent();
+      return await this.layerSet.liveLayerSet();
     } catch (err) {
       const ticket = this.lookupFailedThrottle.take("event-layers");
       if (ticket) {

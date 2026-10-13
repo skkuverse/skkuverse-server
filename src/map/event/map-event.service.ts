@@ -31,13 +31,13 @@ export class MapEventService {
   }
 
   private async loadEventOverlays(): Promise<MapOverlays> {
-    const config = await this.layerSet.activeEvent();
-    if (!config) return { overlays: [] };
-    const places = await this.repository.listPlacesByLayerSetId(config.layerSetId);
+    const liveLayerSet = await this.layerSet.liveLayerSet();
+    if (!liveLayerSet) return { overlays: [] };
+    const places = await this.repository.listPlacesByLayerSetId(liveLayerSet.layerSetId);
     const drops: EventDrops = { actions: [], facets: [] };
     const isKnownMiniAppTarget = (value: string): boolean => this.miniApps.isKnownMiniAppTarget(value);
-    const overlays = places.map((doc) => toEventOverlay(doc, { config, drops, isKnownMiniAppTarget }));
-    this.warnDrops(config.layerSetId, drops);
+    const overlays = places.map((doc) => toEventOverlay(doc, { layerSet: liveLayerSet, drops, isKnownMiniAppTarget }));
+    this.warnDrops(liveLayerSet.layerSetId, drops);
     return { overlays };
   }
 

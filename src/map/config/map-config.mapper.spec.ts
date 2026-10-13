@@ -10,7 +10,7 @@ import type { Clock } from "../../infra/clock";
 import { pick } from "../../infra/i18n";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
-import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
+import type { LayerSet } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import type { MapChipSpec } from "../layer-set/map-layer-set.types";
 import { BASE_LAYERS } from "../map.constants";
@@ -25,7 +25,7 @@ const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
 const LAYER_SET = new MapLayerSetService(asReal<MapRepository>(new FakeMapRepository()), CLOCK);
 
 /** The chips /map/config serves for a live festival, or none. */
-const getChips = (lang: SupportedLang, event: EventMapConfig | null) => toMapChips(LAYER_SET.servedChipSpecs(event), lang);
+const getChips = (lang: SupportedLang, event: LayerSet | null) => toMapChips(LAYER_SET.servedChipSpecs(event), lang);
 
 const LANGS = ["ko", "en", "zh"] as const;
 const CONFIG = shippedLayerSet();

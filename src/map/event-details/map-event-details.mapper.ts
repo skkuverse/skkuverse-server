@@ -7,10 +7,10 @@ import { toI18nText } from "../map.mapper";
 import { mediaUrl } from "../map.schema";
 import type { I18nText } from "../map.wire";
 import { isInstagramPostUrl, isInstagramProfileUrl, isNonBlankId, isPlaceKind } from "./map-event-details.rules";
-import type { PlaceDetail } from "./map-event-details.wire";
+import type { PlaceSheet } from "./map-event-details.wire";
 
-type Block = PlaceDetail["blocks"][number];
-type DetailAction = PlaceDetail["actions"][number];
+type Block = PlaceSheet["blocks"][number];
+type DetailAction = PlaceSheet["actions"][number];
 type Raw = Record<string, unknown>;
 
 function textOrNull(value: unknown): I18nText | null {
@@ -94,7 +94,7 @@ function toDetailAction(raw: unknown, where: string, dropped: string[]): DetailA
   return drop(dropped, `${at}: url "${String(raw.url)}" is not an absolute https URL`);
 }
 
-export function toPlaceDetail(doc: SheetPlaceDoc, dropped: string[]): PlaceDetail | null {
+export function toPlaceSheet(doc: SheetPlaceDoc, dropped: string[]): PlaceSheet | null {
   const raw: unknown = doc.detail;
   if (!isRecord(raw) || !isPlaceKind(raw.kind) || !Array.isArray(raw.blocks) || !Array.isArray(raw.actions)) {
     return drop(dropped, `${doc._id}: detail is unreadable (kind, blocks or actions)`);
