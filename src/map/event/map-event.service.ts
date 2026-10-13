@@ -2,12 +2,9 @@ import { Injectable } from "@nestjs/common";
 import { createCachedLoader } from "../../infra/cached-loader";
 import logger from "../../infra/logger";
 import { MiniAppsService } from "../../miniapps/miniapps.service";
-import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "../map.constants";
-import type { MapPlaceDoc } from "../map.document";
 import { MapRepository } from "../map.repository";
-import { isRenderable } from "../map.rules";
 import type { MapOverlays } from "../map.wire";
 import { toEventOverlay } from "./map-event.mapper";
 import type { EventDrops } from "./map-event.types";
@@ -36,25 +33,12 @@ export class MapEventService {
   private async loadEventOverlays(): Promise<MapOverlays> {
     const config = await this.layerSet.activeEvent();
     if (!config) return { overlays: [] };
-    const places = await this.renderablePlaces(config);
+    const places = await this.repository.listPlacesByLayerSetId(config.layerSetId);
     const drops: EventDrops = { actions: [], facets: [] };
     const isKnownMiniAppTarget = (value: string): boolean => this.miniApps.isKnownMiniAppTarget(value);
     const overlays = places.map((doc) => toEventOverlay(doc, { config, drops, isKnownMiniAppTarget }));
     this.warnDrops(config.layerSetId, drops);
     return { overlays };
-  }
-
-  // WHY: counted and logged, not thrown: one unusable row must not take the other places with it.
-  private async renderablePlaces(config: EventMapConfig): Promise<MapPlaceDoc[]> {
-    const places = await this.repository.listPlacesByLayerSetId(config.layerSetId);
-    const renderable = places.filter(isRenderable);
-    if (renderable.length !== places.length) {
-      logger.warn(
-        { event: "map.event_overlays.places_unrenderable", layerSetId: config.layerSetId, count: places.length - renderable.length },
-        "Places not renderable, skipped",
-      );
-    }
-    return renderable;
   }
 
   private warnDrops(layerSetId: string, { actions, facets }: EventDrops): void {

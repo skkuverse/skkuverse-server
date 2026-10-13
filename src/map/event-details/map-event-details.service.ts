@@ -4,15 +4,14 @@ import logger from "../../infra/logger";
 import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "../map.constants";
-import type { MapPlaceDoc } from "../map.document";
+import type { SheetPlaceDoc } from "../map.document";
 import { MapRepository } from "../map.repository";
-import { isRenderable, presentationFor } from "../map.rules";
+import { presentationFor } from "../map.rules";
 import { toPlaceDetail } from "./map-event-details.mapper";
 import type { EventPlaceDetails, PlaceDetail } from "./map-event-details.wire";
 
 // WHY: only a place the overlay route serves, on a category whose tap opens a place, has a sheet to open.
-function sheetlessReason(doc: MapPlaceDoc, config: EventMapConfig): string | null {
-  if (!isRenderable(doc)) return `${doc._id}: place is not renderable`;
+function sheetlessReason(doc: SheetPlaceDoc, config: EventMapConfig): string | null {
   const presentation = presentationFor(config, doc.category);
   if (!presentation.interactive) return `${doc._id}: category "${doc.category}" is not tappable`;
   return presentation.tapChip ? `${doc._id}: category "${doc.category}" taps to chip "${presentation.tapChip}"` : null;

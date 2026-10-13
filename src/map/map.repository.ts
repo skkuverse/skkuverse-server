@@ -2,8 +2,30 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Collection } from "mongodb";
 import config from "../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
+import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
-import type { ActivationDoc, MapPlaceDoc } from "./map.document";
+import { parseEach } from "../shared/zod-list.util";
+import type { ActivationDoc, MapPlaceDoc, OverlayPlaceDoc, SheetPlaceDoc } from "./map.document";
+import { overlayPlaceDoc, sheetPlaceDoc } from "./map.schema";
+
+const OVERLAY_PLACE_FIELDS = {
+  _id: 1,
+  campus: 1,
+  category: 1,
+  location: 1,
+  title: 1,
+  subtitle: 1,
+  hours: 1,
+  fields: 1,
+  actions: 1,
+  order: 1,
+  facets: 1,
+  orderByOption: 1,
+} as const;
+
+const SHEET_PLACE_FIELDS = { _id: 1, category: 1, location: 1, title: 1, hours: 1, fields: 1, actions: 1, detail: 1 } as const;
+
+const placeIdOf = (doc: unknown): string => String((doc as { _id?: unknown })._id);
 
 @Injectable()
 export class MapRepository implements OnModuleInit {
@@ -38,12 +60,27 @@ export class MapRepository implements OnModuleInit {
     );
   }
 
-  listPlacesByLayerSetId(layerSetId: string): Promise<MapPlaceDoc[]> {
-    return this.places().find({ layerSetId }, { maxTimeMS: HOT_READ_MAX_TIME_MS }).toArray();
+  async listPlacesByLayerSetId(layerSetId: string): Promise<OverlayPlaceDoc[]> {
+    const docs = await this.places().find({ layerSetId }, { projection: OVERLAY_PLACE_FIELDS, maxTimeMS: HOT_READ_MAX_TIME_MS }).toArray();
+    const { valid, invalid } = parseEach(docs, overlayPlaceDoc, placeIdOf);
+    if (invalid.length > 0) {
+      logger.warn({ event: "map.event_overlays.places_unrenderable", layerSetId, count: invalid.length }, "Places not renderable, skipped");
+    }
+    return valid;
   }
 
-  listPlacesWithDetailByLayerSetId(layerSetId: string): Promise<MapPlaceDoc[]> {
-    return this.places().find({ layerSetId, detail: { $ne: null } }, { maxTimeMS: HOT_READ_MAX_TIME_MS }).toArray();
+  async listPlacesWithDetailByLayerSetId(layerSetId: string): Promise<SheetPlaceDoc[]> {
+    const docs = await this.places()
+      .find({ layerSetId, detail: { $ne: null } }, { projection: SHEET_PLACE_FIELDS, maxTimeMS: HOT_READ_MAX_TIME_MS })
+      .toArray();
+    const { valid, invalid } = parseEach(docs, sheetPlaceDoc, placeIdOf);
+    if (invalid.length > 0) {
+      logger.warn(
+        { event: "map.event_details.places_unrenderable", layerSetId, count: invalid.length, invalid },
+        "Places not renderable, no sheet served",
+      );
+    }
+    return valid;
   }
 
   private places(): Collection<MapPlaceDoc> {
