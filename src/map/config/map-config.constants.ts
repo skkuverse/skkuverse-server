@@ -3,7 +3,7 @@ import type { CameraMotion } from "../map.types";
 // WHY: per request while the activation lookup keeps failing, so the line says once a minute that it still does.
 export const LOOKUP_FAILED_LOG_INTERVAL_MS = 60_000;
 
-// EVIDENCE: the furthest building is 460 m (인사캠) and 487 m (자과캠) from its centre; the centres are 32,692 m apart.
+// EVIDENCE: the furthest building is 460 m (HSSC) and 487 m (NSC) from its centre; the centres are 32,692 m apart.
 const CAMPUS_RADIUS_M = 1000;
 
 export const CAMPUS_ENTRIES = [

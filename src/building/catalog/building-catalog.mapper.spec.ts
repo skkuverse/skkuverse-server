@@ -1,7 +1,7 @@
 /**
  * The building detail's floor list and connections. What it guards:
  *  - floors sort basement → ground → rooftop numerically, and floors with no
- *    number (an empty name, "로비") follow in the order they first appear;
+ *    number (an empty name, a lobby) follow in the order they first appear;
  *  - spaces keep their input order within a floor and carry only the fields
  *    the floor list shows;
  *  - a connection is read from whichever end is this building, so `fromFloor`
