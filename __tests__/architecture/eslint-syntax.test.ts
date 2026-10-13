@@ -12,6 +12,8 @@
  *     (or JSON). Specs state the values they expect and are left out. Its
  *     `ignores` lists the unmigrated files that broke it when it was added;
  *     import-boundaries.test.ts fails when one is fixed.
+ *   - `readability/src`: no comma operator in src/, parenthesised or not
+ *     (`return (dropped.push(reason), null)` packs two steps into one).
  *   - `specs/fixed-clock`: a spec in a migrated scope (and a top-level
  *     module's `__tests__/nest/<module>/` tests) never constructs the real
  *     `Clock`; it passes a fixed fake, so one answer reads one instant and
@@ -33,7 +35,7 @@ function lint(name: string, file: string, source: string): Linter.LintMessage[] 
   const { plugins, rules } = block(name);
   return new Linter({ configType: "flat" }).verify(
     source,
-    [{ files: ["**/*.ts"], languageOptions: { parser: tsparser }, plugins, rules }],
+    [{ files: ["**/*.ts"], languageOptions: { parser: tsparser }, ...(plugins ? { plugins } : {}), rules }],
     file,
   );
 }
@@ -156,5 +158,22 @@ describe("specs/fixed-clock", () => {
     // Act & Assert
     expect(files).toEqual(expect.arrayContaining(["src/map/**/*.spec.ts", "__tests__/nest/map/**/*.ts", "__tests__/nest/infra/**/*.ts"]));
     expect(files.some((glob) => String(glob).includes("bus"))).toBe(false);
+  });
+});
+
+describe("readability/src", () => {
+  it("rejects a comma operator, parenthesised or not, and passes a comma that separates", () => {
+    // Arrange
+    const file = "src/x/x.mapper.ts";
+
+    // Act
+    const packed = lint("readability/src", file, "function f(d: string[]) { return (d.push('x'), null); }");
+    const bare = lint("readability/src", file, "let a = 0; let b = 0; a++, b++;");
+    const separated = lint("readability/src", file, "const [a, b] = [1, 2]; f(a, b); for (let i = 0, j = 1; i < j; i++) {}");
+
+    // Assert
+    expect(packed).toHaveLength(1);
+    expect(bare).toHaveLength(1);
+    expect(separated).toEqual([]);
   });
 });

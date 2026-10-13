@@ -55,8 +55,11 @@ export const sheetPlaceDoc = renderablePlace.transform((place) => place as unkno
 export const liveActivation = z.object({ _id: z.string(), activeUntil: z.date().nullish().transform((until) => until ?? null) }) satisfies z.ZodType<LiveActivation>;
 
 // WHY: the URL rules read infra's origins, which rules and mappers may not import, so they parse through these.
-export const webviewUrl = z
-  .string()
-  .transform((value, ctx) => toWebviewUrl(value) ?? (ctx.addIssue({ code: "custom", path: [], message: "is not a web view URL" }), z.NEVER));
+export const webviewUrl = z.string().transform((value, ctx) => {
+  const url = toWebviewUrl(value);
+  if (url !== null) return url;
+  ctx.addIssue({ code: "custom", path: [], message: "is not a web view URL" });
+  return z.NEVER;
+});
 
 export const mediaUrl = z.string().refine(isMediaUrl);
