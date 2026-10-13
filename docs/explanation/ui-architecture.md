@@ -3,7 +3,7 @@ title: Ui Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-11
+last-updated: 2026-10-13
 audience: internal
 ---
 
@@ -20,6 +20,7 @@ Ui owns no data store. It serves two JSON files committed next to their readers,
 | The committed config files | — | The home layout and the campus carousel, edited by hand and shipped with a deploy | `readHomeLayout`, `readCampusBanners` |
 | The mini-app registry | — | Which mini apps exist, the target and emoji checks, and the logo of a link tile | `MiniAppsService`, injected into `UiHomeService` and `UiCampusService` |
 | The bus groups | — | Each group's label, card, screen type and visibility | `BusConfigService.getBusGroups`, injected into `UiTransitListService` |
+| moment-timezone | `moment` | A bus group's KST dates and first-day time; a strict parse still reads `24:00` as the next midnight | `isBusGroupVisible` |
 | The translations | — | The titles of the campus buttons and the scroll cards | `t` in `src/infra/i18n.ts` |
 | skkuverse-app | — | Nothing; it reads the four routes | `GET /ui/home` and its siblings |
 
@@ -30,7 +31,7 @@ Ui owns no data store. It serves two JSON files committed next to their readers,
 | home layout (`HomeLayout`) | The `GET /ui/home` body: a version and the sections the home screen draws in order | `toHomeLayout` over `home-layout.json` | `homeConfig` |
 | section | One entry of a layout or sheet, told apart by `type`; the app skips a type it does not know | the config files | `widget` |
 | banner carousel (`BannerCarousel`) | A rotating row of banners with an `aspectRatio` and an `autoRotateSec` | `toBannerCarousel` | `slider` |
-| banner (`BannerImageRaw`) | One uploaded image in a carousel, with its `alt` text and an optional action | `bannerImage` in `ui.schema.ts` | — |
+| banner (`BannerImageRaw`) | One uploaded image in a carousel, with its `alt` text and an optional action | `bannerImageFile` in `ui.schema.ts` | — |
 | default banner | The app's own built-in banner, placed by a `{ "type": "default" }` item on home only | `home-layout.json` | — |
 | window | A banner's `startAt` and `endAt`, each with an offset; the banner shows from the first and stops at the second | `isBannerShowing` | `period` |
 | tile (`TileRaw`) | One entry of a tile grid: a registered mini app, a game the app bundles, or a link with its own text and icon | `home-layout.json` | `shortcut` |
@@ -82,7 +83,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `sk
 - Section and banner ids share one namespace and tile ids another (`findDuplicateId`): each is an analytics item id for a tap.
 - A banner shows inside its window on the injected `Clock` (`isBannerShowing`). `GET /ui/home` and `GET /ui/home/campus` are cached for `UI_CACHE_CONTROL`, which also bounds how late a window takes effect.
 - An emptied home carousel is still sent, because the app draws its default banner there; an emptied campus carousel is left out, because the campus sheet has none.
-- A bus group card shows by its visibility, a date range counting whole days in KST (`isBusGroupVisible`).
+- A bus group card shows by its visibility: always, or a date range counting whole days in KST whose first day a `fromTime` (KST `HH:mm`) may open later (`isBusGroupVisible`). A malformed `fromTime` throws instead of hiding the card, and `bus-config.data.ts` refuses a malformed date or time at import.
 - The served shapes are built from named fields, so a window and the untranslated text never reach the wire; the `.wire` files publish them.
 - `HOME_LAYOUT_VERSION` changes only on a breaking change; a new section or tile kind is not one.
 - Only `UiModule` binds the general limiter on `/ui`; the sub-modules bind nothing.

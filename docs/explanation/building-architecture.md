@@ -103,7 +103,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 
 ## Open questions
 
-- `ApiId` equals `SkkuId`, and no reason for keeping them apart is recorded. Merging them, which would retire `toApiId`, is open ([brand minter design](../../openspec/changes/enforce-single-brand-minter/design.md), Open questions).
+- `ApiId` equals `SkkuId`, and no reason for keeping them apart is recorded. Merging them, which would retire `toApiId`, is open ([brand minter design](../../openspec/changes/archive/2026-10-13-enforce-single-brand-minter/design.md), Open questions).
 - `GET /building/list` has no caller in the app, web or mini sources, and only the response-compare script called it in the logs checked. Removing it waits for several days of logs or per-app-version counts.
 - After a sync, `clearCache` clears only the poller process's cache, so `ROLE=api` replicas serve the old list until `BUILDING_CACHE_TTL_MS` expires ([refactor design, D15](../../openspec/changes/refactor-server-architecture/design.md)).
 - What `conspaceCd` means; nothing reads it.

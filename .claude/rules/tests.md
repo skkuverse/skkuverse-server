@@ -67,6 +67,7 @@ ADR 0011 (`docs/decisions/0011-test-strategy.md`) is the decision and its why; `
 
 - Open each test file with a docblock saying which behavior it guards (`src/building/building.repository.spec.ts`).
 - Mark the steps of every test body with one-line comments, exactly `// Arrange`, `// Act` and `// Assert`, in that order. Leave out `// Arrange` when there is nothing to set up, and `// Act` when the act ran in a shared setup or there is none; write `// Act & Assert` when the call sits inside the `expect`. Any other comment goes on its own line below a marker. Checked by `test-hygiene`; files that predate the rule are in its `test-aaa.json` allowlist, and a new file complies from its first commit.
+- Name a sibling spec's top-level `describe` after what the source next to it exports: the function, `@Decorator` or `Class.method` (`BuildingRepository.listBuildings`), never a wrapper the spec defines. A title that opens with a code name the source does not export fails `spec-titles`; one that opens in prose is not checked.
 - Every other comment says only why, as in `src/` (ADR 0010 D10). The three-line cap and the `comment-tags` prefixes do not apply to tests.
 - Assert on logged fields with `__tests__/helpers/log-text.ts` instead of matching the message alone.
 

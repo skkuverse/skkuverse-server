@@ -1,7 +1,9 @@
 import crypto from "crypto";
+import { z } from "zod";
 import { pick, t } from "../../infra/i18n";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
+import type { BusGroup } from "./bus-config.types";
 import { HSSCStations } from "./hssc.stations";
 import { jongroRoutes, type JongroRoute } from "../registry/jongro-registry";
 import { buildStreetViewUrl } from "../schedule/naver-street-view";
@@ -19,13 +21,32 @@ import type {
 type AnyStation = HsscStation | JongroStation;
 
 /** When the bus list shows a group: always, or from one KST date to another, inclusive. */
-type GroupVisibility =
-  | { type: "always" }
-  | { type: "dateRange"; from: string; fromTime?: string; until: string };
+const groupVisibility = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("always") }),
+  z.strictObject({
+    type: z.literal("dateRange"),
+    from: z.iso.date(),
+    fromTime: z.iso.time({ precision: -1 }).optional(),
+    until: z.iso.date(),
+  }),
+]);
+
+type GroupVisibility = z.output<typeof groupVisibility>;
 
 const always = (): GroupVisibility => ({ type: "always" });
-const dateRange = (from: string, until: string, fromTime?: string): GroupVisibility =>
-  fromTime === undefined ? { type: "dateRange", from, until } : { type: "dateRange", from, fromTime, until };
+
+// WHY: parsed at import, so a typo in a date or time fails the boot instead of silently hiding the card.
+function dateRange(from: string, until: string, fromTime?: string): GroupVisibility {
+  const visibility: GroupVisibility =
+    fromTime === undefined ? { type: "dateRange", from, until } : { type: "dateRange", from, fromTime, until };
+  groupVisibility.parse(visibility);
+  return visibility;
+}
+
+const FASTTRACK_VISIBILITY = dateRange("2026-03-01", "2026-03-07");
+// WHY: the 자과캠 통학셔틀 card opens with the school's notice, a week before the first run
+// (2026-10-19), and its smart view opens on that run. SEE: docs/project-docs.md (Visibility)
+const COMMUTE_VISIBILITY = dateRange("2026-10-12", "2026-12-18", "11:55");
 
 interface MappedStation {
   index: number;
@@ -239,15 +260,13 @@ const COMMUTE_SERVICE_IDS = [
   "commute-gwanggyo",
 ] as const;
 
-// WHY: the 자과캠 통학셔틀 card opens with the school's notice, a week before the first run
-// (2026-10-19), and its smart view opens on that run. SEE: docs/project-docs.md (Visibility)
 function buildCommuteGroup(lang: SupportedLang) {
   const { sequences, stops } = resolveStopSequences(COMMUTE_SERVICE_IDS, lang);
   return {
     id: "commute",
     screenType: "schedule",
     label: t("busconfig.label.commute", lang),
-    visibility: dateRange("2026-10-12", "2026-12-18", "11:55"),
+    visibility: COMMUTE_VISIBILITY,
     card: {
       themeColor: "003626",
       iconType: "shuttle",
@@ -310,7 +329,7 @@ function getBusGroups(lang: SupportedLang = "ko") {
       id: "fasttrack",
       screenType: "schedule",
       label: t("busconfig.label.fasttrack", lang),
-      visibility: dateRange("2026-03-01", "2026-03-07"),
+      visibility: FASTTRACK_VISIBILITY,
       card: {
         themeColor: "E65100",
         iconType: "shuttle",
@@ -357,8 +376,6 @@ function computeEtag(lang: SupportedLang = "ko"): string {
   return etag;
 }
 
-type BusGroup = ReturnType<typeof getBusGroups>[number];
-
 /**
  * Returns a single group by id, or null if not found.
  */
@@ -400,4 +417,5 @@ export {
   computeGroupEtag,
   mapStations,
   resolveStopSequences,
+  dateRange,
 };

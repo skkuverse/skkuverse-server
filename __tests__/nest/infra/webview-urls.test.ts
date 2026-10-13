@@ -25,8 +25,6 @@ import { UiScrollService } from "../../../src/ui/scroll/ui-scroll.service";
 import { getBusGroups } from "../../../src/bus/bus-config/bus-config.data";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN } from "../../../src/infra/origins";
 
-const getCampusSections = () => new UiCampusService(new MiniAppsService(), new Clock()).getCampusSheet("ko");
-const getScrollComponent = () => new UiScrollService().listScrollCards("ko");
 
 /** Every string anywhere in `value` that names a webview host. */
 function webviewUrlsIn(value: unknown): string[] {
@@ -62,8 +60,8 @@ const registryDetails = Object.fromEntries(
 );
 
 const payloads: Record<string, unknown> = {
-  "GET /ui/home/campus": getCampusSections(),
-  "GET /ui/home/scroll": getScrollComponent(),
+  "GET /ui/home/campus": new UiCampusService(new MiniAppsService(), new Clock()).getCampusSheet("ko"),
+  "GET /ui/home/scroll": new UiScrollService().listScrollCards("ko"),
   "GET /bus/config": getBusGroups(),
   "src/miniapps/details/*.json": registryDetails,
 };

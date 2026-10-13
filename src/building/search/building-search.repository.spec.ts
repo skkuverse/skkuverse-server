@@ -28,7 +28,7 @@ import type { Document } from "mongodb";
 import { SPACE_SEARCH_LIMIT, SPACE_STRONG_MIN_SCORE, SPACE_WEAK_LIMIT } from "./building-search.rules";
 import { BuildingSearchRepository } from "./building-search.repository";
 
-describe("searchSpaces pipeline assembly", () => {
+describe("BuildingSearchRepository.searchSpaces pipeline assembly", () => {
   function capturePipeline(campus?: "hssc" | "nsc"): Promise<Document[]> {
     let captured: Document[] = [];
     mockCollection.aggregate.mockImplementation((pipeline: Document[]) => {

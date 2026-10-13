@@ -62,7 +62,7 @@ function building(over: Record<string, unknown> = {}) {
   };
 }
 
-describe("getCampusOverlays", () => {
+describe("MapCampusService.getCampusOverlays", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockListAllCampusShapes.mockResolvedValue([]);
@@ -315,7 +315,7 @@ describe("getCampusOverlays", () => {
   });
 });
 
-describe("getCampusOverlays — hand-authored campus geometry", () => {
+describe("MapCampusService.getCampusOverlays — hand-authored campus geometry", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockListAllBuildings.mockResolvedValue([building()]);
