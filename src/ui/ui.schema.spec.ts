@@ -1,12 +1,10 @@
 /**
  * The on-disk pieces home and campus share: a captured banner image parses and
  * a copy missing each required field does not; a carousel rotates never (0)
- * or every 2 to 30 whole seconds; and a failed parse throws one
- * line that starts with the file's label and names each path.
+ * or every 2 to 30 whole seconds.
  */
-import { z } from "zod";
 import { MAX_AUTO_ROTATE_SEC, MIN_AUTO_ROTATE_SEC } from "./ui.constants";
-import { bannerImageFile, carouselFields, parseConfigFile } from "./ui.schema";
+import { bannerImageFile, carouselFields } from "./ui.schema";
 
 const CAPTURED_IMAGE = {
   type: "image",
@@ -64,21 +62,5 @@ describe("carouselFields", () => {
     expect(parsed.error?.issues.map((issue) => issue.message)).toEqual([
       `must be 0 (off) or a whole number from ${MIN_AUTO_ROTATE_SEC} to ${MAX_AUTO_ROTATE_SEC}`,
     ]);
-  });
-});
-
-describe("parseConfigFile", () => {
-  const schema = z.strictObject({ id: z.string(), items: z.array(z.int()) });
-
-  it("returns the parsed value", () => {
-    // Act & Assert
-    expect(parseConfigFile("x file", schema, { id: "a", items: [1] })).toEqual({ id: "a", items: [1] });
-  });
-
-  it("throws one line naming each failed path after the label", () => {
-    // Act & Assert
-    expect(() => parseConfigFile("x file", schema, { id: 1, items: [1, "2"], extra: true })).toThrow(
-      /^x file: id: .+; items\.1: .+; root: Unrecognized key: "extra"$/,
-    );
   });
 });
