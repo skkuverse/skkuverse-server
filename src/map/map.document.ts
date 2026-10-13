@@ -62,6 +62,7 @@ export interface MapPlaceDoc {
   updatedAt: Date;
 }
 
+// CONTRACT(scripts): scripts/lib/eventmap-db.js and scripts/eventmap-window.js write activations; ops edit them by hand.
 export interface ActivationDoc {
   /** WHY: the layer set's id, so one activation per layer set. */
   _id: string;
@@ -79,3 +80,5 @@ export type OverlayPlaceDoc = Pick<
 
 /** WHY: `detail` is read block by block and button by button, so the place read leaves it unknown. */
 export type SheetPlaceDoc = Pick<MapPlaceDoc, "_id" | "category" | "location" | "title" | "hours" | "fields" | "actions"> & { detail?: unknown };
+
+export type LiveActivation = Pick<ActivationDoc, "_id" | "activeUntil">;

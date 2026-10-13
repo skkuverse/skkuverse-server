@@ -5,7 +5,7 @@ import { isMediaUrl } from "../infra/media-url";
 import { toWebviewUrl } from "../infra/webview-url";
 import type { OverlayGeometry } from "../shared/geojson.types";
 import { isDrawableGeometry } from "../shared/geojson.util";
-import type { OverlayPlaceDoc, SheetPlaceDoc } from "./map.document";
+import type { LiveActivation, OverlayPlaceDoc, SheetPlaceDoc } from "./map.document";
 import type { ConfigIssue } from "./map.types";
 
 export const text = z.string().regex(/\S/);
@@ -50,6 +50,9 @@ const renderablePlace = z.looseObject({
 /** CONTRACT(scripts): scripts/lib/map-places-file.js writes places; map.schema.spec.ts keeps the two in step. */
 export const overlayPlaceDoc = renderablePlace.transform((place) => place as unknown as OverlayPlaceDoc) satisfies z.ZodType<OverlayPlaceDoc>;
 export const sheetPlaceDoc = renderablePlace.transform((place) => place as unknown as SheetPlaceDoc) satisfies z.ZodType<SheetPlaceDoc>;
+
+// WHY: the activation query already matched `enabled` and the window, so only what the service reads is checked.
+export const liveActivation = z.object({ _id: z.string(), activeUntil: z.date().nullish().transform((until) => until ?? null) }) satisfies z.ZodType<LiveActivation>;
 
 // WHY: the URL rules read infra's origins, which rules and mappers may not import, so they parse through these.
 export const webviewUrl = z
