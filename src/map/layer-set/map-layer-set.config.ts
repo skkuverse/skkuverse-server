@@ -13,7 +13,7 @@ import type { LoadedConfig } from "./map-layer-set.types";
 assertValidChipSpecs(BASE_CHIPS, BASE_LAYERS);
 
 // WHY: the first problem, with its path: the only reader is whoever broke the file, and the fix is a PR.
-export function assertValidConfig(raw: unknown): LayerSet {
+export function parseLayerSetFile(raw: unknown): LayerSet {
   const parsed = layerSetFile.safeParse(raw, { error: toConfigWords });
   if (!parsed.success) throw new Error(parsed.error.issues.map(toConfigMessage)[0]);
   const reference = crossReferenceIssue(parsed.data);
@@ -25,7 +25,7 @@ export function assertValidConfig(raw: unknown): LayerSet {
 }
 
 function readLayerSet(fileName: string, layerSetId: string): LayerSet {
-  const config = assertValidConfig(JSON.parse(fs.readFileSync(path.join(__dirname, fileName), "utf8")));
+  const config = parseLayerSetFile(JSON.parse(fs.readFileSync(path.join(__dirname, fileName), "utf8")));
   if (config.layerSetId !== layerSetId) {
     throw new Error(`config.layerSetId "${config.layerSetId}" does not match its filename "${fileName}"`);
   }

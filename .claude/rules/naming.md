@@ -16,7 +16,7 @@ A name is how a reader, or an agent, finds code and understands it without a com
 | Exported types only in `.types`, `.document`, `.schema`, `.wire`; type files hold no runtime code | `naming.test.ts` |
 | A `.rules` file exports a function, a `.constants` file none, a `.schema` file no predicate; a service, controller, repository, client or poller file declares no function beside its class | `role-contents.test.ts` |
 | A brand is minted only by its one `is<Brand>`/`to<Brand>` in the declaring folder's `.rules`; casts only there or in specs | `naming.test.ts` |
-| Repository and client verbs, and `.rules`/`.mapper` predicates, match the declared return type | `method-verbs.test.ts` |
+| Repository and client verbs, and `.rules`/`.mapper` predicates, match the declared return type; an `assert…` function returns `void` | `method-verbs.test.ts` |
 | No `// --- X ---` section dividers | `section-comments.test.ts` |
 | Top-level `src/` folders are shared roles or feature modules | `folders.test.ts` |
 | One file per role in a module folder, named after the folder's module (`building-sync.*` in `sync/`) | `folders.test.ts` |
