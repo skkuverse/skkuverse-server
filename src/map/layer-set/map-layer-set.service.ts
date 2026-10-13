@@ -11,7 +11,7 @@ import { eventChipSpecs, eventLayerSpecs } from "./map-layer-set.mapper";
 import type { EventMapConfig } from "./map-layer-set.schema";
 import type { LoadedConfig, MapChipSpec } from "./map-layer-set.types";
 
-// SEE: docs/explanation/map-architecture.md (The live layer set): /map/config and the event routes ask this one service.
+// SEE: docs/explanation/map-architecture.md (Structure): /map/config and the event routes ask this one service.
 @Injectable()
 export class MapLayerSetService {
   private readonly reported = new Set<string>();
