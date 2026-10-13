@@ -1,24 +1,13 @@
 /**
- * The carousel rules home and campus share: a rotation is off (0) or 2 to 30
- * seconds, a banner shows inside its half-open window [startAt, endAt), and
- * the first repeated id is named.
+ * The rules home and campus share: a banner shows inside its half-open window
+ * [startAt, endAt), the first repeated id is named, and a link action is
+ * checked by its type's rule (a registered mini-app target, an https URL, a
+ * web view URL, a root-relative route), never with whitespace.
  */
-import { MAX_AUTO_ROTATE_SEC, MIN_AUTO_ROTATE_SEC, findDuplicateId, isAutoRotateSec, isBannerShowing } from "./ui.rules";
+import { MiniAppsService } from "../miniapps/miniapps.service";
+import { findDuplicateId, isBannerShowing, isBrokenLinkAction } from "./ui.rules";
 
-describe("isAutoRotateSec", () => {
-  it.each([
-    [0, true],
-    [MIN_AUTO_ROTATE_SEC - 1, false],
-    [MIN_AUTO_ROTATE_SEC, true],
-    [MIN_AUTO_ROTATE_SEC + 1, true],
-    [MAX_AUTO_ROTATE_SEC - 1, true],
-    [MAX_AUTO_ROTATE_SEC, true],
-    [MAX_AUTO_ROTATE_SEC + 1, false],
-  ])("answers %p with %p", (sec, expected) => {
-    // Act & Assert
-    expect(isAutoRotateSec(sec)).toBe(expected);
-  });
-});
+const registry = new MiniAppsService();
 
 describe("isBannerShowing", () => {
   const window = { startAt: "2026-10-01T00:00:00+09:00", endAt: "2026-10-03T00:00:00+09:00" };
@@ -50,5 +39,31 @@ describe("findDuplicateId", () => {
     expect(findDuplicateId(["a", "b", "c", "b", "a"])).toBe("b");
     expect(findDuplicateId(["a", "b", "c"])).toBeUndefined();
     expect(findDuplicateId([])).toBeUndefined();
+  });
+});
+
+describe("isBrokenLinkAction", () => {
+  it.each([
+    ["miniapp", "eskara-2026", false],
+    ["miniapp", "eskara-2026/eskara/wristband", false],
+    ["miniapp", "no-such-app", true],
+    ["external", "https://pf.kakao.com/_cjxexdG/chat", false],
+    ["external", "http://pf.kakao.com/_cjxexdG/chat", true],
+    ["external", "/x", true],
+    ["webview", "https://webview.skkuverse.com/skku/lostandfound", false],
+    ["webview", "https://webview.skkuverse.com/a b", true],
+    ["route", "/map/hssc", false],
+    ["route", "//evil.com", true],
+    ["route", "campus", true],
+    ["route", "", true],
+    ["route", "/search\n", true],
+  ] as const)("%s %p: broken is %p", (actionType, actionValue, expected) => {
+    // Act & Assert
+    expect(isBrokenLinkAction({ actionType, actionValue }, registry)).toBe(expected);
+  });
+
+  it("finds nothing broken in a banner without an action", () => {
+    // Act & Assert
+    expect(isBrokenLinkAction({}, registry)).toBe(false);
   });
 });

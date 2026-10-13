@@ -1,15 +1,10 @@
 /**
  * The on-disk pieces home and campus share: a captured banner image parses and
- * a copy missing each required field does not; a link action is checked by its
- * type's rule (a registered mini-app target, an https URL, a web view URL, a
- * root-relative route), never with whitespace; and a failed parse throws one
+ * a copy missing each required field does not; and a failed parse throws one
  * line that starts with the file's label and names each path.
  */
 import { z } from "zod";
-import { MiniAppsService } from "../miniapps/miniapps.service";
-import { bannerImage, isBrokenLinkAction, parseConfigFile } from "./ui.schema";
-
-const registry = new MiniAppsService();
+import { bannerImageFile, parseConfigFile } from "./ui.schema";
 
 const CAPTURED_IMAGE = {
   type: "image",
@@ -19,10 +14,10 @@ const CAPTURED_IMAGE = {
   endAt: "2026-10-03T00:00:00+09:00",
 };
 
-describe("bannerImage", () => {
+describe("bannerImageFile", () => {
   it("parses a banner from campus-banners.json", () => {
     // Act & Assert
-    expect(bannerImage.safeParse(CAPTURED_IMAGE).success).toBe(true);
+    expect(bannerImageFile.safeParse(CAPTURED_IMAGE).success).toBe(true);
   });
 
   it.each(["type", "id", "imageUrl", "alt"])("refuses a banner without its %s", (field) => {
@@ -31,7 +26,7 @@ describe("bannerImage", () => {
     delete rest[field];
 
     // Act & Assert
-    expect(bannerImage.safeParse(rest).success).toBe(false);
+    expect(bannerImageFile.safeParse(rest).success).toBe(false);
   });
 
   it.each(["actionType", "actionValue", "startAt", "endAt"])("accepts a banner without its %s", (field) => {
@@ -40,33 +35,7 @@ describe("bannerImage", () => {
     delete rest[field];
 
     // Act & Assert
-    expect(bannerImage.safeParse(rest).success).toBe(true);
-  });
-});
-
-describe("isBrokenLinkAction", () => {
-  it.each([
-    ["miniapp", "eskara-2026", false],
-    ["miniapp", "eskara-2026/eskara/wristband", false],
-    ["miniapp", "no-such-app", true],
-    ["external", "https://pf.kakao.com/_cjxexdG/chat", false],
-    ["external", "http://pf.kakao.com/_cjxexdG/chat", true],
-    ["external", "/x", true],
-    ["webview", "https://webview.skkuverse.com/skku/lostandfound", false],
-    ["webview", "https://webview.skkuverse.com/a b", true],
-    ["route", "/map/hssc", false],
-    ["route", "//evil.com", true],
-    ["route", "campus", true],
-    ["route", "", true],
-    ["route", "/search\n", true],
-  ] as const)("%s %p: broken is %p", (actionType, actionValue, expected) => {
-    // Act & Assert
-    expect(isBrokenLinkAction({ actionType, actionValue }, registry)).toBe(expected);
-  });
-
-  it("finds nothing broken in a banner without an action", () => {
-    // Act & Assert
-    expect(isBrokenLinkAction({}, registry)).toBe(false);
+    expect(bannerImageFile.safeParse(rest).success).toBe(true);
   });
 });
 

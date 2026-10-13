@@ -6,7 +6,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { DEFAULT_MINIAPP_FEED_LIMIT } from "./ui-home.rules";
+import { DEFAULT_MINIAPP_FEED_LIMIT } from "./ui-home.constants";
 import { homeLayoutFile } from "./ui-home.schema";
 
 const COMMITTED = JSON.parse(fs.readFileSync(path.join(__dirname, "home-layout.json"), "utf8")) as Record<string, unknown>;
