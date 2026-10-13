@@ -47,6 +47,6 @@ export const renderablePlace = z.looseObject({
 // WHY: the URL rules read infra's origins, which rules and mappers may not import, so they parse through these.
 export const webviewUrl = z
   .string()
-  .transform((value, ctx) => toWebviewUrl(value) ?? (ctx.addIssue({ code: "custom", message: "is not a web view URL" }), z.NEVER));
+  .transform((value, ctx) => toWebviewUrl(value) ?? (ctx.addIssue({ code: "custom", path: [], message: "is not a web view URL" }), z.NEVER));
 
 export const mediaUrl = z.string().refine(isMediaUrl);

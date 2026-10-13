@@ -148,6 +148,28 @@ const CLOCK_SYNTAX = [
   },
 ];
 
+// no-restricted-syntax replaces rather than merges across blocks, and the role blocks above each
+// set it for their files. The rules below run beside them under their own names: the same core
+// rule, registered again by a local plugin, so a block that sets one leaves the others alone.
+const CORE_RESTRICTED_SYNTAX = require("eslint/use-at-your-own-risk").builtinRules.get("no-restricted-syntax");
+const SRC_SYNTAX_PLUGIN = {
+  rules: { "zod-issues": CORE_RESTRICTED_SYNTAX },
+};
+
+// A zod issue names where it is (ADR 0010, D5): parseConfigFile and the boot error print each
+// issue's path, and an issue without one reads `root:` wherever it sits.
+const ADD_ISSUE = "CallExpression[callee.property.name='addIssue']";
+const ADD_ISSUE_SYNTAX = [
+  {
+    selector: `${ADD_ISSUE} > ObjectExpression.arguments:first-child:not(:has(> Property[key.name='path']))`,
+    message: "Give each zod issue its `path` (`path: []` when the issue is the whole value), so the error names the field.",
+  },
+  {
+    selector: `${ADD_ISSUE} > :matches(Literal, TemplateLiteral).arguments:first-child`,
+    message: "Pass an issue object with its `path` (`path: []` when the issue is the whole value), not a bare message.",
+  },
+];
+
 // ── Import boundaries (docs/decisions/0010-server-architecture.md, D3 and D9) ──
 //
 // Each boundary block is named `boundaries/...`. Its `ignores` hold the files
@@ -646,6 +668,14 @@ module.exports = [
     },
   },
   ...layerSetLeafBlocks(),
+  {
+    // A spec may build a pathless issue on purpose, to test how one is answered.
+    name: "zod/issue-path",
+    files: ["src/**/*.ts"],
+    ignores: ["src/**/*.spec.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: { "src-syntax/zod-issues": ["error", ...ADD_ISSUE_SYNTAX] },
+  },
   {
     files: ["__tests__/**/*.{js,ts}"],
     languageOptions: {

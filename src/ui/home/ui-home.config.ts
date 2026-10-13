@@ -57,7 +57,7 @@ function registryIssues(layout: HomeLayoutRaw, registry: MiniAppRegistry): Array
 
 export function loadHomeLayout(raw: unknown, registry: MiniAppRegistry): Readonly<HomeLayoutRaw> {
   const schema = homeLayoutFile.superRefine((layout, ctx) => {
-    for (const issue of registryIssues(layout, registry)) ctx.addIssue({ code: "custom", ...issue });
+    for (const { path: at, message } of registryIssues(layout, registry)) ctx.addIssue({ code: "custom", path: at, message });
   });
   return Object.freeze(parseConfigFile("home layout", schema, raw));
 }
