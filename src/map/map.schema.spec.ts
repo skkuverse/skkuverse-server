@@ -5,7 +5,7 @@
  * URL pieces the layer-set schema and the mappers build on.
  */
 import { WEBVIEW_ORIGIN } from "../infra/origins";
-import { i18nText, mapCamera, mediaUrl, renderablePlace, webviewUrl } from "./map.schema";
+import { i18nTextFile, mapCamera, mediaUrl, renderablePlace, webviewUrl } from "./map.schema";
 
 // The importer is CommonJS and outside tsconfig, so it is required.
 const { parsePlacesFile } = require("../../scripts/lib/map-places-file");
@@ -85,10 +85,10 @@ describe("renderablePlace agrees with the places importer", () => {
   });
 });
 
-describe("i18nText", () => {
+describe("i18nTextFile", () => {
   it("keeps ko and drops a null translation rather than sending it", () => {
     // Act
-    const parsed = i18nText.parse({ ko: "주점", en: null, zh: "酒馆" });
+    const parsed = i18nTextFile.parse({ ko: "주점", en: null, zh: "酒馆" });
 
     // Assert
     expect(parsed).toEqual({ ko: "주점", zh: "酒馆" });
@@ -97,7 +97,7 @@ describe("i18nText", () => {
 
   it.each([{}, { ko: "" }, { ko: "  " }, { ko: "주점", en: "" }])("refuses %j", (text) => {
     // Act & Assert
-    expect(i18nText.safeParse(text).success).toBe(false);
+    expect(i18nTextFile.safeParse(text).success).toBe(false);
   });
 });
 

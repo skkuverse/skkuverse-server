@@ -23,7 +23,7 @@ export function addIssue(ctx: z.RefinementCtx, found: ConfigIssue | null): void 
   if (found) ctx.addIssue({ code: "custom", path: [...found[0]], message: found[1] });
 }
 
-export const i18nText = z
+export const i18nTextFile = z
   .object({ ko: text, en: text.nullish(), zh: text.nullish() })
   .transform(({ ko, en, zh }) => ({ ko, ...(en == null ? {} : { en }), ...(zh == null ? {} : { zh }) }));
 

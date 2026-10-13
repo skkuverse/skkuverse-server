@@ -2,7 +2,7 @@ import { z } from "zod";
 import { isHex6 } from "../../infra/color";
 import { LOCATION_ACCURACIES } from "../map.constants";
 import { chipLabelIssue, listSortIssue } from "../map.rules";
-import { absentWhenNull, addIssue, defaulted, i18nText, mapCamera, text } from "../map.schema";
+import { absentWhenNull, addIssue, defaulted, i18nTextFile, mapCamera, text } from "../map.schema";
 import type { DailyWindow } from "../map.types";
 import { HHMM_RE } from "./map-layer-set.constants";
 import { toOptionWindow } from "./map-layer-set.mapper";
@@ -24,7 +24,7 @@ const visibility = z.discriminatedUnion("kind", [fixed("always"), fixed("never")
 const layer = z.object({
   color: text.refine(isHex6, 'must be a 6-digit hex colour without "#"'),
   id: text,
-  label: i18nText,
+  label: i18nTextFile,
   defaultVisibleWhen: defaulted(visibility, { kind: "always" } as const),
   markerStyle: defaulted(z.enum(["placeDot", "textLabel"]), "placeDot"),
 });
@@ -35,13 +35,13 @@ const sort = z
   .transform(({ key, scopeFacetId = null }) => (key === "title" ? { key, scopeFacetId: null } : { key, scopeFacetId }));
 const list = z.object({ facetIds: z.array(text), sort });
 const chip = z
-  .object({ layerIds: z.array(text).min(1, "must not be empty"), id: text, emoji: text, label: absentWhenNull(i18nText) })
+  .object({ layerIds: z.array(text).min(1, "must not be empty"), id: text, emoji: text, label: absentWhenNull(i18nTextFile) })
   .extend({ camera: absentWhenNull(mapCamera), list: absentWhenNull(list) })
   .superRefine((raw, ctx) => addIssue(ctx, chipLabelIssue(raw.layerIds.length, raw.label !== undefined)));
 
-const option = z.object({ id: text, label: i18nText, from: z.unknown().optional(), until: z.unknown().optional() });
+const option = z.object({ id: text, label: i18nTextFile, from: z.unknown().optional(), until: z.unknown().optional() });
 const facet = z
-  .object({ source: z.enum(["hours", "tag"]), options: z.array(option).min(1, "must not be empty"), id: text, label: i18nText })
+  .object({ source: z.enum(["hours", "tag"]), options: z.array(option).min(1, "must not be empty"), id: text, label: i18nTextFile })
   .extend({ select: z.enum(["required", "optional"]) })
   .superRefine((raw, ctx) => optionIssues(raw.source, raw.options).forEach((found) => addIssue(ctx, found)))
   .transform(({ options, ...head }) => ({ ...head, options: options.map(({ from, until, ...o }) => ({ ...o, window: toOptionWindow(from, until) })) }));
@@ -57,7 +57,7 @@ const presentation = z.object({
 const itemDefaults = z.object({ byCategory: z.record(z.string(), presentation), fallback: presentation });
 export const layerSetFile = z
   .object({ camera: mapCamera, layers: z.array(layer), chips: z.array(chip), facets: z.array(facet), itemDefaults })
-  .extend({ layerSetId: text, campus: z.enum(["hssc", "nsc"]), name: i18nText, emoji: text, timezone: z.enum(["Asia/Seoul"]) });
+  .extend({ layerSetId: text, campus: z.enum(["hssc", "nsc"]), name: i18nTextFile, emoji: text, timezone: z.enum(["Asia/Seoul"]) });
 
 export type EventMapConfig = z.output<typeof layerSetFile>;
 export type EventFacetDef = EventMapConfig["facets"][number];
