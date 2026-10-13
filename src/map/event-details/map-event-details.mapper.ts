@@ -2,7 +2,7 @@ import { hasAnyText } from "../../infra/i18n";
 import type { I18n } from "../../infra/types";
 import { isAbsoluteHttpsUrl } from "../../shared/link-target.util";
 import { isRecord } from "../../shared/object.util";
-import type { MapPlaceDoc } from "../map.document";
+import type { SheetPlaceDoc } from "../map.document";
 import { toI18nText } from "../map.mapper";
 import { mediaUrl } from "../map.schema";
 import type { I18nText } from "../map.wire";
@@ -89,7 +89,7 @@ function toDetailAction(raw: unknown, where: string, dropped: string[]): DetailA
   return (dropped.push(`${at}: url "${String(raw.url)}" is not an absolute https URL`), null);
 }
 
-export function toPlaceDetail(doc: MapPlaceDoc, dropped: string[]): PlaceDetail | null {
+export function toPlaceDetail(doc: SheetPlaceDoc, dropped: string[]): PlaceDetail | null {
   const raw: unknown = doc.detail;
   if (!isRecord(raw) || !isPlaceKind(raw.kind) || !Array.isArray(raw.blocks) || !Array.isArray(raw.actions)) {
     return (dropped.push(`${doc._id}: detail is unreadable (kind, blocks or actions)`), null);

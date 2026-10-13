@@ -1,6 +1,6 @@
 import { toWirePolygon } from "../../shared/ring-winding.util";
 import type { ItemPresentation } from "../layer-set/map-layer-set.schema";
-import type { MapPlaceDoc, PlaceAction } from "../map.document";
+import type { OverlayPlaceDoc, PlaceAction } from "../map.document";
 import { toI18nText } from "../map.mapper";
 import { presentationFor } from "../map.rules";
 import { webviewUrl } from "../map.schema";
@@ -37,7 +37,7 @@ function toOverlayTap(presentation: ItemPresentation, placeId: string): OverlayB
   return presentation.tapChip ? { kind: "chip", chipId: presentation.tapChip } : { kind: "event", placeId };
 }
 
-function toOverlayBase(doc: MapPlaceDoc, context: EventOverlayContext): OverlayBase {
+function toOverlayBase(doc: OverlayPlaceDoc, context: EventOverlayContext): OverlayBase {
   const { config, drops } = context;
   const presentation = presentationFor(config, doc.category);
   return {
@@ -64,7 +64,7 @@ function toOverlayBase(doc: MapPlaceDoc, context: EventOverlayContext): OverlayB
  * WHY: points and lines pass through by reference, exactly as stored: an axis swap can only come from a conversion.
  * A polygon's rings are rewound, which never touches the pair inside a position.
  */
-export function toEventOverlay(doc: MapPlaceDoc, context: EventOverlayContext): MapOverlay {
+export function toEventOverlay(doc: OverlayPlaceDoc, context: EventOverlayContext): MapOverlay {
   const base = toOverlayBase(doc, context);
   const { location } = doc;
   if (location.type === "Polygon") return { ...base, kind: "polygon", geometry: toWirePolygon(location) };

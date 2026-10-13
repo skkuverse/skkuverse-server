@@ -327,8 +327,8 @@ describe("MapEventDetailsService.getEventPlaceDetails", () => {
     const { details } = await getEventPlaceDetails();
 
     // Assert
+    // The place is left out, and logged, where it is parsed: map.repository.spec.ts.
     expect(details).toEqual({});
-    expect(warned()).toMatch(/not renderable/);
   });
 
   it("gives no detail to a place on an inert category, which nothing can tap", async () => {

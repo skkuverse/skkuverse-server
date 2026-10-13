@@ -3,7 +3,9 @@ import { hasAnyText } from "../infra/i18n";
 import type { I18n } from "../infra/types";
 import { isMediaUrl } from "../infra/media-url";
 import { toWebviewUrl } from "../infra/webview-url";
+import type { OverlayGeometry } from "../shared/geojson.types";
 import { isDrawableGeometry } from "../shared/geojson.util";
+import type { OverlayPlaceDoc, SheetPlaceDoc } from "./map.document";
 import type { ConfigIssue } from "./map.types";
 
 export const text = z.string().regex(/\S/);
@@ -35,14 +37,19 @@ export const mapCamera = z
     if (Math.abs(lng) > 180) addIssue(ctx, [["lng"], `${lng} is outside ±180`]);
   });
 
-/** CONTRACT(scripts): scripts/lib/map-places-file.js writes places; map.schema.spec.ts keeps the two in step. */
-export const renderablePlace = z.looseObject({
+// WHY: only what makes a place undrawable is checked, as before the parse moved to the read; the other
+// fields are the importer's, read as stored, so a check on them would change which places are served.
+const renderablePlace = z.looseObject({
   title: z.custom<I18n>((title) => hasAnyText(title as I18n | null)),
-  location: z.unknown().refine(isDrawableGeometry),
-  hours: z.array(z.object({ startAt: z.date(), endAt: z.date().nullable() })),
+  location: z.custom<OverlayGeometry>(isDrawableGeometry),
+  hours: z.array(z.looseObject({ startAt: z.date(), endAt: z.date().nullable() })),
   fields: z.array(z.unknown()),
   actions: z.array(z.unknown()),
 });
+
+/** CONTRACT(scripts): scripts/lib/map-places-file.js writes places; map.schema.spec.ts keeps the two in step. */
+export const overlayPlaceDoc = renderablePlace.transform((place) => place as unknown as OverlayPlaceDoc) satisfies z.ZodType<OverlayPlaceDoc>;
+export const sheetPlaceDoc = renderablePlace.transform((place) => place as unknown as SheetPlaceDoc) satisfies z.ZodType<SheetPlaceDoc>;
 
 // WHY: the URL rules read infra's origins, which rules and mappers may not import, so they parse through these.
 export const webviewUrl = z

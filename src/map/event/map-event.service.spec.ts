@@ -604,9 +604,8 @@ describe("MapEventService.getEventOverlays", () => {
       const { overlays: markers } = await getEventOverlays();
 
       // Assert
+      // The skip is counted and logged where the place is parsed: map.repository.spec.ts.
       expect(markers.map((m) => m.id)).toEqual(["eskara-2026-booth-01"]);
-      expect(mockLogger.warn).toHaveBeenCalledTimes(1);
-      expect(logText(mockLogger.warn.mock.calls[0])).toMatch(/1/);
     });
 
     it("skips a document whose window has no start", async () => {
@@ -844,9 +843,9 @@ describe("MapEventService.getEventOverlays — zones and route lines", () => {
     const { overlays } = await getEventOverlays();
 
     // Assert
+    // The count is logged where the place is parsed: map.repository.spec.ts.
     expect(overlays).toHaveLength(1);
     expect(overlays[0]!.id).toBe("eskara-2026-booth-01");
-    expect(logText(mockLogger.warn.mock.calls.at(-1))).toMatch(/not renderable/);
   });
 });
 
