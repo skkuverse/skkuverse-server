@@ -107,8 +107,8 @@ function findSectionHeaders(barrierFreeText: string): BarrierFreeHeader[] {
 }
 
 function toSections(barrierFreeText: string, headers: readonly BarrierFreeHeader[]): BarrierFreeSection[] {
-  return headers.map((header, i) => {
-    const end = headers[i + 1]?.index ?? barrierFreeText.length;
+  return headers.map((header, headerIndex) => {
+    const end = headers[headerIndex + 1]?.index ?? barrierFreeText.length;
     return { label: header.label, ...parseSection(barrierFreeText.slice(header.endIndex, end)) };
   });
 }

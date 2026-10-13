@@ -13,6 +13,8 @@
  *           20-row window to dormitory noise. Pins ORDERING.
  *   q=204 — the Law building has no digits in its name, so its rooms (20401, 20404, ...)
  *           are unreachable by any prefix of their own code. Pins RECALL.
+ *
+ * Also isCampus, which reads the campus a count row of the facet names.
  */
 
 import type { Document } from "mongodb";
@@ -24,6 +26,7 @@ import {
   SPACE_STRONG_MIN_SCORE,
   SPACE_TIERS,
   SPACE_WEAK_LIMIT,
+  isCampus,
   scoreLocally,
 } from "./building-search.rules";
 
@@ -206,5 +209,20 @@ describe("row caps", () => {
     expect(BUILDING_SEARCH_LIMIT).toBeGreaterThan(78);
     // The strong cut must land on the spaceCd-prefix tier.
     expect(SPACE_STRONG_MIN_SCORE).toBe(50);
+  });
+});
+
+describe("isCampus", () => {
+  it.each([
+    ["hssc", true],
+    ["nsc", true],
+    ["HSSC", false],
+    ["", false],
+    [null, false],
+    [undefined, false],
+    [1, false],
+  ])("%j → %s", (value, expected) => {
+    // Act & Assert
+    expect(isCampus(value)).toBe(expected);
   });
 });

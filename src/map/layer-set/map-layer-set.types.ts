@@ -1,6 +1,6 @@
 import type { I18n } from "../../infra/types";
 import type { MapChipActionSpec } from "../map.types";
-import type { EventFacetDef, EventListSort, EventMapConfig } from "./map-layer-set.schema";
+import type { EventFacetDef, EventListSort, LayerSet } from "./map-layer-set.schema";
 
 export interface MapChipSpec {
   id: string;
@@ -12,4 +12,4 @@ export interface MapChipSpec {
   list: { facets: EventFacetDef[]; sort: EventListSort } | null;
 }
 
-export type LoadedConfig = { config: EventMapConfig; error: null } | { config: null; error: string };
+export type LoadedConfig = { config: LayerSet; error: null } | { config: null; error: string };

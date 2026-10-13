@@ -1,6 +1,6 @@
 import { toWirePolygon } from "../../shared/ring-winding.util";
 import type { ItemPresentation } from "../layer-set/map-layer-set.schema";
-import type { MapPlaceDoc, PlaceAction } from "../map.document";
+import type { OverlayPlaceDoc, PlaceAction } from "../map.document";
 import { toI18nText } from "../map.mapper";
 import { presentationFor } from "../map.rules";
 import { webviewUrl } from "../map.schema";
@@ -37,25 +37,25 @@ function toOverlayTap(presentation: ItemPresentation, placeId: string): OverlayB
   return presentation.tapChip ? { kind: "chip", chipId: presentation.tapChip } : { kind: "event", placeId };
 }
 
-function toOverlayBase(doc: MapPlaceDoc, context: EventOverlayContext): OverlayBase {
-  const { config, drops } = context;
-  const presentation = presentationFor(config, doc.category);
+function toOverlayBase(doc: OverlayPlaceDoc, context: EventOverlayContext): OverlayBase {
+  const { layerSet, drops } = context;
+  const presentation = presentationFor(layerSet, doc.category);
   return {
     id: doc._id,
     layerId: presentation.layerId,
     campus: doc.campus,
     text: toI18nText(doc.title),
     subtitle: doc.subtitle ? toI18nText(doc.subtitle) : null,
-    hours: doc.hours.map((w) => ({
-      startAt: w.startAt.toISOString(),
-      endAt: w.endAt ? w.endAt.toISOString() : null,
-      label: w.label ? toI18nText(w.label) : null,
+    hours: doc.hours.map((openingWindow) => ({
+      startAt: openingWindow.startAt.toISOString(),
+      endAt: openingWindow.endAt ? openingWindow.endAt.toISOString() : null,
+      label: openingWindow.label ? toI18nText(openingWindow.label) : null,
     })),
     fields: doc.fields.map((f) => ({ label: toI18nText(f.label), value: toI18nText(f.value) })),
     actions: toOverlayActions(doc.actions, context),
     order: doc.order,
-    facets: facetsOf(doc, config, drops.facets),
-    orderByOption: orderByOptionOf(doc, config, drops.facets),
+    facets: facetsOf(doc, layerSet, drops.facets),
+    orderByOption: orderByOptionOf(doc, layerSet, drops.facets),
     tap: toOverlayTap(presentation, doc._id),
   };
 }
@@ -64,12 +64,12 @@ function toOverlayBase(doc: MapPlaceDoc, context: EventOverlayContext): OverlayB
  * WHY: points and lines pass through by reference, exactly as stored: an axis swap can only come from a conversion.
  * A polygon's rings are rewound, which never touches the pair inside a position.
  */
-export function toEventOverlay(doc: MapPlaceDoc, context: EventOverlayContext): MapOverlay {
+export function toEventOverlay(doc: OverlayPlaceDoc, context: EventOverlayContext): MapOverlay {
   const base = toOverlayBase(doc, context);
   const { location } = doc;
   if (location.type === "Polygon") return { ...base, kind: "polygon", geometry: toWirePolygon(location) };
   if (location.type === "LineString") return { ...base, kind: "path", geometry: location };
-  const presentation = presentationFor(context.config, doc.category);
+  const presentation = presentationFor(context.layerSet, doc.category);
   return {
     ...base,
     kind: "marker",

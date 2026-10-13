@@ -46,7 +46,7 @@ export function flattenLogAttributes(log: Log): Log {
   const flat: Record<string, unknown> = {};
   const put = (prefix: string, value: unknown, depth: number): void => {
     if (isRecord(value) && depth < MAX_FLATTEN_DEPTH) {
-      for (const [key, v] of Object.entries(value)) put(`${prefix}.${key}`, v, depth + 1);
+      for (const [key, nested] of Object.entries(value)) put(`${prefix}.${key}`, nested, depth + 1);
       return;
     }
     flat[prefix] = value;

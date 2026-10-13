@@ -1,8 +1,8 @@
 import { hasAnyText } from "../../infra/i18n";
 import { isAbsoluteHttpsUrl, isRootRelativePath } from "../../shared/link-target.util";
 import { isRecord } from "../../shared/object.util";
-import type { EventFacetDef, EventMapConfig } from "../layer-set/map-layer-set.schema";
-import type { MapPlaceDoc, PlaceAction } from "../map.document";
+import type { EventFacetDef, LayerSet } from "../layer-set/map-layer-set.schema";
+import type { OverlayPlaceDoc, PlaceAction } from "../map.document";
 import { webviewUrl } from "../map.schema";
 
 const WHITESPACE_RE = /\s/;
@@ -37,13 +37,13 @@ export function actionDropReason(action: PlaceAction, isKnownMiniAppTarget: (val
 }
 
 // WHY: a window belongs to the option it STARTS in, so a pub closing past the cut-over stays on its night; `[]` is always open.
-function hoursOptionsOf(doc: MapPlaceDoc, facet: EventFacetDef): string[] {
+function hoursOptionsOf(doc: OverlayPlaceDoc, facet: EventFacetDef): string[] {
   const opensIn = ({ window }: EventFacetDef["options"][number]): boolean =>
     window !== null && doc.hours.some((w) => w.startAt >= window.from && w.startAt < window.until);
   return facet.options.filter((option) => doc.hours.length === 0 || opensIn(option)).map((option) => option.id);
 }
 
-function tagOptionsOf(doc: MapPlaceDoc, facet: EventFacetDef, dropped: string[]): string[] {
+function tagOptionsOf(doc: OverlayPlaceDoc, facet: EventFacetDef, dropped: string[]): string[] {
   const authored: unknown = isRecord(doc.facets) && Object.hasOwn(doc.facets, facet.id) ? doc.facets[facet.id] : [];
   if (!Array.isArray(authored)) dropped.push(`${doc._id}: facets.${facet.id} is not a list`);
   const known = new Set(facet.options.map((option) => option.id));
@@ -55,29 +55,29 @@ function tagOptionsOf(doc: MapPlaceDoc, facet: EventFacetDef, dropped: string[])
   return [...new Set(offered)];
 }
 
-function strayFacetKeys(doc: MapPlaceDoc, config: EventMapConfig): string[] {
+function strayFacetKeys(doc: OverlayPlaceDoc, layerSet: LayerSet): string[] {
   const authored = isRecord(doc.facets) ? Object.keys(doc.facets) : [];
   return authored.flatMap((key) => {
-    const facet = config.facets.find((f) => f.id === key);
+    const facet = layerSet.facets.find((f) => f.id === key);
     if (!facet) return [`${doc._id}: facets.${key} is not a facet`];
     return facet.source === "hours" ? [`${doc._id}: facets.${key} is derived from hours, not authored`] : [];
   });
 }
 
 /** WHY: every facet gets a key, so the app never reads a missing one as a filter answer; a bad value is logged, not thrown. */
-export function facetsOf(doc: MapPlaceDoc, config: EventMapConfig, dropped: string[]): Record<string, string[]> {
+export function facetsOf(doc: OverlayPlaceDoc, layerSet: LayerSet, dropped: string[]): Record<string, string[]> {
   const out: Record<string, string[]> = {};
-  for (const facet of config.facets) {
+  for (const facet of layerSet.facets) {
     out[facet.id] = facet.source === "hours" ? hoursOptionsOf(doc, facet) : tagOptionsOf(doc, facet, dropped);
   }
-  dropped.push(...strayFacetKeys(doc, config));
+  dropped.push(...strayFacetKeys(doc, layerSet));
   return out;
 }
 
-export function orderByOptionOf(doc: MapPlaceDoc, config: EventMapConfig, dropped: string[]): Record<string, number> {
+export function orderByOptionOf(doc: OverlayPlaceDoc, layerSet: LayerSet, dropped: string[]): Record<string, number> {
   const out: Record<string, number> = {};
   if (!isRecord(doc.orderByOption)) return out;
-  const known = new Set(config.facets.flatMap((f) => f.options.map((o) => o.id)));
+  const known = new Set(layerSet.facets.flatMap((f) => f.options.map((o) => o.id)));
   for (const [key, value] of Object.entries(doc.orderByOption)) {
     if (known.has(key) && typeof value === "number" && Number.isFinite(value)) out[key] = value;
     else dropped.push(`${doc._id}: orderByOption.${key} = ${JSON.stringify(value)}`);

@@ -1,9 +1,7 @@
 /**
  * MapConfigService builds /map/config from the base map and the live layer
  * set: layers, chips and camera defaults, labels resolved per language, and
- * the base map kept when the festival lookup fails. One case runs
- * MapCampusService over a building source with no buildings, so the campus
- * overlays take the FALLBACK_MARKERS path.
+ * the base map kept when the festival lookup fails.
  */
 
 // The config module stays REAL — the file loads with no mock — but one test
@@ -17,14 +15,11 @@ jest.mock("../layer-set/map-layer-set.config", () => ({
 }));
 
 import { pick } from "../../infra/i18n";
-import { Clock } from "../../infra/clock";
-import type { BuildingService } from "../../building/building.service";
+import type { Clock } from "../../infra/clock";
 import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import { MapCampusService } from "../campus/map-campus.service";
-import { getLayerSetConfig } from "../layer-set/map-layer-set.config";
-import { BASE_CHIPS } from "../layer-set/map-layer-set.constants";
-import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
+import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
+import type { LayerSet } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS, EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "../map.constants";
 import type { MapRepository } from "../map.repository";
@@ -39,9 +34,12 @@ const BASE_LAYER_COUNT = 3;
  * relative to its own directory — so every expectation below derives from it
  * rather than restating a count that the next festival would break.
  */
-const loaded = getLayerSetConfig("eskara-2026");
-if (!loaded?.config) throw new Error(`eskara-2026 failed to load: ${loaded?.error}`);
-const CONFIG: EventMapConfig = loaded.config;
+const CONFIG: LayerSet = shippedLayerSet();
+
+const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
+
+// The chips /map/config serves off-season, read through the layer-set service as the config service reads them.
+const BASE_CHIPS = new MapLayerSetService(asReal<MapRepository>(new FakeMapRepository()), CLOCK).servedChipSpecs(null);
 const EVENT_LAYER_IDS = new Set(CONFIG.layers.map((l) => l.id));
 
 // "No festival" is stated rather than inferred from an absent DB client, and
@@ -50,24 +48,15 @@ const mockFindActiveActivation = jest.fn<ReturnType<MapRepository["findActiveAct
 const findActiveActivation: MapRepository["findActiveActivation"] = mockFindActiveActivation;
 
 describe("MapConfigService", () => {
-  // getCampusOverlays falls back to FALLBACK_MARKERS on an empty building list (no DB).
-  const building = {
-    listAllBuildings: jest.fn().mockResolvedValue([]),
-    listAllCampusShapes: jest.fn().mockResolvedValue([]),
-  } as unknown as BuildingService;
-
   let config: MapConfigService;
-  let campusService: MapCampusService;
   // The event read path is cached per service instance; each test starts cold.
   function freshServices(): void {
     const repository = new FakeMapRepository();
     repository.findActiveActivation = findActiveActivation;
-    config = new MapConfigService(new MapLayerSetService(asReal<MapRepository>(repository), new Clock()));
-    campusService = new MapCampusService(building);
+    config = new MapConfigService(new MapLayerSetService(asReal<MapRepository>(repository), CLOCK));
   }
   const svc = {
     getMapConfig: (lang: "ko" | "en" | "zh") => config.getMapConfig(lang),
-    getCampusOverlays: () => campusService.getCampusOverlays(),
   };
 
   beforeEach(() => {
@@ -77,7 +66,7 @@ describe("MapConfigService", () => {
     mockGetLayerSetConfig.mockImplementation(actualConfigModule.getLayerSetConfig);
   });
 
-  it("getMapConfig delegates to map-config.data (campus labels via i18n)", async () => {
+  it("getMapConfig labels the campuses per language and serves only the base layers off-season", async () => {
     // Act
     const ko = await svc.getMapConfig("ko");
 
@@ -498,26 +487,6 @@ describe("MapConfigService", () => {
     // and the loop above is what you would narrow, deliberately.
     expect(Object.keys(EVENT_LAYER_STYLE)).not.toContain("shape");
     expect(Object.keys(EVENT_SHAPE_STYLE)).not.toContain("shape");
-  });
-
-  it("getCampusOverlays delegates to map-campus-overlays.data, both layers in one call", async () => {
-    // No overlay argument any more: one response carries both building layers,
-    // so the app's endpoint-keyed cache serves two toggles from one fetch.
-    // Act
-    const { overlays: markers, degraded } = await svc.getCampusOverlays();
-
-    // Assert
-    // building.data is mocked to [] above, so this is the fallback path — and it
-    // must say so, or the controller caches 12 hardcoded buildings for a day.
-    expect(degraded).toBe(true);
-
-    expect(markers.length).toBeGreaterThan(0);
-    expect(new Set(markers.map((m) => m.layerId))).toEqual(
-      new Set(["building_numbers", "building_labels"]),
-    );
-    // `displayNo` is gone from the wire — the visible string is always `text`.
-    expect(markers[0]).not.toHaveProperty("displayNo");
-    expect(markers[0]).not.toHaveProperty("skkuId");
   });
 
   // The three legacy /map/overlays tests that stood here are gone with their

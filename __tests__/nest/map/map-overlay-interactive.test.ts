@@ -21,14 +21,14 @@ jest.mock("../../../src/infra/logger", () => ({
 
 import { MiniAppsService } from "../../../src/miniapps/miniapps.service";
 import { MapEventService } from "../../../src/map/event/map-event.service";
-import type { EventMapConfig } from "../../../src/map/layer-set/map-layer-set.schema";
+import type { LayerSet } from "../../../src/map/layer-set/map-layer-set.schema";
 import type { MapLayerSetService } from "../../../src/map/layer-set/map-layer-set.service";
 import type { MapPlaceDoc } from "../../../src/map/map.document";
 import type { MapRepository } from "../../../src/map/map.repository";
 import { asReal } from "../../helpers/fakes/public-of";
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
 
-const mockActiveEventConfig = jest.fn<Promise<EventMapConfig | null>, []>();
+const mockActiveEventConfig = jest.fn<Promise<LayerSet | null>, []>();
 let repository: FakeMapRepository;
 let service: MapEventService;
 const getEventOverlays = () => service.getEventOverlays();
@@ -36,7 +36,7 @@ const getEventOverlays = () => service.getEventOverlays();
 // The event read path is cached per service; each test starts cold.
 beforeEach(() => {
   repository = new FakeMapRepository();
-  const layerSet = { activeEvent: mockActiveEventConfig } as unknown as MapLayerSetService;
+  const layerSet = { liveLayerSet: mockActiveEventConfig } as unknown as MapLayerSetService;
   service = new MapEventService(asReal<MapRepository>(repository), layerSet, new MiniAppsService());
 });
 
@@ -60,7 +60,7 @@ const CONFIG = {
     },
     fallback: { layerId: "test_zones", pinPriority: 0, interactive: true, tapChip: null },
   },
-} as unknown as EventMapConfig;
+} as unknown as LayerSet;
 
 function place(id: string, category: string) {
   return {

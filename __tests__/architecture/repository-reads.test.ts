@@ -17,6 +17,21 @@
  * `find`/`findOne` whose first argument is a function are Array methods, not
  * reads. The check is syntactic: an options object passed through a variable
  * does not count, so write the literal at the call.
+ *
+ * Data written outside src/ is parsed where it is read (ADR 0010, D2;
+ * `.claude/rules/architecture.md`). A document type is written outside src/
+ * when its declaration in a `.document` file carries a `CONTRACT(<writer>):`
+ * comment (attached: no blank line between). A repository read of a
+ * collection of that type (`this.<accessor>().find(…)`, the accessor declared
+ * to return `Collection<Type>`) must:
+ *
+ *   - pass a `projection` in its options object literal, so it loads only
+ *     what the flow uses; and
+ *   - parse the result through a schema imported from a `.schema` file
+ *     (`parseEach(docs, schema, …)`, `schema.parse(…)`, `schema.safeParse(…)`)
+ *     in the member that reads, or in a member of the class it calls.
+ *
+ * In a migrated scope the allowlist is empty (migrated-scopes.test.ts).
  */
 import ts from "typescript";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
@@ -154,6 +169,194 @@ export function unboundedReads(file: string, source: string): string[] {
     });
 }
 
+/** The document types a `.document` source declares with an attached `CONTRACT(…)` comment. */
+export function contractDocTypes(file: string, source: string): string[] {
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const attached = (node: ts.Node): string[] => {
+    const ranges = ts.getLeadingCommentRanges(source, node.getFullStart()) ?? [];
+    const out: string[] = [];
+    let next = node.getStart(sf);
+    for (const range of [...ranges].reverse()) {
+      if (/\n[ \t]*\n/.test(source.slice(range.end, next))) break;
+      out.push(source.slice(range.pos, range.end));
+      next = range.pos;
+    }
+    return out;
+  };
+  return sf.statements
+    .filter((st): st is ts.InterfaceDeclaration | ts.TypeAliasDeclaration => ts.isInterfaceDeclaration(st) || ts.isTypeAliasDeclaration(st))
+    .filter((st) => attached(st).some((c) => /\bCONTRACT\([^)]+\):/.test(c)))
+    .map((st) => st.name.text);
+}
+
+const PARSE_METHODS = new Set(["parse", "safeParse", "parseAsync", "safeParseAsync"]);
+
+function schemaImports(sf: ts.SourceFile): Set<string> {
+  const names = new Set<string>();
+  for (const st of sf.statements) {
+    if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier) || !st.moduleSpecifier.text.endsWith(".schema")) continue;
+    const bindings = st.importClause?.namedBindings;
+    if (bindings && ts.isNamedImports(bindings)) for (const e of bindings.elements) if (!e.isTypeOnly) names.add(e.name.text);
+  }
+  return names;
+}
+
+function parsesWith(node: ts.Node, schemas: ReadonlySet<string>): boolean {
+  let found = false;
+  const visit = (n: ts.Node): void => {
+    if (found) return;
+    if (ts.isCallExpression(n)) {
+      const callee = n.expression;
+      const viaEach = ts.isIdentifier(callee) && callee.text === "parseEach" && n.arguments.some((a) => ts.isIdentifier(a) && schemas.has(a.text));
+      const viaMethod =
+        ts.isPropertyAccessExpression(callee) && PARSE_METHODS.has(callee.name.text) && ts.isIdentifier(callee.expression) && schemas.has(callee.expression.text);
+      if (viaEach || viaMethod) found = true;
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(node);
+  return found;
+}
+
+function hasProjection(arg: ts.Expression | undefined): boolean {
+  return (
+    arg !== undefined &&
+    ts.isObjectLiteralExpression(arg) &&
+    arg.properties.some((p) => (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) && ts.isIdentifier(p.name) && p.name.text === "projection")
+  );
+}
+
+/** `this.<accessor>()` → the accessor's name. */
+function accessorOf(receiver: ts.Expression): string | undefined {
+  if (!ts.isCallExpression(receiver) || !ts.isPropertyAccessExpression(receiver.expression)) return undefined;
+  return receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword ? receiver.expression.name.text : undefined;
+}
+
+/** `<file>: <member> <read> of <Type>: no projection` / `: no .schema parse`, for each read of a contract type. */
+export function contractReadViolations(file: string, source: string, contractTypes: ReadonlySet<string>): string[] {
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const schemas = schemaImports(sf);
+  const out: string[] = [];
+  for (const cls of sf.statements.filter(ts.isClassDeclaration)) {
+    const members = new Map(cls.members.flatMap((m) => (m.name && ts.isIdentifier(m.name) ? [[m.name.text, m] as const] : [])));
+    const collectionOf = new Map<string, string>();
+    for (const [name, m] of members) {
+      const type = ts.isMethodDeclaration(m) ? m.type : undefined;
+      if (type && ts.isTypeReferenceNode(type) && type.typeName.getText(sf) === "Collection") {
+        const arg = type.typeArguments?.[0];
+        if (arg && ts.isTypeReferenceNode(arg)) collectionOf.set(name, arg.typeName.getText(sf));
+      }
+    }
+    const memo = new Map<string, boolean>();
+    const memberParses = (name: string): boolean => {
+      if (memo.has(name)) return memo.get(name)!;
+      memo.set(name, false);
+      const member = members.get(name);
+      let calls: string[] = [];
+      if (member) {
+        const visit = (n: ts.Node): void => {
+          if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression) && n.expression.expression.kind === ts.SyntaxKind.ThisKeyword) {
+            calls.push(n.expression.name.text);
+          }
+          ts.forEachChild(n, visit);
+        };
+        visit(member);
+      }
+      calls = calls.filter((c) => c !== name);
+      const result = member !== undefined && (parsesWith(member, schemas) || calls.some(memberParses));
+      memo.set(name, result);
+      return result;
+    };
+    for (const [name, member] of members) {
+      const visit = (n: ts.Node): void => {
+        if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression) && n.expression.name.text in OPTIONS_ARG) {
+          const type = collectionOf.get(accessorOf(n.expression.expression) ?? "");
+          if (type !== undefined && contractTypes.has(type)) {
+            const read = `${file}: ${name} ${n.expression.name.text} of ${type}`;
+            if (!hasProjection(n.arguments[OPTIONS_ARG[n.expression.name.text]!])) out.push(`${read}: no projection`);
+            if (!memberParses(name)) out.push(`${read}: no .schema parse`);
+          }
+        }
+        ts.forEachChild(n, visit);
+      };
+      visit(member);
+    }
+  }
+  return out;
+}
+
+describe("contract read rule applies as specified", () => {
+  it("finds the document types with an attached CONTRACT comment", () => {
+    // Arrange
+    const source = [
+      'import type { X } from "./x";',
+      "",
+      "// CONTRACT(scripts): a file-level note, apart from the next declaration.",
+      "",
+      "export interface Plain { a: number }",
+      "",
+      "/** CONTRACT(scripts): scripts/a.js writes these. */",
+      "export interface Written { a: number }",
+      "",
+      "// CONTRACT(skkuverse-crawler): the crawler writes these. Why a collection",
+      "// of its own: docs/x.md.",
+      "export type AlsoWritten = { a: number };",
+      "",
+      "/** WHY: not a contract. */",
+      "export interface Ours { a: number }",
+    ].join("\n");
+
+    // Act & Assert
+    expect(contractDocTypes("src/x/x.document.ts", source)).toEqual(["Written", "AlsoWritten"]);
+  });
+
+  const REPOSITORY = `
+import { placeDoc } from "./x.schema";
+import { parseEach } from "../shared/zod-list.util";
+export class XRepository {
+  private readonly cache = createCachedLoader({
+    name: "x", ttlMs: 1,
+    load: async () => parseEach(await this.places().find({}, { projection: { a: 1 }, maxTimeMS: 1 }).toArray(), placeDoc, String).valid,
+  });
+  listParsed() { return this.cache.get(); }
+  async listViaHelper(id: string) {
+    const docs = await this.places().find({ id }, { projection: { a: 1 }, maxTimeMS: 1 }).toArray();
+    return this.parsePlaces(docs);
+  }
+  async findUnprojected(id: string) {
+    const doc = await this.places().findOne({ id }, { maxTimeMS: 1 });
+    return placeDoc.parse(doc);
+  }
+  listUnparsed(id: string) { return this.places().find({ id }, { projection: { a: 1 }, maxTimeMS: 1 }).toArray(); }
+  listOurs() { return this.ours().find({}, { maxTimeMS: 1 }).toArray(); }
+  private parsePlaces(docs: unknown[]) { return docs.map((d) => placeDoc.safeParse(d)); }
+  private places(): Collection<PlaceDoc> { return mongoCollection("db", "places"); }
+  private ours(): Collection<OurDoc> { return mongoCollection("db", "ours"); }
+}`;
+
+  it("passes a projected read parsed in its member or a member it calls, and leaves other types alone", () => {
+    // Act
+    const violations = contractReadViolations("src/x/x.repository.ts", REPOSITORY, new Set(["PlaceDoc"]));
+
+    // Assert
+    expect(violations).toEqual([
+      "src/x/x.repository.ts: findUnprojected findOne of PlaceDoc: no projection",
+      "src/x/x.repository.ts: listUnparsed find of PlaceDoc: no .schema parse",
+    ]);
+  });
+
+  it("does not count a parse through a schema that no .schema file exports", () => {
+    // Arrange
+    const source = REPOSITORY.replace('import { placeDoc } from "./x.schema";', 'import { placeDoc } from "./x.wire";');
+
+    // Act
+    const violations = contractReadViolations("src/x/x.repository.ts", source, new Set(["PlaceDoc"]));
+
+    // Assert
+    expect(violations.filter((v) => v.endsWith("no .schema parse"))).toHaveLength(4);
+  });
+});
+
 describe("repository read rule applies as specified", () => {
   const FIXTURE = `
 import { createCachedLoader } from "../infra/cached-loader";
@@ -236,5 +439,19 @@ describe("repository reads", () => {
         .filter((f) => f.endsWith(".repository.ts"))
         .flatMap((f) => unboundedReads(f, readSource(f))),
     );
+  });
+});
+
+describe("repository reads of documents written outside src/", () => {
+  it("project and parse through a .schema", () => {
+    // Arrange
+    const files = sourceFiles();
+    const contractTypes = new Set(files.filter((f) => f.endsWith(".document.ts")).flatMap((f) => contractDocTypes(f, readSource(f))));
+
+    // Act
+    const violations = files.filter((f) => f.endsWith(".repository.ts")).flatMap((f) => contractReadViolations(f, readSource(f), contractTypes));
+
+    // Assert
+    expectAllowlisted("repository-contract-reads", violations);
   });
 });

@@ -34,7 +34,8 @@ jest.mock("../../infra/logger", () => ({
 
 import logger from "../../infra/logger";
 import type { BuildingRawDoc } from "../building.document";
-import type { ApiId, BuildNo, SkkuId, SpaceCd } from "../building.types";
+import type { BuildNo, SkkuId, SpaceCd } from "../building.types";
+import type { ApiId } from "./building-sync.types";
 import { enrichBuilding } from "./building-sync.mapper";
 import { BuildingSyncRepository } from "./building-sync.repository";
 import type { SyncedSpace } from "./building-sync.types";
@@ -297,6 +298,18 @@ describe("BuildingSyncRepository reads and the stale delete", () => {
       {},
       expect.objectContaining({ projection: { skkuUpdatedAt: 1 } }),
     );
+  });
+
+  it("reads the raw buildings of the given skkuIds, whole, under the sync's read bound", async () => {
+    // Arrange
+    mockCollection("buildings_raw").find.mockReturnValueOnce({ toArray: jest.fn().mockResolvedValue([RAW]) });
+
+    // Act
+    const raw = await new BuildingSyncRepository().listRawBySkkuIds(new Set([2 as SkkuId, 7 as SkkuId]));
+
+    // Assert
+    expect(raw).toEqual([RAW]);
+    expect(mockCollections.buildings_raw!.find.mock.calls).toEqual([[{ _id: { $in: [2, 7] } }, { maxTimeMS: 30_000 }]]);
   });
 });
 

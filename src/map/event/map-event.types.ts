@@ -1,4 +1,4 @@
-import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
+import type { LayerSet } from "../layer-set/map-layer-set.schema";
 
 export interface EventDrops {
   actions: string[];
@@ -6,7 +6,7 @@ export interface EventDrops {
 }
 
 export interface EventOverlayContext {
-  config: EventMapConfig;
+  layerSet: LayerSet;
   drops: EventDrops;
   isKnownMiniAppTarget: (value: string) => boolean;
 }
