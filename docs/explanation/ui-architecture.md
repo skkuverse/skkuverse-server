@@ -20,6 +20,7 @@ Ui owns no data store. It serves two JSON files committed next to their readers,
 | The committed config files | — | The home layout and the campus carousel, edited by hand and shipped with a deploy | `readHomeLayout`, `readCampusBanners` |
 | The mini-app registry | — | Which mini apps exist, the target and emoji checks, and the logo of a link tile | `MiniAppsService`, injected into `UiHomeService` and `UiCampusService` |
 | The bus groups | — | Each group's label, card, screen type and visibility | `BusConfigService.getBusGroups`, injected into `UiTransitListService` |
+| moment-timezone | `moment` | A bus group's KST dates and first-day time; a strict parse still reads `24:00` as the next midnight | `isBusGroupVisible` |
 | The translations | — | The titles of the campus buttons and the scroll cards | `t` in `src/infra/i18n.ts` |
 | skkuverse-app | — | Nothing; it reads the four routes | `GET /ui/home` and its siblings |
 
