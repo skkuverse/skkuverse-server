@@ -11,7 +11,10 @@
  *  2. A failure is non-fatal. Index creation is a startup nicety, not a serving
  *     prerequisite; an Atlas hiccup during boot must not take /map down.
  *
- * Queries. The activation filter carries two invariants nothing downstream can
+ * Queries. Each read's query object is pinned here, since FakeMapRepository
+ * copies it; the reads project only what their route reads and parse each
+ * document, leaving out and logging one that is not usable. The
+ * activation filter carries two invariants nothing downstream can
  * recover from: a window containing now with null read as unbounded, and a
  * deterministic sort, so replicas cannot disagree about which layer set is
  * live. Every filter must match an index (docs/reference/event-places.md), or a
@@ -62,11 +65,27 @@ jest.mock("../infra/logger", () => mockLogger);
 
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { MapRepository } from "./map.repository";
+import { logText } from "../../__tests__/helpers/log-text";
 
 const NOW = new Date("2026-09-16T09:00:00.000Z");
 
+const POINT = { type: "Point", coordinates: [126.971747, 37.294452] };
+const PLACE = {
+  _id: "eskara-2026-booth-01",
+  campus: "nsc",
+  category: "booth",
+  location: POINT,
+  title: { ko: "우끼끼친" },
+  hours: [{ startAt: new Date("2026-10-01T09:00:00.000Z"), endAt: null }],
+  fields: [],
+  actions: [],
+  order: 10,
+};
+
 const repository = new MapRepository();
 const findActiveActivation = (now: Date) => repository.findActiveActivation(now);
+const listPlacesByLayerSetId = (layerSetId: string) => repository.listPlacesByLayerSetId(layerSetId);
+const listPlacesWithDetailByLayerSetId = (layerSetId: string) => repository.listPlacesWithDetailByLayerSetId(layerSetId);
 const ensureIndexes = () => repository.ensureIndexes();
 
 /** Every (collection, keys, options?) call, as JSON for comparison. */
@@ -180,8 +199,135 @@ describe("MapRepository.findActiveActivation", () => {
 
     // Assert
     expect(findOne.mock.calls[0]![1]).toEqual({
+      projection: { _id: 1, activeUntil: 1 },
       sort: { activeFrom: -1, _id: 1 },
       maxTimeMS: HOT_READ_MAX_TIME_MS,
     });
+  });
+
+  it("reads the live activation's id and end, an absent end as none", async () => {
+    // Arrange
+    findOne.mockResolvedValue({ _id: "eskara-2026" });
+
+    // Act & Assert
+    await expect(findActiveActivation(NOW)).resolves.toEqual({ _id: "eskara-2026", activeUntil: null });
+    expect(mockLogger.warn).not.toHaveBeenCalled();
+  });
+
+  it("reads an activation that does not parse as none, and logs it once an hour", async () => {
+    // Arrange
+    // An ObjectId typed by hand instead of the layer set's id: no layer set file can match it.
+    findOne.mockResolvedValue({ _id: { $oid: "652f00000000000000000001" }, activeUntil: null });
+    const fresh = new MapRepository();
+
+    // Act
+    const first = await fresh.findActiveActivation(NOW);
+    await fresh.findActiveActivation(NOW);
+
+    // Assert
+    expect(first).toBeNull();
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    expect(mockLogger.warn.mock.calls[0]?.[0]).toMatchObject({ event: "map.eventmap.activation_invalid" });
+  });
+});
+
+describe("MapRepository.listPlacesByLayerSetId", () => {
+  it("reads one layer set's places, with no lifecycle filter, under the hot-read bound", async () => {
+    // Act
+    await listPlacesByLayerSetId("eskara-2026");
+
+    // Assert
+    // No lifecycle filter: a cancelled booth is deleted, not flagged. The projection leaves the sheet out.
+    expect(find.mock.calls).toEqual([
+      [
+        { layerSetId: "eskara-2026" },
+        {
+          projection: {
+            _id: 1,
+            campus: 1,
+            category: 1,
+            location: 1,
+            title: 1,
+            subtitle: 1,
+            hours: 1,
+            fields: 1,
+            actions: 1,
+            order: 1,
+            facets: 1,
+            orderByOption: 1,
+          },
+          maxTimeMS: HOT_READ_MAX_TIME_MS,
+        },
+      ],
+    ]);
+  });
+
+  it("skips a legacy document from the pre-collapse schema, and logs the count", async () => {
+    // Arrange
+    // Prod held 62 of these — `name` instead of `title`, no `hours` — which would throw on `doc.title.ko`.
+    const legacy = { _id: "nsc-daybooth-01", campus: "nsc", name: { ko: "주간부스 1번" }, location: POINT };
+    toArray.mockResolvedValue([legacy, PLACE]);
+
+    // Act
+    const places = await listPlacesByLayerSetId("eskara-2026");
+
+    // Assert
+    expect(places.map((p) => p._id)).toEqual(["eskara-2026-booth-01"]);
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    expect(logText(mockLogger.warn.mock.calls[0])).toMatch(/1/);
+  });
+
+  it("skips a geometry this build has no renderer for, and says the place is not renderable", async () => {
+    // Arrange
+    const multi = { ...PLACE, _id: "eskara-2026-bad-01", location: { type: "MultiPolygon", coordinates: [] } };
+    toArray.mockResolvedValue([PLACE, multi]);
+
+    // Act
+    const places = await listPlacesByLayerSetId("eskara-2026");
+
+    // Assert
+    expect(places).toHaveLength(1);
+    expect(logText(mockLogger.warn.mock.calls.at(-1))).toMatch(/not renderable/);
+  });
+
+  it("keeps a renderable place as stored", async () => {
+    // Arrange
+    toArray.mockResolvedValue([PLACE]);
+
+    // Act & Assert
+    await expect(listPlacesByLayerSetId("eskara-2026")).resolves.toEqual([PLACE]);
+    expect(mockLogger.warn).not.toHaveBeenCalled();
+  });
+});
+
+describe("MapRepository.listPlacesWithDetailByLayerSetId", () => {
+  it("reads only the places of one layer set that carry a sheet", async () => {
+    // Act
+    await listPlacesWithDetailByLayerSetId("eskara-2026");
+
+    // Assert
+    // `$ne: null` also leaves out a place whose detail field is missing.
+    expect(find.mock.calls).toEqual([
+      [
+        { layerSetId: "eskara-2026", detail: { $ne: null } },
+        {
+          projection: { _id: 1, category: 1, location: 1, title: 1, hours: 1, fields: 1, actions: 1, detail: 1 },
+          maxTimeMS: HOT_READ_MAX_TIME_MS,
+        },
+      ],
+    ]);
+  });
+
+  it("gives no sheet to a place the overlay route would not serve, and says so", async () => {
+    // Arrange
+    toArray.mockResolvedValue([{ ...PLACE, title: { ko: "" }, detail: { kind: "booth", blocks: [], actions: [] } }]);
+
+    // Act
+    const places = await listPlacesWithDetailByLayerSetId("eskara-2026");
+
+    // Assert
+    expect(places).toEqual([]);
+    expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    expect(logText(mockLogger.warn.mock.calls[0])).toMatch(/not renderable/);
   });
 });

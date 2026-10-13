@@ -4,13 +4,11 @@
  * or as authored for a tag), and which per-option orders survive, with every
  * value the config does not offer reported rather than thrown.
  */
-import fs from "fs";
-import path from "path";
-import { assertValidConfig } from "../layer-set/map-layer-set.config";
 import type { MapPlaceDoc, PlaceAction } from "../map.document";
 import { actionDropReason, facetsOf, isValidActionValue, orderByOptionOf } from "./map-event.rules";
+import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 
-const CONFIG = assertValidConfig(JSON.parse(fs.readFileSync(path.join(__dirname, "../layer-set/eskara-2026.json"), "utf8")));
+const CONFIG = shippedLayerSet();
 const knownTargets = (value: string): boolean => value.split("/")[0] === "eskara-2026";
 const DAY_1_START = CONFIG.facets[0]?.options[0]?.window?.from ?? new Date(0);
 

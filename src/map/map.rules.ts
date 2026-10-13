@@ -1,10 +1,5 @@
-import { renderablePlace, webviewUrl } from "./map.schema";
+import { webviewUrl } from "./map.schema";
 import type { ConfigIssue, LayerSpec, MapChipActionSpec } from "./map.types";
-
-// WHY: a hand-typed Mongo edit or a stale document must drop one place, not 500 the festival.
-export function isRenderable(doc: unknown): boolean {
-  return renderablePlace.safeParse(doc).success;
-}
 
 // WHY: two answers, because the chip validator reports an unknown id and an untouchable layer differently.
 export function chipGroupOf(catalogue: readonly LayerSpec[], layerId: string): string | null | undefined {

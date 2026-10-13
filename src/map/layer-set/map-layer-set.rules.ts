@@ -1,7 +1,7 @@
 import { BASE_LAYERS } from "../map.constants";
 import { EXPLICIT_OFFSET_RE } from "./map-layer-set.constants";
 import type { ConfigIssue } from "../map.types";
-import type { EventFacetDef, EventMapConfig } from "./map-layer-set.schema";
+import type { EventFacetDef, LayerSet } from "./map-layer-set.schema";
 
 function instantIssue(value: unknown): string | null {
   if (typeof value !== "string" || value.trim() === "") return "must be a non-empty string";
@@ -11,13 +11,13 @@ function instantIssue(value: unknown): string | null {
 
 type OptionRaw = { id: string; from?: unknown; until?: unknown };
 
-function windowIssues(o: OptionRaw, i: number): ConfigIssue[] {
+function windowIssues(option: OptionRaw, index: number): ConfigIssue[] {
   const bounds = (["from", "until"] as const).flatMap((key): ConfigIssue[] => {
-    const found = instantIssue(o[key]);
-    return found ? [[["options", i, key], found]] : [];
+    const found = instantIssue(option[key]);
+    return found ? [[["options", index, key], found]] : [];
   });
   if (bounds.length > 0) return bounds;
-  return Date.parse(String(o.from)) >= Date.parse(String(o.until)) ? [[["options", i, "from"], "must be before until"]] : [];
+  return Date.parse(String(option.from)) >= Date.parse(String(option.until)) ? [[["options", index, "from"], "must be before until"]] : [];
 }
 
 // WHY: one place per day, so a window start belongs to exactly one option: days may not overlap.
@@ -41,7 +41,7 @@ function firstDuplicate(ids: readonly string[]): string | undefined {
   return ids.find((id, i) => ids.indexOf(id) !== i);
 }
 
-function layerIssue({ layers }: EventMapConfig): string | null {
+function layerIssue({ layers }: LayerSet): string | null {
   const duplicate = firstDuplicate(layers.map((l) => l.id));
   const collision = layers.findIndex((l) => BASE_LAYERS.some((base) => base.id === l.id));
   if (layers.length === 0) return "config.layers must not be empty";
@@ -59,7 +59,7 @@ function facetIssue(facets: readonly EventFacetDef[]): string | null {
   return option === undefined ? null : `config.facets[].options has a duplicate id "${option}"`;
 }
 
-type ChipList = EventMapConfig["chips"][number]["list"];
+type ChipList = LayerSet["chips"][number]["list"];
 
 function chipListIssue(list: ChipList, where: string, known: ReadonlySet<string>): string | null {
   if (!list) return null;
@@ -72,25 +72,26 @@ function chipListIssue(list: ChipList, where: string, known: ReadonlySet<string>
   return null;
 }
 
-function listIssue({ chips, facets }: EventMapConfig): string | null {
+function listIssue({ chips, facets }: LayerSet): string | null {
   const known = new Set(facets.map((f) => f.id));
   const issues = chips.map(({ list }, i) => chipListIssue(list, `config.chips[${i}].list`, known));
   return issues.find((found) => found !== null) ?? null;
 }
 
-function presentationIssue({ itemDefaults, layers, chips }: EventMapConfig): string | null {
+function presentationIssue({ itemDefaults, layers, chips }: LayerSet): string | null {
   const entries = [
     ["config.itemDefaults.fallback", itemDefaults.fallback] as const,
     ...Object.entries(itemDefaults.byCategory).map(([c, p]) => [`config.itemDefaults.byCategory["${c}"]`, p] as const),
   ];
-  for (const [where, p] of entries) {
-    if (!layers.some((l) => l.id === p.layerId)) return `${where}.layerId "${p.layerId}" is not in config.layers`;
-    if (p.tapChip !== null && !chips.some((c) => c.id === p.tapChip)) return `${where}.tapChip "${p.tapChip}" is not in config.chips`;
-    if (p.tapChip !== null && !p.interactive) return `${where}.tapChip is set on a category with interactive: false`;
+  for (const [where, presentation] of entries) {
+    const { layerId, tapChip, interactive } = presentation;
+    if (!layers.some((l) => l.id === layerId)) return `${where}.layerId "${layerId}" is not in config.layers`;
+    if (tapChip !== null && !chips.some((c) => c.id === tapChip)) return `${where}.tapChip "${tapChip}" is not in config.chips`;
+    if (tapChip !== null && !interactive) return `${where}.tapChip is set on a category with interactive: false`;
   }
   return null;
 }
 
-export function crossReferenceIssue(config: EventMapConfig): string | null {
+export function crossReferenceIssue(config: LayerSet): string | null {
   return layerIssue(config) ?? facetIssue(config.facets) ?? listIssue(config) ?? presentationIssue(config);
 }

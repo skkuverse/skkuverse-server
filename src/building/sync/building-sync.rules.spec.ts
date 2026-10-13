@@ -3,10 +3,12 @@
  * broken, not one building. More than half of the attempted buildings failing
  * trips it; exactly half does not, and a run that attempted nothing never
  * fails. Also needsEnrichment (which listed buildings phase 1 re-enriches) and
- * toSyncError (the run's one rejection), and shouldRejectPayload (when a SKKU
- * list has too many invalid items to trust, on the same boundary as phase 2).
+ * toSyncError (the run's one rejection), shouldRejectPayload (when a SKKU
+ * list has too many invalid items to trust, on the same boundary as phase 2),
+ * and toApiId, the minter of the id buildInfo takes back: the same number.
  */
-import { needsEnrichment, shouldFailBuildInfoPhase, shouldRejectPayload, toSyncError } from "./building-sync.rules";
+import type { SkkuId } from "../building.types";
+import { needsEnrichment, shouldFailBuildInfoPhase, shouldRejectPayload, toApiId, toSyncError } from "./building-sync.rules";
 
 describe("shouldFailBuildInfoPhase", () => {
   it.each([
@@ -73,5 +75,12 @@ describe("shouldRejectPayload", () => {
   ])("is %s-of-%s invalid → %s", (invalid, total, expected) => {
     // Act & Assert
     expect(shouldRejectPayload({ total, invalid })).toBe(expected);
+  });
+});
+
+describe("toApiId", () => {
+  it.each([1, 88, Number.MAX_SAFE_INTEGER])("toApiId(%p) is the same number", (id) => {
+    // Act & Assert
+    expect(toApiId(id as SkkuId)).toBe(id);
   });
 });

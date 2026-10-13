@@ -1,8 +1,7 @@
 /**
  * Importer → projection round trip, against the REAL surveyed sheet.
  *
- * Every other test in this directory mocks the collections, which means the
- * Mongo query shapes are asserted but the DOCUMENTS are invented — and an
+ * Every other test of the event projection invents its documents — and an
  * invented document cannot catch a `[lng, lat]` swap, because whatever order
  * the fixture was written in is the order the assertion expects.
  *
@@ -20,28 +19,30 @@
 import fs from "fs";
 import path from "path";
 
-// The places collection, handed out by name; activations are read through a spy below.
-const mockPlaces = jest.fn();
-jest.mock("../../../src/infra/mongo", () => ({
-  ensureIndexesAtBoot: jest.fn(),
-  mongoCollection: (_db: string, name: string) => (name === "places" ? mockPlaces() : {}),
-}));
-
-import { Clock } from "../../../src/infra/clock";
+import type { Clock } from "../../../src/infra/clock";
 import { MiniAppsService } from "../../../src/miniapps/miniapps.service";
 import { MapEventService } from "../../../src/map/event/map-event.service";
 import { MapLayerSetService } from "../../../src/map/layer-set/map-layer-set.service";
-import { MapRepository } from "../../../src/map/map.repository";
+import type { MapPlaceDoc } from "../../../src/map/map.document";
+import type { MapRepository } from "../../../src/map/map.repository";
+import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
+import { asReal } from "../../helpers/fakes/public-of";
 
-const mockFindActiveActivation = jest.spyOn(MapRepository.prototype, "findActiveActivation");
+const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
 
+// The live activation, stated per test; the fake answers with it.
+const mockFindActiveActivation = jest.fn<ReturnType<MapRepository["findActiveActivation"]>, [Date]>();
+
+let repository: FakeMapRepository;
 let service: MapEventService;
 const getEventOverlays = () => service.getEventOverlays();
 
 // The event read path is cached per service; each test starts cold.
 beforeEach(() => {
-  const repository = new MapRepository();
-  service = new MapEventService(repository, new MapLayerSetService(repository, new Clock()), new MiniAppsService());
+  repository = new FakeMapRepository();
+  repository.findActiveActivation = mockFindActiveActivation;
+  const real = asReal<MapRepository>(repository);
+  service = new MapEventService(real, new MapLayerSetService(real, CLOCK), new MiniAppsService());
 });
 
 // scripts/ is excluded from tsconfig (plain CommonJS operator tooling), so this
@@ -99,14 +100,6 @@ function rewound(geometry: WireGeometry): WireGeometry {
   };
 }
 
-function collectionOf(docs: unknown[]) {
-  return {
-    find: jest.fn().mockReturnValue({
-      toArray: jest.fn().mockResolvedValue(docs),
-    }),
-  } as never;
-}
-
 /**
  * Every position an overlay carries, flattened. Works for a Point, a LineString
  * and a Polygon's rings alike, so the peninsula check below does not have to
@@ -133,7 +126,7 @@ describe("event overlay coordinates, end to end from the survey sheet", () => {
     mockFindActiveActivation.mockResolvedValue({ _id: LAYER_SET_ID } as Awaited<
       ReturnType<MapRepository["findActiveActivation"]>
     >);
-    mockPlaces.mockReturnValue(collectionOf(docs));
+    repository.places = docs as MapPlaceDoc[];
 
     // Act
     const { overlays: markers } = await getEventOverlays();
@@ -171,7 +164,7 @@ describe("event overlay coordinates, end to end from the survey sheet", () => {
     mockFindActiveActivation.mockResolvedValue({ _id: LAYER_SET_ID } as Awaited<
       ReturnType<MapRepository["findActiveActivation"]>
     >);
-    mockPlaces.mockReturnValue(collectionOf(docs));
+    repository.places = docs as MapPlaceDoc[];
 
     // Act
     const { overlays: markers } = await getEventOverlays();

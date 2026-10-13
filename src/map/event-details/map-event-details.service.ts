@@ -1,22 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { createCachedLoader } from "../../infra/cached-loader";
 import logger from "../../infra/logger";
-import type { EventMapConfig } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "../map.constants";
-import type { MapPlaceDoc } from "../map.document";
 import { MapRepository } from "../map.repository";
-import { isRenderable, presentationFor } from "../map.rules";
-import { toPlaceDetail } from "./map-event-details.mapper";
-import type { EventPlaceDetails, PlaceDetail } from "./map-event-details.wire";
-
-// WHY: only a place the overlay route serves, on a category whose tap opens a place, has a sheet to open.
-function sheetlessReason(doc: MapPlaceDoc, config: EventMapConfig): string | null {
-  if (!isRenderable(doc)) return `${doc._id}: place is not renderable`;
-  const presentation = presentationFor(config, doc.category);
-  if (!presentation.interactive) return `${doc._id}: category "${doc.category}" is not tappable`;
-  return presentation.tapChip ? `${doc._id}: category "${doc.category}" taps to chip "${presentation.tapChip}"` : null;
-}
+import { toPlaceSheet } from "./map-event-details.mapper";
+import { sheetlessReason } from "./map-event-details.rules";
+import type { EventPlaceDetails, PlaceSheet } from "./map-event-details.wire";
 
 @Injectable()
 export class MapEventDetailsService {
@@ -38,18 +28,22 @@ export class MapEventDetailsService {
   }
 
   private async loadEventPlaceDetails(): Promise<EventPlaceDetails> {
-    const config = await this.layerSet.activeEvent();
-    if (!config) return { details: {} };
+    const liveLayerSet = await this.layerSet.liveLayerSet();
+    if (!liveLayerSet) return { details: {} };
     const dropped: string[] = [];
-    const details: Record<string, PlaceDetail> = {};
-    for (const doc of await this.repository.listPlacesWithDetailByLayerSetId(config.layerSetId)) {
-      const reason = sheetlessReason(doc, config);
-      const detail = reason === null ? toPlaceDetail(doc, dropped) : (dropped.push(reason), null);
+    const details: Record<string, PlaceSheet> = {};
+    for (const doc of await this.repository.listPlacesWithDetailByLayerSetId(liveLayerSet.layerSetId)) {
+      const reason = sheetlessReason(doc, liveLayerSet);
+      if (reason !== null) {
+        dropped.push(reason);
+        continue;
+      }
+      const detail = toPlaceSheet(doc, dropped);
       if (detail) details[doc._id] = detail;
     }
     if (dropped.length > 0) {
       logger.warn(
-        { event: "map.event_details.items_dropped", layerSetId: config.layerSetId, count: dropped.length, dropped },
+        { event: "map.event_details.items_dropped", layerSetId: liveLayerSet.layerSetId, count: dropped.length, dropped },
         "Place-detail items dropped",
       );
     }

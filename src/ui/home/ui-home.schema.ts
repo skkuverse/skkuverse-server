@@ -60,13 +60,13 @@ export type TileRaw = Extract<SectionRaw, { type: "tile_grid" }>["tiles"][number
 
 type LocatedId = { id: string; path: Array<string | number> };
 
-function sectionIds(raw: SectionRaw, i: number): LocatedId[] {
-  const own = { id: raw.id, path: ["sections", i, "id"] };
+function sectionIds(raw: SectionRaw, sectionIndex: number): LocatedId[] {
+  const own = { id: raw.id, path: ["sections", sectionIndex, "id"] };
   if (raw.type !== "banner_carousel") return [own];
-  const images = raw.items.flatMap((item, j) => (item.type === "image" ? [{ id: item.id, path: ["sections", i, "items", j, "id"] }] : []));
+  const images = raw.items.flatMap((item, j) => (item.type === "image" ? [{ id: item.id, path: ["sections", sectionIndex, "items", j, "id"] }] : []));
   return [own, ...images];
 }
 
-function tileIds(raw: SectionRaw, i: number): LocatedId[] {
-  return raw.type === "tile_grid" ? raw.tiles.map((t, j) => ({ id: t.id, path: ["sections", i, "tiles", j, "id"] })) : [];
+function tileIds(raw: SectionRaw, sectionIndex: number): LocatedId[] {
+  return raw.type === "tile_grid" ? raw.tiles.map((t, j) => ({ id: t.id, path: ["sections", sectionIndex, "tiles", j, "id"] })) : [];
 }

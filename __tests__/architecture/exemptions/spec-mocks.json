@@ -1,0 +1,3 @@
+{
+  "__tests__/nest/health/health.routes.test.ts: jest.mock(src/infra/db)": "Health has no repository by design: its controller pings the database through src/infra/db itself, so the route test can only double that ping."
+}

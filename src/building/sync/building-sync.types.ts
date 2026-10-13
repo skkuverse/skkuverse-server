@@ -6,7 +6,11 @@ import type {
   BuildingRawDoc,
   GeoPoint,
 } from "../building.document";
-import type { ApiId, BilingualText, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd, WithBuildNo } from "../building.types";
+import type { Brand } from "../../shared/brand.types";
+import type { BilingualText, BuildNo, Campus, DisplayNo, SkkuId, SpaceCd, WithBuildNo } from "../building.types";
+
+/** QUIRK(skku): the building id exactly as buildList sent it; buildInfo takes it back verbatim. */
+export type ApiId = Brand<number, "ApiId">;
 
 export interface ListedBuilding {
   skkuId: SkkuId;

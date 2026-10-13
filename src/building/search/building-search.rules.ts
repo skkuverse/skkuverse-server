@@ -3,6 +3,8 @@
 import { escapeRegex } from "../../shared/regex.util";
 import type { StringPath } from "../../shared/string-path.types";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
+import { CAMPUSES } from "../building.constants";
+import type { Campus } from "../building.types";
 import type { RelevanceTier, TierMode } from "./building-search.types";
 
 // EVIDENCE: a building-number query returns whole buildings (the largest has 801 rooms);
@@ -24,11 +26,7 @@ const SPACE_TIERS: readonly RelevanceTier<SpaceDoc>[] = [
   { score: 40, paths: ["buildingName.ko", "buildingName.en"], mode: "prefix" },
   { score: 30, paths: ["name.ko", "name.en"], mode: "prefix" },
   { score: 20, paths: ["spaceCd"], mode: "substring" },
-  {
-    score: 10,
-    paths: ["buildingName.ko", "buildingName.en"],
-    mode: "substring",
-  },
+  { score: 10, paths: ["buildingName.ko", "buildingName.en"], mode: "substring" },
   { score: 5, paths: ["name.ko", "name.en"], mode: "substring" },
 ];
 
@@ -76,17 +74,17 @@ function readPath(doc: Record<string, unknown>, path: string): string {
 }
 
 /** WHY: the JS reading of a tier table, so specs pin the ranking without Mongo. */
-function scoreLocally<TDoc>(
-  tiers: readonly RelevanceTier<TDoc>[],
-  keyword: string,
-  doc: Record<string, unknown>,
-): number {
+function scoreLocally<TDoc>(tiers: readonly RelevanceTier<TDoc>[], keyword: string, doc: Record<string, unknown>): number {
   const escaped = escapeRegex(keyword);
   for (const tier of tiers) {
     const tierPattern = new RegExp(tierRegex(tier.mode, escaped), "i");
     if (tier.paths.some((path) => tierPattern.test(readPath(doc, path)))) return tier.score;
   }
   return NO_TIER_SCORE;
+}
+
+function isCampus(value: unknown): value is Campus {
+  return (CAMPUSES as readonly unknown[]).includes(value);
 }
 
 export {
@@ -99,6 +97,7 @@ export {
   SPACE_STRONG_MIN_SCORE,
   SPACE_TIERS,
   SPACE_WEAK_LIMIT,
+  isCampus,
   scoreLocally,
   tierRegex,
 };

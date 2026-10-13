@@ -20,7 +20,7 @@ const detailAction = z.discriminatedUnion("type", [
 ]);
 
 /** CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/types/placeDetail.ts; `placeId` is the overlay's `tap.placeId`. */
-const placeDetail = z.object({
+const placeSheet = z.object({
   placeId: z.string(),
   kind: z.enum(PLACE_KINDS),
   org: i18nText.nullable(),
@@ -30,7 +30,7 @@ const placeDetail = z.object({
   blocks: z.array(placeBlock),
 });
 
-export const eventPlaceDetails = z.object({ details: z.record(z.string(), placeDetail) });
+export const eventPlaceDetails = z.object({ details: z.record(z.string(), placeSheet) });
 
-export type PlaceDetail = z.input<typeof placeDetail>;
+export type PlaceSheet = z.input<typeof placeSheet>;
 export type EventPlaceDetails = z.input<typeof eventPlaceDetails>;

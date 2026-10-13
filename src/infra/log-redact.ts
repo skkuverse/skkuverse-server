@@ -98,9 +98,9 @@ function scrub(value: unknown, depth: number): unknown {
   if (depth > MAX_ERROR_DEPTH) return "[Truncated]";
   if (Array.isArray(value)) return value.map((v) => scrub(v, depth + 1));
   const out: Record<string, unknown> = {};
-  for (const [key, v] of Object.entries(value)) {
+  for (const [key, field] of Object.entries(value)) {
     if (DROPPED_ERROR_KEYS.has(key)) continue;
-    out[key] = key === "url" && typeof v === "string" ? maskUrl(v) : scrub(v, depth + 1);
+    out[key] = key === "url" && typeof field === "string" ? maskUrl(field) : scrub(field, depth + 1);
   }
   return out;
 }

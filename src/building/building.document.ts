@@ -122,11 +122,11 @@ export interface ConnectionEnd {
 }
 
 // CONTRACT(scripts): written by scripts/import-campus-shapes.js. Why a collection of its own and not a
-// field on buildings: docs/explanation/map-architecture.md, "Campus shapes".
+// field on buildings: docs/how-to/configure-map-overlays.md ("Draw permanent campus geometry").
 export interface CampusShapeDoc {
   _id: string;
   campus: Campus;
-  /** SEE: docs/explanation/map-architecture.md ("Campus shapes"): a BASE_LAYERS id, no category table between. */
+  /** SEE: docs/how-to/configure-map-overlays.md ("Draw permanent campus geometry"): a BASE_LAYERS id, no category table. */
   layerId: string;
   geometry: OverlayGeometry;
   title: BilingualText;
