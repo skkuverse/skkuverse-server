@@ -319,7 +319,7 @@ const ROLE_MAX_LINES = {
   module: 18,
   poller: 33,
   query: 173,
-  repository: 187,
+  repository: 133,
   rules: 92,
   schema: 61,
   service: 263,
