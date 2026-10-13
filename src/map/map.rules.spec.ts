@@ -235,7 +235,7 @@ describe("authored chips", () => {
   });
 });
 
-describe("getChips", () => {
+describe("the chips /map/config serves", () => {
   it("serves only the base chips when no festival is live", () => {
     // Act
     const chips = getChips("ko", null);

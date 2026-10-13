@@ -45,7 +45,7 @@ beforeEach(() => {
   service = new MapLayerSetService(asReal<MapRepository>(repository), new Clock());
 });
 
-describe("activeEventConfig", () => {
+describe("MapLayerSetService.activeEventConfig", () => {
   it("is null when no activation is live, and says nothing", async () => {
     // Arrange
     mockFindActiveActivation.mockResolvedValue(null);
@@ -106,7 +106,7 @@ describe("activeEventConfig", () => {
   });
 });
 
-describe("activeEventConfig — origin cache", () => {
+describe("MapLayerSetService.activeEventConfig — origin cache", () => {
   let clock = NOW.getTime();
   beforeEach(() => {
     clock = NOW.getTime();
