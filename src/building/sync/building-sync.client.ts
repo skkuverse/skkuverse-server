@@ -5,8 +5,7 @@ import logger from "../../infra/logger";
 import { issuePaths, parseEach } from "../../shared/zod-list.util";
 import type { BuildingAttachment, BuildingRawDoc } from "../building.document";
 import { SKKU_CAMPUS_CODE } from "../building.constants";
-import { toApiId } from "../building.rules";
-import { shouldRejectPayload } from "./building-sync.rules";
+import { shouldRejectPayload, toApiId } from "./building-sync.rules";
 import {
   skkuBuildInfoAttachment,
   skkuBuildInfoFloor,
