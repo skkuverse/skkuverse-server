@@ -1,6 +1,6 @@
 import type { SupportedLang } from "../../infra/types";
-import type { MiniAppLogo, MiniAppLogoRaw } from "../../miniapps/types";
 import { toBannerCarousel, toLocalizedText } from "../ui.mapper";
+import type { LogoResolver } from "../ui.types";
 import type { HomeLayoutRaw, TileRaw } from "./ui-home.schema";
 import type { HomeLayout } from "./ui-home.wire";
 
@@ -11,7 +11,7 @@ type SectionRaw = HomeLayoutRaw["sections"][number];
 interface HomeLayoutContext {
   lang: SupportedLang;
   now: Date;
-  resolveLogo: (logo: MiniAppLogoRaw) => MiniAppLogo;
+  resolveLogo: LogoResolver;
 }
 
 function toTile(tile: TileRaw, context: HomeLayoutContext): Tile {
