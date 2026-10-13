@@ -15,10 +15,6 @@ export const LOCATION_ACCURACIES = ["exact", "area"] as const;
 // CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/types/placeDetail.ts has a closed PlaceKind union.
 export const PLACE_KINDS = ["pub", "booth", "promo", "foodTruck", "goods", "facility", "stage", "etc"] as const;
 
-export const PLACE_BLOCK_TYPES = ["text", "list", "table", "image", "notice"] as const;
-
-export const PLACE_DETAIL_ACTION_TYPES = ["instagram", "link"] as const;
-
 export const BASE_LAYERS = [
   {
     id: "building_numbers",
