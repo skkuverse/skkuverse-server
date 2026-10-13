@@ -84,7 +84,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe("listBuildings", () => {
+describe("BuildingRepository.listBuildings", () => {
   it("scans once for concurrent requests, and filters the cached list by campus", async () => {
     // Act
     const [all, hssc, nsc] = await Promise.all([
@@ -160,7 +160,7 @@ describe("the reads' query objects", () => {
   });
 });
 
-describe("listCampusShapes", () => {
+describe("BuildingRepository.listCampusShapes", () => {
   it("is cached like the buildings", async () => {
     // Act
     await Promise.all([listCampusShapes(), listCampusShapes()]);

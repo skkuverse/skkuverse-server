@@ -154,7 +154,7 @@ describe("MapRepository.onModuleInit", () => {
   });
 });
 
-describe("findActiveActivation", () => {
+describe("MapRepository.findActiveActivation", () => {
   it("requires enabled AND a window containing now, treating null as unbounded", async () => {
     // Act
     await findActiveActivation(NOW);
