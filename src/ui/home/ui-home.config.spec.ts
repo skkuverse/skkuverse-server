@@ -7,7 +7,6 @@
  * that must not start. Mini-app ids are checked against the real registry.
  */
 import { Clock } from "../../infra/clock";
-import type { SupportedLang } from "../../infra/types";
 import { MiniAppsService } from "../../miniapps/miniapps.service";
 import { UiCampusService } from "../campus/ui-campus.service";
 import { loadHomeLayout as loadWithRegistry, readHomeLayout } from "./ui-home.config";
@@ -18,15 +17,9 @@ const registry = new MiniAppsService();
 const committedLayout = readHomeLayout(registry);
 const campus = new UiCampusService(registry, new Clock());
 
+const resolveLogo = registry.resolveLogo.bind(registry);
+
 const loadHomeLayout = (raw: unknown): Readonly<HomeLayoutRaw> => loadWithRegistry(raw, registry);
-
-function resolveHomeLayout(lang: SupportedLang, now: Date, source: Readonly<HomeLayoutRaw> = committedLayout) {
-  return toHomeLayout(source, { lang, now, resolveLogo: (logo) => registry.resolveLogo(logo) });
-}
-
-function getCampusSections(lang: SupportedLang) {
-  return campus.getCampusSheet(lang);
-}
 
 const IMAGE_URL = "https://media.skkuverse.com/home/banners/test-00000000.jpg";
 
@@ -78,7 +71,7 @@ function layout(...sections: Record<string, unknown>[]): Record<string, unknown>
 describe("committed home-layout.json", () => {
   it("loads, so the module import in this file did not throw", () => {
     // Act
-    const resolved = resolveHomeLayout("ko", new Date());
+    const resolved = toHomeLayout(committedLayout, { lang: "ko", now: new Date(), resolveLogo });
 
     // Assert
     expect(resolved.version).toBe(1);
@@ -89,7 +82,7 @@ describe("committed home-layout.json", () => {
     "home_tiles (%s): the campus sheet's four buttons, then the games, in one grid",
     (lang) => {
       // Act
-      const resolved = resolveHomeLayout(lang, new Date());
+      const resolved = toHomeLayout(committedLayout, { lang, now: new Date(), resolveLogo });
 
       // Assert
       // One grid: the app puts a 24 pt gap after each grid, so a second grid
@@ -98,7 +91,7 @@ describe("committed home-layout.json", () => {
       const homeRow = resolved.sections.find((s) => s.id === "home_tiles") as unknown as {
         tiles: Array<{ kind: string; id: string; title?: string; actionType?: string; actionValue?: string }>;
       };
-      const sheet = getCampusSections(lang).sections.find((s) => s.type === "button_grid") as {
+      const sheet = campus.getCampusSheet(lang).sections.find((s) => s.type === "button_grid") as {
         items: Array<{ id: string; title: string; actionType: string; actionValue: string }>;
       };
       // The four service tiles mean the same thing as the campus sheet's buttons.
@@ -113,7 +106,7 @@ describe("committed home-layout.json", () => {
   );
 });
 
-describe("assertValidHomeLayout (via loadHomeLayout)", () => {
+describe("loadHomeLayout", () => {
   it("accepts a well-formed layout", () => {
     // Act & Assert
     expect(() => loadHomeLayout(layout(carousel(), grid()))).not.toThrow();
@@ -175,6 +168,17 @@ describe("assertValidHomeLayout (via loadHomeLayout)", () => {
     // Act & Assert
     expect(() => loadHomeLayout(raw)).toThrow(/^home layout: /);
   });
+
+  it.each<[string, Record<string, unknown>, string]>([
+    ["an unregistered mini app tile", layout(grid(), grid({ id: "more", tiles: [{ kind: "miniapp", id: "nope" }] })), "sections.1.tiles.0.id"],
+    ["an unregistered feed", layout(grid(), { type: "miniapp_feed", id: "feed", miniAppId: "nope" }), "sections.1.miniAppId"],
+    ["a broken banner action", layout(carousel({ items: [{ type: "default" }, image({ actionValue: "nope" })] })), "sections.0.items.1.actionValue"],
+    ["a broken link tile action", layout(tiles({ kind: "game", id: "wave-run" }, link({ actionValue: "campus" }))), "sections.0.tiles.1.actionValue"],
+    ["a link icon of two emoji", layout(grid(), grid({ id: "more", tiles: [link({ icon: { kind: "emoji", emoji: "🗺️🗺️" } })] })), "sections.1.tiles.0.icon.emoji"],
+  ])("names the path of %s", (_label, raw, path) => {
+    // Act & Assert
+    expect(() => loadHomeLayout(raw)).toThrow(new RegExp(`^home layout: ${path.replaceAll(".", "\\.")}: `));
+  });
 });
 
 describe("miniapp_feed section", () => {
@@ -232,7 +236,7 @@ describe("miniapp_feed section", () => {
     );
 
     // Act
-    const { sections } = resolveHomeLayout("en", new Date(), source);
+    const { sections } = toHomeLayout(source, { lang: "en", now: new Date(), resolveLogo });
 
     // Assert
     expect(sections).toEqual([

@@ -101,7 +101,7 @@ function arrange(docs: unknown[]) {
   return { placesFind: p.find };
 }
 
-describe("getEventOverlays", () => {
+describe("MapEventService.getEventOverlays", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFindActiveActivation.mockResolvedValue({
@@ -721,7 +721,7 @@ describe("getEventOverlays", () => {
  * pipeline is special-cased for it — same collection, same activation, same
  * cursor, same category table — which is the property these cases pin.
  */
-describe("getEventOverlays — zones and route lines", () => {
+describe("MapEventService.getEventOverlays — zones and route lines", () => {
   const RING: [number, number][] = [
     [126.9714, 37.2944],
     [126.9724, 37.2944],
@@ -860,7 +860,7 @@ describe("getEventOverlays — zones and route lines", () => {
   });
 });
 
-describe("getEventOverlays — list facets", () => {
+describe("MapEventService.getEventOverlays — list facets", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFindActiveActivation.mockResolvedValue({

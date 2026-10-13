@@ -21,14 +21,43 @@ jobs:
       issues: write
       id-token: write
       actions: read
+    # WHY: `@claude …` is read-only: read code, run read-only git/gh, comment.
+    # `@claude edit …` from an OWNER/MEMBER/COLLABORATOR may also edit, commit and push.
+    # The action pushes with its GitHub App token, not GITHUB_TOKEN, so the lock is the tool list.
+    env:
+      CLAUDE_READ_TOOLS: >-
+        --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git blame:*),Bash(git status:*),Bash(git rev-parse:*),Bash(git merge-base:*),Bash(git ls-files:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr list:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh run view:*),Bash(gh run list:*)"
+      CLAUDE_READ_ONLY_LOCK: >-
+        --permission-mode default
+        --disallowedTools "Edit,Write,MultiEdit,NotebookEdit,Bash(git add:*),Bash(git commit:*),Bash(git rm:*),Bash(git push:*),Bash(*git-push.sh*),mcp__github_file_ops__commit_files,mcp__github_file_ops__delete_files"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: Choose mode
+        id: mode
+        env:
+          BODY: ${{ github.event.comment.body || github.event.review.body }}
+          ASSOCIATION: ${{ github.event.comment.author_association || github.event.review.author_association }}
+        run: |
+          mode="read"
+          opt_in='(^|[[:space:]])@claude[[:space:]]+edit([^[:alnum:]_-]|$)'
+          if [[ "$BODY" =~ $opt_in ]]; then
+            case "$ASSOCIATION" in
+              OWNER|MEMBER|COLLABORATOR) mode="edit" ;;
+              *) echo "::notice::@claude edit needs OWNER, MEMBER or COLLABORATOR; running read-only" ;;
+            esac
+          fi
+          echo "Claude mode: $mode"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
 
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: |
+            ${{ env.CLAUDE_READ_TOOLS }}
+            ${{ steps.mode.outputs.mode != 'edit' && env.CLAUDE_READ_ONLY_LOCK || '' }}

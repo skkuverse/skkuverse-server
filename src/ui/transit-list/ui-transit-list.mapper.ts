@@ -1,9 +1,9 @@
-import type { BusGroupSource } from "./ui-transit-list.types";
+import type { BusGroup } from "../../bus/bus-config/bus-config.types";
 import type { TransitList } from "./ui-transit-list.wire";
 
 type BusGroupCard = TransitList[number];
 
-export function toBusGroupCard(group: BusGroupSource): BusGroupCard {
+export function toBusGroupCard(group: Pick<BusGroup, "id" | "label" | "screenType" | "card">): BusGroupCard {
   return {
     groupId: group.id,
     card: {

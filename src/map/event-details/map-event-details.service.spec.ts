@@ -103,7 +103,7 @@ function warned(): string {
   return logText(mockLogger.warn.mock.calls[0]);
 }
 
-describe("getEventPlaceDetails", () => {
+describe("MapEventDetailsService.getEventPlaceDetails", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFindActiveActivation.mockResolvedValue({

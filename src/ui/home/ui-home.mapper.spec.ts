@@ -12,10 +12,6 @@ import type { HomeLayoutRaw } from "./ui-home.schema";
 
 const registry = new MiniAppsService();
 
-function resolveHomeLayout(lang: SupportedLang, now: Date, source: Readonly<HomeLayoutRaw>) {
-  return toHomeLayout(source, { lang, now, resolveLogo: (logo) => registry.resolveLogo(logo) });
-}
-
 const IMAGE_URL = "https://media.skkuverse.com/home/banners/test-00000000.jpg";
 
 function image(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -63,14 +59,15 @@ function layout(...sections: Record<string, unknown>[]): Record<string, unknown>
   return { version: 1, sections };
 }
 
-describe("resolveHomeLayout", () => {
+describe("toHomeLayout", () => {
   const WINDOW = {
     startAt: "2026-10-01T00:00:00+09:00",
     endAt: "2026-10-03T00:00:00+09:00",
   };
 
-  function resolveAt(iso: string, raw: Record<string, unknown>, lang: "ko" | "en" | "zh" = "ko") {
-    return resolveHomeLayout(lang, new Date(iso), loadHomeLayout(raw, registry) as HomeLayoutRaw);
+  function resolveAt(iso: string, raw: Record<string, unknown>, lang: SupportedLang = "ko") {
+    const loaded = loadHomeLayout(raw, registry) as HomeLayoutRaw;
+    return toHomeLayout(loaded, { lang, now: new Date(iso), resolveLogo: (logo) => registry.resolveLogo(logo) });
   }
 
   it("shows a windowed banner only inside [startAt, endAt)", () => {

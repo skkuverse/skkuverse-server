@@ -1,7 +1,8 @@
 /**
  * A bus group's card shows always, or from the first to the last day of its
  * date range, both whole days in KST. The instants below fall on different
- * dates in UTC and KST, so a check in the host's zone fails them.
+ * dates in UTC and KST, so a check in the host's zone fails them. A first-day
+ * time that does not parse throws rather than hiding the card.
  */
 import { isBusGroupVisible } from "./ui-transit-list.rules";
 
@@ -32,5 +33,13 @@ describe("isBusGroupVisible", () => {
 
     // Act & Assert
     expect(isBusGroupVisible(fromNoon, new Date(iso))).toBe(expected);
+  });
+
+  it.each(["24:00", "11:5", "noon"])("throws on a first-day time of %p instead of hiding the card", (fromTime) => {
+    // Arrange
+    const broken = { type: "dateRange", from: "2026-10-12", fromTime, until: "2026-12-18" } as const;
+
+    // Act & Assert
+    expect(() => isBusGroupVisible(broken, new Date("2026-10-20T00:00:00Z"))).toThrow(/fromTime/);
   });
 });

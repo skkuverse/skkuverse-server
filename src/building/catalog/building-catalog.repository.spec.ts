@@ -68,7 +68,7 @@ describe("the reads' projections", () => {
   });
 });
 
-describe("listConnectionsBySkkuId", () => {
+describe("BuildingCatalogRepository.listConnectionsBySkkuId", () => {
   it("matches either end and reads only the two ends (connections are hand-authored)", async () => {
     // Act
     await new BuildingCatalogRepository().listConnectionsBySkkuId(7 as SkkuId);

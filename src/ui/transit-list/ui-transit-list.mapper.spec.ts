@@ -2,11 +2,13 @@
  * A bus group becomes its card on the transit tab: the group's label and card
  * fields, a blank subtitle sent as null, and the screen it opens by its type.
  */
+import type { BusGroup } from "../../bus/bus-config/bus-config.types";
 import { toBusGroupCard } from "./ui-transit-list.mapper";
-import type { BusGroupSource } from "./ui-transit-list.types";
 import { transitList } from "./ui-transit-list.wire";
 
-function group(overrides: Partial<BusGroupSource> = {}): BusGroupSource {
+type BusGroupCardSource = Pick<BusGroup, "id" | "label" | "screenType" | "card">;
+
+function group(overrides: Partial<BusGroupCardSource> = {}): BusGroupCardSource {
   return {
     id: "hssc",
     label: "인사캠 셔틀버스",

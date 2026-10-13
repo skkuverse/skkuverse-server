@@ -6,8 +6,7 @@ import {
   getGroupById,
   computeGroupEtag,
 } from "./bus-config.data";
-
-export type BusGroup = ReturnType<typeof getBusGroups>[number];
+import type { BusGroup } from "./bus-config.types";
 
 /**
  * SDUI bus-group config + ETags — DELEGATES to ./bus-config.data.
