@@ -14,7 +14,7 @@ A name is how a reader, or an agent, finds code and understands it without a com
 | File = `<meaning>.<role>.ts` from the closed role list, kebab-case | `naming.test.ts` |
 | Class = PascalCase(file base) + Role; a role file's main export is named after the file | `naming.test.ts` |
 | Exported types only in `.types`, `.document`, `.schema`, `.wire`; type files hold no runtime code | `naming.test.ts` |
-| A `.rules` file exports a function, a `.constants` file none, a `.schema` file no predicate | `role-contents.test.ts` |
+| A `.rules` file exports a function, a `.constants` file none, a `.schema` file no predicate; a service, controller, repository, client or poller file declares no function beside its class | `role-contents.test.ts` |
 | A brand is minted only by its one `is<Brand>`/`to<Brand>` in the declaring folder's `.rules`; casts only there or in specs | `naming.test.ts` |
 | Repository and client verbs, and `.rules`/`.mapper` predicates, match the declared return type | `method-verbs.test.ts` |
 | No `// --- X ---` section dividers | `section-comments.test.ts` |
