@@ -1,12 +1,12 @@
 import { Module } from "@nestjs/common";
-import { BusModule } from "../../bus/bus.module";
+import { BusConfigModule } from "../../bus/config/bus-config.module";
 import { Clock } from "../../infra/clock";
 import { UiModule } from "../ui.module";
 import { UiTransitListController } from "./ui-transit-list.controller";
 import { UiTransitListService } from "./ui-transit-list.service";
 
 @Module({
-  imports: [UiModule, BusModule],
+  imports: [UiModule, BusConfigModule],
   controllers: [UiTransitListController],
   providers: [UiTransitListService, Clock],
 })

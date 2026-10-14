@@ -1,0 +1,45 @@
+{
+  "_about": "GET /bus/config/commute captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); stop jeongja-exit3, its guide cut to one marker and one two-point walk",
+  "data": {
+    "id": "jeongja-exit3",
+    "name": "정자역 3번 출구",
+    "detail": "파리바게뜨 앞",
+    "coords": {
+      "lat": 37.365499,
+      "lng": 127.107906
+    },
+    "photoUrl": "https://media.skkuverse.com/commute/stops/jeongja-exit3/ko-f3580542.jpg",
+    "streetViewUrl": "https://inapp.map.naver.com/launchApp/panorama/street?street=on&vrpanoid=4MWo62oDv4KAFMmR86SRaA&vrpanopan=-75&vrpanotilt=0&vrpanofov=80&appTargetPage=panorama%2Fstreet&id=4MWo62oDv4KAFMmR86SRaA&pan=-75&tilt=0&fov=80&fallbackUrl=https%3A%2F%2Fviewer.map.naver.com%2Fpanorama%2F%3Fid%3D4MWo62oDv4KAFMmR86SRaA%26heading%3D-75%26tilt%3D0%26fov%3D80&app=Y&appmarket=N",
+    "map": {
+      "markers": [
+        {
+          "id": "exit3",
+          "kind": "subwayExit",
+          "label": "3번 출구",
+          "number": 3,
+          "coords": {
+            "lat": 37.365922,
+            "lng": 127.107774
+          }
+        }
+      ],
+      "paths": [
+        {
+          "kind": "walk",
+          "from": "exit3",
+          "to": "stop",
+          "points": [
+            {
+              "lat": 37.365922,
+              "lng": 127.107774
+            },
+            {
+              "lat": 37.365882,
+              "lng": 127.107844
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,480 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "screenType": {
+            "type": "string",
+            "enum": [
+              "realtime",
+              "schedule"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "visibility": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "always"
+                  }
+                },
+                "required": [
+                  "type"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "dateRange"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "fromTime": {
+                    "type": "string"
+                  },
+                  "until": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "from",
+                  "until"
+                ]
+              }
+            ]
+          },
+          "card": {
+            "type": "object",
+            "properties": {
+              "themeColor": {
+                "type": "string"
+              },
+              "iconType": {
+                "type": "string"
+              },
+              "busTypeText": {
+                "type": "string"
+              },
+              "subtitle": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "themeColor",
+              "iconType",
+              "busTypeText",
+              "subtitle"
+            ]
+          },
+          "screen": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "dataEndpoint": {
+                    "type": "string"
+                  },
+                  "refreshInterval": {
+                    "type": "number"
+                  },
+                  "lastStationIndex": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "stations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "index": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "subtitle": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "stationNumber": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "isFirstStation": {
+                          "type": "boolean"
+                        },
+                        "isLastStation": {
+                          "type": "boolean"
+                        },
+                        "isRotationStation": {
+                          "type": "boolean"
+                        },
+                        "transferLines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "line": {
+                                "type": "string"
+                              },
+                              "color": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "line",
+                              "color"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "index",
+                        "name",
+                        "subtitle",
+                        "stationNumber",
+                        "isFirstStation",
+                        "isLastStation",
+                        "isRotationStation",
+                        "transferLines"
+                      ]
+                    }
+                  },
+                  "routeOverlay": {
+                    "type": "null"
+                  },
+                  "features": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "url"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "dataEndpoint",
+                  "refreshInterval",
+                  "lastStationIndex",
+                  "stations",
+                  "routeOverlay",
+                  "features"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "defaultServiceId": {
+                    "type": "string"
+                  },
+                  "serviceSelector": {
+                    "type": "string"
+                  },
+                  "services": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "serviceId": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "endpoint": {
+                          "type": "string"
+                        },
+                        "stopSequences": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "enum": [
+                                    "board",
+                                    "alight"
+                                  ]
+                                },
+                                "timing": {
+                                  "type": "string",
+                                  "enum": [
+                                    "scheduled",
+                                    "estimated"
+                                  ]
+                                },
+                                "stopId": {
+                                  "type": "string"
+                                },
+                                "note": {
+                                  "type": "string"
+                                },
+                                "detail": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "action",
+                                "timing"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "serviceId",
+                        "label",
+                        "endpoint"
+                      ]
+                    }
+                  },
+                  "heroCard": {
+                    "type": "null"
+                  },
+                  "routeBadges": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "color": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "label",
+                        "color"
+                      ]
+                    }
+                  },
+                  "stops": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "detail": {
+                          "type": "string"
+                        },
+                        "coords": {
+                          "type": "object",
+                          "properties": {
+                            "lat": {
+                              "type": "number"
+                            },
+                            "lng": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "lat",
+                            "lng"
+                          ]
+                        },
+                        "photoUrl": {
+                          "type": "string"
+                        },
+                        "streetViewUrl": {
+                          "type": "string"
+                        },
+                        "map": {
+                          "type": "object",
+                          "properties": {
+                            "markers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "subwayExit"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "number": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "coords": {
+                                    "type": "object",
+                                    "properties": {
+                                      "lat": {
+                                        "type": "number"
+                                      },
+                                      "lng": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "required": [
+                                      "lat",
+                                      "lng"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "label",
+                                  "number",
+                                  "coords"
+                                ]
+                              }
+                            },
+                            "paths": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "walk"
+                                  },
+                                  "from": {
+                                    "type": "string"
+                                  },
+                                  "to": {
+                                    "type": "string"
+                                  },
+                                  "points": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "lat": {
+                                          "type": "number"
+                                        },
+                                        "lng": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "lat",
+                                        "lng"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "from",
+                                  "to",
+                                  "points"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "markers",
+                            "paths"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ]
+                    }
+                  },
+                  "features": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "url"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "defaultServiceId",
+                  "services",
+                  "heroCard",
+                  "routeBadges",
+                  "features"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "screenType",
+          "label",
+          "visibility",
+          "card",
+          "screen"
+        ]
+      }
+    }
+  },
+  "required": [
+    "groups"
+  ]
+}

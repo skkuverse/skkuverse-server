@@ -1,9 +1,7 @@
 /**
- * Integration over BusConfigController (@Res() ETag/304). BusConfigService
- * delegates to the real pure bus-config.data functions.
- *
- * BusCacheService is overridden (cachedRead → null) so no DB is touched during
- * app init / any incidental cache reads. Asserts group shape, 404
+ * Integration over BusConfigController (ETag/304 through EtagInterceptor) on
+ * the production pipeline (buildTestApp); the config reads no database, so
+ * nothing is overridden. Asserts group shape, 404
  * GROUP_NOT_FOUND, 304, per-language ETag difference, and the hssc (11 stations,
  * lastStationIndex 10, refreshInterval 10) / jongro07 (22 stations,
  * refreshInterval 40) screen contents.
@@ -11,20 +9,15 @@
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { BusCacheService } from "../../../src/bus/cache/bus-cache.service";
-import { buildBusApp } from "../../helpers/nest/build-bus-app";
+import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
+import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
+import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 
 beforeAll(async () => {
-  const busCacheStub = {
-    ensureIndex: jest.fn().mockResolvedValue(undefined),
-    write: jest.fn().mockResolvedValue(undefined),
-    read: jest.fn().mockResolvedValue(null),
-    cachedRead: jest.fn().mockResolvedValue(null),
-  };
-  app = await buildBusApp([{ provide: BusCacheService, useValue: busCacheStub }]);
+  app = await buildTestApp({ imports: [BusStopsModule, BusConfigModule], role: "api" });
   httpServer = app.getHttpServer();
 });
 
@@ -34,7 +27,10 @@ afterAll(async () => {
 
 describe("GET /bus/config", () => {
   it("returns a groups array of 7", async () => {
+    // Act
     const res = await request(httpServer).get("/bus/config");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data.groups)).toBe(true);
     expect(res.body.data.groups).toHaveLength(7);
@@ -43,9 +39,14 @@ describe("GET /bus/config", () => {
   });
 
   it("returns 304 when If-None-Match matches (root)", async () => {
+    // Arrange
     const first = await request(httpServer).get("/bus/config");
     const etag = first.headers.etag;
+
+    // Act
     const second = await request(httpServer).get("/bus/config").set("If-None-Match", etag);
+
+    // Assert
     expect(second.status).toBe(304);
     expect(second.headers["x-response-time"]).toBeUndefined();
   });
@@ -53,7 +54,10 @@ describe("GET /bus/config", () => {
 
 describe("GET /bus/config/:groupId", () => {
   it("returns group shape for known id", async () => {
+    // Act
     const res = await request(httpServer).get("/bus/config/campus");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveProperty("id", "campus");
     expect(res.body.data).toHaveProperty("screenType", "schedule");
@@ -64,22 +68,33 @@ describe("GET /bus/config/:groupId", () => {
   });
 
   it("returns 404 for unknown groupId", async () => {
+    // Act
     const res = await request(httpServer).get("/bus/config/unknown");
+
+    // Assert
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("GROUP_NOT_FOUND");
   });
 
   it("returns 404 GROUP_NOT_FOUND even with If-None-Match (precedes 304)", async () => {
+    // Act
     const res = await request(httpServer)
       .get("/bus/config/unknown")
       .set("If-None-Match", '"anything"');
+
+    // Assert
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("GROUP_NOT_FOUND");
   });
 
   it("returns 304 when ETag matches", async () => {
+    // Arrange
     const first = await request(httpServer).get("/bus/config/campus");
+
+    // Act
     const etag = first.headers.etag;
+
+    // Assert
     expect(etag).toBeDefined();
     const second = await request(httpServer)
       .get("/bus/config/campus")
@@ -88,17 +103,25 @@ describe("GET /bus/config/:groupId", () => {
   });
 
   it("returns different ETag per language", async () => {
+    // Arrange
     const ko = await request(httpServer).get("/bus/config/campus");
+
+    // Act
     const en = await request(httpServer)
       .get("/bus/config/campus")
       .set("Accept-Language", "en");
+
+    // Assert
     expect(ko.headers.etag).toBeDefined();
     expect(en.headers.etag).toBeDefined();
     expect(ko.headers.etag).not.toBe(en.headers.etag);
   });
 
   it("commute serves the spec's group config", async () => {
+    // Act
     const res = await request(httpServer).get("/bus/config/commute");
+
+    // Assert
     expect(res.status).toBe(200);
     const group = res.body.data;
     expect(group.screenType).toBe("schedule");
@@ -116,8 +139,13 @@ describe("GET /bus/config/:groupId", () => {
   });
 
   it("campus screen has services[] and routeBadges", async () => {
+    // Arrange
     const res = await request(httpServer).get("/bus/config/campus");
+
+    // Act
     const screen = res.body.data.screen;
+
+    // Assert
     expect(Array.isArray(screen.services)).toBe(true);
     expect(screen.services.length).toBeGreaterThan(0);
     expect(Array.isArray(screen.routeBadges)).toBe(true);
@@ -125,8 +153,13 @@ describe("GET /bus/config/:groupId", () => {
   });
 
   it("hssc screen has dataEndpoint, refreshInterval, stations, routeOverlay", async () => {
+    // Arrange
     const res = await request(httpServer).get("/bus/config/hssc");
+
+    // Act
     const screen = res.body.data.screen;
+
+    // Assert
     expect(screen.dataEndpoint).toBe("/bus/realtime/data/hssc");
     expect(screen.refreshInterval).toBe(10);
     expect(screen.lastStationIndex).toBe(10);
@@ -138,8 +171,13 @@ describe("GET /bus/config/:groupId", () => {
   });
 
   it("jongro07 screen has stations and routeOverlay", async () => {
+    // Arrange
     const res = await request(httpServer).get("/bus/config/jongro07");
+
+    // Act
     const screen = res.body.data.screen;
+
+    // Assert
     expect(screen.dataEndpoint).toBe("/bus/realtime/data/jongro07");
     expect(screen.refreshInterval).toBe(40);
     expect(screen.stations).toHaveLength(22);
@@ -148,8 +186,13 @@ describe("GET /bus/config/:groupId", () => {
   });
 
   it("jongro08 has its label, subtitle and 31-stop screen", async () => {
+    // Arrange
     const res = await request(httpServer).get("/bus/config/jongro08");
+
+    // Act
     const g = res.body.data;
+
+    // Assert
     expect(g.label).toBe("종로 08");
     expect(g.card.subtitle).toBe("명륜3가 ↔ 종로5가");
     expect(g.screen.dataEndpoint).toBe("/bus/realtime/data/jongro08");
