@@ -1,116 +1,143 @@
-/**
- * Server-owned mini-app registry loader.
- *
- * Reads index.json + details/*.json, validates referential integrity (throws at
- * boot on malformed config), resolves image logos to absolute URLs, freezes
- * everything, and exposes an ordered list + a Map for O(1) lookups.
- *
- * Mirrors notices/sources.ts, including the __dirname path resolution: at
- * runtime this is dist/src/miniapps/, and scripts/copy-build-assets.js stages
- * the JSON next to the compiled .js so fs.readFileSync resolves. `npm run dev`
- * runs from dist/ as well, and its watcher re-runs that script when a JSON file
- * under src/ changes — so a file not registered there is missing in dev too,
- * unless an old copy is still sitting in dist/.
- */
 import fs from "fs";
 import path from "path";
+import type { z } from "zod";
+import { parseConfigFile } from "../infra/config-file";
 import { FIRST_PARTY_MINIAPP_ORIGINS, WEB_ORIGIN } from "../infra/origins";
-import { assertValidRegistry } from "./miniapps.schema";
-import type {
-  MiniAppDetail,
-  MiniAppIndexEntry,
-  MiniAppIndexRaw,
-  MiniAppLogo,
-  MiniAppLogoRaw,
-} from "./types";
+import { isRecord } from "../shared/object.util";
+import { SHELL_BARS, SHELL_HEADERS, SHELL_STATUS_BARS } from "./miniapps.constants";
+import { toIndexEntry } from "./miniapps.mapper";
+import { registryFile, type MiniAppDetailRaw, type RegistryFile } from "./miniapps.schema";
+import type { LoadedRegistry } from "./miniapps.types";
 
-function readJson<T>(...segments: string[]): T {
-  return JSON.parse(
-    fs.readFileSync(path.join(__dirname, ...segments), "utf8"),
-  ) as T;
+type Issue = z.core.$ZodRawIssue;
+type Words = (id: string, issue: Issue) => string;
+
+const LABEL = "miniapp registry";
+
+const firstKey = (issue: Issue): string => (issue.code === "unrecognized_keys" ? String(issue.keys[0]) : "");
+
+const SHELL_VALUES: Readonly<Record<string, readonly string[]>> = {
+  bar: SHELL_BARS,
+  header: SHELL_HEADERS,
+  statusBar: SHELL_STATUS_BARS,
+};
+
+const ENTRY_WORDS: Readonly<Record<string, Words>> = {
+  "": (id, issue) => `unknown index key "${firstKey(issue)}" in "${id}"`,
+  id: (_id, issue) => `invalid id slug "${String(issue.input)}"`,
+  hidden: (id) => `hidden for "${id}" must be a boolean`,
+};
+
+const LOGO_PART_WORDS: Readonly<Record<string, (field: string, id: string) => string>> = {
+  url: (field, id) => `${field}.url for "${id}" must be an object on the media bucket`,
+  emoji: (field, id) => `${field}.emoji for "${id}" must be exactly one emoji`,
+};
+
+const DETAIL_WORDS: Readonly<Record<string, Words>> = {
+  "": (id, issue) => `unknown detail key "${firstKey(issue)}" in "${id}"`,
+  startUrl: (id, issue) =>
+    issue.code === "custom"
+      ? `startUrl for "${id}" must address a page on the web view — no fragment, not the root`
+      : `bad startUrl for "${id}"`,
+  relatedLinks: (id) => `bad relatedLinks url in "${id}"`,
+};
+
+function logoWords({ id, field, part }: { id: string; field: string; part: PropertyKey | undefined }, issue: Issue): string {
+  const partWords = LOGO_PART_WORDS[String(part)];
+  if (partWords) return partWords(field, id);
+  if (part === undefined && issue.code === "invalid_type") return `${field} for "${id}" must be an object`;
+  return `${field} for "${id}" must be a site-root-relative path, a media-bucket url, or one emoji`;
 }
 
-const rawIndex = readJson<MiniAppIndexRaw>("index.json");
+function shellWords(id: string, [key]: readonly PropertyKey[], issue: Issue): string {
+  if (key === undefined && issue.code === "unrecognized_keys") return `unknown shell key "${firstKey(issue)}" in "${id}"`;
+  if (key === undefined) return `shell for "${id}" must be an object`;
+  const values = SHELL_VALUES[String(key)];
+  if (values) return `shell.${String(key)} for "${id}" must be one of ${values.join(", ")}`;
+  return `shell.background for "${id}" must be a #RRGGBB string`;
+}
 
-const rawDetails: Record<string, MiniAppDetail> = Object.fromEntries(
-  rawIndex.miniApps.map((entry) => [
-    entry.id,
-    readJson<MiniAppDetail>("details", `${entry.id}.json`),
-  ]),
-);
+function entryIdAt(raw: unknown, position: PropertyKey | undefined): string {
+  const entries = isRecord(raw) && isRecord(raw.index) ? raw.index.miniApps : undefined;
+  const entry: unknown = Array.isArray(entries) ? entries[Number(position)] : undefined;
+  return isRecord(entry) ? String(entry.id) : String(position);
+}
 
-// Fail loud at module load — our own data, so a typo is a bug.
-assertValidRegistry(rawIndex, rawDetails);
+function entryWords(raw: unknown, [position, field = "", ...parts]: readonly PropertyKey[], issue: Issue): string | undefined {
+  const id = entryIdAt(raw, position);
+  if (field === "homeLogo" || field === "shellLogo") return logoWords({ id, field, part: parts[0] }, issue);
+  return ENTRY_WORDS[String(field)]?.(id, issue);
+}
 
-/** Registry schema version — clients gate breaking changes on this. */
-export const version: number = rawIndex.version;
+function detailWords([id, field = "", ...parts]: readonly PropertyKey[], issue: Issue): string | undefined {
+  if (field === "shell") return shellWords(String(id), parts, issue);
+  return DETAIL_WORDS[String(field)]?.(String(id), issue);
+}
 
-/** The wire logo: both image spellings become one absolute `uri`; an emoji passes through. */
-export function resolveLogo(logo: MiniAppLogoRaw): MiniAppLogo {
-  switch (logo.kind) {
-    case "emoji":
-      return { kind: "emoji", emoji: logo.emoji };
-    case "media":
-      return { kind: "remote", uri: logo.url };
-    case "remote":
-      return { kind: "remote", uri: `${WEB_ORIGIN}${logo.path}` };
+// WHY: each refusal names the entry by its id, not its position, so a boot failure says which mini app broke.
+export function toRegistryWords(raw: unknown): (issue: Issue) => string | undefined {
+  return (issue) => {
+    const [file, list, ...rest] = issue.path ?? [];
+    if (file === "index" && list === "miniApps" && rest.length > 0) return entryWords(raw, rest, issue);
+    if (file === "details" && list !== undefined) return detailWords([list, ...rest], issue);
+    return undefined;
+  };
+}
+
+function crossReferenceIssues({ index, details }: RegistryFile): string[] {
+  const ids = index.miniApps.map((entry) => entry.id);
+  const detailIds = Object.keys(details);
+  const mismatched = Object.entries(details).filter(([id, detail]) => detail.id !== id);
+  return [
+    ...(new Set(ids).size !== ids.length ? ["duplicate ids in index"] : []),
+    ...ids.filter((id) => !detailIds.includes(id)).map((id) => `index id "${id}" has no detail`),
+    ...mismatched.map(([id, detail]) => `detail.id "${detail.id}" != index id "${id}"`),
+    ...detailIds.filter((id) => !ids.includes(id)).map((id) => `detail "${id}" not present in index`),
+  ];
+}
+
+export function loadRegistry(index: unknown, details: Readonly<Record<string, unknown>>): Readonly<RegistryFile> {
+  const schema = registryFile.superRefine((file, ctx) => {
+    for (const message of crossReferenceIssues(file)) ctx.addIssue({ code: "custom", path: [], message });
+  });
+  const raw = { index, details };
+  return parseConfigFile({ label: LABEL, error: toRegistryWords(raw) }, schema, raw);
+}
+
+function ownerOf(origin: string, details: readonly MiniAppDetailRaw[]): string {
+  const owners = details.filter((detail) => new URL(detail.startUrl).origin === origin);
+  const [owner] = owners;
+  if (owners.length !== 1 || !owner) {
+    throw new Error(`${LABEL}: first-party origin ${origin} must be the startUrl origin of exactly one mini app, found ${owners.length}`);
   }
+  return owner.id;
 }
 
-/**
- * Ordered index with both logos resolved. The fallback between them is applied
- * here, so the client always receives a `homeLogo` and a `shellLogo` and never
- * has to know which one was authored.
- */
-export const list: ReadonlyArray<Readonly<MiniAppIndexEntry>> = Object.freeze(
-  [...rawIndex.miniApps]
-    .sort((a, b) => a.order - b.order)
-    .map((entry) => {
-      // assertValidRegistry above guarantees at least one of the two.
-      const home = (entry.homeLogo ?? entry.shellLogo) as MiniAppLogoRaw;
-      const shell = (entry.shellLogo ?? entry.homeLogo) as MiniAppLogoRaw;
-      // Named fields rather than `...entry`, so no raw on-disk value can reach
-      // the wire even if a key slipped past the schema's allow-list.
-      return Object.freeze({
-        id: entry.id,
-        name: entry.name,
-        ...(entry.shortName !== undefined ? { shortName: entry.shortName } : {}),
-        order: entry.order,
-        homeLogo: Object.freeze(resolveLogo(home)),
-        shellLogo: Object.freeze(resolveLogo(shell)),
-        ...(entry.hidden !== undefined ? { hidden: entry.hidden } : {}),
-      });
-    }),
-);
+// WHY: one owner per first-party origin, or a URL there opens in no mini app's shell, or in two.
+function toFirstPartyOrigins(details: readonly MiniAppDetailRaw[]): Readonly<Record<string, string>> {
+  return Object.freeze(Object.fromEntries(FIRST_PARTY_MINIAPP_ORIGINS.map((origin) => [origin, ownerOf(origin, details)])));
+}
 
-/** Frozen id → detail map for O(1) lookups. */
-export const map: ReadonlyMap<string, Readonly<MiniAppDetail>> = new Map(
-  Object.entries(rawDetails).map(([id, detail]) => [
-    id,
-    Object.freeze({ ...detail }),
-  ]),
-);
+function toLoadedRegistry({ index, details }: RegistryFile): LoadedRegistry {
+  const map = new Map(Object.entries(details).map(([id, detail]) => [id, Object.freeze(detail)]));
+  const list = [...index.miniApps].sort((a, b) => a.order - b.order).map((entry) => toIndexEntry(entry, WEB_ORIGIN));
+  return { version: index.version, list: Object.freeze(list), map, firstPartyOrigins: toFirstPartyOrigins([...map.values()]) };
+}
 
-/**
- * First-party origin → the mini app that owns it, published on GET /app/config
- * as `miniapps.origins` so the app can open any URL on one of these origins in
- * that mini app's shell rather than the generic /webview.
- *
- * Built from the registry's startUrls, so the host is never typed twice. Each
- * FIRST_PARTY_MINIAPP_ORIGINS entry must be claimed by exactly one registered
- * mini app — none means the list names a host nothing opens, two means a URL
- * there has no single owner — and either throws at boot.
- */
-export const firstPartyOrigins: Readonly<Record<string, string>> = Object.freeze(
-  Object.fromEntries(
-    FIRST_PARTY_MINIAPP_ORIGINS.map((origin) => {
-      const owners = [...map.values()].filter((d) => new URL(d.startUrl).origin === origin);
-      if (owners.length !== 1) {
-        throw new Error(
-          `miniapp registry: first-party origin ${origin} must be the startUrl origin of exactly one mini app, found ${owners.length}`,
-        );
-      }
-      return [origin, owners[0]!.id];
-    }),
-  ),
-);
+// WHY: read next to the compiled file at runtime; scripts/copy-build-assets.js stages each JSON file into dist/.
+function readJson(...segments: string[]): unknown {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, ...segments), "utf8"));
+}
+
+function indexIdsOf(index: unknown): string[] {
+  const entries: unknown[] = isRecord(index) && Array.isArray(index.miniApps) ? index.miniApps : [];
+  return entries.flatMap((entry) => (isRecord(entry) && typeof entry.id === "string" ? [entry.id] : []));
+}
+
+function readRegistry(): LoadedRegistry {
+  const index = readJson("index.json");
+  const details = Object.fromEntries(indexIdsOf(index).map((id) => [id, readJson("details", `${id}.json`)]));
+  return toLoadedRegistry(loadRegistry(index, details));
+}
+
+export const registry: Readonly<LoadedRegistry> = Object.freeze(readRegistry());

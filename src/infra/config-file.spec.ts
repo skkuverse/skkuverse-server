@@ -20,4 +20,12 @@ describe("parseConfigFile", () => {
       /^x file: id: .+; items\.1: .+; root: Unrecognized key: "extra"$/,
     );
   });
+
+  it("words each issue through the error map it is given, which sees the issue's full path", () => {
+    // Arrange
+    const file = { label: "x file", error: (issue: { path?: PropertyKey[] }) => `bad at ${issue.path?.join("/")}` };
+
+    // Act & Assert
+    expect(() => parseConfigFile(file, schema, { id: "a", items: [1, "2"] })).toThrow(/^x file: items\.1: bad at items\/1$/);
+  });
 });

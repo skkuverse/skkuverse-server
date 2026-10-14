@@ -1,59 +1,42 @@
-/**
- * The mini-app target: which registered mini app to open, and at which page.
- *
- *     <miniAppId>[<root-relative path>]
- *
- *     eskara-2026                     the mini app's registered startUrl
- *     eskara-2026/eskara/wristband    that page, on the startUrl's origin
- *
- * One grammar for every place that can open a mini app: a map `miniapp` action,
- * a mini-app push's `miniapp` action, and the app's `/m/<target>` deep link,
- * which is this string with `/m/` in front. The app parses it with the same rule
- * (packages/shared/src/miniapps/target.ts in skkuverse-app); keep the two in step.
- *
- * Why an id and a path rather than a URL. An origin does not name a mini app —
- * one host can serve several — and the shell needs the id anyway for the name,
- * logo and verified badge it frames the page with. The path is confined to the
- * registered origin for the same reason the badge exists: the shell must never
- * vouch for a page on a host nobody registered.
- *
- * The path is resolved against startUrl ON THE DEVICE, not here. The server only
- * guarantees the path cannot name another host (`ROOT_RELATIVE_PATH_RE` refuses
- * `//evil.com` and `/\evil.com`, the two spellings a URL parser reads as a new
- * authority). The app checks the resolved origin again, because a deep link
- * never passes through this server.
- */
-import { ROOT_RELATIVE_PATH_RE } from "../shared/link-target.constants";
-import { map as registry } from "./miniapps";
+import { isOnWebviewOrigin, toWebviewUrl } from "../infra/webview-url";
+import { isRootRelativePath } from "../shared/link-target.util";
+import type { MiniAppTarget } from "./miniapps.types";
 
-export interface MiniAppTarget {
-  id: string;
-  /** Root-relative, on the mini app's registered origin. Absent means startUrl. */
-  path?: string;
-}
+const PICTOGRAPHIC_RE = /\p{Extended_Pictographic}/u;
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
-// The slug is the leading run up to the first `/`, which is also where the path
-// starts — so the split below needs no delimiter a path could contain.
+// WHY: the slug is the leading run up to the first `/`, where the path starts, so the split needs no delimiter.
 const TARGET_RE = /^([a-z0-9-]+)(\/.*)?$/;
 
+// WHY: graphemes, not code points: "🌶️" and "👩‍🍳" are several code points and one glyph on the tile.
+export function isSingleEmoji(value: string): boolean {
+  const [first, ...rest] = graphemes.segment(value);
+  return first !== undefined && rest.length === 0 && PICTOGRAPHIC_RE.test(first.segment);
+}
+
 /**
- * Parse the grammar only. Registry membership is a separate question — see
- * `isKnownMiniAppTarget` — because the grammar is shared with the app, which
- * holds its own copy of the registry.
+ * WHY: the web view routes by path, so a fragment or its bare root lands on the wrong page at HTTP 200.
+ * Only our own origin is held to it: a third party's routing is its own, and a refusal here fails the boot.
+ */
+export function isServableStartUrl(startUrl: string): boolean {
+  return !isOnWebviewOrigin(startUrl) || toWebviewUrl(startUrl) !== null;
+}
+
+/**
+ * CONTRACT(skkuverse-app): `<miniAppId>[<root-relative path>]`, the grammar of
+ * skkuverse-app/packages/shared/src/miniapps/target.ts; the app resolves the path against startUrl.
  */
 export function parseMiniAppTarget(value: unknown): MiniAppTarget | null {
   if (typeof value !== "string") return null;
   const match = TARGET_RE.exec(value);
-  if (!match) return null;
-  const [, id, path] = match;
-  if (!id) return null;
+  const id = match?.[1];
+  if (id === undefined) return null;
+  const path = match?.[2];
   if (path === undefined) return { id };
-  if (!ROOT_RELATIVE_PATH_RE.test(path)) return null;
-  return { id, path };
+  return isRootRelativePath(path) ? { id, path } : null;
 }
 
-/** A well-formed target naming a mini app this server registers. */
-export function isKnownMiniAppTarget(value: unknown): boolean {
+export function isKnownMiniAppTarget(value: unknown, registry: ReadonlyMap<string, unknown>): boolean {
   const target = parseMiniAppTarget(value);
   return target !== null && registry.has(target.id);
 }
