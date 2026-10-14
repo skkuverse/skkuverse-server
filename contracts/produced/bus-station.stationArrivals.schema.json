@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "busNm": {
+        "type": "string"
+      },
+      "busSupportTime": {
+        "type": "boolean"
+      },
+      "msg1ShowMessage": {
+        "type": "boolean"
+      },
+      "msg1Message": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "msg1RemainStation": {
+        "type": "null"
+      },
+      "msg1RemainSeconds": {
+        "type": "null"
+      },
+      "msg2ShowMessage": {
+        "type": "boolean"
+      },
+      "msg2Message": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "msg2RemainStation": {
+        "type": "null"
+      },
+      "msg2RemainSeconds": {
+        "type": "null"
+      }
+    },
+    "required": [
+      "busNm",
+      "busSupportTime",
+      "msg1ShowMessage",
+      "msg1Message",
+      "msg1RemainStation",
+      "msg1RemainSeconds",
+      "msg2ShowMessage",
+      "msg2Message",
+      "msg2RemainStation",
+      "msg2RemainSeconds"
+    ]
+  }
+}

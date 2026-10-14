@@ -3,6 +3,12 @@ import { ConfigModule } from "./config/config.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
 import { HealthModule } from "./health/health.module";
 import { BusModule } from "./bus/bus.module";
+import { BusCacheModule } from "./bus/cache/bus-cache.module";
+import { BusRealtimeModule } from "./bus/realtime/bus-realtime.module";
+import { BusRealtimeHsscModule } from "./bus/realtime/hssc/bus-realtime-hssc.module";
+import { BusRealtimeJongroModule } from "./bus/realtime/jongro/bus-realtime-jongro.module";
+import { BusRealtimeGroupModule } from "./bus/realtime/group/bus-realtime-group.module";
+import { BusStationModule } from "./bus/station/bus-station.module";
 import { AppConfigModule } from "./app-config/app-config.module";
 import { UiModule } from "./ui/ui.module";
 import { UiHomeModule } from "./ui/home/ui-home.module";
@@ -38,6 +44,12 @@ import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.modul
     SchedulingModule,
     HealthModule,
     BusModule,
+    BusCacheModule,
+    BusRealtimeModule,
+    BusRealtimeHsscModule,
+    BusRealtimeJongroModule,
+    BusRealtimeGroupModule,
+    BusStationModule,
     AppConfigModule,
     UiModule,
     UiHomeModule,

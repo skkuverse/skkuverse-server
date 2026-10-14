@@ -3,6 +3,8 @@
   "explorer.fileNesting.expand": false,
   "explorer.fileNesting.patterns": {
     "building.module.ts": "building.*, *.json",
+    "bus.module.ts": "bus.*, *.json",
+    "bus-realtime.module.ts": "bus-realtime.*, *.json",
     "map.module.ts": "map.*, *.json",
     "miniapps.module.ts": "miniapps.*, *.json",
     "notices.module.ts": "notices.*, *.json",
