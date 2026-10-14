@@ -1,22 +1,23 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Collection } from "mongodb";
 import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import config from "../../infra/config";
-import { mongoCollection } from "../../infra/mongo";
+import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type { BusCacheDocument, BusCacheKey, BusCacheValueByKey } from "./bus-cache.document";
 
 // WHY: each replica answers a burst of realtime requests from one read per key per 5 s.
 const MEMORY_TTL_MS = 5_000;
 
 @Injectable()
-export class BusCacheRepository {
+export class BusCacheRepository implements OnModuleInit {
   private readonly loaders = new Map<BusCacheKey, CachedLoader<BusCacheValueByKey[BusCacheKey] | null>>();
 
   constructor(private readonly clock: Clock) {}
 
-  async ensureIndex(): Promise<void> {
-    await this.busCache().createIndex({ _updatedAt: 1 }, { expireAfterSeconds: 60, name: "ttl_updatedAt" });
+  // WHY: every ROLE ensures it: the poller writes bus_cache and the api replicas read it.
+  onModuleInit(): Promise<void> {
+    return ensureIndexesAtBoot("bus.cache", () => this.ensureIndexes());
   }
 
   async upsert<K extends BusCacheKey>(key: K, value: BusCacheValueByKey[K]): Promise<void> {
@@ -39,6 +40,11 @@ export class BusCacheRepository {
     });
     this.loaders.set(key, loader);
     return loader;
+  }
+
+  // WHY: MongoDB drops a key a minute after its last write, so a stopped poller empties bus_cache.
+  private async ensureIndexes(): Promise<void> {
+    await this.busCache().createIndex({ _updatedAt: 1 }, { expireAfterSeconds: 60, name: "ttl_updatedAt" });
   }
 
   private async loadValue(key: BusCacheKey): Promise<BusCacheValueByKey[BusCacheKey] | null> {
