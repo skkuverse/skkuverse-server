@@ -1,93 +1,46 @@
-import { Controller, Get, Param, Req, Res } from "@nestjs/common";
-import type { Request, Response } from "express";
-import { AppError } from "../http/app.error";
-import { MiniAppsService } from "./miniapps.service";
-import { MiniAppNotificationsService } from "./miniapps-notifications.service";
-import { MiniAppsManifestService } from "./miniapps.manifest";
-import { DEFAULT_SHELL, mergeShell, parseShellFields } from "./shell";
-import type {
-  MiniAppDetailResponse,
-  MiniAppIndexEntry,
-  MiniAppNotificationEntry,
-} from "./types";
-import type { SupportedLang } from "../infra/types";
+import { Controller, Get, Param, Res } from "@nestjs/common";
+import type { Response } from "express";
+import { AppError } from "../../http/app.error";
+import { CacheControl } from "../../http/cache-control.decorator";
+import { Lang } from "../../http/lang.decorator";
+import type { SupportedLang } from "../../infra/types";
+import type { MiniAppDetail } from "../miniapps.wire";
+import { MiniappsNotificationsService } from "../notifications/miniapps-notifications.service";
+import type { MiniAppFeed } from "../notifications/miniapps-notifications.wire";
+import { FEED_CACHE_CONTROL, REGISTRY_CACHE_CONTROL } from "./miniapps-catalog.constants";
+import { MiniappsCatalogService } from "./miniapps-catalog.service";
+import type { MiniAppIndex } from "./miniapps-catalog.wire";
 
-/**
- * The registry is JSON shipped with the build, identical for every client and
- * every language, and it changes only on deploy — so it may be cached by the
- * client and by a shared cache in front of the origin. Five minutes bounds how
- * long a deploy that edits it takes to be seen.
- */
-const REGISTRY_CACHE_CONTROL = "public, max-age=300";
-
-interface MiniAppIndexResponse {
-  version: number;
-  miniApps: ReadonlyArray<Readonly<MiniAppIndexEntry>>;
-}
-
-/**
- * (A perimeter detail is left out of the public history.)
- *
- *
- *
- */
 @Controller("miniapps")
-export class MiniAppsController {
+export class MiniappsCatalogController {
   constructor(
-    private readonly miniApps: MiniAppsService,
-    private readonly notifications: MiniAppNotificationsService,
-    private readonly manifest: MiniAppsManifestService,
+    private readonly catalog: MiniappsCatalogService,
+    private readonly notifications: MiniappsNotificationsService,
   ) {}
 
-  // GET /miniapps
   @Get()
-  getIndex(@Res({ passthrough: true }) res: Response): MiniAppIndexResponse {
-    res.set("Cache-Control", REGISTRY_CACHE_CONTROL);
-    return { version: this.miniApps.version, miniApps: this.miniApps.list };
+  @CacheControl(REGISTRY_CACHE_CONTROL)
+  index(): MiniAppIndex {
+    return this.catalog.index();
   }
 
-  /**
-   * (A perimeter detail is left out of the public history.)
-   *
-   *
-   *
-   */
+  // WHY: set before the read, so a failed read's 500 is held as briefly as the feed and not retried by every device.
   @Get(":id/notifications")
-  async getNotifications(
-    @Param("id") id: string,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<MiniAppNotificationEntry[]> {
-    if (!this.miniApps.getDetail(id)) {
-      throw new AppError("MINIAPP_NOT_FOUND", `Unknown mini-app id: ${id}`, 404);
-    }
-    res.set("Cache-Control", "public, max-age=3");
-    return this.notifications.feed(id, (req.lang ?? "ko") as SupportedLang);
+  async feed(@Param("id") id: string, @Lang() lang: SupportedLang, @Res({ passthrough: true }) res: Response): Promise<MiniAppFeed> {
+    if (!this.catalog.isRegistered(id)) throw this.notFound(id);
+    res.set("Cache-Control", FEED_CACHE_CONTROL);
+    return this.notifications.feed(id, lang);
   }
 
-  /**
-   * GET /miniapps/:id — the registry detail, with `shell` always the complete
-   * merged config: `DEFAULT_SHELL`, overridden by the registry's own
-   * (optional) fields, overridden again by the mini app's own manifest (for a
-   * first-party mini app that has shipped one; `{}` otherwise). See
-   * `miniapps.manifest.ts` for the fetch/cache and `shell.ts` for the merge.
-   */
   @Get(":id")
-  async getDetail(
-    @Param("id") id: string,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<Readonly<MiniAppDetailResponse>> {
-    const detail = this.miniApps.getDetail(id);
-    if (!detail) {
-      throw new AppError("MINIAPP_NOT_FOUND", `Unknown mini-app id: ${id}`, 404);
-    }
-    const manifestFields = await this.manifest.getShellFields(detail);
-    const shell = mergeShell(
-      mergeShell(DEFAULT_SHELL, parseShellFields(detail.shell)),
-      manifestFields,
-    );
-    // Set only on success, so a 404 for a slug that ships later is not kept.
-    res.set("Cache-Control", REGISTRY_CACHE_CONTROL);
-    return { ...detail, shell };
+  @CacheControl(REGISTRY_CACHE_CONTROL)
+  async detail(@Param("id") id: string): Promise<MiniAppDetail> {
+    const detail = await this.catalog.detail(id);
+    if (!detail) throw this.notFound(id);
+    return detail;
+  }
+
+  private notFound(id: string): AppError {
+    return new AppError("MINIAPP_NOT_FOUND", `Unknown mini-app id: ${id}`, 404);
   }
 }
