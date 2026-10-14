@@ -273,10 +273,10 @@ function isAbsoluteHttpsUrl(value) {
 
 /** src/infra/webview-url.ts ROOT_RELATIVE_PATH_RE. */
 const ROOT_RELATIVE_PATH_RE = /^\/(?![/\\])[^\s]*$/;
-/** src/miniapps/miniapp-target.ts TARGET_RE. */
+/** TARGET_RE in src/miniapps/miniapps.rules.ts. */
 const MINIAPP_TARGET_RE = /^([a-z0-9-]+)(\/.*)?$/;
 
-/** Copy of src/miniapps/miniapp-target.ts `parseMiniAppTarget` — see there for the grammar. */
+/** Copy of `parseMiniAppTarget` in src/miniapps/miniapps.rules.ts — see there for the grammar. */
 function parseMiniAppTarget(value) {
   if (typeof value !== "string" || value === "" || WHITESPACE_RE.test(value)) return null;
   const match = MINIAPP_TARGET_RE.exec(value);

@@ -339,7 +339,6 @@ const VIOLATORS = {
     "src/bus/eta/eta-store.ts",
     "src/bus/schedule/schedule-db.ts",
     "src/bus/schedule/schedule.service.ts",
-    "src/miniapps/miniapps.data.ts",
     "src/notices/notices.data.ts",
   ],
   features: {},
@@ -348,13 +347,11 @@ const VIOLATORS = {
     "src/bus/bus-config/bus-config.data.ts",
     "src/bus/bus-config/hssc.stations.ts",
     "src/bus/route-overlay/route-overlay.service.ts",
-    "src/miniapps/shell.ts",
   ],
   // Controllers that read req.lang themselves instead of taking @Lang().
   lang: [
     "src/bus/controllers/bus-config.controller.ts",
     "src/bus/controllers/schedule.controller.ts",
-    "src/miniapps/miniapps.controller.ts",
     "src/notices/notices.controller.ts",
     "src/notices/overview/overview.controller.ts",
   ],
@@ -554,6 +551,7 @@ const GLOSSARY_NOT = {
   building: ["buildingId", "buildingNo", "roomId", "level", "bucket", "searchData", "term", "geometryDoc"],
   health: ["isAlive", "isHealthy"],
   map: ["festivalConfig", "layerConfig", "eventWindow", "currentFestival", "filterButton", "exclusiveGroup", "categoryStyle", "sheetBody", "isFallback"],
+  miniapps: ["appRegistry", "inbox", "readBy"],
   ui: ["homeConfig", "widget", "slider", "period", "shortcut", "campusConfig", "busItem", "scrollItem"],
 };
 
