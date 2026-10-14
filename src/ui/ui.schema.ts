@@ -29,9 +29,11 @@ export const bannerImageFile = z
     endAt: instant.optional(),
   })
   .refine((image) => (image.actionType === undefined) === (image.actionValue === undefined), {
+    path: [],
     message: "needs both actionType and actionValue, or neither",
   })
   .refine((image) => !image.startAt || !image.endAt || Date.parse(image.startAt) < Date.parse(image.endAt), {
+    path: [],
     message: "startAt must be before endAt",
   });
 
