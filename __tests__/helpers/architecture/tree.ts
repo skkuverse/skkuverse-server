@@ -38,6 +38,11 @@ export function isNonSpecSource(file: string): boolean {
   return file.startsWith("src/") && file.endsWith(".ts") && !file.endsWith(".spec.ts");
 }
 
+/** A generated file (`*.generated.ts`): its comments come from its generator, so the src/ comment rules skip it. */
+export function isGeneratedSource(file: string): boolean {
+  return file.endsWith(".generated.ts");
+}
+
 /** The TypeScript sources under src/, excluding specs. */
 export function sourceFiles(): string[] {
   return filesUnder("src").filter(isNonSpecSource);

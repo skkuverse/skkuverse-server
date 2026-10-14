@@ -5,9 +5,9 @@
  */
 import fs from "fs";
 import path from "path";
-import { commentBlocks, commentsOf, numberedKeys, type SourceComment } from "../helpers/architecture/comments";
+import { commentBlocks, commentsOf, numberedKeys, vendoredSources, type SourceComment } from "../helpers/architecture/comments";
 import { expectAllowlisted, ROOT } from "../helpers/architecture/ratchet";
-import { isNonSpecSource, readSource, sourceFiles } from "../helpers/architecture/tree";
+import { isGeneratedSource, isNonSpecSource, readSource, sourceFiles } from "../helpers/architecture/tree";
 
 /** The repos of CLAUDE.md "Ecosystem", and the in-repo consumers outside src/. */
 export const CONTRACT_REPOS = [
@@ -51,19 +51,13 @@ function tagProblem(text: readonly string[], exists: (rel: string) => boolean): 
   return undefined;
 }
 
-/** Hash-locked vendored files (.contracts.lock.json): their comments are not edited here. */
-function vendoredSources(): Set<string> {
-  const lock = JSON.parse(readSource(".contracts.lock.json")) as { contracts: Record<string, { path: string }> };
-  return new Set(Object.values(lock.contracts).map((c) => c.path));
-}
-
 /** `<file>: <first line>` per untagged comment, `[reason]` appended when a tag is malformed, `#n` on a repeat. */
 export function commentTagViolations(
   file: string,
   source: string,
   exists: (rel: string) => boolean = (rel) => fs.existsSync(path.join(ROOT, rel)),
 ): string[] {
-  if (!isNonSpecSource(file)) return [];
+  if (!isNonSpecSource(file) || isGeneratedSource(file)) return [];
   const blocks = commentBlocks(commentsOf(file, source).filter((c) => !isDirective(c)));
   const labels = blocks.flatMap((block) => {
     const problem = tagProblem(block.text, exists);
@@ -187,6 +181,14 @@ describe("comment tag rule applies as specified", () => {
 
     // Assert
     expect(checked).toEqual([[], [], ["src/x/x.ts: Untagged."]]);
+  });
+
+  it("skips a generated file: its comments come from its generator", () => {
+    // Act
+    const violations = commentTagViolations("src/x/x.document.generated.ts", "// Untagged.\nconst a = 1;", none);
+
+    // Assert
+    expect(violations).toEqual([]);
   });
 });
 

@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured (a push payload has no capture): mirrors the payload NoticesDispatcherService.buildPayload sends and PushFunctionName03 in skkuverse-app/private-file reads; one notice cross-posted to two boards",
+  "_about": "Synthetic, never captured (a push payload has no capture): mirrors the payload NoticesDispatchClient.sendPush sends and PushFunctionName03 in skkuverse-app/private-file reads; one notice cross-posted to two boards",
   "data": {
     "type": "notice",
     "noticeId": "6704f0c2a1b2c3d4e5f60718",

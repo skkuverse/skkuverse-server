@@ -278,7 +278,7 @@ describe("naming rules apply as specified", () => {
 
   it.each([
     ["src/infra/rateLimitKeys.ts", true],
-    ["src/notices/tabConfig.ts", true],
+    ["src/building/buildingList.ts", true],
     ["src/notices/notices.dedup-key.ts", false],
     ["src/map/map-layerset.config.ts", false],
   ])("kebab-case of %s violates: %s", (file, violates) => {

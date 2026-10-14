@@ -96,6 +96,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 - A payload item that fails its schema is dropped and logged (`building.sync.payload_items_dropped`); a list where more than `MAX_INVALID_PAYLOAD_ITEM_RATIO` fail is rejected whole. The buildInfo phase fails when more than `MAX_BUILD_INFO_FAILURE_RATIO` of its calls fail.
 - A building is re-enriched only when it is new, SKKU's `updateDt` changed, or its `enrichVersion` is not `ENRICH_VERSION` (`needsEnrichment`).
 - Data is at most one sync interval (`config.building.syncIntervalMs`) plus `BUILDING_CACHE_TTL_MS` old, and every route sends `BUILDING_CACHE_CONTROL`. Development does not sync (`BUILDING_SYNC=off`).
+- An api replica serves a synced list at most `BUILDING_CACHE_TTL_MS` late: the sync's `clearCache` clears only the poller process's cache, so the TTL, not an invalidation, is the stated freshness bound ([refactor design, D15](../../openspec/changes/refactor-server-architecture/design.md)).
 - `GET /building/:skkuId` answers `400` `INVALID_ID` for an id `isSkkuId` rejects, before any read, and `404` `NOT_FOUND` for a valid id with no building.
 - A `campus_shapes` document that fails `campusShapeDoc` is left out and logged (`building.campus_shapes.invalid`), and a failed reload serves the last good shapes for `CAMPUS_SHAPES_STALE_WINDOW_MS`. The buildings cache has no stale window, so a failed read reaches `map`.
 - The search ranks by the tier tables, in one `$facet` per collection so the counts describe the same predicate as the rows ([ADR 0006](../decisions/0006-building-search-relevance-ranking.md)).
@@ -105,7 +106,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 
 - `ApiId` equals `SkkuId`, and no reason for keeping them apart is recorded. Merging them, which would retire `toApiId`, is open ([brand minter design](../../openspec/changes/archive/2026-10-13-enforce-single-brand-minter/design.md), Open questions).
 - `GET /building/list` has no caller in the app, web or mini sources, and only the response-compare script called it in the logs checked. Removing it waits for several days of logs or per-app-version counts.
-- After a sync, `clearCache` clears only the poller process's cache, so `ROLE=api` replicas serve the old list until `BUILDING_CACHE_TTL_MS` expires ([refactor design, D15](../../openspec/changes/refactor-server-architecture/design.md)).
+- A version stamp that api replicas check, so a sync reaches them before their TTL, is open (`spencer0124/skkuverse#64`).
 - What `conspaceCd` means; nothing reads it.
 - What `extensions` is for: created empty on insert, and served by the detail route only.
 - buildInfo also sends a floor code (`floor`), which the schema ignores; `floorSortKey` orders floors by the Korean floor name instead.

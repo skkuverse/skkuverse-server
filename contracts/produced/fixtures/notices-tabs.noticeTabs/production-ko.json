@@ -1,0 +1,87 @@
+{
+  "_about": "GET /notices/tabs captured from production 2026-10-14 (stage 11 snapshot, Accept-Language ko); public tab configuration, trimmed to one fixed tab, the dept picker with one available and one excluded source, and the library picker with its campus defaults",
+  "data": {
+    "schemaVersion": 1,
+    "tabs": [
+      {
+        "key": "dept",
+        "label": "학과",
+        "tabMode": "picker",
+        "picker": {
+          "sources": [
+            {
+              "id": "arch",
+              "name": "건축학과",
+              "campus": "nsc",
+              "college": "공과대학",
+              "noticeAvailable": true,
+              "excludeReason": null,
+              "excludeReasonText": null
+            },
+            {
+              "id": "cheme",
+              "name": "화학공학과",
+              "campus": "nsc",
+              "college": "공과대학",
+              "noticeAvailable": false,
+              "excludeReason": "siteUnreachable",
+              "excludeReasonText": "학과 홈페이지에 연결이 되지 않아 공지를 가져올 수 없어요"
+            }
+          ],
+          "maxSelection": 5,
+          "defaultIds": [],
+          "campusDefaultIds": {}
+        }
+      },
+      {
+        "key": "academic",
+        "label": "학사",
+        "tabMode": "fixed",
+        "fixed": {
+          "sourceId": "skku-notice02",
+          "name": "성균관대_통합(학사)",
+          "campus": "both"
+        }
+      },
+      {
+        "key": "library",
+        "label": "도서관",
+        "tabMode": "picker",
+        "picker": {
+          "sources": [
+            {
+              "id": "lib-hssc",
+              "name": "중앙학술정보관",
+              "campus": "hssc",
+              "college": null,
+              "noticeAvailable": true,
+              "excludeReason": null,
+              "excludeReasonText": null
+            },
+            {
+              "id": "lib-nsc",
+              "name": "삼성학술정보관",
+              "campus": "nsc",
+              "college": null,
+              "noticeAvailable": true,
+              "excludeReason": null,
+              "excludeReasonText": null
+            }
+          ],
+          "maxSelection": 3,
+          "defaultIds": [
+            "lib-all"
+          ],
+          "campusDefaultIds": {
+            "hssc": [
+              "lib-hssc"
+            ],
+            "nsc": [
+              "lib-nsc"
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
