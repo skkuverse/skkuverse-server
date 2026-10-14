@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "in-progress"
+      ]
+    },
+    "source": {
+      "type": "string"
+    },
+    "processed": {
+      "type": "number"
+    },
+    "sent": {
+      "type": "number"
+    },
+    "failed": {
+      "type": "number"
+    },
+    "skippedNoTopics": {
+      "type": "number"
+    },
+    "cfCalls": {
+      "type": "number"
+    },
+    "dedupedDocs": {
+      "type": "number"
+    },
+    "durationMs": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "status",
+    "source",
+    "processed",
+    "sent",
+    "failed",
+    "skippedNoTopics"
+  ]
+}

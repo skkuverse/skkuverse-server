@@ -1,0 +1,13 @@
+{
+  "_about": "Synthetic, never captured: the summary a ping gets while another sweep runs in the same process",
+  "data": {
+    "status": "in-progress",
+    "source": "crawler-main",
+    "processed": 0,
+    "sent": 0,
+    "failed": 0,
+    "skippedNoTopics": 0,
+    "cfCalls": 0,
+    "dedupedDocs": 0
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "_about": "GET /notices/source/skku-notice06?limit=50&type=action_required and GET /notices?sourceIds=… captured from production 2026-10-14 (stage 11 shape snapshot); public notices, trimmed to an action_required badge with a time, an informational range and, where the capture had one, an unsummarized notice",
+  "data": {
+    "notices": [
+      {
+        "id": "6acee22b9cb01d9a98e90cc0",
+        "sourceId": "skku-notice06",
+        "articleNo": 140562,
+        "title": "2027년도 두산연강재단 장학생 선발 안내",
+        "category": null,
+        "author": "���հ����б� ���д��",
+        "department": "성균관대_통합(장학)",
+        "date": "2026-10-14",
+        "views": 2723,
+        "sourceUrl": "https://www.skku.edu/skku/campus/skk_comm/notice06.do?mode=view&articleNo=140562&article.offset=0&articleLimit=10",
+        "hasContent": true,
+        "hasAttachments": true,
+        "isEdited": false,
+        "summary": {
+          "oneLiner": "국내 4년제 학부생 대상, 홈페이지에서 신청서·서류 업로드",
+          "type": "action_required",
+          "startAt": {
+            "date": "2026-10-14",
+            "time": null
+          },
+          "endAt": {
+            "date": "2026-11-13",
+            "time": "18:00",
+            "label": "공고 및 서류 접수"
+          }
+        }
+      },
+      {
+        "id": "6acf2f809cb01d9a98eb3c7b",
+        "sourceId": "skku-notice06",
+        "articleNo": 140575,
+        "title": "(대학원)2026년도 동진장학연구재단 동진장학금 선발 안내",
+        "category": null,
+        "author": "성균관대학교 장학담당",
+        "department": "성균관대_통합(장학)",
+        "date": "2026-10-14",
+        "views": 1630,
+        "sourceUrl": "https://www.skku.edu/skku/campus/skk_comm/notice06.do?mode=view&articleNo=140575&article.offset=0&articleLimit=10",
+        "hasContent": true,
+        "hasAttachments": true,
+        "isEdited": false,
+        "summary": {
+          "oneLiner": "화학 계열 대학원생 대상, 이메일로 지원서 접수",
+          "type": "informational",
+          "startAt": {
+            "date": "2026-10-15",
+            "time": null
+          },
+          "endAt": {
+            "date": "2026-10-30",
+            "time": null,
+            "label": "신청기간"
+          }
+        }
+      }
+    ],
+    "nextCursor": "eyJkIjoiMjAyNi0wOS0zMCIsImMiOiIyMDI2LTEwLTEyVDA1OjEwOjE2LjIwOFoiLCJpIjoiNmFiY2MxOGFiMGMyN2QzOTkwYmI4M2NiIn0",
+    "hasMore": true
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "_about": "Synthetic, never captured: the data GET /notices/overview serves when retrieval finds nothing, as overview-routes.test.ts pins",
+  "data": {
+    "overview": null
+  }
+}
