@@ -35,14 +35,6 @@ const config = {
     },
   },
 
-  ad: {
-    dbName: dbNameFor(process.env.MONGO_AD_DB_NAME),
-    collections: {
-      ads: process.env.MONGO_AD_COLLECTION || "ads",
-      adEvents: process.env.MONGO_AD_EVENTS_COLLECTION || "ad_events",
-    },
-  },
-
   building: {
     dbName: dbNameFor(process.env.MONGO_BUILDING_DB_NAME),
     collections: {
