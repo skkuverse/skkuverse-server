@@ -23,8 +23,12 @@
  *     says nothing on its own (`info`, `obj`, `tmp`, `helper`, `manager`).
  *   - `specs/fixed-clock`: a spec in a migrated scope (and a top-level
  *     module's `__tests__/nest/<module>/` tests) never constructs the real
- *     `Clock`; it passes a fixed fake, so one answer reads one instant and
- *     does not depend on the day the test runs.
+ *     `Clock`, aliased, through a namespace or as a Nest provider; it passes
+ *     a fixed fake, so one answer reads one instant and does not depend on
+ *     the day the test runs.
+ *   - `migrated/syntax-clock`: the `Date.now()` / `new Date()` ban covers
+ *     every migrated scope but the shared layers, read from
+ *     `migrated-scopes.json`, so a module is bound when it joins.
  */
 import { Linter } from "eslint";
 
@@ -183,6 +187,34 @@ describe("specs/fixed-clock", () => {
     expect(fake).toEqual([]);
   });
 
+  it.each([
+    ["an aliased import", 'import { Clock as RealClock } from "../../infra/clock";\nnew Service(repo, new RealClock());'],
+    ["a namespace import", 'import * as clock from "../../infra/clock";\nnew clock.Clock();'],
+    ["a Nest-built Clock in providers", "Test.createTestingModule({ providers: [MapLayerSetService, MapRepository, Clock] });"],
+    ["a Nest-built Clock through useClass", "Test.createTestingModule({ providers: [{ provide: Clock, useClass: Clock }] });"],
+  ])("rejects the real Clock through %s", (_case, source) => {
+    // Act
+    const messages = lint("specs/fixed-clock", "src/map/layer-set/map-layer-set.service.spec.ts", source);
+
+    // Assert
+    expect(messages).toHaveLength(1);
+  });
+
+  it("passes a fake provided in place of Clock, and a fixed fake class", () => {
+    // Arrange
+    const file = "src/map/layer-set/map-layer-set.service.spec.ts";
+
+    // Act
+    const messages = lint(
+      "specs/fixed-clock",
+      file,
+      "Test.createTestingModule({ providers: [{ provide: Clock, useValue: fakeClock }] });\nnew FixedClock(NOW);\nnew FakeClock(NOW);",
+    );
+
+    // Assert
+    expect(messages).toEqual([]);
+  });
+
   it("covers the migrated scopes' specs and route tests, not an unmigrated module's", () => {
     // Arrange
     const { files = [] } = block("specs/fixed-clock");
@@ -190,6 +222,31 @@ describe("specs/fixed-clock", () => {
     // Act & Assert
     expect(files).toEqual(expect.arrayContaining(["src/map/**/*.spec.ts", "__tests__/nest/map/**/*.ts", "__tests__/nest/infra/**/*.ts"]));
     expect(files.some((glob) => String(glob).includes("bus"))).toBe(false);
+  });
+});
+
+describe("migrated/syntax-clock", () => {
+  it("covers every migrated feature module and no shared layer, from migrated-scopes.json", () => {
+    // Arrange
+    const scopes: string[] = require("./migrated-scopes.json");
+    const shared = ["config", "http", "infra", "scheduling", "shared"];
+    const features = scopes.filter((scope) => !shared.some((layer) => scope.startsWith(`src/${layer}/`)));
+
+    // Act
+    const { files = [] } = block("migrated/syntax-clock");
+
+    // Assert
+    expect(features.length).toBeGreaterThan(0);
+    expect(files).toEqual(expect.arrayContaining(features.map((scope) => `${scope}**/*.ts`)));
+    expect(files.filter((glob) => shared.some((layer) => String(glob).startsWith(`src/${layer}/`)))).toEqual([]);
+  });
+
+  it("rejects Date.now() in a migrated feature service", () => {
+    // Act
+    const messages = lint("migrated/syntax-clock", "src/building/x/x.service.ts", "const at = Date.now();");
+
+    // Assert
+    expect(messages.map((m) => m.message)).toEqual([expect.stringContaining("Clock")]);
   });
 });
 
