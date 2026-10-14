@@ -8,11 +8,10 @@
  */
 import fs from "fs";
 import path from "path";
+import { isSharedLayer } from "./ast";
 import { ROOT } from "./ratchet";
 import { filesUnder, readSource } from "./tree";
 
-/** The top-level src/ folders that are a shared role, not a feature (folders.test.ts). */
-const SHARED_ROLES = new Set(["config", "http", "infra", "scheduling", "shared"]);
 
 export const MODULE_TEMPLATE = "docs/_module-template.md";
 export const SECTIONS = ["Context", "Glossary", "Structure", "Invariants", "Open questions", "Related"];
@@ -36,7 +35,7 @@ export function titleOf(module: string): string {
 export function featureModules(files: readonly string[] = filesUnder("src")): string[] {
   const present = new Set(files);
   const tops = new Set(files.map((f) => f.split("/")).filter((p) => p.length > 2).map((p) => p[1]!));
-  return [...tops].filter((m) => !SHARED_ROLES.has(m) && present.has(moduleFileOf(m))).sort();
+  return [...tops].filter((m) => !isSharedLayer(m) && present.has(moduleFileOf(m))).sort();
 }
 
 /** The modules whose `src/<m>/` is a migrated scope. */
