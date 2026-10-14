@@ -17,12 +17,15 @@ export class BusStationClient {
   // keeps the last message (null); any other code is an error, an expired or throttled key for one.
   async fetchArrivalMessages(): Promise<string[] | null> {
     const response = await axios.get<TopisStationEnvelope>(config.api.stationHyehwa, { timeout: REQUEST_TIMEOUT_MS });
-    const header = response.data?.msgHeader;
-    if (header?.headerCd === "4") return null;
-    if (header?.headerCd && header.headerCd !== "0") {
-      throw new UpstreamError("TOPIS error code", "station", header.headerCd, header.headerMsg);
+    return this.toMessages(response.data ?? {});
+  }
+
+  private toMessages({ msgHeader, msgBody }: TopisStationEnvelope): string[] | null {
+    if (msgHeader?.headerCd === "4") return null;
+    if (msgHeader?.headerCd && msgHeader.headerCd !== "0") {
+      throw new UpstreamError("TOPIS error code", "station", msgHeader.headerCd, msgHeader.headerMsg);
     }
-    const rows = response.data?.msgBody?.itemList;
+    const rows = msgBody?.itemList;
     if (!rows) throw new UpstreamError("Station response has no itemList", "station");
     return rows.map((row) => row.arrmsg1);
   }
