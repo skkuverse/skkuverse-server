@@ -2,7 +2,8 @@
  * registryFile, the structure of the committed mini-app registry. What it
  * guards: the committed index.json and details/*.json pass; a file missing
  * either half fails; an index entry gets both logos, the absent one taking
- * the other's; and a detail's shell keeps only the fields it sets. The words
+ * the other's; a detail's shell keeps only the fields it sets; and a key no
+ * level declares fails, at every object level. The words
  * a refusal names its entry with are miniapps.config.spec.ts's.
  */
 import fs from "fs";
@@ -44,6 +45,20 @@ describe("registryFile", () => {
 
     // Assert
     expect(entry).toMatchObject({ homeLogo: emoji, shellLogo: emoji });
+  });
+
+  it.each([
+    ["an index entry", { index: { version: 1, miniApps: [{ id: "a", name: "A", order: 1, homeLogo: { kind: "emoji", emoji: "😋" }, extra: 1 }] }, details: {} }],
+    ["a detail", { index: { version: 1, miniApps: [] }, details: { a: { ...DETAIL, extra: 1 } } }],
+    ["a shell", { index: { version: 1, miniApps: [] }, details: { a: { ...DETAIL, shell: { bar: "top", extra: 1 } } } }],
+    ["a related link", { index: { version: 1, miniApps: [] }, details: { a: { ...DETAIL, relatedLinks: [{ url: "https://a.test/", extra: 1 }] } } }],
+    ["a notice banner", { index: { version: 1, miniApps: [] }, details: { a: { ...DETAIL, noticeBanner: { title: "t", subtitle: "s", extra: 1 } } } }],
+  ])("fails an unknown key on %s", (_level, raw) => {
+    // Act
+    const parsed = registryFile.safeParse(raw);
+
+    // Assert
+    expect(parsed.error?.issues.map((issue) => issue.code)).toEqual(["unrecognized_keys"]);
   });
 
   it("keeps a detail's shell to the fields it sets", () => {
