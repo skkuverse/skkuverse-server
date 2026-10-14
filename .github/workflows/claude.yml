@@ -23,7 +23,11 @@ jobs:
       actions: read
     # WHY: `@claude …` is read-only: read code, run read-only git/gh, comment.
     # `@claude edit …` from an OWNER/MEMBER/COLLABORATOR may also edit, commit and push.
-    # The action pushes with its GitHub App token, not GITHUB_TOKEN, so the lock is the tool list.
+    # QUIRK(claude-code-action): the action pushes with its GitHub App token, not GITHUB_TOKEN, and passes
+    # `--permission-mode acceptEdits` ahead of claude_args, so neither the job's permissions nor the
+    # appended `--permission-mode default` is the lock: the --disallowedTools deny list of the action's
+    # own write tools in CLAUDE_READ_ONLY_LOCK is. A deny list holds only against the tools it names, so
+    # the action is pinned to a commit: a write tool added upstream arrives here as a reviewed diff.
     env:
       CLAUDE_READ_TOOLS: >-
         --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git blame:*),Bash(git status:*),Bash(git rev-parse:*),Bash(git merge-base:*),Bash(git ls-files:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr list:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh run view:*),Bash(gh run list:*)"
@@ -33,7 +37,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
@@ -55,7 +59,7 @@ jobs:
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
 
       - name: Run Claude Code
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@34968b5981d5d170904281aa3df6f3c0d4a28855 # v1.0.249
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
