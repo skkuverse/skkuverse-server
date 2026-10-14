@@ -168,6 +168,55 @@ describe("request logging", () => {
   });
 });
 
+describe("access line route", () => {
+  // Alerting groups 5xx by route; the raw URL would split /items/1 and /items/2
+  // into separate series and leak ids into a label-like field.
+  const servers = new LoopbackServers();
+  afterEach(() => servers.closeAll());
+
+  function buildRoutedApp(logger: pino.Logger) {
+    const app = express();
+    mountRequestLogging(app, logger);
+    app.get("/items/:id", (_req, res) => void res.json({ ok: true }));
+    app.get("/items/:id/fail", (_req, res) => void res.status(500).json({}));
+    return app;
+  }
+
+  const accessLineFor = (lines: Line[], url: string) =>
+    lines.find((l) => (l.req as { url?: string } | undefined)?.url === url);
+
+  it("names the matched route template on success and on a 5xx", async () => {
+    // Arrange
+    const out = capture();
+    const server = await servers.serve(buildRoutedApp(out.logger));
+
+    // Act
+    await request(server).get("/items/42").expect(200);
+    await request(server).get("/items/42/fail").expect(500);
+    await settle();
+
+    // Assert
+    expect(accessLineFor(out.lines, "/items/42")?.route).toBe("/items/:id");
+    expect(accessLineFor(out.lines, "/items/42/fail")?.route).toBe("/items/:id/fail");
+  });
+
+  it("leaves route off when no route matched, and writes the key once", async () => {
+    // Arrange
+    const out = capture();
+    const server = await servers.serve(buildRoutedApp(out.logger));
+
+    // Act
+    await request(server).get("/nowhere").expect(404);
+    await request(server).get("/items/7").expect(200);
+    await settle();
+
+    // Assert
+    expect(accessLineFor(out.lines, "/nowhere")).not.toHaveProperty("route");
+    const raw = out.raw.find((l) => l.includes('"url":"/items/7"'))!;
+    expect(raw.match(/"route":/g) ?? []).toHaveLength(1);
+  });
+});
+
 describe("log context", () => {
   // pino's default merge writes each line's fields into the request's context,
   // so every later line of the request (the access line included) would carry

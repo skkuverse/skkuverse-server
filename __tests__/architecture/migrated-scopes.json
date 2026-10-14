@@ -1,11 +1,13 @@
 [
   "src/app-config/",
   "src/building/",
+  "src/config/",
   "src/health/",
   "src/http/",
   "src/infra/",
   "src/map/",
   "src/miniapps/",
+  "src/scheduling/",
   "src/shared/",
   "src/ui/"
 ]
