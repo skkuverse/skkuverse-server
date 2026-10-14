@@ -73,8 +73,8 @@ import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.modul
     UiScrollModule,
     UiCampusModule,
     BuildingModule,
-    // Before BuildingCatalogModule: Nest registers routes in module order, and
-    // /building/:skkuId would catch /building/search (route-order.test.ts).
+    // WHY: before BuildingCatalogModule: Nest registers routes in module order, and /building/:skkuId would catch
+    // /building/search (route-order.test.ts).
     BuildingSearchModule,
     BuildingCatalogModule,
     BuildingSyncModule,

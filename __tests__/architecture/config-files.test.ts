@@ -1,6 +1,6 @@
 /**
  * A committed config file fails the boot with every issue (ADR 0010, D5): a
- * `.config.ts` in a migrated scope that reads a file (`readFileSync`, or an
+ * `.config.ts` in a module scope that reads a file (`readFileSync`, or an
  * import or `require` of a `.json`) parses it through `parseConfigFile`
  * (`src/infra/config-file.ts`), imported from there, so every issue is
  * thrown with its path in one line. A `.config.ts` that holds TypeScript
@@ -8,12 +8,12 @@
  *
  * A file that keeps its own parse for a reason is exempt in
  * `exemptions/config-files.json` (helpers/architecture/exemptions.ts).
- * Modules not yet migrated are not checked, so there is no allowlist.
+ * Every module scope is checked, and there is no allowlist.
  */
 import ts from "typescript";
 import { calleeName, collect, importsOf, parseSource } from "../helpers/architecture/ast";
 import { expectExempted } from "../helpers/architecture/exemptions";
-import { inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { filesUnder, readSource } from "../helpers/architecture/tree";
 
 const RULE = "config-files";
@@ -118,9 +118,9 @@ describe("config file rule applies as specified", () => {
   });
 });
 
-describe(".config files in migrated scopes", () => {
+describe(".config files in the module scopes", () => {
   it("read files only in a .config.ts, each parsed through parseConfigFile, or are exempt with a reason", () => {
     // Act & Assert
-    expectExempted(RULE, unparsedConfigFiles(filesUnder("src"), migratedScopes(), readSource));
+    expectExempted(RULE, unparsedConfigFiles(filesUnder("src"), moduleScopes(), readSource));
   });
 });

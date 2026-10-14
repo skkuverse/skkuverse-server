@@ -18,7 +18,7 @@ import {
   parseSource,
   skipOuter,
 } from "../helpers/architecture/ast";
-import { inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
@@ -661,9 +661,9 @@ describe("repository reads of documents written outside src/", () => {
     expectAllowlisted("repository-contract-tags", untaggedOutsideWrites(repositories, tagged));
   });
 
-  it("open collections only through a private Collection<T> accessor, in migrated scopes", () => {
+  it("open collections only through a private Collection<T> accessor, in the module scopes", () => {
     // Arrange
-    const files = sourceFiles().filter((f) => f.endsWith(".repository.ts") && migratedScopes().some((scope) => inScope(f, scope)));
+    const files = sourceFiles().filter((f) => f.endsWith(".repository.ts") && moduleScopes().some((scope) => inScope(f, scope)));
 
     // Act & Assert
     expect(files.flatMap((f) => collectionAccessorViolations(f, readSource(f)))).toEqual([]);
