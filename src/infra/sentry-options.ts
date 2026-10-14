@@ -27,7 +27,7 @@ export function sentryOptions(): Sentry.NodeOptions {
         error: { levels: [] },
       }),
     ],
-    initialScope: { tags: { role: process.env.ROLE || "combined" } },
+    initialScope: { tags: { role: config.role() } },
     beforeSend: scrubEvent,
     beforeBreadcrumb: scrubBreadcrumb,
     beforeSendLog: flattenLogAttributes,

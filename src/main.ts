@@ -42,7 +42,7 @@ async function bootstrap(): Promise<void> {
     );
   }
 
-  const role = process.env.ROLE || "combined";
+  const role = config.role();
 
   if (role === "poller") {
     // Poller-only: run lifecycle hooks (onApplicationBootstrap starts pollers)

@@ -13,7 +13,7 @@ export const HOT_READ_MAX_TIME_MS = 3_000;
  * design. No socket or operation timeout: long operations are legitimate; hot reads carry their own.
  */
 export function mongoClientOptions(
-  role = process.env.ROLE || "combined",
+  role = config.role(),
 ): MongoClientOptions {
   return {
     maxPoolSize: 5,

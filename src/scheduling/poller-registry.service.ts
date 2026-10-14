@@ -4,6 +4,7 @@ import {
   type OnApplicationShutdown,
 } from "@nestjs/common";
 import * as Sentry from "@sentry/nestjs";
+import config from "../infra/config";
 import logger from "../infra/logger";
 
 type PollerFn = () => Promise<unknown> | unknown;
@@ -150,8 +151,7 @@ export class PollerRegistryService
   }
 
   onApplicationBootstrap(): void {
-    const role = process.env.ROLE || "combined";
-    if (role !== "api") {
+    if (config.runsPollers()) {
       this.startAll();
     }
   }
