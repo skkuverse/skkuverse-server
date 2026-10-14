@@ -24,6 +24,7 @@
  * so a repository that returns one has done the service's job.
  */
 import ts from "typescript";
+import { NEST_LIFECYCLE, isExported, isNonPublic } from "../helpers/architecture/ast";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
@@ -55,14 +56,6 @@ const REPOSITORY_VERBS: Readonly<Record<string, Contract>> = {
 
 const CLIENT_VERBS: Readonly<Record<string, Contract>> = { fetch: anything, post: anything, send: anything };
 
-const LIFECYCLE = new Set([
-  "onModuleInit",
-  "onModuleDestroy",
-  "onApplicationBootstrap",
-  "beforeApplicationShutdown",
-  "onApplicationShutdown",
-]);
-
 const PREDICATE = /^(?:is|has|can|needs|should)[A-Z]/;
 
 /** The declared return type with `Promise<…>` removed, or undefined when there is none. */
@@ -74,9 +67,6 @@ function returnType(node: ts.SignatureDeclarationBase, sf: ts.SourceFile): strin
 }
 
 const isBooleanType = (t: string) => t === "boolean" || /^\w+ is \S/.test(t) || /^asserts /.test(t);
-
-const hasModifier = (node: ts.Node, kind: ts.SyntaxKind) =>
-  ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((m) => m.kind === kind);
 
 function roleOf(file: string): string | undefined {
   return /\.(repository|client|rules|mapper)\.ts$/.exec(file)?.[1];
@@ -94,7 +84,7 @@ function exportedFunctions(sf: ts.SourceFile): ts.FunctionDeclaration[] {
     (s): s is ts.FunctionDeclaration =>
       ts.isFunctionDeclaration(s) &&
       !!s.name &&
-      (hasModifier(s, ts.SyntaxKind.ExportKeyword) || listed.has(s.name.text)),
+      (isExported(s) || listed.has(s.name.text)),
   );
 }
 
@@ -116,8 +106,7 @@ export function methodVerbViolations(file: string, source: string): string[] {
     for (const cls of sf.statements.filter(ts.isClassDeclaration)) {
       for (const m of cls.members) {
         if (!ts.isMethodDeclaration(m) || !ts.isIdentifier(m.name)) continue;
-        if (hasModifier(m, ts.SyntaxKind.PrivateKeyword) || hasModifier(m, ts.SyntaxKind.ProtectedKeyword)) continue;
-        if (LIFECYCLE.has(m.name.text)) continue;
+        if (isNonPublic(m) || NEST_LIFECYCLE.has(m.name.text)) continue;
         if (verbViolation(m.name.text, returnType(m, sf), verbs)) out.push(`${file}: ${m.name.text}`);
       }
     }
@@ -222,7 +211,7 @@ export function repositoryReturnViolations(file: string, source: string, mapperO
   for (const cls of sf.statements.filter(ts.isClassDeclaration)) {
     for (const m of cls.members) {
       if (!ts.isMethodDeclaration(m) || !ts.isIdentifier(m.name) || !m.type) continue;
-      if (hasModifier(m, ts.SyntaxKind.PrivateKeyword) || hasModifier(m, ts.SyntaxKind.ProtectedKeyword)) continue;
+      if (isNonPublic(m)) continue;
       if (typeNames(m.type, typeParamsOf(m)).some((name) => mapperOutputs.has(name))) out.push(`${file}: ${m.name.text}`);
     }
   }

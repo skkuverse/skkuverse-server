@@ -43,9 +43,6 @@ function room(
   };
 }
 
-const scoreSpace = (q: string, doc: Record<string, unknown>): number =>
-  scoreLocally(SPACE_TIERS, q, doc);
-
 describe("room ranking (q=27) — the reported bug", () => {
   const engineering = room("27101", "측량기기성능검사실", "제2공학관27동");
   const dormCode = room("91227", "남자숙실(1227)", "기숙사지관");
@@ -53,9 +50,9 @@ describe("room ranking (q=27) — the reported bug", () => {
 
   it("ranks a spaceCd prefix hit above a code-substring hit above a name-only hit", () => {
     // Act & Assert
-    expect(scoreSpace("27", engineering)).toBe(50);
-    expect(scoreSpace("27", dormCode)).toBe(20);
-    expect(scoreSpace("27", dormNameOnly)).toBe(5);
+    expect(scoreLocally(SPACE_TIERS, "27", engineering)).toBe(50);
+    expect(scoreLocally(SPACE_TIERS, "27", dormCode)).toBe(20);
+    expect(scoreLocally(SPACE_TIERS, "27", dormNameOnly)).toBe(5);
   });
 
   it("scores every room of building 27 into one tier above all dorm noise", () => {
@@ -64,8 +61,8 @@ describe("room ranking (q=27) — the reported bug", () => {
       room("27101", "측량기기성능검사실", "제2공학관27동"),
       room("27114A", "교육매체지원실", "제2공학관27동"),
       room("27422", "SSIT 강의실", "제2공학관27동"),
-    ].map((r) => scoreSpace("27", r));
-    const noise = [dormCode, dormNameOnly].map((r) => scoreSpace("27", r));
+    ].map((r) => scoreLocally(SPACE_TIERS, "27", r));
+    const noise = [dormCode, dormNameOnly].map((r) => scoreLocally(SPACE_TIERS, "27", r));
 
     // Assert
     // The property that matters: the WHOLE prefix tier outranks the WHOLE rest,
@@ -93,8 +90,8 @@ describe("room ranking (q=27) — the reported bug", () => {
 
   it("ranks an exact code above a prefix match", () => {
     // Act & Assert
-    expect(scoreSpace("27101", engineering)).toBe(60);
-    expect(scoreSpace("2710", engineering)).toBe(50);
+    expect(scoreLocally(SPACE_TIERS, "27101", engineering)).toBe(60);
+    expect(scoreLocally(SPACE_TIERS, "2710", engineering)).toBe(50);
   });
 });
 
@@ -104,7 +101,7 @@ describe("room reachability (q=204) — rooms in a digit-free building", () => {
 
   it("finds the room by a prefix of its code", () => {
     // Act & Assert
-    expect(scoreSpace("204", law)).toBe(50);
+    expect(scoreLocally(SPACE_TIERS, "204", law)).toBe(50);
   });
 
   it("matches the room through the keyword filter (it did not before)", () => {
@@ -127,8 +124,8 @@ describe("scoring edge cases from real production rows", () => {
     const orphan = room(null, "숙실(271)", "기숙사신관");
 
     // Act & Assert
-    expect(() => scoreSpace("27", orphan)).not.toThrow();
-    expect(scoreSpace("27", orphan)).toBe(5);
+    expect(() => scoreLocally(SPACE_TIERS, "27", orphan)).not.toThrow();
+    expect(scoreLocally(SPACE_TIERS, "27", orphan)).toBe(5);
   });
 
   it("treats a non-string spaceCd as empty rather than matching it", () => {
@@ -141,12 +138,12 @@ describe("scoring edge cases from real production rows", () => {
     const stringy = room("27101", "측량기기성능검사실", "제2공학관27동");
 
     // Act & Assert
-    expect(() => scoreSpace("27", numeric)).not.toThrow();
+    expect(() => scoreLocally(SPACE_TIERS, "27", numeric)).not.toThrow();
     // Falls back to the buildingName SUBSTRING tier (10) — the wing 27 building's name does
     // not start with "27" — instead of the spaceCd prefix tier (50) it would
     // have earned as a string. Demoted, never crashing.
-    expect(scoreSpace("27", numeric)).toBe(10);
-    expect(scoreSpace("27", stringy)).toBe(50);
+    expect(scoreLocally(SPACE_TIERS, "27", numeric)).toBe(10);
+    expect(scoreLocally(SPACE_TIERS, "27", stringy)).toBe(50);
   });
 
   it("matches the single lowercase spaceCd case-insensitively", () => {
@@ -154,8 +151,8 @@ describe("scoring edge cases from real production rows", () => {
     const med = room("712115b", "의학교육연구실", "의학관");
 
     // Act & Assert
-    expect(scoreSpace("712115b", med)).toBe(60);
-    expect(scoreSpace("712115B", med)).toBe(60);
+    expect(scoreLocally(SPACE_TIERS, "712115b", med)).toBe(60);
+    expect(scoreLocally(SPACE_TIERS, "712115B", med)).toBe(60);
   });
 
   it("treats regex metacharacters literally", () => {
@@ -164,8 +161,8 @@ describe("scoring edge cases from real production rows", () => {
     const literal = room("axb", "x", "y");
 
     // Act & Assert
-    expect(scoreSpace("a.b", dotted)).toBe(60);
-    expect(scoreSpace("a.b", literal)).toBe(0);
+    expect(scoreLocally(SPACE_TIERS, "a.b", dotted)).toBe(60);
+    expect(scoreLocally(SPACE_TIERS, "a.b", literal)).toBe(0);
   });
 });
 
@@ -202,7 +199,7 @@ describe("row caps", () => {
   it("sizes the strong cap above the largest building and cuts the weak tail", () => {
     // Assert
     // The new dormitory (buildNo 298) holds 801 rooms — the strong band must never
-    // truncate a building. The weak band is what keeps the one-syllable query for "room" (6173 matches) from
+    // truncate a building. The weak band is what keeps `q=실` (6173 matches) from
     // reaching a non-virtualized ScrollView.
     expect(SPACE_SEARCH_LIMIT).toBeGreaterThan(801);
     expect(SPACE_WEAK_LIMIT).toBeLessThanOrEqual(100);

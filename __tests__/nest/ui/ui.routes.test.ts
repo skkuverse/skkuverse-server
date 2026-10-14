@@ -29,6 +29,7 @@ jest.mock("../../../src/bus/eta/eta-store", () => ({
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";
+import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { UiCampusModule } from "../../../src/ui/campus/ui-campus.module";
 import { UiHomeModule } from "../../../src/ui/home/ui-home.module";
@@ -36,6 +37,14 @@ import { UiScrollModule } from "../../../src/ui/scroll/ui-scroll.module";
 import { UiTransitListModule } from "../../../src/ui/transit-list/ui-transit-list.module";
 import { UiModule } from "../../../src/ui/ui.module";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { expectWire } from "../../helpers/contracts/expect-wire";
+import { campusSheet } from "../../../src/ui/campus/ui-campus.wire";
+import { homeLayout } from "../../../src/ui/home/ui-home.wire";
+import { scrollCards, scrollCardsMeta } from "../../../src/ui/scroll/ui-scroll.wire";
+import { transitList, transitListMeta } from "../../../src/ui/transit-list/ui-transit-list.wire";
+
+// WHY: one fixed instant (12:00 KST, 2026-10-14), so the answers do not depend on the day the suite runs.
+const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -45,6 +54,7 @@ beforeAll(async () => {
   global.fetch = jest.fn().mockRejectedValue(new Error("no network in tests")) as unknown as typeof fetch;
   app = await buildTestApp({
     imports: [SchedulingModule, BusModule, UiModule, UiHomeModule, UiTransitListModule, UiScrollModule, UiCampusModule],
+    overrides: [{ provide: Clock, useValue: CLOCK }],
     role: "api",
   });
   httpServer = app.getHttpServer();
@@ -207,5 +217,56 @@ describe("GET /ui/home", () => {
       }
       if (g.title !== undefined) expect(typeof g.title).toBe("string");
     }
+  });
+});
+
+/**
+ * Each served body against its wire schema (PR 219 F2): the contract fixtures were captured once,
+ * so a field the mappers start to serve without a wire declaring it shows only here. The envelope's
+ * own `meta.lang` is not part of a meta wire.
+ */
+describe("/ui bodies against their wire schemas", () => {
+  it("serves /ui/home as homeLayout declares", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(homeLayout, res.body.data);
+  });
+
+  it("serves /ui/home/campus as campusSheet declares", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/campus");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(campusSheet, res.body.data);
+  });
+
+  it("serves /ui/home/scroll as scrollCards and scrollCardsMeta declare", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/scroll");
+    const { lang, ...meta } = res.body.meta;
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(lang).toBe("ko");
+    expect(res.body.data.length).toBeGreaterThan(0);
+    expectWire(scrollCards, res.body.data);
+    expectWire(scrollCardsMeta, meta);
+  });
+
+  it("serves /ui/home/transitlist as transitList and transitListMeta declare", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/transitlist");
+    const { lang, ...meta } = res.body.meta;
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(lang).toBe("ko");
+    expect(res.body.data.length).toBeGreaterThan(0);
+    expectWire(transitList, res.body.data);
+    expectWire(transitListMeta, meta);
   });
 });

@@ -13,7 +13,7 @@ const SPACE_SEARCH_LIMIT = 1000;
 const SPACE_WEAK_LIMIT = 100;
 
 // EVIDENCE: 78 buildings exist, so only the weak cap binds. It trims description-only hits
-// (the one-syllable query for "hall": 29 of 69), which the results list gives no visible reason for.
+// (`q=관`: 29 of 69), which the results list gives no visible reason for.
 const BUILDING_SEARCH_LIMIT = 100;
 const BUILDING_WEAK_LIMIT = 10;
 

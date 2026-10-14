@@ -15,4 +15,5 @@ export const HISTORY_PHRASES: ReadonlyArray<readonly [string, RegExp]> = [
   ["replaced by", /\breplaced by\b|\bwas replaced\b/i],
   ["formerly", /\bformerly\b/i],
   ["before the refactor", /\bbefore the (?:refactor|port|migration)\b/i],
+  ["as before", /\b(?:as|than) before\b|\bas (?:it|they) (?:was|were|did)\b|\buntil now\b/i],
 ];

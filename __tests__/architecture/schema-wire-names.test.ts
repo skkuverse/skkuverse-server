@@ -5,42 +5,23 @@
  * names the wrapper apart (`homeLayoutFile` wraps the wire's `homeLayout`), so
  * an import never picks one where the other was meant.
  *
- * Names exported in place and through `export { … }` count, types included;
- * a re-export from another file is not read.
+ * Names exported in place, through `export { … }`, destructured or
+ * re-exported count, types included; an `export * from` a file of this
+ * repository counts as all of that file's names.
  *
  * The allowlist holds the names of modules not yet migrated; a migrated scope
  * carries no entry (migrated-scopes.test.ts).
  */
-import ts from "typescript";
+import { exportedNamesDeep, exportsOf, parseSource } from "../helpers/architecture/ast";
 import { parse } from "../helpers/architecture/names";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { filesUnder, readSource } from "../helpers/architecture/tree";
 
 const RULE = "schema-wire-names";
 
-const isExported = (node: ts.Node): boolean =>
-  ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
-
-/** The identifiers a source exports in place or through a local `export { … }`. */
+/** The identifiers a source exports: in place, through `export { … }`, destructured or re-exported, types included. */
 export function exportedNames(file: string, source: string): string[] {
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  return sf.statements.flatMap((s) => {
-    if (ts.isExportDeclaration(s)) {
-      if (s.moduleSpecifier || !s.exportClause || !ts.isNamedExports(s.exportClause)) return [];
-      return s.exportClause.elements.map((e) => e.name.text);
-    }
-    if (!isExported(s)) return [];
-    if (ts.isVariableStatement(s)) {
-      return s.declarationList.declarations.flatMap((d) => (ts.isIdentifier(d.name) ? [d.name.text] : []));
-    }
-    const named =
-      ts.isFunctionDeclaration(s) ||
-      ts.isClassDeclaration(s) ||
-      ts.isEnumDeclaration(s) ||
-      ts.isInterfaceDeclaration(s) ||
-      ts.isTypeAliasDeclaration(s);
-    return named && s.name ? [s.name.text] : [];
-  });
+  return exportsOf(parseSource(file, source)).bindings.map((b) => b.exported);
 }
 
 const moduleOf = (file: string): string | undefined => /^src\/([^/]+)\//.exec(file)?.[1];
@@ -49,10 +30,12 @@ const moduleOf = (file: string): string | undefined => /^src\/([^/]+)\//.exec(fi
 export function schemaWireNameViolations(files: readonly string[], read: (file: string) => string): string[] {
   const byRole = (role: string) =>
     files.filter((f) => f.startsWith("src/") && !f.endsWith(".spec.ts") && parse(f).parts.at(-1) === role);
-  const wireNames = byRole("wire").flatMap((file) => exportedNames(file, read(file)).map((name) => ({ file, name })));
+  const present = new Set(files);
+  const namesOf = (file: string): string[] => [...exportedNamesDeep(file, read, present).names];
+  const wireNames = byRole("wire").flatMap((file) => namesOf(file).map((name) => ({ file, name })));
   return byRole("schema")
     .flatMap((schemaFile) =>
-      exportedNames(schemaFile, read(schemaFile)).flatMap((name) =>
+      namesOf(schemaFile).flatMap((name) =>
         wireNames
           .filter((w) => w.name === name && moduleOf(w.file) === moduleOf(schemaFile))
           .map((w) => `${moduleOf(schemaFile) ?? ""}: ${name} (${schemaFile}, ${w.file})`),
@@ -62,7 +45,7 @@ export function schemaWireNameViolations(files: readonly string[], read: (file: 
 }
 
 describe("schema/wire name rule applies as specified", () => {
-  it("reads names exported in place and through export { … }, types included, but not re-exports", () => {
+  it("reads names exported in place, through export { … } and re-exported, types included", () => {
     // Arrange
     const source = [
       'import { z } from "zod";',
@@ -76,7 +59,7 @@ describe("schema/wire name rule applies as specified", () => {
     ].join("\n");
 
     // Act & Assert
-    expect(exportedNames("src/x/x.schema.ts", source)).toEqual(["a", "A", "B", "toA", "renamed"]);
+    expect(exportedNames("src/x/x.schema.ts", source)).toEqual(["a", "A", "B", "toA", "renamed", "fromElsewhere"]);
   });
 
   it("flags a name a module's .schema and .wire both export, across its sub-modules too", () => {
@@ -95,6 +78,21 @@ describe("schema/wire name rule applies as specified", () => {
       "x: XItem (src/x/y/x-y.schema.ts, src/x/x.wire.ts)",
       "x: xItem (src/x/x.schema.ts, src/x/x.wire.ts)",
     ]);
+  });
+
+  it.each([
+    ["re-exported by name", 'export { xItem } from "./x.wire";'],
+    ["re-exported through export *", 'export * from "./x.wire";'],
+    ["destructured", "export const { xItem } = obj;"],
+  ])("flags a .wire name the .schema exports %s", (_case, schemaSource) => {
+    // Arrange
+    const sources: Record<string, string> = { "src/x/x.wire.ts": "export const xItem = 1;", "src/x/x.schema.ts": schemaSource };
+
+    // Act
+    const violations = schemaWireNameViolations(Object.keys(sources), (file) => sources[file] ?? "");
+
+    // Assert
+    expect(violations).toEqual(["x: xItem (src/x/x.schema.ts, src/x/x.wire.ts)"]);
   });
 
   it("passes the same name in two modules, in other roles and in specs", () => {

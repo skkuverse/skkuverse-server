@@ -16,11 +16,11 @@
  */
 import path from "path";
 import ts from "typescript";
+import { isSharedLayer, resolveRelative } from "../helpers/architecture/ast";
 import { inScope, migratedScopes } from "../helpers/architecture/migrated";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { filesUnder, readSource, sourceFiles } from "../helpers/architecture/tree";
 
-const SHARED_ROLES = new Set(["config", "http", "infra", "scheduling", "shared"]);
 
 /** The relative imports and re-exports of a file, with whether each is type-only. */
 function relativeImports(file: string, source: string): Array<{ spec: string; typeOnly: boolean }> {
@@ -53,12 +53,12 @@ const feature = (file: string) => file.split("/")[1]!;
  */
 export function subModuleViolations(file: string, source: string, scopes: readonly string[] = []): string[] {
   const isUncheckedSpec = file.endsWith(".spec.ts") && !scopes.some((scope) => inScope(file, scope));
-  if (isUncheckedSpec || SHARED_ROLES.has(feature(file))) return [];
+  if (isUncheckedSpec || isSharedLayer(feature(file))) return [];
   const dir = path.posix.dirname(file);
   const out: string[] = [];
   for (const { spec, typeOnly } of relativeImports(file, source)) {
     if (spec.endsWith(".json")) continue;
-    const target = path.posix.normalize(path.posix.join(dir, spec));
+    const target = resolveRelative(file, spec) ?? spec;
     if (!target.startsWith("src/") || feature(target) !== feature(file)) continue;
     const targetDir = path.posix.dirname(target);
     const isAncestorOrSelf = dir === targetDir || dir.startsWith(`${targetDir}/`);
