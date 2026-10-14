@@ -97,7 +97,8 @@ export interface BuildingDoc {
 
 export interface SpaceDoc {
   _id?: ObjectId;
-  spaceCd: SpaceCd;
+  // EVIDENCE: two skkumap_dev spaces carry spaceCd: null (synced 2026-09-24, blank names); prod had none on 2026-10-14.
+  spaceCd: SpaceCd | null;
   buildNo: BuildNo;
   campus: Campus;
   floor: BilingualText;
