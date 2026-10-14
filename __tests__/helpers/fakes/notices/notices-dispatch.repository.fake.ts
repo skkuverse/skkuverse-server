@@ -13,6 +13,8 @@ export class FakeNoticesDispatchRepository implements PublicOf<NoticesDispatchRe
   pending: NoticeDoc[] = [];
   records: Array<{ id: ObjectId; fields: PushedFields | ReleasedFields }> = [];
 
+  async onModuleInit(): Promise<void> {}
+
   async claimNextPending(_window: ClaimWindow, claimedAt: Date): Promise<NoticeDoc | null> {
     const next = this.pending.shift();
     return next ? { ...next, dispatchClaimedAt: claimedAt } : null;
