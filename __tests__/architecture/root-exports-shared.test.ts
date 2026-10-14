@@ -17,10 +17,13 @@
  *
  * This rule is a ratchet, `__tests__/architecture/ratchets/root-exports-shared.json`:
  * the root exports that broke it when it was added, in migrated modules, kept
- * there because their flow's role file is at its size cap. Where an export
- * goes when its flow's file is full is ADR 0010 D9's open question; until it
- * is answered the list may only shrink. It sits apart from `allowlists/`, which
- * hold unmigrated debt (migrated-scopes.test.ts).
+ * there because their flow's role file was at its size cap. ADR 0010 D9
+ * decides where such an export goes: its flow's role file splits along a
+ * domain seam, never overflowing into another role file or the module root,
+ * and a file with no seam takes a reasoned per-file cap in
+ * `exemptions/size-caps.json`. Each entry leaves the ratchet as its export
+ * moves, and the list only shrinks (list-growth). It sits apart from
+ * `allowlists/`, which hold unmigrated debt (migrated-scopes.test.ts).
  */
 import path from "path";
 import ts from "typescript";
