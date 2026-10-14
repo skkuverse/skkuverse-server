@@ -21,31 +21,40 @@
  * Data written outside src/ is parsed where it is read (ADR 0010, D2;
  * `.claude/rules/architecture.md`). A document type is written outside src/
  * when its declaration in a `.document` file carries a `CONTRACT(<writer>):`
- * comment (attached: no blank line between). A repository read of a
- * collection of that type (`this.<accessor>().find(…)`, the accessor declared
- * to return `Collection<Type>`) must:
+ * comment (attached: no blank line between), and a type that a repository
+ * reads and no `src/` repository writes must carry one: deleting the tag, or
+ * detaching it with a blank line, fails instead of switching the check off.
+ * In a migrated scope a repository opens a collection only in a private
+ * accessor declared to return `Collection<Type>` whose whole body returns
+ * `mongoCollection(…)`. A repository read of a collection of that type
+ * (`this.<accessor>().find(…)`, or through a local `const` assigned from the
+ * accessor) must:
  *
- *   - pass a `projection` in its options object literal, so it loads only
- *     what the flow uses; and
- *   - parse the result through a schema imported from a `.schema` file
- *     (`parseEach(docs, schema, …)`, `schema.parse(…)`, `schema.safeParse(…)`)
- *     in the member that reads, or in a member of the class it calls.
+ *   - pass a `projection` of at least one included field in its options
+ *     object literal (written there, or a top-level `const` it names), so it
+ *     loads only what the flow uses; and
+ *   - parse the read's result through a schema imported from a `.schema` file
+ *     (`parseEach(docs, schema, …)`, `schema.parse(…)`, `schema.safeParse(…)`):
+ *     the read itself or the local it is assigned to, in the member that
+ *     reads, or handed to a member that parses its parameter.
  *
  * In a migrated scope the allowlist is empty (migrated-scopes.test.ts).
  */
 import ts from "typescript";
+import {
+  MONGO_READ_OPTIONS_ARG,
+  MONGO_WRITES,
+  collect,
+  importsOf,
+  isNonPublic,
+  parseSource,
+  skipOuter,
+} from "../helpers/architecture/ast";
+import { inScope, migratedScopes } from "../helpers/architecture/migrated";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
-/** Index of the options argument per read method. */
-const OPTIONS_ARG: Record<string, number> = {
-  find: 1,
-  findOne: 1,
-  aggregate: 1,
-  countDocuments: 1,
-  estimatedDocumentCount: 0,
-  distinct: 2,
-};
+const OPTIONS_ARG = MONGO_READ_OPTIONS_ARG;
 
 function calleeName(call: ts.CallExpression): string | undefined {
   const e = call.expression;
@@ -127,17 +136,13 @@ export function unboundedReads(file: string, source: string): string[] {
           : undefined;
       const callee = (e: ts.Expression): string | undefined =>
         ts.isPropertyAccessExpression(e) ? e.name.text : ts.isIdentifier(e) ? e.text : undefined;
-      const collect = (n: ts.Node): void => {
-        if (ts.isCallExpression(n)) {
-          const name = callee(n.expression);
-          if (name) loaderNames.add(name);
-        }
-        ts.forEachChild(n, collect);
-      };
       if (load) {
         const named = callee(load);
         if (named) loaderNames.add(named);
-        else collect(load);
+        else {for (const call of collect(load, ts.isCallExpression)) {
+          const name = callee(call.expression);
+          if (name) loaderNames.add(name);
+        }}
       }
     }
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
@@ -192,97 +197,214 @@ export function contractDocTypes(file: string, source: string): string[] {
 const PARSE_METHODS = new Set(["parse", "safeParse", "parseAsync", "safeParseAsync"]);
 
 function schemaImports(sf: ts.SourceFile): Set<string> {
-  const names = new Set<string>();
+  return new Set(importsOf(sf).filter((i) => !i.isType && i.specifier.endsWith(".schema")).map((i) => i.local));
+}
+
+/** The node an initializer or argument stands for: the top-level `const` an identifier names, else itself. */
+function resolveLocalConst(e: ts.Expression, sf: ts.SourceFile): ts.Expression {
+  const n = skipOuter(e);
+  if (!ts.isIdentifier(n)) return n;
   for (const st of sf.statements) {
-    if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier) || !st.moduleSpecifier.text.endsWith(".schema")) continue;
-    const bindings = st.importClause?.namedBindings;
-    if (bindings && ts.isNamedImports(bindings)) for (const e of bindings.elements) if (!e.isTypeOnly) names.add(e.name.text);
+    if (!ts.isVariableStatement(st)) continue;
+    for (const d of st.declarationList.declarations) if (ts.isIdentifier(d.name) && d.name.text === n.text && d.initializer) return skipOuter(d.initializer);
   }
-  return names;
+  return n;
 }
 
-function parsesWith(node: ts.Node, schemas: ReadonlySet<string>): boolean {
-  let found = false;
-  const visit = (n: ts.Node): void => {
-    if (found) return;
-    if (ts.isCallExpression(n)) {
-      const callee = n.expression;
-      const viaEach = ts.isIdentifier(callee) && callee.text === "parseEach" && n.arguments.some((a) => ts.isIdentifier(a) && schemas.has(a.text));
-      const viaMethod =
-        ts.isPropertyAccessExpression(callee) && PARSE_METHODS.has(callee.name.text) && ts.isIdentifier(callee.expression) && schemas.has(callee.expression.text);
-      if (viaEach || viaMethod) found = true;
+/** An inclusion projection of at least one field: `projection: { a: 1 }`, or a top-level `const` holding one. */
+function hasProjection(arg: ts.Expression | undefined, sf: ts.SourceFile): boolean {
+  if (arg === undefined || !ts.isObjectLiteralExpression(skipOuter(arg))) return false;
+  const options = skipOuter(arg) as ts.ObjectLiteralExpression;
+  const property = options.properties.find((p) => p.name && ts.isIdentifier(p.name) && p.name.text === "projection");
+  if (property === undefined) return false;
+  const value = ts.isPropertyAssignment(property) ? property.initializer : ts.isShorthandPropertyAssignment(property) ? property.name : undefined;
+  const projection = value === undefined ? undefined : resolveLocalConst(value, sf);
+  if (projection === undefined || !ts.isObjectLiteralExpression(projection)) return false;
+  return projection.properties.some((p) => {
+    if (!ts.isPropertyAssignment(p)) return false;
+    const v = skipOuter(p.initializer);
+    return v.kind === ts.SyntaxKind.TrueKeyword || (ts.isNumericLiteral(v) && Number(v.text) !== 0);
+  });
+}
+
+/** `Collection<T>` accessors of a class: the accessor's name → `T`. */
+function collectionAccessors(cls: ts.ClassDeclaration, sf: ts.SourceFile): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const m of cls.members) {
+    const type = ts.isMethodDeclaration(m) && m.name && ts.isIdentifier(m.name) ? m.type : undefined;
+    if (type && ts.isTypeReferenceNode(type) && type.typeName.getText(sf) === "Collection") {
+      const arg = type.typeArguments?.[0];
+      if (arg && ts.isTypeReferenceNode(arg)) out.set((m.name as ts.Identifier).text, arg.typeName.getText(sf));
     }
-    ts.forEachChild(n, visit);
-  };
-  visit(node);
-  return found;
+  }
+  return out;
 }
 
-function hasProjection(arg: ts.Expression | undefined): boolean {
-  return (
-    arg !== undefined &&
-    ts.isObjectLiteralExpression(arg) &&
-    arg.properties.some((p) => (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) && ts.isIdentifier(p.name) && p.name.text === "projection")
+/** The document type a receiver is: `this.<accessor>()`, or a local `const` assigned from one in `member`. */
+function receiverType(receiver: ts.Expression, accessors: ReadonlyMap<string, string>, member: ts.Node): string | undefined {
+  const r = skipOuter(receiver);
+  if (ts.isCallExpression(r) && ts.isPropertyAccessExpression(r.expression) && r.expression.expression.kind === ts.SyntaxKind.ThisKeyword) {
+    return accessors.get(r.expression.name.text);
+  }
+  if (!ts.isIdentifier(r)) return undefined;
+  const declaration = collect(member, ts.isVariableDeclaration).find((d) => ts.isIdentifier(d.name) && d.name.text === r.text);
+  return declaration?.initializer ? receiverType(declaration.initializer, accessors, member) : undefined;
+}
+
+interface CollectionCall {
+  member: string;
+  memberNode: ts.ClassElement;
+  call: ts.CallExpression;
+  method: string;
+  type: string;
+}
+
+/** Every driver call on a `Collection<T>` of a repository source's classes, with the member it sits in. */
+function collectionCalls(sf: ts.SourceFile): Array<{ cls: ts.ClassDeclaration; calls: CollectionCall[] }> {
+  return sf.statements.filter(ts.isClassDeclaration).map((cls) => {
+    const accessors = collectionAccessors(cls, sf);
+    const calls = cls.members.flatMap((m) => {
+      const member = m.name && ts.isIdentifier(m.name) ? m.name.text : undefined;
+      if (member === undefined) return [];
+      return collect(m, ts.isCallExpression).flatMap((call) => {
+        if (!ts.isPropertyAccessExpression(call.expression)) return [];
+        const type = receiverType(call.expression.expression, accessors, m);
+        return type === undefined ? [] : [{ member, memberNode: m, call, method: call.expression.name.text, type }];
+      });
+    });
+    return { cls, calls };
+  });
+}
+
+/** The document types a repository source reads, and those it writes. */
+export function collectionUse(file: string, source: string): { reads: Set<string>; writes: Set<string> } {
+  const reads = new Set<string>();
+  const writes = new Set<string>();
+  for (const { calls } of collectionCalls(parseSource(file, source))) {
+    for (const c of calls) {
+      if (c.method in MONGO_READ_OPTIONS_ARG) reads.add(c.type);
+      if (MONGO_WRITES.has(c.method)) writes.add(c.type);
+    }
+  }
+  return { reads, writes };
+}
+
+/** `<file>: <member> mongoCollection outside a Collection<T> accessor` for each collection a repository opens any other way. */
+export function collectionAccessorViolations(file: string, source: string): string[] {
+  const sf = parseSource(file, source);
+  return collect(sf, ts.isCallExpression)
+    .filter((call) => calleeName(call) === "mongoCollection")
+    .filter((call) => {
+      const ret = call.parent;
+      const block = ret?.parent;
+      const method = block?.parent;
+      const isWholeBody = ts.isReturnStatement(ret) && ts.isBlock(block) && block.statements.length === 1;
+      if (!isWholeBody || method === undefined || !ts.isMethodDeclaration(method) || !isNonPublic(method)) return true;
+      const type = method.type;
+      return !(type && ts.isTypeReferenceNode(type) && type.typeName.getText(sf) === "Collection" && type.typeArguments?.length === 1);
+    })
+    .map((call) => {
+      let n: ts.Node | undefined = call;
+      while (n && !(ts.isMethodDeclaration(n) || ts.isPropertyDeclaration(n) || ts.isFunctionDeclaration(n))) n = n.parent;
+      const where = n && (n as { name?: ts.Node }).name ? (n as { name: ts.Node }).name.getText(sf) : "(module)";
+      return `${file}: ${where} mongoCollection outside a Collection<T> accessor`;
+    });
+}
+
+/**
+ * Whether `arg` comes from what `isSource` accepts: it holds it, or it names a local assigned from such an
+ * expression, or a callback parameter of a call on one (`docs.map((d) => schema.parse(d))`).
+ */
+function derivesFrom(arg: ts.Expression, isSource: (n: ts.Node) => boolean, member: ts.Node, depth = 0): boolean {
+  if (depth > 8) return false;
+  if (isSource(arg) || collect(arg, (x): x is ts.Node => isSource(x)).length > 0) return true;
+  const a = skipOuter(arg);
+  if (!ts.isIdentifier(a)) return false;
+  for (let n: ts.Node | undefined = a.parent; n !== undefined && n !== member.parent; n = n.parent) {
+    if (!(ts.isArrowFunction(n) || ts.isFunctionExpression(n))) continue;
+    if (!n.parameters.some((p) => ts.isIdentifier(p.name) && p.name.text === a.text)) continue;
+    const call = n.parent;
+    return ts.isCallExpression(call) && ts.isPropertyAccessExpression(call.expression) && derivesFrom(call.expression.expression, isSource, member, depth + 1);
+  }
+  return collect(member, ts.isVariableDeclaration).some(
+    (d) => ts.isIdentifier(d.name) && d.name.text === a.text && d.initializer !== undefined && derivesFrom(d.initializer, isSource, member, depth + 1),
   );
 }
 
-/** `this.<accessor>()` → the accessor's name. */
-function accessorOf(receiver: ts.Expression): string | undefined {
-  if (!ts.isCallExpression(receiver) || !ts.isPropertyAccessExpression(receiver.expression)) return undefined;
-  return receiver.expression.expression.kind === ts.SyntaxKind.ThisKeyword ? receiver.expression.name.text : undefined;
+/** The parse calls in a node: `parseEach(x, schema, …)` → x, `schema.parse(x)` → x. */
+function parsedArguments(node: ts.Node, schemas: ReadonlySet<string>): ts.Expression[] {
+  return collect(node, ts.isCallExpression).flatMap((n) => {
+    const callee = n.expression;
+    const viaEach = ts.isIdentifier(callee) && callee.text === "parseEach" && n.arguments.some((a) => ts.isIdentifier(a) && schemas.has(a.text));
+    const viaMethod =
+      ts.isPropertyAccessExpression(callee) && PARSE_METHODS.has(callee.name.text) && ts.isIdentifier(callee.expression) && schemas.has(callee.expression.text);
+    return (viaEach || viaMethod) && n.arguments[0] ? [n.arguments[0]] : [];
+  });
 }
 
 /** `<file>: <member> <read> of <Type>: no projection` / `: no .schema parse`, for each read of a contract type. */
 export function contractReadViolations(file: string, source: string, contractTypes: ReadonlySet<string>): string[] {
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const sf = parseSource(file, source);
   const schemas = schemaImports(sf);
   const out: string[] = [];
-  for (const cls of sf.statements.filter(ts.isClassDeclaration)) {
+  for (const { cls, calls } of collectionCalls(sf)) {
     const members = new Map(cls.members.flatMap((m) => (m.name && ts.isIdentifier(m.name) ? [[m.name.text, m] as const] : [])));
-    const collectionOf = new Map<string, string>();
-    for (const [name, m] of members) {
-      const type = ts.isMethodDeclaration(m) ? m.type : undefined;
-      if (type && ts.isTypeReferenceNode(type) && type.typeName.getText(sf) === "Collection") {
-        const arg = type.typeArguments?.[0];
-        if (arg && ts.isTypeReferenceNode(arg)) collectionOf.set(name, arg.typeName.getText(sf));
-      }
-    }
     const memo = new Map<string, boolean>();
-    const memberParses = (name: string): boolean => {
+    const memberParsesParameter = (name: string): boolean => {
       if (memo.has(name)) return memo.get(name)!;
       memo.set(name, false);
       const member = members.get(name);
-      let calls: string[] = [];
-      if (member) {
-        const visit = (n: ts.Node): void => {
-          if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression) && n.expression.expression.kind === ts.SyntaxKind.ThisKeyword) {
-            calls.push(n.expression.name.text);
-          }
-          ts.forEachChild(n, visit);
-        };
-        visit(member);
-      }
-      calls = calls.filter((c) => c !== name);
-      const result = member !== undefined && (parsesWith(member, schemas) || calls.some(memberParses));
+      const params = new Set(member && ts.isMethodDeclaration(member) ? member.parameters.flatMap((p) => (ts.isIdentifier(p.name) ? [p.name.text] : [])) : []);
+      const isParam = (n: ts.Node): boolean => ts.isIdentifier(n) && params.has(n.text) && ts.isParameter(n.parent) === false;
+      const result =
+        member !== undefined &&
+        (parsedArguments(member, schemas).some((a) => derivesFrom(a, isParam, member)) ||
+          collect(member, ts.isCallExpression).some((c) => {
+            const callee = c.expression;
+            const isThisCall = ts.isPropertyAccessExpression(callee) && callee.expression.kind === ts.SyntaxKind.ThisKeyword && callee.name.text !== name;
+            return isThisCall && c.arguments.some((a) => ts.isIdentifier(skipOuter(a)) && params.has((skipOuter(a) as ts.Identifier).text)) && memberParsesParameter(callee.name.text);
+          }));
       memo.set(name, result);
       return result;
     };
-    for (const [name, member] of members) {
-      const visit = (n: ts.Node): void => {
-        if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression) && n.expression.name.text in OPTIONS_ARG) {
-          const type = collectionOf.get(accessorOf(n.expression.expression) ?? "");
-          if (type !== undefined && contractTypes.has(type)) {
-            const read = `${file}: ${name} ${n.expression.name.text} of ${type}`;
-            if (!hasProjection(n.arguments[OPTIONS_ARG[n.expression.name.text]!])) out.push(`${read}: no projection`);
-            if (!memberParses(name)) out.push(`${read}: no .schema parse`);
-          }
-        }
-        ts.forEachChild(n, visit);
-      };
-      visit(member);
+    const parsesRead = (c: CollectionCall): boolean => {
+      const isRead = (n: ts.Node): boolean => n === c.call;
+      if (parsedArguments(c.memberNode, schemas).some((a) => derivesFrom(a, isRead, c.memberNode))) return true;
+      return collect(c.memberNode, ts.isCallExpression).some((h) => {
+        const callee = h.expression;
+        const isThisCall = ts.isPropertyAccessExpression(callee) && callee.expression.kind === ts.SyntaxKind.ThisKeyword;
+        return isThisCall && h.arguments.some((a) => derivesFrom(a, isRead, c.memberNode)) && memberParsesParameter(callee.name.text);
+      });
+    };
+    for (const c of calls) {
+      if (!(c.method in MONGO_READ_OPTIONS_ARG) || !contractTypes.has(c.type)) continue;
+      const read = `${file}: ${c.member} ${c.method} of ${c.type}`;
+      if (!hasProjection(c.call.arguments[MONGO_READ_OPTIONS_ARG[c.method]!], sf)) out.push(`${read}: no projection`);
+      if (!parsesRead(c)) out.push(`${read}: no .schema parse`);
     }
   }
   return out;
+}
+
+/**
+ * `<type>: read in src/, written by no src/ repository, and carries no attached CONTRACT(<writer>): tag` for each
+ * document type a repository reads that only something outside src/ can have written.
+ */
+export function untaggedOutsideWrites(
+  repositories: ReadonlyMap<string, string>,
+  tagged: ReadonlySet<string>,
+): string[] {
+  const reads = new Set<string>();
+  const writes = new Set<string>();
+  for (const [file, source] of repositories) {
+    const use = collectionUse(file, source);
+    for (const t of use.reads) reads.add(t);
+    for (const t of use.writes) writes.add(t);
+  }
+  return [...reads]
+    .filter((t) => !writes.has(t) && !tagged.has(t))
+    .sort()
+    .map((t) => `${t}: read in src/, written by no src/ repository, and carries no attached CONTRACT(<writer>): tag`);
 }
 
 describe("contract read rule applies as specified", () => {
@@ -442,11 +564,108 @@ describe("repository reads", () => {
   });
 });
 
+describe("contract read rule reads every shape of a read (PR 229)", () => {
+  const T = new Set(["PlaceDoc"]);
+  const repository = (body: string): string => `
+import { placeDoc } from "./x.schema";
+export class XRepository {
+${body}
+  private places(): Collection<PlaceDoc> { return mongoCollection<PlaceDoc>("db", "places"); }
+}`;
+
+  it.each([
+    ["a read through a local variable", "async listLocal() { const c = this.places(); return c.find({}, { maxTimeMS: 1 }).toArray(); }", ["listLocal find of PlaceDoc: no projection", "listLocal find of PlaceDoc: no .schema parse"]],
+    ["an empty projection", "async listEmpty() { const docs = await this.places().find({}, { projection: {}, maxTimeMS: 1 }).toArray(); return docs.map((d) => placeDoc.parse(d)); }", ["listEmpty find of PlaceDoc: no projection"]],
+    ["an exclusion projection", "async listOut() { return placeDoc.parse(await this.places().findOne({}, { projection: { a: 0 }, maxTimeMS: 1 })); }", ["listOut findOne of PlaceDoc: no projection"]],
+    ["a parse of something other than the read", "async listOther() { placeDoc.safeParse({}); return this.places().find({}, { projection: { a: 1 }, maxTimeMS: 1 }).toArray(); }", ["listOther find of PlaceDoc: no .schema parse"]],
+  ])("flags %s", (_case, body, problems) => {
+    // Act & Assert
+    expect(contractReadViolations("src/x/x.repository.ts", repository(body), T)).toEqual(problems.map((p) => `src/x/x.repository.ts: ${p}`));
+  });
+
+  it.each([
+    ["a parse of the awaited read", "async one() { const doc = await this.places().findOne({}, { projection: { a: 1 }, maxTimeMS: 1 }); return placeDoc.safeParse(doc); }"],
+    ["a projection held in a top-level const", "async list() { const docs = await this.places().find({}, { projection: FIELDS, maxTimeMS: 1 }).toArray(); return parseEach(docs, placeDoc, String); }"],
+    ["a parse in a member the read is handed to", "async list() { const docs = await this.places().find({}, { projection: { a: 1 }, maxTimeMS: 1 }).toArray(); return this.parseAll(docs); }\n  private parseAll(docs: unknown[]) { return docs.map((d) => placeDoc.parse(d)); }"],
+  ])("passes %s", (_case, body) => {
+    // Arrange
+    const source = `const FIELDS = { a: 1 } as const;\n${repository(body)}`;
+
+    // Act & Assert
+    expect(contractReadViolations("src/x/x.repository.ts", source, T)).toEqual([]);
+  });
+
+  it("flags a collection opened anywhere but a private Collection<T> accessor", () => {
+    // Arrange
+    const source = `
+export class XRepository {
+  listInline() { return mongoCollection<PlaceDoc>("db", "p").find({}, { maxTimeMS: 1 }).toArray(); }
+  private untyped() { return mongoCollection<PlaceDoc>("db", "places"); }
+  places(): Collection<PlaceDoc> { return mongoCollection<PlaceDoc>("db", "places"); }
+  private typed(): Collection<PlaceDoc> { return mongoCollection<PlaceDoc>("db", "places"); }
+}`;
+
+    // Act & Assert
+    expect(collectionAccessorViolations("src/x/x.repository.ts", source)).toEqual([
+      "src/x/x.repository.ts: listInline mongoCollection outside a Collection<T> accessor",
+      "src/x/x.repository.ts: untyped mongoCollection outside a Collection<T> accessor",
+      "src/x/x.repository.ts: places mongoCollection outside a Collection<T> accessor",
+    ]);
+  });
+
+  it("asks a tag of a type src/ reads and never writes, however its tag went missing", () => {
+    // Arrange
+    const repositories = new Map([
+      [
+        "src/x/x.repository.ts",
+        `export class XRepository {
+  list() { return this.places().find({}, { maxTimeMS: 1 }).toArray(); }
+  listOurs() { const c = this.ours(); return c.find({}, { maxTimeMS: 1 }).toArray(); }
+  save(doc: OurDoc) { return this.ours().insertOne(doc); }
+  private places(): Collection<PlaceDoc> { return mongoCollection<PlaceDoc>("db", "places"); }
+  private shapes(): Collection<ShapeDoc> { return mongoCollection<ShapeDoc>("db", "shapes"); }
+  private ours(): Collection<OurDoc> { return mongoCollection<OurDoc>("db", "ours"); }
+  listShapes() { return this.shapes().find({}, { maxTimeMS: 1 }).toArray(); }
+}`,
+      ],
+    ]);
+    const detached = contractDocTypes("src/x/x.document.ts", "// CONTRACT(scripts): scripts/a.js writes these.\n\nexport interface PlaceDoc { a: number }");
+    const tagged = contractDocTypes("src/x/x.document.ts", "// CONTRACT(scripts): scripts/b.js writes these.\nexport interface ShapeDoc { a: number }");
+
+    // Act
+    const violations = untaggedOutsideWrites(repositories, new Set([...detached, ...tagged]));
+
+    // Assert
+    expect(violations).toEqual(["PlaceDoc: read in src/, written by no src/ repository, and carries no attached CONTRACT(<writer>): tag"]);
+  });
+});
+
 describe("repository reads of documents written outside src/", () => {
+  it("are of types that carry their writer's CONTRACT tag", () => {
+    // Arrange
+    const files = sourceFiles();
+    const tagged = new Set(files.filter((f) => f.endsWith(".document.ts")).flatMap((f) => contractDocTypes(f, readSource(f))));
+    const repositories = new Map(files.filter((f) => f.endsWith(".repository.ts")).map((f) => [f, readSource(f)]));
+
+    // Act & Assert
+    expectAllowlisted("repository-contract-tags", untaggedOutsideWrites(repositories, tagged));
+  });
+
+  it("open collections only through a private Collection<T> accessor, in migrated scopes", () => {
+    // Arrange
+    const files = sourceFiles().filter((f) => f.endsWith(".repository.ts") && migratedScopes().some((scope) => inScope(f, scope)));
+
+    // Act & Assert
+    expect(files.flatMap((f) => collectionAccessorViolations(f, readSource(f)))).toEqual([]);
+  });
+
   it("project and parse through a .schema", () => {
     // Arrange
     const files = sourceFiles();
-    const contractTypes = new Set(files.filter((f) => f.endsWith(".document.ts")).flatMap((f) => contractDocTypes(f, readSource(f))));
+    const tagged = new Set(files.filter((f) => f.endsWith(".document.ts")).flatMap((f) => contractDocTypes(f, readSource(f))));
+    const repositories = new Map(files.filter((f) => f.endsWith(".repository.ts")).map((f) => [f, readSource(f)]));
+    const untagged = untaggedOutsideWrites(repositories, tagged).map((v) => v.slice(0, v.indexOf(":")));
+    const contractTypes = new Set([...tagged, ...untagged]);
 
     // Act
     const violations = files.filter((f) => f.endsWith(".repository.ts")).flatMap((f) => contractReadViolations(f, readSource(f), contractTypes));
