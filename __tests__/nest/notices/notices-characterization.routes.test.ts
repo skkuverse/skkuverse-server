@@ -324,6 +324,25 @@ describe("GET /notices/source/:sourceId over real documents", () => {
   });
 });
 
+describe("GET /notices list without its hinted index", () => {
+  it("answers 500 for every list read once sourceId_1_date_-1__id_-1 is gone, not a slower full scan", async () => {
+    // Arrange
+    await notices.insertOne(notice());
+    await notices.dropIndex("sourceId_1_date_-1__id_-1");
+
+    try {
+      // Act
+      const res = await list("/source/bio-undergrad");
+
+      // Assert
+      expect(res.status).toBe(500);
+      expect(res.body.error.code).toBe("INTERNAL_ERROR");
+    } finally {
+      await notices.createIndex({ sourceId: 1, date: -1, _id: -1 });
+    }
+  });
+});
+
 describe("GET /notices?sourceIds= over real documents", () => {
   it("merges the named sources by date across pages and leaves the others out", async () => {
     // Arrange
