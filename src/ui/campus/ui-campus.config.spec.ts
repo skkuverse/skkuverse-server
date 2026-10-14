@@ -8,12 +8,12 @@
  * differs for campus.
  */
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
-import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import { loadCampusBanners as loadWithRegistry, readCampusBanners } from "./ui-campus.config";
 import { toCampusSheet } from "./ui-campus.mapper";
 import type { CampusBannerCarouselRaw } from "./ui-campus.schema";
 
-const registry = new MiniAppsService();
+const registry = new MiniappsService();
 const committedBanners = readCampusBanners(registry);
 
 const loadCampusBanners = (raw: unknown): Readonly<CampusBannerCarouselRaw> => loadWithRegistry(raw, registry);

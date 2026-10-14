@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../../infra/clock";
 import type { SupportedLang } from "../../infra/types";
-import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import { readHomeLayout } from "./ui-home.config";
 import { toHomeLayout } from "./ui-home.mapper";
 import type { HomeLayoutRaw } from "./ui-home.schema";
@@ -13,7 +13,7 @@ export class UiHomeService {
   private readonly layout: Readonly<HomeLayoutRaw>;
 
   constructor(
-    private readonly miniApps: MiniAppsService,
+    private readonly miniApps: MiniappsService,
     private readonly clock: Clock,
   ) {
     this.layout = readHomeLayout(miniApps);

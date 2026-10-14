@@ -8,13 +8,6 @@
  * never reaching the body, sibling routes answering only for themselves, and
  * the four retired URLs staying gone.
  */
-// MapEventModule reads the mini-app registry through MiniAppsModule, whose feed
-// service creates its Mongo index at init and whose manifest service prefetches
-// each first-party manifest over the network. Neither is part of these routes.
-jest.mock("../../../src/miniapps/miniapps.data", () => ({
-  ensureIndexes: jest.fn(async () => undefined),
-}));
-
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import type { BuildingDoc, CampusShapeDoc } from "../../../src/building/building.document";
@@ -39,7 +32,6 @@ import { mapOverlays } from "../../../src/map/map.wire";
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 let buildings: FakeBuildingRepository;
-const realFetch = global.fetch;
 
 const SUSEON = {
   _id: 2,
@@ -97,7 +89,6 @@ const BOOTH = {
 const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
 
 beforeAll(async () => {
-  global.fetch = jest.fn().mockRejectedValue(new Error("no network in tests")) as unknown as typeof fetch;
   buildings = new FakeBuildingRepository();
   const map = new FakeMapRepository();
   map.activations = [{ _id: "eskara-2026", activeFrom: null, activeUntil: null, enabled: true } as ActivationDoc];
@@ -116,7 +107,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
-  global.fetch = realFetch;
 });
 
 beforeEach(() => {

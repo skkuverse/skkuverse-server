@@ -19,7 +19,7 @@ import { PLACE_KINDS } from "../../../src/map/map.constants";
 import { isAbsoluteHttpsUrl } from "../../../src/shared/link-target.util";
 import { isInstagramPostUrl, isInstagramProfileUrl } from "../../../src/map/event-details/map-event-details.rules";
 import { getLayerSetConfig } from "../../../src/map/layer-set/map-layer-set.config";
-import { parseMiniAppTarget } from "../../../src/miniapps/miniapp-target";
+import { parseMiniAppTarget } from "../../../src/miniapps/miniapps.rules";
 import { presentationFor } from "../../../src/map/map.rules";
 
 // scripts/ is plain CommonJS excluded from tsconfig, so this is a require.
