@@ -1,5 +1,5 @@
 /**
- * A service in a migrated scope has its spec (ADR 0011, D1): `x.service.ts`
+ * A service in a module scope has its spec (ADR 0011, D1): `x.service.ts`
  * → `x.service.spec.ts` in the same folder, over fakes. A service that only
  * delegates (a door that forwards to its repository, a call into a mapper the
  * mapper's spec covers) is exempt instead, in
@@ -10,7 +10,7 @@
  * statements per method. A service that grows a decision fails here until it
  * gets its spec, whatever its reason says.
  *
- * Modules not yet migrated are not checked, so there is no allowlist.
+ * Every module scope is checked, and there is no allowlist.
  */
 import fs from "fs";
 import os from "os";
@@ -18,7 +18,7 @@ import path from "path";
 import ts from "typescript";
 import { collect, parseSource } from "../helpers/architecture/ast";
 import { expectExempted, readExemptions } from "../helpers/architecture/exemptions";
-import { inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { filesUnder, readSource } from "../helpers/architecture/tree";
 
 const RULE = "service-specs";
@@ -153,10 +153,10 @@ export class XService {
   });
 });
 
-describe("services in migrated scopes", () => {
+describe("services in the module scopes", () => {
   it("have a sibling spec or a reasoned exemption", () => {
     // Act & Assert
-    expectExempted(RULE, servicesWithoutSpecs(filesUnder("src"), migratedScopes()));
+    expectExempted(RULE, servicesWithoutSpecs(filesUnder("src"), moduleScopes()));
   });
 
   it("keep the delegation shape their exemption claims", () => {

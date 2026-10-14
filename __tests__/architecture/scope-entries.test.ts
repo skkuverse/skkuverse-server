@@ -1,22 +1,20 @@
 /**
- * A migrated scope (`migrated-scopes.json`, which eslint.config.js reads too) carries no ratchet
- * entry: no allowlist entry and no file in an ESLint boundary block's `ignores` points into it. A
- * file in `ratchets/` may hold migrated-scope debt only while `RATCHET_DECISIONS` (lists.ts) names
- * the decision it waits on; any other ratchet file counts like an allowlist here.
+ * No ratchet list points into a module scope (scopes.ts; eslint.config.js derives the same list): no
+ * allowlist entry and no file in an ESLint boundary block's `ignores` names a file under `src/` or a
+ * module's `__tests__/nest/<module>/` tests. Every rule is strict there. A file in `ratchets/` may hold
+ * such an entry only while `RATCHET_DECISIONS` (lists.ts) names the decision it waits on; any other
+ * ratchet file counts like an allowlist here.
  */
 import fs from "fs";
 import path from "path";
 import { Linter } from "eslint";
-import { MIGRATED_SCOPES_FILE, inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { RATCHET_DECISIONS } from "../helpers/architecture/lists";
-import { ALLOWLIST_DIR, ROOT, expectAllowlisted, readAllowlist } from "../helpers/architecture/ratchet";
+import { ALLOWLIST_DIR, ROOT, readAllowlist } from "../helpers/architecture/ratchet";
 import { routesIn } from "../helpers/architecture/routes";
-import { filesUnder, readSource, sourceFiles } from "../helpers/architecture/tree";
+import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
 const config: Linter.Config[] = require("../../eslint.config.js");
-
-const RULE = "migrated-scope-entries";
-const SCOPE_SHAPE = /^src\/(?:[\w-]+\/)+$|^src\/[\w./-]+\.ts$/;
 
 /** The repo files an entry names: its leading path, or the controller files that declare its route. */
 export function entryFiles(entry: string, routeFiles: ReadonlyMap<string, readonly string[]>): string[] {
@@ -56,14 +54,13 @@ const jsonNames = (dir: string): string[] =>
   fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -".json".length)) : [];
 
 /**
- * Every ratchet list: the allowlists but this rule's own, each ratchet not registered with its decision, and each
+ * Every ratchet list: the allowlists, each ratchet not registered with its decision, and each
  * boundary block's ignored violators.
  */
 export function ratchetLists(): Map<string, string[]> {
   const lists = new Map<string, string[]>();
-  const rules = jsonNames(ALLOWLIST_DIR).filter((rule) => rule !== RULE);
-  for (const rule of rules) lists.set(`allowlists/${rule}.json`, readAllowlist(rule));
-  // A ratchet holds migrated-scope debt only while it waits on its registered decision (lists.ts).
+  for (const rule of jsonNames(ALLOWLIST_DIR)) lists.set(`allowlists/${rule}.json`, readAllowlist(rule));
+  // A ratchet holds debt under src/ only while it waits on its registered decision (lists.ts).
   for (const rule of jsonNames(RATCHET_DIR).filter((r) => RATCHET_DECISIONS[r] === undefined)) {
     lists.set(`ratchets/${rule}.json`, readAllowlist(rule, RATCHET_DIR));
   }
@@ -77,7 +74,7 @@ export function ratchetLists(): Map<string, string[]> {
   return lists;
 }
 
-describe("migrated scope rule applies as specified", () => {
+describe("scope-entries rule applies as specified", () => {
   const routeFiles = new Map([["GET ad/placements", ["src/ad/placements/ad-placements.controller.ts"]]]);
 
   it("reads an entry's leading path, the importer of an arrow entry, and a route's controller", () => {
@@ -125,30 +122,26 @@ describe("migrated scope rule applies as specified", () => {
   });
 });
 
-describe("migrated scopes", () => {
-  it("name src/ folders ending in / or single .ts files that exist, sorted and unique", () => {
+describe("module scopes", () => {
+  it("are each top-level folder of src/ and each .ts file at its root", () => {
     // Arrange
-    const scopes = migratedScopes();
+    const files = ["src/a/x.ts", "src/a/b/y.json", "src/b/z.ts", "src/main.ts", "src/types.d.ts", "src/notes.json"];
 
     // Act
-    const exists = (s: string): boolean =>
-      s.endsWith("/") ? filesUnder(s.slice(0, -1)).length > 0 : fs.existsSync(path.join(ROOT, s));
-    const bad = scopes.filter((s) => !SCOPE_SHAPE.test(s) || !exists(s));
+    const scopes = moduleScopes(files);
 
     // Assert
-    expect(bad).toEqual([]);
-    expect(scopes).toEqual([...new Set(scopes)].sort());
-    expect(scopes.length).toBeGreaterThan(0);
+    expect(scopes).toEqual(["src/a/", "src/b/", "src/main.ts", "src/types.d.ts"]);
   });
 
-  it(`carry no allowlist or boundary-ignores entry (${MIGRATED_SCOPES_FILE})`, () => {
+  it("carry no allowlist or boundary-ignores entry", () => {
     // Arrange
     const lists = ratchetLists();
 
     // Act
-    const found = scopedEntries(lists, migratedScopes(), routeFilesOf(sourceFiles()));
+    const found = scopedEntries(lists, moduleScopes(), routeFilesOf(sourceFiles()));
 
     // Assert
-    expectAllowlisted(RULE, found);
+    expect(found).toEqual([]);
   });
 });

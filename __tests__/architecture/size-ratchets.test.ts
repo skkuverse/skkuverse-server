@@ -9,12 +9,12 @@
  * The worst values are measured by linting src/ with each limit at its
  * minimum and reading the sizes ESLint reports.
  *
- * The per-role caps of migrated modules (blocks "size/<role>") are held the
+ * The per-role caps (blocks "size/<role>") are held the
  * same way: each `max-lines` within 10 of the largest file it covers, measured
  * with the block's own options (comment lines count, D10), and none covering no
  * file. So are their function caps (block "size-ratchets/migrated"): lines
  * within 10 of the longest function, `max-depth`, `max-params` and
- * `complexity` at the worst, over the migrated modules' files.
+ * `complexity` at the worst, over every module scope's files.
  *
  * A file over its role's cap with no domain seam to split along carries a
  * per-file cap, `exemptions/size-caps.json` (ADR 0010 D9), applied by a
@@ -31,8 +31,8 @@ const tsparser = require("@typescript-eslint/parser");
 const config: Linter.Config[] = require("../../eslint.config.js");
 
 const RULES = ["max-lines", "max-lines-per-function", "complexity", "max-params"] as const;
-const MIGRATED_RULES = ["max-lines-per-function", "max-depth", "complexity", "max-params"] as const;
-type RatchetRule = (typeof RULES)[number] | (typeof MIGRATED_RULES)[number];
+const FUNCTION_RULES = ["max-lines-per-function", "max-depth", "complexity", "max-params"] as const;
+type RatchetRule = (typeof RULES)[number] | (typeof FUNCTION_RULES)[number];
 
 const MARGIN: Readonly<Record<RatchetRule, number>> = {
   "max-lines": 10,
@@ -114,11 +114,11 @@ function countedLines(file: string, linter: Linter, options: Record<string, unkn
   return size ?? 1;
 }
 
-/** `<folder>/**\/*<tail>` or a single file, as eslint.config.js derives them from the migrated scope. */
+/** `<folder>/**\/*<tail>` or a single file, as eslint.config.js derives them from the module scopes. */
 function matchesGlob(glob: string, file: string): boolean {
   if (!glob.includes("*")) return file === glob;
   const match = /^(src\/(?:[\w-]+\/)+)\*\*\/\*((?:\.[a-z]+)?\.ts)$/.exec(glob);
-  if (!match) throw new Error(`unexpected migrated glob ${glob}`);
+  if (!match) throw new Error(`unexpected scope glob ${glob}`);
   return file.startsWith(match[1]!) && file.endsWith(match[2]!);
 }
 
@@ -171,13 +171,13 @@ describe("size ratchets", () => {
     expect(loose).toEqual([]);
   });
 
-  it("of the migrated modules' functions sit at the worst function they cover", () => {
+  it("of the module scopes' functions sit at the worst function they cover", () => {
     const name = "size-ratchets/migrated";
     const globs = namedBlock(name).files as string[];
     const covered = sourceFiles().filter((f) => globs.some((g) => matchesGlob(g, f)));
     expect(covered.length).toBeGreaterThan(0);
-    const worst = worstSizes(MIGRATED_RULES, name, covered);
-    const loose = MIGRATED_RULES.flatMap((rule) => {
+    const worst = worstSizes(FUNCTION_RULES, name, covered);
+    const loose = FUNCTION_RULES.flatMap((rule) => {
       const { limit } = setting(rule, name);
       const { size, where } = worst[rule];
       return limit - size > MARGIN[rule]
@@ -187,7 +187,7 @@ describe("size ratchets", () => {
     expect(loose).toEqual([]);
   });
 
-  it("per role sit at the largest file of that role in the migrated modules", () => {
+  it("per role sit at the largest file of that role", () => {
     const linter = new Linter({ configType: "flat" });
     const exempt = readSizeCapExemptions();
     const files = sourceFiles().filter((f) => !exempt.has(f));

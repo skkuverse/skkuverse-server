@@ -21,24 +21,23 @@
  *     ending in `color`), an `rgb()` string, a `0x…` color number or a web
  *     view path (`/skku/…`, `${origin}/skku/…`) appears only in a
  *     `*.constants.ts` file (or JSON). Specs state the values they expect
- *     and are left out. Its
- *     `ignores` lists the unmigrated files that broke it when it was added;
- *     import-boundaries.test.ts fails when one is fixed.
+ *     and are left out.
  *   - `readability/src`: no comma operator in src/, parenthesised or not
  *     (`return (dropped.push(reason), null)` packs two steps into one).
- *   - `naming/generic-names`: in a migrated scope's sources, no name that
+ *   - `naming/generic-names`: in every module scope's sources, no name that
  *     says nothing on its own (`info`, `obj`, `tmp`, `helper`, `manager`).
- *   - `specs/fixed-clock`: a spec in a migrated scope (and a top-level
+ *   - `specs/fixed-clock`: a spec in a module scope (and a top-level
  *     module's `__tests__/nest/<module>/` tests) never constructs the real
  *     `Clock`, aliased, through a namespace or as a Nest provider; it passes
  *     a fixed fake, so one answer reads one instant and does not depend on
  *     the day the test runs.
  *   - `migrated/syntax-clock`: the `Date.now()` / `new Date()` ban covers
- *     every migrated scope but the shared layers, read from
- *     `migrated-scopes.json`, so a module is bound when it joins.
+ *     every module scope but the shared layers, derived from the tree
+ *     (scopes.ts), so a new module is bound from its first file.
  */
 import { Linter } from "eslint";
 import { SHARED_LAYERS } from "../helpers/architecture/ast";
+import { moduleScopes } from "../helpers/architecture/scopes";
 
 const tsparser = require("@typescript-eslint/parser");
 const config: Linter.Config[] = require("../../eslint.config.js");
@@ -321,22 +320,22 @@ describe("specs/fixed-clock", () => {
     expect(messages).toEqual([]);
   });
 
-  it("covers the migrated scopes' specs and route tests, not an unmigrated module's", () => {
+  it("covers the module scopes' specs and route tests", () => {
     // Arrange
     const { files = [] } = block("specs/fixed-clock");
 
     // Act & Assert
     expect(files).toEqual(expect.arrayContaining(["src/map/**/*.spec.ts", "__tests__/nest/map/**/*.ts", "__tests__/nest/infra/**/*.ts"]));
-    const scopes: string[] = require("./migrated-scopes.json");
+    const scopes = moduleScopes();
     const nestModules = files.map((glob) => /^__tests__\/nest\/([^/]+)\//.exec(String(glob))?.[1]).filter((m): m is string => !!m);
     expect(nestModules.filter((m) => !scopes.includes(`src/${m}/`))).toEqual([]);
   });
 });
 
 describe("migrated/syntax-clock", () => {
-  it("covers every migrated feature module and no shared layer, from migrated-scopes.json", () => {
+  it("covers every feature module and no shared layer, from the module scopes", () => {
     // Arrange
-    const scopes: string[] = require("./migrated-scopes.json");
+    const scopes = moduleScopes();
     const features = scopes.filter((scope) => !SHARED_LAYERS.some((layer) => scope.startsWith(`src/${layer}/`)));
 
     // Act
@@ -344,11 +343,11 @@ describe("migrated/syntax-clock", () => {
 
     // Assert
     expect(features.length).toBeGreaterThan(0);
-    expect(files).toEqual(expect.arrayContaining(features.map((scope) => `${scope}**/*.ts`)));
+    expect(files).toEqual(expect.arrayContaining(features.map((scope) => (scope.endsWith("/") ? `${scope}**/*.ts` : scope))));
     expect(files.filter((glob) => SHARED_LAYERS.some((layer) => String(glob).startsWith(`src/${layer}/`)))).toEqual([]);
   });
 
-  it("rejects Date.now() in a migrated feature service", () => {
+  it("rejects Date.now() in a feature service", () => {
     // Act
     const messages = lint("migrated/syntax-clock", "src/building/x/x.service.ts", "const at = Date.now();");
 

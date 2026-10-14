@@ -16,8 +16,8 @@
  * (eslint.config.js, `boundaries/feature/…`), which lets every type import
  * through; this rule says where those types come from.
  *
- * The allowlist holds the imports of modules not yet migrated; a migrated
- * scope carries no entry (migrated-scopes.test.ts).
+ * The rule is strict: no allowlist, and no list may hold an entry under src/
+ * (scope-entries.test.ts).
  */
 import { importsOf, isSharedLayer, parseSource } from "../helpers/architecture/ast";
 import { parse } from "../helpers/architecture/names";

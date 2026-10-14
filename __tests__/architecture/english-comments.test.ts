@@ -12,8 +12,8 @@
  * Blocks as in comment-blocks (helpers/architecture/comments.ts), labelled
  * by their first line.
  *
- * The allowlist holds the comments of modules not yet migrated; a migrated
- * scope carries no entry (migrated-scopes.test.ts).
+ * The rule is strict: no allowlist, and no list may hold an entry under src/
+ * (scope-entries.test.ts).
  */
 import { commentBlocks, commentsOf, numberedKeys } from "../helpers/architecture/comments";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
