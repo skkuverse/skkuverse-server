@@ -8,6 +8,10 @@
  * named by its own file. Shared folders (config, http, infra, scheduling,
  * shared) are not features. Specs are checked like sources.
  *
+ * Type-only re-exports (`export type { X } from`), `export * from` and
+ * `import("…").X` types count as type bindings too, and a folder import
+ * (`"../../miniapps"`) names no type file.
+ *
  * A value import across features is the ESLint feature boundary's
  * (eslint.config.js, `boundaries/feature/…`), which lets every type import
  * through; this rule says where those types come from.
@@ -15,55 +19,35 @@
  * The allowlist holds the imports of modules not yet migrated; a migrated
  * scope carries no entry (migrated-scopes.test.ts).
  */
-import path from "path";
-import ts from "typescript";
+import { importsOf, isSharedLayer, parseSource } from "../helpers/architecture/ast";
 import { parse } from "../helpers/architecture/names";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { filesUnder, readSource } from "../helpers/architecture/tree";
 
 const RULE = "type-imports";
-const SHARED_DIRS = new Set(["config", "http", "infra", "scheduling", "shared"]);
 const TYPE_SOURCE_ROLES = new Set(["types", "document", "schema", "wire", "service", "module"]);
 
-const featureOf = (file: string): string | undefined => {
-  const top = /^src\/([^/]+)\//.exec(file)?.[1];
-  return top === undefined || SHARED_DIRS.has(top) ? undefined : top;
+/** The feature a repo path (a file, or a module path without `.ts`) belongs to; undefined for a shared layer. */
+const featureOf = (target: string): string | undefined => {
+  const top = /^src\/([^/.]+)(?:\/|$)/.exec(target)?.[1];
+  return top === undefined || isSharedLayer(top) ? undefined : top;
 };
 
-/** The repo-relative target of a relative specifier, without an extension. */
-function resolve(importer: string, specifier: string): string | undefined {
-  if (!specifier.startsWith(".")) return undefined;
-  return path.posix.normalize(path.posix.join(path.posix.dirname(importer), specifier)).replace(/\.ts$/, "");
-}
-
-/** The type-only names an import declaration binds. */
-function typeOnlyNames(s: ts.ImportDeclaration): string[] {
-  const clause = s.importClause;
-  if (!clause) return [];
-  const bindings = clause.namedBindings;
-  const named = bindings && ts.isNamedImports(bindings) ? bindings.elements : [];
-  if (clause.isTypeOnly) {
-    const namespace = bindings && ts.isNamespaceImport(bindings) ? [bindings.name.text] : [];
-    return [...(clause.name ? [clause.name.text] : []), ...namespace, ...named.map((e) => e.name.text)];
-  }
-  return named.filter((e) => e.isTypeOnly).map((e) => e.name.text);
-}
-
-/** `<file> → <target>: <names>` for each type-only import from another feature's non-type file. */
+/** `<file> → <target>: <names>` for each type-only binding taken from another feature's non-type file. */
 export function typeImportViolations(file: string, source: string): string[] {
   const own = featureOf(file);
   if (own === undefined || !file.endsWith(".ts")) return [];
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  return sf.statements.flatMap((s) => {
-    if (!ts.isImportDeclaration(s) || !ts.isStringLiteral(s.moduleSpecifier)) return [];
-    const target = resolve(file, s.moduleSpecifier.text);
-    const other = target === undefined ? undefined : featureOf(`${target}.ts`);
-    if (target === undefined || other === undefined || other === own) return [];
-    const { parts } = parse(`${target}.ts`);
-    if (parts.length > 1 && TYPE_SOURCE_ROLES.has(parts.at(-1) ?? "")) return [];
-    const names = typeOnlyNames(s);
-    return names.length === 0 ? [] : [`${file} → ${target}: ${names.join(", ")}`];
-  });
+  const byTarget = new Map<string, string[]>();
+  for (const i of importsOf(parseSource(file, source))) {
+    const isTypeBinding = i.isType || (i.isReexport && i.imported === "*");
+    if (!isTypeBinding || !i.specifier.startsWith(".")) continue;
+    const other = featureOf(i.target);
+    if (other === undefined || other === own) continue;
+    const { parts } = parse(`${i.target}.ts`);
+    if (parts.length > 1 && TYPE_SOURCE_ROLES.has(parts.at(-1) ?? "")) continue;
+    byTarget.set(i.target, [...(byTarget.get(i.target) ?? []), i.local]);
+  }
+  return [...byTarget].map(([target, names]) => `${file} → ${target}: ${names.join(", ")}`);
 }
 
 describe("type import rule applies as specified", () => {
@@ -88,6 +72,11 @@ describe("type import rule applies as specified", () => {
     ["an inline type binding from a rules file", 'import { type Rule, value } from "../../bus/bus.rules";', "src/bus/bus.rules: Rule"],
     ["a default type import from a mapper", 'import type Thing from "../../map/map.mapper";', "src/map/map.mapper: Thing"],
     ["a namespace type import from a data file", 'import type * as data from "../../bus/bus-config/bus-config.data";', "src/bus/bus-config/bus-config.data: data"],
+    ["a type re-export from a rules file", 'export type { Rule } from "../../bus/bus.rules";', "src/bus/bus.rules: Rule"],
+    ["an inline type re-export", 'export { type Rule } from "../../bus/bus.rules";', "src/bus/bus.rules: Rule"],
+    ["an export * from a rules file", 'export * from "../../bus/bus.rules";', "src/bus/bus.rules: *"],
+    ["an import type", 'type L = import("../../miniapps/types").MiniAppLogo;', "src/miniapps/types: MiniAppLogo"],
+    ["a folder import", 'import type { X } from "../../miniapps";', "src/miniapps: X"],
   ])("fails %s", (_case, source, label) => {
     // Act & Assert
     expect(typeImportViolations(file, source)).toEqual([`${file} → ${label}`]);
