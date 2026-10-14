@@ -10,42 +10,40 @@
  * resolves to the constants file). A reasoned exemption is in
  * `exemptions/constants-read.json`.
  */
-import path from "path";
 import ts from "typescript";
+import { exportsOf, importsOf, parseSource } from "../helpers/architecture/ast";
 import { expectExempted } from "../helpers/architecture/exemptions";
 import { inScope, migratedScopes } from "../helpers/architecture/migrated";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
-const isExported = (node: ts.Node): boolean =>
-  ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
-
-/** The value names a source exports, in place or through `export { … }`. */
+/** The value names a source exports, in place or through `export { … }`; re-exports aside. */
 export function exportedValues(file: string, source: string): string[] {
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
-  const names: string[] = [];
-  for (const s of sf.statements) {
-    if (ts.isVariableStatement(s) && isExported(s)) {
-      for (const d of s.declarationList.declarations) if (ts.isIdentifier(d.name)) names.push(d.name.text);
-    }
-    if (ts.isExportDeclaration(s) && !s.isTypeOnly && !s.moduleSpecifier && s.exportClause && ts.isNamedExports(s.exportClause)) {
-      for (const e of s.exportClause.elements) if (!e.isTypeOnly) names.push(e.name.text);
-    }
-  }
-  return names;
+  return exportsOf(parseSource(file, source))
+    .bindings.filter((b) => !b.isType && b.kind !== "reexport" && b.kind !== "namespace")
+    .map((b) => b.exported);
 }
 
-/** `<module path without .ts>` → the value names each source imports from it. */
+/**
+ * `<module path without .ts>` → the value names each source imports from it: by name, or read as
+ * `<namespace>.<name>` through `import * as`.
+ */
 export function importedValues(file: string, source: string): Map<string, Set<string>> {
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const sf = parseSource(file, source);
   const out = new Map<string, Set<string>>();
-  for (const s of sf.statements) {
-    if (!ts.isImportDeclaration(s) || !ts.isStringLiteral(s.moduleSpecifier) || !s.moduleSpecifier.text.startsWith(".")) continue;
-    const bindings = s.importClause?.namedBindings;
-    if (s.importClause?.isTypeOnly || !bindings || !ts.isNamedImports(bindings)) continue;
-    const target = path.posix.normalize(path.posix.join(path.posix.dirname(file), s.moduleSpecifier.text));
-    const names = out.get(target) ?? new Set<string>();
-    for (const e of bindings.elements) if (!e.isTypeOnly) names.add((e.propertyName ?? e.name).text);
-    out.set(target, names);
+  const namespaceReads = (local: string): string[] => {
+    const names: string[] = [];
+    const visit = (n: ts.Node): void => {
+      if (ts.isPropertyAccessExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === local) names.push(n.name.text);
+      ts.forEachChild(n, visit);
+    };
+    visit(sf);
+    return names;
+  };
+  for (const i of importsOf(sf)) {
+    if (i.isType || i.isReexport || !i.specifier.startsWith(".")) continue;
+    const names = out.get(i.target) ?? new Set<string>();
+    for (const name of i.imported === "*" ? namespaceReads(i.local) : [i.imported]) names.add(name);
+    out.set(i.target, names);
   }
   return out;
 }
@@ -76,6 +74,21 @@ describe("constants-read rule applies as specified", () => {
 
     // Assert
     expect(violations).toEqual(["src/x/x.constants.ts: OWN", "src/x/x.constants.ts: TYPED", "src/x/x.constants.ts: LOCAL"]);
+  });
+
+  it("reads an enum and a namespace import's members, and does not count a re-export as a read", () => {
+    // Arrange
+    const withNamespace = new Map([
+      ["src/x/x.constants.ts", "export enum Kind { A }\nexport const NS = 1;\nexport const RE = 2;\nexport const UNREAD = 3;"],
+      ["src/x/x.mapper.ts", 'import * as C from "./x.constants";\nexport const f = (): number => C.NS;'],
+      ["src/x/x.barrel.ts", 'export { RE } from "./x.constants";'],
+    ]);
+
+    // Act
+    const violations = unreadConstants(withNamespace, ["src/x/"]);
+
+    // Assert
+    expect(violations).toEqual(["src/x/x.constants.ts: Kind", "src/x/x.constants.ts: RE", "src/x/x.constants.ts: UNREAD"]);
   });
 });
 
