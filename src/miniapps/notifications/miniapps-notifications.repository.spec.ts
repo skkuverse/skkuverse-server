@@ -16,7 +16,10 @@ const mongoCollection = jest.fn(() => ({ find, insertOne, updateOne, createIndex
 
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
-jest.mock("../../infra/mongo", () => ({ mongoCollection: (...args: unknown[]) => mongoCollection(...(args as [])) }));
+jest.mock("../../infra/mongo", () => ({
+  ...jest.requireActual("../../infra/mongo"),
+  mongoCollection: (...args: unknown[]) => mongoCollection(...(args as [])),
+}));
 
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
@@ -86,6 +89,6 @@ describe("MiniappsNotificationsRepository.onModuleInit", () => {
     await new MiniappsNotificationsRepository().onModuleInit();
 
     // Assert
-    expect(mockLogger.warn).toHaveBeenCalledWith(expect.objectContaining({ event: "miniapps.startup.init_failed" }), expect.any(String));
+    expect(mockLogger.warn).toHaveBeenCalledWith(expect.objectContaining({ event: "miniapps.indexes.failed" }), expect.any(String));
   });
 });
