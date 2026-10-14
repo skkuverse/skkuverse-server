@@ -9,8 +9,6 @@
 import type { Clock } from "../../infra/clock";
 import { pick } from "../../infra/i18n";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
-import type { SupportedLang } from "../../infra/types";
-import type { LayerSet } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import type { MapChipSpec } from "../layer-set/map-layer-set.types";
 import { BASE_LAYERS } from "../map.constants";
@@ -23,9 +21,6 @@ import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-se
 
 const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
 const LAYER_SET = new MapLayerSetService(asReal<MapRepository>(new FakeMapRepository()), CLOCK);
-
-/** The chips /map/config serves for a live festival, or none. */
-const getChips = (lang: SupportedLang, event: LayerSet | null) => toMapChips(LAYER_SET.servedChipSpecs(event), lang);
 
 const LANGS = ["ko", "en", "zh"] as const;
 const CONFIG = shippedLayerSet();
@@ -122,7 +117,7 @@ describe("the reset chip on the wire", () => {
   it("survives the projection to the wire, for every language", () => {
     // Act & Assert
     for (const lang of LANGS) {
-      const wire = getChips(lang, CONFIG);
+      const wire = toMapChips(LAYER_SET.servedChipSpecs(CONFIG), lang);
       expect(wire.filter((chip) => chip.isReset)).toHaveLength(1);
       expect(wire.find((chip) => chip.isReset)!.id).toBe("eskara-2026_all");
     }
@@ -132,7 +127,7 @@ describe("the reset chip on the wire", () => {
 describe("the chips /map/config serves", () => {
   it("serves only the base chips when no festival is live", () => {
     // Act
-    const chips = getChips("ko", null);
+    const chips = toMapChips(LAYER_SET.servedChipSpecs(null), "ko");
 
     // Assert
     expect(chips.map((c) => c.id)).toEqual(BASE_CHIPS.map((c) => c.id));
@@ -140,7 +135,7 @@ describe("the chips /map/config serves", () => {
 
   it("adds the festival row while one is live: reset chip plus every authored chip", () => {
     // Act
-    const chips = getChips("ko", CONFIG);
+    const chips = toMapChips(LAYER_SET.servedChipSpecs(CONFIG), "ko");
 
     // Assert
     expect(chips).toHaveLength(BASE_CHIPS.length + 1 + CONFIG.chips.length);
@@ -149,7 +144,7 @@ describe("the chips /map/config serves", () => {
 
   it.each(LANGS)("resolves every chip label in %s through the one I18n resolver", (lang) => {
     // Act
-    const chips = getChips(lang, CONFIG);
+    const chips = toMapChips(LAYER_SET.servedChipSpecs(CONFIG), lang);
 
     // Assert
     for (const spec of SERVED) {
@@ -161,7 +156,7 @@ describe("the chips /map/config serves", () => {
 
   it("gives every chip an emoji icon and a known action kind", () => {
     // Act & Assert
-    for (const chip of getChips("ko", CONFIG)) {
+    for (const chip of toMapChips(LAYER_SET.servedChipSpecs(CONFIG), "ko")) {
       expect(chip.icon).toEqual({ kind: "emoji", emoji: expect.any(String) });
       expect(["webview", "focus"]).toContain(chip.action.kind);
     }
@@ -170,7 +165,7 @@ describe("the chips /map/config serves", () => {
 
 describe("focus actions", () => {
   const focusChips = () =>
-    getChips("ko", CONFIG).filter((chip) => chip.action.kind === "focus");
+    toMapChips(LAYER_SET.servedChipSpecs(CONFIG), "ko").filter((chip) => chip.action.kind === "focus");
 
   it("name layers that all resolve to one non-null chip group", () => {
     // Act
@@ -211,7 +206,7 @@ describe("focus actions", () => {
 describe("webview actions", () => {
   it("resolves every webview URL to an absolute one on our own origin", () => {
     // Act
-    const chips = getChips("ko", CONFIG).filter(
+    const chips = toMapChips(LAYER_SET.servedChipSpecs(CONFIG), "ko").filter(
       (chip) => chip.action.kind === "webview",
     );
 
