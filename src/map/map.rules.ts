@@ -1,4 +1,4 @@
-import { webviewUrl } from "./map.schema";
+import { toWebviewUrl } from "../infra/webview-url";
 import type { ConfigIssue, LayerSpec, MapChipActionSpec } from "./map.types";
 
 // WHY: two answers, because the chip validator reports an unknown id and an untouchable layer differently.
@@ -25,7 +25,7 @@ function focusErrors(id: string, layerIds: readonly string[], catalogue: readonl
 
 function actionErrors(id: string, action: MapChipActionSpec, catalogue: readonly LayerSpec[]): string[] {
   if (action.kind === "focus") return focusErrors(id, action.layerIds, catalogue);
-  return !webviewUrl.safeParse(action.url).success ? [`chip "${id}": "${action.url}" is not a usable web view URL`] : [];
+  return toWebviewUrl(action.url) === null ? [`chip "${id}": "${action.url}" is not a usable web view URL`] : [];
 }
 
 /** WHY: every error together, so a bad edit is fixed in one pass; the caller decides whether it is fatal. */

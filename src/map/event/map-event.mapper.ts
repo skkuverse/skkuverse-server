@@ -1,9 +1,8 @@
 import type { ItemPresentation } from "../layer-set/map-layer-set.schema";
 import type { OverlayPlaceDoc, PlaceAction } from "../map.document";
-import { toI18nText, toOverlay } from "../map.mapper";
+import { toI18nText, toOverlay, toServedWebviewUrl } from "../map.mapper";
 import type { MarkerPresentation, OverlayBase } from "../map.types";
 import { presentationFor } from "../map.rules";
-import { webviewUrl } from "../map.schema";
 import type { MapOverlay } from "../map.wire";
 import { actionDropReason, facetsOf, orderByOptionOf } from "./map-event.rules";
 import type { EventOverlayContext } from "./map-event.types";
@@ -15,8 +14,7 @@ function toOverlayAction(action: PlaceAction): OverlayAction {
     id: action.id,
     label: toI18nText(action.label),
     actionType: action.actionType,
-    // WHY: a root-relative `webview` value becomes absolute here, so the client only ever sees a complete URL.
-    actionValue: action.actionType === "webview" ? webviewUrl.parse(action.actionValue) : action.actionValue,
+    actionValue: action.actionType === "webview" ? toServedWebviewUrl(action.actionValue) : action.actionValue,
     ...(action.style ? { style: action.style } : {}),
   };
 }

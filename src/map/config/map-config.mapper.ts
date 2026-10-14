@@ -1,7 +1,7 @@
 import { pick, t } from "../../infra/i18n";
 import type { SupportedLang } from "../../infra/types";
 import type { MapChipSpec } from "../layer-set/map-layer-set.types";
-import { webviewUrl } from "../map.schema";
+import { toServedWebviewUrl } from "../map.mapper";
 import type { LayerSpec, MapChipActionSpec } from "../map.types";
 import { CAMPUS_ENTRIES, CAMPUS_FOCUS_DURATION_MS, MARKER_FOCUS } from "./map-config.constants";
 import type { MapConfigSource } from "./map-config.types";
@@ -10,7 +10,7 @@ import type { MapConfig } from "./map-config.wire";
 type MapChip = MapConfig["chips"][number];
 
 function toChipAction(action: MapChipActionSpec): MapChip["action"] {
-  if (action.kind === "webview") return { kind: "webview", url: webviewUrl.parse(action.url) };
+  if (action.kind === "webview") return { kind: "webview", url: toServedWebviewUrl(action.url) };
   return { kind: "focus", camera: { ...action.camera }, layerIds: [...action.layerIds] };
 }
 
