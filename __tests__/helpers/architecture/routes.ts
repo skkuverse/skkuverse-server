@@ -1,7 +1,7 @@
 /**
  * Routes as Nest declares them: `@Controller(prefix)` on a class and
  * `@Get(path)` (or another HTTP method decorator) on its methods, read from the
- * source. Shared by the rate-limit coverage, route-order, migrated-scope and
+ * source. Shared by the rate-limit coverage, route-order, scope-entries and
  * wire-routes rules.
  */
 import ts from "typescript";

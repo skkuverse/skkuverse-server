@@ -5,7 +5,7 @@
  * whenever it boots a module that provides or injects it, and its answer then
  * depends on the day it runs.
  *
- * In a migrated scope's tests (`__tests__/nest/<module>/`), each
+ * In a module scope's tests (`__tests__/nest/<module>/`), each
  * `buildTestApp({ imports })` or `Test.createTestingModule({ imports })` whose
  * imports reach a Clock-dependent module overrides `Clock`: its `overrides`
  * (or the testing module's `.overrideProvider(…)` chain, or its `providers`)
@@ -14,7 +14,7 @@
  */
 import ts from "typescript";
 import { collect, parseSource } from "../helpers/architecture/ast";
-import { inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { filesUnder, readSource, sourceFiles } from "../helpers/architecture/tree";
 
 const names = (e: ts.Expression | undefined): string[] =>
@@ -106,12 +106,12 @@ describe("route clock rule applies as specified", () => {
   });
 });
 
-describe("route tests in migrated scopes", () => {
+describe("route tests in the module scopes", () => {
   it("override Clock when they boot a module that reads it", () => {
     // Arrange
     const sources = new Map(sourceFiles().map((f) => [f, readSource(f)]));
     const clockModules = clockDependentModules(sources);
-    const tests = filesUnder("__tests__/nest").filter((f) => f.endsWith(".ts") && migratedScopes().some((scope) => inScope(f, scope)));
+    const tests = filesUnder("__tests__/nest").filter((f) => f.endsWith(".ts") && moduleScopes().some((scope) => inScope(f, scope)));
 
     // Act
     const violations = tests.flatMap((f) => unpinnedClockApps(f, readSource(f), clockModules));

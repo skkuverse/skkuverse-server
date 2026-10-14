@@ -16,10 +16,10 @@
  * fails when it re-exports a predicate by name or is an object with a
  * predicate member. Specs are not checked.
  *
- * The allowlist holds the files of modules not yet migrated; a migrated scope
- * carries no entry (migrated-scopes.test.ts).
+ * The rule is strict: no allowlist, and no list may hold an entry under src/
+ * (scope-entries.test.ts).
  *
- * A class role holds its class: in a migrated scope, a `.service`,
+ * A class role holds its class: in a module scope, a `.service`,
  * `.controller`, `.repository`, `.client` or `.poller` file declares no
  * top-level function, exported or not: no `function`, and no constant that
  * holds code (an arrow, an object of methods, a lookup table of arrows, a call
@@ -30,7 +30,7 @@
 import ts from "typescript";
 import { collect, exportsOf, isExported, isFunctionExpression, parseSource, skipOuter, type ExportedBinding } from "../helpers/architecture/ast";
 import { expectExempted } from "../helpers/architecture/exemptions";
-import { inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { parse } from "../helpers/architecture/names";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { filesUnder, readSource } from "../helpers/architecture/tree";
@@ -252,10 +252,10 @@ describe("class role rule applies as specified", () => {
   });
 });
 
-describe("class-role files in migrated scopes", () => {
+describe("class-role files in the module scopes", () => {
   it("declare no function beside their class", () => {
     // Arrange
-    const files = filesUnder("src").filter((f) => f.endsWith(".ts") && migratedScopes().some((scope) => inScope(f, scope)));
+    const files = filesUnder("src").filter((f) => f.endsWith(".ts") && moduleScopes().some((scope) => inScope(f, scope)));
 
     // Act
     const violations = files.flatMap((f) => classRoleFunctionViolations(f, readSource(f)));

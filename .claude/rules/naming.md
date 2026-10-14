@@ -48,9 +48,9 @@ Asked to name the same thing, two developers pick the same name about 7% of the 
 ## Words
 
 - A name says only what is true: nothing called `All` filters (`listBuildings(campus?)`, not `getAllBuildings`).
-- `data`, `info`, `item`, `result`, `value`, `obj`, `tmp`, `helper`, `manager` never stand alone. Add the domain noun: `upsertResult`, `campusSpaces`. ESLint `naming/generic-names` bans `info`, `obj`, `tmp`, `helper` and `manager` in migrated scopes; the others are also wire property names, so they stay judgment.
+- `data`, `info`, `item`, `result`, `value`, `obj`, `tmp`, `helper`, `manager` never stand alone. Add the domain noun: `upsertResult`, `campusSpaces`. ESLint `naming/generic-names` bans `info`, `obj`, `tmp`, `helper` and `manager` in `src/`; the others are also wire property names, so they stay judgment.
 - Abbreviations: `id`, `url`, `ms`, `db`, `api`, and an upstream's own field names (`spaceCd`, `buildNo`). Nothing else.
-- A one-letter name only inside a callback of three lines or fewer: `(b) => b.campus`. A `for (let i = …)` counter and an index signature's key are allowed too. Checked by `short-names.test.ts` in migrated scopes.
+- A one-letter name only inside a callback of three lines or fewer: `(b) => b.campus`. A `for (let i = …)` counter and an index signature's key are allowed too. Checked by `short-names.test.ts` in `src/`.
 - A comment that says *what* becomes a name. When a comment is allowed at all, and how long it may be, is ADR 0010 D10: only what the code cannot carry, opening with a tag (`WHY:`, `QUIRK(<system>):`, `CONTRACT(<repo>):`, `EVIDENCE:`, `SEE: docs/…`; `comment-tags`), at most three lines.
 
 | The comment explained | It becomes |
@@ -62,7 +62,7 @@ Asked to name the same thing, two developers pick the same name about 7% of the 
 
 ## Glossary
 
-One concept, one name (ADR 0010, D1). Each migrated module's glossary is the Glossary of its `docs/explanation/<module>-architecture.md`, whose Not column is an ESLint `id-denylist` block (`glossary/<module>` in `eslint.config.js`); `.claude/rules/<module>.md` loads it. This file keeps only the terms every module shares.
+One concept, one name (ADR 0010, D1). Each feature module's glossary is the Glossary of its `docs/explanation/<module>-architecture.md`, whose Not column is an ESLint `id-denylist` block (`glossary/<module>` in `eslint.config.js`); `.claude/rules/<module>.md` loads it. This file keeps only the terms every module shares.
 
 ### Every module
 

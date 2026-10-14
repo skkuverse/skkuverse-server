@@ -4,7 +4,7 @@
  * `b` that lives for fifteen lines, or a function parameter `o`, makes the
  * reader carry the type in their head.
  *
- * In a migrated scope's non-spec sources, a one-letter variable, parameter,
+ * In a module scope's non-spec sources, a one-letter variable, parameter,
  * destructured binding or function name is allowed only:
  *
  *   - in the parameters of an arrow or function expression passed as a call's
@@ -17,7 +17,7 @@
  */
 import ts from "typescript";
 import { expectExempted } from "../helpers/architecture/exemptions";
-import { inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
 const MAX_CALLBACK_LINES = 3;
@@ -112,10 +112,10 @@ describe("short name rule applies as specified", () => {
   });
 });
 
-describe("names in migrated scopes", () => {
+describe("names in the module scopes", () => {
   it("are one letter only in short callbacks", () => {
     // Arrange
-    const files = sourceFiles().filter((f) => migratedScopes().some((scope) => inScope(f, scope)));
+    const files = sourceFiles().filter((f) => moduleScopes().some((scope) => inScope(f, scope)));
 
     // Act
     const violations = files.flatMap((f) => shortNameViolations(f, readSource(f)).map((v) => v.replace(/ \(line \d+\)$/, "")));

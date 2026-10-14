@@ -1,5 +1,5 @@
 /**
- * Every migrated feature module has one architecture doc in one fixed shape
+ * Every feature module has one architecture doc in one fixed shape
  * (refactor design D16; openspec module-docs spec): `docs/explanation/<m>-architecture.md`,
  * linked from the explanation table of docs/README.md, loaded for agents by
  * `.claude/rules/<m>.md` and pointed to by a `SEE:` line above `@Module`.
@@ -10,15 +10,11 @@
  * outside code spans, fences, links and frontmatter, no history phrase, at
  * most 200 lines, and links that resolve. docs/_module-template.md passes the
  * same structure checks, and the MD043 override in docs/.markdownlint-cli2.jsonc
- * names the template and exactly the migrated modules' docs.
- *
- * The allowlist names the feature modules not yet migrated whose doc is missing
- * or off-format. It only shrinks, and a migrated module is never on it.
+ * names the template and exactly the feature modules' docs.
  */
 import path from "path";
 import ts from "typescript";
 import { HISTORY_PHRASES } from "../helpers/architecture/history";
-import { migratedScopes } from "../helpers/architecture/migrated";
 import {
   CONTEXT_HEADER,
   FIELD_HEADER,
@@ -30,8 +26,6 @@ import {
   featureModules,
   linkTargets,
   linkTexts,
-  migratedEntries,
-  migratedModules,
   moduleFileOf,
   parseDoc,
   readIfExists,
@@ -41,12 +35,10 @@ import {
   withoutLinks,
   type ParsedDoc,
 } from "../helpers/architecture/module-docs";
-import { compareWithAllowlist, expectAllowlisted, readAllowlist } from "../helpers/architecture/ratchet";
 import { routesIn } from "../helpers/architecture/routes";
 import { filesUnder, isNonSpecSource, readSource } from "../helpers/architecture/tree";
 import { isExemptPath } from "../helpers/architecture/wire-routes";
 
-const RULE = "module-docs";
 const MAX_LINES = 200;
 const FRONTMATTER_KEYS = ["title", "type", "status", "owner", "last-updated", "audience"];
 const STATUSES = ["draft", "accepted"];
@@ -281,11 +273,11 @@ export function moduleDocViolations(input: ModuleDocInput): string[] {
   return out;
 }
 
-/** The MD043 override's filter must be the template plus one doc per migrated module, relative to docs/. */
-export function overrideFilterViolations(jsonc: string, migrated: readonly string[]): string[] {
+/** The MD043 override's filter must be the template plus one doc per feature module, relative to docs/. */
+export function overrideFilterViolations(jsonc: string, modules: readonly string[]): string[] {
   const parsed = ts.parseConfigFileTextToJson(MD_CONFIG, jsonc) as { config?: { overrides?: Array<{ filter?: unknown }> } };
   const filter = parsed.config?.overrides?.[0]?.filter;
-  const expected = [path.basename(MODULE_TEMPLATE), ...migrated.map((m) => `explanation/${m}-architecture.md`)];
+  const expected = [path.basename(MODULE_TEMPLATE), ...modules.map((m) => `explanation/${m}-architecture.md`)];
   if (JSON.stringify(filter) === JSON.stringify(expected)) return [];
   return [`${MD_CONFIG}: overrides[0].filter is ${JSON.stringify(filter)}, expected ${JSON.stringify(expected)}`];
 }
@@ -414,18 +406,6 @@ describe("module-docs rule applies as specified", () => {
 
     // Assert
     expect(violations).toEqual(["docs/README.md: the explanation table does not link explanation/bus-architecture.md"]);
-  });
-
-  it("drops an allowlisted module whose doc conforms, and never allowlists a migrated one", () => {
-    // Act
-    const ratchet = compareWithAllowlist([], ["bus"]);
-    const listedMigrated = migratedEntries(["building", "bus"], ["ad", "building"]);
-    const listedUnmigrated = migratedEntries(["bus", "map"], ["ad", "building"]);
-
-    // Assert
-    expect(ratchet.fixed).toEqual(["bus"]);
-    expect(listedMigrated).toEqual(["building"]);
-    expect(listedUnmigrated).toEqual([]);
   });
 
   it("names the doc and the key when the type is wrong", () => {
@@ -684,7 +664,7 @@ describe("module-docs rule applies as specified", () => {
     expect(violations).toEqual(['src/bus/bus.module.ts: no "// SEE: docs/explanation/bus-architecture.md" in the comments just above @Module']);
   });
 
-  it("wants the MD043 override to name the template and exactly the migrated modules' docs", () => {
+  it("wants the MD043 override to name the template and exactly the feature modules' docs", () => {
     // Arrange
     const config = (filter: string[]) => `{\n  // the module docs\n  "overrides": [{ "filter": ${JSON.stringify(filter)}, "config": {} }]\n}`;
 
@@ -703,23 +683,13 @@ describe("module-docs rule applies as specified", () => {
 describe("module docs", () => {
   const files = filesUnder("src");
   const modules = featureModules(files);
-  const migrated = migratedModules(modules, migratedScopes());
 
-  it.each(migrated)("of %s: the doc, its index entry, its rules file and its SEE: line conform", (module) => {
+  it.each(modules)("of %s: the doc, its index entry, its rules file and its SEE: line conform", (module) => {
     // Act
     const violations = moduleDocViolations(realModuleInput(module, files));
 
     // Assert
     expect(violations).toEqual([]);
-  });
-
-  it("are missing or off-format only in the modules not yet migrated, which the allowlist names", () => {
-    // Act
-    const nonconforming = modules.filter((m) => moduleDocViolations(realModuleInput(m, files)).length > 0);
-
-    // Assert
-    expect(migratedEntries(readAllowlist(RULE), migrated)).toEqual([]);
-    expectAllowlisted(RULE, nonconforming);
   });
 
   it("share their structure checks with docs/_module-template.md", () => {
@@ -736,9 +706,9 @@ describe("module docs", () => {
     expect(violations).toEqual([]);
   });
 
-  it("of exactly the migrated modules are what the MD043 override checks, with the template", () => {
+  it("of exactly the feature modules are what the MD043 override checks, with the template", () => {
     // Act
-    const violations = overrideFilterViolations(readSource(MD_CONFIG), migrated);
+    const violations = overrideFilterViolations(readSource(MD_CONFIG), modules);
 
     // Assert
     expect(violations).toEqual([]);
