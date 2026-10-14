@@ -7,8 +7,15 @@
  *     (`path: []` when the issue is the whole value), since parseConfigFile
  *     and the boot error print it: `ctx.addIssue({ … })`, `ctx["addIssue"]`,
  *     a destructured `addIssue({ … })` and `ctx.issues.push({ … })`; a bare
- *     message string and `path: undefined` are refused too. Specs may build
- *     a pathless issue to test how one is answered.
+ *     message string and `path: undefined` are refused too, and so is an
+ *     object-level `.refine` (on `z.object`, `strictObject`, `looseObject`
+ *     or `.extend`, or after refinements of one) without a `path`. Specs may
+ *     build a pathless issue to test how one is answered.
+ *   - `schemas/no-double-cast`: no cast through `unknown` (or any second
+ *     cast) in a `.schema`, which would certify fields the schema never
+ *     checked.
+ *   - `boundaries/pure-schema`: a `.rules` or `.mapper` imports a `.schema`
+ *     for types only, so boundaries/pure cannot be passed one hop deep.
  *   - `boundaries/literals`: a hex color (`#FFFFFF`, `#FF003626`, a bare
  *     hex that mixes letters and digits, or any bare hex bound to a name
  *     ending in `color`), an `rgb()` string, a `0x…` color number or a web
@@ -99,6 +106,33 @@ describe("zod/issue-path", () => {
     expect(counts).toEqual(sources.map(() => 1));
   });
 
+  it("rejects an object-level refine without a path, and passes one with a path or on a field", () => {
+    // Arrange
+    const refusals = [
+      'z.object({ a: z.string(), b: z.string() }).refine((v) => v.a !== v.b, "a and b differ");',
+      "z.strictObject({ a: z.string() }).refine((v) => v.a !== '', { message: 'blank' });",
+      "z.looseObject({}).refine((v) => isX(v));",
+      "z.object({}).extend({ b: z.string() }).refine((v) => v.b !== '', { error: () => 'blank' });",
+      "z.object({}).refine((v) => isX(v), { path: [] }).refine((v) => isY(v), { message: 'y' });",
+    ];
+    const passes = [
+      "z.object({ start: hhmm, end: hhmm }).refine((w) => w.start !== w.end, { path: [], error: () => 'equal' });",
+      "z.object({ a: z.string() }).refine((v) => v.a !== '', { message: 'blank', path: ['a'] });",
+      'z.string().refine((text) => text.trim() !== "", "must be non-blank text");',
+      "z.number().refine(isSkkuId);",
+      "z.string().refine(isA).refine(isB);",
+      "z.array(z.object({}).refine((v) => isX(v), { path: [] })).refine((all) => all.length > 0);",
+    ];
+
+    // Act
+    const counts = refusals.map((source) => lint("zod/issue-path", file, source).length);
+    const reported = passes.filter((source) => lint("zod/issue-path", file, source).length > 0);
+
+    // Assert
+    expect(counts).toEqual(refusals.map(() => 1));
+    expect(reported).toEqual([]);
+  });
+
   it("applies to src/ but not to its specs", () => {
     // Arrange
     const { files, ignores } = block("zod/issue-path");
@@ -171,6 +205,77 @@ describe("boundaries/literals", () => {
 
     // Act & Assert
     expect(ignores).toEqual(expect.arrayContaining(["src/**/*.spec.ts", "src/**/*.constants.ts"]));
+  });
+});
+
+describe("schemas/no-double-cast", () => {
+  const file = "src/x/x.schema.ts";
+
+  it("rejects a cast through unknown or any in a .schema, which certifies fields the schema never checks", () => {
+    // Arrange
+    const sources = [
+      "export const toX = (raw: Raw) => raw as unknown as XDoc;",
+      "export const toY = (raw: Raw) => (raw as any) as YDoc;",
+      "export const toZ = (raw: Raw) => <ZDoc>(<unknown>raw);",
+    ];
+
+    // Act
+    const counts = sources.map((source) => lint("schemas/no-double-cast", file, source).length);
+
+    // Assert
+    expect(counts).toEqual(sources.map(() => 1));
+  });
+
+  it("passes a single cast and a satisfies, and leaves specs out", () => {
+    // Arrange
+    const source = 'export const x = z.object({}) satisfies z.ZodType<X>;\nexport const k = "a" as const;';
+    const { ignores = [] } = block("schemas/no-double-cast");
+
+    // Act & Assert
+    expect(lint("schemas/no-double-cast", file, source)).toEqual([]);
+    expect(ignores).toEqual(["src/**/*.spec.ts"]);
+  });
+});
+
+describe("boundaries/pure-schema", () => {
+  const file = "src/map/x/map-x.rules.ts";
+
+  it("rejects a runtime import of a .schema from a .rules or .mapper file", () => {
+    // Arrange
+    const sources = [
+      'import { webviewUrl } from "../map.schema";',
+      'import { webviewUrl, type BannerImageRaw } from "./ui.schema";',
+      'import * as schema from "../map.schema";',
+      'import schema from "./x.schema";',
+      'import "./x.schema";',
+    ];
+
+    // Act
+    const counts = sources.map((source) => lint("boundaries/pure-schema", file, source).length);
+
+    // Assert
+    expect(counts).toEqual(sources.map(() => 1));
+  });
+
+  it("passes a type import of a .schema and a runtime import of anything else", () => {
+    // Arrange
+    const sources = [
+      'import type { BannerImageRaw } from "./ui.schema";',
+      'import { type A, type B } from "../map.schema";',
+      'import { toWebviewUrl } from "../../infra/webview-url";',
+      'import { LOST_AND_FOUND_PATH } from "../map.constants";',
+    ];
+
+    // Act
+    const reported = sources.filter((source) => lint("boundaries/pure-schema", file, source).length > 0);
+
+    // Assert
+    expect(reported).toEqual([]);
+  });
+
+  it("covers .rules and .mapper files", () => {
+    // Act & Assert
+    expect(block("boundaries/pure-schema").files).toEqual(["src/**/*.rules.ts", "src/**/*.mapper.ts"]);
   });
 });
 

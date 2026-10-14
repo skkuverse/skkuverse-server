@@ -164,6 +164,8 @@ const SRC_SYNTAX_PLUGIN = {
     "zod-issues": CORE_RESTRICTED_SYNTAX,
     literals: CORE_RESTRICTED_SYNTAX,
     "spec-clock": CORE_RESTRICTED_SYNTAX,
+    "schema-casts": CORE_RESTRICTED_SYNTAX,
+    "schema-imports": CORE_RESTRICTED_SYNTAX,
     // An alias of id-denylist, so the glossary/<module> blocks keep theirs.
     "generic-names": CORE_RULES.get("id-denylist"),
   },
@@ -195,6 +197,47 @@ const ADD_ISSUE_SYNTAX = [
     message: "`path: undefined` is no path: name the field, or `path: []` when the issue is the whole value.",
   },
 ];
+
+// An object-level `.refine` without a path reports at the object: name the field, or `path: []` to say the
+// issue is the whole value. A field-level `.refine` takes its path from where the field sits.
+// A refine counts as object-level on the object call itself or after up to two other refinements of it.
+const OBJECT_REFINES = [0, 1, 2].map((between) => {
+  const hop = "callee.object.";
+  const steps = Array.from({ length: between }, (_, i) => `[${hop.repeat(i + 1)}callee.property.name=/^(?:refine|superRefine)$/]`);
+  const object = `[${hop.repeat(between + 1)}callee.property.name=/^(?:object|strictObject|looseObject|extend)$/]`;
+  return `CallExpression[callee.property.name='refine']${steps.join("")}${object}`;
+});
+const OBJECT_REFINE_SYNTAX = [
+  {
+    selector: OBJECT_REFINES.flatMap((refine) => [
+      `${refine}[arguments.length<2]`,
+      `${refine} > :matches(Literal, TemplateLiteral).arguments:nth-child(2)`,
+      `${refine} > ObjectExpression.arguments:nth-child(2):not(:has(> Property[key.name='path'])):not(:has(> Property[key.value='path']))`,
+    ]).join(", "),
+    message: "Give an object-level refine its `path` (`path: []` when the issue is the whole object), so the error names the field.",
+  },
+];
+
+// A `.schema` parses: its output type is what it checked. A cast through `unknown` (or a second cast) in a
+// transform certifies fields the schema never read, and `satisfies z.ZodType<T>` holds either way.
+const DOUBLE_CAST_SYNTAX = [
+  {
+    selector: ":matches(TSAsExpression, TSTypeAssertion) > :matches(TSAsExpression, TSTypeAssertion).expression",
+    message: "No cast through unknown in a .schema: check the field, or leave it out of the type the schema returns.",
+  },
+];
+
+// A rule or mapper imports a `.schema` for its types only (PURE_IMPORT_PATTERNS is one import deep): a runtime
+// value through a `.schema` would let a pure file reach whatever that schema imports.
+const SCHEMA_IMPORT = "ImportDeclaration[importKind='value'][source.value=/\\.schema$/]";
+const SCHEMA_IMPORT_MESSAGE =
+  "A .rules or .mapper file imports a .schema for types only (`import type`): import the pure helper from where it lives.";
+const SCHEMA_IMPORT_SYNTAX = [
+  `${SCHEMA_IMPORT}:has(ImportSpecifier[importKind='value'])`,
+  `${SCHEMA_IMPORT}:has(ImportDefaultSpecifier)`,
+  `${SCHEMA_IMPORT}:has(ImportNamespaceSpecifier)`,
+  `${SCHEMA_IMPORT}[specifiers.length=0]`,
+].map((selector) => ({ selector, message: SCHEMA_IMPORT_MESSAGE }));
 
 // A color or a web view path is a value the app reads, kept in one place: a `.constants` file
 // (or the JSON config) holds it, and code imports its name.
@@ -792,7 +835,20 @@ module.exports = [
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.spec.ts"],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
-    rules: { "src-syntax/zod-issues": ["error", ...ADD_ISSUE_SYNTAX] },
+    rules: { "src-syntax/zod-issues": ["error", ...ADD_ISSUE_SYNTAX, ...OBJECT_REFINE_SYNTAX] },
+  },
+  {
+    name: "schemas/no-double-cast",
+    files: ["src/**/*.schema.ts"],
+    ignores: ["src/**/*.spec.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: { "src-syntax/schema-casts": ["error", ...DOUBLE_CAST_SYNTAX] },
+  },
+  {
+    name: "boundaries/pure-schema",
+    files: ["src/**/*.rules.ts", "src/**/*.mapper.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: { "src-syntax/schema-imports": ["error", ...SCHEMA_IMPORT_SYNTAX] },
   },
   {
     name: "naming/generic-names",
