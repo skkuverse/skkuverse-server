@@ -391,19 +391,19 @@ function scopeGlobs(tail) {
 }
 
 const ROLE_MAX_LINES = {
-  client: 173,
-  controller: 47,
-  document: 130,
-  mapper: 147,
-  module: 18,
+  client: 163,
+  controller: 42,
+  document: 124,
+  mapper: 139,
+  module: 16,
   poller: 33,
-  query: 173,
-  repository: 133,
+  query: 169,
+  repository: 123,
   rules: 92,
   schema: 61,
-  service: 263,
-  types: 58,
-  wire: 60,
+  service: 257,
+  types: 56,
+  wire: 57,
 };
 
 // A file over its role's cap with no domain seam to split it along carries a reasoned per-file cap instead
@@ -432,7 +432,7 @@ function roleSizeBlocks() {
 // most 10 lines, comment lines counted as in max-lines; depth, parameters and
 // complexity at the worst. Specs are left out: a describe callback is long by design.
 const MIGRATED_FUNCTION_LIMITS = {
-  "max-lines-per-function": ["error", { max: 40, skipBlankLines: true, skipComments: false }],
+  "max-lines-per-function": ["error", { max: 37, skipBlankLines: true, skipComments: false }],
   "max-depth": ["error", 2],
   // A constructor of 4 injected dependencies is allowed; PARAMS_SYNTAX holds functions to 3.
   "max-params": ["error", 4],
