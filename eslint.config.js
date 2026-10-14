@@ -79,10 +79,10 @@ const PURE_IMPORT_PATTERNS = [
     message: "A pure file does no IO: take the data as an argument; the service calls the repository or client.",
   },
   {
-    // infra/webview-url is pure (string checks over a constant origin), so a rule imports it directly
-    // rather than through a `.schema` that wraps it.
-    regex: "(?:^|/)infra/(?!(?:i18n|types|webview-url)$)",
-    message: "A pure file reaches infra/ only for i18n lookups, types and webview-url; take anything else as an argument.",
+    // infra/webview-url and infra/media-url are pure (string checks over a constant origin), so a rule or a
+    // mapper imports them directly rather than through a `.schema` that wraps them.
+    regex: "(?:^|/)infra/(?!(?:i18n|types|webview-url|media-url)$)",
+    message: "A pure file reaches infra/ only for i18n lookups, types, webview-url and media-url; take anything else as an argument.",
   },
   {
     regex: "(?:^|/)http/(?!app\\.error$)",

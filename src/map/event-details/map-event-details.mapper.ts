@@ -1,4 +1,5 @@
 import { hasAnyText } from "../../infra/i18n";
+import { isMediaUrl } from "../../infra/media-url";
 import type { I18n } from "../../infra/types";
 import { isAbsoluteHttpsUrl } from "../../shared/link-target.util";
 import { isRecord } from "../../shared/object.util";
@@ -7,7 +8,6 @@ import { toI18nText } from "../map.mapper";
 import type { I18nText } from "../map.wire";
 import { PLACE_BLOCK_TYPES, PLACE_DETAIL_ACTION_TYPES } from "./map-event-details.constants";
 import { isInstagramPostUrl, isInstagramProfileUrl, isNonBlankId, isPlaceKind } from "./map-event-details.rules";
-import { mediaUrl } from "./map-event-details.schema";
 import type { PlaceSheet } from "./map-event-details.wire";
 
 type Block = PlaceSheet["blocks"][number];
@@ -50,7 +50,7 @@ const BLOCK_READERS: Readonly<Record<(typeof PLACE_BLOCK_TYPES)[number], (raw: R
     return rows ? { type: "table", id, title, rows } : null;
   },
   image: (raw, id, title) =>
-    mediaUrl.safeParse(raw.url).success ? { type: "image", id, title, url: String(raw.url), caption: textOrNull(raw.caption) } : null,
+    isMediaUrl(raw.url) ? { type: "image", id, title, url: String(raw.url), caption: textOrNull(raw.caption) } : null,
   notice: (raw, id, title) => {
     const items = allOrNull(raw.items, textOrNull);
     return items ? { type: "notice", id, title, items } : null;
