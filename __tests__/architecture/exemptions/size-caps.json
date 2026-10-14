@@ -20,7 +20,7 @@
     "reason": "ADR 0010 D9, no domain seam: layerSetFile is one zod composite over one operator-edited document. Child-to-parent imports put a composite's leaves (camera, i18n text, nullable defaults) above it, so a sub-module split cannot hold them, and the leaves alone exceed the schema cap."
   },
   "src/notices/list/notices-list.rules.ts": {
-    "max": 185,
+    "max": 181,
     "reason": "ADR 0010 D9, no domain seam: the list badge is one priority chain a list item is cut from, the v1 period pick and the v2 role badge feeding one brief, and the cursor decode beside it; neither half is a flow of its own, so a sub-module would hold rules and nothing else, and the badge alone exceeds the rules cap."
   }
 }
