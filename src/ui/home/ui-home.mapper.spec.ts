@@ -4,6 +4,7 @@
  * with ko behind it, a media icon becomes a uri, and nothing kept only on disk
  * (a window, the untranslated text) reaches the wire.
  */
+import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
 import { MiniAppsService } from "../../miniapps/miniapps.service";
 import { loadHomeLayout } from "./ui-home.config";
@@ -162,6 +163,20 @@ describe("toHomeLayout", () => {
           actionValue: "/(tabs)/campus",
         },
       ],
+    });
+  });
+
+  it("serves a root-relative web view tile on the web view origin", () => {
+    // Arrange
+    const raw = layout(tiles(link({ actionType: "webview", actionValue: "/skku/lostandfound" })));
+
+    // Act
+    const [section] = resolveAt("2026-09-25T00:00:00Z", raw, "ko").sections;
+
+    // Assert
+    expect(section?.type === "tile_grid" ? section.tiles[0] : null).toMatchObject({
+      actionType: "webview",
+      actionValue: `${WEBVIEW_ORIGIN}/skku/lostandfound`,
     });
   });
 });

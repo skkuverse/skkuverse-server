@@ -1,5 +1,7 @@
 import { pick } from "../infra/i18n";
 import type { I18n, SupportedLang } from "../infra/types";
+import { toWebviewUrl } from "../infra/webview-url";
+import type { LinkActionType } from "../shared/link-action.wire";
 import { isBannerShowing } from "./ui.rules";
 import type { BannerImageRaw } from "./ui.schema";
 import type { BannerCarousel } from "./ui.wire";
@@ -15,9 +17,15 @@ export function toLocalizedText(text: I18n, lang: SupportedLang): string {
   return pick(text, lang) ?? text.ko;
 }
 
+// WHY: a root-relative `webview` value is served absolute, as the event map serves its buttons, so the app opens a complete URL.
+export function toServedActionValue(actionType: LinkActionType, actionValue: string): string {
+  return actionType === "webview" ? (toWebviewUrl(actionValue) ?? actionValue) : actionValue;
+}
+
 // WHY: built from named fields rather than `...image`, so the window and the untranslated text never reach the wire.
 function toBannerImage(image: BannerImageRaw, lang: SupportedLang): BannerItem {
-  const action = image.actionType === undefined ? {} : { actionType: image.actionType, actionValue: image.actionValue };
+  const { actionType, actionValue } = image;
+  const action = actionType === undefined || actionValue === undefined ? {} : { actionType, actionValue: toServedActionValue(actionType, actionValue) };
   return { type: "image", id: image.id, imageUrl: image.imageUrl, alt: toLocalizedText(image.alt, lang), ...action };
 }
 

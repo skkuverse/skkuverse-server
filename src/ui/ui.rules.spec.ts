@@ -54,6 +54,8 @@ describe("isBrokenLinkAction", () => {
     ["external", "/x", true],
     ["webview", "https://webview.skkuverse.com/skku/lostandfound", false],
     ["webview", "https://webview.skkuverse.com/a b", true],
+    ["webview", "/skku/lostandfound", false],
+    ["webview", "//evil.com/x", true],
     ["route", "/map/hssc", false],
     ["route", "//evil.com", true],
     ["route", "campus", true],
