@@ -22,23 +22,8 @@ import { MapEventDetailsModule } from "./map/event-details/map-event-details.mod
 import { NoticesModule } from "./notices/notices.module";
 import { MiniAppsModule } from "./miniapps/miniapps.module";
 
-/**
- * Root module.
- *
- * Order of imports mirrors the boot-time concerns: config (fail-loud validation)
- * → scheduling (poller registry) → health. The MongoDB client is not a module:
- * it is the lazy singleton in infra/db, closed by main.ts on shutdown.
- *
- * LangMiddleware is NOT applied here via consumer.forRoutes("*"): Nest's
- * wildcard forRoutes binding does NOT fire against the pre-built ExpressAdapter
- * instance main.ts uses (empirically verified — "*"/"(.*)"/"{*path}"/"*path"
- * all produce zero invocations). Instead main.ts mounts LangMiddleware as raw
- * app-level express middleware before NestFactory.create, as the
- * build-bus-app.ts test helper does, so req.lang + req.__startNs + Vary are set
- * on every request. The per-route bus rate limiter is still applied inside
- * BusModule.configure() (exact prefixes, which DO fire), so the order is
- * lang → limiter → handler.
- */
+// WHY: imports in boot order: config (fails loud on a missing value), the poller registry, then health.
+// LangMiddleware is not bound here but in bootstrapHttpApp (src/http/http-app.bootstrap.ts); its QUIRK says why.
 @Module({
   imports: [
     ConfigModule,
