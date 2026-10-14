@@ -6,7 +6,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { startMongod, type TestMongod } from "../../helpers/mongod";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 
 type Db = typeof import("../../../src/infra/db");
 
@@ -22,7 +22,8 @@ let db: Db;
 beforeAll(async () => {
   mongod = await startMongod();
   db = require("../../../src/infra/db") as Db;
-});
+  assertConfigReaches(mongod, (require("../../../src/infra/config") as { mongo: { url: string } }).mongo.url);
+}, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
   try {

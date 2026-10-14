@@ -22,7 +22,7 @@ import http from "node:http";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ObjectId, type Collection, type Document } from "mongodb";
 import request from "supertest";
-import { clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { LoopbackServers } from "../../helpers/nest/loopback-servers";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
@@ -137,6 +137,7 @@ beforeAll(async () => {
 
   db = require("../../../src/infra/db") as Db;
   config = require("../../../src/infra/config") as Config;
+  assertConfigReaches(mongod, config.mongo.url);
   buildTestApp = (require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp }).buildTestApp;
   modules = [
     (require("../../../src/scheduling/scheduling.module") as { SchedulingModule: unknown }).SchedulingModule,
@@ -147,7 +148,7 @@ beforeAll(async () => {
   // The crawler owns this unique index; production has it, so a seeding mistake fails here too.
   await notices.createIndex({ articleNo: 1, sourceId: 1 }, { unique: true });
   app = await buildTestApp({ imports: modules as never[], role: "api" });
-});
+}, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
   try {

@@ -4,9 +4,10 @@
  * process writes what it fetched to `bus_cache`, and an api replica, whose own
  * pollers never run, serves the realtime and station routes from it.
  *
- * Each test boots two apps on one mongod: a "poller" app whose PollerRegistry
- * is a spy, so the test runs a registered poller's tick by name, and an "api"
- * app with nothing overridden. Upstream APIs (HSSC, TOPIS) are a loopback
+ * Each test boots two apps on one mongod, both with ROLE=api so no poller
+ * starts on its own: a "poller" app, booted under a spy on
+ * PollerRegistryService#registerPoller so the test runs a registered poller's
+ * tick by name, and an "api" app. Neither overrides a provider. Upstream APIs (HSSC, TOPIS) are a loopback
  * server reached through an axios request interceptor; their payloads are
  * hand-written in the shapes the pollers read (the client fixtures are task 6.6).
  * `Date` is frozen at 10:00 KST on a Tuesday.
@@ -18,15 +19,14 @@ import http from "node:http";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Collection } from "mongodb";
 import request from "supertest";
-import { clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { LoopbackServers } from "../../helpers/nest/loopback-servers";
-// Safe to load before startMongod(): the registry reaches no config.
-import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type Axios = import("axios").AxiosStatic;
+type Registry = typeof import("../../../src/scheduling/poller-registry.service")["PollerRegistryService"];
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const DO_NOT_FAKE = [
@@ -93,6 +93,7 @@ let config: Config;
 let axios: Axios;
 let interceptor: number;
 let buildTestApp: BuildTestApp;
+let PollerRegistryService: Registry;
 let modules: unknown[];
 let busCache: Collection;
 let pollers: Map<string, () => Promise<unknown> | unknown>;
@@ -106,6 +107,7 @@ beforeAll(async () => {
 
   db = require("../../../src/infra/db") as Db;
   config = require("../../../src/infra/config") as Config;
+  assertConfigReaches(mongod, config.mongo.url);
   axios = (require("axios") as { default: Axios }).default;
   interceptor = axios.interceptors.request.use((outgoing) => {
     const original = new URL(outgoing.url as string);
@@ -113,12 +115,14 @@ beforeAll(async () => {
     return outgoing;
   });
   buildTestApp = (require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp }).buildTestApp;
+  PollerRegistryService = (require("../../../src/scheduling/poller-registry.service") as { PollerRegistryService: Registry })
+    .PollerRegistryService;
   modules = [
     (require("../../../src/scheduling/scheduling.module") as { SchedulingModule: unknown }).SchedulingModule,
     (require("../../../src/bus/bus.module") as { BusModule: unknown }).BusModule,
   ];
   busCache = db.getClient().db(config.mongo.dbName).collection(config.mongo.collections.busCache);
-});
+}, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
   try {
@@ -136,22 +140,15 @@ beforeEach(async () => {
   upstream.station = STATION_BODY;
   upstream.requests = [];
   await clearCollections(db.getClient().db(config.mongo.dbName));
-  pollers = new Map();
-  const registry = {
-    registerPoller: (fn: () => unknown, _intervalMs: number, name: string) => pollers.set(name, fn),
-    startAll: () => undefined,
-    stopAll: () => undefined,
-    isReady: () => true,
-    onApplicationBootstrap: () => undefined,
-    onApplicationShutdown: () => undefined,
-  };
-  pollerApp = await buildTestApp({
-    imports: modules as never[],
-    overrides: [{ provide: PollerRegistryService, useValue: registry }],
-    role: "poller",
-  });
+  const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller");
+  try {
+    pollerApp = await buildTestApp({ imports: modules as never[], role: "api" });
+    pollers = new Map(registered.mock.calls.map(([fn, , name]) => [name, fn]));
+  } finally {
+    registered.mockRestore();
+  }
   apiApp = await buildTestApp({ imports: modules as never[], role: "api" });
-});
+}, APP_BOOT_TIMEOUT_MS);
 
 afterEach(async () => {
   jest.useRealTimers();

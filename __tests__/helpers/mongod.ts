@@ -23,6 +23,15 @@ import net from "node:net";
 import type { Db } from "mongodb";
 import { MongoMemoryServer } from "mongodb-memory-server";
 
+/**
+ * For the `beforeAll` that starts mongod and boots the app: a first start after
+ * `npm ci` (macOS verifies a new binary) or a loaded CI worker can pass Jest's 5 s default.
+ */
+export const MONGOD_START_TIMEOUT_MS = 30_000;
+
+/** For a `beforeEach` that boots Nest apps against mongod. */
+export const APP_BOOT_TIMEOUT_MS = 15_000;
+
 export interface TestMongod {
   /** `mongodb://127.0.0.1:<port>/`, also set as MONGO_URL until `stop()`. */
   readonly uri: string;
@@ -59,6 +68,20 @@ export async function startMongod(): Promise<TestMongod> {
       }
     },
   };
+}
+
+/**
+ * Throws when src/infra/config.ts was loaded before `startMongod()` (a static
+ * import that reaches config, even through another module), so its MONGO_URL
+ * points elsewhere and the app would hang on, or write to, another database.
+ */
+export function assertConfigReaches(mongod: TestMongod, configuredUrl: string): void {
+  if (configuredUrl !== mongod.uri) {
+    throw new Error(
+      `src/infra/config.ts holds MONGO_URL ${configuredUrl}, not the test mongod ${mongod.uri}: ` +
+        "it was loaded before startMongod(). Import src/ only as types and require() it in beforeAll.",
+    );
+  }
 }
 
 /**
