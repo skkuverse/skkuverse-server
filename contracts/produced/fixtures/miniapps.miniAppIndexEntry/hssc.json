@@ -1,0 +1,18 @@
+{
+  "_about": "One entry of GET /miniapps captured from production 2026-10-14 (stage 8b snapshot); the entry with a shortName and a remote logo under the web origin",
+  "data": {
+    "id": "hssc",
+    "name": "인사캠 총학생회",
+    "shortName": "인사캠 총학",
+    "order": 10,
+    "homeLogo": {
+      "kind": "remote",
+      "uri": "https://skkuverse.com/miniapps/hssc.png"
+    },
+    "shellLogo": {
+      "kind": "remote",
+      "uri": "https://skkuverse.com/miniapps/hssc.png"
+    },
+    "hidden": true
+  }
+}

@@ -19,7 +19,7 @@ jest.mock("../../../src/infra/logger", () => ({
   debug: jest.fn(),
 }));
 
-import { MiniAppsService } from "../../../src/miniapps/miniapps.service";
+import { MiniappsService } from "../../../src/miniapps/miniapps.service";
 import { MapEventService } from "../../../src/map/event/map-event.service";
 import type { LayerSet } from "../../../src/map/layer-set/map-layer-set.schema";
 import type { MapLayerSetService } from "../../../src/map/layer-set/map-layer-set.service";
@@ -37,7 +37,7 @@ const getEventOverlays = () => service.getEventOverlays();
 beforeEach(() => {
   repository = new FakeMapRepository();
   const layerSet = { liveLayerSet: mockLiveLayerSet } as unknown as MapLayerSetService;
-  service = new MapEventService(asReal<MapRepository>(repository), layerSet, new MiniAppsService());
+  service = new MapEventService(asReal<MapRepository>(repository), layerSet, new MiniappsService());
 });
 
 const RING: [number, number][] = [

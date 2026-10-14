@@ -1,0 +1,14 @@
+{
+  "_about": "Synthetic, never captured (a push payload has no capture): mirrors the payload toPushPayload builds and PushFunctionName02 in skkuverse-app/private-file reads, with a miniapp action",
+  "data": {
+    "type": "miniapp",
+    "miniAppId": "eskara-2026",
+    "notificationId": "b9d6677f-7842-4594-b197-a36e8e3a8347",
+    "title_ko": "[아티스트] 공연 시작",
+    "body_ko": "무대를 함께 즐겨보세요!",
+    "title_en": null,
+    "body_en": null,
+    "actionType": "miniapp",
+    "actionValue": "eskara-2026/eskara/lineup"
+  }
+}
