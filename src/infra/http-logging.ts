@@ -45,6 +45,12 @@ function isHealthProbe(req: IncomingMessage): boolean {
   return (req.url ?? "").startsWith("/health");
 }
 
+/** WHY: the route template, not the URL, so 5xx group per endpoint; set on the access line only, never twice. */
+function withRoute<T extends object>(req: IncomingMessage, line: T): T {
+  const route = (req as IncomingMessage & { route?: { path?: unknown } }).route?.path;
+  return typeof route === "string" ? { ...line, route } : line;
+}
+
 export function httpLoggerOptions(target: Logger = logger): Options {
   return {
     logger: target,
@@ -60,6 +66,9 @@ export function httpLoggerOptions(target: Logger = logger): Options {
       appVersion: req.headers["x-app-version"] || null,
       platform: req.headers["x-platform"] || null,
     }),
+    customSuccessObject: (req, _res, line: object) => withRoute(req, line),
+    customErrorObject: (...args: Parameters<NonNullable<Options["customErrorObject"]>>) =>
+      withRoute(args[0], args[3] as object),
   };
 }
 
