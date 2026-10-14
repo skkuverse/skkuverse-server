@@ -13,7 +13,6 @@ import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import type { MapChipSpec } from "../layer-set/map-layer-set.types";
 import { BASE_LAYERS } from "../map.constants";
 import type { MapRepository } from "../map.repository";
-import { chipGroupOf } from "../map.rules";
 import { toMapChips, toMapConfig, toMapLayers } from "./map-config.mapper";
 import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
@@ -28,6 +27,8 @@ const BASE_CHIPS = LAYER_SET.servedChipSpecs(null);
 
 /** What /map/config serves while this festival is live. */
 const CATALOGUE = LAYER_SET.servedLayerSpecs(CONFIG);
+// undefined for an id the catalogue lacks, else the layer's chip group (null: no chip may touch it).
+const chipGroupOf = (layerId: string): string | null | undefined => CATALOGUE.find((layer) => layer.id === layerId)?.chipGroupId;
 const SERVED = LAYER_SET.servedChipSpecs(CONFIG);
 
 const camera = { lat: 37.29, lng: 126.97, zoom: 17, tilt: 0, bearing: 6, durationMs: 500 };
@@ -176,7 +177,7 @@ describe("focus actions", () => {
     for (const chip of chips) {
       if (chip.action.kind !== "focus") continue;
       const groups = new Set(
-        chip.action.layerIds.map((layerId) => chipGroupOf(CATALOGUE, layerId)),
+        chip.action.layerIds.map((layerId) => chipGroupOf(layerId)),
       );
       expect(groups.size).toBe(1);
       const group = [...groups][0];

@@ -3,10 +3,9 @@ import path from "path";
 import type { z } from "zod";
 import logger from "../../infra/logger";
 import { BASE_LAYERS } from "../map.constants";
-import { assertValidChipSpecs, validateChipSpecs } from "../map.rules";
 import { BASE_CHIPS, LAYER_SET_FILES } from "./map-layer-set.constants";
 import { eventChipSpecs, eventLayerSpecs } from "./map-layer-set.mapper";
-import { crossReferenceIssue } from "./map-layer-set.rules";
+import { assertValidChipSpecs, crossReferenceIssue, validateChipSpecs } from "./map-layer-set.rules";
 import { layerSetFile, type LayerSet } from "./map-layer-set.schema";
 import type { LoadedConfig } from "./map-layer-set.types";
 
