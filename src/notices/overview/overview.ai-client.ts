@@ -58,7 +58,7 @@ function transportCode(err: unknown): string {
 @Injectable()
 export class OverviewAiClient {
   async generate(body: AiOverviewRequest): Promise<AiOverviewResult> {
-    const base = config.notices.overview.aiApiUrl!.replace(/\/+$/, "");
+    const base = config.notices.overview.aiApiUrl.replace(/\/+$/, "");
     let res: AxiosResponse<unknown>;
     try {
       res = await axios.post<unknown>(`${base}/api/notices/overview`, body, {
