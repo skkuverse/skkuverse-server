@@ -15,37 +15,22 @@ interface PollerRegistration {
   name: string;
 }
 
-/** Health of one poller, kept between ticks. */
 interface PollerHealth {
-  /** Under FAST_POLLER_MS between ticks: debounced, and counted by the cron monitor. */
-  fast: boolean;
+  isFast: boolean;
   failures: number;
   failingSince: number | null;
-  /** Declared failing: the error has been logged and sent to Sentry. */
-  declared: boolean;
+  isDeclaredFailing: boolean;
   lastReportAt: number;
 }
 
-/**
- * A fast poller is declared failing after this many failed ticks in a row, so
- * one timeout does not page anyone. A slow one (a minute or more between
- * ticks) is declared on its first failure: by the third it would be an hour
- * late.
- */
+// WHY: a fast poller is declared failing only after a run of failed ticks, so one timeout pages no
+// one; a slow one (a minute or more between ticks) on its first, since by its third it is an hour late.
 const FAST_POLLER_MS = 60_000;
 const FAST_FAIL_AFTER = 3;
-/** While a poller stays down, say so again this often (warn, Sentry Logs only). */
 const STILL_FAILING_EVERY_MS = 15 * 60_000;
 
-/**
- * Sentry cron monitor for the poller process. Every few minutes it checks in:
- * "error" while a fast poller is declared failing, "ok" otherwise. A slow
- * poller is left out: its first failure already opened its own Issue, and its
- * "error" would last at least one interval (a week for building-sync), hiding
- * the fast pollers. Sentry raises an Issue when check-ins report errors or stop
- * coming — the second case being a poller process that died or hangs, which no
- * log line can report. Created on the first check-in from `monitorConfig`.
- */
+// QUIRK(sentry): the cron monitor is created from MONITOR_CONFIG on its first check-in, and raises an
+// Issue when check-ins report "error" or stop coming: a dead or hung poller process logs nothing.
 const HEARTBEAT_MS = 5 * 60_000;
 const MONITOR_SLUG = "skkuverse-pollers";
 const MONITOR_CONFIG = {
@@ -55,25 +40,7 @@ const MONITOR_CONFIG = {
   recoveryThreshold: 1,
 } as const;
 
-/**
- * Runs the registered pollers: an immediate warm-up run, then one per
- * interval, never two of the same poller at once.
- *
- * A poller reports its outcome by resolving or rejecting; it does not log its
- * own failures. The registry turns outcomes into state transitions — one error
- * line (and one Sentry Issue) when a poller becomes failing, a reminder while
- * it stays down, one info line when it recovers — so an upstream outage costs
- * a few lines instead of one per tick. Single failed ticks are debug. Only the
- * fast pollers drive the cron monitor; a slow one reports through its own Issue.
- *
- * Lifecycle:
- *  - Poller services register themselves in their own onModuleInit (module init
- *    phase), which always precedes onApplicationBootstrap (app bootstrap phase),
- *    so all registrations are complete before startAll() may fire here.
- *  - onApplicationBootstrap: startAll() gated on ROLE !== "api" (covers
- *    "poller" and "combined"; under "api" no pollers start).
- *  - onApplicationShutdown: stopAll().
- */
+// SEE: docs/reference/logging.md for the poller.failing, poller.still_failing and poller.recovered lines.
 @Injectable()
 export class PollerRegistryService
   implements OnApplicationBootstrap, OnApplicationShutdown
@@ -90,14 +57,7 @@ export class PollerRegistryService
   startAll(): void {
     this.intervalIds = this.registeredPollers.map(({ fn, intervalMs, name }) => {
       logger.info({ event: "poller.started", name, intervalMs }, "Starting poller");
-      const health: PollerHealth = {
-        fast: intervalMs < FAST_POLLER_MS,
-        failures: 0,
-        failingSince: null,
-        declared: false,
-        lastReportAt: 0,
-      };
-      this.health.set(name, health);
+      const health = this.trackHealth(name, intervalMs);
       let inFlight = false;
       const guarded = (): void => {
         if (inFlight) {
@@ -108,8 +68,8 @@ export class PollerRegistryService
           return;
         }
         inFlight = true;
-        // Called synchronously (the warm-up run starts at once); a synchronous
-        // throw is treated like a rejection.
+        // WHY: the warm-up run calls fn synchronously, so a synchronous throw is turned into a
+        // rejection here rather than escaping startAll.
         let result: unknown;
         try {
           result = fn();
@@ -145,11 +105,12 @@ export class PollerRegistryService
     );
   }
 
-  /** Names of the pollers currently declared failing. */
   failingPollers(): string[] {
-    return [...this.health].filter(([, h]) => h.declared).map(([name]) => name);
+    return [...this.health].filter(([, h]) => h.isDeclaredFailing).map(([name]) => name);
   }
 
+  // QUIRK(nest): every onModuleInit, where the pollers register, runs before any
+  // onApplicationBootstrap, so startAll sees every registration.
   onApplicationBootstrap(): void {
     if (config.runsPollers()) {
       this.startAll();
@@ -160,8 +121,20 @@ export class PollerRegistryService
     this.stopAll();
   }
 
+  private trackHealth(name: string, intervalMs: number): PollerHealth {
+    const health: PollerHealth = {
+      isFast: intervalMs < FAST_POLLER_MS,
+      failures: 0,
+      failingSince: null,
+      isDeclaredFailing: false,
+      lastReportAt: 0,
+    };
+    this.health.set(name, health);
+    return health;
+  }
+
   private recordSuccess(name: string, health: PollerHealth): void {
-    if (health.declared) {
+    if (health.isDeclaredFailing) {
       logger.info(
         {
           event: "poller.recovered",
@@ -174,17 +147,17 @@ export class PollerRegistryService
     }
     health.failures = 0;
     health.failingSince = null;
-    health.declared = false;
+    health.isDeclaredFailing = false;
   }
 
   private recordFailure(name: string, health: PollerHealth, err: unknown): void {
     const now = Date.now();
     health.failures += 1;
     if (health.failingSince === null) health.failingSince = now;
-    const failAfter = health.fast ? FAST_FAIL_AFTER : 1;
+    const failAfter = health.isFast ? FAST_FAIL_AFTER : 1;
 
-    if (!health.declared && health.failures >= failAfter) {
-      health.declared = true;
+    if (!health.isDeclaredFailing && health.failures >= failAfter) {
+      health.isDeclaredFailing = true;
       health.lastReportAt = now;
       logger.error(
         { event: "poller.failing", name, failures: health.failures, err },
@@ -193,7 +166,7 @@ export class PollerRegistryService
       Sentry.captureException(err, { tags: { poller: name } });
       return;
     }
-    if (health.declared && now - health.lastReportAt >= STILL_FAILING_EVERY_MS) {
+    if (health.isDeclaredFailing && now - health.lastReportAt >= STILL_FAILING_EVERY_MS) {
       health.lastReportAt = now;
       logger.warn(
         {
@@ -213,8 +186,10 @@ export class PollerRegistryService
     );
   }
 
+  // WHY: a slow poller's first failure already opened its own Issue, and its "error" would last an
+  // interval (a week for building-sync), hiding the fast pollers.
   private heartbeat(): void {
-    const down = [...this.health.values()].some((h) => h.fast && h.declared);
+    const down = [...this.health.values()].some((h) => h.isFast && h.isDeclaredFailing);
     Sentry.captureCheckIn(
       { monitorSlug: MONITOR_SLUG, status: down ? "error" : "ok" },
       MONITOR_CONFIG,
