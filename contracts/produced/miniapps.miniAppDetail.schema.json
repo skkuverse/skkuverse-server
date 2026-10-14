@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number"
+    },
+    "id": {
+      "type": "string"
+    },
+    "startUrl": {
+      "type": "string"
+    },
+    "verified": {
+      "type": "boolean"
+    },
+    "description": {
+      "type": "string"
+    },
+    "relatedLinks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      }
+    },
+    "noticeBanner": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "subtitle"
+      ]
+    },
+    "shell": {
+      "type": "object",
+      "properties": {
+        "bar": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "none"
+          ]
+        },
+        "header": {
+          "type": "string",
+          "enum": [
+            "opaque",
+            "overlay"
+          ]
+        },
+        "statusBar": {
+          "type": "string",
+          "enum": [
+            "dark",
+            "light"
+          ]
+        },
+        "background": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bar",
+        "header",
+        "statusBar",
+        "background"
+      ]
+    }
+  },
+  "required": [
+    "version",
+    "id",
+    "startUrl",
+    "verified",
+    "relatedLinks",
+    "shell"
+  ]
+}

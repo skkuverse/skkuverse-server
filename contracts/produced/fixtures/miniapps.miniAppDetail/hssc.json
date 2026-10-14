@@ -1,0 +1,16 @@
+{
+  "_about": "GET /miniapps/hssc captured from production 2026-10-14 (stage 8b snapshot, Accept-Language ko); whole data",
+  "data": {
+    "version": 1,
+    "id": "hssc",
+    "startUrl": "https://student.skku.edu/student/notice2.do",
+    "verified": true,
+    "relatedLinks": [],
+    "shell": {
+      "bar": "bottom",
+      "header": "opaque",
+      "statusBar": "dark",
+      "background": "#FFFFFF"
+    }
+  }
+}
