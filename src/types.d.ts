@@ -21,8 +21,8 @@ declare global {
       // 500 → ops alert. A test app without request logging hits the same
       // throw path.
       log: Logger;
-      // WHY: X-Response-Time counts from here, LangMiddleware's startResponseTimer(), which main.ts mounts
-      // after helmet, request logging and the JSON body parser, not at request entry.
+      // WHY: X-Response-Time counts from here, LangMiddleware's startResponseTimer(), which bootstrapHttpApp
+      // mounts after helmet, request logging and the JSON body parser, not at request entry.
       __startNs?: bigint;
     }
   }

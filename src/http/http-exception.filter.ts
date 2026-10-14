@@ -9,7 +9,7 @@ import type { Request, Response } from "express";
 import logger from "../infra/logger";
 import { currentLogContext } from "../infra/log-context";
 import { AppError } from "./app.error";
-import { setResponseTime } from "./response.interceptor";
+import { setResponseTime } from "../infra/response-time";
 
 interface ErrorAnswer {
   status: number;
