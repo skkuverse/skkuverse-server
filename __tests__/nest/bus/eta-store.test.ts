@@ -80,7 +80,7 @@ describe("writeEtas", () => {
     await expect(writeEtas([doc], seqLength)).resolves.toEqual({ written: 0, skippedFrozen: 1 });
     expect(coll.find).toHaveBeenCalledWith(
       { _id: { $in: [doc._id] }, frozen: true },
-      { projection: { _id: 1, offsetsSec: 1 } },
+      { projection: { _id: 1, offsetsSec: 1 }, maxTimeMS: 3_000 },
     );
     expect(coll.bulkWrite).not.toHaveBeenCalled();
   });

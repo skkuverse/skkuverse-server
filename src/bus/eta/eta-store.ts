@@ -115,7 +115,10 @@ export async function writeEtas(
   // A fixed value for another stop count (the catalog changed since) is no
   // longer served, so it may be replaced.
   const frozen = await coll
-    .find({ _id: { $in: docs.map((d) => d._id) }, frozen: true }, { projection: { _id: 1, offsetsSec: 1 } })
+    .find(
+      { _id: { $in: docs.map((d) => d._id) }, frozen: true },
+      { projection: { _id: 1, offsetsSec: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+    )
     .toArray();
   const frozenLength = new Map(frozen.map((d) => [d._id, d.offsetsSec.length]));
   const toWrite = docs.filter((d) => frozenLength.get(d._id) !== d.offsetsSec.length);
@@ -131,7 +134,7 @@ export async function writeEtas(
 /** The documents of some services on some dates, expired or not: what the pollers decide from. */
 export async function readEtas(serviceIds: string[], dates: string[]): Promise<ShuttleEtaDoc[]> {
   return collection()
-    .find({ serviceId: { $in: serviceIds }, date: { $in: dates } })
+    .find({ serviceId: { $in: serviceIds }, date: { $in: dates } }, { maxTimeMS: HOT_READ_MAX_TIME_MS })
     .toArray();
 }
 

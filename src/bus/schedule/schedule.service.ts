@@ -1,6 +1,6 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import moment from "moment-timezone";
-import { getClient } from "../../infra/db";
+import { getClient, HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import config from "../../infra/config";
 import logger from "../../infra/logger";
 import { createLogThrottle } from "../../infra/log-throttle";
@@ -170,9 +170,9 @@ export class ScheduleService implements OnModuleInit {
     const [overridesRaw, patternsRaw] = await Promise.all([
       db
         .collection("bus_overrides")
-        .find({ serviceId, date: { $gte: from, $lte: sundayStr } })
+        .find({ serviceId, date: { $gte: from, $lte: sundayStr } }, { maxTimeMS: HOT_READ_MAX_TIME_MS })
         .toArray(),
-      db.collection("bus_schedules").find({ serviceId }).toArray(),
+      db.collection("bus_schedules").find({ serviceId }, { maxTimeMS: HOT_READ_MAX_TIME_MS }).toArray(),
     ]);
     const overrides = overridesRaw as unknown as BusOverrideDoc[];
     const patterns = patternsRaw as unknown as BusScheduleDoc[];
