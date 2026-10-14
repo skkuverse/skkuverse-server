@@ -5,7 +5,7 @@
  * `articleNo_1_sourceId_1`. This module adds the read-path compound
  * index that covers list queries with the {date, _id} cursor.
  */
-import { getClient } from "../infra/db";
+import { getClient, HOT_READ_MAX_TIME_MS } from "../infra/db";
 import config from "../infra/config";
 import { buildCursorFilter, encodeCursor } from "./notices.cursor";
 import { escapeRegex } from "../shared/regex.util";
@@ -157,7 +157,7 @@ async function _findNotices(
   const docs = (await col
     // mongodb v7's Filter<NoticeDoc> is strict; the dynamic $and shape above
     // is type-checked at the boundary via the Record<string, unknown> cast.
-    .find(filter as never, { projection: LIST_PROJECTION })
+    .find(filter as never, { projection: LIST_PROJECTION, maxTimeMS: HOT_READ_MAX_TIME_MS })
     .sort({ date: -1, _id: -1 })
     .hint(FORCE_INDEX)
     .limit(limit + 1)
@@ -221,7 +221,7 @@ async function findNoticeByArticleNo(
       articleNo: Number(articleNo),
       isDeleted: { $ne: true },
     } as never,
-    { projection: DETAIL_PROJECTION },
+    { projection: DETAIL_PROJECTION, maxTimeMS: HOT_READ_MAX_TIME_MS },
   )) as NoticeDoc | null;
 }
 
