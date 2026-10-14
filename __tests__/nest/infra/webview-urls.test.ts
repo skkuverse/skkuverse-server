@@ -17,7 +17,7 @@
  * of these payloads is covered without this file being updated.
  */
 import type { Clock } from "../../../src/infra/clock";
-import { MiniAppsService } from "../../../src/miniapps/miniapps.service";
+import { MiniappsService } from "../../../src/miniapps/miniapps.service";
 import { UiCampusService } from "../../../src/ui/campus/ui-campus.service";
 import fs from "fs";
 import path from "path";
@@ -63,7 +63,7 @@ const registryDetails = Object.fromEntries(
 const clock: Clock = { now: () => new Date("2026-10-13T03:00:00.000Z") };
 
 const payloads: Record<string, unknown> = {
-  "GET /ui/home/campus": new UiCampusService(new MiniAppsService(), clock).getCampusSheet("ko"),
+  "GET /ui/home/campus": new UiCampusService(new MiniappsService(), clock).getCampusSheet("ko"),
   "GET /ui/home/scroll": new UiScrollService().listScrollCards("ko"),
   "GET /bus/config": getBusGroups(),
   "src/miniapps/details/*.json": registryDetails,

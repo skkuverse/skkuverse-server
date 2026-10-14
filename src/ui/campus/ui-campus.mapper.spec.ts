@@ -4,12 +4,12 @@
  * sheet has no default banner to draw in an empty slot.
  */
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
-import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import { loadCampusBanners } from "./ui-campus.config";
 import { toCampusSheet } from "./ui-campus.mapper";
 import type { CampusBannerCarouselRaw } from "./ui-campus.schema";
 
-const registry = new MiniAppsService();
+const registry = new MiniappsService();
 
 const IMAGE_URL = "https://media.skkuverse.com/campus/banners/test-00000000.webp";
 

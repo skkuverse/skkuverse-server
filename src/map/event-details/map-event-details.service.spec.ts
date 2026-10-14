@@ -18,7 +18,7 @@ import fs from "fs";
 import path from "path";
 import type { Clock } from "../../infra/clock";
 import { MEDIA_ORIGIN } from "../../infra/origins";
-import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import { MapEventService } from "../event/map-event.service";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import type { MapPlaceDoc } from "../map.document";
@@ -53,7 +53,7 @@ beforeEach(() => {
   const real = asReal<MapRepository>(repository);
   const layerSet = new MapLayerSetService(real, CLOCK);
   detailsService = new MapEventDetailsService(real, layerSet);
-  eventService = new MapEventService(real, layerSet, new MiniAppsService());
+  eventService = new MapEventService(real, layerSet, new MiniappsService());
 });
 const getEventPlaceDetails = () => detailsService.getEventPlaceDetails();
 const getEventOverlays = () => eventService.getEventOverlays();

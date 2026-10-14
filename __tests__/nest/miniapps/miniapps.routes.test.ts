@@ -1,12 +1,7 @@
 /**
- * Integration test for MiniAppsController (GET /miniapps, GET /miniapps/:id).
- *
- * Builds a NestExpressApplication mirroring main.ts's pipeline for these routes:
- *   pino-http → express.json → LangMiddleware (req.lang + __startNs + Vary)
- *     → GeneralRateLimitMiddleware (MiniAppsModule.configure forRoutes("miniapps"))
- *     → controller (plain return)
- *     → global ResponseInterceptor ({ meta, data } envelope)
- *     → HttpExceptionFilter.
+ * GET /miniapps and GET /miniapps/:id through the production pipeline
+ * (buildTestApp): the real catalog controller, service and registry, over a
+ * manifest client that answers no shell fields and the notification fakes.
  *
  * These endpoints are the SSOT the mobile client replaced its bundled registry
  * with, so the guards that matter are: the index is ordered, image logo URIs are
@@ -14,81 +9,56 @@
  * directly into <Image source={{uri}}>), every index id resolves to a detail,
  * and an unknown slug 404s rather than 200-ing with null.
  */
-// The registry itself is static JSON with no database, which is why this file
-// builds the REAL MiniAppsModule rather than stubbing its service. Since
-// skkuverse#17 that module also carries MiniAppNotificationsService, whose
-// onModuleInit creates the feed's Mongo index — so without this mock, app.init()
-// tries to reach Atlas and the beforeAll hook times out. It fails only where
-// there is no route to Mongo, which is CI and not a laptop that gets a fast
-// connection refusal, so mocking here is what keeps the two agreeing.
-jest.mock("../../../src/miniapps/miniapps.data", () => ({
-  ensureIndexes: jest.fn(async () => undefined),
-  insertSentNotification: jest.fn(async () => undefined),
-  recordDelivery: jest.fn(async () => undefined),
-  listSentNotifications: jest.fn(async () => []),
-}));
-
-import { Module } from "@nestjs/common";
-import { ExpressAdapter } from "@nestjs/platform-express";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { Test } from "@nestjs/testing";
-import express from "express";
-import { mountRequestLogging } from "../../../src/infra/http-logging";
 import request from "supertest";
 import { MEDIA_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
+import { Clock } from "../../../src/infra/clock";
 import { ConfigModule } from "../../../src/config/config.module";
-import { MiniAppsModule } from "../../../src/miniapps/miniapps.module";
-import { LangMiddleware } from "../../../src/http/lang.middleware";
-import { ResponseInterceptor } from "../../../src/http/response.interceptor";
-import { HttpExceptionFilter } from "../../../src/http/http-exception.filter";
-
-@Module({
-  imports: [ConfigModule, MiniAppsModule],
-})
-class TestMiniAppsModule {}
+import { MiniappsModule } from "../../../src/miniapps/miniapps.module";
+import { MiniappsCatalogClient } from "../../../src/miniapps/catalog/miniapps-catalog.client";
+import { MiniappsCatalogModule } from "../../../src/miniapps/catalog/miniapps-catalog.module";
+import { MiniappsNotificationsClient } from "../../../src/miniapps/notifications/miniapps-notifications.client";
+import { MiniappsNotificationsModule } from "../../../src/miniapps/notifications/miniapps-notifications.module";
+import { MiniappsNotificationsRepository } from "../../../src/miniapps/notifications/miniapps-notifications.repository";
+import { FakeMiniappsCatalogClient } from "../../helpers/fakes/miniapps/miniapps-catalog.client.fake";
+import { FakeMiniappsNotificationsClient } from "../../helpers/fakes/miniapps/miniapps-notifications.client.fake";
+import { FakeMiniappsNotificationsRepository } from "../../helpers/fakes/miniapps/miniapps-notifications.repository.fake";
+import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { expectWire } from "../../helpers/contracts/expect-wire";
+import { miniAppIndex } from "../../../src/miniapps/catalog/miniapps-catalog.wire";
+import { miniAppDetail } from "../../../src/miniapps/miniapps.wire";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 
+// WHY: one fixed instant, so nothing these routes answer depends on the day the suite runs.
+const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
+
 beforeAll(async () => {
-  // Several details have a first-party (`*.mini.skkuverse.com`) startUrl, so
-  // MiniAppsManifestService.onModuleInit fires a real fetch for each unless
-  // this is stubbed — this suite mocks external dependencies, and a manifest
-  // outage must never fail these routes, so a rejection is exactly the case
-  // that should also be exercised: every mini app falls back to its registry
-  // shell, same as before this feature existed.
-  global.fetch = jest.fn().mockRejectedValue(new Error("no network in tests")) as unknown as typeof fetch;
-  const expressInstance = express();
-  expressInstance.set("trust proxy", 1);
-  mountRequestLogging(expressInstance);
-  expressInstance.use(express.json({ limit: "100kb" }));
-  const lang = new LangMiddleware();
-  expressInstance.use((req, res, next) =>
-    lang.use(req as never, res as never, next),
-  );
-
-  const moduleRef = await Test.createTestingModule({
-    imports: [TestMiniAppsModule],
-  }).compile();
-
-  app = moduleRef.createNestApplication<NestExpressApplication>(
-    new ExpressAdapter(expressInstance),
-    { bodyParser: false },
-  );
-  app.useGlobalInterceptors(new ResponseInterceptor());
-  app.useGlobalFilters(new HttpExceptionFilter());
-  await app.listen(0, "127.0.0.1");
+  // The manifest client answers no shell fields, as a first-party mini app
+  // whose origin is unreachable does: every mini app keeps its registry shell.
+  app = await buildTestApp({
+    imports: [ConfigModule, MiniappsModule, MiniappsNotificationsModule, MiniappsCatalogModule],
+    overrides: [
+      { provide: MiniappsCatalogClient, useValue: new FakeMiniappsCatalogClient() },
+      { provide: MiniappsNotificationsRepository, useValue: new FakeMiniappsNotificationsRepository() },
+      { provide: MiniappsNotificationsClient, useValue: new FakeMiniappsNotificationsClient() },
+      { provide: Clock, useValue: CLOCK },
+    ],
+  });
   httpServer = app.getHttpServer();
 });
 
 afterAll(async () => {
   await app.close();
-  delete (global as { fetch?: typeof fetch }).fetch;
 });
 
 describe("GET /miniapps", () => {
   it("returns { version, miniApps } in the standard envelope", async () => {
+    // Arrange
     const res = await request(httpServer).get("/miniapps");
+
+    // Act & Assert
     expect(res.status).toBe(200);
     expect(res.body.meta.lang).toBe("ko");
     expect(typeof res.body.data.version).toBe("number");
@@ -97,19 +67,26 @@ describe("GET /miniapps", () => {
   });
 
   it("is cacheable by clients and shared caches: static, language-independent", async () => {
+    // Arrange
     const res = await request(httpServer).get("/miniapps");
+
+    // Act & Assert
     expect(res.headers["cache-control"]).toBe("public, max-age=300");
   });
 
   it("orders entries by `order` ascending", async () => {
+    // Arrange
     const res = await request(httpServer).get("/miniapps");
     const orders = res.body.data.miniApps.map(
       (m: { order: number }) => m.order,
     );
+
+    // Act & Assert
     expect(orders).toEqual([...orders].sort((a, b) => a - b));
   });
 
   it("resolves both logos of every entry, image logos to an absolute URL", async () => {
+    // Act & Assert
     const res = await request(httpServer).get("/miniapps");
     for (const entry of res.body.data.miniApps) {
       // The single `logo` is gone; both slots are always present on the wire.
@@ -133,24 +110,33 @@ describe("GET /miniapps", () => {
   });
 
   it("lets the grid tile and the shell logo differ (ESKARA: 📖 tile, poster in the shell)", async () => {
+    // Arrange
     const res = await request(httpServer).get("/miniapps");
     const eskara = res.body.data.miniApps.find((m: { id: string }) => m.id === "eskara-2026");
+
+    // Act & Assert
     expect(eskara.homeLogo).toEqual({ kind: "emoji", emoji: "📖" });
     expect(eskara.shellLogo.kind).toBe("remote");
     expect(eskara.shellLogo.uri.startsWith(`${MEDIA_ORIGIN}/`)).toBe(true);
   });
 
   it("fills an unset logo from the other one", async () => {
+    // Arrange
     const res = await request(httpServer).get("/miniapps");
     const hssc = res.body.data.miniApps.find((m: { id: string }) => m.id === "hssc");
+
+    // Act & Assert
     expect(hssc.shellLogo).toEqual(hssc.homeLogo);
   });
 
   it("keeps hidden entries in the index, flagged, so deep links still resolve them", async () => {
+    // Arrange
     const res = await request(httpServer).get("/miniapps");
     const hidden = res.body.data.miniApps
       .filter((m: { hidden?: boolean }) => m.hidden === true)
       .map((m: { id: string }) => m.id);
+
+    // Act & Assert
     expect(hidden).toEqual([
       "eskara-2026",
       "inja",
@@ -172,14 +158,18 @@ describe("GET /miniapps", () => {
   });
 
   it("serves an emoji logo as the emoji, for the client to draw in Tossface", async () => {
+    // Arrange
     const res = await request(httpServer).get("/miniapps");
     const mukja = res.body.data.miniApps.find((m: { id: string }) => m.id === "mukja");
+
+    // Act & Assert
     // Only homeLogo is authored for mukja; the shell takes the same emoji.
     expect(mukja.homeLogo).toEqual({ kind: "emoji", emoji: "😋" });
     expect(mukja.shellLogo).toEqual({ kind: "emoji", emoji: "😋" });
   });
 
   it("gives every entry a slug id and a display name", async () => {
+    // Act & Assert
     const res = await request(httpServer).get("/miniapps");
     for (const entry of res.body.data.miniApps) {
       expect(entry.id).toMatch(/^[a-z0-9-]+$/);
@@ -189,13 +179,17 @@ describe("GET /miniapps", () => {
   });
 
   it("requires no auth (succeeds without a Bearer token)", async () => {
+    // Arrange
     const res = await request(httpServer).get("/miniapps");
+
+    // Act & Assert
     expect(res.status).toBe(200);
   });
 });
 
 describe("GET /miniapps/:id", () => {
   it("resolves a detail for every id in the index", async () => {
+    // Act & Assert
     const index = await request(httpServer).get("/miniapps");
     for (const entry of index.body.data.miniApps) {
       const res = await request(httpServer).get(`/miniapps/${entry.id}`);
@@ -215,6 +209,7 @@ describe("GET /miniapps/:id", () => {
   });
 
   it("serves DEFAULT_SHELL for a first-party app whose manifest has never loaded (mocked offline)", async () => {
+    // Act & Assert
     // A first-party detail carries no shell of its own (register-a-miniapp.md
     // §2): its manifest is the one source. With the origin unreachable the page
     // is too, so what the shell looks like around it no longer matters.
@@ -230,14 +225,20 @@ describe("GET /miniapps/:id", () => {
   });
 
   it("marks a found detail cacheable", async () => {
+    // Arrange
     const index = await request(httpServer).get("/miniapps");
     const id = index.body.data.miniApps[0].id;
     const res = await request(httpServer).get(`/miniapps/${id}`);
+
+    // Act & Assert
     expect(res.headers["cache-control"]).toBe("public, max-age=300");
   });
 
   it("404s on an unknown slug rather than returning null", async () => {
+    // Arrange
     const res = await request(httpServer).get("/miniapps/does-not-exist");
+
+    // Act & Assert
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("MINIAPP_NOT_FOUND");
     // A slug that ships in a later deploy must not stay a cached 404.
@@ -245,10 +246,34 @@ describe("GET /miniapps/:id", () => {
   });
 
   it("404s on a path-traversal-shaped slug", async () => {
+    // Arrange
     // The loader reads details/<id>.json off disk at boot, never per-request,
     // so a traversal slug can only miss the Map — but assert it, because that
     // guarantee lives in the loader's design and not in the route.
     const res = await request(httpServer).get("/miniapps/..%2F..%2Fpackage");
+
+    // Act & Assert
     expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /miniapps and GET /miniapps/:id wire", () => {
+  it("serves the published index shape", async () => {
+    // Act
+    const res = await request(httpServer).get("/miniapps");
+
+    // Assert
+    expectWire(miniAppIndex, res.body.data);
+  });
+
+  it("serves the published detail shape for every registered mini app", async () => {
+    // Arrange
+    const index = await request(httpServer).get("/miniapps");
+
+    // Act
+    const details = await Promise.all(index.body.data.miniApps.map((entry: { id: string }) => request(httpServer).get(`/miniapps/${entry.id}`)));
+
+    // Assert
+    for (const res of details) expectWire(miniAppDetail, res.body.data);
   });
 });

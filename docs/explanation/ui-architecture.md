@@ -18,7 +18,7 @@ Ui owns no data store. It serves two JSON files committed next to their readers,
 | System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
 | The committed config files | — | The home layout and the campus carousel, edited by hand and shipped with a deploy | `readHomeLayout`, `readCampusBanners` |
-| The mini-app registry | — | Which mini apps exist, the target and emoji checks, and the logo of a link tile | `MiniAppsService`, injected into `UiHomeService` and `UiCampusService` |
+| The mini-app registry | — | Which mini apps exist, the target and emoji checks, and the logo of a link tile | `MiniappsService`, injected into `UiHomeService` and `UiCampusService` |
 | The bus groups | — | Each group's label, card, screen type and visibility | `BusConfigService.getBusGroups`, injected into `UiTransitListService` |
 | moment-timezone | `moment` | A bus group's KST dates and first-day time; a strict parse still reads `24:00` as the next midnight | `isBusGroupVisible` |
 | The translations | — | The titles of the campus buttons and the scroll cards | `t` in `src/infra/i18n.ts` |
@@ -41,7 +41,7 @@ Ui owns no data store. It serves two JSON files committed next to their readers,
 | campus button | One of the campus sheet's service buttons, with an emoji and a link action | `toCampusSheet` | — |
 | bus group card | One bus group as the transit tab lists it: its card and the screen a tap opens | `toBusGroupCard` | `busItem` |
 | scroll card (`ScrollCards`) | One of the three cards `GET /ui/home/scroll` sends | `toScrollCards` | `scrollItem` |
-| registry (`MiniAppRegistry`) | What the boot checks read from `MiniAppsService` | `MiniAppsService` | — |
+| registry (`MiniAppRegistry`) | What the boot checks read from `MiniappsService` | `MiniappsService` | — |
 
 ## Structure
 
@@ -49,7 +49,7 @@ Ui owns no data store. It serves two JSON files committed next to their readers,
 flowchart LR
   homeFile["home-layout.json"] -->|readHomeLayout, checked against the registry| home["UiHomeService"]
   campusFile["campus-banners.json"] -->|readCampusBanners, checked against the registry| campus["UiCampusService"]
-  registry["MiniAppsService"] -->|resolveLogo| home
+  registry["MiniappsService"] -->|resolveLogo| home
   bus["BusConfigService"] -->|bus groups, isBusGroupVisible| transit["UiTransitListService"]
   clock["Clock"] -->|now, for each window| home
   home -->|UI_CACHE_CONTROL| r1["GET /ui/home"]
