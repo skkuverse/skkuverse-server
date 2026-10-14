@@ -1,4 +1,5 @@
 import type { I18n } from "../infra/types";
+import type { MapOverlay } from "./map.wire";
 
 export interface CameraMotion {
   zoom: number;
@@ -39,9 +40,11 @@ export interface LayerSpec {
   style?: MapLayerStyle;
 }
 
-
 export type MapChipActionSpec =
   | { kind: "webview"; url: string }
   | { kind: "focus"; camera: MapCamera; layerIds: readonly string[] };
 
 export type ConfigIssue = readonly [path: PropertyKey[], message: string];
+
+export type OverlayBase = Omit<Extract<MapOverlay, { kind: "polygon" }>, "kind" | "geometry">;
+export type MarkerPresentation = Pick<Extract<MapOverlay, { kind: "marker" }>, "pinPriority" | "locationAccuracy">;
