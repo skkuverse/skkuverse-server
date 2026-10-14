@@ -1,0 +1,6 @@
+{
+  "_about": "The meta of GET /notices/source/skku-notice02?limit=5 captured from production 2026-10-14 (stage 11 shape snapshot), lang removed: the envelope owns it",
+  "data": {
+    "count": 5
+  }
+}

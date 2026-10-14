@@ -1,0 +1,33 @@
+{
+  "_about": "Synthetic, never captured (an overview costs an LLM call per request): the shape NoticesOverviewService serves and __tests__/nest/notices/overview/overview-routes.test.ts pins, one answer citing one notice",
+  "data": {
+    "overview": {
+      "lead": {
+        "text": "ROTC 지원은 10월 13일까지예요.",
+        "cites": [
+          1
+        ]
+      },
+      "points": [
+        {
+          "text": "대상은 1·2학년이에요.",
+          "cites": [
+            1
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "n": 1,
+          "sourceId": "skku-main",
+          "articleNo": 140112,
+          "title": "ROTC 모집",
+          "date": "2026-09-24",
+          "contentMissing": false
+        }
+      ],
+      "lang": "ko",
+      "generatedAt": "2026-10-06T08:00:02.512Z"
+    }
+  }
+}
