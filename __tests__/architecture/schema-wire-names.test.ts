@@ -9,8 +9,8 @@
  * re-exported count, types included; an `export * from` a file of this
  * repository counts as all of that file's names.
  *
- * The allowlist holds the names of modules not yet migrated; a migrated scope
- * carries no entry (migrated-scopes.test.ts).
+ * The rule is strict: no allowlist, and no list may hold an entry under src/
+ * (scope-entries.test.ts).
  */
 import { exportedNamesDeep, exportsOf, parseSource } from "../helpers/architecture/ast";
 import { parse } from "../helpers/architecture/names";

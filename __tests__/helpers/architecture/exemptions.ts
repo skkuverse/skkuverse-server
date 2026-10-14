@@ -1,10 +1,10 @@
 /**
  * A reasoned exemption: `__tests__/architecture/exemptions/<rule>.json`, an
  * object from a file to why the rule does not apply to it. An allowlist
- * (ratchet.ts) records debt in modules not yet migrated and only shrinks, so
- * a migrated scope carries none (migrated-scopes.test.ts). An exemption is a
- * decision that holds in a migrated scope, so it lives apart from the
- * allowlists and every entry states its reason, which review reads.
+ * (ratchet.ts) records debt and only shrinks, and no module scope carries
+ * one (scope-entries.test.ts). An exemption is a decision that holds under
+ * a strict rule, so it lives apart from the allowlists and every entry
+ * states its reason, which review reads.
  *
  * The harness fails on a violation that is not exempt, on an exempt file that
  * no longer violates (delete the entry), on a key written twice (JSON.parse

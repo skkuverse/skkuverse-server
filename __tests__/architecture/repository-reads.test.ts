@@ -24,7 +24,7 @@
  * comment (attached: no blank line between), and a type that a repository
  * reads and no `src/` repository writes must carry one: deleting the tag, or
  * detaching it with a blank line, fails instead of switching the check off.
- * In a migrated scope a repository opens a collection only in a private
+ * In a module scope a repository opens a collection only in a private
  * accessor declared to return `Collection<Type>` whose whole body returns
  * `mongoCollection(…)`. A repository read of a collection of that type
  * (`this.<accessor>().find(…)`, or through a local `const` assigned from the
@@ -39,7 +39,8 @@
  *     the read itself or the local it is assigned to, in the member that
  *     reads, or handed to a member that parses its parameter.
  *
- * In a migrated scope the allowlist is empty (migrated-scopes.test.ts).
+ * The rule is strict: no allowlist, and no list may hold an entry under src/
+ * (scope-entries.test.ts).
  */
 import ts from "typescript";
 import {
@@ -51,7 +52,7 @@ import {
   parseSource,
   skipOuter,
 } from "../helpers/architecture/ast";
-import { inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
@@ -694,9 +695,9 @@ describe("repository reads of documents written outside src/", () => {
     expectAllowlisted("repository-contract-tags", untaggedOutsideWrites(repositories, tagged));
   });
 
-  it("open collections only through a private Collection<T> accessor, in migrated scopes", () => {
+  it("open collections only through a private Collection<T> accessor, in the module scopes", () => {
     // Arrange
-    const files = sourceFiles().filter((f) => f.endsWith(".repository.ts") && migratedScopes().some((scope) => inScope(f, scope)));
+    const files = sourceFiles().filter((f) => f.endsWith(".repository.ts") && moduleScopes().some((scope) => inScope(f, scope)));
 
     // Act & Assert
     expect(files.flatMap((f) => collectionAccessorViolations(f, readSource(f)))).toEqual([]);

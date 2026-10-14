@@ -11,21 +11,17 @@
  * Exempt: `internal/*` (crawler and console callers), `health`, and a handler
  * that takes `@Res()` and writes its own response (the attachment stream). A
  * `@Res()` handler that sends the envelope through `sendSuccess` still serves
- * JSON to a client, so it is checked, and its `void` return fails until its
- * module is migrated. A `@Res({ passthrough: true })` handler returns its
- * payload like any other.
- *
- * The allowlist holds the routes that predate the rule; each refactor group
- * clears its own, and a new route is never on it.
+ * JSON to a client, so it is checked, and its `void` return fails. A
+ * `@Res({ passthrough: true })` handler returns its payload like any other.
+ * The rule is strict: no route is exempt beyond these.
  *
  * Each wire name a route references must also map to an id in
  * `contracts/produced/index.json`: a schema its file exports, or a `z.input`
  * alias of one. An alias of a schema the file keeps private satisfies `tsc`
  * and the check above, yet no published contract describes the route. This
- * check has no allowlist.
+ * check is strict too.
  */
 import { z } from "zod";
-import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 import { clientRoutes, routeWireRefs, unwiredRoutes } from "../helpers/architecture/wire-routes";
 import {
@@ -185,7 +181,7 @@ describe("routes", () => {
     // Assert
     // An empty route list would pass the rule vacuously.
     expect(checked.length).toBeGreaterThan(20);
-    expectAllowlisted("wire-routes", unwired);
+    expect(unwired).toEqual([]);
   });
 
   it("reference only wire names that map to a published contract id", () => {

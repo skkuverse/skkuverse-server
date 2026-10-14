@@ -3,7 +3,7 @@
  * A fake implements every public member (`PublicOf`, fake-shape.test.ts), so a
  * method made public only for a spec spreads into the fakes and the contract.
  *
- * In a migrated scope, each public method of a class in a `.service.ts`,
+ * In a module scope, each public method of a class in a `.service.ts`,
  * `.repository.ts` or `.client.ts` (Nest lifecycle hooks aside) is named, as
  * `<expression>.<method>`, in a non-spec `src/` file other than its own. The
  * type checker resolves each access, so a method sharing a name with another
@@ -18,7 +18,7 @@ import path from "path";
 import ts from "typescript";
 import { NEST_LIFECYCLE, isNonPublic } from "../helpers/architecture/ast";
 import { expectExempted } from "../helpers/architecture/exemptions";
-import { inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
 const CLASS_ROLE = /\.(?:service|repository|client)\.ts$/;
@@ -178,13 +178,13 @@ describe("production caller rule resolves the receiver", () => {
   });
 });
 
-describe("services, repositories and clients in migrated scopes", () => {
+describe("services, repositories and clients in the module scopes", () => {
   it("expose only methods that production code calls", () => {
     // Arrange
     const sources = new Map(sourceFiles().map((f) => [f, readSource(f)]));
 
     // Act
-    const violations = uncalledMethods(sources, migratedScopes());
+    const violations = uncalledMethods(sources, moduleScopes());
 
     // Assert
     expectExempted("production-callers", violations);

@@ -18,7 +18,7 @@ export interface WireTypeRef {
 }
 
 export interface RouteWireRefs {
-  /** `<METHOD> <path>`, as the wire-routes allowlist writes it. */
+  /** `<METHOD> <path>`, as the wire-routes rule reports it. */
   route: string;
   refs: WireTypeRef[];
 }
