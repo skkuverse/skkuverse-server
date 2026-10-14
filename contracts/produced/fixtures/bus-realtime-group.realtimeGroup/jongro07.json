@@ -1,0 +1,36 @@
+{
+  "_about": "GET /bus/realtime/data/jongro07 captured from production 2026-10-14 (stage 12 shape snapshot, Accept-Language ko); buses and stationEtas trimmed to their first entries",
+  "data": {
+    "groupId": "jongro07",
+    "buses": [
+      {
+        "stationIndex": 21,
+        "carNumber": "5537",
+        "estimatedTime": 40,
+        "latitude": "37.587863",
+        "longitude": "126.99237"
+      },
+      {
+        "stationIndex": 21,
+        "carNumber": "5536",
+        "estimatedTime": 40,
+        "latitude": "37.587863",
+        "longitude": "126.99237"
+      }
+    ],
+    "stationEtas": [
+      {
+        "stationIndex": 0,
+        "eta": "운행종료"
+      },
+      {
+        "stationIndex": 1,
+        "eta": "운행종료"
+      },
+      {
+        "stationIndex": 2,
+        "eta": "운행종료"
+      }
+    ]
+  }
+}

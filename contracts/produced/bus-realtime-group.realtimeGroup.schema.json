@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "groupId": {
+      "type": "string"
+    },
+    "buses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "stationIndex": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "carNumber": {
+            "type": "string"
+          },
+          "estimatedTime": {
+            "type": "number"
+          },
+          "latitude": {
+            "type": "string"
+          },
+          "longitude": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stationIndex",
+          "carNumber",
+          "estimatedTime"
+        ]
+      }
+    },
+    "stationEtas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "stationIndex": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "eta": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stationIndex",
+          "eta"
+        ]
+      }
+    }
+  },
+  "required": [
+    "groupId",
+    "buses",
+    "stationEtas"
+  ]
+}

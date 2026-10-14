@@ -1,0 +1,29 @@
+{
+  "_about": "GET /bus/station/01592 captured from production 2026-10-14 (stage 12 shape snapshot, Accept-Language ko)",
+  "data": [
+    {
+      "busNm": "종로07",
+      "busSupportTime": true,
+      "msg1ShowMessage": true,
+      "msg1Message": "정보 없음",
+      "msg1RemainStation": null,
+      "msg1RemainSeconds": null,
+      "msg2ShowMessage": false,
+      "msg2Message": null,
+      "msg2RemainStation": null,
+      "msg2RemainSeconds": null
+    },
+    {
+      "busNm": "인사캠셔틀",
+      "busSupportTime": false,
+      "msg1ShowMessage": true,
+      "msg1Message": "3 정거장 전",
+      "msg1RemainStation": null,
+      "msg1RemainSeconds": null,
+      "msg2ShowMessage": true,
+      "msg2Message": null,
+      "msg2RemainStation": null,
+      "msg2RemainSeconds": null
+    }
+  ]
+}
