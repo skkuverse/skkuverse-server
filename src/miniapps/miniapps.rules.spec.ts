@@ -8,9 +8,10 @@
  * reaches the device if it fails here, and that is the cheaper place to learn.
  * Also the two checks the registry schema refines with: one emoji per logo,
  * counted in graphemes, and a startUrl on the web view that addresses a page.
+ * And the one 404 both flows answer an unregistered id with.
  */
 import { registry } from "./miniapps.config";
-import { isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, parseMiniAppTarget } from "./miniapps.rules";
+import { isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, parseMiniAppTarget, toMiniAppNotFound } from "./miniapps.rules";
 
 describe("parseMiniAppTarget", () => {
   it.each([
@@ -43,12 +44,12 @@ describe("parseMiniAppTarget", () => {
 describe("isKnownMiniAppTarget", () => {
   it("accepts a target naming a registered mini app", () => {
     // Act & Assert
-    expect(isKnownMiniAppTarget("eskara-2026/eskara/wristband", registry.map)).toBe(true);
+    expect(isKnownMiniAppTarget("eskara-2026/eskara/wristband", registry.detailsById)).toBe(true);
   });
 
   it("refuses a well-formed target naming nothing registered", () => {
     // Act & Assert
-    expect(isKnownMiniAppTarget("no-such-app/x", registry.map)).toBe(false);
+    expect(isKnownMiniAppTarget("no-such-app/x", registry.detailsById)).toBe(false);
   });
 });
 
@@ -76,5 +77,19 @@ describe("isServableStartUrl", () => {
   ])("%s → %s", (_label, startUrl, expected) => {
     // Act & Assert
     expect(isServableStartUrl(startUrl)).toBe(expected);
+  });
+});
+
+describe("toMiniAppNotFound", () => {
+  it("is the 404 MINIAPP_NOT_FOUND naming the id", () => {
+    // Act
+    const error = toMiniAppNotFound("no-such-app");
+
+    // Assert
+    expect({ code: error.code, message: error.message, status: error.httpStatus }).toEqual({
+      code: "MINIAPP_NOT_FOUND",
+      message: "Unknown mini-app id: no-such-app",
+      status: 404,
+    });
   });
 });
