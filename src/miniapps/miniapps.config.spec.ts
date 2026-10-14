@@ -397,4 +397,21 @@ describe("loadRegistry", () => {
       }),
     ).toThrow(/bad relatedLinks url/);
   });
+
+  it("rejects an unknown relatedLinks key, naming it", () => {
+    // Act & Assert
+    expect(() =>
+      loadRegistry(index(), { a: { ...details().a, relatedLinks: [{ lable: "typo", url: "https://x.test" }] as never } }),
+    ).toThrow(/unknown relatedLinks key "lable" in "a"/);
+  });
+
+  it("rejects an unknown noticeBanner key, naming it", () => {
+    // Arrange
+    const noticeBanner = { title: "t", subtitle: "s", sutitle: "typo" };
+
+    // Act & Assert
+    expect(() => loadRegistry(index(), { a: { ...details().a, noticeBanner } })).toThrow(
+      /unknown noticeBanner key "sutitle" in "a"/,
+    );
+  });
 });

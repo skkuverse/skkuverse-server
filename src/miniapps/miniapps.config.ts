@@ -10,7 +10,7 @@ import { registryFile, type MiniAppDetailRaw, type RegistryFile } from "./miniap
 import type { LoadedRegistry } from "./miniapps.types";
 
 type Issue = z.core.$ZodRawIssue;
-type Words = (id: string, issue: Issue) => string;
+type Words = (id: string, issue: Issue) => string | undefined;
 
 const LABEL = "miniapp registry";
 
@@ -39,7 +39,9 @@ const DETAIL_WORDS: Readonly<Record<string, Words>> = {
     issue.code === "custom"
       ? `startUrl for "${id}" must address a page on the web view — no fragment, not the root`
       : `bad startUrl for "${id}"`,
-  relatedLinks: (id) => `bad relatedLinks url in "${id}"`,
+  relatedLinks: (id, issue) =>
+    issue.code === "unrecognized_keys" ? `unknown relatedLinks key "${firstKey(issue)}" in "${id}"` : `bad relatedLinks url in "${id}"`,
+  noticeBanner: (id, issue) => (issue.code === "unrecognized_keys" ? `unknown noticeBanner key "${firstKey(issue)}" in "${id}"` : undefined),
 };
 
 function logoWords({ id, field, part }: { id: string; field: string; part: PropertyKey | undefined }, issue: Issue): string {
