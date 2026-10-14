@@ -143,6 +143,7 @@ describe("import boundary blocks apply as specified", () => {
       'import { getClient } from "../infra/db";',
       'import logger from "../infra/logger";',
       'import { config } from "../infra/config";',
+      'import { toWebviewUrl } from "../infra/webview-urls";',
       'import { BuildingRepository } from "./building.repository";',
       'import { BuildingClient } from "./building.client";',
       'import { AppError } from "../http/zod-validation.pipe";',
@@ -159,6 +160,7 @@ describe("import boundary blocks apply as specified", () => {
     for (const source of [
       'import { t } from "../infra/i18n";',
       'import type { SupportedLang } from "../infra/types";',
+      'import { toWebviewUrl } from "../infra/webview-url";',
       'import { AppError } from "../http/app.error";',
       'import { escapeRegex } from "../shared/regex.util";',
       'import { toDisplayNo } from "./building.rules";',
