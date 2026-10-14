@@ -4,7 +4,7 @@
  * import or `require` of a `.json`) parses it through `parseConfigFile`
  * (`src/infra/config-file.ts`), imported from there, so every issue is
  * thrown with its path in one line. A `.config.ts` that holds TypeScript
- * values only (`src/ad/ad.config.ts`) reads no file and is not checked.
+ * values only reads no file and is not checked.
  *
  * A file that keeps its own parse for a reason is exempt in
  * `exemptions/config-files.json` (helpers/architecture/exemptions.ts).
