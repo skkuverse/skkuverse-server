@@ -10,7 +10,7 @@ export interface BuildingConnection {
 }
 
 export interface FloorSpace {
-  spaceCd: SpaceCd;
+  spaceCd: SpaceCd | null;
   name: BilingualText;
   conspaceCd?: string | null;
 }

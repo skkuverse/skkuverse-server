@@ -5,26 +5,11 @@ import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
+import { isRecord } from "../shared/object.util";
 import { parseEach } from "../shared/zod-list.util";
 import type { ActivationDoc, LiveActivation, MapPlaceDoc, OverlayPlaceDoc, SheetPlaceDoc } from "./map.document";
+import { OVERLAY_PLACE_FIELDS, SHEET_PLACE_FIELDS } from "./map.query";
 import { liveActivation, overlayPlaceDoc, sheetPlaceDoc } from "./map.schema";
-
-const OVERLAY_PLACE_FIELDS = {
-  _id: 1,
-  campus: 1,
-  category: 1,
-  location: 1,
-  title: 1,
-  subtitle: 1,
-  hours: 1,
-  fields: 1,
-  actions: 1,
-  order: 1,
-  facets: 1,
-  orderByOption: 1,
-} as const;
-
-const SHEET_PLACE_FIELDS = { _id: 1, category: 1, location: 1, title: 1, hours: 1, fields: 1, actions: 1, detail: 1 } as const;
 
 // WHY: read every TTL, so a bad activation is reported hourly, not every five seconds.
 const INVALID_ACTIVATION_LOG_INTERVAL_MS = 60 * 60 * 1000;
@@ -101,7 +86,7 @@ export class MapRepository implements OnModuleInit {
   }
 
   private idOf(doc: unknown): string {
-    return String((doc as { _id?: unknown })._id);
+    return String(isRecord(doc) ? doc._id : undefined);
   }
 
   private places(): Collection<MapPlaceDoc> {

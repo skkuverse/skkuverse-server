@@ -1,7 +1,7 @@
 import { Injectable, type NestMiddleware } from "@nestjs/common";
 import type { Request, Response, NextFunction } from "express";
 import { SUPPORTED_LANGS, type SupportedLang } from "../infra/types";
-import { startResponseTimer } from "./response.interceptor";
+import { startResponseTimer } from "../infra/response-time";
 
 const SUPPORTED: readonly SupportedLang[] = SUPPORTED_LANGS;
 

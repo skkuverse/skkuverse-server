@@ -1,23 +1,20 @@
-import { toWirePolygon } from "../../shared/ring-winding.util";
 import type { ItemPresentation } from "../layer-set/map-layer-set.schema";
 import type { OverlayPlaceDoc, PlaceAction } from "../map.document";
-import { toI18nText } from "../map.mapper";
+import { toI18nText, toOverlay, toServedWebviewUrl } from "../map.mapper";
+import type { MarkerPresentation, OverlayBase } from "../map.types";
 import { presentationFor } from "../map.rules";
-import { webviewUrl } from "../map.schema";
 import type { MapOverlay } from "../map.wire";
 import { actionDropReason, facetsOf, orderByOptionOf } from "./map-event.rules";
 import type { EventOverlayContext } from "./map-event.types";
 
 type OverlayAction = MapOverlay["actions"][number];
-type OverlayBase = Omit<Extract<MapOverlay, { kind: "polygon" }>, "kind" | "geometry">;
 
 function toOverlayAction(action: PlaceAction): OverlayAction {
   return {
     id: action.id,
     label: toI18nText(action.label),
     actionType: action.actionType,
-    // WHY: a root-relative `webview` value becomes absolute here, so the client only ever sees a complete URL.
-    actionValue: action.actionType === "webview" ? webviewUrl.parse(action.actionValue) : action.actionValue,
+    actionValue: action.actionType === "webview" ? toServedWebviewUrl(action.actionValue) : action.actionValue,
     ...(action.style ? { style: action.style } : {}),
   };
 }
@@ -37,9 +34,8 @@ function toOverlayTap(presentation: ItemPresentation, placeId: string): OverlayB
   return presentation.tapChip ? { kind: "chip", chipId: presentation.tapChip } : { kind: "event", placeId };
 }
 
-function toOverlayBase(doc: OverlayPlaceDoc, context: EventOverlayContext): OverlayBase {
+function toOverlayBase(doc: OverlayPlaceDoc, presentation: ItemPresentation, context: EventOverlayContext): OverlayBase {
   const { layerSet, drops } = context;
-  const presentation = presentationFor(layerSet, doc.category);
   return {
     id: doc._id,
     layerId: presentation.layerId,
@@ -60,21 +56,11 @@ function toOverlayBase(doc: OverlayPlaceDoc, context: EventOverlayContext): Over
   };
 }
 
-/**
- * WHY: points and lines pass through by reference, exactly as stored: an axis swap can only come from a conversion.
- * A polygon's rings are rewound, which never touches the pair inside a position.
- */
 export function toEventOverlay(doc: OverlayPlaceDoc, context: EventOverlayContext): MapOverlay {
-  const base = toOverlayBase(doc, context);
-  const { location } = doc;
-  if (location.type === "Polygon") return { ...base, kind: "polygon", geometry: toWirePolygon(location) };
-  if (location.type === "LineString") return { ...base, kind: "path", geometry: location };
   const presentation = presentationFor(context.layerSet, doc.category);
-  return {
-    ...base,
-    kind: "marker",
-    geometry: location,
+  const marker: MarkerPresentation = {
     pinPriority: presentation.pinPriority,
     locationAccuracy: presentation.locationAccuracy === "area" ? "area" : "exact",
   };
+  return toOverlay(toOverlayBase(doc, presentation, context), doc.location, marker);
 }

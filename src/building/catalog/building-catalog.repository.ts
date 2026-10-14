@@ -7,7 +7,7 @@ import logger from "../../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import { parseEach } from "../../shared/zod-list.util";
 import type { BuildingDoc, ConnectionDoc, SpaceDoc } from "../building.document";
-import { SERVED_BUILDING_WITH_EXTENSIONS_PROJECTION } from "../building.query";
+import { SERVED_BUILDING_WITH_EXTENSIONS_PROJECTION } from "./building-catalog.query";
 import type { BuildNo, SkkuId } from "../building.types";
 import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
 import { connectionEnds } from "./building-catalog.schema";

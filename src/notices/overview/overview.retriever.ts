@@ -118,7 +118,7 @@ export class OverviewRetriever {
     const pipeline = buildOverviewPipeline({
       q,
       sourceIds,
-      serviceStartDate: config.notices.serviceStartDate!,
+      serviceStartDate: config.notices.serviceStartDate,
     });
     return getNoticesCollection()
       .aggregate<OverviewCandidate>(pipeline, {

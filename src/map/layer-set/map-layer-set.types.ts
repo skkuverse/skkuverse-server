@@ -13,3 +13,5 @@ export interface MapChipSpec {
 }
 
 export type LoadedConfig = { config: LayerSet; error: null } | { config: null; error: string };
+
+export type ConfigIssue = readonly [path: PropertyKey[], message: string];

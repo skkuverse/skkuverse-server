@@ -67,7 +67,7 @@ export class HsscPollerService implements OnModuleInit {
   async updateHSSCBusList(): Promise<void> {
     // Defensive: receive as unknown; HSSC server has been stable but we don't
     // give a generic to axios — that would silently rubber-stamp any shape.
-    const response = await axios.get<unknown>(config.api.hsscNew!, {
+    const response = await axios.get<unknown>(config.api.hsscNew, {
       timeout: 10000,
     });
 

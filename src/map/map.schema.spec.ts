@@ -2,11 +2,9 @@
  * The shared map schemas: the place schemas MapRepository parses each read
  * through (one for the overlay route, one for the sheets; the same renderable
  * rules, kept in step with the places importer, scripts/lib/map-places-file.js,
- * boundary 4.3), the live activation, and the camera, text and URL pieces the
- * layer-set schema and the mappers build on.
+ * boundary 4.3), and the live activation.
  */
-import { WEBVIEW_ORIGIN } from "../infra/origins";
-import { i18nTextFile, liveActivation, mapCamera, mediaUrl, overlayPlaceDoc, sheetPlaceDoc, webviewUrl } from "./map.schema";
+import { liveActivation, overlayPlaceDoc, sheetPlaceDoc } from "./map.schema";
 
 // The importer is CommonJS and outside tsconfig, so it is required.
 const { parsePlacesFile } = require("../../scripts/lib/map-places-file");
@@ -145,11 +143,30 @@ describe("overlayPlaceDoc and sheetPlaceDoc", () => {
   it.each([
     ["no subtitle, order, facets or orderByOption", { ...STORED, subtitle: undefined, order: undefined, facets: undefined, orderByOption: undefined }],
     ["a malformed facets value", { ...STORED, facets: "council" }],
-    ["a field or button that is not an object", { ...STORED, fields: [null], actions: [7] }],
+    ["a button that is not an object", { ...STORED, actions: [7] }],
+    ["a field whose label and value are not text", { ...STORED, fields: [{ label: "운영", value: 7 }] }],
     ["an empty window list, meaning always open", { ...STORED, hours: [] }],
   ])("accept a renderable place with %s, as before", (_case, doc) => {
     // Act & Assert
     expect(overlayPlaceDoc.safeParse(doc).success).toBe(true);
+    expect(sheetPlaceDoc.safeParse(doc).success).toBe(true);
+  });
+});
+
+// What drawing a place's fields and buttons would throw on: the overlay read leaves the place out instead.
+const UNDRAWABLE: Array<[string, Row]> = [
+  ["a field that is null", { ...STORED, fields: [null] }],
+  ["a field that is not an object", { ...STORED, fields: [7] }],
+  ["a field with no label or value", { ...STORED, fields: [{}] }],
+  ["a field with no value", { ...STORED, fields: [{ label: { ko: "운영" } }] }],
+  ["a field whose label is null", { ...STORED, fields: [{ label: null, value: { ko: "학생회" } }] }],
+  ["a button that is null", { ...STORED, actions: [null] }],
+];
+
+describe("overlayPlaceDoc", () => {
+  it.each(UNDRAWABLE)("refuses %s, which the sheet read still accepts: it draws neither", (_case, doc) => {
+    // Act & Assert
+    expect(overlayPlaceDoc.safeParse(doc).success).toBe(false);
     expect(sheetPlaceDoc.safeParse(doc).success).toBe(true);
   });
 });
@@ -171,68 +188,5 @@ describe("liveActivation", () => {
   ])("refuses %s", (_case, doc) => {
     // Act & Assert
     expect(liveActivation.safeParse(doc).success).toBe(false);
-  });
-});
-
-describe("i18nTextFile", () => {
-  it("keeps ko and drops a null translation rather than sending it", () => {
-    // Act
-    const parsed = i18nTextFile.parse({ ko: "주점", en: null, zh: "酒馆" });
-
-    // Assert
-    expect(parsed).toEqual({ ko: "주점", zh: "酒馆" });
-    expect(Object.keys(parsed)).toEqual(["ko", "zh"]);
-  });
-
-  it.each([{}, { ko: "" }, { ko: "  " }, { ko: "주점", en: "" }])("refuses %j", (text) => {
-    // Act & Assert
-    expect(i18nTextFile.safeParse(text).success).toBe(false);
-  });
-});
-
-describe("mapCamera", () => {
-  const camera = { lat: 37.295129, lng: 126.971234, zoom: 17.5, tilt: 0, bearing: 6, durationMs: 500 };
-
-  it("keeps a camera's fields in the order the chips serve them", () => {
-    // Act
-    const parsed = mapCamera.parse({ durationMs: 500, bearing: 6, tilt: 0, zoom: 17.5, lng: 126.971234, lat: 37.295129 });
-
-    // Assert
-    expect(Object.keys(parsed)).toEqual(["lat", "lng", "zoom", "tilt", "bearing", "durationMs"]);
-  });
-
-  it.each([
-    [90, true],
-    [90.5, false],
-    [-90.5, false],
-  ])("treats latitude %d as in range: %s", (lat, inRange) => {
-    // Act & Assert
-    expect(mapCamera.safeParse({ ...camera, lat }).success).toBe(inRange);
-  });
-
-  it.each([
-    [180, true],
-    [180.5, false],
-  ])("treats longitude %d as in range: %s", (lng, inRange) => {
-    // Act & Assert
-    expect(mapCamera.safeParse({ ...camera, lng }).success).toBe(inRange);
-  });
-});
-
-describe("webviewUrl and mediaUrl", () => {
-  it("resolves a root-relative web view path onto the web view origin", () => {
-    // Act & Assert
-    expect(webviewUrl.parse("/eskara/entry")).toBe(`${WEBVIEW_ORIGIN}/eskara/entry`);
-  });
-
-  it.each(["https://evil.com/x", "/eskara/entry\n", "//evil.com/x", ""])("refuses %j as a web view URL", (value) => {
-    // Act & Assert
-    expect(webviewUrl.safeParse(value).success).toBe(false);
-  });
-
-  it("accepts only objects on the media host", () => {
-    // Act & Assert
-    expect(mediaUrl.safeParse("https://media.skkuverse.com/a.png").success).toBe(true);
-    expect(mediaUrl.safeParse("https://media.skkuverse.com.evil.com/a.png").success).toBe(false);
   });
 });

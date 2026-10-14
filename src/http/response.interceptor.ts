@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { map, type Observable } from "rxjs";
+import { setResponseTime } from "../infra/response-time";
 import { CACHE_CONTROL_METADATA } from "./cache-control.decorator";
 import type { SuccessMeta, WithMeta } from "./response.types";
 
@@ -23,16 +24,6 @@ class MetaEnvelope<T, M extends SuccessMeta> implements WithMeta<T, M> {
 
 export function withMeta<T, M extends SuccessMeta>(data: T, meta: M): WithMeta<T, M> {
   return new MetaEnvelope(data, meta);
-}
-
-export function startResponseTimer(req: Request): void {
-  req.__startNs = process.hrtime.bigint();
-}
-
-export function setResponseTime(req: Request, res: Response): void {
-  const start = req.__startNs ?? process.hrtime.bigint();
-  const ms = Number(process.hrtime.bigint() - start) / 1e6;
-  res.setHeader("X-Response-Time", `${ms.toFixed(1)}ms`);
 }
 
 function successEnvelope(req: Request, data: unknown): SuccessEnvelope {

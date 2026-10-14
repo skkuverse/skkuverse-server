@@ -49,7 +49,7 @@ function parseBody(text: string): FcmBody {
 }
 
 // WHY: `status` attached, so a caller can tell a rejected payload from a network that went away.
-function rejection(status: number, body: FcmBody, text: string): Error & { status?: number } {
+function toFcmError(status: number, body: FcmBody, text: string): Error & { status?: number } {
   const err = new Error(
     `sendNotification ${status}: ${typeof body === "object" ? JSON.stringify(body) : text}`,
   ) as Error & { status?: number };
@@ -77,7 +77,7 @@ export async function postToFcmFunction(payload: FcmPayload): Promise<FcmRespons
     });
     const text = await res.text();
     const body = parseBody(text);
-    if (!res.ok) throw rejection(res.status, body, text);
+    if (!res.ok) throw toFcmError(res.status, body, text);
     return (body as FcmResponse) || {};
   } finally {
     clearTimeout(timer);

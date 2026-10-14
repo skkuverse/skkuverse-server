@@ -8,6 +8,7 @@
  * `naming.test.ts` covers only `src/`.
  */
 import ts from "typescript";
+import { isExported } from "../helpers/architecture/ast";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { filesUnder, readSource, sourceFiles } from "../helpers/architecture/tree";
 
@@ -33,7 +34,7 @@ function exportedClass(file: string, source: string, name: string): ts.ClassDecl
     (s): s is ts.ClassDeclaration =>
       ts.isClassDeclaration(s) &&
       s.name?.text === name &&
-      !!s.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword),
+      isExported(s),
   );
 }
 

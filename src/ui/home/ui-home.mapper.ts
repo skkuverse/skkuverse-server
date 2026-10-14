@@ -1,5 +1,5 @@
 import type { SupportedLang } from "../../infra/types";
-import { toBannerCarousel, toLocalizedText } from "../ui.mapper";
+import { toBannerCarousel, toLocalizedText, toServedActionValue } from "../ui.mapper";
 import type { LogoResolver } from "./ui-home.types";
 import type { HomeLayoutRaw, TileRaw } from "./ui-home.schema";
 import type { HomeLayout } from "./ui-home.wire";
@@ -22,7 +22,7 @@ function toTile(tile: TileRaw, context: HomeLayoutContext): Tile {
     title: toLocalizedText(tile.title, context.lang),
     icon: context.resolveLogo(tile.icon),
     actionType: tile.actionType,
-    actionValue: tile.actionValue,
+    actionValue: toServedActionValue(tile.actionType, tile.actionValue),
   };
 }
 

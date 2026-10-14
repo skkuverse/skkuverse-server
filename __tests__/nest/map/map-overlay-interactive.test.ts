@@ -28,7 +28,7 @@ import type { MapRepository } from "../../../src/map/map.repository";
 import { asReal } from "../../helpers/fakes/public-of";
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
 
-const mockActiveEventConfig = jest.fn<Promise<LayerSet | null>, []>();
+const mockLiveLayerSet = jest.fn<Promise<LayerSet | null>, []>();
 let repository: FakeMapRepository;
 let service: MapEventService;
 const getEventOverlays = () => service.getEventOverlays();
@@ -36,7 +36,7 @@ const getEventOverlays = () => service.getEventOverlays();
 // The event read path is cached per service; each test starts cold.
 beforeEach(() => {
   repository = new FakeMapRepository();
-  const layerSet = { liveLayerSet: mockActiveEventConfig } as unknown as MapLayerSetService;
+  const layerSet = { liveLayerSet: mockLiveLayerSet } as unknown as MapLayerSetService;
   service = new MapEventService(asReal<MapRepository>(repository), layerSet, new MiniAppsService());
 });
 
@@ -81,7 +81,7 @@ function place(id: string, category: string) {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockActiveEventConfig.mockResolvedValue(CONFIG);
+  mockLiveLayerSet.mockResolvedValue(CONFIG);
   repository.places = [
     place("z-tappable", "zone"),
     place("z-backdrop", "zone-bg"),

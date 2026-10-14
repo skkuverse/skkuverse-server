@@ -6,6 +6,7 @@ import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
+import { isRecord } from "../shared/object.util";
 import { parseEach } from "../shared/zod-list.util";
 import { SERVED_BUILDING_PROJECTION } from "./building.query";
 import { BUILDING_CACHE_TTL_MS } from "./building.constants";
@@ -66,7 +67,7 @@ export class BuildingRepository implements OnModuleInit {
           .sort({ order: 1, _id: 1 })
           .toArray(),
         campusShapeDoc,
-        (doc) => String((doc as { _id?: unknown })._id),
+        (doc) => String(isRecord(doc) ? doc._id : undefined),
       );
       this.warnInvalidShapes(invalid);
       return shapes;

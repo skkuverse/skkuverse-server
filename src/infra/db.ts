@@ -11,7 +11,7 @@ export const HOT_READ_MAX_TIME_MS = 3_000;
  * (An operations detail is left out of the public history.)
  */
 export function mongoClientOptions(
-  role = process.env.ROLE || "combined",
+  role = config.role(),
 ): MongoClientOptions {
   return {
     maxPoolSize: 5,

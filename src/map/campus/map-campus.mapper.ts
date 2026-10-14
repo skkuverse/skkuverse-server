@@ -1,11 +1,14 @@
 import type { BuildingDoc, CampusShapeDoc } from "../../building/building.document";
-import { toWirePolygon } from "../../shared/ring-winding.util";
+import { toOverlay } from "../map.mapper";
+import type { MarkerPresentation, OverlayBase } from "../map.types";
 import type { MapOverlay } from "../map.wire";
 import { FALLBACK_MARKERS, LAYER_LABELS, LAYER_NUMBERS } from "./map-campus.constants";
 import { hasFinitePosition } from "./map-campus.rules";
 
 type CampusBuilding = Pick<BuildingDoc, "_id" | "name" | "displayNo" | "location" | "campus">;
 type MarkerBase = Omit<Extract<MapOverlay, { kind: "marker" }>, "layerId" | "text">;
+
+const CAMPUS_MARKER: MarkerPresentation = { pinPriority: 0, locationAccuracy: "exact" };
 
 const noEventFields = (): Pick<MarkerBase, "hours" | "subtitle" | "fields" | "actions" | "order" | "facets" | "orderByOption"> => ({
   hours: [],
@@ -26,8 +29,7 @@ export function toFallbackOverlays(): MapOverlay[] {
       campus: marker.campus,
       geometry: { type: "Point", coordinates: [marker.lng, marker.lat] },
       ...noEventFields(),
-      pinPriority: 0,
-      locationAccuracy: "exact",
+      ...CAMPUS_MARKER,
       tap: null,
     };
     return [
@@ -46,8 +48,7 @@ function toBuildingOverlays(building: CampusBuilding): MapOverlay[] {
     campus: building.campus,
     geometry: { type: "Point", coordinates: [lng, lat] },
     ...noEventFields(),
-    pinPriority: 0,
-    locationAccuracy: "exact",
+    ...CAMPUS_MARKER,
     tap: { kind: "skku_building", placeId: String(building._id) },
   };
   // QUIRK(skku): both building writers store a missing English name as "", so `||`, not `??`.
@@ -60,27 +61,25 @@ export function toCampusBuildingOverlays(buildings: readonly CampusBuilding[]): 
   return buildings.filter((b) => hasFinitePosition(b.location.coordinates)).flatMap(toBuildingOverlays);
 }
 
-function toShapeBase(doc: CampusShapeDoc): Omit<MapOverlay & { kind: "polygon" }, "kind" | "geometry"> {
+function toShapeBase(shape: CampusShapeDoc): OverlayBase {
+  const { hours, fields, actions, facets, orderByOption } = noEventFields();
   return {
-    id: doc._id,
-    layerId: doc.layerId,
-    campus: doc.campus,
-    text: { ko: doc.title.ko, en: doc.title.en || doc.title.ko },
-    subtitle: doc.subtitle ? { ko: doc.subtitle.ko, en: doc.subtitle.en || doc.subtitle.ko } : null,
-    hours: [],
-    fields: [],
-    actions: [],
-    order: doc.order,
-    facets: {},
-    orderByOption: {},
+    id: shape._id,
+    layerId: shape.layerId,
+    campus: shape.campus,
+    text: { ko: shape.title.ko, en: shape.title.en || shape.title.ko },
+    subtitle: shape.subtitle ? { ko: shape.subtitle.ko, en: shape.subtitle.en || shape.subtitle.ko } : null,
+    hours,
+    fields,
+    actions,
+    order: shape.order,
+    facets,
+    orderByOption,
     // WHY: a footprint opens the same sheet as its number pin; a boundary or a path stays a backdrop.
-    tap: doc.skkuId === null ? null : { kind: "skku_building", placeId: String(doc.skkuId) },
+    tap: shape.skkuId === null ? null : { kind: "skku_building", placeId: String(shape.skkuId) },
   };
 }
 
-export function toShapeOverlay(doc: CampusShapeDoc): MapOverlay {
-  const base = toShapeBase(doc);
-  if (doc.geometry.type === "Polygon") return { ...base, kind: "polygon", geometry: toWirePolygon(doc.geometry) };
-  if (doc.geometry.type === "LineString") return { ...base, kind: "path", geometry: doc.geometry };
-  return { ...base, kind: "marker", geometry: doc.geometry, pinPriority: 0, locationAccuracy: "exact" };
+export function toShapeOverlay(shape: CampusShapeDoc): MapOverlay {
+  return toOverlay(toShapeBase(shape), shape.geometry, CAMPUS_MARKER);
 }

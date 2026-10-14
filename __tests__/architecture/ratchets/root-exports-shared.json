@@ -1,13 +1,1 @@
-[
-  "src/map/map.constants.ts: EVENT_LAYER_STYLE",
-  "src/map/map.constants.ts: EVENT_OVERLAYS_ENDPOINT",
-  "src/map/map.constants.ts: EVENT_SHAPE_STYLE",
-  "src/map/map.rules.ts: assertValidChipSpecs",
-  "src/map/map.rules.ts: chipLabelIssue",
-  "src/map/map.rules.ts: listSortIssue",
-  "src/map/map.schema.ts: absentWhenNull",
-  "src/map/map.schema.ts: defaulted",
-  "src/map/map.schema.ts: i18nTextFile",
-  "src/map/map.schema.ts: mapCamera",
-  "src/map/map.schema.ts: mediaUrl"
-]
+[]

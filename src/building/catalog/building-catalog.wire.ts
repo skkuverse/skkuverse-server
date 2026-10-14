@@ -5,7 +5,7 @@ const floorGroup = z.object({
   floor: bilingualText,
   spaces: z.array(
     z.object({
-      /** QUIRK(skku): two production spaces have no code; they are served as stored. */
+      /** QUIRK(skku): a stored space can have no code (SpaceDoc); it is served as stored. */
       spaceCd: z.string().nullable(),
       name: bilingualText,
       conspaceCd: z.string().nullable().optional(),

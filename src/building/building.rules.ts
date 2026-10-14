@@ -1,4 +1,4 @@
-import { SKKU_CAMPUS_CODE } from "./building.constants";
+import { CAMPUSES, SKKU_CAMPUS_CODE } from "./building.constants";
 import type { BuildNo, Campus, DisplayNo, SkkuId, SpaceCd, WithBuildNo } from "./building.types";
 
 export function hasBuildNo<T extends { buildNo: BuildNo | null }>(building: T): building is WithBuildNo<T> {
@@ -25,4 +25,8 @@ export function isBuildNo(buildNo: string): buildNo is BuildNo {
 
 export function isSpaceCd(spaceCd: string): spaceCd is SpaceCd {
   return spaceCd !== "";
+}
+
+export function isCampus(value: unknown): value is Campus {
+  return (CAMPUSES as readonly unknown[]).includes(value);
 }

@@ -1,7 +1,4 @@
-import type { BASE_LAYERS } from "../map.constants";
 import type { MapOverlay } from "../map.wire";
-
-export type BaseLayerId = (typeof BASE_LAYERS)[number]["id"];
 
 export interface CampusOverlays {
   overlays: MapOverlay[];

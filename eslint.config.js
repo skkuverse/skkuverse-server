@@ -79,8 +79,10 @@ const PURE_IMPORT_PATTERNS = [
     message: "A pure file does no IO: take the data as an argument; the service calls the repository or client.",
   },
   {
-    regex: "(?:^|/)infra/(?!(?:i18n|types)$)",
-    message: "A pure file reaches infra/ only for i18n lookups and types; take anything else as an argument.",
+    // infra/webview-url and infra/media-url are pure (string checks over a constant origin), so a rule or a
+    // mapper imports them directly rather than through a `.schema` that wraps them.
+    regex: "(?:^|/)infra/(?!(?:i18n|types|webview-url|media-url)$)",
+    message: "A pure file reaches infra/ only for i18n lookups, types, webview-url and media-url; take anything else as an argument.",
   },
   {
     regex: "(?:^|/)http/(?!app\\.error$)",
@@ -110,8 +112,12 @@ const QUERY_IMPORT_PATTERN = {
   message: "Only a repository runs a query: import the *.query.ts from the module's repository.",
 };
 
-// Migrated feature modules read the time through `Clock` (design D13).
-const CLOCK_INJECT_DIRS = ["src/building/", "src/app-config/", "src/health/", "src/map/", "src/ui/"];
+// Migrated feature modules read the time through `Clock` (design D13): every migrated scope but the
+// shared layers, so a module that joins migrated-scopes.json is bound from that commit.
+const CLOCK_FREE_LAYERS = ["config", "http", "infra", "scheduling", "shared"];
+const CLOCK_INJECT_DIRS = require("./__tests__/architecture/migrated-scopes.json").filter(
+  (scope) => !CLOCK_FREE_LAYERS.some((layer) => scope.startsWith(`src/${layer}/`)),
+);
 
 const CLOCK_INJECT_SYNTAX = [
   {
@@ -158,6 +164,8 @@ const SRC_SYNTAX_PLUGIN = {
     "zod-issues": CORE_RESTRICTED_SYNTAX,
     literals: CORE_RESTRICTED_SYNTAX,
     "spec-clock": CORE_RESTRICTED_SYNTAX,
+    "schema-casts": CORE_RESTRICTED_SYNTAX,
+    "schema-imports": CORE_RESTRICTED_SYNTAX,
     // An alias of id-denylist, so the glossary/<module> blocks keep theirs.
     "generic-names": CORE_RULES.get("id-denylist"),
   },
@@ -168,40 +176,127 @@ const SRC_SYNTAX_PLUGIN = {
 const GENERIC_NAMES = ["info", "obj", "tmp", "helper", "manager"];
 
 // A zod issue names where it is (ADR 0010, D5): parseConfigFile and the boot error print each
-// issue's path, and an issue without one reads `root:` wherever it sits.
-const ADD_ISSUE = "CallExpression[callee.property.name='addIssue']";
+// issue's path, and an issue without one reads `root:` wherever it sits. zod takes an issue through
+// `ctx.addIssue(…)` (also as `ctx["addIssue"]` or a destructured `addIssue`) and, in zod 4's `.check`,
+// `ctx.issues.push(…)`; each spelling must carry its own `path`. A bare `addIssue(ctx, found)` is a
+// local helper that sets the path itself, so only an object first argument is read.
+const ISSUE_CALL =
+  "CallExpression:matches([callee.property.name='addIssue'], [callee.property.value='addIssue'], [callee.name='addIssue'], " +
+  "[callee.property.name='push'][callee.object.property.name='issues'])";
 const ADD_ISSUE_SYNTAX = [
   {
-    selector: `${ADD_ISSUE} > ObjectExpression.arguments:first-child:not(:has(> Property[key.name='path']))`,
+    selector: `${ISSUE_CALL} > ObjectExpression.arguments:first-child:not(:has(> Property[key.name='path'])):not(:has(> Property[key.value='path']))`,
     message: "Give each zod issue its `path` (`path: []` when the issue is the whole value), so the error names the field.",
   },
   {
-    selector: `${ADD_ISSUE} > :matches(Literal, TemplateLiteral).arguments:first-child`,
+    selector: `${ISSUE_CALL}[callee.type='MemberExpression'] > :matches(Literal, TemplateLiteral).arguments:first-child`,
     message: "Pass an issue object with its `path` (`path: []` when the issue is the whole value), not a bare message.",
+  },
+  {
+    selector: `${ISSUE_CALL} > ObjectExpression.arguments:first-child > Property[value.type='Identifier'][value.name='undefined']:matches([key.name='path'], [key.value='path'])`,
+    message: "`path: undefined` is no path: name the field, or `path: []` when the issue is the whole value.",
   },
 ];
 
+// An object-level `.refine` without a path reports at the object: name the field, or `path: []` to say the
+// issue is the whole value. A field-level `.refine` takes its path from where the field sits.
+// A refine counts as object-level on the object call itself or after up to two other refinements of it.
+const OBJECT_REFINES = [0, 1, 2].map((between) => {
+  const hop = "callee.object.";
+  const steps = Array.from({ length: between }, (_, i) => `[${hop.repeat(i + 1)}callee.property.name=/^(?:refine|superRefine)$/]`);
+  const object = `[${hop.repeat(between + 1)}callee.property.name=/^(?:object|strictObject|looseObject|extend)$/]`;
+  return `CallExpression[callee.property.name='refine']${steps.join("")}${object}`;
+});
+const OBJECT_REFINE_SYNTAX = [
+  {
+    selector: OBJECT_REFINES.flatMap((refine) => [
+      `${refine}[arguments.length<2]`,
+      `${refine} > :matches(Literal, TemplateLiteral).arguments:nth-child(2)`,
+      `${refine} > ObjectExpression.arguments:nth-child(2):not(:has(> Property[key.name='path'])):not(:has(> Property[key.value='path']))`,
+    ]).join(", "),
+    message: "Give an object-level refine its `path` (`path: []` when the issue is the whole object), so the error names the field.",
+  },
+];
+
+// A `.schema` parses: its output type is what it checked. A cast through `unknown` (or a second cast) in a
+// transform certifies fields the schema never read, and `satisfies z.ZodType<T>` holds either way.
+const DOUBLE_CAST_SYNTAX = [
+  {
+    selector: ":matches(TSAsExpression, TSTypeAssertion) > :matches(TSAsExpression, TSTypeAssertion).expression",
+    message: "No cast through unknown in a .schema: check the field, or leave it out of the type the schema returns.",
+  },
+];
+
+// A rule or mapper imports a `.schema` for its types only (PURE_IMPORT_PATTERNS is one import deep): a runtime
+// value through a `.schema` would let a pure file reach whatever that schema imports.
+const SCHEMA_IMPORT = "ImportDeclaration[importKind='value'][source.value=/\\.schema$/]";
+const SCHEMA_IMPORT_MESSAGE =
+  "A .rules or .mapper file imports a .schema for types only (`import type`): import the pure helper from where it lives.";
+const SCHEMA_IMPORT_SYNTAX = [
+  `${SCHEMA_IMPORT}:has(ImportSpecifier[importKind='value'])`,
+  `${SCHEMA_IMPORT}:has(ImportDefaultSpecifier)`,
+  `${SCHEMA_IMPORT}:has(ImportNamespaceSpecifier)`,
+  `${SCHEMA_IMPORT}[specifiers.length=0]`,
+].map((selector) => ({ selector, message: SCHEMA_IMPORT_MESSAGE }));
+
 // A color or a web view path is a value the app reads, kept in one place: a `.constants` file
 // (or the JSON config) holds it, and code imports its name.
-const HEX_COLOR = "/^#?[0-9A-Fa-f]{6}$/";
-const WEBVIEW_PATH = "/^\\/skku\\//";
+// A bare six- or eight-digit hex string is read as a color only when it mixes letters and digits
+// (`e65100`, `4CAF50`) or is bound to a name ending in `color`: an all-digit string is as often an id
+// or a date (`202610`, `100100`) and an all-letter one a word (`facade`, `decade`), and no lexical test
+// tells those from `003626`. A `#` prefix, `rgb(`/`rgba(` and a `0x` number are colors wherever they sit.
+const HEX = "(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})";
+const HASH_COLOR = `/^#${HEX}$/`;
+const MIXED_HEX = `/^(?=[0-9A-Fa-f]*[A-Fa-f])(?=[0-9A-Fa-f]*[0-9])${HEX}$/`;
+const ANY_HEX = `/^${HEX}$/`;
+const RGB = "/^rgba?\\(/";
+const COLOR_NAME = "/[Cc]olou?r$/";
+const hexString = (pattern) => `:matches(Literal[value=${pattern}], TemplateLiteral[quasis.length=1] > TemplateElement[value.raw=${pattern}])`;
+// A web view path opens a string (`/skku/x`, `skku/x`) or follows an origin in a template
+// (`${origin}/skku/x`). An absolute URL to www.skku.edu also holds `/skku/`, but it is the school's
+// site, not a web view page, so a `/skku/` after literal text is not read.
+const WEBVIEW_PATH = "/^\\/?skku\\//";
 const LITERAL_SYNTAX = [
   {
-    selector: `:matches(Literal[value=${HEX_COLOR}], TemplateLiteral[quasis.length=1] > TemplateElement[value.raw=${HEX_COLOR}])`,
-    message: "A six-digit hex color lives in a *.constants.ts file: import it by name.",
+    selector: [
+      hexString(HASH_COLOR),
+      hexString(MIXED_HEX),
+      `VariableDeclarator[id.name=${COLOR_NAME}] > Literal.init[value=${ANY_HEX}]`,
+      `Property:matches([key.name=${COLOR_NAME}], [key.value=${COLOR_NAME}]) > Literal.value[value=${ANY_HEX}]`,
+      `Literal[raw=/^0[xX]${HEX}$/]`,
+    ].join(", "),
+    message: "A hex color lives in a *.constants.ts file: import it by name.",
   },
   {
-    selector: `:matches(Literal[value=${WEBVIEW_PATH}], TemplateLiteral > TemplateElement:first-child[value.raw=${WEBVIEW_PATH}])`,
+    selector: `:matches(Literal[value=${RGB}], TemplateLiteral > TemplateElement:first-child[value.raw=${RGB}])`,
+    message: "An rgb() color lives in a *.constants.ts file: import it by name.",
+  },
+  {
+    selector: [
+      `Literal[value=${WEBVIEW_PATH}]`,
+      `TemplateLiteral > TemplateElement:first-child[value.raw=${WEBVIEW_PATH}]`,
+      "TemplateLiteral > TemplateElement:not(:first-child)[value.raw=/^\\/skku\\//]",
+    ].join(", "),
     message: "A web view path (/skku/…) lives in a *.constants.ts file: import it by name.",
   },
 ];
 
 // A spec in a migrated scope passes a fixed clock (tests.md, "What to double"): the real Clock makes the
 // answer depend on the day the test runs, and lets one read see two different instants.
+// An alias (`Clock as RealClock`), a namespace (`new clock.Clock()`) and a Nest provider (`providers: [Clock]`,
+// `useClass: Clock`) build the same real Clock; a fake class says so in its name (`FixedClock`, `FakeClock`).
+const REAL_CLOCK_NAME = "/^(?!Fixed|Fake).*Clock$/";
 const SPEC_CLOCK_SYNTAX = [
   {
-    selector: "NewExpression[callee.name='Clock']",
+    selector: `NewExpression:matches([callee.name=${REAL_CLOCK_NAME}], [callee.property.name='Clock'])`,
     message: "Pass a fixed fake clock (`const clock: Clock = { now: () => NOW }`), not the real Clock.",
+  },
+  {
+    selector: [
+      `Property[key.name='providers'] > ArrayExpression > Identifier[name=${REAL_CLOCK_NAME}]`,
+      `Property[key.name='useClass'] > Identifier.value[name=${REAL_CLOCK_NAME}]`,
+    ].join(", "),
+    message: "Provide a fixed fake clock (`{ provide: Clock, useValue: fakeClock }`), not the real Clock.",
   },
 ];
 
@@ -346,6 +441,20 @@ const ROLE_MAX_LINES = {
   types: 58,
   wire: 60,
 };
+
+// A file over its role's cap with no domain seam to split it along carries a reasoned per-file cap instead
+// (ADR 0010 D9): __tests__/architecture/exemptions/size-caps.json, { "<file>": { "max": <lines>, "reason": "…" } }.
+// Each block comes after the role blocks, so it raises only that file's max-lines; size-ratchets.test.ts holds
+// each max within 10 of the file and fails an entry whose file is gone or back under its role's cap.
+const SIZE_CAP_EXEMPTIONS = require("./__tests__/architecture/exemptions/size-caps.json");
+
+function sizeCapExemptionBlocks() {
+  return Object.entries(SIZE_CAP_EXEMPTIONS).map(([file, { max }]) => ({
+    name: `size-exemption/${file}`,
+    files: [file],
+    rules: { "max-lines": ["error", { max, skipBlankLines: true, skipComments: false }] },
+  }));
+}
 
 function roleSizeBlocks() {
   return Object.entries(ROLE_MAX_LINES).map(([role, max]) => ({
@@ -583,6 +692,7 @@ module.exports = [
     },
   },
   ...roleSizeBlocks(),
+  ...sizeCapExemptionBlocks(),
   migratedFunctionBlock(),
   migratedTypescriptBlock(),
   ...glossaryDenylistBlocks(),
@@ -725,7 +835,20 @@ module.exports = [
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.spec.ts"],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
-    rules: { "src-syntax/zod-issues": ["error", ...ADD_ISSUE_SYNTAX] },
+    rules: { "src-syntax/zod-issues": ["error", ...ADD_ISSUE_SYNTAX, ...OBJECT_REFINE_SYNTAX] },
+  },
+  {
+    name: "schemas/no-double-cast",
+    files: ["src/**/*.schema.ts"],
+    ignores: ["src/**/*.spec.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: { "src-syntax/schema-casts": ["error", ...DOUBLE_CAST_SYNTAX] },
+  },
+  {
+    name: "boundaries/pure-schema",
+    files: ["src/**/*.rules.ts", "src/**/*.mapper.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: { "src-syntax/schema-imports": ["error", ...SCHEMA_IMPORT_SYNTAX] },
   },
   {
     name: "naming/generic-names",

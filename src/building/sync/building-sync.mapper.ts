@@ -13,11 +13,10 @@ const ELEVATOR_STATUS_BY_TEXT: Readonly<Record<string, ElevatorStatus>> = {
   "운영X": "not_operating",
 };
 
-// QUIRK(skku): the block's heading follows `*` with or without a space, or one line after a `*` line
-// naming the building.
+// QUIRK(skku): the block starts as `* 배리어프리`, `*배리어프리` or `*학생회관\n배리어프리`.
 const BARRIER_FREE_START_RE = /\n\n\*\s*(?:[^\n]*\n)?배리어프리 편의시설 안내/;
 
-// QUIRK(skku): a section header may carry a wing label in parentheses (wing A).
+// QUIRK(skku): a section header may carry a wing label, as in `(A동)`.
 const BARRIER_FREE_SECTION_RE =
   /\*\s*(?:[^\n]*\n)?배리어프리 편의시설 안내(?:\(([^)]+)\))?/g;
 
@@ -49,7 +48,7 @@ function parseElevator(text: string): {
   total: number | null;
   accessible: number | null;
 } | null {
-  // QUIRK(skku): one building's elevator line carries a stray leading syllable, hence the optional first character.
+  // QUIRK(skku): one building's line reads `승장애인 표시 승강기`.
   const elevator = captureGroups(text, /(?:승)?장애인 표시 승강기\s*[:：]\s*(.+)/, 1);
   if (!elevator) return null;
   const raw = elevator[0].trim();

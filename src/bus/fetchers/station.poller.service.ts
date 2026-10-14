@@ -39,7 +39,7 @@ export class StationPollerService implements OnModuleInit {
 
   private async updateStation(): Promise<void> {
     const response = await axios.get<HyehwaStationResponse>(
-      config.api.stationHyehwa!,
+      config.api.stationHyehwa,
       { timeout: 10000 },
     );
     // "0" = data, "4" = no result (keep the previous message); anything else
