@@ -15,7 +15,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { getLayerSetConfig, parseLayerSetFile } from "./map-layer-set.config";
+import { getLayerSetConfig, parseLayerSetFile, toConfigMessage, toConfigWords } from "./map-layer-set.config";
 
 const CONFIG_PATH = path.join(__dirname, "eskara-2026.json");
 const RAW = fs.readFileSync(CONFIG_PATH, "utf8");
@@ -999,5 +999,30 @@ describe("parseLayerSetFile — list facets, the FILTER axis", () => {
     const r2 = raw();
     delete chipById(r2, "eskara26_view_bar").list.sort.scopeFacetId;
     expect(() => parseLayerSetFile(r2)).toThrow(/scopeFacetId is required/);
+  });
+});
+
+describe("toConfigWords and toConfigMessage", () => {
+  it.each([
+    [{ code: "invalid_type", expected: "object", input: undefined, path: [] }, "must be an object"],
+    [{ code: "invalid_type", expected: "record", input: [], path: [] }, "must be an object"],
+    [{ code: "invalid_type", expected: "number", input: "1", path: [] }, "must be a finite number"],
+    [{ code: "invalid_value", values: ["hours", "tag"], input: "date", path: [] }, "must be one of [hours, tag]"],
+    [{ code: "invalid_union", options: ["always", "never", "scheduled"], errors: [], input: {}, path: [] }, "must be one of [always, never, scheduled]"],
+    [{ code: "custom", input: 1, path: [] }, undefined],
+  ])("words %j as %p", (issue, words) => {
+    // Act & Assert
+    expect(toConfigWords(issue as never)).toBe(words);
+  });
+
+  it("prints an index in brackets and a category key quoted", () => {
+    // Act & Assert
+    expect(toConfigMessage({ path: ["layers", 0, "label", "ko"], message: "must be a non-empty string" })).toBe(
+      "config.layers[0].label.ko must be a non-empty string",
+    );
+    expect(toConfigMessage({ path: ["itemDefaults", "byCategory", "bar", "pinPriority"], message: "x" })).toBe(
+      'config.itemDefaults.byCategory["bar"].pinPriority x',
+    );
+    expect(toConfigMessage({ path: [], message: "must be an object" })).toBe("config must be an object");
   });
 });

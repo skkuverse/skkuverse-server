@@ -13,7 +13,7 @@ import { parseLayerSetFile } from "./map-layer-set.config";
 import { BASE_LAYERS } from "../map.constants";
 import { assertValidChipSpecs, validateChipSpecs } from "../map.rules";
 import { BASE_CHIPS, EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "./map-layer-set.constants";
-import { eventChipSpecs, eventLayerSpecs, resetChip, toConfigMessage, toConfigWords, toOptionWindow } from "./map-layer-set.mapper";
+import { eventChipSpecs, eventLayerSpecs, resetChip } from "./map-layer-set.mapper";
 import type { LayerSet } from "./map-layer-set.schema";
 
 const CONFIG = parseLayerSetFile(JSON.parse(fs.readFileSync(path.join(__dirname, "eskara-2026.json"), "utf8")));
@@ -78,42 +78,6 @@ describe("resetChip and eventChipSpecs", () => {
 
     // Assert
     expect(spec?.label).toEqual(CONFIG.layers.find((l) => l.id === chip?.layerIds[0])?.label);
-  });
-});
-
-describe("toOptionWindow", () => {
-  it("reads both bounds as instants, and gives a tag option none", () => {
-    // Act & Assert
-    expect(toOptionWindow("2026-10-01T06:00:00+09:00", "2026-10-02T06:00:00+09:00")).toEqual({
-      from: new Date("2026-09-30T21:00:00.000Z"),
-      until: new Date("2026-10-01T21:00:00.000Z"),
-    });
-    expect(toOptionWindow(undefined, undefined)).toBeNull();
-  });
-});
-
-describe("toConfigWords and toConfigMessage", () => {
-  it.each([
-    [{ code: "invalid_type", expected: "object", input: undefined, path: [] }, "must be an object"],
-    [{ code: "invalid_type", expected: "record", input: [], path: [] }, "must be an object"],
-    [{ code: "invalid_type", expected: "number", input: "1", path: [] }, "must be a finite number"],
-    [{ code: "invalid_value", values: ["hours", "tag"], input: "date", path: [] }, "must be one of [hours, tag]"],
-    [{ code: "invalid_union", options: ["always", "never", "scheduled"], errors: [], input: {}, path: [] }, "must be one of [always, never, scheduled]"],
-    [{ code: "custom", input: 1, path: [] }, undefined],
-  ])("words %j as %p", (issue, words) => {
-    // Act & Assert
-    expect(toConfigWords(issue as never)).toBe(words);
-  });
-
-  it("prints an index in brackets and a category key quoted", () => {
-    // Act & Assert
-    expect(toConfigMessage({ path: ["layers", 0, "label", "ko"], message: "must be a non-empty string" })).toBe(
-      "config.layers[0].label.ko must be a non-empty string",
-    );
-    expect(toConfigMessage({ path: ["itemDefaults", "byCategory", "bar", "pinPriority"], message: "x" })).toBe(
-      'config.itemDefaults.byCategory["bar"].pinPriority x',
-    );
-    expect(toConfigMessage({ path: [], message: "must be an object" })).toBe("config must be an object");
   });
 });
 

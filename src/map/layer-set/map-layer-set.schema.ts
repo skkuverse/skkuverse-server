@@ -5,7 +5,6 @@ import { chipLabelIssue, listSortIssue } from "../map.rules";
 import { absentWhenNull, addIssue, defaulted, i18nTextFile, mapCamera, text } from "../map.schema";
 import type { DailyWindow } from "../map.types";
 import { HHMM_RE } from "./map-layer-set.constants";
-import { toOptionWindow } from "./map-layer-set.mapper";
 import { optionIssues } from "./map-layer-set.rules";
 
 // SEE: docs/reference/event-places.md §1. A type error takes its words from the loader's error map.
@@ -38,6 +37,11 @@ const chip = z
   .object({ layerIds: z.array(text).min(1, "must not be empty"), id: text, emoji: text, label: absentWhenNull(i18nTextFile) })
   .extend({ camera: absentWhenNull(mapCamera), list: absentWhenNull(list) })
   .superRefine((raw, ctx) => addIssue(ctx, chipLabelIssue(raw.layerIds.length, raw.label !== undefined)));
+
+/** WHY: absolute instants: an option's day is decided with no timezone arithmetic. `null` on a tag option. */
+export function toOptionWindow(from: unknown, until: unknown): { from: Date; until: Date } | null {
+  return typeof from === "string" && typeof until === "string" ? { from: new Date(from), until: new Date(until) } : null;
+}
 
 const option = z.object({ id: text, label: i18nTextFile, from: z.unknown().optional(), until: z.unknown().optional() });
 const facet = z
