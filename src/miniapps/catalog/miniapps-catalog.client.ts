@@ -1,196 +1,131 @@
-/**
- * Fetches each first-party mini app's own `public/skkuverse.json` manifest and
- * merges its `shell` fields into `GET /miniapps/:id` (see `miniapps.controller.ts`).
- *
- * The registry (`index.json`/`details/*.json`) still owns identity — startUrl,
- * name, verified, logos — and now only a FALLBACK shell. The manifest, served
- * from the mini app's own origin, is the presentation source of truth: it can
- * change what the app draws around the page without a server deploy.
- *
- * "First-party" is deliberately narrow: only a startUrl whose origin is on
- * FIRST_PARTY_MINIAPP_ORIGINS (`../infra/origins.ts`) is fetched at all. The
- * third-party sites keep exactly their registry shell — this module never
- * reaches out to a host we do not operate.
- *
- * One `CachedLoader` per first-party id (`../infra/cached-loader.ts`):
- * 5-minute TTL, an effectively unbounded stale window, so once a manifest has
- * been fetched at least once, a down or slow origin never blocks a request —
- * `getShellFields` always falls back to `{}` (no override) rather than letting
- * a manifest failure fail the mini app's own detail response. Prefetched at
- * module init, fire-and-forget, so one mini app being down cannot delay boot
- * or any other mini app's prefetch.
- */
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import logger from "../infra/logger";
-import { createLogThrottle } from "../infra/log-throttle";
+import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
+import { createLogThrottle } from "../../infra/log-throttle";
+import logger from "../../infra/logger";
+import { FIRST_PARTY_MINIAPP_ORIGINS } from "../../infra/origins";
+import { isRecord } from "../../shared/object.util";
+import type { MiniAppDetailRaw } from "../miniapps.schema";
+import { MiniappsService } from "../miniapps.service";
+import type { ShellConfig } from "../miniapps.wire";
+import {
+  CACHE_TTL_MS,
+  FETCH_FAILED_LOG_INTERVAL_MS,
+  FETCH_TIMEOUT_MS,
+  MANIFEST_PATH,
+  MAX_MANIFEST_BYTES,
+} from "./miniapps-catalog.constants";
+import { parseShellFields } from "./miniapps-catalog.mapper";
+import { firstPartyOrigin } from "./miniapps-catalog.rules";
 
-const fetchFailedThrottle = createLogThrottle(10 * 60_000);
-import { FIRST_PARTY_MINIAPP_ORIGINS } from "../infra/origins";
-import { createCachedLoader, type CachedLoader } from "../infra/cached-loader";
-import { MANIFEST_PATH, parseShellFields, type ShellConfig } from "./shell";
-import { MiniAppsService } from "./miniapps.service";
-import type { MiniAppDetail } from "./types";
-import { isRecord } from "../shared/object.util";
-
-/** A manifest fetch aborts after this long — a slow origin must not hold up a request. */
-export const FETCH_TIMEOUT_MS = 3_000;
-/** Refuse a manifest body over this size, whether announced or actually read. */
-export const MAX_MANIFEST_BYTES = 16 * 1024;
-/** How long a fetched manifest is served before it is fetched again. */
-export const CACHE_TTL_MS = 5 * 60 * 1000;
-/**
- * Once a manifest has ever loaded, keep serving it for this long past its TTL
- * while retries fail in the background. Effectively "forever" — the whole
- * point of stale-while-revalidate here is that a mini app's own outage must
- * never make ITS OWN detail response fail or hang.
- */
+// WHY: once a manifest has loaded, a mini app's own outage must never fail or hang its own detail.
 const STALE_FOREVER_MS = Number.MAX_SAFE_INTEGER;
 
-/** The first-party origin to fetch a manifest from, or null when this id is not first-party. */
-export function firstPartyOrigin(startUrl: string): string | null {
-  let url: URL;
-  try {
-    url = new URL(startUrl);
-  } catch {
-    return null;
-  }
-  return (FIRST_PARTY_MINIAPP_ORIGINS as readonly string[]).includes(url.origin) ? url.origin : null;
-}
-
-/**
- * Reads a fetch `Response` body up to `maxBytes`, throwing rather than ever
- * buffering more than that many bytes — a `Content-Length` header can lie or
- * be absent (chunked transfer), so the announced size alone is not a bound.
- */
-async function readBounded(res: Response, maxBytes: number): Promise<string> {
-  const reader = res.body?.getReader();
-  if (!reader) {
-    // No streaming body (e.g. a test double). Fall back to a plain read; test
-    // doubles construct small fixtures, so this path never sees a real oversized body.
-    return res.text();
-  }
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) {
-        total += value.byteLength;
-        if (total > maxBytes) {
-          throw new Error(`manifest body exceeds ${maxBytes} bytes`);
-        }
-        chunks.push(value);
-      }
-    }
-  } finally {
-    await reader.cancel().catch(() => undefined);
-  }
-  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk))).toString("utf8");
-}
-
-/**
- * Fetches and parses one mini app's manifest. Throws on anything untrustworthy
- * — bad status, a redirect, an oversized or unparsable body — so the caller
- * (the `CachedLoader`'s `load`) can tell a real fetch from a fallback.
- */
-async function fetchManifestShellFields(origin: string): Promise<Partial<ShellConfig>> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${origin}${MANIFEST_PATH}`, {
-      redirect: "manual",
-      signal: controller.signal,
-    });
-    // `redirect: "manual"` turns a real redirect into an opaque response (status
-    // 0, type "opaqueredirect") rather than following it. Some fetch mocks
-    // instead hand back the raw 3xx, so both shapes are treated as a failure.
-    if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
-      throw new Error(`manifest redirected from ${origin}`);
-    }
-    if (!res.ok) {
-      throw new Error(`manifest ${res.status} from ${origin}`);
-    }
-    const contentLength = res.headers.get("content-length");
-    if (contentLength !== null && Number(contentLength) > MAX_MANIFEST_BYTES) {
-      throw new Error(`manifest content-length exceeds ${MAX_MANIFEST_BYTES} bytes`);
-    }
-    const text = await readBounded(res, MAX_MANIFEST_BYTES);
-    const json: unknown = JSON.parse(text);
-    const shell = isRecord(json) ? json.shell : undefined;
-    return parseShellFields(shell);
-  } finally {
-    clearTimeout(timer);
-  }
-}
+type ShellFields = Partial<ShellConfig>;
 
 @Injectable()
-export class MiniAppsManifestService implements OnModuleInit {
-  private readonly loaders = new Map<string, CachedLoader<Partial<ShellConfig>>>();
+export class MiniappsCatalogClient implements OnModuleInit {
+  private readonly loaders = new Map<string, CachedLoader<ShellFields>>();
+  private readonly fetchFailedThrottle = createLogThrottle(FETCH_FAILED_LOG_INTERVAL_MS);
 
-  constructor(private readonly miniApps: MiniAppsService) {}
+  constructor(private readonly miniApps: MiniappsService) {}
 
-  /** Builds one loader per first-party registry entry. Never throws. */
+  // WHY: fire-and-forget, so the boot never waits on a network call, and one mini app down stops no other's prefetch.
   onModuleInit(): void {
     for (const detail of this.miniApps.map.values()) {
-      const origin = firstPartyOrigin(detail.startUrl);
+      const origin = firstPartyOrigin(detail.startUrl, FIRST_PARTY_MINIAPP_ORIGINS);
       if (!origin) continue;
-      const loader = this.loaderFor(detail.id, origin);
-      // Prefetch, fire-and-forget: boot must not wait on a network call, and a
-      // down mini app must not stop another mini app's prefetch or the app itself.
-      loader.get().catch((err: unknown) => {
-        logger.warn(
-          { event: "miniapps.manifest.prefetch_failed", miniAppId: detail.id, origin, err },
-          "Manifest prefetch failed; serving the registry's own shell for now",
-        );
-      });
+      this.loaderFor(detail.id, origin)
+        .get()
+        .catch((err: unknown) => {
+          logger.warn(
+            { event: "miniapps.manifest.prefetch_failed", miniAppId: detail.id, origin, err },
+            "Manifest prefetch failed; serving the registry's own shell for now",
+          );
+        });
     }
   }
 
-  private loaderFor(id: string, origin: string): CachedLoader<Partial<ShellConfig>> {
+  // WHY: `{}` merges as no override, so a mini app with no manifest, or one failing, keeps the registry's shell.
+  async fetchShellFields(detail: Pick<MiniAppDetailRaw, "id" | "startUrl">): Promise<ShellFields> {
+    const origin = firstPartyOrigin(detail.startUrl, FIRST_PARTY_MINIAPP_ORIGINS);
+    if (!origin) return {};
+    try {
+      return await this.loaderFor(detail.id, origin).get();
+    } catch (err) {
+      this.warnFetchFailed(detail.id, origin, err);
+      return {};
+    }
+  }
+
+  private warnFetchFailed(miniAppId: string, origin: string, err: unknown): void {
+    const ticket = this.fetchFailedThrottle.take(miniAppId);
+    if (!ticket) return;
+    logger.warn(
+      { event: "miniapps.manifest.fetch_failed", miniAppId, origin, err, suppressed: ticket.suppressed },
+      "Manifest fetch failed; serving the registry's own shell",
+    );
+  }
+
+  private loaderFor(id: string, origin: string): CachedLoader<ShellFields> {
     const existing = this.loaders.get(id);
     if (existing) return existing;
-    const loader = createCachedLoader<Partial<ShellConfig>>({
+    const loader = createCachedLoader<ShellFields>({
       name: `miniapp-manifest:${id}`,
       ttlMs: CACHE_TTL_MS,
       staleWindowMs: STALE_FOREVER_MS,
-      load: () => fetchManifestShellFields(origin),
-      // The manifest lives on the mini app's production origin, not in a _dev
-      // database; uncached, every detail open would wait on that fetch.
+      load: () => this.fetchManifest(origin),
+      // WHY: the manifest is on the mini app's production origin, not in a _dev database; uncached, every open waits on it.
       keepWhenCacheOff: true,
     });
     this.loaders.set(id, loader);
     return loader;
   }
 
-  /**
-   * The manifest's shell fields for one mini app's detail, or `{}` — never
-   * fetched (not first-party), never yet fetched successfully, or fetched but
-   * currently failing. `{}` merges as "no override" (`mergeShell`), so the
-   * registry's own shell (already merged over `DEFAULT_SHELL` by the caller)
-   * is exactly what a mini app that has shipped no manifest yet keeps showing.
-   */
-  async getShellFields(detail: Pick<MiniAppDetail, "id" | "startUrl">): Promise<Partial<ShellConfig>> {
-    const origin = firstPartyOrigin(detail.startUrl);
-    if (!origin) return {};
+  // WHY: throws on anything untrustworthy, so the loader keeps its last good value instead of an empty one.
+  private async fetchManifest(origin: string): Promise<ShellFields> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
-      return await this.loaderFor(detail.id, origin).get();
-    } catch (err) {
-      // Per detail request until a manifest has loaded once.
-      const ticket = fetchFailedThrottle.take(detail.id);
-      if (ticket) {
-        logger.warn(
-          {
-            event: "miniapps.manifest.fetch_failed",
-            miniAppId: detail.id,
-            origin,
-            err,
-            suppressed: ticket.suppressed,
-          },
-          "Manifest fetch failed; serving the registry's own shell",
-        );
-      }
-      return {};
+      const res = await fetch(`${origin}${MANIFEST_PATH}`, { redirect: "manual", signal: controller.signal });
+      this.assertReadable(res, origin);
+      const json: unknown = JSON.parse(await this.readBounded(res));
+      return parseShellFields(isRecord(json) ? json.shell : undefined);
+    } finally {
+      clearTimeout(timer);
     }
+  }
+
+  // WHY: a manual redirect answers with an opaque status-0 response, and a test double with the raw 3xx: both refused.
+  private assertReadable(res: Response, origin: string): void {
+    if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
+      throw new Error(`manifest redirected from ${origin}`);
+    }
+    if (!res.ok) throw new Error(`manifest ${res.status} from ${origin}`);
+    const contentLength = res.headers.get("content-length");
+    if (contentLength !== null && Number(contentLength) > MAX_MANIFEST_BYTES) {
+      throw new Error(`manifest content-length exceeds ${MAX_MANIFEST_BYTES} bytes`);
+    }
+  }
+
+  // WHY: a Content-Length can lie or be absent (chunked), so the bytes actually read are bounded too.
+  private async readBounded(res: Response): Promise<string> {
+    const reader = res.body?.getReader();
+    if (!reader) return res.text();
+    try {
+      return await this.readChunks(reader);
+    } finally {
+      await reader.cancel().catch(() => undefined);
+    }
+  }
+
+  private async readChunks(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<string> {
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (let next = await reader.read(); !next.done; next = await reader.read()) {
+      total += next.value.byteLength;
+      if (total > MAX_MANIFEST_BYTES) throw new Error(`manifest body exceeds ${MAX_MANIFEST_BYTES} bytes`);
+      chunks.push(next.value);
+    }
+    return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk))).toString("utf8");
   }
 }
