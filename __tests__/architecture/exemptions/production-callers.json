@@ -1,0 +1,6 @@
+{
+  "src/building/building.repository.ts: BuildingRepository.ensureIndexes": "onModuleInit runs it through ensureIndexesAtBoot, which warns and continues (ADR 0010 D2), so building.repository.spec.ts calls it directly to see which collection each campus-shape index lands on",
+  "src/building/catalog/building-catalog.repository.ts: BuildingCatalogRepository.ensureIndexes": "the boot wrapper swallows a failed createIndex by design (ADR 0010 D2); building-catalog.repository.spec.ts calls it directly to pin the spaces and connections indexes",
+  "src/building/sync/building-sync.repository.ts: BuildingSyncRepository.ensureIndexes": "public only so building-sync.repository.spec.ts can pin the unique space key and the 2dsphere index, which onModuleInit would log and skip on failure (ADR 0010 D2)",
+  "src/map/map.repository.ts: MapRepository.ensureIndexes": "map.repository.spec.ts drives it directly to pin the place and activation indexes, because ensureIndexesAtBoot in onModuleInit turns a rejection into a warning (ADR 0010 D2)"
+}
