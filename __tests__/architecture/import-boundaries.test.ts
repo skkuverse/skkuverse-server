@@ -1,9 +1,8 @@
 /**
  * The ESLint import boundaries (eslint.config.js, blocks named `boundaries/...`)
- * keep the files that broke them when they were added in each block's
- * `ignores`. ESLint never reports an ignored file, so on its own a fixed file
- * would stay listed forever. This lints every listed file with its block's
- * rule and fails when one no longer violates it: the lists only shrink.
+ * are strict: a block's `ignores` holds globs that exempt a role (repositories,
+ * specs) and the two Mongo owners, never a single file that breaks the rule.
+ * ESLint never reports an ignored file, so a listed violator would pass silently.
  */
 import fs from "fs";
 import path from "path";
@@ -232,22 +231,16 @@ describe("boundaries/lang", () => {
   });
 });
 
-describe("files listed in a boundary block's ignores", () => {
-  const listed = blocks.flatMap((b) =>
-    (b.ignores ?? [])
-      .filter((p) => !/[*{}]/.test(p) && p !== "src/infra/db.ts" && p !== "src/infra/mongo.ts")
-      .map((file) => ({ block: b, file })),
-  );
+describe("a boundary block's ignores", () => {
+  it("list no single file but the two Mongo owners", () => {
+    // Act
+    const listed = blocks.flatMap((b) =>
+      (b.ignores ?? [])
+        .filter((p) => !/[*{}]/.test(p) && p !== "src/infra/db.ts" && p !== "src/infra/mongo.ts")
+        .map((file) => `${b.name ?? ""}: ${file}`),
+    );
 
-  it("exist", () => {
-    expect(listed.filter(({ file }) => !fs.existsSync(path.join(ROOT, file))).map(({ file }) => file)).toEqual([]);
-  });
-
-  it("still violate their block (delete the entry once a file is fixed)", () => {
-    const fixed = listed
-      .filter(({ file }) => fs.existsSync(path.join(ROOT, file)))
-      .filter(({ block: b, file }) => lint(b.rules!, file, fs.readFileSync(path.join(ROOT, file), "utf8")).length === 0)
-      .map(({ block: b, file }) => `${b.name}: ${file}`);
-    expect(fixed).toEqual([]);
+    // Assert
+    expect(listed).toEqual([]);
   });
 });

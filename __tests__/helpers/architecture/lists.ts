@@ -24,9 +24,7 @@ export const LIST_DIRS = ["allowlists", "exemptions", "ratchets"] as const;
 export type ListDir = (typeof LIST_DIRS)[number];
 
 /** The ratchets, each with the decision it waits on: a file in `ratchets/` that is not here fails `list-registry`. */
-export const RATCHET_DECISIONS: Readonly<Record<string, string>> = {
-  "root-exports-shared": "ADR 0010 D9",
-};
+export const RATCHET_DECISIONS: Readonly<Record<string, string>> = {};
 
 export const DEBT_TRAILER = "Architecture-Debt";
 

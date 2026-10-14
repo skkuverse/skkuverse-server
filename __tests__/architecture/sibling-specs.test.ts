@@ -11,8 +11,8 @@
  * structure pins), and a `.service` by a spec only when it composes more than
  * a delegation.
  *
- * The allowlist holds the files of modules not yet migrated; a migrated scope
- * carries no entry (migrated-scopes.test.ts).
+ * The rule is strict: no allowlist, and no list may hold an entry under src/
+ * (scope-entries.test.ts).
  */
 import { EXEMPT, parse } from "../helpers/architecture/names";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";

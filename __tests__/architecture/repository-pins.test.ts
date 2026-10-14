@@ -4,7 +4,7 @@
  * sort, so the repository spec must hold the query object the fake copies, or
  * a dropped filter passes every test while the fake keeps filtering.
  *
- * In a migrated scope, each public method of a `*.repository.ts` class that
+ * In a module scope, each public method of a `*.repository.ts` class that
  * reads (a `find`, `findOne`, `aggregate`, `countDocuments`,
  * `estimatedDocumentCount` or `distinct` in its body, in a private method it
  * calls, or in the `load` of a `createCachedLoader` whose `.get()` it calls)
@@ -19,11 +19,11 @@
  * the method's name, so a spec's same-named wrapper
  * (`const listBuildings = () => repository.listBuildings()`) counts too.
  *
- * Modules not yet migrated are not checked, so there is no allowlist.
+ * Every module scope is checked, and there is no allowlist.
  */
 import ts from "typescript";
 import { MONGO_READS, NEST_LIFECYCLE, collect, importsOf, isNonPublic, parseSource, resolveSpecifier, skipOuter } from "../helpers/architecture/ast";
-import { inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { parseTestFile } from "../helpers/architecture/tests";
 import { filesUnder, readSource } from "../helpers/architecture/tree";
 
@@ -193,7 +193,7 @@ export function unpinnedMethods(methods: readonly string[], specFile: string, sp
   return methods.filter((name) => !bodies.some((body) => callsNamed(body, name)));
 }
 
-/** `<file>: <method>` for each reading method of a migrated repository its spec does not pin. */
+/** `<file>: <method>` for each reading method of a repository in `scopes` its spec does not pin. */
 export function repositoryPinViolations(files: readonly string[], scopes: readonly string[], read: (f: string) => string): string[] {
   const present = new Set(files);
   return files
@@ -290,7 +290,7 @@ it("pins", async () => {
     expect(unpinnedMethods(["findById", "listAll", "countOpen"], "src/x/x.repository.spec.ts", spec)).toEqual(["findById", "listAll"]);
   });
 
-  it("checks only repositories in migrated scopes", () => {
+  it("checks only repositories in the given scopes", () => {
     // Arrange
     const sources: Record<string, string> = {
       "src/x/x.repository.ts": REPOSITORY,
@@ -306,10 +306,10 @@ it("pins", async () => {
   });
 });
 
-describe("repositories in migrated scopes", () => {
+describe("repositories in the module scopes", () => {
   it("pin each read's query object in their own spec", () => {
     // Act
-    const violations = repositoryPinViolations(filesUnder("src"), migratedScopes(), readSource);
+    const violations = repositoryPinViolations(filesUnder("src"), moduleScopes(), readSource);
 
     // Assert
     expect(violations).toEqual([]);
