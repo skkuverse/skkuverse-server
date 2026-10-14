@@ -199,7 +199,7 @@ describe("row caps", () => {
   it("sizes the strong cap above the largest building and cuts the weak tail", () => {
     // Assert
     // The new dormitory (buildNo 298) holds 801 rooms — the strong band must never
-    // truncate a building. The weak band is what keeps the one-syllable query for "room" (6173 matches) from
+    // truncate a building. The weak band is what keeps `q=실` (6173 matches) from
     // reaching a non-virtualized ScrollView.
     expect(SPACE_SEARCH_LIMIT).toBeGreaterThan(801);
     expect(SPACE_WEAK_LIMIT).toBeLessThanOrEqual(100);
