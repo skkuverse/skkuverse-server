@@ -310,7 +310,7 @@ rewrites `updatedAt`.
 
 The old `places` documents carry the same `layerSetId` and are keyed `nsc-*`, while the reader now
 emits `<layerSetId>-*` ids — so an ordinary import does not overwrite them, it sits beside them. They
-have `name` where the projection reads `title` and no `hours` at all. `isRenderable` skips them and
+have `name` where the projection reads `title` and no `hours` at all. The place read skips them and
 logs a count, so the map still serves; but 62 skipped places with nothing drawn is not a state to
 leave production in.
 
