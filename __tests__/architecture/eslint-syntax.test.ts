@@ -3,13 +3,18 @@
  * alias of no-restricted-syntax under the local `src-syntax` plugin so a
  * block that sets one leaves the rest alone:
  *
- *   - `zod/issue-path`: every `ctx.addIssue({ … })` in src/ names its `path`
+ *   - `zod/issue-path`: every issue src/ hands zod names its `path`
  *     (`path: []` when the issue is the whole value), since parseConfigFile
- *     and the boot error print it; a bare message string is refused too.
- *     Specs may build a pathless issue to test how one is answered.
- *   - `boundaries/literals`: a six-digit hex color (`003626`, `#FFFFFF`) or
- *     a web view path (`/skku/…`) appears only in a `*.constants.ts` file
- *     (or JSON). Specs state the values they expect and are left out. Its
+ *     and the boot error print it: `ctx.addIssue({ … })`, `ctx["addIssue"]`,
+ *     a destructured `addIssue({ … })` and `ctx.issues.push({ … })`; a bare
+ *     message string and `path: undefined` are refused too. Specs may build
+ *     a pathless issue to test how one is answered.
+ *   - `boundaries/literals`: a hex color (`#FFFFFF`, `#FF003626`, a bare
+ *     hex that mixes letters and digits, or any bare hex bound to a name
+ *     ending in `color`), an `rgb()` string, a `0x…` color number or a web
+ *     view path (`/skku/…`, `${origin}/skku/…`) appears only in a
+ *     `*.constants.ts` file (or JSON). Specs state the values they expect
+ *     and are left out. Its
  *     `ignores` lists the unmigrated files that broke it when it was added;
  *     import-boundaries.test.ts fails when one is fixed.
  *   - `readability/src`: no comma operator in src/, parenthesised or not
@@ -53,6 +58,11 @@ describe("zod/issue-path", () => {
       "ctx.addIssue({ code: 'custom', path: at, message });",
       "ctx.addIssue(issue);",
       'addIssue(ctx, [["lat"], "swapped"]);',
+      'ctx.addIssue({ code: "custom", "path": ["a"], message: "dup" });',
+      'ctx.issues.push({ code: "custom", path: ["a"], message: "dup", input: v });',
+      'ctx["addIssue"]({ code: "custom", path: [], message: "dup" });',
+      'z.object({}).superRefine((v, { addIssue }) => addIssue({ code: "custom", path: ["a"], message: "m" }));',
+      "items.push({ code: 'custom', message: 'not an issue list' });",
     ];
 
     // Act
@@ -70,6 +80,11 @@ describe("zod/issue-path", () => {
       'ctx.addIssue({ code: "custom", params: { path: ["x"] }, message: "m" });',
       'ctx.addIssue("duplicate id");',
       "ctx.addIssue(`duplicate ${id}`);",
+      'ctx.issues.push({ code: "custom", message: "dup", input: v });',
+      'ctx["addIssue"]({ code: "custom", message: "dup" });',
+      'ctx.addIssue({ code: "custom", path: undefined, message: "dup" });',
+      'z.object({}).superRefine((v, { addIssue }) => addIssue({ code: "custom", message: "m" }));',
+      'z.object({}).check((ctx) => { ctx.issues.push({ code: "custom", message: "m", input: ctx.value }); });',
     ];
 
     // Act
@@ -92,7 +107,7 @@ describe("zod/issue-path", () => {
 describe("boundaries/literals", () => {
   const file = "src/x/x.mapper.ts";
 
-  it("rejects a hex color, bare or with #, and a web view path, as a string or a template", () => {
+  it("rejects a hex color (with #, mixing letters and digits, or named as a color), rgb(), 0x…, and a web view path, as a string or a template", () => {
     // Arrange
     const sources = [
       'const color = "003626";',
@@ -102,6 +117,14 @@ describe("boundaries/literals", () => {
       'const path = "/skku/lostandfound";',
       "const url = `/skku/${page}`;",
       'type Color = "4CAF50";',
+      'const color = "#FF003626";',
+      'const tint = "FF003626";',
+      'const style = { textColor: "003626" };',
+      'const color = "rgb(0, 54, 38)";',
+      "const color = `rgba(0, 54, 38, ${alpha})`;",
+      "const color = 0x003626;",
+      "const url = `${origin}/skku/lostandfound`;",
+      'const path = "skku/lostandfound";',
     ];
 
     // Act
@@ -111,7 +134,7 @@ describe("boundaries/literals", () => {
     expect(counts).toEqual(sources.map(() => 1));
   });
 
-  it("passes other strings: short or long hex, non-hex words, other paths and a path inside a URL", () => {
+  it("passes other strings: short or long hex, all-digit ids and all-letter words outside a color, non-hex words, other paths and a path inside a URL", () => {
     // Arrange
     const sources = [
       'const short = "#FFF";',
@@ -121,6 +144,13 @@ describe("boundaries/literals", () => {
       'const url = "https://www.skku.edu/skku/campus/support/lost_and_found_2.do";',
       "const url = `${origin}${LOST_AND_FOUND_PATH}`;",
       "const mixed = `${a}003626`;",
+      'const since = "202610";',
+      'const routeId = "100100";',
+      'const kind = "facade";',
+      'const era = "decade";',
+      "const mask = 0xff;",
+      'const label = "rgb is a color model";',
+      "const url = `${origin}/webview/x`;",
     ];
 
     // Act
