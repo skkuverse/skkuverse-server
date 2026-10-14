@@ -1,9 +1,1 @@
-[
-  "src/map/map.rules.ts: assertValidChipSpecs",
-  "src/map/map.rules.ts: chipLabelIssue",
-  "src/map/map.rules.ts: listSortIssue",
-  "src/map/map.schema.ts: absentWhenNull",
-  "src/map/map.schema.ts: defaulted",
-  "src/map/map.schema.ts: i18nTextFile",
-  "src/map/map.schema.ts: mapCamera"
-]
+[]

@@ -1,1 +1,10 @@
-{}
+{
+  "src/map/layer-set/map-layer-set.rules.ts": {
+    "max": 141,
+    "reason": "ADR 0010 D9, no domain seam: the layer-set file is one operator-edited document, and its schema composes these checks (chips, lists, option windows, cross-references). Child-to-parent imports put a zod composite's leaves above it, so a sub-module split cannot hold them, and the leaves alone exceed the rules cap."
+  },
+  "src/map/layer-set/map-layer-set.schema.ts": {
+    "max": 84,
+    "reason": "ADR 0010 D9, no domain seam: layerSetFile is one zod composite over one operator-edited document. Child-to-parent imports put a composite's leaves (camera, i18n text, nullable defaults) above it, so a sub-module split cannot hold them, and the leaves alone exceed the schema cap."
+  }
+}

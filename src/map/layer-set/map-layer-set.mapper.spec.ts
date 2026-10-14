@@ -11,8 +11,8 @@ import fs from "fs";
 import path from "path";
 import { parseLayerSetFile } from "./map-layer-set.config";
 import { BASE_LAYERS } from "../map.constants";
-import { assertValidChipSpecs, validateChipSpecs } from "../map.rules";
 import { BASE_CHIPS, EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "./map-layer-set.constants";
+import { assertValidChipSpecs, validateChipSpecs } from "./map-layer-set.rules";
 import { eventChipSpecs, eventLayerSpecs, resetChip } from "./map-layer-set.mapper";
 import type { LayerSet } from "./map-layer-set.schema";
 
