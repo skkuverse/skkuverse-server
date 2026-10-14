@@ -1,0 +1,8 @@
+{
+  "_about": "GET /bus/schedule/data/campus-inja/week?from=2026-10-19 captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); the first notice",
+  "data": {
+    "style": "ai",
+    "text": "도착 시간은 실시간 교통 상황을 반영해요",
+    "source": "service"
+  }
+}

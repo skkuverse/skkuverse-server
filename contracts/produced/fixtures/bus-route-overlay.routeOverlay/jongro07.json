@@ -1,0 +1,20 @@
+{
+  "_about": "GET /bus/route/jongro07 captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); arrays cut to the first three items",
+  "data": {
+    "color": "4CAF50",
+    "coords": [
+      [
+        37.583014,
+        126.998763
+      ],
+      [
+        37.583063,
+        126.998714
+      ],
+      [
+        37.584114,
+        126.997674
+      ]
+    ]
+  }
+}
