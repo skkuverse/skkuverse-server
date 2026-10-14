@@ -158,6 +158,16 @@ const config = {
     stationHyehwa: asRequired(process.env.API_STATION_HEWA),
   },
 
+  // WHY: read per call, not at import: ROLE is set per execution context, and a test sets it per case.
+  role(): string {
+    return requiredEnv.envRole(process.env);
+  },
+
+  /** WHY: only `api` leaves the pollers to another container; `poller` and `combined` run them. */
+  runsPollers(): boolean {
+    return requiredEnv.envRole(process.env) !== "api";
+  },
+
   getModeLabel(): string {
     if (isProduction) return "PRODUCTION (prod DB + prod API)";
     if (isDevelopment && USE_PROD_API) return "STAGING CHECK (dev DB + prod API)";

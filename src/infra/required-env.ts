@@ -26,6 +26,11 @@ export function envMode(env: NodeJS.ProcessEnv): EnvMode {
   };
 }
 
+// WHY: unset means `combined`, which polls and serves: the documented local default (CLAUDE.md, Runtime topology).
+export function envRole(env: NodeJS.ProcessEnv): string {
+  return env.ROLE || "combined";
+}
+
 export function dbNameFor(mode: EnvMode, baseName: string | undefined): string | undefined {
   if (!baseName) return baseName;
   if (mode.isTest) return `${baseName}_test`;

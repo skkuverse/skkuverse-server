@@ -1,5 +1,6 @@
 import { Controller, Get, Res } from "@nestjs/common";
 import type { Response } from "express";
+import config from "../infra/config";
 import { ping as pingDb } from "../infra/db";
 import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
@@ -25,8 +26,7 @@ export class HealthController {
   async ready(@Res() res: Response): Promise<void> {
     try {
       await pingDb();
-      const role = process.env.ROLE || "combined";
-      const pollersReady = role === "api" ? true : this.pollers.isReady();
+      const pollersReady = config.runsPollers() ? this.pollers.isReady() : true;
       if (!pollersReady) {
         res.status(503).json({ status: "unavailable", reason: "pollers not started" });
         return;
