@@ -106,7 +106,7 @@ export function loadRegistry(index: unknown, details: Readonly<Record<string, un
   return parseConfigFile({ label: LABEL, error: toRegistryWords(raw) }, schema, raw);
 }
 
-function ownerOf(origin: string, details: readonly MiniAppDetailRaw[]): string {
+function ownerOf(details: readonly MiniAppDetailRaw[], origin: string): string {
   const owners = details.filter((detail) => new URL(detail.startUrl).origin === origin);
   const [owner] = owners;
   if (owners.length !== 1 || !owner) {
@@ -116,15 +116,15 @@ function ownerOf(origin: string, details: readonly MiniAppDetailRaw[]): string {
 }
 
 // WHY: one owner per first-party origin, or a URL there opens in no mini app's shell, or in two.
-function toFirstPartyOrigins(details: readonly MiniAppDetailRaw[]): Readonly<Record<string, string>> {
-  return Object.freeze(Object.fromEntries(FIRST_PARTY_MINIAPP_ORIGINS.map((origin) => [origin, ownerOf(origin, details)])));
+function toFirstPartyOrigins(details: readonly MiniAppDetailRaw[], origins: readonly string[]): Readonly<Record<string, string>> {
+  return Object.freeze(Object.fromEntries(origins.map((origin) => [origin, ownerOf(details, origin)])));
 }
 
-function toLoadedRegistry({ index, details }: RegistryFile): LoadedRegistry {
+export function toLoadedRegistry({ index, details }: RegistryFile, firstPartyOrigins: readonly string[]): LoadedRegistry {
   const detailsById = new Map(Object.entries(details).map(([id, detail]) => [id, Object.freeze(detail)]));
   const indexEntries = [...index.miniApps].sort((a, b) => a.order - b.order).map((entry) => toIndexEntry(entry, WEB_ORIGIN));
-  const firstPartyOrigins = toFirstPartyOrigins([...detailsById.values()]);
-  return { version: index.version, indexEntries: Object.freeze(indexEntries), detailsById, firstPartyOrigins };
+  const ownerByOrigin = toFirstPartyOrigins([...detailsById.values()], firstPartyOrigins);
+  return { version: index.version, indexEntries: Object.freeze(indexEntries), detailsById, firstPartyOrigins: ownerByOrigin };
 }
 
 // WHY: read next to the compiled file at runtime; scripts/copy-build-assets.js stages each JSON file into dist/.
@@ -140,7 +140,7 @@ function indexIdsOf(index: unknown): string[] {
 function readRegistry(): LoadedRegistry {
   const index = readJson("index.json");
   const details = Object.fromEntries(indexIdsOf(index).map((id) => [id, readJson("details", `${id}.json`)]));
-  return toLoadedRegistry(loadRegistry(index, details));
+  return toLoadedRegistry(loadRegistry(index, details), FIRST_PARTY_MINIAPP_ORIGINS);
 }
 
 export const registry: Readonly<LoadedRegistry> = Object.freeze(readRegistry());
