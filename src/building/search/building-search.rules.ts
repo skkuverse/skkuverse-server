@@ -3,8 +3,6 @@
 import { escapeRegex } from "../../shared/regex.util";
 import type { StringPath } from "../../shared/string-path.types";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
-import { CAMPUSES } from "../building.constants";
-import type { Campus } from "../building.types";
 import type { RelevanceTier, TierMode } from "./building-search.types";
 
 // EVIDENCE: a building-number query returns whole buildings (the largest has 801 rooms);
@@ -83,10 +81,6 @@ function scoreLocally<TDoc>(tiers: readonly RelevanceTier<TDoc>[], keyword: stri
   return NO_TIER_SCORE;
 }
 
-function isCampus(value: unknown): value is Campus {
-  return (CAMPUSES as readonly unknown[]).includes(value);
-}
-
 export {
   BUILDING_SEARCH_LIMIT,
   BUILDING_STRONG_MIN_SCORE,
@@ -97,7 +91,6 @@ export {
   SPACE_STRONG_MIN_SCORE,
   SPACE_TIERS,
   SPACE_WEAK_LIMIT,
-  isCampus,
   scoreLocally,
   tierRegex,
 };

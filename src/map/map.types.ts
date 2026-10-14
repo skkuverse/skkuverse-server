@@ -1,4 +1,5 @@
 import type { I18n } from "../infra/types";
+import type { BASE_LAYERS } from "./map.constants";
 import type { MapOverlay } from "./map.wire";
 
 export interface CameraMotion {
@@ -46,3 +47,5 @@ export type MapChipActionSpec =
 
 export type OverlayBase = Omit<Extract<MapOverlay, { kind: "polygon" }>, "kind" | "geometry">;
 export type MarkerPresentation = Pick<Extract<MapOverlay, { kind: "marker" }>, "pinPriority" | "locationAccuracy">;
+
+export type BaseLayerId = (typeof BASE_LAYERS)[number]["id"];
