@@ -32,6 +32,7 @@
  *     generic `as T` is not seen.
  */
 import ts from "typescript";
+import { exportsOf, parseSource } from "../helpers/architecture/ast";
 import { numberedKeys } from "../helpers/architecture/comments";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { CLASS_ROLES, EXEMPT, ROLES, parse } from "../helpers/architecture/names";
@@ -64,14 +65,9 @@ const pascal = (kebab: string) =>
     .join("");
 
 function exportedClasses(source: string): string[] {
-  const sf = ts.createSourceFile("x.ts", source, ts.ScriptTarget.ES2022, false);
-  return sf.statements.flatMap((s) =>
-    ts.isClassDeclaration(s) &&
-    s.name &&
-    s.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
-      ? [s.name.text]
-      : [],
-  );
+  return exportsOf(parseSource("x.ts", source))
+    .bindings.filter((b) => b.kind === "class")
+    .map((b) => b.local ?? b.exported);
 }
 
 /** `<file>: <class>` for each exported class whose name does not match its file. */
@@ -89,21 +85,11 @@ export function classNameViolations(file: string, source: string): string[] {
     .map((name) => `${file}: ${name}`);
 }
 
-/** Exported interfaces and type aliases, and the names in a type-only `export { … }`. */
+/** Exported interfaces and type aliases, and the names in a type-only `export { … }`, re-exports included. */
 function exportedTypes(source: string): string[] {
-  const sf = ts.createSourceFile("x.ts", source, ts.ScriptTarget.ES2022, false);
-  return sf.statements.flatMap((s) => {
-    if (
-      (ts.isInterfaceDeclaration(s) || ts.isTypeAliasDeclaration(s)) &&
-      s.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
-    ) {
-      return [s.name.text];
-    }
-    if (ts.isExportDeclaration(s) && s.exportClause && ts.isNamedExports(s.exportClause)) {
-      return s.exportClause.elements.filter((e) => s.isTypeOnly || e.isTypeOnly).map((e) => e.name.text);
-    }
-    return [];
-  });
+  return exportsOf(parseSource("x.ts", source))
+    .bindings.filter((b) => b.isType)
+    .map((b) => b.exported);
 }
 
 const TYPE_ROLES = new Set(["types", "document", "schema", "wire"]);
@@ -116,22 +102,11 @@ export function exportedTypeViolations(file: string, source: string): string[] {
   return exportedTypes(source).map((name) => `${file}: ${name}`);
 }
 
-const isExported = (node: ts.Node) =>
-  ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
-
-/** Value names a file exports: classes, functions, variables, and the non-type names of `export { … }`. */
+/** Value names a file exports: classes, functions, variables, enums, and the non-type names of `export { … }`. */
 function exportedValues(source: string): string[] {
-  const sf = ts.createSourceFile("x.ts", source, ts.ScriptTarget.ES2022, false);
-  return sf.statements.flatMap((s) => {
-    if ((ts.isClassDeclaration(s) || ts.isFunctionDeclaration(s)) && s.name && isExported(s)) return [s.name.text];
-    if (ts.isVariableStatement(s) && isExported(s)) {
-      return s.declarationList.declarations.flatMap((d) => (ts.isIdentifier(d.name) ? [d.name.text] : []));
-    }
-    if (ts.isExportDeclaration(s) && !s.isTypeOnly && s.exportClause && ts.isNamedExports(s.exportClause)) {
-      return s.exportClause.elements.filter((e) => !e.isTypeOnly).map((e) => e.name.text);
-    }
-    return [];
-  });
+  return exportsOf(parseSource("x.ts", source))
+    .bindings.filter((b) => !b.isType)
+    .map((b) => b.exported);
 }
 
 const NAMED_EXPORT_ROLES = new Set([...CLASS_ROLES, "decorator", "bootstrap"]);

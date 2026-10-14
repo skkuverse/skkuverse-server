@@ -30,17 +30,17 @@
  */
 import fs from "fs";
 import path from "path";
+import { isSharedLayer } from "../helpers/architecture/ast";
 import { EXEMPT, ROLES, parse } from "../helpers/architecture/names";
 import { ROOT, expectAllowlisted } from "../helpers/architecture/ratchet";
 import { dirsUnder, filesUnder } from "../helpers/architecture/tree";
 
-const SHARED_ROLES = new Set(["config", "http", "infra", "scheduling", "shared"]);
 
 /** `src/<name>/` for each top-level folder that is neither a shared role nor a feature module. */
 export function topLevelViolations(files: readonly string[]): string[] {
   const top = [...new Set(files.map((f) => f.split("/")).filter((p) => p.length > 2).map((p) => p[1]!))];
   return top
-    .filter((name) => !SHARED_ROLES.has(name) && !files.includes(`src/${name}/${name}.module.ts`))
+    .filter((name) => !isSharedLayer(name) && !files.includes(`src/${name}/${name}.module.ts`))
     .map((name) => `src/${name}/`)
     .sort();
 }
@@ -66,7 +66,7 @@ export function folderRoleViolations(files: readonly string[]): string[] {
   const out: string[] = [];
   for (const [dir, direct] of byDir) {
     const segments = dir.split("/");
-    if (segments.length < 2 || SHARED_ROLES.has(segments[1]!)) continue;
+    if (segments.length < 2 || isSharedLayer(segments[1]!)) continue;
     const moduleFile = direct.find((f) => f.endsWith(".module.ts"));
     if (!moduleFile) continue;
     const moduleBase = parse(moduleFile).parts[0]!;

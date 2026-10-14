@@ -8,6 +8,7 @@
 import fs from "fs";
 import path from "path";
 import { Linter } from "eslint";
+import { isSharedLayer } from "../helpers/architecture/ast";
 import { ROOT } from "../helpers/architecture/ratchet";
 
 const tsparser = require("@typescript-eslint/parser");
@@ -121,10 +122,9 @@ describe("import boundary blocks apply as specified", () => {
     const featureBlocks = new Set(
       blocks.map((b) => b.name!.match(/^boundaries\/feature\/([^/]+)\//)?.[1]).filter(Boolean),
     );
-    const shared = new Set(["config", "http", "infra", "scheduling", "shared"]);
     const topLevel = fs
       .readdirSync(path.join(ROOT, "src"), { withFileTypes: true })
-      .filter((d) => d.isDirectory() && !shared.has(d.name))
+      .filter((d) => d.isDirectory() && !isSharedLayer(d.name))
       .map((d) => d.name);
     expect([...featureBlocks].sort()).toEqual(topLevel.sort());
   });

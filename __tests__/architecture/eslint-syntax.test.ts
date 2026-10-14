@@ -31,6 +31,7 @@
  *     `migrated-scopes.json`, so a module is bound when it joins.
  */
 import { Linter } from "eslint";
+import { SHARED_LAYERS } from "../helpers/architecture/ast";
 
 const tsparser = require("@typescript-eslint/parser");
 const config: Linter.Config[] = require("../../eslint.config.js");
@@ -229,8 +230,7 @@ describe("migrated/syntax-clock", () => {
   it("covers every migrated feature module and no shared layer, from migrated-scopes.json", () => {
     // Arrange
     const scopes: string[] = require("./migrated-scopes.json");
-    const shared = ["config", "http", "infra", "scheduling", "shared"];
-    const features = scopes.filter((scope) => !shared.some((layer) => scope.startsWith(`src/${layer}/`)));
+    const features = scopes.filter((scope) => !SHARED_LAYERS.some((layer) => scope.startsWith(`src/${layer}/`)));
 
     // Act
     const { files = [] } = block("migrated/syntax-clock");
@@ -238,7 +238,7 @@ describe("migrated/syntax-clock", () => {
     // Assert
     expect(features.length).toBeGreaterThan(0);
     expect(files).toEqual(expect.arrayContaining(features.map((scope) => `${scope}**/*.ts`)));
-    expect(files.filter((glob) => shared.some((layer) => String(glob).startsWith(`src/${layer}/`)))).toEqual([]);
+    expect(files.filter((glob) => SHARED_LAYERS.some((layer) => String(glob).startsWith(`src/${layer}/`)))).toEqual([]);
   });
 
   it("rejects Date.now() in a migrated feature service", () => {
