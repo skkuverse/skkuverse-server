@@ -1,0 +1,7 @@
+{
+  "_about": "GET /bus/realtime/data/hssc captured from production 2026-10-14 (stage 12 shape snapshot, Accept-Language ko); meta without lang",
+  "data": {
+    "currentTime": "10:26 PM",
+    "totalBuses": 2
+  }
+}
