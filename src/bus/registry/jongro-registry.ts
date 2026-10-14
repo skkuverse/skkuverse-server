@@ -317,7 +317,7 @@ function deriveMapping(raw: JongroRouteStation[]): JongroStationMapping {
 function buildRoute(raw: JongroRouteConfig): JongroRoute {
   const code = raw.id.slice("jongro".length);
   // (A credential detail is left out of the public history.)
-  const serviceKey = config.api.seoulBusServiceKey!;
+  const serviceKey = config.api.seoulBusServiceKey;
   const route: JongroRoute = {
     id: raw.id,
     code,

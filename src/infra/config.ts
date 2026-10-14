@@ -11,11 +11,11 @@ const { switches, errors: switchErrors } = resolveRuntimeSwitches(
   runtimeMode(NODE_ENV),
 );
 
-// WHY: typed `string`: each value read through these is in required-env.ts's list, so the exit at the
+// WHY: typed `string`: every value read through these is in required-env.ts's list, so the exit at the
 // end of this file runs before any caller reads one. No DB name falls back to another database.
 const asRequired = (value: string | undefined): string => value as string;
 const dbNameFor = (baseName: string | undefined): string => asRequired(requiredEnv.dbNameFor(mode, baseName));
-const apiUrl = (prod: string, dev: string): string | undefined => requiredEnv.apiUrl(mode, process.env, { prod, dev });
+const apiUrl = (prod: string, dev: string): string => asRequired(requiredEnv.apiUrl(mode, process.env, { prod, dev }));
 
 const FCM_TIMEOUT_MS = 30 * 1000;
 
@@ -56,17 +56,17 @@ const config = {
       notices: process.env.MONGO_NOTICES_COLLECTION || "notices",
     },
     // WHY: no default: a filter boundary that reverted to an old date would expose hidden notices.
-    serviceStartDate: process.env.NOTICES_SERVICE_START_DATE,
+    serviceStartDate: asRequired(process.env.NOTICES_SERVICE_START_DATE),
 
     // CONTRACT(skkuverse-ai): skkuverse-ai/docs/notice-overview-api.md owns this API.
     overview: {
-      aiApiUrl: process.env.AI_API_URL,
+      aiApiUrl: asRequired(process.env.AI_API_URL),
     },
 
     dispatch: {
       functionUrl: asRequired(process.env.FCM_FUNCTION_URL),
       apiKey: asRequired(process.env.FCM_API_KEY),
-      internalToken: process.env.INTERNAL_DISPATCH_TOKEN,
+      internalToken: asRequired(process.env.INTERNAL_DISPATCH_TOKEN),
       // SEE: docs/decisions/0008-dispatch-age-gate-on-publication-date.md — measured against the
       // notice's publication `date`, not crawl time; 14 days matched 2,498 of 2,498 real pushes.
       maxAgeDays: 14,
@@ -119,10 +119,10 @@ const config = {
   shuttleEta: {
     enabled: switches.shuttleEtaEnabled,
     naver: {
-      keyId: process.env.NAVER_API_KEY_ID,
-      key: process.env.NAVER_API_KEY,
+      keyId: asRequired(process.env.NAVER_API_KEY_ID),
+      key: asRequired(process.env.NAVER_API_KEY),
     },
-    tmapAppKey: process.env.TMAP_APP_KEY,
+    tmapAppKey: asRequired(process.env.TMAP_APP_KEY),
     naverDailyCap: 1000,
     // QUIRK(tmap): one app serves dev and prd (its terms count several apps for one service as abuse),
     // so development gets a small share of the 1,000 daily calls.
@@ -149,13 +149,13 @@ const config = {
   },
 
   naver: {
-    styleId: process.env.NAVER_MAP_STYLE_ID,
+    styleId: asRequired(process.env.NAVER_MAP_STYLE_ID),
   },
 
   api: {
     hsscNew: apiUrl("API_HSSC_NEW_PROD", "API_HSSC_NEW_DEV"),
-    seoulBusServiceKey: process.env.SEOUL_BUS_SERVICE_KEY,
-    stationHyehwa: process.env.API_STATION_HEWA,
+    seoulBusServiceKey: asRequired(process.env.SEOUL_BUS_SERVICE_KEY),
+    stationHyehwa: asRequired(process.env.API_STATION_HEWA),
   },
 
   getModeLabel(): string {
