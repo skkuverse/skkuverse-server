@@ -1,0 +1,28 @@
+// WHY: an inclusion list with the Markdown body only: the raw HTML and plain-text bodies, the hashes and the
+// crawler's bookkeeping are never served, and a field the crawler adds later stays out until named here.
+export const DETAIL_PROJECTION = {
+  _id: 1,
+  sourceId: 1,
+  articleNo: 1,
+  title: 1,
+  category: 1,
+  author: 1,
+  department: 1,
+  date: 1,
+  views: 1,
+  cleanMarkdown: 1,
+  attachments: 1,
+  sourceUrl: 1,
+  lastModified: 1,
+  crawledAt: 1,
+  editCount: 1,
+  editHistory: 1,
+  summary: 1,
+  summaryOneLiner: 1,
+  summaryType: 1,
+  summaryPeriods: 1,
+  summaryLocations: 1,
+  summaryDetails: 1,
+  summaryModel: 1,
+  summaryAt: 1,
+} as const;

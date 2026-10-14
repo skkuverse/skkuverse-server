@@ -1,0 +1,14 @@
+{
+  "_about": "Synthetic, never captured (an internal route the crawler calls): the summary NoticesDispatchService.sweepPending returns for a sweep that merged a cross-posted pair into one push",
+  "data": {
+    "status": "ok",
+    "source": "crawler-main",
+    "processed": 3,
+    "sent": 3,
+    "failed": 0,
+    "skippedNoTopics": 0,
+    "cfCalls": 2,
+    "dedupedDocs": 1,
+    "durationMs": 412
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "tabs": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "tabMode": {
+                "type": "string",
+                "const": "fixed"
+              },
+              "fixed": {
+                "type": "object",
+                "properties": {
+                  "sourceId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "campus": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "sourceId",
+                  "name",
+                  "campus"
+                ]
+              }
+            },
+            "required": [
+              "key",
+              "label",
+              "tabMode",
+              "fixed"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "tabMode": {
+                "type": "string",
+                "const": "picker"
+              },
+              "picker": {
+                "type": "object",
+                "properties": {
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "campus": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "college": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "noticeAvailable": {
+                          "type": "boolean"
+                        },
+                        "excludeReason": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "excludeReasonText": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "campus",
+                        "college",
+                        "noticeAvailable",
+                        "excludeReason",
+                        "excludeReasonText"
+                      ]
+                    }
+                  },
+                  "maxSelection": {
+                    "type": "number"
+                  },
+                  "defaultIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "campusDefaultIds": {
+                    "type": "object",
+                    "properties": {
+                      "hssc": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "nsc": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "sources",
+                  "maxSelection",
+                  "defaultIds",
+                  "campusDefaultIds"
+                ]
+              }
+            },
+            "required": [
+              "key",
+              "label",
+              "tabMode",
+              "picker"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "tabs"
+  ]
+}
