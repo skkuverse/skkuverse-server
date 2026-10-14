@@ -3,26 +3,25 @@
  * Lives under helpers/ so jest does not collect it as a suite.
  */
 import { ObjectId } from "mongodb";
-import type {
-  AiOverviewResponse,
-  OverviewCandidate,
-} from "../../src/notices/overview/overview.contract";
+import type { AiOverviewResponse } from "../../src/notices/overview/notices-overview.schema";
+import type { OverviewCandidate } from "../../src/notices/overview/notices-overview.types";
 
 let seq = 0;
 
 /** A candidate with a unique title and hash unless overridden. */
+// WHY: `articleNo` takes a string too, as some route tests seed one; production documents hold a number.
 export function candidate(
-  extra: Partial<OverviewCandidate> = {},
+  extra: Partial<Omit<OverviewCandidate, "articleNo">> & { articleNo?: number | string } = {},
 ): OverviewCandidate {
   seq += 1;
   return {
     _id: new ObjectId(),
     sourceId: "skku-main",
-    articleNo: `${140000 + seq}`,
+    articleNo: 140000 + seq,
     title: `notice ${seq}`,
     date: "2026-09-20",
     contentHash: `hash-${seq}`,
-    ...extra,
+    ...(extra as Partial<OverviewCandidate>),
   };
 }
 

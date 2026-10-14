@@ -5,7 +5,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { commentBlocks, commentsOf, numberedKeys, type SourceComment } from "../helpers/architecture/comments";
+import { commentBlocks, commentsOf, numberedKeys, vendoredSources, type SourceComment } from "../helpers/architecture/comments";
 import { expectAllowlisted, ROOT } from "../helpers/architecture/ratchet";
 import { isGeneratedSource, isNonSpecSource, readSource, sourceFiles } from "../helpers/architecture/tree";
 
@@ -49,12 +49,6 @@ function tagProblem(text: readonly string[], exists: (rel: string) => boolean): 
     if (!cited.endsWith(".md") && !exists(cited)) return `missing ${cited}`;
   }
   return undefined;
-}
-
-/** Hash-locked vendored files (.contracts.lock.json): their comments are not edited here. */
-function vendoredSources(): Set<string> {
-  const lock = JSON.parse(readSource(".contracts.lock.json")) as { contracts: Record<string, { path: string }> };
-  return new Set(Object.values(lock.contracts).map((c) => c.path));
 }
 
 /** `<file>: <first line>` per untagged comment, `[reason]` appended when a tag is malformed, `#n` on a repeat. */

@@ -1,3 +1,7 @@
 {
-  "__tests__/nest/health/health.routes.test.ts: jest.mock(src/infra/db)": "Health has no repository by design: its controller pings the database through src/infra/db itself, so the route test can only double that ping."
+  "__tests__/nest/health/health.routes.test.ts: jest.mock(src/infra/db)": "Health has no repository by design: its controller pings the database through src/infra/db itself, so the route test can only double that ping.",
+  "__tests__/nest/notices/notices-proxy.test.ts: jest.mock(axios)": "the route test drives the real attachment client over a mocked axios, so the guarded config on every outbound call and the 403 and 502 mappings stay pinned through the HTTP pipeline; a client fake would hide exactly those (ADR 0011 D2)",
+  "src/notices/dispatch/notices-dispatch.service.spec.ts: jest.mock(src/infra/db)": "the dispatch spec runs the service with its Mongo stub, so each sweep's claim filter, push payload and stored push fields are pinned call by call; it moved unchanged with its code through stage 11 (ADR 0011 D2)",
+  "src/notices/dispatch/notices-dispatch.service.spec.ts: new NoticesDispatchClient": "the dispatch spec runs the service with its real push client over a stubbed fetch, so each sweep's claim filter, push payload and stored push fields are pinned call by call; it moved unchanged with its code through stage 11 (ADR 0011 D2)",
+  "src/notices/dispatch/notices-dispatch.service.spec.ts: new NoticesDispatchRepository": "the dispatch spec runs the service with its real repository over the stubbed driver, so each sweep's claim filter, push payload and stored push fields are pinned call by call; it moved unchanged with its code through stage 11 (ADR 0011 D2)"
 }
