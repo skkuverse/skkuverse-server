@@ -1,9 +1,9 @@
 import { hasAnyText } from "../../infra/i18n";
+import { toWebviewUrl } from "../../infra/webview-url";
 import { isAbsoluteHttpsUrl, isRootRelativePath } from "../../shared/link-target.util";
 import { isRecord } from "../../shared/object.util";
 import type { EventFacetDef, LayerSet } from "../layer-set/map-layer-set.schema";
 import type { OverlayPlaceDoc, PlaceAction } from "../map.document";
-import { webviewUrl } from "../map.schema";
 
 /** SEE: docs/reference/event-places.md §5: a URL opener never gets a relative string; `route` is the app's own navigator. */
 export function isValidActionValue(action: PlaceAction, isKnownMiniAppTarget: (value: string) => boolean): boolean {
@@ -14,7 +14,7 @@ export function isValidActionValue(action: PlaceAction, isKnownMiniAppTarget: (v
     case "route":
       return isRootRelativePath(value);
     case "webview":
-      return webviewUrl.safeParse(value).success;
+      return toWebviewUrl(value) !== null;
     case "external":
       return isAbsoluteHttpsUrl(value);
     case "miniapp":

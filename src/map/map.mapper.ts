@@ -1,4 +1,5 @@
 import type { I18n } from "../infra/types";
+import { toWebviewUrl } from "../infra/webview-url";
 import type { OverlayGeometry } from "../shared/geojson.types";
 import { toWirePolygon } from "../shared/ring-winding.util";
 import type { MarkerPresentation, OverlayBase } from "./map.types";
@@ -21,4 +22,11 @@ export function toOverlay(base: OverlayBase, geometry: OverlayGeometry, marker: 
   if (geometry.type === "Polygon") return { ...base, kind: "polygon", geometry: toWirePolygon(geometry) };
   if (geometry.type === "LineString") return { ...base, kind: "path", geometry };
   return { ...base, kind: "marker", geometry, pinPriority: marker.pinPriority, locationAccuracy: marker.locationAccuracy };
+}
+
+/** WHY: a root-relative `webview` value is served absolute, so the app only ever opens a complete URL; it was checked before. */
+export function toServedWebviewUrl(value: string): string {
+  const url = toWebviewUrl(value);
+  if (url === null) throw new Error(`"${value}" passed its web view check but toWebviewUrl refuses it`);
+  return url;
 }

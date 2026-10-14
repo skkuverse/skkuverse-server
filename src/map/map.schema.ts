@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { hasAnyText } from "../infra/i18n";
 import type { I18n } from "../infra/types";
-import { toWebviewUrl } from "../infra/webview-url";
 import type { OverlayGeometry } from "../shared/geojson.types";
 import { isDrawableGeometry } from "../shared/geojson.util";
 import type { LiveActivation, OverlayPlaceDoc, SheetPlaceDoc } from "./map.document";
@@ -52,11 +51,3 @@ export const sheetPlaceDoc = renderablePlace.transform((place) => place as unkno
 
 // WHY: the activation query already matched `enabled` and the window, so only what the service reads is checked.
 export const liveActivation = z.object({ _id: z.string(), activeUntil: z.date().nullish().transform((until) => until ?? null) }) satisfies z.ZodType<LiveActivation>;
-
-// WHY: the URL rules read infra's origins, which rules and mappers may not import, so they parse through these.
-export const webviewUrl = z.string().transform((value, ctx) => {
-  const url = toWebviewUrl(value);
-  if (url !== null) return url;
-  ctx.addIssue({ code: "custom", path: [], message: "is not a web view URL" });
-  return z.NEVER;
-});

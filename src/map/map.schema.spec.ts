@@ -2,11 +2,10 @@
  * The shared map schemas: the place schemas MapRepository parses each read
  * through (one for the overlay route, one for the sheets; the same renderable
  * rules, kept in step with the places importer, scripts/lib/map-places-file.js,
- * boundary 4.3), the live activation, and the camera, text and web view URL pieces
- * the layer-set schema and the mappers build on.
+ * boundary 4.3), the live activation, and the camera and text pieces the
+ * layer-set schema and the mappers build on.
  */
-import { WEBVIEW_ORIGIN } from "../infra/origins";
-import { i18nTextFile, liveActivation, mapCamera, overlayPlaceDoc, sheetPlaceDoc, webviewUrl } from "./map.schema";
+import { i18nTextFile, liveActivation, mapCamera, overlayPlaceDoc, sheetPlaceDoc } from "./map.schema";
 
 // The importer is CommonJS and outside tsconfig, so it is required.
 const { parsePlacesFile } = require("../../scripts/lib/map-places-file");
@@ -216,17 +215,5 @@ describe("mapCamera", () => {
   ])("treats longitude %d as in range: %s", (lng, inRange) => {
     // Act & Assert
     expect(mapCamera.safeParse({ ...camera, lng }).success).toBe(inRange);
-  });
-});
-
-describe("webviewUrl", () => {
-  it("resolves a root-relative web view path onto the web view origin", () => {
-    // Act & Assert
-    expect(webviewUrl.parse("/eskara/entry")).toBe(`${WEBVIEW_ORIGIN}/eskara/entry`);
-  });
-
-  it.each(["https://evil.com/x", "/eskara/entry\n", "//evil.com/x", ""])("refuses %j as a web view URL", (value) => {
-    // Act & Assert
-    expect(webviewUrl.safeParse(value).success).toBe(false);
   });
 });
