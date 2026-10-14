@@ -24,7 +24,8 @@ export class MiniappsCatalogController {
     return this.catalog.index();
   }
 
-  // WHY: set before the read, so a failed read's 500 is held as briefly as the feed and not retried by every device.
+  // WHY: set before the read, so a failed read's 500 carries it too; moving it to success only changes what is
+  // served, tracked in spencer0124/skkuverse#79.
   @Get(":id/notifications")
   async feed(@Param("id") id: string, @Lang() lang: SupportedLang, @Res({ passthrough: true }) res: Response): Promise<MiniAppFeed> {
     if (!this.catalog.isRegistered(id)) throw this.notFound(id);
