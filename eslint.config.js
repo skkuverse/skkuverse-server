@@ -110,8 +110,12 @@ const QUERY_IMPORT_PATTERN = {
   message: "Only a repository runs a query: import the *.query.ts from the module's repository.",
 };
 
-// Migrated feature modules read the time through `Clock` (design D13).
-const CLOCK_INJECT_DIRS = ["src/building/", "src/app-config/", "src/health/", "src/map/", "src/ui/"];
+// Migrated feature modules read the time through `Clock` (design D13): every migrated scope but the
+// shared layers, so a module that joins migrated-scopes.json is bound from that commit.
+const CLOCK_FREE_LAYERS = ["config", "http", "infra", "scheduling", "shared"];
+const CLOCK_INJECT_DIRS = require("./__tests__/architecture/migrated-scopes.json").filter(
+  (scope) => !CLOCK_FREE_LAYERS.some((layer) => scope.startsWith(`src/${layer}/`)),
+);
 
 const CLOCK_INJECT_SYNTAX = [
   {
@@ -234,10 +238,20 @@ const LITERAL_SYNTAX = [
 
 // A spec in a migrated scope passes a fixed clock (tests.md, "What to double"): the real Clock makes the
 // answer depend on the day the test runs, and lets one read see two different instants.
+// An alias (`Clock as RealClock`), a namespace (`new clock.Clock()`) and a Nest provider (`providers: [Clock]`,
+// `useClass: Clock`) build the same real Clock; a fake class says so in its name (`FixedClock`, `FakeClock`).
+const REAL_CLOCK_NAME = "/^(?!Fixed|Fake).*Clock$/";
 const SPEC_CLOCK_SYNTAX = [
   {
-    selector: "NewExpression[callee.name='Clock']",
+    selector: `NewExpression:matches([callee.name=${REAL_CLOCK_NAME}], [callee.property.name='Clock'])`,
     message: "Pass a fixed fake clock (`const clock: Clock = { now: () => NOW }`), not the real Clock.",
+  },
+  {
+    selector: [
+      `Property[key.name='providers'] > ArrayExpression > Identifier[name=${REAL_CLOCK_NAME}]`,
+      `Property[key.name='useClass'] > Identifier.value[name=${REAL_CLOCK_NAME}]`,
+    ].join(", "),
+    message: "Provide a fixed fake clock (`{ provide: Clock, useValue: fakeClock }`), not the real Clock.",
   },
 ];
 
