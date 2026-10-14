@@ -5,6 +5,7 @@ import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { createLogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../infra/mongo";
+import { isRecord } from "../shared/object.util";
 import { parseEach } from "../shared/zod-list.util";
 import type { ActivationDoc, LiveActivation, MapPlaceDoc, OverlayPlaceDoc, SheetPlaceDoc } from "./map.document";
 import { OVERLAY_PLACE_FIELDS, SHEET_PLACE_FIELDS } from "./map.query";
@@ -85,7 +86,7 @@ export class MapRepository implements OnModuleInit {
   }
 
   private idOf(doc: unknown): string {
-    return String((doc as { _id?: unknown })._id);
+    return String(isRecord(doc) ? doc._id : undefined);
   }
 
   private places(): Collection<MapPlaceDoc> {
