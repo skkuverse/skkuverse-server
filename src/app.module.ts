@@ -9,6 +9,14 @@ import { BusRealtimeHsscModule } from "./bus/realtime/hssc/bus-realtime-hssc.mod
 import { BusRealtimeJongroModule } from "./bus/realtime/jongro/bus-realtime-jongro.module";
 import { BusRealtimeGroupModule } from "./bus/realtime/group/bus-realtime-group.module";
 import { BusStationModule } from "./bus/station/bus-station.module";
+import { BusStopsModule } from "./bus/stops/bus-stops.module";
+import { BusScheduleModule } from "./bus/schedule/bus-schedule.module";
+import { BusEtaModule } from "./bus/eta/bus-eta.module";
+import { BusEtaLiveModule } from "./bus/eta/live/bus-eta-live.module";
+import { BusEtaBaselineModule } from "./bus/eta/baseline/bus-eta-baseline.module";
+import { BusEtaSmartModule } from "./bus/eta/smart/bus-eta-smart.module";
+import { BusConfigModule } from "./bus/config/bus-config.module";
+import { BusRouteOverlayModule } from "./bus/route-overlay/bus-route-overlay.module";
 import { AppConfigModule } from "./app-config/app-config.module";
 import { UiModule } from "./ui/ui.module";
 import { UiHomeModule } from "./ui/home/ui-home.module";
@@ -50,6 +58,14 @@ import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.modul
     BusRealtimeJongroModule,
     BusRealtimeGroupModule,
     BusStationModule,
+    BusStopsModule,
+    BusScheduleModule,
+    BusEtaModule,
+    BusEtaLiveModule,
+    BusEtaBaselineModule,
+    BusEtaSmartModule,
+    BusConfigModule,
+    BusRouteOverlayModule,
     AppConfigModule,
     UiModule,
     UiHomeModule,

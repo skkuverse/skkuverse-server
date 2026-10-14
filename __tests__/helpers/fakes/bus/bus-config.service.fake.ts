@@ -2,8 +2,8 @@
  * In-memory BusConfigService: the bus groups each language reads, set by the
  * test. The ETags are a stand-in, not the real md5 of the groups.
  */
-import type { BusConfigService } from "../../../../src/bus/bus-config/bus-config.service";
-import type { BusGroup } from "../../../../src/bus/bus-config/bus-config.types";
+import type { BusConfigService } from "../../../../src/bus/config/bus-config.service";
+import type { BusGroup } from "../../../../src/bus/config/bus-config.wire";
 import type { SupportedLang } from "../../../../src/infra/types";
 import type { PublicOf } from "../public-of";
 

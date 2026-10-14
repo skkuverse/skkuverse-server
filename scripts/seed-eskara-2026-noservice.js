@@ -18,7 +18,7 @@
  *
  * Flags follow scripts/set-campus-schedule.js (--prod, never NODE_ENV).
  * Idempotent: replaceOne upserts on the unique {serviceId, date} index from
- * src/bus/schedule/schedule-db.ts. Nothing to undo afterwards — past dates are
+ * src/bus/schedule/bus-schedule.repository.ts. Nothing to undo afterwards — past dates are
  * never queried.
  *
  * NOTE: api containers cache a resolved week for 1 hour per process. Write

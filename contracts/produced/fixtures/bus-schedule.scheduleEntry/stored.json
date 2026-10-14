@@ -1,0 +1,14 @@
+{
+  "_about": "GET /bus/schedule/data/campus-inja/week?from=2026-10-19 captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); the first entry of 2026-10-19",
+  "data": {
+    "index": 1,
+    "time": "07:00",
+    "routeType": "regular",
+    "busCount": 1,
+    "notes": null,
+    "stopTimes": [
+      "07:00",
+      null
+    ]
+  }
+}
