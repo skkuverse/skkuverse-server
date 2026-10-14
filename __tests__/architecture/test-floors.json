@@ -1,8 +1,4 @@
 {
-  "ad": {
-    "tests": 49,
-    "expects": 108
-  },
   "app-config": {
     "tests": 9,
     "expects": 23

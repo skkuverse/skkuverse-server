@@ -67,7 +67,6 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
     raw("api.stationHyehwa", "API_STATION_HEWA"),
     raw("naver.styleId", "NAVER_MAP_STYLE_ID"),
     db("building.dbName", "MONGO_BUILDING_DB_NAME"),
-    db("ad.dbName", "MONGO_AD_DB_NAME"),
     db("notices.dbName", "MONGO_NOTICES_DB_NAME"),
     db("eventmap.dbName", "MONGO_EVENTMAP_DB_NAME"),
     db("miniapps.dbName", "MONGO_MINIAPPS_DB_NAME"),

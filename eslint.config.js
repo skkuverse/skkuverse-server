@@ -111,7 +111,7 @@ const QUERY_IMPORT_PATTERN = {
 };
 
 // Migrated feature modules read the time through `Clock` (design D13).
-const CLOCK_INJECT_DIRS = ["src/building/", "src/ad/", "src/app-config/", "src/health/", "src/map/", "src/ui/"];
+const CLOCK_INJECT_DIRS = ["src/building/", "src/app-config/", "src/health/", "src/map/", "src/ui/"];
 
 const CLOCK_INJECT_SYNTAX = [
   {
@@ -441,7 +441,6 @@ function migratedTypescriptBlock() {
 // column of docs/explanation/<module>-architecture.md, nothing else (openspec
 // module-docs spec; the glossary-coverage test keeps the two in step).
 const GLOSSARY_NOT = {
-  ad: ["slot", "campaign", "defaultAds", "impression"],
   "app-config": ["AppSettings", "forceUpdate"],
   building: ["buildingId", "buildingNo", "roomId", "level", "bucket", "searchData", "term", "geometryDoc"],
   health: ["isAlive", "isHealthy"],
