@@ -41,7 +41,6 @@
  *
  * In a migrated scope the allowlist is empty (migrated-scopes.test.ts).
  */
-import path from "path";
 import ts from "typescript";
 import {
   MONGO_READ_OPTIONS_ARG,
@@ -227,7 +226,7 @@ const readIfPresent: ModuleReader = (file) => {
 function resolveQueryConst(n: ts.Identifier, sf: ts.SourceFile, readModule: ModuleReader): ts.Expression | undefined {
   const imported = importsOf(sf).find((i) => i.local === n.text && i.specifier.endsWith(".query"));
   if (imported === undefined) return undefined;
-  const target = `${path.posix.normalize(path.posix.join(path.posix.dirname(sf.fileName), imported.specifier))}.ts`;
+  const target = `${imported.target}.ts`;
   const source = readModule(target);
   if (source === undefined) return undefined;
   const resolved = resolveLocalConst(ts.factory.createIdentifier(imported.imported ?? n.text), parseSource(target, source));
