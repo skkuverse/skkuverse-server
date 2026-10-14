@@ -24,7 +24,6 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | The mini-app registry | — | Which mini-app targets a sheet button may open | `MiniAppsService.isKnownMiniAppTarget` |
 | GeoJSON | `geojson` | The `[lng, lat]` position order and ring winding, served as stored | `map.wire.ts` |
 | The NAVER map SDK | `naver-map` | Polygon defaults the base and festival styles override | `BASE_LAYERS`, `EVENT_SHAPE_STYLE` |
-| JavaScript strings | `javascript` | `$` matching before a final newline, why action values are checked for whitespace | `isValidActionValue` |
 | skkuverse-app | — | Nothing; it reads the four routes | `GET /map/config` and the overlay routes |
 
 ## Glossary
