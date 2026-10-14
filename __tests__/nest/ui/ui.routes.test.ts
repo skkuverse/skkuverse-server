@@ -36,6 +36,11 @@ import { UiScrollModule } from "../../../src/ui/scroll/ui-scroll.module";
 import { UiTransitListModule } from "../../../src/ui/transit-list/ui-transit-list.module";
 import { UiModule } from "../../../src/ui/ui.module";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { expectWire } from "../../helpers/contracts/expect-wire";
+import { campusSheet } from "../../../src/ui/campus/ui-campus.wire";
+import { homeLayout } from "../../../src/ui/home/ui-home.wire";
+import { scrollCards, scrollCardsMeta } from "../../../src/ui/scroll/ui-scroll.wire";
+import { transitList, transitListMeta } from "../../../src/ui/transit-list/ui-transit-list.wire";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -207,5 +212,56 @@ describe("GET /ui/home", () => {
       }
       if (g.title !== undefined) expect(typeof g.title).toBe("string");
     }
+  });
+});
+
+/**
+ * Each served body against its wire schema (PR 219 F2): the contract fixtures were captured once,
+ * so a field the mappers start to serve without a wire declaring it shows only here. The envelope's
+ * own `meta.lang` is not part of a meta wire.
+ */
+describe("/ui bodies against their wire schemas", () => {
+  it("serves /ui/home as homeLayout declares", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(homeLayout, res.body.data);
+  });
+
+  it("serves /ui/home/campus as campusSheet declares", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/campus");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(campusSheet, res.body.data);
+  });
+
+  it("serves /ui/home/scroll as scrollCards and scrollCardsMeta declare", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/scroll");
+    const { lang, ...meta } = res.body.meta;
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(lang).toBe("ko");
+    expect(res.body.data.length).toBeGreaterThan(0);
+    expectWire(scrollCards, res.body.data);
+    expectWire(scrollCardsMeta, meta);
+  });
+
+  it("serves /ui/home/transitlist as transitList and transitListMeta declare", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/transitlist");
+    const { lang, ...meta } = res.body.meta;
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(lang).toBe("ko");
+    expect(res.body.data.length).toBeGreaterThan(0);
+    expectWire(transitList, res.body.data);
+    expectWire(transitListMeta, meta);
   });
 });

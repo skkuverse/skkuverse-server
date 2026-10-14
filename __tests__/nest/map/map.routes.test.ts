@@ -30,6 +30,10 @@ import { MapRepository } from "../../../src/map/map.repository";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { expectWire } from "../../helpers/contracts/expect-wire";
+import { mapConfig } from "../../../src/map/config/map-config.wire";
+import { eventPlaceDetails } from "../../../src/map/event-details/map-event-details.wire";
+import { mapOverlays } from "../../../src/map/map.wire";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -254,4 +258,53 @@ describe("the routes this replaced", () => {
       expect(res.status).toBe(404);
     },
   );
+});
+
+/**
+ * Each served body against its wire schema (PR 219 F2): the contract fixtures were captured once,
+ * so a field the mappers start to serve without a wire declaring it shows only here.
+ */
+describe("/map bodies against their wire schemas", () => {
+  it("serves /map/config as mapConfig declares", async () => {
+    // Act
+    const res = await request(httpServer).get("/map/config");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(mapConfig, res.body.data);
+  });
+
+  it("serves /map/overlays/campus as mapOverlays declares, pins and geometry both", async () => {
+    // Arrange
+    buildings.buildings = [SUSEON];
+    buildings.campusShapes = [FOOTPRINT];
+
+    // Act
+    const res = await request(httpServer).get("/map/overlays/campus");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.overlays.map((o: { kind: string }) => o.kind)).toContain("polygon");
+    expectWire(mapOverlays, res.body.data);
+  });
+
+  it("serves /map/overlays/event as mapOverlays declares", async () => {
+    // Act
+    const res = await request(httpServer).get("/map/overlays/event");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.overlays).toHaveLength(1);
+    expectWire(mapOverlays, res.body.data);
+  });
+
+  it("serves /map/overlays/event/details as eventPlaceDetails declares", async () => {
+    // Act
+    const res = await request(httpServer).get("/map/overlays/event/details");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body.data.details)).toEqual(["eskara-2026-booth-01"]);
+    expectWire(eventPlaceDetails, res.body.data);
+  });
 });
