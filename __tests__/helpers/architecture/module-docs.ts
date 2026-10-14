@@ -38,16 +38,6 @@ export function featureModules(files: readonly string[] = filesUnder("src")): st
   return [...tops].filter((m) => !isSharedLayer(m) && present.has(moduleFileOf(m))).sort();
 }
 
-/** The modules whose `src/<m>/` is a migrated scope. */
-export function migratedModules(modules: readonly string[], scopes: readonly string[]): string[] {
-  return modules.filter((m) => scopes.includes(`src/${m}/`));
-}
-
-/** Allowlist entries that name a migrated module: a migrated module is never allowlisted. */
-export function migratedEntries(allowlist: readonly string[], migrated: readonly string[]): string[] {
-  return allowlist.filter((entry) => migrated.includes(entry));
-}
-
 export const existsInRepo = (rel: string): boolean => fs.existsSync(path.join(ROOT, rel));
 
 export function readIfExists(rel: string): string | undefined {

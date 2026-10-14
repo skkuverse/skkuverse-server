@@ -16,14 +16,10 @@
  *
  * And no module keeps its glossary in .claude/rules/naming.md. The template is
  * not a module, so it is not checked here.
- *
- * The allowlist names the feature modules not yet migrated whose doc leaves a
- * gap. It only shrinks, and a migrated module is never on it.
  */
 import type { Linter } from "eslint";
 import ts from "typescript";
 import { commentsOf } from "../helpers/architecture/comments";
-import { migratedScopes } from "../helpers/architecture/migrated";
 import {
   CONTEXT_HEADER,
   GLOSSARY_HEADER,
@@ -33,20 +29,16 @@ import {
   docPathOf,
   featureModules,
   mermaidText,
-  migratedEntries,
-  migratedModules,
   namesRoute,
   namesWord,
   parseDoc,
   readIfExists,
 } from "../helpers/architecture/module-docs";
-import { expectAllowlisted, readAllowlist } from "../helpers/architecture/ratchet";
 import { routesIn } from "../helpers/architecture/routes";
 import { filesUnder, isNonSpecSource, readSource } from "../helpers/architecture/tree";
 
 const ESLINT_CONFIG: Linter.Config[] = require("../../eslint.config.js");
 
-const RULE = "glossary-coverage";
 const CONFIG_FILE = "src/infra/config.ts";
 const NAMING_FILE = ".claude/rules/naming.md";
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
@@ -404,36 +396,18 @@ describe("glossary-coverage rule applies as specified", () => {
     // Assert
     expect(violations).toEqual([".claude/rules/naming.md: ### building"]);
   });
-
-  it("never allowlists a migrated module", () => {
-    // Act
-    const listed = migratedEntries(["building", "bus"], ["ad", "building"]);
-
-    // Assert
-    expect(listed).toEqual(["building"]);
-  });
 });
 
 describe("module glossaries", () => {
   const files = filesUnder("src");
   const modules = featureModules(files);
-  const migrated = migratedModules(modules, migratedScopes());
 
-  it.each(migrated)("of %s name every quirk system, brand, collection and route, and match its id-denylist", (module) => {
+  it.each(modules)("of %s name every quirk system, brand, collection and route, and match its id-denylist", (module) => {
     // Act
     const violations = glossaryViolations(realGlossaryInput(module, files));
 
     // Assert
     expect(violations).toEqual([]);
-  });
-
-  it("leave gaps only in the modules not yet migrated, which the allowlist names", () => {
-    // Act
-    const withGaps = modules.filter((m) => glossaryViolations(realGlossaryInput(m, files)).length > 0);
-
-    // Assert
-    expect(migratedEntries(readAllowlist(RULE), migrated)).toEqual([]);
-    expectAllowlisted(RULE, withGaps);
   });
 
   it("live only in the module docs, not in .claude/rules/naming.md", () => {

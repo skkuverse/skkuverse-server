@@ -5,7 +5,7 @@
  * the repository spec, and a service spec never depends on how the driver is
  * called.
  *
- * In a migrated scope, these appear only in a `*.repository.spec.ts` or
+ * In a module scope, these appear only in a `*.repository.spec.ts` or
  * `*.client.spec.ts`:
  *
  *   - `jest.mock` (or `jest.doMock`) of a seam that leaves the process: the
@@ -22,14 +22,13 @@
  *     or not, where its fake (`Fake<X>…`) belongs.
  *
  * Mocking the logger, or a module that is not a seam, is not checked here.
- * Modules not yet migrated keep their module mocks until their rework, so
- * there is no allowlist; a test that has no fake to use instead is exempt with
+ * There is no allowlist; a test that has no fake to use instead is exempt with
  * its reason in `exemptions/spec-mocks.json`.
  */
 import ts from "typescript";
 import { importsOf, parseSource, resolveSpecifier, skipOuter } from "../helpers/architecture/ast";
 import { expectExempted } from "../helpers/architecture/exemptions";
-import { inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { filesUnder, readSource } from "../helpers/architecture/tree";
 
 const SEAMS = new Set(["src/infra/db", "src/infra/mongo", "src/infra/fcm", "axios", "mongodb"]);
@@ -122,10 +121,10 @@ describe("spec mock rule applies as specified", () => {
   });
 });
 
-describe("specs in migrated scopes", () => {
+describe("specs in the module scopes", () => {
   it("double Mongo, axios and real repositories or clients only in repository and client specs", () => {
     // Act
-    const violations = testFilesInScopes(migratedScopes()).flatMap((f) => specMockViolations(f, readSource(f)));
+    const violations = testFilesInScopes(moduleScopes()).flatMap((f) => specMockViolations(f, readSource(f)));
 
     // Assert
     expectExempted("spec-mocks", violations);

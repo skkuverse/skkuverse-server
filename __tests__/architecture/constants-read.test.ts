@@ -5,7 +5,7 @@
  * adding a block type to `PLACE_BLOCK_TYPES` compiled, while the readers kept
  * their own lists and dropped the new type as unknown.
  *
- * In a migrated scope, each export of a `.constants.ts` file is imported by
+ * In a module scope, each export of a `.constants.ts` file is imported by
  * name by a non-spec `src/` file other than its own (a relative import that
  * resolves to the constants file). A reasoned exemption is in
  * `exemptions/constants-read.json`.
@@ -13,7 +13,7 @@
 import ts from "typescript";
 import { exportsOf, importsOf, parseSource } from "../helpers/architecture/ast";
 import { expectExempted } from "../helpers/architecture/exemptions";
-import { inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
 /** The value names a source exports, in place or through `export { … }`; re-exports aside. */
@@ -92,13 +92,13 @@ describe("constants-read rule applies as specified", () => {
   });
 });
 
-describe("constants in migrated scopes", () => {
+describe("constants in the module scopes", () => {
   it("are exported only when other production code reads them", () => {
     // Arrange
     const sources = new Map(sourceFiles().map((f) => [f, readSource(f)]));
 
     // Act
-    const violations = unreadConstants(sources, migratedScopes());
+    const violations = unreadConstants(sources, moduleScopes());
 
     // Assert
     expectExempted("constants-read", violations);

@@ -21,8 +21,8 @@
  * `wrapper <name>`; call the export where the test uses it. Nested describes, `describe.each` and route tests in
  * `__tests__/` are out of scope.
  *
- * The allowlist holds the specs of modules not yet migrated; a migrated scope
- * carries no entry (migrated-scopes.test.ts).
+ * The rule is strict: no allowlist, and no list may hold an entry under src/
+ * (scope-entries.test.ts).
  */
 import ts from "typescript";
 import { exportedNamesDeep, exportsOf, parseSource, skipOuter } from "../helpers/architecture/ast";

@@ -112,10 +112,17 @@ const QUERY_IMPORT_PATTERN = {
   message: "Only a repository runs a query: import the *.query.ts from the module's repository.",
 };
 
-// Migrated feature modules read the time through `Clock` (design D13): every migrated scope but the
-// shared layers, so a module that joins migrated-scopes.json is bound from that commit.
+// The module scopes: every top-level folder of src/ (ending in "/") and every file at its root. The role,
+// function, TypeScript and clock blocks below cover them all, so a new module is bound from its first file;
+// the architecture tests derive the same list (__tests__/helpers/architecture/scopes.ts).
+const MODULE_SCOPES = require("fs")
+  .readdirSync(require("path").join(__dirname, "src"), { withFileTypes: true })
+  .flatMap((d) => (d.isDirectory() ? [`src/${d.name}/`] : d.name.endsWith(".ts") ? [`src/${d.name}`] : []))
+  .sort();
+
+// Feature modules read the time through `Clock` (design D13): every scope but the shared layers.
 const CLOCK_FREE_LAYERS = ["config", "http", "infra", "scheduling", "shared"];
-const CLOCK_INJECT_DIRS = require("./__tests__/architecture/migrated-scopes.json").filter(
+const CLOCK_INJECT_DIRS = MODULE_SCOPES.filter(
   (scope) => !CLOCK_FREE_LAYERS.some((layer) => scope.startsWith(`src/${layer}/`)),
 );
 
@@ -131,7 +138,7 @@ const CLOCK_INJECT_SYNTAX = [
 ];
 
 // A constructor lists injected dependencies, not an argument list: ESLint's max-params
-// counts both, so the migrated limit is the constructor's 4 and functions are held to 3 here.
+// counts both, so the function-cap limit is the constructor's 4 and functions are held to 3 here.
 const PARAMS_SYNTAX = [
   {
     selector: ":function[params.length>3]:not(MethodDefinition[kind='constructor'] > FunctionExpression)",
@@ -171,7 +178,7 @@ const SRC_SYNTAX_PLUGIN = {
   },
 };
 
-// A name that says nothing on its own (.claude/rules/naming.md, Words). Only the ones no migrated
+// A name that says nothing on its own (.claude/rules/naming.md, Words). Only the ones no source
 // file uses: `data`, `item`, `value` and kin are also wire property names, so a denylist flags those.
 const GENERIC_NAMES = ["info", "obj", "tmp", "helper", "manager"];
 
@@ -281,7 +288,7 @@ const LITERAL_SYNTAX = [
   },
 ];
 
-// A spec in a migrated scope passes a fixed clock (tests.md, "What to double"): the real Clock makes the
+// A spec in a module scope passes a fixed clock (tests.md, "What to double"): the real Clock makes the
 // answer depend on the day the test runs, and lets one read see two different instants.
 // An alias (`Clock as RealClock`), a namespace (`new clock.Clock()`) and a Nest provider (`providers: [Clock]`,
 // `useClass: Clock`) build the same real Clock; a fake class says so in its name (`FixedClock`, `FakeClock`).
@@ -302,10 +309,10 @@ const SPEC_CLOCK_SYNTAX = [
 
 // ── Import boundaries (docs/decisions/0010-server-architecture.md, D3 and D9) ──
 //
-// Each boundary block is named `boundaries/...`. Its `ignores` hold the files
-// that broke the rule when it was added (VIOLATORS). Never add one:
-// __tests__/architecture/import-boundaries.test.ts fails when a listed file no
-// longer violates, so each list only shrinks as modules are migrated.
+// Each boundary block is named `boundaries/...`. Its `ignores` name only the
+// files the rule exempts by role (a repository, a spec, the Mongo owners), never
+// a file that breaks it: __tests__/architecture/import-boundaries.test.ts fails
+// on an ignored file that would violate the block.
 
 const SHARED_DIRS = ["config", "http", "infra", "scheduling", "shared"];
 // Every other top-level folder of src/ is a feature, so a new module is
@@ -326,23 +333,6 @@ const MONGO_COLLECTION_PATTERN = {
   regex: "(?:^|/)infra/mongo$",
   importNames: ["mongoCollection"],
   message: "Only a *.repository.ts reaches Mongo: add a named query to the module's repository.",
-};
-
-const VIOLATORS = {
-  // Rules and mappers that build Mongo syntax (ADR 0010, D2).
-  pure: [],
-  // Repositories that import a mapper (ADR 0010, D2): they return documents,
-  // and the service maps them.
-  repository: [],
-  getClient: [
-  ],
-  features: {},
-  // Files that hold a hex color or a web view path outside a .constants file.
-  literals: [
-  ],
-  // Controllers that read req.lang themselves instead of taking @Lang().
-  lang: [
-  ],
 };
 
 // A handler takes the language from @Lang() (src/http/lang.decorator.ts), which
@@ -368,7 +358,6 @@ function featureBoundaryBlocks() {
       return {
         name: `boundaries/feature/${feature}/depth-${depth}`,
         files: [`src/${feature}/${"*/".repeat(depth - 1)}*.ts`],
-        ignores: (VIOLATORS.features[feature] ?? []).filter((f) => f.split("/").length === depth + 2),
         rules: {
           "@typescript-eslint/no-restricted-imports": [
             "error",
@@ -389,24 +378,14 @@ function featureBoundaryBlocks() {
   );
 }
 
-// Per-role size caps for migrated modules (ADR 0010, D9). Each is the largest
-// file of that role in a migrated module plus at most 10 lines, comment lines
-// counted (__tests__/architecture/size-ratchets.test.ts keeps them there). A
-// file over its role's cap is split, or its flow becomes a sub-module (D3).
-//
-// The migrated scope lives in __tests__/architecture/migrated-scopes.json,
-// which the architecture tests read too: a folder ends in "/", a single file
-// does not. A module or file joins it when its migration lands.
-const MIGRATED_SCOPES = require("./__tests__/architecture/migrated-scopes.json");
-for (const scope of MIGRATED_SCOPES) {
-  if (!/^src\/(?:[\w-]+\/)+$|^src\/[\w./-]+\.ts$/.test(scope)) {
-    throw new Error(`migrated-scopes.json: "${scope}" is neither a src/ folder ending in "/" nor a .ts file`);
-  }
-}
+// Per-role size caps (ADR 0010, D9). Each is the largest file of that role plus
+// at most 10 lines, comment lines counted
+// (__tests__/architecture/size-ratchets.test.ts keeps them there). A file over
+// its role's cap is split, or its flow becomes a sub-module (D3).
 
-/** Globs over the migrated scope for files named `*<tail>`: `migratedGlobs(".service.ts")`. */
-function migratedGlobs(tail) {
-  return MIGRATED_SCOPES.flatMap((scope) =>
+/** Globs over the module scopes for files named `*<tail>`: `scopeGlobs(".service.ts")`. */
+function scopeGlobs(tail) {
+  return MODULE_SCOPES.flatMap((scope) =>
     scope.endsWith("/") ? [`${scope}**/*${tail}`] : scope.endsWith(tail) ? [scope] : [],
   );
 }
@@ -444,12 +423,12 @@ function sizeCapExemptionBlocks() {
 function roleSizeBlocks() {
   return Object.entries(ROLE_MAX_LINES).map(([role, max]) => ({
     name: `size/${role}`,
-    files: migratedGlobs(`.${role}.ts`),
+    files: scopeGlobs(`.${role}.ts`),
     rules: { "max-lines": ["error", { max, skipBlankLines: true, skipComments: false }] },
   }));
 }
 
-// Function caps for migrated modules (ADR 0010, D9): the longest function plus at
+// Function caps over the module scopes (ADR 0010, D9): the longest function plus at
 // most 10 lines, comment lines counted as in max-lines; depth, parameters and
 // complexity at the worst. Specs are left out: a describe callback is long by design.
 const MIGRATED_FUNCTION_LIMITS = {
@@ -460,11 +439,11 @@ const MIGRATED_FUNCTION_LIMITS = {
   complexity: ["error", 9],
 };
 
-// no-restricted-syntax replaces rather than merges, so each kind of migrated file gets
+// no-restricted-syntax replaces rather than merges, so each kind of source file gets
 // one block with every selector it needs: log, its role's own, params, and the clock.
 function migratedSyntaxBlocks() {
-  const underClockDirs = MIGRATED_SCOPES.filter((scope) => CLOCK_INJECT_DIRS.some((dir) => scope.startsWith(dir)));
-  const elsewhere = MIGRATED_SCOPES.filter((scope) => !underClockDirs.includes(scope));
+  const underClockDirs = MODULE_SCOPES.filter((scope) => CLOCK_INJECT_DIRS.some((dir) => scope.startsWith(dir)));
+  const elsewhere = MODULE_SCOPES.filter((scope) => !underClockDirs.includes(scope));
   const globs = (scopes, tail) =>
     scopes.flatMap((scope) => (scope.endsWith("/") ? [`${scope}**/*${tail}`] : scope.endsWith(tail) ? [scope] : []));
   const pure = [".rules.ts", ".mapper.ts", ".query.ts"];
@@ -498,16 +477,16 @@ function migratedSyntaxBlocks() {
   return blocks;
 }
 
-/** The specs of the migrated scope: `src/` specs, and a top-level module's `__tests__/nest/<module>/` tests. */
-function migratedSpecGlobs() {
-  return MIGRATED_SCOPES.flatMap((scope) => {
+/** The specs of the module scopes: `src/` specs, and a top-level module's `__tests__/nest/<module>/` tests. */
+function scopeSpecGlobs() {
+  return MODULE_SCOPES.flatMap((scope) => {
     if (!scope.endsWith("/")) return [scope.replace(/\.ts$/, ".spec.ts")];
     const topLevel = /^src\/([^/]+)\/$/.exec(scope);
     return [`${scope}**/*.spec.ts`, ...(topLevel ? [`__tests__/nest/${topLevel[1]}/**/*.ts`] : [])];
   });
 }
 
-// Hash-locked vendored sources (.contracts.lock.json) are not edited here (ADR 0010, D10), so the migrated
+// Hash-locked vendored sources (.contracts.lock.json) are not edited here (ADR 0010, D10), so the scoped
 // function and TypeScript rules leave them alone; their producer repository owns their shape.
 const VENDORED_SOURCES = Object.values(require("./.contracts.lock.json").contracts)
   .map((contract) => contract.path)
@@ -516,19 +495,19 @@ const VENDORED_SOURCES = Object.values(require("./.contracts.lock.json").contrac
 function migratedFunctionBlock() {
   return {
     name: "size-ratchets/migrated",
-    files: migratedGlobs(".ts"),
+    files: scopeGlobs(".ts"),
     ignores: ["src/**/*.spec.ts", ...VENDORED_SOURCES],
     rules: MIGRATED_FUNCTION_LIMITS,
   };
 }
 
-// TypeScript rules a module meets once migrated (ADR 0010, D9): every exported
+// TypeScript rules every module meets (ADR 0010, D9): every exported
 // function and public method declares its return type, and no `!` asserts a value
 // away; a regex group is read through captureGroups (src/shared/regex.util.ts).
 function migratedTypescriptBlock() {
   return {
     name: "migrated/typescript",
-    files: migratedGlobs(".ts"),
+    files: scopeGlobs(".ts"),
     ignores: ["src/**/*.spec.ts", ...VENDORED_SOURCES],
     rules: {
       "@typescript-eslint/explicit-module-boundary-types": "error",
@@ -537,7 +516,7 @@ function migratedTypescriptBlock() {
   };
 }
 
-// Each migrated module's forbidden synonyms: the backticked names in the Not
+// Each feature module's forbidden synonyms: the backticked names in the Not
 // column of docs/explanation/<module>-architecture.md, nothing else (openspec
 // module-docs spec; the glossary-coverage test keeps the two in step).
 const GLOSSARY_NOT = {
@@ -673,7 +652,7 @@ module.exports = [
   },
   {
     // Size ratchets (ADR 0010, D9): each limit is today's worst file or
-    // function, so nothing grows past it. Lower them as modules are migrated;
+    // function, so nothing grows past it. Lower one when its worst shrinks;
     // never raise one. max-lines counts comment lines (D10). Errors, not warnings.
     name: "size-ratchets",
     files: ["src/**/*.ts"],
@@ -700,7 +679,6 @@ module.exports = [
       "src/**/*.spec.ts",
       "src/infra/db.ts",
       "src/infra/mongo.ts",
-      ...VIOLATORS.getClient,
     ],
     rules: {
       "no-restricted-imports": [
@@ -712,7 +690,6 @@ module.exports = [
   {
     name: "boundaries/repository",
     files: ["src/**/*.repository.ts"],
-    ignores: VIOLATORS.repository,
     rules: {
       "no-restricted-imports": [
         "error",
@@ -736,7 +713,6 @@ module.exports = [
     // it carries the log selectors along with the clock ones.
     name: "boundaries/pure",
     files: ["src/**/*.rules.ts", "src/**/*.mapper.ts"],
-    ignores: VIOLATORS.pure,
     rules: {
       "no-restricted-imports": [
         "error",
@@ -781,7 +757,6 @@ module.exports = [
     // so it carries the log selectors along.
     name: "boundaries/lang",
     files: ["src/**/*.controller.ts"],
-    ignores: VIOLATORS.lang,
     rules: {
       "no-restricted-syntax": ["error", ...LOG_SYNTAX, ...LANG_SYNTAX],
     },
@@ -846,14 +821,14 @@ module.exports = [
   },
   {
     name: "naming/generic-names",
-    files: migratedGlobs(".ts"),
+    files: scopeGlobs(".ts"),
     ignores: ["src/**/*.spec.ts"],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
     rules: { "src-syntax/generic-names": ["error", ...GENERIC_NAMES] },
   },
   {
     name: "specs/fixed-clock",
-    files: migratedSpecGlobs(),
+    files: scopeSpecGlobs(),
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
     rules: { "src-syntax/spec-clock": ["error", ...SPEC_CLOCK_SYNTAX] },
   },
@@ -861,7 +836,7 @@ module.exports = [
     // A spec states the values it expects, so it is left out.
     name: "boundaries/literals",
     files: ["src/**/*.ts"],
-    ignores: ["src/**/*.spec.ts", "src/**/*.constants.ts", ...VIOLATORS.literals],
+    ignores: ["src/**/*.spec.ts", "src/**/*.constants.ts"],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
     rules: { "src-syntax/literals": ["error", ...LITERAL_SYNTAX] },
   },
