@@ -10,7 +10,6 @@ import config from "./infra/config";
 import { closeClient, ping as pingDb } from "./infra/db";
 import { AppModule } from "./app.module";
 import { bootstrapHttpApp } from "./http/http-app.bootstrap";
-import { BusCacheService } from "./bus/cache/bus-cache.service";
 
 async function bootstrap(): Promise<void> {
   const app = await bootstrapHttpApp((adapter, options) =>
@@ -26,19 +25,6 @@ async function bootstrap(): Promise<void> {
     logger.warn(
       { event: "db.connect_failed", err },
       "MongoDB connection failed",
-    );
-  }
-
-  // Ensure bus_cache TTL index exists (non-fatal). Runs for every ROLE (NOT
-  // ROLE-gated). The schedule indexes are ensured by
-  // ScheduleService.onModuleInit instead.
-  try {
-    await app.get(BusCacheService).ensureIndex();
-    logger.info({ event: "bus.cache.index_ensured" }, "bus_cache TTL index ensured");
-  } catch (err) {
-    logger.warn(
-      { event: "bus.cache.index_failed", err },
-      "bus_cache TTL index setup failed",
     );
   }
 

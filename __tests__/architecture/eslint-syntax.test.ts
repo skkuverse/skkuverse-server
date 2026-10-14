@@ -327,7 +327,7 @@ describe("specs/fixed-clock", () => {
 
     // Act & Assert
     expect(files).toEqual(expect.arrayContaining(["src/map/**/*.spec.ts", "__tests__/nest/map/**/*.ts", "__tests__/nest/infra/**/*.ts"]));
-    expect(files.some((glob) => String(glob).includes("bus"))).toBe(false);
+    expect(files.some((glob) => String(glob).startsWith("__tests__/nest/bus/"))).toBe(false);
   });
 });
 

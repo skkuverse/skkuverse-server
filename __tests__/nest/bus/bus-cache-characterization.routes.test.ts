@@ -120,6 +120,12 @@ beforeAll(async () => {
   modules = [
     (require("../../../src/scheduling/scheduling.module") as { SchedulingModule: unknown }).SchedulingModule,
     (require("../../../src/bus/bus.module") as { BusModule: unknown }).BusModule,
+    (require("../../../src/bus/cache/bus-cache.module") as { BusCacheModule: unknown }).BusCacheModule,
+    (require("../../../src/bus/realtime/bus-realtime.module") as { BusRealtimeModule: unknown }).BusRealtimeModule,
+    (require("../../../src/bus/realtime/hssc/bus-realtime-hssc.module") as { BusRealtimeHsscModule: unknown }).BusRealtimeHsscModule,
+    (require("../../../src/bus/realtime/jongro/bus-realtime-jongro.module") as { BusRealtimeJongroModule: unknown }).BusRealtimeJongroModule,
+    (require("../../../src/bus/realtime/group/bus-realtime-group.module") as { BusRealtimeGroupModule: unknown }).BusRealtimeGroupModule,
+    (require("../../../src/bus/station/bus-station.module") as { BusStationModule: unknown }).BusStationModule,
   ];
   busCache = db.getClient().db(config.mongo.dbName).collection(config.mongo.collections.busCache);
 }, MONGOD_START_TIMEOUT_MS);

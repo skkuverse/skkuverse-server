@@ -335,7 +335,6 @@ const VIOLATORS = {
   // and the service maps them.
   repository: [],
   getClient: [
-    "src/bus/cache/bus-cache.service.ts",
     "src/bus/eta/eta-store.ts",
     "src/bus/schedule/schedule-db.ts",
     "src/bus/schedule/schedule.service.ts",
@@ -688,8 +687,8 @@ module.exports = [
     ignores: ["src/**/*.spec.ts"],
     rules: {
       "max-lines": ["error", { max: 408, skipBlankLines: true, skipComments: false }],
-      "max-lines-per-function": ["error", { max: 122, skipBlankLines: true, skipComments: true }],
-      complexity: ["error", 47],
+      "max-lines-per-function": ["error", { max: 100, skipBlankLines: true, skipComments: true }],
+      complexity: ["error", 26],
       "max-params": ["error", 5],
     },
   },

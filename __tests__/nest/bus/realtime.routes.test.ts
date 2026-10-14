@@ -1,46 +1,40 @@
 /**
- * Integration over RealtimeController (GET /bus/realtime/data/:groupId).
- * Overrides the fetcher getters + cache (cachedRead → null so it falls back to
- * the getters; hssc → [], jongro → undefined). Asserts Cache-Control:
- * no-store, meta.{currentTime,totalBuses}, data.{groupId,buses,stationEtas},
- * and 404 GROUP_NOT_FOUND for unknown groups.
+ * Integration over BusRealtimeGroupController (GET /bus/realtime/data/:groupId)
+ * through the production pipeline (buildTestApp), with bus_cache faked in
+ * memory and the clock fixed; the pollers never start (ROLE=api), so each
+ * process's own memory stays empty and what bus_cache holds is served. Asserts
+ * Cache-Control: no-store, meta.{currentTime,totalBuses},
+ * data.{groupId,buses,stationEtas}, and 404 GROUP_NOT_FOUND for unknown groups.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { BusCacheService } from "../../../src/bus/cache/bus-cache.service";
-import { HsscPollerService } from "../../../src/bus/fetchers/hssc.poller.service";
-import { JongroPollerService } from "../../../src/bus/fetchers/jongro.poller.service";
-import { buildBusApp } from "../../helpers/nest/build-bus-app";
+import { BusCacheModule } from "../../../src/bus/cache/bus-cache.module";
+import { BusCacheRepository } from "../../../src/bus/cache/bus-cache.repository";
+import { BusRealtimeModule } from "../../../src/bus/realtime/bus-realtime.module";
+import { BusRealtimeGroupModule } from "../../../src/bus/realtime/group/bus-realtime-group.module";
+import { BusRealtimeHsscModule } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.module";
+import { BusRealtimeJongroModule } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.module";
+import { Clock } from "../../../src/infra/clock";
+import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
+import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
+import { buildTestApp } from "../../helpers/nest/build-test-app";
+
+const NOW = new Date("2026-10-20T01:00:00Z");
+const busCache = new FakeBusCacheRepository();
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
-const getHSSCBusList = jest.fn().mockReturnValue([]);
 
 beforeAll(async () => {
-  app = await buildBusApp([
-    {
-      provide: BusCacheService,
-      useValue: {
-        ensureIndex: jest.fn().mockResolvedValue(undefined),
-        write: jest.fn().mockResolvedValue(undefined),
-        read: jest.fn().mockResolvedValue(null),
-        cachedRead: jest.fn().mockResolvedValue(null),
-      },
-    },
-    {
-      provide: HsscPollerService,
-      useValue: { onModuleInit: jest.fn(), getHSSCBusList },
-    },
-    {
-      provide: JongroPollerService,
-      useValue: {
-        onModuleInit: jest.fn(),
-        getJongroBusList: jest.fn().mockReturnValue(undefined),
-        getJongroBusLocation: jest.fn().mockReturnValue(undefined),
-      },
-    },
-  ]);
+  app = await buildTestApp({
+    imports: [SchedulingModule, BusCacheModule, BusRealtimeModule, BusRealtimeHsscModule, BusRealtimeJongroModule, BusRealtimeGroupModule],
+    overrides: [
+      { provide: BusCacheRepository, useValue: busCache },
+      { provide: Clock, useValue: { now: () => NOW } },
+    ],
+    role: "api",
+  });
   httpServer = app.getHttpServer();
 });
 
@@ -49,12 +43,15 @@ afterAll(async () => {
 });
 
 afterEach(() => {
-  getHSSCBusList.mockReturnValue([]);
+  busCache.values.clear();
 });
 
 describe("GET /bus/realtime/data/:groupId", () => {
   it("hssc → 200 with no-store, meta.currentTime/totalBuses, empty buses", async () => {
+    // Act
     const res = await request(httpServer).get("/bus/realtime/data/hssc");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.headers["cache-control"]).toBe("no-store");
     expect(res.body.data).toMatchObject({ groupId: "hssc", buses: [], stationEtas: [] });
@@ -64,11 +61,16 @@ describe("GET /bus/realtime/data/:groupId", () => {
   });
 
   it("maps buses with parseInt(sequence)-1 and conditional lat/lng spread", async () => {
-    getHSSCBusList.mockReturnValue([
+    // Arrange
+    busCache.values.set("hssc", [
       { sequence: "3", carNumber: "1234", estimatedTime: 120, latitude: "37.5", longitude: "127.0" },
       { sequence: "1", carNumber: "5678", estimatedTime: 60 },
     ]);
+
+    // Act
     const res = await request(httpServer).get("/bus/realtime/data/hssc");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.meta.totalBuses).toBe(2);
     expect(res.body.data.buses[0]).toEqual({
@@ -88,19 +90,28 @@ describe("GET /bus/realtime/data/:groupId", () => {
   });
 
   it("jongro07 → 200 with empty buses/stationEtas when getters return undefined", async () => {
+    // Act
     const res = await request(httpServer).get("/bus/realtime/data/jongro07");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({ groupId: "jongro07", buses: [], stationEtas: [] });
   });
 
   it("jongro08 → 200 with empty buses/stationEtas when getters return undefined", async () => {
+    // Act
     const res = await request(httpServer).get("/bus/realtime/data/jongro08");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({ groupId: "jongro08", buses: [], stationEtas: [] });
   });
 
   it("unknown groupId → 404 GROUP_NOT_FOUND", async () => {
+    // Act
     const res = await request(httpServer).get("/bus/realtime/data/nope");
+
+    // Assert
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("GROUP_NOT_FOUND");
   });
