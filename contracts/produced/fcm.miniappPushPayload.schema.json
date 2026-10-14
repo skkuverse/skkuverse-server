@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "miniapp"
+    },
+    "miniAppId": {
+      "type": "string"
+    },
+    "notificationId": {
+      "type": "string"
+    },
+    "title_ko": {
+      "type": "string"
+    },
+    "body_ko": {
+      "type": "string"
+    },
+    "title_en": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "body_en": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "actionType": {
+      "type": "string",
+      "enum": [
+        "miniapp",
+        "external",
+        "webview",
+        "route"
+      ]
+    },
+    "actionValue": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "miniAppId",
+    "notificationId",
+    "title_ko",
+    "body_ko",
+    "title_en",
+    "body_en"
+  ]
+}

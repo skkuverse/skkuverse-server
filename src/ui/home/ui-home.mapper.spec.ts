@@ -6,12 +6,12 @@
  */
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
-import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import { loadHomeLayout } from "./ui-home.config";
 import { toHomeLayout } from "./ui-home.mapper";
 import type { HomeLayoutRaw } from "./ui-home.schema";
 
-const registry = new MiniAppsService();
+const registry = new MiniappsService();
 
 const IMAGE_URL = "https://media.skkuverse.com/home/banners/test-00000000.jpg";
 

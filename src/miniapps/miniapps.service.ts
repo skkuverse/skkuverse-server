@@ -1,49 +1,40 @@
 import { Injectable } from "@nestjs/common";
-import { isKnownMiniAppTarget } from "./miniapp-target";
-import * as registry from "./miniapps";
-import { isSingleEmoji } from "./miniapps.schema";
-import type { MiniAppDetail, MiniAppIndexEntry, MiniAppLogo, MiniAppLogoRaw } from "./types";
+import { WEB_ORIGIN } from "../infra/origins";
+import { registry } from "./miniapps.config";
+import { resolveLogo } from "./miniapps.mapper";
+import { isKnownMiniAppTarget, isSingleEmoji } from "./miniapps.rules";
+import type { MiniAppDetailRaw, MiniAppLogoRaw } from "./miniapps.schema";
+import type { MiniAppIndexEntry, MiniAppLogo } from "./miniapps.wire";
 
-/**
- * MiniAppsService — thin @Injectable delegate over the validated registry
- * module (frozen ordered list + Map loaded from index.json / details/*.json).
- *
- * Mirrors SourcesService: the freeze, the JSON load, the WEB_ORIGIN logo
- * resolution, and the boot-time integrity check all happen in the delegated
- * module. This wrapper adds no defaults and no narrowing.
- */
+// SEE: docs/decisions/0010-server-architecture.md (D1): the door other features read the registry through.
 @Injectable()
-export class MiniAppsService {
-  /** Registry schema version (MINIAPP_REGISTRY_VERSION on the wire). */
+export class MiniappsService {
   get version(): number {
     return registry.version;
   }
 
-  /** Frozen index ordered by `order`, both logos resolved (images to absolute URLs). */
   get list(): ReadonlyArray<Readonly<MiniAppIndexEntry>> {
     return registry.list;
   }
 
-  /** Frozen id → detail map for O(1) lookups. */
-  get map(): ReadonlyMap<string, Readonly<MiniAppDetail>> {
+  get map(): ReadonlyMap<string, Readonly<MiniAppDetailRaw>> {
     return registry.map;
-  }
-
-  /** Detail for a slug, or undefined when unregistered. */
-  getDetail(id: string): Readonly<MiniAppDetail> | undefined {
-    return registry.map.get(id);
   }
 
   get firstPartyOrigins(): Readonly<Record<string, string>> {
     return registry.firstPartyOrigins;
   }
 
+  getDetail(id: string): Readonly<MiniAppDetailRaw> | undefined {
+    return registry.map.get(id);
+  }
+
   isKnownMiniAppTarget(value: unknown): boolean {
-    return isKnownMiniAppTarget(value);
+    return isKnownMiniAppTarget(value, registry.map);
   }
 
   resolveLogo(logo: MiniAppLogoRaw): MiniAppLogo {
-    return registry.resolveLogo(logo);
+    return resolveLogo(logo, WEB_ORIGIN);
   }
 
   isSingleEmoji(value: string): boolean {

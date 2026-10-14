@@ -131,9 +131,9 @@ describe("NoticesDispatcherService.dispatchGroup", () => {
     expect(out.result).toBe("sent");
     expect(global.fetch).toHaveBeenCalledTimes(1);
     const [url, opts] = (global.fetch as jest.Mock).mock.calls[0];
-    expect(url).toBe(config.notices.dispatch.functionUrl);
+    expect(url).toBe(config.push.functionUrl);
     expect(opts.method).toBe("POST");
-    expect(opts.headers["X-API-Key"]).toBe(config.notices.dispatch.apiKey);
+    expect(opts.headers["X-API-Key"]).toBe(config.push.apiKey);
     expect(opts.headers["Content-Type"]).toBe("application/json");
     // AbortController signal threaded through (the fcmTimeoutMs guard).
     expect(opts.signal).toBeDefined();

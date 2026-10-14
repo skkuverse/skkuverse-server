@@ -64,8 +64,6 @@ const config = {
     },
 
     dispatch: {
-      functionUrl: asRequired(process.env.FCM_FUNCTION_URL),
-      apiKey: asRequired(process.env.FCM_API_KEY),
       internalToken: asRequired(process.env.INTERNAL_DISPATCH_TOKEN),
       // SEE: docs/decisions/0008-dispatch-age-gate-on-publication-date.md — measured against the
       // notice's publication `date`, not crawl time; 14 days matched 2,498 of 2,498 real pushes.
@@ -77,7 +75,6 @@ const config = {
         parseInt(process.env.NOTICES_DISPATCH_SWEEP_MS || "", 10) ||
         30 * 60 * 1000,
       maxAttempts: 5,
-      fcmTimeoutMs: FCM_TIMEOUT_MS,
       sweepBatchCap: 200,
     },
   },
@@ -104,6 +101,9 @@ const config = {
 
   push: {
     delivery: switches.pushDelivery,
+    functionUrl: asRequired(process.env.FCM_FUNCTION_URL),
+    apiKey: asRequired(process.env.FCM_API_KEY),
+    fcmTimeoutMs: FCM_TIMEOUT_MS,
   },
 
   rateLimit: {

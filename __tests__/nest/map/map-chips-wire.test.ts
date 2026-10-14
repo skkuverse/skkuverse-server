@@ -9,14 +9,6 @@
  * serialization step. This is the test that reads the bytes a client receives.
  */
 
-// The event route's module reads the mini-app registry through MiniAppsModule,
-// whose feed service creates its Mongo index at init and whose manifest service
-// prefetches each first-party manifest over the network. Neither is part of
-// /map/config.
-jest.mock("../../../src/miniapps/miniapps.data", () => ({
-  ensureIndexes: jest.fn(async () => undefined),
-}));
-
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 
@@ -49,12 +41,6 @@ const CONFIG = getLayerSetConfig("eskara-2026")!.config!;
 describe("GET /map/config (real map services)", () => {
   let app: NestExpressApplication;
   let httpServer: ReturnType<NestExpressApplication["getHttpServer"]>;
-  const realFetch = global.fetch;
-
-  beforeAll(() => {
-    global.fetch = jest.fn().mockRejectedValue(new Error("no network in tests")) as unknown as typeof fetch;
-  });
-
   // The activation is cached per app, so each test boots a cold one. Only the
   // repositories are fakes: buildings and campus shapes empty, the activation
   // read stated per test.
@@ -77,10 +63,6 @@ describe("GET /map/config (real map services)", () => {
 
   afterEach(async () => {
     await app.close();
-  });
-
-  afterAll(() => {
-    global.fetch = realFetch;
   });
 
   it("carries the chips and the camera defaults through the envelope", async () => {

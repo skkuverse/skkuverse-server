@@ -1,14 +1,19 @@
 /**
- * Unit tests for assertValidRegistry — the boot-time fail-loud guard on the
- * mini-app registry.
+ * loadRegistry — the boot-time fail-loud guard on the mini-app registry: the
+ * zod schema in miniapps.schema.ts, the cross-references between the index and
+ * the details, and the words each refusal names the entry with.
  *
  * This runs against OUR OWN config, so every case here represents a deploy that
  * must not start rather than a request that must not succeed. The mobile client
  * parses the same data tolerantly (a bad entry there just drops a tile), which
  * is exactly why the strict half has to live on this side.
  */
-import { assertValidRegistry } from "../../../src/miniapps/miniapps.schema";
-import type { MiniAppDetail, MiniAppIndexRaw } from "../../../src/miniapps/types";
+import type { z } from "zod";
+import { loadRegistry } from "./miniapps.config";
+import type { registryFile } from "./miniapps.schema";
+
+type MiniAppIndexRaw = z.input<typeof registryFile>["index"];
+type MiniAppDetail = z.input<typeof registryFile>["details"][string];
 
 function index(
   overrides: Partial<MiniAppIndexRaw["miniApps"][number]> = {},
@@ -42,39 +47,52 @@ function details(
   };
 }
 
-describe("assertValidRegistry", () => {
+describe("loadRegistry", () => {
   it("accepts a well-formed registry", () => {
-    expect(() => assertValidRegistry(index(), details())).not.toThrow();
+    // Act & Assert
+    expect(() => loadRegistry(index(), details())).not.toThrow();
   });
 
   it("rejects duplicate ids in the index", () => {
+    // Arrange
     const dup = index();
-    dup.miniApps.push({ ...dup.miniApps[0] });
-    expect(() => assertValidRegistry(dup, details())).toThrow(/duplicate ids/);
+    dup.miniApps.push({ ...dup.miniApps[0]! });
+
+    // Act & Assert
+    expect(() => loadRegistry(dup, details())).toThrow(/duplicate ids/);
   });
 
   it("rejects a non-kebab-case slug", () => {
+    // Arrange
     // The slug is the deep-link path segment and the analytics id; anything
     // outside [a-z0-9-] would need escaping somewhere downstream.
     const bad = index({ id: "Bad_Slug" });
     const badDetails = { Bad_Slug: { ...details().a, id: "Bad_Slug" } };
-    expect(() => assertValidRegistry(bad, badDetails)).toThrow(
+
+    // Act & Assert
+    expect(() => loadRegistry(bad, badDetails)).toThrow(
       /invalid id slug/,
     );
   });
 
   it("rejects an absolute logo URL (must stay relative to WEB_ORIGIN)", () => {
+    // Arrange
     const bad = index({ homeLogo: { kind: "remote", path: "https://evil.com/a.png" } });
-    expect(() => assertValidRegistry(bad, details())).toThrow(
+
+    // Act & Assert
+    expect(() => loadRegistry(bad, details())).toThrow(
       /site-root-relative/,
     );
   });
 
   it("accepts a logo on the media bucket", () => {
+    // Arrange
     const ok = index({
       homeLogo: { kind: "media", url: "https://media.skkuverse.com/miniapps/a/logo-01234567.jpg" },
     });
-    expect(() => assertValidRegistry(ok, details())).not.toThrow();
+
+    // Act & Assert
+    expect(() => loadRegistry(ok, details())).not.toThrow();
   });
 
   it.each([
@@ -82,15 +100,21 @@ describe("assertValidRegistry", () => {
     ["the web origin", "https://skkuverse.com/miniapps/a.png"],
     ["a relative path", "/miniapps/a.png"],
   ])("rejects a media logo on %s", (_label, url) => {
+    // Arrange
     const bad = index({ homeLogo: { kind: "media", url } });
-    expect(() => assertValidRegistry(bad, details())).toThrow(/media bucket/);
+
+    // Act & Assert
+    expect(() => loadRegistry(bad, details())).toThrow(/media bucket/);
   });
 
   it.each([["🍢"], ["🌶️"], ["👩‍🍳"]])("accepts an emoji logo, %s", (emoji) => {
+    // Arrange
     // 🌶️ carries a variation selector and 👩‍🍳 is a joined sequence: several
     // code points, one glyph on the tile.
     const ok = index({ homeLogo: { kind: "emoji", emoji } });
-    expect(() => assertValidRegistry(ok, details())).not.toThrow();
+
+    // Act & Assert
+    expect(() => loadRegistry(ok, details())).not.toThrow();
   });
 
   it.each([
@@ -100,31 +124,44 @@ describe("assertValidRegistry", () => {
     ["an emoticon", ":)"],
     ["an emoji and a letter", "🍢a"],
   ])("rejects an emoji logo that is %s", (_label, emoji) => {
+    // Arrange
     const bad = index({ homeLogo: { kind: "emoji", emoji } });
-    expect(() => assertValidRegistry(bad, details())).toThrow(/exactly one emoji/);
+
+    // Act & Assert
+    expect(() => loadRegistry(bad, details())).toThrow(/exactly one emoji/);
   });
 
   it("accepts a hidden entry", () => {
-    expect(() => assertValidRegistry(index({ hidden: true }), details())).not.toThrow();
-    expect(() => assertValidRegistry(index({ hidden: false }), details())).not.toThrow();
+    // Act & Assert
+    expect(() => loadRegistry(index({ hidden: true }), details())).not.toThrow();
+    expect(() => loadRegistry(index({ hidden: false }), details())).not.toThrow();
   });
 
   it.each([["true"], [1], [null]])("rejects a non-boolean hidden, %j", (hidden) => {
+    // Arrange
     const bad = index({ hidden: hidden as unknown as boolean });
-    expect(() => assertValidRegistry(bad, details())).toThrow(/hidden for "a" must be a boolean/);
+
+    // Act & Assert
+    expect(() => loadRegistry(bad, details())).toThrow(/hidden for "a" must be a boolean/);
   });
 
   it("accepts an entry with only shellLogo", () => {
+    // Arrange
     const ok: MiniAppIndexRaw = {
       version: 1,
       miniApps: [{ id: "a", name: "A", order: 1, shellLogo: { kind: "emoji", emoji: "😋" } }],
     };
-    expect(() => assertValidRegistry(ok, details())).not.toThrow();
+
+    // Act & Assert
+    expect(() => loadRegistry(ok, details())).not.toThrow();
   });
 
   it("rejects an entry with neither homeLogo nor shellLogo", () => {
+    // Arrange
     const none: MiniAppIndexRaw = { version: 1, miniApps: [{ id: "a", name: "A", order: 1 }] };
-    expect(() => assertValidRegistry(none, details())).toThrow(
+
+    // Act & Assert
+    expect(() => loadRegistry(none, details())).toThrow(
       /"a" needs at least one of homeLogo or shellLogo/,
     );
   });
@@ -133,59 +170,77 @@ describe("assertValidRegistry", () => {
     ["the old single logo", "logo"],
     ["a misspelt homeLogo", "homelogo"],
   ])("rejects an unknown index key: %s", (_label, key) => {
+    // Arrange
     const bad = {
       version: 1,
       miniApps: [{ ...index().miniApps[0]!, [key]: { kind: "emoji", emoji: "😋" } }],
     } as MiniAppIndexRaw;
-    expect(() => assertValidRegistry(bad, details())).toThrow(
+
+    // Act & Assert
+    expect(() => loadRegistry(bad, details())).toThrow(
       new RegExp(`unknown index key "${key}" in "a"`),
     );
   });
 
   it.each([[null], [[]], ["😋"]])("rejects a logo that is not an object, %j", (logo) => {
+    // Arrange
     const bad = index({ homeLogo: logo as unknown as MiniAppIndexRaw["miniApps"][number]["homeLogo"] });
-    expect(() => assertValidRegistry(bad, details())).toThrow(/homeLogo for "a" must be an object/);
+
+    // Act & Assert
+    expect(() => loadRegistry(bad, details())).toThrow(/homeLogo for "a" must be an object/);
   });
 
   it("rejects a remote logo whose path is not a string", () => {
+    // Arrange
     const bad = index({
       homeLogo: { kind: "remote", path: ["/miniapps/a.png"] as unknown as string },
     });
-    expect(() => assertValidRegistry(bad, details())).toThrow(/site-root-relative/);
+
+    // Act & Assert
+    expect(() => loadRegistry(bad, details())).toThrow(/site-root-relative/);
   });
 
   it("checks shellLogo with the same rules as homeLogo", () => {
+    // Arrange
     const bad = index({ shellLogo: { kind: "media", url: "https://evil.com/a.jpg" } });
-    expect(() => assertValidRegistry(bad, details())).toThrow(/shellLogo\.url .*media bucket/);
+
+    // Act & Assert
+    expect(() => loadRegistry(bad, details())).toThrow(/shellLogo\.url .*media bucket/);
     const twoEmoji = index({ shellLogo: { kind: "emoji", emoji: "🍢🍗" } });
-    expect(() => assertValidRegistry(twoEmoji, details())).toThrow(/shellLogo\.emoji .*exactly one emoji/);
+    expect(() => loadRegistry(twoEmoji, details())).toThrow(/shellLogo\.emoji .*exactly one emoji/);
   });
 
   it("rejects an index entry with no matching detail", () => {
-    expect(() => assertValidRegistry(index(), {})).toThrow(/has no detail/);
+    // Act & Assert
+    expect(() => loadRegistry(index(), {})).toThrow(/has no detail/);
   });
 
   it("rejects an orphan detail not present in the index", () => {
+    // Arrange
     const orphaned = {
       ...details(),
       ghost: { ...details().a, id: "ghost" },
     };
-    expect(() => assertValidRegistry(index(), orphaned)).toThrow(
+
+    // Act & Assert
+    expect(() => loadRegistry(index(), orphaned)).toThrow(
       /not present in index/,
     );
   });
 
   it("rejects a detail whose id disagrees with its index entry", () => {
+    // Act & Assert
     expect(() =>
-      assertValidRegistry(index(), { a: { ...details().a, id: "b" } }),
+      loadRegistry(index(), { a: { ...details().a, id: "b" } }),
     ).toThrow(/!= index id/);
   });
 
   it("rejects a non-http startUrl", () => {
+    // Act & Assert
     // The client feeds startUrl straight to a WebView; a javascript: or data:
     // URL here would execute in the mini-app shell.
     expect(() =>
-      assertValidRegistry(index(), {
+      loadRegistry(index(), {
         a: { ...details().a, startUrl: "javascript:alert(1)" },
       }),
     ).toThrow(/bad startUrl/);
@@ -196,13 +251,15 @@ describe("assertValidRegistry", () => {
     // reaches the origin, the SPA fallback answers at HTTP 200, and the app's
     // error overlay only rises above 400. Wrong page, clean logs.
     const withStartUrl = (startUrl: string) => () =>
-      assertValidRegistry(index(), { a: { ...details().a, startUrl } });
+      loadRegistry(index(), { a: { ...details().a, startUrl } });
 
     it("rejects a fragment route", () => {
+      // Act & Assert
       expect(withStartUrl("https://webview.skkuverse.com/#/eskara")).toThrow(/must address a page/);
     });
 
     it("rejects a fragment after a real path, which an origin-and-path check misses", () => {
+      // Act & Assert
       // Lands on the ESKARA index rather than the entry page — the worse failure,
       // because the user arrives somewhere plausible.
       expect(withStartUrl("https://webview.skkuverse.com/eskara#/entry")).toThrow(
@@ -211,67 +268,78 @@ describe("assertValidRegistry", () => {
     });
 
     it("rejects the bare origin, which the old fragment-only ban let through", () => {
+      // Act & Assert
       expect(withStartUrl("https://webview.skkuverse.com/")).toThrow(/must address a page/);
     });
 
     it("accepts a real page", () => {
+      // Act & Assert
       expect(withStartUrl("https://webview.skkuverse.com/eskara")).not.toThrow();
     });
   });
 
   describe("a third-party startUrl keeps its own routing", () => {
     // The rule is origin-gated on purpose. Four of the five registered mini-apps
-    // are third parties, this check runs at import, and assertValidRegistry
+    // are third parties, this check runs at import, and loadRegistry
     // throws — so applying our routing choice to their URLs would mean the server
     // does not boot because someone else's site changed.
     const withStartUrl = (startUrl: string) => () =>
-      assertValidRegistry(index(), { a: { ...details().a, startUrl } });
+      loadRegistry(index(), { a: { ...details().a, startUrl } });
 
     it("allows a bare root path — this is skkuw's real startUrl", () => {
+      // Act & Assert
       expect(withStartUrl("https://www.skkuw.com/")).not.toThrow();
     });
 
     it("allows a fragment, because that host may legitimately route by hash", () => {
+      // Act & Assert
       expect(withStartUrl("https://example.com/#/section")).not.toThrow();
     });
 
     it("still requires http(s)", () => {
+      // Act & Assert
       expect(withStartUrl("javascript:alert(1)")).toThrow(/bad startUrl/);
     });
   });
 
   describe("shell", () => {
     const withShell = (shell: unknown) => () =>
-      assertValidRegistry(index(), {
+      loadRegistry(index(), {
         a: { ...details().a, shell: shell as MiniAppDetail["shell"] },
       });
 
     it.each([[{}], [{ bar: "top" }], [{ bar: "bottom" }], [{ bar: "none" }]])(
       "accepts %j",
       (shell) => {
+        // Act & Assert
         expect(withShell(shell)).not.toThrow();
       },
     );
 
     it.each([["left"], ["TOP"], ["hide"], [true], [null]])("rejects bar %j", (bar) => {
+      // Act & Assert
       expect(withShell({ bar })).toThrow(/shell.bar for "a" must be one of top, bottom, none/);
     });
 
     it.each([[{ header: "opaque" }], [{ header: "overlay" }]])("accepts %j", (shell) => {
+      // Act & Assert
       expect(withShell(shell)).not.toThrow();
     });
 
     it.each([["sideways"], ["OPAQUE"], [1], [null]])("rejects header %j", (header) => {
+      // Act & Assert
       expect(withShell({ header })).toThrow(
         /shell.header for "a" must be one of opaque, overlay/,
       );
     });
 
     it.each([[{ statusBar: "dark" }], [{ statusBar: "light" }]])("accepts %j", (shell) => {
+      // Act & Assert
       expect(withShell(shell)).not.toThrow();
     });
 
     it.each([["gray"], ["DARK"], [1], [null]])("rejects statusBar %j", (statusBar) => {
+      // Act & Assert
       expect(withShell({ statusBar })).toThrow(
         /shell.statusBar for "a" must be one of dark, light/,
       );
@@ -280,6 +348,7 @@ describe("assertValidRegistry", () => {
     it.each([[{ background: "#FFFFFF" }], [{ background: "#0a0b0c" }]])(
       "accepts %j",
       (shell) => {
+        // Act & Assert
         expect(withShell(shell)).not.toThrow();
       },
     );
@@ -287,6 +356,7 @@ describe("assertValidRegistry", () => {
     it.each([["FFFFFF"], ["#FFF"], ["#GGGGGG"], [123456], [null]])(
       "rejects background %j",
       (background) => {
+        // Act & Assert
         expect(withShell({ background })).toThrow(
           /shell.background for "a" must be a #RRGGBB string/,
         );
@@ -294,6 +364,7 @@ describe("assertValidRegistry", () => {
     );
 
     it("accepts every field together", () => {
+      // Act & Assert
       expect(
         withShell({ bar: "top", header: "overlay", statusBar: "light", background: "#112233" }),
       ).not.toThrow();
@@ -302,11 +373,13 @@ describe("assertValidRegistry", () => {
     it.each([["bottomBar"], ["backForward"], ["position"]])(
       "rejects the unknown key %s, including the old switches",
       (key) => {
+        // Act & Assert
         expect(withShell({ [key]: false })).toThrow(new RegExp(`unknown shell key "${key}"`));
       },
     );
 
     it("rejects a shell that is not an object", () => {
+      // Act & Assert
       expect(withShell([])).toThrow(/must be an object/);
       expect(withShell(false)).toThrow(/must be an object/);
       expect(withShell("top")).toThrow(/must be an object/);
@@ -314,8 +387,9 @@ describe("assertValidRegistry", () => {
   });
 
   it("rejects a non-http relatedLinks url", () => {
+    // Act & Assert
     expect(() =>
-      assertValidRegistry(index(), {
+      loadRegistry(index(), {
         a: {
           ...details().a,
           relatedLinks: [{ url: "javascript:alert(1)" }],
