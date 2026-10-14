@@ -39,7 +39,7 @@ npm test            # jest — notices 스위트 포함
 
 ## 인덱스 소유권 확인
 
-- Check in MongoDB that the server's read index `sourceId_1_date_-1__id_-1` exists. The server creates it at startup and hints every list query to it (`FORCE_INDEX` in `src/notices/notices.data.ts`), and a hint against a missing index fails the query.
+- Check in MongoDB that the server's read index `sourceId_1_date_-1__id_-1` exists. The server creates it at startup and hints every list query to it (`FORCE_INDEX` in `src/notices/list/notices-list.query.ts`), and a hint against a missing index fails the query.
 - 크롤러 소유 `articleNo_1_sourceId_1` unique 인덱스를 **건드리지 않았는지** — 서버는 이 인덱스에 손대면 안 된다 ([decisions/0002](../decisions/0002-notices-read-only-ownership.md)).
 
 ## dispatch 변경 시 추가 확인

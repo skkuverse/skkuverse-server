@@ -1,14 +1,12 @@
 /**
- * Integration over NoticesController (tabs / source / multi / detail / proxy
- * CORP), validation branches, toListItem/toDetailItem projection, route
- * ordering, and the q-search parsing/pass-through.
+ * Route coverage for the notices tabs, list, multi-source list and detail (plus the attachment route's CORP
+ * header): validation branches, the list and detail item shapes, route ordering, and how the q, type, limit
+ * and cursor parameters reach the list read.
  *
- * NoticesDataService is overridden with a stub (its real onModuleInit would call
- * ensureNoticeIndexes() → src/infra/db.ts, hanging without Mongo; its finder
- * methods hit the collection). TabConfigService + SourcesService load the real,
- * committed categories.json / sources.json, so the tabs response +
- * INVALID_SOURCE_ID guard run on real data. The envelope + meta come from
- * sendSuccess (controller @Res()).
+ * The app boots the notices modules through the production pipeline (buildTestApp). Only the list and detail
+ * repositories are doubles, typed fakes seeded per test, with spies on their reads where a test asserts what
+ * reached the read; the clock is fixed. The tabs response and the INVALID_SOURCE_ID guard run on the real,
+ * committed categories.json and sources.json.
  */
 
 import fs from "fs";
@@ -16,20 +14,30 @@ import path from "path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { ObjectId } from "mongodb";
-import { NoticesDataService } from "../../../src/notices/notices-data.service";
-import { encodeCursor } from "../../../src/notices/notices.cursor";
-import { buildNoticesApp } from "../../helpers/nest/build-notices-app";
+import { Clock } from "../../../src/infra/clock";
+import { NoticesAttachmentModule } from "../../../src/notices/attachment/notices-attachment.module";
+import { NoticesDetailModule } from "../../../src/notices/detail/notices-detail.module";
+import { NoticesDetailRepository } from "../../../src/notices/detail/notices-detail.repository";
+import { encodeCursor } from "../../../src/notices/list/notices-list.mapper";
+import { NoticesListModule } from "../../../src/notices/list/notices-list.module";
+import { NoticesListRepository } from "../../../src/notices/list/notices-list.repository";
+import type { NoticeDoc } from "../../../src/notices/notices.document";
+import { NoticesModule } from "../../../src/notices/notices.module";
+import { NoticesTabsModule } from "../../../src/notices/tabs/notices-tabs.module";
+import { FakeNoticesDetailRepository } from "../../helpers/fakes/notices/notices-detail.repository.fake";
+import { FakeNoticesListRepository } from "../../helpers/fakes/notices/notices-list.repository.fake";
+import { buildTestApp } from "../../helpers/nest/build-test-app";
+
+const NOW = new Date("2026-04-11T03:00:00.000Z");
+const fakeClock: Clock = { now: () => NOW };
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
-let data: {
-  onModuleInit: jest.Mock;
-  findNoticesBySource: jest.Mock;
-  findNoticesBySources: jest.Mock;
-  findNoticeByArticleNo: jest.Mock;
-};
+const listRepository = new FakeNoticesListRepository();
+const detailRepository = new FakeNoticesDetailRepository();
+let listNotices: jest.SpyInstance;
 
-function rawDoc(overrides: Record<string, unknown> = {}) {
+function rawDoc(overrides: Record<string, unknown> = {}): NoticeDoc {
   return {
     _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d0e1"),
     sourceId: "skku-main",
@@ -46,19 +54,19 @@ function rawDoc(overrides: Record<string, unknown> = {}) {
     editCount: 0,
     crawledAt: new Date("2026-04-10T03:00:00.000Z"),
     ...overrides,
-  };
+  } as NoticeDoc;
 }
 
 beforeAll(async () => {
-  data = {
-    onModuleInit: jest.fn(),
-    findNoticesBySource: jest.fn(),
-    findNoticesBySources: jest.fn(),
-    findNoticeByArticleNo: jest.fn(),
-  };
-  app = await buildNoticesApp([
-    { provide: NoticesDataService, useValue: data },
-  ]);
+  app = await buildTestApp({
+    imports: [NoticesModule, NoticesTabsModule, NoticesListModule, NoticesAttachmentModule, NoticesDetailModule],
+    overrides: [
+      { provide: NoticesListRepository, useValue: listRepository },
+      { provide: NoticesDetailRepository, useValue: detailRepository },
+      { provide: Clock, useValue: fakeClock },
+    ],
+    role: "api",
+  });
   httpServer = app.getHttpServer();
 });
 
@@ -67,12 +75,18 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.restoreAllMocks();
+  listRepository.docs = [];
+  detailRepository.docs = [];
+  listNotices = jest.spyOn(listRepository, "listNotices");
 });
 
 describe("GET /notices/tabs", () => {
   it("returns tab config with schemaVersion and tabs array", async () => {
+    // Act
     const res = await request(httpServer).get("/notices/tabs");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.meta).toHaveProperty("lang");
     expect(res.body.data.schemaVersion).toBe(1);
@@ -81,30 +95,45 @@ describe("GET /notices/tabs", () => {
   });
 
   it("returns Korean labels by default", async () => {
+    // Arrange
     const res = await request(httpServer).get("/notices/tabs");
+
+    // Act
     const deptTab = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "dept",
     );
+
+    // Assert
     expect(deptTab.label).toBe("학과");
   });
 
   it("returns English labels for Accept-Language: en", async () => {
+    // Arrange
     const res = await request(httpServer)
       .get("/notices/tabs")
       .set("Accept-Language", "en");
+
+    // Act
     const deptTab = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "dept",
     );
+
+    // Assert
     expect(deptTab.label).toBe("Department");
   });
 
   it("falls back to English for unsupported language (zh)", async () => {
+    // Arrange
     const res = await request(httpServer)
       .get("/notices/tabs")
       .set("Accept-Language", "zh");
+
+    // Act
     const deptTab = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "dept",
     );
+
+    // Assert
     expect(deptTab.label).toBe("Department");
   });
 
@@ -119,14 +148,19 @@ describe("GET /notices/tabs", () => {
   ) as Record<string, { ko: string; en?: string }>;
 
   it("unavailable picker sources carry server-resolved excludeReasonText", async () => {
+    // Arrange
     // Uses the real committed sources.json: cheme is a retired source.
     const res = await request(httpServer).get("/notices/tabs");
     const deptTab = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "dept",
     );
+
+    // Act
     const cheme = deptTab.picker.sources.find(
       (s: { id: string }) => s.id === "cheme",
     );
+
+    // Assert
     expect(cheme.noticeAvailable).toBe(false);
     expect(typeof cheme.excludeReason).toBe("string");
     expect(cheme.excludeReasonText).toBe(
@@ -135,37 +169,52 @@ describe("GET /notices/tabs", () => {
   });
 
   it("excludeReasonText is localized per response language", async () => {
+    // Arrange
     const res = await request(httpServer)
       .get("/notices/tabs")
       .set("Accept-Language", "en");
     const deptTab = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "dept",
     );
+
+    // Act
     const cheme = deptTab.picker.sources.find(
       (s: { id: string }) => s.id === "cheme",
     );
+
+    // Assert
     expect(cheme.excludeReasonText).toBe(
       excludeReasonMap[cheme.excludeReason].en,
     );
   });
 
   it("available picker sources have null excludeReasonText", async () => {
+    // Arrange
     const res = await request(httpServer).get("/notices/tabs");
     const deptTab = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "dept",
     );
+
+    // Act
     const available = deptTab.picker.sources.find(
       (s: { noticeAvailable: boolean }) => s.noticeAvailable,
     );
+
+    // Assert
     expect(available.excludeReason).toBeNull();
     expect(available.excludeReasonText).toBeNull();
   });
 
   it("fixed tabs have tagged payload with sourceId, name, campus", async () => {
+    // Arrange
     const res = await request(httpServer).get("/notices/tabs");
+
+    // Act
     const academic = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "academic",
     );
+
+    // Assert
     expect(academic.tabMode).toBe("fixed");
     expect(academic.fixed).toBeDefined();
     expect(academic.fixed.sourceId).toBe("skku-notice02");
@@ -175,10 +224,15 @@ describe("GET /notices/tabs", () => {
   });
 
   it("picker tabs have tagged payload with sources, maxSelection, defaultIds", async () => {
+    // Arrange
     const res = await request(httpServer).get("/notices/tabs");
+
+    // Act
     const library = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "library",
     );
+
+    // Assert
     expect(library.tabMode).toBe("picker");
     expect(library.picker).toBeDefined();
     expect(Array.isArray(library.picker.sources)).toBe(true);
@@ -193,44 +247,64 @@ describe("GET /notices/tabs", () => {
   });
 
   it("picker source entries have id, name, campus", async () => {
+    // Arrange
     const res = await request(httpServer).get("/notices/tabs");
     const deptTab = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "dept",
     );
+
+    // Act
     const first = deptTab.picker.sources[0];
+
+    // Assert
     expect(first).toHaveProperty("id");
     expect(first).toHaveProperty("name");
     expect(first).toHaveProperty("campus");
   });
 
   it("picker source entries have college, noticeAvailable, excludeReason", async () => {
+    // Arrange
     const res = await request(httpServer).get("/notices/tabs");
     const deptTab = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "dept",
     );
+
+    // Act
     const first = deptTab.picker.sources[0];
+
+    // Assert
     expect(first).toHaveProperty("college");
     expect(typeof first.noticeAvailable).toBe("boolean");
     expect(first).toHaveProperty("excludeReason");
   });
 
   it("known dept carries its parent college (cse-undergrad → 소프트웨어융합대학)", async () => {
+    // Arrange
     const res = await request(httpServer).get("/notices/tabs");
     const deptTab = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "dept",
     );
+
+    // Act
     const cse = deptTab.picker.sources.find(
       (s: { id: string }) => s.id === "cse-undergrad",
     );
+
+    // Assert
     expect(cse).toBeDefined();
     expect(cse.college).toBe("소프트웨어융합대학");
   });
 
   it("noticeAvailable and excludeReason are biconditional invariants", async () => {
+    // Arrange
     const res = await request(httpServer).get("/notices/tabs");
+
+    // Act
     const deptTab = res.body.data.tabs.find(
       (t: { key: string }) => t.key === "dept",
     );
+
+    // Assert
     for (const s of deptTab.picker.sources) {
       if (s.noticeAvailable) {
         expect(s.excludeReason).toBe(null);
@@ -241,14 +315,22 @@ describe("GET /notices/tabs", () => {
   });
 
   it("sets Cache-Control private, max-age=3600", async () => {
+    // Act
     const res = await request(httpServer).get("/notices/tabs");
+
+    // Assert
     expect(res.headers["cache-control"]).toContain("private");
     expect(res.headers["cache-control"]).toContain("max-age=3600");
   });
 
   it("tab array order matches categories.json order", async () => {
+    // Arrange
     const res = await request(httpServer).get("/notices/tabs");
+
+    // Act
     const keys = res.body.data.tabs.map((t: { key: string }) => t.key);
+
+    // Assert
     expect(keys[0]).toBe("dept");
     expect(keys[1]).toBe("academic");
     expect(keys[keys.length - 1]).toBe("general");
@@ -257,42 +339,52 @@ describe("GET /notices/tabs", () => {
 
 describe("GET /notices/source/:sourceId", () => {
   it("returns 400 INVALID_SOURCE_ID for unknown source (no DB hit)", async () => {
+    // Act
     const res = await request(httpServer).get("/notices/source/nope-not-real");
+
+    // Assert
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_SOURCE_ID");
-    expect(data.findNoticesBySource).not.toHaveBeenCalled();
+    expect(listNotices).not.toHaveBeenCalled();
   });
 
   it("returns 400 INVALID_PARAMS for unknown type", async () => {
+    // Act
     const res = await request(httpServer).get(
       "/notices/source/skku-main?type=bogus",
     );
+
+    // Assert
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_PARAMS");
   });
 
   it("returns 400 INVALID_CURSOR for malformed cursor", async () => {
+    // Act
     const res = await request(httpServer).get(
       "/notices/source/skku-main?cursor=!!!",
     );
+
+    // Assert
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_CURSOR");
   });
 
   it("maps docs through toListItem and never leaks content/cleanHtml/cleanMarkdown/contentText", async () => {
-    data.findNoticesBySource.mockResolvedValue({
-      items: [
+    // Arrange
+    listRepository.docs = [
         rawDoc({
           content: "<p>x</p>",
           cleanHtml: "<p>x</p>",
           cleanMarkdown: "**x**",
           contentText: "x",
         }),
-      ],
-      nextCursor: null,
-      hasMore: false,
-    });
+      ];
+
+    // Act
     const res = await request(httpServer).get("/notices/source/skku-main");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.data.notices).toHaveLength(1);
     const item = res.body.data.notices[0];
@@ -309,10 +401,12 @@ describe("GET /notices/source/:sourceId", () => {
   });
 
   it("does not crash when .map leaks array index into toListItem's now param (regression: action_required best-pick)", async () => {
-    data.findNoticesBySource.mockResolvedValue({
-      items: [
+    // Arrange
+    listRepository.docs = [
         rawDoc({
           _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d0e1"),
+          // Newer than the next one, so the list (newest first) serves it at [0].
+          date: "2026-04-11",
           articleNo: 999001,
           summaryAt: new Date("2026-04-11T00:00:00.000Z"),
           summaryType: "action_required",
@@ -333,11 +427,12 @@ describe("GET /notices/source/:sourceId", () => {
             },
           ],
         }),
-      ],
-      nextCursor: null,
-      hasMore: false,
-    });
+      ];
+
+    // Act
     const res = await request(httpServer).get("/notices/source/skku-main");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.data.notices).toHaveLength(2);
     expect(res.body.data.notices[1].summary).toEqual({
@@ -349,51 +444,47 @@ describe("GET /notices/source/:sourceId", () => {
   });
 
   it("clamps limit to 1..50 range", async () => {
-    data.findNoticesBySource.mockResolvedValue({
-      items: [],
-      nextCursor: null,
-      hasMore: false,
-    });
+    // Act
     await request(httpServer).get("/notices/source/skku-main?limit=999");
-    expect(data.findNoticesBySource).toHaveBeenCalledWith(
+
+    // Assert
+    expect(listNotices).toHaveBeenCalledWith(
       "skku-main",
       expect.objectContaining({ limit: 50 }),
     );
 
-    data.findNoticesBySource.mockClear();
+    listNotices.mockClear();
     await request(httpServer).get("/notices/source/skku-main?limit=0");
-    expect(data.findNoticesBySource).toHaveBeenCalledWith(
+    expect(listNotices).toHaveBeenCalledWith(
       "skku-main",
       expect.objectContaining({ limit: 1 }),
     );
   });
 
   it("default limit is 20 when not provided", async () => {
-    data.findNoticesBySource.mockResolvedValue({
-      items: [],
-      nextCursor: null,
-      hasMore: false,
-    });
+    // Act
     await request(httpServer).get("/notices/source/skku-main");
-    expect(data.findNoticesBySource).toHaveBeenCalledWith(
+
+    // Assert
+    expect(listNotices).toHaveBeenCalledWith(
       "skku-main",
       expect.objectContaining({ limit: 20 }),
     );
   });
 
   it("forwards a valid cursor as a decoded object to the data layer", async () => {
-    data.findNoticesBySource.mockResolvedValue({
-      items: [],
-      nextCursor: null,
-      hasMore: false,
-    });
+    // Arrange
     const cursor = encodeCursor({
       d: "2026-04-01",
       c: "2026-04-01T00:00:00.000Z",
       i: "66a1b2c3d4e5f6a7b8c9d0e1",
     });
     await request(httpServer).get(`/notices/source/skku-main?cursor=${cursor}`);
-    const callArgs = data.findNoticesBySource.mock.calls[0]![1];
+
+    // Act
+    const callArgs = listNotices.mock.calls[0]![1];
+
+    // Assert
     expect(callArgs.cursor).toEqual({
       d: "2026-04-01",
       c: "2026-04-01T00:00:00.000Z",
@@ -402,15 +493,13 @@ describe("GET /notices/source/:sourceId", () => {
   });
 
   it("forwards type filter", async () => {
-    data.findNoticesBySource.mockResolvedValue({
-      items: [],
-      nextCursor: null,
-      hasMore: false,
-    });
+    // Act
     await request(httpServer).get(
       "/notices/source/skku-main?type=action_required",
     );
-    expect(data.findNoticesBySource).toHaveBeenCalledWith(
+
+    // Assert
+    expect(listNotices).toHaveBeenCalledWith(
       "skku-main",
       expect.objectContaining({ type: "action_required" }),
     );
@@ -419,34 +508,47 @@ describe("GET /notices/source/:sourceId", () => {
 
 describe("GET /notices/:sourceId/:articleNo", () => {
   it("returns 400 INVALID_SOURCE_ID for unknown source", async () => {
+    // Act
     const res = await request(httpServer).get("/notices/nope/12345");
+
+    // Assert
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_SOURCE_ID");
   });
 
   it("returns 400 INVALID_PARAMS for non-numeric articleNo", async () => {
+    // Act
     const res = await request(httpServer).get("/notices/skku-main/abc");
+
+    // Assert
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_PARAMS");
   });
 
   it("returns 404 NOT_FOUND when data layer returns null", async () => {
-    data.findNoticeByArticleNo.mockResolvedValue(null);
+    // Act
     const res = await request(httpServer).get("/notices/skku-main/999999");
+
+    // Assert
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("NOT_FOUND");
   });
 
   it("maps through toDetailItem: cleanMarkdown → contentMarkdown, legacy body fields omitted", async () => {
-    data.findNoticeByArticleNo.mockResolvedValue(
+    // Arrange
+    detailRepository.docs = [
       rawDoc({
         content: "<p>body</p>",
         cleanHtml: "<p>body</p>",
         contentText: "body",
         cleanMarkdown: "**body**",
       }),
-    );
+    ];
+
+    // Act
     const res = await request(httpServer).get("/notices/skku-main/136023");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.data.contentMarkdown).toBe("**body**");
     expect(res.body.data).not.toHaveProperty("content");
@@ -457,10 +559,15 @@ describe("GET /notices/:sourceId/:articleNo", () => {
   });
 
   it("contentMarkdown is null when cleanMarkdown missing", async () => {
-    data.findNoticeByArticleNo.mockResolvedValue(
+    // Arrange
+    detailRepository.docs = [
       rawDoc({ cleanMarkdown: undefined }),
-    );
+    ];
+
+    // Act
     const res = await request(httpServer).get("/notices/skku-main/136023");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.data.contentMarkdown).toBeNull();
   });
@@ -468,7 +575,10 @@ describe("GET /notices/:sourceId/:articleNo", () => {
 
 describe("route ordering", () => {
   it("/tabs is NOT treated as a sourceId", async () => {
+    // Act
     const res = await request(httpServer).get("/notices/tabs");
+
+    // Assert
     expect(res.status).toBe(200);
     expect(res.body.data.tabs).toBeDefined();
   });
@@ -476,47 +586,61 @@ describe("route ordering", () => {
 
 describe("GET /notices/proxy/attachment — CORP cross-origin override", () => {
   it("sets Cross-Origin-Resource-Policy: cross-origin on the response", async () => {
+    // Act
     const res = await request(httpServer).get("/notices/proxy/attachment");
+
+    // Assert
     expect(res.headers["cross-origin-resource-policy"]).toBe("cross-origin");
   });
 });
 
 describe("GET /notices/source/:sourceId — search query", () => {
-  beforeEach(() => {
-    data.findNoticesBySource.mockResolvedValue({
-      items: [],
-      nextCursor: null,
-      hasMore: false,
-    });
-  });
-
   it("forwards regex-metachar q raw to the data layer (escape is data-layer's job)", async () => {
+    // Act
     await request(httpServer).get("/notices/source/skku-main?q=.%2A%2B%3F");
-    expect(data.findNoticesBySource).toHaveBeenCalledWith(
+
+    // Assert
+    expect(listNotices).toHaveBeenCalledWith(
       "skku-main",
       expect.objectContaining({ q: ".*+?" }),
     );
   });
 
   it("treats q='' as missing — no q in data layer call", async () => {
+    // Arrange
     await request(httpServer).get("/notices/source/skku-main?q=");
-    const callArgs = data.findNoticesBySource.mock.calls[0]![1];
+
+    // Act
+    const callArgs = listNotices.mock.calls[0]![1];
+
+    // Assert
     expect(callArgs.q).toBeUndefined();
   });
 
   it("treats whitespace-only q as missing", async () => {
+    // Arrange
     await request(httpServer).get("/notices/source/skku-main?q=%20%20%20");
-    const callArgs = data.findNoticesBySource.mock.calls[0]![1];
+
+    // Act
+    const callArgs = listNotices.mock.calls[0]![1];
+
+    // Assert
     expect(callArgs.q).toBeUndefined();
   });
 
   it("missing q (param absent) is missing — no q in data layer call", async () => {
+    // Arrange
     await request(httpServer).get("/notices/source/skku-main");
-    const callArgs = data.findNoticesBySource.mock.calls[0]![1];
+
+    // Act
+    const callArgs = listNotices.mock.calls[0]![1];
+
+    // Assert
     expect(callArgs.q).toBeUndefined();
   });
 
   it("round-trips q + cursor together to the data layer", async () => {
+    // Arrange
     const cursor = encodeCursor({
       d: "2026-04-01",
       c: "2026-04-01T00:00:00.000Z",
@@ -525,7 +649,11 @@ describe("GET /notices/source/:sourceId — search query", () => {
     await request(httpServer).get(
       `/notices/source/skku-main?q=%EA%B3%B5%EC%A7%80&cursor=${cursor}`,
     );
-    const callArgs = data.findNoticesBySource.mock.calls[0]![1];
+
+    // Act
+    const callArgs = listNotices.mock.calls[0]![1];
+
+    // Assert
     expect(callArgs.q).toBe("공지");
     expect(callArgs.cursor).toEqual({
       d: "2026-04-01",
@@ -535,10 +663,13 @@ describe("GET /notices/source/:sourceId — search query", () => {
   });
 
   it("forwards q + type filter together", async () => {
+    // Act
     await request(httpServer).get(
       "/notices/source/skku-main?q=%EC%9E%A5%ED%95%99%EA%B8%88&type=action_required",
     );
-    expect(data.findNoticesBySource).toHaveBeenCalledWith(
+
+    // Assert
+    expect(listNotices).toHaveBeenCalledWith(
       "skku-main",
       expect.objectContaining({
         q: "장학금",
@@ -548,57 +679,71 @@ describe("GET /notices/source/:sourceId — search query", () => {
   });
 
   it("trims surrounding whitespace before forwarding", async () => {
+    // Act
     await request(httpServer).get(
       "/notices/source/skku-main?q=%20%20hello%20%20",
     );
-    expect(data.findNoticesBySource).toHaveBeenCalledWith(
+
+    // Assert
+    expect(listNotices).toHaveBeenCalledWith(
       "skku-main",
       expect.objectContaining({ q: "hello" }),
     );
   });
 
   it("silently drops q exceeding 100 codepoints", async () => {
+    // Arrange
     const tooLong = "x".repeat(101);
     await request(httpServer).get(`/notices/source/skku-main?q=${tooLong}`);
-    const callArgs = data.findNoticesBySource.mock.calls[0]![1];
+
+    // Act
+    const callArgs = listNotices.mock.calls[0]![1];
+
+    // Assert
     expect(callArgs.q).toBeUndefined();
   });
 
   it("silently drops q containing control characters", async () => {
+    // Arrange
     await request(httpServer).get("/notices/source/skku-main?q=abc%00def");
-    const callArgs = data.findNoticesBySource.mock.calls[0]![1];
+
+    // Act
+    const callArgs = listNotices.mock.calls[0]![1];
+
+    // Assert
     expect(callArgs.q).toBeUndefined();
   });
 });
 
 describe("GET /notices — multi-source search query", () => {
-  beforeEach(() => {
-    data.findNoticesBySources.mockResolvedValue({
-      items: [],
-      nextCursor: null,
-      hasMore: false,
-    });
-  });
-
   it("forwards q to findNoticesBySources alongside sourceIds", async () => {
+    // Act
     await request(httpServer).get(
       "/notices?sourceIds=skku-main,cse-undergrad&q=%EA%B3%B5%EC%A7%80",
     );
-    expect(data.findNoticesBySources).toHaveBeenCalledWith(
+
+    // Assert
+    expect(listNotices).toHaveBeenCalledWith(
       ["skku-main", "cse-undergrad"],
       expect.objectContaining({ q: "공지" }),
     );
   });
 
   it("treats q='' as missing on multi-source endpoint", async () => {
+    // Arrange
     await request(httpServer).get(
       "/notices?sourceIds=skku-main,cse-undergrad&q=",
     );
-    const callArgs = data.findNoticesBySources.mock.calls[0]![1];
+
+    // Act
+    const callArgs = listNotices.mock.calls[0]![1];
+
+    // Assert
     expect(callArgs.q).toBeUndefined();
   });
 
   it("forwards q + cursor + type together on multi-source endpoint", async () => {
+    // Arrange
     const cursor = encodeCursor({
       d: "2026-04-01",
       c: "2026-04-01T00:00:00.000Z",
@@ -607,7 +752,11 @@ describe("GET /notices — multi-source search query", () => {
     await request(httpServer).get(
       `/notices?sourceIds=skku-main,cse-undergrad&q=%EC%9E%A5%ED%95%99%EA%B8%88&type=action_required&cursor=${cursor}`,
     );
-    const callArgs = data.findNoticesBySources.mock.calls[0]![1];
+
+    // Act
+    const callArgs = listNotices.mock.calls[0]![1];
+
+    // Assert
     expect(callArgs.q).toBe("장학금");
     expect(callArgs.type).toBe("action_required");
     expect(callArgs.cursor).toEqual({
@@ -618,35 +767,49 @@ describe("GET /notices — multi-source search query", () => {
   });
 
   it("returns 400 INVALID_PARAMS when sourceIds missing", async () => {
+    // Act
     const res = await request(httpServer).get("/notices");
+
+    // Assert
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_PARAMS");
   });
 
   it("returns 400 INVALID_PARAMS when more than 20 sourceIds", async () => {
+    // Arrange
     // 21 ids. The count guard runs before the unknown-sourceId guard, so
     // these can be bogus — that ordering is what this asserts.
     const ids = Array.from({ length: 21 }, (_, i) => `src${i}`).join(",");
+
+    // Act
     const res = await request(httpServer).get(`/notices?sourceIds=${ids}`);
+
+    // Assert
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_PARAMS");
   });
 
   it("lets 6 sourceIds past the count guard (was 400 under the old cap of 5)", async () => {
+    // Act
     // Regression guard for the cap raise. Six ids used to fail the count
     // check with INVALID_PARAMS; now they reach the validity check instead,
     // so the error code is what proves the cap moved.
     const res = await request(httpServer).get(
       "/notices?sourceIds=a,b,c,d,e,f",
     );
+
+    // Assert
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_SOURCE_ID");
   });
 
   it("returns 400 INVALID_SOURCE_ID when a sourceId is unknown", async () => {
+    // Act
     const res = await request(httpServer).get(
       "/notices?sourceIds=skku-main,bogus-src",
     );
+
+    // Assert
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_SOURCE_ID");
   });

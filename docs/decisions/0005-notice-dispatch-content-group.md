@@ -26,7 +26,7 @@ prod(`skku_notices.notices`, 6,868 docs) 실측(2026-08-04)으로 확인한 것:
 
 ## Decision
 
-**같은 sweep 회차 안에서 `title`(trim) + `contentHash`가 완전히 일치하는 문서를 한 그룹으로 묶어, topic union으로 CF를 1번만 호출한다.** (`src/notices/notices.dedup-key.ts` + `notices-dispatcher.service.ts`의 `dispatchGroup`)
+**같은 sweep 회차 안에서 `title`(trim) + `contentHash`가 완전히 일치하는 문서를 한 그룹으로 묶어, topic union으로 CF를 1번만 호출한다.** (`src/notices/notices.rules.ts`의 `dedupKeyOf` + `src/notices/dispatch/notices-dispatch.service.ts`의 `dispatchGroup`)
 
 - **content 기반이라 소스별 분기가 없다.** 8-way·16-way는 물론 내일 새로 생기는 교차 게시 보드도 코드 변경 없이 잡힌다. 크롤러 변경 0, 스키마·인덱스·필드 추가 0.
 - **완전 일치만 병합한다.** 퍼지 매칭 없음. `contentHash`가 없으면(상세 fetch 실패) `_id` 기반 identity 키로 떨어져 1인 그룹이 된다 — 추측해서 병합하느니 병합을 포기한다. **오탐으로 정상 공지를 삼키는 것이 중복 알림보다 나쁘다.**

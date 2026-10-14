@@ -7,6 +7,7 @@
   "src/infra/",
   "src/map/",
   "src/miniapps/",
+  "src/notices/",
   "src/scheduling/",
   "src/shared/",
   "src/ui/"

@@ -17,7 +17,8 @@
  *     at any depth, so a consumer holding an older copy accepts a new field.
  *   - timestamps: a property named for an instant (`<event>At`, naming.md) is
  *     a `date-time` string, as `z.iso.datetime()` exports it. The server
- *     sends dates through `toISOString()`.
+ *     sends dates through `toISOString()`. An object so named is a structured
+ *     date served as one (a notice badge's `{ date, time }`), not an instant.
  */
 import path from "path";
 import ts from "typescript";
@@ -146,6 +147,18 @@ function isDateTime(node: Json): boolean {
   return schema.type === "string" && schema.format === "date-time";
 }
 
+/** An object schema, nullable or not: a structured date, which the timestamp rule leaves alone. */
+function isObjectNode(node: Json): boolean {
+  if (typeof node !== "object" || node === null) return false;
+  const schema = node as Record<string, Json>;
+  const members = schema.anyOf ?? schema.oneOf;
+  if (Array.isArray(members)) {
+    const nonNull = members.filter((m) => (m as Record<string, Json>)?.type !== "null");
+    return nonNull.length > 0 && nonNull.every(isObjectNode);
+  }
+  return schema.type === "object";
+}
+
 /** `<file>#<name>: <pointer> is not z.iso.datetime()` for each `<event>At` property that is not a date-time string. */
 export function timestampViolations(file: string, exported: WireExports): string[] {
   return inputJsonOf(exported).flatMap(([name, json]) =>
@@ -153,7 +166,7 @@ export function timestampViolations(file: string, exported: WireExports): string
       const properties = node.properties;
       if (typeof properties !== "object" || properties === null || Array.isArray(properties)) return [];
       return Object.entries(properties as Record<string, Json>)
-        .filter(([key, sub]) => INSTANT_KEY.test(key) && !isDateTime(sub))
+        .filter(([key, sub]) => INSTANT_KEY.test(key) && !isDateTime(sub) && !isObjectNode(sub))
         .map(([key]) => `${file}#${name}: ${pointer}/properties/${key} is not z.iso.datetime()`);
     }),
   );
@@ -319,6 +332,20 @@ describe("wire schema rules apply as specified", () => {
       `${FILE}#x: #/properties/createdAt is not z.iso.datetime()`,
       `${FILE}#x: #/properties/nested/properties/updatedAt is not z.iso.datetime()`,
     ]);
+  });
+
+  it("timestamps: an object named <event>At is a structured date, not an instant", () => {
+    // Arrange
+    const source = [
+      ZOD,
+      "export const x = z.object({",
+      "  startAt: z.object({ date: z.string(), time: z.string().nullable() }).nullable(),",
+      "  endAt: z.object({ date: z.string() }),",
+      "});",
+    ].join("\n");
+
+    // Act & Assert
+    expect(timestampViolations(FILE, loadSource(source))).toEqual([]);
   });
 
   it("timestamps: z.iso.datetime(), nullable or optional, passes, and a word ending in at is no instant", () => {

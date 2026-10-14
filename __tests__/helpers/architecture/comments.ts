@@ -1,4 +1,5 @@
 import ts from "typescript";
+import { readSource } from "./tree";
 
 export interface SourceComment {
   /** 1-based line of the comment's first character. */
@@ -95,4 +96,10 @@ export function numberedKeys(file: string, labels: readonly string[]): string[] 
     seen.set(label, n);
     return `${file}: ${label}${n > 1 ? ` #${n}` : ""}`;
   });
+}
+
+/** Hash-locked vendored files (.contracts.lock.json): their comments are not edited here. */
+export function vendoredSources(): Set<string> {
+  const lock = JSON.parse(readSource(".contracts.lock.json")) as { contracts: Record<string, { path: string }> };
+  return new Set(Object.values(lock.contracts).map((c) => c.path));
 }
