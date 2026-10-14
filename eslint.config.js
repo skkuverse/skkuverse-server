@@ -399,6 +399,20 @@ const ROLE_MAX_LINES = {
   wire: 60,
 };
 
+// A file over its role's cap with no domain seam to split it along carries a reasoned per-file cap instead
+// (ADR 0010 D9): __tests__/architecture/exemptions/size-caps.json, { "<file>": { "max": <lines>, "reason": "…" } }.
+// Each block comes after the role blocks, so it raises only that file's max-lines; size-ratchets.test.ts holds
+// each max within 10 of the file and fails an entry whose file is gone or back under its role's cap.
+const SIZE_CAP_EXEMPTIONS = require("./__tests__/architecture/exemptions/size-caps.json");
+
+function sizeCapExemptionBlocks() {
+  return Object.entries(SIZE_CAP_EXEMPTIONS).map(([file, { max }]) => ({
+    name: `size-exemption/${file}`,
+    files: [file],
+    rules: { "max-lines": ["error", { max, skipBlankLines: true, skipComments: false }] },
+  }));
+}
+
 function roleSizeBlocks() {
   return Object.entries(ROLE_MAX_LINES).map(([role, max]) => ({
     name: `size/${role}`,
@@ -635,6 +649,7 @@ module.exports = [
     },
   },
   ...roleSizeBlocks(),
+  ...sizeCapExemptionBlocks(),
   migratedFunctionBlock(),
   migratedTypescriptBlock(),
   ...glossaryDenylistBlocks(),
