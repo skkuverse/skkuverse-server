@@ -5,12 +5,12 @@ import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
 import type { BusGroup, BusGroupVisibility } from "./bus-config.types";
 import { HSSCStations } from "./hssc.stations";
-import { jongroRoutes, type JongroRoute } from "../registry/jongro-registry";
+import { jongroRoutes } from "../bus.config";
+import type { JongroRoute, JongroStation } from "../bus.types";
 import { buildStreetViewUrl } from "../schedule/naver-street-view";
 import { stopCatalog } from "../schedule/schedule-stops";
 import type {
   HsscStation,
-  JongroStation,
   LatLng,
   ScheduleStop,
   ScheduleStopCatalog,

@@ -1,0 +1,90 @@
+import { Injectable } from "@nestjs/common";
+import { Clock } from "../../../infra/clock";
+import logger from "../../../infra/logger";
+import type { JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
+import { BusCacheService } from "../../cache/bus-cache.service";
+import type { JongroRoute } from "../../bus.types";
+import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
+import { toJongroBusPosition } from "./bus-realtime-jongro.mapper";
+import { toDwell, toRegistryDrift } from "./bus-realtime-jongro.rules";
+import type { JongroBusSighting } from "./bus-realtime-jongro.types";
+
+@Injectable()
+export class BusRealtimeJongroService {
+  private readonly arrivalsByCode = new Map<string, JongroArrivalDoc[]>();
+  private readonly positionsByCode = new Map<string, JongroBusPositionDoc[]>();
+  private readonly recordTimesByCode = new Map<string, Map<string, string>>();
+  private readonly driftWarnedCodes = new Set<string>();
+
+  constructor(
+    private readonly client: BusRealtimeJongroClient,
+    private readonly cache: BusCacheService,
+    private readonly clock: Clock,
+  ) {}
+
+  // WHY: rejects on a failed fetch or bus_cache write, so the poller registry reports the tick.
+  async refresh(route: JongroRoute): Promise<void> {
+    await Promise.all([this.refreshArrivals(route), this.refreshPositions(route)]);
+  }
+
+  // WHY: an api replica runs no poller: its memory is empty (undefined before a first tick) and bus_cache serves.
+  async listArrivals(code: string): Promise<JongroArrivalDoc[] | undefined> {
+    return (await this.cache.read(`jongro_stations_${code}`)) ?? this.arrivalsByCode.get(code);
+  }
+
+  async listPositions(code: string): Promise<JongroBusPositionDoc[] | undefined> {
+    return (await this.cache.read(`jongro_locations_${code}`)) ?? this.positionsByCode.get(code);
+  }
+
+  private async refreshArrivals(route: JongroRoute): Promise<void> {
+    const arrivals = await this.client.fetchArrivals(route);
+    if (!arrivals) return;
+    this.warnOnRegistryDrift(route, arrivals);
+    this.arrivalsByCode.set(route.code, arrivals);
+    await this.cache.write(`jongro_stations_${route.code}`, arrivals);
+  }
+
+  private async refreshPositions(route: JongroRoute): Promise<void> {
+    const sightings = await this.client.fetchSightings(route);
+    if (!sightings) return;
+    const now = this.clock.now();
+    const positions = sightings.flatMap((sighting) => this.toPositions(route, sighting, now));
+    this.positionsByCode.set(route.code, positions);
+    await this.cache.write(`jongro_locations_${route.code}`, positions);
+  }
+
+  private toPositions(route: JongroRoute, sighting: JongroBusSighting, now: Date): JongroBusPositionDoc[] {
+    const station = route.mapping[sighting.stationId];
+    if (!station) {
+      logger.debug(
+        { event: "bus.jongro.unmapped_station", lastStnId: sighting.stationId, code: route.code },
+        "Unmapped station ID",
+      );
+      return [];
+    }
+    const recordTimes = this.recordTimesOf(route.code);
+    const dwell = toDwell(recordTimes.get(sighting.stationId), now);
+    recordTimes.set(sighting.stationId, dwell.recordTime);
+    return [toJongroBusPosition(sighting, station, dwell)];
+  }
+
+  private recordTimesOf(code: string): Map<string, string> {
+    const existing = this.recordTimesByCode.get(code);
+    if (existing) return existing;
+    const created = new Map<string, string>();
+    this.recordTimesByCode.set(code, created);
+    return created;
+  }
+
+  // WHY: once per route per process; a drifted registry puts buses and ETAs on the wrong stop.
+  private warnOnRegistryDrift(route: JongroRoute, arrivals: readonly JongroArrivalDoc[]): void {
+    if (this.driftWarnedCodes.has(route.code)) return;
+    const drift = toRegistryDrift(route, arrivals);
+    if (!drift) return;
+    this.driftWarnedCodes.add(route.code);
+    logger.warn(
+      { event: "bus.jongro.registry_drift", code: route.code, ...drift },
+      "jongro-routes.json has drifted from TOPIS — resync the registry",
+    );
+  }
+}

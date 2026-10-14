@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "busRouteId": {
+        "type": "string"
+      },
+      "themeColor": {
+        "type": "string"
+      },
+      "iconType": {
+        "type": "string"
+      },
+      "refreshInterval": {
+        "type": "number"
+      },
+      "stations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "stationName": {
+              "type": "string"
+            },
+            "arsId": {
+              "type": "string"
+            },
+            "topisId": {
+              "type": "string"
+            },
+            "isFirstStation": {
+              "type": "boolean"
+            },
+            "isLastStation": {
+              "type": "boolean"
+            },
+            "isRotationStation": {
+              "type": "boolean"
+            },
+            "transferLines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "string"
+                  },
+                  "color": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "line",
+                  "color"
+                ]
+              }
+            }
+          },
+          "required": [
+            "stationName",
+            "arsId",
+            "topisId",
+            "isFirstStation",
+            "isLastStation",
+            "isRotationStation",
+            "transferLines"
+          ]
+        }
+      }
+    },
+    "required": [
+      "id",
+      "busRouteId",
+      "themeColor",
+      "iconType",
+      "refreshInterval",
+      "stations"
+    ]
+  }
+}
