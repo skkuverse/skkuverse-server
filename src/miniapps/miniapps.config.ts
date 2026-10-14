@@ -121,9 +121,10 @@ function toFirstPartyOrigins(details: readonly MiniAppDetailRaw[]): Readonly<Rec
 }
 
 function toLoadedRegistry({ index, details }: RegistryFile): LoadedRegistry {
-  const map = new Map(Object.entries(details).map(([id, detail]) => [id, Object.freeze(detail)]));
-  const list = [...index.miniApps].sort((a, b) => a.order - b.order).map((entry) => toIndexEntry(entry, WEB_ORIGIN));
-  return { version: index.version, list: Object.freeze(list), map, firstPartyOrigins: toFirstPartyOrigins([...map.values()]) };
+  const detailsById = new Map(Object.entries(details).map(([id, detail]) => [id, Object.freeze(detail)]));
+  const indexEntries = [...index.miniApps].sort((a, b) => a.order - b.order).map((entry) => toIndexEntry(entry, WEB_ORIGIN));
+  const firstPartyOrigins = toFirstPartyOrigins([...detailsById.values()]);
+  return { version: index.version, indexEntries: Object.freeze(indexEntries), detailsById, firstPartyOrigins };
 }
 
 // WHY: read next to the compiled file at runtime; scripts/copy-build-assets.js stages each JSON file into dist/.

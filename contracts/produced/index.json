@@ -44,9 +44,9 @@
     "export": "buildingCard",
     "routes": []
   },
-  "fcm.miniappPushPayload": {
+  "fcm.miniAppPushPayload": {
     "source": "src/infra/fcm.wire.ts",
-    "export": "miniappPushPayload",
+    "export": "miniAppPushPayload",
     "routes": []
   },
   "fcm.noticePushPayload": {
