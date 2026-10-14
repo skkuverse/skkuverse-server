@@ -20,7 +20,9 @@ import { MapCampusModule } from "./map/campus/map-campus.module";
 import { MapEventModule } from "./map/event/map-event.module";
 import { MapEventDetailsModule } from "./map/event-details/map-event-details.module";
 import { NoticesModule } from "./notices/notices.module";
-import { MiniAppsModule } from "./miniapps/miniapps.module";
+import { MiniappsModule } from "./miniapps/miniapps.module";
+import { MiniappsNotificationsModule } from "./miniapps/notifications/miniapps-notifications.module";
+import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
 
 // WHY: imports in boot order: config (fails loud on a missing value), the poller registry, then health.
 // LangMiddleware is not bound here but in bootstrapHttpApp (src/http/http-app.bootstrap.ts); its QUIRK says why.
@@ -49,7 +51,9 @@ import { MiniAppsModule } from "./miniapps/miniapps.module";
     MapEventModule,
     MapEventDetailsModule,
     NoticesModule,
-    MiniAppsModule,
+    MiniappsModule,
+    MiniappsNotificationsModule,
+    MiniappsCatalogModule,
   ],
 })
 export class AppModule {}
