@@ -10,7 +10,7 @@ import config from "./infra/config";
 import { closeClient, ping as pingDb } from "./infra/db";
 import { AppModule } from "./app.module";
 import { bootstrapHttpApp } from "./http/http-app.bootstrap";
-import { BusCacheService } from "./bus/cache/bus-cache.service";
+import { BusCacheRepository } from "./bus/cache/bus-cache.repository";
 
 async function bootstrap(): Promise<void> {
   const app = await bootstrapHttpApp((adapter, options) =>
@@ -33,7 +33,7 @@ async function bootstrap(): Promise<void> {
   // ROLE-gated). The schedule indexes are ensured by
   // ScheduleService.onModuleInit instead.
   try {
-    await app.get(BusCacheService).ensureIndex();
+    await app.get(BusCacheRepository).ensureIndex();
     logger.info({ event: "bus.cache.index_ensured" }, "bus_cache TTL index ensured");
   } catch (err) {
     logger.warn(

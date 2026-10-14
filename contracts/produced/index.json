@@ -44,6 +44,34 @@
     "export": "buildingCard",
     "routes": []
   },
+  "bus-realtime-group.realtimeGroup": {
+    "source": "src/bus/realtime/group/bus-realtime-group.wire.ts",
+    "export": "realtimeGroup",
+    "routes": [
+      "GET bus/realtime/data/:groupId"
+    ]
+  },
+  "bus-realtime-group.realtimeGroupMeta": {
+    "source": "src/bus/realtime/group/bus-realtime-group.wire.ts",
+    "export": "realtimeGroupMeta",
+    "routes": [
+      "GET bus/realtime/data/:groupId"
+    ]
+  },
+  "bus-station.stationArrivals": {
+    "source": "src/bus/station/bus-station.wire.ts",
+    "export": "stationArrivals",
+    "routes": [
+      "GET bus/station/:stationId"
+    ]
+  },
+  "bus-station.stationArrivalsMeta": {
+    "source": "src/bus/station/bus-station.wire.ts",
+    "export": "stationArrivalsMeta",
+    "routes": [
+      "GET bus/station/:stationId"
+    ]
+  },
   "bus.jongroRoutesFile": {
     "source": "src/bus/bus.wire.ts",
     "export": "jongroRoutesFile",
