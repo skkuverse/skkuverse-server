@@ -1,3 +1,4 @@
+import { AppError } from "../http/app.error";
 import { isOnWebviewOrigin, toWebviewUrl } from "../infra/webview-url";
 import { isRootRelativePath } from "../shared/link-target.util";
 import type { MiniAppTarget } from "./miniapps.types";
@@ -39,4 +40,8 @@ export function parseMiniAppTarget(value: unknown): MiniAppTarget | null {
 export function isKnownMiniAppTarget(value: unknown, registry: ReadonlyMap<string, unknown>): boolean {
   const target = parseMiniAppTarget(value);
   return target !== null && registry.has(target.id);
+}
+
+export function toMiniAppNotFound(id: string): AppError {
+  return new AppError("MINIAPP_NOT_FOUND", `Unknown mini-app id: ${id}`, 404);
 }

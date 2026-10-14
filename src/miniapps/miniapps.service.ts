@@ -25,6 +25,10 @@ export class MiniappsService {
     return registry.firstPartyOrigins;
   }
 
+  isRegistered(id: string): boolean {
+    return registry.detailsById.has(id);
+  }
+
   getDetail(id: string): Readonly<MiniAppDetailRaw> | undefined {
     return registry.detailsById.get(id);
   }
