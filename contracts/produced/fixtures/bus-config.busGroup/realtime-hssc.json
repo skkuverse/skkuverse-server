@@ -1,0 +1,51 @@
+{
+  "_about": "GET /bus/config/hssc captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); stations cut to the first two",
+  "data": {
+    "id": "hssc",
+    "screenType": "realtime",
+    "label": "인사캠 셔틀버스",
+    "visibility": {
+      "type": "always"
+    },
+    "card": {
+      "themeColor": "003626",
+      "iconType": "shuttle",
+      "busTypeText": "성대",
+      "subtitle": "정차소(인문.농구장) ↔ 600주년 기념관"
+    },
+    "screen": {
+      "dataEndpoint": "/bus/realtime/data/hssc",
+      "refreshInterval": 10,
+      "lastStationIndex": 10,
+      "stations": [
+        {
+          "index": 0,
+          "name": "농구장",
+          "subtitle": "Basketball Court (Shuttle Bus Stop)",
+          "stationNumber": null,
+          "isFirstStation": true,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "transferLines": []
+        },
+        {
+          "index": 1,
+          "name": "학생회관",
+          "subtitle": "Student Center",
+          "stationNumber": null,
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "transferLines": []
+        }
+      ],
+      "routeOverlay": null,
+      "features": [
+        {
+          "type": "info",
+          "url": "https://webview.skkuverse.com/bus/hssc/info"
+        }
+      ]
+    }
+  }
+}

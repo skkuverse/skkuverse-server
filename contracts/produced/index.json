@@ -44,6 +44,20 @@
     "export": "buildingCard",
     "routes": []
   },
+  "bus-config.busConfig": {
+    "source": "src/bus/config/bus-config.wire.ts",
+    "export": "busConfig",
+    "routes": [
+      "GET bus/config"
+    ]
+  },
+  "bus-config.busGroup": {
+    "source": "src/bus/config/bus-config.wire.ts",
+    "export": "busGroup",
+    "routes": [
+      "GET bus/config/:groupId"
+    ]
+  },
   "bus-realtime-group.realtimeGroup": {
     "source": "src/bus/realtime/group/bus-realtime-group.wire.ts",
     "export": "realtimeGroup",
@@ -56,6 +70,42 @@
     "export": "realtimeGroupMeta",
     "routes": [
       "GET bus/realtime/data/:groupId"
+    ]
+  },
+  "bus-route-overlay.routeOverlay": {
+    "source": "src/bus/route-overlay/bus-route-overlay.wire.ts",
+    "export": "routeOverlay",
+    "routes": [
+      "GET bus/route/:routeId"
+    ]
+  },
+  "bus-schedule.scheduleDay": {
+    "source": "src/bus/schedule/bus-schedule.wire.ts",
+    "export": "scheduleDay",
+    "routes": []
+  },
+  "bus-schedule.scheduleEntry": {
+    "source": "src/bus/schedule/bus-schedule.wire.ts",
+    "export": "scheduleEntry",
+    "routes": []
+  },
+  "bus-schedule.scheduleNotice": {
+    "source": "src/bus/schedule/bus-schedule.wire.ts",
+    "export": "scheduleNotice",
+    "routes": []
+  },
+  "bus-schedule.scheduleWeek": {
+    "source": "src/bus/schedule/bus-schedule.wire.ts",
+    "export": "scheduleWeek",
+    "routes": [
+      "GET bus/schedule/data/:serviceId/week"
+    ]
+  },
+  "bus-schedule.smartSchedule": {
+    "source": "src/bus/schedule/bus-schedule.wire.ts",
+    "export": "smartSchedule",
+    "routes": [
+      "GET bus/schedule/data/:serviceId/smart"
     ]
   },
   "bus-station.stationArrivals": {
@@ -75,6 +125,21 @@
   "bus.jongroRoutesFile": {
     "source": "src/bus/bus.wire.ts",
     "export": "jongroRoutesFile",
+    "routes": []
+  },
+  "bus.servedSequenceStop": {
+    "source": "src/bus/bus.wire.ts",
+    "export": "servedSequenceStop",
+    "routes": []
+  },
+  "bus.servedStop": {
+    "source": "src/bus/bus.wire.ts",
+    "export": "servedStop",
+    "routes": []
+  },
+  "bus.stopMap": {
+    "source": "src/bus/bus.wire.ts",
+    "export": "stopMap",
     "routes": []
   },
   "fcm.miniAppPushPayload": {
