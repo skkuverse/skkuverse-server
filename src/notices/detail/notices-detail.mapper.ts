@@ -1,0 +1,55 @@
+import type { NoticeDoc, NoticeEdit } from "../notices.document";
+import { normalizeSummaryType } from "../notices.rules";
+import type { NoticeDetail, NoticeSummaryFull } from "./notices-detail.wire";
+
+// WHY: what JSON.stringify writes for the value, so the wire's string type holds a Date and a stored string alike.
+const toJsonTime = (value: Date | string): string => (value instanceof Date ? value.toISOString() : value);
+
+export function buildSummaryFull(doc: NoticeDoc): NoticeSummaryFull | null {
+  if (!doc.summaryAt) return null;
+  return {
+    text: textOrNull(doc.summary),
+    oneLiner: textOrNull(doc.summaryOneLiner),
+    type: normalizeSummaryType(doc.summaryType),
+    periods: Array.isArray(doc.summaryPeriods) ? doc.summaryPeriods : [],
+    locations: Array.isArray(doc.summaryLocations) ? doc.summaryLocations : [],
+    details: doc.summaryDetails || null,
+    model: textOrNull(doc.summaryModel),
+    generatedAt: toJsonTime(doc.summaryAt),
+  };
+}
+
+const textOrNull = (value: string | null | undefined): string | null => value || null;
+
+function toAttachments(doc: NoticeDoc): NoticeDetail["attachments"] {
+  return (doc.attachments || []).map((a) => ({ name: a.name, url: a.url, ...(a.referer ? { referer: a.referer } : {}) }));
+}
+
+function toJsonEdit(edit: NoticeEdit): NonNullable<NoticeDetail["editInfo"]>["history"][number] {
+  return edit.detectedAt === undefined ? { ...edit, detectedAt: undefined } : { ...edit, detectedAt: toJsonTime(edit.detectedAt) };
+}
+
+function toEditInfo(doc: NoticeDoc): NoticeDetail["editInfo"] {
+  return (doc.editCount || 0) > 0 ? { count: doc.editCount, history: (doc.editHistory || []).map(toJsonEdit) } : null;
+}
+
+export function toDetailItem(doc: NoticeDoc): NoticeDetail {
+  return {
+    id: doc._id.toHexString(),
+    sourceId: doc.sourceId,
+    articleNo: doc.articleNo,
+    title: doc.title,
+    category: textOrNull(doc.category),
+    author: textOrNull(doc.author),
+    department: textOrNull(doc.department),
+    date: doc.date,
+    views: doc.views ?? 0,
+    contentMarkdown: doc.cleanMarkdown ?? null,
+    attachments: toAttachments(doc),
+    sourceUrl: doc.sourceUrl,
+    lastModified: doc.lastModified ? toJsonTime(doc.lastModified) : null,
+    crawledAt: toJsonTime(doc.crawledAt),
+    editInfo: toEditInfo(doc),
+    summary: buildSummaryFull(doc),
+  };
+}

@@ -3,9 +3,10 @@
  * holds only what the code cannot say; a rationale that needs more goes to
  * docs/ and the comment cites its path. A block comment, or a run of adjacent
  * own-line `//` comments, counts as one; blank lines and eslint directives do
- * not count. Specs are not checked (.claude/rules/tests.md).
+ * not count. Specs and the hash-locked vendored files are not checked
+ * (.claude/rules/tests.md; ADR 0010 D10).
  */
-import { commentBlocks, commentsOf, numberedKeys } from "../helpers/architecture/comments";
+import { commentBlocks, commentsOf, numberedKeys, vendoredSources } from "../helpers/architecture/comments";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { isGeneratedSource, readSource, sourceFiles } from "../helpers/architecture/tree";
 
@@ -94,9 +95,13 @@ describe("comment block rule applies as specified", () => {
 
 describe("comment blocks", () => {
   it("hold at most three lines; a longer rationale lives in docs/", () => {
+    // WHY: a hash-locked vendored file is not edited here (ADR 0010 D10), so its comments are not checked either.
+    const vendored = vendoredSources();
     expectAllowlisted(
       "comment-blocks",
-      sourceFiles().flatMap((f) => longCommentViolations(f, readSource(f))),
+      sourceFiles()
+        .filter((f) => !vendored.has(f))
+        .flatMap((f) => longCommentViolations(f, readSource(f))),
     );
   });
 });
