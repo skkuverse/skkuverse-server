@@ -26,16 +26,18 @@ function toMismatchesAndRenames(route: JongroRoute, arrivals: readonly JongroArr
       mismatched.push({ staOrd: arrival.sequence, stId: arrival.stationId, stNm: arrival.stationName, expected: expected ?? null });
       continue;
     }
-    const registryName = route.stations[idx]!.stationName;
-    if (registryName !== arrival.stationName) renamed.push({ staOrd: arrival.sequence, stNm: arrival.stationName, registryName });
+    const registryName = route.stations[idx]?.stationName;
+    if (registryName !== undefined && registryName !== arrival.stationName) {
+      renamed.push({ staOrd: arrival.sequence, stNm: arrival.stationName, registryName });
+    }
   }
   return { mismatched, renamed };
 }
 
 function toMissingStops(route: JongroRoute, arrivals: readonly JongroArrivalDoc[]): MissingStop[] {
   const seenOrds = new Set(arrivals.map((arrival) => parseInt(arrival.sequence, 10) - 1));
-  return route.topisIds
-    .map((topisId, idx) => ({ staOrd: String(idx + 1), topisId, stationName: route.stations[idx]!.stationName }))
+  return route.stations
+    .map((station, idx) => ({ staOrd: String(idx + 1), topisId: route.topisIds[idx] ?? "", stationName: station.stationName }))
     .filter((_, idx) => !seenOrds.has(idx));
 }
 

@@ -53,6 +53,6 @@ export class BusCacheRepository implements OnModuleInit {
   }
 
   private busCache(): Collection<BusCacheDocument> {
-    return mongoCollection<BusCacheDocument>(config.mongo.dbName!, config.mongo.collections.busCache);
+    return mongoCollection<BusCacheDocument>(config.mongo.dbName, config.mongo.collections.busCache);
   }
 }

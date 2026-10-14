@@ -23,7 +23,7 @@ export class BusStationService {
   async refresh(): Promise<void> {
     const messages = await this.client.fetchArrivalMessages();
     if (!messages) return;
-    this.message = messages.length === 0 ? NO_STATION_MESSAGE : messages[0]!;
+    this.message = messages.length === 0 ? NO_STATION_MESSAGE : (messages[0] as string);
     await this.cache.write("station", this.message);
   }
 

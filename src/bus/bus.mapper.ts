@@ -18,22 +18,22 @@ export function toJongroPositionsUrl(
 }
 
 function toJongroStations(stations: readonly JongroRouteStation[]): JongroStation[] {
-  return stations.map((s, i) => ({
-    sequence: String(i + 1),
-    stationName: s.stationName,
-    stationNumber: s.arsId,
-    isFirstStation: s.isFirstStation,
-    isLastStation: s.isLastStation,
-    isRotationStation: s.isRotationStation,
-    transferLines: s.transferLines.map((t) => ({ line: t.line, color: t.color })),
+  return stations.map((station, index) => ({
+    sequence: String(index + 1),
+    stationName: station.stationName,
+    stationNumber: station.arsId,
+    isFirstStation: station.isFirstStation,
+    isLastStation: station.isLastStation,
+    isRotationStation: station.isRotationStation,
+    transferLines: station.transferLines.map((t) => ({ line: t.line, color: t.color })),
   }));
 }
 
 // WHY: the first ord wins a loop-closing repeat: a bus whose last passed stop is the terminal has just left it.
 function toStationMapping(stations: readonly JongroRouteStation[]): JongroStationMapping {
   const mapping: JongroStationMapping = {};
-  stations.forEach((s, i) => {
-    mapping[s.topisId] ??= { sequence: i + 1, stationName: s.stationName };
+  stations.forEach((station, index) => {
+    mapping[station.topisId] ??= { sequence: index + 1, stationName: station.stationName };
   });
   return mapping;
 }
