@@ -1,13 +1,42 @@
 import fs from "fs";
 import path from "path";
+import type { z } from "zod";
 import logger from "../../infra/logger";
 import { BASE_LAYERS } from "../map.constants";
 import { assertValidChipSpecs, validateChipSpecs } from "../map.rules";
 import { BASE_CHIPS, LAYER_SET_FILES } from "./map-layer-set.constants";
-import { eventChipSpecs, eventLayerSpecs, toConfigMessage, toConfigWords } from "./map-layer-set.mapper";
+import { eventChipSpecs, eventLayerSpecs } from "./map-layer-set.mapper";
 import { crossReferenceIssue } from "./map-layer-set.rules";
 import { layerSetFile, type LayerSet } from "./map-layer-set.schema";
 import type { LoadedConfig } from "./map-layer-set.types";
+
+const TYPE_WORDS: Readonly<Record<string, string>> = {
+  object: "must be an object",
+  record: "must be an object",
+  array: "must be an array",
+  string: "must be a non-empty string",
+  number: "must be a finite number",
+  boolean: "must be a boolean",
+};
+
+// WHY: the words the hand-written validator used, so the loader's messages stay byte for byte what they were.
+export function toConfigWords(issue: z.core.$ZodRawIssue): string | undefined {
+  if (issue.code === "invalid_type") return TYPE_WORDS[issue.expected];
+  if (issue.code === "invalid_format") return "must be a non-empty string";
+  if (issue.code === "invalid_value") return `must be one of [${issue.values.join(", ")}]`;
+  if (issue.code === "invalid_union" && "options" in issue) return `must be one of [${String(issue.options).split(",").join(", ")}]`;
+  return undefined;
+}
+
+function toPathSegment(key: PropertyKey, parentKey: PropertyKey | undefined): string {
+  if (typeof key === "number") return `[${key}]`;
+  return parentKey === "byCategory" ? `["${String(key)}"]` : `.${String(key)}`;
+}
+
+export function toConfigMessage(issue: Pick<z.core.$ZodIssue, "path" | "message">): string {
+  const at = issue.path.map((key, i) => toPathSegment(key, issue.path[i - 1])).join("");
+  return `config${at} ${issue.message}`;
+}
 
 // WHY: a bad permanent chip is a PR's to fix, so it fails the boot instead of a request.
 assertValidChipSpecs(BASE_CHIPS, BASE_LAYERS);
