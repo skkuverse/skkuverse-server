@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { hasAnyText } from "../infra/i18n";
 import type { I18n } from "../infra/types";
-import { isMediaUrl } from "../infra/media-url";
 import { toWebviewUrl } from "../infra/webview-url";
 import type { OverlayGeometry } from "../shared/geojson.types";
 import { isDrawableGeometry } from "../shared/geojson.util";
@@ -61,5 +60,3 @@ export const webviewUrl = z.string().transform((value, ctx) => {
   ctx.addIssue({ code: "custom", path: [], message: "is not a web view URL" });
   return z.NEVER;
 });
-
-export const mediaUrl = z.string().refine(isMediaUrl);

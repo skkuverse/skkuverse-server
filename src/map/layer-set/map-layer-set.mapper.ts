@@ -1,6 +1,6 @@
 import type { z } from "zod";
-import { EVENT_LAYER_STYLE, EVENT_OVERLAYS_ENDPOINT, EVENT_SHAPE_STYLE } from "../map.constants";
 import type { LayerSpec, LayerVisibility } from "../map.types";
+import { EVENT_LAYER_STYLE, EVENT_OVERLAYS_ENDPOINT, EVENT_SHAPE_STYLE } from "./map-layer-set.constants";
 import type { EventFacetDef, LayerSet } from "./map-layer-set.schema";
 import type { MapChipSpec } from "./map-layer-set.types";
 

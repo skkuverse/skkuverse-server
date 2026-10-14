@@ -1,3 +1,4 @@
+import type { MapLayerStyle } from "../map.types";
 import type { MapChipSpec } from "./map-layer-set.types";
 
 /**
@@ -14,3 +15,11 @@ export const EXPLICIT_OFFSET_RE = /(Z|[+-]\d{2}:\d{2})$/;
 
 // WHY: empty, so off-season the map serves no chip row and the app draws none.
 export const BASE_CHIPS: readonly MapChipSpec[] = [];
+
+// WHY: one route per data source; the app keys its overlay cache on the string, so layers sharing it cost one fetch.
+export const EVENT_OVERLAYS_ENDPOINT = "/map/overlays/event";
+
+export const EVENT_LAYER_STYLE = { width: 22, height: 30, captionTextSize: 9 } as const satisfies MapLayerStyle;
+
+// QUIRK(naver-map): a polygon without fillOpacity is opaque black. No outline: the student council's choice, 2026-09-22.
+export const EVENT_SHAPE_STYLE = { fillOpacity: 0.18, outlineWidth: 0 } as const satisfies MapLayerStyle;

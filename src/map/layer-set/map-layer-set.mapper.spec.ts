@@ -12,7 +12,7 @@ import path from "path";
 import { parseLayerSetFile } from "./map-layer-set.config";
 import { BASE_LAYERS } from "../map.constants";
 import { assertValidChipSpecs, validateChipSpecs } from "../map.rules";
-import { BASE_CHIPS } from "./map-layer-set.constants";
+import { BASE_CHIPS, EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "./map-layer-set.constants";
 import { eventChipSpecs, eventLayerSpecs, resetChip, toConfigMessage, toConfigWords, toOptionWindow } from "./map-layer-set.mapper";
 import type { LayerSet } from "./map-layer-set.schema";
 
@@ -42,6 +42,19 @@ describe("eventLayerSpecs", () => {
     // Assert
     expect(served).toEqual(CONFIG.layers[scheduled]?.defaultVisibleWhen);
     expect(served).not.toBe(CONFIG.layers[scheduled]?.defaultVisibleWhen);
+  });
+});
+
+describe("the event styles eventLayerSpecs stamps on every festival layer", () => {
+  it("draw no outline and send no shape", () => {
+    // Act & Assert
+    // Named apart from the wire tests in map-config.service.spec.ts: these constants
+    // are where a border or a shape comes back for every festival layer at once, and a
+    // failure here says which constant was edited instead of pointing at a projected
+    // response object. Opting ONE layer out stays legal, on its own style literal.
+    expect(EVENT_SHAPE_STYLE.outlineWidth).toBe(0);
+    expect(Object.keys(EVENT_LAYER_STYLE)).not.toContain("shape");
+    expect(Object.keys(EVENT_SHAPE_STYLE)).not.toContain("shape");
   });
 });
 
