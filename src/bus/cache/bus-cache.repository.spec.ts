@@ -1,12 +1,15 @@
 /**
  * BusCacheRepository over a mocked Mongo seam (src/infra/db): the TTL index
- * name, the upsert shape with the key as `_id`, and the 5 s in-memory layer
+ * it ensures at boot (warning, never failing, when it cannot), the upsert shape with the key as `_id`, and the 5 s in-memory layer
  * over the read (a memory hit, a cached null, a re-read after the TTL).
  */
 
 const mockCreateIndex = jest.fn().mockResolvedValue("ttl_updatedAt");
 const mockUpdateOne = jest.fn().mockResolvedValue({ upsertedCount: 1 });
 const mockFindOne = jest.fn();
+const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+
+jest.mock("../../infra/logger", () => mockLogger);
 
 jest.mock("../../infra/db", () => ({
   getClient: jest.fn().mockReturnValue({
@@ -44,16 +47,28 @@ beforeEach(() => {
   busCache = new BusCacheRepository(clock);
 });
 
-describe("BusCacheRepository.ensureIndex", () => {
+describe("BusCacheRepository.onModuleInit", () => {
   it("creates TTL index on _updatedAt with 60s expiry", async () => {
     // Act
-    await busCache.ensureIndex();
+    await busCache.onModuleInit();
 
     // Assert
     expect(mockCreateIndex).toHaveBeenCalledWith(
       { _updatedAt: 1 },
       { expireAfterSeconds: 60, name: "ttl_updatedAt" },
     );
+    expect(mockLogger.info).toHaveBeenCalledWith({ event: "bus.cache.indexes.ensured" }, expect.any(String));
+  });
+
+  it("warns and carries on when the index cannot be created", async () => {
+    // Arrange
+    mockCreateIndex.mockRejectedValueOnce(new Error("atlas down"));
+
+    // Act
+    await busCache.onModuleInit();
+
+    // Assert
+    expect(mockLogger.warn).toHaveBeenCalledWith(expect.objectContaining({ event: "bus.cache.indexes.failed" }), expect.any(String));
   });
 });
 

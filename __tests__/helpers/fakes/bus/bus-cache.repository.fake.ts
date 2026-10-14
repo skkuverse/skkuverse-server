@@ -11,7 +11,7 @@ export class FakeBusCacheRepository implements PublicOf<BusCacheRepository> {
   values = new Map<string, unknown>();
   failWith: Error | null = null;
 
-  async ensureIndex(): Promise<void> {}
+  async onModuleInit(): Promise<void> {}
 
   async upsert<K extends BusCacheKey>(key: K, value: BusCacheValueByKey[K]): Promise<void> {
     this.fail();
