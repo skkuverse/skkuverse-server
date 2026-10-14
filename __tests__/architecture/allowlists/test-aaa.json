@@ -45,7 +45,6 @@
   "__tests__/nest/bus/station.poller.service.test.ts",
   "__tests__/nest/bus/station.routes.test.ts",
   "__tests__/nest/bus/tmap-prediction.test.ts",
-  "__tests__/nest/config/env-manifest.test.ts",
   "__tests__/nest/notices/notices-dispatcher.service.test.ts",
   "__tests__/nest/notices/notices-internal.routes.test.ts",
   "__tests__/nest/notices/notices-proxy.test.ts",
@@ -65,6 +64,5 @@
   "__tests__/nest/notices/overview/overview-select.test.ts",
   "__tests__/nest/notices/overview/overview-service.test.ts",
   "__tests__/nest/notices/tabconfig-validation.test.ts",
-  "__tests__/scripts/compare-responses.test.ts",
-  "src/scheduling/poller-registry.service.spec.ts"
+  "__tests__/scripts/compare-responses.test.ts"
 ]
