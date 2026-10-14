@@ -1,5 +1,5 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import logger from "../infra/logger";
+import { ensureIndexesAtBoot } from "../infra/mongo";
 import {
   DETAIL_PROJECTION,
   LIST_PROJECTION,
@@ -45,38 +45,8 @@ export class NoticesDataService implements OnModuleInit {
   readonly LIST_PROJECTION = LIST_PROJECTION;
   readonly DETAIL_PROJECTION = DETAIL_PROJECTION;
 
-  async onModuleInit(): Promise<void> {
-    // 3-attempt retry with linear backoff, final failure logged at ERROR
-    // (non-fatal). Without this index, list
-    // queries fall back to full collection scan, which is expensive for the
-    // 54MB+ notices collection.
-    try {
-      let lastErr: unknown = null;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          await ensureNoticeIndexes();
-          logger.info({ event: "notices.indexes.ensured", attempt }, "Indexes ensured");
-          lastErr = null;
-          break;
-        } catch (err) {
-          lastErr = err;
-          if (attempt < 3) {
-            await new Promise((r) => setTimeout(r, 1000 * attempt));
-          }
-        }
-      }
-      if (lastErr) {
-        logger.error(
-          { event: "notices.indexes.failed", err: lastErr },
-          "Index setup failed after 3 attempts — list queries will full-scan",
-        );
-      }
-    } catch (err) {
-      logger.error(
-        { event: "notices.indexes.crashed", err },
-        "Index setup crashed",
-      );
-    }
+  onModuleInit(): Promise<void> {
+    return ensureIndexesAtBoot("notices", ensureNoticeIndexes, { attempts: 3, backoffMs: 1_000, failLevel: "error" });
   }
 
   getNoticesCollection(): ReturnType<typeof getNoticesCollection> {
