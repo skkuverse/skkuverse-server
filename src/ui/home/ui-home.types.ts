@@ -1,3 +1,3 @@
-import type { MiniAppsService } from "../../miniapps/miniapps.service";
+import type { MiniappsService } from "../../miniapps/miniapps.service";
 
-export type LogoResolver = MiniAppsService["resolveLogo"];
+export type LogoResolver = MiniappsService["resolveLogo"];

@@ -9,14 +9,9 @@
  * Cache-Control of /home and /home/campus, and that /home/transitlist and
  * /home/scroll send none.
  */
-// The home and campus flows read the mini-app registry through MiniAppsModule,
-// whose feed service creates its Mongo index at init and whose manifest service
-// prefetches each first-party manifest over the network; the transit list reads
-// the bus groups through BusModule, whose schedule service and estimate pollers
-// create their Mongo indexes at init. None of them is part of these routes.
-jest.mock("../../../src/miniapps/miniapps.data", () => ({
-  ensureIndexes: jest.fn(async () => undefined),
-}));
+// The transit list reads the bus groups through BusModule, whose schedule
+// service and estimate pollers create their Mongo indexes at init. Neither is
+// part of these routes.
 jest.mock("../../../src/bus/schedule/schedule-db", () => ({
   ...jest.requireActual("../../../src/bus/schedule/schedule-db"),
   ensureScheduleIndexes: jest.fn(async () => undefined),
@@ -48,10 +43,8 @@ const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
-const realFetch = global.fetch;
 
 beforeAll(async () => {
-  global.fetch = jest.fn().mockRejectedValue(new Error("no network in tests")) as unknown as typeof fetch;
   app = await buildTestApp({
     imports: [SchedulingModule, BusModule, UiModule, UiHomeModule, UiTransitListModule, UiScrollModule, UiCampusModule],
     overrides: [{ provide: Clock, useValue: CLOCK }],
@@ -62,7 +55,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
-  global.fetch = realFetch;
 });
 
 describe("GET /ui/home/transitlist", () => {

@@ -21,7 +21,7 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | `places` and `activations` (eventmap database) | `mongodb` | The festival's places, and the window that switches a layer set on | `MapRepository` |
 | The places importer (`scripts/lib/map-places-file.js`) | — | Places written to Mongo, checked by the same rules the server reads with | `overlayPlaceDoc`, `sheetPlaceDoc` |
 | The building module | `skku` | Buildings and hand-authored campus shapes | `BuildingService`, injected into `MapCampusService` |
-| The mini-app registry | — | Which mini-app targets a sheet button may open | `MiniAppsService.isKnownMiniAppTarget` |
+| The mini-app registry | — | Which mini-app targets a sheet button may open | `MiniappsService.isKnownMiniAppTarget` |
 | GeoJSON | `geojson` | The `[lng, lat]` position order and ring winding, served as stored | `map.wire.ts` |
 | The NAVER map SDK | `naver-map` | Polygon defaults the base and festival styles override | `BASE_LAYERS`, `EVENT_SHAPE_STYLE` |
 | skkuverse-app | — | Nothing; it reads the four routes | `GET /map/config` and the overlay routes |
@@ -56,7 +56,7 @@ flowchart LR
   layerSet --> event
   layerSet --> details
   building["BuildingService"] -->|buildings, campus shapes| campus["MapCampusService"]
-  miniapps["MiniAppsService"] -->|isKnownMiniAppTarget| event
+  miniapps["MiniappsService"] -->|isKnownMiniAppTarget| event
   config --> r1["GET /map/config"]
   campus -->|CAMPUS_CACHE_CONTROL or DEGRADED_CACHE_CONTROL| r2["GET /map/overlays/campus"]
   event -->|EVENT_CACHE_CONTROL| r3["GET /map/overlays/event"]

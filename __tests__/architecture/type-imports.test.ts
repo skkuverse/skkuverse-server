@@ -57,7 +57,7 @@ describe("type import rule applies as specified", () => {
     ["a type file", 'import type { BusGroup } from "../../bus/bus-config/bus-config.types";'],
     ["a document", 'import type { BuildingDoc } from "../../building/building.document";'],
     ["a schema and a wire", 'import type { A } from "../../map/map.schema";\nimport { type B } from "../../map/map.wire";'],
-    ["the feature's service and module", 'import type { MiniAppsService } from "../../miniapps/miniapps.service";\nimport type { M } from "../../miniapps/miniapps.module";'],
+    ["the feature's service and module", 'import type { MiniappsService } from "../../miniapps/miniapps.service";\nimport type { M } from "../../miniapps/miniapps.module";'],
     ["its own feature", 'import type { X } from "../ui.rules";\nimport type { Y } from "./ui-home.mapper";'],
     ["a shared folder", 'import type { SupportedLang } from "../../infra/types";\nimport type { L } from "../../shared/link-action.wire";'],
     ["a value import, the feature boundary's to judge", 'import { helper } from "../../bus/bus-config/bus-config.data";'],

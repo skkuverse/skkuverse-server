@@ -1,0 +1,21 @@
+{
+  "_about": "GET /miniapps/eskara-2026/notifications captured from production 2026-10-14 (stage 8b snapshot, Accept-Language ko); a public broadcast feed with no user data, trimmed to one entry per action type it holds",
+  "data": [
+    {
+      "id": "b9d6677f-7842-4594-b197-a36e8e3a8347",
+      "title": "[아티스트] ALLDAY PROJECT 공연 시작 🔥",
+      "body": "강렬한 퍼포먼스와 압도적인 에너지!\nADP와 함께 무대를 뜨겁게 즐겨보세요!",
+      "sentAt": "2026-10-02T11:37:39.571Z",
+      "actionType": "miniapp",
+      "actionValue": "eskara-2026/eskara/lineup"
+    },
+    {
+      "id": "c7b2cc41-46f7-4c91-b6d8-15d255913fd1",
+      "title": "[안내] 쿵야즈 이벤트 진행 🌱",
+      "body": "쿵야즈와 함께하는 특별한 이벤트!\n귀여움 가득한 순간을 함께 즐겨보세요",
+      "sentAt": "2026-10-02T11:19:25.221Z",
+      "actionType": "route",
+      "actionValue": "/mini-app?id=timetable&source=push"
+    }
+  ]
+}

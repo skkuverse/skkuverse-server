@@ -4,10 +4,10 @@
  * checked by its type's rule (a registered mini-app target, an https URL, a
  * web view URL, a root-relative route), never with whitespace.
  */
-import { MiniAppsService } from "../miniapps/miniapps.service";
+import { MiniappsService } from "../miniapps/miniapps.service";
 import { findRepeatedId, isBannerShowing, isBrokenLinkAction } from "./ui.rules";
 
-const registry = new MiniAppsService();
+const registry = new MiniappsService();
 
 describe("isBannerShowing", () => {
   const window = { startAt: "2026-10-01T00:00:00+09:00", endAt: "2026-10-03T00:00:00+09:00" };

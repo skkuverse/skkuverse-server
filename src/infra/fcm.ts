@@ -1,4 +1,5 @@
 import config from "./config";
+import type { PushPayload } from "./fcm.wire";
 import logger from "./logger";
 
 /**
@@ -13,8 +14,6 @@ export interface FcmResponse {
   [k: string]: unknown;
 }
 
-export type FcmPayload = Record<string, unknown> & { type: string };
-
 type FcmBody = FcmResponse | { raw: string } | null;
 
 // WHY: callers treat a suppressed send as completed, so a local run still exercises claim → push → record.
@@ -25,15 +24,17 @@ const SUPPRESSED_RESPONSE: Readonly<FcmResponse> = Object.freeze({
   suppressed: true,
 });
 
-function logSuppressed(payload: FcmPayload): void {
+function logSuppressed(payload: PushPayload): void {
+  const notice = payload.type === "notice" ? payload : undefined;
+  const miniapp = payload.type === "miniapp" ? payload : undefined;
   logger.info(
     {
       event: "push.delivery.suppressed",
       type: payload.type,
-      noticeId: payload.noticeId,
-      miniAppId: payload.miniAppId,
-      notificationId: payload.notificationId,
-      topics: payload.topics,
+      noticeId: notice?.noticeId,
+      miniAppId: miniapp?.miniAppId,
+      notificationId: miniapp?.notificationId,
+      topics: notice?.topics,
       title_ko: payload.title_ko,
     },
     "Push suppressed (PUSH_DELIVERY=suppressed); the Cloud Function was not called",
@@ -57,12 +58,12 @@ function toFcmError(status: number, body: FcmBody, text: string): Error & { stat
   return err;
 }
 
-export async function postToFcmFunction(payload: FcmPayload): Promise<FcmResponse> {
+export async function postToFcmFunction(payload: PushPayload): Promise<FcmResponse> {
   if (config.push.delivery === "suppressed") {
     logSuppressed(payload);
     return { ...SUPPRESSED_RESPONSE };
   }
-  const { functionUrl, apiKey, fcmTimeoutMs } = config.notices.dispatch;
+  const { functionUrl, apiKey, fcmTimeoutMs } = config.push;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), fcmTimeoutMs);
   try {
