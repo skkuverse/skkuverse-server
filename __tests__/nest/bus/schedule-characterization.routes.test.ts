@@ -16,7 +16,7 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Collection, Document } from "mongodb";
 import request from "supertest";
-import { clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
@@ -47,6 +47,7 @@ beforeAll(async () => {
   mongod = await startMongod();
   db = require("../../../src/infra/db") as Db;
   config = require("../../../src/infra/config") as Config;
+  assertConfigReaches(mongod, config.mongo.url);
   const { buildTestApp } = require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp };
   const { SchedulingModule } = require("../../../src/scheduling/scheduling.module") as { SchedulingModule: unknown };
   const { BusModule } = require("../../../src/bus/bus.module") as { BusModule: unknown };
@@ -55,7 +56,7 @@ beforeAll(async () => {
   schedules = busDb.collection("bus_schedules");
   overrides = busDb.collection("bus_overrides");
   app = await buildTestApp({ imports: [SchedulingModule, BusModule] as never[], role: "api" });
-});
+}, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
   try {
