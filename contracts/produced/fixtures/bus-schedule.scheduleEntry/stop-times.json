@@ -1,0 +1,15 @@
+{
+  "_about": "GET /bus/schedule/data/commute-gangnam-yangjae/week?from=2026-10-19 captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); an entry with stopTimes",
+  "data": {
+    "index": 1,
+    "time": "07:40",
+    "routeType": "up",
+    "busCount": 1,
+    "notes": "양재역 07:45",
+    "stopTimes": [
+      "07:40",
+      "07:45",
+      "08:45"
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "_about": "GET /bus/schedule/data/commute-gangnam-yangjae/week?from=2026-10-19 captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); the first day, two entries",
+  "data": {
+    "serviceId": "commute-gangnam-yangjae",
+    "requestedFrom": "2026-10-19",
+    "from": "2026-10-19",
+    "days": [
+      {
+        "date": "2026-10-19",
+        "dayOfWeek": 1,
+        "display": "schedule",
+        "label": null,
+        "notices": [
+          {
+            "style": "info",
+            "text": "시범 운행 · 무료 · 킹고M QR 탑승",
+            "source": "service"
+          },
+          {
+            "style": "info",
+            "text": "등교: 강남역 → 양재역 → 자과캠\n하교: 자과캠 → 양재역 → 강남역",
+            "source": "service"
+          }
+        ],
+        "schedule": [
+          {
+            "index": 1,
+            "time": "07:40",
+            "routeType": "up",
+            "busCount": 1,
+            "notes": "양재역 07:45",
+            "stopTimes": [
+              "07:40",
+              "07:45",
+              "08:45"
+            ]
+          },
+          {
+            "index": 2,
+            "time": "08:55",
+            "routeType": "up",
+            "busCount": 1,
+            "notes": "양재역 09:00",
+            "stopTimes": [
+              "08:55",
+              "09:00",
+              "10:15"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "_about": "GET /bus/schedule/data/campus-inja/week?from=2026-10-19 captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); day 2026-10-24",
+  "data": {
+    "date": "2026-10-24",
+    "dayOfWeek": 6,
+    "display": "hidden",
+    "label": null,
+    "notices": [],
+    "schedule": []
+  }
+}

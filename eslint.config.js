@@ -335,21 +335,13 @@ const VIOLATORS = {
   // and the service maps them.
   repository: [],
   getClient: [
-    "src/bus/eta/eta-store.ts",
-    "src/bus/schedule/schedule-db.ts",
-    "src/bus/schedule/schedule.service.ts",
   ],
   features: {},
   // Files that hold a hex color or a web view path outside a .constants file.
   literals: [
-    "src/bus/bus-config/bus-config.data.ts",
-    "src/bus/bus-config/hssc.stations.ts",
-    "src/bus/route-overlay/route-overlay.service.ts",
   ],
   // Controllers that read req.lang themselves instead of taking @Lang().
   lang: [
-    "src/bus/controllers/bus-config.controller.ts",
-    "src/bus/controllers/schedule.controller.ts",
   ],
 };
 
@@ -551,6 +543,7 @@ function migratedTypescriptBlock() {
 const GLOSSARY_NOT = {
   "app-config": ["AppSettings", "forceUpdate"],
   building: ["buildingId", "buildingNo", "roomId", "level", "bucket", "searchData", "term", "geometryDoc"],
+  bus: ["busGroupConfig", "busStop", "seqNo", "trip", "prediction"],
   health: ["isAlive", "isHealthy"],
   map: ["festivalConfig", "layerConfig", "eventWindow", "currentFestival", "filterButton", "exclusiveGroup", "categoryStyle", "sheetBody", "isFallback"],
   miniapps: ["appRegistry", "inbox", "readBy"],
@@ -686,10 +679,10 @@ module.exports = [
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.spec.ts"],
     rules: {
-      "max-lines": ["error", { max: 408, skipBlankLines: true, skipComments: false }],
-      "max-lines-per-function": ["error", { max: 100, skipBlankLines: true, skipComments: true }],
-      complexity: ["error", 26],
-      "max-params": ["error", 5],
+      "max-lines": ["error", { max: 362, skipBlankLines: true, skipComments: false }],
+      "max-lines-per-function": ["error", { max: 71, skipBlankLines: true, skipComments: true }],
+      complexity: ["error", 11],
+      "max-params": ["error", 4],
     },
   },
   ...roleSizeBlocks(),

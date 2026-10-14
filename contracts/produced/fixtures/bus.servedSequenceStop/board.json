@@ -1,0 +1,10 @@
+{
+  "_about": "GET /bus/config/commute captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); the first stop of commute-jeongja's first sequence",
+  "data": {
+    "label": "정자역 3번 출구",
+    "action": "board",
+    "timing": "scheduled",
+    "stopId": "jeongja-exit3",
+    "note": "정자역 탑승"
+  }
+}

@@ -9,10 +9,9 @@ const assets = [
   ["src/notices/categories.json", "dist/src/notices/categories.json"],
   ["src/notices/sources.json", "dist/src/notices/sources.json"],
   ["src/notices/exclude-reasons.json", "dist/src/notices/exclude-reasons.json"],
-  // holiday-calendar reads this with fs.readFileSync(__dirname/<name>)
+  // src/bus/schedule/bus-schedule.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/schedule/skku-rest-days.json", "dist/src/bus/schedule/skku-rest-days.json"],
-  // schedule-stops.ts reads this with fs.readFileSync(__dirname/<name>); a miss
-  // exits the api at boot in production only
+  // src/bus/stops/bus-stops.config.ts reads this with fs.readFileSync(__dirname/../schedule/<name>)
   ["src/bus/schedule/schedule-stops.json", "dist/src/bus/schedule/schedule-stops.json"],
   // src/bus/bus.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/jongro-routes.json", "dist/src/bus/jongro-routes.json"],

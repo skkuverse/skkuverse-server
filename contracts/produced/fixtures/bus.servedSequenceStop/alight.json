@@ -1,0 +1,10 @@
+{
+  "_about": "GET /bus/config/commute captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); its first alighting stop",
+  "data": {
+    "label": "자과캠",
+    "action": "alight",
+    "timing": "estimated",
+    "note": "자과캠 하차",
+    "detail": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근"
+  }
+}
