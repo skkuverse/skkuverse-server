@@ -143,11 +143,30 @@ describe("overlayPlaceDoc and sheetPlaceDoc", () => {
   it.each([
     ["no subtitle, order, facets or orderByOption", { ...STORED, subtitle: undefined, order: undefined, facets: undefined, orderByOption: undefined }],
     ["a malformed facets value", { ...STORED, facets: "council" }],
-    ["a field or button that is not an object", { ...STORED, fields: [null], actions: [7] }],
+    ["a button that is not an object", { ...STORED, actions: [7] }],
+    ["a field whose label and value are not text", { ...STORED, fields: [{ label: "운영", value: 7 }] }],
     ["an empty window list, meaning always open", { ...STORED, hours: [] }],
   ])("accept a renderable place with %s, as before", (_case, doc) => {
     // Act & Assert
     expect(overlayPlaceDoc.safeParse(doc).success).toBe(true);
+    expect(sheetPlaceDoc.safeParse(doc).success).toBe(true);
+  });
+});
+
+// What drawing a place's fields and buttons would throw on: the overlay read leaves the place out instead.
+const UNDRAWABLE: Array<[string, Row]> = [
+  ["a field that is null", { ...STORED, fields: [null] }],
+  ["a field that is not an object", { ...STORED, fields: [7] }],
+  ["a field with no label or value", { ...STORED, fields: [{}] }],
+  ["a field with no value", { ...STORED, fields: [{ label: { ko: "운영" } }] }],
+  ["a field whose label is null", { ...STORED, fields: [{ label: null, value: { ko: "학생회" } }] }],
+  ["a button that is null", { ...STORED, actions: [null] }],
+];
+
+describe("overlayPlaceDoc", () => {
+  it.each(UNDRAWABLE)("refuses %s, which the sheet read still accepts: it draws neither", (_case, doc) => {
+    // Act & Assert
+    expect(overlayPlaceDoc.safeParse(doc).success).toBe(false);
     expect(sheetPlaceDoc.safeParse(doc).success).toBe(true);
   });
 });

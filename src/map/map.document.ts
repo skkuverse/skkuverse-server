@@ -78,7 +78,11 @@ export type OverlayPlaceDoc = Pick<
   "_id" | "campus" | "category" | "location" | "title" | "subtitle" | "hours" | "fields" | "actions" | "order" | "facets" | "orderByOption"
 >;
 
-/** WHY: `detail` is read block by block and button by button, so the place read leaves it unknown. */
-export type SheetPlaceDoc = Pick<MapPlaceDoc, "_id" | "category" | "location" | "title" | "hours" | "fields" | "actions"> & { detail?: unknown };
+/** WHY: `detail` is read block by block and button by button, and the sheet reads no field or button, so those stay unknown. */
+export type SheetPlaceDoc = Pick<MapPlaceDoc, "_id" | "category" | "location" | "title" | "hours"> & {
+  fields: unknown[];
+  actions: unknown[];
+  detail?: unknown;
+};
 
 export type LiveActivation = Pick<ActivationDoc, "_id" | "activeUntil">;
