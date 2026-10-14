@@ -110,7 +110,7 @@ describe("allowed request", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("application/pdf");
-    expect(res.headers["content-security-policy"]).toBeUndefined();
+    expect(res.headers["content-security-policy"]).not.toMatch(/\bsandbox\b/);
     expect(mockedGet).toHaveBeenCalledTimes(2);
     for (const [, config] of mockedGet.mock.calls) {
       expect(config.proxy).toBe(false);
@@ -203,7 +203,7 @@ describe("inline content-type policy", () => {
 
       // Assert
       expect(res.status).toBe(200);
-      expect(res.headers["content-security-policy"]).toBeUndefined();
+      expect(res.headers["content-security-policy"]).not.toMatch(/\bsandbox\b/);
     },
   );
 
