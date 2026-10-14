@@ -6,7 +6,7 @@ import { BusCacheService } from "../cache/bus-cache.service";
 import {
   JONGRO_ROUTES,
 } from "../registry/jongro-registry.provider";
-import type { JongroRoute } from "../registry/jongro-registry";
+import type { JongroRoute } from "../bus.types";
 import {
   mapBuses,
   buildStationEtas,

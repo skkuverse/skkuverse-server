@@ -688,8 +688,8 @@ module.exports = [
     ignores: ["src/**/*.spec.ts"],
     rules: {
       "max-lines": ["error", { max: 408, skipBlankLines: true, skipComments: false }],
-      "max-lines-per-function": ["error", { max: 122, skipBlankLines: true, skipComments: true }],
-      complexity: ["error", 47],
+      "max-lines-per-function": ["error", { max: 100, skipBlankLines: true, skipComments: true }],
+      complexity: ["error", 26],
       "max-params": ["error", 5],
     },
   },

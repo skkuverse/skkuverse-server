@@ -7,11 +7,11 @@
  */
 
 import { buildStationEtas } from "../../../src/bus/realtime/realtime.transforms";
-import { getJongroRouteById } from "../../../src/bus/registry/jongro-registry";
+import { jongroRoutes } from "../../../src/bus/bus.config";
 
 describe("buildStationEtas", () => {
-  const r02 = getJongroRouteById("jongro02")!;
-  const r07 = getJongroRouteById("jongro07")!;
+  const r02 = jongroRoutes.find((r) => r.id === "jongro02")!;
+  const r07 = jongroRoutes.find((r) => r.id === "jongro07")!;
 
   it("puts each same-named stop's ETA on its own index", () => {
     const etas = buildStationEtas(r07, [

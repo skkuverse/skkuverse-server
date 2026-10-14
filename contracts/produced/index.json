@@ -44,6 +44,11 @@
     "export": "buildingCard",
     "routes": []
   },
+  "bus.jongroRoutesFile": {
+    "source": "src/bus/bus.wire.ts",
+    "export": "jongroRoutesFile",
+    "routes": []
+  },
   "fcm.miniAppPushPayload": {
     "source": "src/infra/fcm.wire.ts",
     "export": "miniAppPushPayload",
