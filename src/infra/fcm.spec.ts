@@ -14,13 +14,16 @@ import path from "path";
 import config from "./config";
 import logger from "./logger";
 import { postToFcmFunction } from "./fcm";
+import type { PushPayload } from "./fcm.wire";
 
-const notice = {
+const notice: PushPayload = {
   type: "notice",
   noticeId: "n1",
   topics: ["notices:cs"],
   title_ko: "제목",
   body_ko: "본문",
+  title_en: null,
+  body_en: null,
 };
 
 let savedDelivery: typeof config.push.delivery;
@@ -105,7 +108,7 @@ describe("postToFcmFunction with PUSH_DELIVERY=live", () => {
     await expect(postToFcmFunction(notice)).resolves.toEqual({ sent: 3, failed: 0, cleanedUp: 0 });
     expect(global.fetch).toHaveBeenCalledTimes(1);
     const [url, opts] = (global.fetch as jest.Mock).mock.calls[0];
-    expect(url).toBe(config.notices.dispatch.functionUrl);
+    expect(url).toBe(config.push.functionUrl);
     expect(JSON.parse(opts.body)).toEqual(notice);
   });
 });
@@ -115,7 +118,7 @@ describe("postToFcmFunction is the only way to the Cloud Function", () => {
   // (config.ts, required-env.ts) and used (fcm.ts). A fetch to the
   // function anywhere else would bypass PUSH_DELIVERY. Specs are not code.
   const allowed = new Set(["infra/config.ts", "infra/required-env.ts", "infra/fcm.ts"]);
-  const reference = /\bfunctionUrl\b|\bFCM_FUNCTION_URL\b|\bFCM_API_KEY\b|dispatch\.apiKey\b/;
+  const reference = /\bfunctionUrl\b|\bFCM_FUNCTION_URL\b|\bFCM_API_KEY\b|push\.apiKey\b/;
 
   it("no other file in src/ reads the function URL or key", () => {
     // Act

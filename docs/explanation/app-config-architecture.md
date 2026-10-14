@@ -19,7 +19,7 @@ App config owns no data. It assembles one body from values the server reads at b
 | --- | --- | --- | --- |
 | Doppler, through the deploy's environment | — | The minimum version and update URL per platform (`APP_IOS_MIN_VERSION` and its siblings) | `config.app` in `src/infra/config.ts` |
 | The first-party web origins | — | The origins allowed to talk to the native bridge, and the web app's origin | `BRIDGE_ORIGINS` and `WEB_ORIGIN` in `src/infra/origins.ts` |
-| The mini-app registry | — | Each first-party mini app's origin | `firstPartyOrigins` in `src/miniapps/miniapps.ts` |
+| The mini-app registry | — | Each first-party mini app's origin | `firstPartyOrigins` of `MiniappsService`, built in `src/miniapps/miniapps.config.ts` |
 | skkuverse-app | — | Nothing; it reads the body at boot | `GET /app/config` |
 
 ## Glossary

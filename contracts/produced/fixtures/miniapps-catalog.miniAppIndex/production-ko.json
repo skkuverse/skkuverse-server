@@ -1,0 +1,51 @@
+{
+  "_about": "GET /miniapps captured from production 2026-10-14 (stage 8b snapshot, Accept-Language ko); miniApps trimmed to three entries: an emoji tile with a media shell logo, an emoji in both slots, and a remote logo with a shortName",
+  "data": {
+    "version": 1,
+    "miniApps": [
+      {
+        "id": "eskara-2026",
+        "name": "축제 가이드",
+        "order": 4,
+        "homeLogo": {
+          "kind": "emoji",
+          "emoji": "📖"
+        },
+        "shellLogo": {
+          "kind": "remote",
+          "uri": "https://media.skkuverse.com/miniapps/eskara-2026/logo-03a86934.jpg"
+        },
+        "hidden": true
+      },
+      {
+        "id": "mukja",
+        "name": "음식 룰렛",
+        "order": 8,
+        "homeLogo": {
+          "kind": "emoji",
+          "emoji": "😋"
+        },
+        "shellLogo": {
+          "kind": "emoji",
+          "emoji": "😋"
+        },
+        "hidden": true
+      },
+      {
+        "id": "hssc",
+        "name": "인사캠 총학생회",
+        "shortName": "인사캠 총학",
+        "order": 10,
+        "homeLogo": {
+          "kind": "remote",
+          "uri": "https://skkuverse.com/miniapps/hssc.png"
+        },
+        "shellLogo": {
+          "kind": "remote",
+          "uri": "https://skkuverse.com/miniapps/hssc.png"
+        },
+        "hidden": true
+      }
+    ]
+  }
+}

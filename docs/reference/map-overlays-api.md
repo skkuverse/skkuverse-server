@@ -241,7 +241,7 @@ path>]` — `eskara-2026` opens that mini app at its registered `startUrl`, and
 authored; the app resolves the path against the `startUrl` it fetched from `GET /miniapps/:id` and
 falls back to `startUrl` if the result leaves that origin. The server drops a target whose id is not
 registered, or whose path could name another host (`//…`, `/\…`). The grammar lives in
-`src/miniapps/miniapp-target.ts` and is shared with the app's `/m/<target>` deep link and with
+`parseMiniAppTarget` in `src/miniapps/miniapps.rules.ts` and is shared with the app's `/m/<target>` deep link and with
 mini-app pushes.
 
 A button whose label is blank in every language, or whose value is wrong for its type, is **dropped**

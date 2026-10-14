@@ -1,0 +1,16 @@
+{
+  "_about": "GET /miniapps/eskara-2026 captured from production 2026-10-14 (stage 8b snapshot, Accept-Language ko); whole data",
+  "data": {
+    "version": 1,
+    "id": "eskara-2026",
+    "startUrl": "https://eskara.miniapp.skkuverse.com/eskara",
+    "verified": true,
+    "relatedLinks": [],
+    "shell": {
+      "bar": "bottom",
+      "header": "opaque",
+      "statusBar": "dark",
+      "background": "#FFFFFF"
+    }
+  }
+}

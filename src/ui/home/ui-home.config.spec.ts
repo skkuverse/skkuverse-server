@@ -7,13 +7,13 @@
  * that must not start. Mini-app ids are checked against the real registry.
  */
 import type { Clock } from "../../infra/clock";
-import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import { UiCampusService } from "../campus/ui-campus.service";
 import { loadHomeLayout as loadWithRegistry, readHomeLayout } from "./ui-home.config";
 import { toHomeLayout } from "./ui-home.mapper";
 import type { HomeLayoutRaw } from "./ui-home.schema";
 
-const registry = new MiniAppsService();
+const registry = new MiniappsService();
 const committedLayout = readHomeLayout(registry);
 // After the festival's campus banners closed (10/3), as on the day this spec was pinned.
 const clock: Clock = { now: () => new Date("2026-10-13T03:00:00.000Z") };

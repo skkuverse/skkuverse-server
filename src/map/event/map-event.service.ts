@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { createCachedLoader } from "../../infra/cached-loader";
 import logger from "../../infra/logger";
-import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "../map.constants";
 import { MapRepository } from "../map.repository";
@@ -22,7 +22,7 @@ export class MapEventService {
   constructor(
     private readonly repository: MapRepository,
     private readonly layerSet: MapLayerSetService,
-    private readonly miniApps: MiniAppsService,
+    private readonly miniApps: MiniappsService,
   ) {}
 
   /** WHY: empty, not an error, when no festival is live: the app asks whenever the layer is configured. */

@@ -16,7 +16,7 @@ const assets = [
   ["src/bus/schedule/schedule-stops.json", "dist/src/bus/schedule/schedule-stops.json"],
   // jongro.registry reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/registry/jongro-routes.json", "dist/src/bus/registry/jongro-routes.json"],
-  // miniapps/miniapps.ts reads these with fs.readFileSync(__dirname/<name>).
+  // miniapps/miniapps.config.ts reads these with fs.readFileSync(__dirname/<name>).
   // Every details/<id>.json listed in index.json must appear here too — the
   // loader reads them eagerly at boot, so a missing file is a startup crash.
   ["src/miniapps/index.json", "dist/src/miniapps/index.json"],

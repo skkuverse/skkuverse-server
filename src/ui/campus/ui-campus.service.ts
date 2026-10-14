@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Clock } from "../../infra/clock";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
-import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import { readCampusBanners } from "./ui-campus.config";
 import { toCampusSheet } from "./ui-campus.mapper";
 import type { CampusBannerCarouselRaw } from "./ui-campus.schema";
@@ -14,7 +14,7 @@ export class UiCampusService {
   private readonly banners: Readonly<CampusBannerCarouselRaw>;
 
   constructor(
-    miniApps: MiniAppsService,
+    miniApps: MiniappsService,
     private readonly clock: Clock,
   ) {
     this.banners = readCampusBanners(miniApps);

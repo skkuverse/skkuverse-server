@@ -6,11 +6,11 @@
  * parser as a new authority, so a path that begins with either must be refused
  * here — the device checks the resolved origin again, but a map action never
  * reaches the device if it fails here, and that is the cheaper place to learn.
+ * Also the two checks the registry schema refines with: one emoji per logo,
+ * counted in graphemes, and a startUrl on the web view that addresses a page.
  */
-import {
-  isKnownMiniAppTarget,
-  parseMiniAppTarget,
-} from "../../../src/miniapps/miniapp-target";
+import { registry } from "./miniapps.config";
+import { isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, parseMiniAppTarget } from "./miniapps.rules";
 
 describe("parseMiniAppTarget", () => {
   it.each([
@@ -19,6 +19,7 @@ describe("parseMiniAppTarget", () => {
     ["eskara-2026/eskara/lineup?day=2", { id: "eskara-2026", path: "/eskara/lineup?day=2" }],
     ["hssc/", { id: "hssc", path: "/" }],
   ])("parses %s", (value, expected) => {
+    // Act & Assert
     expect(parseMiniAppTarget(value)).toEqual(expected);
   });
 
@@ -34,16 +35,46 @@ describe("parseMiniAppTarget", () => {
     ["an empty string", ""],
     ["a non-string", 42],
   ])("refuses %s", (_label, value) => {
+    // Act & Assert
     expect(parseMiniAppTarget(value)).toBeNull();
   });
 });
 
 describe("isKnownMiniAppTarget", () => {
   it("accepts a target naming a registered mini app", () => {
-    expect(isKnownMiniAppTarget("eskara-2026/eskara/wristband")).toBe(true);
+    // Act & Assert
+    expect(isKnownMiniAppTarget("eskara-2026/eskara/wristband", registry.map)).toBe(true);
   });
 
   it("refuses a well-formed target naming nothing registered", () => {
-    expect(isKnownMiniAppTarget("no-such-app/x")).toBe(false);
+    // Act & Assert
+    expect(isKnownMiniAppTarget("no-such-app/x", registry.map)).toBe(false);
+  });
+});
+
+describe("isSingleEmoji", () => {
+  it.each([
+    ["one pictograph", "🍢", true],
+    ["a pictograph with a variation selector", "🌶️", true],
+    ["a joined sequence", "👩‍🍳", true],
+    ["two pictographs", "🍢🍗", false],
+    ["a letter", "a", false],
+    ["an empty string", "", false],
+  ])("%s → %s", (_label, value, expected) => {
+    // Act & Assert
+    expect(isSingleEmoji(value)).toBe(expected);
+  });
+});
+
+describe("isServableStartUrl", () => {
+  it.each([
+    ["a page on the web view", "https://webview.skkuverse.com/eskara", true],
+    ["the web view's bare root", "https://webview.skkuverse.com/", false],
+    ["a fragment route on the web view", "https://webview.skkuverse.com/#/eskara", false],
+    ["a third party's bare root", "https://www.skkuw.com/", true],
+    ["a third party's fragment", "https://example.com/#/section", true],
+  ])("%s → %s", (_label, startUrl, expected) => {
+    // Act & Assert
+    expect(isServableStartUrl(startUrl)).toBe(expected);
   });
 });

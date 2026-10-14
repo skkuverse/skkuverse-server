@@ -19,7 +19,7 @@ const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: 
 jest.mock("../../infra/logger", () => mockLogger);
 
 import type { Clock } from "../../infra/clock";
-import { MiniAppsService } from "../../miniapps/miniapps.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { EVENT_CACHE_TTL_MS } from "../map.constants";
 import type { MapPlaceDoc } from "../map.document";
@@ -43,7 +43,7 @@ let mockPlaces: jest.SpyInstance<ReturnType<MapRepository["listPlacesByLayerSetI
 /** A cold service: the activation and overlay caches live on the instances. */
 function newService(): MapEventService {
   const real = asReal<MapRepository>(repository);
-  return new MapEventService(real, new MapLayerSetService(real, CLOCK), new MiniAppsService());
+  return new MapEventService(real, new MapLayerSetService(real, CLOCK), new MiniappsService());
 }
 
 let service: MapEventService;

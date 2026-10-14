@@ -44,6 +44,21 @@
     "export": "buildingCard",
     "routes": []
   },
+  "fcm.miniappPushPayload": {
+    "source": "src/infra/fcm.wire.ts",
+    "export": "miniappPushPayload",
+    "routes": []
+  },
+  "fcm.noticePushPayload": {
+    "source": "src/infra/fcm.wire.ts",
+    "export": "noticePushPayload",
+    "routes": []
+  },
+  "fcm.pushPayload": {
+    "source": "src/infra/fcm.wire.ts",
+    "export": "pushPayload",
+    "routes": []
+  },
   "link-action.linkActionType": {
     "source": "src/shared/link-action.wire.ts",
     "export": "linkActionType",
@@ -80,6 +95,32 @@
       "GET map/overlays/campus",
       "GET map/overlays/event"
     ]
+  },
+  "miniapps-catalog.miniAppIndex": {
+    "source": "src/miniapps/catalog/miniapps-catalog.wire.ts",
+    "export": "miniAppIndex",
+    "routes": [
+      "GET miniapps"
+    ]
+  },
+  "miniapps-notifications.miniAppFeed": {
+    "source": "src/miniapps/notifications/miniapps-notifications.wire.ts",
+    "export": "miniAppFeed",
+    "routes": [
+      "GET miniapps/:id/notifications"
+    ]
+  },
+  "miniapps.miniAppDetail": {
+    "source": "src/miniapps/miniapps.wire.ts",
+    "export": "miniAppDetail",
+    "routes": [
+      "GET miniapps/:id"
+    ]
+  },
+  "miniapps.miniAppIndexEntry": {
+    "source": "src/miniapps/miniapps.wire.ts",
+    "export": "miniAppIndexEntry",
+    "routes": []
   },
   "ui-campus.campusSheet": {
     "source": "src/ui/campus/ui-campus.wire.ts",
