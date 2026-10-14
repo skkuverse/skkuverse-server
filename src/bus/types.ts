@@ -7,6 +7,7 @@
  * without churning the wrapper. Defensive narrowing happens inside fetchers.
  */
 import type { I18n, SupportedLang } from "../infra/types";
+import type { TransferLine } from "./bus.types";
 
 // --- HSSC (campus shuttle, custom university API) ---
 // Response is a bare JSON array. No envelope.
@@ -78,11 +79,6 @@ export type JongroLocResponse = SeoulBusEnvelope<JongroLocItem>;
 
 // --- Internal station/route shapes (served to the client) ---
 
-export interface TransferLine {
-  line: string;
-  color: string;
-}
-
 interface BusStationBase {
   stationName: string;
   stationNumber: string | null;
@@ -97,46 +93,6 @@ interface BusStationBase {
 export interface HsscStation extends BusStationBase {
   sequence: number;
   subtitle: string;
-}
-
-// Jongro: string sequence. Display shape derived from JongroRouteStation
-// (registry). Vestigial fields (`eta` placeholder, `busType`) intentionally
-// dropped — neither was read by served output (`mapStations`, realtime route)
-// per grep audit during the registry refactor.
-export interface JongroStation
-  extends Omit<BusStationBase, "busType"> {
-  sequence: string;
-}
-
-// Raw shape in `jongro-routes.json`. The registry derives the display
-// (`JongroStation` with sequence = idx+1, stationNumber = arsId) and the
-// TOPIS mapping (topisId → { sequence, stationName }) from this single
-// source of truth.
-export interface JongroRouteStation {
-  stationName: string;
-  arsId: string;
-  topisId: string;
-  isFirstStation: boolean;
-  isLastStation: boolean;
-  isRotationStation: boolean;
-  transferLines: TransferLine[];
-}
-
-export interface JongroRouteConfig {
-  id: string;
-  busRouteId: string;
-  themeColor: string;
-  iconType: string;
-  refreshInterval: number;
-  stations: JongroRouteStation[];
-}
-
-// Mapping from TOPIS lastStnId → { sequence, stationName } used by fetcher.
-export interface JongroStationMapping {
-  [lastStnId: string]: {
-    sequence: number;
-    stationName: string;
-  };
 }
 
 // service-config.ts

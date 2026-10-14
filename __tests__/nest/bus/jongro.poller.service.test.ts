@@ -19,7 +19,7 @@ jest.mock("../../../src/infra/logger", () => ({
 }));
 
 import { JongroPollerService } from "../../../src/bus/fetchers/jongro.poller.service";
-import { jongroRoutes } from "../../../src/bus/registry/jongro-registry";
+import { jongroRoutes } from "../../../src/bus/bus.config";
 import type { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
 import type { BusCacheService } from "../../../src/bus/cache/bus-cache.service";
 

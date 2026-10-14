@@ -1,4 +1,4 @@
-import type { JongroStationMapping } from "../types";
+import type { JongroStationMapping } from "../bus.types";
 
 /**
  * Realtime transform helpers (mapBuses / buildStationEtas /
