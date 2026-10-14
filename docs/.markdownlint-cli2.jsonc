@@ -15,6 +15,7 @@
         "explanation/health-architecture.md",
         "explanation/map-architecture.md",
         "explanation/miniapps-architecture.md",
+        "explanation/notices-architecture.md",
         "explanation/ui-architecture.md"
       ],
       "combine": "merge",
