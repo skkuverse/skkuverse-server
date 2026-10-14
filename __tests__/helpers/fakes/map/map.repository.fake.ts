@@ -4,10 +4,12 @@
  * there, by the repository-pins architecture test), and the same parse:
  * a place that is not renderable is left out, and an activation that does not
  * parse reads as none. Like the real projections, a place read carries only
- * the fields its route reads and an activation only `_id` and `activeUntil`.
+ * the fields its route reads (map.query.ts, the projections the real reads pass)
+ * and an activation only `_id` and `activeUntil`.
  * `failWith` makes the next reads reject, as a database error would.
  */
 import type { ActivationDoc, LiveActivation, MapPlaceDoc, OverlayPlaceDoc, SheetPlaceDoc } from "../../../../src/map/map.document";
+import { OVERLAY_PLACE_FIELDS, SHEET_PLACE_FIELDS } from "../../../../src/map/map.query";
 import type { MapRepository } from "../../../../src/map/map.repository";
 import { liveActivation, overlayPlaceDoc, sheetPlaceDoc } from "../../../../src/map/map.schema";
 import type { PublicOf } from "../public-of";
@@ -19,8 +21,8 @@ const isOpenAt = (a: ActivationDoc, now: Date): boolean =>
 const byNewestStart = (a: ActivationDoc, b: ActivationDoc): number =>
   (b.activeFrom?.getTime() ?? -Infinity) - (a.activeFrom?.getTime() ?? -Infinity) || a._id.localeCompare(b._id);
 
-const OVERLAY_FIELDS = ["_id", "campus", "category", "location", "title", "subtitle", "hours", "fields", "actions", "order", "facets", "orderByOption"];
-const SHEET_FIELDS = ["_id", "category", "location", "title", "hours", "fields", "actions", "detail"];
+const OVERLAY_FIELDS = Object.keys(OVERLAY_PLACE_FIELDS);
+const SHEET_FIELDS = Object.keys(SHEET_PLACE_FIELDS);
 
 /** An inclusion projection: only the listed fields that the document has. */
 const projected = (doc: MapPlaceDoc, fields: readonly string[]): Record<string, unknown> =>
