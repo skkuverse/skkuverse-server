@@ -31,8 +31,9 @@
  * accessor) must:
  *
  *   - pass a `projection` of at least one included field in its options
- *     object literal (written there, or a top-level `const` it names), so it
- *     loads only what the flow uses; and
+ *     object literal (written there, a top-level `const` it names, or a
+ *     `const` a `.query` file exports, which a fake can share), so it loads
+ *     only what the flow uses; and
  *   - parse the read's result through a schema imported from a `.schema` file
  *     (`parseEach(docs, schema, …)`, `schema.parse(…)`, `schema.safeParse(…)`):
  *     the read itself or the local it is assigned to, in the member that
@@ -40,6 +41,7 @@
  *
  * In a migrated scope the allowlist is empty (migrated-scopes.test.ts).
  */
+import path from "path";
 import ts from "typescript";
 import {
   MONGO_READ_OPTIONS_ARG,
@@ -211,14 +213,36 @@ function resolveLocalConst(e: ts.Expression, sf: ts.SourceFile): ts.Expression {
   return n;
 }
 
-/** An inclusion projection of at least one field: `projection: { a: 1 }`, or a top-level `const` holding one. */
-function hasProjection(arg: ts.Expression | undefined, sf: ts.SourceFile): boolean {
+type ModuleReader = (file: string) => string | undefined;
+
+const readIfPresent: ModuleReader = (file) => {
+  try {
+    return readSource(file);
+  } catch {
+    return undefined;
+  }
+};
+
+/** The initializer of the `const` an identifier imports from a `.query` file, when that file exports one. */
+function resolveQueryConst(n: ts.Identifier, sf: ts.SourceFile, readModule: ModuleReader): ts.Expression | undefined {
+  const imported = importsOf(sf).find((i) => i.local === n.text && i.specifier.endsWith(".query"));
+  if (imported === undefined) return undefined;
+  const target = `${path.posix.normalize(path.posix.join(path.posix.dirname(sf.fileName), imported.specifier))}.ts`;
+  const source = readModule(target);
+  if (source === undefined) return undefined;
+  const resolved = resolveLocalConst(ts.factory.createIdentifier(imported.imported ?? n.text), parseSource(target, source));
+  return ts.isIdentifier(resolved) ? undefined : resolved;
+}
+
+/** An inclusion projection of at least one field: `projection: { a: 1 }`, a top-level `const` holding one, or one a `.query` exports. */
+function hasProjection(arg: ts.Expression | undefined, sf: ts.SourceFile, readModule: ModuleReader): boolean {
   if (arg === undefined || !ts.isObjectLiteralExpression(skipOuter(arg))) return false;
   const options = skipOuter(arg) as ts.ObjectLiteralExpression;
   const property = options.properties.find((p) => p.name && ts.isIdentifier(p.name) && p.name.text === "projection");
   if (property === undefined) return false;
   const value = ts.isPropertyAssignment(property) ? property.initializer : ts.isShorthandPropertyAssignment(property) ? property.name : undefined;
-  const projection = value === undefined ? undefined : resolveLocalConst(value, sf);
+  const local = value === undefined ? undefined : resolveLocalConst(value, sf);
+  const projection = local !== undefined && ts.isIdentifier(local) ? resolveQueryConst(local, sf, readModule) : local;
   if (projection === undefined || !ts.isObjectLiteralExpression(projection)) return false;
   return projection.properties.some((p) => {
     if (!ts.isPropertyAssignment(p)) return false;
@@ -343,7 +367,12 @@ function parsedArguments(node: ts.Node, schemas: ReadonlySet<string>): ts.Expres
 }
 
 /** `<file>: <member> <read> of <Type>: no projection` / `: no .schema parse`, for each read of a contract type. */
-export function contractReadViolations(file: string, source: string, contractTypes: ReadonlySet<string>): string[] {
+export function contractReadViolations(
+  file: string,
+  source: string,
+  contractTypes: ReadonlySet<string>,
+  readModule: ModuleReader = readIfPresent,
+): string[] {
   const sf = parseSource(file, source);
   const schemas = schemaImports(sf);
   const out: string[] = [];
@@ -379,7 +408,7 @@ export function contractReadViolations(file: string, source: string, contractTyp
     for (const c of calls) {
       if (!(c.method in MONGO_READ_OPTIONS_ARG) || !contractTypes.has(c.type)) continue;
       const read = `${file}: ${c.member} ${c.method} of ${c.type}`;
-      if (!hasProjection(c.call.arguments[MONGO_READ_OPTIONS_ARG[c.method]!], sf)) out.push(`${read}: no projection`);
+      if (!hasProjection(c.call.arguments[MONGO_READ_OPTIONS_ARG[c.method]!], sf, readModule)) out.push(`${read}: no projection`);
       if (!parsesRead(c)) out.push(`${read}: no .schema parse`);
     }
   }
@@ -593,6 +622,21 @@ ${body}
 
     // Act & Assert
     expect(contractReadViolations("src/x/x.repository.ts", source, T)).toEqual([]);
+  });
+
+  it("passes a projection a sibling .query file exports, and flags one it cannot find there", () => {
+    // Arrange
+    const body = "async list() { const docs = await this.places().find({}, { projection: X_FIELDS, maxTimeMS: 1 }).toArray(); return parseEach(docs, placeDoc, String); }";
+    const source = `import { X_FIELDS } from "./x.query";\n${repository(body)}`;
+    const queries = new Map([["src/x/x.query.ts", "export const X_FIELDS = { a: 1 } as const;"]]);
+
+    // Act
+    const found = contractReadViolations("src/x/x.repository.ts", source, T, (f) => queries.get(f));
+    const missing = contractReadViolations("src/x/x.repository.ts", source, T, () => undefined);
+
+    // Assert
+    expect(found).toEqual([]);
+    expect(missing).toEqual(["src/x/x.repository.ts: list find of PlaceDoc: no projection"]);
   });
 
   it("flags a collection opened anywhere but a private Collection<T> accessor", () => {
