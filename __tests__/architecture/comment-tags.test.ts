@@ -7,7 +7,7 @@ import fs from "fs";
 import path from "path";
 import { commentBlocks, commentsOf, numberedKeys, type SourceComment } from "../helpers/architecture/comments";
 import { expectAllowlisted, ROOT } from "../helpers/architecture/ratchet";
-import { isNonSpecSource, readSource, sourceFiles } from "../helpers/architecture/tree";
+import { isGeneratedSource, isNonSpecSource, readSource, sourceFiles } from "../helpers/architecture/tree";
 
 /** The repos of CLAUDE.md "Ecosystem", and the in-repo consumers outside src/. */
 export const CONTRACT_REPOS = [
@@ -63,7 +63,7 @@ export function commentTagViolations(
   source: string,
   exists: (rel: string) => boolean = (rel) => fs.existsSync(path.join(ROOT, rel)),
 ): string[] {
-  if (!isNonSpecSource(file)) return [];
+  if (!isNonSpecSource(file) || isGeneratedSource(file)) return [];
   const blocks = commentBlocks(commentsOf(file, source).filter((c) => !isDirective(c)));
   const labels = blocks.flatMap((block) => {
     const problem = tagProblem(block.text, exists);
@@ -187,6 +187,14 @@ describe("comment tag rule applies as specified", () => {
 
     // Assert
     expect(checked).toEqual([[], [], ["src/x/x.ts: Untagged."]]);
+  });
+
+  it("skips a generated file: its comments come from its generator", () => {
+    // Act
+    const violations = commentTagViolations("src/x/x.document.generated.ts", "// Untagged.\nconst a = 1;", none);
+
+    // Assert
+    expect(violations).toEqual([]);
   });
 });
 
