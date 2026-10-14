@@ -43,12 +43,12 @@ describe("parseMiniAppTarget", () => {
 describe("isKnownMiniAppTarget", () => {
   it("accepts a target naming a registered mini app", () => {
     // Act & Assert
-    expect(isKnownMiniAppTarget("eskara-2026/eskara/wristband", registry.map)).toBe(true);
+    expect(isKnownMiniAppTarget("eskara-2026/eskara/wristband", registry.detailsById)).toBe(true);
   });
 
   it("refuses a well-formed target naming nothing registered", () => {
     // Act & Assert
-    expect(isKnownMiniAppTarget("no-such-app/x", registry.map)).toBe(false);
+    expect(isKnownMiniAppTarget("no-such-app/x", registry.detailsById)).toBe(false);
   });
 });
 
