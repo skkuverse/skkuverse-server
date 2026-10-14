@@ -3,10 +3,10 @@
  * the building number users see (buildNo without its campus digit), and the
  * one minter of each root building brand: a skkuId is a positive safe integer
  * that every production id passes, and buildNo and spaceCd are any non-empty
- * string.
+ * string. And isCampus, the guard of the root Campus over CAMPUSES.
  */
 import type { BuildNo } from "./building.types";
-import { hasBuildNo, isBuildNo, isSkkuId, isSpaceCd, toDisplayNo } from "./building.rules";
+import { hasBuildNo, isBuildNo, isCampus, isSkkuId, isSpaceCd, toDisplayNo } from "./building.rules";
 
 describe("hasBuildNo", () => {
   it.each([
@@ -80,5 +80,20 @@ describe("building brand minters", () => {
   ])("isSpaceCd(%j) → %s", (spaceCd, expected) => {
     // Act & Assert
     expect(isSpaceCd(spaceCd)).toBe(expected);
+  });
+});
+
+describe("isCampus", () => {
+  it.each([
+    ["hssc", true],
+    ["nsc", true],
+    ["HSSC", false],
+    ["", false],
+    [null, false],
+    [undefined, false],
+    [1, false],
+  ])("%j → %s", (value, expected) => {
+    // Act & Assert
+    expect(isCampus(value)).toBe(expected);
   });
 });

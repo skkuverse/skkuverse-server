@@ -3,6 +3,7 @@ import { escapeRegex } from "../../shared/regex.util";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
 import { SERVED_BUILDING_PROJECTION } from "../building.query";
 import { CAMPUSES } from "../building.constants";
+import { isCampus } from "../building.rules";
 import type { Campus } from "../building.types";
 import {
   BUILDING_SEARCH_LIMIT,
@@ -14,7 +15,6 @@ import {
   SPACE_STRONG_MIN_SCORE,
   SPACE_TIERS,
   SPACE_WEAK_LIMIT,
-  isCampus,
   tierRegex,
 } from "./building-search.rules";
 import type { RankedFacet, RankedSearchResult, RelevanceTier } from "./building-search.types";
