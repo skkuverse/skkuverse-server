@@ -16,6 +16,10 @@ import { FakeBuildingCatalogRepository } from "../../helpers/fakes/building/buil
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeBuildingSearchRepository } from "../../helpers/fakes/building/building-search.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { expectWire } from "../../helpers/contracts/expect-wire";
+import { SERVED_BUILDING_PROJECTION } from "../../../src/building/building.query";
+import { buildingDetail, buildingList } from "../../../src/building/catalog/building-catalog.wire";
+import { buildingSearchData, buildingSearchMeta } from "../../../src/building/search/building-search.wire";
 import { BuildingCatalogModule } from "../../../src/building/catalog/building-catalog.module";
 import { BuildingSearchModule } from "../../../src/building/search/building-search.module";
 
@@ -403,5 +407,77 @@ describe("Cache-Control on /building/*", () => {
     // Assert
     expect(res.status).toBe(status);
     expect(res.headers["cache-control"]).toBeUndefined();
+  });
+});
+
+/**
+ * Each served body against its wire schema (PR 219 F2): the contract fixtures were captured once,
+ * so a field the mappers start to serve without a wire declaring it shows only here. The documents
+ * carry every stored field, the sync bookkeeping and enrichVersion included.
+ */
+describe("/building bodies against their wire schemas", () => {
+  const STORED: BuildingDoc = {
+    ...building(1, "100", "hssc", "법학관", "Law"),
+    displayNo: null,
+    type: "building",
+    description: { ko: "법학관 설명", en: "" },
+    location: { type: "Point", coordinates: [126.99, 37.58] },
+    image: { url: null, filename: null },
+    attachments: [{ id: 1, url: "https://example.com/a.jpg", filename: "a.jpg", alt: "" }],
+    accessibility: { elevator: true, toilet: false, detail: { sections: [] } },
+    enrichVersion: 3,
+    skkuCreatedAt: "2018-04-23T00:34:04.000+00:00",
+    skkuUpdatedAt: null,
+    sync: { listAt: new Date("2026-10-01T00:00:00Z"), detailAt: null, detailError: null },
+    updatedAt: new Date("2026-10-01T00:00:00Z"),
+    extensions: {},
+  } as BuildingDoc;
+
+  it("serves /building/list as buildingList declares", async () => {
+    // Arrange
+    buildings.buildings = [STORED];
+
+    // Act
+    const res = await request(httpServer).get("/building/list");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.buildings).toHaveLength(1);
+    expectWire(buildingList, res.body.data);
+  });
+
+  it("serves /building/:skkuId as buildingDetail declares", async () => {
+    // Arrange
+    catalog.buildings = [STORED, { ...STORED, _id: 2, buildNo: "101" } as BuildingDoc];
+    catalog.spaces = [room("100-A101", "100", "hssc")];
+    catalog.connections = [{ a: { skkuId: 1, floor: { ko: "1층", en: "1F" } }, b: { skkuId: 2, floor: { ko: "2층", en: "2F" } } }] as never;
+
+    // Act
+    const res = await request(httpServer).get("/building/1");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.connections).toHaveLength(1);
+    expectWire(buildingDetail, res.body.data);
+  });
+
+  it("serves /building/search as buildingSearchData and buildingSearchMeta declare", async () => {
+    // Arrange
+    // The fake returns its rows as seeded, so they are seeded as the search pipeline's $project leaves them.
+    const ranked = Object.fromEntries(Object.entries(STORED).filter(([field]) => !(field in SERVED_BUILDING_PROJECTION)));
+    search.buildings = { items: [ranked as unknown as BuildingDoc] };
+    search.spaces = { items: [room("100-A101", "100", "hssc")] };
+    buildings.buildings = [STORED];
+
+    // Act
+    const res = await request(httpServer).get("/building/search?q=%EB%B2%95");
+    const { lang, ...meta } = res.body.meta;
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(lang).toBe("ko");
+    expect(res.body.data.spaces).toHaveLength(1);
+    expectWire(buildingSearchData, res.body.data);
+    expectWire(buildingSearchMeta, meta);
   });
 });

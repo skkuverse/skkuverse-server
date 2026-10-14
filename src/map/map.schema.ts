@@ -37,8 +37,8 @@ export const mapCamera = z
     if (Math.abs(lng) > 180) addIssue(ctx, [["lng"], `${lng} is outside ±180`]);
   });
 
-// WHY: only what makes a place undrawable is checked, as before the parse moved to the read; the other
-// fields are the importer's, read as stored, so a check on them would change which places are served.
+// WHY: only what makes a place undrawable is checked; the other fields are the importer's, read as stored,
+// so a check on them would change which places are served.
 const renderablePlace = z.looseObject({
   title: z.custom<I18n>((title) => hasAnyText(title as I18n | null)),
   location: z.custom<OverlayGeometry>(isDrawableGeometry),

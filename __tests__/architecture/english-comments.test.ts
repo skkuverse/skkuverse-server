@@ -2,9 +2,11 @@
  * Comments in src/ are English (CLAUDE.md, "English everywhere"): no comment
  * in a `src/**\/*.ts` file, specs included, holds Hangul. Korean is allowed
  * only in product copy, the files `.conventions.json` lists under
- * `productCopy`, and in strings, which this rule does not read: a comment
- * that needs a Korean name says it in English or points at the constant
- * that holds it. The umbrella repo's English check (`.conventions.json`
+ * `productCopy`, in strings, which this rule does not read, and inside a
+ * backticked code span in a comment: an `EVIDENCE:` or `QUIRK(…):` that
+ * quotes the exact upstream input (`q=관`) quotes data. Prose around it is
+ * English; a comment that needs a Korean name says it in English or points
+ * at the constant that holds it. The umbrella repo's English check (`.conventions.json`
  * names it) reads markdown only; this one covers the comments.
  *
  * Blocks as in comment-blocks (helpers/architecture/comments.ts), labelled
@@ -29,11 +31,14 @@ export function productCopyFiles(conventions: string): Set<string> {
   return new Set(parsed.productCopy);
 }
 
-/** `<file>: <first line>` per comment block that holds Hangul, `#n` on a repeat. */
+/** A comment line without its backticked code spans: a quoted upstream input is data, like a string. */
+const withoutCodeSpans = (line: string): string => line.replace(/`[^`\n]*`/g, "");
+
+/** `<file>: <first line>` per comment block that holds Hangul outside a code span, `#n` on a repeat. */
 export function hangulCommentViolations(file: string, source: string, productCopy: ReadonlySet<string>): string[] {
   if (!file.startsWith("src/") || !file.endsWith(".ts") || productCopy.has(file)) return [];
   const labels = commentBlocks(commentsOf(file, source))
-    .filter((block) => block.text.some((line) => HANGUL.test(line)))
+    .filter((block) => block.text.some((line) => HANGUL.test(withoutCodeSpans(line))))
     .map((block) => block.text[0]!.slice(0, 60).trimEnd());
   return numberedKeys(file, labels);
 }
@@ -62,6 +67,18 @@ describe("English comment rule applies as specified", () => {
     expect(hangulCommentViolations("src/x/x.rules.spec.ts", "// 법학관 has no digits", none)).toEqual([
       "src/x/x.rules.spec.ts: 법학관 has no digits",
     ]);
+  });
+
+  it("passes Hangul inside a backticked code span, and still reports Hangul outside one", () => {
+    // Arrange
+    const quoted = "// EVIDENCE: it trims description-only hits (`q=관`: 29 of 69).";
+    const prose = "// EVIDENCE: `q=관` trims 관 hits.";
+    const unclosed = "// EVIDENCE: `q=관 trims hits.";
+
+    // Act & Assert
+    expect(hangulCommentViolations("src/x/x.rules.ts", quoted, none)).toEqual([]);
+    expect(hangulCommentViolations("src/x/x.rules.ts", prose, none)).toHaveLength(1);
+    expect(hangulCommentViolations("src/x/x.rules.ts", unclosed, none)).toHaveLength(1);
   });
 
   it("passes Hangul in a string or a template, and an English comment", () => {

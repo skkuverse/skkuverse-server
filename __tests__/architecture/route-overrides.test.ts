@@ -12,8 +12,8 @@
  * every `.override<Kind>(X)` call on a testing module builder. `jest.mock` of a
  * module is not covered.
  */
-import path from "path";
 import ts from "typescript";
+import { resolveRelative } from "../helpers/architecture/ast";
 import { parse } from "../helpers/architecture/names";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { testFiles } from "../helpers/architecture/tests";
@@ -70,7 +70,7 @@ function importsOf(file: string, source: ts.SourceFile): Map<string, string> {
   for (const s of source.statements) {
     if (!ts.isImportDeclaration(s) || !ts.isStringLiteral(s.moduleSpecifier) || !s.importClause) continue;
     const spec = s.moduleSpecifier.text;
-    const from = spec.startsWith(".") ? `${path.posix.join(path.posix.dirname(file), spec)}.ts` : spec;
+    const from = spec.startsWith(".") ? `${resolveRelative(file, spec) ?? spec}.ts` : spec;
     const clause = s.importClause;
     if (clause.name) out.set(clause.name.text, `${from}#default`);
     if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {

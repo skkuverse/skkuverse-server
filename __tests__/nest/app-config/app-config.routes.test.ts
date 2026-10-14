@@ -19,6 +19,8 @@ import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../../../src/infra/o
 import { ConfigModule } from "../../../src/config/config.module";
 import { AppConfigModule } from "../../../src/app-config/app-config.module";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { expectWire } from "../../helpers/contracts/expect-wire";
+import { appClientConfig } from "../../../src/app-config/app-config.wire";
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -168,5 +170,20 @@ describe("GET /app/config", () => {
     // Static config is language-independent; only meta.lang changes.
     expect(res.body.data).toHaveProperty("ios");
     expect(res.body.data).toHaveProperty("android");
+  });
+});
+
+/**
+ * The served body against its wire schema (PR 219 F2): the contract fixture was captured once, so
+ * a field the service starts to serve without the wire declaring it shows only here.
+ */
+describe("/app/config body against its wire schema", () => {
+  it("serves /app/config as appClientConfig declares", async () => {
+    // Act
+    const res = await request(httpServer).get("/app/config");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(appClientConfig, res.body.data);
   });
 });

@@ -22,6 +22,7 @@
 import path from "path";
 import ts from "typescript";
 import { z } from "zod";
+import { exportsOf, isExported, parseSource } from "../helpers/architecture/ast";
 import { numberedKeys } from "../helpers/architecture/comments";
 import { ROOT } from "../helpers/architecture/ratchet";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
@@ -53,9 +54,6 @@ export function bannedCallViolations(file: string, source: string): string[] {
   return numberedKeys(file, labels);
 }
 
-const isExported = (node: ts.Node) =>
-  ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
-
 const isZodInput = (type: ts.TypeNode) =>
   ts.isTypeReferenceNode(type) &&
   ts.isQualifiedName(type.typeName) &&
@@ -63,17 +61,15 @@ const isZodInput = (type: ts.TypeNode) =>
   type.typeName.left.text === "z" &&
   type.typeName.right.text === "input";
 
-/** `type <name>` for each exported type that is not a `z.input<…>` alias. */
+/** `type <name>` for each exported type that is not a `z.input<…>` alias exported in place. */
 function exportedTypesNotZodInput(file: string, source: string): string[] {
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, false);
-  return sf.statements.flatMap((s) => {
-    if (ts.isTypeAliasDeclaration(s) && isExported(s)) return isZodInput(s.type) ? [] : [`type ${s.name.text}`];
-    if (ts.isInterfaceDeclaration(s) && isExported(s)) return [`type ${s.name.text}`];
-    if (ts.isExportDeclaration(s) && s.exportClause && ts.isNamedExports(s.exportClause)) {
-      return s.exportClause.elements.filter((e) => s.isTypeOnly || e.isTypeOnly).map((e) => `type ${e.name.text}`);
-    }
-    return [];
-  });
+  return exportsOf(parseSource(file, source))
+    .bindings.filter((b) => b.isType)
+    .flatMap((b) => {
+      const d = b.declaration;
+      const isZodInputInPlace = d !== undefined && isExported(d) && ts.isTypeAliasDeclaration(d) && isZodInput(d.type);
+      return isZodInputInPlace ? [] : [`type ${b.exported}`];
+    });
 }
 
 const isZodSchema = (value: unknown): value is z.ZodType => value instanceof z.ZodType;

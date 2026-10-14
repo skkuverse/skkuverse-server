@@ -22,7 +22,7 @@
  * APIs), so they cover the wiring without the full AppModule's env + Mongo
  * requirements.
  */
-import { Controller, Get, Module, Req } from "@nestjs/common";
+import { Controller, Get, Module, Post, Req } from "@nestjs/common";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
@@ -253,5 +253,160 @@ describe("CORS policy in development", () => {
   it("still allows the webview origin", async () => {
     const res = await request(app.getHttpServer()).get("/ping").set("Origin", WEBVIEW_ORIGIN);
     expect(res.headers["access-control-allow-origin"]).toBe(WEBVIEW_ORIGIN);
+  });
+});
+
+/**
+ * Every step bootstrapHttpApp mounts, through the pipeline itself (PR 218 F1): the regression
+ * pins above boot their own copy, and the response diff after a deploy compares bodies only, so
+ * a deleted helmet, logging, body-limit, trust-proxy or no-store line would otherwise ship green.
+ */
+@Controller("pipeline")
+class PipelineController {
+  @Get()
+  ip(@Req() req: express.Request): { ip: string | undefined } {
+    return { ip: req.ip };
+  }
+
+  @Post()
+  echo(@Req() req: express.Request): { bodyLength: number } {
+    // WHY: the length of the parsed body proves express.json ran; an unparsed body is undefined.
+    return { bodyLength: JSON.stringify(req.body ?? null).length };
+  }
+}
+
+@Module({ controllers: [PipelineController] })
+class PipelineModule {}
+
+type StackLayer = { name: string };
+
+/** The names of the Express middleware layers, in mount order. */
+function layerNames(app: NestExpressApplication): string[] {
+  const instance = app.getHttpAdapter().getInstance() as { _router: { stack: StackLayer[] } };
+  return instance._router.stack.map((layer) => layer.name);
+}
+
+/** The first `count` layers after Express's own: the ones bootstrapHttpApp mounts before Nest adds its own. */
+function pipelineLayers(app: NestExpressApplication, count: number): string[] {
+  const names = layerNames(app);
+  return names.slice(names.indexOf("expressInit") + 1).slice(0, count);
+}
+
+describe("bootstrapHttpApp pipeline", () => {
+  let app: NestExpressApplication;
+
+  beforeAll(async () => {
+    app = await buildTestApp({ imports: [PipelineModule] });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("mounts helmet, request logging, the JSON parser and the lang middleware in that order", () => {
+    // Arrange
+    // pino-http's middleware is named `result`; the lang wrapper is an inline arrow.
+    const expected = ["helmetMiddleware", "requestContext", "result", "jsonParser", "<anonymous>"];
+
+    // Act
+    const layers = pipelineLayers(app, expected.length + 1);
+
+    // Assert
+    expect(layers.slice(0, expected.length)).toEqual(expected);
+    expect(layers.at(-1)).not.toBe("noStoreMiddleware");
+  });
+
+  it("trusts one proxy hop, so req.ip is the rightmost X-Forwarded-For address", async () => {
+    // Act
+    const res = await request(app.getHttpServer()).get("/pipeline").set("X-Forwarded-For", "203.0.113.1, 198.51.100.7");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.ip).toBe("198.51.100.7");
+  });
+
+  it("sends helmet's headers", async () => {
+    // Act
+    const res = await request(app.getHttpServer()).get("/pipeline");
+
+    // Assert
+    expect(res.headers["x-content-type-options"]).toBe("nosniff");
+    expect(res.headers["x-frame-options"]).toBe("SAMEORIGIN");
+  });
+
+  it("tags each response with an X-Request-Id, echoing a valid one the client sent", async () => {
+    // Act
+    const generated = await request(app.getHttpServer()).get("/pipeline");
+    const echoed = await request(app.getHttpServer()).get("/pipeline").set("X-Request-Id", "req-123");
+
+    // Assert
+    expect(generated.headers["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
+    expect(echoed.headers["x-request-id"]).toBe("req-123");
+  });
+
+  it("parses a JSON body up to 100 kB and refuses a larger one", async () => {
+    // Arrange
+    const under = { text: "x".repeat(90_000) };
+    const over = { text: "x".repeat(110_000) };
+
+    // Act
+    const accepted = await request(app.getHttpServer()).post("/pipeline").send(under);
+    const refused = await request(app.getHttpServer()).post("/pipeline").send(over);
+
+    // Assert
+    expect(accepted.status).toBe(201);
+    expect(accepted.body.data.bodyLength).toBe(JSON.stringify(under).length);
+    expect(refused.status).toBeGreaterThanOrEqual(400);
+    expect(refused.body.data).toBeUndefined();
+  });
+
+  it("runs the lang middleware before the handler: meta.lang and Vary", async () => {
+    // Act
+    const res = await request(app.getHttpServer()).get("/pipeline").set("Accept-Language", "en-US,en;q=0.9");
+
+    // Assert
+    expect(res.body.meta).toEqual({ lang: "en" });
+    expect(res.headers["vary"]).toContain("Accept-Language");
+  });
+
+  it("leaves Cache-Control alone while the cache is on", async () => {
+    // Act
+    const res = await request(app.getHttpServer()).get("/pipeline");
+
+    // Assert
+    expect(layerNames(app)).not.toContain("noStoreMiddleware");
+    expect(res.headers["cache-control"]).toBeUndefined();
+  });
+});
+
+describe("bootstrapHttpApp pipeline with CACHE=off", () => {
+  let app: NestExpressApplication;
+  let cacheEnabled: jest.ReplaceProperty<boolean>;
+
+  beforeAll(async () => {
+    // WHY: bootstrapHttpApp reads config.cache.enabled when it builds the app, as main.ts does.
+    cacheEnabled = jest.replaceProperty(config.cache, "enabled", false);
+    app = await buildTestApp({ imports: [PipelineModule] });
+  });
+
+  afterAll(async () => {
+    await app.close();
+    cacheEnabled.restore();
+  });
+
+  it("mounts the no-store middleware last, after the lang middleware", () => {
+    // Act
+    const layers = pipelineLayers(app, 6);
+
+    // Assert
+    expect(layers).toEqual(["helmetMiddleware", "requestContext", "result", "jsonParser", "<anonymous>", "noStoreMiddleware"]);
+  });
+
+  it("answers every response with Cache-Control: no-store", async () => {
+    // Act
+    const res = await request(app.getHttpServer()).get("/pipeline");
+
+    // Assert
+    expect(res.headers["cache-control"]).toBe("no-store");
   });
 });
