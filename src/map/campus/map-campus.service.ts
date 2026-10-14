@@ -37,8 +37,9 @@ export class MapCampusService {
     }
   }
 
-  private toDrawableShapes(docs: readonly CampusShapeDoc[]): MapOverlay[] {
-    const skipped = docs.map(shapeSkipReason).filter((reason): reason is string => reason !== null);
+  private toDrawableShapes(shapes: readonly CampusShapeDoc[]): MapOverlay[] {
+    const reasons = shapes.map(shapeSkipReason);
+    const skipped = reasons.filter((reason): reason is string => reason !== null);
     const ticket = skipped.length > 0 ? this.skippedThrottle.take(skipped.join("|")) : null;
     if (ticket) {
       logger.warn(
@@ -46,6 +47,6 @@ export class MapCampusService {
         "Campus shapes skipped",
       );
     }
-    return docs.filter((doc) => shapeSkipReason(doc) === null).map(toShapeOverlay);
+    return shapes.filter((_, index) => reasons[index] === null).map(toShapeOverlay);
   }
 }
