@@ -51,11 +51,12 @@ beforeAll(async () => {
   const { buildTestApp } = require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp };
   const { SchedulingModule } = require("../../../src/scheduling/scheduling.module") as { SchedulingModule: unknown };
   const { BusModule } = require("../../../src/bus/bus.module") as { BusModule: unknown };
+  const { BusScheduleModule } = require("../../../src/bus/schedule/bus-schedule.module") as { BusScheduleModule: unknown };
 
   const busDb = db.getClient().db(config.mongo.dbName);
   schedules = busDb.collection("bus_schedules");
   overrides = busDb.collection("bus_overrides");
-  app = await buildTestApp({ imports: [SchedulingModule, BusModule] as never[], role: "api" });
+  app = await buildTestApp({ imports: [SchedulingModule, BusModule, BusScheduleModule] as never[], role: "api" });
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
