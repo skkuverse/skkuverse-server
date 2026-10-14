@@ -9,8 +9,6 @@ import { UiHomeModule } from "./ui/home/ui-home.module";
 import { UiTransitListModule } from "./ui/transit-list/ui-transit-list.module";
 import { UiScrollModule } from "./ui/scroll/ui-scroll.module";
 import { UiCampusModule } from "./ui/campus/ui-campus.module";
-import { AdEventsModule } from "./ad/events/ad-events.module";
-import { AdPlacementsModule } from "./ad/placements/ad-placements.module";
 import { BuildingModule } from "./building/building.module";
 import { BuildingCatalogModule } from "./building/catalog/building-catalog.module";
 import { BuildingSearchModule } from "./building/search/building-search.module";
@@ -53,8 +51,6 @@ import { MiniAppsModule } from "./miniapps/miniapps.module";
     UiTransitListModule,
     UiScrollModule,
     UiCampusModule,
-    AdPlacementsModule,
-    AdEventsModule,
     BuildingModule,
     // Before BuildingCatalogModule: Nest registers routes in module order, and
     // /building/:skkuId would catch /building/search (route-order.test.ts).
