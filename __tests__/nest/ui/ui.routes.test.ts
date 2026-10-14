@@ -29,6 +29,7 @@ jest.mock("../../../src/bus/eta/eta-store", () => ({
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";
+import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { UiCampusModule } from "../../../src/ui/campus/ui-campus.module";
 import { UiHomeModule } from "../../../src/ui/home/ui-home.module";
@@ -42,6 +43,9 @@ import { homeLayout } from "../../../src/ui/home/ui-home.wire";
 import { scrollCards, scrollCardsMeta } from "../../../src/ui/scroll/ui-scroll.wire";
 import { transitList, transitListMeta } from "../../../src/ui/transit-list/ui-transit-list.wire";
 
+// WHY: one fixed instant (12:00 KST, 2026-10-14), so the answers do not depend on the day the suite runs.
+const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
+
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 const realFetch = global.fetch;
@@ -50,6 +54,7 @@ beforeAll(async () => {
   global.fetch = jest.fn().mockRejectedValue(new Error("no network in tests")) as unknown as typeof fetch;
   app = await buildTestApp({
     imports: [SchedulingModule, BusModule, UiModule, UiHomeModule, UiTransitListModule, UiScrollModule, UiCampusModule],
+    overrides: [{ provide: Clock, useValue: CLOCK }],
     role: "api",
   });
   httpServer = app.getHttpServer();

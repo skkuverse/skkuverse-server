@@ -32,7 +32,11 @@ import { MapModule } from "../../../src/map/map.module";
 import { MapRepository } from "../../../src/map/map.repository";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
+import { Clock } from "../../../src/infra/clock";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+
+// WHY: one fixed instant (12:00 KST, 2026-10-14), so the answers do not depend on the day the suite runs.
+const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
 
 // No DB in either direction: buildings fall back (an empty fake), and "no
 // festival" is stated rather than inferred from an absent Mongo client.
@@ -62,6 +66,7 @@ describe("GET /map/config (real map services)", () => {
       overrides: [
         { provide: BuildingRepository, useValue: new FakeBuildingRepository() },
         { provide: MapRepository, useValue: mapRepository },
+        { provide: Clock, useValue: CLOCK },
       ],
       role: "api",
     });
