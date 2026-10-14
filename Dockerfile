@@ -9,7 +9,9 @@ WORKDIR /app
 # 패키지 매니페스트 + tsconfig만 먼저 복사 → npm ci 결과를 별도 layer로 캐시.
 # source 변경 시 npm ci 재실행 없이 build만 다시 돌게 됨.
 COPY package.json package-lock.json tsconfig.json ./
-RUN npm ci
+# WHY: the devDependency mongodb-memory-server would download a ~100 MB mongod for the tests on
+# every rebuild of this layer, and none is published for Alpine; the image never runs the tests.
+RUN MONGOMS_DISABLE_POSTINSTALL=1 npm ci
 
 # 나머지 source 복사 후 빌드. .dockerignore가 dist/, node_modules/, __tests__/,
 # __fixtures__/, scripts/, docs/ 등을 제외.
