@@ -168,30 +168,66 @@ const SRC_SYNTAX_PLUGIN = {
 const GENERIC_NAMES = ["info", "obj", "tmp", "helper", "manager"];
 
 // A zod issue names where it is (ADR 0010, D5): parseConfigFile and the boot error print each
-// issue's path, and an issue without one reads `root:` wherever it sits.
-const ADD_ISSUE = "CallExpression[callee.property.name='addIssue']";
+// issue's path, and an issue without one reads `root:` wherever it sits. zod takes an issue through
+// `ctx.addIssue(…)` (also as `ctx["addIssue"]` or a destructured `addIssue`) and, in zod 4's `.check`,
+// `ctx.issues.push(…)`; each spelling must carry its own `path`. A bare `addIssue(ctx, found)` is a
+// local helper that sets the path itself, so only an object first argument is read.
+const ISSUE_CALL =
+  "CallExpression:matches([callee.property.name='addIssue'], [callee.property.value='addIssue'], [callee.name='addIssue'], " +
+  "[callee.property.name='push'][callee.object.property.name='issues'])";
 const ADD_ISSUE_SYNTAX = [
   {
-    selector: `${ADD_ISSUE} > ObjectExpression.arguments:first-child:not(:has(> Property[key.name='path']))`,
+    selector: `${ISSUE_CALL} > ObjectExpression.arguments:first-child:not(:has(> Property[key.name='path'])):not(:has(> Property[key.value='path']))`,
     message: "Give each zod issue its `path` (`path: []` when the issue is the whole value), so the error names the field.",
   },
   {
-    selector: `${ADD_ISSUE} > :matches(Literal, TemplateLiteral).arguments:first-child`,
+    selector: `${ISSUE_CALL}[callee.type='MemberExpression'] > :matches(Literal, TemplateLiteral).arguments:first-child`,
     message: "Pass an issue object with its `path` (`path: []` when the issue is the whole value), not a bare message.",
+  },
+  {
+    selector: `${ISSUE_CALL} > ObjectExpression.arguments:first-child > Property[value.type='Identifier'][value.name='undefined']:matches([key.name='path'], [key.value='path'])`,
+    message: "`path: undefined` is no path: name the field, or `path: []` when the issue is the whole value.",
   },
 ];
 
 // A color or a web view path is a value the app reads, kept in one place: a `.constants` file
 // (or the JSON config) holds it, and code imports its name.
-const HEX_COLOR = "/^#?[0-9A-Fa-f]{6}$/";
-const WEBVIEW_PATH = "/^\\/skku\\//";
+// A bare six- or eight-digit hex string is read as a color only when it mixes letters and digits
+// (`e65100`, `4CAF50`) or is bound to a name ending in `color`: an all-digit string is as often an id
+// or a date (`202610`, `100100`) and an all-letter one a word (`facade`, `decade`), and no lexical test
+// tells those from `003626`. A `#` prefix, `rgb(`/`rgba(` and a `0x` number are colors wherever they sit.
+const HEX = "(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})";
+const HASH_COLOR = `/^#${HEX}$/`;
+const MIXED_HEX = `/^(?=[0-9A-Fa-f]*[A-Fa-f])(?=[0-9A-Fa-f]*[0-9])${HEX}$/`;
+const ANY_HEX = `/^${HEX}$/`;
+const RGB = "/^rgba?\\(/";
+const COLOR_NAME = "/[Cc]olou?r$/";
+const hexString = (pattern) => `:matches(Literal[value=${pattern}], TemplateLiteral[quasis.length=1] > TemplateElement[value.raw=${pattern}])`;
+// A web view path opens a string (`/skku/x`, `skku/x`) or follows an origin in a template
+// (`${origin}/skku/x`). An absolute URL to www.skku.edu also holds `/skku/`, but it is the school's
+// site, not a web view page, so a `/skku/` after literal text is not read.
+const WEBVIEW_PATH = "/^\\/?skku\\//";
 const LITERAL_SYNTAX = [
   {
-    selector: `:matches(Literal[value=${HEX_COLOR}], TemplateLiteral[quasis.length=1] > TemplateElement[value.raw=${HEX_COLOR}])`,
-    message: "A six-digit hex color lives in a *.constants.ts file: import it by name.",
+    selector: [
+      hexString(HASH_COLOR),
+      hexString(MIXED_HEX),
+      `VariableDeclarator[id.name=${COLOR_NAME}] > Literal.init[value=${ANY_HEX}]`,
+      `Property:matches([key.name=${COLOR_NAME}], [key.value=${COLOR_NAME}]) > Literal.value[value=${ANY_HEX}]`,
+      `Literal[raw=/^0[xX]${HEX}$/]`,
+    ].join(", "),
+    message: "A hex color lives in a *.constants.ts file: import it by name.",
   },
   {
-    selector: `:matches(Literal[value=${WEBVIEW_PATH}], TemplateLiteral > TemplateElement:first-child[value.raw=${WEBVIEW_PATH}])`,
+    selector: `:matches(Literal[value=${RGB}], TemplateLiteral > TemplateElement:first-child[value.raw=${RGB}])`,
+    message: "An rgb() color lives in a *.constants.ts file: import it by name.",
+  },
+  {
+    selector: [
+      `Literal[value=${WEBVIEW_PATH}]`,
+      `TemplateLiteral > TemplateElement:first-child[value.raw=${WEBVIEW_PATH}]`,
+      "TemplateLiteral > TemplateElement:not(:first-child)[value.raw=/^\\/skku\\//]",
+    ].join(", "),
     message: "A web view path (/skku/…) lives in a *.constants.ts file: import it by name.",
   },
 ];
