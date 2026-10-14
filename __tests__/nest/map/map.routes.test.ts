@@ -29,6 +29,7 @@ import { MapModule } from "../../../src/map/map.module";
 import { MapRepository } from "../../../src/map/map.repository";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
+import { Clock } from "../../../src/infra/clock";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { mapConfig } from "../../../src/map/config/map-config.wire";
@@ -92,6 +93,9 @@ const BOOTH = {
   updatedAt: new Date("2026-10-01T00:00:00.000Z"),
 } as unknown as MapPlaceDoc;
 
+// WHY: one fixed instant (12:00 KST, 2026-10-14), so the answers do not depend on the day the suite runs.
+const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
+
 beforeAll(async () => {
   global.fetch = jest.fn().mockRejectedValue(new Error("no network in tests")) as unknown as typeof fetch;
   buildings = new FakeBuildingRepository();
@@ -103,6 +107,7 @@ beforeAll(async () => {
     overrides: [
       { provide: BuildingRepository, useValue: buildings },
       { provide: MapRepository, useValue: map },
+      { provide: Clock, useValue: CLOCK },
     ],
     role: "api",
   });
