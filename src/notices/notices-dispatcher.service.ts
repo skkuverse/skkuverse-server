@@ -1,11 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import moment from "moment-timezone";
 import config from "../infra/config";
-import {
-  postToFcmFunction,
-  type FcmPayload as FcmPayloadRecord,
-  type FcmResponse,
-} from "../infra/fcm";
+import { postToFcmFunction, type FcmResponse } from "../infra/fcm";
+import type { PushPayload } from "../infra/fcm.wire";
 import logger from "../infra/logger";
 import { groupByDedupKey } from "./notices.dedup-key";
 import { getNoticesCollection } from "./notices.data";
@@ -115,7 +112,7 @@ export class NoticesDispatcherService {
    * this class is unchanged by the extraction.
    */
   private async postToFunction(payload: FcmPayload): Promise<FcmResponse> {
-    return postToFcmFunction(payload as unknown as FcmPayloadRecord);
+    return postToFcmFunction(payload as unknown as PushPayload);
   }
 
   /**
