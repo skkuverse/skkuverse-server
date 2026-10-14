@@ -1,0 +1,244 @@
+/**
+ * The stops as one language's client sees them: the stop-sequence helper
+ * (catalog stop or label, each referenced stop listed once, optional fields
+ * only when set, the photo variant in the request language) and the street
+ * view link, verified on a phone.
+ */
+import type { SupportedLang } from "../../infra/types";
+import { resolveStopSequences, toStreetViewUrl } from "./bus-stops.mapper";
+import type { ScheduleStopCatalog } from "./bus-stops.types";
+
+const VERIFIED_LINK =
+  "https://inapp.map.naver.com/launchApp/panorama/street?street=on&vrpanoid=oCt8OYgXgYopNL-f4h4MAw&vrpanopan=-53&vrpanotilt=0&vrpanofov=80&appTargetPage=panorama%2Fstreet&id=oCt8OYgXgYopNL-f4h4MAw&pan=-53&tilt=0&fov=80&fallbackUrl=https%3A%2F%2Fviewer.map.naver.com%2Fpanorama%2F%3Fid%3DoCt8OYgXgYopNL-f4h4MAw%26heading%3D-53%26tilt%3D0%26fov%3D80&app=Y&appmarket=N";
+
+describe("toStreetViewUrl", () => {
+  it("returns exactly the link verified on a phone", () => {
+    // Act & Assert
+    expect(toStreetViewUrl({ panoId: "oCt8OYgXgYopNL-f4h4MAw", pan: -53, tilt: 0, fov: 80 })).toBe(VERIFIED_LINK);
+  });
+
+  it("carries the same panorama and view in all three places", () => {
+    // Arrange
+    const url = new URL(toStreetViewUrl({ panoId: "t3fVimfVujMkQbI7-J3YnQ", pan: -72, tilt: 12, fov: 60 }));
+    const q = url.searchParams;
+
+    // Act
+    const fallback = new URL(q.get("fallbackUrl")!);
+
+    // Assert
+    expect(fallback.origin + fallback.pathname).toBe("https://viewer.map.naver.com/panorama/");
+    const f = fallback.searchParams;
+    for (const [app, page, viewer] of [
+      [q.get("vrpanoid"), q.get("id"), f.get("id")],
+      [q.get("vrpanopan"), q.get("pan"), f.get("heading")],
+      [q.get("vrpanotilt"), q.get("tilt"), f.get("tilt")],
+      [q.get("vrpanofov"), q.get("fov"), f.get("fov")],
+    ]) {
+      expect([app, page]).toEqual([viewer, viewer]);
+    }
+    expect([q.get("vrpanoid"), q.get("vrpanopan"), q.get("vrpanotilt"), q.get("vrpanofov")]).toEqual([
+      "t3fVimfVujMkQbI7-J3YnQ",
+      "-72",
+      "12",
+      "60",
+    ]);
+  });
+});
+
+describe("resolveStopSequences", () => {
+  const MEDIA = "https://media.skkuverse.com/commute/stops";
+  const CAMPUS = {
+    label: { ko: "자과캠", en: "NSC" },
+    detail: { ko: "N센터 인근 → 학생회관 인근", en: "Near N Center → near Student Center" },
+    action: "alight" as const,
+    timing: "estimated" as const,
+  };
+  const catalog: ScheduleStopCatalog = {
+    stops: [
+      {
+        id: "jeongja-exit3",
+        name: { ko: "정자역 3번 출구", en: "Jeongja Stn. Exit 3" },
+        detail: { ko: "파리바게뜨 앞" },
+        coords: { lat: 37.365499, lng: 127.107906 },
+        photo: {
+          original: `${MEDIA}/jeongja-exit3/original-00000000.jpg`,
+          localized: { ko: `${MEDIA}/jeongja-exit3/ko-11111111.jpg`, zh: `${MEDIA}/jeongja-exit3/zh-22222222.jpg` },
+        },
+        panorama: { panoId: "oCt8OYgXgYopNL-f4h4MAw", pan: -53, tilt: 0, fov: 80 },
+        guide: {
+          places: [
+            {
+              id: "exit3",
+              kind: "subwayExit",
+              number: 3,
+              name: { ko: "3번 출구", en: "Exit 3", zh: "3号出口" },
+              coords: { lat: 37.365922, lng: 127.107774 },
+            },
+          ],
+          walks: [
+            {
+              from: "exit3",
+              to: "stop",
+              path: [
+                { lat: 37.365922, lng: 127.107774 },
+                { lat: 37.365499, lng: 127.107906 },
+              ],
+            },
+          ],
+        },
+      },
+      { id: "nsc-opposite", name: { ko: "N센터 건너편", en: "Across from N Center", zh: "N中心对面" } },
+      { id: "nsc-welfare", name: { ko: "복지회관 앞" }, coords: { lat: 37.293999, lng: 126.973183 }, guide: {} },
+      { id: "unused", name: { ko: "쓰이지 않는 정류장" } },
+    ],
+    sequences: {
+      "commute-jeongja": {
+        up: [{ stopId: "jeongja-exit3", action: "board", timing: "scheduled" }, CAMPUS],
+        down: [
+          { stopId: "nsc-opposite", action: "board", timing: "scheduled" },
+          { label: { ko: "정자역 2번 출구 앞" }, action: "alight", timing: "estimated" },
+        ],
+      },
+      "commute-jamsil": {
+        down: [{ stopId: "nsc-opposite", action: "board", timing: "scheduled" }, CAMPUS],
+      },
+      "commute-gwanggyo": {
+        down: [
+          { stopId: "nsc-opposite", action: "board", timing: "scheduled" },
+          { stopId: "nsc-welfare", action: "alight", timing: "estimated" },
+        ],
+      },
+    },
+  };
+
+  it("lists only referenced catalog stops, each once, in order of first reference", () => {
+    // Arrange
+    const { stops } = resolveStopSequences(["commute-jeongja", "commute-jamsil", "commute-dogok"], "ko", catalog);
+
+    // Act & Assert
+    expect(stops.map((s) => s.id)).toEqual(["jeongja-exit3", "nsc-opposite"]);
+  });
+
+  it("omits a service without sequences", () => {
+    // Arrange
+    const { sequences } = resolveStopSequences(["commute-jeongja", "commute-dogok"], "ko", catalog);
+
+    // Act & Assert
+    expect(Object.keys(sequences)).toEqual(["commute-jeongja"]);
+  });
+
+  it("names a catalog stop by its name and a plain stop by its label, with action and timing", () => {
+    // Arrange
+    const { sequences } = resolveStopSequences(["commute-jeongja"], "ko", catalog);
+
+    // Act & Assert
+    expect(sequences["commute-jeongja"]).toEqual({
+      up: [
+        { label: "정자역 3번 출구", action: "board", timing: "scheduled", stopId: "jeongja-exit3" },
+        { label: "자과캠", action: "alight", timing: "estimated", detail: "N센터 인근 → 학생회관 인근" },
+      ],
+      down: [
+        { label: "N센터 건너편", action: "board", timing: "scheduled", stopId: "nsc-opposite" },
+        { label: "정자역 2번 출구 앞", action: "alight", timing: "estimated" },
+      ],
+    });
+  });
+
+  it("serves a note only when the sequence stop has one, resolved like text", () => {
+    // Arrange
+    const withNote: ScheduleStopCatalog = {
+      ...catalog,
+      sequences: {
+        "commute-jeongja": {
+          up: [
+            { stopId: "jeongja-exit3", note: { ko: "정자역 탑승", en: "Board · Jeongja" }, action: "board", timing: "scheduled" },
+            CAMPUS,
+          ],
+        },
+      },
+    };
+
+    // Act
+    const up = (lang: SupportedLang) => resolveStopSequences(["commute-jeongja"], lang, withNote).sequences["commute-jeongja"]!.up!;
+
+    // Assert
+    expect(up("ko")[0]!.note).toBe("정자역 탑승");
+    expect(up("zh")[0]!.note).toBe("Board · Jeongja");
+    expect(up("ko")[1]).not.toHaveProperty("note");
+  });
+
+  it("resolves text zh → en → ko", () => {
+    // Arrange
+    const { stops, sequences } = resolveStopSequences(["commute-jeongja"], "zh", catalog);
+
+    // Act & Assert
+    expect(stops[0]!.name).toBe("Jeongja Stn. Exit 3");
+    expect(stops[0]!.detail).toBe("파리바게뜨 앞");
+    expect(stops[1]!.name).toBe("N中心对面");
+    expect(sequences["commute-jeongja"]!.up!.map((st) => st.label)).toEqual(["Jeongja Stn. Exit 3", "NSC"]);
+  });
+
+  it("serves the photo variant for the language, else the original", () => {
+    // Act
+    const photo = (lang: SupportedLang) => resolveStopSequences(["commute-jeongja"], lang, catalog).stops[0]!.photoUrl;
+
+    // Assert
+    expect(photo("zh")).toBe(`${MEDIA}/jeongja-exit3/zh-22222222.jpg`);
+    expect(photo("ko")).toBe(`${MEDIA}/jeongja-exit3/ko-11111111.jpg`);
+    expect(photo("en")).toBe(`${MEDIA}/jeongja-exit3/original-00000000.jpg`);
+  });
+
+  it("builds the street view link", () => {
+    // Act
+    const stop = resolveStopSequences(["commute-jeongja"], "ko", catalog).stops[0]!;
+
+    // Assert
+    expect(stop.streetViewUrl).toBe(VERIFIED_LINK);
+  });
+
+  it.each([
+    ["ko", "3번 출구"],
+    ["en", "Exit 3"],
+    ["zh", "3号出口"],
+  ] as const)("serves the guide as a map, the exit labeled in %s", (lang, label) => {
+    // Act
+    const stop = resolveStopSequences(["commute-jeongja"], lang, catalog).stops[0]!;
+
+    // Assert
+    expect(stop.map).toEqual({
+      markers: [{ id: "exit3", kind: "subwayExit", label, number: 3, coords: { lat: 37.365922, lng: 127.107774 } }],
+      paths: [
+        {
+          kind: "walk",
+          from: "exit3",
+          to: "stop",
+          points: [
+            { lat: 37.365922, lng: 127.107774 },
+            { lat: 37.365499, lng: 127.107906 },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("Pin-only stop: an empty guide serves empty markers and paths, with coords", () => {
+    // Act
+    const stop = resolveStopSequences(["commute-gwanggyo"], "ko", catalog).stops.find((s) => s.id === "nsc-welfare")!;
+
+    // Assert
+    expect(stop).toEqual({
+      id: "nsc-welfare",
+      name: "복지회관 앞",
+      coords: { lat: 37.293999, lng: 126.973183 },
+      map: { markers: [], paths: [] },
+    });
+  });
+
+  it("emits no key for a field the catalog does not set: no guide, no map", () => {
+    // Arrange
+    const { stops } = resolveStopSequences(["commute-jamsil"], "ko", catalog);
+
+    // Act & Assert
+    expect(stops[0]).toEqual({ id: "nsc-opposite", name: "N센터 건너편" });
+  });
+});

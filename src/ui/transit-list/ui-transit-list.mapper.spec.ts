@@ -2,7 +2,7 @@
  * A bus group becomes its card on the transit tab: the group's label and card
  * fields, a blank subtitle sent as null, and the screen it opens by its type.
  */
-import type { BusGroup } from "../../bus/bus-config/bus-config.types";
+import type { BusGroup } from "../../bus/config/bus-config.wire";
 import { toBusGroupCard } from "./ui-transit-list.mapper";
 import { transitList } from "./ui-transit-list.wire";
 
