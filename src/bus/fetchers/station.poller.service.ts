@@ -3,7 +3,7 @@ import axios from "axios";
 import config from "../../infra/config";
 import { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { BusCacheService } from "../cache/bus-cache.service";
-import { UpstreamError } from "./upstream-error";
+import { UpstreamError } from "../../infra/upstream.error";
 
 // 혜화역 API 응답에서 우리가 읽는 부분만. itemList[0].arrmsg1만 사용.
 interface HyehwaStationItem {

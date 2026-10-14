@@ -6,7 +6,7 @@ import config from "../../infra/config";
 import type { HsscBusItem } from "../types";
 import { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { BusCacheService } from "../cache/bus-cache.service";
-import { UpstreamError } from "./upstream-error";
+import { UpstreamError } from "../../infra/upstream.error";
 
 export interface NormalizedHsscItem extends HsscBusItem {
   sequence: string;

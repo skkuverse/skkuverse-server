@@ -9,7 +9,7 @@ import type {
 } from "../types";
 import { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { BusCacheService } from "../cache/bus-cache.service";
-import { UpstreamError } from "./upstream-error";
+import { UpstreamError } from "../../infra/upstream.error";
 import { JONGRO_ROUTES } from "../registry/jongro-registry.provider";
 import type { JongroRoute, JongroStationMapping } from "../bus.types";
 
