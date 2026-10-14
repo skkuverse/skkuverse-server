@@ -10,35 +10,33 @@
  *
  *   - `jest.mock` (or `jest.doMock`) of a seam that leaves the process: the
  *     Mongo client (`src/infra/db`), the collections over it
- *     (`src/infra/mongo`) and `axios`. The seams' own specs
- *     (`src/infra/db.spec.ts`, `src/infra/mongo.spec.ts`) may mock what they
- *     wrap;
+ *     (`src/infra/mongo`), the driver itself (`mongodb`), the FCM call
+ *     (`src/infra/fcm`) and `axios`. The seams' own specs
+ *     (`src/infra/db.spec.ts`, `src/infra/mongo.spec.ts`,
+ *     `src/infra/fcm.spec.ts`) may mock what they wrap;
  *   - `jest.spyOn(<X>Repository.prototype, …)` or
- *     `jest.spyOn(<X>Client.prototype, …)`: a spy on the real class instead of
- *     its fake.
+ *     `jest.spyOn(<X>Client.prototype, …)`, a cast around it included: a spy
+ *     on the real class instead of its fake;
+ *   - `jest.spyOn(axios, …)` on the axios import;
+ *   - `new <X>Repository(…)` or `new <X>Client(…)`: the real class, spied on
+ *     or not, where its fake (`Fake<X>…`) belongs.
  *
  * Mocking the logger, or a module that is not a seam, is not checked here.
  * Modules not yet migrated keep their module mocks until their rework, so
  * there is no allowlist; a test that has no fake to use instead is exempt with
  * its reason in `exemptions/spec-mocks.json`.
  */
-import path from "path";
 import ts from "typescript";
+import { importsOf, parseSource, resolveSpecifier, skipOuter } from "../helpers/architecture/ast";
 import { expectExempted } from "../helpers/architecture/exemptions";
 import { inScope, migratedScopes } from "../helpers/architecture/migrated";
 import { filesUnder, readSource } from "../helpers/architecture/tree";
 
-const SEAMS = new Set(["src/infra/db", "src/infra/mongo", "axios"]);
-const SEAM_OWNERS = new Set(["src/infra/db.spec.ts", "src/infra/mongo.spec.ts"]);
+const SEAMS = new Set(["src/infra/db", "src/infra/mongo", "src/infra/fcm", "axios", "mongodb"]);
+const SEAM_OWNERS = new Set(["src/infra/db.spec.ts", "src/infra/mongo.spec.ts", "src/infra/fcm.spec.ts"]);
 const BOUNDARY_SPEC = /\.(?:repository|client)\.spec\.ts$/;
-const DOUBLED_CLASS = /^\w+(?:Repository|Client)$/;
+const DOUBLED_CLASS = /^(?!Fake)\w+(?:Repository|Client)$/;
 const MOCK_CALLS = new Set(["mock", "doMock"]);
-
-/** A module specifier as a repo path (`../../infra/mongo` → `src/infra/mongo`), or a package name as written. */
-export function resolveSpecifier(file: string, specifier: string): string {
-  if (!specifier.startsWith(".")) return specifier;
-  return path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier)).replace(/\.ts$/, "");
-}
 
 const isJestCall = (call: ts.CallExpression, names: ReadonlySet<string>): boolean =>
   ts.isPropertyAccessExpression(call.expression) &&
@@ -46,25 +44,38 @@ const isJestCall = (call: ts.CallExpression, names: ReadonlySet<string>): boolea
   call.expression.expression.text === "jest" &&
   names.has(call.expression.name.text);
 
-/** `<file>: jest.mock(<seam>)` and `<file>: jest.spyOn(<Class>.prototype)` for each double a non-boundary spec holds. */
+/** The class a `new` builds, by its name: `new MapRepository()` or `new db.MapRepository()`. */
+const constructedName = (node: ts.NewExpression): string | undefined => {
+  const callee = skipOuter(node.expression);
+  if (ts.isIdentifier(callee)) return callee.text;
+  return ts.isPropertyAccessExpression(callee) ? callee.name.text : undefined;
+};
+
+/**
+ * `<file>: jest.mock(<seam>)`, `<file>: jest.spyOn(<Class>.prototype)`, `<file>: jest.spyOn(axios)` and
+ * `<file>: new <Class>` for each double, or real repository or client, a non-boundary spec holds.
+ */
 export function specMockViolations(file: string, source: string): string[] {
   if (BOUNDARY_SPEC.test(file) || SEAM_OWNERS.has(file)) return [];
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const sf = parseSource(file, source);
+  const axiosNames = new Set(importsOf(sf).filter((i) => i.target === "axios" && (i.imported === "default" || i.imported === "*")).map((i) => i.local));
   const out: string[] = [];
   const visit = (node: ts.Node): void => {
+    if (ts.isNewExpression(node)) {
+      const name = constructedName(node);
+      if (name !== undefined && DOUBLED_CLASS.test(name)) out.push(`${file}: new ${name}`);
+    }
     if (ts.isCallExpression(node)) {
       const [first] = node.arguments;
       if (isJestCall(node, MOCK_CALLS) && first && ts.isStringLiteralLike(first) && SEAMS.has(resolveSpecifier(file, first.text))) {
         out.push(`${file}: jest.mock(${resolveSpecifier(file, first.text)})`);
       }
-      const isPrototypeSpy =
-        isJestCall(node, new Set(["spyOn"])) &&
-        first !== undefined &&
-        ts.isPropertyAccessExpression(first) &&
-        first.name.text === "prototype" &&
-        ts.isIdentifier(first.expression) &&
-        DOUBLED_CLASS.test(first.expression.text);
-      if (isPrototypeSpy) out.push(`${file}: jest.spyOn(${first.expression.getText(sf)}.prototype)`);
+      const spied = first === undefined ? undefined : skipOuter(first);
+      if (isJestCall(node, new Set(["spyOn"])) && spied !== undefined) {
+        const target = ts.isPropertyAccessExpression(spied) && spied.name.text === "prototype" ? skipOuter(spied.expression) : undefined;
+        if (target !== undefined && ts.isIdentifier(target) && DOUBLED_CLASS.test(target.text)) out.push(`${file}: jest.spyOn(${target.text}.prototype)`);
+        if (ts.isIdentifier(spied) && axiosNames.has(spied.text)) out.push(`${file}: jest.spyOn(axios)`);
+      }
     }
     ts.forEachChild(node, visit);
   };
@@ -85,6 +96,11 @@ describe("spec mock rule applies as specified", () => {
     ["axios", "src/x/x.mapper.spec.ts", 'jest.mock("axios", () => ({ get: jest.fn() }));', ["jest.mock(axios)"]],
     ["a spy on a repository's prototype", "src/x/x.service.spec.ts", 'jest.spyOn(XRepository.prototype, "findOne");', ["jest.spyOn(XRepository.prototype)"]],
     ["a spy on a client's prototype", "__tests__/nest/map/map.routes.test.ts", 'jest.spyOn(XClient.prototype, "fetchList");', ["jest.spyOn(XClient.prototype)"]],
+    ["the driver", "src/x/x.service.spec.ts", 'jest.mock("mongodb");', ["jest.mock(mongodb)"]],
+    ["the FCM call", "src/x/y/x-y.service.spec.ts", 'jest.mock("../../infra/fcm");', ["jest.mock(src/infra/fcm)"]],
+    ["a spy on axios", "src/x/x.service.spec.ts", 'import axios from "axios";\njest.spyOn(axios, "get");', ["jest.spyOn(axios)"]],
+    ["a spy on a cast prototype", "src/x/x.service.spec.ts", 'jest.spyOn(XRepository.prototype as any, "findOne");', ["jest.spyOn(XRepository.prototype)"]],
+    ["a real repository instance", "src/x/x.service.spec.ts", 'const repo = new MapRepository();\njest.spyOn(repo, "listPlaces");', ["new MapRepository"]],
   ])("refuses %s outside a boundary spec", (_case, file, source, problems) => {
     // Act & Assert
     expect(specMockViolations(file, source)).toEqual(problems.map((p) => `${file}: ${p}`));
@@ -98,6 +114,8 @@ describe("spec mock rule applies as specified", () => {
     ["a module that is not a seam", "src/x/x.service.spec.ts", 'jest.mock("./x.config");'],
     ["a spy on a fake instance or another prototype", "src/x/x.service.spec.ts", 'jest.spyOn(fake, "findOne");\njest.spyOn(XService.prototype, "run");'],
     ["a path that only ends like a seam", "src/x/x.service.spec.ts", 'jest.mock("./mongo");'],
+    ["a fake repository", "src/x/x.service.spec.ts", "const repo = new FakeMapRepository();"],
+    ["a real repository in its own spec", "src/x/x.repository.spec.ts", "const repo = new XRepository(clock);"],
   ])("passes %s", (_case, file, source) => {
     // Act & Assert
     expect(specMockViolations(file, source)).toEqual([]);
