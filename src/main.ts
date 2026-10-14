@@ -12,14 +12,6 @@ import { AppModule } from "./app.module";
 import { bootstrapHttpApp } from "./http/http-app.bootstrap";
 import { BusCacheService } from "./bus/cache/bus-cache.service";
 
-/**
- * NestJS entrypoint:
- *  - the HTTP pipeline (http/http-app.bootstrap.ts): trust proxy,
- *    helmet, request logging, JSON body, LangMiddleware, no-store, CORS,
- *    the Nest logger, the global ResponseInterceptor + HttpExceptionFilter
- *  - ROLE branch (poller: init only, no listen; api/combined: listen)
- *  - graceful shutdown (enableShutdownHooks + 5s force-exit + closeClient)
- */
 async function bootstrap(): Promise<void> {
   const app = await bootstrapHttpApp((adapter, options) =>
     NestFactory.create<NestExpressApplication>(AppModule, adapter, options),
