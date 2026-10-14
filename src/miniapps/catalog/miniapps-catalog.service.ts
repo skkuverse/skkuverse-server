@@ -16,10 +16,6 @@ export class MiniappsCatalogService {
     return { version: this.miniApps.version, miniApps: [...this.miniApps.list] };
   }
 
-  isRegistered(id: string): boolean {
-    return this.miniApps.getDetail(id) !== undefined;
-  }
-
   async detail(id: string): Promise<MiniAppDetail | null> {
     const detail = this.miniApps.getDetail(id);
     if (!detail) return null;

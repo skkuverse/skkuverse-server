@@ -21,8 +21,8 @@ export interface NotificationContent {
 
 export type DraftCheck = { problems: string[] } | { content: NotificationContent };
 
-/** WHY: `pending` is both fields null: the call is running, or its result was never saved; treat it as unknown. */
-export type DeliveryStatus = "pending" | "delivered" | DeliveryError["outcome"];
+/** WHY: what a send's own call came back as; a stored row with both fields null is still running, or never saved. */
+export type DeliveryStatus = "delivered" | DeliveryError["outcome"];
 
 export interface SendOutcome {
   notificationId: string;

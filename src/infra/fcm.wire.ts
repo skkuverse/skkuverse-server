@@ -17,7 +17,7 @@ export const noticePushPayload = z.object({
 });
 
 /** (An operations detail is left out of the public history.) */
-export const miniappPushPayload = z.object({
+export const miniAppPushPayload = z.object({
   type: z.literal("miniapp"),
   miniAppId: z.string(),
   /** WHY: the feed entry's id, written before the send, so the feed and the delivery can be matched. */
@@ -31,10 +31,10 @@ export const miniappPushPayload = z.object({
 });
 
 /** WHY: the Cloud Function relays the data fields to the device unchanged, so the server owns them. */
-export const pushPayload = z.discriminatedUnion("type", [noticePushPayload, miniappPushPayload]);
+export const pushPayload = z.discriminatedUnion("type", [noticePushPayload, miniAppPushPayload]);
 
 export type NoticePushPayload = z.input<typeof noticePushPayload>;
 
-export type MiniappPushPayload = z.input<typeof miniappPushPayload>;
+export type MiniAppPushPayload = z.input<typeof miniAppPushPayload>;
 
 export type PushPayload = z.input<typeof pushPayload>;

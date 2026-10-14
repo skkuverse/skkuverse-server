@@ -14,23 +14,27 @@ export class MiniappsService {
   }
 
   get list(): ReadonlyArray<Readonly<MiniAppIndexEntry>> {
-    return registry.list;
+    return registry.indexEntries;
   }
 
   get map(): ReadonlyMap<string, Readonly<MiniAppDetailRaw>> {
-    return registry.map;
+    return registry.detailsById;
   }
 
   get firstPartyOrigins(): Readonly<Record<string, string>> {
     return registry.firstPartyOrigins;
   }
 
+  isRegistered(id: string): boolean {
+    return registry.detailsById.has(id);
+  }
+
   getDetail(id: string): Readonly<MiniAppDetailRaw> | undefined {
-    return registry.map.get(id);
+    return registry.detailsById.get(id);
   }
 
   isKnownMiniAppTarget(value: unknown): boolean {
-    return isKnownMiniAppTarget(value, registry.map);
+    return isKnownMiniAppTarget(value, registry.detailsById);
   }
 
   resolveLogo(logo: MiniAppLogoRaw): MiniAppLogo {

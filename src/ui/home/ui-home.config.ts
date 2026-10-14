@@ -42,7 +42,7 @@ const isBrokenIcon = (tile: LinkTileRaw, registry: MiniAppRegistry): boolean =>
 
 function registryIssues(layout: HomeLayoutRaw, registry: MiniAppRegistry): Array<{ path: IssuePath; message: string }> {
   const sections = layout.sections.map((value, i): Located<SectionRaw> => ({ at: ["sections", i], value }));
-  const unregistered = sections.flatMap(miniAppIdsOf).filter((id) => !registry.map.has(id.value));
+  const unregistered = sections.flatMap(miniAppIdsOf).filter((id) => !registry.isRegistered(id.value));
   const brokenLinks = sections.flatMap(linksOf).filter((link) => isBrokenLinkAction(link.value, registry));
   const brokenIcons = sections.flatMap(tilesOf).filter(isLinkTile).filter((tile) => isBrokenIcon(tile.value, registry));
   return [

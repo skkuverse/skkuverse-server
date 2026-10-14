@@ -7,9 +7,12 @@
  * must not start rather than a request that must not succeed. The mobile client
  * parses the same data tolerantly (a bad entry there just drops a tile), which
  * is exactly why the strict half has to live on this side.
+ *
+ * toLoadedRegistry — what the parsed files become: the index served in
+ * `order`, and each first-party origin owned by exactly one mini app.
  */
 import type { z } from "zod";
-import { loadRegistry } from "./miniapps.config";
+import { loadRegistry, toLoadedRegistry } from "./miniapps.config";
 import type { registryFile } from "./miniapps.schema";
 
 type MiniAppIndexRaw = z.input<typeof registryFile>["index"];
@@ -396,5 +399,77 @@ describe("loadRegistry", () => {
         },
       }),
     ).toThrow(/bad relatedLinks url/);
+  });
+
+  it("rejects an unknown relatedLinks key, naming it", () => {
+    // Act & Assert
+    expect(() =>
+      loadRegistry(index(), { a: { ...details().a, relatedLinks: [{ lable: "typo", url: "https://x.test" }] as never } }),
+    ).toThrow(/unknown relatedLinks key "lable" in "a"/);
+  });
+
+  it("rejects an unknown noticeBanner key, naming it", () => {
+    // Arrange
+    const noticeBanner = { title: "t", subtitle: "s", sutitle: "typo" };
+
+    // Act & Assert
+    expect(() => loadRegistry(index(), { a: { ...details().a, noticeBanner } })).toThrow(
+      /unknown noticeBanner key "sutitle" in "a"/,
+    );
+  });
+});
+
+describe("toLoadedRegistry", () => {
+  const entry = (id: string, order: number): MiniAppIndexRaw["miniApps"][number] => ({
+    id,
+    name: id.toUpperCase(),
+    order,
+    homeLogo: { kind: "emoji", emoji: "😋" },
+  });
+  const detail = (id: string, startUrl: string): MiniAppDetail => ({ version: 1, id, startUrl, verified: true, relatedLinks: [] });
+  const parsed = (startUrls: Readonly<Record<string, string>>, orders: Readonly<Record<string, number>>) =>
+    loadRegistry(
+      { version: 1, miniApps: Object.entries(orders).map(([id, order]) => entry(id, order)) },
+      Object.fromEntries(Object.entries(startUrls).map(([id, url]) => [id, detail(id, url)])),
+    );
+
+  it("serves the index in ascending order, not file order", () => {
+    // Arrange
+    const file = parsed({ a: "https://a.test/", b: "https://b.test/", c: "https://c.test/" }, { a: 3, b: 1, c: 2 });
+
+    // Act
+    const loaded = toLoadedRegistry(file, []);
+
+    // Assert
+    expect(loaded.indexEntries.map((indexEntry) => indexEntry.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("maps each first-party origin to the one mini app whose startUrl is on it", () => {
+    // Arrange
+    const file = parsed({ a: "https://a.test/x", b: "https://b.test/" }, { a: 1, b: 2 });
+
+    // Act
+    const loaded = toLoadedRegistry(file, ["https://a.test"]);
+
+    // Assert
+    expect(loaded.firstPartyOrigins).toEqual({ "https://a.test": "a" });
+  });
+
+  it("throws when two mini apps start on one first-party origin", () => {
+    // Arrange
+    const file = parsed({ a: "https://a.test/x", b: "https://a.test/y" }, { a: 1, b: 2 });
+
+    // Act & Assert
+    expect(() => toLoadedRegistry(file, ["https://a.test"])).toThrow(
+      /first-party origin https:\/\/a\.test must be the startUrl origin of exactly one mini app, found 2/,
+    );
+  });
+
+  it("throws when no mini app starts on a first-party origin", () => {
+    // Arrange
+    const file = parsed({ a: "https://a.test/" }, { a: 1 });
+
+    // Act & Assert
+    expect(() => toLoadedRegistry(file, ["https://b.test"])).toThrow(/found 0/);
   });
 });

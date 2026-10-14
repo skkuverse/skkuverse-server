@@ -37,7 +37,8 @@ const withBothLogos = indexEntryRaw.transform((entry, ctx) => {
 const detailRaw = miniAppDetail
   .extend({
     startUrl: z.string().regex(HTTP_URL_RE).refine(isServableStartUrl),
-    relatedLinks: z.array(z.object({ label: z.string().optional(), url: z.string().regex(HTTP_URL_RE) })),
+    relatedLinks: z.array(z.strictObject({ label: z.string().optional(), url: z.string().regex(HTTP_URL_RE) })),
+    noticeBanner: miniAppDetail.shape.noticeBanner.unwrap().strict().optional(),
     shell: miniAppDetail.shape.shell
       .extend({ background: z.string().regex(SHELL_BACKGROUND_RE) })
       .partial()
