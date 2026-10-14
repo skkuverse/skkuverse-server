@@ -27,7 +27,7 @@ App config owns no data. It assembles one body from values the server reads at b
 | Term | Means | Derived from | Not |
 | --- | --- | --- | --- |
 | client config (`AppClientConfig`) | The whole `GET /app/config` body | `AppConfigService.getConfig` | `AppSettings` |
-| platform gate (`PlatformGate`) | One platform's `minVersion` and `updateUrl`: below `minVersion`, the app blocks on its force-update screen | `config.app` | `forceUpdate` |
+| platform gate (`platformGate`) | One platform's `minVersion` and `updateUrl`: below `minVersion`, the app blocks on its force-update screen | `config.app` | `forceUpdate` |
 | bridge origins | The origins whose pages may post messages to the app's native bridge | `BRIDGE_ORIGINS` | — |
 | web origin | The origin of the first-party web app | `WEB_ORIGIN` | — |
 | mini-app origins | Each first-party mini app's id with its origin, so the app opens such a URL in that mini app's shell | `firstPartyOrigins` | — |

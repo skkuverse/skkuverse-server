@@ -6,27 +6,46 @@
  * In a migrated scope, each public method of a class in a `.service.ts`,
  * `.repository.ts` or `.client.ts` (Nest lifecycle hooks aside) is named, as
  * `<expression>.<method>`, in a non-spec `src/` file other than its own. The
- * match is by name, not by type, so a method sharing a name with another
- * class's counts as called.
+ * type checker resolves each access, so a method sharing a name with another
+ * class's (`this.cache.get()` for `XRepository.get`) is not a call of it.
  *
  * A method that only a spec calls is made private, and its spec drives the
  * behavior through the public one; a reasoned exemption
  * (`exemptions/production-callers.json`) is for a method that is public for
  * something other than a spec.
  */
+import path from "path";
 import ts from "typescript";
+import { NEST_LIFECYCLE, isNonPublic } from "../helpers/architecture/ast";
 import { expectExempted } from "../helpers/architecture/exemptions";
 import { inScope, migratedScopes } from "../helpers/architecture/migrated";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
 const CLASS_ROLE = /\.(?:service|repository|client)\.ts$/;
-const LIFECYCLE = new Set(["onModuleInit", "onModuleDestroy", "onApplicationBootstrap", "beforeApplicationShutdown", "onApplicationShutdown"]);
 
-const isNonPublic = (m: ts.ClassElement): boolean =>
-  (m.name !== undefined && ts.isPrivateIdentifier(m.name)) ||
-  (ts.canHaveModifiers(m) ? ts.getModifiers(m) ?? [] : []).some(
-    (mod) => mod.kind === ts.SyntaxKind.PrivateKeyword || mod.kind === ts.SyntaxKind.ProtectedKeyword,
-  );
+/** A type-checked program over in-memory sources: relative imports resolve among them, packages stay unresolved. */
+function programOf(sources: ReadonlyMap<string, string>): ts.Program {
+  const options: ts.CompilerOptions = { noLib: true, types: [], experimentalDecorators: true, module: ts.ModuleKind.CommonJS, moduleResolution: ts.ModuleResolutionKind.Node10 };
+  const files = new Map([...sources].map(([file, source]) => [path.posix.join("/", file), source]));
+  const host: ts.CompilerHost = {
+    getSourceFile: (name) => {
+      const source = files.get(name);
+      return source === undefined ? undefined : ts.createSourceFile(name, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    },
+    getDefaultLibFileName: () => "/lib.d.ts",
+    writeFile: () => undefined,
+    getCurrentDirectory: () => "/",
+    getCanonicalFileName: (name) => name,
+    useCaseSensitiveFileNames: () => true,
+    getNewLine: () => "\n",
+    fileExists: (name) => files.has(name),
+    readFile: (name) => files.get(name),
+    directoryExists: () => true,
+  };
+  return ts.createProgram([...files.keys()], options, host);
+}
+
+const repoPath = (sf: ts.SourceFile): string => sf.fileName.replace(/^\//, "");
 
 /** `Class.method` for each public method of the classes a source declares. */
 export function publicMethods(file: string, source: string): string[] {
@@ -34,36 +53,44 @@ export function publicMethods(file: string, source: string): string[] {
   return sf.statements.filter(ts.isClassDeclaration).flatMap((cls) =>
     cls.members
       .filter((m): m is ts.MethodDeclaration => ts.isMethodDeclaration(m) && ts.isIdentifier(m.name))
-      .filter((m) => !isNonPublic(m) && !LIFECYCLE.has(m.name.getText(sf)))
+      .filter((m) => !isNonPublic(m) && !NEST_LIFECYCLE.has(m.name.getText(sf)))
       .map((m) => `${cls.name?.text ?? "(anonymous)"}.${m.name.getText(sf)}`),
   );
 }
 
-/** The property names a source reaches as `<expression>.<name>`. */
-export function accessedNames(file: string, source: string): Set<string> {
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
-  const names = new Set<string>();
-  const visit = (n: ts.Node): void => {
-    if (ts.isPropertyAccessExpression(n)) names.add(n.name.text);
-    ts.forEachChild(n, visit);
-  };
-  visit(sf);
-  return names;
-}
-
-/** `<file>: Class.method` for each public method no other non-spec source names. */
+/**
+ * `<file>: Class.method` for each public method no other non-spec source reaches. A reach is a property access the
+ * type checker resolves to that method (`this.service.list()`, `this.service.load` by reference), so another class's
+ * method of the same name does not count.
+ */
 export function uncalledMethods(sources: ReadonlyMap<string, string>, scopes: readonly string[]): string[] {
-  const accessed = new Map([...sources].map(([file, source]) => [file, accessedNames(file, source)]));
-  return [...sources]
-    .filter(([file]) => CLASS_ROLE.test(file) && scopes.some((scope) => inScope(file, scope)))
-    .flatMap(([file, source]) =>
-      publicMethods(file, source)
-        .filter((qualified) => {
-          const method = qualified.slice(qualified.indexOf(".") + 1);
-          return ![...accessed].some(([other, names]) => other !== file && names.has(method));
-        })
-        .map((qualified) => `${file}: ${qualified}`),
-    );
+  const program = programOf(sources);
+  const checker = program.getTypeChecker();
+  const reachedFrom = new Map<ts.Declaration, Set<string>>();
+  for (const sf of program.getSourceFiles()) {
+    const visit = (n: ts.Node): void => {
+      if (ts.isPropertyAccessExpression(n)) {
+        for (const d of checker.getSymbolAtLocation(n.name)?.declarations ?? []) {
+          reachedFrom.set(d, (reachedFrom.get(d) ?? new Set()).add(repoPath(sf)));
+        }
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(sf);
+  }
+  return program
+    .getSourceFiles()
+    .filter((sf) => CLASS_ROLE.test(sf.fileName) && scopes.some((scope) => inScope(repoPath(sf), scope)))
+    .flatMap((sf) => {
+      const file = repoPath(sf);
+      return sf.statements.filter(ts.isClassDeclaration).flatMap((cls) =>
+        cls.members
+          .filter((m): m is ts.MethodDeclaration => ts.isMethodDeclaration(m) && ts.isIdentifier(m.name))
+          .filter((m) => !isNonPublic(m) && !NEST_LIFECYCLE.has(m.name.getText(sf)))
+          .filter((m) => ![...(reachedFrom.get(m) ?? [])].some((other) => other !== file))
+          .map((m) => `${file}: ${cls.name?.text ?? "(anonymous)"}.${m.name.getText(sf)}`),
+      );
+    });
 }
 
 describe("production caller rule applies as specified", () => {
@@ -88,7 +115,7 @@ export class XService {
     // Arrange
     const sources = new Map([
       ["src/x/x.service.ts", SERVICE],
-      ["src/x/x.controller.ts", "export class XController { get() { return this.service.list(); } }"],
+      ["src/x/x.controller.ts", 'import { XService } from "./x.service";\nexport class XController { constructor(private readonly service: XService) {} get() { return this.service.list(); } }'],
       ["src/z/z.service.ts", "export class ZService { orphan(): void {} }"],
       ["src/x/x.mapper.ts", "export class Helper { orphan(): void {} }"],
     ]);
@@ -104,11 +131,31 @@ export class XService {
     // Arrange
     const sources = new Map([
       ["src/x/x.service.ts", SERVICE],
-      ["src/x/x.controller.ts", "export class C { a = () => this.service.list(); b = this.service.load; }"],
+      ["src/x/x.controller.ts", 'import { XService } from "./x.service";\nexport class C { constructor(private readonly service: XService) {} a = () => this.service.list(); b = this.service.load; }'],
     ]);
 
     // Act & Assert
     expect(uncalledMethods(sources, ["src/x/"])).toEqual([]);
+  });
+});
+
+describe("production caller rule resolves the receiver", () => {
+  it("does not count another class's method of the same name", () => {
+    // Arrange
+    const sources = new Map([
+      ["src/x/x.repository.ts", "export class XRepository { get(): number { return 1; } clear(): void {} }"],
+      ["src/y/y.cache.ts", "export class Cache { get(): number { return 2; } }"],
+      [
+        "src/y/y.service.ts",
+        'import { Cache } from "./y.cache";\nimport { XRepository } from "../x/x.repository";\nexport class YService {\n  constructor(private readonly cache: Cache, private readonly repository: XRepository) {}\n  run(): number { this.repository.clear(); return this.cache.get(); }\n}',
+      ],
+    ]);
+
+    // Act
+    const violations = uncalledMethods(sources, ["src/x/"]);
+
+    // Assert
+    expect(violations).toEqual(["src/x/x.repository.ts: XRepository.get"]);
   });
 });
 

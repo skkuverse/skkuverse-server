@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { isMediaUrl } from "../infra/media-url";
-import { toWebviewUrl } from "../infra/webview-url";
 import { linkActionType } from "../shared/link-action.wire";
 import { MAX_ASPECT_RATIO, MAX_AUTO_ROTATE_SEC, MIN_ASPECT_RATIO, MIN_AUTO_ROTATE_SEC } from "./ui.constants";
 
@@ -17,8 +16,6 @@ const instant = z
 export const localizedText = z.strictObject({ ko: nonBlankText, en: nonBlankText.optional(), zh: nonBlankText.optional() });
 export const slug = z.string().regex(SLUG_RE, "must be a slug");
 export const mediaUrl = z.string().refine(isMediaUrl, "must be an object on the media bucket");
-// WHY: the web view origins live in infra/, which ui.rules.ts may not import, so its link rule parses through this.
-export const webviewUrl = z.string().refine((value) => toWebviewUrl(value) !== null, "is not a web view URL");
 
 export const bannerImageFile = z
   .strictObject({
@@ -32,11 +29,15 @@ export const bannerImageFile = z
     endAt: instant.optional(),
   })
   .refine((image) => (image.actionType === undefined) === (image.actionValue === undefined), {
+    path: [],
     message: "needs both actionType and actionValue, or neither",
   })
   .refine((image) => !image.startAt || !image.endAt || Date.parse(image.startAt) < Date.parse(image.endAt), {
+    path: [],
     message: "startAt must be before endAt",
   });
+
+const isAutoRotateSec = (sec: number): boolean => sec === 0 || (sec >= MIN_AUTO_ROTATE_SEC && sec <= MAX_AUTO_ROTATE_SEC);
 
 export const carouselFields = {
   type: z.literal("banner_carousel"),
@@ -44,7 +45,7 @@ export const carouselFields = {
   aspectRatio: z.number().min(MIN_ASPECT_RATIO).max(MAX_ASPECT_RATIO),
   autoRotateSec: z
     .int()
-    .refine((sec) => sec === 0 || (sec >= MIN_AUTO_ROTATE_SEC && sec <= MAX_AUTO_ROTATE_SEC), `must be 0 (off) or a whole number from ${MIN_AUTO_ROTATE_SEC} to ${MAX_AUTO_ROTATE_SEC}`),
+    .refine(isAutoRotateSec, `must be 0 (off) or a whole number from ${MIN_AUTO_ROTATE_SEC} to ${MAX_AUTO_ROTATE_SEC}`),
 };
 
 export type BannerImageRaw = z.output<typeof bannerImageFile>;

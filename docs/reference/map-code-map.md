@@ -17,8 +17,8 @@ Read them in this order: each depends only on the ones before it.
 
 | Folder | Holds |
 | --- | --- |
-| `src/map/` (root) | `MapModule` (the `/map` limiter), `MapRepository` (places, activations, their indexes), the stored documents, `BASE_LAYERS` and the other constants, the overlay wire both overlay routes share, `renderablePlace` and the URL schemas, `isRenderable`, `presentationFor`, the chip validator, `toI18nText` |
-| `src/map/layer-set/` | The festival structure tier: the layer-set JSON files, their loader (`map-layer-set.config.ts`) and schema, the cross-reference rules, the festival layer and chip specs, and `MapLayerSetService`, which answers which layer set is live |
+| `src/map/` (root) | `MapModule` (the `/map` limiter), `MapRepository` (places, activations, their indexes), the stored documents, `BASE_LAYERS` and the other constants, the overlay wire both overlay routes share, the place schemas (`overlayPlaceDoc`, `sheetPlaceDoc`), `presentationFor`, `toI18nText`, `toOverlay`, `toServedWebviewUrl` |
+| `src/map/layer-set/` | The festival structure tier: the layer-set JSON files, their loader (`map-layer-set.config.ts`) and schema, the cross-reference rules, the chip validator, the festival layer and chip specs, and `MapLayerSetService`, which answers which layer set is live |
 | `src/map/config/` | `GET /map/config`: campuses, layers, chips and camera defaults |
 | `src/map/campus/` | `GET /map/overlays/campus`: buildings and campus shapes, the static fallback, and the Cache-Control that refuses to cache it |
 | `src/map/event/` | `GET /map/overlays/event`: a festival's places as overlays |
@@ -43,14 +43,14 @@ The layer-set loader imports the root's and its own rules, mappers, schemas, con
 | --- | --- |
 | `src/map/layer-set/map-layer-set.config.spec.ts` | Every layer-set rejection, by its exact message |
 | `src/map/layer-set/map-layer-set.service.spec.ts` | The live-event answer, its cache and stale window, and the once-per-process warning |
-| `src/map/map.rules.spec.ts`, `src/map/layer-set/map-layer-set.mapper.spec.ts`, `src/map/config/map-config.mapper.spec.ts`, `__tests__/nest/map/map-chips-wire.test.ts` | The chip group rules; the reset chip and the shipped chip row; the chips as served |
+| `src/map/layer-set/map-layer-set.rules.spec.ts`, `src/map/layer-set/map-layer-set.mapper.spec.ts`, `src/map/config/map-config.mapper.spec.ts`, `__tests__/nest/map/map-chips-wire.test.ts` | The chip group rules; the reset chip and the shipped chip row; the chips as served |
 | `src/map/config/map-config.service.spec.ts` | The `/map/config` body with and without a festival |
 | `src/map/event/map-event.service.spec.ts`, `__tests__/nest/map/map-overlay-coordinates.test.ts` | The event projection, the unrenderable-place skip, `[lng, lat]` order |
 | `__tests__/nest/map/map-overlay-interactive.test.ts` | `interactive: false`, `tapChip`, and one layer holding all three kinds |
 | `src/map/event-details/map-event-details.service.spec.ts` | The sheet projection and every drop |
 | `src/map/campus/map-campus.service.spec.ts` | Both building layers, the campus shapes, the degraded fallback |
 | `src/map/map.repository.spec.ts` | The activation query, its sort, and the three indexes on the right collections |
-| `src/map/map.schema.spec.ts` | `renderablePlace` agreeing with the places importer |
+| `src/map/map.schema.spec.ts`, `src/map/event/map-event.mapper.spec.ts` | The place schemas agreeing with the places importer; the overlay read refusing exactly the places drawing would throw on |
 | `__tests__/nest/map/map.routes.test.ts` | The four routes through the production pipeline: envelope, Cache-Control, the retired URLs |
 | `__tests__/nest/map/map-places-import.test.ts`, `map-place-detail-import.test.ts`, `campus-shapes-import.test.ts`, `eventmap-db.test.ts` | The importers and the committed sheets |
 | `__tests__/nest/map/map-config-assets.test.ts` | Every declared layer set is also in the build-asset copy list |

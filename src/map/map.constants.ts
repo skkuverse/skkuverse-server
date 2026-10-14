@@ -1,4 +1,4 @@
-import type { LayerSpec, MapLayerStyle } from "./map.types";
+import type { LayerSpec } from "./map.types";
 
 // SEE: docs/reference/map-code-map.md ("Boot time and request time"): an ops change reaches the origin a TTL later.
 export const EVENT_CACHE_TTL_MS = 5_000;
@@ -8,7 +8,6 @@ export const EVENT_STALE_WINDOW_MS = 10 * 60_000;
 
 // WHY: one route per data source; the app keys its overlay cache on the string, so layers sharing it cost one fetch.
 const CAMPUS_OVERLAYS_ENDPOINT = "/map/overlays/campus";
-export const EVENT_OVERLAYS_ENDPOINT = "/map/overlays/event";
 
 export const LOCATION_ACCURACIES = ["exact", "area"] as const;
 
@@ -50,11 +49,6 @@ export const BASE_LAYERS = [
     style: { fillOpacity: 0.12, outlineWidth: 1.5, minZoom: 16 },
   },
 ] as const satisfies readonly LayerSpec[];
-
-export const EVENT_LAYER_STYLE = { width: 22, height: 30, captionTextSize: 9 } as const satisfies MapLayerStyle;
-
-// QUIRK(naver-map): a polygon without fillOpacity is opaque black. No outline: the student council's choice, 2026-09-22.
-export const EVENT_SHAPE_STYLE = { fillOpacity: 0.18, outlineWidth: 0 } as const satisfies MapLayerStyle;
 
 // WHY: a minute: a stable URL cannot be immutable, and an ops correction must be live before anyone walks there.
 export const EVENT_CACHE_CONTROL = "public, max-age=60";

@@ -1,6 +1,5 @@
-import type { z } from "zod";
-import { EVENT_LAYER_STYLE, EVENT_OVERLAYS_ENDPOINT, EVENT_SHAPE_STYLE } from "../map.constants";
 import type { LayerSpec, LayerVisibility } from "../map.types";
+import { EVENT_LAYER_STYLE, EVENT_OVERLAYS_ENDPOINT, EVENT_SHAPE_STYLE } from "./map-layer-set.constants";
 import type { EventFacetDef, LayerSet } from "./map-layer-set.schema";
 import type { MapChipSpec } from "./map-layer-set.types";
 
@@ -60,37 +59,4 @@ export function eventChipSpecs(config: LayerSet): MapChipSpec[] {
     }),
   );
   return [resetChip(config), ...authored];
-}
-
-/** WHY: absolute instants: an option's day is decided with no timezone arithmetic. `null` on a tag option. */
-export function toOptionWindow(from: unknown, until: unknown): { from: Date; until: Date } | null {
-  return typeof from === "string" && typeof until === "string" ? { from: new Date(from), until: new Date(until) } : null;
-}
-
-const TYPE_WORDS: Readonly<Record<string, string>> = {
-  object: "must be an object",
-  record: "must be an object",
-  array: "must be an array",
-  string: "must be a non-empty string",
-  number: "must be a finite number",
-  boolean: "must be a boolean",
-};
-
-// WHY: the words the hand-written validator used, so the loader's messages stay byte for byte what they were.
-export function toConfigWords(issue: z.core.$ZodRawIssue): string | undefined {
-  if (issue.code === "invalid_type") return TYPE_WORDS[issue.expected];
-  if (issue.code === "invalid_format") return "must be a non-empty string";
-  if (issue.code === "invalid_value") return `must be one of [${issue.values.join(", ")}]`;
-  if (issue.code === "invalid_union" && "options" in issue) return `must be one of [${String(issue.options).split(",").join(", ")}]`;
-  return undefined;
-}
-
-function toPathSegment(key: PropertyKey, parentKey: PropertyKey | undefined): string {
-  if (typeof key === "number") return `[${key}]`;
-  return parentKey === "byCategory" ? `["${String(key)}"]` : `.${String(key)}`;
-}
-
-export function toConfigMessage(issue: Pick<z.core.$ZodIssue, "path" | "message">): string {
-  const at = issue.path.map((key, i) => toPathSegment(key, issue.path[i - 1])).join("");
-  return `config${at} ${issue.message}`;
 }

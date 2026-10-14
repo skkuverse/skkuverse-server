@@ -239,7 +239,7 @@ Two of these are not optional in practice, and the reason is the client's own
 defaults: its polygon overlay defaults `color` to **opaque black** and
 `outlineWidth` to **zero**, so a zone shipped without `fillOpacity` and an
 outline is a solid black blob with no border, hiding the booths inside it.
-`EVENT_SHAPE_STYLE` in `map.constants.ts` supplies both for every festival
+`EVENT_SHAPE_STYLE` in `map-layer-set.constants.ts` supplies both for every festival
 layer, and derives the outline colour from the category colour.
 
 Festival layer colours are authored per layer in the layer set JSON, because a

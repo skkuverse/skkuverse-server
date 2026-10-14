@@ -1,26 +1,20 @@
 import { hasAnyText } from "../../infra/i18n";
+import { toWebviewUrl } from "../../infra/webview-url";
 import { isAbsoluteHttpsUrl, isRootRelativePath } from "../../shared/link-target.util";
 import { isRecord } from "../../shared/object.util";
 import type { EventFacetDef, LayerSet } from "../layer-set/map-layer-set.schema";
 import type { OverlayPlaceDoc, PlaceAction } from "../map.document";
-import { webviewUrl } from "../map.schema";
-
-const WHITESPACE_RE = /\s/;
-
-// QUIRK(javascript): `$` without the `m` flag matches before a final newline, so a pasted "https://x\n" passes an anchored pattern.
-const isCleanValue = (value: string): boolean => value.length > 0 && !WHITESPACE_RE.test(value);
 
 /** SEE: docs/reference/event-places.md §5: a URL opener never gets a relative string; `route` is the app's own navigator. */
 export function isValidActionValue(action: PlaceAction, isKnownMiniAppTarget: (value: string) => boolean): boolean {
   const value: unknown = action.actionValue;
   if (typeof value !== "string") return false;
   if (action.actionType === "content") return value.trim() !== "";
-  if (!isCleanValue(value)) return false;
   switch (action.actionType) {
     case "route":
       return isRootRelativePath(value);
     case "webview":
-      return webviewUrl.safeParse(value).success;
+      return toWebviewUrl(value) !== null;
     case "external":
       return isAbsoluteHttpsUrl(value);
     case "miniapp":

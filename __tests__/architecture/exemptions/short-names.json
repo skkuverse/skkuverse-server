@@ -1,3 +1,3 @@
 {
-  "src/infra/i18n.ts: t": "t is the translate function every module imports as t(key, lang), the name the i18n convention gives it; renaming it reaches every unmigrated caller for no gain in reading."
+  "src/infra/i18n.ts: t": "`t` is the translate function every module imports as `t(key, lang)`, the name the i18n convention gives it; renaming it reaches every unmigrated caller for no gain in reading."
 }

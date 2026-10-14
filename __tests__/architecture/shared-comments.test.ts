@@ -4,21 +4,20 @@
  * (`BuildingSyncPoller`), never as a bare word, so "building number" or `map` stays allowed.
  */
 import { CLASS_ROLES } from "../helpers/architecture/names";
+import { SHARED_LAYERS, isSharedLayer } from "../helpers/architecture/ast";
 import { commentBlocks, commentsOf, numberedKeys } from "../helpers/architecture/comments";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { filesUnder, isNonSpecSource, readSource, sourceFiles } from "../helpers/architecture/tree";
-
-export const SHARED_LAYERS = ["config", "http", "infra", "scheduling", "shared"] as const;
 
 const ROLE_SUFFIXES = [...CLASS_ROLES].map((r) => r[0]!.toUpperCase() + r.slice(1));
 
 /** Top-level `src/<name>/` folders that hold `<name>.module.ts`, the shared layers left out. */
 export function featuresOf(files: readonly string[]): string[] {
   const names = files.flatMap((f) => /^src\/([^/]+)\/\1\.module\.ts$/.exec(f)?.[1] ?? []);
-  return names.filter((n) => !(SHARED_LAYERS as readonly string[]).includes(n)).sort();
+  return names.filter((n) => !isSharedLayer(n)).sort();
 }
 
-function isSharedLayer(file: string): boolean {
+function inSharedLayer(file: string): boolean {
   return SHARED_LAYERS.some((layer) => file.startsWith(`src/${layer}/`));
 }
 
@@ -53,7 +52,7 @@ function featureReferences(text: string, features: readonly string[]): string[] 
 
 /** `<file>: <reference>` per feature a shared-layer comment names, `#n` on a repeat. */
 export function sharedCommentViolations(file: string, source: string, features: readonly string[]): string[] {
-  if (!isNonSpecSource(file) || !isSharedLayer(file)) return [];
+  if (!isNonSpecSource(file) || !inSharedLayer(file)) return [];
   const refs = commentBlocks(commentsOf(file, source)).flatMap((b) => featureReferences(b.text.join(" "), features));
   return numberedKeys(file, refs);
 }

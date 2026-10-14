@@ -1,4 +1,5 @@
-import type { getBusGroups } from "./bus-config.data";
+import type { z } from "zod";
+import type { busGroupVisibility, getBusGroups } from "./bus-config.data";
 
 export type BusGroup = ReturnType<typeof getBusGroups>[number];
-export type BusGroupVisibility = BusGroup["visibility"];
+export type BusGroupVisibility = z.output<typeof busGroupVisibility>;

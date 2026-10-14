@@ -24,6 +24,7 @@ const homeCarousel = z
     items: z.array(z.discriminatedUnion("type", [bannerImageFile, z.strictObject({ type: z.literal("default") })])).min(1),
   })
   .refine((carousel) => carousel.items.filter((item) => item.type === "default").length <= 1, {
+    path: [],
     message: "may place the default banner once",
   });
 

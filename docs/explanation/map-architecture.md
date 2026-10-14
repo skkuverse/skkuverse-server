@@ -19,12 +19,11 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | --- | --- | --- | --- |
 | The layer-set files | — | Each festival's layers, chips, list facets and category table, shipped with a deploy | `getLayerSetConfig` |
 | `places` and `activations` (eventmap database) | `mongodb` | The festival's places, and the window that switches a layer set on | `MapRepository` |
-| The places importer (`scripts/lib/map-places-file.js`) | — | Places written to Mongo, checked by the same rules the server reads with | `renderablePlace` |
+| The places importer (`scripts/lib/map-places-file.js`) | — | Places written to Mongo, checked by the same rules the server reads with | `overlayPlaceDoc`, `sheetPlaceDoc` |
 | The building module | `skku` | Buildings and hand-authored campus shapes | `BuildingService`, injected into `MapCampusService` |
 | The mini-app registry | — | Which mini-app targets a sheet button may open | `MiniAppsService.isKnownMiniAppTarget` |
 | GeoJSON | `geojson` | The `[lng, lat]` position order and ring winding, served as stored | `map.wire.ts` |
 | The NAVER map SDK | `naver-map` | Polygon defaults the base and festival styles override | `BASE_LAYERS`, `EVENT_SHAPE_STYLE` |
-| JavaScript strings | `javascript` | `$` matching before a final newline, why action values are checked for whitespace | `isValidActionValue` |
 | skkuverse-app | — | Nothing; it reads the four routes | `GET /map/config` and the overlay routes |
 
 ## Glossary
@@ -99,7 +98,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 
 - Cloudflare caches `/map/overlays/campus` for `CAMPUS_CACHE_CONTROL` and both event routes for `EVENT_CACHE_CONTROL` without varying on `Accept-Language`, so `meta.lang` on an edge hit can be another request's. The overlay bodies carry every language, so only `meta` is affected.
 - Overlay `fields` and the `content` action type parse in the app and draw nothing.
-- The places schema the server reads with (`renderablePlace`) is the renderable subset of what the importer writes, not the importer's whole rule set; a hand edit the importer would refuse can still be served if it renders.
+- The place schemas the server reads with (`overlayPlaceDoc`, `sheetPlaceDoc`) check what makes a place undrawable, not the importer's whole rule set; a hand edit the importer would refuse can still be served if it draws.
 
 ## Related
 

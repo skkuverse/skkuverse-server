@@ -27,7 +27,7 @@ export interface RankedSearchResult<T> {
 }
 
 export interface SpaceGroupItem {
-  spaceCd: SpaceCd;
+  spaceCd: SpaceCd | null;
   name: BilingualText;
   floor: BilingualText;
 }

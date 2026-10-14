@@ -1,11 +1,14 @@
 /**
  * A migrated scope (`migrated-scopes.json`, which eslint.config.js reads too) carries no ratchet
- * entry: no allowlist entry and no file in an ESLint boundary block's `ignores` points into it.
+ * entry: no allowlist entry and no file in an ESLint boundary block's `ignores` points into it. A
+ * file in `ratchets/` may hold migrated-scope debt only while `RATCHET_DECISIONS` (lists.ts) names
+ * the decision it waits on; any other ratchet file counts like an allowlist here.
  */
 import fs from "fs";
 import path from "path";
 import { Linter } from "eslint";
 import { MIGRATED_SCOPES_FILE, inScope, migratedScopes } from "../helpers/architecture/migrated";
+import { RATCHET_DECISIONS } from "../helpers/architecture/lists";
 import { ALLOWLIST_DIR, ROOT, expectAllowlisted, readAllowlist } from "../helpers/architecture/ratchet";
 import { routesIn } from "../helpers/architecture/routes";
 import { filesUnder, readSource, sourceFiles } from "../helpers/architecture/tree";
@@ -47,15 +50,23 @@ export function routeFilesOf(files: readonly string[]): Map<string, string[]> {
   return out;
 }
 
-/** Every ratchet list: the allowlists but this rule's own, and each boundary block's ignored violators. */
+const RATCHET_DIR = path.join(ROOT, "__tests__/architecture/ratchets");
+
+const jsonNames = (dir: string): string[] =>
+  fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -".json".length)) : [];
+
+/**
+ * Every ratchet list: the allowlists but this rule's own, each ratchet not registered with its decision, and each
+ * boundary block's ignored violators.
+ */
 export function ratchetLists(): Map<string, string[]> {
   const lists = new Map<string, string[]>();
-  const rules = fs
-    .readdirSync(ALLOWLIST_DIR)
-    .filter((f) => f.endsWith(".json"))
-    .map((f) => f.slice(0, -".json".length))
-    .filter((rule) => rule !== RULE);
+  const rules = jsonNames(ALLOWLIST_DIR).filter((rule) => rule !== RULE);
   for (const rule of rules) lists.set(`allowlists/${rule}.json`, readAllowlist(rule));
+  // A ratchet holds migrated-scope debt only while it waits on its registered decision (lists.ts).
+  for (const rule of jsonNames(RATCHET_DIR).filter((r) => RATCHET_DECISIONS[r] === undefined)) {
+    lists.set(`ratchets/${rule}.json`, readAllowlist(rule, RATCHET_DIR));
+  }
   for (const block of config.filter((c) => c.name?.startsWith("boundaries/"))) {
     // The files import-boundaries.test.ts treats as violators: globs and the two Mongo owners are not.
     const violators = (block.ignores ?? []).filter(

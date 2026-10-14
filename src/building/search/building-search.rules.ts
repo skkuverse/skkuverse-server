@@ -3,8 +3,6 @@
 import { escapeRegex } from "../../shared/regex.util";
 import type { StringPath } from "../../shared/string-path.types";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
-import { CAMPUSES } from "../building.constants";
-import type { Campus } from "../building.types";
 import type { RelevanceTier, TierMode } from "./building-search.types";
 
 // EVIDENCE: a building-number query returns whole buildings (the largest has 801 rooms);
@@ -13,7 +11,7 @@ const SPACE_SEARCH_LIMIT = 1000;
 const SPACE_WEAK_LIMIT = 100;
 
 // EVIDENCE: 78 buildings exist, so only the weak cap binds. It trims description-only hits
-// (the one-syllable query for "hall": 29 of 69), which the results list gives no visible reason for.
+// (`q=관`: 29 of 69), which the results list gives no visible reason for.
 const BUILDING_SEARCH_LIMIT = 100;
 const BUILDING_WEAK_LIMIT = 10;
 
@@ -83,10 +81,6 @@ function scoreLocally<TDoc>(tiers: readonly RelevanceTier<TDoc>[], keyword: stri
   return NO_TIER_SCORE;
 }
 
-function isCampus(value: unknown): value is Campus {
-  return (CAMPUSES as readonly unknown[]).includes(value);
-}
-
 export {
   BUILDING_SEARCH_LIMIT,
   BUILDING_STRONG_MIN_SCORE,
@@ -97,7 +91,6 @@ export {
   SPACE_STRONG_MIN_SCORE,
   SPACE_TIERS,
   SPACE_WEAK_LIMIT,
-  isCampus,
   scoreLocally,
   tierRegex,
 };

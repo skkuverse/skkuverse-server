@@ -162,6 +162,12 @@ function describe(doc, now) {
   return lines.join("\n");
 }
 
+/** The `$set` that `open` writes: live from now, until the window ends or, with --no-expiry, until `close`. */
+function toOpenedActivation(args, now) {
+  const until = args.noExpiry ? null : new Date(now.getTime() + args.minutes * 60 * 1000);
+  return { enabled: true, activeFrom: now, activeUntil: until, updatedAt: now };
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
@@ -214,13 +220,9 @@ async function main() {
       );
       console.log("\nCLOSED.");
     } else {
-      const until = args.noExpiry
-        ? null
-        : new Date(now.getTime() + args.minutes * 60 * 1000);
-      await activations.updateOne(
-        { _id: args.layerSetId },
-        { $set: { enabled: true, activeFrom: now, activeUntil: until, updatedAt: now } },
-      );
+      const opened = toOpenedActivation(args, now);
+      const until = opened.activeUntil;
+      await activations.updateOne({ _id: args.layerSetId }, { $set: opened });
       console.log(
         until === null
           ? "\nOPEN with NO EXPIRY. Nothing will take this down but `close`."
@@ -246,4 +248,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { isLive, parseArgs };
+module.exports = { isLive, parseArgs, toOpenedActivation };

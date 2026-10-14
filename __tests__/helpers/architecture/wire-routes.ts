@@ -5,8 +5,8 @@
  * requires a wire type, and the contract export, which lists the routes each
  * wire schema describes in `contracts/produced/index.json`.
  */
-import path from "path";
 import ts from "typescript";
+import { resolveRelative } from "./ast";
 import { routeHandlersIn, type RouteHandler } from "./routes";
 
 /** A name a route's type takes from a `.wire` file. */
@@ -36,7 +36,7 @@ export const isExemptPath = (routePath: string) =>
 
 function resolveWire(file: string, specifier: string): string {
   if (!specifier.startsWith(".")) return specifier;
-  return `${path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier))}.ts`;
+  return `${resolveRelative(file, specifier) ?? specifier}.ts`;
 }
 
 /** The local names a file binds from `.wire` imports: named, default and namespace. */

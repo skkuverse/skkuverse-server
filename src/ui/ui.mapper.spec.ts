@@ -4,6 +4,7 @@
  * image's action sent only when it has one, and nothing kept only on disk (the
  * window, the untranslated alt) on the wire.
  */
+import { WEBVIEW_ORIGIN } from "../infra/origins";
 import { toBannerCarousel, toLocalizedText } from "./ui.mapper";
 import type { BannerImageRaw } from "./ui.schema";
 import { bannerCarousel } from "./ui.wire";
@@ -74,6 +75,25 @@ describe("toBannerCarousel", () => {
       ],
     });
     expect(bannerCarousel.safeParse(served).success).toBe(true);
+  });
+
+  it("serves a root-relative web view link on the web view origin, as the event map serves its buttons", () => {
+    // Arrange
+    const raw = carousel([
+      image({ id: "relative", actionType: "webview", actionValue: "/skku/lostandfound" }),
+      image({ id: "absolute", actionType: "webview", actionValue: `${WEBVIEW_ORIGIN}/skku/lostandfound` }),
+      image({ id: "route", actionType: "route", actionValue: "/map/hssc" }),
+    ]);
+
+    // Act
+    const served = toBannerCarousel(raw, "ko", now);
+
+    // Assert
+    expect(served.items.map((item) => (item.type === "image" ? item.actionValue : null))).toEqual([
+      `${WEBVIEW_ORIGIN}/skku/lostandfound`,
+      `${WEBVIEW_ORIGIN}/skku/lostandfound`,
+      "/map/hssc",
+    ]);
   });
 
   it("serves an empty carousel when every image has closed", () => {

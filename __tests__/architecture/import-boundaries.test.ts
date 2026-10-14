@@ -8,6 +8,7 @@
 import fs from "fs";
 import path from "path";
 import { Linter } from "eslint";
+import { isSharedLayer } from "../helpers/architecture/ast";
 import { ROOT } from "../helpers/architecture/ratchet";
 
 const tsparser = require("@typescript-eslint/parser");
@@ -121,10 +122,9 @@ describe("import boundary blocks apply as specified", () => {
     const featureBlocks = new Set(
       blocks.map((b) => b.name!.match(/^boundaries\/feature\/([^/]+)\//)?.[1]).filter(Boolean),
     );
-    const shared = new Set(["config", "http", "infra", "scheduling", "shared"]);
     const topLevel = fs
       .readdirSync(path.join(ROOT, "src"), { withFileTypes: true })
-      .filter((d) => d.isDirectory() && !shared.has(d.name))
+      .filter((d) => d.isDirectory() && !isSharedLayer(d.name))
       .map((d) => d.name);
     expect([...featureBlocks].sort()).toEqual(topLevel.sort());
   });
@@ -143,6 +143,8 @@ describe("import boundary blocks apply as specified", () => {
       'import { getClient } from "../infra/db";',
       'import logger from "../infra/logger";',
       'import { config } from "../infra/config";',
+      'import { toWebviewUrl } from "../infra/webview-urls";',
+      'import { MEDIA_ORIGIN } from "../infra/origins";',
       'import { BuildingRepository } from "./building.repository";',
       'import { BuildingClient } from "./building.client";',
       'import { AppError } from "../http/zod-validation.pipe";',
@@ -159,6 +161,8 @@ describe("import boundary blocks apply as specified", () => {
     for (const source of [
       'import { t } from "../infra/i18n";',
       'import type { SupportedLang } from "../infra/types";',
+      'import { toWebviewUrl } from "../infra/webview-url";',
+      'import { isMediaUrl } from "../infra/media-url";',
       'import { AppError } from "../http/app.error";',
       'import { escapeRegex } from "../shared/regex.util";',
       'import { toDisplayNo } from "./building.rules";',

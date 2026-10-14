@@ -25,7 +25,8 @@ import type { BuildingSyncRepository } from "../../../../src/building/sync/build
 import type { EnrichedBuilding, ListedBuilding, SyncedSpace } from "../../../../src/building/sync/building-sync.types";
 import type { PublicOf } from "../public-of";
 
-export type StoredSpace = SpaceDoc & { sources: SpaceSource[]; syncedAt: Date };
+// The sync writes SyncedSpace, whose spaceCd is never null; SpaceDoc allows the null rows it did not write.
+export type StoredSpace = Omit<SpaceDoc, "spaceCd"> & { spaceCd: SyncedSpace["spaceCd"]; sources: SpaceSource[]; syncedAt: Date };
 
 /** The counts a bulk upsert reports; the service logs these and nothing else. */
 function bulkResult(matched: number, upserted: number, modified: number): BulkWriteResult {

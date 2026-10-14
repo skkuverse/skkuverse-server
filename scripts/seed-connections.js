@@ -7,6 +7,7 @@
  */
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
+const { CONNECTIONS, toConnectionDoc } = require("./lib/connections-seed");
 
 const MONGO_URL = process.env.MONGO_URL;
 if (!MONGO_URL) {
@@ -22,19 +23,6 @@ if (!BASE_DB_NAME) {
 const NODE_ENV = process.env.NODE_ENV || "development";
 const DB_NAME = NODE_ENV === "production" ? BASE_DB_NAME : `${BASE_DB_NAME}_dev`;
 
-const CONNECTIONS = [
-  { a: "법학관",       aFloor: { ko: "2층", en: "2F" },  b: "수선관",       bFloor: { ko: "3층", en: "3F" } },
-  { a: "수선관",       aFloor: { ko: "1층", en: "1F" },  b: "수선관(별관)",  bFloor: { ko: "1층", en: "1F" } },
-  { a: "수선관",       aFloor: { ko: "8층", en: "8F" },  b: "수선관(별관)",  bFloor: { ko: "8층", en: "8F" } },
-  { a: "수선관",       aFloor: { ko: "5층", en: "5F" },  b: "수선관(별관)",  bFloor: { ko: "5층", en: "5F" } },
-  { a: "퇴계인문관",   aFloor: { ko: "2층", en: "2F" },  b: "다산경제관",   bFloor: { ko: "2층", en: "2F" } },
-  { a: "다산경제관",   aFloor: { ko: "2층", en: "2F" },  b: "경영관",       bFloor: { ko: "4층", en: "4F" } },
-  { a: "퇴계인문관",   aFloor: { ko: "3층", en: "3F" },  b: "다산경제관",   bFloor: { ko: "3층", en: "3F" } },
-  { a: "퇴계인문관",   aFloor: { ko: "4층", en: "4F" },  b: "다산경제관",   bFloor: { ko: "4층", en: "4F" } },
-  { a: "퇴계인문관",   aFloor: { ko: "5층", en: "5F" },  b: "다산경제관",   bFloor: { ko: "5층", en: "5F" } },
-  { a: "다산경제관",   aFloor: { ko: "1층", en: "1F" },  b: "경영관",       bFloor: { ko: "3층", en: "3F" } },
-  { a: "600주년기념관", aFloor: { ko: "지하2층", en: "B2" }, b: "국제관", bFloor: { ko: "1층", en: "1F" } },
-];
 
 async function main() {
   const client = new MongoClient(MONGO_URL);
@@ -75,13 +63,7 @@ async function main() {
       "b.skkuId": bId,
       "b.floor.ko": conn.bFloor.ko,
     };
-    const update = {
-      $set: {
-        campus: "hssc",
-        a: { skkuId: aId, floor: conn.aFloor },
-        b: { skkuId: bId, floor: conn.bFloor },
-      },
-    };
+    const update = { $set: toConnectionDoc(conn, aId, bId) };
     ops.push({ updateOne: { filter, update, upsert: true } });
     console.log(`  ${conn.a}(${aId}) ${conn.aFloor.ko} ↔ ${conn.b}(${bId}) ${conn.bFloor.ko}`);
   }

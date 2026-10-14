@@ -22,11 +22,11 @@ export interface CachedLoader<T> {
 }
 
 interface LoaderState<T> {
-  readonly opts: CachedLoaderOptions<T>;
   readonly name: string;
   readonly ttlMs: number;
   readonly load: () => Promise<T>;
   readonly staleWindowMs: number;
+  readonly keepWhenCacheOff: boolean;
   value: { data: T; loadedAt: number } | null;
   freshUntil: number;
   inFlight: Promise<T> | null;
@@ -76,7 +76,7 @@ function reload<T>(state: LoaderState<T>): Promise<T> {
 
 function get<T>(state: LoaderState<T>): Promise<T> {
   // WHY: read per call, so a test can flip CACHE.
-  if (!config.cache.enabled && !state.opts.keepWhenCacheOff) {
+  if (!config.cache.enabled && !state.keepWhenCacheOff) {
     return Promise.resolve().then(state.load);
   }
   const now = Date.now();
@@ -107,11 +107,11 @@ export function createCachedLoader<T>(opts: CachedLoaderOptions<T>): CachedLoade
     throw new Error(`[cache] ${name}: staleWindowMs must be >= 0, got ${staleWindowMs}`);
   }
   const state: LoaderState<T> = {
-    opts,
     name,
     ttlMs,
     load,
     staleWindowMs,
+    keepWhenCacheOff: opts.keepWhenCacheOff ?? false,
     value: null,
     freshUntil: 0,
     inFlight: null,

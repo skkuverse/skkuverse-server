@@ -86,3 +86,22 @@ describe("connectionEnds", () => {
     expect(connectionEnds.safeParse(stored).success).toBe(false);
   });
 });
+
+describe("connectionEnds against what scripts/seed-connections.js writes", () => {
+  // The seed is CommonJS outside tsconfig, so it is required. Its skkuIds come from the buildings
+  // collection; production's 11 seeded rows hold 2, 3, 9, 10, 11, 12, 13 and 14 (2026-10-14).
+  const { CONNECTIONS, toConnectionDoc } = require("../../../scripts/lib/connections-seed");
+  const SEEDED: Array<[string, unknown]> = CONNECTIONS.map((row: { a: string; b: string }) => [`${row.a} ↔ ${row.b}`, row]);
+
+  it.each(SEEDED)(
+    "parses the seeded %s as written",
+    (_name, row) => {
+      // Arrange
+      const written = toConnectionDoc(row, 10, 11);
+
+      // Act & Assert
+      expect(connectionEnds.parse(written)).toEqual({ a: written.a, b: written.b });
+    },
+  );
+});
+

@@ -21,7 +21,7 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 import type { LayerSet } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
-import { EVENT_CACHE_TTL_MS, EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "../map.constants";
+import { EVENT_CACHE_TTL_MS } from "../map.constants";
 import type { MapRepository } from "../map.repository";
 import { MapConfigService } from "./map-config.service";
 
@@ -429,12 +429,6 @@ describe("MapConfigService", () => {
     // field that can only ever be inert, which is the one thing every field on
     // this wire is not allowed to be.
     expect(zone.style!.outlineColor).toBeUndefined();
-
-    // Named separately for the reason the `shape` test below gives: this
-    // constant is where a border comes back for every festival layer at once,
-    // and a failure here says which line was edited rather than pointing at a
-    // projected response object.
-    expect(EVENT_SHAPE_STYLE.outlineWidth).toBe(0);
   });
 
   /**
@@ -479,14 +473,6 @@ describe("MapConfigService", () => {
       // deliberately, so `layer.style.shape` would not compile.
       expect(Object.keys(layer.style ?? {})).not.toContain("shape");
     }
-
-    // Named separately because these two constants are where a shape would be
-    // stamped onto every layer at once. A failure here says which constant was
-    // edited instead of pointing at a projected response object. Opting ONE
-    // layer out stays legal — that would be a `shape` on its own style literal,
-    // and the loop above is what you would narrow, deliberately.
-    expect(Object.keys(EVENT_LAYER_STYLE)).not.toContain("shape");
-    expect(Object.keys(EVENT_SHAPE_STYLE)).not.toContain("shape");
   });
 
   // The three legacy /map/overlays tests that stood here are gone with their

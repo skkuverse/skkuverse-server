@@ -1,5 +1,5 @@
 import type { Campus } from "../../building/building.types";
-import type { BaseLayerId } from "./map-campus.types";
+import type { BaseLayerId } from "../map.types";
 
 // WHY: typed against the catalogue: the app matches `layerId` to a /map/config layer, and a rename on one side draws nothing.
 export const LAYER_NUMBERS: BaseLayerId = "building_numbers";
