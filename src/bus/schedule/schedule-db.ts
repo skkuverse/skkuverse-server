@@ -3,7 +3,6 @@ import config from "../../infra/config";
 
 /**
  * Ensure unique compound indexes on bus_schedules and bus_overrides.
- * Called once at server startup alongside ad.ensureIndexes().
  */
 async function ensureScheduleIndexes(): Promise<void> {
   const db = getClient().db(config.mongo.dbName!);

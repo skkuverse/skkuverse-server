@@ -1,25 +1,4 @@
 {
-  "ad-events.recordedAdEvent": {
-    "source": "src/ad/events/ad-events.wire.ts",
-    "export": "recordedAdEvent",
-    "routes": [
-      "POST ad/events"
-    ]
-  },
-  "ad-placements.adPlacementsMeta": {
-    "source": "src/ad/placements/ad-placements.wire.ts",
-    "export": "adPlacementsMeta",
-    "routes": [
-      "GET ad/placements"
-    ]
-  },
-  "ad-placements.placementMap": {
-    "source": "src/ad/placements/ad-placements.wire.ts",
-    "export": "placementMap",
-    "routes": [
-      "GET ad/placements"
-    ]
-  },
   "app-config.appClientConfig": {
     "source": "src/app-config/app-config.wire.ts",
     "export": "appClientConfig",
