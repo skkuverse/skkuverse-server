@@ -10,7 +10,6 @@
     {
       "filter": [
         "_module-template.md",
-        "explanation/ad-architecture.md",
         "explanation/app-config-architecture.md",
         "explanation/building-architecture.md",
         "explanation/health-architecture.md",
