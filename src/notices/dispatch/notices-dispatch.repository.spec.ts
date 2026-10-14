@@ -1,13 +1,14 @@
 /**
  * NoticesDispatchRepository's driver calls, the only writes of the four push fields: the atomic claim's filter
- * and lease stamp, and the pushed and released records, each with one attempt counted. Over a real mongod they
- * are pinned by notices-characterization.routes.test.ts.
+ * and lease stamp, the pushed and released records, each with one attempt counted, and the partial index the claim
+ * reads. Over a real mongod they are pinned by notices-characterization.routes.test.ts.
  */
 const findOneAndUpdate = jest.fn((..._args: unknown[]) => Promise.resolve(null));
 const updateOne = jest.fn((..._args: unknown[]) => Promise.resolve({ acknowledged: true }));
+const createIndex = jest.fn((..._args: unknown[]) => Promise.resolve("dispatch_pending_idx"));
 
 jest.mock("../../infra/db", () => ({
-  getClient: () => ({ db: () => ({ collection: () => ({ findOneAndUpdate, updateOne }) }) }),
+  getClient: () => ({ db: () => ({ collection: () => ({ findOneAndUpdate, updateOne, createIndex }) }) }),
 }));
 
 import { ObjectId } from "mongodb";
@@ -61,5 +62,18 @@ describe("NoticesDispatchRepository records", () => {
 
     // Assert
     expect(updateOne).toHaveBeenCalledWith({ _id: id }, { $set: { dispatchClaimedAt: null, pushError: "boom" }, $inc: { pushAttempts: 1 } });
+  });
+});
+
+describe("NoticesDispatchRepository.onModuleInit", () => {
+  it("ensures dispatch_pending_idx with the keys and partial filter of scripts/migrate-notices-dispatch-index.js", async () => {
+    // Act
+    await new NoticesDispatchRepository().onModuleInit();
+
+    // Assert
+    expect(createIndex).toHaveBeenCalledWith(
+      { date: -1 },
+      { name: "dispatch_pending_idx", partialFilterExpression: { pushedAt: null, aiSummaryAt: { $type: "date" } } },
+    );
   });
 });
