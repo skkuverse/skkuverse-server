@@ -15,8 +15,16 @@
  * file. So are their function caps (block "size-ratchets/migrated"): lines
  * within 10 of the longest function, `max-depth`, `max-params` and
  * `complexity` at the worst, over the migrated modules' files.
+ *
+ * A file over its role's cap with no domain seam to split along carries a
+ * per-file cap, `exemptions/size-caps.json` (ADR 0010 D9), applied by a
+ * `size-exemption/<file>` block after the role blocks. Its file is left out of
+ * its role's largest-file measure; the entry fails when its file is gone, is
+ * no longer covered by a role cap, is back under that cap, or sits more than
+ * 10 lines below its own `max`.
  */
 import { Linter } from "eslint";
+import { readSizeCapExemptions, type SizeCapExemption } from "../helpers/architecture/exemptions";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
 const tsparser = require("@typescript-eslint/parser");
@@ -114,6 +122,32 @@ function matchesGlob(glob: string, file: string): boolean {
   return file.startsWith(match[1]!) && file.endsWith(match[2]!);
 }
 
+/** `<file>: <problem>` for each size-cap exemption whose file, role cap or ESLint block does not hold it. */
+export function sizeCapProblems(
+  exemptions: ReadonlyMap<string, SizeCapExemption>,
+  files: ReadonlySet<string>,
+  blocks: readonly Linter.Config[],
+): string[] {
+  const linter = new Linter({ configType: "flat" });
+  const roleBlocks = blocks.filter((c) => c.name?.startsWith("size/"));
+  const indexOf = (name: string): number => blocks.findIndex((c) => c.name === name);
+  return [...exemptions].flatMap(([file, { max }]) => {
+    if (!files.has(file)) return [`${file}: no such source; delete its entry`];
+    const role = roleBlocks.find((b) => (b.files as string[]).some((g) => matchesGlob(g, file)));
+    if (role === undefined) return [`${file}: no role cap covers it; delete its entry`];
+    const { max: roleMax, ...options } = (role.rules?.["max-lines"] as [string, { max: number }])[1];
+    const lines = countedLines(file, linter, options);
+    if (lines <= roleMax) return [`${file}: ${lines} lines, under its role cap ${roleMax}; delete its entry`];
+    if (max < lines || max - lines > MARGIN["max-lines"]) return [`${file}: max ${max}, ${lines} lines; set max to ${lines} to ${lines + MARGIN["max-lines"]}`];
+    const block = blocks.find((c) => c.name === `size-exemption/${file}`);
+    const blockMax = (block?.rules?.["max-lines"] as [string, { max: number }] | undefined)?.[1].max;
+    if (blockMax !== max || indexOf(`size-exemption/${file}`) < indexOf(role.name ?? "")) {
+      return [`${file}: eslint.config.js does not apply max ${max} after ${role.name ?? "its role block"}`];
+    }
+    return [];
+  });
+}
+
 describe("size ratchet measurement", () => {
   it("reads the size from each rule's message", () => {
     expect(reportedSize("File has too many lines (440). Maximum allowed is 1.")).toBe(440);
@@ -155,7 +189,8 @@ describe("size ratchets", () => {
 
   it("per role sit at the largest file of that role in the migrated modules", () => {
     const linter = new Linter({ configType: "flat" });
-    const files = sourceFiles();
+    const exempt = readSizeCapExemptions();
+    const files = sourceFiles().filter((f) => !exempt.has(f));
     const roleBlocks = config.filter((c) => c.name?.startsWith("size/"));
     expect(roleBlocks.length).toBeGreaterThan(0);
     const loose = roleBlocks.flatMap((b) => {
@@ -168,5 +203,45 @@ describe("size ratchets", () => {
         : [];
     });
     expect(loose).toEqual([]);
+  });
+
+  it("per file, from exemptions/size-caps.json, raise only an over-cap file's max-lines, held within 10 of it", () => {
+    // Act
+    const problems = sizeCapProblems(readSizeCapExemptions(), new Set(sourceFiles()), config);
+
+    // Assert
+    expect(problems).toEqual([]);
+    expect(config.filter((c) => c.name?.startsWith("size-exemption/")).map((c) => c.name)).toEqual(
+      [...readSizeCapExemptions().keys()].map((f) => `size-exemption/${f}`),
+    );
+  });
+});
+
+describe("size cap exemption rule applies as specified", () => {
+  const file = "src/building/building.rules.ts";
+  const linter = new Linter({ configType: "flat" });
+  const lines = countedLines(file, linter, { skipBlankLines: true, skipComments: false });
+  const options = { skipBlankLines: true, skipComments: false };
+  const role: Linter.Config = { name: "size/rules", files: [file], rules: { "max-lines": ["error", { ...options, max: 10 }] } };
+  const exemptBlock = (max: number): Linter.Config => ({ name: `size-exemption/${file}`, files: [file], rules: { "max-lines": ["error", { ...options, max }] } });
+  const reason = "no domain seam to split along yet (ADR 0010 D9)";
+
+  it("passes a file over its role cap whose max sits within 10 of it, applied after the role block", () => {
+    // Act & Assert
+    expect(sizeCapProblems(new Map([[file, { max: lines + 5, reason }]]), new Set([file]), [role, exemptBlock(lines + 5)])).toEqual([]);
+  });
+
+  it.each([
+    ["a max far above the file", lines + 30, [role, exemptBlock(lines + 30)], new Set([file]), /set max/],
+    ["a file back under its role cap", lines, [{ ...role, rules: { "max-lines": ["error", { ...options, max: lines + 1 }] } } as Linter.Config, exemptBlock(lines)], new Set([file]), /under its role cap/],
+    ["a block missing from the config", lines, [role], new Set([file]), /does not apply/],
+    ["a block before the role block", lines, [exemptBlock(lines), role], new Set([file]), /does not apply/],
+    ["a file that is gone", lines, [role, exemptBlock(lines)], new Set<string>(), /no such source/],
+  ])("refuses %s", (_case, max, blocks, files, message) => {
+    // Act
+    const problems = sizeCapProblems(new Map([[file, { max, reason }]]), files, blocks);
+
+    // Assert
+    expect(problems).toEqual([expect.stringMatching(message)]);
   });
 });
