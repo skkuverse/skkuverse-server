@@ -1,0 +1,18 @@
+{
+  "_about": "Synthetic, never captured (a push payload has no capture): the notice member of the union, as NoticesDispatcherService.buildPayload builds it; PushFunctionName03 in skkuverse-app/private-file reads it",
+  "data": {
+    "type": "notice",
+    "noticeId": "6704f0c2a1b2c3d4e5f60718",
+    "topics": [
+      "notices:skku-main",
+      "notices:cs"
+    ],
+    "title_ko": "2026학년도 2학기 수강신청 안내",
+    "body_ko": "수강신청 일정과 유의사항을 확인하세요.",
+    "title_en": null,
+    "body_en": null,
+    "sourceId": "skku-main",
+    "articleNo": "123456",
+    "category": "학사"
+  }
+}
