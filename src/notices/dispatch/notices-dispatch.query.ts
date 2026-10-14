@@ -33,7 +33,7 @@ export function toReleasedUpdate(fields: ReleasedFields): Document {
   return { $set: fields, $inc: { pushAttempts: 1 } };
 }
 
-// CONTRACT(scripts): the keys, name and partial filter scripts/migrate-notices-dispatch-index.js builds; the partial
+// CONTRACT(scripts): the keys, name and partial filter the scripts/migrate-notices-dispatch-index script builds; the partial
 // filter is the claimable set, which is why the claim filter says `aiSummaryAt: { $type: "date" }`.
 export const DISPATCH_PENDING_INDEX = {
   key: { date: -1 },
