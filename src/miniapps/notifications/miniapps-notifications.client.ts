@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { postToFcmFunction } from "../../infra/fcm";
-import type { MiniappPushPayload } from "../../infra/fcm.wire";
+import type { MiniAppPushPayload } from "../../infra/fcm.wire";
 import type { DeliveryCounts, SentNotificationDoc } from "../miniapps.document";
 
 @Injectable()
@@ -12,7 +12,7 @@ export class MiniappsNotificationsClient {
   }
 
   // WHY: no `topics`: the Cloud Function targets `miniapp:<miniAppId>` itself, so a sender cannot reach another topic.
-  private toPayload(doc: SentNotificationDoc): MiniappPushPayload {
+  private toPayload(doc: SentNotificationDoc): MiniAppPushPayload {
     const { miniAppId, _id: notificationId, title_ko, body_ko, title_en, body_en, actionType, actionValue } = doc;
     return {
       type: "miniapp",
