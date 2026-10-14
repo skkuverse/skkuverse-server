@@ -4,10 +4,10 @@ import { isAbsoluteHttpsUrl } from "../../shared/link-target.util";
 import { isRecord } from "../../shared/object.util";
 import type { SheetPlaceDoc } from "../map.document";
 import { toI18nText } from "../map.mapper";
-import { mediaUrl } from "../map.schema";
 import type { I18nText } from "../map.wire";
 import { PLACE_BLOCK_TYPES, PLACE_DETAIL_ACTION_TYPES } from "./map-event-details.constants";
 import { isInstagramPostUrl, isInstagramProfileUrl, isNonBlankId, isPlaceKind } from "./map-event-details.rules";
+import { mediaUrl } from "./map-event-details.schema";
 import type { PlaceSheet } from "./map-event-details.wire";
 
 type Block = PlaceSheet["blocks"][number];
