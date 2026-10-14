@@ -99,10 +99,10 @@ describe("route clock rule applies as specified", () => {
     ].join("\n");
 
     // Act
-    const violations = unpinnedClockApps("__tests__/nest/x/x.routes.test.ts", test, clockDependentModules(sources));
+    const violations = unpinnedClockApps("__tests__/nest/ui/ui.routes.test.ts", test, clockDependentModules(sources));
 
     // Assert
-    expect(violations).toEqual(["__tests__/nest/x/x.routes.test.ts:1", "__tests__/nest/x/x.routes.test.ts:4"]);
+    expect(violations).toEqual(["__tests__/nest/ui/ui.routes.test.ts:1", "__tests__/nest/ui/ui.routes.test.ts:4"]);
   });
 });
 
