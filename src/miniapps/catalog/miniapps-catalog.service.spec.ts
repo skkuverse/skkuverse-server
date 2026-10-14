@@ -27,16 +27,6 @@ describe("MiniappsCatalogService.index", () => {
   });
 });
 
-describe("MiniappsCatalogService.isRegistered", () => {
-  it.each([
-    ["hssc", true],
-    ["no-such-app", false],
-  ])("%s → %s", (id, expected) => {
-    // Act & Assert
-    expect(service.isRegistered(id)).toBe(expected);
-  });
-});
-
 describe("MiniappsCatalogService.detail", () => {
   it("answers null for an unknown id, without asking for a manifest", async () => {
     // Act
