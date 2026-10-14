@@ -462,8 +462,8 @@ describe("MapEventService.getEventOverlays", () => {
 
     it("drops a value carrying whitespace, which a spreadsheet paste supplies", async () => {
       // Act & Assert
-      // `$` without the `m` flag matches before a trailing newline, so anchors
-      // alone would let "https://evil.com\n" through.
+      // The external URL pattern refuses whitespace anywhere, so a pasted
+      // trailing newline drops the button rather than reaching the client.
       expect(
         await actionsFor({
           id: "sponsor",

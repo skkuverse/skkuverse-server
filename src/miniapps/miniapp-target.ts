@@ -35,7 +35,6 @@ export interface MiniAppTarget {
 // The slug is the leading run up to the first `/`, which is also where the path
 // starts — so the split below needs no delimiter a path could contain.
 const TARGET_RE = /^([a-z0-9-]+)(\/.*)?$/;
-const WHITESPACE_RE = /\s/;
 
 /**
  * Parse the grammar only. Registry membership is a separate question — see
@@ -43,10 +42,7 @@ const WHITESPACE_RE = /\s/;
  * holds its own copy of the registry.
  */
 export function parseMiniAppTarget(value: unknown): MiniAppTarget | null {
-  // Whitespace is refused before matching: `$` without the `m` flag still
-  // matches before a trailing newline, which is exactly what a spreadsheet paste
-  // leaves behind.
-  if (typeof value !== "string" || value === "" || WHITESPACE_RE.test(value)) return null;
+  if (typeof value !== "string") return null;
   const match = TARGET_RE.exec(value);
   if (!match) return null;
   const [, id, path] = match;
