@@ -3,7 +3,7 @@ import { z } from "zod";
 import { pick, t } from "../../infra/i18n";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
-import type { BusGroup } from "./bus-config.types";
+import type { BusGroup, BusGroupVisibility } from "./bus-config.types";
 import { HSSCStations } from "./hssc.stations";
 import { jongroRoutes, type JongroRoute } from "../registry/jongro-registry";
 import { buildStreetViewUrl } from "../schedule/naver-street-view";
@@ -21,25 +21,26 @@ import type {
 type AnyStation = HsscStation | JongroStation;
 
 /** When the bus list shows a group: always, or from one KST date to another, inclusive. */
-const groupVisibility = z.discriminatedUnion("type", [
+const busGroupVisibility = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("always") }),
-  z.strictObject({
-    type: z.literal("dateRange"),
-    from: z.iso.date(),
-    fromTime: z.iso.time({ precision: -1 }).optional(),
-    until: z.iso.date(),
-  }),
+  z
+    .strictObject({
+      type: z.literal("dateRange"),
+      from: z.iso.date(),
+      fromTime: z.iso.time({ precision: -1 }).optional(),
+      until: z.iso.date(),
+    })
+    // WHY: ISO dates order as strings; a swapped pair would parse and then hide the card on every day.
+    .refine((range) => range.from <= range.until, { path: ["until"], message: "must not be before from" }),
 ]);
 
-type GroupVisibility = z.output<typeof groupVisibility>;
-
-const always = (): GroupVisibility => ({ type: "always" });
+const always = (): BusGroupVisibility => ({ type: "always" });
 
 // WHY: parsed at import, so a typo in a date or time fails the boot instead of silently hiding the card.
-function dateRange(from: string, until: string, fromTime?: string): GroupVisibility {
-  const visibility: GroupVisibility =
+function dateRange(from: string, until: string, fromTime?: string): BusGroupVisibility {
+  const visibility: BusGroupVisibility =
     fromTime === undefined ? { type: "dateRange", from, until } : { type: "dateRange", from, fromTime, until };
-  groupVisibility.parse(visibility);
+  busGroupVisibility.parse(visibility);
   return visibility;
 }
 
@@ -418,4 +419,5 @@ export {
   mapStations,
   resolveStopSequences,
   dateRange,
+  busGroupVisibility,
 };

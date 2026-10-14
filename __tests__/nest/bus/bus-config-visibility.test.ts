@@ -1,8 +1,8 @@
 /**
  * A bus group's date-range visibility is parsed when bus-config.data.ts is
  * imported: `from` and `until` are YYYY-MM-DD dates and `fromTime` is HH:mm
- * from 00:00 to 23:59, so a typo fails the boot instead of making the card
- * silently never show.
+ * from 00:00 to 23:59, and `until` is not before `from`, so a typo fails the
+ * boot instead of making the card silently never show.
  */
 import { dateRange } from "../../../src/bus/bus-config/bus-config.data";
 
@@ -37,5 +37,15 @@ describe("dateRange", () => {
   ])("throws on from %p until %p", (from, until) => {
     // Act & Assert
     expect(() => dateRange(from, until)).toThrow();
+  });
+
+  it("throws when until is before from, a window no day falls in", () => {
+    // Act & Assert
+    expect(() => dateRange("2026-12-18", "2026-10-12")).toThrow(/until/);
+  });
+
+  it("accepts a one-day window, from and until the same date", () => {
+    // Act & Assert
+    expect(() => dateRange("2026-10-12", "2026-10-12")).not.toThrow();
   });
 });
