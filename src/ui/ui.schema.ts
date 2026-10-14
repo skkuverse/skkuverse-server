@@ -38,13 +38,15 @@ export const bannerImageFile = z
     message: "startAt must be before endAt",
   });
 
+const isAutoRotateSec = (sec: number): boolean => sec === 0 || (sec >= MIN_AUTO_ROTATE_SEC && sec <= MAX_AUTO_ROTATE_SEC);
+
 export const carouselFields = {
   type: z.literal("banner_carousel"),
   id: slug,
   aspectRatio: z.number().min(MIN_ASPECT_RATIO).max(MAX_ASPECT_RATIO),
   autoRotateSec: z
     .int()
-    .refine((sec) => sec === 0 || (sec >= MIN_AUTO_ROTATE_SEC && sec <= MAX_AUTO_ROTATE_SEC), `must be 0 (off) or a whole number from ${MIN_AUTO_ROTATE_SEC} to ${MAX_AUTO_ROTATE_SEC}`),
+    .refine(isAutoRotateSec, `must be 0 (off) or a whole number from ${MIN_AUTO_ROTATE_SEC} to ${MAX_AUTO_ROTATE_SEC}`),
 };
 
 export type BannerImageRaw = z.output<typeof bannerImageFile>;
