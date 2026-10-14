@@ -1,0 +1,77 @@
+{
+  "_about": "One skku_notices.notices document (sourceId bio-undergrad, articleNo 352), read from production with the MongoDB MCP on 2026-10-14. Trimmed: embeddingInput and its hash/version/timestamps dropped, attachments cut to one, summary shortened and its contact e-mail removed, cleanMarkdown replaced by a two-line body. Dates are ISO strings here; the test turns crawledAt, aiSummaryAt, summaryAt and pushedAt back into BSON dates. The push fields describe a notice already pushed; tests reset them per case.",
+  "document": {
+    "articleNo": 352,
+    "sourceId": "bio-undergrad",
+    "attachments": [
+      {
+        "name": "붙임1 학생성공 장학금 신청서, 추천서, 개인정보활용동의서학생용.hwp",
+        "url": "http://bio.skku.edu/bbs/download.php?bo_table=N4&wr_id=352&no=0&page=3",
+        "referer": "http://bio.skku.edu/bbs/board.php?bo_table=N4&wr_id=352&page=3"
+      }
+    ],
+    "author": "관리자",
+    "category": "",
+    "consecutiveFailures": 0,
+    "contentHash": "781f3db657739bbb003499e676b2ef4eea2f21cefd512f9ecec415a017a22326",
+    "crawledAt": "2026-10-02T13:00:19.467Z",
+    "date": "2026-10-30",
+    "department": "생명과학과(학부)",
+    "detailPath": "http://bio.skku.edu/bbs/board.php?bo_table=N4&wr_id=352&page=3",
+    "editCount": 0,
+    "isDeleted": false,
+    "lastModified": null,
+    "sourceUrl": "http://bio.skku.edu/bbs/board.php?bo_table=N4&wr_id=352&page=3",
+    "title": "2025학년도 2학기 학생성공 창의장학생·정용지 창의장학생 신청 안내/~11월 1…",
+    "views": 1035,
+    "cleanMarkdown": "안녕하세요 생명과학과 사무실입니다.\n\n2025학년도 2학기 학생성공 창의장학생/정용지 창의장학생 신청 안내드리니 학생분들의 많은 신청 바랍니다.",
+    "aiSummaryAt": "2026-10-02T07:21:27.260Z",
+    "summary": "2025학년도 2학기 학생성공 창의장학생과 정용지 창의장학생을 자연과학대학에서 각각 최종 2명씩 선발해요. 신청서·추천서·개인정보활용동의서를 11월 16일(일)까지 이메일로 제출하면 돼요.",
+    "summaryAt": "2026-10-09T03:59:37.024Z",
+    "summaryContentHash": "781f3db657739bbb003499e676b2ef4eea2f21cefd512f9ecec415a017a22326",
+    "summaryDetails": {
+      "target": "직전학기 12학점(마지막학기 9학점) 이상 이수, 평점평균 2.0 이상인 자연과학대학 재학생",
+      "action": "신청서류를 작성해 학과 사무실로 이메일 제출",
+      "host": "생명과학과 사무실",
+      "impact": "선발 시 등록금 전액 지원 (다른 장학금 수혜 시 250만원 범위 내 학업생활지원비 지급)"
+    },
+    "summaryFailures": 0,
+    "summaryLocations": [],
+    "summaryModel": "claude-sonnet-5-5",
+    "summaryOneLiner": "자연과학대학 2명씩 선발, 학과 사무실 이메일로 서류 제출",
+    "summaryPeriods": [
+      {
+        "label": "제출기한",
+        "kind": "application",
+        "startDate": null,
+        "startTime": null,
+        "endDate": "2026-11-16",
+        "endTime": null,
+        "openEnded": false
+      }
+    ],
+    "summaryType": "action_required",
+    "dispatchClaimedAt": null,
+    "pushAttempts": 1,
+    "pushError": null,
+    "pushedAt": "2026-10-02T07:24:50.569Z",
+    "summaryApplication": {
+      "status": "dated",
+      "windows": [{ "startAt": null, "endAt": "2026-11-17T00:00:00+09:00", "openEnded": false }]
+    },
+    "summaryAsksToApply": true,
+    "summaryDates": [
+      {
+        "evidence": "제출기한 : 11월 16일(일)까지",
+        "subject": "제출기한",
+        "role": "apply",
+        "endType": "single",
+        "startAt": null,
+        "endAt": "2026-11-17T00:00:00+09:00"
+      }
+    ],
+    "summaryPromptVersion": "2026-10-08.sonnet-v4b",
+    "summaryTerm": "2025-2",
+    "summaryVersion": 2
+  }
+}
