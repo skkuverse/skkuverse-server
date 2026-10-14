@@ -1,9 +1,7 @@
 [
   "src/app-config/",
   "src/building/",
-  "src/bus/cache/",
-  "src/bus/realtime/",
-  "src/bus/station/",
+  "src/bus/",
   "src/config/",
   "src/health/",
   "src/http/",

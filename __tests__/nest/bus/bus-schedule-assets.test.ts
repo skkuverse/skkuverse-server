@@ -16,13 +16,21 @@ const ASSET_SCRIPT = path.join(ROOT, "scripts/copy-build-assets.js");
 
 describe("bus schedule JSON assets", () => {
   it("lists the boarding-stop catalog in copy-build-assets.js", () => {
+    // Act
     const assetScript = fs.readFileSync(ASSET_SCRIPT, "utf8");
+
+    // Assert
     expect(assetScript).toContain('["src/bus/schedule/schedule-stops.json", "dist/src/bus/schedule/schedule-stops.json"]');
   });
 
   it("lists every JSON file in src/bus/schedule", () => {
+    // Arrange
     const assetScript = fs.readFileSync(ASSET_SCRIPT, "utf8");
+
+    // Act
     const onDisk = fs.readdirSync(SCHEDULE_DIR).filter((f) => f.endsWith(".json"));
+
+    // Assert
     expect(onDisk.length).toBeGreaterThan(0);
     for (const fileName of onDisk) {
       expect(assetScript).toContain(`dist/src/bus/schedule/${fileName}`);

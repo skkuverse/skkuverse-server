@@ -7,10 +7,15 @@
  */
 import fs from "fs";
 import path from "path";
-import { getBusGroups } from "../../../src/bus/bus-config/bus-config.data";
-import { haversineM } from "../../../src/bus/schedule/schedule-stops";
-import type { LatLng } from "../../../src/bus/types";
+import { BusConfigService } from "../../../src/bus/config/bus-config.service";
+import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
+import { haversineM } from "../../../src/shared/distance.util";
+import type { LatLng } from "../../../src/shared/lat-lng.types";
+
 import type { SupportedLang } from "../../../src/infra/types";
+
+const busConfig = new BusConfigService(new BusStopsService());
+const getBusGroups = (lang?: SupportedLang) => busConfig.getBusGroups(lang);
 
 // Captured from getGroupById before the campus group gained its v2 fields.
 const V1: Record<string, { json: string }> = JSON.parse(
@@ -50,7 +55,10 @@ const SCHOOL: Record<string, LatLng> = {
 
 describe("campus group config", () => {
   it("Group config in Korean: stopSequences with regular and hakbu on both services, stops, no serviceSelector", () => {
+    // Arrange
     const { screen } = campus("ko");
+
+    // Act & Assert
     expect(screen.services.map((s) => s.serviceId)).toEqual(["campus-inja", "campus-jain"]);
     for (const s of screen.services) expect(Object.keys(s.stopSequences!)).toEqual(["regular", "hakbu"]);
     expect(screen.stops!.length).toBeGreaterThan(0);
@@ -58,22 +66,29 @@ describe("campus group config", () => {
   });
 
   it.each(LANGS)("A client that has not updated (%s): without stops and stopSequences the body is the v1 body", (lang) => {
+    // Arrange
     const group = JSON.parse(JSON.stringify(campus(lang))) as CampusGroup;
     delete group.screen.stops;
     for (const s of group.screen.services) delete s.stopSequences;
+
+    // Act & Assert
     expect(JSON.stringify(group)).toBe(V1[`campus:${lang}`]!.json);
   });
 
   it("lists exactly the stops its sequences reference, each once", () => {
+    // Act
     const referenced = new Set(
       campus().screen.services.flatMap((s) => Object.values(s.stopSequences!).flat().map((st) => st.stopId!)),
     );
+
+    // Assert
     expect(campus().screen.stops!.map((s) => s.id).sort()).toEqual([...referenced].sort());
   });
 });
 
 describe("인자셔틀 stops and sequences (spec scenarios)", () => {
   it("Stop sequences per direction: board at one campus (scheduled), get off at the other (estimated)", () => {
+    // Act & Assert
     expect(brief(sequences("campus-inja").regular!)).toEqual([
       "board:hssc-bus-lot:scheduled",
       "alight:nsc-n-center:estimated",
@@ -85,6 +100,7 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
   });
 
   it("학부대학 runs use the regular stops: one route per direction", () => {
+    // Act & Assert
     for (const serviceId of ["campus-inja", "campus-jain"]) {
       for (const lang of LANGS) {
         const { regular, hakbu } = sequences(serviceId, lang);
@@ -94,30 +110,43 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
   });
 
   it("인사캠 boarding stop: 학생회관 버스 주차장, its detail mentions 600주년기념관", () => {
+    // Arrange
     const first = sequences("campus-inja").regular![0]!;
+
+    // Act
     const stop = stopById(first.stopId!);
+
+    // Assert
     expect(stop.name).toBe("학생회관 버스 주차장");
     expect(stop.detail).toContain("600주년기념관");
   });
 
   it("every stop at a school point lies within 25 m of it", () => {
+    // Act & Assert
     for (const [id, point] of Object.entries(SCHOOL)) {
       expect(`${id} ${Math.round(haversineM(stopById(id).coords!, point))} m`).toMatch(/^\S+ (\d|1\d|2[0-5]) m$/);
     }
   });
 
   it("자과캠 boarding stop is shared with the commute shuttle", () => {
+    // Arrange
     const commute = getBusGroups("ko").find((g) => g.id === "commute") as unknown as CampusGroup;
+
+    // Act
     const commuteBoard = commute.screen.services[0]!.stopSequences!.down![0]!.stopId;
+
+    // Assert
     expect(sequences("campus-jain").regular![0]!.stopId).toBe(commuteBoard);
     expect(commuteBoard).toBe("nsc-opposite");
   });
 
   it("자과캠 boarding stop is named as on the school's shuttle page: N센터 맞은편", () => {
+    // Act & Assert
     expect(stopById("nsc-opposite").name).toBe("N센터 맞은편");
   });
 
   it("Stop notes name the place: 탑승 first, 하차 after, at most eight characters, in every language", () => {
+    // Act & Assert
     for (const serviceId of ["campus-inja", "campus-jain"]) {
       for (const [routeType, seq] of Object.entries(sequences(serviceId, "ko"))) {
         const notes = seq.map((st) => st.note ?? "");
@@ -139,6 +168,7 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
   });
 
   it.each(LANGS)("Boarding stop (%s): the capture alone as its photo, and a street view link", (lang) => {
+    // Act
     const boarding = new Set(
       campus(lang).screen.services.flatMap((s) =>
         Object.values(s.stopSequences!)
@@ -147,6 +177,8 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
           .map((st) => st.stopId!),
       ),
     );
+
+    // Assert
     expect([...boarding].sort()).toEqual(["hssc-bus-lot", "nsc-opposite"]);
     for (const id of boarding) {
       const stop = stopById(id, lang);
@@ -156,12 +188,16 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
   });
 
   it("Drop-off stop: N센터 앞 has coordinates and a map", () => {
+    // Act
     const stop = stopById("nsc-n-center");
+
+    // Assert
     expect(stop.coords).toBeDefined();
     expect(stop.map).toEqual({ markers: [], paths: [] });
   });
 
   it("every 인자셔틀 stop has a pin-only map guide, and names and details in all three languages", () => {
+    // Act & Assert
     for (const lang of LANGS) {
       for (const stop of campus(lang).screen.stops!) {
         expect(stop.map).toEqual({ markers: [], paths: [] });
@@ -176,9 +212,10 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
 });
 
 describe("인자셔틀 notices", () => {
-  const serviceConfig = require("../../../src/bus/schedule/service-config").default;
+  const serviceConfig = require("../../../src/bus/bus.constants").SERVICE_CONFIG;
 
   it.each(["campus-inja", "campus-jain"])("%s shows one ai banner: arrivals reflect live traffic", (serviceId) => {
+    // Act & Assert
     expect(serviceConfig[serviceId].notices).toEqual([
       { style: "ai", text: "도착 시간은 실시간 교통 상황을 반영해요" },
     ]);

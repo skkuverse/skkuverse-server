@@ -1,4 +1,5 @@
 {
+  "_about": "Captured 2026-10-08 from BusConfigService getGroupById/computeGroupEtag (then bus-config.data.ts) on the code before schedule config v2, per group and language: the served JSON and its ETag.",
   "fasttrack:ko": {
     "json": "{\"id\":\"fasttrack\",\"screenType\":\"schedule\",\"label\":\"패스트트랙\",\"visibility\":{\"type\":\"dateRange\",\"from\":\"2026-03-01\",\"until\":\"2026-03-07\"},\"card\":{\"themeColor\":\"E65100\",\"iconType\":\"shuttle\",\"busTypeText\":\"패스트트랙\",\"subtitle\":\"테스트 버스\"},\"screen\":{\"defaultServiceId\":\"fasttrack-inja\",\"services\":[{\"serviceId\":\"fasttrack-inja\",\"label\":\"인사캠 → 자과캠\",\"endpoint\":\"/bus/schedule/data/fasttrack-inja/smart\"}],\"heroCard\":null,\"routeBadges\":[{\"id\":\"fasttrack\",\"label\":\"패스트트랙\",\"color\":\"E65100\"}],\"features\":[]}}",
     "etag": "\"4f6fee2758bf1070a75636cb98761ee0\""

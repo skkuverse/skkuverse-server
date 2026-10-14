@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { BusConfigService } from "../../bus/bus-config/bus-config.service";
+import { BusConfigService } from "../../bus/config/bus-config.service";
 import { Clock } from "../../infra/clock";
 import type { SupportedLang } from "../../infra/types";
 import { toBusGroupCard } from "./ui-transit-list.mapper";

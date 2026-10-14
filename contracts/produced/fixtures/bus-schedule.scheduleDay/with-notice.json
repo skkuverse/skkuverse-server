@@ -1,0 +1,40 @@
+{
+  "_about": "GET /bus/schedule/data/campus-inja/week?from=2026-10-19 captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); day 2026-10-19, two entries",
+  "data": {
+    "date": "2026-10-19",
+    "dayOfWeek": 1,
+    "display": "schedule",
+    "label": null,
+    "notices": [
+      {
+        "style": "ai",
+        "text": "도착 시간은 실시간 교통 상황을 반영해요",
+        "source": "service"
+      }
+    ],
+    "schedule": [
+      {
+        "index": 1,
+        "time": "07:00",
+        "routeType": "regular",
+        "busCount": 1,
+        "notes": null,
+        "stopTimes": [
+          "07:00",
+          null
+        ]
+      },
+      {
+        "index": 2,
+        "time": "10:00",
+        "routeType": "regular",
+        "busCount": 1,
+        "notes": null,
+        "stopTimes": [
+          "10:00",
+          null
+        ]
+      }
+    ]
+  }
+}

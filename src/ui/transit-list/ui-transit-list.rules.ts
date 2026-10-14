@@ -1,12 +1,12 @@
 import moment from "moment-timezone";
-import type { BusGroupVisibility } from "../../bus/bus-config/bus-config.types";
+import type { BusGroupVisibility } from "../../bus/config/bus-config.types";
 
 const KST = "Asia/Seoul";
 
 const FIRST_DAY_OPENING_FORMAT = "YYYY-MM-DD HH:mm";
 
 // QUIRK(moment): a strict parse still takes "24:00" as the next midnight, so the parse is compared back to the input.
-// WHY: bus parses fromTime at import (bus-config.data.ts), which is the gate; this throw is the second line.
+// WHY: bus parses fromTime at import (bus-config.constants.ts), which is the gate; this throw is the second line.
 function toFirstDayOpening(from: string, fromTime: string): moment.Moment {
   const written = `${from} ${fromTime}`;
   const opensAt = moment.tz(written, FIRST_DAY_OPENING_FORMAT, true, KST);

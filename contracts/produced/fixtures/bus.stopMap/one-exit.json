@@ -1,0 +1,34 @@
+{
+  "_about": "GET /bus/config/commute captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); the map of stop jeongja-exit3, cut to one marker and one two-point walk",
+  "data": {
+    "markers": [
+      {
+        "id": "exit3",
+        "kind": "subwayExit",
+        "label": "3번 출구",
+        "number": 3,
+        "coords": {
+          "lat": 37.365922,
+          "lng": 127.107774
+        }
+      }
+    ],
+    "paths": [
+      {
+        "kind": "walk",
+        "from": "exit3",
+        "to": "stop",
+        "points": [
+          {
+            "lat": 37.365922,
+            "lng": 127.107774
+          },
+          {
+            "lat": 37.365882,
+            "lng": 127.107844
+          }
+        ]
+      }
+    ]
+  }
+}

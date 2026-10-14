@@ -1,4 +1,4 @@
-import type { BusGroup } from "../../bus/bus-config/bus-config.types";
+import type { BusGroup } from "../../bus/config/bus-config.wire";
 import type { TransitList } from "./ui-transit-list.wire";
 
 type BusGroupCard = TransitList[number];
