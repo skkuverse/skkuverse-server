@@ -13,7 +13,9 @@
  */
 // scripts/ is excluded from tsconfig (plain CommonJS operator tooling), so this
 // is a require rather than an import.
-const { isLive, parseArgs } = require("../../../scripts/eventmap-window");
+const { isLive, parseArgs, toOpenedActivation } = require("../../../scripts/eventmap-window");
+
+import { liveActivation } from "../../../src/map/map.schema";
 
 const NOW = new Date("2026-08-27T06:00:00Z");
 const at = (minutes: number): Date => new Date(NOW.getTime() + minutes * 60_000);
@@ -127,3 +129,19 @@ describe("eventmap-window — isLive agrees with findActiveActivation", () => {
     expect(isLive({ enabled: true, activeFrom: NOW, activeUntil: at(10) }, NOW)).toBe(true);
   });
 });
+
+describe("eventmap-window — the activation `open` writes", () => {
+  it.each([
+    ["a 15-minute window", ["open"], at(15)],
+    ["no expiry", ["open", "--no-expiry"], null],
+  ])("parses through the server's liveActivation with %s", (_case, argv, activeUntil) => {
+    // Arrange
+    const written = { _id: "eskara-2026", ...toOpenedActivation(parseArgs(argv), NOW) };
+
+    // Act & Assert
+    // The read projects `_id` and `activeUntil` and parses them with liveActivation (src/map/map.schema.ts).
+    expect(liveActivation.parse(written)).toEqual({ _id: "eskara-2026", activeUntil });
+    expect(isLive(written, NOW)).toBe(true);
+  });
+});
+
