@@ -12,7 +12,7 @@
  */
 import { commentLines, commentsOf, numberedKeys } from "../helpers/architecture/comments";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
-import { readSource, sourceFiles } from "../helpers/architecture/tree";
+import { isGeneratedSource, readSource, sourceFiles } from "../helpers/architecture/tree";
 
 const RULE = String.raw`(?:-{3,}|={3,}|─{2,})`;
 const DIVIDER = new RegExp(String.raw`^\s*\/\/\s*${RULE}(?=\s|$)(.*)$`);
@@ -47,6 +47,7 @@ function blockDividers(file: string, source: string): Array<[number, string]> {
 
 /** `<file>: <heading>` for each divider, `#n` on a repeated heading. */
 export function sectionCommentViolations(file: string, source: string): string[] {
+  if (isGeneratedSource(file)) return [];
   const dividers = [...lineDividers(source), ...blockDividers(file, source)].sort((a, b) => a[0] - b[0]);
   return numberedKeys(
     file,
@@ -99,6 +100,10 @@ describe("section comment rule applies as specified", () => {
       "const s = '// --- not a comment line';",
     ].join("\n");
     expect(sectionCommentViolations("src/x/x.ts", source)).toEqual([]);
+  });
+
+  it("skips a generated file: its comments come from its generator", () => {
+    expect(sectionCommentViolations("src/x/x.document.generated.ts", "// --- Sync ---\nconst a = 1;")).toEqual([]);
   });
 });
 

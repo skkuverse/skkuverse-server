@@ -142,6 +142,12 @@ beforeAll(async () => {
   modules = [
     (require("../../../src/scheduling/scheduling.module") as { SchedulingModule: unknown }).SchedulingModule,
     (require("../../../src/notices/notices.module") as { NoticesModule: unknown }).NoticesModule,
+    (require("../../../src/notices/tabs/notices-tabs.module") as { NoticesTabsModule: unknown }).NoticesTabsModule,
+    (require("../../../src/notices/list/notices-list.module") as { NoticesListModule: unknown }).NoticesListModule,
+    (require("../../../src/notices/overview/notices-overview.module") as { NoticesOverviewModule: unknown }).NoticesOverviewModule,
+    (require("../../../src/notices/attachment/notices-attachment.module") as { NoticesAttachmentModule: unknown }).NoticesAttachmentModule,
+    (require("../../../src/notices/detail/notices-detail.module") as { NoticesDetailModule: unknown }).NoticesDetailModule,
+    (require("../../../src/notices/dispatch/notices-dispatch.module") as { NoticesDispatchModule: unknown }).NoticesDispatchModule,
   ];
 
   notices = db.getClient().db(config.notices.dbName).collection(config.notices.collections.notices);

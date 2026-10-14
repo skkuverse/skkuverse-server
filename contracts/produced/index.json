@@ -122,6 +122,57 @@
     "export": "miniAppIndexEntry",
     "routes": []
   },
+  "notices-detail.noticeDetail": {
+    "source": "src/notices/detail/notices-detail.wire.ts",
+    "export": "noticeDetail",
+    "routes": [
+      "GET notices/:sourceId/:articleNo"
+    ]
+  },
+  "notices-dispatch.sweepSummary": {
+    "source": "src/notices/dispatch/notices-dispatch.wire.ts",
+    "export": "sweepSummary",
+    "routes": [
+      "POST internal/notices/dispatch-pending"
+    ]
+  },
+  "notices-list.noticeList": {
+    "source": "src/notices/list/notices-list.wire.ts",
+    "export": "noticeList",
+    "routes": [
+      "GET notices",
+      "GET notices/source/:sourceId"
+    ]
+  },
+  "notices-list.noticeListMeta": {
+    "source": "src/notices/list/notices-list.wire.ts",
+    "export": "noticeListMeta",
+    "routes": [
+      "GET notices",
+      "GET notices/source/:sourceId"
+    ]
+  },
+  "notices-overview.overviewData": {
+    "source": "src/notices/overview/notices-overview.wire.ts",
+    "export": "overviewData",
+    "routes": [
+      "GET notices/overview"
+    ]
+  },
+  "notices-overview.overviewMeta": {
+    "source": "src/notices/overview/notices-overview.wire.ts",
+    "export": "overviewMeta",
+    "routes": [
+      "GET notices/overview"
+    ]
+  },
+  "notices-tabs.noticeTabs": {
+    "source": "src/notices/tabs/notices-tabs.wire.ts",
+    "export": "noticeTabs",
+    "routes": [
+      "GET notices/tabs"
+    ]
+  },
   "ui-campus.campusSheet": {
     "source": "src/ui/campus/ui-campus.wire.ts",
     "export": "campusSheet",

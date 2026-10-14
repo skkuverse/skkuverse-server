@@ -5,6 +5,7 @@
     "building.module.ts": "building.*, *.json",
     "map.module.ts": "map.*, *.json",
     "miniapps.module.ts": "miniapps.*, *.json",
+    "notices.module.ts": "notices.*, *.json",
     "ui.module.ts": "ui.*, *.json",
     "*.module.ts": "${capture}.schema.ts, ${capture}.wire.ts",
     "*.service.ts": "${capture}.rules.ts, ${capture}.mapper.ts, ${capture}.types.ts",

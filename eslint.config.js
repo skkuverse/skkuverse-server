@@ -339,7 +339,6 @@ const VIOLATORS = {
     "src/bus/eta/eta-store.ts",
     "src/bus/schedule/schedule-db.ts",
     "src/bus/schedule/schedule.service.ts",
-    "src/notices/notices.data.ts",
   ],
   features: {},
   // Files that hold a hex color or a web view path outside a .constants file.
@@ -352,8 +351,6 @@ const VIOLATORS = {
   lang: [
     "src/bus/controllers/bus-config.controller.ts",
     "src/bus/controllers/schedule.controller.ts",
-    "src/notices/notices.controller.ts",
-    "src/notices/overview/overview.controller.ts",
   ],
 };
 
@@ -519,11 +516,17 @@ function migratedSpecGlobs() {
   });
 }
 
+// Hash-locked vendored sources (.contracts.lock.json) are not edited here (ADR 0010, D10), so the migrated
+// function and TypeScript rules leave them alone; their producer repository owns their shape.
+const VENDORED_SOURCES = Object.values(require("./.contracts.lock.json").contracts)
+  .map((contract) => contract.path)
+  .filter((p) => p.startsWith("src/") && p.endsWith(".ts"));
+
 function migratedFunctionBlock() {
   return {
     name: "size-ratchets/migrated",
     files: migratedGlobs(".ts"),
-    ignores: ["src/**/*.spec.ts"],
+    ignores: ["src/**/*.spec.ts", ...VENDORED_SOURCES],
     rules: MIGRATED_FUNCTION_LIMITS,
   };
 }
@@ -535,7 +538,7 @@ function migratedTypescriptBlock() {
   return {
     name: "migrated/typescript",
     files: migratedGlobs(".ts"),
-    ignores: ["src/**/*.spec.ts"],
+    ignores: ["src/**/*.spec.ts", ...VENDORED_SOURCES],
     rules: {
       "@typescript-eslint/explicit-module-boundary-types": "error",
       "@typescript-eslint/no-non-null-assertion": "error",
@@ -552,6 +555,7 @@ const GLOSSARY_NOT = {
   health: ["isAlive", "isHealthy"],
   map: ["festivalConfig", "layerConfig", "eventWindow", "currentFestival", "filterButton", "exclusiveGroup", "categoryStyle", "sheetBody", "isFallback"],
   miniapps: ["appRegistry", "inbox", "readBy"],
+  notices: ["NoticeDto", "tabConfig", "FindResult", "pushStatus"],
   ui: ["homeConfig", "widget", "slider", "period", "shortcut", "campusConfig", "busItem", "scrollItem"],
 };
 
@@ -683,10 +687,10 @@ module.exports = [
     files: ["src/**/*.ts"],
     ignores: ["src/**/*.spec.ts"],
     rules: {
-      "max-lines": ["error", { max: 502, skipBlankLines: true, skipComments: false }],
+      "max-lines": ["error", { max: 408, skipBlankLines: true, skipComments: false }],
       "max-lines-per-function": ["error", { max: 122, skipBlankLines: true, skipComments: true }],
       complexity: ["error", 47],
-      "max-params": ["error", 7],
+      "max-params": ["error", 5],
     },
   },
   ...roleSizeBlocks(),
@@ -876,6 +880,6 @@ module.exports = [
     },
   },
   {
-    ignores: ["node_modules/", "coverage/", "dist/", "swagger/swagger-output.json"],
+    ignores: ["node_modules/", "coverage/", "dist/", "swagger/swagger-output.json", "src/**/*.generated.ts"],
   },
 ];

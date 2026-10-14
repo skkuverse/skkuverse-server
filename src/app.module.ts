@@ -20,6 +20,12 @@ import { MapCampusModule } from "./map/campus/map-campus.module";
 import { MapEventModule } from "./map/event/map-event.module";
 import { MapEventDetailsModule } from "./map/event-details/map-event-details.module";
 import { NoticesModule } from "./notices/notices.module";
+import { NoticesTabsModule } from "./notices/tabs/notices-tabs.module";
+import { NoticesListModule } from "./notices/list/notices-list.module";
+import { NoticesOverviewModule } from "./notices/overview/notices-overview.module";
+import { NoticesAttachmentModule } from "./notices/attachment/notices-attachment.module";
+import { NoticesDetailModule } from "./notices/detail/notices-detail.module";
+import { NoticesDispatchModule } from "./notices/dispatch/notices-dispatch.module";
 import { MiniappsModule } from "./miniapps/miniapps.module";
 import { MiniappsNotificationsModule } from "./miniapps/notifications/miniapps-notifications.module";
 import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
@@ -51,6 +57,13 @@ import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.modul
     MapEventModule,
     MapEventDetailsModule,
     NoticesModule,
+    NoticesTabsModule,
+    NoticesListModule,
+    NoticesOverviewModule,
+    NoticesAttachmentModule,
+    // WHY: last of the /notices routes: /notices/:sourceId/:articleNo would catch every two-segment path above.
+    NoticesDetailModule,
+    NoticesDispatchModule,
     MiniappsModule,
     MiniappsNotificationsModule,
     MiniappsCatalogModule,

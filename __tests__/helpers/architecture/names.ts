@@ -50,6 +50,9 @@ export const EXEMPT = new Set([
   "src/types.d.ts",
   // Pinned by the umbrella repo's contract manifest (.contracts.lock.json).
   "src/notices/notices.topics.ts",
+  // Imported by the hash-locked notices.topics.ts (.contracts.lock.json); changes go through the producer repo.
+  "src/notices/tabConfig.ts",
+  "src/notices/types.ts",
 ]);
 
 export interface ParsedName {
