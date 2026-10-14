@@ -23,10 +23,17 @@ import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
 const CLASS_ROLE = /\.(?:service|repository|client)\.ts$/;
 
+/**
+ * The lib's mapped types a reader names a class through. Without a lib, `Pick<Class, "m">` resolves to nothing, so a
+ * call through it would reach no declaration.
+ */
+const LIB_STUB = "type Pick<T, K extends keyof T> = { [P in K]: T[P] };";
+
 /** A type-checked program over in-memory sources: relative imports resolve among them, packages stay unresolved. */
 function programOf(sources: ReadonlyMap<string, string>): ts.Program {
   const options: ts.CompilerOptions = { noLib: true, types: [], experimentalDecorators: true, module: ts.ModuleKind.CommonJS, moduleResolution: ts.ModuleResolutionKind.Node10 };
   const files = new Map([...sources].map(([file, source]) => [path.posix.join("/", file), source]));
+  files.set("/lib.d.ts", LIB_STUB);
   const host: ts.CompilerHost = {
     getSourceFile: (name) => {
       const source = files.get(name);
@@ -136,6 +143,18 @@ export class XService {
 
     // Act & Assert
     expect(uncalledMethods(sources, ["src/x/"])).toEqual([]);
+  });
+
+  it("counts a call through a Pick of the class, as a door's reader types it", () => {
+    // Arrange
+    const sources = new Map([
+      ["src/x/x.service.ts", "export class XService { isX(value: string): boolean { return value !== \"\"; } orphan(): void {} }"],
+      ["src/y/y.types.ts", 'import type { XService } from "../x/x.service";\nexport type XReader = Pick<XService, "isX">;'],
+      ["src/y/y.config.ts", 'import type { XReader } from "./y.types";\nexport const check = (reader: XReader): boolean => reader.isX("a");'],
+    ]);
+
+    // Act & Assert
+    expect(uncalledMethods(sources, ["src/x/"])).toEqual(["src/x/x.service.ts: XService.orphan"]);
   });
 });
 
