@@ -10,7 +10,7 @@ import { registryFile, type MiniAppDetailRaw, type RegistryFile } from "./miniap
 import type { LoadedRegistry } from "./miniapps.types";
 
 type Issue = z.core.$ZodRawIssue;
-type Words = (id: string, issue: Issue) => string;
+type Words = (id: string, issue: Issue) => string | undefined;
 
 const LABEL = "miniapp registry";
 
@@ -39,7 +39,9 @@ const DETAIL_WORDS: Readonly<Record<string, Words>> = {
     issue.code === "custom"
       ? `startUrl for "${id}" must address a page on the web view — no fragment, not the root`
       : `bad startUrl for "${id}"`,
-  relatedLinks: (id) => `bad relatedLinks url in "${id}"`,
+  relatedLinks: (id, issue) =>
+    issue.code === "unrecognized_keys" ? `unknown relatedLinks key "${firstKey(issue)}" in "${id}"` : `bad relatedLinks url in "${id}"`,
+  noticeBanner: (id, issue) => (issue.code === "unrecognized_keys" ? `unknown noticeBanner key "${firstKey(issue)}" in "${id}"` : undefined),
 };
 
 function logoWords({ id, field, part }: { id: string; field: string; part: PropertyKey | undefined }, issue: Issue): string {
@@ -104,7 +106,7 @@ export function loadRegistry(index: unknown, details: Readonly<Record<string, un
   return parseConfigFile({ label: LABEL, error: toRegistryWords(raw) }, schema, raw);
 }
 
-function ownerOf(origin: string, details: readonly MiniAppDetailRaw[]): string {
+function ownerOf(details: readonly MiniAppDetailRaw[], origin: string): string {
   const owners = details.filter((detail) => new URL(detail.startUrl).origin === origin);
   const [owner] = owners;
   if (owners.length !== 1 || !owner) {
@@ -114,14 +116,15 @@ function ownerOf(origin: string, details: readonly MiniAppDetailRaw[]): string {
 }
 
 // WHY: one owner per first-party origin, or a URL there opens in no mini app's shell, or in two.
-function toFirstPartyOrigins(details: readonly MiniAppDetailRaw[]): Readonly<Record<string, string>> {
-  return Object.freeze(Object.fromEntries(FIRST_PARTY_MINIAPP_ORIGINS.map((origin) => [origin, ownerOf(origin, details)])));
+function toFirstPartyOrigins(details: readonly MiniAppDetailRaw[], origins: readonly string[]): Readonly<Record<string, string>> {
+  return Object.freeze(Object.fromEntries(origins.map((origin) => [origin, ownerOf(details, origin)])));
 }
 
-function toLoadedRegistry({ index, details }: RegistryFile): LoadedRegistry {
-  const map = new Map(Object.entries(details).map(([id, detail]) => [id, Object.freeze(detail)]));
-  const list = [...index.miniApps].sort((a, b) => a.order - b.order).map((entry) => toIndexEntry(entry, WEB_ORIGIN));
-  return { version: index.version, list: Object.freeze(list), map, firstPartyOrigins: toFirstPartyOrigins([...map.values()]) };
+export function toLoadedRegistry({ index, details }: RegistryFile, firstPartyOrigins: readonly string[]): LoadedRegistry {
+  const detailsById = new Map(Object.entries(details).map(([id, detail]) => [id, Object.freeze(detail)]));
+  const indexEntries = [...index.miniApps].sort((a, b) => a.order - b.order).map((entry) => toIndexEntry(entry, WEB_ORIGIN));
+  const ownerByOrigin = toFirstPartyOrigins([...detailsById.values()], firstPartyOrigins);
+  return { version: index.version, indexEntries: Object.freeze(indexEntries), detailsById, firstPartyOrigins: ownerByOrigin };
 }
 
 // WHY: read next to the compiled file at runtime; scripts/copy-build-assets.js stages each JSON file into dist/.
@@ -137,7 +140,7 @@ function indexIdsOf(index: unknown): string[] {
 function readRegistry(): LoadedRegistry {
   const index = readJson("index.json");
   const details = Object.fromEntries(indexIdsOf(index).map((id) => [id, readJson("details", `${id}.json`)]));
-  return toLoadedRegistry(loadRegistry(index, details));
+  return toLoadedRegistry(loadRegistry(index, details), FIRST_PARTY_MINIAPP_ORIGINS);
 }
 
 export const registry: Readonly<LoadedRegistry> = Object.freeze(readRegistry());
