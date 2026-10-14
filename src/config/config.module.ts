@@ -2,36 +2,16 @@ import { Global, Module } from "@nestjs/common";
 import { ConfigModule as NestConfigModule } from "@nestjs/config";
 import { validateEnv } from "../infra/required-env";
 
-/**
- * @Global config module.
- *
- * - NestConfigModule.forRoot({ isGlobal, validate }) runs validateEnv() at
- *   bootstrap; the `validate` hook throws on any missing required env var
- *   (fail-loud, NestJS-native — does NOT process.exit).
- * - APP_CONFIG_VALIDATION is a belt-and-suspenders provider whose useFactory
- *   also runs validateEnv() during DI graph construction, so the crash fires
- *   even if a future refactor changes how NestConfigModule's validate is wired.
- */
+function validatedEnv(env: Record<string, unknown>): Record<string, unknown> {
+  validateEnv();
+  return env;
+}
+
+// WHY: src/infra/config.ts loads dotenv itself (`ignoreEnvFile`), and APP_CONFIG_VALIDATION checks again while
+// Nest builds the providers, so a missing variable fails the boot even if the `validate` hook stops being wired.
 @Global()
 @Module({
-  imports: [
-    NestConfigModule.forRoot({
-      isGlobal: true,
-      ignoreEnvFile: true, // src/infra/config.ts loads dotenv itself; don't double-load
-      validate: (cfg: Record<string, unknown>) => {
-        validateEnv();
-        return cfg;
-      },
-    }),
-  ],
-  providers: [
-    {
-      provide: "APP_CONFIG_VALIDATION",
-      useFactory: () => {
-        validateEnv();
-        return true;
-      },
-    },
-  ],
+  imports: [NestConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, validate: validatedEnv })],
+  providers: [{ provide: "APP_CONFIG_VALIDATION", useFactory: () => { validateEnv(); return true; } }],
 })
 export class ConfigModule {}

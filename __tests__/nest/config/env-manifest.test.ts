@@ -68,6 +68,7 @@ function missingWithOnly(names: string[], nodeEnv: string): string[] {
 describe("config/env.*.keys — the names render_env.py writes", () => {
   it("config.ts and ConfigModule check the shared list and keep none of their own", () => {
     for (const rel of ["src/infra/config.ts", "src/config/config.module.ts"]) {
+      // Act & Assert
       expect(read(rel)).toMatch(/from "(?:\.\.\/infra|\.)\/required-env"/);
       expect(read(rel)).not.toMatch(/const required\b/);
     }
@@ -77,28 +78,40 @@ describe("config/env.*.keys — the names render_env.py writes", () => {
     ["prd", PRD, "production"],
     ["dev", DEV, "development"],
   ])("a .env with only the %s names passes bootstrap validation", (_label, names, nodeEnv) => {
+    // Act & Assert
     expect(missingWithOnly(names, nodeEnv)).toEqual([]);
   });
 
   it("the validation really fails when a listed required name is absent", () => {
+    // Arrange
     const withoutMongo = PRD.filter((n) => n !== "MONGO_URL");
+
+    // Act & Assert
     expect(missingWithOnly(withoutMongo, "production")).toEqual(["  mongo.url (env: MONGO_URL)"]);
   });
 
   it("every listed name is read somewhere in src/", () => {
+    // Arrange
     const source = sourceFiles(path.join(root, "src"))
       .map((file) => fs.readFileSync(file, "utf8"))
       .join("\n");
+
+    // Act
     const unread = [...new Set([...PRD, ...DEV])].filter(
       (name) => !new RegExp(`\\b${name}\\b`).test(source),
     );
+
+    // Assert
     expect(unread).toEqual([]);
   });
 
   it("no listed name is also set inline in docker-compose.yml", () => {
+    // Act
     const inline = new Set(
       [...read("docker-compose.yml").matchAll(/^\s*-\s*([A-Z_][A-Z0-9_]*)=/gm)].map((m) => m[1]!),
     );
+
+    // Assert
     expect(inline.size).toBeGreaterThan(0);
     expect(PRD.filter((name) => inline.has(name))).toEqual([]);
   });
@@ -107,6 +120,7 @@ describe("config/env.*.keys — the names render_env.py writes", () => {
     ["prd", PRD],
     ["dev", DEV],
   ])("the %s list has no duplicates", (_label, names) => {
+    // Act & Assert
     expect(new Set(names).size).toBe(names.length);
   });
 });
