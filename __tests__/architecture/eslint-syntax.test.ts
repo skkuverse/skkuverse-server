@@ -327,7 +327,9 @@ describe("specs/fixed-clock", () => {
 
     // Act & Assert
     expect(files).toEqual(expect.arrayContaining(["src/map/**/*.spec.ts", "__tests__/nest/map/**/*.ts", "__tests__/nest/infra/**/*.ts"]));
-    expect(files.some((glob) => String(glob).startsWith("__tests__/nest/bus/"))).toBe(false);
+    const scopes: string[] = require("./migrated-scopes.json");
+    const nestModules = files.map((glob) => /^__tests__\/nest\/([^/]+)\//.exec(String(glob))?.[1]).filter((m): m is string => !!m);
+    expect(nestModules.filter((m) => !scopes.includes(`src/${m}/`))).toEqual([]);
   });
 });
 

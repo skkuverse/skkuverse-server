@@ -9,18 +9,6 @@
  * Cache-Control of /home and /home/campus, and that /home/transitlist and
  * /home/scroll send none.
  */
-// The transit list reads the bus groups through BusModule, whose schedule
-// service and estimate pollers create their Mongo indexes at init. Neither is
-// part of these routes.
-jest.mock("../../../src/bus/schedule/schedule-db", () => ({
-  ...jest.requireActual("../../../src/bus/schedule/schedule-db"),
-  ensureScheduleIndexes: jest.fn(async () => undefined),
-}));
-jest.mock("../../../src/bus/eta/eta-store", () => ({
-  ...jest.requireActual("../../../src/bus/eta/eta-store"),
-  ensureEtaIndexes: jest.fn(async () => undefined),
-}));
-
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";

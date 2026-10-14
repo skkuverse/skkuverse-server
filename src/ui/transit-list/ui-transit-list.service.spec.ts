@@ -7,8 +7,9 @@
  */
 import { FakeBusConfigService } from "../../../__tests__/helpers/fakes/bus/bus-config.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import type { BusConfigService } from "../../bus/bus-config/bus-config.service";
-import type { BusGroup, BusGroupVisibility } from "../../bus/bus-config/bus-config.types";
+import type { BusConfigService } from "../../bus/config/bus-config.service";
+import type { BusGroupVisibility } from "../../bus/config/bus-config.types";
+import type { BusGroup } from "../../bus/config/bus-config.wire";
 import type { Clock } from "../../infra/clock";
 import { UiTransitListService } from "./ui-transit-list.service";
 

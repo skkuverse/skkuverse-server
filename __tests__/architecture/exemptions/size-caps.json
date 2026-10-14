@@ -1,4 +1,12 @@
 {
+  "src/bus/config/bus-config.mapper.ts": {
+    "max": 155,
+    "reason": "ADR 0010 D9, no domain seam: toBusGroups is the bus list as one ordered literal per group (hssc, campus, fasttrack, commute, then each Jongro route), and each group's field order is the ETag input; the realtime and schedule groups share the card, badge and station helpers, so a sub-module would hold group builders and nothing else."
+  },
+  "src/bus/stops/bus-stops.rules.ts": {
+    "max": 285,
+    "reason": "ADR 0010 D9, no domain seam: schedule-stops.json is one operator-edited document, and its boot failure lists every issue in the words bus-stops.rules.spec.ts pins. The checks (stops, photos, panoramas, guides, sequences, estimate opt-ins) compose into the one validator the schema runs, and child-to-parent imports keep a sub-module from holding a piece of it. docs/plans/private-file tracks the zod rewrite that retires this entry."
+  },
   "src/map/layer-set/map-layer-set.rules.ts": {
     "max": 141,
     "reason": "ADR 0010 D9, no domain seam: the layer-set file is one operator-edited document, and its schema composes these checks (chips, lists, option windows, cross-references). Child-to-parent imports put a zod composite's leaves above it, so a sub-module split cannot hold them, and the leaves alone exceed the rules cap."

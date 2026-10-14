@@ -9,15 +9,20 @@
  */
 import fs from "fs";
 import path from "path";
-import { getBusGroups } from "../../../src/bus/bus-config/bus-config.data";
-import { haversineM } from "../../../src/bus/schedule/schedule-stops";
-import { BusConfigService } from "../../../src/bus/bus-config/bus-config.service";
-import { Clock } from "../../../src/infra/clock";
+import { BusConfigService } from "../../../src/bus/config/bus-config.service";
+import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
+import { haversineM } from "../../../src/shared/distance.util";
+import type { Clock } from "../../../src/infra/clock";
 import type { SupportedLang } from "../../../src/infra/types";
+
 import { UiTransitListService } from "../../../src/ui/transit-list/ui-transit-list.service";
 
-// The transit list as the ui module serves it, reading the (faked) system time through Clock.
-const transitList = new UiTransitListService(new BusConfigService(), new Clock());
+const busConfig = new BusConfigService(new BusStopsService());
+const getBusGroups = (lang?: SupportedLang) => busConfig.getBusGroups(lang);
+
+// The transit list as the ui module serves it; each test fakes the system time this clock reads.
+const clock: Clock = { now: () => new Date() };
+const transitList = new UiTransitListService(busConfig, clock);
 const getBusList = (lang: SupportedLang) => transitList.listBusGroupCards(lang);
 
 const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
@@ -41,6 +46,7 @@ function runs(serviceId: string): string[] {
 
 describe("commute timetable (spec scenarios: departure → arrival per run)", () => {
   it("정자", () => {
+    // Act & Assert
     expect(runs("commute-jeongja")).toEqual([
       "up 07:45→08:25", "up 09:20→10:05", "up 11:00→11:45",
       "down 16:30→17:15", "down 18:30→19:15", "down 20:30→21:15",
@@ -48,14 +54,17 @@ describe("commute timetable (spec scenarios: departure → arrival per run)", ()
   });
 
   it("잠실", () => {
+    // Act & Assert
     expect(runs("commute-jamsil")).toEqual(["up 07:30→08:40", "up 10:20→11:40", "down 18:00→19:20", "down 21:00→22:20"]);
   });
 
   it("도곡", () => {
+    // Act & Assert
     expect(runs("commute-dogok")).toEqual(["up 07:40→08:45", "up 09:40→10:15", "down 16:30→17:45", "down 18:45→20:30"]);
   });
 
   it("강남·양재: one row per bus — 강남, then 양재, then campus; 하교 drops at 양재 (5 min before 강남), then 강남", () => {
+    // Act & Assert
     expect(runs("commute-gangnam-yangjae")).toEqual([
       "up 07:40→07:45→08:45",
       "up 08:55→09:00→10:15",
@@ -69,6 +78,7 @@ describe("commute timetable (spec scenarios: departure → arrival per run)", ()
   });
 
   it("광교중앙", () => {
+    // Act & Assert
     expect(runs("commute-gwanggyo")).toEqual([
       "up 08:00→08:35", "up 08:30→09:05", "up 09:00→09:35", "up 09:30→10:05", "up 10:00→10:35", "up 10:30→11:05",
       "down 16:30→17:05", "down 17:00→17:35", "down 17:30→18:05", "down 18:00→18:35", "down 18:30→19:05", "down 19:00→19:35",
@@ -76,11 +86,15 @@ describe("commute timetable (spec scenarios: departure → arrival per run)", ()
   });
 
   it("keeps the 양재 time in notes for clients that do not read stopTimes", () => {
+    // Act
     const gy = commuteDocs.find((d) => d.serviceId === "commute-gangnam-yangjae")!;
+
+    // Assert
     for (const e of gy.entries.filter((x) => x.routeType === "up")) expect(e.notes).toBe(`양재역 ${e.stopTimes![1]}`);
   });
 
   it("one bus per run, weekdays only, over the pilot window", () => {
+    // Act & Assert
     expect(commuteDocs).toHaveLength(5);
     for (const doc of commuteDocs) {
       expect(doc.days).toEqual([1, 2, 3, 4, 5]);
@@ -99,13 +113,19 @@ function commute(lang: "ko" | "en" | "zh" = "ko"): Group & { screen: Record<stri
 
 describe("commute group config", () => {
   it("labels every route in five Korean characters or fewer, for v1 segmented controls", () => {
+    // Act
     const labels = commute("ko").screen.services.map((s: { label: string }) => s.label);
+
+    // Assert
     expect(labels).toEqual(["정자", "잠실", "도곡", "강남·양재", "광교중앙"]);
     for (const label of labels) expect([...label].length).toBeLessThanOrEqual(5);
   });
 
   it("is labeled 자과캠 통학 셔틀버스 and has a badge for each direction", () => {
+    // Act
     const group = commute("ko");
+
+    // Assert
     expect(group.label).toBe("자과캠 통학 셔틀버스");
     expect(group.screen.routeBadges.map((b: { id: string; label: string }) => `${b.id}:${b.label}`)).toEqual([
       "up:등교",
@@ -114,6 +134,7 @@ describe("commute group config", () => {
   });
 
   it("translates every label it serves", () => {
+    // Act & Assert
     for (const lang of ["en", "zh"] as const) {
       const group = commute(lang);
       const texts = [group.label, ...group.screen.services.map((s: { label: string }) => s.label)];
@@ -132,19 +153,23 @@ describe("commute card visibility", () => {
   };
 
   it("is absent the minute before it opens, 2026-10-12 11:55 KST", () => {
+    // Act & Assert
     expect(listedAt("2026-10-11T15:00:00.000Z")).toBe(false); // 2026-10-12 00:00 KST
     expect(listedAt("2026-10-12T02:54:00.000Z")).toBe(false); // 2026-10-12 11:54 KST
   });
 
   it("is present from 2026-10-12 11:55 KST, a week before the first run", () => {
+    // Act & Assert
     expect(listedAt("2026-10-12T02:55:00.000Z")).toBe(true); // 2026-10-12 11:55 KST
   });
 
   it("stays present into the first run, Monday 2026-10-19", () => {
+    // Act & Assert
     expect(listedAt("2026-10-18T15:00:00.000Z")).toBe(true); // 2026-10-19 00:00 KST
   });
 
   it("is present until the end of the last day", () => {
+    // Act & Assert
     expect(listedAt("2026-12-18T14:59:00.000Z")).toBe(true); // 2026-12-18 23:59 KST
     expect(listedAt("2026-12-18T15:00:00.000Z")).toBe(false); // 2026-12-19 00:00 KST
   });
@@ -162,14 +187,20 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   const brief = (seq: SeqStop[]) => seq.map((st) => `${st.action}:${st.label}:${st.timing}`);
 
   it("정자 boarding: the run boards at 정자역 3번 출구 and arrives at campus (estimated)", () => {
+    // Act
     const seq = sequences("commute-jeongja");
+
+    // Assert
     expect(brief(seq.up!)).toEqual(["board:정자역 3번 출구:scheduled", "alight:자과캠:estimated"]);
     expect(stopById(seq.up![0]!.stopId!)).toMatchObject({ name: "정자역 3번 출구", detail: "파리바게뜨 앞" });
     expect(brief(seq.down!)).toEqual(["board:N센터 맞은편:scheduled", "alight:정자역 2번 출구 앞:estimated"]);
   });
 
   it("강남·양재: 등교 boards at 강남, then 양재; 하교 drops at 양재, then 강남", () => {
+    // Act
     const seq = sequences("commute-gangnam-yangjae");
+
+    // Assert
     expect(brief(seq.up!)).toEqual([
       "board:강남역 5번 출구:scheduled",
       "board:양재역 2번 출구:scheduled",
@@ -183,6 +214,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   });
 
   it("Drop-off sequence: every 등교 run ends at campus, with the campus stops in order as detail", () => {
+    // Act & Assert
     for (const s of services()) {
       const last = s.stopSequences.up!.at(-1)!;
       expect(last).toMatchObject({ action: "alight", label: "자과캠", detail: CAMPUS_SEQUENCE });
@@ -190,9 +222,12 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   });
 
   it("하교 drop-off spots match the school's 2026-10-08 answer", () => {
+    // Act
     const drops = Object.fromEntries(
       services().map((s) => [s.serviceId, s.stopSequences.down!.filter((st) => st.action === "alight").map((st) => st.label)]),
     );
+
+    // Assert
     expect(drops).toEqual({
       "commute-jeongja": ["정자역 2번 출구 앞"],
       "commute-jamsil": ["잠실역 5번 출구 앞"],
@@ -203,7 +238,10 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   });
 
   it("Drop-off with its exit: 정자's 하교 drop-off is a catalog stop with exit 2 and no walk", () => {
+    // Act
     const last = sequences("commute-jeongja").down!.at(-1)!;
+
+    // Assert
     expect(last.stopId).toBe("jeongja-exit2");
     const stop = stopById(last.stopId!);
     expect(stop.coords).toBeDefined();
@@ -212,13 +250,19 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   });
 
   it("Drop-off on a median bus lane: the 강남역 bus stop has coordinates and a pin-only map", () => {
+    // Arrange
     const gangnam = sequences("commute-gangnam-yangjae").down!.at(-1)!;
+
+    // Act
     const stop = stopById(gangnam.stopId!);
+
+    // Assert
     expect(stop.coords).toBeDefined();
     expect(stop.map).toEqual({ markers: [], paths: [] });
   });
 
   it("every 하교 drop-off is a catalog stop in front of the exit its name gives, with no walk and no photo", () => {
+    // Act & Assert
     for (const s of services()) {
       for (const st of s.stopSequences.down!.filter((x) => x.action === "alight")) {
         const stop = stopById(st.stopId!);
@@ -243,7 +287,10 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   });
 
   it("Station stop in English: its en photo, a street view link, and a map with the exit and a walk to the stop", () => {
+    // Act
     const stationIds = ["jeongja-exit3", "jamsil-exit4", "dogok-exit1", "gangnam-exit5", "yangjae-exit2", "gwanggyo-exit4"];
+
+    // Assert
     expect(stops("en").map((s) => s.id)).toEqual(expect.arrayContaining([...stationIds, "nsc-opposite"]));
     for (const id of stationIds) {
       const stop = stopById(id, "en");
@@ -261,6 +308,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   });
 
   it("정자역 3번 출구 in English: the exit marker reads Exit 3", () => {
+    // Act & Assert
     expect(stopById("jeongja-exit3", "en").map.markers[0]).toEqual({
       id: "exit3",
       kind: "subwayExit",
@@ -271,6 +319,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   });
 
   it("Campus stop: the original photo in any language, a street view link, a pin-only map", () => {
+    // Act & Assert
     for (const lang of ["ko", "en", "zh"] as const) {
       const stop = stopById("nsc-opposite", lang);
       expect(stop.photoUrl).toMatch(/^https:\/\/media\.skkuverse\.com\/commute\/stops\/nsc-opposite\/original-[0-9a-f]{8}\.jpg$/);
@@ -280,8 +329,11 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   });
 
   it("notes for the timetable's notes column: station or 자과캠, with 탑승/하차", () => {
+    // Act
     const notes = (serviceId: string, rt: string, lang: "ko" | "en" | "zh" = "ko") =>
       sequences(serviceId, lang)[rt]!.map((st) => (st as SeqStop & { note?: string }).note);
+
+    // Assert
     expect(notes("commute-gangnam-yangjae", "up")).toEqual(["강남역 탑승", "양재역 탑승", "자과캠 하차"]);
     expect(notes("commute-gangnam-yangjae", "down")).toEqual(["자과캠 탑승", "양재역 하차", "강남역 하차"]);
     expect(notes("commute-gangnam-yangjae", "up", "en")).toEqual(["Board · Gangnam Stn.", "Board · Yangjae Stn.", "Get off · NSC"]);
@@ -299,6 +351,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   });
 
   it("labels translate with the request language", () => {
+    // Act & Assert
     expect(sequences("commute-gangnam-yangjae", "en").up!.map((st) => st.label)).toEqual([
       "Gangnam Stn. Exit 5",
       "Yangjae Stn. Exit 2",
