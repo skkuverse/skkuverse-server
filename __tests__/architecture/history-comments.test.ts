@@ -23,7 +23,12 @@ describe("history comment rule applies as specified", () => {
     ["/** Ported from packages/shared. */", ["ported"]],
     ["// Read with parseInt, as it always has been.", ["as it always has"]],
     ["// The legacy route.\n// Previously the old one.", ["legacy", "previously"]],
+    ["// WHY: only the undrawable is checked, as before the parse moved.", ["as before"]],
+    ["// Keyed the same as it was in v1.", ["as before"]],
+    ["// Sorted until now by id.", ["as before"]],
+    ["// Twice as fast than before.", ["as before"]],
     ["// Used to decide the rule below.", []],
+    ["// Run before the first read, as the boot does.", []],
     ["// A list that is used to build the index.", []],
     ["const s = 'it used to be';", []],
   ])("%j → %j", (source, phrases) => {
