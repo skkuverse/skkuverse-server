@@ -7,14 +7,21 @@
  *
  * The copy check reads `__tests__/architecture/*.test.ts` and the other
  * helpers for a hand-written export predicate (`SyntaxKind.ExportKeyword`),
- * a literal list of the shared layers, a lifecycle-hook set, or a relative
- * import resolved with `path.posix.join`.
+ * a literal list of the shared layers, a lifecycle-hook set, a relative
+ * import resolved with `path.posix.join`, or an import walk of its own
+ * (`.moduleSpecifier` read outside ast.ts: use `importsOf`).
  */
 import ts from "typescript";
 import {
+  MONGO_READS,
+  MONGO_READ_OPTIONS_ARG,
+  MONGO_WRITES,
+  calleeName,
+  collect,
   exportedNamesDeep,
   exportsOf,
   importsOf,
+  localDeclarations,
   parseSource,
   resolveRelative,
   skipOuter,
@@ -141,11 +148,100 @@ describe("importsOf", () => {
     ]);
   });
 
+  it("reads side-effect imports, import-equals, require and dynamic import calls, each by its kind", () => {
+    // Arrange
+    const source = [
+      'import "./polyfill";',
+      'import fs = require("fs");',
+      'const axios = require("axios");',
+      'const { a, b: c } = require("./m");',
+      'require("./side");',
+      'const lazy = () => import("../n");',
+      "const notALoad = require(name);",
+    ].join("\n");
+
+    // Act
+    const imports = importsOf(parseSource("src/x/y/x-y.mapper.ts", source));
+
+    // Assert
+    expect(imports.map((i) => [i.kind, i.target, i.imported, i.local, i.isType])).toEqual([
+      ["side-effect", "src/x/y/polyfill", "", "", false],
+      ["import-equals", "fs", "*", "fs", false],
+      ["require", "axios", "*", "axios", false],
+      ["require", "src/x/y/m", "a", "a", false],
+      ["require", "src/x/y/m", "b", "c", false],
+      ["require", "src/x/y/side", "*", "", false],
+      ["dynamic", "src/x/n", "*", "", false],
+    ]);
+  });
+
+  it("marks each static form with its kind", () => {
+    // Arrange
+    const source = 'import { a } from "./m";\nexport { b } from "./m";\ntype T = import("./t").T;';
+
+    // Act
+    const kinds = importsOf(parseSource("src/x/x.ts", source)).map((i) => i.kind);
+
+    // Assert
+    expect(kinds).toEqual(["import", "reexport", "import-type"]);
+  });
+
   it("resolves a relative specifier to a repo path and leaves a package alone", () => {
     // Act & Assert
     expect(resolveRelative("src/x/y/a.ts", "../../infra/mongo.ts")).toBe("src/infra/mongo");
     expect(resolveRelative("src/x/a.ts", "./b")).toBe("src/x/b");
     expect(resolveRelative("src/x/a.ts", "mongodb")).toBeUndefined();
+  });
+});
+
+describe("calleeName", () => {
+  it.each([
+    ["an identifier", "find(filter);", "find"],
+    ["a property", "db.col.find(filter);", "find"],
+    ["an element access", 'col["find"](filter);', "find"],
+    ["an optional chain", "col?.find(filter);", "find"],
+    ["a cast callee", "(col.find as Finder)(filter);", "find"],
+    ["a computed name", "col[name](filter);", undefined],
+  ])("reads %s", (_case, source, name) => {
+    // Arrange
+    const [call] = collect(parseSource("x.ts", source), ts.isCallExpression);
+
+    // Act & Assert
+    expect(calleeName(call!)).toBe(name);
+  });
+});
+
+describe("localDeclarations", () => {
+  it("reads an overloaded function by its implementation", () => {
+    // Arrange
+    const sf = parseSource("x.ts", "function g(n: number): number;\nfunction g(n: string): number;\nfunction g(n: unknown): number { return 1; }");
+
+    // Act
+    const g = localDeclarations(sf).get("g");
+
+    // Assert
+    expect((g?.declaration as ts.FunctionDeclaration).body).toBeDefined();
+  });
+});
+
+describe("the Mongo call names", () => {
+  it("list each driver read with its options index, and each write", () => {
+    // Act & Assert
+    expect(MONGO_READ_OPTIONS_ARG).toEqual({ find: 1, findOne: 1, aggregate: 1, countDocuments: 1, estimatedDocumentCount: 0, distinct: 2 });
+    expect([...MONGO_READS].sort()).toEqual(["aggregate", "countDocuments", "distinct", "estimatedDocumentCount", "find", "findOne"]);
+    expect([...MONGO_WRITES].sort()).toEqual([
+      "bulkWrite",
+      "deleteMany",
+      "deleteOne",
+      "findOneAndDelete",
+      "findOneAndReplace",
+      "findOneAndUpdate",
+      "insertMany",
+      "insertOne",
+      "replaceOne",
+      "updateMany",
+      "updateOne",
+    ]);
   });
 });
 
@@ -180,6 +276,7 @@ export function helperCopies(file: string, source: string): string[] {
     ["a shared-layer list (use SHARED_LAYERS)", /["']config["'],\s*["']http["'],\s*["']infra["'],\s*["']scheduling["'],\s*["']shared["']/],
     ["a lifecycle-hook set (use NEST_LIFECYCLE)", /["']onModuleInit["'],\s*["']onModuleDestroy["']/],
     ["a relative import resolved by hand (use resolveRelative)", /path\.posix\.join\(path\.posix\.dirname\(/],
+    ["an import walk of its own (use importsOf)", /\.moduleSpecifier\b/],
   ];
   return copies.filter(([, pattern]) => pattern.test(source)).map(([what]) => `${file}: ${what}`);
 }
@@ -190,6 +287,7 @@ describe("helper copy rule applies as specified", () => {
     ["a shared-layer list", 'const SHARED = new Set(["config", "http", "infra", "scheduling", "shared"]);'],
     ["a lifecycle set", 'const LIFECYCLE = new Set(["onModuleInit", "onModuleDestroy"]);'],
     ["a hand resolve", "path.posix.normalize(path.posix.join(path.posix.dirname(file), spec));"],
+    ["an import walk", "if (ts.isImportDeclaration(s) && ts.isStringLiteral(s.moduleSpecifier)) out.push(s.moduleSpecifier.text);"],
   ])("fails %s", (_case, source) => {
     // Act & Assert
     expect(helperCopies("__tests__/architecture/naming.test.ts", source)).toHaveLength(1);
