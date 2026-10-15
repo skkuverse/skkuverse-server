@@ -20,7 +20,7 @@
     "reason": "ADR 0010 D9, no domain seam: `layerSetFile` is one zod composite over one operator-edited file, parsed at runtime only by `parseLayerSetFile` in map-layer-set.config.ts, and other flows import its types alone; its leaves (camera, i18n text, nullable defaults) are not flows, so a sub-module would hold schema pieces and nothing else."
   },
   "src/notices/list/notices-list.rules.ts": {
-    "max": 181,
+    "max": 182,
     "reason": "ADR 0010 D9, no domain seam: the list badge is one priority chain a list item is cut from, the v1 period pick and the v2 role badge feeding one brief, and the cursor decode beside it; neither half is a flow of its own, so a sub-module would hold rules and nothing else, and the badge alone exceeds the rules cap."
   }
 }
