@@ -508,3 +508,29 @@ describe("GET /bus/schedule/data/:serviceId/week with a far from", () => {
     expect(res.status).toBe(400);
   });
 });
+
+// QUIRK(date-holidays): isHoliday never returns for an Invalid Date (an impossible day, or a year-10000 day
+// of a 9999-12-27 week), so a `from` that reached the week build would block the event loop.
+describe("GET /bus/schedule/data/:serviceId/week with a from that would hang the holiday lookup", () => {
+  const HANG_BUDGET_MS = 2_000;
+
+  // WHY: a hang is synchronous, so no jest timeout could end it; a stubbed week build turns a `from` that gets
+  // past the check into a fast failure of the not-called assertion instead of a stuck run.
+  beforeEach(() => {
+    resolveWeek.mockResolvedValue(null);
+  });
+
+  it.each(["2026-02-31", "2026-13-01", "9999-01-04", "2026-02-29", "2026-04-31", "0000-01-03"])(
+    "from=%s → 400 INVALID_DATE_FORMAT without building a week",
+    async (from) => {
+      // Act
+      const res = await request(httpServer).get(`/bus/schedule/data/campus-inja/week?from=${from}`);
+
+      // Assert
+      expect(res.status).toBe(400);
+      expect(res.body.error).toEqual({ code: "INVALID_DATE_FORMAT", message: "from must be a date within a year of today" });
+      expect(resolveWeek).not.toHaveBeenCalled();
+    },
+    HANG_BUDGET_MS,
+  );
+});
