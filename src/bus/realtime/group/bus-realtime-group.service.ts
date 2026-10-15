@@ -9,10 +9,11 @@ import { BusRealtimeHsscService } from "../hssc/bus-realtime-hssc.service";
 import { BusRealtimeJongroService } from "../jongro/bus-realtime-jongro.service";
 import { toClockTime, toRealtimeBuses } from "./bus-realtime-group.mapper";
 import { toStationEtas } from "./bus-realtime-group.rules";
+import type { CachedBusFields } from "./bus-realtime-group.types";
 import type { RealtimeGroup, RealtimeGroupMeta, StationEta } from "./bus-realtime-group.wire";
 
 interface GroupSource {
-  listBuses: () => Promise<unknown>;
+  listBuses: () => Promise<readonly CachedBusFields[] | undefined>;
   listStationEtas: (() => Promise<StationEta[]>) | null;
 }
 

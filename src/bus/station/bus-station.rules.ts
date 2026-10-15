@@ -13,9 +13,7 @@ function nextBusEta(station: HsscStation, approaching: readonly HsscBusAtStop[])
   return fallback ? stopsAway(station, fallback) : NO_ARRIVAL;
 }
 
-// WHY: bus_cache is read untyped, so anything but an array is no information.
-export function toHsscEta(station: HsscStation, buses?: HsscBusAtStop[] | null): string {
-  if (!Array.isArray(buses)) return NO_ARRIVAL;
+export function toHsscEta(station: HsscStation, buses: readonly HsscBusAtStop[]): string {
   const approaching = buses
     .filter((bus) => parseInt(bus.sequence) <= station.sequence)
     .sort((a, b) => parseInt(b.sequence) - parseInt(a.sequence));
@@ -26,6 +24,6 @@ export function toHsscEta(station: HsscStation, buses?: HsscBusAtStop[] | null):
   return nextBusEta(station, approaching);
 }
 
-export function withHsscEtas(stations: readonly HsscStation[], buses?: HsscBusAtStop[] | null): HsscStation[] {
+export function withHsscEtas(stations: readonly HsscStation[], buses: readonly HsscBusAtStop[]): HsscStation[] {
   return stations.map((station) => ({ ...station, eta: toHsscEta(station, buses) }));
 }
