@@ -13,11 +13,13 @@ import { BusCacheModule } from "../../../src/bus/cache/bus-cache.module";
 import { BusCacheRepository } from "../../../src/bus/cache/bus-cache.repository";
 import { BusRealtimeModule } from "../../../src/bus/realtime/bus-realtime.module";
 import { BusRealtimeGroupModule } from "../../../src/bus/realtime/group/bus-realtime-group.module";
+import { realtimeGroup, realtimeGroupMeta } from "../../../src/bus/realtime/group/bus-realtime-group.wire";
 import { BusRealtimeHsscModule } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.module";
 import { BusRealtimeJongroModule } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.module";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
-import { hsscBusDoc, jongroPositionDoc } from "../../helpers/bus/bus-cache-docs";
+import { hsscBusDoc, jongroArrivalDoc, jongroPositionDoc } from "../../helpers/bus/bus-cache-docs";
+import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
@@ -131,5 +133,30 @@ describe("GET /bus/realtime/data/:groupId with an Object.prototype name", () => 
     // Assert
     expect(res.status).toBe(404);
     expect(res.body.error).toEqual({ code: "GROUP_NOT_FOUND", message: `Unknown groupId: ${groupId}` });
+  });
+});
+
+describe("GET /bus/realtime/data/:groupId bodies", () => {
+  it.each(["hssc", "jongro07", "jongro08"])("%s parses with the published wire schemas, empty and with buses and arrivals", async (groupId) => {
+    // Arrange
+    const empty = await request(httpServer).get(`/bus/realtime/data/${groupId}`);
+    busCache.values.set("hssc", [hsscBusDoc()]);
+    busCache.values.set("jongro_locations_07", [jongroPositionDoc()]);
+    busCache.values.set("jongro_stations_07", [jongroArrivalDoc()]);
+    busCache.values.set("jongro_locations_08", [jongroPositionDoc()]);
+    busCache.values.set("jongro_stations_08", [jongroArrivalDoc()]);
+
+    // Act
+    const res = await request(httpServer).get(`/bus/realtime/data/${groupId}`);
+
+    // Assert
+    expect([empty.status, res.status]).toEqual([200, 200]);
+    expect(res.body.meta.totalBuses).toBe(1);
+    for (const body of [empty.body, res.body]) {
+      const { lang, ...meta } = body.meta;
+      expect(lang).toBe("ko");
+      expectWire(realtimeGroup, body.data);
+      expectWire(realtimeGroupMeta, meta);
+    }
   });
 });
