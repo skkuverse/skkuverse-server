@@ -38,7 +38,7 @@ export const LIST_PROJECTION = {
 } as const;
 
 // SEE: docs/decisions/0007-notice-ordering-key.md — after the cursor in (date desc, _id desc); `crawledAt` stays out.
-export function buildCursorFilter(cursor: CursorPayload): Document {
+export function toCursorFilter(cursor: CursorPayload): Document {
   const oid = new ObjectId(cursor.i);
   return {
     $or: [{ date: { $lt: cursor.d } }, { date: cursor.d, _id: { $lt: oid } }],
@@ -53,7 +53,7 @@ export function toNoticeListFilter(scope: NoticeScope, query: NoticeListQuery, s
   };
   if (query.type) filter.summaryType = query.type;
   const clauses: Document[] = [{ date: { $gte: serviceStartDate } }];
-  if (query.cursor) clauses.push(buildCursorFilter(query.cursor));
+  if (query.cursor) clauses.push(toCursorFilter(query.cursor));
   if (query.q) {
     const pattern = escapeRegex(query.q);
     clauses.push({ $or: [{ title: { $regex: pattern, $options: "i" } }, { summaryOneLiner: { $regex: pattern, $options: "i" } }] });

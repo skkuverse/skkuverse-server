@@ -79,7 +79,7 @@ every list request it serves. Dropping it is a follow-up release.
 The cursor keeps its `{d, c, i}` wire shape this release even though `c` is no
 longer read:
 
-- `buildCursorFilter` ignores `c` entirely.
+- `toCursorFilter` ignores `c` entirely.
 - `decodeCursor` treats `c` as **optional** — a legacy cursor still decodes.
   A malformed `c` is still rejected; absent and garbage are different things.
 - `encodeCursor` **still emits `c`**.

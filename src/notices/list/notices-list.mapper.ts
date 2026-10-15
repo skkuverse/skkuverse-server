@@ -32,7 +32,7 @@ function toPeriodBrief(period: SummaryPeriod | null): Pick<NoticeSummaryBrief, "
   };
 }
 
-export function buildSummaryBrief(doc: NoticeDoc, now: Date): NoticeSummaryBrief | null {
+export function toSummaryBrief(doc: NoticeDoc, now: Date): NoticeSummaryBrief | null {
   if (!doc.summaryAt) return null;
   const oneLiner = textOrNull(doc.summaryOneLiner);
   if (isV2Summary(doc)) return { oneLiner, ...selectRoleBadge(doc.summaryApplication, doc.summaryDates, now) };
@@ -56,6 +56,6 @@ export function toListItem(doc: NoticeDoc, now: Date): NoticeListItem {
     hasContent: doc.contentHash != null,
     hasAttachments: Array.isArray(doc.attachments) && doc.attachments.length > 0,
     isEdited: (doc.editCount || 0) > 0,
-    summary: buildSummaryBrief(doc, now),
+    summary: toSummaryBrief(doc, now),
   };
 }

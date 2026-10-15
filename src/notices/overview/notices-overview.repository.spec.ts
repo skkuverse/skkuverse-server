@@ -10,7 +10,7 @@ jest.mock("../../infra/db", () => ({
 }));
 
 import { RETRIEVAL_MAX_TIME_MS } from "./notices-overview.constants";
-import { buildOverviewPipeline } from "./notices-overview.query";
+import { toOverviewPipeline } from "./notices-overview.query";
 import { NoticesOverviewRepository } from "./notices-overview.repository";
 
 beforeEach(() => {
@@ -29,7 +29,7 @@ describe("NoticesOverviewRepository.searchCandidates", () => {
     // Assert
     expect(result).toBe(docs);
     expect(aggregate).toHaveBeenCalledWith(
-      buildOverviewPipeline({ q: "장학금", sourceIds: ["skku-main"], serviceStartDate: "2026-03-09" }),
+      toOverviewPipeline({ q: "장학금", sourceIds: ["skku-main"], serviceStartDate: "2026-03-09" }),
       { maxTimeMS: RETRIEVAL_MAX_TIME_MS },
     );
     expect(RETRIEVAL_MAX_TIME_MS).toBe(1_500);
