@@ -1,6 +1,13 @@
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import { etaDocId } from "../bus-eta.mapper";
-import type { EtaRun, LiveFetch } from "../bus-eta.types";
+import type { EtaRun } from "../bus-eta.types";
+
+interface LiveFetch {
+  offsetsSec: number[];
+  fetchedAt: Date;
+  /** WHY: set when the value is fixed for good. */
+  frozenAt?: Date;
+}
 
 // WHY: a fixed value is served for 7 days after its run.
 const LIVE_LIFE_MS = 8 * 24 * 60 * 60_000;

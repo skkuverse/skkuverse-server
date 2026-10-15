@@ -314,6 +314,18 @@ describe("BusCacheRepository.findValue on a missing key", () => {
     expect(missingWarnings().map(([fields]) => fields.key)).toEqual(["hssc", "station"]);
   });
 
+  it("does not warn when the key holds an empty list, a poller's answer for no bus", async () => {
+    // Arrange
+    mockFindOne.mockResolvedValue({ _id: "jongro_locations_07", data: [], _updatedAt: NOW });
+
+    // Act
+    const value = await repository.findValue("jongro_locations_07");
+
+    // Assert
+    expect(value).toEqual([]);
+    expect(missingWarnings()).toEqual([]);
+  });
+
   it("does not warn when the key holds a value", async () => {
     // Arrange
     mockFindOne.mockResolvedValue({ _id: "station", data: "3분후[2번째 전]", _updatedAt: NOW });

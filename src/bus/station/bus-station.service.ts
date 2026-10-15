@@ -22,7 +22,6 @@ export class BusStationService {
   // WHY: rejects on a failed fetch or bus_cache write, so the poller registry reports the tick.
   async refresh(): Promise<void> {
     const messages = await this.client.fetchArrivalMessages();
-    if (!messages) return;
     this.message = messages.length === 0 ? NO_STATION_MESSAGE : (messages[0] as string);
     await this.cache.write("station", this.message);
   }

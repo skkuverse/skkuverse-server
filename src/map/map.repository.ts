@@ -22,7 +22,7 @@ export class MapRepository implements OnModuleInit {
     return ensureIndexesAtBoot("map", () => this.ensureIndexes());
   }
 
-  async ensureIndexes(): Promise<void> {
+  private async ensureIndexes(): Promise<void> {
     await Promise.all([
       this.places().createIndex({ layerSetId: 1 }),
       // WHY: no geo query runs; the 2dsphere index makes Mongo reject a malformed coordinate pair at insert.

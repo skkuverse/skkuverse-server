@@ -15,8 +15,8 @@
  *   4) multi-source $in (20 src) + q   — app "전체" scope, matching term
  *   5) multi-source $in (20 src) + q'  — same, term matching NOTHING
  *
- * Cases 4–5 gate the sourceIds cap raise 5 → 20 (notices.controller.ts
- * MAX_MULTI_SOURCE_IDS). Case 5 is the one that matters: the regex is a
+ * Cases 4–5 gate the sourceIds cap raise 5 → 20 (src/notices/notices.constants.ts
+ * MAX_SOURCE_IDS). Case 5 is the one that matters: the regex is a
  * post-filter, not index-covered, so a term with no matches forces the scan
  * to exhaust all 20 merge-sorted index branches instead of short-circuiting
  * once `limit` rows accumulate. A passing case 4 says nothing about case 5.
@@ -39,12 +39,12 @@ const SEARCH_TERM = "공지"; // 매치 보장 한국어 (no zero-result false-f
 const NO_MATCH_TERM = "zzqx없는검색어zzqx";
 const TYPE_FILTER = "action_required"; // typically <10% selectivity
 const LIMIT = 21;
-// Mirrors NoticesController.MAX_MULTI_SOURCE_IDS. If that changes, change
+// Mirrors MAX_SOURCE_IDS in src/notices/notices.constants.ts. If that changes, change
 // this — the point of the case is to measure the contract's actual ceiling.
 const MAX_MULTI_SOURCE_IDS = 20;
 
-// MUST stay in sync with notices.search.js (Phase 1) — single source of truth
-// will live there once Phase 1 lands. For 0a, replicate the regex escape.
+// MUST stay in sync with escapeRegex in src/shared/regex.util.ts, which
+// toNoticeListFilter uses.
 function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -67,7 +67,7 @@ function buildFilter({ sourceId, sourceIds, type, q }) {
   filter.sourceId = sourceIds ? { $in: sourceIds } : sourceId;
   if (type) filter.summaryType = type;
 
-  // Mirror notices.data.js _findNotices andClauses pattern. Search $or
+  // Mirror toNoticeListFilter (src/notices/list/notices-list.query.ts). Search $or
   // goes INSIDE $and so it composes with cursor keyset $or without
   // top-level conflict (plan §"$and 합성 순서").
   const andClauses = [{ date: { $gte: config.notices.serviceStartDate } }];
@@ -137,10 +137,12 @@ async function main() {
     );
   }
 
-  const HINT_4KEY = { sourceId: 1, date: -1, crawledAt: -1, _id: -1 };
+  // FORCE_INDEX and LIST_SORT in src/notices/list/notices-list.query.ts.
+  const HINT = { sourceId: 1, date: -1, _id: -1 };
+  const SORT = { date: -1, _id: -1 };
 
-  // Every case mirrors production behavior — _findNotices unconditionally
-  // .hint()s the 4-key compound (notices.data.js FORCE_INDEX). Without
+  // Every case mirrors production behavior — NoticesListRepository
+  // unconditionally .hint()s FORCE_INDEX. Without
   // this, multi-source $in falls into the orphan 2-key sourceId_1_date_-1
   // index and incurs an in-memory SORT (Phase 0a 2026-04-26 prod measurement:
   // unhinted multiIn → keysExamined=904, sortStage=present, time=9ms;
@@ -149,11 +151,11 @@ async function main() {
   const cases = {
     single: {
       filter: buildFilter({ sourceId: top1, q: SEARCH_TERM }),
-      hint: HINT_4KEY,
+      hint: HINT,
     },
     multiIn: {
       filter: buildFilter({ sourceIds: top5, q: SEARCH_TERM }),
-      hint: HINT_4KEY,
+      hint: HINT,
     },
     singleWithType: {
       filter: buildFilter({
@@ -161,24 +163,24 @@ async function main() {
         type: TYPE_FILTER,
         q: SEARCH_TERM,
       }),
-      hint: HINT_4KEY,
+      hint: HINT,
     },
     // Cap-raise gate (5 → 20). See header note: the no-match variant is the
     // real test, since it cannot short-circuit on `limit`.
     multiIn20: {
       filter: buildFilter({ sourceIds: topN, q: SEARCH_TERM }),
-      hint: HINT_4KEY,
+      hint: HINT,
     },
     multiIn20NoMatch: {
       filter: buildFilter({ sourceIds: topN, q: NO_MATCH_TERM }),
-      hint: HINT_4KEY,
+      hint: HINT,
     },
   };
 
   let allPassed = true;
   const summaries = {};
   for (const [name, { filter, hint }] of Object.entries(cases)) {
-    let cursor = col.find(filter).sort({ date: -1, crawledAt: -1, _id: -1 });
+    let cursor = col.find(filter).sort(SORT);
     if (hint) cursor = cursor.hint(hint);
     const explain = await cursor.limit(LIMIT).explain("executionStats");
 

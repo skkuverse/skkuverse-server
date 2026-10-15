@@ -110,10 +110,15 @@ describe("BuildingCatalogRepository.listConnectionsBySkkuId", () => {
   });
 });
 
-describe("BuildingCatalogRepository.ensureIndexes", () => {
+describe("BuildingCatalogRepository.onModuleInit", () => {
+  beforeEach(() => {
+    createIndex.mockClear();
+    mockLogger.info.mockClear();
+  });
+
   it("indexes a building's spaces and a connection from either end", async () => {
     // Act
-    await new BuildingCatalogRepository().ensureIndexes();
+    await new BuildingCatalogRepository().onModuleInit();
 
     // Assert
     expect(createIndex.mock.calls).toEqual([
@@ -121,5 +126,18 @@ describe("BuildingCatalogRepository.ensureIndexes", () => {
       ["connections", { "a.skkuId": 1 }],
       ["connections", { "b.skkuId": 1 }],
     ]);
+    expect(mockLogger.info).toHaveBeenCalledWith({ event: "building.catalog.indexes.ensured" }, expect.any(String));
+  });
+
+  it("warns and carries on when an index cannot be created", async () => {
+    // Arrange
+    createIndex.mockRejectedValueOnce(new Error("atlas down"));
+
+    // Act & Assert
+    await expect(new BuildingCatalogRepository().onModuleInit()).resolves.toBeUndefined();
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "building.catalog.indexes.failed" }),
+      expect.any(String),
+    );
   });
 });

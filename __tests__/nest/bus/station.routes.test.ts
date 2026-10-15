@@ -14,10 +14,15 @@ import { BusCacheRepository } from "../../../src/bus/cache/bus-cache.repository"
 import { BusRealtimeModule } from "../../../src/bus/realtime/bus-realtime.module";
 import { BusRealtimeHsscModule } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.module";
 import { BusStationModule } from "../../../src/bus/station/bus-station.module";
+import { stationArrivals, stationArrivalsMeta } from "../../../src/bus/station/bus-station.wire";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
+import { hsscBusDoc } from "../../helpers/bus/bus-cache-docs";
+import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+
+const busCache = new FakeBusCacheRepository();
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
@@ -26,7 +31,7 @@ beforeAll(async () => {
   app = await buildTestApp({
     imports: [SchedulingModule, BusCacheModule, BusRealtimeModule, BusRealtimeHsscModule, BusStationModule],
     overrides: [
-      { provide: BusCacheRepository, useValue: new FakeBusCacheRepository() },
+      { provide: BusCacheRepository, useValue: busCache },
       { provide: Clock, useValue: { now: () => new Date("2026-10-20T01:00:00Z") } },
     ],
     role: "api",
@@ -36,6 +41,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
+});
+
+afterEach(() => {
+  busCache.values.clear();
 });
 
 describe("GET /bus/station/:stationId", () => {
@@ -71,5 +80,26 @@ describe("GET /bus/station/:stationId", () => {
       // hssc empty → "도착 정보 없음" (no bus before 혜화역(승차장) in HSSC_ETA_STATIONS)
       msg1Message: "도착 정보 없음",
     });
+  });
+});
+
+describe("GET /bus/station/:stationId bodies", () => {
+  it("parse with the published wire schemas, for 01592 and for any other station", async () => {
+    // Arrange
+    busCache.values.set("station", "3분후[1번째 전]");
+    busCache.values.set("hssc", [hsscBusDoc()]);
+
+    // Act
+    const other = await request(httpServer).get("/bus/station/99999");
+    const station = await request(httpServer).get("/bus/station/01592");
+    const { lang, ...meta } = station.body.meta;
+
+    // Assert
+    expect([other.status, station.status]).toEqual([200, 200]);
+    expect(lang).toBe("ko");
+    expect(station.body.data[0].msg1Message).toBe("3분후[1번째 전]");
+    expectWire(stationArrivals, other.body.data);
+    expectWire(stationArrivals, station.body.data);
+    expectWire(stationArrivalsMeta, meta);
   });
 });

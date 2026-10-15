@@ -83,7 +83,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `sk
 - Section and banner ids share one namespace and tile ids another (`findDuplicateId`): each is an analytics item id for a tap.
 - A banner shows inside its window on the injected `Clock` (`isBannerShowing`). `GET /ui/home` and `GET /ui/home/campus` are cached for `UI_CACHE_CONTROL`, which also bounds how late a window takes effect.
 - An emptied home carousel is still sent, because the app draws its default banner there; an emptied campus carousel is left out, because the campus sheet has none.
-- A bus group card shows by its visibility: always, or a date range counting whole days in KST whose first day a `fromTime` (KST `HH:mm`) may open later (`isBusGroupVisible`). A malformed `fromTime` throws instead of hiding the card, and `bus-config.data.ts` refuses a malformed date or time at import.
+- A bus group card shows by its visibility: always, or a date range counting whole days in KST whose first day a `fromTime` (KST `HH:mm`) may open later (`isBusGroupVisible`). A malformed `fromTime` throws instead of hiding the card, and `bus-config.config.ts` refuses a malformed date or time at import.
 - The served shapes are built from named fields, so a window and the untranslated text never reach the wire; the `.wire` files publish them.
 - `HOME_LAYOUT_VERSION` changes only on a breaking change; a new section or tile kind is not one.
 - Only `UiModule` binds the general limiter on `/ui`; the sub-modules bind nothing.

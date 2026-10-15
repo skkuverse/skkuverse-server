@@ -1,7 +1,7 @@
 import moment from "moment-timezone";
 import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { LatLng } from "../../../shared/lat-lng.types";
-import { KST_TIME_ZONE } from "../../bus.constants";
+import { KST_TIME_ZONE } from "../../../shared/time-zone.constants";
 import { orderAndTotalIssue, stopDistanceIssue } from "../bus-eta.rules";
 import type { FeatureMarks, TmapFeature, TmapPredictionResponse } from "./bus-eta-baseline.types";
 

@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import moment from "moment-timezone";
-import { NOTICES_TIMEZONE } from "../notices.constants";
+import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import { dedupKeyOf, groupByDedupKey } from "../notices.rules";
 import { OVERVIEW_CANDIDATE_LIMIT } from "./notices-overview.constants";
 import type { OverviewCandidate } from "./notices-overview.document";
@@ -28,7 +28,7 @@ export function normalizeQuery(text: string): string {
 }
 
 export function kstDate(at: Date): string {
-  return moment(at).tz(NOTICES_TIMEZONE).format("YYYY-MM-DD");
+  return moment(at).tz(KST_TIME_ZONE).format("YYYY-MM-DD");
 }
 
 /**

@@ -3,7 +3,7 @@ import axios from "axios";
 import moment from "moment-timezone";
 import type { LatLng } from "../../../shared/lat-lng.types";
 import { BusEtaClient } from "../bus-eta.client";
-import { KST_TIME_ZONE } from "../../bus.constants";
+import { KST_TIME_ZONE } from "../../../shared/time-zone.constants";
 import { toTmapOffsets } from "./bus-eta-baseline.rules";
 import type { TmapCall, TmapPredictionResponse } from "./bus-eta-baseline.types";
 

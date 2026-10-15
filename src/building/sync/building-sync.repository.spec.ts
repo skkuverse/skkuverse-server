@@ -313,10 +313,10 @@ describe("BuildingSyncRepository reads and the stale delete", () => {
   });
 });
 
-describe("BuildingSyncRepository indexes", () => {
+describe("BuildingSyncRepository.onModuleInit", () => {
   it("owns the unique space key its upserts filter on, and no index on the raw layer", async () => {
     // Act
-    await new BuildingSyncRepository().ensureIndexes();
+    await new BuildingSyncRepository().onModuleInit();
 
     // Assert
     expect(mockCollections.spaces!.createIndex.mock.calls).toEqual([
@@ -331,9 +331,33 @@ describe("BuildingSyncRepository indexes", () => {
 
   it("owns the 2dsphere that guards the enriched location it writes", async () => {
     // Act
-    await new BuildingSyncRepository().ensureIndexes();
+    await new BuildingSyncRepository().onModuleInit();
 
     // Assert
     expect(mockCollections.buildings!.createIndex.mock.calls).toEqual([[{ location: "2dsphere" }]]);
+  });
+
+  it("logs that the indexes are ensured", async () => {
+    // Arrange
+    (logger.info as jest.Mock).mockClear();
+
+    // Act
+    await new BuildingSyncRepository().onModuleInit();
+
+    // Assert
+    expect(logger.info).toHaveBeenCalledWith({ event: "building.sync.indexes.ensured" }, expect.any(String));
+  });
+
+  it("warns and carries on when an index cannot be created", async () => {
+    // Arrange
+    (logger.warn as jest.Mock).mockClear();
+    mockCollection("spaces").createIndex.mockRejectedValueOnce(new Error("atlas down"));
+
+    // Act & Assert
+    await expect(new BuildingSyncRepository().onModuleInit()).resolves.toBeUndefined();
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "building.sync.indexes.failed" }),
+      expect.any(String),
+    );
   });
 });

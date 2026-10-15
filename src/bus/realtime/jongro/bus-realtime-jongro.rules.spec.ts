@@ -5,7 +5,7 @@
  */
 import { jongroRoutes } from "../../bus.config";
 import type { JongroArrivalDoc } from "../../cache/bus-cache.document";
-import { isUsableHeaderCd, toArrivalsKey, toDwell, toPositionsKey, toRegistryDrift } from "./bus-realtime-jongro.rules";
+import { isNoResultHeaderCd, isUsableHeaderCd, toArrivalsKey, toDwell, toPositionsKey, toRegistryDrift } from "./bus-realtime-jongro.rules";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const minutesBefore = (minutes: number): string => new Date(NOW.getTime() - minutes * 60_000).toISOString();
@@ -33,6 +33,18 @@ describe("isUsableHeaderCd", () => {
   ])("%s → %s", (headerCd, expected) => {
     // Act & Assert
     expect(isUsableHeaderCd(headerCd)).toBe(expected);
+  });
+});
+
+describe("isNoResultHeaderCd", () => {
+  it.each([
+    [undefined, false],
+    ["0", false],
+    ["4", true],
+    ["7", false],
+  ])("%s → %s", (headerCd, expected) => {
+    // Act & Assert
+    expect(isNoResultHeaderCd(headerCd)).toBe(expected);
   });
 });
 

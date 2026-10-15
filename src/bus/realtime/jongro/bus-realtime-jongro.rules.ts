@@ -13,7 +13,11 @@ export function toPositionsKey(code: string): BusCacheKey & `jongro_locations_${
 
 // QUIRK(topis): "0" is data and "4" no result (overnight); any other code is an upstream error.
 export function isUsableHeaderCd(headerCd: string | undefined): boolean {
-  return !headerCd || headerCd === "0" || headerCd === "4";
+  return !headerCd || headerCd === "0" || isNoResultHeaderCd(headerCd);
+}
+
+export function isNoResultHeaderCd(headerCd: string | undefined): boolean {
+  return headerCd === "4";
 }
 
 // WHY: TOPIS gives no arrival time, so a bus's time at its last passed station counts from the first tick that

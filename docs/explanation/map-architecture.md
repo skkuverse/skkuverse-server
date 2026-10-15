@@ -91,12 +91,12 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 - A stored geometry is served as stored: points and lines by reference, polygon rings rewound (`toWirePolygon`); the only rebuilt pair is a building's, from its `location`.
 - The event map is timezone-free: windows and facet options are absolute instants, compared with no zone arithmetic.
 - `degraded` never reaches the wire, and the campus fallback is sent with `DEGRADED_CACHE_CONTROL`.
+- Cloudflare caches `/map/overlays/campus` and both event routes without varying on `Accept-Language`, so their bodies carry every language and their `meta` names none: `ResponseInterceptor` leaves `lang` out of any response with a `public` or `s-maxage` `Cache-Control`.
 - Only `MapModule` binds the general limiter on `/map/config` and `/map/overlays`; the sub-modules bind nothing.
 - The `.wire` files publish what is served today, including the campus overlay's string `placeId`.
 
 ## Open questions
 
-- Cloudflare caches `/map/overlays/campus` for `CAMPUS_CACHE_CONTROL` and both event routes for `EVENT_CACHE_CONTROL` without varying on `Accept-Language`, so `meta.lang` on an edge hit can be another request's. The overlay bodies carry every language, so only `meta` is affected.
 - Overlay `fields` and the `content` action type parse in the app and draw nothing.
 - The place schemas the server reads with (`overlayPlaceDoc`, `sheetPlaceDoc`) check what makes a place undrawable, not the importer's whole rule set; a hand edit the importer would refuse can still be served if it draws.
 

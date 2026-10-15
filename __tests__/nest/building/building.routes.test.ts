@@ -373,7 +373,7 @@ describe("GET /building/:skkuId at the safe-integer limit", () => {
  */
 describe("Cache-Control on /building/*", () => {
   it.each(["/building/list", "/building/list?campus=hssc", "/building/1", "/building/search?q=law"])(
-    "lets clients cache %s for five minutes, per language",
+    "lets the client alone cache %s for five minutes, since it is in the request's language",
     async (path) => {
       // Arrange
       buildings.buildings = [LAW];
@@ -384,7 +384,7 @@ describe("Cache-Control on /building/*", () => {
 
       // Assert
       expect(res.status).toBe(200);
-      expect(res.headers["cache-control"]).toBe("public, max-age=300");
+      expect(res.headers["cache-control"]).toBe("private, max-age=300");
       expect(res.headers.vary).toMatch(/Accept-Language/i);
     },
   );

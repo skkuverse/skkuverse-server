@@ -1,12 +1,15 @@
 /**
  * ResponseInterceptor wraps a returned value in { meta: { lang, ...withMeta keys }, data } with
  * X-Response-Time, as sendSuccess() does for an @Res() handler, and leaves errors to the filter.
+ * A response a shared cache may store (`public` or `s-maxage`) carries no `meta.lang`: Cloudflare
+ * keys it without Accept-Language, so the lang would be another requester's (umbrella issue 63).
  */
 import { Controller, Get, type INestApplication, Req, Res } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import type { Request, Response } from "express";
 import request from "supertest";
 import { AppError } from "./app.error";
+import { CacheControl } from "./cache-control.decorator";
 import { HttpExceptionFilter } from "./http-exception.filter";
 import { ResponseInterceptor, sendSuccess, withMeta } from "./response.interceptor";
 
@@ -25,6 +28,24 @@ class EnvelopeController {
   @Get("raw")
   raw(@Req() req: Request, @Res() res: Response) {
     sendSuccess(req, res, withMeta({ a: 1 }, { keyword: "raw" }));
+  }
+
+  @Get("public")
+  @CacheControl("public, max-age=60")
+  shared() {
+    return withMeta({ a: 1 }, { keyword: "public" });
+  }
+
+  @Get("private")
+  @CacheControl("private, max-age=60")
+  personal() {
+    return { a: 1 };
+  }
+
+  @Get("s-maxage")
+  sMaxAge(@Res({ passthrough: true }) res: Response) {
+    res.setHeader("Cache-Control", "max-age=0, s-maxage=600");
+    return { a: 1 };
   }
 
   @Get("error")
@@ -72,6 +93,26 @@ describe("ResponseInterceptor", () => {
     expect(Object.keys(viaReturn.body.meta)).toEqual(["lang", "keyword", "counts"]);
     const viaRes = await request(app.getHttpServer()).get("/t/raw");
     expect(viaRes.body).toEqual({ meta: { lang: "ko", keyword: "raw" }, data: { a: 1 } });
+  });
+
+  it("leaves lang out of a response a shared cache may store, keeping withMeta() keys", async () => {
+    // Act
+    const declared = await request(app.getHttpServer()).get("/t/public");
+    const setByHandler = await request(app.getHttpServer()).get("/t/s-maxage");
+
+    // Assert
+    expect(declared.headers["cache-control"]).toBe("public, max-age=60");
+    expect(declared.body).toEqual({ meta: { keyword: "public" }, data: { a: 1 } });
+    expect(setByHandler.body).toEqual({ meta: {}, data: { a: 1 } });
+  });
+
+  it("keeps lang on a private response", async () => {
+    // Act
+    const res = await request(app.getHttpServer()).get("/t/private");
+
+    // Assert
+    expect(res.headers["cache-control"]).toBe("private, max-age=60");
+    expect(res.body).toEqual({ meta: { lang: "ko" }, data: { a: 1 } });
   });
 
   it("leaves errors to the filter", async () => {

@@ -1,6 +1,6 @@
 import moment from "moment-timezone";
 import "moment/locale/ko";
-import { KST_TIME_ZONE } from "../../bus.constants";
+import { KST_TIME_ZONE } from "../../../shared/time-zone.constants";
 import type { HsscApiBus, HsscBusDoc } from "../../cache/bus-cache.document";
 import {
   HSSC_API_DATE_FORMAT,

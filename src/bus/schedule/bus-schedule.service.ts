@@ -8,7 +8,7 @@ import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { createLogThrottle } from "../../infra/log-throttle";
-import { KST_TIME_ZONE } from "../bus.constants";
+import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import { serviceConfigOf } from "../bus.rules";
 import type { ServiceConfigEntry } from "../bus.types";
 import { SKKU_REST_DAYS } from "./bus-schedule.config";

@@ -35,8 +35,6 @@ export class FakeMapRepository implements PublicOf<MapRepository> {
 
   async onModuleInit(): Promise<void> {}
 
-  async ensureIndexes(): Promise<void> {}
-
   async findActiveActivation(now: Date): Promise<LiveActivation | null> {
     if (this.failWith) throw this.failWith;
     const activation = [...this.activations].filter((a) => isOpenAt(a, now)).sort(byNewestStart)[0];

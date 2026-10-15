@@ -78,7 +78,7 @@ export class BuildingRepository implements OnModuleInit {
     return ensureIndexesAtBoot("building", () => this.ensureIndexes());
   }
 
-  async ensureIndexes(): Promise<void> {
+  private async ensureIndexes(): Promise<void> {
     const campusShapes = this.campusShapes();
 
     await Promise.all([

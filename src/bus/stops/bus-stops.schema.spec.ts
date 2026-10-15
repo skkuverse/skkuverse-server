@@ -6,7 +6,7 @@ import { SERVICE_CONFIG } from "../bus.constants";
 import { stopCatalogFile } from "./bus-stops.schema";
 import { etaOptIns } from "./bus-stops.rules";
 
-const raw = require("../schedule/schedule-stops.json");
+const raw = require("./schedule-stops.json");
 const schema = stopCatalogFile({ knownServiceIds: new Set(Object.keys(SERVICE_CONFIG)), optIns: etaOptIns(SERVICE_CONFIG) });
 
 describe("stopCatalogFile", () => {

@@ -15,6 +15,10 @@
  * symbol, so a parameter that shadows the export's name is not one; a
  * namespace import counts the members it reads.
  *
+ * A sub-module that has sub-modules of its own (`src/bus/eta/`, whose flows
+ * are `live/`, `baseline/` and `smart/`) is a root too, held the same way: its
+ * flows are its own sub-folders, and any file outside it is another module.
+ *
  * Where an export goes when its flow's role file is at its size cap is ADR
  * 0010 D9's: the file splits along a domain seam, never overflowing into
  * another role file or the module root, and a file with no seam takes a
@@ -24,7 +28,7 @@ import ts from "typescript";
 import { exportsOf, importsOf, parseSource, type ExportedBinding } from "../helpers/architecture/ast";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
-const SHARED_ROLES = /^src\/([\w-]+)\/\1\.(?:rules|mapper|schema|types|constants)\.ts$/;
+const SHARED_ROLES = /^(src(?:\/[\w-]+)+)\/([\w-]+)\.(?:rules|mapper|schema|types|constants)\.ts$/;
 const BRAND = /^export type (\w+) = Brand</m;
 
 /** `<resolved module>` → the names a source imports from it, value or type; a namespace import by the members it reads. */
@@ -88,11 +92,17 @@ export function namesUsedInFile(file: string, source: string): Set<string> {
   return used;
 }
 
-/** The names a root `.types` or `.constants` file of the module declares. */
-function rootTypeAndConstantNames(module: string, sources: ReadonlyMap<string, string>): Set<string> {
+/** A module folder's base, as its role files are named: `src/bus/eta` → `bus-eta`. */
+function baseOf(dir: string): string {
+  return dir.split("/").slice(1).join("-");
+}
+
+/** The names a root `.types` or `.constants` file of the module at `dir` declares. */
+function rootTypeAndConstantNames(dir: string, sources: ReadonlyMap<string, string>): Set<string> {
+  const base = baseOf(dir);
   return new Set(
     ["types", "constants"].flatMap((role) => {
-      const file = `src/${module}/${module}.${role}.ts`;
+      const file = `${dir}/${base}.${role}.ts`;
       const source = sources.get(file);
       return source === undefined ? [] : exportsOf(parseSource(file, source)).bindings.map((b) => b.exported);
     }),
@@ -124,31 +134,36 @@ function isGuardOrDerivedType(b: ExportedBinding, rootNames: ReadonlySet<string>
   return type !== undefined && ts.isTypePredicateNode(type) && type.type !== undefined && typeNodeNames(type.type).some((n) => rootNames.has(n));
 }
 
-/** Where a file sits relative to a module: `root`, the sub-module's folder name, or `other`. */
-function placeOf(file: string, module: string): string {
-  const prefix = `src/${module}/`;
+/** Where a file sits relative to the module at `dir`: `root`, the sub-module's folder name, or `other`. */
+function placeOf(file: string, dir: string): string {
+  const prefix = `${dir}/`;
   if (!file.startsWith(prefix)) return "other";
   const rest = file.slice(prefix.length);
   return rest.includes("/") ? rest.slice(0, rest.indexOf("/")) : "root";
 }
 
-/** `<file>: <name>` for each root export of a module with sub-modules that fewer than two flows share. */
-export function unsharedRootExports(sources: ReadonlyMap<string, string>): string[] {
-  const imports = [...sources].map(([file, source]) => [file, importsByModule(file, source)] as const);
-  const modulesWithSubModules = new Set(
-    [...sources.keys()].flatMap((f) => {
-      const m = /^src\/([\w-]+)\/[\w-]+\//.exec(f);
-      return m ? [m[1]!] : [];
+/** The module folders, at any depth, that hold a sub-module: every folder above a source's own. */
+function rootsWithSubModules(files: Iterable<string>): Set<string> {
+  return new Set(
+    [...files].flatMap((f) => {
+      const dirs = f.split("/").slice(0, -1);
+      return dirs.slice(2).map((_, i) => dirs.slice(0, i + 2).join("/"));
     }),
   );
+}
+
+/** `<file>: <name>` for each root export of a module or sub-module with sub-modules that fewer than two flows share. */
+export function unsharedRootExports(sources: ReadonlyMap<string, string>): string[] {
+  const imports = [...sources].map(([file, source]) => [file, importsByModule(file, source)] as const);
+  const roots = rootsWithSubModules(sources.keys());
   return [...sources].flatMap(([file, source]) => {
     const match = SHARED_ROLES.exec(file);
-    if (!match || !modulesWithSubModules.has(match[1]!)) return [];
-    const module = match[1]!;
-    const brands = new Set([...(sources.get(`src/${module}/${module}.types.ts`) ?? "").matchAll(new RegExp(BRAND, "gm"))].map((m) => m[1]!));
+    if (!match || !roots.has(match[1]!) || match[2] !== baseOf(match[1]!)) return [];
+    const dir = match[1]!;
+    const brands = new Set([...(sources.get(`${dir}/${baseOf(dir)}.types.ts`) ?? "").matchAll(new RegExp(BRAND, "gm"))].map((m) => m[1]!));
     const isMinter = (b: ExportedBinding): boolean =>
       file.endsWith(".rules.ts") && b.kind === "function" && /^(?:is|to)/.test(b.exported) && brands.has(b.exported.replace(/^(?:is|to)/, ""));
-    const rootNames = rootTypeAndConstantNames(module, sources);
+    const rootNames = rootTypeAndConstantNames(dir, sources);
     const target = file.replace(/\.ts$/, "");
     const usedInFile = namesUsedInFile(file, source);
     return exportsOf(parseSource(file, source))
@@ -157,7 +172,7 @@ export function unsharedRootExports(sources: ReadonlyMap<string, string>): strin
       .map((b) => b.exported)
       .filter((name) => {
         const places = new Set(
-          imports.filter(([other, byModule]) => other !== file && byModule.get(target)?.has(name)).map(([other]) => placeOf(other, module)),
+          imports.filter(([other, byModule]) => other !== file && byModule.get(target)?.has(name)).map(([other]) => placeOf(other, dir)),
         );
         const flows = [...places].filter((p) => p !== "root" && p !== "other");
         return !(usedInFile.has(name) || places.has("root") || places.has("other") || flows.length >= 2);
@@ -225,6 +240,30 @@ describe("root-exports-shared rule reads uses by symbol and keeps guards with th
 
     // Assert
     expect(violations).toEqual(["src/x/x.rules.ts: isOther", "src/x/x.mapper.ts: toXId"]);
+  });
+});
+
+describe("root-exports-shared rule applies to nested module roots", () => {
+  it("holds a sub-module with sub-modules of its own to the same rule, its flows being its own sub-folders", () => {
+    // Arrange
+    const sources = new Map([
+      ["src/x/y/x-y.types.ts", 'export type YId = Brand<number, "YId">;'],
+      [
+        "src/x/y/x-y.rules.ts",
+        "export function isYId(n: number): n is YId { return true; }\nexport const ONE_FLOW = 1;\nexport const TWO_FLOWS = 2;\nexport const ELSEWHERE = 3;\nexport const PARENT_READ = 4;",
+      ],
+      ["src/x/y/a/x-y-a.service.ts", 'import { ONE_FLOW, TWO_FLOWS } from "../x-y.rules";'],
+      ["src/x/y/b/x-y-b.mapper.ts", 'import { TWO_FLOWS } from "../x-y.rules";'],
+      ["src/x/z/x-z.service.ts", 'import { ELSEWHERE } from "../y/x-y.rules";'],
+      ["src/x/x.service.ts", 'import { PARENT_READ } from "./y/x-y.rules";'],
+      ["src/x/w/x-w.rules.ts", "export const FLAT = 1;"],
+    ]);
+
+    // Act
+    const violations = unsharedRootExports(sources);
+
+    // Assert
+    expect(violations).toEqual(["src/x/y/x-y.rules.ts: ONE_FLOW"]);
   });
 });
 

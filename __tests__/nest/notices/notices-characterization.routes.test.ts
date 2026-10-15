@@ -3,18 +3,20 @@
  * task 6.2, design D6): what the list, detail and dispatch routes answer and
  * record today, through the production HTTP pipeline, with no repository, data
  * module or service overridden. The only doubles are at the process edge: the
- * database is a real mongod, the push Cloud Function a loopback server, the date
- * a frozen `Date`.
+ * database is a real mongod, the push Cloud Function a loopback server, the time
+ * a fixed `Clock`.
  *
- * This file is the safety net for refactor group 11 (notices). It is never
- * edited while that group runs: a failure is a regression to report.
+ * A regression pin: a failure is a regression to report, and an expected value
+ * changes only with the behavior it pins (`.claude/rules/tests.md`). The app
+ * boots every notices module `src/app.module.ts` imports, so a module split needs
+ * no edit here.
  *
  * Documents are built from one production document (fixtures/notice-document.json)
  * with the fields each case is about overridden. `$search` paths are out of scope.
  *
- * The clock: the dispatcher reads `new Date()`, with no Clock seam, so `Date` is
- * frozen at 2026-10-19T16:30:00Z, which is 01:30 KST on the 20th: the KST day
- * and the UTC day differ, so the age gate's zone shows.
+ * The clock: the notices services read the time through `Clock`, which stands at
+ * 2026-10-19T16:30:00Z, 01:30 KST on the 20th: the KST day and the UTC day
+ * differ, so the age gate's zone shows.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -22,7 +24,9 @@ import http from "node:http";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ObjectId, type Collection, type Document } from "mongodb";
 import request from "supertest";
+import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { LoopbackServers } from "../../helpers/nest/loopback-servers";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
@@ -30,17 +34,7 @@ type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 
 const NOW = new Date("2026-10-19T16:30:00Z");
-const DO_NOT_FAKE = [
-  "setTimeout",
-  "clearTimeout",
-  "setInterval",
-  "clearInterval",
-  "setImmediate",
-  "clearImmediate",
-  "queueMicrotask",
-  "nextTick",
-  "performance",
-] as const;
+const CLOCK = { now: (): Date => new Date(NOW) };
 
 const FIXTURE = JSON.parse(
   fs.readFileSync(path.join(__dirname, "fixtures/notice-document.json"), "utf8"),
@@ -126,7 +120,6 @@ let mongod: TestMongod;
 let db: Db;
 let config: Config;
 let buildTestApp: BuildTestApp;
-let modules: unknown[];
 let app: NestExpressApplication;
 let notices: Collection;
 
@@ -139,21 +132,11 @@ beforeAll(async () => {
   config = require("../../../src/infra/config") as Config;
   assertConfigReaches(mongod, config.mongo.url);
   buildTestApp = (require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp }).buildTestApp;
-  modules = [
-    (require("../../../src/scheduling/scheduling.module") as { SchedulingModule: unknown }).SchedulingModule,
-    (require("../../../src/notices/notices.module") as { NoticesModule: unknown }).NoticesModule,
-    (require("../../../src/notices/tabs/notices-tabs.module") as { NoticesTabsModule: unknown }).NoticesTabsModule,
-    (require("../../../src/notices/list/notices-list.module") as { NoticesListModule: unknown }).NoticesListModule,
-    (require("../../../src/notices/overview/notices-overview.module") as { NoticesOverviewModule: unknown }).NoticesOverviewModule,
-    (require("../../../src/notices/attachment/notices-attachment.module") as { NoticesAttachmentModule: unknown }).NoticesAttachmentModule,
-    (require("../../../src/notices/detail/notices-detail.module") as { NoticesDetailModule: unknown }).NoticesDetailModule,
-    (require("../../../src/notices/dispatch/notices-dispatch.module") as { NoticesDispatchModule: unknown }).NoticesDispatchModule,
-  ];
 
   notices = db.getClient().db(config.notices.dbName).collection(config.notices.collections.notices);
   // The crawler owns this unique index; production has it, so a seeding mistake fails here too.
   await notices.createIndex({ articleNo: 1, sourceId: 1 }, { unique: true });
-  app = await buildTestApp({ imports: modules as never[], role: "api" });
+  app = await bootApp();
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
@@ -169,14 +152,17 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  jest.useFakeTimers({ now: NOW, doNotFake: [...DO_NOT_FAKE] });
   cf.reset();
   await clearCollections(db.getClient().db(config.notices.dbName));
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+function bootApp(): Promise<NestExpressApplication> {
+  return buildTestApp({
+    imports: appModulesUnder("src/scheduling/", "src/notices/"),
+    overrides: [{ provide: Clock, useValue: CLOCK }],
+    role: "api",
+  });
+}
 
 function list(query: string): request.Test {
   return request(app.getHttpServer()).get(`/notices${query}`);
@@ -670,7 +656,7 @@ describe("POST /internal/notices/dispatch-pending over real documents", () => {
       unpushed({ _id: oid(100 + i), articleNo: 100 + i, contentHash: `hash-${i}`, title: `공지 ${i}` }),
     );
     await notices.insertMany(docs);
-    const replica = await buildTestApp({ imports: modules as never[], role: "api" });
+    const replica = await bootApp();
 
     try {
       // Act

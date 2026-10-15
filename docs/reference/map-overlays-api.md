@@ -27,7 +27,7 @@ audience: internal
 | Layer catalogue | `src/map/map.constants.ts` — the base layers, and the projection of a festival's `layers[]` from its config |
 | Chips | `src/map/layer-set/map-layer-set.mapper.ts` — the base chips, the projection of a festival's `chips[]`, the synthesised reset chip, and the one validator both go through |
 | Response builder | `src/map/config/map-config.mapper.ts` |
-| Envelope | `{ meta: { lang }, data: { overlays: [ … ] } }`, `Vary: Accept-Language`, `X-Response-Time` |
+| Envelope | `{ meta: {}, data: { overlays: [ … ] } }` (no `meta.lang` on a response a shared cache may store; `/map/config` keeps `{ lang }`), `Vary: Accept-Language`, `X-Response-Time` |
 | Tests | `__tests__/nest/map/` |
 
 A building and a booth are **the same kind of thing, addressed the same way** (umbrella ADR 0004
@@ -250,7 +250,7 @@ that dropping the booth is not.
 
 ### 2.1 `text` ships every language, and is not resolved server-side
 
-`text` carries what we hold rather than the one string that matches `meta.lang`, because the two
+`text` carries what we hold rather than the one string in the request's language, because the two
 producers hold different sets: a building has `{ko, en}` only (`BuildingDoc.name`), while an
 ops-authored booth title may also carry `zh`. Resolving server-side would mean picking one and
 discarding the rest.
@@ -683,7 +683,7 @@ Response:
 
 ```json
 {
-  "meta": { "lang": "ko" },
+  "meta": {},
   "data": {
     "markers": [
       {
@@ -762,7 +762,7 @@ Response:
 
 ```json
 {
-  "meta": { "lang": "ko" },
+  "meta": {},
   "data": {
     "markers": [
       {
@@ -796,10 +796,11 @@ The second marker is the always-on case §3 exists to protect: both bounds null,
 layer is on, with no `status` beside it to make that ambiguous.
 
 > [!NOTE]
-> Both marker responses still carry `Vary: Accept-Language`, because `sendSuccess` puts `meta.lang`
-> in the envelope. The marker **data** is language-independent — `text` carries every language we
-> hold — so only the envelope varies. Stripping the header to win edge caching would be a lie about
-> what the response depends on.
+> Both marker responses carry no `meta.lang`. The marker **data** is language-independent (`text`
+> carries every language we hold), and Cloudflare keys its edge copy without `Accept-Language`, so a
+> `lang` in the envelope would be whichever requester filled the cache. `ResponseInterceptor` leaves it
+> out of every response with a `public` or `s-maxage` `Cache-Control`; the `no-store` degraded campus
+> response keeps it. `Vary: Accept-Language` from `LangMiddleware` is still sent, and Cloudflare ignores it.
 
 ### 5.4 `GET /map/overlays/event/details`
 
@@ -811,7 +812,7 @@ absent, and the app draws its sheet from the overlay alone.
 
 ```json
 {
-  "meta": { "lang": "ko" },
+  "meta": {},
   "data": {
     "details": {
       "eskara-2026-truck-oyabong": {

@@ -9,8 +9,10 @@
  *   - A fresh service is constructed per test (no module-scoped state to reset
  *     — the registry/intervalIds live on the instance).
  *
- * Plus two Nest-specific checks the spec pins: the onApplicationBootstrap
- * ROLE-gating (ROLE=api → no startAll) and onApplicationShutdown → stopAll.
+ * The spec drives the registry the way Nest does, through onApplicationBootstrap
+ * and onApplicationShutdown, with ROLE set to "combined" so the bootstrap starts
+ * the pollers; it reads which pollers are declared failing from the transition
+ * lines production emits. Plus the ROLE gate itself: ROLE=api starts nothing.
  */
 
 jest.mock("../infra/logger", () => ({
@@ -38,24 +40,47 @@ async function settle(): Promise<void> {
 const events = (mock: jest.Mock): string[] =>
   mock.mock.calls.map(([fields]) => (fields as { event: string }).event);
 
+/** The pollers declared failing and not since recovered, replayed from the poller.failing and poller.recovered lines. */
+function declaredFailing(): string[] {
+  const transitions = [logger.error, logger.info]
+    .flatMap((mock: jest.Mock) =>
+      mock.mock.calls.map(([fields], i) => ({
+        order: mock.mock.invocationCallOrder[i]!,
+        ...(fields as { event: string; name: string }),
+      })),
+    )
+    .sort((a, b) => a.order - b.order);
+  const declared = new Set<string>();
+  for (const { event, name } of transitions) {
+    if (event === "poller.failing") declared.add(name);
+    if (event === "poller.recovered") declared.delete(name);
+  }
+  return [...declared];
+}
+
 describe("PollerRegistryService", () => {
   let registry: PollerRegistryService;
+  let savedRole: string | undefined;
 
   beforeEach(() => {
     jest.useFakeTimers();
+    savedRole = process.env.ROLE;
+    process.env.ROLE = "combined";
     registry = new PollerRegistryService();
   });
 
   afterEach(() => {
-    registry.stopAll();
+    registry.onApplicationShutdown();
+    if (savedRole === undefined) delete process.env.ROLE;
+    else process.env.ROLE = savedRole;
     jest.useRealTimers();
     jest.clearAllMocks();
   });
 
-  describe("startAll", () => {
+  describe("onApplicationBootstrap", () => {
     it("no-op when nothing is registered", () => {
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
 
       // Assert
       expect(registry.isReady()).toBe(false);
@@ -69,7 +94,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(fn2, 2000, "b");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
 
       // Assert
       expect(fn1).toHaveBeenCalledTimes(1);
@@ -84,7 +109,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(fn2, 2500, "b");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       // Flush warm-up's Promise.resolve(...).catch(...).finally(...) chain
       // (two microtasks) so inFlight is cleared before the timer advances.
       await Promise.resolve();
@@ -116,7 +141,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(fn, 1000, "slow");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
 
       // Assert
       expect(fn).toHaveBeenCalledTimes(1); // warm-up
@@ -149,7 +174,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(fn, 1000, "flaky");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
       jest.advanceTimersByTime(1000);
       await settle();
@@ -166,7 +191,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(fn, 1000, "fast");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
       for (let i = 0; i < 4; i++) {
         jest.advanceTimersByTime(1000);
@@ -185,7 +210,7 @@ describe("PollerRegistryService", () => {
         tags: { poller: "fast" },
       });
       expect(events(logger.debug).filter((e) => e === "poller.tick_failed")).toHaveLength(4);
-      expect(registry.failingPollers()).toEqual(["fast"]);
+      expect(declaredFailing()).toEqual(["fast"]);
     });
 
     it("lets a single failed tick pass without an error line", async () => {
@@ -195,7 +220,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(fn, 1000, "blippy");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
       jest.advanceTimersByTime(1000);
       await settle();
@@ -215,7 +240,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(fn, 60_000, "slow");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
 
       // Assert
@@ -227,7 +252,7 @@ describe("PollerRegistryService", () => {
         expect.objectContaining({ event: "poller.recovered", name: "slow", failures: 1 }),
         "Poller recovered",
       );
-      expect(registry.failingPollers()).toEqual([]);
+      expect(declaredFailing()).toEqual([]);
     });
 
     it("counts a synchronous throw as a failure", async () => {
@@ -241,7 +266,7 @@ describe("PollerRegistryService", () => {
       );
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
 
       // Assert
@@ -253,7 +278,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(() => Promise.reject(new Error("down")), 60_000, "down");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
       for (let i = 0; i < 16; i++) {
         jest.advanceTimersByTime(60_000);
@@ -287,7 +312,7 @@ describe("PollerRegistryService", () => {
       );
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
       await tick(10_000, 30);
 
@@ -299,7 +324,7 @@ describe("PollerRegistryService", () => {
 
       failing = true;
       await tick(10_000, 30);
-      expect(registry.failingPollers()).toEqual(["p"]);
+      expect(declaredFailing()).toEqual(["p"]);
       expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
         { monitorSlug: "skkuverse-pollers", status: "error" },
         expect.anything(),
@@ -311,12 +336,12 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(() => Promise.reject(new Error("crawl failed")), WEEK_MS, "weekly");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
       await tick(60_000, 5);
 
       // Assert
-      expect(registry.failingPollers()).toEqual(["weekly"]);
+      expect(declaredFailing()).toEqual(["weekly"]);
       expect(events(logger.error)).toEqual(["poller.failing"]);
       expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
         tags: { poller: "weekly" },
@@ -333,25 +358,25 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(() => Promise.reject(new Error("upstream down")), 10_000, "fast");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
       await tick(10_000, 30);
 
       // Assert
-      expect(registry.failingPollers()).toEqual(["weekly", "fast"]);
+      expect(declaredFailing()).toEqual(["weekly", "fast"]);
       expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
         { monitorSlug: "skkuverse-pollers", status: "error" },
         expect.anything(),
       );
     });
 
-    it("stops checking in after stopAll", () => {
+    it("stops checking in after shutdown", () => {
       // Arrange
       registry.registerPoller(jest.fn(), 60_000, "p");
 
       // Act
-      registry.startAll();
-      registry.stopAll();
+      registry.onApplicationBootstrap();
+      registry.onApplicationShutdown();
       jest.advanceTimersByTime(10 * 60_000);
 
       // Assert
@@ -397,7 +422,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(jest.fn(), 10_000, "p");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
       await tick(HEARTBEAT_MS, 3);
 
@@ -416,12 +441,12 @@ describe("PollerRegistryService", () => {
       );
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
       await tick(10_000, 30);
 
       // Assert
-      expect(registry.failingPollers()).toEqual(["fast"]);
+      expect(declaredFailing()).toEqual(["fast"]);
       expect(fetchMock).not.toHaveBeenCalled();
 
       failing = false;
@@ -435,7 +460,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(jest.fn(), 10_000, "p");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
       await tick(HEARTBEAT_MS, 2);
 
@@ -454,7 +479,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(jest.fn(), 60_000, "p");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
       await settle();
       await tick(HEARTBEAT_MS, 1);
       await tick(10_000, 1);
@@ -479,7 +504,7 @@ describe("PollerRegistryService", () => {
 
       try {
         // Act
-        registry.startAll();
+        registry.onApplicationBootstrap();
         await settle();
         // One poller interval at a time: a single 5-minute jump fires ticks the in-flight guard skips.
         await tick(60_000, 10);
@@ -502,19 +527,19 @@ describe("PollerRegistryService", () => {
     });
   });
 
-  describe("stopAll", () => {
+  describe("onApplicationShutdown", () => {
     it("clears all intervals so no further ticks fire", () => {
       // Arrange
       const fn = jest.fn();
       registry.registerPoller(fn, 1000, "stop");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
 
       // Assert
       expect(fn).toHaveBeenCalledTimes(1);
 
-      registry.stopAll();
+      registry.onApplicationShutdown();
       jest.advanceTimersByTime(5000);
       expect(fn).toHaveBeenCalledTimes(1);
     });
@@ -522,16 +547,16 @@ describe("PollerRegistryService", () => {
     it("is idempotent", () => {
       // Arrange
       registry.registerPoller(jest.fn(), 1000, "idem");
-      registry.startAll();
-      registry.stopAll();
+      registry.onApplicationBootstrap();
+      registry.onApplicationShutdown();
 
       // Act & Assert
-      expect(() => registry.stopAll()).not.toThrow();
+      expect(() => registry.onApplicationShutdown()).not.toThrow();
     });
   });
 
   describe("isReady", () => {
-    it("is false before startAll, even when pollers are registered", () => {
+    it("is false before bootstrap, even when pollers are registered", () => {
       // Arrange
       registry.registerPoller(jest.fn(), 1000, "r");
 
@@ -539,24 +564,24 @@ describe("PollerRegistryService", () => {
       expect(registry.isReady()).toBe(false);
     });
 
-    it("is true after startAll when at least one poller is registered", () => {
+    it("is true after bootstrap when at least one poller is registered", () => {
       // Arrange
       registry.registerPoller(jest.fn(), 1000, "r");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
 
       // Assert
       expect(registry.isReady()).toBe(true);
     });
 
-    it("is false after stopAll", () => {
+    it("is false after shutdown", () => {
       // Arrange
       registry.registerPoller(jest.fn(), 1000, "r");
 
       // Act
-      registry.startAll();
-      registry.stopAll();
+      registry.onApplicationBootstrap();
+      registry.onApplicationShutdown();
 
       // Assert
       expect(registry.isReady()).toBe(false);
@@ -569,7 +594,7 @@ describe("PollerRegistryService", () => {
       registry.registerPoller(jest.fn(), 1000, "c");
 
       // Act
-      registry.startAll();
+      registry.onApplicationBootstrap();
 
       // Assert
       // 3 registered → 3 intervals → ready
@@ -617,7 +642,7 @@ describe("PollerRegistryService", () => {
     it("onApplicationShutdown stops all pollers", () => {
       // Arrange
       registry.registerPoller(jest.fn(), 1000, "x");
-      registry.startAll();
+      registry.onApplicationBootstrap();
       expect(registry.isReady()).toBe(true);
 
       // Act
