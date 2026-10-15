@@ -2,7 +2,9 @@ import { Controller, Get, Query } from "@nestjs/common";
 import { Lang } from "../../http/lang.decorator";
 import { withMeta } from "../../http/response.interceptor";
 import type { WithMeta } from "../../http/response.types";
+import { ZodValidationPipe } from "../../http/zod-validation.pipe";
 import type { SupportedLang } from "../../infra/types";
+import { overviewRequest, type OverviewQuery } from "./notices-overview.schema";
 import { NoticesOverviewService } from "./notices-overview.service";
 import type { OverviewData, OverviewMeta } from "./notices-overview.wire";
 
@@ -14,11 +16,10 @@ export class NoticesOverviewController {
 
   @Get("overview")
   async getOverview(
-    @Query("q") searchText: unknown,
-    @Query("sourceIds") sourceIds: unknown,
+    @Query(new ZodValidationPipe(overviewRequest, "INVALID_PARAMS")) query: OverviewQuery,
     @Lang() lang: SupportedLang,
   ): Promise<WithMeta<OverviewData, OverviewMeta>> {
-    const { overview, meta } = await this.overview.getOverview({ q: searchText, sourceIds, lang });
+    const { overview, meta } = await this.overview.getOverview({ ...query, lang });
     return withMeta({ overview }, meta);
   }
 }
