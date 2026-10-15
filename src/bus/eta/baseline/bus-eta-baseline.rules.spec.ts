@@ -8,7 +8,7 @@
 import fs from "fs";
 import path from "path";
 import moment from "moment-timezone";
-import { DirectionsError } from "../../../shared/directions.error";
+import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { LatLng } from "../../../shared/lat-lng.types";
 import { baselineDoc } from "../bus-eta.mapper";
 import { refreshCutoff, toTmapOffsets } from "./bus-eta-baseline.rules";
@@ -32,14 +32,14 @@ const OFFSETS = [0, 4500, 4620];
 const fixture = (): TmapPredictionResponse => JSON.parse(JSON.stringify(FIXTURE));
 const features = (res: TmapPredictionResponse) => res.features!;
 
-function rejection(fn: () => unknown): DirectionsError {
+function rejection(fn: () => unknown): BusEtaDirectionsError {
   try {
     fn();
   } catch (err: unknown) {
-    expect(err).toBeInstanceOf(DirectionsError);
-    return err as DirectionsError;
+    expect(err).toBeInstanceOf(BusEtaDirectionsError);
+    return err as BusEtaDirectionsError;
   }
-  throw new Error("expected a DirectionsError");
+  throw new Error("expected a BusEtaDirectionsError");
 }
 
 describe("toTmapOffsets", () => {

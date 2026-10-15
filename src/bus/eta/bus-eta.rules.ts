@@ -1,12 +1,11 @@
 import moment from "moment-timezone";
-import { DailyCapError } from "../../shared/daily-cap.error";
+import { BusEtaDailyCapError } from "./bus-eta.error";
 import { haversineM } from "../../shared/distance.util";
-import type { DirectionsProvider } from "../../shared/directions.types";
 import { KST_TIME_ZONE } from "../bus.constants";
 import type { ScheduleDay } from "../schedule/bus-schedule.wire";
 import type { EtaOptIns, ScheduleStopCatalog } from "../stops/bus-stops.types";
 import type { LatLng } from "../../shared/lat-lng.types";
-import type { EtaRun, EtaSequence, OffsetCheck, SequenceLength, SequenceRef } from "./bus-eta.types";
+import type { DirectionsProvider, EtaRun, EtaSequence, OffsetCheck, SequenceLength, SequenceRef } from "./bus-eta.types";
 
 const MAX_STOP_DISTANCE_M = 150;
 
@@ -72,7 +71,7 @@ export class DailyCap {
       this.day = day;
       this.used = 0;
     }
-    if (this.used >= this.cap) throw new DailyCapError(this.provider, this.cap);
+    if (this.used >= this.cap) throw new BusEtaDailyCapError(this.provider, this.cap);
     this.used += 1;
   }
 }

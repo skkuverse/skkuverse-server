@@ -5,7 +5,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { DirectionsError } from "../../../shared/directions.error";
+import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { LatLng } from "../../../shared/lat-lng.types";
 import { BusEtaLiveClient } from "./bus-eta-live.client";
 import type { NaverDirectionsResponse } from "./bus-eta-live.types";
@@ -76,11 +76,11 @@ describe("BusEtaLiveClient.fetchOffsets", () => {
     mockedGet.mockRejectedValue(axiosError({ status: 401 }));
 
     // Act
-    const err = (await new BusEtaLiveClient().fetchOffsets(STOPS, CREDS, { retryDelayMs: 0 }).catch((e: unknown) => e)) as DirectionsError;
+    const err = (await new BusEtaLiveClient().fetchOffsets(STOPS, CREDS, { retryDelayMs: 0 }).catch((e: unknown) => e)) as BusEtaDirectionsError;
 
     // Assert
     expect(mockedGet).toHaveBeenCalledTimes(1);
-    expect(err).toBeInstanceOf(DirectionsError);
+    expect(err).toBeInstanceOf(BusEtaDirectionsError);
     expect(err).toMatchObject({ provider: "naver", kind: "auth", status: 401 });
     expect(JSON.stringify(err) + err.message + err.stack).not.toMatch(/secret-456|key-id-123/);
   });
