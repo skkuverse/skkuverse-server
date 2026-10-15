@@ -147,7 +147,7 @@ describe("GET /map/overlays/campus", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.meta).toEqual({ lang: "ko" });
+    expect(res.body.meta).toEqual({});
     expect(res.body.data.overlays.map((o: { kind: string; layerId: string }) => [o.kind, o.layerId])).toEqual([
       ["marker", "building_numbers"],
       ["marker", "building_labels"],
@@ -178,7 +178,7 @@ describe("GET /map/overlays/event", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.meta).toEqual({ lang: "ko" });
+    expect(res.body.meta).toEqual({});
     expect(Object.keys(res.body.data)).toEqual(["overlays"]);
     expect(res.body.data.overlays).toHaveLength(1);
     expect(res.body.data.overlays[0]).toMatchObject({
@@ -197,8 +197,8 @@ describe("GET /map/overlays/event", () => {
     const en = await request(httpServer).get("/map/overlays/event").set("Accept-Language", "en");
 
     // Assert
-    expect(en.body.meta).toEqual({ lang: "en" });
-    expect(en.body.data).toEqual(ko.body.data);
+    expect(en.body.meta).toEqual({});
+    expect(en.body).toEqual(ko.body);
     expect(en.body.data.overlays[0].text).toEqual({ ko: "우끼끼친", en: "Ukkikki" });
   });
 
@@ -219,7 +219,7 @@ describe("GET /map/overlays/event/details", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.meta).toEqual({ lang: "ko" });
+    expect(res.body.meta).toEqual({});
     expect(Object.keys(res.body.data)).toEqual(["details"]);
     expect(res.body.data.details["eskara-2026-booth-01"]).toMatchObject({
       placeId: "eskara-2026-booth-01",

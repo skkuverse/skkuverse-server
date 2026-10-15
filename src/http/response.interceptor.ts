@@ -8,12 +8,8 @@ import type { Request, Response } from "express";
 import { map, type Observable } from "rxjs";
 import { setResponseTime } from "../infra/response-time";
 import { CACHE_CONTROL_METADATA } from "./cache-control.decorator";
-import type { SuccessMeta, WithMeta } from "./response.types";
-
-interface SuccessEnvelope {
-  meta: Record<string, unknown>;
-  data: unknown;
-}
+import { isSharedCacheable } from "./no-store.middleware";
+import type { SuccessEnvelope, SuccessMeta, WithMeta } from "./response.types";
 
 class MetaEnvelope<T, M extends SuccessMeta> implements WithMeta<T, M> {
   constructor(
@@ -26,10 +22,11 @@ export function withMeta<T, M extends SuccessMeta>(data: T, meta: M): WithMeta<T
   return new MetaEnvelope(data, meta);
 }
 
-function successEnvelope(req: Request, data: unknown): SuccessEnvelope {
-  return data instanceof MetaEnvelope
-    ? { meta: { lang: req.lang, ...data.meta }, data: data.data }
-    : { meta: { lang: req.lang }, data };
+// QUIRK(cloudflare): its cache key leaves out Accept-Language, so a response it may store names no
+// language: an edge hit would carry another requester's (umbrella issue spencer0124/skkuverse#63).
+function successEnvelope(req: Request, res: Response, data: unknown): SuccessEnvelope {
+  const lang = isSharedCacheable(res) ? {} : { lang: req.lang };
+  return data instanceof MetaEnvelope ? { meta: { ...lang, ...data.meta }, data: data.data } : { meta: lang, data };
 }
 
 function handlerWroteResponse(res: Response, data: unknown): boolean {
@@ -48,7 +45,7 @@ export class ResponseInterceptor implements NestInterceptor {
         const cacheControl: unknown = Reflect.getMetadata(CACHE_CONTROL_METADATA, ctx.getHandler());
         if (typeof cacheControl === "string") res.setHeader("Cache-Control", cacheControl);
         setResponseTime(req, res);
-        return successEnvelope(req, data);
+        return successEnvelope(req, res, data);
       }),
     );
   }
@@ -56,5 +53,5 @@ export class ResponseInterceptor implements NestInterceptor {
 
 export function sendSuccess(req: Request, res: Response, data: unknown): void {
   setResponseTime(req, res);
-  res.json(successEnvelope(req, data));
+  res.json(successEnvelope(req, res, data));
 }
