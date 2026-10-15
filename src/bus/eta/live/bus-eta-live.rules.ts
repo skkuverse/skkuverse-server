@@ -1,5 +1,6 @@
 import { BusEtaDirectionsError } from "../bus-eta.error";
-import { etaDocId, liveDoc } from "../bus-eta.mapper";
+import { etaDocId } from "../bus-eta.mapper";
+import { liveDoc } from "./bus-eta-live.mapper";
 import { orderAndTotalIssue, stopDistanceIssue } from "../bus-eta.rules";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import type { EtaRun } from "../bus-eta.types";

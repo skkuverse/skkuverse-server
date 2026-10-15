@@ -10,7 +10,7 @@ import path from "path";
 import moment from "moment-timezone";
 import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { LatLng } from "../../../shared/lat-lng.types";
-import { baselineDoc } from "../bus-eta.mapper";
+import { baselineDoc } from "./bus-eta-baseline.mapper";
 import { refreshCutoff, toTmapOffsets } from "./bus-eta-baseline.rules";
 import type { TmapPredictionResponse } from "./bus-eta-baseline.types";
 

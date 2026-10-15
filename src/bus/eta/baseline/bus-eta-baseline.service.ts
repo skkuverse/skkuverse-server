@@ -1,4 +1,5 @@
-import { baselineDoc, etaDocId } from "../bus-eta.mapper";
+import { etaDocId } from "../bus-eta.mapper";
+import { baselineDoc } from "./bus-eta-baseline.mapper";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import { refreshCutoff } from "./bus-eta-baseline.rules";
 import type { BaselineEtaDeps, BaselineTickResult, SequencedRun } from "./bus-eta-baseline.types";

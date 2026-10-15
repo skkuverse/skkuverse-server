@@ -1,4 +1,4 @@
-import { liveDoc } from "../bus-eta.mapper";
+import { liveDoc } from "./bus-eta-live.mapper";
 import { toKstDate } from "../bus-eta.rules";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import type { EtaSequence } from "../bus-eta.types";
