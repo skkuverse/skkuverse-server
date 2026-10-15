@@ -19,8 +19,8 @@
  * and silence every push they are owed — permanently, since `pushedAt` never
  * clears.
  *
- * To change the sweep index, use scripts/migrate-notices-dispatch-index.js,
- * which does the index half only and asserts it left document state alone.
+ * The sweep index is the server's now: NoticesDispatchRepository ensures it
+ * at boot (src/notices/dispatch/notices-dispatch.query.ts).
  *
  * Historical note on idempotency (true at the time, kept for the record):
  *   - createIndex with the same spec is a no-op (Mongo returns the existing
@@ -29,8 +29,8 @@
  *     on a second run *in the greenfield window*.
  *
  * Usage:
- *   node scripts/migrate-notices-dispatch-init.js              # apply
- *   node scripts/migrate-notices-dispatch-init.js --dry-run    # report only
+ *   node scripts/archive/migrate-notices-dispatch-init.js              # apply
+ *   node scripts/archive/migrate-notices-dispatch-init.js --dry-run    # report only
  *
  * Pre-deploy: must run BEFORE crawler restart that begins setting aiSummaryAt
  * and BEFORE the new server boots with sweep enabled. Otherwise the first
@@ -38,7 +38,7 @@
  */
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
-const config = require("../src/infra/config");
+const config = require("../../src/infra/config");
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -46,7 +46,7 @@ const PARTIAL_INDEX_NAME = "dispatch_pending_idx";
 // Sort key as of this script's era: `crawledAt`, matching the age gate the
 // sweep used then. SUPERSEDED 2026-09-13 by ADR 0008 — the gate now filters
 // on the notice's publication `date`, and the live index key follows it via
-// scripts/migrate-notices-dispatch-index.js. Left unchanged here because
+// scripts/archive/migrate-notices-dispatch-index.js. Left unchanged here because
 // this script must not run again (see header).
 const PARTIAL_INDEX_SPEC = { crawledAt: -1 };
 // Partial filter — matches the sweep's hot predicates exactly.

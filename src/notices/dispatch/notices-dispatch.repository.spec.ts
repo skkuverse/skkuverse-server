@@ -66,7 +66,7 @@ describe("NoticesDispatchRepository records", () => {
 });
 
 describe("NoticesDispatchRepository.onModuleInit", () => {
-  it("ensures dispatch_pending_idx with the keys and partial filter of the scripts/migrate-notices-dispatch-index script", async () => {
+  it("ensures dispatch_pending_idx on the date, partial on the claimable set", async () => {
     // Act
     await new NoticesDispatchRepository().onModuleInit();
 

@@ -38,8 +38,8 @@ export function toReleasedUpdate(fields: ReleasedFields): Document {
   return { $set: fields, $inc: { pushAttempts: 1 } };
 }
 
-// CONTRACT(scripts): the keys, name and partial filter the scripts/migrate-notices-dispatch-index script builds; the partial
-// filter is the claimable set, which is why the claim filter says `aiSummaryAt: { $type: "date" }`.
+// WHY: the partial filter is the claimable set, which is why the claim filter says `aiSummaryAt: { $type: "date" }`;
+// the name is the one prod already holds, so the boot's createIndex is a no-op there.
 export const DISPATCH_PENDING_INDEX = {
   key: { date: -1 },
   options: { name: "dispatch_pending_idx", partialFilterExpression: { pushedAt: null, aiSummaryAt: { $type: "date" } } },
