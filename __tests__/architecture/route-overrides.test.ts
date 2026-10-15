@@ -5,9 +5,9 @@
  * (tests.md: a poller's double is a spy on it) or the Clock. Overriding a
  * service, a controller or a config stubs the code the route test exists to run.
  *
- * A route test is a test file, or a `__tests__/helpers/nest/` builder, that boots
- * an app: it calls `buildTestApp`, a `build<Module>App` builder or
- * `createNestApplication`. Its overrides are every `{ provide: X, use… }` object
+ * A route test is a test file, or a `__tests__/helpers/nest/` helper, that boots
+ * an app: it calls `buildTestApp` or `createNestApplication` (a `build<Name>App`
+ * wrapper around either counts too). Its overrides are every `{ provide: X, use… }` object
  * in it, passed to a builder, kept in a variable or listed in a stub module, and
  * every `.override<Kind>(X)` call on a testing module builder. `jest.mock` of a
  * module is not covered.
