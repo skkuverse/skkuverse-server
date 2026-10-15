@@ -24,6 +24,12 @@
  * comment (attached: no blank line between), and a type that a repository
  * reads and no `src/` repository writes must carry one: deleting the tag, or
  * detaching it with a blank line, fails instead of switching the check off.
+ * A tag a `.document` file holds detached from any type fails too, so a type
+ * that a `src/` repository also writes (the push fields of `NoticeDoc`)
+ * cannot drop out of the check by detaching its tag. A written type that
+ * carries an attached tag stays checked: the writer clause only waives the
+ * tag's requirement, never an attached tag. A read that D2 types instead of
+ * parsing is a reasoned entry in `exemptions/repository-reads.json`.
  * In a module scope a repository opens a collection only in a private
  * accessor declared to return `Collection<Type>` whose whole body returns
  * `mongoCollection(…)`. A repository read of a collection of that type
@@ -53,6 +59,7 @@ import {
   skipOuter,
 } from "../helpers/architecture/ast";
 import { inScope, moduleScopes } from "../helpers/architecture/scopes";
+import { expectExempted } from "../helpers/architecture/exemptions";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
@@ -194,6 +201,30 @@ export function contractDocTypes(file: string, source: string): string[] {
     .filter((st): st is ts.InterfaceDeclaration | ts.TypeAliasDeclaration => ts.isInterfaceDeclaration(st) || ts.isTypeAliasDeclaration(st))
     .filter((st) => attached(st).some((c) => /\bCONTRACT\([^)]+\):/.test(c)))
     .map((st) => st.name.text);
+}
+
+/** `<file>:<line> CONTRACT tag attached to no type` for each `CONTRACT(<writer>):` comment no declaration carries. */
+export function detachedContractTags(file: string, source: string): string[] {
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const attachedAt = new Set<number>();
+  for (const st of sf.statements) {
+    let next = st.getStart(sf);
+    for (const range of [...(ts.getLeadingCommentRanges(source, st.getFullStart()) ?? [])].reverse()) {
+      if (/\n[ \t]*\n/.test(source.slice(range.end, next))) break;
+      if (ts.isInterfaceDeclaration(st) || ts.isTypeAliasDeclaration(st)) attachedAt.add(range.pos);
+      next = range.pos;
+    }
+  }
+  const tags = sf.statements.flatMap((st) => ts.getLeadingCommentRanges(source, st.getFullStart()) ?? []);
+  return tags
+    .filter((range) => /\bCONTRACT\([^)]+\):/.test(source.slice(range.pos, range.end)) && !attachedAt.has(range.pos))
+    .map((range) => `${file}:${sf.getLineAndCharacterOfPosition(range.pos).line + 1} CONTRACT tag attached to no type`);
+}
+
+/** The document types whose reads must project and parse: every tagged type, and every untagged one only outside src/ writes. */
+export function contractReadTypes(repositories: ReadonlyMap<string, string>, tagged: ReadonlySet<string>): Set<string> {
+  const untagged = untaggedOutsideWrites(repositories, tagged).map((v) => v.slice(0, v.indexOf(":")));
+  return new Set([...tagged, ...untagged]);
 }
 
 const PARSE_METHODS = new Set(["parse", "safeParse", "parseAsync", "safeParseAsync"]);
@@ -684,7 +715,61 @@ export class XRepository {
   });
 });
 
+describe("contract read rule keeps a written type's tag (PR 249 F9)", () => {
+  it("flags a CONTRACT tag that a blank line or a non-type separates from every type", () => {
+    // Arrange
+    const source = [
+      "// CONTRACT(crawler): the crawler writes these.",
+      "",
+      "export interface Detached { a: number }",
+      "",
+      "// CONTRACT(crawler): above a value, not a type.",
+      "export const X = 1;",
+      "",
+      "// QUIRK(crawler): an attached block may open with another tag.",
+      "// CONTRACT(crawler): still attached.",
+      "export interface Attached { a: number }",
+    ].join("\n");
+
+    // Act
+    const violations = detachedContractTags("src/x/x.document.ts", source);
+
+    // Assert
+    expect(violations).toEqual(["src/x/x.document.ts:1 CONTRACT tag attached to no type", "src/x/x.document.ts:5 CONTRACT tag attached to no type"]);
+  });
+
+  it("keeps a tagged type that a src/ repository also writes in the parse check", () => {
+    // Arrange
+    const repositories = new Map([
+      [
+        "src/x/x.repository.ts",
+        `export class XRepository {
+  list() { return this.notices().find({}, { maxTimeMS: 1 }).toArray(); }
+  stamp(id: string) { return this.notices().updateOne({ id }, { $set: { a: 1 } }); }
+  private notices(): Collection<NoticeDoc> { return mongoCollection<NoticeDoc>("db", "notices"); }
+}`,
+      ],
+    ]);
+
+    // Act
+    const tagged = contractReadTypes(repositories, new Set(["NoticeDoc"]));
+    const untagged = contractReadTypes(repositories, new Set());
+
+    // Assert
+    expect([...tagged]).toEqual(["NoticeDoc"]);
+    expect([...untagged]).toEqual([]);
+  });
+});
+
 describe("repository reads of documents written outside src/", () => {
+  it("leave no CONTRACT tag in a .document file detached from its type", () => {
+    // Arrange
+    const documents = sourceFiles().filter((f) => f.endsWith(".document.ts"));
+
+    // Act & Assert
+    expect(documents.flatMap((f) => detachedContractTags(f, readSource(f)))).toEqual([]);
+  });
+
   it("are of types that carry their writer's CONTRACT tag", () => {
     // Arrange
     const files = sourceFiles();
@@ -708,13 +793,12 @@ describe("repository reads of documents written outside src/", () => {
     const files = sourceFiles();
     const tagged = new Set(files.filter((f) => f.endsWith(".document.ts")).flatMap((f) => contractDocTypes(f, readSource(f))));
     const repositories = new Map(files.filter((f) => f.endsWith(".repository.ts")).map((f) => [f, readSource(f)]));
-    const untagged = untaggedOutsideWrites(repositories, tagged).map((v) => v.slice(0, v.indexOf(":")));
-    const contractTypes = new Set([...tagged, ...untagged]);
+    const contractTypes = contractReadTypes(repositories, tagged);
 
     // Act
     const violations = files.filter((f) => f.endsWith(".repository.ts")).flatMap((f) => contractReadViolations(f, readSource(f), contractTypes));
 
     // Assert
-    expectAllowlisted("repository-contract-reads", violations);
+    expectExempted("repository-reads", violations);
   });
 });

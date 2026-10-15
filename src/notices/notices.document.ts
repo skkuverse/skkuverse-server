@@ -1,9 +1,5 @@
 import type { ObjectId } from "mongodb";
 
-// CONTRACT(skkuverse-crawler): the crawler writes notices (skkuverse-crawler/docs/reference/schema/notices.md) and
-// skkuverse-ai its summary fields. Hot and uncached, so typed rather than parsed per read (ADR 0010 D2) until the
-// crawler's NoticeDocument export lands (SEE: docs/explanation/notices-architecture.md, Open questions).
-
 export interface SummaryPeriod {
   startDate?: string;
   startTime?: string;
@@ -59,6 +55,8 @@ export interface NoticeAttachment {
   referer?: string;
 }
 
+// CONTRACT(skkuverse-crawler): the crawler writes notices (skkuverse-crawler/docs/reference/schema/notices.md) and
+// skkuverse-ai its summary fields. Hot reads are typed, not parsed (ADR 0010 D2, exemptions/repository-reads.json).
 export interface NoticeDoc {
   _id: ObjectId;
   sourceId: string;
@@ -94,7 +92,7 @@ export interface NoticeDoc {
   isDeleted?: boolean | null;
   // WHY: the dispatch gate, apart from summaryAt: the crawler sets it once the ai summary has landed.
   aiSummaryAt?: Date | null;
-  // WHY: NoticeDispatchRepository is the only writer of the four push fields (dispatch/).
+  // WHY: NoticesDispatchRepository is the only writer of the four push fields (dispatch/).
   pushedAt?: Date | null;
   pushAttempts?: number;
   dispatchClaimedAt?: Date | null;

@@ -1,0 +1,6 @@
+{
+  "src/notices/detail/notices-detail.repository.ts: findNotice findOne of NoticeDoc: no .schema parse": "ADR 0010 D2 types the hot, uncached notice reads instead of parsing them per request; the detail read projects `DETAIL_PROJECTION` and returns the typed document, and the crawler's generated type replaces this hand-written one (spencer0124/skkuverse#68)",
+  "src/notices/list/notices-list.repository.ts: listNotices find of NoticeDoc: no .schema parse": "every list page is a hot read with no cache in front (ADR 0010 D2), so `listNotices` projects `LIST_PROJECTION` and trusts the corrected `NoticeDoc` type rather than running zod over up to 51 documents per request",
+  "src/notices/overview/notices-overview.repository.ts: searchCandidates aggregate of NoticeDoc: no .schema parse": "the `$rankFusion` pipeline in notices-overview.query.ts returns a `$project` of the candidate fields, typed as `OverviewCandidate` under ADR 0010 D2; parsing it waits for the crawler's exported document schema (spencer0124/skkuverse#68)",
+  "src/notices/overview/notices-overview.repository.ts: searchCandidates aggregate of NoticeDoc: no projection": "an aggregate projects inside its pipeline, not in the options argument this rule reads: `CANDIDATE_PROJECTION` is the `$project` stage of `buildOverviewPipeline` in notices-overview.query.ts (ADR 0010 D2)"
+}
