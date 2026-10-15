@@ -20,7 +20,8 @@ interface WindowSpan extends Span {
   openEnded: boolean;
 }
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// QUIRK(skkuverse-crawler): boards crawled before 2026-08-06 store `date` with a minute; a cursor carries it as stored.
+const STORED_DATE_RE = /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2})?$/;
 const OID_RE = /^[0-9a-fA-F]{24}$/;
 
 function parseCursorJson(str: unknown): unknown {
@@ -41,7 +42,7 @@ export function decodeCursor(str: unknown): CursorPayload {
   const parsed = parseCursorJson(str);
   if (!parsed || typeof parsed !== "object") throw new NoticesListCursorError("cursor is not an object");
   const { d: day, c: crawledAt, i: id } = parsed as Partial<CursorPayload>;
-  if (!isMatch(day, DATE_RE)) throw new NoticesListCursorError("cursor.d must be YYYY-MM-DD");
+  if (!isMatch(day, STORED_DATE_RE)) throw new NoticesListCursorError("cursor.d must be YYYY-MM-DD or YYYY-MM-DD HH:mm");
   if (crawledAt !== undefined && !isIsoTime(crawledAt)) throw new NoticesListCursorError("cursor.c must be a parseable ISO datetime");
   if (!isMatch(id, OID_RE)) throw new NoticesListCursorError("cursor.i must be a 24-hex ObjectId");
   return crawledAt === undefined ? { d: day, i: id } : { d: day, c: crawledAt, i: id };

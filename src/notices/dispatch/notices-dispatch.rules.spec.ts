@@ -1,10 +1,10 @@
 /**
- * Dispatch decisions over the four push fields: the claim window (a KST day floor, the lease cutoff, the attempt
- * cap), the explicit status a stored notice is in, the field values of a push and a release, and the group's
- * representative. Its Mongo form is notices-dispatch.query.ts, pinned by the repository spec.
+ * Dispatch decisions over the push fields: the claim window (a KST day floor, the lease cutoff, the attempt
+ * cap), the field values of a push, a skip and a release, and the group's representative. Its Mongo form is
+ * notices-dispatch.query.ts, pinned by the repository spec.
  */
 import { ObjectId } from "mongodb";
-import { dispatchStatusOf, selectRepresentative, toClaimWindow, toPushedFields, toReleasedFields } from "./notices-dispatch.rules";
+import { selectRepresentative, toClaimWindow, toPushedFields, toReleasedFields, toSkippedFields } from "./notices-dispatch.rules";
 
 const POLICY = { maxAgeDays: 14, claimLeaseMs: 10 * 60_000, maxAttempts: 5 };
 
@@ -21,28 +21,22 @@ describe("toClaimWindow", () => {
   });
 });
 
-describe("dispatchStatusOf", () => {
-  const window = { leaseExpiredBefore: new Date("2026-10-19T16:20:00Z"), maxAttempts: 5 };
-
-  it.each([
-    ["never claimed", {}, "pending"],
-    ["released after a failure", { pushAttempts: 1, dispatchClaimedAt: null }, "pending"],
-    ["claimed, lease expired", { dispatchClaimedAt: new Date("2026-10-19T16:19:59Z") }, "pending"],
-    ["claimed at the cutoff", { dispatchClaimedAt: new Date("2026-10-19T16:20:00Z") }, "claimed"],
-    ["claimed, lease live", { dispatchClaimedAt: new Date("2026-10-19T16:25:00Z") }, "claimed"],
-    ["one attempt under the cap", { pushAttempts: 4 }, "pending"],
-    ["at the attempt cap", { pushAttempts: 5 }, "exhausted"],
-    ["pushed", { pushedAt: new Date("2026-10-19T16:00:00Z"), pushAttempts: 5 }, "pushed"],
-  ])("%s → %s", (_label, fields, status) => {
-    // Act & Assert
-    expect(dispatchStatusOf(fields, window)).toBe(status);
-  });
-});
-
 describe("toPushedFields", () => {
   it("marks pushed at the time given, releases the lease and clears the error", () => {
     // Act & Assert
     expect(toPushedFields(new Date("2026-10-19T16:30:00Z"))).toEqual({ pushedAt: new Date("2026-10-19T16:30:00Z"), dispatchClaimedAt: null, pushError: null });
+  });
+});
+
+describe("toSkippedFields", () => {
+  it("resolves the notice at the time given with the no-topic reason, releases the lease and clears the error", () => {
+    // Act & Assert
+    expect(toSkippedFields(new Date("2026-10-19T16:30:00Z"))).toEqual({
+      pushedAt: new Date("2026-10-19T16:30:00Z"),
+      pushSkippedReason: "no-topic",
+      dispatchClaimedAt: null,
+      pushError: null,
+    });
   });
 });
 

@@ -2,6 +2,10 @@
 /**
  * Re-key `dispatch_pending_idx` from {crawledAt:-1} to {date:-1}.
  *
+ * ARCHIVED: done on prod 2026-09-13. The server now ensures this index at boot
+ * (DISPATCH_PENDING_INDEX in src/notices/dispatch/notices-dispatch.query.ts,
+ * created by NoticesDispatchRepository.onModuleInit); kept for the record.
+ *
  * Companion to ADR 0008, which moved the FCM dispatch age gate off the
  * crawl timestamp and onto the notice's own publication `date`. The index
  * has to follow the predicate or the sweep loses its covering scan.
@@ -34,16 +38,16 @@
  * Idempotent. Re-running with the correct key already in place is a no-op.
  *
  * Usage:
- *   node scripts/migrate-notices-dispatch-index.js --dry-run          # dev, report
- *   node scripts/migrate-notices-dispatch-index.js                    # dev, apply
- *   node scripts/migrate-notices-dispatch-index.js --prod --dry-run   # prod, report
- *   node scripts/migrate-notices-dispatch-index.js --prod             # prod, apply
+ *   node scripts/archive/migrate-notices-dispatch-index.js --dry-run          # dev, report
+ *   node scripts/archive/migrate-notices-dispatch-index.js                    # dev, apply
+ *   node scripts/archive/migrate-notices-dispatch-index.js --prod --dry-run   # prod, report
+ *   node scripts/archive/migrate-notices-dispatch-index.js --prod             # prod, apply
  *
  * Targets the _dev database unless --prod is passed, matching the convention
  * in scripts/eventmap-window.js.
  */
 const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
+require("dotenv").config({ path: path.join(__dirname, "..", "..", ".env") });
 const { MongoClient } = require("mongodb");
 
 const DRY_RUN = process.argv.includes("--dry-run");

@@ -10,6 +10,7 @@
  * Each scenario sets env, then loads the module fresh with
  * jest.isolateModules().
  */
+import { envRole, roleErrors, ROLES, validateEnv } from "./required-env";
 
 const HSSC_KEYS = ["API_HSSC_NEW_PROD", "API_HSSC_NEW_DEV"] as const;
 
@@ -129,5 +130,46 @@ describe("describeMissingRequired AI_API_URL", () => {
       if (saved === undefined) delete process.env.AI_API_URL;
       else process.env.AI_API_URL = saved;
     }
+  });
+});
+
+describe("envRole", () => {
+  it.each([
+    [undefined, "combined"],
+    ["", "combined"],
+    ["api", "api"],
+    ["poller", "poller"],
+    ["combined", "combined"],
+  ])("reads ROLE=%p as %s", (raw, role) => {
+    // Act & Assert
+    expect(envRole({ ROLE: raw })).toBe(role);
+  });
+
+  it.each(["poler", "API", "web"])("throws on ROLE=%s instead of booting as combined", (raw) => {
+    // Act & Assert
+    expect(() => envRole({ ROLE: raw })).toThrow(`ROLE must be one of api | poller | combined (got "${raw}")`);
+  });
+});
+
+describe("roleErrors", () => {
+  it("reports an unknown ROLE and passes every known one and unset", () => {
+    // Act & Assert
+    expect(roleErrors({ ROLE: "poler" })).toEqual([
+      'ROLE must be one of api | poller | combined (got "poler")',
+    ]);
+    for (const raw of [undefined, "", ...ROLES]) expect(roleErrors({ ROLE: raw })).toEqual([]);
+  });
+});
+
+describe("validateEnv refuses an unknown ROLE", () => {
+  it("throws on ROLE=poler in development, and passes ROLE=api", () => {
+    // Arrange
+    const development = { ...process.env, NODE_ENV: "development" };
+
+    // Act & Assert
+    expect(() => validateEnv({ ...development, ROLE: "poler" })).toThrow(
+      /Invalid ROLE[\s\S]*ROLE must be one of api \| poller \| combined \(got "poler"\)/,
+    );
+    expect(() => validateEnv({ ...development, ROLE: "api" })).not.toThrow();
   });
 });

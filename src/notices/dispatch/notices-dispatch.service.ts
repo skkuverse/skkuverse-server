@@ -7,7 +7,7 @@ import { groupByDedupKey } from "../notices.rules";
 import { buildTopics, TOPIC_CAP } from "../notices.topics";
 import { NoticesDispatchClient } from "./notices-dispatch.client";
 import { NoticesDispatchRepository } from "./notices-dispatch.repository";
-import { selectRepresentative, toClaimWindow, toPushedFields, toReleasedFields } from "./notices-dispatch.rules";
+import { selectRepresentative, toClaimWindow, toPushedFields, toReleasedFields, toSkippedFields } from "./notices-dispatch.rules";
 import type { DispatchOutcome, DispatchPolicy } from "./notices-dispatch.types";
 import type { SweepSummary } from "./notices-dispatch.wire";
 
@@ -124,9 +124,9 @@ export class NoticesDispatchService {
     return topics.slice(0, TOPIC_CAP);
   }
 
-  // WHY: nothing subscribable: marked pushed so the sweep stops claiming it (umbrella issue 75).
+  // WHY: nothing subscribable: recorded as a skip, told apart from a push, so the sweep stops claiming it (umbrella issue 75).
   private async skipWithoutTopics(members: NoticeDoc[]): Promise<DispatchOutcome> {
-    for (const member of members) await this.repository.recordPushed(member._id, toPushedFields(this.clock.now()));
+    for (const member of members) await this.repository.recordSkipped(member._id, toSkippedFields(this.clock.now()));
     logger.info(
       {
         event: "notices.dispatch.skipped_no_topics",

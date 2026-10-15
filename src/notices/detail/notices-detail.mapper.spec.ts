@@ -5,7 +5,7 @@
  */
 import { ObjectId } from "mongodb";
 import type { NoticeDoc } from "../notices.document";
-import { buildSummaryFull, toDetailItem } from "./notices-detail.mapper";
+import { toSummaryFull, toDetailItem } from "./notices-detail.mapper";
 
 const ID = new ObjectId("66a1b2c3d4e5f6a7b8c9d0e1");
 const BASE: NoticeDoc = {
@@ -63,14 +63,14 @@ describe("toDetailItem", () => {
   });
 });
 
-describe("buildSummaryFull", () => {
+describe("toSummaryFull", () => {
   it("is null before the summary lands, and passes the ai's arrays through with an unknown type as informational", () => {
     // Arrange
     const summarized = { ...BASE, summaryAt: new Date("2026-10-14T06:00:00Z"), summaryType: "new-kind", summaryPeriods: [{ label: "x", startTime: undefined }] };
 
     // Act & Assert
-    expect(buildSummaryFull(BASE)).toBeNull();
-    expect(buildSummaryFull(summarized)).toEqual({
+    expect(toSummaryFull(BASE)).toBeNull();
+    expect(toSummaryFull(summarized)).toEqual({
       text: null,
       oneLiner: null,
       type: "informational",

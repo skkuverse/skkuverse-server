@@ -11,11 +11,8 @@ const source = (id: string, extra: Partial<SourceConfig> = {}): SourceConfig => 
   name: `name-${id}`,
   campus: "hssc",
   college: null,
-  appCategory: null,
   crawlAvailable: true,
   excludeReason: null,
-  hasCategory: true,
-  hasAuthor: true,
   ...extra,
 });
 

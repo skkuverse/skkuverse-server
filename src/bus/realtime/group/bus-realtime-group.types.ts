@@ -1,17 +1,10 @@
+import type { HsscBusDoc, JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import type { JongroRoute } from "../../bus.types";
 
-export interface CachedBus {
-  sequence: string;
-  carNumber: string;
-  estimatedTime: number;
-  latitude?: string;
-  longitude?: string;
-}
+/** WHY: what a served bus reads from a cached HSSC bus or Jongro position; an HSSC bus has no coordinates. */
+export type CachedBusFields = Pick<HsscBusDoc | JongroBusPositionDoc, "sequence" | "carNumber" | "estimatedTime"> &
+  Partial<Pick<JongroBusPositionDoc, "latitude" | "longitude">>;
 
-export interface CachedArrival {
-  stationId: string;
-  sequence?: string;
-  eta?: string;
-}
+export type CachedArrivalFields = Pick<JongroArrivalDoc, "stationId" | "sequence" | "stationName" | "eta">;
 
-export type JongroRouteStops = Pick<JongroRoute, "mapping" | "topisIds">;
+export type JongroRouteStations = Pick<JongroRoute, "mapping" | "topisIds">;

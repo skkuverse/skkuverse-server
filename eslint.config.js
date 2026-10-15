@@ -126,6 +126,14 @@ const CLOCK_INJECT_DIRS = MODULE_SCOPES.filter(
   (scope) => !CLOCK_FREE_LAYERS.some((layer) => scope.startsWith(`src/${layer}/`)),
 );
 
+// moment-timezone reads the clock too: `moment()`, `moment.utc()` and `moment.now()` without an argument,
+// and `moment.tz(zone)` with only the zone. `moment(now)` and `moment.tz(value, zone)` parse a given instant.
+const MOMENT_NOW = [
+  "CallExpression[callee.name='moment'][arguments.length=0]",
+  "CallExpression[callee.object.name='moment'][callee.property.name='tz'][arguments.length<2]",
+  "CallExpression[callee.object.name='moment'][callee.property.name=/^(?:utc|now)$/][arguments.length=0]",
+].join(", ");
+
 const CLOCK_INJECT_SYNTAX = [
   {
     selector: "NewExpression[callee.name='Date'][arguments.length=0]",
@@ -134,6 +142,10 @@ const CLOCK_INJECT_SYNTAX = [
   {
     selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
     message: "Read the time from the injected `Clock` (src/infra/clock.ts), not `Date.now()`.",
+  },
+  {
+    selector: MOMENT_NOW,
+    message: "Read the time from the injected `Clock` (src/infra/clock.ts) and pass it in: `moment(clock.now())`.",
   },
 ];
 
@@ -159,6 +171,10 @@ const CLOCK_SYNTAX = [
     selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
     message: "A pure file does not read the clock: take `now` as an argument.",
   },
+  {
+    selector: MOMENT_NOW,
+    message: "A pure file does not read the clock: take `now` as an argument and pass it to moment.",
+  },
 ];
 
 // no-restricted-syntax replaces rather than merges across blocks, and the role blocks above each
@@ -173,6 +189,9 @@ const SRC_SYNTAX_PLUGIN = {
     "spec-clock": CORE_RESTRICTED_SYNTAX,
     "schema-casts": CORE_RESTRICTED_SYNTAX,
     "schema-imports": CORE_RESTRICTED_SYNTAX,
+    "module-loads": CORE_RESTRICTED_SYNTAX,
+    // An alias of no-restricted-imports, so the boundary blocks keep their own patterns.
+    "import-paths": CORE_RULES.get("no-restricted-imports"),
     // An alias of id-denylist, so the glossary/<module> blocks keep theirs.
     "generic-names": CORE_RULES.get("id-denylist"),
   },
@@ -231,6 +250,12 @@ const DOUBLE_CAST_SYNTAX = [
   {
     selector: ":matches(TSAsExpression, TSTypeAssertion) > :matches(TSAsExpression, TSTypeAssertion).expression",
     message: "No cast through unknown in a .schema: check the field, or leave it out of the type the schema returns.",
+  },
+  {
+    // A cast to a zod schema type certifies an output the schema never checks, in one hop.
+    selector:
+      ":matches(TSAsExpression, TSTypeAssertion):matches([typeAnnotation.typeName.right.name='ZodType'], [typeAnnotation.typeName.name='ZodType'])",
+    message: "No cast to z.ZodType in a .schema: check the field, or leave it out of the type the schema returns.",
   },
 ];
 
@@ -292,8 +317,17 @@ const LITERAL_SYNTAX = [
 // answer depend on the day the test runs, and lets one read see two different instants.
 // An alias (`Clock as RealClock`), a namespace (`new clock.Clock()`) and a Nest provider (`providers: [Clock]`,
 // `useClass: Clock`) build the same real Clock; a fake class says so in its name (`FixedClock`, `FakeClock`).
+// An alias the name check cannot see (`Clock as Tick`, `Clock as FixedClock`) is refused where it is imported,
+// and so is a subclass of the real Clock, whatever its name.
 const REAL_CLOCK_NAME = "/^(?!Fixed|Fake).*Clock$/";
 const SPEC_CLOCK_SYNTAX = [
+  {
+    selector: [
+      `ImportDeclaration[importKind='value'] > ImportSpecifier[importKind='value'][imported.name='Clock'][local.name!='Clock']:not([local.name=${REAL_CLOCK_NAME}])`,
+      "ClassDeclaration[superClass.name='Clock']",
+    ].join(", "),
+    message: "Import Clock under its own name and pass a fixed fake object (`{ now: () => NOW }`), not the real Clock renamed or extended.",
+  },
   {
     selector: `NewExpression:matches([callee.name=${REAL_CLOCK_NAME}], [callee.property.name='Clock'])`,
     message: "Pass a fixed fake clock (`const clock: Clock = { now: () => NOW }`), not the real Clock.",
@@ -391,11 +425,20 @@ function scopeGlobs(tail) {
 }
 
 const ROLE_MAX_LINES = {
+  bootstrap: 48,
   client: 163,
+  config: 127,
+  constants: 47,
   controller: 42,
+  decorator: 10,
   document: 124,
+  error: 29,
+  filter: 83,
+  interceptor: 53,
   mapper: 139,
+  middleware: 94,
   module: 16,
+  pipe: 31,
   poller: 33,
   query: 169,
   repository: 123,
@@ -403,6 +446,7 @@ const ROLE_MAX_LINES = {
   schema: 61,
   service: 257,
   types: 56,
+  util: 54,
   wire: 57,
 };
 
@@ -526,7 +570,7 @@ const GLOSSARY_NOT = {
   health: ["isAlive", "isHealthy"],
   map: ["festivalConfig", "layerConfig", "eventWindow", "currentFestival", "filterButton", "exclusiveGroup", "categoryStyle", "sheetBody", "isFallback"],
   miniapps: ["appRegistry", "inbox", "readBy"],
-  notices: ["NoticeDto", "tabConfig", "FindResult", "pushStatus"],
+  notices: ["NoticeDto", "tabConfig", "FindResult"],
   ui: ["homeConfig", "widget", "slider", "period", "shortcut", "campusConfig", "busItem", "scrollItem"],
 };
 
@@ -799,6 +843,40 @@ module.exports = [
   },
   ...layerSetLeafBlocks(),
   {
+    // The boundaries above read import declarations: a `require()` or an `import()` call would pass them all,
+    // so non-spec src/ loads modules only through `import`. Specs may still require a module after setup.
+    name: "boundaries/module-loads",
+    files: ["src/**/*.ts"],
+    ignores: ["src/**/*.spec.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: {
+      "@typescript-eslint/no-require-imports": "error",
+      "src-syntax/module-loads": [
+        "error",
+        { selector: "ImportExpression", message: "Import the module at the top of the file: the import boundaries do not read an `import()` call." },
+      ],
+    },
+  },
+  {
+    // The boundary patterns match a specifier as written, so `../../building/../notices/x` would pass as building's.
+    name: "boundaries/import-paths",
+    files: ["src/**/*.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: {
+      "src-syntax/import-paths": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "(?:^|/)[^./][^/]*/\\.\\.(?:/|$)",
+              message: "Write the import path without a `..` after a folder name: the boundaries read the path as written.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // A spec may build a pathless issue on purpose, to test how one is answered.
     name: "zod/issue-path",
     files: ["src/**/*.ts"],
@@ -825,6 +903,13 @@ module.exports = [
     ignores: ["src/**/*.spec.ts"],
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
     rules: { "src-syntax/generic-names": ["error", ...GENERIC_NAMES] },
+  },
+  {
+    // docs/explanation/miniapps-architecture.md (Glossary): a class writes `Miniapps…` and a constant `MINIAPP…`;
+    // every other name writes `miniApp`/`MiniApp`, so `miniappX`/`MiniappX` is a third spelling.
+    name: "naming/miniapp-spelling",
+    files: ["src/**/*.ts"],
+    rules: { "id-match": ["error", "^(?!.*[mM]iniapp[A-Z]).*$", { properties: true, classFields: true }] },
   },
   {
     name: "specs/fixed-clock",

@@ -9,7 +9,8 @@ export function mongoCollection<T extends Document>(dbName: string, name: string
 export interface EnsureIndexesOptions {
   attempts?: number;
   backoffMs?: number;
-  // WHY: "error" where a missing index means full scans on a hot path.
+  // WHY: "error" where a hot read hints the index: without it every such read fails its hint (a 500), it never
+  // falls back to a full scan.
   failLevel?: "warn" | "error";
 }
 

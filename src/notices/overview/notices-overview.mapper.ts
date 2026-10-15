@@ -1,6 +1,7 @@
 import { MAX_POINTS } from "./notices-overview.constants";
 import type { AiOverviewResponse, AiOverviewSentence } from "./notices-overview.schema";
-import type { AiOverviewNotice, MapOverviewResult, OverviewCandidate } from "./notices-overview.types";
+import type { OverviewCandidate } from "./notices-overview.document";
+import type { AiOverviewNotice, MapOverviewResult } from "./notices-overview.types";
 import type { OverviewSentence, OverviewSource } from "./notices-overview.wire";
 
 const orNull = <T>(value: T | null | undefined): T | null => value ?? null;

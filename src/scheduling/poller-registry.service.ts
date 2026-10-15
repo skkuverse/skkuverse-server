@@ -39,6 +39,7 @@ const MONITOR_CONFIG = {
   failureIssueThreshold: 2,
   recoveryThreshold: 1,
 } as const;
+const PING_TIMEOUT_MS = 5_000;
 
 // SEE: docs/reference/logging.md for the poller.failing, poller.still_failing and poller.recovered lines.
 @Injectable()
@@ -194,5 +195,26 @@ export class PollerRegistryService
       { monitorSlug: MONITOR_SLUG, status: down ? "error" : "ok" },
       MONITOR_CONFIG,
     );
+    if (!down) void this.pingHealthchecks();
+  }
+
+  // (An operations detail is left out of the public history.)
+  private async pingHealthchecks(): Promise<void> {
+    const url = config.healthchecks.pollerPingUrl();
+    if (!url) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      await res.body?.cancel();
+      if (!res.ok) {
+        logger.warn({ event: "poller.healthchecks_ping_failed", status: res.status }, "Healthchecks.io ping failed");
+      }
+    } catch (err) {
+      const reason = err instanceof Error ? err.name : typeof err;
+      logger.warn({ event: "poller.healthchecks_ping_failed", reason }, "Healthchecks.io ping failed");
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }

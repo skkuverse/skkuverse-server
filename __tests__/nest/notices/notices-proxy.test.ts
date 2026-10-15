@@ -4,14 +4,18 @@
 
 jest.mock("axios", () => ({ get: jest.fn() }));
 
-import { Readable } from "stream";
+import http from "http";
+import type { AddressInfo } from "net";
+import { PassThrough, Readable } from "stream";
 import axios from "axios";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
 import { OutboundBlockedError } from "../../../src/infra/outbound-guard";
+import * as attachmentConstants from "../../../src/notices/attachment/notices-attachment.constants";
 import { NoticesAttachmentModule } from "../../../src/notices/attachment/notices-attachment.module";
 import { NoticesModule } from "../../../src/notices/notices.module";
+import { NoticesTabsModule } from "../../../src/notices/tabs/notices-tabs.module";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 const mockedGet = axios.get as unknown as jest.Mock;
@@ -20,6 +24,8 @@ const fakeClock: Clock = { now: () => new Date("2026-10-14T00:00:00Z") };
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
+// WHY: the CSP every route gets from the app pipeline; a type served without the sandbox carries exactly this one.
+let controlCsp: string | undefined;
 
 function upstream(body: string, headers: Record<string, string> = {}) {
   return { headers, data: Readable.from([Buffer.from(body)]) };
@@ -27,15 +33,24 @@ function upstream(body: string, headers: Record<string, string> = {}) {
 
 beforeAll(async () => {
   app = await buildTestApp({
-    imports: [NoticesModule, NoticesAttachmentModule],
+    imports: [NoticesModule, NoticesTabsModule, NoticesAttachmentModule],
     overrides: [{ provide: Clock, useValue: fakeClock }],
     role: "api",
   });
   httpServer = app.getHttpServer();
+  controlCsp = (await request(httpServer).get("/notices/tabs")).headers["content-security-policy"];
 });
 
 afterAll(async () => {
   await app.close();
+});
+
+describe("the control CSP", () => {
+  it("is the pipeline's own policy, without a sandbox", () => {
+    // Assert
+    expect(controlCsp).toEqual(expect.any(String));
+    expect(controlCsp).not.toMatch(/\bsandbox\b/);
+  });
 });
 
 beforeEach(() => {
@@ -110,7 +125,7 @@ describe("allowed request", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("application/pdf");
-    expect(res.headers["content-security-policy"]).not.toMatch(/\bsandbox\b/);
+    expect(res.headers["content-security-policy"]).toBe(controlCsp);
     expect(mockedGet).toHaveBeenCalledTimes(2);
     for (const [, config] of mockedGet.mock.calls) {
       expect(config.proxy).toBe(false);
@@ -203,7 +218,7 @@ describe("inline content-type policy", () => {
 
       // Assert
       expect(res.status).toBe(200);
-      expect(res.headers["content-security-policy"]).not.toMatch(/\bsandbox\b/);
+      expect(res.headers["content-security-policy"]).toBe(controlCsp);
     },
   );
 
@@ -241,5 +256,91 @@ describe("inline content-type policy", () => {
 
     // Assert
     expect(res.status).toBe(502);
+  });
+});
+
+describe("transfer limits", () => {
+  // WHY: the real limits are 100 MiB, 30 s and 10 min; the same code runs at sizes and times a test can afford.
+  function limit(name: "MAX_ATTACHMENT_BYTES" | "IDLE_TRANSFER_MS" | "MAX_TRANSFER_MS", value: number): void {
+    jest.replaceProperty(attachmentConstants, name, value);
+  }
+
+  /** A raw GET that reports how the response ended: `complete` is false when the server cut it off. */
+  function fetchRaw(url: string): Promise<{ status: number; bytes: number; complete: boolean; elapsedMs: number }> {
+    const { port } = httpServer.address() as AddressInfo;
+    const startedAt = Date.now();
+    return new Promise((resolve, reject) => {
+      const req = http.get({ host: "127.0.0.1", port, path: `${PROXY}?url=${encodeURIComponent(url)}` }, (res) => {
+        let bytes = 0;
+        res.on("data", (chunk: Buffer) => (bytes += chunk.length));
+        res.on("close", () => resolve({ status: res.statusCode ?? 0, bytes, complete: res.complete, elapsedMs: Date.now() - startedAt }));
+      });
+      req.on("error", reject);
+    });
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("cuts a body off once it passes the cap, though it declared no length", async () => {
+    // Arrange
+    limit("MAX_ATTACHMENT_BYTES", 1024);
+    const body = Readable.from([Buffer.alloc(600), Buffer.alloc(600), Buffer.alloc(600)]);
+    mockedGet.mockResolvedValueOnce({ headers: { "content-type": "application/pdf" }, data: body });
+
+    // Act
+    const res = await fetchRaw("https://www.skku.edu/_attach/big.pdf");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.complete).toBe(false);
+    expect(res.bytes).toBeLessThanOrEqual(1024);
+    expect(body.destroyed).toBe(true);
+  });
+
+  it("serves a body exactly at the cap in full", async () => {
+    // Arrange
+    limit("MAX_ATTACHMENT_BYTES", 1200);
+    mockedGet.mockResolvedValueOnce({ headers: { "content-type": "application/pdf" }, data: Readable.from([Buffer.alloc(600), Buffer.alloc(600)]) });
+
+    // Act
+    const res = await fetchRaw("https://www.skku.edu/_attach/exact.pdf");
+
+    // Assert
+    expect(res).toMatchObject({ status: 200, complete: true, bytes: 1200 });
+  });
+
+  it("cuts a transfer off when the upstream goes idle", async () => {
+    // Arrange
+    limit("IDLE_TRANSFER_MS", 50);
+    const body = new PassThrough();
+    body.write(Buffer.alloc(10));
+    mockedGet.mockResolvedValueOnce({ headers: { "content-type": "application/pdf" }, data: body });
+
+    // Act
+    const res = await fetchRaw("https://www.skku.edu/_attach/stalled.pdf");
+
+    // Assert
+    expect(res).toMatchObject({ status: 200, complete: false, bytes: 10 });
+    expect(body.destroyed).toBe(true);
+  });
+
+  it("cuts a transfer off at the overall limit, though it never goes idle", async () => {
+    // Arrange
+    limit("IDLE_TRANSFER_MS", 1_000);
+    limit("MAX_TRANSFER_MS", 150);
+    const body = new PassThrough();
+    const trickle = setInterval(() => body.write(Buffer.alloc(1)), 10);
+    mockedGet.mockResolvedValueOnce({ headers: { "content-type": "application/pdf" }, data: body });
+
+    // Act
+    const res = await fetchRaw("https://www.skku.edu/_attach/trickle.pdf").finally(() => clearInterval(trickle));
+
+    // Assert
+    expect(res).toMatchObject({ status: 200, complete: false });
+    expect(res.elapsedMs).toBeGreaterThanOrEqual(140);
+    expect(res.elapsedMs).toBeLessThan(1_000);
+    expect(body.destroyed).toBe(true);
   });
 });

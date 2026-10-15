@@ -12,5 +12,5 @@ export interface LoadedRegistry {
   indexEntries: ReadonlyArray<Readonly<MiniAppIndexEntry>>;
   detailsById: ReadonlyMap<string, Readonly<MiniAppDetailRaw>>;
   /** WHY: first-party origin → the mini app that owns it, so the app opens any URL there in that shell. */
-  firstPartyOrigins: Readonly<Record<string, string>>;
+  ownerByOrigin: Readonly<Record<string, string>>;
 }

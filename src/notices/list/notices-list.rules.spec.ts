@@ -408,6 +408,32 @@ describe("decodeCursor — cross-release compatibility", () => {
   });
 });
 
+describe("decodeCursor — every stored date shape", () => {
+  // EVIDENCE: prod notices store `date` as YYYY-MM-DD (10,177 docs) and, for boards crawled before 2026-08-06,
+  // as YYYY-MM-DD HH:mm (868 docs, sscience-undergrad, liberalarts-undergrad, …); sampled 2026-10-15.
+  it.each(["2026-08-05", "2026-07-21 11:15", "2026-03-09 00:00"])("round-trips a cursor minted on %s", (stored) => {
+    // Arrange
+    const minted = encodeCursor({ d: stored, c: ISO, i: OID });
+
+    // Act
+    const decoded = decodeCursor(minted);
+
+    // Assert
+    expect(decoded).toEqual({ d: stored, c: ISO, i: OID });
+  });
+
+  it.each(["", "2026-07-21T11:15", "2026-07-21 11:15:00", "2026-07-21 1:15", "2026-7-21", "2026-07-21 "])(
+    "rejects %j, a shape the crawler never stores",
+    (day) => {
+      // Arrange
+      const cursor = Buffer.from(JSON.stringify({ d: day, i: OID }), "utf8").toString("base64url");
+
+      // Act & Assert
+      expect(() => decodeCursor(cursor)).toThrow(NoticesListCursorError);
+    },
+  );
+});
+
 describe("selectEffectivePeriod", () => {
   const NOW_V1 = new Date("2026-10-09T12:00:00+09:00");
   const periods = [

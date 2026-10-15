@@ -1,7 +1,7 @@
 import moment from "moment-timezone";
 import { NOTICES_TIMEZONE } from "../notices.constants";
 import type { NoticeDoc } from "../notices.document";
-import type { ClaimWindow, DispatchPolicy, DispatchStatus, PushedFields, ReleasedFields } from "./notices-dispatch.types";
+import type { ClaimWindow, DispatchPolicy, PushedFields, ReleasedFields, SkippedFields } from "./notices-dispatch.types";
 
 // WHY: a push error is kept for a person to read: 500 characters hold the Cloud Function's status and message.
 const MAX_PUSH_ERROR_LENGTH = 500;
@@ -18,18 +18,13 @@ export function toClaimWindow(now: Date, policy: Pick<DispatchPolicy, "maxAgeDay
   };
 }
 
-type DispatchFields = Pick<NoticeDoc, "pushedAt" | "pushAttempts" | "dispatchClaimedAt">;
-
-/** SEE: docs/decisions/0003-fcm-dispatch-cloud-function-claim-lease.md — a claim is a lease, not a lock. */
-export function dispatchStatusOf(doc: DispatchFields, window: Pick<ClaimWindow, "leaseExpiredBefore" | "maxAttempts">): DispatchStatus {
-  if (doc.pushedAt instanceof Date) return "pushed";
-  if ((doc.pushAttempts ?? 0) >= window.maxAttempts) return "exhausted";
-  const claimedAt = doc.dispatchClaimedAt;
-  return claimedAt instanceof Date && claimedAt >= window.leaseExpiredBefore ? "claimed" : "pending";
-}
-
 export function toPushedFields(at: Date): PushedFields {
   return { pushedAt: at, dispatchClaimedAt: null, pushError: null };
+}
+
+// WHY: no board of the group has a topic, so nobody can be sent it: resolved as a skip, which no attempt counts.
+export function toSkippedFields(at: Date): SkippedFields {
+  return { pushedAt: at, pushSkippedReason: "no-topic", dispatchClaimedAt: null, pushError: null };
 }
 
 // WHY: a failed send releases the lease, so the next sweep retries it while attempts remain.

@@ -11,6 +11,7 @@ const mongoCollection = jest.fn(() => ({ find, createIndex }));
 
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
+jest.mock("@sentry/nestjs", () => ({ captureException: jest.fn() }));
 jest.mock("../../infra/mongo", () => ({
   ...jest.requireActual("../../infra/mongo"),
   mongoCollection: (...args: unknown[]) => mongoCollection(...(args as [])),
@@ -18,6 +19,8 @@ jest.mock("../../infra/mongo", () => ({
 
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
+import * as Sentry from "@sentry/nestjs";
+import { BusScheduleDroppedOverrideError } from "./bus-schedule.error";
 import { BusScheduleRepository } from "./bus-schedule.repository";
 
 const PATTERN = { serviceId: "campus-inja", patternId: "weekday", days: [1, 2], entries: [{ time: "08:00" }], effectiveFrom: "2026-08-31" };
@@ -101,5 +104,60 @@ describe("BusScheduleRepository.onModuleInit", () => {
       expect.objectContaining({ event: "bus.schedule.indexes.failed", err: expect.objectContaining({ message: "idx boom" }) }),
       expect.any(String),
     );
+  });
+});
+
+// WHY: a dropped override serves the pattern on a day the operator closed or replaced, so a person must see
+// it as an Issue, not only as a log line.
+describe("BusScheduleRepository.listOverrides with a document it drops", () => {
+  const BROKEN = { ...OVERRIDE, date: "2026-10-22", type: "replace", entries: undefined };
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("raises one Sentry Issue naming the dropped override", async () => {
+    // Arrange
+    toArray.mockResolvedValue([OVERRIDE, BROKEN]);
+
+    // Act
+    const overrides = await new BusScheduleRepository().listOverrides("campus-inja", "2026-10-19", "2026-10-25");
+
+    // Assert
+    expect(overrides).toEqual([OVERRIDE]);
+    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+    const [err, context] = (Sentry.captureException as jest.Mock).mock.calls[0]!;
+    expect(err).toBeInstanceOf(BusScheduleDroppedOverrideError);
+    expect(err.message).toContain("campus-inja/2026-10-22: entries");
+    expect(context).toEqual({ tags: { collection: "bus_overrides" } });
+  });
+
+  it("raises it for one document at most once an hour", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: Date.parse("2026-10-20T01:00:00Z") });
+    toArray.mockResolvedValue([BROKEN]);
+    const repository = new BusScheduleRepository();
+    await repository.listOverrides("campus-inja", "2026-10-19", "2026-10-25");
+    jest.setSystemTime(Date.parse("2026-10-20T01:59:59Z"));
+    await repository.listOverrides("campus-inja", "2026-10-19", "2026-10-25");
+
+    // Act
+    jest.setSystemTime(Date.parse("2026-10-20T02:00:00Z"));
+    await repository.listOverrides("campus-inja", "2026-10-19", "2026-10-25");
+
+    // Assert
+    expect(Sentry.captureException).toHaveBeenCalledTimes(2);
+  });
+
+  it("logs a dropped pattern without raising an Issue", async () => {
+    // Arrange
+    toArray.mockResolvedValue([{ ...PATTERN, days: "1,2" }]);
+
+    // Act
+    await new BusScheduleRepository().listPatterns("campus-inja");
+
+    // Assert
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+    expect(Sentry.captureException).not.toHaveBeenCalled();
   });
 });

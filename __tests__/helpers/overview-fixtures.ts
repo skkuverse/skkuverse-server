@@ -4,7 +4,7 @@
  */
 import { ObjectId } from "mongodb";
 import type { AiOverviewResponse } from "../../src/notices/overview/notices-overview.schema";
-import type { OverviewCandidate } from "../../src/notices/overview/notices-overview.types";
+import type { OverviewCandidate } from "../../src/notices/overview/notices-overview.document";
 
 let seq = 0;
 

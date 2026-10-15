@@ -4,10 +4,10 @@
  * projected to the candidate fields.
  */
 import { RETRIEVAL_LIMIT } from "./notices-overview.constants";
-import { buildOverviewPipeline } from "./notices-overview.query";
+import { toOverviewPipeline } from "./notices-overview.query";
 
-describe("buildOverviewPipeline", () => {
-  const pipeline = buildOverviewPipeline({
+describe("toOverviewPipeline", () => {
+  const pipeline = toOverviewPipeline({
     q: "기숙사",
     sourceIds: ["skku-main", "cs"],
     serviceStartDate: "2026-03-09",

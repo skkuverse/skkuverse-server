@@ -6,7 +6,7 @@
  * wire schema describes in `contracts/produced/index.json`.
  */
 import ts from "typescript";
-import { resolveRelative } from "./ast";
+import { importsOf, resolveRelative } from "./ast";
 import { routeHandlersIn, type RouteHandler } from "./routes";
 
 /** A name a route's type takes from a `.wire` file. */
@@ -42,18 +42,9 @@ function resolveWire(file: string, specifier: string): string {
 /** The local names a file binds from `.wire` imports: named, default and namespace. */
 function wireBindings(sf: ts.SourceFile): Map<string, WireBinding> {
   const bindings = new Map<string, WireBinding>();
-  for (const s of sf.statements) {
-    if (!ts.isImportDeclaration(s) || !ts.isStringLiteral(s.moduleSpecifier) || !isWireSpecifier(s.moduleSpecifier.text)) {
-      continue;
-    }
-    const wireFile = resolveWire(sf.fileName, s.moduleSpecifier.text);
-    const clause = s.importClause;
-    if (clause?.name) bindings.set(clause.name.text, { wireFile, imported: "default" });
-    const named = clause?.namedBindings;
-    if (named && ts.isNamespaceImport(named)) bindings.set(named.name.text, { wireFile, imported: null });
-    if (named && ts.isNamedImports(named)) {
-      for (const e of named.elements) bindings.set(e.name.text, { wireFile, imported: (e.propertyName ?? e.name).text });
-    }
+  for (const i of importsOf(sf)) {
+    if (i.kind !== "import" || !isWireSpecifier(i.specifier)) continue;
+    bindings.set(i.local, { wireFile: resolveWire(sf.fileName, i.specifier), imported: i.imported === "*" ? null : i.imported });
   }
   return bindings;
 }

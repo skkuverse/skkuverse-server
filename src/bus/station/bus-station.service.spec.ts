@@ -10,6 +10,7 @@ import { FakeBusCacheRepository } from "../../../__tests__/helpers/fakes/bus/bus
 import { FakeBusRealtimeHsscClient } from "../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.client.fake";
 import { FakeBusStationClient } from "../../../__tests__/helpers/fakes/bus/bus-station.client.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { hsscBusDoc } from "../../../__tests__/helpers/bus/bus-cache-docs";
 import type { Clock } from "../../infra/clock";
 import type { BusCacheRepository } from "../cache/bus-cache.repository";
 import { BusCacheService } from "../cache/bus-cache.service";
@@ -94,7 +95,7 @@ describe("BusStationService.listArrivals", () => {
   it("01592 → the cached station message and the HSSC ETA at 혜화역(승차장), with totalCount 2", async () => {
     // Arrange
     busCache.values.set("station", "3분후[2번째 전]");
-    busCache.values.set("hssc", [{ sequence: "2", estimatedTime: 30 }]);
+    busCache.values.set("hssc", [hsscBusDoc({ sequence: "2", estimatedTime: 30 })]);
 
     // Act
     const arrivals = await service.listArrivals("01592");

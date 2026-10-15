@@ -4,9 +4,9 @@ import type { z } from "zod";
 import config from "../infra/config";
 import { parseConfigFile } from "../infra/config-file";
 import { toJongroRoute } from "./bus.mapper";
-import { SERVICE_KEY_REQUIRED, validateServiceKey } from "./bus.rules";
+import { deepFreeze, validateServiceKey } from "./bus.rules";
 import { jongroRoutesConfig } from "./bus.schema";
-import type { JongroRoute } from "./bus.types";
+import type { JongroRoute, ServiceKeyProblem } from "./bus.types";
 
 // WHY: read next to the compiled file at runtime; scripts/copy-build-assets.js stages the JSON into dist/.
 const JONGRO_ROUTES_FILE = path.join(__dirname, "jongro-routes.json");
@@ -19,17 +19,19 @@ const JONGRO_ROUTES_WORDS = {
   error: (issue: z.core.$ZodRawIssue): string | undefined => (isRootTypeIssue(issue) ? "must be a JSON array" : undefined),
 };
 
-function deepFreeze<T>(value: T): T {
-  if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
-  Object.freeze(value);
-  for (const key of Object.getOwnPropertyNames(value)) deepFreeze((value as Record<string, unknown>)[key]);
-  return value;
-}
+const SERVICE_KEY_MESSAGES: Readonly<Record<ServiceKeyProblem, string>> = {
+  missing: "SEOUL_BUS_SERVICE_KEY is required (see config/env.prd.keys)",
+  "not-url-encoded":
+    "SEOUL_BUS_SERVICE_KEY must be URL-encoded (allowed chars: [A-Za-z0-9_%-]). " +
+    "Re-encode the raw key with encodeURIComponent() before storing in .env.",
+};
 
 // WHY: the test environment runs without the key (jest.setup.ts), so only a malformed one fails there.
 function checkServiceKey(key: unknown): string {
-  const problems = validateServiceKey(key).filter((p) => !(config.isTest && p === SERVICE_KEY_REQUIRED));
-  if (problems.length > 0) throw new Error(`SEOUL_BUS_SERVICE_KEY invalid: ${problems.join("; ")}`);
+  const problem = validateServiceKey(key);
+  if (problem !== null && !(config.isTest && problem === "missing")) {
+    throw new Error(`SEOUL_BUS_SERVICE_KEY invalid: ${SERVICE_KEY_MESSAGES[problem]}`);
+  }
   return String(key);
 }
 

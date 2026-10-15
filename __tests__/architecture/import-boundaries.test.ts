@@ -173,6 +173,37 @@ describe("import boundary blocks apply as specified", () => {
   });
 });
 
+describe("boundaries/module-loads and boundaries/import-paths", () => {
+  it.each([
+    ["a require call", "boundaries/module-loads", 'const fs = require("fs");'],
+    ["an import-equals", "boundaries/module-loads", 'import fs = require("fs");'],
+    ["a dynamic import", "boundaries/module-loads", 'export const load = async () => (await import("axios")).default;'],
+    ["a `..` after a feature's folder", "boundaries/import-paths", 'import { x } from "../../building/../notices/list/notices-list.repository";'],
+    ["a `..` after a shared folder", "boundaries/import-paths", 'import { x } from "../../shared/../notices/x";'],
+    ["a re-export through a `..`", "boundaries/import-paths", 'export { x } from "./sub/../../notices/x";'],
+  ])("rejects %s in src/", (_case, name, source) => {
+    // Act
+    const messages = lint(block(name).rules!, "src/building/probe/building-probe.rules.ts", source);
+
+    // Assert
+    expect(messages).toHaveLength(1);
+  });
+
+  it("passes an import path that only climbs, a type import and a spec's require", () => {
+    // Arrange
+    const file = "src/building/probe/building-probe.service.ts";
+
+    // Act
+    const loads = lint(block("boundaries/module-loads").rules!, file, 'import axios from "axios";\ntype T = import("../building.types").T;');
+    const paths = lint(block("boundaries/import-paths").rules!, file, 'import { db } from "../../infra/db";\nimport { b } from "./building-probe.rules";');
+
+    // Assert
+    expect(loads).toEqual([]);
+    expect(paths).toEqual([]);
+    expect(block("boundaries/module-loads").ignores).toEqual(["src/**/*.spec.ts"]);
+  });
+});
+
 describe("boundaries/wire", () => {
   const file = "src/infra/x.wire.ts";
 

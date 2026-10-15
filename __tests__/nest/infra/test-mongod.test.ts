@@ -6,7 +6,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
+import net from "node:net";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, freeLoopbackPort, startMongod, type TestMongod } from "../../helpers/mongod";
 
 type Db = typeof import("../../../src/infra/db");
 
@@ -59,4 +60,41 @@ describe("startMongod", () => {
     // Assert
     expect(found).toEqual({ _id: "one", n: 1 });
   });
+});
+
+describe("startMongod's mongod", () => {
+  it("runs with the TTL monitor off, so a frozen-clock document is never reaped mid-test", async () => {
+    // Act
+    const parameter = await db.getClient().db("admin").command({ getParameter: 1, ttlMonitorEnabled: 1 });
+
+    // Assert
+    expect(parameter.ttlMonitorEnabled).toBe(false);
+  });
+
+  it(
+    "starts on another port when the one it picked is taken before mongod binds it",
+    async () => {
+      // Arrange
+      const holder = net.createServer();
+      await new Promise<void>((resolve) => holder.listen(0, "127.0.0.1", resolve));
+      const taken = (holder.address() as net.AddressInfo).port;
+      const ports = [Promise.resolve(taken), freeLoopbackPort()];
+      const previousUrl = process.env.MONGO_URL;
+      let second: TestMongod | undefined;
+
+      try {
+        // Act
+        second = await startMongod(() => ports.shift() ?? freeLoopbackPort());
+
+        // Assert
+        expect(second.uri).toMatch(/^mongodb:\/\/127\.0\.0\.1:\d+\/$/);
+        expect(second.uri).not.toContain(`:${taken}/`);
+      } finally {
+        await second?.stop();
+        await new Promise<void>((resolve) => holder.close(() => resolve()));
+        process.env.MONGO_URL = previousUrl;
+      }
+    },
+    MONGOD_START_TIMEOUT_MS,
+  );
 });

@@ -1,5 +1,5 @@
 {
-  "_about": "GET /building/1 captured from production 2026-10-11 (Accept-Language ko); a facility: no floors, no connections; `extensions` as served",
+  "_about": "GET /building/1 captured from production 2026-10-11 (Accept-Language ko); a facility: no floors, no connections; `extensions` removed 2026-10-16, when the detail stopped serving it",
   "data": {
     "building": {
       "_id": 1,
@@ -16,7 +16,6 @@
         "ko": "성균관대학교 인문사회과학캠퍼스의 정문이다."
       },
       "displayNo": null,
-      "extensions": {},
       "image": {
         "url": "https://www.skku.edu/_attach/image/2018/07/EUWaNcMcMYUCmumaSXFe.jpg",
         "filename": "EUWaNcMcMYUCmumaSXFe.jpg"

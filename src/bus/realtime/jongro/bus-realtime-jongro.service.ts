@@ -6,14 +6,14 @@ import { BusCacheService } from "../../cache/bus-cache.service";
 import type { JongroRoute } from "../../bus.types";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 import { toJongroBusPosition } from "./bus-realtime-jongro.mapper";
-import { toDwell, toRegistryDrift } from "./bus-realtime-jongro.rules";
+import { toArrivalsKey, toDwell, toPositionsKey, toRegistryDrift } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
 @Injectable()
 export class BusRealtimeJongroService {
   private readonly arrivalsByCode = new Map<string, JongroArrivalDoc[]>();
   private readonly positionsByCode = new Map<string, JongroBusPositionDoc[]>();
-  private readonly recordTimesByCode = new Map<string, Map<string, string>>();
+  private readonly firstSeenAtByStationIdByCode = new Map<string, Map<string, string>>();
   private readonly driftWarnedCodes = new Set<string>();
 
   constructor(
@@ -29,11 +29,11 @@ export class BusRealtimeJongroService {
 
   // WHY: an api replica runs no poller: its memory is empty (undefined before a first tick) and bus_cache serves.
   async listArrivals(code: string): Promise<JongroArrivalDoc[] | undefined> {
-    return (await this.cache.read(`jongro_stations_${code}`)) ?? this.arrivalsByCode.get(code);
+    return (await this.cache.read(toArrivalsKey(code))) ?? this.arrivalsByCode.get(code);
   }
 
   async listPositions(code: string): Promise<JongroBusPositionDoc[] | undefined> {
-    return (await this.cache.read(`jongro_locations_${code}`)) ?? this.positionsByCode.get(code);
+    return (await this.cache.read(toPositionsKey(code))) ?? this.positionsByCode.get(code);
   }
 
   private async refreshArrivals(route: JongroRoute): Promise<void> {
@@ -41,7 +41,7 @@ export class BusRealtimeJongroService {
     if (!arrivals) return;
     this.warnOnRegistryDrift(route, arrivals);
     this.arrivalsByCode.set(route.code, arrivals);
-    await this.cache.write(`jongro_stations_${route.code}`, arrivals);
+    await this.cache.write(toArrivalsKey(route.code), arrivals);
   }
 
   private async refreshPositions(route: JongroRoute): Promise<void> {
@@ -50,7 +50,7 @@ export class BusRealtimeJongroService {
     const now = this.clock.now();
     const positions = sightings.flatMap((sighting) => this.toPositions(route, sighting, now));
     this.positionsByCode.set(route.code, positions);
-    await this.cache.write(`jongro_locations_${route.code}`, positions);
+    await this.cache.write(toPositionsKey(route.code), positions);
   }
 
   private toPositions(route: JongroRoute, sighting: JongroBusSighting, now: Date): JongroBusPositionDoc[] {
@@ -62,17 +62,17 @@ export class BusRealtimeJongroService {
       );
       return [];
     }
-    const recordTimes = this.recordTimesOf(route.code);
-    const dwell = toDwell(recordTimes.get(sighting.stationId), now);
-    recordTimes.set(sighting.stationId, dwell.recordTime);
+    const firstSeenAtByStationId = this.firstSeenAtByStationIdOf(route.code);
+    const dwell = toDwell(firstSeenAtByStationId.get(sighting.stationId), now);
+    firstSeenAtByStationId.set(sighting.stationId, dwell.firstSeenAt);
     return [toJongroBusPosition(sighting, station, dwell)];
   }
 
-  private recordTimesOf(code: string): Map<string, string> {
-    const existing = this.recordTimesByCode.get(code);
+  private firstSeenAtByStationIdOf(code: string): Map<string, string> {
+    const existing = this.firstSeenAtByStationIdByCode.get(code);
     if (existing) return existing;
     const created = new Map<string, string>();
-    this.recordTimesByCode.set(code, created);
+    this.firstSeenAtByStationIdByCode.set(code, created);
     return created;
   }
 

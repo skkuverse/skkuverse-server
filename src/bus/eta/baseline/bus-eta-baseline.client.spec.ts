@@ -5,7 +5,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { DirectionsError } from "../../../shared/directions.error";
+import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { LatLng } from "../../../shared/lat-lng.types";
 import { BusEtaBaselineClient } from "./bus-eta-baseline.client";
 import type { TmapPredictionResponse } from "./bus-eta-baseline.types";
@@ -84,11 +84,11 @@ describe("BusEtaBaselineClient.fetchOffsets", () => {
     mockedPost.mockRejectedValue(axiosError({ status: 403 }));
 
     // Act
-    const err = (await new BusEtaBaselineClient().fetchOffsets(STOPS, DEPART, { appKey: KEY, retryDelayMs: 0 }).catch((e: unknown) => e)) as DirectionsError;
+    const err = (await new BusEtaBaselineClient().fetchOffsets(STOPS, DEPART, { appKey: KEY, retryDelayMs: 0 }).catch((e: unknown) => e)) as BusEtaDirectionsError;
 
     // Assert
     expect(mockedPost).toHaveBeenCalledTimes(1);
-    expect(err).toBeInstanceOf(DirectionsError);
+    expect(err).toBeInstanceOf(BusEtaDirectionsError);
     expect(err).toMatchObject({ provider: "tmap", kind: "auth", status: 403 });
     expect(JSON.stringify(err) + err.message + err.stack).not.toContain(KEY);
   });

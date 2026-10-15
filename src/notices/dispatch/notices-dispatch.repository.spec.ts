@@ -1,7 +1,7 @@
 /**
- * NoticesDispatchRepository's driver calls, the only writes of the four push fields: the atomic claim's filter
- * and lease stamp, the pushed and released records, each with one attempt counted, and the partial index the claim
- * reads. Over a real mongod they are pinned by notices-characterization.routes.test.ts.
+ * NoticesDispatchRepository's driver calls, the only writes of the push fields: the atomic claim's filter
+ * and lease stamp, the pushed and released records, each with one attempt counted, the skip record with none, and
+ * the partial index the claim reads. Over a real mongod they are pinned by notices-characterization.routes.test.ts.
  */
 const findOneAndUpdate = jest.fn((..._args: unknown[]) => Promise.resolve(null));
 const updateOne = jest.fn((..._args: unknown[]) => Promise.resolve({ acknowledged: true }));
@@ -22,7 +22,7 @@ beforeEach(() => {
 });
 
 describe("NoticesDispatchRepository.claimNextPending", () => {
-  it("claims an unpushed, summarized, recent, undeleted notice under its attempt cap whose lease is free or expired", async () => {
+  it("claims the newest unpushed, summarized, recent, undeleted notice under its attempt cap whose lease is free or expired", async () => {
     // Act
     await new NoticesDispatchRepository().claimNextPending({ dateFloor: "2026-10-06", leaseExpiredBefore: LEASE, maxAttempts: 5 }, CLAIMED_AT);
 
@@ -37,7 +37,7 @@ describe("NoticesDispatchRepository.claimNextPending", () => {
         $or: [{ dispatchClaimedAt: null }, { dispatchClaimedAt: { $exists: false } }, { dispatchClaimedAt: { $lt: LEASE } }],
       },
       { $set: { dispatchClaimedAt: CLAIMED_AT } },
-      { returnDocument: "after" },
+      { sort: { date: -1, _id: -1 }, returnDocument: "after" },
     ]);
   });
 });
@@ -65,8 +65,24 @@ describe("NoticesDispatchRepository records", () => {
   });
 });
 
+describe("NoticesDispatchRepository.recordSkipped", () => {
+  it("records a skip: resolved so no claim takes it again, the reason kept, the lease released, no attempt counted", async () => {
+    // Arrange
+    const id = new ObjectId();
+
+    // Act
+    await new NoticesDispatchRepository().recordSkipped(id, { pushedAt: CLAIMED_AT, pushSkippedReason: "no-topic", dispatchClaimedAt: null, pushError: null });
+
+    // Assert
+    expect(updateOne).toHaveBeenCalledWith(
+      { _id: id },
+      { $set: { pushedAt: CLAIMED_AT, pushSkippedReason: "no-topic", dispatchClaimedAt: null, pushError: null } },
+    );
+  });
+});
+
 describe("NoticesDispatchRepository.onModuleInit", () => {
-  it("ensures dispatch_pending_idx with the keys and partial filter of the scripts/migrate-notices-dispatch-index script", async () => {
+  it("ensures dispatch_pending_idx on the date, partial on the claimable set", async () => {
     // Act
     await new NoticesDispatchRepository().onModuleInit();
 

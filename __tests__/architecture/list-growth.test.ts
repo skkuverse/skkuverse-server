@@ -1,16 +1,21 @@
 /**
  * The lists beside the rules change only the way their kind allows
- * (`__tests__/helpers/architecture/lists.ts`; PR 227 F2, PR 229 F2):
+ * (`__tests__/helpers/architecture/lists.ts`; PR 227 F2, PR 229 F2,
+ * PR 234 F1 F2):
  *
  *   - `list-growth`: against the base branch, an allowlist or a ratchet gains
- *     no entry unless the rule's own commit records the debt
- *     (`Architecture-Debt: <list path>`), and an exemption gains one only
- *     when its reason cites a decision that `docs/decisions/` declares.
+ *     an entry only through commits that each carry
+ *     `Architecture-Debt: <list path>` and change a rule file that reads the
+ *     list; a size cap's `max` rises only in commits that carry the trailer
+ *     for `size-caps.json`; and an exemption gains an entry only when its
+ *     reason cites a decision that `docs/decisions/` declares and that
+ *     `EXEMPTION_DECISIONS` allows for its file.
  *   - `list-registry`: every file in `allowlists/` and `exemptions/` is read
- *     by a rule (its name appears as a string in an architecture test or
- *     helper), and
- *     every file in `ratchets/` is registered in `RATCHET_DECISIONS` with a
- *     decision that exists. A stray list holds nothing back.
+ *     by a rule (an architecture test or helper, or `eslint.config.js`, names
+ *     it), every exemption file is in `EXEMPTION_DECISIONS` with decisions
+ *     that exist, and every file in `ratchets/` is registered in
+ *     `RATCHET_DECISIONS` with a decision that exists. A stray list holds
+ *     nothing back.
  *   - `exemption-reasons`: no reason is shared between two entries of any
  *     exemption file, so a reason cannot be pasted as boilerplate.
  */
@@ -26,19 +31,31 @@ import {
   reasonProblem,
 } from "../helpers/architecture/exemptions";
 import {
+  EXEMPTION_DECISIONS,
   LIST_DIRS,
   RATCHET_DECISIONS,
   baseCommit,
-  debtCommits,
   growthViolations,
   listChanges,
+  listCommits,
   listEntries,
-  type DebtCommit,
+  listReaders,
+  missingBaseProblem,
+  type ListCommit,
+  type ListGate,
 } from "../helpers/architecture/lists";
 import { ROOT } from "../helpers/architecture/ratchet";
 import { filesUnder, readSource } from "../helpers/architecture/tree";
 
 const DECISIONS = new Set(["ADR 0010 D9", "ADR 0010 D2"]);
+
+/** The rule files a list's reader may be: the architecture tests, their helpers and eslint.config.js. */
+const ruleSources = (): Map<string, string> =>
+  new Map(
+    [...filesUnder("__tests__/architecture"), ...filesUnder("__tests__/helpers/architecture"), "eslint.config.js"]
+      .filter((f) => f.endsWith(".ts") || f === "eslint.config.js")
+      .map((f) => [f, readSource(f)]),
+  );
 const REASON = "pure delegation: forwards each call to `XRepository` unchanged, as building.service.ts does";
 
 describe("exemption reasons", () => {
@@ -125,51 +142,135 @@ describe("exemption reasons", () => {
 describe("list growth rule applies as specified", () => {
   const allowlist = "__tests__/architecture/allowlists/rule.json";
   const ratchet = "__tests__/architecture/ratchets/rule.json";
-  const exemption = "__tests__/architecture/exemptions/rule.json";
-  const ruleCommit: DebtCommit = { lists: [allowlist], changed: [allowlist, "__tests__/architecture/naming.test.ts"] };
+  const exemption = "__tests__/architecture/exemptions/size-caps.json";
+  const otherExemption = "__tests__/architecture/exemptions/service-specs.json";
+  const reader = "__tests__/helpers/architecture/rule-reader.ts";
+  const gate: ListGate = { decisions: DECISIONS, cited: citedDecisions, readers: () => [reader] };
+  const commit = (hash: string, debt: string[], changed: string[], lists: ListCommit["lists"]): ListCommit => ({ hash, debt, changed, lists });
+  const cap = (max: number): string => JSON.stringify({ "src/a.rules.ts": { max, reason: `no domain seam (ADR 0010 D9); ${REASON}` } });
 
   it("passes a list that shrank, stayed or kept its entries", () => {
     // Arrange
     const changes = [
       { file: allowlist, before: '["a", "b"]', after: '["a"]' },
       { file: ratchet, before: '["a"]', after: '["a"]' },
-      { file: exemption, before: JSON.stringify({ a: REASON }), after: "{}" },
+      { file: otherExemption, before: JSON.stringify({ a: REASON }), after: "{}" },
     ];
 
     // Act & Assert
-    expect(growthViolations(changes, [], DECISIONS, citedDecisions)).toEqual([]);
+    expect(growthViolations(changes, [], gate)).toEqual([]);
   });
 
-  it("refuses an allowlist or ratchet entry, a new file's included, unless the rule's own commit records it", () => {
+  it("refuses an allowlist or ratchet entry, a new file's included, unless the commit that adds it records it", () => {
     // Arrange
     const changes = [
       { file: allowlist, before: '["a"]', after: '["a", "b"]' },
       { file: ratchet, before: undefined, after: '["c"]' },
     ];
-    const listOnly: DebtCommit = { lists: [allowlist, ratchet], changed: [allowlist, ratchet] };
+    const listOnly = commit("1111111111", [allowlist, ratchet], [allowlist, ratchet], [
+      { file: allowlist, before: '["a"]', after: '["a", "b"]' },
+      { file: ratchet, before: undefined, after: '["c"]' },
+    ]);
+    const ruleCommit = commit("2222222222", [allowlist], [allowlist, reader], [{ file: allowlist, before: '["a"]', after: '["a", "b"]' }]);
 
     // Act
-    const refused = growthViolations(changes, [listOnly], DECISIONS, citedDecisions);
-    const recorded = growthViolations(changes.slice(0, 1), [ruleCommit], DECISIONS, citedDecisions);
+    const refused = growthViolations(changes, [listOnly], gate);
+    const recorded = growthViolations(changes.slice(0, 1), [ruleCommit], gate);
 
     // Assert
     expect(refused.map((v) => v.split(" (")[0])).toEqual([`${allowlist}: b`, `${ratchet}: c`]);
     expect(recorded).toEqual([]);
   });
 
-  it("passes a new exemption whose reason cites a decision that exists, and refuses any other", () => {
+  it.each([
+    ["a trailer with a change to a helper that does not read the list", ["__tests__/helpers/architecture/tree.ts"]],
+    ["a trailer with a new empty rule file", ["__tests__/helpers/architecture/zz-empty.ts"]],
+    ["a trailer with eslint.config.js when the list is not ESLint's", ["eslint.config.js"]],
+  ])("refuses %s", (_case, ruleFiles) => {
+    // Arrange
+    const change = { file: allowlist, before: "[]", after: '["b"]' };
+    const debt = commit("3333333333", [allowlist], [allowlist, ...ruleFiles], [change]);
+
+    // Act & Assert
+    expect(growthViolations([change], [debt], gate)).toHaveLength(1);
+  });
+
+  it("credits a debt commit only with the entries it added itself", () => {
+    // Arrange
+    const debt = commit("4444444444", [allowlist], [allowlist, reader], [{ file: allowlist, before: "[]", after: '["a"]' }]);
+    const later = commit("5555555555", [], [allowlist], [{ file: allowlist, before: '["a"]', after: '["a", "b", "c", "d"]' }]);
+    const change = { file: allowlist, before: "[]", after: '["a", "b", "c", "d"]' };
+
+    // Act
+    const violations = growthViolations([change], [debt, later], gate);
+
+    // Assert
+    expect(violations.map((v) => v.split(" (")[0])).toEqual([`${allowlist}: b`, `${allowlist}: c`, `${allowlist}: d`]);
+  });
+
+  it("refuses an entry no commit of its own added, as a merge would", () => {
+    // Arrange
+    const change = { file: allowlist, before: "[]", after: '["a"]' };
+
+    // Act
+    const violations = growthViolations([change], [commit("6666666666", [allowlist], [reader], [])], gate);
+
+    // Assert
+    expect(violations).toEqual([expect.stringContaining("no commit of its own added it")]);
+  });
+
+  it("refuses a size cap's max raised without the trailer, and passes one raised with it or lowered", () => {
+    // Arrange
+    const change = { file: exemption, before: cap(120), after: cap(130) };
+    const bare = commit("7777777777", [], [exemption], [change]);
+    const recorded = commit("8888888888", [exemption], [exemption], [change]);
+    const lowered = { file: exemption, before: cap(130), after: cap(120) };
+
+    // Act & Assert
+    expect(growthViolations([change], [bare], gate)).toEqual([expect.stringContaining("src/a.rules.ts max raised")]);
+    expect(growthViolations([change], [recorded], gate)).toEqual([]);
+    expect(growthViolations([lowered], [], gate)).toEqual([]);
+  });
+
+  it("passes a new exemption whose reason cites a decision its file allows, and refuses any other", () => {
     // Arrange
     const after = JSON.stringify({
       cited: `no domain seam yet (ADR 0010 D9); ${REASON}`,
       missing: `as ADR 0010 D99 asks; ${REASON}`,
       uncited: REASON,
+      wrongDecision: `the AAA markers say so (ADR 0010 D2); ${REASON}`,
     });
 
     // Act
-    const violations = growthViolations([{ file: exemption, before: "{}", after }], [ruleCommit], DECISIONS, citedDecisions);
+    const violations = growthViolations([{ file: exemption, before: "{}", after: JSON.stringify(JSON.parse(after)) }], [], gate);
+    const unregistered = growthViolations([{ file: "__tests__/architecture/exemptions/rule.json", before: "{}", after: JSON.stringify({ a: REASON }) }], [], gate);
 
     // Assert
-    expect(violations.map((v) => v.split(" (")[0])).toEqual([`${exemption}: missing`, `${exemption}: uncited`]);
+    expect(violations.map((v) => v.split(" (")[0])).toEqual([`${exemption}: missing`, `${exemption}: uncited`, `${exemption}: wrongDecision`]);
+    expect(unregistered).toEqual([expect.stringContaining("register rule in EXEMPTION_DECISIONS")]);
+  });
+
+  it("finds the rule files that read a list by its name or its path", () => {
+    // Arrange
+    const sources = new Map([
+      ["__tests__/architecture/test-hygiene.test.ts", 'expectAllowlisted("test-aaa", found);'],
+      ["eslint.config.js", 'require("./__tests__/architecture/exemptions/size-caps.json");'],
+      ["__tests__/helpers/architecture/tree.ts", "export const ROOT = 1;"],
+      ["__tests__/architecture/list-growth.test.ts", '"test-aaa"'],
+    ]);
+
+    // Act & Assert
+    expect(listReaders("__tests__/architecture/allowlists/test-aaa.json", sources)).toEqual(["__tests__/architecture/test-hygiene.test.ts"]);
+    expect(listReaders("__tests__/architecture/exemptions/size-caps.json", sources)).toEqual(["eslint.config.js"]);
+  });
+
+  it("fails on a base that is missing when it was set or in CI, and names the cause", () => {
+    // Act & Assert
+    expect(missingBaseProblem({ ARCHITECTURE_BASE: "0000000000000000000000000000000000000000" })).toBe(
+      "ARCHITECTURE_BASE=0000000000000000000000000000000000000000 is not in this checkout (new branch or rewritten history?)",
+    );
+    expect(missingBaseProblem({ CI: "true", GITHUB_BASE_REF: "dev" })).toMatch(/origin\/dev in the checkout/);
+    expect(missingBaseProblem({})).toBeUndefined();
   });
 
   it("reads an array's strings and an object's keys", () => {
@@ -184,22 +285,23 @@ describe("allowlists, ratchets and exemptions", () => {
   it("gain no entry their kind may not gain, against the base branch", () => {
     // Arrange
     const base = baseCommit();
-    if (base === undefined && process.env.CI) throw new Error("list-growth needs the base branch: check out full history");
+    const problem = base === undefined ? missingBaseProblem() : undefined;
+    if (problem !== undefined) throw new Error(problem);
+    const sources = ruleSources();
+    const gate: ListGate = { decisions: decisionHeadings(), cited: citedDecisions, readers: (file) => listReaders(file, sources) };
 
     // Act
-    const violations = base === undefined ? [] : growthViolations(listChanges(base), debtCommits(base), decisionHeadings(), citedDecisions);
+    const violations = base === undefined ? [] : growthViolations(listChanges(base), listCommits(base), gate);
 
     // Assert
     expect(violations).toEqual([]);
   });
 
-  it("are each read by a rule, and each ratchet waits on a decision that exists", () => {
+  it("are each read by a rule, and each ratchet and exemption file names decisions that exist", () => {
     // Arrange
-    const tests = [...filesUnder("__tests__/architecture"), ...filesUnder("__tests__/helpers/architecture")].filter(
-      (f) => f.endsWith(".ts") && !f.endsWith("list-growth.test.ts"),
-    );
-    const testText = tests.map(readSource).join("\n");
+    const sources = ruleSources();
     const headings = decisionHeadings();
+    const exemptionFiles = filesUnder("__tests__/architecture/exemptions").filter((f) => f.endsWith(".json")).map((f) => path.basename(f, ".json"));
 
     // Act
     const stray = LIST_DIRS.flatMap((dir) =>
@@ -211,12 +313,18 @@ describe("allowlists, ratchets and exemptions", () => {
             const decision = RATCHET_DECISIONS[name];
             return decision !== undefined && headings.has(decision) ? [] : [`${f}: not in RATCHET_DECISIONS with a decision that exists`];
           }
-          return testText.includes(`"${name}"`) ? [] : [`${f}: no architecture test reads it`];
+          if (dir === "exemptions") {
+            const decisions = EXEMPTION_DECISIONS[name] ?? [];
+            if (decisions.length === 0 || !decisions.every((d) => headings.has(d))) return [`${f}: not in EXEMPTION_DECISIONS with decisions that exist`];
+          }
+          return listReaders(f, sources).length > 0 ? [] : [`${f}: no architecture test reads it`];
         }),
     );
+    const unlisted = Object.keys(EXEMPTION_DECISIONS).filter((name) => !exemptionFiles.includes(name));
 
     // Assert
     expect(stray).toEqual([]);
+    expect(unlisted).toEqual([]);
   });
 
   it("never share one reason between two exemptions", () => {

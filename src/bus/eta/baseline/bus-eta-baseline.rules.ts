@@ -1,16 +1,16 @@
 import moment from "moment-timezone";
-import { DirectionsError } from "../../../shared/directions.error";
+import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { LatLng } from "../../../shared/lat-lng.types";
+import { KST_TIME_ZONE } from "../../bus.constants";
 import { orderAndTotalIssue, stopDistanceIssue } from "../bus-eta.rules";
 import type { FeatureMarks, TmapFeature, TmapPredictionResponse } from "./bus-eta-baseline.types";
 
-const TZ = "Asia/Seoul";
 const REFRESH_HOUR = 4;
 
 const MAX_TOTAL_MISMATCH_S = 30;
 
-function implausible(message: string): DirectionsError {
-  return new DirectionsError("tmap", "implausible", message);
+function implausible(message: string): BusEtaDirectionsError {
+  return new BusEtaDirectionsError("tmap", "implausible", message);
 }
 
 // QUIRK(tmap): each LineString carries its segment's `time`; a waypoint is a B1, B2… Point and the goal the E
@@ -47,11 +47,11 @@ function checkStopsAtMarks(marks: ReadonlyArray<[number, number]>, stops: readon
 function routeStart(features: TmapFeature[] | undefined): { features: TmapFeature[]; start: TmapFeature; totalTime: number } {
   const start = features?.[0];
   const totalTime = start?.properties.pointType === "S" ? start.properties.totalTime : undefined;
-  if (!features || !start || typeof totalTime !== "number") throw new DirectionsError("tmap", "api", "no route in the response");
+  if (!features || !start || typeof totalTime !== "number") throw new BusEtaDirectionsError("tmap", "api", "no route in the response");
   return { features, start, totalTime };
 }
 
-/** WHY: throws a DirectionsError for a failed or implausible route, which is rejected, never stored. */
+/** WHY: throws a BusEtaDirectionsError for a failed or implausible route, which is rejected, never stored. */
 export function toTmapOffsets(res: TmapPredictionResponse, stops: readonly LatLng[]): number[] {
   const { features, start, totalTime } = routeStart(res.features);
   const { offsets, marks, waypoints, ended } = toFeatureMarks(features, start.geometry.coordinates as [number, number]);
@@ -66,7 +66,7 @@ export function toTmapOffsets(res: TmapPredictionResponse, stops: readonly LatLn
 
 /** WHY: the latest 04:00 KST at or before `now`: baselines fetched earlier are refreshed. */
 export function refreshCutoff(now: Date): Date {
-  const local = moment(now).tz(TZ);
+  const local = moment(now).tz(KST_TIME_ZONE);
   const cutoff = local.clone().startOf("day").hour(REFRESH_HOUR);
   if (cutoff.isAfter(local)) cutoff.subtract(1, "day");
   return cutoff.toDate();

@@ -6,20 +6,20 @@ import { HHMM_RE } from "./map-layer-set.constants";
 import { chipLabelIssue, listSortIssue, optionIssues } from "./map-layer-set.rules";
 import type { ConfigIssue } from "./map-layer-set.types";
 
-export const text = z.string().regex(/\S/);
+const text = z.string().regex(/\S/);
 
-export function absentWhenNull<T extends z.ZodType>(schema: T): z.ZodPreprocess<z.ZodOptional<T>, unknown> {
+function absentWhenNull<T extends z.ZodType>(schema: T): z.ZodPreprocess<z.ZodOptional<T>, unknown> {
   return z.preprocess((v) => v ?? undefined, schema.optional());
 }
 
-export function defaulted<T extends z.ZodType, const F>(
+function defaulted<T extends z.ZodType, const F>(
   schema: T,
   fallback: F,
 ): z.ZodPipe<z.ZodOptional<z.ZodNullable<T>>, z.ZodTransform<z.output<T> | F, z.output<T> | null | undefined>> {
   return schema.nullish().transform((v): z.output<T> | F => v ?? fallback);
 }
 
-export function addIssue(ctx: z.RefinementCtx, found: ConfigIssue | null): void {
+function addIssue(ctx: z.RefinementCtx, found: ConfigIssue | null): void {
   if (found) ctx.addIssue({ code: "custom", path: [...found[0]], message: found[1] });
 }
 

@@ -6,7 +6,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { DirectionsError } from "../../../shared/directions.error";
+import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { LatLng } from "../../../shared/lat-lng.types";
 import { toNaverOffsets } from "./bus-eta-live.rules";
 import type { NaverDirectionsResponse } from "./bus-eta-live.types";
@@ -25,14 +25,14 @@ const STOPS: LatLng[] = [
 const fixture = (): NaverDirectionsResponse => JSON.parse(JSON.stringify(FIXTURE));
 const route = (res: NaverDirectionsResponse) => res.route!.traoptimal![0]!;
 
-function rejection(fn: () => unknown): DirectionsError {
+function rejection(fn: () => unknown): BusEtaDirectionsError {
   try {
     fn();
   } catch (err: unknown) {
-    expect(err).toBeInstanceOf(DirectionsError);
-    return err as DirectionsError;
+    expect(err).toBeInstanceOf(BusEtaDirectionsError);
+    return err as BusEtaDirectionsError;
   }
-  throw new Error("expected a DirectionsError");
+  throw new Error("expected a BusEtaDirectionsError");
 }
 
 describe("toNaverOffsets", () => {

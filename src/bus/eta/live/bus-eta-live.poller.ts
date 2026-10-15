@@ -1,6 +1,7 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { Clock } from "../../../infra/clock";
 import config from "../../../infra/config";
+import logger from "../../../infra/logger";
 import { PollerRegistryService } from "../../../scheduling/poller-registry.service";
 import { DailyCap } from "../bus-eta.rules";
 import { BusEtaService } from "../bus-eta.service";
@@ -18,14 +19,13 @@ export class BusEtaLivePoller implements OnModuleInit {
     private readonly clock: Clock,
   ) {}
 
-  // WHY: SHUTTLE_ETA=off (the development default) registers nothing, so no directions call is made.
+  // WHY: SHUTTLE_ETA=off (the development default) registers nothing and calls no API; config.ts exits at boot without the keys.
   onModuleInit(): void {
-    if (!config.shuttleEta.enabled) return;
+    if (!config.shuttleEta.enabled) return logger.info({ event: "bus.eta.disabled", poller: "shuttle-eta-live" }, "SHUTTLE_ETA=off: poller not registered");
     const { naver, naverDailyCap } = config.shuttleEta;
     const live = new BusEtaLiveService({
       sequences: this.eta.sequences(),
       runsOn: (sequence, date) => this.eta.runsOn(sequence, date),
-      // WHY: config.ts exits at boot when a credential is missing.
       fetchOffsets: (stops) => this.client.fetchOffsets(stops, { keyId: naver.keyId as string, key: naver.key as string }),
       readEtas: (serviceIds, dates) => this.eta.listFitting(serviceIds, dates),
       writeEtas: (docs) => this.eta.upsertFitting(docs),

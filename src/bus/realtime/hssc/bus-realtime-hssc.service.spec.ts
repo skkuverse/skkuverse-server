@@ -9,6 +9,7 @@ import moment from "moment-timezone";
 import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusRealtimeHsscClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.client.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
+import { hsscBusDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { Clock } from "../../../infra/clock";
 import type { BusCacheRepository } from "../../cache/bus-cache.repository";
 import { BusCacheService } from "../../cache/bus-cache.service";
@@ -53,10 +54,10 @@ describe("BusRealtimeHsscService.listBuses", () => {
 
   it("serves bus_cache over the process's own memory", async () => {
     // Arrange
-    busCache.values.set("hssc", [{ sequence: "3" }]);
+    busCache.values.set("hssc", [hsscBusDoc({ sequence: "3" })]);
 
     // Act & Assert
-    expect(await service.listBuses()).toEqual([{ sequence: "3" }]);
+    expect(await service.listBuses()).toEqual([hsscBusDoc({ sequence: "3" })]);
   });
 });
 

@@ -13,17 +13,17 @@ export function toCarNumber(plateNo: string | undefined): string {
 export function toJongroBusPosition(
   sighting: JongroBusSighting,
   station: MappedStation,
-  { recordTime, estimatedTime }: JongroBusDwell,
+  { firstSeenAt, dwellSeconds }: JongroBusDwell,
 ): JongroBusPositionDoc {
   return {
     sequence: station.sequence.toString(),
     stationName: station.stationName,
     carNumber: sighting.carNumber,
-    eventDate: recordTime,
-    estimatedTime,
+    eventDate: firstSeenAt,
+    estimatedTime: dwellSeconds,
     stationId: sighting.stationId,
     latitude: sighting.latitude,
     longitude: sighting.longitude,
-    recordTime,
+    recordTime: firstSeenAt,
   };
 }

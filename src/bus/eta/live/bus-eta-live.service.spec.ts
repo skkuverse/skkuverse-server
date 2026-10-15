@@ -5,10 +5,11 @@
  * in-memory store with writeEtas' frozen-skip rule.
  */
 import moment from "moment-timezone";
-import { DailyCapError } from "../../../shared/daily-cap.error";
-import { DirectionsError } from "../../../shared/directions.error";
+import { BusEtaDailyCapError } from "../bus-eta.error";
+import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
-import { etaDocId, liveDoc } from "../bus-eta.mapper";
+import { etaDocId } from "../bus-eta.mapper";
+import { liveDoc } from "./bus-eta-live.mapper";
 import { DailyCap } from "../bus-eta.rules";
 import type { EtaRun, EtaSequence } from "../bus-eta.types";
 import { BusEtaLiveService } from "./bus-eta-live.service";
@@ -117,7 +118,7 @@ describe("BusEtaLiveService.tick", () => {
     // Arrange
     const { poller, fetchOffsets, doc } = setup(["10:00"]);
     await poller.tick(at("09:50"));
-    fetchOffsets.mockRejectedValue(new DirectionsError("naver", "timeout", "timed out (ECONNABORTED)"));
+    fetchOffsets.mockRejectedValue(new BusEtaDirectionsError("naver", "timeout", "timed out (ECONNABORTED)"));
 
     // Act & Assert
     for (let m = 0; m < 10; m++) await expect(poller.tick(at("10:00", m * 60))).rejects.toThrow("timed out");
@@ -157,7 +158,7 @@ describe("BusEtaLiveService.tick", () => {
   it("A failing tick rejects until a call succeeds, after writing what it got", async () => {
     // Arrange
     const { poller, fetchOffsets, doc } = setup(["10:00"]);
-    const down = new DirectionsError("naver", "auth", "authentication refused (HTTP 401)", 401);
+    const down = new BusEtaDirectionsError("naver", "auth", "authentication refused (HTTP 401)", 401);
     fetchOffsets.mockRejectedValueOnce(down);
 
     // Act & Assert
@@ -173,7 +174,7 @@ describe("BusEtaLiveService.tick", () => {
   it("keeps rejecting on ticks that make no call, while the last call failed", async () => {
     // Arrange
     const { poller, fetchOffsets } = setup(["10:00"]);
-    const down = new DirectionsError("naver", "http", "HTTP 503", 503);
+    const down = new BusEtaDirectionsError("naver", "http", "HTTP 503", 503);
     fetchOffsets.mockRejectedValueOnce(down);
 
     // Act & Assert
@@ -192,7 +193,7 @@ describe("BusEtaLiveService.tick", () => {
     const err = await poller.tick(at("09:20")).catch((e: unknown) => e);
 
     // Assert
-    expect(err).toBeInstanceOf(DailyCapError);
+    expect(err).toBeInstanceOf(BusEtaDailyCapError);
     expect((err as Error).message).toBe("naver: daily cap of 2 calls reached");
     expect(fetchOffsets).toHaveBeenCalledTimes(2);
   });
@@ -205,7 +206,7 @@ describe("the daily cap", () => {
     cap.take(at("23:59"));
 
     // Act & Assert
-    expect(() => cap.take(at("23:59", 30))).toThrow(DailyCapError);
+    expect(() => cap.take(at("23:59", 30))).toThrow(BusEtaDailyCapError);
     expect(() => cap.take(moment(at("00:00")).add(1, "day").toDate())).not.toThrow();
   });
 });

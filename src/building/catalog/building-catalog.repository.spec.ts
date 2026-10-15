@@ -39,14 +39,14 @@ beforeEach(() => {
 });
 
 describe("the reads' projections", () => {
-  it("reads one building without its sync bookkeeping, which the detail would otherwise send", async () => {
+  it("reads one building without its sync bookkeeping or extensions, which the detail would otherwise send", async () => {
     // Act
     await new BuildingCatalogRepository().findBuildingBySkkuId(7 as SkkuId);
 
     // Assert
     expect(findOne.mock.calls[0]).toEqual([
       { _id: 7 },
-      { projection: { sync: 0, enrichVersion: 0 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+      { projection: { sync: 0, enrichVersion: 0, extensions: 0 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
     ]);
   });
 

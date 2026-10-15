@@ -5,15 +5,15 @@
  * (tests.md: a poller's double is a spy on it) or the Clock. Overriding a
  * service, a controller or a config stubs the code the route test exists to run.
  *
- * A route test is a test file, or a `__tests__/helpers/nest/` builder, that boots
- * an app: it calls `buildTestApp`, a `build<Module>App` builder or
- * `createNestApplication`. Its overrides are every `{ provide: X, use… }` object
+ * A route test is a test file, or a `__tests__/helpers/nest/` helper, that boots
+ * an app: it calls `buildTestApp` or `createNestApplication` (a `build<Name>App`
+ * wrapper around either counts too). Its overrides are every `{ provide: X, use… }` object
  * in it, passed to a builder, kept in a variable or listed in a stub module, and
  * every `.override<Kind>(X)` call on a testing module builder. `jest.mock` of a
  * module is not covered.
  */
 import ts from "typescript";
-import { resolveRelative } from "../helpers/architecture/ast";
+import { calleeName, importsOf, parseSource, skipOuter } from "../helpers/architecture/ast";
 import { parse } from "../helpers/architecture/names";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { testFiles } from "../helpers/architecture/tests";
@@ -34,13 +34,6 @@ const OVERRIDE_CALLS = new Set([
   "overrideModule",
 ]);
 
-function calleeName(call: ts.CallExpression): string | null {
-  const callee = call.expression;
-  if (ts.isIdentifier(callee)) return callee.text;
-  if (ts.isPropertyAccessExpression(callee)) return callee.name.text;
-  return null;
-}
-
 function bootsApp(name: string): boolean {
   return name === "buildTestApp" || name === "createNestApplication" || /^build[A-Z]\w*App$/.test(name);
 }
@@ -58,26 +51,13 @@ function providedToken(node: ts.ObjectLiteralExpression): ts.Expression | null {
   return ts.isPropertyAssignment(provide) ? provide.initializer : (provide.name as ts.Identifier);
 }
 
-function unwrap(expression: ts.Expression): ts.Expression {
-  let e = expression;
-  while (ts.isAsExpression(e) || ts.isParenthesizedExpression(e) || ts.isNonNullExpression(e)) e = e.expression;
-  return e;
-}
-
 /** Local name → `<repo path>.ts#<export>`, or the package specifier for a non-relative import. */
-function importsOf(file: string, source: ts.SourceFile): Map<string, string> {
+function importOrigins(source: ts.SourceFile): Map<string, string> {
   const out = new Map<string, string>();
-  for (const s of source.statements) {
-    if (!ts.isImportDeclaration(s) || !ts.isStringLiteral(s.moduleSpecifier) || !s.importClause) continue;
-    const spec = s.moduleSpecifier.text;
-    const from = spec.startsWith(".") ? `${resolveRelative(file, spec) ?? spec}.ts` : spec;
-    const clause = s.importClause;
-    if (clause.name) out.set(clause.name.text, `${from}#default`);
-    if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
-      for (const e of clause.namedBindings.elements) {
-        out.set(e.name.text, `${from}#${(e.propertyName ?? e.name).text}`);
-      }
-    }
+  for (const i of importsOf(source)) {
+    if (i.kind !== "import" || i.imported === "*") continue;
+    const from = i.specifier.startsWith(".") ? `${i.target}.ts` : i.target;
+    out.set(i.local, `${from}#${i.imported}`);
   }
   return out;
 }
@@ -90,7 +70,7 @@ function isDouble(origin: string): boolean {
 
 /** `<file>: <token> (<origin>)` for each overridden token that is no repository, client, poller or clock. */
 export function routeOverrideViolations(file: string, text: string): string[] {
-  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const source = parseSource(file, text);
   const tokens: ts.Expression[] = [];
   let boots = false;
   const visit = (node: ts.Node): void => {
@@ -99,18 +79,18 @@ export function routeOverrideViolations(file: string, text: string): string[] {
       if (name && bootsApp(name)) boots = true;
       const [arg] = node.arguments;
       // A builder's `overrideProvider(o.provide)` loop: the `{ provide }` objects it reads are counted where written.
-      if (name && OVERRIDE_CALLS.has(name) && arg && ts.isIdentifier(unwrap(arg))) tokens.push(unwrap(arg));
+      if (name && OVERRIDE_CALLS.has(name) && arg && ts.isIdentifier(skipOuter(arg))) tokens.push(skipOuter(arg));
     }
     if (ts.isObjectLiteralExpression(node)) {
       const token = providedToken(node);
-      if (token) tokens.push(unwrap(token));
+      if (token) tokens.push(skipOuter(token));
     }
     ts.forEachChild(node, visit);
   };
   visit(source);
   if (!boots) return [];
 
-  const imports = importsOf(file, source);
+  const imports = importOrigins(source);
   const violations = tokens.flatMap((token) => {
     const name = token.getText(source);
     const origin = ts.isIdentifier(token) ? imports.get(token.text) : undefined;

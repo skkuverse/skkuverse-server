@@ -31,7 +31,8 @@ function toJongroStations(stations: readonly JongroRouteStation[]): JongroStatio
 
 // WHY: the first ord wins a loop-closing repeat: a bus whose last passed stop is the terminal has just left it.
 function toStationMapping(stations: readonly JongroRouteStation[]): JongroStationMapping {
-  const mapping: JongroStationMapping = {};
+  // WHY: no prototype, so a TOPIS id that names an Object.prototype member (`constructor`) maps to nothing.
+  const mapping: JongroStationMapping = Object.create(null);
   stations.forEach((station, index) => {
     mapping[station.topisId] ??= { sequence: index + 1, stationName: station.stationName };
   });

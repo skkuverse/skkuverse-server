@@ -13,12 +13,15 @@ export interface BusScheduleDoc {
   effectiveUntil?: string;
 }
 
-// CONTRACT(scripts): written by scripts/seed-eskara.js and scripts/seed-vacation-2026.js.
-export interface BusOverrideDoc {
+interface BusOverrideFields {
   serviceId: string;
   date: string;
-  type: string;
-  entries: ScheduleEntry[];
   label?: string | null;
   notices: ServiceNotice[];
 }
+
+// CONTRACT(scripts): written by scripts/seed-eskara.js, scripts/seed-vacation-2026.js and
+// scripts/seed-eskara-2026-noservice.js; MongoDB refuses other shapes (scripts/lib/bus-overrides-validator.js).
+export type BusOverrideDoc =
+  | (BusOverrideFields & { type: "replace"; entries: ScheduleEntry[] })
+  | (BusOverrideFields & { type: "noService"; entries?: ScheduleEntry[] });
