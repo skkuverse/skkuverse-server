@@ -9,7 +9,7 @@
   },
   "src/bus/stops/bus-stops.rules.ts": {
     "max": 285,
-    "reason": "ADR 0010 D9, no domain seam: schedule-stops.json is one operator-edited document, and its boot failure lists every issue in the words bus-stops.rules.spec.ts pins. The checks (stops, photos, panoramas, guides, sequences, estimate opt-ins) compose into the one validator the schema runs, and child-to-parent imports keep a sub-module from holding a piece of it. docs/plans/private-file tracks the zod rewrite that retires this entry."
+    "reason": "ADR 0010 D9, no domain seam: schedule-stops.json is one committed document that stops the boot on any fault, and validateStopCatalog lists every issue in the words bus-stops.rules.spec.ts pins. Its checks (stops, photos, panoramas, guides, sequences, estimate opt-ins) compose into the one validator bus-stops.schema.ts runs, and child-to-parent imports keep a sub-module from holding a piece of it."
   },
   "src/map/layer-set/map-layer-set.rules.ts": {
     "max": 141,
