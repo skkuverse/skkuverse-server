@@ -144,7 +144,7 @@ describe("list growth rule applies as specified", () => {
   const ratchet = "__tests__/architecture/ratchets/rule.json";
   const exemption = "__tests__/architecture/exemptions/size-caps.json";
   const otherExemption = "__tests__/architecture/exemptions/service-specs.json";
-  const reader = "__tests__/architecture/rule.test.ts";
+  const reader = "__tests__/helpers/architecture/rule-reader.ts";
   const gate: ListGate = { decisions: DECISIONS, cited: citedDecisions, readers: () => [reader] };
   const commit = (hash: string, debt: string[], changed: string[], lists: ListCommit["lists"]): ListCommit => ({ hash, debt, changed, lists });
   const cap = (max: number): string => JSON.stringify({ "src/a.rules.ts": { max, reason: `no domain seam (ADR 0010 D9); ${REASON}` } });
@@ -184,7 +184,7 @@ describe("list growth rule applies as specified", () => {
 
   it.each([
     ["a trailer with a change to a helper that does not read the list", ["__tests__/helpers/architecture/tree.ts"]],
-    ["a trailer with a new empty rule file", ["__tests__/architecture/zz-empty.test.ts"]],
+    ["a trailer with a new empty rule file", ["__tests__/helpers/architecture/zz-empty.ts"]],
     ["a trailer with eslint.config.js when the list is not ESLint's", ["eslint.config.js"]],
   ])("refuses %s", (_case, ruleFiles) => {
     // Arrange
