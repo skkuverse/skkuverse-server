@@ -33,7 +33,10 @@
  *     the day the test runs.
  *   - `migrated/syntax-clock`: the `Date.now()` / `new Date()` ban covers
  *     every module scope but the shared layers, derived from the tree
- *     (scopes.ts), so a new module is bound from its first file.
+ *     (scopes.ts), so a new module is bound from its first file. It and the
+ *     pure files' ban also refuse moment reading the clock: `moment()`,
+ *     `moment.utc()` and `moment.now()` without an argument, and
+ *     `moment.tz(zone)`.
  */
 import { Linter } from "eslint";
 import { SHARED_LAYERS } from "../helpers/architecture/ast";
@@ -353,6 +356,25 @@ describe("migrated/syntax-clock", () => {
 
     // Assert
     expect(messages.map((m) => m.message)).toEqual([expect.stringContaining("Clock")]);
+  });
+
+  it.each([
+    ["migrated/syntax-clock", "src/bus/x/bus-x.service.ts"],
+    ["migrated/syntax-pure-clock", "src/bus/x/bus-x.rules.ts"],
+    ["boundaries/pure", "src/bus/x/bus-x.rules.ts"],
+    ["boundaries/query", "src/bus/x/bus-x.query.ts"],
+  ])("%s rejects moment reading the clock, and passes moment over a given instant", (name, file) => {
+    // Arrange
+    const reads = ["moment();", 'moment.tz("Asia/Seoul");', "moment.tz();", "moment.utc();", "moment.now();"];
+    const parses = ["moment(now);", 'moment(now).tz("Asia/Seoul");', 'moment.tz(day, "YYYY-MM-DD", "Asia/Seoul");', 'moment.tz(now, "Asia/Seoul");', "moment.utc(ms);"];
+
+    // Act
+    const counts = reads.map((source) => lint(name, file, source).length);
+    const reported = parses.filter((source) => lint(name, file, source).length > 0);
+
+    // Assert
+    expect(counts).toEqual(reads.map(() => 1));
+    expect(reported).toEqual([]);
   });
 });
 
