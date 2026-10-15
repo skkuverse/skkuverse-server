@@ -14,14 +14,14 @@ interface TopisStationEnvelope {
 @Injectable()
 export class BusStationClient {
   // QUIRK(topis): "0" is data and "4" no result, the answer for this stop in every sample so far, which
-  // keeps the last message (null); any other code is an error, an expired or throttled key for one.
-  async fetchArrivalMessages(): Promise<string[] | null> {
+  // lists no arrival; any other code is an error, an expired or throttled key for one.
+  async fetchArrivalMessages(): Promise<string[]> {
     const response = await axios.get<TopisStationEnvelope>(config.api.stationHyehwa, { timeout: REQUEST_TIMEOUT_MS });
     return this.toMessages(response.data ?? {});
   }
 
-  private toMessages({ msgHeader, msgBody }: TopisStationEnvelope): string[] | null {
-    if (msgHeader?.headerCd === "4") return null;
+  private toMessages({ msgHeader, msgBody }: TopisStationEnvelope): string[] {
+    if (msgHeader?.headerCd === "4") return [];
     if (msgHeader?.headerCd && msgHeader.headerCd !== "0") {
       throw new UpstreamError("TOPIS error code", "station", msgHeader.headerCd, msgHeader.headerMsg);
     }

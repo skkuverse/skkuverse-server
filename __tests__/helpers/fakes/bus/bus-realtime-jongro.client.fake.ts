@@ -1,7 +1,7 @@
 /**
  * Scripted BusRealtimeJongroClient: every route answers the arrivals and
- * sightings set by the test (null as TOPIS's "no result"), or rejects with
- * `failWith`.
+ * sightings set by the test (empty, TOPIS's "no result", until set), or
+ * rejects with `failWith`.
  */
 import type { JongroArrivalDoc } from "../../../../src/bus/cache/bus-cache.document";
 import type { JongroRoute } from "../../../../src/bus/bus.types";
@@ -10,16 +10,16 @@ import type { JongroBusSighting } from "../../../../src/bus/realtime/jongro/bus-
 import type { PublicOf } from "../public-of";
 
 export class FakeBusRealtimeJongroClient implements PublicOf<BusRealtimeJongroClient> {
-  arrivals: JongroArrivalDoc[] | null = null;
-  sightings: JongroBusSighting[] | null = null;
+  arrivals: JongroArrivalDoc[] = [];
+  sightings: JongroBusSighting[] = [];
   failWith: Error | null = null;
 
-  async fetchArrivals(_route: JongroRoute): Promise<JongroArrivalDoc[] | null> {
+  async fetchArrivals(_route: JongroRoute): Promise<JongroArrivalDoc[]> {
     this.fail();
     return this.arrivals;
   }
 
-  async fetchSightings(_route: JongroRoute): Promise<JongroBusSighting[] | null> {
+  async fetchSightings(_route: JongroRoute): Promise<JongroBusSighting[]> {
     this.fail();
     return this.sightings;
   }

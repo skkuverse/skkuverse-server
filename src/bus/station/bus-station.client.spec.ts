@@ -2,9 +2,9 @@
  * BusStationClient — the Hyehwa stop's arrival messages from TOPIS.
  *
  * Pins what counts as a failed tick. TOPIS answers "4" (no result) for this
- * stop in every sample collected so far; that must read as nothing new (null,
- * so the previous message stays) and NOT reject, or the poller would be
- * declared failing forever. Any other error code, or a body without an
+ * stop in every sample collected so far; that must read as no arrival (an
+ * empty list, which the tick still writes) and NOT reject, or the poller
+ * would be declared failing forever. Any other error code, or a body without an
  * itemList, rejects.
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
@@ -29,12 +29,12 @@ describe("BusStationClient.fetchArrivalMessages", () => {
     expect(axios.get).toHaveBeenCalledWith(expect.any(String), { timeout: 10000 });
   });
 
-  it("treats headerCd 4 (no result) as a quiet success that keeps the message", async () => {
+  it("treats headerCd 4 (no result) as a quiet success with no message", async () => {
     // Arrange
     respond({ msgHeader: { headerCd: "4", headerMsg: "결과가 없습니다." }, msgBody: { itemList: null } });
 
     // Act & Assert
-    await expect(new BusStationClient().fetchArrivalMessages()).resolves.toBeNull();
+    await expect(new BusStationClient().fetchArrivalMessages()).resolves.toEqual([]);
   });
 
   it("rejects any other TOPIS code with the code attached", async () => {

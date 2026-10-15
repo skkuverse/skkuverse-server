@@ -1,8 +1,8 @@
 /**
  * BusStationService over a scripted client and an in-memory bus_cache: a tick
  * keeps the Hyehwa stop's first arrival message (a "no information" text when
- * TOPIS lists none) and mirrors it to bus_cache, TOPIS's "no result" keeps the
- * last one, and /bus/station/01592 composes that message with the HSSC
+ * TOPIS lists none, its "no result" included) and mirrors it to bus_cache on
+ * every tick, and /bus/station/01592 composes that message with the HSSC
  * shuttle's ETA at the Hyehwa boarding stop; any other stop is an empty list
  * with no meta.
  */
@@ -63,13 +63,27 @@ describe("BusStationService.refresh", () => {
     expect(busCache.values.get("station")).toBe("정보 없음");
   });
 
-  it("treats no result (null) as a quiet success that keeps the message", async () => {
+  it("replaces the last message with 정보 없음 when TOPIS lists none", async () => {
     // Arrange
-    client.messages = null;
+    client.messages = ["곧 도착"];
+    await service.refresh();
+    client.messages = [];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(busCache.values.get("station")).toBe("정보 없음");
+    busCache.values.clear();
+    expect((await messagesOf())[0]).toBe("정보 없음");
+  });
+
+  it("writes nothing when the fetch fails", async () => {
+    // Arrange
+    client.failWith = new Error("TOPIS error code");
 
     // Act & Assert
-    await expect(service.refresh()).resolves.toBeUndefined();
-    expect((await messagesOf())[0]).toBe("정보 없음");
+    await expect(service.refresh()).rejects.toThrow("TOPIS error code");
     expect(busCache.values.has("station")).toBe(false);
   });
 

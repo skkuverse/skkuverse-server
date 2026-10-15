@@ -212,6 +212,26 @@ describe("BusRealtimeHsscService.refresh", () => {
       await expect(service.refresh()).rejects.toThrow("mongo down");
     });
 
+    it("stores an empty tick under `hssc`, so the key outlives a night with no bus", async () => {
+      // Arrange
+      client.buses = [];
+
+      // Act
+      await service.refresh();
+
+      // Assert
+      expect(busCache.values.get("hssc")).toEqual([]);
+    });
+
+    it("writes nothing on an API error", async () => {
+      // Arrange
+      client.failWith = new Error("HSSC response is not an array (string)");
+
+      // Act & Assert
+      await expect(service.refresh()).rejects.toThrow("not an array");
+      expect(busCache.values.has("hssc")).toBe(false);
+    });
+
     it("stores what it keeps under `hssc`", async () => {
       // Arrange
       client.buses = [createApiItem("혜화동로터리", "6", koreanNow())];

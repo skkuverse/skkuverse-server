@@ -15,6 +15,7 @@ jest.mock("../../../infra/logger", () => ({
 
 import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-jongro.client.fake";
+import { jongroArrivalDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../../infra/clock";
 import { jongroRoutes } from "../../bus.config";
@@ -85,17 +86,18 @@ describe("BusRealtimeJongroService.listArrivals", () => {
     expect(busCache.values.get("jongro_stations_07")).toEqual(result);
   });
 
-  it("keeps the last arrivals when TOPIS lists nothing", async () => {
+  it("replaces the last arrivals when TOPIS lists none", async () => {
     // Arrange
-    client.arrivals = [];
+    client.arrivals = [jongroArrivalDoc()];
     await service.refresh(route("07"));
-    client.arrivals = null;
+    client.arrivals = [];
 
     // Act
     await service.refresh(route("07"));
 
     // Assert
     expect(await service.listArrivals("07")).toEqual([]);
+    expect(busCache.values.get("jongro_stations_07")).toEqual([]);
   });
 });
 
@@ -239,6 +241,15 @@ describe("BusRealtimeJongroService.refresh", () => {
       await expect(service.refresh(route("07"))).rejects.toThrow("mongo down");
     });
 
+    it("writes nothing when TOPIS fails", async () => {
+      // Arrange
+      client.failWith = new Error("TOPIS error code (jongro 07 location)");
+
+      // Act & Assert
+      await expect(service.refresh(route("07"))).rejects.toThrow("TOPIS error code");
+      expect([...busCache.values.keys()]).toEqual([]);
+    });
+
     it("handles empty itemList → empty list array", async () => {
       // Arrange
       client.arrivals = [];
@@ -249,5 +260,34 @@ describe("BusRealtimeJongroService.refresh", () => {
       // Assert
       expect(await service.listArrivals("07")).toHaveLength(0);
     });
+  });
+});
+
+// WHY: TOPIS lists no bus overnight; a written empty list keeps the key alive, so a missing key means the
+// poller stopped writing (bus.cache.missing) rather than a quiet night.
+describe("BusRealtimeJongroService.refresh with no bus listed", () => {
+  const logger = require("../../../infra/logger");
+
+  it("writes both of the route's keys as empty lists", async () => {
+    // Arrange
+    client.arrivals = [];
+    client.sightings = [];
+
+    // Act
+    await service.refresh(route("02"));
+
+    // Assert
+    expect(Object.fromEntries(busCache.values)).toEqual({ jongro_stations_02: [], jongro_locations_02: [] });
+  });
+
+  it("does not read an empty arrival list as registry drift", async () => {
+    // Arrange
+    client.arrivals = [];
+
+    // Act
+    await service.refresh(route("07"));
+
+    // Assert
+    expect((logger.warn as jest.Mock).mock.calls.filter(([fields]) => fields?.event === "bus.jongro.registry_drift")).toEqual([]);
   });
 });
