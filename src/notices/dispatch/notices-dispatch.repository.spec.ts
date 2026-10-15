@@ -22,7 +22,7 @@ beforeEach(() => {
 });
 
 describe("NoticesDispatchRepository.claimNextPending", () => {
-  it("claims an unpushed, summarized, recent, undeleted notice under its attempt cap whose lease is free or expired", async () => {
+  it("claims the newest unpushed, summarized, recent, undeleted notice under its attempt cap whose lease is free or expired", async () => {
     // Act
     await new NoticesDispatchRepository().claimNextPending({ dateFloor: "2026-10-06", leaseExpiredBefore: LEASE, maxAttempts: 5 }, CLAIMED_AT);
 
@@ -37,7 +37,7 @@ describe("NoticesDispatchRepository.claimNextPending", () => {
         $or: [{ dispatchClaimedAt: null }, { dispatchClaimedAt: { $exists: false } }, { dispatchClaimedAt: { $lt: LEASE } }],
       },
       { $set: { dispatchClaimedAt: CLAIMED_AT } },
-      { returnDocument: "after" },
+      { sort: { date: -1, _id: -1 }, returnDocument: "after" },
     ]);
   });
 });

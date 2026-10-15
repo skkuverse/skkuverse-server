@@ -59,6 +59,9 @@ import type { NoticeDoc } from "../notices.document";
 import { NoticesDispatchClient } from "./notices-dispatch.client";
 import { NoticesDispatchRepository } from "./notices-dispatch.repository";
 import { NoticesDispatchService } from "./notices-dispatch.service";
+import { FakeNoticesDispatchClient } from "../../../__tests__/helpers/fakes/notices/notices-dispatch.client.fake";
+import { FakeNoticesDispatchRepository } from "../../../__tests__/helpers/fakes/notices/notices-dispatch.repository.fake";
+import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 
 let service: NoticesDispatchService;
 const clock: Clock = { now: () => new Date() };
@@ -824,5 +827,26 @@ describe("NoticesDispatchService.dispatchGroup — updateOne failure path", () =
     mockCollection.findOneAndUpdate.mockResolvedValueOnce(null);
     const followUp = await service.sweepPending("recovery");
     expect(followUp.status).toBe("ok");
+  });
+});
+
+describe("NoticesDispatchService.sweepPending over the claim-aware fake", () => {
+  const id = (n: number) => new ObjectId(n.toString(16).padStart(24, "0"));
+  const notice = (n: number, date: string) => makeNotice({ _id: id(n), date, title: `notice ${n}`, contentHash: `hash-${n}` });
+
+  it("claims a backlog over sweepBatchCap newest first: by date, then by _id within a day (umbrella issue 76)", async () => {
+    // Arrange
+    const repository = new FakeNoticesDispatchRepository();
+    const pushClient = new FakeNoticesDispatchClient();
+    repository.notices = [notice(1, "2026-05-20"), notice(2, "2026-05-24"), notice(3, "2026-05-22"), notice(4, "2026-05-24")];
+    const sweeper = new NoticesDispatchService(asReal<NoticesDispatchRepository>(repository), asReal<NoticesDispatchClient>(pushClient), clock);
+
+    // Act
+    const summary = await sweeper.sweepPending("test", { sweepBatchCap: 3 });
+
+    // Assert
+    expect(summary.processed).toBe(3);
+    expect(pushClient.pushes.map((push) => push.notice._id)).toEqual([id(4), id(2), id(3)]);
+    expect(repository.notices.find((stored) => stored._id.equals(id(1)))?.pushedAt).toBeNull();
   });
 });

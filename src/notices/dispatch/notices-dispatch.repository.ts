@@ -3,7 +3,7 @@ import type { Collection, ObjectId } from "mongodb";
 import config from "../../infra/config";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type { NoticeDoc } from "../notices.document";
-import { DISPATCH_PENDING_INDEX, toClaimFilter, toClaimUpdate, toPushedUpdate, toReleasedUpdate } from "./notices-dispatch.query";
+import { CLAIM_SORT, DISPATCH_PENDING_INDEX, toClaimFilter, toClaimUpdate, toPushedUpdate, toReleasedUpdate } from "./notices-dispatch.query";
 import type { ClaimWindow, PushedFields, ReleasedFields } from "./notices-dispatch.types";
 
 // WHY: the only writer of the four push fields in `notices`, so moving them to a collection of their own later
@@ -16,7 +16,7 @@ export class NoticesDispatchRepository implements OnModuleInit {
 
   /** SEE: docs/decisions/0003-fcm-dispatch-cloud-function-claim-lease.md — atomic, so two replicas never claim one notice. */
   claimNextPending(window: ClaimWindow, claimedAt: Date): Promise<NoticeDoc | null> {
-    return this.notices().findOneAndUpdate(toClaimFilter(window), toClaimUpdate(claimedAt), { returnDocument: "after" });
+    return this.notices().findOneAndUpdate(toClaimFilter(window), toClaimUpdate(claimedAt), { sort: CLAIM_SORT, returnDocument: "after" });
   }
 
   async recordPushed(id: ObjectId, fields: PushedFields): Promise<void> {
