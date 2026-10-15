@@ -21,6 +21,11 @@ export function toClaimFilter(window: ClaimWindow): Document {
   };
 }
 
+// EVIDENCE: newest first, so a backlog over sweepBatchCap sends today's notices before old ones (umbrella issue 76).
+// The plan stays an IXSCAN of dispatch_pending_idx plus a top-1 SORT over the partial index, 9 documents on prod
+// (explain, 2026-10-16); `_id` orders one day's notices.
+export const CLAIM_SORT = { date: -1, _id: -1 } as const;
+
 export function toClaimUpdate(claimedAt: Date): Document {
   return { $set: { dispatchClaimedAt: claimedAt } };
 }
