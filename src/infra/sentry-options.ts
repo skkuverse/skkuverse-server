@@ -22,8 +22,10 @@ export function sentryOptions(): Sentry.NodeOptions {
       stackFrameVariables: false,
     },
     integrations: [
+      // WHY: Sentry is for errors, Grafana Loki for logs (docs/reference/logging.md). No line goes to
+      // Sentry Logs, and no error-level line becomes an Issue.
       Sentry.pinoIntegration({
-        log: { levels: ["info", "warn", "error", "fatal"] },
+        log: { levels: [] },
         error: { levels: [] },
       }),
     ],
