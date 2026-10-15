@@ -1,7 +1,7 @@
 /**
  * The realtime group mappers: a cached bus becomes the served bus (1-based
  * sequence → 0-based stationIndex, coordinates only when the source has them,
- * no buses from anything but an array), and the clock reads as the KST wall
+ * no buses before a route's first tick), and the clock reads as the KST wall
  * time "hh:mm AM/PM".
  */
 import { toClockTime, toRealtimeBuses } from "./bus-realtime-group.mapper";
@@ -20,9 +20,9 @@ describe("toRealtimeBuses", () => {
     expect(buses[1]).not.toHaveProperty("latitude");
   });
 
-  it.each([null, undefined, {}, "hssc"])("serves no buses from %j", (cached) => {
+  it("serves no buses before the route's first tick", () => {
     // Act & Assert
-    expect(toRealtimeBuses(cached)).toEqual([]);
+    expect(toRealtimeBuses(undefined)).toEqual([]);
   });
 });
 

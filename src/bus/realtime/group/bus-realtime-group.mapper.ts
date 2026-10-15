@@ -1,12 +1,12 @@
-import type { CachedBus } from "./bus-realtime-group.types";
+import type { CachedBusFields } from "./bus-realtime-group.types";
 import type { RealtimeBus } from "./bus-realtime-group.wire";
 
 const SEOUL_TIME_ZONE = "Asia/Seoul";
 
-// WHY: latitude and longitude are left out, not null, when the source has none (HSSC never does).
-export function toRealtimeBuses(buses: unknown): RealtimeBus[] {
-  if (!Array.isArray(buses)) return [];
-  return (buses as CachedBus[]).map((bus) => ({
+// WHY: latitude and longitude are left out, not null, when the source has none (HSSC never does); a Jongro
+// route has no buses before its first tick.
+export function toRealtimeBuses(buses: readonly CachedBusFields[] | undefined): RealtimeBus[] {
+  return (buses ?? []).map((bus) => ({
     stationIndex: parseInt(bus.sequence, 10) - 1,
     carNumber: bus.carNumber,
     estimatedTime: bus.estimatedTime,

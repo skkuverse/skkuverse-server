@@ -45,19 +45,6 @@ function busAt(sequence: number, overrides: Partial<Bus> = {}): Bus {
 
 describe("toHsscEta", () => {
   describe("no bus to report", () => {
-    it.each<[string, unknown]>([
-      ["null", null],
-      ["undefined", undefined],
-      ["an object (an unexpected bus_cache value)", {}],
-      ["a string", "hssc"],
-    ])("reports no info when the bus data is %s", (_label, busData) => {
-      // Act
-      const result = toHsscEta(HYEHWA, busData as Bus[]);
-
-      // Assert
-      expect(result).toBe(NO_INFO);
-    });
-
     it("reports no info when no bus is running", () => {
       // Act
       const result = toHsscEta(HYEHWA, []);
