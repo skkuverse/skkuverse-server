@@ -28,7 +28,7 @@ Accepted — 2026-05 (백필 문서화 2026-07-22)
 
 **Trigger 경로 (2단):**
 
-1. (A perimeter detail is left out of the public history.)
+1. **Primary:** 크롤러가 cycle 끝(기본 30분)에 `POST /internal/notices/dispatch-pending`(`X-Internal-Token`) → `src/notices/dispatch/notices-dispatch.controller.ts` → `NoticesDispatchService.sweepPending` (`src/notices/dispatch/notices-dispatch.service.ts`).
 2. **Safety net:** `notices-dispatch.poller.service.ts`가 env-gated(`DISPATCH_SWEEP_ENABLED`) cron으로 같은 sweep 실행 — 크롤러 ping 누락 대비. `@Global` SchedulingModule의 PollerRegistry에 등록.
 
 **Claim-lease로 중복 발송 차단:** Mongo `claimedAt` 필드로 5분 lease. dispatcher가 후보를 가져올 때 `claimedAt` 미설정 또는 5분 경과분만 선택 후 곧장 자기 ID로 stamp. 다른 컨테이너가 같은 후보를 보면 lease 유효해 skip.

@@ -57,7 +57,7 @@ ADR 0011 (`docs/decisions/0011-test-strategy.md`) is the decision and its why; `
 ## Determinism
 
 - No test reaches MongoDB or the network. `__tests__/helpers/network-guard.ts` fails a connection, DNS lookup or `fetch` to anything but loopback, naming the host; stub `global.fetch` and restore it in `afterAll`. A server listens on `127.0.0.1` only: the guard refuses any other bind. Serve a bare Express app through `LoopbackServers` (`__tests__/helpers/nest/loopback-servers.ts`), never by handing it to supertest. A test that expects a refusal takes it with `takeBlockedConnections()`. Checked by `__tests__/nest/infra/network-guard.test.ts`.
-- Tests run in UTC (`jest.config.js`; checked by `__tests__/nest/infra/test-timezone.test.ts`). Test KST date logic at an instant where UTC and KST fall on different dates (`2026-10-19T16:30:00Z` is 01:30 KST on the 20th), and assert both the KST answer and that the UTC one is not returned (`__tests__/nest/notices/notices-dispatcher.service.test.ts`).
+- Tests run in UTC (`jest.config.js`; checked by `__tests__/nest/infra/test-timezone.test.ts`). Test KST date logic at an instant where UTC and KST fall on different dates (`2026-10-19T16:30:00Z` is 01:30 KST on the 20th), and assert both the KST answer and that the UTC one is not returned (`toClaimWindow` in `src/notices/dispatch/notices-dispatch.rules.spec.ts`).
 - Change shared mutable config (a `serviceConfig` entry, an env var) only inside `try/finally`. A spec that turns on fake timers restores real ones in `afterEach`.
 - Jest runs with `NODE_ENV=test`: DB names get `_test`, and missing config does not exit. `jest.setup.ts` gives every required env var a dummy value when unset; a new required var needs an entry there too.
 

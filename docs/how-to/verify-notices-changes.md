@@ -24,7 +24,7 @@ npm run lint        # eslint + markdownlint (lint:md 체인)
 npm test            # jest — notices 스위트 포함
 ```
 
-- 테스트는 transform/cursor/data/controller/dispatcher/tabConfig를 커버. 커서 round-trip, `InvalidCursorError`, `summary: null` invariant 등이 회귀 방지.
+- The specs sit next to each flow under `src/notices/` (`tabs/`, `list/`, `detail/`, `overview/`, `attachment/`, `dispatch/`), the route tests in `__tests__/nest/notices/`. They pin the cursor round-trip for every stored date shape, `NoticesListCursorError`, the `summary: null` invariant and the sampled production documents (`notices-documents.routes.test.ts`).
 - coverage threshold는 `jest.config.js`가 SSOT.
 
 ## 런타임 스모크 (dev DB 대상)
@@ -44,7 +44,7 @@ npm test            # jest — notices 스위트 포함
 
 ## dispatch 변경 시 추가 확인
 
-`notices-dispatcher.service.ts` / poller / internal controller를 고쳤다면:
+`src/notices/dispatch/` (service, poller, internal controller)를 고쳤다면:
 
 - `POST /internal/notices/dispatch-pending`에 `X-Internal-Token`으로 호출 → sweep 카운트 응답. A local run sends nothing: `PUSH_DELIVERY` resolves to `suppressed` in development, so each push is logged as `push.delivery.suppressed` and the claimed `_dev` notices are marked `pushedAt` ([test-the-app-against-a-local-server.md](test-the-app-against-a-local-server.md)).
 - claim-lease 동시성: 같은 후보를 두 번 sweep해도 두 번 발송 안 됨 (lease 유효).
