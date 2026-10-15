@@ -4,7 +4,7 @@
  * opted-in sequences carry their stops' coordinates in order; and the daily
  * cap starts over at 00:00 KST.
  */
-import { DailyCapError } from "../../shared/daily-cap.error";
+import { BusEtaDailyCapError } from "./bus-eta.error";
 import type { ScheduleDay, ScheduleEntry } from "../schedule/bus-schedule.wire";
 import { BusStopsService } from "../stops/bus-stops.service";
 import { DailyCap, runsOfDay, toEtaSequences, toKstDate, toSequenceLength } from "./bus-eta.rules";
@@ -97,7 +97,7 @@ describe("DailyCap", () => {
     // Act & Assert
     cap.take(evening);
     cap.take(evening);
-    expect(() => cap.take(evening)).toThrow(DailyCapError);
+    expect(() => cap.take(evening)).toThrow(BusEtaDailyCapError);
     expect(() => cap.take(midnight)).not.toThrow();
   });
 });

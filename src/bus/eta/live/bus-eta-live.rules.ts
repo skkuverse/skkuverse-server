@@ -1,4 +1,4 @@
-import { DirectionsError } from "../../../shared/directions.error";
+import { BusEtaDirectionsError } from "../bus-eta.error";
 import { etaDocId, liveDoc } from "../bus-eta.mapper";
 import { orderAndTotalIssue, stopDistanceIssue } from "../bus-eta.rules";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
@@ -10,8 +10,8 @@ const GUIDE_WAYPOINT = 87;
 const GUIDE_GOAL = 88;
 const MAX_TOTAL_MISMATCH_MS = 30_000;
 
-function implausible(message: string): DirectionsError {
-  return new DirectionsError("naver", "implausible", message);
+function implausible(message: string): BusEtaDirectionsError {
+  return new BusEtaDirectionsError("naver", "implausible", message);
 }
 
 // QUIRK(naver): a waypoint is one `type: 87` guide entry and the goal the `type: 88` one, so the running sum of
@@ -40,9 +40,9 @@ function checkStopsOnPath(path: ReadonlyArray<[number, number]>, pointIndexes: r
   });
 }
 
-/** WHY: throws a DirectionsError for a failed or implausible route, which is rejected, never stored. */
+/** WHY: throws a BusEtaDirectionsError for a failed or implausible route, which is rejected, never stored. */
 export function toNaverOffsets(res: NaverDirectionsResponse, stops: readonly LatLng[]): number[] {
-  if (res.code !== 0) throw new DirectionsError("naver", "api", `code ${res.code} (${res.message})`);
+  if (res.code !== 0) throw new BusEtaDirectionsError("naver", "api", `code ${res.code} (${res.message})`);
   const route = res.route?.traoptimal?.[0];
   if (!route) throw implausible("no traoptimal route in the response");
   const { offsetsMs, pointIndexes, waypoints, goals } = toGuideMarks(route.guide);
