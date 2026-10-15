@@ -4,24 +4,24 @@
     "expects": 23
   },
   "architecture": {
-    "tests": 116,
-    "expects": 151
+    "tests": 414,
+    "expects": 539
   },
   "building": {
     "tests": 225,
     "expects": 481
   },
   "bus": {
-    "tests": 433,
-    "expects": 949
+    "tests": 593,
+    "expects": 1194
   },
   "config": {
     "tests": 6,
     "expects": 8
   },
   "http": {
-    "tests": 29,
-    "expects": 72
+    "tests": 42,
+    "expects": 113
   },
   "infra": {
     "tests": 221,
@@ -40,8 +40,8 @@
     "expects": 20
   },
   "notices": {
-    "tests": 234,
-    "expects": 524
+    "tests": 338,
+    "expects": 705
   },
   "scheduling": {
     "tests": 23,
