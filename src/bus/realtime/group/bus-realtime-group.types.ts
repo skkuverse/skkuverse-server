@@ -7,4 +7,4 @@ export type CachedBusFields = Pick<HsscBusDoc | JongroBusPositionDoc, "sequence"
 
 export type CachedArrivalFields = Pick<JongroArrivalDoc, "stationId" | "sequence" | "stationName" | "eta">;
 
-export type JongroRouteStops = Pick<JongroRoute, "mapping" | "topisIds">;
+export type JongroRouteStations = Pick<JongroRoute, "mapping" | "topisIds">;

@@ -39,13 +39,13 @@ describe("isUsableHeaderCd", () => {
 describe("toDwell", () => {
   it("starts a dwell at a stop no bus held", () => {
     // Act & Assert
-    expect(toDwell(undefined, NOW)).toEqual({ recordTime: NOW.toISOString(), estimatedTime: 0 });
+    expect(toDwell(undefined, NOW)).toEqual({ firstSeenAt: NOW.toISOString(), dwellSeconds: 0 });
   });
 
   it.each([
-    [9, { recordTime: minutesBefore(9), estimatedTime: 540 }],
-    [10, { recordTime: minutesBefore(10), estimatedTime: 600 }],
-    [11, { recordTime: NOW.toISOString(), estimatedTime: 0 }],
+    [9, { firstSeenAt: minutesBefore(9), dwellSeconds: 540 }],
+    [10, { firstSeenAt: minutesBefore(10), dwellSeconds: 600 }],
+    [11, { firstSeenAt: NOW.toISOString(), dwellSeconds: 0 }],
   ])("a stop held %i minutes → %j", (minutes, expected) => {
     // Act & Assert
     expect(toDwell(minutesBefore(minutes), NOW)).toEqual(expected);

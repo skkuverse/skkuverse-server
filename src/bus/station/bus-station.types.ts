@@ -6,4 +6,4 @@ export interface HsscEtaStation {
   stationName: string;
 }
 
-export type HsscBusAtStop = Pick<HsscBusDoc, "sequence" | "estimatedTime"> & Partial<HsscBusDoc>;
+export type HsscBusAtStation = Pick<HsscBusDoc, "sequence" | "estimatedTime"> & Partial<HsscBusDoc>;
