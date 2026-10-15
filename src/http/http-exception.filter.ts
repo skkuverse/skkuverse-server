@@ -26,9 +26,26 @@ function httpExceptionMessage(exception: HttpException): string {
   return Array.isArray(message) ? message.join(", ") : String(message);
 }
 
+interface ExposedClientError {
+  status: number;
+  message: string;
+}
+
+// QUIRK(body-parser): a refused body throws an http-errors error (`status`, `expose: true`), which Nest
+// passes through unmapped unless it is a SyntaxError. `expose` marks the message as safe to send.
+function isExposedClientError(exception: unknown): exception is ExposedClientError {
+  if (!(exception instanceof Error)) return false;
+  const { status, expose } = exception as { status?: unknown; expose?: unknown };
+  return expose === true && typeof status === "number" && status >= 400 && status < 500;
+}
+
 function errorAnswer(exception: unknown, req: Request): ErrorAnswer | undefined {
   if (exception instanceof AppError) {
     return { status: exception.httpStatus, code: exception.code, message: exception.message };
+  }
+  if (isExposedClientError(exception)) {
+    const code = exception.status === 413 ? "PAYLOAD_TOO_LARGE" : "HTTP_ERROR";
+    return { status: exception.status, code, message: exception.message };
   }
   if (!(exception instanceof HttpException)) return undefined;
   const status = exception.getStatus();
