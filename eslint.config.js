@@ -311,8 +311,17 @@ const LITERAL_SYNTAX = [
 // answer depend on the day the test runs, and lets one read see two different instants.
 // An alias (`Clock as RealClock`), a namespace (`new clock.Clock()`) and a Nest provider (`providers: [Clock]`,
 // `useClass: Clock`) build the same real Clock; a fake class says so in its name (`FixedClock`, `FakeClock`).
+// An alias the name check cannot see (`Clock as Tick`, `Clock as FixedClock`) is refused where it is imported,
+// and so is a subclass of the real Clock, whatever its name.
 const REAL_CLOCK_NAME = "/^(?!Fixed|Fake).*Clock$/";
 const SPEC_CLOCK_SYNTAX = [
+  {
+    selector: [
+      `ImportDeclaration[importKind='value'] > ImportSpecifier[importKind='value'][imported.name='Clock'][local.name!='Clock']:not([local.name=${REAL_CLOCK_NAME}])`,
+      "ClassDeclaration[superClass.name='Clock']",
+    ].join(", "),
+    message: "Import Clock under its own name and pass a fixed fake object (`{ now: () => NOW }`), not the real Clock renamed or extended.",
+  },
   {
     selector: `NewExpression:matches([callee.name=${REAL_CLOCK_NAME}], [callee.property.name='Clock'])`,
     message: "Pass a fixed fake clock (`const clock: Clock = { now: () => NOW }`), not the real Clock.",
