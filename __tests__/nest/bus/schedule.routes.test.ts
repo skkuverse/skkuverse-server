@@ -5,7 +5,8 @@
  *
  * Asserts the wire format: envelope shape, 200/404 status + error codes, ETag
  * format regexes ("week-…"/"smart-…"), 304 on If-None-Match, Cache-Control
- * max-age=300 (60 with arrival estimates), i18n message presence/absence per
+ * max-age=300 (60 with arrival estimates; smart is private, being in the
+ * request's language), i18n message presence/absence per
  * status + en translations, and X-Response-Time present on 200 but ABSENT on
  * 304. The last block applies stored arrival estimates (spec
  * shuttle-arrival-eta) from the faked estimate store.
@@ -233,9 +234,9 @@ describe("GET /bus/schedule/data/:serviceId/smart", () => {
     const res = await request(httpServer).get("/bus/schedule/data/campus-inja/smart");
 
     // Assert
-    expect(res.headers["cache-control"]).toBe("public, max-age=60");
+    expect(res.headers["cache-control"]).toBe("private, max-age=60");
     const commute = await request(httpServer).get("/bus/schedule/data/commute-jeongja/smart");
-    expect(commute.headers["cache-control"]).toBe("public, max-age=300");
+    expect(commute.headers["cache-control"]).toBe("private, max-age=300");
   });
 
   it("ETag format is smart-{serviceId}-{from}-{hash} for active", async () => {
@@ -403,7 +404,7 @@ describe("GET …/smart with arrival estimates", () => {
     // Assert
     expect(second.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", "10:56"]);
     expect(second.headers.etag).not.toBe(first.headers.etag);
-    expect(second.headers["cache-control"]).toBe("public, max-age=60");
+    expect(second.headers["cache-control"]).toBe("private, max-age=60");
   });
 
   it("Commute runs carry no estimate: the body and headers are what they were without estimates", async () => {
@@ -417,7 +418,7 @@ describe("GET …/smart with arrival estimates", () => {
     // Assert
     expect(JSON.stringify(res.body.data)).toBe(JSON.stringify(plain.body.data));
     expect(res.headers.etag).toBe(plain.headers.etag);
-    expect(res.headers["cache-control"]).toBe("public, max-age=300");
+    expect(res.headers["cache-control"]).toBe("private, max-age=300");
     expect(estimates.unexpiredReads).toBe(0);
   });
 
