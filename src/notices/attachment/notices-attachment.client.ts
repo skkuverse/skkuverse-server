@@ -1,8 +1,6 @@
 import { Injectable, type OnModuleDestroy } from "@nestjs/common";
 import axios from "axios";
-import type { Response } from "express";
-import { Readable, Transform } from "stream";
-import { pipeline } from "stream/promises";
+import { Readable } from "stream";
 import { AppError } from "../../http/app.error";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
@@ -10,16 +8,13 @@ import { guardedRequestConfig, isOutboundBlocked } from "../../infra/outbound-gu
 import { isRecord } from "../../shared/object.util";
 import {
   ALLOWED_ATTACHMENT_DOMAINS,
-  IDLE_TRANSFER_MS,
-  MAX_ATTACHMENT_BYTES,
-  MAX_TRANSFER_MS,
   SESSION_CACHE_TTL_MS,
   SESSION_TIMEOUT_MS,
   UPSTREAM_TIMEOUT_MS,
   UPSTREAM_USER_AGENT,
 } from "./notices-attachment.constants";
-import { toAttachmentFilename, toAttachmentHeaders, toSessionId } from "./notices-attachment.rules";
-import type { AttachmentDelivery, AttachmentUpstream } from "./notices-attachment.types";
+import { toSessionId } from "./notices-attachment.rules";
+import type { AttachmentUpstream } from "./notices-attachment.types";
 
 // QUIRK(gnuboard): some department boards refuse a download without the PHPSESSID their board page hands out,
 // so the session is primed from the notice's page and kept per host.
@@ -54,49 +49,20 @@ export class NoticesAttachmentClient implements OnModuleDestroy {
   async fetchAttachment(url: string, headers: Record<string, string>): Promise<AttachmentUpstream> {
     try {
       const resp = await axios.get<Readable>(url, { ...guardedRequestConfig(ALLOWED_ATTACHMENT_DOMAINS), headers, responseType: "stream", timeout: UPSTREAM_TIMEOUT_MS });
-      return { headers: resp.headers as Record<string, unknown>, data: resp.data };
+      return this.toUpstream(resp.headers, resp.data);
     } catch (err: unknown) {
       throw this.toUpstreamError(err, url);
     }
   }
 
-  // WHY: headers are already on the wire when a transfer fails, so a failure ends in the destroyed response.
-  async sendAttachment(upstream: AttachmentUpstream, res: Response, delivery: AttachmentDelivery): Promise<void> {
-    const declaredLength = Number(upstream.headers["content-length"]);
-    if (Number.isFinite(declaredLength) && declaredLength > MAX_ATTACHMENT_BYTES) {
-      upstream.data.destroy();
-      throw new AppError("UPSTREAM_TOO_LARGE", "attachment too large", 502);
-    }
-    const filename = toAttachmentFilename(delivery.url, delivery.name);
-    for (const [header, value] of toAttachmentHeaders(delivery.mode, filename, upstream.headers["content-type"] as string | undefined)) {
-      res.setHeader(header, value);
-    }
-    const abort = new AbortController();
-    const overall = setTimeout(() => abort.abort(), MAX_TRANSFER_MS);
-    const limiter = this.transferLimiter(abort);
-    try {
-      await pipeline(upstream.data, limiter.stream, res, { signal: abort.signal });
-    } catch {
-      return;
-    } finally {
-      clearTimeout(overall);
-      limiter.stop();
-    }
-  }
-
-  private transferLimiter(abort: AbortController): { stream: Transform; stop: () => void } {
-    let idle = setTimeout(() => abort.abort(), IDLE_TRANSFER_MS);
-    let received = 0;
-    const stream = new Transform({
-      transform(chunk: Buffer, _enc, callback) {
-        clearTimeout(idle);
-        idle = setTimeout(() => abort.abort(), IDLE_TRANSFER_MS);
-        received += chunk.length;
-        if (received > MAX_ATTACHMENT_BYTES) return callback(new Error("attachment exceeded size cap"));
-        callback(null, chunk);
-      },
-    });
-    return { stream, stop: () => clearTimeout(idle) };
+  private toUpstream(headers: Record<string, unknown>, body: Readable): AttachmentUpstream {
+    const contentType = headers["content-type"];
+    const contentLength = Number(headers["content-length"]);
+    return {
+      contentType: typeof contentType === "string" ? contentType : undefined,
+      contentLength: headers["content-length"] !== undefined && Number.isFinite(contentLength) ? contentLength : undefined,
+      body,
+    };
   }
 
   private toUpstreamError(err: unknown, url: string): unknown {

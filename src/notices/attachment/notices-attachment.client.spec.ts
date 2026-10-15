@@ -1,13 +1,12 @@
 /**
  * NoticesAttachmentClient over a mocked axios: every request goes through the guarded config, a session is
  * cached per host until its TTL or a fresh fetch, an upstream failure becomes 403 (policy), 502 (the school's
- * server) or the error itself, and a send enforces the size cap and sets the headers before piping.
+ * server) or the error itself, and an answer is translated to its content type, declared length and body.
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
 
-import { PassThrough, Readable } from "stream";
+import { Readable } from "stream";
 import axios from "axios";
-import type { Response } from "express";
 import type { Clock } from "../../infra/clock";
 import { OutboundBlockedError } from "../../infra/outbound-guard";
 import { NoticesAttachmentClient } from "./notices-attachment.client";
@@ -60,17 +59,32 @@ describe("NoticesAttachmentClient.fetchSessionId", () => {
 });
 
 describe("NoticesAttachmentClient.fetchAttachment", () => {
-  it("returns the upstream's headers and stream", async () => {
+  it("translates the upstream's content type, declared length and stream", async () => {
     // Arrange
     const data = Readable.from([Buffer.from("%PDF")]);
-    get.mockResolvedValueOnce({ headers: { "content-type": "application/pdf" }, data });
+    get.mockResolvedValueOnce({ headers: { "content-type": "application/pdf", "content-length": "4" }, data });
 
     // Act
     const upstream = await client.fetchAttachment("https://www.skku.edu/a.pdf", { "User-Agent": "Mozilla/5.0" });
 
     // Assert
-    expect(upstream).toEqual({ headers: { "content-type": "application/pdf" }, data });
+    expect(upstream).toEqual({ contentType: "application/pdf", contentLength: 4, body: data });
     expect(get.mock.calls[0][1]).toMatchObject({ headers: { "User-Agent": "Mozilla/5.0" }, timeout: 15_000, proxy: false });
+  });
+
+  it.each([
+    ["no headers", {}, { contentType: undefined, contentLength: undefined }],
+    ["an unreadable length", { "content-length": "lots" }, { contentType: undefined, contentLength: undefined }],
+    ["a non-string type", { "content-type": ["a", "b"] }, { contentType: undefined, contentLength: undefined }],
+  ])("leaves out what the upstream does not declare: %s", async (_label, headers, expected) => {
+    // Arrange
+    get.mockResolvedValueOnce({ headers, data: Readable.from([]) });
+
+    // Act
+    const upstream = await client.fetchAttachment("https://www.skku.edu/a.pdf", {});
+
+    // Assert
+    expect(upstream).toMatchObject(expected);
   });
 
   it.each([
@@ -91,48 +105,5 @@ describe("NoticesAttachmentClient.fetchAttachment", () => {
 
     // Act & Assert
     await expect(client.fetchAttachment("https://www.skku.edu/a.pdf", {})).rejects.toThrow(TypeError);
-  });
-});
-
-describe("NoticesAttachmentClient.sendAttachment", () => {
-  function response(): { res: Response; headers: Record<string, string>; body: Promise<string> } {
-    const stream = new PassThrough();
-    const headers: Record<string, string> = {};
-    const res = Object.assign(stream, { setHeader: (name: string, value: string) => (headers[name] = value) }) as unknown as Response;
-    const body = new Promise<string>((resolve) => {
-      let text = "";
-      stream.on("data", (chunk: Buffer) => (text += chunk.toString()));
-      stream.on("end", () => resolve(text));
-    });
-    return { res, headers, body };
-  }
-
-  it("refuses a declared body over 100 MiB before writing anything", async () => {
-    // Arrange
-    const data = Readable.from([]);
-    const { res, headers } = response();
-
-    // Act & Assert
-    await expect(
-      client.sendAttachment({ headers: { "content-length": String(200 * 1024 * 1024) }, data }, res, { url: "https://x/a.pdf", name: undefined, mode: undefined }),
-    ).rejects.toMatchObject({ code: "UPSTREAM_TOO_LARGE", httpStatus: 502 });
-    expect(headers).toEqual({});
-    expect(data.destroyed).toBe(true);
-  });
-
-  it("sets the headers and pipes the body through", async () => {
-    // Arrange
-    const { res, headers, body } = response();
-
-    // Act
-    await client.sendAttachment({ headers: { "content-type": "application/pdf" }, data: Readable.from([Buffer.from("%PDF-1.7")]) }, res, {
-      url: "https://x/a.pdf",
-      name: undefined,
-      mode: undefined,
-    });
-
-    // Assert
-    expect(headers).toEqual({ "Content-Type": "application/pdf", "Content-Disposition": "inline", "X-Content-Type-Options": "nosniff" });
-    expect(await body).toBe("%PDF-1.7");
   });
 });
