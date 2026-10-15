@@ -1,23 +1,12 @@
 /**
- * The lists a rule keeps beside it, and how each may change against the base
- * branch (`list-growth`, architecture tests):
+ * (An operations detail is left out of the public history.)
  *
- *   - `allowlists/<rule>.json` and `ratchets/<rule>.json` only shrink. An
- *     entry the base did not have fails, unless a commit since the base
- *     carries `Architecture-Debt: <list path>` and changes the rule itself
- *     (a file under `__tests__/architecture/` or `eslint.config.js` that is
- *     not a list): a new or stricter rule records the debt that exists.
- *   - `exemptions/<rule>.json` may gain an entry only when its reason cites
- *     a decision (`ADR 0010 D9`) that a heading in `docs/decisions/` declares.
  *
- * The base is the merge base of HEAD and `ARCHITECTURE_BASE`, else
- * `origin/$GITHUB_BASE_REF` on a pull request, else `origin/dev`. CI checks out
- * full history for this (`.github/workflows/ci.yml`); a checkout without the
- * base ref fails in CI and is skipped locally.
  */
 import { execFileSync } from "child_process";
 import fs from "fs";
 import path from "path";
+import { SIZE_CAPS } from "./exemptions";
 import { ROOT } from "./ratchet";
 
 export const LIST_DIRS = ["allowlists", "exemptions", "ratchets"] as const;
@@ -28,16 +17,38 @@ export const RATCHET_DECISIONS: Readonly<Record<string, string>> = {};
 
 export const DEBT_TRAILER = "Architecture-Debt";
 
+/** Each exemption file, with the decisions a new entry's reason may cite: a file not here takes no new entry. */
+export const EXEMPTION_DECISIONS: Readonly<Record<string, readonly string[]>> = {
+  "config-files": ["ADR 0010 D5"],
+  "production-callers": ["ADR 0010 D2", "ADR 0011 D2"],
+  "service-specs": ["ADR 0010 D1"],
+  "short-names": ["ADR 0010 D4"],
+  "size-caps": ["ADR 0010 D9"],
+  "spec-mocks": ["ADR 0011 D2"],
+};
+
 const git = (args: readonly string[]): string => execFileSync("git", args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+
+/** The ref the lists are compared with, and whether `ARCHITECTURE_BASE` named it. */
+export function baseRef(env: NodeJS.ProcessEnv = process.env): { ref: string; explicit: boolean } {
+  if (env.ARCHITECTURE_BASE) return { ref: env.ARCHITECTURE_BASE, explicit: true };
+  return { ref: env.GITHUB_BASE_REF ? `origin/${env.GITHUB_BASE_REF}` : "origin/dev", explicit: false };
+}
 
 /** The commit to compare the lists with, or undefined when the base ref is not in this checkout. */
 export function baseCommit(env: NodeJS.ProcessEnv = process.env): string | undefined {
-  const ref = env.ARCHITECTURE_BASE ?? (env.GITHUB_BASE_REF ? `origin/${env.GITHUB_BASE_REF}` : "origin/dev");
   try {
-    return git(["merge-base", "HEAD", ref]).trim();
+    return git(["merge-base", "HEAD", baseRef(env).ref]).trim();
   } catch {
     return undefined;
   }
+}
+
+/** Why a missing base fails the run, or undefined when it may be skipped (a local checkout without the ref). */
+export function missingBaseProblem(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const { ref, explicit } = baseRef(env);
+  if (explicit) return `ARCHITECTURE_BASE=${ref} is not in this checkout (new branch or rewritten history?)`;
+  return env.CI ? `list-growth needs ${ref} in the checkout: fetch the base branch (actions/checkout with fetch-depth: 0)` : undefined;
 }
 
 /** The entries of a list file's text: an array's strings, or an object's keys. */
@@ -56,49 +67,93 @@ export function exemptionReason(text: string, key: string): string | undefined {
   return typeof reason === "string" ? reason : undefined;
 }
 
+/** A size cap's `max`, or undefined when the text or the key is missing. */
+export function sizeCapMax(text: string | undefined, key: string): number | undefined {
+  if (text === undefined) return undefined;
+  const value = (JSON.parse(text) as Record<string, unknown>)[key];
+  const max = value !== null && typeof value === "object" ? (value as { max?: unknown }).max : undefined;
+  return typeof max === "number" ? max : undefined;
+}
+
 export interface ListChange {
   /** Repo-relative path: `__tests__/architecture/<dir>/<rule>.json`. */
   file: string;
-  /** The file's text at the base, or undefined when it did not exist. */
+  /** The file's text before (at the base, or at the commit's parent), or undefined when it did not exist. */
   before: string | undefined;
-  /** The file's text now. */
-  after: string;
+  /** The file's text after (now, or at the commit), or undefined when it was deleted. */
+  after: string | undefined;
 }
 
-export interface DebtCommit {
+export interface ListCommit {
+  hash: string;
   /** The list paths its `Architecture-Debt:` trailers name. */
-  lists: string[];
+  debt: string[];
   /** The paths it changed. */
   changed: string[];
+  /** The list files it changed, against its parent. */
+  lists: ListChange[];
+}
+
+export interface ListGate {
+  /** The decisions `docs/decisions/` declares, as `ADR 0010 D9`. */
+  decisions: ReadonlySet<string>;
+  /** The decisions a reason cites. */
+  cited: (reason: string) => string[];
+  /** The rule files that read a list: changing one of them is what lets a commit record debt in it. */
+  readers: (listFile: string) => readonly string[];
 }
 
 const dirOf = (file: string): string | undefined => /^__tests__\/architecture\/([^/]+)\/[^/]+\.json$/.exec(file)?.[1];
+const nameOf = (file: string): string => path.basename(file, ".json");
 
-const isRuleFile = (f: string): boolean =>
-  f === "eslint.config.js" || (/^__tests__\/(?:helpers\/)?architecture\//.test(f) && f.endsWith(".ts"));
+/** The commits that made `grew(before, after)` true for a list file. */
+const commitsThat = (commits: readonly ListCommit[], file: string, grew: (change: ListChange) => boolean): ListCommit[] =>
+  commits.filter((c) => c.lists.some((l) => l.file === file && grew(l)));
 
-const changesRule = (changed: readonly string[]): boolean => changed.some(isRuleFile);
+const describeCommits = (commits: readonly ListCommit[]): string =>
+  commits.length === 0 ? "no commit of its own added it" : `added by ${commits.map((c) => c.hash.slice(0, 8)).join(", ")}`;
 
-/** `<file>: <entry> (<why>)` for each entry a list gained that its kind of list may not gain. */
-export function growthViolations(
-  changes: readonly ListChange[],
-  recordedDebt: readonly DebtCommit[],
-  decisions: ReadonlySet<string>,
-  cited: (reason: string) => string[],
-): string[] {
-  return changes.flatMap(({ file, before, after }) => {
+function exemptionViolations(change: ListChange, commits: readonly ListCommit[], gate: ListGate): string[] {
+  const { file, before, after } = change;
+  const name = nameOf(file);
+  const allowed = EXEMPTION_DECISIONS[name];
+  const was = new Set(listEntries(before));
+  const added = listEntries(after).filter((e) => !was.has(e));
+  const out = added.flatMap((entry) => {
+    const cited = gate.cited(exemptionReason(after ?? "{}", entry) ?? "");
+    const ok = allowed !== undefined && cited.length > 0 && cited.every((d) => gate.decisions.has(d)) && cited.some((d) => allowed.includes(d));
+    if (ok) return [];
+    const why = allowed === undefined ? `register ${name} in EXEMPTION_DECISIONS first` : `a new exemption cites the decision behind it: ${allowed.join(" or ")}`;
+    return [`${file}: ${entry} (${why})`];
+  });
+  if (name !== SIZE_CAPS) return out;
+  const risen = listEntries(after).filter((e) => was.has(e) && (sizeCapMax(after, e) ?? 0) > (sizeCapMax(before, e) ?? 0));
+  return [
+    ...out,
+    ...risen.flatMap((entry) => {
+      const raised = commitsThat(commits, file, (l) => (sizeCapMax(l.after, entry) ?? 0) > (sizeCapMax(l.before, entry) ?? Infinity));
+      if (raised.length > 0 && raised.every((c) => c.debt.includes(file))) return [];
+      return [`${file}: ${entry} max raised (${describeCommits(raised)}; each commit that raises a cap carries "${DEBT_TRAILER}: ${file}")`];
+    }),
+  ];
+}
+
+/** `<file>: <entry> (<why>)` for each entry a list gained, or cap it raised, that its kind of list may not. */
+export function growthViolations(changes: readonly ListChange[], commits: readonly ListCommit[], gate: ListGate): string[] {
+  return changes.flatMap((change) => {
+    if (dirOf(change.file) === "exemptions") return exemptionViolations(change, commits, gate);
+    const { file, before, after } = change;
     const was = new Set(listEntries(before));
-    const added = listEntries(after).filter((e) => !was.has(e));
-    if (added.length === 0) return [];
-    if (dirOf(file) === "exemptions") {
-      return added.flatMap((entry) => {
-        const decision = cited(exemptionReason(after, entry) ?? "");
-        if (decision.length > 0 && decision.every((d) => decisions.has(d))) return [];
-        return [`${file}: ${entry} (a new exemption cites the decision behind it, e.g. "ADR 0010 D9")`];
+    const readers = new Set(gate.readers(file));
+    return listEntries(after)
+      .filter((entry) => !was.has(entry))
+      .flatMap((entry) => {
+        const added = commitsThat(commits, file, (l) => listEntries(l.after).includes(entry) && !listEntries(l.before).includes(entry));
+        const recorded = added.length > 0 && added.every((c) => c.debt.includes(file) && c.changed.some((f) => readers.has(f)));
+        if (recorded) return [];
+        const rule = readers.size === 0 ? "no rule reads it" : [...readers].join(", ");
+        return [`${file}: ${entry} (only shrinks; ${describeCommits(added)}; record debt with "${DEBT_TRAILER}: ${file}" in the commit that adds it and changes its rule: ${rule})`];
       });
-    }
-    const recorded = recordedDebt.some((c) => c.lists.includes(file) && changesRule(c.changed));
-    return recorded ? [] : added.map((entry) => `${file}: ${entry} (only shrinks; a rule's own commit records debt with "${DEBT_TRAILER}: ${file}")`);
   });
 }
 
@@ -112,27 +167,40 @@ export function listChanges(base: string): ListChange[] {
       .filter((f) => f.endsWith(".json"))
       .map((name) => {
         const file = `__tests__/architecture/${dir}/${name}`;
-        let before: string | undefined;
-        try {
-          before = git(["show", `${base}:${file}`]);
-        } catch {
-          before = undefined;
-        }
-        return { file, before, after: fs.readFileSync(path.join(ROOT, file), "utf8") };
+        return { file, before: showFile(base, file), after: fs.readFileSync(path.join(ROOT, file), "utf8") };
       });
   });
 }
 
-/** The commits since `base` that carry an `Architecture-Debt:` trailer. */
-export function debtCommits(base: string): DebtCommit[] {
-  const hashes = git(["log", "--format=%H", `${base}..HEAD`]).split("\n").filter(Boolean);
-  return hashes.flatMap((hash) => {
-    const lists = git(["log", "-1", `--format=%(trailers:key=${DEBT_TRAILER},valueonly)`, hash])
+function showFile(commit: string, file: string): string | undefined {
+  try {
+    return git(["show", `${commit}:${file}`]);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Each non-merge commit since `base`, with its debt trailers, the paths it changed and its list changes. */
+export function listCommits(base: string): ListCommit[] {
+  const hashes = git(["log", "--no-merges", "--format=%H", `${base}..HEAD`]).split("\n").filter(Boolean);
+  return hashes.map((hash) => {
+    const debt = git(["log", "-1", `--format=%(trailers:key=${DEBT_TRAILER},valueonly)`, hash])
       .split("\n")
       .map((l) => l.trim())
       .filter(Boolean);
-    if (lists.length === 0) return [];
-    const changed = git(["diff-tree", "--no-commit-id", "--name-only", "-r", "-m", hash]).split("\n").filter(Boolean);
-    return [{ lists, changed }];
+    const changed = git(["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", hash]).split("\n").filter(Boolean);
+    const lists = changed
+      .filter((f) => dirOf(f) !== undefined && (LIST_DIRS as readonly string[]).includes(dirOf(f) ?? ""))
+      .map((file) => ({ file, before: showFile(`${hash}^`, file), after: showFile(hash, file) }));
+    return { hash, debt, changed, lists };
   });
 }
+
+/** The rule files whose text names a list (`"<name>"` or `<dir>/<name>.json`), among `sources` (path → text). */
+export function listReaders(listFile: string, sources: ReadonlyMap<string, string>): string[] {
+  const name = nameOf(listFile);
+  const relative = `${dirOf(listFile) ?? ""}/${name}.json`;
+  return [...sources].filter(([file, text]) => file !== LIST_GROWTH_TEST && (text.includes(`"${name}"`) || text.includes(relative))).map(([file]) => file);
+}
+
+export const LIST_GROWTH_TEST = "__tests__/architecture/list-growth.test.ts";
