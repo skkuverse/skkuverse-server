@@ -1,5 +1,5 @@
 {
-  "_about": "GET /building/2 captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); floors trimmed to two, spaces per floor to two, attachments and barrier-free sections to one; `extensions` as served",
+  "_about": "GET /building/2 captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); floors trimmed to two, spaces per floor to two, attachments and barrier-free sections to one; `extensions` removed 2026-10-16, when the detail stopped serving it",
   "data": {
     "building": {
       "_id": 2,
@@ -44,7 +44,6 @@
         "ko": "건학 600주년을 기념하기 위해서 1999년 11월에 완공되었다. 총장실, 부총장실을 비롯한 대학본부가 자리잡고 있으며, 각종 행사를 위한 대규모 공연장인 새천년홀과 조병두국제홀이 있다. 이 밖에 패컬티식당과 은행골, SUBWAY와 도미노피자가 입점해 있고, 수시로 전시회를 개최하는 박물관과 동아시아 연구의 메카인 동아시아학술원이 위치하고 있다."
       },
       "displayNo": "1",
-      "extensions": {},
       "image": {
         "url": "https://www.skku.edu/_attach/image/2018/07/WdvZbhwLWznIHxqgvdLQ.jpg",
         "filename": "WdvZbhwLWznIHxqgvdLQ.jpg"
