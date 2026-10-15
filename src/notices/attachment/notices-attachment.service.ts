@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { Response } from "express";
 import { AppError } from "../../http/app.error";
 import { parseAllowedUrl } from "../../infra/outbound-guard";
-import { UPSTREAM_USER_AGENT } from "./notices-attachment.constants";
+import { ALLOWED_ATTACHMENT_DOMAINS, UPSTREAM_USER_AGENT } from "./notices-attachment.constants";
 import { NoticesAttachmentClient } from "./notices-attachment.client";
 import type { AttachmentRequest } from "./notices-attachment.types";
 
@@ -28,8 +28,8 @@ export class NoticesAttachmentService {
   private assertAllowed(url: string | undefined, referer: string | undefined): asserts url is string {
     if (!url) throw new AppError("INVALID_PARAMS", "url is required", 400);
     if (!URL.canParse(url)) throw new AppError("INVALID_PARAMS", "malformed url", 400);
-    if (!parseAllowedUrl(url)) throw new AppError("FORBIDDEN", "host not allowed", 403);
-    if (referer && !parseAllowedUrl(referer)) throw new AppError("INVALID_PARAMS", "referer not allowed", 400);
+    if (!parseAllowedUrl(url, ALLOWED_ATTACHMENT_DOMAINS)) throw new AppError("FORBIDDEN", "host not allowed", 403);
+    if (referer && !parseAllowedUrl(referer, ALLOWED_ATTACHMENT_DOMAINS)) throw new AppError("INVALID_PARAMS", "referer not allowed", 400);
   }
 
   private async primeSession(headers: Record<string, string>, referer: string, { res, fresh }: { res: Response; fresh: boolean }): Promise<void> {

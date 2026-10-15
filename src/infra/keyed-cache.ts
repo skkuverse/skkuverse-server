@@ -17,7 +17,7 @@ export class KeyedCache<T> {
   constructor(
     private readonly ttlMs: number,
     private readonly maxKeys: number,
-    private readonly name = "keyed-cache",
+    private readonly name: string,
   ) {}
 
   async get(key: string, load: () => Promise<T>): Promise<{ value: T; cached: boolean }> {

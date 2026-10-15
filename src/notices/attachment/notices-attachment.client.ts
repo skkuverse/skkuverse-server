@@ -9,6 +9,7 @@ import logger from "../../infra/logger";
 import { guardedRequestConfig, isOutboundBlocked } from "../../infra/outbound-guard";
 import { isRecord } from "../../shared/object.util";
 import {
+  ALLOWED_ATTACHMENT_DOMAINS,
   IDLE_TRANSFER_MS,
   MAX_ATTACHMENT_BYTES,
   MAX_TRANSFER_MS,
@@ -39,7 +40,7 @@ export class NoticesAttachmentClient implements OnModuleDestroy {
     if (fresh) this.sessions.delete(host);
     else if (cached && this.clock.now().getTime() - cached.fetchedAt < SESSION_CACHE_TTL_MS) return cached.sessionId;
     const resp = await axios.get<Readable>(refererUrl, {
-      ...guardedRequestConfig(),
+      ...guardedRequestConfig(ALLOWED_ATTACHMENT_DOMAINS),
       headers: { "User-Agent": UPSTREAM_USER_AGENT },
       timeout: SESSION_TIMEOUT_MS,
       responseType: "stream",
@@ -52,7 +53,7 @@ export class NoticesAttachmentClient implements OnModuleDestroy {
 
   async fetchAttachment(url: string, headers: Record<string, string>): Promise<AttachmentUpstream> {
     try {
-      const resp = await axios.get<Readable>(url, { ...guardedRequestConfig(), headers, responseType: "stream", timeout: UPSTREAM_TIMEOUT_MS });
+      const resp = await axios.get<Readable>(url, { ...guardedRequestConfig(ALLOWED_ATTACHMENT_DOMAINS), headers, responseType: "stream", timeout: UPSTREAM_TIMEOUT_MS });
       return { headers: resp.headers as Record<string, unknown>, data: resp.data };
     } catch (err: unknown) {
       throw this.toUpstreamError(err, url);
