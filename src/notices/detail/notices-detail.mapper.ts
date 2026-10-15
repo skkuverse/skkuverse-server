@@ -1,4 +1,5 @@
 import type { NoticeEdit } from "../notices.document";
+import { textOrNull } from "../notices.mapper";
 import type { NoticeDetailRow } from "./notices-detail.document";
 import { normalizeSummaryType } from "../notices.rules";
 import type { NoticeDetail, NoticeSummaryFull } from "./notices-detail.wire";
@@ -19,8 +20,6 @@ export function toSummaryFull(doc: NoticeDetailRow): NoticeSummaryFull | null {
     generatedAt: toJsonTime(doc.summaryAt),
   };
 }
-
-const textOrNull = (value: string | null | undefined): string | null => value || null;
 
 function toAttachments(doc: NoticeDetailRow): NoticeDetail["attachments"] {
   return (doc.attachments || []).map((a) => ({ name: a.name, url: a.url, ...(a.referer ? { referer: a.referer } : {}) }));

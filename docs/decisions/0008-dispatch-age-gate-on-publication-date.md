@@ -115,7 +115,7 @@ the KST answer *and* the absence of the UTC one.
 
 `dispatch_pending_idx` is re-keyed `{crawledAt: -1}` → `{date: -1}`; the
 `partialFilterExpression` is unchanged. Migration:
-`scripts/migrate-notices-dispatch-index.js`.
+`scripts/migrate-notices-dispatch-index.js` (since archived to `scripts/archive/`: the server now ensures the index at boot).
 
 **Run the migration BEFORE deploying this code.** `claimNext` does not
 `.hint()`, so a stale index cannot break correctness — but it does break cost,

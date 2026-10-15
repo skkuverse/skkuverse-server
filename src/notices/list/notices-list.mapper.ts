@@ -1,4 +1,5 @@
 import type { SummaryPeriod } from "../notices.document";
+import { textOrNull } from "../notices.mapper";
 import type { NoticeListRow } from "./notices-list.document";
 import { normalizeSummaryType } from "../notices.rules";
 import { isV2Summary, selectEffectivePeriod, selectRoleBadge } from "./notices-list.rules";
@@ -20,8 +21,6 @@ export function toNoticePage(docs: NoticeListRow[], limit: number): NoticePage {
       : null;
   return { items, nextCursor, hasMore };
 }
-
-const textOrNull = (value: string | null | undefined): string | null => value || null;
 
 function toPeriodBrief(period: SummaryPeriod | null): Pick<NoticeSummaryBrief, "startAt" | "endAt"> {
   if (!period) return { startAt: null, endAt: null };

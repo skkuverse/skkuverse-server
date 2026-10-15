@@ -13,7 +13,6 @@ interface OverviewCacheKeyInput {
   candidates: readonly OverviewCandidate[];
 }
 
-
 /** WHY: the highest-ranked copy of each cross-posted article, keyed as the push dispatch merges them. */
 export function selectCandidates<T extends Pick<OverviewCandidate, "_id" | "title" | "contentHash">>(
   ranked: readonly T[],
