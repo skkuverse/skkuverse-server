@@ -137,7 +137,7 @@ describe("BusEtaRepository reads and indexes", () => {
     expect(coll.find).toHaveBeenCalledWith({ serviceId: { $in: ["campus-inja"] }, date: { $in: ["2026-10-12"] } }, { maxTimeMS: 3_000 });
   });
 
-  it("SHUTTLE_ETA=off touches no collection and says so once", async () => {
+  it("SHUTTLE_ETA=off touches no collection, and leaves saying so to the pollers", async () => {
     // Arrange
     config.shuttleEta.enabled = false;
 
@@ -145,7 +145,7 @@ describe("BusEtaRepository reads and indexes", () => {
     try {
       await repository.onModuleInit();
       expect(coll.createIndex).not.toHaveBeenCalled();
-      expect(logger.info).toHaveBeenCalledWith({ event: "bus.eta.disabled" }, expect.any(String));
+      expect(logger.info).not.toHaveBeenCalled();
     } finally {
       config.shuttleEta.enabled = true;
     }
