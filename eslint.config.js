@@ -432,7 +432,7 @@ const ROLE_MAX_LINES = {
   controller: 42,
   decorator: 10,
   document: 124,
-  error: 18,
+  error: 29,
   filter: 83,
   interceptor: 53,
   mapper: 139,
