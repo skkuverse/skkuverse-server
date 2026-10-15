@@ -6,11 +6,12 @@
  *   - `list-growth`: against the base branch, an allowlist or a ratchet gains
  *     an entry only through commits that each carry
  *     `Architecture-Debt: <list path>` and change a rule file that reads the
- *     list; a size cap's `max` rises only in commits that carry the trailer
- *     for `size-caps.json`; and an exemption gains an entry only when its
- *     reason cites a decision that `docs/decisions/` declares and that
- *     `EXEMPTION_DECISIONS` allows for its file.
- *   - `list-registry`: every file in `allowlists/` and `exemptions/` is read
+ *     list; a size cap's `max`, or a cap in `caps/` (`role-max-lines.json`,
+ *     the per-role `max-lines` eslint.config.js applies), rises only in
+ *     commits that carry the trailer for its file; and an exemption gains an
+ *     entry only when its reason cites a decision that `docs/decisions/`
+ *     declares and that `EXEMPTION_DECISIONS` allows for its file.
+ *   - `list-registry`: every file in `allowlists/`, `caps/` and `exemptions/` is read
  *     by a rule (an architecture test or helper, or `eslint.config.js`, names
  *     it), every exemption file is in `EXEMPTION_DECISIONS` with decisions
  *     that exist, and every file in `ratchets/` is registered in
@@ -230,6 +231,20 @@ describe("list growth rule applies as specified", () => {
     expect(growthViolations([change], [bare], gate)).toEqual([expect.stringContaining("src/a.rules.ts max raised")]);
     expect(growthViolations([change], [recorded], gate)).toEqual([]);
     expect(growthViolations([lowered], [], gate)).toEqual([]);
+  });
+
+  it("refuses a role cap raised without the trailer, and passes one raised with it, lowered, added or removed", () => {
+    // Arrange
+    const roleCaps = "__tests__/architecture/caps/role-max-lines.json";
+    const change = { file: roleCaps, before: '{ "filter": 68, "error": 18 }', after: '{ "filter": 83, "error": 18 }' };
+    const bare = commit("9999999999", [], [roleCaps], [change]);
+    const recorded = commit("aaaaaaaaaa", [roleCaps], [roleCaps], [change]);
+    const reshaped = { file: roleCaps, before: '{ "filter": 83, "error": 18 }', after: '{ "error": 12, "pipe": 31 }' };
+
+    // Act & Assert
+    expect(growthViolations([change], [bare], gate)).toEqual([expect.stringContaining(`${roleCaps}: filter max raised`)]);
+    expect(growthViolations([change], [recorded], gate)).toEqual([]);
+    expect(growthViolations([reshaped], [], gate)).toEqual([]);
   });
 
   it("passes a new exemption whose reason cites a decision its file allows, and refuses any other", () => {
