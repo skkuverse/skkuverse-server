@@ -7,9 +7,8 @@ import { etaOptIns } from "./bus-stops.rules";
 import { stopCatalogFile } from "./bus-stops.schema";
 import type { ScheduleStopCatalog } from "./bus-stops.types";
 
-// WHY: the catalog stays beside the timetable it serves (scripts/lib/campus-schedule-file.js checks entries
-// against it); scripts/copy-build-assets.js stages it into dist/.
-const STOP_CATALOG_FILE = path.join(__dirname, "../schedule/schedule-stops.json");
+// WHY: scripts/copy-build-assets.js stages the catalog into dist/; a miss exits the api at boot.
+const STOP_CATALOG_FILE = path.join(__dirname, "schedule-stops.json");
 
 export function loadStopCatalog(raw: unknown): Readonly<ScheduleStopCatalog> {
   const schema = stopCatalogFile({ knownServiceIds: new Set(Object.keys(SERVICE_CONFIG)), optIns: etaOptIns(SERVICE_CONFIG) });
