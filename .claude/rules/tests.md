@@ -21,7 +21,7 @@ ADR 0011 (`docs/decisions/0011-test-strategy.md`) is the decision and its why; `
 
 - A test written against code that already works passes on its first run, which proves nothing. Make one or two hand mutants per seam (a dropped filter, a flipped sort, an off-by-one threshold) fail it, and list them in the commit message.
 - When one session writes the test and another the code: commit the red test with `Expected-Red: <test file>, …`, in its own `describe`, and run it against a sketch of the change in a scratch worktree first. The implementing commit carries `Red-Fixed: <test file>, …` and does not touch the test file. Never add a trailer to get past a blocked Stop.
-- Characterization tests are never edited while the refactor runs; a failure is a regression to report.
+- A characterization test (`*-characterization.routes.test.ts`) pins what a route answers today over a real `mongod`. A failure is a regression to report, never a reason to edit an assertion. Its boot, clock and fixtures may change; an expected value changes only in the commit that changes that behavior on purpose, and the message says so.
 
 ## Where a test lives
 
