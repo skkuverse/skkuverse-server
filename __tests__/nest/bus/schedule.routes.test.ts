@@ -455,3 +455,82 @@ describe("GET …/smart with arrival estimates", () => {
     expect(res.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", null]);
   });
 });
+
+// WHY: a service id is a lookup key, so a name Object.prototype already has must miss like any other
+// unknown id (spencer0124/skkuverse#82).
+describe("GET /bus/schedule/data/:serviceId with an Object.prototype name", () => {
+  const PROTOTYPE_NAMES = ["toString", "__proto__", "constructor", "hasOwnProperty"];
+
+  it.each(PROTOTYPE_NAMES)("%s/week → 404 SERVICE_NOT_FOUND", async (serviceId) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/schedule/data/${serviceId}/week`);
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.body.error).toEqual({ code: "SERVICE_NOT_FOUND", message: `Unknown serviceId: ${serviceId}` });
+  });
+
+  it.each(PROTOTYPE_NAMES)("%s/smart → 404 SERVICE_NOT_FOUND", async (serviceId) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/schedule/data/${serviceId}/smart`);
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.body.error).toEqual({ code: "SERVICE_NOT_FOUND", message: `Unknown serviceId: ${serviceId}` });
+  });
+});
+
+// WHY: each distinct Monday gets its own cached week and two Atlas reads, so `from` is bounded to a year
+// either side of today (KST); the clock reads 2026-03-10.
+describe("GET /bus/schedule/data/:serviceId/week with a far from", () => {
+  it.each(["2025-03-10", "2027-03-10", "2026-03-09"])("from=%s → 200", async (from) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/schedule/data/campus-inja/week?from=${from}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+  });
+
+  it.each(["2025-03-09", "2027-03-11", "1970-01-05", "9999-12-27", "2026-02-31"])("from=%s → 400 INVALID_DATE_FORMAT", async (from) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/schedule/data/campus-inja/week?from=${from}`);
+
+    // Assert
+    expect(res.status).toBe(400);
+    expect(res.body.error).toEqual({ code: "INVALID_DATE_FORMAT", message: "from must be a date within a year of today" });
+  });
+
+  it("answers 400 before looking the service up", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/schedule/data/unknown/week?from=2030-01-07");
+
+    // Assert
+    expect(res.status).toBe(400);
+  });
+});
+
+// QUIRK(date-holidays): isHoliday never returns for an Invalid Date (an impossible day, or a year-10000 day
+// of a 9999-12-27 week), so a `from` that reached the week build would block the event loop.
+describe("GET /bus/schedule/data/:serviceId/week with a from that would hang the holiday lookup", () => {
+  const HANG_BUDGET_MS = 2_000;
+
+  // WHY: a hang is synchronous, so no jest timeout could end it; a stubbed week build turns a `from` that gets
+  // past the check into a fast failure of the not-called assertion instead of a stuck run.
+  beforeEach(() => {
+    resolveWeek.mockResolvedValue(null);
+  });
+
+  it.each(["2026-02-31", "2026-13-01", "9999-01-04", "2026-02-29", "2026-04-31", "0000-01-03"])(
+    "from=%s → 400 INVALID_DATE_FORMAT without building a week",
+    async (from) => {
+      // Act
+      const res = await request(httpServer).get(`/bus/schedule/data/campus-inja/week?from=${from}`);
+
+      // Assert
+      expect(res.status).toBe(400);
+      expect(res.body.error).toEqual({ code: "INVALID_DATE_FORMAT", message: "from must be a date within a year of today" });
+      expect(resolveWeek).not.toHaveBeenCalled();
+    },
+    HANG_BUDGET_MS,
+  );
+});

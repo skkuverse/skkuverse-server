@@ -11,8 +11,8 @@
  *
  * The per-role caps (blocks "size/<role>") are held the
  * same way: each `max-lines` within 10 of the largest file it covers, measured
- * with the block's own options (comment lines count, D10), and none covering no
- * file. So are their function caps (block "size-ratchets/migrated"): lines
+ * with the block's own options (comment lines count, D10), none covering no
+ * file, and every role with a file under src/ capped. So are their function caps (block "size-ratchets/migrated"): lines
  * within 10 of the longest function, `max-depth`, `max-params` and
  * `complexity` at the worst, over every module scope's files.
  *
@@ -25,6 +25,7 @@
  */
 import { Linter } from "eslint";
 import { readSizeCapExemptions, type SizeCapExemption } from "../helpers/architecture/exemptions";
+import { ROLES, parse } from "../helpers/architecture/names";
 import { readSource, sourceFiles } from "../helpers/architecture/tree";
 
 const tsparser = require("@typescript-eslint/parser");
@@ -203,6 +204,19 @@ describe("size ratchets", () => {
         : [];
     });
     expect(loose).toEqual([]);
+  });
+
+  it("per role cover every role that has a file in a module scope", () => {
+    // Arrange
+    const blocks = new Set(config.filter((c) => c.name?.startsWith("size/")).map((c) => c.name));
+
+    // Act
+    const roles = [...new Set(sourceFiles().map((f) => parse(f).parts.at(-1) ?? ""))].filter((role) => ROLES.has(role));
+    const uncapped = roles.filter((role) => !blocks.has(`size/${role}`)).sort();
+
+    // Assert
+    expect(roles.length).toBeGreaterThan(0);
+    expect(uncapped).toEqual([]);
   });
 
   it("per file, from exemptions/size-caps.json, raise only an over-cap file's max-lines, held within 10 of it", () => {

@@ -39,8 +39,6 @@ const DETAIL_WORDS: Readonly<Record<string, Words>> = {
     issue.code === "custom"
       ? `startUrl for "${id}" must address a page on the web view — no fragment, not the root`
       : `bad startUrl for "${id}"`,
-  relatedLinks: (id, issue) =>
-    issue.code === "unrecognized_keys" ? `unknown relatedLinks key "${firstKey(issue)}" in "${id}"` : `bad relatedLinks url in "${id}"`,
   noticeBanner: (id, issue) => (issue.code === "unrecognized_keys" ? `unknown noticeBanner key "${firstKey(issue)}" in "${id}"` : undefined),
 };
 
@@ -71,8 +69,14 @@ function entryWords(raw: unknown, [position, field = "", ...parts]: readonly Pro
   return ENTRY_WORDS[String(field)]?.(id, issue);
 }
 
+function relatedLinkWords(id: string, [, key]: readonly PropertyKey[], issue: Issue): string | undefined {
+  if (issue.code === "unrecognized_keys") return `unknown relatedLinks key "${firstKey(issue)}" in "${id}"`;
+  return key === "url" ? `bad relatedLinks url in "${id}"` : undefined;
+}
+
 function detailWords([id, field = "", ...parts]: readonly PropertyKey[], issue: Issue): string | undefined {
   if (field === "shell") return shellWords(String(id), parts, issue);
+  if (field === "relatedLinks") return relatedLinkWords(String(id), parts, issue);
   return DETAIL_WORDS[String(field)]?.(String(id), issue);
 }
 
@@ -116,15 +120,15 @@ function ownerOf(details: readonly MiniAppDetailRaw[], origin: string): string {
 }
 
 // WHY: one owner per first-party origin, or a URL there opens in no mini app's shell, or in two.
-function toFirstPartyOrigins(details: readonly MiniAppDetailRaw[], origins: readonly string[]): Readonly<Record<string, string>> {
+function toOwnerByOrigin(details: readonly MiniAppDetailRaw[], origins: readonly string[]): Readonly<Record<string, string>> {
   return Object.freeze(Object.fromEntries(origins.map((origin) => [origin, ownerOf(details, origin)])));
 }
 
 export function toLoadedRegistry({ index, details }: RegistryFile, firstPartyOrigins: readonly string[]): LoadedRegistry {
   const detailsById = new Map(Object.entries(details).map(([id, detail]) => [id, Object.freeze(detail)]));
   const indexEntries = [...index.miniApps].sort((a, b) => a.order - b.order).map((entry) => toIndexEntry(entry, WEB_ORIGIN));
-  const ownerByOrigin = toFirstPartyOrigins([...detailsById.values()], firstPartyOrigins);
-  return { version: index.version, indexEntries: Object.freeze(indexEntries), detailsById, firstPartyOrigins: ownerByOrigin };
+  const ownerByOrigin = toOwnerByOrigin([...detailsById.values()], firstPartyOrigins);
+  return { version: index.version, indexEntries: Object.freeze(indexEntries), detailsById, ownerByOrigin };
 }
 
 // WHY: read next to the compiled file at runtime; scripts/copy-build-assets.js stages each JSON file into dist/.

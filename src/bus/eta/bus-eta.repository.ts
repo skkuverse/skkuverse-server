@@ -2,7 +2,6 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Collection } from "mongodb";
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
-import logger from "../../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type { ShuttleEtaDoc } from "./bus-eta.document";
 import type { SequenceLength, UpsertResult } from "./bus-eta.types";
@@ -13,10 +12,7 @@ const COLLECTION = "shuttle_eta";
 export class BusEtaRepository implements OnModuleInit {
   // WHY: SHUTTLE_ETA=off (the development default) touches no collection; the TTL index enforces TMAP's 24-hour term.
   onModuleInit(): Promise<void> {
-    if (!config.shuttleEta.enabled) {
-      logger.info({ event: "bus.eta.disabled" }, "SHUTTLE_ETA=off: arrival-estimate pollers not registered");
-      return Promise.resolve();
-    }
+    if (!config.shuttleEta.enabled) return Promise.resolve();
     return ensureIndexesAtBoot("bus.eta", () => this.ensureIndexes());
   }
 

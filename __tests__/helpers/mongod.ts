@@ -17,7 +17,13 @@
  *
  * mongodb-memory-server probes for a free port by listening on every address,
  * which the network guard refuses; the port is taken here on 127.0.0.1 and
- * handed over with port generation off.
+ * handed over with port generation off. Another socket can take that port
+ * before mongod binds it, so a start that finds it in use retries on a new one
+ * (START_ATTEMPTS in all).
+ *
+ * The TTL monitor is off: it deletes on the real clock, and the tests write
+ * timestamps from a frozen one, so a monitor pass could delete what a test
+ * just wrote. No test relies on TTL deletion; specs pin the TTL indexes.
  */
 import net from "node:net";
 import type { Db } from "mongodb";
@@ -38,7 +44,7 @@ export interface TestMongod {
   stop(): Promise<void>;
 }
 
-function freeLoopbackPort(): Promise<number> {
+export function freeLoopbackPort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
     server.once("error", reject);
@@ -49,11 +55,25 @@ function freeLoopbackPort(): Promise<number> {
   });
 }
 
-export async function startMongod(): Promise<TestMongod> {
-  const port = await freeLoopbackPort();
-  const server = await MongoMemoryServer.create({
-    instance: { ip: "127.0.0.1", port, portGeneration: false },
-  });
+export const START_ATTEMPTS = 3;
+
+const isPortTaken = (err: unknown): boolean => err instanceof Error && /already in use/i.test(err.message);
+
+async function createOnLoopback(nextPort: () => Promise<number>, attempt: number): Promise<MongoMemoryServer> {
+  const port = await nextPort();
+  try {
+    return await MongoMemoryServer.create({
+      instance: { ip: "127.0.0.1", port, portGeneration: false, args: ["--setParameter", "ttlMonitorEnabled=false"] },
+    });
+  } catch (err) {
+    if (attempt >= START_ATTEMPTS || !isPortTaken(err)) throw err;
+    return createOnLoopback(nextPort, attempt + 1);
+  }
+}
+
+/** `nextPort` picks each attempt's port: a free loopback port unless a test hands one in. */
+export async function startMongod(nextPort: () => Promise<number> = freeLoopbackPort): Promise<TestMongod> {
+  const server = await createOnLoopback(nextPort, 1);
   const uri = server.getUri();
   const previousUrl = process.env.MONGO_URL;
   process.env.MONGO_URL = uri;

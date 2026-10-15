@@ -68,7 +68,7 @@ describe("GET /bus/station/:stationId", () => {
       busNm: "인사캠셔틀",
       busSupportTime: false,
       msg1ShowMessage: true,
-      // hssc empty → "도착 정보 없음" (no 혜화역(승차장) match in HSSC_STATIONS etas)
+      // hssc empty → "도착 정보 없음" (no bus before 혜화역(승차장) in HSSC_ETA_STATIONS)
       msg1Message: "도착 정보 없음",
     });
   });

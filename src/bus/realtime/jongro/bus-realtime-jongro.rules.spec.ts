@@ -5,7 +5,7 @@
  */
 import { jongroRoutes } from "../../bus.config";
 import type { JongroArrivalDoc } from "../../cache/bus-cache.document";
-import { isUsableHeaderCd, toDwell, toRegistryDrift } from "./bus-realtime-jongro.rules";
+import { isUsableHeaderCd, toArrivalsKey, toDwell, toPositionsKey, toRegistryDrift } from "./bus-realtime-jongro.rules";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const minutesBefore = (minutes: number): string => new Date(NOW.getTime() - minutes * 60_000).toISOString();
@@ -39,13 +39,13 @@ describe("isUsableHeaderCd", () => {
 describe("toDwell", () => {
   it("starts a dwell at a stop no bus held", () => {
     // Act & Assert
-    expect(toDwell(undefined, NOW)).toEqual({ recordTime: NOW.toISOString(), estimatedTime: 0 });
+    expect(toDwell(undefined, NOW)).toEqual({ firstSeenAt: NOW.toISOString(), dwellSeconds: 0 });
   });
 
   it.each([
-    [9, { recordTime: minutesBefore(9), estimatedTime: 540 }],
-    [10, { recordTime: minutesBefore(10), estimatedTime: 600 }],
-    [11, { recordTime: NOW.toISOString(), estimatedTime: 0 }],
+    [9, { firstSeenAt: minutesBefore(9), dwellSeconds: 540 }],
+    [10, { firstSeenAt: minutesBefore(10), dwellSeconds: 600 }],
+    [11, { firstSeenAt: NOW.toISOString(), dwellSeconds: 0 }],
   ])("a stop held %i minutes → %j", (minutes, expected) => {
     // Act & Assert
     expect(toDwell(minutesBefore(minutes), NOW)).toEqual(expected);
@@ -94,5 +94,21 @@ describe("toRegistryDrift", () => {
       missing: [],
       renamed: [{ staOrd: "1", stNm: "새이름", registryName: "성균관대운동장" }],
     });
+  });
+});
+
+// WHY: the poller writes and every replica reads these keys, so a route's two keys are built in one place
+// from its two-digit code, never from its id (`jongro07`).
+describe("toArrivalsKey", () => {
+  it("keys a route's arrivals by its code", () => {
+    // Act & Assert
+    expect(toArrivalsKey(route07.code)).toBe("jongro_stations_07");
+  });
+});
+
+describe("toPositionsKey", () => {
+  it("keys a route's positions by its code", () => {
+    // Act & Assert
+    expect(toPositionsKey(route07.code)).toBe("jongro_locations_07");
   });
 });

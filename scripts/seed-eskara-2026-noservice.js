@@ -29,6 +29,7 @@ const path = require("node:path");
 
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const { MongoClient } = require("mongodb");
+const { assertValidOverrides } = require("./lib/bus-overrides-validator");
 
 const DATES = ["2026-10-01", "2026-10-02"];
 const SERVICE_IDS = ["campus-inja", "campus-jain"];
@@ -86,6 +87,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const dbName = resolveDbName(args.prod);
   const docs = buildDocuments();
+  assertValidOverrides(docs);
 
   console.log(`database   ${dbName}${args.prod ? "   <- PRODUCTION" : "   (dev — pass --prod for production)"}`);
   docs.forEach((d) => console.log(`  ${d.date} ${d.serviceId}  ${d.type}  "${d.label}"`));

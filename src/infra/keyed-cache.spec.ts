@@ -10,7 +10,7 @@ describe("KeyedCache", () => {
   it("replaces an expired entry with the new caller's loader", async () => {
     // Arrange
     jest.useFakeTimers({ now: new Date("2026-10-06T00:00:00Z") });
-    const cache = new KeyedCache<string>(1_000, 10);
+    const cache = new KeyedCache<string>(1_000, 10, "test.keyed");
 
     await cache.get("k", async () => "first");
     jest.setSystemTime(new Date("2026-10-06T00:00:02Z"));
@@ -24,7 +24,7 @@ describe("KeyedCache", () => {
 
   it("evicts the oldest key when full", async () => {
     // Arrange
-    const cache = new KeyedCache<string>(60_000, 2);
+    const cache = new KeyedCache<string>(60_000, 2, "test.keyed");
     const load = jest.fn(async () => "v");
 
     await cache.get("a", load);
@@ -51,7 +51,7 @@ describe("KeyedCache.get with CACHE=off", () => {
   it("still answers a repeated key from the cache", async () => {
     // Arrange
     config.cache.enabled = false;
-    const cache = new KeyedCache<string>(60_000, 10);
+    const cache = new KeyedCache<string>(60_000, 10, "test.keyed");
     const load = jest.fn(async () => "v");
 
     await cache.get("k", load);

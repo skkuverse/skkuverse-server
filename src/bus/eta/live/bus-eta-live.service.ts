@@ -1,5 +1,5 @@
-import moment from "moment-timezone";
-import { liveDoc } from "../bus-eta.mapper";
+import { liveDoc } from "./bus-eta-live.mapper";
+import { toKstDate } from "../bus-eta.rules";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import type { EtaSequence } from "../bus-eta.types";
 import { toLiveWork } from "./bus-eta-live.rules";
@@ -24,7 +24,7 @@ export class BusEtaLiveService {
   constructor(private readonly deps: LiveEtaDeps) {}
 
   async tick(now: Date): Promise<LiveTickResult> {
-    const today = moment(now).tz("Asia/Seoul").format("YYYY-MM-DD");
+    const today = toKstDate(now);
     const serviceIds = [...new Set(this.deps.sequences.map((s) => s.serviceId))];
     const live = (await this.deps.readEtas(serviceIds, [today])).filter((d) => d.kind === "live");
     const state: TickState = { now, existing: new Map(live.map((d) => [d._id, d])), out: [], calls: 0, succeeded: false };

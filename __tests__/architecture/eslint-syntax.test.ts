@@ -28,12 +28,16 @@
  *     says nothing on its own (`info`, `obj`, `tmp`, `helper`, `manager`).
  *   - `specs/fixed-clock`: a spec in a module scope (and a top-level
  *     module's `__tests__/nest/<module>/` tests) never constructs the real
- *     `Clock`, aliased, through a namespace or as a Nest provider; it passes
- *     a fixed fake, so one answer reads one instant and does not depend on
- *     the day the test runs.
+ *     `Clock`, aliased, through a namespace, as a Nest provider or as a
+ *     subclass; an alias whose name hides the real Clock (`Tick`,
+ *     `FixedClock`) is refused at its import. It passes a fixed fake, so one
+ *     answer reads one instant and does not depend on the day the test runs.
  *   - `migrated/syntax-clock`: the `Date.now()` / `new Date()` ban covers
  *     every module scope but the shared layers, derived from the tree
- *     (scopes.ts), so a new module is bound from its first file.
+ *     (scopes.ts), so a new module is bound from its first file. It and the
+ *     pure files' ban also refuse moment reading the clock: `moment()`,
+ *     `moment.utc()` and `moment.now()` without an argument, and
+ *     `moment.tz(zone)`.
  */
 import { Linter } from "eslint";
 import { SHARED_LAYERS } from "../helpers/architecture/ast";
@@ -305,6 +309,32 @@ describe("specs/fixed-clock", () => {
     expect(messages).toHaveLength(1);
   });
 
+  it.each([
+    ["an alias the name check cannot see, built with new", 'import { Clock as Tick } from "../../infra/clock";\nnew Tick();'],
+    ["an alias provided to Nest", 'import { Clock as Tick } from "../../infra/clock";\nTest.createTestingModule({ providers: [Tick] });'],
+    ["an alias through useClass", 'import { Clock as Tick } from "../../infra/clock";\nTest.createTestingModule({ providers: [{ provide: Clock, useClass: Tick }] });'],
+    ["an alias that reads as a fake", 'import { Clock as FixedClock } from "../../infra/clock";\nnew FixedClock();'],
+    ["a fake class that extends the real one", "class FixedClock extends Clock {}\nnew FixedClock();"],
+  ])("rejects the real Clock through %s", (_case, source) => {
+    // Act
+    const messages = lint("specs/fixed-clock", "src/map/layer-set/map-layer-set.service.spec.ts", source);
+
+    // Assert
+    expect(messages).toHaveLength(1);
+  });
+
+  it("passes Clock imported by its name or as a type under another", () => {
+    // Act
+    const messages = lint(
+      "specs/fixed-clock",
+      "src/map/layer-set/map-layer-set.service.spec.ts",
+      'import { Clock } from "../../infra/clock";\nimport type { Clock as Now } from "../../infra/clock";\nconst clock: Clock = { now: () => NOW };',
+    );
+
+    // Assert
+    expect(messages).toEqual([]);
+  });
+
   it("passes a fake provided in place of Clock, and a fixed fake class", () => {
     // Arrange
     const file = "src/map/layer-set/map-layer-set.service.spec.ts";
@@ -353,6 +383,25 @@ describe("migrated/syntax-clock", () => {
 
     // Assert
     expect(messages.map((m) => m.message)).toEqual([expect.stringContaining("Clock")]);
+  });
+
+  it.each([
+    ["migrated/syntax-clock", "src/bus/x/bus-x.service.ts"],
+    ["migrated/syntax-pure-clock", "src/bus/x/bus-x.rules.ts"],
+    ["boundaries/pure", "src/bus/x/bus-x.rules.ts"],
+    ["boundaries/query", "src/bus/x/bus-x.query.ts"],
+  ])("%s rejects moment reading the clock, and passes moment over a given instant", (name, file) => {
+    // Arrange
+    const reads = ["moment();", 'moment.tz("Asia/Seoul");', "moment.tz();", "moment.utc();", "moment.now();"];
+    const parses = ["moment(now);", 'moment(now).tz("Asia/Seoul");', 'moment.tz(day, "YYYY-MM-DD", "Asia/Seoul");', 'moment.tz(now, "Asia/Seoul");', "moment.utc(ms);"];
+
+    // Act
+    const counts = reads.map((source) => lint(name, file, source).length);
+    const reported = parses.filter((source) => lint(name, file, source).length > 0);
+
+    // Assert
+    expect(counts).toEqual(reads.map(() => 1));
+    expect(reported).toEqual([]);
   });
 });
 

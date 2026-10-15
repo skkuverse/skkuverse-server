@@ -8,6 +8,7 @@ import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/
 import { FakeBusRealtimeHsscClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.client.fake";
 import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-jongro.client.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
+import { hsscBusDoc, jongroArrivalDoc, jongroPositionDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { Clock } from "../../../infra/clock";
 import type { BusCacheRepository } from "../../cache/bus-cache.repository";
 import { BusCacheService } from "../../cache/bus-cache.service";
@@ -34,7 +35,7 @@ beforeEach(() => {
 describe("BusRealtimeGroupService.getGroup", () => {
   it("serves the cached HSSC buses with no station ETAs", async () => {
     // Arrange
-    busCache.values.set("hssc", [{ sequence: "2", carNumber: "0000", estimatedTime: 30 }]);
+    busCache.values.set("hssc", [hsscBusDoc({ sequence: "2", carNumber: "0000", estimatedTime: 30 })]);
 
     // Act
     const group = await service.getGroup("hssc");
@@ -49,11 +50,11 @@ describe("BusRealtimeGroupService.getGroup", () => {
   it("serves a Jongro route's positions and its arrival ETAs by ord", async () => {
     // Arrange
     busCache.values.set("jongro_locations_07", [
-      { sequence: "6", carNumber: "5537", estimatedTime: 0, latitude: "37.587", longitude: "126.998" },
+      jongroPositionDoc({ sequence: "6", carNumber: "5537", estimatedTime: 0, latitude: "37.587", longitude: "126.998" }),
     ]);
     busCache.values.set("jongro_stations_07", [
-      { stationId: "100900220", sequence: "1", eta: "3분후[2번째 전]" },
-      { stationId: "100000424", sequence: "3", eta: "" },
+      jongroArrivalDoc({ stationId: "100900220", sequence: "1", eta: "3분후[2번째 전]" }),
+      jongroArrivalDoc({ stationId: "100000424", sequence: "3", eta: "" }),
     ]);
 
     // Act

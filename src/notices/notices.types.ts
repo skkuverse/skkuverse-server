@@ -7,11 +7,8 @@ export interface SourceConfig {
   name: string;
   campus: string;
   college: string | null;
-  appCategory: string | null;
   crawlAvailable: boolean;
   excludeReason: string | null;
-  hasCategory: boolean;
-  hasAuthor: boolean;
 }
 
 export interface CategoryLabel {

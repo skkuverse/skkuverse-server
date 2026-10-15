@@ -1,5 +1,7 @@
 // WHY: an inclusion list with the Markdown body only: the raw HTML and plain-text bodies, the hashes and the
 // crawler's bookkeeping are never served, and a field the crawler adds later stays out until named here.
+import type { NoticeDetailRow } from "./notices-detail.document";
+
 export const DETAIL_PROJECTION = {
   _id: 1,
   sourceId: 1,
@@ -25,4 +27,4 @@ export const DETAIL_PROJECTION = {
   summaryDetails: 1,
   summaryModel: 1,
   summaryAt: 1,
-} as const;
+} as const satisfies Record<keyof NoticeDetailRow, 1>;

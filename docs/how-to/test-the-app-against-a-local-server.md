@@ -3,7 +3,7 @@ title: Test the App Against a Local Server
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-11
+last-updated: 2026-10-15
 audience: internal
 ---
 
@@ -18,9 +18,9 @@ A local server holds credentials that reach real people. The dev Doppler config 
 | Env var | development | production | What "off" means |
 | --- | --- | --- | --- |
 | `PUSH_DELIVERY` | `suppressed` | `live` | `postToFcmFunction` logs `push.delivery.suppressed` and returns `{ sent: 0 }` without calling the Cloud Function. Callers record it as a completed send, so `_dev` notices get `pushedAt`. |
-| `RATE_LIMIT` | `off` | `on` | All four limiters skip. Locally every simulator request comes from one loopback address. |
+| `RATE_LIMIT` | `off` | `on` | Every limiter skips. Locally every simulator request comes from one loopback address. |
 | `BUILDING_SYNC` | `off` | `on` | The `building-sync` poller is not registered. Its warm-up crawls all of `campusMap.do` and rewrites `skkumap_dev` on every boot, and nodemon reboots on every save. |
-| `CACHE` | `off` | `on` | A change to a `_dev` database shows on the next request. Every `createCachedLoader` (buildings, campus shapes, the event map, the mini-app feed), and the bus timetable cache load on every call, and every `Cache-Control` is rewritten to `no-store` so the phone's HTTP cache never answers for the server. |
+| `CACHE` | `off` | `on` | A change to a `_dev` database shows on the next request. Every `createCachedLoader` (buildings, campus shapes, the event map, the mini-app feed) and the bus timetable cache load on every call, and every `Cache-Control` is rewritten to `no-store` so the phone's HTTP cache never answers for the server. |
 | `SHUTTLE_ETA` | `off` | `on` | No NAVER Directions or TMAP call: the 인자셔틀 arrival-estimate jobs, which use metered keys, do not run. Smart schedules still apply whatever estimates `bus_campus_dev.shuttle_eta` holds. Production may set it `off`. |
 
 `CACHE=off` leaves three caches on. The AI overview cache saves an LLM call per request; its key changes when the crawler rewrites a notice's `contentHash`, but a hand edit of a body or `summary*` field in `_dev` stays cached for 30 minutes (restart to drop it). The mini-app manifest cache holds files from production origins, not `_dev` data. The 5-second `bus_cache` read cache is shorter than the app's poll interval.
@@ -102,6 +102,7 @@ Sentry is off locally: the dev keys carry no `SENTRY_DSN`.
 | A change in a `_dev` database does not show, and no request reaches the server log | The phone's HTTP cache is answering from an earlier run with `CACHE=on` (`max-age` up to 24 h, kept across app restarts). Clear the app's storage or reinstall it once. |
 | A change does not show, and the request does reach the server | The data is read once at boot (notice tabs, mini-app registry, home layout): save any `.ts` or `.json` file under `src/` to restart, or the screen caches it in the app (React Query `staleTime`): pull to refresh or reopen the screen. |
 | Boot fails with `config.invalid_runtime_switch` | A switch has a value outside its enum, or one of the three refused combinations. |
+| Boot fails with `config.invalid_role` | `ROLE` is set to a value other than `api`, `poller` or `combined`. Leave it unset for a local run, which boots as `combined`. |
 | A local web page gets no `Access-Control-Allow-Origin` | Only `http://localhost:*` and `http://127.0.0.1:*` are allowed in development, not LAN addresses. |
 
 ## Related

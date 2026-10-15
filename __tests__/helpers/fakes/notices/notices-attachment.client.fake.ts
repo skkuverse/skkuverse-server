@@ -1,11 +1,10 @@
 /**
  * NoticesAttachmentClient with scripted answers: `sessionIds` hands out one PHPSESSID per session fetch (an
- * Error rejects it), `upstreams` one upstream per attachment fetch, in order. Every call is recorded; a send
- * records what it was handed instead of piping (notices-attachment.client.spec.ts covers the piping and caps).
+ * Error rejects it), `upstreams` one upstream per attachment fetch, in order, already translated as the real
+ * client translates axios's answer (notices-attachment.client.spec.ts covers that). Every call is recorded.
  */
-import type { Response } from "express";
 import type { NoticesAttachmentClient } from "../../../../src/notices/attachment/notices-attachment.client";
-import type { AttachmentDelivery, AttachmentUpstream } from "../../../../src/notices/attachment/notices-attachment.types";
+import type { AttachmentUpstream } from "../../../../src/notices/attachment/notices-attachment.types";
 import type { PublicOf } from "../public-of";
 
 export class FakeNoticesAttachmentClient implements PublicOf<NoticesAttachmentClient> {
@@ -13,7 +12,6 @@ export class FakeNoticesAttachmentClient implements PublicOf<NoticesAttachmentCl
   upstreams: AttachmentUpstream[] = [];
   sessionFetches: Array<{ refererUrl: string; fresh: boolean }> = [];
   attachmentFetches: Array<{ url: string; headers: Record<string, string> }> = [];
-  sends: Array<{ upstream: AttachmentUpstream; delivery: AttachmentDelivery }> = [];
 
   onModuleDestroy(): void {}
 
@@ -29,9 +27,5 @@ export class FakeNoticesAttachmentClient implements PublicOf<NoticesAttachmentCl
     const next = this.upstreams.shift();
     if (!next) throw new Error("no upstream scripted");
     return next;
-  }
-
-  async sendAttachment(upstream: AttachmentUpstream, _res: Response, delivery: AttachmentDelivery): Promise<void> {
-    this.sends.push({ upstream, delivery });
   }
 }

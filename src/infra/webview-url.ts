@@ -41,3 +41,10 @@ export function toWebviewUrl(value: string): string | null {
 
   return absolute;
 }
+
+/** WHY: a root-relative `webview` value is served absolute, so the app only ever opens a complete URL; it was checked before. */
+export function toServedWebviewUrl(value: string): string {
+  const url = toWebviewUrl(value);
+  if (url === null) throw new Error(`"${value}" passed its web view check but toWebviewUrl refuses it`);
+  return url;
+}

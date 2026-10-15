@@ -1,5 +1,6 @@
 import { ObjectId, type Document } from "mongodb";
 import { escapeRegex } from "../../shared/regex.util";
+import type { NoticeListRow } from "./notices-list.document";
 import type { CursorPayload, NoticeListQuery, NoticeScope } from "./notices-list.types";
 
 /**
@@ -35,10 +36,10 @@ export const LIST_PROJECTION = {
   summaryVersion: 1,
   summaryApplication: 1,
   summaryDates: 1,
-} as const;
+} as const satisfies Record<keyof NoticeListRow, 1>;
 
 // SEE: docs/decisions/0007-notice-ordering-key.md — after the cursor in (date desc, _id desc); `crawledAt` stays out.
-export function buildCursorFilter(cursor: CursorPayload): Document {
+export function toCursorFilter(cursor: CursorPayload): Document {
   const oid = new ObjectId(cursor.i);
   return {
     $or: [{ date: { $lt: cursor.d } }, { date: cursor.d, _id: { $lt: oid } }],
@@ -53,7 +54,7 @@ export function toNoticeListFilter(scope: NoticeScope, query: NoticeListQuery, s
   };
   if (query.type) filter.summaryType = query.type;
   const clauses: Document[] = [{ date: { $gte: serviceStartDate } }];
-  if (query.cursor) clauses.push(buildCursorFilter(query.cursor));
+  if (query.cursor) clauses.push(toCursorFilter(query.cursor));
   if (query.q) {
     const pattern = escapeRegex(query.q);
     clauses.push({ $or: [{ title: { $regex: pattern, $options: "i" } }, { summaryOneLiner: { $regex: pattern, $options: "i" } }] });

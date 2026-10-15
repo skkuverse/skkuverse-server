@@ -408,6 +408,16 @@ describe("loadRegistry", () => {
     ).toThrow(/unknown relatedLinks key "lable" in "a"/);
   });
 
+  it("names a relatedLinks label it refuses as the label, not the url", () => {
+    // Act
+    const load = () =>
+      loadRegistry(index(), { a: { ...details().a, relatedLinks: [{ label: 5, url: "https://x.test" }] as never } });
+
+    // Assert
+    expect(load).toThrow(/a\.relatedLinks\.0\.label: /);
+    expect(load).not.toThrow(/url/);
+  });
+
   it("rejects an unknown noticeBanner key, naming it", () => {
     // Arrange
     const noticeBanner = { title: "t", subtitle: "s", sutitle: "typo" };
@@ -452,7 +462,7 @@ describe("toLoadedRegistry", () => {
     const loaded = toLoadedRegistry(file, ["https://a.test"]);
 
     // Assert
-    expect(loaded.firstPartyOrigins).toEqual({ "https://a.test": "a" });
+    expect(loaded.ownerByOrigin).toEqual({ "https://a.test": "a" });
   });
 
   it("throws when two mini apps start on one first-party origin", () => {

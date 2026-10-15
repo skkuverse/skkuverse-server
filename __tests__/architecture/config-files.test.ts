@@ -36,7 +36,7 @@ export function configFileUse(file: string, source: string): ConfigFileUse {
   const imports = importsOf(sf);
   const parserNames = new Set(imports.filter((i) => PARSER_MODULE.test(i.specifier) && i.imported === "parseConfigFile").map((i) => i.local));
   const parserNamespaces = new Set(imports.filter((i) => PARSER_MODULE.test(i.specifier) && i.imported === "*").map((i) => i.local));
-  let reads = imports.filter((i) => !i.isType && i.specifier.endsWith(".json")).length;
+  let reads = imports.filter((i) => !i.isType && i.kind !== "require" && i.specifier.endsWith(".json")).length;
   let parses = 0;
   for (const call of collect(sf, ts.isCallExpression)) {
     const name = calleeName(call);

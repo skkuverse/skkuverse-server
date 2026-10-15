@@ -1,13 +1,7 @@
 import type { SupportedLang } from "../../infra/types";
-import type { NoticeDoc } from "../notices.document";
+import type { OverviewCandidate } from "./notices-overview.document";
 import type { AiOverviewResponse } from "./notices-overview.schema";
 import type { Overview, OverviewMeta } from "./notices-overview.wire";
-
-export type OverviewCandidate = Pick<
-  NoticeDoc,
-  "_id" | "sourceId" | "articleNo" | "title" | "date" | "department" | "category" | "summary" | "summaryOneLiner" | "summaryType"
-  | "summaryPeriods" | "summaryLocations" | "summaryDetails" | "contentText" | "contentHash" | "summaryContentHash" | "summaryApplication"
->;
 
 type AiNoticeField = Exclude<keyof OverviewCandidate, "_id" | "sourceId" | "articleNo" | "title">;
 
@@ -40,10 +34,9 @@ export type UnavailableCause =
   | { cause: "budget_exhausted"; retryAt: Date | null }
   | { cause: "contract_violation"; reason: string };
 
-/** WHY: raw query values: the service validates them, sources first, as GET /notices does. */
 export interface OverviewRequest {
-  q: unknown;
-  sourceIds: unknown;
+  q: string;
+  sourceIds: readonly string[];
   lang: SupportedLang;
 }
 

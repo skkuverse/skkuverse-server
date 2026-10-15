@@ -3,7 +3,7 @@ import moment from "moment-timezone";
 import { NOTICES_TIMEZONE } from "../notices.constants";
 import { dedupKeyOf, groupByDedupKey } from "../notices.rules";
 import { OVERVIEW_CANDIDATE_LIMIT } from "./notices-overview.constants";
-import type { OverviewCandidate } from "./notices-overview.types";
+import type { OverviewCandidate } from "./notices-overview.document";
 
 interface OverviewCacheKeyInput {
   q: string;
@@ -12,7 +12,6 @@ interface OverviewCacheKeyInput {
   now: Date;
   candidates: readonly OverviewCandidate[];
 }
-
 
 /** WHY: the highest-ranked copy of each cross-posted article, keyed as the push dispatch merges them. */
 export function selectCandidates<T extends Pick<OverviewCandidate, "_id" | "title" | "contentHash">>(

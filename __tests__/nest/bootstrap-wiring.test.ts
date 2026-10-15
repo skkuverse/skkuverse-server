@@ -30,6 +30,7 @@ import express from "express";
 import request from "supertest";
 import { LangMiddleware } from "../../src/http/lang.middleware";
 import config from "../../src/infra/config";
+import logger from "../../src/infra/logger";
 import { CORS_METHODS, WEBVIEW_ORIGIN } from "../../src/infra/origins";
 import { buildTestApp } from "../helpers/nest/build-test-app";
 
@@ -151,6 +152,18 @@ describe("CORS policy", () => {
       .set("Access-Control-Request-Method", "GET");
     expect(res.status).toBeLessThan(300);
     expect(res.headers["access-control-allow-origin"]).toBe(WEBVIEW_ORIGIN);
+  });
+
+  // WHY: without Access-Control-Max-Age a browser repeats the preflight before every cross-origin GET.
+  it("lets a browser cache the preflight for a day", async () => {
+    // Act
+    const res = await request(app.getHttpServer())
+      .options("/ping")
+      .set("Origin", WEBVIEW_ORIGIN)
+      .set("Access-Control-Request-Method", "GET");
+
+    // Assert
+    expect(res.headers["access-control-max-age"]).toBe("86400");
   });
 
   it("grants nothing to an origin that is not ours", async () => {
@@ -358,6 +371,49 @@ describe("bootstrapHttpApp pipeline", () => {
     expect(accepted.body.data.bodyLength).toBe(JSON.stringify(under).length);
     expect(refused.status).toBeGreaterThanOrEqual(400);
     expect(refused.body.data).toBeUndefined();
+  });
+
+  it("answers a JSON body over 100 kB with 413 PAYLOAD_TOO_LARGE on any method, and reports no fault", async () => {
+    // Arrange
+    const over = JSON.stringify({ text: "x".repeat(110_000) });
+    const errorLog = jest.spyOn(logger, "error");
+    const send = (req: request.Test) => req.set("Content-Type", "application/json").send(over);
+
+    try {
+      // Act
+      const responses = [
+        await send(request(app.getHttpServer()).post("/pipeline")),
+        await send(request(app.getHttpServer()).get("/pipeline")),
+        await send(request(app.getHttpServer()).put("/nowhere")),
+      ];
+
+      // Assert
+      for (const res of responses) {
+        expect(res.status).toBe(413);
+        expect(res.body).toEqual({ error: { code: "PAYLOAD_TOO_LARGE", message: "request entity too large" } });
+      }
+      expect(errorLog).not.toHaveBeenCalled();
+    } finally {
+      errorLog.mockRestore();
+    }
+  });
+
+  it("answers an unsupported JSON charset with 415 HTTP_ERROR, and malformed JSON with 400 HTTP_ERROR", async () => {
+    // Act
+    const charset = await request(app.getHttpServer())
+      .post("/pipeline")
+      .set("Content-Type", "application/json; charset=latin1")
+      .send("{}");
+    const malformed = await request(app.getHttpServer())
+      .post("/pipeline")
+      .set("Content-Type", "application/json")
+      .send("{bad");
+
+    // Assert
+    expect(charset.status).toBe(415);
+    expect(charset.body).toEqual({ error: { code: "HTTP_ERROR", message: 'unsupported charset "LATIN1"' } });
+    expect(malformed.status).toBe(400);
+    expect(malformed.body.error.code).toBe("HTTP_ERROR");
   });
 
   it("runs the lang middleware before the handler: meta.lang and Vary", async () => {

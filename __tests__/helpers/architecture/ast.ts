@@ -144,7 +144,6 @@ export function localDeclarations(sf: ts.SourceFile): Map<string, LocalDeclarati
     const kind = declarationKind(s);
     const name = (s as { name?: ts.Node }).name;
     if (kind === undefined || name === undefined || !ts.isIdentifier(name)) continue;
-    if (kind === "function" && out.get(name.text)?.kind === "function" && !(s as ts.FunctionDeclaration).body) continue;
     out.set(name.text, { kind, declaration: s, initializer: undefined });
   }
   return out;
@@ -227,11 +226,22 @@ export function moduleFile(resolved: string, files: ReadonlySet<string>): string
   return files.has(`${resolved}.ts`) ? `${resolved}.ts` : undefined;
 }
 
+/**
+ * How a source names another module: `import` (a declaration with bindings), `reexport` (`export … from`),
+ * `import-type` (`import("…").X` in a type), `side-effect` (`import "…"`), `import-equals`
+ * (`import x = require("…")`), `require` (a `require("…")` call) or `dynamic` (an `import("…")` call).
+ */
+export type ImportKind = "import" | "reexport" | "import-type" | "side-effect" | "import-equals" | "require" | "dynamic";
+
 export interface ImportedBinding {
+  kind: ImportKind;
   /** The resolved repo path without `.ts` for a relative specifier, the package name otherwise. */
   target: string;
   specifier: string;
-  /** The name taken from the target: an export name, `default`, or `*` for a namespace. */
+  /**
+   * The name taken from the target: an export name, `default`, or `*` for a namespace (an `import-equals`, or a
+   * `require` or `dynamic` call bound whole or not bound); empty for a `side-effect` import.
+   */
   imported: string;
   /** The name it is bound to here (the exported name for a re-export). */
   local: string;
@@ -242,8 +252,9 @@ export interface ImportedBinding {
 }
 
 /**
- * Every binding a source takes from another module: `import` declarations, `export … from`
- * re-exports (an `export *` as `*`), and `import("…").X` types.
+ * Every binding a source takes from another module: `import` declarations (a side-effect import with an empty
+ * name), `export … from` re-exports (an `export *` as `*`), `import("…").X` types, `import x = require("…")`,
+ * and `require("…")` and `import("…")` calls with a string literal (a destructured `require` per name).
  */
 export function importsOf(sf: ts.SourceFile): ImportedBinding[] {
   const file = sf.fileName;
@@ -253,9 +264,12 @@ export function importsOf(sf: ts.SourceFile): ImportedBinding[] {
     if (ts.isImportDeclaration(s) && ts.isStringLiteral(s.moduleSpecifier)) {
       const specifier = s.moduleSpecifier.text;
       const clause = s.importClause;
-      if (!clause) continue;
+      if (!clause) {
+        out.push({ kind: "side-effect", target: target(specifier), specifier, imported: "", local: "", isType: false, isReexport: false, node: s });
+        continue;
+      }
       const typeOnly = clause.isTypeOnly;
-      const base = { target: target(specifier), specifier, isReexport: false, node: s };
+      const base = { kind: "import" as const, target: target(specifier), specifier, isReexport: false, node: s };
       if (clause.name) out.push({ ...base, imported: "default", local: clause.name.text, isType: typeOnly });
       const named = clause.namedBindings;
       if (named && ts.isNamespaceImport(named)) out.push({ ...base, imported: "*", local: named.name.text, isType: typeOnly });
@@ -267,7 +281,7 @@ export function importsOf(sf: ts.SourceFile): ImportedBinding[] {
     }
     if (ts.isExportDeclaration(s) && s.moduleSpecifier && ts.isStringLiteral(s.moduleSpecifier)) {
       const specifier = s.moduleSpecifier.text;
-      const base = { target: target(specifier), specifier, isReexport: true, node: s };
+      const base = { kind: "reexport" as const, target: target(specifier), specifier, isReexport: true, node: s };
       if (!s.exportClause) out.push({ ...base, imported: "*", local: "*", isType: s.isTypeOnly });
       else if (ts.isNamespaceExport(s.exportClause)) out.push({ ...base, imported: "*", local: s.exportClause.name.text, isType: s.isTypeOnly });
       else {
@@ -276,17 +290,43 @@ export function importsOf(sf: ts.SourceFile): ImportedBinding[] {
         }
       }
     }
+    if (ts.isImportEqualsDeclaration(s) && ts.isExternalModuleReference(s.moduleReference) && ts.isStringLiteral(s.moduleReference.expression)) {
+      const specifier = s.moduleReference.expression.text;
+      out.push({ kind: "import-equals", target: target(specifier), specifier, imported: "*", local: s.name.text, isType: s.isTypeOnly, isReexport: false, node: s });
+    }
   }
   const visit = (n: ts.Node): void => {
     if (ts.isImportTypeNode(n) && ts.isLiteralTypeNode(n.argument) && ts.isStringLiteral(n.argument.literal)) {
       const specifier = n.argument.literal.text;
       const imported = n.qualifier ? (ts.isIdentifier(n.qualifier) ? n.qualifier.text : n.qualifier.left.getText(sf)) : "*";
-      out.push({ target: target(specifier), specifier, imported, local: imported, isType: true, isReexport: false, node: n });
+      out.push({ kind: "import-type", target: target(specifier), specifier, imported, local: imported, isType: true, isReexport: false, node: n });
+    }
+    const loaded = ts.isCallExpression(n) ? loadedSpecifier(n) : undefined;
+    if (loaded !== undefined) {
+      const base = { ...loaded, target: target(loaded.specifier), isType: false, isReexport: false, node: n };
+      const binding = loaded.kind === "require" && ts.isVariableDeclaration(n.parent) && n.parent.initializer === n ? n.parent.name : undefined;
+      if (binding !== undefined && ts.isObjectBindingPattern(binding)) {
+        for (const e of binding.elements) {
+          const local = ts.isIdentifier(e.name) ? e.name.text : "";
+          const key = e.propertyName ?? e.name;
+          out.push({ ...base, imported: ts.isIdentifier(key) || ts.isStringLiteral(key) ? key.text : "*", local });
+        }
+      } else {
+        out.push({ ...base, imported: "*", local: binding !== undefined && ts.isIdentifier(binding) ? binding.text : "" });
+      }
     }
     ts.forEachChild(n, visit);
   };
   visit(sf);
   return out;
+}
+
+/** The specifier a `require("…")` or `import("…")` call loads, when it is a string literal. */
+function loadedSpecifier(call: ts.CallExpression): { kind: "require" | "dynamic"; specifier: string } | undefined {
+  const [first] = call.arguments;
+  if (first === undefined || !ts.isStringLiteralLike(first)) return undefined;
+  if (call.expression.kind === ts.SyntaxKind.ImportKeyword) return { kind: "dynamic", specifier: first.text };
+  return ts.isIdentifier(call.expression) && call.expression.text === "require" ? { kind: "require", specifier: first.text } : undefined;
 }
 
 /**

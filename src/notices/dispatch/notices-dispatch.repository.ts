@@ -3,10 +3,10 @@ import type { Collection, ObjectId } from "mongodb";
 import config from "../../infra/config";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type { NoticeDoc } from "../notices.document";
-import { DISPATCH_PENDING_INDEX, toClaimFilter, toClaimUpdate, toPushedUpdate, toReleasedUpdate } from "./notices-dispatch.query";
-import type { ClaimWindow, PushedFields, ReleasedFields } from "./notices-dispatch.types";
+import { CLAIM_SORT, DISPATCH_PENDING_INDEX, toClaimFilter, toClaimUpdate, toPushedUpdate, toReleasedUpdate, toSkippedUpdate } from "./notices-dispatch.query";
+import type { ClaimWindow, PushedFields, ReleasedFields, SkippedFields } from "./notices-dispatch.types";
 
-// WHY: the only writer of the four push fields in `notices`, so moving them to a collection of their own later
+// WHY: the only writer of the five push fields in `notices`, so moving them to a collection of their own later
 // touches this file alone (ADR 0010 D2).
 @Injectable()
 export class NoticesDispatchRepository implements OnModuleInit {
@@ -16,11 +16,15 @@ export class NoticesDispatchRepository implements OnModuleInit {
 
   /** SEE: docs/decisions/0003-fcm-dispatch-cloud-function-claim-lease.md — atomic, so two replicas never claim one notice. */
   claimNextPending(window: ClaimWindow, claimedAt: Date): Promise<NoticeDoc | null> {
-    return this.notices().findOneAndUpdate(toClaimFilter(window), toClaimUpdate(claimedAt), { returnDocument: "after" });
+    return this.notices().findOneAndUpdate(toClaimFilter(window), toClaimUpdate(claimedAt), { sort: CLAIM_SORT, returnDocument: "after" });
   }
 
   async recordPushed(id: ObjectId, fields: PushedFields): Promise<void> {
     await this.notices().updateOne({ _id: id }, toPushedUpdate(fields));
+  }
+
+  async recordSkipped(id: ObjectId, fields: SkippedFields): Promise<void> {
+    await this.notices().updateOne({ _id: id }, toSkippedUpdate(fields));
   }
 
   async recordReleased(id: ObjectId, fields: ReleasedFields): Promise<void> {

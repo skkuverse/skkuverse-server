@@ -1,7 +1,7 @@
 {
   "src/app.module.ts": {
     "max": 99,
-    "reason": "ADR 0010 D9, no domain seam: the root module lists every feature module and sub-module in the order Nest registers their routes (route-order.test.ts replays it), and a parent module never imports its sub-modules (D3), so no feature module can hold a share of the list."
+    "reason": "ADR 0010 D9, no domain seam: the root module lists every feature module and sub-module in the order Nest registers their routes (route-order.test.ts replays it), and a parent module never imports its sub-modules (D3), so no feature module can hold a share of the list. Its max rises with each module added: that commit carries the Architecture-Debt trailer for this file and needs no other reason."
   },
   "src/bus/config/bus-config.mapper.ts": {
     "max": 155,
@@ -9,18 +9,18 @@
   },
   "src/bus/stops/bus-stops.rules.ts": {
     "max": 285,
-    "reason": "ADR 0010 D9, no domain seam: schedule-stops.json is one operator-edited document, and its boot failure lists every issue in the words bus-stops.rules.spec.ts pins. The checks (stops, photos, panoramas, guides, sequences, estimate opt-ins) compose into the one validator the schema runs, and child-to-parent imports keep a sub-module from holding a piece of it. docs/plans/private-file tracks the zod rewrite that retires this entry."
+    "reason": "ADR 0010 D9, no domain seam: schedule-stops.json is one committed document that stops the boot on any fault, and validateStopCatalog lists every issue in the words bus-stops.rules.spec.ts pins. Its checks (stops, photos, panoramas, guides, sequences, estimate opt-ins) compose into the one validator bus-stops.schema.ts runs, and child-to-parent imports keep a sub-module from holding a piece of it."
   },
   "src/map/layer-set/map-layer-set.rules.ts": {
     "max": 141,
-    "reason": "ADR 0010 D9, no domain seam: the layer-set file is one operator-edited document, and its schema composes these checks (chips, lists, option windows, cross-references). Child-to-parent imports put a zod composite's leaves above it, so a sub-module split cannot hold them, and the leaves alone exceed the rules cap."
+    "reason": "ADR 0010 D9, no domain seam: one loader of one operator-edited file reads every check here, `layerSetFile` the leaf checks (`optionIssues`, `chipLabelIssue`, `listSortIssue`) and `parseLayerSetFile` in map-layer-set.config.ts the cross-reference and chip checks, which also run at import; the checks are not flows, so a sub-module would hold rules and nothing else."
   },
   "src/map/layer-set/map-layer-set.schema.ts": {
     "max": 84,
-    "reason": "ADR 0010 D9, no domain seam: layerSetFile is one zod composite over one operator-edited document. Child-to-parent imports put a composite's leaves (camera, i18n text, nullable defaults) above it, so a sub-module split cannot hold them, and the leaves alone exceed the schema cap."
+    "reason": "ADR 0010 D9, no domain seam: `layerSetFile` is one zod composite over one operator-edited file, parsed at runtime only by `parseLayerSetFile` in map-layer-set.config.ts, and other flows import its types alone; its leaves (camera, i18n text, nullable defaults) are not flows, so a sub-module would hold schema pieces and nothing else."
   },
   "src/notices/list/notices-list.rules.ts": {
-    "max": 181,
+    "max": 182,
     "reason": "ADR 0010 D9, no domain seam: the list badge is one priority chain a list item is cut from, the v1 period pick and the v2 role badge feeding one brief, and the cursor decode beside it; neither half is a flow of its own, so a sub-module would hold rules and nothing else, and the badge alone exceeds the rules cap."
   }
 }

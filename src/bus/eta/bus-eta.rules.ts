@@ -1,14 +1,17 @@
 import moment from "moment-timezone";
-import { DailyCapError } from "../../shared/daily-cap.error";
+import { BusEtaDailyCapError } from "./bus-eta.error";
 import { haversineM } from "../../shared/distance.util";
-import type { DirectionsProvider } from "../../shared/directions.types";
+import { KST_TIME_ZONE } from "../bus.constants";
 import type { ScheduleDay } from "../schedule/bus-schedule.wire";
 import type { EtaOptIns, ScheduleStopCatalog } from "../stops/bus-stops.types";
 import type { LatLng } from "../../shared/lat-lng.types";
-import type { EtaRun, EtaSequence, OffsetCheck, SequenceLength, SequenceRef } from "./bus-eta.types";
+import type { DirectionsProvider, EtaRun, EtaSequence, OffsetCheck, SequenceLength, SequenceRef } from "./bus-eta.types";
 
-const TZ = "Asia/Seoul";
 const MAX_STOP_DISTANCE_M = 150;
+
+export function toKstDate(instant: Date): string {
+  return moment(instant).tz(KST_TIME_ZONE).format("YYYY-MM-DD");
+}
 
 /**
  * WHY: a resolved day's runs of one route type. An entry counts only when its `stopTimes` has one item per sequence
@@ -21,7 +24,7 @@ export function runsOfDay(day: ScheduleDay, { serviceId, routeType, sequenceLeng
     if (entry.routeType !== routeType || typeof entry.time !== "string") return [];
     if (!Array.isArray(entry.stopTimes) || entry.stopTimes.length !== sequenceLength || seen.has(entry.time)) return [];
     seen.add(entry.time);
-    const departAt = moment.tz(`${day.date} ${entry.time}`, "YYYY-MM-DD HH:mm", TZ).toDate();
+    const departAt = moment.tz(`${day.date} ${entry.time}`, "YYYY-MM-DD HH:mm", KST_TIME_ZONE).toDate();
     return [{ serviceId, routeType, date: day.date, time: entry.time, departAt }];
   });
 }
@@ -63,12 +66,12 @@ export class DailyCap {
   ) {}
 
   take(now: Date): void {
-    const day = moment(now).tz(TZ).format("YYYY-MM-DD");
+    const day = toKstDate(now);
     if (day !== this.day) {
       this.day = day;
       this.used = 0;
     }
-    if (this.used >= this.cap) throw new DailyCapError(this.provider, this.cap);
+    if (this.used >= this.cap) throw new BusEtaDailyCapError(this.provider, this.cap);
     this.used += 1;
   }
 }

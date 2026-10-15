@@ -26,9 +26,29 @@ export function envMode(env: NodeJS.ProcessEnv): EnvMode {
   };
 }
 
+export const ROLES = ["api", "poller", "combined"] as const;
+export type Role = (typeof ROLES)[number];
+
 // WHY: unset means `combined`, which polls and serves: the documented local default (CLAUDE.md, Runtime topology).
-export function envRole(env: NodeJS.ProcessEnv): string {
+// The logger labels its lines with this before config.ts has checked the value.
+export function envRoleLabel(env: NodeJS.ProcessEnv): string {
   return env.ROLE || "combined";
+}
+
+function isRole(value: string): value is Role {
+  return (ROLES as readonly string[]).includes(value);
+}
+
+export function roleErrors(env: NodeJS.ProcessEnv): string[] {
+  const label = envRoleLabel(env);
+  return isRole(label) ? [] : [`ROLE must be one of ${ROLES.join(" | ")} (got "${label}")`];
+}
+
+// WHY: a typo must not boot as `combined`, a second poller fleet beside the real one; config.ts exits first.
+export function envRole(env: NodeJS.ProcessEnv): Role {
+  const label = envRoleLabel(env);
+  if (!isRole(label)) throw new Error(roleErrors(env).join("\n"));
+  return label;
 }
 
 export function dbNameFor(mode: EnvMode, baseName: string | undefined): string | undefined {
@@ -108,5 +128,9 @@ export function validateEnv(env: NodeJS.ProcessEnv = process.env): void {
   const { errors } = resolveRuntimeSwitches(env, runtimeMode(nodeEnv));
   if (errors.length > 0) {
     throw new Error(`FATAL: Invalid runtime switch:\n  ${errors.join("\n  ")}`);
+  }
+  const invalidRole = roleErrors(env);
+  if (invalidRole.length > 0) {
+    throw new Error(`FATAL: Invalid ROLE:\n  ${invalidRole.join("\n  ")}`);
   }
 }

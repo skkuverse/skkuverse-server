@@ -32,6 +32,7 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
     const projected: Partial<BuildingDoc> = { ...building };
     delete projected.sync;
     delete projected.enrichVersion;
+    delete projected.extensions;
     return projected as BuildingDoc;
   }
 

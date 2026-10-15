@@ -5,15 +5,15 @@
  */
 
 import { ObjectId } from "mongodb";
-import { buildCursorFilter } from "./notices-list.query";
+import { toCursorFilter } from "./notices-list.query";
 
 const OID = "66a1b2c3d4e5f6a7b8c9d0e1";
 const ISO = "2026-04-01T00:00:00.000Z";
 
-describe("buildCursorFilter", () => {
+describe("toCursorFilter", () => {
   it("pages on (date, _id) only — never on crawledAt", () => {
     // Act
-    const filter = buildCursorFilter({ d: "2026-04-01", c: ISO, i: OID });
+    const filter = toCursorFilter({ d: "2026-04-01", c: ISO, i: OID });
 
     // Assert
     expect(filter).toEqual({
@@ -29,10 +29,10 @@ describe("buildCursorFilter", () => {
 
   it("ignores a legacy `c` rather than letting it narrow the page", () => {
     // Arrange
-    const withC = buildCursorFilter({ d: "2026-04-01", c: ISO, i: OID });
+    const withC = toCursorFilter({ d: "2026-04-01", c: ISO, i: OID });
 
     // Act
-    const withoutC = buildCursorFilter({ d: "2026-04-01", i: OID });
+    const withoutC = toCursorFilter({ d: "2026-04-01", i: OID });
 
     // Assert
     expect(withC).toEqual(withoutC);

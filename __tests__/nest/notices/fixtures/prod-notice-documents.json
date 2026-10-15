@@ -1,0 +1,219 @@
+{
+  "_about": "Three skku_notices.notices documents read from production with the MongoDB MCP on 2026-10-16, in MongoDB relaxed Extended JSON as the driver hands them over: liberalarts-undergrad 160795 (a time-bearing date, a v1 summary), skku-main 140595 (a v2 summary, one edit) and math-undergrad 226956 (not yet summarized). Trimmed: content, cleanHtml, contentText and embeddingInput with its hash, version and timestamp dropped, cleanMarkdown replaced by a placeholder, summaries shortened, a contact e-mail removed and the skku-main author (a staff name) replaced with 관리자.",
+  "documents": [
+    {
+      "_id": {
+        "$oid": "6a5ed9e520097db8672d2097"
+      },
+      "articleNo": 160795,
+      "sourceId": "liberalarts-undergrad",
+      "attachments": [
+        {
+          "name": "성적우수_장학금_신청_첨부서류.hwp",
+          "url": "https://portal.skku.edu/support/fileupload/downloadFile.do?fileId=u2euIhFsOznsKGKQWykIg"
+        }
+      ],
+      "author": "문과대학",
+      "category": "장학",
+      "consecutiveFailures": 0,
+      "contentHash": "6eaff646902e18137df77cf03af5a8c560c7d8b844570d1a8ff391558aeb0947",
+      "crawledAt": {
+        "$date": "2026-08-05T13:30:06.543Z"
+      },
+      "date": "2026-07-21 11:15",
+      "department": "문과대학(학부생)",
+      "detailPath": "?mode=view&link=null&viewBoardId=138884&itemId=160795&article.offset=0&articleLimit=10",
+      "editCount": 0,
+      "editHistory": [],
+      "isDeleted": false,
+      "lastModified": null,
+      "sourceUrl": "https://liberalarts.skku.edu/liberal/community/under_notice.do?mode=view&link=null&viewBoardId=138884&itemId=160795&article.offset=0&articleLimit=10",
+      "title": "2026학년도 2학기 문과대학 학사과정 성적우수장학금 선발 안내",
+      "views": 0,
+      "aiSummaryAt": {
+        "$date": "2026-07-21T03:20:38.014Z"
+      },
+      "summary": "2026학년도 2학기 문과대학 학사과정 재학생은 7월 20일부터 31일까지 GLS에서 성적우수장학금을 신청할 수 있어요.",
+      "summaryAt": {
+        "$date": "2026-07-21T03:20:38.014Z"
+      },
+      "summaryContentHash": "6eaff646902e18137df77cf03af5a8c560c7d8b844570d1a8ff391558aeb0947",
+      "summaryDetails": {
+        "target": "문과대학 학사과정 재학생 및 2026-2학기 복학예정자",
+        "action": "GLS에서 성적우수장학금 신청",
+        "host": null,
+        "impact": "장학금은 등록금 감면고지로 지급되며 휴학 시 취소, 복학 시 재심사 필요"
+      },
+      "summaryFailures": 0,
+      "summaryLocations": [],
+      "summaryModel": "gpt-4.1-mini-2025-04-14",
+      "summaryOneLiner": "문과대학 재학생 대상 성적우수장학금 신청 안내",
+      "summaryPeriods": [
+        {
+          "label": null,
+          "startDate": "2026-07-20",
+          "startTime": null,
+          "endDate": "2026-07-31",
+          "endTime": null
+        }
+      ],
+      "summaryType": "action_required",
+      "dispatchClaimedAt": null,
+      "pushAttempts": 1,
+      "pushError": null,
+      "pushedAt": {
+        "$date": "2026-07-21T03:21:03.918Z"
+      },
+      "cleanMarkdown": "(본문 생략)"
+    },
+    {
+      "_id": {
+        "$oid": "6ad041b19cb01d9a98f17f6e"
+      },
+      "articleNo": 140595,
+      "sourceId": "skku-main",
+      "attachments": [
+        {
+          "name": "연구교수_관련_제서류_IPHC.hwp",
+          "url": "https://www.skku.edu/skku/campus/skk_comm/notice01.do?mode=download&articleNo=140595&attachNo=118386"
+        }
+      ],
+      "author": "관리자",
+      "category": "채용/모집",
+      "consecutiveFailures": 0,
+      "contentHash": "13734db15b3378bff9e49da8a65d866001c3a6b9296555d5aa35dbe266b4cfe5",
+      "crawledAt": {
+        "$date": "2026-10-15T15:00:00.623Z"
+      },
+      "date": "2026-10-15",
+      "department": "학부통합(학사)",
+      "detailPath": "?mode=view&articleNo=140595&article.offset=0&articleLimit=10",
+      "editCount": 1,
+      "editHistory": [
+        {
+          "detectedAt": {
+            "$date": "2026-10-15T11:12:40.719Z"
+          },
+          "oldHash": "ef2dab27a14f950fbb293bc5b76ea050602933664e095919d0dcb45972fd014d",
+          "newHash": "13734db15b3378bff9e49da8a65d866001c3a6b9296555d5aa35dbe266b4cfe5",
+          "contentChanged": true,
+          "source": "tier2"
+        }
+      ],
+      "isDeleted": false,
+      "lastModified": null,
+      "sourceUrl": "https://www.skku.edu/skku/campus/skk_comm/notice01.do?mode=view&articleNo=140595&article.offset=0&articleLimit=10",
+      "title": "[채용/모집] 성균관대학교 지능형정밀헬스케어교육연구단 연구교수 채용 공고",
+      "views": 4645,
+      "aiSummaryAt": {
+        "$date": "2026-10-15T11:20:08.620Z"
+      },
+      "summary": "성균관대학교 BK21 지능형정밀헬스케어 교육연구단에서 연구교수를 채용해요. 서류는 2026년 10월 14일부터 10월 19일까지 이메일로 접수해요.",
+      "summaryApplication": {
+        "status": "dated",
+        "windows": [
+          {
+            "startAt": "2026-10-14T00:00:00+09:00",
+            "endAt": "2026-10-20T00:00:00+09:00",
+            "openEnded": false
+          }
+        ]
+      },
+      "summaryAsksToApply": true,
+      "summaryAt": {
+        "$date": "2026-10-15T11:20:08.620Z"
+      },
+      "summaryContentHash": "13734db15b3378bff9e49da8a65d866001c3a6b9296555d5aa35dbe266b4cfe5",
+      "summaryDates": [
+        {
+          "evidence": "접수기간 : 2026년 10월 14일부터 2026년 10월 19일까지",
+          "subject": "접수기간",
+          "role": "apply",
+          "endType": "range",
+          "startAt": "2026-10-14T00:00:00+09:00",
+          "endAt": "2026-10-20T00:00:00+09:00"
+        },
+        {
+          "evidence": "임용예정일자 : 2026.11.01.",
+          "subject": "임용예정일자",
+          "role": "other",
+          "endType": "single",
+          "startAt": "2026-11-01T00:00:00+09:00",
+          "endAt": "2026-11-02T00:00:00+09:00"
+        }
+      ],
+      "summaryDetails": {
+        "target": "박사학위 소지자이며 박사학위 취득 후 산업체·교육·연구 경력 1년 이상인 자",
+        "action": "이메일로 서류 제출",
+        "host": "성균관대학교 지능형정밀헬스케어교육연구단",
+        "impact": "BK21 신진연구인력은 타 기관과 이중소속이 원칙적으로 허용되지 않음"
+      },
+      "summaryFailures": 0,
+      "summaryLocations": [
+        {
+          "label": null,
+          "detail": "자연과학캠퍼스(수원)"
+        }
+      ],
+      "summaryModel": "claude-haiku-5-5",
+      "summaryOneLiner": "박사학위·산업체·교육·연구 경력 1년 이상 연구교수, 이메일로 서류 접수",
+      "summaryPeriods": [
+        {
+          "label": "접수기간",
+          "kind": "application",
+          "startDate": "2026-10-14",
+          "startTime": null,
+          "endDate": "2026-10-19",
+          "endTime": null,
+          "openEnded": false
+        },
+        {
+          "label": "임용예정일자",
+          "kind": "other",
+          "startDate": "2026-11-01",
+          "startTime": null,
+          "endDate": "2026-11-01",
+          "endTime": null,
+          "openEnded": false
+        }
+      ],
+      "summaryPromptVersion": "2026-10-08.haiku-v3",
+      "summaryTerm": null,
+      "summaryType": "action_required",
+      "summaryVersion": 2,
+      "dispatchClaimedAt": null,
+      "pushAttempts": 1,
+      "pushError": null,
+      "pushedAt": {
+        "$date": "2026-10-15T03:21:16.642Z"
+      },
+      "cleanMarkdown": "(본문 생략)"
+    },
+    {
+      "_id": {
+        "$oid": "6ad081049cb01d9a98f1fd0a"
+      },
+      "sourceId": "math-undergrad",
+      "articleNo": 226956,
+      "attachments": [],
+      "author": "수학과",
+      "category": "행사/세미나",
+      "consecutiveFailures": 0,
+      "contentHash": "1a7cf2965d8b8cf5cddfe35fa51430ac96776f1ef7080a26e4d2b5cb37925ef1",
+      "crawledAt": {
+        "$date": "2026-10-15T14:00:10.548Z"
+      },
+      "date": "2026-10-15",
+      "department": "수학과(학부생)",
+      "detailPath": "?mode=view&articleNo=226956&article.offset=0&articleLimit=10",
+      "editCount": 0,
+      "editHistory": [],
+      "isDeleted": false,
+      "lastModified": null,
+      "sourceUrl": "https://math.skku.edu/math/community/under_notice.do?mode=view&articleNo=226956&article.offset=0&articleLimit=10",
+      "title": "수학과 학술동아리 MIMIC 주관 2026년도 성균관대학교 수학 경시대회",
+      "views": 84,
+      "cleanMarkdown": "(본문 생략)"
+    }
+  ]
+}

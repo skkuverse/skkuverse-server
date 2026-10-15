@@ -17,6 +17,7 @@ import { BusRealtimeHsscModule } from "../../../src/bus/realtime/hssc/bus-realti
 import { BusRealtimeJongroModule } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.module";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
+import { hsscBusDoc, jongroPositionDoc } from "../../helpers/bus/bus-cache-docs";
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
@@ -62,31 +63,34 @@ describe("GET /bus/realtime/data/:groupId", () => {
 
   it("maps buses with parseInt(sequence)-1 and conditional lat/lng spread", async () => {
     // Arrange
-    busCache.values.set("hssc", [
-      { sequence: "3", carNumber: "1234", estimatedTime: 120, latitude: "37.5", longitude: "127.0" },
-      { sequence: "1", carNumber: "5678", estimatedTime: 60 },
+    // WHY: HSSC rows never carry coordinates and Jongro positions always do, so each source shows one side.
+    busCache.values.set("jongro_locations_07", [
+      jongroPositionDoc({ sequence: "3", carNumber: "1234", estimatedTime: 120, latitude: "37.5", longitude: "127.0" }),
     ]);
+    busCache.values.set("hssc", [hsscBusDoc({ sequence: "1", carNumber: "5678", estimatedTime: 60 })]);
 
     // Act
+    const jongro = await request(httpServer).get("/bus/realtime/data/jongro07");
     const res = await request(httpServer).get("/bus/realtime/data/hssc");
 
     // Assert
+    expect(jongro.status).toBe(200);
     expect(res.status).toBe(200);
-    expect(res.body.meta.totalBuses).toBe(2);
-    expect(res.body.data.buses[0]).toEqual({
+    expect(res.body.meta.totalBuses).toBe(1);
+    expect(jongro.body.data.buses[0]).toEqual({
       stationIndex: 2, // 3 - 1
       carNumber: "1234",
       estimatedTime: 120,
       latitude: "37.5",
       longitude: "127.0",
     });
-    // Second bus has no latitude/longitude keys (conditional spread).
-    expect(res.body.data.buses[1]).toEqual({
+    // The HSSC bus has no latitude/longitude keys (conditional spread).
+    expect(res.body.data.buses[0]).toEqual({
       stationIndex: 0,
       carNumber: "5678",
       estimatedTime: 60,
     });
-    expect(res.body.data.buses[1]).not.toHaveProperty("latitude");
+    expect(res.body.data.buses[0]).not.toHaveProperty("latitude");
   });
 
   it("jongro07 → 200 with empty buses/stationEtas when getters return undefined", async () => {
@@ -114,5 +118,18 @@ describe("GET /bus/realtime/data/:groupId", () => {
     // Assert
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("GROUP_NOT_FOUND");
+  });
+});
+
+// WHY: a group id is a lookup key, so a name Object.prototype already has must miss like any other
+// unknown id (spencer0124/skkuverse#82).
+describe("GET /bus/realtime/data/:groupId with an Object.prototype name", () => {
+  it.each(["toString", "__proto__", "constructor", "hasOwnProperty"])("%s → 404 GROUP_NOT_FOUND", async (groupId) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/realtime/data/${groupId}`);
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.body.error).toEqual({ code: "GROUP_NOT_FOUND", message: `Unknown groupId: ${groupId}` });
   });
 });

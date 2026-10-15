@@ -23,7 +23,7 @@ jest.mock("date-holidays", () =>
 import moment from "moment-timezone";
 import { SKKU_REST_DAYS, loadRestDays as parseRestDays } from "./bus-schedule.config";
 import type { BusScheduleDoc } from "./bus-schedule.document";
-import { isWeekStartParam, lookupRestDay, pickPattern, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
+import { isWeekStartInRange, lookupRestDay, pickPattern, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
 
 const service = { getNonOperatingDayLabel: (date: string) => toNonOperatingDayLabel(SKKU_REST_DAYS, date) };
 
@@ -99,19 +99,6 @@ describe("lookupRestDay over loadRestDays", () => {
   });
 });
 
-describe("isWeekStartParam", () => {
-  it.each([
-    [undefined, true],
-    ["2026-03-09", true],
-    ["bad", false],
-    ["2026-3-9", false],
-    [["2026-03-09", "2026-03-10"], false],
-  ])("%j → %s", (from, expected) => {
-    // Act & Assert
-    expect(isWeekStartParam(from)).toBe(expected);
-  });
-});
-
 describe("pickPattern", () => {
   const pattern = (patternId: string, effectiveFrom?: string): BusScheduleDoc => ({
     serviceId: "campus-inja",
@@ -155,3 +142,21 @@ describe("toSuspendWindow", () => {
   });
 });
 
+
+describe("isWeekStartInRange", () => {
+  // WHY: 2026-03-09T16:30Z is already 2026-03-10 in KST, so a UTC reading would move every bound a day.
+  const NOW = new Date("2026-03-09T16:30:00Z");
+
+  it.each([
+    ["2025-03-09", false],
+    ["2025-03-10", true],
+    ["2026-03-10", true],
+    ["2027-03-10", true],
+    ["2027-03-11", false],
+    ["2026-02-31", false],
+    ["9999-12-27", false],
+  ])("%s → %s", (from, expected) => {
+    // Act & Assert
+    expect(isWeekStartInRange(from, NOW)).toBe(expected);
+  });
+});

@@ -7,6 +7,7 @@ jest.mock("../../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), er
 
 import type { Clock } from "../../../infra/clock";
 import config from "../../../infra/config";
+import logger from "../../../infra/logger";
 import type { PollerRegistryService } from "../../../scheduling/poller-registry.service";
 import type { BusEtaService } from "../bus-eta.service";
 import type { BusEtaLiveClient } from "./bus-eta-live.client";
@@ -31,6 +32,18 @@ describe("BusEtaLivePoller.onModuleInit", () => {
   afterEach(() => {
     shuttleEta.enabled = enabled;
     jest.clearAllMocks();
+  });
+
+  it("SHUTTLE_ETA=off says so once, naming the poller it leaves out", () => {
+    // Arrange
+    shuttleEta.enabled = false;
+
+    // Act
+    new BusEtaLivePoller(registry, eta, client, clock).onModuleInit();
+
+    // Assert
+    expect(logger.info).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith({ event: "bus.eta.disabled", poller: "shuttle-eta-live" }, expect.any(String));
   });
 
   it("SHUTTLE_ETA=off registers nothing", () => {

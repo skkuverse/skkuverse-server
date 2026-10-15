@@ -1,8 +1,5 @@
 import type { FcmResponse } from "../../infra/fcm";
 
-/** WHY: derived from the four push fields alone; the stored documents carry no status field. */
-export type DispatchStatus = "pending" | "claimed" | "pushed" | "exhausted";
-
 export interface DispatchPolicy {
   maxAgeDays: number;
   claimLeaseMs: number;
@@ -18,6 +15,14 @@ export interface ClaimWindow {
 
 export interface PushedFields {
   pushedAt: Date;
+  dispatchClaimedAt: null;
+  pushError: null;
+}
+
+// WHY: `pushedAt` set too, so the claim's `pushedAt: null` and the partial index leave a skipped notice out.
+export interface SkippedFields {
+  pushedAt: Date;
+  pushSkippedReason: "no-topic";
   dispatchClaimedAt: null;
   pushError: null;
 }

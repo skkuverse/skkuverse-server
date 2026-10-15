@@ -6,12 +6,13 @@
 import moment from "moment-timezone";
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
-import { DailyCapError } from "../../../shared/daily-cap.error";
-import { DirectionsError } from "../../../shared/directions.error";
+import { BusEtaDailyCapError } from "../bus-eta.error";
+import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { BusScheduleService } from "../../schedule/bus-schedule.service";
 import { BusStopsService } from "../../stops/bus-stops.service";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
-import { baselineDoc, etaDocId } from "../bus-eta.mapper";
+import { etaDocId } from "../bus-eta.mapper";
+import { baselineDoc } from "./bus-eta-baseline.mapper";
 import type { BusEtaRepository } from "../bus-eta.repository";
 import { DailyCap } from "../bus-eta.rules";
 import { BusEtaService } from "../bus-eta.service";
@@ -127,7 +128,7 @@ describe("BusEtaBaselineService.tick", () => {
   it("Backoff: a run whose call failed waits 30 minutes; the tick writes the rest and rejects", async () => {
     // Arrange
     const { poller, store, fetchOffsets } = setup();
-    const down = new DirectionsError("tmap", "http", "HTTP 500", 500);
+    const down = new BusEtaDirectionsError("tmap", "http", "HTTP 500", 500);
     fetchOffsets.mockRejectedValueOnce(down);
 
     // Act & Assert
@@ -150,7 +151,7 @@ describe("BusEtaBaselineService.tick", () => {
     const err = await poller.tick(kst("2026-10-12", "06:00")).catch((e: unknown) => e);
 
     // Assert
-    expect(err).toBeInstanceOf(DailyCapError);
+    expect(err).toBeInstanceOf(BusEtaDailyCapError);
     expect(fetchOffsets).toHaveBeenCalledTimes(2);
     expect(store.size).toBe(2);
   });

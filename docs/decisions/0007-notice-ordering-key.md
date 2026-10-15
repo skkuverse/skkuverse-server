@@ -79,7 +79,7 @@ every list request it serves. Dropping it is a follow-up release.
 The cursor keeps its `{d, c, i}` wire shape this release even though `c` is no
 longer read:
 
-- `buildCursorFilter` ignores `c` entirely.
+- `toCursorFilter` ignores `c` entirely.
 - `decodeCursor` treats `c` as **optional** — a legacy cursor still decodes.
   A malformed `c` is still rejected; absent and garbage are different things.
 - `encodeCursor` **still emits `c`**.
@@ -108,7 +108,7 @@ separate release, once no server that requires it can receive one.
 ## Not decided here
 
 Re-pointing the FCM dispatch age gate off `crawledAt`
-(`notices-dispatcher.service.ts`) is a **prerequisite for the crawler-side
+(now `src/notices/dispatch/notices-dispatch.service.ts`) is a **prerequisite for the crawler-side
 change**, not for this one, and lands separately. Measured reason it cannot be
 skipped: 8.9% of notices pushed in September 2026 were summarized more than 24h
 after insert (n=313), and the gate's 24h window is currently held open for them

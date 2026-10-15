@@ -137,6 +137,13 @@ const config = {
     release: process.env.GIT_SHA || undefined,
   },
 
+  // WHY: read per call, like role(): a test sets it per case. Only backend/prd_server holds it, so a laptop never pings.
+  healthchecks: {
+    pollerPingUrl(): string | undefined {
+      return process.env.HEALTHCHECKS_POLLER_PING_URL || undefined;
+    },
+  },
+
   app: {
     ios: {
       minVersion: process.env.APP_IOS_MIN_VERSION || "1.0.0",
@@ -159,7 +166,7 @@ const config = {
   },
 
   // WHY: read per call, not at import: ROLE is set per execution context, and a test sets it per case.
-  role(): string {
+  role(): requiredEnv.Role {
     return requiredEnv.envRole(process.env);
   },
 
@@ -210,6 +217,17 @@ if (switchErrors.length > 0) {
   logger.fatal(
     { event: "config.invalid_runtime_switch", errors: switchErrors },
     "Invalid runtime switch — fix the env vars named in `errors`",
+  );
+  if (!isTest) {
+    process.exit(1);
+  }
+}
+
+const invalidRole = requiredEnv.roleErrors(process.env);
+if (invalidRole.length > 0) {
+  logger.fatal(
+    { event: "config.invalid_role", errors: invalidRole },
+    "Invalid ROLE — set it to a role named in `errors`, or leave it unset",
   );
   if (!isTest) {
     process.exit(1);

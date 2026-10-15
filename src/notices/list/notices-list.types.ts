@@ -1,4 +1,4 @@
-import type { NoticeDoc } from "../notices.document";
+import type { NoticeListRow } from "./notices-list.document";
 import type { SummaryType } from "../notices.types";
 
 export interface CursorPayload {
@@ -33,7 +33,7 @@ export interface BriefDates {
 }
 
 export interface NoticePage {
-  items: NoticeDoc[];
+  items: NoticeListRow[];
   nextCursor: string | null;
   hasMore: boolean;
 }

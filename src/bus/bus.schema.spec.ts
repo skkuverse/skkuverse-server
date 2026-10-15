@@ -75,3 +75,31 @@ describe("jongroRoutesConfig", () => {
     expect(messagesOf([route([stn("A", true), stn("B"), stn("A", false, true)])])).toEqual([]);
   });
 });
+
+// WHY: zod runs a superRefine only once every type check has passed, so a file with both kinds of fault
+// fails the boot on its type issues, and on its cross-check issues at the next boot. Accepted (PR 250 F5).
+describe("jongroRoutesConfig with several faults", () => {
+  const typeFaults = () => [route([stn("1", true, true)], { busRouteId: 1 }), route([{ ...stn("2", true, true), stationName: 2 }], { id: "jongro98" })];
+  const crossFaults = () => [route([stn("1", true, true)], { id: "bad" }), route([stn("2", true, true)], { id: "jongro98", themeColor: "zz" })];
+
+  it("reports every type fault in one boot", () => {
+    // Act & Assert
+    expect(messagesOf(typeFaults())).toEqual([
+      "0.busRouteId: Invalid input: expected string, received number",
+      "1.stations.0.stationName: Invalid input: expected string, received number",
+    ]);
+  });
+
+  it("reports every cross-check fault in one boot", () => {
+    // Act & Assert
+    expect(messagesOf(crossFaults())).toEqual(["0.id: must match /^jongro(0[1-9]|[1-9]\\d+)$/", "1.themeColor: must be 6-char hex string"]);
+  });
+
+  it("reports only the type faults of a file that has both kinds", () => {
+    // Act & Assert
+    expect(messagesOf([...typeFaults(), ...crossFaults()])).toEqual([
+      "0.busRouteId: Invalid input: expected string, received number",
+      "1.stations.0.stationName: Invalid input: expected string, received number",
+    ]);
+  });
+});

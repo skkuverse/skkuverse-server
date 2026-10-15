@@ -28,9 +28,7 @@ export const buildingList = z.object({
 });
 
 export const buildingDetail = z.object({
-  // WHY: detail serves `extensions` (always {}) as production does; dropping it is a behavior
-  // change of its own (define-boundary-contracts design, Q5).
-  building: buildingCard.extend({ extensions: z.object({}).optional() }),
+  building: buildingCard,
   floors: z.array(floorGroup),
   connections: z.array(buildingConnection),
 });

@@ -34,6 +34,8 @@ export interface JongroRoute {
   readonly topisIds: ReadonlyArray<string>;
 }
 
+export type ServiceKeyProblem = "missing" | "not-url-encoded";
+
 export interface ServiceNotice {
   style: "info" | "warning" | "error" | string;
   text: string;

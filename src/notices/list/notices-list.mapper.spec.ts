@@ -1,10 +1,10 @@
 /**
- * The list's reshaping: the v1/v2 brief dispatch (buildSummaryBrief), the list item and the page cut from a
+ * The list's reshaping: the v1/v2 brief dispatch (toSummaryBrief), the list item and the page cut from a
  * read of limit + 1, and the cursor encoding (ADR 0007: `c` is still emitted, so a rollback can decode it).
  */
 import { ObjectId } from "mongodb";
 import type { NoticeDoc, SummaryDate } from "../notices.document";
-import { buildSummaryBrief, encodeCursor, toListItem, toNoticePage } from "./notices-list.mapper";
+import { toSummaryBrief, encodeCursor, toListItem, toNoticePage } from "./notices-list.mapper";
 import { decodeCursor } from "./notices-list.rules";
 
 const NOW = new Date("2026-10-09T12:00:00+09:00");
@@ -27,7 +27,7 @@ function app(...windows: { startAt: string | null; endAt: string | null; openEnd
   };
 }
 
-describe("buildSummaryBrief — v1 / v2 dispatch", () => {
+describe("toSummaryBrief — v1 / v2 dispatch", () => {
   function doc(extra: Partial<NoticeDoc>): NoticeDoc {
     return {
       _id: new ObjectId(),
@@ -49,7 +49,7 @@ describe("buildSummaryBrief — v1 / v2 dispatch", () => {
 
   it("uses the role badge for a v2 notice, ignoring the stored type", () => {
     // Act
-    const brief = buildSummaryBrief(
+    const brief = toSummaryBrief(
       doc({
         summaryVersion: 2,
         summaryType: "event",
@@ -71,7 +71,7 @@ describe("buildSummaryBrief — v1 / v2 dispatch", () => {
 
   it("keeps the v1 path when the notice is not v2", () => {
     // Act
-    const v1 = buildSummaryBrief(doc({ summaryType: "event", summaryPeriods: v1Periods }), NOW);
+    const v1 = toSummaryBrief(doc({ summaryType: "event", summaryPeriods: v1Periods }), NOW);
 
     // Assert
     expect(v1).toEqual({
@@ -81,7 +81,7 @@ describe("buildSummaryBrief — v1 / v2 dispatch", () => {
       endAt: { date: "2026-10-15", time: null, label: "행사" },
     });
 
-    const noDates = buildSummaryBrief(
+    const noDates = toSummaryBrief(
       doc({ summaryVersion: 2, summaryType: "event", summaryPeriods: v1Periods }),
       NOW,
     );
@@ -90,7 +90,7 @@ describe("buildSummaryBrief — v1 / v2 dispatch", () => {
 
   it("returns null before the notice is summarized", () => {
     // Act & Assert
-    expect(buildSummaryBrief(doc({ summaryAt: null, summaryVersion: 2, summaryDates: [] }), NOW)).toBeNull();
+    expect(toSummaryBrief(doc({ summaryAt: null, summaryVersion: 2, summaryDates: [] }), NOW)).toBeNull();
   });
 });
 

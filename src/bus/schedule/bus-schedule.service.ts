@@ -8,22 +8,18 @@ import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { createLogThrottle } from "../../infra/log-throttle";
-import { SERVICE_CONFIG } from "../bus.constants";
+import { KST_TIME_ZONE } from "../bus.constants";
+import { serviceConfigOf } from "../bus.rules";
 import type { ServiceConfigEntry } from "../bus.types";
 import { SKKU_REST_DAYS } from "./bus-schedule.config";
 import { BusScheduleRepository } from "./bus-schedule.repository";
-import { firstSelectableDate, isWeekStartParam, pickPattern, toDay, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
+import { firstSelectableDate, isWeekStartInRange, pickPattern, toDay, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
 import type { ScheduleDay, ScheduleWeek, SmartSchedule } from "./bus-schedule.wire";
 
-const TZ = "Asia/Seoul";
 const DATE_FORMAT = "YYYY-MM-DD";
 const HOUR_MS = 60 * 60_000;
 // SEE: docs/explanation/bus-architecture.md (Invariants)
 const WEEK_CACHE_TTL_MS = HOUR_MS;
-
-interface WeekCallLog {
-  warn(fields: Record<string, unknown>, message: string): void;
-}
 
 @Injectable()
 export class BusScheduleService {
@@ -40,31 +36,33 @@ export class BusScheduleService {
   ) {}
 
   // WHY: old app builds still call the deprecated week view; an hourly line per service counts them.
-  async getWeek(serviceId: string, from: unknown, log: WeekCallLog): Promise<WithEtag<ScheduleWeek>> {
+  async getWeek(serviceId: string, from: string | undefined): Promise<WithEtag<ScheduleWeek>> {
     const ticket = this.weekCallThrottle.take(serviceId);
     if (ticket) {
-      log.warn({ event: "bus.schedule.week_endpoint_called", serviceId, suppressed: ticket.suppressed }, "deprecated: /week endpoint called, use /smart");
+      logger.warn({ event: "bus.schedule.week_endpoint_called", serviceId, suppressed: ticket.suppressed }, "deprecated: /week endpoint called, use /smart");
     }
-    if (!isWeekStartParam(from)) throw new AppError("INVALID_DATE_FORMAT", "from must be YYYY-MM-DD", 400);
-    const week = await this.resolveWeek(serviceId, from as string | undefined);
+    if (from !== undefined && !isWeekStartInRange(from, this.clock.now())) {
+      throw new AppError("INVALID_DATE_FORMAT", "from must be a date within a year of today", 400);
+    }
+    const week = await this.resolveWeek(serviceId, from);
     if (!week) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${serviceId}`, 404);
     const hash = crypto.createHash("md5").update(JSON.stringify(week)).digest("hex");
     return withEtag(week, `"week-${serviceId}-${week.from}-${hash}"`);
   }
 
   async resolveWeek(serviceId: string, fromDate?: string): Promise<ScheduleWeek | null> {
-    const serviceConfig = SERVICE_CONFIG[serviceId];
+    const serviceConfig = serviceConfigOf(serviceId);
     if (!serviceConfig) return null;
-    const ref = fromDate ? moment.tz(fromDate, DATE_FORMAT, TZ) : moment(this.clock.now()).tz(TZ);
+    const ref = fromDate ? moment.tz(fromDate, DATE_FORMAT, KST_TIME_ZONE) : moment(this.clock.now()).tz(KST_TIME_ZONE);
     const from = ref.clone().isoWeekday(1).startOf("day").format(DATE_FORMAT);
     const week = await this.weekLoader(serviceId, from, serviceConfig).get();
     return { ...week, requestedFrom: fromDate || null };
   }
 
   async resolveSmartSchedule(serviceId: string): Promise<SmartSchedule | null> {
-    const serviceConfig = SERVICE_CONFIG[serviceId];
+    const serviceConfig = serviceConfigOf(serviceId);
     if (!serviceConfig) return null;
-    const today = moment(this.clock.now()).tz(TZ);
+    const today = moment(this.clock.now()).tz(KST_TIME_ZONE);
     const suspended = this.suspendedResult(serviceId, serviceConfig, today);
     if (suspended) return suspended;
 
@@ -117,7 +115,7 @@ export class BusScheduleService {
   }
 
   private async loadWeek(serviceId: string, from: string, serviceConfig: ServiceConfigEntry): Promise<ScheduleWeek> {
-    const monday = moment.tz(from, DATE_FORMAT, TZ);
+    const monday = moment.tz(from, DATE_FORMAT, KST_TIME_ZONE);
     const [overrides, patterns] = await Promise.all([
       this.repository.listOverrides(serviceId, from, monday.clone().add(6, "days").format(DATE_FORMAT)),
       this.repository.listPatterns(serviceId),

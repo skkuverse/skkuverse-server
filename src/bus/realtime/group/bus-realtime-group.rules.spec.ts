@@ -66,7 +66,7 @@ describe("toStationEtas", () => {
     expect(
       toStationEtas(r07, [
         { stationId: "999999999", sequence: "1", stationName: "비천당", eta: "곧 도착" },
-        { stationId: "100900197", sequence: "6", stationName: "명륜새마을금고" },
+        { stationId: "100900197", sequence: "6", stationName: "명륜새마을금고", eta: "" },
       ]),
     ).toEqual([]);
     expect(toStationEtas(r07, undefined)).toEqual([]);

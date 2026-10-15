@@ -31,13 +31,12 @@ jest.mock("../../infra/config", () => ({
   cache: { enabled: true },
 }));
 
+import { hsscBusDoc, jongroArrivalDoc } from "../../../__tests__/helpers/bus/bus-cache-docs";
 import type { Clock } from "../../infra/clock";
-import type { BusCacheKey } from "./bus-cache.document";
 import { BusCacheRepository } from "./bus-cache.repository";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const clock: Clock = { now: () => NOW };
-const key = (name: string) => name as BusCacheKey;
 
 let busCache: BusCacheRepository;
 
@@ -75,10 +74,10 @@ describe("BusCacheRepository.onModuleInit", () => {
 describe("BusCacheRepository.upsert", () => {
   it("upserts document with data and _updatedAt Date", async () => {
     // Arrange
-    const payload = [{ stationName: "혜화역" }];
+    const payload = [hsscBusDoc()];
 
     // Act
-    await busCache.upsert(key("hssc"), payload as never);
+    await busCache.upsert("hssc", payload);
 
     // Assert
     expect(mockUpdateOne).toHaveBeenCalledWith(
@@ -145,15 +144,15 @@ describe("BusCacheRepository.findValue", () => {
 
   it("fetches from MongoDB on first call and caches the result", async () => {
     // Arrange
-    const data = [{ stationName: "혜화역" }];
+    const data = [jongroArrivalDoc()];
     mockFindOne.mockResolvedValueOnce({
-      _id: "cr_test1",
+      _id: "jongro_stations_07",
       data,
       _updatedAt: new Date(),
     });
 
     // Act
-    const result = await busCache.findValue(key("cr_test1"));
+    const result = await busCache.findValue("jongro_stations_07");
 
     // Assert
     expect(result).toEqual(data);
@@ -162,17 +161,17 @@ describe("BusCacheRepository.findValue", () => {
 
   it("serves from memory on subsequent call within TTL — no MongoDB round-trip", async () => {
     // Arrange
-    const data = [{ stationName: "성균관대입구" }];
+    const data = [jongroArrivalDoc({ stationName: "성균관대입구" })];
     mockFindOne.mockResolvedValueOnce({
-      _id: "cr_test2",
+      _id: "jongro_stations_02",
       data,
       _updatedAt: new Date(),
     });
-    await busCache.findValue(key("cr_test2"));
+    await busCache.findValue("jongro_stations_02");
     jest.clearAllMocks();
 
     // Act
-    const result = await busCache.findValue(key("cr_test2"));
+    const result = await busCache.findValue("jongro_stations_02");
 
     // Assert
     expect(result).toEqual(data);
@@ -182,12 +181,12 @@ describe("BusCacheRepository.findValue", () => {
   it("caches null result when MongoDB has no document", async () => {
     // Arrange
     mockFindOne.mockResolvedValueOnce(null);
-    const first = await busCache.findValue(key("cr_test3"));
+    const first = await busCache.findValue("jongro_locations_08");
     expect(first).toBeNull();
     jest.clearAllMocks();
 
     // Act
-    const second = await busCache.findValue(key("cr_test3"));
+    const second = await busCache.findValue("jongro_locations_08");
 
     // Assert
     expect(second).toBeNull();
@@ -197,8 +196,8 @@ describe("BusCacheRepository.findValue", () => {
   it("re-queries after the in-mem TTL expires", async () => {
     // Arrange
     mockFindOne.mockResolvedValue({
-      _id: "cr_ttl",
-      data: [1],
+      _id: "station",
+      data: "3분후[2번째 전]",
       _updatedAt: new Date(),
     });
     let now = 1_000_000;
@@ -206,20 +205,123 @@ describe("BusCacheRepository.findValue", () => {
 
     try {
       // Act & Assert
-      await busCache.findValue(key("cr_ttl"));
+      await busCache.findValue("station");
       expect(mockFindOne).toHaveBeenCalledTimes(1);
 
       // Within TTL → memory
-      await busCache.findValue(key("cr_ttl"));
+      await busCache.findValue("station");
       expect(mockFindOne).toHaveBeenCalledTimes(1);
 
       // Advance past TTL → re-query
       now += 5001;
       jest.setSystemTime(now);
-      await busCache.findValue(key("cr_ttl"));
+      await busCache.findValue("station");
       expect(mockFindOne).toHaveBeenCalledTimes(2);
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+// WHY: a burst of realtime requests on a cold key must cost one bus_cache read per replica, CACHE=off included,
+// since that memory bounds reads rather than staleness.
+describe("BusCacheRepository.findValue under concurrent misses", () => {
+  const config = jest.requireMock("../../infra/config") as { cache: { enabled: boolean } };
+
+  it("reads once for concurrent misses of one key", async () => {
+    // Arrange
+    mockFindOne.mockResolvedValueOnce({ _id: "hssc", data: [hsscBusDoc()], _updatedAt: NOW });
+
+    // Act
+    const reads = await Promise.all([busCache.findValue("hssc"), busCache.findValue("hssc"), busCache.findValue("hssc")]);
+
+    // Assert
+    expect(mockFindOne).toHaveBeenCalledTimes(1);
+    expect(reads).toEqual([[hsscBusDoc()], [hsscBusDoc()], [hsscBusDoc()]]);
+  });
+
+  it("reads once for concurrent misses of one key with CACHE=off", async () => {
+    // Arrange
+    config.cache.enabled = false;
+    mockFindOne.mockResolvedValueOnce({ _id: "hssc", data: [hsscBusDoc()], _updatedAt: NOW });
+
+    try {
+      // Act
+      await Promise.all([busCache.findValue("hssc"), busCache.findValue("hssc"), busCache.findValue("hssc")]);
+      await busCache.findValue("hssc");
+
+      // Assert
+      expect(mockFindOne).toHaveBeenCalledTimes(1);
+    } finally {
+      config.cache.enabled = true;
+    }
+  });
+});
+
+describe("BusCacheRepository.findValue on a missing key", () => {
+  const START_MS = Date.parse("2026-10-20T01:00:00Z");
+  let nowMs: number;
+  let repository: BusCacheRepository;
+  const missingWarnings = () => mockLogger.warn.mock.calls.filter(([fields]) => fields.event === "bus.cache.missing");
+  const advanceTo = (ms: number) => {
+    nowMs = ms;
+    jest.setSystemTime(ms);
+  };
+
+  beforeEach(() => {
+    nowMs = START_MS;
+    jest.useFakeTimers({ now: START_MS });
+    repository = new BusCacheRepository({ now: () => new Date(nowMs) });
+    mockFindOne.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    mockFindOne.mockReset();
+  });
+
+  it("warns bus.cache.missing with the key", async () => {
+    // Act
+    await repository.findValue("jongro_locations_07");
+
+    // Assert
+    expect(missingWarnings()).toEqual([[{ event: "bus.cache.missing", key: "jongro_locations_07", suppressed: 0 }, expect.any(String)]]);
+  });
+
+  it("warns once a minute per key, counting the reads it skipped", async () => {
+    // Arrange
+    await repository.findValue("hssc");
+    advanceTo(START_MS + 5_001);
+    await repository.findValue("hssc");
+    advanceTo(START_MS + 59_999);
+    await repository.findValue("hssc");
+
+    // Act
+    // WHY: past the minute and past the 5 s memory of the 59_999 read, so the read reaches Mongo again.
+    advanceTo(START_MS + 65_000);
+    await repository.findValue("hssc");
+
+    // Assert
+    expect(missingWarnings().map(([fields]) => fields.suppressed)).toEqual([0, 2]);
+  });
+
+  it("throttles each key on its own", async () => {
+    // Act
+    await repository.findValue("hssc");
+    await repository.findValue("station");
+
+    // Assert
+    expect(missingWarnings().map(([fields]) => fields.key)).toEqual(["hssc", "station"]);
+  });
+
+  it("does not warn when the key holds a value", async () => {
+    // Arrange
+    mockFindOne.mockResolvedValue({ _id: "station", data: "3분후[2번째 전]", _updatedAt: NOW });
+
+    // Act
+    await repository.findValue("station");
+
+    // Assert
+    expect(missingWarnings()).toEqual([]);
   });
 });

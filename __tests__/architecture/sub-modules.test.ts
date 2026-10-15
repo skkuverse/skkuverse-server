@@ -14,34 +14,17 @@
  * job.
  */
 import path from "path";
-import ts from "typescript";
-import { isSharedLayer, resolveRelative } from "../helpers/architecture/ast";
+import { importsOf, isSharedLayer, parseSource, resolveRelative } from "../helpers/architecture/ast";
 import { inScope, moduleScopes } from "../helpers/architecture/scopes";
 import { expectAllowlisted } from "../helpers/architecture/ratchet";
 import { filesUnder, readSource, sourceFiles } from "../helpers/architecture/tree";
 
 
-/** The relative imports and re-exports of a file, with whether each is type-only. */
+/** The relative specifiers a file names, in any form `importsOf` reads, with whether each binding is a type. */
 function relativeImports(file: string, source: string): Array<{ spec: string; typeOnly: boolean }> {
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, false);
-  const out: Array<{ spec: string; typeOnly: boolean }> = [];
-  for (const s of sf.statements) {
-    if (ts.isImportDeclaration(s) && ts.isStringLiteral(s.moduleSpecifier)) {
-      const clause = s.importClause;
-      const typeOnly =
-        !!clause &&
-        (clause.isTypeOnly ||
-          (!clause.name &&
-            !!clause.namedBindings &&
-            ts.isNamedImports(clause.namedBindings) &&
-            clause.namedBindings.elements.length > 0 &&
-            clause.namedBindings.elements.every((e) => e.isTypeOnly)));
-      out.push({ spec: s.moduleSpecifier.text, typeOnly });
-    } else if (ts.isExportDeclaration(s) && s.moduleSpecifier && ts.isStringLiteral(s.moduleSpecifier)) {
-      out.push({ spec: s.moduleSpecifier.text, typeOnly: s.isTypeOnly });
-    }
-  }
-  return out.filter((i) => i.spec.startsWith("."));
+  return importsOf(parseSource(file, source))
+    .filter((i) => i.specifier.startsWith("."))
+    .map((i) => ({ spec: i.specifier, typeOnly: i.isType }));
 }
 
 const feature = (file: string) => file.split("/")[1]!;
@@ -66,7 +49,7 @@ export function subModuleViolations(file: string, source: string, scopes: readon
     const viaProvider = /\.(?:module|service)$/.test(target);
     if (isDescendant || !(viaProvider || typeOnly)) out.push(`${file} → ${target}`);
   }
-  return out;
+  return [...new Set(out)];
 }
 
 describe("sub-module direction rule applies as specified", () => {
@@ -102,6 +85,23 @@ describe("sub-module direction rule applies as specified", () => {
       "src/building/search/building-search.service.ts → src/building/sync/building-sync.mapper",
       "src/building/search/building-search.service.ts → src/building/sync/building-sync.types",
     ]);
+  });
+
+  it.each([
+    ["an import type", 'type T = import("./sync/building-sync.types").SyncedSpace;'],
+    ["an import-equals", 'import sync = require("./sync/building-sync.mapper");'],
+    ["a require call", 'const sync = require("./sync/building-sync.mapper");'],
+    ["a dynamic import", 'const load = () => import("./sync/building-sync.module");'],
+    ["a side-effect import", 'import "./sync/building-sync.module";'],
+  ])("rejects a parent reaching its child through %s", (_case, source) => {
+    // Arrange
+    const file = "src/building/building.service.ts";
+
+    // Act
+    const violations = subModuleViolations(file, source);
+
+    // Assert
+    expect(violations).toHaveLength(1);
   });
 
   it("checks a spec in a scope as its subject, and leaves other specs alone", () => {

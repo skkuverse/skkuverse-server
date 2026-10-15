@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import axios from "axios";
-import { withOneRetry } from "../../../infra/directions-retry";
 import type { LatLng } from "../../../shared/lat-lng.types";
+import { BusEtaClient } from "../bus-eta.client";
 import { toNaverOffsets } from "./bus-eta-live.rules";
 import type { NaverCredentials, NaverDirectionsResponse } from "./bus-eta-live.types";
 
@@ -10,7 +10,7 @@ const TIMEOUT_MS = 5_000;
 const RETRY_DELAY_MS = 3_000;
 
 @Injectable()
-export class BusEtaLiveClient {
+export class BusEtaLiveClient extends BusEtaClient {
   // QUIRK(naver): one Directions 5 call for a whole sequence, as start, waypoints and goal; the keys travel in
   // headers only. Retries once, 3 s later, on a timeout, a reset or a 5xx.
   async fetchOffsets(stops: readonly LatLng[], credentials: NaverCredentials, opts: { retryDelayMs?: number } = {}): Promise<number[]> {
@@ -23,7 +23,7 @@ export class BusEtaLiveClient {
       option: "traoptimal",
     };
     if (stops.length > 2) params.waypoints = stops.slice(1, -1).map((stop) => this.lngLat(stop)).join("|");
-    const res = await withOneRetry(
+    const res = await this.fetchWithOneRetry(
       "naver",
       () =>
         axios.get<NaverDirectionsResponse>(ENDPOINT, {

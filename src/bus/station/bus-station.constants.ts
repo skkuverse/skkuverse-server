@@ -1,6 +1,6 @@
-import type { HsscStation } from "./bus-station.types";
+import type { HsscEtaStation } from "./bus-station.types";
 
-export const HYEHWA_STOP_ID = "01592";
+export const HYEHWA_STATION_ID = "01592";
 
 export const HYEHWA_STATION_NAME = "혜화역(승차장)";
 
@@ -18,18 +18,10 @@ export const LAST_STATION_SEQUENCE = 10;
 // WHY: a bus at the stop longer than this has left in all but name, so the bus behind it answers.
 export const STALE_THRESHOLD_SECONDS = 60;
 
-const station = (sequence: number, stationName: string): HsscStation => ({
-  sequence,
-  stationName,
-  stationNumber: null,
-  eta: NO_ARRIVAL,
-  isFirstStation: sequence === 1,
-  isLastStation: sequence === LAST_STATION_SEQUENCE,
-  isRotationStation: false,
-  busType: "BusType.hsscBus",
-});
+const station = (sequence: number, stationName: string): HsscEtaStation => ({ sequence, stationName });
 
-export const HSSC_STATIONS: readonly HsscStation[] = [
+// (An operations detail is left out of the public history.)
+export const HSSC_ETA_STATIONS: readonly HsscEtaStation[] = [
   station(1, "정차소(인문.농구장)"),
   station(2, "학생회관(인문)"),
   station(3, "정문(인문-하교)"),
