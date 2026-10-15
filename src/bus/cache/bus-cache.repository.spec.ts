@@ -223,3 +223,71 @@ describe("BusCacheRepository.findValue", () => {
     }
   });
 });
+
+describe("BusCacheRepository.findValue on a missing key", () => {
+  const START_MS = Date.parse("2026-10-20T01:00:00Z");
+  let nowMs: number;
+  let repository: BusCacheRepository;
+  const missingWarnings = () => mockLogger.warn.mock.calls.filter(([fields]) => fields.event === "bus.cache.missing");
+  const advanceTo = (ms: number) => {
+    nowMs = ms;
+    jest.setSystemTime(ms);
+  };
+
+  beforeEach(() => {
+    nowMs = START_MS;
+    jest.useFakeTimers({ now: START_MS });
+    repository = new BusCacheRepository({ now: () => new Date(nowMs) });
+    mockFindOne.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    mockFindOne.mockReset();
+  });
+
+  it("warns bus.cache.missing with the key", async () => {
+    // Act
+    await repository.findValue("jongro_locations_07");
+
+    // Assert
+    expect(missingWarnings()).toEqual([[{ event: "bus.cache.missing", key: "jongro_locations_07", suppressed: 0 }, expect.any(String)]]);
+  });
+
+  it("warns once a minute per key, counting the reads it skipped", async () => {
+    // Arrange
+    await repository.findValue("hssc");
+    advanceTo(START_MS + 5_001);
+    await repository.findValue("hssc");
+    advanceTo(START_MS + 59_999);
+    await repository.findValue("hssc");
+
+    // Act
+    // WHY: past the minute and past the 5 s memory of the 59_999 read, so the read reaches Mongo again.
+    advanceTo(START_MS + 65_000);
+    await repository.findValue("hssc");
+
+    // Assert
+    expect(missingWarnings().map(([fields]) => fields.suppressed)).toEqual([0, 2]);
+  });
+
+  it("throttles each key on its own", async () => {
+    // Act
+    await repository.findValue("hssc");
+    await repository.findValue("station");
+
+    // Assert
+    expect(missingWarnings().map(([fields]) => fields.key)).toEqual(["hssc", "station"]);
+  });
+
+  it("does not warn when the key holds a value", async () => {
+    // Arrange
+    mockFindOne.mockResolvedValue({ _id: "station", data: "3분후[2번째 전]", _updatedAt: NOW });
+
+    // Act
+    await repository.findValue("station");
+
+    // Assert
+    expect(missingWarnings()).toEqual([]);
+  });
+});
