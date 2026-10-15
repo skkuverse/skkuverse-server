@@ -8,6 +8,7 @@ import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { createLogThrottle } from "../../infra/log-throttle";
+import { KST_TIME_ZONE } from "../bus.constants";
 import { serviceConfigOf } from "../bus.rules";
 import type { ServiceConfigEntry } from "../bus.types";
 import { SKKU_REST_DAYS } from "./bus-schedule.config";
@@ -15,7 +16,6 @@ import { BusScheduleRepository } from "./bus-schedule.repository";
 import { firstSelectableDate, isWeekStartParam, pickPattern, toDay, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
 import type { ScheduleDay, ScheduleWeek, SmartSchedule } from "./bus-schedule.wire";
 
-const TZ = "Asia/Seoul";
 const DATE_FORMAT = "YYYY-MM-DD";
 const HOUR_MS = 60 * 60_000;
 // SEE: docs/explanation/bus-architecture.md (Invariants)
@@ -55,7 +55,7 @@ export class BusScheduleService {
   async resolveWeek(serviceId: string, fromDate?: string): Promise<ScheduleWeek | null> {
     const serviceConfig = serviceConfigOf(serviceId);
     if (!serviceConfig) return null;
-    const ref = fromDate ? moment.tz(fromDate, DATE_FORMAT, TZ) : moment(this.clock.now()).tz(TZ);
+    const ref = fromDate ? moment.tz(fromDate, DATE_FORMAT, KST_TIME_ZONE) : moment(this.clock.now()).tz(KST_TIME_ZONE);
     const from = ref.clone().isoWeekday(1).startOf("day").format(DATE_FORMAT);
     const week = await this.weekLoader(serviceId, from, serviceConfig).get();
     return { ...week, requestedFrom: fromDate || null };
@@ -64,7 +64,7 @@ export class BusScheduleService {
   async resolveSmartSchedule(serviceId: string): Promise<SmartSchedule | null> {
     const serviceConfig = serviceConfigOf(serviceId);
     if (!serviceConfig) return null;
-    const today = moment(this.clock.now()).tz(TZ);
+    const today = moment(this.clock.now()).tz(KST_TIME_ZONE);
     const suspended = this.suspendedResult(serviceId, serviceConfig, today);
     if (suspended) return suspended;
 
@@ -117,7 +117,7 @@ export class BusScheduleService {
   }
 
   private async loadWeek(serviceId: string, from: string, serviceConfig: ServiceConfigEntry): Promise<ScheduleWeek> {
-    const monday = moment.tz(from, DATE_FORMAT, TZ);
+    const monday = moment.tz(from, DATE_FORMAT, KST_TIME_ZONE);
     const [overrides, patterns] = await Promise.all([
       this.repository.listOverrides(serviceId, from, monday.clone().add(6, "days").format(DATE_FORMAT)),
       this.repository.listPatterns(serviceId),

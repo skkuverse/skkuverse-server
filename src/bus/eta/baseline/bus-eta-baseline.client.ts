@@ -3,6 +3,7 @@ import axios from "axios";
 import moment from "moment-timezone";
 import { withOneRetry } from "../../../infra/directions-retry";
 import type { LatLng } from "../../../shared/lat-lng.types";
+import { KST_TIME_ZONE } from "../../bus.constants";
 import { toTmapOffsets } from "./bus-eta-baseline.rules";
 import type { TmapCall, TmapPredictionResponse } from "./bus-eta-baseline.types";
 
@@ -22,7 +23,7 @@ export class BusEtaBaselineClient {
       departure: this.place("stop0", first),
       destination: this.place(`stop${stops.length - 1}`, last),
       predictionType: "arrival",
-      predictionTime: moment(departAt).tz("Asia/Seoul").format("YYYY-MM-DDTHH:mm:ssZZ"),
+      predictionTime: moment(departAt).tz(KST_TIME_ZONE).format("YYYY-MM-DDTHH:mm:ssZZ"),
       searchOption: "00",
       trafficInfo: "N",
     };

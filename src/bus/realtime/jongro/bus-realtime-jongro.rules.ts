@@ -1,5 +1,5 @@
 import type { BusCacheKey, JongroArrivalDoc } from "../../cache/bus-cache.document";
-import type { JongroRoute } from "../../bus.types";
+import type { JongroRoute, JongroStation } from "../../bus.types";
 import { DWELL_RESET_MINUTES } from "./bus-realtime-jongro.constants";
 import type { JongroBusDwell, MismatchedStation, MissingStation, RegistryDrift, RenamedStation } from "./bus-realtime-jongro.types";
 
@@ -24,6 +24,14 @@ export function toDwell(firstSeenAt: string | undefined, now: Date): JongroBusDw
   return { firstSeenAt, dwellSeconds: Math.round((now.getTime() - new Date(firstSeenAt).getTime()) / 1000) };
 }
 
+// WHY: stations and topisIds come from one registry entry, so an ord with an id and no station is a loader bug,
+// which rejects the tick rather than skipping the check.
+function stationAt(route: JongroRoute, idx: number): JongroStation {
+  const station = route.stations[idx];
+  if (station === undefined) throw new Error(`jongro ${route.code}: a TOPIS id but no station at ord ${idx + 1}`);
+  return station;
+}
+
 function toMismatchesAndRenames(route: JongroRoute, arrivals: readonly JongroArrivalDoc[]) {
   const mismatched: MismatchedStation[] = [];
   const renamed: RenamedStation[] = [];
@@ -34,8 +42,8 @@ function toMismatchesAndRenames(route: JongroRoute, arrivals: readonly JongroArr
       mismatched.push({ staOrd: arrival.sequence, stId: arrival.stationId, stNm: arrival.stationName, expected: expected ?? null });
       continue;
     }
-    const registryName = route.stations[idx]?.stationName;
-    if (registryName !== undefined && registryName !== arrival.stationName) {
+    const registryName = stationAt(route, idx).stationName;
+    if (registryName !== arrival.stationName) {
       renamed.push({ staOrd: arrival.sequence, stNm: arrival.stationName, registryName });
     }
   }
@@ -44,9 +52,9 @@ function toMismatchesAndRenames(route: JongroRoute, arrivals: readonly JongroArr
 
 function toMissingStations(route: JongroRoute, arrivals: readonly JongroArrivalDoc[]): MissingStation[] {
   const seenOrds = new Set(arrivals.map((arrival) => parseInt(arrival.sequence, 10) - 1));
-  return route.stations
-    .map((station, idx) => ({ staOrd: String(idx + 1), topisId: route.topisIds[idx] ?? "", stationName: station.stationName }))
-    .filter((_, idx) => !seenOrds.has(idx));
+  return route.topisIds.flatMap((topisId, idx) =>
+    seenOrds.has(idx) ? [] : [{ staOrd: String(idx + 1), topisId, stationName: stationAt(route, idx).stationName }],
+  );
 }
 
 // QUIRK(topis): the arrival list names every stop of the route on every tick, so it shows when TOPIS adds,

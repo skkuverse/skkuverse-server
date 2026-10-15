@@ -1,10 +1,10 @@
 import moment from "moment-timezone";
 import { DirectionsError } from "../../../shared/directions.error";
 import type { LatLng } from "../../../shared/lat-lng.types";
+import { KST_TIME_ZONE } from "../../bus.constants";
 import { orderAndTotalIssue, stopDistanceIssue } from "../bus-eta.rules";
 import type { FeatureMarks, TmapFeature, TmapPredictionResponse } from "./bus-eta-baseline.types";
 
-const TZ = "Asia/Seoul";
 const REFRESH_HOUR = 4;
 
 const MAX_TOTAL_MISMATCH_S = 30;
@@ -66,7 +66,7 @@ export function toTmapOffsets(res: TmapPredictionResponse, stops: readonly LatLn
 
 /** WHY: the latest 04:00 KST at or before `now`: baselines fetched earlier are refreshed. */
 export function refreshCutoff(now: Date): Date {
-  const local = moment(now).tz(TZ);
+  const local = moment(now).tz(KST_TIME_ZONE);
   const cutoff = local.clone().startOf("day").hour(REFRESH_HOUR);
   if (cutoff.isAfter(local)) cutoff.subtract(1, "day");
   return cutoff.toDate();
