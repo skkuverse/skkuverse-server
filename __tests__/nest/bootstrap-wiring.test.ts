@@ -153,6 +153,18 @@ describe("CORS policy", () => {
     expect(res.headers["access-control-allow-origin"]).toBe(WEBVIEW_ORIGIN);
   });
 
+  // WHY: without Access-Control-Max-Age a browser repeats the preflight before every cross-origin GET.
+  it("lets a browser cache the preflight for a day", async () => {
+    // Act
+    const res = await request(app.getHttpServer())
+      .options("/ping")
+      .set("Origin", WEBVIEW_ORIGIN)
+      .set("Access-Control-Request-Method", "GET");
+
+    // Assert
+    expect(res.headers["access-control-max-age"]).toBe("86400");
+  });
+
   it("grants nothing to an origin that is not ours", async () => {
     const res = await request(app.getHttpServer())
       .get("/ping")
