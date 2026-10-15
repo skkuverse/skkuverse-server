@@ -1,7 +1,15 @@
-import type { JongroArrivalDoc } from "../../cache/bus-cache.document";
+import type { BusCacheKey, JongroArrivalDoc } from "../../cache/bus-cache.document";
 import type { JongroRoute } from "../../bus.types";
 import { DWELL_RESET_MINUTES } from "./bus-realtime-jongro.constants";
 import type { JongroBusDwell, MismatchedStop, MissingStop, RegistryDrift, RenamedStop } from "./bus-realtime-jongro.types";
+
+export function toArrivalsKey(code: string): BusCacheKey & `jongro_stations_${string}` {
+  return `jongro_stations_${code}`;
+}
+
+export function toPositionsKey(code: string): BusCacheKey & `jongro_locations_${string}` {
+  return `jongro_locations_${code}`;
+}
 
 // QUIRK(topis): "0" is data and "4" no result (overnight); any other code is an upstream error.
 export function isUsableHeaderCd(headerCd: string | undefined): boolean {
