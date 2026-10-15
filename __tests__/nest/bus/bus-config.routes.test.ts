@@ -10,7 +10,9 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
+import { busConfig, busGroup } from "../../../src/bus/config/bus-config.wire";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
+import { expectWire } from "../../helpers/contracts/expect-wire";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 let app: NestExpressApplication;
@@ -211,5 +213,20 @@ describe("GET /bus/config/:groupId with an Object.prototype name", () => {
     // Assert
     expect(res.status).toBe(404);
     expect(res.body.error).toEqual({ code: "GROUP_NOT_FOUND", message: `Unknown groupId: ${groupId}` });
+  });
+});
+
+describe("GET /bus/config and /bus/config/:groupId bodies", () => {
+  it.each(["ko", "en"])("parse with their published wire schemas for every group in %s", async (lang) => {
+    // Act
+    const config = await request(httpServer).get("/bus/config").set("Accept-Language", lang);
+    const ids: string[] = config.body.data.groups.map((group: { id: string }) => group.id);
+    const groups = await Promise.all(ids.map((id) => request(httpServer).get(`/bus/config/${id}`).set("Accept-Language", lang)));
+
+    // Assert
+    expect(config.status).toBe(200);
+    expectWire(busConfig, config.body.data);
+    expect(groups.map((res) => res.status)).toEqual(ids.map(() => 200));
+    for (const res of groups) expectWire(busGroup, res.body.data);
   });
 });

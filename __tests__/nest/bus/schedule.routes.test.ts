@@ -11,6 +11,8 @@
  * shuttle-arrival-eta) from the faked estimate store.
  */
 
+import fs from "fs";
+import path from "path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
@@ -22,9 +24,11 @@ import { BusModule } from "../../../src/bus/bus.module";
 import { BusScheduleModule } from "../../../src/bus/schedule/bus-schedule.module";
 import { BusScheduleRepository } from "../../../src/bus/schedule/bus-schedule.repository";
 import { BusScheduleService } from "../../../src/bus/schedule/bus-schedule.service";
+import { scheduleWeek, smartSchedule } from "../../../src/bus/schedule/bus-schedule.wire";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
+import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBusEtaRepository } from "../../helpers/fakes/bus/bus-eta.repository.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
@@ -430,6 +434,18 @@ describe("GET …/smart with arrival estimates", () => {
     expect(res.body.data.days[0].schedule[1]).not.toHaveProperty("eta");
   });
 
+  it.each(["live", "frozen", "predicted"] as const)("A body with %s estimates parses with the published smartSchedule wire", async (source) => {
+    // Arrange
+    store(estimate(source));
+
+    // Act
+    const res = await request(server).get("/bus/schedule/data/campus-inja/smart");
+
+    // Assert
+    expect(res.body.data.days[0].schedule[1].eta.source).toBe(source);
+    expectWire(smartSchedule, res.body.data);
+  });
+
   it("leaves the cached schedule unmutated", async () => {
     // Arrange
     const schedule = etaApp.get(BusScheduleService);
@@ -533,4 +549,62 @@ describe("GET /bus/schedule/data/:serviceId/week with a from that would hang the
     },
     HANG_BUDGET_MS,
   );
+});
+
+// scripts/ is plain CommonJS outside tsconfig, so the reader `npm run schedule` writes with is required.
+const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
+const COMMITTED_PATTERNS = ["campus-schedule.json", "commute-schedule.json"].flatMap((file) =>
+  buildDocuments(parseTimetableFile(JSON.parse(fs.readFileSync(path.join(__dirname, "../../../scripts/data", file), "utf8")))),
+);
+
+describe("GET /bus/schedule/data/:serviceId/week and /smart bodies", () => {
+  it.each(Object.keys(SERVICE_CONFIG))("%s parses with the published wire schemas over the committed timetable and an override", async (serviceId) => {
+    // Arrange
+    jest.setSystemTime(new Date("2026-10-21T03:00:00.000Z"));
+    timetable.patterns = COMMITTED_PATTERNS;
+    timetable.overrides = [
+      {
+        serviceId,
+        date: "2026-10-22",
+        type: "replace",
+        label: "방학",
+        notices: [{ style: "info", text: "2026 하계방학 시간표" }],
+        entries: [{ index: 1, time: "10:00", routeType: "regular", busCount: 1, notes: null }],
+      },
+    ];
+
+    // Act
+    const week = await request(httpServer).get(`/bus/schedule/data/${serviceId}/week?from=2026-10-19`);
+    const smart = await request(httpServer).get(`/bus/schedule/data/${serviceId}/smart`);
+
+    // Assert
+    expect([week.status, smart.status]).toEqual([200, 200]);
+    expect(week.body.data.days.some((day: { label?: string | null }) => day.label === "방학")).toBe(true);
+    expectWire(scheduleWeek, week.body.data);
+    expectWire(smartSchedule, smart.body.data);
+  });
+
+  it("a suspended smart body parses with the published smartSchedule wire", async () => {
+    // Arrange
+    SERVICE_CONFIG["campus-inja"]!.suspend = { from: "2026-03-01", until: "2026-08-31" };
+
+    // Act
+    const res = await request(httpServer).get("/bus/schedule/data/campus-inja/smart");
+
+    // Assert
+    expect(res.body.data.status).toBe("suspended");
+    expectWire(smartSchedule, res.body.data);
+  });
+
+  it("a noData smart body parses with the published smartSchedule wire", async () => {
+    // Arrange
+    timetable.patterns = [];
+
+    // Act
+    const res = await request(httpServer).get("/bus/schedule/data/campus-inja/smart");
+
+    // Assert
+    expect(res.body.data.status).toBe("noData");
+    expectWire(smartSchedule, res.body.data);
+  });
 });

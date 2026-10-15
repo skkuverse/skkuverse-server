@@ -14,6 +14,8 @@ import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";
 import { BusRouteOverlayModule } from "../../../src/bus/route-overlay/bus-route-overlay.module";
 import { BusRouteOverlayService } from "../../../src/bus/route-overlay/bus-route-overlay.service";
+import { routeOverlay } from "../../../src/bus/route-overlay/bus-route-overlay.wire";
+import { expectWire } from "../../helpers/contracts/expect-wire";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 let app: NestExpressApplication;
@@ -103,5 +105,17 @@ describe("GET /bus/route/:routeId with an Object.prototype name", () => {
     // Assert
     expect(res.status).toBe(404);
     expect(res.body.error).toEqual({ code: "NOT_FOUND", message: `Route '${routeId}' not found` });
+  });
+});
+
+describe("GET /bus/route/:routeId bodies", () => {
+  it.each(["jongro07", "jongro02"])("%s parses with the published routeOverlay wire", async (routeId) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/route/${routeId}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.coords.length).toBeGreaterThan(0);
+    expectWire(routeOverlay, res.body.data);
   });
 });
