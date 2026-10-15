@@ -1,11 +1,17 @@
 import type { ObjectId } from "mongodb";
 
+// QUIRK(skkuverse-ai): an absent part is stored as null as often as it is left out.
 export interface SummaryPeriod {
-  startDate?: string;
-  startTime?: string;
-  endDate?: string;
-  endTime?: string;
-  label?: string;
+  startDate?: string | null;
+  startTime?: string | null;
+  endDate?: string | null;
+  endTime?: string | null;
+  label?: string | null;
+}
+
+export interface SummaryLocation {
+  label?: string | null;
+  detail?: string | null;
 }
 
 // QUIRK(skkuverse-ai): v2 times are ISO 8601 with +09:00, and an end with no time is the next day's 00:00.
@@ -56,7 +62,8 @@ export interface NoticeAttachment {
 }
 
 // CONTRACT(skkuverse-crawler): the crawler writes notices (skkuverse-crawler/docs/reference/schema/notices.md) and
-// skkuverse-ai its summary fields. Hot reads are typed, not parsed (ADR 0010 D2, exemptions/repository-reads.json).
+// skkuverse-ai its summary fields. Hot reads are typed, not parsed (ADR 0010 D2, exemptions/repository-reads.json);
+// notices-documents.routes.test.ts serves sampled prod documents through the list and detail reads instead.
 export interface NoticeDoc {
   _id: ObjectId;
   sourceId: string;
@@ -81,7 +88,7 @@ export interface NoticeDoc {
   summaryOneLiner?: string | null;
   summary?: string | null;
   summaryPeriods?: SummaryPeriod[];
-  summaryLocations?: unknown[];
+  summaryLocations?: SummaryLocation[];
   summaryDetails?: SummaryDetails | null;
   summaryModel?: string | null;
   // WHY: the summary is stale when this differs from contentHash: the body changed after summarization.
