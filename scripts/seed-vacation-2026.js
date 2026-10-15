@@ -21,6 +21,7 @@
  */
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
+const { assertValidOverrides } = require("./lib/bus-overrides-validator");
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -84,6 +85,7 @@ function buildOverrides(dates) {
 async function main() {
   const weekdays = generateWeekdays(VACATION_START, VACATION_END);
   const docs = buildOverrides(weekdays);
+  assertValidOverrides(docs);
 
   console.log(`Vacation period: ${VACATION_START} → ${VACATION_END}`);
   console.log(`Weekdays: ${weekdays.length} days`);
