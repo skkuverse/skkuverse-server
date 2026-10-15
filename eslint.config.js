@@ -905,6 +905,13 @@ module.exports = [
     rules: { "src-syntax/generic-names": ["error", ...GENERIC_NAMES] },
   },
   {
+    // docs/explanation/miniapps-architecture.md (Glossary): a class writes `Miniapps…` and a constant `MINIAPP…`;
+    // every other name writes `miniApp`/`MiniApp`, so `miniappX`/`MiniappX` is a third spelling.
+    name: "naming/miniapp-spelling",
+    files: ["src/**/*.ts"],
+    rules: { "id-match": ["error", "^(?!.*[mM]iniapp[A-Z]).*$", { properties: true, classFields: true }] },
+  },
+  {
     name: "specs/fixed-clock",
     files: scopeSpecGlobs(),
     plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
