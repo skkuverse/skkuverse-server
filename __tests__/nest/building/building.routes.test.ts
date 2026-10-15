@@ -302,7 +302,7 @@ describe("GET /building/:skkuId", () => {
     ]);
   });
 
-  it("never sends a building's sync bookkeeping; extensions go in the detail only", async () => {
+  it("never sends a building's sync bookkeeping or its unread extensions", async () => {
     // Arrange
     const synced = {
       ...LAW,
@@ -320,9 +320,8 @@ describe("GET /building/:skkuId", () => {
     // Assert
     expect(detail.body.data.building).not.toHaveProperty("sync");
     expect(detail.body.data.building).not.toHaveProperty("enrichVersion");
-    // The detail contract reserves extensions for future custom data
-    // (docs/archive/flutter-client-guides-2026-03.md); the list leaves it out to stay light.
-    expect(detail.body.data.building.extensions).toEqual({ indoorMap: "reserved" });
+    // No client reads extensions: skkuverse-app's parser falls back to {} (packages/shared/src/building/parser.ts).
+    expect(detail.body.data.building).not.toHaveProperty("extensions");
     expect(list.body.data.buildings[0]).not.toHaveProperty("sync");
     expect(list.body.data.buildings[0]).not.toHaveProperty("enrichVersion");
     expect(list.body.data.buildings[0]).not.toHaveProperty("extensions");

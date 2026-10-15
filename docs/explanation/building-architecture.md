@@ -3,7 +3,7 @@ title: Building Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-11
+last-updated: 2026-10-16
 audience: internal
 ---
 
@@ -85,7 +85,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 | `connections[].targetName`, `targetDisplayNo`, `fromFloor`, `toFloor`, `targetSkkuId` | `ConnectionsSection` and the floor chips; a tap opens the target's sheet |
 | `spaces[].buildingName`, `items[].spaceCd`, `items[].name`, `items[].floor`, `spaces[].skkuId` | `SearchScreen` space rows; a row with a `null` `skkuId` ignores the tap |
 | `meta.buildingCount`, `meta.spaceCount`, `meta.counts` | `SearchScreen` section counts and the campus tabs |
-| `buildNo`, `type`, `image.filename`, `attachments`, `extensions`, `conspaceCd`, `targetBuildNo`, `spaces[].displayNo`, `spaces[].campusLabel`, `meta.keyword` | Parsed, not rendered |
+| `buildNo`, `type`, `image.filename`, `attachments`, `conspaceCd`, `targetBuildNo`, `spaces[].displayNo`, `spaces[].campusLabel`, `meta.keyword` | Parsed, not rendered |
 | `accessibility.detail`, `skkuCreatedAt`, `skkuUpdatedAt`, `updatedAt`, `meta.limits` | Served, not parsed |
 
 ## Invariants
@@ -108,7 +108,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 - `GET /building/list` has no caller in the app, web or mini sources, and only the response-compare script called it in the logs checked. Removing it waits for several days of logs or per-app-version counts.
 - A version stamp that api replicas check, so a sync reaches them before their TTL, is open (`spencer0124/skkuverse#64`).
 - What `conspaceCd` means; nothing reads it.
-- What `extensions` is for: created empty on insert, and served by the detail route only.
+- What `extensions` is for: the sync creates it empty on insert, and no route serves it.
 - buildInfo also sends a floor code (`floor`), which the schema ignores; `floorSortKey` orders floors by the Korean floor name instead.
 
 ## Related
