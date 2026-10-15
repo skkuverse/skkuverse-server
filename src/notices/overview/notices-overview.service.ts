@@ -10,7 +10,8 @@ import { mapOverview, toAiNotice } from "./notices-overview.mapper";
 import { NoticesOverviewRepository } from "./notices-overview.repository";
 import { overviewCacheKey, selectCandidates } from "./notices-overview.rules";
 import type { AiOverviewStatus } from "./notices-overview.schema";
-import type { OverviewCandidate, OverviewRequest, OverviewResult, UnavailableCause } from "./notices-overview.types";
+import type { OverviewCandidate } from "./notices-overview.document";
+import type { OverviewRequest, OverviewResult, UnavailableCause } from "./notices-overview.types";
 import type { Overview } from "./notices-overview.wire";
 
 type Generated = { kind: "answer"; overview: Overview; aiStatus: AiOverviewStatus } | { kind: "no_answer" };

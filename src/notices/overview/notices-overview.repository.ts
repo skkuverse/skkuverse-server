@@ -5,7 +5,7 @@ import { mongoCollection } from "../../infra/mongo";
 import type { NoticeDoc } from "../notices.document";
 import { RETRIEVAL_MAX_TIME_MS } from "./notices-overview.constants";
 import { toOverviewPipeline } from "./notices-overview.query";
-import type { OverviewCandidate } from "./notices-overview.types";
+import type { OverviewCandidate } from "./notices-overview.document";
 
 @Injectable()
 export class NoticesOverviewRepository {

@@ -1,5 +1,6 @@
 import type { Document } from "mongodb";
 import { RETRIEVAL_LIMIT } from "./notices-overview.constants";
+import type { OverviewCandidate } from "./notices-overview.document";
 import type { OverviewPipelineInput } from "./notices-overview.types";
 
 const TEXT_PATHS = ["title", "summaryOneLiner", "summary", "contentText"];
@@ -22,7 +23,7 @@ export const CANDIDATE_PROJECTION = {
   contentHash: 1,
   summaryContentHash: 1,
   summaryApplication: 1,
-} as const;
+} as const satisfies Record<keyof OverviewCandidate, 1>;
 
 /**
  * QUIRK(atlas): one $rankFusion over the lexical index notices_search (nori) and the autoEmbed vector index

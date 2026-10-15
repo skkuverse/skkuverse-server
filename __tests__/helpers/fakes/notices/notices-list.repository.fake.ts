@@ -5,6 +5,7 @@
  * newest first by (date, _id), one more than the limit, and only the fields of LIST_PROJECTION.
  */
 import config from "../../../../src/infra/config";
+import type { NoticeListRow } from "../../../../src/notices/list/notices-list.document";
 import { LIST_PROJECTION } from "../../../../src/notices/list/notices-list.query";
 import type { NoticesListRepository } from "../../../../src/notices/list/notices-list.repository";
 import type { NoticeListQuery, NoticeScope } from "../../../../src/notices/list/notices-list.types";
@@ -18,15 +19,15 @@ const newestFirst = (a: NoticeDoc, b: NoticeDoc): number =>
   byCodeUnit(b.date, a.date) || byCodeUnit(b._id.toHexString(), a._id.toHexString());
 
 /** An inclusion projection: only the listed fields that the document has. */
-const project = (doc: NoticeDoc, projection: Readonly<Record<string, 1>>): NoticeDoc =>
-  Object.fromEntries(Object.keys(projection).filter((f) => Object.hasOwn(doc, f)).map((f) => [f, doc[f as keyof NoticeDoc]])) as unknown as NoticeDoc;
+const project = (doc: NoticeDoc): NoticeListRow =>
+  Object.fromEntries(Object.keys(LIST_PROJECTION).filter((f) => Object.hasOwn(doc, f)).map((f) => [f, doc[f as keyof NoticeDoc]])) as unknown as NoticeListRow;
 
 export class FakeNoticesListRepository implements PublicOf<NoticesListRepository> {
   docs: NoticeDoc[] = [];
 
   async onModuleInit(): Promise<void> {}
 
-  async listNotices(scope: NoticeScope, query: NoticeListQuery): Promise<NoticeDoc[]> {
+  async listNotices(scope: NoticeScope, query: NoticeListQuery): Promise<NoticeListRow[]> {
     const sources = typeof scope === "string" ? [scope] : scope;
     return this.docs
       .filter((doc) => sources.includes(doc.sourceId) && doc.isDeleted !== true && doc.date >= config.notices.serviceStartDate)
@@ -35,7 +36,7 @@ export class FakeNoticesListRepository implements PublicOf<NoticesListRepository
       .filter((doc) => !query.q || this.matchesSearch(doc, query.q))
       .sort(newestFirst)
       .slice(0, query.limit + 1)
-      .map((doc) => project(doc, LIST_PROJECTION));
+      .map(project);
   }
 
   private isAfterCursor(doc: NoticeDoc, date: string, id: string): boolean {
