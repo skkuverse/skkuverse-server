@@ -2,7 +2,7 @@ import os from "os";
 import pino, { type LoggerOptions } from "pino";
 import { currentLogContext } from "./log-context";
 import { REDACT_PATHS, serializeError } from "./log-redact";
-import { envRole } from "./required-env";
+import { envRoleLabel } from "./required-env";
 
 /** WHY: apart from logger.ts, so a test can build a logger that writes to a buffer with exactly these options. */
 export function loggerOptions(): LoggerOptions {
@@ -12,7 +12,7 @@ export function loggerOptions(): LoggerOptions {
       pid: process.pid,
       hostname: os.hostname(),
       service: "skkuverse-server",
-      role: envRole(process.env),
+      role: envRoleLabel(process.env),
     },
     timestamp: pino.stdTimeFunctions.isoTime,
     formatters: {

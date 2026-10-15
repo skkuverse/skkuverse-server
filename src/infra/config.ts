@@ -166,7 +166,7 @@ const config = {
   },
 
   // WHY: read per call, not at import: ROLE is set per execution context, and a test sets it per case.
-  role(): string {
+  role(): requiredEnv.Role {
     return requiredEnv.envRole(process.env);
   },
 
@@ -217,6 +217,17 @@ if (switchErrors.length > 0) {
   logger.fatal(
     { event: "config.invalid_runtime_switch", errors: switchErrors },
     "Invalid runtime switch — fix the env vars named in `errors`",
+  );
+  if (!isTest) {
+    process.exit(1);
+  }
+}
+
+const invalidRole = requiredEnv.roleErrors(process.env);
+if (invalidRole.length > 0) {
+  logger.fatal(
+    { event: "config.invalid_role", errors: invalidRole },
+    "Invalid ROLE — set it to a role named in `errors`, or leave it unset",
   );
   if (!isTest) {
     process.exit(1);

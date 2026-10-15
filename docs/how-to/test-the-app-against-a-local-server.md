@@ -3,7 +3,7 @@ title: Test the App Against a Local Server
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-11
+last-updated: 2026-10-15
 audience: internal
 ---
 
@@ -102,6 +102,7 @@ Sentry is off locally: the dev keys carry no `SENTRY_DSN`.
 | A change in a `_dev` database does not show, and no request reaches the server log | The phone's HTTP cache is answering from an earlier run with `CACHE=on` (`max-age` up to 24 h, kept across app restarts). Clear the app's storage or reinstall it once. |
 | A change does not show, and the request does reach the server | The data is read once at boot (notice tabs, mini-app registry, home layout): save any `.ts` or `.json` file under `src/` to restart, or the screen caches it in the app (React Query `staleTime`): pull to refresh or reopen the screen. |
 | Boot fails with `config.invalid_runtime_switch` | A switch has a value outside its enum, or one of the three refused combinations. |
+| Boot fails with `config.invalid_role` | `ROLE` is set to a value other than `api`, `poller` or `combined`. Leave it unset for a local run, which boots as `combined`. |
 | A local web page gets no `Access-Control-Allow-Origin` | Only `http://localhost:*` and `http://127.0.0.1:*` are allowed in development, not LAN addresses. |
 
 ## Related
