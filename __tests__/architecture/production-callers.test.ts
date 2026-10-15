@@ -3,7 +3,7 @@
  * A fake implements every public member (`PublicOf`, fake-shape.test.ts), so a
  * method made public only for a spec spreads into the fakes and the contract.
  *
- * In a module scope, each public method of a class in a `.service.ts`,
+ * In a module scope, each public method or getter of a class in a `.service.ts`,
  * `.repository.ts` or `.client.ts` (Nest lifecycle hooks aside) is named, as
  * `<expression>.<method>`, in a non-spec `src/` file other than its own. The
  * type checker resolves each access, so a method sharing a name with another
@@ -24,10 +24,17 @@ import { readSource, sourceFiles } from "../helpers/architecture/tree";
 const CLASS_ROLE = /\.(?:service|repository|client)\.ts$/;
 
 /**
- * The lib's mapped types a reader names a class through. Without a lib, `Pick<Class, "m">` resolves to nothing, so a
- * call through it would reach no declaration.
+ * The lib's mapped types a reader names a class through. Without a lib, `Pick<Class, "m">` (or `Omit`, `Partial`,
+ * `Readonly`, `Required`) resolves to nothing, so a call through it would reach no declaration.
  */
-const LIB_STUB = "type Pick<T, K extends keyof T> = { [P in K]: T[P] };";
+const LIB_STUB = [
+  "type Pick<T, K extends keyof T> = { [P in K]: T[P] };",
+  "type Exclude<T, U> = T extends U ? never : T;",
+  "type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;",
+  "type Partial<T> = { [P in keyof T]?: T[P] };",
+  "type Readonly<T> = { readonly [P in keyof T]: T[P] };",
+  "type Required<T> = { [P in keyof T]-?: T[P] };",
+].join("\n");
 
 /** A type-checked program over in-memory sources: relative imports resolve among them, packages stay unresolved. */
 function programOf(sources: ReadonlyMap<string, string>): ts.Program {
@@ -54,12 +61,18 @@ function programOf(sources: ReadonlyMap<string, string>): ts.Program {
 
 const repoPath = (sf: ts.SourceFile): string => sf.fileName.replace(/^\//, "");
 
+type Member = ts.MethodDeclaration | ts.GetAccessorDeclaration;
+
+/** A method or a getter, both reached as `<expression>.<name>`. */
+const isMethodOrGetter = (m: ts.ClassElement): m is Member =>
+  (ts.isMethodDeclaration(m) || ts.isGetAccessor(m)) && ts.isIdentifier(m.name);
+
 /** `Class.method` for each public method of the classes a source declares. */
 export function publicMethods(file: string, source: string): string[] {
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   return sf.statements.filter(ts.isClassDeclaration).flatMap((cls) =>
     cls.members
-      .filter((m): m is ts.MethodDeclaration => ts.isMethodDeclaration(m) && ts.isIdentifier(m.name))
+      .filter(isMethodOrGetter)
       .filter((m) => !isNonPublic(m) && !NEST_LIFECYCLE.has(m.name.getText(sf)))
       .map((m) => `${cls.name?.text ?? "(anonymous)"}.${m.name.getText(sf)}`),
   );
@@ -92,7 +105,7 @@ export function uncalledMethods(sources: ReadonlyMap<string, string>, scopes: re
       const file = repoPath(sf);
       return sf.statements.filter(ts.isClassDeclaration).flatMap((cls) =>
         cls.members
-          .filter((m): m is ts.MethodDeclaration => ts.isMethodDeclaration(m) && ts.isIdentifier(m.name))
+          .filter(isMethodOrGetter)
           .filter((m) => !isNonPublic(m) && !NEST_LIFECYCLE.has(m.name.getText(sf)))
           .filter((m) => ![...(reachedFrom.get(m) ?? [])].some((other) => other !== file))
           .map((m) => `${file}: ${cls.name?.text ?? "(anonymous)"}.${m.name.getText(sf)}`),
@@ -155,6 +168,39 @@ export class XService {
 
     // Act & Assert
     expect(uncalledMethods(sources, ["src/x/"])).toEqual(["src/x/x.service.ts: XService.orphan"]);
+  });
+});
+
+describe("production caller rule reads lib types and accessors", () => {
+  const X_SERVICE = 'export class XService { isX(value: string): boolean { return value !== ""; } orphan(): void {} }';
+
+  it.each([
+    ["Omit", 'Omit<XService, "orphan">'],
+    ["Partial", "Partial<XService>"],
+    ["Readonly", "Readonly<XService>"],
+    ["Required", "Required<XService>"],
+  ])("counts a call through %s of the class", (_label, readerType) => {
+    // Arrange
+    const sources = new Map([
+      ["src/x/x.service.ts", X_SERVICE],
+      ["src/y/y.types.ts", `import type { XService } from "../x/x.service";\nexport type XReader = ${readerType};`],
+      ["src/y/y.config.ts", 'import type { XReader } from "./y.types";\nexport const check = (reader: XReader): boolean => reader.isX("a");'],
+    ]);
+
+    // Act & Assert
+    expect(uncalledMethods(sources, ["src/x/"])).toEqual(["src/x/x.service.ts: XService.orphan"]);
+  });
+
+  it("flags a getter only its own file reads, and passes one another source reads", () => {
+    // Arrange
+    const sources = new Map([
+      ["src/x/x.service.ts", "export class XService { get version(): number { return 1; } get unread(): number { return 2; } }"],
+      ["src/y/y.service.ts", 'import { XService } from "../x/x.service";\nexport class YService { constructor(private readonly x: XService) {} v(): number { return this.x.version; } }'],
+    ]);
+
+    // Act & Assert
+    expect(publicMethods("src/x/x.service.ts", sources.get("src/x/x.service.ts")!)).toEqual(["XService.version", "XService.unread"]);
+    expect(uncalledMethods(sources, ["src/x/"])).toEqual(["src/x/x.service.ts: XService.unread"]);
   });
 });
 
