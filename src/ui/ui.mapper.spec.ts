@@ -2,10 +2,11 @@
  * The carousel as served: text in the request language with en and then ko
  * behind it, the default item kept where it sits, a closed image dropped, an
  * image's action sent only when it has one, and nothing kept only on disk (the
- * window, the untranslated alt) on the wire.
+ * window, the untranslated alt) on the wire. A web view link its check would
+ * have refused throws rather than being served raw.
  */
 import { WEBVIEW_ORIGIN } from "../infra/origins";
-import { toBannerCarousel, toLocalizedText } from "./ui.mapper";
+import { toBannerCarousel, toLocalizedText, toServedActionValue } from "./ui.mapper";
 import type { BannerImageRaw } from "./ui.schema";
 import { bannerCarousel } from "./ui.wire";
 
@@ -105,5 +106,18 @@ describe("toBannerCarousel", () => {
 
     // Assert
     expect(served.items).toEqual([]);
+  });
+});
+
+describe("toServedActionValue", () => {
+  it("serves a web view link absolute and any other link as it is", () => {
+    // Act & Assert
+    expect(toServedActionValue("webview", "/skku/lostandfound")).toBe(`${WEBVIEW_ORIGIN}/skku/lostandfound`);
+    expect(toServedActionValue("external", "https://evil.com/x")).toBe("https://evil.com/x");
+  });
+
+  it("throws on a web view link its check would have refused, rather than serving it raw", () => {
+    // Act & Assert
+    expect(() => toServedActionValue("webview", "https://evil.com/x")).toThrow(/toWebviewUrl refuses it/);
   });
 });
