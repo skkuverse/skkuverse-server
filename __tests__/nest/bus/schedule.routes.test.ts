@@ -95,7 +95,7 @@ describe("GET /bus/schedule/data/:serviceId/week", () => {
       days: expect.any(Array),
     });
     expect(res.body.data.days).toHaveLength(7);
-    expect(res.body.meta.lang).toBe("ko");
+    expect(res.body.meta).toEqual({});
     expect(res.headers["x-response-time"]).toMatch(/ms$/);
   });
 

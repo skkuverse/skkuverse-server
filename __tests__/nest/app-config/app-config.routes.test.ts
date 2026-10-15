@@ -34,7 +34,7 @@ describe("GET /app/config", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.meta.lang).toBe("ko");
+    expect(res.body.meta).toEqual({});
     expect(res.body.data).toHaveProperty("ios");
     expect(res.body.data).toHaveProperty("android");
     expect(res.body.data.ios).toHaveProperty("minVersion");
@@ -148,18 +148,17 @@ describe("GET /app/config", () => {
     expect(res.status).toBe(200);
   });
 
-  it("reflects the requested language in meta.lang", async () => {
+  it("serves the same body for every language and names none in meta, since the edge cache keeps one copy", async () => {
     // Act
-    const res = await request(httpServer)
+    const ko = await request(httpServer).get("/app/config");
+    const en = await request(httpServer)
       .get("/app/config")
       .set("Accept-Language", "en");
 
     // Assert
-    expect(res.status).toBe(200);
-    expect(res.body.meta.lang).toBe("en");
-    // Static config is language-independent; only meta.lang changes.
-    expect(res.body.data).toHaveProperty("ios");
-    expect(res.body.data).toHaveProperty("android");
+    expect(en.status).toBe(200);
+    expect(en.body.meta).toEqual({});
+    expect(en.body).toEqual(ko.body);
   });
 });
 

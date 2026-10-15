@@ -1,3 +1,10 @@
+import type { SupportedLang } from "../infra/types";
+
+export interface SuccessEnvelope {
+  readonly meta: { readonly lang?: SupportedLang } & Readonly<Record<string, unknown>>;
+  readonly data: unknown;
+}
+
 export type SuccessMeta = Readonly<Record<string, unknown>> & { readonly lang?: never };
 
 export interface WithMeta<T, M extends SuccessMeta> {
