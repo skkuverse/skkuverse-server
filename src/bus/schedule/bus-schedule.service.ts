@@ -13,17 +13,13 @@ import { serviceConfigOf } from "../bus.rules";
 import type { ServiceConfigEntry } from "../bus.types";
 import { SKKU_REST_DAYS } from "./bus-schedule.config";
 import { BusScheduleRepository } from "./bus-schedule.repository";
-import { firstSelectableDate, isWeekStartParam, pickPattern, toDay, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
+import { firstSelectableDate, pickPattern, toDay, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
 import type { ScheduleDay, ScheduleWeek, SmartSchedule } from "./bus-schedule.wire";
 
 const DATE_FORMAT = "YYYY-MM-DD";
 const HOUR_MS = 60 * 60_000;
 // SEE: docs/explanation/bus-architecture.md (Invariants)
 const WEEK_CACHE_TTL_MS = HOUR_MS;
-
-interface WeekCallLog {
-  warn(fields: Record<string, unknown>, message: string): void;
-}
 
 @Injectable()
 export class BusScheduleService {
@@ -40,13 +36,12 @@ export class BusScheduleService {
   ) {}
 
   // WHY: old app builds still call the deprecated week view; an hourly line per service counts them.
-  async getWeek(serviceId: string, from: unknown, log: WeekCallLog): Promise<WithEtag<ScheduleWeek>> {
+  async getWeek(serviceId: string, from: string | undefined): Promise<WithEtag<ScheduleWeek>> {
     const ticket = this.weekCallThrottle.take(serviceId);
     if (ticket) {
-      log.warn({ event: "bus.schedule.week_endpoint_called", serviceId, suppressed: ticket.suppressed }, "deprecated: /week endpoint called, use /smart");
+      logger.warn({ event: "bus.schedule.week_endpoint_called", serviceId, suppressed: ticket.suppressed }, "deprecated: /week endpoint called, use /smart");
     }
-    if (!isWeekStartParam(from)) throw new AppError("INVALID_DATE_FORMAT", "from must be YYYY-MM-DD", 400);
-    const week = await this.resolveWeek(serviceId, from as string | undefined);
+    const week = await this.resolveWeek(serviceId, from);
     if (!week) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${serviceId}`, 404);
     const hash = crypto.createHash("md5").update(JSON.stringify(week)).digest("hex");
     return withEtag(week, `"week-${serviceId}-${week.from}-${hash}"`);

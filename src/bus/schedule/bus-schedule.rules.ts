@@ -5,15 +5,10 @@ import type { DaySources, PickedPattern, RestDays, SuspendWindow } from "./bus-s
 import type { ScheduleDay, ScheduleNotice } from "./bus-schedule.wire";
 
 const DATE_FORMAT = "YYYY-MM-DD";
-const WEEK_START_PARAM = /^\d{4}-\d{2}-\d{2}$/;
 
 // QUIRK(date-holidays): computes KR holidays for any year, substitute holidays included; ad-hoc ones the
 // library cannot predict go in skku-rest-days.json.
 const krHolidays = new Holidays("KR");
-
-export function isWeekStartParam(from: unknown): boolean {
-  return from === undefined || WEEK_START_PARAM.test(String(from));
-}
 
 /** WHY: exact date first, then the yearly MM-DD rule. */
 export function lookupRestDay(restDays: RestDays, dateStr: string): string | null {

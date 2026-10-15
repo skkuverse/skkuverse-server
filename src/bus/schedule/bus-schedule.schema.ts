@@ -44,3 +44,11 @@ export const restDaysFile = z.record(z.string(), z.unknown()).superRefine((raw, 
     else if (!EXACT_KEY.test(key) && !ANNUAL_KEY.test(key)) ctx.addIssue({ code: "custom", path: [], message: `"${key}" is neither YYYY-MM-DD nor MM-DD` });
   }
 });
+
+const WEEK_START = /^\d{4}-\d{2}-\d{2}$/;
+const WEEK_START_MESSAGE = "from must be YYYY-MM-DD";
+
+// QUIRK(express): `?from=A&from=B` arrives as an array, which the string check refuses with the same message.
+export const weekQuery = z.object({
+  from: z.string({ error: WEEK_START_MESSAGE }).regex(WEEK_START, { error: WEEK_START_MESSAGE }).optional(),
+});
