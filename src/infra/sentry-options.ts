@@ -22,8 +22,9 @@ export function sentryOptions(): Sentry.NodeOptions {
       stackFrameVariables: false,
     },
     integrations: [
+      // (An operations detail is left out of the public history.)
       Sentry.pinoIntegration({
-        log: { levels: ["info", "warn", "error", "fatal"] },
+        log: { levels: [] },
         error: { levels: [] },
       }),
     ],
