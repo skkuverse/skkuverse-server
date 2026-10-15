@@ -12,15 +12,15 @@
  * edit here.
  *
  * `/week` takes its week from `?from=` and refuses one more than a year from
- * today, so `Clock` stands at 10:00 KST on Tuesday 2026-10-20. Each test asks
- * for its own week: ScheduleService keeps a resolved week for an hour per
- * process, which one test pins on purpose.
+ * today, so `Clock` stands at 10:00 KST on Tuesday 2026-10-20. Each test boots
+ * its own app: ScheduleService keeps a resolved week in memory for an hour,
+ * which one test pins on purpose.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Collection, Document } from "mongodb";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
-import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
@@ -46,6 +46,7 @@ function entries(...times: string[]): Document[] {
 let mongod: TestMongod;
 let db: Db;
 let config: Config;
+let buildTestApp: BuildTestApp;
 let app: NestExpressApplication;
 let schedules: Collection;
 let overrides: Collection;
@@ -55,21 +56,15 @@ beforeAll(async () => {
   db = require("../../../src/infra/db") as Db;
   config = require("../../../src/infra/config") as Config;
   assertConfigReaches(mongod, config.mongo.url);
-  const { buildTestApp } = require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp };
+  buildTestApp = (require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp }).buildTestApp;
 
   const busDb = db.getClient().db(config.mongo.dbName);
   schedules = busDb.collection("bus_schedules");
   overrides = busDb.collection("bus_overrides");
-  app = await buildTestApp({
-    imports: appModulesUnder("src/scheduling/", "src/bus/"),
-    overrides: [{ provide: Clock, useValue: CLOCK }],
-    role: "api",
-  });
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
   try {
-    await app?.close();
     await db?.closeClient();
   } finally {
     await mongod?.stop();
@@ -78,6 +73,15 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await clearCollections(db.getClient().db(config.mongo.dbName));
+  app = await buildTestApp({
+    imports: appModulesUnder("src/scheduling/", "src/bus/"),
+    overrides: [{ provide: Clock, useValue: CLOCK }],
+    role: "api",
+  });
+}, APP_BOOT_TIMEOUT_MS);
+
+afterEach(async () => {
+  await app?.close();
 });
 
 function week(serviceId: string, from: string): request.Test {
