@@ -1,8 +1,9 @@
 /**
  * BusRealtimeJongroClient over a mocked axios: TOPIS's arrival and position
  * envelopes translated to the cached shapes, "0" and "4" accepted, any other
- * header code rejected with the code attached, and a missing list read as
- * nothing to store.
+ * header code rejected with the code attached, "4" (no result, TOPIS's
+ * overnight answer) read as an empty list, and any other answer without a
+ * list rejected.
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
 
@@ -79,14 +80,35 @@ describe("BusRealtimeJongroClient.fetchArrivals", () => {
     expect(await new BusRealtimeJongroClient().fetchArrivals(route07)).toHaveLength(0);
   });
 
-  it("reads no result (4) and a missing envelope as nothing to store", async () => {
+  it("reads no result (4) as an empty list, so the tick still writes", async () => {
     // Arrange
     respond({ msgHeader: { headerCd: "4", headerMsg: "결과가 없습니다." }, msgBody: { itemList: null } });
 
     // Act & Assert
-    expect(await new BusRealtimeJongroClient().fetchArrivals(route07)).toBeNull();
+    expect(await new BusRealtimeJongroClient().fetchArrivals(route07)).toEqual([]);
+  });
+
+  it("rejects a body with no envelope, naming the list", async () => {
+    // Arrange
     respond(null);
-    expect(await new BusRealtimeJongroClient().fetchArrivals(route07)).toBeNull();
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toMatchObject({
+      name: "UpstreamError",
+      upstream: "topis",
+      message: "TOPIS response has no itemList (jongro 07 list)",
+    });
+  });
+
+  it("rejects a 0 answer whose itemList is null", async () => {
+    // Arrange
+    respond({ msgHeader: { headerCd: "0" }, msgBody: { itemList: null } });
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toMatchObject({
+      name: "UpstreamError",
+      headerCd: "0",
+    });
   });
 
   it("rejects on a TOPIS error code, carrying the code", async () => {
@@ -116,6 +138,25 @@ describe("BusRealtimeJongroClient.fetchSightings", () => {
     // Assert
     expect(result).toEqual([{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537" }]);
     expect(axios.get).toHaveBeenCalledWith(route07.positionsUrl, { timeout: 10000 });
+  });
+
+  it("reads no result (4), TOPIS's overnight answer, as no bus", async () => {
+    // Arrange
+    respond({ msgHeader: { headerCd: "4", headerMsg: "결과가 없습니다." }, msgBody: { itemList: null } });
+
+    // Act & Assert
+    expect(await new BusRealtimeJongroClient().fetchSightings(route07)).toEqual([]);
+  });
+
+  it("rejects a body with no envelope, naming the location list", async () => {
+    // Arrange
+    respond("<OpenAPI_ServiceResponse></OpenAPI_ServiceResponse>");
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchSightings(route07)).rejects.toMatchObject({
+      name: "UpstreamError",
+      message: "TOPIS response has no itemList (jongro 07 location)",
+    });
   });
 
   it("rejects each route's tick on an API error", async () => {

@@ -338,3 +338,66 @@ describe("bus_cache between a poller process and an api replica", () => {
     expect([sameInstant, justBefore, atExpiry].map((r) => r.body.meta.totalBuses)).toEqual([0, 0, 2]);
   });
 });
+
+// WHY: overnight TOPIS answers "4" (no result) and HSSC an empty array; the pollers write that as an empty
+// value, so a key goes missing only when its poller stops writing, which is what bus.cache.missing reports.
+describe("bus_cache when the upstreams list no bus", () => {
+  const TOPIS_NO_RESULT = { msgHeader: { headerCd: "4", headerMsg: "결과가 없습니다." }, msgBody: { itemList: null } };
+  const PATHS = ["/bus/realtime/data/hssc", "/bus/realtime/data/jongro02", "/bus/realtime/data/jongro08", "/bus/station/01592"];
+  const tickAll = async () => {
+    for (const name of ["hssc", "station", "jongro-02", "jongro-08"]) await tick(name);
+  };
+
+  beforeEach(() => {
+    upstream.hssc = [];
+    upstream.station = TOPIS_NO_RESULT;
+  });
+
+  it("writes an empty value under every key", async () => {
+    // Act
+    await tickAll();
+
+    // Assert
+    expect(await busCache.find({}).sort({ _id: 1 }).toArray()).toEqual([
+      { _id: "hssc", _updatedAt: NOW, data: [] },
+      { _id: "jongro_locations_02", _updatedAt: NOW, data: [] },
+      { _id: "jongro_locations_08", _updatedAt: NOW, data: [] },
+      { _id: "jongro_stations_02", _updatedAt: NOW, data: [] },
+      { _id: "jongro_stations_08", _updatedAt: NOW, data: [] },
+      { _id: "station", _updatedAt: NOW, data: "정보 없음" },
+    ]);
+  });
+
+  it("serves byte for byte what the api replica served with the keys missing", async () => {
+    // Arrange
+    const missing = await Promise.all(PATHS.map((path) => get(path)));
+    await tickAll();
+    // WHY: past the replica's 5 s memory of the missing reads.
+    jest.setSystemTime(NOW.getTime() + 5_000);
+
+    // Act
+    const written = await Promise.all(PATHS.map((path) => get(path)));
+
+    // Assert
+    expect(written.map((res) => [res.status, res.headers["cache-control"], res.text])).toEqual(
+      missing.map((res) => [res.status, res.headers["cache-control"], res.text]),
+    );
+  });
+
+  it("logs no bus.cache.missing once the pollers have written", async () => {
+    // Arrange
+    const logger = require("../../../src/infra/logger") as { warn: (...args: unknown[]) => void };
+    const warn = jest.spyOn(logger, "warn");
+
+    try {
+      // Act
+      await tickAll();
+      await Promise.all(PATHS.map((path) => get(path)));
+
+      // Assert
+      expect(warn.mock.calls.filter(([fields]) => (fields as { event?: string }).event === "bus.cache.missing")).toEqual([]);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});

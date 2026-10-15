@@ -4,7 +4,7 @@ import { UpstreamError } from "../../../infra/upstream.error";
 import type { JongroArrivalDoc } from "../../cache/bus-cache.document";
 import type { JongroRoute } from "../../bus.types";
 import { toCarNumber } from "./bus-realtime-jongro.mapper";
-import { isUsableHeaderCd } from "./bus-realtime-jongro.rules";
+import { isNoResultHeaderCd, isUsableHeaderCd } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -34,25 +34,28 @@ interface TopisPositionRow {
 
 @Injectable()
 export class BusRealtimeJongroClient {
-  // WHY: null when TOPIS lists nothing (overnight or no envelope), which keeps the last arrivals.
-  async fetchArrivals(route: JongroRoute): Promise<JongroArrivalDoc[] | null> {
+  async fetchArrivals(route: JongroRoute): Promise<JongroArrivalDoc[]> {
     const rows = await this.fetchRows<TopisArrivalRow>(route.arrivalsUrl, `jongro ${route.code} list`);
-    return rows?.map((row) => this.toArrival(row)) ?? null;
+    return rows.map((row) => this.toArrival(row));
   }
 
-  async fetchSightings(route: JongroRoute): Promise<JongroBusSighting[] | null> {
+  async fetchSightings(route: JongroRoute): Promise<JongroBusSighting[]> {
     const rows = await this.fetchRows<TopisPositionRow>(route.positionsUrl, `jongro ${route.code} location`);
-    return rows?.map((row) => this.toSighting(row)) ?? null;
+    return rows.map((row) => this.toSighting(row));
   }
 
-  private async fetchRows<TRow>(url: string, what: string): Promise<TRow[] | null> {
+  // WHY: "4" (no result) is an empty list, so the tick still writes; an answer with no list at all rejects.
+  private async fetchRows<TRow>(url: string, what: string): Promise<TRow[]> {
     const response = await axios.get<TopisEnvelope<TRow>>(url, { timeout: REQUEST_TIMEOUT_MS });
     const body = response.data;
     const headerCd = body?.msgHeader?.headerCd;
     if (!isUsableHeaderCd(headerCd)) {
       throw new UpstreamError(`TOPIS error code (${what})`, "topis", headerCd, body.msgHeader?.headerMsg);
     }
-    return body?.msgBody?.itemList || null;
+    if (isNoResultHeaderCd(headerCd)) return [];
+    const rows = body?.msgBody?.itemList;
+    if (!Array.isArray(rows)) throw new UpstreamError(`TOPIS response has no itemList (${what})`, "topis", headerCd);
+    return rows;
   }
 
   private toArrival(row: TopisArrivalRow): JongroArrivalDoc {
