@@ -452,7 +452,7 @@ describe("toLoadedRegistry", () => {
     const loaded = toLoadedRegistry(file, ["https://a.test"]);
 
     // Assert
-    expect(loaded.firstPartyOrigins).toEqual({ "https://a.test": "a" });
+    expect(loaded.ownerByOrigin).toEqual({ "https://a.test": "a" });
   });
 
   it("throws when two mini apps start on one first-party origin", () => {
