@@ -13,7 +13,7 @@ import { serviceConfigOf } from "../bus.rules";
 import type { ServiceConfigEntry } from "../bus.types";
 import { SKKU_REST_DAYS } from "./bus-schedule.config";
 import { BusScheduleRepository } from "./bus-schedule.repository";
-import { firstSelectableDate, pickPattern, toDay, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
+import { firstSelectableDate, isWeekStartInRange, pickPattern, toDay, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
 import type { ScheduleDay, ScheduleWeek, SmartSchedule } from "./bus-schedule.wire";
 
 const DATE_FORMAT = "YYYY-MM-DD";
@@ -40,6 +40,9 @@ export class BusScheduleService {
     const ticket = this.weekCallThrottle.take(serviceId);
     if (ticket) {
       logger.warn({ event: "bus.schedule.week_endpoint_called", serviceId, suppressed: ticket.suppressed }, "deprecated: /week endpoint called, use /smart");
+    }
+    if (from !== undefined && !isWeekStartInRange(from, this.clock.now())) {
+      throw new AppError("INVALID_DATE_FORMAT", "from must be a date within a year of today", 400);
     }
     const week = await this.resolveWeek(serviceId, from);
     if (!week) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${serviceId}`, 404);

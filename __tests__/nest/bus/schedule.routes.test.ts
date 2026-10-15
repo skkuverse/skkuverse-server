@@ -479,3 +479,32 @@ describe("GET /bus/schedule/data/:serviceId with an Object.prototype name", () =
     expect(res.body.error).toEqual({ code: "SERVICE_NOT_FOUND", message: `Unknown serviceId: ${serviceId}` });
   });
 });
+
+// WHY: each distinct Monday gets its own cached week and two Atlas reads, so `from` is bounded to a year
+// either side of today (KST); the clock reads 2026-03-10.
+describe("GET /bus/schedule/data/:serviceId/week with a far from", () => {
+  it.each(["2025-03-10", "2027-03-10", "2026-03-09"])("from=%s → 200", async (from) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/schedule/data/campus-inja/week?from=${from}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+  });
+
+  it.each(["2025-03-09", "2027-03-11", "1970-01-05", "9999-12-27", "2026-02-31"])("from=%s → 400 INVALID_DATE_FORMAT", async (from) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/schedule/data/campus-inja/week?from=${from}`);
+
+    // Assert
+    expect(res.status).toBe(400);
+    expect(res.body.error).toEqual({ code: "INVALID_DATE_FORMAT", message: "from must be a date within a year of today" });
+  });
+
+  it("answers 400 before looking the service up", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/schedule/data/unknown/week?from=2030-01-07");
+
+    // Assert
+    expect(res.status).toBe(400);
+  });
+});
