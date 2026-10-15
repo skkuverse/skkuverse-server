@@ -52,7 +52,7 @@ ADR 0011 (`docs/decisions/0011-test-strategy.md`) is the decision and its why; `
 - Boot the app with `buildTestApp({ imports, overrides, role })` (`__tests__/helpers/nest/build-test-app.ts`). It runs the production pipeline (`bootstrapHttpApp`, `src/http/http-app.bootstrap.ts`) and listens on `127.0.0.1`. List `imports` in `src/app.module.ts` order.
 - Override only repositories, clients, pollers, the poller registry and `Clock`, each with one fake. Checked by `route-overrides`. Override every provider whose `onModuleInit` reaches Mongo, or app init hangs; that is a repository.
 - Assert the status, the envelope, the error `code` and `message`, and the headers.
-- A route that serves a wire type may also assert `expectWire(schema, data)` (`__tests__/helpers/contracts/expect-wire.ts`) on the envelope's `data` or `meta`. Add it as a new assertion, never as an edit to a frozen one.
+- A route that declares a wire type has a route test that asserts `expectWire(schema, data)` (`__tests__/helpers/contracts/expect-wire.ts`) on the envelope's `data` or `meta`, once for each schema it declares (both of `WithMeta<T, M>`; strip `lang` from `meta` first). Request the route with a URL literal (`"/x/list"` or `` `/x/${id}` ``) in the same test body as the `expectWire` call, and import the schema from its `.wire` file. Checked by `wire-assertions`, with no exemption. Add it as a new assertion, never as an edit to a frozen one.
 
 ## Determinism
 
