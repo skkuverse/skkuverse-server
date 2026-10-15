@@ -9,7 +9,7 @@
  * the bus behind it answers instead.
  */
 
-import { HSSC_STATIONS } from "./bus-station.constants";
+import { HSSC_ETA_STATIONS } from "./bus-station.constants";
 import { toHsscEta, withHsscEtas } from "./bus-station.rules";
 
 type Station = Parameters<typeof toHsscEta>[0];
@@ -20,7 +20,7 @@ const ARRIVING = "도착 또는 출발";
 const stopsAway = (n: number): string => `${n} 정거장 전`;
 
 function stationAt(sequence: number): Station {
-  const station = HSSC_STATIONS.find((s) => s.sequence === sequence);
+  const station = HSSC_ETA_STATIONS.find((s) => s.sequence === sequence);
   if (!station) throw new Error(`no HSSC stop with sequence ${sequence}`);
   return station;
 }
@@ -242,12 +242,12 @@ describe("withHsscEtas", () => {
     const buses = [busAt(4)];
 
     // Act
-    const stations = withHsscEtas(HSSC_STATIONS, buses);
+    const stations = withHsscEtas(HSSC_ETA_STATIONS, buses);
 
     // Assert
     expect(stations.map((s) => s.eta)).toEqual([
       NO_INFO, NO_INFO, NO_INFO, ARRIVING, stopsAway(1), stopsAway(2), stopsAway(3), stopsAway(4), stopsAway(5), stopsAway(6),
     ]);
-    expect(HSSC_STATIONS.every((s) => s.eta === NO_INFO)).toBe(true);
+    expect(HSSC_ETA_STATIONS.some((s) => "eta" in s)).toBe(false);
   });
 });

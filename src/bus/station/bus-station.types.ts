@@ -1,14 +1,9 @@
 import type { HsscBusDoc } from "../cache/bus-cache.document";
 
-export interface HsscStation {
+/** WHY: a station of the HSSC line as the station ETA counts it, by the HSSC API's own numbering. */
+export interface HsscEtaStation {
   sequence: number;
   stationName: string;
-  stationNumber: string | null;
-  eta: string;
-  isFirstStation: boolean;
-  isLastStation: boolean;
-  isRotationStation: boolean;
-  busType: string;
 }
 
 export type HsscBusAtStop = Pick<HsscBusDoc, "sequence" | "estimatedTime"> & Partial<HsscBusDoc>;
