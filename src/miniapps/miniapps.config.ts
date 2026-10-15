@@ -116,15 +116,15 @@ function ownerOf(details: readonly MiniAppDetailRaw[], origin: string): string {
 }
 
 // WHY: one owner per first-party origin, or a URL there opens in no mini app's shell, or in two.
-function toFirstPartyOrigins(details: readonly MiniAppDetailRaw[], origins: readonly string[]): Readonly<Record<string, string>> {
+function toOwnerByOrigin(details: readonly MiniAppDetailRaw[], origins: readonly string[]): Readonly<Record<string, string>> {
   return Object.freeze(Object.fromEntries(origins.map((origin) => [origin, ownerOf(details, origin)])));
 }
 
 export function toLoadedRegistry({ index, details }: RegistryFile, firstPartyOrigins: readonly string[]): LoadedRegistry {
   const detailsById = new Map(Object.entries(details).map(([id, detail]) => [id, Object.freeze(detail)]));
   const indexEntries = [...index.miniApps].sort((a, b) => a.order - b.order).map((entry) => toIndexEntry(entry, WEB_ORIGIN));
-  const ownerByOrigin = toFirstPartyOrigins([...detailsById.values()], firstPartyOrigins);
-  return { version: index.version, indexEntries: Object.freeze(indexEntries), detailsById, firstPartyOrigins: ownerByOrigin };
+  const ownerByOrigin = toOwnerByOrigin([...detailsById.values()], firstPartyOrigins);
+  return { version: index.version, indexEntries: Object.freeze(indexEntries), detailsById, ownerByOrigin };
 }
 
 // WHY: read next to the compiled file at runtime; scripts/copy-build-assets.js stages each JSON file into dist/.

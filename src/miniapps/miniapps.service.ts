@@ -22,7 +22,7 @@ export class MiniappsService {
   }
 
   get firstPartyOrigins(): Readonly<Record<string, string>> {
-    return registry.firstPartyOrigins;
+    return registry.ownerByOrigin;
   }
 
   isRegistered(id: string): boolean {
