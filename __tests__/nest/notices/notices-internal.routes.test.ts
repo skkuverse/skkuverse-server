@@ -151,6 +151,24 @@ describe("POST /internal/notices/dispatch-pending", () => {
     expect(repository.notices[0]?.pushedAt).toBeUndefined();
   });
 
+  it("records a notice whose board has no push topic as skipped, without a push or an attempt, and never claims it again", async () => {
+    // Arrange
+    repository.notices = [summarized({ sourceId: "skku-main" })];
+    const ping = () =>
+      request(httpServer).post("/internal/notices/dispatch-pending").set("X-Internal-Token", config.notices.dispatch.internalToken as string).send({});
+
+    // Act
+    const first = await ping();
+    const second = await ping();
+
+    // Assert
+    expect(first.body.data).toMatchObject({ processed: 1, sent: 0, skippedNoTopics: 1, cfCalls: 0 });
+    expect(second.body.data).toMatchObject({ processed: 0 });
+    expect(client.pushes).toEqual([]);
+    expect(repository.notices[0]).toMatchObject({ pushedAt: new Date("2026-10-19T16:30:00Z"), pushSkippedReason: "no-topic", dispatchClaimedAt: null });
+    expect(repository.notices[0]?.pushAttempts).toBeUndefined();
+  });
+
   it("defaults triggerSource to 'internal' when body.source is absent", async () => {
     // Act
     const res = await request(httpServer)

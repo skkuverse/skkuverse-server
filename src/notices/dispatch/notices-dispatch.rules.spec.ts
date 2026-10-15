@@ -1,10 +1,10 @@
 /**
- * Dispatch decisions over the four push fields: the claim window (a KST day floor, the lease cutoff, the attempt
- * cap), the field values of a push and a release, and the group's representative. Its Mongo form is
+ * Dispatch decisions over the push fields: the claim window (a KST day floor, the lease cutoff, the attempt
+ * cap), the field values of a push, a skip and a release, and the group's representative. Its Mongo form is
  * notices-dispatch.query.ts, pinned by the repository spec.
  */
 import { ObjectId } from "mongodb";
-import { selectRepresentative, toClaimWindow, toPushedFields, toReleasedFields } from "./notices-dispatch.rules";
+import { selectRepresentative, toClaimWindow, toPushedFields, toReleasedFields, toSkippedFields } from "./notices-dispatch.rules";
 
 const POLICY = { maxAgeDays: 14, claimLeaseMs: 10 * 60_000, maxAttempts: 5 };
 
@@ -25,6 +25,18 @@ describe("toPushedFields", () => {
   it("marks pushed at the time given, releases the lease and clears the error", () => {
     // Act & Assert
     expect(toPushedFields(new Date("2026-10-19T16:30:00Z"))).toEqual({ pushedAt: new Date("2026-10-19T16:30:00Z"), dispatchClaimedAt: null, pushError: null });
+  });
+});
+
+describe("toSkippedFields", () => {
+  it("resolves the notice at the time given with the no-topic reason, releases the lease and clears the error", () => {
+    // Act & Assert
+    expect(toSkippedFields(new Date("2026-10-19T16:30:00Z"))).toEqual({
+      pushedAt: new Date("2026-10-19T16:30:00Z"),
+      pushSkippedReason: "no-topic",
+      dispatchClaimedAt: null,
+      pushError: null,
+    });
   });
 });
 

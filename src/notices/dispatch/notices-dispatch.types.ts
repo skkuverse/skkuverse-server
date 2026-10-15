@@ -19,6 +19,14 @@ export interface PushedFields {
   pushError: null;
 }
 
+// WHY: `pushedAt` set too, so the claim's `pushedAt: null` and the partial index leave a skipped notice out.
+export interface SkippedFields {
+  pushedAt: Date;
+  pushSkippedReason: "no-topic";
+  dispatchClaimedAt: null;
+  pushError: null;
+}
+
 export interface ReleasedFields {
   dispatchClaimedAt: null;
   pushError: string;

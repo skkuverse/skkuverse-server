@@ -1,5 +1,5 @@
 import type { Document } from "mongodb";
-import type { ClaimWindow, PushedFields, ReleasedFields } from "./notices-dispatch.types";
+import type { ClaimWindow, PushedFields, ReleasedFields, SkippedFields } from "./notices-dispatch.types";
 
 /**
  * QUIRK(atlas): `aiSummaryAt: { $type: "date" }`, not `$ne: null`, matches dispatch_pending_idx's partial filter so
@@ -32,6 +32,10 @@ export function toClaimUpdate(claimedAt: Date): Document {
 
 export function toPushedUpdate(fields: PushedFields): Document {
   return { $set: fields, $inc: { pushAttempts: 1 } };
+}
+
+export function toSkippedUpdate(fields: SkippedFields): Document {
+  return { $set: fields };
 }
 
 export function toReleasedUpdate(fields: ReleasedFields): Document {
