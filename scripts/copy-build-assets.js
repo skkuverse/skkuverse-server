@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 const assets = [
-  // notices/tabConfig + notices/sources read these with fs.readFileSync(__dirname/<name>)
+  // src/notices/notices.config.ts reads these with fs.readFileSync(__dirname/<name>)
   ["src/notices/categories.json", "dist/src/notices/categories.json"],
   ["src/notices/sources.json", "dist/src/notices/sources.json"],
   ["src/notices/exclude-reasons.json", "dist/src/notices/exclude-reasons.json"],
