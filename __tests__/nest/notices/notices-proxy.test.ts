@@ -12,6 +12,7 @@ import { Clock } from "../../../src/infra/clock";
 import { OutboundBlockedError } from "../../../src/infra/outbound-guard";
 import { NoticesAttachmentModule } from "../../../src/notices/attachment/notices-attachment.module";
 import { NoticesModule } from "../../../src/notices/notices.module";
+import { NoticesTabsModule } from "../../../src/notices/tabs/notices-tabs.module";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 const mockedGet = axios.get as unknown as jest.Mock;
@@ -20,6 +21,8 @@ const fakeClock: Clock = { now: () => new Date("2026-10-14T00:00:00Z") };
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
+// WHY: the CSP every route gets from the app pipeline; a type served without the sandbox carries exactly this one.
+let controlCsp: string | undefined;
 
 function upstream(body: string, headers: Record<string, string> = {}) {
   return { headers, data: Readable.from([Buffer.from(body)]) };
@@ -27,15 +30,24 @@ function upstream(body: string, headers: Record<string, string> = {}) {
 
 beforeAll(async () => {
   app = await buildTestApp({
-    imports: [NoticesModule, NoticesAttachmentModule],
+    imports: [NoticesModule, NoticesTabsModule, NoticesAttachmentModule],
     overrides: [{ provide: Clock, useValue: fakeClock }],
     role: "api",
   });
   httpServer = app.getHttpServer();
+  controlCsp = (await request(httpServer).get("/notices/tabs")).headers["content-security-policy"];
 });
 
 afterAll(async () => {
   await app.close();
+});
+
+describe("the control CSP", () => {
+  it("is the pipeline's own policy, without a sandbox", () => {
+    // Assert
+    expect(controlCsp).toEqual(expect.any(String));
+    expect(controlCsp).not.toMatch(/\bsandbox\b/);
+  });
 });
 
 beforeEach(() => {
@@ -110,7 +122,7 @@ describe("allowed request", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("application/pdf");
-    expect(res.headers["content-security-policy"]).not.toMatch(/\bsandbox\b/);
+    expect(res.headers["content-security-policy"]).toBe(controlCsp);
     expect(mockedGet).toHaveBeenCalledTimes(2);
     for (const [, config] of mockedGet.mock.calls) {
       expect(config.proxy).toBe(false);
@@ -203,7 +215,7 @@ describe("inline content-type policy", () => {
 
       // Assert
       expect(res.status).toBe(200);
-      expect(res.headers["content-security-policy"]).not.toMatch(/\bsandbox\b/);
+      expect(res.headers["content-security-policy"]).toBe(controlCsp);
     },
   );
 
