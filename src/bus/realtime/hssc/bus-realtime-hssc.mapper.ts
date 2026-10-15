@@ -11,8 +11,5 @@ export function toHsscBus(item: HsscApiBus, { sequence, firstSeenAt, dwellSecond
     eventDate: firstSeenAt.format(HSSC_EVENT_DATE_FORMAT),
     estimatedTime: dwellSeconds,
     isLastBus: false,
-    line_no: item.line_no,
-    stop_no: item.stop_no,
-    get_date: item.get_date,
   };
 }

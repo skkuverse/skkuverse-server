@@ -1,5 +1,3 @@
-export const HSSC_TIME_ZONE = "Asia/Seoul";
-
 export const HSSC_EVENT_DATE_FORMAT = "YYYY-MM-DD HH:mm:ss";
 
 // QUIRK(hssc): get_date is Korean-locale local time, its AM/PM marker in Korean.

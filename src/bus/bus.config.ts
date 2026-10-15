@@ -4,7 +4,7 @@ import type { z } from "zod";
 import config from "../infra/config";
 import { parseConfigFile } from "../infra/config-file";
 import { toJongroRoute } from "./bus.mapper";
-import { validateServiceKey } from "./bus.rules";
+import { deepFreeze, validateServiceKey } from "./bus.rules";
 import { jongroRoutesConfig } from "./bus.schema";
 import type { JongroRoute, ServiceKeyProblem } from "./bus.types";
 
@@ -18,13 +18,6 @@ const JONGRO_ROUTES_WORDS = {
   label: "jongro-routes.json",
   error: (issue: z.core.$ZodRawIssue): string | undefined => (isRootTypeIssue(issue) ? "must be a JSON array" : undefined),
 };
-
-function deepFreeze<T>(value: T): T {
-  if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
-  Object.freeze(value);
-  for (const key of Object.getOwnPropertyNames(value)) deepFreeze((value as Record<string, unknown>)[key]);
-  return value;
-}
 
 const SERVICE_KEY_MESSAGES: Readonly<Record<ServiceKeyProblem, string>> = {
   missing: "SEOUL_BUS_SERVICE_KEY is required (see config/env.prd.keys)",

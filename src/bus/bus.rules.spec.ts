@@ -3,7 +3,7 @@
  * splits the query string and TOPIS rejects it as if it were down. And the
  * one duplicate stop a route may hold: its last ord repeating its first.
  */
-import { isLoopClosingRepeat, validateServiceKey } from "./bus.rules";
+import { deepFreeze, isLoopClosingRepeat, serviceConfigOf, validateServiceKey } from "./bus.rules";
 
 const FIXED_KEY =
   "FAKEseoulBusServiceKeyForTestsOnlyNotARealKey0000%2BFAKE%2Fseoul%2Bbus%2Ftest0key%3D%3D";
@@ -39,4 +39,29 @@ describe("isLoopClosingRepeat", () => {
     // Act & Assert
     expect(isLoopClosingRepeat(topisIds, index)).toBe(expected);
   });
+});
+
+describe("deepFreeze", () => {
+  it("freezes every nested object and array, and returns the same value", () => {
+    // Arrange
+    const value = { routes: [{ stations: [{ name: "a" }] }] };
+
+    // Act
+    const frozen = deepFreeze(value);
+
+    // Assert
+    expect(frozen).toBe(value);
+    expect(Object.isFrozen(value.routes[0]!.stations[0])).toBe(true);
+    expect(Object.isFrozen(value.routes)).toBe(true);
+  });
+});
+
+describe("serviceConfigOf", () => {
+  it.each([["campus-inja", true], ["nope", false], ["toString", false], ["__proto__", false], ["constructor", false]])(
+    "%s is a service: %s",
+    (serviceId, known) => {
+      // Act & Assert
+      expect(serviceConfigOf(serviceId) !== undefined).toBe(known);
+    },
+  );
 });

@@ -7,7 +7,7 @@
 import { DailyCapError } from "../../shared/daily-cap.error";
 import type { ScheduleDay, ScheduleEntry } from "../schedule/bus-schedule.wire";
 import { BusStopsService } from "../stops/bus-stops.service";
-import { DailyCap, runsOfDay, toEtaSequences, toSequenceLength } from "./bus-eta.rules";
+import { DailyCap, runsOfDay, toEtaSequences, toKstDate, toSequenceLength } from "./bus-eta.rules";
 
 function day(date: string, schedule: ScheduleEntry[], display = "schedule"): ScheduleDay {
   return { date, dayOfWeek: 5, display, label: null, notices: [], schedule };
@@ -99,5 +99,16 @@ describe("DailyCap", () => {
     cap.take(evening);
     expect(() => cap.take(evening)).toThrow(DailyCapError);
     expect(() => cap.take(midnight)).not.toThrow();
+  });
+});
+
+describe("toKstDate", () => {
+  it.each([
+    ["2026-10-19T14:59:59Z", "2026-10-19"],
+    ["2026-10-19T15:00:00Z", "2026-10-20"],
+    ["2026-10-19T16:30:00Z", "2026-10-20"],
+  ])("%s is %s in KST", (instant, expected) => {
+    // Act & Assert
+    expect(toKstDate(new Date(instant))).toBe(expected);
   });
 });
