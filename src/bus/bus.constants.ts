@@ -1,4 +1,4 @@
-import type { ServiceConfigMap } from "./bus.types";
+import type { ServiceConfigEntry, ServiceConfigMap } from "./bus.types";
 
 export const KST_TIME_ZONE = "Asia/Seoul";
 
@@ -9,14 +9,15 @@ export const JONGRO_ROUTE_ID_PATTERN = /^jongro(0[1-9]|[1-9]\d+)$/;
 
 export const JONGRO_ROUTE_ID_PREFIX = "jongro";
 
-// WHY: the commute shuttle's pilot window lives on its timetable patterns (scripts/data/commute-schedule.json), not here.
-const COMMUTE_SERVICE = {
+// WHY: the commute shuttle's pilot window lives on its timetable patterns (scripts/data/commute-schedule.json), not
+// here; a new entry per service, so a change to one (a suspension) leaves the others.
+const commuteService = (): ServiceConfigEntry => ({
   nonOperatingDayDisplay: "hidden",
   // WHY: the pilot notice stays first: apps draw notices[0] as the banner.
   notices: [{ style: "info", text: "시범 운행 · 무료 · 킹고M QR 탑승" }],
   suspend: null,
   respectsKoreanHolidays: true,
-};
+});
 
 export const SERVICE_CONFIG: ServiceConfigMap = {
   "campus-inja": {
@@ -40,13 +41,13 @@ export const SERVICE_CONFIG: ServiceConfigMap = {
     ],
     suspend: null,
   },
-  "commute-jeongja": COMMUTE_SERVICE,
-  "commute-jamsil": COMMUTE_SERVICE,
-  "commute-dogok": COMMUTE_SERVICE,
+  "commute-jeongja": commuteService(),
+  "commute-jamsil": commuteService(),
+  "commute-dogok": commuteService(),
   "commute-gangnam-yangjae": {
-    ...COMMUTE_SERVICE,
+    ...commuteService(),
     // WHY: one bus serves both stations; the explicit line break keeps iOS from breaking a word.
-    notices: [...COMMUTE_SERVICE.notices, { style: "info", text: "등교: 강남역 → 양재역 → 자과캠\n하교: 자과캠 → 양재역 → 강남역" }],
+    notices: [...commuteService().notices, { style: "info", text: "등교: 강남역 → 양재역 → 자과캠\n하교: 자과캠 → 양재역 → 강남역" }],
   },
-  "commute-gwanggyo": COMMUTE_SERVICE,
+  "commute-gwanggyo": commuteService(),
 };
