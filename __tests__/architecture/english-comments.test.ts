@@ -5,8 +5,10 @@
  * `productCopy`, in strings, which this rule does not read, and inside a
  * backticked code span in a comment: an `EVIDENCE:` or `QUIRK(…):` that
  * quotes the exact upstream input (`q=관`) quotes data. Prose around it is
- * English; a comment that needs a Korean name says it in English or points
- * at the constant that holds it. The umbrella repo's English check (`.conventions.json`
+ * English, so a block that quotes Hangul also holds at least
+ * MIN_ENGLISH_WORDS English words outside its spans and its tag (a whole
+ * Korean sentence in backticks is not a quote); a comment that needs a Korean
+ * name says it in English or points at the constant that holds it. The umbrella repo's English check (`.conventions.json`
  * names it) reads markdown only; this one covers the comments.
  *
  * Blocks as in comment-blocks (helpers/architecture/comments.ts), labelled
@@ -31,14 +33,25 @@ export function productCopyFiles(conventions: string): Set<string> {
   return new Set(parsed.productCopy);
 }
 
+export const MIN_ENGLISH_WORDS = 3;
+const ENGLISH_WORD = /\b[A-Za-z]{2,}\b/g;
+const COMMENT_TAG = /\b(?:WHY|EVIDENCE|SEE|QUIRK|CONTRACT)(?:\([^)]*\))?:/g;
+
 /** A comment line without its backticked code spans: a quoted upstream input is data, like a string. */
 const withoutCodeSpans = (line: string): string => line.replace(/`[^`\n]*`/g, "");
 
-/** `<file>: <first line>` per comment block that holds Hangul outside a code span, `#n` on a repeat. */
+/** A block whose Hangul sits in code spans with too little English prose around them to be a quote. */
+const isUnquotedKorean = (text: readonly string[]): boolean => {
+  if (!text.some((line) => HANGUL.test(line))) return false;
+  const prose = text.map((line) => withoutCodeSpans(line).replace(COMMENT_TAG, "")).join(" ");
+  return (prose.match(ENGLISH_WORD) ?? []).length < MIN_ENGLISH_WORDS;
+};
+
+/** `<file>: <first line>` per comment block that holds Hangul outside a code span or in spans alone, `#n` on a repeat. */
 export function hangulCommentViolations(file: string, source: string, productCopy: ReadonlySet<string>): string[] {
   if (!file.startsWith("src/") || !file.endsWith(".ts") || productCopy.has(file)) return [];
   const labels = commentBlocks(commentsOf(file, source))
-    .filter((block) => block.text.some((line) => HANGUL.test(withoutCodeSpans(line))))
+    .filter((block) => block.text.some((line) => HANGUL.test(withoutCodeSpans(line))) || isUnquotedKorean(block.text))
     .map((block) => block.text[0]!.slice(0, 60).trimEnd());
   return numberedKeys(file, labels);
 }
@@ -79,6 +92,23 @@ describe("English comment rule applies as specified", () => {
     expect(hangulCommentViolations("src/x/x.rules.ts", quoted, none)).toEqual([]);
     expect(hangulCommentViolations("src/x/x.rules.ts", prose, none)).toHaveLength(1);
     expect(hangulCommentViolations("src/x/x.rules.ts", unclosed, none)).toHaveLength(1);
+  });
+
+  it.each([
+    ["a whole sentence in backticks", "// `이 함수는 혜화역 도착 정보를 읽는다`"],
+    ["a tag and a sentence in backticks", "// QUIRK(skku): `이 함수는 혜화역 도착 정보를 읽는다`"],
+    ["spans with one English word between them", "// `혜화역` near `정류장`"],
+  ])("reports Hangul in code spans with no English prose around them: %s", (_case, source) => {
+    // Act & Assert
+    expect(hangulCommentViolations("src/x/x.rules.ts", source, none)).toHaveLength(1);
+  });
+
+  it("passes a quote with spaces when English prose says what it is", () => {
+    // Arrange
+    const source = "// QUIRK(skku): one building's line reads `승장애인 표시 승강기`.";
+
+    // Act & Assert
+    expect(hangulCommentViolations("src/x/x.mapper.ts", source, none)).toEqual([]);
   });
 
   it("passes Hangul in a string or a template, and an English comment", () => {
