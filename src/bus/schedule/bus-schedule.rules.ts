@@ -56,7 +56,7 @@ export function pickPattern(patterns: readonly BusScheduleDoc[], dateStr: string
 function overrideDay(override: BusOverrideDoc, serviceNotices: readonly ScheduleNotice[]): Omit<ScheduleDay, "date" | "dayOfWeek"> {
   const notices = override.notices.map((n) => ({ ...n, source: "override" }));
   // WHY: a no-service day shows only its own notices; "no weekend service" is noise on a day without service.
-  if (override.type !== "replace") return { display: "noService", label: override.label, notices, schedule: [] };
+  if (override.type === "noService") return { display: "noService", label: override.label, notices, schedule: [] };
   return { display: "schedule", label: override.label, notices: [...serviceNotices, ...notices], schedule: override.entries };
 }
 
