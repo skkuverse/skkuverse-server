@@ -160,3 +160,29 @@ describe("isWeekStartInRange", () => {
     expect(isWeekStartInRange(from, NOW)).toBe(expected);
   });
 });
+
+// QUIRK(date-holidays): isHoliday never returns for an Invalid Date or a year-0 or year-1 day, and reads an
+// impossible day (2026-02-29) as the next real one, so the label refuses those before asking it.
+describe("toNonOperatingDayLabel on a date the holiday lookup cannot take", () => {
+  it.each(["2026-13-01", "2026-02-31", "2026-02-29", "2026-04-31", "0000-01-03", "0001-01-01", "1899-12-31", "3000-01-01", "10000-01-01", "2026-1-01", "Invalid date"])(
+    "throws on %s",
+    (date) => {
+      // Act & Assert
+      expect(() => toNonOperatingDayLabel(SKKU_REST_DAYS, date)).toThrow(`${date} is not a date from 1900 to 2999`);
+    },
+  );
+
+  it.each([
+    ["1900-01-01", null],
+    ["2999-12-31", null],
+    ["2028-02-29", null],
+  ])("answers %s", (date, label) => {
+    // Act & Assert
+    expect(toNonOperatingDayLabel(SKKU_REST_DAYS, date)).toBe(label);
+  });
+
+  it("refuses a year out of range even on a day the SKKU list names", () => {
+    // Act & Assert
+    expect(() => toNonOperatingDayLabel(SKKU_REST_DAYS, "0001-09-28")).toThrow("0001-09-28 is not a date from 1900 to 2999");
+  });
+});
