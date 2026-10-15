@@ -32,7 +32,7 @@ const noticeSummaryFull = z.object({
   oneLiner: z.string().nullable(),
   type: z.enum(SUMMARY_TYPES),
   periods: z.array(summaryPeriod),
-  locations: z.array(z.unknown()),
+  locations: z.array(z.object({ label: detail, detail })),
   details: summaryDetails.nullable(),
   model: z.string().nullable(),
   generatedAt: z.iso.datetime(),
