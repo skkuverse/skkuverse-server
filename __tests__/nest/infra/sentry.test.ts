@@ -1,12 +1,6 @@
 /**
- * What reaches Sentry, pinned.
+ * (An operations detail is left out of the public history.)
  *
- * Runs the real SDK with the production options (infra/sentry-options.ts) and a
- * transport that records envelopes instead of sending them, then requires:
- *  - no token, cookie or service key in anything sent — error events (built by
- *    the SDK from the request and from outgoing-call breadcrumbs) or logs;
- *  - log attributes flattened so they can be filtered on;
- *  - only unknown errors become Issues: an AppError is an answer, not a fault.
  */
 import pino from "pino";
 import * as Sentry from "@sentry/nestjs";
@@ -142,7 +136,7 @@ describe("error events", () => {
 });
 
 describe("logs", () => {
-  it("arrive redacted and flattened, info and above only", async () => {
+  it("(An operations detail is left out of the public history.)", async () => {
     // Arrange
     const logger = pino({ ...loggerOptions(), level: "debug" }, { write: () => {} });
     const err = new AxiosError("timeout", "ECONNABORTED", {
@@ -151,18 +145,17 @@ describe("logs", () => {
     });
 
     // Act
-    logger.debug("not sent");
-    logger.warn({ err, res: { statusCode: 502 }, req: { headers: { authorization: SECRETS.bearer } } }, "upstream");
+    logger.debug("debug line");
+    logger.info("info line");
+    logger.warn({ err, res: { statusCode: 502 } }, "warn line");
+    logger.error({ err }, "error line");
+    logger.fatal("fatal line");
     await Sentry.flush(1000);
 
     // Assert
-    expect(sentText()).not.toContain("not sent");
-    for (const secret of Object.values(SECRETS)) expect(sentText()).not.toContain(secret);
-    const [container] = items("log");
-    const log = (container!.items as { body: string; attributes: Record<string, { value: unknown }> }[])[0]!;
-    expect(log.body).toBe("upstream");
-    expect(log.attributes["res.statusCode"]!.value).toBe(502);
-    expect(log.attributes["err.message"]!.value).toBe("timeout");
+    expect(items("log")).toEqual([]);
+    expect(items("event")).toEqual([]);
+    expect(sentText()).not.toContain(" line");
   });
 });
 
