@@ -419,11 +419,20 @@ function scopeGlobs(tail) {
 }
 
 const ROLE_MAX_LINES = {
+  bootstrap: 48,
   client: 163,
+  config: 124,
+  constants: 47,
   controller: 42,
+  decorator: 10,
   document: 124,
+  error: 18,
+  filter: 68,
+  interceptor: 53,
   mapper: 139,
+  middleware: 94,
   module: 16,
+  pipe: 31,
   poller: 33,
   query: 169,
   repository: 123,
@@ -431,6 +440,7 @@ const ROLE_MAX_LINES = {
   schema: 61,
   service: 257,
   types: 56,
+  util: 54,
   wire: 57,
 };
 
