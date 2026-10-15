@@ -1,19 +1,13 @@
 import { SERVICE_CONFIG } from "./bus.constants";
-import type { ServiceConfigEntry } from "./bus.types";
+import type { ServiceConfigEntry, ServiceKeyProblem } from "./bus.types";
 
 // QUIRK(topis): a raw base64 key (`+`, `=`, `/`) splits the query string and TOPIS rejects it as if it
 // were down, so the key must be stored URL-encoded.
 const URL_ENCODED_KEY = /^[A-Za-z0-9_%-]+$/;
 
-export const SERVICE_KEY_REQUIRED = "SEOUL_BUS_SERVICE_KEY is required (see config/env.prd.keys)";
-
-export function validateServiceKey(key: unknown): string[] {
-  if (typeof key !== "string" || key.length === 0) return [SERVICE_KEY_REQUIRED];
-  if (URL_ENCODED_KEY.test(key)) return [];
-  return [
-    "SEOUL_BUS_SERVICE_KEY must be URL-encoded (allowed chars: [A-Za-z0-9_%-]). " +
-      "Re-encode the raw key with encodeURIComponent() before storing in .env.",
-  ];
+export function validateServiceKey(key: unknown): ServiceKeyProblem | null {
+  if (typeof key !== "string" || key.length === 0) return "missing";
+  return URL_ENCODED_KEY.test(key) ? null : "not-url-encoded";
 }
 
 // QUIRK(topis): some loops list their first stop again as the last ord (02: ord 1 and ord 27).
