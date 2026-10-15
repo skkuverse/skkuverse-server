@@ -4,7 +4,7 @@ import type { HsscBusDoc } from "../../cache/bus-cache.document";
 import { BusCacheService } from "../../cache/bus-cache.service";
 import { BusRealtimeHsscClient } from "./bus-realtime-hssc.client";
 import { toHsscBus } from "./bus-realtime-hssc.mapper";
-import { isFresh, toDwellSeconds, toEventAt, toLinearSequence } from "./bus-realtime-hssc.rules";
+import { isFresh, toDwellSeconds, toFirstSeenAt, toLinearSequence } from "./bus-realtime-hssc.rules";
 
 @Injectable()
 export class BusRealtimeHsscService {
@@ -23,9 +23,9 @@ export class BusRealtimeHsscService {
     const now = this.clock.now();
     this.buses = items
       .map((item) => {
-        const eventAt = toEventAt(item, this.buses);
+        const firstSeenAt = toFirstSeenAt(item, this.buses);
         const sequence = toLinearSequence(parseInt(item.seq, 10));
-        return toHsscBus(item, { sequence, eventAt, dwellSeconds: toDwellSeconds(eventAt, now) });
+        return toHsscBus(item, { sequence, firstSeenAt, dwellSeconds: toDwellSeconds(firstSeenAt, now) });
       })
       .filter((bus) => isFresh(bus, now));
     await this.cache.write("hssc", this.buses);

@@ -1,6 +1,6 @@
 import type { HsscEtaStation } from "./bus-station.types";
 
-export const HYEHWA_STOP_ID = "01592";
+export const HYEHWA_STATION_ID = "01592";
 
 export const HYEHWA_STATION_NAME = "혜화역(승차장)";
 

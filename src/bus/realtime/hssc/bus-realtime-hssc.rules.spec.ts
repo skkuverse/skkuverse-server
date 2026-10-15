@@ -6,7 +6,7 @@
 import "moment/locale/ko";
 import moment from "moment-timezone";
 import type { HsscBusDoc } from "../../cache/bus-cache.document";
-import { isFresh, toDwellSeconds, toEventAt, toLinearSequence } from "./bus-realtime-hssc.rules";
+import { isFresh, toDwellSeconds, toFirstSeenAt, toLinearSequence } from "./bus-realtime-hssc.rules";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const kst = (minutesAgo: number): string =>
@@ -26,10 +26,10 @@ describe("toLinearSequence", () => {
   });
 });
 
-describe("toEventAt", () => {
+describe("toFirstSeenAt", () => {
   it("parses get_date, Korean-locale KST, for a bus not seen before", () => {
     // Act & Assert
-    expect(toEventAt(ROW, []).toISOString()).toBe("2026-10-20T00:59:30.000Z");
+    expect(toFirstSeenAt(ROW, []).toISOString()).toBe("2026-10-20T00:59:30.000Z");
   });
 
   it("keeps the previous sighting's time for the same line and stop", () => {
@@ -37,7 +37,7 @@ describe("toEventAt", () => {
     const previous = [{ ...ROW, eventDate: "2026-10-20 09:55:00" } as HsscBusDoc];
 
     // Act & Assert
-    expect(toEventAt(ROW, previous).toISOString()).toBe("2026-10-20T00:55:00.000Z");
+    expect(toFirstSeenAt(ROW, previous).toISOString()).toBe("2026-10-20T00:55:00.000Z");
   });
 
   it("starts over at another stop", () => {
@@ -45,7 +45,7 @@ describe("toEventAt", () => {
     const previous = [{ ...ROW, stop_no: "4", eventDate: "2026-10-20 09:55:00" } as HsscBusDoc];
 
     // Act & Assert
-    expect(toEventAt(ROW, previous).toISOString()).toBe("2026-10-20T00:59:30.000Z");
+    expect(toFirstSeenAt(ROW, previous).toISOString()).toBe("2026-10-20T00:59:30.000Z");
   });
 });
 

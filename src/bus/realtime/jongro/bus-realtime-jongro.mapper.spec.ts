@@ -25,8 +25,8 @@ describe("toJongroBusPosition", () => {
 
     // Act
     const position = toJongroBusPosition(sighting, { sequence: 6, stationName: "명륜새마을금고" }, {
-      recordTime: "2026-10-20T01:00:00.000Z",
-      estimatedTime: 40,
+      firstSeenAt: "2026-10-20T01:00:00.000Z",
+      dwellSeconds: 40,
     });
 
     // Assert

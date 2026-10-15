@@ -13,7 +13,7 @@ import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 export class BusRealtimeJongroService {
   private readonly arrivalsByCode = new Map<string, JongroArrivalDoc[]>();
   private readonly positionsByCode = new Map<string, JongroBusPositionDoc[]>();
-  private readonly recordTimesByCode = new Map<string, Map<string, string>>();
+  private readonly firstSeenAtByStationIdByCode = new Map<string, Map<string, string>>();
   private readonly driftWarnedCodes = new Set<string>();
 
   constructor(
@@ -62,17 +62,17 @@ export class BusRealtimeJongroService {
       );
       return [];
     }
-    const recordTimes = this.recordTimesOf(route.code);
-    const dwell = toDwell(recordTimes.get(sighting.stationId), now);
-    recordTimes.set(sighting.stationId, dwell.recordTime);
+    const firstSeenAtByStationId = this.firstSeenAtByStationIdOf(route.code);
+    const dwell = toDwell(firstSeenAtByStationId.get(sighting.stationId), now);
+    firstSeenAtByStationId.set(sighting.stationId, dwell.firstSeenAt);
     return [toJongroBusPosition(sighting, station, dwell)];
   }
 
-  private recordTimesOf(code: string): Map<string, string> {
-    const existing = this.recordTimesByCode.get(code);
+  private firstSeenAtByStationIdOf(code: string): Map<string, string> {
+    const existing = this.firstSeenAtByStationIdByCode.get(code);
     if (existing) return existing;
     const created = new Map<string, string>();
-    this.recordTimesByCode.set(code, created);
+    this.firstSeenAtByStationIdByCode.set(code, created);
     return created;
   }
 
