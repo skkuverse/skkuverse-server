@@ -4,7 +4,7 @@
  * as the same objects. restDaysFile refuses a key that is neither a date nor a
  * month-day, and a label that is not a non-empty string.
  */
-import { busOverrideDoc, busScheduleDoc, restDaysFile } from "./bus-schedule.schema";
+import { busOverrideDoc, busScheduleDoc, restDaysFile, weekQuery } from "./bus-schedule.schema";
 
 const PATTERN = { serviceId: "campus-inja", patternId: "weekday", days: [1, 2], entries: [{ time: "08:00" }] };
 const OVERRIDE = { serviceId: "campus-inja", date: "2026-10-21", type: "replace", label: null, notices: [{ style: "info", text: "x" }], entries: [] };
@@ -76,5 +76,27 @@ describe("restDaysFile", () => {
   ])("%j → %s", (raw, expected) => {
     // Act & Assert
     expect(restDaysFile.safeParse(raw).success).toBe(expected);
+  });
+});
+
+describe("weekQuery", () => {
+  it.each([
+    [{}, true],
+    [{ from: "2026-03-09" }, true],
+    [{ from: "bad" }, false],
+    [{ from: "2026-3-9" }, false],
+    [{ from: "" }, false],
+    [{ from: ["2026-03-09", "2026-03-10"] }, false],
+  ])("%j → %s", (query, expected) => {
+    // Act & Assert
+    expect(weekQuery.safeParse(query).success).toBe(expected);
+  });
+
+  it("refuses a repeated from with the date-format message", () => {
+    // Act
+    const result = weekQuery.safeParse({ from: ["2026-03-09", "2026-03-10"] });
+
+    // Assert
+    expect(result.error?.issues.map((issue) => issue.message)).toEqual(["from must be YYYY-MM-DD"]);
   });
 });

@@ -1,5 +1,7 @@
+import type { z } from "zod";
 import type { ServiceConfigEntry } from "../bus.types";
 import type { BusOverrideDoc, BusScheduleDoc } from "./bus-schedule.document";
+import type { weekQuery } from "./bus-schedule.schema";
 import type { ScheduleNotice } from "./bus-schedule.wire";
 
 export interface RestDays {
@@ -21,3 +23,5 @@ export interface DaySources {
   serviceNotices: readonly ScheduleNotice[];
   config: ServiceConfigEntry;
 }
+
+export type WeekQuery = z.output<typeof weekQuery>;

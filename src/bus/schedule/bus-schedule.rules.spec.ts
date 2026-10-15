@@ -23,7 +23,7 @@ jest.mock("date-holidays", () =>
 import moment from "moment-timezone";
 import { SKKU_REST_DAYS, loadRestDays as parseRestDays } from "./bus-schedule.config";
 import type { BusScheduleDoc } from "./bus-schedule.document";
-import { isWeekStartParam, lookupRestDay, pickPattern, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
+import { lookupRestDay, pickPattern, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
 
 const service = { getNonOperatingDayLabel: (date: string) => toNonOperatingDayLabel(SKKU_REST_DAYS, date) };
 
@@ -96,19 +96,6 @@ describe("lookupRestDay over loadRestDays", () => {
     // Act & Assert
     expect(() => parseRestDays({ "09-28": true })).toThrow(/non-empty string/);
     expect(() => parseRestDays({ "09-28": "" })).toThrow(/non-empty string/);
-  });
-});
-
-describe("isWeekStartParam", () => {
-  it.each([
-    [undefined, true],
-    ["2026-03-09", true],
-    ["bad", false],
-    ["2026-3-9", false],
-    [["2026-03-09", "2026-03-10"], false],
-  ])("%j → %s", (from, expected) => {
-    // Act & Assert
-    expect(isWeekStartParam(from)).toBe(expected);
   });
 });
 
