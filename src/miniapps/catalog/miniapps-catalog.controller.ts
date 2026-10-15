@@ -1,5 +1,4 @@
-import { Controller, Get, Param, Res } from "@nestjs/common";
-import type { Response } from "express";
+import { Controller, Get, Param } from "@nestjs/common";
 import { CacheControl } from "../../http/cache-control.decorator";
 import { Lang } from "../../http/lang.decorator";
 import type { SupportedLang } from "../../infra/types";
@@ -26,12 +25,10 @@ export class MiniappsCatalogController {
     return this.catalog.index();
   }
 
-  // WHY: set before the read, so a failed read's 500 carries it too; moving it to success only changes what is
-  // served, tracked in spencer0124/skkuverse#79.
   @Get(":id/notifications")
-  async feed(@Param("id") id: string, @Lang() lang: SupportedLang, @Res({ passthrough: true }) res: Response): Promise<MiniAppFeed> {
+  @CacheControl(FEED_CACHE_CONTROL)
+  async feed(@Param("id") id: string, @Lang() lang: SupportedLang): Promise<MiniAppFeed> {
     if (!this.miniApps.isRegistered(id)) throw toMiniAppNotFound(id);
-    res.set("Cache-Control", FEED_CACHE_CONTROL);
     return this.notifications.feed(id, lang);
   }
 
