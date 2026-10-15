@@ -46,6 +46,27 @@ describe("busOverrideDoc", () => {
   });
 });
 
+// WHY: only a replace override serves entries; a noService one written without them must still close the day,
+// and a type that is neither must not be read as a closure.
+describe("busOverrideDoc by type", () => {
+  const NO_SERVICE = { serviceId: "campus-inja", date: "2026-10-01", type: "noService", label: "축제", notices: [] };
+
+  it("accepts a noService override without entries", () => {
+    // Act & Assert
+    expect(busOverrideDoc.safeParse(NO_SERVICE).success).toBe(true);
+  });
+
+  it("rejects a replace override without entries", () => {
+    // Act & Assert
+    expect(busOverrideDoc.safeParse({ ...NO_SERVICE, type: "replace" }).success).toBe(false);
+  });
+
+  it.each(["noservice", "Replace", "closed", ""])("rejects the type %j", (type) => {
+    // Act & Assert
+    expect(busOverrideDoc.safeParse({ ...OVERRIDE, type }).success).toBe(false);
+  });
+});
+
 describe("restDaysFile", () => {
   it.each([
     [{ _comment: "docs", "09-28": "공자탄신일", "2030-09-28": "특별" }, true],

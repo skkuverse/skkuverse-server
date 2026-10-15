@@ -17,14 +17,18 @@ export const busScheduleDoc = z.object({
   effectiveUntil: z.string().optional(),
 }) satisfies z.ZodType<BusScheduleDoc>;
 
-export const busOverrideDoc = z.object({
+const overrideFields = {
   serviceId: z.string(),
   date: z.string(),
-  type: z.string(),
-  entries: z.array(storedEntry),
   label: z.string().nullish(),
   notices: z.array(storedNotice),
-}) satisfies z.ZodType<BusOverrideDoc>;
+};
+
+// WHY: only a replace override serves entries, and a type that is neither is not a closure.
+export const busOverrideDoc = z.discriminatedUnion("type", [
+  z.object({ ...overrideFields, type: z.literal("replace"), entries: z.array(storedEntry) }),
+  z.object({ ...overrideFields, type: z.literal("noService"), entries: z.array(storedEntry).optional() }),
+]) satisfies z.ZodType<BusOverrideDoc>;
 
 const EXACT_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const ANNUAL_KEY = /^\d{2}-\d{2}$/;
