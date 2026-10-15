@@ -24,8 +24,16 @@ export function lookupRestDay(restDays: RestDays, dateStr: string): string | nul
   return restDays.exact.get(dateStr) ?? restDays.annual.get(dateStr.slice(5)) ?? null;
 }
 
+// EVIDENCE: date-holidays never returned for an Invalid Date or a year-0 or year-1 day, and read 2026-02-29 as
+// 3·1절 (a standalone run, 2026-10-16); 1900 and 2999 answer, and every caller asks for a day near today.
+const HOLIDAY_YEARS = { first: 1900, last: 2999 } as const;
+
 // WHY: the SKKU list wins over the public calendar; noon KST resolves the date whatever the host's time zone.
 export function toNonOperatingDayLabel(restDays: RestDays, dateStr: string): string | null {
+  const day = moment.tz(dateStr, DATE_FORMAT, true, KST_TIME_ZONE);
+  if (!day.isValid() || day.year() < HOLIDAY_YEARS.first || day.year() > HOLIDAY_YEARS.last) {
+    throw new RangeError(`${dateStr} is not a date from ${HOLIDAY_YEARS.first} to ${HOLIDAY_YEARS.last}`);
+  }
   const skku = lookupRestDay(restDays, dateStr);
   if (skku) return skku;
   const holidays = krHolidays.isHoliday(new Date(`${dateStr}T12:00:00+09:00`));
