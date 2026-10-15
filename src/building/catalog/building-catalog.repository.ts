@@ -23,7 +23,7 @@ export class BuildingCatalogRepository implements OnModuleInit {
     return ensureIndexesAtBoot("building.catalog", () => this.ensureIndexes());
   }
 
-  async ensureIndexes(): Promise<void> {
+  private async ensureIndexes(): Promise<void> {
     await Promise.all([
       this.spaces().createIndex({ buildNo: 1 }),
       this.connections().createIndex({ "a.skkuId": 1 }),

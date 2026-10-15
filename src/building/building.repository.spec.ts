@@ -22,7 +22,7 @@ for (const name of Object.keys(toArrayFor)) {
   findFor[name] = jest.fn(() => ({ sort: sortFor[name] }));
 }
 
-// Records which COLLECTION each index was created on (see "ensureIndexes").
+// Records which COLLECTION each index was created on (see "onModuleInit").
 const createIndex = jest.fn().mockResolvedValue(undefined);
 
 jest.mock("../infra/db", () => ({
@@ -69,7 +69,6 @@ const { clearCache, listBuildings, listCampusShapes } = {
     repository.listBuildings(...args),
   listCampusShapes: () => repository.listCampusShapes(),
 };
-const ensureIndexes = () => repository.ensureIndexes();
 
 let clock = 1_000_000;
 beforeEach(() => {
@@ -248,10 +247,10 @@ describe("BuildingRepository.listCampusShapes", () => {
  * call against `buildings` — and an index on the wrong collection is exactly
  * the mistake that is silent in production.
  */
-describe("BuildingRepository.ensureIndexes", () => {
+describe("BuildingRepository.onModuleInit", () => {
   it("creates a 2dsphere on campus_shapes.geometry — the insert-time ring guard", async () => {
     // Act
-    await ensureIndexes();
+    await repository.onModuleInit();
 
     // Assert
     expect(createIndex).toHaveBeenCalledWith("campus_shapes", {
@@ -261,7 +260,7 @@ describe("BuildingRepository.ensureIndexes", () => {
 
   it("covers the one read there is, rather than a filter nothing uses", async () => {
     // Act
-    await ensureIndexes();
+    await repository.onModuleInit();
 
     // Assert
     // `listCampusShapes` is `find({}).sort({order: 1, _id: 1})` — no campus
@@ -272,7 +271,7 @@ describe("BuildingRepository.ensureIndexes", () => {
 
   it("creates no index on another collection", async () => {
     // Act
-    await ensureIndexes();
+    await repository.onModuleInit();
 
     // Assert
     // Regression guard for the one-line mistake this file is shaped to catch:
@@ -280,9 +279,7 @@ describe("BuildingRepository.ensureIndexes", () => {
     // sync's (BuildingSyncRepository); nothing reads buildings or spaces by campus.
     expect(createIndex.mock.calls.map(([collection]) => collection)).toEqual(["campus_shapes", "campus_shapes"]);
   });
-});
 
-describe("BuildingRepository.onModuleInit", () => {
   it("ensures the indexes and logs it", async () => {
     // Act & Assert
     await expect(repository.onModuleInit()).resolves.toBeUndefined();
