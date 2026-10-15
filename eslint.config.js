@@ -570,7 +570,7 @@ const GLOSSARY_NOT = {
   health: ["isAlive", "isHealthy"],
   map: ["festivalConfig", "layerConfig", "eventWindow", "currentFestival", "filterButton", "exclusiveGroup", "categoryStyle", "sheetBody", "isFallback"],
   miniapps: ["appRegistry", "inbox", "readBy"],
-  notices: ["NoticeDto", "tabConfig", "FindResult", "pushStatus"],
+  notices: ["NoticeDto", "tabConfig", "FindResult"],
   ui: ["homeConfig", "widget", "slider", "period", "shortcut", "campusConfig", "busItem", "scrollItem"],
 };
 
