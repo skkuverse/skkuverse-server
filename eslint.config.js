@@ -126,6 +126,14 @@ const CLOCK_INJECT_DIRS = MODULE_SCOPES.filter(
   (scope) => !CLOCK_FREE_LAYERS.some((layer) => scope.startsWith(`src/${layer}/`)),
 );
 
+// moment-timezone reads the clock too: `moment()`, `moment.utc()` and `moment.now()` without an argument,
+// and `moment.tz(zone)` with only the zone. `moment(now)` and `moment.tz(value, zone)` parse a given instant.
+const MOMENT_NOW = [
+  "CallExpression[callee.name='moment'][arguments.length=0]",
+  "CallExpression[callee.object.name='moment'][callee.property.name='tz'][arguments.length<2]",
+  "CallExpression[callee.object.name='moment'][callee.property.name=/^(?:utc|now)$/][arguments.length=0]",
+].join(", ");
+
 const CLOCK_INJECT_SYNTAX = [
   {
     selector: "NewExpression[callee.name='Date'][arguments.length=0]",
@@ -134,6 +142,10 @@ const CLOCK_INJECT_SYNTAX = [
   {
     selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
     message: "Read the time from the injected `Clock` (src/infra/clock.ts), not `Date.now()`.",
+  },
+  {
+    selector: MOMENT_NOW,
+    message: "Read the time from the injected `Clock` (src/infra/clock.ts) and pass it in: `moment(clock.now())`.",
   },
 ];
 
@@ -159,6 +171,10 @@ const CLOCK_SYNTAX = [
     selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
     message: "A pure file does not read the clock: take `now` as an argument.",
   },
+  {
+    selector: MOMENT_NOW,
+    message: "A pure file does not read the clock: take `now` as an argument and pass it to moment.",
+  },
 ];
 
 // no-restricted-syntax replaces rather than merges across blocks, and the role blocks above each
@@ -173,6 +189,9 @@ const SRC_SYNTAX_PLUGIN = {
     "spec-clock": CORE_RESTRICTED_SYNTAX,
     "schema-casts": CORE_RESTRICTED_SYNTAX,
     "schema-imports": CORE_RESTRICTED_SYNTAX,
+    "module-loads": CORE_RESTRICTED_SYNTAX,
+    // An alias of no-restricted-imports, so the boundary blocks keep their own patterns.
+    "import-paths": CORE_RULES.get("no-restricted-imports"),
     // An alias of id-denylist, so the glossary/<module> blocks keep theirs.
     "generic-names": CORE_RULES.get("id-denylist"),
   },
@@ -798,6 +817,40 @@ module.exports = [
     },
   },
   ...layerSetLeafBlocks(),
+  {
+    // The boundaries above read import declarations: a `require()` or an `import()` call would pass them all,
+    // so non-spec src/ loads modules only through `import`. Specs may still require a module after setup.
+    name: "boundaries/module-loads",
+    files: ["src/**/*.ts"],
+    ignores: ["src/**/*.spec.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: {
+      "@typescript-eslint/no-require-imports": "error",
+      "src-syntax/module-loads": [
+        "error",
+        { selector: "ImportExpression", message: "Import the module at the top of the file: the import boundaries do not read an `import()` call." },
+      ],
+    },
+  },
+  {
+    // The boundary patterns match a specifier as written, so `../../building/../notices/x` would pass as building's.
+    name: "boundaries/import-paths",
+    files: ["src/**/*.ts"],
+    plugins: { "src-syntax": SRC_SYNTAX_PLUGIN },
+    rules: {
+      "src-syntax/import-paths": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "(?:^|/)[^./][^/]*/\\.\\.(?:/|$)",
+              message: "Write the import path without a `..` after a folder name: the boundaries read the path as written.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   {
     // A spec may build a pathless issue on purpose, to test how one is answered.
     name: "zod/issue-path",
