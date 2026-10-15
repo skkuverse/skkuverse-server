@@ -9,23 +9,23 @@ const FIXED_KEY =
   "FAKEseoulBusServiceKeyForTestsOnlyNotARealKey0000%2BFAKE%2Fseoul%2Bbus%2Ftest0key%3D%3D";
 
 describe("validateServiceKey", () => {
-  it("rejects missing / empty key with 'is required'", () => {
+  it("reports a missing or empty key as missing", () => {
     // Act & Assert
-    expect(validateServiceKey(undefined).some((e) => e.includes("is required"))).toBe(true);
-    expect(validateServiceKey("").some((e) => e.includes("is required"))).toBe(true);
+    expect(validateServiceKey(undefined)).toBe("missing");
+    expect(validateServiceKey("")).toBe("missing");
   });
 
   it("rejects raw special chars that indicate non-URL-encoded form", () => {
     // Act & Assert
-    expect(validateServiceKey("ABC+DEF=").some((e) => e.includes("URL-encoded"))).toBe(true);
-    expect(validateServiceKey("ABC&DEF").some((e) => e.includes("URL-encoded"))).toBe(true);
-    expect(validateServiceKey("ABC DEF").some((e) => e.includes("URL-encoded"))).toBe(true);
+    expect(validateServiceKey("ABC+DEF=")).toBe("not-url-encoded");
+    expect(validateServiceKey("ABC&DEF")).toBe("not-url-encoded");
+    expect(validateServiceKey("ABC DEF")).toBe("not-url-encoded");
   });
 
   it("accepts a properly URL-encoded prod-shaped key", () => {
     // Act & Assert
-    expect(validateServiceKey(FIXED_KEY)).toEqual([]);
-    expect(validateServiceKey("test-seoul-bus-key")).toEqual([]);
+    expect(validateServiceKey(FIXED_KEY)).toBeNull();
+    expect(validateServiceKey("test-seoul-bus-key")).toBeNull();
   });
 });
 
