@@ -1,5 +1,6 @@
 import Holidays from "date-holidays";
 import moment from "moment-timezone";
+import { KST_TIME_ZONE } from "../bus.constants";
 import type { BusOverrideDoc, BusScheduleDoc } from "./bus-schedule.document";
 import type { DaySources, PickedPattern, RestDays, SuspendWindow } from "./bus-schedule.types";
 import type { ScheduleDay, ScheduleNotice } from "./bus-schedule.wire";
@@ -9,6 +10,14 @@ const DATE_FORMAT = "YYYY-MM-DD";
 // QUIRK(date-holidays): computes KR holidays for any year, substitute holidays included; ad-hoc ones the
 // library cannot predict go in skku-rest-days.json.
 const krHolidays = new Holidays("KR");
+
+// WHY: each Monday asked for costs a cached week and two reads, and date-holidays hangs on an invalid date or a
+// far year, so the week view answers a real date within a year of today (KST) either way.
+export function isWeekStartInRange(from: string, now: Date): boolean {
+  const day = moment.tz(from, DATE_FORMAT, true, KST_TIME_ZONE);
+  const today = moment(now).tz(KST_TIME_ZONE).startOf("day");
+  return day.isValid() && !day.isBefore(today.clone().subtract(1, "year")) && !day.isAfter(today.clone().add(1, "year"));
+}
 
 /** WHY: exact date first, then the yearly MM-DD rule. */
 export function lookupRestDay(restDays: RestDays, dateStr: string): string | null {
