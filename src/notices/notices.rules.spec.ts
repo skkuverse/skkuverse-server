@@ -289,11 +289,8 @@ describe("excludeReasonProblems", () => {
     name: "S",
     campus: "hssc",
     college: null,
-    appCategory: null,
     crawlAvailable: excludeReason === null,
     excludeReason,
-    hasCategory: true,
-    hasAuthor: true,
   });
 
   it("names a source whose reason has no copy, and passes one that has or needs none", () => {

@@ -6,11 +6,8 @@ const sourceConfig = z.object({
   name: z.string(),
   campus: z.string(),
   college: z.string().nullable(),
-  appCategory: z.string().nullable(),
   crawlAvailable: z.boolean(),
   excludeReason: z.string().nullable(),
-  hasCategory: z.boolean(),
-  hasAuthor: z.boolean(),
 }) satisfies z.ZodType<SourceConfig>;
 
 export const sourcesFile = z.array(sourceConfig, { error: "sources.json must be a JSON array" });
