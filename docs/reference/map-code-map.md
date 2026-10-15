@@ -17,7 +17,7 @@ Read them in this order: each depends only on the ones before it.
 
 | Folder | Holds |
 | --- | --- |
-| `src/map/` (root) | `MapModule` (the `/map` limiter), `MapRepository` (places, activations, their indexes), the stored documents, `BASE_LAYERS` and the other constants, the overlay wire both overlay routes share, the place schemas (`overlayPlaceDoc`, `sheetPlaceDoc`), `presentationFor`, `toI18nText`, `toOverlay`, `toServedWebviewUrl` |
+| `src/map/` (root) | `MapModule` (the `/map` limiter), `MapRepository` (places, activations, their indexes), the stored documents, `BASE_LAYERS` and the other constants, the overlay wire both overlay routes share, the place schemas (`overlayPlaceDoc`, `sheetPlaceDoc`), `presentationFor`, `toI18nText`, `toOverlay` |
 | `src/map/layer-set/` | The festival structure tier: the layer-set JSON files, their loader (`map-layer-set.config.ts`) and schema, the cross-reference rules, the chip validator, the festival layer and chip specs, and `MapLayerSetService`, which answers which layer set is live |
 | `src/map/config/` | `GET /map/config`: campuses, layers, chips and camera defaults |
 | `src/map/campus/` | `GET /map/overlays/campus`: buildings and campus shapes, the static fallback, and the Cache-Control that refuses to cache it |
