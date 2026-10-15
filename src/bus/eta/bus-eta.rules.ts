@@ -1,7 +1,7 @@
 import moment from "moment-timezone";
 import { BusEtaDailyCapError } from "./bus-eta.error";
 import { haversineM } from "../../shared/distance.util";
-import { KST_TIME_ZONE } from "../bus.constants";
+import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { ScheduleDay } from "../schedule/bus-schedule.wire";
 import type { EtaOptIns, ScheduleStopCatalog } from "../stops/bus-stops.types";
 import type { LatLng } from "../../shared/lat-lng.types";
