@@ -22,7 +22,7 @@ import http from "node:http";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ObjectId, type Collection, type Document } from "mongodb";
 import request from "supertest";
-import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { LoopbackServers } from "../../helpers/nest/loopback-servers";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
@@ -639,25 +639,29 @@ describe("POST /internal/notices/dispatch-pending over real documents", () => {
     let release!: () => void;
     cf.hold = new Promise<void>((resolve) => (release = resolve));
     const first = ping().then((r) => r);
-    await until(() => cf.calls.length === 1);
+    try {
+      await until(() => cf.calls.length === 1);
 
-    // Act
-    const second = await ping(app, { source: "second" });
-    release();
+      // Act
+      const second = await ping(app, { source: "second" });
+      release();
 
-    // Assert
-    expect(second.body.data).toEqual({
-      status: "in-progress",
-      source: "second",
-      processed: 0,
-      sent: 0,
-      failed: 0,
-      skippedNoTopics: 0,
-      cfCalls: 0,
-      dedupedDocs: 0,
-    });
-    expect((await first).body.data).toMatchObject({ status: "ok", processed: 1, sent: 1 });
-  });
+      // Assert
+      expect(second.body.data).toEqual({
+        status: "in-progress",
+        source: "second",
+        processed: 0,
+        sent: 0,
+        failed: 0,
+        skippedNoTopics: 0,
+        cfCalls: 0,
+        dedupedDocs: 0,
+      });
+      expect((await first).body.data).toMatchObject({ status: "ok", processed: 1, sent: 1 });
+    } finally {
+      release();
+    }
+  }, APP_BOOT_TIMEOUT_MS);
 
   it("lets two replicas sweeping at once push each notice exactly once", async () => {
     // Arrange
@@ -678,5 +682,5 @@ describe("POST /internal/notices/dispatch-pending over real documents", () => {
     } finally {
       await replica.close();
     }
-  });
+  }, APP_BOOT_TIMEOUT_MS);
 });
