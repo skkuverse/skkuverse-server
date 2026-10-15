@@ -1,19 +1,16 @@
 import type { Readable } from "stream";
 
 export interface AttachmentUpstream {
-  headers: Record<string, unknown>;
-  data: Readable;
+  contentType: string | undefined;
+  contentLength: number | undefined;
+  body: Readable;
 }
 
-export interface AttachmentRequest {
-  url?: string;
-  referer?: string;
-  mode?: string;
-  name?: string;
+export interface AttachmentDownload {
+  headers: Array<[string, string]>;
+  body: Readable;
 }
 
-export interface AttachmentDelivery {
-  url: string;
-  name: string | undefined;
-  mode: string | undefined;
+export interface AttachmentLog {
+  warn(fields: Record<string, unknown>, message: string): void;
 }
