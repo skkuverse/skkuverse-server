@@ -21,7 +21,7 @@ interface BusOverrideFields {
 }
 
 // CONTRACT(scripts): written by scripts/seed-eskara.js, scripts/seed-vacation-2026.js and
-// scripts/seed-eskara-2026-noservice.js.
+// scripts/seed-eskara-2026-noservice.js; MongoDB refuses other shapes (scripts/lib/bus-overrides-validator.js).
 export type BusOverrideDoc =
   | (BusOverrideFields & { type: "replace"; entries: ScheduleEntry[] })
   | (BusOverrideFields & { type: "noService"; entries?: ScheduleEntry[] });

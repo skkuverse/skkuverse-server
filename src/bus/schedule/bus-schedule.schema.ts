@@ -1,12 +1,13 @@
 import { z } from "zod";
+import { isRecord } from "../../shared/object.util";
 import type { ServiceNotice } from "../bus.types";
 import type { BusOverrideDoc, BusScheduleDoc } from "./bus-schedule.document";
 import type { ScheduleEntry } from "./bus-schedule.wire";
 
 // WHY: entries and notices are served as stored, so they are checked, not rebuilt: a rebuilt object would
 // reorder its keys and move every week's ETag.
-const storedEntry = z.custom<ScheduleEntry>((value) => typeof value === "object" && value !== null);
-const storedNotice = z.custom<ServiceNotice>((value) => typeof value === "object" && value !== null);
+const storedEntry = z.custom<ScheduleEntry>(isRecord);
+const storedNotice = z.custom<ServiceNotice>(isRecord);
 
 export const busScheduleDoc = z.object({
   serviceId: z.string(),
@@ -24,7 +25,9 @@ const overrideFields = {
   notices: z.array(storedNotice),
 };
 
-// WHY: only a replace override serves entries, and a type that is neither is not a closure.
+// WHY: only a replace override serves entries, and a type that is neither is not a closure. The collection
+// holds the same shape as its validator (scripts/lib/bus-overrides-validator.js), pinned to this schema by
+// __tests__/nest/bus/bus-overrides-validator.test.ts.
 export const busOverrideDoc = z.discriminatedUnion("type", [
   z.object({ ...overrideFields, type: z.literal("replace"), entries: z.array(storedEntry) }),
   z.object({ ...overrideFields, type: z.literal("noService"), entries: z.array(storedEntry).optional() }),

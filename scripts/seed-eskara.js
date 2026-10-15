@@ -7,6 +7,7 @@
  */
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
+const { assertValidOverrides } = require("./lib/bus-overrides-validator");
 
 const MONGO_URL = process.env.MONGO_URL;
 if (!MONGO_URL) {
@@ -68,6 +69,9 @@ async function main() {
       entries: day2Entries,
     },
   ];
+
+  // Before the delete, so a bad document leaves the old ones in place.
+  assertValidOverrides(overrides);
 
   // Remove existing fasttrack-inja overrides for these dates
   await overridesCol.deleteMany({
