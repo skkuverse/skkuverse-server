@@ -137,6 +137,13 @@ const config = {
     release: process.env.GIT_SHA || undefined,
   },
 
+  // (An operations detail is left out of the public history.)
+  healthchecks: {
+    pollerPingUrl(): string | undefined {
+      return process.env.HEALTHCHECKS_POLLER_PING_URL || undefined;
+    },
+  },
+
   app: {
     ios: {
       minVersion: process.env.APP_IOS_MIN_VERSION || "1.0.0",

@@ -24,6 +24,7 @@ jest.mock("@sentry/nestjs", () => ({
   captureCheckIn: jest.fn(),
 }));
 
+import { inspect } from "node:util";
 import { PollerRegistryService } from "./poller-registry.service";
 
 const logger = require("../infra/logger");
@@ -355,6 +356,149 @@ describe("PollerRegistryService", () => {
 
       // Assert
       expect(Sentry.captureCheckIn).not.toHaveBeenCalled();
+    });
+  });
+
+  // (An operations detail is left out of the public history.)
+  describe("Healthchecks.io heartbeat ping", () => {
+    const PING_URL = "https://hc-ping.com/0f0e0d0c-test-ping-uuid";
+    const HEARTBEAT_MS = 5 * 60_000;
+    const realFetch = global.fetch;
+    const realSetImmediate = setImmediate;
+    let fetchMock: jest.Mock;
+    let savedUrl: string | undefined;
+
+    async function tick(intervalMs: number, times: number): Promise<void> {
+      for (let i = 0; i < times; i++) {
+        jest.advanceTimersByTime(intervalMs);
+        await settle();
+      }
+    }
+
+    function withPingUrl(url: string | undefined): void {
+      if (url === undefined) delete process.env.HEALTHCHECKS_POLLER_PING_URL;
+      else process.env.HEALTHCHECKS_POLLER_PING_URL = url;
+    }
+
+    beforeEach(() => {
+      savedUrl = process.env.HEALTHCHECKS_POLLER_PING_URL;
+      withPingUrl(PING_URL);
+      fetchMock = jest.fn().mockResolvedValue(new Response(null, { status: 200 }));
+      global.fetch = fetchMock as unknown as typeof fetch;
+    });
+
+    afterEach(() => {
+      global.fetch = realFetch;
+      withPingUrl(savedUrl);
+    });
+
+    it("pings the check once for every ok check-in", async () => {
+      // Arrange
+      registry.registerPoller(jest.fn(), 10_000, "p");
+
+      // Act
+      registry.startAll();
+      await settle();
+      await tick(HEARTBEAT_MS, 3);
+
+      // Assert
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(fetchMock.mock.calls.every(([url]) => url === PING_URL)).toBe(true);
+    });
+
+    it("does not ping while a fast poller is declared failing, and pings again once it recovers", async () => {
+      // Arrange
+      let failing = true;
+      registry.registerPoller(
+        () => (failing ? Promise.reject(new Error("upstream down")) : undefined),
+        10_000,
+        "fast",
+      );
+
+      // Act
+      registry.startAll();
+      await settle();
+      await tick(10_000, 30);
+
+      // Assert
+      expect(registry.failingPollers()).toEqual(["fast"]);
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      failing = false;
+      await tick(10_000, 30);
+      expect(fetchMock).toHaveBeenCalled();
+    });
+
+    it("does not ping at all when no ping URL is set", async () => {
+      // Arrange
+      withPingUrl(undefined);
+      registry.registerPoller(jest.fn(), 10_000, "p");
+
+      // Act
+      registry.startAll();
+      await settle();
+      await tick(HEARTBEAT_MS, 2);
+
+      // Assert
+      expect(Sentry.captureCheckIn).toHaveBeenCalledTimes(2);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("gives up on a ping that hangs within ten seconds", async () => {
+      // Arrange
+      let signal: AbortSignal | undefined;
+      fetchMock.mockImplementation((_url: string, init?: RequestInit) => {
+        signal = init?.signal ?? undefined;
+        return new Promise(() => {});
+      });
+      registry.registerPoller(jest.fn(), 60_000, "p");
+
+      // Act
+      registry.startAll();
+      await settle();
+      await tick(HEARTBEAT_MS, 1);
+      await tick(10_000, 1);
+
+      // Assert
+      expect(signal?.aborted).toBe(true);
+    });
+
+    it.each([
+      ["rejects", () => Promise.reject(new Error(`request to ${PING_URL} failed, reason: ECONNRESET`))],
+      ["answers 500", () => Promise.resolve(new Response(null, { status: 500 }))],
+    ])("keeps the pollers and check-ins going when the ping %s, and never logs the URL", async (_label, answer) => {
+      // Arrange
+      const unhandled: unknown[] = [];
+      const onUnhandled = (reason: unknown): void => {
+        unhandled.push(reason);
+      };
+      process.on("unhandledRejection", onUnhandled);
+      fetchMock.mockImplementation(answer);
+      const fn = jest.fn();
+      registry.registerPoller(fn, 60_000, "p");
+
+      try {
+        // Act
+        registry.startAll();
+        await settle();
+        // One poller interval at a time: a single 5-minute jump fires ticks the in-flight guard skips.
+        await tick(60_000, 10);
+        // A real macrotask, so Node has reported any unhandled rejection before the assertions.
+        await new Promise((resolve) => realSetImmediate(resolve));
+
+        // Assert
+        expect(unhandled).toEqual([]);
+        expect(Sentry.captureCheckIn).toHaveBeenCalledTimes(2);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(fn).toHaveBeenCalledTimes(11);
+        expect(events(logger.warn)).toContain("poller.healthchecks_ping_failed");
+        const logged = [logger.info, logger.warn, logger.error, logger.debug]
+          .map((m: jest.Mock) => inspect(m.mock.calls, { depth: 8 }))
+          .join("\n");
+        expect(logged).not.toContain("test-ping-uuid");
+      } finally {
+        process.off("unhandledRejection", onUnhandled);
+      }
     });
   });
 
