@@ -1,10 +1,10 @@
 /**
  * Dispatch decisions over the four push fields: the claim window (a KST day floor, the lease cutoff, the attempt
- * cap), the explicit status a stored notice is in, the field values of a push and a release, and the group's
- * representative. Its Mongo form is notices-dispatch.query.ts, pinned by the repository spec.
+ * cap), the field values of a push and a release, and the group's representative. Its Mongo form is
+ * notices-dispatch.query.ts, pinned by the repository spec.
  */
 import { ObjectId } from "mongodb";
-import { dispatchStatusOf, selectRepresentative, toClaimWindow, toPushedFields, toReleasedFields } from "./notices-dispatch.rules";
+import { selectRepresentative, toClaimWindow, toPushedFields, toReleasedFields } from "./notices-dispatch.rules";
 
 const POLICY = { maxAgeDays: 14, claimLeaseMs: 10 * 60_000, maxAttempts: 5 };
 
@@ -18,24 +18,6 @@ describe("toClaimWindow", () => {
     expect(window.dateFloor).not.toBe("2026-10-05");
     expect(window.leaseExpiredBefore).toEqual(new Date("2026-10-19T16:20:00Z"));
     expect(window.maxAttempts).toBe(5);
-  });
-});
-
-describe("dispatchStatusOf", () => {
-  const window = { leaseExpiredBefore: new Date("2026-10-19T16:20:00Z"), maxAttempts: 5 };
-
-  it.each([
-    ["never claimed", {}, "pending"],
-    ["released after a failure", { pushAttempts: 1, dispatchClaimedAt: null }, "pending"],
-    ["claimed, lease expired", { dispatchClaimedAt: new Date("2026-10-19T16:19:59Z") }, "pending"],
-    ["claimed at the cutoff", { dispatchClaimedAt: new Date("2026-10-19T16:20:00Z") }, "claimed"],
-    ["claimed, lease live", { dispatchClaimedAt: new Date("2026-10-19T16:25:00Z") }, "claimed"],
-    ["one attempt under the cap", { pushAttempts: 4 }, "pending"],
-    ["at the attempt cap", { pushAttempts: 5 }, "exhausted"],
-    ["pushed", { pushedAt: new Date("2026-10-19T16:00:00Z"), pushAttempts: 5 }, "pushed"],
-  ])("%s → %s", (_label, fields, status) => {
-    // Act & Assert
-    expect(dispatchStatusOf(fields, window)).toBe(status);
   });
 });
 
