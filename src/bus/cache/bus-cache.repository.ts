@@ -3,15 +3,19 @@ import type { Collection } from "mongodb";
 import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import config from "../../infra/config";
+import { createLogThrottle } from "../../infra/log-throttle";
+import logger from "../../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import type { BusCacheDocument, BusCacheKey, BusCacheValueByKey } from "./bus-cache.document";
 
 // WHY: each replica answers a burst of realtime requests from one read per key per 5 s.
 const MEMORY_TTL_MS = 5_000;
+const MISSING_LOG_INTERVAL_MS = 60_000;
 
 @Injectable()
 export class BusCacheRepository implements OnModuleInit {
   private readonly loaders = new Map<BusCacheKey, CachedLoader<BusCacheValueByKey[BusCacheKey] | null>>();
+  private readonly missingThrottle = createLogThrottle(MISSING_LOG_INTERVAL_MS, () => this.clock.now().getTime());
 
   constructor(private readonly clock: Clock) {}
 
@@ -49,7 +53,17 @@ export class BusCacheRepository implements OnModuleInit {
 
   private async loadValue(key: BusCacheKey): Promise<BusCacheValueByKey[BusCacheKey] | null> {
     const doc = await this.busCache().findOne({ _id: key });
-    return doc ? doc.data : null;
+    if (doc) return doc.data;
+    this.warnMissing(key);
+    return null;
+  }
+
+  // WHY: a missing key serves an empty list that reads as "no bus running"; this line shows a stopped writer
+  // or a key typo. SEE: docs/explanation/bus-architecture.md ("Invariants")
+  private warnMissing(key: BusCacheKey): void {
+    const ticket = this.missingThrottle.take(key);
+    if (!ticket) return;
+    logger.warn({ event: "bus.cache.missing", key, suppressed: ticket.suppressed }, "bus_cache key missing: serving this process's own poller memory");
   }
 
   private busCache(): Collection<BusCacheDocument> {
