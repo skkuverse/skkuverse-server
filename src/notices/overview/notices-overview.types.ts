@@ -40,10 +40,9 @@ export type UnavailableCause =
   | { cause: "budget_exhausted"; retryAt: Date | null }
   | { cause: "contract_violation"; reason: string };
 
-/** WHY: raw query values: the service validates them, sources first, as GET /notices does. */
 export interface OverviewRequest {
-  q: unknown;
-  sourceIds: unknown;
+  q: string;
+  sourceIds: readonly string[];
   lang: SupportedLang;
 }
 

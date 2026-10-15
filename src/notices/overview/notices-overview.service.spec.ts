@@ -1,10 +1,10 @@
 /**
  * NoticesOverviewService against stub retrieval and ai client. One block per
- * spec requirement: validation, no candidates, degradation, budget pause,
- * no answer, the cache, and the bounded response time.
+ * spec requirement: no candidates, degradation, budget pause, no answer, the
+ * cache, and the bounded response time. Validation is overviewRequest's
+ * (notices-overview.schema.spec.ts); the time is the injected clock's.
  */
 import { aiResponse, candidate } from "../../../__tests__/helpers/overview-fixtures";
-import { AppError } from "../../http/app.error";
 import type { Clock } from "../../infra/clock";
 import { AI_TIMEOUT_MS, MAX_BUDGET_PAUSE_MS, RETRIEVAL_MAX_TIME_MS } from "./notices-overview.constants";
 import { NoticesOverviewService } from "./notices-overview.service";
@@ -16,52 +16,19 @@ function setup() {
   const retriever = { retrieve: jest.fn() };
   const ai = { generate: jest.fn() };
   // The repository and client stubs keep this file's names: retriever.retrieve is searchCandidates, ai.generate postOverview.
-  const clock: Clock = { now: () => NOW };
+  // The time each call reads; a test moves it with `clock.at`.
+  const clock = { at: NOW, now(): Date { return this.at; } } satisfies Clock & { at: Date };
   const service = new NoticesOverviewService(
     { searchCandidates: retriever.retrieve } as never,
     { postOverview: ai.generate } as never,
     clock,
   );
-  return { service, retriever, ai };
+  return { service, retriever, ai, clock };
 }
 
 function ok(extra = {}): AiOverviewResult {
   return { kind: "ok", response: aiResponse(extra) };
 }
-
-async function rejection(p: Promise<unknown>): Promise<AppError> {
-  try {
-    await p;
-  } catch (err) {
-    return err as AppError;
-  }
-  throw new Error("expected a rejection");
-}
-
-describe("request validation", () => {
-  it.each([
-    ["missing q", undefined, "skku-main", "INVALID_PARAMS"],
-    ["blank q", "   ", "skku-main", "INVALID_PARAMS"],
-    ["q over 100 codepoints", "가".repeat(101), "skku-main", "INVALID_PARAMS"],
-    ["missing sourceIds", "장학금", undefined, "INVALID_PARAMS"],
-    ["array sourceIds", "장학금", ["skku-main"], "INVALID_PARAMS"],
-    ["21 sourceIds", "장학금", Array(21).fill("skku-main").join(","), "INVALID_PARAMS"],
-    ["unknown source", "장학금", "nope", "INVALID_SOURCE_ID"],
-  ])("rejects %s with 400 and touches nothing", async (_label, q, sourceIds, code) => {
-    // Arrange
-    const { service, retriever, ai } = setup();
-
-    // Act
-    const err = await rejection(service.getOverview({ q, sourceIds, lang: "ko" }, NOW));
-
-    // Assert
-    expect(err).toBeInstanceOf(AppError);
-    expect(err.code).toBe(code);
-    expect(err.httpStatus).toBe(400);
-    expect(retriever.retrieve).not.toHaveBeenCalled();
-    expect(ai.generate).not.toHaveBeenCalled();
-  });
-});
 
 describe("NoticesOverviewService.getOverview answers", () => {
   it("sends the top 6 distinct candidates with the request time and language", async () => {
@@ -73,7 +40,7 @@ describe("NoticesOverviewService.getOverview answers", () => {
     ai.generate.mockResolvedValue(ok());
 
     // Act
-    const result = await service.getOverview({ q: "장학금", sourceIds: "skku-main,skku-notice02", lang: "en" }, NOW);
+    const result = await service.getOverview({ q: "장학금", sourceIds: ["skku-main", "skku-notice02"], lang: "en" });
 
     // Assert
     expect(retriever.retrieve).toHaveBeenCalledWith("장학금", ["skku-main", "skku-notice02"]);
@@ -96,7 +63,7 @@ describe("NoticesOverviewService.getOverview answers", () => {
     retriever.retrieve.mockResolvedValue([]);
 
     // Act
-    const result = await service.getOverview({ q: "없는말", sourceIds: "skku-main", lang: "ko" }, NOW);
+    const result = await service.getOverview({ q: "없는말", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(result).toEqual({ overview: null, meta: { cached: false, reason: "no_results" } });
@@ -110,7 +77,7 @@ describe("NoticesOverviewService.getOverview answers", () => {
     ai.generate.mockResolvedValue(ok({ status: "no_answer", lead: null, points: [], sources: [] }));
 
     // Act
-    const result = await service.getOverview({ q: "날씨", sourceIds: "skku-main", lang: "ko" }, NOW);
+    const result = await service.getOverview({ q: "날씨", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(result).toEqual({ overview: null, meta: { cached: false, reason: "no_answer" } });
@@ -130,7 +97,7 @@ describe("graceful degradation", () => {
     ai.generate.mockResolvedValue(outcome);
 
     // Act
-    const result = await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, NOW);
+    const result = await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(result).toEqual({ overview: null, meta: { cached: false, reason: "unavailable" } });
@@ -142,7 +109,7 @@ describe("graceful degradation", () => {
     retriever.retrieve.mockRejectedValue(new Error("maxTimeMS expired"));
 
     // Act
-    const result = await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, NOW);
+    const result = await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(result.meta.reason).toBe("unavailable");
@@ -156,7 +123,7 @@ describe("graceful degradation", () => {
     ai.generate.mockRejectedValue(new TypeError("bug"));
 
     // Act
-    const result = await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, NOW);
+    const result = await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(result.meta.reason).toBe("unavailable");
@@ -168,14 +135,16 @@ describe("budget pause", () => {
 
   it("stops calling the ai until retryAt, then resumes", async () => {
     // Arrange
-    const { service, retriever, ai } = setup();
+    const { service, retriever, ai, clock } = setup();
     retriever.retrieve.mockResolvedValue([candidate()]);
     ai.generate.mockResolvedValueOnce({ kind: "budget_exhausted", retryAt: RETRY_AT });
 
-    const first = await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, new Date("2026-10-06T15:00:00Z"));
+    clock.at = new Date("2026-10-06T15:00:00Z");
+    const first = await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     // Act
-    const paused = await service.getOverview({ q: "기숙사", sourceIds: "skku-main", lang: "ko" }, new Date("2026-10-06T23:59:00Z"));
+    clock.at = new Date("2026-10-06T23:59:00Z");
+    const paused = await service.getOverview({ q: "기숙사", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(first.meta.reason).toBe("unavailable");
@@ -184,23 +153,25 @@ describe("budget pause", () => {
     expect(retriever.retrieve).toHaveBeenCalledTimes(1);
 
     ai.generate.mockResolvedValueOnce(ok());
-    const resumed = await service.getOverview({ q: "기숙사", sourceIds: "skku-main", lang: "ko" }, new Date("2026-10-07T00:00:01Z"));
+    clock.at = new Date("2026-10-07T00:00:01Z");
+    const resumed = await service.getOverview({ q: "기숙사", sourceIds: ["skku-main"], lang: "ko" });
     expect(ai.generate).toHaveBeenCalledTimes(2);
     expect(resumed.overview).not.toBeNull();
   });
 
   it("caps a far-future retryAt at 24 hours", async () => {
     // Arrange
-    const { service, retriever, ai } = setup();
+    const { service, retriever, ai, clock } = setup();
     retriever.retrieve.mockResolvedValue([candidate()]);
     ai.generate.mockResolvedValueOnce({ kind: "budget_exhausted", retryAt: new Date("2027-01-01T00:00:00Z") });
-    await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, NOW);
+    await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     ai.generate.mockResolvedValueOnce(ok());
     const after = new Date(NOW.getTime() + MAX_BUDGET_PAUSE_MS + 1);
 
     // Act
-    await service.getOverview({ q: "기숙사", sourceIds: "skku-main", lang: "ko" }, after);
+    clock.at = after;
+    await service.getOverview({ q: "기숙사", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(ai.generate).toHaveBeenCalledTimes(2);
@@ -211,12 +182,12 @@ describe("budget pause", () => {
     const { service, retriever, ai } = setup();
     retriever.retrieve.mockResolvedValue([candidate()]);
     ai.generate.mockResolvedValueOnce({ kind: "budget_exhausted", retryAt: null });
-    await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, NOW);
+    await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     ai.generate.mockResolvedValueOnce(ok());
 
     // Act
-    await service.getOverview({ q: "기숙사", sourceIds: "skku-main", lang: "ko" }, NOW);
+    await service.getOverview({ q: "기숙사", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(ai.generate).toHaveBeenCalledTimes(2);
@@ -226,15 +197,16 @@ describe("budget pause", () => {
 describe("overview cache", () => {
   it("reuses an overview for a respaced query and marks it cached", async () => {
     // Arrange
-    const { service, retriever, ai } = setup();
+    const { service, retriever, ai, clock } = setup();
     const docs = [candidate()];
     retriever.retrieve.mockResolvedValue(docs);
     ai.generate.mockResolvedValue(ok());
 
-    const first = await service.getOverview({ q: "장학금  신청", sourceIds: "skku-main", lang: "ko" }, NOW);
+    const first = await service.getOverview({ q: "장학금  신청", sourceIds: ["skku-main"], lang: "ko" });
 
     // Act
-    const second = await service.getOverview({ q: "장학금 신청", sourceIds: "skku-main", lang: "ko" }, new Date(NOW.getTime() + 5 * 60_000));
+    clock.at = new Date(NOW.getTime() + 5 * 60_000);
+    const second = await service.getOverview({ q: "장학금 신청", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(ai.generate).toHaveBeenCalledTimes(1);
@@ -249,10 +221,10 @@ describe("overview cache", () => {
     retriever.retrieve.mockResolvedValue([candidate()]);
     ai.generate.mockResolvedValue(ok({ status: "no_answer", lead: null, points: [], sources: [] }));
 
-    await service.getOverview({ q: "날씨", sourceIds: "skku-main", lang: "ko" }, NOW);
+    await service.getOverview({ q: "날씨", sourceIds: ["skku-main"], lang: "ko" });
 
     // Act
-    const again = await service.getOverview({ q: "날씨", sourceIds: "skku-main", lang: "ko" }, NOW);
+    const again = await service.getOverview({ q: "날씨", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(ai.generate).toHaveBeenCalledTimes(1);
@@ -266,10 +238,10 @@ describe("overview cache", () => {
     retriever.retrieve.mockResolvedValueOnce([doc]).mockResolvedValueOnce([{ ...doc, contentHash: "edited" }]);
     ai.generate.mockResolvedValue(ok());
 
-    await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, NOW);
+    await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     // Act
-    await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, NOW);
+    await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(ai.generate).toHaveBeenCalledTimes(2);
@@ -277,14 +249,16 @@ describe("overview cache", () => {
 
   it("calls the ai again on the next KST day", async () => {
     // Arrange
-    const { service, retriever, ai } = setup();
+    const { service, retriever, ai, clock } = setup();
     retriever.retrieve.mockResolvedValue([candidate()]);
     ai.generate.mockResolvedValue(ok());
 
-    await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, new Date("2026-10-06T14:50:00Z"));
+    clock.at = new Date("2026-10-06T14:50:00Z");
+    await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     // Act
-    await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, new Date("2026-10-06T15:10:00Z"));
+    clock.at = new Date("2026-10-06T15:10:00Z");
+    await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(ai.generate).toHaveBeenCalledTimes(2);
@@ -298,10 +272,10 @@ describe("overview cache", () => {
       .mockResolvedValueOnce({ kind: "failed", httpStatus: 502, code: "llm_error" })
       .mockResolvedValueOnce(ok());
 
-    const first = await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, NOW);
+    const first = await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     // Act
-    const second = await service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, NOW);
+    const second = await service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
 
     // Assert
     expect(first.meta.reason).toBe("unavailable");
@@ -317,8 +291,8 @@ describe("overview cache", () => {
     let release!: (v: AiOverviewResult) => void;
     ai.generate.mockReturnValue(new Promise<AiOverviewResult>((r) => (release = r)));
 
-    const a = service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, NOW);
-    const b = service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" }, NOW);
+    const a = service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
+    const b = service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
     await new Promise((r) => setImmediate(r));
     release(ok());
 
@@ -367,7 +341,7 @@ describe("bounded response time (spec: answered within 24 s even when the ai nev
     );
 
     const started = Date.now();
-    const pending = service.getOverview({ q: "장학금", sourceIds: "skku-main", lang: "ko" });
+    const pending = service.getOverview({ q: "장학금", sourceIds: ["skku-main"], lang: "ko" });
     await jest.advanceTimersByTimeAsync(AI_TIMEOUT_MS);
 
     // Act

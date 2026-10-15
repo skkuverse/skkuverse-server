@@ -1,11 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import { AppError } from "../../http/app.error";
 import { Clock } from "../../infra/clock";
 import { KeyedCache } from "../../infra/keyed-cache";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
-import { noticesConfig } from "../notices.config";
-import { toSearchQuery, toSourceIds } from "../notices.rules";
 import { NoticesOverviewClient } from "./notices-overview.client";
 import { MAX_BUDGET_PAUSE_MS, OVERVIEW_CACHE_MAX_KEYS, OVERVIEW_CACHE_TTL_MS } from "./notices-overview.constants";
 import { NoticesOverviewUnavailableError } from "./notices-overview.error";
@@ -27,7 +24,7 @@ interface Resolved {
 const UNAVAILABLE: OverviewResult = { overview: null, meta: { cached: false, reason: "unavailable" } };
 
 // WHY: an extra on top of the search list, so it never fails the request: a runtime failure is `overview: null`
-// with reason "unavailable" and a log line, and only bad input is a 400.
+// with reason "unavailable" and a log line; bad input is a 400 from `overviewRequest` before it gets here.
 @Injectable()
 export class NoticesOverviewService {
   private pausedUntil = 0;
@@ -39,11 +36,9 @@ export class NoticesOverviewService {
     private readonly clock: Clock,
   ) {}
 
-  async getOverview({ q: rawQ, sourceIds: rawSourceIds, lang }: OverviewRequest, now: Date = this.clock.now()): Promise<OverviewResult> {
-    const sourceIds = toSourceIds(typeof rawSourceIds === "string" ? rawSourceIds : "", (id) => noticesConfig.sourceById.has(id));
-    const searchText = toSearchQuery(rawQ);
-    if (!searchText) throw new AppError("INVALID_PARAMS", "q: 1-100 characters required", 400);
-    const startedAt = this.clock.now().getTime();
+  async getOverview({ q: searchText, sourceIds, lang }: OverviewRequest): Promise<OverviewResult> {
+    const now = this.clock.now();
+    const startedAt = now.getTime();
     const { result, candidates, aiStatus } = await this.resolve(searchText, sourceIds, { lang, now });
     logger.info(
       {
@@ -60,7 +55,7 @@ export class NoticesOverviewService {
     return result;
   }
 
-  private async resolve(searchText: string, sourceIds: string[], request: { lang: SupportedLang; now: Date }): Promise<Resolved> {
+  private async resolve(searchText: string, sourceIds: readonly string[], request: { lang: SupportedLang; now: Date }): Promise<Resolved> {
     if (request.now.getTime() < this.pausedUntil) return { result: UNAVAILABLE, candidates: 0, aiStatus: "paused" };
     let ranked: OverviewCandidate[];
     try {
