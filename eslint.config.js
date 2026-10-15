@@ -251,6 +251,12 @@ const DOUBLE_CAST_SYNTAX = [
     selector: ":matches(TSAsExpression, TSTypeAssertion) > :matches(TSAsExpression, TSTypeAssertion).expression",
     message: "No cast through unknown in a .schema: check the field, or leave it out of the type the schema returns.",
   },
+  {
+    // A cast to a zod schema type certifies an output the schema never checks, in one hop.
+    selector:
+      ":matches(TSAsExpression, TSTypeAssertion):matches([typeAnnotation.typeName.right.name='ZodType'], [typeAnnotation.typeName.name='ZodType'])",
+    message: "No cast to z.ZodType in a .schema: check the field, or leave it out of the type the schema returns.",
+  },
 ];
 
 // A rule or mapper imports a `.schema` for its types only (PURE_IMPORT_PATTERNS is one import deep): a runtime
