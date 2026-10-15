@@ -3,25 +3,32 @@
  * (harden-test-suite task 6.3, design D6): what
  * GET /bus/schedule/data/:serviceId/week answers for timetable patterns
  * (`bus_schedules`) and per-date overrides (`bus_overrides`) seeded the way
- * `npm run schedule` writes them, through the production pipeline with nothing
- * overridden.
+ * `npm run schedule` writes them, through the production pipeline with only
+ * `Clock` overridden.
  *
- * This file is the safety net for refactor group 12 (bus). It is never edited
- * while that group runs: a failure is a regression to report.
+ * A regression pin: a failure is a regression to report, and an expected value
+ * changes only with the behavior it pins (`.claude/rules/tests.md`). The app
+ * boots every bus module `src/app.module.ts` imports, so a module split needs no
+ * edit here.
  *
- * `/week` takes its week from `?from=`, so no clock is involved. Each test asks
+ * `/week` takes its week from `?from=` and refuses one more than a year from
+ * today, so `Clock` stands at 10:00 KST on Tuesday 2026-10-20. Each test asks
  * for its own week: ScheduleService keeps a resolved week for an hour per
  * process, which one test pins on purpose.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Collection, Document } from "mongodb";
 import request from "supertest";
+import { Clock } from "../../../src/infra/clock";
 import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { appModulesUnder } from "../../helpers/nest/app-modules";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 
+const NOW = new Date("2026-10-20T01:00:00Z");
+const CLOCK = { now: (): Date => new Date(NOW) };
 const SERVICE_NOTICE = { style: "ai", text: "도착 시간은 실시간 교통 상황을 반영해요", source: "service" };
 
 /** Entries in the shape scripts/data/*-schedule.json carries. */
@@ -49,14 +56,15 @@ beforeAll(async () => {
   config = require("../../../src/infra/config") as Config;
   assertConfigReaches(mongod, config.mongo.url);
   const { buildTestApp } = require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp };
-  const { SchedulingModule } = require("../../../src/scheduling/scheduling.module") as { SchedulingModule: unknown };
-  const { BusModule } = require("../../../src/bus/bus.module") as { BusModule: unknown };
-  const { BusScheduleModule } = require("../../../src/bus/schedule/bus-schedule.module") as { BusScheduleModule: unknown };
 
   const busDb = db.getClient().db(config.mongo.dbName);
   schedules = busDb.collection("bus_schedules");
   overrides = busDb.collection("bus_overrides");
-  app = await buildTestApp({ imports: [SchedulingModule, BusModule, BusScheduleModule] as never[], role: "api" });
+  app = await buildTestApp({
+    imports: appModulesUnder("src/scheduling/", "src/bus/"),
+    overrides: [{ provide: Clock, useValue: CLOCK }],
+    role: "api",
+  });
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
