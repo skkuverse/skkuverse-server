@@ -86,7 +86,6 @@ const repository = new MapRepository();
 const findActiveActivation = (now: Date) => repository.findActiveActivation(now);
 const listPlacesByLayerSetId = (layerSetId: string) => repository.listPlacesByLayerSetId(layerSetId);
 const listPlacesWithDetailByLayerSetId = (layerSetId: string) => repository.listPlacesWithDetailByLayerSetId(layerSetId);
-const ensureIndexes = () => repository.ensureIndexes();
 
 /** Every (collection, keys, options?) call, as JSON for comparison. */
 function indexSpecs(): string[] {
@@ -112,7 +111,7 @@ describe("MapRepository.onModuleInit", () => {
 
   it("indexes places for the marker scan and validates coordinates with 2dsphere", async () => {
     // Act
-    await ensureIndexes();
+    await repository.onModuleInit();
     const specs = indexSpecs();
 
     // Assert
@@ -126,7 +125,7 @@ describe("MapRepository.onModuleInit", () => {
 
   it("creates no session index, because there are no sessions", async () => {
     // Act
-    await ensureIndexes();
+    await repository.onModuleInit();
     const specs = indexSpecs().join("|");
 
     // Assert
@@ -141,7 +140,7 @@ describe("MapRepository.onModuleInit", () => {
 
   it("indexes activations to cover the liveness filter AND its sort", async () => {
     // Act
-    await ensureIndexes();
+    await repository.onModuleInit();
 
     // Assert
     // Compound, because findActiveActivation sorts by activeFrom. A bare
@@ -153,7 +152,7 @@ describe("MapRepository.onModuleInit", () => {
 
   it("creates no snapshot index, because there are no snapshots", async () => {
     // Act
-    await ensureIndexes();
+    await repository.onModuleInit();
     const specs = indexSpecs().join("|");
 
     // Assert

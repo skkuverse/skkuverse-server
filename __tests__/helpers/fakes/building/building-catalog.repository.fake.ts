@@ -23,8 +23,6 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
 
   async onModuleInit(): Promise<void> {}
 
-  async ensureIndexes(): Promise<void> {}
-
   async findBuildingBySkkuId(skkuId: SkkuId): Promise<BuildingDoc | null> {
     this.read("findBuildingBySkkuId");
     const building = this.buildings.find((b) => b._id === skkuId);

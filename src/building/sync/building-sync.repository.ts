@@ -24,7 +24,7 @@ export class BuildingSyncRepository implements OnModuleInit {
     return ensureIndexesAtBoot("building.sync", () => this.ensureIndexes());
   }
 
-  async ensureIndexes(): Promise<void> {
+  private async ensureIndexes(): Promise<void> {
     await Promise.all([
       // WHY: no geo query runs; the 2dsphere index makes Mongo reject a malformed point at upsert.
       this.enriched().createIndex({ location: "2dsphere" }),

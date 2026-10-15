@@ -8,8 +8,8 @@
     "expects": 151
   },
   "building": {
-    "tests": 173,
-    "expects": 400
+    "tests": 226,
+    "expects": 482
   },
   "bus": {
     "tests": 433,
@@ -28,8 +28,8 @@
     "expects": 518
   },
   "map": {
-    "tests": 345,
-    "expects": 700
+    "tests": 433,
+    "expects": 844
   },
   "miniapps": {
     "tests": 145,
