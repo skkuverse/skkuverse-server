@@ -39,8 +39,6 @@ const DETAIL_WORDS: Readonly<Record<string, Words>> = {
     issue.code === "custom"
       ? `startUrl for "${id}" must address a page on the web view — no fragment, not the root`
       : `bad startUrl for "${id}"`,
-  relatedLinks: (id, issue) =>
-    issue.code === "unrecognized_keys" ? `unknown relatedLinks key "${firstKey(issue)}" in "${id}"` : `bad relatedLinks url in "${id}"`,
   noticeBanner: (id, issue) => (issue.code === "unrecognized_keys" ? `unknown noticeBanner key "${firstKey(issue)}" in "${id}"` : undefined),
 };
 
@@ -71,8 +69,14 @@ function entryWords(raw: unknown, [position, field = "", ...parts]: readonly Pro
   return ENTRY_WORDS[String(field)]?.(id, issue);
 }
 
+function relatedLinkWords(id: string, [, key]: readonly PropertyKey[], issue: Issue): string | undefined {
+  if (issue.code === "unrecognized_keys") return `unknown relatedLinks key "${firstKey(issue)}" in "${id}"`;
+  return key === "url" ? `bad relatedLinks url in "${id}"` : undefined;
+}
+
 function detailWords([id, field = "", ...parts]: readonly PropertyKey[], issue: Issue): string | undefined {
   if (field === "shell") return shellWords(String(id), parts, issue);
+  if (field === "relatedLinks") return relatedLinkWords(String(id), parts, issue);
   return DETAIL_WORDS[String(field)]?.(String(id), issue);
 }
 
