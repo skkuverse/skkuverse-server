@@ -99,7 +99,7 @@ export function crossReferenceIssue(config: LayerSet): string | null {
 }
 
 // WHY: two answers, because the chip validator reports an unknown id and an untouchable layer differently.
-export function chipGroupOf(catalogue: readonly LayerSpec[], layerId: string): string | null | undefined {
+function chipGroupOf(catalogue: readonly LayerSpec[], layerId: string): string | null | undefined {
   const layer = catalogue.find((l) => l.id === layerId);
   return layer ? layer.chipGroupId : undefined;
 }
