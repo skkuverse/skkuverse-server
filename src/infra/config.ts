@@ -137,6 +137,13 @@ const config = {
     release: process.env.GIT_SHA || undefined,
   },
 
+  // WHY: read per call, like role(): a test sets it per case. Only backend/prd_server holds it, so a laptop never pings.
+  healthchecks: {
+    pollerPingUrl(): string | undefined {
+      return process.env.HEALTHCHECKS_POLLER_PING_URL || undefined;
+    },
+  },
+
   app: {
     ios: {
       minVersion: process.env.APP_IOS_MIN_VERSION || "1.0.0",
