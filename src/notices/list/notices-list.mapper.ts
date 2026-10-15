@@ -1,4 +1,5 @@
-import type { NoticeDoc, SummaryPeriod } from "../notices.document";
+import type { SummaryPeriod } from "../notices.document";
+import type { NoticeListRow } from "./notices-list.document";
 import { normalizeSummaryType } from "../notices.rules";
 import { isV2Summary, selectEffectivePeriod, selectRoleBadge } from "./notices-list.rules";
 import type { CursorPayload, NoticePage } from "./notices-list.types";
@@ -9,7 +10,7 @@ export function encodeCursor(cursor: CursorPayload): string {
 }
 
 // WHY: a read of `limit + 1`: the extra document only says a next page exists, and the cursor is the last served row.
-export function toNoticePage(docs: NoticeDoc[], limit: number): NoticePage {
+export function toNoticePage(docs: NoticeListRow[], limit: number): NoticePage {
   const hasMore = docs.length > limit;
   const items = hasMore ? docs.slice(0, limit) : docs;
   const last = items[items.length - 1];
@@ -32,7 +33,7 @@ function toPeriodBrief(period: SummaryPeriod | null): Pick<NoticeSummaryBrief, "
   };
 }
 
-export function toSummaryBrief(doc: NoticeDoc, now: Date): NoticeSummaryBrief | null {
+export function toSummaryBrief(doc: NoticeListRow, now: Date): NoticeSummaryBrief | null {
   if (!doc.summaryAt) return null;
   const oneLiner = textOrNull(doc.summaryOneLiner);
   if (isV2Summary(doc)) return { oneLiner, ...selectRoleBadge(doc.summaryApplication, doc.summaryDates, now) };
@@ -41,7 +42,7 @@ export function toSummaryBrief(doc: NoticeDoc, now: Date): NoticeSummaryBrief | 
   return { oneLiner, type, ...toPeriodBrief(selected) };
 }
 
-export function toListItem(doc: NoticeDoc, now: Date): NoticeListItem {
+export function toListItem(doc: NoticeListRow, now: Date): NoticeListItem {
   return {
     id: doc._id.toHexString(),
     sourceId: doc.sourceId,

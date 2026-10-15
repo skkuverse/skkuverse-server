@@ -1,5 +1,6 @@
 import { ObjectId, type Document } from "mongodb";
 import { escapeRegex } from "../../shared/regex.util";
+import type { NoticeListRow } from "./notices-list.document";
 import type { CursorPayload, NoticeListQuery, NoticeScope } from "./notices-list.types";
 
 /**
@@ -35,7 +36,7 @@ export const LIST_PROJECTION = {
   summaryVersion: 1,
   summaryApplication: 1,
   summaryDates: 1,
-} as const;
+} as const satisfies Record<keyof NoticeListRow, 1>;
 
 // SEE: docs/decisions/0007-notice-ordering-key.md — after the cursor in (date desc, _id desc); `crawledAt` stays out.
 export function toCursorFilter(cursor: CursorPayload): Document {

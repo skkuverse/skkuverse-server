@@ -3,7 +3,7 @@
  * real $rankFusion is (pinned in notices-overview.query.spec.ts). `failWith` makes the read reject.
  */
 import type { NoticesOverviewRepository } from "../../../../src/notices/overview/notices-overview.repository";
-import type { OverviewCandidate } from "../../../../src/notices/overview/notices-overview.types";
+import type { OverviewCandidate } from "../../../../src/notices/overview/notices-overview.document";
 import type { PublicOf } from "../public-of";
 
 export class FakeNoticesOverviewRepository implements PublicOf<NoticesOverviewRepository> {
