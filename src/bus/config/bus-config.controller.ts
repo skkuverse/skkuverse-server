@@ -8,7 +8,8 @@ import type { SupportedLang } from "../../infra/types";
 import { BusConfigService } from "./bus-config.service";
 import type { BusConfig, BusGroup } from "./bus-config.wire";
 
-const CONFIG_CACHE_CONTROL = "public, max-age=300";
+// WHY: private, since the body is in the request's language and a shared cache would serve it to every language.
+const CONFIG_CACHE_CONTROL = "private, max-age=300";
 
 @Controller("bus/config")
 export class BusConfigController {

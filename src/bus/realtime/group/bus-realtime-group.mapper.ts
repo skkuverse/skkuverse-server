@@ -1,4 +1,4 @@
-import { KST_TIME_ZONE } from "../../bus.constants";
+import { KST_TIME_ZONE } from "../../../shared/time-zone.constants";
 import type { CachedBusFields } from "./bus-realtime-group.types";
 import type { RealtimeBus } from "./bus-realtime-group.wire";
 

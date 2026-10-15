@@ -18,12 +18,16 @@ import { Clock } from "../../../src/infra/clock";
 import { NoticesAttachmentModule } from "../../../src/notices/attachment/notices-attachment.module";
 import { NoticesDetailModule } from "../../../src/notices/detail/notices-detail.module";
 import { NoticesDetailRepository } from "../../../src/notices/detail/notices-detail.repository";
+import { noticeDetail } from "../../../src/notices/detail/notices-detail.wire";
 import { encodeCursor } from "../../../src/notices/list/notices-list.mapper";
 import { NoticesListModule } from "../../../src/notices/list/notices-list.module";
 import { NoticesListRepository } from "../../../src/notices/list/notices-list.repository";
+import { noticeList, noticeListMeta } from "../../../src/notices/list/notices-list.wire";
 import type { NoticeDoc } from "../../../src/notices/notices.document";
 import { NoticesModule } from "../../../src/notices/notices.module";
 import { NoticesTabsModule } from "../../../src/notices/tabs/notices-tabs.module";
+import { noticeTabs } from "../../../src/notices/tabs/notices-tabs.wire";
+import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeNoticesDetailRepository } from "../../helpers/fakes/notices/notices-detail.repository.fake";
 import { FakeNoticesListRepository } from "../../helpers/fakes/notices/notices-list.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
@@ -852,5 +856,92 @@ describe("GET /notices — multi-source search query", () => {
     // Assert
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_SOURCE_ID");
+  });
+});
+
+describe("notices bodies", () => {
+  // One notice per summary shape the list and detail map: AI v1 with every optional field, AI v2, and none.
+  const variety = () => [
+    rawDoc({
+      _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d101"),
+      articleNo: 101,
+      cleanMarkdown: "**x**",
+      attachments: [{ name: "a.pdf", url: "https://skku/a.pdf", referer: "https://skku/x" }, { name: "b.hwp", url: "https://skku/b.hwp" }],
+      editCount: 1,
+      editHistory: [{ detectedAt: new Date("2026-04-10T05:00:00.000Z"), oldHash: "a", newHash: "b", titleChanged: false, contentChanged: true, source: "crawler" }],
+      lastModified: new Date("2026-04-10T04:00:00.000Z"),
+      summaryAt: new Date("2026-04-10T06:00:00.000Z"),
+      summaryType: "action_required",
+      summary: "요약",
+      summaryOneLiner: "한 줄",
+      summaryPeriods: [{ label: "신청", startDate: "2026-04-05", startTime: null, endDate: "2026-04-20", endTime: "17:00" }],
+      summaryLocations: [{ label: "600주년기념관", detail: null }],
+      summaryDetails: { target: "학부생", action: null, host: "학생처", impact: null },
+      summaryModel: "model",
+    }),
+    rawDoc({
+      _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d102"),
+      articleNo: 102,
+      summaryAt: "2026-04-10T06:00:00.000Z",
+      summaryVersion: 2,
+      summaryOneLiner: "한 줄",
+      summaryApplication: { status: "dated", windows: [{ startAt: "2026-04-01T09:00:00+09:00", endAt: "2026-04-20T00:00:00+09:00", openEnded: false }] },
+      summaryDates: [{ evidence: "", subject: "신청", role: "apply", endType: "range", startAt: "2026-04-01T09:00:00+09:00", endAt: "2026-04-20T00:00:00+09:00" }],
+    }),
+    rawDoc({ _id: new ObjectId("66a1b2c3d4e5f6a7b8c9d103"), articleNo: 103, category: null, author: null, department: null, contentHash: null }),
+  ];
+
+  it.each(["ko", "en", "zh"])("GET /notices/tabs parses with the published noticeTabs wire in %s", async (lang) => {
+    // Act
+    const res = await request(httpServer).get("/notices/tabs").set("Accept-Language", lang);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(noticeTabs, res.body.data);
+  });
+
+  it("GET /notices/source/:sourceId parses with the published noticeList and noticeListMeta wires", async () => {
+    // Arrange
+    listRepository.docs = variety();
+
+    // Act
+    const res = await request(httpServer).get("/notices/source/skku-main?limit=2");
+    const { lang, ...meta } = res.body.meta;
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(lang).toBe("ko");
+    expect(res.body.data.hasMore).toBe(true);
+    expectWire(noticeList, res.body.data);
+    expectWire(noticeListMeta, meta);
+  });
+
+  it("GET /notices parses with the published noticeList and noticeListMeta wires", async () => {
+    // Arrange
+    listRepository.docs = variety();
+
+    // Act
+    const res = await request(httpServer).get("/notices?sourceIds=skku-main,cse-undergrad");
+    const { lang, ...meta } = res.body.meta;
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(lang).toBe("ko");
+    expect(res.body.data.notices.filter((notice: { summary: unknown }) => notice.summary === null)).toHaveLength(1);
+    expectWire(noticeList, res.body.data);
+    expectWire(noticeListMeta, meta);
+  });
+
+  it.each([101, 102, 103])("GET /notices/skku-main/%s parses with the published noticeDetail wire", async (articleNo) => {
+    // Arrange
+    detailRepository.docs = variety();
+
+    // Act
+    const res = await request(httpServer).get(`/notices/skku-main/${articleNo}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.articleNo).toBe(articleNo);
+    expectWire(noticeDetail, res.body.data);
   });
 });

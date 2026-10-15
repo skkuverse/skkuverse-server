@@ -17,8 +17,6 @@ export class FakeBuildingRepository implements PublicOf<BuildingRepository> {
 
   async onModuleInit(): Promise<void> {}
 
-  async ensureIndexes(): Promise<void> {}
-
   async listBuildings(campus?: Campus): Promise<readonly BuildingDoc[]> {
     if (this.failWith) throw this.failWith;
     return [...this.buildings]

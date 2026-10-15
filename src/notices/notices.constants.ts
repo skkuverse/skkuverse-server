@@ -6,4 +6,3 @@ export const MAX_SOURCE_IDS = 20;
 
 export const MAX_QUERY_CODEPOINTS = 100;
 
-export const NOTICES_TIMEZONE = "Asia/Seoul";

@@ -49,8 +49,6 @@ export class FakeBuildingSyncRepository implements PublicOf<BuildingSyncReposito
 
   async onModuleInit(): Promise<void> {}
 
-  async ensureIndexes(): Promise<void> {}
-
   async listRawUpdatedAt(): Promise<Map<SkkuId, string | null>> {
     return new Map([...this.raw.values()].map((doc) => [doc._id, doc.skkuUpdatedAt]));
   }

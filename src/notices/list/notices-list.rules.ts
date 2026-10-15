@@ -1,6 +1,6 @@
 import moment from "moment-timezone";
 import type { NoticeDoc, SummaryPeriod } from "../notices.document";
-import { NOTICES_TIMEZONE } from "../notices.constants";
+import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { SummaryType } from "../notices.types";
 import { OPEN_ENDED_DAYS } from "./notices-list.constants";
 import { NoticesListCursorError } from "./notices-list.error";
@@ -49,7 +49,7 @@ export function decodeCursor(str: unknown): CursorPayload {
 }
 
 function periodEndEpochMs(period: SummaryPeriod): number {
-  return moment.tz(`${period.endDate}T${period.endTime || "23:59:59"}`, NOTICES_TIMEZONE).valueOf();
+  return moment.tz(`${period.endDate}T${period.endTime || "23:59:59"}`, KST_TIME_ZONE).valueOf();
 }
 
 // WHY: a same-day time-boxed slot (a 12:00-13:00 info session) is an event, not a deadline to count down to.
@@ -76,7 +76,7 @@ export function isV2Summary(doc: Pick<NoticeDoc, "summaryVersion" | "summaryDate
 
 function parseKst(value: unknown): moment.Moment | null {
   if (typeof value !== "string" || value === "") return null;
-  const parsed = moment.tz(value, moment.ISO_8601, true, NOTICES_TIMEZONE);
+  const parsed = moment.tz(value, moment.ISO_8601, true, KST_TIME_ZONE);
   return parsed.isValid() ? parsed : null;
 }
 

@@ -1,6 +1,6 @@
-// WHY: static config resolved per request, so it may be cached like the mini-app registry it references;
-// five minutes also bounds how late a banner's `endAt` takes effect.
-export const UI_CACHE_CONTROL = "public, max-age=300";
+// WHY: five minutes bounds how late a banner's `endAt` takes effect; private, since the text is resolved in
+// the request's language and a shared cache would serve it to every language.
+export const UI_CACHE_CONTROL = "private, max-age=300";
 
 export const MIN_ASPECT_RATIO = 1;
 export const MAX_ASPECT_RATIO = 6;

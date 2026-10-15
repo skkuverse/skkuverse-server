@@ -55,7 +55,7 @@ export class PollerRegistryService
     this.registeredPollers.push({ fn, intervalMs, name });
   }
 
-  startAll(): void {
+  private startAll(): void {
     this.intervalIds = this.registeredPollers.map(({ fn, intervalMs, name }) => {
       logger.info({ event: "poller.started", name, intervalMs }, "Starting poller");
       const health = this.trackHealth(name, intervalMs);
@@ -92,7 +92,7 @@ export class PollerRegistryService
     this.heartbeatId = setInterval(() => this.heartbeat(), HEARTBEAT_MS);
   }
 
-  stopAll(): void {
+  private stopAll(): void {
     this.intervalIds.forEach(clearInterval);
     this.intervalIds = [];
     if (this.heartbeatId) clearInterval(this.heartbeatId);
@@ -104,10 +104,6 @@ export class PollerRegistryService
       this.intervalIds.length > 0 &&
       this.intervalIds.length === this.registeredPollers.length
     );
-  }
-
-  failingPollers(): string[] {
-    return [...this.health].filter(([, h]) => h.isDeclaredFailing).map(([name]) => name);
   }
 
   // QUIRK(nest): every onModuleInit, where the pollers register, runs before any

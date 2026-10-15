@@ -5,14 +5,14 @@ const fs = require("fs");
 const path = require("path");
 
 const assets = [
-  // notices/tabConfig + notices/sources read these with fs.readFileSync(__dirname/<name>)
+  // src/notices/notices.config.ts reads these with fs.readFileSync(__dirname/<name>)
   ["src/notices/categories.json", "dist/src/notices/categories.json"],
   ["src/notices/sources.json", "dist/src/notices/sources.json"],
   ["src/notices/exclude-reasons.json", "dist/src/notices/exclude-reasons.json"],
   // src/bus/schedule/bus-schedule.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/schedule/skku-rest-days.json", "dist/src/bus/schedule/skku-rest-days.json"],
-  // src/bus/stops/bus-stops.config.ts reads this with fs.readFileSync(__dirname/../schedule/<name>)
-  ["src/bus/schedule/schedule-stops.json", "dist/src/bus/schedule/schedule-stops.json"],
+  // src/bus/stops/bus-stops.config.ts reads this with fs.readFileSync(__dirname/<name>)
+  ["src/bus/stops/schedule-stops.json", "dist/src/bus/stops/schedule-stops.json"],
   // src/bus/bus.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/jongro-routes.json", "dist/src/bus/jongro-routes.json"],
   // miniapps/miniapps.config.ts reads these with fs.readFileSync(__dirname/<name>).

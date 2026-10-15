@@ -60,7 +60,7 @@ describe("GET /miniapps", () => {
 
     // Act & Assert
     expect(res.status).toBe(200);
-    expect(res.body.meta.lang).toBe("ko");
+    expect(res.body.meta).toEqual({});
     expect(typeof res.body.data.version).toBe("number");
     expect(Array.isArray(res.body.data.miniApps)).toBe(true);
     expect(res.body.data.miniApps.length).toBeGreaterThan(0);

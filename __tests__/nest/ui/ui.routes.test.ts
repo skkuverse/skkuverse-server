@@ -162,13 +162,13 @@ describe("GET /ui/home/campus", () => {
     const res = await request(httpServer).get("/ui/home/campus");
 
     // Assert
-    expect(res.headers["cache-control"]).toBe("public, max-age=300");
+    expect(res.headers["cache-control"]).toBe("private, max-age=300");
     expect(res.headers.vary).toMatch(/Accept-Language/);
   });
 });
 
 describe("GET /ui/home", () => {
-  it("returns the layout in the standard envelope, cacheable", async () => {
+  it("returns the layout in the standard envelope, cacheable by the client alone since it is in the request's language", async () => {
     // Act
     const res = await request(httpServer).get("/ui/home");
 
@@ -177,7 +177,7 @@ describe("GET /ui/home", () => {
     expect(res.body.meta.lang).toBe("ko");
     expect(res.body.data.version).toBe(1);
     expect(Array.isArray(res.body.data.sections)).toBe(true);
-    expect(res.headers["cache-control"]).toBe("public, max-age=300");
+    expect(res.headers["cache-control"]).toBe("private, max-age=300");
     expect(res.headers.vary).toMatch(/Accept-Language/);
   });
 

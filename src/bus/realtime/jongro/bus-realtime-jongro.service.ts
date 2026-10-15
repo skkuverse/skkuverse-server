@@ -38,7 +38,6 @@ export class BusRealtimeJongroService {
 
   private async refreshArrivals(route: JongroRoute): Promise<void> {
     const arrivals = await this.client.fetchArrivals(route);
-    if (!arrivals) return;
     this.warnOnRegistryDrift(route, arrivals);
     this.arrivalsByCode.set(route.code, arrivals);
     await this.cache.write(toArrivalsKey(route.code), arrivals);
@@ -46,7 +45,6 @@ export class BusRealtimeJongroService {
 
   private async refreshPositions(route: JongroRoute): Promise<void> {
     const sightings = await this.client.fetchSightings(route);
-    if (!sightings) return;
     const now = this.clock.now();
     const positions = sightings.flatMap((sighting) => this.toPositions(route, sighting, now));
     this.positionsByCode.set(route.code, positions);
@@ -76,9 +74,10 @@ export class BusRealtimeJongroService {
     return created;
   }
 
-  // WHY: once per route per process; a drifted registry puts buses and ETAs on the wrong stop.
+  // WHY: once per route per process; a drifted registry puts buses and ETAs on the wrong stop. An empty list
+  // ("4", no result) names no stop, so it says nothing about the registry.
   private warnOnRegistryDrift(route: JongroRoute, arrivals: readonly JongroArrivalDoc[]): void {
-    if (this.driftWarnedCodes.has(route.code)) return;
+    if (arrivals.length === 0 || this.driftWarnedCodes.has(route.code)) return;
     const drift = toRegistryDrift(route, arrivals);
     if (!drift) return;
     this.driftWarnedCodes.add(route.code);

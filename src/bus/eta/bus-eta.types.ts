@@ -25,13 +25,6 @@ export interface UpsertResult {
   skippedFrozen: number;
 }
 
-export interface LiveFetch {
-  offsetsSec: number[];
-  fetchedAt: Date;
-  /** WHY: set when the value is fixed for good. */
-  frozenAt?: Date;
-}
-
 export interface SequenceRef {
   serviceId: string;
   routeType: string;
