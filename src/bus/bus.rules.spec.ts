@@ -65,3 +65,16 @@ describe("serviceConfigOf", () => {
     },
   );
 });
+
+describe("serviceConfigOf for the commute services", () => {
+  const COMMUTE_IDS = ["commute-jeongja", "commute-jamsil", "commute-dogok", "commute-gangnam-yangjae", "commute-gwanggyo"];
+
+  it("gives each its own entry and notices, so changing one leaves the others", () => {
+    // Act
+    const entries = COMMUTE_IDS.map((id) => serviceConfigOf(id));
+
+    // Assert
+    expect(new Set(entries).size).toBe(COMMUTE_IDS.length);
+    expect(new Set(entries.map((entry) => entry?.notices)).size).toBe(COMMUTE_IDS.length);
+  });
+});
