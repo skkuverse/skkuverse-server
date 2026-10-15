@@ -5,7 +5,7 @@ import type { NoticeDetail, NoticeSummaryFull } from "./notices-detail.wire";
 // WHY: what JSON.stringify writes for the value, so the wire's string type holds a Date and a stored string alike.
 const toJsonTime = (value: Date | string): string => (value instanceof Date ? value.toISOString() : value);
 
-export function buildSummaryFull(doc: NoticeDoc): NoticeSummaryFull | null {
+export function toSummaryFull(doc: NoticeDoc): NoticeSummaryFull | null {
   if (!doc.summaryAt) return null;
   return {
     text: textOrNull(doc.summary),
@@ -50,6 +50,6 @@ export function toDetailItem(doc: NoticeDoc): NoticeDetail {
     lastModified: doc.lastModified ? toJsonTime(doc.lastModified) : null,
     crawledAt: toJsonTime(doc.crawledAt),
     editInfo: toEditInfo(doc),
-    summary: buildSummaryFull(doc),
+    summary: toSummaryFull(doc),
   };
 }

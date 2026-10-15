@@ -29,7 +29,7 @@ export const CANDIDATE_PROJECTION = {
  * notices_vector, which supplies its own embedding model. The scope is applied inside each sub-pipeline, before
  * fusion, so an out-of-scope notice cannot take a rank; `mustNot` because a document may lack `isDeleted`.
  */
-export function buildOverviewPipeline({ q: searchText, sourceIds, serviceStartDate }: OverviewPipelineInput): Document[] {
+export function toOverviewPipeline({ q: searchText, sourceIds, serviceStartDate }: OverviewPipelineInput): Document[] {
   const inScopeDate = { $match: { date: { $gte: serviceStartDate } } };
   const text = {
     $search: {
