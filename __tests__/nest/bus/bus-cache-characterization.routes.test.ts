@@ -7,19 +7,24 @@
  * Each test boots two apps on one mongod, both with ROLE=api so no poller
  * starts on its own: a "poller" app, booted under a spy on
  * PollerRegistryService#registerPoller so the test runs a registered poller's
- * tick by name, and an "api" app. Neither overrides a provider. Upstream APIs (HSSC, TOPIS) are a loopback
- * server reached through an axios request interceptor; their payloads are
- * hand-written in the shapes the pollers read (the client fixtures are task 6.6).
- * `Date` is frozen at 10:00 KST on a Tuesday.
+ * tick by name, and an "api" app. Each boots every bus module `src/app.module.ts`
+ * imports, so a module split needs no edit here, and overrides only `Clock`, which
+ * stands at 10:00 KST on Tuesday 2026-10-20. Upstream APIs (HSSC, TOPIS) are a
+ * loopback server reached through an axios request interceptor; their payloads
+ * are hand-written in the shapes the pollers read (the client fixtures are task
+ * 6.6). The 5-second test also freezes `Date`, which `createCachedLoader`
+ * (src/infra/cached-loader.ts) reads for its TTL.
  *
- * This file is the safety net for refactor group 12 (bus). It is never edited
- * while that group runs: a failure is a regression to report.
+ * A regression pin: a failure is a regression to report, and an expected value
+ * changes only with the behavior it pins (`.claude/rules/tests.md`).
  */
 import http from "node:http";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Collection } from "mongodb";
 import request from "supertest";
+import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { LoopbackServers } from "../../helpers/nest/loopback-servers";
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
@@ -29,6 +34,7 @@ type Axios = import("axios").AxiosStatic;
 type Registry = typeof import("../../../src/scheduling/poller-registry.service")["PollerRegistryService"];
 
 const NOW = new Date("2026-10-20T01:00:00Z");
+const CLOCK = { now: (): Date => new Date(NOW) };
 const DO_NOT_FAKE = [
   "setTimeout",
   "clearTimeout",
@@ -94,7 +100,6 @@ let axios: Axios;
 let interceptor: number;
 let buildTestApp: BuildTestApp;
 let PollerRegistryService: Registry;
-let modules: unknown[];
 let busCache: Collection;
 let pollers: Map<string, () => Promise<unknown> | unknown>;
 let pollerApp: NestExpressApplication;
@@ -117,16 +122,6 @@ beforeAll(async () => {
   buildTestApp = (require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp }).buildTestApp;
   PollerRegistryService = (require("../../../src/scheduling/poller-registry.service") as { PollerRegistryService: Registry })
     .PollerRegistryService;
-  modules = [
-    (require("../../../src/scheduling/scheduling.module") as { SchedulingModule: unknown }).SchedulingModule,
-    (require("../../../src/bus/bus.module") as { BusModule: unknown }).BusModule,
-    (require("../../../src/bus/cache/bus-cache.module") as { BusCacheModule: unknown }).BusCacheModule,
-    (require("../../../src/bus/realtime/bus-realtime.module") as { BusRealtimeModule: unknown }).BusRealtimeModule,
-    (require("../../../src/bus/realtime/hssc/bus-realtime-hssc.module") as { BusRealtimeHsscModule: unknown }).BusRealtimeHsscModule,
-    (require("../../../src/bus/realtime/jongro/bus-realtime-jongro.module") as { BusRealtimeJongroModule: unknown }).BusRealtimeJongroModule,
-    (require("../../../src/bus/realtime/group/bus-realtime-group.module") as { BusRealtimeGroupModule: unknown }).BusRealtimeGroupModule,
-    (require("../../../src/bus/station/bus-station.module") as { BusStationModule: unknown }).BusStationModule,
-  ];
   busCache = db.getClient().db(config.mongo.dbName).collection(config.mongo.collections.busCache);
 }, MONGOD_START_TIMEOUT_MS);
 
@@ -141,19 +136,18 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  jest.useFakeTimers({ now: NOW, doNotFake: [...DO_NOT_FAKE] });
   upstream.hssc = HSSC_ITEMS;
   upstream.station = STATION_BODY;
   upstream.requests = [];
   await clearCollections(db.getClient().db(config.mongo.dbName));
   const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller");
   try {
-    pollerApp = await buildTestApp({ imports: modules as never[], role: "api" });
+    pollerApp = await bootApp();
     pollers = new Map(registered.mock.calls.map(([fn, , name]) => [name, fn]));
   } finally {
     registered.mockRestore();
   }
-  apiApp = await buildTestApp({ imports: modules as never[], role: "api" });
+  apiApp = await bootApp();
 }, APP_BOOT_TIMEOUT_MS);
 
 afterEach(async () => {
@@ -161,6 +155,14 @@ afterEach(async () => {
   await apiApp?.close();
   await pollerApp?.close();
 });
+
+function bootApp(): Promise<NestExpressApplication> {
+  return buildTestApp({
+    imports: appModulesUnder("src/scheduling/", "src/bus/"),
+    overrides: [{ provide: Clock, useValue: CLOCK }],
+    role: "api",
+  });
+}
 
 async function tick(name: string): Promise<void> {
   const poller = pollers.get(name);
@@ -321,6 +323,7 @@ describe("bus_cache between a poller process and an api replica", () => {
 
   it("keeps a bus_cache read in replica memory for 5 seconds", async () => {
     // Arrange
+    jest.useFakeTimers({ now: NOW, doNotFake: [...DO_NOT_FAKE] });
     await get("/bus/realtime/data/hssc");
     await tick("hssc");
 
