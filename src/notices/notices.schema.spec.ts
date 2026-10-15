@@ -1,14 +1,14 @@
 /**
- * The committed tab files' shapes: the real files pass, a source missing any field fails, a non-array or
- * non-object file fails with the message the boot log shows, and a picker needs at least one source and a
- * maxSelection of one or more. Cross-references are notices.rules.ts.
+ * The committed tab files' shapes: the real files pass, a source missing any field the server reads fails (the
+ * crawler-only keys are optional and dropped), a non-array or non-object file fails with the message the boot
+ * log shows, and a picker needs at least one source and a maxSelection of one or more. Cross-references are notices.rules.ts.
  */
 import fs from "fs";
 import path from "path";
 import { categoriesFile, excludeReasonsFile, sourcesFile } from "./notices.schema";
 
 const read = (name: string): unknown => JSON.parse(fs.readFileSync(path.join(__dirname, name), "utf8"));
-const SOURCE = { id: "a", name: "A", campus: "hssc", college: null, appCategory: null, crawlAvailable: true, excludeReason: null, hasCategory: true, hasAuthor: false };
+const SOURCE = { id: "a", name: "A", campus: "hssc", college: null, crawlAvailable: true, excludeReason: null };
 
 describe("sourcesFile", () => {
   it("passes the committed sources.json", () => {
@@ -23,6 +23,17 @@ describe("sourcesFile", () => {
 
     // Act & Assert
     expect(sourcesFile.safeParse([rest]).success).toBe(false);
+  });
+
+  it("passes a source without the crawler-only keys and drops them", () => {
+    // Arrange
+    const crawlerOnly = { appCategory: null, hasCategory: true, hasAuthor: false };
+
+    // Act
+    const parsed = sourcesFile.safeParse([SOURCE, { ...SOURCE, id: "b", ...crawlerOnly }]);
+
+    // Assert
+    expect(parsed.data).toEqual([SOURCE, { ...SOURCE, id: "b" }]);
   });
 
   it("names a non-array file", () => {
