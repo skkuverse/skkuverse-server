@@ -116,3 +116,16 @@ describe("GET /bus/realtime/data/:groupId", () => {
     expect(res.body.error.code).toBe("GROUP_NOT_FOUND");
   });
 });
+
+// WHY: a group id is a lookup key, so a name Object.prototype already has must miss like any other
+// unknown id (spencer0124/skkuverse#82).
+describe("GET /bus/realtime/data/:groupId with an Object.prototype name", () => {
+  it.each(["toString", "__proto__", "constructor", "hasOwnProperty"])("%s → 404 GROUP_NOT_FOUND", async (groupId) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/realtime/data/${groupId}`);
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.body.error).toEqual({ code: "GROUP_NOT_FOUND", message: `Unknown groupId: ${groupId}` });
+  });
+});

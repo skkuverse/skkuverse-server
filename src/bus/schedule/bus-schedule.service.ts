@@ -8,7 +8,7 @@ import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { createLogThrottle } from "../../infra/log-throttle";
-import { SERVICE_CONFIG } from "../bus.constants";
+import { serviceConfigOf } from "../bus.rules";
 import type { ServiceConfigEntry } from "../bus.types";
 import { SKKU_REST_DAYS } from "./bus-schedule.config";
 import { BusScheduleRepository } from "./bus-schedule.repository";
@@ -53,7 +53,7 @@ export class BusScheduleService {
   }
 
   async resolveWeek(serviceId: string, fromDate?: string): Promise<ScheduleWeek | null> {
-    const serviceConfig = SERVICE_CONFIG[serviceId];
+    const serviceConfig = serviceConfigOf(serviceId);
     if (!serviceConfig) return null;
     const ref = fromDate ? moment.tz(fromDate, DATE_FORMAT, TZ) : moment(this.clock.now()).tz(TZ);
     const from = ref.clone().isoWeekday(1).startOf("day").format(DATE_FORMAT);
@@ -62,7 +62,7 @@ export class BusScheduleService {
   }
 
   async resolveSmartSchedule(serviceId: string): Promise<SmartSchedule | null> {
-    const serviceConfig = SERVICE_CONFIG[serviceId];
+    const serviceConfig = serviceConfigOf(serviceId);
     if (!serviceConfig) return null;
     const today = moment(this.clock.now()).tz(TZ);
     const suspended = this.suspendedResult(serviceId, serviceConfig, today);

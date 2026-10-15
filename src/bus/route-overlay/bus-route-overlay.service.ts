@@ -4,12 +4,12 @@ import type { RouteOverlay } from "./bus-route-overlay.wire";
 
 @Injectable()
 export class BusRouteOverlayService {
-  private readonly routes: Record<string, RouteOverlay> = {
-    jongro07: { color: OVERLAY_COLOR, coords: JONGRO07_COORDS },
-    jongro02: { color: OVERLAY_COLOR, coords: JONGRO02_COORDS },
-  };
+  private readonly routes = new Map<string, RouteOverlay>([
+    ["jongro07", { color: OVERLAY_COLOR, coords: JONGRO07_COORDS }],
+    ["jongro02", { color: OVERLAY_COLOR, coords: JONGRO02_COORDS }],
+  ]);
 
   getRoute(routeId: string): RouteOverlay | undefined {
-    return this.routes[routeId];
+    return this.routes.get(routeId);
   }
 }

@@ -455,3 +455,27 @@ describe("GET …/smart with arrival estimates", () => {
     expect(res.body.data.days[0].schedule[1].stopTimes).toEqual(["10:00", null]);
   });
 });
+
+// WHY: a service id is a lookup key, so a name Object.prototype already has must miss like any other
+// unknown id (spencer0124/skkuverse#82).
+describe("GET /bus/schedule/data/:serviceId with an Object.prototype name", () => {
+  const PROTOTYPE_NAMES = ["toString", "__proto__", "constructor", "hasOwnProperty"];
+
+  it.each(PROTOTYPE_NAMES)("%s/week → 404 SERVICE_NOT_FOUND", async (serviceId) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/schedule/data/${serviceId}/week`);
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.body.error).toEqual({ code: "SERVICE_NOT_FOUND", message: `Unknown serviceId: ${serviceId}` });
+  });
+
+  it.each(PROTOTYPE_NAMES)("%s/smart → 404 SERVICE_NOT_FOUND", async (serviceId) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/schedule/data/${serviceId}/smart`);
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.body.error).toEqual({ code: "SERVICE_NOT_FOUND", message: `Unknown serviceId: ${serviceId}` });
+  });
+});

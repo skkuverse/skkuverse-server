@@ -92,3 +92,16 @@ describe("GET /bus/campus/eta (retired)", () => {
     expect(res.status).toBe(404);
   });
 });
+
+// WHY: a route id is a lookup key, so a name Object.prototype already has must miss like any other
+// unknown id (spencer0124/skkuverse#82).
+describe("GET /bus/route/:routeId with an Object.prototype name", () => {
+  it.each(["toString", "__proto__", "constructor", "hasOwnProperty"])("%s → 404 NOT_FOUND", async (routeId) => {
+    // Act
+    const res = await request(httpServer).get(`/bus/route/${routeId}`);
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.body.error).toEqual({ code: "NOT_FOUND", message: `Route '${routeId}' not found` });
+  });
+});

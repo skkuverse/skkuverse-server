@@ -30,4 +30,9 @@ describe("toHsscBus", () => {
     // Act & Assert
     expect(toHsscBus({ ...ROW, stop_name: "새로운정류장" }, { sequence: 2, eventAt, dwellSeconds: 0 }).stationName).toBe("새로운정류장");
   });
+
+  it("passes a stop name that names an Object.prototype member through", () => {
+    // Act & Assert
+    expect(toHsscBus({ ...ROW, stop_name: "toString" }, { sequence: 2, eventAt, dwellSeconds: 0 }).stationName).toBe("toString");
+  });
 });
