@@ -25,7 +25,7 @@ export function lookupRestDay(restDays: RestDays, dateStr: string): string | nul
 }
 
 // EVIDENCE: date-holidays never returned for an Invalid Date or a year-0 or year-1 day, and read 2026-02-29 as
-// 3·1절 (a standalone run, 2026-10-16); 1900 and 2999 answer, and every caller asks for a day near today.
+// the March 1 holiday (a standalone run, 2026-10-16); 1900 and 2999 answer, and callers ask for days near today.
 const HOLIDAY_YEARS = { first: 1900, last: 2999 } as const;
 
 // WHY: the SKKU list wins over the public calendar; noon KST resolves the date whatever the host's time zone.
