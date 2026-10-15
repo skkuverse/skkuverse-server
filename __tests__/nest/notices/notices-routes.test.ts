@@ -506,6 +506,46 @@ describe("GET /notices/source/:sourceId", () => {
   });
 });
 
+describe("GET /notices — paging across stored date shapes", () => {
+  // EVIDENCE: boards crawled before 2026-08-06 store `date` with a time ("2026-07-21 11:15"); the cursor carries it.
+  const shapes = [
+    { id: "66a1b2c3d4e5f6a7b8c9d001", sourceId: "korean-undergrad", date: "2026-08-12" },
+    { id: "66a1b2c3d4e5f6a7b8c9d002", sourceId: "liberalarts-undergrad", date: "2026-07-21 11:15" },
+    { id: "66a1b2c3d4e5f6a7b8c9d003", sourceId: "korean-undergrad", date: "2026-07-21 11:15" },
+    { id: "66a1b2c3d4e5f6a7b8c9d004", sourceId: "liberalarts-undergrad", date: "2026-07-21 09:00" },
+    { id: "66a1b2c3d4e5f6a7b8c9d005", sourceId: "korean-undergrad", date: "2026-07-21" },
+    { id: "66a1b2c3d4e5f6a7b8c9d006", sourceId: "liberalarts-undergrad", date: "2026-07-20 18:30" },
+  ];
+
+  it("walks every page to the end, each notice once, newest first", async () => {
+    // Arrange
+    listRepository.docs = shapes.map((shape) => rawDoc({ _id: new ObjectId(shape.id), sourceId: shape.sourceId, date: shape.date }));
+    const served: string[] = [];
+    const statuses: number[] = [];
+    let cursor: string | null = null;
+
+    // Act
+    do {
+      const query: string = `/notices?sourceIds=korean-undergrad,liberalarts-undergrad&limit=2${cursor ? `&cursor=${cursor}` : ""}`;
+      const res = await request(httpServer).get(query);
+      statuses.push(res.status);
+      served.push(...(res.body.data?.notices ?? []).map((notice: { id: string }) => notice.id));
+      cursor = res.body.data?.nextCursor ?? null;
+    } while (cursor !== null && statuses.length < 10);
+
+    // Assert
+    expect(statuses).toEqual([200, 200, 200]);
+    expect(served).toEqual([
+      "66a1b2c3d4e5f6a7b8c9d001",
+      "66a1b2c3d4e5f6a7b8c9d003",
+      "66a1b2c3d4e5f6a7b8c9d002",
+      "66a1b2c3d4e5f6a7b8c9d004",
+      "66a1b2c3d4e5f6a7b8c9d005",
+      "66a1b2c3d4e5f6a7b8c9d006",
+    ]);
+  });
+});
+
 describe("GET /notices/:sourceId/:articleNo", () => {
   it("returns 400 INVALID_SOURCE_ID for unknown source", async () => {
     // Act

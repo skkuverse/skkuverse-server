@@ -10,8 +10,11 @@ import type { NoticeListQuery, NoticeScope } from "../../../../src/notices/list/
 import type { NoticeDoc } from "../../../../src/notices/notices.document";
 import type { PublicOf } from "../public-of";
 
+const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
+// WHY: Mongo orders strings by code unit, not locale, and stored dates mix "YYYY-MM-DD" with "YYYY-MM-DD HH:mm".
 const newestFirst = (a: NoticeDoc, b: NoticeDoc): number =>
-  b.date.localeCompare(a.date) || b._id.toHexString().localeCompare(a._id.toHexString());
+  byCodeUnit(b.date, a.date) || byCodeUnit(b._id.toHexString(), a._id.toHexString());
 
 export class FakeNoticesListRepository implements PublicOf<NoticesListRepository> {
   docs: NoticeDoc[] = [];
