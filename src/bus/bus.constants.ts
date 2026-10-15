@@ -1,7 +1,5 @@
 import type { ServiceConfigEntry, ServiceConfigMap } from "./bus.types";
 
-export const KST_TIME_ZONE = "Asia/Seoul";
-
 export const SEOUL_BUS_API_URL = "http://ws.bus.go.kr/api/rest";
 
 // WHY: two-digit codes as Seoul names village buses, so `jongro_locations_07` has no `_007` twin.

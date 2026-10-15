@@ -1,6 +1,6 @@
 import Holidays from "date-holidays";
 import moment from "moment-timezone";
-import { KST_TIME_ZONE } from "../bus.constants";
+import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { BusOverrideDoc, BusScheduleDoc } from "./bus-schedule.document";
 import type { DaySources, PickedPattern, RestDays, SuspendWindow } from "./bus-schedule.types";
 import type { ScheduleDay, ScheduleNotice } from "./bus-schedule.wire";

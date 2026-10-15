@@ -1,5 +1,5 @@
 import moment from "moment-timezone";
-import { NOTICES_TIMEZONE } from "../notices.constants";
+import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { NoticeDoc } from "../notices.document";
 import type { ClaimWindow, DispatchPolicy, PushedFields, ReleasedFields, SkippedFields } from "./notices-dispatch.types";
 
@@ -12,7 +12,7 @@ const MAX_PUSH_ERROR_LENGTH = 500;
  */
 export function toClaimWindow(now: Date, policy: Pick<DispatchPolicy, "maxAgeDays" | "claimLeaseMs" | "maxAttempts">): ClaimWindow {
   return {
-    dateFloor: moment(now).tz(NOTICES_TIMEZONE).subtract(policy.maxAgeDays, "days").format("YYYY-MM-DD"),
+    dateFloor: moment(now).tz(KST_TIME_ZONE).subtract(policy.maxAgeDays, "days").format("YYYY-MM-DD"),
     leaseExpiredBefore: new Date(now.getTime() - policy.claimLeaseMs),
     maxAttempts: policy.maxAttempts,
   };
