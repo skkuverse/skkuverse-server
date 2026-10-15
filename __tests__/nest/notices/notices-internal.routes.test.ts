@@ -8,14 +8,17 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ObjectId } from "mongodb";
 import request from "supertest";
 import config from "../../../src/infra/config";
+import type { FcmResponse } from "../../../src/infra/fcm";
 import { Clock } from "../../../src/infra/clock";
 import { NoticesDispatchClient } from "../../../src/notices/dispatch/notices-dispatch.client";
 import { NoticesDispatchModule } from "../../../src/notices/dispatch/notices-dispatch.module";
 import { NoticesDispatchRepository } from "../../../src/notices/dispatch/notices-dispatch.repository";
 import { NoticesDispatchService } from "../../../src/notices/dispatch/notices-dispatch.service";
+import { sweepSummary } from "../../../src/notices/dispatch/notices-dispatch.wire";
 import type { NoticeDoc } from "../../../src/notices/notices.document";
 import { NoticesModule } from "../../../src/notices/notices.module";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
+import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeNoticesDispatchClient } from "../../helpers/fakes/notices/notices-dispatch.client.fake";
 import { FakeNoticesDispatchRepository } from "../../helpers/fakes/notices/notices-dispatch.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
@@ -67,6 +70,7 @@ beforeEach(() => {
   repository.records = [];
   client.pushes = [];
   client.error = null;
+  client.response = { sent: 1, failed: 0, cleanedUp: 0 };
 });
 
 describe("POST /internal/notices/dispatch-pending", () => {
@@ -194,5 +198,43 @@ describe("POST /internal/notices/dispatch-pending", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.headers["ratelimit-limit"]).toBeUndefined();
+  });
+});
+
+describe("POST /internal/notices/dispatch-pending bodies", () => {
+  it("a sent, failed, skipped, idle and in-progress sweep each parse with the published sweepSummary wire", async () => {
+    // Arrange
+    const ping = () =>
+      request(httpServer).post("/internal/notices/dispatch-pending").set("X-Internal-Token", config.notices.dispatch.internalToken as string).send({});
+    repository.notices = [summarized(), summarized({ sourceId: "skku-main", articleNo: 1, title: "다른 공지", contentHash: "hash-2" })];
+    const mixed = await ping();
+    repository.notices = [summarized()];
+    client.error = new Error("sendNotification 500");
+    const failed = await ping();
+    client.error = null;
+    const idle = await ping();
+    // WHY: the fake's async sendPush adopts a pending promise, which holds the sweep in flight until the gate opens.
+    let openGate = () => {};
+    const gate = new Promise<FcmResponse>((resolve) => {
+      openGate = () => resolve({ sent: 1, failed: 0, cleanedUp: 0 });
+    });
+    client.response = gate as unknown as FcmResponse;
+    repository.notices = [summarized()];
+    client.pushes = [];
+    const held = ping().then((res) => res);
+    while (client.pushes.length === 0) await new Promise((resolve) => setImmediate(resolve));
+
+    // Act
+    const overlapping = await ping();
+    openGate();
+
+    // Assert
+    expect(mixed.body.data).toMatchObject({ sent: 1, skippedNoTopics: 1 });
+    expect(failed.body.data).toMatchObject({ failed: 1 });
+    expect([idle.body.data.status, overlapping.body.data.status]).toEqual(["ok", "in-progress"]);
+    for (const res of [mixed, failed, idle, overlapping, await held]) {
+      expect(res.status).toBe(200);
+      expectWire(sweepSummary, res.body.data);
+    }
   });
 });
