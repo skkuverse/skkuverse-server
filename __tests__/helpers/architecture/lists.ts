@@ -9,7 +9,7 @@ import path from "path";
 import { SIZE_CAPS } from "./exemptions";
 import { ROOT } from "./ratchet";
 
-export const LIST_DIRS = ["allowlists", "exemptions", "ratchets"] as const;
+export const LIST_DIRS = ["allowlists", "caps", "exemptions", "ratchets"] as const;
 export type ListDir = (typeof LIST_DIRS)[number];
 
 /** The ratchets, each with the decision it waits on: a file in `ratchets/` that is not here fails `list-registry`. */
@@ -68,11 +68,11 @@ export function exemptionReason(text: string, key: string): string | undefined {
   return typeof reason === "string" ? reason : undefined;
 }
 
-/** A size cap's `max`, or undefined when the text or the key is missing. */
-export function sizeCapMax(text: string | undefined, key: string): number | undefined {
+/** A cap's limit (a number, or a size cap's `max`), or undefined when the text or the key is missing. */
+export function capMax(text: string | undefined, key: string): number | undefined {
   if (text === undefined) return undefined;
   const value = (JSON.parse(text) as Record<string, unknown>)[key];
-  const max = value !== null && typeof value === "object" ? (value as { max?: unknown }).max : undefined;
+  const max = value !== null && typeof value === "object" ? (value as { max?: unknown }).max : value;
   return typeof max === "number" ? max : undefined;
 }
 
@@ -127,22 +127,26 @@ function exemptionViolations(change: ListChange, commits: readonly ListCommit[],
     const why = allowed === undefined ? `register ${name} in EXEMPTION_DECISIONS first` : `a new exemption cites the decision behind it: ${allowed.join(" or ")}`;
     return [`${file}: ${entry} (${why})`];
   });
-  if (name !== SIZE_CAPS) return out;
-  const risen = listEntries(after).filter((e) => was.has(e) && (sizeCapMax(after, e) ?? 0) > (sizeCapMax(before, e) ?? 0));
-  return [
-    ...out,
-    ...risen.flatMap((entry) => {
-      const raised = commitsThat(commits, file, (l) => (sizeCapMax(l.after, entry) ?? 0) > (sizeCapMax(l.before, entry) ?? Infinity));
-      if (raised.length > 0 && raised.every((c) => c.debt.includes(file))) return [];
-      return [`${file}: ${entry} max raised (${describeCommits(raised)}; each commit that raises a cap carries "${DEBT_TRAILER}: ${file}")`];
-    }),
-  ];
+  return name === SIZE_CAPS ? [...out, ...capRaises(change, commits)] : out;
+}
+
+/** `<file>: <key> max raised (…)` for each cap above the base whose raising commits do not all carry the trailer. */
+function capRaises(change: ListChange, commits: readonly ListCommit[]): string[] {
+  const { file, before, after } = change;
+  const was = new Set(listEntries(before));
+  const risen = listEntries(after).filter((e) => was.has(e) && (capMax(after, e) ?? 0) > (capMax(before, e) ?? 0));
+  return risen.flatMap((entry) => {
+    const raised = commitsThat(commits, file, (l) => (capMax(l.after, entry) ?? 0) > (capMax(l.before, entry) ?? Infinity));
+    if (raised.length > 0 && raised.every((c) => c.debt.includes(file))) return [];
+    return [`${file}: ${entry} max raised (${describeCommits(raised)}; each commit that raises a cap carries "${DEBT_TRAILER}: ${file}")`];
+  });
 }
 
 /** `<file>: <entry> (<why>)` for each entry a list gained, or cap it raised, that its kind of list may not. */
 export function growthViolations(changes: readonly ListChange[], commits: readonly ListCommit[], gate: ListGate): string[] {
   return changes.flatMap((change) => {
     if (dirOf(change.file) === "exemptions") return exemptionViolations(change, commits, gate);
+    if (dirOf(change.file) === "caps") return capRaises(change, commits);
     const { file, before, after } = change;
     const was = new Set(listEntries(before));
     const readers = new Set(gate.readers(file));

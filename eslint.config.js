@@ -412,10 +412,10 @@ function featureBoundaryBlocks() {
   );
 }
 
-// Per-role size caps (ADR 0010, D9). Each is the largest file of that role plus
-// at most 10 lines, comment lines counted
-// (__tests__/architecture/size-ratchets.test.ts keeps them there). A file over
-// its role's cap is split, or its flow becomes a sub-module (D3).
+// Per-role size caps (ADR 0010, D9), in __tests__/architecture/caps/role-max-lines.json. Each is the largest
+// file of that role plus at most 10 lines, comment lines counted (__tests__/architecture/size-ratchets.test.ts
+// keeps them there). A file over its role's cap is split, or its flow becomes a sub-module (D3). Each commit that
+// raises a cap carries `Architecture-Debt: __tests__/architecture/caps/role-max-lines.json` (list-growth).
 
 /** Globs over the module scopes for files named `*<tail>`: `scopeGlobs(".service.ts")`. */
 function scopeGlobs(tail) {
@@ -424,31 +424,7 @@ function scopeGlobs(tail) {
   );
 }
 
-const ROLE_MAX_LINES = {
-  bootstrap: 48,
-  client: 163,
-  config: 127,
-  constants: 47,
-  controller: 42,
-  decorator: 10,
-  document: 124,
-  error: 29,
-  filter: 83,
-  interceptor: 53,
-  mapper: 139,
-  middleware: 94,
-  module: 16,
-  pipe: 31,
-  poller: 33,
-  query: 169,
-  repository: 123,
-  rules: 92,
-  schema: 61,
-  service: 257,
-  types: 56,
-  util: 54,
-  wire: 57,
-};
+const ROLE_MAX_LINES = require("./__tests__/architecture/caps/role-max-lines.json");
 
 // A file over its role's cap with no domain seam to split it along carries a reasoned per-file cap instead
 // (ADR 0010 D9): __tests__/architecture/exemptions/size-caps.json, { "<file>": { "max": <lines>, "reason": "…" } }.
