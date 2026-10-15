@@ -579,33 +579,39 @@ describe("PollerRegistryService", () => {
 
   describe("Nest lifecycle hooks", () => {
     it("onApplicationBootstrap starts pollers when ROLE !== 'api' (combined)", () => {
-      // Arrange
       const prev = process.env.ROLE;
-      delete process.env.ROLE; // → "combined"
-      registry.registerPoller(jest.fn(), 1000, "x");
+      try {
+        // Arrange
+        delete process.env.ROLE; // → "combined"
+        registry.registerPoller(jest.fn(), 1000, "x");
 
-      // Act
-      registry.onApplicationBootstrap();
+        // Act
+        registry.onApplicationBootstrap();
 
-      // Assert
-      expect(registry.isReady()).toBe(true);
-      if (prev === undefined) delete process.env.ROLE;
-      else process.env.ROLE = prev;
+        // Assert
+        expect(registry.isReady()).toBe(true);
+      } finally {
+        if (prev === undefined) delete process.env.ROLE;
+        else process.env.ROLE = prev;
+      }
     });
 
     it("onApplicationBootstrap does NOT start pollers under ROLE=api", () => {
-      // Arrange
       const prev = process.env.ROLE;
-      process.env.ROLE = "api";
-      registry.registerPoller(jest.fn(), 1000, "x");
+      try {
+        // Arrange
+        process.env.ROLE = "api";
+        registry.registerPoller(jest.fn(), 1000, "x");
 
-      // Act
-      registry.onApplicationBootstrap();
+        // Act
+        registry.onApplicationBootstrap();
 
-      // Assert
-      expect(registry.isReady()).toBe(false);
-      if (prev === undefined) delete process.env.ROLE;
-      else process.env.ROLE = prev;
+        // Assert
+        expect(registry.isReady()).toBe(false);
+      } finally {
+        if (prev === undefined) delete process.env.ROLE;
+        else process.env.ROLE = prev;
+      }
     });
 
     it("onApplicationShutdown stops all pollers", () => {
