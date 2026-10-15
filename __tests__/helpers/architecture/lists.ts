@@ -21,6 +21,7 @@ export const DEBT_TRAILER = "Architecture-Debt";
 export const EXEMPTION_DECISIONS: Readonly<Record<string, readonly string[]>> = {
   "config-files": ["ADR 0010 D5"],
   "production-callers": ["ADR 0010 D2", "ADR 0011 D2"],
+  "repository-reads": ["ADR 0010 D2"],
   "service-specs": ["ADR 0010 D1"],
   "short-names": ["ADR 0010 D4"],
   "size-caps": ["ADR 0010 D9"],
