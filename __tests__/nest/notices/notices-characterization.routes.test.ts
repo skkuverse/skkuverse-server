@@ -605,7 +605,8 @@ describe("POST /internal/notices/dispatch-pending over real documents", () => {
     // Assert
     expect(res.body.data).toMatchObject({ processed: 1, sent: 0, skippedNoTopics: 1, cfCalls: 0 });
     expect(cf.calls).toEqual([]);
-    expect(await stored(doc._id)).toMatchObject({ pushedAt: NOW, pushAttempts: 1, dispatchClaimedAt: null, pushError: null });
+    expect(await stored(doc._id)).toMatchObject({ pushedAt: NOW, pushSkippedReason: "no-topic", dispatchClaimedAt: null, pushError: null });
+    expect(await stored(doc._id)).not.toHaveProperty("pushAttempts");
   });
 
   it("releases the lease and records the error when the function fails, and the next ping retries", async () => {
