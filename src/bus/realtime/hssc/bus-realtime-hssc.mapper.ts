@@ -6,7 +6,7 @@ export function toHsscBus(item: HsscApiBus, { sequence, eventAt, dwellSeconds }:
   return {
     ...item,
     sequence: sequence.toString(),
-    stationName: STATION_NAME_BY_HSSC_NAME[item.stop_name] || item.stop_name,
+    stationName: STATION_NAME_BY_HSSC_NAME.get(item.stop_name) ?? item.stop_name,
     carNumber: "0000",
     eventDate: eventAt.format(HSSC_EVENT_DATE_FORMAT),
     estimatedTime: dwellSeconds,

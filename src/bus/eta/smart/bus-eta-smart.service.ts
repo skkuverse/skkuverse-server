@@ -8,7 +8,7 @@ import { Clock } from "../../../infra/clock";
 import logger from "../../../infra/logger";
 import { createLogThrottle } from "../../../infra/log-throttle";
 import type { SupportedLang } from "../../../infra/types";
-import { SERVICE_CONFIG } from "../../bus.constants";
+import { serviceConfigOf } from "../../bus.rules";
 import { BusScheduleService } from "../../schedule/bus-schedule.service";
 import type { SmartSchedule } from "../../schedule/bus-schedule.wire";
 import { BusStopsService } from "../../stops/bus-stops.service";
@@ -44,7 +44,7 @@ export class BusEtaSmartService {
   ) {}
 
   async getSmart(serviceId: string, lang: SupportedLang): Promise<WithEtag<SmartSchedule>> {
-    const serviceConfig = SERVICE_CONFIG[serviceId];
+    const serviceConfig = serviceConfigOf(serviceId);
     const resolved = serviceConfig ? await this.schedule.resolveSmartSchedule(serviceId) : null;
     if (!resolved) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${serviceId}`, 404);
     // WHY: applied to a copy after the schedule cache and before hashing, so the ETag follows the estimates.
