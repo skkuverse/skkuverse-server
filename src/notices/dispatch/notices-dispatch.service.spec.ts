@@ -109,7 +109,7 @@ afterEach(() => {
 // dispatchGroup
 // ──────────────────────────────────────────────────────────
 describe("NoticesDispatchService.dispatchGroup", () => {
-  it("marks pushedAt and skips fetch when topics are empty", async () => {
+  it("records a skip, not a push, and skips fetch when topics are empty (umbrella issue 75)", async () => {
     // Arrange
     const notice = makeNotice({ sourceId: "does-not-exist" });
 
@@ -121,13 +121,7 @@ describe("NoticesDispatchService.dispatchGroup", () => {
     expect(global.fetch).not.toHaveBeenCalled();
     expect(mockCollection.updateOne).toHaveBeenCalledWith(
       { _id: notice._id },
-      expect.objectContaining({
-        $set: expect.objectContaining({
-          pushedAt: expect.any(Date),
-          dispatchClaimedAt: null,
-        }),
-        $inc: { pushAttempts: 1 },
-      }),
+      { $set: { pushedAt: FIXED_NOW, pushSkippedReason: "no-topic", dispatchClaimedAt: null, pushError: null } },
     );
   });
 

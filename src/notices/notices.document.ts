@@ -99,8 +99,9 @@ export interface NoticeDoc {
   isDeleted?: boolean | null;
   // WHY: the dispatch gate, apart from summaryAt: the crawler sets it once the ai summary has landed.
   aiSummaryAt?: Date | null;
-  // WHY: NoticesDispatchRepository is the only writer of the four push fields (dispatch/).
+  // WHY: NoticesDispatchRepository is the only writer of the five push fields (dispatch/).
   pushedAt?: Date | null;
+  pushSkippedReason?: "no-topic" | null;
   pushAttempts?: number;
   dispatchClaimedAt?: Date | null;
   pushError?: string | null;

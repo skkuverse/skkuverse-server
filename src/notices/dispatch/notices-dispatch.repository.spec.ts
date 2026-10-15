@@ -1,7 +1,7 @@
 /**
- * NoticesDispatchRepository's driver calls, the only writes of the four push fields: the atomic claim's filter
- * and lease stamp, the pushed and released records, each with one attempt counted, and the partial index the claim
- * reads. Over a real mongod they are pinned by notices-characterization.routes.test.ts.
+ * NoticesDispatchRepository's driver calls, the only writes of the push fields: the atomic claim's filter
+ * and lease stamp, the pushed and released records, each with one attempt counted, the skip record with none, and
+ * the partial index the claim reads. Over a real mongod they are pinned by notices-characterization.routes.test.ts.
  */
 const findOneAndUpdate = jest.fn((..._args: unknown[]) => Promise.resolve(null));
 const updateOne = jest.fn((..._args: unknown[]) => Promise.resolve({ acknowledged: true }));
@@ -62,6 +62,22 @@ describe("NoticesDispatchRepository records", () => {
 
     // Assert
     expect(updateOne).toHaveBeenCalledWith({ _id: id }, { $set: { dispatchClaimedAt: null, pushError: "boom" }, $inc: { pushAttempts: 1 } });
+  });
+});
+
+describe("NoticesDispatchRepository.recordSkipped", () => {
+  it("records a skip: resolved so no claim takes it again, the reason kept, the lease released, no attempt counted", async () => {
+    // Arrange
+    const id = new ObjectId();
+
+    // Act
+    await new NoticesDispatchRepository().recordSkipped(id, { pushedAt: CLAIMED_AT, pushSkippedReason: "no-topic", dispatchClaimedAt: null, pushError: null });
+
+    // Assert
+    expect(updateOne).toHaveBeenCalledWith(
+      { _id: id },
+      { $set: { pushedAt: CLAIMED_AT, pushSkippedReason: "no-topic", dispatchClaimedAt: null, pushError: null } },
+    );
   });
 });
 
