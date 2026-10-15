@@ -1,12 +1,10 @@
 import { Global, Module } from "@nestjs/common";
-import { ScheduleModule } from "@nestjs/schedule";
 import { PollerRegistryService } from "./poller-registry.service";
 
 // WHY: pollers run through PollerRegistryService, not @nestjs/schedule's @Interval, which has no
 // in-flight guard, no warm-up run and no failure reporting.
 @Global()
 @Module({
-  imports: [ScheduleModule.forRoot()],
   providers: [PollerRegistryService],
   exports: [PollerRegistryService],
 })
