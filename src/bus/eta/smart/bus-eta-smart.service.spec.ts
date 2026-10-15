@@ -53,7 +53,7 @@ describe("BusEtaSmartService.getSmart", () => {
     // Assert
     expect(smart.data.days[0]!.schedule[0]).toMatchObject({ stopTimes: ["10:00", "10:51"], eta: { source: "live" } });
     expect(smart.etag).toMatch(/^"smart-campus-inja-2026-10-12-[a-f0-9]{32}"$/);
-    expect(smart.cacheControl).toBe("public, max-age=60");
+    expect(smart.cacheControl).toBe("private, max-age=60");
   });
 
   it("reads the estimate store once per 30 s", async () => {
@@ -87,6 +87,6 @@ describe("BusEtaSmartService.getSmart", () => {
 
     // Assert
     expect(smart.data).toMatchObject({ status: "noData", message: "Schedule information is being prepared" });
-    expect(smart.cacheControl).toBe("public, max-age=300");
+    expect(smart.cacheControl).toBe("private, max-age=300");
   });
 });

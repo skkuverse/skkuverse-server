@@ -53,7 +53,8 @@ export class BusEtaSmartService {
     const data = withStatusMessage(result, lang);
     const hash = crypto.createHash("md5").update(JSON.stringify(data)).digest("hex");
     const maxAge = etaRouteTypes ? MAX_AGE_WITH_ESTIMATES_S : MAX_AGE_S;
-    return withEtag(data, `"smart-${serviceId}-${data.from || data.status}-${hash}"`, `public, max-age=${maxAge}`);
+    // WHY: private, since the body is in the request's language and a shared cache would serve it to every language.
+    return withEtag(data, `"smart-${serviceId}-${data.from || data.status}-${hash}"`, `private, max-age=${maxAge}`);
   }
 
   // WHY: the schedule as resolved when the estimates cannot be read.
