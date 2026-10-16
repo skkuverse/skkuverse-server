@@ -1,3 +1,4 @@
+import type { SubwayArrivalsDoc } from "../subway.document";
 import type { CountdownRow, SubwayDirection, TrainEvent, TrainState } from "../subway.types";
 import type { LineRoutes } from "../timetable/subway-timetable.types";
 
@@ -33,3 +34,19 @@ export interface StationObservations {
   histories: ReadonlyMap<string, TrainHistory>;
   countdownRows: readonly CountdownRow[];
 }
+
+export interface TrackedStation {
+  stationId: string;
+  lineCode: string;
+  serviceDate: string;
+  events: readonly TrainEvent[];
+  arrivals: SubwayArrivalsDoc;
+}
+
+export interface TrackedTick {
+  source: string;
+  trackedAt: Date;
+  stations: readonly TrackedStation[];
+}
+
+export type TrackedTickListener = (tick: TrackedTick) => Promise<void>;
