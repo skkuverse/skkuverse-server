@@ -39,7 +39,7 @@ export function toLatestProgress(latest: TrainProgress, candidate: TrainProgress
   return isForwardAndNoOlder ? candidate : latest;
 }
 
-function toNewestRows(events: readonly TrainEvent[], now: Date): TrainEvent[] {
+export function toNewestEvents(events: readonly TrainEvent[], now: Date): TrainEvent[] {
   const newestByTrainNo = new Map<string, TrainEvent>();
   for (const event of events) {
     const trainNo = toTrainNo(event.trainNo);
@@ -63,7 +63,7 @@ function withEvent(tick: TrackingTick, known: TrainHistory | undefined, event: T
 
 export function mergeObservations(tick: TrackingTick): Map<string, TrainHistory> {
   const histories = new Map(tick.histories);
-  for (const event of tick.responseEvents.flatMap((events) => toNewestRows(events, tick.now))) {
+  for (const event of tick.responseEvents.flatMap((events) => toNewestEvents(events, tick.now))) {
     const merged = withEvent(tick, histories.get(event.trainNo), event);
     if (merged) histories.set(merged.trainNo, merged);
   }

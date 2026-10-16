@@ -11,8 +11,8 @@ import type { StationSchedule } from "../timetable/subway-timetable.types";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { MAX_TRAINS_PER_DIRECTION } from "./subway-tracking.constants";
 import { toArrivalsDoc } from "./subway-tracking.mapper";
-import { mergeObservations, toDirectionByDestination, toLiveCountdownRows } from "./subway-tracking.rules";
-import type { SourceCountdownRows, StationObservations, TrainHistory } from "./subway-tracking.types";
+import { mergeObservations, toDirectionByDestination, toLiveCountdownRows, toNewestEvents } from "./subway-tracking.rules";
+import type { SourceCountdownRows, StationObservations, TrackedStation, TrackedTickListener, TrainHistory } from "./subway-tracking.types";
 
 const DIVERGENCE_LOG_INTERVAL_MS = 10 * 60_000;
 
@@ -23,6 +23,7 @@ const DIVERGENCE_LOG_INTERVAL_MS = 10 * 60_000;
 export class SubwayTrackingService {
   private readonly historiesByStationId = new Map<string, ReadonlyMap<string, TrainHistory>>();
   private readonly countdownRowsBySource = new Map<string, SourceCountdownRows>();
+  private readonly tickListeners: TrackedTickListener[] = [];
   private readonly divergenceThrottle: LogThrottle;
 
   constructor(
@@ -41,10 +42,20 @@ export class SubwayTrackingService {
     this.countdownRowsBySource.set(observations.source, { observedAt: now, rows: observations.countdownRows });
     const countdownRows = toLiveCountdownRows([...this.countdownRowsBySource.values()], now);
     const schedules = await this.timetable.listStationSchedules(now);
-    const docs = schedules.map((schedule) =>
-      this.toStationDoc(schedule, { histories: this.mergeInto(schedule, observations.events, now), countdownRows }, now),
-    );
-    await this.repository.upsertArrivals(docs);
+    const stations = schedules.map((schedule): TrackedStation => {
+      const events = toNewestEvents(observations.events.filter((event) => schedule.lineRoutes.up.includes(event.stationId)), now);
+      const histories = this.mergeInto(schedule, events, now);
+      const arrivals = this.toStationDoc(schedule, { histories, countdownRows }, now);
+      return { stationId: schedule.station.id, lineCode: schedule.station.lineCode, serviceDate: schedule.serviceDate, events, arrivals };
+    });
+    await this.repository.upsertArrivals(stations.map((station) => station.arrivals));
+    for (const listener of this.tickListeners) await listener({ source: observations.source, trackedAt: now, stations });
+  }
+
+  // WHY: the accuracy history listens here instead of the tracker calling it, so serving never depends on it;
+  // a listener must not reject, or it fails the tick after the arrivals are written.
+  addTickListener(listener: TrackedTickListener): void {
+    this.tickListeners.push(listener);
   }
 
   async findScheduledArrivals(stationId: string, now: Date): Promise<SubwayArrivalsDoc | null> {
@@ -56,7 +67,7 @@ export class SubwayTrackingService {
     const stationId = schedule.station.id;
     const histories = mergeObservations({
       histories: this.historiesByStationId.get(stationId) ?? new Map(),
-      responseEvents: [events.filter((event) => schedule.lineRoutes.up.includes(event.stationId))],
+      responseEvents: [events],
       routes: schedule.lineRoutes,
       directionByDestination: toDirectionByDestination(schedule.trains),
       now,

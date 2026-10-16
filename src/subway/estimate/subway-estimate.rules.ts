@@ -1,7 +1,8 @@
 import type { CountdownRow, TrainState } from "../subway.types";
 import type { ScheduledStop, ScheduledTrain } from "../timetable/subway-timetable.types";
 import type { TrainHistory, TrainProgress } from "../tracking/subway-tracking.types";
-import { APPROACH_LEAD_MS, MAX_COUNTDOWN_DIVERGENCE_SEC, MAX_DELAY_LENDER_GAP_MS, MAX_DELAY_SEC, MIN_DELAY_SEC } from "./subway-estimate.constants";
+import { APPROACH_LEAD_MS } from "../subway.constants";
+import { MAX_COUNTDOWN_DIVERGENCE_SEC, MAX_DELAY_LENDER_GAP_MS, MAX_DELAY_SEC, MIN_DELAY_SEC } from "./subway-estimate.constants";
 import type { CountdownDivergence, EstimateInput, StationArrivals, TrainArrival } from "./subway-estimate.types";
 
 const SECOND_MS = 1000;

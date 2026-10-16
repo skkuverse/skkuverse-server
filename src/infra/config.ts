@@ -137,6 +137,8 @@ const config = {
     trainMapDailyCap: 20_000,
     collections: {
       arrivals: "subway_arrivals",
+      events: "subway_events",
+      predictions: "subway_predictions",
     },
   },
 
