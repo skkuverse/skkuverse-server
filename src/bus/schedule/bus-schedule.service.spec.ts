@@ -20,7 +20,9 @@ jest.mock("./bus-schedule.rules", () => ({
 }));
 
 import { FakeBusScheduleRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
+import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
 import { SERVICE_CONFIG as serviceConfig } from "../bus.constants";
 import type { BusScheduleDoc } from "./bus-schedule.document";
@@ -39,7 +41,7 @@ let service: BusScheduleService;
 beforeEach(() => {
   repository = new FakeBusScheduleRepository();
   getNonOperatingDayLabel.mockImplementation(() => null);
-  service = new BusScheduleService(asReal<BusScheduleRepository>(repository), clock);
+  service = new BusScheduleService(asReal<BusScheduleRepository>(repository), asReal<HolidaysService>(new FakeHolidaysService()), clock);
 });
 
 afterEach(() => {

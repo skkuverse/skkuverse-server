@@ -9,7 +9,9 @@
  * request's language), i18n message presence/absence per
  * status + en translations, and X-Response-Time present on 200 but ABSENT on
  * 304. The last block applies stored arrival estimates (spec
- * shuttle-arrival-eta) from the faked estimate store.
+ * shuttle-arrival-eta) from the faked estimate store. Public holidays come
+ * from the faked calendar store, empty unless a test stores a year, so a day
+ * is answered by the rule-based lookup as before the calendar existed.
  */
 
 import fs from "fs";
@@ -27,11 +29,13 @@ import { BusScheduleRepository } from "../../../src/bus/schedule/bus-schedule.re
 import { BusScheduleService } from "../../../src/bus/schedule/bus-schedule.service";
 import { scheduleWeek, smartSchedule } from "../../../src/bus/schedule/bus-schedule.wire";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
+import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBusEtaRepository } from "../../helpers/fakes/bus/bus-eta.repository.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
+import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 const DO_NOT_FAKE = ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "setImmediate", "clearImmediate", "queueMicrotask", "nextTick", "performance"] as const;
@@ -42,33 +46,37 @@ interface TestApp {
   app: NestExpressApplication;
   timetable: FakeBusScheduleRepository;
   estimates: FakeBusEtaRepository;
+  holidays: FakeHolidaysRepository;
 }
 
 // WHY: the clock reads the (possibly fake-timer) Date, so a test fixes or advances the time with jest.
 async function bootApp(): Promise<TestApp> {
   const timetable = new FakeBusScheduleRepository();
   const estimates = new FakeBusEtaRepository();
+  const holidays = new FakeHolidaysRepository();
   const app = await buildTestApp({
     imports: [SchedulingModule, BusModule, BusStopsModule, BusScheduleModule, BusEtaModule, BusEtaSmartModule],
     overrides: [
       { provide: BusScheduleRepository, useValue: timetable },
       { provide: BusEtaRepository, useValue: estimates },
+      { provide: HolidaysRepository, useValue: holidays },
       { provide: Clock, useValue: { now: () => new Date() } },
     ],
     role: "api",
   });
-  return { app, timetable, estimates };
+  return { app, timetable, estimates, holidays };
 }
 
 let app: NestExpressApplication;
 let timetable: FakeBusScheduleRepository;
+let holidays: FakeHolidaysRepository;
 let httpServer: import("http").Server;
 let resolveWeek: jest.SpyInstance;
 let resolveSmartSchedule: jest.SpyInstance;
 
 beforeEach(async () => {
   jest.useFakeTimers({ now: new Date("2026-03-10T03:00:00.000Z"), doNotFake: [...DO_NOT_FAKE] });
-  ({ app, timetable } = await bootApp());
+  ({ app, timetable, holidays } = await bootApp());
   timetable.patterns = [pattern("campus-inja", [1, 2, 3, 4, 5])];
   httpServer = app.getHttpServer();
   resolveWeek = jest.spyOn(app.get(BusScheduleService), "resolveWeek");
@@ -607,5 +615,44 @@ describe("GET /bus/schedule/data/:serviceId/week and /smart bodies", () => {
     // Assert
     expect(res.body.data.status).toBe("noData");
     expectWire(smartSchedule, res.body.data);
+  });
+});
+
+// The calendar's 2026 rows as getRestDeInfo lists them (__tests__/nest/holidays/fixtures/getrestdeinfo-2026.json).
+const CALENDAR_2026 = [
+  { date: "2026-03-01", name: "삼일절" },
+  { date: "2026-03-02", name: "대체공휴일(삼일절)" },
+  { date: "2026-06-03", name: "전국동시지방선거" },
+];
+
+describe("GET /bus/schedule/data/:serviceId/week on a day the official calendar lists", () => {
+  it.each([
+    ["Substitute holiday", "2026-03-02", "2026-03-02", "대체공휴일(삼일절)"],
+    ["Election day", "2026-06-01", "2026-06-03", "전국동시지방선거"],
+  ])("%s: %s week resolves %s to no service with the calendar's label", async (_label, from, date, name) => {
+    // Arrange
+    holidays.store(2026, CALENDAR_2026);
+
+    // Act
+    const res = await request(httpServer).get(`/bus/schedule/data/campus-inja/week?from=${from}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+    const day = res.body.data.days.find((d: { date: string }) => d.date === date);
+    expect(day).toMatchObject({ display: "noService", label: name, schedule: [], notices: [] });
+    expect(res.body.data.days.filter((d: { display: string }) => d.display === "schedule")).toHaveLength(4);
+    expectWire(scheduleWeek, res.body.data);
+  });
+
+  it("a SKKU rest day still wins over a calendar holiday on the same date", async () => {
+    // Arrange
+    holidays.store(2026, [...CALENDAR_2026, { date: "2026-09-28", name: "임시공휴일" }]);
+
+    // Act
+    const res = await request(httpServer).get("/bus/schedule/data/campus-inja/week?from=2026-09-28");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.days[0]).toMatchObject({ date: "2026-09-28", display: "noService", label: "공자탄신일" });
   });
 });

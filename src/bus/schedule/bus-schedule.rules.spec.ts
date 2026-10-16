@@ -1,47 +1,29 @@
 /**
  * The timetable rules: the non-operating-day label (the SKKU list first, then
- * public holidays only, null on an ordinary day), the rest-day lookup, the
- * week-start parameter, which pattern a date resolves to, and the suspension
- * window. date-holidays MUST be mocked (loading the real lib under ts-jest
- * hangs); the stub holds three dates.
+ * the public-holiday name it is given, null on an ordinary day, and a
+ * RangeError on a date the holiday lookup cannot take), the rest-day lookup,
+ * the week-start parameter, which pattern a date resolves to, and the
+ * suspension window. Which dates are public holidays is HolidaysService's
+ * (src/holidays/holidays.service.spec.ts).
  */
-
-jest.mock("date-holidays", () =>
-  jest.fn().mockImplementation(() => ({
-    isHoliday: (date: Date) => {
-      const ds = date.toISOString().slice(0, 10);
-      const table: Record<string, Array<{ name: string; type: string }>> = {
-        "2026-01-01": [{ name: "신정", type: "public" }],
-        "2026-10-09": [{ name: "한글날", type: "public" }],
-        "2026-12-24": [{ name: "Christmas Eve", type: "observance" }],
-      };
-      return table[ds] ?? false;
-    },
-  })),
-);
 
 import moment from "moment-timezone";
 import { SKKU_REST_DAYS, loadRestDays as parseRestDays } from "./bus-schedule.config";
 import type { BusScheduleDoc } from "./bus-schedule.document";
 import { isWeekStartInRange, lookupRestDay, pickPattern, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
 
-const service = { getNonOperatingDayLabel: (date: string) => toNonOperatingDayLabel(SKKU_REST_DAYS, date) };
+const service = { getNonOperatingDayLabel: (date: string) => toNonOperatingDayLabel(SKKU_REST_DAYS, date, null) };
 
 describe("toNonOperatingDayLabel", () => {
-  it("returns the Korean name for a KR public holiday", () => {
+  it.each([
+    ["the calendar's name passes through", "2026-03-02", "대체공휴일(삼일절)", "대체공휴일(삼일절)"],
+    ["an election day passes through", "2026-06-03", "전국동시지방선거", "전국동시지방선거"],
+    ["a SKKU rest day beats a calendar name", "2026-09-28", "임시공휴일", "공자탄신일"],
+    ["a SKKU rest day with no calendar name", "2026-09-25", null, "건학기념일"],
+    ["null on an ordinary day", "2026-03-03", null, null],
+  ])("%s: %s with %s → %s", (_label, date, publicHoliday, label) => {
     // Act & Assert
-    expect(service.getNonOperatingDayLabel("2026-01-01")).toBe("신정");
-    expect(service.getNonOperatingDayLabel("2026-10-09")).toBe("한글날");
-  });
-
-  it("ignores non-public holiday types (e.g. observance)", () => {
-    // Act & Assert
-    expect(service.getNonOperatingDayLabel("2026-12-24")).toBeNull();
-  });
-
-  it("returns null for an ordinary weekday", () => {
-    // Act & Assert
-    expect(service.getNonOperatingDayLabel("2026-03-02")).toBeNull();
+    expect(toNonOperatingDayLabel(SKKU_REST_DAYS, date, publicHoliday)).toBe(label);
   });
 });
 
@@ -168,7 +150,7 @@ describe("toNonOperatingDayLabel on a date the holiday lookup cannot take", () =
     "throws on %s",
     (date) => {
       // Act & Assert
-      expect(() => toNonOperatingDayLabel(SKKU_REST_DAYS, date)).toThrow(`${date} is not a date from 1900 to 2999`);
+      expect(() => toNonOperatingDayLabel(SKKU_REST_DAYS, date, null)).toThrow(`${date} is not a date from 1900 to 2999`);
     },
   );
 
@@ -178,11 +160,11 @@ describe("toNonOperatingDayLabel on a date the holiday lookup cannot take", () =
     ["2028-02-29", null],
   ])("answers %s", (date, label) => {
     // Act & Assert
-    expect(toNonOperatingDayLabel(SKKU_REST_DAYS, date)).toBe(label);
+    expect(toNonOperatingDayLabel(SKKU_REST_DAYS, date, null)).toBe(label);
   });
 
   it("refuses a year out of range even on a day the SKKU list names", () => {
     // Act & Assert
-    expect(() => toNonOperatingDayLabel(SKKU_REST_DAYS, "0001-09-28")).toThrow("0001-09-28 is not a date from 1900 to 2999");
+    expect(() => toNonOperatingDayLabel(SKKU_REST_DAYS, "0001-09-28", null)).toThrow("0001-09-28 is not a date from 1900 to 2999");
   });
 });
