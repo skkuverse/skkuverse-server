@@ -293,7 +293,7 @@
     "appCategory": "general",
     "crawlAvailable": true,
     "excludeReason": null,
-    "hasCategory": true,
+    "hasCategory": false,
     "hasAuthor": true
   },
   {
@@ -1468,8 +1468,8 @@
     "campus": "nsc",
     "college": "공과대학",
     "appCategory": "dept",
-    "crawlAvailable": true,
-    "excludeReason": null,
+    "crawlAvailable": false,
+    "excludeReason": "temporarilyUnavailable",
     "hasCategory": true,
     "hasAuthor": false
   },
