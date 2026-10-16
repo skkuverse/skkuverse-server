@@ -12,12 +12,17 @@ const krHolidays = new Holidays("KR");
 // the March 1 holiday (a standalone run, 2026-10-16); 1900 and 2999 answer, and callers ask for days near today.
 const HOLIDAY_YEARS = { first: 1900, last: 2999 } as const;
 
-// WHY: noon KST resolves the date whatever the host's time zone.
-export function lookupKoreanPublicHoliday(dateStr: string): string | null {
+export function toHolidayYear(dateStr: string): number {
   const day = moment.tz(dateStr, DATE_FORMAT, true, KST_TIME_ZONE);
   if (!day.isValid() || day.year() < HOLIDAY_YEARS.first || day.year() > HOLIDAY_YEARS.last) {
     throw new RangeError(`${dateStr} is not a date from ${HOLIDAY_YEARS.first} to ${HOLIDAY_YEARS.last}`);
   }
+  return day.year();
+}
+
+// WHY: noon KST resolves the date whatever the host's time zone.
+export function lookupKoreanPublicHoliday(dateStr: string): string | null {
+  toHolidayYear(dateStr);
   const holidays = krHolidays.isHoliday(new Date(`${dateStr}T12:00:00+09:00`));
   return (holidays && holidays.find((h) => h.type === "public")?.name) || null;
 }

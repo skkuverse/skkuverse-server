@@ -173,3 +173,23 @@ describe("validateEnv refuses an unknown ROLE", () => {
     expect(() => validateEnv({ ...development, ROLE: "api" })).not.toThrow();
   });
 });
+
+describe("describeMissingRequired DATA_GO_KR_SERVICE_KEY", () => {
+  // The holiday calendar sync cannot call getRestDeInfo without it, and there is no default.
+  it("reports DATA_GO_KR_SERVICE_KEY as missing when it is unset", () => {
+    // Arrange
+    const saved = process.env.DATA_GO_KR_SERVICE_KEY;
+    delete process.env.DATA_GO_KR_SERVICE_KEY;
+
+    // Act & Assert
+    try {
+      jest.isolateModules(() => {
+        const mod = require("./required-env");
+        expect(mod.describeMissingRequired()).toContain("  holidays.serviceKey (env: DATA_GO_KR_SERVICE_KEY)");
+      });
+    } finally {
+      if (saved === undefined) delete process.env.DATA_GO_KR_SERVICE_KEY;
+      else process.env.DATA_GO_KR_SERVICE_KEY = saved;
+    }
+  });
+});

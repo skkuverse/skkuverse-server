@@ -1,0 +1,23 @@
+{
+  "_about": "GET https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo?solYear=2026&solMonth=07&_type=json&numOfRows=100 (serviceKey left out), captured 2026-10-16. Untrimmed. A month with one row, so `item` is an object, not an array; the client asks per year, and a year with one holiday would answer the same way.",
+  "response": {
+    "header": {
+      "resultCode": "00",
+      "resultMsg": "NORMAL SERVICE."
+    },
+    "body": {
+      "items": {
+        "item": {
+          "dateKind": "01",
+          "dateName": "제헌절",
+          "isHoliday": "Y",
+          "locdate": 20260717,
+          "seq": 1
+        }
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}

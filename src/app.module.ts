@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "./config/config.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
 import { HealthModule } from "./health/health.module";
+import { HolidaysModule } from "./holidays/holidays.module";
 import { BusModule } from "./bus/bus.module";
 import { BusCacheModule } from "./bus/cache/bus-cache.module";
 import { BusRealtimeModule } from "./bus/realtime/bus-realtime.module";
@@ -51,6 +52,7 @@ import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.modul
     ConfigModule,
     SchedulingModule,
     HealthModule,
+    HolidaysModule,
     BusModule,
     BusCacheModule,
     BusRealtimeModule,

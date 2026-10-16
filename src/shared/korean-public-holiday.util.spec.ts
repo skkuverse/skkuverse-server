@@ -22,7 +22,7 @@ jest.mock("date-holidays", () => {
   });
 });
 
-import { lookupKoreanPublicHoliday } from "./korean-public-holiday.util";
+import { lookupKoreanPublicHoliday, toHolidayYear } from "./korean-public-holiday.util";
 
 describe("lookupKoreanPublicHoliday", () => {
   it.each([
@@ -80,5 +80,21 @@ describe("lookupKoreanPublicHoliday on a date the holiday lookup cannot take", (
   ])("answers %s", (date, name) => {
     // Act & Assert
     expect(lookupKoreanPublicHoliday(date)).toBe(name);
+  });
+});
+
+describe("toHolidayYear", () => {
+  it.each([
+    ["1900-01-01", 1900],
+    ["2026-03-02", 2026],
+    ["2999-12-31", 2999],
+  ])("reads the year of %s as %s", (date, year) => {
+    // Act & Assert
+    expect(toHolidayYear(date)).toBe(year);
+  });
+
+  it.each(["2026-02-29", "0000-01-03", "1899-12-31", "3000-01-01", "2026-1-01", "Invalid date"])("throws on %s, as the lookup does", (date) => {
+    // Act & Assert
+    expect(() => toHolidayYear(date)).toThrow(new RangeError(`${date} is not a date from 1900 to 2999`));
   });
 });
