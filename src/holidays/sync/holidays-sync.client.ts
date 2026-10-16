@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import axios from "axios";
 import type { z } from "zod";
-import config from "../infra/config";
-import { issuePaths } from "../shared/zod-list.util";
-import { HolidaysCalendarError } from "./holidays.error";
-import { gatewayError, restDeBody, restDeEnvelope, type restDeRow } from "./holidays.schema";
-import type { PublicHoliday } from "./holidays.types";
+import config from "../../infra/config";
+import { issuePaths } from "../../shared/zod-list.util";
+import { HolidaysSyncCalendarError } from "./holidays-sync.error";
+import { gatewayError, restDeBody, restDeEnvelope, type restDeRow } from "./holidays-sync.schema";
+import type { PublicHoliday } from "../holidays.types";
 
 const REST_DE_INFO_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -18,7 +18,7 @@ const OK_STATUS = 200;
 type RestDeRow = z.infer<typeof restDeRow>;
 
 @Injectable()
-export class HolidaysClient {
+export class HolidaysSyncClient {
   // QUIRK(data-go-kr): the service key travels in the query string, so a failure keeps only its status and code.
   async fetchYear(year: number): Promise<PublicHoliday[]> {
     let data: unknown;
@@ -33,25 +33,25 @@ export class HolidaysClient {
     return this.toHolidays(year, this.rowsOf(year, data));
   }
 
-  private toCalendarError(year: number, err: unknown): HolidaysCalendarError {
-    if (!axios.isAxiosError(err)) return new HolidaysCalendarError(`${year}: request failed`);
+  private toCalendarError(year: number, err: unknown): HolidaysSyncCalendarError {
+    if (!axios.isAxiosError(err)) return new HolidaysSyncCalendarError(`${year}: request failed`);
     const status = err.response?.status;
     const refused = gatewayError.safeParse(err.response?.data);
     const code = refused.success ? refused.data.OpenAPI_ServiceResponse.cmmMsgHeader.errMsg : err.code;
-    return new HolidaysCalendarError(status === undefined ? `${year}: request failed (${code ?? "no code"})` : `${year}: HTTP ${status}`, status, code);
+    return new HolidaysSyncCalendarError(status === undefined ? `${year}: request failed (${code ?? "no code"})` : `${year}: HTTP ${status}`, status, code);
   }
 
   private rowsOf(year: number, data: unknown): RestDeRow[] {
     const refused = gatewayError.safeParse(data);
     if (refused.success) {
       const { errMsg } = refused.data.OpenAPI_ServiceResponse.cmmMsgHeader;
-      throw new HolidaysCalendarError(`${year}: refused (${errMsg})`, OK_STATUS, errMsg);
+      throw new HolidaysSyncCalendarError(`${year}: refused (${errMsg})`, OK_STATUS, errMsg);
     }
     const envelope = restDeEnvelope.safeParse(data);
     if (!envelope.success) throw this.shapeError(year, `not the expected envelope: ${issuePaths(envelope.error)}`);
     const { header, body } = envelope.data.response;
     if (header.resultCode !== SUCCESS_RESULT_CODE) {
-      throw new HolidaysCalendarError(`${year}: result code ${header.resultCode} (${header.resultMsg ?? "no message"})`, OK_STATUS, header.resultCode);
+      throw new HolidaysSyncCalendarError(`${year}: result code ${header.resultCode} (${header.resultMsg ?? "no message"})`, OK_STATUS, header.resultCode);
     }
     const parsedBody = restDeBody.safeParse(body);
     if (!parsedBody.success) throw this.shapeError(year, `not the expected body: ${issuePaths(parsedBody.error)}`);
@@ -75,7 +75,7 @@ export class HolidaysClient {
     return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
   }
 
-  private shapeError(year: number, detail: string): HolidaysCalendarError {
-    return new HolidaysCalendarError(`${year}: ${detail}`, OK_STATUS, UNEXPECTED_SHAPE);
+  private shapeError(year: number, detail: string): HolidaysSyncCalendarError {
+    return new HolidaysSyncCalendarError(`${year}: ${detail}`, OK_STATUS, UNEXPECTED_SHAPE);
   }
 }

@@ -3,7 +3,7 @@
  * instant and the year after it. Checked at the turn of the year, where the
  * UTC and KST years differ for nine hours.
  */
-import { toSyncYears } from "./holidays.rules";
+import { toSyncYears } from "./holidays-sync.rules";
 
 describe("toSyncYears", () => {
   it.each([

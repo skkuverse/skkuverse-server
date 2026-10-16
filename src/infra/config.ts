@@ -135,6 +135,9 @@ const config = {
 
   holidays: {
     serviceKey: asRequired(process.env.DATA_GO_KR_SERVICE_KEY),
+    collections: {
+      publicHolidays: "public_holidays",
+    },
     syncIntervalMs: 24 * 60 * 60 * 1000,
   },
 

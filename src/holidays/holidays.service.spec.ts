@@ -1,30 +1,22 @@
 /**
- * HolidaysService over a scripted client, an in-memory repository (the typed
- * fakes in __tests__/helpers/fakes/holidays/) and a fixed Clock. What it
- * guards:
- *  - holidayName answers a stored year from the calendar alone, its
- *    substitute, temporary and election-day holidays included, reading the
- *    stored years at most once an hour;
+ * HolidaysService.holidayName over an in-memory repository (the typed fake in
+ * __tests__/helpers/fakes/holidays/) and a fixed Clock. What it guards:
+ *  - a stored year is answered from the calendar alone, its substitute,
+ *    temporary and election-day holidays included;
  *  - a year with no stored document is answered by the rule-based lookup,
  *    with one warning naming the year per hour, not one per call;
  *  - a date the lookup cannot take (year 0) throws a RangeError, whether or
- *    not years are stored, and is not answered from rules;
- *  - sync fetches the KST year and the next, stores each with the Clock's
- *    time, stores nothing for a year the calendar has not published, keeps
- *    the stored years and still stores the other year when one fails, then
- *    rejects so the poller reports failing; a lookup after a sync sees it.
- * The payload translation is holidays.client.spec.ts's and the exact MongoDB
- * calls are holidays.repository.spec.ts's.
+ *    not years are stored, and is not answered from rules.
+ * How often the stored years are read is holidays.repository.spec.ts's, and
+ * how they are written is the sync's (src/holidays/sync/).
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../infra/logger", () => mockLogger);
 
-import { FakeHolidaysClient } from "../../__tests__/helpers/fakes/holidays/holidays.client.fake";
 import { FakeHolidaysRepository } from "../../__tests__/helpers/fakes/holidays/holidays.repository.fake";
 import { asReal } from "../../__tests__/helpers/fakes/public-of";
 import { logText } from "../../__tests__/helpers/log-text";
 import type { Clock } from "../infra/clock";
-import type { HolidaysClient } from "./holidays.client";
 import type { HolidaysRepository } from "./holidays.repository";
 import { HolidaysService } from "./holidays.service";
 import type { PublicHoliday } from "./holidays.types";
@@ -37,37 +29,23 @@ const CALENDAR_2026: PublicHoliday[] = [
   { date: "2026-03-02", name: "대체공휴일(삼일절)" },
   { date: "2026-06-03", name: "전국동시지방선거" },
 ];
-const CALENDAR_2027: PublicHoliday[] = [{ date: "2027-01-01", name: "1월1일" }];
 
 interface Setup {
   service: HolidaysService;
-  client: FakeHolidaysClient;
-  repository: FakeHolidaysRepository;
   advance: (ms: number) => void;
 }
 
 function setup(repository = new FakeHolidaysRepository()): Setup {
   let now = NOW.getTime();
   const clock = { now: () => new Date(now) };
-  const client = new FakeHolidaysClient();
-  const service = new HolidaysService(asReal<HolidaysClient>(client), asReal<HolidaysRepository>(repository), clock as Clock);
-  const advance = (ms: number): void => {
-    now += ms;
-    jest.setSystemTime(now);
-  };
-  return { service, client, repository, advance };
+  const service = new HolidaysService(asReal<HolidaysRepository>(repository), clock as Clock);
+  return { service, advance: (ms) => (now += ms) };
 }
 
 const fallbackWarnings = () => mockLogger.warn.mock.calls.filter(([fields]) => fields?.event === "holidays.lookup.rules_fallback");
 
 beforeEach(() => {
   jest.clearAllMocks();
-  // The cached loader reads Date.now; only the clock is faked, never the promise queue.
-  jest.useFakeTimers({ now: NOW, doNotFake: ["nextTick", "queueMicrotask", "setImmediate"] });
-});
-
-afterEach(() => {
-  jest.useRealTimers();
 });
 
 describe("HolidaysService.holidayName for a stored year", () => {
@@ -84,30 +62,20 @@ describe("HolidaysService.holidayName for a stored year", () => {
     expect(fallbackWarnings()).toHaveLength(0);
   });
 
+  it("Temporary holiday: a day the calendar lists as 임시공휴일 is a holiday", async () => {
+    // Arrange
+    const { service } = setup(new FakeHolidaysRepository().store(2024, [{ date: "2024-10-01", name: "임시공휴일" }]));
+
+    // Act & Assert
+    await expect(service.holidayName("2024-10-01")).resolves.toBe("임시공휴일");
+  });
+
   it("answers a day the rules call a holiday but the calendar does not list as no holiday", async () => {
     // Arrange
     const { service } = setup(new FakeHolidaysRepository().store(2026, CALENDAR_2026));
 
     // Act & Assert
     await expect(service.holidayName("2026-10-09")).resolves.toBeNull();
-  });
-
-  it("reads the stored years once an hour, not once per lookup", async () => {
-    // Arrange
-    const { service, repository, advance } = setup(new FakeHolidaysRepository().store(2026, CALENDAR_2026));
-    await service.holidayName("2026-03-02");
-    await service.holidayName("2026-06-03");
-    advance(HOUR_MS - 1);
-    await service.holidayName("2026-06-03");
-    const readsWithinTheHour = repository.reads;
-
-    // Act
-    advance(1);
-    await service.holidayName("2026-06-03");
-
-    // Assert
-    expect(readsWithinTheHour).toBe(1);
-    expect(repository.reads).toBe(2);
   });
 });
 
@@ -165,77 +133,5 @@ describe("HolidaysService.holidayName on a date the lookup cannot take", () => {
 
     // Act & Assert
     await expect(service.holidayName("2026-02-29")).rejects.toThrow(RangeError);
-  });
-});
-
-describe("HolidaysService.sync", () => {
-  it("fetches this KST year and the next, and stores each with the Clock's time", async () => {
-    // Arrange
-    const { service, client, repository } = setup();
-    client.answers.set(2026, CALENDAR_2026).set(2027, CALENDAR_2027);
-
-    // Act
-    await service.sync();
-
-    // Assert
-    expect(client.calls).toEqual([2026, 2027]);
-    expect(repository.years.get(2026)).toEqual({ _id: 2026, holidays: CALENDAR_2026, fetchedAt: NOW });
-    expect(repository.years.get(2027)).toEqual({ _id: 2027, holidays: CALENDAR_2027, fetchedAt: NOW });
-  });
-
-  it("stores nothing for a year the calendar has not published, so that year keeps its stored or rule-based answer", async () => {
-    // Arrange
-    const stored = new FakeHolidaysRepository().store(2027, CALENDAR_2027, new Date("2026-10-01T00:00:00Z"));
-    const { service, client, repository } = setup(stored);
-    client.answers.set(2026, CALENDAR_2026).set(2027, []);
-
-    // Act
-    await service.sync();
-
-    // Assert
-    expect(repository.years.get(2027)).toEqual({ _id: 2027, holidays: CALENDAR_2027, fetchedAt: new Date("2026-10-01T00:00:00Z") });
-    expect([...repository.years.keys()].sort()).toEqual([2026, 2027]);
-  });
-
-  it("Calendar unreachable: keeps the stored years serving, stores the year that answered, and rejects", async () => {
-    // Arrange
-    const unreachable = new Error("getRestDeInfo: 2026: HTTP 500");
-    const { service, client, repository } = setup(new FakeHolidaysRepository().store(2026, CALENDAR_2026));
-    client.answers.set(2026, unreachable).set(2027, CALENDAR_2027);
-
-    // Act
-    const outcome = service.sync();
-
-    // Assert
-    await expect(outcome).rejects.toBe(unreachable);
-    expect(repository.years.get(2026)?.holidays).toEqual(CALENDAR_2026);
-    expect(repository.years.get(2027)?.holidays).toEqual(CALENDAR_2027);
-    await expect(service.holidayName("2026-06-03")).resolves.toBe("전국동시지방선거");
-  });
-
-  it("rejects naming both years when both fail", async () => {
-    // Arrange
-    const { service, client } = setup();
-    client.answers.set(2026, new Error("2026 failed")).set(2027, new Error("2027 failed"));
-
-    // Act
-    const err = (await service.sync().catch((e: unknown) => e)) as AggregateError;
-
-    // Assert
-    expect(err).toBeInstanceOf(AggregateError);
-    expect(err.errors.map((e: Error) => e.message)).toEqual(["2026 failed", "2027 failed"]);
-  });
-
-  it("Temporary holiday declared next week: a lookup after the sync answers it, without waiting for the hour", async () => {
-    // Arrange
-    const { service, client } = setup(new FakeHolidaysRepository().store(2026, CALENDAR_2026));
-    await expect(service.holidayName("2026-10-23")).resolves.toBeNull();
-    client.answers.set(2026, [...CALENDAR_2026, { date: "2026-10-23", name: "임시공휴일" }]).set(2027, CALENDAR_2027);
-
-    // Act
-    await service.sync();
-
-    // Assert
-    await expect(service.holidayName("2026-10-23")).resolves.toBe("임시공휴일");
   });
 });
