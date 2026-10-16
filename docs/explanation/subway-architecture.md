@@ -130,6 +130,7 @@ Adding a provider touches:
 
 ## Related
 
+- [Subway API reference](../reference/subway-api.md): the route's contract
 - [Subway arrivals spec](../../openspec/changes/add-subway-arrivals/specs/subway-arrivals/spec.md): the required behavior
 - [Holidays architecture](holidays-architecture.md): the public holidays that choose a timetable's day type
 - [Logging reference](../reference/logging.md): the subway pollers' own lines
