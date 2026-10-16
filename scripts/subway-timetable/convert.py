@@ -12,10 +12,10 @@ When to rerun:
 
 How to rerun (from the repository root):
 
-    doppler run -p backend -c dev_server -- python3 -I scripts/subway-timetable/convert.py
+    doppler run -p backend -c dev_personal -- python3 -I scripts/subway-timetable/convert.py
 
-The 4호선 part reads SEOUL_OPENAPI_GENERAL_KEY from the environment; Doppler backend/dev_server holds
-it. `--only korail` needs no key. `--korail-weekday FILE` and `--korail-holiday FILE` read local
+The 4호선 part reads SEOUL_OPENAPI_GENERAL_KEY from the environment, and no other variable; Doppler
+backend/dev_personal holds it, a config no service renders. `--only korail` needs no key. `--korail-weekday FILE` and `--korail-holiday FILE` read local
 copies of the two Korail URLs instead of downloading them. Review the diff, then commit the JSON.
 
 What it writes, per operator line and day type:
@@ -544,7 +544,7 @@ def build_korail(out_dir, weekday_file, holiday_file):
 def build_seoul(out_dir, today):
     key = os.environ.get("SEOUL_OPENAPI_GENERAL_KEY")
     if not key:
-        raise ConvertError("SEOUL_OPENAPI_GENERAL_KEY is not set; run through doppler run -p backend -c dev_server --")
+        raise ConvertError("SEOUL_OPENAPI_GENERAL_KEY is not set; run through doppler run -p backend -c dev_personal --")
 
     def fetch(code, week, inout):
         return seoul_fetch(key, code, week, inout)
