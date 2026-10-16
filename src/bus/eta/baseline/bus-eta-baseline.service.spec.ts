@@ -6,7 +6,7 @@
 import moment from "moment-timezone";
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
-import { BusEtaDailyCapError } from "../bus-eta.error";
+import { DailyCapError } from "../../../shared/daily-cap.error";
 import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { BusScheduleService } from "../../schedule/bus-schedule.service";
 import { BusStopsService } from "../../stops/bus-stops.service";
@@ -14,7 +14,7 @@ import type { ShuttleEtaDoc } from "../bus-eta.document";
 import { etaDocId } from "../bus-eta.mapper";
 import { baselineDoc } from "./bus-eta-baseline.mapper";
 import type { BusEtaRepository } from "../bus-eta.repository";
-import { DailyCap } from "../bus-eta.rules";
+import { DailyCap } from "../../../shared/daily-cap.util";
 import { BusEtaService } from "../bus-eta.service";
 import type { EtaRun, EtaSequence } from "../bus-eta.types";
 import { BusEtaBaselineService } from "./bus-eta-baseline.service";
@@ -151,7 +151,7 @@ describe("BusEtaBaselineService.tick", () => {
     const err = await poller.tick(kst("2026-10-12", "06:00")).catch((e: unknown) => e);
 
     // Assert
-    expect(err).toBeInstanceOf(BusEtaDailyCapError);
+    expect(err).toBeInstanceOf(DailyCapError);
     expect(fetchOffsets).toHaveBeenCalledTimes(2);
     expect(store.size).toBe(2);
   });

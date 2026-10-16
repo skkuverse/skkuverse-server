@@ -271,6 +271,13 @@
       "GET notices/tabs"
     ]
   },
+  "subway-arrivals.subwayStationArrivals": {
+    "source": "src/subway/arrivals/subway-arrivals.wire.ts",
+    "export": "subwayStationArrivals",
+    "routes": [
+      "GET subway/stations/:stationId/arrivals"
+    ]
+  },
   "ui-campus.campusSheet": {
     "source": "src/ui/campus/ui-campus.wire.ts",
     "export": "campusSheet",

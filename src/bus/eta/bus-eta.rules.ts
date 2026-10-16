@@ -1,17 +1,12 @@
 import moment from "moment-timezone";
-import { BusEtaDailyCapError } from "./bus-eta.error";
 import { haversineM } from "../../shared/distance.util";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { ScheduleDay } from "../schedule/bus-schedule.wire";
 import type { EtaOptIns, ScheduleStopCatalog } from "../stops/bus-stops.types";
 import type { LatLng } from "../../shared/lat-lng.types";
-import type { DirectionsProvider, EtaRun, EtaSequence, OffsetCheck, SequenceLength, SequenceRef } from "./bus-eta.types";
+import type { EtaRun, EtaSequence, OffsetCheck, SequenceLength, SequenceRef } from "./bus-eta.types";
 
 const MAX_STOP_DISTANCE_M = 150;
-
-export function toKstDate(instant: Date): string {
-  return moment(instant).tz(KST_TIME_ZONE).format("YYYY-MM-DD");
-}
 
 /**
  * WHY: a resolved day's runs of one route type. An entry counts only when its `stopTimes` has one item per sequence
@@ -50,30 +45,6 @@ export function toEtaSequences(catalog: Readonly<ScheduleStopCatalog>, optIns: E
 export function toSequenceLength(sequences: readonly EtaSequence[]): SequenceLength {
   const lengths = new Map(sequences.map((s) => [`${s.serviceId}|${s.routeType}`, s.stops.length]));
   return (serviceId, routeType) => lengths.get(`${serviceId}|${routeType}`);
-}
-
-/**
- * WHY: calls left today for one provider, starting over at 00:00 KST. The counter lives in the poller process, the
- * only caller; a restart starts it over, which the providers' own limits still bound.
- */
-export class DailyCap {
-  private day = "";
-  private used = 0;
-
-  constructor(
-    private readonly provider: DirectionsProvider,
-    private readonly cap: number,
-  ) {}
-
-  take(now: Date): void {
-    const day = toKstDate(now);
-    if (day !== this.day) {
-      this.day = day;
-      this.used = 0;
-    }
-    if (this.used >= this.cap) throw new BusEtaDailyCapError(this.provider, this.cap);
-    this.used += 1;
-  }
 }
 
 /** WHY: a router's stop times never run backwards and add up to its own route total, within a tolerance. */
