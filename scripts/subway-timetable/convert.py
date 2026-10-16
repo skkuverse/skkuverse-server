@@ -15,7 +15,7 @@ How to rerun (from the repository root):
     (An operations detail is left out of the public history.)
 
 (An operations detail is left out of the public history.)
-it. `--only korail` needs no key. `--korail-weekday FILE` and `--korail-holiday FILE` read local
+(An operations detail is left out of the public history.)
 copies of the two Korail URLs instead of downloading them. Review the diff, then commit the JSON.
 
 What it writes, per operator line and day type:
