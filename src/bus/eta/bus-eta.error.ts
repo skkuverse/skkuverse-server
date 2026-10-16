@@ -19,14 +19,3 @@ export class BusEtaDirectionsError extends Error {
     return this.kind === "timeout" || this.kind === "reset" || (this.kind === "http" && (this.status ?? 0) >= 500);
   }
 }
-
-export class BusEtaDailyCapError extends Error {
-  constructor(
-    readonly provider: DirectionsProvider,
-    readonly cap: number,
-  ) {
-    super(`${provider}: daily cap of ${cap} calls reached`);
-    // WHY: the name the poller.* lines have always carried. SEE: docs/reference/logging.md ("Pollers")
-    this.name = "DailyCapError";
-  }
-}

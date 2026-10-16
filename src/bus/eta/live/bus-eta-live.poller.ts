@@ -3,7 +3,7 @@ import { Clock } from "../../../infra/clock";
 import config from "../../../infra/config";
 import logger from "../../../infra/logger";
 import { PollerRegistryService } from "../../../scheduling/poller-registry.service";
-import { DailyCap } from "../bus-eta.rules";
+import { DailyCap } from "../../../shared/daily-cap.util";
 import { BusEtaService } from "../bus-eta.service";
 import { BusEtaLiveClient } from "./bus-eta-live.client";
 import { BusEtaLiveService } from "./bus-eta-live.service";

@@ -1,4 +1,4 @@
-import type { DailyCap } from "../bus-eta.rules";
+import type { DailyCap } from "../../../shared/daily-cap.util";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import type { EtaRun, EtaSequence } from "../bus-eta.types";
 import type { LatLng } from "../../../shared/lat-lng.types";
