@@ -4,8 +4,8 @@ import { KST_TIME_ZONE } from "./time-zone.constants";
 
 const DATE_FORMAT = "YYYY-MM-DD";
 
-// QUIRK(date-holidays): computes KR public holidays for any year, but has no substitute-holiday rule (3.30.2,
-// checked 2026-10-16), and cannot predict ad-hoc holidays either.
+// QUIRK(date-holidays): computes KR public and substitute holidays for any year (3.37.0, checked 2026-10-16),
+// but cannot predict temporary holidays or election days.
 const krHolidays = new Holidays("KR");
 
 // EVIDENCE: date-holidays never returned for an Invalid Date or a year-0 or year-1 day, and read 2026-02-29 as

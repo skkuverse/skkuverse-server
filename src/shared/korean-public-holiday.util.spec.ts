@@ -47,12 +47,20 @@ describe("lookupKoreanPublicHoliday", () => {
     expect(lookupKoreanPublicHoliday("2026-10-10")).toBeNull();
   });
 
-  // date-holidays 3.30.2 has no KR substitute-holiday rule (checked 2026-10-16), so the Monday after
-  // Independence Movement Day on a Sunday reads as an ordinary day.
-  it("returns null on a substitute holiday (대체공휴일 2026-03-02)", () => {
+  // date-holidays has a KR substitute-holiday rule since 3.37.0 (checked 2026-10-16): the Monday after
+  // Independence Movement Day on a Sunday is a holiday of its own.
+  it("names a substitute holiday (대체공휴일 2026-03-02)", () => {
     // Act & Assert
     expect(lookupKoreanPublicHoliday("2026-03-01")).toBe("3·1절");
-    expect(lookupKoreanPublicHoliday("2026-03-02")).toBeNull();
+    expect(lookupKoreanPublicHoliday("2026-03-02")).toBe("3·1절 (대체공휴일)");
+  });
+
+  it.each([
+    ["2024-05-06", "어린이날 (대체공휴일)"],
+    ["2025-10-08", "추석 (대체공휴일)"],
+  ])("names the substitute holiday on %s", (date, name) => {
+    // Act & Assert
+    expect(lookupKoreanPublicHoliday(date)).toBe(name);
   });
 });
 
