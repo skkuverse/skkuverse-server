@@ -1,0 +1,196 @@
+/**
+ * GET /subway/stations/:stationId/arrivals while an upstream fails, end to end
+ * on fakes: the real `seoul` provider and its pollers (registered into a
+ * recording stand-in for the poller registry), the tracker, the timetable and
+ * estimate doors and the arrivals route, over FakeSubwaySeoulApiClient,
+ * FakeSubwaySeoulTrainmapClient (the line 1 and 4 positions and the line 4
+ * page captured on 2026-10-16 22:27 KST; the line 1 page dates from 20:45, so
+ * its trains are too far from their timetable rows to count), FakeSubwayRepository, FakeHolidaysRepository and a
+ * scripted Clock. Each test is a scenario of the spec's "Serving survives a
+ * failing source" requirement: a train map that cannot be parsed fails its own
+ * job while the API's arrivals keep being served; a failing API leaves the
+ * train map's arrivals served; and with neither upstream answering for 3
+ * minutes every listed train is `scheduled`.
+ */
+import fs from "fs";
+import path from "path";
+import { Global, Module } from "@nestjs/common";
+import type { NestExpressApplication } from "@nestjs/platform-express";
+import request from "supertest";
+import { HolidaysModule } from "../../../src/holidays/holidays.module";
+import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { Clock } from "../../../src/infra/clock";
+import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
+import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
+import { SubwayEstimateModule } from "../../../src/subway/estimate/subway-estimate.module";
+import { SubwaySeoulApiClient } from "../../../src/subway/seoul-api/subway-seoul-api.client";
+import { SubwaySeoulApiModule } from "../../../src/subway/seoul-api/subway-seoul-api.module";
+import { SubwaySeoulTrainmapClient } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.client";
+import { SubwaySeoulTrainmapModule } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.module";
+import { SubwaySeoulModule } from "../../../src/subway/seoul/subway-seoul.module";
+import { SubwayModule } from "../../../src/subway/subway.module";
+import { SubwayRepository } from "../../../src/subway/subway.repository";
+import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
+import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracking.module";
+import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { FakeSubwaySeoulApiClient } from "../../helpers/fakes/subway/subway-seoul-api.client.fake";
+import { FakeSubwaySeoulTrainmapClient } from "../../helpers/fakes/subway/subway-seoul-trainmap.client.fake";
+import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
+import { buildTestApp } from "../../helpers/nest/build-test-app";
+
+type Tick = () => Promise<unknown>;
+
+const FIXTURES = path.join(__dirname, "fixtures");
+const rows = <T>(name: string, list: string): T[] => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), "utf8"))[list];
+const page = (name: string): string => fs.readFileSync(path.join(FIXTURES, name), "utf8");
+
+const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
+const clock = { current: at("22:27:30"), now(): Date { return this.current; } };
+const ticks = new Map<string, Tick>();
+const registry = { registerPoller: (fn: Tick, _intervalMs: number, name: string): void => void ticks.set(name, fn) };
+
+// Stands in for the @Global SchedulingModule, which provides the registry in main.ts; it records each tick by name.
+@Global()
+@Module({ providers: [{ provide: PollerRegistryService, useValue: registry }], exports: [PollerRegistryService] })
+class SchedulingStubModule {}
+
+let app: NestExpressApplication;
+let httpServer: import("http").Server;
+let apiClient: FakeSubwaySeoulApiClient;
+let trainmapClient: FakeSubwaySeoulTrainmapClient;
+
+// A fresh app per test: the tracker keeps its train histories in memory, so no test inherits another's.
+beforeEach(async () => {
+  ticks.clear();
+  apiClient = new FakeSubwaySeoulApiClient();
+  trainmapClient = new FakeSubwaySeoulTrainmapClient();
+  answerApi();
+  answerTrainMap();
+  app = await buildTestApp({
+    imports: [
+      SchedulingStubModule,
+      HolidaysModule,
+      SubwayModule,
+      SubwayTimetableModule,
+      SubwayEstimateModule,
+      SubwaySeoulApiModule,
+      SubwaySeoulTrainmapModule,
+      SubwayTrackingModule,
+      SubwaySeoulModule,
+      SubwayArrivalsModule,
+    ],
+    overrides: [
+      { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+      { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
+      { provide: SubwaySeoulApiClient, useValue: apiClient },
+      { provide: SubwaySeoulTrainmapClient, useValue: trainmapClient },
+      { provide: Clock, useValue: clock },
+    ],
+  });
+  httpServer = app.getHttpServer();
+});
+
+afterEach(async () => {
+  await app.close();
+});
+
+function answerApi(): void {
+  apiClient.positions.set("1호선", rows("realtime-position-line1.json", "realtimePositionList"));
+  apiClient.positions.set("4호선", rows("realtime-position-line4.json", "realtimePositionList"));
+  apiClient.arrivals.clear();
+}
+
+function failApi(): void {
+  const outage = new Error("seoul-subway-api: HTTP 503");
+  apiClient.positions.set("1호선", outage);
+  apiClient.positions.set("4호선", outage);
+}
+
+function answerTrainMap(): void {
+  trainmapClient.pages.set("1", page("trainmap-line1.html"));
+  trainmapClient.pages.set("4", page("trainmap-line4.html"));
+}
+
+function breakTrainMap(): void {
+  trainmapClient.pages.set("1", "<html><body>시스템 점검 중입니다</body></html>");
+  trainmapClient.pages.set("4", "<html><body>시스템 점검 중입니다</body></html>");
+}
+
+function tickAt(kst: string, name: "subway-seoul" | "subway-trainmap"): Promise<unknown> {
+  clock.current = at(kst);
+  const tick = ticks.get(name);
+  if (!tick) throw new Error(`${name} was not registered`);
+  return tick();
+}
+
+function getAt(kst: string, stationId: string): request.Test {
+  clock.current = at(kst);
+  return request(httpServer).get(`/subway/stations/${stationId}/arrivals`);
+}
+
+type WireTrain = { trainNo: string; source: string; position: { stationId: string; state: string } | null };
+const trainsOf = (body: { data: { directions: { trains: WireTrain[] }[] } }): WireTrain[] => body.data.directions.flatMap((d) => d.trains);
+
+describe("Serving survives a failing source", () => {
+  it("Crawl breaks: responses keep succeeding with API-based arrivals, and the crawl job reports failing", async () => {
+    // Arrange
+    breakTrainMap();
+
+    // Act
+    const crawl = tickAt("22:27:30", "subway-trainmap");
+    await expect(crawl).rejects.toMatchObject({ source: "seoul-trainmap" });
+    await tickAt("22:27:31", "subway-seoul");
+    const res = await getAt("22:27:33", "KR-1-0153");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.generatedAt).toBe(at("22:27:31").toISOString());
+    const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.position !== null);
+    expect(observed.length).toBeGreaterThan(0);
+  });
+
+  it("API fails: arrivals are served from the train map and the timetable, and the API job reports failing", async () => {
+    // Arrange
+    failApi();
+
+    // Act
+    await expect(tickAt("22:27:30", "subway-seoul")).rejects.toThrow("seoul-subway-api: HTTP 503");
+    await tickAt("22:27:31", "subway-trainmap");
+    const res = await getAt("22:27:33", "S1-4-420");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.generatedAt).toBe(at("22:27:31").toISOString());
+    const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.position !== null);
+    expect(observed.length).toBeGreaterThan(0);
+  });
+
+  it("Both down: with neither upstream answering for 3 minutes, every listed train has source scheduled", async () => {
+    // Arrange
+    await tickAt("22:27:30", "subway-seoul");
+    await tickAt("22:27:31", "subway-trainmap");
+    failApi();
+    breakTrainMap();
+    const outcomes: unknown[] = [];
+    for (let second = 10; second <= 180; second += 10) {
+      const upstream = second % 20 === 0 ? "subway-trainmap" : "subway-seoul";
+      outcomes.push(await tickAt(toKst(at("22:27:31"), second), upstream).catch((err: unknown) => err));
+    }
+    const oneMinuteIn = await getAt("22:28:31", "S1-4-420");
+
+    // Act
+    const threeMinutesIn = await getAt("22:30:31", "S1-4-420");
+
+    // Assert
+    expect(outcomes.every((outcome) => outcome instanceof Error)).toBe(true);
+    expect(trainsOf(oneMinuteIn.body).some((train) => train.source !== "scheduled")).toBe(true);
+    expect(threeMinutesIn.status).toBe(200);
+    const trains = trainsOf(threeMinutesIn.body);
+    expect(trains.length).toBeGreaterThan(0);
+    expect(trains.every((train) => train.source === "scheduled" && train.position === null)).toBe(true);
+  });
+});
+
+function toKst(start: Date, plusSec: number): string {
+  return new Date(start.getTime() + plusSec * 1000 + 9 * 3_600_000).toISOString().slice(11, 19);
+}
