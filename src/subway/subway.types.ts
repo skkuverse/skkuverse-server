@@ -35,6 +35,7 @@ export interface TrainEvent {
   stationId: string;
   state: TrainState;
   stateChangedAt: Date;
+  destination: string;
 }
 
 export interface CountdownRow {
@@ -45,10 +46,12 @@ export interface CountdownRow {
 }
 
 export interface ProviderObservations {
+  source: string;
   events: readonly TrainEvent[];
   countdownRows: readonly CountdownRow[];
 }
 
+// WHY: one per upstream, not per provider: each upstream ticks on its own cadence and fails apart (design D7).
 export interface SubwayProvider {
   observe(): Promise<ProviderObservations>;
 }

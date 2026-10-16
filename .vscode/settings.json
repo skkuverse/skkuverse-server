@@ -11,6 +11,7 @@
     "miniapps.module.ts": "miniapps.*, *.json",
     "notices.module.ts": "notices.*, *.json",
     "ui.module.ts": "ui.*, *.json",
+    "subway.module.ts": "subway.*, *.json",
     "*.module.ts": "${capture}.schema.ts, ${capture}.wire.ts",
     "*.service.ts": "${capture}.rules.ts, ${capture}.mapper.ts, ${capture}.types.ts",
     "*.repository.ts": "${capture}.query.ts, ${capture}.document.ts",
