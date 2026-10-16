@@ -1,0 +1,48 @@
+{
+  "_about": "GET /subway/stations/S1-4-420/arrivals captured from a local development run (SUBWAY=on, _dev databases) 2026-10-17 00:29 KST, Accept-Language ko; trimmed to one train per direction",
+  "data": {
+    "station": {
+      "id": "S1-4-420",
+      "operatorCode": "S1",
+      "lineCode": "4",
+      "stationCode": "420",
+      "name": "혜화"
+    },
+    "generatedAt": "2026-10-16T15:29:34.592Z",
+    "directions": [
+      {
+        "direction": "up",
+        "name": "불암산·진접 방면",
+        "trains": [
+          {
+            "trainNo": "4222",
+            "destination": "불암산",
+            "express": false,
+            "arrivalAt": "2026-10-16T15:40:45.000Z",
+            "remainingSec": 670,
+            "position": null,
+            "source": "live"
+          }
+        ]
+      },
+      {
+        "direction": "down",
+        "name": "오이도·안산 방면",
+        "trains": [
+          {
+            "trainNo": "4219",
+            "destination": "사당",
+            "express": false,
+            "arrivalAt": "2026-10-16T15:29:44.000Z",
+            "remainingSec": 9,
+            "position": {
+              "stationId": "S1-4-420",
+              "state": "approaching"
+            },
+            "source": "estimated"
+          }
+        ]
+      }
+    ]
+  }
+}

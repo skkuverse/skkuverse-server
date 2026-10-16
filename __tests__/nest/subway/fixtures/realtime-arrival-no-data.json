@@ -1,0 +1,9 @@
+{
+  "_about": "GET http://swopenapi.seoul.go.kr/api/subway/<key>/json/realtimeStationArrival/0/50/<a name that is no station> (key left out), captured 2026-10-16. Untrimmed: HTTP 200, the bare status body INFO-200, as a station with no train answers at night.",
+  "status": 500,
+  "code": "INFO-200",
+  "message": "해당하는 데이터가 없습니다.",
+  "link": "",
+  "developerMessage": "",
+  "total": 0
+}

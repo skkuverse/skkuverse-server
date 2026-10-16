@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./env-file";
 import logger from "./logger";
 import * as requiredEnv from "./required-env";
 import { resolveRuntimeSwitches, runtimeMode } from "./runtime-switches";
@@ -129,8 +129,15 @@ const config = {
     tmapDailyCap: isProduction ? 900 : 50,
   },
 
+  // WHY: about twice each source's calls in a service day (design D7), so only a runaway loop reaches one.
   subway: {
     enabled: switches.subwayEnabled,
+    seoulApiKey: asRequired(process.env.SEOUL_SUBWAY_API_KEY),
+    apiDailyCap: 60_000,
+    trainMapDailyCap: 20_000,
+    collections: {
+      arrivals: "subway_arrivals",
+    },
   },
 
   holidays: {

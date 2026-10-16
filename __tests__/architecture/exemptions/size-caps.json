@@ -1,6 +1,6 @@
 {
   "src/app.module.ts": {
-    "max": 105,
+    "max": 119,
     "reason": "ADR 0010 D9, no domain seam: the root module lists every feature module and sub-module in the order Nest registers their routes (route-order.test.ts replays it), and a parent module never imports its sub-modules (D3), so no feature module can hold a share of the list. Its max rises with each module added: that commit carries the Architecture-Debt trailer for this file and needs no other reason."
   },
   "src/bus/config/bus-config.mapper.ts": {
