@@ -9,7 +9,7 @@ import { UNRESOLVED_SWEEP_INTERVAL_MS, WRITE_FAILURE_LOG_INTERVAL_MS } from "./s
 import type { SubwayEventDoc, SubwayPredictionDoc } from "./subway-history.document";
 import { SubwayHistoryRepository } from "./subway-history.repository";
 import { toCrossedHorizons, toObservedArrivalAt, toPredictionDoc, toUnresolvedCutoff } from "./subway-history.rules";
-import type { ObservedArrival } from "./subway-history.types";
+import type { AccuracyGroup, AccuracyRange, ObservedArrival } from "./subway-history.types";
 
 const DIRECTIONS: readonly SubwayDirection[] = ["up", "down"];
 const WRITE_FAILURE_KEY = "subway.history";
@@ -47,6 +47,10 @@ export class SubwayHistoryService implements OnModuleInit {
     await this.write("predictions", () => this.repository.upsertPredictions(predictions));
     for (const arrival of arrivals) await this.write("arrivals", () => this.repository.updateObservedArrival(arrival, tick.trackedAt));
     await this.sweepUnresolved(tick.trackedAt);
+  }
+
+  listAccuracyGroups(range: AccuracyRange): Promise<AccuracyGroup[]> {
+    return this.repository.listAccuracyGroups(range);
   }
 
   private startServiceDate(tick: TrackedTick): void {

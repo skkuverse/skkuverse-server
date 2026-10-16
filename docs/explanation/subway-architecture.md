@@ -85,6 +85,7 @@ flowchart LR
   tracking -->|tick listener| history["history/"]
   history --> events[("subway_events")]
   history --> predictions[("subway_predictions")]
+  predictions -->|SubwayHistoryRepository| report["GET /internal/subway/accuracy"]
 ```
 
 | Field | App use |
@@ -102,7 +103,7 @@ The root holds the module file, which binds the rate limiter for `subway`, `SUBW
 - `seoul-api/` and `seoul-trainmap/` each hold a client, its mapper to train events (and, for the API, countdown rows) and a service that is their door; neither names a station, since each is handed the station table of the line it reads.
 - `seoul/` holds `SubwaySeoulService`, which derives the polled lines from `SUBWAY_STATIONS` and the Seoul names of the upstream stations (`SEOUL_STATION_NAME_BY_ID`): `observeApi` makes the API's calls, `observeTrainMap` crawls each line and stamps its events with the crawl time, and each upstream call first takes one from its source's daily ceiling (`config.subway.apiDailyCap`, `config.subway.trainMapDailyCap`). `SubwaySeoulPoller` registers `subway-seoul` and `subway-trainmap`, each on its own interval, each handing its upstream to the tracker.
 - `tracking/` holds `SubwayTrackingService`. Inside the service window it observes the upstream it is handed, merges the events into each station's train histories, keeps each source's latest countdown rows, estimates each direction's next `MAX_TRAINS_PER_DIRECTION` trains and upserts every station's arrivals document. It also builds a station's timetable-only document.
-- `history/` holds `SubwayHistoryService`, which listens to the tracker's ticks: it stores each source's first report of a train's state at a station in `subway_events`, records the served arrival in `subway_predictions` when a train's lead first falls to each of `PREDICTION_HORIZONS_MIN`, resolves a train's records on its first observed arrival at the station, and marks a record unresolved `UNRESOLVED_AFTER_MS` past its predicted arrival. Each tick writes in batches; a failed write is logged and never fails the tick.
+- `history/` holds `SubwayHistoryService`, which listens to the tracker's ticks: it stores each source's first report of a train's state at a station in `subway_events`, records the served arrival in `subway_predictions` when a train's lead first falls to each of `PREDICTION_HORIZONS_MIN`, resolves a train's records on its first observed arrival at the station, and marks a record unresolved `UNRESOLVED_AFTER_MS` past its predicted arrival. Each tick writes in batches; a failed write is logged and never fails the tick. `SubwayHistoryController` serves the accuracy report behind the internal token; its aggregation is `toAccuracyPipeline`.
 - `arrivals/` holds the route. It serves the stored document while it is at most `MAX_STATE_AGE_MS` old and `SUBWAY` is on, else the tracker's timetable-only document, with labels in the request language.
 
 Adding a station touches:
