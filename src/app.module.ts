@@ -44,6 +44,7 @@ import { NoticesDispatchModule } from "./notices/dispatch/notices-dispatch.modul
 import { MiniappsModule } from "./miniapps/miniapps.module";
 import { MiniappsNotificationsModule } from "./miniapps/notifications/miniapps-notifications.module";
 import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
+import { SubwayModule } from "./subway/subway.module";
 
 // WHY: imports in boot order: config (fails loud on a missing value), the poller registry, then health.
 // LangMiddleware is not bound here but in bootstrapHttpApp (src/http/http-app.bootstrap.ts); its QUIRK says why.
@@ -97,6 +98,7 @@ import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.modul
     MiniappsModule,
     MiniappsNotificationsModule,
     MiniappsCatalogModule,
+    SubwayModule,
   ],
 })
 export class AppModule {}

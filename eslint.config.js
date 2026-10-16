@@ -548,6 +548,7 @@ const GLOSSARY_NOT = {
   map: ["festivalConfig", "layerConfig", "eventWindow", "currentFestival", "filterButton", "exclusiveGroup", "categoryStyle", "sheetBody", "isFallback"],
   miniapps: ["appRegistry", "inbox", "readBy"],
   notices: ["NoticeDto", "tabConfig", "FindResult"],
+  subway: ["subwayStop", "bound", "prevStations", "adapter", "trainId"],
   ui: ["homeConfig", "widget", "slider", "period", "shortcut", "campusConfig", "busItem", "scrollItem"],
 };
 
