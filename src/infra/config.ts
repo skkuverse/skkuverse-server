@@ -129,6 +129,10 @@ const config = {
     tmapDailyCap: isProduction ? 900 : 50,
   },
 
+  subway: {
+    enabled: switches.subwayEnabled,
+  },
+
   // WHY: the literal "disabled" turns Sentry off where a DSN is required (docker-compose.local-verify.yml).
   sentry: {
     dsn: process.env.SENTRY_DSN,
@@ -189,6 +193,7 @@ const config = {
     buildingSync: string;
     cache: string;
     shuttleEta: string;
+    subway: string;
   } {
     return {
       push: switches.pushDelivery,
@@ -196,6 +201,7 @@ const config = {
       buildingSync: switches.buildingSyncEnabled ? "on" : "off",
       cache: switches.cacheEnabled ? "on" : "off",
       shuttleEta: switches.shuttleEtaEnabled ? "on" : "off",
+      subway: switches.subwayEnabled ? "on" : "off",
     };
   },
 };

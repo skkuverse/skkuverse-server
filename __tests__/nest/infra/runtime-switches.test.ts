@@ -33,6 +33,7 @@ describe("resolveRuntimeSwitches defaults", () => {
         buildingSyncEnabled: true,
         cacheEnabled: true,
         shuttleEtaEnabled: true,
+        subwayEnabled: true,
       },
       errors: [],
     });
@@ -47,6 +48,7 @@ describe("resolveRuntimeSwitches defaults", () => {
         buildingSyncEnabled: false,
         cacheEnabled: false,
         shuttleEtaEnabled: false,
+        subwayEnabled: false,
       },
       errors: [],
     });
@@ -97,6 +99,16 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(prod.switches.shuttleEtaEnabled).toBe(false);
   });
 
+  it("development may turn the subway pollers on, and production may turn them off", () => {
+    // Act
+    const dev = resolveRuntimeSwitches({ SUBWAY: "on" }, "development");
+    const prod = resolveRuntimeSwitches({ SUBWAY: "off" }, "production");
+
+    // Assert
+    expect(dev).toEqual({ switches: expect.objectContaining({ subwayEnabled: true }), errors: [] });
+    expect(prod).toEqual({ switches: expect.objectContaining({ subwayEnabled: false }), errors: [] });
+  });
+
   it("refuses PUSH_DELIVERY=live in development, and stays suppressed", () => {
     // Act
     const { switches, errors } = resolveRuntimeSwitches({ PUSH_DELIVERY: "live" }, "development");
@@ -144,6 +156,7 @@ describe("resolveRuntimeSwitches overrides", () => {
     ["BUILDING_SYNC", "OFF"],
     ["CACHE", "no-store"],
     ["SHUTTLE_ETA", "true"],
+    ["SUBWAY", "yes"],
   ])("reports %s=%s instead of coercing it", (name, value) => {
     // Act & Assert
     for (const mode of ["production", "development", "test"] as const) {
@@ -233,6 +246,14 @@ describe("where the switches may be set", () => {
       expect(env).toMatch(/- PUSH_DELIVERY=suppressed\n/);
       expect(env).toMatch(/- BUILDING_SYNC=off\n/);
       expect(env).toMatch(/- SHUTTLE_ETA=off\n/);
+    });
+
+    it.each([
+      ["the api replicas", apiEnv],
+      ["the poller", pollerEnv],
+    ])("%s run no subway poller", (_label, env) => {
+      // Assert
+      expect(env).toMatch(/- SUBWAY=off\n/);
     });
   });
 });
