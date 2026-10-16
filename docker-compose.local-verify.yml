@@ -31,6 +31,8 @@
 #   - BUILDING_SYNC=off: no campusMap.do crawl on every container start.
 #   - SHUTTLE_ETA=off: no NAVER Directions or TMAP call, which use metered
 #     keys and would write estimates into bus_campus_dev.
+#   - SUBWAY=off: no Seoul subway API call or train-map crawl, which share a
+#     daily quota with production.
 #   - DISPATCH_SWEEP_ENABLED=false on the poller: the base file sets it true;
 #     with push suppressed the sweep would only mark _dev notices pushed.
 #   - SENTRY_DSN=disabled: production requires a DSN, and a local run must not
@@ -53,6 +55,7 @@ x-api-dev-env: &api-dev-env
   - PUSH_DELIVERY=suppressed
   - BUILDING_SYNC=off
   - SHUTTLE_ETA=off
+  - SUBWAY=off
 
 services:
   poller:
@@ -70,6 +73,7 @@ services:
       - PUSH_DELIVERY=suppressed
       - BUILDING_SYNC=off
       - SHUTTLE_ETA=off
+      - SUBWAY=off
 
   api-1:
     environment: *api-dev-env

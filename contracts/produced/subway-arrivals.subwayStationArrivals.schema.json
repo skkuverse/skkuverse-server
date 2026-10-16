@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "station": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "operatorCode": {
+          "type": "string"
+        },
+        "lineCode": {
+          "type": "string"
+        },
+        "stationCode": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "operatorCode",
+        "lineCode",
+        "stationCode",
+        "name"
+      ]
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+    },
+    "directions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "direction": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "trains": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "trainNo": {
+                  "type": "string"
+                },
+                "destination": {
+                  "type": "string"
+                },
+                "express": {
+                  "type": "boolean"
+                },
+                "arrivalAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "remainingSec": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "position": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "stationId": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "approaching",
+                            "arrived",
+                            "departed"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "stationId",
+                        "state"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "live",
+                    "estimated",
+                    "scheduled"
+                  ]
+                }
+              },
+              "required": [
+                "trainNo",
+                "destination",
+                "express",
+                "arrivalAt",
+                "remainingSec",
+                "position",
+                "source"
+              ]
+            }
+          }
+        },
+        "required": [
+          "direction",
+          "name",
+          "trains"
+        ]
+      }
+    }
+  },
+  "required": [
+    "station",
+    "generatedAt",
+    "directions"
+  ]
+}

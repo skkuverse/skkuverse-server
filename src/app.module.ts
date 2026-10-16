@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "./config/config.module";
 import { SchedulingModule } from "./scheduling/scheduling.module";
 import { HealthModule } from "./health/health.module";
+import { HolidaysModule } from "./holidays/holidays.module";
+import { HolidaysSyncModule } from "./holidays/sync/holidays-sync.module";
 import { BusModule } from "./bus/bus.module";
 import { BusCacheModule } from "./bus/cache/bus-cache.module";
 import { BusRealtimeModule } from "./bus/realtime/bus-realtime.module";
@@ -43,6 +45,15 @@ import { NoticesDispatchModule } from "./notices/dispatch/notices-dispatch.modul
 import { MiniappsModule } from "./miniapps/miniapps.module";
 import { MiniappsNotificationsModule } from "./miniapps/notifications/miniapps-notifications.module";
 import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
+import { SubwayModule } from "./subway/subway.module";
+import { SubwayTimetableModule } from "./subway/timetable/subway-timetable.module";
+import { SubwayEstimateModule } from "./subway/estimate/subway-estimate.module";
+import { SubwaySeoulApiModule } from "./subway/seoul-api/subway-seoul-api.module";
+import { SubwaySeoulTrainmapModule } from "./subway/seoul-trainmap/subway-seoul-trainmap.module";
+import { SubwayTrackingModule } from "./subway/tracking/subway-tracking.module";
+import { SubwaySeoulModule } from "./subway/seoul/subway-seoul.module";
+import { SubwayArrivalsModule } from "./subway/arrivals/subway-arrivals.module";
+import { SubwayHistoryModule } from "./subway/history/subway-history.module";
 
 // WHY: imports in boot order: config (fails loud on a missing value), the poller registry, then health.
 // LangMiddleware is not bound here but in bootstrapHttpApp (src/http/http-app.bootstrap.ts); its QUIRK says why.
@@ -51,6 +62,8 @@ import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.modul
     ConfigModule,
     SchedulingModule,
     HealthModule,
+    HolidaysModule,
+    HolidaysSyncModule,
     BusModule,
     BusCacheModule,
     BusRealtimeModule,
@@ -95,6 +108,15 @@ import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.modul
     MiniappsModule,
     MiniappsNotificationsModule,
     MiniappsCatalogModule,
+    SubwayModule,
+    SubwayTimetableModule,
+    SubwayEstimateModule,
+    SubwaySeoulApiModule,
+    SubwaySeoulTrainmapModule,
+    SubwayTrackingModule,
+    SubwaySeoulModule,
+    SubwayArrivalsModule,
+    SubwayHistoryModule,
   ],
 })
 export class AppModule {}

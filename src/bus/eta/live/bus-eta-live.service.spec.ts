@@ -5,12 +5,12 @@
  * in-memory store with writeEtas' frozen-skip rule.
  */
 import moment from "moment-timezone";
-import { BusEtaDailyCapError } from "../bus-eta.error";
+import { DailyCapError } from "../../../shared/daily-cap.error";
 import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import { etaDocId } from "../bus-eta.mapper";
 import { liveDoc } from "./bus-eta-live.mapper";
-import { DailyCap } from "../bus-eta.rules";
+import { DailyCap } from "../../../shared/daily-cap.util";
 import type { EtaRun, EtaSequence } from "../bus-eta.types";
 import { BusEtaLiveService } from "./bus-eta-live.service";
 
@@ -193,7 +193,7 @@ describe("BusEtaLiveService.tick", () => {
     const err = await poller.tick(at("09:20")).catch((e: unknown) => e);
 
     // Assert
-    expect(err).toBeInstanceOf(BusEtaDailyCapError);
+    expect(err).toBeInstanceOf(DailyCapError);
     expect((err as Error).message).toBe("naver: daily cap of 2 calls reached");
     expect(fetchOffsets).toHaveBeenCalledTimes(2);
   });
@@ -206,7 +206,7 @@ describe("the daily cap", () => {
     cap.take(at("23:59"));
 
     // Act & Assert
-    expect(() => cap.take(at("23:59", 30))).toThrow(BusEtaDailyCapError);
+    expect(() => cap.take(at("23:59", 30))).toThrow(DailyCapError);
     expect(() => cap.take(moment(at("00:00")).add(1, "day").toDate())).not.toThrow();
   });
 });

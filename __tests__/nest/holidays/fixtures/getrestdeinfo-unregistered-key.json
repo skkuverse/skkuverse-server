@@ -1,0 +1,10 @@
+{
+  "_about": "GET https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo?serviceKey=bogus&solYear=2026&_type=json, captured 2026-10-16. Untrimmed body; it came with HTTP 403. The gateway's error envelope, which has no `response` key.",
+  "OpenAPI_ServiceResponse": {
+    "cmmMsgHeader": {
+      "errMsg": "SERVICE_KEY_IS_NOT_REGISTERED_ERROR",
+      "returnAuthMsg": "등록되지 않은 서비스키",
+      "returnReasonCode": "30"
+    }
+  }
+}

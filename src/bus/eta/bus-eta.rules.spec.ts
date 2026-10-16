@@ -1,13 +1,11 @@
 /**
  * The estimate rules (design D10): runs come from a resolved day, one per
  * (route type, time), and only entries whose stopTimes fit the sequence; the
- * opted-in sequences carry their stops' coordinates in order; and the daily
- * cap starts over at 00:00 KST.
+ * opted-in sequences carry their stops' coordinates in order.
  */
-import { BusEtaDailyCapError } from "./bus-eta.error";
 import type { ScheduleDay, ScheduleEntry } from "../schedule/bus-schedule.wire";
 import { BusStopsService } from "../stops/bus-stops.service";
-import { DailyCap, runsOfDay, toEtaSequences, toKstDate, toSequenceLength } from "./bus-eta.rules";
+import { runsOfDay, toEtaSequences, toSequenceLength } from "./bus-eta.rules";
 
 function day(date: string, schedule: ScheduleEntry[], display = "schedule"): ScheduleDay {
   return { date, dayOfWeek: 5, display, label: null, notices: [], schedule };
@@ -84,31 +82,5 @@ describe("toEtaSequences", () => {
     const length = toSequenceLength(seqs);
     expect(length("campus-jain", "hakbu")).toBe(2);
     expect(length("commute-jamsil", "down")).toBeUndefined();
-  });
-});
-
-describe("DailyCap", () => {
-  it("allows the cap's calls in a KST day and starts over at 00:00 KST", () => {
-    // Arrange
-    const cap = new DailyCap("tmap", 2);
-    const evening = new Date("2026-10-12T14:59:00.000Z"); // 23:59 KST
-    const midnight = new Date("2026-10-12T15:00:00.000Z"); // 00:00 KST next day
-
-    // Act & Assert
-    cap.take(evening);
-    cap.take(evening);
-    expect(() => cap.take(evening)).toThrow(BusEtaDailyCapError);
-    expect(() => cap.take(midnight)).not.toThrow();
-  });
-});
-
-describe("toKstDate", () => {
-  it.each([
-    ["2026-10-19T14:59:59Z", "2026-10-19"],
-    ["2026-10-19T15:00:00Z", "2026-10-20"],
-    ["2026-10-19T16:30:00Z", "2026-10-20"],
-  ])("%s is %s in KST", (instant, expected) => {
-    // Act & Assert
-    expect(toKstDate(new Date(instant))).toBe(expected);
   });
 });

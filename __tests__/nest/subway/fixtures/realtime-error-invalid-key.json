@@ -1,0 +1,9 @@
+{
+  "_about": "GET http://swopenapi.seoul.go.kr/api/subway/<key>/json/<endpoint> with an invalid key, captured 2026-10-16. Untrimmed: HTTP 200, the bare status body INFO-100.",
+  "status": 500,
+  "code": "INFO-100",
+  "message": "인증키가 유효하지 않습니다. 인증키가 없는 경우, 열린 데이터 광장 홈페이지에서 인증키를 신청하십시오.",
+  "link": "",
+  "developerMessage": "",
+  "total": 0
+}

@@ -1,15 +1,11 @@
-import Holidays from "date-holidays";
 import moment from "moment-timezone";
+import { toHolidayYear } from "../../shared/korean-public-holiday.util";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { BusOverrideDoc, BusScheduleDoc } from "./bus-schedule.document";
 import type { DaySources, PickedPattern, RestDays, SuspendWindow } from "./bus-schedule.types";
 import type { ScheduleDay, ScheduleNotice } from "./bus-schedule.wire";
 
 const DATE_FORMAT = "YYYY-MM-DD";
-
-// QUIRK(date-holidays): computes KR holidays for any year, substitute holidays included; ad-hoc ones the
-// library cannot predict go in skku-rest-days.json.
-const krHolidays = new Holidays("KR");
 
 // WHY: each Monday asked for costs a cached week and two reads, and date-holidays hangs on an invalid date or a
 // far year, so the week view answers a real date within a year of today (KST) either way.
@@ -24,20 +20,11 @@ export function lookupRestDay(restDays: RestDays, dateStr: string): string | nul
   return restDays.exact.get(dateStr) ?? restDays.annual.get(dateStr.slice(5)) ?? null;
 }
 
-// EVIDENCE: date-holidays never returned for an Invalid Date or a year-0 or year-1 day, and read 2026-02-29 as
-// the March 1 holiday (a standalone run, 2026-10-16); 1900 and 2999 answer, and callers ask for days near today.
-const HOLIDAY_YEARS = { first: 1900, last: 2999 } as const;
-
-// WHY: the SKKU list wins over the public calendar; noon KST resolves the date whatever the host's time zone.
-export function toNonOperatingDayLabel(restDays: RestDays, dateStr: string): string | null {
-  const day = moment.tz(dateStr, DATE_FORMAT, true, KST_TIME_ZONE);
-  if (!day.isValid() || day.year() < HOLIDAY_YEARS.first || day.year() > HOLIDAY_YEARS.last) {
-    throw new RangeError(`${dateStr} is not a date from ${HOLIDAY_YEARS.first} to ${HOLIDAY_YEARS.last}`);
-  }
-  const skku = lookupRestDay(restDays, dateStr);
-  if (skku) return skku;
-  const holidays = krHolidays.isHoliday(new Date(`${dateStr}T12:00:00+09:00`));
-  return (holidays && holidays.find((h) => h.type === "public")?.name) || null;
+// WHY: the SKKU list wins over the public calendar, and holds the rest days that calendar does not list. The
+// year check runs first, so a date the holiday lookup cannot take throws even on an SKKU rest day.
+export function toNonOperatingDayLabel(restDays: RestDays, dateStr: string, publicHoliday: string | null): string | null {
+  toHolidayYear(dateStr);
+  return lookupRestDay(restDays, dateStr) || publicHoliday;
 }
 
 /** WHY: a day the smart view may open on: one with a timetable, or a no-service day that carries notices. */
