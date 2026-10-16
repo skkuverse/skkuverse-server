@@ -6,12 +6,15 @@
  * records at the station with each one's own error, and
  * updateUnresolvedPredictions marks open records predicted before the cutoff,
  * as the real updates do (all pinned in subway-history.repository.spec.ts).
- * `failWith` makes every write reject; `writes` counts the write calls.
+ * listAccuracyGroups answers `accuracyGroups` and records each range asked:
+ * the aggregation itself runs on a real mongod in
+ * __tests__/nest/subway/subway-history.routes.test.ts. `failWith` makes every
+ * write reject; `writes` counts the write calls.
  */
 import type { SubwayEventDoc, SubwayPredictionDoc } from "../../../../src/subway/history/subway-history.document";
 import type { SubwayHistoryRepository } from "../../../../src/subway/history/subway-history.repository";
 import { toErrorSec } from "../../../../src/subway/history/subway-history.rules";
-import type { ObservedArrival } from "../../../../src/subway/history/subway-history.types";
+import type { AccuracyGroup, AccuracyRange, ObservedArrival } from "../../../../src/subway/history/subway-history.types";
 import type { PublicOf } from "../public-of";
 
 const keyOf = (record: Pick<SubwayPredictionDoc, "serviceDate" | "trainNo" | "stationId" | "horizonMin">): string =>
@@ -20,6 +23,8 @@ const keyOf = (record: Pick<SubwayPredictionDoc, "serviceDate" | "trainNo" | "st
 export class FakeSubwayHistoryRepository implements PublicOf<SubwayHistoryRepository> {
   events: SubwayEventDoc[] = [];
   predictions = new Map<string, SubwayPredictionDoc>();
+  accuracyGroups: AccuracyGroup[] = [];
+  rangesAsked: AccuracyRange[] = [];
   failWith: Error | null = null;
   writes = 0;
 
@@ -54,6 +59,11 @@ export class FakeSubwayHistoryRepository implements PublicOf<SubwayHistoryReposi
     for (const [key, record] of this.predictions) {
       if (record.status === "open" && record.predictedAt < cutoff) this.predictions.set(key, { ...record, status: "unresolved", resolvedAt: markedAt });
     }
+  }
+
+  async listAccuracyGroups(range: AccuracyRange): Promise<AccuracyGroup[]> {
+    this.rangesAsked.push(range);
+    return this.accuracyGroups.map((group) => ({ ...group }));
   }
 
   /** The records of one train at one station, by horizon, largest first. */

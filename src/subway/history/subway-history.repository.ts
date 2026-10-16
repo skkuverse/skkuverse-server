@@ -5,8 +5,17 @@ import { getClient } from "../../infra/db";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import { HISTORY_TTL_SEC } from "./subway-history.constants";
 import type { SubwayEventDoc, SubwayPredictionDoc } from "./subway-history.document";
-import { toObservedArrivalFilter, toObservedArrivalUpdate, toUnresolvedFilter, toUnresolvedUpdate } from "./subway-history.query";
-import type { ObservedArrival } from "./subway-history.types";
+import {
+  toAccuracyPipeline,
+  toObservedArrivalFilter,
+  toObservedArrivalUpdate,
+  toUnresolvedFilter,
+  toUnresolvedUpdate,
+} from "./subway-history.query";
+import type { AccuracyGroup, AccuracyRange, ObservedArrival } from "./subway-history.types";
+
+// WHY: an operator's report over up to 180 days of records, not a hot read.
+const REPORT_MAX_TIME_MS = 30_000;
 
 const EVENTS_OPTIONS = {
   timeseries: { timeField: "at", metaField: "meta", granularity: "seconds" },
@@ -52,6 +61,10 @@ export class SubwayHistoryRepository implements OnModuleInit {
 
   async updateUnresolvedPredictions(cutoff: Date, markedAt: Date): Promise<void> {
     await this.subwayPredictions().updateMany(toUnresolvedFilter(cutoff), toUnresolvedUpdate(markedAt));
+  }
+
+  listAccuracyGroups(range: AccuracyRange): Promise<AccuracyGroup[]> {
+    return this.subwayPredictions().aggregate<AccuracyGroup>(toAccuracyPipeline(range), { maxTimeMS: REPORT_MAX_TIME_MS }).toArray();
   }
 
   private async createEventsCollection(): Promise<void> {

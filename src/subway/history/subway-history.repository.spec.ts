@@ -9,14 +9,17 @@
  * unordered bulk of insert-only upserts of crossed horizons, one update per
  * observed arrival computing each open record's error from its own
  * prediction, and one update marking the open records 30 minutes past their
- * predicted arrival unresolved. A database error rejects; the service decides
- * what that means.
+ * predicted arrival unresolved. The report runs one bounded aggregation over
+ * the range's resolved and unresolved records. A database error rejects; the
+ * service decides what that means.
  */
 const insertMany = jest.fn();
 const bulkWrite = jest.fn();
 const updateMany = jest.fn();
 const createIndexes = jest.fn();
-const mongoCollection = jest.fn((_db: string, _name: string) => ({ insertMany, bulkWrite, updateMany, createIndexes }));
+const toArray = jest.fn();
+const aggregate = jest.fn((..._args: unknown[]) => ({ toArray }));
+const mongoCollection = jest.fn((_db: string, _name: string) => ({ insertMany, bulkWrite, updateMany, createIndexes, aggregate }));
 const createCollection = jest.fn();
 const db = jest.fn((_name: string) => ({ createCollection }));
 
@@ -30,6 +33,7 @@ jest.mock("../../infra/mongo", () => ({
 import config from "../../infra/config";
 import logger from "../../infra/logger";
 import type { SubwayEventDoc, SubwayPredictionDoc } from "./subway-history.document";
+import { toAccuracyPipeline } from "./subway-history.query";
 import { SubwayHistoryRepository } from "./subway-history.repository";
 
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
@@ -189,5 +193,32 @@ describe("SubwayHistoryRepository.updateUnresolvedPredictions", () => {
       { status: "open", predictedAt: { $lt: at("21:05:30") } },
       { $set: { status: "unresolved", resolvedAt: at("21:35:30") } },
     );
+  });
+});
+
+describe("SubwayHistoryRepository.listAccuracyGroups", () => {
+  it("aggregates the range's resolved and unresolved records by service date, bounded", async () => {
+    // Arrange
+    const groups = [{ stationId: "KR-1-0153", count: 1 }];
+    toArray.mockResolvedValueOnce(groups);
+    const range = { from: "2026-10-10", to: "2026-10-16" };
+
+    // Act
+    const result = await repository.listAccuracyGroups(range);
+
+    // Assert
+    expect(result).toBe(groups);
+    expect(aggregate).toHaveBeenCalledWith(toAccuracyPipeline(range), { maxTimeMS: 30_000 });
+    expect((aggregate.mock.calls[0]?.[0] as unknown[])[0]).toEqual({
+      $match: { serviceDate: { $gte: "2026-10-10", $lte: "2026-10-16" }, status: { $in: ["resolved", "unresolved"] } },
+    });
+  });
+
+  it("propagates a database error", async () => {
+    // Arrange
+    toArray.mockRejectedValueOnce(new Error("maxTimeMS expired"));
+
+    // Act & Assert
+    await expect(repository.listAccuracyGroups({ from: "2026-10-10", to: "2026-10-16" })).rejects.toThrow("maxTimeMS expired");
   });
 });
