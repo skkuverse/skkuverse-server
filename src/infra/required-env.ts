@@ -103,6 +103,7 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
     raw("shuttleEta.naver.keyId", "NAVER_API_KEY_ID"),
     raw("shuttleEta.naver.key", "NAVER_API_KEY"),
     raw("shuttleEta.tmapAppKey", "TMAP_APP_KEY"),
+    raw("holidays.serviceKey", "DATA_GO_KR_SERVICE_KEY"),
     // WHY: production must report errors somewhere; elsewhere Sentry is opt-in.
     ...(mode.isProduction ? [raw("sentry.dsn", "SENTRY_DSN")] : []),
   ];

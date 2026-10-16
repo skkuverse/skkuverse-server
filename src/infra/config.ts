@@ -133,6 +133,11 @@ const config = {
     enabled: switches.subwayEnabled,
   },
 
+  holidays: {
+    serviceKey: asRequired(process.env.DATA_GO_KR_SERVICE_KEY),
+    syncIntervalMs: 24 * 60 * 60 * 1000,
+  },
+
   // WHY: the literal "disabled" turns Sentry off where a DSN is required (docker-compose.local-verify.yml).
   sentry: {
     dsn: process.env.SENTRY_DSN,
