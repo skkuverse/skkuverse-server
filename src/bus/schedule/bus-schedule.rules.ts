@@ -1,5 +1,5 @@
 import moment from "moment-timezone";
-import { lookupKoreanPublicHoliday } from "../../shared/korean-public-holiday.util";
+import { toHolidayYear } from "../../shared/korean-public-holiday.util";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { BusOverrideDoc, BusScheduleDoc } from "./bus-schedule.document";
 import type { DaySources, PickedPattern, RestDays, SuspendWindow } from "./bus-schedule.types";
@@ -20,10 +20,10 @@ export function lookupRestDay(restDays: RestDays, dateStr: string): string | nul
   return restDays.exact.get(dateStr) ?? restDays.annual.get(dateStr.slice(5)) ?? null;
 }
 
-// WHY: the SKKU list wins over the public calendar, and holds the rest days that calendar cannot predict. The
-// public lookup runs first only for its RangeError, so a date it cannot take throws even on an SKKU rest day.
-export function toNonOperatingDayLabel(restDays: RestDays, dateStr: string): string | null {
-  const publicHoliday = lookupKoreanPublicHoliday(dateStr);
+// WHY: the SKKU list wins over the public calendar, and holds the rest days that calendar does not list. The
+// year check runs first, so a date the holiday lookup cannot take throws even on an SKKU rest day.
+export function toNonOperatingDayLabel(restDays: RestDays, dateStr: string, publicHoliday: string | null): string | null {
+  toHolidayYear(dateStr);
   return lookupRestDay(restDays, dateStr) || publicHoliday;
 }
 
