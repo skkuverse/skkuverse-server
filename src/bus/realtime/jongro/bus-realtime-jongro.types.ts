@@ -3,7 +3,8 @@ export interface JongroBusSighting {
   latitude: string;
   longitude: string;
   carNumber: string;
-  turnaroundStationId: string;
+  /** QUIRK(topis): absent when the row names no turnaround stop, which the registry sync reads as no observation. */
+  turnaroundStationId?: string;
 }
 
 /** WHY: since when a bus has been at its last passed station (ISO instant), and for how many seconds. */

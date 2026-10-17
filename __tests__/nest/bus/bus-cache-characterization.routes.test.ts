@@ -57,8 +57,8 @@ const JONGRO07_LOC_BODY = {
   msgHeader: TOPIS_OK,
   msgBody: {
     itemList: [
-      { lastStnId: "100900197", tmX: "126.998", tmY: "37.587", plainNo: "서울74사5537", busType: "1" },
-      { lastStnId: "999999999", tmX: "126.990", tmY: "37.580", plainNo: "서울74사0001", busType: "1" },
+      { lastStnId: "100900197", gpsX: "126.998", gpsY: "37.587", tmX: null, tmY: null, trnstnid: "100900028", plainNo: "서울74사5537", busType: "1" },
+      { lastStnId: "999999999", gpsX: "126.990", gpsY: "37.580", tmX: null, tmY: null, trnstnid: "100900028", plainNo: "서울74사0001", busType: "1" },
     ],
   },
 };

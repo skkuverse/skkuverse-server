@@ -5,7 +5,6 @@
  */
 import type { JongroArrivalDoc } from "../../../../src/bus/cache/bus-cache.document";
 import type { JongroRoute } from "../../../../src/bus/bus.types";
-import type { RegistryRoute } from "../../../../src/bus/registry/bus-registry.types";
 import type { BusRealtimeJongroClient } from "../../../../src/bus/realtime/jongro/bus-realtime-jongro.client";
 import type { JongroBusSighting } from "../../../../src/bus/realtime/jongro/bus-realtime-jongro.types";
 import type { PublicOf } from "../public-of";
@@ -21,7 +20,7 @@ export class FakeBusRealtimeJongroClient implements PublicOf<BusRealtimeJongroCl
     return this.arrivals;
   }
 
-  async fetchSightings(route: Pick<RegistryRoute, "code" | "positionsUrl">): Promise<JongroBusSighting[]> {
+  async fetchSightings(route: Pick<JongroRoute, "code" | "positionsUrl">): Promise<JongroBusSighting[]> {
     this.positionsUrls.push(route.positionsUrl);
     this.fail();
     return this.sightings;

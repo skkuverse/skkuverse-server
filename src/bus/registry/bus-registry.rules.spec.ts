@@ -72,6 +72,7 @@ describe("toTurnaroundTopisId", () => {
     ["no bus is running", [], "T1"],
     ["the rows disagree", ["T2", "T3"], "T1"],
     ["a row has no id", ["T2", ""], "T1"],
+    ["the rows name no turnaround stop", [undefined, undefined], "T1"],
   ])("when %s", (_case, sightingIds, expected) => {
     // Act & Assert
     expect(toTurnaroundTopisId(sightingIds, "T1")).toBe(expected);
