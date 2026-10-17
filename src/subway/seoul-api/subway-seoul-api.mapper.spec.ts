@@ -89,6 +89,28 @@ describe("toTrainEvents", () => {
     ]);
   });
 
+  it("keeps the twelve 신분당선 trains of the 2026-10-17 21:05 capture under their raw trainset numbers, at the batch time", () => {
+    // Arrange
+    const positions = fixture<SeoulPositionRow>("realtime-position-shinbundang.json", "realtimePositionList");
+    const shinbundang = new Map([
+      ["논현", "DX-D1-4305"],
+      ["신논현", "DX-D1-4306"],
+      ["양재시민의숲", "DX-D1-4309"],
+      ["판교", "DX-D1-4311"],
+      ["미금", "DX-D1-D13"],
+      ["성복", "DX-D1-4316"],
+      ["광교중앙", "DX-D1-4318"],
+      ["광교", "DX-D1-4319"],
+    ]);
+
+    // Act
+    const events = toTrainEvents(positions, shinbundang, "trainset");
+
+    // Assert
+    expect(events.map((e) => e.trainNo)).toEqual(["2", "3", "8", "6", "12", "14", "18", "20", "19", "13", "23", "22"]);
+    expect(new Set(events.map((e) => e.stateChangedAt.toISOString()))).toEqual(new Set(["2026-10-17T12:05:41.000Z"]));
+  });
+
   it.each([
     ["0", "approaching"],
     ["1", "arrived"],
