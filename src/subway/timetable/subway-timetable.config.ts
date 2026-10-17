@@ -13,6 +13,19 @@ const TIMETABLE_FILES = [
   "seoul-4-weekday.json",
   "seoul-4-saturday.json",
   "seoul-4-holiday.json",
+  "korail-k1-weekday.json",
+  "korail-k1-holiday.json",
+  "seoul-2-weekday.json",
+  "seoul-2-saturday.json",
+  "seoul-2-holiday.json",
+  "seoul-3-weekday.json",
+  "seoul-3-saturday.json",
+  "seoul-3-holiday.json",
+  "seoul-8-weekday.json",
+  "seoul-8-saturday.json",
+  "seoul-8-holiday.json",
+  "shinbundang-d1-weekday.json",
+  "shinbundang-d1-holiday.json",
 ];
 
 export function loadTimetable(file: string, raw: unknown): Timetable {
