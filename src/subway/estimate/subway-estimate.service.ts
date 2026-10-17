@@ -7,9 +7,7 @@ import type { EstimateInput, StationArrivals } from "./subway-estimate.types";
 // through, which siblings import only as a .module or a .service.
 @Injectable()
 export class SubwayEstimateService {
-  // WHY: Nest injects SubwayCountdownModule's instance; the default lets the sibling flows' specs build the
-  // estimate by hand (`new SubwayEstimateService()`), each with a countdown memory of its own.
-  constructor(private readonly countdown: SubwayCountdownService = new SubwayCountdownService()) {}
+  constructor(private readonly countdown: SubwayCountdownService) {}
 
   estimateArrivals(input: EstimateInput): StationArrivals {
     return toStationArrivals({ ...input, countdownRows: this.countdown.listCountingRows(input.countdownRows, input.now) });
