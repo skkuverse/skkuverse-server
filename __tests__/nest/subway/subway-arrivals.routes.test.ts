@@ -12,8 +12,12 @@
  * `scheduled`; a train whose departure was observed is not listed; a published
  * countdown arrives at its row time plus its seconds; a train seen at the
  * nearest upstream station is one stop away; 강남 serves its 2호선 line entry
- * with the circle directions and a published countdown live; and the station,
- * direction and neighbor station names follow the request language.
+ * with the circle directions and a published countdown live; 잠실 and 도곡
+ * serve two line entries in platform order, 잠실's captured 8호선 rows giving
+ * no countdown beside its live 2호선 ones; a 수인분당 train seen arrived, whose
+ * departure no source reports, is listed until 90 s past its estimated
+ * departure; and the station, direction and neighbor station names follow the
+ * request language.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -29,6 +33,12 @@ import type { CountdownRow, TrainEvent } from "../../../src/subway/subway.types"
 import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
 import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracking.module";
 import { SubwayTrackingService } from "../../../src/subway/tracking/subway-tracking.service";
+import fs from "fs";
+import path from "path";
+import { toCountdownRows } from "../../../src/subway/seoul-api/subway-seoul-api.mapper";
+import type { SeoulArrivalRow } from "../../../src/subway/seoul-api/subway-seoul-api.schema";
+import { toSeoulStations } from "../../../src/subway/seoul/subway-seoul.rules";
+import { SUBWAY_REGISTRY } from "../../../src/subway/subway.config";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
@@ -71,12 +81,12 @@ function event(trainNo: string, platformId: string, state: TrainEvent["state"], 
   return { trainNo, platformId, state, stateChangedAt: at(kst), destination };
 }
 
-// WHY: the stations these tests read have one platform, so their one line entry holds every direction.
+// WHY: the stations these tests read through it have one platform, so their one line entry holds every direction.
 const directionsOf = (body: { data: { lines: Array<{ directions: any[] }> } }) => body.data.lines[0]!.directions;
 
-function getAt(kst: string, path: string): request.Test {
+function getAt(kst: string, url: string): request.Test {
   clock.current = at(kst);
-  return request(httpServer).get(path);
+  return request(httpServer).get(url);
 }
 
 describe("GET /subway/stations/:stationId/arrivals", () => {
@@ -150,6 +160,67 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(up.trains.find((t: { trainNo: string }) => t.trainNo === "2440")).toMatchObject({ arrivalAt: at("20:42:50").toISOString(), source: "live" });
   });
 
+  it("answers jamsil with its 2호선 then its 8호선 line entry, and dogok with 3호선 then 수인분당선, as the wire publishes them", async () => {
+    // Act
+    const jamsil = await getAt("20:41:02", "/subway/stations/jamsil/arrivals");
+    const dogok = await getAt("20:41:02", "/subway/stations/dogok/arrivals");
+
+    // Assert
+    const entriesOf = (body: { data: { lines: Array<{ line: { code: string; badge: string; color: string }; platformId: string }> } }) =>
+      body.data.lines.map((l) => [l.line.code, l.line.badge, l.line.color, l.platformId]);
+    expect(entriesOf(jamsil.body)).toEqual([
+      ["2", "2", "00A84D", "S1-2-216"],
+      ["8", "8", "E6186C", "S1-8-2815"],
+    ]);
+    expect(entriesOf(dogok.body)).toEqual([
+      ["3", "3", "EF7C1C", "S1-3-334"],
+      ["K1", "수인분당", "F5A200", "KR-K1-K217"],
+    ]);
+    expect(dogok.body.data.lines[1].directions.map((d: { name: string }) => d.name)).toEqual(["청량리 방면", "인천 방면"]);
+    expectWire(subwayStationArrivals, jamsil.body.data);
+    expectWire(subwayStationArrivals, dogok.body.data);
+  });
+
+  it("Line without countdowns: serves 잠실's captured 2호선 countdowns live and none of its 8호선 trains live, whose rows carry none", async () => {
+    // Arrange
+    const fetchedAt = new Date("2026-10-17T21:07:00+09:00");
+    const captured = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/realtime-arrival-jamsil.json"), "utf8")) as { realtimeArrivalList: SeoulArrivalRow[] };
+    const jamsil = toSeoulStations(SUBWAY_REGISTRY).find((station) => station.seoulName === "잠실");
+    const countdownRows = toCountdownRows(captured.realtimeArrivalList, jamsil?.platformBySubwayId ?? new Map(), fetchedAt);
+    clock.current = fetchedAt;
+    await app.get(SubwayTrackingService).track({ observe: async () => ({ source: "seoul-subway-api", events: [], countdownRows }) });
+
+    // Act
+    clock.current = new Date("2026-10-17T21:07:02+09:00");
+    const res = await request(httpServer).get("/subway/stations/jamsil/arrivals");
+
+    // Assert
+    const sourcesOf = (index: number): string[] =>
+      res.body.data.lines[index].directions.flatMap((d: { trains: Array<{ source: string }> }) => d.trains.map((t) => t.source));
+    expect(res.body.data.lines.map((l: { platformId: string }) => l.platformId)).toEqual(["S1-2-216", "S1-8-2815"]);
+    expect(sourcesOf(0)).toContain("live");
+    expect(sourcesOf(1).length).toBeGreaterThan(0);
+    expect(sourcesOf(1).every((source) => source === "estimated" || source === "scheduled")).toBe(true);
+  });
+
+  it.each([
+    ["89 s", "20:44:19", true],
+    ["91 s", "20:44:21", false],
+  ])("Departure never reported: lists 수인분당 6204, seen arrived at 정자 20 s late, until 90 s past its estimated departure (%s past: %s)", async (_label, kst, listed) => {
+    // Arrange
+    await trackAt("20:42:25", "seoul-subway-api", [event("6204", "KR-K1-K230", "arrived", "20:42:20", "왕십리")]);
+    await trackAt(kst, "seoul-subway-api", []);
+
+    // Act
+    const res = await getAt(kst, "/subway/stations/jeongja/arrivals");
+
+    // Assert
+    const up = res.body.data.lines.find((l: { platformId: string }) => l.platformId === "KR-K1-K230").directions[0];
+    const train = up.trains.find((t: { trainNo: string }) => t.trainNo === "6204");
+    expect(train !== undefined).toBe(listed);
+    if (listed) expect(train).toMatchObject({ arrivalAt: at("20:42:20").toISOString(), stopsAway: 0, source: "estimated" });
+  });
+
   it.each(["S1-4-420", "KR-1-0153", "S1-2-222", "seoul", "Hyehwa"])("answers %s with 404 SUBWAY_STATION_NOT_FOUND and no cache header", async (stationId) => {
     // Act
     const res = await getAt("20:41:02", `/subway/stations/${stationId}/arrivals`);
@@ -160,7 +231,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.headers["cache-control"]).not.toBe("private, max-age=5");
   });
 
-  it.each(["sungkyunkwan", "hyehwa", "jamsil", "dogok", "gangnam", "yangjae"])("sends %s's arrivals with Cache-Control: private, max-age=5", async (stationId) => {
+  it.each(["sungkyunkwan", "hyehwa", "jeongja", "jamsil", "dogok", "gangnam", "yangjae"])("sends %s's arrivals with Cache-Control: private, max-age=5", async (stationId) => {
     // Act
     const res = await getAt("20:41:02", `/subway/stations/${stationId}/arrivals`);
 

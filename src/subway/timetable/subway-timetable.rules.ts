@@ -45,8 +45,11 @@ export function findTimetable(timetables: readonly Timetable[], platform: Subway
   return timetables.find((t) => isPlatformTable(t) && t.dayType === dayType) ?? null;
 }
 
+// WHY: every tick reads tables of tens of thousands of stop times, so the time zone is applied once per table,
+// not once per time.
 export function toScheduledTrains(timetable: Timetable, serviceDate: string): ScheduledTrain[] {
-  const toInstant = (seconds: number | null): Date | null => (seconds === null ? null : toServiceInstant(serviceDate, seconds));
+  const midnightMs = toServiceInstant(serviceDate, 0).getTime();
+  const toInstant = (seconds: number | null): Date | null => (seconds === null ? null : new Date(midnightMs + seconds * SECOND_MS));
   return timetable.trains.map(({ stops, ...train }) => ({
     ...train,
     stops: stops.map((stop) => ({ platformId: stop.station, arrivalAt: toInstant(stop.arr), departureAt: toInstant(stop.dep) })),

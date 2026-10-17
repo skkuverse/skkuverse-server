@@ -56,8 +56,9 @@ describe("findSubwayStation", () => {
   it.each([
     ["sungkyunkwan", ["KR-1-0153"], "성균관대", { ko: "성균관대", en: "Sungkyunkwan Univ.", zh: "成均馆大学" }],
     ["hyehwa", ["S1-4-420"], "혜화", { ko: "혜화", en: "Hyehwa", zh: "惠化" }],
-    ["jamsil", ["S1-2-216"], "잠실", { ko: "잠실", en: "Jamsil", zh: "蚕室" }],
-    ["dogok", ["S1-3-334"], "도곡", { ko: "도곡", en: "Dogok", zh: "道谷" }],
+    ["jeongja", ["KR-K1-K230"], "정자", { ko: "정자", en: "Jeongja", zh: "亭子" }],
+    ["jamsil", ["S1-2-216", "S1-8-2815"], "잠실", { ko: "잠실", en: "Jamsil", zh: "蚕室" }],
+    ["dogok", ["S1-3-334", "KR-K1-K217"], "도곡", { ko: "도곡", en: "Dogok", zh: "道谷" }],
     ["gangnam", ["S1-2-222"], "강남", { ko: "강남", en: "Gangnam", zh: "江南" }],
     ["yangjae", ["S1-3-332"], "양재", { ko: "양재", en: "Yangjae", zh: "良才" }],
   ])("finds %s with its platforms, its Seoul name and its names", (slug, platformIds, seoulName, name) => {
@@ -95,6 +96,14 @@ describe("findPlatformName", () => {
     ["S1-3-335", { ko: "대치", en: "Daechi", zh: "大峙" }],
     ["S1-3-332", { ko: "양재", en: "Yangjae", zh: "良才" }],
     ["S1-3-334", { ko: "도곡", en: "Dogok", zh: "道谷" }],
+    ["S1-8-2814", { ko: "몽촌토성", en: "Mongchontoseong", zh: "梦村土城" }],
+    ["S1-8-2816", { ko: "석촌", en: "Seokchon", zh: "石村" }],
+    ["KR-K1-K216", { ko: "한티", en: "Hanti", zh: "韩峙" }],
+    ["KR-K1-K218", { ko: "구룡", en: "Guryong", zh: "九龙" }],
+    ["KR-K1-K229", { ko: "수내", en: "Sunae", zh: "薮内" }],
+    ["KR-K1-K231", { ko: "미금", en: "Migeum", zh: "美金" }],
+    ["S1-8-2815", { ko: "잠실", en: "Jamsil", zh: "蚕室" }],
+    ["KR-K1-K230", { ko: "정자", en: "Jeongja", zh: "亭子" }],
   ])("names %s in every language", (platformId, name) => {
     // Act & Assert
     expect(findPlatformName(platformId)).toEqual(name);

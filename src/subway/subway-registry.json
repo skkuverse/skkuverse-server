@@ -27,6 +27,20 @@
       "badge": { "ko": "3", "en": "3", "zh": "3" },
       "color": "EF7C1C",
       "seoul": { "subwayId": "1003", "lineName": "3호선", "trainMapLine": "3", "trainNumbers": "timetable" }
+    },
+    {
+      "code": "8",
+      "name": { "ko": "8호선", "en": "Line 8", "zh": "8号线" },
+      "badge": { "ko": "8", "en": "8", "zh": "8" },
+      "color": "E6186C",
+      "seoul": { "subwayId": "1008", "lineName": "8호선", "trainMapLine": "8", "trainNumbers": "timetable" }
+    },
+    {
+      "code": "K1",
+      "name": { "ko": "수인분당선", "en": "Suin–Bundang Line", "zh": "水仁·盆唐线" },
+      "badge": { "ko": "수인분당", "en": "Suin–Bundang", "zh": "水仁盆唐" },
+      "color": "F5A200",
+      "seoul": { "subwayId": "1075", "lineName": "수인분당선", "trainNumbers": "timetable" }
     }
   ],
   "stations": [
@@ -83,6 +97,32 @@
       ]
     },
     {
+      "id": "jeongja",
+      "name": { "ko": "정자", "en": "Jeongja", "zh": "亭子" },
+      "seoulName": "정자",
+      "platforms": [
+        {
+          "id": "KR-K1-K230",
+          "line": "K1",
+          "timetable": { "source": "korail" },
+          "directions": {
+            "up": {
+              "name": { "ko": "청량리 방면", "en": "Toward Cheongnyangni", "zh": "清凉里方向" },
+              "upstreamPlatformIds": ["KR-K1-K231", "KR-K1-K232", "KR-K1-K233"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "KR-K1-K229"
+            },
+            "down": {
+              "name": { "ko": "인천 방면", "en": "Toward Incheon", "zh": "仁川方向" },
+              "upstreamPlatformIds": ["KR-K1-K229", "KR-K1-K228", "KR-K1-K227"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "KR-K1-K231"
+            }
+          }
+        }
+      ]
+    },
+    {
       "id": "jamsil",
       "name": { "ko": "잠실", "en": "Jamsil", "zh": "蚕室" },
       "seoulName": "잠실",
@@ -103,6 +143,25 @@
               "upstreamPlatformIds": ["S1-2-217", "S1-2-218", "S1-2-219"],
               "watchedPlatformIds": [],
               "nextPlatformId": "S1-2-215"
+            }
+          }
+        },
+        {
+          "id": "S1-8-2815",
+          "line": "8",
+          "timetable": { "source": "seoul-station", "stationCode": "2815" },
+          "directions": {
+            "up": {
+              "name": { "ko": "별내 방면", "en": "Toward Byeollae", "zh": "别内方向" },
+              "upstreamPlatformIds": ["S1-8-2816", "S1-8-2817", "S1-8-2818"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "S1-8-2814"
+            },
+            "down": {
+              "name": { "ko": "모란 방면", "en": "Toward Moran", "zh": "牡丹方向" },
+              "upstreamPlatformIds": ["S1-8-2814", "S1-8-2813", "S1-8-2812"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "S1-8-2816"
             }
           }
         }
@@ -129,6 +188,25 @@
               "upstreamPlatformIds": ["S1-3-333", "S1-3-332", "S1-3-331"],
               "watchedPlatformIds": [],
               "nextPlatformId": "S1-3-335"
+            }
+          }
+        },
+        {
+          "id": "KR-K1-K217",
+          "line": "K1",
+          "timetable": { "source": "korail" },
+          "directions": {
+            "up": {
+              "name": { "ko": "청량리 방면", "en": "Toward Cheongnyangni", "zh": "清凉里方向" },
+              "upstreamPlatformIds": ["KR-K1-K218", "KR-K1-K219", "KR-K1-K220"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "KR-K1-K216"
+            },
+            "down": {
+              "name": { "ko": "인천 방면", "en": "Toward Incheon", "zh": "仁川方向" },
+              "upstreamPlatformIds": ["KR-K1-K216", "KR-K1-K215", "KR-K1-K214"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "KR-K1-K218"
             }
           }
         }
@@ -218,6 +296,24 @@
     "S1-3-333": { "line": "3", "seoulName": "매봉", "name": { "ko": "매봉", "en": "Maebong", "zh": "梅峰" } },
     "S1-3-335": { "line": "3", "seoulName": "대치", "name": { "ko": "대치", "en": "Daechi", "zh": "大峙" } },
     "S1-3-336": { "line": "3", "seoulName": "학여울" },
-    "S1-3-337": { "line": "3", "seoulName": "대청" }
+    "S1-3-337": { "line": "3", "seoulName": "대청" },
+    "S1-8-2812": { "line": "8", "seoulName": "천호(풍납토성)", "trainMapName": "천호" },
+    "S1-8-2813": { "line": "8", "seoulName": "강동구청" },
+    "S1-8-2814": { "line": "8", "seoulName": "몽촌토성(평화의문)", "trainMapName": "몽촌토성", "name": { "ko": "몽촌토성", "en": "Mongchontoseong", "zh": "梦村土城" } },
+    "S1-8-2816": { "line": "8", "seoulName": "석촌", "name": { "ko": "석촌", "en": "Seokchon", "zh": "石村" } },
+    "S1-8-2817": { "line": "8", "seoulName": "송파" },
+    "S1-8-2818": { "line": "8", "seoulName": "가락시장" },
+    "KR-K1-K214": { "line": "K1", "seoulName": "선정릉" },
+    "KR-K1-K215": { "line": "K1", "seoulName": "선릉" },
+    "KR-K1-K216": { "line": "K1", "seoulName": "한티", "name": { "ko": "한티", "en": "Hanti", "zh": "韩峙" } },
+    "KR-K1-K218": { "line": "K1", "seoulName": "구룡", "name": { "ko": "구룡", "en": "Guryong", "zh": "九龙" } },
+    "KR-K1-K219": { "line": "K1", "seoulName": "개포동" },
+    "KR-K1-K220": { "line": "K1", "seoulName": "대모산입구" },
+    "KR-K1-K227": { "line": "K1", "seoulName": "이매" },
+    "KR-K1-K228": { "line": "K1", "seoulName": "서현" },
+    "KR-K1-K229": { "line": "K1", "seoulName": "수내", "name": { "ko": "수내", "en": "Sunae", "zh": "薮内" } },
+    "KR-K1-K231": { "line": "K1", "seoulName": "미금", "name": { "ko": "미금", "en": "Migeum", "zh": "美金" } },
+    "KR-K1-K232": { "line": "K1", "seoulName": "오리" },
+    "KR-K1-K233": { "line": "K1", "seoulName": "죽전" }
   }
 }

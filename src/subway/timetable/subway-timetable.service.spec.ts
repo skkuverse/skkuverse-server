@@ -23,7 +23,7 @@ function setup() {
 }
 
 describe("SubwayTimetableService.listPlatformSchedules", () => {
-  it("serves a Saturday from the 1호선 holiday table and the Seoul station Saturday tables", async () => {
+  it("serves a Saturday from the Korail holiday tables and the Seoul station Saturday tables", async () => {
     // Arrange
     const { service } = setup();
 
@@ -34,8 +34,11 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
     expect(schedules.map((s) => [s.platform.id, s.serviceDate, s.dayType])).toEqual([
       ["KR-1-0153", "2026-10-17", "holiday"],
       ["S1-4-420", "2026-10-17", "saturday"],
+      ["KR-K1-K230", "2026-10-17", "holiday"],
       ["S1-2-216", "2026-10-17", "saturday"],
+      ["S1-8-2815", "2026-10-17", "saturday"],
       ["S1-3-334", "2026-10-17", "saturday"],
+      ["KR-K1-K217", "2026-10-17", "holiday"],
       ["S1-2-222", "2026-10-17", "saturday"],
       ["S1-3-332", "2026-10-17", "saturday"],
     ]);
@@ -51,7 +54,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
 
     // Assert
     expect(new Set(schedules.map((s) => s.dayType))).toEqual(new Set(["holiday"]));
-    expect(schedules).toHaveLength(6);
+    expect(schedules).toHaveLength(9);
   });
 
   it("matches 00:13 on Saturday to Friday's weekday table, its trains at instants of that day", async () => {
