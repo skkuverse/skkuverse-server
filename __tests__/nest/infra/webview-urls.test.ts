@@ -23,6 +23,7 @@ import fs from "fs";
 import path from "path";
 import { UiScrollService } from "../../../src/ui/scroll/ui-scroll.service";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
+import { seededBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN } from "../../../src/infra/origins";
 
@@ -63,25 +64,30 @@ const registryDetails = Object.fromEntries(
 // After the festival's campus banners closed (10/3), as on the day this test was pinned.
 const clock: Clock = { now: () => new Date("2026-10-13T03:00:00.000Z") };
 
-const payloads: Record<string, unknown> = {
-  "GET /ui/home/campus": new UiCampusService(new MiniappsService(), clock).getCampusSheet("ko"),
-  "GET /ui/home/scroll": new UiScrollService().listScrollCards("ko"),
-  "GET /bus/config": new BusConfigService(new BusStopsService()).getBusGroups(),
-  "src/miniapps/details/*.json": registryDetails,
+// WHY: read when the tests run, since the bus config reads its stations from a registry seeded as a boot seeds it.
+const payloads: Record<string, () => unknown> = {
+  "GET /ui/home/campus": () => new UiCampusService(new MiniappsService(), clock).getCampusSheet("ko"),
+  "GET /ui/home/scroll": () => new UiScrollService().listScrollCards("ko"),
+  "GET /bus/config": async () => new BusConfigService(new BusStopsService(), await seededBusRegistryService()).getBusGroups(),
+  "src/miniapps/details/*.json": () => registryDetails,
 };
 
 describe("webview URLs the API hands out", () => {
-  it("emits at least one, so an empty walk cannot pass by accident", () => {
+  it("emits at least one, so an empty walk cannot pass by accident", async () => {
     // Act
-    const all = Object.values(payloads).flatMap(webviewUrlsIn);
+    const all = (await Promise.all(Object.values(payloads).map((read) => read()))).flatMap(webviewUrlsIn);
 
     // Assert
     expect(all.length).toBeGreaterThan(0);
   });
 
-  for (const [name, payload] of Object.entries(payloads)) {
+  for (const [name, read] of Object.entries(payloads)) {
     describe(name, () => {
-      const urls = webviewUrlsIn(payload);
+      let urls: string[] = [];
+
+      beforeAll(async () => {
+        urls = webviewUrlsIn(await read());
+      });
 
       it("builds every webview URL from WEBVIEW_ORIGIN", () => {
         // Assert

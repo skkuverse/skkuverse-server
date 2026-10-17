@@ -96,6 +96,24 @@ describe("isLastBus", () => {
   });
 });
 
+// WHY: community parsers flag the last bus on the last-bus word anywhere in the text, so the bare prefix TOPIS
+// also sends counts, while the ended-last-bus phrase still reads as ended (owner decision after Stage 1).
+describe("isLastBus on 막차 anywhere in the text", () => {
+  it.each([
+    [false, "막차 13분10초후[6번째 전]", true],
+    [false, "막차운행종료", true],
+    [false, "곧 도착", false],
+  ])("flag %s with %j → %s", (isLast, arrmsg, expected) => {
+    // Act & Assert
+    expect(isLastBus(jongroArrivalBus({ isLast, arrmsg }))).toBe(expected);
+  });
+
+  it("keeps 막차운행종료 as ended", () => {
+    // Act & Assert
+    expect(toArrivalState("막차운행종료")).toBe("ended");
+  });
+});
+
 describe("toMinutes", () => {
   it.each([
     [192, "3분12초후[2번째 전]", 3],

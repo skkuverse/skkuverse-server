@@ -35,8 +35,7 @@ export interface JongroArrivalBus {
   rerideNum: number | null;
 }
 
-/** WHY: the shape the previous poller wrote; a new replica can read one for 60 s after a deploy. */
-export interface LegacyJongroArrivalDoc {
+export interface JongroArrivalDoc {
   stationId: string;
   sequence: string;
   stationName: string;
@@ -44,14 +43,9 @@ export interface LegacyJongroArrivalDoc {
   eventDate: string;
   stationNumber: string;
   eta: string;
-}
-
-export interface JongroArrivalDoc extends LegacyJongroArrivalDoc {
   /** WHY: the row's first bus, then its second. */
   buses: JongroArrivalBus[];
 }
-
-export type CachedJongroArrivalDoc = JongroArrivalDoc | LegacyJongroArrivalDoc;
 
 export interface JongroBusPositionDoc {
   sequence: string;
@@ -68,7 +62,7 @@ export interface JongroBusPositionDoc {
 export interface BusCacheValueByKey {
   hssc: HsscBusDoc[];
   station: string;
-  [key: `jongro_stations_${string}`]: CachedJongroArrivalDoc[];
+  [key: `jongro_stations_${string}`]: JongroArrivalDoc[];
   [key: `jongro_locations_${string}`]: JongroBusPositionDoc[];
 }
 

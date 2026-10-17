@@ -5,17 +5,6 @@ const transferLine = z.object({
   color: z.string(),
 });
 
-const jongroRouteStation = z.object({
-  stationName: z.string(),
-  arsId: z.string(),
-  /** QUIRK(topis): the stop's station ID, the `stId` and `lastStnId` TOPIS answers with. */
-  topisId: z.string(),
-  isFirstStation: z.boolean(),
-  isLastStation: z.boolean(),
-  isRotationStation: z.boolean(),
-  transferLines: z.array(transferLine),
-});
-
 const jongroRouteEntry = z.object({
   id: z.string(),
   busRouteId: z.string(),
@@ -24,11 +13,15 @@ const jongroRouteEntry = z.object({
   refreshInterval: z.number(),
   /** WHY: crowding compares a bus's passenger count with this; 18 is a 9 m village bus until the real count is known. */
   seatCount: z.number(),
-  /** QUIRK(topis): the route's stops in TOPIS order, so stations[i] is TOPIS ord i + 1. */
-  stations: z.array(jongroRouteStation),
+  /** WHY: keyed by ARS number, so a stop's subway badges follow it when TOPIS moves it in the list. */
+  transferLinesByArsId: z.record(z.string(), z.array(transferLine)),
 });
 
-/** CONTRACT(skkuverse-crawler): a copy of this file is read by skkuverse-crawler/py/src/skkuverse_crawler/modules/bus/registry.py. */
+/**
+ * CONTRACT(skkuverse-crawler): skkuverse-crawler/py/src/skkuverse_crawler/modules/bus/registry.py reads a copy of
+ * this file's older shape, with stations; the stations now live in `jongro_routes`, which its paused bus module
+ * must read before it is re-enabled.
+ */
 export const jongroRoutesFile = z.array(jongroRouteEntry);
 
 const latLng = z.object({ lat: z.number(), lng: z.number() });

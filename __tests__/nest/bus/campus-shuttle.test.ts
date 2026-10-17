@@ -8,14 +8,22 @@
 import fs from "fs";
 import path from "path";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
+import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
+import { seededBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
 import { haversineM } from "../../../src/shared/distance.util";
 import type { LatLng } from "../../../src/shared/lat-lng.types";
 
 import type { SupportedLang } from "../../../src/infra/types";
 
-const busConfig = new BusConfigService(new BusStopsService());
-const getBusGroups = (lang?: SupportedLang) => busConfig.getBusGroups(lang);
+let busConfig: BusConfigService;
+const groupsByLang = new Map<SupportedLang, BusGroup[]>();
+// WHY: the stations come from the registry, seeded here as a boot seeds it; the groups are read once.
+beforeAll(async () => {
+  busConfig = new BusConfigService(new BusStopsService(), await seededBusRegistryService());
+  for (const lang of ["ko", "en", "zh"] as const) groupsByLang.set(lang, await busConfig.getBusGroups(lang));
+});
+const getBusGroups = (lang: SupportedLang = "ko"): BusGroup[] => groupsByLang.get(lang)!;
 
 // Captured from getGroupById before the campus group gained its v2 fields.
 const V1: Record<string, { json: string }> = JSON.parse(

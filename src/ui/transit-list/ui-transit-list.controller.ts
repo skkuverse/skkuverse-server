@@ -11,8 +11,8 @@ export class UiTransitListController {
   constructor(private readonly transitList: UiTransitListService) {}
 
   @Get("home/transitlist")
-  getTransitList(@Lang() lang: SupportedLang): WithMeta<TransitList, TransitListMeta> {
-    const cards = this.transitList.listBusGroupCards(lang);
+  async getTransitList(@Lang() lang: SupportedLang): Promise<WithMeta<TransitList, TransitListMeta>> {
+    const cards = await this.transitList.listBusGroupCards(lang);
     return withMeta(cards, { busListCount: cards.length });
   }
 }

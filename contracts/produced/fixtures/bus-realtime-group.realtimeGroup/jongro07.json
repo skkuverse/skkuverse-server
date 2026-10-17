@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-written from captures, since the arrivals shape is not deployed yet: buses from GET /bus/realtime/data/jongro07 captured from production 2026-10-14 (trimmed to their first entries); stationEtas from TOPIS getArrInfoByRouteAll busRouteId=100900004 captured 2026-10-17 19:16 KST (ord 2 and 12, the same rows as __tests__/nest/bus/fixtures/topis-jongro-arrivals.json jongro07Waiting), each bus through the arrival rules on 18 seats.",
+  "_about": "Hand-written from captures, since the arrivals shape is not deployed yet: buses from GET /bus/realtime/data/jongro07 captured from production 2026-10-14 (trimmed to their first entries); stationEtas from TOPIS getArrInfoByRouteAll busRouteId=100900004 captured 2026-10-17 19:16 KST (ord 2 and 12, the same rows as __tests__/nest/bus/fixtures/topis-jongro-arrivals.json jongro07Waiting), each bus through the arrival rules on 18 seats. stationsVersion is the jongro07 registry document's as seeded from src/bus/registry/jongro-stations.seed.json (2026-10-17).",
   "data": {
     "groupId": "jongro07",
     "buses": [
@@ -71,6 +71,7 @@
           }
         ]
       }
-    ]
+    ],
+    "stationsVersion": "0346768f2b776f45"
   }
 }

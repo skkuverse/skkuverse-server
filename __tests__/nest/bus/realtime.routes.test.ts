@@ -11,29 +11,35 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BusCacheModule } from "../../../src/bus/cache/bus-cache.module";
 import { BusCacheRepository } from "../../../src/bus/cache/bus-cache.repository";
+import { BusRegistryModule } from "../../../src/bus/registry/bus-registry.module";
+import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRealtimeModule } from "../../../src/bus/realtime/bus-realtime.module";
 import { BusRealtimeGroupModule } from "../../../src/bus/realtime/group/bus-realtime-group.module";
 import { realtimeGroup, realtimeGroupMeta } from "../../../src/bus/realtime/group/bus-realtime-group.wire";
 import { BusRealtimeHsscModule } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.module";
 import { BusRealtimeJongroModule } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.module";
 import { Clock } from "../../../src/infra/clock";
+import config from "../../../src/infra/config";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
-import { hsscBusDoc, jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc, legacyJongroArrivalDoc, noArrivalBus } from "../../helpers/bus/bus-cache-docs";
+import { hsscBusDoc, jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc, noArrivalBus } from "../../helpers/bus/bus-cache-docs";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
+import { FakeBusRegistryRepository } from "../../helpers/fakes/bus/bus-registry.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const busCache = new FakeBusCacheRepository();
+const registryRepository = new FakeBusRegistryRepository();
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 
 beforeAll(async () => {
   app = await buildTestApp({
-    imports: [SchedulingModule, BusCacheModule, BusRealtimeModule, BusRealtimeHsscModule, BusRealtimeJongroModule, BusRealtimeGroupModule],
+    imports: [SchedulingModule, BusCacheModule, BusRegistryModule, BusRealtimeModule, BusRealtimeHsscModule, BusRealtimeJongroModule, BusRealtimeGroupModule],
     overrides: [
       { provide: BusCacheRepository, useValue: busCache },
+      { provide: BusRegistryRepository, useValue: registryRepository },
       { provide: Clock, useValue: { now: () => NOW } },
     ],
     role: "api",
@@ -162,7 +168,7 @@ describe("GET /bus/realtime/data/:groupId bodies", () => {
 });
 
 // WHY: installed apps read only stationIndex and eta, so arrivals is added beside them and eta stays TOPIS's
-// first-bus text exactly; during a deploy a row the previous poller cached still answers 200 (design D2).
+// first-bus text exactly.
 describe("GET /bus/realtime/data/jongro07 arrivals", () => {
   it("keeps every eta byte for byte and adds arrivals to every entry", async () => {
     // Arrange
@@ -182,7 +188,12 @@ describe("GET /bus/realtime/data/jongro07 arrivals", () => {
         eta: "출발대기",
         buses: [jongroArrivalBus({ arrmsg: "출발대기", traTime: 228, staOrd: 2, sectOrd: 2, rerideDiv: 0 }), noArrivalBus({ arrmsg: "" })],
       }),
-      legacyJongroArrivalDoc({ stationId: "100000424", sequence: "3", eta: "3분12초후[2번째 전]" }),
+      jongroArrivalDoc({
+        stationId: "100000424",
+        sequence: "3",
+        eta: "3분12초후[2번째 전]",
+        buses: [jongroArrivalBus({ arrmsg: "3분12초후[2번째 전]", traTime: 192, staOrd: 3, sectOrd: 1 }), noArrivalBus({ arrmsg: "" })],
+      }),
     ]);
 
     // Act
@@ -196,6 +207,42 @@ describe("GET /bus/realtime/data/jongro07 arrivals", () => {
       res.body.data.stationEtas.map((entry: { arrivals: Array<{ state: string; minutes: number | null }> }) =>
         entry.arrivals.map((arrival) => [arrival.state, arrival.minutes]),
       ),
-    ).toEqual([[["arriving", null], ["running", 8]], [["waiting", null]], []]);
+    ).toEqual([[["arriving", null], ["running", 8]], [["waiting", null]], [["running", 3]]]);
+  });
+});
+
+// WHY: a Jongro response names the stations version it was placed by, as its /bus/config group does; HSSC has
+// none; and with its registry route gone the route answers 503 instead of an empty or stale list (D7, D10).
+describe("GET /bus/realtime/data/:groupId and the registry", () => {
+  it("serves jongro07's stored stations version, and none for hssc", async () => {
+    // Act
+    const jongro = await request(httpServer).get("/bus/realtime/data/jongro07");
+    const hssc = await request(httpServer).get("/bus/realtime/data/hssc");
+
+    // Assert
+    expect(jongro.status).toBe(200);
+    expectWire(realtimeGroup, jongro.body.data);
+    expect(jongro.body.data.stationsVersion).toBe(registryRepository.routes.get("jongro07")!.stationsVersion);
+    expect(hssc.body.data).not.toHaveProperty("stationsVersion");
+  });
+
+  it("answers 503 JONGRO_REGISTRY_UNAVAILABLE when jongro02's registry route is missing", async () => {
+    // Arrange
+    const stored = registryRepository.routes.get("jongro02")!;
+    registryRepository.routes.delete("jongro02");
+    const previous = config.cache.enabled;
+    config.cache.enabled = false;
+
+    try {
+      // Act
+      const res = await request(httpServer).get("/bus/realtime/data/jongro02");
+
+      // Assert
+      expect(res.status).toBe(503);
+      expect(res.body).toEqual({ error: { code: "JONGRO_REGISTRY_UNAVAILABLE", message: "The station registry of jongro02 is unavailable" } });
+    } finally {
+      config.cache.enabled = previous;
+      registryRepository.routes.set("jongro02", stored);
+    }
   });
 });

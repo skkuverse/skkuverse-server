@@ -6,7 +6,7 @@ import {
   BRACKET_TOKEN_PATTERN,
   CONGESTION_CODE_TYPE,
   CROWDING_BY_CONGESTION_CODE,
-  LAST_BUS_TOKEN,
+  LAST_BUS_WORD,
   NORMAL_CROWDING_SEAT_RATIO,
   NO_VEHICLE_ID,
   PASSENGER_COUNT_TYPE,
@@ -29,7 +29,7 @@ export function toArrivalState(arrmsg: string): ArrivalState {
 }
 
 export function isLastBus(bus: JongroArrivalBus): boolean {
-  return bus.isLast || bus.arrmsg.includes(LAST_BUS_TOKEN);
+  return bus.isLast || bus.arrmsg.includes(LAST_BUS_WORD);
 }
 
 function hasVehicle(bus: JongroArrivalBus): boolean {

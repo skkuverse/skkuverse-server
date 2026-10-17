@@ -29,24 +29,27 @@ type TopisArrivalRow = { [K in `${TopisBusField}${BusSlot}`]: string } & {
 
 const BUS_SLOTS: readonly BusSlot[] = ["1", "2"];
 
+// QUIRK(topis): a getBusPosByRtid row; its coordinates are gpsX/gpsY (tmX/tmY come null), its turnaround stop trnstnid.
 interface TopisPositionRow {
-  lastStnId: string;
-  tmX: string;
-  tmY: string;
+  lastStnId: string | null;
+  trnstnid?: string | null;
+  gpsX: string | null;
+  gpsY: string | null;
   plainNo: string;
 }
 
 @Injectable()
 export class BusRealtimeJongroClient {
-  async fetchArrivals(route: JongroRoute): Promise<JongroArrivalDoc[]> {
+  async fetchArrivals(route: Pick<JongroRoute, "code" | "arrivalsUrl">): Promise<JongroArrivalDoc[]> {
     const what = `jongro ${route.code} list`;
     const rows = await this.fetchRows<TopisArrivalRow>(route.arrivalsUrl, what);
     return rows.map((row) => this.toArrival(row, what));
   }
 
-  async fetchSightings(route: JongroRoute): Promise<JongroBusSighting[]> {
-    const rows = await this.fetchRows<TopisPositionRow>(route.positionsUrl, `jongro ${route.code} location`);
-    return rows.map((row) => this.toSighting(row));
+  async fetchSightings(route: Pick<JongroRoute, "code" | "positionsUrl">): Promise<JongroBusSighting[]> {
+    const what = `jongro ${route.code} location`;
+    const rows = await this.fetchRows<TopisPositionRow>(route.positionsUrl, what);
+    return rows.map((row) => this.toSighting(row, what));
   }
 
   // WHY: "4" (no result) is an empty list, so the tick still writes; an answer with no list at all rejects.
@@ -98,7 +101,19 @@ export class BusRealtimeJongroClient {
     return parsed;
   }
 
-  private toSighting(row: TopisPositionRow): JongroBusSighting {
-    return { stationId: row.lastStnId, latitude: row.tmY, longitude: row.tmX, carNumber: toCarNumber(row.plainNo) };
+  // WHY: the stop places the bus and the coordinates draw it; without them the row is not TOPIS's shape.
+  private toSighting(row: TopisPositionRow, what: string): JongroBusSighting {
+    const field = (name: "lastStnId" | "gpsX" | "gpsY"): string => {
+      const text = row[name]?.trim();
+      if (!text) throw new UpstreamError(`TOPIS row has no ${name} (${what})`, "topis");
+      return text;
+    };
+    return {
+      stationId: field("lastStnId"),
+      latitude: field("gpsY"),
+      longitude: field("gpsX"),
+      carNumber: toCarNumber(row.plainNo),
+      turnaroundStationId: row.trnstnid?.trim() || undefined,
+    };
   }
 }

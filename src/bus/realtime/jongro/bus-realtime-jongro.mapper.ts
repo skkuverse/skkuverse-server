@@ -1,5 +1,5 @@
 import type { JongroBusPositionDoc } from "../../cache/bus-cache.document";
-import type { JongroStationMapping } from "../../bus.types";
+import type { JongroStationMapping } from "../../registry/bus-registry.types";
 import type { JongroBusDwell, JongroBusSighting } from "./bus-realtime-jongro.types";
 
 type MappedStation = JongroStationMapping[string];

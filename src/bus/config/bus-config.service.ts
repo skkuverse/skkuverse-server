@@ -3,46 +3,64 @@ import crypto from "crypto";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
 import { jongroRoutes } from "../bus.config";
+import { BusRegistryService } from "../registry/bus-registry.service";
+import type { RegistryRoute } from "../registry/bus-registry.types";
 import { BusStopsService } from "../stops/bus-stops.service";
 import { CAMPUS_SERVICE_IDS, COMMUTE_SERVICE_IDS } from "./bus-config.constants";
-import { toBusGroups } from "./bus-config.mapper";
+import { toBusGroupIds, toBusGroups } from "./bus-config.mapper";
 import type { BusGroup } from "./bus-config.wire";
 
 @Injectable()
 export class BusConfigService {
   private readonly etagCache = new Map<string, string>();
 
-  constructor(private readonly stops: BusStopsService) {}
+  constructor(
+    private readonly stops: BusStopsService,
+    private readonly registry: BusRegistryService,
+  ) {}
 
-  getBusGroups(lang: SupportedLang = "ko"): BusGroup[] {
-    const stops = {
-      campus: this.stops.servedSequences(CAMPUS_SERVICE_IDS, lang),
-      commute: this.stops.servedSequences(COMMUTE_SERVICE_IDS, lang),
-    };
-    return toBusGroups({ lang, stops, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+  // WHY: route ids never change at runtime, so the ids need no registry read and serve a boot-time check.
+  listGroupIds(): string[] {
+    return toBusGroupIds(jongroRoutes);
   }
 
-  computeEtag(lang: SupportedLang = "ko"): string {
-    const cached = this.etagCache.get(lang);
+  async getBusGroups(lang: SupportedLang = "ko"): Promise<BusGroup[]> {
+    return this.toGroups(lang, await this.registry.listRoutes());
+  }
+
+  // WHY: keyed by every route's stations version too, so a sync changes the ETag (improve-jongro-realtime D10).
+  async computeEtag(lang: SupportedLang = "ko"): Promise<string> {
+    const routes = await this.registry.listRoutes();
+    const cacheKey = [lang, ...routes.map((route) => route.stationsVersion)].join(":");
+    const cached = this.etagCache.get(cacheKey);
     if (cached) return cached;
-    const etag = this.md5Etag(this.getBusGroups(lang));
-    this.etagCache.set(lang, etag);
+    const etag = this.md5Etag(this.toGroups(lang, routes));
+    this.etagCache.set(cacheKey, etag);
     return etag;
   }
 
-  getGroupById(id: string, lang: SupportedLang = "ko"): BusGroup | null {
-    return this.getBusGroups(lang).find((g) => g.id === id) || null;
+  async getGroupById(id: string, lang: SupportedLang = "ko"): Promise<BusGroup | null> {
+    return (await this.getBusGroups(lang)).find((g) => g.id === id) || null;
   }
 
-  computeGroupEtag(id: string, lang: SupportedLang = "ko"): string | null {
-    const cacheKey = `${id}:${lang}`;
+  async computeGroupEtag(id: string, lang: SupportedLang = "ko"): Promise<string | null> {
+    const routes = await this.registry.listRoutes();
+    const cacheKey = [id, lang, ...routes.map((route) => route.stationsVersion)].join(":");
     const cached = this.etagCache.get(cacheKey);
     if (cached) return cached;
-    const group = this.getGroupById(id, lang);
+    const group = this.toGroups(lang, routes).find((g) => g.id === id);
     if (!group) return null;
     const etag = this.md5Etag(group);
     this.etagCache.set(cacheKey, etag);
     return etag;
+  }
+
+  private toGroups(lang: SupportedLang, routes: readonly RegistryRoute[]): BusGroup[] {
+    const stops = {
+      campus: this.stops.servedSequences(CAMPUS_SERVICE_IDS, lang),
+      commute: this.stops.servedSequences(COMMUTE_SERVICE_IDS, lang),
+    };
+    return toBusGroups({ lang, stops, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN });
   }
 
   private md5Etag(value: unknown): string {
