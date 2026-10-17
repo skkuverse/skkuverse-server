@@ -27,8 +27,11 @@ const arrival = z.object({
 
 const stationEta = z.object({
   stationIndex: z.int(),
-  /** QUIRK(topis): TOPIS's own arrival text, in Korean, served as it comes. */
-  eta: z.string(),
+  /**
+   * QUIRK(topis): TOPIS's own first-bus arrival text, in Korean, served as it comes.
+   * WHY: deprecated, kept while installed builds from before the arrivals OTA read it.
+   */
+  eta: z.string().meta({ deprecated: true, description: "Legacy: read arrivals[].message; kept for installed builds from before the arrivals OTA" }),
   /** WHY: the first bus, then the second, each listed when TOPIS gave it a text. */
   arrivals: z.array(arrival),
 });
