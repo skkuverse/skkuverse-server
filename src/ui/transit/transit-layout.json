@@ -4,7 +4,6 @@
     {
       "type": "item_list",
       "id": "campus",
-      "title": { "ko": "캠퍼스", "en": "Campus", "zh": "校区" },
       "items": [
         { "kind": "bus", "groupId": "campus" },
         { "kind": "bus", "groupId": "fasttrack" }

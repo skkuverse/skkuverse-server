@@ -55,7 +55,7 @@ describe("UiTransitService.getTransitLayout", () => {
     // Assert
     expect(layout.version).toBe(1);
     expect(layout.sections.map(({ type, id, title }) => ({ type, id, title }))).toEqual([
-      { type: "item_list", id: "campus", title: "캠퍼스" },
+      { type: "item_list", id: "campus", title: null },
       { type: "item_list", id: "hssc", title: "인사캠" },
       { type: "item_list", id: "nsc", title: "자과캠" },
     ]);
@@ -75,7 +75,7 @@ describe("UiTransitService.getTransitLayout", () => {
     const en = service.getTransitLayout("en");
 
     // Assert
-    expect(en.sections.map((section) => section.title)).toEqual(["Campus", "HSSC", "NSC"]);
+    expect(en.sections.map((section) => section.title)).toEqual([null, "HSSC", "NSC"]);
     expect(en.sections[1]?.items.map((served) => served.title)).toEqual([
       "HSSC Shuttle Bus",
       "Jongro 02",

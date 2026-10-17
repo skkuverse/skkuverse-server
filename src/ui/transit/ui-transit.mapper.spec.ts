@@ -158,6 +158,18 @@ describe("toTransitSection", () => {
     expect(resolved.items[0]).toMatchObject({ title: "Taxi share", subtitle: "인사캠 ↔ 자과캠" });
   });
 
+  it("serves a section placed without a title with a null title", () => {
+    // Arrange
+    const untitled: SectionRaw = { type: "item_list", id: "campus", items: [LINK] };
+
+    // Act
+    const resolved = resolve(untitled);
+
+    // Assert
+    expect(resolved.title).toBeNull();
+    expect(parsesAsWire(resolved)).toBe(true);
+  });
+
   it("leaves out a bus item whose group is not visible, and keeps the others in order", () => {
     // Act
     const resolved = resolve(section({ kind: "bus", groupId: "commute" }, LINK, { kind: "subway", stationId: "S1-4-420" }));

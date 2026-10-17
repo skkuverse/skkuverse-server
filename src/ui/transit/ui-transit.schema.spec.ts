@@ -1,6 +1,6 @@
 /**
  * The structure of transit-layout.json: version 1, sections of type
- * `item_list` with a slug id, a localized title and at least one item, and
+ * `item_list` with a slug id, an optional localized title and at least one item, and
  * items that place a bus group, a subway station or a written link. Section
  * ids and item ids each repeat nowhere in the layout, so a group or a station
  * is placed at most once. Unknown keys and kinds are refused.
@@ -43,6 +43,15 @@ describe("transitLayoutFile", () => {
     expect(transitLayoutFile.safeParse(withSubtitle).success).toBe(true);
   });
 
+  it("parses a section with no title", () => {
+    // Arrange
+    const untitled = section("campus", [LINK]);
+    delete untitled.title;
+
+    // Act & Assert
+    expect(transitLayoutFile.safeParse(layout(untitled)).success).toBe(true);
+  });
+
   it.each(Object.keys(transitLayoutFile.shape))("refuses a layout without its %s", (field) => {
     // Arrange
     const rest: Record<string, unknown> = { ...WELL_FORMED };
@@ -67,7 +76,6 @@ describe("transitLayoutFile", () => {
     ["a link id that is not a slug", layout(section("campus", [{ ...LINK, id: "bus:hssc" }]))],
     ["a link with no title", layout(section("campus", [{ ...LINK, title: undefined }]))],
     ["a link icon color with a #", layout(section("campus", [{ ...LINK, icon: { ...LINK.icon, color: "#FFB300" } }]))],
-    ["a section with no title", layout({ ...section("campus", [LINK]), title: undefined })],
   ])("refuses %s", (_label, raw) => {
     // Act & Assert
     expect(transitLayoutFile.safeParse(raw).success).toBe(false);

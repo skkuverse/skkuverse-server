@@ -6,7 +6,7 @@
       {
         "type": "item_list",
         "id": "campus",
-        "title": "Campus",
+        "title": null,
         "items": [
           {
             "kind": "bus",
