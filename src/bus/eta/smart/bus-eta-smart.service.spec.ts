@@ -85,7 +85,7 @@ describe("BusEtaSmartService.getSmart", () => {
 
   it("carries the localized message on a status other than active, cached 300 s without estimates", async () => {
     // Act
-    const smart = await service.getSmart("commute-jeongja", "en");
+    const smart = await service.getSmart("fasttrack-inja", "en");
 
     // Assert
     expect(smart.data).toMatchObject({ status: "noData", message: "Schedule information is being prepared" });

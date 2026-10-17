@@ -32,3 +32,16 @@ export function pickEstimates(docs: readonly ShuttleEtaDoc[], now: Date): Map<st
   }
   return best;
 }
+
+/**
+ * WHY: a router's offsets run nonstop from departure, but a bus waits at a scheduled stop until its timetable time;
+ * reaching one early moves it and every later stop to that time, reaching it late keeps the delay.
+ */
+export function floorAtScheduledStops(offsetsSec: readonly number[], scheduledOffsetsSec: ReadonlyArray<number | null>): number[] {
+  let waitSec = 0;
+  return offsetsSec.map((offset, index) => {
+    const scheduled = scheduledOffsetsSec[index];
+    if (index > 0 && scheduled !== null && scheduled !== undefined) waitSec = Math.max(waitSec, scheduled - offset);
+    return offset + waitSec;
+  });
+}

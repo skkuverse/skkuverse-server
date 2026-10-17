@@ -243,8 +243,8 @@ describe("GET /bus/schedule/data/:serviceId/smart", () => {
 
     // Assert
     expect(res.headers["cache-control"]).toBe("private, max-age=60");
-    const commute = await request(httpServer).get("/bus/schedule/data/commute-jeongja/smart");
-    expect(commute.headers["cache-control"]).toBe("private, max-age=300");
+    const fasttrack = await request(httpServer).get("/bus/schedule/data/fasttrack-inja/smart");
+    expect(fasttrack.headers["cache-control"]).toBe("private, max-age=300");
   });
 
   it("ETag format is smart-{serviceId}-{from}-{hash} for active", async () => {
@@ -415,19 +415,21 @@ describe("GET …/smart with arrival estimates", () => {
     expect(second.headers["cache-control"]).toBe("private, max-age=60");
   });
 
-  it("Commute runs carry no estimate: the body and headers are what they were without estimates", async () => {
+  it("Commute 등교 run: fills the campus drop-off and is cached like every estimated service", async () => {
     // Arrange
-    const plain = await request(server).get("/bus/schedule/data/commute-jeongja/smart");
-    store(estimate("live", [0, 3060], "commute-jeongja"));
+    etaTimetable.patterns = [
+      pattern("commute-jeongja", [1], [{ index: 1, time: "10:00", routeType: "up", busCount: 1, notes: null, stopTimes: ["10:00", null] }]),
+    ];
+    store({ ...estimate("live", [0, 3060], "commute-jeongja"), _id: "commute-jeongja|up|2026-10-12|10:00|live", routeType: "up" });
 
     // Act
     const res = await request(server).get("/bus/schedule/data/commute-jeongja/smart");
 
     // Assert
-    expect(JSON.stringify(res.body.data)).toBe(JSON.stringify(plain.body.data));
-    expect(res.headers.etag).toBe(plain.headers.etag);
-    expect(res.headers["cache-control"]).toBe("private, max-age=300");
-    expect(estimates.unexpiredReads).toBe(0);
+    const [run] = res.body.data.days[0].schedule;
+    expect(run.stopTimes).toEqual(["10:00", "10:51"]);
+    expect(run.eta).toEqual({ source: "live", updatedAt: "2026-10-12T00:20:00.000Z" });
+    expect(res.headers["cache-control"]).toBe("private, max-age=60");
   });
 
   it("Estimate store unavailable: 200 with the stored stopTimes and no eta", async () => {
