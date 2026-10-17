@@ -25,7 +25,7 @@ export function toTrainEvents(
     const platformId = platformIdByName.get(row.statnNm);
     const state = STATE_BY_TRAIN_STTUS[row.trainSttus];
     if (platformId === undefined || state === null) return [];
-    const trainNo = toTimetableTrainNo(row.trainNo, trainNumbers);
+    const trainNo = toTimetableTrainNo(row.trainNo, trainNumbers, row.statnTnm);
     return trainNo === null ? [] : [{ trainNo, platformId, state, stateChangedAt: toKstInstant(row.recptnDt), destination: row.statnTnm }];
   });
 }
