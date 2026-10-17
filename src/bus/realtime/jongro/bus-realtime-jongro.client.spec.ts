@@ -14,8 +14,7 @@ import { jongroRoutes } from "../../bus.config";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 
 const axios = require("axios") as { get: jest.Mock };
-// WHY: the position URL covers the stored stations, so it comes from the registry; any URL stands in for it here.
-const route07 = { ...jongroRoutes.find((r) => r.code === "07")!, positionsUrl: "http://ws.bus.go.kr/api/rest/buspos/getBusPosByRouteSt?busRouteId=100900004&endOrd=22" };
+const route07 = jongroRoutes.find((r) => r.code === "07")!;
 const respond = (data: unknown) => axios.get.mockResolvedValue({ data });
 // What TOPIS sends in a row's bus fields when it names no bus (topis-jongro-arrivals.json, the second bus of jongro07Waiting ord 2).
 const NO_BUS_FIELDS = Object.fromEntries(
@@ -259,14 +258,14 @@ describe("BusRealtimeJongroClient.fetchSightings", () => {
     // Arrange
     respond({
       msgHeader: { headerCd: "0" },
-      msgBody: { itemList: [{ lastStnId: "100900197", tmX: "126.998", tmY: "37.587", plainNo: "서울74사5537" }] },
+      msgBody: { itemList: [{ lastStnId: "100900197", gpsX: "126.998", gpsY: "37.587", plainNo: "서울74사5537", trnstnid: "100900028" }] },
     });
 
     // Act
     const result = await new BusRealtimeJongroClient().fetchSightings(route07);
 
     // Assert
-    expect(result).toEqual([{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537" }]);
+    expect(result).toEqual([{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537", turnaroundStationId: "100900028" }]);
     expect(axios.get).toHaveBeenCalledWith(route07.positionsUrl, { timeout: 10000 });
   });
 
@@ -326,5 +325,49 @@ describe("BusRealtimeJongroClient.fetchSightings turnaround stop", () => {
       ["100900221", "100900028"],
       ["100900043", "100900028"],
     ]);
+  });
+});
+
+// WHY: getBusPosByRtid is the position endpoint that names the turnaround stop; it puts the coordinates in gpsY/gpsX
+// and leaves tmX/tmY null (the 2026-10-17 capture), so a row without a stop or a coordinate is not its shape.
+describe("BusRealtimeJongroClient.fetchSightings over getBusPosByRtid", () => {
+  it("reads the coordinates from gpsY and gpsX, as strings", async () => {
+    // Arrange
+    respond(positionsFixture.jongro07);
+
+    // Act
+    const sightings = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sightings).toEqual([
+      { stationId: "100900221", latitude: "37.586893", longitude: "126.994075", carNumber: "5538", turnaroundStationId: "100900028" },
+      { stationId: "100900043", latitude: "37.576948", longitude: "127.002008", carNumber: "5537", turnaroundStationId: "100900028" },
+    ]);
+  });
+
+  it("reads a row without trnstnid as naming no turnaround stop", async () => {
+    // Arrange
+    const [row] = positionsFixture.jongro07.msgBody.itemList;
+    respond({ msgHeader: { headerCd: "0" }, msgBody: { itemList: [{ ...row, trnstnid: undefined }] } });
+
+    // Act
+    const [sighting] = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sighting).toHaveProperty("turnaroundStationId", undefined);
+    expect(sighting!.stationId).toBe("100900221");
+  });
+
+  it.each(["lastStnId", "gpsX", "gpsY"])("rejects a row without %s, naming the field", async (field) => {
+    // Arrange
+    const [row] = positionsFixture.jongro07.msgBody.itemList;
+    respond({ msgHeader: { headerCd: "0" }, msgBody: { itemList: [{ ...row, [field]: null }] } });
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchSightings(route07)).rejects.toMatchObject({
+      name: "UpstreamError",
+      upstream: "topis",
+      message: `TOPIS row has no ${field} (jongro 07 location)`,
+    });
   });
 });

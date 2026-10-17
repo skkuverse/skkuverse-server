@@ -110,7 +110,6 @@ describe("BusRegistryService.routeOf over the seeded snapshot", () => {
     // Assert
     expect(r08.busRouteId).toBe("100900005");
     expect(r08.stations).toHaveLength(31);
-    expect(r08.positionsUrl).toContain("&endOrd=31&");
     expect(r08.stations[0]!.isFirstStation).toBe(true);
     expect(r08.stations[0]!.stationName).toBe("명륜3가종점");
     expect(r08.stations[30]!.isLastStation).toBe(true);
@@ -152,8 +151,6 @@ describe("BusRegistryService.routeOf over the seeded snapshot", () => {
     expect(r07.mapping["100900197"]).toEqual({ sequence: 6, stationName: "명륜새마을금고" });
     expect(r07.mapping["100000423"]).toEqual({ sequence: 21, stationName: "비천당" });
     expect(r07.mapping["100000424"]).toEqual({ sequence: 3, stationName: "비천당" });
-    expect(r07.positionsUrl).toContain("&endOrd=22&");
-    expect(r02.positionsUrl).toContain("&endOrd=27&");
   });
 
   it("carries the transfer badges of the 2026-09 review on the stations they belong to", async () => {
@@ -240,7 +237,7 @@ describe("BusRegistryService.observe", () => {
     // Assert
     expect(beforeThird).toEqual(seed08());
     expect(storedStationsOf("jongro08")).toEqual(withAddedStop());
-    expect((await service.routeOf("jongro08")).positionsUrl).toContain("&endOrd=32&");
+    expect((await service.routeOf("jongro08")).topisIds).toHaveLength(32);
     const synced = callsOf("warn", "bus.jongro.registry_synced");
     expect(synced).toHaveLength(1);
     expect(synced[0]![0]).toMatchObject({

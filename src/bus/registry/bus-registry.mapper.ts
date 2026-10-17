@@ -1,11 +1,6 @@
-import { SEOUL_BUS_API_URL } from "../bus.constants";
 import type { JongroRoute } from "../bus.types";
 import type { JongroRouteDocument, RegistryStation } from "./bus-registry.document";
 import type { JongroStation, JongroStationMapping, ObservedStation, RegistryRoute } from "./bus-registry.types";
-
-export function toJongroPositionsUrl(busRouteId: string, stationCount: number, serviceKey: string): string {
-  return `${SEOUL_BUS_API_URL}/buspos/getBusPosByRouteSt?serviceKey=${serviceKey}&busRouteId=${busRouteId}&startOrd=1&endOrd=${stationCount}&resultType=json`;
-}
 
 function toJongroStations(route: JongroRoute, doc: JongroRouteDocument): JongroStation[] {
   const last = doc.stations.length - 1;
@@ -30,13 +25,12 @@ function toStationMapping(stations: readonly RegistryStation[]): JongroStationMa
   return mapping;
 }
 
-export function toRegistryRoute(route: JongroRoute, doc: JongroRouteDocument, serviceKey: string): RegistryRoute {
+export function toRegistryRoute(route: JongroRoute, doc: JongroRouteDocument): RegistryRoute {
   return {
     ...route,
     stationsVersion: doc.stationsVersion,
     turnaroundTopisId: doc.turnaroundTopisId,
     registryStations: doc.stations,
-    positionsUrl: toJongroPositionsUrl(route.busRouteId, doc.stations.length, serviceKey),
     stations: toJongroStations(route, doc),
     mapping: toStationMapping(doc.stations),
     topisIds: doc.stations.map((station) => station.topisId),

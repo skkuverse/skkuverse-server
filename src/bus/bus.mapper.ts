@@ -8,6 +8,11 @@ export function toJongroArrivalsUrl(busRouteId: string, serviceKey: string): str
   return `${SEOUL_BUS_API_URL}/arrive/getArrInfoByRouteAll?serviceKey=${serviceKey}&busRouteId=${busRouteId}&resultType=json`;
 }
 
+// QUIRK(topis): getBusPosByRtid answers the whole route with each row's turnaround stop; getBusPosByRouteSt does not.
+export function toJongroPositionsUrl(busRouteId: string, serviceKey: string): string {
+  return `${SEOUL_BUS_API_URL}/buspos/getBusPosByRtid?serviceKey=${serviceKey}&busRouteId=${busRouteId}&resultType=json`;
+}
+
 export function toJongroRoute(entry: JongroRouteEntry, serviceKey: string): JongroRoute {
   return {
     id: entry.id,
@@ -18,6 +23,7 @@ export function toJongroRoute(entry: JongroRouteEntry, serviceKey: string): Jong
     refreshInterval: entry.refreshInterval,
     seatCount: entry.seatCount,
     arrivalsUrl: toJongroArrivalsUrl(entry.busRouteId, serviceKey),
+    positionsUrl: toJongroPositionsUrl(entry.busRouteId, serviceKey),
     transferLinesByArsId: entry.transferLinesByArsId,
   };
 }

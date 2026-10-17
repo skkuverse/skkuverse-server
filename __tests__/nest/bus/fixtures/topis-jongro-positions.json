@@ -1,5 +1,5 @@
 {
-  "_about": "Captured from TOPIS getBusPosByRouteSt?busRouteId=100900004 (종로07) on 2026-10-17 (pos_100900004_1792231921.json); trimmed to its first two rows and the fields the client reads plus identifying ones; msgHeader kept.",
+  "_about": "Captured from TOPIS buspos/getBusPosByRtid?busRouteId=100900004 (종로07) on 2026-10-17 from production (pos_100900004_1792231921.json); trimmed to its first two rows and to the fields the client reads plus identifying ones; msgHeader kept. This endpoint carries trnstnid and puts the coordinates in gpsX/gpsY (tmX/tmY are null).",
   "jongro07": {
     "msgHeader": {
       "headerCd": "0",

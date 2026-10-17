@@ -230,19 +230,32 @@ describe("BusRealtimeJongroService.refresh and the registry", () => {
     topisIds.map((stationId, index) => jongroArrivalDoc({ stationId, sequence: String(index + 1), stationName: `stop ${stationId}`, stationNumber: `0${index}` }));
   const storedIdsOf = (routeId: string) => registryRepository.routes.get(routeId)!.stations.map((station) => station.topisId);
 
-  it("applies a drifted stop list at the third tick, and the next tick polls positions over the new count", async () => {
+  it("applies a drifted stop list at the third tick, and the next tick places buses by it", async () => {
     // Arrange
     const ids = [...storedIdsOf("jongro07"), "100000999"];
     client.arrivals = arrivalsOf(ids);
 
     // Act
     for (let i = 0; i < 3; i++) await service.refresh(route("07"));
+    client.sightings = [{ stationId: "100000999", latitude: "37.5", longitude: "127.0", carNumber: "0009" }];
     await service.refresh(route("07"));
 
     // Assert
     expect(storedIdsOf("jongro07")).toEqual(ids);
-    expect(client.positionsUrls.slice(0, 3).every((url) => url.includes("&endOrd=22&"))).toBe(true);
-    expect(client.positionsUrls[3]).toContain("&endOrd=23&");
+    expect((await service.listPositions("07"))!.map((p) => [p.sequence, p.stationName])).toEqual([["23", "stop 100000999"]]);
+    expect(new Set(client.positionsUrls)).toEqual(new Set([route("07").positionsUrl]));
+  });
+
+  it("keeps the stored turnaround stop when the position rows name none", async () => {
+    // Arrange
+    client.arrivals = arrivalsOf([...storedIdsOf("jongro07"), "100000999"]);
+    client.sightings = [{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537" }];
+
+    // Act
+    for (let i = 0; i < 3; i++) await service.refresh(route("07"));
+
+    // Assert
+    expect(registryRepository.routes.get("jongro07")!.turnaroundTopisId).toBe("100900028");
   });
 
   it("still writes both keys when the registry holds a change", async () => {

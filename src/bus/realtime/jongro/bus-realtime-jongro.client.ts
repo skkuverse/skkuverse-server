@@ -3,7 +3,6 @@ import axios from "axios";
 import { UpstreamError } from "../../../infra/upstream.error";
 import type { JongroArrivalBus, JongroArrivalDoc } from "../../cache/bus-cache.document";
 import type { JongroRoute } from "../../bus.types";
-import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { toCarNumber } from "../bus-realtime.mapper";
 import { isNoResultHeaderCd, isUsableHeaderCd, toTopisInteger } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
@@ -30,12 +29,12 @@ type TopisArrivalRow = { [K in `${TopisBusField}${BusSlot}`]: string } & {
 
 const BUS_SLOTS: readonly BusSlot[] = ["1", "2"];
 
+// QUIRK(topis): a getBusPosByRtid row; its coordinates are gpsX/gpsY (tmX/tmY come null), its turnaround stop trnstnid.
 interface TopisPositionRow {
-  lastStnId: string;
-  /** QUIRK(topis): the route's turnaround stop, the same on every row of an answer. */
-  trnstnid: string;
-  tmX: string;
-  tmY: string;
+  lastStnId: string | null;
+  trnstnid?: string | null;
+  gpsX: string | null;
+  gpsY: string | null;
   plainNo: string;
 }
 
@@ -47,9 +46,10 @@ export class BusRealtimeJongroClient {
     return rows.map((row) => this.toArrival(row, what));
   }
 
-  async fetchSightings(route: Pick<RegistryRoute, "code" | "positionsUrl">): Promise<JongroBusSighting[]> {
-    const rows = await this.fetchRows<TopisPositionRow>(route.positionsUrl, `jongro ${route.code} location`);
-    return rows.map((row) => this.toSighting(row));
+  async fetchSightings(route: Pick<JongroRoute, "code" | "positionsUrl">): Promise<JongroBusSighting[]> {
+    const what = `jongro ${route.code} location`;
+    const rows = await this.fetchRows<TopisPositionRow>(route.positionsUrl, what);
+    return rows.map((row) => this.toSighting(row, what));
   }
 
   // WHY: "4" (no result) is an empty list, so the tick still writes; an answer with no list at all rejects.
@@ -101,13 +101,19 @@ export class BusRealtimeJongroClient {
     return parsed;
   }
 
-  private toSighting(row: TopisPositionRow): JongroBusSighting {
+  // WHY: the stop places the bus and the coordinates draw it; without them the row is not TOPIS's shape.
+  private toSighting(row: TopisPositionRow, what: string): JongroBusSighting {
+    const field = (name: "lastStnId" | "gpsX" | "gpsY"): string => {
+      const text = row[name]?.trim();
+      if (!text) throw new UpstreamError(`TOPIS row has no ${name} (${what})`, "topis");
+      return text;
+    };
     return {
-      stationId: row.lastStnId,
-      latitude: row.tmY,
-      longitude: row.tmX,
+      stationId: field("lastStnId"),
+      latitude: field("gpsY"),
+      longitude: field("gpsX"),
       carNumber: toCarNumber(row.plainNo),
-      turnaroundStationId: row.trnstnid,
+      turnaroundStationId: row.trnstnid?.trim() || undefined,
     };
   }
 }
