@@ -5,10 +5,11 @@ import { DailyCap } from "../../shared/daily-cap.util";
 import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
 import { SUBWAY_REGISTRY } from "../subway.config";
-import { toSeoulLines, toSettledObservations } from "./subway-seoul.rules";
+import { toSeoulLines, toSeoulStations, toSettledObservations } from "./subway-seoul.rules";
 import type { SettledObservations } from "./subway-seoul.types";
 
 const SEOUL_LINES = toSeoulLines(SUBWAY_REGISTRY);
+const SEOUL_STATIONS = toSeoulStations(SUBWAY_REGISTRY);
 const API_SOURCE = "seoul-subway-api";
 const TRAIN_MAP_SOURCE = "seoul-trainmap";
 
@@ -28,12 +29,11 @@ export class SubwaySeoulService {
 
   async observeApi(): Promise<SettledObservations> {
     const take = <T>(call: () => Promise<T>): Promise<T> => this.withCap(this.apiCap, call);
+    const fetchedAt = this.clock.now();
     const [eventResults, countdownResults] = await Promise.all([
-      Promise.allSettled(SEOUL_LINES.map((line) => take(() => this.api.listLineEvents(line.lineName, line.platformIdByApiName)))),
+      Promise.allSettled(SEOUL_LINES.map((line) => take(() => this.api.listLineEvents(line.lineName, line.platformIdByApiName, line.trainNumbers)))),
       Promise.allSettled(
-        SEOUL_LINES.flatMap((line) =>
-          line.stationNames.map((name) => take(() => this.api.listStationCountdownRows(name, line.platformIdByApiName))),
-        ),
+        SEOUL_STATIONS.map((station) => take(() => this.api.listStationCountdownRows(station.seoulName, station.platformBySubwayId, fetchedAt))),
       ),
     ]);
     return toSettledObservations(API_SOURCE, eventResults, countdownResults);

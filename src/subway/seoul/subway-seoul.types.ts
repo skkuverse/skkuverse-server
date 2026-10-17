@@ -1,3 +1,4 @@
+import type { CountdownPlatform } from "../seoul-api/subway-seoul-api.types";
 import type { ProviderObservations, SubwayProvider, TrainNumbering } from "../subway.types";
 
 export interface SeoulLine {
@@ -5,9 +6,13 @@ export interface SeoulLine {
   lineName: string;
   trainMapLine?: string | undefined;
   trainNumbers: TrainNumbering;
-  stationNames: readonly string[];
   platformIdByApiName: ReadonlyMap<string, string>;
   platformIdByTrainMapName: ReadonlyMap<string, string>;
+}
+
+export interface SeoulStation {
+  seoulName: string;
+  platformBySubwayId: ReadonlyMap<string, CountdownPlatform>;
 }
 
 export interface SettledObservations extends ProviderObservations {

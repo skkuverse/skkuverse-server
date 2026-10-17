@@ -4,7 +4,8 @@
  * (__tests__/nest/subway/fixtures/, see each file's `_about`). What it
  * guards: every captured body and row passes; a body or row missing any field
  * of its shape fails at that field's path; the bare status body of a failure
- * passes as a status; a train number is four digits, `trainSttus` is 0 to 3
+ * passes as a status; a train number is one to four digits (the Shinbundang
+ * line numbers its trainsets from 1), an arrival row names its line by `subwayId`, `trainSttus` is 0 to 3
  * and `recptnDt` a KST date and time. How the client turns a failed parse into
  * an error is subway-seoul-api.client.spec.ts's.
  */
@@ -82,7 +83,7 @@ describe("seoulPositionRow", () => {
 
   it.each([
     ["trainNo", "K509"],
-    ["trainNo", "509"],
+    ["trainNo", "12345"],
     ["trainSttus", "4"],
     ["recptnDt", "20261016"],
     ["statnNm", ""],
@@ -92,6 +93,13 @@ describe("seoulPositionRow", () => {
 
     // Assert
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe("seoulPositionRow train numbers", () => {
+  it.each(["2", "18", "509", "3361"])("Short 신분당 numbers: passes trainNo %j", (trainNo) => {
+    // Act & Assert
+    expect(seoulPositionRow.safeParse({ ...POSITION, trainNo }).success).toBe(true);
   });
 });
 
@@ -122,6 +130,20 @@ describe("seoulArrivalRow", () => {
     // Assert
     expect(parsed.success).toBe(false);
     expect(parsed.error?.issues[0]?.path).toEqual([key]);
+  });
+
+  it.each([
+    ["btrainNo", "12345"],
+    ["btrainNo", "K18"],
+    ["subwayId", "1호선"],
+  ])("fails with %s %j", (key, wrong) => {
+    // Act & Assert
+    expect(seoulArrivalRow.safeParse({ ...ARRIVAL, [key]: wrong }).success).toBe(false);
+  });
+
+  it("passes the trainset number 18", () => {
+    // Act & Assert
+    expect(seoulArrivalRow.safeParse({ ...ARRIVAL, btrainNo: "18" }).success).toBe(true);
   });
 
   it("fails with a countdown that is not a whole number of seconds", () => {

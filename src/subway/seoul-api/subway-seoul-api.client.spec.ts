@@ -150,10 +150,10 @@ describe("SubwaySeoulApiClient.fetchArrivals", () => {
 
     // Assert
     expect(rows).toEqual([
-      { btrainNo: "4674", statnNm: "혜화", barvlDt: "150", recptnDt: "2026-10-09 22:44:20" },
-      { btrainNo: "4174", statnNm: "혜화", barvlDt: "390", recptnDt: "2026-10-09 22:44:20" },
-      { btrainNo: "4331", statnNm: "혜화", barvlDt: "240", recptnDt: "2026-10-09 22:44:20" },
-      { btrainNo: "4173", statnNm: "혜화", barvlDt: "960", recptnDt: "2026-10-09 22:44:20" },
+      { subwayId: "1004", btrainNo: "4674", statnNm: "혜화", barvlDt: "150", recptnDt: "2026-10-09 22:44:20" },
+      { subwayId: "1004", btrainNo: "4174", statnNm: "혜화", barvlDt: "390", recptnDt: "2026-10-09 22:44:20" },
+      { subwayId: "1004", btrainNo: "4331", statnNm: "혜화", barvlDt: "240", recptnDt: "2026-10-09 22:44:20" },
+      { subwayId: "1004", btrainNo: "4173", statnNm: "혜화", barvlDt: "960", recptnDt: "2026-10-09 22:44:20" },
     ]);
   });
 
