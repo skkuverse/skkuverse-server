@@ -12,8 +12,10 @@
  * arrived row replacing an approaching row's resolution, and a horizon crossed
  * once the train is seen arrived gets no record; a record 30 minutes past its
  * predicted arrival with no arrival seen is marked unresolved at the next
- * minute's sweep; each source's first report of a train's state at a station
- * is one event; and a failing history write leaves the served arrivals
+ * minute's sweep; each source's first report of a train's state at a served
+ * platform is one event, and an event at a stop the tracker only observes
+ * (upstream, watched or next) is none (add-commute-station-subway design D10);
+ * and a failing history write leaves the served arrivals
  * written and the tick resolved, logged at most once every 10 minutes.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
@@ -310,18 +312,62 @@ describe("Events stored per source", () => {
   it("stores each source's first report of a train's state at a station once, with its line and time", async () => {
     // Arrange
     const { history, tickAt } = setup();
-    const atUiwang = event("K0493", "KR-1-P152", "arrived", "20:39:00", "서동탄");
+    const atSungkyunkwan = event("K0493", SUNGKYUNKWAN, "arrived", "20:41:00", "서동탄");
 
     // Act
-    await tickAt("20:39:10", upstream("seoul-subway-api", [atUiwang]));
-    await tickAt("20:39:20", upstream("seoul-subway-api", [atUiwang]));
-    await tickAt("20:39:25", upstream("seoul-trainmap", [event("0493", "KR-1-P152", "arrived", "20:39:25", "서동탄")]));
+    await tickAt("20:41:10", upstream("seoul-subway-api", [atSungkyunkwan]));
+    await tickAt("20:41:20", upstream("seoul-subway-api", [atSungkyunkwan]));
+    await tickAt("20:41:25", upstream("seoul-trainmap", [event("0493", SUNGKYUNKWAN, "arrived", "20:41:25", "서동탄")]));
 
     // Assert
     expect(history.events).toEqual([
-      { at: at("20:39:00"), meta: { line: "1", trainNo: "0493" }, stationId: "KR-1-P152", state: "arrived", source: "seoul-subway-api" },
-      { at: at("20:39:25"), meta: { line: "1", trainNo: "0493" }, stationId: "KR-1-P152", state: "arrived", source: "seoul-trainmap" },
+      { at: at("20:41:00"), meta: { line: "1", trainNo: "0493" }, stationId: SUNGKYUNKWAN, state: "arrived", source: "seoul-subway-api" },
+      { at: at("20:41:25"), meta: { line: "1", trainNo: "0493" }, stationId: SUNGKYUNKWAN, state: "arrived", source: "seoul-trainmap" },
     ]);
+  });
+});
+
+describe("Train events recorded at served platforms only", () => {
+  const JAMSIL = "S1-2-216";
+  const JAMSILNARU = "S1-2-215";
+
+  it("Event at an upstream stop: 2364 arrived at 잠실나루 moves 잠실's served train and writes no event", async () => {
+    // Arrange
+    const { arrivals, history, tickAt } = setup();
+
+    // Act
+    await tickAt("18:13:40", upstream("seoul-subway-api", [event("2364", JAMSILNARU, "arrived", "18:13:30", "성수")]));
+
+    // Assert
+    const served = arrivals.docs.get(JAMSIL)?.directions.up.find((train) => train.trainNo === "2364");
+    expect(served?.position).toEqual({ stationId: JAMSILNARU, state: "arrived" });
+    expect(history.events).toEqual([]);
+  });
+
+  it("Event at the served platform: the train map's first departure of 2364 from 잠실 is one event for S1-2-216", async () => {
+    // Arrange
+    const { history, tickAt } = setup();
+    const departed = event("2364", JAMSIL, "departed", "18:16:10", "내선순환");
+
+    // Act
+    await tickAt("18:16:10", upstream("seoul-trainmap", [departed]));
+    await tickAt("18:16:25", upstream("seoul-trainmap", [departed]));
+
+    // Assert
+    expect(history.events).toEqual([
+      { at: at("18:16:10"), meta: { line: "2", trainNo: "2364" }, stationId: JAMSIL, state: "departed", source: "seoul-trainmap" },
+    ]);
+  });
+
+  it("writes no event at another station's platform of the same line, which 잠실's tick also carries", async () => {
+    // Arrange
+    const { history, tickAt } = setup();
+
+    // Act
+    await tickAt("18:16:10", upstream("seoul-trainmap", [event("2364", "S1-2-222", "arrived", "18:16:00", "내선순환")]));
+
+    // Assert
+    expect(history.events.map((record) => record.stationId)).toEqual(["S1-2-222"]);
   });
 });
 
