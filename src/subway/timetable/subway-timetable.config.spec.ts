@@ -1,23 +1,14 @@
 /**
- * The committed timetables as loaded at import: every file parses, each platform the registry serves or design D2b
- * plans (add-commute-station-subway) finds a table for every day type its source declares, every train at such a
- * platform runs inside the service window, and a malformed file fails the boot with every issue and its path in one
+ * The committed timetables as loaded at import: every file parses, each of the thirteen platforms the registry
+ * serves finds a table for every day type its source declares, every train at such a platform runs inside the
+ * service window, and a malformed file fails the boot with every issue and its path in one
  * message.
  */
-import type { SubwayPlatform } from "../subway.types";
 import { SUBWAY_TIMETABLES, loadTimetable } from "./subway-timetable.config";
 import { SERVICE_WINDOW_CLOSES_SEC, SERVICE_WINDOW_OPENS_SEC, TIMETABLE_DAY_TYPES } from "./subway-timetable.constants";
 import { findTimetable, listSubwayPlatforms } from "./subway-timetable.rules";
 
-// The platforms of design D2b that WP6 has not registered yet: each leaves this list in the commit that registers it.
-const PLANNED: readonly Pick<SubwayPlatform, "id" | "line" | "timetable">[] = [
-  { id: "DX-D1-4312", line: "D1", timetable: { source: "shinbundang" } },
-  { id: "DX-D1-4307", line: "D1", timetable: { source: "shinbundang" } },
-  { id: "DX-D1-4308", line: "D1", timetable: { source: "shinbundang" } },
-  { id: "DX-D1-4318", line: "D1", timetable: { source: "shinbundang" } },
-];
-
-const SERVED = [...listSubwayPlatforms(), ...PLANNED.map((platform) => platform as SubwayPlatform)];
+const SERVED = listSubwayPlatforms();
 
 describe("SUBWAY_TIMETABLES", () => {
   it("loads every committed table, so the module import in this file did not throw", () => {
@@ -47,7 +38,7 @@ describe("SUBWAY_TIMETABLES", () => {
     ]);
   });
 
-  it("finds a table for every day type of every served and planned platform's source", () => {
+  it("finds a table for every day type of every served platform's source", () => {
     // Act
     const missing = SERVED.flatMap((platform) =>
       TIMETABLE_DAY_TYPES[platform.timetable.source]
@@ -60,7 +51,7 @@ describe("SUBWAY_TIMETABLES", () => {
     expect(missing).toEqual([]);
   });
 
-  it("runs every train of every table inside the service window of its day type at each served or planned platform", () => {
+  it("runs every train of every table inside the service window of its day type at each served platform", () => {
     // Arrange
     const servedIds = new Set(SERVED.map((platform) => platform.id));
 

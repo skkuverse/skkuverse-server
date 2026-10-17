@@ -107,18 +107,49 @@ describe("GET /ui/home/transit", () => {
       initialState: "collapsed",
       items: undefined,
     });
-    expect(group.items.map((served: { id: string }) => served.id)).toEqual(["subway:jeongja", "subway:jamsil", "subway:dogok", "subway:gangnam", "subway:yangjae"]);
+    expect(group.items.map((served: { id: string }) => served.id)).toEqual([
+      "subway:jeongja",
+      "subway:jamsil",
+      "subway:dogok",
+      "subway:gangnam",
+      "subway:yangjae",
+      "subway:gwanggyo-jungang",
+    ]);
     expect(group.items[2]).toMatchObject({ id: "subway:dogok", subtitle: "3호선 · 수인분당선", lines: [{ code: "3" }, { code: "K1", badge: "수인분당", color: "F5A200" }] });
     expect(group.items[3]).toEqual({
       kind: "subway",
       id: "subway:gangnam",
       stationId: "gangnam",
       title: "강남역",
-      subtitle: "2호선",
-      lines: [{ code: "2", name: "2호선", badge: "2", color: "00A84D" }],
+      subtitle: "2호선 · 신분당선",
+      lines: [
+        { code: "2", name: "2호선", badge: "2", color: "00A84D" },
+        { code: "D1", name: "신분당선", badge: "신분당", color: "D4003B" },
+      ],
       action: { actionType: "route", actionValue: "/subway?station=gangnam" },
     });
     expect(keysOf(res.body.data)).not.toContain("visibleWith");
+    expectWire(transitLayout, res.body.data);
+  });
+
+  it("Transfer station: serves 정자 first in the group with its 신분당 then its 수인분당 line, and their names joined as its subtitle", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/transit").set("Accept-Language", "ko");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.sections[2].items[2].items[0]).toEqual({
+      kind: "subway",
+      id: "subway:jeongja",
+      stationId: "jeongja",
+      title: "정자역",
+      subtitle: "신분당선 · 수인분당선",
+      lines: [
+        { code: "D1", name: "신분당선", badge: "신분당", color: "D4003B" },
+        { code: "K1", name: "수인분당선", badge: "수인분당", color: "F5A200" },
+      ],
+      action: { actionType: "route", actionValue: "/subway?station=jeongja" },
+    });
     expectWire(transitLayout, res.body.data);
   });
 

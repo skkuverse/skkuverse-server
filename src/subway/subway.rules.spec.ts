@@ -13,6 +13,7 @@ describe("toSubwayLine", () => {
     ["3", { subwayId: "1003", lineName: "3호선", trainMapLine: "3", trainNumbers: "timetable" }, "EF7C1C"],
     ["8", { subwayId: "1008", lineName: "8호선", trainMapLine: "8", trainNumbers: "timetable" }, "E6186C"],
     ["K1", { subwayId: "1075", lineName: "수인분당선", trainNumbers: "timetable" }, "F5A200"],
+    ["D1", { subwayId: "1077", lineName: "신분당선", trainNumbers: "trainset" }, "D4003B"],
   ])("carries the seoul ids and the color of line %s", (code, seoul, color) => {
     // Act
     const line = toSubwayLine(code);
@@ -27,6 +28,7 @@ describe("toSubwayLine", () => {
     ["3", { ko: "3호선", en: "Line 3", zh: "3号线" }, { ko: "3", en: "3", zh: "3" }],
     ["8", { ko: "8호선", en: "Line 8", zh: "8号线" }, { ko: "8", en: "8", zh: "8" }],
     ["K1", { ko: "수인분당선", en: "Suin–Bundang Line", zh: "水仁·盆唐线" }, { ko: "수인분당", en: "Suin–Bundang", zh: "水仁盆唐" }],
+    ["D1", { ko: "신분당선", en: "Shinbundang Line", zh: "新盆唐线" }, { ko: "신분당", en: "Shinbundang", zh: "新盆唐" }],
   ])("names line %s and its badge in every language", (code, name, badge) => {
     // Act
     const line = toSubwayLine(code);

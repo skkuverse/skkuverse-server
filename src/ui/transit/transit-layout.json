@@ -45,7 +45,8 @@
             { "kind": "subway", "stationId": "jamsil" },
             { "kind": "subway", "stationId": "dogok" },
             { "kind": "subway", "stationId": "gangnam" },
-            { "kind": "subway", "stationId": "yangjae" }
+            { "kind": "subway", "stationId": "yangjae" },
+            { "kind": "subway", "stationId": "gwanggyo-jungang" }
           ]
         }
       ]

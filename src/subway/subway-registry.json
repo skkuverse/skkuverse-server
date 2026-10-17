@@ -41,6 +41,13 @@
       "badge": { "ko": "수인분당", "en": "Suin–Bundang", "zh": "水仁盆唐" },
       "color": "F5A200",
       "seoul": { "subwayId": "1075", "lineName": "수인분당선", "trainNumbers": "timetable" }
+    },
+    {
+      "code": "D1",
+      "name": { "ko": "신분당선", "en": "Shinbundang Line", "zh": "新盆唐线" },
+      "badge": { "ko": "신분당", "en": "Shinbundang", "zh": "新盆唐" },
+      "color": "D4003B",
+      "seoul": { "subwayId": "1077", "lineName": "신분당선", "trainNumbers": "trainset" }
     }
   ],
   "stations": [
@@ -101,6 +108,25 @@
       "name": { "ko": "정자", "en": "Jeongja", "zh": "亭子" },
       "seoulName": "정자",
       "platforms": [
+        {
+          "id": "DX-D1-4312",
+          "line": "D1",
+          "timetable": { "source": "shinbundang" },
+          "directions": {
+            "up": {
+              "name": { "ko": "신사 방면", "en": "Toward Sinsa", "zh": "新沙方向" },
+              "upstreamPlatformIds": ["DX-D1-D13", "DX-D1-D14", "DX-D1-D15"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "DX-D1-4311"
+            },
+            "down": {
+              "name": { "ko": "광교 방면", "en": "Toward Gwanggyo", "zh": "光教方向" },
+              "upstreamPlatformIds": ["DX-D1-4311", "DX-D1-4310", "DX-D1-4309"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "DX-D1-D13"
+            }
+          }
+        },
         {
           "id": "KR-K1-K230",
           "line": "K1",
@@ -235,6 +261,25 @@
               "nextPlatformId": "S1-2-221"
             }
           }
+        },
+        {
+          "id": "DX-D1-4307",
+          "line": "D1",
+          "timetable": { "source": "shinbundang" },
+          "directions": {
+            "up": {
+              "name": { "ko": "신사 방면", "en": "Toward Sinsa", "zh": "新沙方向" },
+              "upstreamPlatformIds": ["DX-D1-4308", "DX-D1-4309", "DX-D1-4310"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "DX-D1-4306"
+            },
+            "down": {
+              "name": { "ko": "광교 방면", "en": "Toward Gwanggyo", "zh": "光教方向" },
+              "upstreamPlatformIds": ["DX-D1-4306", "DX-D1-4305", "DX-D1-D04"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "DX-D1-4308"
+            }
+          }
         }
       ]
     },
@@ -259,6 +304,51 @@
               "upstreamPlatformIds": ["S1-3-331", "S1-3-330", "S1-3-329"],
               "watchedPlatformIds": [],
               "nextPlatformId": "S1-3-333"
+            }
+          }
+        },
+        {
+          "id": "DX-D1-4308",
+          "line": "D1",
+          "timetable": { "source": "shinbundang" },
+          "directions": {
+            "up": {
+              "name": { "ko": "신사 방면", "en": "Toward Sinsa", "zh": "新沙方向" },
+              "upstreamPlatformIds": ["DX-D1-4309", "DX-D1-4310", "DX-D1-4311"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "DX-D1-4307"
+            },
+            "down": {
+              "name": { "ko": "광교 방면", "en": "Toward Gwanggyo", "zh": "光教方向" },
+              "upstreamPlatformIds": ["DX-D1-4307", "DX-D1-4306", "DX-D1-4305"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "DX-D1-4309"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "gwanggyo-jungang",
+      "name": { "ko": "광교중앙", "en": "Gwanggyojungang", "zh": "光教中央" },
+      "seoulName": "광교중앙",
+      "platforms": [
+        {
+          "id": "DX-D1-4318",
+          "line": "D1",
+          "timetable": { "source": "shinbundang" },
+          "directions": {
+            "up": {
+              "name": { "ko": "신사 방면", "en": "Toward Sinsa", "zh": "新沙方向" },
+              "upstreamPlatformIds": ["DX-D1-4319"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "DX-D1-4317"
+            },
+            "down": {
+              "name": { "ko": "광교 방면", "en": "Toward Gwanggyo", "zh": "光教方向" },
+              "upstreamPlatformIds": ["DX-D1-4317", "DX-D1-4316", "DX-D1-D15"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "DX-D1-4319"
             }
           }
         }
@@ -314,6 +404,18 @@
     "KR-K1-K229": { "line": "K1", "seoulName": "수내", "name": { "ko": "수내", "en": "Sunae", "zh": "薮内" } },
     "KR-K1-K231": { "line": "K1", "seoulName": "미금", "name": { "ko": "미금", "en": "Migeum", "zh": "美金" } },
     "KR-K1-K232": { "line": "K1", "seoulName": "오리" },
-    "KR-K1-K233": { "line": "K1", "seoulName": "죽전" }
+    "KR-K1-K233": { "line": "K1", "seoulName": "죽전" },
+    "DX-D1-D04": { "line": "D1", "seoulName": "신사" },
+    "DX-D1-4305": { "line": "D1", "seoulName": "논현" },
+    "DX-D1-4306": { "line": "D1", "seoulName": "신논현", "name": { "ko": "신논현", "en": "Sinnonhyeon", "zh": "新论岘" } },
+    "DX-D1-4309": { "line": "D1", "seoulName": "양재시민의숲", "name": { "ko": "양재시민의숲", "en": "Yangjae Citizen's Forest", "zh": "良才市民之林" } },
+    "DX-D1-4310": { "line": "D1", "seoulName": "청계산입구" },
+    "DX-D1-4311": { "line": "D1", "seoulName": "판교", "name": { "ko": "판교", "en": "Pangyo", "zh": "板桥" } },
+    "DX-D1-D13": { "line": "D1", "seoulName": "미금", "name": { "ko": "미금", "en": "Migeum", "zh": "美金" } },
+    "DX-D1-D14": { "line": "D1", "seoulName": "동천" },
+    "DX-D1-D15": { "line": "D1", "seoulName": "수지구청" },
+    "DX-D1-4316": { "line": "D1", "seoulName": "성복" },
+    "DX-D1-4317": { "line": "D1", "seoulName": "상현", "name": { "ko": "상현", "en": "Sanghyeon", "zh": "上岘" } },
+    "DX-D1-4319": { "line": "D1", "seoulName": "광교", "name": { "ko": "광교", "en": "Gwanggyo", "zh": "光教" } }
   }
 }

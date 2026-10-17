@@ -67,6 +67,24 @@ const LINE_3_NAMES = {
 const LINE_8_STATIONS = { 잠실: "S1-8-2815", 강동구청: "S1-8-2813", 석촌: "S1-8-2816", 송파: "S1-8-2817", 가락시장: "S1-8-2818" };
 const LINE_8_API_NAMES = { ...LINE_8_STATIONS, "천호(풍납토성)": "S1-8-2812", "몽촌토성(평화의문)": "S1-8-2814" };
 const LINE_8_MAP_NAMES = { ...LINE_8_STATIONS, 천호: "S1-8-2812", 몽촌토성: "S1-8-2814" };
+const SHINBUNDANG_NAMES = {
+  정자: "DX-D1-4312",
+  강남: "DX-D1-4307",
+  양재: "DX-D1-4308",
+  광교중앙: "DX-D1-4318",
+  신사: "DX-D1-D04",
+  논현: "DX-D1-4305",
+  신논현: "DX-D1-4306",
+  양재시민의숲: "DX-D1-4309",
+  청계산입구: "DX-D1-4310",
+  판교: "DX-D1-4311",
+  미금: "DX-D1-D13",
+  동천: "DX-D1-D14",
+  수지구청: "DX-D1-D15",
+  성복: "DX-D1-4316",
+  상현: "DX-D1-4317",
+  광교: "DX-D1-4319",
+};
 const SUIN_BUNDANG_NAMES = {
   정자: "KR-K1-K230",
   도곡: "KR-K1-K217",
@@ -139,6 +157,14 @@ describe("toSeoulLines", () => {
         platformIdByApiName: SUIN_BUNDANG_NAMES,
         platformIdByTrainMapName: SUIN_BUNDANG_NAMES,
       },
+      {
+        subwayId: "1077",
+        lineName: "신분당선",
+        trainMapLine: undefined,
+        trainNumbers: "trainset",
+        platformIdByApiName: SHINBUNDANG_NAMES,
+        platformIdByTrainMapName: SHINBUNDANG_NAMES,
+      },
     ]);
   });
 
@@ -180,7 +206,7 @@ describe("toSeoulLines", () => {
     const lines = toSeoulLines(registry);
 
     // Assert
-    expect(lines.map((line) => line.trainMapLine)).toEqual(["1", undefined, "2", "3", "8", undefined]);
+    expect(lines.map((line) => line.trainMapLine)).toEqual(["1", undefined, "2", "3", "8", undefined, undefined]);
   });
 });
 
@@ -193,7 +219,13 @@ describe("toSeoulStations", () => {
     expect(stations.map(({ seoulName, platformBySubwayId }) => [seoulName, Object.fromEntries(platformBySubwayId)])).toEqual([
       ["성균관대", { "1001": { platformId: "KR-1-0153", trainNumbers: "timetable" } }],
       ["혜화", { "1004": { platformId: "S1-4-420", trainNumbers: "timetable" } }],
-      ["정자", { "1075": { platformId: "KR-K1-K230", trainNumbers: "timetable" } }],
+      [
+        "정자",
+        {
+          "1077": { platformId: "DX-D1-4312", trainNumbers: "trainset" },
+          "1075": { platformId: "KR-K1-K230", trainNumbers: "timetable" },
+        },
+      ],
       [
         "잠실",
         {
@@ -208,8 +240,21 @@ describe("toSeoulStations", () => {
           "1075": { platformId: "KR-K1-K217", trainNumbers: "timetable" },
         },
       ],
-      ["강남", { "1002": { platformId: "S1-2-222", trainNumbers: "circle" } }],
-      ["양재", { "1003": { platformId: "S1-3-332", trainNumbers: "timetable" } }],
+      [
+        "강남",
+        {
+          "1002": { platformId: "S1-2-222", trainNumbers: "circle" },
+          "1077": { platformId: "DX-D1-4307", trainNumbers: "trainset" },
+        },
+      ],
+      [
+        "양재",
+        {
+          "1003": { platformId: "S1-3-332", trainNumbers: "timetable" },
+          "1077": { platformId: "DX-D1-4308", trainNumbers: "trainset" },
+        },
+      ],
+      ["광교중앙", { "1077": { platformId: "DX-D1-4318", trainNumbers: "trainset" } }],
     ]);
   });
 

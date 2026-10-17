@@ -6,8 +6,8 @@
  * most 2 minutes old is served as the tracker stored it; an older or missing
  * state, or SUBWAY=off, serves that platform's timetable alone at the
  * request's time, every train `scheduled`; and at a station of two platforms
- * each is judged on its own ("One line stale"), on a station made of Hyehwa's
- * and Sungkyunkwan Univ.'s platforms, since the registry serves no transfer station yet.
+ * each is judged on its own ("One line stale"), on Gangnam's line 2 and Shinbundang
+ * platforms.
  */
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
@@ -22,14 +22,6 @@ import type { SubwayRepository } from "../subway.repository";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
 import { SubwayArrivalsService } from "./subway-arrivals.service";
-
-// WHY: a two-platform station built from the two registered platforms; the real lookup answers every other slug.
-jest.mock("./subway-arrivals.rules", () => {
-  const actual = jest.requireActual<typeof import("./subway-arrivals.rules")>("./subway-arrivals.rules");
-  const [hyehwa, sungkyunkwan] = [actual.findSubwayStation("hyehwa"), actual.findSubwayStation("sungkyunkwan")];
-  const transfer = hyehwa && sungkyunkwan && { ...hyehwa, id: "transfer", platforms: [...hyehwa.platforms, ...sungkyunkwan.platforms] };
-  return { ...actual, findSubwayStation: (slug: string) => (slug === "transfer" ? transfer : actual.findSubwayStation(slug)) };
-});
 
 const NOW = new Date("2026-10-16T11:41:00Z");
 const subway = config.subway as { enabled: boolean };
@@ -114,16 +106,16 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
   it("One line stale: serves the fresh platform from its document and the stale one from its timetable alone", async () => {
     // Arrange
     const { service, repository } = setup();
-    repository.docs.set("S1-4-420", storedAgo(5_000));
-    repository.docs.set("KR-1-0153", storedAgo(121_000, "KR-1-0153"));
+    repository.docs.set("S1-2-222", storedAgo(5_000, "S1-2-222"));
+    repository.docs.set("DX-D1-4307", storedAgo(121_000, "DX-D1-4307"));
 
     // Act
-    const arrivals = await service.findStationArrivals("transfer", "ko");
+    const arrivals = await service.findStationArrivals("gangnam", "ko");
 
     // Assert
     expect(arrivals?.lines.map((l) => [l.platformId, l.generatedAt])).toEqual([
-      ["S1-4-420", "2026-10-16T11:40:55.000Z"],
-      ["KR-1-0153", NOW.toISOString()],
+      ["S1-2-222", "2026-10-16T11:40:55.000Z"],
+      ["DX-D1-4307", NOW.toISOString()],
     ]);
     expect(sourcesOf(arrivals, 0)).toEqual(["live"]);
     expect(sourcesOf(arrivals, 1)).toEqual(Array(6).fill("scheduled"));

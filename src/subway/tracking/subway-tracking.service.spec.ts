@@ -27,19 +27,6 @@
  * scheduled arrival plus its delay; a trainset that matches no run is not served.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
-// The committed registry has no trainset line until the Shinbundang line is registered (tasks.md 6.3.2).
-jest.mock("../subway.config", () => {
-  const actual = jest.requireActual<typeof import("../subway.config")>("../subway.config");
-  const line = (code: string, name: string, trainNumbers: string) => ({
-    code,
-    name: { ko: name, en: name, zh: name },
-    badge: { ko: name, en: name, zh: name },
-    color: "D4003B",
-    seoul: { subwayId: code, lineName: name, trainNumbers },
-  });
-  const lines = [...actual.SUBWAY_REGISTRY.lines, line("D1", "신분당선", "trainset")];
-  return { ...actual, SUBWAY_REGISTRY: { ...actual.SUBWAY_REGISTRY, lines } };
-});
 
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
@@ -71,6 +58,7 @@ function setup(atKst = at) {
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
   const clock = { now: () => now } as Clock;
   const service = new SubwayTrackingService(asReal<SubwayRepository>(repository), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
+  new SubwayMatchingService(service, clock).onModuleInit();
   const tickAt = (kst: string, provider: SubwayProvider): Promise<void> => {
     now = atKst(kst);
     return service.track(provider);

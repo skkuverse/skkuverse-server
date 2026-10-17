@@ -36,7 +36,7 @@ const NEXT_LINE = (committed["lines"] as unknown[]).length;
 const HYEHWA = ["stations", 1, "platforms", 0] as const;
 
 describe("SUBWAY_REGISTRY", () => {
-  it("loads the committed registry: its stations with their platforms in served order, on lines 1, 4, 2, 3, 8 and K1, so the module import in this file did not throw", () => {
+  it("loads the committed registry: its stations with their platforms in served order, on lines 1, 4, 2, 3, 8, K1 and D1, so the module import in this file did not throw", () => {
     // Act
     const stations = SUBWAY_REGISTRY.stations.map((station) => [station.id, station.platforms.map((platform) => platform.id)]);
 
@@ -44,13 +44,15 @@ describe("SUBWAY_REGISTRY", () => {
     expect(stations).toEqual([
       ["sungkyunkwan", ["KR-1-0153"]],
       ["hyehwa", ["S1-4-420"]],
-      ["jeongja", ["KR-K1-K230"]],
+      ["jeongja", ["DX-D1-4312", "KR-K1-K230"]],
       ["jamsil", ["S1-2-216", "S1-8-2815"]],
       ["dogok", ["S1-3-334", "KR-K1-K217"]],
-      ["gangnam", ["S1-2-222"]],
-      ["yangjae", ["S1-3-332"]],
+      ["gangnam", ["S1-2-222", "DX-D1-4307"]],
+      ["yangjae", ["S1-3-332", "DX-D1-4308"]],
+      ["gwanggyo-jungang", ["DX-D1-4318"]],
     ]);
-    expect(SUBWAY_REGISTRY.lines.map((line) => line.code)).toEqual(["1", "4", "2", "3", "8", "K1"]);
+    expect(stations.flatMap(([, platformIds]) => platformIds)).toHaveLength(13);
+    expect(SUBWAY_REGISTRY.lines.map((line) => line.code)).toEqual(["1", "4", "2", "3", "8", "K1", "D1"]);
   });
 });
 
