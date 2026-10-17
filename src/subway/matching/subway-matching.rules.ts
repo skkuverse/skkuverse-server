@@ -69,7 +69,7 @@ function findNearestRun(tick: MatchingTick, event: TrainEvent, direction: Subway
 
 function toSightings(tick: MatchingTick): Sighting[] {
   const directionByDestination = toOneDirectionDestinations(tick.trains);
-  const sightings = toNewestByTrainset(tick.events).map((event) => ({ event, direction: directionByDestination.get(event.destination) }));
+  const sightings = toNewestByTrainset(tick.events).map((event) => ({ event, direction: directionByDestination.get(event.destination) ?? event.reportedDirection }));
   const positionOf = ({ event, direction }: Sighting): number => (direction ? tick.routes[direction].indexOf(event.platformId) : -1);
   return sightings.sort((a, b) => positionOf(b) - positionOf(a));
 }

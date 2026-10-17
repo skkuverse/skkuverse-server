@@ -25,8 +25,8 @@ describe("SubwaySeoulApiService.listLineEvents", () => {
     // Arrange
     const { client, service } = setup();
     client.positions.set("1호선", [
-      { trainNo: "0493", statnNm: "성균관대", statnTnm: "서동탄", trainSttus: "1", recptnDt: "2026-10-16 20:44:10" },
-      { trainNo: "0509", statnNm: "시청", statnTnm: "서동탄", trainSttus: "1", recptnDt: "2026-10-16 20:44:11" },
+      { trainNo: "0493", statnNm: "성균관대", statnTnm: "서동탄", updnLine: "1", trainSttus: "1", recptnDt: "2026-10-16 20:44:10" },
+      { trainNo: "0509", statnNm: "시청", statnTnm: "서동탄", updnLine: "1", trainSttus: "1", recptnDt: "2026-10-16 20:44:11" },
     ]);
 
     // Act

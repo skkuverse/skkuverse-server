@@ -82,6 +82,7 @@ const row = (fields: Partial<SeoulPositionRow>): SeoulPositionRow => ({
   trainNo: "0493",
   statnNm: "성균관대",
   statnTnm: "서동탄",
+  updnLine: "1",
   trainSttus: "1",
   recptnDt: "2026-10-16 20:44:10",
   ...fields,
@@ -135,6 +136,48 @@ describe("toTrainEvents", () => {
     // Assert
     expect(events.map((e) => e.trainNo)).toEqual(["2", "3", "8", "6", "12", "14", "18", "20", "19", "13", "23", "22"]);
     expect(new Set(events.map((e) => e.stateChangedAt.toISOString()))).toEqual(new Set(["2026-10-17T12:05:41.000Z"]));
+  });
+
+  it("reports each 신분당선 row's direction from its updnLine, 0 up toward 신사 and 1 down toward 광교", () => {
+    // Arrange
+    const positions = fixture<SeoulPositionRow>("realtime-position-shinbundang.json", "realtimePositionList");
+    const shinbundang = new Map([
+      ["논현", "DX-D1-4305"],
+      ["신논현", "DX-D1-4306"],
+      ["양재시민의숲", "DX-D1-4309"],
+      ["판교", "DX-D1-4311"],
+      ["미금", "DX-D1-D13"],
+      ["성복", "DX-D1-4316"],
+      ["광교중앙", "DX-D1-4318"],
+      ["광교", "DX-D1-4319"],
+    ]);
+
+    // Act
+    const events = toTrainEvents(positions, shinbundang, "trainset");
+
+    // Assert
+    expect(events.map((e) => [e.trainNo, e.destination, e.reportedDirection])).toEqual([
+      ["2", "광교", "down"],
+      ["3", "광교", "down"],
+      ["8", "신사", "up"],
+      ["6", "신사", "up"],
+      ["12", "광교", "down"],
+      ["14", "신사", "up"],
+      ["18", "신사", "up"],
+      ["20", "신사", "up"],
+      ["19", "신사", "up"],
+      ["13", "광교", "down"],
+      ["23", "광교", "down"],
+      ["22", "광교", "down"],
+    ]);
+  });
+
+  it("reports no direction for a line read by its timetable numbers, whose direction its timetable decides", () => {
+    // Act
+    const [event] = toTrainEvents([row({ updnLine: "1" })], LINE_1, "timetable");
+
+    // Assert
+    expect(event).not.toHaveProperty("reportedDirection");
   });
 
   it.each([

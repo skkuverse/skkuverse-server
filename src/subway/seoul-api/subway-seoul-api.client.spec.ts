@@ -87,7 +87,7 @@ describe("SubwaySeoulApiClient.fetchPositions", () => {
 
     // Assert
     expect(rows).toHaveLength(74);
-    expect(rows[0]).toEqual({ trainNo: "0509", statnNm: "시청", statnTnm: "서동탄", trainSttus: "1", recptnDt: "2026-10-16 22:26:51" });
+    expect(rows[0]).toEqual({ trainNo: "0509", statnNm: "시청", statnTnm: "서동탄", updnLine: "1", trainSttus: "1", recptnDt: "2026-10-16 22:26:51" });
     expect(rows.filter((row) => row.trainNo === "0509")).toHaveLength(2);
   });
 

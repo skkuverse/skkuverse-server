@@ -13,6 +13,7 @@ export const seoulPositionRow = z.object({
   trainNo: z.string().regex(TRAIN_NO),
   statnNm: z.string().min(1),
   statnTnm: z.string().min(1),
+  updnLine: z.enum(["0", "1"]),
   trainSttus: z.enum(["0", "1", "2", "3"]),
   recptnDt: z.string().regex(KST_DATE_TIME),
 });
