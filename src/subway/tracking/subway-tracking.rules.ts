@@ -37,7 +37,7 @@ function toStopProgress(tick: TrackingTick, route: readonly string[], event: Tra
 }
 
 // WHY: both operators number up trains even and down trains odd (every train of the committed timetables);
-// a destination the timetables name decides first.
+// a destination the timetable runs in one direction only decides first (line 2's Seongsu runs both ways).
 export function toDirection(
   train: Pick<TrainEvent, "trainNo" | "destination">,
   directionByDestination: ReadonlyMap<string, SubwayDirection>,
@@ -48,7 +48,9 @@ export function toDirection(
 export function toDirectionByDestination(
   trains: readonly Pick<TimetableTrain, "direction" | "destination">[],
 ): Map<string, SubwayDirection> {
-  return new Map(trains.map((train) => [train.destination, train.direction]));
+  const toDestinations = (direction: SubwayDirection): Set<string> => new Set(trains.filter((t) => t.direction === direction).map((t) => t.destination));
+  const [upDestinations, downDestinations] = [toDestinations("up"), toDestinations("down")];
+  return new Map(trains.filter((t) => !(upDestinations.has(t.destination) && downDestinations.has(t.destination))).map((t) => [t.destination, t.direction]));
 }
 
 export function toStopPlatformIdsByTrainNo(trains: readonly Pick<ScheduledTrain, "trainNo" | "stops">[]): Map<string, string[]> {

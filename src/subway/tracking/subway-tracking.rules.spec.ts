@@ -3,7 +3,8 @@
  * train's direction, the newest of one response's duplicate rows, regressions, older rows and rows over
  * 5 minutes ahead dropped, the earlier time winning for the same progress (so a train-map row keeps the
  * crawl that first showed it), the 15-minute hold for a missing train, and direction from destination and
- * train number, never from the upstream's `updnLine`. An event at a station a train's timetable row does not
+ * train number, never from the upstream's `updnLine`; a destination counts only when every train of the table
+ * runs it in one direction, so line 2's Seongsu, named both ways, leaves the number to decide. An event at a station a train's timetable row does not
  * call at (an express passing it) counts as the train's departure from its last stop before that station, at
  * the latest at the event's time, so it never replaces an observed stop event; before the train's first stop,
  * and on its run into its stop at the served station, the event stays its progress, at the station it passes;
@@ -116,6 +117,62 @@ describe("toDirection", () => {
   ])("falls back to the number's parity for an unknown destination: %s runs %s", (trainNo, direction) => {
     // Act & Assert
     expect(toDirection({ trainNo, destination: "미상" }, DIRECTION_BY_DESTINATION)).toBe(direction);
+  });
+});
+
+describe("toDirectionByDestination", () => {
+  it("keeps each destination every train of the table runs in one direction", () => {
+    // Act
+    const directionByDestination = toDirectionByDestination([
+      { direction: "up", destination: "내선순환" },
+      { direction: "down", destination: "외선순환" },
+      { direction: "up", destination: "내선순환" },
+      { direction: "up", destination: "신도림" },
+    ]);
+
+    // Assert
+    expect(directionByDestination).toEqual(new Map([["내선순환", "up"], ["외선순환", "down"], ["신도림", "up"]]));
+  });
+
+  it.each([
+    ["up, then down", ["up", "down"]],
+    ["down, then up", ["down", "up"]],
+    ["up twice, then down", ["up", "up", "down"]],
+    ["down, then up twice", ["down", "up", "up"]],
+  ] as const)("leaves out a destination the table runs %s", (_label, directions) => {
+    // Act
+    const directionByDestination = toDirectionByDestination([...directions.map((direction) => ({ direction, destination: "성수" })), { direction: "up", destination: "내선순환" }]);
+
+    // Assert
+    expect(directionByDestination).toEqual(new Map([["내선순환", "up"]]));
+  });
+
+  it.each([
+    ["2364", "up"],
+    ["2363", "down"],
+  ])("2호선 circle destination: lists %s, reported for 성수, which the table names both ways, under %s by its number", (trainNo, direction) => {
+    // Arrange
+    const directionByDestination = toDirectionByDestination([
+      { direction: "up", destination: "성수" },
+      { direction: "down", destination: "성수" },
+      { direction: "up", destination: "내선순환" },
+      { direction: "down", destination: "외선순환" },
+    ]);
+
+    // Act & Assert
+    expect(toDirection({ trainNo, destination: "성수" }, directionByDestination)).toBe(direction);
+  });
+
+  it("Mislabeled direction: lists 2363, whose odd number says down, under up for its one-direction destination 내선순환", () => {
+    // Arrange
+    const directionByDestination = toDirectionByDestination([
+      { direction: "up", destination: "성수" },
+      { direction: "down", destination: "성수" },
+      { direction: "up", destination: "내선순환" },
+    ]);
+
+    // Act & Assert
+    expect(toDirection({ trainNo: "2363", destination: "내선순환" }, directionByDestination)).toBe("up");
   });
 });
 
