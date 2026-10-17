@@ -6,7 +6,8 @@ When to rerun:
 
     - Korail publishes a new 1호선 timetable (a 사업계획변경 신고, usually with a new semester or a
       timetable change notice on korail.com). Update KORAIL_WEEKDAY_URL, KORAIL_HOLIDAY_URL and
-      KORAIL_REVISION below to the new files, then rerun.
+      KORAIL_REVISION below to the new files, then rerun. The same for a new 수인분당선 file
+      (KORAIL_K1_URL, KORAIL_K1_REVISION; Korail publishes two or three a year).
     - Seoul Metro changes the 2/3/4/8호선 timetable (a 열차운행시각 조정 notice). Rerun; the Seoul API
       already serves the new table. `--line 2` (repeatable) rebuilds one line only.
     - A served station or one of its upstream or watched stations changes (the line's entry in LINES:
@@ -18,11 +19,12 @@ How to rerun (from the repository root):
 
 The Seoul part reads SEOUL_OPENAPI_GENERAL_KEY from the environment, and no other variable; Doppler
 backend/dev_personal holds it, a config no service renders. `--only korail` needs no key. `--korail-weekday FILE` and `--korail-holiday FILE` read local
-copies of the two Korail URLs instead of downloading them. Review the diff, then commit the JSON.
+copies of the two 1호선 Korail URLs instead of downloading them, `--korail-k1 FILE` of the 수인분당 one. Review the diff, then commit the JSON.
 
 What it writes, per operator line and day type:
 
     korail-1-weekday.json, korail-1-holiday.json                      1호선, Korail xlsx
+    korail-k1-weekday.json, korail-k1-holiday.json                    수인분당선, Korail xlsx (one file)
     seoul-{2,3,4,8}-{weekday,saturday,holiday}.json                    2/3/4/8호선, SearchSTNTimeTableByIDService
 
 Each file lists the trains that stop at one of its line's served platforms (LINES) with their stops among
@@ -45,6 +47,9 @@ Rules taken from the data (checked on the 2026-08-28 Korail files and the 2026-1
       fails the run. The tracker reads a train's direction off its destination.
     - Korail express: train numbers 1000-1999 (the K19xx 급행; the 서울급행 sheet holds only those).
       A train with a pass outside that range fails the run.
+    - 수인분당선: the sheets 평일상행/평일하행/휴일상행/휴일하행 of one file, Saturday counting as 휴일. The
+      xlsx writes 인천 as 신인천 and 수원 as 신수원. Its express is K63xx, and an express that passes a
+      covered station fails the run: on 2026-08-22 every 분당 express stops at every station 죽전-왕십리.
     - Seoul express: EXPRESS_YN "G" is 일반, "D" is 급행; any other value fails the run. Every
       2026-10-16 row was "G". ARRIVETIME or LEFTTIME "00:00:00" means none (the origin or terminus);
       the one mid-route hole of 2026-10-17 is filled from SEOUL_ARRIVAL_FIXES.
@@ -78,6 +83,9 @@ KORAIL_REVISION = "2026-08-28"
 KORAIL_WEEKDAY_URL = "https://www.korail.com/file/cubedata/COMMON/jfile/202608/28/202608281a045c6bb40560.xlsx"
 KORAIL_HOLIDAY_URL = "https://www.korail.com/file/cubedata/COMMON/jfile/202608/28/202608281a045c713b2610.xlsx"
 KORAIL_SHEET_PREFIXES = ("경부", "서동탄", "서울급행")
+# 수인분당선 전동열차 시각표(2026.8.22.부터): one file holds both day types, Saturday counting as 휴일.
+KORAIL_K1_REVISION = "2026-08-22"
+KORAIL_K1_URL = "https://www.korail.com/file/cubedata/COMMON/jfile/202608/21/202608211a02345f4b6660.xlsx"
 
 SEOUL_API = "SearchSTNTimeTableByIDService"
 SEOUL_URL = "http://openapi.seoul.go.kr:8088/{key}/json/" + SEOUL_API + "/{start}/{end}/{code}/{week}/{inout}/"
@@ -206,7 +214,43 @@ LINE8 = {
     "up_order": "reversed",
     "served": ("S1-8-2815",),
 }
-LINES = (LINE1, LINE2, LINE3, LINE4, LINE8)
+# KRIC code (2026-05-11 list) and the xlsx short name, in line order: the 도곡 window (K214-K220) and the 정자 window
+# (K227-K233). Up runs toward 왕십리/청량리, against this order.
+LINEK1 = {
+    "line": "K1",
+    "operator": "KR",
+    "file": "korail-k1",
+    "source": "korail",
+    "stations": (
+        ("KR-K1-K214", "선정릉"),
+        ("KR-K1-K215", "선릉"),
+        ("KR-K1-K216", "한티"),
+        ("KR-K1-K217", "도곡"),
+        ("KR-K1-K218", "구룡역"),
+        ("KR-K1-K219", "개포동"),
+        ("KR-K1-K220", "대모산"),
+        ("KR-K1-K227", "이매"),
+        ("KR-K1-K228", "서현"),
+        ("KR-K1-K229", "수내"),
+        ("KR-K1-K230", "정자"),
+        ("KR-K1-K231", "미금"),
+        ("KR-K1-K232", "오리"),
+        ("KR-K1-K233", "죽전"),
+    ),
+    "up_order": "reversed",
+    "served": ("KR-K1-K217", "KR-K1-K230"),
+    # Every 종착역 of the 2026-08-22 file, as the Seoul API writes it.
+    "termini": frozenset(("왕십리", "청량리", "죽전", "고색", "오이도", "인천", "수원")),
+    "abbreviations": {"신인천": "인천", "신수원": "수원"},
+    # The 분당 express K6300-K6313 stops at every station 죽전-왕십리; the 수인 express K6350-K6358 runs 오이도-인천.
+    "is_express": lambda train_no: train_no.startswith("63"),
+    "express_rule": "numbered 63xx",
+    "express_stops_at_covered": True,
+    "revision": KORAIL_K1_REVISION,
+    "urls": {"weekday": KORAIL_K1_URL, "holiday": KORAIL_K1_URL},
+    "sheets": {"weekday": ("평일상행", "평일하행"), "holiday": ("휴일상행", "휴일하행")},
+}
+LINES = (LINE1, LINEK1, LINE2, LINE3, LINE4, LINE8)
 SEOUL_LINES = (LINE2, LINE3, LINE4, LINE8)
 
 def station_codes(line):
@@ -469,6 +513,9 @@ def korail_train(rows, sheet, column, station_rows, direction, line=LINE1):
     express = line["is_express"](train_no)
     if passes and not express:
         raise ConvertError("%s: train %s passes a station but is not %s" % (where, raw_no.strip(), line["express_rule"]))
+    covered_passes = [code for code in passes if code is not None]
+    if covered_passes and line.get("express_stops_at_covered"):
+        raise ConvertError("%s: express %s passes %s, a covered station every express stops at" % (where, train_no, ", ".join(covered_passes)))
     if not any(stop["station"] in line["served"] for stop in stops):
         return None
     destination = rows.get(3, {}).get(column)
@@ -721,6 +768,12 @@ def build_korail(out_dir, weekday_file, holiday_file):
         build_korail_line(out_dir, LINE1, day_type, read_local_or_download(local, LINE1["urls"][day_type]))
 
 
+def build_korail_k1(out_dir, local):
+    data = read_local_or_download(local, KORAIL_K1_URL)
+    for day_type in ("weekday", "holiday"):
+        build_korail_line(out_dir, LINEK1, day_type, data)
+
+
 def build_seoul(out_dir, today, lines=SEOUL_LINES):
     key = os.environ.get("SEOUL_OPENAPI_GENERAL_KEY")
     if not key:
@@ -753,6 +806,7 @@ def main(argv=None):
     parser.add_argument("--out", default=os.path.join(root, "src", "subway", "timetable"), help="output directory")
     parser.add_argument("--korail-weekday", help="a local copy of KORAIL_WEEKDAY_URL")
     parser.add_argument("--korail-holiday", help="a local copy of KORAIL_HOLIDAY_URL")
+    parser.add_argument("--korail-k1", help="a local copy of KORAIL_K1_URL")
     args = parser.parse_args(argv)
     os.makedirs(args.out, exist_ok=True)
     today = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).date().isoformat()
@@ -760,6 +814,8 @@ def main(argv=None):
     try:
         if args.only in (None, "korail") and "1" in wanted:
             build_korail(args.out, args.korail_weekday, args.korail_holiday)
+        if args.only in (None, "korail") and "K1" in wanted:
+            build_korail_k1(args.out, args.korail_k1)
         if args.only in (None, "seoul"):
             build_seoul(args.out, today, [line for line in SEOUL_LINES if line["line"] in wanted])
     except ConvertError as error:

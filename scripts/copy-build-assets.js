@@ -48,6 +48,8 @@ const assets = [
   // scripts/subway-timetable/convert.py writes them.
   ["src/subway/timetable/korail-1-weekday.json", "dist/src/subway/timetable/korail-1-weekday.json"],
   ["src/subway/timetable/korail-1-holiday.json", "dist/src/subway/timetable/korail-1-holiday.json"],
+  ["src/subway/timetable/korail-k1-weekday.json", "dist/src/subway/timetable/korail-k1-weekday.json"],
+  ["src/subway/timetable/korail-k1-holiday.json", "dist/src/subway/timetable/korail-k1-holiday.json"],
   ["src/subway/timetable/seoul-4-weekday.json", "dist/src/subway/timetable/seoul-4-weekday.json"],
   ["src/subway/timetable/seoul-4-saturday.json", "dist/src/subway/timetable/seoul-4-saturday.json"],
   ["src/subway/timetable/seoul-4-holiday.json", "dist/src/subway/timetable/seoul-4-holiday.json"],

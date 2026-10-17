@@ -167,4 +167,18 @@ describe("scripts/subway-timetable/convert.py", () => {
     expect(first.trainNo).toBe(trainNo);
     expect(first.stops.find((s) => s.station === platformId)).toEqual({ station: platformId, arr, dep });
   });
+
+  it("writes the 분당 express K6300 at 정자 at 07:07:30/07:08:00 and at 도곡 at 07:39:30/07:40:00 on Korail weekdays", () => {
+    // Arrange
+    const weekday = timetable("korail-k1-weekday.json");
+
+    // Act
+    const train = weekday.trains.find((t) => t.trainNo === "6300");
+
+    // Assert
+    expect([weekday.operator, weekday.line, weekday.dayType]).toEqual(["KR", "K1", "weekday"]);
+    expect(train).toMatchObject({ direction: "up", destination: "왕십리", express: true });
+    expect(stopOf(weekday, "6300", "KR-K1-K230")).toEqual({ station: "KR-K1-K230", arr: 7 * 3600 + 7 * 60 + 30, dep: 7 * 3600 + 8 * 60 });
+    expect(stopOf(weekday, "6300", "KR-K1-K217")).toEqual({ station: "KR-K1-K217", arr: 7 * 3600 + 39 * 60 + 30, dep: 7 * 3600 + 40 * 60 });
+  });
 });
