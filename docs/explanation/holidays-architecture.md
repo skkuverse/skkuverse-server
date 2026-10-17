@@ -52,7 +52,7 @@ flowchart LR
 - `HolidaysRepository.listYears` reads the stored years through `createCachedLoader` for `STORED_YEARS_TTL_MS`, and keeps the last good years for `STORED_YEARS_STALE_WINDOW_MS` when a read fails. Every sync run clears the cache of its own process.
 - A stored year is answered from the calendar alone; the rules fallback answers only a year with no stored year, and logs `holidays.lookup.rules_fallback` once an hour per year.
 - A date outside the years `lookupKoreanPublicHoliday` takes throws a `RangeError` (`toHolidayYear`) before any answer.
-- The service key travels in the query string, so a failure is a `HolidaysSyncCalendarError` that carries the source, the status and a code, never the URL, the key or the axios error ([logging](../reference/logging.md)).
+- The service key travels in the query string, so a failure is a `HolidaysSyncCalendarError` that carries the source, the status and a code, never the URL, the key or the axios error ([logging](../reference/logging.md)). When the data.go.kr gateway refuses the request, the code is its `errMsg` and the message also names its `returnReasonCode`: `2026: HTTP 400 INVALID_REQUEST_PARAMETER_ERROR (10)`.
 - Other features import only `HolidaysModule` and `HolidaysService` ([ADR 0010, D1](../decisions/0010-server-architecture.md)).
 
 ## Open questions

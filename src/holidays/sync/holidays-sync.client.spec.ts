@@ -1,5 +1,5 @@
 /**
- * HolidaysSyncClient against getRestDeInfo as it answered on 2026-10-16 (captured
+ * HolidaysSyncClient against getRestDeInfo as it answered on 2026-10-16 and 17 (captured
  * fixtures in __tests__/nest/holidays/fixtures/, see each file's `_about`).
  * What it guards: one request per year with the service key as a query
  * parameter; the translation of each `isHoliday` `Y` row into a dated,
@@ -34,6 +34,7 @@ const YEAR_2026 = fixture("getrestdeinfo-2026.json");
 const ONE_ROW = fixture("getrestdeinfo-2026-07.json");
 const NO_ROWS = fixture("getrestdeinfo-2026-04.json");
 const UNREGISTERED_KEY = fixture("getrestdeinfo-unregistered-key.json");
+const REFUSED_HEADER = fixture("getrestdeinfo-refused-header.json");
 
 const client = new HolidaysSyncClient();
 const respond = (data: unknown) => mockedGet.mockResolvedValue({ status: 200, data });
@@ -183,6 +184,31 @@ describe("HolidaysSyncClient.fetchYear on a failure", () => {
     // Assert
     expect(err).toMatchObject({ source: "getRestDeInfo", status: 403, code: "SERVICE_KEY_IS_NOT_REGISTERED_ERROR" });
     leaksNothing(err);
+  });
+
+  it("a header the gateway refuses, answered with 400, names its errMsg and reason code in the message", async () => {
+    // Arrange
+    mockedGet.mockRejectedValue(axiosError({ status: 400, code: "ERR_BAD_REQUEST", data: REFUSED_HEADER }));
+
+    // Act
+    const err = await failureOf(2026);
+
+    // Assert
+    expect(err).toBeInstanceOf(HolidaysSyncCalendarError);
+    expect(err).toMatchObject({ source: "getRestDeInfo", status: 400, code: "INVALID_REQUEST_PARAMETER_ERROR" });
+    expect(err.message).toBe("getRestDeInfo: 2026: HTTP 400 INVALID_REQUEST_PARAMETER_ERROR (10)");
+    leaksNothing(err);
+  });
+
+  it("a status without the gateway's envelope keeps only the status in the message", async () => {
+    // Arrange
+    mockedGet.mockRejectedValue(axiosError({ status: 502, code: "ERR_BAD_RESPONSE", data: "<html>bad gateway</html>" }));
+
+    // Act
+    const err = await failureOf(2026);
+
+    // Assert
+    expect(err.message).toBe("getRestDeInfo: 2026: HTTP 502");
   });
 
   it("the gateway's error envelope answered with 200 rejects with its errMsg", async () => {
