@@ -83,3 +83,37 @@ describe("BusEtaService.listFitting", () => {
     expect(read).toHaveBeenCalledWith(["campus-inja"], ["2026-10-12"]);
   });
 });
+
+describe("BusEtaService.listFixedFitting", () => {
+  it("reads the fixed values and drops one whose stop count no longer fits its sequence", async () => {
+    // Arrange
+    const now = new Date("2026-10-19T19:00:00.000Z");
+    const fixed = (date: string, offsetsSec: number[]) =>
+      ({
+        _id: `campus-inja|regular|${date}|13:30|live`,
+        kind: "live",
+        serviceId: "campus-inja",
+        routeType: "regular",
+        date,
+        time: "13:30",
+        departAt: new Date(`${date}T04:30:00.000Z`),
+        offsetsSec,
+        source: "naver",
+        fetchedAt: new Date(`${date}T04:30:30.000Z`),
+        frozen: true,
+        frozenAt: new Date(`${date}T04:30:30.000Z`),
+        expiresAt: new Date(new Date(`${date}T04:30:00.000Z`).getTime() + 8 * 24 * 3600_000),
+      }) as ShuttleEtaDoc;
+    const fits = fixed("2026-10-13", [0, 4320]);
+    // fixed while the sequence had three stops
+    const stale = fixed("2026-10-12", [0, 4500, 4620]);
+    const repository = new FakeBusEtaRepository();
+    for (const d of [fits, stale]) repository.docs.set(d._id, d);
+
+    // Act
+    const read = await build({}, repository).listFixedFitting(["campus-inja"], ["2026-10-13", "2026-10-12"], now);
+
+    // Assert
+    expect(read).toEqual([{ _id: fits._id, serviceId: "campus-inja", routeType: "regular", date: "2026-10-13", time: "13:30", offsetsSec: [0, 4320] }]);
+  });
+});

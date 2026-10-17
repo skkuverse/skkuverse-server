@@ -1,5 +1,5 @@
 /**
- * BusEtaBaselineClient over a mocked axios: the forecast request it sends (an
+ * BusEtaForecastClient over a mocked axios: the forecast request it sends (an
  * arrival forecast from the KST departure, the app key in a header only) and
  * its one retry.
  */
@@ -7,8 +7,8 @@ import fs from "fs";
 import path from "path";
 import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { LatLng } from "../../../shared/lat-lng.types";
-import { BusEtaBaselineClient } from "./bus-eta-baseline.client";
-import type { TmapPredictionResponse } from "./bus-eta-baseline.types";
+import { BusEtaForecastClient } from "./bus-eta-forecast.client";
+import type { TmapPredictionResponse } from "./bus-eta-forecast.types";
 import axios from "axios";
 
 jest.mock("axios", () => {
@@ -30,7 +30,7 @@ const OFFSETS = [0, 4500, 4620];
 
 const fixture = (): TmapPredictionResponse => JSON.parse(JSON.stringify(FIXTURE));
 
-describe("BusEtaBaselineClient.fetchOffsets", () => {
+describe("BusEtaForecastClient.fetchOffsets", () => {
   const KEY = "app-key-secret-789";
   const DEPART = new Date("2026-10-12T01:00:00Z"); // 10:00 KST
   beforeEach(() => mockedPost.mockReset());
@@ -46,7 +46,7 @@ describe("BusEtaBaselineClient.fetchOffsets", () => {
     mockedPost.mockResolvedValue({ data: fixture() });
 
     // Act & Assert
-    await expect(new BusEtaBaselineClient().fetchOffsets(STOPS, DEPART, { appKey: KEY })).resolves.toEqual(OFFSETS);
+    await expect(new BusEtaForecastClient().fetchOffsets(STOPS, DEPART, { appKey: KEY })).resolves.toEqual(OFFSETS);
     const [url, body, opts] = mockedPost.mock.calls[0]!;
     expect(url).toBe("https://apis.openapi.sk.com/tmap/routes/prediction");
     expect(body).toEqual({
@@ -75,7 +75,7 @@ describe("BusEtaBaselineClient.fetchOffsets", () => {
     mockedPost.mockRejectedValueOnce(axiosError(fields)).mockResolvedValueOnce({ data: fixture() });
 
     // Act & Assert
-    await expect(new BusEtaBaselineClient().fetchOffsets(STOPS, DEPART, { appKey: KEY, retryDelayMs: 0 })).resolves.toEqual(OFFSETS);
+    await expect(new BusEtaForecastClient().fetchOffsets(STOPS, DEPART, { appKey: KEY, retryDelayMs: 0 })).resolves.toEqual(OFFSETS);
     expect(mockedPost).toHaveBeenCalledTimes(2);
   });
 
@@ -84,7 +84,7 @@ describe("BusEtaBaselineClient.fetchOffsets", () => {
     mockedPost.mockRejectedValue(axiosError({ status: 403 }));
 
     // Act
-    const err = (await new BusEtaBaselineClient().fetchOffsets(STOPS, DEPART, { appKey: KEY, retryDelayMs: 0 }).catch((e: unknown) => e)) as BusEtaDirectionsError;
+    const err = (await new BusEtaForecastClient().fetchOffsets(STOPS, DEPART, { appKey: KEY, retryDelayMs: 0 }).catch((e: unknown) => e)) as BusEtaDirectionsError;
 
     // Assert
     expect(mockedPost).toHaveBeenCalledTimes(1);
@@ -98,7 +98,7 @@ describe("BusEtaBaselineClient.fetchOffsets", () => {
     mockedPost.mockRejectedValue(axiosError({ status: 429 }));
 
     // Act & Assert
-    await expect(new BusEtaBaselineClient().fetchOffsets(STOPS, DEPART, { appKey: KEY, retryDelayMs: 0 })).rejects.toMatchObject({ kind: "http", status: 429 });
+    await expect(new BusEtaForecastClient().fetchOffsets(STOPS, DEPART, { appKey: KEY, retryDelayMs: 0 })).rejects.toMatchObject({ kind: "http", status: 429 });
     expect(mockedPost).toHaveBeenCalledTimes(1);
   });
 
@@ -107,7 +107,7 @@ describe("BusEtaBaselineClient.fetchOffsets", () => {
     mockedPost.mockRejectedValue(axiosError({ status: 400 }));
 
     // Act & Assert
-    await expect(new BusEtaBaselineClient().fetchOffsets([STOPS[0]!, STOPS[1]!], DEPART, { appKey: KEY })).rejects.toMatchObject({ kind: "http" });
+    await expect(new BusEtaForecastClient().fetchOffsets([STOPS[0]!, STOPS[1]!], DEPART, { appKey: KEY })).rejects.toMatchObject({ kind: "http" });
     expect(mockedPost.mock.calls[0]![1].routesInfo).not.toHaveProperty("wayPoints");
     expect(mockedPost).toHaveBeenCalledTimes(1);
   });

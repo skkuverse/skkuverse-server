@@ -483,6 +483,20 @@ describe("GET …/smart with arrival estimates", () => {
     expectWire(smartSchedule, res.body.data);
   });
 
+  it("A prediction that reuses a fixed value is served as predicted, dated by its refresh, without the value it came from", async () => {
+    // Arrange
+    const refreshedAt = new Date("2026-10-11T19:00:00.000Z");
+    store({ ...estimate("predicted"), source: "naver", fetchedAt: refreshedAt, derivedFrom: "campus-inja|regular|2026-10-05|10:00|live" });
+
+    // Act
+    const res = await request(server).get("/bus/schedule/data/campus-inja/smart");
+
+    // Assert
+    expect(res.body.data.days[0].schedule[1]).toEqual(expect.objectContaining({ stopTimes: ["10:00", "10:51"], eta: { source: "predicted", updatedAt: "2026-10-11T19:00:00.000Z" } }));
+    expect(JSON.stringify(res.body)).not.toMatch(/derivedFrom|2026-10-05/);
+    expectWire(smartSchedule, res.body.data);
+  });
+
   it("ignores an estimate whose offsets no longer fit the sequence", async () => {
     // Fetched while the sequence had three stops.
     // Arrange

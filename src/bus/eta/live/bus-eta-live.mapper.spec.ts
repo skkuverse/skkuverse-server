@@ -51,3 +51,17 @@ describe("liveDoc travel", () => {
     expect(live).not.toHaveProperty("travel");
   });
 });
+
+describe("liveDoc life (design D7)", () => {
+  it("keeps a fixed value at least 8 days after its run: predictions reuse the fixed value of the same weekday 7 days earlier, with a day's margin for the refresh", () => {
+    // Arrange
+    const reuseAfterMs = 7 * 24 * 60 * 60_000;
+    const marginMs = 24 * 60 * 60_000;
+
+    // Act
+    const fixed = liveDoc(RUN, { offsetsSec: [0, 3000, 3200], fetchedAt: FETCHED, frozenAt: FETCHED });
+
+    // Assert
+    expect(fixed.expiresAt.getTime() - RUN.departAt.getTime()).toBeGreaterThanOrEqual(reuseAfterMs + marginMs);
+  });
+});

@@ -10,7 +10,7 @@ interface LiveFetch {
   travel?: EtaTravel;
 }
 
-// WHY: a fixed value is served for 7 days after its run.
+// WHY: a fixed value is served for 7 days after its run, and a week later a bus-lane run's prediction reuses it.
 const LIVE_LIFE_MS = 8 * 24 * 60 * 60_000;
 
 export function liveDoc(run: EtaRun, { offsetsSec, fetchedAt, frozenAt, travel }: LiveFetch): ShuttleEtaDoc {
