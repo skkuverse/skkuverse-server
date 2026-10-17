@@ -34,8 +34,8 @@ import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import type { SubwaySeoulTrainmapClient } from "../seoul-trainmap/subway-seoul-trainmap.client";
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
 import { SUBWAY_REGISTRY } from "../subway.config";
+import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
-import { SERVICE_WINDOW_CLOSES_SEC, SERVICE_WINDOW_OPENS_SEC } from "../timetable/subway-timetable.constants";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
 import type { TrackedTick } from "../tracking/subway-tracking.types";
@@ -55,7 +55,8 @@ const LINES_1_AND_4_PAGE = `${page("trainmap-line1.html")}${page("trainmap-line4
 const BROKEN_LINE_4 = '<div class="4line_metro"><div class="T0421_Q_9_v2 tip" title="4050열차  동대문 도착 진접행"></div></div>';
 // WHY: one position call per registered line and one arrival call per registered station, however many the registry holds.
 const API_CALLS_PER_TICK = SUBWAY_REGISTRY.lines.length + SUBWAY_REGISTRY.stations.length;
-const WEEKDAY_WINDOW_SEC = SERVICE_WINDOW_CLOSES_SEC.weekday - SERVICE_WINDOW_OPENS_SEC;
+// WHY: 05:00 to 01:10 KST, the weekday window the service-window tests below pin; a sibling's constants are not importable.
+const WEEKDAY_WINDOW_SEC = (20 * 60 + 10) * 60;
 // WHY: the intervals the registration test pins (10 s and 15 s); a crawl is one request (line=0).
 const WEEKDAY_API_CALLS = API_CALLS_PER_TICK * (WEEKDAY_WINDOW_SEC / 10);
 const WEEKDAY_CRAWLS = WEEKDAY_WINDOW_SEC / 15;
@@ -75,7 +76,7 @@ function setup(startIso: string) {
     clock,
   );
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
-  const tracking = new SubwayTrackingService(asReal<SubwayRepository>(new FakeSubwayRepository()), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
+  const tracking = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(new FakeSubwayRepository())), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   new SubwayMatchingService(tracking, clock).onModuleInit();
   const registerPoller = jest.fn();
   new SubwaySeoulPoller({ registerPoller } as unknown as PollerRegistryService, seoul, tracking).onModuleInit();
