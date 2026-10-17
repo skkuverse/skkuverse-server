@@ -64,6 +64,7 @@ import { SubwayEstimateModule } from "./subway/estimate/subway-estimate.module";
 import { SubwaySeoulApiModule } from "./subway/seoul-api/subway-seoul-api.module";
 import { SubwaySeoulTrainmapModule } from "./subway/seoul-trainmap/subway-seoul-trainmap.module";
 import { SubwayTrackingModule } from "./subway/tracking/subway-tracking.module";
+import { SubwayMatchingModule } from "./subway/matching/subway-matching.module";
 import { SubwaySeoulModule } from "./subway/seoul/subway-seoul.module";
 import { SubwayArrivalsModule } from "./subway/arrivals/subway-arrivals.module";
 import { SubwayHistoryModule } from "./subway/history/subway-history.module";
@@ -140,6 +141,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     SubwaySeoulApiModule,
     SubwaySeoulTrainmapModule,
     SubwayTrackingModule,
+    SubwayMatchingModule,
     SubwaySeoulModule,
     SubwayArrivalsModule,
     SubwayHistoryModule,
