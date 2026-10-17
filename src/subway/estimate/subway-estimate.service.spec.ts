@@ -1,7 +1,7 @@
 /**
  * The estimate door over ticks: a published countdown counts from its first publication, so an arrival read
  * from it holds still while the upstream republishes it, and once it is spent, or the train is seen at the
- * station, the train's estimate is served.
+ * station, the train's estimate is served. A document from the timetable alone leaves that memory alone.
  */
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import type { CountdownRow } from "../subway.types";
@@ -59,5 +59,23 @@ describe("SubwayEstimateService.estimateArrivals", () => {
     // Assert
     // WHY: 4540 arrived at 10:57:17; the approach is taken to lead an arrival by 30 s.
     expect(served).toEqual([[[at("10:56:55"), "live"]], [[at("10:56:55"), "live"]], [[at("10:57:36"), "estimated"]]]);
+  });
+});
+
+describe("SubwayEstimateService.listScheduledArrivals", () => {
+  it("serves 4540 at its scheduled 10:53:30 and leaves the countdown memory as the ticks left it", () => {
+    // Arrange
+    const estimate = new SubwayEstimateService(new SubwayCountdownService());
+    const tick = { stationId: HYEHWA, direction: "up", trains: [T4540] } as const;
+    const histories = historyAt({ stationId: "S1-4-421", state: "departed", at: at("10:55:49") });
+    estimate.estimateArrivals({ ...tick, histories, countdownRows: [row("10:54:25")], now: at("10:55:12") });
+
+    // Act
+    const scheduled = estimate.listScheduledArrivals({ ...tick, now: at("10:53:00") });
+    const next = estimate.estimateArrivals({ ...tick, histories, countdownRows: [row("10:55:35")], now: at("10:56:12") });
+
+    // Assert
+    expect(scheduled.map((a) => [a.arrivalAt, a.source])).toEqual([[at("10:53:30"), "scheduled"]]);
+    expect(next.arrivals.map((a) => [a.arrivalAt, a.source])).toEqual([[at("10:56:55"), "live"]]);
   });
 });

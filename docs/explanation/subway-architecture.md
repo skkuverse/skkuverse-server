@@ -152,7 +152,7 @@ Adding a provider touches:
 - A source's countdown rows count until its next tick replaces them, and none after `MAX_COUNTDOWN_SOURCE_AGE_MS` without one.
 - A countdown counts from its first publication until its instant passes, and not when it implies a delay outside `MIN_DELAY_SEC` to `MAX_DELAY_SEC` against the train's scheduled arrival, as for a train not running yet; a countdown a served train does not count is logged with its reason.
 - A train last seen approaching or arrived at the served station is served at its observed arrival, ignores its countdown, and is gone `MAX_STANDING_PAST_DEPARTURE_SEC` past its estimated departure, its scheduled departure plus its delay at arrival.
-- The countdown memory lives in the poller process; a restart counts each countdown from its next row.
+- The countdown memory lives in the poller process and only the tracker's ticks advance it, never a timetable-only document; a restart counts each countdown from its next row.
 - Every served train is a scheduled one: a train only in countdown rows or in a history, absent from the day's timetable, is not served.
 - Only `SubwayModule` binds the rate limiter for `subway`.
 - No upstream error carries the request URL, its config or the original error: the API key sits in the path.
