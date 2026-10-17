@@ -21,7 +21,7 @@ Building copies SKKU's campus map into MongoDB on a schedule and serves list, de
 | SKKU campusMap.do, mode buildInfo (per building with a `buildNo`) | `skku` | Rooms per floor and photo attachments | `BuildingSyncClient.fetchBuildInfo`, then `spaces`, and `attachments` on the building |
 | SKKU campusMap.do, mode spaceList (per campus) | `skku` | Rooms, with `conspaceCd` | `BuildingSyncClient.fetchSpaceList`, then `spaces` |
 | SKKU campusMap.do, mode sisulList (per campus) | `skku` | The facility registry: cafeterias, cafes, ATMs and more, each with a `conspaceCd` and the `buildNo` it sits in | `BuildingCafeteriaClient.fetchCafeterias`, then `facilities` (cafeterias only) |
-| MongoDB | `mongo` | Storage, the GeoJSON indexes, and the aggregation the search runs | The five repositories, through `mongoCollection` |
+| MongoDB | `mongo` | Storage, the GeoJSON indexes, and the aggregation the search runs | The six repositories, through `mongoCollection` |
 | `scripts/seed-connections.js` | — | Hand-written walkways between two floors | `connections`, read by `BuildingCatalogRepository` |
 | `scripts/import-campus-shapes.js` | — | Authored footprints, boundaries and paths | `campus_shapes`, parsed by `campusShapeDoc` in `BuildingRepository` |
 
@@ -52,6 +52,7 @@ The brands live in `src/building/building.types.ts`; each is minted only by its 
 | ranked result | Rows plus the campus counts the same predicate produced (`RankedSearchResult`) | `toRankedResult` | `searchData` |
 | `keyword` | The search text: `q` on the wire, `keyword` from the service down and in `meta` | `buildingSearchQuery` | query (the `.query` role), `term` |
 | campus shape (`CampusShapeDoc`) | A `campus_shapes` document: an authored footprint, boundary or path that `map` draws | `campusShapeDoc` | `geometryDoc` |
+| cafeteria list (`BuildingCafeteriaListService`) | Every cafeteria of a campus, in `conspaceCd` order, with the fields a listing serves (`ListedCafeteria`): the door `meals` lists cafeterias through (`cafeteria-list/`) | `BuildingCafeteriaListRepository.listCafeterias` | — |
 | catalog | Building's list-and-detail flow (`catalog/`): the list is the catalog, `:skkuId` one entry of it | `BuildingCatalogModule` | list, detail, core, read |
 
 ## Structure
@@ -70,6 +71,7 @@ flowchart LR
   bld & spc & con & fac -->|BuildingCatalogRepository| detail["GET /building/:skkuId"]
   bld & spc -->|BuildingSearchRepository, ranked| search["GET /building/search"]
   bld & cs -->|BuildingService| map["map: GET /map/overlays/campus"]
+  fac -->|BuildingCafeteriaListService, cached| meals["meals: GET /meals/cafeterias"]
   detail -->|building, floors, connections, cafeterias| sheet["app: BuildingDetailSheet"]
   search -->|buildings, spaces, counts| sscreen["app: SearchScreen"]
   map -->|pins, footprints| cscreen["app: CampusScreen"]
@@ -107,10 +109,11 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 - Data is at most one sync interval (`config.building.syncIntervalMs`) plus `BUILDING_CACHE_TTL_MS` old, and every route sends `BUILDING_CACHE_CONTROL`. Both syncs also run once when the poller boots. Development runs neither (`BUILDING_SYNC=off`).
 - An api replica serves a synced list at most `BUILDING_CACHE_TTL_MS` late: the sync's `clearCache` clears only the poller process's cache, so the TTL, not an invalidation, is the stated freshness bound ([refactor design, D15](../../openspec/changes/archive/2026-10-15-refactor-server-architecture/design.md)).
 - The detail lists the cafeterias whose `buildNo` is the building's, in `conspaceCd` order; a building without a `buildNo` reads none and serves `[]`.
+- The cafeteria list reads every cafeteria in one cached read (`BUILDING_CACHE_TTL_MS`, no stale window) and filters it by campus, so a failed read reaches `meals`. Nothing clears it: the TTL is its freshness bound.
 - `GET /building/:skkuId` answers `400` `INVALID_ID` for an id `isSkkuId` rejects, before any read, and `404` `NOT_FOUND` for a valid id with no building.
 - A `campus_shapes` document that fails `campusShapeDoc` is left out and logged (`building.campus_shapes.invalid`), and a failed reload serves the last good shapes for `CAMPUS_SHAPES_STALE_WINDOW_MS`. The buildings cache has no stale window, so a failed read reaches `map`.
 - The search ranks by the tier tables, in one `$facet` per collection so the counts describe the same predicate as the rows ([ADR 0006](../decisions/0006-building-search-relevance-ranking.md)).
-- `BuildingService` is the door other modules use; building's own flows inject the repositories ([ADR 0010, D1](../decisions/0010-server-architecture.md)).
+- `BuildingService` and `BuildingCafeteriaListService` are the doors other modules use; building's own flows inject the repositories ([ADR 0010, D1](../decisions/0010-server-architecture.md)).
 
 ## Open questions
 
