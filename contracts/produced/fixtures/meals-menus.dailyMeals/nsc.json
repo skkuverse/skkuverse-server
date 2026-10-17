@@ -1,0 +1,1620 @@
+{
+  "_about": "Hand-assembled, since the route is not deployed yet: GET /meals?campus=nsc&date=2026-10-14 as the app is coded against it (a local path, handed over 2026-10-17), which is what toDailyMeals builds from __tests__/nest/meals/fixtures/crawler-meal-docs-2026-10-14.json and the meals-catalog.cafeteriaList nsc fixture (meals-menus.routes.test.ts pins the two equal); every cafeteria of the campus, untrimmed",
+  "data": {
+    "date": "2026-10-14",
+    "campus": "nsc",
+    "cafeterias": [
+      {
+        "id": "20201040",
+        "name": {
+          "ko": "구시재식당",
+          "en": "Faculty Cafeteria(Gusijae)"
+        },
+        "building": {
+          "skkuId": 16,
+          "name": {
+            "en": "Shop&Service Center",
+            "ko": "복지회관"
+          }
+        },
+        "floor": {
+          "ko": "3층",
+          "en": "3F"
+        },
+        "meals": [
+          {
+            "code": "L",
+            "corners": [
+              {
+                "name": "구시재",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 20,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "닭볶음탕",
+                    "priceKrw": null,
+                    "kind": "set",
+                    "dishes": [
+                      "닭볶음탕",
+                      "콩나물국",
+                      "연두부찜&양념장",
+                      "느타리버섯볶음",
+                      "치커리유자무침",
+                      "쌀밥",
+                      "깍두기"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "하이디라오마라훠궈",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "닭볶음탕\n콩나물국\n연두부찜&양념장\n느타리버섯볶음\n치커리유자무침\n쌀밥\n깍두기\n하이디라오마라훠궈(13,000원)"
+              }
+            ]
+          },
+          {
+            "code": "D",
+            "corners": [
+              {
+                "name": "구시재",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 17,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "돈육김치찌개",
+                    "priceKrw": null,
+                    "kind": "set",
+                    "dishes": [
+                      "돈육김치찌개",
+                      "옛날소시지전&케찹",
+                      "고구마맛탕",
+                      "연근조림",
+                      "고들빼기지",
+                      "쌀밥",
+                      "깍두기"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "돈육김치찌개\n옛날소시지전&케찹\n고구마맛탕\n연근조림\n고들빼기지\n쌀밥\n깍두기"
+              }
+            ]
+          },
+          {
+            "code": "R",
+            "corners": [
+              {
+                "name": "구시재",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 13,
+                "imageUrl": "https://www.skku.edu/_attach/image/2025/03/thumb_ZHdUpCNnsfTNRSiSqzzl.jpg",
+                "items": [
+                  {
+                    "name": "능이버섯갈비탕",
+                    "priceKrw": 22000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "능이버섯갈비탕"
+              },
+              {
+                "name": "구시재",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 2,
+                "imageUrl": "https://www.skku.edu/_attach/image/2025/03/thumb_YdeETOhEWeRfnhDGKLov.jpg",
+                "items": [
+                  {
+                    "name": "산채정식",
+                    "priceKrw": 22000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "산채정식"
+              },
+              {
+                "name": "구시재",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 2,
+                "imageUrl": "https://www.skku.edu/_attach/image/2025/03/thumb_UVozAIIHmymvFxCXHfLF.jpg",
+                "items": [
+                  {
+                    "name": "소갈비찜",
+                    "priceKrw": 30000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "소갈비찜"
+              },
+              {
+                "name": "구시재",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 4,
+                "imageUrl": "https://www.skku.edu/_attach/image/2025/03/thumb_EGPqBLiYXVwjUFQudzqu.jpg",
+                "items": [
+                  {
+                    "name": "장어구이정식",
+                    "priceKrw": 30000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "장어구이정식"
+              },
+              {
+                "name": "구시재",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 9,
+                "imageUrl": "https://www.skku.edu/_attach/image/2025/03/thumb_UDADmPFkyqKPdoXDaPkI.jpg",
+                "items": [
+                  {
+                    "name": "살치살구이",
+                    "priceKrw": 33000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "살치살구이"
+              },
+              {
+                "name": "구시재",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 4,
+                "imageUrl": "https://www.skku.edu/_attach/image/2025/03/thumb_BiPqBVAxsjsojkTMAqxQ.jpg",
+                "items": [
+                  {
+                    "name": "문어솥밥&오리주물럭",
+                    "priceKrw": 33000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "문어솥밥&오리주물럭"
+              },
+              {
+                "name": "구시재",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 3,
+                "imageUrl": "https://www.skku.edu/_attach/image/2025/03/thumb_KRZrKEyhVIQQOwggrGWF.jpg",
+                "items": [
+                  {
+                    "name": "한식A코스",
+                    "priceKrw": 36000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "한식A코스"
+              },
+              {
+                "name": "구시재",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 1,
+                "imageUrl": "https://www.skku.edu/_attach/image/2025/03/thumb_RDNiBVhuoIxOPAcnDjzu.jpg",
+                "items": [
+                  {
+                    "name": "한식B코스",
+                    "priceKrw": 48000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "한식B코스"
+              },
+              {
+                "name": "구시재",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 3,
+                "imageUrl": "https://www.skku.edu/_attach/image/2025/03/thumb_krGgqIEVAnMakICPBOiB.jpg",
+                "items": [
+                  {
+                    "name": "양식코스",
+                    "priceKrw": 48000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "양식코스"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "20201104",
+        "name": {
+          "ko": "행단골식당",
+          "en": "Student Center Cafeteria(Hangdangol)"
+        },
+        "building": {
+          "skkuId": 15,
+          "name": {
+            "en": "Student Center",
+            "ko": "학생회관"
+          }
+        },
+        "floor": {
+          "ko": "1층",
+          "en": "1F"
+        },
+        "meals": [
+          {
+            "code": "B",
+            "corners": [
+              {
+                "name": "피키피커스",
+                "floor": "1F",
+                "isFixedMenu": false,
+                "likes": 2,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "순살감자탕",
+                    "priceKrw": null,
+                    "kind": "set",
+                    "dishes": [
+                      "순살감자탕",
+                      "해물파전",
+                      "마늘종고추장무침",
+                      "쌀밥/숭늉",
+                      "배추김치"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "천원의아침밥",
+                      "일반식"
+                    ]
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "[♥천원의아침밥:일반식♥]\n순살감자탕\n해물파전\n마늘종고추장무침\n쌀밥/숭늉\n배추김치"
+              }
+            ]
+          },
+          {
+            "code": "L",
+            "corners": [
+              {
+                "name": "가츠엔",
+                "floor": "1F",
+                "isFixedMenu": true,
+                "likes": 13,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "등심돈가스",
+                    "priceKrw": 5500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "점보돈가스",
+                    "priceKrw": 7500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "카레돈가스",
+                    "priceKrw": 6500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "등심돈가스(5.5)/점보돈가스(7.5) \n[월] 피카츄&등심돈가스(8.0)\n[화] 고구마치즈돈가스(6.8)\n[수] 카레돈가스(6.5)\n[목] 치즈돈가스(6.5)\n[금] 갈릭돈가스(6.5)"
+              },
+              {
+                "name": "싱푸차이나",
+                "floor": "1F",
+                "isFixedMenu": true,
+                "likes": 40,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "자장면",
+                    "priceKrw": 5000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "계란볶음밥*자장소스",
+                    "priceKrw": 5500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "짬뽕",
+                    "priceKrw": 5000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "부대짬뽕",
+                    "priceKrw": 6500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "나가사키짬뽕",
+                    "priceKrw": 6500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "탕수육",
+                    "priceKrw": 3000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "군만두",
+                    "priceKrw": 1000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": "2pcs",
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "공깃밥",
+                    "priceKrw": 1000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "자장면(5.0) / 계란볶음밥*자장소스(5.5) \n/ 짬뽕(5.0) / 부대짬뽕(6.5) / 나가사키짬뽕(6.5)\n/ 탕수육(3.0) / 군만두(2pcs, 1.0) / 공깃밥(1.0)\n\n화요일은 기존 메뉴 대신 한정수량판매 짬짜면 (6.5) 메뉴 제공\n목요일은 기존 메뉴 대신 한정수량판매 해물누룽지탕 (6.8) 메뉴 제공"
+              },
+              {
+                "name": "피키피커스",
+                "floor": "1F",
+                "isFixedMenu": true,
+                "likes": 67,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "셀프라면",
+                    "priceKrw": null,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "오늘의 프로틴",
+                    "priceKrw": null,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "오늘의 선식",
+                    "priceKrw": null,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "구운닭가슴살샐러드",
+                    "priceKrw": null,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "치킨텐더샐러드",
+                    "priceKrw": null,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "베이컨포테이토샐러드",
+                    "priceKrw": null,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "두부콩불고기샐러드",
+                    "priceKrw": null,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "셀프라면\n오늘의 프로틴\n오늘의 선식 \n구운닭가슴살샐러드\n치킨텐더샐러드\n베이컨포테이토샐러드\n두부콩불고기샐러드"
+              },
+              {
+                "name": "봄이온소반",
+                "floor": "1F",
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "간장불고기채소덮밥",
+                    "priceKrw": 5000,
+                    "kind": "set",
+                    "dishes": [
+                      "간장불고기채소덮밥",
+                      "소떡소떡구이",
+                      "우동국",
+                      "배추김치"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "간장불고기채소덮밥\n소떡소떡구이\n우동국\n배추김치"
+              },
+              {
+                "name": "나폴리폴리",
+                "floor": "2F",
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "닭고기달걀덮밥(오야꼬동)",
+                    "priceKrw": 7000,
+                    "kind": "set",
+                    "dishes": [
+                      "닭고기달걀덮밥(오야꼬동)",
+                      "미소장국",
+                      "단무지"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "닭고기달걀덮밥(오야꼬동)\n미소장국\n단무지"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "20201251",
+        "name": {
+          "ko": "해오름식당",
+          "en": "Engineering Building Cafeteria"
+        },
+        "building": {
+          "skkuId": 21,
+          "name": {
+            "en": "Engineering 2 (26)",
+            "ko": "제2공학관26동"
+          }
+        },
+        "floor": {
+          "ko": "지하1층",
+          "en": "B1"
+        },
+        "meals": [
+          {
+            "code": "L",
+            "corners": [
+              {
+                "name": "한식",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "나주곰탕",
+                    "priceKrw": 5500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "나주곰탕"
+              },
+              {
+                "name": "한식",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "삼겹살콩불덮밥",
+                    "priceKrw": 6000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "삼겹살콩불덮밥"
+              },
+              {
+                "name": "한식",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "고구마치즈돈까스",
+                    "priceKrw": 6800,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "고구마치즈돈까스"
+              },
+              {
+                "name": "한식",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "왕교자튀김만두",
+                    "priceKrw": 3800,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "왕교자튀김만두"
+              },
+              {
+                "name": "한식",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "Burger Day",
+                    "priceKrw": null,
+                    "kind": "set",
+                    "dishes": [
+                      "Burger Day",
+                      "통살치킨/살사프레시/블랙페퍼/치즈듬뿍통살치킨버거"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "Burger Day\n통살치킨/살사프레시/블랙페퍼/치즈듬뿍통살치킨버거"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "20201252",
+        "name": {
+          "ko": "기숙사신관 식당",
+          "en": "Dormitory Shin-Kwan Cafeteria"
+        },
+        "building": {
+          "skkuId": 38,
+          "name": {
+            "en": "Dormitory Shin-gwan",
+            "ko": "기숙사신관"
+          }
+        },
+        "floor": {
+          "ko": "지하1층",
+          "en": "B1"
+        },
+        "meals": []
+      },
+      {
+        "id": "20201253",
+        "name": {
+          "ko": "기숙사의관 식당",
+          "en": "Dormitory Ui-Kwan Cafeteria"
+        },
+        "building": {
+          "skkuId": 35,
+          "name": {
+            "en": "Dormitory Ui-gwan",
+            "ko": "기숙사의관"
+          }
+        },
+        "floor": {
+          "ko": "1층",
+          "en": "1F"
+        },
+        "meals": []
+      },
+      {
+        "id": "20201254",
+        "name": {
+          "ko": "기숙사지관 식당",
+          "en": "Cafeteria"
+        },
+        "building": {
+          "skkuId": 37,
+          "name": {
+            "en": "Dormitory Ji-gwan",
+            "ko": "기숙사지관"
+          }
+        },
+        "floor": {
+          "ko": "지하1층",
+          "en": "B1"
+        },
+        "meals": []
+      },
+      {
+        "id": "20201289",
+        "name": {
+          "ko": "THE S LOUNGE",
+          "en": "THE S LOUNGE"
+        },
+        "building": {
+          "skkuId": 87,
+          "name": {
+            "en": "CNS Center",
+            "ko": "CNS센터"
+          }
+        },
+        "floor": {
+          "ko": "7층",
+          "en": "7F"
+        },
+        "meals": [
+          {
+            "code": "L",
+            "corners": [
+              {
+                "name": "비비고고",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 26,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "직화제육비빔밥",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "곤드레비빔밥 + 버섯우렁강된장",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "곤드레비빔밥 + 강된장",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "소불고기비빔밥",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "육회비빔밥",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "오색비빔밥",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "직화제육 세트",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "소불고기 세트",
+                    "priceKrw": 14000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "직화제육비빔밥 [12,000]\n곤드레비빔밥 + 버섯우렁강된장 (준비중)[12,000]\n곤드레비빔밥 + 강된장 (준비중) [10,000]\n소불고기비빔밥 [13,000]\n육회비빔밥 [13,000]\n오색비빔밥 [10,000]\n직화제육 세트 [13,000]\n소불고기 세트 [14,000]"
+              },
+              {
+                "name": "미성옥",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 11,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "순대국밥",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "순대만국밥",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "오소리국밥",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "살고기만국밥",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "시래기순대국밥",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "얼큰순대국밥",
+                    "priceKrw": 11000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "얼큰순대만국밥",
+                    "priceKrw": 11000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "얼큰오소리국밥",
+                    "priceKrw": 11000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "얼큰살고기만국밥",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "얼큰시래기순대국밥",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "순대한접시",
+                    "priceKrw": 9000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "순대국밥정식(국밥+미니수육)",
+                    "priceKrw": 14000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "순대만국밥정식(국밥+미니수육)",
+                    "priceKrw": 14000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "오소리국밥정식(국밥+미니수육)",
+                    "priceKrw": 14000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "살고기만국밥정식(국밥+미니수육)",
+                    "priceKrw": 16000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "시래기순대국밥정식(국밥+미니수육)",
+                    "priceKrw": 16000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "순대국밥 [10,000]\n순대만국밥 [10,000]\n오소리국밥 [10,000]\n살고기만국밥 [12,000]\n시래기순대국밥(준비중) [12,000]\n얼큰순대국밥 [11,000]\n얼큰순대만국밥 [11,000]\n얼큰오소리국밥 [11,000]\n얼큰살고기만국밥 [13,000]\n얼큰시래기순대국밥(준비중) [13,000]\n순대한접시(준비중) [9,000]\n순대국밥정식(국밥+미니수육) [14,000]\n순대만국밥정식(국밥+미니수육) [14,000]\n오소리국밥정식(국밥+미니수육) [14,000]\n살고기만국밥정식(국밥+미니수육) [16,000]\n시래기순대국밥정식(국밥+미니수육)(준비중) [16,000]"
+              },
+              {
+                "name": "경성카츠",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 14,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "옛날 돈까스",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "로츠가스",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "히레가스",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "치즈가스",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "로츠가스정식(미니우동포함)",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "히레가스정식(미니우동포함)",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "돈가스나베",
+                    "priceKrw": 11000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "김치나베",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "가츠동",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "새우튀김우동+유부초밥세트",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "마제소바",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "돈토로동",
+                    "priceKrw": 11000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "옛날 돈까스[10,000]\n로츠가스[12,000]\n히레가스[12,000]\n치즈가스[13,000]\n로츠가스정식(미니우동포함)[13,000]\n히레가스정식(미니우동포함)[13,000]\n돈가스나베(준비중)[11,000]\n김치나베[12,000]\n가츠동(준비중)[10,000]\n새우튀김우동+유부초밥세트[10,000]\n마제소바[10,000]\n돈토로동[11,000]"
+              },
+              {
+                "name": "맑음(사전 예약必)",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 11,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "코코넛 크림 새우",
+                    "priceKrw": 22000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "전복 새우장 반상",
+                    "priceKrw": 20000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "닭볶음탕 반상",
+                    "priceKrw": 14000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "와인숙성오리 반상",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "직화돼지갈비 반상",
+                    "priceKrw": 14000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "코코넛 크림 새우 [22000원]\n전복 새우장 반상[20000원]\n닭볶음탕 반상[14000원]\n와인숙성오리 반상[13000원]\n직화돼지갈비 반상[14000원]"
+              }
+            ]
+          },
+          {
+            "code": "D",
+            "corners": [
+              {
+                "name": "비비고고",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 3,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "직화제육비빔밥",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "곤드레비빔밥 + 버섯우렁강된장",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "곤드레비빔밥 + 강된장",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "소불고기비빔밥",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "육회비빔밥",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "오색비빔밥",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "직화제육 세트",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "소불고기 세트",
+                    "priceKrw": 14000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "직화제육비빔밥 [12,000]\n곤드레비빔밥 + 버섯우렁강된장 (준비중)[12,000]\n곤드레비빔밥 + 강된장 (준비중) [10,000]\n소불고기비빔밥 [13,000]\n육회비빔밥 [13,000]\n오색비빔밥 [10,000]\n직화제육 세트 [13,000]\n소불고기 세트 [14,000]"
+              },
+              {
+                "name": "미성옥",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 1,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "순대국밥",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "순대만국밥",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "오소리국밥",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "살고기만국밥",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "시래기순대국밥",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "얼큰순대국밥",
+                    "priceKrw": 11000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "얼큰순대만국밥",
+                    "priceKrw": 11000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "얼큰오소리국밥",
+                    "priceKrw": 11000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "얼큰살고기만국밥",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "얼큰시래기순대국밥",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "순대한접시",
+                    "priceKrw": 9000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "순대국밥정식(국밥+미니수육)",
+                    "priceKrw": 14000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "순대만국밥정식(국밥+미니수육)",
+                    "priceKrw": 14000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "오소리국밥정식(국밥+미니수육)",
+                    "priceKrw": 14000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "살고기만국밥정식(국밥+미니수육)",
+                    "priceKrw": 16000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "시래기순대국밥정식(국밥+미니수육)",
+                    "priceKrw": 16000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "순대국밥 [10,000]\n순대만국밥 [10,000]\n오소리국밥 [10,000]\n살고기만국밥 [12,000]\n시래기순대국밥(준비중) [12,000]\n얼큰순대국밥 [11,000]\n얼큰순대만국밥 [11,000]\n얼큰오소리국밥 [11,000]\n얼큰살고기만국밥 [13,000]\n얼큰시래기순대국밥(준비중) [13,000]\n순대한접시(준비중) [9,000]\n순대국밥정식(국밥+미니수육) [14,000]\n순대만국밥정식(국밥+미니수육) [14,000]\n오소리국밥정식(국밥+미니수육) [14,000]\n살고기만국밥정식(국밥+미니수육) [16,000]\n시래기순대국밥정식(국밥+미니수육)(준비중) [16,000]"
+              },
+              {
+                "name": "경성카츠",
+                "floor": null,
+                "isFixedMenu": true,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "옛날 돈까스",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "로츠가스",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "히레가스",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "치즈가스",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "로츠가스정식(미니우동포함)",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "히레가스정식(미니우동포함)",
+                    "priceKrw": 13000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "돈가스나베",
+                    "priceKrw": 11000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "김치나베",
+                    "priceKrw": 12000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "가츠동",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": [
+                      "준비중"
+                    ]
+                  },
+                  {
+                    "name": "어묵우동+유부초밥 세트",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "새우튀김우동+유부초밥세트",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "마제소바",
+                    "priceKrw": 10000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "돈토로동",
+                    "priceKrw": 11000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "옛날 돈까스[10,000]\n로츠가스[12,000]\n히레가스[12,000]\n치즈가스[13,000]\n로츠가스정식(미니우동포함)[13,000]\n히레가스정식(미니우동포함)[13,000]\n돈가스나베(준비중)[11,000]\n김치나베(준비중)[12,000]\n가츠동(준비중)[10,000]\n어묵우동+유부초밥 세트[10,000]\n새우튀김우동+유부초밥세트[10,000]\n마제소바[10,000]\n돈토로동[11,000]"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
