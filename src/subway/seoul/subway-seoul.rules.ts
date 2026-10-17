@@ -12,18 +12,18 @@ export function toSeoulLines(
     if (lineName === undefined) throw new Error(`subway: no Seoul line name for subwayId ${subwayId}`);
     const served = stations.filter((station) => station.seoul.subwayId === subwayId);
     const stationIdByName = new Map(
-      served.flatMap((station) => [[station.seoul.stationName, station.id] as const, ...toUpstreamNames(station, stationNameById)]),
+      served.flatMap((station) => [[station.seoul.stationName, station.id] as const, ...toObservedNames(station, stationNameById)]),
     );
     return { subwayId, lineName, trainMapLine, stationNames: served.map((s) => s.seoul.stationName), stationIdByName };
   });
 }
 
-function toUpstreamNames(station: SubwayStation, stationNameById: Readonly<Record<string, string>>): Array<readonly [string, string]> {
-  const { up, down } = station.directions;
-  return [...up.upstreamStationIds, ...down.upstreamStationIds].map((upstreamId) => {
-    const upstreamName = stationNameById[upstreamId];
-    if (upstreamName === undefined) throw new Error(`subway: no Seoul station name for ${upstreamId}`);
-    return [upstreamName, upstreamId] as const;
+function toObservedNames(station: SubwayStation, stationNameById: Readonly<Record<string, string>>): Array<readonly [string, string]> {
+  const stationIds = Object.values(station.directions).flatMap((direction) => [...direction.upstreamStationIds, ...direction.watchedStationIds]);
+  return stationIds.map((stationId) => {
+    const stationName = stationNameById[stationId];
+    if (stationName === undefined) throw new Error(`subway: no Seoul station name for ${stationId}`);
+    return [stationName, stationId] as const;
   });
 }
 

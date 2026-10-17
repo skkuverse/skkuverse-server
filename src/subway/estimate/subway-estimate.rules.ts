@@ -102,6 +102,26 @@ function toServedDelaySec(candidate: Candidate, ahead: readonly Candidate[]): nu
   return latest && isAtServedStation(candidate) ? toDelaySec(candidate.train, latest, latest.at) : (candidate.delaySec ?? toLentDelaySec(candidate, ahead));
 }
 
+function isSeenAtOrPast(input: EstimateInput, candidate: Candidate): boolean {
+  const stationIds = candidate.train.stops.map((stop) => stop.stationId);
+  const latestStationId = input.histories.get(candidate.train.trainNo)?.latest.stationId;
+  return latestStationId !== undefined && stationIds.indexOf(latestStationId) >= stationIds.indexOf(candidate.servedAt.stationId);
+}
+
+// WHY: on the tracker's path every train is seen at the served station (2026-10-17: all 157 to 16:35), so one overdue
+// there with a row stop before it is late, not gone, until a later train on its track (no local) is seen there.
+function isAwaitedTrain(input: EstimateInput, candidate: Candidate, later: readonly Candidate[]): boolean {
+  const isOvertaken = later.some((other) => other.train.express === candidate.train.express && isSeenAtOrPast(input, other));
+  const isInDelayRange = plusSec(candidate.servedAt.departureAt ?? candidate.scheduledArrivalAt, MAX_DELAY_SEC) >= input.now;
+  const isUnseen = !candidate.history && !isSeenAtOrPast(input, candidate);
+  return input.isTracked && isUnseen && candidate.train.stops[0] !== candidate.servedAt && isInDelayRange && !isOvertaken;
+}
+
+function toAwaitedArrival(candidate: Candidate, now: Date): TrainArrival {
+  const runMs = candidate.scheduledArrivalAt.getTime() - (candidate.train.stops[0]?.departureAt ?? candidate.scheduledArrivalAt).getTime();
+  return { ...toArrival(candidate, null), arrivalAt: new Date(now.getTime() + runMs), source: "estimated" };
+}
+
 function hasLeft(candidate: Candidate, delaySec: number | null, now: Date): boolean {
   const departureAt = plusSec(candidate.servedAt.departureAt ?? candidate.scheduledArrivalAt, delaySec ?? 0);
   if (!candidate.history) return departureAt < now;
@@ -151,9 +171,10 @@ export function toStationArrivals(input: EstimateInput): StationArrivals {
   const findings: CountdownFindings = { divergences: [], rejections: [] };
   const arrivals = candidates.flatMap((candidate, index) => {
     const delaySec = toServedDelaySec(candidate, candidates.slice(0, index));
-    if (hasLeft(candidate, delaySec, input.now)) return [];
+    const isOverdue = hasLeft(candidate, delaySec, input.now);
+    if (isOverdue && !isAwaitedTrain(input, candidate, candidates.slice(index + 1))) return [];
     const row = input.countdownRows.find((r) => r.trainNo === candidate.train.trainNo && r.stationId === input.stationId);
-    const arrival = toArrival(candidate, delaySec);
+    const arrival = isOverdue ? toAwaitedArrival(candidate, input.now) : toArrival(candidate, delaySec);
     return [row ? withCountdown(arrival, { row, reason: toRejectionReason(candidate, row, input.now) }, findings) : arrival];
   });
   return { arrivals: arrivals.sort((a, b) => a.arrivalAt.getTime() - b.arrivalAt.getTime()), ...findings };

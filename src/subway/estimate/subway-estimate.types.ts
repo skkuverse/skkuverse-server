@@ -57,5 +57,6 @@ export interface EstimateInput {
   trains: readonly ScheduledTrain[];
   histories: ReadonlyMap<string, TrainHistory>;
   countdownRows: readonly CountdownRow[];
+  isTracked: boolean;
   now: Date;
 }

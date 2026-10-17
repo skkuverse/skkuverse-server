@@ -1,9 +1,10 @@
 /**
  * The served stations (design D0): each is found by its KRIC id and carries
  * the KRIC codes it is joined from, its names, per direction the upstream
- * stations its trains pass just before it (nearest first), the next station
- * its trains go on to, and the ids the `seoul` provider polls it by. Any
- * other id finds no station.
+ * stations its trains pass just before it (nearest first), the stations
+ * watched beyond them (Geumjeong for Sungkyunkwan Univ. southbound, the stop before it of
+ * every southbound express), the next station its trains go on to, and the
+ * ids the `seoul` provider polls it by. Any other id finds no station.
  */
 import { findSubwayStation } from "./subway.rules";
 
@@ -30,6 +31,19 @@ describe("findSubwayStation", () => {
 
     // Assert
     expect(station?.directions[direction].upstreamStationIds).toEqual(upstreamStationIds);
+  });
+
+  it.each([
+    ["KR-1-0153", "up", []],
+    ["KR-1-0153", "down", ["KR-1-P149"]],
+    ["S1-4-420", "up", []],
+    ["S1-4-420", "down", []],
+  ] as const)("lists the watched stations of %s %s, beyond its upstream ones, nearest first", (id, direction, watchedStationIds) => {
+    // Act
+    const station = findSubwayStation(id);
+
+    // Assert
+    expect(station?.directions[direction].watchedStationIds).toEqual(watchedStationIds);
   });
 
   it.each([

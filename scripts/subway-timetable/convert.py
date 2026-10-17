@@ -8,7 +8,7 @@ When to rerun:
       KORAIL_REVISION below to the new files, then rerun.
     - Seoul Metro changes the 4호선 timetable (a 열차운행시각 조정 notice). Rerun; the Seoul API
       already serves the new table.
-    - A served station or one of its upstream stations changes (LINE1_STATIONS, LINE4_STATIONS).
+    - A served station or one of its upstream or watched stations changes (LINE1_STATIONS, LINE4_STATIONS).
 
 How to rerun (from the repository root):
 
@@ -24,7 +24,8 @@ What it writes, per operator line and day type:
     seoul-4-weekday.json, seoul-4-saturday.json, seoul-4-holiday.json   4호선, SearchSTNTimeTableByIDService
 
 Each file lists the trains that stop at the served station (성균관대 KR-1-0153, 혜화 S1-4-420) with
-their stops among the covered stations (the served station and three on each side), in travel order.
+their stops among the covered stations (the served station and three on each side, and for 성균관대 also
+금정 KR-1-P149, the first stop north of it every down 급행 of the 경부 sheets makes), in travel order.
 Times are seconds after 00:00 of the service day. A clock time before SERVICE_DAY_START (03:00)
 belongs to the previous service day and gets 86400 added, so 00:13:30 is 87210; Seoul already writes
 those as 24:13:30. Either way the times must then increase along the train, or the run fails.
@@ -90,6 +91,7 @@ LINE1_STATIONS = (
     ("KR-1-P152", "의왕"),
     ("KR-1-P151", "당정"),
     ("KR-1-P150", "군포"),
+    ("KR-1-P149", "금정"),
 )
 LINE1_SERVED = "KR-1-0153"
 
