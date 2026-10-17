@@ -18,7 +18,7 @@ import { BusRealtimeHsscModule } from "../../../src/bus/realtime/hssc/bus-realti
 import { BusRealtimeJongroModule } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.module";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
-import { hsscBusDoc, jongroArrivalDoc, jongroPositionDoc } from "../../helpers/bus/bus-cache-docs";
+import { hsscBusDoc, jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc, legacyJongroArrivalDoc, noArrivalBus } from "../../helpers/bus/bus-cache-docs";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
@@ -158,5 +158,44 @@ describe("GET /bus/realtime/data/:groupId bodies", () => {
       expectWire(realtimeGroup, body.data);
       expectWire(realtimeGroupMeta, meta);
     }
+  });
+});
+
+// WHY: installed apps read only stationIndex and eta, so arrivals is added beside them and eta stays TOPIS's
+// first-bus text exactly; during a deploy a row the previous poller cached still answers 200 (design D2).
+describe("GET /bus/realtime/data/jongro07 arrivals", () => {
+  it("keeps every eta byte for byte and adds arrivals to every entry", async () => {
+    // Arrange
+    busCache.values.set("jongro_stations_07", [
+      jongroArrivalDoc({
+        stationId: "100900220",
+        sequence: "1",
+        eta: "곧 도착",
+        buses: [
+          jongroArrivalBus({ arrmsg: "곧 도착", traTime: 95, staOrd: 1, sectOrd: 1 }),
+          jongroArrivalBus({ arrmsg: "7분50초후[4번째 전]", traTime: 470, staOrd: 1, sectOrd: 19 }),
+        ],
+      }),
+      jongroArrivalDoc({
+        stationId: "100900221",
+        sequence: "2",
+        eta: "출발대기",
+        buses: [jongroArrivalBus({ arrmsg: "출발대기", traTime: 228, staOrd: 2, sectOrd: 2, rerideDiv: 0 }), noArrivalBus({ arrmsg: "" })],
+      }),
+      legacyJongroArrivalDoc({ stationId: "100000424", sequence: "3", eta: "3분12초후[2번째 전]" }),
+    ]);
+
+    // Act
+    const res = await request(httpServer).get("/bus/realtime/data/jongro07");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(realtimeGroup, res.body.data);
+    expect(res.body.data.stationEtas.map((entry: { eta: string }) => entry.eta)).toEqual(["곧 도착", "출발대기", "3분12초후[2번째 전]"]);
+    expect(
+      res.body.data.stationEtas.map((entry: { arrivals: Array<{ state: string; minutes: number | null }> }) =>
+        entry.arrivals.map((arrival) => [arrival.state, arrival.minutes]),
+      ),
+    ).toEqual([[["arriving", null], ["running", 8]], [["waiting", null]], []]);
   });
 });
