@@ -10,6 +10,7 @@ import type { Clock } from "../../infra/clock";
 import { pick } from "../../infra/i18n";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import type { MapChipSpec } from "../layer-set/map-layer-set.types";
 import { BASE_LAYERS } from "../map.constants";
 import type { MapRepository } from "../map.repository";
@@ -19,7 +20,7 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 
 const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
-const LAYER_SET = new MapLayerSetService(asReal<MapRepository>(new FakeMapRepository()), CLOCK);
+const LAYER_SET = new MapLayerSetService(asReal<MapRepository>(new FakeMapRepository()), CLOCK, new MiniappsService());
 
 const LANGS = ["ko", "en", "zh"] as const;
 const CONFIG = shippedLayerSet();
@@ -94,6 +95,26 @@ describe("toMapChips", () => {
     // Act & Assert
     expect(toMapChips([webview], "ko")[0]?.action).toEqual({ kind: "webview", url: `${WEBVIEW_ORIGIN}/lost-found` });
   });
+
+  it("sends a link chip as the shared link shape, a web view value absolute and any other as written", () => {
+    // Arrange
+    const link = (actionType: "webview" | "route" | "external", actionValue: string): MapChipSpec => ({
+      ...LIST_CHIP,
+      action: { kind: "link", actionType, actionValue },
+      list: null,
+    });
+    const specs = [link("webview", "/skku/lostandfound"), link("route", "/search"), link("external", "https://pf.kakao.com/_cjxexdG/chat")];
+
+    // Act
+    const actions = toMapChips(specs, "ko").map((chip) => chip.action);
+
+    // Assert
+    expect(actions).toEqual([
+      { kind: "link", actionType: "webview", actionValue: `${WEBVIEW_ORIGIN}/skku/lostandfound` },
+      { kind: "link", actionType: "route", actionValue: "/search" },
+      { kind: "link", actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" },
+    ]);
+  });
 });
 
 describe("toMapConfig", () => {
@@ -159,7 +180,7 @@ describe("the chips /map/config serves", () => {
     // Act & Assert
     for (const chip of toMapChips(LAYER_SET.servedChipSpecs(CONFIG), "ko")) {
       expect(chip.icon).toEqual({ kind: "emoji", emoji: expect.any(String) });
-      expect(["webview", "focus"]).toContain(chip.action.kind);
+      expect(["webview", "focus", "link"]).toContain(chip.action.kind);
     }
   });
 });

@@ -22,7 +22,7 @@ Ui owns no data store. It serves three JSON files committed next to their reader
 | The bus groups | — | Each group's label, card, screen type and visibility | `BusConfigService.getBusGroups`, injected into `UiTransitListService` and `UiTransitService` |
 | The served subway stations | — | Each station's title, line code, line label and line color | `SubwayStationsService.listStations`, injected into `UiTransitService` |
 | moment-timezone | `moment` | A bus group's KST dates and first-day time; a strict parse still reads `24:00` as the next midnight | `isBusGroupVisible` |
-| The translations | — | The titles of the campus buttons and the scroll cards | `t` in `src/infra/i18n.ts` |
+| The translations | — | The titles of the scroll cards | `t` in `src/infra/i18n.ts` |
 | skkuverse-app | — | Nothing; it reads the routes | `GET /ui/home` and its siblings |
 
 ## Glossary
@@ -38,8 +38,7 @@ Ui owns no data store. It serves three JSON files committed next to their reader
 | tile (`TileRaw`) | One entry of a tile grid: a registered mini app, a game the app bundles, or a link with its own text and icon | `home-layout.json` | `shortcut` |
 | link action | An `actionType` with its `actionValue`, checked by the type's rule | `isBrokenLinkAction` | — |
 | mini-app feed | A home card showing the latest entries of one mini app's broadcast feed, fetched by the app | `home-layout.json` | — |
-| campus sheet (`CampusSheet`) | The `GET /ui/home/campus` body: the campus carousel while a banner shows, then the campus buttons | `toCampusSheet` | `campusConfig` |
-| campus button | One of the campus sheet's service buttons, with an emoji and a link action | `toCampusSheet` | — |
+| campus sheet (`CampusSheet`) | The `GET /ui/home/campus` body: the campus carousel while a banner shows, else no section | `toCampusSheet` | `campusConfig` |
 | transit layout (`TransitLayout`) | The `GET /ui/home/transit` body: a version and the transit sections the transit tab draws in order | `toTransitSection` over `transit-layout.json` | — |
 | transit section | One `item_list` of the transit layout: an id, a title and its transit items; one left with no item is not served | `toTransitSection` | — |
 | transit item | One row of a transit section: a `kind` (`bus`, `subway` or `link`) naming its referent, and the id, title, subtitle, icon and action every kind carries | a bus group, a served station or a link written in `transit-layout.json` | — |
@@ -80,7 +79,6 @@ What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `sk
 | `/ui/home` feed `miniAppId`, `limit` | `MiniAppFeedSection` fetches that many entries of the mini app's feed |
 | `/ui/home` `version` | Parsed; the app falls back to its own when it is missing |
 | `/ui/home/campus` `sections` | `CampusScreen` draws them in the sheet, the carousel only while the festival gate is open |
-| `/ui/home/campus` button `webviewTitle`, `webviewColor` | `ButtonGrid` passes them to the web view it opens |
 | `/ui/home/campus` `minAppVersion` | Parsed, not read |
 | `/ui/home/transitlist` `data` | The transit tab's list of bus cards in builds before the transit layout; a tap opens `action.route` for `action.groupId`. Its shape is frozen: an unknown `action.route` opens the bus realtime screen there |
 | `/ui/home/transitlist` `meta.busListCount` | Served, not read |
@@ -105,7 +103,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `sk
 
 - `GET /ui/home/transitlist` is frozen and logs `ui.transit_list.legacy_called` at most once an hour with the calls it held back. It is deleted once that line stays near zero for two weeks and the `/app/config` `minVersion` is at or above the first build that renders the transit layout.
 - `GET /ui/home/scroll` has no caller in the app sources beyond an endpoint constant. Whether to remove it waits for request logs.
-- The campus buttons repeat the first four tiles of the home grid. The app's `CampusScreen` expects them to give way to a promotion feed section.
+- The first four tiles of the home grid repeat the map's base chips, which builds without the `link` chip kind drop; `ui-home.config.spec.ts` fails when the two drift apart. Whether the tiles stay once those builds are gone is open.
 - `minAppVersion`, `meta.busListCount` and `meta.itemCount` are served and not read.
 
 ## Related

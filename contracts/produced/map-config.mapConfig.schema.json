@@ -292,6 +292,32 @@
                   "camera",
                   "layerIds"
                 ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "link"
+                  },
+                  "actionType": {
+                    "type": "string",
+                    "enum": [
+                      "miniapp",
+                      "external",
+                      "webview",
+                      "route"
+                    ]
+                  },
+                  "actionValue": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "actionType",
+                  "actionValue"
+                ]
               }
             ]
           },

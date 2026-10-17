@@ -1,6 +1,7 @@
-// WHY: the name the Seoul API and the train map write for each upstream station, which the rows carry
-// instead of an id; a served station's own name is its `seoul.stationName`.
+// WHY: the name the Seoul API and the train map write for each upstream and watched station, which the rows
+// carry instead of an id; a served station's own name is its `seoul.stationName`.
 export const SEOUL_STATION_NAME_BY_ID: Readonly<Record<string, string>> = {
+  "KR-1-P149": "금정",
   "KR-1-P150": "군포",
   "KR-1-P151": "당정",
   "KR-1-P152": "의왕",

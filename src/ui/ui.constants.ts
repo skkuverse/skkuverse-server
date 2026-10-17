@@ -6,7 +6,3 @@ export const MIN_ASPECT_RATIO = 1;
 export const MAX_ASPECT_RATIO = 6;
 export const MIN_AUTO_ROTATE_SEC = 2;
 export const MAX_AUTO_ROTATE_SEC = 30;
-
-export const LOST_AND_FOUND_PATH = "/skku/lostandfound";
-export const LOST_AND_FOUND_COLOR = "003626";
-

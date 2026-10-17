@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { linkActionType } from "../../shared/link-action.wire";
 
 const dailyWindow = z.object({ start: z.string(), end: z.string() });
 const layerVisibility = z.discriminatedUnion("kind", [
@@ -22,9 +23,11 @@ const layer = z.object({
 });
 
 const cameraMotion = z.object({ zoom: z.number(), tilt: z.number(), bearing: z.number(), durationMs: z.number() });
+// CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/map/parser.ts drops a chip whose action kind is not in CHIP_ACTION_KINDS.
 const chipAction = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("webview"), url: z.string() }),
   z.object({ kind: z.literal("focus"), camera: cameraMotion.extend({ lat: z.number(), lng: z.number() }), layerIds: z.array(z.string()) }),
+  z.object({ kind: z.literal("link"), actionType: linkActionType, actionValue: z.string() }),
 ]);
 const facetOption = z.object({ id: z.string(), label: z.string(), window: z.object({ startAt: z.iso.datetime(), endAt: z.iso.datetime() }).nullable() });
 const chipList = z.object({

@@ -9,13 +9,13 @@ import type { EstimateInput, StationArrivals, TrainArrival } from "./subway-esti
 export class SubwayEstimateService {
   constructor(private readonly countdown: SubwayCountdownService) {}
 
-  estimateArrivals(input: EstimateInput): StationArrivals {
-    return toStationArrivals({ ...input, countdownRows: this.countdown.listFirstPublishedRows(input.countdownRows) });
+  estimateArrivals(input: Omit<EstimateInput, "isTracked">): StationArrivals {
+    return toStationArrivals({ ...input, countdownRows: this.countdown.listFirstPublishedRows(input.countdownRows), isTracked: true });
   }
 
   // WHY: the countdown memory is advanced by the tracker's ticks only, so a timetable-only document built between
   // them, as an api process serving a stale state does, never resets it.
   listScheduledArrivals(input: Pick<EstimateInput, "stationId" | "direction" | "trains" | "now">): TrainArrival[] {
-    return toStationArrivals({ ...input, histories: new Map(), countdownRows: [] }).arrivals;
+    return toStationArrivals({ ...input, histories: new Map(), countdownRows: [], isTracked: false }).arrivals;
   }
 }

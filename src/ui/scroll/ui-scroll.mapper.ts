@@ -1,6 +1,6 @@
 import { t } from "../../infra/i18n";
 import type { SupportedLang } from "../../infra/types";
-import { LOST_AND_FOUND_COLOR, LOST_AND_FOUND_PATH } from "../ui.constants";
+import { LOST_AND_FOUND_COLOR, LOST_AND_FOUND_PATH } from "./ui-scroll.constants";
 import type { ScrollCards } from "./ui-scroll.wire";
 
 const CAMPUS_MAP_ALT_URL = "https://namu.wiki/w/%EB%8F%84%EB%A7%9D%EC%B3%90";

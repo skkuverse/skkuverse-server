@@ -1,4 +1,5 @@
 import { toWebviewUrl } from "../../infra/webview-url";
+import { isBrokenLinkAction } from "../../shared/link-action.util";
 import { BASE_LAYERS } from "../map.constants";
 import type { LayerSpec, MapChipActionSpec } from "../map.types";
 import { EXPLICIT_OFFSET_RE } from "./map-layer-set.constants";
@@ -122,6 +123,8 @@ function focusErrors(id: string, layerIds: readonly string[], catalogue: readonl
 
 function actionErrors(id: string, action: MapChipActionSpec, catalogue: readonly LayerSpec[]): string[] {
   if (action.kind === "focus") return focusErrors(id, action.layerIds, catalogue);
+  // WHY: a link's target needs the mini-app registry, which only Nest provides: assertValidLinkChips checks it.
+  if (action.kind === "link") return [];
   return toWebviewUrl(action.url) === null ? [`chip "${id}": "${action.url}" is not a usable web view URL`] : [];
 }
 
@@ -138,14 +141,30 @@ export function validateChipSpecs(
   });
 }
 
+function throwChipErrors(errors: readonly string[]): void {
+  if (errors.length > 0) {
+    throw new Error(`FATAL [map chips]: ${errors.length} invalid chip definition(s):\n  - ${errors.join("\n  - ")}`);
+  }
+}
+
 export function assertValidChipSpecs(
   specs: ReadonlyArray<{ id: string; action: MapChipActionSpec }>,
   catalogue: readonly LayerSpec[],
 ): void {
-  const errors = validateChipSpecs(specs, catalogue);
-  if (errors.length > 0) {
-    throw new Error(`FATAL [map chips]: ${errors.length} invalid chip definition(s):\n  - ${errors.join("\n  - ")}`);
-  }
+  throwChipErrors(validateChipSpecs(specs, catalogue));
+}
+
+export function assertValidLinkChips(
+  specs: ReadonlyArray<{ id: string; action: MapChipActionSpec }>,
+  registry: { isKnownMiniAppTarget(value: string): boolean },
+): void {
+  throwChipErrors(
+    specs.flatMap(({ id, action }) =>
+      action.kind === "link" && isBrokenLinkAction(action, registry)
+        ? [`chip "${id}": actionValue "${action.actionValue}" is not valid for "${action.actionType}"`]
+        : [],
+    ),
+  );
 }
 
 export function chipLabelIssue(layerCount: number, hasLabel: boolean): ConfigIssue | null {

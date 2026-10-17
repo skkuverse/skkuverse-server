@@ -2,12 +2,14 @@ import { Injectable } from "@nestjs/common";
 import { createCachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import { BASE_LAYERS, EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "../map.constants";
 import { MapRepository } from "../map.repository";
 import type { LayerSpec } from "../map.types";
 import { getLayerSetConfig } from "./map-layer-set.config";
 import { BASE_CHIPS } from "./map-layer-set.constants";
 import { eventChipSpecs, eventLayerSpecs } from "./map-layer-set.mapper";
+import { assertValidLinkChips } from "./map-layer-set.rules";
 import type { LayerSet } from "./map-layer-set.schema";
 import type { LoadedConfig, MapChipSpec } from "./map-layer-set.types";
 
@@ -23,10 +25,14 @@ export class MapLayerSetService {
     load: () => this.repository.findActiveActivation(this.clock.now()),
   });
 
+  // WHY: a link chip's mini-app target is checked when Nest builds the provider, so a broken one fails the boot.
   constructor(
     private readonly repository: MapRepository,
     private readonly clock: Clock,
-  ) {}
+    miniApps: MiniappsService,
+  ) {
+    assertValidLinkChips(BASE_CHIPS, miniApps);
+  }
 
   /** WHY: a cached activation is checked against the clock on every call, so its window closes on time between reloads. */
   async liveLayerSet(): Promise<LayerSet | null> {

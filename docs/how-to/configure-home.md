@@ -3,7 +3,7 @@ title: Configure the Home Screen
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-11
+last-updated: 2026-10-17
 audience: internal
 ---
 
@@ -79,10 +79,10 @@ Text (`alt`, `title`) is written as `{ "ko": ..., "en"?: ..., "zh"?: ... }`, and
 
 ### Campus sheet banners
 
-`GET /ui/home/campus` puts a second carousel above the four service tiles on the campus tab's sheet. It lives in [`src/ui/campus/campus-banners.json`](../../src/ui/campus/campus-banners.json) and is a single `banner_carousel` object, not a layout. The rules are the home carousel's, with two differences:
+`GET /ui/home/campus` serves a second carousel as the only section of the campus tab's sheet. It lives in [`src/ui/campus/campus-banners.json`](../../src/ui/campus/campus-banners.json) and is a single `banner_carousel` object, not a layout. The rules are the home carousel's, with two differences:
 
 - **Images only.** `{ "type": "default" }` is refused, because the campus sheet has no built-in banner for it to stand for.
-- **No empty slot.** When every image is outside its window, the section is left out of the response, so the tiles move up.
+- **No empty slot.** When every image is outside its window, the section is left out of the response, and the sheet has no section at all.
 
 Add a banner the way the steps above describe, with keys under `campus/banners/`. The slot is 6:1. The ESKARA 2026 student banners are 2400 × 400 WebP, about 110 KB each: the app also opens a banner full screen, turned sideways, where its long edge spans the phone's height (about 2400 px on a 3x phone). Errors at boot start with `campus banners:`. The response also sends a 5-minute `Cache-Control`.
 
@@ -94,7 +94,7 @@ The app only draws this section while its festival gate is open (`isFestivalUnlo
 
 Edit the `tile_grid` sections: reorder tiles, move a tile to another grid, add a grid, or add or remove a `title`. To add a new mini app, register it in `src/miniapps/` first (see [register-a-miniapp.md](register-a-miniapp.md)), since the layout refuses unknown ids.
 
-The `home_tiles` grid starts with the campus sheet's four buttons (건물지도, 건물코드, 분실물, 문의하기) from [`src/ui/campus/ui-campus.mapper.ts`](../../src/ui/campus/ui-campus.mapper.ts), with the same ids, titles and actions; `ui-home.config.spec.ts` fails when the two drift apart. The games follow in the same grid, because the app puts a 24 pt gap after every grid: a second grid reads as a new section, while tiles in one grid wrap at the normal row spacing. The Hall of Fame card stays under the first grid that holds a game.
+The `home_tiles` grid starts with the map's four permanent chips (건물지도, 건물코드, 분실물, 문의하기) from `BASE_CHIPS` in [`src/map/layer-set/map-layer-set.constants.ts`](../../src/map/layer-set/map-layer-set.constants.ts), with the same ids, titles and served actions; `ui-home.config.spec.ts` fails when the two drift apart. App builds that drop a `link` chip still reach the four links here. The games follow in the same grid, because the app puts a 24 pt gap after every grid: a second grid reads as a new section, while tiles in one grid wrap at the normal row spacing. The Hall of Fame card stays under the first grid that holds a game.
 
 ### Add a link to an app screen
 
