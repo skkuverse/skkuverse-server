@@ -8,7 +8,8 @@ When to rerun:
       KORAIL_REVISION below to the new files, then rerun.
     - Seoul Metro changes the 4호선 timetable (a 열차운행시각 조정 notice). Rerun; the Seoul API
       already serves the new table.
-    - A served station or one of its upstream or watched stations changes (LINE1_STATIONS, LINE4_STATIONS).
+    - A served station or one of its upstream or watched stations changes (the line's entry in LINES:
+      its stations and served platforms).
 
 How to rerun (from the repository root):
 
@@ -118,8 +119,50 @@ KORAIL_TERMINI = frozenset((
 # S1-1-150 서울역), which the train map and the Seoul API write as 청량리 and 서울.
 KORAIL_ABBREVIATIONS = {"1지청": "청량리", "지하서": "서울"}
 
-KORAIL_NAMES = {name: code for code, name in LINE1_STATIONS}
-LINE1_ORDER = [code for code, _ in LINE1_STATIONS]
+# One entry per line (OpenSpec add-commute-station-subway, design D8). Keys:
+#   line, operator     the file's line and operator, which the server matches to a platform id
+#   file               the output name before -<day type>.json
+#   source             korail (an xlsx per day type) or seoul (SearchSTNTimeTableByIDService)
+#   stations           (KRIC code, Korail short name or Seoul STATION_CD) in the order the file lists them
+#   up_order           "listed" when up trains travel the stations in that order, "reversed" otherwise
+#   served             the platforms a train must stop at to be written
+#   termini, abbreviations, is_express   Korail only: see korail_destination and korail_train
+LINE1 = {
+    "line": "1",
+    "operator": "KR",
+    "file": "korail-1",
+    "source": "korail",
+    "stations": LINE1_STATIONS,
+    "up_order": "listed",
+    "served": (LINE1_SERVED,),
+    "termini": KORAIL_TERMINI,
+    "abbreviations": KORAIL_ABBREVIATIONS,
+    "is_express": lambda train_no: train_no.startswith("1"),
+    "express_rule": "numbered 1xxx",
+    "revision": KORAIL_REVISION,
+    "urls": {"weekday": KORAIL_WEEKDAY_URL, "holiday": KORAIL_HOLIDAY_URL},
+    "sheet_prefixes": KORAIL_SHEET_PREFIXES,
+}
+LINE4 = {
+    "line": "4",
+    "operator": "S1",
+    "file": "seoul-4",
+    "source": "seoul",
+    "stations": LINE4_STATIONS,
+    "up_order": "reversed",
+    "served": (LINE4_SERVED,),
+}
+LINES = (LINE1, LINE4)
+
+def station_codes(line):
+    return [code for code, _ in line["stations"]]
+
+
+def travel_order(line, direction):
+    """The line's KRIC codes in the order a train of that direction reaches them."""
+    codes = station_codes(line)
+    forward = (direction == "up") == (line["up_order"] == "listed")
+    return codes if forward else codes[::-1]
 
 XLSX_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -168,9 +211,10 @@ def stop_time(stop):
 
 
 def validate_train(train, served, label):
-    """The train stops at the served station, and its times increase along its stops."""
-    if not any(stop["station"] == served for stop in train["stops"]):
-        raise ConvertError("%s: train %s (%s) has no stop at %s" % (label, train["trainNo"], train["direction"], served))
+    """The train stops at a served station (one KRIC code or several), and its times increase along its stops."""
+    served = (served,) if isinstance(served, str) else tuple(served)
+    if not any(stop["station"] in served for stop in train["stops"]):
+        raise ConvertError("%s: train %s (%s) has no stop at %s" % (label, train["trainNo"], train["direction"], " or ".join(served)))
     previous = None
     for index, stop in enumerate(train["stops"]):
         if stop["arr"] is None and stop["dep"] is None:
@@ -246,13 +290,14 @@ def read_workbook(data):
     return sheets
 
 
-# ---------------------------------------------------------------- Korail (1호선)
+# ---------------------------------------------------------------- Korail
 
-def korail_code(name, where):
+def korail_code(name, where, line=LINE1):
     """The KRIC code of a covered short name, None for an uncovered station; refuses a near miss."""
-    if name in KORAIL_NAMES:
-        return KORAIL_NAMES[name]
-    for covered in KORAIL_NAMES:
+    names = {short: code for code, short in line["stations"]}
+    if name in names:
+        return names[name]
+    for covered in names:
         if name[:2] == covered[:2]:
             raise ConvertError("%s: station name %r looks like %r but is not in the name table" % (where, name, covered))
     return None
@@ -289,14 +334,24 @@ def korail_blocks(rows, sheet):
     return blocks
 
 
-def korail_direction(station_rows, sheet):
-    """up when the block lists the covered stations south to north, down when north to south."""
+def sheet_direction(sheet):
+    """The direction a sheet name states: a _상/_하 suffix (1호선) or a 상행/하행 suffix (수인분당), else None."""
+    if sheet.endswith("상행"):
+        return "up"
+    if sheet.endswith("하행"):
+        return "down"
+    return {"상": "up", "하": "down"}.get(sheet.rsplit("_", 1)[-1])
+
+
+def korail_direction(station_rows, sheet, line=LINE1):
+    """up when the block lists the covered stations in up travel order, down when in down travel order."""
     codes = [code for _, _, code in station_rows if code is not None]
-    if LINE1_SERVED not in codes:
-        raise ConvertError("%s: no 성균관 row" % sheet)
+    if not any(code in line["served"] for code in codes):
+        raise ConvertError("%s: no row of a served station (%s)" % (sheet, ", ".join(line["served"])))
     if len(set(codes)) != len(codes):
         raise ConvertError("%s: a covered station is listed twice" % sheet)
-    positions = [LINE1_ORDER.index(code) for code in codes]
+    up_order = travel_order(line, "up")
+    positions = [up_order.index(code) for code in codes]
     if len(positions) < 2:
         raise ConvertError("%s: too few covered stations to tell the direction" % sheet)
     if positions == sorted(positions):
@@ -305,14 +360,14 @@ def korail_direction(station_rows, sheet):
         direction = "down"
     else:
         raise ConvertError("%s: covered stations are out of line order" % sheet)
-    suffix = {"상": "up", "하": "down"}.get(sheet.rsplit("_", 1)[-1])
-    if suffix is not None and suffix != direction:
-        raise ConvertError("%s: the sheet name says %s but the stations run %s" % (sheet, suffix, direction))
+    stated = sheet_direction(sheet)
+    if stated is not None and stated != direction:
+        raise ConvertError("%s: the sheet name says %s but the stations run %s" % (sheet, stated, direction))
     return direction
 
 
-def korail_train(rows, sheet, column, station_rows, direction):
-    """One train column as a train with its stops at covered stations, or None if it skips 성균관."""
+def korail_train(rows, sheet, column, station_rows, direction, line=LINE1):
+    """One train column as a train with its stops at covered stations, or None if it stops at no served station."""
     where = "%s column %d" % (sheet, column + 1)
     raw_no = rows[4][column]
     try:
@@ -328,7 +383,7 @@ def korail_train(rows, sheet, column, station_rows, direction):
     if not timed:
         return None
     stops = []
-    has_pass = False
+    passes = []
     for index, (row, code, arr, dep) in enumerate(timed):
         is_origin = index == 0
         is_terminus = index == len(timed) - 1
@@ -341,16 +396,16 @@ def korail_train(rows, sheet, column, station_rows, direction):
                 raise ConvertError("%s row %d: the terminus has no arrival" % (where, row))
             dep = None
         elif arr is None:
-            has_pass = True
+            passes.append(code)
             continue
         elif dep is None:
             raise ConvertError("%s row %d: an arrival without a departure mid-route" % (where, row))
         if code is not None:
             stops.append({"station": code, "arr": None if arr is None else service_seconds(arr), "dep": None if dep is None else service_seconds(dep)})
-    express = train_no.startswith("1")
-    if has_pass and not express:
-        raise ConvertError("%s: train %s passes a station but is not numbered 1xxx" % (where, raw_no.strip()))
-    if not any(stop["station"] == LINE1_SERVED for stop in stops):
+    express = line["is_express"](train_no)
+    if passes and not express:
+        raise ConvertError("%s: train %s passes a station but is not %s" % (where, raw_no.strip(), line["express_rule"]))
+    if not any(stop["station"] in line["served"] for stop in stops):
         return None
     destination = rows.get(3, {}).get(column)
     if is_blank(destination):
@@ -358,24 +413,32 @@ def korail_train(rows, sheet, column, station_rows, direction):
     return {"trainNo": train_no, "direction": direction, "destination": destination.strip(), "express": express, "stops": stops}
 
 
-def korail_destination(name, where):
+def korail_destination(name, where, line=LINE1):
     """The name the train map and the Seoul API write for a Korail 종착역; refuses a name in neither table."""
-    if name in KORAIL_ABBREVIATIONS:
-        return KORAIL_ABBREVIATIONS[name]
-    if name in KORAIL_TERMINI or name in KORAIL_ABBREVIATIONS.values():
+    abbreviations = line["abbreviations"]
+    if name in abbreviations:
+        return abbreviations[name]
+    if name in line["termini"] or name in abbreviations.values():
         return name
-    raise ConvertError("%s: destination %r is neither in KORAIL_TERMINI nor in KORAIL_ABBREVIATIONS; check it against the KRIC code list and the train map" % (where, name))
+    raise ConvertError("%s: destination %r is neither in the line's termini nor in its abbreviations; check it against the KRIC code list and the train map" % (where, name))
 
 
-def with_upstream_destinations(trains, label):
-    return [dict(train, destination=korail_destination(train["destination"], "%s train %s" % (label, train["trainNo"]))) for train in trains]
+def with_upstream_destinations(trains, label, line=LINE1):
+    return [dict(train, destination=korail_destination(train["destination"], "%s train %s" % (label, train["trainNo"]), line)) for train in trains]
 
 
-def korail_trains(sheets):
-    """Every train of the selected sheets that stops at 성균관."""
+def korail_sheet_selected(line, sheet, day_type):
+    """1호선 reads every sheet of a day type's file whose name starts with a prefix; 수인분당 names its sheets per day type."""
+    if "sheets" in line:
+        return sheet in line["sheets"][day_type]
+    return sheet.startswith(line["sheet_prefixes"])
+
+
+def korail_trains(sheets, line=LINE1, day_type=None):
+    """Every train of the selected sheets that stops at a served station."""
     trains = []
     for sheet, rows in sheets.items():
-        if not sheet.startswith(KORAIL_SHEET_PREFIXES):
+        if not korail_sheet_selected(line, sheet, day_type):
             continue
         for name_column, columns in korail_blocks(rows, sheet):
             station_rows = []
@@ -387,26 +450,24 @@ def korail_trains(sheets):
                     raise ConvertError("%s row %d: station name %r is not text" % (sheet, row, name))
                 if not is_blank(rows.get(row + 1, {}).get(name_column)):
                     raise ConvertError("%s row %d: the departure row below a station holds a name" % (sheet, row + 1))
-                station_rows.append((row, name.strip(), korail_code(name.strip(), "%s row %d" % (sheet, row))))
-            direction = korail_direction(station_rows, sheet)
+                station_rows.append((row, name.strip(), korail_code(name.strip(), "%s row %d" % (sheet, row), line)))
+            direction = korail_direction(station_rows, sheet, line)
             for column in columns:
-                train = korail_train(rows, sheet, column, station_rows, direction)
+                train = korail_train(rows, sheet, column, station_rows, direction, line)
                 if train is not None:
-                    validate_train(train, LINE1_SERVED, sheet)
+                    validate_train(train, line["served"], sheet)
                     trains.append(train)
     return trains
 
 
-# ---------------------------------------------------------------- Seoul (4호선)
+# ---------------------------------------------------------------- Seoul
 
-def seoul_trips(rows_by_station, direction):
+def seoul_trips(rows_by_station, direction, line=LINE4):
     """Join one direction's station rows into trains, by normalized number and time continuity.
 
     rows_by_station: [(KRIC code, [API row, ...])] in the order the API was asked, any order.
     """
-    order = [code for code, _ in LINE4_STATIONS]
-    if direction == "up":
-        order = order[::-1]
+    order = travel_order(line, direction)
     candidates = []
     for code, rows in rows_by_station:
         for row in rows:
@@ -498,13 +559,13 @@ def seoul_fetch(key, code, week, inout):
     return rows
 
 
-def seoul_trains(fetch, week):
+def seoul_trains(fetch, week, line=LINE4):
     trains = []
     for direction, inout in SEOUL_INOUT:
-        rows_by_station = [(code, fetch(station_cd, week, inout)) for code, station_cd in LINE4_STATIONS]
-        for train in seoul_trips(rows_by_station, direction):
-            if any(stop["station"] == LINE4_SERVED for stop in train["stops"]):
-                validate_train(train, LINE4_SERVED, "seoul WEEK_TAG %s" % week)
+        rows_by_station = [(code, fetch(station_cd, week, inout)) for code, station_cd in line["stations"]]
+        for train in seoul_trips(rows_by_station, direction, line):
+            if any(stop["station"] in line["served"] for stop in train["stops"]):
+                validate_train(train, line["served"], "seoul %s WEEK_TAG %s" % (line["line"], week))
                 trains.append(train)
     return trains
 
@@ -538,15 +599,15 @@ def keep_revision(path, document):
     return document
 
 
-def write(out_dir, name, document):
+def write(out_dir, line, document):
+    name = "%s-%s.json" % (line["file"], document["dayType"])
     path = os.path.join(out_dir, name)
     if document["source"]["kind"] == "seoul-station-timetable":
         document = keep_revision(path, document)
     with open(path, "w", encoding="utf-8") as handle:
         handle.write(render(document))
-    served = LINE1_SERVED if document["line"] == "1" else LINE4_SERVED
     by_direction = {d: sum(1 for t in document["trains"] if t["direction"] == d) for d in ("up", "down")}
-    print("%s: %d trains at %s (up %d, down %d), revision %s" % (name, len(document["trains"]), served, by_direction["up"], by_direction["down"], document["source"]["revision"]))
+    print("%s: %d trains at %s (up %d, down %d), revision %s" % (name, len(document["trains"]), ", ".join(line["served"]), by_direction["up"], by_direction["down"], document["source"]["revision"]))
 
 
 def download(url):
@@ -558,20 +619,27 @@ def download(url):
         raise ConvertError("%s: HTTP %d" % (url, error.code)) from None
 
 
+def read_local_or_download(local, url):
+    if local:
+        with open(local, "rb") as handle:
+            return handle.read()
+    return download(url)
+
+
+def build_korail_line(out_dir, line, day_type, data):
+    label = "korail %s %s" % (line["line"], day_type)
+    trains = with_upstream_destinations(korail_trains(read_workbook(data), line, day_type), label, line)
+    check_unique(trains, label, allow_split=False)
+    document = timetable("korail-xlsx", line["urls"][day_type], line["revision"], line["operator"], line["line"], day_type, station_codes(line), trains)
+    write(out_dir, line, document)
+
+
 def build_korail(out_dir, weekday_file, holiday_file):
-    for day_type, url, local in (("weekday", KORAIL_WEEKDAY_URL, weekday_file), ("holiday", KORAIL_HOLIDAY_URL, holiday_file)):
-        if local:
-            with open(local, "rb") as handle:
-                data = handle.read()
-        else:
-            data = download(url)
-        trains = with_upstream_destinations(korail_trains(read_workbook(data)), "korail %s" % day_type)
-        check_unique(trains, "korail %s" % day_type, allow_split=False)
-        document = timetable("korail-xlsx", url, KORAIL_REVISION, "KR", "1", day_type, LINE1_ORDER, trains)
-        write(out_dir, "korail-1-%s.json" % day_type, document)
+    for day_type, local in (("weekday", weekday_file), ("holiday", holiday_file)):
+        build_korail_line(out_dir, LINE1, day_type, read_local_or_download(local, LINE1["urls"][day_type]))
 
 
-def build_seoul(out_dir, today):
+def build_seoul(out_dir, today, lines=(LINE4,)):
     key = os.environ.get("SEOUL_OPENAPI_GENERAL_KEY")
     if not key:
         raise ConvertError("SEOUL_OPENAPI_GENERAL_KEY is not set; run through doppler run -p backend -c dev_personal --")
@@ -579,12 +647,12 @@ def build_seoul(out_dir, today):
     def fetch(code, week, inout):
         return seoul_fetch(key, code, week, inout)
 
-    for day_type, week in SEOUL_WEEK_TAGS:
-        trains = seoul_trains(fetch, week)
-        check_unique(trains, "seoul %s" % day_type, allow_split=True)
-        stations = [code for code, _ in LINE4_STATIONS]
-        document = timetable("seoul-station-timetable", SEOUL_API, today, "S1", "4", day_type, stations, trains)
-        write(out_dir, "seoul-4-%s.json" % day_type, document)
+    for line in lines:
+        for day_type, week in SEOUL_WEEK_TAGS:
+            trains = seoul_trains(fetch, week, line)
+            check_unique(trains, "seoul %s %s" % (line["line"], day_type), allow_split=True)
+            document = timetable("seoul-station-timetable", SEOUL_API, today, line["operator"], line["line"], day_type, station_codes(line), trains)
+            write(out_dir, line, document)
 
 
 def main(argv=None):
