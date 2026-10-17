@@ -7,8 +7,10 @@
  * station's KRIC codes and one entry per direction, as the wire publishes it;
  * any other station id is a 404 `SUBWAY_STATION_NOT_FOUND`; a served response
  * is `private, max-age=5`; a state older than 2 minutes serves every train
- * `scheduled`; a train whose departure was observed is not listed; a countdown
- * counts from `generatedAt`; and the labels follow the request language.
+ * `scheduled`; a train whose departure was observed is not listed; a published
+ * countdown arrives at its row time plus its seconds; a train seen at the
+ * nearest upstream station is one stop away; and the station, direction and
+ * neighbor station names follow the request language.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -140,7 +142,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(down.trains.map((t: { trainNo: string }) => t.trainNo)).not.toContain("0493");
   });
 
-  it("counts a 혜화 countdown of 150 s generated 40 s before the state as 110 s, live", async () => {
+  it("serves a 혜화 countdown of 150 s generated at 20:40:20 as arriving at 20:42:50, live, with no seconds left of its own", async () => {
     // Arrange
     const row: CountdownRow = { trainNo: "4674", stationId: "S1-4-420", generatedAt: at("20:40:20"), remainingSec: 150 };
     await trackAt("20:41:00", "seoul-subway-api", [], [row]);
@@ -151,7 +153,24 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     // Assert
     const up = res.body.data.directions.find((d: { direction: string }) => d.direction === "up");
     expect(res.body.data.generatedAt).toBe(at("20:41:00").toISOString());
-    expect(up.trains.find((t: { trainNo: string }) => t.trainNo === "4674")).toMatchObject({ remainingSec: 110, source: "live" });
+    const train = up.trains.find((t: { trainNo: string }) => t.trainNo === "4674");
+    expect(train).toMatchObject({ arrivalAt: at("20:42:50").toISOString(), source: "live" });
+    expect(train).not.toHaveProperty("remainingSec");
+  });
+
+  it("counts 0691, arrived at 의왕 (KR-1-P152), one stop away from 성균관대 down", async () => {
+    // Arrange
+    await trackAt("20:47:40", "seoul-subway-api", [event("0691", "KR-1-P152", "arrived", "20:47:30", "천안")]);
+
+    // Act
+    const res = await getAt("20:47:42", "/subway/stations/KR-1-0153/arrivals");
+
+    // Assert
+    expect(res.status).toBe(200);
+    const down = res.body.data.directions.find((d: { direction: string }) => d.direction === "down");
+    const train = down.trains.find((t: { trainNo: string }) => t.trainNo === "0691");
+    expect(train).toMatchObject({ stopsAway: 1, source: "estimated" });
+    expect(train).not.toHaveProperty("position");
   });
 
   it.each([
@@ -166,5 +185,19 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.body.meta).toEqual({ lang });
     expect(res.body.data.station.name).toBe(stationName);
     expect(res.body.data.directions.map((d: { name: string }) => d.name)).toEqual(directionNames);
+  });
+
+  it.each([
+    ["ko-KR", [{ id: "KR-1-P154", name: "화서" }, { id: "KR-1-P152", name: "의왕" }], [{ id: "KR-1-P152", name: "의왕" }, { id: "KR-1-P154", name: "화서" }]],
+    ["en-US", [{ id: "KR-1-P154", name: "Hwaseo" }, { id: "KR-1-P152", name: "Uiwang" }], [{ id: "KR-1-P152", name: "Uiwang" }, { id: "KR-1-P154", name: "Hwaseo" }]],
+    ["zh-CN", [{ id: "KR-1-P154", name: "华西" }, { id: "KR-1-P152", name: "义王" }], [{ id: "KR-1-P152", name: "义王" }, { id: "KR-1-P154", name: "华西" }]],
+  ])("names each 성균관대 direction's previous and next stations for Accept-Language %s", async (acceptLanguage, up, down) => {
+    // Act
+    const res = await getAt("20:41:02", "/subway/stations/KR-1-0153/arrivals").set("Accept-Language", acceptLanguage);
+
+    // Assert
+    expect(res.status).toBe(200);
+    const neighbors = res.body.data.directions.map((d: { previousStation: unknown; nextStation: unknown }) => [d.previousStation, d.nextStation]);
+    expect(neighbors).toEqual([up, down]);
   });
 });

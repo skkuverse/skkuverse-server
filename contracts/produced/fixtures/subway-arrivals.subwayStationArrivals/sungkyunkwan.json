@@ -1,0 +1,59 @@
+{
+  "_about": "GET /subway/stations/KR-1-0153/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction",
+  "data": {
+    "station": {
+      "id": "KR-1-0153",
+      "operatorCode": "KR",
+      "lineCode": "1",
+      "stationCode": "0153",
+      "name": "성균관대"
+    },
+    "generatedAt": "2026-10-17T02:39:07.605Z",
+    "directions": [
+      {
+        "direction": "up",
+        "name": "서울 방면",
+        "previousStation": {
+          "id": "KR-1-P154",
+          "name": "화서"
+        },
+        "nextStation": {
+          "id": "KR-1-P152",
+          "name": "의왕"
+        },
+        "trains": [
+          {
+            "trainNo": "0444",
+            "destination": "광운대",
+            "express": false,
+            "arrivalAt": "2026-10-17T02:44:37.605Z",
+            "stopsAway": 2,
+            "source": "estimated"
+          }
+        ]
+      },
+      {
+        "direction": "down",
+        "name": "천안·서동탄 방면",
+        "previousStation": {
+          "id": "KR-1-P152",
+          "name": "의왕"
+        },
+        "nextStation": {
+          "id": "KR-1-P154",
+          "name": "화서"
+        },
+        "trains": [
+          {
+            "trainNo": "1915",
+            "destination": "천안",
+            "express": true,
+            "arrivalAt": "2026-10-17T02:38:38.000Z",
+            "stopsAway": 0,
+            "source": "estimated"
+          }
+        ]
+      }
+    ]
+  }
+}

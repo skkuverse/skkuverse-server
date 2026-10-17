@@ -37,6 +37,8 @@ Subway owns the real-time arrivals of the stations nearest the two campuses: Sun
 | station direction (`StationDirection`) | One direction at one station: its localized name, its upstream stations and its next station | `SubwayStation.directions` | — |
 | upstream station (`upstreamStationIds`) | Up to three stations a direction's trains pass just before the station, by station id, nearest first | `StationDirection.upstreamStationIds` | `prevStations` |
 | next station (`nextStationId`) | The station a direction's trains reach just after the station, by station id | `StationDirection.nextStationId` | — |
+| previous station (`previousStation`) | A direction's nearest upstream station, as the response names it: its station id and its name in the request language | `upstreamStationIds`, `NEIGHBOR_NAME_BY_STATION_ID` | — |
+| neighbor name (`NEIGHBOR_NAME_BY_STATION_ID`) | The localized name of each direction's previous station and next station | `NEIGHBOR_NAME_BY_STATION_ID` | — |
 | seoul ids (`SeoulStationIds`) | What the `seoul` provider reaches a station by: `subwayId`, `stationName` in the Seoul API, `trainMapLine` and its timetable | `SubwayStation.seoul` | — |
 | station timetable (`StationTimetable`) | The committed timetable source that serves a station: `korail`, or `seoul-station` with its Seoul station code | `SeoulStationIds.timetable` | — |
 | provider (`SubwayProvider`) | What the tracker observes one upstream of a jurisdiction's data through, on that upstream's own cadence; the `seoul` provider hands it the Seoul API and the train map | `SubwayProvider.observe` | `adapter` |
@@ -56,7 +58,7 @@ Subway owns the real-time arrivals of the stations nearest the two campuses: Sun
 | arrival source (`ArrivalSource`) | How an arrival was obtained: `live` from a published countdown, `estimated` from the timetable and a delay, `scheduled` from the timetable alone | `toStationArrivals` | — |
 | countdown divergence (`CountdownDivergence`) | A live arrival over `MAX_COUNTDOWN_DIVERGENCE_SEC` from the train's estimate; logged, the live one still served | `toStationArrivals` | — |
 | arrivals document | A station's next trains per direction at absolute instants, with the tick's `generatedAt` and service day: a `SubwayArrivalsDoc` in `subway_arrivals` | `toArrivalsDoc` | — |
-| remaining seconds | A served train's `remainingSec`: whole seconds from the response's `generatedAt` to its arrival, never below zero | `toRemainingSec` | — |
+| stops away (`toStopsAway`) | How far a served train is from the station by its stored position: `0` at the station, an upstream station's place in the list from `1` whatever its state there, null when nothing reported it or it is farther | `toStopsAway` | — |
 | tracked tick (`TrackedTick`) | One tracker tick as its listeners get it: the upstream's source, the tick's time and, per station, the tick's events on its line and the arrivals document written | `SubwayTrackingService.track` | — |
 | tick listener (`TrackedTickListener`) | What runs after each tick has written the arrivals; it must not reject | `SubwayTrackingService.addTickListener` | — |
 | subway event (`SubwayEventDoc`) | One source's first report of one train's state at one station, at the event's time, in `subway_events` | `SubwayHistoryService` | — |
@@ -92,10 +94,10 @@ flowchart LR
 | Field | App use |
 | --- | --- |
 | `station` | The station's id, codes and name in the request language; served and not rendered yet |
-| `generatedAt` | The instant `remainingSec` counts from; served and not rendered yet |
-| `directions` | Up then down, each with its name in the request language and at most `MAX_TRAINS_PER_DIRECTION` trains; served and not rendered yet |
-| `remainingSec` | Meant for a countdown from the app's receive time; served and not rendered yet |
-| `source`, `position` | How an arrival was obtained and where its train is; served and not rendered yet |
+| `generatedAt` | When the arrivals were computed, for a staleness label; the request time when the timetable alone is served; served and not rendered yet |
+| `directions` | Up then down, each with its name, `previousStation` and `nextStation` in the request language and at most `MAX_TRAINS_PER_DIRECTION` trains; served and not rendered yet |
+| `arrivalAt` | The instant the app counts down to with the device clock; served and not rendered yet |
+| `source`, `stopsAway` | How an arrival was obtained and how many stops away its train is; served and not rendered yet |
 
 The root holds the module file, which binds the rate limiter for `subway`, `SUBWAY_STATIONS`, `findSubwayStation`, the provider seam (`SubwayProvider` and the shapes it hands over in `src/subway/subway.types.ts`) and `SubwayRepository`, which the tracker writes and the route reads. Everything after the seam does not depend on the provider: merging, delay, estimates, the stored state and the response.
 
@@ -105,14 +107,15 @@ The root holds the module file, which binds the rate limiter for `subway`, `SUBW
 - `seoul/` holds `SubwaySeoulService`, which derives the polled lines from `SUBWAY_STATIONS` and the Seoul names of the upstream stations (`SEOUL_STATION_NAME_BY_ID`): `observeApi` makes the API's calls, `observeTrainMap` crawls each line and stamps its events with the crawl time, and each upstream call first takes one from its source's daily ceiling (`config.subway.apiDailyCap`, `config.subway.trainMapDailyCap`). `SubwaySeoulPoller` registers `subway-seoul` and `subway-trainmap`, each on its own interval, each handing its upstream to the tracker.
 - `tracking/` holds `SubwayTrackingService`. Inside the service window it observes the upstream it is handed, merges the events into each station's train histories, keeps each source's latest countdown rows, estimates each direction's next `MAX_TRAINS_PER_DIRECTION` trains and upserts every station's arrivals document. It also builds a station's timetable-only document.
 - `history/` holds `SubwayHistoryService`, which listens to the tracker's ticks: it stores each source's first report of a train's state at a station in `subway_events`, records the served arrival in `subway_predictions` when a train's lead first falls to each of `PREDICTION_HORIZONS_MIN`, resolves a train's records on its first observed arrival at the station, and marks a record unresolved `UNRESOLVED_AFTER_MS` past its predicted arrival. Each tick writes in batches; a failed write is logged and never fails the tick. `SubwayHistoryController` serves the accuracy report behind the internal token; its aggregation is `toAccuracyPipeline`.
-- `arrivals/` holds the route. It serves the stored document while it is at most `MAX_STATE_AGE_MS` old and `SUBWAY` is on, else the tracker's timetable-only document, with labels in the request language.
+- `arrivals/` holds the route. It serves the stored document while it is at most `MAX_STATE_AGE_MS` old and `SUBWAY` is on, else the tracker's timetable-only document, with labels in the request language. It turns each stored position into the train's stops away and names each direction's previous and next stations from `NEIGHBOR_NAME_BY_STATION_ID`.
 
 Adding a station touches:
 
 - `SUBWAY_STATIONS`: its KRIC codes checked against the code list, its localized names, each direction's name, upstream stations and next station, and the ids its provider reaches it by;
+- `NEIGHBOR_NAME_BY_STATION_ID` in `src/subway/arrivals/subway-arrivals.constants.ts`: the localized names of each direction's previous and next stations;
 - `scripts/subway-timetable/convert.py`: the station and its upstream stations in the timetables it writes, then a rerun;
 - `scripts/copy-build-assets.js`: any new timetable file;
-- `src/subway/subway.rules.spec.ts`: the station's ids, upstream stations and next stations pinned; `src/subway/timetable/subway-timetable.service.spec.ts` checks the upstream and next stations against the timetable's route.
+- `src/subway/subway.rules.spec.ts`: the station's ids, upstream stations and next stations pinned; `src/subway/timetable/subway-timetable.service.spec.ts` checks the upstream and next stations against the timetable's route, and `src/subway/arrivals/subway-arrivals.mapper.spec.ts` pins their names in every language.
 
 Adding a provider touches:
 
@@ -132,7 +135,8 @@ Adding a provider touches:
 - One upstream tick is read as one response: its responses cover lines whose train numbers never overlap, so the newest row per train within it counts.
 - Each upstream ticks, fails and reaches its daily ceiling on its own; a ceiling rejects that source's ticks until the next KST date.
 - With `SUBWAY=off` nothing calls the provider and the route serves the timetable alone; the provider itself has no switch.
-- The train histories live in the poller process's memory and a restart rebuilds them from the next ticks; `subway_arrivals` holds absolute instants, and remaining seconds are computed per response.
+- The train histories live in the poller process's memory and a restart rebuilds them from the next ticks; `subway_arrivals` holds absolute instants and positions, and stops away are computed per response.
+- A response carries arrival instants, never seconds left: the app counts down against the device clock.
 - A source's countdown rows count until its next tick replaces them, and none after `MAX_COUNTDOWN_SOURCE_AGE_MS` without one.
 - Every served train is a scheduled one: a train only in countdown rows or in a history, absent from the day's timetable, is not served.
 - Only `SubwayModule` binds the rate limiter for `subway`.
@@ -145,7 +149,7 @@ Adding a provider touches:
 
 - Whether `recptnDt` is an event time on line `1`, and any offset to apply, waits on the first days of `subway_events` (the [add-subway-arrivals change](../../openspec/changes/add-subway-arrivals/design.md), Risks).
 - A countdown's divergence from the estimate is logged, not stored with the prediction as the design's countdown decision says: the report compares `live` and `estimated` only across trains.
-- A train's position names its station by station id only, and destinations are the upstreams' Korean names; the app has no localized name for an upstream station or a destination yet.
+- Destinations are the upstreams' Korean names; the app has no localized name for a destination yet.
 
 ## Related
 

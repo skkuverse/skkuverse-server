@@ -1,10 +1,14 @@
 /**
  * The arrivals route's two decisions: the stored state is served while it is
- * at most 2 minutes old, and a train's remaining seconds count from the
- * state's `generatedAt` to its arrival, whole seconds, never below zero (a
- * train already standing at the station).
+ * at most 2 minutes old, and a train is so many stops away as its last
+ * observed station says: 0 at the served station, the upstream station's
+ * place in its direction's list (nearest first, from 1) at an upstream
+ * station whatever its state there, and unknown (null) for a station off the
+ * list or a train nothing has reported.
  */
-import { isFreshState, toRemainingSec } from "./subway-arrivals.rules";
+import { SUBWAY_STATIONS } from "../subway.constants";
+import type { SubwayStation } from "../subway.types";
+import { isFreshState, toStopsAway } from "./subway-arrivals.rules";
 
 const GENERATED_AT = new Date("2026-10-16T11:41:00Z");
 
@@ -22,18 +26,25 @@ describe("isFreshState", () => {
   });
 });
 
-describe("toRemainingSec", () => {
+describe("toStopsAway", () => {
+  const SUNGKYUNKWAN = SUBWAY_STATIONS.find((s) => s.id === "KR-1-0153") as SubwayStation;
+  const DOWN = SUNGKYUNKWAN.directions.down;
+
   it.each([
-    ["110 s after", "2026-10-16T11:42:50Z", 110],
-    ["0.4 s after", "2026-10-16T11:41:00.400Z", 0],
-    ["0.6 s after", "2026-10-16T11:41:00.600Z", 1],
-    ["at", "2026-10-16T11:41:00Z", 0],
-    ["30 s before", "2026-10-16T11:40:30Z", 0],
-  ])("counts an arrival %s generatedAt as %i s", (_label, arrivalIso, remainingSec) => {
+    ["approaching the served station", { stationId: "KR-1-0153", state: "approaching" }, 0],
+    ["standing at the served station", { stationId: "KR-1-0153", state: "arrived" }, 0],
+    ["arrived at the nearest upstream station", { stationId: "KR-1-P152", state: "arrived" }, 1],
+    ["departed the nearest upstream station", { stationId: "KR-1-P152", state: "departed" }, 1],
+    ["approaching the second upstream station", { stationId: "KR-1-P151", state: "approaching" }, 2],
+    ["at the third upstream station", { stationId: "KR-1-P150", state: "arrived" }, 3],
+    ["at a station past the upstream list", { stationId: "KR-1-P157", state: "arrived" }, null],
+    ["at the station after the served one", { stationId: "KR-1-P154", state: "arrived" }, null],
+    ["nothing has reported", null, null],
+  ] as const)("reads a 성균관대 down train %s as %p stops away", (_label, position, stopsAway) => {
     // Act
-    const seconds = toRemainingSec(new Date(arrivalIso), GENERATED_AT);
+    const stops = toStopsAway(DOWN, "KR-1-0153", position);
 
     // Assert
-    expect(seconds).toBe(remainingSec);
+    expect(stops).toBe(stopsAway);
   });
 });
