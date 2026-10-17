@@ -7,11 +7,13 @@
  * predicted instants for the unresolved sweep, and a 180-day TTL on `madeAt`.
  * Each tick writes in batches: one unordered insert of new events, one
  * unordered bulk of insert-only upserts of crossed horizons, one update per
- * observed arrival computing each open record's error from its own
- * prediction, and one update marking the open records 30 minutes past their
- * predicted arrival unresolved. The report runs one bounded aggregation over
- * the range's resolved and unresolved records. A database error rejects; the
- * service decides what that means.
+ * observed arrival computing each record's error from its own prediction,
+ * over the records isResolvableBy lets it resolve (made before the tick that
+ * saw it, within 30 minutes of their predicted arrival, open or, for an
+ * arrived row, resolved by an approaching row), and one update marking the
+ * open records 30 minutes past their predicted arrival unresolved. The report
+ * runs one bounded aggregation over the range's resolved and unresolved
+ * records. A database error rejects; the service decides what that means.
  */
 const insertMany = jest.fn();
 const bulkWrite = jest.fn();
@@ -158,10 +160,20 @@ describe("SubwayHistoryRepository.upsertPredictions", () => {
 });
 
 describe("SubwayHistoryRepository.updateObservedArrival", () => {
-  it("resolves the train's open records at the station in one update, each error from its own predicted instant", async () => {
-    // Arrange
-    const observedAt = at("21:05:50");
+  const observedAt = at("21:05:50");
+  const update = [
+    {
+      $set: {
+        status: "resolved",
+        observedAt,
+        observedState: "arrived",
+        resolvedAt: at("21:05:51"),
+        errorSec: { $divide: [{ $subtract: ["$predictedAt", observedAt] }, 1000] },
+      },
+    },
+  ];
 
+  it("resolves, in one update, the train's records at the station made before the tick that saw the arrived row, open or resolved by an approaching row", async () => {
     // Act
     await repository.updateObservedArrival(
       { serviceDate: "2026-10-16", trainNo: "0692", stationId: "KR-1-0153", observedAt, observedState: "arrived" },
@@ -169,17 +181,37 @@ describe("SubwayHistoryRepository.updateObservedArrival", () => {
     );
 
     // Assert
-    expect(updateMany).toHaveBeenCalledWith({ serviceDate: "2026-10-16", trainNo: "0692", stationId: "KR-1-0153", status: "open" }, [
+    expect(updateMany).toHaveBeenCalledWith(
       {
-        $set: {
-          status: "resolved",
-          observedAt,
-          observedState: "arrived",
-          resolvedAt: at("21:05:51"),
-          errorSec: { $divide: [{ $subtract: ["$predictedAt", observedAt] }, 1000] },
-        },
+        serviceDate: "2026-10-16",
+        trainNo: "0692",
+        stationId: "KR-1-0153",
+        status: { $in: ["open", "resolved"] },
+        observedState: { $in: [null, "approaching"] },
+        madeAt: { $lt: at("21:05:51") },
+        predictedAt: { $gte: at("20:35:51") },
       },
-    ]);
+      update,
+    );
+  });
+
+  it("resolves by an approaching row only the open records made before the tick that saw it", async () => {
+    // Act
+    await repository.updateObservedArrival(
+      { serviceDate: "2026-10-16", trainNo: "0692", stationId: "KR-1-0153", observedAt, observedState: "approaching" },
+      at("21:05:51"),
+    );
+
+    // Assert
+    expect(updateMany.mock.calls[0]?.[0]).toEqual({
+      serviceDate: "2026-10-16",
+      trainNo: "0692",
+      stationId: "KR-1-0153",
+      status: { $in: ["open", "resolved"] },
+      observedState: { $in: [null] },
+      madeAt: { $lt: at("21:05:51") },
+      predictedAt: { $gte: at("20:35:51") },
+    });
   });
 });
 

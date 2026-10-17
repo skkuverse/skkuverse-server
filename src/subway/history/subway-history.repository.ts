@@ -56,7 +56,7 @@ export class SubwayHistoryRepository implements OnModuleInit {
   }
 
   async updateObservedArrival(arrival: ObservedArrival, resolvedAt: Date): Promise<void> {
-    await this.subwayPredictions().updateMany(toObservedArrivalFilter(arrival), toObservedArrivalUpdate(arrival, resolvedAt));
+    await this.subwayPredictions().updateMany(toObservedArrivalFilter(arrival, resolvedAt), toObservedArrivalUpdate(arrival, resolvedAt));
   }
 
   async updateUnresolvedPredictions(cutoff: Date, markedAt: Date): Promise<void> {
