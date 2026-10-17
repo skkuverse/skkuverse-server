@@ -46,7 +46,9 @@
             "maximum": 9007199254740991
           },
           "eta": {
-            "type": "string"
+            "type": "string",
+            "deprecated": true,
+            "description": "Legacy: read arrivals[].message; kept for installed builds from before the arrivals OTA"
           },
           "arrivals": {
             "type": "array",
