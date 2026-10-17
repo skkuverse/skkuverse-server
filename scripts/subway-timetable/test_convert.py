@@ -17,6 +17,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
+import zlib
 from xml.sax.saxutils import escape
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -475,6 +476,253 @@ class CommittedSuinBundang(unittest.TestCase):
         # Assert
         self.assertEqual(sorted(stops), ["%04d" % n for n in range(6300, 6314)])
         self.assertEqual({no: [s for window in self.WINDOWS for s in window if s not in seen] for no, seen in stops.items()}, {no: [] for no in stops})
+
+
+def pdf(objects):
+    """PDF bytes from {number: dictionary bytes or (dictionary bytes, stream bytes)}, catalog first."""
+    out = b"%PDF-1.5\n"
+    for number, value in objects.items():
+        head, stream = value if isinstance(value, tuple) else (value, None)
+        out += b"%d 0 obj\n" % number + head
+        if stream is not None:
+            out += b"\nstream\r\n" + stream + b"\r\nendstream"
+        out += b"\nendobj\n"
+    return out + b"trailer\n<</Root 1 0 R>>\n%%EOF\n"
+
+
+class PdfText(unittest.TestCase):
+    CMAP = b"1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n1 beginbfrange\n<0057> <0060> <0030>\nendbfrange\n1 beginbfchar\n<3949> <C815>\nendbfchar\n"
+
+    def test_reads_each_shown_string_at_its_position_through_its_font(self):
+        # Arrange
+        content = b"BT /F1 9 Tf 1 0 0 1 405.9 449.4 Tm [(05)] TJ ET\nBT /F2 9 Tf 1 0 0 1 450 449.4 Tm [<0057>-3<00583949>] TJ 10 -2 Td /F1 9 Tf (a\\(b\\)\\101 (c)) Tj ET"
+        data = pdf({
+            1: b"<</Type/Catalog/Pages 2 0 R>>",
+            2: b"<</Type/Pages/Kids[ 3 0 R]/Count 1>>",
+            3: b"<</Type/Page/Parent 2 0 R/Resources<</Font<</F1 4 0 R/F2 5 0 R>>>>/Contents 6 0 R>>",
+            4: b"<</Type/Font/Subtype/TrueType/Encoding/WinAnsiEncoding>>",
+            5: b"<</Type/Font/Subtype/Type0/Encoding/Identity-H/ToUnicode 7 0 R>>",
+            6: (b"<</Filter/FlateDecode/Length %d>>" % len(zlib.compress(content)), zlib.compress(content)),
+            7: (b"<</Length %d>>" % len(self.CMAP), self.CMAP),
+        })
+        objects = convert.pdf_objects(data)
+
+        # Act
+        runs = convert.pdf_text_runs(objects, convert.pdf_pages(objects)[0])
+
+        # Assert
+        self.assertEqual(runs, [(405.9, 449.4, "05"), (450.0, 449.4, "01정"), (460.0, 447.4, "a(b)A (c)")])
+
+    def test_reads_a_ucs2_font_and_a_page_s_resources_by_reference(self):
+        # Arrange
+        stream = "BT /CJK1 22 Tf 1 0 0 1 331.6 528.5 Tm (".encode() + "정".encode("utf-16-be") + b") Tj 21.9 0 Td (" + "자".encode("utf-16-be") + b") Tj ET"
+        data = pdf({
+            3: b"<</Type /Catalog /Pages 2 0 R>>",
+            2: b"<</Type /Pages /Kids [\r\n5 0 R\r\n] /Count 1>>",
+            5: b"<</Type /Page /Parent 2 0 R /Resources 8 0 R /Contents [9 0 R]>>",
+            8: b"<< /Font <<\r\n/CJK1 6 0 R\r\n>> >>",
+            6: b"<</Type /Font /Subtype /Type0 /BaseFont /X /Encoding /UniKS-UCS2-H>>",
+            9: (b"<</Length %d>>" % len(stream), stream),
+        })
+        objects = convert.pdf_objects(data)
+
+        # Act
+        runs = convert.pdf_text_runs(objects, convert.pdf_pages(objects)[0])
+
+        # Assert
+        self.assertEqual(runs, [(331.6, 528.5, "정"), (353.5, 528.5, "자")])
+
+
+def page_runs(rows):
+    """Runs of a station page in the 평일 edition's shape, one run per cell: rows of (hour, 신사방면 text, 광교방면 text)."""
+    runs = [
+        (322.25, 530.2, "정자 열차시각표"),
+        (23.2, 490.2, "기본계획번호 :"), (82.1, 490.2, "SBL4020"), (205.9, 489.7, "적용기간 :"), (253.9, 490.2, "2026-09-28~9999-12-31"),
+        (450.8, 489.7, "운행요일 :"), (495.6, 489.7, "평일"),
+        (178.0, 469.5, "신사방면"), (406.75, 469.5, "시"), (604.9, 469.5, "광교방면"),
+    ]
+    for index, (hour, up, down) in enumerate(rows):
+        y = 449.4 - 19.4 * index
+        runs += [(368.2, y, " "), (405.9, y, hour)]
+        runs += [(330.3, y, up)] if up else []
+        runs += [(450.9, y, down)] if down else []
+    return runs
+
+
+class ShinbundangPage(unittest.TestCase):
+    def test_reads_each_direction_s_minutes_with_the_short_turn_mark(self):
+        # Act
+        page = convert.shinbundang_page(page_runs([("05", "30 39", "40 52(정자)"), ("00", "", "10")]), "test")
+
+        # Assert
+        self.assertEqual((page["title"], page["plan"], page["from"], page["days"]), ("정자", "SBL4020", "2026-09-28", "평일"))
+        self.assertEqual(page["columns"], {
+            "신사방면": [(5 * 3600 + 30 * 60, False), (5 * 3600 + 39 * 60, False)],
+            "광교방면": [(5 * 3600 + 40 * 60, False), (5 * 3600 + 52 * 60, True), (86400 + 10 * 60, False)],
+        })
+
+    def test_reads_the_holiday_edition_s_one_glyph_runs(self):
+        # Arrange
+        runs = [(x, 528.5, c) for x, c in zip((331.6, 353.6, 375.5, 382.9, 404.8, 426.8, 448.7, 470.7), "정자 열차시각표")]
+        runs += [(x, 485.8, c) for x, c in zip(range(30, 300, 5), "기본계획번호 :SBL4020")]
+        runs += [(x, 485.8, c) for x, c in zip(range(214, 400, 5), "적용기간 :2026-09-28~9999-12-31")]
+        runs += [(x, 485.8, c) for x, c in zip(range(461, 520, 5), "운행요일 :공휴일")]
+        runs += [(185.3, 464.3, "신"), (195.3, 464.3, "사"), (205.3, 464.3, "방"), (215.3, 464.3, "면"), (415.7, 464.3, "시")]
+        runs += [(616.2, 464.3, "광"), (626.2, 464.3, "교"), (636.2, 464.3, "방"), (646.2, 464.3, "면")]
+        runs += [(x, 442.8, c) for x, c in zip((339.0, 344.5, 350.4, 353.8, 359.7), "30 40")] + [(414.7, 442.8, "0"), (420.7, 442.8, "5")]
+        runs += [(x, 442.8, c) for x, c in zip((461.2, 467.1), "40")] + [(378.0, 49.6, " "), (414.7, 49.6, "0"), (420.7, 49.6, "0"), (461.0, 49.6, "  ")]
+
+        # Act
+        page = convert.shinbundang_page(runs, "test")
+
+        # Assert
+        self.assertEqual((page["title"], page["days"]), ("정자", "공휴일"))
+        self.assertEqual(page["columns"], {"신사방면": [(19800, False), (20400, False)], "광교방면": [(20400, False)]})
+
+    def test_refuses_a_cell_that_is_not_two_digit_minutes(self):
+        for text in ("30 7", "30 61", "30(미금)", "30,40"):
+            with self.subTest(text=text):
+                # Act & Assert
+                with self.assertRaises(convert.ConvertError):
+                    convert.shinbundang_page(page_runs([("05", text, "")]), "test")
+
+    def test_refuses_hours_out_of_order(self):
+        # Act & Assert
+        with self.assertRaisesRegex(convert.ConvertError, "does not follow"):
+            convert.shinbundang_page(page_runs([("06", "10", ""), ("05", "30", "")]), "test")
+
+
+class ShinbundangPages(unittest.TestCase):
+    def pages(self):
+        return [{"title": title, "plan": "SBL4020", "from": "2026-09-28", "days": "평일", "columns": {}} for _, title in line_of("D1")["stations"]]
+
+    def test_passes_the_sixteen_kric_names_in_route_order(self):
+        # Act
+        pages = convert.check_shinbundang_pages(self.pages(), "weekday")
+
+        # Assert
+        self.assertEqual([p["title"] for p in pages][:4], ["신사", "논현", "신논현", "강남"])
+
+    def test_refuses_another_title_another_edition_or_another_day_type(self):
+        for index, field, value in ((4, "title", "양재(서초구청)"), (0, "plan", "SBL4021"), (9, "from", "2026-10-01"), (15, "days", "공휴일")):
+            with self.subTest(field=field):
+                # Arrange
+                pages = self.pages()
+                pages[index] = dict(pages[index], **{field: value})
+
+                # Act & Assert
+                with self.assertRaises(convert.ConvertError):
+                    convert.check_shinbundang_pages(pages, "weekday")
+
+
+class ShinbundangChain(unittest.TestCase):
+    """A hand-written four-station stretch of 신분당선 (청계산입구, 판교, 정자, 미금), 광교방면 only."""
+
+    LINE = dict(convert.LINED1, stations=(("DX-D1-4310", "청계산입구"), ("DX-D1-4311", "판교"), ("DX-D1-4312", "정자"), ("DX-D1-D13", "미금")))
+
+    @staticmethod
+    def at(hh, mm):
+        return hh * 3600 + mm * 60
+
+    def pages(self, times):
+        return [{"title": title, "columns": {"광교방면": [(self.at(*t[:2]), len(t) > 2) for t in times[code]]}} for code, title in self.LINE["stations"]]
+
+    def times(self):
+        return {
+            "DX-D1-4310": [(10, 0), (10, 7, "정자"), (10, 15)],
+            "DX-D1-4311": [(10, 7), (10, 14, "정자"), (10, 22)],
+            "DX-D1-4312": [(10, 5), (10, 11), (10, 26)],
+            "DX-D1-D13": [(10, 8), (10, 14), (10, 29)],
+        }
+
+    def test_chains_runs_without_overtaking_ends_a_short_turn_at_jeongja_and_starts_one_there(self):
+        # Act
+        runs = convert.shinbundang_chain(self.pages(self.times()), "down", self.LINE)
+
+        # Assert
+        self.assertEqual(sorted(runs, key=lambda r: r[0][1]), [
+            [("DX-D1-4310", self.at(10, 0), True), ("DX-D1-4311", self.at(10, 7), True), ("DX-D1-4312", self.at(10, 11), True), ("DX-D1-D13", self.at(10, 14), True)],
+            [("DX-D1-4312", self.at(10, 5), True), ("DX-D1-D13", self.at(10, 8), True)],
+            # 정자's page leaves the short turn out; it arrives one 판교-정자 segment (4 min, both runs) after 판교.
+            [("DX-D1-4310", self.at(10, 7), True), ("DX-D1-4311", self.at(10, 14), True), ("DX-D1-4312", self.at(10, 18), False)],
+            [("DX-D1-4310", self.at(10, 15), True), ("DX-D1-4311", self.at(10, 22), True), ("DX-D1-4312", self.at(10, 26), True), ("DX-D1-D13", self.at(10, 29), True)],
+        ])
+
+    def test_refuses_a_run_that_starts_where_no_train_enters(self):
+        # Arrange
+        times = self.times()
+        times["DX-D1-D13"] = times["DX-D1-D13"] + [(10, 40)]
+
+        # Act & Assert
+        with self.assertRaisesRegex(convert.ConvertError, "10:40 starts a run"):
+            convert.shinbundang_chain(self.pages(times), "down", self.LINE)
+
+    def test_refuses_a_segment_whose_times_spread_over_more_than_a_minute(self):
+        # Arrange
+        times = self.times()
+        times["DX-D1-4311"] = [(10, 7), (10, 14, "정자"), (10, 24)]
+        times["DX-D1-4312"] = [(10, 5), (10, 11), (10, 28)]
+        times["DX-D1-D13"] = [(10, 8), (10, 14), (10, 31)]
+
+        # Act & Assert
+        with self.assertRaisesRegex(convert.ConvertError, "segment DX-D1-4310-DX-D1-4311"):
+            convert.shinbundang_chain(self.pages(times), "down", self.LINE)
+
+    def test_refuses_a_short_turn_mark_on_one_station_of_a_run_only(self):
+        # Arrange
+        times = self.times()
+        times["DX-D1-4311"] = [(10, 7), (10, 14), (10, 22)]
+
+        # Act & Assert
+        with self.assertRaisesRegex(convert.ConvertError, "marked"):
+            convert.shinbundang_chain(self.pages(times), "down", self.LINE)
+
+
+class CommittedShinbundang(unittest.TestCase):
+    ORDER = ["D04", "4305", "4306", "4307", "4308", "4309", "4310", "4311", "4312", "D13", "D14", "D15", "4316", "4317", "4318", "4319"]
+    # Minutes per station page and column in the two PDFs of all_kor.zip (SBL4020, 2026-09-28), in ORDER.
+    LISTED = {
+        "weekday": {"up": [0] + [165] * 7 + [164] + [162] * 7, "down": [165] * 8 + [162] * 7 + [0]},
+        "holiday": {"up": [0] + [133] * 7 + [132] + [130] * 7, "down": [133] * 8 + [130] * 7 + [0]},
+    }
+
+    def document(self, day_type):
+        with open(os.path.join(TIMETABLE_DIR, "shinbundang-d1-%s.json" % day_type), encoding="utf-8") as handle:
+            return json.load(handle)
+
+    def test_lists_each_station_s_minutes_once_per_direction(self):
+        for day_type, expected in self.LISTED.items():
+            with self.subTest(day_type=day_type):
+                # Arrange
+                trains = self.document(day_type)["trains"]
+
+                # Act
+                listed = {d: [sum(1 for t in trains if t["direction"] == d for s in t["stops"] if s["station"] == "DX-D1-" + code and s["dep"] is not None) for code in self.ORDER] for d in ("up", "down")}
+
+                # Assert
+                self.assertEqual(listed, expected)
+
+    def test_ends_every_short_turn_at_jeongja_with_no_departure(self):
+        for day_type, count in (("weekday", 5), ("holiday", 4)):
+            with self.subTest(day_type=day_type):
+                # Act
+                ends = [t["stops"][-1] for t in self.document(day_type)["trains"] if t["destination"] == "정자"]
+
+                # Assert
+                self.assertEqual(len(ends), count)
+                self.assertEqual({(s["station"], s["dep"]) for s in ends}, {("DX-D1-4312", None)})
+
+    def test_numbers_runs_from_1001_down_and_1002_up_by_two(self):
+        for day_type in ("weekday", "holiday"):
+            with self.subTest(day_type=day_type):
+                # Arrange
+                trains = self.document(day_type)["trains"]
+
+                # Act
+                numbers = {d: sorted(int(t["trainNo"]) for t in trains if t["direction"] == d) for d in ("up", "down")}
+
+                # Assert
+                self.assertEqual(numbers, {d: list(range(first, first + 2 * len(numbers[d]), 2)) for d, first in (("up", 1002), ("down", 1001))})
 
 
 class SeoulLines(unittest.TestCase):
