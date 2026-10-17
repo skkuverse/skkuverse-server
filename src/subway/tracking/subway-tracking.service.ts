@@ -11,7 +11,7 @@ import type { StationSchedule } from "../timetable/subway-timetable.types";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { MAX_TRAINS_PER_DIRECTION } from "./subway-tracking.constants";
 import { toArrivalsDoc } from "./subway-tracking.mapper";
-import { mergeObservations, toDirectionByDestination, toLiveCountdownRows, toNewestEvents } from "./subway-tracking.rules";
+import { mergeObservations, toDirectionByDestination, toLiveCountdownRows, toNewestEvents, toStopStationIdsByTrainNo } from "./subway-tracking.rules";
 import type { SourceCountdownRows, StationObservations, TrackedStation, TrackedTickListener, TrainHistory } from "./subway-tracking.types";
 
 const DIVERGENCE_LOG_INTERVAL_MS = 10 * 60_000;
@@ -70,6 +70,8 @@ export class SubwayTrackingService {
       responseEvents: [events],
       routes: schedule.lineRoutes,
       directionByDestination: toDirectionByDestination(schedule.trains),
+      stationId,
+      stopStationIdsByTrainNo: toStopStationIdsByTrainNo(schedule.trains),
       now,
     });
     this.historiesByStationId.set(stationId, histories);

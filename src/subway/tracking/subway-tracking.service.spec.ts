@@ -11,7 +11,12 @@
  * 90 s is served from the timetable; a countdown far from the estimate is
  * logged once per train within the throttle; a train only in countdown rows
  * is not served; an upstream is not observed outside the service window; and
- * a failing upstream rejects its tick and writes nothing.
+ * a failing upstream rejects its tick and writes nothing. On Saturday
+ * 2026-10-17 (the holiday tables), shaped like that morning's captures: an
+ * express seen departing `성균관대` stays off the list through its events at
+ * stations it passes, northbound and southbound, while a late train ahead
+ * would lend it a delay; and an express first seen at a station it passes is
+ * estimated from its departure from its last stop before it.
  * Its timetable-only document, which the arrivals route serves for a stale
  * state, lists every train `scheduled`, whatever the tracker has observed.
  */
@@ -33,14 +38,16 @@ const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
 const SUNGKYUNKWAN = "KR-1-0153";
 const HYEHWA = "S1-4-420";
 
-function setup() {
-  let now = at("20:39:10");
+const onSaturday = (kst: string): Date => new Date(`2026-10-17T${kst}+09:00`);
+
+function setup(atKst = at) {
+  let now = atKst("20:39:10");
   const repository = new FakeSubwayRepository();
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
   const clock = { now: () => now } as Clock;
   const service = new SubwayTrackingService(asReal<SubwayRepository>(repository), timetable, new SubwayEstimateService(), clock);
   const tickAt = (kst: string, provider: SubwayProvider): Promise<void> => {
-    now = at(kst);
+    now = atKst(kst);
     return service.track(provider);
   };
   return { service, repository, tickAt };
@@ -213,6 +220,67 @@ describe("SubwayTrackingService.track", () => {
     // Act & Assert
     await expect(service.track({ observe: () => Promise.reject(failure) })).rejects.toBe(failure);
     expect(repository.replaces).toBe(0);
+  });
+});
+
+describe("SubwayTrackingService.track for an express passing stations it does not call at", () => {
+  const expressEvent = (trainNo: string, stationId: string, state: TrainEvent["state"], kst: string): TrainEvent => ({
+    trainNo,
+    stationId,
+    state,
+    stateChangedAt: onSaturday(kst),
+    destination: Number(trainNo) % 2 === 0 ? "청량리" : "신창",
+  });
+  const listedAtSungkyunkwan = (repository: FakeSubwayRepository, direction: "up" | "down") =>
+    repository.docs.get(SUNGKYUNKWAN)?.directions[direction].map((t) => t.trainNo);
+
+  it("keeps northbound 1912, seen departing 성균관대 at 10:43:36, off the list through its events at 의왕, while 0632 ahead runs 1,185 s late", async () => {
+    // Arrange
+    const { repository, tickAt } = setup(onSaturday);
+    await tickAt("10:42:06", api([expressEvent("1912", SUNGKYUNKWAN, "arrived", "10:42:01")]));
+    await tickAt("10:43:36", trainMap([expressEvent("1912", SUNGKYUNKWAN, "departed", "10:43:36")]));
+
+    // Act
+    await tickAt("10:44:51", trainMap([expressEvent("1912", "KR-1-P152", "approaching", "10:44:51"), expressEvent("0632", "KR-1-P154", "arrived", "10:44:51")]));
+    await tickAt("10:45:15", api([expressEvent("0632", "KR-1-P154", "arrived", "10:44:42")]));
+
+    // Assert
+    expect(listedAtSungkyunkwan(repository, "up")).toContain("0632");
+    expect(listedAtSungkyunkwan(repository, "up")).not.toContain("1912");
+  });
+
+  it("keeps southbound 1913 off the list once seen at 화서, which it passes, though no upstream reported its departure from 성균관대", async () => {
+    // Arrange
+    const { repository, tickAt } = setup(onSaturday);
+    await tickAt("10:25:15", api([expressEvent("1913", SUNGKYUNKWAN, "arrived", "10:25:10")]));
+
+    // Act
+    await tickAt("10:26:45", trainMap([expressEvent("1913", "KR-1-P154", "approaching", "10:26:40"), expressEvent("0431", "KR-1-P152", "arrived", "10:26:00")]));
+
+    // Assert
+    expect(listedAtSungkyunkwan(repository, "down")).toContain("0431");
+    expect(listedAtSungkyunkwan(repository, "down")).not.toContain("1913");
+  });
+
+  it("estimates northbound 1910, first seen at 세류 which it passes, 606 s late from its departure from 병점, at 10:15:36", async () => {
+    // Arrange
+    const { repository, tickAt } = setup(onSaturday);
+    for (const [kst, state] of [["10:04:36", "approaching"], ["10:04:51", "arrived"], ["10:06:06", "arrived"]] as const) {
+      await tickAt(kst, trainMap([expressEvent("1910", "KR-1-1715", state, kst)]));
+    }
+
+    // Act
+    await tickAt("10:07:21", trainMap([expressEvent("1910", "KR-1-1715", "arrived", "10:07:21")]));
+
+    // Assert
+    expect(repository.docs.get(SUNGKYUNKWAN)?.directions.up.find((t) => t.trainNo === "1910")).toEqual({
+      trainNo: "1910",
+      destination: "청량리",
+      express: true,
+      arrivalAt: onSaturday("10:15:36"),
+      source: "estimated",
+      position: { stationId: "KR-1-P157", state: "departed" },
+    });
   });
 });
 

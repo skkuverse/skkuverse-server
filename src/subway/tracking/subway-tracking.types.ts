@@ -22,6 +22,8 @@ export interface TrackingTick {
   responseEvents: readonly (readonly TrainEvent[])[];
   routes: LineRoutes;
   directionByDestination: ReadonlyMap<string, SubwayDirection>;
+  stationId: string;
+  stopStationIdsByTrainNo: ReadonlyMap<string, readonly string[]>;
   now: Date;
 }
 
