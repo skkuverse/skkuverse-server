@@ -19,7 +19,7 @@ Ui owns no data store. It serves three JSON files committed next to their reader
 | --- | --- | --- | --- |
 | The committed config files | — | The home layout, the campus carousel and the transit layout, edited by hand and shipped with a deploy | `readHomeLayout`, `readCampusBanners`, `readTransitLayout` |
 | The mini-app registry | — | Which mini apps exist, the target and emoji checks, and the logo of a link tile | `MiniappsService`, injected into `UiHomeService`, `UiCampusService` and `UiTransitService` |
-| The bus groups | — | Each group's label, card, screen type and visibility | `BusConfigService.getBusGroups`, injected into `UiTransitListService` and `UiTransitService` |
+| The bus groups | — | Each group's label, card, screen type and visibility; the boot check reads only their ids (`BusConfigService.listGroupIds`) | `BusConfigService.getBusGroups`, injected into `UiTransitListService` and `UiTransitService` |
 | The served subway stations | — | Each station's title, line code, line label and line color | `SubwayStationsService.listStations`, injected into `UiTransitService` |
 | moment-timezone | `moment` | A bus group's KST dates and first-day time; a strict parse still reads `24:00` as the next midnight | `isBusGroupVisible` |
 | The translations | — | The titles of the scroll cards | `t` in `src/infra/i18n.ts` |
@@ -89,7 +89,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `sk
 ## Invariants
 
 - Both config files are parsed when Nest builds `UiHomeService` and `UiCampusService`, so a bad file, an unregistered mini app, a broken link action or a tile placed twice stops the boot (`loadHomeLayout`, `loadCampusBanners`). Unknown keys are refused, so a misspelt key cannot pass and do nothing.
-- The transit layout is parsed when Nest builds `UiTransitService`: an unknown bus group or station, a repeated section or item id, an empty section, a broken link action, or a bus group or served station left unplaced stops the boot (`loadTransitLayout`). A group meant to be hidden keeps its place and uses its visibility.
+- The transit layout is parsed when Nest builds `UiTransitService`: an unknown bus group or station, a repeated section or item id, an empty section, a broken link action, or a bus group or served station left unplaced stops the boot (`loadTransitLayout`). A group meant to be hidden keeps its place and uses its visibility. The bus groups are read per request from the bus config, whose Jongro stations come from the bus registry, so a missing registry route answers `503 JONGRO_REGISTRY_UNAVAILABLE` on both transit routes too ([bus](bus-architecture.md), "Invariants").
 - A transit item's id is `bus:` or `subway:` and its referent's id, or a link's own slug (`toTransitItemId`); a transit item carries no arrival, which stays on each kind's own route.
 - Section and banner ids share one namespace and tile ids another (`findDuplicateId`): each is an analytics item id for a tap.
 - A banner shows inside its window on the injected `Clock` (`isBannerShowing`). `GET /ui/home`, `GET /ui/home/campus` and `GET /ui/home/transit` are cached for `UI_CACHE_CONTROL`, which also bounds how late a window takes effect.

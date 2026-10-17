@@ -386,6 +386,8 @@ describe("bus_cache between a poller process and an api replica", () => {
         { stationIndex: 0, eta: "3분후[2번째 전]", arrivals: [running5537(3, 1, "3분후[2번째 전]"), WAITING_NO_VEHICLE] },
         { stationIndex: 1, eta: "5분후[3번째 전]", arrivals: [running5537(5, 2, "5분후[3번째 전]"), WAITING_NO_VEHICLE] },
       ],
+      // WHY: the registry's stations version (improve-jongro-realtime 5.4), seeded from the committed snapshot.
+      stationsVersion: "0346768f2b776f45",
     });
   });
 
@@ -399,7 +401,8 @@ describe("bus_cache between a poller process and an api replica", () => {
 
     // Assert
     expect(hssc.body.data).toEqual({ groupId: "hssc", buses: [], stationEtas: [] });
-    expect(jongro.body.data).toEqual({ groupId: "jongro07", buses: [], stationEtas: [] });
+    // WHY: stationsVersion is the registry's (improve-jongro-realtime 5.4), seeded from the committed snapshot.
+    expect(jongro.body.data).toEqual({ groupId: "jongro07", buses: [], stationEtas: [], stationsVersion: "0346768f2b776f45" });
     expect(station.body.data.map((s: { msg1Message: string }) => s.msg1Message)).toEqual(["정보 없음", "도착 정보 없음"]);
     expect(upstream.requests).toEqual([]);
   });
@@ -482,5 +485,32 @@ describe("bus_cache when the upstreams list no bus", () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+// WHY: both boots above seed the registry (every role does, improve-jongro-realtime D7) against a real mongod, so
+// this pins that `$setOnInsert` inserts each route once from the snapshot and the second boot writes nothing.
+describe("jongro_routes seeded by both boots", () => {
+  it("holds one document per route, equal to the committed snapshot", async () => {
+    // Arrange
+    const seed = require("../../../src/bus/registry/jongro-stations.seed.json") as Array<{
+      id: string;
+      turnaroundTopisId: string;
+      stations: Array<{ topisId: string; arsId: string; stationName: string }>;
+    }>;
+
+    // Act
+    const docs = await db.getClient().db(config.mongo.dbName).collection("jongro_routes").find({}).sort({ _id: 1 }).toArray();
+
+    // Assert
+    expect(docs.map((doc) => ({ id: doc._id, turnaroundTopisId: doc.turnaroundTopisId, stations: doc.stations, syncedAt: doc.syncedAt }))).toEqual(
+      seed.map((route) => ({
+        id: route.id,
+        turnaroundTopisId: route.turnaroundTopisId,
+        stations: route.stations.map((station, index) => ({ ...station, sequence: index + 1 })),
+        syncedAt: CLOCK.now(),
+      })),
+    );
+    expect(docs.find((doc) => String(doc._id) === "jongro07")!.stationsVersion).toBe("0346768f2b776f45");
   });
 });

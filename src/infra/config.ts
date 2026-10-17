@@ -32,6 +32,7 @@ const config = {
     dbName: dbNameFor(process.env.MONGO_DB_NAME_BUS_CAMPUS),
     collections: {
       busCache: process.env.MONGO_CACHE_COLLECTION || "bus_cache",
+      jongroRoutes: "jongro_routes",
     },
   },
 

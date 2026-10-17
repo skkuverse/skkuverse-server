@@ -1,31 +1,22 @@
 /**
  * jongroRoutesConfig, the refined form of the jongro-routes.json wire: the
- * committed file passes; a copy missing any field of a route or a station
- * fails; and the cross-checks name what broke: the route id pattern, a
- * duplicate id, a duplicate stop (the loop-closing repeat aside), hex colors
- * and the first and last markers at the two ends.
+ * committed file passes; a copy missing any field of a route fails; and the
+ * cross-checks name what broke: the route id pattern, a duplicate id, hex
+ * colors and a malformed transfer override. The stations moved to the
+ * registry's snapshot (src/bus/registry/, improve-jongro-realtime D6).
  */
 import { jongroRoutesConfig } from "./bus.schema";
 
-const committed = require("./jongro-routes.json") as Array<Record<string, unknown> & { stations: Array<Record<string, unknown>> }>;
+const committed = require("./jongro-routes.json") as Array<Record<string, unknown>>;
 
-const stn = (topisId: string, first = false, last = false) => ({
-  stationName: topisId,
-  arsId: topisId,
-  topisId,
-  isFirstStation: first,
-  isLastStation: last,
-  isRotationStation: false,
-  transferLines: [] as Array<{ line: string; color: string }>,
-});
-const route = (stations: unknown[], overrides: Record<string, unknown> = {}) => ({
+const route = (overrides: Record<string, unknown> = {}) => ({
   id: "jongro99",
   busRouteId: "1",
   themeColor: "4CAF50",
   iconType: "village",
   refreshInterval: 40,
   seatCount: 18,
-  stations,
+  transferLinesByArsId: { "01589": [{ line: "1", color: "0052A4" }] },
   ...overrides,
 });
 
@@ -48,72 +39,77 @@ describe("jongroRoutesConfig", () => {
     expect(messagesOf([rest]).length).toBeGreaterThan(0);
   });
 
-  it.each(Object.keys(committed[0]!.stations[0]!))("rejects a station without %s", (field) => {
-    // Arrange
-    const [first, ...others] = committed[0]!.stations;
-    const rest = Object.fromEntries(Object.entries(first!).filter(([key]) => key !== field));
-
-    // Act & Assert
-    expect(messagesOf([{ ...committed[0], stations: [rest, ...others] }]).length).toBeGreaterThan(0);
-  });
-
   it.each([
-    ["an id off the pattern", [route([stn("A", true), stn("B", false, true)], { id: "jongro007" })], "0.id: must match"],
-    ["a repeated id", [route([stn("A", true), stn("B", false, true)]), route([stn("A", true), stn("B", false, true)])], '1.id: duplicate "jongro99"'],
-    ["a theme color off hex", [route([stn("A", true), stn("B", false, true)], { themeColor: "green" })], "0.themeColor: must be 6-char hex string"],
-    ["no stations", [route([])], "0.stations: required non-empty array"],
-    ["a stop repeated mid-route", [route([stn("A", true), stn("B"), stn("B", false, true)])], '0.stations.2.topisId: duplicate "B" within route'],
-    ["no first marker", [route([stn("A"), stn("B", false, true)])], "0: must have exactly 1 isFirstStation=true (got 0)"],
-    ["a first marker off index 0", [route([stn("A"), stn("B", true), stn("C", false, true)])], "0: isFirstStation=true must be at index 0 (got 1)"],
-    ["a last marker off the end", [route([stn("A", true), stn("B", false, true), stn("C")])], "0: isLastStation=true must be at index 2 (got 1)"],
+    ["an id off the pattern", [route({ id: "jongro007" })], "0.id: must match"],
+    ["a repeated id", [route(), route()], '1.id: duplicate "jongro99"'],
+    ["a theme color off hex", [route({ themeColor: "green" })], "0.themeColor: must be 6-char hex string"],
   ])("rejects %s", (_case, raw, message) => {
     // Act & Assert
     expect(messagesOf(raw)).toContainEqual(expect.stringContaining(message));
   });
 
-  it("accepts the last stop repeating the first (TOPIS loop close)", () => {
+  it("accepts a route without transfer lines", () => {
     // Act & Assert
-    expect(messagesOf([route([stn("A", true), stn("B"), stn("A", false, true)])])).toEqual([]);
+    expect(messagesOf([route({ transferLinesByArsId: {} })])).toEqual([]);
+  });
+});
+
+// WHY: a station's transfer lines come from this override by ARS number, so a malformed one fails the boot
+// with its ARS number in the path (improve-jongro-realtime D6).
+describe("jongroRoutesConfig transferLinesByArsId", () => {
+  it.each([
+    ["an empty list", { "01589": [] }, ["0.transferLinesByArsId.01589: required non-empty array"]],
+    ["a line without a name", { "01589": [{ line: "", color: "0052A4" }] }, ["0.transferLinesByArsId.01589.0.line: required non-empty string"]],
+    ["a color off hex", { "01589": [{ line: "1", color: "blue" }] }, ["0.transferLinesByArsId.01589.0.color: must be 6-char hex string"]],
+    ["an empty ARS number", { "": [{ line: "1", color: "0052A4" }] }, ["0.transferLinesByArsId.: ARS number must be a non-empty string"]],
+  ])("rejects %s", (_case, transferLinesByArsId, expected) => {
+    // Act & Assert
+    expect(messagesOf([route({ transferLinesByArsId })])).toEqual(expected);
+  });
+
+  it("rejects a line missing its color as a type fault", () => {
+    // Act & Assert
+    expect(messagesOf([route({ transferLinesByArsId: { "01589": [{ line: "1" }] } })])).toEqual([
+      "0.transferLinesByArsId.01589.0.color: Invalid input: expected string, received undefined",
+    ]);
   });
 });
 
 // WHY: crowding compares a bus's passenger count with its route's seat count, so a route without a usable one
 // fails the boot, named by its path (improve-jongro-realtime D5).
 describe("jongroRoutesConfig seatCount", () => {
-  const stations = () => [stn("A", true), stn("B", false, true)];
-
   it("rejects a route without a seat count, naming it", () => {
     // Arrange
-    const withoutSeatCount = Object.fromEntries(Object.entries(route(stations())).filter(([key]) => key !== "seatCount"));
+    const withoutSeatCount = Object.fromEntries(Object.entries(route()).filter(([key]) => key !== "seatCount"));
 
     // Act & Assert
-    expect(messagesOf([route(stations(), { id: "jongro98" }), withoutSeatCount])).toEqual([
+    expect(messagesOf([route({ id: "jongro98" }), withoutSeatCount])).toEqual([
       "1.seatCount: Invalid input: expected number, received undefined",
     ]);
   });
 
   it.each([[0], [-18], [17.5]])("rejects a seat count of %j, naming the route", (seatCount) => {
     // Act & Assert
-    expect(messagesOf([route(stations(), { seatCount })])).toEqual(["0.seatCount: required positive integer"]);
+    expect(messagesOf([route({ seatCount })])).toEqual(["0.seatCount: required positive integer"]);
   });
 
   it("accepts a seat count of 1", () => {
     // Act & Assert
-    expect(messagesOf([route(stations(), { seatCount: 1 })])).toEqual([]);
+    expect(messagesOf([route({ seatCount: 1 })])).toEqual([]);
   });
 });
 
 // WHY: zod runs a superRefine only once every type check has passed, so a file with both kinds of fault
 // fails the boot on its type issues, and on its cross-check issues at the next boot. Accepted (PR 250 F5).
 describe("jongroRoutesConfig with several faults", () => {
-  const typeFaults = () => [route([stn("1", true, true)], { busRouteId: 1 }), route([{ ...stn("2", true, true), stationName: 2 }], { id: "jongro98" })];
-  const crossFaults = () => [route([stn("1", true, true)], { id: "bad" }), route([stn("2", true, true)], { id: "jongro98", themeColor: "zz" })];
+  const typeFaults = () => [route({ busRouteId: 1 }), route({ id: "jongro98", transferLinesByArsId: { "01589": [{ line: 2, color: "0052A4" }] } })];
+  const crossFaults = () => [route({ id: "bad" }), route({ id: "jongro98", themeColor: "zz" })];
 
   it("reports every type fault in one boot", () => {
     // Act & Assert
     expect(messagesOf(typeFaults())).toEqual([
       "0.busRouteId: Invalid input: expected string, received number",
-      "1.stations.0.stationName: Invalid input: expected string, received number",
+      "1.transferLinesByArsId.01589.0.line: Invalid input: expected string, received number",
     ]);
   });
 
@@ -126,7 +122,7 @@ describe("jongroRoutesConfig with several faults", () => {
     // Act & Assert
     expect(messagesOf([...typeFaults(), ...crossFaults()])).toEqual([
       "0.busRouteId: Invalid input: expected string, received number",
-      "1.stations.0.stationName: Invalid input: expected string, received number",
+      "1.transferLinesByArsId.01589.0.line: Invalid input: expected string, received number",
     ]);
   });
 });

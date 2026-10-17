@@ -3,6 +3,7 @@ import type { SupportedLang } from "../../infra/types";
 import { ESTIMATES_MAX_AGE_S } from "../bus.constants";
 import { serviceConfigOf } from "../bus.rules";
 import type { JongroRoute } from "../bus.types";
+import type { RegistryRoute } from "../registry/bus-registry.types";
 import type { ResolvedStops } from "../stops/bus-stops.types";
 import type { BusGroup, ServiceRefresh } from "./bus-config.wire";
 import {
@@ -40,8 +41,9 @@ export function mapStations(stations: ReadonlyArray<AnyStation>): MappedStation[
   }));
 }
 
-// WHY: the field order is the ETag's input (md5 of the JSON), so it never changes for an unchanged group.
-function toJongroGroup(route: JongroRoute, lang: SupportedLang) {
+// WHY: the field order is the ETag's input (md5 of the JSON), so it never changes for an unchanged group;
+// stationsVersion comes last for the same reason.
+function toJongroGroup(route: RegistryRoute, lang: SupportedLang) {
   return {
     id: route.id,
     screenType: "realtime" as const,
@@ -60,6 +62,7 @@ function toJongroGroup(route: JongroRoute, lang: SupportedLang) {
       stations: mapStations(route.stations),
       routeOverlay: null,
       features: [],
+      stationsVersion: route.stationsVersion,
     },
   };
 }
@@ -164,6 +167,12 @@ function toCommuteGroup(lang: SupportedLang, { sequences, stops }: ResolvedStops
       features: [{ type: "info", url: `${webviewOrigin}/bus/commute/info` }],
     },
   };
+}
+
+const FIXED_GROUP_IDS = ["hssc", "campus", "fasttrack", "commute"] as const;
+
+export function toBusGroupIds(routes: ReadonlyArray<Pick<JongroRoute, "id">>): string[] {
+  return [...FIXED_GROUP_IDS, ...routes.map((route) => route.id)];
 }
 
 /** WHY: the bus groups in the order the app lists them: hssc, campus, fasttrack, commute, then every Jongro route. */

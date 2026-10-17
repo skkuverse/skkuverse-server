@@ -1,9 +1,10 @@
 /**
  * BusRealtimeGroupService over scripted clients and an in-memory bus_cache:
  * the HSSC group serves the cached HSSC buses and no ETAs, a Jongro group its
- * route's positions and arrival ETAs with each station's arrivals (a doc the
- * previous poller wrote serves none and is logged once), an unknown group is
- * a 404, and meta carries the KST clock and the bus count.
+ * route's positions and arrival ETAs with each station's arrivals placed by
+ * the registry's stations and its stations version, a missing registry route
+ * is a 503, an unknown group is a 404, and meta carries the KST clock and the
+ * bus count.
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -15,18 +16,20 @@ jest.mock("../../../infra/logger", () => ({
 import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusRealtimeHsscClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.client.fake";
 import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-jongro.client.fake";
+import { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import {
   hsscBusDoc,
   jongroArrivalBus,
   jongroArrivalDoc,
   jongroPositionDoc,
-  legacyJongroArrivalDoc,
   noArrivalBus,
 } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { Clock } from "../../../infra/clock";
 import type { BusCacheRepository } from "../../cache/bus-cache.repository";
 import { BusCacheService } from "../../cache/bus-cache.service";
+import type { BusRegistryRepository } from "../../registry/bus-registry.repository";
+import { BusRegistryService } from "../../registry/bus-registry.service";
 import { BusRealtimeArrivalService } from "../arrival/bus-realtime-arrival.service";
 import type { BusRealtimeHsscClient } from "../hssc/bus-realtime-hssc.client";
 import { BusRealtimeHsscService } from "../hssc/bus-realtime-hssc.service";
@@ -38,13 +41,18 @@ const NOW = new Date("2026-10-20T01:00:00Z");
 const clock: Clock = { now: () => NOW };
 
 let busCache: FakeBusCacheRepository;
+let registryRepository: FakeBusRegistryRepository;
 let service: BusRealtimeGroupService;
+const versionOf = (routeId: string) => registryRepository.routes.get(routeId)!.stationsVersion;
 
-beforeEach(() => {
+beforeEach(async () => {
   busCache = new FakeBusCacheRepository();
+  registryRepository = new FakeBusRegistryRepository();
+  const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
+  await registry.onModuleInit();
   const cache = new BusCacheService(asReal<BusCacheRepository>(busCache));
   const hssc = new BusRealtimeHsscService(asReal<BusRealtimeHsscClient>(new FakeBusRealtimeHsscClient()), cache, clock);
-  const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cache, clock);
+  const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cache, registry, clock);
   service = new BusRealtimeGroupService(hssc, jongro, new BusRealtimeArrivalService(), clock);
 });
 
@@ -77,9 +85,10 @@ describe("BusRealtimeGroupService.getGroup", () => {
     const group = await service.getGroup("jongro07");
 
     // Assert
-    // WHY: arrivals is the field this change adds (improve-jongro-realtime 3.1); the rest is as before.
+    // WHY: arrivals (improve-jongro-realtime 3.1) and stationsVersion (5.4) are the fields this change adds.
     expect(group.data).toEqual({
       groupId: "jongro07",
+      stationsVersion: versionOf("jongro07"),
       buses: [{ stationIndex: 5, carNumber: "5537", estimatedTime: 0, latitude: "37.587", longitude: "126.998" }],
       stationEtas: [
         {
@@ -163,26 +172,9 @@ describe("BusRealtimeGroupService.getGroup", () => {
     expect(group.data.stationEtas[0]!.arrivals.map((arrival) => arrival.message)).toEqual(["3분후[2번째 전]"]);
   });
 
-  it("serves eta and no arrivals from a doc the previous poller wrote, logging it once per process", async () => {
-    // Arrange
-    const logger = require("../../../infra/logger") as { info: jest.Mock };
-    logger.info.mockClear();
-    busCache.values.set("jongro_stations_07", [legacyJongroArrivalDoc({ stationId: "100900220", sequence: "1", eta: "3분후[2번째 전]" })]);
-
-    // Act
-    const first = await service.getGroup("jongro07");
-    await service.getGroup("jongro07");
-
-    // Assert
-    expect(first.data.stationEtas).toEqual([{ stationIndex: 0, eta: "3분후[2번째 전]", arrivals: [] }]);
-    const legacyLogs = logger.info.mock.calls.filter(([fields]) => fields?.event === "bus.jongro.legacy_arrivals");
-    expect(legacyLogs).toHaveLength(1);
-    expect(legacyLogs[0]![0]).toMatchObject({ code: "07" });
-  });
-
   it("serves an empty group when neither bus_cache nor memory has buses", async () => {
     // Act & Assert
-    expect((await service.getGroup("jongro08")).data).toEqual({ groupId: "jongro08", buses: [], stationEtas: [] });
+    expect((await service.getGroup("jongro08")).data).toEqual({ groupId: "jongro08", buses: [], stationEtas: [], stationsVersion: versionOf("jongro08") });
   });
 
   it("refuses an unknown group with GROUP_NOT_FOUND", async () => {
@@ -192,5 +184,42 @@ describe("BusRealtimeGroupService.getGroup", () => {
       message: "Unknown groupId: nope",
       httpStatus: 404,
     });
+  });
+});
+
+// WHY: the realtime response names the stations version it was placed by, so the app can tell its config is stale
+// (improve-jongro-realtime D10); without a stored route there is nothing to place by (D7).
+describe("BusRealtimeGroupService.getGroup and the registry", () => {
+  it("places arrivals by the stored stations and serves their version", async () => {
+    // Arrange
+    const doc = registryRepository.routes.get("jongro07")!;
+    doc.stations = [{ topisId: "NEW", arsId: "09999", stationName: "새 정류장", sequence: 1 }, ...doc.stations.map((s) => ({ ...s, sequence: s.sequence + 1 }))];
+    doc.stationsVersion = "moved-by-one";
+    const freshRegistry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
+    const cache = new BusCacheService(asReal<BusCacheRepository>(busCache));
+    const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cache, freshRegistry, clock);
+    const hssc = new BusRealtimeHsscService(asReal<BusRealtimeHsscClient>(new FakeBusRealtimeHsscClient()), cache, clock);
+    const fresh = new BusRealtimeGroupService(hssc, jongro, new BusRealtimeArrivalService(), clock);
+    busCache.values.set("jongro_stations_07", [jongroArrivalDoc({ stationId: "100900220", sequence: "2", eta: "곧 도착" })]);
+
+    // Act
+    const group = await fresh.getGroup("jongro07");
+
+    // Assert
+    expect(group.data.stationsVersion).toBe("moved-by-one");
+    expect(group.data.stationEtas.map((eta) => [eta.stationIndex, eta.eta])).toEqual([[1, "곧 도착"]]);
+  });
+
+  it("serves no stations version for the HSSC group", async () => {
+    // Act & Assert
+    expect((await service.getGroup("hssc")).data).not.toHaveProperty("stationsVersion");
+  });
+
+  it("refuses a Jongro group whose registry route is missing with a 503", async () => {
+    // Arrange
+    registryRepository.routes.delete("jongro02");
+
+    // Act & Assert
+    await expect(service.getGroup("jongro02")).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE", httpStatus: 503 });
   });
 });

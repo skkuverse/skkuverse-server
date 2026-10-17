@@ -3,23 +3,6 @@ export interface TransferLine {
   color: string;
 }
 
-export interface JongroStation {
-  sequence: string;
-  stationName: string;
-  stationNumber: string | null;
-  isFirstStation: boolean;
-  isLastStation: boolean;
-  isRotationStation: boolean;
-  transferLines: TransferLine[];
-}
-
-export interface JongroStationMapping {
-  [topisId: string]: {
-    sequence: number;
-    stationName: string;
-  };
-}
-
 export interface JongroRoute {
   readonly id: string;
   readonly code: string;
@@ -29,10 +12,7 @@ export interface JongroRoute {
   readonly refreshInterval: number;
   readonly seatCount: number;
   readonly arrivalsUrl: string;
-  readonly positionsUrl: string;
-  readonly stations: ReadonlyArray<JongroStation>;
-  readonly mapping: Readonly<JongroStationMapping>;
-  readonly topisIds: ReadonlyArray<string>;
+  readonly transferLinesByArsId: Readonly<Record<string, ReadonlyArray<TransferLine>>>;
 }
 
 export type ServiceKeyProblem = "missing" | "not-url-encoded";

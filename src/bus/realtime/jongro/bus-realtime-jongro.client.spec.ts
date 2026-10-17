@@ -9,11 +9,13 @@
 jest.mock("axios", () => ({ get: jest.fn() }));
 
 import arrivalsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-arrivals.json";
+import positionsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-positions.json";
 import { jongroRoutes } from "../../bus.config";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 
 const axios = require("axios") as { get: jest.Mock };
-const route07 = jongroRoutes.find((r) => r.code === "07")!;
+// WHY: the position URL covers the stored stations, so it comes from the registry; any URL stands in for it here.
+const route07 = { ...jongroRoutes.find((r) => r.code === "07")!, positionsUrl: "http://ws.bus.go.kr/api/rest/buspos/getBusPosByRouteSt?busRouteId=100900004&endOrd=22" };
 const respond = (data: unknown) => axios.get.mockResolvedValue({ data });
 // What TOPIS sends in a row's bus fields when it names no bus (topis-jongro-arrivals.json, the second bus of jongro07Waiting ord 2).
 const NO_BUS_FIELDS = Object.fromEntries(
@@ -307,5 +309,22 @@ describe("BusRealtimeJongroClient.fetchSightings", () => {
       headerMsg: "한도 초과",
       message: "TOPIS error code (jongro 07 location)",
     });
+  });
+});
+
+// WHY: the registry sync follows the turnaround stop TOPIS names on every position row (improve-jongro-realtime D9).
+describe("BusRealtimeJongroClient.fetchSightings turnaround stop", () => {
+  it("keeps each row's turnaround stop id (trnstnid)", async () => {
+    // Arrange
+    respond(positionsFixture.jongro07);
+
+    // Act
+    const sightings = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sightings.map((s) => [s.stationId, s.turnaroundStationId])).toEqual([
+      ["100900221", "100900028"],
+      ["100900043", "100900028"],
+    ]);
   });
 });

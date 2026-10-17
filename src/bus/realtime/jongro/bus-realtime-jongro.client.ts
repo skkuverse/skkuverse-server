@@ -3,6 +3,7 @@ import axios from "axios";
 import { UpstreamError } from "../../../infra/upstream.error";
 import type { JongroArrivalBus, JongroArrivalDoc } from "../../cache/bus-cache.document";
 import type { JongroRoute } from "../../bus.types";
+import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { toCarNumber } from "../bus-realtime.mapper";
 import { isNoResultHeaderCd, isUsableHeaderCd, toTopisInteger } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
@@ -31,6 +32,8 @@ const BUS_SLOTS: readonly BusSlot[] = ["1", "2"];
 
 interface TopisPositionRow {
   lastStnId: string;
+  /** QUIRK(topis): the route's turnaround stop, the same on every row of an answer. */
+  trnstnid: string;
   tmX: string;
   tmY: string;
   plainNo: string;
@@ -38,13 +41,13 @@ interface TopisPositionRow {
 
 @Injectable()
 export class BusRealtimeJongroClient {
-  async fetchArrivals(route: JongroRoute): Promise<JongroArrivalDoc[]> {
+  async fetchArrivals(route: Pick<JongroRoute, "code" | "arrivalsUrl">): Promise<JongroArrivalDoc[]> {
     const what = `jongro ${route.code} list`;
     const rows = await this.fetchRows<TopisArrivalRow>(route.arrivalsUrl, what);
     return rows.map((row) => this.toArrival(row, what));
   }
 
-  async fetchSightings(route: JongroRoute): Promise<JongroBusSighting[]> {
+  async fetchSightings(route: Pick<RegistryRoute, "code" | "positionsUrl">): Promise<JongroBusSighting[]> {
     const rows = await this.fetchRows<TopisPositionRow>(route.positionsUrl, `jongro ${route.code} location`);
     return rows.map((row) => this.toSighting(row));
   }
@@ -99,6 +102,12 @@ export class BusRealtimeJongroClient {
   }
 
   private toSighting(row: TopisPositionRow): JongroBusSighting {
-    return { stationId: row.lastStnId, latitude: row.tmY, longitude: row.tmX, carNumber: toCarNumber(row.plainNo) };
+    return {
+      stationId: row.lastStnId,
+      latitude: row.tmY,
+      longitude: row.tmX,
+      carNumber: toCarNumber(row.plainNo),
+      turnaroundStationId: row.trnstnid,
+    };
   }
 }

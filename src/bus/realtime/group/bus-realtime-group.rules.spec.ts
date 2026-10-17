@@ -6,12 +6,23 @@
  * arriving) apart.
  */
 
-import { jongroRoutes } from "../../bus.config";
+import { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
+import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
+import type { BusRegistryRepository } from "../../registry/bus-registry.repository";
+import { BusRegistryService } from "../../registry/bus-registry.service";
+import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { toStationEtas } from "./bus-realtime-group.rules";
 
 describe("toStationEtas", () => {
-  const r02 = jongroRoutes.find((r) => r.id === "jongro02")!;
-  const r07 = jongroRoutes.find((r) => r.id === "jongro07")!;
+  // WHY: the routes as the registry seeds them from the committed snapshot, which these stop ids come from.
+  let r02: RegistryRoute;
+  let r07: RegistryRoute;
+
+  beforeAll(async () => {
+    const registry = new BusRegistryService(asReal<BusRegistryRepository>(new FakeBusRegistryRepository()), { now: () => new Date("2026-10-17T12:00:00Z") });
+    await registry.onModuleInit();
+    [r02, r07] = [await registry.routeOf("jongro02"), await registry.routeOf("jongro07")];
+  });
 
   it("puts each same-named stop's ETA on its own index", () => {
     // Act

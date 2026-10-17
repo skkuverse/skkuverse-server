@@ -10,6 +10,8 @@
 import fs from "fs";
 import path from "path";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
+import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
+import { seededBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
 import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
 import { haversineM } from "../../../src/shared/distance.util";
@@ -18,13 +20,18 @@ import type { SupportedLang } from "../../../src/infra/types";
 
 import { UiTransitListService } from "../../../src/ui/transit-list/ui-transit-list.service";
 
-const busConfig = new BusConfigService(new BusStopsService());
-const getBusGroups = (lang?: SupportedLang) => busConfig.getBusGroups(lang);
+let busConfig: BusConfigService;
+const groupsByLang = new Map<SupportedLang, BusGroup[]>();
+// WHY: the stations come from the registry, seeded here as a boot seeds it; the groups are read once.
+beforeAll(async () => {
+  busConfig = new BusConfigService(new BusStopsService(), await seededBusRegistryService());
+  for (const lang of ["ko", "en", "zh"] as const) groupsByLang.set(lang, await busConfig.getBusGroups(lang));
+});
+const getBusGroups = (lang: SupportedLang = "ko"): BusGroup[] => groupsByLang.get(lang)!;
 
 // The transit list as the ui module serves it; each test fakes the system time this clock reads.
 const clock: Clock = { now: () => new Date() };
-const transitList = new UiTransitListService(busConfig, clock);
-const getBusList = (lang: SupportedLang) => transitList.listBusGroupCards(lang);
+const getBusList = (lang: SupportedLang) => new UiTransitListService(busConfig, clock).listBusGroupCards(lang);
 
 const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
 
@@ -106,7 +113,7 @@ describe("commute timetable (spec scenarios: departure → arrival per run)", ()
   });
 });
 
-type Group = ReturnType<typeof getBusGroups>[number];
+type Group = BusGroup;
 
 function commute(lang: "ko" | "en" | "zh" = "ko"): Group & { screen: Record<string, any> } {
   return getBusGroups(lang).find((g) => g.id === "commute") as Group & { screen: Record<string, any> };
@@ -147,32 +154,32 @@ describe("commute group config", () => {
 describe("commute card visibility", () => {
   afterEach(() => jest.useRealTimers());
 
-  const listedAt = (iso: string) => {
+  const listedAt = async (iso: string) => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date(iso));
-    return getBusList("ko").some((item) => item.groupId === "commute");
+    return (await getBusList("ko")).some((item) => item.groupId === "commute");
   };
 
-  it("is absent the minute before it opens, 2026-10-12 11:55 KST", () => {
+  it("is absent the minute before it opens, 2026-10-12 11:55 KST", async () => {
     // Act & Assert
-    expect(listedAt("2026-10-11T15:00:00.000Z")).toBe(false); // 2026-10-12 00:00 KST
-    expect(listedAt("2026-10-12T02:54:00.000Z")).toBe(false); // 2026-10-12 11:54 KST
+    expect(await listedAt("2026-10-11T15:00:00.000Z")).toBe(false); // 2026-10-12 00:00 KST
+    expect(await listedAt("2026-10-12T02:54:00.000Z")).toBe(false); // 2026-10-12 11:54 KST
   });
 
-  it("is present from 2026-10-12 11:55 KST, a week before the first run", () => {
+  it("is present from 2026-10-12 11:55 KST, a week before the first run", async () => {
     // Act & Assert
-    expect(listedAt("2026-10-12T02:55:00.000Z")).toBe(true); // 2026-10-12 11:55 KST
+    expect(await listedAt("2026-10-12T02:55:00.000Z")).toBe(true); // 2026-10-12 11:55 KST
   });
 
-  it("stays present into the first run, Monday 2026-10-19", () => {
+  it("stays present into the first run, Monday 2026-10-19", async () => {
     // Act & Assert
-    expect(listedAt("2026-10-18T15:00:00.000Z")).toBe(true); // 2026-10-19 00:00 KST
+    expect(await listedAt("2026-10-18T15:00:00.000Z")).toBe(true); // 2026-10-19 00:00 KST
   });
 
-  it("is present until the end of the last day", () => {
+  it("is present until the end of the last day", async () => {
     // Act & Assert
-    expect(listedAt("2026-12-18T14:59:00.000Z")).toBe(true); // 2026-12-18 23:59 KST
-    expect(listedAt("2026-12-18T15:00:00.000Z")).toBe(false); // 2026-12-19 00:00 KST
+    expect(await listedAt("2026-12-18T14:59:00.000Z")).toBe(true); // 2026-12-18 23:59 KST
+    expect(await listedAt("2026-12-18T15:00:00.000Z")).toBe(false); // 2026-12-19 00:00 KST
   });
 });
 
@@ -187,7 +194,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   const stopById = (id: string, lang: "ko" | "en" | "zh" = "ko") => stops(lang).find((s) => s.id === id)!;
   const brief = (seq: SeqStop[]) => seq.map((st) => `${st.action}:${st.label}:${st.timing}`);
 
-  it("정자 boarding: the run boards at 정자역 3번 출구 and arrives at N센터 앞, the first campus drop point (estimated)", () => {
+  it("정자 boarding: the run boards at 정자역 3번 출구 and arrives at N센터 앞, the first campus drop point (estimated)", async () => {
     // Act
     const seq = sequences("commute-jeongja");
 
@@ -197,7 +204,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     expect(brief(seq.down!)).toEqual(["board:N센터 맞은편:scheduled", "alight:정자역 2번 출구 앞:estimated"]);
   });
 
-  it("강남·양재: 등교 boards at 강남, then 양재; 하교 drops at 양재, then 강남", () => {
+  it("강남·양재: 등교 boards at 강남, then 양재; 하교 drops at 양재, then 강남", async () => {
     // Act
     const seq = sequences("commute-gangnam-yangjae");
 
@@ -214,7 +221,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     ]);
   });
 
-  it("Drop-off sequence: every 등교 run ends at the N센터 catalog stop, the first drop point its estimate times, with the campus stops in order as detail", () => {
+  it("Drop-off sequence: every 등교 run ends at the N센터 catalog stop, the first drop point its estimate times, with the campus stops in order as detail", async () => {
     // Act & Assert
     for (const s of services()) {
       const last = s.stopSequences.up!.at(-1)!;
@@ -223,7 +230,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     expect(stopById("nsc-n-center").coords).toEqual({ lat: 37.292298, lng: 126.975057 });
   });
 
-  it("하교 drop-off spots match the school's 2026-10-08 answer", () => {
+  it("하교 drop-off spots match the school's 2026-10-08 answer", async () => {
     // Act
     const drops = Object.fromEntries(
       services().map((s) => [s.serviceId, s.stopSequences.down!.filter((st) => st.action === "alight").map((st) => st.label)]),
@@ -239,7 +246,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     });
   });
 
-  it("Drop-off with its exit: 정자's 하교 drop-off is a catalog stop with exit 2 and no walk", () => {
+  it("Drop-off with its exit: 정자's 하교 drop-off is a catalog stop with exit 2 and no walk", async () => {
     // Act
     const last = sequences("commute-jeongja").down!.at(-1)!;
 
@@ -251,7 +258,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     expect(stop.map.paths).toEqual([]);
   });
 
-  it("Drop-off on a median bus lane: the 강남역 bus stop has coordinates and a pin-only map", () => {
+  it("Drop-off on a median bus lane: the 강남역 bus stop has coordinates and a pin-only map", async () => {
     // Arrange
     const gangnam = sequences("commute-gangnam-yangjae").down!.at(-1)!;
 
@@ -263,7 +270,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     expect(stop.map).toEqual({ markers: [], paths: [] });
   });
 
-  it("every 하교 drop-off is a catalog stop in front of the exit its name gives, with no walk and no photo", () => {
+  it("every 하교 drop-off is a catalog stop in front of the exit its name gives, with no walk and no photo", async () => {
     // Act & Assert
     for (const s of services()) {
       for (const st of s.stopSequences.down!.filter((x) => x.action === "alight")) {
@@ -288,7 +295,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     ]);
   });
 
-  it("Station stop in English: its en photo, a street view link, and a map with the exit and a walk to the stop", () => {
+  it("Station stop in English: its en photo, a street view link, and a map with the exit and a walk to the stop", async () => {
     // Act
     const stationIds = ["jeongja-exit3", "jamsil-exit4", "dogok-exit1", "gangnam-exit5", "yangjae-exit2", "gwanggyo-exit4"];
 
@@ -309,7 +316,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     }
   });
 
-  it("정자역 3번 출구 in English: the exit marker reads Exit 3", () => {
+  it("정자역 3번 출구 in English: the exit marker reads Exit 3", async () => {
     // Act & Assert
     expect(stopById("jeongja-exit3", "en").map.markers[0]).toEqual({
       id: "exit3",
@@ -320,7 +327,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     });
   });
 
-  it("Campus stop: the original photo in any language, a street view link, a pin-only map", () => {
+  it("Campus stop: the original photo in any language, a street view link, a pin-only map", async () => {
     // Act & Assert
     for (const lang of ["ko", "en", "zh"] as const) {
       const stop = stopById("nsc-opposite", lang);
@@ -330,7 +337,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     }
   });
 
-  it("notes for the timetable's notes column: station or 자과캠, with 탑승/하차", () => {
+  it("notes for the timetable's notes column: station or 자과캠, with 탑승/하차", async () => {
     // Act
     const notes = (serviceId: string, rt: string, lang: "ko" | "en" | "zh" = "ko") =>
       sequences(serviceId, lang)[rt]!.map((st) => (st as SeqStop & { note?: string }).note);
@@ -352,7 +359,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     // The eight-character limit is checked for every timetable file in campus-schedule-data.test.ts.
   });
 
-  it("labels translate with the request language", () => {
+  it("labels translate with the request language", async () => {
     // Act & Assert
     expect(sequences("commute-gangnam-yangjae", "en").up!.map((st) => st.label)).toEqual([
       "Gangnam Stn. Exit 5",
@@ -365,7 +372,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
 describe("commute arrival estimates", () => {
   const COMMUTE_IDS = ["commute-jeongja", "commute-jamsil", "commute-dogok", "commute-gangnam-yangjae", "commute-gwanggyo"];
 
-  it("opts every commute service's 등교 and 하교 runs in to estimates", () => {
+  it("opts every commute service's 등교 and 하교 runs in to estimates", async () => {
     // Act
     const optIns = new BusStopsService().etaOptIns();
 
@@ -373,7 +380,7 @@ describe("commute arrival estimates", () => {
     for (const serviceId of COMMUTE_IDS) expect(optIns.get(serviceId)).toEqual(["up", "down"]);
   });
 
-  it("keeps the pilot notice first, for the banner, and ends with the live-traffic ai notice", () => {
+  it("keeps the pilot notice first, for the banner, and ends with the live-traffic ai notice", async () => {
     // Act
     const notices = Object.fromEntries(COMMUTE_IDS.map((id) => [id, SERVICE_CONFIG[id]!.notices.map((n) => `${n.style}:${n.text}`)]));
 

@@ -40,7 +40,6 @@ export function loadJongroRoutes(raw: unknown, serviceKey: string): ReadonlyArra
   return deepFreeze(entries.map((entry) => toJongroRoute(entry, serviceKey)));
 }
 
-export const jongroRoutes = loadJongroRoutes(
-  JSON.parse(fs.readFileSync(JONGRO_ROUTES_FILE, "utf8")),
-  checkServiceKey(config.api.seoulBusServiceKey),
-);
+export const seoulBusServiceKey = checkServiceKey(config.api.seoulBusServiceKey);
+
+export const jongroRoutes = loadJongroRoutes(JSON.parse(fs.readFileSync(JONGRO_ROUTES_FILE, "utf8")), seoulBusServiceKey);

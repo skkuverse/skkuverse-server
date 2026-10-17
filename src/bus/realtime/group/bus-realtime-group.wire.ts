@@ -35,12 +35,14 @@ const stationEta = z.object({
 
 /**
  * CONTRACT(skkuverse-app): parsed by skkuverse-app/packages/shared/src/bus/parser.ts (parseRealtimeData),
- * which reads each station's stationIndex and eta; arrivals is additive and not read yet.
+ * which reads each station's stationIndex and eta; arrivals and stationsVersion are additive and not read yet.
  */
 export const realtimeGroup = z.object({
   groupId: z.string(),
   buses: z.array(realtimeBus),
   stationEtas: z.array(stationEta),
+  /** WHY: a Jongro route's stations version, the same as its `/bus/config` group's while that is current. */
+  stationsVersion: z.string().optional(),
 });
 
 export const realtimeGroupMeta = z.object({

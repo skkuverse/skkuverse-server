@@ -18,17 +18,17 @@ export class BusConfigController {
   @Get()
   @UseInterceptors(EtagInterceptor)
   @CacheControl(CONFIG_CACHE_CONTROL)
-  getConfig(@Lang() lang: SupportedLang): WithEtag<BusConfig> {
-    return withEtag({ groups: this.busConfig.getBusGroups(lang) }, this.busConfig.computeEtag(lang));
+  async getConfig(@Lang() lang: SupportedLang): Promise<WithEtag<BusConfig>> {
+    const [groups, etag] = await Promise.all([this.busConfig.getBusGroups(lang), this.busConfig.computeEtag(lang)]);
+    return withEtag({ groups }, etag);
   }
 
   // WHY: an unknown group is a 404 even with If-None-Match: the lookup comes before the ETag check.
   @Get(":groupId")
   @UseInterceptors(EtagInterceptor)
   @CacheControl(CONFIG_CACHE_CONTROL)
-  getGroup(@Param("groupId") groupId: string, @Lang() lang: SupportedLang): WithEtag<BusGroup> {
-    const etag = this.busConfig.computeGroupEtag(groupId, lang);
-    const group = this.busConfig.getGroupById(groupId, lang);
+  async getGroup(@Param("groupId") groupId: string, @Lang() lang: SupportedLang): Promise<WithEtag<BusGroup>> {
+    const [etag, group] = await Promise.all([this.busConfig.computeGroupEtag(groupId, lang), this.busConfig.getGroupById(groupId, lang)]);
     if (!etag || !group) throw new AppError("GROUP_NOT_FOUND", `Unknown groupId: ${groupId}`, 404);
     return withEtag(group, etag);
   }

@@ -65,9 +65,9 @@ describe("UiTransitListService.listBusGroupCards", () => {
     ["2026-10-12T02:54:59.999Z", ["hssc"]],
     ["2026-10-12T02:55:00.000Z", ["hssc", "commute"]],
     ["2026-10-12T02:55:00.001Z", ["hssc", "commute"]],
-  ])("at %s, around 11:55 KST on the first day of a fromTime range, lists %p", (iso, groupIds) => {
+  ])("at %s, around 11:55 KST on the first day of a fromTime range, lists %p", async (iso, groupIds) => {
     // Act
-    const cards = serviceAt(iso).listBusGroupCards("ko");
+    const cards = await serviceAt(iso).listBusGroupCards("ko");
 
     // Assert
     expect(cards.map((card) => card.groupId)).toEqual(groupIds);
@@ -79,35 +79,35 @@ describe("UiTransitListService.listBusGroupCards", () => {
     ["2026-10-19T16:30:00.000Z", ["hssc", "pilot", "commute"]],
     ["2026-12-18T14:59:59.999Z", ["hssc", "pilot", "commute"]],
     ["2026-12-18T15:00:00.000Z", ["hssc"]],
-  ])("at %s, around the KST date edges of the ranges, lists %p", (iso, groupIds) => {
+  ])("at %s, around the KST date edges of the ranges, lists %p", async (iso, groupIds) => {
     // Act
-    const cards = serviceAt(iso).listBusGroupCards("ko");
+    const cards = await serviceAt(iso).listBusGroupCards("ko");
 
     // Assert
     expect(cards.map((card) => card.groupId)).toEqual(groupIds);
   });
 
-  it("shows a range on its KST first day while the UTC date is still the day before", () => {
+  it("shows a range on its KST first day while the UTC date is still the day before", async () => {
     // Arrange
     // 01:30 KST on the 20th is 16:30 UTC on the 19th: a check in UTC would still hide the pilot.
     const service = serviceAt("2026-10-19T16:30:00Z");
 
     // Act
-    const groupIds = service.listBusGroupCards("ko").map((card) => card.groupId);
+    const groupIds = (await service.listBusGroupCards("ko")).map((card) => card.groupId);
 
     // Assert
     expect(groupIds).toContain("pilot");
-    expect(serviceAt("2026-10-19T14:59:59.999Z").listBusGroupCards("ko").map((card) => card.groupId)).not.toContain(
+    expect((await serviceAt("2026-10-19T14:59:59.999Z").listBusGroupCards("ko")).map((card) => card.groupId)).not.toContain(
       "pilot",
     );
   });
 
-  it("maps each shown group of the request's language to its card", () => {
+  it("maps each shown group of the request's language to its card", async () => {
     // Arrange
     busConfig.busGroupsByLang.set("en", [busGroup("hssc", { type: "always" }, "HSSC Shuttle")]);
 
     // Act
-    const cards = serviceAt("2026-10-20T00:00:00Z").listBusGroupCards("en");
+    const cards = await serviceAt("2026-10-20T00:00:00Z").listBusGroupCards("en");
 
     // Assert
     expect(cards).toEqual([
@@ -128,18 +128,18 @@ describe("UiTransitListService.listBusGroupCards, counted as a deprecated route"
     logger.warn.mockClear();
   });
 
-  it("logs one warn line for two calls within an hour, then the next with the count it held back", () => {
+  it("logs one warn line for two calls within an hour, then the next with the count it held back", async () => {
     // Arrange
     let nowIso = "2026-10-20T00:00:00.000Z";
     const service = new UiTransitListService(asReal<BusConfigService>(busConfig), { now: () => new Date(nowIso) });
 
     // Act
-    service.listBusGroupCards("ko");
+    await service.listBusGroupCards("ko");
     nowIso = "2026-10-20T00:59:59.999Z";
-    service.listBusGroupCards("ko");
+    await service.listBusGroupCards("ko");
     const linesWithinTheHour = legacyLines().length;
     nowIso = "2026-10-20T01:00:00.000Z";
-    service.listBusGroupCards("ko");
+    await service.listBusGroupCards("ko");
 
     // Assert
     expect(linesWithinTheHour).toBe(1);

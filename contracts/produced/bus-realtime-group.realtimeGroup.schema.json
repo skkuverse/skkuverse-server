@@ -147,6 +147,9 @@
           "arrivals"
         ]
       }
+    },
+    "stationsVersion": {
+      "type": "string"
     }
   },
   "required": [

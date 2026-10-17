@@ -1,0 +1,37 @@
+{
+  "_about": "Captured from TOPIS getBusPosByRouteSt?busRouteId=100900004 (종로07) on 2026-10-17 (pos_100900004_1792231921.json); trimmed to its first two rows and the fields the client reads plus identifying ones; msgHeader kept.",
+  "jongro07": {
+    "msgHeader": {
+      "headerCd": "0",
+      "headerMsg": "정상적으로 처리되었습니다."
+    },
+    "msgBody": {
+      "itemList": [
+        {
+          "lastStnId": "100900221",
+          "trnstnid": "100900028",
+          "tmX": null,
+          "tmY": null,
+          "gpsX": "126.994075",
+          "gpsY": "37.586893",
+          "plainNo": "서울70사5538",
+          "vehId": "100000114",
+          "sectOrd": "2",
+          "dataTm": "20261017191145"
+        },
+        {
+          "lastStnId": "100900043",
+          "trnstnid": "100900028",
+          "tmX": null,
+          "tmY": null,
+          "gpsX": "127.002008",
+          "gpsY": "37.576948",
+          "plainNo": "서울70사5537",
+          "vehId": "100000103",
+          "sectOrd": "14",
+          "dataTm": "20261017191144"
+        }
+      ]
+    }
+  }
+}
