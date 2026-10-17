@@ -32,6 +32,22 @@
         "title": "인사캠",
         "items": [
           {
+            "kind": "subway",
+            "id": "subway:S1-4-420",
+            "stationId": "S1-4-420",
+            "title": "혜화역",
+            "subtitle": "4호선",
+            "icon": {
+              "type": "subway",
+              "color": "00A5DE",
+              "text": "4"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/subway?station=S1-4-420"
+            }
+          },
+          {
             "kind": "bus",
             "id": "bus:hssc",
             "groupId": "hssc",
@@ -94,22 +110,6 @@
               "actionType": "route",
               "actionValue": "/bus/realtime?groupId=jongro08"
             }
-          },
-          {
-            "kind": "subway",
-            "id": "subway:S1-4-420",
-            "stationId": "S1-4-420",
-            "title": "혜화역",
-            "subtitle": "4호선",
-            "icon": {
-              "type": "subway",
-              "color": "00A5DE",
-              "text": "4"
-            },
-            "action": {
-              "actionType": "route",
-              "actionValue": "/subway?station=S1-4-420"
-            }
           }
         ]
       },
@@ -118,22 +118,6 @@
         "id": "nsc",
         "title": "자과캠",
         "items": [
-          {
-            "kind": "bus",
-            "id": "bus:commute",
-            "groupId": "commute",
-            "title": "자과캠 통학 셔틀버스",
-            "subtitle": "역 ↔ 자과캠 시범 운행",
-            "icon": {
-              "type": "shuttle",
-              "color": "003626",
-              "text": "성대"
-            },
-            "action": {
-              "actionType": "route",
-              "actionValue": "/bus/schedule?groupId=commute"
-            }
-          },
           {
             "kind": "subway",
             "id": "subway:KR-1-0153",
@@ -148,6 +132,22 @@
             "action": {
               "actionType": "route",
               "actionValue": "/subway?station=KR-1-0153"
+            }
+          },
+          {
+            "kind": "bus",
+            "id": "bus:commute",
+            "groupId": "commute",
+            "title": "자과캠 통학 셔틀버스",
+            "subtitle": "역 ↔ 자과캠 시범 운행",
+            "icon": {
+              "type": "shuttle",
+              "color": "003626",
+              "text": "성대"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/schedule?groupId=commute"
             }
           }
         ]

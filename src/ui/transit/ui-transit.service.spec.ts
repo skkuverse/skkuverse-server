@@ -61,8 +61,8 @@ describe("UiTransitService.getTransitLayout", () => {
     ]);
     expect(layout.sections.map((section) => section.items.map((served) => served.id))).toEqual([
       ["bus:campus"],
-      ["bus:hssc", "bus:jongro02", "bus:jongro07", "bus:jongro08", "subway:S1-4-420"],
-      ["bus:commute", "subway:KR-1-0153"],
+      ["subway:S1-4-420", "bus:hssc", "bus:jongro02", "bus:jongro07", "bus:jongro08"],
+      ["subway:KR-1-0153", "bus:commute"],
     ]);
   });
 
@@ -77,11 +77,11 @@ describe("UiTransitService.getTransitLayout", () => {
     // Assert
     expect(en.sections.map((section) => section.title)).toEqual([null, "HSSC", "NSC"]);
     expect(en.sections[1]?.items.map((served) => served.title)).toEqual([
+      "Hyehwa Station",
       "HSSC Shuttle Bus",
       "Jongro 02",
       "Jongro 07",
       "Jongro 08",
-      "Hyehwa Station",
     ]);
     expect(en.sections.map((section) => section.items.map((served) => served.id))).toEqual(
       ko.sections.map((section) => section.items.map((served) => served.id)),
@@ -90,14 +90,14 @@ describe("UiTransitService.getTransitLayout", () => {
 
   it.each([
     ["2026-10-12T02:54:59.999Z", ["subway:KR-1-0153"]],
-    ["2026-10-12T02:55:00.000Z", ["bus:commute", "subway:KR-1-0153"]],
+    ["2026-10-12T02:55:00.000Z", ["subway:KR-1-0153", "bus:commute"]],
   ])("at %s, around 11:55 KST when the commute card opens, serves nsc as %p", (iso, itemIds) => {
     // Act & Assert
     expect(itemIdsOf(serviceAt(iso), "nsc")).toEqual(itemIds);
   });
 
   it.each([
-    ["2026-12-18T14:59:59.999Z", ["bus:commute", "subway:KR-1-0153"]],
+    ["2026-12-18T14:59:59.999Z", ["subway:KR-1-0153", "bus:commute"]],
     ["2026-12-18T15:00:00.000Z", ["subway:KR-1-0153"]],
   ])("at %s, around 00:00 KST on 2026-12-19 after the pilot, serves nsc as %p", (iso, itemIds) => {
     // Act & Assert
