@@ -47,11 +47,104 @@
           },
           "eta": {
             "type": "string"
+          },
+          "arrivals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "minutes": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "stopsAway": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "running",
+                    "arriving",
+                    "waiting",
+                    "ended",
+                    "noInfo",
+                    "unknown"
+                  ]
+                },
+                "isLastBus": {
+                  "type": "boolean"
+                },
+                "carNumber": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "crowding": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "relaxed",
+                        "normal",
+                        "crowded"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "passengerCount": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "minutes",
+                "stopsAway",
+                "state",
+                "isLastBus",
+                "carNumber",
+                "crowding",
+                "passengerCount",
+                "message"
+              ]
+            }
           }
         },
         "required": [
           "stationIndex",
-          "eta"
+          "eta",
+          "arrivals"
         ]
       }
     }

@@ -62,13 +62,25 @@ const JONGRO07_LOC_BODY = {
     ],
   },
 };
+// TOPIS's values for a bus slot that names no bus (topis-jongro-arrivals.json).
+const NO_BUS = (slot: "1" | "2", arrmsg: string) => ({
+  [`vehId${slot}`]: "0",
+  [`plainNo${slot}`]: " ",
+  [`sectOrd${slot}`]: "0",
+  [`traTime${slot}`]: "0",
+  [`isLast${slot}`]: "0",
+  [`rerdie_Div${slot}`]: "0",
+  [`reride_Num${slot}`]: "0",
+  [`arrmsg${slot}`]: arrmsg,
+});
+const BUS_5537 = { vehId1: "100000103", sectOrd1: "0", isLast1: "0", rerdie_Div1: "2", reride_Num1: "9" };
 const JONGRO07_LIST_BODY = {
   msgHeader: TOPIS_OK,
   msgBody: {
     itemList: [
-      { stId: "100900220", staOrd: "1", stNm: "성균관대운동장", plainNo1: "서울74사5537", mkTm: "2026-10-20 09:59:00.0", arsId: "01617", arrmsg1: "3분후[2번째 전]" },
-      { stId: "100900221", staOrd: "2", stNm: "학생회관", plainNo1: "서울74사5537", mkTm: "2026-10-20 09:59:00.0", arsId: "01618", arrmsg1: "5분후[3번째 전]" },
-      { stId: "100000424", staOrd: "3", stNm: "비천당", plainNo1: " ", mkTm: "2026-10-20 09:59:00.0", arsId: "01619", arrmsg1: "" },
+      { ...BUS_5537, ...NO_BUS("2", "출발대기"), stId: "100900220", staOrd: "1", stNm: "성균관대운동장", plainNo1: "서울74사5537", traTime1: "180", mkTm: "2026-10-20 09:59:00.0", arsId: "01617", arrmsg1: "3분후[2번째 전]" },
+      { ...BUS_5537, ...NO_BUS("2", "출발대기"), stId: "100900221", staOrd: "2", stNm: "학생회관", plainNo1: "서울74사5537", traTime1: "300", mkTm: "2026-10-20 09:59:00.0", arsId: "01618", arrmsg1: "5분후[3번째 전]" },
+      { ...NO_BUS("1", ""), ...NO_BUS("2", ""), stId: "100000424", staOrd: "3", stNm: "비천당", plainNo1: " ", mkTm: "2026-10-20 09:59:00.0", arsId: "01619", arrmsg1: "" },
     ],
   },
 };
@@ -292,16 +304,87 @@ describe("bus_cache between a poller process and an api replica", () => {
     const res = await get("/bus/realtime/data/jongro07");
 
     // Assert
+    const running5537 = (minutes: number, stopsAway: number, message: string) => ({
+      minutes,
+      stopsAway,
+      state: "running",
+      isLastBus: false,
+      carNumber: "5537",
+      crowding: "relaxed",
+      passengerCount: 9,
+      message,
+    });
+    const WAITING_NO_VEHICLE = {
+      minutes: null,
+      stopsAway: null,
+      state: "waiting",
+      isLastBus: false,
+      carNumber: null,
+      crowding: null,
+      passengerCount: null,
+      message: "출발대기",
+    };
     expect((await busCache.find({}, { projection: { _id: 1 } }).toArray()).map((d) => d._id).sort()).toEqual([
       "jongro_locations_07",
       "jongro_stations_07",
     ]);
+    // WHY: the stored arrival rows gained each row's two buses (improve-jongro-realtime task 2.2); every other
+    // field keeps the value it had.
+    const bus5537 = { sectOrd: 0, isLast: false, plainNo: "서울74사5537", vehId: "100000103", rerideDiv: 2, rerideNum: 9 };
+    const noBus = (staOrd: number, arrmsg: string) => ({
+      traTime: 0,
+      sectOrd: 0,
+      staOrd,
+      arrmsg,
+      isLast: false,
+      plainNo: " ",
+      vehId: "0",
+      rerideDiv: 0,
+      rerideNum: 0,
+    });
+    expect(await busCache.findOne({ _id: "jongro_stations_07" as never })).toEqual({
+      _id: "jongro_stations_07",
+      _updatedAt: NOW,
+      data: [
+        {
+          stationId: "100900220",
+          sequence: "1",
+          stationName: "성균관대운동장",
+          carNumber: "5537",
+          eventDate: "2026-10-20 09:59:00.0",
+          stationNumber: "01617",
+          eta: "3분후[2번째 전]",
+          buses: [{ ...bus5537, traTime: 180, staOrd: 1, arrmsg: "3분후[2번째 전]" }, noBus(1, "출발대기")],
+        },
+        {
+          stationId: "100900221",
+          sequence: "2",
+          stationName: "학생회관",
+          carNumber: "5537",
+          eventDate: "2026-10-20 09:59:00.0",
+          stationNumber: "01618",
+          eta: "5분후[3번째 전]",
+          buses: [{ ...bus5537, traTime: 300, staOrd: 2, arrmsg: "5분후[3번째 전]" }, noBus(2, "출발대기")],
+        },
+        {
+          stationId: "100000424",
+          sequence: "3",
+          stationName: "비천당",
+          carNumber: "----",
+          eventDate: "2026-10-20 09:59:00.0",
+          stationNumber: "01619",
+          eta: "",
+          buses: [noBus(3, ""), noBus(3, "")],
+        },
+      ],
+    });
     expect(res.body.data).toEqual({
       groupId: "jongro07",
       buses: [{ stationIndex: 5, carNumber: "5537", estimatedTime: 0, latitude: "37.587", longitude: "126.998" }],
+      // WHY: each station's arrivals is the field improve-jongro-realtime adds (task 3.1); eta is as before.
       stationEtas: [
-        { stationIndex: 0, eta: "3분후[2번째 전]" },
-        { stationIndex: 1, eta: "5분후[3번째 전]" },
+        { stationIndex: 0, eta: "3분후[2번째 전]", arrivals: [running5537(3, 1, "3분후[2번째 전]"), WAITING_NO_VEHICLE] },
+        { stationIndex: 1, eta: "5분후[3번째 전]", arrivals: [running5537(5, 2, "5분후[3번째 전]"), WAITING_NO_VEHICLE] },
       ],
     });
   });

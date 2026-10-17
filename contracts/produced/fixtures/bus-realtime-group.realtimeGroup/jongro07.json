@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/realtime/data/jongro07 captured from production 2026-10-14 (stage 12 shape snapshot, Accept-Language ko); buses and stationEtas trimmed to their first entries",
+  "_about": "Hand-written from captures, since the arrivals shape is not deployed yet: buses from GET /bus/realtime/data/jongro07 captured from production 2026-10-14 (trimmed to their first entries); stationEtas from TOPIS getArrInfoByRouteAll busRouteId=100900004 captured 2026-10-17 19:16 KST (ord 2 and 12, the same rows as __tests__/nest/bus/fixtures/topis-jongro-arrivals.json jongro07Waiting), each bus through the arrival rules on 18 seats.",
   "data": {
     "groupId": "jongro07",
     "buses": [
@@ -20,16 +20,56 @@
     ],
     "stationEtas": [
       {
-        "stationIndex": 0,
-        "eta": "운행종료"
-      },
-      {
         "stationIndex": 1,
-        "eta": "운행종료"
+        "eta": "출발대기",
+        "arrivals": [
+          {
+            "minutes": null,
+            "stopsAway": 0,
+            "state": "waiting",
+            "isLastBus": false,
+            "carNumber": "5536",
+            "crowding": null,
+            "passengerCount": null,
+            "message": "출발대기"
+          },
+          {
+            "minutes": null,
+            "stopsAway": null,
+            "state": "waiting",
+            "isLastBus": false,
+            "carNumber": null,
+            "crowding": null,
+            "passengerCount": null,
+            "message": "출발대기"
+          }
+        ]
       },
       {
-        "stationIndex": 2,
-        "eta": "운행종료"
+        "stationIndex": 11,
+        "eta": "출발대기",
+        "arrivals": [
+          {
+            "minutes": null,
+            "stopsAway": 10,
+            "state": "waiting",
+            "isLastBus": false,
+            "carNumber": "5536",
+            "crowding": null,
+            "passengerCount": null,
+            "message": "출발대기"
+          },
+          {
+            "minutes": 2,
+            "stopsAway": 1,
+            "state": "running",
+            "isLastBus": false,
+            "carNumber": "5538",
+            "crowding": "relaxed",
+            "passengerCount": 7,
+            "message": "2분19초후[1번째 전]"
+          }
+        ]
       }
     ]
   }
