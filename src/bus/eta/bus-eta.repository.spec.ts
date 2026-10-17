@@ -1,7 +1,9 @@
 /**
  * BusEtaRepository over a mocked Mongo seam (src/infra/db): the frozen skip,
  * the offsets-length guard, the reads' filters and bounds, and the indexes it
- * ensures at boot, only with SHUTTLE_ETA on.
+ * ensures at boot, only with SHUTTLE_ETA on. A live value's travel model is
+ * stored with it and never outlives it, and a document from before the model
+ * existed reads as it was stored.
  */
 jest.mock("../../infra/db", () => ({ getClient: jest.fn(), HOT_READ_MAX_TIME_MS: 3_000 }));
 jest.mock("../../infra/config", () => ({ mongo: { dbName: "bus_campus_test" }, shuttleEta: { enabled: true } }));
@@ -149,5 +151,46 @@ describe("BusEtaRepository reads and indexes", () => {
     } finally {
       config.shuttleEta.enabled = true;
     }
+  });
+});
+
+describe("BusEtaRepository travel model", () => {
+  const travel = { model: "busLane" as const, corridorCarSec: 1920, corridorSec: 1080, spanCount: 6, coverage: 0.81 };
+
+  it("stores a bus-lane value's travel model with it", async () => {
+    // Arrange
+    const doc = { ...liveEstimate(RUN, { offsetsSec: [0, 3000, 3200], fetchedAt: FETCHED }), travel };
+
+    // Act
+    await repository.upsertEstimates([doc], seqLength);
+
+    // Assert
+    expect(coll.bulkWrite).toHaveBeenCalledWith([{ replaceOne: { filter: { _id: doc._id }, replacement: doc, upsert: true } }], { ordered: false });
+  });
+
+  it("replaces the whole document, so a later car value keeps no travel model from an earlier one", async () => {
+    // Arrange
+    const car = liveEstimate(RUN, { offsetsSec: [0, 3300, 3500], fetchedAt: FETCHED });
+
+    // Act
+    await repository.upsertEstimates([car], seqLength);
+
+    // Assert
+    const [[operations]] = coll.bulkWrite.mock.calls as unknown as [[Array<{ replaceOne: { replacement: ShuttleEtaDoc } }>]];
+    expect(operations).toHaveLength(1);
+    expect(operations[0]!.replaceOne.replacement).not.toHaveProperty("travel");
+  });
+
+  it("reads a document written before the travel model existed as it was stored", async () => {
+    // Arrange
+    const old = liveEstimate(RUN, { offsetsSec: [0, 3000, 3200], fetchedAt: FETCHED });
+    frozenInDb = [old];
+
+    // Act
+    const docs = await repository.listEstimates(["campus-inja"], ["2026-10-12"]);
+
+    // Assert
+    expect(docs).toEqual([old]);
+    expect(coll.find).toHaveBeenCalledWith({ serviceId: { $in: ["campus-inja"] }, date: { $in: ["2026-10-12"] } }, { maxTimeMS: 3_000 });
   });
 });

@@ -5,8 +5,8 @@ import type { DirectionsProvider } from "./bus-eta.types";
 const AUTH_STATUSES = new Set([401, 403]);
 const TIMEOUT_CODES = new Set(["ECONNABORTED", "ETIMEDOUT"]);
 
-// WHY: the two directions clients extend this for their one retry and its error translation, so a NAVER or TMAP
-// failure leaves either as a BusEtaDirectionsError that carries no request config.
+// WHY: the directions clients and the probe's position client extend this for their one retry and its error
+// translation, so a NAVER, TMAP or TOPIS failure leaves as a BusEtaDirectionsError that carries no request config.
 export class BusEtaClient {
   protected async fetchWithOneRetry<T>(provider: DirectionsProvider, call: () => Promise<T>, retryDelayMs: number): Promise<T> {
     try {
