@@ -4,10 +4,12 @@
  * for a train first seen inside it; an observed arrival is an arrived row at its
  * time or an approaching row 30 s on (design D4's approach lead), never a
  * departure; the error is the predicted instant minus the observed one; and a
- * record is unresolved once its predicted arrival is 30 minutes past; a record
- * is open until its train is observed, and resolved from the start after.
+ * record is unresolved once its predicted arrival is 30 minutes past. A record
+ * is written open, and only a row first seen at a later tick than the one that
+ * made it resolves it, never the row it was predicted from (F6), within those
+ * 30 minutes; an arrived row also replaces an approaching row's resolution.
  */
-import { toCrossedHorizons, toErrorSec, toObservedArrivalAt, toPredictionDoc, toUnresolvedCutoff } from "./subway-history.rules";
+import { isResolvableBy, toCrossedHorizons, toErrorSec, toObservedArrivalAt, toPredictionDoc, toUnresolvedCutoff } from "./subway-history.rules";
 import type { PredictionMade } from "./subway-history.types";
 
 const MIN = 60_000;
@@ -85,9 +87,9 @@ describe("toPredictionDoc", () => {
     madeAt: at("21:02:31"),
   };
 
-  it("writes the prediction served then, open while the train has not been observed", () => {
+  it("writes the prediction served then, open", () => {
     // Act & Assert
-    expect(toPredictionDoc(made, undefined)).toEqual({
+    expect(toPredictionDoc(made)).toEqual({
       serviceDate: "2026-10-16",
       trainNo: "0692",
       stationId: "KR-1-0153",
@@ -103,18 +105,32 @@ describe("toPredictionDoc", () => {
       errorSec: null,
     });
   });
+});
 
-  it("writes it resolved, with its error, when the train's arrival was already observed", () => {
-    // Arrange
-    const observed = { serviceDate: "2026-10-16", trainNo: "0692", stationId: "KR-1-0153", observedAt: at("21:05:50"), observedState: "arrived" as const };
+describe("isResolvableBy", () => {
+  const seenAt = at("20:31:10");
+  const open = { status: "open", observedState: null, madeAt: at("20:28:40"), predictedAt: at("20:31:30") } as const;
+  const approachResolved = { ...open, status: "resolved", observedState: "approaching" } as const;
+  const arrivedResolved = { ...open, status: "resolved", observedState: "arrived" } as const;
+  const unresolved = { ...open, status: "unresolved" } as const;
+  const madeAt = (instant: Date) => ({ ...open, madeAt: instant });
+  const predictedAt = (instant: Date) => ({ ...open, predictedAt: instant });
+  const ms = (instant: Date, deltaMs: number): Date => new Date(instant.getTime() + deltaMs);
 
+  it.each([
+    ["an open record made a millisecond before the tick that first saw the row", true, "arrived", madeAt(ms(seenAt, -1))],
+    ["an open record made at the tick that first saw the row (F6: the row it was made from)", false, "arrived", madeAt(seenAt)],
+    ["an open record made a millisecond after that tick", false, "arrived", madeAt(ms(seenAt, 1))],
+    ["an open record and an approaching row", true, "approaching", open],
+    ["an open record made at the tick that first saw an approaching row", false, "approaching", madeAt(seenAt)],
+    ["a record an approaching row resolved, and an arrived row", true, "arrived", approachResolved],
+    ["a record an approaching row resolved, and another approaching row", false, "approaching", approachResolved],
+    ["a record an arrived row resolved, and another arrived row", false, "arrived", arrivedResolved],
+    ["an unresolved record", false, "arrived", unresolved],
+    ["a record predicted exactly 30 minutes before the tick", true, "arrived", predictedAt(ms(seenAt, -30 * MIN))],
+    ["a record predicted 30 minutes and a millisecond before the tick", false, "arrived", predictedAt(ms(seenAt, -30 * MIN - 1))],
+  ] as const)("%s: resolvable %s", (_label, isResolvable, observedState, record) => {
     // Act & Assert
-    expect(toPredictionDoc(made, observed)).toMatchObject({
-      status: "resolved",
-      observedAt: at("21:05:50"),
-      observedState: "arrived",
-      resolvedAt: at("21:02:31"),
-      errorSec: -20,
-    });
+    expect(isResolvableBy(record, { observedState }, seenAt)).toBe(isResolvable);
   });
 });

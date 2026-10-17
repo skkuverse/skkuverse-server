@@ -1,13 +1,24 @@
 import type { Document, Filter, UpdateFilter } from "mongodb";
 import type { SubwayPredictionDoc } from "./subway-history.document";
+import { toReplaceableObservedStates, toUnresolvedCutoff } from "./subway-history.rules";
 import type { AccuracyRange, ObservedArrival } from "./subway-history.types";
 
 const SECOND_MS = 1000;
 const MEDIAN = { numerator: 1, denominator: 2 };
 const P90 = { numerator: 9, denominator: 10 };
 
-export function toObservedArrivalFilter(arrival: ObservedArrival): Filter<SubwayPredictionDoc> {
-  return { serviceDate: arrival.serviceDate, trainNo: arrival.trainNo, stationId: arrival.stationId, status: "open" };
+// WHY: the Mongo form of isResolvableBy (subway-history.rules.ts), `resolvedAt` being the tick that first saw the row.
+export function toObservedArrivalFilter(arrival: ObservedArrival, resolvedAt: Date): Filter<SubwayPredictionDoc> {
+  const { serviceDate, trainNo, stationId, observedState } = arrival;
+  return {
+    serviceDate,
+    trainNo,
+    stationId,
+    status: { $in: ["open", "resolved"] },
+    observedState: { $in: [...toReplaceableObservedStates(observedState)] },
+    madeAt: { $lt: resolvedAt },
+    predictedAt: { $gte: toUnresolvedCutoff(resolvedAt) },
+  };
 }
 
 // WHY: the pipeline form of toErrorSec (subway-history.rules.ts): each record's own predicted instant minus the one

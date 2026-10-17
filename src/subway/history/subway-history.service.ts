@@ -22,7 +22,7 @@ export class SubwayHistoryService implements OnModuleInit {
   private serviceDate: string | null = null;
   private readonly recordedEventKeys = new Set<string>();
   private readonly leadMsByTrain = new Map<string, number>();
-  private readonly observedArrivalsByTrain = new Map<string, ObservedArrival>();
+  private readonly observedStateKeys = new Set<string>();
   private unresolvedSweptAtMs = Number.NEGATIVE_INFINITY;
   private readonly writeFailureThrottle: LogThrottle;
 
@@ -59,7 +59,7 @@ export class SubwayHistoryService implements OnModuleInit {
     this.serviceDate = serviceDate;
     this.recordedEventKeys.clear();
     this.leadMsByTrain.clear();
-    this.observedArrivalsByTrain.clear();
+    this.observedStateKeys.clear();
   }
 
   private toNewEvents(source: string, station: TrackedStation): SubwayEventDoc[] {
@@ -75,11 +75,10 @@ export class SubwayHistoryService implements OnModuleInit {
   private toNewObservedArrivals(station: TrackedStation): ObservedArrival[] {
     return station.events.flatMap((event) => {
       const observedAt = event.stationId === station.stationId ? toObservedArrivalAt(event) : null;
-      const key = `${station.stationId} ${event.trainNo}`;
-      if (!observedAt || this.observedArrivalsByTrain.has(key)) return [];
-      const arrival = { serviceDate: station.serviceDate, trainNo: event.trainNo, stationId: station.stationId, observedAt, observedState: event.state };
-      this.observedArrivalsByTrain.set(key, arrival);
-      return [arrival];
+      const key = `${station.stationId} ${event.trainNo} ${event.state}`;
+      if (!observedAt || this.observedStateKeys.has(key)) return [];
+      this.observedStateKeys.add(key);
+      return [{ serviceDate: station.serviceDate, trainNo: event.trainNo, stationId: station.stationId, observedAt, observedState: event.state }];
     });
   }
 
@@ -91,8 +90,9 @@ export class SubwayHistoryService implements OnModuleInit {
         const leadMs = train.arrivalAt.getTime() - madeAt.getTime();
         const horizons = toCrossedHorizons(this.leadMsByTrain.get(key), leadMs);
         this.leadMsByTrain.set(key, leadMs);
-        const observed = this.observedArrivalsByTrain.get(key);
-        return horizons.map((horizonMin) => toPredictionDoc({ serviceDate, stationId, direction, horizonMin, train, madeAt }, observed));
+        // WHY: a horizon first crossed once the train is seen arrived was crossed by that row (F6): nothing is left to predict.
+        if (this.observedStateKeys.has(`${key} arrived`)) return [];
+        return horizons.map((horizonMin) => toPredictionDoc({ serviceDate, stationId, direction, horizonMin, train, madeAt }));
       }),
     );
   }
