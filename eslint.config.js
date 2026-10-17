@@ -545,6 +545,7 @@ const GLOSSARY_NOT = {
   bus: ["busGroupConfig", "busStop", "seqNo", "trip", "prediction"],
   health: ["isAlive", "isHealthy"],
   holidays: ["restDay", "holidayCache"],
+  meals: ["restaurant", "diningHall", "mealType"],
   map: ["festivalConfig", "layerConfig", "eventWindow", "currentFestival", "filterButton", "exclusiveGroup", "categoryStyle", "sheetBody", "isFallback"],
   miniapps: ["appRegistry", "inbox", "readBy"],
   notices: ["NoticeDto", "tabConfig", "FindResult"],
