@@ -1,6 +1,6 @@
 {
   "src/app.module.ts": {
-    "max": 121,
+    "max": 123,
     "reason": "ADR 0010 D9, no domain seam: the root module lists every feature module and sub-module in the order Nest registers their routes (route-order.test.ts replays it), and a parent module never imports its sub-modules (D3), so no feature module can hold a share of the list. Its max rises with each module added: that commit carries the Architecture-Debt trailer for this file and needs no other reason."
   },
   "src/bus/config/bus-config.mapper.ts": {
@@ -22,5 +22,9 @@
   "src/notices/list/notices-list.rules.ts": {
     "max": 182,
     "reason": "ADR 0010 D9, no domain seam: the list badge is one priority chain a list item is cut from, the v1 period pick and the v2 role badge feeding one brief, and the cursor decode beside it; neither half is a flow of its own, so a sub-module would hold rules and nothing else, and the badge alone exceeds the rules cap."
+  },
+  "src/subway/estimate/subway-estimate.rules.ts": {
+    "max": 140,
+    "reason": "ADR 0010 D9, no domain seam a sub-module can take: every function here feeds `toStationArrivals`, which composes each train's candidate, its delay (`toDelaySec`, at a station its row passes against `toPassingStop`), the delay lent to unobserved trains, the departure estimated at the served station and the countdown a train may count, and a sibling or parent never imports a sub-module's rules (D3); the countdown's memory across ticks, the one part only the service reads, is src/subway/countdown/."
   }
 }

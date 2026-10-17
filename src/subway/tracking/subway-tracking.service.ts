@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Clock } from "../../infra/clock";
 import { createLogThrottle, type LogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
-import type { CountdownDivergence, TrainArrival } from "../estimate/subway-estimate.types";
+import type { CountdownDivergence, CountdownRejection, TrainArrival } from "../estimate/subway-estimate.types";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import type { SubwayArrivalsDoc } from "../subway.document";
 import { SubwayRepository } from "../subway.repository";
@@ -11,7 +11,7 @@ import type { StationSchedule } from "../timetable/subway-timetable.types";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { MAX_TRAINS_PER_DIRECTION } from "./subway-tracking.constants";
 import { toArrivalsDoc } from "./subway-tracking.mapper";
-import { mergeObservations, toDirectionByDestination, toLiveCountdownRows, toNewestEvents } from "./subway-tracking.rules";
+import { mergeObservations, toDirectionByDestination, toLiveCountdownRows, toNewestEvents, toStopStationIdsByTrainNo } from "./subway-tracking.rules";
 import type { SourceCountdownRows, StationObservations, TrackedStation, TrackedTickListener, TrainHistory } from "./subway-tracking.types";
 
 const DIVERGENCE_LOG_INTERVAL_MS = 10 * 60_000;
@@ -25,6 +25,7 @@ export class SubwayTrackingService {
   private readonly countdownRowsBySource = new Map<string, SourceCountdownRows>();
   private readonly tickListeners: TrackedTickListener[] = [];
   private readonly divergenceThrottle: LogThrottle;
+  private readonly rejectionThrottle: LogThrottle;
 
   constructor(
     private readonly repository: SubwayRepository,
@@ -33,6 +34,7 @@ export class SubwayTrackingService {
     private readonly clock: Clock,
   ) {
     this.divergenceThrottle = createLogThrottle(DIVERGENCE_LOG_INTERVAL_MS, () => this.clock.now().getTime());
+    this.rejectionThrottle = createLogThrottle(DIVERGENCE_LOG_INTERVAL_MS, () => this.clock.now().getTime());
   }
 
   async track(provider: SubwayProvider): Promise<void> {
@@ -60,7 +62,7 @@ export class SubwayTrackingService {
 
   async findScheduledArrivals(stationId: string, now: Date): Promise<SubwayArrivalsDoc | null> {
     const schedule = await this.timetable.findStationSchedule(stationId, now);
-    return schedule && this.toStationDoc(schedule, { histories: new Map(), countdownRows: [] }, now);
+    return schedule && this.toStationDoc(schedule, null, now);
   }
 
   private mergeInto(schedule: StationSchedule, events: readonly TrainEvent[], now: Date): ReadonlyMap<string, TrainHistory> {
@@ -70,18 +72,22 @@ export class SubwayTrackingService {
       responseEvents: [events],
       routes: schedule.lineRoutes,
       directionByDestination: toDirectionByDestination(schedule.trains),
+      stationId,
+      stopStationIdsByTrainNo: toStopStationIdsByTrainNo(schedule.trains),
       now,
     });
     this.historiesByStationId.set(stationId, histories);
     return histories;
   }
 
-  private toStationDoc(schedule: StationSchedule, observed: StationObservations, now: Date): SubwayArrivalsDoc {
+  private toStationDoc(schedule: StationSchedule, observed: StationObservations | null, now: Date): SubwayArrivalsDoc {
     const stationId = schedule.station.id;
-    const { histories, countdownRows } = observed;
     const arrivalsOf = (direction: SubwayDirection): TrainArrival[] => {
-      const estimated = this.estimate.estimateArrivals({ stationId, direction, trains: schedule.trains, histories, countdownRows, now });
+      const scheduleInput = { stationId, direction, trains: schedule.trains, now };
+      if (!observed) return this.estimate.listScheduledArrivals(scheduleInput).slice(0, MAX_TRAINS_PER_DIRECTION);
+      const estimated = this.estimate.estimateArrivals({ ...scheduleInput, ...observed });
       this.logDivergences(estimated.divergences);
+      this.logRejections(estimated.rejections);
       return estimated.arrivals.slice(0, MAX_TRAINS_PER_DIRECTION);
     };
     const stamp = { _id: stationId, generatedAt: now, serviceDate: schedule.serviceDate };
@@ -97,6 +103,15 @@ export class SubwayTrackingService {
         { event: "subway.tracking.countdown_diverged", ...divergence, suppressed: ticket.suppressed },
         "A published countdown is over 120 s from the train's estimate",
       );
+    }
+  }
+
+  // WHY: a countdown that is not served leaves no divergence line, and those lines are how a misleading one was found.
+  private logRejections(rejections: readonly CountdownRejection[]): void {
+    for (const rejection of rejections) {
+      const ticket = this.rejectionThrottle.take(`${rejection.stationId} ${rejection.trainNo}`);
+      if (!ticket) continue;
+      logger.info({ event: "subway.tracking.countdown_rejected", ...rejection, suppressed: ticket.suppressed }, "A published countdown is not served");
     }
   }
 }

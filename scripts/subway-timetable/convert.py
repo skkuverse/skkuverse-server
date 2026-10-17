@@ -36,6 +36,10 @@ Rules taken from the data (checked on the 2026-08-28 Korail files and the 2026-1
     - Korail: a station is a stop when its arrival row has a time. The origin has only a departure,
       the terminus only an arrival. A departure-row time without an arrival mid-route is a pass:
       only express trains have one.
+    - Korail destinations: the 종착역 row writes the underground platforms of the Seoul Metro section
+      short (1지청 for 청량리, 지하서 for 서울); each is written as the train map and the Seoul API
+      write it (KORAIL_ABBREVIATIONS), any other name must be in KORAIL_TERMINI, and a name in neither
+      fails the run. The tracker reads a train's direction off its destination.
     - Korail express: train numbers 1000-1999 (the K19xx 급행; the 서울급행 sheet holds only those).
       A train with a pass outside that range fails the run.
     - Seoul express: EXPRESS_YN "G" is 일반, "D" is 급행; any other value fails the run. Every
@@ -100,6 +104,17 @@ LINE4_STATIONS = (
     ("S1-4-423", "0423"),
 )
 LINE4_SERVED = "S1-4-420"
+
+# Every 시발역/종착역 name of the 2026-08-28 files, weekday and holiday, written as the train map and the Seoul API
+# write a destination: the KRIC name without its parenthesized suffix (신창(순천향대) -> 신창). 연천 opened after the
+# 2022-08-26 code list; the train map writes 연천행.
+KORAIL_TERMINI = frozenset((
+    "광명", "광운대", "구로", "동두천", "동묘앞", "동인천", "병점", "부천", "부평", "서동탄", "서울",
+    "소요산", "신창", "양주", "연천", "영등포", "용산", "의정부", "인천", "창동", "천안",
+))
+# The xlsx's short names for the underground platforms of the Seoul Metro section (S1-1-158 청량리(서울시립대입구),
+# S1-1-150 서울역), which the train map and the Seoul API write as 청량리 and 서울.
+KORAIL_ABBREVIATIONS = {"1지청": "청량리", "지하서": "서울"}
 
 KORAIL_NAMES = {name: code for code, name in LINE1_STATIONS}
 LINE1_ORDER = [code for code, _ in LINE1_STATIONS]
@@ -341,6 +356,19 @@ def korail_train(rows, sheet, column, station_rows, direction):
     return {"trainNo": train_no, "direction": direction, "destination": destination.strip(), "express": express, "stops": stops}
 
 
+def korail_destination(name, where):
+    """The name the train map and the Seoul API write for a Korail 종착역; refuses a name in neither table."""
+    if name in KORAIL_ABBREVIATIONS:
+        return KORAIL_ABBREVIATIONS[name]
+    if name in KORAIL_TERMINI or name in KORAIL_ABBREVIATIONS.values():
+        return name
+    raise ConvertError("%s: destination %r is neither in KORAIL_TERMINI nor in KORAIL_ABBREVIATIONS; check it against the KRIC code list and the train map" % (where, name))
+
+
+def with_upstream_destinations(trains, label):
+    return [dict(train, destination=korail_destination(train["destination"], "%s train %s" % (label, train["trainNo"]))) for train in trains]
+
+
 def korail_trains(sheets):
     """Every train of the selected sheets that stops at 성균관."""
     trains = []
@@ -535,7 +563,7 @@ def build_korail(out_dir, weekday_file, holiday_file):
                 data = handle.read()
         else:
             data = download(url)
-        trains = korail_trains(read_workbook(data))
+        trains = with_upstream_destinations(korail_trains(read_workbook(data)), "korail %s" % day_type)
         check_unique(trains, "korail %s" % day_type, allow_split=False)
         document = timetable("korail-xlsx", url, KORAIL_REVISION, "KR", "1", day_type, LINE1_ORDER, trains)
         write(out_dir, "korail-1-%s.json" % day_type, document)

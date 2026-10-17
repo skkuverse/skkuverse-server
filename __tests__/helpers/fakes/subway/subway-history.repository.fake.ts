@@ -2,8 +2,9 @@
  * In-memory SubwayHistoryRepository. `events` holds every inserted event in
  * order; `predictions` holds one record per service date, train, station and
  * horizon, which upsertPredictions inserts only when absent, as the real
- * `$setOnInsert` upsert does; updateObservedArrival resolves the train's open
- * records at the station with each one's own error, and
+ * `$setOnInsert` upsert does; updateObservedArrival resolves the train's records
+ * at the station that isResolvableBy lets the row resolve, each with its own
+ * error, and
  * updateUnresolvedPredictions marks open records predicted before the cutoff,
  * as the real updates do (all pinned in subway-history.repository.spec.ts).
  * listAccuracyGroups answers `accuracyGroups` and records each range asked:
@@ -13,7 +14,7 @@
  */
 import type { SubwayEventDoc, SubwayPredictionDoc } from "../../../../src/subway/history/subway-history.document";
 import type { SubwayHistoryRepository } from "../../../../src/subway/history/subway-history.repository";
-import { toErrorSec } from "../../../../src/subway/history/subway-history.rules";
+import { isResolvableBy, toErrorSec } from "../../../../src/subway/history/subway-history.rules";
 import type { AccuracyGroup, AccuracyRange, ObservedArrival } from "../../../../src/subway/history/subway-history.types";
 import type { PublicOf } from "../public-of";
 
@@ -48,7 +49,7 @@ export class FakeSubwayHistoryRepository implements PublicOf<SubwayHistoryReposi
     this.write();
     for (const [key, record] of this.predictions) {
       const isTrainAtStation = record.serviceDate === arrival.serviceDate && record.trainNo === arrival.trainNo && record.stationId === arrival.stationId;
-      if (!isTrainAtStation || record.status !== "open") continue;
+      if (!isTrainAtStation || !isResolvableBy(record, arrival, resolvedAt)) continue;
       const { observedAt, observedState } = arrival;
       this.predictions.set(key, { ...record, status: "resolved", observedAt, observedState, resolvedAt, errorSec: toErrorSec(record.predictedAt, observedAt) });
     }

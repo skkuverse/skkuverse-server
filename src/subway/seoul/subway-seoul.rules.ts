@@ -1,5 +1,5 @@
-import type { SubwayStation } from "../subway.types";
-import type { SeoulLine } from "./subway-seoul.types";
+import type { CountdownRow, SubwayStation, TrainEvent } from "../subway.types";
+import type { SeoulLine, SettledObservations } from "./subway-seoul.types";
 
 export function toSeoulLines(
   stations: readonly SubwayStation[],
@@ -25,4 +25,19 @@ function toUpstreamNames(station: SubwayStation, stationNameById: Readonly<Recor
     if (upstreamName === undefined) throw new Error(`subway: no Seoul station name for ${upstreamId}`);
     return [upstreamName, upstreamId] as const;
   });
+}
+
+export function toSettledObservations(
+  source: string,
+  eventResults: readonly PromiseSettledResult<readonly TrainEvent[]>[],
+  countdownResults: readonly PromiseSettledResult<readonly CountdownRow[]>[],
+): SettledObservations {
+  const failures = [...eventResults, ...countdownResults].flatMap((result) => (result.status === "rejected" ? [result.reason as unknown] : []));
+  const isEveryCallFailed = failures.length > 0 && failures.length === eventResults.length + countdownResults.length;
+  if (isEveryCallFailed) throw failures[0];
+  return { source, events: toAnswers(eventResults), countdownRows: toAnswers(countdownResults), failures };
+}
+
+function toAnswers<T>(results: readonly PromiseSettledResult<readonly T[]>[]): T[] {
+  return results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
 }

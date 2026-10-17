@@ -1,7 +1,7 @@
 import { captureGroups } from "../../shared/regex.util";
-import type { CountdownRow, SubwayDirection, TrainEvent } from "../subway.types";
-import type { TimetableTrain } from "../timetable/subway-timetable.types";
-import { MAX_COUNTDOWN_SOURCE_AGE_MS, MAX_ROW_AHEAD_MS, MISSING_TRAIN_HOLD_MS, STATE_STEPS } from "./subway-tracking.constants";
+import type { CountdownRow, SubwayDirection, TrainEvent, TrainState } from "../subway.types";
+import type { ScheduledTrain, TimetableTrain } from "../timetable/subway-timetable.types";
+import { MAX_COUNTDOWN_SOURCE_AGE_MS, MAX_ROW_AHEAD_MS, MISSING_TRAIN_HOLD_MS, PASSED_TRAIN_HOLD_MS, STATE_STEPS } from "./subway-tracking.constants";
 import type { SourceCountdownRows, TrackingTick, TrainHistory, TrainProgress } from "./subway-tracking.types";
 
 const TRAIN_NO = /^[A-Z]*(\d{1,4})$/;
@@ -13,9 +13,23 @@ export function toTrainNo(raw: string): string | null {
   return groups ? groups[0].padStart(TRAIN_NO_DIGITS, "0") : null;
 }
 
+const toOrdinal = (stationIndex: number, state: TrainState): number => STATES_PER_STATION * stationIndex + STATE_STEPS[state];
+
 export function toProgressOrdinal(route: readonly string[], event: Pick<TrainEvent, "stationId" | "state">): number | null {
   const stationIndex = route.indexOf(event.stationId);
-  return stationIndex < 0 ? null : STATES_PER_STATION * stationIndex + STATE_STEPS[event.state];
+  return stationIndex < 0 ? null : toOrdinal(stationIndex, event.state);
+}
+
+// WHY: a train seen at a station its row passes has left its last stop before it, at the latest then, so it never
+// replaces a stop event; before its first stop it stays there, timed from its next stop (design D4).
+function toStopProgress(route: readonly string[], stopStationIds: readonly string[] | undefined, event: TrainEvent): TrainProgress | null {
+  const stationIndex = route.indexOf(event.stationId);
+  const at = event.stateChangedAt;
+  if (stationIndex < 0) return null;
+  const progress: TrainProgress = { stationId: event.stationId, state: event.state, at, ordinal: toOrdinal(stationIndex, event.state) };
+  if (!stopStationIds || stopStationIds.includes(event.stationId)) return progress;
+  const lastStopId = route.slice(0, stationIndex).filter((stationId) => stopStationIds.includes(stationId)).at(-1);
+  return lastStopId === undefined ? progress : { stationId: lastStopId, state: "departed", at, ordinal: toOrdinal(route.indexOf(lastStopId), "departed") };
 }
 
 // WHY: both operators number up trains even and down trains odd (every train of the committed timetables);
@@ -31,6 +45,10 @@ export function toDirectionByDestination(
   trains: readonly Pick<TimetableTrain, "direction" | "destination">[],
 ): Map<string, SubwayDirection> {
   return new Map(trains.map((train) => [train.destination, train.direction]));
+}
+
+export function toStopStationIdsByTrainNo(trains: readonly Pick<ScheduledTrain, "trainNo" | "stops">[]): Map<string, string[]> {
+  return new Map(trains.map((train) => [train.trainNo, train.stops.map((stop) => stop.stationId)]));
 }
 
 export function toLatestProgress(latest: TrainProgress, candidate: TrainProgress): TrainProgress {
@@ -53,12 +71,16 @@ export function toNewestEvents(events: readonly TrainEvent[], now: Date): TrainE
 
 function withEvent(tick: TrackingTick, known: TrainHistory | undefined, event: TrainEvent): TrainHistory | null {
   const direction = known?.direction ?? toDirection(event, tick.directionByDestination);
-  const ordinal = toProgressOrdinal(tick.routes[direction], event);
-  if (ordinal === null) return null;
-  const candidate = { stationId: event.stationId, state: event.state, at: event.stateChangedAt, ordinal };
+  const candidate = toStopProgress(tick.routes[direction], tick.stopStationIdsByTrainNo.get(event.trainNo), event);
+  if (candidate === null) return null;
   const latest = known ? toLatestProgress(known.latest, candidate) : candidate;
   const destination = latest === candidate || !known ? event.destination : known.destination;
   return { trainNo: event.trainNo, direction, destination, latest, lastSeenAt: tick.now };
+}
+
+function hasPassedStation(tick: TrackingTick, history: TrainHistory): boolean {
+  const departedOrdinal = toProgressOrdinal(tick.routes[history.direction], { stationId: tick.stationId, state: "departed" });
+  return departedOrdinal !== null && history.latest.ordinal >= departedOrdinal;
 }
 
 export function mergeObservations(tick: TrackingTick): Map<string, TrainHistory> {
@@ -67,7 +89,8 @@ export function mergeObservations(tick: TrackingTick): Map<string, TrainHistory>
     const merged = withEvent(tick, histories.get(event.trainNo), event);
     if (merged) histories.set(merged.trainNo, merged);
   }
-  const isHeld = (history: TrainHistory): boolean => tick.now.getTime() - history.lastSeenAt.getTime() <= MISSING_TRAIN_HOLD_MS;
+  const isHeld = (history: TrainHistory): boolean =>
+    tick.now.getTime() - history.lastSeenAt.getTime() <= (hasPassedStation(tick, history) ? PASSED_TRAIN_HOLD_MS : MISSING_TRAIN_HOLD_MS);
   return new Map([...histories].filter(([, history]) => isHeld(history)));
 }
 

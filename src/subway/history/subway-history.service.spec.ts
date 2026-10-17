@@ -6,9 +6,11 @@
  * feed the tracker. What it guards, by the subway-arrival-accuracy spec's
  * scenarios: a record is written at the tick a train's served lead time first
  * falls to or below a horizon, with the prediction served then; a train first
- * seen 2 minutes out gets only its 1-minute record; the first observed arrival
- * resolves every open record of the train at the station with its own error,
- * and a record made after it is written resolved; a record 30 minutes past its
+ * seen 2 minutes out gets only its 1-minute record; an observed arrival
+ * resolves the train's records at the station made before the tick that first
+ * saw it, each with its own error, never the record made from it (F6), an
+ * arrived row replacing an approaching row's resolution, and a horizon crossed
+ * once the train is seen arrived gets no record; a record 30 minutes past its
  * predicted arrival with no arrival seen is marked unresolved at the next
  * minute's sweep; each source's first report of a train's state at a station
  * is one event; and a failing history write leaves the served arrivals
@@ -23,6 +25,7 @@ import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/su
 import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
+import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import type { SubwayRepository } from "../subway.repository";
 import type { SubwayProvider, TrainEvent } from "../subway.types";
@@ -40,7 +43,7 @@ function setup() {
   const arrivals = new FakeSubwayRepository();
   const history = new FakeSubwayHistoryRepository();
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
-  const tracking = new SubwayTrackingService(asReal<SubwayRepository>(arrivals), timetable, new SubwayEstimateService(), clock);
+  const tracking = new SubwayTrackingService(asReal<SubwayRepository>(arrivals), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   const service = new SubwayHistoryService(asReal<SubwayHistoryRepository>(history), tracking, clock);
   service.onModuleInit();
   const tickAt = (kst: string, provider: SubwayProvider = upstream("seoul-subway-api")): Promise<void> => {
@@ -151,20 +154,6 @@ describe("Observed arrivals close the record", () => {
     });
   });
 
-  it("takes an approaching row as the arrival 30 s on, and the first observation wins over a later arrived row", async () => {
-    // Arrange
-    const { history, tickAt } = setup();
-    await tickAt("20:28:20");
-    await tickAt("20:28:40");
-
-    // Act
-    await tickAt("20:31:25", upstream("seoul-subway-api", [event("0692", SUNGKYUNKWAN, "approaching", "20:31:20", "광운대")]));
-    await tickAt("20:32:05", upstream("seoul-trainmap", [event("0692", SUNGKYUNKWAN, "arrived", "20:32:05", "광운대")]));
-
-    // Assert
-    expect(history.recordsOf("0692", SUNGKYUNKWAN)[0]).toMatchObject({ observedAt: at("20:31:50"), observedState: "approaching", errorSec: -20 });
-  });
-
   it("does not take a departure or an arrival at another station as the train's arrival", async () => {
     // Arrange
     const { history, tickAt } = setup();
@@ -176,21 +165,6 @@ describe("Observed arrivals close the record", () => {
 
     // Assert
     expect(history.recordsOf("0692", SUNGKYUNKWAN)[0]).toMatchObject({ status: "open", errorSec: null });
-  });
-
-  it("writes a record made after the train's observed arrival already resolved", async () => {
-    // Arrange
-    const { history, tickAt } = setup();
-    await tickAt("20:30:20");
-    const observed = upstream("seoul-subway-api", [event("0692", SUNGKYUNKWAN, "approaching", "20:30:25", "광운대")]);
-
-    // Act
-    await tickAt("20:30:30", observed);
-    await tickAt("20:30:40", observed);
-
-    // Assert
-    const records = history.recordsOf("0692", SUNGKYUNKWAN);
-    expect(records.map((r) => [r.horizonMin, r.status, r.observedAt])).toEqual([[1, "resolved", at("20:30:55")]]);
   });
 
   it("Train never seen arriving: 0493's records are marked unresolved, with no error, at the first sweep past 30 minutes", async () => {
@@ -223,6 +197,110 @@ describe("Observed arrivals close the record", () => {
 
     // Assert
     expect(history.recordsOf("0493", SUNGKYUNKWAN).map((r) => r.status)).toEqual(["open"]);
+  });
+});
+
+describe("A record is never resolved by the row it was made from (F6)", () => {
+  it("leaves open the 1-minute record made at the tick that first sees 0692 approaching, predicted from that row", async () => {
+    // Arrange
+    const { history, tickAt } = setup();
+    await tickAt("20:30:20");
+
+    // Act
+    await tickAt("20:30:30", upstream("seoul-subway-api", [event("0692", SUNGKYUNKWAN, "approaching", "20:30:25", "광운대")]));
+
+    // Assert
+    expect(history.recordsOf("0692", SUNGKYUNKWAN)).toEqual([
+      expect.objectContaining({ horizonMin: 1, predictedAt: at("20:30:55"), madeAt: at("20:30:30"), status: "open", observedAt: null, errorSec: null }),
+    ]);
+  });
+
+  it("resolves that 1-minute record by the arrived row seen after it, 10 s past the approach lead", async () => {
+    // Arrange
+    const { history, tickAt } = setup();
+    await tickAt("20:30:20");
+    await tickAt("20:30:30", upstream("seoul-subway-api", [event("0692", SUNGKYUNKWAN, "approaching", "20:30:25", "광운대")]));
+
+    // Act
+    await tickAt("20:31:10", upstream("seoul-subway-api", [event("0692", SUNGKYUNKWAN, "arrived", "20:31:05", "광운대")]));
+
+    // Assert
+    expect(history.recordsOf("0692", SUNGKYUNKWAN)).toEqual([
+      expect.objectContaining({ horizonMin: 1, status: "resolved", observedAt: at("20:31:05"), observedState: "arrived", resolvedAt: at("20:31:10"), errorSec: -10 }),
+    ]);
+  });
+
+  it("marks that 1-minute record unresolved past 30 minutes when no arrived row follows its approaching row", async () => {
+    // Arrange
+    const { history, tickAt } = setup();
+    await tickAt("20:30:20");
+    await tickAt("20:30:30", upstream("seoul-subway-api", [event("0692", SUNGKYUNKWAN, "approaching", "20:30:25", "광운대")]));
+
+    // Act
+    await tickAt("21:01:00");
+
+    // Assert
+    expect(history.recordsOf("0692", SUNGKYUNKWAN)).toEqual([expect.objectContaining({ horizonMin: 1, status: "unresolved", observedAt: null, errorSec: null })]);
+  });
+
+  it("resolves a record made before the approaching row from that row 30 s on while no arrived row has been seen", async () => {
+    // Arrange
+    const { history, tickAt } = setup();
+    await tickAt("20:28:20");
+    await tickAt("20:28:40");
+
+    // Act
+    await tickAt("20:31:25", upstream("seoul-subway-api", [event("0692", SUNGKYUNKWAN, "approaching", "20:31:20", "광운대")]));
+
+    // Assert
+    expect(history.recordsOf("0692", SUNGKYUNKWAN)[0]).toMatchObject({ horizonMin: 3, observedAt: at("20:31:50"), observedState: "approaching", errorSec: -20 });
+  });
+
+  it("re-resolves that record by the arrived row seen after the approaching row, the arrival itself", async () => {
+    // Arrange
+    const { history, tickAt } = setup();
+    await tickAt("20:28:20");
+    await tickAt("20:28:40");
+    await tickAt("20:31:25", upstream("seoul-subway-api", [event("0692", SUNGKYUNKWAN, "approaching", "20:31:20", "광운대")]));
+
+    // Act
+    await tickAt("20:32:05", upstream("seoul-trainmap", [event("0692", SUNGKYUNKWAN, "arrived", "20:32:05", "광운대")]));
+
+    // Assert
+    expect(history.recordsOf("0692", SUNGKYUNKWAN)[0]).toMatchObject({
+      horizonMin: 3,
+      observedAt: at("20:32:05"),
+      observedState: "arrived",
+      resolvedAt: at("20:32:05"),
+      errorSec: -35,
+    });
+  });
+
+  it("resolves a record by an arrived row stamped before the record was made but first seen after it, as upstream lag", async () => {
+    // Arrange
+    const { history, tickAt } = setup();
+    await tickAt("20:30:20");
+    await tickAt("20:30:30");
+
+    // Act
+    await tickAt("20:30:50", upstream("seoul-subway-api", [event("0692", SUNGKYUNKWAN, "arrived", "20:30:25", "광운대")]));
+
+    // Assert
+    expect(history.recordsOf("0692", SUNGKYUNKWAN)).toEqual([
+      expect.objectContaining({ horizonMin: 1, madeAt: at("20:30:30"), predictedAt: at("20:31:30"), observedAt: at("20:30:25"), errorSec: 65 }),
+    ]);
+  });
+
+  it("writes no record for the 3- and 1-minute horizons crossed only by the tick that first sees 0692 arrived", async () => {
+    // Arrange
+    const { history, tickAt } = setup();
+    await tickAt("20:28:20");
+
+    // Act
+    await tickAt("20:30:00", upstream("seoul-subway-api", [event("0692", SUNGKYUNKWAN, "arrived", "20:29:55", "광운대")]));
+
+    // Assert
+    expect(horizonsOf(history, "0692")).toEqual([]);
   });
 });
 

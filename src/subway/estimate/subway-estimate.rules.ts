@@ -2,8 +2,8 @@ import type { CountdownRow, TrainState } from "../subway.types";
 import type { ScheduledStop, ScheduledTrain } from "../timetable/subway-timetable.types";
 import type { TrainHistory, TrainProgress } from "../tracking/subway-tracking.types";
 import { APPROACH_LEAD_MS } from "../subway.constants";
-import { MAX_COUNTDOWN_DIVERGENCE_SEC, MAX_DELAY_LENDER_GAP_MS, MAX_DELAY_SEC, MIN_DELAY_SEC } from "./subway-estimate.constants";
-import type { CountdownDivergence, EstimateInput, StationArrivals, TrainArrival } from "./subway-estimate.types";
+import { MAX_COUNTDOWN_DIVERGENCE_SEC, MAX_DELAY_LENDER_GAP_MS, MAX_DELAY_SEC, MAX_STANDING_PAST_DEPARTURE_SEC, MIN_DELAY_SEC } from "./subway-estimate.constants";
+import type { CountdownFindings, CountdownRejectionReason, CountdownVerdict, EstimateInput, StationArrivals, TrainArrival } from "./subway-estimate.types";
 
 const SECOND_MS = 1000;
 
@@ -17,6 +17,7 @@ interface Candidate {
 
 const secondsBetween = (later: Date, earlier: Date): number => (later.getTime() - earlier.getTime()) / SECOND_MS;
 const plusSec = (instant: Date, seconds: number): Date => new Date(instant.getTime() + seconds * SECOND_MS);
+const isDelayInRange = (delaySec: number): boolean => delaySec >= MIN_DELAY_SEC && delaySec <= MAX_DELAY_SEC;
 
 function toScheduledAt(stop: ScheduledStop, state: TrainState): Date | null {
   if (state === "departed") return stop.departureAt;
@@ -34,8 +35,10 @@ export function toDelaySec(train: ScheduledTrain, latest: TrainProgress, now: Da
   const scheduledAt = stop ? toScheduledAt(stop, latest.state) : null;
   if (!stop || !scheduledAt) return null;
   const delaySec = secondsBetween(latest.at, scheduledAt);
-  return delaySec < MIN_DELAY_SEC || delaySec > MAX_DELAY_SEC ? null : Math.max(delaySec, toStandingLateSec(stop, latest, now));
+  return isDelayInRange(delaySec) ? Math.max(delaySec, toStandingLateSec(stop, latest, now)) : null;
 }
+
+const isAtServedStation = (candidate: Candidate): boolean => candidate.history?.latest.stationId === candidate.servedAt.stationId;
 
 function hasPassed(candidate: Candidate): boolean {
   const latest = candidate.history?.latest;
@@ -44,12 +47,45 @@ function hasPassed(candidate: Candidate): boolean {
   return latestIndex > servedIndex || (latestIndex === servedIndex && latest?.state === "departed");
 }
 
+const callsAt = (train: ScheduledTrain, stationId: string): boolean => train.stops.some((stop) => stop.stationId === stationId);
+
+function toRunSec(stops: readonly ScheduledStop[]): number | null {
+  let runSec = 0;
+  for (const [index, stop] of stops.slice(1).entries()) {
+    const departedAt = stops[index]?.departureAt;
+    if (!departedAt || !stop.arrivalAt) return null;
+    runSec += secondsBetween(stop.arrivalAt, departedAt);
+  }
+  return runSec;
+}
+
+// WHY: a train's row has no time at a station it passes (design D4); a train calling there and at its next stop
+// runs between them in the sum of its legs, its stands left out, which the nearest one in time gives.
+function toPassingStop(train: ScheduledTrain, trains: readonly ScheduledTrain[], stationId: string): ScheduledStop | null {
+  const passes = trains.flatMap((caller) => {
+    const from = caller.stops.findIndex((stop) => stop.stationId === stationId);
+    const to = from < 0 || caller.direction !== train.direction ? -1 : caller.stops.findIndex((stop, index) => index > from && callsAt(train, stop.stationId));
+    const callerArrivalAt = caller.stops[to]?.arrivalAt;
+    const nextArrivalAt = train.stops.find((stop) => stop.stationId === caller.stops[to]?.stationId)?.arrivalAt;
+    const runSec = to < 0 ? null : toRunSec(caller.stops.slice(from, to + 1));
+    if (runSec === null || !callerArrivalAt || !nextArrivalAt) return [];
+    return [{ passedAt: plusSec(nextArrivalAt, -runSec), gapMs: Math.abs(nextArrivalAt.getTime() - callerArrivalAt.getTime()) }];
+  });
+  const nearest = passes.sort((a, b) => a.gapMs - b.gapMs)[0];
+  return nearest ? { stationId, arrivalAt: nearest.passedAt, departureAt: nearest.passedAt } : null;
+}
+
+function toOwnDelaySec(input: EstimateInput, train: ScheduledTrain, latest: TrainProgress): number | null {
+  const passingStop = callsAt(train, latest.stationId) ? null : toPassingStop(train, input.trains, latest.stationId);
+  return toDelaySec(passingStop ? { ...train, stops: [passingStop] } : train, latest, input.now);
+}
+
 function toCandidate(input: EstimateInput, train: ScheduledTrain): Candidate | null {
   const servedAt = train.stops.find((stop) => stop.stationId === input.stationId);
   const scheduledArrivalAt = servedAt?.arrivalAt ?? servedAt?.departureAt;
   if (!servedAt || !scheduledArrivalAt) return null;
   const known = input.histories.get(train.trainNo);
-  const delaySec = known ? toDelaySec(train, known.latest, input.now) : null;
+  const delaySec = known ? toOwnDelaySec(input, train, known.latest) : null;
   return { train, servedAt, scheduledArrivalAt, history: known && delaySec !== null ? known : null, delaySec };
 }
 
@@ -57,6 +93,19 @@ function toLentDelaySec(candidate: Candidate, ahead: readonly Candidate[]): numb
   const isLender = (other: Candidate): boolean =>
     other.delaySec !== null && candidate.scheduledArrivalAt.getTime() - other.scheduledArrivalAt.getTime() <= MAX_DELAY_LENDER_GAP_MS;
   return ahead.filter(isLender).at(-1)?.delaySec ?? null;
+}
+
+// WHY: at the served station a train's arrival is observed and standing there delays only its departure, which a
+// Korail section never reports; the train counts as gone once that departure is overrun (design D4).
+function toServedDelaySec(candidate: Candidate, ahead: readonly Candidate[]): number | null {
+  const latest = candidate.history?.latest;
+  return latest && isAtServedStation(candidate) ? toDelaySec(candidate.train, latest, latest.at) : (candidate.delaySec ?? toLentDelaySec(candidate, ahead));
+}
+
+function hasLeft(candidate: Candidate, delaySec: number | null, now: Date): boolean {
+  const departureAt = plusSec(candidate.servedAt.departureAt ?? candidate.scheduledArrivalAt, delaySec ?? 0);
+  if (!candidate.history) return departureAt < now;
+  return hasPassed(candidate) || (isAtServedStation(candidate) && plusSec(departureAt, MAX_STANDING_PAST_DEPARTURE_SEC) < now);
 }
 
 function toArrival(candidate: Candidate, delaySec: number | null): TrainArrival {
@@ -73,13 +122,25 @@ function toArrival(candidate: Candidate, delaySec: number | null): TrainArrival 
   };
 }
 
-function withCountdown(arrival: TrainArrival, row: CountdownRow | undefined, divergences: CountdownDivergence[]): TrainArrival {
-  if (!row || row.remainingSec <= 0) return arrival;
+// WHY: a train seen at the station has outrun its countdown, a spent one counts no more, and one implying a delay
+// out of range is likelier for a train not running yet, as a first train at its origin (design D4).
+function toRejectionReason(candidate: Candidate, row: CountdownRow, now: Date): CountdownRejectionReason | null {
   const liveArrivalAt = plusSec(row.generatedAt, row.remainingSec);
-  const divergenceSec = Math.abs(secondsBetween(liveArrivalAt, arrival.arrivalAt));
-  if (divergenceSec > MAX_COUNTDOWN_DIVERGENCE_SEC) {
-    divergences.push({ trainNo: arrival.trainNo, stationId: row.stationId, liveArrivalAt, estimatedArrivalAt: arrival.arrivalAt, divergenceSec });
+  if (isAtServedStation(candidate)) return "at_station";
+  if (row.remainingSec <= 0 || liveArrivalAt <= now) return "spent";
+  return isDelayInRange(secondsBetween(liveArrivalAt, candidate.scheduledArrivalAt)) ? null : "out_of_range";
+}
+
+function withCountdown(arrival: TrainArrival, verdict: CountdownVerdict, findings: CountdownFindings): TrainArrival {
+  const { row, reason } = verdict;
+  const liveArrivalAt = plusSec(row.generatedAt, row.remainingSec);
+  const finding = { trainNo: arrival.trainNo, stationId: row.stationId, liveArrivalAt, estimatedArrivalAt: arrival.arrivalAt };
+  if (reason) {
+    findings.rejections.push({ ...finding, reason });
+    return arrival;
   }
+  const divergenceSec = Math.abs(secondsBetween(liveArrivalAt, arrival.arrivalAt));
+  if (divergenceSec > MAX_COUNTDOWN_DIVERGENCE_SEC) findings.divergences.push({ ...finding, divergenceSec });
   return { ...arrival, arrivalAt: liveArrivalAt, source: "live" };
 }
 
@@ -87,13 +148,13 @@ export function toStationArrivals(input: EstimateInput): StationArrivals {
   const candidates = input.trains
     .flatMap((train) => (train.direction === input.direction ? (toCandidate(input, train) ?? []) : []))
     .sort((a, b) => a.scheduledArrivalAt.getTime() - b.scheduledArrivalAt.getTime());
-  const divergences: CountdownDivergence[] = [];
+  const findings: CountdownFindings = { divergences: [], rejections: [] };
   const arrivals = candidates.flatMap((candidate, index) => {
-    const delaySec = candidate.delaySec ?? toLentDelaySec(candidate, candidates.slice(0, index));
-    const departureAt = plusSec(candidate.servedAt.departureAt ?? candidate.scheduledArrivalAt, delaySec ?? 0);
-    if (hasPassed(candidate) || (!candidate.history && departureAt < input.now)) return [];
+    const delaySec = toServedDelaySec(candidate, candidates.slice(0, index));
+    if (hasLeft(candidate, delaySec, input.now)) return [];
     const row = input.countdownRows.find((r) => r.trainNo === candidate.train.trainNo && r.stationId === input.stationId);
-    return [withCountdown(toArrival(candidate, delaySec), row, divergences)];
+    const arrival = toArrival(candidate, delaySec);
+    return [row ? withCountdown(arrival, { row, reason: toRejectionReason(candidate, row, input.now) }, findings) : arrival];
   });
-  return { arrivals: arrivals.sort((a, b) => a.arrivalAt.getTime() - b.arrivalAt.getTime()), divergences };
+  return { arrivals: arrivals.sort((a, b) => a.arrivalAt.getTime() - b.arrivalAt.getTime()), ...findings };
 }

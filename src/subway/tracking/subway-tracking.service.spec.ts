@@ -9,11 +9,19 @@
  * a positive countdown is served `live` until its source has been silent for
  * 90 s; a train missing for a minute keeps its delay and position, and after
  * 90 s is served from the timetable; a countdown far from the estimate is
- * logged once per train within the throttle; a train only in countdown rows
+ * logged once per train within the throttle, and so is a rejected one, with
+ * its reason; a train only in countdown rows
  * is not served; an upstream is not observed outside the service window; and
- * a failing upstream rejects its tick and writes nothing.
+ * a failing upstream rejects its tick and writes nothing. On Saturday
+ * 2026-10-17 (the holiday tables), shaped like that morning's captures: an
+ * express seen departing `성균관대` stays off the list through its events at
+ * stations it passes, northbound and southbound, while a late train ahead
+ * would lend it a delay; an express first seen at a station it passes is
+ * estimated from its departure from its last stop before it; and one seen
+ * before its first stop, from the time it is scheduled to pass that station.
  * Its timetable-only document, which the arrivals route serves for a stale
- * state, lists every train `scheduled`, whatever the tracker has observed.
+ * state, lists every train `scheduled`, whatever the tracker has observed,
+ * and leaves the countdown memory to the ticks.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
@@ -23,6 +31,7 @@ import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/su
 import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
+import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import type { SubwayRepository } from "../subway.repository";
 import type { CountdownRow, SubwayProvider, TrainEvent } from "../subway.types";
@@ -33,14 +42,16 @@ const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
 const SUNGKYUNKWAN = "KR-1-0153";
 const HYEHWA = "S1-4-420";
 
-function setup() {
-  let now = at("20:39:10");
+const onSaturday = (kst: string): Date => new Date(`2026-10-17T${kst}+09:00`);
+
+function setup(atKst = at) {
+  let now = atKst("20:39:10");
   const repository = new FakeSubwayRepository();
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
   const clock = { now: () => now } as Clock;
-  const service = new SubwayTrackingService(asReal<SubwayRepository>(repository), timetable, new SubwayEstimateService(), clock);
+  const service = new SubwayTrackingService(asReal<SubwayRepository>(repository), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   const tickAt = (kst: string, provider: SubwayProvider): Promise<void> => {
-    now = at(kst);
+    now = atKst(kst);
     return service.track(provider);
   };
   return { service, repository, tickAt };
@@ -180,6 +191,51 @@ describe("SubwayTrackingService.track", () => {
     );
   });
 
+  it("logs a spent countdown with its reason once per station and train within the throttle, and another train's too", async () => {
+    // Arrange
+    const { tickAt } = setup();
+    const spent = [countdown("4674", "20:40:20", 30), countdown("4676", "20:40:20", 30)];
+
+    // Act
+    await tickAt("20:41:00", api([], spent));
+    await tickAt("20:41:10", api([], spent));
+
+    // Assert
+    const rejected = jest.mocked(logger.info).mock.calls.filter(([fields]) => (fields as { event?: string }).event === "subway.tracking.countdown_rejected");
+    expect(rejected.map(([fields]) => fields)).toEqual([
+      expect.objectContaining({ trainNo: "4674", stationId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
+      expect.objectContaining({ trainNo: "4676", stationId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
+    ]);
+  });
+
+  it("logs 4676's spent countdown again 10 minutes on, with the rejection it suppressed", async () => {
+    // Arrange
+    const { tickAt } = setup();
+    const spent = [countdown("4676", "20:40:20", 30)];
+    await tickAt("20:41:00", api([], spent));
+    await tickAt("20:41:10", api([], spent));
+
+    // Act
+    await tickAt("20:51:00", api([], [countdown("4676", "20:50:20", 30)]));
+
+    // Assert
+    const rejected = jest.mocked(logger.info).mock.calls.filter(([fields]) => (fields as { event?: string }).event === "subway.tracking.countdown_rejected");
+    expect(rejected.map(([fields]) => (fields as { suppressed: number }).suppressed)).toEqual([0, 1]);
+  });
+
+  it("logs 4674's spent countdown though its divergence was logged 10 s before", async () => {
+    // Arrange
+    const { tickAt } = setup();
+    await tickAt("20:41:00", api([], [countdown("4674", "20:40:20", 600)]));
+
+    // Act
+    await tickAt("20:41:10", api([], [countdown("4674", "20:41:05", 0)]));
+
+    // Assert
+    const events = jest.mocked(logger.info).mock.calls.map(([fields]) => (fields as { event?: string; trainNo?: string }).event);
+    expect(events).toEqual(["subway.tracking.countdown_diverged", "subway.tracking.countdown_rejected"]);
+  });
+
   it("serves no train that only a countdown row names", async () => {
     // Arrange
     const { repository, tickAt } = setup();
@@ -216,6 +272,97 @@ describe("SubwayTrackingService.track", () => {
   });
 });
 
+describe("SubwayTrackingService.track for an express passing stations it does not call at", () => {
+  const expressEvent = (trainNo: string, stationId: string, state: TrainEvent["state"], kst: string): TrainEvent => ({
+    trainNo,
+    stationId,
+    state,
+    stateChangedAt: onSaturday(kst),
+    destination: Number(trainNo) % 2 === 0 ? "청량리" : "신창",
+  });
+  const listedAtSungkyunkwan = (repository: FakeSubwayRepository, direction: "up" | "down") =>
+    repository.docs.get(SUNGKYUNKWAN)?.directions[direction].map((t) => t.trainNo);
+
+  it("keeps northbound 1912, seen departing 성균관대 at 10:43:36, off the list through its events at 의왕, while 0632 ahead runs 1,185 s late", async () => {
+    // Arrange
+    const { repository, tickAt } = setup(onSaturday);
+    await tickAt("10:42:06", api([expressEvent("1912", SUNGKYUNKWAN, "arrived", "10:42:01")]));
+    await tickAt("10:43:36", trainMap([expressEvent("1912", SUNGKYUNKWAN, "departed", "10:43:36")]));
+
+    // Act
+    await tickAt("10:44:51", trainMap([expressEvent("1912", "KR-1-P152", "approaching", "10:44:51"), expressEvent("0632", "KR-1-P154", "arrived", "10:44:51")]));
+    await tickAt("10:45:15", api([expressEvent("0632", "KR-1-P154", "arrived", "10:44:42")]));
+
+    // Assert
+    expect(listedAtSungkyunkwan(repository, "up")).toContain("0632");
+    expect(listedAtSungkyunkwan(repository, "up")).not.toContain("1912");
+  });
+
+  it("keeps southbound 1913 off the list once seen at 화서, which it passes, though no upstream reported its departure from 성균관대", async () => {
+    // Arrange
+    const { repository, tickAt } = setup(onSaturday);
+    await tickAt("10:25:15", api([expressEvent("1913", SUNGKYUNKWAN, "arrived", "10:25:10")]));
+
+    // Act
+    await tickAt("10:26:45", trainMap([expressEvent("1913", "KR-1-P154", "approaching", "10:26:40"), expressEvent("0431", "KR-1-P152", "arrived", "10:26:00")]));
+
+    // Assert
+    expect(listedAtSungkyunkwan(repository, "down")).toContain("0431");
+    expect(listedAtSungkyunkwan(repository, "down")).not.toContain("1913");
+  });
+
+  it("estimates northbound 1910, first seen at 세류 which it passes, 606 s late from its departure from 병점, at 10:15:36", async () => {
+    // Arrange
+    const { repository, tickAt } = setup(onSaturday);
+    for (const [kst, state] of [["10:04:36", "approaching"], ["10:04:51", "arrived"], ["10:06:06", "arrived"]] as const) {
+      await tickAt(kst, trainMap([expressEvent("1910", "KR-1-1715", state, kst)]));
+    }
+
+    // Act
+    await tickAt("10:07:21", trainMap([expressEvent("1910", "KR-1-1715", "arrived", "10:07:21")]));
+
+    // Assert
+    expect(repository.docs.get(SUNGKYUNKWAN)?.directions.up.find((t) => t.trainNo === "1910")).toEqual({
+      trainNo: "1910",
+      destination: "청량리",
+      express: true,
+      arrivalAt: onSaturday("10:15:36"),
+      source: "estimated",
+      position: { stationId: "KR-1-P157", state: "departed" },
+    });
+  });
+});
+
+describe("SubwayTrackingService.track for an express seen before its first stop", () => {
+  const southbound = (trainNo: string, stationId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent => ({
+    trainNo,
+    stationId,
+    state,
+    stateChangedAt: onSaturday(kst),
+    destination,
+  });
+
+  it("estimates southbound 1913, seen departing 의왕 before its first stop 성균관대, from its own pass at 10:26:21, not from 0431's 155 s", async () => {
+    // Arrange
+    const { repository, tickAt } = setup(onSaturday);
+    await tickAt("10:23:21", trainMap([southbound("1913", "KR-1-P152", "departed", "10:23:21", "신창"), southbound("0431", "KR-1-P154", "departed", "10:23:06", "병점")]));
+
+    // Act
+    await tickAt("10:23:37", api([southbound("0431", "KR-1-P155", "approaching", "10:23:35", "병점")]));
+
+    // Assert
+    // WHY: the 2026-10-17 tick at 10:23:37 served 1913 at 10:27:36, 0431's delay; 1913 arrived at 10:24:48.
+    expect(repository.docs.get(SUNGKYUNKWAN)?.directions.down.find((t) => t.trainNo === "1913")).toEqual({
+      trainNo: "1913",
+      destination: "신창",
+      express: true,
+      arrivalAt: onSaturday("10:26:21"),
+      source: "estimated",
+      position: { stationId: "KR-1-P152", state: "departed" },
+    });
+  });
+});
+
 describe("SubwayTrackingService.findScheduledArrivals", () => {
   it("builds a station's document from its timetable alone, every train scheduled, after observations too", async () => {
     // Arrange
@@ -230,6 +377,20 @@ describe("SubwayTrackingService.findScheduledArrivals", () => {
     expect(doc?.directions.down[0]).toMatchObject({ trainNo: "0493", arrivalAt: at("20:41:00"), source: "scheduled", position: null });
     const trains = [...(doc?.directions.up ?? []), ...(doc?.directions.down ?? [])];
     expect([trains.length, trains.every((t) => t.source === "scheduled")]).toEqual([6, true]);
+  });
+
+  it("leaves the countdown memory to the ticks: 4674's republished 150 s still counts from 20:40:20 after a build between them", async () => {
+    // Arrange
+    const { service, repository, tickAt } = setup();
+    await tickAt("20:41:00", api([], [countdown("4674", "20:40:20", 150)]));
+    await service.findScheduledArrivals(HYEHWA, at("20:41:05"));
+
+    // Act
+    await tickAt("20:41:10", api([], [countdown("4674", "20:41:05", 150)]));
+
+    // Assert
+    const train = repository.docs.get(HYEHWA)?.directions.up.find((t) => t.trainNo === "4674");
+    expect([train?.arrivalAt, train?.source]).toEqual([at("20:42:50"), "live"]);
   });
 
   it("finds no document for a station it does not serve", async () => {

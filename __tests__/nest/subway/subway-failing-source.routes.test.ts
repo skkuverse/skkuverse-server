@@ -100,10 +100,13 @@ function answerApi(): void {
   apiClient.arrivals.clear();
 }
 
+// WHY: all 4 calls: a tick whose arrivals calls still answer is tracked (subway-seoul.service.spec.ts).
 function failApi(): void {
   const outage = new Error("seoul-subway-api: HTTP 503");
   apiClient.positions.set("1호선", outage);
   apiClient.positions.set("4호선", outage);
+  apiClient.arrivals.set("성균관대", outage);
+  apiClient.arrivals.set("혜화", outage);
 }
 
 function answerTrainMap(): void {
@@ -128,7 +131,7 @@ function getAt(kst: string, stationId: string): request.Test {
   return request(httpServer).get(`/subway/stations/${stationId}/arrivals`);
 }
 
-type WireTrain = { trainNo: string; source: string; position: { stationId: string; state: string } | null };
+type WireTrain = { trainNo: string; source: string; stopsAway: number | null };
 const trainsOf = (body: { data: { directions: { trains: WireTrain[] }[] } }): WireTrain[] => body.data.directions.flatMap((d) => d.trains);
 
 describe("Serving survives a failing source", () => {
@@ -145,7 +148,7 @@ describe("Serving survives a failing source", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.body.data.generatedAt).toBe(at("22:27:31").toISOString());
-    const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.position !== null);
+    const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.stopsAway !== null);
     expect(observed.length).toBeGreaterThan(0);
   });
 
@@ -161,7 +164,7 @@ describe("Serving survives a failing source", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.body.data.generatedAt).toBe(at("22:27:31").toISOString());
-    const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.position !== null);
+    const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.stopsAway !== null);
     expect(observed.length).toBeGreaterThan(0);
   });
 
@@ -187,7 +190,7 @@ describe("Serving survives a failing source", () => {
     expect(threeMinutesIn.status).toBe(200);
     const trains = trainsOf(threeMinutesIn.body);
     expect(trains.length).toBeGreaterThan(0);
-    expect(trains.every((train) => train.source === "scheduled" && train.position === null)).toBe(true);
+    expect(trains.every((train) => train.source === "scheduled" && train.stopsAway === null)).toBe(true);
   });
 });
 

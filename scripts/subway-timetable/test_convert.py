@@ -9,10 +9,12 @@ The Korail tests build a small xlsx in memory with the layout of the 2026-08-28 
 row 3 종착역, row 4 열차번호, then two rows per station (arrival with the name, departure below).
 """
 
+import contextlib
 import io
 import json
 import os
 import sys
+import tempfile
 import unittest
 import zipfile
 from xml.sax.saxutils import escape
@@ -246,6 +248,77 @@ class KorailWorkbook(unittest.TestCase):
             self.trains(sheet="경부장항_평일_하")
 
 
+class KorailDestinations(unittest.TestCase):
+    def test_maps_each_abbreviation_to_the_name_the_upstreams_write(self):
+        # Act
+        names = {name: convert.korail_destination(name, "test") for name in ("1지청", "지하서")}
+
+        # Assert
+        self.assertEqual(names, {"1지청": "청량리", "지하서": "서울"})
+
+    def test_keeps_a_terminus_the_xlsx_writes_in_full(self):
+        # Arrange
+        termini = ["광운대", "구로", "동묘앞", "서울", "병점", "서동탄", "천안", "신창", "용산", "연천"]
+
+        # Act
+        names = [convert.korail_destination(name, "test") for name in termini]
+
+        # Assert
+        self.assertEqual(names, termini)
+
+    def test_refuses_a_name_in_neither_table_with_where(self):
+        for name in ("2지청", "지하청", "청량", ""):
+            with self.subTest(name=name):
+                # Act
+                with self.assertRaises(convert.ConvertError) as caught:
+                    convert.korail_destination(name, "korail weekday train 0602")
+
+                # Assert
+                self.assertIn("korail weekday train 0602", str(caught.exception))
+                self.assertIn(repr(name), str(caught.exception))
+
+
+class KorailBuild(unittest.TestCase):
+    def setUp(self):
+        local = {name: (fraction(6, m), fraction(6, m, 30)) for name, m in zip(UP_STATIONS, range(0, 14, 2))}
+        local["천안"] = (None, fraction(6, 0, 30))
+        local["금정"] = (fraction(6, 12), None)
+        express = {"천안": (None, fraction(7, 0)), "수원": (fraction(7, 10), fraction(7, 11)), "성균관": (fraction(7, 14), fraction(7, 14, 30)), "금정": (fraction(7, 20), None)}
+        self.trains = {1: ("K602", "천안", "1지청", local), 2: ("K1912", "천안", "1지청", express), 3: ("K1902", "천안", "서울", express)}
+
+    def build(self, trains):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        directory = scratch.name
+        path = os.path.join(directory, "korail.xlsx")
+        with open(path, "wb") as handle:
+            handle.write(xlsx({"경부장항_평일_상": korail_sheet(UP_STATIONS, trains)}))
+        with contextlib.redirect_stdout(io.StringIO()):
+            convert.build_korail(directory, path, path)
+        with open(os.path.join(directory, "korail-1-weekday.json"), encoding="utf-8") as handle:
+            return {t["trainNo"]: t["destination"] for t in json.load(handle)["trains"]}
+
+    def test_writes_each_train_with_the_destination_the_upstreams_write(self):
+        # Act
+        destinations = self.build(self.trains)
+
+        # Assert
+        self.assertEqual(destinations, {"0602": "청량리", "1902": "서울", "1912": "청량리"})
+
+    def test_refuses_a_destination_in_neither_table_and_names_the_train(self):
+        # Arrange
+        trains = dict(self.trains)
+        trains[1] = ("K602", "천안", "2지청", trains[1][3])
+
+        # Act
+        with self.assertRaises(convert.ConvertError) as caught:
+            self.build(trains)
+
+        # Assert
+        self.assertIn("0602", str(caught.exception))
+        self.assertIn("'2지청'", str(caught.exception))
+
+
 class SeoulTrips(unittest.TestCase):
     @staticmethod
     def row(number, arrive, leave, destination="진접"):
@@ -334,6 +407,33 @@ class CommittedTimetables(unittest.TestCase):
                 # Assert
                 self.assertEqual(convert.render(document), text)
                 self.assertEqual(document["trains"], convert.sort_trains(document["trains"]))
+
+    def test_each_korail_destination_is_a_name_the_upstreams_write(self):
+        for name in self.NAMES[:2]:
+            with self.subTest(name=name):
+                # Arrange
+                with open(os.path.join(TIMETABLE_DIR, name), encoding="utf-8") as handle:
+                    document = json.load(handle)
+
+                # Act
+                destinations = {train["destination"] for train in document["trains"]}
+
+                # Assert
+                self.assertEqual({d: convert.korail_destination(d, name) for d in destinations}, {d: d for d in destinations})
+
+    def test_no_destination_names_trains_of_both_directions(self):
+        # The tracker reads a train's direction off its destination in these files (toDirectionByDestination).
+        for name in self.NAMES:
+            with self.subTest(name=name):
+                # Arrange
+                with open(os.path.join(TIMETABLE_DIR, name), encoding="utf-8") as handle:
+                    document = json.load(handle)
+
+                # Act
+                by_direction = {d: {t["destination"] for t in document["trains"] if t["direction"] == d} for d in ("up", "down")}
+
+                # Assert
+                self.assertEqual(by_direction["up"] & by_direction["down"], set())
 
 
 if __name__ == "__main__":
