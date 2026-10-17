@@ -5,7 +5,10 @@
  * code, name, badge and color (in place of an icon), and a link item its own
  * text in the request language and its served action. Every kind carries a
  * title, a subtitle and an action, never a live arrival, and a bus item whose
- * group is not among the visible ones is left out.
+ * group is not among the visible ones is left out. A group item serves its own
+ * text, icon and initial state, and its children exactly as at the top of a
+ * section, with no action and never its `visibleWith`; it is left out while
+ * its `visibleWith` bus group is not visible, and when no child is left.
  */
 import type { BusGroup } from "../../bus/config/bus-config.wire";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
@@ -54,6 +57,22 @@ const LINK: ItemRaw = {
   actionType: "webview",
   actionValue: "/skku/taxi",
 };
+
+type GroupRaw = Extract<ItemRaw, { kind: "group" }>;
+
+function stationGroup(overrides: Partial<GroupRaw> = {}): GroupRaw {
+  return {
+    kind: "group",
+    id: "commute-stations",
+    title: { ko: "통학버스 정류장 지하철", en: "Subway at shuttle stops" },
+    subtitle: { ko: "혜화 · 정자", en: "Hyehwa · Jeongja" },
+    icon: { type: "subway", color: "8B95A1", text: { ko: "환승", en: "Transfer" } },
+    initialState: "collapsed",
+    visibleWith: { kind: "bus", groupId: "hssc" },
+    items: [{ kind: "subway", stationId: "hyehwa" }, { kind: "subway", stationId: "jeongja" }],
+    ...overrides,
+  };
+}
 
 function section(...items: ItemRaw[]): SectionRaw {
   return { type: "item_list", id: "hssc", title: { ko: "인사캠", en: "HSSC" }, items };
@@ -224,5 +243,76 @@ describe("toTransitSection", () => {
 
     // Assert
     expect(resolved.items.map((served) => served.id)).toEqual(["taxi-share", "subway:hyehwa"]);
+  });
+
+  it("serves a group in the request language with its children as at the top of a section, and no action or visibleWith", () => {
+    // Arrange
+    const children: ItemRaw[] = [{ kind: "subway", stationId: "hyehwa" }, { kind: "bus", groupId: "hssc" }, LINK];
+    const topLevel = resolve(section(...children), "en").items;
+
+    // Act
+    const resolved = resolve(section(stationGroup({ items: children as GroupRaw["items"] })), "en");
+
+    // Assert
+    expect(resolved.items).toEqual([
+      {
+        kind: "group",
+        id: "group:commute-stations",
+        title: "Subway at shuttle stops",
+        subtitle: "Hyehwa · Jeongja",
+        icon: { type: "subway", color: "8B95A1", text: "Transfer" },
+        initialState: "collapsed",
+        items: topLevel,
+      },
+    ]);
+    expect(parsesAsWire(resolved)).toBe(true);
+  });
+
+  it("Initial state served as written: serves expanded, and a group with no subtitle with a null subtitle", () => {
+    // Act
+    const resolved = resolve(section(stationGroup({ initialState: "expanded", subtitle: undefined })));
+
+    // Assert
+    expect(resolved.items[0]).toMatchObject({ initialState: "expanded", subtitle: null, title: "통학버스 정류장 지하철" });
+    expect(parsesAsWire(resolved)).toBe(true);
+  });
+
+  it("serves a group with no visibleWith whatever bus groups are visible", () => {
+    // Act
+    const resolved = resolve(section(stationGroup({ visibleWith: undefined })), "ko", []);
+
+    // Assert
+    expect(resolved.items.map((served) => served.id)).toEqual(["group:commute-stations"]);
+  });
+
+  it("leaves out a group whose visibleWith bus group is not visible, though its children are", () => {
+    // Act
+    const resolved = resolve(section({ kind: "subway", stationId: "hyehwa" }, stationGroup({ visibleWith: { kind: "bus", groupId: "commute" }, items: [{ kind: "subway", stationId: "jeongja" }] })));
+
+    // Assert
+    expect(resolved.items.map((served) => served.id)).toEqual(["subway:hyehwa"]);
+  });
+
+  it("leaves out a hidden bus child and keeps the group's other children in order", () => {
+    // Act
+    const resolved = resolve(section(stationGroup({ items: [{ kind: "bus", groupId: "commute" }, { kind: "subway", stationId: "jeongja" }, { kind: "bus", groupId: "hssc" }] })));
+
+    // Assert
+    expect(resolved.items[0]?.kind === "group" && resolved.items[0].items.map((served) => served.id)).toEqual(["subway:jeongja", "bus:hssc"]);
+  });
+
+  it("Group emptied: leaves out a group whose bus children are all hidden", () => {
+    // Act
+    const resolved = resolve(section(LINK, stationGroup({ visibleWith: undefined, items: [{ kind: "bus", groupId: "commute" }, { kind: "bus", groupId: "fasttrack" }] })));
+
+    // Assert
+    expect(resolved.items.map((served) => served.id)).toEqual(["taxi-share"]);
+  });
+
+  it("throws on a station inside a group that is not served", () => {
+    // Act & Assert
+    expect(() => resolve(section(stationGroup({ items: [{ kind: "subway", stationId: "gangnam" }] })))).toThrow(
+      'transit layout places subway station "gangnam", which is not served',
+    );
   });
 });

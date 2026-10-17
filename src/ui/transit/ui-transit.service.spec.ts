@@ -5,8 +5,19 @@
  * checked when the service is built, a bus item shows only while its group is
  * visible in KST (the commute shuttle's card opens at 11:55 KST on 2026-10-12
  * and closes after 2026-12-18), subway items always show, a section left with
- * no item is not served, and the text follows the request language.
+ * no item is not served, and the text follows the request language. Layouts
+ * with a group are fed through loadTransitLayout: a group shows only while its
+ * `visibleWith` bus group does, never serves `visibleWith`, loses its hidden
+ * bus children, is not served when none is left, and keeps its initial state.
  */
+const actualConfig = jest.requireActual("./ui-transit.config");
+let layoutFile: unknown;
+jest.mock("./ui-transit.config", () => ({
+  ...actualConfig,
+  readTransitLayout: (references: unknown) =>
+    layoutFile === undefined ? actualConfig.readTransitLayout(references) : actualConfig.loadTransitLayout(layoutFile, references),
+}));
+
 import { FakeBusConfigService } from "../../../__tests__/helpers/fakes/bus/bus-config.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { seededBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
@@ -49,6 +60,7 @@ const itemIdsOf = async (service: UiTransitService, sectionId: string): Promise<
 beforeEach(() => {
   busConfig = new FakeBusConfigService();
   withVisibility({});
+  layoutFile = undefined;
 });
 
 describe("UiTransitService.getTransitLayout", () => {
@@ -143,5 +155,117 @@ describe("UiTransitService.getTransitLayout", () => {
 
     // Act & Assert
     expect(() => serviceAt("2026-10-20T03:00:00Z")).toThrow('transit layout: sections: bus group "night" is not placed');
+  });
+});
+
+describe("UiTransitService.getTransitLayout with a group", () => {
+  const ICON = { type: "subway", color: "8B95A1", text: { ko: "환승", en: "Transfer" } };
+
+  function commuteStations(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    // WHY: the registry serves two stations, so hyehwa stands in for the commute stations.
+    const items = [{ kind: "subway", stationId: "hyehwa" }];
+    const visibleWith = { kind: "bus", groupId: "commute" };
+    return { kind: "group", id: "commute-stations", title: { ko: "통학버스 정류장 지하철" }, icon: ICON, initialState: "collapsed", visibleWith, items, ...overrides };
+  }
+
+  function grouped(nscGroup: Record<string, unknown>, campusItems: unknown[] = [{ kind: "bus", groupId: "campus" }, { kind: "bus", groupId: "fasttrack" }]): unknown {
+    const hssc = ["hssc", "jongro02", "jongro07", "jongro08"].map((groupId) => ({ kind: "bus", groupId }));
+    const nsc = [{ kind: "subway", stationId: "sungkyunkwan" }, { kind: "bus", groupId: "commute" }, nscGroup];
+    return {
+      version: 1,
+      sections: [
+        { type: "item_list", id: "campus", items: campusItems },
+        { type: "item_list", id: "hssc", items: hssc },
+        { type: "item_list", id: "nsc", items: nsc },
+      ],
+    };
+  }
+
+  const servedNsc = async (iso: string): Promise<Array<Record<string, unknown>> | undefined> =>
+    (await serviceAt(iso).getTransitLayout("ko")).sections.find((section) => section.id === "nsc")?.items;
+
+  it("serves the group after the commute row during the pilot, collapsed, with its children and no visibleWith", async () => {
+    // Arrange
+    layoutFile = grouped(commuteStations());
+
+    // Act
+    const nsc = await servedNsc("2026-10-20T00:00:00Z");
+
+    // Assert
+    expect(nsc?.map((served) => served.id)).toEqual(["subway:sungkyunkwan", "bus:commute", "group:commute-stations"]);
+    expect(nsc?.[2]).toEqual({
+      kind: "group",
+      id: "group:commute-stations",
+      title: "통학버스 정류장 지하철",
+      subtitle: null,
+      icon: { type: "subway", color: "8B95A1", text: "환승" },
+      initialState: "collapsed",
+      items: [expect.objectContaining({ id: "subway:hyehwa", title: "혜화역" })],
+    });
+  });
+
+  it.each([
+    ["Before the commute card opens", "2026-10-12T02:54:59.999Z", ["subway:sungkyunkwan"]],
+    ["When the commute card opens", "2026-10-12T02:55:00.000Z", ["subway:sungkyunkwan", "bus:commute", "group:commute-stations"]],
+    ["On the pilot's last day", "2026-12-18T14:59:59.999Z", ["subway:sungkyunkwan", "bus:commute", "group:commute-stations"]],
+    ["Commute pilot over", "2026-12-18T15:00:00.000Z", ["subway:sungkyunkwan"]],
+  ])("%s (%s): serves nsc as %p, and no item carries visibleWith", async (_label, iso, itemIds) => {
+    // Arrange
+    layoutFile = grouped(commuteStations());
+
+    // Act
+    const nsc = await servedNsc(iso);
+
+    // Assert
+    expect(nsc?.map((served) => served.id)).toEqual(itemIds);
+    expect(JSON.stringify(nsc)).not.toContain("visibleWith");
+  });
+
+  it("Initial state served as written: serves an expanded group as expanded", async () => {
+    // Arrange
+    layoutFile = grouped(commuteStations({ initialState: "expanded" }));
+
+    // Act
+    const nsc = await servedNsc("2026-10-20T00:00:00Z");
+
+    // Assert
+    expect(nsc?.[2]).toMatchObject({ id: "group:commute-stations", initialState: "expanded" });
+  });
+
+  it("Group emptied: leaves out a group whose bus children are all hidden, and keeps its section for the rest", async () => {
+    // Arrange
+    const past = { type: "dateRange", from: "2026-03-01", until: "2026-03-07" } as const;
+    withVisibility({ campus: past, fasttrack: past });
+    const shuttles = { ...commuteStations({ id: "shuttles", visibleWith: undefined }), items: [{ kind: "bus", groupId: "campus" }, { kind: "bus", groupId: "fasttrack" }] };
+    const campusLink = { kind: "link", id: "taxi-share", title: { ko: "택시 합승" }, icon: ICON, actionType: "miniapp", actionValue: "inja" };
+    layoutFile = grouped(commuteStations(), [campusLink, shuttles]);
+
+    // Act
+    const layout = await serviceAt("2026-10-20T00:00:00Z").getTransitLayout("ko");
+
+    // Assert
+    expect(layout.sections.find((section) => section.id === "campus")?.items.map((served) => served.id)).toEqual(["taxi-share"]);
+  });
+
+  it("drops a section whose only item is an emptied group", async () => {
+    // Arrange
+    const past = { type: "dateRange", from: "2026-03-01", until: "2026-03-07" } as const;
+    withVisibility({ campus: past, fasttrack: past });
+    const shuttles = { ...commuteStations({ id: "shuttles", visibleWith: undefined }), items: [{ kind: "bus", groupId: "campus" }, { kind: "bus", groupId: "fasttrack" }] };
+    layoutFile = grouped(commuteStations(), [shuttles]);
+
+    // Act
+    const layout = await serviceAt("2026-10-20T00:00:00Z").getTransitLayout("ko");
+
+    // Assert
+    expect(layout.sections.map((section) => section.id)).toEqual(["hssc", "nsc"]);
+  });
+
+  it("refuses to build over a group whose visibleWith names a bus group placed in another section", () => {
+    // Arrange
+    layoutFile = grouped(commuteStations({ visibleWith: { kind: "bus", groupId: "campus" } }));
+
+    // Act & Assert
+    expect(() => serviceAt("2026-10-20T00:00:00Z")).toThrow('bus group "campus" is not placed in section "nsc"');
   });
 });
