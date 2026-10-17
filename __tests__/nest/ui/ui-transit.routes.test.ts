@@ -107,8 +107,9 @@ describe("GET /ui/home/transit", () => {
       initialState: "collapsed",
       items: undefined,
     });
-    expect(group.items.map((served: { id: string }) => served.id)).toEqual(["subway:jamsil", "subway:dogok", "subway:gangnam", "subway:yangjae"]);
-    expect(group.items[2]).toEqual({
+    expect(group.items.map((served: { id: string }) => served.id)).toEqual(["subway:jeongja", "subway:jamsil", "subway:dogok", "subway:gangnam", "subway:yangjae"]);
+    expect(group.items[2]).toMatchObject({ id: "subway:dogok", subtitle: "3호선 · 수인분당선", lines: [{ code: "3" }, { code: "K1", badge: "수인분당", color: "F5A200" }] });
+    expect(group.items[3]).toEqual({
       kind: "subway",
       id: "subway:gangnam",
       stationId: "gangnam",

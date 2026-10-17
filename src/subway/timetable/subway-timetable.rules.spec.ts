@@ -235,8 +235,11 @@ describe("listSubwayPlatforms", () => {
     expect(platforms.map((platform) => [platform.id, platform.line])).toEqual([
       ["KR-1-0153", "1"],
       ["S1-4-420", "4"],
+      ["KR-K1-K230", "K1"],
       ["S1-2-216", "2"],
+      ["S1-8-2815", "8"],
       ["S1-3-334", "3"],
+      ["KR-K1-K217", "K1"],
       ["S1-2-222", "2"],
       ["S1-3-332", "3"],
     ]);
@@ -257,6 +260,12 @@ describe("findSubwayPlatform", () => {
     ["S1-2-222", "down", ["S1-2-223", "S1-2-224", "S1-2-225"]],
     ["S1-3-332", "up", ["S1-3-333", "S1-3-334", "S1-3-335"]],
     ["S1-3-332", "down", ["S1-3-331", "S1-3-330", "S1-3-329"]],
+    ["KR-K1-K230", "up", ["KR-K1-K231", "KR-K1-K232", "KR-K1-K233"]],
+    ["KR-K1-K230", "down", ["KR-K1-K229", "KR-K1-K228", "KR-K1-K227"]],
+    ["S1-8-2815", "up", ["S1-8-2816", "S1-8-2817", "S1-8-2818"]],
+    ["S1-8-2815", "down", ["S1-8-2814", "S1-8-2813", "S1-8-2812"]],
+    ["KR-K1-K217", "up", ["KR-K1-K218", "KR-K1-K219", "KR-K1-K220"]],
+    ["KR-K1-K217", "down", ["KR-K1-K216", "KR-K1-K215", "KR-K1-K214"]],
   ] as const)("lists the upstream platforms of %s %s nearest first", (id, direction, upstreamPlatformIds) => {
     // Act
     const platform = findSubwayPlatform(id);
@@ -278,6 +287,12 @@ describe("findSubwayPlatform", () => {
     ["S1-2-222", "down", []],
     ["S1-3-332", "up", []],
     ["S1-3-332", "down", []],
+    ["KR-K1-K230", "up", []],
+    ["KR-K1-K230", "down", []],
+    ["S1-8-2815", "up", []],
+    ["S1-8-2815", "down", []],
+    ["KR-K1-K217", "up", []],
+    ["KR-K1-K217", "down", []],
   ] as const)("lists the watched platforms of %s %s, beyond its upstream ones, nearest first", (id, direction, watchedPlatformIds) => {
     // Act
     const platform = findSubwayPlatform(id);
@@ -299,6 +314,12 @@ describe("findSubwayPlatform", () => {
     ["S1-2-222", "down", "S1-2-221"],
     ["S1-3-332", "up", "S1-3-331"],
     ["S1-3-332", "down", "S1-3-333"],
+    ["KR-K1-K230", "up", "KR-K1-K229"],
+    ["KR-K1-K230", "down", "KR-K1-K231"],
+    ["S1-8-2815", "up", "S1-8-2814"],
+    ["S1-8-2815", "down", "S1-8-2816"],
+    ["KR-K1-K217", "up", "KR-K1-K216"],
+    ["KR-K1-K217", "down", "KR-K1-K218"],
   ] as const)("names the next platform of %s %s", (id, direction, nextPlatformId) => {
     // Act
     const platform = findSubwayPlatform(id);
@@ -314,6 +335,9 @@ describe("findSubwayPlatform", () => {
     ["S1-3-334", "3", { source: "seoul-station", stationCode: "0334" }],
     ["S1-2-222", "2", { source: "seoul-station", stationCode: "0222" }],
     ["S1-3-332", "3", { source: "seoul-station", stationCode: "0332" }],
+    ["KR-K1-K230", "K1", { source: "korail" }],
+    ["S1-8-2815", "8", { source: "seoul-station", stationCode: "2815" }],
+    ["KR-K1-K217", "K1", { source: "korail" }],
   ])("puts %s on line %s with its timetable source", (id, line, timetable) => {
     // Act
     const platform = findSubwayPlatform(id);
@@ -330,6 +354,9 @@ describe("findSubwayPlatform", () => {
     ["S1-2-222", { ko: "내선순환", en: "Inner circle", zh: "内环" }, { ko: "외선순환", en: "Outer circle", zh: "外环" }],
     ["S1-3-334", { ko: "대화 방면", en: "Toward Daehwa", zh: "大化方向" }, { ko: "오금 방면", en: "Toward Ogeum", zh: "梧琴方向" }],
     ["S1-3-332", { ko: "대화 방면", en: "Toward Daehwa", zh: "大化方向" }, { ko: "오금 방면", en: "Toward Ogeum", zh: "梧琴方向" }],
+    ["KR-K1-K230", { ko: "청량리 방면", en: "Toward Cheongnyangni", zh: "清凉里方向" }, { ko: "인천 방면", en: "Toward Incheon", zh: "仁川方向" }],
+    ["S1-8-2815", { ko: "별내 방면", en: "Toward Byeollae", zh: "别内方向" }, { ko: "모란 방면", en: "Toward Moran", zh: "牡丹方向" }],
+    ["KR-K1-K217", { ko: "청량리 방면", en: "Toward Cheongnyangni", zh: "清凉里方向" }, { ko: "인천 방면", en: "Toward Incheon", zh: "仁川方向" }],
   ])("names %s's directions in every language", (id, upName, downName) => {
     // Act
     const platform = findSubwayPlatform(id);

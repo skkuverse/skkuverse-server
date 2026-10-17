@@ -27,8 +27,7 @@
  * scheduled arrival plus its delay; a trainset that matches no run is not served.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
-// The committed registry has no trainset line until the Shinbundang line is registered (tasks.md 6.3.2), and no
-// Suin-Bundang line until tasks.md 6.2.2.
+// The committed registry has no trainset line until the Shinbundang line is registered (tasks.md 6.3.2).
 jest.mock("../subway.config", () => {
   const actual = jest.requireActual<typeof import("../subway.config")>("../subway.config");
   const line = (code: string, name: string, trainNumbers: string) => ({
@@ -38,7 +37,7 @@ jest.mock("../subway.config", () => {
     color: "D4003B",
     seoul: { subwayId: code, lineName: name, trainNumbers },
   });
-  const lines = [...actual.SUBWAY_REGISTRY.lines, line("D1", "신분당선", "trainset"), line("K1", "수인분당선", "timetable")];
+  const lines = [...actual.SUBWAY_REGISTRY.lines, line("D1", "신분당선", "trainset")];
   return { ...actual, SUBWAY_REGISTRY: { ...actual.SUBWAY_REGISTRY, lines } };
 });
 

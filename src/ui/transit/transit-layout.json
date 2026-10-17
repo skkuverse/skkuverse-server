@@ -41,6 +41,7 @@
           "initialState": "collapsed",
           "visibleWith": { "kind": "bus", "groupId": "commute" },
           "items": [
+            { "kind": "subway", "stationId": "jeongja" },
             { "kind": "subway", "stationId": "jamsil" },
             { "kind": "subway", "stationId": "dogok" },
             { "kind": "subway", "stationId": "gangnam" },
