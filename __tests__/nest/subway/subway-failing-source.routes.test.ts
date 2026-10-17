@@ -24,6 +24,7 @@ import { Clock } from "../../../src/infra/clock";
 import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
 import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
 import { SubwayEstimateModule } from "../../../src/subway/estimate/subway-estimate.module";
+import { SubwayMatchingModule } from "../../../src/subway/matching/subway-matching.module";
 import { SubwaySeoulApiClient } from "../../../src/subway/seoul-api/subway-seoul-api.client";
 import { SubwaySeoulApiModule } from "../../../src/subway/seoul-api/subway-seoul-api.module";
 import { SubwaySeoulTrainmapClient } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.client";
@@ -80,6 +81,7 @@ beforeEach(async () => {
       SubwaySeoulApiModule,
       SubwaySeoulTrainmapModule,
       SubwayTrackingModule,
+      SubwayMatchingModule,
       SubwaySeoulModule,
       SubwayArrivalsModule,
     ],

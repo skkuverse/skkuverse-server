@@ -26,6 +26,7 @@ import logger from "../../infra/logger";
 import type { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
+import { SubwayMatchingService } from "../matching/subway-matching.service";
 import type { SubwaySeoulApiClient } from "../seoul-api/subway-seoul-api.client";
 import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import type { SubwaySeoulTrainmapClient } from "../seoul-trainmap/subway-seoul-trainmap.client";
@@ -68,6 +69,7 @@ function setup(startIso: string) {
   );
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
   const tracking = new SubwayTrackingService(asReal<SubwayRepository>(new FakeSubwayRepository()), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
+  new SubwayMatchingService(tracking, clock).onModuleInit();
   const registerPoller = jest.fn();
   new SubwaySeoulPoller({ registerPoller } as unknown as PollerRegistryService, seoul, tracking).onModuleInit();
   const tickOf = (name: string): Tick => registerPoller.mock.calls.find((c) => c[2] === name)?.[0] as Tick;

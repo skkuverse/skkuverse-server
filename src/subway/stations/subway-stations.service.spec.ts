@@ -17,7 +17,13 @@ describe("SubwayStationsService.listStations", () => {
     expect(stations.map(({ id, lines }) => ({ id, lines: lines.map(({ code, color }) => ({ code, color })) }))).toEqual([
       { id: "sungkyunkwan", lines: [{ code: "1", color: "0052A4" }] },
       { id: "hyehwa", lines: [{ code: "4", color: "00A5DE" }] },
-      { id: "jeongja", lines: [{ code: "K1", color: "F5A200" }] },
+      {
+        id: "jeongja",
+        lines: [
+          { code: "D1", color: "D4003B" },
+          { code: "K1", color: "F5A200" },
+        ],
+      },
       {
         id: "jamsil",
         lines: [
@@ -32,8 +38,21 @@ describe("SubwayStationsService.listStations", () => {
           { code: "K1", color: "F5A200" },
         ],
       },
-      { id: "gangnam", lines: [{ code: "2", color: "00A84D" }] },
-      { id: "yangjae", lines: [{ code: "3", color: "EF7C1C" }] },
+      {
+        id: "gangnam",
+        lines: [
+          { code: "2", color: "00A84D" },
+          { code: "D1", color: "D4003B" },
+        ],
+      },
+      {
+        id: "yangjae",
+        lines: [
+          { code: "3", color: "EF7C1C" },
+          { code: "D1", color: "D4003B" },
+        ],
+      },
+      { id: "gwanggyo-jungang", lines: [{ code: "D1", color: "D4003B" }] },
     ]);
     expect(stations[1]?.title.ko).toBe("혜화역");
   });

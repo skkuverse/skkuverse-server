@@ -1,7 +1,7 @@
 /**
  * GET /subway/stations/:stationId/arrivals through the real controller, the
- * arrivals service, the tracker, the timetable and estimate doors and the
- * committed weekday tables, with FakeSubwayRepository, FakeHolidaysRepository
+ * arrivals service, the tracker and its run matcher, the timetable and
+ * estimate doors and the committed weekday tables, with FakeSubwayRepository, FakeHolidaysRepository
  * and a scripted Clock. The tracker is fed one upstream's observations per
  * tick, as the pollers feed it. What it guards: a station is requested by its
  * slug, and the 200 body names it and holds one line entry per platform, with
@@ -16,8 +16,10 @@
  * serve two line entries in platform order, 잠실's captured 8호선 rows giving
  * no countdown beside its live 2호선 ones; a 수인분당 train seen arrived, whose
  * departure no source reports, is listed until 90 s past its estimated
- * departure; and the station, direction and neighbor station names follow the
- * request language.
+ * departure; every one of the eight stations answers with its platforms in
+ * order, 정자's 신분당 line named in Korean; a 신분당 trainset seen leaving 광교
+ * is served at 광교중앙 as the run it is matched to; and the station, direction
+ * and neighbor station names follow the request language.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -27,6 +29,7 @@ import { Clock } from "../../../src/infra/clock";
 import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
 import { subwayStationArrivals } from "../../../src/subway/arrivals/subway-arrivals.wire";
 import { SubwayEstimateModule } from "../../../src/subway/estimate/subway-estimate.module";
+import { SubwayMatchingModule } from "../../../src/subway/matching/subway-matching.module";
 import { SubwayModule } from "../../../src/subway/subway.module";
 import { SubwayRepository } from "../../../src/subway/subway.repository";
 import type { CountdownRow, TrainEvent } from "../../../src/subway/subway.types";
@@ -54,7 +57,7 @@ let subwayRepository: FakeSubwayRepository;
 beforeAll(async () => {
   subwayRepository = new FakeSubwayRepository();
   app = await buildTestApp({
-    imports: [HolidaysModule, SubwayModule, SubwayTimetableModule, SubwayEstimateModule, SubwayTrackingModule, SubwayArrivalsModule],
+    imports: [HolidaysModule, SubwayModule, SubwayTimetableModule, SubwayEstimateModule, SubwayTrackingModule, SubwayMatchingModule, SubwayArrivalsModule],
     overrides: [
       { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
       { provide: SubwayRepository, useValue: subwayRepository },
@@ -127,7 +130,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expectWire(subwayStationArrivals, res.body.data);
   });
 
-  it("answers gangnam with one 2호선 line entry, its circle directions and its neighbors, as the wire publishes it", async () => {
+  it("answers gangnam with its 2호선 line entry first, its circle directions and its neighbors, as the wire publishes it", async () => {
     // Arrange
     await trackAt("20:41:00", "seoul-subway-api", []);
 
@@ -139,6 +142,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.body.data.station).toEqual({ id: "gangnam", name: "강남" });
     expect(res.body.data.lines.map((l: { line: unknown; platformId: string }) => [l.line, l.platformId])).toEqual([
       [{ code: "2", name: "2호선", badge: "2", color: "00A84D" }, "S1-2-222"],
+      [{ code: "D1", name: "신분당선", badge: "신분당", color: "D4003B" }, "DX-D1-4307"],
     ]);
     expect(directionsOf(res.body).map((d: { direction: string; name: string; previousStation: unknown; nextStation: unknown }) => [d.direction, d.name, d.previousStation, d.nextStation])).toEqual([
       ["up", "내선순환", { id: "S1-2-221", name: "역삼" }, { id: "S1-2-223", name: "교대" }],
@@ -179,6 +183,58 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(dogok.body.data.lines[1].directions.map((d: { name: string }) => d.name)).toEqual(["청량리 방면", "인천 방면"]);
     expectWire(subwayStationArrivals, jamsil.body.data);
     expectWire(subwayStationArrivals, dogok.body.data);
+  });
+
+  it.each([
+    ["sungkyunkwan", ["KR-1-0153"]],
+    ["hyehwa", ["S1-4-420"]],
+    ["jeongja", ["DX-D1-4312", "KR-K1-K230"]],
+    ["jamsil", ["S1-2-216", "S1-8-2815"]],
+    ["dogok", ["S1-3-334", "KR-K1-K217"]],
+    ["gangnam", ["S1-2-222", "DX-D1-4307"]],
+    ["yangjae", ["S1-3-332", "DX-D1-4308"]],
+    ["gwanggyo-jungang", ["DX-D1-4318"]],
+  ])("Every station answers: %s with its platforms' line entries %j in order, each with both directions, as the wire publishes it", async (stationId, platformIds) => {
+    // Arrange
+    await trackAt("20:41:00", "seoul-subway-api", []);
+
+    // Act
+    const res = await getAt("20:41:02", `/subway/stations/${stationId}/arrivals`);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.station.id).toBe(stationId);
+    expect(res.body.data.lines.map((l: { platformId: string }) => l.platformId)).toEqual(platformIds);
+    expect(res.body.data.lines.map((l: { directions: Array<{ direction: string }> }) => l.directions.map((d) => d.direction))).toEqual(platformIds.map(() => ["up", "down"]));
+    expectWire(subwayStationArrivals, res.body.data);
+  });
+
+  it("Named line in Korean: serves jeongja's 신분당 entry as D1, 신분당선, badge 신분당, color D4003B, before its 수인분당 entry", async () => {
+    // Act
+    const res = await getAt("20:41:02", "/subway/stations/jeongja/arrivals").set("Accept-Language", "ko");
+
+    // Assert
+    expect(res.body.data.station).toEqual({ id: "jeongja", name: "정자" });
+    expect(res.body.data.lines.map((l: { line: unknown }) => l.line)).toEqual([
+      { code: "D1", name: "신분당선", badge: "신분당", color: "D4003B" },
+      { code: "K1", name: "수인분당선", badge: "수인분당", color: "F5A200" },
+    ]);
+    expect(res.body.data.lines[0].directions.map((d: { name: string }) => d.name)).toEqual(["신사 방면", "광교 방면"]);
+  });
+
+  it("serves trainset 20, seen leaving 광교 for 신사 70 s late, as its matched run 1286 at 광교중앙, estimated and one stop away", async () => {
+    // Arrange
+    const leaving: TrainEvent = { ...event("20", "DX-D1-4319", "departed", "20:41:10", "신사"), reportedDirection: "down" };
+    await trackAt("20:41:15", "seoul-subway-api", [leaving]);
+
+    // Act
+    const res = await getAt("20:41:17", "/subway/stations/gwanggyo-jungang/arrivals");
+
+    // Assert
+    const up = directionsOf(res.body).find((d: { direction: string }) => d.direction === "up");
+    const train = up.trains.find((t: { trainNo: string }) => t.trainNo === "1286");
+    expect(train).toMatchObject({ destination: "신사", arrivalAt: at("20:44:10").toISOString(), stopsAway: 1, source: "estimated" });
+    expect(up.trains.map((t: { trainNo: string }) => t.trainNo)).not.toContain("20");
   });
 
   it("Line without countdowns: serves 잠실's captured 2호선 countdowns live and none of its 8호선 trains live, whose rows carry none", async () => {
@@ -231,7 +287,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.headers["cache-control"]).not.toBe("private, max-age=5");
   });
 
-  it.each(["sungkyunkwan", "hyehwa", "jeongja", "jamsil", "dogok", "gangnam", "yangjae"])("sends %s's arrivals with Cache-Control: private, max-age=5", async (stationId) => {
+  it.each(["sungkyunkwan", "hyehwa", "jeongja", "jamsil", "dogok", "gangnam", "yangjae", "gwanggyo-jungang"])("sends %s's arrivals with Cache-Control: private, max-age=5", async (stationId) => {
     // Act
     const res = await getAt("20:41:02", `/subway/stations/${stationId}/arrivals`);
 
