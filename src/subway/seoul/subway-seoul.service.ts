@@ -4,12 +4,11 @@ import config from "../../infra/config";
 import { DailyCap } from "../../shared/daily-cap.util";
 import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
-import { SUBWAY_STATIONS } from "../subway.constants";
-import { SEOUL_LINE_NAME_BY_SUBWAY_ID, SEOUL_STATION_NAME_BY_ID } from "./subway-seoul.constants";
+import { SUBWAY_REGISTRY } from "../subway.config";
 import { toSeoulLines, toSettledObservations } from "./subway-seoul.rules";
 import type { SettledObservations } from "./subway-seoul.types";
 
-const SEOUL_LINES = toSeoulLines(SUBWAY_STATIONS, SEOUL_LINE_NAME_BY_SUBWAY_ID, SEOUL_STATION_NAME_BY_ID);
+const SEOUL_LINES = toSeoulLines(SUBWAY_REGISTRY);
 const API_SOURCE = "seoul-subway-api";
 const TRAIN_MAP_SOURCE = "seoul-trainmap";
 
@@ -30,10 +29,10 @@ export class SubwaySeoulService {
   async observeApi(): Promise<SettledObservations> {
     const take = <T>(call: () => Promise<T>): Promise<T> => this.withCap(this.apiCap, call);
     const [eventResults, countdownResults] = await Promise.all([
-      Promise.allSettled(SEOUL_LINES.map((line) => take(() => this.api.listLineEvents(line.lineName, line.platformIdByName)))),
+      Promise.allSettled(SEOUL_LINES.map((line) => take(() => this.api.listLineEvents(line.lineName, line.platformIdByApiName)))),
       Promise.allSettled(
         SEOUL_LINES.flatMap((line) =>
-          line.stationNames.map((name) => take(() => this.api.listStationCountdownRows(name, line.platformIdByName))),
+          line.stationNames.map((name) => take(() => this.api.listStationCountdownRows(name, line.platformIdByApiName))),
         ),
       ),
     ]);
@@ -43,8 +42,8 @@ export class SubwaySeoulService {
   async observeTrainMap(): Promise<SettledObservations> {
     const observedAt = this.clock.now();
     const eventResults = await Promise.allSettled(
-      SEOUL_LINES.map((line) =>
-        this.withCap(this.trainMapCap, () => this.trainMap.listLineEvents(line.trainMapLine, line.platformIdByName, observedAt)),
+      SEOUL_LINES.flatMap(({ trainMapLine, platformIdByTrainMapName }) =>
+        trainMapLine === undefined ? [] : [this.withCap(this.trainMapCap, () => this.trainMap.listLineEvents(trainMapLine, platformIdByTrainMapName, observedAt))],
       ),
     );
     return toSettledObservations(TRAIN_MAP_SOURCE, eventResults, []);

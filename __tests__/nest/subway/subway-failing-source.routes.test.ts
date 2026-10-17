@@ -132,7 +132,8 @@ function getAt(kst: string, stationId: string): request.Test {
 }
 
 type WireTrain = { trainNo: string; source: string; stopsAway: number | null };
-const trainsOf = (body: { data: { directions: { trains: WireTrain[] }[] } }): WireTrain[] => body.data.directions.flatMap((d) => d.trains);
+const trainsOf = (body: { data: { lines: { directions: { trains: WireTrain[] }[] }[] } }): WireTrain[] =>
+  body.data.lines.flatMap((line) => line.directions.flatMap((d) => d.trains));
 
 describe("Serving survives a failing source", () => {
   it("Crawl breaks: responses keep succeeding with API-based arrivals, and the crawl job reports failing", async () => {
@@ -143,11 +144,11 @@ describe("Serving survives a failing source", () => {
     const crawl = tickAt("22:27:30", "subway-trainmap");
     await expect(crawl).rejects.toMatchObject({ source: "seoul-trainmap" });
     await tickAt("22:27:31", "subway-seoul");
-    const res = await getAt("22:27:33", "KR-1-0153");
+    const res = await getAt("22:27:33", "sungkyunkwan");
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.generatedAt).toBe(at("22:27:31").toISOString());
+    expect(res.body.data.lines[0].generatedAt).toBe(at("22:27:31").toISOString());
     const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.stopsAway !== null);
     expect(observed.length).toBeGreaterThan(0);
   });
@@ -159,11 +160,11 @@ describe("Serving survives a failing source", () => {
     // Act
     await expect(tickAt("22:27:30", "subway-seoul")).rejects.toThrow("seoul-subway-api: HTTP 503");
     await tickAt("22:27:31", "subway-trainmap");
-    const res = await getAt("22:27:33", "S1-4-420");
+    const res = await getAt("22:27:33", "hyehwa");
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.generatedAt).toBe(at("22:27:31").toISOString());
+    expect(res.body.data.lines[0].generatedAt).toBe(at("22:27:31").toISOString());
     const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.stopsAway !== null);
     expect(observed.length).toBeGreaterThan(0);
   });
@@ -179,10 +180,10 @@ describe("Serving survives a failing source", () => {
       const upstream = second % 20 === 0 ? "subway-trainmap" : "subway-seoul";
       outcomes.push(await tickAt(toKst(at("22:27:31"), second), upstream).catch((err: unknown) => err));
     }
-    const oneMinuteIn = await getAt("22:28:31", "S1-4-420");
+    const oneMinuteIn = await getAt("22:28:31", "hyehwa");
 
     // Act
-    const threeMinutesIn = await getAt("22:30:31", "S1-4-420");
+    const threeMinutesIn = await getAt("22:30:31", "hyehwa");
 
     // Assert
     expect(outcomes.every((outcome) => outcome instanceof Error)).toBe(true);

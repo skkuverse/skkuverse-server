@@ -42,6 +42,8 @@ const assets = [
   ["src/ui/transit/transit-layout.json", "dist/src/ui/transit/transit-layout.json"],
   // ui/campus/ui-campus.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/ui/campus/campus-banners.json", "dist/src/ui/campus/campus-banners.json"],
+  // src/subway/subway.config.ts reads this with fs.readFileSync(__dirname/<name>)
+  ["src/subway/subway-registry.json", "dist/src/subway/subway-registry.json"],
   // The subway timetable config reads these with fs.readFileSync(__dirname/<name>);
   // scripts/subway-timetable/convert.py writes them.
   ["src/subway/timetable/korail-1-weekday.json", "dist/src/subway/timetable/korail-1-weekday.json"],

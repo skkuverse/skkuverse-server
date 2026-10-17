@@ -26,7 +26,7 @@ function layout(...sections: Record<string, unknown>[]): Record<string, unknown>
 
 const WELL_FORMED = layout(
   section("campus", [{ kind: "bus", groupId: "campus" }, LINK]),
-  section("hssc", [{ kind: "bus", groupId: "hssc" }, { kind: "subway", stationId: "S1-4-420" }]),
+  section("hssc", [{ kind: "bus", groupId: "hssc" }, { kind: "subway", stationId: "hyehwa" }]),
 );
 
 describe("transitLayoutFile", () => {
@@ -65,7 +65,7 @@ describe("transitLayoutFile", () => {
     ["an empty section", layout(section("campus", []))],
     ["a section id used twice", layout(section("campus", [LINK]), section("campus", [{ kind: "bus", groupId: "hssc" }]))],
     ["a bus group placed twice", layout(section("campus", [{ kind: "bus", groupId: "hssc" }]), section("hssc", [{ kind: "bus", groupId: "hssc" }]))],
-    ["a station placed twice", layout(section("campus", [{ kind: "subway", stationId: "S1-4-420" }, { kind: "subway", stationId: "S1-4-420" }]))],
+    ["a station placed twice", layout(section("campus", [{ kind: "subway", stationId: "hyehwa" }, { kind: "subway", stationId: "hyehwa" }]))],
     ["a link id used twice", layout(section("campus", [LINK, LINK]))],
     ["an unknown item kind", layout(section("campus", [{ kind: "taxi", id: "taxi" }]))],
     ["an unknown section type", layout({ ...section("campus", [LINK]), type: "route_card" })],

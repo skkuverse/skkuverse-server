@@ -6,13 +6,17 @@ const transitIcon = z.object({ type: z.string(), color: z.string(), text: z.stri
 
 const transitAction = z.object({ actionType: linkActionType, actionValue: z.string() });
 
-const itemFields = { id: z.string(), title: z.string(), subtitle: z.string().nullable(), icon: transitIcon, action: transitAction };
+const rowFields = { id: z.string(), title: z.string(), subtitle: z.string().nullable(), action: transitAction };
+
+/** WHY: a line's display data comes from the server, so the app keeps no line table; `color` is six hex digits, no `#`. */
+const transitLine = z.object({ code: z.string(), name: z.string(), badge: z.string(), color: z.string() });
 
 /** WHY: `kind` names the referent and gates which build draws the item; `action` alone says where a tap goes. */
 const transitItem = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("bus"), groupId: z.string(), ...itemFields }),
-  z.object({ kind: z.literal("subway"), stationId: z.string(), ...itemFields }),
-  z.object({ kind: z.literal("link"), ...itemFields }),
+  z.object({ kind: z.literal("bus"), groupId: z.string(), ...rowFields, icon: transitIcon }),
+  /** WHY: one physical station; a badge per line in `lines` takes the place of the icon. */
+  z.object({ kind: z.literal("subway"), stationId: z.string(), ...rowFields, lines: z.array(transitLine).min(1) }),
+  z.object({ kind: z.literal("link"), ...rowFields, icon: transitIcon }),
 ]);
 
 /** WHY: a null title draws no header above the section. */

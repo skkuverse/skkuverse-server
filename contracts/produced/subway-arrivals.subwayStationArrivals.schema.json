@@ -8,155 +8,182 @@
         "id": {
           "type": "string"
         },
-        "operatorCode": {
-          "type": "string"
-        },
-        "lineCode": {
-          "type": "string"
-        },
-        "stationCode": {
-          "type": "string"
-        },
         "name": {
           "type": "string"
         }
       },
       "required": [
         "id",
-        "operatorCode",
-        "lineCode",
-        "stationCode",
         "name"
       ]
     },
-    "generatedAt": {
-      "type": "string",
-      "format": "date-time",
-      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-    },
-    "directions": {
+    "lines": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "direction": {
-            "type": "string",
-            "enum": [
-              "up",
-              "down"
+          "line": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "badge": {
+                "type": "string"
+              },
+              "color": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "name",
+              "badge",
+              "color"
             ]
           },
-          "name": {
+          "platformId": {
             "type": "string"
           },
-          "previousStation": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "id",
-                  "name"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
           },
-          "nextStation": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "id",
-                  "name"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "trains": {
+          "directions": {
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
-                "trainNo": {
-                  "type": "string"
-                },
-                "destination": {
-                  "type": "string"
-                },
-                "express": {
-                  "type": "boolean"
-                },
-                "arrivalAt": {
+                "direction": {
                   "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  "enum": [
+                    "up",
+                    "down"
+                  ]
                 },
-                "stopsAway": {
+                "name": {
+                  "type": "string"
+                },
+                "previousStation": {
                   "anyOf": [
                     {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ]
                     },
                     {
                       "type": "null"
                     }
                   ]
                 },
-                "source": {
-                  "type": "string",
-                  "enum": [
-                    "live",
-                    "estimated",
-                    "scheduled"
+                "nextStation": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
                   ]
+                },
+                "trains": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "trainNo": {
+                        "type": "string"
+                      },
+                      "destination": {
+                        "type": "string"
+                      },
+                      "express": {
+                        "type": "boolean"
+                      },
+                      "arrivalAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      },
+                      "stopsAway": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "source": {
+                        "type": "string",
+                        "enum": [
+                          "live",
+                          "estimated",
+                          "scheduled"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "trainNo",
+                      "destination",
+                      "express",
+                      "arrivalAt",
+                      "stopsAway",
+                      "source"
+                    ]
+                  }
                 }
               },
               "required": [
-                "trainNo",
-                "destination",
-                "express",
-                "arrivalAt",
-                "stopsAway",
-                "source"
+                "direction",
+                "name",
+                "previousStation",
+                "nextStation",
+                "trains"
               ]
             }
           }
         },
         "required": [
-          "direction",
-          "name",
-          "previousStation",
-          "nextStation",
-          "trains"
+          "line",
+          "platformId",
+          "generatedAt",
+          "directions"
         ]
       }
     }
   },
   "required": [
     "station",
-    "generatedAt",
-    "directions"
+    "lines"
   ]
 }

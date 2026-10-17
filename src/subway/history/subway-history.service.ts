@@ -3,7 +3,7 @@ import { Clock } from "../../infra/clock";
 import { createLogThrottle, type LogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
 import type { SubwayDirection } from "../subway.types";
-import type { TrackedStation, TrackedTick } from "../tracking/subway-tracking.types";
+import type { TrackedPlatform, TrackedTick } from "../tracking/subway-tracking.types";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
 import { UNRESOLVED_SWEEP_INTERVAL_MS, WRITE_FAILURE_LOG_INTERVAL_MS } from "./subway-history.constants";
 import type { SubwayEventDoc, SubwayPredictionDoc } from "./subway-history.document";
@@ -40,9 +40,9 @@ export class SubwayHistoryService implements OnModuleInit {
 
   private async recordTick(tick: TrackedTick): Promise<void> {
     this.startServiceDate(tick);
-    const events = tick.stations.flatMap((station) => this.toNewEvents(tick.source, station));
-    const arrivals = tick.stations.flatMap((station) => this.toNewObservedArrivals(station));
-    const predictions = tick.stations.flatMap((station) => this.toCrossedPredictions(station, tick.trackedAt));
+    const events = tick.platforms.flatMap((platform) => this.toNewEvents(tick.source, platform));
+    const arrivals = tick.platforms.flatMap((platform) => this.toNewObservedArrivals(platform));
+    const predictions = tick.platforms.flatMap((platform) => this.toCrossedPredictions(platform, tick.trackedAt));
     await this.write("events", () => this.repository.insertEvents(events));
     await this.write("predictions", () => this.repository.upsertPredictions(predictions));
     for (const arrival of arrivals) await this.write("arrivals", () => this.repository.updateObservedArrival(arrival, tick.trackedAt));
@@ -54,7 +54,7 @@ export class SubwayHistoryService implements OnModuleInit {
   }
 
   private startServiceDate(tick: TrackedTick): void {
-    const serviceDate = tick.stations[0]?.serviceDate ?? this.serviceDate;
+    const serviceDate = tick.platforms[0]?.serviceDate ?? this.serviceDate;
     if (serviceDate === this.serviceDate) return;
     this.serviceDate = serviceDate;
     this.recordedEventKeys.clear();
@@ -62,30 +62,30 @@ export class SubwayHistoryService implements OnModuleInit {
     this.observedStateKeys.clear();
   }
 
-  private toNewEvents(source: string, station: TrackedStation): SubwayEventDoc[] {
-    return station.events.flatMap((event) => {
+  private toNewEvents(source: string, platform: TrackedPlatform): SubwayEventDoc[] {
+    return platform.events.flatMap((event) => {
       const key = `${source} ${event.trainNo} ${event.platformId} ${event.state}`;
       if (this.recordedEventKeys.has(key)) return [];
       this.recordedEventKeys.add(key);
-      const meta = { line: station.lineCode, trainNo: event.trainNo };
+      const meta = { line: platform.lineCode, trainNo: event.trainNo };
       return [{ at: event.stateChangedAt, meta, stationId: event.platformId, state: event.state, source }];
     });
   }
 
-  private toNewObservedArrivals(station: TrackedStation): ObservedArrival[] {
-    return station.events.flatMap((event) => {
-      const observedAt = event.platformId === station.platformId ? toObservedArrivalAt(event) : null;
-      const key = `${station.platformId} ${event.trainNo} ${event.state}`;
+  private toNewObservedArrivals(platform: TrackedPlatform): ObservedArrival[] {
+    return platform.events.flatMap((event) => {
+      const observedAt = event.platformId === platform.platformId ? toObservedArrivalAt(event) : null;
+      const key = `${platform.platformId} ${event.trainNo} ${event.state}`;
       if (!observedAt || this.observedStateKeys.has(key)) return [];
       this.observedStateKeys.add(key);
-      return [{ serviceDate: station.serviceDate, trainNo: event.trainNo, platformId: station.platformId, observedAt, observedState: event.state }];
+      return [{ serviceDate: platform.serviceDate, trainNo: event.trainNo, platformId: platform.platformId, observedAt, observedState: event.state }];
     });
   }
 
-  private toCrossedPredictions(station: TrackedStation, madeAt: Date): SubwayPredictionDoc[] {
-    const { serviceDate, platformId } = station;
+  private toCrossedPredictions(platform: TrackedPlatform, madeAt: Date): SubwayPredictionDoc[] {
+    const { serviceDate, platformId } = platform;
     return DIRECTIONS.flatMap((direction) =>
-      station.arrivals.directions[direction].flatMap((train) => {
+      platform.arrivals.directions[direction].flatMap((train) => {
         const key = `${platformId} ${train.trainNo}`;
         const leadMs = train.arrivalAt.getTime() - madeAt.getTime();
         const horizons = toCrossedHorizons(this.leadMsByTrain.get(key), leadMs);

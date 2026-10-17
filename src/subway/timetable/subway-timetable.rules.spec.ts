@@ -1,16 +1,18 @@
 /**
  * The service-day rules: which service day an instant belongs to (it starts at 03:00 KST, so a train past
  * midnight is the previous day's), which day type each timetable source serves on a date, and how a
- * timetable's seconds become instants. Also which committed table a station reads, the travel order of a
+ * timetable's seconds become instants. Also the registry's platforms, each found by its KRIC id with its
+ * line, timetable source, upstream, watched and next platforms and direction names; which committed table a platform reads, the travel order of a
  * line per direction, and the boot check that every source's declared day types have a table.
  */
-import { SUBWAY_STATIONS } from "../subway.constants";
-import type { SubwayStation } from "../subway.types";
+import type { SubwayPlatform } from "../subway.types";
 import { SUBWAY_TIMETABLES } from "./subway-timetable.config";
 import {
   assertTimetablesCover,
+  findSubwayPlatform,
   findTimetable,
   isInServiceWindow,
+  listSubwayPlatforms,
   toDayType,
   toLineRoutes,
   toScheduledTrains,
@@ -19,8 +21,8 @@ import {
 } from "./subway-timetable.rules";
 import type { Timetable } from "./subway-timetable.types";
 
-const SUNGKYUNKWAN = SUBWAY_STATIONS.find((s) => s.id === "KR-1-0153") as SubwayStation;
-const HYEHWA = SUBWAY_STATIONS.find((s) => s.id === "S1-4-420") as SubwayStation;
+const SUNGKYUNKWAN = findSubwayPlatform("KR-1-0153") as SubwayPlatform;
+const HYEHWA = findSubwayPlatform("S1-4-420") as SubwayPlatform;
 
 function table(overrides: Partial<Timetable>): Timetable {
   return {
@@ -106,7 +108,7 @@ describe("findTimetable", () => {
     expect([korail?.line, korail?.dayType, seoul?.line, seoul?.dayType]).toEqual(["1", "holiday", "4", "holiday"]);
   });
 
-  it("finds no table for a day type the station's line has none of", () => {
+  it("finds no table for a day type the platform's line has none of", () => {
     // Act & Assert
     expect(findTimetable(SUBWAY_TIMETABLES, SUNGKYUNKWAN, "saturday")).toBeNull();
   });
@@ -188,17 +190,17 @@ describe("toLineRoutes", () => {
 describe("assertTimetablesCover", () => {
   it("passes for the committed tables", () => {
     // Act & Assert
-    expect(() => assertTimetablesCover(SUBWAY_STATIONS, SUBWAY_TIMETABLES)).not.toThrow();
+    expect(() => assertTimetablesCover(listSubwayPlatforms(), SUBWAY_TIMETABLES)).not.toThrow();
   });
 
-  it("names every station and day type its source declares but no table serves", () => {
+  it("names every platform and day type its source declares but no table serves", () => {
     // Arrange
     const withoutSaturdayOrKorailHoliday = SUBWAY_TIMETABLES.filter(
       (t) => !(t.line === "4" && t.dayType === "saturday") && !(t.line === "1" && t.dayType === "holiday"),
     );
 
     // Act & Assert
-    expect(() => assertTimetablesCover(SUBWAY_STATIONS, withoutSaturdayOrKorailHoliday)).toThrow(
+    expect(() => assertTimetablesCover(listSubwayPlatforms(), withoutSaturdayOrKorailHoliday)).toThrow(
       "subway timetables: no table for KR-1-0153 holiday, S1-4-420 saturday",
     );
   });
@@ -221,5 +223,91 @@ describe("isInServiceWindow", () => {
 
     // Assert
     expect(isInside).toBe(inside);
+  });
+});
+
+describe("listSubwayPlatforms", () => {
+  it("lists every platform in the registry's station order", () => {
+    // Act
+    const platforms = listSubwayPlatforms();
+
+    // Assert
+    expect(platforms.map((platform) => [platform.id, platform.line])).toEqual([
+      ["KR-1-0153", "1"],
+      ["S1-4-420", "4"],
+    ]);
+  });
+});
+
+describe("findSubwayPlatform", () => {
+  it.each([
+    ["KR-1-0153", "up", ["KR-1-P154", "KR-1-P155", "KR-1-1715"]],
+    ["KR-1-0153", "down", ["KR-1-P152", "KR-1-P151", "KR-1-P150"]],
+    ["S1-4-420", "up", ["S1-4-421", "S1-4-422", "S1-4-423"]],
+    ["S1-4-420", "down", ["S1-4-419", "S1-4-418", "S1-4-417"]],
+  ] as const)("lists the upstream platforms of %s %s nearest first", (id, direction, upstreamPlatformIds) => {
+    // Act
+    const platform = findSubwayPlatform(id);
+
+    // Assert
+    expect(platform?.directions[direction].upstreamPlatformIds).toEqual(upstreamPlatformIds);
+  });
+
+  it.each([
+    ["KR-1-0153", "up", []],
+    ["KR-1-0153", "down", ["KR-1-P149"]],
+    ["S1-4-420", "up", []],
+    ["S1-4-420", "down", []],
+  ] as const)("lists the watched platforms of %s %s, beyond its upstream ones, nearest first", (id, direction, watchedPlatformIds) => {
+    // Act
+    const platform = findSubwayPlatform(id);
+
+    // Assert
+    expect(platform?.directions[direction].watchedPlatformIds).toEqual(watchedPlatformIds);
+  });
+
+  it.each([
+    ["KR-1-0153", "up", "KR-1-P152"],
+    ["KR-1-0153", "down", "KR-1-P154"],
+    ["S1-4-420", "up", "S1-4-419"],
+    ["S1-4-420", "down", "S1-4-421"],
+  ] as const)("names the next platform of %s %s", (id, direction, nextPlatformId) => {
+    // Act
+    const platform = findSubwayPlatform(id);
+
+    // Assert
+    expect(platform?.directions[direction].nextPlatformId).toBe(nextPlatformId);
+  });
+
+  it.each([
+    ["KR-1-0153", "1", { source: "korail" }],
+    ["S1-4-420", "4", { source: "seoul-station", stationCode: "0420" }],
+  ])("puts %s on line %s with its timetable source", (id, line, timetable) => {
+    // Act
+    const platform = findSubwayPlatform(id);
+
+    // Assert
+    expect(platform?.line).toBe(line);
+    expect(platform?.timetable).toEqual(timetable);
+  });
+
+  it.each([
+    ["KR-1-0153", { ko: "서울 방면", en: "Toward Seoul", zh: "首尔方向" }, { ko: "천안·서동탄 방면", en: "Toward Cheonan / Seodongtan", zh: "天安·西东滩方向" }],
+    ["S1-4-420", { ko: "불암산·진접 방면", en: "Toward Buramsan / Jinjeop", zh: "佛岩山·榛接方向" }, { ko: "오이도·안산 방면", en: "Toward Oido / Ansan", zh: "乌耳岛·安山方向" }],
+  ])("names %s's directions in every language", (id, upName, downName) => {
+    // Act
+    const platform = findSubwayPlatform(id);
+
+    // Assert
+    expect(platform?.directions.up.name).toEqual(upName);
+    expect(platform?.directions.down.name).toEqual(downName);
+  });
+
+  it.each(["S1-2-222", "KR-1-P154", "kr-1-0153", "hyehwa", ""])("finds no platform for %j", (id) => {
+    // Act
+    const platform = findSubwayPlatform(id);
+
+    // Assert
+    expect(platform).toBeNull();
   });
 });

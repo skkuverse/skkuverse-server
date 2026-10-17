@@ -1,6 +1,6 @@
-import type { StationTimetable, SubwayDirection, SubwayStation } from "../subway.types";
+import type { PlatformTimetable, SubwayDirection, SubwayPlatform } from "../subway.types";
 
-export type TimetableSource = StationTimetable["source"];
+export type TimetableSource = PlatformTimetable["source"];
 
 export type DayType = "weekday" | "saturday" | "holiday";
 
@@ -43,8 +43,8 @@ export interface ScheduledTrain {
   stops: readonly ScheduledStop[];
 }
 
-export interface StationSchedule {
-  station: SubwayStation;
+export interface PlatformSchedule {
+  platform: SubwayPlatform;
   serviceDate: string;
   dayType: DayType;
   lineRoutes: LineRoutes;

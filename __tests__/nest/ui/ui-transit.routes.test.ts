@@ -4,7 +4,8 @@
  * transit-layout.json, the real bus groups and the real served stations on a
  * fixed clock (2026-10-20, the commute pilot running, fasttrack closed).
  *
- * Asserts the envelope, the three sections in order in Korean, the English
+ * Asserts the envelope, the three sections in order in Korean, each subway
+ * row as one physical station by slug with its lines and no icon, the English
  * titles under unchanged ids, the private five-minute Cache-Control, that no
  * item carries live arrival data, and the wire.
  */
@@ -65,15 +66,25 @@ describe("GET /ui/home/transit", () => {
       ["item_list", "hssc", "인사캠"],
       ["item_list", "nsc", "자과캠"],
     ]);
-    expect(res.body.data.sections[1].items).toContainEqual({
+    expectWire(transitLayout, res.body.data);
+  });
+
+  it("Hyehwa in Korean: serves 혜화 as a station row with its line, first in hssc", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/transit").set("Accept-Language", "ko");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.sections[1].items[0]).toEqual({
       kind: "subway",
-      id: "subway:S1-4-420",
-      stationId: "S1-4-420",
+      id: "subway:hyehwa",
+      stationId: "hyehwa",
       title: "혜화역",
       subtitle: "4호선",
-      icon: { type: "subway", color: "00A5DE", text: "4" },
-      action: { actionType: "route", actionValue: "/subway?station=S1-4-420" },
+      lines: [{ code: "4", name: "4호선", badge: "4", color: "00A5DE" }],
+      action: { actionType: "route", actionValue: "/subway?station=hyehwa" },
     });
+    expect(res.body.data.sections[2].items[0]).toMatchObject({ id: "subway:sungkyunkwan", lines: [{ code: "1", badge: "1", color: "0052A4" }] });
     expectWire(transitLayout, res.body.data);
   });
 

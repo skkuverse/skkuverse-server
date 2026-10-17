@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured: the route had not shipped; generated 2026-10-17 by UiTransitService over the committed transit-layout.json, the real bus groups and the served stations at 2026-10-20 12:00 KST (commute pilot open, fasttrack closed), Accept-Language ko; whole data",
+  "_about": "Synthetic, never captured: the route had not shipped; generated 2026-10-17 by UiTransitService (regenerated the same day for the station rows of add-commute-station-subway) over the committed transit-layout.json, the real bus groups and the served stations at 2026-10-20 12:00 KST (commute pilot open, fasttrack closed), Accept-Language ko; whole data",
   "data": {
     "version": 1,
     "sections": [
@@ -33,18 +33,21 @@
         "items": [
           {
             "kind": "subway",
-            "id": "subway:S1-4-420",
-            "stationId": "S1-4-420",
+            "id": "subway:hyehwa",
+            "stationId": "hyehwa",
             "title": "혜화역",
             "subtitle": "4호선",
-            "icon": {
-              "type": "subway",
-              "color": "00A5DE",
-              "text": "4"
-            },
+            "lines": [
+              {
+                "code": "4",
+                "name": "4호선",
+                "badge": "4",
+                "color": "00A5DE"
+              }
+            ],
             "action": {
               "actionType": "route",
-              "actionValue": "/subway?station=S1-4-420"
+              "actionValue": "/subway?station=hyehwa"
             }
           },
           {
@@ -120,18 +123,21 @@
         "items": [
           {
             "kind": "subway",
-            "id": "subway:KR-1-0153",
-            "stationId": "KR-1-0153",
+            "id": "subway:sungkyunkwan",
+            "stationId": "sungkyunkwan",
             "title": "성균관대역",
             "subtitle": "1호선",
-            "icon": {
-              "type": "subway",
-              "color": "0052A4",
-              "text": "1"
-            },
+            "lines": [
+              {
+                "code": "1",
+                "name": "1호선",
+                "badge": "1",
+                "color": "0052A4"
+              }
+            ],
             "action": {
               "actionType": "route",
-              "actionValue": "/subway?station=KR-1-0153"
+              "actionValue": "/subway?station=sungkyunkwan"
             }
           },
           {

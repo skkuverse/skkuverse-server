@@ -1,8 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { parseConfigFile } from "../../infra/config-file";
-import { SUBWAY_STATIONS } from "../subway.constants";
-import { assertTimetablesCover } from "./subway-timetable.rules";
+import { assertTimetablesCover, listSubwayPlatforms } from "./subway-timetable.rules";
 import { timetableFile } from "./subway-timetable.schema";
 import type { Timetable } from "./subway-timetable.types";
 
@@ -24,4 +23,4 @@ export const SUBWAY_TIMETABLES: readonly Timetable[] = TIMETABLE_FILES.map((file
   loadTimetable(file, JSON.parse(fs.readFileSync(path.join(__dirname, file), "utf8"))),
 );
 
-assertTimetablesCover(SUBWAY_STATIONS, SUBWAY_TIMETABLES);
+assertTimetablesCover(listSubwayPlatforms(), SUBWAY_TIMETABLES);

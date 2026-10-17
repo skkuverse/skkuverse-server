@@ -1,14 +1,16 @@
 /**
- * The arrivals route's two decisions: the stored state is served while it is
+ * The arrivals route's lookups and decisions: a station is found by its slug
+ * with its platforms, and a previous or next platform named in every language
+ * (a served one by its station's name); the stored state is served while it is
  * at most 2 minutes old, and a train is so many stops away as its last
  * observed station says: 0 at the served station, the upstream station's
  * place in its direction's list (nearest first, from 1) at an upstream
  * station whatever its state there, and unknown (null) for a station off the
  * list, a watched one such as Geumjeong included, or a train nothing has reported.
  */
-import { SUBWAY_STATIONS } from "../subway.constants";
-import type { SubwayStation } from "../subway.types";
-import { isFreshState, toStopsAway } from "./subway-arrivals.rules";
+import { SUBWAY_REGISTRY } from "../subway.config";
+import type { SubwayPlatform } from "../subway.types";
+import { findPlatformName, findSubwayStation, isFreshState, toStopsAway } from "./subway-arrivals.rules";
 
 const GENERATED_AT = new Date("2026-10-16T11:41:00Z");
 
@@ -27,7 +29,7 @@ describe("isFreshState", () => {
 });
 
 describe("toStopsAway", () => {
-  const SUNGKYUNKWAN = SUBWAY_STATIONS.find((s) => s.id === "KR-1-0153") as SubwayStation;
+  const SUNGKYUNKWAN = SUBWAY_REGISTRY.stations[0]?.platforms[0] as SubwayPlatform;
   const DOWN = SUNGKYUNKWAN.directions.down;
 
   it.each([
@@ -47,5 +49,46 @@ describe("toStopsAway", () => {
 
     // Assert
     expect(stops).toBe(stopsAway);
+  });
+});
+
+describe("findSubwayStation", () => {
+  it.each([
+    ["sungkyunkwan", ["KR-1-0153"], "성균관대", { ko: "성균관대", en: "Sungkyunkwan Univ.", zh: "成均馆大学" }],
+    ["hyehwa", ["S1-4-420"], "혜화", { ko: "혜화", en: "Hyehwa", zh: "惠化" }],
+  ])("finds %s with its platforms, its Seoul name and its names", (slug, platformIds, seoulName, name) => {
+    // Act
+    const station = findSubwayStation(slug);
+
+    // Assert
+    expect(station?.platforms.map((platform) => platform.id)).toEqual(platformIds);
+    expect(station?.seoulName).toBe(seoulName);
+    expect(station?.name).toEqual(name);
+  });
+
+  it.each(["S1-4-420", "KR-1-0153", "Hyehwa", "seoul", ""])("finds no station for %j", (slug) => {
+    // Act
+    const station = findSubwayStation(slug);
+
+    // Assert
+    expect(station).toBeNull();
+  });
+});
+
+describe("findPlatformName", () => {
+  it.each([
+    ["KR-1-P152", { ko: "의왕", en: "Uiwang", zh: "义王" }],
+    ["KR-1-P154", { ko: "화서", en: "Hwaseo", zh: "华西" }],
+    ["S1-4-419", { ko: "한성대입구", en: "Hansung Univ.", zh: "汉城大入口" }],
+    ["S1-4-421", { ko: "동대문", en: "Dongdaemun", zh: "东大门" }],
+    ["S1-4-420", { ko: "혜화", en: "Hyehwa", zh: "惠化" }],
+  ])("names %s in every language", (platformId, name) => {
+    // Act & Assert
+    expect(findPlatformName(platformId)).toEqual(name);
+  });
+
+  it.each(["KR-1-P149", "S1-4-499"])("finds no name for %s, which is neither a named neighbor nor served", (platformId) => {
+    // Act & Assert
+    expect(findPlatformName(platformId)).toBeNull();
   });
 });
