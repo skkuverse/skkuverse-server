@@ -20,6 +20,12 @@ export function isNoResultHeaderCd(headerCd: string | undefined): boolean {
   return headerCd === "4";
 }
 
+// QUIRK(topis): numbers arrive as strings; anything else is not a number.
+export function toTopisInteger(text: string | null | undefined): number | null {
+  const trimmed = text?.trim() ?? "";
+  return /^-?\d+$/.test(trimmed) ? Number(trimmed) : null;
+}
+
 // WHY: TOPIS gives no arrival time, so a bus's time at its last passed station counts from the first tick that
 // saw a bus there; the dwell is per station, not per bus.
 export function toDwell(firstSeenAt: string | undefined, now: Date): JongroBusDwell {

@@ -4,7 +4,13 @@
  * cache can hold and states only the fields it checks. Lives under helpers/ so
  * jest does not collect it as a suite.
  */
-import type { HsscBusDoc, JongroArrivalDoc, JongroBusPositionDoc } from "../../../src/bus/cache/bus-cache.document";
+import type {
+  HsscBusDoc,
+  JongroArrivalBus,
+  JongroArrivalDoc,
+  JongroBusPositionDoc,
+  LegacyJongroArrivalDoc,
+} from "../../../src/bus/cache/bus-cache.document";
 
 export function hsscBusDoc(extra: Partial<HsscBusDoc> = {}): HsscBusDoc {
   return {
@@ -39,7 +45,28 @@ export function jongroPositionDoc(extra: Partial<JongroBusPositionDoc> = {}): Jo
   };
 }
 
-export function jongroArrivalDoc(extra: Partial<JongroArrivalDoc> = {}): JongroArrivalDoc {
+/** A bus of an arrival row; the default is 종로07's 서울70사5537 two stops before ord 3, 3 minutes away. */
+export function jongroArrivalBus(extra: Partial<JongroArrivalBus> = {}): JongroArrivalBus {
+  return {
+    traTime: 185,
+    sectOrd: 1,
+    staOrd: 3,
+    arrmsg: "3분5초후[2번째 전]",
+    isLast: false,
+    plainNo: "서울70사5537",
+    vehId: "100000103",
+    rerideDiv: 2,
+    rerideNum: 9,
+    ...extra,
+  };
+}
+
+/** What TOPIS sends for a bus slot it has no bus for. */
+export function noArrivalBus(extra: Partial<JongroArrivalBus> = {}): JongroArrivalBus {
+  return jongroArrivalBus({ traTime: 0, sectOrd: 0, arrmsg: "", plainNo: " ", vehId: "0", rerideDiv: 0, rerideNum: 0, ...extra });
+}
+
+export function legacyJongroArrivalDoc(extra: Partial<LegacyJongroArrivalDoc> = {}): LegacyJongroArrivalDoc {
   return {
     stationId: "100900220",
     sequence: "1",
@@ -48,6 +75,14 @@ export function jongroArrivalDoc(extra: Partial<JongroArrivalDoc> = {}): JongroA
     eventDate: "2026-10-20 10:00:00.0",
     stationNumber: "01000",
     eta: "3분후[2번째 전]",
+    ...extra,
+  };
+}
+
+export function jongroArrivalDoc(extra: Partial<JongroArrivalDoc> = {}): JongroArrivalDoc {
+  return {
+    ...legacyJongroArrivalDoc(),
+    buses: [jongroArrivalBus({ staOrd: 1, sectOrd: 0, arrmsg: "3분후[2번째 전]" }), noArrivalBus({ staOrd: 1 })],
     ...extra,
   };
 }

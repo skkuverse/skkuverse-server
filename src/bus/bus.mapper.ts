@@ -47,6 +47,7 @@ export function toJongroRoute(entry: JongroRouteEntry, serviceKey: string): Jong
     themeColor: entry.themeColor,
     iconType: entry.iconType,
     refreshInterval: entry.refreshInterval,
+    seatCount: entry.seatCount,
     arrivalsUrl: toJongroArrivalsUrl(entry.busRouteId, serviceKey),
     positionsUrl: toJongroPositionsUrl(entry.busRouteId, entry.stations.length, serviceKey),
     stations: toJongroStations(entry.stations),

@@ -230,3 +230,19 @@ describe("GET /bus/config and /bus/config/:groupId bodies", () => {
     for (const res of groups) expectWire(busGroup, res.body.data);
   });
 });
+
+describe("GET /bus/config/:groupId refresh", () => {
+  it("offers a traffic refresh on each campus service, and none on fasttrack", async () => {
+    // Act
+    const campus = await request(httpServer).get("/bus/config/campus");
+    const fasttrack = await request(httpServer).get("/bus/config/fasttrack");
+
+    // Assert
+    expect(campus.status).toBe(200);
+    expectWire(busGroup, campus.body.data);
+    for (const service of campus.body.data.screen.services) expect(service.refresh).toEqual({ targets: ["traffic"], intervalSec: 60 });
+    expect(fasttrack.status).toBe(200);
+    expectWire(busGroup, fasttrack.body.data);
+    expect(fasttrack.body.data.screen.services[0]).not.toHaveProperty("refresh");
+  });
+});

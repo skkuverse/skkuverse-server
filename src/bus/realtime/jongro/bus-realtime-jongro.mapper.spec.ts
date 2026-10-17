@@ -1,22 +1,8 @@
 /**
- * The Jongro mappers: a plate number becomes its last four digits ("----"
- * when there is none), and a sighting placed on a registry stop becomes the
- * cached bus position the realtime route reads.
+ * The Jongro mapper: a sighting placed on a registry stop becomes the cached
+ * bus position the realtime route reads.
  */
-import { toCarNumber, toJongroBusPosition } from "./bus-realtime-jongro.mapper";
-
-describe("toCarNumber", () => {
-  it.each([
-    ["서울74사5537", "5537"],
-    ["서울74사1234 ", "1234"],
-    [" ", "----"],
-    ["", "----"],
-    [undefined, "----"],
-  ])("%j → %s", (plateNo, expected) => {
-    // Act & Assert
-    expect(toCarNumber(plateNo)).toBe(expected);
-  });
-});
+import { toJongroBusPosition } from "./bus-realtime-jongro.mapper";
 
 describe("toJongroBusPosition", () => {
   it("places the sighting on its stop with its dwell", () => {

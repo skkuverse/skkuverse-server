@@ -66,6 +66,7 @@ describe("BusRealtimeJongroService.listArrivals", () => {
         eventDate: "2024-01-01 12:00:00",
         stationNumber: "01504",
         eta: "3분후[1번째 전]",
+        buses: [],
       },
     ];
 
@@ -168,6 +169,7 @@ describe("BusRealtimeJongroService.refresh", () => {
         carNumber: "----",
         eventDate: "",
         eta: "",
+        buses: [],
       }));
     };
     const driftWarnsFor = (code: string) =>

@@ -1,8 +1,10 @@
 import { t } from "../../infra/i18n";
 import type { SupportedLang } from "../../infra/types";
+import { ESTIMATES_MAX_AGE_S } from "../bus.constants";
+import { serviceConfigOf } from "../bus.rules";
 import type { JongroRoute } from "../bus.types";
 import type { ResolvedStops } from "../stops/bus-stops.types";
-import type { BusGroup } from "./bus-config.wire";
+import type { BusGroup, ServiceRefresh } from "./bus-config.wire";
 import {
   CAMPUS_SERVICE_IDS,
   COMMUTE_SERVICE_IDS,
@@ -62,6 +64,10 @@ function toJongroGroup(route: JongroRoute, lang: SupportedLang) {
   };
 }
 
+// WHY: no key without live estimates, since the app shows a refresh button exactly when the key is there.
+const refreshOf = (serviceId: string): { refresh?: ServiceRefresh } =>
+  serviceConfigOf(serviceId)?.eta ? { refresh: { targets: ["traffic"], intervalSec: ESTIMATES_MAX_AGE_S } } : {};
+
 // WHY: a service without stop sequences has no `stopSequences` key, so its entry serializes as in v1.
 function scheduleServices(serviceIds: readonly string[], lang: SupportedLang, sequences: ResolvedStops["sequences"]) {
   return serviceIds.map((serviceId) => ({
@@ -69,6 +75,7 @@ function scheduleServices(serviceIds: readonly string[], lang: SupportedLang, se
     label: t(`busconfig.service.${serviceId}`, lang),
     endpoint: `/bus/schedule/data/${serviceId}/smart`,
     ...(sequences[serviceId] ? { stopSequences: sequences[serviceId] } : {}),
+    ...refreshOf(serviceId),
   }));
 }
 
@@ -126,7 +133,12 @@ function toFasttrackGroup(lang: SupportedLang) {
     screen: {
       defaultServiceId: "fasttrack-inja",
       services: [
-        { serviceId: "fasttrack-inja", label: t("busconfig.service.campus-inja", lang), endpoint: "/bus/schedule/data/fasttrack-inja/smart" },
+        {
+          serviceId: "fasttrack-inja",
+          label: t("busconfig.service.campus-inja", lang),
+          endpoint: "/bus/schedule/data/fasttrack-inja/smart",
+          ...refreshOf("fasttrack-inja"),
+        },
       ],
       heroCard: null,
       routeBadges: [routeBadge("fasttrack", FASTTRACK_ORANGE, lang)],

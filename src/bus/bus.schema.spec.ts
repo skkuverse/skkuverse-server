@@ -24,6 +24,7 @@ const route = (stations: unknown[], overrides: Record<string, unknown> = {}) => 
   themeColor: "4CAF50",
   iconType: "village",
   refreshInterval: 40,
+  seatCount: 18,
   stations,
   ...overrides,
 });
@@ -73,6 +74,32 @@ describe("jongroRoutesConfig", () => {
   it("accepts the last stop repeating the first (TOPIS loop close)", () => {
     // Act & Assert
     expect(messagesOf([route([stn("A", true), stn("B"), stn("A", false, true)])])).toEqual([]);
+  });
+});
+
+// WHY: crowding compares a bus's passenger count with its route's seat count, so a route without a usable one
+// fails the boot, named by its path (improve-jongro-realtime D5).
+describe("jongroRoutesConfig seatCount", () => {
+  const stations = () => [stn("A", true), stn("B", false, true)];
+
+  it("rejects a route without a seat count, naming it", () => {
+    // Arrange
+    const withoutSeatCount = Object.fromEntries(Object.entries(route(stations())).filter(([key]) => key !== "seatCount"));
+
+    // Act & Assert
+    expect(messagesOf([route(stations(), { id: "jongro98" }), withoutSeatCount])).toEqual([
+      "1.seatCount: Invalid input: expected number, received undefined",
+    ]);
+  });
+
+  it.each([[0], [-18], [17.5]])("rejects a seat count of %j, naming the route", (seatCount) => {
+    // Act & Assert
+    expect(messagesOf([route(stations(), { seatCount })])).toEqual(["0.seatCount: required positive integer"]);
+  });
+
+  it("accepts a seat count of 1", () => {
+    // Act & Assert
+    expect(messagesOf([route(stations(), { seatCount: 1 })])).toEqual([]);
   });
 });
 

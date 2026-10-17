@@ -19,6 +19,9 @@
       "refreshInterval": {
         "type": "number"
       },
+      "seatCount": {
+        "type": "number"
+      },
       "stations": {
         "type": "array",
         "items": {
@@ -79,6 +82,7 @@
       "themeColor",
       "iconType",
       "refreshInterval",
+      "seatCount",
       "stations"
     ]
   }

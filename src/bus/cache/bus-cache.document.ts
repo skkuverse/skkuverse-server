@@ -20,7 +20,23 @@ export interface HsscBusDoc extends HsscApiBus {
   isLastBus: boolean;
 }
 
-export interface JongroArrivalDoc {
+export interface JongroArrivalBus {
+  /** QUIRK(topis): seconds to the stop, although TOPIS's guide says minutes; 0 when it has none. */
+  traTime: number;
+  sectOrd: number;
+  staOrd: number;
+  arrmsg: string;
+  isLast: boolean;
+  plainNo: string;
+  /** QUIRK(topis): "0" when no bus is assigned. */
+  vehId: string;
+  /** QUIRK(topis): 2 makes rerideNum the on-board passenger count, 4 a congestion code. */
+  rerideDiv: number | null;
+  rerideNum: number | null;
+}
+
+/** WHY: the shape the previous poller wrote; a new replica can read one for 60 s after a deploy. */
+export interface LegacyJongroArrivalDoc {
   stationId: string;
   sequence: string;
   stationName: string;
@@ -29,6 +45,13 @@ export interface JongroArrivalDoc {
   stationNumber: string;
   eta: string;
 }
+
+export interface JongroArrivalDoc extends LegacyJongroArrivalDoc {
+  /** WHY: the row's first bus, then its second. */
+  buses: JongroArrivalBus[];
+}
+
+export type CachedJongroArrivalDoc = JongroArrivalDoc | LegacyJongroArrivalDoc;
 
 export interface JongroBusPositionDoc {
   sequence: string;
@@ -45,7 +68,7 @@ export interface JongroBusPositionDoc {
 export interface BusCacheValueByKey {
   hssc: HsscBusDoc[];
   station: string;
-  [key: `jongro_stations_${string}`]: JongroArrivalDoc[];
+  [key: `jongro_stations_${string}`]: CachedJongroArrivalDoc[];
   [key: `jongro_locations_${string}`]: JongroBusPositionDoc[];
 }
 

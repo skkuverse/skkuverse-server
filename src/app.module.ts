@@ -9,6 +9,7 @@ import { BusCacheModule } from "./bus/cache/bus-cache.module";
 import { BusRealtimeModule } from "./bus/realtime/bus-realtime.module";
 import { BusRealtimeHsscModule } from "./bus/realtime/hssc/bus-realtime-hssc.module";
 import { BusRealtimeJongroModule } from "./bus/realtime/jongro/bus-realtime-jongro.module";
+import { BusRealtimeArrivalModule } from "./bus/realtime/arrival/bus-realtime-arrival.module";
 import { BusRealtimeGroupModule } from "./bus/realtime/group/bus-realtime-group.module";
 import { BusStationModule } from "./bus/station/bus-station.module";
 import { BusStopsModule } from "./bus/stops/bus-stops.module";
@@ -80,6 +81,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusRealtimeModule,
     BusRealtimeHsscModule,
     BusRealtimeJongroModule,
+    BusRealtimeArrivalModule,
     BusRealtimeGroupModule,
     BusStationModule,
     BusStopsModule,
