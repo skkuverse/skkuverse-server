@@ -23,5 +23,10 @@ export interface ShuttleEtaDoc {
   frozenAt?: Date;
   /** WHY: set only on a bus-lane run's live value; a car run, and any document written before it, has none. */
   travel?: EtaTravel;
+  /** WHY: set only on a prediction that reuses a fixed value: that value's `_id`. */
+  derivedFrom?: string;
   expiresAt: Date;
 }
+
+/** WHY: a fixed live value as a bus-lane run's prediction reuses it. */
+export type FixedEstimate = Pick<ShuttleEtaDoc, "_id" | "serviceId" | "routeType" | "date" | "time" | "offsetsSec">;

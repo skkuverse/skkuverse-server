@@ -17,6 +17,7 @@ import { BusEtaModule } from "./bus/eta/bus-eta.module";
 import { BusEtaLaneModule } from "./bus/eta/lane/bus-eta-lane.module";
 import { BusEtaProbeModule } from "./bus/eta/probe/bus-eta-probe.module";
 import { BusEtaTravelModule } from "./bus/eta/travel/bus-eta-travel.module";
+import { BusEtaForecastModule } from "./bus/eta/forecast/bus-eta-forecast.module";
 import { BusEtaLiveModule } from "./bus/eta/live/bus-eta-live.module";
 import { BusEtaBaselineModule } from "./bus/eta/baseline/bus-eta-baseline.module";
 import { BusEtaSmartModule } from "./bus/eta/smart/bus-eta-smart.module";
@@ -81,6 +82,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusEtaLaneModule,
     BusEtaProbeModule,
     BusEtaTravelModule,
+    BusEtaForecastModule,
     BusEtaLiveModule,
     BusEtaBaselineModule,
     BusEtaSmartModule,

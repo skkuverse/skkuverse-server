@@ -194,3 +194,73 @@ describe("BusEtaRepository travel model", () => {
     expect(coll.find).toHaveBeenCalledWith({ serviceId: { $in: ["campus-inja"] }, date: { $in: ["2026-10-12"] } }, { maxTimeMS: 3_000 });
   });
 });
+
+describe("BusEtaRepository.listFixedEstimates", () => {
+  // 04:00 KST on Tuesday 2026-10-20.
+  const NOW = new Date("2026-10-19T19:00:00.000Z");
+  const FIXED = {
+    _id: "campus-inja|regular|2026-10-13|13:30|live",
+    serviceId: "campus-inja",
+    routeType: "regular",
+    date: "2026-10-13",
+    time: "13:30",
+    offsetsSec: [0, 4320],
+  };
+
+  it("reads the unexpired fixed live values of some services on some dates, only the fields a reuse needs, bounded", async () => {
+    // Arrange
+    frozenInDb = [FIXED];
+
+    // Act
+    const fixed = await repository.listFixedEstimates(["campus-inja"], ["2026-10-13", "2026-10-06"], NOW);
+
+    // Assert
+    expect(fixed).toEqual([FIXED]);
+    expect(coll.find).toHaveBeenCalledWith(
+      { kind: "live", frozen: true, serviceId: { $in: ["campus-inja"] }, date: { $in: ["2026-10-13", "2026-10-06"] }, expiresAt: { $gt: NOW } },
+      { projection: { _id: 1, serviceId: 1, routeType: 1, date: 1, time: 1, offsetsSec: 1 }, maxTimeMS: 3_000 },
+    );
+  });
+
+  it("leaves out a document that does not parse, and logs it by its id", async () => {
+    // Arrange
+    const broken = { ...FIXED, _id: "campus-inja|regular|2026-10-06|13:30|live", offsetsSec: undefined } as unknown as typeof FIXED;
+    frozenInDb = [broken, FIXED];
+
+    // Act
+    const fixed = await repository.listFixedEstimates(["campus-inja"], ["2026-10-13", "2026-10-06"], NOW);
+
+    // Assert
+    expect(fixed).toEqual([FIXED]);
+    expect(logger.warn).toHaveBeenCalledWith(
+      { event: "bus.eta.invalid_document", count: 1, invalid: ["campus-inja|regular|2026-10-06|13:30|live: offsetsSec"] },
+      expect.any(String),
+    );
+  });
+});
+
+describe("BusEtaRepository.upsertEstimates derivedFrom", () => {
+  it("stores a reused prediction with the fixed value it came from", async () => {
+    // Arrange
+    const fetchedAt = new Date("2026-10-19T19:00:00.000Z");
+    const reused: ShuttleEtaDoc = {
+      _id: etaDocId(RUN, "baseline"),
+      kind: "baseline",
+      ...RUN,
+      offsetsSec: [0, 3000, 3200],
+      source: "naver",
+      fetchedAt,
+      derivedFrom: "campus-inja|regular|2026-10-05|10:00|live",
+      expiresAt: new Date(fetchedAt.getTime() + 24 * 3600_000),
+    };
+
+    // Act
+    await repository.upsertEstimates([reused], seqLength);
+
+    // Assert
+    expect(coll.bulkWrite).toHaveBeenCalledWith(
+      [{ replaceOne: { filter: { _id: reused._id }, replacement: reused, upsert: true } }],
+      { ordered: false },
+    );
+  });
+});

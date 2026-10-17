@@ -10,7 +10,7 @@ import config from "../../../infra/config";
 import logger from "../../../infra/logger";
 import type { PollerRegistryService } from "../../../scheduling/poller-registry.service";
 import type { BusEtaService } from "../bus-eta.service";
-import type { BusEtaBaselineClient } from "./bus-eta-baseline.client";
+import type { BusEtaForecastService } from "../forecast/bus-eta-forecast.service";
 import { BusEtaBaselinePoller } from "./bus-eta-baseline.poller";
 
 const shuttleEta = config.shuttleEta as { enabled: boolean };
@@ -25,7 +25,7 @@ const eta = {
   listFitting: jest.fn(async () => []),
   upsertFitting: jest.fn(),
 } as unknown as BusEtaService;
-const client = { fetchOffsets: jest.fn() } as unknown as BusEtaBaselineClient;
+const forecast = { fetchOffsets: jest.fn() } as unknown as BusEtaForecastService;
 
 describe("BusEtaBaselinePoller.onModuleInit", () => {
   const enabled = shuttleEta.enabled;
@@ -39,7 +39,7 @@ describe("BusEtaBaselinePoller.onModuleInit", () => {
     shuttleEta.enabled = false;
 
     // Act
-    new BusEtaBaselinePoller(registry, eta, client, clock).onModuleInit();
+    new BusEtaBaselinePoller(registry, eta, forecast, clock).onModuleInit();
 
     // Assert
     expect(logger.info).toHaveBeenCalledTimes(1);
@@ -51,7 +51,7 @@ describe("BusEtaBaselinePoller.onModuleInit", () => {
     shuttleEta.enabled = false;
 
     // Act
-    new BusEtaBaselinePoller(registry, eta, client, clock).onModuleInit();
+    new BusEtaBaselinePoller(registry, eta, forecast, clock).onModuleInit();
 
     // Assert
     expect(registerPoller).not.toHaveBeenCalled();
@@ -62,7 +62,7 @@ describe("BusEtaBaselinePoller.onModuleInit", () => {
     shuttleEta.enabled = true;
 
     // Act
-    new BusEtaBaselinePoller(registry, eta, client, clock).onModuleInit();
+    new BusEtaBaselinePoller(registry, eta, forecast, clock).onModuleInit();
 
     // Assert
     expect(registerPoller.mock.calls.map((c) => [c[2], c[1]])).toEqual([["shuttle-eta-baseline", 300_000]]);

@@ -5,7 +5,7 @@ import logger from "../../../infra/logger";
 import { PollerRegistryService } from "../../../scheduling/poller-registry.service";
 import { DailyCap } from "../../../shared/daily-cap.util";
 import { BusEtaService } from "../bus-eta.service";
-import { BusEtaBaselineClient } from "./bus-eta-baseline.client";
+import { BusEtaForecastService } from "../forecast/bus-eta-forecast.service";
 import { BusEtaBaselineService } from "./bus-eta-baseline.service";
 
 const POLL_INTERVAL_MS = 5 * 60_000;
@@ -15,7 +15,7 @@ export class BusEtaBaselinePoller implements OnModuleInit {
   constructor(
     private readonly registry: PollerRegistryService,
     private readonly eta: BusEtaService,
-    private readonly client: BusEtaBaselineClient,
+    private readonly forecast: BusEtaForecastService,
     private readonly clock: Clock,
   ) {}
 
@@ -25,7 +25,7 @@ export class BusEtaBaselinePoller implements OnModuleInit {
     const baseline = new BusEtaBaselineService({
       sequences: this.eta.sequences(),
       upcomingRuns: (sequence, now) => this.eta.upcomingRuns(sequence, now),
-      fetchOffsets: (stops, departAt) => this.client.fetchOffsets(stops, departAt, { appKey: config.shuttleEta.tmapAppKey as string }),
+      forecast: this.forecast,
       readEtas: (serviceIds, dates) => this.eta.listFitting(serviceIds, dates),
       writeEtas: (docs) => this.eta.upsertFitting(docs),
       cap: new DailyCap("tmap", config.shuttleEta.tmapDailyCap),
