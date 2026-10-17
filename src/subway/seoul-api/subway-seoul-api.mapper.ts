@@ -1,6 +1,6 @@
 import moment from "moment-timezone";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
-import type { CountdownRow, TrainEvent, TrainNumbering, TrainState } from "../subway.types";
+import type { CountdownRow, SubwayDirection, TrainEvent, TrainNumbering, TrainState } from "../subway.types";
 import { isArrivalRowInWindow, toTimetableTrainNo } from "./subway-seoul-api.rules";
 import type { SeoulArrivalRow, SeoulPositionRow } from "./subway-seoul-api.schema";
 import type { CountdownPlatform } from "./subway-seoul-api.types";
@@ -16,6 +16,10 @@ const STATE_BY_TRAIN_STTUS: Readonly<Record<SeoulPositionRow["trainSttus"], Trai
   "3": null,
 };
 
+// QUIRK(seoul-subway-api): a position row's `updnLine` is `0` for an up train and `1` for a down one, but a train
+// leaving a terminus keeps its old value for a minute or more while its destination has already turned (2026-10-17).
+const DIRECTION_BY_UPDN_LINE: Readonly<Record<SeoulPositionRow["updnLine"], SubwayDirection>> = { "0": "up", "1": "down" };
+
 export function toTrainEvents(
   rows: readonly SeoulPositionRow[],
   platformIdByName: ReadonlyMap<string, string>,
@@ -26,7 +30,8 @@ export function toTrainEvents(
     const state = STATE_BY_TRAIN_STTUS[row.trainSttus];
     if (platformId === undefined || state === null) return [];
     const trainNo = toTimetableTrainNo(row.trainNo, trainNumbers, row.statnTnm);
-    return trainNo === null ? [] : [{ trainNo, platformId, state, stateChangedAt: toKstInstant(row.recptnDt), destination: row.statnTnm }];
+    const reported = trainNumbers === "trainset" ? { reportedDirection: DIRECTION_BY_UPDN_LINE[row.updnLine] } : {};
+    return trainNo === null ? [] : [{ trainNo, platformId, state, stateChangedAt: toKstInstant(row.recptnDt), destination: row.statnTnm, ...reported }];
   });
 }
 

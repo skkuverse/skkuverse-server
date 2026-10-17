@@ -23,6 +23,8 @@ export interface TrainEvent {
   state: TrainState;
   stateChangedAt: Date;
   destination: string;
+  // WHY: only a line matched to runs carries it, and reads it only where its destination names both directions (design D14).
+  reportedDirection?: SubwayDirection;
 }
 
 export interface CountdownRow {

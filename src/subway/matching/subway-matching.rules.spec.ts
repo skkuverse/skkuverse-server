@@ -9,6 +9,8 @@
  * for the Shinbundang line (design D8): minute times, arrival equal to departure, runs numbered from 1001 down and 1002
  * up, on a shortened route.
  */
+import fs from "fs";
+import path from "path";
 import { APPROACH_LEAD_MS } from "../subway.constants";
 import type { SubwayDirection, TrainEvent } from "../subway.types";
 import type { LineRoutes, ScheduledTrain } from "../timetable/subway-timetable.types";
@@ -71,6 +73,23 @@ describe("toOneDirectionDestinations", () => {
       ["광교", "down"],
       ["신사", "up"],
     ]);
+  });
+});
+
+describe("toOneDirectionDestinations over the committed 신분당선 tables", () => {
+  // WHY: the destinations the 2026-10-17 positions wrote, `신사` and `광교` (task 6.3.1), must each name one direction.
+  const tableTrains = (dayType: string) =>
+    (JSON.parse(fs.readFileSync(path.join(__dirname, `../timetable/shinbundang-d1-${dayType}.json`), "utf8")) as { trains: ScheduledTrain[] }).trains;
+
+  it.each([
+    ["weekday", [["광교", "down"], ["신사", "up"]]],
+    ["holiday", [["광교", "down"], ["신사", "up"], ["정자", "down"]]],
+  ])("reads the %s table's one-direction destinations as %j, 정자 both ways on weekdays", (dayType, expected) => {
+    // Act
+    const directionByDestination = toOneDirectionDestinations(tableTrains(dayType));
+
+    // Assert
+    expect([...directionByDestination].sort()).toEqual(expected);
   });
 });
 
@@ -166,6 +185,31 @@ describe("matchRuns", () => {
     expect(runs.events).toEqual([]);
     expect(runs.unmatched).toEqual([seen]);
     expect(runs.matchesByTrainset.has("3")).toBe(false);
+  });
+
+  it("정자 on a weekday: takes the direction its row reports for a destination the table names both ways, so a 정자-bound trainset going up takes the up run", () => {
+    // Arrange
+    const trains = [...TRAINS, run("1037", "up", "21:20:00", "정자", [GWANGGYO, MIGEUM, JEONGJA])];
+    const seen: TrainEvent = { ...event("9", MIGEUM, "21:22:30", "정자"), reportedDirection: "up" };
+
+    // Act
+    const runs = matchRuns(tick({ trains, events: [seen], now: at("21:22:35") }));
+
+    // Assert
+    expect(runs.events).toEqual([{ ...seen, trainNo: "1037" }]);
+    expect(runs.matchesByTrainset.get("9")).toEqual(matched("1037", "up", MIGEUM, at("21:22:35")));
+  });
+
+  it("takes the destination's direction over the row's: a trainset leaving 광교 for 신사, its row still reporting down, takes the up run", () => {
+    // Arrange
+    const seen: TrainEvent = { ...event("2", GWANGGYO, "21:12:20", "신사", "departed"), reportedDirection: "down" };
+
+    // Act
+    const runs = matchRuns(tick({ events: [seen], now: at("21:12:25") }));
+
+    // Assert
+    expect(runs.events.map((e) => e.trainNo)).toEqual(["1032"]);
+    expect(runs.matchesByTrainset.get("2")?.direction).toBe("up");
   });
 
   it.each([
