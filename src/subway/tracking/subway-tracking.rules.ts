@@ -20,15 +20,16 @@ export function toProgressOrdinal(route: readonly string[], event: Pick<TrainEve
   return stationIndex < 0 ? null : toOrdinal(stationIndex, event.state);
 }
 
-// WHY: a station a train's row does not call at, which an express passes, has no scheduled time to measure a
-// delay against (design D4); a train seen there has left its last stop before it, at the latest at that time.
+// WHY: a train seen at a station its row passes has left its last stop before it, at the latest then, so it never
+// replaces a stop event; before its first stop it stays there, timed from its next stop (design D4).
 function toStopProgress(route: readonly string[], stopStationIds: readonly string[] | undefined, event: TrainEvent): TrainProgress | null {
   const stationIndex = route.indexOf(event.stationId);
   const at = event.stateChangedAt;
   if (stationIndex < 0) return null;
-  if (!stopStationIds || stopStationIds.includes(event.stationId)) return { stationId: event.stationId, state: event.state, at, ordinal: toOrdinal(stationIndex, event.state) };
+  const progress: TrainProgress = { stationId: event.stationId, state: event.state, at, ordinal: toOrdinal(stationIndex, event.state) };
+  if (!stopStationIds || stopStationIds.includes(event.stationId)) return progress;
   const lastStopId = route.slice(0, stationIndex).filter((stationId) => stopStationIds.includes(stationId)).at(-1);
-  return lastStopId === undefined ? null : { stationId: lastStopId, state: "departed", at, ordinal: toOrdinal(route.indexOf(lastStopId), "departed") };
+  return lastStopId === undefined ? progress : { stationId: lastStopId, state: "departed", at, ordinal: toOrdinal(route.indexOf(lastStopId), "departed") };
 }
 
 // WHY: both operators number up trains even and down trains odd (every train of the committed timetables);

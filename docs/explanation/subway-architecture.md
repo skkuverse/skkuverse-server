@@ -46,7 +46,7 @@ Subway owns the real-time arrivals of the stations nearest the two campuses: Sun
 | `trainNo` | A train's number as four digits, the operator's prefix letter dropped | the upstream's train number | `trainId` |
 | train state (`TrainState`) | Where a train is relative to a station: `approaching`, `arrived` or `departed` | the upstream's row | — |
 | train event (`TrainEvent`) | One train's state at one station, when that state changed, and its destination as the upstream names it | a provider's upstream rows | — |
-| pass-through event | An event at a station a train's timetable row does not call at, which an express passes; it counts as the train's departure from its last row stop before that station, at the latest at the event's time, and starts no history before the train's first row stop | `mergeObservations` | — |
+| pass-through event | An event at a station a train's timetable row does not call at, which an express passes; it counts as the train's departure from its last row stop before that station, at the latest at the event's time; before the train's first row stop it stays its progress, at that station | `mergeObservations` | — |
 | Seoul line (`SeoulLine`) | One line the `seoul` provider polls: its Seoul API name, its train-map line, its served stations and the station id of each Seoul station name it covers | `toSeoulLines` | — |
 | countdown row (`CountdownRow`) | An upstream's own seconds until a train reaches a station, and when the upstream generated the row | a provider's upstream rows | — |
 | first published row (`toFirstPublishedRows`) | A countdown row dated by the earliest generation time of the rows repeating its train's countdown at its station, which the countdown counts from | `SubwayCountdownService` | — |
@@ -58,6 +58,7 @@ Subway owns the real-time arrivals of the stations nearest the two campuses: Sun
 | service window (`isInServiceWindow`) | The hours an upstream is observed, from `SERVICE_WINDOW_OPENS_SEC` to the day type's `SERVICE_WINDOW_CLOSES_SEC`, in seconds after midnight of the service day | `SubwayTimetableService.isInServiceWindow` | — |
 | train history (`TrainHistory`) | One train's direction, destination and latest accepted progress at a station its timetable row calls at, on one station's line, and when it was last seen | `mergeObservations` | — |
 | delay (`toDelaySec`) | A train's seconds behind its own timetable row at its latest event, at least its standing time past a scheduled departure | `toDelaySec` | — |
+| passing stop (`toPassingStop`) | When a train is scheduled at a station its row passes: its next row stop's arrival less the running time there of the train nearest in time that calls at both, its stands left out | `toPassingStop` | — |
 | train arrival (`TrainArrival`) | One train's arrival at a station: its instant, its source and its position | `toStationArrivals` | — |
 | arrival source (`ArrivalSource`) | How an arrival was obtained: `live` from a published countdown, `estimated` from the timetable and a delay, `scheduled` from the timetable alone | `toStationArrivals` | — |
 | countdown divergence (`CountdownDivergence`) | A live arrival over `MAX_COUNTDOWN_DIVERGENCE_SEC` from the train's estimate; logged, the live one still served while it counts | `toStationArrivals` | — |
@@ -141,7 +142,7 @@ Adding a provider touches:
 - Within one tick each call settles on its own: what answered is tracked and the tick then rejects with the first failure; a tick whose every call failed is not tracked, so it replaces no countdown rows.
 - A train-map line with no train is not a failure until it has had none for over `MAX_EMPTY_LINE_MS` of crawls at most `MAX_EMPTY_CRAWL_GAP_MS` apart: each morning a line is empty for a while after the window opens, and the overnight closure starts a new spell.
 - A timetable destination is the name the train map and the Seoul API write for it: `convert.py` refuses a Korail destination in neither of its tables, and no destination names trains of both directions (`__tests__/nest/subway/subway-timetable-convert.test.ts`).
-- A train's latest progress is always at a station its timetable row calls at: an event at a station it passes never replaces an observed stop event, and an observed departure keeps its earlier time.
+- A train's latest progress is at a station its timetable row calls at, or before its first row stop at a station it passes, measured against its passing stop: an event at a station it passes never replaces an observed stop event, and an observed departure keeps its earlier time.
 - A train seen past the served station is held `PASSED_TRAIN_HOLD_MS`, the largest lent delay plus the earliest an observed train leaves, after it was last seen, so a lent delay never lists it again; any other missing train is held `MISSING_TRAIN_HOLD_MS`.
 - Each upstream ticks, fails and reaches its daily ceiling on its own; a ceiling rejects that source's ticks until the next KST date.
 - With `SUBWAY=off` nothing calls the provider and the route serves the timetable alone; the provider itself has no switch.
@@ -164,7 +165,6 @@ Adding a provider touches:
 - Whether `recptnDt` is an event time on line `1`, and any offset to apply, waits on the first days of `subway_events` (the [add-subway-arrivals change](../../openspec/changes/add-subway-arrivals/design.md), Risks).
 - A countdown's divergence from the estimate is logged, not stored with the prediction as the design's countdown decision says: the report compares `live` and `estimated` only across trains.
 - Destinations are the upstreams' Korean names; the app has no localized name for a destination yet.
-- A down express seen before `KR-1-0153`, its first stop the timetables cover, has no stop event to infer a departure from, so it starts no history there and still borrows the delay of the train ahead.
 
 ## Related
 

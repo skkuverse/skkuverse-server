@@ -24,7 +24,7 @@
     "reason": "ADR 0010 D9, no domain seam: the list badge is one priority chain a list item is cut from, the v1 period pick and the v2 role badge feeding one brief, and the cursor decode beside it; neither half is a flow of its own, so a sub-module would hold rules and nothing else, and the badge alone exceeds the rules cap."
   },
   "src/subway/estimate/subway-estimate.rules.ts": {
-    "max": 105,
-    "reason": "ADR 0010 D9, no domain seam a sub-module can take: every function here feeds `toStationArrivals`, which composes each train's candidate, its delay (`toDelaySec`), the delay lent to unobserved trains, the departure estimated at the served station and the countdown a train may count, and a sibling or parent never imports a sub-module's rules (D3); the countdown's memory across ticks, the one part only the service reads, is src/subway/countdown/."
+    "max": 134,
+    "reason": "ADR 0010 D9, no domain seam a sub-module can take: every function here feeds `toStationArrivals`, which composes each train's candidate, its delay (`toDelaySec`, at a station its row passes against `toPassingStop`), the delay lent to unobserved trains, the departure estimated at the served station and the countdown a train may count, and a sibling or parent never imports a sub-module's rules (D3); the countdown's memory across ticks, the one part only the service reads, is src/subway/countdown/."
   }
 }
