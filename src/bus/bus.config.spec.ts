@@ -28,6 +28,15 @@ describe("jongroRoutes derived from jongro-routes.json", () => {
     expect(jongroRoutes[2]!.code).toBe("08");
   });
 
+  it("reads a seat count of 18 for every route", () => {
+    // Act & Assert
+    expect(jongroRoutes.map((r) => [r.id, r.seatCount])).toEqual([
+      ["jongro02", 18],
+      ["jongro07", 18],
+      ["jongro08", 18],
+    ]);
+  });
+
   it("builds 종로08 from TOPIS route 100900005: 31 stops, 회차 at 재향군인회관", () => {
     // Arrange
     const r08 = jongroRoutes.find((r) => r.id === "jongro08")!;
@@ -264,7 +273,7 @@ describe("loadJongroRoutes validation (fail-loud surfaces)", () => {
   it("rejects route with bad id pattern", () => {
     // Arrange
     const errors = issuesOf([
-      { id: "jongroX", busRouteId: "1", themeColor: "4CAF50", iconType: "village", refreshInterval: 40, stations: [
+      { id: "jongroX", busRouteId: "1", themeColor: "4CAF50", iconType: "village", refreshInterval: 40, seatCount: 18, stations: [
         { stationName: "a", arsId: "1", topisId: "t1", isFirstStation: true, isLastStation: false, isRotationStation: false, transferLines: [] },
         { stationName: "b", arsId: "2", topisId: "t2", isFirstStation: false, isLastStation: true, isRotationStation: false, transferLines: [] },
       ] },
@@ -279,7 +288,7 @@ describe("loadJongroRoutes validation (fail-loud surfaces)", () => {
     isFirstStation: first, isLastStation: last, isRotationStation: false, transferLines: [],
   });
   const routeOf = (...stations: unknown[]) => [
-    { id: "jongro99", busRouteId: "1", themeColor: "4CAF50", iconType: "village", refreshInterval: 40, stations },
+    { id: "jongro99", busRouteId: "1", themeColor: "4CAF50", iconType: "village", refreshInterval: 40, seatCount: 18, stations },
   ];
 
   it("rejects duplicate topisId within a route", () => {

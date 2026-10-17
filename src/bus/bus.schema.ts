@@ -17,6 +17,7 @@ function checkEntryFields(entry: JongroRouteEntry, at: IssuePath, ctx: Issues): 
   if (!isHex6(entry.themeColor)) report(ctx, [...at, "themeColor"], HEX);
   if (entry.iconType.length === 0) report(ctx, [...at, "iconType"], NON_EMPTY);
   if (!(entry.refreshInterval > 0)) report(ctx, [...at, "refreshInterval"], "required positive number");
+  if (!(Number.isInteger(entry.seatCount) && entry.seatCount > 0)) report(ctx, [...at, "seatCount"], "required positive integer");
 }
 
 function checkStations(entry: JongroRouteEntry, at: IssuePath, ctx: Issues): void {

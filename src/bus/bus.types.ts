@@ -27,6 +27,7 @@ export interface JongroRoute {
   readonly themeColor: string;
   readonly iconType: string;
   readonly refreshInterval: number;
+  readonly seatCount: number;
   readonly arrivalsUrl: string;
   readonly positionsUrl: string;
   readonly stations: ReadonlyArray<JongroStation>;
