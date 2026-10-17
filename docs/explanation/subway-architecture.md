@@ -31,6 +31,9 @@ Subway owns the real-time arrivals of the stations nearest the two campuses: Sun
 | Term | Means | Derived from | Not |
 | --- | --- | --- | --- |
 | station (`SubwayStation`) | A served station: its KRIC codes, its names, its two directions and its seoul ids | `SUBWAY_STATIONS`, found by `findSubwayStation` | `subwayStop` |
+| served station (`ServedStation`) | A station as other modules read it: its station id, its title, its line code and its line's label and color | `toServedStation`, listed by `SubwayStationsService.listStations` | — |
+| station suffix (`STATION_SUFFIX`) | What each language writes after a station's name to make its title (`혜화역`, `Hyehwa Station`, `惠化站`) | `STATION_SUFFIX` | — |
+| line (`SubwayLine`) | A line's localized label and the color its operator paints it in, six hex digits, by line code | `LINE_BY_LINE_CODE` | — |
 | station id | The KRIC operator, line and station codes joined as `<operator>-<line>-<station>` (`KR-1-0153`) | `SubwayStation.id` | the Seoul API's own station id, which exists only where that API does |
 | localized name (`LocalizedName`) | A name in every supported language | `SUBWAY_STATIONS` | — |
 | direction (`SubwayDirection`) | `up` or `down`, as the operator's timetable names a train's direction | the timetables' `direction` | `bound` |
@@ -107,6 +110,7 @@ flowchart LR
 
 The root holds the module file, which binds the rate limiter for `subway`, `SUBWAY_STATIONS`, `findSubwayStation`, the provider seam (`SubwayProvider` and the shapes it hands over in `src/subway/subway.types.ts`) and `SubwayRepository`, which the tracker writes and the route reads. Everything after the seam does not depend on the provider: merging, delay, estimates, the stored state and the response.
 
+- `stations/` holds `SubwayStationsService`, the door other modules list the served stations through: each one's station id, its title, its line code and its line's label and color. A station on a line that `LINE_BY_LINE_CODE` does not list fails the boot.
 - `timetable/` parses the committed tables at import and holds the service-day rules. `SubwayTimetableService` is its door: each station's schedule for the service day of an instant, and whether the instant is in the service window.
 - `estimate/` holds the delay and estimate rules; `SubwayEstimateService` is its door, and reads every countdown through `SubwayCountdownService`, then decides whether each train counts it.
 - `countdown/` holds `SubwayCountdownService`, which remembers the countdown rows it was last handed, in the poller process: a row repeating a train's countdown at a station counts from its first publication.
@@ -119,6 +123,7 @@ The root holds the module file, which binds the rate limiter for `subway`, `SUBW
 Adding a station touches:
 
 - `SUBWAY_STATIONS`: its KRIC codes checked against the code list, its localized names, each direction's name, upstream stations and next station, and the ids its provider reaches it by;
+- `LINE_BY_LINE_CODE` in `src/subway/stations/subway-stations.constants.ts`: the line's label and color, when the station is on a new line;
 - `NEIGHBOR_NAME_BY_STATION_ID` in `src/subway/arrivals/subway-arrivals.constants.ts`: the localized names of each direction's previous and next stations;
 - `scripts/subway-timetable/convert.py`: the station and its upstream stations in the timetables it writes, then a rerun;
 - `scripts/copy-build-assets.js`: any new timetable file;
@@ -163,14 +168,14 @@ Adding a provider touches:
 
 ## Open questions
 
-- Whether `recptnDt` is an event time on line `1`, and any offset to apply, waits on the first days of `subway_events` (the [add-subway-arrivals change](../../openspec/changes/add-subway-arrivals/design.md), Risks).
+- Whether `recptnDt` is an event time on line `1`, and any offset to apply, waits on the first days of `subway_events` (the [add-subway-arrivals change](../../openspec/changes/archive/2026-10-17-add-subway-arrivals/design.md), Risks).
 - A countdown's divergence from the estimate is logged, not stored with the prediction as the design's countdown decision says: the report compares `live` and `estimated` only across trains.
 - Destinations are the upstreams' Korean names; the app has no localized name for a destination yet.
 
 ## Related
 
 - [Subway API reference](../reference/subway-api.md): the route's contract
-- [Subway arrivals spec](../../openspec/changes/add-subway-arrivals/specs/subway-arrivals/spec.md): the required behavior
+- [Subway arrivals spec](../../openspec/changes/archive/2026-10-17-add-subway-arrivals/specs/subway-arrivals/spec.md): the required behavior
 - [Holidays architecture](holidays-architecture.md): the public holidays that choose a timetable's day type
 - [Logging reference](../reference/logging.md): the subway pollers' own lines
 - [ADR 0010](../decisions/0010-server-architecture.md): the module shape

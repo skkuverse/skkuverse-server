@@ -65,7 +65,7 @@ None.
 
 ## Related
 
-- [Public holidays spec](../../openspec/changes/add-subway-arrivals/specs/public-holidays/spec.md): the required behavior
+- [Public holidays spec](../../openspec/changes/archive/2026-10-17-add-subway-arrivals/specs/public-holidays/spec.md): the required behavior
 - [Bus architecture](bus-architecture.md): the shuttle schedules that read the holiday name
 - [ADR 0010](../decisions/0010-server-architecture.md): the module shape
 - [Docs index](../README.md): writing rules
