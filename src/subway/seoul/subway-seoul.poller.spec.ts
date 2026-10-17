@@ -44,6 +44,11 @@ const subway = config.subway as { enabled: boolean; apiDailyCap: number; trainMa
 
 type Tick = () => Promise<unknown>;
 
+// WHY: the train map is one page for every line (line=0); the line 1 and line 4 captures joined stand for it.
+const ALL_LINES = "0";
+const LINES_1_AND_4_PAGE = `${page("trainmap-line1.html")}${page("trainmap-line4.html")}`;
+const BROKEN_LINE_4 = '<div class="4line_metro"><div class="T0421_Q_9_v2 tip" title="4050열차  동대문 도착 진접행"></div></div>';
+
 function setup(startIso: string) {
   let now = new Date(startIso);
   const clock = { now: () => now } as Clock;
@@ -52,8 +57,7 @@ function setup(startIso: string) {
   apiClient.positions.set("4호선", rows("realtime-position-line4.json", "realtimePositionList"));
   apiClient.arrivals.set("혜화", rows("realtime-arrival-hyehwa.json", "realtimeArrivalList"));
   const trainmapClient = new FakeSubwaySeoulTrainmapClient();
-  trainmapClient.pages.set("1", page("trainmap-line1.html"));
-  trainmapClient.pages.set("4", page("trainmap-line4.html"));
+  trainmapClient.pages.set(ALL_LINES, LINES_1_AND_4_PAGE);
   const seoul = new SubwaySeoulService(
     new SubwaySeoulApiService(asReal<SubwaySeoulApiClient>(apiClient)),
     new SubwaySeoulTrainmapService(asReal<SubwaySeoulTrainmapClient>(trainmapClient)),
@@ -165,15 +169,15 @@ describe("SubwaySeoulPoller daily ceilings", () => {
     expect(apiClient.calls).toHaveLength(8);
   });
 
-  it("keeps the train map's ceiling apart from the API's", async () => {
+  it("keeps the train map's ceiling apart from the API's, one taken per crawl's single request", async () => {
     // Arrange
-    subway.trainMapDailyCap = 2;
+    subway.trainMapDailyCap = 1;
     const { apiClient, tickAt } = setup("2026-10-16T11:00:00Z");
     await tickAt("2026-10-16T11:00:00Z", "subway-trainmap");
 
     // Act
     const atCeiling = tickAt("2026-10-16T11:00:15Z", "subway-trainmap");
-    await expect(atCeiling).rejects.toMatchObject({ name: "DailyCapError", provider: "seoul-trainmap", cap: 2 });
+    await expect(atCeiling).rejects.toMatchObject({ name: "DailyCapError", provider: "seoul-trainmap", cap: 1 });
     await tickAt("2026-10-16T11:00:20Z", "subway-seoul");
 
     // Assert
@@ -189,7 +193,7 @@ describe("SubwaySeoulPoller sources fail apart", () => {
   it("rejects the train map's tick on a page it cannot parse while the API's tick resolves", async () => {
     // Arrange
     const { trainmapClient, tickAt } = setup("2026-10-16T11:00:00Z");
-    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    trainmapClient.pages.set(ALL_LINES, "<html>점검 중</html>");
 
     // Act
     const trainMapTick = tickAt("2026-10-16T11:00:00Z", "subway-trainmap");
@@ -215,10 +219,10 @@ describe("SubwaySeoulPoller tracks what answered before it reports a failure", (
   const eventsAt = (ticks: readonly TrackedTick[], platformId: string): string[] =>
     ticks.flatMap((tick) => tick.platforms.filter((s) => s.platformId === platformId).flatMap((s) => s.events.map((e) => `${e.trainNo} ${e.state}`)));
 
-  it("tracks line 1's train-map events and still rejects the tick when line 4's page does not parse", async () => {
+  it("tracks line 1's train-map events and still rejects the tick when line 4's block does not parse", async () => {
     // Arrange
     const { trainmapClient, tracking, tickAt } = setup("2026-10-16T11:45:00Z");
-    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    trainmapClient.pages.set(ALL_LINES, `${page("trainmap-line1.html")}${BROKEN_LINE_4}`);
     const ticks = listenTo(tracking);
 
     // Act
@@ -249,8 +253,7 @@ describe("SubwaySeoulPoller tracks what answered before it reports a failure", (
   it("tracks nothing and rejects the tick when every line fails", async () => {
     // Arrange
     const { trainmapClient, tracking, tickAt } = setup("2026-10-16T11:45:00Z");
-    trainmapClient.pages.set("1", "<html>점검 중</html>");
-    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    trainmapClient.pages.set(ALL_LINES, "<html>점검 중</html>");
     const ticks = listenTo(tracking);
 
     // Act

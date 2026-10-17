@@ -5,11 +5,12 @@ import { DailyCap } from "../../shared/daily-cap.util";
 import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
 import { SUBWAY_REGISTRY } from "../subway.config";
-import { toSeoulLines, toSeoulStations, toSettledObservations } from "./subway-seoul.rules";
+import { toSeoulLines, toSeoulStations, toSettledObservations, toTrainMapLines } from "./subway-seoul.rules";
 import type { SettledObservations } from "./subway-seoul.types";
 
 const SEOUL_LINES = toSeoulLines(SUBWAY_REGISTRY);
 const SEOUL_STATIONS = toSeoulStations(SUBWAY_REGISTRY);
+const TRAIN_MAP_LINES = toTrainMapLines(SEOUL_LINES);
 const API_SOURCE = "seoul-subway-api";
 const TRAIN_MAP_SOURCE = "seoul-trainmap";
 
@@ -41,11 +42,7 @@ export class SubwaySeoulService {
 
   async observeTrainMap(): Promise<SettledObservations> {
     const observedAt = this.clock.now();
-    const eventResults = await Promise.allSettled(
-      SEOUL_LINES.flatMap(({ trainMapLine, platformIdByTrainMapName }) =>
-        trainMapLine === undefined ? [] : [this.withCap(this.trainMapCap, () => this.trainMap.listLineEvents(trainMapLine, platformIdByTrainMapName, observedAt))],
-      ),
-    );
+    const eventResults = await this.withCap(this.trainMapCap, () => this.trainMap.listLineEventResults(TRAIN_MAP_LINES, observedAt));
     return toSettledObservations(TRAIN_MAP_SOURCE, eventResults, []);
   }
 

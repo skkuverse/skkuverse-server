@@ -8,7 +8,7 @@
  */
 import { SUBWAY_REGISTRY } from "../subway.config";
 import type { CountdownRow, SubwayRegistry, TrainEvent } from "../subway.types";
-import { toSeoulLines, toSeoulStations, toSettledObservations } from "./subway-seoul.rules";
+import { toSeoulLines, toSeoulStations, toSettledObservations, toTrainMapLines } from "./subway-seoul.rules";
 
 const copyOf = (): SubwayRegistry => JSON.parse(JSON.stringify(SUBWAY_REGISTRY)) as SubwayRegistry;
 const tables = ({ platformIdByApiName, platformIdByTrainMapName, ...line }: ReturnType<typeof toSeoulLines>[number]) => ({
@@ -132,6 +132,20 @@ describe("toSeoulStations", () => {
       ["1004", "S1-4-420"],
       ["1001", "KR-1-0153"],
     ]);
+  });
+});
+
+describe("toTrainMapLines", () => {
+  it("crawls each line with a train map, through its train-map names, and leaves out a line with none", () => {
+    // Arrange
+    const registry = copyOf();
+    delete registry.lines[0]!.seoul.trainMapLine;
+
+    // Act
+    const lines = toTrainMapLines(toSeoulLines(registry));
+
+    // Assert
+    expect(lines.map(({ trainMapLine, platformIdByName }) => [trainMapLine, platformIdByName.get("혜화")])).toEqual([["4", "S1-4-420"]]);
   });
 });
 

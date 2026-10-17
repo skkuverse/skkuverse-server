@@ -1,4 +1,5 @@
 import type { CountdownRow, SubwayRegistry, TrainEvent } from "../subway.types";
+import type { TrainMapLine } from "../seoul-trainmap/subway-seoul-trainmap.types";
 import type { SeoulLine, SeoulStation, SettledObservations } from "./subway-seoul.types";
 
 // WHY: a row names its station, not its platform, so each line maps the names it writes to its own platforms: the
@@ -33,6 +34,12 @@ export function toSeoulStations(registry: SubwayRegistry): SeoulStation[] {
       }),
     ),
   }));
+}
+
+export function toTrainMapLines(lines: readonly SeoulLine[]): TrainMapLine[] {
+  return lines.flatMap(({ trainMapLine, platformIdByTrainMapName }) =>
+    trainMapLine === undefined ? [] : [{ trainMapLine, platformIdByName: platformIdByTrainMapName }],
+  );
 }
 
 export function toSettledObservations(
