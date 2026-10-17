@@ -9,6 +9,8 @@
  * nothing, until 00:00 KST; a failing source rejects its own ticks only;
  * and within one tick, what answered reaches the tracker before the tick
  * rejects with the failure, so a failing line loses no other line's trains.
+ * Each ceiling is about twice a weekday's calls as the registry derives them
+ * (design D9 of add-commute-station-subway), so a station that outgrows one fails here.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
@@ -33,6 +35,7 @@ import type { SubwaySeoulTrainmapClient } from "../seoul-trainmap/subway-seoul-t
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
 import { SUBWAY_REGISTRY } from "../subway.config";
 import type { SubwayRepository } from "../subway.repository";
+import { SERVICE_WINDOW_CLOSES_SEC, SERVICE_WINDOW_OPENS_SEC } from "../timetable/subway-timetable.constants";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
 import type { TrackedTick } from "../tracking/subway-tracking.types";
@@ -52,6 +55,10 @@ const LINES_1_AND_4_PAGE = `${page("trainmap-line1.html")}${page("trainmap-line4
 const BROKEN_LINE_4 = '<div class="4line_metro"><div class="T0421_Q_9_v2 tip" title="4050열차  동대문 도착 진접행"></div></div>';
 // WHY: one position call per registered line and one arrival call per registered station, however many the registry holds.
 const API_CALLS_PER_TICK = SUBWAY_REGISTRY.lines.length + SUBWAY_REGISTRY.stations.length;
+const WEEKDAY_WINDOW_SEC = SERVICE_WINDOW_CLOSES_SEC.weekday - SERVICE_WINDOW_OPENS_SEC;
+// WHY: the intervals the registration test pins (10 s and 15 s); a crawl is one request (line=0).
+const WEEKDAY_API_CALLS = API_CALLS_PER_TICK * (WEEKDAY_WINDOW_SEC / 10);
+const WEEKDAY_CRAWLS = WEEKDAY_WINDOW_SEC / 15;
 
 function setup(startIso: string) {
   let now = new Date(startIso);
@@ -187,6 +194,25 @@ describe("SubwaySeoulPoller daily ceilings", () => {
 
     // Assert
     expect(apiClient.calls).toHaveLength(API_CALLS_PER_TICK);
+  });
+});
+
+describe("SubwaySeoulPoller daily ceilings against a weekday's calls", () => {
+  it("counts a weekday's calls from the registry: 7,260 API ticks and 4,840 crawls in the 72,600 s window", () => {
+    // Act & Assert
+    expect([WEEKDAY_WINDOW_SEC, WEEKDAY_API_CALLS / API_CALLS_PER_TICK, WEEKDAY_CRAWLS]).toEqual([72_600, 7_260, 4_840]);
+  });
+
+  it.each([
+    ["seoul-subway-api", () => subway.apiDailyCap, WEEKDAY_API_CALLS],
+    ["seoul-trainmap", () => subway.trainMapDailyCap, WEEKDAY_CRAWLS],
+  ])("keeps %s's ceiling between 1.8 and 2.5 times a weekday's calls", (_source, ceilingOf, weekdayCalls) => {
+    // Act
+    const ratio = ceilingOf() / weekdayCalls;
+
+    // Assert
+    expect(ratio).toBeGreaterThanOrEqual(1.8);
+    expect(ratio).toBeLessThanOrEqual(2.5);
   });
 });
 
