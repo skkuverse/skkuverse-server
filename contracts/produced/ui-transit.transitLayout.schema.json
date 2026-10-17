@@ -20,7 +20,10 @@
             "type": "string"
           },
           "title": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "items": {
             "type": "array",
