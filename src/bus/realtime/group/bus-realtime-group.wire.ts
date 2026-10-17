@@ -10,13 +10,33 @@ const realtimeBus = z.object({
   longitude: z.string().optional(),
 });
 
+const arrival = z.object({
+  /** WHY: whole minutes, at least 1, for a running bus only; TOPIS's seconds are not accurate to the second. */
+  minutes: z.int().nullable(),
+  stopsAway: z.int().nullable(),
+  /** WHY: from the bus's text, which wins over its numbers. */
+  state: z.enum(["running", "arriving", "waiting", "ended", "noInfo", "unknown"]),
+  isLastBus: z.boolean(),
+  carNumber: z.string().nullable(),
+  crowding: z.enum(["relaxed", "normal", "crowded"]).nullable(),
+  /** QUIRK(topis): card taps in minus taps out, so riders who skip the tap out are still counted. */
+  passengerCount: z.int().nullable(),
+  /** QUIRK(topis): this bus's own arrival text, in Korean, served as it comes. */
+  message: z.string(),
+});
+
 const stationEta = z.object({
   stationIndex: z.int(),
   /** QUIRK(topis): TOPIS's own arrival text, in Korean, served as it comes. */
   eta: z.string(),
+  /** WHY: the first bus, then the second, each listed when TOPIS gave it a text. */
+  arrivals: z.array(arrival),
 });
 
-/** CONTRACT(skkuverse-app): parsed by skkuverse-app/packages/shared/src/bus/parser.ts (parseRealtimeData). */
+/**
+ * CONTRACT(skkuverse-app): parsed by skkuverse-app/packages/shared/src/bus/parser.ts (parseRealtimeData),
+ * which reads each station's stationIndex and eta; arrivals is additive and not read yet.
+ */
 export const realtimeGroup = z.object({
   groupId: z.string(),
   buses: z.array(realtimeBus),
@@ -33,3 +53,4 @@ export type RealtimeGroup = z.input<typeof realtimeGroup>;
 export type RealtimeGroupMeta = z.input<typeof realtimeGroupMeta>;
 export type RealtimeBus = z.input<typeof realtimeBus>;
 export type StationEta = z.input<typeof stationEta>;
+export type Arrival = z.input<typeof arrival>;

@@ -7,6 +7,9 @@ export const JONGRO_ROUTE_ID_PATTERN = /^jongro(0[1-9]|[1-9]\d+)$/;
 
 export const JONGRO_ROUTE_ID_PREFIX = "jongro";
 
+// WHY: the live estimate poller runs every 60 s; an app refreshing estimates faster would only read its HTTP cache.
+export const ESTIMATES_MAX_AGE_S = 60;
+
 const COMMUTE_PILOT_NOTICE = { style: "info", text: "시범 운행 · 무료 · 킹고M QR 탑승" } as const;
 const LIVE_TRAFFIC_NOTICE = { style: "ai", text: "도착 시간은 실시간 교통 상황을 반영해요" } as const;
 

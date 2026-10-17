@@ -1,11 +1,20 @@
 /**
- * The Jongro rules: which TOPIS header codes carry data, the dwell timer at a
+ * The Jongro rules: which TOPIS header codes carry data, which of TOPIS's
+ * strings read as a number, the dwell timer at a
  * stop (reset after 10 minutes) at each threshold, and the drift between
  * TOPIS's stop list and jongro-routes.json, named stop by stop.
  */
 import { jongroRoutes } from "../../bus.config";
 import type { JongroArrivalDoc } from "../../cache/bus-cache.document";
-import { isNoResultHeaderCd, isUsableHeaderCd, toArrivalsKey, toDwell, toPositionsKey, toRegistryDrift } from "./bus-realtime-jongro.rules";
+import {
+  isNoResultHeaderCd,
+  isUsableHeaderCd,
+  toArrivalsKey,
+  toDwell,
+  toPositionsKey,
+  toRegistryDrift,
+  toTopisInteger,
+} from "./bus-realtime-jongro.rules";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const minutesBefore = (minutes: number): string => new Date(NOW.getTime() - minutes * 60_000).toISOString();
@@ -21,6 +30,7 @@ const topisList = (): JongroArrivalDoc[] =>
     carNumber: "----",
     eventDate: "",
     eta: "",
+    buses: [],
   }));
 
 describe("isUsableHeaderCd", () => {
@@ -45,6 +55,24 @@ describe("isNoResultHeaderCd", () => {
   ])("%s → %s", (headerCd, expected) => {
     // Act & Assert
     expect(isNoResultHeaderCd(headerCd)).toBe(expected);
+  });
+});
+
+describe("toTopisInteger", () => {
+  it.each([
+    ["228", 228],
+    ["0", 0],
+    [" 7 ", 7],
+    ["-3", -3],
+    ["", null],
+    [" ", null],
+    ["12.5", null],
+    ["2분", null],
+    [null, null],
+    [undefined, null],
+  ])("%j → %j", (text, expected) => {
+    // Act & Assert
+    expect(toTopisInteger(text)).toBe(expected);
   });
 });
 

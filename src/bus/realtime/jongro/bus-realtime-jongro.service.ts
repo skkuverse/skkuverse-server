@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../../../infra/clock";
 import logger from "../../../infra/logger";
-import type { JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
+import type { CachedJongroArrivalDoc, JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import { BusCacheService } from "../../cache/bus-cache.service";
 import type { JongroRoute } from "../../bus.types";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
@@ -28,7 +28,7 @@ export class BusRealtimeJongroService {
   }
 
   // WHY: an api replica runs no poller: its memory is empty (undefined before a first tick) and bus_cache serves.
-  async listArrivals(code: string): Promise<JongroArrivalDoc[] | undefined> {
+  async listArrivals(code: string): Promise<CachedJongroArrivalDoc[] | undefined> {
     return (await this.cache.read(toArrivalsKey(code))) ?? this.arrivalsByCode.get(code);
   }
 

@@ -8,6 +8,7 @@ import { Clock } from "../../../infra/clock";
 import logger from "../../../infra/logger";
 import { createLogThrottle } from "../../../infra/log-throttle";
 import type { SupportedLang } from "../../../infra/types";
+import { ESTIMATES_MAX_AGE_S } from "../../bus.constants";
 import { serviceConfigOf } from "../../bus.rules";
 import { BusScheduleService } from "../../schedule/bus-schedule.service";
 import type { SmartSchedule } from "../../schedule/bus-schedule.wire";
@@ -19,8 +20,6 @@ import { pickEstimates } from "./bus-eta-smart.rules";
 import type { ServedEstimate } from "./bus-eta-smart.types";
 
 const HOUR_MS = 60 * 60_000;
-// WHY: estimates move by the minute, so a smart view that carries them is cached for 60 s, not 300.
-const MAX_AGE_WITH_ESTIMATES_S = 60;
 const MAX_AGE_S = 300;
 
 @Injectable()
@@ -52,7 +51,7 @@ export class BusEtaSmartService {
     const result = etaRouteTypes && resolved.status === "active" ? await this.withEstimates(resolved, etaRouteTypes) : resolved;
     const data = withStatusMessage(result, lang);
     const hash = crypto.createHash("md5").update(JSON.stringify(data)).digest("hex");
-    const maxAge = etaRouteTypes ? MAX_AGE_WITH_ESTIMATES_S : MAX_AGE_S;
+    const maxAge = etaRouteTypes ? ESTIMATES_MAX_AGE_S : MAX_AGE_S;
     // WHY: private, since the body is in the request's language and a shared cache would serve it to every language.
     return withEtag(data, `"smart-${serviceId}-${data.from || data.status}-${hash}"`, `private, max-age=${maxAge}`);
   }

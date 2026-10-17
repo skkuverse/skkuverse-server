@@ -21,11 +21,15 @@ const station = z.object({
 
 const feature = z.object({ type: z.string(), url: z.string() });
 
+// CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/bus/parser.ts drops a target it does not know (`crowding`).
+const serviceRefresh = z.object({ targets: z.array(z.enum(["traffic"])), intervalSec: z.int().positive() });
+
 const service = z.object({
   serviceId: z.string(),
   label: z.string(),
   endpoint: z.string(),
   stopSequences: z.record(z.string(), z.array(servedSequenceStop)).optional(),
+  refresh: serviceRefresh.optional(),
 });
 
 const realtimeScreen = z.object({
@@ -61,3 +65,4 @@ export const busConfig = z.object({ groups: z.array(busGroup) });
 
 export type BusGroup = z.input<typeof busGroup>;
 export type BusConfig = z.input<typeof busConfig>;
+export type ServiceRefresh = z.input<typeof serviceRefresh>;

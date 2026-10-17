@@ -5,6 +5,7 @@
     "themeColor": "4CAF50",
     "iconType": "village",
     "refreshInterval": 40,
+    "seatCount": 18,
     "stations": [
       { "stationName": "성균관대학교", "arsId": "01881", "topisId": "100900204", "isFirstStation": true, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
       { "stationName": "서울성곽.성대후문", "arsId": "01515", "topisId": "100900202", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
@@ -41,6 +42,7 @@
     "themeColor": "4CAF50",
     "iconType": "village",
     "refreshInterval": 40,
+    "seatCount": 18,
     "stations": [
       { "stationName": "성균관대운동장", "arsId": "01617", "topisId": "100900220", "isFirstStation": true, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
       { "stationName": "학생회관", "arsId": "01618", "topisId": "100900221", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
@@ -72,6 +74,7 @@
     "themeColor": "4CAF50",
     "iconType": "village",
     "refreshInterval": 40,
+    "seatCount": 18,
     "stations": [
       { "stationName": "명륜3가종점", "arsId": "01503", "topisId": "100900040", "isFirstStation": true, "isLastStation": false, "isRotationStation": false, "transferLines": [] },
       { "stationName": "샘미용실.종로구청소년상담복지센터", "arsId": "01511", "topisId": "100900032", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [] },

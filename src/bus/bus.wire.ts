@@ -22,6 +22,8 @@ const jongroRouteEntry = z.object({
   themeColor: z.string(),
   iconType: z.string(),
   refreshInterval: z.number(),
+  /** WHY: crowding compares a bus's passenger count with this; 18 is a 9 m village bus until the real count is known. */
+  seatCount: z.number(),
   /** QUIRK(topis): the route's stops in TOPIS order, so stations[i] is TOPIS ord i + 1. */
   stations: z.array(jongroRouteStation),
 });
