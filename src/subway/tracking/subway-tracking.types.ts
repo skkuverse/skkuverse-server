@@ -1,6 +1,6 @@
 import type { SubwayArrivalsDoc } from "../subway.document";
 import type { CountdownRow, SubwayDirection, TrainEvent, TrainState } from "../subway.types";
-import type { LineRoutes } from "../timetable/subway-timetable.types";
+import type { LineRoutes, PlatformSchedule } from "../timetable/subway-timetable.types";
 
 export interface TrainProgress {
   platformId: string;
@@ -52,3 +52,5 @@ export interface TrackedTick {
 }
 
 export type TrackedTickListener = (tick: TrackedTick) => Promise<void>;
+
+export type RunMatcher = (schedule: PlatformSchedule, events: readonly TrainEvent[], now: Date) => TrainEvent[];
