@@ -3,7 +3,7 @@ title: Holidays Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-16
+last-updated: 2026-10-17
 audience: internal
 ---
 
@@ -35,17 +35,19 @@ Holidays owns which dates are Korean public holidays for every feature that depe
 
 ```mermaid
 flowchart LR
-  kasi["getRestDeInfo"] -->|HolidaysSyncClient.fetchYear, once a day per sync year| poller["sync/: HolidaysSyncPoller, holidays-sync"]
+  kasi["getRestDeInfo"] -->|HolidaysSyncClient.fetchYear, hourly per stale sync year| poller["sync/: HolidaysSyncPoller, holidays-sync"]
   poller -->|HolidaysSyncRepository.upsertYear| coll[("public_holidays")]
   poller -.->|HolidaysRepository.clearCache| svc
   coll -->|HolidaysRepository.listYears, cached| svc["HolidaysService.holidayName"]
+  coll -.->|HolidaysRepository.listYears, fetchedAt per year| poller
   rules["date-holidays"] -->|year not stored| svc
   svc --> bus["bus schedule"]
 ```
 
 ## Invariants
 
-- Only a process that runs pollers syncs (`config.runsPollers`); an api replica only reads. The registry's warm-up run syncs at startup, then every `config.holidays.syncIntervalMs`.
+- Only a process that runs pollers syncs (`config.runsPollers`); an api replica only reads. The registry's warm-up run syncs at startup, then every `config.holidays.syncIntervalMs` (an hour).
+- A run fetches only the stale sync years: a sync year with no stored year, or whose `fetchedAt` is 24 hours old or more (`isStoredYearFresh`). So a failed sync retries within the hour, a stored year is refetched once a day, and a run whose every sync year is fresh calls nothing and resolves. A year the calendar has not published is never stored, so it is asked for every hour until it is.
 - Only `src/app.module.ts` imports `HolidaysSyncModule`. A feature imports `HolidaysModule`, which holds no poller and no client.
 - The sync reports by resolving or rejecting. One sync year failing still stores the other, then the sync rejects, so the stored years keep serving and the job reports failing.
 - A sync year the calendar answers with no rows is not published yet and is not stored, so it keeps its stored or rules-fallback answer.
