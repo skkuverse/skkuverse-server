@@ -47,12 +47,45 @@ function hasPassed(candidate: Candidate): boolean {
   return latestIndex > servedIndex || (latestIndex === servedIndex && latest?.state === "departed");
 }
 
+const callsAt = (train: ScheduledTrain, stationId: string): boolean => train.stops.some((stop) => stop.stationId === stationId);
+
+function toRunSec(stops: readonly ScheduledStop[]): number | null {
+  let runSec = 0;
+  for (const [index, stop] of stops.slice(1).entries()) {
+    const departedAt = stops[index]?.departureAt;
+    if (!departedAt || !stop.arrivalAt) return null;
+    runSec += secondsBetween(stop.arrivalAt, departedAt);
+  }
+  return runSec;
+}
+
+// WHY: a train's row has no time at a station it passes (design D4); a train calling there and at its next stop
+// runs between them in the sum of its legs, its stands left out, which the nearest one in time gives.
+function toPassingStop(train: ScheduledTrain, trains: readonly ScheduledTrain[], stationId: string): ScheduledStop | null {
+  const passes = trains.flatMap((caller) => {
+    const from = caller.stops.findIndex((stop) => stop.stationId === stationId);
+    const to = from < 0 || caller.direction !== train.direction ? -1 : caller.stops.findIndex((stop, index) => index > from && callsAt(train, stop.stationId));
+    const callerArrivalAt = caller.stops[to]?.arrivalAt;
+    const nextArrivalAt = train.stops.find((stop) => stop.stationId === caller.stops[to]?.stationId)?.arrivalAt;
+    const runSec = to < 0 ? null : toRunSec(caller.stops.slice(from, to + 1));
+    if (runSec === null || !callerArrivalAt || !nextArrivalAt) return [];
+    return [{ passedAt: plusSec(nextArrivalAt, -runSec), gapMs: Math.abs(nextArrivalAt.getTime() - callerArrivalAt.getTime()) }];
+  });
+  const nearest = passes.sort((a, b) => a.gapMs - b.gapMs)[0];
+  return nearest ? { stationId, arrivalAt: nearest.passedAt, departureAt: nearest.passedAt } : null;
+}
+
+function toOwnDelaySec(input: EstimateInput, train: ScheduledTrain, latest: TrainProgress): number | null {
+  const passingStop = callsAt(train, latest.stationId) ? null : toPassingStop(train, input.trains, latest.stationId);
+  return toDelaySec(passingStop ? { ...train, stops: [passingStop] } : train, latest, input.now);
+}
+
 function toCandidate(input: EstimateInput, train: ScheduledTrain): Candidate | null {
   const servedAt = train.stops.find((stop) => stop.stationId === input.stationId);
   const scheduledArrivalAt = servedAt?.arrivalAt ?? servedAt?.departureAt;
   if (!servedAt || !scheduledArrivalAt) return null;
   const known = input.histories.get(train.trainNo);
-  const delaySec = known ? toDelaySec(train, known.latest, input.now) : null;
+  const delaySec = known ? toOwnDelaySec(input, train, known.latest) : null;
   return { train, servedAt, scheduledArrivalAt, history: known && delaySec !== null ? known : null, delaySec };
 }
 

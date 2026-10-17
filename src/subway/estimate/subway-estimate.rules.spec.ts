@@ -482,3 +482,77 @@ describe("toStationArrivals, with a countdown far from the timetable", () => {
 });
 
 const secondsUntil = (later: Date, earlier: Date): number => (later.getTime() - earlier.getTime()) / 1000;
+
+/** Train 0431 on the 2026-10-17 holiday table, southbound ahead of express 1913. */
+const T0431 = trainWithStops("0431", "down", [
+  ["KR-1-P151", "10:09:30", "10:10:00"],
+  [UIWANG, "10:12:00", "10:12:30"],
+  [SUNGKYUNKWAN, "10:15:30", "10:16:00"],
+  [HWASEO, "10:18:30", "10:19:00"],
+  ["KR-1-P155", "10:21:30", "10:22:00"],
+]);
+
+/** Express 1913 on the 2026-10-17 holiday table: its first stop the tables cover is Sungkyunkwan Univ. */
+const T1913 = trainWithStops("1913", "down", [
+  [SUNGKYUNKWAN, "10:25:00", "10:25:30"],
+  ["KR-1-P155", "10:30:00", "10:30:30"],
+]);
+
+/** Train 0641 on the 2026-10-17 holiday table, calling at Dangjeong and Uiwang just after 1913 passes them. */
+const T0641 = trainWithStops("0641", "down", [
+  ["KR-1-P151", "10:22:30", "10:23:00"],
+  [UIWANG, "10:25:00", "10:25:30"],
+  [SUNGKYUNKWAN, "10:28:30", "10:29:00"],
+]);
+
+describe("toStationArrivals, for an express seen at stations it passes before its first stop", () => {
+  it("serves southbound 1913, seen departing 의왕 at 10:23:21, 81 s late at 10:26:21 instead of borrowing 0431's 155 s", () => {
+    // Arrange
+    const histories = historiesOf(
+      history("0431", { stationId: "KR-1-P155", state: "approaching", at: at("10:23:35") }),
+      history("1913", { stationId: UIWANG, state: "departed", at: at("10:23:21") }),
+    );
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ trains: [T0431, T1913, T0641], histories, now: at("10:23:37") }));
+
+    // Assert
+    // WHY: 0641 runs from Uiwang to Sungkyunkwan Univ. in 180 s, so 1913 is scheduled to pass Uiwang at 10:22:00; it arrived at 10:24:48.
+    expect(arrivals.find((a) => a.trainNo === "1913")).toMatchObject({
+      arrivalAt: at("10:26:21"),
+      source: "estimated",
+      position: { stationId: UIWANG, state: "departed" },
+    });
+  });
+
+  it.each([
+    ["1 s before it is scheduled to pass", "10:19:59", "10:24:30"],
+    ["when it is scheduled to pass", "10:20:00", "10:24:30"],
+    ["1 s after it is scheduled to pass", "10:20:01", "10:25:01"],
+  ])("serves 1913, seen at 당정 at 10:19:30, later the longer it stands there, from %s", (_label, now, arrival) => {
+    // Arrange
+    const histories = historiesOf(history("1913", { stationId: "KR-1-P151", state: "arrived", at: at("10:19:30") }));
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ trains: [T1913, T0641], histories, now: at(now) }));
+
+    // Assert
+    // WHY: 0641's 120 s to Uiwang and 180 s on make 1913's pass of Dangjeong 10:20:00; its 30 s stand at Uiwang is not 1913's.
+    expect(arrivals.find((a) => a.trainNo === "1913")?.arrivalAt).toEqual(at(arrival));
+  });
+
+  it("times 1913's pass of 의왕 from the train calling there nearest in time", () => {
+    // Arrange
+    const early = trainWithStops("0401", "down", [
+      [UIWANG, "05:29:30", "05:30:00"],
+      [SUNGKYUNKWAN, "05:34:00", "05:34:30"],
+    ]);
+    const histories = historiesOf(history("1913", { stationId: UIWANG, state: "departed", at: at("10:22:30") }));
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ trains: [early, T1913, T0641], histories, now: at("10:22:40") }));
+
+    // Assert
+    expect(arrivals.find((a) => a.trainNo === "1913")?.arrivalAt).toEqual(at("10:25:30"));
+  });
+});

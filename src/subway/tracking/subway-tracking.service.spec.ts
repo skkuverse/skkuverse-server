@@ -15,8 +15,9 @@
  * 2026-10-17 (the holiday tables), shaped like that morning's captures: an
  * express seen departing `성균관대` stays off the list through its events at
  * stations it passes, northbound and southbound, while a late train ahead
- * would lend it a delay; and an express first seen at a station it passes is
- * estimated from its departure from its last stop before it.
+ * would lend it a delay; an express first seen at a station it passes is
+ * estimated from its departure from its last stop before it; and one seen
+ * before its first stop, from the time it is scheduled to pass that station.
  * Its timetable-only document, which the arrivals route serves for a stale
  * state, lists every train `scheduled`, whatever the tracker has observed.
  */
@@ -280,6 +281,36 @@ describe("SubwayTrackingService.track for an express passing stations it does no
       arrivalAt: onSaturday("10:15:36"),
       source: "estimated",
       position: { stationId: "KR-1-P157", state: "departed" },
+    });
+  });
+});
+
+describe("SubwayTrackingService.track for an express seen before its first stop", () => {
+  const southbound = (trainNo: string, stationId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent => ({
+    trainNo,
+    stationId,
+    state,
+    stateChangedAt: onSaturday(kst),
+    destination,
+  });
+
+  it("estimates southbound 1913, seen departing 의왕 before its first stop 성균관대, from its own pass at 10:26:21, not from 0431's 155 s", async () => {
+    // Arrange
+    const { repository, tickAt } = setup(onSaturday);
+    await tickAt("10:23:21", trainMap([southbound("1913", "KR-1-P152", "departed", "10:23:21", "신창"), southbound("0431", "KR-1-P154", "departed", "10:23:06", "병점")]));
+
+    // Act
+    await tickAt("10:23:37", api([southbound("0431", "KR-1-P155", "approaching", "10:23:35", "병점")]));
+
+    // Assert
+    // WHY: the 2026-10-17 tick at 10:23:37 served 1913 at 10:27:36, 0431's delay; 1913 arrived at 10:24:48.
+    expect(repository.docs.get(SUNGKYUNKWAN)?.directions.down.find((t) => t.trainNo === "1913")).toEqual({
+      trainNo: "1913",
+      destination: "신창",
+      express: true,
+      arrivalAt: onSaturday("10:26:21"),
+      source: "estimated",
+      position: { stationId: "KR-1-P152", state: "departed" },
     });
   });
 });

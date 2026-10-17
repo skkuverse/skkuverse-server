@@ -5,8 +5,9 @@
  * crawl that first showed it), the 90 s hold for a missing train, and direction from destination and train
  * number, never from the upstream's `updnLine`. An event at a station a train's timetable row does not call
  * at (an express passing it) counts as the train's departure from its last stop before that station, at the
- * latest at the event's time, so it never replaces an observed stop event; and a train seen past the served
- * station is held 47 minutes, not 90 s.
+ * latest at the event's time, so it never replaces an observed stop event; before the train's first stop the
+ * event stays its progress, at the station it passes; and a train seen past the served station is held
+ * 47 minutes, not 90 s.
  */
 import type { TrainEvent } from "../subway.types";
 import type { LineRoutes } from "../timetable/subway-timetable.types";
@@ -354,12 +355,23 @@ describe("mergeObservations at stations an express passes", () => {
     expect(latestOf(next, trainNo)).toEqual({ stationId: SUNGKYUNKWAN, state: "departed", at: at(kst), ordinal });
   });
 
-  it("starts no history for southbound 1913 seen only at 의왕, which it passes before its first stop", () => {
+  it("keeps southbound 1913, seen only at 의왕, which it passes before its first stop, at 의왕", () => {
     // Act
     const histories = mergeObservations(expressTick("10:22:00", new Map(), [express("1913", UIWANG, "arrived", "10:22:00")]));
 
     // Assert
-    expect(histories.size).toBe(0);
+    expect(latestOf(histories, "1913")).toEqual({ stationId: UIWANG, state: "arrived", at: at("10:22:00"), ordinal: 7 });
+  });
+
+  it("moves southbound 1913 along the stations it passes before its first stop, as the 2026-10-17 train map saw it", () => {
+    // Arrange
+    const atDangjeong = mergeObservations(expressTick("10:21:21", new Map(), [express("1913", "KR-1-P151", "arrived", "10:21:21")]));
+
+    // Act
+    const passed = mergeObservations(expressTick("10:23:21", atDangjeong, [express("1913", UIWANG, "departed", "10:23:21")]));
+
+    // Assert
+    expect(latestOf(passed, "1913")).toEqual({ stationId: UIWANG, state: "departed", at: at("10:23:21"), ordinal: 8 });
   });
 });
 
