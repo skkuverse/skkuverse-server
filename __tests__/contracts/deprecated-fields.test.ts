@@ -19,7 +19,7 @@ const etaOf = (schema: JsonSchema): JsonSchema | undefined => schema.properties?
 describe("realtimeGroup stationEtas[].eta", () => {
   it("is deprecated, pointing at arrivals[].message, in the draft-07 export", () => {
     // Act
-    const eta = etaOf(z.toJSONSchema(realtimeGroup, { io: "input", target: "draft-7" }) as JsonSchema);
+    const eta = etaOf(z.toJSONSchema(realtimeGroup, { io: "input", target: "draft-7" }) as unknown as JsonSchema);
 
     // Assert
     expect(eta).toMatchObject({ type: "string", deprecated: true });
@@ -36,7 +36,7 @@ describe("realtimeGroup stationEtas[].eta", () => {
 
   it("stays required, so installed builds keep receiving it", () => {
     // Act
-    const items = (z.toJSONSchema(realtimeGroup, { io: "input", target: "draft-7" }) as { properties: { stationEtas: { items: { required: string[] } } } })
+    const items = (z.toJSONSchema(realtimeGroup, { io: "input", target: "draft-7" }) as unknown as { properties: { stationEtas: { items: { required: string[] } } } })
       .properties.stationEtas.items;
 
     // Assert
