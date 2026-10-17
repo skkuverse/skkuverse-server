@@ -3,7 +3,7 @@ import type { StoredTrainArrival, SubwayArrivalsDoc } from "../subway.document";
 import type { SubwayDirection } from "../subway.types";
 
 function toStoredArrival({ trainNo, destination, express, arrivalAt, source, position }: TrainArrival): StoredTrainArrival {
-  return { trainNo, destination, express, arrivalAt, source, position };
+  return { trainNo, destination, express, arrivalAt, source, position: position && { stationId: position.platformId, state: position.state } };
 }
 
 export function toArrivalsDoc(

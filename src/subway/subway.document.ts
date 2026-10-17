@@ -6,10 +6,11 @@ export interface StoredTrainArrival {
   express: boolean;
   arrivalAt: Date;
   source: "live" | "estimated" | "scheduled";
+  // WHY: a platform id under its stored name, as the history's (add-commute-station-subway design D1).
   position: { stationId: string; state: TrainState } | null;
 }
 
-// WHY: written by the tracker in the poller process and read by the api replicas, one document per station.
+// WHY: written by the tracker in the poller process and read by the api replicas, one document per platform.
 export interface SubwayArrivalsDoc {
   _id: string;
   generatedAt: Date;

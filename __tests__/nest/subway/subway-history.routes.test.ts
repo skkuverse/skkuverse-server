@@ -88,7 +88,7 @@ async function resolved(repository: SubwayHistoryRepository, record: SubwayPredi
   await repository.upsertPredictions([record]);
   const observedAt = new Date(record.predictedAt.getTime() - errorSec * 1000);
   const { serviceDate, trainNo, stationId } = record;
-  await repository.updateObservedArrival({ serviceDate, trainNo, stationId, observedAt, observedState: "arrived" }, observedAt);
+  await repository.updateObservedArrival({ serviceDate, trainNo, platformId: stationId, observedAt, observedState: "arrived" }, observedAt);
 }
 
 async function writeKnownRecords(repository: SubwayHistoryRepository): Promise<void> {
@@ -179,7 +179,7 @@ describe("SubwayHistoryRepository.updateObservedArrival on mongod", () => {
   it("resolves by an approaching row only the records made before the tick that saw it, then by the arrived row the rest within 30 minutes", async () => {
     // Arrange
     const repository = app.get<SubwayHistoryRepository>(SubwayHistoryRepositoryClass);
-    const arrival = { serviceDate, trainNo: "0692", stationId: "KR-1-0153" };
+    const arrival = { serviceDate, trainNo: "0692", platformId: "KR-1-0153" };
     await repository.upsertPredictions(records);
 
     // Act

@@ -54,10 +54,10 @@ describe("toTrainEvents", () => {
 
     // Assert
     expect(events).toEqual([
-      { trainNo: "0506", stationId: "KR-1-P155", state: "arrived", stateChangedAt: new Date("2026-10-16T13:26:34Z"), destination: "광운대" },
-      { trainNo: "0503", stationId: "KR-1-P154", state: "arrived", stateChangedAt: new Date("2026-10-16T13:25:07Z"), destination: "병점" },
-      { trainNo: "0702", stationId: "KR-1-0153", state: "approaching", stateChangedAt: new Date("2026-10-16T13:26:32Z"), destination: "구로" },
-      { trainNo: "0501", stationId: "KR-1-1715", state: "arrived", stateChangedAt: new Date("2026-10-16T13:23:22Z"), destination: "서동탄" },
+      { trainNo: "0506", platformId: "KR-1-P155", state: "arrived", stateChangedAt: new Date("2026-10-16T13:26:34Z"), destination: "광운대" },
+      { trainNo: "0503", platformId: "KR-1-P154", state: "arrived", stateChangedAt: new Date("2026-10-16T13:25:07Z"), destination: "병점" },
+      { trainNo: "0702", platformId: "KR-1-0153", state: "approaching", stateChangedAt: new Date("2026-10-16T13:26:32Z"), destination: "구로" },
+      { trainNo: "0501", platformId: "KR-1-1715", state: "arrived", stateChangedAt: new Date("2026-10-16T13:23:22Z"), destination: "서동탄" },
     ]);
   });
 
@@ -66,7 +66,7 @@ describe("toTrainEvents", () => {
     const events = toTrainEvents(POSITIONS_LINE_4, LINE_4);
 
     // Assert
-    expect(events.map((e) => [e.trainNo, e.stationId, e.state])).toEqual([
+    expect(events.map((e) => [e.trainNo, e.platformId, e.state])).toEqual([
       ["4203", "S1-4-423", "arrived"],
       ["4707", "S1-4-420", "arrived"],
       ["4690", "S1-4-417", "arrived"],
@@ -84,7 +84,7 @@ describe("toTrainEvents", () => {
     const events = toTrainEvents([row({ trainSttus })], LINE_1);
 
     // Assert
-    expect(events).toEqual([expect.objectContaining({ trainNo: "0493", stationId: "KR-1-0153", state })]);
+    expect(events).toEqual([expect.objectContaining({ trainNo: "0493", platformId: "KR-1-0153", state })]);
   });
 
   it("leaves out a 전역출발 row (trainSttus 3), which names the station the train has not reached", () => {
@@ -132,10 +132,10 @@ describe("toCountdownRows", () => {
     // Assert
     const generatedAt = new Date("2026-10-09T13:44:20Z");
     expect(countdownRows).toEqual([
-      { trainNo: "4674", stationId: "S1-4-420", generatedAt, remainingSec: 150 },
-      { trainNo: "4174", stationId: "S1-4-420", generatedAt, remainingSec: 390 },
-      { trainNo: "4331", stationId: "S1-4-420", generatedAt, remainingSec: 240 },
-      { trainNo: "4173", stationId: "S1-4-420", generatedAt, remainingSec: 960 },
+      { trainNo: "4674", platformId: "S1-4-420", generatedAt, remainingSec: 150 },
+      { trainNo: "4174", platformId: "S1-4-420", generatedAt, remainingSec: 390 },
+      { trainNo: "4331", platformId: "S1-4-420", generatedAt, remainingSec: 240 },
+      { trainNo: "4173", platformId: "S1-4-420", generatedAt, remainingSec: 960 },
     ]);
   });
 

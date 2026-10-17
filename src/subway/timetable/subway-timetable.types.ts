@@ -30,7 +30,7 @@ export interface Timetable {
 export type LineRoutes = Readonly<Record<SubwayDirection, readonly string[]>>;
 
 export interface ScheduledStop {
-  stationId: string;
+  platformId: string;
   arrivalAt: Date | null;
   departureAt: Date | null;
 }

@@ -127,7 +127,7 @@ describe("toTrainEvents", () => {
     const events = toTrainEvents([train({})], LINE_1, OBSERVED_AT);
 
     // Assert
-    expect(events).toEqual([{ trainNo: "0493", stationId: "KR-1-0153", state: "departed", stateChangedAt: OBSERVED_AT, destination: "서동탄" }]);
+    expect(events).toEqual([{ trainNo: "0493", platformId: "KR-1-0153", state: "departed", stateChangedAt: OBSERVED_AT, destination: "서동탄" }]);
   });
 
   it.each([
@@ -159,7 +159,7 @@ describe("toTrainEvents", () => {
     const events = toTrainEvents(trains, LINE_1, OBSERVED_AT);
 
     // Assert
-    expect(events.map((e) => `${e.trainNo} ${e.stationId} ${e.state}`).sort()).toEqual([
+    expect(events.map((e) => `${e.trainNo} ${e.platformId} ${e.state}`).sort()).toEqual([
       "0491 KR-1-P157 approaching",
       "0493 KR-1-0153 departed",
       "0494 KR-1-P154 departed",

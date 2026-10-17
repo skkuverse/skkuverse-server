@@ -127,7 +127,7 @@ describe("toScheduledTrains", () => {
     expect(serviceDate).not.toBe("2026-10-17");
     const lastDown = trains
       .filter((t) => t.direction === "down")
-      .flatMap((t) => t.stops.filter((s) => s.stationId === "KR-1-0153").map((s) => ({ trainNo: t.trainNo, arrivalAt: s.arrivalAt })))
+      .flatMap((t) => t.stops.filter((s) => s.platformId === "KR-1-0153").map((s) => ({ trainNo: t.trainNo, arrivalAt: s.arrivalAt })))
       .sort((a, b) => Number(b.arrivalAt) - Number(a.arrivalAt))[0];
     expect(lastDown).toEqual({ trainNo: "0515", arrivalAt: new Date("2026-10-16T15:13:00Z") });
   });
@@ -160,8 +160,8 @@ describe("toScheduledTrains", () => {
         destination: "서동탄",
         express: false,
         stops: [
-          { stationId: "KR-1-P152", arrivalAt: null, departureAt: new Date("2026-10-16T12:01:00Z") },
-          { stationId: "KR-1-0153", arrivalAt: new Date("2026-10-16T12:04:00Z"), departureAt: null },
+          { platformId: "KR-1-P152", arrivalAt: null, departureAt: new Date("2026-10-16T12:01:00Z") },
+          { platformId: "KR-1-0153", arrivalAt: new Date("2026-10-16T12:04:00Z"), departureAt: null },
         ],
       },
     ]);

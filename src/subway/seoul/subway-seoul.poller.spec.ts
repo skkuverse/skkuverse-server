@@ -212,8 +212,8 @@ describe("SubwaySeoulPoller tracks what answered before it reports a failure", (
     });
     return ticks;
   }
-  const eventsAt = (ticks: readonly TrackedTick[], stationId: string): string[] =>
-    ticks.flatMap((tick) => tick.stations.filter((s) => s.stationId === stationId).flatMap((s) => s.events.map((e) => `${e.trainNo} ${e.state}`)));
+  const eventsAt = (ticks: readonly TrackedTick[], platformId: string): string[] =>
+    ticks.flatMap((tick) => tick.stations.filter((s) => s.platformId === platformId).flatMap((s) => s.events.map((e) => `${e.trainNo} ${e.state}`)));
 
   it("tracks line 1's train-map events and still rejects the tick when line 4's page does not parse", async () => {
     // Arrange

@@ -58,7 +58,7 @@ describe("SubwayTimetableService.listStationSchedules", () => {
 
     // Assert
     expect([sungkyunkwan?.serviceDate, sungkyunkwan?.dayType]).toEqual(["2026-10-16", "weekday"]);
-    const arrivals = sungkyunkwan?.trains.flatMap((t) => t.stops.filter((s) => s.stationId === "KR-1-0153").map((s) => s.arrivalAt));
+    const arrivals = sungkyunkwan?.trains.flatMap((t) => t.stops.filter((s) => s.platformId === "KR-1-0153").map((s) => s.arrivalAt));
     expect(arrivals).toContainEqual(new Date("2026-10-16T15:13:00Z"));
   });
 
@@ -85,9 +85,9 @@ describe("SubwayTimetableService.listStationSchedules", () => {
     const watched = schedules.flatMap(({ station, lineRoutes }) =>
       (["up", "down"] as const).map((direction) => {
         const route = lineRoutes[direction];
-        const { upstreamStationIds, watchedStationIds } = station.directions[direction];
-        const beyond = route.indexOf(station.id) - upstreamStationIds.length;
-        return [watchedStationIds, route.slice(Math.max(0, beyond - watchedStationIds.length), beyond).reverse()];
+        const { upstreamPlatformIds, watchedPlatformIds } = station.directions[direction];
+        const beyond = route.indexOf(station.id) - upstreamPlatformIds.length;
+        return [watchedPlatformIds, route.slice(Math.max(0, beyond - watchedPlatformIds.length), beyond).reverse()];
       }),
     );
     expect(watched.map(([declared]) => declared)).toEqual(watched.map(([, onRoute]) => onRoute));
@@ -106,8 +106,8 @@ describe("SubwayTimetableService.listStationSchedules", () => {
       (["up", "down"] as const).map((direction) => {
         const route = lineRoutes[direction];
         const at = route.indexOf(station.id);
-        const { upstreamStationIds, nextStationId } = station.directions[direction];
-        return [[upstreamStationIds, nextStationId], [route.slice(Math.max(0, at - 3), at).reverse(), route[at + 1]]];
+        const { upstreamPlatformIds, nextPlatformId } = station.directions[direction];
+        return [[upstreamPlatformIds, nextPlatformId], [route.slice(Math.max(0, at - 3), at).reverse(), route[at + 1]]];
       }),
     );
     expect(neighbors.map(([declared]) => declared)).toEqual(neighbors.map(([, onRoute]) => onRoute));

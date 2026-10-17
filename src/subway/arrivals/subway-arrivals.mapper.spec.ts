@@ -127,7 +127,7 @@ describe("toSubwayStationArrivals", () => {
 
   it("refuses a next station it has no name for rather than serving it unnamed", () => {
     // Arrange
-    const up = { ...HYEHWA.directions.up, nextStationId: "S1-4-499" };
+    const up = { ...HYEHWA.directions.up, nextPlatformId: "S1-4-499" };
     const station: SubwayStation = { ...HYEHWA, directions: { ...HYEHWA.directions, up } };
 
     // Act & Assert

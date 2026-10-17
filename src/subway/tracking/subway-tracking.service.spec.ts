@@ -64,13 +64,13 @@ function upstream(source: string, events: TrainEvent[] = [], countdownRows: Coun
 const api = (events: TrainEvent[] = [], countdownRows: CountdownRow[] = []) => upstream("seoul-subway-api", events, countdownRows);
 const trainMap = (events: TrainEvent[] = []) => upstream("seoul-trainmap", events);
 
-function event(trainNo: string, stationId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent {
-  return { trainNo, stationId, state, stateChangedAt: at(kst), destination };
+function event(trainNo: string, platformId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent {
+  return { trainNo, platformId, state, stateChangedAt: at(kst), destination };
 }
 
 const countdown = (trainNo: string, generatedKst: string, remainingSec: number): CountdownRow => ({
   trainNo,
-  stationId: HYEHWA,
+  platformId: HYEHWA,
   generatedAt: at(generatedKst),
   remainingSec,
 });
@@ -186,7 +186,7 @@ describe("SubwayTrackingService.track", () => {
     // Assert
     expect(logger.info).toHaveBeenCalledTimes(1);
     expect(logger.info).toHaveBeenCalledWith(
-      expect.objectContaining({ event: "subway.tracking.countdown_diverged", trainNo: "4674", stationId: HYEHWA, divergenceSec: 470 }),
+      expect.objectContaining({ event: "subway.tracking.countdown_diverged", trainNo: "4674", platformId: HYEHWA, divergenceSec: 470 }),
       expect.any(String),
     );
   });
@@ -203,8 +203,8 @@ describe("SubwayTrackingService.track", () => {
     // Assert
     const rejected = jest.mocked(logger.info).mock.calls.filter(([fields]) => (fields as { event?: string }).event === "subway.tracking.countdown_rejected");
     expect(rejected.map(([fields]) => fields)).toEqual([
-      expect.objectContaining({ trainNo: "4674", stationId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
-      expect.objectContaining({ trainNo: "4676", stationId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
+      expect.objectContaining({ trainNo: "4674", platformId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
+      expect.objectContaining({ trainNo: "4676", platformId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
     ]);
   });
 
@@ -273,9 +273,9 @@ describe("SubwayTrackingService.track", () => {
 });
 
 describe("SubwayTrackingService.track for an express passing stations it does not call at", () => {
-  const expressEvent = (trainNo: string, stationId: string, state: TrainEvent["state"], kst: string): TrainEvent => ({
+  const expressEvent = (trainNo: string, platformId: string, state: TrainEvent["state"], kst: string): TrainEvent => ({
     trainNo,
-    stationId,
+    platformId,
     state,
     stateChangedAt: onSaturday(kst),
     destination: Number(trainNo) % 2 === 0 ? "청량리" : "신창",
@@ -334,9 +334,9 @@ describe("SubwayTrackingService.track for an express passing stations it does no
 });
 
 describe("SubwayTrackingService.track for an express seen before its first stop", () => {
-  const southbound = (trainNo: string, stationId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent => ({
+  const southbound = (trainNo: string, platformId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent => ({
     trainNo,
-    stationId,
+    platformId,
     state,
     stateChangedAt: onSaturday(kst),
     destination,

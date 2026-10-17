@@ -38,7 +38,7 @@ describe("SubwaySeoulTrainmapService.listLineEvents", () => {
 
     // Assert
     expect(client.calls).toEqual(["1"]);
-    expect(events).toEqual([{ trainNo: "0493", stationId: "KR-1-0153", state: "departed", stateChangedAt: OBSERVED_AT, destination: "서동탄" }]);
+    expect(events).toEqual([{ trainNo: "0493", platformId: "KR-1-0153", state: "departed", stateChangedAt: OBSERVED_AT, destination: "서동탄" }]);
   });
 
   it("rejects a page without the line's blocks as a parse failure", async () => {
