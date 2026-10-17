@@ -62,8 +62,11 @@ export class SubwayHistoryService implements OnModuleInit {
     this.observedStateKeys.clear();
   }
 
+  // WHY: only the served platform's own events are stored (add-commute-station-subway design D10): the stops the
+  // tracker also observes there would multiply the writes for no report that reads them.
   private toNewEvents(source: string, platform: TrackedPlatform): SubwayEventDoc[] {
     return platform.events.flatMap((event) => {
+      if (event.platformId !== platform.platformId) return [];
       const key = `${source} ${event.trainNo} ${event.platformId} ${event.state}`;
       if (this.recordedEventKeys.has(key)) return [];
       this.recordedEventKeys.add(key);
