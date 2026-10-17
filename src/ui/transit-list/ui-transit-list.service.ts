@@ -3,7 +3,7 @@ import { BusConfigService } from "../../bus/config/bus-config.service";
 import { Clock } from "../../infra/clock";
 import type { SupportedLang } from "../../infra/types";
 import { toBusGroupCard } from "./ui-transit-list.mapper";
-import { isBusGroupVisible } from "./ui-transit-list.rules";
+import { isBusGroupVisible } from "../ui.rules";
 import type { TransitList } from "./ui-transit-list.wire";
 
 @Injectable()

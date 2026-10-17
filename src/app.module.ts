@@ -27,6 +27,7 @@ import { AppConfigModule } from "./app-config/app-config.module";
 import { UiModule } from "./ui/ui.module";
 import { UiHomeModule } from "./ui/home/ui-home.module";
 import { UiTransitListModule } from "./ui/transit-list/ui-transit-list.module";
+import { UiTransitModule } from "./ui/transit/ui-transit.module";
 import { UiScrollModule } from "./ui/scroll/ui-scroll.module";
 import { UiCampusModule } from "./ui/campus/ui-campus.module";
 import { BuildingModule } from "./building/building.module";
@@ -50,6 +51,7 @@ import { MiniappsModule } from "./miniapps/miniapps.module";
 import { MiniappsNotificationsModule } from "./miniapps/notifications/miniapps-notifications.module";
 import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
 import { SubwayModule } from "./subway/subway.module";
+import { SubwayStationsModule } from "./subway/stations/subway-stations.module";
 import { SubwayTimetableModule } from "./subway/timetable/subway-timetable.module";
 import { SubwayCountdownModule } from "./subway/countdown/subway-countdown.module";
 import { SubwayEstimateModule } from "./subway/estimate/subway-estimate.module";
@@ -92,6 +94,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     UiModule,
     UiHomeModule,
     UiTransitListModule,
+    UiTransitModule,
     UiScrollModule,
     UiCampusModule,
     BuildingModule,
@@ -118,6 +121,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     MiniappsNotificationsModule,
     MiniappsCatalogModule,
     SubwayModule,
+    SubwayStationsModule,
     SubwayTimetableModule,
     SubwayCountdownModule,
     SubwayEstimateModule,

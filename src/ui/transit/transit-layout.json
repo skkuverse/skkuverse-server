@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "sections": [
+    {
+      "type": "item_list",
+      "id": "campus",
+      "title": { "ko": "캠퍼스", "en": "Campus", "zh": "校区" },
+      "items": [
+        { "kind": "bus", "groupId": "campus" },
+        { "kind": "bus", "groupId": "fasttrack" }
+      ]
+    },
+    {
+      "type": "item_list",
+      "id": "hssc",
+      "title": { "ko": "인사캠", "en": "HSSC", "zh": "人文校区" },
+      "items": [
+        { "kind": "bus", "groupId": "hssc" },
+        { "kind": "bus", "groupId": "jongro02" },
+        { "kind": "bus", "groupId": "jongro07" },
+        { "kind": "bus", "groupId": "jongro08" },
+        { "kind": "subway", "stationId": "S1-4-420" }
+      ]
+    },
+    {
+      "type": "item_list",
+      "id": "nsc",
+      "title": { "ko": "자과캠", "en": "NSC", "zh": "自然校区" },
+      "items": [
+        { "kind": "bus", "groupId": "commute" },
+        { "kind": "subway", "stationId": "KR-1-0153" }
+      ]
+    }
+  ]
+}

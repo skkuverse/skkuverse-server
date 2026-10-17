@@ -320,6 +320,13 @@
       "GET ui/home/transitlist"
     ]
   },
+  "ui-transit.transitLayout": {
+    "source": "src/ui/transit/ui-transit.wire.ts",
+    "export": "transitLayout",
+    "routes": [
+      "GET ui/home/transit"
+    ]
+  },
   "ui.bannerCarousel": {
     "source": "src/ui/ui.wire.ts",
     "export": "bannerCarousel",
