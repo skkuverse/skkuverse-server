@@ -1,5 +1,5 @@
 {
-  "_about": "GET /building/2 captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); floors trimmed to two, spaces per floor to two, attachments and barrier-free sections to one; `extensions` removed 2026-10-16, when the detail stopped serving it",
+  "_about": "GET /building/2 captured from production 2026-10-11 (Deploy A snapshot, Accept-Language ko); floors trimmed to two, spaces per floor to two, attachments and barrier-free sections to one; `extensions` removed 2026-10-16, when the detail stopped serving it; `cafeterias` added 2026-10-17 by hand from sisulList campusCd=1 of that day (buildNo 101), before production served the field",
   "data": {
     "building": {
       "_id": 2,
@@ -132,6 +132,26 @@
           "ko": "1층",
           "en": "1F"
         }
+      }
+    ],
+    "cafeterias": [
+      {
+        "id": "10201030",
+        "name": {
+          "ko": "패컬티식당",
+          "en": "Faculty Dining Hall"
+        },
+        "floor": "6층",
+        "spaceCd": "10607A"
+      },
+      {
+        "id": "10201031",
+        "name": {
+          "ko": "은행골식당",
+          "en": "Eunhaenggol Restaurant"
+        },
+        "floor": "지하1층",
+        "spaceCd": "1B102"
       }
     ]
   }

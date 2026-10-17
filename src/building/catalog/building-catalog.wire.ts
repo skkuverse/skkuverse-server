@@ -23,6 +23,15 @@ const buildingConnection = z.object({
   toFloor: bilingualText,
 });
 
+const buildingCafeteria = z.object({
+  /** CONTRACT(skkuverse-crawler): SKKU's conspaceCd, the cafeteria id skkuverse-crawler/py/src/skkuverse_crawler/modules/meals/models.py stores. */
+  id: z.string(),
+  name: bilingualText,
+  /** WHY: the Korean floor name, the key `floors[].floor.ko` groups by; null when SKKU gives none. */
+  floor: z.string().nullable(),
+  spaceCd: z.string().nullable(),
+});
+
 export const buildingList = z.object({
   buildings: z.array(buildingCard),
 });
@@ -31,6 +40,7 @@ export const buildingDetail = z.object({
   building: buildingCard,
   floors: z.array(floorGroup),
   connections: z.array(buildingConnection),
+  cafeterias: z.array(buildingCafeteria),
 });
 
 export type BuildingList = z.input<typeof buildingList>;
