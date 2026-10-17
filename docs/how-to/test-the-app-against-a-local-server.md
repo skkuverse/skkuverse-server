@@ -3,7 +3,7 @@ title: Test the App Against a Local Server
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-16
+last-updated: 2026-10-17
 audience: internal
 ---
 
@@ -91,7 +91,7 @@ The switches cover what the server sends out. These are shared with production r
 - **Web pages.** Webview and mini-app pages inside the app load from their production hosts and call the production API, even when native screens use the local server.
 - **`GET /notices/overview`.** It calls skkuverse-ai at `AI_API_URL`, a loopback address in the dev config. Without a local skkuverse-ai the overview answers "unavailable".
 
-Sentry is off locally: the dev keys carry no `SENTRY_DSN`.
+Sentry is off locally: the dev keys carry no `SENTRY_DSN`, and `npm run verify:serve` sets `SENTRY_DSN=disabled`. So neither reproduces what the Sentry SDK changes on the wire, such as the trace headers the data.go.kr gateway refuses ([holidays architecture](../explanation/holidays-architecture.md)); `__tests__/nest/infra/sentry.test.ts` pins those instead.
 
 ## Troubleshooting
 
