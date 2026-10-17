@@ -6,7 +6,9 @@
  * FakeSubwayRepository, at a scripted Clock. What it guards: no upstream call
  * outside the service window (03:00 KST; 05:00 to 01:10 after a weekday, to
  * 00:30 after a Saturday); a source's daily ceiling rejects its ticks, calling
- * nothing, until 00:00 KST; and a failing source rejects its own ticks only.
+ * nothing, until 00:00 KST; a failing source rejects its own ticks only;
+ * and within one tick, what answered reaches the tracker before the tick
+ * rejects with the failure, so a failing line loses no other line's trains.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
@@ -30,6 +32,7 @@ import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-train
 import type { SubwayRepository } from "../subway.repository";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
+import type { TrackedTick } from "../tracking/subway-tracking.types";
 import { SubwaySeoulPoller } from "./subway-seoul.poller";
 import { SubwaySeoulService } from "./subway-seoul.service";
 
@@ -64,7 +67,7 @@ function setup(startIso: string) {
     now = new Date(iso);
     return tickOf(name)();
   };
-  return { registerPoller, apiClient, trainmapClient, tickAt };
+  return { registerPoller, apiClient, trainmapClient, tracking, tickAt };
 }
 
 const restore = { ...subway };
@@ -193,5 +196,67 @@ describe("SubwaySeoulPoller sources fail apart", () => {
 
     // Assert
     await expect(tickAt("2026-10-16T11:00:10Z", "subway-seoul")).resolves.toBeUndefined();
+  });
+});
+
+describe("SubwaySeoulPoller tracks what answered before it reports a failure", () => {
+  beforeEach(() => {
+    subway.enabled = true;
+  });
+
+  function listenTo(tracking: SubwayTrackingService): TrackedTick[] {
+    const ticks: TrackedTick[] = [];
+    tracking.addTickListener(async (tick) => {
+      ticks.push(tick);
+    });
+    return ticks;
+  }
+  const eventsAt = (ticks: readonly TrackedTick[], stationId: string): string[] =>
+    ticks.flatMap((tick) => tick.stations.filter((s) => s.stationId === stationId).flatMap((s) => s.events.map((e) => `${e.trainNo} ${e.state}`)));
+
+  it("tracks line 1's train-map events and still rejects the tick when line 4's page does not parse", async () => {
+    // Arrange
+    const { trainmapClient, tracking, tickAt } = setup("2026-10-16T11:45:00Z");
+    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    const ticks = listenTo(tracking);
+
+    // Act
+    const trainMapTick = tickAt("2026-10-16T11:45:00Z", "subway-trainmap");
+
+    // Assert
+    await expect(trainMapTick).rejects.toMatchObject({ source: "seoul-trainmap", code: "unexpected_shape" });
+    expect(eventsAt(ticks, "KR-1-0153")).toContain("0493 departed");
+    expect(eventsAt(ticks, "S1-4-420")).toEqual([]);
+  });
+
+  it("tracks both lines' API events and still rejects the tick when 혜화's arrivals call fails", async () => {
+    // Arrange
+    // At the line 4 fixture's capture time, so its rows are not too far ahead to track.
+    const { apiClient, tracking, tickAt } = setup("2026-10-16T13:28:00Z");
+    const failure = new Error("realtimeStationArrival: HTTP 500");
+    apiClient.arrivals.set("혜화", failure);
+    const ticks = listenTo(tracking);
+
+    // Act
+    const apiTick = tickAt("2026-10-16T13:28:00Z", "subway-seoul");
+
+    // Assert
+    await expect(apiTick).rejects.toBe(failure);
+    expect(eventsAt(ticks, "S1-4-420")).toEqual(expect.arrayContaining(["4204 arrived", "4707 arrived"]));
+  });
+
+  it("tracks nothing and rejects the tick when every line fails", async () => {
+    // Arrange
+    const { trainmapClient, tracking, tickAt } = setup("2026-10-16T11:45:00Z");
+    trainmapClient.pages.set("1", "<html>점검 중</html>");
+    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    const ticks = listenTo(tracking);
+
+    // Act
+    const trainMapTick = tickAt("2026-10-16T11:45:00Z", "subway-trainmap");
+
+    // Assert
+    await expect(trainMapTick).rejects.toMatchObject({ source: "seoul-trainmap" });
+    expect(ticks).toEqual([]);
   });
 });

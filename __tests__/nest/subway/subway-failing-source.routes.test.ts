@@ -100,10 +100,13 @@ function answerApi(): void {
   apiClient.arrivals.clear();
 }
 
+// WHY: all 4 calls: a tick whose arrivals calls still answer is tracked (subway-seoul.service.spec.ts).
 function failApi(): void {
   const outage = new Error("seoul-subway-api: HTTP 503");
   apiClient.positions.set("1호선", outage);
   apiClient.positions.set("4호선", outage);
+  apiClient.arrivals.set("성균관대", outage);
+  apiClient.arrivals.set("혜화", outage);
 }
 
 function answerTrainMap(): void {
