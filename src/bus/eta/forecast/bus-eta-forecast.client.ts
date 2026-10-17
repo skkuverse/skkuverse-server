@@ -4,15 +4,15 @@ import moment from "moment-timezone";
 import type { LatLng } from "../../../shared/lat-lng.types";
 import { BusEtaClient } from "../bus-eta.client";
 import { KST_TIME_ZONE } from "../../../shared/time-zone.constants";
-import { toTmapOffsets } from "./bus-eta-baseline.rules";
-import type { TmapCall, TmapPredictionResponse } from "./bus-eta-baseline.types";
+import { toTmapOffsets } from "./bus-eta-forecast.rules";
+import type { TmapCall, TmapPredictionResponse } from "./bus-eta-forecast.types";
 
 const ENDPOINT = "https://apis.openapi.sk.com/tmap/routes/prediction";
 const TIMEOUT_MS = 5_000;
 const RETRY_DELAY_MS = 3_000;
 
 @Injectable()
-export class BusEtaBaselineClient extends BusEtaClient {
+export class BusEtaForecastClient extends BusEtaClient {
   // QUIRK(tmap): the time-machine forecast for a whole sequence leaving at `departAt` ("arrival" forecasts forward
   // from the departure); the app key travels in a header only. Retries once, 3 s later, on a timeout, a reset or a 5xx.
   async fetchOffsets(stops: readonly LatLng[], departAt: Date, { appKey, retryDelayMs = RETRY_DELAY_MS }: TmapCall): Promise<number[]> {

@@ -13,6 +13,8 @@ const assets = [
   ["src/bus/schedule/skku-rest-days.json", "dist/src/bus/schedule/skku-rest-days.json"],
   // src/bus/stops/bus-stops.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/stops/schedule-stops.json", "dist/src/bus/stops/schedule-stops.json"],
+  // src/bus/eta/lane/bus-eta-lane.config.ts reads this with fs.readFileSync(__dirname/<name>)
+  ["src/bus/eta/lane/bus-lane.json", "dist/src/bus/eta/lane/bus-lane.json"],
   // src/bus/bus.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/jongro-routes.json", "dist/src/bus/jongro-routes.json"],
   // miniapps/miniapps.config.ts reads these with fs.readFileSync(__dirname/<name>).

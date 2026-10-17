@@ -468,6 +468,35 @@ describe("GET …/smart with arrival estimates", () => {
     expect(JSON.stringify(await schedule.resolveSmartSchedule("campus-inja"))).toBe(before);
   });
 
+  it("Diagnostics stay internal: a live value's travel model changes nothing in the body", async () => {
+    // Arrange
+    store({ ...estimate("live"), travel: { model: "busLane", corridorCarSec: 1920, corridorSec: 1080, spanCount: 6, coverage: 0.81 } });
+
+    // Act
+    const res = await request(server).get("/bus/schedule/data/campus-inja/smart");
+
+    // Assert
+    // The entry a live value without the model gives ("Live entry: … (live)").
+    expect(res.body.data.days[0].schedule[1]).toEqual(expect.objectContaining({ stopTimes: ["10:00", "10:51"], eta: { source: "live", updatedAt: "2026-10-12T00:20:00.000Z" } }));
+    expect(Object.keys(res.body.data.days[0].schedule[1]).sort()).toEqual(Object.keys(res.body.data.days[0].schedule[0]).concat("eta").sort());
+    expect(JSON.stringify(res.body)).not.toMatch(/travel|model|corridor|spanCount|coverage/);
+    expectWire(smartSchedule, res.body.data);
+  });
+
+  it("A prediction that reuses a fixed value is served as predicted, dated by its refresh, without the value it came from", async () => {
+    // Arrange
+    const refreshedAt = new Date("2026-10-11T19:00:00.000Z");
+    store({ ...estimate("predicted"), source: "naver", fetchedAt: refreshedAt, derivedFrom: "campus-inja|regular|2026-10-05|10:00|live" });
+
+    // Act
+    const res = await request(server).get("/bus/schedule/data/campus-inja/smart");
+
+    // Assert
+    expect(res.body.data.days[0].schedule[1]).toEqual(expect.objectContaining({ stopTimes: ["10:00", "10:51"], eta: { source: "predicted", updatedAt: "2026-10-11T19:00:00.000Z" } }));
+    expect(JSON.stringify(res.body)).not.toMatch(/derivedFrom|2026-10-05/);
+    expectWire(smartSchedule, res.body.data);
+  });
+
   it("ignores an estimate whose offsets no longer fit the sequence", async () => {
     // Fetched while the sequence had three stops.
     // Arrange

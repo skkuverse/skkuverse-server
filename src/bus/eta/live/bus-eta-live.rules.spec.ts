@@ -1,105 +1,92 @@
 /**
- * toNaverOffsets reads the travel time to each stop from a NAVER Directions 5
- * response, over the live response captured on 2026-10-09 (tasks.md 9.1) for
- * campus-inja.regular, and rejects the cases of spec "Implausible routes are
- * rejected".
+ * The live tick's travel-model rules: due runs grouped by travel model, one
+ * group per model and direction; a bus-lane value as the forced route's
+ * offsets with the corridor's car time replaced by the bus-lane time; the one
+ * minute that primes the probe ten minutes before a window opens; and a value
+ * fixed from the last live one keeping how it was timed.
  */
-import fs from "fs";
-import path from "path";
-import { BusEtaDirectionsError } from "../bus-eta.error";
-import type { LatLng } from "../../../shared/lat-lng.types";
-import { toNaverOffsets } from "./bus-eta-live.rules";
-import type { NaverDirectionsResponse } from "./bus-eta-live.types";
+import moment from "moment-timezone";
+import type { ShuttleEtaDoc } from "../bus-eta.document";
+import { etaDocId } from "../bus-eta.mapper";
+import type { EtaRun } from "../bus-eta.types";
+import type { SequenceStrategy } from "../lane/bus-eta-lane.types";
+import { liveDoc } from "./bus-eta-live.mapper";
+import { isPrimeMinute, toBusLaneOffsets, toLiveWork, toModelGroups } from "./bus-eta-live.rules";
 
+const DATE = "2026-10-16"; // a Friday
+const at = (hhmm: string, seconds = 0) => moment.tz(`${DATE} ${hhmm}`, "YYYY-MM-DD HH:mm", "Asia/Seoul").add(seconds, "s").toDate();
+const run = (time: string): EtaRun => ({ serviceId: "campus-inja", routeType: "regular", date: DATE, time, departAt: at(time) });
+const SOUTHBOUND: SequenceStrategy = { strategy: "busLane", direction: "southbound" };
+const CAR: SequenceStrategy = { strategy: "car" };
+const laneHours = (r: EtaRun): SequenceStrategy => (r.time < "21:00" ? SOUTHBOUND : CAR);
 
-const FIXTURE: NaverDirectionsResponse = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "../../../../__tests__/nest/bus/fixtures/naver-directions-inja.json"), "utf8"),
-);
-// Student center bus lot → N Center → Welfare Hall
-const STOPS: LatLng[] = [
-  { lat: 37.587367, lng: 126.993643 },
-  { lat: 37.292298, lng: 126.975057 },
-  { lat: 37.293999, lng: 126.973183 },
-];
-
-const fixture = (): NaverDirectionsResponse => JSON.parse(JSON.stringify(FIXTURE));
-const route = (res: NaverDirectionsResponse) => res.route!.traoptimal![0]!;
-
-function rejection(fn: () => unknown): BusEtaDirectionsError {
-  try {
-    fn();
-  } catch (err: unknown) {
-    expect(err).toBeInstanceOf(BusEtaDirectionsError);
-    return err as BusEtaDirectionsError;
-  }
-  throw new Error("expected a BusEtaDirectionsError");
-}
-
-describe("toNaverOffsets", () => {
-  it("reads the travel time to each stop from the running guide sums", () => {
+describe("isPrimeMinute", () => {
+  it.each([
+    ["12:19", 59, false],
+    ["12:20", 0, true],
+    ["12:20", 59, true],
+    ["12:21", 0, false],
+  ])("a 13:30 run primes in the minute 70 minutes before it: %s:%s → %s", (hhmm, seconds, expected) => {
     // Act & Assert
-    expect(toNaverOffsets(fixture(), STOPS)).toEqual([0, 4099, 4317]);
-  });
-
-  it("rejects a wrong count of waypoint (87) entries", () => {
-    // Arrange
-    const res = fixture();
-    const guide = route(res).guide;
-    const i = guide.findIndex((g) => g.type === 87);
-    guide[i + 1]!.duration += guide[i]!.duration;
-    guide.splice(i, 1);
-
-    // Act
-    const err = rejection(() => toNaverOffsets(res, STOPS));
-
-    // Assert
-    expect(err.kind).toBe("implausible");
-    expect(err.message).toMatch(/expected 1 waypoint \(87\) and 1 goal \(88\) guide entries, got 0 and 1/);
-  });
-
-  it("rejects stop times that miss the route total by more than 30 s", () => {
-    // Arrange
-    const res = fixture();
-    route(res).summary.duration += 31_000;
-
-    // Act & Assert
-    expect(rejection(() => toNaverOffsets(res, STOPS)).message).toMatch(/add up to 4316648 ms but the route total is 4347648 ms/);
-    const close = fixture();
-    route(close).summary.duration += 29_000;
-    expect(toNaverOffsets(close, STOPS)).toEqual([0, 4099, 4317]);
-  });
-
-  it("Drop-off snapped to an outside road: rejects a stop more than 150 m from where the route places it", () => {
-    // Arrange
-    const moved = [...STOPS];
-    moved[2] = { lat: 37.293999 + 0.00225, lng: 126.973183 }; // about 250 m north
-
-    // Act
-    const err = rejection(() => toNaverOffsets(fixture(), moved));
-
-    // Assert
-    expect(err.kind).toBe("implausible");
-    expect(err.message).toMatch(/stop 2 is 2\d\d m from where the route places it/);
-  });
-
-  it("rejects offsets that go backwards", () => {
-    // Arrange
-    const res = fixture();
-    const guide = route(res).guide;
-    const goal = guide.findIndex((g) => g.type === 88);
-    guide[goal - 1]!.duration = -300_000;
-
-    // Act & Assert
-    expect(rejection(() => toNaverOffsets(res, STOPS)).message).toMatch(/stop 2 is reached before stop 1/);
-  });
-
-  it("reports a non-zero code as an API failure, not a route", () => {
-    // Act
-    const err = rejection(() => toNaverOffsets({ code: 1, message: "출발지와 도착지가 동일합니다." }, STOPS));
-
-    // Assert
-    expect(err.kind).toBe("api");
-    expect(err.retryable).toBe(false);
+    expect(isPrimeMinute(run("13:30"), at(hhmm, seconds))).toBe(expected);
   });
 });
 
+describe("toModelGroups", () => {
+  it("A mixed window: a bus-lane group and a car group, each with its fixed and window runs", () => {
+    // Arrange
+    const work = { fix: [run("20:30")], inWindow: [run("20:50"), run("21:10")] };
+
+    // Act
+    const groups = toModelGroups(work, laneHours);
+
+    // Assert
+    expect(groups).toEqual([
+      { strategy: SOUTHBOUND, fix: [run("20:30")], inWindow: [run("20:50")] },
+      { strategy: CAR, fix: [], inWindow: [run("21:10")] },
+    ]);
+  });
+
+  it("one group per direction of a bus-lane sequence", () => {
+    // Arrange
+    const work = { fix: [], inWindow: [run("10:00"), run("10:10")] };
+    const byTime = (r: EtaRun): SequenceStrategy => (r.time === "10:00" ? SOUTHBOUND : { strategy: "busLane", direction: "northbound" });
+
+    // Act
+    const groups = toModelGroups(work, byTime);
+
+    // Assert
+    expect(groups.map((g) => g.strategy)).toEqual([SOUTHBOUND, { strategy: "busLane", direction: "northbound" }]);
+  });
+
+  it("no due run, no group", () => {
+    // Act & Assert
+    expect(toModelGroups({ fix: [], inWindow: [] }, laneHours)).toEqual([]);
+  });
+});
+
+describe("toBusLaneOffsets", () => {
+  it.each([
+    [[0, 4620], 1080, [0, 3780]],
+    [[0, 4620, 4740], 1080, [0, 3780, 3900]],
+    [[0, 4620], 2400, [0, 5100]],
+    [[0, 4620], 1080.6, [0, 3781]],
+  ])("offsets %j with a %s s bus-lane corridor (car: 1920 s) → %j", (stopOffsetsSec, corridorSec, expected) => {
+    // Act & Assert
+    expect(toBusLaneOffsets({ stopOffsetsSec, corridorCarSec: 1920 }, corridorSec)).toEqual(expected);
+  });
+});
+
+describe("toLiveWork", () => {
+  it("fixes a late run with its last live value's travel model", () => {
+    // Arrange
+    const travel = { model: "busLane" as const, corridorCarSec: 1920, corridorSec: 1080, spanCount: 6, coverage: 0.8 };
+    const last: ShuttleEtaDoc = liveDoc(run("10:00"), { offsetsSec: [0, 3780], fetchedAt: at("09:55"), travel });
+
+    // Act
+    const work = toLiveWork([run("10:00")], new Map([[etaDocId(run("10:00"), "live"), last]]), at("10:10"));
+
+    // Assert
+    expect(work.fallback).toEqual([expect.objectContaining({ frozen: true, frozenAt: at("10:10"), offsetsSec: [0, 3780], travel })]);
+  });
+});
