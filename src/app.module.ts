@@ -6,6 +6,7 @@ import { HolidaysModule } from "./holidays/holidays.module";
 import { HolidaysSyncModule } from "./holidays/sync/holidays-sync.module";
 import { BusModule } from "./bus/bus.module";
 import { BusCacheModule } from "./bus/cache/bus-cache.module";
+import { BusRegistryModule } from "./bus/registry/bus-registry.module";
 import { BusRealtimeModule } from "./bus/realtime/bus-realtime.module";
 import { BusRealtimeHsscModule } from "./bus/realtime/hssc/bus-realtime-hssc.module";
 import { BusRealtimeJongroModule } from "./bus/realtime/jongro/bus-realtime-jongro.module";
@@ -78,6 +79,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     HolidaysSyncModule,
     BusModule,
     BusCacheModule,
+    BusRegistryModule,
     BusRealtimeModule,
     BusRealtimeHsscModule,
     BusRealtimeJongroModule,

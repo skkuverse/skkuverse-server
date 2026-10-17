@@ -1,12 +1,13 @@
 import { Module } from "@nestjs/common";
 import { Clock } from "../../../infra/clock";
+import { BusRegistryModule } from "../../registry/bus-registry.module";
 import { BusRealtimeModule } from "../bus-realtime.module";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 import { BusRealtimeJongroPoller } from "./bus-realtime-jongro.poller";
 import { BusRealtimeJongroService } from "./bus-realtime-jongro.service";
 
 @Module({
-  imports: [BusRealtimeModule],
+  imports: [BusRealtimeModule, BusRegistryModule],
   providers: [BusRealtimeJongroClient, BusRealtimeJongroService, BusRealtimeJongroPoller, Clock],
   exports: [BusRealtimeJongroService],
 })

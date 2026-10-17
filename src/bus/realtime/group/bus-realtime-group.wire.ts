@@ -27,20 +27,25 @@ const arrival = z.object({
 
 const stationEta = z.object({
   stationIndex: z.int(),
-  /** QUIRK(topis): TOPIS's own arrival text, in Korean, served as it comes. */
-  eta: z.string(),
+  /**
+   * QUIRK(topis): TOPIS's own first-bus arrival text, in Korean, served as it comes.
+   * WHY: deprecated, kept while installed builds from before the arrivals OTA read it.
+   */
+  eta: z.string().meta({ deprecated: true, description: "Legacy: read arrivals[].message; kept for installed builds from before the arrivals OTA" }),
   /** WHY: the first bus, then the second, each listed when TOPIS gave it a text. */
   arrivals: z.array(arrival),
 });
 
 /**
  * CONTRACT(skkuverse-app): parsed by skkuverse-app/packages/shared/src/bus/parser.ts (parseRealtimeData),
- * which reads each station's stationIndex and eta; arrivals is additive and not read yet.
+ * which reads each station's stationIndex and eta; arrivals and stationsVersion are additive and not read yet.
  */
 export const realtimeGroup = z.object({
   groupId: z.string(),
   buses: z.array(realtimeBus),
   stationEtas: z.array(stationEta),
+  /** WHY: a Jongro route's stations version, the same as its `/bus/config` group's while that is current. */
+  stationsVersion: z.string().optional(),
 });
 
 export const realtimeGroupMeta = z.object({

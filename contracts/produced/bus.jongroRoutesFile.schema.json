@@ -22,57 +22,28 @@
       "seatCount": {
         "type": "number"
       },
-      "stations": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "stationName": {
-              "type": "string"
-            },
-            "arsId": {
-              "type": "string"
-            },
-            "topisId": {
-              "type": "string"
-            },
-            "isFirstStation": {
-              "type": "boolean"
-            },
-            "isLastStation": {
-              "type": "boolean"
-            },
-            "isRotationStation": {
-              "type": "boolean"
-            },
-            "transferLines": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "line": {
-                    "type": "string"
-                  },
-                  "color": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "line",
-                  "color"
-                ]
+      "transferLinesByArsId": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "line": {
+                "type": "string"
+              },
+              "color": {
+                "type": "string"
               }
-            }
-          },
-          "required": [
-            "stationName",
-            "arsId",
-            "topisId",
-            "isFirstStation",
-            "isLastStation",
-            "isRotationStation",
-            "transferLines"
-          ]
+            },
+            "required": [
+              "line",
+              "color"
+            ]
+          }
         }
       }
     },
@@ -83,7 +54,7 @@
       "iconType",
       "refreshInterval",
       "seatCount",
-      "stations"
+      "transferLinesByArsId"
     ]
   }
 }

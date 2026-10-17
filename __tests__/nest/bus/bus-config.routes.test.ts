@@ -1,7 +1,7 @@
 /**
  * Integration over BusConfigController (ETag/304 through EtagInterceptor) on
- * the production pipeline (buildTestApp); the config reads no database, so
- * nothing is overridden. Asserts group shape, 404
+ * the production pipeline (buildTestApp); the Jongro stations come from the
+ * registry, whose repository is an in-memory fake the boot seeds. Asserts group shape, 404
  * GROUP_NOT_FOUND, 304, per-language ETag difference, and the hssc (11 stations,
  * lastStationIndex 10, refreshInterval 10) / jongro07 (22 stations,
  * refreshInterval 40) screen contents.
@@ -11,15 +11,28 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
 import { busConfig, busGroup } from "../../../src/bus/config/bus-config.wire";
+import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
+import { Clock } from "../../../src/infra/clock";
+import appConfig from "../../../src/infra/config";
 import { expectWire } from "../../helpers/contracts/expect-wire";
+import { FakeBusRegistryRepository } from "../../helpers/fakes/bus/bus-registry.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+
+const registryRepository = new FakeBusRegistryRepository();
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 
 beforeAll(async () => {
-  app = await buildTestApp({ imports: [BusStopsModule, BusConfigModule], role: "api" });
+  app = await buildTestApp({
+    imports: [BusStopsModule, BusConfigModule],
+    overrides: [
+      { provide: BusRegistryRepository, useValue: registryRepository },
+      { provide: Clock, useValue: { now: () => new Date("2026-10-20T03:00:00Z") } },
+    ],
+    role: "api",
+  });
   httpServer = app.getHttpServer();
 });
 
@@ -244,5 +257,84 @@ describe("GET /bus/config/:groupId refresh", () => {
     expect(fasttrack.status).toBe(200);
     expectWire(busGroup, fasttrack.body.data);
     expect(fasttrack.body.data.screen.services[0]).not.toHaveProperty("refresh");
+  });
+});
+
+// WHY: the Jongro stations come from the registry now (improve-jongro-realtime D10, D7): each Jongro group names its
+// stations version, a stored change reaches a revalidating client as a 200, and a missing route is a 503.
+describe("GET /bus/config and the registry", () => {
+  async function withCacheOff(run: () => Promise<void>): Promise<void> {
+    const previous = appConfig.cache.enabled;
+    appConfig.cache.enabled = false;
+    try {
+      await run();
+    } finally {
+      appConfig.cache.enabled = previous;
+    }
+  }
+
+  it("gives each Jongro group its stored stations version and the HSSC group none", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/config");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(busConfig, res.body.data);
+    const versions = res.body.data.groups.map((g: { id: string; screen: { stationsVersion?: string } }) => [g.id, g.screen.stationsVersion ?? null]);
+    expect(versions).toEqual([
+      ["hssc", null],
+      ["campus", null],
+      ["fasttrack", null],
+      ["commute", null],
+      ["jongro02", registryRepository.routes.get("jongro02")!.stationsVersion],
+      ["jongro07", registryRepository.routes.get("jongro07")!.stationsVersion],
+      ["jongro08", registryRepository.routes.get("jongro08")!.stationsVersion],
+    ]);
+  });
+
+  it("answers 200 with the new stations, not 304, to the ETag from before a stored change", async () => {
+    // Arrange
+    const doc = registryRepository.routes.get("jongro07")!;
+    const stored = structuredClone(doc);
+    const before = await request(httpServer).get("/bus/config");
+
+    await withCacheOff(async () => {
+      try {
+        doc.stations = [doc.stations[1]!, doc.stations[0]!, ...doc.stations.slice(2)].map((s, index) => ({ ...s, sequence: index + 1 }));
+        doc.stationsVersion = "synced";
+
+        // Act
+        const after = await request(httpServer).get("/bus/config").set("If-None-Match", before.headers.etag);
+
+        // Assert
+        expect(after.status).toBe(200);
+        const jongro07 = after.body.data.groups.find((g: { id: string }) => g.id === "jongro07");
+        expect(jongro07.screen.stationsVersion).toBe("synced");
+        expect(jongro07.screen.stations[0].name).toBe("학생회관");
+      } finally {
+        registryRepository.routes.set("jongro07", stored);
+      }
+    });
+  });
+
+  it("answers 503 JONGRO_REGISTRY_UNAVAILABLE for the config and a group when a route is missing", async () => {
+    // Arrange
+    const stored = registryRepository.routes.get("jongro08")!;
+    registryRepository.routes.delete("jongro08");
+
+    await withCacheOff(async () => {
+      try {
+        // Act
+        const all = await request(httpServer).get("/bus/config");
+        const one = await request(httpServer).get("/bus/config/jongro08");
+
+        // Assert
+        expect([all.status, one.status]).toEqual([503, 503]);
+        expect(all.body.error.code).toBe("JONGRO_REGISTRY_UNAVAILABLE");
+        expect(one.body.error.code).toBe("JONGRO_REGISTRY_UNAVAILABLE");
+      } finally {
+        registryRepository.routes.set("jongro08", stored);
+      }
+    });
   });
 });

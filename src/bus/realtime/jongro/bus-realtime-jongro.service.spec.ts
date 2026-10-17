@@ -1,10 +1,11 @@
 /**
- * BusRealtimeJongroService over a scripted client and an in-memory bus_cache:
- * a route's tick stores its arrivals and its bus positions under the route's
- * code, places each bus on the registry's stop (sequence and name), times its
- * dwell at that stop, warns once per route when TOPIS's stop list drifts from
- * jongro-routes.json, and rejects on any failure so the poller registry
- * counts it.
+ * BusRealtimeJongroService over a scripted client, an in-memory bus_cache and
+ * a registry seeded from the committed snapshot: a route's tick stores its
+ * arrivals and its bus positions under the route's code, places each bus on
+ * the registry's stop (sequence and name), times its dwell at that stop, hands
+ * the arrival list and turnaround stops to the registry sync (applied at the
+ * third identical tick, never blocking the cache writes), and rejects on any
+ * failure, a missing registry route included, so the poller registry counts it.
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -15,6 +16,7 @@ jest.mock("../../../infra/logger", () => ({
 
 import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-jongro.client.fake";
+import { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
 import { jongroArrivalDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../../infra/clock";
@@ -22,6 +24,8 @@ import { jongroRoutes } from "../../bus.config";
 import type { JongroArrivalDoc } from "../../cache/bus-cache.document";
 import type { BusCacheRepository } from "../../cache/bus-cache.repository";
 import { BusCacheService } from "../../cache/bus-cache.service";
+import type { BusRegistryRepository } from "../../registry/bus-registry.repository";
+import { BusRegistryService } from "../../registry/bus-registry.service";
 import type { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 import { BusRealtimeJongroService } from "./bus-realtime-jongro.service";
 
@@ -32,6 +36,7 @@ const route = (code: string) => jongroRoutes.find((r) => r.code === code)!;
 
 let client: FakeBusRealtimeJongroClient;
 let busCache: FakeBusCacheRepository;
+let registryRepository: FakeBusRegistryRepository;
 let service: BusRealtimeJongroService;
 
 /** Runs every route's tick; returns their outcomes (a failed tick rejects). */
@@ -39,13 +44,16 @@ async function runTickAndFlush(): Promise<PromiseSettledResult<unknown>[]> {
   return Promise.allSettled(jongroRoutes.map((r) => service.refresh(r)));
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
   now = NOW;
   client = new FakeBusRealtimeJongroClient();
   busCache = new FakeBusCacheRepository();
+  registryRepository = new FakeBusRegistryRepository();
+  const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
+  await registry.onModuleInit();
   const cache = new BusCacheService(asReal<BusCacheRepository>(busCache));
-  service = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(client), cache, clock);
+  service = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(client), cache, registry, clock);
 });
 
 describe("BusRealtimeJongroService.listArrivals", () => {
@@ -105,7 +113,7 @@ describe("BusRealtimeJongroService.listArrivals", () => {
 describe("BusRealtimeJongroService.listPositions", () => {
   it("maps location data with station mapping", async () => {
     // Arrange
-    client.sightings = [{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537" }];
+    client.sightings = [{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537", turnaroundStationId: "100900028" }];
 
     // Act
     await runTickAndFlush();
@@ -127,7 +135,7 @@ describe("BusRealtimeJongroService.listPositions", () => {
 
   it("drops a bus at a stop the registry does not list", async () => {
     // Arrange
-    client.sightings = [{ stationId: "999999999", latitude: "37.5", longitude: "126.9", carNumber: "0001" }];
+    client.sightings = [{ stationId: "999999999", latitude: "37.5", longitude: "126.9", carNumber: "0001", turnaroundStationId: "100900028" }];
 
     // Act
     await service.refresh(route("07"));
@@ -138,7 +146,7 @@ describe("BusRealtimeJongroService.listPositions", () => {
 
   it("times a bus's dwell at its stop from the first tick that saw it there", async () => {
     // Arrange
-    client.sightings = [{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537" }];
+    client.sightings = [{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537", turnaroundStationId: "100900028" }];
     await service.refresh(route("07"));
     now = new Date(NOW.getTime() + 80_000);
 
@@ -155,71 +163,6 @@ describe("BusRealtimeJongroService.listPositions", () => {
 });
 
 describe("BusRealtimeJongroService.refresh", () => {
-  describe("registry drift warning", () => {
-    const logger = require("../../../infra/logger");
-    // What TOPIS would return when it matches the registry exactly: one row per
-    // ord, including 02's loop-closing repeat of its first stop at ord 27.
-    const topisListFor = (code: string): JongroArrivalDoc[] => {
-      const r = route(code);
-      return r.topisIds.map((stationId, idx) => ({
-        stationId,
-        sequence: String(idx + 1),
-        stationName: r.stations[idx]!.stationName,
-        stationNumber: "",
-        carNumber: "----",
-        eventDate: "",
-        eta: "",
-        buses: [],
-      }));
-    };
-    const driftWarnsFor = (code: string) =>
-      (logger.warn as jest.Mock).mock.calls.filter(
-        ([ctx, msg]) => ctx?.code === code && String(msg).includes("drifted"),
-      );
-
-    it("stays quiet when TOPIS lists exactly the registry stops", async () => {
-      // Arrange
-      client.arrivals = topisListFor("07");
-
-      // Act
-      await service.refresh(route("07"));
-
-      // Assert
-      expect(driftWarnsFor("07")).toHaveLength(0);
-    });
-
-    it("stays quiet on 02's loop-closing repeat of its first stop", async () => {
-      // Arrange
-      client.arrivals = topisListFor("02");
-
-      // Act
-      await service.refresh(route("02"));
-
-      // Assert
-      expect(driftWarnsFor("02")).toHaveLength(0);
-    });
-
-    it("warns once, naming a stop TOPIS added", async () => {
-      // Arrange
-      const list = topisListFor("07");
-      const extra = { ...list[0]!, stationId: "100000999", stationName: "새정류소", sequence: "23" };
-      client.arrivals = [...list, extra];
-
-      // Act
-      await service.refresh(route("07"));
-      await service.refresh(route("07"));
-
-      // Assert
-      const warns = driftWarnsFor("07");
-      expect(warns).toHaveLength(1);
-      expect(warns[0]![0]).toMatchObject({
-        mismatched: [{ staOrd: "23", stId: "100000999", stNm: "새정류소", expected: null }],
-        missing: [],
-        renamed: [],
-      });
-    });
-  });
-
   describe("error handling", () => {
     it("rejects each route's tick on an API error; state stays undefined", async () => {
       // Arrange
@@ -268,8 +211,6 @@ describe("BusRealtimeJongroService.refresh", () => {
 // WHY: TOPIS lists no bus overnight; a written empty list keeps the key alive, so a missing key means the
 // poller stopped writing (bus.cache.missing) rather than a quiet night.
 describe("BusRealtimeJongroService.refresh with no bus listed", () => {
-  const logger = require("../../../infra/logger");
-
   it("writes both of the route's keys as empty lists", async () => {
     // Arrange
     client.arrivals = [];
@@ -281,15 +222,61 @@ describe("BusRealtimeJongroService.refresh with no bus listed", () => {
     // Assert
     expect(Object.fromEntries(busCache.values)).toEqual({ jongro_stations_02: [], jongro_locations_02: [] });
   });
+});
 
-  it("does not read an empty arrival list as registry drift", async () => {
+// WHY: the poller follows TOPIS's stop list through the registry (improve-jongro-realtime D9, D10).
+describe("BusRealtimeJongroService.refresh and the registry", () => {
+  const arrivalsOf = (topisIds: readonly string[]): JongroArrivalDoc[] =>
+    topisIds.map((stationId, index) => jongroArrivalDoc({ stationId, sequence: String(index + 1), stationName: `stop ${stationId}`, stationNumber: `0${index}` }));
+  const storedIdsOf = (routeId: string) => registryRepository.routes.get(routeId)!.stations.map((station) => station.topisId);
+
+  it("applies a drifted stop list at the third tick, and the next tick places buses by it", async () => {
     // Arrange
-    client.arrivals = [];
+    const ids = [...storedIdsOf("jongro07"), "100000999"];
+    client.arrivals = arrivalsOf(ids);
 
     // Act
+    for (let i = 0; i < 3; i++) await service.refresh(route("07"));
+    client.sightings = [{ stationId: "100000999", latitude: "37.5", longitude: "127.0", carNumber: "0009" }];
     await service.refresh(route("07"));
 
     // Assert
-    expect((logger.warn as jest.Mock).mock.calls.filter(([fields]) => fields?.event === "bus.jongro.registry_drift")).toEqual([]);
+    expect(storedIdsOf("jongro07")).toEqual(ids);
+    expect((await service.listPositions("07"))!.map((p) => [p.sequence, p.stationName])).toEqual([["23", "stop 100000999"]]);
+    expect(new Set(client.positionsUrls)).toEqual(new Set([route("07").positionsUrl]));
+  });
+
+  it("keeps the stored turnaround stop when the position rows name none", async () => {
+    // Arrange
+    client.arrivals = arrivalsOf([...storedIdsOf("jongro07"), "100000999"]);
+    client.sightings = [{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537" }];
+
+    // Act
+    for (let i = 0; i < 3; i++) await service.refresh(route("07"));
+
+    // Assert
+    expect(registryRepository.routes.get("jongro07")!.turnaroundTopisId).toBe("100900028");
+  });
+
+  it("still writes both keys when the registry holds a change", async () => {
+    // Arrange
+    client.arrivals = arrivalsOf(storedIdsOf("jongro07").map((id, index) => (index < 10 ? `OTHER${index}` : id)));
+
+    // Act
+    for (let i = 0; i < 3; i++) await service.refresh(route("07"));
+
+    // Assert
+    expect(storedIdsOf("jongro07")[0]).toBe("100900220");
+    expect(busCache.values.get("jongro_stations_07")).toHaveLength(22);
+    expect(busCache.values.get("jongro_locations_07")).toEqual([]);
+  });
+
+  it("rejects the tick and writes nothing when the route's registry document is missing", async () => {
+    // Arrange
+    registryRepository.routes.delete("jongro02");
+
+    // Act & Assert
+    await expect(service.refresh(route("02"))).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE" });
+    expect([...busCache.values.keys()]).toEqual([]);
   });
 });

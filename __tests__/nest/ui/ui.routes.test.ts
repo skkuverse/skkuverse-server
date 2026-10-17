@@ -12,6 +12,7 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";
+import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { UiCampusModule } from "../../../src/ui/campus/ui-campus.module";
@@ -19,6 +20,7 @@ import { UiHomeModule } from "../../../src/ui/home/ui-home.module";
 import { UiScrollModule } from "../../../src/ui/scroll/ui-scroll.module";
 import { UiTransitListModule } from "../../../src/ui/transit-list/ui-transit-list.module";
 import { UiModule } from "../../../src/ui/ui.module";
+import { FakeBusRegistryRepository } from "../../helpers/fakes/bus/bus-registry.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { campusSheet } from "../../../src/ui/campus/ui-campus.wire";
@@ -35,7 +37,10 @@ let httpServer: import("http").Server;
 beforeAll(async () => {
   app = await buildTestApp({
     imports: [SchedulingModule, BusModule, UiModule, UiHomeModule, UiTransitListModule, UiScrollModule, UiCampusModule],
-    overrides: [{ provide: Clock, useValue: CLOCK }],
+    overrides: [
+      { provide: Clock, useValue: CLOCK },
+      { provide: BusRegistryRepository, useValue: new FakeBusRegistryRepository() },
+    ],
     role: "api",
   });
   httpServer = app.getHttpServer();

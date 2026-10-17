@@ -9,21 +9,29 @@
  */
 import { FakeBusConfigService } from "../../../__tests__/helpers/fakes/bus/bus-config.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { seededBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { BusConfigService } from "../../bus/config/bus-config.service";
 import type { BusGroupVisibility } from "../../bus/config/bus-config.types";
+import type { BusGroup } from "../../bus/config/bus-config.wire";
 import { BusStopsService } from "../../bus/stops/bus-stops.service";
 import type { Clock } from "../../infra/clock";
 import { MiniappsService } from "../../miniapps/miniapps.service";
 import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
 import { UiTransitService } from "./ui-transit.service";
 
-const realBusConfig = new BusConfigService(new BusStopsService());
+const LANGS = ["ko", "en", "zh"] as const;
+const realGroupsByLang = new Map<string, BusGroup[]>();
 
 let busConfig: FakeBusConfigService;
 
+beforeAll(async () => {
+  const realBusConfig = new BusConfigService(new BusStopsService(), await seededBusRegistryService());
+  for (const lang of LANGS) realGroupsByLang.set(lang, await realBusConfig.getBusGroups(lang));
+});
+
 function withVisibility(visibilityByGroupId: Record<string, BusGroupVisibility>): void {
-  for (const lang of ["ko", "en", "zh"] as const) {
-    const groups = realBusConfig.getBusGroups(lang).map((group) => ({ ...group, visibility: visibilityByGroupId[group.id] ?? group.visibility }));
+  for (const lang of LANGS) {
+    const groups = realGroupsByLang.get(lang)!.map((group) => ({ ...group, visibility: visibilityByGroupId[group.id] ?? group.visibility }));
     busConfig.busGroupsByLang.set(lang, groups);
   }
 }
@@ -33,9 +41,8 @@ function serviceAt(iso: string): UiTransitService {
   return new UiTransitService(asReal<BusConfigService>(busConfig), new SubwayStationsService(), new MiniappsService(), clock);
 }
 
-const itemIdsOf = (service: UiTransitService, sectionId: string): string[] | undefined =>
-  service
-    .getTransitLayout("ko")
+const itemIdsOf = async (service: UiTransitService, sectionId: string): Promise<string[] | undefined> =>
+  (await service.getTransitLayout("ko"))
     .sections.find((section) => section.id === sectionId)
     ?.items.map((served) => served.id);
 
@@ -45,12 +52,12 @@ beforeEach(() => {
 });
 
 describe("UiTransitService.getTransitLayout", () => {
-  it("serves the launch layout on 2026-10-20 in Korean, version 1, campus, hssc and nsc in order", () => {
+  it("serves the launch layout on 2026-10-20 in Korean, version 1, campus, hssc and nsc in order", async () => {
     // Arrange
     const service = serviceAt("2026-10-20T03:00:00Z");
 
     // Act
-    const layout = service.getTransitLayout("ko");
+    const layout = await service.getTransitLayout("ko");
 
     // Assert
     expect(layout.version).toBe(1);
@@ -66,13 +73,13 @@ describe("UiTransitService.getTransitLayout", () => {
     ]);
   });
 
-  it("serves English titles with the same section and item ids", () => {
+  it("serves English titles with the same section and item ids", async () => {
     // Arrange
     const service = serviceAt("2026-10-20T03:00:00Z");
 
     // Act
-    const ko = service.getTransitLayout("ko");
-    const en = service.getTransitLayout("en");
+    const ko = await service.getTransitLayout("ko");
+    const en = await service.getTransitLayout("en");
 
     // Assert
     expect(en.sections.map((section) => section.title)).toEqual([null, "HSSC", "NSC"]);
@@ -91,47 +98,47 @@ describe("UiTransitService.getTransitLayout", () => {
   it.each([
     ["2026-10-12T02:54:59.999Z", ["subway:KR-1-0153"]],
     ["2026-10-12T02:55:00.000Z", ["subway:KR-1-0153", "bus:commute"]],
-  ])("at %s, around 11:55 KST when the commute card opens, serves nsc as %p", (iso, itemIds) => {
+  ])("at %s, around 11:55 KST when the commute card opens, serves nsc as %p", async (iso, itemIds) => {
     // Act & Assert
-    expect(itemIdsOf(serviceAt(iso), "nsc")).toEqual(itemIds);
+    expect(await itemIdsOf(serviceAt(iso), "nsc")).toEqual(itemIds);
   });
 
   it.each([
     ["2026-12-18T14:59:59.999Z", ["subway:KR-1-0153", "bus:commute"]],
     ["2026-12-18T15:00:00.000Z", ["subway:KR-1-0153"]],
-  ])("at %s, around 00:00 KST on 2026-12-19 after the pilot, serves nsc as %p", (iso, itemIds) => {
+  ])("at %s, around 00:00 KST on 2026-12-19 after the pilot, serves nsc as %p", async (iso, itemIds) => {
     // Act & Assert
-    expect(itemIdsOf(serviceAt(iso), "nsc")).toEqual(itemIds);
+    expect(await itemIdsOf(serviceAt(iso), "nsc")).toEqual(itemIds);
   });
 
-  it("serves fasttrack in the campus section only inside its window", () => {
+  it("serves fasttrack in the campus section only inside its window", async () => {
     // Arrange
     withVisibility({ fasttrack: { type: "dateRange", from: "2026-10-20", until: "2026-10-21" } });
 
     // Act
-    const before = itemIdsOf(serviceAt("2026-10-19T14:59:59.999Z"), "campus");
-    const during = itemIdsOf(serviceAt("2026-10-19T15:00:00.000Z"), "campus");
+    const before = await itemIdsOf(serviceAt("2026-10-19T14:59:59.999Z"), "campus");
+    const during = await itemIdsOf(serviceAt("2026-10-19T15:00:00.000Z"), "campus");
 
     // Assert
     expect(before).toEqual(["bus:campus"]);
     expect(during).toEqual(["bus:campus", "bus:fasttrack"]);
   });
 
-  it("does not serve a section whose every item is hidden", () => {
+  it("does not serve a section whose every item is hidden", async () => {
     // Arrange
     const past: BusGroupVisibility = { type: "dateRange", from: "2026-03-01", until: "2026-03-07" };
     withVisibility({ campus: past, fasttrack: past });
 
     // Act
-    const layout = serviceAt("2026-10-20T03:00:00Z").getTransitLayout("ko");
+    const layout = await serviceAt("2026-10-20T03:00:00Z").getTransitLayout("ko");
 
     // Assert
     expect(layout.sections.map((section) => section.id)).toEqual(["hssc", "nsc"]);
   });
 
-  it("refuses to build over a bus group the layout does not place", () => {
+  it("refuses to build over a bus group the layout does not place", async () => {
     // Arrange
-    const groups = realBusConfig.getBusGroups("ko");
+    const groups = realGroupsByLang.get("ko")!;
     busConfig.busGroupsByLang.set("ko", [...groups, { ...groups[0]!, id: "night" }]);
 
     // Act & Assert

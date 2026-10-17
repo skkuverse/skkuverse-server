@@ -16,11 +16,19 @@
 import fs from "fs";
 import path from "path";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
+import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
+import { seededBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
 import type { SupportedLang } from "../../../src/infra/types";
 
-const busConfig = new BusConfigService(new BusStopsService());
-const getBusGroups = (lang?: SupportedLang) => busConfig.getBusGroups(lang);
+let busConfig: BusConfigService;
+const groupsByLang = new Map<SupportedLang, BusGroup[]>();
+// WHY: the stations come from the registry, seeded here as a boot seeds it; the groups are read once.
+beforeAll(async () => {
+  busConfig = new BusConfigService(new BusStopsService(), await seededBusRegistryService());
+  for (const lang of ["ko", "en", "zh"] as const) groupsByLang.set(lang, await busConfig.getBusGroups(lang));
+});
+const getBusGroups = (lang: SupportedLang = "ko"): BusGroup[] => groupsByLang.get(lang)!;
 
 // scripts/ is excluded from tsconfig (plain CommonJS operator tooling), so this
 // is a require rather than an import.
@@ -148,7 +156,7 @@ describe("every committed timetable file", () => {
       entries: Array<{ time: string; routeType: string; notes: string | null; stopTimes?: Array<string | null> }>;
     }> = buildDocuments(parseTimetableFile(JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), "utf8"))));
     type SeqStop = { timing: string; note?: string };
-    const groups = getBusGroups("ko") as unknown as Array<{
+    const groupsOf = () => getBusGroups("ko") as unknown as Array<{
       id: string;
       screenType: string;
       screen: {
@@ -157,7 +165,7 @@ describe("every committed timetable file", () => {
       };
     }>;
     const service = (serviceId: string) =>
-      groups.flatMap((g) => g.screen.services ?? []).find((s) => s.serviceId === serviceId);
+      groupsOf().flatMap((g) => g.screen.services ?? []).find((s) => s.serviceId === serviceId);
 
     it("names only services that serviceConfig defines", () => {
       // Act & Assert
@@ -167,7 +175,7 @@ describe("every committed timetable file", () => {
     it("uses only route types that have a badge in the group listing the service", () => {
       // Act & Assert
       for (const doc of docs) {
-        const group = groups.find((g) => g.screen.services?.some((s) => s.serviceId === doc.serviceId));
+        const group = groupsOf().find((g) => g.screen.services?.some((s) => s.serviceId === doc.serviceId));
         expect(group).toBeDefined();
         const badgeIds = group!.screen.routeBadges!.map((b) => b.id);
         for (const entry of doc.entries) expect(badgeIds).toContain(entry.routeType);
@@ -178,7 +186,7 @@ describe("every committed timetable file", () => {
     it("gives every route type a stop sequence, and every sequence route type a badge", () => {
       // Act & Assert
       for (const doc of docs) {
-        const group = groups.find((g) => g.screen.services?.some((s) => s.serviceId === doc.serviceId))!;
+        const group = groupsOf().find((g) => g.screen.services?.some((s) => s.serviceId === doc.serviceId))!;
         const badgeIds = group.screen.routeBadges!.map((b) => b.id);
         const seq = service(doc.serviceId)!.stopSequences ?? {};
         for (const rt of new Set(doc.entries.map((e) => e.routeType))) {

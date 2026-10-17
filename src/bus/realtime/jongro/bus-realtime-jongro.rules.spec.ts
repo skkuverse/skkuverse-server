@@ -1,37 +1,21 @@
 /**
  * The Jongro rules: which TOPIS header codes carry data, which of TOPIS's
  * strings read as a number, the dwell timer at a
- * stop (reset after 10 minutes) at each threshold, and the drift between
- * TOPIS's stop list and jongro-routes.json, named stop by stop.
+ * stop (reset after 10 minutes) at each threshold, and the cache keys.
  */
-import { jongroRoutes } from "../../bus.config";
-import type { JongroArrivalDoc } from "../../cache/bus-cache.document";
 import {
   isNoResultHeaderCd,
   isUsableHeaderCd,
   toArrivalsKey,
   toDwell,
   toPositionsKey,
-  toRegistryDrift,
   toTopisInteger,
 } from "./bus-realtime-jongro.rules";
+import { jongroRoutes } from "../../bus.config";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
-const minutesBefore = (minutes: number): string => new Date(NOW.getTime() - minutes * 60_000).toISOString();
 const route07 = jongroRoutes.find((r) => r.code === "07")!;
-
-// What TOPIS would return when it matches the registry exactly: one row per ord.
-const topisList = (): JongroArrivalDoc[] =>
-  route07.topisIds.map((stationId, idx) => ({
-    stationId,
-    sequence: String(idx + 1),
-    stationName: route07.stations[idx]!.stationName,
-    stationNumber: "",
-    carNumber: "----",
-    eventDate: "",
-    eta: "",
-    buses: [],
-  }));
+const minutesBefore = (minutes: number): string => new Date(NOW.getTime() - minutes * 60_000).toISOString();
 
 describe("isUsableHeaderCd", () => {
   it.each([
@@ -89,51 +73,6 @@ describe("toDwell", () => {
   ])("a stop held %i minutes → %j", (minutes, expected) => {
     // Act & Assert
     expect(toDwell(minutesBefore(minutes), NOW)).toEqual(expected);
-  });
-});
-
-describe("toRegistryDrift", () => {
-  it("is null when TOPIS lists exactly the registry stops", () => {
-    // Act & Assert
-    expect(toRegistryDrift(route07, topisList())).toBeNull();
-  });
-
-  it("names reordered stops by ord", () => {
-    // Arrange
-    const list = topisList();
-    const [a, b] = [list[0]!, list[1]!];
-
-    // Act
-    const drift = toRegistryDrift(route07, [{ ...b, sequence: "1" }, { ...a, sequence: "2" }, ...list.slice(2)]);
-
-    // Assert
-    expect(drift).toMatchObject({
-      mismatched: [
-        { staOrd: "1", stId: b.stationId, expected: a.stationId },
-        { staOrd: "2", stId: a.stationId, expected: b.stationId },
-      ],
-      missing: [],
-    });
-  });
-
-  it("names registry ords that TOPIS no longer lists", () => {
-    // Act & Assert
-    expect(toRegistryDrift(route07, topisList().slice(0, -1))).toMatchObject({
-      mismatched: [],
-      missing: [{ staOrd: "22", topisId: "100900219", stationName: "600주년기념관" }],
-    });
-  });
-
-  it("names renamed stops", () => {
-    // Arrange
-    const list = topisList();
-
-    // Act & Assert
-    expect(toRegistryDrift(route07, [{ ...list[0]!, stationName: "새이름" }, ...list.slice(1)])).toMatchObject({
-      mismatched: [],
-      missing: [],
-      renamed: [{ staOrd: "1", stNm: "새이름", registryName: "성균관대운동장" }],
-    });
   });
 });
 

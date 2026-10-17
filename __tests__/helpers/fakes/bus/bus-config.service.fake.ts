@@ -10,19 +10,23 @@ import type { PublicOf } from "../public-of";
 export class FakeBusConfigService implements PublicOf<BusConfigService> {
   busGroupsByLang = new Map<SupportedLang, BusGroup[]>();
 
-  getBusGroups(lang: SupportedLang = "ko"): BusGroup[] {
+  listGroupIds(): string[] {
+    return (this.busGroupsByLang.get("ko") ?? []).map((group) => group.id);
+  }
+
+  async getBusGroups(lang: SupportedLang = "ko"): Promise<BusGroup[]> {
     return this.busGroupsByLang.get(lang) ?? [];
   }
 
-  computeEtag(lang: SupportedLang = "ko"): string {
-    return `"fake-${lang}-${this.getBusGroups(lang).length}"`;
+  async computeEtag(lang: SupportedLang = "ko"): Promise<string> {
+    return `"fake-${lang}-${(await this.getBusGroups(lang)).length}"`;
   }
 
-  getGroupById(id: string, lang: SupportedLang = "ko"): BusGroup | null {
-    return this.getBusGroups(lang).find((group) => group.id === id) ?? null;
+  async getGroupById(id: string, lang: SupportedLang = "ko"): Promise<BusGroup | null> {
+    return (await this.getBusGroups(lang)).find((group) => group.id === id) ?? null;
   }
 
-  computeGroupEtag(id: string, lang: SupportedLang = "ko"): string | null {
-    return this.getGroupById(id, lang) === null ? null : `"fake-${id}-${lang}"`;
+  async computeGroupEtag(id: string, lang: SupportedLang = "ko"): Promise<string | null> {
+    return (await this.getGroupById(id, lang)) === null ? null : `"fake-${id}-${lang}"`;
   }
 }

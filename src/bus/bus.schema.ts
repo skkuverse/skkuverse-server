@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { isHex6 } from "../infra/color";
 import { JONGRO_ROUTE_ID_PATTERN } from "./bus.constants";
-import { isLoopClosingRepeat } from "./bus.rules";
 import { jongroRoutesFile, type JongroRoutesFile } from "./bus.wire";
 
 type JongroRouteEntry = JongroRoutesFile[number];
@@ -20,41 +19,21 @@ function checkEntryFields(entry: JongroRouteEntry, at: IssuePath, ctx: Issues): 
   if (!(Number.isInteger(entry.seatCount) && entry.seatCount > 0)) report(ctx, [...at, "seatCount"], "required positive integer");
 }
 
-function checkStations(entry: JongroRouteEntry, at: IssuePath, ctx: Issues): void {
-  const topisIds = entry.stations.map((s) => s.topisId);
-  const seen = new Set<string>();
-  entry.stations.forEach((station, index) => {
-    const stationAt = [...at, "stations", index];
-    if (station.stationName.length === 0) report(ctx, [...stationAt, "stationName"], NON_EMPTY);
-    if (station.arsId.length === 0) report(ctx, [...stationAt, "arsId"], NON_EMPTY);
-    if (station.topisId.length === 0) report(ctx, [...stationAt, "topisId"], NON_EMPTY);
-    else if (seen.has(station.topisId) && !isLoopClosingRepeat(topisIds, index)) {
-      report(ctx, [...stationAt, "topisId"], `duplicate "${station.topisId}" within route`);
-    }
-    seen.add(station.topisId);
-    station.transferLines.forEach((line, lineIndex) => {
-      if (line.line.length === 0) report(ctx, [...stationAt, "transferLines", lineIndex, "line"], NON_EMPTY);
-      if (!isHex6(line.color)) report(ctx, [...stationAt, "transferLines", lineIndex, "color"], HEX);
+function checkTransferLines(entry: JongroRouteEntry, at: IssuePath, ctx: Issues): void {
+  for (const [arsId, lines] of Object.entries(entry.transferLinesByArsId)) {
+    const linesAt = [...at, "transferLinesByArsId", arsId];
+    if (arsId.length === 0) report(ctx, linesAt, "ARS number must be a non-empty string");
+    if (lines.length === 0) report(ctx, linesAt, "required non-empty array");
+    lines.forEach((line, lineIndex) => {
+      if (line.line.length === 0) report(ctx, [...linesAt, lineIndex, "line"], NON_EMPTY);
+      if (!isHex6(line.color)) report(ctx, [...linesAt, lineIndex, "color"], HEX);
     });
-  });
-}
-
-// WHY: a station's sequence is its index + 1, so the first and last markers must sit at the two ends.
-function checkEnds(entry: JongroRouteEntry, at: IssuePath, ctx: Issues): void {
-  const last = entry.stations.length - 1;
-  const firsts = entry.stations.flatMap((station, index) => (station.isFirstStation ? [index] : []));
-  const lasts = entry.stations.flatMap((station, index) => (station.isLastStation ? [index] : []));
-  if (firsts.length !== 1) report(ctx, at, `must have exactly 1 isFirstStation=true (got ${firsts.length})`);
-  else if (firsts[0] !== 0) report(ctx, at, `isFirstStation=true must be at index 0 (got ${firsts[0]})`);
-  if (lasts.length !== 1) report(ctx, at, `must have exactly 1 isLastStation=true (got ${lasts.length})`);
-  else if (lasts[0] !== last) report(ctx, at, `isLastStation=true must be at index ${last} (got ${lasts[0]})`);
+  }
 }
 
 function checkEntry(entry: JongroRouteEntry, index: number, ctx: Issues): void {
   checkEntryFields(entry, [index], ctx);
-  if (entry.stations.length === 0) return report(ctx, [index, "stations"], "required non-empty array");
-  checkStations(entry, [index], ctx);
-  checkEnds(entry, [index], ctx);
+  checkTransferLines(entry, [index], ctx);
 }
 
 export const jongroRoutesConfig = jongroRoutesFile.superRefine((entries, ctx) => {

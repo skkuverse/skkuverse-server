@@ -12,7 +12,7 @@ export class UiTransitController {
 
   @Get("home/transit")
   @CacheControl(UI_CACHE_CONTROL)
-  getTransitLayout(@Lang() lang: SupportedLang): TransitLayout {
+  getTransitLayout(@Lang() lang: SupportedLang): Promise<TransitLayout> {
     return this.transit.getTransitLayout(lang);
   }
 }

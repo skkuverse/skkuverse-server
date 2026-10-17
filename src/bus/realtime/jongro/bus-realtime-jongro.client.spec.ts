@@ -9,6 +9,7 @@
 jest.mock("axios", () => ({ get: jest.fn() }));
 
 import arrivalsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-arrivals.json";
+import positionsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-positions.json";
 import { jongroRoutes } from "../../bus.config";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 
@@ -257,14 +258,14 @@ describe("BusRealtimeJongroClient.fetchSightings", () => {
     // Arrange
     respond({
       msgHeader: { headerCd: "0" },
-      msgBody: { itemList: [{ lastStnId: "100900197", tmX: "126.998", tmY: "37.587", plainNo: "서울74사5537" }] },
+      msgBody: { itemList: [{ lastStnId: "100900197", gpsX: "126.998", gpsY: "37.587", plainNo: "서울74사5537", trnstnid: "100900028" }] },
     });
 
     // Act
     const result = await new BusRealtimeJongroClient().fetchSightings(route07);
 
     // Assert
-    expect(result).toEqual([{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537" }]);
+    expect(result).toEqual([{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537", turnaroundStationId: "100900028" }]);
     expect(axios.get).toHaveBeenCalledWith(route07.positionsUrl, { timeout: 10000 });
   });
 
@@ -306,6 +307,67 @@ describe("BusRealtimeJongroClient.fetchSightings", () => {
       headerCd: "8",
       headerMsg: "한도 초과",
       message: "TOPIS error code (jongro 07 location)",
+    });
+  });
+});
+
+// WHY: the registry sync follows the turnaround stop TOPIS names on every position row (improve-jongro-realtime D9).
+describe("BusRealtimeJongroClient.fetchSightings turnaround stop", () => {
+  it("keeps each row's turnaround stop id (trnstnid)", async () => {
+    // Arrange
+    respond(positionsFixture.jongro07);
+
+    // Act
+    const sightings = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sightings.map((s) => [s.stationId, s.turnaroundStationId])).toEqual([
+      ["100900221", "100900028"],
+      ["100900043", "100900028"],
+    ]);
+  });
+});
+
+// WHY: getBusPosByRtid is the position endpoint that names the turnaround stop; it puts the coordinates in gpsY/gpsX
+// and leaves tmX/tmY null (the 2026-10-17 capture), so a row without a stop or a coordinate is not its shape.
+describe("BusRealtimeJongroClient.fetchSightings over getBusPosByRtid", () => {
+  it("reads the coordinates from gpsY and gpsX, as strings", async () => {
+    // Arrange
+    respond(positionsFixture.jongro07);
+
+    // Act
+    const sightings = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sightings).toEqual([
+      { stationId: "100900221", latitude: "37.586893", longitude: "126.994075", carNumber: "5538", turnaroundStationId: "100900028" },
+      { stationId: "100900043", latitude: "37.576948", longitude: "127.002008", carNumber: "5537", turnaroundStationId: "100900028" },
+    ]);
+  });
+
+  it("reads a row without trnstnid as naming no turnaround stop", async () => {
+    // Arrange
+    const [row] = positionsFixture.jongro07.msgBody.itemList;
+    respond({ msgHeader: { headerCd: "0" }, msgBody: { itemList: [{ ...row, trnstnid: undefined }] } });
+
+    // Act
+    const [sighting] = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sighting).toHaveProperty("turnaroundStationId", undefined);
+    expect(sighting!.stationId).toBe("100900221");
+  });
+
+  it.each(["lastStnId", "gpsX", "gpsY"])("rejects a row without %s, naming the field", async (field) => {
+    // Arrange
+    const [row] = positionsFixture.jongro07.msgBody.itemList;
+    respond({ msgHeader: { headerCd: "0" }, msgBody: { itemList: [{ ...row, [field]: null }] } });
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchSightings(route07)).rejects.toMatchObject({
+      name: "UpstreamError",
+      upstream: "topis",
+      message: `TOPIS row has no ${field} (jongro 07 location)`,
     });
   });
 });

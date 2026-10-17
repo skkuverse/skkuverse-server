@@ -21,14 +21,13 @@ export class UiTransitListService {
 
   // WHY: builds that predate GET /ui/home/transit still call this; an hourly line counts them until it is deleted.
   // SEE: docs/explanation/ui-architecture.md ("Open questions")
-  listBusGroupCards(lang: SupportedLang): TransitList {
+  async listBusGroupCards(lang: SupportedLang): Promise<TransitList> {
     const ticket = this.legacyCallThrottle.take("transitlist");
     if (ticket) {
       logger.warn({ event: "ui.transit_list.legacy_called", suppressed: ticket.suppressed }, "deprecated: /ui/home/transitlist called, use /ui/home/transit");
     }
     const now = this.clock.now();
-    return this.busConfig
-      .getBusGroups(lang)
+    return (await this.busConfig.getBusGroups(lang))
       .filter((group) => isBusGroupVisible(group.visibility, now))
       .map(toBusGroupCard);
   }

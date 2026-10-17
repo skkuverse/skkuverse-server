@@ -22,15 +22,15 @@ export class UiTransitService {
     private readonly clock: Clock,
   ) {
     this.layout = readTransitLayout({
-      busGroupIds: busConfig.getBusGroups("ko").map((group) => group.id),
+      busGroupIds: busConfig.listGroupIds(),
       stationIds: stations.listStations().map((station) => station.id),
       registry: miniApps,
     });
   }
 
-  getTransitLayout(lang: SupportedLang): TransitLayout {
+  async getTransitLayout(lang: SupportedLang): Promise<TransitLayout> {
     const now = this.clock.now();
-    const visibleGroups = this.busConfig.getBusGroups(lang).filter((group) => isBusGroupVisible(group.visibility, now));
+    const visibleGroups = (await this.busConfig.getBusGroups(lang)).filter((group) => isBusGroupVisible(group.visibility, now));
     const context = {
       lang,
       busGroupById: new Map(visibleGroups.map((group) => [group.id, group])),

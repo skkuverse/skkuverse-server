@@ -7,7 +7,7 @@ import { toJongroBusPosition } from "./bus-realtime-jongro.mapper";
 describe("toJongroBusPosition", () => {
   it("places the sighting on its stop with its dwell", () => {
     // Arrange
-    const sighting = { stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537" };
+    const sighting = { stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537", turnaroundStationId: "100900028" };
 
     // Act
     const position = toJongroBusPosition(sighting, { sequence: 6, stationName: "명륜새마을금고" }, {

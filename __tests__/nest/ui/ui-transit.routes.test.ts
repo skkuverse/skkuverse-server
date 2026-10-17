@@ -11,12 +11,14 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";
+import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { UiTransitModule } from "../../../src/ui/transit/ui-transit.module";
 import { transitLayout } from "../../../src/ui/transit/ui-transit.wire";
 import { UiModule } from "../../../src/ui/ui.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
+import { FakeBusRegistryRepository } from "../../helpers/fakes/bus/bus-registry.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 // WHY: 12:00 KST on 2026-10-20, so the commute card is open and the answer does not depend on the day the suite runs.
@@ -30,7 +32,10 @@ let httpServer: import("http").Server;
 beforeAll(async () => {
   app = await buildTestApp({
     imports: [SchedulingModule, BusModule, UiModule, UiTransitModule],
-    overrides: [{ provide: Clock, useValue: CLOCK }],
+    overrides: [
+      { provide: Clock, useValue: CLOCK },
+      { provide: BusRegistryRepository, useValue: new FakeBusRegistryRepository() },
+    ],
     role: "api",
   });
   httpServer = app.getHttpServer();
