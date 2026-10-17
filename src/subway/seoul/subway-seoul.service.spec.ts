@@ -48,7 +48,7 @@ function setup() {
   return { service, apiClient, trainmapClient };
 }
 
-const summary = (events: readonly TrainEvent[]) => events.map((e) => `${e.trainNo} ${e.stationId} ${e.state}`).sort();
+const summary = (events: readonly TrainEvent[]) => events.map((e) => `${e.trainNo} ${e.platformId} ${e.state}`).sort();
 
 describe("SubwaySeoulService.observeApi", () => {
   it("makes the 4 API calls of one tick and returns the merged events of both lines", async () => {
@@ -87,7 +87,7 @@ describe("SubwaySeoulService.observeApi", () => {
     const { countdownRows } = await service.observeApi();
 
     // Assert
-    expect(countdownRows.map((row) => `${row.trainNo} ${row.stationId} ${row.remainingSec}`)).toEqual([
+    expect(countdownRows.map((row) => `${row.trainNo} ${row.platformId} ${row.remainingSec}`)).toEqual([
       "4674 S1-4-420 150",
       "4174 S1-4-420 390",
       "4331 S1-4-420 240",

@@ -29,7 +29,7 @@ export function toUnresolvedCutoff(now: Date): Date {
 }
 
 export function toPredictionDoc(made: PredictionMade): SubwayPredictionDoc {
-  const { serviceDate, stationId, direction, horizonMin, train, madeAt } = made;
+  const { serviceDate, platformId: stationId, direction, horizonMin, train, madeAt } = made;
   const prediction = { serviceDate, trainNo: train.trainNo, stationId, horizonMin, direction, source: train.source, predictedAt: train.arrivalAt, madeAt };
   return { ...prediction, status: "open", observedAt: null, observedState: null, resolvedAt: null, errorSec: null };
 }

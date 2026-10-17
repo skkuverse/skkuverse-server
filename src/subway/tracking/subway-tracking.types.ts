@@ -3,7 +3,7 @@ import type { CountdownRow, SubwayDirection, TrainEvent, TrainState } from "../s
 import type { LineRoutes } from "../timetable/subway-timetable.types";
 
 export interface TrainProgress {
-  stationId: string;
+  platformId: string;
   state: TrainState;
   at: Date;
   ordinal: number;
@@ -22,8 +22,8 @@ export interface TrackingTick {
   responseEvents: readonly (readonly TrainEvent[])[];
   routes: LineRoutes;
   directionByDestination: ReadonlyMap<string, SubwayDirection>;
-  stationId: string;
-  stopStationIdsByTrainNo: ReadonlyMap<string, readonly string[]>;
+  platformId: string;
+  stopPlatformIdsByTrainNo: ReadonlyMap<string, readonly string[]>;
   now: Date;
 }
 
@@ -38,7 +38,7 @@ export interface StationObservations {
 }
 
 export interface TrackedStation {
-  stationId: string;
+  platformId: string;
   lineCode: string;
   serviceDate: string;
   events: readonly TrainEvent[];

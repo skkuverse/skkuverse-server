@@ -64,8 +64,8 @@ async function trackAt(kst: string, source: string, events: TrainEvent[], countd
   await app.get(SubwayTrackingService).track({ observe: async () => ({ source, events, countdownRows }) });
 }
 
-function event(trainNo: string, stationId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent {
-  return { trainNo, stationId, state, stateChangedAt: at(kst), destination };
+function event(trainNo: string, platformId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent {
+  return { trainNo, platformId, state, stateChangedAt: at(kst), destination };
 }
 
 function getAt(kst: string, path: string): request.Test {
@@ -144,7 +144,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
 
   it("serves a 혜화 countdown of 150 s generated at 20:40:20 as arriving at 20:42:50, live, with no seconds left of its own", async () => {
     // Arrange
-    const row: CountdownRow = { trainNo: "4674", stationId: "S1-4-420", generatedAt: at("20:40:20"), remainingSec: 150 };
+    const row: CountdownRow = { trainNo: "4674", platformId: "S1-4-420", generatedAt: at("20:40:20"), remainingSec: 150 };
     await trackAt("20:41:00", "seoul-subway-api", [], [row]);
 
     // Act

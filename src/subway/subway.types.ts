@@ -6,9 +6,9 @@ export type SubwayDirection = "up" | "down";
 
 export interface StationDirection {
   name: LocalizedName;
-  upstreamStationIds: readonly string[];
-  watchedStationIds: readonly string[];
-  nextStationId: string;
+  upstreamPlatformIds: readonly string[];
+  watchedPlatformIds: readonly string[];
+  nextPlatformId: string;
 }
 
 export type StationTimetable = { source: "korail" } | { source: "seoul-station"; stationCode: string };
@@ -34,7 +34,7 @@ export type TrainState = "approaching" | "arrived" | "departed";
 
 export interface TrainEvent {
   trainNo: string;
-  stationId: string;
+  platformId: string;
   state: TrainState;
   stateChangedAt: Date;
   destination: string;
@@ -42,7 +42,7 @@ export interface TrainEvent {
 
 export interface CountdownRow {
   trainNo: string;
-  stationId: string;
+  platformId: string;
   generatedAt: Date;
   remainingSec: number;
 }

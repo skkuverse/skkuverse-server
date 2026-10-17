@@ -35,7 +35,7 @@ const HWASEO = "KR-1-P154";
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
 
 function event(overrides: Partial<TrainEvent> = {}): TrainEvent {
-  return { trainNo: "0493", stationId: SUNGKYUNKWAN, state: "arrived", stateChangedAt: at("20:41:00"), destination: "서동탄", ...overrides };
+  return { trainNo: "0493", platformId: SUNGKYUNKWAN, state: "arrived", stateChangedAt: at("20:41:00"), destination: "서동탄", ...overrides };
 }
 
 function tick(overrides: Partial<TrackingTick>): TrackingTick {
@@ -44,8 +44,8 @@ function tick(overrides: Partial<TrackingTick>): TrackingTick {
     responseEvents: [],
     routes: ROUTES,
     directionByDestination: DIRECTION_BY_DESTINATION,
-    stationId: SUNGKYUNKWAN,
-    stopStationIdsByTrainNo: new Map(),
+    platformId: SUNGKYUNKWAN,
+    stopPlatformIdsByTrainNo: new Map(),
     now: at("20:41:10"),
     ...overrides,
   };
@@ -56,7 +56,7 @@ function history(overrides: Partial<TrainHistory> = {}): TrainHistory {
     trainNo: "0493",
     direction: "down",
     destination: "서동탄",
-    latest: { stationId: SUNGKYUNKWAN, state: "arrived", at: at("20:41:00"), ordinal: 10 },
+    latest: { platformId: SUNGKYUNKWAN, state: "arrived", at: at("20:41:00"), ordinal: 10 },
     lastSeenAt: at("20:41:00"),
     ...overrides,
   };
@@ -86,17 +86,17 @@ describe("toProgressOrdinal", () => {
     ["departed", 11],
   ] as const)("counts %s at the fourth station of the route as %i", (state, ordinal) => {
     // Act & Assert
-    expect(toProgressOrdinal(DOWN_ROUTE, { stationId: SUNGKYUNKWAN, state })).toBe(ordinal);
+    expect(toProgressOrdinal(DOWN_ROUTE, { platformId: SUNGKYUNKWAN, state })).toBe(ordinal);
   });
 
   it("orders the same station by the direction travelled", () => {
     // Act & Assert
-    expect([toProgressOrdinal(ROUTES.down, { stationId: HWASEO, state: "arrived" }), toProgressOrdinal(ROUTES.up, { stationId: HWASEO, state: "arrived" })]).toEqual([13, 10]);
+    expect([toProgressOrdinal(ROUTES.down, { platformId: HWASEO, state: "arrived" }), toProgressOrdinal(ROUTES.up, { platformId: HWASEO, state: "arrived" })]).toEqual([13, 10]);
   });
 
   it("has no progress at a station off the route", () => {
     // Act & Assert
-    expect(toProgressOrdinal(DOWN_ROUTE, { stationId: "KR-1-0150", state: "arrived" })).toBeNull();
+    expect(toProgressOrdinal(DOWN_ROUTE, { platformId: "KR-1-0150", state: "arrived" })).toBeNull();
   });
 });
 
@@ -120,7 +120,7 @@ describe("toDirection", () => {
 });
 
 describe("toLatestProgress", () => {
-  const latest = { stationId: SUNGKYUNKWAN, state: "arrived" as const, at: at("20:41:15"), ordinal: 10 };
+  const latest = { platformId: SUNGKYUNKWAN, state: "arrived" as const, at: at("20:41:15"), ordinal: 10 };
 
   it("keeps the earlier time of the same progress from another source", () => {
     // Act & Assert
@@ -150,14 +150,14 @@ describe("toLatestProgress", () => {
 describe("mergeObservations", () => {
   it("takes only the newer of two rows one response lists for the same train", () => {
     // Arrange
-    const stale = event({ trainNo: "0496", destination: "광운대", stationId: SUNGKYUNKWAN, state: "arrived", stateChangedAt: at("20:40:00") });
-    const fresh = event({ trainNo: "0496", destination: "광운대", stationId: SUNGKYUNKWAN, state: "approaching", stateChangedAt: at("20:41:00") });
+    const stale = event({ trainNo: "0496", destination: "광운대", platformId: SUNGKYUNKWAN, state: "arrived", stateChangedAt: at("20:40:00") });
+    const fresh = event({ trainNo: "0496", destination: "광운대", platformId: SUNGKYUNKWAN, state: "approaching", stateChangedAt: at("20:41:00") });
 
     // Act
     const histories = mergeObservations(tick({ responseEvents: [[stale, fresh]] }));
 
     // Assert
-    expect(latestOf(histories, "0496")).toEqual({ stationId: SUNGKYUNKWAN, state: "approaching", at: at("20:41:00"), ordinal: 12 });
+    expect(latestOf(histories, "0496")).toEqual({ platformId: SUNGKYUNKWAN, state: "approaching", at: at("20:41:00"), ordinal: 12 });
   });
 
   it("takes the newer row of a train however the response orders its duplicates", () => {
@@ -197,21 +197,21 @@ describe("mergeObservations", () => {
 
   it("starts a history in the destination's direction, at the row's progress, keyed by four digits", () => {
     // Act
-    const histories = mergeObservations(tick({ responseEvents: [[event({ trainNo: "K0493", stationId: UIWANG })]] }));
+    const histories = mergeObservations(tick({ responseEvents: [[event({ trainNo: "K0493", platformId: UIWANG })]] }));
 
     // Assert
     expect(histories.get("0493")).toEqual({
       trainNo: "0493",
       direction: "down",
       destination: "서동탄",
-      latest: { stationId: UIWANG, state: "arrived", at: at("20:41:00"), ordinal: 7 },
+      latest: { platformId: UIWANG, state: "arrived", at: at("20:41:00"), ordinal: 7 },
       lastSeenAt: at("20:41:10"),
     });
   });
 
   it("ignores a row at a station off the line's route", () => {
     // Act
-    const histories = mergeObservations(tick({ responseEvents: [[event({ stationId: "S1-4-420" })]] }));
+    const histories = mergeObservations(tick({ responseEvents: [[event({ platformId: "S1-4-420" })]] }));
 
     // Assert
     expect(histories.size).toBe(0);
@@ -227,7 +227,7 @@ describe("mergeObservations", () => {
     const next = mergeObservations(tick({ histories: first, now: at("20:41:55"), responseEvents: [[api]] }));
 
     // Assert
-    expect(latestOf(next)).toEqual({ stationId: SUNGKYUNKWAN, state: "departed", at: at("20:41:45"), ordinal: 11 });
+    expect(latestOf(next)).toEqual({ platformId: SUNGKYUNKWAN, state: "departed", at: at("20:41:45"), ordinal: 11 });
   });
 
   it("keeps the time of the first crawl that showed a departure", () => {
@@ -245,7 +245,7 @@ describe("mergeObservations", () => {
 
   it("takes the API's earlier time for the progress the train map showed first", () => {
     // Arrange
-    const histories = new Map([["0493", history({ latest: { stationId: SUNGKYUNKWAN, state: "arrived", at: at("20:41:15"), ordinal: 10 } })]]);
+    const histories = new Map([["0493", history({ latest: { platformId: SUNGKYUNKWAN, state: "arrived", at: at("20:41:15"), ordinal: 10 } })]]);
 
     // Act
     const next = mergeObservations(tick({ histories, now: at("20:41:20"), responseEvents: [[event({ stateChangedAt: at("20:41:02") })]] }));
@@ -256,7 +256,7 @@ describe("mergeObservations", () => {
 
   it("keeps train 0692's state through a missed poll until it is back 60 seconds later", () => {
     // Arrange
-    const row = event({ trainNo: "0692", destination: "광운대", stationId: HWASEO, state: "departed", stateChangedAt: at("20:31:00") });
+    const row = event({ trainNo: "0692", destination: "광운대", platformId: HWASEO, state: "departed", stateChangedAt: at("20:31:00") });
     const seen = mergeObservations(tick({ now: at("20:31:00"), responseEvents: [[row]] }));
 
     // Act
@@ -275,7 +275,7 @@ describe("mergeObservations", () => {
   ])("holds a train seen before 성균관대 and missing from every upstream for %s only within 15 minutes", (_label, kst, isKept) => {
     // Arrange
     // WHY: an express runs 510 s from Geumjeong to Sungkyunkwan Univ., and no upstream reliably reports it between them.
-    const departedUiwang = history({ latest: { stationId: UIWANG, state: "departed", at: at("20:41:00"), ordinal: 8 } });
+    const departedUiwang = history({ latest: { platformId: UIWANG, state: "departed", at: at("20:41:00"), ordinal: 8 } });
     const histories = new Map([["0493", departedUiwang]]);
 
     // Act
@@ -296,10 +296,10 @@ describe("mergeObservations at stations an express passes", () => {
     ["1912", [BYEONGJEOM, SUWON, SUNGKYUNKWAN]],
     ["1913", [SUNGKYUNKWAN, SUWON, BYEONGJEOM]],
   ]);
-  const express = (trainNo: string, stationId: string, state: TrainEvent["state"], kst: string): TrainEvent =>
-    event({ trainNo, stationId, state, stateChangedAt: at(kst), destination: trainNo === "1913" ? "신창" : "청량리" });
+  const express = (trainNo: string, platformId: string, state: TrainEvent["state"], kst: string): TrainEvent =>
+    event({ trainNo, platformId, state, stateChangedAt: at(kst), destination: trainNo === "1913" ? "신창" : "청량리" });
   const expressTick = (now: string, histories: ReadonlyMap<string, TrainHistory>, ...responseEvents: TrainEvent[][]): TrackingTick =>
-    tick({ histories, responseEvents, now: at(now), stopStationIdsByTrainNo: STOP_STATION_IDS_BY_TRAIN_NO });
+    tick({ histories, responseEvents, now: at(now), stopPlatformIdsByTrainNo: STOP_STATION_IDS_BY_TRAIN_NO });
 
   it("keeps 1912's departure from 성균관대 at 10:43:36 through its events at 의왕, a station it passes", () => {
     // Arrange
@@ -316,7 +316,7 @@ describe("mergeObservations at stations an express passes", () => {
       trainNo: "1912",
       direction: "up",
       destination: "청량리",
-      latest: { stationId: SUNGKYUNKWAN, state: "departed", at: at("10:43:36"), ordinal: 14 },
+      latest: { platformId: SUNGKYUNKWAN, state: "departed", at: at("10:43:36"), ordinal: 14 },
       lastSeenAt: at("10:45:51"),
     });
   });
@@ -329,7 +329,7 @@ describe("mergeObservations at stations an express passes", () => {
     const standing = mergeObservations(expressTick("10:06:06", approaching, [express("1910", SERYU, "arrived", "10:06:06")]));
 
     // Assert
-    expect(latestOf(standing, "1910")).toEqual({ stationId: BYEONGJEOM, state: "departed", at: at("10:04:36"), ordinal: 2 });
+    expect(latestOf(standing, "1910")).toEqual({ platformId: BYEONGJEOM, state: "departed", at: at("10:04:36"), ordinal: 2 });
   });
 
   it("takes 1910's next stop after the station it passed", () => {
@@ -340,21 +340,21 @@ describe("mergeObservations at stations an express passes", () => {
     const next = mergeObservations(expressTick("10:10:30", passing, [express("1910", SUWON, "approaching", "10:10:26")]));
 
     // Assert
-    expect(latestOf(next, "1910")).toEqual({ stationId: SUWON, state: "approaching", at: at("10:10:26"), ordinal: 6 });
+    expect(latestOf(next, "1910")).toEqual({ platformId: SUWON, state: "approaching", at: at("10:10:26"), ordinal: 6 });
   });
 
   it.each([
     ["northbound 1912 at 의왕", "1912", UIWANG, "10:44:51", 14],
     ["southbound 1913 at 화서", "1913", HWASEO, "10:26:40", 11],
-  ])("ends a stay at 성균관대 whose departure no upstream reported once %s, which it passes, is seen", (_label, trainNo, stationId, kst, ordinal) => {
+  ])("ends a stay at 성균관대 whose departure no upstream reported once %s, which it passes, is seen", (_label, trainNo, platformId, kst, ordinal) => {
     // Arrange
     const standing = mergeObservations(expressTick("10:24:00", new Map(), [express(trainNo, SUNGKYUNKWAN, "arrived", "10:24:00")]));
 
     // Act
-    const next = mergeObservations(expressTick(kst, standing, [express(trainNo, stationId, "approaching", kst)]));
+    const next = mergeObservations(expressTick(kst, standing, [express(trainNo, platformId, "approaching", kst)]));
 
     // Assert
-    expect(latestOf(next, trainNo)).toEqual({ stationId: SUNGKYUNKWAN, state: "departed", at: at(kst), ordinal });
+    expect(latestOf(next, trainNo)).toEqual({ platformId: SUNGKYUNKWAN, state: "departed", at: at(kst), ordinal });
   });
 
   it("keeps southbound 1913, seen only at 의왕, which it passes before its first stop, at 의왕", () => {
@@ -362,7 +362,7 @@ describe("mergeObservations at stations an express passes", () => {
     const histories = mergeObservations(expressTick("10:22:00", new Map(), [express("1913", UIWANG, "arrived", "10:22:00")]));
 
     // Assert
-    expect(latestOf(histories, "1913")).toEqual({ stationId: UIWANG, state: "arrived", at: at("10:22:00"), ordinal: 7 });
+    expect(latestOf(histories, "1913")).toEqual({ platformId: UIWANG, state: "arrived", at: at("10:22:00"), ordinal: 7 });
   });
 
   it("keeps southbound 1935, seen departing 군포 on its run from 금정 into 성균관대, its next stop, at 군포", () => {
@@ -370,7 +370,7 @@ describe("mergeObservations at stations an express passes", () => {
     const geumjeongRoute = ["KR-1-P149", ...DOWN_ROUTE];
     const tick1935 = tick({
       routes: { down: geumjeongRoute, up: [...geumjeongRoute].reverse() },
-      stopStationIdsByTrainNo: new Map([["1935", ["KR-1-P149", SUNGKYUNKWAN, SUWON]]]),
+      stopPlatformIdsByTrainNo: new Map([["1935", ["KR-1-P149", SUNGKYUNKWAN, SUWON]]]),
       responseEvents: [[express("1935", "KR-1-P150", "departed", "16:31:00")]],
       now: at("16:31:00"),
     });
@@ -379,7 +379,7 @@ describe("mergeObservations at stations an express passes", () => {
     const histories = mergeObservations(tick1935);
 
     // Assert
-    expect(latestOf(histories, "1935")).toEqual({ stationId: "KR-1-P150", state: "departed", at: at("16:31:00"), ordinal: 5 });
+    expect(latestOf(histories, "1935")).toEqual({ platformId: "KR-1-P150", state: "departed", at: at("16:31:00"), ordinal: 5 });
   });
 
   it("moves southbound 1913 along the stations it passes before its first stop, as the 2026-10-17 train map saw it", () => {
@@ -390,12 +390,12 @@ describe("mergeObservations at stations an express passes", () => {
     const passed = mergeObservations(expressTick("10:23:21", atDangjeong, [express("1913", UIWANG, "departed", "10:23:21")]));
 
     // Assert
-    expect(latestOf(passed, "1913")).toEqual({ stationId: UIWANG, state: "departed", at: at("10:23:21"), ordinal: 8 });
+    expect(latestOf(passed, "1913")).toEqual({ platformId: UIWANG, state: "departed", at: at("10:23:21"), ordinal: 8 });
   });
 });
 
 describe("mergeObservations of a train past the station", () => {
-  const departedSungkyunkwan = history({ latest: { stationId: SUNGKYUNKWAN, state: "departed", at: at("20:41:00"), ordinal: 11 } });
+  const departedSungkyunkwan = history({ latest: { platformId: SUNGKYUNKWAN, state: "departed", at: at("20:41:00"), ordinal: 11 } });
 
   it.each([
     ["46 m 59 s", "21:27:59", true],
@@ -414,7 +414,7 @@ describe("mergeObservations of a train past the station", () => {
     ["arrived at", 10],
   ] as const)("holds a train last seen %s 성균관대 and missing for 47 minutes, like one past it", (state, ordinal) => {
     // Arrange
-    const atStation = history({ latest: { stationId: SUNGKYUNKWAN, state: state === "arrived at" ? "arrived" : state, at: at("20:41:00"), ordinal } });
+    const atStation = history({ latest: { platformId: SUNGKYUNKWAN, state: state === "arrived at" ? "arrived" : state, at: at("20:41:00"), ordinal } });
 
     // Act
     const [held, dropped] = ["21:28:00", "21:28:01"].map((kst) =>
@@ -427,7 +427,7 @@ describe("mergeObservations of a train past the station", () => {
 
   it("holds a train seen at 화서, past 성균관대, after 15 minutes", () => {
     // Arrange
-    const atHwaseo = history({ latest: { stationId: HWASEO, state: "arrived", at: at("20:41:00"), ordinal: 13 } });
+    const atHwaseo = history({ latest: { platformId: HWASEO, state: "arrived", at: at("20:41:00"), ordinal: 13 } });
 
     // Act
     const next = mergeObservations(tick({ histories: new Map([["0493", atHwaseo]]), now: at("21:20:00"), responseEvents: [[]] }));
@@ -438,7 +438,7 @@ describe("mergeObservations of a train past the station", () => {
 });
 
 describe("toLiveCountdownRows", () => {
-  const row = { trainNo: "4674", stationId: "S1-4-420", generatedAt: at("20:40:20"), remainingSec: 150 };
+  const row = { trainNo: "4674", platformId: "S1-4-420", generatedAt: at("20:40:20"), remainingSec: 150 };
 
   it.each([
     ["89 s", "20:42:29", ["4674"]],

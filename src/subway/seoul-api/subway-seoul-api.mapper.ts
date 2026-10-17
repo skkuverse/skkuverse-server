@@ -14,21 +14,21 @@ const STATE_BY_TRAIN_STTUS: Readonly<Record<SeoulPositionRow["trainSttus"], Trai
   "3": null,
 };
 
-export function toTrainEvents(rows: readonly SeoulPositionRow[], stationIdByName: ReadonlyMap<string, string>): TrainEvent[] {
+export function toTrainEvents(rows: readonly SeoulPositionRow[], platformIdByName: ReadonlyMap<string, string>): TrainEvent[] {
   return rows.flatMap((row) => {
-    const stationId = stationIdByName.get(row.statnNm);
+    const platformId = platformIdByName.get(row.statnNm);
     const state = STATE_BY_TRAIN_STTUS[row.trainSttus];
-    if (stationId === undefined || state === null) return [];
-    return [{ trainNo: row.trainNo, stationId, state, stateChangedAt: toKstInstant(row.recptnDt), destination: row.statnTnm }];
+    if (platformId === undefined || state === null) return [];
+    return [{ trainNo: row.trainNo, platformId, state, stateChangedAt: toKstInstant(row.recptnDt), destination: row.statnTnm }];
   });
 }
 
-export function toCountdownRows(rows: readonly SeoulArrivalRow[], stationIdByName: ReadonlyMap<string, string>): CountdownRow[] {
+export function toCountdownRows(rows: readonly SeoulArrivalRow[], platformIdByName: ReadonlyMap<string, string>): CountdownRow[] {
   return rows.flatMap((row) => {
-    const stationId = stationIdByName.get(row.statnNm);
+    const platformId = platformIdByName.get(row.statnNm);
     const remainingSec = Number(row.barvlDt);
-    if (stationId === undefined || remainingSec === 0) return [];
-    return [{ trainNo: row.btrainNo, stationId, generatedAt: toKstInstant(row.recptnDt), remainingSec }];
+    if (platformId === undefined || remainingSec === 0) return [];
+    return [{ trainNo: row.btrainNo, platformId, generatedAt: toKstInstant(row.recptnDt), remainingSec }];
   });
 }
 

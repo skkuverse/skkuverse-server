@@ -38,10 +38,10 @@ Subway owns the real-time arrivals of the stations nearest the two campuses: Sun
 | localized name (`LocalizedName`) | A name in every supported language | `SUBWAY_STATIONS` | — |
 | direction (`SubwayDirection`) | `up` or `down`, as the operator's timetable names a train's direction | the timetables' `direction` | `bound` |
 | station direction (`StationDirection`) | One direction at one station: its localized name, its upstream stations, its watched stations and its next station | `SubwayStation.directions` | — |
-| upstream station (`upstreamStationIds`) | Up to three stations a direction's trains pass just before the station, by station id, nearest first | `StationDirection.upstreamStationIds` | `prevStations` |
-| watched station (`watchedStationIds`) | A station beyond the upstream stations whose events the tracker also observes for a direction, by station id, nearest first: 금정 for Sungkyunkwan Univ. down, the stop before it of every down express; never a previous station nor counted in stops away | `StationDirection.watchedStationIds` | — |
-| next station (`nextStationId`) | The station a direction's trains reach just after the station, by station id | `StationDirection.nextStationId` | — |
-| previous station (`previousStation`) | A direction's nearest upstream station, as the response names it: its station id and its name in the request language | `upstreamStationIds`, `NEIGHBOR_NAME_BY_STATION_ID` | — |
+| upstream station (`upstreamPlatformIds`) | Up to three stations a direction's trains pass just before the station, by station id, nearest first | `StationDirection.upstreamPlatformIds` | `prevStations` |
+| watched station (`watchedPlatformIds`) | A station beyond the upstream stations whose events the tracker also observes for a direction, by station id, nearest first: 금정 for Sungkyunkwan Univ. down, the stop before it of every down express; never a previous station nor counted in stops away | `StationDirection.watchedPlatformIds` | — |
+| next station (`nextPlatformId`) | The station a direction's trains reach just after the station, by station id | `StationDirection.nextPlatformId` | — |
+| previous station (`previousStation`) | A direction's nearest upstream station, as the response names it: its station id and its name in the request language | `upstreamPlatformIds`, `NEIGHBOR_NAME_BY_STATION_ID` | — |
 | neighbor name (`NEIGHBOR_NAME_BY_STATION_ID`) | The localized name of each direction's previous station and next station | `NEIGHBOR_NAME_BY_STATION_ID` | — |
 | seoul ids (`SeoulStationIds`) | What the `seoul` provider reaches a station by: `subwayId`, `stationName` in the Seoul API, `trainMapLine` and its timetable | `SubwayStation.seoul` | — |
 | station timetable (`StationTimetable`) | The committed timetable source that serves a station: `korail`, or `seoul-station` with its Seoul station code | `SeoulStationIds.timetable` | — |

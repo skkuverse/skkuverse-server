@@ -27,12 +27,12 @@ export function toTrainMapTrains(page: string, line: string): TrainMapTrain[] {
   return trains;
 }
 
-export function toTrainEvents(trains: readonly TrainMapTrain[], stationIdByName: ReadonlyMap<string, string>, observedAt: Date): TrainEvent[] {
+export function toTrainEvents(trains: readonly TrainMapTrain[], platformIdByName: ReadonlyMap<string, string>, observedAt: Date): TrainEvent[] {
   return trains.flatMap((train) => {
-    const stationId = stationIdByName.get(train.stationName);
+    const platformId = platformIdByName.get(train.stationName);
     const state = STATE_BY_STATUS[train.status];
-    if (stationId === undefined || state === null) return [];
-    return [{ trainNo: train.trainNo, stationId, state, stateChangedAt: observedAt, destination: train.destination }];
+    if (platformId === undefined || state === null) return [];
+    return [{ trainNo: train.trainNo, platformId, state, stateChangedAt: observedAt, destination: train.destination }];
   });
 }
 

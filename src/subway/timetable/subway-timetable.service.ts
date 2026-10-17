@@ -19,8 +19,8 @@ export class SubwayTimetableService {
     return SUBWAY_STATIONS.map((station) => this.toStationSchedule(station, serviceDate, isPublicHoliday));
   }
 
-  async findStationSchedule(stationId: string, now: Date): Promise<StationSchedule | null> {
-    const station = findSubwayStation(stationId);
+  async findStationSchedule(platformId: string, now: Date): Promise<StationSchedule | null> {
+    const station = findSubwayStation(platformId);
     if (!station) return null;
     const serviceDate = toServiceDate(now);
     return this.toStationSchedule(station, serviceDate, await this.isPublicHoliday(serviceDate));

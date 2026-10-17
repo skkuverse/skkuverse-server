@@ -21,13 +21,13 @@ describe("toSeoulLines", () => {
     const lines = toSeoulLines(SUBWAY_STATIONS, SEOUL_LINE_NAME_BY_SUBWAY_ID, SEOUL_STATION_NAME_BY_ID);
 
     // Assert
-    expect(lines.map(({ stationIdByName, ...line }) => ({ ...line, stationIdByName: Object.fromEntries(stationIdByName) }))).toEqual([
+    expect(lines.map(({ platformIdByName, ...line }) => ({ ...line, platformIdByName: Object.fromEntries(platformIdByName) }))).toEqual([
       {
         subwayId: "1001",
         lineName: "1호선",
         trainMapLine: "1",
         stationNames: ["성균관대"],
-        stationIdByName: {
+        platformIdByName: {
           성균관대: "KR-1-0153",
           화서: "KR-1-P154",
           수원: "KR-1-P155",
@@ -43,7 +43,7 @@ describe("toSeoulLines", () => {
         lineName: "4호선",
         trainMapLine: "4",
         stationNames: ["혜화"],
-        stationIdByName: {
+        platformIdByName: {
           혜화: "S1-4-420",
           동대문: "S1-4-421",
           동대문역사문화공원: "S1-4-422",
@@ -66,7 +66,7 @@ describe("toSeoulLines", () => {
     // Assert
     expect(lines).toHaveLength(1);
     expect(lines[0]?.stationNames).toEqual(["성균관대", "의정부"]);
-    expect(lines[0]?.stationIdByName.get("의정부")).toBe("KR-1-X100");
+    expect(lines[0]?.platformIdByName.get("의정부")).toBe("KR-1-X100");
   });
 
   it("fails for an upstream station without a Seoul name", () => {
@@ -86,12 +86,12 @@ describe("toSeoulLines", () => {
 describe("toSettledObservations", () => {
   const event = (trainNo: string): TrainEvent => ({
     trainNo,
-    stationId: "KR-1-0153",
+    platformId: "KR-1-0153",
     state: "arrived",
     stateChangedAt: new Date("2026-10-16T20:16:00Z"),
     destination: "광운대",
   });
-  const row: CountdownRow = { trainNo: "4674", stationId: "S1-4-420", generatedAt: new Date("2026-10-16T20:16:00Z"), remainingSec: 150 };
+  const row: CountdownRow = { trainNo: "4674", platformId: "S1-4-420", generatedAt: new Date("2026-10-16T20:16:00Z"), remainingSec: 150 };
   const answered = <T>(value: T): PromiseSettledResult<T> => ({ status: "fulfilled", value });
   const failed = <T>(reason: Error): PromiseSettledResult<T> => ({ status: "rejected", reason });
   const line4Down = new Error("seoul-trainmap: line 4: no train");

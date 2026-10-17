@@ -25,12 +25,12 @@ describe("findSubwayStation", () => {
     ["KR-1-0153", "down", ["KR-1-P152", "KR-1-P151", "KR-1-P150"]],
     ["S1-4-420", "up", ["S1-4-421", "S1-4-422", "S1-4-423"]],
     ["S1-4-420", "down", ["S1-4-419", "S1-4-418", "S1-4-417"]],
-  ] as const)("lists the upstream stations of %s %s nearest first", (id, direction, upstreamStationIds) => {
+  ] as const)("lists the upstream stations of %s %s nearest first", (id, direction, upstreamPlatformIds) => {
     // Act
     const station = findSubwayStation(id);
 
     // Assert
-    expect(station?.directions[direction].upstreamStationIds).toEqual(upstreamStationIds);
+    expect(station?.directions[direction].upstreamPlatformIds).toEqual(upstreamPlatformIds);
   });
 
   it.each([
@@ -38,12 +38,12 @@ describe("findSubwayStation", () => {
     ["KR-1-0153", "down", ["KR-1-P149"]],
     ["S1-4-420", "up", []],
     ["S1-4-420", "down", []],
-  ] as const)("lists the watched stations of %s %s, beyond its upstream ones, nearest first", (id, direction, watchedStationIds) => {
+  ] as const)("lists the watched stations of %s %s, beyond its upstream ones, nearest first", (id, direction, watchedPlatformIds) => {
     // Act
     const station = findSubwayStation(id);
 
     // Assert
-    expect(station?.directions[direction].watchedStationIds).toEqual(watchedStationIds);
+    expect(station?.directions[direction].watchedPlatformIds).toEqual(watchedPlatformIds);
   });
 
   it.each([
@@ -51,12 +51,12 @@ describe("findSubwayStation", () => {
     ["KR-1-0153", "down", "KR-1-P154"],
     ["S1-4-420", "up", "S1-4-419"],
     ["S1-4-420", "down", "S1-4-421"],
-  ] as const)("names the next station of %s %s", (id, direction, nextStationId) => {
+  ] as const)("names the next station of %s %s", (id, direction, nextPlatformId) => {
     // Act
     const station = findSubwayStation(id);
 
     // Assert
-    expect(station?.directions[direction].nextStationId).toBe(nextStationId);
+    expect(station?.directions[direction].nextPlatformId).toBe(nextPlatformId);
   });
 
   it.each([

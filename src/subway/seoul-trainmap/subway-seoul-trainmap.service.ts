@@ -16,10 +16,10 @@ export class SubwaySeoulTrainmapService {
 
   constructor(private readonly client: SubwaySeoulTrainmapClient) {}
 
-  async listLineEvents(line: string, stationIdByName: ReadonlyMap<string, string>, observedAt: Date): Promise<TrainEvent[]> {
+  async listLineEvents(line: string, platformIdByName: ReadonlyMap<string, string>, observedAt: Date): Promise<TrainEvent[]> {
     const trains = toTrainMapTrains(await this.client.fetchLinePage(line), line);
     this.assertNotEmptyTooLong(line, trains, observedAt);
-    return toTrainEvents(trains, stationIdByName, observedAt);
+    return toTrainEvents(trains, platformIdByName, observedAt);
   }
 
   private assertNotEmptyTooLong(line: string, trains: readonly TrainMapTrain[], observedAt: Date): void {

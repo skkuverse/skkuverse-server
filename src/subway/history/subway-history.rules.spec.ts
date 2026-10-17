@@ -80,7 +80,7 @@ describe("toUnresolvedCutoff", () => {
 describe("toPredictionDoc", () => {
   const made: PredictionMade = {
     serviceDate: "2026-10-16",
-    stationId: "KR-1-0153",
+    platformId: "KR-1-0153",
     direction: "up",
     horizonMin: 3,
     train: { trainNo: "0692", destination: "광운대", express: false, arrivalAt: at("21:05:30"), source: "estimated", position: null },

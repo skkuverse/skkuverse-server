@@ -5,7 +5,7 @@ export interface SeoulLine {
   lineName: string;
   trainMapLine: string;
   stationNames: readonly string[];
-  stationIdByName: ReadonlyMap<string, string>;
+  platformIdByName: ReadonlyMap<string, string>;
 }
 
 export interface SettledObservations extends ProviderObservations {

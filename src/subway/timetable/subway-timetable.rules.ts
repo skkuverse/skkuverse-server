@@ -40,7 +40,7 @@ export function toScheduledTrains(timetable: Timetable, serviceDate: string): Sc
   const toInstant = (seconds: number | null): Date | null => (seconds === null ? null : toServiceInstant(serviceDate, seconds));
   return timetable.trains.map(({ stops, ...train }) => ({
     ...train,
-    stops: stops.map((stop) => ({ stationId: stop.station, arrivalAt: toInstant(stop.arr), departureAt: toInstant(stop.dep) })),
+    stops: stops.map((stop) => ({ platformId: stop.station, arrivalAt: toInstant(stop.arr), departureAt: toInstant(stop.dep) })),
   }));
 }
 

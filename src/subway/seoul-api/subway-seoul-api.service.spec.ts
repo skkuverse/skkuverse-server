@@ -34,7 +34,7 @@ describe("SubwaySeoulApiService.listLineEvents", () => {
     // Assert
     expect(client.calls).toEqual(["realtimePosition 1호선"]);
     expect(events).toEqual([
-      { trainNo: "0493", stationId: "KR-1-0153", state: "arrived", stateChangedAt: new Date("2026-10-16T11:44:10Z"), destination: "서동탄" },
+      { trainNo: "0493", platformId: "KR-1-0153", state: "arrived", stateChangedAt: new Date("2026-10-16T11:44:10Z"), destination: "서동탄" },
     ]);
   });
 
@@ -60,7 +60,7 @@ describe("SubwaySeoulApiService.listStationCountdownRows", () => {
     // Assert
     expect(client.calls).toEqual(["realtimeStationArrival 성균관대"]);
     expect(countdownRows).toEqual([
-      { trainNo: "0493", stationId: "KR-1-0153", generatedAt: new Date("2026-10-16T11:44:10Z"), remainingSec: 120 },
+      { trainNo: "0493", platformId: "KR-1-0153", generatedAt: new Date("2026-10-16T11:44:10Z"), remainingSec: 120 },
     ]);
   });
 });

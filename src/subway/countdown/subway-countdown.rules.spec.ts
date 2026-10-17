@@ -10,9 +10,9 @@ const HYEHWA = "S1-4-420";
 
 const at = (kst: string): Date => new Date(`2026-10-17T${kst}+09:00`);
 
-const row = (trainNo: string, generatedAt: string, remainingSec: number, stationId = HYEHWA): CountdownRow => ({
+const row = (trainNo: string, generatedAt: string, remainingSec: number, platformId = HYEHWA): CountdownRow => ({
   trainNo,
-  stationId,
+  platformId,
   generatedAt: at(generatedAt),
   remainingSec,
 });

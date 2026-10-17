@@ -57,8 +57,8 @@ function upstream(source: string, events: TrainEvent[] = []): SubwayProvider {
   return { observe: async () => ({ source, events, countdownRows: [] }) };
 }
 
-function event(trainNo: string, stationId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent {
-  return { trainNo, stationId, state, stateChangedAt: at(kst), destination };
+function event(trainNo: string, platformId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent {
+  return { trainNo, platformId, state, stateChangedAt: at(kst), destination };
 }
 
 const horizonsOf = (history: FakeSubwayHistoryRepository, trainNo: string) => history.recordsOf(trainNo, SUNGKYUNKWAN).map((r) => r.horizonMin);

@@ -11,7 +11,7 @@ import type { StationSchedule } from "../timetable/subway-timetable.types";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { MAX_TRAINS_PER_DIRECTION } from "./subway-tracking.constants";
 import { toArrivalsDoc } from "./subway-tracking.mapper";
-import { mergeObservations, toDirectionByDestination, toLiveCountdownRows, toNewestEvents, toStopStationIdsByTrainNo } from "./subway-tracking.rules";
+import { mergeObservations, toDirectionByDestination, toLiveCountdownRows, toNewestEvents, toStopPlatformIdsByTrainNo } from "./subway-tracking.rules";
 import type { SourceCountdownRows, StationObservations, TrackedStation, TrackedTickListener, TrainHistory } from "./subway-tracking.types";
 
 const DIVERGENCE_LOG_INTERVAL_MS = 10 * 60_000;
@@ -21,7 +21,7 @@ const DIVERGENCE_LOG_INTERVAL_MS = 10 * 60_000;
 // A train only in countdown rows, absent from the timetable, is not served: every estimate starts from one.
 @Injectable()
 export class SubwayTrackingService {
-  private readonly historiesByStationId = new Map<string, ReadonlyMap<string, TrainHistory>>();
+  private readonly historiesByPlatformId = new Map<string, ReadonlyMap<string, TrainHistory>>();
   private readonly countdownRowsBySource = new Map<string, SourceCountdownRows>();
   private readonly tickListeners: TrackedTickListener[] = [];
   private readonly divergenceThrottle: LogThrottle;
@@ -45,10 +45,10 @@ export class SubwayTrackingService {
     const countdownRows = toLiveCountdownRows([...this.countdownRowsBySource.values()], now);
     const schedules = await this.timetable.listStationSchedules(now);
     const stations = schedules.map((schedule): TrackedStation => {
-      const events = toNewestEvents(observations.events.filter((event) => schedule.lineRoutes.up.includes(event.stationId)), now);
+      const events = toNewestEvents(observations.events.filter((event) => schedule.lineRoutes.up.includes(event.platformId)), now);
       const histories = this.mergeInto(schedule, events, now);
       const arrivals = this.toStationDoc(schedule, { histories, countdownRows }, now);
-      return { stationId: schedule.station.id, lineCode: schedule.station.lineCode, serviceDate: schedule.serviceDate, events, arrivals };
+      return { platformId: schedule.station.id, lineCode: schedule.station.lineCode, serviceDate: schedule.serviceDate, events, arrivals };
     });
     await this.repository.upsertArrivals(stations.map((station) => station.arrivals));
     for (const listener of this.tickListeners) await listener({ source: observations.source, trackedAt: now, stations });
@@ -60,44 +60,44 @@ export class SubwayTrackingService {
     this.tickListeners.push(listener);
   }
 
-  async findScheduledArrivals(stationId: string, now: Date): Promise<SubwayArrivalsDoc | null> {
-    const schedule = await this.timetable.findStationSchedule(stationId, now);
+  async findScheduledArrivals(platformId: string, now: Date): Promise<SubwayArrivalsDoc | null> {
+    const schedule = await this.timetable.findStationSchedule(platformId, now);
     return schedule && this.toStationDoc(schedule, null, now);
   }
 
   private mergeInto(schedule: StationSchedule, events: readonly TrainEvent[], now: Date): ReadonlyMap<string, TrainHistory> {
-    const stationId = schedule.station.id;
+    const platformId = schedule.station.id;
     const histories = mergeObservations({
-      histories: this.historiesByStationId.get(stationId) ?? new Map(),
+      histories: this.historiesByPlatformId.get(platformId) ?? new Map(),
       responseEvents: [events],
       routes: schedule.lineRoutes,
       directionByDestination: toDirectionByDestination(schedule.trains),
-      stationId,
-      stopStationIdsByTrainNo: toStopStationIdsByTrainNo(schedule.trains),
+      platformId,
+      stopPlatformIdsByTrainNo: toStopPlatformIdsByTrainNo(schedule.trains),
       now,
     });
-    this.historiesByStationId.set(stationId, histories);
+    this.historiesByPlatformId.set(platformId, histories);
     return histories;
   }
 
   private toStationDoc(schedule: StationSchedule, observed: StationObservations | null, now: Date): SubwayArrivalsDoc {
-    const stationId = schedule.station.id;
+    const platformId = schedule.station.id;
     const arrivalsOf = (direction: SubwayDirection): TrainArrival[] => {
-      const scheduleInput = { stationId, direction, trains: schedule.trains, now };
+      const scheduleInput = { platformId, direction, trains: schedule.trains, now };
       if (!observed) return this.estimate.listScheduledArrivals(scheduleInput).slice(0, MAX_TRAINS_PER_DIRECTION);
       const estimated = this.estimate.estimateArrivals({ ...scheduleInput, ...observed });
       this.logDivergences(estimated.divergences);
       this.logRejections(estimated.rejections);
       return estimated.arrivals.slice(0, MAX_TRAINS_PER_DIRECTION);
     };
-    const stamp = { _id: stationId, generatedAt: now, serviceDate: schedule.serviceDate };
+    const stamp = { _id: platformId, generatedAt: now, serviceDate: schedule.serviceDate };
     return toArrivalsDoc(stamp, { up: arrivalsOf("up"), down: arrivalsOf("down") });
   }
 
   // WHY: design D5: the live countdown is still served; the accuracy report later shows which was closer.
   private logDivergences(divergences: readonly CountdownDivergence[]): void {
     for (const divergence of divergences) {
-      const ticket = this.divergenceThrottle.take(`${divergence.stationId} ${divergence.trainNo}`);
+      const ticket = this.divergenceThrottle.take(`${divergence.platformId} ${divergence.trainNo}`);
       if (!ticket) continue;
       logger.info(
         { event: "subway.tracking.countdown_diverged", ...divergence, suppressed: ticket.suppressed },
@@ -109,7 +109,7 @@ export class SubwayTrackingService {
   // WHY: a countdown that is not served leaves no divergence line, and those lines are how a misleading one was found.
   private logRejections(rejections: readonly CountdownRejection[]): void {
     for (const rejection of rejections) {
-      const ticket = this.rejectionThrottle.take(`${rejection.stationId} ${rejection.trainNo}`);
+      const ticket = this.rejectionThrottle.take(`${rejection.platformId} ${rejection.trainNo}`);
       if (!ticket) continue;
       logger.info({ event: "subway.tracking.countdown_rejected", ...rejection, suppressed: ticket.suppressed }, "A published countdown is not served");
     }

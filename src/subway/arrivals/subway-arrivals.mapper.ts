@@ -10,9 +10,9 @@ const DIRECTIONS: readonly SubwayDirection[] = ["up", "down"];
 type WireDirection = SubwayStationArrivals["directions"][number];
 type WireTrain = WireDirection["trains"][number];
 
-function toWireTrain(train: StoredTrainArrival, direction: StationDirection, stationId: string): WireTrain {
+function toWireTrain(train: StoredTrainArrival, direction: StationDirection, platformId: string): WireTrain {
   const { trainNo, destination, express, arrivalAt, position, source } = train;
-  const stopsAway = toStopsAway(direction, stationId, position);
+  const stopsAway = toStopsAway(direction, platformId, position);
   return { trainNo, destination, express, arrivalAt: arrivalAt.toISOString(), stopsAway, source };
 }
 
@@ -33,8 +33,8 @@ export function toSubwayStationArrivals(station: SubwayStation, doc: SubwayArriv
       return {
         direction,
         name: stationDirection.name[lang],
-        previousStation: toNeighborStation(stationDirection.upstreamStationIds[0], lang),
-        nextStation: toNeighborStation(stationDirection.nextStationId, lang),
+        previousStation: toNeighborStation(stationDirection.upstreamPlatformIds[0], lang),
+        nextStation: toNeighborStation(stationDirection.nextPlatformId, lang),
         trains: doc.directions[direction].map((train) => toWireTrain(train, stationDirection, id)),
       };
     }),
