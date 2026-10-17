@@ -62,7 +62,7 @@ export class SubwayTrackingService {
 
   async findScheduledArrivals(stationId: string, now: Date): Promise<SubwayArrivalsDoc | null> {
     const schedule = await this.timetable.findStationSchedule(stationId, now);
-    return schedule && this.toStationDoc(schedule, { histories: new Map(), countdownRows: [] }, now);
+    return schedule && this.toStationDoc(schedule, null, now);
   }
 
   private mergeInto(schedule: StationSchedule, events: readonly TrainEvent[], now: Date): ReadonlyMap<string, TrainHistory> {
@@ -80,11 +80,12 @@ export class SubwayTrackingService {
     return histories;
   }
 
-  private toStationDoc(schedule: StationSchedule, observed: StationObservations, now: Date): SubwayArrivalsDoc {
+  private toStationDoc(schedule: StationSchedule, observed: StationObservations | null, now: Date): SubwayArrivalsDoc {
     const stationId = schedule.station.id;
-    const { histories, countdownRows } = observed;
     const arrivalsOf = (direction: SubwayDirection): TrainArrival[] => {
-      const estimated = this.estimate.estimateArrivals({ stationId, direction, trains: schedule.trains, histories, countdownRows, now });
+      const scheduleInput = { stationId, direction, trains: schedule.trains, now };
+      if (!observed) return this.estimate.listScheduledArrivals(scheduleInput).slice(0, MAX_TRAINS_PER_DIRECTION);
+      const estimated = this.estimate.estimateArrivals({ ...scheduleInput, ...observed });
       this.logDivergences(estimated.divergences);
       this.logRejections(estimated.rejections);
       return estimated.arrivals.slice(0, MAX_TRAINS_PER_DIRECTION);

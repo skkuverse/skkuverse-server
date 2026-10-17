@@ -20,7 +20,8 @@
  * estimated from its departure from its last stop before it; and one seen
  * before its first stop, from the time it is scheduled to pass that station.
  * Its timetable-only document, which the arrivals route serves for a stale
- * state, lists every train `scheduled`, whatever the tracker has observed.
+ * state, lists every train `scheduled`, whatever the tracker has observed,
+ * and leaves the countdown memory to the ticks.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
@@ -376,6 +377,20 @@ describe("SubwayTrackingService.findScheduledArrivals", () => {
     expect(doc?.directions.down[0]).toMatchObject({ trainNo: "0493", arrivalAt: at("20:41:00"), source: "scheduled", position: null });
     const trains = [...(doc?.directions.up ?? []), ...(doc?.directions.down ?? [])];
     expect([trains.length, trains.every((t) => t.source === "scheduled")]).toEqual([6, true]);
+  });
+
+  it("leaves the countdown memory to the ticks: 4674's republished 150 s still counts from 20:40:20 after a build between them", async () => {
+    // Arrange
+    const { service, repository, tickAt } = setup();
+    await tickAt("20:41:00", api([], [countdown("4674", "20:40:20", 150)]));
+    await service.findScheduledArrivals(HYEHWA, at("20:41:05"));
+
+    // Act
+    await tickAt("20:41:10", api([], [countdown("4674", "20:41:05", 150)]));
+
+    // Assert
+    const train = repository.docs.get(HYEHWA)?.directions.up.find((t) => t.trainNo === "4674");
+    expect([train?.arrivalAt, train?.source]).toEqual([at("20:42:50"), "live"]);
   });
 
   it("finds no document for a station it does not serve", async () => {
