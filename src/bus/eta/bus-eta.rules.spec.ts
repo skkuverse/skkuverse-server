@@ -74,6 +74,16 @@ describe("toEtaSequences", () => {
       "campus-inja.hakbu:2",
       "campus-jain.regular:2",
       "campus-jain.hakbu:2",
+      "commute-jeongja.up:2",
+      "commute-jeongja.down:2",
+      "commute-jamsil.up:2",
+      "commute-jamsil.down:2",
+      "commute-dogok.up:2",
+      "commute-dogok.down:2",
+      "commute-gangnam-yangjae.up:3",
+      "commute-gangnam-yangjae.down:3",
+      "commute-gwanggyo.up:2",
+      "commute-gwanggyo.down:2",
     ]);
     expect(seqs[0]!.stops).toEqual([
       { lat: 37.587367, lng: 126.993643 },
@@ -81,6 +91,7 @@ describe("toEtaSequences", () => {
     ]);
     const length = toSequenceLength(seqs);
     expect(length("campus-jain", "hakbu")).toBe(2);
-    expect(length("commute-jamsil", "down")).toBeUndefined();
+    expect(length("commute-gangnam-yangjae", "up")).toBe(3);
+    expect(length("fasttrack-inja", "regular")).toBeUndefined();
   });
 });

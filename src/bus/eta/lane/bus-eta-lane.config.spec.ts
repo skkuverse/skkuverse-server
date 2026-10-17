@@ -36,6 +36,10 @@ describe("readLaneConfig", () => {
       ["campus-inja", "hakbu", { strategy: "busLane", direction: "southbound" }],
       ["campus-jain", "regular", { strategy: "busLane", direction: "northbound" }],
       ["campus-jain", "hakbu", { strategy: "busLane", direction: "northbound" }],
+      ...["jeongja", "jamsil", "dogok", "gangnam-yangjae", "gwanggyo"].flatMap((route) => [
+        [`commute-${route}`, "up", { strategy: "car" }],
+        [`commute-${route}`, "down", { strategy: "car" }],
+      ]),
     ]);
     expect(Object.isFrozen(lane.corridor.centerline)).toBe(true);
   });
@@ -45,13 +49,13 @@ describe("loadLaneConfig", () => {
   it("fails a strategy for a sequence that is not estimated, naming it", () => {
     // Arrange
     const raw = copy();
-    raw.strategies = { ...(raw.strategies as object), "commute-jamsil": { down: { strategy: "busLane", direction: "southbound" } } };
+    raw.strategies = { ...(raw.strategies as object), "fasttrack-inja": { regular: { strategy: "busLane", direction: "southbound" } } };
 
     // Act
     const message = loadError(raw);
 
     // Assert
-    expect(message).toMatch(/^bus-lane\.json: strategies\.commute-jamsil\.down: .*commute-jamsil down/);
+    expect(message).toMatch(/^bus-lane\.json: strategies\.fasttrack-inja\.regular: .*fasttrack-inja regular/);
   });
 
   it("fails an unknown strategy at its path", () => {

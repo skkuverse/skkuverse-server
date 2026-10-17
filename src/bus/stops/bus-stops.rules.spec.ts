@@ -466,18 +466,21 @@ describe("validateStopCatalog", () => {
       ]);
     });
 
-    it("leaves the commute shuttle out: its 등교 sequences end at a label stop, so opting it in would fail", () => {
+    it("opts the commute shuttle in, 등교 and 하교, and the committed catalog passes: its 등교 runs end at a catalog stop", () => {
       // Act
       const optIns = etaOptIns(serviceConfig);
 
       // Assert
-      expect([...optIns.keys()].filter((id) => id.startsWith("commute-"))).toEqual([]);
-      expect(Object.fromEntries(optIns)).toEqual({ "campus-inja": ["regular", "hakbu"], "campus-jain": ["regular", "hakbu"] });
-      const allServices = new Set(Object.keys(serviceConfig));
-      const commuteIn = new Map([["commute-jeongja", ["up"]]]);
-      expect(validateStopCatalog(stopCatalog, allServices, commuteIn)).toEqual([
-        "sequences commute-jeongja.up[1]: opted in to estimates, but is a label, not a catalog stop with coordinates",
-      ]);
+      expect(Object.fromEntries(optIns)).toEqual({
+        "campus-inja": ["regular", "hakbu"],
+        "campus-jain": ["regular", "hakbu"],
+        "commute-jeongja": ["up", "down"],
+        "commute-jamsil": ["up", "down"],
+        "commute-dogok": ["up", "down"],
+        "commute-gangnam-yangjae": ["up", "down"],
+        "commute-gwanggyo": ["up", "down"],
+      });
+      expect(validateStopCatalog(stopCatalog, new Set(Object.keys(serviceConfig)), optIns)).toEqual([]);
     });
   });
 });
