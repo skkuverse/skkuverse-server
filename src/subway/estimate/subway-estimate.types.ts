@@ -27,9 +27,28 @@ export interface CountdownDivergence {
   divergenceSec: number;
 }
 
-export interface StationArrivals {
-  arrivals: TrainArrival[];
+export type CountdownRejectionReason = "spent" | "out_of_range" | "at_station";
+
+export interface CountdownRejection {
+  trainNo: string;
+  stationId: string;
+  reason: CountdownRejectionReason;
+  liveArrivalAt: Date;
+  estimatedArrivalAt: Date;
+}
+
+export interface CountdownVerdict {
+  row: CountdownRow;
+  reason: CountdownRejectionReason | null;
+}
+
+export interface CountdownFindings {
   divergences: CountdownDivergence[];
+  rejections: CountdownRejection[];
+}
+
+export interface StationArrivals extends CountdownFindings {
+  arrivals: TrainArrival[];
 }
 
 export interface EstimateInput {

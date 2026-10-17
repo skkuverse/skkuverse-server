@@ -10,6 +10,6 @@ export class SubwayEstimateService {
   constructor(private readonly countdown: SubwayCountdownService) {}
 
   estimateArrivals(input: EstimateInput): StationArrivals {
-    return toStationArrivals({ ...input, countdownRows: this.countdown.listCountingRows(input.countdownRows, input.now) });
+    return toStationArrivals({ ...input, countdownRows: this.countdown.listFirstPublishedRows(input.countdownRows) });
   }
 }

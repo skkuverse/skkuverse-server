@@ -9,7 +9,8 @@
  * a positive countdown is served `live` until its source has been silent for
  * 90 s; a train missing for a minute keeps its delay and position, and after
  * 90 s is served from the timetable; a countdown far from the estimate is
- * logged once per train within the throttle; a train only in countdown rows
+ * logged once per train within the throttle, and so is a rejected one, with
+ * its reason; a train only in countdown rows
  * is not served; an upstream is not observed outside the service window; and
  * a failing upstream rejects its tick and writes nothing. On Saturday
  * 2026-10-17 (the holiday tables), shaped like that morning's captures: an
@@ -187,6 +188,51 @@ describe("SubwayTrackingService.track", () => {
       expect.objectContaining({ event: "subway.tracking.countdown_diverged", trainNo: "4674", stationId: HYEHWA, divergenceSec: 470 }),
       expect.any(String),
     );
+  });
+
+  it("logs a spent countdown with its reason once per station and train within the throttle, and another train's too", async () => {
+    // Arrange
+    const { tickAt } = setup();
+    const spent = [countdown("4674", "20:40:20", 30), countdown("4676", "20:40:20", 30)];
+
+    // Act
+    await tickAt("20:41:00", api([], spent));
+    await tickAt("20:41:10", api([], spent));
+
+    // Assert
+    const rejected = jest.mocked(logger.info).mock.calls.filter(([fields]) => (fields as { event?: string }).event === "subway.tracking.countdown_rejected");
+    expect(rejected.map(([fields]) => fields)).toEqual([
+      expect.objectContaining({ trainNo: "4674", stationId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
+      expect.objectContaining({ trainNo: "4676", stationId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
+    ]);
+  });
+
+  it("logs 4676's spent countdown again 10 minutes on, with the rejection it suppressed", async () => {
+    // Arrange
+    const { tickAt } = setup();
+    const spent = [countdown("4676", "20:40:20", 30)];
+    await tickAt("20:41:00", api([], spent));
+    await tickAt("20:41:10", api([], spent));
+
+    // Act
+    await tickAt("20:51:00", api([], [countdown("4676", "20:50:20", 30)]));
+
+    // Assert
+    const rejected = jest.mocked(logger.info).mock.calls.filter(([fields]) => (fields as { event?: string }).event === "subway.tracking.countdown_rejected");
+    expect(rejected.map(([fields]) => (fields as { suppressed: number }).suppressed)).toEqual([0, 1]);
+  });
+
+  it("logs 4674's spent countdown though its divergence was logged 10 s before", async () => {
+    // Arrange
+    const { tickAt } = setup();
+    await tickAt("20:41:00", api([], [countdown("4674", "20:40:20", 600)]));
+
+    // Act
+    await tickAt("20:41:10", api([], [countdown("4674", "20:41:05", 0)]));
+
+    // Assert
+    const events = jest.mocked(logger.info).mock.calls.map(([fields]) => (fields as { event?: string; trainNo?: string }).event);
+    expect(events).toEqual(["subway.tracking.countdown_diverged", "subway.tracking.countdown_rejected"]);
   });
 
   it("serves no train that only a countdown row names", async () => {
