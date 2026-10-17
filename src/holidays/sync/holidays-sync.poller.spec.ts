@@ -1,7 +1,9 @@
 /**
  * HolidaysSyncPoller registers HolidaysSyncService.run() with the poller registry
- * under name "holidays-sync" at config.holidays.syncIntervalMs (daily; the
- * registry's warm-up run syncs at startup), and a rejected sync reaches the
+ * under name "holidays-sync" at config.holidays.syncIntervalMs (hourly, so a
+ * failed sync retries within the hour; the service skips a year stored under
+ * 24 hours ago, and the registry's warm-up run syncs at startup), and a
+ * rejected sync reaches the
  * registry unchanged, so a failed sync is declared failing like any other
  * poller. The registry is a `registerPoller` spy (ADR 0011 D2) and the
  * service a stub, so neither the DB nor the calendar is touched. Whether a
@@ -22,7 +24,7 @@ beforeEach(() => {
 });
 
 describe("HolidaysSyncPoller.onModuleInit", () => {
-  it("registers a 'holidays-sync' poller once a day", () => {
+  it("registers a 'holidays-sync' poller once an hour", () => {
     // Act
     new HolidaysSyncPoller(registry, sync).onModuleInit();
 
@@ -30,7 +32,7 @@ describe("HolidaysSyncPoller.onModuleInit", () => {
     expect(registerPoller).toHaveBeenCalledTimes(1);
     const [fn, intervalMs, name] = registerPoller.mock.calls[0]!;
     expect(intervalMs).toBe(config.holidays.syncIntervalMs);
-    expect(intervalMs).toBe(24 * 60 * 60 * 1000);
+    expect(intervalMs).toBe(60 * 60 * 1000);
     expect(name).toBe("holidays-sync");
     expect(typeof fn).toBe("function");
   });

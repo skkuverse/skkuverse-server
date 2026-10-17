@@ -4,7 +4,8 @@
  */
 import pino from "pino";
 import * as Sentry from "@sentry/nestjs";
-import { AxiosError, AxiosHeaders } from "axios";
+import axios, { AxiosError, AxiosHeaders } from "axios";
+import type { IncomingHttpHeaders } from "node:http";
 import type { ArgumentsHost } from "@nestjs/common";
 import { sentryOptions } from "../../../src/infra/sentry-options";
 import { loggerOptions } from "../../../src/infra/logger-options";
@@ -12,6 +13,7 @@ import { runWithLogContext } from "../../../src/infra/log-context";
 import { flattenLogAttributes, scrubBreadcrumb, scrubEvent } from "../../../src/infra/sentry-scrub";
 import { HttpExceptionFilter } from "../../../src/http/http-exception.filter";
 import { AppError } from "../../../src/http/app.error";
+import { LoopbackServers } from "../../helpers/nest/loopback-servers";
 
 const SECRETS = {
   bearer: "SECRET-ID-TOKEN",
@@ -156,6 +158,33 @@ describe("logs", () => {
     expect(items("log")).toEqual([]);
     expect(items("event")).toEqual([]);
     expect(sentText()).not.toContain(" line");
+  });
+});
+
+describe("outgoing calls", () => {
+  const servers = new LoopbackServers();
+
+  afterEach(async () => {
+    await servers.closeAll();
+  });
+
+  it("carry no baggage or sentry-trace header: the data.go.kr gateway refuses a header holding environment=", async () => {
+    // Arrange
+    let received: IncomingHttpHeaders = {};
+    const server = await servers.serve((req, res) => {
+      received = req.headers;
+      res.end("{}");
+    });
+    const { port } = server.address() as { port: number };
+
+    // Act
+    await axios.get(`http://127.0.0.1:${port}/getRestDeInfo`, { params: { solYear: "2026", _type: "json" } });
+
+    // Assert
+    expect(received.host).toBe(`127.0.0.1:${port}`);
+    expect(received).not.toHaveProperty("baggage");
+    expect(received).not.toHaveProperty("sentry-trace");
+    expect(JSON.stringify(received)).not.toContain("environment=");
   });
 });
 

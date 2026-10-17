@@ -1,8 +1,10 @@
 /**
  * HolidaysSyncService.run() over a scripted client, in-memory repositories
  * (the typed fakes in __tests__/helpers/fakes/holidays/) and a fixed Clock.
- * What it guards: a run fetches the KST year and the next, stores each with
- * the Clock's time, stores nothing for a year the calendar has not published,
+ * What it guards: a run fetches the KST year and the next, skipping a year
+ * stored under 24 hours ago (the poller ticks hourly, so a failed year is
+ * retried within the hour and a stored one refetched once a day), stores each
+ * with the Clock's time, stores nothing for a year the calendar has not published,
  * keeps the stored years and still stores the other year when one fails, then
  * rejects so the poller reports failing; every run clears the read side's
  * cache, so a lookup in this process sees what it wrote. The payload
@@ -26,6 +28,8 @@ import { HolidaysSyncService } from "./holidays-sync.service";
 // 01:30 KST on 2026-10-17, still the 16th in UTC.
 const NOW = new Date("2026-10-16T16:30:00Z");
 const EARLIER = new Date("2026-10-01T00:00:00Z");
+const HOUR_MS = 60 * 60_000;
+const hoursBefore = (hours: number, ms = 0): Date => new Date(NOW.getTime() - hours * HOUR_MS - ms);
 const CALENDAR_2026: PublicHoliday[] = [
   { date: "2026-03-02", name: "대체공휴일(삼일절)" },
   { date: "2026-06-03", name: "전국동시지방선거" },
@@ -121,5 +125,79 @@ describe("HolidaysSyncService.run", () => {
 
     // Assert
     expect(holidays.clears).toBe(1);
+  });
+});
+
+describe("HolidaysSyncService.run on the hourly tick", () => {
+  it("fetches nothing and resolves when every sync year was stored under 24 hours ago", async () => {
+    // Arrange
+    const { service, client, repository, holidays } = setup();
+    holidays.store(2026, CALENDAR_2026, hoursBefore(1)).store(2027, CALENDAR_2027, hoursBefore(23, 59 * 60_000));
+    client.answers.set(2026, new Error("2026 failed")).set(2027, new Error("2027 failed"));
+
+    // Act
+    const outcome = service.run();
+
+    // Assert
+    await expect(outcome).resolves.toBeUndefined();
+    expect(client.calls).toEqual([]);
+    expect(repository.years.size).toBe(0);
+  });
+
+  it("fetches a sync year stored exactly 24 hours ago, and one never stored", async () => {
+    // Arrange
+    const { service, client, repository, holidays } = setup();
+    holidays.store(2026, CALENDAR_2026, hoursBefore(24));
+    client.answers.set(2026, CALENDAR_2026).set(2027, CALENDAR_2027);
+
+    // Act
+    await service.run();
+
+    // Assert
+    expect(client.calls).toEqual([2026, 2027]);
+    expect(repository.years.get(2026)?.fetchedAt).toEqual(NOW);
+    expect(repository.years.get(2027)?.fetchedAt).toEqual(NOW);
+  });
+
+  it("Last sync refused: fetches only the stale year and leaves the fresh one alone", async () => {
+    // Arrange
+    const { service, client, repository, holidays } = setup();
+    holidays.store(2026, CALENDAR_2026, hoursBefore(2)).store(2027, CALENDAR_2027, hoursBefore(25));
+    client.answers.set(2026, CALENDAR_2026).set(2027, CALENDAR_2027);
+
+    // Act
+    await service.run();
+
+    // Assert
+    expect(client.calls).toEqual([2027]);
+    expect([...repository.years.keys()]).toEqual([2027]);
+    expect(repository.years.get(2027)).toEqual({ _id: 2027, holidays: CALENDAR_2027, fetchedAt: NOW });
+  });
+
+  it("ignores a stored year outside the sync years", async () => {
+    // Arrange
+    const { service, client, holidays } = setup();
+    holidays.store(2025, [], hoursBefore(1));
+    client.answers.set(2026, CALENDAR_2026).set(2027, CALENDAR_2027);
+
+    // Act
+    await service.run();
+
+    // Assert
+    expect(client.calls).toEqual([2026, 2027]);
+  });
+
+  it("rejects without fetching when the stored years cannot be read", async () => {
+    // Arrange
+    const unreadable = new Error("server selection timed out");
+    const { service, client, holidays } = setup();
+    holidays.failWith = unreadable;
+
+    // Act
+    const outcome = service.run();
+
+    // Assert
+    await expect(outcome).rejects.toBe(unreadable);
+    expect(client.calls).toEqual([]);
   });
 });

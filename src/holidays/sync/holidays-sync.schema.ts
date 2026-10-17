@@ -20,8 +20,10 @@ export const restDeBody = z.object({
   totalCount: z.number().int().nonnegative(),
 });
 
-// QUIRK(data-go-kr): the gateway in front of every API answers a key it refuses with this envelope instead
-// of `response`, with HTTP 403 or 200.
+// QUIRK(data-go-kr): the gateway in front of every API answers a request it refuses (a key, a header) with
+// this envelope instead of `response`, with HTTP 400, 403 or 200; `returnReasonCode` names the refusal.
 export const gatewayError = z.object({
-  OpenAPI_ServiceResponse: z.object({ cmmMsgHeader: z.object({ errMsg: z.string().min(1) }) }),
+  OpenAPI_ServiceResponse: z.object({
+    cmmMsgHeader: z.object({ errMsg: z.string().min(1), returnReasonCode: z.string().optional(), returnAuthMsg: z.string().optional() }),
+  }),
 });
