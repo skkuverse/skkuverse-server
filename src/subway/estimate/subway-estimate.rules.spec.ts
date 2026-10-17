@@ -556,3 +556,53 @@ describe("toStationArrivals, for an express seen at stations it passes before it
     expect(arrivals.find((a) => a.trainNo === "1913")?.arrivalAt).toEqual(at("10:25:30"));
   });
 });
+
+describe("toStationArrivals, rejecting a published countdown", () => {
+  it.each([
+    ["1 s before it is spent", "21:03:59", "live", []],
+    ["when it is spent", "21:04:00", "scheduled", ["spent"]],
+    ["1 s after it is spent", "21:04:01", "scheduled", ["spent"]],
+  ])("counts 0493's 120 s, published at 21:02:00, %s only while some remain, and reports it spent after", (_label, now, source, reasons) => {
+    // Arrange
+    const row: CountdownRow = { trainNo: "0493", stationId: SUNGKYUNKWAN, generatedAt: at("21:02:00"), remainingSec: 120 };
+
+    // Act
+    const { arrivals, rejections } = toStationArrivals(input({ trains: [T0493], countdownRows: [row], now: at(now) }));
+
+    // Assert
+    expect(arrivals.map((a) => a.source)).toEqual([source]);
+    expect(rejections.map((r) => r.reason)).toEqual(reasons);
+  });
+
+  it("reports first train 4507's countdown to 05:03:10, standing at its origin, as out of range against its scheduled 05:38:30", () => {
+    // Arrange
+    const t4507 = trainWithStops("4507", "down", [
+      ["S1-4-419", null, "05:37:00"],
+      [HYEHWA, "05:38:30", "05:39:00"],
+    ]);
+    const histories = historiesOf(history("4507", { stationId: "S1-4-419", state: "arrived", at: at("05:01:01") }));
+    const row: CountdownRow = { trainNo: "4507", stationId: HYEHWA, generatedAt: at("05:01:10"), remainingSec: 120 };
+
+    // Act
+    const { rejections } = toStationArrivals(input({ stationId: HYEHWA, trains: [t4507], histories, countdownRows: [row], now: at("05:02:00") }));
+
+    // Assert
+    expect(rejections).toEqual([
+      { trainNo: "4507", stationId: HYEHWA, reason: "out_of_range", liveArrivalAt: at("05:03:10"), estimatedArrivalAt: at("05:38:30") },
+    ]);
+  });
+
+  it("reports 4555's countdown, arrived at 혜화 at 10:54:56, as at the station", () => {
+    // Arrange
+    const histories = historiesOf(history("4555", { stationId: HYEHWA, state: "arrived", at: at("10:54:56") }));
+    const row: CountdownRow = { trainNo: "4555", stationId: HYEHWA, generatedAt: at("10:54:25"), remainingSec: 120 };
+
+    // Act
+    const { rejections } = toStationArrivals(input({ stationId: HYEHWA, trains: [T4555], histories, countdownRows: [row], now: at("10:55:12") }));
+
+    // Assert
+    expect(rejections).toEqual([
+      { trainNo: "4555", stationId: HYEHWA, reason: "at_station", liveArrivalAt: at("10:56:25"), estimatedArrivalAt: at("10:54:56") },
+    ]);
+  });
+});

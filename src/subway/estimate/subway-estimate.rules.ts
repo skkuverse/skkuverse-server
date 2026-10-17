@@ -3,7 +3,7 @@ import type { ScheduledStop, ScheduledTrain } from "../timetable/subway-timetabl
 import type { TrainHistory, TrainProgress } from "../tracking/subway-tracking.types";
 import { APPROACH_LEAD_MS } from "../subway.constants";
 import { MAX_COUNTDOWN_DIVERGENCE_SEC, MAX_DELAY_LENDER_GAP_MS, MAX_DELAY_SEC, MAX_STANDING_PAST_DEPARTURE_SEC, MIN_DELAY_SEC } from "./subway-estimate.constants";
-import type { CountdownDivergence, EstimateInput, StationArrivals, TrainArrival } from "./subway-estimate.types";
+import type { CountdownFindings, CountdownRejectionReason, CountdownVerdict, EstimateInput, StationArrivals, TrainArrival } from "./subway-estimate.types";
 
 const SECOND_MS = 1000;
 
@@ -122,20 +122,25 @@ function toArrival(candidate: Candidate, delaySec: number | null): TrainArrival 
   };
 }
 
-// WHY: a train seen at the station has outrun its countdown, and a countdown implying a delay out of range is
-// likelier one for a train not running yet, such as a first train standing at its origin (design D4).
-function toCountingRow(candidate: Candidate, row: CountdownRow | undefined): CountdownRow | undefined {
-  const liveDelaySec = row && secondsBetween(plusSec(row.generatedAt, row.remainingSec), candidate.scheduledArrivalAt);
-  return liveDelaySec !== undefined && isDelayInRange(liveDelaySec) && !isAtServedStation(candidate) ? row : undefined;
+// WHY: a train seen at the station has outrun its countdown, a spent one counts no more, and one implying a delay
+// out of range is likelier for a train not running yet, as a first train at its origin (design D4).
+function toRejectionReason(candidate: Candidate, row: CountdownRow, now: Date): CountdownRejectionReason | null {
+  const liveArrivalAt = plusSec(row.generatedAt, row.remainingSec);
+  if (isAtServedStation(candidate)) return "at_station";
+  if (row.remainingSec <= 0 || liveArrivalAt <= now) return "spent";
+  return isDelayInRange(secondsBetween(liveArrivalAt, candidate.scheduledArrivalAt)) ? null : "out_of_range";
 }
 
-function withCountdown(arrival: TrainArrival, row: CountdownRow | undefined, divergences: CountdownDivergence[]): TrainArrival {
-  if (!row || row.remainingSec <= 0) return arrival;
+function withCountdown(arrival: TrainArrival, verdict: CountdownVerdict, findings: CountdownFindings): TrainArrival {
+  const { row, reason } = verdict;
   const liveArrivalAt = plusSec(row.generatedAt, row.remainingSec);
-  const divergenceSec = Math.abs(secondsBetween(liveArrivalAt, arrival.arrivalAt));
-  if (divergenceSec > MAX_COUNTDOWN_DIVERGENCE_SEC) {
-    divergences.push({ trainNo: arrival.trainNo, stationId: row.stationId, liveArrivalAt, estimatedArrivalAt: arrival.arrivalAt, divergenceSec });
+  const finding = { trainNo: arrival.trainNo, stationId: row.stationId, liveArrivalAt, estimatedArrivalAt: arrival.arrivalAt };
+  if (reason) {
+    findings.rejections.push({ ...finding, reason });
+    return arrival;
   }
+  const divergenceSec = Math.abs(secondsBetween(liveArrivalAt, arrival.arrivalAt));
+  if (divergenceSec > MAX_COUNTDOWN_DIVERGENCE_SEC) findings.divergences.push({ ...finding, divergenceSec });
   return { ...arrival, arrivalAt: liveArrivalAt, source: "live" };
 }
 
@@ -143,12 +148,13 @@ export function toStationArrivals(input: EstimateInput): StationArrivals {
   const candidates = input.trains
     .flatMap((train) => (train.direction === input.direction ? (toCandidate(input, train) ?? []) : []))
     .sort((a, b) => a.scheduledArrivalAt.getTime() - b.scheduledArrivalAt.getTime());
-  const divergences: CountdownDivergence[] = [];
+  const findings: CountdownFindings = { divergences: [], rejections: [] };
   const arrivals = candidates.flatMap((candidate, index) => {
     const delaySec = toServedDelaySec(candidate, candidates.slice(0, index));
     if (hasLeft(candidate, delaySec, input.now)) return [];
     const row = input.countdownRows.find((r) => r.trainNo === candidate.train.trainNo && r.stationId === input.stationId);
-    return [withCountdown(toArrival(candidate, delaySec), toCountingRow(candidate, row), divergences)];
+    const arrival = toArrival(candidate, delaySec);
+    return [row ? withCountdown(arrival, { row, reason: toRejectionReason(candidate, row, input.now) }, findings) : arrival];
   });
-  return { arrivals: arrivals.sort((a, b) => a.arrivalAt.getTime() - b.arrivalAt.getTime()), divergences };
+  return { arrivals: arrivals.sort((a, b) => a.arrivalAt.getTime() - b.arrivalAt.getTime()), ...findings };
 }

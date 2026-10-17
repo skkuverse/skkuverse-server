@@ -1,7 +1,5 @@
 import type { CountdownRow } from "../subway.types";
 
-const SECOND_MS = 1000;
-
 const isSameCountdown = (known: CountdownRow, row: CountdownRow): boolean =>
   known.trainNo === row.trainNo && known.stationId === row.stationId && known.remainingSec === row.remainingSec;
 
@@ -12,8 +10,4 @@ export function toFirstPublishedRows(previous: readonly CountdownRow[], rows: re
     const first = previous.find((known) => isSameCountdown(known, row) && known.generatedAt < row.generatedAt);
     return first ? { ...row, generatedAt: first.generatedAt } : row;
   });
-}
-
-export function toCountingRows(rows: readonly CountdownRow[], now: Date): CountdownRow[] {
-  return rows.filter((row) => row.generatedAt.getTime() + row.remainingSec * SECOND_MS > now.getTime());
 }

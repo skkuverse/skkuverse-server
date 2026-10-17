@@ -1,10 +1,10 @@
 /**
  * How a published countdown is read over time. An upstream publishes a train's seconds to a station per segment
  * (its station before), and republishes the same seconds with each new row time while the train stays in that
- * segment, so a countdown counts from its first publication. One spent before the train shows up counts no more.
+ * segment, so a countdown counts from its first publication.
  */
 import type { CountdownRow } from "../subway.types";
-import { toCountingRows, toFirstPublishedRows } from "./subway-countdown.rules";
+import { toFirstPublishedRows } from "./subway-countdown.rules";
 
 const HYEHWA = "S1-4-420";
 
@@ -44,16 +44,5 @@ describe("toFirstPublishedRows", () => {
 
     // Assert
     expect(rows).toEqual([row("4540", "10:54:25", 150)]);
-  });
-});
-
-describe("toCountingRows", () => {
-  it.each([
-    ["1 s before it is spent", "10:56:54", 1],
-    ["when it is spent", "10:56:55", 0],
-    ["1 s after it is spent", "10:56:56", 0],
-  ])("counts 4540's 150 s, first published at 10:54:25, %s only while some remain", (_label, now, count) => {
-    // Act & Assert
-    expect(toCountingRows([row("4540", "10:54:25", 150)], at(now))).toHaveLength(count);
   });
 });
