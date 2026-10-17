@@ -7,6 +7,7 @@ export type SubwayDirection = "up" | "down";
 export interface StationDirection {
   name: LocalizedName;
   upstreamStationIds: readonly string[];
+  nextStationId: string;
 }
 
 export type StationTimetable = { source: "korail" } | { source: "seoul-station"; stationCode: string };
