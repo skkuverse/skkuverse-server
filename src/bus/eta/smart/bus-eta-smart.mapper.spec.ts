@@ -1,7 +1,8 @@
 /**
  * applyEstimates fills an entry's estimated stops from a served estimate and
  * names its source, and leaves an entry as stored when its route type is not
- * opted in, its stopTimes do not fit the sequence, or no estimate fits.
+ * opted in, its stopTimes do not fit the sequence, or no estimate fits. A
+ * scheduled stop after the first holds the bus until its stored time.
  */
 import type { SmartSchedule } from "../../schedule/bus-schedule.wire";
 import type { SequenceStop } from "../../stops/bus-stops.types";
@@ -50,5 +51,44 @@ describe("applyEstimates", () => {
 
     // Assert
     expect(applied.days[0]!.schedule[0]).toBe(schedule.days[0]!.schedule[0]);
+  });
+});
+
+describe("applyEstimates with a second scheduled boarding stop", () => {
+  // The Gangnam-Yangjae morning run: Gangnam 07:40, Yangjae 07:45 on the timetable, then campus.
+  const UP: Record<string, SequenceStop[]> = {
+    up: [
+      { stopId: "gangnam-exit5", action: "board", timing: "scheduled" },
+      { stopId: "yangjae-exit2", action: "board", timing: "scheduled" },
+      { stopId: "nsc-n-center", action: "alight", timing: "estimated" },
+    ],
+  };
+  const run = (offsetsSec: number[]) => {
+    const schedule: SmartSchedule = {
+      serviceId: "commute-gangnam-yangjae",
+      status: "active",
+      from: "2026-10-19",
+      selectedDate: "2026-10-19",
+      days: [{ date: "2026-10-19", dayOfWeek: 1, display: "schedule", label: null, notices: [], schedule: [{ time: "07:40", routeType: "up", stopTimes: ["07:40", "07:45", null] }] }],
+    };
+    const estimates = new Map([[runKey({ serviceId: "commute-gangnam-yangjae", routeType: "up", date: "2026-10-19", time: "07:40" }), { offsetsSec, source: "predicted" as const, updatedAt: new Date("2026-10-18T19:00:00.000Z") }]]);
+    return applyEstimates(schedule, { routeTypes: ["up"], sequences: UP, estimates }).days[0]!.schedule[0]!.stopTimes;
+  };
+
+  it("counts the campus arrival from Yangjae's 07:45 when the road reaches Yangjae earlier", () => {
+    // Act
+    const stopTimes = run([0, 120, 3000]);
+
+    // Assert
+    // 07:45 + (3000 − 120) s = 08:33, not 07:40 + 3000 s = 08:30.
+    expect(stopTimes).toEqual(["07:40", "07:45", "08:33"]);
+  });
+
+  it("keeps the traffic delay when the road reaches Yangjae after 07:45", () => {
+    // Act
+    const stopTimes = run([0, 600, 3600]);
+
+    // Assert
+    expect(stopTimes).toEqual(["07:40", "07:45", "08:40"]);
   });
 });
