@@ -147,7 +147,7 @@ const config = {
     collections: {
       publicHolidays: "public_holidays",
     },
-    syncIntervalMs: 24 * 60 * 60 * 1000,
+    syncIntervalMs: 60 * 60 * 1000,
   },
 
   // WHY: the literal "disabled" turns Sentry off where a DSN is required (docker-compose.local-verify.yml).
