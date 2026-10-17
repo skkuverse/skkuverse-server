@@ -47,6 +47,7 @@ import { MiniappsNotificationsModule } from "./miniapps/notifications/miniapps-n
 import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
 import { SubwayModule } from "./subway/subway.module";
 import { SubwayTimetableModule } from "./subway/timetable/subway-timetable.module";
+import { SubwayCountdownModule } from "./subway/countdown/subway-countdown.module";
 import { SubwayEstimateModule } from "./subway/estimate/subway-estimate.module";
 import { SubwaySeoulApiModule } from "./subway/seoul-api/subway-seoul-api.module";
 import { SubwaySeoulTrainmapModule } from "./subway/seoul-trainmap/subway-seoul-trainmap.module";
@@ -110,6 +111,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     MiniappsCatalogModule,
     SubwayModule,
     SubwayTimetableModule,
+    SubwayCountdownModule,
     SubwayEstimateModule,
     SubwaySeoulApiModule,
     SubwaySeoulTrainmapModule,

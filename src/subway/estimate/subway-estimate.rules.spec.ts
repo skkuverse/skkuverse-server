@@ -210,7 +210,7 @@ describe("toStationArrivals", () => {
     expect(arrivals).toEqual([]);
   });
 
-  it("lists a train standing at 성균관대 until it is seen departing", () => {
+  it("lists a train standing at 성균관대 at its observed arrival while it stands", () => {
     // Arrange
     const histories = historiesOf(history("0493", { stationId: SUNGKYUNKWAN, state: "arrived", at: at("21:04:00") }));
 
@@ -218,7 +218,7 @@ describe("toStationArrivals", () => {
     const { arrivals } = toStationArrivals(input({ trains: [T0493], histories, now: at("21:05:00") }));
 
     // Assert
-    expect(arrivals.map((a) => [a.arrivalAt, a.source])).toEqual([[at("21:04:30"), "estimated"]]);
+    expect(arrivals.map((a) => [a.arrivalAt, a.source])).toEqual([[at("21:04:00"), "estimated"]]);
   });
 
   it("leaves out an unobserved train once its estimated departure from the station has passed", () => {
@@ -299,3 +299,186 @@ describe("toStationArrivals", () => {
     );
   });
 });
+
+/** A train with its own stops, as `[stationId, arrival, departure]` in KST, for the trains observed on 2026-10-17. */
+function trainWithStops(trainNo: string, direction: SubwayDirection, stops: readonly [string, string | null, string][]): ScheduledTrain {
+  const destination = direction === "down" ? "오이도" : "불암산";
+  return {
+    trainNo,
+    direction,
+    destination,
+    express: false,
+    stops: stops.map(([stationId, arrival, departure]) => ({ stationId, arrivalAt: arrival ? at(arrival) : null, departureAt: at(departure) })),
+  };
+}
+
+const HYEHWA = "S1-4-420";
+
+/** Train 0645 on the 2026-10-17 holiday table: Uiwang 10:43:00–10:43:30, Sungkyunkwan Univ. 10:46:30–10:47:00, Hwaseo 10:49:30–10:50:00. */
+const T0645 = trainWithStops("0645", "down", [
+  [UIWANG, "10:43:00", "10:43:30"],
+  [SUNGKYUNKWAN, "10:46:30", "10:47:00"],
+  [HWASEO, "10:49:30", "10:50:00"],
+]);
+
+/** Train 0435 on the 2026-10-17 holiday table: Sungkyunkwan Univ. 10:58:00–10:58:30. */
+const T0435 = trainWithStops("0435", "down", [
+  [UIWANG, "10:54:30", "10:55:00"],
+  [SUNGKYUNKWAN, "10:58:00", "10:58:30"],
+  [HWASEO, "11:01:00", "11:01:30"],
+]);
+
+/** Train 4555 on the 2026-10-17 Saturday table, southbound through Hyehwa at 10:55:00–10:55:30. */
+const T4555 = trainWithStops("4555", "down", [
+  ["S1-4-418", "10:51:00", "10:51:30"],
+  ["S1-4-419", "10:53:00", "10:53:30"],
+  [HYEHWA, "10:55:00", "10:55:30"],
+  ["S1-4-421", "10:57:30", "10:58:00"],
+]);
+
+describe("toStationArrivals, for a train last seen at the served station", () => {
+  it("stops listing 0645, last seen arrived at 성균관대 at 10:46:51 and absent from the train map, 90 s past its estimated departure", () => {
+    // Arrange
+    const histories = historiesOf(history("0645", { stationId: SUNGKYUNKWAN, state: "arrived", at: at("10:46:51") }));
+
+    // Act
+    const listed = ["10:48:12", "10:48:51", "10:48:52", "10:49:00"].map((now) =>
+      toStationArrivals(input({ trains: [T0645], histories, now: at(now) })).arrivals.map((a) => a.arrivalAt),
+    );
+
+    // Assert
+    // WHY: the API reported it at Hwaseo only at 10:49:09, and its departure never came; 10:47:21 + 90 s is 10:48:51.
+    expect(listed).toEqual([[at("10:46:51")], [at("10:46:51")], [], []]);
+  });
+
+  it("keeps 0435's arrival at the observed 10:58:33 while it stands, and drops it 90 s past its estimated departure of 10:59:03", () => {
+    // Arrange
+    const histories = historiesOf(history("0435", { stationId: SUNGKYUNKWAN, state: "arrived", at: at("10:58:33") }));
+
+    // Act
+    const served = ["10:59:12", "11:00:12", "11:00:34"].map((now) =>
+      toStationArrivals(input({ trains: [T0435], histories, now: at(now) })).arrivals.map((a) => [a.arrivalAt, a.source]),
+    );
+
+    // Assert
+    expect(served).toEqual([[[at("10:58:33"), "estimated"]], [[at("10:58:33"), "estimated"]], []]);
+  });
+
+  it.each([
+    ["89 s", "21:05:59", 1],
+    ["90 s", "21:06:00", 1],
+    ["91 s", "21:06:01", 0],
+  ])("lists a train arrived on time at 성균관대 %s past its estimated departure only up to 90 s", (_label, now, count) => {
+    // Arrange
+    const histories = historiesOf(history("0493", { stationId: SUNGKYUNKWAN, state: "arrived", at: at("21:04:00") }));
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ trains: [T0493], histories, now: at(now) }));
+
+    // Assert
+    expect(arrivals).toHaveLength(count);
+  });
+
+  it("serves a train approaching 성균관대 30 s after its approach, however long it is then seen there", () => {
+    // Arrange
+    const histories = historiesOf(history("0493", { stationId: SUNGKYUNKWAN, state: "approaching", at: at("21:04:10") }));
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ trains: [T0493], histories, now: at("21:05:30") }));
+
+    // Assert
+    expect(arrivals.map((a) => [a.arrivalAt, a.source])).toEqual([[at("21:04:40"), "estimated"]]);
+  });
+});
+
+describe("toStationArrivals, with a published countdown and the train's position", () => {
+  it("serves 4555, arrived at 혜화 at 10:54:56, at that arrival and not from its countdown of 120 s published at 10:54:25", () => {
+    // Arrange
+    const histories = historiesOf(history("4555", { stationId: HYEHWA, state: "arrived", at: at("10:54:56") }));
+    const row: CountdownRow = { trainNo: "4555", stationId: HYEHWA, generatedAt: at("10:54:25"), remainingSec: 120 };
+
+    // Act
+    const { arrivals, divergences } = toStationArrivals(
+      input({ stationId: HYEHWA, trains: [T4555], histories, countdownRows: [row], now: at("10:55:12") }),
+    );
+
+    // Assert
+    expect(arrivals.map((a) => [a.arrivalAt, a.source])).toEqual([[at("10:54:56"), "estimated"]]);
+    expect(divergences).toEqual([]);
+  });
+
+  it.each([
+    ["approaching 혜화", HYEHWA, "approaching", "estimated"],
+    ["arrived at 혜화", HYEHWA, "arrived", "estimated"],
+    ["departed 한성대입구, the station before", "S1-4-419", "departed", "live"],
+  ] as const)("reads the countdown of a train %s only when it is not at the station", (_label, stationId, state, source) => {
+    // Arrange
+    const histories = historiesOf(history("4555", { stationId, state, at: at("10:54:50") }));
+    const row: CountdownRow = { trainNo: "4555", stationId: HYEHWA, generatedAt: at("10:54:25"), remainingSec: 120 };
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ stationId: HYEHWA, trains: [T4555], histories, countdownRows: [row], now: at("10:54:55") }));
+
+    // Assert
+    expect(arrivals.map((a) => a.source)).toEqual([source]);
+  });
+});
+
+describe("toStationArrivals, with a countdown far from the timetable", () => {
+  it("serves first train 4507, standing at its origin 한성대입구 since 05:01, at its scheduled 05:38:30 instead of a countdown to 05:03:10", () => {
+    // Arrange
+    const t4507 = trainWithStops("4507", "down", [
+      ["S1-4-419", null, "05:37:00"],
+      [HYEHWA, "05:38:30", "05:39:00"],
+      ["S1-4-421", "05:41:00", "05:41:30"],
+    ]);
+    const histories = historiesOf(history("4507", { stationId: "S1-4-419", state: "arrived", at: at("05:01:01") }));
+    const row: CountdownRow = { trainNo: "4507", stationId: HYEHWA, generatedAt: at("05:01:10"), remainingSec: 120 };
+
+    // Act
+    const { arrivals, divergences } = toStationArrivals(
+      input({ stationId: HYEHWA, trains: [t4507], histories, countdownRows: [row], now: at("05:02:00") }),
+    );
+
+    // Assert
+    expect(arrivals.map((a) => [a.arrivalAt, a.source])).toEqual([[at("05:38:30"), "scheduled"]]);
+    expect(divergences).toEqual([]);
+  });
+
+  it("serves first train 4004, not yet seen, at its scheduled 05:41:00 instead of a countdown to 05:12:30", () => {
+    // Arrange
+    const t4004 = trainWithStops("4004", "up", [
+      ["S1-4-421", "05:38:30", "05:39:00"],
+      [HYEHWA, "05:41:00", "05:41:30"],
+      ["S1-4-419", "05:43:00", "05:43:30"],
+    ]);
+    const row: CountdownRow = { trainNo: "4004", stationId: HYEHWA, generatedAt: at("05:10:00"), remainingSec: 150 };
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ stationId: HYEHWA, direction: "up", trains: [t4004], countdownRows: [row], now: at("05:11:00") }));
+
+    // Assert
+    expect(arrivals.map((a) => [a.arrivalAt, a.source])).toEqual([[at("05:41:00"), "scheduled"]]);
+  });
+
+  it.each([
+    ["121 s before", -121, "scheduled"],
+    ["120 s before", -120, "live"],
+    ["119 s before", -119, "live"],
+    ["2,699 s after", 2699, "live"],
+    ["2,700 s after", 2700, "live"],
+    ["2,701 s after", 2701, "scheduled"],
+  ])("reads a countdown to %s the scheduled arrival as live only inside −120…+2,700 s", (_label, offsetSec, source) => {
+    // Arrange
+    const generatedAt = at("21:00:00");
+    const row: CountdownRow = { trainNo: "0493", stationId: SUNGKYUNKWAN, generatedAt, remainingSec: secondsUntil(plusSec(at("21:04:00"), offsetSec), generatedAt) };
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ trains: [T0493], countdownRows: [row], now: at("21:00:30") }));
+
+    // Assert
+    expect(arrivals.map((a) => a.source)).toEqual([source]);
+  });
+});
+
+const secondsUntil = (later: Date, earlier: Date): number => (later.getTime() - earlier.getTime()) / 1000;
