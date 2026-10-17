@@ -23,7 +23,7 @@ const V1: Record<string, { json: string }> = JSON.parse(
 );
 
 type SeqStop = { label: string; action: string; timing: string; stopId?: string; note?: string };
-type Service = { serviceId: string; label: string; endpoint: string; stopSequences?: Record<string, SeqStop[]> };
+type Service = { serviceId: string; label: string; endpoint: string; stopSequences?: Record<string, SeqStop[]>; refresh?: unknown };
 type Stop = {
   id: string;
   name: string;
@@ -65,11 +65,14 @@ describe("campus group config", () => {
     expect(screen).not.toHaveProperty("serviceSelector");
   });
 
-  it.each(LANGS)("A client that has not updated (%s): without stops and stopSequences the body is the v1 body", (lang) => {
+  it.each(LANGS)("A client that has not updated (%s): without stops, stopSequences and refresh the body is the v1 body", (lang) => {
     // Arrange
     const group = JSON.parse(JSON.stringify(campus(lang))) as CampusGroup;
     delete group.screen.stops;
-    for (const s of group.screen.services) delete s.stopSequences;
+    for (const s of group.screen.services) {
+      delete s.stopSequences;
+      delete s.refresh;
+    }
 
     // Act & Assert
     expect(JSON.stringify(group)).toBe(V1[`campus:${lang}`]!.json);
