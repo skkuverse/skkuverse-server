@@ -1,7 +1,8 @@
 import { t } from "../../../infra/i18n";
 import type { SupportedLang } from "../../../infra/types";
 import type { ScheduleEntry, SmartSchedule } from "../../schedule/bus-schedule.wire";
-import { runKey } from "./bus-eta-smart.rules";
+import { floorAtScheduledStops, runKey } from "./bus-eta-smart.rules";
+import type { SequenceStop } from "../../stops/bus-stops.types";
 import type { EstimateInputs } from "./bus-eta-smart.types";
 
 /** WHY: "10:00" plus 3,060 s is "10:51": rounded to the minute, as the timetable shows times. */
@@ -9,6 +10,19 @@ function addSeconds(time: string, seconds: number): string {
   const [hours, minutes] = time.split(":");
   const total = (Number(hours) * 60 + Number(minutes) + Math.round(seconds / 60)) % (24 * 60);
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+const minutesOf = (time: string): number => {
+  const [hours, minutes] = time.split(":");
+  return Number(hours) * 60 + Number(minutes);
+};
+
+function toScheduledOffsetsSec(departure: string, stopTimes: ReadonlyArray<string | null>, sequence: readonly SequenceStop[]): Array<number | null> {
+  return stopTimes.map((stored, index) => {
+    if (sequence[index]?.timing !== "scheduled" || typeof stored !== "string") return null;
+    const minutes = minutesOf(stored) - minutesOf(departure);
+    return (minutes < 0 ? minutes + 24 * 60 : minutes) * 60;
+  });
 }
 
 // WHY: returns a copy, since the schedule cache keeps entry arrays by reference; only the estimated slots of an
@@ -25,10 +39,12 @@ export function applyEstimates(result: SmartSchedule, { routeTypes, sequences, e
         const est = estimates.get(runKey({ serviceId: result.serviceId, routeType: entry.routeType, date: day.date, time: entry.time }));
         if (!est || est.offsetsSec.length !== seq.length) return entry;
         const time = entry.time;
+        const storedTimes = entry.stopTimes as Array<string | null>;
+        const offsetsSec = floorAtScheduledStops(est.offsetsSec, toScheduledOffsetsSec(time, storedTimes, seq));
         return {
           ...entry,
-          stopTimes: (entry.stopTimes as Array<string | null>).map((stored, index) => {
-            const offset = est.offsetsSec[index];
+          stopTimes: storedTimes.map((stored, index) => {
+            const offset = offsetsSec[index];
             return seq[index]?.timing === "estimated" && offset !== undefined ? addSeconds(time, offset) : stored;
           }),
           eta: { source: est.source, updatedAt: est.updatedAt.toISOString() },
