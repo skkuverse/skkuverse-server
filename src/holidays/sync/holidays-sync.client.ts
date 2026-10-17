@@ -16,6 +16,7 @@ const UNEXPECTED_SHAPE = "unexpected_shape";
 const OK_STATUS = 200;
 
 type RestDeRow = z.infer<typeof restDeRow>;
+type GatewayRefusal = z.infer<typeof gatewayError>["OpenAPI_ServiceResponse"]["cmmMsgHeader"];
 
 @Injectable()
 export class HolidaysSyncClient {
@@ -37,8 +38,14 @@ export class HolidaysSyncClient {
     if (!axios.isAxiosError(err)) return new HolidaysSyncCalendarError(`${year}: request failed`);
     const status = err.response?.status;
     const refused = gatewayError.safeParse(err.response?.data);
-    const code = refused.success ? refused.data.OpenAPI_ServiceResponse.cmmMsgHeader.errMsg : err.code;
-    return new HolidaysSyncCalendarError(status === undefined ? `${year}: request failed (${code ?? "no code"})` : `${year}: HTTP ${status}`, status, code);
+    const refusal = refused.success ? refused.data.OpenAPI_ServiceResponse.cmmMsgHeader : undefined;
+    const code = refusal ? refusal.errMsg : err.code;
+    if (status === undefined) return new HolidaysSyncCalendarError(`${year}: request failed (${code ?? "no code"})`, status, code);
+    return new HolidaysSyncCalendarError(`${year}: HTTP ${status}${refusal ? ` ${this.toRefusalText(refusal)}` : ""}`, status, code);
+  }
+
+  private toRefusalText({ errMsg, returnReasonCode }: GatewayRefusal): string {
+    return returnReasonCode === undefined ? errMsg : `${errMsg} (${returnReasonCode})`;
   }
 
   private rowsOf(year: number, data: unknown): RestDeRow[] {

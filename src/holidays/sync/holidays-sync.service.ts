@@ -4,7 +4,7 @@ import logger from "../../infra/logger";
 import { HolidaysRepository } from "../holidays.repository";
 import { HolidaysSyncClient } from "./holidays-sync.client";
 import { HolidaysSyncRepository } from "./holidays-sync.repository";
-import { toSyncYears } from "./holidays-sync.rules";
+import { isStoredYearFresh, toSyncYears } from "./holidays-sync.rules";
 
 @Injectable()
 export class HolidaysSyncService {
@@ -19,8 +19,9 @@ export class HolidaysSyncService {
   // the other, and a year with no rows is not published yet, so it keeps what answers it now.
   async run(): Promise<void> {
     const fetchedAt = this.clock.now();
+    const staleYears = await this.listStaleSyncYears(fetchedAt);
     const failures: unknown[] = [];
-    for (const year of toSyncYears(fetchedAt)) {
+    for (const year of staleYears) {
       try {
         await this.syncYear(year, fetchedAt);
       } catch (err) {
@@ -30,6 +31,15 @@ export class HolidaysSyncService {
     this.holidays.clearCache();
     if (failures.length === 1) throw failures[0];
     if (failures.length > 1) throw new AggregateError(failures, "Holiday calendar sync failed for every year");
+  }
+
+  private async listStaleSyncYears(now: Date): Promise<number[]> {
+    const storedYears = await this.holidays.listYears();
+    const fetchedAtByYear = new Map(storedYears.map((stored) => [stored._id, stored.fetchedAt]));
+    return toSyncYears(now).filter((year) => {
+      const storedAt = fetchedAtByYear.get(year);
+      return storedAt === undefined || !isStoredYearFresh(storedAt, now);
+    });
   }
 
   private async syncYear(year: number, fetchedAt: Date): Promise<void> {
