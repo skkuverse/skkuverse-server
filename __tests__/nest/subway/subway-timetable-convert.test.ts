@@ -16,6 +16,8 @@ interface Stop {
 interface Train {
   trainNo: string;
   direction: "up" | "down";
+  destination: string;
+  express: boolean;
   stops: Stop[];
 }
 interface Timetable {
@@ -51,6 +53,26 @@ describe("scripts/subway-timetable/convert.py", () => {
     // Assert
     expect([weekday.operator, weekday.line, weekday.dayType]).toEqual(["KR", "1", "weekday"]);
     expect(stop).toEqual({ station: "KR-1-0153", arr: 6 * 3600 + 5 * 60, dep: 6 * 3600 + 5 * 60 + 30 });
+  });
+
+  it.each(["korail-1-weekday.json", "korail-1-holiday.json"])("writes the Korail expresses to the underground 청량리 as 청량리, never the xlsx's 1지청, in %s", (name) => {
+    // Arrange
+    const file = timetable(name);
+
+    // Act
+    const destinations = new Set(file.trains.filter((t) => t.express && t.direction === "up").map((t) => t.destination));
+
+    // Assert
+    expect(destinations).toContain("청량리");
+    expect(file.trains.filter((t) => t.destination === "1지청")).toEqual([]);
+  });
+
+  it("writes the weekday express 1912 to 청량리, as the train map names it", () => {
+    // Act
+    const train = timetable("korail-1-weekday.json").trains.find((t) => t.trainNo === "1912");
+
+    // Assert
+    expect(train).toMatchObject({ direction: "up", destination: "청량리", express: true });
   });
 
   it("writes 4004 at 혜화 at 05:41:00 and 05:41:30 on Seoul weekdays", () => {

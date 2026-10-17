@@ -165,7 +165,7 @@
     {
       "trainNo": "0404",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -261,7 +261,7 @@
     {
       "trainNo": "0406",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -501,7 +501,7 @@
     {
       "trainNo": "0412",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -597,7 +597,7 @@
     {
       "trainNo": "0414",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -789,7 +789,7 @@
     {
       "trainNo": "0418",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -1653,7 +1653,7 @@
     {
       "trainNo": "0436",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -5253,7 +5253,7 @@
     {
       "trainNo": "0602",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -5541,7 +5541,7 @@
     {
       "trainNo": "0610",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -5637,7 +5637,7 @@
     {
       "trainNo": "0612",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -5733,7 +5733,7 @@
     {
       "trainNo": "0614",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -5877,7 +5877,7 @@
     {
       "trainNo": "0618",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -6165,7 +6165,7 @@
     {
       "trainNo": "0624",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -7221,7 +7221,7 @@
     {
       "trainNo": "0648",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -7941,7 +7941,7 @@
     {
       "trainNo": "0664",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -8565,7 +8565,7 @@
     {
       "trainNo": "0682",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -8853,7 +8853,7 @@
     {
       "trainNo": "0688",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -8901,7 +8901,7 @@
     {
       "trainNo": "0690",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -9333,7 +9333,7 @@
     {
       "trainNo": "0700",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": false,
       "stops": [
         {
@@ -10220,7 +10220,7 @@
     {
       "trainNo": "1906",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10266,7 +10266,7 @@
     {
       "trainNo": "1908",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10312,7 +10312,7 @@
     {
       "trainNo": "1910",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10358,7 +10358,7 @@
     {
       "trainNo": "1912",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10404,7 +10404,7 @@
     {
       "trainNo": "1914",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10450,7 +10450,7 @@
     {
       "trainNo": "1916",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10496,7 +10496,7 @@
     {
       "trainNo": "1918",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10542,7 +10542,7 @@
     {
       "trainNo": "1920",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10588,7 +10588,7 @@
     {
       "trainNo": "1922",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10634,7 +10634,7 @@
     {
       "trainNo": "1924",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10680,7 +10680,7 @@
     {
       "trainNo": "1926",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10726,7 +10726,7 @@
     {
       "trainNo": "1928",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10772,7 +10772,7 @@
     {
       "trainNo": "1930",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10818,7 +10818,7 @@
     {
       "trainNo": "1932",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10864,7 +10864,7 @@
     {
       "trainNo": "1934",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10910,7 +10910,7 @@
     {
       "trainNo": "1936",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -10956,7 +10956,7 @@
     {
       "trainNo": "1938",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -11002,7 +11002,7 @@
     {
       "trainNo": "1940",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -11048,7 +11048,7 @@
     {
       "trainNo": "1942",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -11071,7 +11071,7 @@
     {
       "trainNo": "1944",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
@@ -11094,7 +11094,7 @@
     {
       "trainNo": "1946",
       "direction": "up",
-      "destination": "1지청",
+      "destination": "청량리",
       "express": true,
       "stops": [
         {
