@@ -1,0 +1,157 @@
+{
+  "_about": "Synthetic, never captured: the route had not shipped; generated 2026-10-17 by UiTransitService over the committed transit-layout.json, the real bus groups and the served stations at 2026-10-20 12:00 KST (commute pilot open, fasttrack closed), Accept-Language ko; whole data",
+  "data": {
+    "version": 1,
+    "sections": [
+      {
+        "type": "item_list",
+        "id": "campus",
+        "title": "캠퍼스",
+        "items": [
+          {
+            "kind": "bus",
+            "id": "bus:campus",
+            "groupId": "campus",
+            "title": "인자셔틀",
+            "subtitle": "인사캠 ↔ 자과캠",
+            "icon": {
+              "type": "shuttle",
+              "color": "003626",
+              "text": "성대"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/schedule?groupId=campus"
+            }
+          }
+        ]
+      },
+      {
+        "type": "item_list",
+        "id": "hssc",
+        "title": "인사캠",
+        "items": [
+          {
+            "kind": "bus",
+            "id": "bus:hssc",
+            "groupId": "hssc",
+            "title": "인사캠 셔틀버스",
+            "subtitle": "정차소(인문.농구장) ↔ 600주년 기념관",
+            "icon": {
+              "type": "shuttle",
+              "color": "003626",
+              "text": "성대"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/realtime?groupId=hssc"
+            }
+          },
+          {
+            "kind": "bus",
+            "id": "bus:jongro02",
+            "groupId": "jongro02",
+            "title": "종로 02",
+            "subtitle": "성균관대학교 ↔ 종각역.YMCA",
+            "icon": {
+              "type": "village",
+              "color": "4CAF50",
+              "text": "마을"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/realtime?groupId=jongro02"
+            }
+          },
+          {
+            "kind": "bus",
+            "id": "bus:jongro07",
+            "groupId": "jongro07",
+            "title": "종로 07",
+            "subtitle": "성균관대운동장 ↔ 600주년기념관",
+            "icon": {
+              "type": "village",
+              "color": "4CAF50",
+              "text": "마을"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/realtime?groupId=jongro07"
+            }
+          },
+          {
+            "kind": "bus",
+            "id": "bus:jongro08",
+            "groupId": "jongro08",
+            "title": "종로 08",
+            "subtitle": "명륜3가 ↔ 종로5가",
+            "icon": {
+              "type": "village",
+              "color": "4CAF50",
+              "text": "마을"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/realtime?groupId=jongro08"
+            }
+          },
+          {
+            "kind": "subway",
+            "id": "subway:S1-4-420",
+            "stationId": "S1-4-420",
+            "title": "혜화역",
+            "subtitle": "4호선",
+            "icon": {
+              "type": "subway",
+              "color": "00A5DE",
+              "text": "4"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/subway?station=S1-4-420"
+            }
+          }
+        ]
+      },
+      {
+        "type": "item_list",
+        "id": "nsc",
+        "title": "자과캠",
+        "items": [
+          {
+            "kind": "bus",
+            "id": "bus:commute",
+            "groupId": "commute",
+            "title": "자과캠 통학 셔틀버스",
+            "subtitle": "역 ↔ 자과캠 시범 운행",
+            "icon": {
+              "type": "shuttle",
+              "color": "003626",
+              "text": "성대"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/schedule?groupId=commute"
+            }
+          },
+          {
+            "kind": "subway",
+            "id": "subway:KR-1-0153",
+            "stationId": "KR-1-0153",
+            "title": "성균관대역",
+            "subtitle": "1호선",
+            "icon": {
+              "type": "subway",
+              "color": "0052A4",
+              "text": "1"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/subway?station=KR-1-0153"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
