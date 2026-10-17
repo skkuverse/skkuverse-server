@@ -251,6 +251,293 @@
                     "action",
                     "icon"
                   ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "group"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "subtitle": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "icon": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string"
+                        },
+                        "color": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "color",
+                        "text"
+                      ]
+                    },
+                    "initialState": {
+                      "type": "string",
+                      "enum": [
+                        "collapsed",
+                        "expanded"
+                      ]
+                    },
+                    "items": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "bus"
+                              },
+                              "groupId": {
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "subtitle": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "action": {
+                                "type": "object",
+                                "properties": {
+                                  "actionType": {
+                                    "type": "string",
+                                    "enum": [
+                                      "miniapp",
+                                      "external",
+                                      "webview",
+                                      "route"
+                                    ]
+                                  },
+                                  "actionValue": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "actionType",
+                                  "actionValue"
+                                ]
+                              },
+                              "icon": {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string"
+                                  },
+                                  "color": {
+                                    "type": "string"
+                                  },
+                                  "text": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "color",
+                                  "text"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "groupId",
+                              "id",
+                              "title",
+                              "subtitle",
+                              "action",
+                              "icon"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "subway"
+                              },
+                              "stationId": {
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "subtitle": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "action": {
+                                "type": "object",
+                                "properties": {
+                                  "actionType": {
+                                    "type": "string",
+                                    "enum": [
+                                      "miniapp",
+                                      "external",
+                                      "webview",
+                                      "route"
+                                    ]
+                                  },
+                                  "actionValue": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "actionType",
+                                  "actionValue"
+                                ]
+                              },
+                              "lines": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "code": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "badge": {
+                                      "type": "string"
+                                    },
+                                    "color": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "code",
+                                    "name",
+                                    "badge",
+                                    "color"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "stationId",
+                              "id",
+                              "title",
+                              "subtitle",
+                              "action",
+                              "lines"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "link"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "subtitle": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "action": {
+                                "type": "object",
+                                "properties": {
+                                  "actionType": {
+                                    "type": "string",
+                                    "enum": [
+                                      "miniapp",
+                                      "external",
+                                      "webview",
+                                      "route"
+                                    ]
+                                  },
+                                  "actionValue": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "actionType",
+                                  "actionValue"
+                                ]
+                              },
+                              "icon": {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string"
+                                  },
+                                  "color": {
+                                    "type": "string"
+                                  },
+                                  "text": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "color",
+                                  "text"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "title",
+                              "subtitle",
+                              "action",
+                              "icon"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "id",
+                    "title",
+                    "subtitle",
+                    "icon",
+                    "initialState",
+                    "items"
+                  ]
                 }
               ]
             }

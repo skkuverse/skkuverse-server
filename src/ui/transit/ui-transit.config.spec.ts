@@ -3,9 +3,11 @@
  * ui-transit.schema.ts plus its references): every bus item names a bus group
  * and every subway item a served station, every link action passes its
  * type's check against the mini-app registry, and every bus group and every
- * served station is placed. Each rejection here is a deploy that must not
- * start, and the error names the path and the id at fault. The committed
- * transit-layout.json loads against the real bus groups and stations.
+ * served station is placed, a group's children counting as placed. A group's
+ * `visibleWith` names a bus group that its own section places. Each rejection
+ * here is a deploy that must not start, and the error names the path and the
+ * id at fault. The committed transit-layout.json loads against the real bus
+ * groups and stations.
  */
 import { seededBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { BusConfigService } from "../../bus/config/bus-config.service";
@@ -97,6 +99,97 @@ describe("loadTransitLayout", () => {
   it("refuses a structural fault before checking references", () => {
     // Act & Assert
     expect(() => loadTransitLayout(layout(), references)).toThrow(/^transit layout: sections\.0\.items: /);
+  });
+});
+
+describe("loadTransitLayout with groups", () => {
+  const withCommute: TransitLayoutReferences = { ...references, busGroupIds: ["campus", "hssc", "commute"], stationIds: ["hyehwa", "jamsil", "gangnam"] };
+
+  function group(items: unknown[], visibleWith: unknown = { kind: "bus", groupId: "commute" }): Record<string, unknown> {
+    const icon = { type: "subway", color: "8B95A1", text: { ko: "환승" } };
+    return { kind: "group", id: "commute-stations", title: { ko: "통학버스 정류장 지하철" }, icon, initialState: "collapsed", visibleWith, items };
+  }
+
+  function twoSections(campusItems: unknown[], nscItems: unknown[]): Record<string, unknown> {
+    const campus = { type: "item_list", id: "campus", items: campusItems };
+    return { version: 1, sections: [campus, { type: "item_list", id: "nsc", title: { ko: "자과캠" }, items: nscItems }] };
+  }
+
+  const COMMUTE = { kind: "bus", groupId: "commute" };
+
+  it("Station only inside a group: accepts jamsil placed only in commute-stations and counts it as placed", () => {
+    // Arrange
+    const raw = twoSections(PLACED, [COMMUTE, { kind: "subway", stationId: "gangnam" }, group([{ kind: "subway", stationId: "jamsil" }])]);
+
+    // Act
+    const loaded = loadTransitLayout(raw, withCommute);
+
+    // Assert
+    expect(loaded.sections[1]?.items.map(toTransitItemId)).toEqual(["bus:commute", "subway:gangnam", "group:commute-stations"]);
+  });
+
+  it("counts a bus group placed only inside a group as placed", () => {
+    // Act & Assert
+    expect(() => loadTransitLayout(twoSections(PLACED, [group([COMMUTE, { kind: "subway", stationId: "jamsil" }, { kind: "subway", stationId: "gangnam" }], undefined)]), withCommute)).not.toThrow();
+  });
+
+  it("Station placed twice: refuses gangnam at the top of a section and inside a group, naming subway:gangnam", () => {
+    // Arrange
+    const raw = twoSections(PLACED, [COMMUTE, { kind: "subway", stationId: "gangnam" }, group([{ kind: "subway", stationId: "jamsil" }, { kind: "subway", stationId: "gangnam" }])]);
+
+    // Act & Assert
+    expect(() => loadTransitLayout(raw, withCommute)).toThrow('transit layout: sections.1.items.2.items.1: item "subway:gangnam" is placed more than once');
+  });
+
+  it("refuses an unknown station inside a group, naming the child's path", () => {
+    // Arrange
+    const raw = twoSections(PLACED, [COMMUTE, group([{ kind: "subway", stationId: "jamsil" }, { kind: "subway", stationId: "gangnam" }, { kind: "subway", stationId: "seoul" }])]);
+
+    // Act & Assert
+    expect(() => loadTransitLayout(raw, withCommute)).toThrow('transit layout: sections.1.items.1.items.2.stationId: "seoul" is not a served subway station');
+  });
+
+  it("refuses a broken link action inside a group, naming the child's path", () => {
+    // Arrange
+    const raw = twoSections(PLACED, [COMMUTE, group([{ kind: "subway", stationId: "jamsil" }, { kind: "subway", stationId: "gangnam" }, { ...LINK, actionValue: "no-such-app" }])]);
+
+    // Act & Assert
+    expect(() => loadTransitLayout(raw, withCommute)).toThrow(/^transit layout: sections\.1\.items\.1\.items\.2\.actionValue: "taxi-share" actionValue /);
+  });
+
+  it("refuses a visibleWith that names no bus group, naming its path and the group", () => {
+    // Arrange
+    const raw = twoSections(PLACED, [COMMUTE, group([{ kind: "subway", stationId: "jamsil" }, { kind: "subway", stationId: "gangnam" }], { kind: "bus", groupId: "nope" })]);
+
+    // Act & Assert
+    expect(() => loadTransitLayout(raw, withCommute)).toThrow('transit layout: sections.1.items.1.visibleWith.groupId: "nope" is not a bus group');
+  });
+
+  it("refuses a visibleWith bus group placed in another section, naming its path, the group and the section", () => {
+    // Arrange
+    const raw = twoSections([...PLACED, COMMUTE], [group([{ kind: "subway", stationId: "jamsil" }, { kind: "subway", stationId: "gangnam" }])]);
+
+    // Act & Assert
+    expect(() => loadTransitLayout(raw, withCommute)).toThrow(
+      'transit layout: sections.1.items.0.visibleWith.groupId: bus group "commute" is not placed in section "nsc"',
+    );
+  });
+
+  it("accepts a visibleWith bus group placed inside a group of the same section", () => {
+    // Arrange
+    const other = { ...group([COMMUTE]), id: "night" };
+    const raw = twoSections(PLACED, [other, group([{ kind: "subway", stationId: "jamsil" }, { kind: "subway", stationId: "gangnam" }])]);
+
+    // Act & Assert
+    expect(() => loadTransitLayout(raw, withCommute)).not.toThrow();
+  });
+
+  it("refuses a station left unplaced when the others sit in a group, naming the station", () => {
+    // Arrange
+    const raw = twoSections(PLACED, [COMMUTE, group([{ kind: "subway", stationId: "jamsil" }])]);
+
+    // Act & Assert
+    expect(() => loadTransitLayout(raw, withCommute)).toThrow('transit layout: sections: subway station "gangnam" is not placed');
   });
 });
 

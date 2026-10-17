@@ -11,13 +11,27 @@ const rowFields = { id: z.string(), title: z.string(), subtitle: z.string().null
 /** WHY: a line's display data comes from the server, so the app keeps no line table; `color` is six hex digits, no `#`. */
 const transitLine = z.object({ code: z.string(), name: z.string(), badge: z.string(), color: z.string() });
 
+const busTransitItem = z.object({ kind: z.literal("bus"), groupId: z.string(), ...rowFields, icon: transitIcon });
+/** WHY: one physical station; a badge per line in `lines` takes the place of the icon. */
+const subwayTransitItem = z.object({ kind: z.literal("subway"), stationId: z.string(), ...rowFields, lines: z.array(transitLine).min(1) });
+const linkTransitItem = z.object({ kind: z.literal("link"), ...rowFields, icon: transitIcon });
+
+/**
+ * WHY: a tap on a group folds or unfolds it, so it has no `action`; `initialState` is how it first draws, and
+ * its children never hold a group.
+ */
+const groupTransitItem = z.object({
+  kind: z.literal("group"),
+  id: z.string(),
+  title: z.string(),
+  subtitle: z.string().nullable(),
+  icon: transitIcon,
+  initialState: z.enum(["collapsed", "expanded"]),
+  items: z.array(z.discriminatedUnion("kind", [busTransitItem, subwayTransitItem, linkTransitItem])).min(1),
+});
+
 /** WHY: `kind` names the referent and gates which build draws the item; `action` alone says where a tap goes. */
-const transitItem = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("bus"), groupId: z.string(), ...rowFields, icon: transitIcon }),
-  /** WHY: one physical station; a badge per line in `lines` takes the place of the icon. */
-  z.object({ kind: z.literal("subway"), stationId: z.string(), ...rowFields, lines: z.array(transitLine).min(1) }),
-  z.object({ kind: z.literal("link"), ...rowFields, icon: transitIcon }),
-]);
+const transitItem = z.discriminatedUnion("kind", [busTransitItem, subwayTransitItem, linkTransitItem, groupTransitItem]);
 
 /** WHY: a null title draws no header above the section. */
 const transitSection = z.object({ type: z.literal("item_list"), id: z.string(), title: z.string().nullable(), items: z.array(transitItem) });

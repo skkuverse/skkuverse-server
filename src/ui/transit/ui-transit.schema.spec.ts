@@ -1,9 +1,13 @@
 /**
  * The structure of transit-layout.json: version 1, sections of type
  * `item_list` with a slug id, an optional localized title and at least one item, and
- * items that place a bus group, a subway station or a written link. Section
- * ids and item ids each repeat nowhere in the layout, so a group or a station
- * is placed at most once. Unknown keys and kinds are refused.
+ * items that place a bus group, a subway station, a written link or a group.
+ * A group has a slug id, a localized title, an optional subtitle, an icon, a
+ * required initial state, an optional `visibleWith` bus group and at least one
+ * child, which is a bus, subway or link item and never a group. Section ids
+ * and item ids, group children and `group:<id>` included, each repeat nowhere
+ * in the layout, so a bus group or a station is placed at most once. Unknown
+ * keys and kinds are refused.
  */
 import { transitLayoutFile } from "./ui-transit.schema";
 
@@ -14,6 +18,17 @@ const LINK = {
   icon: { type: "taxi", color: "FFB300", text: { ko: "택시", en: "Taxi" } },
   actionType: "miniapp",
   actionValue: "inja",
+};
+
+const GROUP = {
+  kind: "group",
+  id: "commute-stations",
+  title: { ko: "통학버스 정류장 지하철", en: "Subway at shuttle stops" },
+  subtitle: { ko: "정자 · 잠실" },
+  icon: { type: "subway", color: "8B95A1", text: { ko: "환승" } },
+  initialState: "collapsed",
+  visibleWith: { kind: "bus", groupId: "commute" },
+  items: [{ kind: "subway", stationId: "jeongja" }, { kind: "bus", groupId: "fasttrack" }, { ...LINK, id: "commute-map" }],
 };
 
 function section(id: string, items: unknown[]): Record<string, unknown> {
@@ -27,7 +42,14 @@ function layout(...sections: Record<string, unknown>[]): Record<string, unknown>
 const WELL_FORMED = layout(
   section("campus", [{ kind: "bus", groupId: "campus" }, LINK]),
   section("hssc", [{ kind: "bus", groupId: "hssc" }, { kind: "subway", stationId: "hyehwa" }]),
+  section("nsc", [{ kind: "bus", groupId: "commute" }, GROUP]),
 );
+
+function groupWithout(field: keyof typeof GROUP): Record<string, unknown> {
+  const rest: Record<string, unknown> = { ...GROUP };
+  delete rest[field];
+  return rest;
+}
 
 describe("transitLayoutFile", () => {
   it("parses a layout of every item kind", () => {
@@ -50,6 +72,81 @@ describe("transitLayoutFile", () => {
 
     // Act & Assert
     expect(transitLayoutFile.safeParse(layout(untitled)).success).toBe(true);
+  });
+
+  it("parses a group with no subtitle and no visibleWith, its initial state expanded", () => {
+    // Arrange
+    const bare = { ...groupWithout("subtitle"), visibleWith: undefined, initialState: "expanded" };
+
+    // Act & Assert
+    expect(transitLayoutFile.safeParse(layout(section("nsc", [bare]))).success).toBe(true);
+  });
+
+  it("Nested group: refuses a group inside a group, naming the inner group's path", () => {
+    // Arrange
+    const nested = { ...GROUP, items: [{ ...GROUP, id: "inner" }] };
+
+    // Act
+    const parsed = transitLayoutFile.safeParse(layout(section("nsc", [{ kind: "bus", groupId: "commute" }, nested])));
+
+    // Assert
+    expect(parsed.error?.issues).toEqual([
+      expect.objectContaining({ path: ["sections", 0, "items", 1, "items", 0, "kind"], message: "a group holds only bus, subway or link items" }),
+    ]);
+  });
+
+  it("Missing initial state: refuses a group with no initialState, naming the group's path", () => {
+    // Act
+    const parsed = transitLayoutFile.safeParse(layout(section("nsc", [groupWithout("initialState")])));
+
+    // Assert
+    expect(parsed.error?.issues).toEqual([expect.objectContaining({ path: ["sections", 0, "items", 0, "initialState"] })]);
+  });
+
+  it.each<[string, Record<string, unknown>]>([
+    ["an unknown key", { ...GROUP, action: { actionType: "route", actionValue: "/subway" } }],
+    ["no icon", groupWithout("icon")],
+    ["no title", groupWithout("title")],
+    ["no child", { ...GROUP, items: [] }],
+    ["an initial state other than collapsed or expanded", { ...GROUP, initialState: "peek" }],
+    ["an id that is not a slug", { ...GROUP, id: "group:commute" }],
+    ["a visibleWith that names no bus group", { ...GROUP, visibleWith: { kind: "subway", stationId: "jeongja" } }],
+    ["an unknown key in visibleWith", { ...GROUP, visibleWith: { kind: "bus", groupId: "commute", until: "2026-12-18" } }],
+  ])("refuses a group with %s", (_label, group) => {
+    // Act & Assert
+    expect(transitLayoutFile.safeParse(layout(section("nsc", [group]))).success).toBe(false);
+  });
+
+  it("Station placed twice: refuses a station at the top of a section and inside a group, naming its item id", () => {
+    // Arrange
+    const twice = layout(section("nsc", [{ kind: "subway", stationId: "gangnam" }, { ...GROUP, items: [{ kind: "subway", stationId: "gangnam" }] }]));
+
+    // Act
+    const parsed = transitLayoutFile.safeParse(twice);
+
+    // Assert
+    expect(parsed.error?.issues).toEqual([
+      expect.objectContaining({ path: ["sections", 0, "items", 1, "items", 0], message: 'item "subway:gangnam" is placed more than once' }),
+    ]);
+  });
+
+  it.each<[string, Record<string, unknown>, string]>([
+    ["a bus group in two groups", layout(section("nsc", [GROUP, { ...GROUP, id: "other", items: [{ kind: "bus", groupId: "fasttrack" }] }])), "bus:fasttrack"],
+    ["a group id used twice", layout(section("nsc", [GROUP]), section("hssc", [{ ...GROUP, items: [{ kind: "bus", groupId: "hssc" }] }])), "group:commute-stations"],
+  ])("refuses %s, naming its item id", (_label, raw, itemId) => {
+    // Act
+    const parsed = transitLayoutFile.safeParse(raw);
+
+    // Assert
+    expect(parsed.error?.issues.map((issue) => issue.message)).toEqual([`item "${itemId}" is placed more than once`]);
+  });
+
+  it("keeps a group's id apart from a link written with the same slug", () => {
+    // Arrange
+    const sameSlug = layout(section("nsc", [{ ...LINK, id: "commute-stations" }, { ...GROUP, items: [{ kind: "bus", groupId: "commute" }] }]));
+
+    // Act & Assert
+    expect(transitLayoutFile.safeParse(sameSlug).success).toBe(true);
   });
 
   it.each(Object.keys(transitLayoutFile.shape))("refuses a layout without its %s", (field) => {
