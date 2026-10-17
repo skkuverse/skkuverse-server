@@ -235,6 +235,10 @@ describe("listSubwayPlatforms", () => {
     expect(platforms.map((platform) => [platform.id, platform.line])).toEqual([
       ["KR-1-0153", "1"],
       ["S1-4-420", "4"],
+      ["S1-2-216", "2"],
+      ["S1-3-334", "3"],
+      ["S1-2-222", "2"],
+      ["S1-3-332", "3"],
     ]);
   });
 });
@@ -245,6 +249,14 @@ describe("findSubwayPlatform", () => {
     ["KR-1-0153", "down", ["KR-1-P152", "KR-1-P151", "KR-1-P150"]],
     ["S1-4-420", "up", ["S1-4-421", "S1-4-422", "S1-4-423"]],
     ["S1-4-420", "down", ["S1-4-419", "S1-4-418", "S1-4-417"]],
+    ["S1-2-216", "up", ["S1-2-215", "S1-2-214", "S1-2-213"]],
+    ["S1-2-216", "down", ["S1-2-217", "S1-2-218", "S1-2-219"]],
+    ["S1-3-334", "up", ["S1-3-335", "S1-3-336", "S1-3-337"]],
+    ["S1-3-334", "down", ["S1-3-333", "S1-3-332", "S1-3-331"]],
+    ["S1-2-222", "up", ["S1-2-221", "S1-2-220", "S1-2-219"]],
+    ["S1-2-222", "down", ["S1-2-223", "S1-2-224", "S1-2-225"]],
+    ["S1-3-332", "up", ["S1-3-333", "S1-3-334", "S1-3-335"]],
+    ["S1-3-332", "down", ["S1-3-331", "S1-3-330", "S1-3-329"]],
   ] as const)("lists the upstream platforms of %s %s nearest first", (id, direction, upstreamPlatformIds) => {
     // Act
     const platform = findSubwayPlatform(id);
@@ -258,6 +270,14 @@ describe("findSubwayPlatform", () => {
     ["KR-1-0153", "down", ["KR-1-P149"]],
     ["S1-4-420", "up", []],
     ["S1-4-420", "down", []],
+    ["S1-2-216", "up", []],
+    ["S1-2-216", "down", []],
+    ["S1-3-334", "up", []],
+    ["S1-3-334", "down", []],
+    ["S1-2-222", "up", []],
+    ["S1-2-222", "down", []],
+    ["S1-3-332", "up", []],
+    ["S1-3-332", "down", []],
   ] as const)("lists the watched platforms of %s %s, beyond its upstream ones, nearest first", (id, direction, watchedPlatformIds) => {
     // Act
     const platform = findSubwayPlatform(id);
@@ -271,6 +291,14 @@ describe("findSubwayPlatform", () => {
     ["KR-1-0153", "down", "KR-1-P154"],
     ["S1-4-420", "up", "S1-4-419"],
     ["S1-4-420", "down", "S1-4-421"],
+    ["S1-2-216", "up", "S1-2-217"],
+    ["S1-2-216", "down", "S1-2-215"],
+    ["S1-3-334", "up", "S1-3-333"],
+    ["S1-3-334", "down", "S1-3-335"],
+    ["S1-2-222", "up", "S1-2-223"],
+    ["S1-2-222", "down", "S1-2-221"],
+    ["S1-3-332", "up", "S1-3-331"],
+    ["S1-3-332", "down", "S1-3-333"],
   ] as const)("names the next platform of %s %s", (id, direction, nextPlatformId) => {
     // Act
     const platform = findSubwayPlatform(id);
@@ -282,6 +310,10 @@ describe("findSubwayPlatform", () => {
   it.each([
     ["KR-1-0153", "1", { source: "korail" }],
     ["S1-4-420", "4", { source: "seoul-station", stationCode: "0420" }],
+    ["S1-2-216", "2", { source: "seoul-station", stationCode: "0216" }],
+    ["S1-3-334", "3", { source: "seoul-station", stationCode: "0334" }],
+    ["S1-2-222", "2", { source: "seoul-station", stationCode: "0222" }],
+    ["S1-3-332", "3", { source: "seoul-station", stationCode: "0332" }],
   ])("puts %s on line %s with its timetable source", (id, line, timetable) => {
     // Act
     const platform = findSubwayPlatform(id);
@@ -294,6 +326,10 @@ describe("findSubwayPlatform", () => {
   it.each([
     ["KR-1-0153", { ko: "서울 방면", en: "Toward Seoul", zh: "首尔方向" }, { ko: "천안·서동탄 방면", en: "Toward Cheonan / Seodongtan", zh: "天安·西东滩方向" }],
     ["S1-4-420", { ko: "불암산·진접 방면", en: "Toward Buramsan / Jinjeop", zh: "佛岩山·榛接方向" }, { ko: "오이도·안산 방면", en: "Toward Oido / Ansan", zh: "乌耳岛·安山方向" }],
+    ["S1-2-216", { ko: "내선순환", en: "Inner circle", zh: "内环" }, { ko: "외선순환", en: "Outer circle", zh: "外环" }],
+    ["S1-2-222", { ko: "내선순환", en: "Inner circle", zh: "内环" }, { ko: "외선순환", en: "Outer circle", zh: "外环" }],
+    ["S1-3-334", { ko: "대화 방면", en: "Toward Daehwa", zh: "大化方向" }, { ko: "오금 방면", en: "Toward Ogeum", zh: "梧琴方向" }],
+    ["S1-3-332", { ko: "대화 방면", en: "Toward Daehwa", zh: "大化方向" }, { ko: "오금 방면", en: "Toward Ogeum", zh: "梧琴方向" }],
   ])("names %s's directions in every language", (id, upName, downName) => {
     // Act
     const platform = findSubwayPlatform(id);
@@ -303,7 +339,7 @@ describe("findSubwayPlatform", () => {
     expect(platform?.directions.down.name).toEqual(downName);
   });
 
-  it.each(["S1-2-222", "KR-1-P154", "kr-1-0153", "hyehwa", ""])("finds no platform for %j", (id) => {
+  it.each(["S1-2-220", "KR-1-P154", "kr-1-0153", "hyehwa", ""])("finds no platform for %j", (id) => {
     // Act
     const platform = findSubwayPlatform(id);
 

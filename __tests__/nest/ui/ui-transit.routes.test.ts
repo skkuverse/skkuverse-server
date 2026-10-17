@@ -5,7 +5,8 @@
  * fixed clock (2026-10-20, the commute pilot running, fasttrack closed).
  *
  * Asserts the envelope, the three sections in order in Korean, each subway
- * row as one physical station by slug with its lines and no icon, the English
+ * row as one physical station by slug with its lines and no icon, the commute
+ * stations group below the commute bus row with its stations, the English
  * titles under unchanged ids, the private five-minute Cache-Control, that no
  * item carries live arrival data, and the wire.
  */
@@ -85,6 +86,38 @@ describe("GET /ui/home/transit", () => {
       action: { actionType: "route", actionValue: "/subway?station=hyehwa" },
     });
     expect(res.body.data.sections[2].items[0]).toMatchObject({ id: "subway:sungkyunkwan", lines: [{ code: "1", badge: "1", color: "0052A4" }] });
+    expectWire(transitLayout, res.body.data);
+  });
+
+  it("Commute stations group: serves group:commute-stations collapsed right below bus:commute in nsc, its stations in the commute chip order", async () => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/transit").set("Accept-Language", "ko");
+
+    // Assert
+    expect(res.status).toBe(200);
+    const nsc = res.body.data.sections[2];
+    expect(nsc.items.map((served: { id: string }) => served.id)).toEqual(["subway:sungkyunkwan", "bus:commute", "group:commute-stations"]);
+    const group = nsc.items[2];
+    expect({ ...group, items: undefined }).toEqual({
+      kind: "group",
+      id: "group:commute-stations",
+      title: "통학버스 정류장 지하철",
+      subtitle: "정자 · 잠실 · 도곡 · 강남 · 양재 · 광교중앙",
+      icon: { type: "subway", color: "8B95A1", text: "환승" },
+      initialState: "collapsed",
+      items: undefined,
+    });
+    expect(group.items.map((served: { id: string }) => served.id)).toEqual(["subway:jamsil", "subway:dogok", "subway:gangnam", "subway:yangjae"]);
+    expect(group.items[2]).toEqual({
+      kind: "subway",
+      id: "subway:gangnam",
+      stationId: "gangnam",
+      title: "강남역",
+      subtitle: "2호선",
+      lines: [{ code: "2", name: "2호선", badge: "2", color: "00A84D" }],
+      action: { actionType: "route", actionValue: "/subway?station=gangnam" },
+    });
+    expect(keysOf(res.body.data)).not.toContain("visibleWith");
     expectWire(transitLayout, res.body.data);
   });
 

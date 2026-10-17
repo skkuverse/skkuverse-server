@@ -9,17 +9,13 @@ import { SUBWAY_TIMETABLES, loadTimetable } from "./subway-timetable.config";
 import { SERVICE_WINDOW_CLOSES_SEC, SERVICE_WINDOW_OPENS_SEC, TIMETABLE_DAY_TYPES } from "./subway-timetable.constants";
 import { findTimetable, listSubwayPlatforms } from "./subway-timetable.rules";
 
-// The eleven platforms design D2b adds, which WP6 registers; until then the registry serves only the first two lines.
+// The platforms of design D2b that WP6 has not registered yet: each leaves this list in the commit that registers it.
 const PLANNED: readonly Pick<SubwayPlatform, "id" | "line" | "timetable">[] = [
   { id: "DX-D1-4312", line: "D1", timetable: { source: "shinbundang" } },
   { id: "KR-K1-K230", line: "K1", timetable: { source: "korail" } },
-  { id: "S1-2-216", line: "2", timetable: { source: "seoul-station", stationCode: "0216" } },
   { id: "S1-8-2815", line: "8", timetable: { source: "seoul-station", stationCode: "2815" } },
-  { id: "S1-3-334", line: "3", timetable: { source: "seoul-station", stationCode: "0334" } },
   { id: "KR-K1-K217", line: "K1", timetable: { source: "korail" } },
-  { id: "S1-2-222", line: "2", timetable: { source: "seoul-station", stationCode: "0222" } },
   { id: "DX-D1-4307", line: "D1", timetable: { source: "shinbundang" } },
-  { id: "S1-3-332", line: "3", timetable: { source: "seoul-station", stationCode: "0332" } },
   { id: "DX-D1-4308", line: "D1", timetable: { source: "shinbundang" } },
   { id: "DX-D1-4318", line: "D1", timetable: { source: "shinbundang" } },
 ];

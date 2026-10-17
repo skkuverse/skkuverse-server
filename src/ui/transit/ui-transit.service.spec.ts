@@ -81,7 +81,7 @@ describe("UiTransitService.getTransitLayout", () => {
     expect(layout.sections.map((section) => section.items.map((served) => served.id))).toEqual([
       ["bus:campus"],
       ["subway:hyehwa", "bus:hssc", "bus:jongro02", "bus:jongro07", "bus:jongro08"],
-      ["subway:sungkyunkwan", "bus:commute"],
+      ["subway:sungkyunkwan", "bus:commute", "group:commute-stations"],
     ]);
   });
 
@@ -109,14 +109,14 @@ describe("UiTransitService.getTransitLayout", () => {
 
   it.each([
     ["2026-10-12T02:54:59.999Z", ["subway:sungkyunkwan"]],
-    ["2026-10-12T02:55:00.000Z", ["subway:sungkyunkwan", "bus:commute"]],
+    ["2026-10-12T02:55:00.000Z", ["subway:sungkyunkwan", "bus:commute", "group:commute-stations"]],
   ])("at %s, around 11:55 KST when the commute card opens, serves nsc as %p", async (iso, itemIds) => {
     // Act & Assert
     expect(await itemIdsOf(serviceAt(iso), "nsc")).toEqual(itemIds);
   });
 
   it.each([
-    ["2026-12-18T14:59:59.999Z", ["subway:sungkyunkwan", "bus:commute"]],
+    ["2026-12-18T14:59:59.999Z", ["subway:sungkyunkwan", "bus:commute", "group:commute-stations"]],
     ["2026-12-18T15:00:00.000Z", ["subway:sungkyunkwan"]],
   ])("at %s, around 00:00 KST on 2026-12-19 after the pilot, serves nsc as %p", async (iso, itemIds) => {
     // Act & Assert
@@ -162,14 +162,18 @@ describe("UiTransitService.getTransitLayout with a group", () => {
   const ICON = { type: "subway", color: "8B95A1", text: { ko: "환승", en: "Transfer" } };
 
   function commuteStations(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-    // WHY: the registry serves two stations, so hyehwa stands in for the commute stations.
+    // WHY: hyehwa stands in for the commute stations, so these layouts hold one group child whatever the registry serves.
     const items = [{ kind: "subway", stationId: "hyehwa" }];
     const visibleWith = { kind: "bus", groupId: "commute" };
     return { kind: "group", id: "commute-stations", title: { ko: "통학버스 정류장 지하철" }, icon: ICON, initialState: "collapsed", visibleWith, items, ...overrides };
   }
 
   function grouped(nscGroup: Record<string, unknown>, campusItems: unknown[] = [{ kind: "bus", groupId: "campus" }, { kind: "bus", groupId: "fasttrack" }]): unknown {
-    const hssc = ["hssc", "jongro02", "jongro07", "jongro08"].map((groupId) => ({ kind: "bus", groupId }));
+    const buses = ["hssc", "jongro02", "jongro07", "jongro08"].map((groupId) => ({ kind: "bus", groupId }));
+    const otherStations = new SubwayStationsService()
+      .listStations()
+      .flatMap(({ id }) => (id === "sungkyunkwan" || id === "hyehwa" ? [] : [{ kind: "subway", stationId: id }]));
+    const hssc = [...buses, ...otherStations];
     const nsc = [{ kind: "subway", stationId: "sungkyunkwan" }, { kind: "bus", groupId: "commute" }, nscGroup];
     return {
       version: 1,
