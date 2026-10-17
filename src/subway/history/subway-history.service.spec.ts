@@ -25,6 +25,7 @@ import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/su
 import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
+import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import type { SubwayRepository } from "../subway.repository";
 import type { SubwayProvider, TrainEvent } from "../subway.types";
@@ -42,7 +43,7 @@ function setup() {
   const arrivals = new FakeSubwayRepository();
   const history = new FakeSubwayHistoryRepository();
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
-  const tracking = new SubwayTrackingService(asReal<SubwayRepository>(arrivals), timetable, new SubwayEstimateService(), clock);
+  const tracking = new SubwayTrackingService(asReal<SubwayRepository>(arrivals), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   const service = new SubwayHistoryService(asReal<SubwayHistoryRepository>(history), tracking, clock);
   service.onModuleInit();
   const tickAt = (kst: string, provider: SubwayProvider = upstream("seoul-subway-api")): Promise<void> => {

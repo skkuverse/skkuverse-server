@@ -29,6 +29,7 @@ import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/su
 import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
+import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import type { SubwayRepository } from "../subway.repository";
 import type { CountdownRow, SubwayProvider, TrainEvent } from "../subway.types";
@@ -46,7 +47,7 @@ function setup(atKst = at) {
   const repository = new FakeSubwayRepository();
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
   const clock = { now: () => now } as Clock;
-  const service = new SubwayTrackingService(asReal<SubwayRepository>(repository), timetable, new SubwayEstimateService(), clock);
+  const service = new SubwayTrackingService(asReal<SubwayRepository>(repository), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   const tickAt = (kst: string, provider: SubwayProvider): Promise<void> => {
     now = atKst(kst);
     return service.track(provider);
