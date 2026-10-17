@@ -2,9 +2,10 @@
  * The Seoul Metro train map page as the tracker takes it. What it guards:
  * every train `div` of the line's blocks (`<n>line_metro` and
  * `<n>line_korail`) is read from its `class` and `title` into a four-digit
- * train number, a station name, a status and a destination; a page with no
- * block for the line, no train in it, or a train title of another shape is a
- * parse failure; each train at a covered station becomes a train event
+ * train number, a station name, a status and a destination; a line block
+ * with no train in it is no train (line 4 at 05:16 KST on 2026-10-17, before
+ * its first train), and a page with no block for the line or a train title of
+ * another shape is a parse failure; each train at a covered station becomes a train event
  * stamped with the crawl time, and `이동` (between stations) none. Inputs are
  * the line 1 and line 4 pages captured on 2026-10-16
  * (__tests__/nest/subway/fixtures/, see each file's first line).
@@ -97,8 +98,15 @@ describe("toTrainMapTrains", () => {
     expect(trains).toEqual([{ trainNo: "4206", stationName: "총신대입구(이수)", status: "출발", destination: "진접" }]);
   });
 
+  it("reads the line's blocks with no train div as no train, as line 4's page was at 05:16 KST on 2026-10-17", () => {
+    // Act
+    const trains = toTrainMapTrains('<div class="4line_metro"></div><div class="4line_korail"></div>', "4");
+
+    // Assert
+    expect(trains).toEqual([]);
+  });
+
   it.each([
-    ["a page with no train div, as during service hours it never is", '<div class="1line_metro"></div><div class="1line_korail"></div>'],
     ["a page without the line's blocks", `<div class="4line_metro">${trainDiv("4690열차  길음 도착 불암산행")}</div>`],
     ["a train title of another shape", `<div class="1line_metro">${trainDiv("0493 성균관대 출발")}</div>`],
     ["a status the map never showed", `<div class="1line_metro">${trainDiv("0493열차  성균관대 정차 서동탄행")}</div>`],

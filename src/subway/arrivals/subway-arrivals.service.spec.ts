@@ -12,6 +12,7 @@ import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/su
 import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
 import config from "../../infra/config";
+import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import type { SubwayArrivalsDoc } from "../subway.document";
 import type { SubwayRepository } from "../subway.repository";
@@ -26,7 +27,7 @@ function setup() {
   const repository = new FakeSubwayRepository();
   const clock = { now: () => NOW } as Clock;
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
-  const tracking = new SubwayTrackingService(asReal<SubwayRepository>(repository), timetable, new SubwayEstimateService(), clock);
+  const tracking = new SubwayTrackingService(asReal<SubwayRepository>(repository), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   return { repository, service: new SubwayArrivalsService(asReal<SubwayRepository>(repository), tracking, clock) };
 }
 

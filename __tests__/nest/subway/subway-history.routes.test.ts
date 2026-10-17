@@ -11,7 +11,10 @@
  * median error, median and p90 absolute error and unresolved count, leaving
  * out open records and other service dates, under `Cache-Control: no-store`.
  * Boot creates `subway_events` as a time-series collection expiring after 180
- * days.
+ * days. On Mongo, an observed arrival resolves the records isResolvableBy
+ * allows and no other: never one made at the tick that saw it (F6), an arrived
+ * row replacing an approaching row's resolution, nothing predicted over 30
+ * minutes before.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -153,6 +156,48 @@ describe("GET /internal/subway/accuracy", () => {
         { stationId: "S1-4-420", direction: "down", horizonMin: 1, source: "live", count: 0, medianErrorSec: null, medianAbsErrorSec: null, p90AbsErrorSec: null, unresolvedCount: 2 },
       ],
     });
+  });
+});
+
+describe("SubwayHistoryRepository.updateObservedArrival on mongod", () => {
+  const serviceDate = "2026-10-01";
+  const keyOf = { serviceDate, stationId: "KR-1-0153" };
+  const records = [
+    prediction({ ...keyOf, trainNo: "0692", horizonMin: 3, madeAt: at("2026-10-01T20:28:40"), predictedAt: at("2026-10-01T20:31:30") }),
+    prediction({ ...keyOf, trainNo: "0692", horizonMin: 1, madeAt: at("2026-10-01T20:31:25"), predictedAt: at("2026-10-01T20:31:50") }),
+    prediction({ ...keyOf, trainNo: "0692", horizonMin: 10, madeAt: at("2026-10-01T19:51:00"), predictedAt: at("2026-10-01T20:02:04") }),
+  ];
+  const stateOf = async (): Promise<unknown[]> =>
+    db
+      .getClient()
+      .db(config.mongo.dbName)
+      .collection<SubwayPredictionDoc>(config.subway.collections.predictions)
+      .find({ serviceDate }, { projection: { _id: 0, horizonMin: 1, status: 1, observedState: 1, errorSec: 1 } })
+      .sort({ horizonMin: -1 })
+      .toArray();
+
+  it("resolves by an approaching row only the records made before the tick that saw it, then by the arrived row the rest within 30 minutes", async () => {
+    // Arrange
+    const repository = app.get<SubwayHistoryRepository>(SubwayHistoryRepositoryClass);
+    const arrival = { serviceDate, trainNo: "0692", stationId: "KR-1-0153" };
+    await repository.upsertPredictions(records);
+
+    // Act
+    await repository.updateObservedArrival({ ...arrival, observedAt: at("2026-10-01T20:31:50"), observedState: "approaching" }, at("2026-10-01T20:31:25"));
+    const afterApproach = await stateOf();
+    await repository.updateObservedArrival({ ...arrival, observedAt: at("2026-10-01T20:32:05"), observedState: "arrived" }, at("2026-10-01T20:32:05"));
+
+    // Assert
+    expect(afterApproach).toEqual([
+      { horizonMin: 10, status: "resolved", observedState: "approaching", errorSec: -1786 },
+      { horizonMin: 3, status: "resolved", observedState: "approaching", errorSec: -20 },
+      { horizonMin: 1, status: "open", observedState: null, errorSec: null },
+    ]);
+    expect(await stateOf()).toEqual([
+      { horizonMin: 10, status: "resolved", observedState: "approaching", errorSec: -1786 },
+      { horizonMin: 3, status: "resolved", observedState: "arrived", errorSec: -35 },
+      { horizonMin: 1, status: "resolved", observedState: "arrived", errorSec: -15 },
+    ]);
   });
 });
 

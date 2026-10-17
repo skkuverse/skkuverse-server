@@ -24,7 +24,6 @@ export function toTrainMapTrains(page: string, line: string): TrainMapTrain[] {
   const blocks = toLineBlocks(page, line);
   if (blocks.length === 0) throw shapeError(`line ${line}: no line block`);
   const trains = blocks.flatMap((block) => [...block.matchAll(TRAIN_DIV)].map(([, trainClass = "", title = ""]) => toTrain(line, trainClass, title)));
-  if (trains.length === 0) throw shapeError(`line ${line}: no train`);
   return trains;
 }
 

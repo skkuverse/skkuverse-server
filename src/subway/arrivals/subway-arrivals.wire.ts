@@ -1,20 +1,24 @@
 import { z } from "zod";
 
+/** WHY: nullable for a terminus, which has no station on one side. */
+const neighborStation = z.object({ id: z.string(), name: z.string() }).nullable();
+
 const trainArrival = z.object({
   trainNo: z.string(),
   destination: z.string(),
   express: z.boolean(),
+  /** WHY: an instant, not seconds left: the app counts down against its own clock (owner decision 2026-10-17). */
   arrivalAt: z.iso.datetime(),
-  /** WHY: counted from `generatedAt`, so the app counts down from its own receive time, not its clock. */
-  remainingSec: z.int().nonnegative(),
-  /** WHY: the station by its station id and where the train is there; null for a train nothing has reported. */
-  position: z.object({ stationId: z.string(), state: z.enum(["approaching", "arrived", "departed"]) }).nullable(),
+  /** WHY: 0 at the station, 1 to 3 at an upstream one; null when nothing reported the train or it is farther. */
+  stopsAway: z.int().nonnegative().nullable(),
   source: z.enum(["live", "estimated", "scheduled"]),
 });
 
 const directionArrivals = z.object({
   direction: z.enum(["up", "down"]),
   name: z.string(),
+  previousStation: neighborStation,
+  nextStation: neighborStation,
   trains: z.array(trainArrival),
 });
 

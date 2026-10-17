@@ -72,6 +72,25 @@ describe("SubwayTimetableService.listStationSchedules", () => {
     expect(sungkyunkwan?.lineRoutes.down.slice(0, 4)).toEqual(["KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153"]);
     expect(hyehwa?.lineRoutes.up.slice(0, 4)).toEqual(["S1-4-423", "S1-4-422", "S1-4-421", "S1-4-420"]);
   });
+
+  it("lists each station's upstream stations as the three before it on its direction's route, nearest first, and its next station as the one after", async () => {
+    // Arrange
+    const { service } = setup();
+
+    // Act
+    const schedules = await service.listStationSchedules(new Date("2026-10-16T03:00:00Z"));
+
+    // Assert
+    const neighbors = schedules.flatMap(({ station, lineRoutes }) =>
+      (["up", "down"] as const).map((direction) => {
+        const route = lineRoutes[direction];
+        const at = route.indexOf(station.id);
+        const { upstreamStationIds, nextStationId } = station.directions[direction];
+        return [[upstreamStationIds, nextStationId], [route.slice(Math.max(0, at - 3), at).reverse(), route[at + 1]]];
+      }),
+    );
+    expect(neighbors.map(([declared]) => declared)).toEqual(neighbors.map(([, onRoute]) => onRoute));
+  });
 });
 
 describe("SubwayTimetableService.findStationSchedule", () => {
