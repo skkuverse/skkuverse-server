@@ -124,6 +124,8 @@ const config = {
     },
     tmapAppKey: asRequired(process.env.TMAP_APP_KEY),
     naverDailyCap: 1000,
+    // WHY: about four times a Friday's bus-lane probe requests, and a tenth of the TOPIS function's daily quota.
+    topisDailyCap: 2000,
     // QUIRK(tmap): one app serves dev and prd (its terms count several apps for one service as abuse),
     // so development gets a small share of the 1,000 daily calls.
     tmapDailyCap: isProduction ? 900 : 50,

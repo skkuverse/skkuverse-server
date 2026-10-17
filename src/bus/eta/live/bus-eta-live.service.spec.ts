@@ -3,6 +3,13 @@
  * per window, fixing at departure, the fallback, fixed values never changing,
  * failure reporting and the daily cap. Ticks take an explicit `now`, over an
  * in-memory store with writeEtas' frozen-skip rule.
+ *
+ * By travel model (bus-lane design D2, D5): a bus-lane run's value is the
+ * route forced through the corridor with the probe's corridor time in place
+ * of the car time; it falls back to the car route when the probe cannot
+ * answer or fails; one call per model; the probe primed once, ten minutes
+ * before a bus-lane window opens; and a TOPIS failure reported until a
+ * position request succeeds, whatever NAVER does.
  */
 import moment from "moment-timezone";
 import { DailyCapError } from "../../../shared/daily-cap.error";
@@ -12,7 +19,10 @@ import { etaDocId } from "../bus-eta.mapper";
 import { liveDoc } from "./bus-eta-live.mapper";
 import { DailyCap } from "../../../shared/daily-cap.util";
 import type { EtaRun, EtaSequence } from "../bus-eta.types";
+import type { SequenceStrategy } from "../lane/bus-eta-lane.types";
+import type { LegTime } from "../probe/bus-eta-probe.types";
 import { BusEtaLiveService } from "./bus-eta-live.service";
+import type { LiveTravel } from "./bus-eta-live.types";
 
 const DATE = "2026-10-12"; // a Monday
 const SEQ: EtaSequence = {
@@ -26,6 +36,12 @@ const SEQ: EtaSequence = {
 };
 const OFFSETS = [0, 4500, 4620];
 
+// A car-only travel model: a lane or probe call fails the test.
+function carTravel(fetchOffsets: LiveTravel["fetchOffsets"]): LiveTravel {
+  const noLaneCall = () => Promise.reject(new Error("no lane or probe call expected"));
+  return { strategyOfRun: () => ({ strategy: "car" }), fetchOffsets, fetchCorridorRoute: noLaneCall, legTime: noLaneCall, prime: noLaneCall };
+}
+
 const at = (hhmm: string, seconds = 0) => moment.tz(`${DATE} ${hhmm}`, "YYYY-MM-DD HH:mm", "Asia/Seoul").add(seconds, "s").toDate();
 const run = (time: string): EtaRun => ({ serviceId: SEQ.serviceId, routeType: SEQ.routeType, date: DATE, time, departAt: at(time) });
 
@@ -35,7 +51,7 @@ function setup(times: string[], opts: { cap?: number } = {}) {
   const poller = new BusEtaLiveService({
     sequences: [SEQ],
     runsOn: async (_s, date) => (date === DATE ? times.map(run) : []),
-    fetchOffsets,
+    travel: carTravel(fetchOffsets),
     readEtas: async (serviceIds, dates) =>
       [...store.values()].filter((d) => serviceIds.includes(d.serviceId) && dates.includes(d.date)),
     writeEtas: async (docs) => {
@@ -208,5 +224,229 @@ describe("the daily cap", () => {
     // Act & Assert
     expect(() => cap.take(at("23:59", 30))).toThrow(DailyCapError);
     expect(() => cap.take(moment(at("00:00")).add(1, "day").toDate())).not.toThrow();
+  });
+});
+
+const INJA: EtaSequence = { serviceId: "campus-inja", routeType: "regular", stops: [SEQ.stops[0]!, SEQ.stops[1]!] };
+const JAIN: EtaSequence = { serviceId: "campus-jain", routeType: "regular", stops: [SEQ.stops[1]!, SEQ.stops[0]!] };
+const CAR_OFFSETS = [0, 5400];
+const FORCED_ROUTE = { stopOffsetsSec: [0, 4620], corridorCarSec: 1920 };
+const PROBE: LegTime = { kind: "probe", corridorSec: 1080, spanCount: 6, coverage: 0.81 };
+const BUS_LANE_TRAVEL = { model: "busLane", corridorCarSec: 1920, corridorSec: 1080, spanCount: 6, coverage: 0.81 };
+const TOPIS_DOWN = new BusEtaDirectionsError("topis", "http", "HTTP 503", 503);
+
+// The lane config's rule: campus-inja southbound and campus-jain northbound in lane hours, 07:00 to 21:00.
+function laneHours(r: Pick<EtaRun, "serviceId" | "time">): SequenceStrategy {
+  if (r.time < "07:00" || r.time >= "21:00") return { strategy: "car" };
+  return { strategy: "busLane", direction: r.serviceId === "campus-inja" ? "southbound" : "northbound" };
+}
+
+function laneSetup(times: string[], opts: { sequences?: EtaSequence[]; strategyOf?: (r: EtaRun) => SequenceStrategy } = {}) {
+  const store = new Map<string, ShuttleEtaDoc>();
+  const travel = {
+    strategyOfRun: jest.fn(opts.strategyOf ?? laneHours),
+    fetchOffsets: jest.fn().mockResolvedValue(CAR_OFFSETS),
+    fetchCorridorRoute: jest.fn().mockResolvedValue(FORCED_ROUTE),
+    legTime: jest.fn().mockResolvedValue(PROBE),
+    prime: jest.fn().mockResolvedValue(undefined),
+  };
+  const sequences = opts.sequences ?? [INJA];
+  const live = new BusEtaLiveService({
+    sequences,
+    runsOn: async (s, date) => (date === DATE ? times.map((time) => ({ ...run(time), serviceId: s.serviceId })) : []),
+    travel,
+    readEtas: async (serviceIds, dates) => [...store.values()].filter((d) => serviceIds.includes(d.serviceId) && dates.includes(d.date)),
+    writeEtas: async (docs) => {
+      for (const d of docs) if (!store.get(d._id)?.frozen) store.set(d._id, d);
+    },
+    cap: new DailyCap("naver", 1000),
+  });
+  const doc = (time: string, serviceId = "campus-inja") => store.get(etaDocId({ ...run(time), serviceId }, "live"));
+  return { live, travel, doc };
+}
+
+describe("BusEtaLiveService.tick by travel model", () => {
+  it("Afternoon run: its value is the forced route's legs with the bus-lane corridor time in place of the car time", async () => {
+    // Arrange
+    const { live, travel, doc } = laneSetup(["14:00"]);
+
+    // Act
+    const result = await live.tick(at("13:00"));
+
+    // Assert
+    expect(result).toEqual({ calls: 1, written: 1 });
+    expect(doc("14:00")).toMatchObject({ offsetsSec: [0, 3780], fetchedAt: at("13:00"), travel: BUS_LANE_TRAVEL });
+    expect(travel.fetchCorridorRoute).toHaveBeenCalledWith(INJA.stops, "southbound");
+    expect(travel.legTime).toHaveBeenCalledWith("southbound", at("13:00"));
+    expect(travel.fetchOffsets).not.toHaveBeenCalled();
+  });
+
+  it("A mixed window: a bus-lane run and a 21:10 run make one call per model", async () => {
+    // Arrange
+    const { live, travel, doc } = laneSetup(["20:30", "20:40", "21:10"]);
+
+    // Act
+    const result = await live.tick(at("20:15"));
+
+    // Assert
+    expect(result).toEqual({ calls: 2, written: 3 });
+    expect(travel.fetchCorridorRoute).toHaveBeenCalledTimes(1);
+    expect(travel.fetchOffsets).toHaveBeenCalledTimes(1);
+    expect(travel.fetchOffsets).toHaveBeenCalledWith(INJA.stops);
+    expect(doc("20:30")).toMatchObject({ offsetsSec: [0, 3780], travel: BUS_LANE_TRAVEL });
+    expect(doc("20:40")).toMatchObject({ offsetsSec: [0, 3780], travel: BUS_LANE_TRAVEL });
+    expect(doc("21:10")).toMatchObject({ offsetsSec: CAR_OFFSETS });
+    expect(doc("21:10")).not.toHaveProperty("travel");
+  });
+
+  it("Departure: a bus-lane run and a car run are each fixed by their own model", async () => {
+    // Arrange
+    const { live, travel, doc } = laneSetup(["20:55", "21:00"]);
+
+    // Act
+    await live.tick(at("21:00"));
+
+    // Assert
+    expect(travel.fetchCorridorRoute).toHaveBeenCalledTimes(1);
+    expect(travel.fetchOffsets).toHaveBeenCalledTimes(1);
+    expect(doc("20:55")).toMatchObject({ frozen: true, frozenAt: at("21:00"), offsetsSec: [0, 3780], travel: BUS_LANE_TRAVEL });
+    expect(doc("21:00")).toMatchObject({ frozen: true, frozenAt: at("21:00"), offsetsSec: CAR_OFFSETS });
+    expect(doc("21:00")).not.toHaveProperty("travel");
+  });
+
+  it("Too little coverage: the run falls back to the car route at the same tick, marked car, after two NAVER calls", async () => {
+    // Arrange
+    const { live, travel, doc } = laneSetup(["14:00"]);
+    travel.legTime.mockResolvedValue({ kind: "unavailable", reason: "lowCoverage", spanCount: 3, coverage: 0.54 });
+
+    // Act
+    const result = await live.tick(at("13:00"));
+
+    // Assert
+    expect(result).toEqual({ calls: 2, written: 1 });
+    expect(travel.fetchCorridorRoute).toHaveBeenCalledTimes(1);
+    expect(travel.fetchOffsets).toHaveBeenCalledWith(INJA.stops);
+    expect(doc("14:00")).toMatchObject({ offsetsSec: CAR_OFFSETS, travel: { model: "car" } });
+  });
+
+  it("A car-only sequence makes no lane or probe call", async () => {
+    // Arrange
+    const { live, travel, doc } = laneSetup(["10:00"], { strategyOf: () => ({ strategy: "car" }) });
+
+    // Act
+    for (const t of ["08:50", "09:00", "10:00"]) await live.tick(at(t));
+
+    // Assert
+    expect(travel.fetchCorridorRoute).not.toHaveBeenCalled();
+    expect(travel.legTime).not.toHaveBeenCalled();
+    expect(travel.prime).not.toHaveBeenCalled();
+    expect(doc("10:00")).toMatchObject({ frozen: true, offsetsSec: CAR_OFFSETS });
+  });
+});
+
+describe("BusEtaLiveService.tick failures by travel model", () => {
+  it("Bus position service down: the car value is stored and served, then the tick rejects", async () => {
+    // Arrange
+    const { live, travel, doc } = laneSetup(["14:00"]);
+    travel.legTime.mockRejectedValue(TOPIS_DOWN);
+
+    // Act
+    const err = await live.tick(at("13:00")).catch((e: unknown) => e);
+
+    // Assert
+    expect(err).toBe(TOPIS_DOWN);
+    expect(travel.fetchOffsets).toHaveBeenCalledTimes(1);
+    expect(doc("14:00")).toMatchObject({ offsetsSec: CAR_OFFSETS, fetchedAt: at("13:00"), travel: { model: "car" } });
+  });
+
+  it("The TOPIS cap: a capped probe falls back the same way and the tick rejects with the cap error", async () => {
+    // Arrange
+    const { live, travel, doc } = laneSetup(["14:00"]);
+    const capped = new DailyCapError("topis", 2000);
+    travel.legTime.mockRejectedValue(capped);
+
+    // Act
+    const err = await live.tick(at("13:00")).catch((e: unknown) => e);
+
+    // Assert
+    expect(err).toBe(capped);
+    expect(doc("14:00")).toMatchObject({ offsetsSec: CAR_OFFSETS, travel: { model: "car" } });
+  });
+
+  it("keeps rejecting, NAVER answering or not, until a position request succeeds", async () => {
+    // Arrange
+    const { live, travel } = laneSetup(["14:00", "21:30"]);
+    travel.legTime.mockRejectedValueOnce(TOPIS_DOWN);
+    await live.tick(at("13:00")).catch(() => undefined);
+
+    // Act & Assert
+    // 13:05: no call is due.
+    await expect(live.tick(at("13:05"))).rejects.toBe(TOPIS_DOWN);
+    // 20:30: only the 21:30 car run is due, and its NAVER call succeeds.
+    await expect(live.tick(at("20:30"))).rejects.toBe(TOPIS_DOWN);
+    expect(travel.fetchOffsets).toHaveBeenCalledTimes(2);
+    // 14:00: fixing the run at departure asks the probe again, which answers.
+    await expect(live.tick(at("14:00"))).resolves.toMatchObject({ calls: 1 });
+    await expect(live.tick(at("14:01"))).resolves.toEqual({ calls: 0, written: 0 });
+  });
+
+  it("Forced route fails: no value and no car call at that tick, the tick rejects, and the next good call resolves", async () => {
+    // Arrange
+    const { live, travel, doc } = laneSetup(["14:00"]);
+    const down = new BusEtaDirectionsError("naver", "timeout", "timed out (ECONNABORTED)");
+    travel.fetchCorridorRoute.mockRejectedValueOnce(down);
+
+    // Act & Assert
+    await expect(live.tick(at("13:00"))).rejects.toBe(down);
+    expect(doc("14:00")).toBeUndefined();
+    expect(travel.fetchOffsets).not.toHaveBeenCalled();
+    expect(travel.legTime).not.toHaveBeenCalled();
+    await expect(live.tick(at("13:01"))).resolves.toEqual({ calls: 1, written: 1 });
+  });
+});
+
+describe("BusEtaLiveService.tick priming", () => {
+  it("Priming before the window: a 13:30 bus-lane run primes at 12:20, not at 12:19 or 12:21", async () => {
+    // Arrange
+    const { live, travel } = laneSetup(["13:30"]);
+
+    // Act
+    for (const t of ["12:19", "12:20", "12:21"]) await live.tick(at(t));
+
+    // Assert
+    expect(travel.prime.mock.calls).toEqual([[at("12:20")]]);
+  });
+
+  it("never primes for car runs", async () => {
+    // Arrange
+    const { live, travel } = laneSetup(["13:30", "22:30"], { strategyOf: () => ({ strategy: "car" }) });
+
+    // Act
+    for (const t of ["12:20", "21:20"]) await live.tick(at(t));
+
+    // Assert
+    expect(travel.prime).not.toHaveBeenCalled();
+  });
+
+  it("primes once per tick across sequences and directions", async () => {
+    // Arrange
+    const { live, travel } = laneSetup(["13:30"], { sequences: [INJA, { ...INJA, routeType: "hakbu" }, JAIN] });
+
+    // Act
+    await live.tick(at("12:20"));
+
+    // Assert
+    expect(travel.prime).toHaveBeenCalledTimes(1);
+  });
+
+  it("a failed prime is held like any failure, and a later position request clears it", async () => {
+    // Arrange
+    const { live, travel } = laneSetup(["13:30"]);
+    travel.prime.mockRejectedValueOnce(TOPIS_DOWN);
+
+    // Act & Assert
+    await expect(live.tick(at("12:20"))).rejects.toBe(TOPIS_DOWN);
+    await expect(live.tick(at("12:25"))).rejects.toBe(TOPIS_DOWN);
+    await expect(live.tick(at("12:30"))).resolves.toEqual({ calls: 1, written: 1 });
   });
 });
