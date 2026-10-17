@@ -182,5 +182,6 @@ Adding a provider touches:
 - [Subway arrivals spec](../../openspec/changes/archive/2026-10-17-add-subway-arrivals/specs/subway-arrivals/spec.md): the required behavior
 - [Holidays architecture](holidays-architecture.md): the public holidays that choose a timetable's day type
 - [Logging reference](../reference/logging.md): the subway pollers' own lines
+- (An operations detail is left out of the public history.)
 - [ADR 0010](../decisions/0010-server-architecture.md): the module shape
 - [Docs index](../README.md): writing rules

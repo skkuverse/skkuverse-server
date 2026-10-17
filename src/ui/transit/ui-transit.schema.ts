@@ -29,7 +29,7 @@ const transitItemFile = z.discriminatedUnion("kind", [
 const transitSectionFile = z.strictObject({
   type: z.literal("item_list"),
   id: slug,
-  title: localizedText,
+  title: localizedText.optional(),
   items: z.array(transitItemFile).min(1),
 });
 

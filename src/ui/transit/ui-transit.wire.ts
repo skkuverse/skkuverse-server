@@ -15,7 +15,8 @@ const transitItem = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("link"), ...itemFields }),
 ]);
 
-const transitSection = z.object({ type: z.literal("item_list"), id: z.string(), title: z.string(), items: z.array(transitItem) });
+/** WHY: a null title draws no header above the section. */
+const transitSection = z.object({ type: z.literal("item_list"), id: z.string(), title: z.string().nullable(), items: z.array(transitItem) });
 
 /**
  * CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/transit/schema.ts parses this tolerantly and drops a

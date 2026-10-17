@@ -70,7 +70,7 @@ export function toTransitSection(section: TransitLayoutRaw["sections"][number], 
   return {
     type: "item_list",
     id: section.id,
-    title: toLocalizedText(section.title, context.lang),
+    title: section.title === undefined ? null : toLocalizedText(section.title, context.lang),
     items: section.items.flatMap((item) => toTransitItems(item, context)),
   };
 }

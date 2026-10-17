@@ -40,7 +40,7 @@ Ui owns no data store. It serves three JSON files committed next to their reader
 | mini-app feed | A home card showing the latest entries of one mini app's broadcast feed, fetched by the app | `home-layout.json` | — |
 | campus sheet (`CampusSheet`) | The `GET /ui/home/campus` body: the campus carousel while a banner shows, else no section | `toCampusSheet` | `campusConfig` |
 | transit layout (`TransitLayout`) | The `GET /ui/home/transit` body: a version and the transit sections the transit tab draws in order | `toTransitSection` over `transit-layout.json` | — |
-| transit section | One `item_list` of the transit layout: an id, a title and its transit items; one left with no item is not served | `toTransitSection` | — |
+| transit section | One `item_list` of the transit layout: an id, a title (null when the layout gives none, and the app draws no header) and its transit items; one left with no item is not served | `toTransitSection` | — |
 | transit item | One row of a transit section: a `kind` (`bus`, `subway` or `link`) naming its referent, and the id, title, subtitle, icon and action every kind carries | a bus group, a served station or a link written in `transit-layout.json` | — |
 | bus group card | One bus group as the transit tab lists it: its card and the screen a tap opens | `toBusGroupCard` | `busItem` |
 | scroll card (`ScrollCards`) | One of the three cards `GET /ui/home/scroll` sends | `toScrollCards` | `scrollItem` |
