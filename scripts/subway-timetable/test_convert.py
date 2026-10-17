@@ -149,19 +149,19 @@ class Times(unittest.TestCase):
 
 
 class KorailNames(unittest.TestCase):
-    def test_maps_the_eight_covered_short_names(self):
+    def test_maps_the_nine_covered_short_names(self):
         # Arrange
-        names = ["병점", "세류", "수원", "화서", "성균관", "의왕", "당정", "군포"]
+        names = ["병점", "세류", "수원", "화서", "성균관", "의왕", "당정", "군포", "금정"]
 
         # Act
         codes = [convert.korail_code(name, "test") for name in names]
 
         # Assert
-        self.assertEqual(codes, ["KR-1-P157", "KR-1-1715", "KR-1-P155", "KR-1-P154", "KR-1-0153", "KR-1-P152", "KR-1-P151", "KR-1-P150"])
+        self.assertEqual(codes, ["KR-1-P157", "KR-1-1715", "KR-1-P155", "KR-1-P154", "KR-1-0153", "KR-1-P152", "KR-1-P151", "KR-1-P150", "KR-1-P149"])
 
     def test_leaves_other_stations_unmapped(self):
         # Act & Assert
-        self.assertEqual([convert.korail_code(name, "test") for name in ("서동탄", "세마", "1지청", "금정")], [None, None, None, None])
+        self.assertEqual([convert.korail_code(name, "test") for name in ("서동탄", "세마", "1지청", "명학")], [None, None, None, None])
 
     def test_refuses_a_covered_looking_name_with_the_sheet_and_row(self):
         # Arrange
@@ -204,7 +204,7 @@ class KorailWorkbook(unittest.TestCase):
         self.assertEqual(train["direction"], "up")
         self.assertEqual(train["destination"], "1지청")
         self.assertFalse(train["express"])
-        self.assertEqual([s["station"] for s in train["stops"]], ["KR-1-P155", "KR-1-P154", "KR-1-0153", "KR-1-P152", "KR-1-P150"])
+        self.assertEqual([s["station"] for s in train["stops"]], ["KR-1-P155", "KR-1-P154", "KR-1-0153", "KR-1-P152", "KR-1-P150", "KR-1-P149"])
         self.assertEqual(train["stops"][2], {"station": "KR-1-0153", "arr": 6 * 3600 + 6 * 60, "dep": 6 * 3600 + 6 * 60 + 30})
 
     def test_keeps_only_trains_that_stop_at_the_served_station_and_ignores_other_sheets(self):
@@ -220,7 +220,7 @@ class KorailWorkbook(unittest.TestCase):
 
         # Assert
         self.assertTrue(train["express"])
-        self.assertEqual([s["station"] for s in train["stops"]], ["KR-1-P155", "KR-1-0153"])
+        self.assertEqual([s["station"] for s in train["stops"]], ["KR-1-P155", "KR-1-0153", "KR-1-P149"])
 
     def test_origin_and_terminus_have_one_time_and_midnight_rolls_over(self):
         # Act

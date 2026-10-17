@@ -2,8 +2,8 @@
  * The lines the `seoul` provider polls, derived from the served stations:
  * one per Seoul `subwayId`, with the Seoul API's line name, the train-map
  * line, the served stations to ask arrivals for, and the table from each
- * Seoul station name of the line (the served stations and their upstream
- * stations) to its KRIC station id. A station or line without a Seoul name
+ * Seoul station name of the line (the served stations, their upstream
+ * stations and their watched stations) to its KRIC station id. A station or line without a Seoul name
  * fails at boot instead of dropping its trains. And one upstream tick's calls
  * settled apart: what answered is kept beside what failed, and only a tick
  * whose every call failed has nothing to hand on.
@@ -16,7 +16,7 @@ import { toSeoulLines, toSettledObservations } from "./subway-seoul.rules";
 const [SUNGKYUNKWAN, HYEHWA] = SUBWAY_STATIONS as [SubwayStation, SubwayStation];
 
 describe("toSeoulLines", () => {
-  it("gives 1호선 and 4호선, each with its served station and the Seoul names of its seven covered stations", () => {
+  it("gives 1호선 and 4호선, each with its served station and the Seoul names of its covered stations, 금정 watched beyond 1호선's", () => {
     // Act
     const lines = toSeoulLines(SUBWAY_STATIONS, SEOUL_LINE_NAME_BY_SUBWAY_ID, SEOUL_STATION_NAME_BY_ID);
 
@@ -35,6 +35,7 @@ describe("toSeoulLines", () => {
           의왕: "KR-1-P152",
           당정: "KR-1-P151",
           군포: "KR-1-P150",
+          금정: "KR-1-P149",
         },
       },
       {

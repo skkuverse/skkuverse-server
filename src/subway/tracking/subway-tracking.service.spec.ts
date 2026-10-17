@@ -7,8 +7,8 @@
  * and the tick's time; a train late at `의왕` is estimated late at `성균관대`; a
  * departure the train map shows ends a train the API still lists as arrived;
  * a positive countdown is served `live` until its source has been silent for
- * 90 s; a train missing for a minute keeps its delay and position, and after
- * 90 s is served from the timetable; a countdown far from the estimate is
+ * 90 s; a train missing for a minute keeps its delay and position, and still
+ * does past 90 s; a countdown far from the estimate is
  * logged once per train within the throttle, and so is a rejected one, with
  * its reason; a train only in countdown rows
  * is not served; an upstream is not observed outside the service window; and
@@ -158,7 +158,7 @@ describe("SubwayTrackingService.track", () => {
     expect(sourceOf4674()).toBe("scheduled");
   });
 
-  it("keeps 0692's delay and position while it is missing for a minute, and serves it from the timetable after 90 s", async () => {
+  it("keeps 0692's delay and position while it is missing for a minute and past 90 s, as on a run no upstream reports", async () => {
     // Arrange
     const { repository, tickAt } = setup();
     await tickAt("20:30:05", trainMap([event("0692", "KR-1-P154", "departed", "20:30:00", "광운대")]));
@@ -171,7 +171,7 @@ describe("SubwayTrackingService.track", () => {
 
     // Assert
     expect(missingAMinute).toMatchObject({ arrivalAt: at("20:32:30"), source: "estimated", position: { stationId: "KR-1-P154", state: "departed" } });
-    expect(train0692()).toMatchObject({ arrivalAt: at("20:31:30"), source: "scheduled", position: null });
+    expect(train0692()).toEqual(missingAMinute);
   });
 
   it("logs a countdown over 120 s from the estimate once per train within the throttle", async () => {
