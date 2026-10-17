@@ -4,7 +4,8 @@
  * recording stand-in for the poller registry), the tracker, the timetable and
  * estimate doors and the arrivals route, over FakeSubwaySeoulApiClient,
  * FakeSubwaySeoulTrainmapClient (the line 1 and 4 positions and the line 4
- * page captured on 2026-10-16 22:27 KST; the line 1 page dates from 20:45, so
+ * page captured on 2026-10-16 22:27 KST, joined with the line 1 page as the one
+ * page of every line the crawl reads; the line 1 page dates from 20:45, so
  * its trains are too far from their timetable rows to count), FakeSubwayRepository, FakeHolidaysRepository and a
  * scripted Clock. Each test is a scenario of the spec's "Serving survives a
  * failing source" requirement: a train map that cannot be parsed fails its own
@@ -44,6 +45,8 @@ const FIXTURES = path.join(__dirname, "fixtures");
 const rows = <T>(name: string, list: string): T[] => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), "utf8"))[list];
 const page = (name: string): string => fs.readFileSync(path.join(FIXTURES, name), "utf8");
 
+// WHY: the train map is one page for every line, requested as line 0.
+const ALL_LINES = "0";
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
 const clock = { current: at("22:27:30"), now(): Date { return this.current; } };
 const ticks = new Map<string, Tick>();
@@ -110,13 +113,11 @@ function failApi(): void {
 }
 
 function answerTrainMap(): void {
-  trainmapClient.pages.set("1", page("trainmap-line1.html"));
-  trainmapClient.pages.set("4", page("trainmap-line4.html"));
+  trainmapClient.pages.set(ALL_LINES, `${page("trainmap-line1.html")}${page("trainmap-line4.html")}`);
 }
 
 function breakTrainMap(): void {
-  trainmapClient.pages.set("1", "<html><body>시스템 점검 중입니다</body></html>");
-  trainmapClient.pages.set("4", "<html><body>시스템 점검 중입니다</body></html>");
+  trainmapClient.pages.set(ALL_LINES, "<html><body>시스템 점검 중입니다</body></html>");
 }
 
 function tickAt(kst: string, name: "subway-seoul" | "subway-trainmap"): Promise<unknown> {

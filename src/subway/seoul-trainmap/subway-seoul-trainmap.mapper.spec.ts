@@ -7,8 +7,9 @@
  * its first train), and a page with no block for the line or a train title of
  * another shape is a parse failure; each train at a covered station becomes a train event
  * stamped with the crawl time, and `이동` (between stations) none. Inputs are
- * the line 1 and line 4 pages captured on 2026-10-16
- * (__tests__/nest/subway/fixtures/, see each file's first line).
+ * the line 1 and line 4 pages captured on 2026-10-16 and the page of every line
+ * (`line=0`) captured on 2026-10-17 21:16, from which each line's blocks are
+ * read alone (__tests__/nest/subway/fixtures/, see each file's first line).
  */
 import fs from "fs";
 import path from "path";
@@ -19,6 +20,7 @@ import type { TrainMapTrain } from "./subway-seoul-trainmap.types";
 const page = (name: string): string => fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/subway/fixtures", name), "utf8");
 const LINE_1_PAGE = page("trainmap-line1.html");
 const LINE_4_PAGE = page("trainmap-line4.html");
+const ALL_LINES_PAGE = page("trainmap-all-lines.html");
 const OBSERVED_AT = new Date("2026-10-16T11:45:00Z");
 
 const LINE_1 = new Map([
@@ -166,6 +168,44 @@ describe("toTrainEvents", () => {
       "0496 KR-1-P155 approaching",
       "0692 KR-1-P152 arrived",
       "0694 KR-1-P157 departed",
+    ]);
+  });
+});
+
+describe("toTrainMapTrains on the page of every line", () => {
+  it("reads only line 1's blocks for line 1, its Korail and its Seoul Metro trains", () => {
+    // Act
+    const trains = toTrainMapTrains(ALL_LINES_PAGE, "1");
+
+    // Assert
+    expect(trains).toHaveLength(66);
+    expect(trains.filter((t) => t.stationName === "의왕")).toEqual([{ trainNo: "0698", stationName: "의왕", status: "출발", destination: "광운대" }]);
+  });
+
+  it("reads only line 4's blocks for line 4, so 금정 on line 4 is never read as line 1's", () => {
+    // Act
+    const trains = toTrainMapTrains(ALL_LINES_PAGE, "4");
+
+    // Assert
+    expect(trains).toHaveLength(33);
+    expect(trains.find((t) => t.trainNo === "4668")).toEqual({ trainNo: "4668", stationName: "금정", status: "출발", destination: "불암산" });
+  });
+
+  it("gives line 1 and line 4 events at their covered stations from the one page", () => {
+    // Arrange
+    const line4 = new Map([["길음", "S1-4-417"], ["동대문", "S1-4-421"]]);
+
+    // Act
+    const events = [...toTrainEvents(toTrainMapTrains(ALL_LINES_PAGE, "1"), LINE_1, OBSERVED_AT), ...toTrainEvents(toTrainMapTrains(ALL_LINES_PAGE, "4"), line4, OBSERVED_AT)];
+
+    // Assert
+    expect(events.map((e) => `${e.trainNo} ${e.platformId} ${e.state}`)).toEqual([
+      "0698 KR-1-P152 departed",
+      "0492 KR-1-P154 departed",
+      "0700 KR-1-P155 approaching",
+      "0489 KR-1-P155 approaching",
+      "4158 S1-4-417 approaching",
+      "4669 S1-4-421 arrived",
     ]);
   });
 });

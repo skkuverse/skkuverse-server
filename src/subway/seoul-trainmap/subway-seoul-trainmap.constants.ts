@@ -4,3 +4,6 @@ export const MAX_EMPTY_LINE_MS = 30 * 60_000;
 
 // WHY: crawls further apart than this (the overnight closure, a daily ceiling) start a new empty spell.
 export const MAX_EMPTY_CRAWL_GAP_MS = 10 * 60_000;
+
+// QUIRK(seoul-trainmap): `line=0` answers the blocks of lines 1 to 8 in one page, about 156 KB (2026-10-17 21:16).
+export const ALL_LINES_PAGE = "0";

@@ -5,7 +5,8 @@
  * one position call per line and one arrival call per station (positions of
  * `1호선` and `4호선`, arrivals of `성균관대` and `혜화`) and returns their events
  * and countdown rows merged, each arrival row read against the tick's time; a train-map
- * tick crawls lines 1 and 4 once each and stamps their events with the
+ * tick crawls the one page of every line once (the line 1 and line 4 captures
+ * joined stand for it), reads lines 1 and 4 from it and stamps their events with the
  * Clock's time; each tick names its upstream as its source, so the tracker
  * keeps one upstream's countdown rows apart from the other's; and a failing
  * call is handed on beside what the tick's other calls answered, and only a
@@ -32,6 +33,10 @@ const rows = <T>(name: string, list: string): T[] => JSON.parse(fs.readFileSync(
 const page = (name: string): string => fs.readFileSync(path.join(FIXTURES, name), "utf8");
 const NOW = new Date("2026-10-16T11:45:00Z");
 
+// WHY: the train map is one page for every line (line=0); the line 1 and line 4 captures joined stand for it.
+const ALL_LINES = "0";
+const BROKEN_LINE_4 = '<div class="4line_metro"><div class="T0421_Q_9_v2 tip" title="4050열차  동대문 도착 진접행"></div></div>';
+
 function setup(now: Date = NOW) {
   const apiClient = new FakeSubwaySeoulApiClient();
   apiClient.positions.set("1호선", rows("realtime-position-line1.json", "realtimePositionList"));
@@ -39,8 +44,7 @@ function setup(now: Date = NOW) {
   apiClient.arrivals.set("성균관대", rows("realtime-arrival-sungkyunkwan.json", "realtimeArrivalList"));
   apiClient.arrivals.set("혜화", rows("realtime-arrival-hyehwa.json", "realtimeArrivalList"));
   const trainmapClient = new FakeSubwaySeoulTrainmapClient();
-  trainmapClient.pages.set("1", page("trainmap-line1.html"));
-  trainmapClient.pages.set("4", page("trainmap-line4.html"));
+  trainmapClient.pages.set(ALL_LINES, `${page("trainmap-line1.html")}${page("trainmap-line4.html")}`);
   const service = new SubwaySeoulService(
     new SubwaySeoulApiService(asReal<SubwaySeoulApiClient>(apiClient)),
     new SubwaySeoulTrainmapService(asReal<SubwaySeoulTrainmapClient>(trainmapClient)),
@@ -98,7 +102,7 @@ describe("SubwaySeoulService.observeApi", () => {
 });
 
 describe("SubwaySeoulService.observeTrainMap", () => {
-  it("crawls lines 1 and 4 once each and stamps their events at covered stations with the Clock's time", async () => {
+  it("crawls the page of every line once and stamps lines 1 and 4's events at covered stations with the Clock's time", async () => {
     // Arrange
     const { service, trainmapClient } = setup();
 
@@ -106,7 +110,7 @@ describe("SubwaySeoulService.observeTrainMap", () => {
     const observations = await service.observeTrainMap();
 
     // Assert
-    expect([...trainmapClient.calls].sort()).toEqual(["1", "4"]);
+    expect(trainmapClient.calls).toEqual([ALL_LINES]);
     expect(summary(observations.events)).toEqual([
       "0493 KR-1-0153 departed",
       "0494 KR-1-P154 departed",
@@ -138,10 +142,10 @@ describe("SubwaySeoulService observes each upstream as its own source", () => {
 });
 
 describe("SubwaySeoulService keeps each call's answer when another call of its tick fails", () => {
-  it("hands on line 1's train-map events when line 4's page does not parse, with that failure beside them", async () => {
+  it("hands on line 1's train-map events when line 4's block does not parse, with that failure beside them", async () => {
     // Arrange
     const { service, trainmapClient } = setup();
-    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    trainmapClient.pages.set(ALL_LINES, `${page("trainmap-line1.html")}${BROKEN_LINE_4}`);
 
     // Act
     const settled = await service.observeTrainMap();
@@ -160,8 +164,7 @@ describe("SubwaySeoulService keeps each call's answer when another call of its t
   it("rejects the train-map tick when neither line's page parses", async () => {
     // Arrange
     const { service, trainmapClient } = setup();
-    trainmapClient.pages.set("1", "<html>점검 중</html>");
-    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    trainmapClient.pages.set(ALL_LINES, "<html>점검 중</html>");
 
     // Act & Assert
     await expect(service.observeTrainMap()).rejects.toMatchObject({ source: "seoul-trainmap", code: "unexpected_shape" });
