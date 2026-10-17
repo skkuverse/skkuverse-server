@@ -1,11 +1,12 @@
 /**
  * The schemas HolidaysSyncClient reads getRestDeInfo through, checked against the
- * 2026-10-16 capture (__tests__/nest/holidays/fixtures/, see each file's
+ * 2026-10-16 and 17 captures (__tests__/nest/holidays/fixtures/, see each file's
  * `_about`). What it guards: every captured envelope, body and row passes;
  * a row or body missing any field of its shape fails at that field's path;
  * the body takes `items` as "" (no rows), as one row object or as an array;
  * a row's name is not empty, its isHoliday is Y or N, and its locdate is an
- * eight-digit date. How the client turns a failed parse into an error is
+ * eight-digit date; the gateway's refusal keeps its errMsg, reason code and
+ * message. How the client turns a failed parse into an error is
  * holidays-sync.client.spec.ts's.
  */
 import fs from "fs";
@@ -21,6 +22,7 @@ const YEAR_2026 = fixture("getrestdeinfo-2026.json");
 const ONE_ROW = fixture("getrestdeinfo-2026-07.json");
 const NO_ROWS = fixture("getrestdeinfo-2026-04.json");
 const UNREGISTERED_KEY = fixture("getrestdeinfo-unregistered-key.json");
+const REFUSED_HEADER = fixture("getrestdeinfo-refused-header.json");
 const ROWS = (bodyOf(YEAR_2026).items as { item: Payload[] }).item;
 const [ROW] = ROWS as [Payload];
 
@@ -116,6 +118,23 @@ describe("gatewayError", () => {
   it("passes the captured refusal of an unregistered key", () => {
     // Act & Assert
     expect(gatewayError.safeParse(UNREGISTERED_KEY).success).toBe(true);
+  });
+
+  it("reads the reason code and message of the captured refusal of a header", () => {
+    // Act
+    const parsed = gatewayError.parse(REFUSED_HEADER);
+
+    // Assert
+    expect(parsed.OpenAPI_ServiceResponse.cmmMsgHeader).toEqual({
+      errMsg: "INVALID_REQUEST_PARAMETER_ERROR",
+      returnAuthMsg: "잘못된 요청 파라미터 에러",
+      returnReasonCode: "10",
+    });
+  });
+
+  it("passes a refusal with an errMsg alone", () => {
+    // Act & Assert
+    expect(gatewayError.safeParse({ OpenAPI_ServiceResponse: { cmmMsgHeader: { errMsg: "SERVICE ERROR" } } }).success).toBe(true);
   });
 
   it.each(Object.keys(gatewayError.shape))("fails without %s", (key) => {
