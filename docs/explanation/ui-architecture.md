@@ -82,7 +82,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `sk
 | `/ui/home/campus` `sections` | `CampusScreen` draws them in the sheet, the carousel only while the festival gate is open |
 | `/ui/home/campus` button `webviewTitle`, `webviewColor` | `ButtonGrid` passes them to the web view it opens |
 | `/ui/home/campus` `minAppVersion` | Parsed, not read |
-| `/ui/home/transitlist` `data` | The transit tab's list of bus cards; a tap opens `action.route` for `action.groupId` |
+| `/ui/home/transitlist` `data` | The transit tab's list of bus cards in builds before the transit layout; a tap opens `action.route` for `action.groupId`. Its shape is frozen: an unknown `action.route` opens the bus realtime screen there |
 | `/ui/home/transitlist` `meta.busListCount` | Served, not read |
 | `/ui/home/transit` `sections` | No caller in the app sources yet; the sectioned transit tab is to draw each in order and drop a section of an unknown type |
 | `/ui/home/transit` item `kind`, `action` | The tab is to drop an item of an unknown kind and open `action` on a tap, never a route derived from `kind` |
@@ -103,6 +103,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `sk
 
 ## Open questions
 
+- `GET /ui/home/transitlist` is frozen and logs `ui.transit_list.legacy_called` at most once an hour with the calls it held back. It is deleted once that line stays near zero for two weeks and the `/app/config` `minVersion` is at or above the first build that renders the transit layout.
 - `GET /ui/home/scroll` has no caller in the app sources beyond an endpoint constant. Whether to remove it waits for request logs.
 - The campus buttons repeat the first four tiles of the home grid. The app's `CampusScreen` expects them to give way to a promotion feed section.
 - `minAppVersion`, `meta.busListCount` and `meta.itemCount` are served and not read.
