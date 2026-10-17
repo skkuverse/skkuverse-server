@@ -30,6 +30,7 @@ import type { SubwaySeoulApiClient } from "../seoul-api/subway-seoul-api.client"
 import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import type { SubwaySeoulTrainmapClient } from "../seoul-trainmap/subway-seoul-trainmap.client";
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
+import { SUBWAY_REGISTRY } from "../subway.config";
 import type { SubwayRepository } from "../subway.repository";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
@@ -48,6 +49,8 @@ type Tick = () => Promise<unknown>;
 const ALL_LINES = "0";
 const LINES_1_AND_4_PAGE = `${page("trainmap-line1.html")}${page("trainmap-line4.html")}`;
 const BROKEN_LINE_4 = '<div class="4line_metro"><div class="T0421_Q_9_v2 tip" title="4050열차  동대문 도착 진접행"></div></div>';
+// WHY: one position call per registered line and one arrival call per registered station, however many the registry holds.
+const API_CALLS_PER_TICK = SUBWAY_REGISTRY.lines.length + SUBWAY_REGISTRY.stations.length;
 
 function setup(startIso: string) {
   let now = new Date(startIso);
@@ -129,11 +132,11 @@ describe("SubwaySeoulPoller ticks only in the service window", () => {
 
   it.each([
     ["04:59:59 on a Friday", "2026-10-15T19:59:59Z", 0],
-    ["05:00 on a Friday", "2026-10-15T20:00:00Z", 4],
-    ["01:09:59 after a Friday", "2026-10-16T16:09:59Z", 4],
+    ["05:00 on a Friday", "2026-10-15T20:00:00Z", API_CALLS_PER_TICK],
+    ["01:09:59 after a Friday", "2026-10-16T16:09:59Z", API_CALLS_PER_TICK],
     ["01:10 after a Friday", "2026-10-16T16:10:00Z", 0],
-    ["05:00 on a Saturday", "2026-10-16T20:00:00Z", 4],
-    ["00:29:59 after a Saturday", "2026-10-17T15:29:59Z", 4],
+    ["05:00 on a Saturday", "2026-10-16T20:00:00Z", API_CALLS_PER_TICK],
+    ["00:29:59 after a Saturday", "2026-10-17T15:29:59Z", API_CALLS_PER_TICK],
     ["00:30 after a Saturday", "2026-10-17T15:30:00Z", 0],
   ])("makes the API's calls at %s: %i", async (_label, iso, callCount) => {
     // Arrange
@@ -154,19 +157,19 @@ describe("SubwaySeoulPoller daily ceilings", () => {
 
   it("rejects the API's ticks once its ceiling is reached, calling nothing, until 00:00 KST", async () => {
     // Arrange
-    subway.apiDailyCap = 4;
+    subway.apiDailyCap = API_CALLS_PER_TICK;
     const { apiClient, tickAt } = setup("2026-10-16T14:59:00Z");
     await tickAt("2026-10-16T14:59:00Z", "subway-seoul");
 
     // Act
     const atCeiling = tickAt("2026-10-16T14:59:59Z", "subway-seoul");
-    await expect(atCeiling).rejects.toMatchObject({ name: "DailyCapError", provider: "seoul-subway-api", cap: 4 });
+    await expect(atCeiling).rejects.toMatchObject({ name: "DailyCapError", provider: "seoul-subway-api", cap: API_CALLS_PER_TICK });
     const callsAtCeiling = apiClient.calls.length;
     await tickAt("2026-10-16T15:00:00Z", "subway-seoul");
 
     // Assert
-    expect(callsAtCeiling).toBe(4);
-    expect(apiClient.calls).toHaveLength(8);
+    expect(callsAtCeiling).toBe(API_CALLS_PER_TICK);
+    expect(apiClient.calls).toHaveLength(2 * API_CALLS_PER_TICK);
   });
 
   it("keeps the train map's ceiling apart from the API's, one taken per crawl's single request", async () => {
@@ -181,7 +184,7 @@ describe("SubwaySeoulPoller daily ceilings", () => {
     await tickAt("2026-10-16T11:00:20Z", "subway-seoul");
 
     // Assert
-    expect(apiClient.calls).toHaveLength(4);
+    expect(apiClient.calls).toHaveLength(API_CALLS_PER_TICK);
   });
 });
 

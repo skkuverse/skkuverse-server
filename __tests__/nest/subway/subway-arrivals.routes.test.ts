@@ -11,8 +11,9 @@
  * is `private, max-age=5`; a state older than 2 minutes serves every train
  * `scheduled`; a train whose departure was observed is not listed; a published
  * countdown arrives at its row time plus its seconds; a train seen at the
- * nearest upstream station is one stop away; and the station, direction and
- * neighbor station names follow the request language.
+ * nearest upstream station is one stop away; 강남 serves its 2호선 line entry
+ * with the circle directions and a published countdown live; and the station,
+ * direction and neighbor station names follow the request language.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -70,7 +71,7 @@ function event(trainNo: string, platformId: string, state: TrainEvent["state"], 
   return { trainNo, platformId, state, stateChangedAt: at(kst), destination };
 }
 
-// WHY: both served stations have one platform, so their one line entry holds every direction.
+// WHY: the stations these tests read have one platform, so their one line entry holds every direction.
 const directionsOf = (body: { data: { lines: Array<{ directions: any[] }> } }) => body.data.lines[0]!.directions;
 
 function getAt(kst: string, path: string): request.Test {
@@ -116,7 +117,40 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expectWire(subwayStationArrivals, res.body.data);
   });
 
-  it.each(["S1-4-420", "KR-1-0153", "seoul", "gangnam", "Hyehwa"])("answers %s with 404 SUBWAY_STATION_NOT_FOUND and no cache header", async (stationId) => {
+  it("answers gangnam with one 2호선 line entry, its circle directions and its neighbors, as the wire publishes it", async () => {
+    // Arrange
+    await trackAt("20:41:00", "seoul-subway-api", []);
+
+    // Act
+    const res = await getAt("20:41:02", "/subway/stations/gangnam/arrivals");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.station).toEqual({ id: "gangnam", name: "강남" });
+    expect(res.body.data.lines.map((l: { line: unknown; platformId: string }) => [l.line, l.platformId])).toEqual([
+      [{ code: "2", name: "2호선", badge: "2", color: "00A84D" }, "S1-2-222"],
+    ]);
+    expect(directionsOf(res.body).map((d: { direction: string; name: string; previousStation: unknown; nextStation: unknown }) => [d.direction, d.name, d.previousStation, d.nextStation])).toEqual([
+      ["up", "내선순환", { id: "S1-2-221", name: "역삼" }, { id: "S1-2-223", name: "교대" }],
+      ["down", "외선순환", { id: "S1-2-223", name: "교대" }, { id: "S1-2-221", name: "역삼" }],
+    ]);
+    expectWire(subwayStationArrivals, res.body.data);
+  });
+
+  it("Live first: serves a 강남 2호선 countdown of 150 s generated at 20:40:20 as arriving at 20:42:50, live", async () => {
+    // Arrange
+    const row: CountdownRow = { trainNo: "2440", platformId: "S1-2-222", generatedAt: at("20:40:20"), remainingSec: 150 };
+    await trackAt("20:41:00", "seoul-subway-api", [], [row]);
+
+    // Act
+    const res = await getAt("20:41:03", "/subway/stations/gangnam/arrivals");
+
+    // Assert
+    const up = directionsOf(res.body).find((d: { direction: string }) => d.direction === "up");
+    expect(up.trains.find((t: { trainNo: string }) => t.trainNo === "2440")).toMatchObject({ arrivalAt: at("20:42:50").toISOString(), source: "live" });
+  });
+
+  it.each(["S1-4-420", "KR-1-0153", "S1-2-222", "seoul", "Hyehwa"])("answers %s with 404 SUBWAY_STATION_NOT_FOUND and no cache header", async (stationId) => {
     // Act
     const res = await getAt("20:41:02", `/subway/stations/${stationId}/arrivals`);
 
@@ -126,7 +160,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.headers["cache-control"]).not.toBe("private, max-age=5");
   });
 
-  it.each(["sungkyunkwan", "hyehwa"])("sends %s's arrivals with Cache-Control: private, max-age=5", async (stationId) => {
+  it.each(["sungkyunkwan", "hyehwa", "jamsil", "dogok", "gangnam", "yangjae"])("sends %s's arrivals with Cache-Control: private, max-age=5", async (stationId) => {
     // Act
     const res = await getAt("20:41:02", `/subway/stations/${stationId}/arrivals`);
 

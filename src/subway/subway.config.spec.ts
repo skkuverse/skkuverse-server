@@ -30,10 +30,13 @@ function issuesOf(raw: unknown): string[] {
 }
 
 const SUNGKYUNKWAN = ["stations", 0, "platforms", 0] as const;
+// WHY: an entry pushed onto the committed lists lands after the last one, wherever the registry has grown to.
+const NEXT_STATION = (committed["stations"] as unknown[]).length;
+const NEXT_LINE = (committed["lines"] as unknown[]).length;
 const HYEHWA = ["stations", 1, "platforms", 0] as const;
 
 describe("SUBWAY_REGISTRY", () => {
-  it("loads the committed registry: 성균관대 and 혜화, on lines 1 and 4, so the module import in this file did not throw", () => {
+  it("loads the committed registry: its stations with their platforms in served order, on lines 1, 4, 2 and 3, so the module import in this file did not throw", () => {
     // Act
     const stations = SUBWAY_REGISTRY.stations.map((station) => [station.id, station.platforms.map((platform) => platform.id)]);
 
@@ -41,8 +44,12 @@ describe("SUBWAY_REGISTRY", () => {
     expect(stations).toEqual([
       ["sungkyunkwan", ["KR-1-0153"]],
       ["hyehwa", ["S1-4-420"]],
+      ["jamsil", ["S1-2-216"]],
+      ["dogok", ["S1-3-334"]],
+      ["gangnam", ["S1-2-222"]],
+      ["yangjae", ["S1-3-332"]],
     ]);
-    expect(SUBWAY_REGISTRY.lines.map((line) => line.code)).toEqual(["1", "4"]);
+    expect(SUBWAY_REGISTRY.lines.map((line) => line.code)).toEqual(["1", "4", "2", "3"]);
   });
 });
 
@@ -67,17 +74,17 @@ describe("loadSubwayRegistry", () => {
     [
       "a repeated station",
       (raw: Json) => (raw["stations"] as Json[]).push({ ...at(raw, ["stations", 1]), platforms: [{ ...at(raw, HYEHWA), id: "S1-4-499" }] }),
-      'stations.2.id: station "hyehwa" is listed twice',
+      `stations.${NEXT_STATION}.id: station "hyehwa" is listed twice`,
     ],
     [
       "a repeated platform",
       (raw: Json) => (raw["stations"] as Json[]).push({ ...at(raw, ["stations", 1]), id: "hyehwa-two" }),
-      'stations.2.platforms.0.id: platform "S1-4-420" is listed twice',
+      `stations.${NEXT_STATION}.platforms.0.id: platform "S1-4-420" is listed twice`,
     ],
     [
       "a repeated line code",
       (raw: Json) => (raw["lines"] as Json[]).push({ ...at(raw, ["lines", 1]), seoul: { ...at(raw, ["lines", 1, "seoul"]), subwayId: "1099" } }),
-      'lines.2.code: line "4" is listed twice',
+      `lines.${NEXT_LINE}.code: line "4" is listed twice`,
     ],
     [
       "a repeated subwayId",
@@ -129,8 +136,8 @@ describe("loadSubwayRegistry", () => {
     ],
     [
       "a line no platform uses",
-      (raw: Json) => (raw["lines"] as Json[]).push({ ...at(raw, ["lines", 1]), code: "8", seoul: { ...at(raw, ["lines", 1, "seoul"]), subwayId: "1008" } }),
-      'lines.2.code: line "8" has no platform',
+      (raw: Json) => (raw["lines"] as Json[]).push({ ...at(raw, ["lines", 1]), code: "9", seoul: { ...at(raw, ["lines", 1, "seoul"]), subwayId: "1009" } }),
+      `lines.${NEXT_LINE}.code: line "9" has no platform`,
     ],
   ])("throws %s with its path", (_case, arrange, issue) => {
     // Arrange

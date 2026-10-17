@@ -13,6 +13,20 @@
       "badge": { "ko": "4", "en": "4", "zh": "4" },
       "color": "00A5DE",
       "seoul": { "subwayId": "1004", "lineName": "4호선", "trainMapLine": "4", "trainNumbers": "timetable" }
+    },
+    {
+      "code": "2",
+      "name": { "ko": "2호선", "en": "Line 2", "zh": "2号线" },
+      "badge": { "ko": "2", "en": "2", "zh": "2" },
+      "color": "00A84D",
+      "seoul": { "subwayId": "1002", "lineName": "2호선", "trainMapLine": "2", "trainNumbers": "circle" }
+    },
+    {
+      "code": "3",
+      "name": { "ko": "3호선", "en": "Line 3", "zh": "3号线" },
+      "badge": { "ko": "3", "en": "3", "zh": "3" },
+      "color": "EF7C1C",
+      "seoul": { "subwayId": "1003", "lineName": "3호선", "trainMapLine": "3", "trainNumbers": "timetable" }
     }
   ],
   "stations": [
@@ -67,6 +81,110 @@
           }
         }
       ]
+    },
+    {
+      "id": "jamsil",
+      "name": { "ko": "잠실", "en": "Jamsil", "zh": "蚕室" },
+      "seoulName": "잠실",
+      "platforms": [
+        {
+          "id": "S1-2-216",
+          "line": "2",
+          "timetable": { "source": "seoul-station", "stationCode": "0216" },
+          "directions": {
+            "up": {
+              "name": { "ko": "내선순환", "en": "Inner circle", "zh": "内环" },
+              "upstreamPlatformIds": ["S1-2-215", "S1-2-214", "S1-2-213"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "S1-2-217"
+            },
+            "down": {
+              "name": { "ko": "외선순환", "en": "Outer circle", "zh": "外环" },
+              "upstreamPlatformIds": ["S1-2-217", "S1-2-218", "S1-2-219"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "S1-2-215"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "dogok",
+      "name": { "ko": "도곡", "en": "Dogok", "zh": "道谷" },
+      "seoulName": "도곡",
+      "platforms": [
+        {
+          "id": "S1-3-334",
+          "line": "3",
+          "timetable": { "source": "seoul-station", "stationCode": "0334" },
+          "directions": {
+            "up": {
+              "name": { "ko": "대화 방면", "en": "Toward Daehwa", "zh": "大化方向" },
+              "upstreamPlatformIds": ["S1-3-335", "S1-3-336", "S1-3-337"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "S1-3-333"
+            },
+            "down": {
+              "name": { "ko": "오금 방면", "en": "Toward Ogeum", "zh": "梧琴方向" },
+              "upstreamPlatformIds": ["S1-3-333", "S1-3-332", "S1-3-331"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "S1-3-335"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "gangnam",
+      "name": { "ko": "강남", "en": "Gangnam", "zh": "江南" },
+      "seoulName": "강남",
+      "platforms": [
+        {
+          "id": "S1-2-222",
+          "line": "2",
+          "timetable": { "source": "seoul-station", "stationCode": "0222" },
+          "directions": {
+            "up": {
+              "name": { "ko": "내선순환", "en": "Inner circle", "zh": "内环" },
+              "upstreamPlatformIds": ["S1-2-221", "S1-2-220", "S1-2-219"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "S1-2-223"
+            },
+            "down": {
+              "name": { "ko": "외선순환", "en": "Outer circle", "zh": "外环" },
+              "upstreamPlatformIds": ["S1-2-223", "S1-2-224", "S1-2-225"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "S1-2-221"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "yangjae",
+      "name": { "ko": "양재", "en": "Yangjae", "zh": "良才" },
+      "seoulName": "양재",
+      "platforms": [
+        {
+          "id": "S1-3-332",
+          "line": "3",
+          "timetable": { "source": "seoul-station", "stationCode": "0332" },
+          "directions": {
+            "up": {
+              "name": { "ko": "대화 방면", "en": "Toward Daehwa", "zh": "大化方向" },
+              "upstreamPlatformIds": ["S1-3-333", "S1-3-334", "S1-3-335"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "S1-3-331"
+            },
+            "down": {
+              "name": { "ko": "오금 방면", "en": "Toward Ogeum", "zh": "梧琴方向" },
+              "upstreamPlatformIds": ["S1-3-331", "S1-3-330", "S1-3-329"],
+              "watchedPlatformIds": [],
+              "nextPlatformId": "S1-3-333"
+            }
+          }
+        }
+      ]
     }
   ],
   "neighbors": {
@@ -82,6 +200,24 @@
     "S1-4-419": { "line": "4", "seoulName": "한성대입구", "name": { "ko": "한성대입구", "en": "Hansung Univ.", "zh": "汉城大入口" } },
     "S1-4-421": { "line": "4", "seoulName": "동대문", "name": { "ko": "동대문", "en": "Dongdaemun", "zh": "东大门" } },
     "S1-4-422": { "line": "4", "seoulName": "동대문역사문화공원" },
-    "S1-4-423": { "line": "4", "seoulName": "충무로" }
+    "S1-4-423": { "line": "4", "seoulName": "충무로" },
+    "S1-2-213": { "line": "2", "seoulName": "구의" },
+    "S1-2-214": { "line": "2", "seoulName": "강변" },
+    "S1-2-215": { "line": "2", "seoulName": "잠실나루", "name": { "ko": "잠실나루", "en": "Jamsillaru", "zh": "蚕室渡口" } },
+    "S1-2-217": { "line": "2", "seoulName": "잠실새내", "name": { "ko": "잠실새내", "en": "Jamsilsaenae", "zh": "蚕室新川" } },
+    "S1-2-218": { "line": "2", "seoulName": "종합운동장" },
+    "S1-2-219": { "line": "2", "seoulName": "삼성" },
+    "S1-2-220": { "line": "2", "seoulName": "선릉" },
+    "S1-2-221": { "line": "2", "seoulName": "역삼", "name": { "ko": "역삼", "en": "Yeoksam", "zh": "驿三" } },
+    "S1-2-223": { "line": "2", "seoulName": "교대", "name": { "ko": "교대", "en": "Seoul Nat'l Univ. of Education", "zh": "教大" } },
+    "S1-2-224": { "line": "2", "seoulName": "서초" },
+    "S1-2-225": { "line": "2", "seoulName": "방배" },
+    "S1-3-329": { "line": "3", "seoulName": "고속터미널" },
+    "S1-3-330": { "line": "3", "seoulName": "교대" },
+    "S1-3-331": { "line": "3", "seoulName": "남부터미널", "name": { "ko": "남부터미널", "en": "Nambu Bus Terminal", "zh": "南部客运站" } },
+    "S1-3-333": { "line": "3", "seoulName": "매봉", "name": { "ko": "매봉", "en": "Maebong", "zh": "梅峰" } },
+    "S1-3-335": { "line": "3", "seoulName": "대치", "name": { "ko": "대치", "en": "Daechi", "zh": "大峙" } },
+    "S1-3-336": { "line": "3", "seoulName": "학여울" },
+    "S1-3-337": { "line": "3", "seoulName": "대청" }
   }
 }

@@ -2,8 +2,8 @@
  * SubwaySeoulService, the `seoul` provider, over scripted clients (the typed
  * fakes in __tests__/helpers/fakes/subway/) fed the captured 2026-10-09 and
  * 2026-10-16 payloads, and a fixed Clock. What it guards: an API tick makes
- * one position call per line and one arrival call per station (positions of
- * `1호선` and `4호선`, arrivals of `성균관대` and `혜화`) and returns their events
+ * one position call per registered line and one arrival call per registered
+ * station (the `1호선`, `4호선`, `성균관대` and `혜화` captures answer, the others no rows) and returns their events
  * and countdown rows merged, each arrival row read against the tick's time; a train-map
  * tick crawls the one page of every line once (the line 1 and line 4 captures
  * joined stand for it), reads lines 1 and 4 from it and stamps their events with the
@@ -25,6 +25,7 @@ import type { SubwaySeoulApiClient } from "../seoul-api/subway-seoul-api.client"
 import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import type { SubwaySeoulTrainmapClient } from "../seoul-trainmap/subway-seoul-trainmap.client";
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
+import { SUBWAY_REGISTRY } from "../subway.config";
 import type { TrainEvent } from "../subway.types";
 import { SubwaySeoulService } from "./subway-seoul.service";
 
@@ -36,6 +37,8 @@ const NOW = new Date("2026-10-16T11:45:00Z");
 // WHY: the train map is one page for every line (line=0); the line 1 and line 4 captures joined stand for it.
 const ALL_LINES = "0";
 const BROKEN_LINE_4 = '<div class="4line_metro"><div class="T0421_Q_9_v2 tip" title="4050열차  동대문 도착 진접행"></div></div>';
+const LINE_NAMES = SUBWAY_REGISTRY.lines.map((line) => line.seoul.lineName);
+const STATION_NAMES = SUBWAY_REGISTRY.stations.map((station) => station.seoulName);
 
 function setup(now: Date = NOW) {
   const apiClient = new FakeSubwaySeoulApiClient();
@@ -56,7 +59,7 @@ function setup(now: Date = NOW) {
 const summary = (events: readonly TrainEvent[]) => events.map((e) => `${e.trainNo} ${e.platformId} ${e.state}`).sort();
 
 describe("SubwaySeoulService.observeApi", () => {
-  it("makes the 4 API calls of one tick and returns the merged events of both lines", async () => {
+  it("makes one position call per registered line and one arrival call per registered station, and returns their merged events", async () => {
     // Arrange
     const { service, apiClient } = setup();
 
@@ -64,12 +67,8 @@ describe("SubwaySeoulService.observeApi", () => {
     const observations = await service.observeApi();
 
     // Assert
-    expect([...apiClient.calls].sort()).toEqual([
-      "realtimePosition 1호선",
-      "realtimePosition 4호선",
-      "realtimeStationArrival 성균관대",
-      "realtimeStationArrival 혜화",
-    ]);
+    expect(apiClient.calls).toEqual([...LINE_NAMES.map((name) => `realtimePosition ${name}`), ...STATION_NAMES.map((name) => `realtimeStationArrival ${name}`)]);
+    expect(apiClient.calls).toEqual(expect.arrayContaining(["realtimePosition 1호선", "realtimePosition 4호선", "realtimeStationArrival 성균관대", "realtimeStationArrival 혜화"]));
     expect(summary(observations.events)).toEqual([
       "0501 KR-1-1715 arrived",
       "0503 KR-1-P154 arrived",
@@ -206,14 +205,12 @@ describe("SubwaySeoulService keeps each call's answer when another call of its t
     expect(settled.failures).toEqual([failure]);
   });
 
-  it("rejects the API tick with its first failure when all 4 calls fail", async () => {
+  it("rejects the API tick with its first failure when every call fails", async () => {
     // Arrange
     const { service, apiClient } = setup();
-    const failures = ["1호선", "4호선", "성균관대", "혜화"].map((name) => new Error(`${name}: HTTP 500`));
-    apiClient.positions.set("1호선", failures[0] as Error);
-    apiClient.positions.set("4호선", failures[1] as Error);
-    apiClient.arrivals.set("성균관대", failures[2] as Error);
-    apiClient.arrivals.set("혜화", failures[3] as Error);
+    const failures = [...LINE_NAMES, ...STATION_NAMES].map((name) => new Error(`${name}: HTTP 500`));
+    LINE_NAMES.forEach((name, i) => apiClient.positions.set(name, failures[i] as Error));
+    STATION_NAMES.forEach((name, i) => apiClient.arrivals.set(name, failures[LINE_NAMES.length + i] as Error));
 
     // Act & Assert
     await expect(service.observeApi()).rejects.toBe(failures[0]);

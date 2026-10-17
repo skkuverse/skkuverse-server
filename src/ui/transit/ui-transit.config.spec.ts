@@ -209,7 +209,7 @@ describe("committed transit-layout.json", () => {
     expect(committed.sections.map((section) => [section.id, section.items.map(toTransitItemId)])).toEqual([
       ["campus", ["bus:campus", "bus:fasttrack"]],
       ["hssc", ["subway:hyehwa", "bus:hssc", "bus:jongro02", "bus:jongro07", "bus:jongro08"]],
-      ["nsc", ["subway:sungkyunkwan", "bus:commute"]],
+      ["nsc", ["subway:sungkyunkwan", "bus:commute", "group:commute-stations"]],
     ]);
     expect(committed.sections.map((section) => section.title)).toEqual([
       undefined,

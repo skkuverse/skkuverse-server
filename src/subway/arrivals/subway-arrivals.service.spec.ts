@@ -58,7 +58,7 @@ afterEach(() => {
 });
 
 describe("SubwayArrivalsService.findStationArrivals", () => {
-  it.each(["gangnam", "S1-4-420"])("finds nothing for %s, which it does not serve as a station", async (stationId) => {
+  it.each(["seoul", "S1-4-420"])("finds nothing for %s, which it does not serve as a station", async (stationId) => {
     // Arrange
     const { service } = setup();
 

@@ -29,6 +29,7 @@ import { SubwaySeoulApiModule } from "../../../src/subway/seoul-api/subway-seoul
 import { SubwaySeoulTrainmapClient } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.client";
 import { SubwaySeoulTrainmapModule } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.module";
 import { SubwaySeoulModule } from "../../../src/subway/seoul/subway-seoul.module";
+import { SUBWAY_REGISTRY } from "../../../src/subway/subway.config";
 import { SubwayModule } from "../../../src/subway/subway.module";
 import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
@@ -103,13 +104,12 @@ function answerApi(): void {
   apiClient.arrivals.clear();
 }
 
-// WHY: all 4 calls: a tick whose arrivals calls still answer is tracked (subway-seoul.service.spec.ts).
+// WHY: every call of the tick, one per registered line and station: a tick whose arrivals calls still answer is
+// tracked (subway-seoul.service.spec.ts).
 function failApi(): void {
   const outage = new Error("seoul-subway-api: HTTP 503");
-  apiClient.positions.set("1호선", outage);
-  apiClient.positions.set("4호선", outage);
-  apiClient.arrivals.set("성균관대", outage);
-  apiClient.arrivals.set("혜화", outage);
+  for (const line of SUBWAY_REGISTRY.lines) apiClient.positions.set(line.seoul.lineName, outage);
+  for (const station of SUBWAY_REGISTRY.stations) apiClient.arrivals.set(station.seoulName, outage);
 }
 
 function answerTrainMap(): void {
