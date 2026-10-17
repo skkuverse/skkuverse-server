@@ -3,7 +3,7 @@
  * mappers, with an in-memory fake per repository (design D11 of
  * harden-test-suite). What it guards: query validation and its error bodies,
  * the campus filter and labels per language, the English fallback, search
- * grouping and meta, the detail's floors and connections, an internal error's
+ * grouping and meta, the detail's floors, connections and cafeterias, an internal error's
  * body, and the Cache-Control a response may or may not carry.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -457,6 +457,36 @@ describe("/building bodies against their wire schemas", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.body.data.connections).toHaveLength(1);
+    expectWire(buildingDetail, res.body.data);
+  });
+
+  it("serves /building/:skkuId with cafeterias as buildingDetail declares", async () => {
+    // Arrange
+    catalog.buildings = [STORED];
+    catalog.cafeterias = [
+      {
+        _id: "10201034",
+        kind: "cafeteria",
+        campus: "hssc",
+        name: { ko: "법고을식당", en: "Beopgoeul Restaurant" },
+        buildNo: "100",
+        buildingName: { ko: "법학관", en: "Law School" },
+        floor: { ko: "지하2층", en: "B2" },
+        floorCode: "B2",
+        spaceCd: "2B205",
+        location: { type: "Point", coordinates: [126.990749, 37.587355] },
+        syncedAt: new Date("2026-10-17T00:00:00Z"),
+      },
+    ] as never;
+
+    // Act
+    const res = await request(httpServer).get("/building/1");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.cafeterias).toEqual([
+      { id: "10201034", name: { ko: "법고을식당", en: "Beopgoeul Restaurant" }, floor: "지하2층", spaceCd: "2B205" },
+    ]);
     expectWire(buildingDetail, res.body.data);
   });
 

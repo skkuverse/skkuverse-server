@@ -1,5 +1,5 @@
 {
-  "_about": "GET /building/1 captured from production 2026-10-11 (Accept-Language ko); a facility: no floors, no connections; `extensions` removed 2026-10-16, when the detail stopped serving it",
+  "_about": "GET /building/1 captured from production 2026-10-11 (Accept-Language ko); a facility: no floors, no connections; `extensions` removed 2026-10-16, when the detail stopped serving it; `cafeterias` added 2026-10-17 as the facility has none (no buildNo)",
   "data": {
     "building": {
       "_id": 1,
@@ -38,6 +38,7 @@
       "campusLabel": "인사캠"
     },
     "floors": [],
-    "connections": []
+    "connections": [],
+    "cafeterias": []
   }
 }

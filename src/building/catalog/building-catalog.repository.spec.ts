@@ -5,7 +5,7 @@
  * end and read without their _id, parsed so a malformed one is left out and
  * logged (connections are hand-authored), and the boot indexes cover the
  * catalog's reads (a building's spaces by buildNo, a connection from either
- * end). These pin the query objects; what they match against real data is for
+ * end, a building's cafeterias by buildNo). These pin the query objects; what they match against real data is for
  * a mongod spec (harden-test-suite D6).
  */
 const find = jest.fn(() => ({ toArray: jest.fn().mockResolvedValue([]) }));
@@ -73,6 +73,19 @@ describe("the reads' projections", () => {
   });
 });
 
+describe("BuildingCatalogRepository.listCafeteriasByBuildNo", () => {
+  it("reads a building's cafeterias by buildNo, in conspaceCd order, with only the fields the detail shows", async () => {
+    // Act
+    await new BuildingCatalogRepository().listCafeteriasByBuildNo("101" as BuildNo);
+
+    // Assert
+    expect(find.mock.calls[0]).toEqual([
+      { buildNo: "101", kind: "cafeteria" },
+      { projection: { _id: 1, name: 1, floor: 1, spaceCd: 1 }, sort: { _id: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+    ]);
+  });
+});
+
 describe("BuildingCatalogRepository.listConnectionsBySkkuId", () => {
   it("matches either end and reads only the two ends (connections are hand-authored)", async () => {
     // Act
@@ -116,7 +129,7 @@ describe("BuildingCatalogRepository.onModuleInit", () => {
     mockLogger.info.mockClear();
   });
 
-  it("indexes a building's spaces and a connection from either end", async () => {
+  it("indexes a building's spaces, a connection from either end and a building's cafeterias", async () => {
     // Act
     await new BuildingCatalogRepository().onModuleInit();
 
@@ -125,6 +138,7 @@ describe("BuildingCatalogRepository.onModuleInit", () => {
       ["spaces", { buildNo: 1 }],
       ["connections", { "a.skkuId": 1 }],
       ["connections", { "b.skkuId": 1 }],
+      ["facilities", { buildNo: 1 }],
     ]);
     expect(mockLogger.info).toHaveBeenCalledWith({ event: "building.catalog.indexes.ensured" }, expect.any(String));
   });

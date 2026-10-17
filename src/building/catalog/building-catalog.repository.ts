@@ -7,9 +7,10 @@ import logger from "../../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
 import { parseEach } from "../../shared/zod-list.util";
 import type { BuildingDoc, ConnectionDoc, SpaceDoc } from "../building.document";
+import type { CafeteriaDoc } from "../cafeteria/building-cafeteria.document";
 import { SERVED_BUILDING_PROJECTION } from "../building.query";
 import type { BuildNo, SkkuId } from "../building.types";
-import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
+import type { BuildingLabel, CafeteriaSummary, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
 import { connectionEnds } from "./building-catalog.schema";
 
 // WHY: read on every detail request, so a bad connection is reported hourly, not per request.
@@ -28,6 +29,7 @@ export class BuildingCatalogRepository implements OnModuleInit {
       this.spaces().createIndex({ buildNo: 1 }),
       this.connections().createIndex({ "a.skkuId": 1 }),
       this.connections().createIndex({ "b.skkuId": 1 }),
+      this.facilities().createIndex({ buildNo: 1 }),
     ]);
   }
 
@@ -65,6 +67,15 @@ export class BuildingCatalogRepository implements OnModuleInit {
     return connections;
   }
 
+  listCafeteriasByBuildNo(buildNo: BuildNo): Promise<CafeteriaSummary[]> {
+    return this.facilities()
+      .find(
+        { buildNo, kind: "cafeteria" },
+        { projection: { _id: 1, name: 1, floor: 1, spaceCd: 1 }, sort: { _id: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS },
+      )
+      .toArray();
+  }
+
   listBuildingsBySkkuIds(skkuIds: readonly SkkuId[]): Promise<BuildingLabel[]> {
     return this.buildings()
       .find(
@@ -89,6 +100,10 @@ export class BuildingCatalogRepository implements OnModuleInit {
 
   private spaces(): Collection<SpaceDoc> {
     return mongoCollection<SpaceDoc>(config.building.dbName, config.building.collections.spaces);
+  }
+
+  private facilities(): Collection<CafeteriaDoc> {
+    return mongoCollection<CafeteriaDoc>(config.building.dbName, config.building.collections.facilities);
   }
 
   private connections(): Collection<ConnectionDoc> {
