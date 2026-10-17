@@ -67,10 +67,10 @@ flowchart LR
   seed["scripts/seed-connections.js"] -->|hand-written| con[("connections")]
   shapes["scripts/import-campus-shapes.js"] -->|authored| cs[("campus_shapes")]
   bld -->|BuildingRepository, cached| list["GET /building/list"]
-  bld & spc & con -->|BuildingCatalogRepository| detail["GET /building/:skkuId"]
+  bld & spc & con & fac -->|BuildingCatalogRepository| detail["GET /building/:skkuId"]
   bld & spc -->|BuildingSearchRepository, ranked| search["GET /building/search"]
   bld & cs -->|BuildingService| map["map: GET /map/overlays/campus"]
-  detail -->|building, floors, connections| sheet["app: BuildingDetailSheet"]
+  detail -->|building, floors, connections, cafeterias| sheet["app: BuildingDetailSheet"]
   search -->|buildings, spaces, counts| sscreen["app: SearchScreen"]
   map -->|pins, footprints| cscreen["app: CampusScreen"]
 ```
@@ -91,6 +91,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 | `connections[].targetName`, `targetDisplayNo`, `fromFloor`, `toFloor`, `targetSkkuId` | `ConnectionsSection` and the floor chips; a tap opens the target's sheet |
 | `spaces[].buildingName`, `items[].spaceCd`, `items[].name`, `items[].floor`, `spaces[].skkuId` | `SearchScreen` space rows; a row with a `null` `skkuId` ignores the tap |
 | `meta.buildingCount`, `meta.spaceCount`, `meta.counts` | `SearchScreen` section counts and the campus tabs |
+| `cafeterias[].id`, `name`, `floor`, `spaceCd` | Not read yet: the planned chip that opens a cafeteria's menu, by the crawler's cafeteria id. `floor` is the Korean floor name, the key of `floors[].floor.ko` |
 | `buildNo`, `type`, `image.filename`, `attachments`, `conspaceCd`, `targetBuildNo`, `spaces[].displayNo`, `spaces[].campusLabel`, `meta.keyword` | Parsed, not rendered |
 | `accessibility.detail`, `skkuCreatedAt`, `skkuUpdatedAt`, `updatedAt`, `meta.limits` | Served, not parsed |
 
@@ -105,6 +106,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 - A building is re-enriched only when it is new, SKKU's `updateDt` changed, or its `enrichVersion` is not `ENRICH_VERSION` (`needsEnrichment`).
 - Data is at most one sync interval (`config.building.syncIntervalMs`) plus `BUILDING_CACHE_TTL_MS` old, and every route sends `BUILDING_CACHE_CONTROL`. Both syncs also run once when the poller boots. Development runs neither (`BUILDING_SYNC=off`).
 - An api replica serves a synced list at most `BUILDING_CACHE_TTL_MS` late: the sync's `clearCache` clears only the poller process's cache, so the TTL, not an invalidation, is the stated freshness bound ([refactor design, D15](../../openspec/changes/archive/2026-10-15-refactor-server-architecture/design.md)).
+- The detail lists the cafeterias whose `buildNo` is the building's, in `conspaceCd` order; a building without a `buildNo` reads none and serves `[]`.
 - `GET /building/:skkuId` answers `400` `INVALID_ID` for an id `isSkkuId` rejects, before any read, and `404` `NOT_FOUND` for a valid id with no building.
 - A `campus_shapes` document that fails `campusShapeDoc` is left out and logged (`building.campus_shapes.invalid`), and a failed reload serves the last good shapes for `CAMPUS_SHAPES_STALE_WINDOW_MS`. The buildings cache has no stale window, so a failed read reaches `map`.
 - The search ranks by the tier tables, in one `$facet` per collection so the counts describe the same predicate as the rows ([ADR 0006](../decisions/0006-building-search-relevance-ranking.md)).

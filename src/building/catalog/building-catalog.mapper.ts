@@ -1,8 +1,9 @@
-import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
+import type { BuildingLabel, CafeteriaSummary, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
 import { withEnFallback } from "../building.mapper";
 import type { SkkuId } from "../building.types";
 import { floorSortKey } from "./building-catalog.rules";
 import type { BuildingConnection, FloorGroup } from "./building-catalog.types";
+import type { BuildingDetail } from "./building-catalog.wire";
 
 function groupByFloor(spaces: readonly FloorSpaceDoc[]): FloorGroup[] {
   const floorGroupByFloorKo = new Map<string, FloorGroup>();
@@ -45,6 +46,15 @@ function toBuildingConnections(
   });
 }
 
+function toBuildingCafeterias(cafeterias: readonly CafeteriaSummary[]): BuildingDetail["cafeterias"] {
+  return cafeterias.map((cafeteria) => ({
+    id: cafeteria._id,
+    name: withEnFallback(cafeteria.name),
+    floor: cafeteria.floor ? cafeteria.floor.ko : null,
+    spaceCd: cafeteria.spaceCd,
+  }));
+}
+
 function toConnectedSkkuIds(skkuId: SkkuId, connections: readonly ConnectionEnds[]): SkkuId[] {
   const skkuIds = new Set<SkkuId>();
   for (const connection of connections) {
@@ -63,4 +73,4 @@ function withFloorEnFallback(floors: readonly FloorGroup[]): FloorGroup[] {
   }));
 }
 
-export { groupByFloor, toConnectedSkkuIds, toBuildingConnections, withFloorEnFallback };
+export { groupByFloor, toBuildingCafeterias, toConnectedSkkuIds, toBuildingConnections, withFloorEnFallback };

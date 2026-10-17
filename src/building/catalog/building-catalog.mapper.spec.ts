@@ -8,12 +8,15 @@
  *    is always this building's floor, and a target missing from the read
  *    leaves the target's number and name empty;
  *  - the English fallback fills empty English names without touching the
- *    repository's objects.
+ *    repository's objects;
+ *  - a cafeteria is served by its conspaceCd with its Korean floor name, and a
+ *    missing floor or spaceCd stays null.
  */
 import type { SpaceCd, SkkuId } from "../building.types";
-import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
+import type { BuildingLabel, CafeteriaSummary, ConnectionEnds, FloorSpaceDoc } from "./building-catalog.document";
 import {
   groupByFloor,
+  toBuildingCafeterias,
   toBuildingConnections,
   toConnectedSkkuIds,
   withFloorEnFallback,
@@ -153,5 +156,37 @@ describe("withFloorEnFallback", () => {
       ],
     });
     expect(floors[0]!.floor).toEqual({ ko: "1층", en: "" });
+  });
+});
+
+describe("toBuildingCafeterias", () => {
+  it("serves each cafeteria by its conspaceCd, with its Korean floor name and its room", () => {
+    // Arrange
+    const faculty: CafeteriaSummary = {
+      _id: "10201030",
+      name: { ko: "패컬티식당", en: "Faculty Dining Hall" },
+      floor: { ko: "6층", en: "6F" },
+      spaceCd: "10607A" as SpaceCd,
+    };
+
+    // Act
+    const cafeterias = toBuildingCafeterias([faculty]);
+
+    // Assert
+    expect(cafeterias).toEqual([
+      { id: "10201030", name: { ko: "패컬티식당", en: "Faculty Dining Hall" }, floor: "6층", spaceCd: "10607A" },
+    ]);
+  });
+
+  it("keeps a missing floor and spaceCd null and fills an empty English name from Korean", () => {
+    // Arrange
+    const gusijae: CafeteriaSummary = { _id: "20201040", name: { ko: "구시재식당", en: "" }, floor: null, spaceCd: null };
+
+    // Act
+    const cafeterias = toBuildingCafeterias([gusijae]);
+
+    // Assert
+    expect(cafeterias).toEqual([{ id: "20201040", name: { ko: "구시재식당", en: "구시재식당" }, floor: null, spaceCd: null }]);
+    expect(gusijae.name).toEqual({ ko: "구시재식당", en: "" });
   });
 });
