@@ -32,6 +32,22 @@
         "title": "HSSC",
         "items": [
           {
+            "kind": "subway",
+            "id": "subway:S1-4-420",
+            "stationId": "S1-4-420",
+            "title": "Hyehwa Station",
+            "subtitle": "Line 4",
+            "icon": {
+              "type": "subway",
+              "color": "00A5DE",
+              "text": "4"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/subway?station=S1-4-420"
+            }
+          },
+          {
             "kind": "bus",
             "id": "bus:hssc",
             "groupId": "hssc",
@@ -94,22 +110,6 @@
               "actionType": "route",
               "actionValue": "/bus/realtime?groupId=jongro08"
             }
-          },
-          {
-            "kind": "subway",
-            "id": "subway:S1-4-420",
-            "stationId": "S1-4-420",
-            "title": "Hyehwa Station",
-            "subtitle": "Line 4",
-            "icon": {
-              "type": "subway",
-              "color": "00A5DE",
-              "text": "4"
-            },
-            "action": {
-              "actionType": "route",
-              "actionValue": "/subway?station=S1-4-420"
-            }
           }
         ]
       },
@@ -118,22 +118,6 @@
         "id": "nsc",
         "title": "NSC",
         "items": [
-          {
-            "kind": "bus",
-            "id": "bus:commute",
-            "groupId": "commute",
-            "title": "NSC Commuter Shuttle Bus",
-            "subtitle": "Stations ↔ NSC pilot",
-            "icon": {
-              "type": "shuttle",
-              "color": "003626",
-              "text": "SKKU"
-            },
-            "action": {
-              "actionType": "route",
-              "actionValue": "/bus/schedule?groupId=commute"
-            }
-          },
           {
             "kind": "subway",
             "id": "subway:KR-1-0153",
@@ -148,6 +132,22 @@
             "action": {
               "actionType": "route",
               "actionValue": "/subway?station=KR-1-0153"
+            }
+          },
+          {
+            "kind": "bus",
+            "id": "bus:commute",
+            "groupId": "commute",
+            "title": "NSC Commuter Shuttle Bus",
+            "subtitle": "Stations ↔ NSC pilot",
+            "icon": {
+              "type": "shuttle",
+              "color": "003626",
+              "text": "SKKU"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/schedule?groupId=commute"
             }
           }
         ]
