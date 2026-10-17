@@ -74,11 +74,7 @@ export interface RequiredValue {
 
 export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
   const mode = envMode(env);
-  const db = (name: string, key: string): RequiredValue => ({
-    name,
-    env: key,
-    value: dbNameFor(mode, env[key]),
-  });
+  const db = (name: string, key: string): RequiredValue => ({ name, env: key, value: dbNameFor(mode, env[key]) });
   const raw = (name: string, key: string): RequiredValue => ({ name, env: key, value: env[key] });
   return [
     raw("mongo.url", "MONGO_URL"),
@@ -95,6 +91,7 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
     db("notices.dbName", "MONGO_NOTICES_DB_NAME"),
     db("eventmap.dbName", "MONGO_EVENTMAP_DB_NAME"),
     db("miniapps.dbName", "MONGO_MINIAPPS_DB_NAME"),
+    db("meals.dbName", "MONGO_MEALS_DB_NAME"),
     raw("notices.serviceStartDate", "NOTICES_SERVICE_START_DATE"),
     raw("push.functionUrl", "FCM_FUNCTION_URL"),
     raw("push.apiKey", "FCM_API_KEY"),

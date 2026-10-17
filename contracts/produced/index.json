@@ -201,6 +201,13 @@
       "GET meals/cafeterias"
     ]
   },
+  "meals-menus.dailyMeals": {
+    "source": "src/meals/menus/meals-menus.wire.ts",
+    "export": "dailyMeals",
+    "routes": [
+      "GET meals"
+    ]
+  },
   "miniapps-catalog.miniAppIndex": {
     "source": "src/miniapps/catalog/miniapps-catalog.wire.ts",
     "export": "miniAppIndex",
