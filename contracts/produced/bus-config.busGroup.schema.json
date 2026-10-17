@@ -256,6 +256,29 @@
                         ]
                       }
                     }
+                  },
+                  "refresh": {
+                    "type": "object",
+                    "properties": {
+                      "targets": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "traffic"
+                          ]
+                        }
+                      },
+                      "intervalSec": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "targets",
+                      "intervalSec"
+                    ]
                   }
                 },
                 "required": [
