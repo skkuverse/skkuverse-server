@@ -1,0 +1,157 @@
+{
+  "_about": "Synthetic, never captured: the route had not shipped; generated 2026-10-17 by UiTransitService over the committed transit-layout.json, the real bus groups and the served stations at 2026-10-20 12:00 KST (commute pilot open, fasttrack closed), Accept-Language en; whole data",
+  "data": {
+    "version": 1,
+    "sections": [
+      {
+        "type": "item_list",
+        "id": "campus",
+        "title": "Campus",
+        "items": [
+          {
+            "kind": "bus",
+            "id": "bus:campus",
+            "groupId": "campus",
+            "title": "INJA Shuttle",
+            "subtitle": "HSSC ↔ NSC",
+            "icon": {
+              "type": "shuttle",
+              "color": "003626",
+              "text": "SKKU"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/schedule?groupId=campus"
+            }
+          }
+        ]
+      },
+      {
+        "type": "item_list",
+        "id": "hssc",
+        "title": "HSSC",
+        "items": [
+          {
+            "kind": "bus",
+            "id": "bus:hssc",
+            "groupId": "hssc",
+            "title": "HSSC Shuttle Bus",
+            "subtitle": "Bus Stop (Humanities) ↔ 600th Anniversary Hall",
+            "icon": {
+              "type": "shuttle",
+              "color": "003626",
+              "text": "SKKU"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/realtime?groupId=hssc"
+            }
+          },
+          {
+            "kind": "bus",
+            "id": "bus:jongro02",
+            "groupId": "jongro02",
+            "title": "Jongro 02",
+            "subtitle": "SKKU ↔ Jonggak Stn. YMCA",
+            "icon": {
+              "type": "village",
+              "color": "4CAF50",
+              "text": "Village"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/realtime?groupId=jongro02"
+            }
+          },
+          {
+            "kind": "bus",
+            "id": "bus:jongro07",
+            "groupId": "jongro07",
+            "title": "Jongro 07",
+            "subtitle": "SKKU Sports Ground ↔ 600th Anniversary Hall",
+            "icon": {
+              "type": "village",
+              "color": "4CAF50",
+              "text": "Village"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/realtime?groupId=jongro07"
+            }
+          },
+          {
+            "kind": "bus",
+            "id": "bus:jongro08",
+            "groupId": "jongro08",
+            "title": "Jongro 08",
+            "subtitle": "Myeongnyun 3-ga ↔ Jongno 5-ga",
+            "icon": {
+              "type": "village",
+              "color": "4CAF50",
+              "text": "Village"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/realtime?groupId=jongro08"
+            }
+          },
+          {
+            "kind": "subway",
+            "id": "subway:S1-4-420",
+            "stationId": "S1-4-420",
+            "title": "Hyehwa Station",
+            "subtitle": "Line 4",
+            "icon": {
+              "type": "subway",
+              "color": "00A5DE",
+              "text": "4"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/subway?station=S1-4-420"
+            }
+          }
+        ]
+      },
+      {
+        "type": "item_list",
+        "id": "nsc",
+        "title": "NSC",
+        "items": [
+          {
+            "kind": "bus",
+            "id": "bus:commute",
+            "groupId": "commute",
+            "title": "NSC Commuter Shuttle Bus",
+            "subtitle": "Stations ↔ NSC pilot",
+            "icon": {
+              "type": "shuttle",
+              "color": "003626",
+              "text": "SKKU"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/bus/schedule?groupId=commute"
+            }
+          },
+          {
+            "kind": "subway",
+            "id": "subway:KR-1-0153",
+            "stationId": "KR-1-0153",
+            "title": "Sungkyunkwan Univ. Station",
+            "subtitle": "Line 1",
+            "icon": {
+              "type": "subway",
+              "color": "0052A4",
+              "text": "1"
+            },
+            "action": {
+              "actionType": "route",
+              "actionValue": "/subway?station=KR-1-0153"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
