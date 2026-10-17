@@ -118,7 +118,7 @@ describe("committed transit-layout.json", () => {
       ["nsc", ["bus:commute", "subway:KR-1-0153"]],
     ]);
     expect(committed.sections.map((section) => section.title)).toEqual([
-      { ko: "캠퍼스", en: "Campus", zh: "校区" },
+      undefined,
       { ko: "인사캠", en: "HSSC", zh: "人文校区" },
       { ko: "자과캠", en: "NSC", zh: "自然校区" },
     ]);

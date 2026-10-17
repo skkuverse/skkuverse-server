@@ -6,7 +6,7 @@
       {
         "type": "item_list",
         "id": "campus",
-        "title": "캠퍼스",
+        "title": null,
         "items": [
           {
             "kind": "bus",

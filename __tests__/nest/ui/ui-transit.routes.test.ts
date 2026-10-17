@@ -55,8 +55,8 @@ describe("GET /ui/home/transit", () => {
     expect(res.status).toBe(200);
     expect(res.body.meta).toEqual({ lang: "ko" });
     expect(res.body.data.version).toBe(1);
-    expect(res.body.data.sections.map((s: { type: string; id: string; title: string }) => [s.type, s.id, s.title])).toEqual([
-      ["item_list", "campus", "캠퍼스"],
+    expect(res.body.data.sections.map((s: { type: string; id: string; title: string | null }) => [s.type, s.id, s.title])).toEqual([
+      ["item_list", "campus", null],
       ["item_list", "hssc", "인사캠"],
       ["item_list", "nsc", "자과캠"],
     ]);
@@ -80,7 +80,7 @@ describe("GET /ui/home/transit", () => {
     // Assert
     expect(en.status).toBe(200);
     expect(en.body.meta).toEqual({ lang: "en" });
-    expect(en.body.data.sections.map((s: { title: string }) => s.title)).toEqual(["Campus", "HSSC", "NSC"]);
+    expect(en.body.data.sections.map((s: { title: string | null }) => s.title)).toEqual([null, "HSSC", "NSC"]);
     expect(en.body.data.sections[0].items[0].title).toBe("INJA Shuttle");
     const idsOf = (body: { data: { sections: Array<{ id: string; items: Array<{ id: string }> }> } }) =>
       body.data.sections.map((s) => [s.id, s.items.map((served) => served.id)]);
