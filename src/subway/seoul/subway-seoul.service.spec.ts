@@ -2,8 +2,9 @@
  * SubwaySeoulService, the `seoul` provider, over scripted clients (the typed
  * fakes in __tests__/helpers/fakes/subway/) fed the captured 2026-10-09 and
  * 2026-10-16 payloads, and a fixed Clock. What it guards: an API tick makes
- * the 4 calls of design D7 (positions of `1호선` and `4호선`, arrivals of
- * `성균관대` and `혜화`) and returns their events and countdown rows merged; a train-map
+ * one position call per line and one arrival call per station (positions of
+ * `1호선` and `4호선`, arrivals of `성균관대` and `혜화`) and returns their events
+ * and countdown rows merged, each arrival row read against the tick's time; a train-map
  * tick crawls lines 1 and 4 once each and stamps their events with the
  * Clock's time; each tick names its upstream as its source, so the tracker
  * keeps one upstream's countdown rows apart from the other's; and a failing
@@ -31,7 +32,7 @@ const rows = <T>(name: string, list: string): T[] => JSON.parse(fs.readFileSync(
 const page = (name: string): string => fs.readFileSync(path.join(FIXTURES, name), "utf8");
 const NOW = new Date("2026-10-16T11:45:00Z");
 
-function setup() {
+function setup(now: Date = NOW) {
   const apiClient = new FakeSubwaySeoulApiClient();
   apiClient.positions.set("1호선", rows("realtime-position-line1.json", "realtimePositionList"));
   apiClient.positions.set("4호선", rows("realtime-position-line4.json", "realtimePositionList"));
@@ -43,7 +44,7 @@ function setup() {
   const service = new SubwaySeoulService(
     new SubwaySeoulApiService(asReal<SubwaySeoulApiClient>(apiClient)),
     new SubwaySeoulTrainmapService(asReal<SubwaySeoulTrainmapClient>(trainmapClient)),
-    { now: () => NOW } as Clock,
+    { now: () => now } as Clock,
   );
   return { service, apiClient, trainmapClient };
 }
@@ -79,9 +80,9 @@ describe("SubwaySeoulService.observeApi", () => {
     ]);
   });
 
-  it("returns the 혜화 countdown rows, and none for 성균관대", async () => {
+  it("returns the 혜화 countdown rows, and none for 성균관대, read at their own capture's time", async () => {
     // Arrange
-    const { service } = setup();
+    const { service } = setup(new Date("2026-10-09T13:45:00Z"));
 
     // Act
     const { countdownRows } = await service.observeApi();
@@ -183,7 +184,7 @@ describe("SubwaySeoulService keeps each call's answer when another call of its t
 
   it("hands on line 4's API events and 혜화's countdown rows when line 1's positions call fails", async () => {
     // Arrange
-    const { service, apiClient } = setup();
+    const { service, apiClient } = setup(new Date("2026-10-09T13:45:00Z"));
     const failure = new Error("realtimePosition: HTTP 500");
     apiClient.positions.set("1호선", failure);
 

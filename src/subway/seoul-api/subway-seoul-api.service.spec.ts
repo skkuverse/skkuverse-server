@@ -1,7 +1,7 @@
 /**
  * SubwaySeoulApiService over a scripted client (the typed fake in
  * __tests__/helpers/fakes/subway/). What it guards: one request per line or
- * station, its rows mapped through the station table it is given, and a
+ * station, its rows mapped through the platform tables it is given, and a
  * failing request rejecting as it came, so the caller's poller reports it.
  * The payload parsing is subway-seoul-api.client.spec.ts's and the row
  * mapping subway-seoul-api.mapper.spec.ts's.
@@ -13,6 +13,7 @@ import type { SubwaySeoulApiClient } from "./subway-seoul-api.client";
 import { SubwaySeoulApiService } from "./subway-seoul-api.service";
 
 const STATION_ID_BY_NAME = new Map([["성균관대", "KR-1-0153"]]);
+const PLATFORM_BY_SUBWAY_ID = new Map([["1001", { platformId: "KR-1-0153", trainNumbers: "timetable" as const }]]);
 
 function setup() {
   const client = new FakeSubwaySeoulApiClient();
@@ -29,7 +30,7 @@ describe("SubwaySeoulApiService.listLineEvents", () => {
     ]);
 
     // Act
-    const events = await service.listLineEvents("1호선", STATION_ID_BY_NAME);
+    const events = await service.listLineEvents("1호선", STATION_ID_BY_NAME, "timetable");
 
     // Assert
     expect(client.calls).toEqual(["realtimePosition 1호선"]);
@@ -44,7 +45,7 @@ describe("SubwaySeoulApiService.listLineEvents", () => {
     client.positions.set("1호선", new SubwaySeoulApiError("realtimePosition: HTTP 500", 500, "ERR_BAD_RESPONSE"));
 
     // Act & Assert
-    await expect(service.listLineEvents("1호선", STATION_ID_BY_NAME)).rejects.toMatchObject({ status: 500, code: "ERR_BAD_RESPONSE" });
+    await expect(service.listLineEvents("1호선", STATION_ID_BY_NAME, "timetable")).rejects.toMatchObject({ status: 500, code: "ERR_BAD_RESPONSE" });
   });
 });
 
@@ -52,10 +53,10 @@ describe("SubwaySeoulApiService.listStationCountdownRows", () => {
   it("asks for the station's arrivals once and maps them to countdown rows", async () => {
     // Arrange
     const { client, service } = setup();
-    client.arrivals.set("성균관대", [{ btrainNo: "0493", statnNm: "성균관대", barvlDt: "120", recptnDt: "2026-10-16 20:44:10" }]);
+    client.arrivals.set("성균관대", [{ subwayId: "1001", btrainNo: "0493", statnNm: "성균관대", barvlDt: "120", recptnDt: "2026-10-16 20:44:10" }]);
 
     // Act
-    const countdownRows = await service.listStationCountdownRows("성균관대", STATION_ID_BY_NAME);
+    const countdownRows = await service.listStationCountdownRows("성균관대", PLATFORM_BY_SUBWAY_ID, new Date("2026-10-16T11:44:30Z"));
 
     // Assert
     expect(client.calls).toEqual(["realtimeStationArrival 성균관대"]);
