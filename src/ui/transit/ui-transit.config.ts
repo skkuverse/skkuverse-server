@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { parseConfigFile } from "../../infra/config-file";
-import { isBrokenLinkAction } from "../ui.rules";
+import { isBrokenLinkAction } from "../../shared/link-action.util";
 import { transitLayoutFile, type TransitItemRaw, type TransitLayoutRaw } from "./ui-transit.schema";
 import type { TransitLayoutReferences } from "./ui-transit.types";
 

@@ -69,6 +69,7 @@ describe("SubwaySeoulService.observeApi", () => {
       "0501 KR-1-1715 arrived",
       "0503 KR-1-P154 arrived",
       "0506 KR-1-P155 arrived",
+      "0701 KR-1-P149 arrived",
       "0702 KR-1-0153 approaching",
       "4203 S1-4-423 arrived",
       "4204 S1-4-420 arrived",
@@ -175,7 +176,7 @@ describe("SubwaySeoulService keeps each call's answer when another call of its t
     const settled = await service.observeApi();
 
     // Assert
-    expect(settled.events).toHaveLength(9);
+    expect(settled.events).toHaveLength(10);
     expect(settled.countdownRows).toEqual([]);
     expect(settled.failures).toEqual([failure]);
   });

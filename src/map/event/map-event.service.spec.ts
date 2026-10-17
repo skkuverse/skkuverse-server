@@ -43,7 +43,7 @@ let mockPlaces: jest.SpyInstance<ReturnType<MapRepository["listPlacesByLayerSetI
 /** A cold service: the activation and overlay caches live on the instances. */
 function newService(): MapEventService {
   const real = asReal<MapRepository>(repository);
-  return new MapEventService(real, new MapLayerSetService(real, CLOCK), new MiniappsService());
+  return new MapEventService(real, new MapLayerSetService(real, CLOCK, new MiniappsService()), new MiniappsService());
 }
 
 let service: MapEventService;

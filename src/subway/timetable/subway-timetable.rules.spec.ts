@@ -178,7 +178,7 @@ describe("toLineRoutes", () => {
     const [korailRoutes, seoulRoutes] = [toLineRoutes(korail), toLineRoutes(seoul)];
 
     // Assert
-    expect(korailRoutes.down.slice(0, 5)).toEqual(["KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153", "KR-1-P154"]);
+    expect(korailRoutes.down.slice(0, 6)).toEqual(["KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153", "KR-1-P154"]);
     expect(korailRoutes.up).toEqual([...korailRoutes.down].reverse());
     expect(seoulRoutes.up.slice(0, 4)).toEqual(["S1-4-423", "S1-4-422", "S1-4-421", "S1-4-420"]);
     expect(seoulRoutes.down).toEqual([...seoulRoutes.up].reverse());

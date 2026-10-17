@@ -131,30 +131,16 @@ describe("GET /ui/home/scroll", () => {
 });
 
 describe("GET /ui/home/campus", () => {
-  it("returns minAppVersion and the button_grid, with no carousel once every banner has closed", async () => {
+  it("returns minAppVersion and no section once every banner has closed", async () => {
     // Act
     const res = await request(httpServer).get("/ui/home/campus");
 
     // Assert
     expect(res.status).toBe(200);
     expect(res.body.meta.lang).toBe("ko");
-    expect(res.body.data).toHaveProperty("minAppVersion", "2.0.0");
-    expect(Array.isArray(res.body.data.sections)).toBe(true);
     // Every committed banner ended with ESKARA 2026 (ui-campus.config.spec.ts
-    // pins the window); the carousel itself is covered there.
-    expect(res.body.data.sections.map((s: { type: string }) => s.type)).toEqual([
-      "button_grid",
-    ]);
-    const section = res.body.data.sections[0];
-    expect(section).toHaveProperty("columns", 4);
-    expect(Array.isArray(section.items)).toBe(true);
-    expect(section.items).toHaveLength(4);
-    for (const item of section.items) {
-      expect(item).toHaveProperty("id");
-      expect(item).toHaveProperty("title");
-      expect(item).toHaveProperty("actionType");
-      expect(item).toHaveProperty("actionValue");
-    }
+    // pins the window), and the service buttons moved to the map's chip row.
+    expect(res.body.data).toEqual({ minAppVersion: "2.0.0", sections: [] });
   });
 
   it("is cacheable like /ui/home", async () => {

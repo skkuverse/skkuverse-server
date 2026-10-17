@@ -7,17 +7,20 @@
  * that must not start. Mini-app ids are checked against the real registry.
  */
 import type { Clock } from "../../infra/clock";
+import { MapConfigService } from "../../map/config/map-config.service";
+import { MapLayerSetService } from "../../map/layer-set/map-layer-set.service";
 import { MiniappsService } from "../../miniapps/miniapps.service";
-import { UiCampusService } from "../campus/ui-campus.service";
 import { loadHomeLayout as loadWithRegistry, readHomeLayout } from "./ui-home.config";
 import { toHomeLayout } from "./ui-home.mapper";
 import type { HomeLayoutRaw } from "./ui-home.schema";
+import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
+import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 
 const registry = new MiniappsService();
 const committedLayout = readHomeLayout(registry);
-// After the festival's campus banners closed (10/3), as on the day this spec was pinned.
+// No festival is live in the empty fake, so /map/config serves only its permanent chips.
 const clock: Clock = { now: () => new Date("2026-10-13T03:00:00.000Z") };
-const campus = new UiCampusService(registry, clock);
+const map = new MapConfigService(new MapLayerSetService(asReal<ConstructorParameters<typeof MapLayerSetService>[0]>(new FakeMapRepository()), clock, registry));
 
 const resolveLogo = registry.resolveLogo.bind(registry);
 
@@ -81,10 +84,11 @@ describe("committed home-layout.json", () => {
   });
 
   it.each(["ko", "en", "zh"] as const)(
-    "home_tiles (%s): the campus sheet's four buttons, then the games, in one grid",
-    (lang) => {
+    "home_tiles (%s): the map's four permanent chips, then the games, in one grid",
+    async (lang) => {
       // Act
       const resolved = toHomeLayout(committedLayout, { lang, now: new Date(), resolveLogo });
+      const { chips } = await map.getMapConfig(lang);
 
       // Assert
       // One grid: the app puts a 24 pt gap after each grid, so a second grid
@@ -93,13 +97,16 @@ describe("committed home-layout.json", () => {
       const homeRow = resolved.sections.find((s) => s.id === "home_tiles") as unknown as {
         tiles: Array<{ kind: string; id: string; title?: string; actionType?: string; actionValue?: string }>;
       };
-      const sheet = campus.getCampusSheet(lang).sections.find((s) => s.type === "button_grid") as {
-        items: Array<{ id: string; title: string; actionType: string; actionValue: string }>;
-      };
-      // The four service tiles mean the same thing as the campus sheet's buttons.
+      // The four service tiles mean the same thing as the map's permanent chips,
+      // which took over the campus sheet's buttons; builds that drop a link chip
+      // still reach them here.
+      const links = chips.flatMap(({ id, label, action }) =>
+        action.kind === "link" ? [{ kind: "link", id, title: label, actionType: action.actionType, actionValue: action.actionValue }] : [],
+      );
+      expect(links).toHaveLength(4);
       expect(
         homeRow.tiles.slice(0, 4).map(({ kind, id, title, actionType, actionValue }) => ({ kind, id, title, actionType, actionValue })),
-      ).toEqual(sheet.items.map(({ id, title, actionType, actionValue }) => ({ kind: "link", id, title, actionType, actionValue })));
+      ).toEqual(links);
       expect(homeRow.tiles.slice(4)).toEqual([
         { kind: "game", id: "subway-typing" },
         { kind: "game", id: "wave-run" },

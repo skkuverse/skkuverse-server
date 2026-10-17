@@ -51,7 +51,7 @@ beforeEach(() => {
   repository.findActiveActivation = mockFindActiveActivation;
   mockPlaces = jest.spyOn(repository, "listPlacesWithDetailByLayerSetId");
   const real = asReal<MapRepository>(repository);
-  const layerSet = new MapLayerSetService(real, CLOCK);
+  const layerSet = new MapLayerSetService(real, CLOCK, new MiniappsService());
   detailsService = new MapEventDetailsService(real, layerSet);
   eventService = new MapEventService(real, layerSet, new MiniappsService());
 });

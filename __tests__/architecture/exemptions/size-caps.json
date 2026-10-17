@@ -12,8 +12,8 @@
     "reason": "ADR 0010 D9, no domain seam: schedule-stops.json is one committed document that stops the boot on any fault, and validateStopCatalog lists every issue in the words bus-stops.rules.spec.ts pins. Its checks (stops, photos, panoramas, guides, sequences, estimate opt-ins) compose into the one validator bus-stops.schema.ts runs, and child-to-parent imports keep a sub-module from holding a piece of it."
   },
   "src/map/layer-set/map-layer-set.rules.ts": {
-    "max": 141,
-    "reason": "ADR 0010 D9, no domain seam: one loader of one operator-edited file reads every check here, `layerSetFile` the leaf checks (`optionIssues`, `chipLabelIssue`, `listSortIssue`) and `parseLayerSetFile` in map-layer-set.config.ts the cross-reference and chip checks, which also run at import; the checks are not flows, so a sub-module would hold rules and nothing else."
+    "max": 158,
+    "reason": "ADR 0010 D9, no domain seam: one loader of one operator-edited file reads every check here, `layerSetFile` the leaf checks (`optionIssues`, `chipLabelIssue`, `listSortIssue`) and `parseLayerSetFile` in map-layer-set.config.ts the cross-reference and chip checks, which also run at import, and `MapLayerSetService` the base chips' link check (`assertValidLinkChips`) when Nest builds it; the checks are not flows, so a sub-module would hold rules and nothing else."
   },
   "src/map/layer-set/map-layer-set.schema.ts": {
     "max": 84,
@@ -24,7 +24,7 @@
     "reason": "ADR 0010 D9, no domain seam: the list badge is one priority chain a list item is cut from, the v1 period pick and the v2 role badge feeding one brief, and the cursor decode beside it; neither half is a flow of its own, so a sub-module would hold rules and nothing else, and the badge alone exceeds the rules cap."
   },
   "src/subway/estimate/subway-estimate.rules.ts": {
-    "max": 140,
-    "reason": "ADR 0010 D9, no domain seam a sub-module can take: every function here feeds `toStationArrivals`, which composes each train's candidate, its delay (`toDelaySec`, at a station its row passes against `toPassingStop`), the delay lent to unobserved trains, the departure estimated at the served station and the countdown a train may count, and a sibling or parent never imports a sub-module's rules (D3); the countdown's memory across ticks, the one part only the service reads, is src/subway/countdown/."
+    "max": 160,
+    "reason": "ADR 0010 D9, no domain seam a sub-module can take: every function here feeds `toStationArrivals`, which composes each train's candidate, its delay (`toDelaySec`, at a station its row passes against `toPassingStop`), the delay lent to unobserved trains, the overdue unseen train the tracker still awaits (`isAwaitedTrain`), the departure estimated at the served station and the countdown a train may count, and a sibling or parent never imports a sub-module's rules (D3), so the pass-time half cannot move to src/subway/timetable/; the countdown's memory across ticks, the one part only the service reads, is src/subway/countdown/."
   }
 }

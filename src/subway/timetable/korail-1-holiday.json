@@ -15,7 +15,8 @@
     "KR-1-0153",
     "KR-1-P152",
     "KR-1-P151",
-    "KR-1-P150"
+    "KR-1-P150",
+    "KR-1-P149"
   ],
   "trains": [
     {
@@ -24,6 +25,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 21810,
+          "dep": 21840
+        },
         {
           "station": "KR-1-P150",
           "arr": 22020,
@@ -111,6 +117,11 @@
           "station": "KR-1-P150",
           "arr": 19530,
           "dep": 19560
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 19740,
+          "dep": 19770
         }
       ]
     },
@@ -120,6 +131,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 22800,
+          "dep": 22830
+        },
         {
           "station": "KR-1-P150",
           "arr": 23010,
@@ -207,6 +223,11 @@
           "station": "KR-1-P150",
           "arr": 20190,
           "dep": 20220
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 20400,
+          "dep": 20430
         }
       ]
     },
@@ -216,6 +237,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 23340,
+          "dep": 23370
+        },
         {
           "station": "KR-1-P150",
           "arr": 23550,
@@ -303,6 +329,11 @@
           "station": "KR-1-P150",
           "arr": 20850,
           "dep": 20880
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 21060,
+          "dep": 21090
         }
       ]
     },
@@ -312,6 +343,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 23910,
+          "dep": 23940
+        },
         {
           "station": "KR-1-P150",
           "arr": 24120,
@@ -399,6 +435,11 @@
           "station": "KR-1-P150",
           "arr": 21690,
           "dep": 21720
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 21900,
+          "dep": 21930
         }
       ]
     },
@@ -408,6 +449,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 25530,
+          "dep": 25560
+        },
         {
           "station": "KR-1-P150",
           "arr": 25740,
@@ -495,6 +541,11 @@
           "station": "KR-1-P150",
           "arr": 23130,
           "dep": 23160
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 23340,
+          "dep": 23370
         }
       ]
     },
@@ -543,6 +594,11 @@
           "station": "KR-1-P150",
           "arr": 24270,
           "dep": 24300
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 24480,
+          "dep": 24510
         }
       ]
     },
@@ -552,6 +608,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 26580,
+          "dep": 26610
+        },
         {
           "station": "KR-1-P150",
           "arr": 26790,
@@ -639,6 +700,11 @@
           "station": "KR-1-P150",
           "arr": 25350,
           "dep": 25380
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 25560,
+          "dep": 25590
         }
       ]
     },
@@ -648,6 +714,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 28260,
+          "dep": 28290
+        },
         {
           "station": "KR-1-P150",
           "arr": 28470,
@@ -735,6 +806,11 @@
           "station": "KR-1-P150",
           "arr": 25920,
           "dep": 25950
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 26130,
+          "dep": 26160
         }
       ]
     },
@@ -744,6 +820,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 27630,
+          "dep": 27660
+        },
         {
           "station": "KR-1-P150",
           "arr": 27840,
@@ -831,6 +912,11 @@
           "station": "KR-1-P150",
           "arr": 26610,
           "dep": 26640
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 26820,
+          "dep": 26850
         }
       ]
     },
@@ -840,6 +926,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 29490,
+          "dep": 29520
+        },
         {
           "station": "KR-1-P150",
           "arr": 29700,
@@ -927,6 +1018,11 @@
           "station": "KR-1-P150",
           "arr": 27030,
           "dep": 27060
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 27240,
+          "dep": 27270
         }
       ]
     },
@@ -936,6 +1032,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 30210,
+          "dep": 30240
+        },
         {
           "station": "KR-1-P150",
           "arr": 30420,
@@ -1023,6 +1124,11 @@
           "station": "KR-1-P150",
           "arr": 27930,
           "dep": 27960
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 28140,
+          "dep": 28170
         }
       ]
     },
@@ -1032,6 +1138,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 31470,
+          "dep": 31500
+        },
         {
           "station": "KR-1-P150",
           "arr": 31680,
@@ -1119,6 +1230,11 @@
           "station": "KR-1-P150",
           "arr": 28470,
           "dep": 28500
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 28680,
+          "dep": 28710
         }
       ]
     },
@@ -1128,6 +1244,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 33090,
+          "dep": 33120
+        },
         {
           "station": "KR-1-P150",
           "arr": 33300,
@@ -1215,6 +1336,11 @@
           "station": "KR-1-P150",
           "arr": 29910,
           "dep": 29940
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 30120,
+          "dep": 30150
         }
       ]
     },
@@ -1224,6 +1350,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 34530,
+          "dep": 34560
+        },
         {
           "station": "KR-1-P150",
           "arr": 34740,
@@ -1311,6 +1442,11 @@
           "station": "KR-1-P150",
           "arr": 30930,
           "dep": 30960
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 31140,
+          "dep": 31170
         }
       ]
     },
@@ -1320,6 +1456,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 35730,
+          "dep": 35760
+        },
         {
           "station": "KR-1-P150",
           "arr": 35940,
@@ -1407,6 +1548,11 @@
           "station": "KR-1-P150",
           "arr": 32250,
           "dep": 32280
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 32460,
+          "dep": 32490
         }
       ]
     },
@@ -1416,6 +1562,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 36240,
+          "dep": 36270
+        },
         {
           "station": "KR-1-P150",
           "arr": 36450,
@@ -1503,6 +1654,11 @@
           "station": "KR-1-P150",
           "arr": 34230,
           "dep": 34260
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 34440,
+          "dep": 34470
         }
       ]
     },
@@ -1512,6 +1668,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 37650,
+          "dep": 37680
+        },
         {
           "station": "KR-1-P150",
           "arr": 37860,
@@ -1599,6 +1760,11 @@
           "station": "KR-1-P150",
           "arr": 35790,
           "dep": 35820
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 36000,
+          "dep": 36030
         }
       ]
     },
@@ -1608,6 +1774,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 38790,
+          "dep": 38820
+        },
         {
           "station": "KR-1-P150",
           "arr": 39000,
@@ -1695,6 +1866,11 @@
           "station": "KR-1-P150",
           "arr": 37110,
           "dep": 37140
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 37320,
+          "dep": 37350
         }
       ]
     },
@@ -1704,6 +1880,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 40560,
+          "dep": 40590
+        },
         {
           "station": "KR-1-P150",
           "arr": 40770,
@@ -1791,6 +1972,11 @@
           "station": "KR-1-P150",
           "arr": 37710,
           "dep": 37740
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 37920,
+          "dep": 37950
         }
       ]
     },
@@ -1800,6 +1986,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 42210,
+          "dep": 42240
+        },
         {
           "station": "KR-1-P150",
           "arr": 42420,
@@ -1887,6 +2078,11 @@
           "station": "KR-1-P150",
           "arr": 39030,
           "dep": 39060
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 39240,
+          "dep": 39270
         }
       ]
     },
@@ -1896,6 +2092,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 43920,
+          "dep": 43950
+        },
         {
           "station": "KR-1-P150",
           "arr": 44130,
@@ -1983,6 +2184,11 @@
           "station": "KR-1-P150",
           "arr": 40530,
           "dep": 40560
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 40740,
+          "dep": 40770
         }
       ]
     },
@@ -1992,6 +2198,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 45780,
+          "dep": 45810
+        },
         {
           "station": "KR-1-P150",
           "arr": 45990,
@@ -2079,6 +2290,11 @@
           "station": "KR-1-P150",
           "arr": 42750,
           "dep": 42780
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 42960,
+          "dep": 42990
         }
       ]
     },
@@ -2088,6 +2304,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 47040,
+          "dep": 47070
+        },
         {
           "station": "KR-1-P150",
           "arr": 47250,
@@ -2175,6 +2396,11 @@
           "station": "KR-1-P150",
           "arr": 45030,
           "dep": 45360
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 45540,
+          "dep": 45570
         }
       ]
     },
@@ -2184,6 +2410,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 47550,
+          "dep": 47580
+        },
         {
           "station": "KR-1-P150",
           "arr": 47760,
@@ -2271,6 +2502,11 @@
           "station": "KR-1-P150",
           "arr": 46560,
           "dep": 46590
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 46770,
+          "dep": 46800
         }
       ]
     },
@@ -2280,6 +2516,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 50730,
+          "dep": 50760
+        },
         {
           "station": "KR-1-P150",
           "arr": 50940,
@@ -2367,6 +2608,11 @@
           "station": "KR-1-P150",
           "arr": 48150,
           "dep": 48180
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 48360,
+          "dep": 48390
         }
       ]
     },
@@ -2376,6 +2622,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 52170,
+          "dep": 52200
+        },
         {
           "station": "KR-1-P150",
           "arr": 52380,
@@ -2463,6 +2714,11 @@
           "station": "KR-1-P150",
           "arr": 50250,
           "dep": 50280
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 50460,
+          "dep": 50490
         }
       ]
     },
@@ -2472,6 +2728,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 52650,
+          "dep": 52680
+        },
         {
           "station": "KR-1-P150",
           "arr": 52860,
@@ -2559,6 +2820,11 @@
           "station": "KR-1-P150",
           "arr": 51570,
           "dep": 51600
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 51780,
+          "dep": 51810
         }
       ]
     },
@@ -2568,6 +2834,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 54390,
+          "dep": 54420
+        },
         {
           "station": "KR-1-P150",
           "arr": 54600,
@@ -2655,6 +2926,11 @@
           "station": "KR-1-P150",
           "arr": 52650,
           "dep": 53010
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 53190,
+          "dep": 53220
         }
       ]
     },
@@ -2664,6 +2940,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 55110,
+          "dep": 55140
+        },
         {
           "station": "KR-1-P150",
           "arr": 55320,
@@ -2751,6 +3032,11 @@
           "station": "KR-1-P150",
           "arr": 54930,
           "dep": 54960
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 55140,
+          "dep": 55170
         }
       ]
     },
@@ -2760,6 +3046,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 56850,
+          "dep": 56880
+        },
         {
           "station": "KR-1-P150",
           "arr": 57060,
@@ -2847,6 +3138,11 @@
           "station": "KR-1-P150",
           "arr": 56700,
           "dep": 56730
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 56910,
+          "dep": 56940
         }
       ]
     },
@@ -2856,6 +3152,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 58290,
+          "dep": 58320
+        },
         {
           "station": "KR-1-P150",
           "arr": 58500,
@@ -2943,6 +3244,11 @@
           "station": "KR-1-P150",
           "arr": 58530,
           "dep": 58560
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 58740,
+          "dep": 58770
         }
       ]
     },
@@ -2952,6 +3258,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 59220,
+          "dep": 59250
+        },
         {
           "station": "KR-1-P150",
           "arr": 59430,
@@ -3039,6 +3350,11 @@
           "station": "KR-1-P150",
           "arr": 59610,
           "dep": 59940
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 60120,
+          "dep": 60150
         }
       ]
     },
@@ -3048,6 +3364,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 60060,
+          "dep": 60090
+        },
         {
           "station": "KR-1-P150",
           "arr": 60270,
@@ -3135,6 +3456,11 @@
           "station": "KR-1-P150",
           "arr": 60990,
           "dep": 61020
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 61200,
+          "dep": 61230
         }
       ]
     },
@@ -3144,6 +3470,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 61650,
+          "dep": 61680
+        },
         {
           "station": "KR-1-P150",
           "arr": 61860,
@@ -3231,6 +3562,11 @@
           "station": "KR-1-P150",
           "arr": 62370,
           "dep": 62400
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 62580,
+          "dep": 62610
         }
       ]
     },
@@ -3240,6 +3576,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 62070,
+          "dep": 62100
+        },
         {
           "station": "KR-1-P150",
           "arr": 62280,
@@ -3327,6 +3668,11 @@
           "station": "KR-1-P150",
           "arr": 63870,
           "dep": 63900
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 64080,
+          "dep": 64110
         }
       ]
     },
@@ -3336,6 +3682,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 63270,
+          "dep": 63300
+        },
         {
           "station": "KR-1-P150",
           "arr": 63480,
@@ -3423,6 +3774,11 @@
           "station": "KR-1-P150",
           "arr": 64470,
           "dep": 64500
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 64680,
+          "dep": 64710
         }
       ]
     },
@@ -3432,6 +3788,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 63810,
+          "dep": 63840
+        },
         {
           "station": "KR-1-P150",
           "arr": 64020,
@@ -3519,6 +3880,11 @@
           "station": "KR-1-P150",
           "arr": 66510,
           "dep": 66540
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 66720,
+          "dep": 66750
         }
       ]
     },
@@ -3528,6 +3894,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 65190,
+          "dep": 65220
+        },
         {
           "station": "KR-1-P150",
           "arr": 65400,
@@ -3615,6 +3986,11 @@
           "station": "KR-1-P150",
           "arr": 67770,
           "dep": 67800
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 67980,
+          "dep": 68010
         }
       ]
     },
@@ -3624,6 +4000,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 66150,
+          "dep": 66180
+        },
         {
           "station": "KR-1-P150",
           "arr": 66360,
@@ -3711,6 +4092,11 @@
           "station": "KR-1-P150",
           "arr": 69390,
           "dep": 69420
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 69600,
+          "dep": 69630
         }
       ]
     },
@@ -3720,6 +4106,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 68190,
+          "dep": 68220
+        },
         {
           "station": "KR-1-P150",
           "arr": 68400,
@@ -3807,6 +4198,11 @@
           "station": "KR-1-P150",
           "arr": 70470,
           "dep": 70800
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 70980,
+          "dep": 71010
         }
       ]
     },
@@ -3816,6 +4212,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 69030,
+          "dep": 69060
+        },
         {
           "station": "KR-1-P150",
           "arr": 69240,
@@ -3903,6 +4304,11 @@
           "station": "KR-1-P150",
           "arr": 72150,
           "dep": 72180
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 72360,
+          "dep": 72390
         }
       ]
     },
@@ -3912,6 +4318,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 69870,
+          "dep": 69900
+        },
         {
           "station": "KR-1-P150",
           "arr": 70080,
@@ -3999,6 +4410,11 @@
           "station": "KR-1-P150",
           "arr": 72930,
           "dep": 72960
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 73140,
+          "dep": 73170
         }
       ]
     },
@@ -4008,6 +4424,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 71010,
+          "dep": 71040
+        },
         {
           "station": "KR-1-P150",
           "arr": 71220,
@@ -4095,6 +4516,11 @@
           "station": "KR-1-P150",
           "arr": 73770,
           "dep": 73800
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 73980,
+          "dep": 74010
         }
       ]
     },
@@ -4104,6 +4530,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 72570,
+          "dep": 72600
+        },
         {
           "station": "KR-1-P150",
           "arr": 72780,
@@ -4191,6 +4622,11 @@
           "station": "KR-1-P150",
           "arr": 75150,
           "dep": 75180
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 75360,
+          "dep": 75390
         }
       ]
     },
@@ -4200,6 +4636,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 75480,
+          "dep": 75510
+        },
         {
           "station": "KR-1-P150",
           "arr": 75690,
@@ -4287,6 +4728,11 @@
           "station": "KR-1-P150",
           "arr": 75690,
           "dep": 75720
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 75900,
+          "dep": 75930
         }
       ]
     },
@@ -4296,6 +4742,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 76830,
+          "dep": 76860
+        },
         {
           "station": "KR-1-P150",
           "arr": 77040,
@@ -4383,6 +4834,11 @@
           "station": "KR-1-P150",
           "arr": 76890,
           "dep": 76920
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 77100,
+          "dep": 77130
         }
       ]
     },
@@ -4392,6 +4848,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 78330,
+          "dep": 78360
+        },
         {
           "station": "KR-1-P150",
           "arr": 78540,
@@ -4479,6 +4940,11 @@
           "station": "KR-1-P150",
           "arr": 78030,
           "dep": 78060
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 78240,
+          "dep": 78270
         }
       ]
     },
@@ -4488,6 +4954,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 79350,
+          "dep": 79380
+        },
         {
           "station": "KR-1-P150",
           "arr": 79560,
@@ -4575,6 +5046,11 @@
           "station": "KR-1-P150",
           "arr": 79290,
           "dep": 79320
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 79500,
+          "dep": 79530
         }
       ]
     },
@@ -4623,6 +5099,11 @@
           "station": "KR-1-P150",
           "arr": 80490,
           "dep": 80520
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 80700,
+          "dep": 80730
         }
       ]
     },
@@ -4632,6 +5113,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 80550,
+          "dep": 80580
+        },
         {
           "station": "KR-1-P150",
           "arr": 80760,
@@ -4719,6 +5205,11 @@
           "station": "KR-1-P150",
           "arr": 81630,
           "dep": 81660
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 81840,
+          "dep": 81870
         }
       ]
     },
@@ -4728,6 +5219,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 81150,
+          "dep": 81180
+        },
         {
           "station": "KR-1-P150",
           "arr": 81360,
@@ -4815,6 +5311,11 @@
           "station": "KR-1-P150",
           "arr": 82770,
           "dep": 82800
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 82980,
+          "dep": 83010
         }
       ]
     },
@@ -4824,6 +5325,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 82500,
+          "dep": 82530
+        },
         {
           "station": "KR-1-P150",
           "arr": 82710,
@@ -4872,6 +5378,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 82170,
+          "dep": 82200
+        },
         {
           "station": "KR-1-P150",
           "arr": 82380,
@@ -4959,6 +5470,11 @@
           "station": "KR-1-P150",
           "arr": 85350,
           "dep": 85380
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 85560,
+          "dep": 85590
         }
       ]
     },
@@ -4968,6 +5484,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 83610,
+          "dep": 83640
+        },
         {
           "station": "KR-1-P150",
           "arr": 83820,
@@ -5055,6 +5576,11 @@
           "station": "KR-1-P150",
           "arr": 86550,
           "dep": 86580
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 86760,
+          "dep": 86790
         }
       ]
     },
@@ -5064,6 +5590,11 @@
       "destination": "서동탄",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 84690,
+          "dep": 84720
+        },
         {
           "station": "KR-1-P150",
           "arr": 84900,
@@ -5113,6 +5644,11 @@
       "express": false,
       "stops": [
         {
+          "station": "KR-1-P149",
+          "arr": 85230,
+          "dep": 85260
+        },
+        {
           "station": "KR-1-P150",
           "arr": 85440,
           "dep": 85470
@@ -5161,6 +5697,11 @@
       "express": false,
       "stops": [
         {
+          "station": "KR-1-P149",
+          "arr": 85920,
+          "dep": 85950
+        },
+        {
           "station": "KR-1-P150",
           "arr": 86130,
           "dep": 86160
@@ -5208,6 +5749,11 @@
       "destination": "병점",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 86610,
+          "dep": 86640
+        },
         {
           "station": "KR-1-P150",
           "arr": 86820,
@@ -5295,6 +5841,11 @@
           "station": "KR-1-P150",
           "arr": 22380,
           "dep": 22410
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 22590,
+          "dep": 22620
         }
       ]
     },
@@ -5343,6 +5894,11 @@
           "station": "KR-1-P150",
           "arr": 23730,
           "dep": 23760
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 23940,
+          "dep": 23970
         }
       ]
     },
@@ -5391,6 +5947,11 @@
           "station": "KR-1-P150",
           "arr": 24720,
           "dep": 24750
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 24930,
+          "dep": 24960
         }
       ]
     },
@@ -5400,6 +5961,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 19380,
+          "dep": 19410
+        },
         {
           "station": "KR-1-P150",
           "arr": 19590,
@@ -5487,6 +6053,11 @@
           "station": "KR-1-P150",
           "arr": 26160,
           "dep": 26190
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 26370,
+          "dep": 26400
         }
       ]
     },
@@ -5496,6 +6067,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 20400,
+          "dep": 20430
+        },
         {
           "station": "KR-1-P150",
           "arr": 20610,
@@ -5583,6 +6159,11 @@
           "station": "KR-1-P150",
           "arr": 27660,
           "dep": 27690
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 27870,
+          "dep": 27900
         }
       ]
     },
@@ -5592,6 +6173,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 21300,
+          "dep": 21330
+        },
         {
           "station": "KR-1-P150",
           "arr": 21510,
@@ -5679,6 +6265,11 @@
           "station": "KR-1-P150",
           "arr": 28770,
           "dep": 28800
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 28980,
+          "dep": 29010
         }
       ]
     },
@@ -5688,6 +6279,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 22260,
+          "dep": 22290
+        },
         {
           "station": "KR-1-P150",
           "arr": 22470,
@@ -5775,6 +6371,11 @@
           "station": "KR-1-P150",
           "arr": 29460,
           "dep": 29490
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 29670,
+          "dep": 29700
         }
       ]
     },
@@ -5823,6 +6424,11 @@
           "station": "KR-1-P150",
           "arr": 30300,
           "dep": 30630
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 30810,
+          "dep": 30840
         }
       ]
     },
@@ -5832,6 +6438,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 24240,
+          "dep": 24270
+        },
         {
           "station": "KR-1-P150",
           "arr": 24450,
@@ -5919,6 +6530,11 @@
           "station": "KR-1-P150",
           "arr": 31560,
           "dep": 31590
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 31770,
+          "dep": 31800
         }
       ]
     },
@@ -5928,6 +6544,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 25080,
+          "dep": 25110
+        },
         {
           "station": "KR-1-P150",
           "arr": 25290,
@@ -6015,6 +6636,11 @@
           "station": "KR-1-P150",
           "arr": 32730,
           "dep": 32760
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 32940,
+          "dep": 32970
         }
       ]
     },
@@ -6024,6 +6650,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 25950,
+          "dep": 25980
+        },
         {
           "station": "KR-1-P150",
           "arr": 26160,
@@ -6111,6 +6742,11 @@
           "station": "KR-1-P150",
           "arr": 33180,
           "dep": 33510
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 33690,
+          "dep": 33720
         }
       ]
     },
@@ -6120,6 +6756,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 26850,
+          "dep": 26880
+        },
         {
           "station": "KR-1-P150",
           "arr": 27060,
@@ -6207,6 +6848,11 @@
           "station": "KR-1-P150",
           "arr": 34830,
           "dep": 34860
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 35040,
+          "dep": 35070
         }
       ]
     },
@@ -6216,6 +6862,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 27360,
+          "dep": 27390
+        },
         {
           "station": "KR-1-P150",
           "arr": 27570,
@@ -6303,6 +6954,11 @@
           "station": "KR-1-P150",
           "arr": 35280,
           "dep": 35310
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 35490,
+          "dep": 35520
         }
       ]
     },
@@ -6312,6 +6968,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 28740,
+          "dep": 28770
+        },
         {
           "station": "KR-1-P150",
           "arr": 28950,
@@ -6399,6 +7060,11 @@
           "station": "KR-1-P150",
           "arr": 36540,
           "dep": 36870
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 37050,
+          "dep": 37080
         }
       ]
     },
@@ -6408,6 +7074,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 29730,
+          "dep": 29760
+        },
         {
           "station": "KR-1-P150",
           "arr": 29940,
@@ -6495,6 +7166,11 @@
           "station": "KR-1-P150",
           "arr": 37470,
           "dep": 37500
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 37680,
+          "dep": 37710
         }
       ]
     },
@@ -6504,6 +7180,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 30660,
+          "dep": 30690
+        },
         {
           "station": "KR-1-P150",
           "arr": 30870,
@@ -6591,6 +7272,11 @@
           "station": "KR-1-P150",
           "arr": 38160,
           "dep": 38490
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 38670,
+          "dep": 38700
         }
       ]
     },
@@ -6600,6 +7286,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 32370,
+          "dep": 32400
+        },
         {
           "station": "KR-1-P150",
           "arr": 32580,
@@ -6687,6 +7378,11 @@
           "station": "KR-1-P150",
           "arr": 39600,
           "dep": 39960
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 40140,
+          "dep": 40170
         }
       ]
     },
@@ -6735,6 +7431,11 @@
           "station": "KR-1-P150",
           "arr": 41040,
           "dep": 41070
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 41250,
+          "dep": 41280
         }
       ]
     },
@@ -6744,6 +7445,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 33690,
+          "dep": 33720
+        },
         {
           "station": "KR-1-P150",
           "arr": 33900,
@@ -6831,6 +7537,11 @@
           "station": "KR-1-P150",
           "arr": 41820,
           "dep": 42180
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 42360,
+          "dep": 42390
         }
       ]
     },
@@ -6840,6 +7551,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 35100,
+          "dep": 35130
+        },
         {
           "station": "KR-1-P150",
           "arr": 35310,
@@ -6927,6 +7643,11 @@
           "station": "KR-1-P150",
           "arr": 43200,
           "dep": 43230
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 43410,
+          "dep": 43440
         }
       ]
     },
@@ -6936,6 +7657,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 36750,
+          "dep": 36780
+        },
         {
           "station": "KR-1-P150",
           "arr": 36960,
@@ -7023,6 +7749,11 @@
           "station": "KR-1-P150",
           "arr": 43680,
           "dep": 44040
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 44220,
+          "dep": 44250
         }
       ]
     },
@@ -7071,6 +7802,11 @@
           "station": "KR-1-P150",
           "arr": 45810,
           "dep": 45840
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 46020,
+          "dep": 46050
         }
       ]
     },
@@ -7080,6 +7816,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 38100,
+          "dep": 38130
+        },
         {
           "station": "KR-1-P150",
           "arr": 38310,
@@ -7167,6 +7908,11 @@
           "station": "KR-1-P150",
           "arr": 47070,
           "dep": 47430
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 47610,
+          "dep": 47640
         }
       ]
     },
@@ -7176,6 +7922,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 39480,
+          "dep": 39510
+        },
         {
           "station": "KR-1-P150",
           "arr": 39690,
@@ -7263,6 +8014,11 @@
           "station": "KR-1-P150",
           "arr": 48990,
           "dep": 49020
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 49200,
+          "dep": 49230
         }
       ]
     },
@@ -7272,6 +8028,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 40110,
+          "dep": 40140
+        },
         {
           "station": "KR-1-P150",
           "arr": 40320,
@@ -7359,6 +8120,11 @@
           "station": "KR-1-P150",
           "arr": 49680,
           "dep": 49710
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 49890,
+          "dep": 49920
         }
       ]
     },
@@ -7368,6 +8134,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 40890,
+          "dep": 40920
+        },
         {
           "station": "KR-1-P150",
           "arr": 41100,
@@ -7455,6 +8226,11 @@
           "station": "KR-1-P150",
           "arr": 50670,
           "dep": 51000
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 51180,
+          "dep": 51210
         }
       ]
     },
@@ -7503,6 +8279,11 @@
           "station": "KR-1-P150",
           "arr": 52140,
           "dep": 52170
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 52350,
+          "dep": 52380
         }
       ]
     },
@@ -7512,6 +8293,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 43470,
+          "dep": 43500
+        },
         {
           "station": "KR-1-P150",
           "arr": 43680,
@@ -7599,6 +8385,11 @@
           "station": "KR-1-P150",
           "arr": 53250,
           "dep": 53280
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 53460,
+          "dep": 53490
         }
       ]
     },
@@ -7608,6 +8399,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 44250,
+          "dep": 44280
+        },
         {
           "station": "KR-1-P150",
           "arr": 44460,
@@ -7695,6 +8491,11 @@
           "station": "KR-1-P150",
           "arr": 54060,
           "dep": 54390
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 54570,
+          "dep": 54600
         }
       ]
     },
@@ -7704,6 +8505,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 45270,
+          "dep": 45330
+        },
         {
           "station": "KR-1-P150",
           "arr": 45510,
@@ -7791,6 +8597,11 @@
           "station": "KR-1-P150",
           "arr": 55380,
           "dep": 55410
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 55590,
+          "dep": 55620
         }
       ]
     },
@@ -7800,6 +8611,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 46530,
+          "dep": 46560
+        },
         {
           "station": "KR-1-P150",
           "arr": 46740,
@@ -7887,6 +8703,11 @@
           "station": "KR-1-P150",
           "arr": 56010,
           "dep": 56340
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 56520,
+          "dep": 56550
         }
       ]
     },
@@ -7896,6 +8717,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 48750,
+          "dep": 48780
+        },
         {
           "station": "KR-1-P150",
           "arr": 48960,
@@ -7983,6 +8809,11 @@
           "station": "KR-1-P150",
           "arr": 57330,
           "dep": 57660
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 57840,
+          "dep": 57870
         }
       ]
     },
@@ -7992,6 +8823,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 49290,
+          "dep": 49320
+        },
         {
           "station": "KR-1-P150",
           "arr": 49500,
@@ -8079,6 +8915,11 @@
           "station": "KR-1-P150",
           "arr": 59100,
           "dep": 59130
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 59310,
+          "dep": 59340
         }
       ]
     },
@@ -8088,6 +8929,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 49890,
+          "dep": 49920
+        },
         {
           "station": "KR-1-P150",
           "arr": 50100,
@@ -8175,6 +9021,11 @@
           "station": "KR-1-P150",
           "arr": 60360,
           "dep": 60390
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 60570,
+          "dep": 60600
         }
       ]
     },
@@ -8184,6 +9035,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 51210,
+          "dep": 51240
+        },
         {
           "station": "KR-1-P150",
           "arr": 51420,
@@ -8271,6 +9127,11 @@
           "station": "KR-1-P150",
           "arr": 61380,
           "dep": 61740
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 61920,
+          "dep": 61950
         }
       ]
     },
@@ -8319,6 +9180,11 @@
           "station": "KR-1-P150",
           "arr": 62910,
           "dep": 63240
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 63420,
+          "dep": 63450
         }
       ]
     },
@@ -8328,6 +9194,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 53130,
+          "dep": 53160
+        },
         {
           "station": "KR-1-P150",
           "arr": 53370,
@@ -8376,6 +9247,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 56250,
+          "dep": 56280
+        },
         {
           "station": "KR-1-P150",
           "arr": 56460,
@@ -8463,6 +9339,11 @@
           "station": "KR-1-P150",
           "arr": 65730,
           "dep": 65760
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 65940,
+          "dep": 65970
         }
       ]
     },
@@ -8472,6 +9353,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 57210,
+          "dep": 57270
+        },
         {
           "station": "KR-1-P150",
           "arr": 57450,
@@ -8559,6 +9445,11 @@
           "station": "KR-1-P150",
           "arr": 66990,
           "dep": 67320
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 67500,
+          "dep": 67530
         }
       ]
     },
@@ -8607,6 +9498,11 @@
           "station": "KR-1-P150",
           "arr": 68340,
           "dep": 68370
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 68550,
+          "dep": 68580
         }
       ]
     },
@@ -8616,6 +9512,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 59490,
+          "dep": 59520
+        },
         {
           "station": "KR-1-P150",
           "arr": 59700,
@@ -8703,6 +9604,11 @@
           "station": "KR-1-P150",
           "arr": 68910,
           "dep": 68940
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 69120,
+          "dep": 69150
         }
       ]
     },
@@ -8712,6 +9618,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 61110,
+          "dep": 61140
+        },
         {
           "station": "KR-1-P150",
           "arr": 61320,
@@ -8799,6 +9710,11 @@
           "station": "KR-1-P150",
           "arr": 69960,
           "dep": 69990
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 70170,
+          "dep": 70200
         }
       ]
     },
@@ -8808,6 +9724,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 62730,
+          "dep": 62760
+        },
         {
           "station": "KR-1-P150",
           "arr": 62940,
@@ -8895,6 +9816,11 @@
           "station": "KR-1-P150",
           "arr": 71190,
           "dep": 71220
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 71400,
+          "dep": 71460
         }
       ]
     },
@@ -8943,6 +9869,11 @@
           "station": "KR-1-P150",
           "arr": 72450,
           "dep": 72480
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 72660,
+          "dep": 72690
         }
       ]
     },
@@ -8952,6 +9883,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 64290,
+          "dep": 64350
+        },
         {
           "station": "KR-1-P150",
           "arr": 64530,
@@ -9039,6 +9975,11 @@
           "station": "KR-1-P150",
           "arr": 73500,
           "dep": 73530
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 73710,
+          "dep": 73740
         }
       ]
     },
@@ -9048,6 +9989,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 65640,
+          "dep": 65670
+        },
         {
           "station": "KR-1-P150",
           "arr": 65850,
@@ -9135,6 +10081,11 @@
           "station": "KR-1-P150",
           "arr": 74250,
           "dep": 74610
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 74790,
+          "dep": 74820
         }
       ]
     },
@@ -9144,6 +10095,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 66750,
+          "dep": 66780
+        },
         {
           "station": "KR-1-P150",
           "arr": 66960,
@@ -9192,6 +10148,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 67080,
+          "dep": 67110
+        },
         {
           "station": "KR-1-P150",
           "arr": 67290,
@@ -9279,6 +10240,11 @@
           "station": "KR-1-P150",
           "arr": 76350,
           "dep": 76380
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 76560,
+          "dep": 76590
         }
       ]
     },
@@ -9288,6 +10254,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 68700,
+          "dep": 68730
+        },
         {
           "station": "KR-1-P150",
           "arr": 68910,
@@ -9375,6 +10346,11 @@
           "station": "KR-1-P150",
           "arr": 77400,
           "dep": 77430
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 77610,
+          "dep": 77640
         }
       ]
     },
@@ -9384,6 +10360,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 70290,
+          "dep": 70320
+        },
         {
           "station": "KR-1-P150",
           "arr": 70500,
@@ -9471,6 +10452,11 @@
           "station": "KR-1-P150",
           "arr": 78660,
           "dep": 78690
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 78870,
+          "dep": 78900
         }
       ]
     },
@@ -9480,6 +10466,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 71850,
+          "dep": 71880
+        },
         {
           "station": "KR-1-P150",
           "arr": 72060,
@@ -9567,6 +10558,11 @@
           "station": "KR-1-P150",
           "arr": 79830,
           "dep": 79860
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 80040,
+          "dep": 80070
         }
       ]
     },
@@ -9576,6 +10572,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 73170,
+          "dep": 73200
+        },
         {
           "station": "KR-1-P150",
           "arr": 73380,
@@ -9663,6 +10664,11 @@
           "station": "KR-1-P150",
           "arr": 81180,
           "dep": 81210
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 81390,
+          "dep": 81420
         }
       ]
     },
@@ -9672,6 +10678,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 74190,
+          "dep": 74220
+        },
         {
           "station": "KR-1-P150",
           "arr": 74400,
@@ -9720,6 +10731,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 74970,
+          "dep": 75000
+        },
         {
           "station": "KR-1-P150",
           "arr": 75180,
@@ -9807,6 +10823,11 @@
           "station": "KR-1-P150",
           "arr": 83610,
           "dep": 83640
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 83820,
+          "dep": 83850
         }
       ]
     },
@@ -9816,6 +10837,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 76350,
+          "dep": 76380
+        },
         {
           "station": "KR-1-P150",
           "arr": 76560,
@@ -9903,6 +10929,11 @@
           "station": "KR-1-P150",
           "arr": 84750,
           "dep": 84780
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 84960,
+          "dep": 84990
         }
       ]
     },
@@ -9912,6 +10943,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 77670,
+          "dep": 77700
+        },
         {
           "station": "KR-1-P150",
           "arr": 77880,
@@ -9999,6 +11035,11 @@
           "station": "KR-1-P150",
           "arr": 85920,
           "dep": 85950
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 86130,
+          "dep": 86190
         }
       ]
     },
@@ -10008,6 +11049,11 @@
       "destination": "신창",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 78840,
+          "dep": 78870
+        },
         {
           "station": "KR-1-P150",
           "arr": 79050,
@@ -10057,6 +11103,11 @@
       "express": false,
       "stops": [
         {
+          "station": "KR-1-P149",
+          "arr": 79860,
+          "dep": 79890
+        },
+        {
           "station": "KR-1-P150",
           "arr": 80070,
           "dep": 80100
@@ -10104,6 +11155,11 @@
       "destination": "천안",
       "express": false,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 81540,
+          "dep": 81570
+        },
         {
           "station": "KR-1-P150",
           "arr": 81750,
@@ -10153,6 +11209,11 @@
       "express": false,
       "stops": [
         {
+          "station": "KR-1-P149",
+          "arr": 83070,
+          "dep": 83100
+        },
+        {
           "station": "KR-1-P150",
           "arr": 83280,
           "dep": 83310
@@ -10201,6 +11262,11 @@
       "express": true,
       "stops": [
         {
+          "station": "KR-1-P149",
+          "arr": 28980,
+          "dep": 29010
+        },
+        {
           "station": "KR-1-0153",
           "arr": 29520,
           "dep": 29550
@@ -10237,6 +11303,11 @@
           "station": "KR-1-0153",
           "arr": 30090,
           "dep": 30120
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 30630,
+          "dep": 30660
         }
       ]
     },
@@ -10246,6 +11317,11 @@
       "destination": "신창",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 30900,
+          "dep": 30930
+        },
         {
           "station": "KR-1-0153",
           "arr": 31440,
@@ -10283,6 +11359,11 @@
           "station": "KR-1-0153",
           "arr": 32940,
           "dep": 32970
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 33480,
+          "dep": 33510
         }
       ]
     },
@@ -10292,6 +11373,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 32580,
+          "dep": 32610
+        },
         {
           "station": "KR-1-0153",
           "arr": 33120,
@@ -10329,6 +11415,11 @@
           "station": "KR-1-0153",
           "arr": 36330,
           "dep": 36360
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 36870,
+          "dep": 36900
         }
       ]
     },
@@ -10338,6 +11429,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 33960,
+          "dep": 33990
+        },
         {
           "station": "KR-1-0153",
           "arr": 34500,
@@ -10375,6 +11471,11 @@
           "station": "KR-1-0153",
           "arr": 37920,
           "dep": 37950
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 38460,
+          "dep": 38490
         }
       ]
     },
@@ -10384,6 +11485,11 @@
       "destination": "신창",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 36960,
+          "dep": 36990
+        },
         {
           "station": "KR-1-0153",
           "arr": 37500,
@@ -10421,6 +11527,11 @@
           "station": "KR-1-0153",
           "arr": 39390,
           "dep": 39420
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 39930,
+          "dep": 39960
         }
       ]
     },
@@ -10430,6 +11541,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 41310,
+          "dep": 41340
+        },
         {
           "station": "KR-1-0153",
           "arr": 41850,
@@ -10467,6 +11583,11 @@
           "station": "KR-1-0153",
           "arr": 41580,
           "dep": 41610
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 42120,
+          "dep": 42150
         }
       ]
     },
@@ -10476,6 +11597,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 42960,
+          "dep": 42990
+        },
         {
           "station": "KR-1-0153",
           "arr": 43500,
@@ -10513,6 +11639,11 @@
           "station": "KR-1-0153",
           "arr": 43440,
           "dep": 43470
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 43980,
+          "dep": 44010
         }
       ]
     },
@@ -10522,6 +11653,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 44460,
+          "dep": 44490
+        },
         {
           "station": "KR-1-0153",
           "arr": 45000,
@@ -10559,6 +11695,11 @@
           "station": "KR-1-0153",
           "arr": 44790,
           "dep": 44820
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 45330,
+          "dep": 45360
         }
       ]
     },
@@ -10568,6 +11709,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 46020,
+          "dep": 46050
+        },
         {
           "station": "KR-1-0153",
           "arr": 46560,
@@ -10605,6 +11751,11 @@
           "station": "KR-1-0153",
           "arr": 46860,
           "dep": 46890
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 47400,
+          "dep": 47430
         }
       ]
     },
@@ -10614,6 +11765,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 47820,
+          "dep": 47850
+        },
         {
           "station": "KR-1-0153",
           "arr": 48360,
@@ -10651,6 +11807,11 @@
           "station": "KR-1-0153",
           "arr": 50460,
           "dep": 50490
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 51000,
+          "dep": 51030
         }
       ]
     },
@@ -10660,6 +11821,11 @@
       "destination": "신창",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 50160,
+          "dep": 50190
+        },
         {
           "station": "KR-1-0153",
           "arr": 50700,
@@ -10697,6 +11863,11 @@
           "station": "KR-1-0153",
           "arr": 52440,
           "dep": 52470
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 52980,
+          "dep": 53010
         }
       ]
     },
@@ -10706,6 +11877,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 51600,
+          "dep": 51630
+        },
         {
           "station": "KR-1-0153",
           "arr": 52140,
@@ -10743,6 +11919,11 @@
           "station": "KR-1-0153",
           "arr": 53820,
           "dep": 53850
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 54360,
+          "dep": 54390
         }
       ]
     },
@@ -10752,6 +11933,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 53550,
+          "dep": 53580
+        },
         {
           "station": "KR-1-0153",
           "arr": 54090,
@@ -10789,6 +11975,11 @@
           "station": "KR-1-0153",
           "arr": 55800,
           "dep": 55830
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 56340,
+          "dep": 56370
         }
       ]
     },
@@ -10798,6 +11989,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 55320,
+          "dep": 55380
+        },
         {
           "station": "KR-1-0153",
           "arr": 55890,
@@ -10835,6 +12031,11 @@
           "station": "KR-1-0153",
           "arr": 57120,
           "dep": 57150
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 57660,
+          "dep": 57690
         }
       ]
     },
@@ -10844,6 +12045,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 57480,
+          "dep": 57510
+        },
         {
           "station": "KR-1-0153",
           "arr": 58020,
@@ -10881,6 +12087,11 @@
           "station": "KR-1-0153",
           "arr": 59400,
           "dep": 59430
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 59940,
+          "dep": 59970
         }
       ]
     },
@@ -10890,6 +12101,11 @@
       "destination": "신창",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 58650,
+          "dep": 58710
+        },
         {
           "station": "KR-1-0153",
           "arr": 59220,
@@ -10927,6 +12143,11 @@
           "station": "KR-1-0153",
           "arr": 61170,
           "dep": 61200
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 61710,
+          "dep": 61740
         }
       ]
     },
@@ -10936,6 +12157,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 60630,
+          "dep": 60690
+        },
         {
           "station": "KR-1-0153",
           "arr": 61200,
@@ -10973,6 +12199,11 @@
           "station": "KR-1-0153",
           "arr": 62670,
           "dep": 62700
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 63210,
+          "dep": 63240
         }
       ]
     },
@@ -10982,6 +12213,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 62280,
+          "dep": 62340
+        },
         {
           "station": "KR-1-0153",
           "arr": 62850,
@@ -11019,6 +12255,11 @@
           "station": "KR-1-0153",
           "arr": 64980,
           "dep": 65010
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 65520,
+          "dep": 65550
         }
       ]
     },
@@ -11028,6 +12269,11 @@
       "destination": "신창",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 64620,
+          "dep": 64650
+        },
         {
           "station": "KR-1-0153",
           "arr": 65160,
@@ -11065,6 +12311,11 @@
           "station": "KR-1-0153",
           "arr": 66780,
           "dep": 66810
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 67320,
+          "dep": 67350
         }
       ]
     },
@@ -11088,6 +12339,11 @@
           "station": "KR-1-0153",
           "arr": 70260,
           "dep": 70290
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 70800,
+          "dep": 70830
         }
       ]
     },
@@ -11111,6 +12367,11 @@
           "station": "KR-1-0153",
           "arr": 74040,
           "dep": 74070
+        },
+        {
+          "station": "KR-1-P149",
+          "arr": 74580,
+          "dep": 74610
         }
       ]
     },
@@ -11120,6 +12381,11 @@
       "destination": "신창",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 69300,
+          "dep": 69330
+        },
         {
           "station": "KR-1-0153",
           "arr": 69840,
@@ -11143,6 +12409,11 @@
       "destination": "천안",
       "express": true,
       "stops": [
+        {
+          "station": "KR-1-P149",
+          "arr": 71220,
+          "dep": 71250
+        },
         {
           "station": "KR-1-0153",
           "arr": 71760,

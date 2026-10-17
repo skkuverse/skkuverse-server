@@ -6,7 +6,8 @@
  * the Seoul Saturday table on a Saturday, both holiday tables on a public
  * holiday that falls on a Wednesday, Friday's weekday table for a train past
  * midnight), with its trains at instants of that day and its line's travel
- * order; one station's schedule is found by its station id, and an unserved
+ * order, which continues each direction's upstream stations with its watched
+ * ones; one station's schedule is found by its station id, and an unserved
  * id finds none; and the service window opens at 05:00 KST and closes at 01:10 after a
  * weekday and at 00:30 after a Saturday or a holiday. The day-type, window and
  * instant rules themselves are subway-timetable.rules.spec.ts's.
@@ -69,8 +70,28 @@ describe("SubwayTimetableService.listStationSchedules", () => {
     const [sungkyunkwan, hyehwa] = await service.listStationSchedules(new Date("2026-10-16T03:00:00Z"));
 
     // Assert
-    expect(sungkyunkwan?.lineRoutes.down.slice(0, 4)).toEqual(["KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153"]);
+    expect(sungkyunkwan?.lineRoutes.down.slice(0, 5)).toEqual(["KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153"]);
     expect(hyehwa?.lineRoutes.up.slice(0, 4)).toEqual(["S1-4-423", "S1-4-422", "S1-4-421", "S1-4-420"]);
+  });
+
+  it("continues each station's upstream stations with its watched stations on its direction's route, nearest first", async () => {
+    // Arrange
+    const { service } = setup();
+
+    // Act
+    const schedules = await service.listStationSchedules(new Date("2026-10-16T03:00:00Z"));
+
+    // Assert
+    const watched = schedules.flatMap(({ station, lineRoutes }) =>
+      (["up", "down"] as const).map((direction) => {
+        const route = lineRoutes[direction];
+        const { upstreamStationIds, watchedStationIds } = station.directions[direction];
+        const beyond = route.indexOf(station.id) - upstreamStationIds.length;
+        return [watchedStationIds, route.slice(Math.max(0, beyond - watchedStationIds.length), beyond).reverse()];
+      }),
+    );
+    expect(watched.map(([declared]) => declared)).toEqual(watched.map(([, onRoute]) => onRoute));
+    expect(watched.flatMap(([declared]) => declared)).toEqual(["KR-1-P149"]);
   });
 
   it("lists each station's upstream stations as the three before it on its direction's route, nearest first, and its next station as the one after", async () => {

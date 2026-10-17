@@ -7,6 +7,7 @@ export type SubwayDirection = "up" | "down";
 export interface StationDirection {
   name: LocalizedName;
   upstreamStationIds: readonly string[];
+  watchedStationIds: readonly string[];
   nextStationId: string;
 }
 

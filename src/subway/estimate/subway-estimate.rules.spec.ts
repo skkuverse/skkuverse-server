@@ -10,7 +10,7 @@ import type { CountdownRow, SubwayDirection } from "../subway.types";
 import type { ScheduledTrain } from "../timetable/subway-timetable.types";
 import type { TrainHistory, TrainProgress } from "../tracking/subway-tracking.types";
 import { toDelaySec, toStationArrivals } from "./subway-estimate.rules";
-import type { EstimateInput } from "./subway-estimate.types";
+import type { EstimateInput, TrainArrival } from "./subway-estimate.types";
 
 const UIWANG = "KR-1-P152";
 const SUNGKYUNKWAN = "KR-1-0153";
@@ -42,7 +42,16 @@ function history(trainNo: string, latest: Omit<TrainProgress, "ordinal">, direct
 }
 
 function input(overrides: Partial<EstimateInput>): EstimateInput {
-  return { stationId: SUNGKYUNKWAN, direction: "down", trains: [], histories: new Map(), countdownRows: [], now: at("21:02:10"), ...overrides };
+  return {
+    stationId: SUNGKYUNKWAN,
+    direction: "down",
+    trains: [],
+    histories: new Map(),
+    countdownRows: [],
+    isTracked: false,
+    now: at("21:02:10"),
+    ...overrides,
+  };
 }
 
 const historiesOf = (...histories: TrainHistory[]) => new Map(histories.map((h) => [h.trainNo, h]));
@@ -604,5 +613,162 @@ describe("toStationArrivals, rejecting a published countdown", () => {
     expect(rejections).toEqual([
       { trainNo: "4555", stationId: HYEHWA, reason: "at_station", liveArrivalAt: at("10:56:25"), estimatedArrivalAt: at("10:54:56") },
     ]);
+  });
+});
+
+const GEUMJEONG = "KR-1-P149";
+
+/** Express 1935 on the 2026-10-17 holiday table: Geumjeong 16:17:30–16:18:30, Sungkyunkwan Univ. 16:27:00–16:28:00, Suwon. */
+const T1935: ScheduledTrain = {
+  ...trainWithStops("1935", "down", [
+    [GEUMJEONG, "16:17:30", "16:18:30"],
+    [SUNGKYUNKWAN, "16:27:00", "16:28:00"],
+    ["KR-1-P155", "16:32:30", "16:33:30"],
+  ]),
+  express: true,
+  destination: "신창",
+};
+
+/** Express 1937, the next one: Geumjeong 16:50:30–16:51:30, Sungkyunkwan Univ. 17:00:00–17:01:00. */
+const T1937: ScheduledTrain = {
+  ...trainWithStops("1937", "down", [
+    [GEUMJEONG, "16:50:30", "16:51:30"],
+    [SUNGKYUNKWAN, "17:00:00", "17:01:00"],
+  ]),
+  express: true,
+  destination: "천안",
+};
+
+/** Local 0461, the train ahead of 1935: Uiwang 16:19:30–16:20:00, Sungkyunkwan Univ. 16:23:00–16:23:30, Hwaseo 16:26:00–16:26:30. */
+const T0461 = trainWithStops("0461", "down", [
+  [UIWANG, "16:19:30", "16:20:00"],
+  [SUNGKYUNKWAN, "16:23:00", "16:23:30"],
+  [HWASEO, "16:26:00", "16:26:30"],
+]);
+
+/** Local 0463, scheduled at Sungkyunkwan Univ. after 1935: Uiwang 16:35:00–16:35:30, Sungkyunkwan Univ. 16:38:30–16:39:00. */
+const T0463 = trainWithStops("0463", "down", [
+  [UIWANG, "16:35:00", "16:35:30"],
+  [SUNGKYUNKWAN, "16:38:30", "16:39:00"],
+]);
+
+/** 0461 left Hwaseo 60 s late, so it lends 1935 a delay of 60 s. */
+const H0461 = history("0461", { stationId: HWASEO, state: "departed", at: at("16:27:30") });
+
+const listed1935 = (overrides: Partial<EstimateInput>): TrainArrival | undefined =>
+  toStationArrivals(input({ trains: [T0461, T1935], histories: historiesOf(H0461), isTracked: true, ...overrides })).arrivals.find(
+    (a) => a.trainNo === "1935",
+  );
+
+describe("toStationArrivals, for a tracked train not seen yet", () => {
+  // 2026-10-17: no source reported express 1935 before it approached Sungkyunkwan Univ. at 16:38:53, 12.5 min late; it had
+  // been dropped at 16:29, its scheduled departure plus 0461's 60 s, and its estimates were 633 to 766 s early.
+  it.each([
+    ["16:20:00", "16:28:00"],
+    ["16:29:00", "16:28:00"],
+    ["16:29:01", "16:37:31"],
+    ["16:35:00", "16:43:30"],
+  ])("serves unseen express 1935 at %s at %s: 0461's 60 s until it is overdue, then its 510 s run from 금정 away", (now, arrival) => {
+    // Act
+    const arrival1935 = listed1935({ now: at(now) });
+
+    // Assert
+    expect(arrival1935).toMatchObject({ arrivalAt: at(arrival), source: "estimated", position: null });
+  });
+
+  it("serves 1935 at its observed arrival once it is seen approaching 성균관대 at 16:38:53", () => {
+    // Arrange
+    const histories = historiesOf(H0461, history("1935", { stationId: SUNGKYUNKWAN, state: "approaching", at: at("16:38:53") }));
+
+    // Act
+    const arrival1935 = listed1935({ histories, now: at("16:39:00") });
+
+    // Assert
+    expect(arrival1935).toMatchObject({ arrivalAt: at("16:39:23"), source: "estimated", position: { stationId: SUNGKYUNKWAN, state: "approaching" } });
+  });
+
+  it.each([
+    ["17:12:59", true],
+    ["17:13:00", true],
+    ["17:13:01", false],
+  ])("lists 1935 at %s only up to its scheduled departure plus the largest delay, 2,700 s", (now, isListed) => {
+    // Act
+    const arrival1935 = listed1935({ now: at(now) });
+
+    // Assert
+    expect(arrival1935 !== undefined).toBe(isListed);
+  });
+
+  it("drops 1935 once express 1937, scheduled after it on its track, is seen at 성균관대", () => {
+    // Arrange
+    const histories = historiesOf(H0461, history("1937", { stationId: SUNGKYUNKWAN, state: "arrived", at: at("17:00:10") }));
+
+    // Act
+    const [unseen, overtaken] = [historiesOf(H0461), histories].map((h) => listed1935({ trains: [T0461, T1935, T1937], histories: h, now: at("17:00:20") }));
+
+    // Assert
+    expect([unseen !== undefined, overtaken]).toEqual([true, undefined]);
+  });
+
+  it("keeps 1935 listed when local 0463, scheduled after it, reaches 성균관대 first, as a local may overtake a late express", () => {
+    // Arrange
+    const histories = historiesOf(H0461, history("0463", { stationId: SUNGKYUNKWAN, state: "arrived", at: at("16:38:40") }));
+
+    // Act
+    const arrival1935 = listed1935({ trains: [T0461, T1935, T0463], histories, now: at("16:38:45") });
+
+    // Assert
+    expect(arrival1935?.arrivalAt).toEqual(at("16:47:15"));
+  });
+
+  it.each([
+    ["16:30:00", 1],
+    ["16:30:01", 0],
+  ])("drops a train starting at 성균관대, with no row stop before it, at its scheduled departure: at %s it lists %d", (now, count) => {
+    // Arrange
+    const starting = trainWithStops("0418", "down", [
+      [SUNGKYUNKWAN, null, "16:30:00"],
+      [HWASEO, "16:32:30", "16:33:00"],
+    ]);
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ trains: [starting], isTracked: true, now: at(now) }));
+
+    // Assert
+    expect(arrivals).toHaveLength(count);
+  });
+});
+
+describe("toStationArrivals, for a tracked train seen at or past the station", () => {
+  it("leaves out 0493, seen arrived at 화서 180 s before it is due there, though that delay is out of range", () => {
+    // Arrange
+    const histories = historiesOf(history("0493", { stationId: HWASEO, state: "arrived", at: at("21:04:30") }));
+
+    // Act
+    const { arrivals } = toStationArrivals(input({ trains: [T0493], histories, isTracked: true, now: at("21:04:40") }));
+
+    // Assert
+    expect(arrivals).toEqual([]);
+  });
+});
+
+describe("toStationArrivals, from the timetable alone", () => {
+  it.each([
+    ["16:29:00", true],
+    ["16:29:01", false],
+  ])("drops unseen 1935 at its scheduled departure plus 0461's 60 s, as before it was tracked: at %s listed %s", (now, isListed) => {
+    // Act
+    const arrival1935 = listed1935({ isTracked: false, now: at(now) });
+
+    // Assert
+    expect(arrival1935 !== undefined).toBe(isListed);
+  });
+
+  it("serves unseen 1935 at its scheduled arrival plus 0461's 60 s up to its departure plus that delay", () => {
+    // Act
+    const arrival1935 = listed1935({ isTracked: false, now: at("16:29:00") });
+
+    // Assert
+    expect(arrival1935).toMatchObject({ arrivalAt: at("16:28:00"), source: "estimated", position: null });
   });
 });
