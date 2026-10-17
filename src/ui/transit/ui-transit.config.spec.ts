@@ -7,6 +7,7 @@
  * start, and the error names the path and the id at fault. The committed
  * transit-layout.json loads against the real bus groups and stations.
  */
+import { seededBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { BusConfigService } from "../../bus/config/bus-config.service";
 import { BusStopsService } from "../../bus/stops/bus-stops.service";
 import { MiniappsService } from "../../miniapps/miniapps.service";
@@ -100,10 +101,10 @@ describe("loadTransitLayout", () => {
 });
 
 describe("committed transit-layout.json", () => {
-  it("loads against the real bus groups, stations and registry, in the launch layout", () => {
+  it("loads against the real bus groups, stations and registry, in the launch layout", async () => {
     // Arrange
     const real: TransitLayoutReferences = {
-      busGroupIds: new BusConfigService(new BusStopsService()).getBusGroups("ko").map((group) => group.id),
+      busGroupIds: new BusConfigService(new BusStopsService(), await seededBusRegistryService()).listGroupIds(),
       stationIds: new SubwayStationsService().listStations().map((station) => station.id),
       registry: new MiniappsService(),
     };

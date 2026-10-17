@@ -183,6 +183,9 @@
                         "url"
                       ]
                     }
+                  },
+                  "stationsVersion": {
+                    "type": "string"
                   }
                 },
                 "required": [

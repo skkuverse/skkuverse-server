@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import type { SupportedLang } from "../../infra/types";
-import type { JongroRoute, JongroStation, TransferLine } from "../bus.types";
+import type { TransferLine } from "../bus.types";
+import type { JongroStation, RegistryRoute } from "../registry/bus-registry.types";
 import type { ResolvedStops } from "../stops/bus-stops.types";
 import type { busGroupVisibility } from "./bus-config.schema";
 
@@ -40,6 +41,6 @@ export interface GroupStops {
 export interface BusGroupSources {
   lang: SupportedLang;
   stops: GroupStops;
-  jongroRoutes: ReadonlyArray<JongroRoute>;
+  jongroRoutes: ReadonlyArray<RegistryRoute>;
   webviewOrigin: string;
 }

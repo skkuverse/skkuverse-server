@@ -9,7 +9,6 @@ import type {
   JongroArrivalBus,
   JongroArrivalDoc,
   JongroBusPositionDoc,
-  LegacyJongroArrivalDoc,
 } from "../../../src/bus/cache/bus-cache.document";
 
 export function hsscBusDoc(extra: Partial<HsscBusDoc> = {}): HsscBusDoc {
@@ -66,7 +65,7 @@ export function noArrivalBus(extra: Partial<JongroArrivalBus> = {}): JongroArriv
   return jongroArrivalBus({ traTime: 0, sectOrd: 0, arrmsg: "", plainNo: " ", vehId: "0", rerideDiv: 0, rerideNum: 0, ...extra });
 }
 
-export function legacyJongroArrivalDoc(extra: Partial<LegacyJongroArrivalDoc> = {}): LegacyJongroArrivalDoc {
+export function jongroArrivalDoc(extra: Partial<JongroArrivalDoc> = {}): JongroArrivalDoc {
   return {
     stationId: "100900220",
     sequence: "1",
@@ -75,13 +74,6 @@ export function legacyJongroArrivalDoc(extra: Partial<LegacyJongroArrivalDoc> = 
     eventDate: "2026-10-20 10:00:00.0",
     stationNumber: "01000",
     eta: "3분후[2번째 전]",
-    ...extra,
-  };
-}
-
-export function jongroArrivalDoc(extra: Partial<JongroArrivalDoc> = {}): JongroArrivalDoc {
-  return {
-    ...legacyJongroArrivalDoc(),
     buses: [jongroArrivalBus({ staOrd: 1, sectOrd: 0, arrmsg: "3분후[2번째 전]" }), noArrivalBus({ staOrd: 1 })],
     ...extra,
   };

@@ -11,6 +11,10 @@
 import fs from "fs";
 import path from "path";
 import type { SupportedLang } from "../../infra/types";
+import { FakeBusRegistryRepository } from "../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
+import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import type { BusRegistryRepository } from "../registry/bus-registry.repository";
+import { BusRegistryService } from "../registry/bus-registry.service";
 import { BusStopsService } from "../stops/bus-stops.service";
 import { BusConfigService } from "./bus-config.service";
 
@@ -18,25 +22,34 @@ const FIXTURE: Record<string, { json: string; etag: string }> = JSON.parse(
   fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/bus/fixtures/bus-config-v1-groups.json"), "utf8"),
 );
 
+let registryRepository: FakeBusRegistryRepository;
 let service: BusConfigService;
+const clock = { now: () => new Date("2026-10-17T12:00:00Z") };
 
-beforeEach(() => {
-  service = new BusConfigService(new BusStopsService());
+async function seededService(): Promise<BusConfigService> {
+  const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
+  await registry.onModuleInit();
+  return new BusConfigService(new BusStopsService(), registry);
+}
+
+beforeEach(async () => {
+  registryRepository = new FakeBusRegistryRepository();
+  service = await seededService();
 });
 
 describe("BusConfigService.getBusGroups", () => {
-  it("returns groups array with 7 items", () => {
+  it("returns groups array with 7 items", async () => {
     // Act
-    const groups = service.getBusGroups("ko");
+    const groups = (await service.getBusGroups("ko"));
 
     // Assert
     expect(Array.isArray(groups)).toBe(true);
     expect(groups).toHaveLength(7);
   });
 
-  it("each group has id, screenType, label, visibility, card, screen", () => {
+  it("each group has id, screenType, label, visibility, card, screen", async () => {
     // Act & Assert
-    for (const g of service.getBusGroups("ko")) {
+    for (const g of (await service.getBusGroups("ko"))) {
       expect(g).toHaveProperty("id");
       expect(g).toHaveProperty("screenType");
       expect(g).toHaveProperty("label");
@@ -46,10 +59,9 @@ describe("BusConfigService.getBusGroups", () => {
     }
   });
 
-  it("realtime groups have screen.dataEndpoint, stations, refreshInterval", () => {
+  it("realtime groups have screen.dataEndpoint, stations, refreshInterval", async () => {
     // Act
-    const realtime = service
-      .getBusGroups("ko")
+    const realtime = (await service.getBusGroups("ko"))
       .filter((g: any) => g.screenType === "realtime");
 
     // Assert
@@ -66,10 +78,9 @@ describe("BusConfigService.getBusGroups", () => {
     }
   });
 
-  it("schedule groups have services with endpoint, defaultServiceId, routeBadges", () => {
+  it("schedule groups have services with endpoint, defaultServiceId, routeBadges", async () => {
     // Act
-    const schedule = service
-      .getBusGroups("ko")
+    const schedule = (await service.getBusGroups("ko"))
       .filter((g: any) => g.screenType === "schedule");
 
     // Assert
@@ -88,22 +99,20 @@ describe("BusConfigService.getBusGroups", () => {
     }
   });
 
-  it("campus has no hero card: the ETA it showed is retired", () => {
+  it("campus has no hero card: the ETA it showed is retired", async () => {
     // A non-null heroCard makes the app request GET /bus/campus/eta, which no
     // longer exists. null is the shape the app renders as "no card".
     // Arrange
-    const campus: any = service
-      .getBusGroups("ko")
+    const campus: any = (await service.getBusGroups("ko"))
       .find((g: any) => g.id === "campus");
 
     // Act & Assert
     expect(campus.screen.heroCard).toBeNull();
   });
 
-  it("fasttrack has dateRange visibility with valid ISO dates", () => {
+  it("fasttrack has dateRange visibility with valid ISO dates", async () => {
     // Arrange
-    const fasttrack: any = service
-      .getBusGroups("ko")
+    const fasttrack: any = (await service.getBusGroups("ko"))
       .find((g: any) => g.id === "fasttrack");
 
     // Act & Assert
@@ -112,10 +121,9 @@ describe("BusConfigService.getBusGroups", () => {
     expect(fasttrack.visibility.until).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it("groups other than fasttrack and commute have visibility.type always", () => {
+  it("groups other than fasttrack and commute have visibility.type always", async () => {
     // Act
-    const nonFt = service
-      .getBusGroups("ko")
+    const nonFt = (await service.getBusGroups("ko"))
       .filter((g: any) => g.id !== "fasttrack" && g.id !== "commute");
 
     // Assert
@@ -124,54 +132,54 @@ describe("BusConfigService.getBusGroups", () => {
     }
   });
 
-  it("group order is hssc, campus, fasttrack, commute, jongro02, jongro07, jongro08", () => {
+  it("group order is hssc, campus, fasttrack, commute, jongro02, jongro07, jongro08", async () => {
     // Act
-    const ids = service.getBusGroups("ko").map((g: any) => g.id);
+    const ids = (await service.getBusGroups("ko")).map((g: any) => g.id);
 
     // Assert
     expect(ids).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
   });
 
-  it("English translations differ from Korean", () => {
+  it("English translations differ from Korean", async () => {
     // Arrange
-    const ko = service.getBusGroups("ko");
+    const ko = (await service.getBusGroups("ko"));
 
     // Act
-    const en = service.getBusGroups("en");
+    const en = (await service.getBusGroups("en"));
 
     // Assert
     expect((en[0] as any).label).not.toBe((ko[0] as any).label);
   });
 
-  it("default lang (omitted) equals 'ko'", () => {
+  it("default lang (omitted) equals 'ko'", async () => {
     // Act & Assert
-    expect((service.getBusGroups()[0] as any).label).toBe(
-      (service.getBusGroups("ko")[0] as any).label,
+    expect(((await service.getBusGroups())[0] as any).label).toBe(
+      ((await service.getBusGroups("ko"))[0] as any).label,
     );
   });
 });
 
 describe("BusConfigService.computeEtag", () => {
-  it("ETag matches md5 hex format", () => {
+  it("ETag matches md5 hex format", async () => {
     // Act & Assert
-    expect(service.computeEtag("ko")).toMatch(/^"[a-f0-9]{32}"$/);
+    expect((await service.computeEtag("ko"))).toMatch(/^"[a-f0-9]{32}"$/);
   });
 
-  it("same language returns same ETag", () => {
+  it("same language returns same ETag", async () => {
     // Act & Assert
-    expect(service.computeEtag("ko")).toBe(service.computeEtag("ko"));
+    expect((await service.computeEtag("ko"))).toBe((await service.computeEtag("ko")));
   });
 
-  it("different ETag per language", () => {
+  it("different ETag per language", async () => {
     // Act & Assert
-    expect(service.computeEtag("ko")).not.toBe(service.computeEtag("en"));
+    expect((await service.computeEtag("ko"))).not.toBe((await service.computeEtag("en")));
   });
 });
 
 describe("BusConfigService.getGroupById", () => {
-  it("returns group for known id", () => {
+  it("returns group for known id", async () => {
     // Arrange
-    const group: any = service.getGroupById("campus", "ko");
+    const group: any = (await service.getGroupById("campus", "ko"));
 
     // Act & Assert
     expect(group).not.toBeNull();
@@ -180,53 +188,53 @@ describe("BusConfigService.getGroupById", () => {
     expect(group).toHaveProperty("screen");
   });
 
-  it("returns null for unknown id", () => {
+  it("returns null for unknown id", async () => {
     // Act & Assert
-    expect(service.getGroupById("nonexistent", "ko")).toBeNull();
+    expect((await service.getGroupById("nonexistent", "ko"))).toBeNull();
   });
 });
 
 describe("BusConfigService.computeGroupEtag", () => {
-  it("returns md5 hex format for known id", () => {
+  it("returns md5 hex format for known id", async () => {
     // Act & Assert
-    expect(service.computeGroupEtag("campus", "ko")).toMatch(/^"[a-f0-9]{32}"$/);
+    expect((await service.computeGroupEtag("campus", "ko"))).toMatch(/^"[a-f0-9]{32}"$/);
   });
 
-  it("returns null for unknown id", () => {
+  it("returns null for unknown id", async () => {
     // Act & Assert
-    expect(service.computeGroupEtag("nonexistent", "ko")).toBeNull();
+    expect((await service.computeGroupEtag("nonexistent", "ko"))).toBeNull();
   });
 
-  it("same id+lang returns same etag", () => {
+  it("same id+lang returns same etag", async () => {
     // Act & Assert
-    expect(service.computeGroupEtag("hssc", "ko")).toBe(
-      service.computeGroupEtag("hssc", "ko"),
+    expect((await service.computeGroupEtag("hssc", "ko"))).toBe(
+      (await service.computeGroupEtag("hssc", "ko")),
     );
   });
 
-  it("different lang returns different etag", () => {
+  it("different lang returns different etag", async () => {
     // Act & Assert
-    expect(service.computeGroupEtag("hssc", "ko")).not.toBe(
-      service.computeGroupEtag("hssc", "en"),
+    expect((await service.computeGroupEtag("hssc", "ko"))).not.toBe(
+      (await service.computeGroupEtag("hssc", "en")),
     );
   });
 });
 
 describe("groups without v2 fields", () => {
-  it.each(Object.keys(FIXTURE).filter((key) => key !== "_about"))("%s matches the pre-v2 body and ETag byte for byte", (key) => {
+  it.each(Object.keys(FIXTURE).filter((key) => key !== "_about"))("%s matches the pre-v2 body and ETag byte for byte", async (key) => {
     // Arrange
     const [id, lang] = key.split(":") as [string, SupportedLang];
 
     // Act & Assert
-    expect(JSON.stringify(service.getGroupById(id, lang))).toBe(FIXTURE[key]!.json);
-    expect(service.computeGroupEtag(id, lang)).toBe(FIXTURE[key]!.etag);
+    expect(JSON.stringify((await service.getGroupById(id, lang)))).toBe(FIXTURE[key]!.json);
+    expect((await service.computeGroupEtag(id, lang))).toBe(FIXTURE[key]!.etag);
   });
 });
 
 describe("Retired fields", () => {
-  it.each(["ko", "en", "zh"] as const)("no served stop of any group has exit or walkPath (%s)", (lang) => {
+  it.each(["ko", "en", "zh"] as const)("no served stop of any group has exit or walkPath (%s)", async (lang) => {
     // Act
-    const stops = service.getBusGroups(lang).flatMap((g) => ((g.screen as { stops?: object[] }).stops ?? []) as object[]);
+    const stops = (await service.getBusGroups(lang)).flatMap((g) => ((g.screen as { stops?: object[] }).stops ?? []) as object[]);
 
     // Assert
     expect(stops.length).toBeGreaterThan(0);
@@ -234,5 +242,80 @@ describe("Retired fields", () => {
       expect(stop).not.toHaveProperty("exit");
       expect(stop).not.toHaveProperty("walkPath");
     }
+  });
+});
+
+// WHY: the stations come from the registry now (improve-jongro-realtime D10): each Jongro group carries its route's
+// stations version, appended last, and every other group keeps its JSON and ETag byte for byte.
+describe("BusConfigService and the registry", () => {
+  const BEFORE: Record<string, { json: string; etag: string }> = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/bus/fixtures/bus-config-before-registry.json"), "utf8"),
+  );
+
+  it.each(["hssc:ko", "campus:ko", "commute:ko", "hssc:en", "campus:en", "commute:en"])("keeps %s byte for byte", async (key) => {
+    // Arrange
+    const [id, lang] = key.split(":") as [string, SupportedLang];
+
+    // Act & Assert
+    expect(JSON.stringify(await service.getGroupById(id, lang))).toBe(BEFORE[key]!.json);
+    expect(await service.computeGroupEtag(id, lang)).toBe(BEFORE[key]!.etag);
+  });
+
+  it.each(["jongro02:ko", "jongro07:ko", "jongro08:en"])("serves %s as before, with only stationsVersion appended to its screen", async (key) => {
+    // Arrange
+    const [id, lang] = key.split(":") as [string, SupportedLang];
+    const routeId = id;
+
+    // Act
+    const group = (await service.getGroupById(id, lang)) as { screen: Record<string, unknown> };
+
+    // Assert
+    const { stationsVersion, ...screen } = group.screen;
+    expect(stationsVersion).toBe(registryRepository.routes.get(routeId)!.stationsVersion);
+    expect(Object.keys(group.screen).at(-1)).toBe("stationsVersion");
+    expect(JSON.stringify({ ...group, screen })).toBe(BEFORE[key]!.json);
+  });
+
+  it("lists a route's stored stations in their stored order", async () => {
+    // Arrange
+    const doc = registryRepository.routes.get("jongro07")!;
+    doc.stations = [doc.stations[1]!, doc.stations[0]!, ...doc.stations.slice(2)].map((s, index) => ({ ...s, sequence: index + 1 }));
+    doc.stationsVersion = "reordered";
+
+    // Act
+    const group = (await (await seededService()).getGroupById("jongro07", "ko")) as { screen: { stations: Array<{ name: string }> } };
+
+    // Assert
+    expect(group.screen.stations.slice(0, 2).map((s) => s.name)).toEqual(["학생회관", "성균관대운동장"]);
+  });
+
+  it("changes the config and group ETags when a stations version changes", async () => {
+    // Arrange
+    const [etag, groupEtag, hsscEtag] = [await service.computeEtag("ko"), await service.computeGroupEtag("jongro07", "ko"), await service.computeGroupEtag("hssc", "ko")];
+    registryRepository.routes.get("jongro07")!.stationsVersion = "synced";
+    const reread = await seededService();
+
+    // Act & Assert
+    expect(await reread.computeEtag("ko")).not.toBe(etag);
+    expect(await reread.computeGroupEtag("jongro07", "ko")).not.toBe(groupEtag);
+    expect(await reread.computeGroupEtag("hssc", "ko")).toBe(hsscEtag);
+  });
+
+  it("refuses the config with a 503 when a Jongro registry route is missing", async () => {
+    // Arrange
+    registryRepository.routes.delete("jongro08");
+    const missing = new BusConfigService(new BusStopsService(), new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock));
+
+    // Act & Assert
+    await expect(missing.getBusGroups("ko")).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE", httpStatus: 503 });
+    await expect(missing.computeEtag("ko")).rejects.toMatchObject({ httpStatus: 503 });
+  });
+
+  it("lists every group id without reading the registry", () => {
+    // Arrange
+    registryRepository.failWith = new Error("atlas down");
+
+    // Act & Assert
+    expect(service.listGroupIds()).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
   });
 });

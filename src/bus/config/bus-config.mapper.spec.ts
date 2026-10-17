@@ -4,13 +4,22 @@
  * order the app lists them, the Jongro routes in registry order, and the
  * refresh a schedule service offers when it serves live arrival estimates.
  */
-import { jongroRoutes } from "../bus.config";
+import { seededBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
+import { jongroRoutes as committedRoutes } from "../bus.config";
 import { SERVICE_CONFIG } from "../bus.constants";
+import type { RegistryRoute } from "../registry/bus-registry.types";
 import { HSSC_STATIONS } from "./bus-config.constants";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
-import { mapStations, toBusGroups } from "./bus-config.mapper";
+import { mapStations, toBusGroupIds, toBusGroups } from "./bus-config.mapper";
 
 const NO_STOPS = { sequences: {}, stops: [] };
+
+// WHY: the Jongro routes as the registry derives them from the seeded snapshot.
+let jongroRoutes: RegistryRoute[] = [];
+
+beforeAll(async () => {
+  jongroRoutes = await (await seededBusRegistryService()).listRoutes();
+});
 
 type ScheduleService = { serviceId: string; refresh?: unknown };
 
@@ -45,6 +54,13 @@ describe("mapStations", () => {
     // Act & Assert
     expect(mapStations([station])[0]!.subtitle).toBe("01881");
     expect(mapStations([{ ...station, stationNumber: null }])[0]!.subtitle).toBeNull();
+  });
+});
+
+describe("toBusGroupIds", () => {
+  it("lists the fixed groups, then every configured Jongro route, without their stations", () => {
+    // Act & Assert
+    expect(toBusGroupIds(committedRoutes)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
   });
 });
 
@@ -109,5 +125,18 @@ describe("toBusGroups refresh", () => {
     } finally {
       entry.eta = eta;
     }
+  });
+});
+
+describe("toBusGroups for a Jongro route", () => {
+  it("appends the route's stations version to its realtime screen, last", () => {
+    // Act
+    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+
+    // Assert
+    const screen = groups.find((g) => g.id === "jongro07")!.screen as Record<string, unknown>;
+    expect(screen.stationsVersion).toBe(jongroRoutes[1]!.stationsVersion);
+    expect(Object.keys(screen).at(-1)).toBe("stationsVersion");
+    expect(groups.find((g) => g.id === "hssc")!.screen).not.toHaveProperty("stationsVersion");
   });
 });

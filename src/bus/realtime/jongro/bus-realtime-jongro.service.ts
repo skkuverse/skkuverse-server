@@ -1,12 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../../../infra/clock";
 import logger from "../../../infra/logger";
-import type { CachedJongroArrivalDoc, JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
+import type { JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import { BusCacheService } from "../../cache/bus-cache.service";
 import type { JongroRoute } from "../../bus.types";
+import { BusRegistryService } from "../../registry/bus-registry.service";
+import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 import { toJongroBusPosition } from "./bus-realtime-jongro.mapper";
-import { toArrivalsKey, toDwell, toPositionsKey, toRegistryDrift } from "./bus-realtime-jongro.rules";
+import { toArrivalsKey, toDwell, toPositionsKey } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
 @Injectable()
@@ -14,21 +16,29 @@ export class BusRealtimeJongroService {
   private readonly arrivalsByCode = new Map<string, JongroArrivalDoc[]>();
   private readonly positionsByCode = new Map<string, JongroBusPositionDoc[]>();
   private readonly firstSeenAtByStationIdByCode = new Map<string, Map<string, string>>();
-  private readonly driftWarnedCodes = new Set<string>();
 
   constructor(
     private readonly client: BusRealtimeJongroClient,
     private readonly cache: BusCacheService,
+    private readonly registry: BusRegistryService,
     private readonly clock: Clock,
   ) {}
 
-  // WHY: rejects on a failed fetch or bus_cache write, so the poller registry reports the tick.
+  // WHY: rejects on a missing registry, a failed fetch, a bus_cache write or a sync write, so the poller registry
+  // reports the tick; the registry sync runs after both keys are written, so a held change never blocks them.
   async refresh(route: JongroRoute): Promise<void> {
-    await Promise.all([this.refreshArrivals(route), this.refreshPositions(route)]);
+    const registryRoute = await this.registry.routeOf(route.id);
+    const [arrivals, sightings] = await Promise.all([this.refreshArrivals(registryRoute), this.refreshPositions(registryRoute)]);
+    await this.registry.observe(registryRoute, arrivals, sightings.map((sighting) => sighting.turnaroundStationId));
+  }
+
+  // WHY: the realtime group places a route's rows by the stations this flow polls with.
+  registryRouteOf(routeId: string): Promise<RegistryRoute> {
+    return this.registry.routeOf(routeId);
   }
 
   // WHY: an api replica runs no poller: its memory is empty (undefined before a first tick) and bus_cache serves.
-  async listArrivals(code: string): Promise<CachedJongroArrivalDoc[] | undefined> {
+  async listArrivals(code: string): Promise<JongroArrivalDoc[] | undefined> {
     return (await this.cache.read(toArrivalsKey(code))) ?? this.arrivalsByCode.get(code);
   }
 
@@ -36,22 +46,23 @@ export class BusRealtimeJongroService {
     return (await this.cache.read(toPositionsKey(code))) ?? this.positionsByCode.get(code);
   }
 
-  private async refreshArrivals(route: JongroRoute): Promise<void> {
+  private async refreshArrivals(route: RegistryRoute): Promise<JongroArrivalDoc[]> {
     const arrivals = await this.client.fetchArrivals(route);
-    this.warnOnRegistryDrift(route, arrivals);
     this.arrivalsByCode.set(route.code, arrivals);
     await this.cache.write(toArrivalsKey(route.code), arrivals);
+    return arrivals;
   }
 
-  private async refreshPositions(route: JongroRoute): Promise<void> {
+  private async refreshPositions(route: RegistryRoute): Promise<JongroBusSighting[]> {
     const sightings = await this.client.fetchSightings(route);
     const now = this.clock.now();
     const positions = sightings.flatMap((sighting) => this.toPositions(route, sighting, now));
     this.positionsByCode.set(route.code, positions);
     await this.cache.write(toPositionsKey(route.code), positions);
+    return sightings;
   }
 
-  private toPositions(route: JongroRoute, sighting: JongroBusSighting, now: Date): JongroBusPositionDoc[] {
+  private toPositions(route: RegistryRoute, sighting: JongroBusSighting, now: Date): JongroBusPositionDoc[] {
     const station = route.mapping[sighting.stationId];
     if (!station) {
       logger.debug(
@@ -72,18 +83,5 @@ export class BusRealtimeJongroService {
     const created = new Map<string, string>();
     this.firstSeenAtByStationIdByCode.set(code, created);
     return created;
-  }
-
-  // WHY: once per route per process; a drifted registry puts buses and ETAs on the wrong stop. An empty list
-  // ("4", no result) names no stop, so it says nothing about the registry.
-  private warnOnRegistryDrift(route: JongroRoute, arrivals: readonly JongroArrivalDoc[]): void {
-    if (arrivals.length === 0 || this.driftWarnedCodes.has(route.code)) return;
-    const drift = toRegistryDrift(route, arrivals);
-    if (!drift) return;
-    this.driftWarnedCodes.add(route.code);
-    logger.warn(
-      { event: "bus.jongro.registry_drift", code: route.code, ...drift },
-      "jongro-routes.json has drifted from TOPIS — resync the registry",
-    );
   }
 }
