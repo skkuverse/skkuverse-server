@@ -1,0 +1,186 @@
+{
+  "_about": "Hand-assembled, since the route is not deployed yet: GET /meals/cafeterias?campus=nsc as the mapper builds it from the cafeteria rows of campusMap.do mode=sisulList campusCd=2 captured 2026-10-17 (__tests__/nest/building/fixtures/campus-map-sisullist-nsc.json) and the production `buildings` documents with those buildNos read 2026-10-17; all seven cafeterias, with the null spaceCd and location SKKU leaves on some",
+  "data": {
+    "cafeterias": [
+      {
+        "id": "20201040",
+        "campus": "nsc",
+        "name": {
+          "ko": "구시재식당",
+          "en": "Faculty Cafeteria(Gusijae)"
+        },
+        "building": {
+          "skkuId": 16,
+          "buildNo": "204",
+          "displayNo": "4",
+          "name": {
+            "ko": "복지회관",
+            "en": "Shop&Service Center"
+          }
+        },
+        "floor": {
+          "ko": "3층",
+          "en": "3F"
+        },
+        "spaceCd": null,
+        "location": {
+          "type": "Point",
+          "coordinates": [
+            126.972533,
+            37.29396
+          ]
+        }
+      },
+      {
+        "id": "20201104",
+        "campus": "nsc",
+        "name": {
+          "ko": "행단골식당",
+          "en": "Student Center Cafeteria(Hangdangol)"
+        },
+        "building": {
+          "skkuId": 15,
+          "buildNo": "203",
+          "displayNo": "3",
+          "name": {
+            "ko": "학생회관",
+            "en": "Student Center"
+          }
+        },
+        "floor": {
+          "ko": "1층",
+          "en": "1F"
+        },
+        "spaceCd": null,
+        "location": {
+          "type": "Point",
+          "coordinates": [
+            126.973723,
+            37.294366
+          ]
+        }
+      },
+      {
+        "id": "20201251",
+        "campus": "nsc",
+        "name": {
+          "ko": "해오름식당",
+          "en": "Engineering Building Cafeteria"
+        },
+        "building": {
+          "skkuId": 21,
+          "buildNo": "226",
+          "displayNo": "26",
+          "name": {
+            "ko": "제2공학관26동",
+            "en": "Engineering 2 (26)"
+          }
+        },
+        "floor": {
+          "ko": "지하1층",
+          "en": "B1"
+        },
+        "spaceCd": "26B03",
+        "location": null
+      },
+      {
+        "id": "20201252",
+        "campus": "nsc",
+        "name": {
+          "ko": "기숙사신관 식당",
+          "en": "Dormitory Shin-Kwan Cafeteria"
+        },
+        "building": {
+          "skkuId": 38,
+          "buildNo": "298",
+          "displayNo": "98",
+          "name": {
+            "ko": "기숙사신관",
+            "en": "Dormitory Shin-gwan"
+          }
+        },
+        "floor": {
+          "ko": "지하1층",
+          "en": "B1"
+        },
+        "spaceCd": "298B1062",
+        "location": null
+      },
+      {
+        "id": "20201253",
+        "campus": "nsc",
+        "name": {
+          "ko": "기숙사의관 식당",
+          "en": "Dormitory Ui-Kwan Cafeteria"
+        },
+        "building": {
+          "skkuId": 35,
+          "buildNo": "292",
+          "displayNo": "92",
+          "name": {
+            "ko": "기숙사의관",
+            "en": "Dormitory Ui-gwan"
+          }
+        },
+        "floor": {
+          "ko": "1층",
+          "en": "1F"
+        },
+        "spaceCd": "92125",
+        "location": null
+      },
+      {
+        "id": "20201254",
+        "campus": "nsc",
+        "name": {
+          "ko": "기숙사지관 식당",
+          "en": "Cafeteria"
+        },
+        "building": {
+          "skkuId": 37,
+          "buildNo": "295",
+          "displayNo": "95",
+          "name": {
+            "ko": "기숙사지관",
+            "en": "Dormitory Ji-gwan"
+          }
+        },
+        "floor": {
+          "ko": "지하1층",
+          "en": "B1"
+        },
+        "spaceCd": "95B02",
+        "location": null
+      },
+      {
+        "id": "20201289",
+        "campus": "nsc",
+        "name": {
+          "ko": "THE S LOUNGE",
+          "en": "THE S LOUNGE"
+        },
+        "building": {
+          "skkuId": 87,
+          "buildNo": "237",
+          "displayNo": "37",
+          "name": {
+            "ko": "CNS센터",
+            "en": "CNS Center"
+          }
+        },
+        "floor": {
+          "ko": "7층",
+          "en": "7F"
+        },
+        "spaceCd": "37705",
+        "location": {
+          "type": "Point",
+          "coordinates": [
+            126.977975,
+            37.294558
+          ]
+        }
+      }
+    ]
+  }
+}

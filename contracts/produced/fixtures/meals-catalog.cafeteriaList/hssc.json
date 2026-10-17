@@ -1,0 +1,123 @@
+{
+  "_about": "Hand-assembled, since the route is not deployed yet: GET /meals/cafeterias?campus=hssc as the mapper builds it from the cafeteria rows of campusMap.do mode=sisulList campusCd=1 captured 2026-10-17 (__tests__/nest/building/fixtures/campus-map-sisullist-hssc.json) and the production `buildings` documents with those buildNos read 2026-10-17; all four cafeterias, every field present",
+  "data": {
+    "cafeterias": [
+      {
+        "id": "10201030",
+        "campus": "hssc",
+        "name": {
+          "ko": "패컬티식당",
+          "en": "Faculty Dining Hall"
+        },
+        "building": {
+          "skkuId": 2,
+          "buildNo": "101",
+          "displayNo": "1",
+          "name": {
+            "ko": "600주년기념관",
+            "en": "600th Anniversary Hall"
+          }
+        },
+        "floor": {
+          "ko": "6층",
+          "en": "6F"
+        },
+        "spaceCd": "10607A",
+        "location": {
+          "type": "Point",
+          "coordinates": [
+            126.994501,
+            37.587584
+          ]
+        }
+      },
+      {
+        "id": "10201031",
+        "campus": "hssc",
+        "name": {
+          "ko": "은행골식당",
+          "en": "Eunhaenggol Restaurant"
+        },
+        "building": {
+          "skkuId": 2,
+          "buildNo": "101",
+          "displayNo": "1",
+          "name": {
+            "ko": "600주년기념관",
+            "en": "600th Anniversary Hall"
+          }
+        },
+        "floor": {
+          "ko": "지하1층",
+          "en": "B1"
+        },
+        "spaceCd": "1B102",
+        "location": {
+          "type": "Point",
+          "coordinates": [
+            126.994565,
+            37.587398
+          ]
+        }
+      },
+      {
+        "id": "10201033",
+        "campus": "hssc",
+        "name": {
+          "ko": "금잔디식당",
+          "en": "Geumjandi Restaurant"
+        },
+        "building": {
+          "skkuId": 12,
+          "buildNo": "133",
+          "displayNo": "33",
+          "name": {
+            "ko": "경영관",
+            "en": "Business School"
+          }
+        },
+        "floor": {
+          "ko": "지하2층",
+          "en": "B2"
+        },
+        "spaceCd": "33B204",
+        "location": {
+          "type": "Point",
+          "coordinates": [
+            126.992719,
+            37.588515
+          ]
+        }
+      },
+      {
+        "id": "10201034",
+        "campus": "hssc",
+        "name": {
+          "ko": "법고을식당",
+          "en": "Beopgoeul Restaurant"
+        },
+        "building": {
+          "skkuId": 3,
+          "buildNo": "102",
+          "displayNo": "2",
+          "name": {
+            "ko": "법학관",
+            "en": "Law School"
+          }
+        },
+        "floor": {
+          "ko": "지하2층",
+          "en": "B2"
+        },
+        "spaceCd": "2B205",
+        "location": {
+          "type": "Point",
+          "coordinates": [
+            126.990749,
+            37.587355
+          ]
+        }
+      }
+    ]
+  }
+}

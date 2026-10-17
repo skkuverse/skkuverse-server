@@ -9,6 +9,7 @@ import { BusCacheModule } from "./bus/cache/bus-cache.module";
 import { BusRealtimeModule } from "./bus/realtime/bus-realtime.module";
 import { BusRealtimeHsscModule } from "./bus/realtime/hssc/bus-realtime-hssc.module";
 import { BusRealtimeJongroModule } from "./bus/realtime/jongro/bus-realtime-jongro.module";
+import { BusRealtimeArrivalModule } from "./bus/realtime/arrival/bus-realtime-arrival.module";
 import { BusRealtimeGroupModule } from "./bus/realtime/group/bus-realtime-group.module";
 import { BusStationModule } from "./bus/station/bus-station.module";
 import { BusStopsModule } from "./bus/stops/bus-stops.module";
@@ -35,6 +36,9 @@ import { BuildingCafeteriaModule } from "./building/cafeteria/building-cafeteria
 import { BuildingCatalogModule } from "./building/catalog/building-catalog.module";
 import { BuildingSearchModule } from "./building/search/building-search.module";
 import { BuildingSyncModule } from "./building/sync/building-sync.module";
+import { BuildingCafeteriaListModule } from "./building/cafeteria-list/building-cafeteria-list.module";
+import { MealsModule } from "./meals/meals.module";
+import { MealsCatalogModule } from "./meals/catalog/meals-catalog.module";
 import { MapModule } from "./map/map.module";
 import { MapLayerSetModule } from "./map/layer-set/map-layer-set.module";
 import { MapConfigModule } from "./map/config/map-config.module";
@@ -77,6 +81,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusRealtimeModule,
     BusRealtimeHsscModule,
     BusRealtimeJongroModule,
+    BusRealtimeArrivalModule,
     BusRealtimeGroupModule,
     BusStationModule,
     BusStopsModule,
@@ -105,6 +110,9 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BuildingCatalogModule,
     BuildingSyncModule,
     BuildingCafeteriaModule,
+    BuildingCafeteriaListModule,
+    MealsModule,
+    MealsCatalogModule,
     MapModule,
     MapLayerSetModule,
     MapConfigModule,

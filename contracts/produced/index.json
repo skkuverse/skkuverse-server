@@ -194,6 +194,13 @@
       "GET map/overlays/event"
     ]
   },
+  "meals-catalog.cafeteriaList": {
+    "source": "src/meals/catalog/meals-catalog.wire.ts",
+    "export": "cafeteriaList",
+    "routes": [
+      "GET meals/cafeterias"
+    ]
+  },
   "miniapps-catalog.miniAppIndex": {
     "source": "src/miniapps/catalog/miniapps-catalog.wire.ts",
     "export": "miniAppIndex",
