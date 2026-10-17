@@ -9,5 +9,6 @@ import { MealsCatalogService } from "./meals-catalog.service";
   imports: [MealsModule, BuildingModule, BuildingCafeteriaListModule],
   controllers: [MealsCatalogController],
   providers: [MealsCatalogService],
+  exports: [MealsCatalogService],
 })
 export class MealsCatalogModule {}

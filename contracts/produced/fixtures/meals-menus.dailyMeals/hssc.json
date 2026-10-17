@@ -1,0 +1,587 @@
+{
+  "_about": "Hand-assembled, since the route is not deployed yet: GET /meals?campus=hssc&date=2026-10-14 as the app is coded against it (a local path, handed over 2026-10-17), which is what toDailyMeals builds from __tests__/nest/meals/fixtures/crawler-meal-docs-2026-10-14.json and the meals-catalog.cafeteriaList hssc fixture (meals-menus.routes.test.ts pins the two equal); every cafeteria of the campus, untrimmed",
+  "data": {
+    "date": "2026-10-14",
+    "campus": "hssc",
+    "cafeterias": [
+      {
+        "id": "10201030",
+        "name": {
+          "ko": "패컬티식당",
+          "en": "Faculty Dining Hall"
+        },
+        "building": {
+          "skkuId": 2,
+          "name": {
+            "en": "600th Anniversary Hall",
+            "ko": "600주년기념관"
+          }
+        },
+        "floor": {
+          "ko": "6층",
+          "en": "6F"
+        },
+        "meals": [
+          {
+            "code": "L",
+            "corners": [
+              {
+                "name": "패컬티",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "시래기된장국",
+                    "priceKrw": null,
+                    "kind": "set",
+                    "dishes": [
+                      "시래기된장국",
+                      "돼지고기김치볶음",
+                      "두부찜*양념장",
+                      "볶음우동",
+                      "호박나물",
+                      "탕평채",
+                      "무말랭이무침",
+                      "쑥갓겉절이",
+                      "흑미밥/현미밥",
+                      "김치2종",
+                      "그린샐러드",
+                      "빵/구이김",
+                      "커피/차/컵라면"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "시래기된장국\n돼지고기김치볶음\n두부찜*양념장\n볶음우동\n호박나물\n탕평채\n무말랭이무침\n쑥갓겉절이\n흑미밥/현미밥\n김치2종\n그린샐러드\n빵/구이김\n커피/차/컵라면"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "10201031",
+        "name": {
+          "ko": "은행골식당",
+          "en": "Eunhaenggol Restaurant"
+        },
+        "building": {
+          "skkuId": 2,
+          "name": {
+            "en": "600th Anniversary Hall",
+            "ko": "600주년기념관"
+          }
+        },
+        "floor": {
+          "ko": "지하1층",
+          "en": "B1"
+        },
+        "meals": [
+          {
+            "code": "B",
+            "corners": [
+              {
+                "name": "봄이온 소반",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 2,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "김치어묵탕&우동사리",
+                    "priceKrw": 5000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "김치어묵탕&우동사리"
+              }
+            ]
+          },
+          {
+            "code": "L",
+            "corners": [
+              {
+                "name": "봄이온 소반",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 1,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "열무비빔밥&계란후라이",
+                    "priceKrw": 5000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "부대찌개",
+                    "priceKrw": 6500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "은행골김치찌개",
+                    "priceKrw": 5000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "건강삼계탕",
+                    "priceKrw": 11000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "추어탕",
+                    "priceKrw": 8000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "열무비빔밥&계란후라이 5,000 / 부대찌개 6,500 / 은행골김치찌개 5,000 / 건강삼계탕 11,000 / 추어탕 8,000"
+              },
+              {
+                "name": "가츠엔",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "남산왕돈가스",
+                    "priceKrw": 8000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "치즈돈가스",
+                    "priceKrw": 6500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "장어덮밥",
+                    "priceKrw": 8500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "김치볶음밥*핫도그",
+                    "priceKrw": 6500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "남산왕돈가스 8,000 / 치즈돈가스 6,500 / 장어덮밥 8,500 / 김치볶음밥*핫도그 6,500"
+              },
+              {
+                "name": "싱푸차이나",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "유니자장면",
+                    "priceKrw": 4800,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "홍합짬뽕",
+                    "priceKrw": 6000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "모듬탕수",
+                    "priceKrw": 8000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "새우볶음밥&짜장소스",
+                    "priceKrw": 5500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "유니자장면 4,800 / 홍합짬뽕 6,000 / 모듬탕수 8,000 / 새우볶음밥&짜장소스 5,500"
+              }
+            ]
+          },
+          {
+            "code": "D",
+            "corners": [
+              {
+                "name": "봄이온 소반",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 1,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "열무비빔밥&계란후라이",
+                    "priceKrw": 5000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "부대찌개",
+                    "priceKrw": 6500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "은행골김치찌개",
+                    "priceKrw": 5000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "열무비빔밥&계란후라이 5,000 / 부대찌개 6,500 / 은행골김치찌개 5,000"
+              },
+              {
+                "name": "가츠엔",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 1,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "남산왕돈가스",
+                    "priceKrw": 8000,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "치즈돈가스",
+                    "priceKrw": 6500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "장어덮밥",
+                    "priceKrw": 8500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  },
+                  {
+                    "name": "김치볶음밥*핫도그",
+                    "priceKrw": 6500,
+                    "kind": "single",
+                    "dishes": [],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "남산왕돈가스 8,000 / 치즈돈가스 6,500 / 장어덮밥 8,500 / 김치볶음밥*핫도그 6,500"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "10201033",
+        "name": {
+          "ko": "금잔디식당",
+          "en": "Geumjandi Restaurant"
+        },
+        "building": {
+          "skkuId": 12,
+          "name": {
+            "en": "Business School",
+            "ko": "경영관"
+          }
+        },
+        "floor": {
+          "ko": "지하2층",
+          "en": "B2"
+        },
+        "meals": [
+          {
+            "code": "L",
+            "corners": [
+              {
+                "name": "CORNER1",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 7,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "철판제육삼합",
+                    "priceKrw": 5500,
+                    "kind": "set",
+                    "dishes": [
+                      "철판제육삼합",
+                      "쌀밥",
+                      "미역국",
+                      "양배추쌈&쌈장"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "철판제육삼합\n쌀밥\n미역국\n양배추쌈&쌈장"
+              },
+              {
+                "name": "CORNER2",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 3,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "치킨까스&떡볶이",
+                    "priceKrw": 6000,
+                    "kind": "set",
+                    "dishes": [
+                      "치킨까스&떡볶이",
+                      "쌀밥",
+                      "미역장국"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "치킨까스&떡볶이\n쌀밥\n미역장국"
+              },
+              {
+                "name": "CORNER3",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "칼집소세지하이라이스덮밥",
+                    "priceKrw": 6000,
+                    "kind": "set",
+                    "dishes": [
+                      "칼집소세지하이라이스덮밥",
+                      "미역국",
+                      "해쉬브라운&케찹"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "칼집소세지하이라이스덮밥\n미역국\n해쉬브라운&케찹"
+              },
+              {
+                "name": "금잔디소반",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 1,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "돈코츠라멘",
+                    "priceKrw": 8000,
+                    "kind": "set",
+                    "dishes": [
+                      "돈코츠라멘",
+                      "쌀밥",
+                      "야채고로케&케찹",
+                      "망고코코푸딩"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "돈코츠라멘\n쌀밥\n야채고로케&케찹\n망고코코푸딩"
+              }
+            ]
+          },
+          {
+            "code": "D",
+            "corners": [
+              {
+                "name": "CORNER1",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "철판제육삼합",
+                    "priceKrw": 5500,
+                    "kind": "set",
+                    "dishes": [
+                      "철판제육삼합",
+                      "쌀밥",
+                      "미역국",
+                      "양배추쌈&쌈장"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "철판제육삼합\n쌀밥\n미역국\n양배추쌈&쌈장"
+              },
+              {
+                "name": "CORNER2",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "깻잎소고기볶음밥",
+                    "priceKrw": 6000,
+                    "kind": "set",
+                    "dishes": [
+                      "깻잎소고기볶음밥",
+                      "미역국",
+                      "치킨너겟&머스타드"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "깻잎소고기볶음밥\n미역국\n치킨너겟&머스타드"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "10201034",
+        "name": {
+          "ko": "법고을식당",
+          "en": "Beopgoeul Restaurant"
+        },
+        "building": {
+          "skkuId": 3,
+          "name": {
+            "en": "Law School",
+            "ko": "법학관"
+          }
+        },
+        "floor": {
+          "ko": "지하2층",
+          "en": "B2"
+        },
+        "meals": [
+          {
+            "code": "L",
+            "corners": [
+              {
+                "name": "법고을",
+                "floor": null,
+                "isFixedMenu": false,
+                "likes": 0,
+                "imageUrl": null,
+                "items": [
+                  {
+                    "name": "돈까스&쫄면",
+                    "priceKrw": 6000,
+                    "kind": "set",
+                    "dishes": [
+                      "돈까스&쫄면",
+                      "우동국물",
+                      "쌀밥",
+                      "단무지",
+                      "무맛김치",
+                      "그린샐러드*드레싱2종"
+                    ],
+                    "quantity": null,
+                    "options": [],
+                    "tags": []
+                  }
+                ],
+                "needsReview": false,
+                "rawText": "돈까스&쫄면​\n\n우동국물​\n\n쌀밥​\n\n단무지​\n\n무맛김치​\n\n그린샐러드*드레싱2종​"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

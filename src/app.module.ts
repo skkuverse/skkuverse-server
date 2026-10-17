@@ -40,6 +40,7 @@ import { BuildingSyncModule } from "./building/sync/building-sync.module";
 import { BuildingCafeteriaListModule } from "./building/cafeteria-list/building-cafeteria-list.module";
 import { MealsModule } from "./meals/meals.module";
 import { MealsCatalogModule } from "./meals/catalog/meals-catalog.module";
+import { MealsMenusModule } from "./meals/menus/meals-menus.module";
 import { MapModule } from "./map/map.module";
 import { MapLayerSetModule } from "./map/layer-set/map-layer-set.module";
 import { MapConfigModule } from "./map/config/map-config.module";
@@ -115,6 +116,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BuildingCafeteriaListModule,
     MealsModule,
     MealsCatalogModule,
+    MealsMenusModule,
     MapModule,
     MapLayerSetModule,
     MapConfigModule,
