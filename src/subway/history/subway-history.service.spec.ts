@@ -30,6 +30,7 @@ import logger from "../../infra/logger";
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import { SubwayMatchingService } from "../matching/subway-matching.service";
+import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
 import type { SubwayProvider, TrainEvent } from "../subway.types";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
@@ -46,7 +47,7 @@ function setup() {
   const arrivals = new FakeSubwayRepository();
   const history = new FakeSubwayHistoryRepository();
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
-  const tracking = new SubwayTrackingService(asReal<SubwayRepository>(arrivals), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
+  const tracking = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(arrivals)), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   new SubwayMatchingService(tracking, clock).onModuleInit();
   const service = new SubwayHistoryService(asReal<SubwayHistoryRepository>(history), tracking, clock);
   service.onModuleInit();

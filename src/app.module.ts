@@ -63,6 +63,7 @@ import { SubwayCountdownModule } from "./subway/countdown/subway-countdown.modul
 import { SubwayEstimateModule } from "./subway/estimate/subway-estimate.module";
 import { SubwaySeoulApiModule } from "./subway/seoul-api/subway-seoul-api.module";
 import { SubwaySeoulTrainmapModule } from "./subway/seoul-trainmap/subway-seoul-trainmap.module";
+import { SubwayStateModule } from "./subway/state/subway-state.module";
 import { SubwayTrackingModule } from "./subway/tracking/subway-tracking.module";
 import { SubwayMatchingModule } from "./subway/matching/subway-matching.module";
 import { SubwaySeoulModule } from "./subway/seoul/subway-seoul.module";
@@ -140,6 +141,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     SubwayEstimateModule,
     SubwaySeoulApiModule,
     SubwaySeoulTrainmapModule,
+    SubwayStateModule,
     SubwayTrackingModule,
     SubwayMatchingModule,
     SubwaySeoulModule,

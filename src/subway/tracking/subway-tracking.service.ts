@@ -5,9 +5,9 @@ import logger from "../../infra/logger";
 import type { CountdownDivergence, CountdownRejection, TrainArrival } from "../estimate/subway-estimate.types";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import type { SubwayArrivalsDoc } from "../subway.document";
-import { SubwayRepository } from "../subway.repository";
 import { toSubwayLine } from "../subway.rules";
 import type { SubwayDirection, SubwayProvider, TrainEvent } from "../subway.types";
+import { SubwayStateService } from "../state/subway-state.service";
 import type { PlatformSchedule } from "../timetable/subway-timetable.types";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { MAX_TRAINS_PER_DIRECTION } from "./subway-tracking.constants";
@@ -30,7 +30,7 @@ export class SubwayTrackingService {
   private readonly rejectionThrottle: LogThrottle;
 
   constructor(
-    private readonly repository: SubwayRepository,
+    private readonly state: SubwayStateService,
     private readonly timetable: SubwayTimetableService,
     private readonly estimate: SubwayEstimateService,
     private readonly clock: Clock,
@@ -53,7 +53,7 @@ export class SubwayTrackingService {
       const arrivals = this.toPlatformDoc(schedule, { histories, countdownRows }, now);
       return { platformId: schedule.platform.id, lineCode: schedule.platform.line, serviceDate: schedule.serviceDate, events, arrivals };
     });
-    await this.repository.upsertArrivals(platforms.map((platform) => platform.arrivals));
+    await this.state.writeArrivals(platforms.map((platform) => platform.arrivals));
     for (const listener of this.tickListeners) await listener({ source: observations.source, trackedAt: now, platforms });
   }
 

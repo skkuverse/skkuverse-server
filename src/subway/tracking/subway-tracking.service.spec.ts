@@ -1,10 +1,12 @@
 /**
- * SubwayTrackingService over FakeSubwayRepository, the real timetable door
+ * SubwayTrackingService over FakeSubwayRepository (through the real
+ * SubwayStateService), the real timetable door
  * (on FakeHolidaysService and the committed weekday tables), the real estimate
  * door and a scripted Clock, fed one upstream's observations per tick as the
  * pollers hand them. What it guards: each tick replaces both stations'
  * documents with their next three trains per direction, at absolute instants
- * and the tick's time; a train late at `의왕` is estimated late at `성균관대`; a
+ * and the tick's time, and a later tick rewrites only the documents whose
+ * trains changed while its listeners get every platform; a train late at `의왕` is estimated late at `성균관대`; a
  * departure the train map shows ends a train the API still lists as arrived;
  * a positive countdown is served `live` until its source has been silent for
  * 90 s; a train missing for a minute keeps its delay and position, and still
@@ -39,6 +41,7 @@ import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import { SubwayMatchingService } from "../matching/subway-matching.service";
 import { SUBWAY_REGISTRY } from "../subway.config";
+import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
 import type { CountdownRow, SubwayPlatform, SubwayProvider, TrainEvent } from "../subway.types";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
@@ -57,7 +60,7 @@ function setup(atKst = at) {
   const repository = new FakeSubwayRepository();
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
   const clock = { now: () => now } as Clock;
-  const service = new SubwayTrackingService(asReal<SubwayRepository>(repository), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
+  const service = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(repository)), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   new SubwayMatchingService(service, clock).onModuleInit();
   const tickAt = (kst: string, provider: SubwayProvider): Promise<void> => {
     now = atKst(kst);
@@ -256,6 +259,25 @@ describe("SubwayTrackingService.track", () => {
     // Assert
     const trainNos = [...repository.docs.values()].flatMap((doc) => [...doc.directions.up, ...doc.directions.down].map((t) => t.trainNo));
     expect(trainNos).not.toContain("9999");
+  });
+
+  it("Quiet tick: hands its listeners every platform while it rewrites only the documents whose trains changed", async () => {
+    // With nothing observed, Sungkyunkwan Univ.'s overdue trains are awaited, served from now, so they move each
+    // tick; Jeongja's Shinbundang trains are all scheduled and hold still.
+    // Arrange
+    const { service, repository, tickAt } = setup();
+    const ticks: TrackedTick[] = [];
+    service.addTickListener(async (tick) => {
+      ticks.push(tick);
+    });
+    await tickAt("20:39:10", api());
+
+    // Act
+    await tickAt("20:39:30", trainMap());
+
+    // Assert
+    expect(ticks[1]?.platforms.map((platform) => platform.platformId)).toEqual([...repository.docs.keys()]);
+    expect([repository.docs.get(SUNGKYUNKWAN)?.generatedAt, repository.docs.get("DX-D1-4312")?.generatedAt]).toEqual([at("20:39:30"), at("20:39:10")]);
   });
 
   it("observes no upstream and writes nothing at 03:00 KST, outside the service window", async () => {
@@ -493,7 +515,7 @@ function setupShinbundang({ withMatcher = true } = {}) {
   const timetable = new FakeSubwayTimetableService(platforms, [SHINBUNDANG_WEEKDAY, SUIN_BUNDANG_WEEKDAY]);
   const clock = { now: () => now } as Clock;
   const estimate = new SubwayEstimateService(new SubwayCountdownService());
-  const service = new SubwayTrackingService(asReal<SubwayRepository>(repository), asReal<SubwayTimetableService>(timetable), estimate, clock);
+  const service = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(repository)), asReal<SubwayTimetableService>(timetable), estimate, clock);
   if (withMatcher) new SubwayMatchingService(service, clock).onModuleInit();
   const ticks: TrackedTick[] = [];
   service.addTickListener(async (tick) => {
