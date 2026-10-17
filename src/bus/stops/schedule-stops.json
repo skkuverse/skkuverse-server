@@ -719,11 +719,7 @@
           "timing": "scheduled"
         },
         {
-          "label": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
-          },
+          "stopId": "nsc-n-center",
           "note": {
             "ko": "자과캠 하차",
             "en": "Get off · NSC",
@@ -774,11 +770,7 @@
           "timing": "scheduled"
         },
         {
-          "label": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
-          },
+          "stopId": "nsc-n-center",
           "note": {
             "ko": "자과캠 하차",
             "en": "Get off · NSC",
@@ -829,11 +821,7 @@
           "timing": "scheduled"
         },
         {
-          "label": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
-          },
+          "stopId": "nsc-n-center",
           "note": {
             "ko": "자과캠 하차",
             "en": "Get off · NSC",
@@ -894,11 +882,7 @@
           "timing": "scheduled"
         },
         {
-          "label": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
-          },
+          "stopId": "nsc-n-center",
           "note": {
             "ko": "자과캠 하차",
             "en": "Get off · NSC",
@@ -959,11 +943,7 @@
           "timing": "scheduled"
         },
         {
-          "label": {
-            "ko": "자과캠",
-            "en": "NSC",
-            "zh": "自然校区"
-          },
+          "stopId": "nsc-n-center",
           "note": {
             "ko": "자과캠 하차",
             "en": "Get off · NSC",
