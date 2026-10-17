@@ -1008,11 +1008,24 @@ describe("자과캠 통학셔틀 resolution (built from scripts/data/commute-sch
       expect(day.notices.map((n) => n.text)).toEqual([
         "시범 운행 · 무료 · 킹고M QR 탑승",
         "등교: 강남역 → 양재역 → 자과캠\n하교: 자과캠 → 양재역 → 강남역",
+        "도착 시간은 실시간 교통 상황을 반영해요",
       ]);
     }
     repository.patterns = docsFor("commute-jeongja");
     const jeongja = await service.resolveWeek("commute-jeongja", "2026-11-02");
-    expect(jeongja!.days[0]!.notices).toHaveLength(1);
+    expect(jeongja!.days[0]!.notices.map((n) => n.text)).not.toContain("등교: 강남역 → 양재역 → 자과캠\n하교: 자과캠 → 양재역 → 강남역");
+  });
+
+  it("closes every operating day with the live-traffic ai notice, since arrivals are estimated", async () => {
+    // Act & Assert
+    for (const serviceId of ["commute-jeongja", "commute-jamsil", "commute-dogok", "commute-gangnam-yangjae", "commute-gwanggyo"]) {
+      repository.patterns = docsFor(serviceId);
+      const week = await service.resolveWeek(serviceId, "2026-11-02");
+      for (const day of week!.days.filter((d) => d.display === "schedule")) {
+        expect(day.notices.at(-1)).toEqual({ style: "ai", text: "도착 시간은 실시간 교통 상황을 반영해요", source: "service" });
+        expect(day.notices.filter((n) => n.style === "ai")).toHaveLength(1);
+      }
+    }
   });
 
   it("opens every operating day with the pilot notice", async () => {

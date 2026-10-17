@@ -11,6 +11,7 @@ import fs from "fs";
 import path from "path";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
+import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
 import { haversineM } from "../../../src/shared/distance.util";
 import type { Clock } from "../../../src/infra/clock";
 import type { SupportedLang } from "../../../src/infra/types";
@@ -186,12 +187,12 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   const stopById = (id: string, lang: "ko" | "en" | "zh" = "ko") => stops(lang).find((s) => s.id === id)!;
   const brief = (seq: SeqStop[]) => seq.map((st) => `${st.action}:${st.label}:${st.timing}`);
 
-  it("정자 boarding: the run boards at 정자역 3번 출구 and arrives at campus (estimated)", () => {
+  it("정자 boarding: the run boards at 정자역 3번 출구 and arrives at N센터 앞, the first campus drop point (estimated)", () => {
     // Act
     const seq = sequences("commute-jeongja");
 
     // Assert
-    expect(brief(seq.up!)).toEqual(["board:정자역 3번 출구:scheduled", "alight:자과캠:estimated"]);
+    expect(brief(seq.up!)).toEqual(["board:정자역 3번 출구:scheduled", "alight:N센터 앞:estimated"]);
     expect(stopById(seq.up![0]!.stopId!)).toMatchObject({ name: "정자역 3번 출구", detail: "파리바게뜨 앞" });
     expect(brief(seq.down!)).toEqual(["board:N센터 맞은편:scheduled", "alight:정자역 2번 출구 앞:estimated"]);
   });
@@ -204,7 +205,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     expect(brief(seq.up!)).toEqual([
       "board:강남역 5번 출구:scheduled",
       "board:양재역 2번 출구:scheduled",
-      "alight:자과캠:estimated",
+      "alight:N센터 앞:estimated",
     ]);
     expect(brief(seq.down!)).toEqual([
       "board:N센터 맞은편:scheduled",
@@ -213,12 +214,13 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     ]);
   });
 
-  it("Drop-off sequence: every 등교 run ends at campus, with the campus stops in order as detail", () => {
+  it("Drop-off sequence: every 등교 run ends at the N센터 catalog stop, the first drop point its estimate times, with the campus stops in order as detail", () => {
     // Act & Assert
     for (const s of services()) {
       const last = s.stopSequences.up!.at(-1)!;
-      expect(last).toMatchObject({ action: "alight", label: "자과캠", detail: CAMPUS_SEQUENCE });
+      expect(last).toMatchObject({ action: "alight", timing: "estimated", stopId: "nsc-n-center", label: "N센터 앞", detail: CAMPUS_SEQUENCE });
     }
+    expect(stopById("nsc-n-center").coords).toEqual({ lat: 37.292298, lng: 126.975057 });
   });
 
   it("하교 drop-off spots match the school's 2026-10-08 answer", () => {
@@ -355,7 +357,35 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     expect(sequences("commute-gangnam-yangjae", "en").up!.map((st) => st.label)).toEqual([
       "Gangnam Stn. Exit 5",
       "Yangjae Stn. Exit 2",
-      "NSC",
+      "N Center",
     ]);
+  });
+});
+
+describe("commute arrival estimates", () => {
+  const COMMUTE_IDS = ["commute-jeongja", "commute-jamsil", "commute-dogok", "commute-gangnam-yangjae", "commute-gwanggyo"];
+
+  it("opts every commute service's 등교 and 하교 runs in to estimates", () => {
+    // Act
+    const optIns = new BusStopsService().etaOptIns();
+
+    // Assert
+    for (const serviceId of COMMUTE_IDS) expect(optIns.get(serviceId)).toEqual(["up", "down"]);
+  });
+
+  it("keeps the pilot notice first, for the banner, and ends with the live-traffic ai notice", () => {
+    // Act
+    const notices = Object.fromEntries(COMMUTE_IDS.map((id) => [id, SERVICE_CONFIG[id]!.notices.map((n) => `${n.style}:${n.text}`)]));
+
+    // Assert
+    const pilot = "info:시범 운행 · 무료 · 킹고M QR 탑승";
+    const ai = "ai:도착 시간은 실시간 교통 상황을 반영해요";
+    expect(notices).toEqual({
+      "commute-jeongja": [pilot, ai],
+      "commute-jamsil": [pilot, ai],
+      "commute-dogok": [pilot, ai],
+      "commute-gangnam-yangjae": [pilot, "info:등교: 강남역 → 양재역 → 자과캠\n하교: 자과캠 → 양재역 → 강남역", ai],
+      "commute-gwanggyo": [pilot, ai],
+    });
   });
 });
