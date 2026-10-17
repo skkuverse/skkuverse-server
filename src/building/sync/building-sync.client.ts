@@ -4,7 +4,7 @@ import type { z } from "zod";
 import logger from "../../infra/logger";
 import { issuePaths, parseEach } from "../../shared/zod-list.util";
 import type { BuildingAttachment, BuildingRawDoc } from "../building.document";
-import { SKKU_CAMPUS_CODE } from "../building.constants";
+import { CAMPUS_MAP_REQUEST_TIMEOUT_MS, CAMPUS_MAP_URL, SKKU_CAMPUS_CODE } from "../building.constants";
 import { shouldRejectPayload, toApiId } from "./building-sync.rules";
 import {
   skkuBuildInfoAttachment,
@@ -19,8 +19,6 @@ import {
 import type { BuildInfo, ListedBuilding, ListedBuildingWithBuildNo, SyncedSpace } from "./building-sync.types";
 import type { BilingualText, Campus } from "../building.types";
 
-const CAMPUS_MAP_URL = "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
-const REQUEST_TIMEOUT_MS = 30000;
 const MAX_LOGGED_INVALID_ITEMS = 10;
 
 type PayloadSource = "buildList" | "buildInfo attachItem" | "buildInfo floorItem" | "spaceList";
@@ -38,7 +36,7 @@ export class BuildingSyncClient {
   async fetchBuildList(campus: Campus): Promise<ListedBuilding[]> {
     const { data } = await axios.get<unknown>(CAMPUS_MAP_URL, {
       params: { mode: "buildList", srSearchValue: "", campusCd: SKKU_CAMPUS_CODE[campus] },
-      timeout: REQUEST_TIMEOUT_MS,
+      timeout: CAMPUS_MAP_REQUEST_TIMEOUT_MS,
     });
     const { buildItems } = this.parseResponse(skkuBuildListResponse, data, `buildList (${campus})`);
     const valid = this.parseItems({ source: "buildList", scope: campus, items: buildItems, schema: skkuBuildListItem, keyField: "id" });
@@ -53,7 +51,7 @@ export class BuildingSyncClient {
     const { doc } = building;
     const { data } = await axios.get<unknown>(CAMPUS_MAP_URL, {
       params: { mode: "buildInfo", buildNo: doc.buildNo, id: building.apiId },
-      timeout: REQUEST_TIMEOUT_MS,
+      timeout: CAMPUS_MAP_REQUEST_TIMEOUT_MS,
     });
     const scope = `buildNo ${doc.buildNo}`;
     const { attachItem, floorItem } = this.parseResponse(skkuBuildInfoResponse, data, `buildInfo (${scope})`);
@@ -90,7 +88,7 @@ export class BuildingSyncClient {
   async fetchSpaceList(campus: Campus): Promise<SyncedSpace[]> {
     const { data } = await axios.get<unknown>(CAMPUS_MAP_URL, {
       params: { mode: "spaceList", srSearchValue: "", campusCd: SKKU_CAMPUS_CODE[campus] },
-      timeout: REQUEST_TIMEOUT_MS,
+      timeout: CAMPUS_MAP_REQUEST_TIMEOUT_MS,
     });
     const { items } = this.parseResponse(skkuSpaceListResponse, data, `spaceList (${campus})`);
     const valid = this.parseItems({ source: "spaceList", scope: campus, items, schema: skkuSpaceListItem, keyField: "spaceCd" });
