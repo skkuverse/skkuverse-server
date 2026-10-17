@@ -388,6 +388,105 @@ class SeoulTrips(unittest.TestCase):
             convert.seoul_trips([("S1-4-420", [row])], "up")
 
 
+def line_of(code):
+    return {line["line"]: line for line in convert.LINES}[code]
+
+
+class SeoulLines(unittest.TestCase):
+    @staticmethod
+    def row(number, arrive, leave, destination):
+        return {"TRAIN_NO": number, "ARRIVETIME": arrive, "LEFTTIME": leave, "SUBWAYENAME": destination, "EXPRESS_YN": "G"}
+
+    def test_drops_the_korail_suffix_of_a_line_3_train(self):
+        # Act
+        normalized = [convert.normalize_train_no(raw) for raw in ("3024K", "K3312", "3312")]
+
+        # Assert
+        self.assertEqual(normalized, ["3024", "3312", "3312"])
+
+    def test_writes_a_line_2_circle_trip_to_seongsu_as_its_circle_and_keeps_a_real_terminus(self):
+        # Arrange
+        up = [("S1-2-215", [self.row("2364", "18:25:00", "18:25:30", "성수")]), ("S1-2-216", [self.row("2364", "18:27:00", "18:27:30", "성수")])]
+        down = [("S1-2-217", [self.row("2365", "18:25:00", "18:25:30", "성수"), self.row("2389", "18:40:00", "18:40:30", "신도림")])]
+
+        # Act
+        trains = convert.seoul_trips(up, "up", line_of("2")) + convert.seoul_trips(down, "down", line_of("2"))
+
+        # Assert
+        self.assertEqual({t["trainNo"]: t["destination"] for t in trains}, {"2364": "내선순환", "2365": "외선순환", "2389": "신도림"})
+        self.assertEqual([s["station"] for s in trains[0]["stops"]], ["S1-2-215", "S1-2-216"])
+
+    def test_refuses_a_line_2_branch_trip(self):
+        for number in ("1675", "5683"):
+            with self.subTest(number=number):
+                # Arrange
+                rows = [("S1-2-216", [self.row(number, "18:27:00", "18:27:30", "성수")])]
+
+                # Act & Assert
+                with self.assertRaisesRegex(convert.ConvertError, "branch"):
+                    convert.seoul_trips(rows, "up", line_of("2"))
+
+    def test_keeps_seongsu_named_on_a_line_that_is_not_a_circle(self):
+        # Arrange
+        rows = [("S1-4-420", [self.row("4004", "05:41:00", "05:41:30", "성수")])]
+
+        # Act
+        trains = convert.seoul_trips(rows, "up")
+
+        # Assert
+        self.assertEqual(trains[0]["destination"], "성수")
+
+
+class SeoulArrivalFixes(unittest.TestCase):
+    @staticmethod
+    def row(arrive):
+        return {"STATION_CD": "0330", "TRAIN_NO": "3305", "ARRIVETIME": arrive, "LEFTTIME": "21:08:30", "SUBWAYENAME": "오금", "EXPRESS_YN": "G"}
+
+    def test_fills_the_one_saturday_arrival_the_api_leaves_out_mid_route(self):
+        # Act
+        fixed = convert.with_arrival_fixes([self.row("00:00:00")], "0330", "2", "2")
+
+        # Assert
+        self.assertEqual(fixed[0]["ARRIVETIME"], "21:08:00")
+
+    def test_leaves_every_other_row_as_the_api_wrote_it(self):
+        for args in (("0330", "3", "2"), ("0330", "2", "1"), ("0331", "2", "2")):
+            with self.subTest(args=args):
+                # Act
+                fixed = convert.with_arrival_fixes([self.row("00:00:00")], *args)
+
+                # Assert
+                self.assertEqual(fixed[0]["ARRIVETIME"], "00:00:00")
+
+
+class OneDirectionDestinations(unittest.TestCase):
+    @staticmethod
+    def train(number, direction, destination):
+        return {"trainNo": number, "direction": direction, "destination": destination, "express": False, "stops": []}
+
+    def test_refuses_a_destination_that_names_both_directions(self):
+        for code in ("4", "3", "8", "1"):
+            with self.subTest(line=code):
+                # Arrange
+                trains = [self.train("4004", "up", "성수"), self.train("4005", "down", "성수")]
+
+                # Act & Assert
+                with self.assertRaisesRegex(convert.ConvertError, "'성수'"):
+                    convert.check_one_direction(trains, "test", line_of(code))
+
+    def test_passes_line_2_circle_labels_and_its_declared_two_direction_terminus_only(self):
+        # Arrange
+        labelled = [self.train("2364", "up", "내선순환"), self.train("2365", "down", "외선순환"), self.train("2520", "up", "삼성"), self.train("2517", "down", "삼성")]
+        both = labelled + [self.train("2388", "up", "신도림"), self.train("2389", "down", "신도림")]
+
+        # Act
+        convert.check_one_direction(labelled, "test", line_of("2"))
+
+        # Assert
+        with self.assertRaisesRegex(convert.ConvertError, "'신도림'"):
+            convert.check_one_direction(both, "test", line_of("2"))
+
+
 class CommittedTimetables(unittest.TestCase):
     NAMES = ["korail-1-weekday.json", "korail-1-holiday.json", "seoul-4-weekday.json", "seoul-4-saturday.json", "seoul-4-holiday.json"]
 
@@ -435,6 +534,44 @@ class CommittedTimetables(unittest.TestCase):
                 # Assert
                 self.assertEqual(by_direction["up"] & by_direction["down"], set())
 
+
+class CommittedLineTables(unittest.TestCase):
+    DAY_TYPES = {"korail": ("weekday", "holiday"), "seoul": ("weekday", "saturday", "holiday"), "shinbundang": ("weekday", "holiday")}
+
+    def documents(self):
+        for line in convert.LINES:
+            for day_type in self.DAY_TYPES[line["source"]]:
+                name = "%s-%s.json" % (line["file"], day_type)
+                with open(os.path.join(TIMETABLE_DIR, name), encoding="utf-8") as handle:
+                    text = handle.read()
+                yield line, name, text, json.loads(text)
+
+    def test_each_line_file_is_rendered_as_the_script_writes_it_for_its_line(self):
+        for line, name, text, document in self.documents():
+            with self.subTest(name=name):
+                # Act
+                for train in document["trains"]:
+                    convert.validate_train(train, line["served"], name)
+
+                # Assert
+                self.assertEqual(convert.render(document), text)
+                self.assertEqual((document["operator"], document["line"], document["stations"]), (line["operator"], line["line"], convert.station_codes(line)))
+                self.assertEqual(document["trains"], convert.sort_trains(document["trains"]))
+
+    def test_each_line_file_names_each_destination_in_one_direction_except_the_line_s_declared_ones(self):
+        for line, name, _, document in self.documents():
+            with self.subTest(name=name):
+                # Act & Assert
+                convert.check_one_direction(document["trains"], name, line)
+
+    def test_every_train_is_even_up_and_odd_down(self):
+        for line, name, _, document in self.documents():
+            with self.subTest(name=name):
+                # Act
+                wrong = [t["trainNo"] for t in document["trains"] if int(t["trainNo"]) % 2 != (0 if t["direction"] == "up" else 1)]
+
+                # Assert
+                self.assertEqual(wrong, [])
 
 if __name__ == "__main__":
     unittest.main(verbosity=1)

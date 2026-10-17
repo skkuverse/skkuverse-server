@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Build the committed subway timetables in src/subway/timetable/ (OpenSpec add-subway-arrivals, design D6).
+"""Build the committed subway timetables in src/subway/timetable/ (OpenSpec add-subway-arrivals, design D6, and
+add-commute-station-subway, design D8).
 
 When to rerun:
 
     - Korail publishes a new 1호선 timetable (a 사업계획변경 신고, usually with a new semester or a
       timetable change notice on korail.com). Update KORAIL_WEEKDAY_URL, KORAIL_HOLIDAY_URL and
       KORAIL_REVISION below to the new files, then rerun.
-    - Seoul Metro changes the 4호선 timetable (a 열차운행시각 조정 notice). Rerun; the Seoul API
-      already serves the new table.
+    - Seoul Metro changes the 2/3/4/8호선 timetable (a 열차운행시각 조정 notice). Rerun; the Seoul API
+      already serves the new table. `--line 2` (repeatable) rebuilds one line only.
     - A served station or one of its upstream or watched stations changes (the line's entry in LINES:
       its stations and served platforms).
 
@@ -15,18 +16,18 @@ How to rerun (from the repository root):
 
     doppler run -p backend -c dev_personal -- python3 -I scripts/subway-timetable/convert.py
 
-The 4호선 part reads SEOUL_OPENAPI_GENERAL_KEY from the environment, and no other variable; Doppler
+The Seoul part reads SEOUL_OPENAPI_GENERAL_KEY from the environment, and no other variable; Doppler
 backend/dev_personal holds it, a config no service renders. `--only korail` needs no key. `--korail-weekday FILE` and `--korail-holiday FILE` read local
 copies of the two Korail URLs instead of downloading them. Review the diff, then commit the JSON.
 
 What it writes, per operator line and day type:
 
     korail-1-weekday.json, korail-1-holiday.json                      1호선, Korail xlsx
-    seoul-4-weekday.json, seoul-4-saturday.json, seoul-4-holiday.json   4호선, SearchSTNTimeTableByIDService
+    seoul-{2,3,4,8}-{weekday,saturday,holiday}.json                    2/3/4/8호선, SearchSTNTimeTableByIDService
 
-Each file lists the trains that stop at the served station (성균관대 KR-1-0153, 혜화 S1-4-420) with
-their stops among the covered stations (the served station and three on each side, and for 성균관대 also
-금정 KR-1-P149, the first stop north of it every down 급행 of the 경부 sheets makes), in travel order.
+Each file lists the trains that stop at one of its line's served platforms (LINES) with their stops among
+the covered stations (each served platform and three stations on each side, and for 성균관대 also 금정
+KR-1-P149, the first stop north of it every down 급행 of the 경부 sheets makes), in travel order.
 Times are seconds after 00:00 of the service day. A clock time before SERVICE_DAY_START (03:00)
 belongs to the previous service day and gets 86400 added, so 00:13:30 is 87210; Seoul already writes
 those as 24:13:30. Either way the times must then increase along the train, or the run fails.
@@ -34,7 +35,7 @@ those as 24:13:30. Either way the times must then increase along the train, or t
 Rules taken from the data (checked on the 2026-08-28 Korail files and the 2026-10-16 Seoul tables):
 
     - Train numbers keep their digits, zero-padded to four: K602 -> 0602, S418 -> 0418,
-      K4302 -> 4302, K1902 -> 1902.
+      K4302 -> 4302, K1902 -> 1902, and the Seoul timetable's Korail-run 3호선 3024K -> 3024.
     - Korail: a station is a stop when its arrival row has a time. The origin has only a departure,
       the terminus only an arrival. A departure-row time without an arrival mid-route is a pass:
       only express trains have one.
@@ -45,11 +46,18 @@ Rules taken from the data (checked on the 2026-08-28 Korail files and the 2026-1
     - Korail express: train numbers 1000-1999 (the K19xx 급행; the 서울급행 sheet holds only those).
       A train with a pass outside that range fails the run.
     - Seoul express: EXPRESS_YN "G" is 일반, "D" is 급행; any other value fails the run. Every
-      2026-10-16 row was "G". ARRIVETIME or LEFTTIME "00:00:00" means none (the origin or terminus).
+      2026-10-16 row was "G". ARRIVETIME or LEFTTIME "00:00:00" means none (the origin or terminus);
+      the one mid-route hole of 2026-10-17 is filled from SEOUL_ARRIVAL_FIXES.
     - Seoul joins one train across the seven station codes by its normalized number, within one
       WEEK_TAG and INOUT_TAG. A number that appears twice at one station is split into runs by time
       continuity: each row joins the run of the same number that left an earlier station at most
       MAX_HOP_SECONDS before it. No number repeated on 2026-10-16.
+    - 2호선: INOUT_TAG 1 is 내선순환 (up). The API and the timetable name nearly every circle trip 성수 in
+      both directions, so a 성수 destination is written as 내선순환 or 외선순환 by direction, as the train
+      map writes it; real termini (신도림, 삼성, ...) stay named. A 성수지선 or 신정지선 number (15xx-17xx,
+      55xx-57xx) fails the run: no covered station sees a branch train.
+    - No destination names trains of both directions (check_one_direction), except one the line declares
+      with its evidence: the tracker reads a train's direction off its destination.
 
 Only the standard library is used (zipfile and xml.etree read the xlsx). The API key is never printed:
 failures name only the station code, the tags and the HTTP status or API result code.
@@ -81,6 +89,12 @@ SEOUL_EXPRESS = {"G": False, "D": True}
 SERVICE_DAY_START = 3 * 3600
 DAY = 86400
 MAX_HOP_SECONDS = 600
+
+# Arrivals the Seoul API leaves out mid-route, keyed by (STATION_CD, WEEK_TAG, INOUT_TAG, TRAIN_NO, LEFTTIME). On
+# 2026-10-17 it answered 3305 at 교대 (0330) on Saturdays with ARRIVETIME 00:00:00, though the train starts at 구파발
+# (0310); its holiday row, identical to the Saturday table everywhere else, reads 21:08:00. A key that no longer
+# matches is printed, so the entry can go once the API is fixed.
+SEOUL_ARRIVAL_FIXES = {("0330", "2", "2", "3305", "21:08:30"): "21:08:00"}
 
 # KRIC code (운영기관_역사_코드정보, 2022-08-26) and the Korail xlsx short name, south to north.
 LINE1_STATIONS = (
@@ -152,7 +166,48 @@ LINE4 = {
     "up_order": "reversed",
     "served": (LINE4_SERVED,),
 }
-LINES = (LINE1, LINE4)
+
+# KRIC code and the Seoul STATION_CD (SearchInfoBySubwayNameService, 2026-10-17), in line order. Both the 잠실 window
+# (213-219) and the 강남 window (219-225); 내선순환 (up) runs in this order.
+LINE2 = {
+    "line": "2",
+    "operator": "S1",
+    "file": "seoul-2",
+    "source": "seoul",
+    "stations": tuple(("S1-2-%d" % n, "%04d" % n) for n in range(213, 226)),
+    "up_order": "listed",
+    "served": ("S1-2-216", "S1-2-222"),
+    # The timetable and the API name almost every circle trip 성수 in both directions; the train map writes the
+    # circle instead, which says the direction.
+    "circle_destination": "성수",
+    "circle_labels": {"up": "내선순환", "down": "외선순환"},
+    # 성수지선 and 신정지선 trips, which never stop in these windows.
+    "branch_trains": ((1500, 1799), (5500, 5799)),
+    # The last trips of both circles end at 삼성 (2520 inner and 2517 outer, weekday 2026-10-17).
+    "two_direction_destinations": ("삼성",),
+}
+# 양재 (329-335) and 도곡 (331-337); up runs toward 대화, against this order.
+LINE3 = {
+    "line": "3",
+    "operator": "S1",
+    "file": "seoul-3",
+    "source": "seoul",
+    "stations": tuple(("S1-3-%d" % n, "%04d" % n) for n in range(329, 338)),
+    "up_order": "reversed",
+    "served": ("S1-3-332", "S1-3-334"),
+}
+# 잠실 (2812-2818); up runs toward 별내, against this order.
+LINE8 = {
+    "line": "8",
+    "operator": "S1",
+    "file": "seoul-8",
+    "source": "seoul",
+    "stations": tuple(("S1-8-%d" % n, "%04d" % n) for n in range(2812, 2819)),
+    "up_order": "reversed",
+    "served": ("S1-8-2815",),
+}
+LINES = (LINE1, LINE2, LINE3, LINE4, LINE8)
+SEOUL_LINES = (LINE2, LINE3, LINE4, LINE8)
 
 def station_codes(line):
     return [code for code, _ in line["stations"]]
@@ -176,11 +231,11 @@ class ConvertError(Exception):
 # ---------------------------------------------------------------- shared rules
 
 def normalize_train_no(raw):
-    """K602 -> 0602, S418 -> 0418, K4302 -> 4302, 1906 -> 1906."""
-    match = re.fullmatch(r"\s*[A-Z]*(\d{1,4})\s*", raw or "")
+    """K602 -> 0602, S418 -> 0418, K4302 -> 4302, 1906 -> 1906, and the Seoul timetable's Korail-run 3024K -> 3024."""
+    match = re.fullmatch(r"\s*(?:[A-Z]*(\d{1,4})|(\d{4})K)\s*", raw or "")
     if match is None:
-        raise ConvertError("train number %r is not letters followed by at most four digits" % (raw,))
-    return match.group(1).zfill(4)
+        raise ConvertError("train number %r is neither letters and at most four digits nor four digits and a K" % (raw,))
+    return (match.group(1) or match.group(2)).zfill(4)
 
 
 def service_seconds(clock_seconds):
@@ -231,6 +286,15 @@ def validate_train(train, served, label):
 
 def sort_trains(trains):
     return sorted(trains, key=lambda t: (t["trainNo"], t["direction"], stop_time(t["stops"][0])))
+
+
+def check_one_direction(trains, label, line):
+    """No destination names trains of both directions, except one the line declares: the tracker reads a train's
+    direction off its destination (toDirectionByDestination)."""
+    by_direction = {d: {t["destination"] for t in trains if t["direction"] == d} for d in ("up", "down")}
+    both = sorted(by_direction["up"] & by_direction["down"] - set(line.get("two_direction_destinations", ())))
+    if both:
+        raise ConvertError("%s: destination %s names trains of both directions" % (label, ", ".join(repr(d) for d in both)))
 
 
 def check_unique(trains, label, allow_split):
@@ -478,8 +542,11 @@ def seoul_trips(rows_by_station, direction, line=LINE4):
                 raise ConvertError("%s: neither an arrival nor a departure" % where)
             if row.get("EXPRESS_YN") not in SEOUL_EXPRESS:
                 raise ConvertError("%s: EXPRESS_YN %r is neither G nor D" % (where, row.get("EXPRESS_YN")))
+            train_no = normalize_train_no(row.get("TRAIN_NO"))
+            if any(low <= int(train_no) <= high for low, high in line.get("branch_trains", ())):
+                raise ConvertError("%s: a branch train, which no covered station serves" % where)
             candidates.append({
-                "trainNo": normalize_train_no(row.get("TRAIN_NO")),
+                "trainNo": train_no,
                 "index": order.index(code),
                 "station": code,
                 "arr": None if arr is None else service_seconds(arr),
@@ -513,10 +580,13 @@ def seoul_trips(rows_by_station, direction, line=LINE4):
         expresses = {s["express"] for s in stops}
         if len(expresses) != 1:
             raise ConvertError("train %s (%s): EXPRESS_YN disagrees across stations" % (trip["trainNo"], direction))
+        destination = destinations.pop()
+        if destination == line.get("circle_destination"):
+            destination = line["circle_labels"][direction]
         trains.append({
             "trainNo": trip["trainNo"],
             "direction": direction,
-            "destination": destinations.pop(),
+            "destination": destination,
             "express": expresses.pop(),
             "stops": [{"station": s["station"], "arr": s["arr"], "dep": s["dep"]} for s in stops],
             "_split": len(open_trips[trip["trainNo"]]) > 1,
@@ -559,10 +629,21 @@ def seoul_fetch(key, code, week, inout):
     return rows
 
 
+def with_arrival_fixes(rows, station_cd, week, inout):
+    """The rows with each SEOUL_ARRIVAL_FIXES arrival filled in where the API wrote 00:00:00."""
+    fixed = []
+    for row in rows:
+        key = (station_cd, week, inout, row.get("TRAIN_NO"), row.get("LEFTTIME"))
+        if key in SEOUL_ARRIVAL_FIXES and row.get("ARRIVETIME") == "00:00:00":
+            row = dict(row, ARRIVETIME=SEOUL_ARRIVAL_FIXES[key])
+        fixed.append(row)
+    return fixed
+
+
 def seoul_trains(fetch, week, line=LINE4):
     trains = []
     for direction, inout in SEOUL_INOUT:
-        rows_by_station = [(code, fetch(station_cd, week, inout)) for code, station_cd in line["stations"]]
+        rows_by_station = [(code, with_arrival_fixes(fetch(station_cd, week, inout), station_cd, week, inout)) for code, station_cd in line["stations"]]
         for train in seoul_trips(rows_by_station, direction, line):
             if any(stop["station"] in line["served"] for stop in train["stops"]):
                 validate_train(train, line["served"], "seoul %s WEEK_TAG %s" % (line["line"], week))
@@ -630,6 +711,7 @@ def build_korail_line(out_dir, line, day_type, data):
     label = "korail %s %s" % (line["line"], day_type)
     trains = with_upstream_destinations(korail_trains(read_workbook(data), line, day_type), label, line)
     check_unique(trains, label, allow_split=False)
+    check_one_direction(trains, label, line)
     document = timetable("korail-xlsx", line["urls"][day_type], line["revision"], line["operator"], line["line"], day_type, station_codes(line), trains)
     write(out_dir, line, document)
 
@@ -639,37 +721,47 @@ def build_korail(out_dir, weekday_file, holiday_file):
         build_korail_line(out_dir, LINE1, day_type, read_local_or_download(local, LINE1["urls"][day_type]))
 
 
-def build_seoul(out_dir, today, lines=(LINE4,)):
+def build_seoul(out_dir, today, lines=SEOUL_LINES):
     key = os.environ.get("SEOUL_OPENAPI_GENERAL_KEY")
     if not key:
         raise ConvertError("SEOUL_OPENAPI_GENERAL_KEY is not set; run through doppler run -p backend -c dev_personal --")
 
+    fetched = {}
+
     def fetch(code, week, inout):
-        return seoul_fetch(key, code, week, inout)
+        fetched[(code, week, inout)] = seoul_fetch(key, code, week, inout)
+        return fetched[(code, week, inout)]
 
     for line in lines:
         for day_type, week in SEOUL_WEEK_TAGS:
             trains = seoul_trains(fetch, week, line)
             check_unique(trains, "seoul %s %s" % (line["line"], day_type), allow_split=True)
+            check_one_direction(trains, "seoul %s %s" % (line["line"], day_type), line)
             document = timetable("seoul-station-timetable", SEOUL_API, today, line["operator"], line["line"], day_type, station_codes(line), trains)
             write(out_dir, line, document)
+    for (code, week, inout, train_no, left), _ in SEOUL_ARRIVAL_FIXES.items():
+        rows = fetched.get((code, week, inout))
+        if rows is not None and not any(r.get("TRAIN_NO") == train_no and r.get("LEFTTIME") == left and r.get("ARRIVETIME") == "00:00:00" for r in rows):
+            print("convert.py: SEOUL_ARRIVAL_FIXES %s is no longer needed" % ((code, week, inout, train_no, left),), file=sys.stderr)
 
 
 def main(argv=None):
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     parser = argparse.ArgumentParser(description="Build src/subway/timetable/*.json from the Korail xlsx files and the Seoul API.")
     parser.add_argument("--only", choices=("korail", "seoul"), help="build one source only")
+    parser.add_argument("--line", action="append", choices=[line["line"] for line in LINES], help="build this line only; repeatable")
     parser.add_argument("--out", default=os.path.join(root, "src", "subway", "timetable"), help="output directory")
     parser.add_argument("--korail-weekday", help="a local copy of KORAIL_WEEKDAY_URL")
     parser.add_argument("--korail-holiday", help="a local copy of KORAIL_HOLIDAY_URL")
     args = parser.parse_args(argv)
     os.makedirs(args.out, exist_ok=True)
     today = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).date().isoformat()
+    wanted = set(args.line or [line["line"] for line in LINES])
     try:
-        if args.only in (None, "korail"):
+        if args.only in (None, "korail") and "1" in wanted:
             build_korail(args.out, args.korail_weekday, args.korail_holiday)
         if args.only in (None, "seoul"):
-            build_seoul(args.out, today)
+            build_seoul(args.out, today, [line for line in SEOUL_LINES if line["line"] in wanted])
     except ConvertError as error:
         print("convert.py: %s" % error, file=sys.stderr)
         return 1
