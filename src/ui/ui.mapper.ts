@@ -1,7 +1,6 @@
 import { pick } from "../infra/i18n";
 import type { I18n, SupportedLang } from "../infra/types";
-import { toServedWebviewUrl } from "../infra/webview-url";
-import type { LinkActionType } from "../shared/link-action.wire";
+import { toServedActionValue } from "../shared/link-action.util";
 import { isBannerShowing } from "./ui.rules";
 import type { BannerImageRaw } from "./ui.schema";
 import type { BannerCarousel } from "./ui.wire";
@@ -15,11 +14,6 @@ interface BannerCarouselRaw extends Omit<BannerCarousel, "items"> {
 // WHY: `ko` is required and non-blank (`localizedText` in ui.schema.ts), so the fallback only satisfies the type.
 export function toLocalizedText(text: I18n, lang: SupportedLang): string {
   return pick(text, lang) ?? text.ko;
-}
-
-// WHY: a root-relative `webview` value is served absolute, as the event map serves its buttons, so the app opens a complete URL.
-export function toServedActionValue(actionType: LinkActionType, actionValue: string): string {
-  return actionType === "webview" ? toServedWebviewUrl(actionValue) : actionValue;
 }
 
 // WHY: built from named fields rather than `...image`, so the window and the untranslated text never reach the wire.

@@ -12,8 +12,8 @@
     "reason": "ADR 0010 D9, no domain seam: schedule-stops.json is one committed document that stops the boot on any fault, and validateStopCatalog lists every issue in the words bus-stops.rules.spec.ts pins. Its checks (stops, photos, panoramas, guides, sequences, estimate opt-ins) compose into the one validator bus-stops.schema.ts runs, and child-to-parent imports keep a sub-module from holding a piece of it."
   },
   "src/map/layer-set/map-layer-set.rules.ts": {
-    "max": 141,
-    "reason": "ADR 0010 D9, no domain seam: one loader of one operator-edited file reads every check here, `layerSetFile` the leaf checks (`optionIssues`, `chipLabelIssue`, `listSortIssue`) and `parseLayerSetFile` in map-layer-set.config.ts the cross-reference and chip checks, which also run at import; the checks are not flows, so a sub-module would hold rules and nothing else."
+    "max": 158,
+    "reason": "ADR 0010 D9, no domain seam: one loader of one operator-edited file reads every check here, `layerSetFile` the leaf checks (`optionIssues`, `chipLabelIssue`, `listSortIssue`) and `parseLayerSetFile` in map-layer-set.config.ts the cross-reference and chip checks, which also run at import, and `MapLayerSetService` the base chips' link check (`assertValidLinkChips`) when Nest builds it; the checks are not flows, so a sub-module would hold rules and nothing else."
   },
   "src/map/layer-set/map-layer-set.schema.ts": {
     "max": 84,

@@ -29,6 +29,7 @@ import { EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "../map.constants";
 import type { LiveActivation } from "../map.document";
 import type { MapRepository } from "../map.repository";
 import { MapLayerSetService } from "./map-layer-set.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 
 const NOW = new Date("2026-09-16T09:00:00.000Z");
 const mockFindActiveActivation = jest.fn<Promise<LiveActivation | null>, [Date]>();
@@ -51,7 +52,7 @@ beforeEach(() => {
   getLayerSetConfig.mockImplementation(actualConfigModule.getLayerSetConfig);
   const repository = new FakeMapRepository();
   repository.findActiveActivation = mockFindActiveActivation;
-  service = new MapLayerSetService(asReal<MapRepository>(repository), fakeClock);
+  service = new MapLayerSetService(asReal<MapRepository>(repository), fakeClock, new MiniappsService());
 });
 
 describe("MapLayerSetService.liveLayerSet", () => {

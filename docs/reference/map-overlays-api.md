@@ -3,7 +3,7 @@ title: Map Overlays API Reference
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-11
+last-updated: 2026-10-17
 audience: internal
 ---
 
@@ -25,7 +25,7 @@ audience: internal
 | Wire schema | `src/map/map.wire.ts` (overlays), `src/shared/geojson.types.ts` (geometry), `src/map/config/map-config.wire.ts` (chips) |
 | Producers | `src/map/campus/map-campus.mapper.ts` (buildings + campus geometry), `src/map/event/map-event.mapper.ts` (event places), `src/map/event-details/map-event-details.mapper.ts` (their sheet bodies) |
 | Layer catalogue | `src/map/map.constants.ts` — the base layers, and the projection of a festival's `layers[]` from its config |
-| Chips | `src/map/layer-set/map-layer-set.mapper.ts` — the base chips, the projection of a festival's `chips[]`, the synthesised reset chip, and the one validator both go through |
+| Chips | `src/map/layer-set/` — the base chips (`map-layer-set.constants.ts`), the projection of a festival's `chips[]` and the synthesised reset chip (`map-layer-set.mapper.ts`), and the validators both go through (`map-layer-set.rules.ts`) |
 | Response builder | `src/map/config/map-config.mapper.ts` |
 | Envelope | `{ meta: {}, data: { overlays: [ … ] } }` (no `meta.lang` on a response a shared cache may store; `/map/config` keeps `{ lang }`), `Vary: Accept-Language`, `X-Response-Time` |
 | Tests | `__tests__/nest/map/` |
@@ -975,7 +975,8 @@ interface MapCamera extends CameraMotion { lat: number; lng: number }
 
 type MapChipAction =
   | { kind: "webview"; url: string }
-  | { kind: "focus"; camera: MapCamera; layerIds: string[] };
+  | { kind: "focus"; camera: MapCamera; layerIds: string[] }
+  | { kind: "link"; actionType: "miniapp" | "external" | "webview" | "route"; actionValue: string };
 
 interface MapChip {
   id: string;
@@ -1006,6 +1007,16 @@ ship, so a client never receives a relative string to hand to an opener. There i
 `title`**: the client already holds the chip's `label`, and a page a chip opened is titled by that
 chip. No chip uses this variant today (§8.5) — it is documented as part of the schema, and its rules
 are enforced whenever one returns.
+
+`link` carries exactly the link shape the home tiles, banners and transit items use
+(`linkActionType` in `src/shared/link-action.wire.ts`), so a chip can open what any other
+server-driven link opens: a mini app, an https page, a web view page or an app route. It changes no
+layer and moves no camera. It is checked by the same `isBrokenLinkAction` and served by the same
+`toServedActionValue` (`src/shared/link-action.util.ts`): a `webview` value is authored root-relative
+and ships absolute, every other value ships as written. App builds whose `CHIP_ACTION_KINDS`
+(`skkuverse-app/packages/shared/src/map/parser.ts`) lacks `link` drop such a chip, so on them it is
+invisible rather than broken. Only `BASE_CHIPS` authors `link` chips; a festival file's chips are
+`focus` chips.
 
 ### 8.2 What a chip tap may change — two rules
 
@@ -1061,11 +1072,13 @@ It also costs nothing. The app already fetches this document.
 
 ### 8.5 The chips served
 
-While a layer set is live, the row is: **the reset chip, then every chip authored in the layer set's
-config**, in file order — followed by nothing else, because `BASE_CHIPS` is empty. 분실물 lived there
-and was removed, and that action is still reachable from the campus SDUI (`src/ui/campus/ui-campus.mapper.ts`).
-So outside an activation window `chips` is `[]`, and a client must render nothing rather than an
-empty row. It stays a list because a permanent chip is an ordinary thing to want back.
+The row always opens with the **base chips**, `BASE_CHIPS` in
+`src/map/layer-set/map-layer-set.constants.ts`: four `link` chips, 건물지도 (route `/map/hssc`),
+건물코드 (route `/search`), 분실물 (web view `/skku/lostandfound`) and 문의하기 (external, the Kakao
+channel chat), each with `isReset: false` and `list: null`. They are the campus sheet's former service
+buttons; the first four tiles of the home grid carry the same links for builds that drop a `link`
+chip. While a layer set is live, **the reset chip, then every chip authored in the layer set's
+config**, in file order, follow them. Outside an activation window `chips` is the base chips alone.
 
 **The reset chip is synthesised, not authored.** Its id is `<layerSetId>_all` (`eskara-2026_all`), its
 label is the festival's `name`, its icon the festival's `emoji`, it carries `isReset: true`, and its
@@ -1110,7 +1123,8 @@ be served beside and **returns** every problem it finds, accumulated. Two caller
 
 | Row | When | On failure |
 | --- | --- | --- |
-| `BASE_CHIPS` against `BASE_LAYERS` | module import, `src/map/layer-set/map-layer-set.mapper.ts` | throws `FATAL [map chips]` — repo TypeScript, a PR fixes it, the boot must not proceed |
+| `BASE_CHIPS` against `BASE_LAYERS` | module import, `src/map/layer-set/map-layer-set.config.ts` | throws `FATAL [map chips]` — repo TypeScript, a PR fixes it, the boot must not proceed |
+| `BASE_CHIPS`' `link` actions against the mini-app registry, by `assertValidLinkChips` | when Nest builds `MapLayerSetService` | throws `FATAL [map chips]`, as above; `validateChipSpecs` leaves a `link` chip to this check, because only Nest provides the registry |
 | the festival row (reset chip + authored chips) against **the full served catalogue** (base + festival layers) | config load, `parseLayerSetFile` in `src/map/layer-set/map-layer-set.config.ts` | the layer set is **rejected**: logged once with the path, and `/map/config` serves the base layers only — the festival is off the campus map until the file is fixed |
 
 The second row is a deliberate posture with a cost worth naming: a config typo takes the whole
@@ -1127,6 +1141,7 @@ The rules:
 | a chip's `layerIds` do not straddle two groups | `validateChipSpecs` |
 | chip ids are unique — including against the synthesised reset chip's | `validateChipSpecs`, the only place that collision is visible at all |
 | a `webview` URL passes `toWebviewUrl` | `validateChipSpecs` |
+| a `link` action passes `isBrokenLinkAction` (a known mini-app target, an https URL, a web view URL, a root-relative route) | `assertValidLinkChips` |
 | at least one layer is not `defaultVisibleWhen.kind: "never"`, so the reset chip is scoped to something | `parseLayerSetFile` |
 | every `DailyWindow` bound is `"HH:MM"` on a 24-hour clock — `"24:00"` and `"7:00"` refused | `parseLayerSetFile` |
 | a `DailyWindow`'s bounds differ; `start > end` is legal and wraps past midnight | `parseLayerSetFile` |

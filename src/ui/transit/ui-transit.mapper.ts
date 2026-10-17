@@ -1,7 +1,8 @@
 import type { BusGroup } from "../../bus/config/bus-config.wire";
 import type { SupportedLang } from "../../infra/types";
 import type { ServedStation } from "../../subway/stations/subway-stations.types";
-import { toLocalizedText, toServedActionValue } from "../ui.mapper";
+import { toLocalizedText } from "../ui.mapper";
+import { toServedActionValue } from "../../shared/link-action.util";
 import { toTransitItemId } from "./ui-transit.rules";
 import type { TransitItemRaw, TransitLayoutRaw } from "./ui-transit.schema";
 import type { TransitLayout } from "./ui-transit.wire";

@@ -42,7 +42,7 @@ beforeEach(() => {
   repository = new FakeMapRepository();
   repository.findActiveActivation = mockFindActiveActivation;
   const real = asReal<MapRepository>(repository);
-  service = new MapEventService(real, new MapLayerSetService(real, CLOCK), new MiniappsService());
+  service = new MapEventService(real, new MapLayerSetService(real, CLOCK, new MiniappsService()), new MiniappsService());
 });
 
 // scripts/ is excluded from tsconfig (plain CommonJS operator tooling), so this

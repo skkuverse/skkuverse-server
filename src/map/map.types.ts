@@ -1,4 +1,5 @@
 import type { I18n } from "../infra/types";
+import type { LinkActionType } from "../shared/link-action.wire";
 import type { BASE_LAYERS } from "./map.constants";
 import type { MapOverlay } from "./map.wire";
 
@@ -43,7 +44,8 @@ export interface LayerSpec {
 
 export type MapChipActionSpec =
   | { kind: "webview"; url: string }
-  | { kind: "focus"; camera: MapCamera; layerIds: readonly string[] };
+  | { kind: "focus"; camera: MapCamera; layerIds: readonly string[] }
+  | { kind: "link"; actionType: LinkActionType; actionValue: string };
 
 export type OverlayBase = Omit<Extract<MapOverlay, { kind: "polygon" }>, "kind" | "geometry">;
 export type MarkerPresentation = Pick<Extract<MapOverlay, { kind: "marker" }>, "pinPriority" | "locationAccuracy">;

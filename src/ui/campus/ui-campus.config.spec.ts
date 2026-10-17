@@ -7,7 +7,6 @@
  * (ui-home.config.spec.ts covers those one by one), so this file pins what
  * differs for campus.
  */
-import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import { MiniappsService } from "../../miniapps/miniapps.service";
 import { loadCampusBanners as loadWithRegistry, readCampusBanners } from "./ui-campus.config";
 import { toCampusSheet } from "./ui-campus.mapper";
@@ -41,7 +40,7 @@ describe("committed campus-banners.json", () => {
     const now = new Date("2026-10-02T12:00:00+09:00");
 
     // Act
-    const [first] = toCampusSheet({ banners: committedBanners, lang: "ko", now, webviewOrigin: WEBVIEW_ORIGIN }).sections;
+    const [first] = toCampusSheet({ banners: committedBanners, lang: "ko", now }).sections;
 
     // Assert
     expect(first).toMatchObject({ type: "banner_carousel", id: "campus_banners" });
@@ -50,13 +49,11 @@ describe("committed campus-banners.json", () => {
   it("closes every ESKARA 2026 banner when the festival ends", () => {
     // Arrange
     const types = (iso: string) =>
-      toCampusSheet({ banners: committedBanners, lang: "ko", now: new Date(iso), webviewOrigin: WEBVIEW_ORIGIN }).sections.map(
-        (s) => s.type,
-      );
+      toCampusSheet({ banners: committedBanners, lang: "ko", now: new Date(iso) }).sections.map((s) => s.type);
 
     // Act & Assert
-    expect(types("2026-10-02T23:59:59+09:00")).toEqual(["banner_carousel", "button_grid"]);
-    expect(types("2026-10-03T00:00:00+09:00")).toEqual(["button_grid"]);
+    expect(types("2026-10-02T23:59:59+09:00")).toEqual(["banner_carousel"]);
+    expect(types("2026-10-03T00:00:00+09:00")).toEqual([]);
   });
 });
 
