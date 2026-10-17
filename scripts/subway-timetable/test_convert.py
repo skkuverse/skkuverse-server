@@ -392,6 +392,91 @@ def line_of(code):
     return {line["line"]: line for line in convert.LINES}[code]
 
 
+K1_DOWN_STATIONS = ["모란", "이매", "서현", "수내", "정자", "미금", "오리", "죽전", "보정"]
+
+
+class SuinBundang(unittest.TestCase):
+    def setUp(self):
+        self.line = line_of("K1")
+        local = {name: (fraction(7, m), fraction(7, m, 30)) for name, m in zip(K1_DOWN_STATIONS, range(0, 18, 2))}
+        local["모란"] = (None, fraction(7, 0, 30))
+        local["보정"] = (fraction(7, 16), None)
+        express = dict(local)
+        express["보정"] = (fraction(7, 16), None)
+        express["오리"] = (None, fraction(7, 12))  # a pass at a covered station
+        self.trains = {1: ("K6001", "모란", "신인천", local), 2: ("K6303", "모란", "고색", express)}
+
+    def build(self, trains):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        cells = korail_sheet(K1_DOWN_STATIONS, trains)
+        with contextlib.redirect_stdout(io.StringIO()):
+            convert.build_korail_line(scratch.name, self.line, "weekday", xlsx({"평일하행": cells, "휴일하행": cells}))
+        with open(os.path.join(scratch.name, "korail-k1-weekday.json"), encoding="utf-8") as handle:
+            return {t["trainNo"]: t for t in json.load(handle)["trains"]}
+
+    def test_maps_the_fourteen_window_short_names(self):
+        # Arrange
+        names = ["선정릉", "선릉", "한티", "도곡", "구룡역", "개포동", "대모산", "이매", "서현", "수내", "정자", "미금", "오리", "죽전"]
+
+        # Act
+        codes = [convert.korail_code(name, "test", self.line) for name in names]
+
+        # Assert
+        self.assertEqual(codes, ["KR-K1-K%d" % n for n in (214, 215, 216, 217, 218, 219, 220, 227, 228, 229, 230, 231, 232, 233)])
+
+    def test_writes_the_xlsx_terminus_names_as_the_upstreams_write_them(self):
+        # Act
+        names = {name: convert.korail_destination(name, "test", self.line) for name in ("신인천", "신수원", "왕십리", "청량리", "죽전", "고색", "오이도")}
+
+        # Assert
+        self.assertEqual(names, {"신인천": "인천", "신수원": "수원", "왕십리": "왕십리", "청량리": "청량리", "죽전": "죽전", "고색": "고색", "오이도": "오이도"})
+
+    def test_reads_one_day_type_s_sheets_and_writes_the_destination_the_upstreams_write(self):
+        # Arrange
+        trains = {1: self.trains[1]}
+
+        # Act
+        built = self.build(trains)
+
+        # Assert
+        self.assertEqual(list(built), ["6001"])
+        self.assertEqual(built["6001"]["destination"], "인천")
+        self.assertEqual(built["6001"]["direction"], "down")
+        self.assertEqual([s["station"] for s in built["6001"]["stops"]], ["KR-K1-K227", "KR-K1-K228", "KR-K1-K229", "KR-K1-K230", "KR-K1-K231", "KR-K1-K232", "KR-K1-K233"])
+
+    def test_refuses_an_express_that_passes_a_window_station(self):
+        # Act & Assert
+        with self.assertRaisesRegex(convert.ConvertError, "6303.*passes KR-K1-K232"):
+            self.build(self.trains)
+
+    def test_refuses_a_pass_on_a_train_not_numbered_63xx(self):
+        # Arrange
+        local = dict(self.trains[1][3])
+        local["보정"] = (fraction(7, 16), None)
+        local["죽전"] = (None, fraction(7, 14, 30))
+
+        # Act & Assert
+        with self.assertRaisesRegex(convert.ConvertError, "passes a station but is not numbered 63xx"):
+            self.build({1: ("K6001", "모란", "신인천", local)})
+
+
+class CommittedSuinBundang(unittest.TestCase):
+    WINDOWS = (["KR-K1-K%d" % n for n in range(214, 221)], ["KR-K1-K%d" % n for n in range(227, 234)])
+
+    def test_every_express_stops_at_every_window_station(self):
+        # Arrange
+        with open(os.path.join(TIMETABLE_DIR, "korail-k1-weekday.json"), encoding="utf-8") as handle:
+            expresses = [t for t in json.load(handle)["trains"] if t["express"]]
+
+        # Act
+        stops = {t["trainNo"]: {s["station"] for s in t["stops"]} for t in expresses}
+
+        # Assert
+        self.assertEqual(sorted(stops), ["%04d" % n for n in range(6300, 6314)])
+        self.assertEqual({no: [s for window in self.WINDOWS for s in window if s not in seen] for no, seen in stops.items()}, {no: [] for no in stops})
+
+
 class SeoulLines(unittest.TestCase):
     @staticmethod
     def row(number, arrive, leave, destination):
