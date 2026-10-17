@@ -10,6 +10,8 @@ When to rerun:
       (KORAIL_K1_URL, KORAIL_K1_REVISION; Korail publishes two or three a year).
     - Seoul Metro changes the 2/3/4/8호선 timetable (a 열차운행시각 조정 notice). Rerun; the Seoul API
       already serves the new table. `--line 2` (repeatable) rebuilds one line only.
+    - 신분당선 posts a new 역별 열차시각표 (all_kor.zip; a reversal of the 2026-10 speed cut would bring one).
+      Update SHINBUNDANG_FILES, SHINBUNDANG_PLAN and SHINBUNDANG_REVISION to the new edition, then rerun.
     - A served station or one of its upstream or watched stations changes (the line's entry in LINES:
       its stations and served platforms).
 
@@ -19,13 +21,15 @@ How to rerun (from the repository root):
 
 The Seoul part reads SEOUL_OPENAPI_GENERAL_KEY from the environment, and no other variable; Doppler
 backend/dev_personal holds it, a config no service renders. `--only korail` needs no key. `--korail-weekday FILE` and `--korail-holiday FILE` read local
-copies of the two 1호선 Korail URLs instead of downloading them, `--korail-k1 FILE` of the 수인분당 one. Review the diff, then commit the JSON.
+copies of the two 1호선 Korail URLs instead of downloading them, `--korail-k1 FILE` of the 수인분당 one,
+`--shinbundang-zip FILE` of all_kor.zip. Only the Seoul part needs the key. Review the diff, then commit the JSON.
 
 What it writes, per operator line and day type:
 
     korail-1-weekday.json, korail-1-holiday.json                      1호선, Korail xlsx
     korail-k1-weekday.json, korail-k1-holiday.json                    수인분당선, Korail xlsx (one file)
     seoul-{2,3,4,8}-{weekday,saturday,holiday}.json                    2/3/4/8호선, SearchSTNTimeTableByIDService
+    shinbundang-d1-weekday.json, shinbundang-d1-holiday.json          신분당선, the operator's per-station PDFs
 
 Each file lists the trains that stop at one of its line's served platforms (LINES) with their stops among
 the covered stations (each served platform and three stations on each side, and for 성균관대 also 금정
@@ -63,8 +67,14 @@ Rules taken from the data (checked on the 2026-08-28 Korail files and the 2026-1
       55xx-57xx) fails the run: no covered station sees a branch train.
     - No destination names trains of both directions (check_one_direction), except one the line declares
       with its evidence: the tracker reads a train's direction off its destination.
+    - 신분당선: the PDFs give each station's minutes per direction and no train numbers. Runs are chained
+      station to station with no overtaking (shinbundang_chain), get arrival = departure = the minute, and
+      are numbered 1002, 1004, ... up and 1001, 1003, ... down in order of their first time. A minute marked
+      (정자) belongs to a run that ends at 정자, whose arrival there is derived from the segment's most
+      common run time, because 정자's page leaves it out. The termini's pages list no arrivals, so through
+      runs end at 광교중앙 or 논현.
 
-Only the standard library is used (zipfile and xml.etree read the xlsx). The API key is never printed:
+Only the standard library is used (zipfile and xml.etree read the xlsx, zlib and re the PDFs). The API key is never printed:
 failures name only the station code, the tags and the HTTP status or API result code.
 """
 
@@ -77,6 +87,7 @@ import sys
 import urllib.error
 import urllib.request
 import zipfile
+import zlib
 import xml.etree.ElementTree as ET
 
 KORAIL_REVISION = "2026-08-28"
@@ -250,7 +261,37 @@ LINEK1 = {
     "urls": {"weekday": KORAIL_K1_URL, "holiday": KORAIL_K1_URL},
     "sheets": {"weekday": ("평일상행", "평일하행"), "holiday": ("휴일상행", "휴일하행")},
 }
-LINES = (LINE1, LINEK1, LINE2, LINE3, LINE4, LINE8)
+# KRIC code (2026-05-11 list) and the page title of the operator's per-station PDF, which is the KRIC name without its
+# parenthesized suffix, in line order. Up runs toward 신사, against this order.
+LINED1 = {
+    "line": "D1",
+    "operator": "DX",
+    "file": "shinbundang-d1",
+    "source": "shinbundang",
+    "stations": (
+        ("DX-D1-D04", "신사"),
+        ("DX-D1-4305", "논현"),
+        ("DX-D1-4306", "신논현"),
+        ("DX-D1-4307", "강남"),
+        ("DX-D1-4308", "양재"),
+        ("DX-D1-4309", "양재시민의숲"),
+        ("DX-D1-4310", "청계산입구"),
+        ("DX-D1-4311", "판교"),
+        ("DX-D1-4312", "정자"),
+        ("DX-D1-D13", "미금"),
+        ("DX-D1-D14", "동천"),
+        ("DX-D1-D15", "수지구청"),
+        ("DX-D1-4316", "성복"),
+        ("DX-D1-4317", "상현"),
+        ("DX-D1-4318", "광교중앙"),
+        ("DX-D1-4319", "광교"),
+    ),
+    "up_order": "reversed",
+    "served": ("DX-D1-4307", "DX-D1-4308", "DX-D1-4312", "DX-D1-4318"),
+    # The weekday PDF ends one 신사-bound run at 정자 (광교 10:18), besides four 광교-bound ones.
+    "two_direction_destinations": ("정자",),
+}
+LINES = (LINE1, LINEK1, LINE2, LINE3, LINE4, LINE8, LINED1)
 SEOUL_LINES = (LINE2, LINE3, LINE4, LINE8)
 
 def station_codes(line):
@@ -698,6 +739,492 @@ def seoul_trains(fetch, week, line=LINE4):
     return trains
 
 
+# ---------------------------------------------------------------- PDF (신분당선)
+
+# 신분당선 역별 열차시각표 (all_kor.zip on shinbundang.co.kr): one PDF per day type, a page per station in route
+# order. 기본계획번호 SBL4020, 적용기간 from 2026-09-28, printed after the speed cut from 90 to 80 km/h.
+SHINBUNDANG_ZIP_URL = "https://www.shinbundang.co.kr/util/download.jsp?fPath=/files/notice/&fName=all_kor.zip"
+SHINBUNDANG_PLAN = "SBL4020"
+SHINBUNDANG_REVISION = "2026-09-28"
+SHINBUNDANG_FILES = {"weekday": ("20260928_역별 열차시각표_평일.pdf", "평일"), "holiday": ("20260928_역별 열차시각표_휴일.pdf", "공휴일")}
+SHINBUNDANG_TERMINI = {"up": "신사", "down": "광교"}
+SHINBUNDANG_FIRST_RUN = {"up": 1002, "down": 1001}
+SHINBUNDANG_COLUMNS = {"up": "신사방면", "down": "광교방면"}
+SHINBUNDANG_SHORT_TURN = "DX-D1-4312"
+SHINBUNDANG_ENTRIES = ("DX-D1-4312", "DX-D1-4311")
+SHINBUNDANG_MIN_HOP = 60
+# Minute-only times put one segment's run times at most one minute apart; a wider spread means a broken chain.
+SHINBUNDANG_HOP_SPREAD = 60
+SHINBUNDANG_COLUMN_GAP = 15
+
+PDF_OBJECT = re.compile(rb"(\d+)\s+\d+\s+obj\b")
+PDF_DELIMITERS = b"()<>[]{}/%"
+
+
+def pdf_objects(data):
+    """{object number: (dictionary bytes, stream bytes or None)}, scanned in file order so that no stream's bytes
+    are searched for an object header."""
+    objects = {}
+    pos = 0
+    while True:
+        match = PDF_OBJECT.search(data, pos)
+        if match is None:
+            return objects
+        start = match.end()
+        end = data.find(b"endobj", start)
+        stream_at = data.find(b"stream", start)
+        if end < 0:
+            raise ConvertError("PDF object %s has no endobj" % match.group(1).decode())
+        stream = None
+        head = data[start:end]
+        if 0 <= stream_at < end:
+            head = data[start:stream_at]
+            body = stream_at + len(b"stream")
+            body += 2 if data[body:body + 2] == b"\r\n" else 1
+            length = re.search(rb"/Length\s+(\d+)(\s+\d+\s+R)?", head)
+            body_end = body + int(length.group(1)) if length and not length.group(2) else data.find(b"endstream", body)
+            stream = data[body:body_end]
+            end = data.find(b"endobj", body_end)
+        objects[int(match.group(1))] = (head, stream)
+        pos = end + len(b"endobj")
+
+
+def pdf_ref(head, key):
+    match = re.search(rb"/" + key + rb"\s*(\d+)\s+\d+\s+R", head)
+    return None if match is None else int(match.group(1))
+
+
+def pdf_object(objects, number, what):
+    if number not in objects:
+        raise ConvertError("PDF: %s (object %s) is not a top-level object" % (what, number))
+    return objects[number]
+
+
+def pdf_stream(objects, number, what):
+    head, stream = pdf_object(objects, number, what)
+    if stream is None:
+        raise ConvertError("PDF: %s (object %d) has no stream" % (what, number))
+    if re.search(rb"/Filter\s*/FlateDecode", head):
+        return zlib.decompress(stream)
+    if b"/Filter" in head:
+        raise ConvertError("PDF: %s (object %d) uses a filter other than FlateDecode" % (what, number))
+    return stream
+
+
+def pdf_pages(objects):
+    """Page object numbers in page order."""
+    catalogs = [n for n, (head, _) in objects.items() if re.search(rb"/Type\s*/Catalog\b", head)]
+    if len(catalogs) != 1:
+        raise ConvertError("PDF: %d catalogs" % len(catalogs))
+    pages = []
+
+    def walk(number):
+        head = pdf_object(objects, number, "a page tree node")[0]
+        if re.search(rb"/Type\s*/Pages\b", head):
+            for kid in re.findall(rb"(\d+)\s+\d+\s+R", re.search(rb"/Kids\s*\[(.*?)\]", head, re.S).group(1)):
+                walk(int(kid))
+        elif re.search(rb"/Type\s*/Page\b", head):
+            pages.append(number)
+        else:
+            raise ConvertError("PDF: object %d in the page tree is neither /Pages nor /Page" % number)
+
+    walk(pdf_ref(objects[catalogs[0]][0], b"Pages"))
+    return pages
+
+
+def pdf_cmap(text, where):
+    """A ToUnicode CMap with two-byte codes as {code: text}."""
+    if re.findall(r"<([0-9A-Fa-f]+)>\s*<[0-9A-Fa-f]+>\s*endcodespacerange", text) != ["0000"]:
+        raise ConvertError("%s: the ToUnicode CMap does not use two-byte codes" % where)
+    cmap = {}
+    for block in re.findall(r"beginbfchar(.*?)endbfchar", text, re.S):
+        for code, value in re.findall(r"<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>", block):
+            cmap[int(code, 16)] = bytes.fromhex(value).decode("utf-16-be")
+    for block in re.findall(r"beginbfrange(.*?)endbfrange", text, re.S):
+        if "[" in block:
+            raise ConvertError("%s: the ToUnicode CMap maps a range to an array" % where)
+        for low, high, value in re.findall(r"<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>", block):
+            for offset in range(int(high, 16) - int(low, 16) + 1):
+                cmap[int(low, 16) + offset] = chr(int(value, 16) + offset)
+    return cmap
+
+
+def pdf_font_decoder(objects, number):
+    """A function from a shown string's bytes to text, for the three font encodings the 신분당 PDFs use."""
+    head = pdf_object(objects, number, "a font")[0]
+    where = "PDF font %d" % number
+    to_unicode = pdf_ref(head, b"ToUnicode")
+    if to_unicode is not None:
+        cmap = pdf_cmap(pdf_stream(objects, to_unicode, "a ToUnicode CMap").decode("latin-1"), where)
+
+        def decode(raw):
+            codes = [int.from_bytes(raw[i:i + 2], "big") for i in range(0, len(raw), 2)]
+            missing = [code for code in codes if code not in cmap]
+            if len(raw) % 2 or missing:
+                raise ConvertError("%s: codes %s are not in its ToUnicode CMap" % (where, missing))
+            return "".join(cmap[code] for code in codes)
+
+        return decode
+    if re.search(rb"/Encoding\s*/UniKS-UCS2-H\b", head):
+        return lambda raw: raw.decode("utf-16-be")
+    if re.search(rb"/Encoding\s*/WinAnsiEncoding\b", head):
+        return lambda raw: raw.decode("cp1252")
+    raise ConvertError("%s: an encoding this reader does not know" % where)
+
+
+def pdf_page_fonts(objects, page):
+    head = objects[page][0]
+    resources = pdf_ref(head, b"Resources")
+    text = pdf_object(objects, resources, "page resources")[0] if resources is not None else head
+    fonts = pdf_ref(text, b"Font")
+    if fonts is not None:
+        text = pdf_object(objects, fonts, "a font dictionary")[0]
+    else:
+        match = re.search(rb"/Font\s*<<(.*?)>>", text, re.S)
+        if match is None:
+            raise ConvertError("PDF page %d has no fonts" % page)
+        text = match.group(1)
+    return {name.decode(): pdf_font_decoder(objects, int(number)) for name, number in re.findall(rb"/([^\s/<>\[\]()]+)\s*(\d+)\s+\d+\s+R", text)}
+
+
+def pdf_literal(content, i):
+    """The bytes of the literal string that opens at content[i], and the index after it."""
+    out = bytearray()
+    depth = 0
+    i += 1
+    while i < len(content):
+        c = content[i]
+        if c == 0x5C:
+            nxt = content[i + 1]
+            if 0x30 <= nxt <= 0x37:
+                j = i + 1
+                while j < i + 4 and j < len(content) and 0x30 <= content[j] <= 0x37:
+                    j += 1
+                out.append(int(content[i + 1:j], 8) & 0xFF)
+                i = j
+                continue
+            out += {ord("n"): b"\n", ord("r"): b"\r", ord("t"): b"\t", ord("b"): b"\b", ord("f"): b"\f", 0x0A: b"", 0x0D: b""}.get(nxt, bytes([nxt]))
+            i += 2
+            continue
+        if c == 0x28:
+            depth += 1
+        elif c == 0x29:
+            if depth == 0:
+                return bytes(out), i + 1
+            depth -= 1
+        out.append(c)
+        i += 1
+    raise ConvertError("PDF: an unterminated string")
+
+
+def pdf_tokens(content):
+    """(kind, value) tokens of a content stream: str (bytes), num, name, op, and [ ] as op."""
+    i = 0
+    while i < len(content):
+        c = content[i:i + 1]
+        if c.isspace():
+            i += 1
+        elif c == b"%":
+            while i < len(content) and content[i:i + 1] not in (b"\r", b"\n"):
+                i += 1
+        elif c == b"(":
+            value, i = pdf_literal(content, i)
+            yield "str", value
+        elif content[i:i + 2] in (b"<<", b">>"):
+            yield "op", content[i:i + 2].decode()
+            i += 2
+        elif c == b"<":
+            end = content.index(b">", i)
+            yield "str", bytes.fromhex(re.sub(rb"\s", b"", content[i + 1:end]).decode())
+            i = end + 1
+        elif c in (b"[", b"]", b"{", b"}"):
+            yield "op", c.decode()
+            i += 1
+        else:
+            j = i + 1
+            while j < len(content) and not content[j:j + 1].isspace() and content[j] not in PDF_DELIMITERS:
+                j += 1
+            word = content[i:j].decode("latin-1")
+            if c == b"/":
+                yield "name", word[1:]
+            elif re.fullmatch(r"[-+]?(\d+\.?\d*|\.\d+)", word):
+                yield "num", float(word)
+            else:
+                yield "op", word
+            i = j
+
+
+def pdf_text_runs(objects, page):
+    """(x, y, text) of every string a page shows, at the text matrix's origin when it is shown."""
+    fonts = pdf_page_fonts(objects, page)
+    head = objects[page][0]
+    contents = re.search(rb"/Contents\s*\[?\s*((?:\d+\s+\d+\s+R\s*)+)\]?", head)
+    if contents is None:
+        raise ConvertError("PDF page %d has no contents" % page)
+    content = b"\n".join(pdf_stream(objects, int(n), "page contents") for n in re.findall(rb"(\d+)\s+\d+\s+R", contents.group(1)))
+    runs = []
+    stack = []
+    matrix = line = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+    leading = 0.0
+    font = None
+
+    def move(tx, ty):
+        a, b, c, d, e, f = line
+        return (a, b, c, d, e + tx * a + ty * c, f + tx * b + ty * d)
+
+    def show(strings):
+        if font is None:
+            raise ConvertError("PDF page %d shows text with no font" % page)
+        runs.append((matrix[4], matrix[5], "".join(font(raw) for raw in strings)))
+
+    for kind, value in pdf_tokens(content):
+        if kind != "op":
+            stack.append(value)
+            continue
+        if value == "[":
+            stack.append("[")
+            continue
+        if value == "]":
+            start = len(stack) - 1 - stack[::-1].index("[")
+            items = stack[start + 1:]
+            del stack[start:]
+            stack.append(items)
+            continue
+        if value == "BT":
+            matrix = line = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+        elif value == "Tf":
+            name = stack[-2]
+            if name not in fonts:
+                raise ConvertError("PDF page %d uses font %s, which its resources do not list" % (page, name))
+            font = fonts[name]
+        elif value == "Tm":
+            matrix = line = tuple(stack[-6:])
+        elif value in ("Td", "TD"):
+            if value == "TD":
+                leading = -stack[-1]
+            matrix = line = move(stack[-2], stack[-1])
+        elif value == "TL":
+            leading = stack[-1]
+        elif value == "T*":
+            matrix = line = move(0, -leading)
+        elif value == "Tj":
+            show([stack[-1]])
+        elif value == "TJ":
+            show([item for item in stack[-1] if isinstance(item, bytes)])
+        elif value in ("'", '"'):
+            matrix = line = move(0, -leading)
+            show([stack[-1]])
+        elif value in ("BI", "ID"):
+            raise ConvertError("PDF page %d holds an inline image, which this reader does not skip" % page)
+        stack = []
+    return runs
+
+
+def pdf_rows(runs):
+    """Runs grouped into rows, top to bottom, each sorted left to right: a gap of more than 3 points in y starts a
+    row (the two editions put one row's runs up to 0.5 points apart)."""
+    rows = []
+    for x, y, text in sorted(runs, key=lambda r: -r[1]):
+        if rows and rows[-1][0] - y <= 3:
+            rows[-1][1].append((x, text))
+        else:
+            rows.append((y, [(x, text)]))
+    return [(y, sorted(cells)) for y, cells in rows]
+
+
+def shinbundang_page(runs, where):
+    """One station page: {"title", "plan", "from", "days", "columns": {"신사방면" | "광교방면": [(seconds, short turn)]}}.
+
+    The page heads a table with 신사방면, 시 and 광교방면; each row below holds an hour in the 시 column and that
+    hour's minutes in each direction's column, a minute followed by (정자) for a train that ends at 정자.
+    """
+    rows = pdf_rows(runs)
+    joined = ["".join(text for _, text in cells) for _, cells in rows]
+    page = "".join(joined)
+    titles = [text.replace(" ", "") for text in joined if text.replace(" ", "").endswith("열차시각표")]
+    meta = {
+        "plan": re.search(r"기본계획번호\s*:\s*([A-Z0-9]+)", page),
+        "from": re.search(r"적용기간\s*:\s*(\d{4}-\d{2}-\d{2})~", page),
+        "days": re.search(r"운행요일\s*:\s*(평일|공휴일|휴일)", page),
+    }
+    if len(titles) != 1 or None in meta.values():
+        raise ConvertError("%s: no single title, 기본계획번호, 적용기간 and 운행요일" % where)
+    headers = [index for index, text in enumerate(joined) if "방면" in text and "시" in text.replace("방면", "")]
+    if len(headers) != 1:
+        raise ConvertError("%s: no single header row with 시 and 방면" % where)
+    header_y, header_cells = rows[headers[0]]
+    hour_x = [x for x, text in header_cells if text.strip() == "시"]
+    if len(hour_x) != 1:
+        raise ConvertError("%s: the header row has no single 시" % where)
+    hour_x = hour_x[0]
+
+    def sides(cells):
+        left = "".join(text for x, text in cells if x < hour_x - SHINBUNDANG_COLUMN_GAP)
+        hour = "".join(text for x, text in cells if abs(x - hour_x) <= SHINBUNDANG_COLUMN_GAP)
+        right = "".join(text for x, text in cells if x > hour_x + SHINBUNDANG_COLUMN_GAP)
+        return left.strip(), hour.strip(), right.strip()
+
+    left_name, _, right_name = sides(header_cells)
+    if left_name not in ("", "신사방면") or right_name not in ("", "광교방면") or not (left_name or right_name):
+        raise ConvertError("%s: header columns %r and %r are not 신사방면 and 광교방면" % (where, left_name, right_name))
+    columns = {name: [] for name in (left_name, right_name) if name}
+    previous_hour = None
+    for y, cells in rows[headers[0] + 1:]:
+        left, hour, right = sides(cells)
+        if not (left or hour or right):
+            continue
+        if not re.fullmatch(r"\d{2}", hour):
+            raise ConvertError("%s: row at y %.1f has hour %r" % (where, y, hour))
+        clock_hour = int(hour) * 3600
+        hour_seconds = service_seconds(clock_hour)
+        if previous_hour is not None and hour_seconds <= previous_hour:
+            raise ConvertError("%s: hour %s does not follow the row above" % (where, hour))
+        previous_hour = hour_seconds
+        for name, text in ((left_name, left), (right_name, right)):
+            if not text:
+                continue
+            if not name or not re.fullmatch(r"\d{2}(\(정자\))?( \d{2}(\(정자\))?)*", re.sub(r"\s+", " ", text)):
+                raise ConvertError("%s: hour %s holds %r, not minutes under a direction" % (where, hour, text))
+            for minute, short in re.findall(r"(\d{2})(\(정자\))?", text):
+                if int(minute) > 59:
+                    raise ConvertError("%s: hour %s minute %s" % (where, hour, minute))
+                columns[name].append((hour_seconds + int(minute) * 60, bool(short)))
+    for name, times in columns.items():
+        if [t for t, _ in times] != sorted({t for t, _ in times}):
+            raise ConvertError("%s: %s times do not increase" % (where, name))
+    return {"title": titles[0][: -len("열차시각표")], "plan": meta["plan"].group(1), "from": meta["from"].group(1), "days": meta["days"].group(1), "columns": columns}
+
+
+def shinbundang_chain(pages, direction, line=LINED1):
+    """Join one direction's per-station times into runs, in travel order, with no overtaking.
+
+    Each open run takes the earliest unclaimed time at the next station that is at least SHINBUNDANG_MIN_HOP after
+    its last one; a time no run takes starts a run, which only the line's first station and SHINBUNDANG_ENTRIES may
+    do. A run marked (정자) ends at 정자, which its page does not list: it arrives there one segment time after its
+    last time, the most common time of the runs that make that segment. Returns [[(KRIC code, seconds, listed)]].
+    """
+    column = SHINBUNDANG_COLUMNS[direction]
+    order = travel_order(line, direction)
+    pages_by_code = dict(zip(station_codes(line), pages))
+    runs = []
+    open_runs = []
+    for index, code in enumerate(order):
+        times = pages_by_code[code]["columns"].get(column)
+        where = "%s %s %s" % (pages_by_code[code]["title"], column, direction)
+        if times is None:
+            if index != len(order) - 1:
+                raise ConvertError("%s: no column before the last station" % where)
+            break
+        next_open = []
+        k = 0
+        taken = set()
+        for run in open_runs:
+            if run["short"] and code == SHINBUNDANG_SHORT_TURN:
+                run["stops"].append((code, None, False))
+                continue
+            last = run["stops"][-1][1]
+            while k < len(times) and times[k][0] < last + SHINBUNDANG_MIN_HOP:
+                k += 1
+            if k == len(times):
+                raise ConvertError("%s: the run at %s %s finds no time" % (where, run["stops"][-1][0], clock(last)))
+            if times[k][1] != run["short"]:
+                raise ConvertError("%s: %s is marked (정자) on one station of its run only" % (where, clock(times[k][0])))
+            run["stops"].append((code, times[k][0], True))
+            taken.add(k)
+            k += 1
+            next_open.append(run)
+        for j, (seconds, short) in enumerate(times):
+            if j in taken:
+                continue
+            if index > 0 and code not in SHINBUNDANG_ENTRIES:
+                raise ConvertError("%s: %s starts a run, and no run starts there" % (where, clock(seconds)))
+            run = {"short": short, "stops": [(code, seconds, True)]}
+            runs.append(run)
+            next_open.append(run)
+        open_runs = sorted(next_open, key=lambda r: r["stops"][-1][1])
+    hops = {}
+    for run in runs:
+        for (a, ta, _), (b, tb, _) in zip(run["stops"], run["stops"][1:]):
+            if tb is not None:
+                hops.setdefault((a, b), {}).setdefault(tb - ta, 0)
+                hops[(a, b)][tb - ta] += 1
+    for (a, b), counts in hops.items():
+        if max(counts) - min(counts) > SHINBUNDANG_HOP_SPREAD:
+            raise ConvertError("%s: segment %s-%s takes %s minutes" % (direction, a, b, sorted(c // 60 for c in counts)))
+    chained = []
+    for run in runs:
+        stops = list(run["stops"])
+        if stops[-1][1] is None:
+            segment = hops.get((stops[-2][0], stops[-1][0]))
+            if not segment:
+                raise ConvertError("%s: no run makes the segment %s-%s" % (direction, stops[-2][0], stops[-1][0]))
+            hop = sorted(segment.items(), key=lambda item: (-item[1], item[0]))[0][0]
+            stops[-1] = (stops[-1][0], stops[-2][1] + hop, False)
+        chained.append(stops)
+    return chained
+
+
+def shinbundang_pages(data, day_type, line=LINED1):
+    """The station pages of one day type's PDF, checked against the line's stations, edition and day type."""
+    objects = pdf_objects(data)
+    name = SHINBUNDANG_FILES[day_type][0]
+    pages = [shinbundang_page(pdf_text_runs(objects, page), "%s page %d" % (name, index + 1)) for index, page in enumerate(pdf_pages(objects))]
+    return check_shinbundang_pages(pages, day_type, line)
+
+
+def check_shinbundang_pages(pages, day_type, line=LINED1):
+    """The pages, when their titles are the line's KRIC names in route order and each is the edition and day type
+    SHINBUNDANG_FILES expects; refuses them otherwise."""
+    name, days = SHINBUNDANG_FILES[day_type]
+    titles = [page["title"] for page in pages]
+    expected = [title for _, title in line["stations"]]
+    if titles != expected:
+        raise ConvertError("%s: page titles %s are not the KRIC names %s" % (name, titles, expected))
+    editions = {(page["plan"], page["from"], page["days"]) for page in pages}
+    if editions != {(SHINBUNDANG_PLAN, SHINBUNDANG_REVISION, days)}:
+        raise ConvertError("%s: edition %s is not %s from %s, %s" % (name, sorted(editions), SHINBUNDANG_PLAN, SHINBUNDANG_REVISION, days))
+    return pages
+
+
+def shinbundang_trains(pages, line=LINED1):
+    """Every run of both directions as a train: arrival and departure at each listed minute, numbered per direction
+    in order of its first time with the direction's parity, to its terminus or, marked (정자), to 정자."""
+    trains = []
+    for direction in ("up", "down"):
+        order = travel_order(line, direction)
+        runs = sorted(shinbundang_chain(pages, direction, line), key=lambda run: (run[0][1], order.index(run[0][0])))
+        for index, run in enumerate(runs):
+            ends_short = not run[-1][2]
+            stops = [{"station": code, "arr": seconds, "dep": seconds if listed else None} for code, seconds, listed in run]
+            trains.append({
+                "trainNo": "%04d" % (SHINBUNDANG_FIRST_RUN[direction] + 2 * index),
+                "direction": direction,
+                "destination": "정자" if ends_short else SHINBUNDANG_TERMINI[direction],
+                "express": False,
+                "stops": stops,
+            })
+    for train in trains:
+        validate_train(train, line["served"], "shinbundang train %s" % train["trainNo"])
+    return trains
+
+
+def zip_member(archive, name):
+    """A member by name, whether the zip spells it in UTF-8 (the flag or a Unicode path field) or in bare cp949."""
+    for info in archive.infolist():
+        names = {info.filename}
+        try:
+            names.add(info.filename.encode("cp437").decode("cp949"))
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            pass
+        if name in names:
+            return archive.read(info)
+    raise ConvertError("the 신분당 zip holds no %s" % name)
+
+
+def clock(seconds):
+    return "%02d:%02d" % (seconds // 3600, seconds % 3600 // 60)
+
+
 # ---------------------------------------------------------------- output
 
 def timetable(kind, ref, revision, operator, line, day_type, stations, trains):
@@ -774,6 +1301,19 @@ def build_korail_k1(out_dir, local):
         build_korail_line(out_dir, LINEK1, day_type, data)
 
 
+def build_shinbundang(out_dir, local):
+    import io
+
+    archive = zipfile.ZipFile(io.BytesIO(read_local_or_download(local, SHINBUNDANG_ZIP_URL)))
+    for day_type, (name, _) in SHINBUNDANG_FILES.items():
+        trains = shinbundang_trains(shinbundang_pages(zip_member(archive, name), day_type))
+        label = "shinbundang %s" % day_type
+        check_unique(trains, label, allow_split=False)
+        check_one_direction(trains, label, LINED1)
+        document = timetable("shinbundang-pdf", "%s#%s" % (SHINBUNDANG_ZIP_URL, name), SHINBUNDANG_REVISION, LINED1["operator"], LINED1["line"], day_type, station_codes(LINED1), trains)
+        write(out_dir, LINED1, document)
+
+
 def build_seoul(out_dir, today, lines=SEOUL_LINES):
     key = os.environ.get("SEOUL_OPENAPI_GENERAL_KEY")
     if not key:
@@ -801,12 +1341,13 @@ def build_seoul(out_dir, today, lines=SEOUL_LINES):
 def main(argv=None):
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     parser = argparse.ArgumentParser(description="Build src/subway/timetable/*.json from the Korail xlsx files and the Seoul API.")
-    parser.add_argument("--only", choices=("korail", "seoul"), help="build one source only")
+    parser.add_argument("--only", choices=("korail", "seoul", "shinbundang"), help="build one source only")
     parser.add_argument("--line", action="append", choices=[line["line"] for line in LINES], help="build this line only; repeatable")
     parser.add_argument("--out", default=os.path.join(root, "src", "subway", "timetable"), help="output directory")
     parser.add_argument("--korail-weekday", help="a local copy of KORAIL_WEEKDAY_URL")
     parser.add_argument("--korail-holiday", help="a local copy of KORAIL_HOLIDAY_URL")
     parser.add_argument("--korail-k1", help="a local copy of KORAIL_K1_URL")
+    parser.add_argument("--shinbundang-zip", help="a local copy of SHINBUNDANG_ZIP_URL")
     args = parser.parse_args(argv)
     os.makedirs(args.out, exist_ok=True)
     today = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).date().isoformat()
@@ -818,6 +1359,8 @@ def main(argv=None):
             build_korail_k1(args.out, args.korail_k1)
         if args.only in (None, "seoul"):
             build_seoul(args.out, today, [line for line in SEOUL_LINES if line["line"] in wanted])
+        if args.only in (None, "shinbundang") and "D1" in wanted:
+            build_shinbundang(args.out, args.shinbundang_zip)
     except ConvertError as error:
         print("convert.py: %s" % error, file=sys.stderr)
         return 1

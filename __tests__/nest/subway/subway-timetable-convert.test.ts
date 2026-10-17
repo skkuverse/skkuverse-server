@@ -181,4 +181,19 @@ describe("scripts/subway-timetable/convert.py", () => {
     expect(stopOf(weekday, "6300", "KR-K1-K230")).toEqual({ station: "KR-K1-K230", arr: 7 * 3600 + 7 * 60 + 30, dep: 7 * 3600 + 8 * 60 });
     expect(stopOf(weekday, "6300", "KR-K1-K217")).toEqual({ station: "KR-K1-K217", arr: 7 * 3600 + 39 * 60 + 30, dep: 7 * 3600 + 40 * 60 });
   });
+
+  it.each([
+    ["down", 5 * 3600 + 34 * 60],
+    ["up", 5 * 3600 + 47 * 60],
+  ])("writes the first 신분당 %s train at 강남 on weekdays at the PDF's minute, %d s", (direction, seconds) => {
+    // Arrange
+    const weekday = timetable("shinbundang-d1-weekday.json");
+
+    // Act
+    const times = weekday.trains.filter((t) => t.direction === direction).flatMap((t) => t.stops.filter((s) => s.station === "DX-D1-4307").map((s) => s.arr ?? 0));
+
+    // Assert
+    expect([weekday.operator, weekday.line, weekday.dayType]).toEqual(["DX", "D1", "weekday"]);
+    expect(Math.min(...times)).toBe(seconds);
+  });
 });
