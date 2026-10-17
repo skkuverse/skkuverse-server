@@ -6,3 +6,8 @@ export interface TrainMapTrain {
   status: TrainMapStatus;
   destination: string;
 }
+
+export interface EmptySpell {
+  since: Date;
+  lastAt: Date;
+}
