@@ -1,12 +1,15 @@
 /**
  * In-memory BusEtaRepository with the real reads' filters (pinned in
- * bus-eta.repository.spec.ts): by service and date, or unexpired at `now`;
+ * bus-eta.repository.spec.ts): by service and date, unexpired at `now`, or
+ * the unexpired fixed live values of some services and dates, projected and
+ * parsed as the real read does;
  * the upsert keeps a frozen document with the same stop count, as the real one
  * does. `unexpiredReads` counts the serving reads; `failWith` makes every call
  * reject.
  */
-import type { ShuttleEtaDoc } from "../../../../src/bus/eta/bus-eta.document";
+import type { FixedEstimate, ShuttleEtaDoc } from "../../../../src/bus/eta/bus-eta.document";
 import type { BusEtaRepository } from "../../../../src/bus/eta/bus-eta.repository";
+import { fixedEstimate } from "../../../../src/bus/eta/bus-eta.schema";
 import type { SequenceLength, UpsertResult } from "../../../../src/bus/eta/bus-eta.types";
 import type { PublicOf } from "../public-of";
 
@@ -35,6 +38,17 @@ export class FakeBusEtaRepository implements PublicOf<BusEtaRepository> {
     this.unexpiredReads += 1;
     this.fail();
     return [...this.docs.values()].filter((d) => d.expiresAt.getTime() > now.getTime());
+  }
+
+  async listFixedEstimates(serviceIds: string[], dates: string[], now: Date): Promise<FixedEstimate[]> {
+    this.fail();
+    return [...this.docs.values()]
+      .filter((d) => d.kind === "live" && d.frozen === true && serviceIds.includes(d.serviceId) && dates.includes(d.date) && d.expiresAt.getTime() > now.getTime())
+      .map(({ _id, serviceId, routeType, date, time, offsetsSec }) => ({ _id, serviceId, routeType, date, time, offsetsSec }))
+      .flatMap((d) => {
+        const parsed = fixedEstimate.safeParse(d);
+        return parsed.success ? [parsed.data] : [];
+      });
   }
 
   private fail(): void {

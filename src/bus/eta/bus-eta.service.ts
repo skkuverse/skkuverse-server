@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { BusScheduleService } from "../schedule/bus-schedule.service";
 import { BusStopsService } from "../stops/bus-stops.service";
-import type { ShuttleEtaDoc } from "./bus-eta.document";
+import type { FixedEstimate, ShuttleEtaDoc } from "./bus-eta.document";
 import { BusEtaRepository } from "./bus-eta.repository";
 import { runsOfDay, toEtaSequences, toSequenceLength } from "./bus-eta.rules";
 import type { EtaRun, EtaSequence, SequenceLength, UpsertResult } from "./bus-eta.types";
@@ -29,6 +29,11 @@ export class BusEtaService {
   async listFitting(serviceIds: string[], dates: string[]): Promise<ShuttleEtaDoc[]> {
     const docs = await this.repository.listEstimates(serviceIds, dates);
     return docs.filter((d) => d.offsetsSec.length === this.sequenceLength(d.serviceId, d.routeType));
+  }
+
+  async listFixedFitting(serviceIds: string[], dates: string[], now: Date): Promise<FixedEstimate[]> {
+    const fixed = await this.repository.listFixedEstimates(serviceIds, dates, now);
+    return fixed.filter((d) => d.offsetsSec.length === this.sequenceLength(d.serviceId, d.routeType));
   }
 
   upsertFitting(docs: ShuttleEtaDoc[]): Promise<UpsertResult> {

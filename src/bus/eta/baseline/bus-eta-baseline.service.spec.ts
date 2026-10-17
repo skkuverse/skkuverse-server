@@ -1,10 +1,13 @@
 /**
  * `shuttle-eta-baseline` (design D10): the 04:00 KST refresh, no refetch after
  * a restart, the 30-minute backoff, the 250 ms spacing, the daily cap and
- * non-operating days. Ticks take an explicit `now`.
+ * non-operating days. Ticks take an explicit `now`. A bus-lane run with a
+ * fixed value of the same weekday and time reuses it with no TMAP call (design
+ * D7); any other run is forecast by TMAP.
  */
 import moment from "moment-timezone";
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
+import { FakeBusEtaForecastClient } from "../../../../__tests__/helpers/fakes/bus/bus-eta-forecast.client.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import { DailyCapError } from "../../../shared/daily-cap.error";
 import { BusEtaDirectionsError } from "../bus-eta.error";
@@ -17,6 +20,9 @@ import type { BusEtaRepository } from "../bus-eta.repository";
 import { DailyCap } from "../../../shared/daily-cap.util";
 import { BusEtaService } from "../bus-eta.service";
 import type { EtaRun, EtaSequence } from "../bus-eta.types";
+import type { BusEtaForecastClient } from "../forecast/bus-eta-forecast.client";
+import { BusEtaForecastService } from "../forecast/bus-eta-forecast.service";
+import { BusEtaLaneService } from "../lane/bus-eta-lane.service";
 import { BusEtaBaselineService } from "./bus-eta-baseline.service";
 
 const SEQ: EtaSequence = {
@@ -51,7 +57,7 @@ function setup(opts: { runs?: EtaRun[]; cap?: number; store?: Map<string, Shuttl
   const poller = new BusEtaBaselineService({
     sequences: [SEQ],
     upcomingRuns: async (_s, now) => runs.filter((r) => r.departAt.getTime() > now.getTime()),
-    fetchOffsets,
+    forecast: { fetchOffsets, reusableFixedByRun: async () => new Map() },
     readEtas,
     writeEtas: async (docs) => {
       for (const d of docs) store.set(d._id, d);
@@ -180,7 +186,7 @@ describe("BusEtaBaselineService.tick", () => {
     const poller = new BusEtaBaselineService({
       sequences: [SEQ],
       upcomingRuns: (s, now) => eta.upcomingRuns(s, now),
-      fetchOffsets,
+      forecast: { fetchOffsets, reusableFixedByRun: async () => new Map() },
       readEtas: async () => [],
       writeEtas: async () => undefined,
       cap: new DailyCap("tmap", 900),
@@ -202,5 +208,105 @@ describe("BusEtaBaselineService.tick", () => {
     await expect(poller.tick(kst("2026-10-12", "06:00"))).resolves.toEqual({ calls: 0, written: 0 });
     expect(readEtas).not.toHaveBeenCalled();
     expect(fetchOffsets).not.toHaveBeenCalled();
+  });
+});
+
+describe("BusEtaBaselineService.tick bus-lane runs (design D7)", () => {
+  // 04:00 KST on Tuesday 2026-10-20, still the 19th in UTC.
+  const NOW = new Date("2026-10-19T19:00:00.000Z");
+  const tuesday = (time: string): EtaRun => run("2026-10-20", time);
+
+  function fixedLastTuesday(time: string, offsetsSec: number[]): ShuttleEtaDoc {
+    const departAt = kst("2026-10-13", time);
+    return {
+      _id: etaDocId(run("2026-10-13", time), "live"),
+      kind: "live",
+      serviceId: "campus-inja",
+      routeType: "regular",
+      date: "2026-10-13",
+      time,
+      departAt,
+      offsetsSec,
+      source: "naver",
+      fetchedAt: departAt,
+      frozen: true,
+      frozenAt: departAt,
+      expiresAt: new Date(departAt.getTime() + 8 * 24 * 3600_000),
+    };
+  }
+
+  function setupWithForecast(runs: EtaRun[], stored: ShuttleEtaDoc[]) {
+    const repository = new FakeBusEtaRepository();
+    for (const doc of stored) repository.docs.set(doc._id, doc);
+    const eta = new BusEtaService(asReal<BusEtaRepository>(repository), {} as BusScheduleService, new BusStopsService());
+    const tmap = new FakeBusEtaForecastClient();
+    const forecast = new BusEtaForecastService(new BusEtaLaneService(eta), asReal<BusEtaForecastClient>(tmap), eta);
+    const sequence = eta.sequences().find((s) => s.serviceId === "campus-inja" && s.routeType === "regular")!;
+    const engine = new BusEtaBaselineService({
+      sequences: [sequence],
+      upcomingRuns: async (_s, now) => runs.filter((r) => r.departAt.getTime() > now.getTime()),
+      forecast,
+      readEtas: (serviceIds, dates) => eta.listFitting(serviceIds, dates),
+      writeEtas: (docs) => eta.upsertFitting(docs),
+      cap: new DailyCap("tmap", 900),
+      sleep: async () => undefined,
+    });
+    return { engine, tmap, repository };
+  }
+
+  it("Bus-lane run with last week's fixed value: the prediction is that value, and TMAP is not asked", async () => {
+    // Arrange
+    const fixed = fixedLastTuesday("13:30", [0, 4320]);
+    const { engine, tmap, repository } = setupWithForecast([tuesday("13:30")], [fixed]);
+
+    // Act
+    const result = await engine.tick(NOW);
+
+    // Assert
+    expect(result).toEqual({ calls: 0, written: 1 });
+    expect(tmap.calls).toEqual([]);
+    const doc = repository.docs.get(etaDocId(tuesday("13:30"), "baseline"))!;
+    expect(doc).toMatchObject({ kind: "baseline", source: "naver", offsetsSec: [0, 4320], derivedFrom: fixed._id, fetchedAt: NOW });
+    expect(doc.expiresAt.getTime() - NOW.getTime()).toBe(24 * 3600_000);
+  });
+
+  it("Bus-lane run without a fixed value: the prediction comes from TMAP", async () => {
+    // Arrange
+    const { engine, tmap, repository } = setupWithForecast([tuesday("13:30")], []);
+
+    // Act
+    await engine.tick(NOW);
+
+    // Assert
+    expect(tmap.calls.map((c) => c.departAt)).toEqual([kst("2026-10-20", "13:30")]);
+    const doc = repository.docs.get(etaDocId(tuesday("13:30"), "baseline"))!;
+    expect(doc).toMatchObject({ source: "tmap", offsetsSec: [0, 5040] });
+    expect(doc).not.toHaveProperty("derivedFrom");
+  });
+
+  it("Car run: the prediction comes from TMAP, even with last week's fixed value", async () => {
+    // Arrange
+    const { engine, tmap, repository } = setupWithForecast([tuesday("21:30")], [fixedLastTuesday("21:30", [0, 3900])]);
+
+    // Act
+    await engine.tick(NOW);
+
+    // Assert
+    expect(tmap.calls.map((c) => c.departAt)).toEqual([kst("2026-10-20", "21:30")]);
+    expect(repository.docs.get(etaDocId(tuesday("21:30"), "baseline"))).toMatchObject({ source: "tmap", offsetsSec: [0, 5040] });
+  });
+
+  it("asks TMAP once for each run that does not reuse a fixed value", async () => {
+    // Arrange
+    const runs = [tuesday("13:30"), tuesday("15:00"), tuesday("21:30")];
+    const stored = [fixedLastTuesday("13:30", [0, 4320]), fixedLastTuesday("21:30", [0, 3900])];
+    const { engine, tmap } = setupWithForecast(runs, stored);
+
+    // Act
+    const result = await engine.tick(NOW);
+
+    // Assert
+    expect(result).toEqual({ calls: 2, written: 3 });
+    expect(tmap.calls.map((c) => c.departAt)).toEqual([kst("2026-10-20", "15:00"), kst("2026-10-20", "21:30")]);
   });
 });
