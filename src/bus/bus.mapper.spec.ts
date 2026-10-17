@@ -57,6 +57,7 @@ describe("toJongroRoute", () => {
     themeColor: "4CAF50",
     iconType: "village",
     refreshInterval: 30,
+    seatCount: 18,
     stations: topisIds.map((id, index) => station(id, { isFirstStation: index === 0, isLastStation: index === topisIds.length - 1 })),
   });
 

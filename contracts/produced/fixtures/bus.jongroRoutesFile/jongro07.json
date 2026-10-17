@@ -1,5 +1,5 @@
 {
-  "_about": "src/bus/jongro-routes.json as committed on 2026-10-14; the jongro07 entry only",
+  "_about": "src/bus/jongro-routes.json as committed on 2026-10-17 (seatCount added); the jongro07 entry only",
   "data": [
     {
       "id": "jongro07",
@@ -7,6 +7,7 @@
       "themeColor": "4CAF50",
       "iconType": "village",
       "refreshInterval": 40,
+      "seatCount": 18,
       "stations": [
         {
           "stationName": "성균관대운동장",
