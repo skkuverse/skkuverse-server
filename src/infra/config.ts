@@ -42,6 +42,7 @@ const config = {
       buildingsRaw: "buildings_raw",
       spaces: "spaces",
       connections: "connections",
+      facilities: "facilities",
       campusShapes: "campus_shapes",
     },
     syncIntervalMs:

@@ -514,11 +514,56 @@
           "toFloor"
         ]
       }
+    },
+    "cafeterias": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "object",
+            "properties": {
+              "ko": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ko",
+              "en"
+            ]
+          },
+          "floor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "spaceCd": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "floor",
+          "spaceCd"
+        ]
+      }
     }
   },
   "required": [
     "building",
     "floors",
-    "connections"
+    "connections",
+    "cafeterias"
   ]
 }

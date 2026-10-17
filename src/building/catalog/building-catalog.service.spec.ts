@@ -2,13 +2,15 @@
  * BuildingCatalogService over in-memory repositories. What it guards: the
  * campus filter and labels of the list; for the detail, which reads it skips
  * (nothing after an unknown building, no spaces for a facility, one read for
- * all connection targets), how connections are labelled, and that the floor
- * list's English fallback leaves the repository's objects as they were.
+ * all connection targets), how connections are labelled, that the floor
+ * list's English fallback leaves the repository's objects as they were, and
+ * that the detail lists the cafeterias in its own building only.
  */
 import { FakeBuildingCatalogRepository } from "../../../__tests__/helpers/fakes/building/building-catalog.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { FakeBuildingRepository } from "../../../__tests__/helpers/fakes/building/building.repository.fake";
 import type { BuildingDoc, SpaceDoc } from "../building.document";
+import type { CafeteriaDoc } from "../cafeteria/building-cafeteria.document";
 import type { BuildingRepository } from "../building.repository";
 import type { SkkuId } from "../building.types";
 import type { ConnectionEnds } from "./building-catalog.document";
@@ -128,5 +130,38 @@ describe("BuildingCatalogService.detail", () => {
     ]);
     expect(catalog.spaces[0]!.floor).toEqual({ ko: "1층", en: "" });
     expect(catalog.spaces[0]!.name).toEqual({ ko: "실", en: "" });
+  });
+
+  it("lists the cafeterias in its own building, by conspaceCd, and none of another's", async () => {
+    // Arrange
+    const inBusiness = (conspaceCd: string, ko: string) =>
+      ({ _id: conspaceCd, kind: "cafeteria", buildNo: "101", name: { ko, en: "" }, floor: { ko: "지하1층", en: "B1" }, spaceCd: null }) as CafeteriaDoc;
+    catalog.buildings = [BUSINESS];
+    catalog.cafeterias = [
+      inBusiness("10201031", "은행골식당"),
+      { ...inBusiness("10201034", "법고을식당"), buildNo: "100" } as CafeteriaDoc,
+      inBusiness("10201030", "패컬티식당"),
+    ];
+
+    // Act
+    const detail = await service.detail(2 as SkkuId, "ko");
+
+    // Assert
+    expect(detail?.cafeterias).toEqual([
+      { id: "10201030", name: { ko: "패컬티식당", en: "패컬티식당" }, floor: "지하1층", spaceCd: null },
+      { id: "10201031", name: { ko: "은행골식당", en: "은행골식당" }, floor: "지하1층", spaceCd: null },
+    ]);
+  });
+
+  it("serves no cafeteria, without reading any, for a facility without a buildNo", async () => {
+    // Arrange
+    catalog.buildings = [GATE];
+
+    // Act
+    const detail = await service.detail(4 as SkkuId, "ko");
+
+    // Assert
+    expect(detail?.cafeterias).toEqual([]);
+    expect(catalog.reads).not.toContain("listCafeteriasByBuildNo");
   });
 });

@@ -3,14 +3,21 @@
  * with the real queries' filters and projections (pinned in
  * building-catalog.repository.spec.ts): a building by skkuId, a building's spaces by
  * buildNo, a connection from either end (parsed by connectionEnds, as the real
- * read does, so a malformed one is left out), and buildings by skkuId list. `reads`
+ * read does, so a malformed one is left out), buildings by skkuId list, and a
+ * building's cafeterias by buildNo, sorted by conspaceCd. `reads`
  * names each read in order, for the tests where skipping a read is the
  * behavior. `failWith` makes every read reject.
  */
 import type { BuildingDoc, SpaceDoc } from "../../../../src/building/building.document";
 import type { BuildNo, SkkuId } from "../../../../src/building/building.types";
 import type { BuildingCatalogRepository } from "../../../../src/building/catalog/building-catalog.repository";
-import type { BuildingLabel, ConnectionEnds, FloorSpaceDoc } from "../../../../src/building/catalog/building-catalog.document";
+import type { CafeteriaDoc } from "../../../../src/building/cafeteria/building-cafeteria.document";
+import type {
+  BuildingLabel,
+  CafeteriaSummary,
+  ConnectionEnds,
+  FloorSpaceDoc,
+} from "../../../../src/building/catalog/building-catalog.document";
 import { connectionEnds } from "../../../../src/building/catalog/building-catalog.schema";
 import type { PublicOf } from "../public-of";
 
@@ -18,6 +25,7 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
   buildings: BuildingDoc[] = [];
   spaces: SpaceDoc[] = [];
   connections: ConnectionEnds[] = [];
+  cafeterias: CafeteriaDoc[] = [];
   reads: string[] = [];
   failWith: Error | null = null;
 
@@ -56,6 +64,14 @@ export class FakeBuildingCatalogRepository implements PublicOf<BuildingCatalogRe
     return this.buildings
       .filter((b) => skkuIds.includes(b._id))
       .map(({ _id, buildNo, displayNo, name }) => ({ _id, buildNo, displayNo, name }));
+  }
+
+  async listCafeteriasByBuildNo(buildNo: BuildNo): Promise<CafeteriaSummary[]> {
+    this.read("listCafeteriasByBuildNo");
+    return this.cafeterias
+      .filter((c) => c.buildNo === buildNo && c.kind === "cafeteria")
+      .sort((a, b) => (a._id < b._id ? -1 : a._id > b._id ? 1 : 0))
+      .map(({ _id, name, floor, spaceCd }) => ({ _id, name, floor, spaceCd }));
   }
 
   private read(name: string): void {
