@@ -88,12 +88,44 @@ describe("chip lists", () => {
     expect(eventChipSpecs(CONFIG).length).toBeGreaterThan(0);
   });
 
-  it("serves no chip row at all off-season", () => {
-    // BASE_CHIPS being empty is a decision, not an oversight — lost and found was
-    // removed and the campus SDUI still carries that action. Asserting the
-    // count means putting a permanent chip back has to be deliberate.
+  it("serves the four permanent link chips off-season, in the row's order", () => {
     // Act & Assert
-    expect(BASE_CHIPS).toHaveLength(0);
+    // The four buttons that left the campus sheet for the chip row. Asserting the
+    // whole row means adding, dropping or reordering a permanent chip has to be deliberate.
+    expect(BASE_CHIPS).toEqual([
+      {
+        id: "building_map",
+        emoji: "🏢",
+        label: { ko: "건물지도", en: "Building Map", zh: "建筑地图" },
+        action: { kind: "link", actionType: "route", actionValue: "/map/hssc" },
+        isReset: false,
+        list: null,
+      },
+      {
+        id: "building_code",
+        emoji: "🔢",
+        label: { ko: "건물코드", en: "Building Code", zh: "建筑编号" },
+        action: { kind: "link", actionType: "route", actionValue: "/search" },
+        isReset: false,
+        list: null,
+      },
+      {
+        id: "lost_found",
+        emoji: "🧳",
+        label: { ko: "분실물", en: "Lost & Found", zh: "失物招领" },
+        action: { kind: "link", actionType: "webview", actionValue: "/skku/lostandfound" },
+        isReset: false,
+        list: null,
+      },
+      {
+        id: "inquiry",
+        emoji: "💬",
+        label: { ko: "문의하기", en: "Inquiry", zh: "咨询" },
+        action: { kind: "link", actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" },
+        isReset: false,
+        list: null,
+      },
+    ]);
   });
 
   it("has no duplicate chip id across the served row", () => {

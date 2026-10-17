@@ -21,6 +21,7 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 import type { LayerSet } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
+import { MiniappsService } from "../../miniapps/miniapps.service";
 import { EVENT_CACHE_TTL_MS } from "../map.constants";
 import type { MapRepository } from "../map.repository";
 import { MapConfigService } from "./map-config.service";
@@ -39,7 +40,7 @@ const CONFIG: LayerSet = shippedLayerSet();
 const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
 
 // The chips /map/config serves off-season, read through the layer-set service as the config service reads them.
-const BASE_CHIPS = new MapLayerSetService(asReal<MapRepository>(new FakeMapRepository()), CLOCK).servedChipSpecs(null);
+const BASE_CHIPS = new MapLayerSetService(asReal<MapRepository>(new FakeMapRepository()), CLOCK, new MiniappsService()).servedChipSpecs(null);
 const EVENT_LAYER_IDS = new Set(CONFIG.layers.map((l) => l.id));
 
 // "No festival" is stated rather than inferred from an absent DB client, and
@@ -53,7 +54,7 @@ describe("MapConfigService", () => {
   function freshServices(): void {
     const repository = new FakeMapRepository();
     repository.findActiveActivation = findActiveActivation;
-    config = new MapConfigService(new MapLayerSetService(asReal<MapRepository>(repository), CLOCK));
+    config = new MapConfigService(new MapLayerSetService(asReal<MapRepository>(repository), CLOCK, new MiniappsService()));
   }
   const svc = {
     getMapConfig: (lang: "ko" | "en" | "zh") => config.getMapConfig(lang),

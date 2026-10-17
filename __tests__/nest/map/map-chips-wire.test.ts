@@ -26,6 +26,8 @@ import { FakeBuildingRepository } from "../../helpers/fakes/building/building.re
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
 import { Clock } from "../../../src/infra/clock";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { expectWire } from "../../helpers/contracts/expect-wire";
+import { mapConfig } from "../../../src/map/config/map-config.wire";
 
 // WHY: one fixed instant (12:00 KST, 2026-10-14), so the answers do not depend on the day the suite runs.
 const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
@@ -98,6 +100,49 @@ describe("GET /map/config (real map services)", () => {
     // would be invisible to every other test.
     expect(layers[0]).toHaveProperty("defaultVisibleWhen", { kind: "always" });
     expect(layers.every((l: { defaultVisibleWhen?: unknown }) => l.defaultVisibleWhen)).toBe(true);
+  });
+
+  it("serves the four permanent link chips with no festival live, as the wire declares", async () => {
+    // Act
+    const res = await request(httpServer).get("/map/config");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(mapConfig, res.body.data);
+    expect(res.body.data.chips).toEqual([
+      {
+        id: "building_map",
+        label: "건물지도",
+        icon: { kind: "emoji", emoji: "🏢" },
+        action: { kind: "link", actionType: "route", actionValue: "/map/hssc" },
+        isReset: false,
+        list: null,
+      },
+      {
+        id: "building_code",
+        label: "건물코드",
+        icon: { kind: "emoji", emoji: "🔢" },
+        action: { kind: "link", actionType: "route", actionValue: "/search" },
+        isReset: false,
+        list: null,
+      },
+      {
+        id: "lost_found",
+        label: "분실물",
+        icon: { kind: "emoji", emoji: "🧳" },
+        action: { kind: "link", actionType: "webview", actionValue: "https://webview.skkuverse.com/skku/lostandfound" },
+        isReset: false,
+        list: null,
+      },
+      {
+        id: "inquiry",
+        label: "문의하기",
+        icon: { kind: "emoji", emoji: "💬" },
+        action: { kind: "link", actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" },
+        isReset: false,
+        list: null,
+      },
+    ]);
   });
 
   it("adds the festival chips while an activation is open", async () => {

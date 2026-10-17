@@ -227,32 +227,6 @@ const translations: Translations = {
     zh: "自然校区",
   },
 
-  "campus.title": {
-    ko: "캠퍼스 서비스",
-    en: "Campus Services",
-    zh: "校园服务",
-  },
-  "campus.buildingMap.title": {
-    ko: "건물지도",
-    en: "Building Map",
-    zh: "建筑地图",
-  },
-  "campus.buildingCode.title": {
-    ko: "건물코드",
-    en: "Building Code",
-    zh: "建筑编号",
-  },
-  "campus.lostFound.title": {
-    ko: "분실물",
-    en: "Lost & Found",
-    zh: "失物招领",
-  },
-  "campus.inquiry.title": {
-    ko: "문의하기",
-    en: "Inquiry",
-    zh: "咨询",
-  },
-
   "scroll.hsscMap.title": {
     ko: "인사캠 건물지도",
     en: "HSSC Building Map",

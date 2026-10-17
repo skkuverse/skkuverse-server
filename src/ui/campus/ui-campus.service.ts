@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../../infra/clock";
-import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
 import { MiniappsService } from "../../miniapps/miniapps.service";
 import { readCampusBanners } from "./ui-campus.config";
@@ -21,6 +20,6 @@ export class UiCampusService {
   }
 
   getCampusSheet(lang: SupportedLang): CampusSheet {
-    return toCampusSheet({ banners: this.banners, lang, now: this.clock.now(), webviewOrigin: WEBVIEW_ORIGIN });
+    return toCampusSheet({ banners: this.banners, lang, now: this.clock.now() });
   }
 }

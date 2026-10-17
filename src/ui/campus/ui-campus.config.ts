@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { parseConfigFile } from "../../infra/config-file";
-import { isBrokenLinkAction } from "../ui.rules";
+import { isBrokenLinkAction } from "../../shared/link-action.util";
 import type { MiniAppRegistry } from "../ui.types";
 import { campusBannersFile, type CampusBannerCarouselRaw } from "./ui-campus.schema";
 

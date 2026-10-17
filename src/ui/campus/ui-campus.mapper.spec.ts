@@ -1,9 +1,9 @@
 /**
- * toCampusSheet places the resolved banner carousel before the service
- * buttons, and drops it once every banner is outside its window: the campus
- * sheet has no default banner to draw in an empty slot.
+ * toCampusSheet serves the resolved banner carousel as the sheet's only
+ * section, and drops it once every banner is outside its window: the campus
+ * sheet has no default banner to draw in an empty slot, and its service
+ * buttons moved to the map's chip row.
  */
-import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import { MiniappsService } from "../../miniapps/miniapps.service";
 import { loadCampusBanners } from "./ui-campus.config";
 import { toCampusSheet } from "./ui-campus.mapper";
@@ -33,15 +33,15 @@ describe("toCampusSheet", () => {
 
   function sectionsAt(iso: string, raw: Record<string, unknown>) {
     const banners = loadCampusBanners(raw, registry) as CampusBannerCarouselRaw;
-    return toCampusSheet({ banners, lang: "ko", now: new Date(iso), webviewOrigin: WEBVIEW_ORIGIN }).sections;
+    return toCampusSheet({ banners, lang: "ko", now: new Date(iso) }).sections;
   }
 
-  it("puts the carousel before the service tiles, in wire shape", () => {
+  it("serves the carousel as the only section, in wire shape", () => {
     // Act
     const sections = sectionsAt("2026-10-02T00:00:00+09:00", carousel({ items: [image(WINDOW)] }));
 
     // Assert
-    expect(sections.map((s) => s.type)).toEqual(["banner_carousel", "button_grid"]);
+    expect(sections.map((s) => s.type)).toEqual(["banner_carousel"]);
     expect(sections[0]).toEqual({
       type: "banner_carousel",
       id: "campus_banners",
@@ -56,6 +56,6 @@ describe("toCampusSheet", () => {
     const sections = sectionsAt("2026-10-03T00:00:00+09:00", carousel({ items: [image(WINDOW)] }));
 
     // Assert
-    expect(sections.map((s) => s.type)).toEqual(["button_grid"]);
+    expect(sections).toEqual([]);
   });
 });

@@ -1,0 +1,7 @@
+{
+  "_about": "Hand-written 2026-10-17: GET /ui/home/campus as served after the service buttons moved to the /map/config chip row (Accept-Language ko); every banner window had closed, so no section",
+  "data": {
+    "minAppVersion": "2.0.0",
+    "sections": []
+  }
+}
