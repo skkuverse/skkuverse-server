@@ -1,7 +1,10 @@
 /**
- * toSubwayStationArrivals: a station and its `subway_arrivals` document become
- * the arrivals response. The station carries its id, its three KRIC codes and
- * its name in the request language; each of its two directions, up then down,
+ * toSubwayStationArrivals: a physical station and each of its platforms'
+ * `subway_arrivals` documents become the arrivals response. The station
+ * carries its slug and its name in the request language; each platform, in
+ * the station's order, a line entry with the line's code, name, badge and
+ * color, its KRIC id, its own document's generatedAt and each of its two
+ * directions, up then down,
  * its name, its previous station (the nearest upstream one) and its next
  * station, each by id and by name in that language, and its trains; each
  * train its arrival instant as an ISO string and how many stops away it is,
@@ -9,12 +12,14 @@
  * one, null with no position or one off the upstream list. A neighbor
  * without a name is refused, never served unnamed.
  */
-import { SUBWAY_STATIONS } from "../subway.constants";
 import type { SubwayArrivalsDoc } from "../subway.document";
-import type { SubwayStation } from "../subway.types";
+import type { SubwayPlatform, SubwayStation } from "../subway.types";
 import { toSubwayStationArrivals } from "./subway-arrivals.mapper";
+import { findSubwayStation } from "./subway-arrivals.rules";
 
-const HYEHWA = SUBWAY_STATIONS.find((s) => s.id === "S1-4-420") as SubwayStation;
+const HYEHWA = findSubwayStation("hyehwa") as SubwayStation;
+const SUNGKYUNKWAN = findSubwayStation("sungkyunkwan") as SubwayStation;
+const HYEHWA_PLATFORM = HYEHWA.platforms[0] as SubwayPlatform;
 const GENERATED_AT = new Date("2026-10-16T11:41:00Z");
 const DOC: SubwayArrivalsDoc = {
   _id: "S1-4-420",
@@ -62,34 +67,40 @@ const DOC: SubwayArrivalsDoc = {
 };
 
 describe("toSubwayStationArrivals", () => {
-  it("names the station by its codes and each direction and its neighbors in Korean, and counts each train's stops away", () => {
+  it("names the station by its slug, its line, each direction and its neighbors in Korean, and counts each train's stops away", () => {
     // Act
-    const response = toSubwayStationArrivals(HYEHWA, DOC, "ko");
+    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], "ko");
 
     // Assert
     expect(response).toEqual({
-      station: { id: "S1-4-420", operatorCode: "S1", lineCode: "4", stationCode: "420", name: "혜화" },
-      generatedAt: "2026-10-16T11:41:00.000Z",
-      directions: [
+      station: { id: "hyehwa", name: "혜화" },
+      lines: [
         {
-          direction: "up",
-          name: "불암산·진접 방면",
-          previousStation: { id: "S1-4-421", name: "동대문" },
-          nextStation: { id: "S1-4-419", name: "한성대입구" },
-          trains: [
-            { trainNo: "4674", destination: "불암산", express: false, arrivalAt: "2026-10-16T11:42:50.000Z", stopsAway: 1, source: "live" },
-            { trainNo: "4676", destination: "불암산", express: false, arrivalAt: "2026-10-16T11:48:00.000Z", stopsAway: null, source: "scheduled" },
-          ],
-        },
-        {
-          direction: "down",
-          name: "오이도·안산 방면",
-          previousStation: { id: "S1-4-419", name: "한성대입구" },
-          nextStation: { id: "S1-4-421", name: "동대문" },
-          trains: [
-            { trainNo: "4171", destination: "사당", express: false, arrivalAt: "2026-10-16T11:41:20.000Z", stopsAway: 0, source: "estimated" },
-            { trainNo: "4173", destination: "오이도", express: false, arrivalAt: "2026-10-16T11:45:00.000Z", stopsAway: 2, source: "estimated" },
-            { trainNo: "4175", destination: "오이도", express: false, arrivalAt: "2026-10-16T11:49:00.000Z", stopsAway: null, source: "estimated" },
+          line: { code: "4", name: "4호선", badge: "4", color: "00A5DE" },
+          platformId: "S1-4-420",
+          generatedAt: "2026-10-16T11:41:00.000Z",
+          directions: [
+            {
+              direction: "up",
+              name: "불암산·진접 방면",
+              previousStation: { id: "S1-4-421", name: "동대문" },
+              nextStation: { id: "S1-4-419", name: "한성대입구" },
+              trains: [
+                { trainNo: "4674", destination: "불암산", express: false, arrivalAt: "2026-10-16T11:42:50.000Z", stopsAway: 1, source: "live" },
+                { trainNo: "4676", destination: "불암산", express: false, arrivalAt: "2026-10-16T11:48:00.000Z", stopsAway: null, source: "scheduled" },
+              ],
+            },
+            {
+              direction: "down",
+              name: "오이도·안산 방면",
+              previousStation: { id: "S1-4-419", name: "한성대입구" },
+              nextStation: { id: "S1-4-421", name: "동대문" },
+              trains: [
+                { trainNo: "4171", destination: "사당", express: false, arrivalAt: "2026-10-16T11:41:20.000Z", stopsAway: 0, source: "estimated" },
+                { trainNo: "4173", destination: "오이도", express: false, arrivalAt: "2026-10-16T11:45:00.000Z", stopsAway: 2, source: "estimated" },
+                { trainNo: "4175", destination: "오이도", express: false, arrivalAt: "2026-10-16T11:49:00.000Z", stopsAway: null, source: "estimated" },
+              ],
+            },
           ],
         },
       ],
@@ -97,40 +108,56 @@ describe("toSubwayStationArrivals", () => {
   });
 
   it.each([
-    ["en", "Hyehwa", ["Toward Buramsan / Jinjeop", "Toward Oido / Ansan"]],
-    ["zh", "惠化", ["佛岩山·榛接方向", "乌耳岛·安山方向"]],
-  ] as const)("labels the station and its directions in %s", (lang, stationName, directionNames) => {
+    ["en", "Hyehwa", "Line 4", ["Toward Buramsan / Jinjeop", "Toward Oido / Ansan"]],
+    ["zh", "惠化", "4号线", ["佛岩山·榛接方向", "乌耳岛·安山方向"]],
+  ] as const)("labels the station, its line and its directions in %s", (lang, stationName, lineName, directionNames) => {
     // Act
-    const response = toSubwayStationArrivals(HYEHWA, DOC, lang);
+    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], lang);
 
     // Assert
-    expect([response.station.name, response.directions.map((d) => d.name)]).toEqual([stationName, directionNames]);
+    const [line] = response.lines;
+    expect([response.station.name, line?.line.name, line?.directions.map((d) => d.name)]).toEqual([stationName, lineName, directionNames]);
   });
 
   it.each([
-    ["S1-4-420", "ko", [["동대문", "한성대입구"], ["한성대입구", "동대문"]]],
-    ["S1-4-420", "en", [["Dongdaemun", "Hansung Univ."], ["Hansung Univ.", "Dongdaemun"]]],
-    ["S1-4-420", "zh", [["东大门", "汉城大入口"], ["汉城大入口", "东大门"]]],
-    ["KR-1-0153", "ko", [["화서", "의왕"], ["의왕", "화서"]]],
-    ["KR-1-0153", "en", [["Hwaseo", "Uiwang"], ["Uiwang", "Hwaseo"]]],
-    ["KR-1-0153", "zh", [["华西", "义王"], ["义王", "华西"]]],
-  ] as const)("names %s's previous and next stations, up then down, in %s", (stationId, lang, neighborNames) => {
+    [HYEHWA, "ko", [["동대문", "한성대입구"], ["한성대입구", "동대문"]]],
+    [HYEHWA, "en", [["Dongdaemun", "Hansung Univ."], ["Hansung Univ.", "Dongdaemun"]]],
+    [HYEHWA, "zh", [["东大门", "汉城大入口"], ["汉城大入口", "东大门"]]],
+    [SUNGKYUNKWAN, "ko", [["화서", "의왕"], ["의왕", "화서"]]],
+    [SUNGKYUNKWAN, "en", [["Hwaseo", "Uiwang"], ["Uiwang", "Hwaseo"]]],
+    [SUNGKYUNKWAN, "zh", [["华西", "义王"], ["义王", "华西"]]],
+  ] as const)("names $0.id's previous and next stations, up then down, in %s", (station, lang, neighborNames) => {
     // Arrange
-    const station = SUBWAY_STATIONS.find((s) => s.id === stationId) as SubwayStation;
+    const platform = station.platforms[0] as SubwayPlatform;
 
     // Act
-    const response = toSubwayStationArrivals(station, { ...DOC, _id: stationId }, lang);
+    const response = toSubwayStationArrivals(station, [{ platform, doc: { ...DOC, _id: platform.id } }], lang);
 
     // Assert
-    expect(response.directions.map((d) => [d.previousStation?.name, d.nextStation?.name])).toEqual(neighborNames);
+    expect(response.lines[0]?.directions.map((d) => [d.previousStation?.name, d.nextStation?.name])).toEqual(neighborNames);
+  });
+
+  it("serves one line entry per platform, in the station's order, each with its own document's generatedAt", () => {
+    // Arrange
+    const transfer: SubwayStation = { ...HYEHWA, id: "transfer", platforms: [HYEHWA_PLATFORM, SUNGKYUNKWAN.platforms[0] as SubwayPlatform] };
+    const stale = { ...DOC, _id: "KR-1-0153", generatedAt: new Date("2026-10-16T11:30:00Z"), directions: { up: [], down: [] } };
+
+    // Act
+    const response = toSubwayStationArrivals(transfer, transfer.platforms.map((platform, i) => ({ platform, doc: i === 0 ? DOC : stale })), "en");
+
+    // Assert
+    expect(response.lines.map((l) => [l.line.code, l.line.badge, l.line.color, l.platformId, l.generatedAt])).toEqual([
+      ["4", "4", "00A5DE", "S1-4-420", "2026-10-16T11:41:00.000Z"],
+      ["1", "1", "0052A4", "KR-1-0153", "2026-10-16T11:30:00.000Z"],
+    ]);
   });
 
   it("refuses a next station it has no name for rather than serving it unnamed", () => {
     // Arrange
-    const up = { ...HYEHWA.directions.up, nextPlatformId: "S1-4-499" };
-    const station: SubwayStation = { ...HYEHWA, directions: { ...HYEHWA.directions, up } };
+    const up = { ...HYEHWA_PLATFORM.directions.up, nextPlatformId: "S1-4-499" };
+    const platform: SubwayPlatform = { ...HYEHWA_PLATFORM, directions: { ...HYEHWA_PLATFORM.directions, up } };
 
     // Act & Assert
-    expect(() => toSubwayStationArrivals(station, DOC, "ko")).toThrow("S1-4-499");
+    expect(() => toSubwayStationArrivals(HYEHWA, [{ platform, doc: DOC }], "ko")).toThrow("S1-4-499");
   });
 });

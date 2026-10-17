@@ -37,7 +37,7 @@ export interface StationObservations {
   countdownRows: readonly CountdownRow[];
 }
 
-export interface TrackedStation {
+export interface TrackedPlatform {
   platformId: string;
   lineCode: string;
   serviceDate: string;
@@ -48,7 +48,7 @@ export interface TrackedStation {
 export interface TrackedTick {
   source: string;
   trackedAt: Date;
-  stations: readonly TrackedStation[];
+  platforms: readonly TrackedPlatform[];
 }
 
 export type TrackedTickListener = (tick: TrackedTick) => Promise<void>;

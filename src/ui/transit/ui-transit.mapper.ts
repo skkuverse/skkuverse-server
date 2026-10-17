@@ -31,14 +31,17 @@ function toBusTransitItem(group: BusGroup): TransitItem {
   };
 }
 
+const LINE_NAME_SEPARATOR = " · ";
+
 function toSubwayTransitItem(station: ServedStation, lang: SupportedLang): TransitItem {
+  const lines = station.lines.map(({ code, name, badge, color }) => ({ code, name: name[lang], badge: badge[lang], color }));
   return {
     kind: "subway",
     id: toTransitItemId({ kind: "subway", stationId: station.id }),
     stationId: station.id,
     title: station.title[lang],
-    subtitle: station.lineLabel[lang],
-    icon: { type: "subway", color: station.lineColor, text: station.lineCode },
+    subtitle: lines.map((line) => line.name).join(LINE_NAME_SEPARATOR),
+    lines,
     action: { actionType: "route", actionValue: `/subway?station=${station.id}` },
   };
 }

@@ -20,7 +20,7 @@ Ui owns no data store. It serves three JSON files committed next to their reader
 | The committed config files | — | The home layout, the campus carousel and the transit layout, edited by hand and shipped with a deploy | `readHomeLayout`, `readCampusBanners`, `readTransitLayout` |
 | The mini-app registry | — | Which mini apps exist, the target and emoji checks, and the logo of a link tile | `MiniappsService`, injected into `UiHomeService`, `UiCampusService` and `UiTransitService` |
 | The bus groups | — | Each group's label, card, screen type and visibility; the boot check reads only their ids (`BusConfigService.listGroupIds`) | `BusConfigService.getBusGroups`, injected into `UiTransitListService` and `UiTransitService` |
-| The served subway stations | — | Each station's title, line code, line label and line color | `SubwayStationsService.listStations`, injected into `UiTransitService` |
+| The served subway stations | — | Each physical station's slug and title, and each of its lines' code, name, badge and color, from subway's registry | `SubwayStationsService.listStations`, injected into `UiTransitService` |
 | moment-timezone | `moment` | A bus group's KST dates and first-day time; a strict parse still reads `24:00` as the next midnight | `isBusGroupVisible` |
 | The translations | — | The titles of the scroll cards | `t` in `src/infra/i18n.ts` |
 | skkuverse-app | — | Nothing; it reads the routes | `GET /ui/home` and its siblings |
@@ -41,7 +41,8 @@ Ui owns no data store. It serves three JSON files committed next to their reader
 | campus sheet (`CampusSheet`) | The `GET /ui/home/campus` body: the campus carousel while a banner shows, else no section | `toCampusSheet` | `campusConfig` |
 | transit layout (`TransitLayout`) | The `GET /ui/home/transit` body: a version and the transit sections the transit tab draws in order | `toTransitSection` over `transit-layout.json` | — |
 | transit section | One `item_list` of the transit layout: an id, a title (null when the layout gives none, and the app draws no header) and its transit items; one left with no item is not served | `toTransitSection` | — |
-| transit item | One row of a transit section: a `kind` (`bus`, `subway` or `link`) naming its referent, and the id, title, subtitle, icon and action every kind carries | a bus group, a served station or a link written in `transit-layout.json` | — |
+| transit item | One row of a transit section: a `kind` (`bus`, `subway` or `link`) naming its referent, and the id, title, subtitle and action every kind carries; a bus or link item also carries an icon | a bus group, a served station or a link written in `transit-layout.json` | — |
+| station row | A `subway` transit item: one physical station by its slug, titled with its station suffix, its lines' names joined by ` · ` as its subtitle and `lines`, each line's code, name, badge and color, in place of an icon; it opens `/subway?station=<slug>` | `SubwayStationsService.listStations` | — |
 | bus group card | One bus group as the transit tab lists it: its card and the screen a tap opens | `toBusGroupCard` | `busItem` |
 | scroll card (`ScrollCards`) | One of the three cards `GET /ui/home/scroll` sends | `toScrollCards` | `scrollItem` |
 | registry (`MiniAppRegistry`) | What the boot checks read from `MiniappsService` | `MiniappsService` | — |

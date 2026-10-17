@@ -1,34 +1,19 @@
+import type { z } from "zod";
 import type { SupportedLang } from "../infra/types";
+import type { subwayRegistryFile } from "./subway.schema";
 
 export type LocalizedName = Readonly<Record<SupportedLang, string>>;
 
 export type SubwayDirection = "up" | "down";
 
-export interface StationDirection {
-  name: LocalizedName;
-  upstreamPlatformIds: readonly string[];
-  watchedPlatformIds: readonly string[];
-  nextPlatformId: string;
-}
-
-export type StationTimetable = { source: "korail" } | { source: "seoul-station"; stationCode: string };
-
-export interface SeoulStationIds {
-  subwayId: string;
-  stationName: string;
-  trainMapLine: string;
-  timetable: StationTimetable;
-}
-
-export interface SubwayStation {
-  id: string;
-  operatorCode: string;
-  lineCode: string;
-  stationCode: string;
-  name: LocalizedName;
-  directions: Readonly<Record<SubwayDirection, StationDirection>>;
-  seoul: SeoulStationIds;
-}
+export type SubwayRegistry = z.output<typeof subwayRegistryFile>;
+export type SubwayLine = SubwayRegistry["lines"][number];
+export type SubwayStation = SubwayRegistry["stations"][number];
+export type SubwayPlatform = SubwayStation["platforms"][number];
+export type SubwayNeighbor = SubwayRegistry["neighbors"][string];
+export type PlatformDirection = SubwayPlatform["directions"]["up"];
+export type PlatformTimetable = SubwayPlatform["timetable"];
+export type TrainNumbering = SubwayLine["seoul"]["trainNumbers"];
 
 export type TrainState = "approaching" | "arrived" | "departed";
 

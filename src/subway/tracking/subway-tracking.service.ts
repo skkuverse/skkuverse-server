@@ -7,12 +7,12 @@ import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import type { SubwayArrivalsDoc } from "../subway.document";
 import { SubwayRepository } from "../subway.repository";
 import type { SubwayDirection, SubwayProvider, TrainEvent } from "../subway.types";
-import type { StationSchedule } from "../timetable/subway-timetable.types";
+import type { PlatformSchedule } from "../timetable/subway-timetable.types";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { MAX_TRAINS_PER_DIRECTION } from "./subway-tracking.constants";
 import { toArrivalsDoc } from "./subway-tracking.mapper";
 import { mergeObservations, toDirectionByDestination, toLiveCountdownRows, toNewestEvents, toStopPlatformIdsByTrainNo } from "./subway-tracking.rules";
-import type { SourceCountdownRows, StationObservations, TrackedStation, TrackedTickListener, TrainHistory } from "./subway-tracking.types";
+import type { SourceCountdownRows, StationObservations, TrackedPlatform, TrackedTickListener, TrainHistory } from "./subway-tracking.types";
 
 const DIVERGENCE_LOG_INTERVAL_MS = 10 * 60_000;
 
@@ -43,15 +43,15 @@ export class SubwayTrackingService {
     const now = this.clock.now();
     this.countdownRowsBySource.set(observations.source, { observedAt: now, rows: observations.countdownRows });
     const countdownRows = toLiveCountdownRows([...this.countdownRowsBySource.values()], now);
-    const schedules = await this.timetable.listStationSchedules(now);
-    const stations = schedules.map((schedule): TrackedStation => {
+    const schedules = await this.timetable.listPlatformSchedules(now);
+    const platforms = schedules.map((schedule): TrackedPlatform => {
       const events = toNewestEvents(observations.events.filter((event) => schedule.lineRoutes.up.includes(event.platformId)), now);
       const histories = this.mergeInto(schedule, events, now);
-      const arrivals = this.toStationDoc(schedule, { histories, countdownRows }, now);
-      return { platformId: schedule.station.id, lineCode: schedule.station.lineCode, serviceDate: schedule.serviceDate, events, arrivals };
+      const arrivals = this.toPlatformDoc(schedule, { histories, countdownRows }, now);
+      return { platformId: schedule.platform.id, lineCode: schedule.platform.line, serviceDate: schedule.serviceDate, events, arrivals };
     });
-    await this.repository.upsertArrivals(stations.map((station) => station.arrivals));
-    for (const listener of this.tickListeners) await listener({ source: observations.source, trackedAt: now, stations });
+    await this.repository.upsertArrivals(platforms.map((platform) => platform.arrivals));
+    for (const listener of this.tickListeners) await listener({ source: observations.source, trackedAt: now, platforms });
   }
 
   // WHY: the accuracy history listens here instead of the tracker calling it, so serving never depends on it;
@@ -61,12 +61,12 @@ export class SubwayTrackingService {
   }
 
   async findScheduledArrivals(platformId: string, now: Date): Promise<SubwayArrivalsDoc | null> {
-    const schedule = await this.timetable.findStationSchedule(platformId, now);
-    return schedule && this.toStationDoc(schedule, null, now);
+    const schedule = await this.timetable.findPlatformSchedule(platformId, now);
+    return schedule && this.toPlatformDoc(schedule, null, now);
   }
 
-  private mergeInto(schedule: StationSchedule, events: readonly TrainEvent[], now: Date): ReadonlyMap<string, TrainHistory> {
-    const platformId = schedule.station.id;
+  private mergeInto(schedule: PlatformSchedule, events: readonly TrainEvent[], now: Date): ReadonlyMap<string, TrainHistory> {
+    const platformId = schedule.platform.id;
     const histories = mergeObservations({
       histories: this.historiesByPlatformId.get(platformId) ?? new Map(),
       responseEvents: [events],
@@ -80,8 +80,8 @@ export class SubwayTrackingService {
     return histories;
   }
 
-  private toStationDoc(schedule: StationSchedule, observed: StationObservations | null, now: Date): SubwayArrivalsDoc {
-    const platformId = schedule.station.id;
+  private toPlatformDoc(schedule: PlatformSchedule, observed: StationObservations | null, now: Date): SubwayArrivalsDoc {
+    const platformId = schedule.platform.id;
     const arrivalsOf = (direction: SubwayDirection): TrainArrival[] => {
       const scheduleInput = { platformId, direction, trains: schedule.trains, now };
       if (!observed) return this.estimate.listScheduledArrivals(scheduleInput).slice(0, MAX_TRAINS_PER_DIRECTION);

@@ -9,7 +9,7 @@ import { toTransitItemId } from "./ui-transit.rules";
 describe("toTransitItemId", () => {
   it.each([
     [{ kind: "bus", groupId: "hssc" }, "bus:hssc"],
-    [{ kind: "subway", stationId: "S1-4-420" }, "subway:S1-4-420"],
+    [{ kind: "subway", stationId: "hyehwa" }, "subway:hyehwa"],
     [{ kind: "link", id: "taxi-share" }, "taxi-share"],
   ] as const)("names %j %s", (reference, id) => {
     // Act & Assert

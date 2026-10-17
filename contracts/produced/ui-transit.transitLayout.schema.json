@@ -51,25 +51,6 @@
                         "null"
                       ]
                     },
-                    "icon": {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string"
-                        },
-                        "color": {
-                          "type": "string"
-                        },
-                        "text": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "color",
-                        "text"
-                      ]
-                    },
                     "action": {
                       "type": "object",
                       "properties": {
@@ -90,6 +71,25 @@
                         "actionType",
                         "actionValue"
                       ]
+                    },
+                    "icon": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string"
+                        },
+                        "color": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "color",
+                        "text"
+                      ]
                     }
                   },
                   "required": [
@@ -98,8 +98,8 @@
                     "id",
                     "title",
                     "subtitle",
-                    "icon",
-                    "action"
+                    "action",
+                    "icon"
                   ]
                 },
                 {
@@ -124,25 +124,6 @@
                         "null"
                       ]
                     },
-                    "icon": {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string"
-                        },
-                        "color": {
-                          "type": "string"
-                        },
-                        "text": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "color",
-                        "text"
-                      ]
-                    },
                     "action": {
                       "type": "object",
                       "properties": {
@@ -163,6 +144,33 @@
                         "actionType",
                         "actionValue"
                       ]
+                    },
+                    "lines": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "badge": {
+                            "type": "string"
+                          },
+                          "color": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "name",
+                          "badge",
+                          "color"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -171,8 +179,8 @@
                     "id",
                     "title",
                     "subtitle",
-                    "icon",
-                    "action"
+                    "action",
+                    "lines"
                   ]
                 },
                 {
@@ -194,25 +202,6 @@
                         "null"
                       ]
                     },
-                    "icon": {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "type": "string"
-                        },
-                        "color": {
-                          "type": "string"
-                        },
-                        "text": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "color",
-                        "text"
-                      ]
-                    },
                     "action": {
                       "type": "object",
                       "properties": {
@@ -233,6 +222,25 @@
                         "actionType",
                         "actionValue"
                       ]
+                    },
+                    "icon": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string"
+                        },
+                        "color": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "color",
+                        "text"
+                      ]
                     }
                   },
                   "required": [
@@ -240,8 +248,8 @@
                     "id",
                     "title",
                     "subtitle",
-                    "icon",
-                    "action"
+                    "action",
+                    "icon"
                   ]
                 }
               ]

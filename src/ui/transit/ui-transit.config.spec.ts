@@ -18,7 +18,7 @@ import type { TransitLayoutReferences } from "./ui-transit.types";
 
 const references: TransitLayoutReferences = {
   busGroupIds: ["campus", "hssc"],
-  stationIds: ["S1-4-420"],
+  stationIds: ["hyehwa"],
   registry: new MiniappsService(),
 };
 
@@ -31,7 +31,7 @@ const LINK = {
   actionValue: "inja",
 };
 
-const PLACED = [{ kind: "bus", groupId: "campus" }, { kind: "bus", groupId: "hssc" }, { kind: "subway", stationId: "S1-4-420" }];
+const PLACED = [{ kind: "bus", groupId: "campus" }, { kind: "bus", groupId: "hssc" }, { kind: "subway", stationId: "hyehwa" }];
 
 function layout(...items: unknown[]): Record<string, unknown> {
   return { version: 1, sections: [{ type: "item_list", id: "campus", title: { ko: "캠퍼스" }, items }] };
@@ -52,8 +52,8 @@ describe("loadTransitLayout", () => {
 
   it("refuses an unknown station, naming the item's path and the station", () => {
     // Act & Assert
-    expect(() => loadTransitLayout(layout(...PLACED, { kind: "subway", stationId: "S1-2-222" }), references)).toThrow(
-      'transit layout: sections.0.items.3.stationId: "S1-2-222" is not a served subway station',
+    expect(() => loadTransitLayout(layout(...PLACED, { kind: "subway", stationId: "gangnam" }), references)).toThrow(
+      'transit layout: sections.0.items.3.stationId: "gangnam" is not a served subway station',
     );
   });
 
@@ -67,11 +67,11 @@ describe("loadTransitLayout", () => {
 
   it("refuses a served station that is not placed, naming the station", () => {
     // Arrange
-    const withSungkyunkwan = { ...references, stationIds: ["KR-1-0153", ...references.stationIds] };
+    const withSungkyunkwan = { ...references, stationIds: ["sungkyunkwan", ...references.stationIds] };
 
     // Act & Assert
     expect(() => loadTransitLayout(layout(...PLACED), withSungkyunkwan)).toThrow(
-      'transit layout: sections: subway station "KR-1-0153" is not placed',
+      'transit layout: sections: subway station "sungkyunkwan" is not placed',
     );
   });
 
@@ -91,7 +91,7 @@ describe("loadTransitLayout", () => {
     const load = () => loadTransitLayout(layout({ kind: "bus", groupId: "nope" }), references);
 
     // Assert
-    expect(load).toThrow(/"nope" is not a bus group; .*bus group "campus" is not placed; .*subway station "S1-4-420" is not placed/);
+    expect(load).toThrow(/"nope" is not a bus group; .*bus group "campus" is not placed; .*subway station "hyehwa" is not placed/);
   });
 
   it("refuses a structural fault before checking references", () => {
@@ -115,8 +115,8 @@ describe("committed transit-layout.json", () => {
     // Assert
     expect(committed.sections.map((section) => [section.id, section.items.map(toTransitItemId)])).toEqual([
       ["campus", ["bus:campus", "bus:fasttrack"]],
-      ["hssc", ["subway:S1-4-420", "bus:hssc", "bus:jongro02", "bus:jongro07", "bus:jongro08"]],
-      ["nsc", ["subway:KR-1-0153", "bus:commute"]],
+      ["hssc", ["subway:hyehwa", "bus:hssc", "bus:jongro02", "bus:jongro07", "bus:jongro08"]],
+      ["nsc", ["subway:sungkyunkwan", "bus:commute"]],
     ]);
     expect(committed.sections.map((section) => section.title)).toEqual([
       undefined,

@@ -1,14 +1,14 @@
 import type { LocalizedName } from "../subway.types";
 
-export interface SubwayLine {
-  label: LocalizedName;
+export interface ServedLine {
+  code: string;
+  name: LocalizedName;
+  badge: LocalizedName;
   color: string;
 }
 
 export interface ServedStation {
   id: string;
   title: LocalizedName;
-  lineCode: string;
-  lineLabel: LocalizedName;
-  lineColor: string;
+  lines: readonly ServedLine[];
 }

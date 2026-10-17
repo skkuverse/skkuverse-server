@@ -7,6 +7,7 @@ export const SERVICE_DAY_START_HOUR = 3;
 export const TIMETABLE_DAY_TYPES: Readonly<Record<TimetableSource, readonly DayType[]>> = {
   korail: ["weekday", "holiday"],
   "seoul-station": ["weekday", "saturday", "holiday"],
+  shinbundang: ["weekday", "holiday"],
 };
 
 const HOUR_SEC = 3600;

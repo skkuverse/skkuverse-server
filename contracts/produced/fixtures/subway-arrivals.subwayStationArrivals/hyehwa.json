@@ -1,56 +1,64 @@
 {
-  "_about": "GET /subway/stations/S1-4-420/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction",
+  "_about": "GET /subway/stations/S1-4-420/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction; reshaped the same day, no value changed, into the per-station wire of add-commute-station-subway (GET /subway/stations/hyehwa/arrivals, its one line entry carrying the line display data from the registry)",
   "data": {
     "station": {
-      "id": "S1-4-420",
-      "operatorCode": "S1",
-      "lineCode": "4",
-      "stationCode": "420",
+      "id": "hyehwa",
       "name": "혜화"
     },
-    "generatedAt": "2026-10-17T02:39:07.605Z",
-    "directions": [
+    "lines": [
       {
-        "direction": "up",
-        "name": "불암산·진접 방면",
-        "previousStation": {
-          "id": "S1-4-421",
-          "name": "동대문"
+        "line": {
+          "code": "4",
+          "name": "4호선",
+          "badge": "4",
+          "color": "00A5DE"
         },
-        "nextStation": {
-          "id": "S1-4-419",
-          "name": "한성대입구"
-        },
-        "trains": [
+        "platformId": "S1-4-420",
+        "generatedAt": "2026-10-17T02:39:07.605Z",
+        "directions": [
           {
-            "trainNo": "4548",
-            "destination": "불암산",
-            "express": false,
-            "arrivalAt": "2026-10-17T02:42:30.000Z",
-            "stopsAway": 2,
-            "source": "live"
-          }
-        ]
-      },
-      {
-        "direction": "down",
-        "name": "오이도·안산 방면",
-        "previousStation": {
-          "id": "S1-4-419",
-          "name": "한성대입구"
-        },
-        "nextStation": {
-          "id": "S1-4-421",
-          "name": "동대문"
-        },
-        "trains": [
+            "direction": "up",
+            "name": "불암산·진접 방면",
+            "previousStation": {
+              "id": "S1-4-421",
+              "name": "동대문"
+            },
+            "nextStation": {
+              "id": "S1-4-419",
+              "name": "한성대입구"
+            },
+            "trains": [
+              {
+                "trainNo": "4548",
+                "destination": "불암산",
+                "express": false,
+                "arrivalAt": "2026-10-17T02:42:30.000Z",
+                "stopsAway": 2,
+                "source": "live"
+              }
+            ]
+          },
           {
-            "trainNo": "4565",
-            "destination": "오이도",
-            "express": false,
-            "arrivalAt": "2026-10-17T02:55:30.000Z",
-            "stopsAway": null,
-            "source": "estimated"
+            "direction": "down",
+            "name": "오이도·안산 방면",
+            "previousStation": {
+              "id": "S1-4-419",
+              "name": "한성대입구"
+            },
+            "nextStation": {
+              "id": "S1-4-421",
+              "name": "동대문"
+            },
+            "trains": [
+              {
+                "trainNo": "4565",
+                "destination": "오이도",
+                "express": false,
+                "arrivalAt": "2026-10-17T02:55:30.000Z",
+                "stopsAway": null,
+                "source": "estimated"
+              }
+            ]
           }
         ]
       }

@@ -14,7 +14,7 @@
       "id": "hssc",
       "title": { "ko": "인사캠", "en": "HSSC", "zh": "人文校区" },
       "items": [
-        { "kind": "subway", "stationId": "S1-4-420" },
+        { "kind": "subway", "stationId": "hyehwa" },
         { "kind": "bus", "groupId": "hssc" },
         { "kind": "bus", "groupId": "jongro02" },
         { "kind": "bus", "groupId": "jongro07" },
@@ -26,7 +26,7 @@
       "id": "nsc",
       "title": { "ko": "자과캠", "en": "NSC", "zh": "自然校区" },
       "items": [
-        { "kind": "subway", "stationId": "KR-1-0153" },
+        { "kind": "subway", "stationId": "sungkyunkwan" },
         { "kind": "bus", "groupId": "commute" }
       ]
     }
