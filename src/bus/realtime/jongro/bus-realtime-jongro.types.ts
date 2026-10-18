@@ -24,7 +24,7 @@ export interface JongroBusDwell {
   dwellSeconds: number;
 }
 
-export type JongroBusTiming = JongroBusDwell & { isStationary: boolean };
+export type JongroBusTiming = JongroBusDwell & { isStationary: boolean; atStopSince?: string };
 
 /** WHY: the last observation of a vehicle the poller remembers, to tell whether it stood still since. */
 export interface JongroVehicleObservation {
@@ -33,4 +33,5 @@ export interface JongroVehicleObservation {
   sectDist: number;
   observedAt: string;
   isStationary: boolean;
+  atStopSince?: string;
 }

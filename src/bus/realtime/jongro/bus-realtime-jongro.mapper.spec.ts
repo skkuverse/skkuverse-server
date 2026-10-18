@@ -1,7 +1,7 @@
 /**
  * The Jongro mapper: a sighting placed on a registry stop becomes the cached
  * bus position the realtime route reads, at its section ord with its vehicle
- * fields.
+ * fields, and since when it has stood at its stop (add-jongro-bus-trajectory).
  */
 import { jongroSighting } from "../../../../__tests__/helpers/bus/jongro-sighting";
 import { toJongroBusPosition } from "./bus-realtime-jongro.mapper";
@@ -49,5 +49,19 @@ describe("toJongroBusPosition", () => {
 
     // Assert
     expect(position).toMatchObject({ sequence: "27", stationName: "성균관대학교", isStationary: true });
+  });
+
+  it("keeps since when the bus has stood at its stop, and leaves it out for a moving bus", () => {
+    // Arrange
+    const timing = { firstSeenAt: "2026-10-18T09:08:59.000Z", dwellSeconds: 21, isStationary: false };
+    const stop = { sequence: 20, stationName: "성균관대학교" };
+
+    // Act
+    const atStop = toJongroBusPosition(jongroSighting({ sectOrd: 20, isAtStop: true }), stop, { ...timing, atStopSince: "2026-10-18T18:08:59+09:00" });
+    const moving = toJongroBusPosition(jongroSighting({ sectOrd: 20 }), stop, timing);
+
+    // Assert
+    expect(atStop).toMatchObject({ isAtStop: true, atStopSince: "2026-10-18T18:08:59+09:00" });
+    expect(moving).not.toHaveProperty("atStopSince");
   });
 });

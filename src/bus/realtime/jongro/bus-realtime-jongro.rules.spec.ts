@@ -4,7 +4,8 @@
  * stop (reset after 10 minutes) at each threshold, the cache keys, TOPIS's
  * observation time as a KST instant, and whether a bus stood still between
  * two observations (under 10 m), and whether it idles at its origin (at
- * index 0 with lastStTm 0, and not moved 10 m since the previous observation).
+ * index 0 with lastStTm 0, and not moved 10 m since the previous observation),
+ * and since when a vehicle has stood at its current stop (add-jongro-bus-trajectory).
  */
 import {
   isIdlingAtOrigin,
@@ -12,6 +13,7 @@ import {
   isStationary,
   isUsableHeaderCd,
   toArrivalsKey,
+  toAtStopSince,
   toDwell,
   toObservedAt,
   toPositionsKey,
@@ -227,5 +229,23 @@ describe("isIdlingAtOrigin", () => {
   ])("is false with %s, however still", (_title, current) => {
     // Act & Assert
     expect(isIdlingAtOrigin({ ...previous, sectOrd: current.sectOrd }, current)).toBe(false);
+  });
+});
+
+// WHY: an atStop bus's expected departure counts its dwell from the first observation at that stop
+// (add-jongro-bus-trajectory D4); route 08 vehicle 100000077 stood at ord 20 from 18:08:59 (2026-10-18 capture).
+describe("toAtStopSince", () => {
+  const atStop = { sectOrd: 20, isAtStop: true, observedAt: "2026-10-18T18:09:20+09:00" };
+  const previous = { sectOrd: 20, sectDist: 0, observedAt: "2026-10-18T18:08:59+09:00", isStationary: false, atStopSince: "2026-10-18T18:08:59+09:00" };
+
+  it.each([
+    ["no previous observation, as after a restart", "2026-10-18T18:09:20+09:00", undefined, atStop],
+    ["at the same stop since an earlier observation", "2026-10-18T18:08:59+09:00", previous, atStop],
+    ["moving at the previous observation", "2026-10-18T18:09:20+09:00", { ...previous, atStopSince: undefined }, atStop],
+    ["at the previous stop before", "2026-10-18T18:09:20+09:00", { ...previous, sectOrd: 19 }, atStop],
+    ["not at a stop now", undefined, previous, { ...atStop, isAtStop: false }],
+  ])("%s → %s", (_case, expected, before, current) => {
+    // Act & Assert
+    expect(toAtStopSince(before, current)).toBe(expected);
   });
 });

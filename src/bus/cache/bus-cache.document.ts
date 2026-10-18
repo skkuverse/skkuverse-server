@@ -67,6 +67,7 @@ export interface JongroBusPositionDoc {
   observedAt: string;
   /** WHY: the vehicle stood still since the poller's previous observation of it. */
   isStationary: boolean;
+  atStopSince?: string;
 }
 
 export interface BusCacheValueByKey {

@@ -1,4 +1,11 @@
 import type { JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
+import {
+  ASSUMED_SPEED_METERS_PER_SECOND,
+  DWELL_SECONDS,
+  MAX_FIRST_KNOT_FRACTION,
+  MIN_SEGMENT_SECONDS,
+  TRAJECTORY_STOPS_AHEAD,
+} from "./bus-realtime-group.constants";
 import type { Arrival, RealtimeBus } from "./bus-realtime-group.wire";
 import type {
   CachedArrivalFields,
@@ -8,6 +15,7 @@ import type {
   NextStopBus,
   PlacedStationEta,
   TrackingContext,
+  TrajectoryKnot,
   VehicleBuses,
 } from "./bus-realtime-group.types";
 
@@ -28,10 +36,14 @@ export function toStationEtas(route: JongroRouteStations, arrivals: readonly Cac
     .filter((eta): eta is PlacedStationEta => eta !== null);
 }
 
-export function toVehicleBuses(rows: readonly Pick<JongroArrivalDoc, "eventDate" | "buses">[], vehicleId: string, sectOrd: number): VehicleBuses {
-  const named = rows
+export function toNamedBuses(rows: readonly Pick<JongroArrivalDoc, "eventDate" | "buses">[], vehicleId: string): NextStopBus[] {
+  return rows
     .flatMap((row) => row.buses.filter((bus) => bus.vehId === vehicleId).map((bus) => ({ bus, madeAt: row.eventDate })))
     .sort((a, b) => a.bus.staOrd - b.bus.staOrd);
+}
+
+export function toVehicleBuses(rows: readonly Pick<JongroArrivalDoc, "eventDate" | "buses">[], vehicleId: string, sectOrd: number): VehicleBuses {
+  const named = toNamedBuses(rows, vehicleId);
   return { nextStop: named.find(({ bus }) => bus.staOrd === sectOrd + 1), firstNamed: named[0]?.bus };
 }
 
@@ -79,6 +91,43 @@ export function toNextStopInSec(nextStop: NextStopBus | undefined, observedAt: s
   return Math.max(0, Math.round(nextStop.bus.traTime - (Date.parse(observedAt) - madeAtMs) / 1000));
 }
 
+function toDepartureMs({ atStopSince }: Pick<JongroBusPositionDoc, "atStopSince">, observedAtMs: number): number {
+  const dwelledSeconds = atStopSince ? Math.max(0, (observedAtMs - Date.parse(atStopSince)) / 1000) : 0;
+  return observedAtMs + Math.max(0, DWELL_SECONDS - dwelledSeconds) * 1000;
+}
+
+// WHY: TOPIS's re-based time; the first next stop without one from the rest of its section (all of it after a departure).
+function toStopArrivalMs(position: JongroBusPositionDoc, row: NextStopBus | undefined, start: { isNextStop: boolean; progress: number; departureMs: number }): number | null {
+  const inSec = toNextStopInSec(row, position.observedAt);
+  if (inSec !== null) return Date.parse(position.observedAt) + inSec * 1000;
+  if (!start.isNextStop || position.fullSectDist <= 0) return null;
+  const remainingMeters = Math.round((1 - start.progress) * position.fullSectDist * 1000);
+  return start.departureMs + Math.round(remainingMeters / ASSUMED_SPEED_METERS_PER_SECOND) * 1000;
+}
+
+// WHY: the knots the app moves a bus through (add-jongro-bus-trajectory D2): its observation, an atStop bus's departure,
+// then each next stop at its re-based travel time (the first by distance without one), held MIN_SEGMENT_SECONDS apart.
+export function toTrajectory(position: JongroBusPositionDoc, status: JongroBusTracking["status"], { stationCount, namedBuses }: Pick<TrackingContext, "stationCount" | "namedBuses">): TrajectoryKnot[] {
+  if (status === "waiting") return [];
+  const stationIndex = Number(position.sequence) - 1;
+  const observedAtMs = Date.parse(position.observedAt);
+  const progress = status === "running" ? toProgress(position.sectDist, position.fullSectDist) : 0;
+  const knots: TrajectoryKnot[] = [{ atMs: observedAtMs, s: stationIndex + Math.min(progress, MAX_FIRST_KNOT_FRACTION) }];
+  const lastIndex = stationCount - 1;
+  if (stationIndex >= lastIndex) return knots;
+  const departureMs = status === "atStop" ? toDepartureMs(position, observedAtMs) : observedAtMs;
+  if (departureMs > observedAtMs) knots.push({ atMs: departureMs, s: stationIndex });
+  let previousMs = departureMs;
+  for (let index = stationIndex + 1; index <= Math.min(stationIndex + TRAJECTORY_STOPS_AHEAD, lastIndex); index++) {
+    const row = namedBuses.find(({ bus }) => bus.staOrd === index + 1);
+    const arrivalMs = toStopArrivalMs(position, row, { isNextStop: index === stationIndex + 1, progress, departureMs });
+    if (arrivalMs === null) break;
+    previousMs = Math.max(arrivalMs, previousMs + MIN_SEGMENT_SECONDS * 1000);
+    knots.push({ atMs: previousMs, s: index });
+  }
+  return knots;
+}
+
 export function toJongroBusTracking(position: JongroBusPositionDoc, context: TrackingContext): JongroBusTracking {
   const status = toTrackedStatus(position, { ...context, nextStopState: context.nextStop ? context.arrival?.state : undefined });
   const isRunning = status === "running";
@@ -91,6 +140,7 @@ export function toJongroBusTracking(position: JongroBusPositionDoc, context: Tra
     progress: isRunning ? toProgress(position.sectDist, position.fullSectDist) : 0,
     segmentMeters: Math.round(position.fullSectDist * 1000),
     nextStopInSec: isRunning ? toNextStopInSec(context.nextStop, position.observedAt) : null,
+    trajectory: toTrajectory(position, status, context),
   };
 }
 
