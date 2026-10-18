@@ -7,12 +7,7 @@ export interface StopPhoto {
   localized?: Partial<Record<SupportedLang, string>>;
 }
 
-export interface StopPanorama {
-  panoId: string;
-  pan: number;
-  tilt: number;
-  fov: number;
-}
+export interface StopPanorama { panoId: string; pan: number; tilt: number; fov: number }
 
 export interface GuidePlace {
   id: string;
@@ -40,6 +35,8 @@ export interface ScheduleStop {
   photo?: StopPhoto;
   panorama?: StopPanorama;
   guide?: StopGuide;
+  /** WHY: the subway registry's slug; the boot check refused one the registry does not serve. */
+  subwayStationId?: string;
 }
 
 export interface SequenceStop {

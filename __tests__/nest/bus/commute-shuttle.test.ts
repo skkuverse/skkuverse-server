@@ -13,18 +13,42 @@ import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
 import { seededBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
+import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
 import { haversineM } from "../../../src/shared/distance.util";
-import type { Clock } from "../../../src/infra/clock";
+import { Clock } from "../../../src/infra/clock";
 import type { SupportedLang } from "../../../src/infra/types";
 
 import { UiTransitListService } from "../../../src/ui/transit-list/ui-transit-list.service";
+import type { NestExpressApplication } from "@nestjs/platform-express";
+import request from "supertest";
+import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
+import { HolidaysModule } from "../../../src/holidays/holidays.module";
+import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { BusModule } from "../../../src/bus/bus.module";
+import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
+import { busGroup } from "../../../src/bus/config/bus-config.wire";
+import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
+import { UiModule } from "../../../src/ui/ui.module";
+import { UiTransitModule } from "../../../src/ui/transit/ui-transit.module";
+import { SubwayModule } from "../../../src/subway/subway.module";
+import { SubwayRepository } from "../../../src/subway/subway.repository";
+import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
+import { SubwayEstimateModule } from "../../../src/subway/estimate/subway-estimate.module";
+import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracking.module";
+import { SubwayMatchingModule } from "../../../src/subway/matching/subway-matching.module";
+import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
+import { expectWire } from "../../helpers/contracts/expect-wire";
+import { FakeBusRegistryRepository } from "../../helpers/fakes/bus/bus-registry.repository.fake";
+import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
+import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 let busConfig: BusConfigService;
 const groupsByLang = new Map<SupportedLang, BusGroup[]>();
 // WHY: the stations come from the registry, seeded here as a boot seeds it; the groups are read once.
 beforeAll(async () => {
-  busConfig = new BusConfigService(new BusStopsService(), await seededBusRegistryService());
+  busConfig = new BusConfigService(new BusStopsService(new SubwayStationsService()), await seededBusRegistryService());
   for (const lang of ["ko", "en", "zh"] as const) groupsByLang.set(lang, await busConfig.getBusGroups(lang));
 });
 const getBusGroups = (lang: SupportedLang = "ko"): BusGroup[] => groupsByLang.get(lang)!;
@@ -374,7 +398,7 @@ describe("commute arrival estimates", () => {
 
   it("opts every commute service's 등교 and 하교 runs in to estimates", async () => {
     // Act
-    const optIns = new BusStopsService().etaOptIns();
+    const optIns = new BusStopsService(new SubwayStationsService()).etaOptIns();
 
     // Assert
     for (const serviceId of COMMUTE_IDS) expect(optIns.get(serviceId)).toEqual(["up", "down"]);
@@ -394,5 +418,133 @@ describe("commute arrival estimates", () => {
       "commute-gangnam-yangjae": [pilot, "info:등교: 강남역 → 양재역 → 자과캠\n하교: 자과캠 → 양재역 → 강남역", ai],
       "commute-gwanggyo": [pilot, ai],
     });
+  });
+});
+
+/**
+ * The subway station each commute stop is at, over HTTP: the commute group, the
+ * transit tab and the arrivals route booted together on a fixed clock inside
+ * the pilot (2026-10-20 12:00 KST), so the transit tab lists the commute
+ * stations. A tagged stop's station must answer arrivals and carry the transit
+ * row's title byte for byte, in every language.
+ */
+describe("commute stops and their subway stations (GET /bus/config/commute)", () => {
+  const PILOT_NOON: Clock = { now: () => new Date("2026-10-20T03:00:00.000Z") };
+  const STATION_STOPS = [
+    ["jeongja-exit3", "jeongja"],
+    ["jamsil-exit4", "jamsil"],
+    ["dogok-exit1", "dogok"],
+    ["gangnam-exit5", "gangnam"],
+    ["yangjae-exit2", "yangjae"],
+    ["gwanggyo-exit4", "gwanggyo-jungang"],
+    ["jeongja-exit2", "jeongja"],
+    ["jamsil-exit5", "jamsil"],
+    ["dogok-exit4", "dogok"],
+    ["yangjae-exit3", "yangjae"],
+    ["gwanggyo-exit1", "gwanggyo-jungang"],
+    ["gangnam-median", "gangnam"],
+  ];
+  type StationLink = { id: string; title: string };
+  type Stop = { id: string; subwayStation?: StationLink };
+  type TransitItem = { kind: string; stationId?: string; title: string; items?: TransitItem[] };
+
+  let app: NestExpressApplication;
+  let httpServer: import("http").Server;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      imports: [
+        SchedulingModule,
+        HolidaysModule,
+        BusModule,
+        BusConfigModule,
+        UiModule,
+        UiTransitModule,
+        SubwayModule,
+        SubwayTimetableModule,
+        SubwayEstimateModule,
+        SubwayTrackingModule,
+        SubwayMatchingModule,
+        SubwayArrivalsModule,
+      ],
+      overrides: [
+        { provide: Clock, useValue: PILOT_NOON },
+        { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+        { provide: BusRegistryRepository, useValue: new FakeBusRegistryRepository() },
+        { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
+      ],
+      role: "api",
+    });
+    httpServer = app.getHttpServer();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  const commuteStops = async (lang: string): Promise<Stop[]> => {
+    const res = await request(httpServer).get("/bus/config/commute").set("Accept-Language", lang);
+    expect(res.status).toBe(200);
+    return res.body.data.screen.stops;
+  };
+
+  it.each([
+    ["ko", "정자역"],
+    ["en", "Jeongja Station"],
+    ["zh", "亭子站"],
+    ["fr", "정자역"],
+  ])("Station title in %s: jeongja-exit2 links jeongja as %s", async (lang, title) => {
+    // Act
+    const res = await request(httpServer).get("/bus/config/commute").set("Accept-Language", lang);
+
+    // Assert
+    expect(res.status).toBe(200);
+    const stop = (res.body.data.screen.stops as Stop[]).find((s) => s.id === "jeongja-exit2");
+    expect(stop?.subwayStation).toEqual({ id: "jeongja", title });
+    expectWire(busGroup, res.body.data);
+  });
+
+  it("names the station on every commute stop at one, boarding and drop-off alike, and on no campus stop", async () => {
+    // Act
+    const stops = await commuteStops("ko");
+
+    // Assert
+    // WHY: stops are served in order of first reference, so the pairs compare sorted.
+    expect(stops.filter((s) => s.subwayStation).map((s) => [s.id, s.subwayStation!.id]).sort()).toEqual([...STATION_STOPS].sort());
+    expect(stops.filter((s) => !s.subwayStation).map((s) => s.id).sort()).toEqual(["nsc-n-center", "nsc-opposite"]);
+  });
+
+  it("Stop away from the subway: no stop of any group but the commute station stops carries the key", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/config").set("Accept-Language", "ko");
+
+    // Assert
+    expect(res.status).toBe(200);
+    const stops = (res.body.data.groups as Array<{ screen: { stops?: Stop[] } }>).flatMap((group) => group.screen.stops ?? []);
+    for (const id of ["nsc-n-center", "nsc-opposite", "hssc-bus-lot", "hssc-600th"]) {
+      const matching = stops.filter((stop) => stop.id === id);
+      expect(matching.length).toBeGreaterThan(0);
+      for (const stop of matching) expect(stop).not.toHaveProperty("subwayStation");
+    }
+    expect(new Set(stops.filter((stop) => "subwayStation" in stop).map((stop) => stop.id))).toEqual(new Set(STATION_STOPS.map(([id]) => id)));
+  });
+
+  it.each(["ko", "en", "zh"])("Same title as the transit tab, and the linked station serves arrivals (%s)", async (lang) => {
+    // Arrange
+    const transit = await request(httpServer).get("/ui/home/transit").set("Accept-Language", lang);
+    expect(transit.status).toBe(200);
+    const items = (transit.body.data.sections as Array<{ items: TransitItem[] }>).flatMap((section) => section.items.flatMap((item) => [item, ...(item.items ?? [])]));
+    const transitTitleById = new Map(items.filter((item) => item.kind === "subway").map((item) => [item.stationId, item.title]));
+
+    // Act
+    const links = (await commuteStops(lang)).flatMap((stop) => (stop.subwayStation ? [stop.subwayStation] : []));
+
+    // Assert
+    expect(links).toHaveLength(STATION_STOPS.length);
+    for (const link of links) {
+      expect([link.id, link.title]).toEqual([link.id, transitTitleById.get(link.id)]);
+      const arrivals = await request(httpServer).get(`/subway/stations/${link.id}/arrivals`).set("Accept-Language", lang);
+      expect([link.id, arrivals.status]).toEqual([link.id, 200]);
+    }
   });
 });
