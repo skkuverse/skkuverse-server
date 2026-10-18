@@ -10,7 +10,9 @@
  * running), its progress through the section and its seconds to the next
  * stop re-based to TOPIS's observation time; a position a full section behind
  * its arrival rows served running, and a waiting vehicle's arrivals read
- * waiting (D7).
+ * waiting (D7). Its trajectory (add-jongro-bus-trajectory): the observation,
+ * an atStop bus's expected departure, then up to three next stops at their
+ * re-based travel times, each at least 20 s after the previous knot.
  */
 
 import { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
@@ -23,10 +25,12 @@ import {
   isLaggingPosition,
   toHighestSectOrd,
   toJongroBusTracking,
+  toNamedBuses,
   toNextStopInSec,
   toProgress,
   toStationEtas,
   toTrackedStatus,
+  toTrajectory,
   toVehicleBuses,
   toWaitingArrival,
   toWaitingVehicleIds,
@@ -227,9 +231,11 @@ describe("toJongroBusTracking", () => {
       ...ROUTE02,
       nextStop: next58,
       arrival: { state: "arriving", crowding: "relaxed", isLastBus: false },
+      namedBuses: [next58],
     });
 
     // Assert
+    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
     expect(tracking).toEqual({
       status: "running",
       vehicleId: "100000058",
@@ -239,6 +245,10 @@ describe("toJongroBusTracking", () => {
       progress: 0.114 / 0.251,
       segmentMeters: 251,
       nextStopInSec: 28,
+      trajectory: [
+        { atMs: Date.parse("2026-10-17T19:12:02+09:00"), s: 16 + 0.114 / 0.251 },
+        { atMs: Date.parse("2026-10-17T19:12:30+09:00"), s: 17 },
+      ],
     });
   });
 
@@ -256,9 +266,10 @@ describe("toJongroBusTracking", () => {
     const nextStop = { bus: jongroArrivalBus({ vehId: "100000103", staOrd: 15, sectOrd: 15, traTime: 61, arrmsg: "곧 도착", rerideNum: 0 }), madeAt: "2026-10-17 19:11:46.0" };
 
     // Act
-    const tracking = toJongroBusTracking(position, { ...ROUTE07, nextStop, arrival: { state: "arriving", crowding: "relaxed", isLastBus: false } });
+    const tracking = toJongroBusTracking(position, { ...ROUTE07, nextStop, arrival: { state: "arriving", crowding: "relaxed", isLastBus: false }, namedBuses: [nextStop] });
 
     // Assert
+    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
     expect(tracking).toEqual({
       status: "atStop",
       vehicleId: "100000103",
@@ -268,12 +279,17 @@ describe("toJongroBusTracking", () => {
       progress: 0,
       segmentMeters: 295,
       nextStopInSec: null,
+      trajectory: [
+        { atMs: Date.parse("2026-10-17T19:11:44+09:00"), s: 13 },
+        { atMs: Date.parse("2026-10-17T19:11:59+09:00"), s: 13 },
+        { atMs: Date.parse("2026-10-17T19:12:47+09:00"), s: 14 },
+      ],
     });
   });
 
   it("reads a waiting text only from the next stop's row, not from a later one", () => {
     // Act
-    const tracking = toJongroBusTracking(running58, { ...ROUTE02, nextStop: undefined, arrival: { state: "waiting", crowding: null, isLastBus: true } });
+    const tracking = toJongroBusTracking(running58, { ...ROUTE02, nextStop: undefined, arrival: { state: "waiting", crowding: null, isLastBus: true }, namedBuses: [] });
 
     // Assert
     expect(tracking).toMatchObject({ status: "running", crowding: null, isLastBus: true, nextStopInSec: null });
@@ -281,7 +297,7 @@ describe("toJongroBusTracking", () => {
 
   it("serves no crowding and no last bus for a vehicle no row names", () => {
     // Act
-    const tracking = toJongroBusTracking(running58, { ...ROUTE02, nextStop: undefined, arrival: undefined });
+    const tracking = toJongroBusTracking(running58, { ...ROUTE02, nextStop: undefined, arrival: undefined, namedBuses: [] });
 
     // Assert
     expect(tracking).toMatchObject({ crowding: null, isLastBus: false, nextStopInSec: null });
@@ -345,9 +361,11 @@ describe("toTrackedStatus with a lagging position", () => {
       highestSectOrd: 7,
       nextStop: undefined,
       arrival: { state: "arriving", crowding: "relaxed", isLastBus: false },
+      namedBuses: [],
     });
 
     // Assert
+    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
     expect(tracking).toEqual({
       status: "running",
       vehicleId: "100000035",
@@ -357,6 +375,7 @@ describe("toTrackedStatus with a lagging position", () => {
       progress: 0,
       segmentMeters: 225,
       nextStopInSec: null,
+      trajectory: [{ atMs: Date.parse("2026-10-17T19:22:58+09:00"), s: 4 }],
     });
   });
 });
@@ -376,15 +395,193 @@ describe("toWaitingArrival", () => {
 describe("toWaitingVehicleIds", () => {
   it("collects the vehicles of tracked buses whose status is waiting", () => {
     // Arrange
+    // An atStop bus carries its trajectory since add-jongro-bus-trajectory.
     const common = { stationIndex: 0, carNumber: "5512", estimatedTime: 0 };
     const tracked = { observedAt: "2026-10-17T19:21:01+09:00", crowding: null, isLastBus: false };
     const buses = [
       { ...common, kind: "tracked" as const, tracked: { status: "waiting" as const, vehicleId: "100000018", ...tracked } },
-      { ...common, kind: "tracked" as const, tracked: { status: "atStop" as const, vehicleId: "100000015", ...tracked } },
+      { ...common, kind: "tracked" as const, tracked: { status: "atStop" as const, vehicleId: "100000015", ...tracked, trajectory: [{ at: "2026-10-17T19:21:01+09:00", s: 26 }] } },
       { ...common, kind: "estimated" as const },
     ];
 
     // Act & Assert
     expect(toWaitingVehicleIds(buses)).toEqual(new Set(["100000018"]));
+  });
+});
+
+// WHY: the app interpolates a tracked bus through knots of (instant, s) (add-jongro-bus-trajectory D2). The rows are
+// the 2026-10-18 production capture's (pos_/arr_<busRouteId>_<epoch>), unless a case says it is hand-edited.
+describe("toTrajectory", () => {
+  const ROUTE08 = { stationCount: 31 };
+  const at = (hhmmss: string) => Date.parse(`2026-10-18T${hhmmss}+09:00`);
+  const named = (vehId: string, madeAt: string, ...rows: Array<[staOrd: number, traTime: number]>) =>
+    rows.map(([staOrd, traTime]) => ({ bus: jongroArrivalBus({ vehId, staOrd, traTime }), madeAt: `2026-10-18 ${madeAt}.0` }));
+
+  // Route 02 vehicle 100000088 running at ord 8 at 18:07:45 (epoch 1792314485), named at ords 9 to 13.
+  const running88 = jongroPositionDoc({ sequence: "8", vehicleId: "100000088", sectDist: 0.015, fullSectDist: 0.118, observedAt: "2026-10-18T18:07:45+09:00" });
+  const rows88 = named("100000088", "18:07:53", [9, 15], [10, 47], [11, 161], [12, 208], [13, 324]);
+  // Route 02 vehicle 100000058 at a stop at ord 19 at 18:08:33 (epoch 1792314531), its first observation there.
+  const atStop58 = jongroPositionDoc({ sequence: "19", vehicleId: "100000058", sectDist: 0, fullSectDist: 0.135, isAtStop: true, observedAt: "2026-10-18T18:08:33+09:00" });
+  const rows58 = named("100000058", "18:08:36", [20, 58], [21, 114], [22, 158], [23, 197]);
+
+  it("starts at the observation and reaches the next three stops at their re-based travel times", () => {
+    // Act
+    const trajectory = toTrajectory(running88, "running", { ...ROUTE02, namedBuses: rows88 });
+
+    // Assert
+    expect(trajectory).toEqual([
+      { atMs: at("18:07:45"), s: 7 + 0.015 / 0.118 },
+      { atMs: at("18:08:08"), s: 8 },
+      { atMs: at("18:08:40"), s: 9 },
+      { atMs: at("18:10:34"), s: 10 },
+    ]);
+  });
+
+  it("holds a bus at its stop until its expected departure, then reaches the next stops", () => {
+    // Act
+    const trajectory = toTrajectory({ ...atStop58, atStopSince: "2026-10-18T18:08:33+09:00" }, "atStop", { ...ROUTE02, namedBuses: rows58 });
+
+    // Assert
+    expect(trajectory).toEqual([
+      { atMs: at("18:08:33"), s: 18 },
+      { atMs: at("18:08:48"), s: 18 },
+      { atMs: at("18:09:34"), s: 19 },
+      { atMs: at("18:10:30"), s: 20 },
+      { atMs: at("18:11:14"), s: 21 },
+    ]);
+  });
+
+  it.each([
+    ["no record of since when, as after a restart", undefined, at("18:08:48")],
+    ["standing there 14 s", "2026-10-18T18:08:19+09:00", at("18:08:34")],
+    ["standing there 15 s", "2026-10-18T18:08:18+09:00", undefined],
+    ["standing there 16 s", "2026-10-18T18:08:17+09:00", undefined],
+  ])("departs a bus at its stop with %s at %s", (_case, atStopSince, departureMs) => {
+    // Act
+    const [first, second] = toTrajectory({ ...atStop58, atStopSince }, "atStop", { ...ROUTE02, namedBuses: rows58 });
+
+    // Assert
+    expect(first).toEqual({ atMs: at("18:08:33"), s: 18 });
+    expect(second).toEqual(departureMs === undefined ? { atMs: at("18:09:34"), s: 19 } : { atMs: departureMs, s: 18 });
+  });
+
+  it("counts a dwell from the first observation at the stop and stops at the first stop no row names the vehicle there", () => {
+    // Arrange
+    // Route 08 vehicle 100000010 at a stop at ord 11 since 18:08:29, observed at 18:08:34 (epoch 1792314531) and
+    // named on the ord 12 row only.
+    const position = jongroPositionDoc({ sequence: "11", vehicleId: "100000010", sectDist: 0.057, fullSectDist: 0.257, isAtStop: true, observedAt: "2026-10-18T18:08:34+09:00", atStopSince: "2026-10-18T18:08:29+09:00" });
+
+    // Act
+    const trajectory = toTrajectory(position, "atStop", { ...ROUTE08, namedBuses: named("100000010", "18:08:46", [12, 61], [14, 170]) });
+
+    // Assert
+    expect(trajectory).toEqual([
+      { atMs: at("18:08:34"), s: 10 },
+      { atMs: at("18:08:44"), s: 10 },
+      { atMs: at("18:09:47"), s: 11 },
+    ]);
+  });
+
+  it("moves a next stop already due at the observation to 20 s after it, and keeps later stops", () => {
+    // Arrange
+    // Route 08 vehicle 100000077 at ord 20 at 18:10:45 (epoch 1792314652): its ord 21 row, made at 18:10:33, has it
+    // there at 18:10:38, before the observation; it reached ord 21 by 18:11:19.
+    const position = jongroPositionDoc({ sequence: "20", vehicleId: "100000077", sectDist: 0.101, fullSectDist: 0.304, observedAt: "2026-10-18T18:10:45+09:00", isStationary: true });
+
+    // Act
+    const trajectory = toTrajectory(position, "running", { ...ROUTE08, namedBuses: named("100000077", "18:10:33", [21, 5], [22, 95], [23, 177]) });
+
+    // Assert
+    expect(trajectory).toEqual([
+      { atMs: at("18:10:45"), s: 19 + 0.101 / 0.304 },
+      { atMs: at("18:11:05"), s: 20 },
+      { atMs: at("18:12:08"), s: 21 },
+      { atMs: at("18:13:30"), s: 22 },
+    ]);
+  });
+
+  it.each([
+    ["19 s after the previous knot (hand-edited)", 19, at("18:08:05")],
+    ["20 s after it", 20, at("18:08:05")],
+    ["21 s after it", 21, at("18:08:06")],
+  ])("keeps a next stop at least 20 s after the previous knot: one %s", (_case, gapSec, expectedMs) => {
+    // Arrange
+    const rows = named("100000088", "18:07:45", [9, gapSec]);
+
+    // Act
+    const [, next] = toTrajectory(running88, "running", { ...ROUTE02, namedBuses: rows });
+
+    // Assert
+    expect(next).toEqual({ atMs: expectedMs, s: 8 });
+  });
+
+  it("moves a later stop the rows put before an earlier one to 20 s after it (hand-edited: no captured pair inverted)", () => {
+    // Act
+    const trajectory = toTrajectory(running88, "running", { ...ROUTE02, namedBuses: named("100000088", "18:07:53", [9, 15], [10, 160], [11, 150]) });
+
+    // Assert
+    expect(trajectory.map((knot) => knot.atMs)).toEqual([at("18:07:45"), at("18:08:08"), at("18:10:33"), at("18:10:53")]);
+  });
+
+  it("serves no trajectory for a waiting bus (route 02 vehicle 100000059 idling at its origin, epoch 1792314485)", () => {
+    // Arrange
+    const position = jongroPositionDoc({ sequence: "1", vehicleId: "100000059", sectDist: 0.043, fullSectDist: 0.259, observedAt: "2026-10-18T18:07:53+09:00", isStationary: true });
+
+    // Act & Assert
+    expect(toTrajectory(position, "waiting", { ...ROUTE02, namedBuses: [] })).toEqual([]);
+  });
+
+  it("goes no further than the last index (route 08 vehicle 100000078 at ord 29, epoch 1792314485)", () => {
+    // Arrange
+    // The ord 32 row is hand-added: route 08 ends at ord 31, so no stop past it may be reached.
+    const position = jongroPositionDoc({ sequence: "29", vehicleId: "100000078", sectDist: 0.038, fullSectDist: 0.176, observedAt: "2026-10-18T18:07:55+09:00" });
+    const rows = [...named("100000078", "18:07:51", [30, 30], [31, 59]), ...named("100000078", "18:07:51", [32, 90])];
+
+    // Act
+    const trajectory = toTrajectory(position, "running", { ...ROUTE08, namedBuses: rows });
+
+    // Assert
+    expect(trajectory).toEqual([
+      { atMs: at("18:07:55"), s: 28 + 0.038 / 0.176 },
+      { atMs: at("18:08:21"), s: 29 },
+      { atMs: at("18:08:50"), s: 30 },
+    ]);
+  });
+
+  it("holds a bus at the last index at its observation, with no departure (hand-edited: no 2026-10-18 row reached 종로02's ord 27)", () => {
+    // Arrange
+    const position = jongroPositionDoc({ sequence: "27", vehicleId: "100000015", sectDist: 0, fullSectDist: 0.1, isAtStop: true, observedAt: "2026-10-18T18:09:00+09:00" });
+
+    // Act & Assert
+    expect(toTrajectory(position, "atStop", { ...ROUTE02, namedBuses: named("100000015", "18:09:00", [28, 30]) })).toEqual([{ atMs: at("18:09:00"), s: 26 }]);
+  });
+
+  it("holds a running bus at its observation when no row names it at its next stop", () => {
+    // Act & Assert
+    expect(toTrajectory(running88, "running", { ...ROUTE02, namedBuses: named("100000088", "18:07:53", [10, 47]) })).toEqual([{ atMs: at("18:07:45"), s: 7 + 0.015 / 0.118 }]);
+  });
+
+  it("stops at a row whose mkTm does not parse", () => {
+    // Arrange
+    const rows = [...named("100000088", "18:07:53", [9, 15]), { bus: jongroArrivalBus({ vehId: "100000088", staOrd: 10, traTime: 47 }), madeAt: "18:07:53" }];
+
+    // Act & Assert
+    expect(toTrajectory(running88, "running", { ...ROUTE02, namedBuses: rows }).map((knot) => knot.s)).toEqual([7 + 0.015 / 0.118, 8]);
+  });
+});
+
+describe("toNamedBuses", () => {
+  it("lists every bus slot naming the vehicle by stop ord, with when its row was made (arr_100900008_1792314485)", () => {
+    // Arrange
+    const rows = [
+      { eventDate: "2026-10-18 18:07:53.0", buses: [jongroArrivalBus({ vehId: "100000088", staOrd: 10, traTime: 47 }), noArrivalBus({ staOrd: 10 })] },
+      { eventDate: "2026-10-18 18:07:53.0", buses: [jongroArrivalBus({ vehId: "100000058", staOrd: 9, traTime: 500 }), jongroArrivalBus({ vehId: "100000088", staOrd: 9, traTime: 15 })] },
+    ];
+
+    // Act & Assert
+    expect(toNamedBuses(rows, "100000088").map(({ bus, madeAt }) => [bus.staOrd, bus.traTime, madeAt])).toEqual([
+      [9, 15, "2026-10-18 18:07:53.0"],
+      [10, 47, "2026-10-18 18:07:53.0"],
+    ]);
   });
 });

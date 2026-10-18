@@ -8,7 +8,7 @@ import { BusRegistryService } from "../../registry/bus-registry.service";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 import { toJongroBusPosition } from "./bus-realtime-jongro.mapper";
-import { isIdlingAtOrigin, isStationary, toArrivalsKey, toDwell, toPositionsKey } from "./bus-realtime-jongro.rules";
+import { isIdlingAtOrigin, isStationary, toArrivalsKey, toAtStopSince, toDwell, toPositionsKey } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting, JongroVehicleObservation } from "./bus-realtime-jongro.types";
 
 @Injectable()
@@ -57,28 +57,29 @@ export class BusRealtimeJongroService {
   private async refreshPositions(route: RegistryRoute): Promise<JongroBusSighting[]> {
     const sightings = await this.client.fetchSightings(route);
     const now = this.clock.now();
-    const stationaryByVehicleId = this.observeVehicles(route.code, sightings);
-    const positions = sightings.flatMap((sighting) => this.toPositions(route, sighting, { now, isStationary: stationaryByVehicleId.get(sighting.vehicleId) ?? false }));
+    const observationByVehicleId = this.observeVehicles(route.code, sightings);
+    const positions = sightings.flatMap((sighting) => this.toPositions(route, sighting, { now, observation: observationByVehicleId.get(sighting.vehicleId) }));
     this.positionsByCode.set(route.code, positions);
     await this.cache.write(toPositionsKey(route.code), positions);
     return sightings;
   }
 
   // WHY: only this tick's vehicles are remembered, so the memory never grows and a vehicle that left starts over.
-  private observeVehicles(code: string, sightings: readonly JongroBusSighting[]): Map<string, boolean> {
+  private observeVehicles(code: string, sightings: readonly JongroBusSighting[]): Map<string, JongroVehicleObservation> {
     const previousByVehicleId = this.observationByVehicleIdByCode.get(code) ?? new Map<string, JongroVehicleObservation>();
     const observationByVehicleId = new Map<string, JongroVehicleObservation>();
     for (const sighting of sightings) {
       const previous = previousByVehicleId.get(sighting.vehicleId);
       const { sectOrd, sectDist, observedAt } = sighting;
       const stationary = isStationary(previous, { sectOrd, sectDist, observedAt }) || isIdlingAtOrigin(previous, sighting);
-      observationByVehicleId.set(sighting.vehicleId, { sectOrd, sectDist, observedAt, isStationary: stationary });
+      const atStopSince = toAtStopSince(previous, sighting);
+      observationByVehicleId.set(sighting.vehicleId, { sectOrd, sectDist, observedAt, isStationary: stationary, ...(atStopSince && { atStopSince }) });
     }
     this.observationByVehicleIdByCode.set(code, observationByVehicleId);
-    return new Map([...observationByVehicleId].map(([vehicleId, observation]) => [vehicleId, observation.isStationary]));
+    return observationByVehicleId;
   }
 
-  private toPositions(route: RegistryRoute, sighting: JongroBusSighting, { now, isStationary: stationary }: { now: Date; isStationary: boolean }): JongroBusPositionDoc[] {
+  private toPositions(route: RegistryRoute, sighting: JongroBusSighting, { now, observation }: { now: Date; observation: JongroVehicleObservation | undefined }): JongroBusPositionDoc[] {
     const station = route.mapping[sighting.stationId];
     if (!station) {
       logger.debug(
@@ -90,7 +91,8 @@ export class BusRealtimeJongroService {
     const firstSeenAtByStationId = this.firstSeenAtByStationIdOf(route.code);
     const dwell = toDwell(firstSeenAtByStationId.get(sighting.stationId), now);
     firstSeenAtByStationId.set(sighting.stationId, dwell.firstSeenAt);
-    return [toJongroBusPosition(sighting, station, { ...dwell, isStationary: stationary })];
+    const atStopSince = observation?.atStopSince;
+    return [toJongroBusPosition(sighting, station, { ...dwell, isStationary: observation?.isStationary ?? false, ...(atStopSince && { atStopSince }) })];
   }
 
   private firstSeenAtByStationIdOf(code: string): Map<string, string> {

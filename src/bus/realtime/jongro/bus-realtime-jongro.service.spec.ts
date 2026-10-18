@@ -11,7 +11,8 @@
  * observation of it (never on the first after a restart), or when it idles at
  * its origin: at index 0 with lastStTm 0 and not moved 10 m since the previous
  * observation, a frozen observation time included, or at its first
- * observation off a stop.
+ * observation off a stop. A bus at a stop keeps since when its vehicle has
+ * stood there, from the poller's memory (add-jongro-bus-trajectory).
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -467,5 +468,48 @@ describe("BusRealtimeJongroService.refresh origin idling", () => {
 
     // Assert
     expect(stationary).toEqual([true, false]);
+  });
+});
+
+// WHY: an atStop bus's expected departure counts its dwell from the first observation at that stop
+// (add-jongro-bus-trajectory D4). Route 02 vehicle 100000058 (pos_100900008_1792314511, _531, _551, _612).
+describe("BusRealtimeJongroService.refresh time at a stop", () => {
+  const sighting58 = (sectOrd: number, stationId: string, isAtStop: boolean, observedAt: string, sectDist = 0) =>
+    jongroSighting({ stationId, carNumber: "2008", vehicleId: "100000058", sectOrd, sectDist, fullSectDist: 0.135, isAtStop, observedAt });
+  const atStopSinceAcross = async (ticks: JongroBusSighting[]) => {
+    const since: Array<string | undefined> = [];
+    for (const sighting of ticks) {
+      client.sightings = [sighting];
+      await service.refresh(route("02"));
+      since.push((await service.listPositions("02"))![0]!.atStopSince);
+    }
+    return since;
+  };
+
+  it("keeps the first observation at a stop while the vehicle stays there, and none once it moves on", async () => {
+    // Act
+    const since = await atStopSinceAcross([
+      sighting58(18, "100900189", false, "2026-10-18T18:08:20+09:00", 0.016),
+      sighting58(19, "100900131", true, "2026-10-18T18:08:33+09:00"),
+      sighting58(19, "100900131", true, "2026-10-18T18:08:49+09:00", 0.044),
+      sighting58(19, "100900131", false, "2026-10-18T18:10:05+09:00", 0.044),
+    ]);
+
+    // Assert
+    expect(since).toEqual([undefined, "2026-10-18T18:08:33+09:00", "2026-10-18T18:08:33+09:00", undefined]);
+  });
+
+  it("forgets it on a restart, so the next observation at the stop starts the count", async () => {
+    // Arrange
+    client.sightings = [sighting58(19, "100900131", true, "2026-10-18T18:08:33+09:00")];
+    await service.refresh(route("02"));
+    const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
+    service = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(client), new BusCacheService(asReal<BusCacheRepository>(busCache)), registry, clock);
+
+    // Act
+    const since = await atStopSinceAcross([sighting58(19, "100900131", true, "2026-10-18T18:08:49+09:00", 0.044)]);
+
+    // Assert
+    expect(since).toEqual(["2026-10-18T18:08:49+09:00"]);
   });
 });

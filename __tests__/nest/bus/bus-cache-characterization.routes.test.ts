@@ -242,7 +242,8 @@ describe("bus_cache between a poller process and an api replica", () => {
     expect(res.status).toBe(200);
     expect(res.headers["cache-control"]).toBe("no-store");
     expect(res.body).toEqual({
-      meta: { lang: "ko", currentTime: "10:00 AM", totalBuses: 2 },
+      // WHY: serverNow is what add-jongro-bus-trajectory adds to meta (task 2.2), a deliberate pin change.
+      meta: { lang: "ko", currentTime: "10:00 AM", totalBuses: 2, serverNow: "2026-10-20T10:00:00+09:00" },
       data: {
         groupId: "hssc",
         buses: [
@@ -411,6 +412,9 @@ describe("bus_cache between a poller process and an api replica", () => {
             progress: 0.4,
             segmentMeters: 250,
             nextStopInSec: null,
+            // WHY: trajectory is what add-jongro-bus-trajectory adds (task 2.2), a deliberate pin change: the observation
+            // alone, since no row names the vehicle at its next stop.
+            trajectory: [{ at: "2026-10-20T09:59:30+09:00", s: 5.4 }],
           },
         },
       ],

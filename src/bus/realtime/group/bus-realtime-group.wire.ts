@@ -15,6 +15,13 @@ const legacyBusFields = {
   longitude: z.string().optional(),
 };
 
+/**
+ * WHY: s (station index plus the fraction of the section toward the next) at instant `at`, +09:00, read against
+ * meta.serverNow. Ascending at, non-decreasing s: the observation, an atStop bus's departure, then up to three next
+ * stops at TOPIS's re-based travel times, 20 s or more apart; the app moves the bus linearly and holds at the last knot.
+ */
+const trajectory = z.array(z.object({ at: z.iso.datetime({ offset: true }), s: z.number().min(0) })).min(1);
+
 const trackedCommon = {
   /** QUIRK(topis): the vehicle's vehId, stable across polls. */
   vehicleId: z.string(),
@@ -38,8 +45,9 @@ const trackedStatus = z.discriminatedUnion("status", [
     segmentMeters: z.int(),
     /** WHY: the next stop's travel time re-based from its arrival row's mkTm to observedAt, floored at 0. */
     nextStopInSec: z.int().min(0).nullable(),
+    trajectory,
   }),
-  z.object({ status: z.literal("atStop"), ...trackedCommon }),
+  z.object({ status: z.literal("atStop"), ...trackedCommon, trajectory }),
   z.object({ status: z.literal("waiting"), ...trackedCommon }),
 ]);
 
@@ -95,6 +103,8 @@ export const realtimeGroupMeta = z.object({
   /** WHY: the server's KST wall clock as "hh:mm AM/PM". */
   currentTime: z.string(),
   totalBuses: z.int(),
+  /** WHY: the server's clock at +09:00 when it built the response, which the app reads trajectory instants against. */
+  serverNow: z.iso.datetime({ offset: true }),
 });
 
 export type RealtimeGroup = z.input<typeof realtimeGroup>;

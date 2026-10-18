@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-written from captures, since the tracked bus shape is not deployed yet: buses from TOPIS getBusPosByRtid busRouteId=100900004 captured 2026-10-17 19:12 KST (vehicles 100000114 and 100000103, pos_100900004_1792231921) joined with the arrival rows of the same moment through the add-jongro-bus-positions rules (estimatedTime, the dwell, is illustrative); stationEtas from TOPIS getArrInfoByRouteAll busRouteId=100900004 captured 2026-10-17 19:16 KST (ord 2 and 12, the same rows as __tests__/nest/bus/fixtures/topis-jongro-arrivals.json jongro07Waiting), each bus through the arrival rules on 18 seats. stationsVersion is the jongro07 registry document's as seeded from src/bus/registry/jongro-stations.seed.json (2026-10-17).",
+  "_about": "Hand-written from captures, since the tracked bus shape is not deployed yet: buses from TOPIS getBusPosByRtid busRouteId=100900004 captured 2026-10-17 19:12 KST (vehicles 100000114 and 100000103, pos_100900004_1792231921) joined with the arrival rows of the same moment through the add-jongro-bus-positions rules (estimatedTime, the dwell, is illustrative); stationEtas from TOPIS getArrInfoByRouteAll busRouteId=100900004 captured 2026-10-17 19:16 KST (ord 2 and 12, the same rows as __tests__/nest/bus/fixtures/topis-jongro-arrivals.json jongro07Waiting), each bus through the arrival rules on 18 seats. stationsVersion is the jongro07 registry document's as seeded from src/bus/registry/jongro-stations.seed.json (2026-10-17). Trajectories (add-jongro-bus-trajectory) added by hand through its rules from the next-stop rows those buses had (vehicle 100000114's at ord 3, 100000103's at ord 15), each ending where those rows end; 100000103's departure knot assumes its first observation at the stop.",
   "data": {
     "groupId": "jongro07",
     "buses": [
@@ -18,7 +18,17 @@
           "isLastBus": false,
           "progress": 0.20761245674740486,
           "segmentMeters": 289,
-          "nextStopInSec": 33
+          "nextStopInSec": 33,
+          "trajectory": [
+            {
+              "at": "2026-10-17T19:11:45+09:00",
+              "s": 1.207612456747405
+            },
+            {
+              "at": "2026-10-17T19:12:18+09:00",
+              "s": 2
+            }
+          ]
         }
       },
       {
@@ -33,7 +43,21 @@
           "vehicleId": "100000103",
           "observedAt": "2026-10-17T19:11:44+09:00",
           "crowding": "relaxed",
-          "isLastBus": false
+          "isLastBus": false,
+          "trajectory": [
+            {
+              "at": "2026-10-17T19:11:44+09:00",
+              "s": 13
+            },
+            {
+              "at": "2026-10-17T19:11:59+09:00",
+              "s": 13
+            },
+            {
+              "at": "2026-10-17T19:12:47+09:00",
+              "s": 14
+            }
+          ]
         }
       }
     ],
