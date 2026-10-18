@@ -113,7 +113,7 @@ describe("resolveStopSequences", () => {
 
   it("lists only referenced catalog stops, each once, in order of first reference", () => {
     // Arrange
-    const { stops } = resolveStopSequences(["commute-jeongja", "commute-jamsil", "commute-dogok"], "ko", catalog);
+    const { stops } = resolveStopSequences(["commute-jeongja", "commute-jamsil", "commute-dogok"], "ko", { catalog });
 
     // Act & Assert
     expect(stops.map((s) => s.id)).toEqual(["jeongja-exit3", "nsc-opposite"]);
@@ -121,7 +121,7 @@ describe("resolveStopSequences", () => {
 
   it("omits a service without sequences", () => {
     // Arrange
-    const { sequences } = resolveStopSequences(["commute-jeongja", "commute-dogok"], "ko", catalog);
+    const { sequences } = resolveStopSequences(["commute-jeongja", "commute-dogok"], "ko", { catalog });
 
     // Act & Assert
     expect(Object.keys(sequences)).toEqual(["commute-jeongja"]);
@@ -129,7 +129,7 @@ describe("resolveStopSequences", () => {
 
   it("names a catalog stop by its name and a plain stop by its label, with action and timing", () => {
     // Arrange
-    const { sequences } = resolveStopSequences(["commute-jeongja"], "ko", catalog);
+    const { sequences } = resolveStopSequences(["commute-jeongja"], "ko", { catalog });
 
     // Act & Assert
     expect(sequences["commute-jeongja"]).toEqual({
@@ -159,7 +159,7 @@ describe("resolveStopSequences", () => {
     };
 
     // Act
-    const up = (lang: SupportedLang) => resolveStopSequences(["commute-jeongja"], lang, withNote).sequences["commute-jeongja"]!.up!;
+    const up = (lang: SupportedLang) => resolveStopSequences(["commute-jeongja"], lang, { catalog: withNote }).sequences["commute-jeongja"]!.up!;
 
     // Assert
     expect(up("ko")[0]!.note).toBe("정자역 탑승");
@@ -169,7 +169,7 @@ describe("resolveStopSequences", () => {
 
   it("resolves text zh → en → ko", () => {
     // Arrange
-    const { stops, sequences } = resolveStopSequences(["commute-jeongja"], "zh", catalog);
+    const { stops, sequences } = resolveStopSequences(["commute-jeongja"], "zh", { catalog });
 
     // Act & Assert
     expect(stops[0]!.name).toBe("Jeongja Stn. Exit 3");
@@ -180,7 +180,7 @@ describe("resolveStopSequences", () => {
 
   it("serves the photo variant for the language, else the original", () => {
     // Act
-    const photo = (lang: SupportedLang) => resolveStopSequences(["commute-jeongja"], lang, catalog).stops[0]!.photoUrl;
+    const photo = (lang: SupportedLang) => resolveStopSequences(["commute-jeongja"], lang, { catalog }).stops[0]!.photoUrl;
 
     // Assert
     expect(photo("zh")).toBe(`${MEDIA}/jeongja-exit3/zh-22222222.jpg`);
@@ -190,7 +190,7 @@ describe("resolveStopSequences", () => {
 
   it("builds the street view link", () => {
     // Act
-    const stop = resolveStopSequences(["commute-jeongja"], "ko", catalog).stops[0]!;
+    const stop = resolveStopSequences(["commute-jeongja"], "ko", { catalog }).stops[0]!;
 
     // Assert
     expect(stop.streetViewUrl).toBe(VERIFIED_LINK);
@@ -202,7 +202,7 @@ describe("resolveStopSequences", () => {
     ["zh", "3号出口"],
   ] as const)("serves the guide as a map, the exit labeled in %s", (lang, label) => {
     // Act
-    const stop = resolveStopSequences(["commute-jeongja"], lang, catalog).stops[0]!;
+    const stop = resolveStopSequences(["commute-jeongja"], lang, { catalog }).stops[0]!;
 
     // Assert
     expect(stop.map).toEqual({
@@ -223,7 +223,7 @@ describe("resolveStopSequences", () => {
 
   it("Pin-only stop: an empty guide serves empty markers and paths, with coords", () => {
     // Act
-    const stop = resolveStopSequences(["commute-gwanggyo"], "ko", catalog).stops.find((s) => s.id === "nsc-welfare")!;
+    const stop = resolveStopSequences(["commute-gwanggyo"], "ko", { catalog }).stops.find((s) => s.id === "nsc-welfare")!;
 
     // Assert
     expect(stop).toEqual({
@@ -236,9 +236,47 @@ describe("resolveStopSequences", () => {
 
   it("emits no key for a field the catalog does not set: no guide, no map", () => {
     // Arrange
-    const { stops } = resolveStopSequences(["commute-jamsil"], "ko", catalog);
+    const { stops } = resolveStopSequences(["commute-jamsil"], "ko", { catalog });
 
     // Act & Assert
     expect(stops[0]).toEqual({ id: "nsc-opposite", name: "N센터 건너편" });
+  });
+
+  describe("the subway station a stop is at", () => {
+    const TITLES = new Map([["jeongja", { ko: "정자역", en: "Jeongja Station", zh: "亭子站" }]]);
+    const tagged: ScheduleStopCatalog = {
+      ...catalog,
+      stops: catalog.stops.map((stop) => (stop.id === "jeongja-exit3" ? { ...stop, subwayStationId: "jeongja" } : stop)),
+    };
+
+    it.each([
+      ["ko", "정자역"],
+      ["en", "Jeongja Station"],
+      ["zh", "亭子站"],
+    ] as const)("serves a tagged stop its station's slug and %s title, as the last field", (lang, title) => {
+      // Act
+      const [stop] = resolveStopSequences(["commute-jeongja"], lang, { catalog: tagged, subwayTitles: TITLES }).stops;
+
+      // Assert
+      expect(stop!.subwayStation).toEqual({ id: "jeongja", title });
+      expect(Object.keys(stop!)).toEqual(["id", "name", "detail", "coords", "photoUrl", "streetViewUrl", "map", "subwayStation"]);
+    });
+
+    it("serves no subwayStation key on a stop that names no station", () => {
+      // Act
+      const { stops } = resolveStopSequences(["commute-jeongja"], "ko", { catalog: tagged, subwayTitles: TITLES });
+
+      // Assert
+      expect(stops.map((stop) => [stop.id, "subwayStation" in stop])).toEqual([
+        ["jeongja-exit3", true],
+        ["nsc-opposite", false],
+      ]);
+    });
+
+    it("throws on a tagged stop whose station has no title, which the catalog loader refuses", () => {
+      // Act & Assert
+      expect(() => resolveStopSequences(["commute-jeongja"], "ko", { catalog: tagged, subwayTitles: new Map() })).toThrow("stop jeongja-exit3 names subway station jeongja");
+      expect(() => resolveStopSequences(["commute-jeongja"], "ko", { catalog: tagged })).toThrow("stop jeongja-exit3 names subway station jeongja");
+    });
   });
 });

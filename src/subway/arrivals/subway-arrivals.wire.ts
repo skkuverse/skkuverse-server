@@ -22,8 +22,14 @@ const directionArrivals = z.object({
   trains: z.array(trainArrival),
 });
 
+/**
+ * WHY: one character in the request language, drawn in an outlined circle; `color`, six hex digits with no `#`,
+ * is the outline's and the text's on the app's light background, so it may be darker than the line's `color`.
+ */
+const lineMarker = z.object({ text: z.string(), color: z.string() });
+
 /** WHY: a line's display data comes from the server, so the app keeps no line table; `color` is six hex digits, no `#`. */
-const subwayLine = z.object({ code: z.string(), name: z.string(), badge: z.string(), color: z.string() });
+const subwayLine = z.object({ code: z.string(), name: z.string(), color: z.string(), marker: lineMarker });
 
 const lineArrivals = z.object({
   line: subwayLine,

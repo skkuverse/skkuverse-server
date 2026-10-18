@@ -12,6 +12,7 @@
         "en": "In front of Paris Baguette",
         "zh": "巴黎贝甜门前"
       },
+      "subwayStationId": "jeongja",
       "coords": {
         "lat": 37.365499,
         "lng": 127.107906
@@ -93,6 +94,7 @@
         "en": "About 200 m, in front of Lotte Mart (Hi-Mart)",
         "zh": "约200米，乐天玛特（Hi-Mart）门前"
       },
+      "subwayStationId": "jamsil",
       "coords": {
         "lat": 37.512278,
         "lng": 127.097033
@@ -166,6 +168,7 @@
         "en": "About 50 m, in front of the red-brick building",
         "zh": "约50米，红砖建筑门前"
       },
+      "subwayStationId": "dogok",
       "coords": {
         "lat": 37.4907,
         "lng": 127.054417
@@ -235,6 +238,7 @@
         "en": "In front of the Samsung Fire & Marine Seocho building",
         "zh": "三星火灾瑞草大楼门前"
       },
+      "subwayStationId": "gangnam",
       "coords": {
         "lat": 37.494424,
         "lng": 127.029091
@@ -308,6 +312,7 @@
         "en": "Across Gangnam-daero 37-gil, in front of Seocho Lenid",
         "zh": "过江南大路37街，瑞草Lenid门前"
       },
+      "subwayStationId": "yangjae",
       "coords": {
         "lat": 37.485406,
         "lng": 127.033382
@@ -385,6 +390,7 @@
         "en": "About 50 m, at the Gyeonggi Library plaza entrance",
         "zh": "约50米，京畿道图书馆广场入口"
       },
+      "subwayStationId": "gwanggyo-jungang",
       "coords": {
         "lat": 37.287931,
         "lng": 127.052631
@@ -476,6 +482,7 @@
         "en": "Jeongja Stn. Exit 2",
         "zh": "亭子站 2号出口"
       },
+      "subwayStationId": "jeongja",
       "coords": {
         "lat": 37.366014,
         "lng": 127.10836
@@ -506,6 +513,7 @@
         "en": "Jamsil Stn. Exit 5",
         "zh": "蚕室站 5号出口"
       },
+      "subwayStationId": "jamsil",
       "coords": {
         "lat": 37.513114,
         "lng": 127.098842
@@ -536,6 +544,7 @@
         "en": "Dogok Stn. Exit 4",
         "zh": "道谷站 4号出口"
       },
+      "subwayStationId": "dogok",
       "coords": {
         "lat": 37.490607,
         "lng": 127.055048
@@ -566,6 +575,7 @@
         "en": "Yangjae Stn. Exit 3",
         "zh": "良才站 3号出口"
       },
+      "subwayStationId": "yangjae",
       "coords": {
         "lat": 37.48499,
         "lng": 127.034064
@@ -596,6 +606,7 @@
         "en": "Gwanggyo Jungang Stn. Exit 1",
         "zh": "光教中央站 1号出口"
       },
+      "subwayStationId": "gwanggyo-jungang",
       "coords": {
         "lat": 37.287978,
         "lng": 127.052104
@@ -626,6 +637,7 @@
         "en": "Median bus stop before Gangnam Station intersection",
         "zh": "江南站十字路口前中央公交车站"
       },
+      "subwayStationId": "gangnam",
       "coords": {
         "lat": 37.495049,
         "lng": 127.029076

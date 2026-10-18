@@ -3,50 +3,50 @@
     {
       "code": "1",
       "name": { "ko": "1호선", "en": "Line 1", "zh": "1号线" },
-      "badge": { "ko": "1", "en": "1", "zh": "1" },
       "color": "0052A4",
+      "marker": { "text": { "ko": "1", "en": "1", "zh": "1" }, "color": "0052A4" },
       "seoul": { "subwayId": "1001", "lineName": "1호선", "trainMapLine": "1", "trainNumbers": "timetable" }
     },
     {
       "code": "4",
       "name": { "ko": "4호선", "en": "Line 4", "zh": "4号线" },
-      "badge": { "ko": "4", "en": "4", "zh": "4" },
       "color": "00A5DE",
+      "marker": { "text": { "ko": "4", "en": "4", "zh": "4" }, "color": "007FAB" },
       "seoul": { "subwayId": "1004", "lineName": "4호선", "trainMapLine": "4", "trainNumbers": "timetable" }
     },
     {
       "code": "2",
       "name": { "ko": "2호선", "en": "Line 2", "zh": "2号线" },
-      "badge": { "ko": "2", "en": "2", "zh": "2" },
       "color": "00A84D",
+      "marker": { "text": { "ko": "2", "en": "2", "zh": "2" }, "color": "00893F" },
       "seoul": { "subwayId": "1002", "lineName": "2호선", "trainMapLine": "2", "trainNumbers": "circle" }
     },
     {
       "code": "3",
       "name": { "ko": "3호선", "en": "Line 3", "zh": "3号线" },
-      "badge": { "ko": "3", "en": "3", "zh": "3" },
       "color": "EF7C1C",
+      "marker": { "text": { "ko": "3", "en": "3", "zh": "3" }, "color": "BB5C0D" },
       "seoul": { "subwayId": "1003", "lineName": "3호선", "trainMapLine": "3", "trainNumbers": "timetable" }
     },
     {
       "code": "8",
       "name": { "ko": "8호선", "en": "Line 8", "zh": "8号线" },
-      "badge": { "ko": "8", "en": "8", "zh": "8" },
       "color": "E6186C",
+      "marker": { "text": { "ko": "8", "en": "8", "zh": "8" }, "color": "E4186B" },
       "seoul": { "subwayId": "1008", "lineName": "8호선", "trainMapLine": "8", "trainNumbers": "timetable" }
     },
     {
       "code": "K1",
       "name": { "ko": "수인분당선", "en": "Suin–Bundang Line", "zh": "水仁·盆唐线" },
-      "badge": { "ko": "수인분당", "en": "Suin–Bundang", "zh": "水仁盆唐" },
       "color": "F5A200",
+      "marker": { "text": { "ko": "수", "en": "수", "zh": "水" }, "color": "A26B00" },
       "seoul": { "subwayId": "1075", "lineName": "수인분당선", "trainNumbers": "timetable" }
     },
     {
       "code": "D1",
       "name": { "ko": "신분당선", "en": "Shinbundang Line", "zh": "新盆唐线" },
-      "badge": { "ko": "신분당", "en": "Shinbundang", "zh": "新盆唐" },
       "color": "D4003B",
+      "marker": { "text": { "ko": "신", "en": "신", "zh": "新" }, "color": "D4003B" },
       "seoul": { "subwayId": "1077", "lineName": "신분당선", "trainNumbers": "trainset" }
     }
   ],

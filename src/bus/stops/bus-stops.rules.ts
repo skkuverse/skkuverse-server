@@ -323,3 +323,14 @@ export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<s
   }
   return [...errors, ...etaErrors(raw.stops, raw.sequences, optIns)];
 }
+
+// WHY: a malformed root or stop is validateStopCatalog's to report; this names only the station a well-formed stop is at.
+export function subwayStationErrors(raw: unknown, stationIds: ReadonlySet<string>): string[] {
+  const stops = isRecord(raw) && Array.isArray(raw.stops) ? raw.stops : [];
+  return stops.flatMap((stop) => {
+    if (!isRecord(stop) || !isNonBlank(stop.id) || !("subwayStationId" in stop)) return [];
+    const value = stop.subwayStationId;
+    if (typeof value !== "string") return [`stop ${stop.id}: subwayStationId must be a station slug, not ${JSON.stringify(value)}`];
+    return stationIds.has(value) ? [] : [`stop ${stop.id}: subwayStationId "${value}" is not a served subway station`];
+  });
+}

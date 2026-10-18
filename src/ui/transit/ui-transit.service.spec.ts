@@ -36,7 +36,7 @@ const realGroupsByLang = new Map<string, BusGroup[]>();
 let busConfig: FakeBusConfigService;
 
 beforeAll(async () => {
-  const realBusConfig = new BusConfigService(new BusStopsService(), await seededBusRegistryService());
+  const realBusConfig = new BusConfigService(new BusStopsService(new SubwayStationsService()), await seededBusRegistryService());
   for (const lang of LANGS) realGroupsByLang.set(lang, await realBusConfig.getBusGroups(lang));
 });
 

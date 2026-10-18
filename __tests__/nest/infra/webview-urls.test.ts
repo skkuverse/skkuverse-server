@@ -25,6 +25,7 @@ import { UiScrollService } from "../../../src/ui/scroll/ui-scroll.service";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import { seededBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
+import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN } from "../../../src/infra/origins";
 
 
@@ -68,7 +69,7 @@ const clock: Clock = { now: () => new Date("2026-10-13T03:00:00.000Z") };
 const payloads: Record<string, () => unknown> = {
   "GET /ui/home/campus": () => new UiCampusService(new MiniappsService(), clock).getCampusSheet("ko"),
   "GET /ui/home/scroll": () => new UiScrollService().listScrollCards("ko"),
-  "GET /bus/config": async () => new BusConfigService(new BusStopsService(), await seededBusRegistryService()).getBusGroups(),
+  "GET /bus/config": async () => new BusConfigService(new BusStopsService(new SubwayStationsService()), await seededBusRegistryService()).getBusGroups(),
   "src/miniapps/details/*.json": () => registryDetails,
 };
 

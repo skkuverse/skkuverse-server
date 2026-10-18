@@ -33,16 +33,19 @@ function toBusTransitItem(group: BusGroup): TransitChild {
   };
 }
 
-const LINE_NAME_SEPARATOR = " · ";
-
 function toSubwayTransitItem(station: ServedStation, lang: SupportedLang): TransitChild {
-  const lines = station.lines.map(({ code, name, badge, color }) => ({ code, name: name[lang], badge: badge[lang], color }));
+  const lines = station.lines.map(({ code, name, color, marker }) => ({
+    code,
+    name: name[lang],
+    color,
+    marker: { text: marker.text[lang], color: marker.color },
+  }));
   return {
     kind: "subway",
     id: toTransitItemId({ kind: "subway", stationId: station.id }),
     stationId: station.id,
     title: station.title[lang],
-    subtitle: lines.map((line) => line.name).join(LINE_NAME_SEPARATOR),
+    subtitle: null,
     lines,
     action: { actionType: "route", actionValue: `/subway?station=${station.id}` },
   };

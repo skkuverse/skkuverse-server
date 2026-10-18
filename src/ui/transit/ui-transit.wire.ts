@@ -8,11 +8,17 @@ const transitAction = z.object({ actionType: linkActionType, actionValue: z.stri
 
 const rowFields = { id: z.string(), title: z.string(), subtitle: z.string().nullable(), action: transitAction };
 
+/**
+ * WHY: one character in the request language, drawn in an outlined circle; `color`, six hex digits with no `#`,
+ * is the outline's and the text's on the app's light background, so it may be darker than the line's `color`.
+ */
+const lineMarker = z.object({ text: z.string(), color: z.string() });
+
 /** WHY: a line's display data comes from the server, so the app keeps no line table; `color` is six hex digits, no `#`. */
-const transitLine = z.object({ code: z.string(), name: z.string(), badge: z.string(), color: z.string() });
+const transitLine = z.object({ code: z.string(), name: z.string(), color: z.string(), marker: lineMarker });
 
 const busTransitItem = z.object({ kind: z.literal("bus"), groupId: z.string(), ...rowFields, icon: transitIcon });
-/** WHY: one physical station; a badge per line in `lines` takes the place of the icon. */
+/** WHY: one physical station; a marker per line in `lines` takes the place of the icon. */
 const subwayTransitItem = z.object({ kind: z.literal("subway"), stationId: z.string(), ...rowFields, lines: z.array(transitLine).min(1) });
 const linkTransitItem = z.object({ kind: z.literal("link"), ...rowFields, icon: transitIcon });
 

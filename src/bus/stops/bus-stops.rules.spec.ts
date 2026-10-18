@@ -5,8 +5,12 @@
  * src/bus/config/bus-config.service.spec.ts.
  */
 import { SERVICE_CONFIG as serviceConfig } from "../bus.constants";
-import { stopCatalog } from "./bus-stops.config";
-import { etaOptIns, validateStopCatalog } from "./bus-stops.rules";
+import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
+import { readStopCatalog } from "./bus-stops.config";
+import { etaOptIns, subwayStationErrors, validateStopCatalog } from "./bus-stops.rules";
+
+const SERVED_STATIONS = new Set(new SubwayStationsService().listStations().map((station) => station.id));
+const stopCatalog = readStopCatalog(SERVED_STATIONS);
 
 const SERVICES = new Set(["commute-jeongja"]);
 const MEDIA = "https://media.skkuverse.com/commute/stops/jeongja-exit3";
@@ -77,6 +81,7 @@ describe("validateStopCatalog", () => {
 
     // Assert
     expect(validateStopCatalog(stopCatalog, new Set(Object.keys(config)), etaOptIns(config))).toEqual([]);
+    expect(subwayStationErrors(stopCatalog, SERVED_STATIONS)).toEqual([]);
     expect(stopCatalog.stops.length).toBeGreaterThan(0);
   });
 
@@ -482,5 +487,43 @@ describe("validateStopCatalog", () => {
       });
       expect(validateStopCatalog(stopCatalog, new Set(Object.keys(serviceConfig)), optIns)).toEqual([]);
     });
+  });
+});
+
+describe("subwayStationErrors", () => {
+  const STATIONS = new Set(["jeongja", "gangnam"]);
+  const tagged = (subwayStationId: unknown) => catalog({ ...validStop(), subwayStationId });
+
+  it("accepts a stop that names a served station by its slug, and a stop that names none", () => {
+    // Act & Assert
+    expect(subwayStationErrors(tagged("jeongja"), STATIONS)).toEqual([]);
+    expect(subwayStationErrors(catalog(), STATIONS)).toEqual([]);
+  });
+
+  it("rejects a slug the subway registry does not serve, naming the stop and the value", () => {
+    // Act & Assert
+    expect(subwayStationErrors(tagged("jeongja2"), STATIONS)).toEqual(['stop jeongja-exit3: subwayStationId "jeongja2" is not a served subway station']);
+    expect(subwayStationErrors(tagged("Jeongja"), STATIONS)).toEqual(['stop jeongja-exit3: subwayStationId "Jeongja" is not a served subway station']);
+  });
+
+  it("rejects a value that is not a string, naming the stop and the value", () => {
+    // Act & Assert
+    expect(subwayStationErrors(tagged(7), STATIONS)).toEqual(["stop jeongja-exit3: subwayStationId must be a station slug, not 7"]);
+    expect(subwayStationErrors(tagged({ id: "jeongja" }), STATIONS)).toEqual([
+      'stop jeongja-exit3: subwayStationId must be a station slug, not {"id":"jeongja"}',
+    ]);
+    expect(subwayStationErrors(tagged(null), STATIONS)).toEqual(["stop jeongja-exit3: subwayStationId must be a station slug, not null"]);
+  });
+
+  it("reports every bad stop, and leaves a malformed root or stop to validateStopCatalog", () => {
+    // Arrange
+    const raw = { stops: [{ ...validStop(), subwayStationId: "x" }, { subwayStationId: "z" }, { id: "b", name: {}, subwayStationId: "y" }], sequences: {} };
+
+    // Act & Assert
+    expect(subwayStationErrors(raw, STATIONS)).toEqual([
+      'stop jeongja-exit3: subwayStationId "x" is not a served subway station',
+      'stop b: subwayStationId "y" is not a served subway station',
+    ]);
+    expect(subwayStationErrors([], STATIONS)).toEqual([]);
   });
 });
