@@ -3,7 +3,7 @@ title: Map Overlays API Reference
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-17
+last-updated: 2026-10-18
 audience: internal
 ---
 
@@ -11,7 +11,7 @@ audience: internal
 
 > The one overlay schema every layer of the campus map draws — pins, zones and route lines alike —
 > the two layer flags that say when a layer is visible and who may change it, the chips that move the
-> camera and swap layer sets, and the four endpoints that carry them. Cross-repo ownership is
+> camera and swap layer sets, and the five endpoints that carry them. Cross-repo ownership is
 > [umbrella ADR 0004](https://github.com/spencer0124/skkuverse/blob/main/docs/decisions/0004-event-map-layer-ownership.md);
 > the festival's storage, authoring and ops tiers are [event-places.md](event-places.md).
 
@@ -19,11 +19,11 @@ audience: internal
 
 | | |
 | --- | --- |
-| Routes | `GET /map/config`, `GET /map/overlays/campus`, `GET /map/overlays/event`, `GET /map/overlays/event/details` |
-| Auth | none on all four |
+| Routes | `GET /map/config`, `GET /map/overlays/campus`, `GET /map/overlays/transit`, `GET /map/overlays/event`, `GET /map/overlays/event/details` |
+| Auth | none on all five |
 | Rate limit | `GeneralRateLimitMiddleware`, applied to the `/map` prefixes in `MapModule.configure` |
 | Wire schema | `src/map/map.wire.ts` (overlays), `src/shared/geojson.types.ts` (geometry), `src/map/config/map-config.wire.ts` (chips) |
-| Producers | `src/map/campus/map-campus.mapper.ts` (buildings + campus geometry), `src/map/event/map-event.mapper.ts` (event places), `src/map/event-details/map-event-details.mapper.ts` (their sheet bodies) |
+| Producers | `src/map/campus/map-campus.mapper.ts` (buildings + campus geometry), `src/map/transit/map-transit.mapper.ts` (the Jongno bus route lines), `src/map/event/map-event.mapper.ts` (event places), `src/map/event-details/map-event-details.mapper.ts` (their sheet bodies) |
 | Layer catalogue | `src/map/map.constants.ts` — the base layers, and the projection of a festival's `layers[]` from its config |
 | Chips | `src/map/layer-set/` — the base chips (`map-layer-set.constants.ts`), the projection of a festival's `chips[]` and the synthesised reset chip (`map-layer-set.mapper.ts`), and the validators both go through (`map-layer-set.rules.ts`) |
 | Response builder | `src/map/config/map-config.mapper.ts` |
@@ -493,8 +493,8 @@ second one. This is the paragraph a client implements from.
 
 ## 5. Endpoints
 
-One route per **data source**, not per layer: buildings come from the buildings collection, festival
-booths from the event map's `places`. See §6 for why layers within a source share one.
+One route per **data source**, not per layer: buildings come from the buildings collection, the Jongno
+bus lines from the bus module's `jongro_route_paths`, festival booths from the event map's `places`. See §6 for why layers within a source share one.
 
 ### 5.1 `GET /map/config`
 
@@ -873,10 +873,75 @@ would not serve, or one on an inert category, gets no detail. One warning line p
 every drop. The one outcome ruled out is a 500: `toWire` dereferences `.ko`, so an unchecked block
 missing its body would take every sheet of the festival down with it.
 
+### 5.5 `GET /map/overlays/transit`
+
+`Cache-Control: public, max-age=3600` — or **`public, max-age=60`** on the degraded branch.
+
+The Jongno village bus lines 종로02, 07 and 08, one `kind: "path"` overlay per route, in the order of
+`src/bus/jongro-routes.json`. No parameters. The geometry is the bus module's stored line
+(`jongro_route_paths`, synced from TOPIS `busRouteInfo/getRoutePath` once a day), served as stored:
+`[lng, lat]` in TOPIS order, a loop left unclosed, 252 / 241 / 488 points on 2026-10-18. `tap` is
+`null`, so a line is a backdrop; `text` names the route in every language; the place-only fields are
+stated empty.
+
+Each overlay's `layerId` is `<route id>_route`. The three layers are in `BASE_LAYERS`, opt-in:
+
+| Layer | Label (ko / en / zh) | `style.color` |
+| --- | --- | --- |
+| `jongro02_route` | 종로02 노선 / Jongno 02 Route / 钟路02路线 | `2E7D32` |
+| `jongro07_route` | 종로07 노선 / Jongno 07 Route / 钟路07路线 | `EF6C00` |
+| `jongro08_route` | 종로08 노선 / Jongno 08 Route / 钟路08路线 | `6A1B9A` |
+
+Every one has `defaultVisibleWhen: { kind: "never" }`, `userConfigurable: true`, `chipGroupId: null`
+and `style: { color, width: 5, outlineWidth: 1.5, outlineColor: "FFFFFF", minZoom: 13 }`: the
+opt-in row of §4, so an installed app keeps a tile in its filter sheet and fetches this route only
+once a user turns a line on. The app's `MapRouteOverlay` reads `color`, `width`, `outlineWidth`,
+`outlineColor`, `minZoom` and `maxZoom`, and no `zIndex`; NAVER draws a path beneath every marker, so
+the lines never cover a building label.
+
+**The degraded branch.** When the bus module cannot read a route's stored line, or has none, it draws
+that route from its committed snapshot (`src/bus/route-path/jongro-route-paths.seed.json`) and the
+response is sent with `public, max-age=60` instead of an hour. Unlike the campus fallback this answer
+is a correct map, so it may be cached briefly: a short shared cache spares the database while it is
+down, and the stored lines are back within a minute of recovery. `degraded` never reaches the body.
+
+The stations TOPIS answers with each line are stored but not drawn yet: the place-dot marker ignores a
+layer's `zIndex`, so a stop caption could win over a building name. A stop layer waits for that app
+change (openspec change `add-jongro-route-lines`, D7).
+
+```json
+{
+  "meta": {},
+  "data": {
+    "overlays": [
+      {
+        "kind": "path",
+        "id": "jongro07",
+        "layerId": "jongro07_route",
+        "campus": "hssc",
+        "text": { "ko": "종로07", "en": "Jongno 07", "zh": "钟路07" },
+        "subtitle": null,
+        "hours": [],
+        "fields": [],
+        "actions": [],
+        "order": 1,
+        "facets": {},
+        "orderByOption": {},
+        "tap": null,
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [[126.9921543446, 37.5881571127], [126.9921650734, 37.5881358585]]
+        }
+      }
+    ]
+  }
+}
+```
+
 ## 6. Why layers share endpoints
 
-Both building layers point at `/map/overlays/campus`. Every festival layer points at
-`/map/overlays/event`.
+Both building layers point at `/map/overlays/campus`, the three Jongno route line layers at
+`/map/overlays/transit`, and every festival layer at `/map/overlays/event`.
 
 Since a layer no longer names a renderer, layers sharing an endpoint are free to draw different
 things: one layer can hold pins, a zone and a route line at once, and two layers over one source still
@@ -1430,6 +1495,8 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 | Chip wire schema | `src/map/config/map-config.wire.ts` |
 | Response builder, campuses, activation lookup | `src/map/config/map-config.mapper.ts` |
 | Buildings + campus geometry → overlays, empty-DB fallback | `src/map/campus/map-campus.mapper.ts` |
+| Jongno route lines → overlays | `src/map/transit/map-transit.mapper.ts` |
+| Jongno route lines: storage, TOPIS sync, snapshot | `src/bus/route-path/` (`jongro_route_paths`, `jongro-route-paths.seed.json`) |
 | Event places → overlays | `src/map/event/map-event.mapper.ts` |
 | Event places → sheet details, and the serve-time checks | `src/map/event-details/map-event-details.mapper.ts` |
 | Detail shape (stored and wire) | `src/map/event-details/map-event-details.wire.ts` |
@@ -1440,7 +1507,7 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 | `DailyWindow`, `LayerDefaultVisibility`, and why this axis is wall-clock | `src/map/layer-set/map-layer-set.schema.ts` |
 | List facets and sort (`EventFacetDef`, `EventChipListDef`), and their wire form (`MapChipList`) | `src/map/layer-set/map-layer-set.schema.ts`, `src/map/config/map-config.wire.ts` |
 | Facet membership per overlay (`facetsOf`) | `src/map/event/map-event.mapper.ts` |
-| HTTP + `Cache-Control` | `src/map/config/map-config.controller.ts`, `src/map/campus/map-campus.controller.ts` |
+| HTTP + `Cache-Control` | `src/map/config/map-config.controller.ts`, `src/map/campus/map-campus.controller.ts`, `src/map/transit/map-transit.controller.ts` |
 | Module wiring, rate limit, endpoint inventory | `src/map/map.module.ts` |
 | Campus labels | `src/infra/i18n.ts` (`map.campus.*`) — layer and chip labels are inline `{ko, en?, zh?}` on their specs, resolved with `pick()` from the same module |
 | Building documents | `src/building/building.repository.ts` |

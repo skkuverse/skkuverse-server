@@ -50,4 +50,9 @@ export interface TrackingContext {
   turnaroundTopisId: string;
   nextStop: NextStopBus | undefined;
   arrival: Pick<Arrival, "state" | "crowding" | "isLastBus"> | undefined;
+  /** WHY: the highest sectOrd an arrival row gives the vehicle; absent when no row names it. */
+  highestSectOrd?: number;
 }
+
+/** WHY: what decides a tracked status beyond the position: the route's terminals and the vehicle's arrival rows. */
+export type StatusContext = Pick<TrackingContext, "stationCount" | "turnaroundTopisId" | "highestSectOrd"> & { nextStopState: string | undefined };

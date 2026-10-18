@@ -8,6 +8,13 @@ export const EVENT_STALE_WINDOW_MS = 10 * 60_000;
 
 // WHY: one route per data source; the app keys its overlay cache on the string, so layers sharing it cost one fetch.
 const CAMPUS_OVERLAYS_ENDPOINT = "/map/overlays/campus";
+const TRANSIT_OVERLAYS_ENDPOINT = "/map/overlays/transit";
+
+// WHY: opt-in, so installed apps fetch and draw no line until a user turns one on (add-jongro-route-lines D6).
+const ROUTE_LINE_LAYER = { defaultVisibleWhen: { kind: "never" }, userConfigurable: true, endpoint: TRANSIT_OVERLAYS_ENDPOINT, chipGroupId: null } as const;
+
+// WHY: a white outline keeps each line legible over the basemap and over the others where they meet near the campus.
+const ROUTE_LINE_STYLE = { width: 5, outlineWidth: 1.5, outlineColor: "FFFFFF", minZoom: 13 } as const;
 
 export const LOCATION_ACCURACIES = ["exact", "area"] as const;
 
@@ -48,6 +55,9 @@ export const BASE_LAYERS = [
     // QUIRK(naver-map): the polygon overlay draws no outline unless outlineWidth is sent; no colour: a theme token.
     style: { fillOpacity: 0.12, outlineWidth: 1.5, minZoom: 16 },
   },
+  { id: "jongro02_route", label: { ko: "종로02 노선", en: "Jongno 02 Route", zh: "钟路02路线" }, ...ROUTE_LINE_LAYER, style: { ...ROUTE_LINE_STYLE, color: "2E7D32" } },
+  { id: "jongro07_route", label: { ko: "종로07 노선", en: "Jongno 07 Route", zh: "钟路07路线" }, ...ROUTE_LINE_LAYER, style: { ...ROUTE_LINE_STYLE, color: "EF6C00" } },
+  { id: "jongro08_route", label: { ko: "종로08 노선", en: "Jongno 08 Route", zh: "钟路08路线" }, ...ROUTE_LINE_LAYER, style: { ...ROUTE_LINE_STYLE, color: "6A1B9A" } },
 ] as const satisfies readonly LayerSpec[];
 
 // WHY: a minute: a stable URL cannot be immutable, and an ops correction must be live before anyone walks there.

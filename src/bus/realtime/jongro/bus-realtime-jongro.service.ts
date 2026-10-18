@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../../../infra/clock";
 import logger from "../../../infra/logger";
-import type { JongroArrivalDoc, JongroBusPositionDoc, LegacyJongroBusPositionDoc } from "../../cache/bus-cache.document";
+import type { JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import { BusCacheService } from "../../cache/bus-cache.service";
 import type { JongroRoute } from "../../bus.types";
 import { BusRegistryService } from "../../registry/bus-registry.service";
@@ -43,7 +43,7 @@ export class BusRealtimeJongroService {
     return (await this.cache.read(toArrivalsKey(code))) ?? this.arrivalsByCode.get(code);
   }
 
-  async listPositions(code: string): Promise<Array<JongroBusPositionDoc | LegacyJongroBusPositionDoc> | undefined> {
+  async listPositions(code: string): Promise<JongroBusPositionDoc[] | undefined> {
     return (await this.cache.read(toPositionsKey(code))) ?? this.positionsByCode.get(code);
   }
 

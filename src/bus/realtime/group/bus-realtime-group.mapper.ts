@@ -19,7 +19,7 @@ export function toRealtimeBuses(buses: readonly CachedBusFields[] | undefined): 
   return (buses ?? []).map(toEstimatedBus);
 }
 
-export function toEstimatedBus(bus: CachedBusFields): RealtimeBus {
+function toEstimatedBus(bus: CachedBusFields): RealtimeBus {
   return { ...toLegacyBusFields(bus), kind: "estimated" };
 }
 

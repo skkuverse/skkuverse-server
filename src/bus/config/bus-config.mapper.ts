@@ -32,7 +32,7 @@ export function mapStations(stations: ReadonlyArray<AnyStation>): MappedStation[
   return stations.map((station, index) => ({
     index,
     name: station.stationName,
-    subtitle: ("subtitle" in station ? station.subtitle : null) || station.stationNumber || null,
+    subtitle: ("subtitle" in station ? station.subtitle : null) || null,
     stationNumber: station.stationNumber || null,
     isFirstStation: station.isFirstStation,
     isLastStation: station.isLastStation,
