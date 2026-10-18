@@ -1,12 +1,12 @@
 {
-  "_about": "src/bus/jongro-routes.json as committed on 2026-10-17 (stations moved to the jongro_routes registry, transferLinesByArsId added); the jongro07 entry only",
+  "_about": "src/bus/jongro-routes.json as committed on 2026-10-17 (stations moved to the jongro_routes registry, transferLinesByArsId added); the jongro07 entry only; refreshInterval 25 since 2026-10-18 (the 25 s Jongro poll)",
   "data": [
     {
       "id": "jongro07",
       "busRouteId": "100900004",
       "themeColor": "4CAF50",
       "iconType": "village",
-      "refreshInterval": 40,
+      "refreshInterval": 25,
       "seatCount": 18,
       "transferLinesByArsId": {
         "01220": [

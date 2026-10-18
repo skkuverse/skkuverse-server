@@ -4,7 +4,7 @@
  * registry, whose repository is an in-memory fake the boot seeds. Asserts group shape, 404
  * GROUP_NOT_FOUND, 304, per-language ETag difference, and the hssc (11 stations,
  * lastStationIndex 10, refreshInterval 10) / jongro07 (22 stations,
- * refreshInterval 40) screen contents.
+ * refreshInterval 25) screen contents.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -193,7 +193,7 @@ describe("GET /bus/config/:groupId", () => {
 
     // Assert
     expect(screen.dataEndpoint).toBe("/bus/realtime/data/jongro07");
-    expect(screen.refreshInterval).toBe(40);
+    expect(screen.refreshInterval).toBe(25);
     expect(screen.stations).toHaveLength(22);
     expect(screen.lastStationIndex).toBe(21);
   });

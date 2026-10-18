@@ -1,5 +1,5 @@
 /**
- * BusRealtimeJongroPoller registers one 40 s poller per registry route, named
+ * BusRealtimeJongroPoller registers one 25 s poller per registry route, named
  * `jongro-<code>`, so one dead route does not mark the others down; a tick is
  * that route's refresh and rejects with it.
  */
@@ -18,13 +18,13 @@ beforeEach(() => {
 });
 
 describe("BusRealtimeJongroPoller.onModuleInit", () => {
-  it("onModuleInit registers one 40s poller per route", () => {
+  it("onModuleInit registers one 25s poller per route", () => {
     // Act
     new BusRealtimeJongroPoller(registry, jongro).onModuleInit();
 
     // Assert
     for (const route of jongroRoutes) {
-      expect(registerPoller).toHaveBeenCalledWith(expect.any(Function), 40000, `jongro-${route.code}`);
+      expect(registerPoller).toHaveBeenCalledWith(expect.any(Function), 25000, `jongro-${route.code}`);
     }
     expect(registerPoller).toHaveBeenCalledTimes(jongroRoutes.length);
   });
