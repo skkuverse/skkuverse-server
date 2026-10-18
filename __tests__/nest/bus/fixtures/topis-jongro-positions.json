@@ -17,7 +17,10 @@
           "plainNo": "서울70사5538",
           "vehId": "100000114",
           "sectOrd": "2",
-          "dataTm": "20261017191145"
+          "dataTm": "20261017191145",
+          "sectDist": "0.06",
+          "fullSectDist": "0.289",
+          "stopFlag": "0"
         },
         {
           "lastStnId": "100900043",
@@ -29,7 +32,10 @@
           "plainNo": "서울70사5537",
           "vehId": "100000103",
           "sectOrd": "14",
-          "dataTm": "20261017191144"
+          "dataTm": "20261017191144",
+          "sectDist": "0",
+          "fullSectDist": "0.295",
+          "stopFlag": "1"
         }
       ]
     }

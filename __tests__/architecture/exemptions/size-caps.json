@@ -7,6 +7,10 @@
     "max": 173,
     "reason": "ADR 0010 D9, no domain seam: toBusGroups is the bus list as one ordered literal per group (hssc, campus, fasttrack, commute, then each Jongro route), and each group's field order is the ETag input; the realtime and schedule groups share the card, badge and station helpers, so a sub-module would hold group builders and nothing else."
   },
+  "src/bus/realtime/group/bus-realtime-group.wire.ts": {
+    "max": 97,
+    "reason": "(An agent tooling note is left out of the public history.)"
+  },
   "src/bus/stops/bus-stops.rules.ts": {
     "max": 285,
     "reason": "ADR 0010 D9, no domain seam: schedule-stops.json is one committed document that stops the boot on any fault, and validateStopCatalog lists every issue in the words bus-stops.rules.spec.ts pins. Its checks (stops, photos, panoramas, guides, sequences, estimate opt-ins) compose into the one validator bus-stops.schema.ts runs, and child-to-parent imports keep a sub-module from holding a piece of it."

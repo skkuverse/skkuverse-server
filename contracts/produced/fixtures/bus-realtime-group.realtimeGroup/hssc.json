@@ -1,17 +1,19 @@
 {
-  "_about": "GET /bus/realtime/data/hssc captured from production 2026-10-14 (stage 12 shape snapshot, Accept-Language ko)",
+  "_about": "GET /bus/realtime/data/hssc captured from production 2026-10-14 (stage 12 shape snapshot, Accept-Language ko); kind added by hand as add-jongro-bus-positions serves it on every HSSC bus.",
   "data": {
     "groupId": "hssc",
     "buses": [
       {
         "stationIndex": 2,
         "carNumber": "0000",
-        "estimatedTime": 122
+        "estimatedTime": 122,
+        "kind": "estimated"
       },
       {
         "stationIndex": 6,
         "carNumber": "0000",
-        "estimatedTime": 114
+        "estimatedTime": 114,
+        "kind": "estimated"
       }
     ],
     "stationEtas": []
