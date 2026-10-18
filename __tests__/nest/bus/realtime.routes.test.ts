@@ -102,6 +102,8 @@ describe("GET /bus/realtime/data/:groupId", () => {
         progress: 0.5,
         segmentMeters: 300,
         nextStopInSec: null,
+        // WHY: trajectory is what add-jongro-bus-trajectory adds (task 2.2): the observation alone, no row names a next stop.
+        trajectory: [{ at: "2026-10-20T10:00:00+09:00", s: 2.5 }],
       },
     });
     // The HSSC bus has no latitude/longitude keys (conditional spread).
@@ -212,7 +214,8 @@ describe("GET /bus/realtime/data/jongro02 tracked buses", () => {
       ["tracked", "waiting"],
     ]);
     expect(res.body.data.buses[0].tracked).toMatchObject({ nextStopInSec: 28, segmentMeters: 251 });
-    expect(Object.keys(res.body.data.buses[1].tracked).sort()).toEqual(["crowding", "isLastBus", "observedAt", "status", "vehicleId"]);
+    // WHY: trajectory is what add-jongro-bus-trajectory adds to an atStop bus (task 2.2).
+    expect(Object.keys(res.body.data.buses[1].tracked).sort()).toEqual(["crowding", "isLastBus", "observedAt", "status", "trajectory", "vehicleId"]);
   });
 
   it("serves every HSSC bus as estimated, with no tracked object", async () => {

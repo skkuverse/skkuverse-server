@@ -1,0 +1,151 @@
+{
+  "_about": "Built from TOPIS getBusPosByRtid and getArrInfoByRouteAll busRouteId=100900008 captured together 2026-10-18 18:08 KST (pos_/arr_100900008_1792314485), the three buses and the ord 2, 9 to 12 and 19 to 22 rows, served through BusRealtimeGroupService (src/bus/realtime/group/bus-realtime-group.service.spec.ts, \"getGroup trajectories\"): vehicle 100000059 waiting at the origin, 100000088 running with three next stops, 100000058 at a stop, first observed there, with its departure knot; estimatedTime is illustrative and stationEtas trimmed to the first two stations. stationsVersion is the jongro02 registry document's as seeded from src/bus/registry/jongro-stations.seed.json.",
+  "data": {
+    "groupId": "jongro02",
+    "buses": [
+      {
+        "stationIndex": 0,
+        "carNumber": "2009",
+        "estimatedTime": 0,
+        "latitude": "37.588427",
+        "longitude": "126.990041",
+        "kind": "tracked",
+        "tracked": {
+          "status": "waiting",
+          "vehicleId": "100000059",
+          "observedAt": "2026-10-18T18:07:53+09:00",
+          "crowding": null,
+          "isLastBus": false
+        }
+      },
+      {
+        "stationIndex": 7,
+        "carNumber": "5501",
+        "estimatedTime": 0,
+        "latitude": "37.579524",
+        "longitude": "126.984928",
+        "kind": "tracked",
+        "tracked": {
+          "status": "running",
+          "vehicleId": "100000088",
+          "observedAt": "2026-10-18T18:07:45+09:00",
+          "crowding": "relaxed",
+          "isLastBus": false,
+          "progress": 0.1271186440677966,
+          "segmentMeters": 118,
+          "nextStopInSec": 23,
+          "trajectory": [
+            {
+              "at": "2026-10-18T18:07:45+09:00",
+              "s": 7.127118644067797
+            },
+            {
+              "at": "2026-10-18T18:08:08+09:00",
+              "s": 8
+            },
+            {
+              "at": "2026-10-18T18:08:40+09:00",
+              "s": 9
+            },
+            {
+              "at": "2026-10-18T18:10:34+09:00",
+              "s": 10
+            }
+          ]
+        }
+      },
+      {
+        "stationIndex": 17,
+        "carNumber": "2008",
+        "estimatedTime": 0,
+        "latitude": "37.577173",
+        "longitude": "126.986118",
+        "kind": "tracked",
+        "tracked": {
+          "status": "atStop",
+          "vehicleId": "100000058",
+          "observedAt": "2026-10-18T18:07:51+09:00",
+          "crowding": "relaxed",
+          "isLastBus": false,
+          "trajectory": [
+            {
+              "at": "2026-10-18T18:07:51+09:00",
+              "s": 17
+            },
+            {
+              "at": "2026-10-18T18:08:06+09:00",
+              "s": 17
+            },
+            {
+              "at": "2026-10-18T18:08:58+09:00",
+              "s": 18
+            },
+            {
+              "at": "2026-10-18T18:09:59+09:00",
+              "s": 19
+            },
+            {
+              "at": "2026-10-18T18:10:55+09:00",
+              "s": 20
+            }
+          ]
+        }
+      }
+    ],
+    "stationEtas": [
+      {
+        "stationIndex": 1,
+        "eta": "출발대기",
+        "arrivals": [
+          {
+            "minutes": null,
+            "stopsAway": null,
+            "state": "waiting",
+            "isLastBus": false,
+            "carNumber": null,
+            "crowding": null,
+            "passengerCount": null,
+            "message": "출발대기"
+          },
+          {
+            "minutes": null,
+            "stopsAway": null,
+            "state": "waiting",
+            "isLastBus": false,
+            "carNumber": null,
+            "crowding": null,
+            "passengerCount": null,
+            "message": "출발대기"
+          }
+        ]
+      },
+      {
+        "stationIndex": 8,
+        "eta": "곧 도착",
+        "arrivals": [
+          {
+            "minutes": null,
+            "stopsAway": 0,
+            "state": "arriving",
+            "isLastBus": false,
+            "carNumber": "5501",
+            "crowding": "relaxed",
+            "passengerCount": 6,
+            "message": "곧 도착"
+          },
+          {
+            "minutes": null,
+            "stopsAway": null,
+            "state": "waiting",
+            "isLastBus": false,
+            "carNumber": null,
+            "crowding": null,
+            "passengerCount": null,
+            "message": "출발대기"
+          }
+        ]
+      }
+    ],
+    "stationsVersion": "76d8e6770cda23aa"
+  }
+}

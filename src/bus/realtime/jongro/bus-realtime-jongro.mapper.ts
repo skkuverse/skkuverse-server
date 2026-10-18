@@ -7,7 +7,7 @@ type MappedStation = JongroStationMapping[string];
 export function toJongroBusPosition(
   sighting: JongroBusSighting,
   station: MappedStation,
-  { firstSeenAt, dwellSeconds, isStationary }: JongroBusTiming,
+  { firstSeenAt, dwellSeconds, isStationary, atStopSince }: JongroBusTiming,
 ): JongroBusPositionDoc {
   return {
     sequence: sighting.sectOrd.toString(),
@@ -25,5 +25,6 @@ export function toJongroBusPosition(
     isAtStop: sighting.isAtStop,
     observedAt: sighting.observedAt,
     isStationary,
+    ...(atStopSince !== undefined && { atStopSince }),
   };
 }
