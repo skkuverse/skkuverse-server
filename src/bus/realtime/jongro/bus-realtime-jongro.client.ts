@@ -4,7 +4,7 @@ import { UpstreamError } from "../../../infra/upstream.error";
 import type { JongroArrivalBus, JongroArrivalDoc } from "../../cache/bus-cache.document";
 import type { JongroRoute } from "../../bus.types";
 import { toCarNumber } from "../bus-realtime.mapper";
-import { isNoResultHeaderCd, isUsableHeaderCd, toTopisInteger } from "./bus-realtime-jongro.rules";
+import { isNoResultHeaderCd, isUsableHeaderCd, toObservedAt, toTopisDecimal, toTopisInteger } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -29,13 +29,22 @@ type TopisArrivalRow = { [K in `${TopisBusField}${BusSlot}`]: string } & {
 
 const BUS_SLOTS: readonly BusSlot[] = ["1", "2"];
 
-// QUIRK(topis): a getBusPosByRtid row; its coordinates are gpsX/gpsY (tmX/tmY come null), its turnaround stop trnstnid.
+type TrackedPositionField = "vehId" | "sectOrd" | "sectDist" | "fullSectDist" | "dataTm";
+
+// QUIRK(topis): a getBusPosByRtid row; its coordinates are gpsX/gpsY (tmX/tmY come null), its turnaround stop
+// trnstnid, sectDist and fullSectDist km, stopFlag "1" at a stop, dataTm a KST yyyyMMddHHmmss.
 interface TopisPositionRow {
   lastStnId: string | null;
   trnstnid?: string | null;
   gpsX: string | null;
   gpsY: string | null;
   plainNo: string;
+  vehId: string | null;
+  sectOrd: string | null;
+  sectDist: string | null;
+  fullSectDist: string | null;
+  stopFlag: string | null;
+  dataTm: string | null;
 }
 
 @Injectable()
@@ -101,12 +110,18 @@ export class BusRealtimeJongroClient {
     return parsed;
   }
 
-  // WHY: the stop places the bus and the coordinates draw it; without them the row is not TOPIS's shape.
+  // WHY: the stop places the bus and the coordinates draw it, the vehicle and its place in the section track it;
+  // without one the row is not TOPIS's shape, and a made-up value would draw the bus in the wrong place.
   private toSighting(row: TopisPositionRow, what: string): JongroBusSighting {
     const field = (name: "lastStnId" | "gpsX" | "gpsY"): string => {
       const text = row[name]?.trim();
       if (!text) throw new UpstreamError(`TOPIS row has no ${name} (${what})`, "topis");
       return text;
+    };
+    const parsed = <T>(name: TrackedPositionField, parse: (text: string) => T | null): T => {
+      const value = parse(row[name]?.trim() ?? "");
+      if (value === null) throw new UpstreamError(`TOPIS row has a malformed ${name} (${what})`, "topis");
+      return value;
     };
     return {
       stationId: field("lastStnId"),
@@ -114,6 +129,12 @@ export class BusRealtimeJongroClient {
       longitude: field("gpsX"),
       carNumber: toCarNumber(row.plainNo),
       turnaroundStationId: row.trnstnid?.trim() || undefined,
+      vehicleId: parsed("vehId", (text) => text || null),
+      sectOrd: parsed("sectOrd", toTopisInteger),
+      sectDist: parsed("sectDist", toTopisDecimal),
+      fullSectDist: parsed("fullSectDist", toTopisDecimal),
+      isAtStop: row.stopFlag?.trim() === "1",
+      observedAt: parsed("dataTm", toObservedAt),
     };
   }
 }

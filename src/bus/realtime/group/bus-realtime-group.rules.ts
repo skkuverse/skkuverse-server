@@ -1,4 +1,13 @@
-import type { CachedArrivalFields, JongroRouteStations, PlacedStationEta } from "./bus-realtime-group.types";
+import type { JongroArrivalDoc, JongroBusPositionDoc, LegacyJongroBusPositionDoc } from "../../cache/bus-cache.document";
+import type {
+  CachedArrivalFields,
+  JongroBusTracking,
+  JongroRouteStations,
+  NextStopBus,
+  PlacedStationEta,
+  TrackingContext,
+  VehicleBuses,
+} from "./bus-realtime-group.types";
 
 function toStationEta(route: JongroRouteStations, arrival: CachedArrivalFields): PlacedStationEta | null {
   if (!arrival.eta) return null;
@@ -15,4 +24,60 @@ export function toStationEtas(route: JongroRouteStations, arrivals: readonly Cac
   return (arrivals ?? [])
     .map((arrival) => toStationEta(route, arrival))
     .filter((eta): eta is PlacedStationEta => eta !== null);
+}
+
+export function isTrackedPosition(position: JongroBusPositionDoc | LegacyJongroBusPositionDoc): position is JongroBusPositionDoc {
+  return "vehicleId" in position;
+}
+
+export function toVehicleBuses(rows: readonly Pick<JongroArrivalDoc, "eventDate" | "buses">[], vehicleId: string, sectOrd: number): VehicleBuses {
+  const named = rows
+    .flatMap((row) => row.buses.filter((bus) => bus.vehId === vehicleId).map((bus) => ({ bus, madeAt: row.eventDate })))
+    .sort((a, b) => a.bus.staOrd - b.bus.staOrd);
+  return { nextStop: named.find(({ bus }) => bus.staOrd === sectOrd + 1), firstNamed: named[0]?.bus };
+}
+
+// WHY: an idling bus at a terminal reports stopFlag 0, so standing still there is waiting (add-jongro-bus-positions
+// D4); the last index is a terminal (route 02's is its origin's stop again) and never running.
+export function toTrackedStatus(
+  position: JongroBusPositionDoc,
+  { stationCount, turnaroundTopisId, nextStopState }: Pick<TrackingContext, "stationCount" | "turnaroundTopisId"> & { nextStopState: string | undefined },
+): JongroBusTracking["status"] {
+  const stationIndex = Number(position.sequence) - 1;
+  const isLastIndex = stationIndex >= stationCount - 1;
+  const isAtTerminal = stationIndex === 0 || isLastIndex || position.stationId === turnaroundTopisId;
+  if ((position.isStationary && isAtTerminal) || nextStopState === "waiting") return "waiting";
+  return position.isAtStop || isLastIndex ? "atStop" : "running";
+}
+
+export function toProgress(sectDist: number, fullSectDist: number): number {
+  return fullSectDist > 0 ? Math.min(1, Math.max(0, sectDist / fullSectDist)) : 0;
+}
+
+// QUIRK(topis): mkTm is a KST wall clock, "yyyy-MM-dd HH:mm:ss.S", with no offset.
+function toMadeAtMs(mkTm: string): number | null {
+  const match = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(?:\.\d+)?$/.exec(mkTm.trim());
+  return match ? Date.parse(`${match[1]}T${match[2]}+09:00`) : null;
+}
+
+// WHY: traTime counts from when TOPIS made the row, and the bus was observed at another moment.
+export function toNextStopInSec(nextStop: NextStopBus | undefined, observedAt: string): number | null {
+  const madeAtMs = nextStop ? toMadeAtMs(nextStop.madeAt) : null;
+  if (!nextStop || madeAtMs === null) return null;
+  return Math.max(0, Math.round(nextStop.bus.traTime - (Date.parse(observedAt) - madeAtMs) / 1000));
+}
+
+export function toJongroBusTracking(position: JongroBusPositionDoc, context: TrackingContext): JongroBusTracking {
+  const status = toTrackedStatus(position, { ...context, nextStopState: context.nextStop ? context.arrival?.state : undefined });
+  const isRunning = status === "running";
+  return {
+    status,
+    vehicleId: position.vehicleId,
+    observedAt: position.observedAt,
+    crowding: context.arrival?.crowding ?? null,
+    isLastBus: context.arrival?.isLastBus ?? false,
+    progress: isRunning ? toProgress(position.sectDist, position.fullSectDist) : 0,
+    segmentMeters: Math.round(position.fullSectDist * 1000),
+    nextStopInSec: isRunning ? toNextStopInSec(context.nextStop, position.observedAt) : null,
+  };
 }

@@ -47,7 +47,8 @@ export interface JongroArrivalDoc {
   buses: JongroArrivalBus[];
 }
 
-export interface JongroBusPositionDoc {
+/** WHY: a position written before add-jongro-bus-positions, read for at most one tick after the deploy (its D5). */
+export interface LegacyJongroBusPositionDoc {
   sequence: string;
   stationName: string;
   carNumber: string;
@@ -59,11 +60,24 @@ export interface JongroBusPositionDoc {
   recordTime: string;
 }
 
+export interface JongroBusPositionDoc extends LegacyJongroBusPositionDoc {
+  vehicleId: string;
+  /** QUIRK(topis): km into the section toward the next stop, three decimals. */
+  sectDist: number;
+  /** QUIRK(topis): the section's length in km. */
+  fullSectDist: number;
+  isAtStop: boolean;
+  /** WHY: TOPIS's observation time as an ISO-8601 instant at +09:00. */
+  observedAt: string;
+  /** WHY: the vehicle stood still since the poller's previous observation of it. */
+  isStationary: boolean;
+}
+
 export interface BusCacheValueByKey {
   hssc: HsscBusDoc[];
   station: string;
   [key: `jongro_stations_${string}`]: JongroArrivalDoc[];
-  [key: `jongro_locations_${string}`]: JongroBusPositionDoc[];
+  [key: `jongro_locations_${string}`]: Array<JongroBusPositionDoc | LegacyJongroBusPositionDoc>;
 }
 
 export type BusCacheKey = keyof BusCacheValueByKey & string;
