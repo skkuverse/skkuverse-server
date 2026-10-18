@@ -1,10 +1,10 @@
-import type { LocalizedName } from "../subway.types";
+import type { LineMarker, LocalizedName } from "../subway.types";
 
 export interface ServedLine {
   code: string;
   name: LocalizedName;
-  badge: LocalizedName;
   color: string;
+  marker: LineMarker;
 }
 
 export interface ServedStation {

@@ -1,7 +1,9 @@
 /**
  * A line of the committed registry by its code (design D2): its Seoul ids,
- * its numbering and its color. A code the registry does not list throws: the
- * registry's boot check makes that unreachable for a registered platform.
+ * its numbering, its color and its marker (one character: a numbered line's
+ * number, a named line's first syllable in Korean). A code the
+ * registry does not list throws: the registry's boot check makes that
+ * unreachable for a registered platform.
  */
 import { toSubwayLine } from "./subway.rules";
 
@@ -24,17 +26,19 @@ describe("toSubwayLine", () => {
   });
 
   it.each([
-    ["2", { ko: "2호선", en: "Line 2", zh: "2号线" }, { ko: "2", en: "2", zh: "2" }],
-    ["3", { ko: "3호선", en: "Line 3", zh: "3号线" }, { ko: "3", en: "3", zh: "3" }],
-    ["8", { ko: "8호선", en: "Line 8", zh: "8号线" }, { ko: "8", en: "8", zh: "8" }],
-    ["K1", { ko: "수인분당선", en: "Suin–Bundang Line", zh: "水仁·盆唐线" }, { ko: "수인분당", en: "Suin–Bundang", zh: "水仁盆唐" }],
-    ["D1", { ko: "신분당선", en: "Shinbundang Line", zh: "新盆唐线" }, { ko: "신분당", en: "Shinbundang", zh: "新盆唐" }],
-  ])("names line %s and its badge in every language", (code, name, badge) => {
+    ["1", { ko: "1호선", en: "Line 1", zh: "1号线" }, { ko: "1", en: "1", zh: "1" }, "0052A4"],
+    ["4", { ko: "4호선", en: "Line 4", zh: "4号线" }, { ko: "4", en: "4", zh: "4" }, "007FAB"],
+    ["2", { ko: "2호선", en: "Line 2", zh: "2号线" }, { ko: "2", en: "2", zh: "2" }, "00893F"],
+    ["3", { ko: "3호선", en: "Line 3", zh: "3号线" }, { ko: "3", en: "3", zh: "3" }, "BB5C0D"],
+    ["8", { ko: "8호선", en: "Line 8", zh: "8号线" }, { ko: "8", en: "8", zh: "8" }, "E4186B"],
+    ["K1", { ko: "수인분당선", en: "Suin–Bundang Line", zh: "水仁·盆唐线" }, { ko: "수", en: "수", zh: "水" }, "A26B00"],
+    ["D1", { ko: "신분당선", en: "Shinbundang Line", zh: "新盆唐线" }, { ko: "신", en: "신", zh: "新" }, "D4003B"],
+  ])("names line %s and marks it with one character in every language, in its marker color", (code, name, text, color) => {
     // Act
     const line = toSubwayLine(code);
 
     // Assert
-    expect([line.name, line.badge]).toEqual([name, badge]);
+    expect([line.name, line.marker]).toEqual([name, { text, color }]);
   });
 
   it("throws on a line the registry does not list", () => {

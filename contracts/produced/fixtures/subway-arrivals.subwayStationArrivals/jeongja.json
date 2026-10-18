@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/subway/stations/jeongja/arrivals captured from production 2026-10-18 17:02 KST (a Sunday), Accept-Language ko; untrimmed: two lines (D1, K1), both directions, three trains each (11 estimated, 1 scheduled), including a train at the platform whose arrivalAt is 70 s before generatedAt",
+  "_about": "GET https://api.skkuverse.com/subway/stations/jeongja/arrivals captured from production 2026-10-18 17:02 KST (a Sunday), Accept-Language ko; untrimmed: two lines (D1, K1), both directions, three trains each (11 estimated, 1 scheduled), including a train at the platform whose arrivalAt is 70 s before generatedAt; converted 2026-10-18 for the serve-subway-line-markers wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color })",
   "data": {
     "station": {
       "id": "jeongja",
@@ -10,8 +10,11 @@
         "line": {
           "code": "D1",
           "name": "신분당선",
-          "badge": "신분당",
-          "color": "D4003B"
+          "color": "D4003B",
+          "marker": {
+            "text": "신",
+            "color": "D4003B"
+          }
         },
         "platformId": "DX-D1-4312",
         "generatedAt": "2026-10-18T08:02:59.442Z",
@@ -98,8 +101,11 @@
         "line": {
           "code": "K1",
           "name": "수인분당선",
-          "badge": "수인분당",
-          "color": "F5A200"
+          "color": "F5A200",
+          "marker": {
+            "text": "수",
+            "color": "A26B00"
+          }
         },
         "platformId": "KR-K1-K230",
         "generatedAt": "2026-10-18T08:02:59.442Z",

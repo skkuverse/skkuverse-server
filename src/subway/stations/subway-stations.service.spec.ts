@@ -1,7 +1,7 @@
 /**
  * SubwayStationsService, subway's door for the modules that list the served
  * stations (the transit tab): every station of the registry, in its order,
- * by slug, with its title and its lines' codes, names, badges and colors.
+ * by slug, with its title and its lines' codes, names, colors and markers.
  */
 import { SubwayStationsService } from "./subway-stations.service";
 
