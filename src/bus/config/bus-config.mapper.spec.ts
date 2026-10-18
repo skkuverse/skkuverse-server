@@ -1,6 +1,6 @@
 /**
  * The bus group mappers: a station as the app lists it (0-based index, the
- * English subtitle or the stop number, null when neither), the groups in the
+ * English subtitle, null without one, never the stop number), the groups in the
  * order the app lists them, the Jongro routes in registry order, and the
  * refresh a schedule service offers when it serves live arrival estimates.
  */
@@ -47,13 +47,17 @@ describe("mapStations", () => {
     });
   });
 
-  it("falls back to the stop number, then null, for the subtitle", () => {
+  // WHY: the owner dropped the stop-number fallback (2026-10-18); the stop number stays in its own field.
+  it("leaves a station without its own subtitle at null and keeps its stop number apart", () => {
     // Arrange
     const station = { ...jongroRoutes[0]!.stations[0]!, stationNumber: "01881" };
 
-    // Act & Assert
-    expect(mapStations([station])[0]!.subtitle).toBe("01881");
-    expect(mapStations([{ ...station, stationNumber: null }])[0]!.subtitle).toBeNull();
+    // Act
+    const [mapped] = mapStations([station]);
+
+    // Assert
+    expect(mapped).toMatchObject({ subtitle: null, stationNumber: "01881" });
+    expect(mapStations([{ ...station, stationNumber: null }])[0]).toMatchObject({ subtitle: null, stationNumber: null });
   });
 });
 
