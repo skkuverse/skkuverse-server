@@ -106,7 +106,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.body.data.station).toEqual({ id: "hyehwa", name: "혜화" });
     expect(res.body.data.lines).toHaveLength(1);
     expect(res.body.data.lines[0]).toMatchObject({
-      line: { code: "4", name: "4호선", badge: "4", color: "00A5DE" },
+      line: { code: "4", name: "4호선", color: "00A5DE", marker: { text: "4", color: "007FAB" } },
       platformId: "S1-4-420",
       generatedAt: at("20:41:00").toISOString(),
     });
@@ -125,7 +125,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.station).toEqual({ id: "sungkyunkwan", name: "성균관대" });
     expect(res.body.data.lines.map((l: { line: unknown; platformId: string }) => [l.line, l.platformId])).toEqual([
-      [{ code: "1", name: "1호선", badge: "1", color: "0052A4" }, "KR-1-0153"],
+      [{ code: "1", name: "1호선", color: "0052A4", marker: { text: "1", color: "0052A4" } }, "KR-1-0153"],
     ]);
     expectWire(subwayStationArrivals, res.body.data);
   });
@@ -141,8 +141,8 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.station).toEqual({ id: "gangnam", name: "강남" });
     expect(res.body.data.lines.map((l: { line: unknown; platformId: string }) => [l.line, l.platformId])).toEqual([
-      [{ code: "2", name: "2호선", badge: "2", color: "00A84D" }, "S1-2-222"],
-      [{ code: "D1", name: "신분당선", badge: "신분당", color: "D4003B" }, "DX-D1-4307"],
+      [{ code: "2", name: "2호선", color: "00A84D", marker: { text: "2", color: "00893F" } }, "S1-2-222"],
+      [{ code: "D1", name: "신분당선", color: "D4003B", marker: { text: "신", color: "D4003B" } }, "DX-D1-4307"],
     ]);
     expect(directionsOf(res.body).map((d: { direction: string; name: string; previousStation: unknown; nextStation: unknown }) => [d.direction, d.name, d.previousStation, d.nextStation])).toEqual([
       ["up", "내선순환", { id: "S1-2-221", name: "역삼" }, { id: "S1-2-223", name: "교대" }],
@@ -170,15 +170,15 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     const dogok = await getAt("20:41:02", "/subway/stations/dogok/arrivals");
 
     // Assert
-    const entriesOf = (body: { data: { lines: Array<{ line: { code: string; badge: string; color: string }; platformId: string }> } }) =>
-      body.data.lines.map((l) => [l.line.code, l.line.badge, l.line.color, l.platformId]);
+    const entriesOf = (body: { data: { lines: Array<{ line: { code: string; color: string; marker: { text: string; color: string } }; platformId: string }> } }) =>
+      body.data.lines.map((l) => [l.line.code, l.line.marker.text, l.line.color, l.line.marker.color, l.platformId]);
     expect(entriesOf(jamsil.body)).toEqual([
-      ["2", "2", "00A84D", "S1-2-216"],
-      ["8", "8", "E6186C", "S1-8-2815"],
+      ["2", "2", "00A84D", "00893F", "S1-2-216"],
+      ["8", "8", "E6186C", "E4186B", "S1-8-2815"],
     ]);
     expect(entriesOf(dogok.body)).toEqual([
-      ["3", "3", "EF7C1C", "S1-3-334"],
-      ["K1", "수인분당", "F5A200", "KR-K1-K217"],
+      ["3", "3", "EF7C1C", "BB5C0D", "S1-3-334"],
+      ["K1", "수", "F5A200", "A26B00", "KR-K1-K217"],
     ]);
     expect(dogok.body.data.lines[1].directions.map((d: { name: string }) => d.name)).toEqual(["청량리 방면", "인천 방면"]);
     expectWire(subwayStationArrivals, jamsil.body.data);
@@ -209,15 +209,15 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expectWire(subwayStationArrivals, res.body.data);
   });
 
-  it("Named line in Korean: serves jeongja's 신분당 entry as D1, 신분당선, badge 신분당, color D4003B, before its 수인분당 entry", async () => {
+  it("Named line in Korean: serves jeongja's 신분당 entry as D1, 신분당선, color D4003B and a 신 marker, before its 수인분당 entry", async () => {
     // Act
     const res = await getAt("20:41:02", "/subway/stations/jeongja/arrivals").set("Accept-Language", "ko");
 
     // Assert
     expect(res.body.data.station).toEqual({ id: "jeongja", name: "정자" });
     expect(res.body.data.lines.map((l: { line: unknown }) => l.line)).toEqual([
-      { code: "D1", name: "신분당선", badge: "신분당", color: "D4003B" },
-      { code: "K1", name: "수인분당선", badge: "수인분당", color: "F5A200" },
+      { code: "D1", name: "신분당선", color: "D4003B", marker: { text: "신", color: "D4003B" } },
+      { code: "K1", name: "수인분당선", color: "F5A200", marker: { text: "수", color: "A26B00" } },
     ]);
     expect(res.body.data.lines[0].directions.map((d: { name: string }) => d.name)).toEqual(["신사 방면", "광교 방면"]);
   });

@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured: the route had not shipped; generated 2026-10-17 by UiTransitService (regenerated the same day for the station rows of add-commute-station-subway) over the committed transit-layout.json, the real bus groups and the served stations at 2026-10-20 12:00 KST (commute pilot open, fasttrack closed), Accept-Language en; whole data, except the nsc group `group:commute-stations`, hand-written the same day as design D5 of add-commute-station-subway serves it (placeholder copy) and trimmed to its first two stations, Jeongja and Jamsil, with their lines as design D2a gives them, because the registry does not serve those stations yet",
+  "_about": "GET https://api.skkuverse.com/ui/home/transit captured from production 2026-10-18 17:34 KST (Accept-Language en), with the commute pilot card open and every served subway station listed; untrimmed; converted 2026-10-18 for the serve-subway-line-markers wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); then, for the null subway subtitle, every subway item's `subtitle` set to null by script on 2026-10-18, as the server now serves it (bus, link and group subtitles unchanged)",
   "data": {
     "version": 1,
     "sections": [
@@ -36,13 +36,16 @@
             "id": "subway:hyehwa",
             "stationId": "hyehwa",
             "title": "Hyehwa Station",
-            "subtitle": "Line 4",
+            "subtitle": null,
             "lines": [
               {
                 "code": "4",
                 "name": "Line 4",
-                "badge": "4",
-                "color": "00A5DE"
+                "color": "00A5DE",
+                "marker": {
+                  "text": "4",
+                  "color": "007FAB"
+                }
               }
             ],
             "action": {
@@ -126,13 +129,16 @@
             "id": "subway:sungkyunkwan",
             "stationId": "sungkyunkwan",
             "title": "Sungkyunkwan Univ. Station",
-            "subtitle": "Line 1",
+            "subtitle": null,
             "lines": [
               {
                 "code": "1",
                 "name": "Line 1",
-                "badge": "1",
-                "color": "0052A4"
+                "color": "0052A4",
+                "marker": {
+                  "text": "1",
+                  "color": "0052A4"
+                }
               }
             ],
             "action": {
@@ -173,19 +179,25 @@
                 "id": "subway:jeongja",
                 "stationId": "jeongja",
                 "title": "Jeongja Station",
-                "subtitle": "Shinbundang Line · Suin–Bundang Line",
+                "subtitle": null,
                 "lines": [
                   {
                     "code": "D1",
                     "name": "Shinbundang Line",
-                    "badge": "Shinbundang",
-                    "color": "D4003B"
+                    "color": "D4003B",
+                    "marker": {
+                      "text": "신",
+                      "color": "D4003B"
+                    }
                   },
                   {
                     "code": "K1",
                     "name": "Suin–Bundang Line",
-                    "badge": "Suin–Bundang",
-                    "color": "F5A200"
+                    "color": "F5A200",
+                    "marker": {
+                      "text": "수",
+                      "color": "A26B00"
+                    }
                   }
                 ],
                 "action": {
@@ -198,24 +210,145 @@
                 "id": "subway:jamsil",
                 "stationId": "jamsil",
                 "title": "Jamsil Station",
-                "subtitle": "Line 2 · Line 8",
+                "subtitle": null,
                 "lines": [
                   {
                     "code": "2",
                     "name": "Line 2",
-                    "badge": "2",
-                    "color": "00A84D"
+                    "color": "00A84D",
+                    "marker": {
+                      "text": "2",
+                      "color": "00893F"
+                    }
                   },
                   {
                     "code": "8",
                     "name": "Line 8",
-                    "badge": "8",
-                    "color": "E6186C"
+                    "color": "E6186C",
+                    "marker": {
+                      "text": "8",
+                      "color": "E4186B"
+                    }
                   }
                 ],
                 "action": {
                   "actionType": "route",
                   "actionValue": "/subway?station=jamsil"
+                }
+              },
+              {
+                "kind": "subway",
+                "id": "subway:dogok",
+                "stationId": "dogok",
+                "title": "Dogok Station",
+                "subtitle": null,
+                "lines": [
+                  {
+                    "code": "3",
+                    "name": "Line 3",
+                    "color": "EF7C1C",
+                    "marker": {
+                      "text": "3",
+                      "color": "BB5C0D"
+                    }
+                  },
+                  {
+                    "code": "K1",
+                    "name": "Suin–Bundang Line",
+                    "color": "F5A200",
+                    "marker": {
+                      "text": "수",
+                      "color": "A26B00"
+                    }
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=dogok"
+                }
+              },
+              {
+                "kind": "subway",
+                "id": "subway:gangnam",
+                "stationId": "gangnam",
+                "title": "Gangnam Station",
+                "subtitle": null,
+                "lines": [
+                  {
+                    "code": "2",
+                    "name": "Line 2",
+                    "color": "00A84D",
+                    "marker": {
+                      "text": "2",
+                      "color": "00893F"
+                    }
+                  },
+                  {
+                    "code": "D1",
+                    "name": "Shinbundang Line",
+                    "color": "D4003B",
+                    "marker": {
+                      "text": "신",
+                      "color": "D4003B"
+                    }
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=gangnam"
+                }
+              },
+              {
+                "kind": "subway",
+                "id": "subway:yangjae",
+                "stationId": "yangjae",
+                "title": "Yangjae Station",
+                "subtitle": null,
+                "lines": [
+                  {
+                    "code": "3",
+                    "name": "Line 3",
+                    "color": "EF7C1C",
+                    "marker": {
+                      "text": "3",
+                      "color": "BB5C0D"
+                    }
+                  },
+                  {
+                    "code": "D1",
+                    "name": "Shinbundang Line",
+                    "color": "D4003B",
+                    "marker": {
+                      "text": "신",
+                      "color": "D4003B"
+                    }
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=yangjae"
+                }
+              },
+              {
+                "kind": "subway",
+                "id": "subway:gwanggyo-jungang",
+                "stationId": "gwanggyo-jungang",
+                "title": "Gwanggyojungang Station",
+                "subtitle": null,
+                "lines": [
+                  {
+                    "code": "D1",
+                    "name": "Shinbundang Line",
+                    "color": "D4003B",
+                    "marker": {
+                      "text": "신",
+                      "color": "D4003B"
+                    }
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=gwanggyo-jungang"
                 }
               }
             ]

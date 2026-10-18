@@ -6,7 +6,8 @@
  * station; a named platform that is neither served nor a neighbor, or is on
  * another line; a previous or next neighbor without a name; a train-map name
  * on a line with no train map; a neighbor on an unknown line; and a line no
- * platform uses.
+ * platform uses. Every line's marker color reads as small text on the app's
+ * light row background.
  */
 import { SUBWAY_REGISTRY, loadSubwayRegistry } from "./subway.config";
 
@@ -53,6 +54,38 @@ describe("SUBWAY_REGISTRY", () => {
     ]);
     expect(stations.flatMap(([, platformIds]) => platformIds)).toHaveLength(13);
     expect(SUBWAY_REGISTRY.lines.map((line) => line.code)).toEqual(["1", "4", "2", "3", "8", "K1", "D1"]);
+  });
+});
+
+// WHY: the app's light row background (skkuverse-app SDS `bg.layerDefault`), and WCAG 2.x AA for text under 18.66 px bold.
+const LIGHT_ROW_BACKGROUND = "FFFFFF";
+const MIN_TEXT_CONTRAST = 4.5;
+
+function relativeLuminance(hex: string): number {
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const channel = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  }) as [number, number, number];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(a: string, b: string): number {
+  const [lighter, darker] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x) as [number, number];
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+describe("SUBWAY_REGISTRY markers", () => {
+  it("colors every line's marker so its text reads at 4.5:1 or more on the app's light row background", () => {
+    // Act
+    const ratios = SUBWAY_REGISTRY.lines.map((line) => [line.code, contrastRatio(line.marker.color, LIGHT_ROW_BACKGROUND) >= MIN_TEXT_CONTRAST]);
+
+    // Assert
+    expect(ratios).toEqual(SUBWAY_REGISTRY.lines.map((line) => [line.code, true]));
+  });
+
+  it("measures 수인분당's own yellow at under 2.1:1 on white, which is why its marker is darker", () => {
+    // Act & Assert
+    expect(contrastRatio("F5A200", LIGHT_ROW_BACKGROUND)).toBeLessThan(2.1);
   });
 });
 

@@ -197,7 +197,7 @@ describe("committed transit-layout.json", () => {
   it("loads against the real bus groups, stations and registry, in the launch layout", async () => {
     // Arrange
     const real: TransitLayoutReferences = {
-      busGroupIds: new BusConfigService(new BusStopsService(), await seededBusRegistryService()).listGroupIds(),
+      busGroupIds: new BusConfigService(new BusStopsService(new SubwayStationsService()), await seededBusRegistryService()).listGroupIds(),
       stationIds: new SubwayStationsService().listStations().map((station) => station.id),
       registry: new MiniappsService(),
     };

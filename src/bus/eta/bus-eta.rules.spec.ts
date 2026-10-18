@@ -5,6 +5,7 @@
  */
 import type { ScheduleDay, ScheduleEntry } from "../schedule/bus-schedule.wire";
 import { BusStopsService } from "../stops/bus-stops.service";
+import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
 import { runsOfDay, toEtaSequences, toSequenceLength } from "./bus-eta.rules";
 
 function day(date: string, schedule: ScheduleEntry[], display = "schedule"): ScheduleDay {
@@ -63,7 +64,7 @@ describe("runsOfDay", () => {
 describe("toEtaSequences", () => {
   it("lists the opted-in route types with their stops' coordinates, in order", () => {
     // Arrange
-    const stops = new BusStopsService();
+    const stops = new BusStopsService(new SubwayStationsService());
 
     // Act
     const seqs = toEtaSequences(stops.catalog(), stops.etaOptIns());

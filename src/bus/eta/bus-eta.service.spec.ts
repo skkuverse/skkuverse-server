@@ -9,6 +9,7 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { BusScheduleService } from "../schedule/bus-schedule.service";
 import type { ScheduleDay, ScheduleEntry } from "../schedule/bus-schedule.wire";
 import { BusStopsService } from "../stops/bus-stops.service";
+import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
 import type { ShuttleEtaDoc } from "./bus-eta.document";
 import type { BusEtaRepository } from "./bus-eta.repository";
 import { BusEtaService } from "./bus-eta.service";
@@ -21,7 +22,7 @@ const entry = (time: string, routeType: string): ScheduleEntry => ({ time, route
 const SEQUENCE: EtaSequence = { serviceId: "campus-inja", routeType: "regular", stops: [{ lat: 37.5, lng: 127 }, { lat: 37.4, lng: 127 }, { lat: 37.3, lng: 127 }] };
 
 const build = (schedule: Partial<BusScheduleService>, repository = new FakeBusEtaRepository()) =>
-  new BusEtaService(asReal<BusEtaRepository>(repository), schedule as BusScheduleService, new BusStopsService());
+  new BusEtaService(asReal<BusEtaRepository>(repository), schedule as BusScheduleService, new BusStopsService(new SubwayStationsService()));
 
 describe("BusEtaService runs", () => {
   const week = {

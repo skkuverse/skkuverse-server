@@ -12,8 +12,8 @@
     "reason": "(An agent tooling note is left out of the public history.)"
   },
   "src/bus/stops/bus-stops.rules.ts": {
-    "max": 285,
-    "reason": "ADR 0010 D9, no domain seam: schedule-stops.json is one committed document that stops the boot on any fault, and validateStopCatalog lists every issue in the words bus-stops.rules.spec.ts pins. Its checks (stops, photos, panoramas, guides, sequences, estimate opt-ins) compose into the one validator bus-stops.schema.ts runs, and child-to-parent imports keep a sub-module from holding a piece of it."
+    "max": 295,
+    "reason": "ADR 0010 D9, no domain seam: schedule-stops.json is one committed document that stops the boot on any fault, and validateStopCatalog lists every issue in the words bus-stops.rules.spec.ts pins. Its checks (stops, photos, panoramas, guides, sequences, estimate opt-ins) compose into the one validator bus-stops.schema.ts runs beside `subwayStationErrors`, and child-to-parent imports keep a sub-module from holding a piece of it."
   },
   "src/map/layer-set/map-layer-set.rules.ts": {
     "max": 158,

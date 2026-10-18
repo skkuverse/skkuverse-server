@@ -25,9 +25,9 @@ function toNeighborStation(id: string | undefined, lang: SupportedLang): WireDir
 }
 
 function toWireLine({ platform, doc }: { platform: SubwayPlatform; doc: SubwayArrivalsDoc }, lang: SupportedLang): WireLine {
-  const { code, name, badge, color } = toSubwayLine(platform.line);
+  const { code, name, color, marker } = toSubwayLine(platform.line);
   return {
-    line: { code, name: name[lang], badge: badge[lang], color },
+    line: { code, name: name[lang], color, marker: { text: marker.text[lang], color: marker.color } },
     platformId: platform.id,
     generatedAt: doc.generatedAt.toISOString(),
     directions: DIRECTIONS.map((direction) => {

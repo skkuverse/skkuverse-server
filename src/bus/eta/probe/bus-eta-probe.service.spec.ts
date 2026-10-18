@@ -13,6 +13,7 @@ import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import { DailyCapError } from "../../../shared/daily-cap.error";
 import type { BusScheduleService } from "../../schedule/bus-schedule.service";
 import { BusStopsService } from "../../stops/bus-stops.service";
+import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
 import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaService } from "../bus-eta.service";
@@ -27,7 +28,7 @@ const MINUTE_MS = 60_000;
 const NOW = new Date("2026-10-16T11:44:00.000Z");
 const minutesBefore = (minutes: number) => new Date(NOW.getTime() - minutes * MINUTE_MS);
 
-const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, new BusStopsService());
+const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, new BusStopsService(new SubwayStationsService()));
 const lane = new BusEtaLaneService(eta);
 const { centerline } = lane.corridor();
 const PROBE_ROUTE_IDS = ["200000205", "228000174", "228000175"];

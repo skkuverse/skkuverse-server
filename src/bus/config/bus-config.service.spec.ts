@@ -16,6 +16,7 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { BusRegistryRepository } from "../registry/bus-registry.repository";
 import { BusRegistryService } from "../registry/bus-registry.service";
 import { BusStopsService } from "../stops/bus-stops.service";
+import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
 import { BusConfigService } from "./bus-config.service";
 
 const FIXTURE: Record<string, { json: string; etag: string }> = JSON.parse(
@@ -29,7 +30,7 @@ const clock = { now: () => new Date("2026-10-17T12:00:00Z") };
 async function seededService(): Promise<BusConfigService> {
   const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
   await registry.onModuleInit();
-  return new BusConfigService(new BusStopsService(), registry);
+  return new BusConfigService(new BusStopsService(new SubwayStationsService()), registry);
 }
 
 beforeEach(async () => {
@@ -304,7 +305,7 @@ describe("BusConfigService and the registry", () => {
   it("refuses the config with a 503 when a Jongro registry route is missing", async () => {
     // Arrange
     registryRepository.routes.delete("jongro08");
-    const missing = new BusConfigService(new BusStopsService(), new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock));
+    const missing = new BusConfigService(new BusStopsService(new SubwayStationsService()), new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock));
 
     // Act & Assert
     await expect(missing.getBusGroups("ko")).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE", httpStatus: 503 });

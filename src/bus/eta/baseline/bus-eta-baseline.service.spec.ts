@@ -13,6 +13,7 @@ import { DailyCapError } from "../../../shared/daily-cap.error";
 import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { BusScheduleService } from "../../schedule/bus-schedule.service";
 import { BusStopsService } from "../../stops/bus-stops.service";
+import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import { etaDocId } from "../bus-eta.mapper";
 import { baselineDoc } from "./bus-eta-baseline.mapper";
@@ -181,7 +182,7 @@ describe("BusEtaBaselineService.tick", () => {
         ],
       }),
     } as unknown as BusScheduleService;
-    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, new BusStopsService());
+    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, new BusStopsService(new SubwayStationsService()));
     const fetchOffsets = jest.fn().mockResolvedValue(OFFSETS);
     const poller = new BusEtaBaselineService({
       sequences: [SEQ],
@@ -238,7 +239,7 @@ describe("BusEtaBaselineService.tick bus-lane runs (design D7)", () => {
   function setupWithForecast(runs: EtaRun[], stored: ShuttleEtaDoc[]) {
     const repository = new FakeBusEtaRepository();
     for (const doc of stored) repository.docs.set(doc._id, doc);
-    const eta = new BusEtaService(asReal<BusEtaRepository>(repository), {} as BusScheduleService, new BusStopsService());
+    const eta = new BusEtaService(asReal<BusEtaRepository>(repository), {} as BusScheduleService, new BusStopsService(new SubwayStationsService()));
     const tmap = new FakeBusEtaForecastClient();
     const forecast = new BusEtaForecastService(new BusEtaLaneService(eta), asReal<BusEtaForecastClient>(tmap), eta);
     const sequence = eta.sequences().find((s) => s.serviceId === "campus-inja" && s.routeType === "regular")!;

@@ -13,6 +13,7 @@ import type { Clock } from "../../../infra/clock";
 import type { BusScheduleRepository } from "../../schedule/bus-schedule.repository";
 import { BusScheduleService } from "../../schedule/bus-schedule.service";
 import { BusStopsService } from "../../stops/bus-stops.service";
+import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaSmartService } from "./bus-eta-smart.service";
@@ -44,7 +45,7 @@ beforeEach(() => {
   estimates = new FakeBusEtaRepository();
   estimates.docs.set(LIVE._id, LIVE);
   const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), clock);
-  service = new BusEtaSmartService(schedule, asReal<BusEtaRepository>(estimates), new BusStopsService(), clock);
+  service = new BusEtaSmartService(schedule, asReal<BusEtaRepository>(estimates), new BusStopsService(new SubwayStationsService()), clock);
 });
 
 describe("BusEtaSmartService.getSmart", () => {

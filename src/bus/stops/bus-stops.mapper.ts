@@ -1,7 +1,17 @@
 import { pick } from "../../infra/i18n";
 import type { I18n, SupportedLang } from "../../infra/types";
+import type { LocalizedName } from "../../subway/subway.types";
 import type { ResolvedStops, ScheduleStop, ScheduleStopCatalog, SequenceStop, StopGuide, StopPanorama } from "./bus-stops.types";
 import type { ServedSequenceStop, ServedStop, StopMap } from "../bus.wire";
+
+type SubwayTitles = ReadonlyMap<string, LocalizedName>;
+type StopSubwayStation = NonNullable<ServedStop["subwayStation"]>;
+
+interface StopSources {
+  catalog: Readonly<ScheduleStopCatalog>;
+  /** WHY: station slug → title; absent where no stop names a station. */
+  subwayTitles?: SubwayTitles;
+}
 
 // QUIRK(naver): NAVER Map's unofficial panorama app link, built here so a format change is one deploy, not an
 // app update; each value appears three times, for the app, the redirect page and the web viewer's fallbackUrl.
@@ -28,9 +38,16 @@ function toStopMap(guide: StopGuide, lang: SupportedLang): StopMap {
   };
 }
 
+function toStopSubwayStation({ id: stopId, subwayStationId: id }: ScheduleStop, lang: SupportedLang, titles: SubwayTitles): StopSubwayStation | null {
+  if (id === undefined) return null;
+  const title = titles.get(id);
+  if (!title) throw new Error(`schedule-stops.json: stop ${stopId} names subway station ${id}, which the catalog loader refuses`);
+  return { id, title: title[lang] };
+}
+
 // WHY: optional fields appear only when the catalog sets their source; the photo is the variant in the request
 // language, else the original, which has no words and reads the same in every language.
-function toServedStop(stop: ScheduleStop, lang: SupportedLang): ServedStop {
+function toServedStop(stop: ScheduleStop, lang: SupportedLang, titles: SubwayTitles): ServedStop {
   const served: ServedStop = { id: stop.id, name: textIn(stop.name, lang) };
   const detail = pick(stop.detail, lang);
   if (detail !== null) served.detail = detail;
@@ -38,6 +55,8 @@ function toServedStop(stop: ScheduleStop, lang: SupportedLang): ServedStop {
   if (stop.photo) served.photoUrl = stop.photo.localized?.[lang] ?? stop.photo.original;
   if (stop.panorama) served.streetViewUrl = toStreetViewUrl(stop.panorama);
   if (stop.guide) served.map = toStopMap(stop.guide, lang);
+  const subwayStation = toStopSubwayStation(stop, lang, titles);
+  if (subwayStation) served.subwayStation = subwayStation;
   return served;
 }
 
@@ -56,7 +75,7 @@ function toServedSequenceStop(entry: SequenceStop, name: I18n, lang: SupportedLa
  * is named by its catalog stop or its own label, `stops` lists each referenced stop once in order of first
  * reference, and a service without sequences is absent from `sequences`.
  */
-export function resolveStopSequences(serviceIds: readonly string[], lang: SupportedLang, catalog: Readonly<ScheduleStopCatalog>): ResolvedStops {
+export function resolveStopSequences(serviceIds: readonly string[], lang: SupportedLang, { catalog, subwayTitles = new Map() }: StopSources): ResolvedStops {
   const sequences: ResolvedStops["sequences"] = {};
   const referenced: string[] = [];
   const byId = (id: string): ScheduleStop => {
@@ -82,5 +101,5 @@ export function resolveStopSequences(serviceIds: readonly string[], lang: Suppor
       ]),
     );
   }
-  return { sequences, stops: referenced.map((id) => toServedStop(byId(id), lang)) };
+  return { sequences, stops: referenced.map((id) => toServedStop(byId(id), lang, subwayTitles)) };
 }
