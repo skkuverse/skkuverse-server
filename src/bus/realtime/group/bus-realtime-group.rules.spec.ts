@@ -8,8 +8,7 @@
  * A tracked Jongro bus (add-jongro-bus-positions): its rows found by vehicle,
  * its status (waiting at a terminal or by its next-stop text, at a stop,
  * running), its progress through the section and its seconds to the next
- * stop re-based to TOPIS's observation time, and a legacy cached position
- * told apart.
+ * stop re-based to TOPIS's observation time.
  */
 
 import { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
@@ -17,9 +16,8 @@ import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import type { BusRegistryRepository } from "../../registry/bus-registry.repository";
 import { BusRegistryService } from "../../registry/bus-registry.service";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
-import { jongroArrivalBus, jongroPositionDoc, legacyJongroPositionDoc, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
+import { jongroArrivalBus, jongroPositionDoc, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import {
-  isTrackedPosition,
   toJongroBusTracking,
   toNextStopInSec,
   toProgress,
@@ -121,14 +119,6 @@ const next58 = {
   bus: jongroArrivalBus({ vehId: "100000058", plainNo: "서울75사2008", staOrd: 18, sectOrd: 18, traTime: 20, arrmsg: "곧 도착", rerideDiv: 2, rerideNum: 1 }),
   madeAt: "2026-10-17 19:12:10.0",
 };
-
-describe("isTrackedPosition", () => {
-  it("tells a position with vehicle fields from one written before them", () => {
-    // Act & Assert
-    expect(isTrackedPosition(jongroPositionDoc())).toBe(true);
-    expect(isTrackedPosition(legacyJongroPositionDoc())).toBe(false);
-  });
-});
 
 describe("toVehicleBuses", () => {
   const row = (sequence: string, eventDate: string, buses: ReturnType<typeof jongroArrivalBus>[]) => ({ sequence, eventDate, buses });

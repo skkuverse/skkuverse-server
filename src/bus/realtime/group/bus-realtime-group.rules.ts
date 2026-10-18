@@ -1,4 +1,4 @@
-import type { JongroArrivalDoc, JongroBusPositionDoc, LegacyJongroBusPositionDoc } from "../../cache/bus-cache.document";
+import type { JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import type {
   CachedArrivalFields,
   JongroBusTracking,
@@ -24,10 +24,6 @@ export function toStationEtas(route: JongroRouteStations, arrivals: readonly Cac
   return (arrivals ?? [])
     .map((arrival) => toStationEta(route, arrival))
     .filter((eta): eta is PlacedStationEta => eta !== null);
-}
-
-export function isTrackedPosition(position: JongroBusPositionDoc | LegacyJongroBusPositionDoc): position is JongroBusPositionDoc {
-  return "vehicleId" in position;
 }
 
 export function toVehicleBuses(rows: readonly Pick<JongroArrivalDoc, "eventDate" | "buses">[], vehicleId: string, sectOrd: number): VehicleBuses {
