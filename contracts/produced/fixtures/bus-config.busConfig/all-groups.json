@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); every group kept, its stations, services and stops cut to the first two; the always-null screen.routeOverlay since dropped from the contract; each Jongro station subtitle nulled since the stop-number fallback was dropped (2026-10-18); each Jongro screen.refreshInterval set to 25 for the 25 s poll (2026-10-18)",
+  "_about": "generated 2026-10-18 from GET /bus/config on a local build of feat/stop-subway-link (NODE_ENV=development, ROLE=api, _dev databases), Accept-Language ko, because production does not serve stops[].subwayStation yet; apart from that field the untrimmed body equals production's /bus/config the same day. Re-capture from production after the deploy; every group kept, its stations, services, route badges and stops cut to the first two, each service to its first route type's stop sequence, cut to two stops, guide markers and walks cut to one, the walk to its first two points",
   "data": {
     "groups": [
       {
@@ -86,6 +86,12 @@
                     "note": "자과캠 하차"
                   }
                 ]
+              },
+              "refresh": {
+                "targets": [
+                  "traffic"
+                ],
+                "intervalSec": 60
               }
             },
             {
@@ -109,6 +115,12 @@
                     "note": "인사캠 하차"
                   }
                 ]
+              },
+              "refresh": {
+                "targets": [
+                  "traffic"
+                ],
+                "intervalSec": 60
               }
             }
           ],
@@ -234,13 +246,20 @@
                     "note": "정자역 탑승"
                   },
                   {
-                    "label": "자과캠",
+                    "label": "N센터 앞",
                     "action": "alight",
                     "timing": "estimated",
+                    "stopId": "nsc-n-center",
                     "note": "자과캠 하차",
                     "detail": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근"
                   }
                 ]
+              },
+              "refresh": {
+                "targets": [
+                  "traffic"
+                ],
+                "intervalSec": 60
               }
             },
             {
@@ -257,13 +276,20 @@
                     "note": "잠실역 탑승"
                   },
                   {
-                    "label": "자과캠",
+                    "label": "N센터 앞",
                     "action": "alight",
                     "timing": "estimated",
+                    "stopId": "nsc-n-center",
                     "note": "자과캠 하차",
                     "detail": "N센터 인근 → CNS센터 → 산학협력센터 인근 → 학생회관 인근"
                   }
                 ]
+              },
+              "refresh": {
+                "targets": [
+                  "traffic"
+                ],
+                "intervalSec": 60
               }
             }
           ],
@@ -321,18 +347,22 @@
                     ]
                   }
                 ]
+              },
+              "subwayStation": {
+                "id": "jeongja",
+                "title": "정자역"
               }
             },
             {
-              "id": "nsc-opposite",
-              "name": "N센터 맞은편",
-              "detail": "글로벌광장 쪽, 연석의 BUS STOP 표시",
+              "id": "nsc-n-center",
+              "name": "N센터 앞",
+              "detail": "N센터 쪽 인도",
               "coords": {
-                "lat": 37.292536,
-                "lng": 126.975077
+                "lat": 37.292298,
+                "lng": 126.975057
               },
-              "photoUrl": "https://media.skkuverse.com/commute/stops/nsc-opposite/original-3406c12b.jpg",
-              "streetViewUrl": "https://inapp.map.naver.com/launchApp/panorama/street?street=on&vrpanoid=1pS33oeIOFDwuxlq1Prstg&vrpanopan=84&vrpanotilt=12&vrpanofov=80&appTargetPage=panorama%2Fstreet&id=1pS33oeIOFDwuxlq1Prstg&pan=84&tilt=12&fov=80&fallbackUrl=https%3A%2F%2Fviewer.map.naver.com%2Fpanorama%2F%3Fid%3D1pS33oeIOFDwuxlq1Prstg%26heading%3D84%26tilt%3D12%26fov%3D80&app=Y&appmarket=N",
+              "photoUrl": "https://media.skkuverse.com/bus/stops/nsc-n-center/original-53c0cde5.jpg",
+              "streetViewUrl": "https://inapp.map.naver.com/launchApp/panorama/street?street=on&vrpanoid=YntS5LxXHav0lPF1zQf9tA&vrpanopan=152&vrpanotilt=2&vrpanofov=80&appTargetPage=panorama%2Fstreet&id=YntS5LxXHav0lPF1zQf9tA&pan=152&tilt=2&fov=80&fallbackUrl=https%3A%2F%2Fviewer.map.naver.com%2Fpanorama%2F%3Fid%3DYntS5LxXHav0lPF1zQf9tA%26heading%3D152%26tilt%3D2%26fov%3D80&app=Y&appmarket=N",
               "map": {
                 "markers": [],
                 "paths": []
@@ -386,7 +416,8 @@
               "transferLines": []
             }
           ],
-          "features": []
+          "features": [],
+          "stationsVersion": "76d8e6770cda23aa"
         }
       },
       {
@@ -428,7 +459,8 @@
               "transferLines": []
             }
           ],
-          "features": []
+          "features": [],
+          "stationsVersion": "0346768f2b776f45"
         }
       },
       {
@@ -470,7 +502,8 @@
               "transferLines": []
             }
           ],
-          "features": []
+          "features": [],
+          "stationsVersion": "52e82cc449046288"
         }
       }
     ]

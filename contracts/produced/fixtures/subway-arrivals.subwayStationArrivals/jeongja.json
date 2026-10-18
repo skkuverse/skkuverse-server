@@ -1,0 +1,187 @@
+{
+  "_about": "GET https://api.skkuverse.com/subway/stations/jeongja/arrivals captured from production 2026-10-18 17:02 KST (a Sunday), Accept-Language ko; untrimmed: two lines (D1, K1), both directions, three trains each (11 estimated, 1 scheduled), including a train at the platform whose arrivalAt is 70 s before generatedAt",
+  "data": {
+    "station": {
+      "id": "jeongja",
+      "name": "정자"
+    },
+    "lines": [
+      {
+        "line": {
+          "code": "D1",
+          "name": "신분당선",
+          "badge": "신분당",
+          "color": "D4003B"
+        },
+        "platformId": "DX-D1-4312",
+        "generatedAt": "2026-10-18T08:02:59.442Z",
+        "directions": [
+          {
+            "direction": "up",
+            "name": "신사 방면",
+            "previousStation": {
+              "id": "DX-D1-D13",
+              "name": "미금"
+            },
+            "nextStation": {
+              "id": "DX-D1-4311",
+              "name": "판교"
+            },
+            "trains": [
+              {
+                "trainNo": "1172",
+                "destination": "신사",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:07:59.442Z",
+                "stopsAway": 2,
+                "source": "estimated"
+              },
+              {
+                "trainNo": "1174",
+                "destination": "신사",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:16:59.442Z",
+                "stopsAway": null,
+                "source": "estimated"
+              },
+              {
+                "trainNo": "1176",
+                "destination": "신사",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:21:24.000Z",
+                "stopsAway": null,
+                "source": "estimated"
+              }
+            ]
+          },
+          {
+            "direction": "down",
+            "name": "광교 방면",
+            "previousStation": {
+              "id": "DX-D1-4311",
+              "name": "판교"
+            },
+            "nextStation": {
+              "id": "DX-D1-D13",
+              "name": "미금"
+            },
+            "trains": [
+              {
+                "trainNo": "1163",
+                "destination": "광교",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:01:49.000Z",
+                "stopsAway": 0,
+                "source": "estimated"
+              },
+              {
+                "trainNo": "1165",
+                "destination": "광교",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:12:07.000Z",
+                "stopsAway": 2,
+                "source": "estimated"
+              },
+              {
+                "trainNo": "1167",
+                "destination": "광교",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:18:59.442Z",
+                "stopsAway": null,
+                "source": "estimated"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "line": {
+          "code": "K1",
+          "name": "수인분당선",
+          "badge": "수인분당",
+          "color": "F5A200"
+        },
+        "platformId": "KR-K1-K230",
+        "generatedAt": "2026-10-18T08:02:59.442Z",
+        "directions": [
+          {
+            "direction": "up",
+            "name": "청량리 방면",
+            "previousStation": {
+              "id": "KR-K1-K231",
+              "name": "미금"
+            },
+            "nextStation": {
+              "id": "KR-K1-K229",
+              "name": "수내"
+            },
+            "trains": [
+              {
+                "trainNo": "6136",
+                "destination": "왕십리",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:05:40.000Z",
+                "stopsAway": 1,
+                "source": "estimated"
+              },
+              {
+                "trainNo": "6138",
+                "destination": "왕십리",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:16:30.000Z",
+                "stopsAway": 3,
+                "source": "scheduled"
+              },
+              {
+                "trainNo": "6544",
+                "destination": "왕십리",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:26:10.000Z",
+                "stopsAway": null,
+                "source": "estimated"
+              }
+            ]
+          },
+          {
+            "direction": "down",
+            "name": "인천 방면",
+            "previousStation": {
+              "id": "KR-K1-K229",
+              "name": "수내"
+            },
+            "nextStation": {
+              "id": "KR-K1-K231",
+              "name": "미금"
+            },
+            "trains": [
+              {
+                "trainNo": "6117",
+                "destination": "죽전",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:08:59.442Z",
+                "stopsAway": 3,
+                "source": "estimated"
+              },
+              {
+                "trainNo": "6549",
+                "destination": "인천",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:14:29.442Z",
+                "stopsAway": null,
+                "source": "estimated"
+              },
+              {
+                "trainNo": "6119",
+                "destination": "죽전",
+                "express": false,
+                "arrivalAt": "2026-10-18T08:19:05.000Z",
+                "stopsAway": null,
+                "source": "estimated"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
