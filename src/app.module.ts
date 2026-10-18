@@ -45,6 +45,7 @@ import { MapModule } from "./map/map.module";
 import { MapLayerSetModule } from "./map/layer-set/map-layer-set.module";
 import { MapConfigModule } from "./map/config/map-config.module";
 import { MapCampusModule } from "./map/campus/map-campus.module";
+import { MapTransitModule } from "./map/transit/map-transit.module";
 import { MapEventModule } from "./map/event/map-event.module";
 import { MapEventDetailsModule } from "./map/event-details/map-event-details.module";
 import { NoticesModule } from "./notices/notices.module";
@@ -123,6 +124,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     MapLayerSetModule,
     MapConfigModule,
     MapCampusModule,
+    MapTransitModule,
     MapEventModule,
     MapEventDetailsModule,
     NoticesModule,

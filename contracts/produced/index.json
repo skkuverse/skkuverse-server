@@ -184,7 +184,8 @@
     "export": "mapOverlays",
     "routes": [
       "GET map/overlays/campus",
-      "GET map/overlays/event"
+      "GET map/overlays/event",
+      "GET map/overlays/transit"
     ]
   },
   "meals-catalog.cafeteriaList": {
