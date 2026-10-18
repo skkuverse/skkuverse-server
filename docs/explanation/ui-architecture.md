@@ -3,7 +3,7 @@ title: Ui Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-17
+last-updated: 2026-10-18
 audience: internal
 ---
 
@@ -20,7 +20,7 @@ Ui owns no data store. It serves three JSON files committed next to their reader
 | The committed config files | — | The home layout, the campus carousel and the transit layout, edited by hand and shipped with a deploy | `readHomeLayout`, `readCampusBanners`, `readTransitLayout` |
 | The mini-app registry | — | Which mini apps exist, the target and emoji checks, and the logo of a link tile | `MiniappsService`, injected into `UiHomeService`, `UiCampusService` and `UiTransitService` |
 | The bus groups | — | Each group's label, card, screen type and visibility; the boot check reads only their ids (`BusConfigService.listGroupIds`) | `BusConfigService.getBusGroups`, injected into `UiTransitListService` and `UiTransitService` |
-| The served subway stations | — | Each physical station's slug and title, and each of its lines' code, name, badge and color, from subway's registry | `SubwayStationsService.listStations`, injected into `UiTransitService` |
+| The served subway stations | — | Each physical station's slug and title, and each of its lines' code, name, color and marker, from subway's registry | `SubwayStationsService.listStations`, injected into `UiTransitService` |
 | moment-timezone | `moment` | A bus group's KST dates and first-day time; a strict parse still reads `24:00` as the next midnight | `isBusGroupVisible` |
 | The translations | — | The titles of the scroll cards | `t` in `src/infra/i18n.ts` |
 | skkuverse-app | — | Nothing; it reads the routes | `GET /ui/home` and its siblings |
@@ -45,7 +45,7 @@ Ui owns no data store. It serves three JSON files committed next to their reader
 | group item | A `group` transit item: a box the app folds and unfolds, with its own title, subtitle and icon, its initial state and the bus, subway or link items it holds, each served as at the top of a section; it holds no group and carries no action | `toGroupTransitItems` over `transit-layout.json` | — |
 | initial state | A group item's `initialState`, `collapsed` or `expanded`, written in the layout with no default and served as written: how the app first draws the box | `transit-layout.json` | — |
 | visible with | A group's `visibleWith`, one bus group of its own section: the group shows only while that bus group does, and the field is never served | `toGroupTransitItems` | — |
-| station row | A `subway` transit item: one physical station by its slug, titled with its station suffix, its lines' names joined by ` · ` as its subtitle and `lines`, each line's code, name, badge and color, in place of an icon; it opens `/subway?station=<slug>` | `SubwayStationsService.listStations` | — |
+| station row | A `subway` transit item: one physical station by its slug, titled with its station suffix, its lines' names joined by ` · ` as its subtitle and `lines`, each line's code, name, color and marker (its one-character text in the request language and its color), in place of an icon; it opens `/subway?station=<slug>` | `SubwayStationsService.listStations` | — |
 | bus group card | One bus group as the transit tab lists it: its card and the screen a tap opens | `toBusGroupCard` | `busItem` |
 | scroll card (`ScrollCards`) | One of the three cards `GET /ui/home/scroll` sends | `toScrollCards` | `scrollItem` |
 | registry (`MiniAppRegistry`) | What the boot checks read from `MiniappsService` | `MiniappsService` | — |

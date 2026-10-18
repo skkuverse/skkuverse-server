@@ -8,6 +8,7 @@ export type SubwayDirection = "up" | "down";
 
 export type SubwayRegistry = z.output<typeof subwayRegistryFile>;
 export type SubwayLine = SubwayRegistry["lines"][number];
+export type LineMarker = SubwayLine["marker"];
 export type SubwayStation = SubwayRegistry["stations"][number];
 export type SubwayPlatform = SubwayStation["platforms"][number];
 export type SubwayNeighbor = SubwayRegistry["neighbors"][string];

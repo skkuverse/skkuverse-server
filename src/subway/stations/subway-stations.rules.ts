@@ -8,8 +8,8 @@ function toStationTitle(name: LocalizedName): LocalizedName {
 
 export function toServedStation(station: SubwayStation, lineOf: (code: string) => SubwayLine): ServedStation {
   const lines = station.platforms.map(({ line: code }) => {
-    const { name, badge, color } = lineOf(code);
-    return { code, name, badge, color };
+    const { name, color, marker } = lineOf(code);
+    return { code, name, color, marker };
   });
   return { id: station.id, title: toStationTitle(station.name), lines };
 }

@@ -1,8 +1,10 @@
 /**
  * subwayRegistryFile, the shape of the committed subway registry (design D2):
  * the committed file passes; a copy missing any field of a line, a station, a
- * platform, a direction or a neighbor fails; a slug, a platform id, a color, a
- * Seoul station code or an upstream list off its shape fails with its path.
+ * platform, a direction, a line's marker or a neighbor fails; a slug, a
+ * platform id, a color, a marker color, a Seoul station code or an upstream
+ * list off its shape fails with its path, and so does a marker whose text is
+ * not exactly one character (one grapheme) in any language.
  * The checks across entries are the config's (subway.config.spec.ts).
  */
 import { subwayRegistryFile } from "./subway.schema";
@@ -40,7 +42,10 @@ describe("subwayRegistryFile", () => {
     [[], "neighbors"],
     [["lines", 0], "code"],
     [["lines", 0], "name"],
-    [["lines", 0], "badge"],
+    [["lines", 0], "marker"],
+    [["lines", 0, "marker"], "text"],
+    [["lines", 0, "marker"], "color"],
+    [["lines", 0, "marker", "text"], "en"],
     [["lines", 0], "color"],
     [["lines", 0], "seoul"],
     [["lines", 0, "seoul"], "subwayId"],
@@ -87,6 +92,8 @@ describe("subwayRegistryFile", () => {
     ["a next platform in lower case", ["stations", 0, "platforms", 0, "directions", "up"], "nextPlatformId", "kr-1-p152"],
     ["a color of five digits", ["lines", 0], "color", "0052A"],
     ["a color with a #", ["lines", 0], "color", "#0052A4"],
+    ["a marker color with a #", ["lines", 0, "marker"], "color", "#0052A4"],
+    ["a marker color of three digits", ["lines", 0, "marker"], "color", "05A"],
     ["a Seoul station code of three digits", ["stations", 1, "platforms", 0, "timetable"], "stationCode", "420"],
     ["four upstream platforms", ["stations", 0, "platforms", 0, "directions", "up"], "upstreamPlatformIds", ["KR-1-P154", "KR-1-P155", "KR-1-1715", "KR-1-1716"]],
     ["a numbering no line uses", ["lines", 0, "seoul"], "trainNumbers", "trip"],
@@ -101,6 +108,35 @@ describe("subwayRegistryFile", () => {
 
     // Assert
     expect(messages).toContainEqual(expect.stringMatching(new RegExp(`^${[...path, field].join("\\.")}`)));
+  });
+
+  it.each([
+    ["ko", "two syllables", "신분"],
+    ["en", "two letters", "SB"],
+    ["zh", "two characters", "新盆"],
+    ["en", "an empty text", ""],
+  ] as const)("rejects a marker whose %s text is %s, with its path", (lang, _case, text) => {
+    // Arrange
+    const raw = copyOf();
+    at(raw, ["lines", 0, "marker", "text"])[lang] = text;
+
+    // Act
+    const messages = messagesOf(raw);
+
+    // Assert
+    expect(messages).toEqual([`lines.0.marker.text.${lang}: must be exactly one character`]);
+  });
+
+  it.each([
+    ["a Hangul syllable written as three jamo", "\u1109\u1175\u11AB"],
+    ["a letter outside the basic plane", "\u{1D7D9}"],
+  ])("accepts a marker text of one character that takes more than one code unit: %s", (_case, text) => {
+    // Arrange
+    const raw = copyOf();
+    at(raw, ["lines", 0, "marker", "text"])["en"] = text;
+
+    // Act & Assert
+    expect(messagesOf(raw)).toEqual([]);
   });
 
   it("rejects a neighbor keyed by something other than a platform id", () => {

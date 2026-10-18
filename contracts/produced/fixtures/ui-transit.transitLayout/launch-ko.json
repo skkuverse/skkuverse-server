@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/ui/home/transit captured from production 2026-10-18 17:34 KST (Accept-Language ko), with the commute pilot card open and every served subway station listed; untrimmed",
+  "_about": "GET https://api.skkuverse.com/ui/home/transit captured from production 2026-10-18 17:34 KST (Accept-Language ko), with the commute pilot card open and every served subway station listed; untrimmed; converted 2026-10-18 for the serve-subway-line-markers wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color })",
   "data": {
     "version": 1,
     "sections": [
@@ -41,8 +41,11 @@
               {
                 "code": "4",
                 "name": "4호선",
-                "badge": "4",
-                "color": "00A5DE"
+                "color": "00A5DE",
+                "marker": {
+                  "text": "4",
+                  "color": "007FAB"
+                }
               }
             ],
             "action": {
@@ -131,8 +134,11 @@
               {
                 "code": "1",
                 "name": "1호선",
-                "badge": "1",
-                "color": "0052A4"
+                "color": "0052A4",
+                "marker": {
+                  "text": "1",
+                  "color": "0052A4"
+                }
               }
             ],
             "action": {
@@ -178,14 +184,20 @@
                   {
                     "code": "D1",
                     "name": "신분당선",
-                    "badge": "신분당",
-                    "color": "D4003B"
+                    "color": "D4003B",
+                    "marker": {
+                      "text": "신",
+                      "color": "D4003B"
+                    }
                   },
                   {
                     "code": "K1",
                     "name": "수인분당선",
-                    "badge": "수인분당",
-                    "color": "F5A200"
+                    "color": "F5A200",
+                    "marker": {
+                      "text": "수",
+                      "color": "A26B00"
+                    }
                   }
                 ],
                 "action": {
@@ -203,14 +215,20 @@
                   {
                     "code": "2",
                     "name": "2호선",
-                    "badge": "2",
-                    "color": "00A84D"
+                    "color": "00A84D",
+                    "marker": {
+                      "text": "2",
+                      "color": "00893F"
+                    }
                   },
                   {
                     "code": "8",
                     "name": "8호선",
-                    "badge": "8",
-                    "color": "E6186C"
+                    "color": "E6186C",
+                    "marker": {
+                      "text": "8",
+                      "color": "E4186B"
+                    }
                   }
                 ],
                 "action": {
@@ -228,14 +246,20 @@
                   {
                     "code": "3",
                     "name": "3호선",
-                    "badge": "3",
-                    "color": "EF7C1C"
+                    "color": "EF7C1C",
+                    "marker": {
+                      "text": "3",
+                      "color": "BB5C0D"
+                    }
                   },
                   {
                     "code": "K1",
                     "name": "수인분당선",
-                    "badge": "수인분당",
-                    "color": "F5A200"
+                    "color": "F5A200",
+                    "marker": {
+                      "text": "수",
+                      "color": "A26B00"
+                    }
                   }
                 ],
                 "action": {
@@ -253,14 +277,20 @@
                   {
                     "code": "2",
                     "name": "2호선",
-                    "badge": "2",
-                    "color": "00A84D"
+                    "color": "00A84D",
+                    "marker": {
+                      "text": "2",
+                      "color": "00893F"
+                    }
                   },
                   {
                     "code": "D1",
                     "name": "신분당선",
-                    "badge": "신분당",
-                    "color": "D4003B"
+                    "color": "D4003B",
+                    "marker": {
+                      "text": "신",
+                      "color": "D4003B"
+                    }
                   }
                 ],
                 "action": {
@@ -278,14 +308,20 @@
                   {
                     "code": "3",
                     "name": "3호선",
-                    "badge": "3",
-                    "color": "EF7C1C"
+                    "color": "EF7C1C",
+                    "marker": {
+                      "text": "3",
+                      "color": "BB5C0D"
+                    }
                   },
                   {
                     "code": "D1",
                     "name": "신분당선",
-                    "badge": "신분당",
-                    "color": "D4003B"
+                    "color": "D4003B",
+                    "marker": {
+                      "text": "신",
+                      "color": "D4003B"
+                    }
                   }
                 ],
                 "action": {
@@ -303,8 +339,11 @@
                   {
                     "code": "D1",
                     "name": "신분당선",
-                    "badge": "신분당",
-                    "color": "D4003B"
+                    "color": "D4003B",
+                    "marker": {
+                      "text": "신",
+                      "color": "D4003B"
+                    }
                   }
                 ],
                 "action": {

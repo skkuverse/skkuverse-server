@@ -2,8 +2,9 @@
  * toSubwayStationArrivals: a physical station and each of its platforms'
  * `subway_arrivals` documents become the arrivals response. The station
  * carries its slug and its name in the request language; each platform, in
- * the station's order, a line entry with the line's code, name, badge and
- * color, its KRIC id, its own document's generatedAt and each of its two
+ * the station's order, a line entry with the line's code, name, color and
+ * marker (its one-character text in the request language and its color),
+ * its KRIC id, its own document's generatedAt and each of its two
  * directions, up then down,
  * its name, its previous station (the nearest upstream one) and its next
  * station, each by id and by name in that language, and its trains; each
@@ -76,7 +77,7 @@ describe("toSubwayStationArrivals", () => {
       station: { id: "hyehwa", name: "혜화" },
       lines: [
         {
-          line: { code: "4", name: "4호선", badge: "4", color: "00A5DE" },
+          line: { code: "4", name: "4호선", color: "00A5DE", marker: { text: "4", color: "007FAB" } },
           platformId: "S1-4-420",
           generatedAt: "2026-10-16T11:41:00.000Z",
           directions: [
@@ -146,10 +147,26 @@ describe("toSubwayStationArrivals", () => {
     const response = toSubwayStationArrivals(transfer, transfer.platforms.map((platform, i) => ({ platform, doc: i === 0 ? DOC : stale })), "en");
 
     // Assert
-    expect(response.lines.map((l) => [l.line.code, l.line.badge, l.line.color, l.platformId, l.generatedAt])).toEqual([
+    expect(response.lines.map((l) => [l.line.code, l.line.marker.text, l.line.color, l.platformId, l.generatedAt])).toEqual([
       ["4", "4", "00A5DE", "S1-4-420", "2026-10-16T11:41:00.000Z"],
       ["1", "1", "0052A4", "KR-1-0153", "2026-10-16T11:30:00.000Z"],
     ]);
+  });
+
+  it.each([
+    ["ko", "신분당선", "신"],
+    ["en", "Shinbundang Line", "신"],
+    ["zh", "新盆唐线", "新"],
+  ] as const)("serves a named line's name and marker text in %s, its colors in every language", (lang, name, text) => {
+    // Arrange
+    const jeongja = findSubwayStation("jeongja") as SubwayStation;
+    const platform = jeongja.platforms[0] as SubwayPlatform;
+
+    // Act
+    const response = toSubwayStationArrivals(jeongja, [{ platform, doc: { ...DOC, _id: platform.id } }], lang);
+
+    // Assert
+    expect(response.lines[0]?.line).toEqual({ code: "D1", name, color: "D4003B", marker: { text, color: "D4003B" } });
   });
 
   it("refuses a next station it has no name for rather than serving it unnamed", () => {

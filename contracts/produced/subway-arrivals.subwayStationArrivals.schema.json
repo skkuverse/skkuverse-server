@@ -31,18 +31,30 @@
               "name": {
                 "type": "string"
               },
-              "badge": {
-                "type": "string"
-              },
               "color": {
                 "type": "string"
+              },
+              "marker": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "color": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "text",
+                  "color"
+                ]
               }
             },
             "required": [
               "code",
               "name",
-              "badge",
-              "color"
+              "color",
+              "marker"
             ]
           },
           "platformId": {

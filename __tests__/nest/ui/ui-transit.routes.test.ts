@@ -82,10 +82,10 @@ describe("GET /ui/home/transit", () => {
       stationId: "hyehwa",
       title: "혜화역",
       subtitle: "4호선",
-      lines: [{ code: "4", name: "4호선", badge: "4", color: "00A5DE" }],
+      lines: [{ code: "4", name: "4호선", color: "00A5DE", marker: { text: "4", color: "007FAB" } }],
       action: { actionType: "route", actionValue: "/subway?station=hyehwa" },
     });
-    expect(res.body.data.sections[2].items[0]).toMatchObject({ id: "subway:sungkyunkwan", lines: [{ code: "1", badge: "1", color: "0052A4" }] });
+    expect(res.body.data.sections[2].items[0]).toMatchObject({ id: "subway:sungkyunkwan", lines: [{ code: "1", color: "0052A4", marker: { text: "1", color: "0052A4" } }] });
     expectWire(transitLayout, res.body.data);
   });
 
@@ -115,7 +115,7 @@ describe("GET /ui/home/transit", () => {
       "subway:yangjae",
       "subway:gwanggyo-jungang",
     ]);
-    expect(group.items[2]).toMatchObject({ id: "subway:dogok", subtitle: "3호선 · 수인분당선", lines: [{ code: "3" }, { code: "K1", badge: "수인분당", color: "F5A200" }] });
+    expect(group.items[2]).toMatchObject({ id: "subway:dogok", subtitle: "3호선 · 수인분당선", lines: [{ code: "3" }, { code: "K1", color: "F5A200", marker: { text: "수", color: "A26B00" } }] });
     expect(group.items[3]).toEqual({
       kind: "subway",
       id: "subway:gangnam",
@@ -123,8 +123,8 @@ describe("GET /ui/home/transit", () => {
       title: "강남역",
       subtitle: "2호선 · 신분당선",
       lines: [
-        { code: "2", name: "2호선", badge: "2", color: "00A84D" },
-        { code: "D1", name: "신분당선", badge: "신분당", color: "D4003B" },
+        { code: "2", name: "2호선", color: "00A84D", marker: { text: "2", color: "00893F" } },
+        { code: "D1", name: "신분당선", color: "D4003B", marker: { text: "신", color: "D4003B" } },
       ],
       action: { actionType: "route", actionValue: "/subway?station=gangnam" },
     });
@@ -145,10 +145,29 @@ describe("GET /ui/home/transit", () => {
       title: "정자역",
       subtitle: "신분당선 · 수인분당선",
       lines: [
-        { code: "D1", name: "신분당선", badge: "신분당", color: "D4003B" },
-        { code: "K1", name: "수인분당선", badge: "수인분당", color: "F5A200" },
+        { code: "D1", name: "신분당선", color: "D4003B", marker: { text: "신", color: "D4003B" } },
+        { code: "K1", name: "수인분당선", color: "F5A200", marker: { text: "수", color: "A26B00" } },
       ],
       action: { actionType: "route", actionValue: "/subway?station=jeongja" },
+    });
+    expectWire(transitLayout, res.body.data);
+  });
+
+  it.each([
+    ["en", "Jeongja Station", ["Shinbundang Line", "신"], ["Suin–Bundang Line", "수"]],
+    ["zh", "亭子站", ["新盆唐线", "新"], ["水仁·盆唐线", "水"]],
+  ])("Transfer station in %s: serves 정자's line names and marker texts in that language, its colors unchanged", async (lang, title, [d1Name, d1Text], [k1Name, k1Text]) => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/transit").set("Accept-Language", lang);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.sections[2].items[2].items[0]).toMatchObject({
+      title,
+      lines: [
+        { code: "D1", name: d1Name, color: "D4003B", marker: { text: d1Text, color: "D4003B" } },
+        { code: "K1", name: k1Name, color: "F5A200", marker: { text: k1Text, color: "A26B00" } },
+      ],
     });
     expectWire(transitLayout, res.body.data);
   });

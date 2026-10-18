@@ -9,13 +9,21 @@ const MAX_UPSTREAM_PLATFORMS = 3;
 
 const localizedName = z.strictObject({ ko: z.string().min(1), en: z.string().min(1), zh: z.string().min(1) });
 
+const hex6 = z.string().refine(isHex6, "must be six hex digits with no #");
+
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+const glyph = z.string().refine((text) => [...GRAPHEMES.segment(text)].length === 1, "must be exactly one character");
+
+const lineMarkerFile = z.strictObject({ text: z.strictObject({ ko: glyph, en: glyph, zh: glyph }), color: hex6 });
+
 const platformId = z.string().regex(PLATFORM_ID, { error: "must be <operator>-<line>-<station>" });
 
 const subwayLineFile = z.strictObject({
   code: z.string().min(1),
   name: localizedName,
-  badge: localizedName,
-  color: z.string().refine(isHex6, "must be six hex digits with no #"),
+  color: hex6,
+  marker: lineMarkerFile,
   seoul: z.strictObject({
     subwayId: z.string().regex(SUBWAY_ID),
     lineName: z.string().min(1),
