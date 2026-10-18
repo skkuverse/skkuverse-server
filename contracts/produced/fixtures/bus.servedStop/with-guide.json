@@ -1,5 +1,5 @@
 {
-  "_about": "generated 2026-10-18 from GET /bus/config/commute on a local build of feat/stop-subway-link (NODE_ENV=development, ROLE=api, _dev databases), Accept-Language ko, because production does not serve stops[].subwayStation yet; apart from that field the untrimmed body equals production's /bus/config/commute the same day. Re-capture from production after the deploy; stop jeongja-exit3, its guide cut to one marker and one two-point walk",
+  "_about": "generated 2026-10-18 from GET /bus/config/commute on a local build of feat/stop-subway-link (NODE_ENV=development, ROLE=api, _dev databases), Accept-Language ko, because production does not serve stops[].subwayStation yet; apart from that field the untrimmed body equals production's /bus/config/commute the same day. Re-capture from production after the deploy; stop jeongja-exit3, its guide cut to one marker and one two-point walk Since hide-commute-stop-maps (2026-10-18) the commute group serves no stop map; kept as the only capture of a map with a subwayExit marker and a walk, a shape no group serves today.",
   "data": {
     "id": "jeongja-exit3",
     "name": "정자역 3번 출구",

@@ -10,6 +10,7 @@
 import fs from "fs";
 import path from "path";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
+import { COMMUTE_SERVICE_IDS } from "../../../src/bus/config/bus-config.constants";
 import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
 import { seededBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
@@ -216,6 +217,11 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     services(lang).find((s) => s.serviceId === serviceId)!.stopSequences;
   const stops = (lang: "ko" | "en" | "zh" = "ko") => commute(lang).screen.stops as Array<Record<string, any>>;
   const stopById = (id: string, lang: "ko" | "en" | "zh" = "ko") => stops(lang).find((s) => s.id === id)!;
+  // WHY: the commute group serves no stop map (hide-commute-stop-maps); the catalog keeps each guide, read here as
+  // a group that serves maps would draw it.
+  const catalogStops = new BusStopsService(new SubwayStationsService());
+  const guideMapOf = (id: string, lang: "ko" | "en" | "zh" = "ko") =>
+    catalogStops.servedSequences(COMMUTE_SERVICE_IDS, lang, true).stops.find((s) => s.id === id)!.map as Record<string, any>;
   const brief = (seq: SeqStop[]) => seq.map((st) => `${st.action}:${st.label}:${st.timing}`);
 
   it("정자 boarding: the run boards at 정자역 3번 출구 and arrives at N센터 앞, the first campus drop point (estimated)", async () => {
@@ -278,8 +284,8 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     expect(last.stopId).toBe("jeongja-exit2");
     const stop = stopById(last.stopId!);
     expect(stop.coords).toBeDefined();
-    expect(stop.map.markers).toEqual([expect.objectContaining({ kind: "subwayExit", number: 2, label: "2번 출구" })]);
-    expect(stop.map.paths).toEqual([]);
+    expect(guideMapOf(stop.id).markers).toEqual([expect.objectContaining({ kind: "subwayExit", number: 2, label: "2번 출구" })]);
+    expect(guideMapOf(stop.id).paths).toEqual([]);
   });
 
   it("Drop-off on a median bus lane: the 강남역 bus stop has coordinates and a pin-only map", async () => {
@@ -291,7 +297,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
 
     // Assert
     expect(stop.coords).toBeDefined();
-    expect(stop.map).toEqual({ markers: [], paths: [] });
+    expect(guideMapOf(stop.id)).toEqual({ markers: [], paths: [] });
   });
 
   it("every 하교 drop-off is a catalog stop in front of the exit its name gives, with no walk and no photo", async () => {
@@ -300,15 +306,15 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
       for (const st of s.stopSequences.down!.filter((x) => x.action === "alight")) {
         const stop = stopById(st.stopId!);
         expect(stop).not.toHaveProperty("photoUrl");
-        expect(stop.map.paths).toEqual([]);
+        expect(guideMapOf(stop.id).paths).toEqual([]);
         const exit = /(\d+)번 출구 앞$/.exec(stop.name);
         if (exit) {
-          expect(stop.map.markers).toHaveLength(1);
-          expect(stop.map.markers[0]).toMatchObject({ kind: "subwayExit", number: Number(exit[1]) });
+          expect(guideMapOf(stop.id).markers).toHaveLength(1);
+          expect(guideMapOf(stop.id).markers[0]).toMatchObject({ kind: "subwayExit", number: Number(exit[1]) });
           // "앞": the stop stands at its exit, not a walk away from it.
-          expect(haversineM(stop.coords, stop.map.markers[0].coords)).toBeLessThan(20);
+          expect(haversineM(stop.coords, guideMapOf(stop.id).markers[0].coords)).toBeLessThan(20);
         } else {
-          expect(stop.map.markers).toEqual([]);
+          expect(guideMapOf(stop.id).markers).toEqual([]);
         }
       }
     }
@@ -329,7 +335,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
       const stop = stopById(id, "en");
       expect(stop.photoUrl).toMatch(new RegExp(`^https://media\\.skkuverse\\.com/commute/stops/${id}/en-[0-9a-f]{8}\\.jpg$`));
       expect(stop.streetViewUrl).toMatch(/^https:\/\/inapp\.map\.naver\.com\/launchApp\/panorama\/street\?/);
-      const { markers, paths } = stop.map;
+      const { markers, paths } = guideMapOf(id, "en");
       expect(markers).toHaveLength(1);
       expect(markers[0]).toMatchObject({ kind: "subwayExit", label: `Exit ${markers[0].number}` });
       expect(id).toBe(`${id.split("-")[0]}-exit${markers[0].number}`);
@@ -342,7 +348,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
 
   it("정자역 3번 출구 in English: the exit marker reads Exit 3", async () => {
     // Act & Assert
-    expect(stopById("jeongja-exit3", "en").map.markers[0]).toEqual({
+    expect(guideMapOf("jeongja-exit3", "en").markers[0]).toEqual({
       id: "exit3",
       kind: "subwayExit",
       label: "Exit 3",
@@ -357,7 +363,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
       const stop = stopById("nsc-opposite", lang);
       expect(stop.photoUrl).toMatch(/^https:\/\/media\.skkuverse\.com\/commute\/stops\/nsc-opposite\/original-[0-9a-f]{8}\.jpg$/);
       expect(stop.streetViewUrl).toBeDefined();
-      expect(stop.map).toEqual({ markers: [], paths: [] });
+      expect(guideMapOf(stop.id, lang)).toEqual({ markers: [], paths: [] });
     }
   });
 
