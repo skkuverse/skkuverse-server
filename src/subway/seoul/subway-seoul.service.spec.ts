@@ -72,13 +72,17 @@ describe("SubwaySeoulService.observeApi", () => {
     expect(summary(observations.events)).toEqual([
       "0501 KR-1-1715 arrived",
       "0503 KR-1-P154 arrived",
+      "0505 KR-1-P147 arrived",
       "0506 KR-1-P155 arrived",
       "0701 KR-1-P149 arrived",
       "0702 KR-1-0153 approaching",
+      "4202 S1-4-415 departed",
       "4203 S1-4-423 arrived",
       "4204 S1-4-420 arrived",
       "4205 S1-4-418 approaching",
       "4690 S1-4-417 arrived",
+      "4692 S1-4-424 arrived",
+      "4705 S1-4-426 arrived",
       "4707 S1-4-420 arrived",
     ]);
   });
@@ -111,15 +115,20 @@ describe("SubwaySeoulService.observeTrainMap", () => {
     // Assert
     expect(trainmapClient.calls).toEqual([ALL_LINES]);
     expect(summary(observations.events)).toEqual([
+      "0491 KR-1-P157 approaching",
       "0493 KR-1-0153 departed",
       "0494 KR-1-P154 departed",
       "0496 KR-1-P155 approaching",
       "0691 KR-1-P150 arrived",
       "0692 KR-1-P152 arrived",
+      "0694 KR-1-P157 departed",
+      "1944 KR-1-P147 arrived",
       "4203 S1-4-423 arrived",
       "4204 S1-4-420 departed",
       "4205 S1-4-418 arrived",
       "4690 S1-4-417 arrived",
+      "4692 S1-4-424 arrived",
+      "4705 S1-4-426 arrived",
       "4707 S1-4-420 departed",
     ]);
     expect(observations.events.every((e) => e.stateChangedAt === NOW)).toBe(true);
@@ -151,11 +160,14 @@ describe("SubwaySeoulService keeps each call's answer when another call of its t
 
     // Assert
     expect(summary(settled.events)).toEqual([
+      "0491 KR-1-P157 approaching",
       "0493 KR-1-0153 departed",
       "0494 KR-1-P154 departed",
       "0496 KR-1-P155 approaching",
       "0691 KR-1-P150 arrived",
       "0692 KR-1-P152 arrived",
+      "0694 KR-1-P157 departed",
+      "1944 KR-1-P147 arrived",
     ]);
     expect(settled.failures).toEqual([expect.objectContaining({ source: "seoul-trainmap", code: "unexpected_shape" })]);
   });
@@ -179,7 +191,7 @@ describe("SubwaySeoulService keeps each call's answer when another call of its t
     const settled = await service.observeApi();
 
     // Assert
-    expect(settled.events).toHaveLength(10);
+    expect(settled.events).toHaveLength(14);
     expect(settled.countdownRows).toEqual([]);
     expect(settled.failures).toEqual([failure]);
   });
@@ -195,10 +207,13 @@ describe("SubwaySeoulService keeps each call's answer when another call of its t
 
     // Assert
     expect(summary(settled.events)).toEqual([
+      "4202 S1-4-415 departed",
       "4203 S1-4-423 arrived",
       "4204 S1-4-420 arrived",
       "4205 S1-4-418 approaching",
       "4690 S1-4-417 arrived",
+      "4692 S1-4-424 arrived",
+      "4705 S1-4-426 arrived",
       "4707 S1-4-420 arrived",
     ]);
     expect(settled.countdownRows).toHaveLength(4);

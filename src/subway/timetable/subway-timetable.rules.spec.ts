@@ -180,9 +180,9 @@ describe("toLineRoutes", () => {
     const [korailRoutes, seoulRoutes] = [toLineRoutes(korail), toLineRoutes(seoul)];
 
     // Assert
-    expect(korailRoutes.down.slice(0, 6)).toEqual(["KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153", "KR-1-P154"]);
+    expect(korailRoutes.down.slice(0, 8)).toEqual(["KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153", "KR-1-P154"]);
     expect(korailRoutes.up).toEqual([...korailRoutes.down].reverse());
-    expect(seoulRoutes.up.slice(0, 4)).toEqual(["S1-4-423", "S1-4-422", "S1-4-421", "S1-4-420"]);
+    expect(seoulRoutes.up.slice(0, 7)).toEqual(["S1-4-426", "S1-4-425", "S1-4-424", "S1-4-423", "S1-4-422", "S1-4-421", "S1-4-420"]);
     expect(seoulRoutes.down).toEqual([...seoulRoutes.up].reverse());
   });
 });
@@ -287,32 +287,32 @@ describe("findSubwayPlatform", () => {
   });
 
   it.each([
-    ["KR-1-0153", "up", []],
-    ["KR-1-0153", "down", ["KR-1-P149"]],
-    ["S1-4-420", "up", []],
-    ["S1-4-420", "down", []],
-    ["S1-2-216", "up", []],
-    ["S1-2-216", "down", []],
-    ["S1-3-334", "up", []],
-    ["S1-3-334", "down", []],
-    ["S1-2-222", "up", []],
-    ["S1-2-222", "down", []],
-    ["S1-3-332", "up", []],
-    ["S1-3-332", "down", []],
-    ["KR-K1-K230", "up", []],
-    ["KR-K1-K230", "down", []],
-    ["S1-8-2815", "up", []],
-    ["S1-8-2815", "down", []],
-    ["KR-K1-K217", "up", []],
-    ["KR-K1-K217", "down", []],
-    ["DX-D1-4312", "up", []],
-    ["DX-D1-4312", "down", []],
-    ["DX-D1-4307", "up", []],
+    ["KR-1-0153", "up", ["KR-1-P157"]],
+    ["KR-1-0153", "down", ["KR-1-P149", "KR-1-P148", "KR-1-P147"]],
+    ["S1-4-420", "up", ["S1-4-424", "S1-4-425", "S1-4-426"]],
+    ["S1-4-420", "down", ["S1-4-416", "S1-4-415", "S1-4-414"]],
+    ["S1-2-216", "up", ["S1-2-212"]],
+    ["S1-2-216", "down", ["S1-2-220", "S1-2-221", "S1-2-222", "S1-2-223", "S1-2-224", "S1-2-225", "S1-2-226", "S1-2-227", "S1-2-228"]],
+    ["S1-3-334", "up", ["S1-3-338", "S1-3-339", "S1-3-340", "S1-3-341", "S1-3-342"]],
+    ["S1-3-334", "down", ["S1-3-330", "S1-3-329", "S1-3-328", "S1-3-327", "S1-3-326"]],
+    ["S1-2-222", "up", ["S1-2-218", "S1-2-217", "S1-2-216", "S1-2-215", "S1-2-214", "S1-2-213", "S1-2-212"]],
+    ["S1-2-222", "down", ["S1-2-226", "S1-2-227", "S1-2-228"]],
+    ["S1-3-332", "up", ["S1-3-336", "S1-3-337", "S1-3-338", "S1-3-339", "S1-3-340", "S1-3-341", "S1-3-342"]],
+    ["S1-3-332", "down", ["S1-3-328", "S1-3-327", "S1-3-326"]],
+    ["KR-K1-K230", "up", ["KR-K1-K234", "KR-K1-K235", "KR-K1-K236", "KR-K1-K237"]],
+    ["KR-K1-K230", "down", ["KR-K1-K226", "KR-K1-K225", "KR-K1-K224", "KR-K1-K223", "KR-K1-K222", "KR-K1-K221", "KR-K1-K220", "KR-K1-K219", "KR-K1-K218", "KR-K1-K217", "KR-K1-K216", "KR-K1-K215", "KR-K1-K214", "KR-K1-K213", "KR-K1-K212", "KR-K1-K211", "KR-K1-K210"]],
+    ["S1-8-2815", "up", ["S1-8-2819", "S1-8-2820", "S1-8-2821", "S1-8-2828"]],
+    ["S1-8-2815", "down", ["S1-8-2811", "S1-8-2809", "GU-8-2808"]],
+    ["KR-K1-K217", "up", ["KR-K1-K221", "KR-K1-K222", "KR-K1-K223", "KR-K1-K224", "KR-K1-K225", "KR-K1-K226", "KR-K1-K227", "KR-K1-K228", "KR-K1-K229", "KR-K1-K230", "KR-K1-K231", "KR-K1-K232", "KR-K1-K233", "KR-K1-K234", "KR-K1-K235", "KR-K1-K236", "KR-K1-K237"]],
+    ["KR-K1-K217", "down", ["KR-K1-K213", "KR-K1-K212", "KR-K1-K211", "KR-K1-K210"]],
+    ["DX-D1-4312", "up", ["DX-D1-4316", "DX-D1-4317", "DX-D1-4318", "DX-D1-4319"]],
+    ["DX-D1-4312", "down", ["DX-D1-4308", "DX-D1-4307", "DX-D1-4306", "DX-D1-4305", "DX-D1-D04"]],
+    ["DX-D1-4307", "up", ["DX-D1-4311", "DX-D1-4312", "DX-D1-D13", "DX-D1-D14", "DX-D1-D15", "DX-D1-4316", "DX-D1-4317", "DX-D1-4318", "DX-D1-4319"]],
     ["DX-D1-4307", "down", []],
-    ["DX-D1-4308", "up", []],
-    ["DX-D1-4308", "down", []],
+    ["DX-D1-4308", "up", ["DX-D1-4312", "DX-D1-D13", "DX-D1-D14", "DX-D1-D15", "DX-D1-4316", "DX-D1-4317", "DX-D1-4318", "DX-D1-4319"]],
+    ["DX-D1-4308", "down", ["DX-D1-D04"]],
     ["DX-D1-4318", "up", []],
-    ["DX-D1-4318", "down", []],
+    ["DX-D1-4318", "down", ["DX-D1-D14", "DX-D1-D13", "DX-D1-4312", "DX-D1-4311", "DX-D1-4310", "DX-D1-4309", "DX-D1-4308", "DX-D1-4307", "DX-D1-4306", "DX-D1-4305", "DX-D1-D04"]],
   ] as const)("lists the watched platforms of %s %s, beyond its upstream ones, nearest first", (id, direction, watchedPlatformIds) => {
     // Act
     const platform = findSubwayPlatform(id);

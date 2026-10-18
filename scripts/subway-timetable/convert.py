@@ -32,8 +32,10 @@ What it writes, per operator line and day type:
     shinbundang-d1-weekday.json, shinbundang-d1-holiday.json          신분당선, the operator's per-station PDFs
 
 Each file lists the trains that stop at one of its line's served platforms (LINES) with their stops among
-the covered stations (each served platform and three stations on each side, and for 성균관대 also 금정
-KR-1-P149, the first stop north of it every down 급행 of the 경부 sheets makes), in travel order.
+the covered stations, in travel order. A line covers every station between its served platforms and, on each side,
+far enough that every train is in view for at least 10 minutes before it reaches a served platform, or from where it
+starts (OpenSpec add-commute-station-subway, design D17): a gap in the covered stations is a stretch where the tracker
+loses a train, and on lines that report no departure it holds the train at the last station it saw, late.
 Times are seconds after 00:00 of the service day. A clock time before SERVICE_DAY_START (03:00)
 belongs to the previous service day and gets 86400 added, so 00:13:30 is 87210; Seoul already writes
 those as 24:13:30. Either way the times must then increase along the train, or the run fails.
@@ -53,11 +55,12 @@ Rules taken from the data (checked on the 2026-08-28 Korail files and the 2026-1
       A train with a pass outside that range fails the run.
     - 수인분당선: the sheets 평일상행/평일하행/휴일상행/휴일하행 of one file, Saturday counting as 휴일. The
       xlsx writes 인천 as 신인천 and 수원 as 신수원. Its express is K63xx, and an express that passes a
-      covered station fails the run: on 2026-08-22 every 분당 express stops at every station 죽전-왕십리.
+      covered station from 왕십리 to 죽전 fails the run: on 2026-08-22 every 분당 express stops at each of them
+      and passes 보정, 구성 and 신갈.
     - Seoul express: EXPRESS_YN "G" is 일반, "D" is 급행; any other value fails the run. Every
       2026-10-16 row was "G". ARRIVETIME or LEFTTIME "00:00:00" means none (the origin or terminus);
       the one mid-route hole of 2026-10-17 is filled from SEOUL_ARRIVAL_FIXES.
-    - Seoul joins one train across the seven station codes by its normalized number, within one
+    - Seoul joins one train across the line's station codes by its normalized number, within one
       WEEK_TAG and INOUT_TAG. A number that appears twice at one station is split into runs by time
       continuity: each row joins the run of the same number that left an earlier station at most
       MAX_HOP_SECONDS before it. No number repeated on 2026-10-16.
@@ -115,7 +118,8 @@ MAX_HOP_SECONDS = 600
 # matches is printed, so the entry can go once the API is fixed.
 SEOUL_ARRIVAL_FIXES = {("0330", "2", "2", "3305", "21:08:30"): "21:08:00"}
 
-# KRIC code (운영기관_역사_코드정보, 2022-08-26) and the Korail xlsx short name, south to north.
+# KRIC code (운영기관_역사_코드정보, 2022-08-26; 명학 and 안양 as in the 2026-05-11 list) and the Korail xlsx short name,
+# south to north: 병점 to 안양, ten minutes before 성균관대 for the 급행 too.
 LINE1_STATIONS = (
     ("KR-1-P157", "병점"),
     ("KR-1-1715", "세류"),
@@ -126,19 +130,13 @@ LINE1_STATIONS = (
     ("KR-1-P151", "당정"),
     ("KR-1-P150", "군포"),
     ("KR-1-P149", "금정"),
+    ("KR-1-P148", "명학"),
+    ("KR-1-P147", "안양"),
 )
 LINE1_SERVED = "KR-1-0153"
 
 # KRIC code and the Seoul STATION_CD, north to south.
-LINE4_STATIONS = (
-    ("S1-4-417", "0417"),
-    ("S1-4-418", "0418"),
-    ("S1-4-419", "0419"),
-    ("S1-4-420", "0420"),
-    ("S1-4-421", "0421"),
-    ("S1-4-422", "0422"),
-    ("S1-4-423", "0423"),
-)
+LINE4_STATIONS = tuple(("S1-4-%d" % n, "%04d" % n) for n in range(414, 427))
 LINE4_SERVED = "S1-4-420"
 
 # Every 시발역/종착역 name of the 2026-08-28 files, weekday and holiday, written as the train map and the Seoul API
@@ -186,14 +184,16 @@ LINE4 = {
     "served": (LINE4_SERVED,),
 }
 
-# KRIC code and the Seoul STATION_CD (SearchInfoBySubwayNameService, 2026-10-17), in line order. Both the 잠실 window
-# (213-219) and the 강남 window (219-225); 내선순환 (up) runs in this order.
+# KRIC code and the Seoul STATION_CD (SearchInfoBySubwayNameService, 2026-10-17 and 2026-10-18), in line order: 건대입구
+# (212) to 서울대입구 (228), ten minutes before 강남 on the outer circle; 내선순환 (up) runs in this order. 성수 (211), one
+# station further, stays out: every 내선 trip that reaches 잠실 starts there, and an outer-circle trip starts its lap
+# there under the number it reaches 잠실 with an hour later, so a sighting there would read as that trip having passed.
 LINE2 = {
     "line": "2",
     "operator": "S1",
     "file": "seoul-2",
     "source": "seoul",
-    "stations": tuple(("S1-2-%d" % n, "%04d" % n) for n in range(213, 226)),
+    "stations": tuple(("S1-2-%d" % n, "%04d" % n) for n in range(212, 229)),
     "up_order": "listed",
     "served": ("S1-2-216", "S1-2-222"),
     # The timetable and the API name almost every circle trip 성수 in both directions; the train map writes the
@@ -205,34 +205,48 @@ LINE2 = {
     # The last trips of both circles end at 삼성 (2520 inner and 2517 outer, weekday 2026-10-17).
     "two_direction_destinations": ("삼성",),
 }
-# 양재 (329-335) and 도곡 (331-337); up runs toward 대화, against this order.
+# 압구정 (326), ten minutes before 양재 toward 오금, to the 오금 terminus (342); up runs toward 대화, against this order.
 LINE3 = {
     "line": "3",
     "operator": "S1",
     "file": "seoul-3",
     "source": "seoul",
-    "stations": tuple(("S1-3-%d" % n, "%04d" % n) for n in range(329, 338)),
+    "stations": tuple(("S1-3-%d" % n, "%04d" % n) for n in range(326, 343)),
     "up_order": "reversed",
     "served": ("S1-3-332", "S1-3-334"),
 }
-# 잠실 (2812-2818); up runs toward 별내, against this order.
+# 장자호수공원 to 남위례, about ten minutes of running each side of 잠실, in line order; up runs toward 별내, against
+# this order. North of 천호 and at 남위례 (opened after the numbering) the KRIC code and the STATION_CD differ: KRIC
+# writes 장자호수공원 GU-8-2808 (구리도시공사) and 암사역사공원 S1-8-2809, the STATION_CDs are 2809 and 2810.
 LINE8 = {
     "line": "8",
     "operator": "S1",
     "file": "seoul-8",
     "source": "seoul",
-    "stations": tuple(("S1-8-%d" % n, "%04d" % n) for n in range(2812, 2819)),
+    "stations": (
+        ("GU-8-2808", "2809"),
+        ("S1-8-2809", "2810"),
+        ("S1-8-2811", "2811"),
+    )
+    + tuple(("S1-8-%d" % n, "%04d" % n) for n in range(2812, 2822))
+    + (("S1-8-2828", "2828"),),
     "up_order": "reversed",
     "served": ("S1-8-2815",),
 }
-# KRIC code (2026-05-11 list) and the xlsx short name, in line order: the 도곡 window (K214-K220) and the 정자 window
-# (K227-K233). Up runs toward 왕십리/청량리, against this order.
+# KRIC code (2026-05-11 list) and the xlsx short name, in line order: 왕십리 (K210), where most trains to 도곡 start,
+# through 도곡 and 정자 to 기흥 (K237), the express's first stop south of 죽전, about twelve minutes before 정자 for a
+# local and an express alike. 청량리 (K209) stays out: no position row named it on 2026-10-18, and the few trains from
+# it are in view from 왕십리 for fourteen minutes. Up runs toward 왕십리/청량리, against this order.
 LINEK1 = {
     "line": "K1",
     "operator": "KR",
     "file": "korail-k1",
     "source": "korail",
     "stations": (
+        ("KR-K1-K210", "왕십리"),
+        ("KR-K1-K211", "서울숲"),
+        ("KR-K1-K212", "로데오"),
+        ("KR-K1-K213", "강남구"),
         ("KR-K1-K214", "선정릉"),
         ("KR-K1-K215", "선릉"),
         ("KR-K1-K216", "한티"),
@@ -240,6 +254,12 @@ LINEK1 = {
         ("KR-K1-K218", "구룡역"),
         ("KR-K1-K219", "개포동"),
         ("KR-K1-K220", "대모산"),
+        ("KR-K1-K221", "수서"),
+        ("KR-K1-K222", "복정"),
+        ("KR-K1-K223", "가천대"),
+        ("KR-K1-K224", "태평"),
+        ("KR-K1-K225", "모란"),
+        ("KR-K1-K226", "야탑"),
         ("KR-K1-K227", "이매"),
         ("KR-K1-K228", "서현"),
         ("KR-K1-K229", "수내"),
@@ -247,16 +267,21 @@ LINEK1 = {
         ("KR-K1-K231", "미금"),
         ("KR-K1-K232", "오리"),
         ("KR-K1-K233", "죽전"),
+        ("KR-K1-K234", "보정"),
+        ("KR-K1-K235", "구성"),
+        ("KR-K1-K236", "신갈"),
+        ("KR-K1-K237", "기흥"),
     ),
     "up_order": "reversed",
     "served": ("KR-K1-K217", "KR-K1-K230"),
     # Every 종착역 of the 2026-08-22 file, as the Seoul API writes it.
     "termini": frozenset(("왕십리", "청량리", "죽전", "고색", "오이도", "인천", "수원")),
     "abbreviations": {"신인천": "인천", "신수원": "수원"},
-    # The 분당 express K6300-K6313 stops at every station 죽전-왕십리; the 수인 express K6350-K6358 runs 오이도-인천.
+    # The 분당 express K6300-K6313 stops at every station 죽전-왕십리 and passes 보정, 구성 and 신갈 (2026-08-22); the 수인
+    # express K6350-K6358 runs 오이도-인천.
     "is_express": lambda train_no: train_no.startswith("63"),
     "express_rule": "numbered 63xx",
-    "express_stops_at_covered": True,
+    "express_stops_at": frozenset("KR-K1-K%d" % n for n in range(210, 234)),
     "revision": KORAIL_K1_REVISION,
     "urls": {"weekday": KORAIL_K1_URL, "holiday": KORAIL_K1_URL},
     "sheets": {"weekday": ("평일상행", "평일하행"), "holiday": ("휴일상행", "휴일하행")},
@@ -555,8 +580,9 @@ def korail_train(rows, sheet, column, station_rows, direction, line=LINE1):
     if passes and not express:
         raise ConvertError("%s: train %s passes a station but is not %s" % (where, raw_no.strip(), line["express_rule"]))
     covered_passes = [code for code in passes if code is not None]
-    if covered_passes and line.get("express_stops_at_covered"):
-        raise ConvertError("%s: express %s passes %s, a covered station every express stops at" % (where, train_no, ", ".join(covered_passes)))
+    stop_passes = [code for code in covered_passes if code in line.get("express_stops_at", ())]
+    if stop_passes:
+        raise ConvertError("%s: express %s passes %s, a covered station every express stops at" % (where, train_no, ", ".join(stop_passes)))
     if not any(stop["station"] in line["served"] for stop in stops):
         return None
     destination = rows.get(3, {}).get(column)
