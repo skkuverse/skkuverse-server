@@ -23,8 +23,8 @@ export class BusStopsService {
     return this.stopCatalog;
   }
 
-  servedSequences(serviceIds: readonly string[], lang: SupportedLang): ResolvedStops {
-    return resolveStopSequences(serviceIds, lang, { catalog: this.stopCatalog, subwayTitles: this.subwayTitles });
+  servedSequences(serviceIds: readonly string[], lang: SupportedLang, hasStopMaps: boolean): ResolvedStops {
+    return resolveStopSequences(serviceIds, lang, { catalog: this.stopCatalog, subwayTitles: this.subwayTitles, hasStopMaps });
   }
 
   etaOptIns(): EtaOptIns {
