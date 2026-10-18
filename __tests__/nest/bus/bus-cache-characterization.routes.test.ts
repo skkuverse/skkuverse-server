@@ -412,9 +412,12 @@ describe("bus_cache between a poller process and an api replica", () => {
             progress: 0.4,
             segmentMeters: 250,
             nextStopInSec: null,
-            // WHY: trajectory is what add-jongro-bus-trajectory adds (task 2.2), a deliberate pin change: the observation
-            // alone, since no row names the vehicle at its next stop.
-            trajectory: [{ at: "2026-10-20T09:59:30+09:00", s: 5.4 }],
+            // WHY: trajectory is what add-jongro-bus-trajectory adds (task 2.2), a deliberate pin change: the observation,
+            // then the next stop from its 150 m left at 4 m/s, since no row names the vehicle there.
+            trajectory: [
+              { at: "2026-10-20T09:59:30+09:00", s: 5.4 },
+              { at: "2026-10-20T10:00:08+09:00", s: 6 },
+            ],
           },
         },
       ],

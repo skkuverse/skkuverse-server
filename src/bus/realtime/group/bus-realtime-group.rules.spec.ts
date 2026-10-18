@@ -375,7 +375,11 @@ describe("toTrackedStatus with a lagging position", () => {
       progress: 0,
       segmentMeters: 225,
       nextStopInSec: null,
-      trajectory: [{ atMs: Date.parse("2026-10-17T19:22:58+09:00"), s: 4 }],
+      // (An agent tooling note is left out of the public history.)
+      trajectory: [
+        { atMs: Date.parse("2026-10-17T19:22:58+09:00"), s: 4 },
+        { atMs: Date.parse("2026-10-17T19:23:54+09:00"), s: 5 },
+      ],
     });
   });
 });
@@ -556,9 +560,16 @@ describe("toTrajectory", () => {
     expect(toTrajectory(position, "atStop", { ...ROUTE02, namedBuses: named("100000015", "18:09:00", [28, 30]) })).toEqual([{ atMs: at("18:09:00"), s: 26 }]);
   });
 
-  it("holds a running bus at its observation when no row names it at its next stop", () => {
-    // Act & Assert
-    expect(toTrajectory(running88, "running", { ...ROUTE02, namedBuses: named("100000088", "18:07:53", [10, 47]) })).toEqual([{ atMs: at("18:07:45"), s: 7 + 0.015 / 0.118 }]);
+  it("reaches a next stop no row names the vehicle at by its distance at 4 m/s, then follows the rows", () => {
+    // Act
+    const trajectory = toTrajectory(running88, "running", { ...ROUTE02, namedBuses: named("100000088", "18:07:53", [10, 47]) });
+
+    // (An agent tooling note is left out of the public history.)
+    expect(trajectory).toEqual([
+      { atMs: at("18:07:45"), s: 7 + 0.015 / 0.118 },
+      { atMs: at("18:08:11"), s: 8 },
+      { atMs: at("18:08:40"), s: 9 },
+    ]);
   });
 
   it("stops at a row whose mkTm does not parse", () => {
@@ -585,3 +596,87 @@ describe("toNamedBuses", () => {
     ]);
   });
 });
+
+// WHY: with a trajectory the app ignores nextStopInSec and segmentMeters, so a next stop TOPIS gives no time for is
+// still reached at the app's own 4 m/s (add-jongro-bus-trajectory D2, agreed with skkuverse-app).
+describe("toTrajectory without a travel time", () => {
+  const at = (hhmmss: string) => Date.parse(`2026-10-18T${hhmmss}+09:00`);
+  const named = (vehId: string, madeAt: string, ...rows: Array<[staOrd: number, traTime: number]>) =>
+    rows.map(([staOrd, traTime]) => ({ bus: jongroArrivalBus({ vehId, staOrd, traTime }), madeAt: `2026-10-18 ${madeAt}.0` }));
+  // Route 02 vehicle 100000058 running at ord 21 at 18:10:53 (epoch 1792314672), 88 m into a 165 m section and named
+  // at ords 23 to 25 but not at ord 22.
+  const ahead58 = jongroPositionDoc({ sequence: "21", vehicleId: "100000058", sectDist: 0.088, fullSectDist: 0.165, observedAt: "2026-10-18T18:10:53+09:00" });
+  const rows58 = named("100000058", "18:11:10", [23, 37], [24, 92], [25, 136]);
+
+  it("reaches the next stop from the rest of its section at 4 m/s, kept 20 s after the observation", () => {
+    // Act
+    const trajectory = toTrajectory(ahead58, "running", { ...ROUTE02, namedBuses: rows58 });
+
+    // Assert
+    // 77 m left at 4 m/s is 19 s, so the knot is held 20 s after the observation.
+    expect(trajectory).toEqual([
+      { atMs: at("18:10:53"), s: 20 + 0.088 / 0.165 },
+      { atMs: at("18:11:13"), s: 21 },
+      { atMs: at("18:11:47"), s: 22 },
+      { atMs: at("18:12:42"), s: 23 },
+    ]);
+  });
+
+  it("reaches an atStop bus's next stop from its departure over the whole section (hand-edited: its ord 20 row removed)", () => {
+    // Arrange
+    // Route 02 vehicle 100000058 at a stop at ord 19 at 18:08:33 (epoch 1792314531), first observed there.
+    const position = jongroPositionDoc({ sequence: "19", vehicleId: "100000058", sectDist: 0, fullSectDist: 0.135, isAtStop: true, observedAt: "2026-10-18T18:08:33+09:00" });
+
+    // Act
+    const trajectory = toTrajectory(position, "atStop", { ...ROUTE02, namedBuses: named("100000058", "18:08:36", [21, 114]) });
+
+    // Assert
+    // 135 m at 4 m/s is 34 s after the 18:08:48 departure.
+    expect(trajectory).toEqual([
+      { atMs: at("18:08:33"), s: 18 },
+      { atMs: at("18:08:48"), s: 18 },
+      { atMs: at("18:09:22"), s: 19 },
+      { atMs: at("18:10:30"), s: 20 },
+    ]);
+  });
+
+  it("builds no later stop from distance", () => {
+    // Act & Assert
+    expect(toTrajectory(ahead58, "running", { ...ROUTE02, namedBuses: [] }).map((knot) => knot.s)).toEqual([20 + 0.088 / 0.165, 21]);
+  });
+
+  it.each([
+    ["running", { sectDist: 0.088, fullSectDist: 0 }, [20]],
+    ["atStop", { sectDist: 0, fullSectDist: 0, isAtStop: true }, [20, 20]],
+  ] as const)("builds no %s next stop from distance when the section has no length", (status, fields, expected) => {
+    // Arrange
+    const position = jongroPositionDoc({ ...ahead58, ...fields });
+
+    // Act & Assert
+    expect(toTrajectory(position, status, { ...ROUTE02, namedBuses: [] }).map((knot) => knot.s)).toEqual(expected);
+  });
+});
+
+// WHY: s is in stationIndex's index space and knot 0 stays in the bus's own section, floor(s) == stationIndex
+// (agreed with skkuverse-app), even when TOPIS's sectDist reaches or passes fullSectDist.
+describe("toTrajectory's first knot", () => {
+  it.each([
+    ["at the stop it passed", 0, 0.3, "running"],
+    ["halfway", 0.15, 0.3, "running"],
+    ["a meter short of the next stop", 0.299, 0.3, "running"],
+    ["at the next stop's distance", 0.3, 0.3, "running"],
+    ["past the next stop's distance", 0.31, 0.3, "running"],
+    ["at a stop", 0.09, 0.3, "atStop"],
+  ] as const)("keeps floor(s) at the station index for a bus %s", (_case, sectDist, fullSectDist, status) => {
+    // Arrange
+    const position = jongroPositionDoc({ sequence: "6", sectDist, fullSectDist, isAtStop: status === "atStop" });
+
+    // Act
+    const [first] = toTrajectory(position, status, { ...ROUTE07, namedBuses: [] });
+
+    // Assert
+    expect(Math.floor(first!.s)).toBe(5);
+    expect(first!.s).toBeGreaterThanOrEqual(5);
+  });
+});
+

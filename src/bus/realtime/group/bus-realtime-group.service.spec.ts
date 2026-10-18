@@ -116,7 +116,11 @@ describe("BusRealtimeGroupService.getGroup", () => {
             progress: 0.5,
             segmentMeters: 300,
             nextStopInSec: null,
-            trajectory: [{ at: "2026-10-20T10:00:00+09:00", s: 5.5 }],
+            // (An agent tooling note is left out of the public history.)
+            trajectory: [
+              { at: "2026-10-20T10:00:00+09:00", s: 5.5 },
+              { at: "2026-10-20T10:00:38+09:00", s: 6 },
+            ],
           },
         },
       ],
@@ -517,7 +521,13 @@ describe("BusRealtimeGroupService.getGroup waiting arrivals and lagging position
           progress: 0,
           segmentMeters: 225,
           nextStopInSec: null,
-          trajectory: [{ at: "2026-10-17T19:22:58+09:00", s: 4 }],
+          // (An agent tooling note is left out of the public history.)
+          trajectory: [
+            { at: "2026-10-17T19:22:58+09:00", s: 4 },
+            { at: "2026-10-17T19:23:54+09:00", s: 5 },
+            { at: "2026-10-17T19:24:14+09:00", s: 6 },
+            { at: "2026-10-17T19:24:59+09:00", s: 7 },
+          ],
         },
       },
     ]);
@@ -591,3 +601,19 @@ describe("BusRealtimeGroupService.getGroup trajectories", () => {
     expect(group.meta).toEqual({ currentTime: "10:00 AM", totalBuses: 3, serverNow: "2026-10-20T10:00:00+09:00" });
   });
 });
+
+// WHY: s is in stationIndex's index space and knot 0 stays in the bus's own section (agreed with skkuverse-app).
+describe("BusRealtimeGroupService.getGroup trajectory index space", () => {
+  it.each([0, 0.15, 0.3, 0.31])("serves knot 0 with floor(s) equal to the bus's stationIndex at sectDist %d of 0.3", async (sectDist) => {
+    // Arrange
+    busCache.values.set("jongro_locations_07", [jongroPositionDoc({ sequence: "6", sectDist, fullSectDist: 0.3 })]);
+
+    // Act
+    const [bus] = (await service.getGroup("jongro07")).data.buses;
+
+    // Assert
+    const trajectory = bus && "tracked" in bus && "trajectory" in bus.tracked ? bus.tracked.trajectory : [];
+    expect(Math.floor(trajectory[0]!.s)).toBe(bus!.stationIndex);
+  });
+});
+
