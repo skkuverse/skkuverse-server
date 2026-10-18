@@ -8,7 +8,7 @@ import { BusRegistryService } from "../../registry/bus-registry.service";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 import { toJongroBusPosition } from "./bus-realtime-jongro.mapper";
-import { isStationary, toArrivalsKey, toDwell, toPositionsKey } from "./bus-realtime-jongro.rules";
+import { isIdlingAtOrigin, isStationary, toArrivalsKey, toDwell, toPositionsKey } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting, JongroVehicleObservation } from "./bus-realtime-jongro.types";
 
 @Injectable()
@@ -68,9 +68,11 @@ export class BusRealtimeJongroService {
   private observeVehicles(code: string, sightings: readonly JongroBusSighting[]): Map<string, boolean> {
     const previousByVehicleId = this.observationByVehicleIdByCode.get(code) ?? new Map<string, JongroVehicleObservation>();
     const observationByVehicleId = new Map<string, JongroVehicleObservation>();
-    for (const { vehicleId, sectOrd, sectDist, observedAt } of sightings) {
-      const current = { sectOrd, sectDist, observedAt };
-      observationByVehicleId.set(vehicleId, { ...current, isStationary: isStationary(previousByVehicleId.get(vehicleId), current) });
+    for (const sighting of sightings) {
+      const previous = previousByVehicleId.get(sighting.vehicleId);
+      const { sectOrd, sectDist, observedAt } = sighting;
+      const stationary = isStationary(previous, { sectOrd, sectDist, observedAt }) || isIdlingAtOrigin(previous, sighting);
+      observationByVehicleId.set(sighting.vehicleId, { sectOrd, sectDist, observedAt, isStationary: stationary });
     }
     this.observationByVehicleIdByCode.set(code, observationByVehicleId);
     return new Map([...observationByVehicleId].map(([vehicleId, observation]) => [vehicleId, observation.isStationary]));
