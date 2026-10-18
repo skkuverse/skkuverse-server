@@ -1,21 +1,40 @@
 {
-  "_about": "Hand-written from captures, since the arrivals shape is not deployed yet: buses from GET /bus/realtime/data/jongro07 captured from production 2026-10-14 (trimmed to their first entries); stationEtas from TOPIS getArrInfoByRouteAll busRouteId=100900004 captured 2026-10-17 19:16 KST (ord 2 and 12, the same rows as __tests__/nest/bus/fixtures/topis-jongro-arrivals.json jongro07Waiting), each bus through the arrival rules on 18 seats. stationsVersion is the jongro07 registry document's as seeded from src/bus/registry/jongro-stations.seed.json (2026-10-17).",
+  "_about": "Hand-written from captures, since the tracked bus shape is not deployed yet: buses from TOPIS getBusPosByRtid busRouteId=100900004 captured 2026-10-17 19:12 KST (vehicles 100000114 and 100000103, pos_100900004_1792231921) joined with the arrival rows of the same moment through the add-jongro-bus-positions rules (estimatedTime, the dwell, is illustrative); stationEtas from TOPIS getArrInfoByRouteAll busRouteId=100900004 captured 2026-10-17 19:16 KST (ord 2 and 12, the same rows as __tests__/nest/bus/fixtures/topis-jongro-arrivals.json jongro07Waiting), each bus through the arrival rules on 18 seats. stationsVersion is the jongro07 registry document's as seeded from src/bus/registry/jongro-stations.seed.json (2026-10-17).",
   "data": {
     "groupId": "jongro07",
     "buses": [
       {
-        "stationIndex": 21,
-        "carNumber": "5537",
+        "stationIndex": 1,
+        "carNumber": "5538",
         "estimatedTime": 40,
-        "latitude": "37.587863",
-        "longitude": "126.99237"
+        "latitude": "37.586893",
+        "longitude": "126.994075",
+        "kind": "tracked",
+        "tracked": {
+          "status": "running",
+          "vehicleId": "100000114",
+          "observedAt": "2026-10-17T19:11:45+09:00",
+          "crowding": "relaxed",
+          "isLastBus": false,
+          "progress": 0.20761245674740486,
+          "segmentMeters": 289,
+          "nextStopInSec": 33
+        }
       },
       {
-        "stationIndex": 21,
-        "carNumber": "5536",
-        "estimatedTime": 40,
-        "latitude": "37.587863",
-        "longitude": "126.99237"
+        "stationIndex": 13,
+        "carNumber": "5537",
+        "estimatedTime": 0,
+        "latitude": "37.576948",
+        "longitude": "127.002008",
+        "kind": "tracked",
+        "tracked": {
+          "status": "atStop",
+          "vehicleId": "100000103",
+          "observedAt": "2026-10-17T19:11:44+09:00",
+          "crowding": "relaxed",
+          "isLastBus": false
+        }
       }
     ],
     "stationEtas": [

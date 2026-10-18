@@ -1,6 +1,6 @@
 import type { BusCacheKey } from "../../cache/bus-cache.document";
-import { DWELL_RESET_MINUTES } from "./bus-realtime-jongro.constants";
-import type { JongroBusDwell } from "./bus-realtime-jongro.types";
+import { DWELL_RESET_MINUTES, MAX_STATIONARY_MOVE_METERS } from "./bus-realtime-jongro.constants";
+import type { JongroBusDwell, JongroVehicleObservation } from "./bus-realtime-jongro.types";
 
 export function toArrivalsKey(code: string): BusCacheKey & `jongro_stations_${string}` {
   return `jongro_stations_${code}`;
@@ -31,4 +31,28 @@ export function toDwell(firstSeenAt: string | undefined, now: Date): JongroBusDw
   const minutesHeld = firstSeenAt ? (now.getTime() - new Date(firstSeenAt).getTime()) / 1000 / 60 : 0;
   if (!firstSeenAt || minutesHeld > DWELL_RESET_MINUTES) return { firstSeenAt: now.toISOString(), dwellSeconds: 0 };
   return { firstSeenAt, dwellSeconds: Math.round((now.getTime() - new Date(firstSeenAt).getTime()) / 1000) };
+}
+
+export function toTopisDecimal(text: string | null | undefined): number | null {
+  const trimmed = text?.trim() ?? "";
+  return /^\d+(?:\.\d+)?$/.test(trimmed) ? Number(trimmed) : null;
+}
+
+// QUIRK(topis): dataTm is a KST wall clock, yyyyMMddHHmmss, with no offset.
+export function toObservedAt(dataTm: string | null | undefined): string | null {
+  const match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(dataTm?.trim() ?? "");
+  if (!match) return null;
+  const [, year, month, day, hour, minute, second] = match;
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}+09:00`;
+}
+
+// WHY: TOPIS repeats an observation across polls, so only an advanced observation time is new evidence;
+// sectDist comes in km with three decimals, compared in whole meters.
+export function isStationary(
+  previous: JongroVehicleObservation | undefined,
+  current: Omit<JongroVehicleObservation, "isStationary">,
+): boolean {
+  if (!previous || previous.sectOrd !== current.sectOrd) return false;
+  if (Date.parse(current.observedAt) <= Date.parse(previous.observedAt)) return previous.isStationary;
+  return Math.round(Math.abs(current.sectDist - previous.sectDist) * 1000) < MAX_STATIONARY_MOVE_METERS;
 }
