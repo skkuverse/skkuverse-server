@@ -5,10 +5,11 @@
  */
 import { toEtaSequences } from "../bus-eta.rules";
 import { BusStopsService } from "../../stops/bus-stops.service";
+import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
 import { loadLaneConfig, readLaneConfig } from "./bus-eta-lane.config";
 import { strategyOf } from "./bus-eta-lane.rules";
 
-const stops = new BusStopsService();
+const stops = new BusStopsService(new SubwayStationsService());
 const estimated = toEtaSequences(stops.catalog(), stops.etaOptIns());
 
 const committed: Record<string, unknown> = require("./bus-lane.json");

@@ -442,6 +442,21 @@
                       "markers",
                       "paths"
                     ]
+                  },
+                  "subwayStation": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title"
+                    ]
                   }
                 },
                 "required": [

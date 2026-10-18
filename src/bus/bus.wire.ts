@@ -41,6 +41,9 @@ export const stopMap = z.object({
   paths: z.array(z.object({ kind: z.literal("walk"), from: z.string(), to: z.string(), points: z.array(latLng) })),
 });
 
+// WHY: `id` is the slug GET /subway/stations/:stationId/arrivals takes; `title` is the station title the transit tab shows.
+const stopSubwayStation = z.object({ id: z.string(), title: z.string() });
+
 export const servedStop = z.object({
   id: z.string(),
   name: z.string(),
@@ -49,6 +52,7 @@ export const servedStop = z.object({
   photoUrl: z.string().optional(),
   streetViewUrl: z.string().optional(),
   map: stopMap.optional(),
+  subwayStation: stopSubwayStation.optional(),
 });
 
 export type JongroRoutesFile = z.input<typeof jongroRoutesFile>;

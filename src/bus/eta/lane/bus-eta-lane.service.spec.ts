@@ -7,13 +7,14 @@ import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bu
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import type { BusScheduleService } from "../../schedule/bus-schedule.service";
 import { BusStopsService } from "../../stops/bus-stops.service";
+import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
 import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaService } from "../bus-eta.service";
 import { BusEtaLaneService } from "./bus-eta-lane.service";
 
 const committed: { entryExit: Record<string, unknown>; corridor: { centerline: unknown[] } } = require("./bus-lane.json");
 
-const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, new BusStopsService());
+const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, new BusStopsService(new SubwayStationsService()));
 const lane = new BusEtaLaneService(eta);
 
 describe("BusEtaLaneService", () => {
