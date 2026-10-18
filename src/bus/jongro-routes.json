@@ -4,7 +4,7 @@
     "busRouteId": "100900008",
     "themeColor": "4CAF50",
     "iconType": "village",
-    "refreshInterval": 40,
+    "refreshInterval": 25,
     "seatCount": 18,
     "transferLinesByArsId": {
       "01200": [{"line": "3", "color": "EF7C1C"}],
@@ -27,7 +27,7 @@
     "busRouteId": "100900004",
     "themeColor": "4CAF50",
     "iconType": "village",
-    "refreshInterval": 40,
+    "refreshInterval": 25,
     "seatCount": 18,
     "transferLinesByArsId": {
       "01220": [{"line": "4", "color": "00A5DE"}],
@@ -43,7 +43,7 @@
     "busRouteId": "100900005",
     "themeColor": "4CAF50",
     "iconType": "village",
-    "refreshInterval": 40,
+    "refreshInterval": 25,
     "seatCount": 18,
     "transferLinesByArsId": {
       "01220": [{"line": "4", "color": "00A5DE"}],

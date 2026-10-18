@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured: the route had not shipped; generated 2026-10-17 by UiTransitService over the committed transit-layout.json, the real bus groups and the served stations at 2026-10-20 12:00 KST (commute pilot open, fasttrack closed), Accept-Language ko; whole data",
+  "_about": "Synthetic, never captured: the route had not shipped; generated 2026-10-17 by UiTransitService (regenerated the same day for the station rows of add-commute-station-subway) over the committed transit-layout.json, the real bus groups and the served stations at 2026-10-20 12:00 KST (commute pilot open, fasttrack closed), Accept-Language ko; whole data, except the nsc group `group:commute-stations`, hand-written the same day as design D5 of add-commute-station-subway serves it (placeholder copy) and trimmed to its first two stations, Jeongja and Jamsil, with their lines as design D2a gives them, because the registry does not serve those stations yet",
   "data": {
     "version": 1,
     "sections": [
@@ -33,18 +33,21 @@
         "items": [
           {
             "kind": "subway",
-            "id": "subway:S1-4-420",
-            "stationId": "S1-4-420",
+            "id": "subway:hyehwa",
+            "stationId": "hyehwa",
             "title": "혜화역",
             "subtitle": "4호선",
-            "icon": {
-              "type": "subway",
-              "color": "00A5DE",
-              "text": "4"
-            },
+            "lines": [
+              {
+                "code": "4",
+                "name": "4호선",
+                "badge": "4",
+                "color": "00A5DE"
+              }
+            ],
             "action": {
               "actionType": "route",
-              "actionValue": "/subway?station=S1-4-420"
+              "actionValue": "/subway?station=hyehwa"
             }
           },
           {
@@ -120,18 +123,21 @@
         "items": [
           {
             "kind": "subway",
-            "id": "subway:KR-1-0153",
-            "stationId": "KR-1-0153",
+            "id": "subway:sungkyunkwan",
+            "stationId": "sungkyunkwan",
             "title": "성균관대역",
             "subtitle": "1호선",
-            "icon": {
-              "type": "subway",
-              "color": "0052A4",
-              "text": "1"
-            },
+            "lines": [
+              {
+                "code": "1",
+                "name": "1호선",
+                "badge": "1",
+                "color": "0052A4"
+              }
+            ],
             "action": {
               "actionType": "route",
-              "actionValue": "/subway?station=KR-1-0153"
+              "actionValue": "/subway?station=sungkyunkwan"
             }
           },
           {
@@ -149,6 +155,70 @@
               "actionType": "route",
               "actionValue": "/bus/schedule?groupId=commute"
             }
+          },
+          {
+            "kind": "group",
+            "id": "group:commute-stations",
+            "title": "통학버스 정류장 지하철",
+            "subtitle": "정자 · 잠실 · 도곡 · 강남 · 양재 · 광교중앙",
+            "icon": {
+              "type": "subway",
+              "color": "8B95A1",
+              "text": "환승"
+            },
+            "initialState": "collapsed",
+            "items": [
+              {
+                "kind": "subway",
+                "id": "subway:jeongja",
+                "stationId": "jeongja",
+                "title": "정자역",
+                "subtitle": "신분당선 · 수인분당선",
+                "lines": [
+                  {
+                    "code": "D1",
+                    "name": "신분당선",
+                    "badge": "신분당",
+                    "color": "D4003B"
+                  },
+                  {
+                    "code": "K1",
+                    "name": "수인분당선",
+                    "badge": "수인분당",
+                    "color": "F5A200"
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=jeongja"
+                }
+              },
+              {
+                "kind": "subway",
+                "id": "subway:jamsil",
+                "stationId": "jamsil",
+                "title": "잠실역",
+                "subtitle": "2호선 · 8호선",
+                "lines": [
+                  {
+                    "code": "2",
+                    "name": "2호선",
+                    "badge": "2",
+                    "color": "00A84D"
+                  },
+                  {
+                    "code": "8",
+                    "name": "8호선",
+                    "badge": "8",
+                    "color": "E6186C"
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=jamsil"
+                }
+              }
+            ]
           }
         ]
       }

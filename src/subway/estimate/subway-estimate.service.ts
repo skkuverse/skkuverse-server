@@ -15,7 +15,7 @@ export class SubwayEstimateService {
 
   // WHY: the countdown memory is advanced by the tracker's ticks only, so a timetable-only document built between
   // them, as an api process serving a stale state does, never resets it.
-  listScheduledArrivals(input: Pick<EstimateInput, "stationId" | "direction" | "trains" | "now">): TrainArrival[] {
+  listScheduledArrivals(input: Pick<EstimateInput, "platformId" | "direction" | "trains" | "now">): TrainArrival[] {
     return toStationArrivals({ ...input, histories: new Map(), countdownRows: [], isTracked: false }).arrivals;
   }
 }

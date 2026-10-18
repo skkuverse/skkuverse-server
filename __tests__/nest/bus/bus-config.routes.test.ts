@@ -4,7 +4,7 @@
  * registry, whose repository is an in-memory fake the boot seeds. Asserts group shape, 404
  * GROUP_NOT_FOUND, 304, per-language ETag difference, and the hssc (11 stations,
  * lastStationIndex 10, refreshInterval 10) / jongro07 (22 stations,
- * refreshInterval 40) screen contents.
+ * refreshInterval 25) screen contents.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -167,7 +167,7 @@ describe("GET /bus/config/:groupId", () => {
     expect(screen.routeBadges.length).toBeGreaterThan(0);
   });
 
-  it("hssc screen has dataEndpoint, refreshInterval, stations, routeOverlay", async () => {
+  it("hssc screen has dataEndpoint, refreshInterval and stations", async () => {
     // Arrange
     const res = await request(httpServer).get("/bus/config/hssc");
 
@@ -182,10 +182,9 @@ describe("GET /bus/config/:groupId", () => {
     expect(screen.stations).toHaveLength(11);
     expect(screen.stations[0]).toHaveProperty("index", 0);
     expect(screen.stations[0]).toHaveProperty("name");
-    expect(screen.routeOverlay).toBeNull();
   });
 
-  it("jongro07 screen has stations and routeOverlay", async () => {
+  it("jongro07 screen has dataEndpoint, refreshInterval and stations", async () => {
     // Arrange
     const res = await request(httpServer).get("/bus/config/jongro07");
 
@@ -194,10 +193,9 @@ describe("GET /bus/config/:groupId", () => {
 
     // Assert
     expect(screen.dataEndpoint).toBe("/bus/realtime/data/jongro07");
-    expect(screen.refreshInterval).toBe(40);
+    expect(screen.refreshInterval).toBe(25);
     expect(screen.stations).toHaveLength(22);
     expect(screen.lastStationIndex).toBe(21);
-    expect(screen.routeOverlay).toBeNull();
   });
 
   it("jongro08 has its label, subtitle and 31-stop screen", async () => {

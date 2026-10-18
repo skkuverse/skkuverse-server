@@ -12,19 +12,24 @@ const transitIconFile = z.strictObject({
   text: localizedText,
 });
 
-const transitItemFile = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("bus"), groupId: z.string() }),
-  z.strictObject({ kind: z.literal("subway"), stationId: z.string() }),
-  z.strictObject({
-    kind: z.literal("link"),
-    id: slug,
-    title: localizedText,
-    subtitle: localizedText.optional(),
-    icon: transitIconFile,
-    actionType: linkActionType,
-    actionValue: z.string(),
-  }),
-]);
+const busItemFile = z.strictObject({ kind: z.literal("bus"), groupId: z.string() });
+const subwayItemFile = z.strictObject({ kind: z.literal("subway"), stationId: z.string() });
+const rowFileFields = { id: slug, title: localizedText, subtitle: localizedText.optional(), icon: transitIconFile };
+const linkItemFile = z.strictObject({ kind: z.literal("link"), ...rowFileFields, actionType: linkActionType, actionValue: z.string() });
+
+const transitChildFile = z.discriminatedUnion("kind", [busItemFile, subwayItemFile, linkItemFile], {
+  error: "a group holds only bus, subway or link items",
+});
+
+const transitGroupFile = z.strictObject({
+  kind: z.literal("group"),
+  ...rowFileFields,
+  initialState: z.enum(["collapsed", "expanded"]),
+  visibleWith: busItemFile.optional(),
+  items: z.array(transitChildFile).min(1),
+});
+
+const transitItemFile = z.discriminatedUnion("kind", [busItemFile, subwayItemFile, linkItemFile, transitGroupFile]);
 
 const transitSectionFile = z.strictObject({
   type: z.literal("item_list"),
@@ -33,17 +38,26 @@ const transitSectionFile = z.strictObject({
   items: z.array(transitItemFile).min(1),
 });
 
+type TransitSectionRaw = z.output<typeof transitSectionFile>;
+const childrenOf = (item: TransitSectionRaw["items"][number]) => (item.kind === "group" ? item.items : []);
+
 export const transitLayoutFile = z
   .strictObject({ version: z.literal(TRANSIT_LAYOUT_VERSION), sections: z.array(transitSectionFile) })
   .superRefine((layout, ctx) => {
     // WHY: an item id is the analytics id of a tap, and a repeat would place one group or station twice.
     const repeatedSection = findRepeatedId(layout.sections.map((section, i) => ({ id: section.id, path: ["sections", i, "id"] })));
     const repeatedItem = findRepeatedId(
-      layout.sections.flatMap((section, i) => section.items.map((item, j) => ({ id: toTransitItemId(item), path: ["sections", i, "items", j] }))),
+      layout.sections.flatMap((section, sectionIndex) =>
+        section.items.flatMap((item, itemIndex) => {
+          const path = ["sections", sectionIndex, "items", itemIndex];
+          return [{ id: toTransitItemId(item), path }, ...childrenOf(item).map((child, k) => ({ id: toTransitItemId(child), path: [...path, "items", k] }))];
+        }),
+      ),
     );
     if (repeatedSection) ctx.addIssue({ code: "custom", path: repeatedSection.path, message: `duplicate section id "${repeatedSection.id}"` });
     if (repeatedItem) ctx.addIssue({ code: "custom", path: repeatedItem.path, message: `item "${repeatedItem.id}" is placed more than once` });
   });
 
 export type TransitLayoutRaw = z.output<typeof transitLayoutFile>;
-export type TransitItemRaw = TransitLayoutRaw["sections"][number]["items"][number];
+export type TransitItemRaw = TransitSectionRaw["items"][number];
+export type TransitChildRaw = z.output<typeof transitChildFile>;

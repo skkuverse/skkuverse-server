@@ -9,7 +9,7 @@ const HYEHWA = "S1-4-420";
 
 const at = (kst: string): Date => new Date(`2026-10-17T${kst}+09:00`);
 
-const row = (generatedAt: string, remainingSec: number): CountdownRow => ({ trainNo: "4540", stationId: HYEHWA, generatedAt: at(generatedAt), remainingSec });
+const row = (generatedAt: string, remainingSec: number): CountdownRow => ({ trainNo: "4540", platformId: HYEHWA, generatedAt: at(generatedAt), remainingSec });
 
 describe("SubwayCountdownService.listFirstPublishedRows", () => {
   it("dates 4540's 150 s from 10:54:25 over the 2026-10-17 ticks, also once spent at 10:56:55", () => {

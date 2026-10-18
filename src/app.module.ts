@@ -24,7 +24,6 @@ import { BusEtaLiveModule } from "./bus/eta/live/bus-eta-live.module";
 import { BusEtaBaselineModule } from "./bus/eta/baseline/bus-eta-baseline.module";
 import { BusEtaSmartModule } from "./bus/eta/smart/bus-eta-smart.module";
 import { BusConfigModule } from "./bus/config/bus-config.module";
-import { BusRouteOverlayModule } from "./bus/route-overlay/bus-route-overlay.module";
 import { AppConfigModule } from "./app-config/app-config.module";
 import { UiModule } from "./ui/ui.module";
 import { UiHomeModule } from "./ui/home/ui-home.module";
@@ -64,7 +63,9 @@ import { SubwayCountdownModule } from "./subway/countdown/subway-countdown.modul
 import { SubwayEstimateModule } from "./subway/estimate/subway-estimate.module";
 import { SubwaySeoulApiModule } from "./subway/seoul-api/subway-seoul-api.module";
 import { SubwaySeoulTrainmapModule } from "./subway/seoul-trainmap/subway-seoul-trainmap.module";
+import { SubwayStateModule } from "./subway/state/subway-state.module";
 import { SubwayTrackingModule } from "./subway/tracking/subway-tracking.module";
+import { SubwayMatchingModule } from "./subway/matching/subway-matching.module";
 import { SubwaySeoulModule } from "./subway/seoul/subway-seoul.module";
 import { SubwayArrivalsModule } from "./subway/arrivals/subway-arrivals.module";
 import { SubwayHistoryModule } from "./subway/history/subway-history.module";
@@ -98,7 +99,6 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusEtaBaselineModule,
     BusEtaSmartModule,
     BusConfigModule,
-    BusRouteOverlayModule,
     AppConfigModule,
     UiModule,
     UiHomeModule,
@@ -141,7 +141,9 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     SubwayEstimateModule,
     SubwaySeoulApiModule,
     SubwaySeoulTrainmapModule,
+    SubwayStateModule,
     SubwayTrackingModule,
+    SubwayMatchingModule,
     SubwaySeoulModule,
     SubwayArrivalsModule,
     SubwayHistoryModule,

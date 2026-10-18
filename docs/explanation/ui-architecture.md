@@ -20,7 +20,7 @@ Ui owns no data store. It serves three JSON files committed next to their reader
 | The committed config files | — | The home layout, the campus carousel and the transit layout, edited by hand and shipped with a deploy | `readHomeLayout`, `readCampusBanners`, `readTransitLayout` |
 | The mini-app registry | — | Which mini apps exist, the target and emoji checks, and the logo of a link tile | `MiniappsService`, injected into `UiHomeService`, `UiCampusService` and `UiTransitService` |
 | The bus groups | — | Each group's label, card, screen type and visibility; the boot check reads only their ids (`BusConfigService.listGroupIds`) | `BusConfigService.getBusGroups`, injected into `UiTransitListService` and `UiTransitService` |
-| The served subway stations | — | Each station's title, line code, line label and line color | `SubwayStationsService.listStations`, injected into `UiTransitService` |
+| The served subway stations | — | Each physical station's slug and title, and each of its lines' code, name, badge and color, from subway's registry | `SubwayStationsService.listStations`, injected into `UiTransitService` |
 | moment-timezone | `moment` | A bus group's KST dates and first-day time; a strict parse still reads `24:00` as the next midnight | `isBusGroupVisible` |
 | The translations | — | The titles of the scroll cards | `t` in `src/infra/i18n.ts` |
 | skkuverse-app | — | Nothing; it reads the routes | `GET /ui/home` and its siblings |
@@ -41,7 +41,11 @@ Ui owns no data store. It serves three JSON files committed next to their reader
 | campus sheet (`CampusSheet`) | The `GET /ui/home/campus` body: the campus carousel while a banner shows, else no section | `toCampusSheet` | `campusConfig` |
 | transit layout (`TransitLayout`) | The `GET /ui/home/transit` body: a version and the transit sections the transit tab draws in order | `toTransitSection` over `transit-layout.json` | — |
 | transit section | One `item_list` of the transit layout: an id, a title (null when the layout gives none, and the app draws no header) and its transit items; one left with no item is not served | `toTransitSection` | — |
-| transit item | One row of a transit section: a `kind` (`bus`, `subway` or `link`) naming its referent, and the id, title, subtitle, icon and action every kind carries | a bus group, a served station or a link written in `transit-layout.json` | — |
+| transit item | One row of a transit section: a `kind` (`bus`, `subway`, `link` or `group`) naming its referent, and the id, title and subtitle every kind carries; a bus, subway or link item carries an action, and a bus, link or group item an icon | a bus group, a served station, a link or a group written in `transit-layout.json` | — |
+| group item | A `group` transit item: a box the app folds and unfolds, with its own title, subtitle and icon, its initial state and the bus, subway or link items it holds, each served as at the top of a section; it holds no group and carries no action | `toGroupTransitItems` over `transit-layout.json` | — |
+| initial state | A group item's `initialState`, `collapsed` or `expanded`, written in the layout with no default and served as written: how the app first draws the box | `transit-layout.json` | — |
+| visible with | A group's `visibleWith`, one bus group of its own section: the group shows only while that bus group does, and the field is never served | `toGroupTransitItems` | — |
+| station row | A `subway` transit item: one physical station by its slug, titled with its station suffix, its lines' names joined by ` · ` as its subtitle and `lines`, each line's code, name, badge and color, in place of an icon; it opens `/subway?station=<slug>` | `SubwayStationsService.listStations` | — |
 | bus group card | One bus group as the transit tab lists it: its card and the screen a tap opens | `toBusGroupCard` | `busItem` |
 | scroll card (`ScrollCards`) | One of the three cards `GET /ui/home/scroll` sends | `toScrollCards` | `scrollItem` |
 | registry (`MiniAppRegistry`) | What the boot checks read from `MiniappsService` | `MiniappsService` | — |
@@ -84,13 +88,15 @@ What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `sk
 | `/ui/home/transitlist` `meta.busListCount` | Served, not read |
 | `/ui/home/transit` `sections` | No caller in the app sources yet; the sectioned transit tab is to draw each in order and drop a section of an unknown type |
 | `/ui/home/transit` item `kind`, `action` | The tab is to drop an item of an unknown kind and open `action` on a tap, never a route derived from `kind` |
+| `/ui/home/transit` group `initialState`, `items` | The tab is to draw a group as a gray box, folded or unfolded by `initialState` until the user toggles it, and its items inside |
 | `/ui/home/scroll` | No caller in the app sources |
 
 ## Invariants
 
 - Both config files are parsed when Nest builds `UiHomeService` and `UiCampusService`, so a bad file, an unregistered mini app, a broken link action or a tile placed twice stops the boot (`loadHomeLayout`, `loadCampusBanners`). Unknown keys are refused, so a misspelt key cannot pass and do nothing.
-- The transit layout is parsed when Nest builds `UiTransitService`: an unknown bus group or station, a repeated section or item id, an empty section, a broken link action, or a bus group or served station left unplaced stops the boot (`loadTransitLayout`). A group meant to be hidden keeps its place and uses its visibility. The bus groups are read per request from the bus config, whose Jongro stations come from the bus registry, so a missing registry route answers `503 JONGRO_REGISTRY_UNAVAILABLE` on both transit routes too ([bus](bus-architecture.md), "Invariants").
-- A transit item's id is `bus:` or `subway:` and its referent's id, or a link's own slug (`toTransitItemId`); a transit item carries no arrival, which stays on each kind's own route.
+- The transit layout is parsed when Nest builds `UiTransitService`: an unknown bus group or station, a repeated section or item id, an empty section or group, a broken link action, a group inside a group or without `initialState`, a `visibleWith` bus group that is unknown or that its own section does not place, or a bus group or served station not placed exactly once, children of groups counted, stops the boot (`loadTransitLayout`). A group meant to be hidden keeps its place and uses its visibility. The bus groups are read per request from the bus config, whose Jongro stations come from the bus registry, so a missing registry route answers `503 JONGRO_REGISTRY_UNAVAILABLE` on both transit routes too ([bus](bus-architecture.md), "Invariants").
+- A transit item's id is `bus:`, `subway:` or `group:` and its referent's id, or a link's own slug (`toTransitItemId`); a transit item carries no arrival, which stays on each kind's own route.
+- Per request, a group whose `visibleWith` bus group is hidden is left out, then hidden bus items inside a group, then a group left with no item, then an emptied section (`toGroupTransitItems`, `UiTransitService`).
 - Section and banner ids share one namespace and tile ids another (`findDuplicateId`): each is an analytics item id for a tap.
 - A banner shows inside its window on the injected `Clock` (`isBannerShowing`). `GET /ui/home`, `GET /ui/home/campus` and `GET /ui/home/transit` are cached for `UI_CACHE_CONTROL`, which also bounds how late a window takes effect.
 - An emptied home carousel is still sent, because the app draws its default banner there; an emptied campus carousel is left out, because the campus sheet has none.

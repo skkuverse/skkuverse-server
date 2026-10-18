@@ -2,9 +2,11 @@
  * SubwaySeoulService, the `seoul` provider, over scripted clients (the typed
  * fakes in __tests__/helpers/fakes/subway/) fed the captured 2026-10-09 and
  * 2026-10-16 payloads, and a fixed Clock. What it guards: an API tick makes
- * the 4 calls of design D7 (positions of `1호선` and `4호선`, arrivals of
- * `성균관대` and `혜화`) and returns their events and countdown rows merged; a train-map
- * tick crawls lines 1 and 4 once each and stamps their events with the
+ * one position call per registered line and one arrival call per registered
+ * station (the `1호선`, `4호선`, `성균관대` and `혜화` captures answer, the others no rows) and returns their events
+ * and countdown rows merged, each arrival row read against the tick's time; a train-map
+ * tick crawls the one page of every line once (the line 1 and line 4 captures
+ * joined stand for it), reads lines 1 and 4 from it and stamps their events with the
  * Clock's time; each tick names its upstream as its source, so the tracker
  * keeps one upstream's countdown rows apart from the other's; and a failing
  * call is handed on beside what the tick's other calls answered, and only a
@@ -23,6 +25,7 @@ import type { SubwaySeoulApiClient } from "../seoul-api/subway-seoul-api.client"
 import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import type { SubwaySeoulTrainmapClient } from "../seoul-trainmap/subway-seoul-trainmap.client";
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
+import { SUBWAY_REGISTRY } from "../subway.config";
 import type { TrainEvent } from "../subway.types";
 import { SubwaySeoulService } from "./subway-seoul.service";
 
@@ -31,27 +34,32 @@ const rows = <T>(name: string, list: string): T[] => JSON.parse(fs.readFileSync(
 const page = (name: string): string => fs.readFileSync(path.join(FIXTURES, name), "utf8");
 const NOW = new Date("2026-10-16T11:45:00Z");
 
-function setup() {
+// WHY: the train map is one page for every line (line=0); the line 1 and line 4 captures joined stand for it.
+const ALL_LINES = "0";
+const BROKEN_LINE_4 = '<div class="4line_metro"><div class="T0421_Q_9_v2 tip" title="4050열차  동대문 도착 진접행"></div></div>';
+const LINE_NAMES = SUBWAY_REGISTRY.lines.map((line) => line.seoul.lineName);
+const STATION_NAMES = SUBWAY_REGISTRY.stations.map((station) => station.seoulName);
+
+function setup(now: Date = NOW) {
   const apiClient = new FakeSubwaySeoulApiClient();
   apiClient.positions.set("1호선", rows("realtime-position-line1.json", "realtimePositionList"));
   apiClient.positions.set("4호선", rows("realtime-position-line4.json", "realtimePositionList"));
   apiClient.arrivals.set("성균관대", rows("realtime-arrival-sungkyunkwan.json", "realtimeArrivalList"));
   apiClient.arrivals.set("혜화", rows("realtime-arrival-hyehwa.json", "realtimeArrivalList"));
   const trainmapClient = new FakeSubwaySeoulTrainmapClient();
-  trainmapClient.pages.set("1", page("trainmap-line1.html"));
-  trainmapClient.pages.set("4", page("trainmap-line4.html"));
+  trainmapClient.pages.set(ALL_LINES, `${page("trainmap-line1.html")}${page("trainmap-line4.html")}`);
   const service = new SubwaySeoulService(
     new SubwaySeoulApiService(asReal<SubwaySeoulApiClient>(apiClient)),
     new SubwaySeoulTrainmapService(asReal<SubwaySeoulTrainmapClient>(trainmapClient)),
-    { now: () => NOW } as Clock,
+    { now: () => now } as Clock,
   );
   return { service, apiClient, trainmapClient };
 }
 
-const summary = (events: readonly TrainEvent[]) => events.map((e) => `${e.trainNo} ${e.stationId} ${e.state}`).sort();
+const summary = (events: readonly TrainEvent[]) => events.map((e) => `${e.trainNo} ${e.platformId} ${e.state}`).sort();
 
 describe("SubwaySeoulService.observeApi", () => {
-  it("makes the 4 API calls of one tick and returns the merged events of both lines", async () => {
+  it("makes one position call per registered line and one arrival call per registered station, and returns their merged events", async () => {
     // Arrange
     const { service, apiClient } = setup();
 
@@ -59,12 +67,8 @@ describe("SubwaySeoulService.observeApi", () => {
     const observations = await service.observeApi();
 
     // Assert
-    expect([...apiClient.calls].sort()).toEqual([
-      "realtimePosition 1호선",
-      "realtimePosition 4호선",
-      "realtimeStationArrival 성균관대",
-      "realtimeStationArrival 혜화",
-    ]);
+    expect(apiClient.calls).toEqual([...LINE_NAMES.map((name) => `realtimePosition ${name}`), ...STATION_NAMES.map((name) => `realtimeStationArrival ${name}`)]);
+    expect(apiClient.calls).toEqual(expect.arrayContaining(["realtimePosition 1호선", "realtimePosition 4호선", "realtimeStationArrival 성균관대", "realtimeStationArrival 혜화"]));
     expect(summary(observations.events)).toEqual([
       "0501 KR-1-1715 arrived",
       "0503 KR-1-P154 arrived",
@@ -79,15 +83,15 @@ describe("SubwaySeoulService.observeApi", () => {
     ]);
   });
 
-  it("returns the 혜화 countdown rows, and none for 성균관대", async () => {
+  it("returns the 혜화 countdown rows, and none for 성균관대, read at their own capture's time", async () => {
     // Arrange
-    const { service } = setup();
+    const { service } = setup(new Date("2026-10-09T13:45:00Z"));
 
     // Act
     const { countdownRows } = await service.observeApi();
 
     // Assert
-    expect(countdownRows.map((row) => `${row.trainNo} ${row.stationId} ${row.remainingSec}`)).toEqual([
+    expect(countdownRows.map((row) => `${row.trainNo} ${row.platformId} ${row.remainingSec}`)).toEqual([
       "4674 S1-4-420 150",
       "4174 S1-4-420 390",
       "4331 S1-4-420 240",
@@ -97,7 +101,7 @@ describe("SubwaySeoulService.observeApi", () => {
 });
 
 describe("SubwaySeoulService.observeTrainMap", () => {
-  it("crawls lines 1 and 4 once each and stamps their events at covered stations with the Clock's time", async () => {
+  it("crawls the page of every line once and stamps lines 1 and 4's events at covered stations with the Clock's time", async () => {
     // Arrange
     const { service, trainmapClient } = setup();
 
@@ -105,7 +109,7 @@ describe("SubwaySeoulService.observeTrainMap", () => {
     const observations = await service.observeTrainMap();
 
     // Assert
-    expect([...trainmapClient.calls].sort()).toEqual(["1", "4"]);
+    expect(trainmapClient.calls).toEqual([ALL_LINES]);
     expect(summary(observations.events)).toEqual([
       "0493 KR-1-0153 departed",
       "0494 KR-1-P154 departed",
@@ -137,10 +141,10 @@ describe("SubwaySeoulService observes each upstream as its own source", () => {
 });
 
 describe("SubwaySeoulService keeps each call's answer when another call of its tick fails", () => {
-  it("hands on line 1's train-map events when line 4's page does not parse, with that failure beside them", async () => {
+  it("hands on line 1's train-map events when line 4's block does not parse, with that failure beside them", async () => {
     // Arrange
     const { service, trainmapClient } = setup();
-    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    trainmapClient.pages.set(ALL_LINES, `${page("trainmap-line1.html")}${BROKEN_LINE_4}`);
 
     // Act
     const settled = await service.observeTrainMap();
@@ -159,8 +163,7 @@ describe("SubwaySeoulService keeps each call's answer when another call of its t
   it("rejects the train-map tick when neither line's page parses", async () => {
     // Arrange
     const { service, trainmapClient } = setup();
-    trainmapClient.pages.set("1", "<html>점검 중</html>");
-    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    trainmapClient.pages.set(ALL_LINES, "<html>점검 중</html>");
 
     // Act & Assert
     await expect(service.observeTrainMap()).rejects.toMatchObject({ source: "seoul-trainmap", code: "unexpected_shape" });
@@ -183,7 +186,7 @@ describe("SubwaySeoulService keeps each call's answer when another call of its t
 
   it("hands on line 4's API events and 혜화's countdown rows when line 1's positions call fails", async () => {
     // Arrange
-    const { service, apiClient } = setup();
+    const { service, apiClient } = setup(new Date("2026-10-09T13:45:00Z"));
     const failure = new Error("realtimePosition: HTTP 500");
     apiClient.positions.set("1호선", failure);
 
@@ -202,14 +205,12 @@ describe("SubwaySeoulService keeps each call's answer when another call of its t
     expect(settled.failures).toEqual([failure]);
   });
 
-  it("rejects the API tick with its first failure when all 4 calls fail", async () => {
+  it("rejects the API tick with its first failure when every call fails", async () => {
     // Arrange
     const { service, apiClient } = setup();
-    const failures = ["1호선", "4호선", "성균관대", "혜화"].map((name) => new Error(`${name}: HTTP 500`));
-    apiClient.positions.set("1호선", failures[0] as Error);
-    apiClient.positions.set("4호선", failures[1] as Error);
-    apiClient.arrivals.set("성균관대", failures[2] as Error);
-    apiClient.arrivals.set("혜화", failures[3] as Error);
+    const failures = [...LINE_NAMES, ...STATION_NAMES].map((name) => new Error(`${name}: HTTP 500`));
+    LINE_NAMES.forEach((name, i) => apiClient.positions.set(name, failures[i] as Error));
+    STATION_NAMES.forEach((name, i) => apiClient.arrivals.set(name, failures[LINE_NAMES.length + i] as Error));
 
     // Act & Assert
     await expect(service.observeApi()).rejects.toBe(failures[0]);

@@ -1,7 +1,9 @@
 import moment from "moment-timezone";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
-import type { CountdownRow, TrainEvent, TrainState } from "../subway.types";
+import type { CountdownRow, SubwayDirection, TrainEvent, TrainNumbering, TrainState } from "../subway.types";
+import { isArrivalRowInWindow, toTimetableTrainNo } from "./subway-seoul-api.rules";
 import type { SeoulArrivalRow, SeoulPositionRow } from "./subway-seoul-api.schema";
+import type { CountdownPlatform } from "./subway-seoul-api.types";
 
 const RECPTN_DT_FORMAT = "YYYY-MM-DD HH:mm:ss";
 
@@ -14,21 +16,39 @@ const STATE_BY_TRAIN_STTUS: Readonly<Record<SeoulPositionRow["trainSttus"], Trai
   "3": null,
 };
 
-export function toTrainEvents(rows: readonly SeoulPositionRow[], stationIdByName: ReadonlyMap<string, string>): TrainEvent[] {
+// QUIRK(seoul-subway-api): a position row's `updnLine` is `0` for an up train and `1` for a down one, but a train
+// leaving a terminus keeps its old value for a minute or more while its destination has already turned (2026-10-17).
+const DIRECTION_BY_UPDN_LINE: Readonly<Record<SeoulPositionRow["updnLine"], SubwayDirection>> = { "0": "up", "1": "down" };
+
+export function toTrainEvents(
+  rows: readonly SeoulPositionRow[],
+  platformIdByName: ReadonlyMap<string, string>,
+  trainNumbers: TrainNumbering,
+): TrainEvent[] {
   return rows.flatMap((row) => {
-    const stationId = stationIdByName.get(row.statnNm);
+    const platformId = platformIdByName.get(row.statnNm);
     const state = STATE_BY_TRAIN_STTUS[row.trainSttus];
-    if (stationId === undefined || state === null) return [];
-    return [{ trainNo: row.trainNo, stationId, state, stateChangedAt: toKstInstant(row.recptnDt), destination: row.statnTnm }];
+    if (platformId === undefined || state === null) return [];
+    const trainNo = toTimetableTrainNo(row.trainNo, trainNumbers, row.statnTnm);
+    const reported = trainNumbers === "trainset" ? { reportedDirection: DIRECTION_BY_UPDN_LINE[row.updnLine] } : {};
+    return trainNo === null ? [] : [{ trainNo, platformId, state, stateChangedAt: toKstInstant(row.recptnDt), destination: row.statnTnm, ...reported }];
   });
 }
 
-export function toCountdownRows(rows: readonly SeoulArrivalRow[], stationIdByName: ReadonlyMap<string, string>): CountdownRow[] {
+// WHY: one call answers every line at the station, told apart only by `subwayId`, so a row counts for its own line's
+// platform alone and is dropped for a line the station does not serve.
+export function toCountdownRows(
+  rows: readonly SeoulArrivalRow[],
+  platformBySubwayId: ReadonlyMap<string, CountdownPlatform>,
+  fetchedAt: Date,
+): CountdownRow[] {
   return rows.flatMap((row) => {
-    const stationId = stationIdByName.get(row.statnNm);
+    const platform = platformBySubwayId.get(row.subwayId);
     const remainingSec = Number(row.barvlDt);
-    if (stationId === undefined || remainingSec === 0) return [];
-    return [{ trainNo: row.btrainNo, stationId, generatedAt: toKstInstant(row.recptnDt), remainingSec }];
+    const generatedAt = toKstInstant(row.recptnDt);
+    if (platform === undefined || remainingSec === 0 || !isArrivalRowInWindow(generatedAt, fetchedAt)) return [];
+    const trainNo = toTimetableTrainNo(row.btrainNo, platform.trainNumbers);
+    return trainNo === null ? [] : [{ trainNo, platformId: platform.platformId, generatedAt, remainingSec }];
   });
 }
 

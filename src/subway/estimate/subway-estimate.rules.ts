@@ -31,23 +31,23 @@ function toStandingLateSec(stop: ScheduledStop, latest: TrainProgress, now: Date
 }
 
 export function toDelaySec(train: ScheduledTrain, latest: TrainProgress, now: Date): number | null {
-  const stop = train.stops.find((s) => s.stationId === latest.stationId);
+  const stop = train.stops.find((s) => s.platformId === latest.platformId);
   const scheduledAt = stop ? toScheduledAt(stop, latest.state) : null;
   if (!stop || !scheduledAt) return null;
   const delaySec = secondsBetween(latest.at, scheduledAt);
   return isDelayInRange(delaySec) ? Math.max(delaySec, toStandingLateSec(stop, latest, now)) : null;
 }
 
-const isAtServedStation = (candidate: Candidate): boolean => candidate.history?.latest.stationId === candidate.servedAt.stationId;
+const isAtServedStation = (candidate: Candidate): boolean => candidate.history?.latest.platformId === candidate.servedAt.platformId;
 
 function hasPassed(candidate: Candidate): boolean {
   const latest = candidate.history?.latest;
-  const stationIds = candidate.train.stops.map((stop) => stop.stationId);
-  const [latestIndex, servedIndex] = [stationIds.indexOf(latest?.stationId ?? ""), stationIds.indexOf(candidate.servedAt.stationId)];
+  const platformIds = candidate.train.stops.map((stop) => stop.platformId);
+  const [latestIndex, servedIndex] = [platformIds.indexOf(latest?.platformId ?? ""), platformIds.indexOf(candidate.servedAt.platformId)];
   return latestIndex > servedIndex || (latestIndex === servedIndex && latest?.state === "departed");
 }
 
-const callsAt = (train: ScheduledTrain, stationId: string): boolean => train.stops.some((stop) => stop.stationId === stationId);
+const callsAt = (train: ScheduledTrain, platformId: string): boolean => train.stops.some((stop) => stop.platformId === platformId);
 
 function toRunSec(stops: readonly ScheduledStop[]): number | null {
   let runSec = 0;
@@ -61,27 +61,27 @@ function toRunSec(stops: readonly ScheduledStop[]): number | null {
 
 // WHY: a train's row has no time at a station it passes (design D4); a train calling there and at its next stop
 // runs between them in the sum of its legs, its stands left out, which the nearest one in time gives.
-function toPassingStop(train: ScheduledTrain, trains: readonly ScheduledTrain[], stationId: string): ScheduledStop | null {
+function toPassingStop(train: ScheduledTrain, trains: readonly ScheduledTrain[], platformId: string): ScheduledStop | null {
   const passes = trains.flatMap((caller) => {
-    const from = caller.stops.findIndex((stop) => stop.stationId === stationId);
-    const to = from < 0 || caller.direction !== train.direction ? -1 : caller.stops.findIndex((stop, index) => index > from && callsAt(train, stop.stationId));
+    const from = caller.stops.findIndex((stop) => stop.platformId === platformId);
+    const to = from < 0 || caller.direction !== train.direction ? -1 : caller.stops.findIndex((stop, index) => index > from && callsAt(train, stop.platformId));
     const callerArrivalAt = caller.stops[to]?.arrivalAt;
-    const nextArrivalAt = train.stops.find((stop) => stop.stationId === caller.stops[to]?.stationId)?.arrivalAt;
+    const nextArrivalAt = train.stops.find((stop) => stop.platformId === caller.stops[to]?.platformId)?.arrivalAt;
     const runSec = to < 0 ? null : toRunSec(caller.stops.slice(from, to + 1));
     if (runSec === null || !callerArrivalAt || !nextArrivalAt) return [];
     return [{ passedAt: plusSec(nextArrivalAt, -runSec), gapMs: Math.abs(nextArrivalAt.getTime() - callerArrivalAt.getTime()) }];
   });
   const nearest = passes.sort((a, b) => a.gapMs - b.gapMs)[0];
-  return nearest ? { stationId, arrivalAt: nearest.passedAt, departureAt: nearest.passedAt } : null;
+  return nearest ? { platformId, arrivalAt: nearest.passedAt, departureAt: nearest.passedAt } : null;
 }
 
 function toOwnDelaySec(input: EstimateInput, train: ScheduledTrain, latest: TrainProgress): number | null {
-  const passingStop = callsAt(train, latest.stationId) ? null : toPassingStop(train, input.trains, latest.stationId);
+  const passingStop = callsAt(train, latest.platformId) ? null : toPassingStop(train, input.trains, latest.platformId);
   return toDelaySec(passingStop ? { ...train, stops: [passingStop] } : train, latest, input.now);
 }
 
 function toCandidate(input: EstimateInput, train: ScheduledTrain): Candidate | null {
-  const servedAt = train.stops.find((stop) => stop.stationId === input.stationId);
+  const servedAt = train.stops.find((stop) => stop.platformId === input.platformId);
   const scheduledArrivalAt = servedAt?.arrivalAt ?? servedAt?.departureAt;
   if (!servedAt || !scheduledArrivalAt) return null;
   const known = input.histories.get(train.trainNo);
@@ -103,9 +103,9 @@ function toServedDelaySec(candidate: Candidate, ahead: readonly Candidate[]): nu
 }
 
 function isSeenAtOrPast(input: EstimateInput, candidate: Candidate): boolean {
-  const stationIds = candidate.train.stops.map((stop) => stop.stationId);
-  const latestStationId = input.histories.get(candidate.train.trainNo)?.latest.stationId;
-  return latestStationId !== undefined && stationIds.indexOf(latestStationId) >= stationIds.indexOf(candidate.servedAt.stationId);
+  const platformIds = candidate.train.stops.map((stop) => stop.platformId);
+  const latestPlatformId = input.histories.get(candidate.train.trainNo)?.latest.platformId;
+  return latestPlatformId !== undefined && platformIds.indexOf(latestPlatformId) >= platformIds.indexOf(candidate.servedAt.platformId);
 }
 
 // WHY: on the tracker's path every train is seen at the served station (2026-10-17: all 157 to 16:35), so one overdue
@@ -138,7 +138,7 @@ function toArrival(candidate: Candidate, delaySec: number | null): TrainArrival 
     express,
     arrivalAt: plusSec(candidate.scheduledArrivalAt, delaySec ?? 0),
     source: delaySec === null ? "scheduled" : "estimated",
-    position: latest ? { stationId: latest.stationId, state: latest.state } : null,
+    position: latest ? { platformId: latest.platformId, state: latest.state } : null,
   };
 }
 
@@ -154,7 +154,7 @@ function toRejectionReason(candidate: Candidate, row: CountdownRow, now: Date): 
 function withCountdown(arrival: TrainArrival, verdict: CountdownVerdict, findings: CountdownFindings): TrainArrival {
   const { row, reason } = verdict;
   const liveArrivalAt = plusSec(row.generatedAt, row.remainingSec);
-  const finding = { trainNo: arrival.trainNo, stationId: row.stationId, liveArrivalAt, estimatedArrivalAt: arrival.arrivalAt };
+  const finding = { trainNo: arrival.trainNo, platformId: row.platformId, liveArrivalAt, estimatedArrivalAt: arrival.arrivalAt };
   if (reason) {
     findings.rejections.push({ ...finding, reason });
     return arrival;
@@ -173,7 +173,7 @@ export function toStationArrivals(input: EstimateInput): StationArrivals {
     const delaySec = toServedDelaySec(candidate, candidates.slice(0, index));
     const isOverdue = hasLeft(candidate, delaySec, input.now);
     if (isOverdue && !isAwaitedTrain(input, candidate, candidates.slice(index + 1))) return [];
-    const row = input.countdownRows.find((r) => r.trainNo === candidate.train.trainNo && r.stationId === input.stationId);
+    const row = input.countdownRows.find((r) => r.trainNo === candidate.train.trainNo && r.platformId === input.platformId);
     const arrival = isOverdue ? toAwaitedArrival(candidate, input.now) : toArrival(candidate, delaySec);
     return [row ? withCountdown(arrival, { row, reason: toRejectionReason(candidate, row, input.now) }, findings) : arrival];
   });

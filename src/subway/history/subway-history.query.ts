@@ -9,7 +9,7 @@ const P90 = { numerator: 9, denominator: 10 };
 
 // WHY: the Mongo form of isResolvableBy (subway-history.rules.ts), `resolvedAt` being the tick that first saw the row.
 export function toObservedArrivalFilter(arrival: ObservedArrival, resolvedAt: Date): Filter<SubwayPredictionDoc> {
-  const { serviceDate, trainNo, stationId, observedState } = arrival;
+  const { serviceDate, trainNo, platformId: stationId, observedState } = arrival;
   return {
     serviceDate,
     trainNo,

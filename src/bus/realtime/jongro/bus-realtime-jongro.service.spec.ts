@@ -302,7 +302,7 @@ describe("BusRealtimeJongroService.refresh vehicle tracking", () => {
       isAtStop: false,
       observedAt,
     });
-  const stationaryOf = async () => (await service.listPositions("02"))!.map((p) => ("isStationary" in p ? p.isStationary : "legacy"));
+  const stationaryOf = async () => (await service.listPositions("02"))!.map((p) => p.isStationary);
 
   it("stores each bus's vehicle fields at its section ord", async () => {
     // Arrange

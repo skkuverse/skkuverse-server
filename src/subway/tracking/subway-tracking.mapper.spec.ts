@@ -17,7 +17,7 @@ function arrival(overrides: Partial<TrainArrival> = {}): TrainArrival {
     express: false,
     arrivalAt: new Date("2026-10-16T11:42:30Z"),
     source: "estimated",
-    position: { stationId: "KR-1-P152", state: "arrived" },
+    position: { platformId: "KR-1-P152", state: "arrived" },
     ...overrides,
   };
 }

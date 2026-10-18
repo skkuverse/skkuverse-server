@@ -4,12 +4,14 @@ import type { ServedStation } from "../../subway/stations/subway-stations.types"
 import { toLocalizedText } from "../ui.mapper";
 import { toServedActionValue } from "../../shared/link-action.util";
 import { toTransitItemId } from "./ui-transit.rules";
-import type { TransitItemRaw, TransitLayoutRaw } from "./ui-transit.schema";
+import type { TransitChildRaw, TransitItemRaw, TransitLayoutRaw } from "./ui-transit.schema";
 import type { TransitLayout } from "./ui-transit.wire";
 
 type TransitSection = TransitLayout["sections"][number];
 type TransitItem = TransitSection["items"][number];
+type TransitChild = Exclude<TransitItem, { kind: "group" }>;
 type LinkItemRaw = Extract<TransitItemRaw, { kind: "link" }>;
+type GroupItemRaw = Extract<TransitItemRaw, { kind: "group" }>;
 
 interface TransitSectionContext {
   lang: SupportedLang;
@@ -17,7 +19,7 @@ interface TransitSectionContext {
   stationById: ReadonlyMap<string, ServedStation>;
 }
 
-function toBusTransitItem(group: BusGroup): TransitItem {
+function toBusTransitItem(group: BusGroup): TransitChild {
   const screen = group.screenType === "realtime" ? "/bus/realtime" : "/bus/schedule";
   return {
     kind: "bus",
@@ -31,19 +33,22 @@ function toBusTransitItem(group: BusGroup): TransitItem {
   };
 }
 
-function toSubwayTransitItem(station: ServedStation, lang: SupportedLang): TransitItem {
+const LINE_NAME_SEPARATOR = " · ";
+
+function toSubwayTransitItem(station: ServedStation, lang: SupportedLang): TransitChild {
+  const lines = station.lines.map(({ code, name, badge, color }) => ({ code, name: name[lang], badge: badge[lang], color }));
   return {
     kind: "subway",
     id: toTransitItemId({ kind: "subway", stationId: station.id }),
     stationId: station.id,
     title: station.title[lang],
-    subtitle: station.lineLabel[lang],
-    icon: { type: "subway", color: station.lineColor, text: station.lineCode },
+    subtitle: lines.map((line) => line.name).join(LINE_NAME_SEPARATOR),
+    lines,
     action: { actionType: "route", actionValue: `/subway?station=${station.id}` },
   };
 }
 
-function toLinkTransitItem(link: LinkItemRaw, lang: SupportedLang): TransitItem {
+function toLinkTransitItem(link: LinkItemRaw, lang: SupportedLang): TransitChild {
   return {
     kind: "link",
     id: link.id,
@@ -55,7 +60,7 @@ function toLinkTransitItem(link: LinkItemRaw, lang: SupportedLang): TransitItem 
 }
 
 // WHY: the loader placed every referent at boot; a group missing here is one outside its visibility.
-function toTransitItems(item: TransitItemRaw, context: TransitSectionContext): TransitItem[] {
+function toTransitChildren(item: TransitChildRaw, context: TransitSectionContext): TransitChild[] {
   if (item.kind === "link") return [toLinkTransitItem(item, context.lang)];
   if (item.kind === "bus") {
     const group = context.busGroupById.get(item.groupId);
@@ -65,6 +70,27 @@ function toTransitItems(item: TransitItemRaw, context: TransitSectionContext): T
   if (station === undefined) throw new Error(`transit layout places subway station "${item.stationId}", which is not served`);
   return [toSubwayTransitItem(station, context.lang)];
 }
+
+function toGroupTransitItems(group: GroupItemRaw, context: TransitSectionContext): TransitItem[] {
+  if (group.visibleWith !== undefined && !context.busGroupById.has(group.visibleWith.groupId)) return [];
+  const items = group.items.flatMap((child) => toTransitChildren(child, context));
+  if (items.length === 0) return [];
+  const { lang } = context;
+  return [
+    {
+      kind: "group",
+      id: toTransitItemId(group),
+      title: toLocalizedText(group.title, lang),
+      subtitle: group.subtitle === undefined ? null : toLocalizedText(group.subtitle, lang),
+      icon: { type: group.icon.type, color: group.icon.color, text: toLocalizedText(group.icon.text, lang) },
+      initialState: group.initialState,
+      items,
+    },
+  ];
+}
+
+const toTransitItems = (item: TransitItemRaw, context: TransitSectionContext): TransitItem[] =>
+  item.kind === "group" ? toGroupTransitItems(item, context) : toTransitChildren(item, context);
 
 export function toTransitSection(section: TransitLayoutRaw["sections"][number], context: TransitSectionContext): TransitSection {
   return {

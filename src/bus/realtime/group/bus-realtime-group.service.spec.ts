@@ -6,8 +6,9 @@
  * is a 503, an unknown group is a 404, and meta carries the KST clock and the
  * bus count. Every bus says its kind: HSSC buses are estimated, and each
  * Jongro bus is tracked from its cached position joined with its vehicle's
- * arrival rows (waiting, at a stop or running, with its countdown), except a
- * position cached before the tracking fields, which is served as estimated.
+ * arrival rows (waiting, at a stop or running, with its countdown); a waiting
+ * vehicle's arrivals read waiting, and a position a full section behind its
+ * arrival rows is served running.
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -26,7 +27,6 @@ import {
   jongroArrivalBus,
   jongroArrivalDoc,
   jongroPositionDoc,
-  legacyJongroPositionDoc,
   noArrivalBus,
 } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { Clock } from "../../../infra/clock";
@@ -391,14 +391,110 @@ describe("BusRealtimeGroupService.getGroup tracked buses", () => {
     // Assert
     expect(group.data.buses.map((bus) => [bus.stationIndex, "tracked" in bus && bus.tracked.status])).toEqual([[26, "atStop"]]);
   });
+});
 
-  it("serves a position cached before the tracking fields as an estimated bus", async () => {
+// WHY: production showed route 02's 2009 waiting at its origin while its own arrivals read arriving at stop 1
+// (add-jongro-bus-positions D7). The rows are the 2026-10-17 capture's (pos_/arr_<busRouteId>_<epoch>).
+describe("BusRealtimeGroupService.getGroup waiting arrivals and lagging positions", () => {
+  it("serves a waiting vehicle's arrivals as waiting and leaves other vehicles' (종로02 vehicle 100000018, epoch 1792232472)", async () => {
     // Arrange
-    busCache.values.set("jongro_locations_07", [legacyJongroPositionDoc({ sequence: "6", carNumber: "5537", estimatedTime: 40 })]);
+    busCache.values.set("jongro_locations_02", [
+      jongroPositionDoc({
+        sequence: "1",
+        stationId: "100900204",
+        carNumber: "5512",
+        latitude: "37.588707",
+        longitude: "126.990208",
+        vehicleId: "100000018",
+        sectDist: 0.031,
+        fullSectDist: 0.259,
+        observedAt: "2026-10-17T19:21:01+09:00",
+        isStationary: true,
+      }),
+    ]);
+    const bus18 = { vehId: "100000018", plainNo: "서울70사5512", sectOrd: 2, rerideDiv: 2, rerideNum: 1 };
+    const row = (stationId: string, sequence: string, buses: ReturnType<typeof jongroArrivalBus>[]) =>
+      jongroArrivalDoc({ stationId, sequence, eventDate: "2026-10-17 19:21:00.0", eta: buses[0]!.arrmsg, buses });
+    busCache.values.set("jongro_stations_02", [
+      row("100900202", "2", [jongroArrivalBus({ ...bus18, staOrd: 2, traTime: 11, arrmsg: "곧 도착" }), noArrivalBus({ staOrd: 2, arrmsg: "출발대기" })]),
+      row("100900045", "3", [jongroArrivalBus({ ...bus18, staOrd: 3, traTime: 107, arrmsg: "1분47초후[1번째 전]" }), noArrivalBus({ staOrd: 3, arrmsg: "출발대기" })]),
+      row("100900121", "13", [
+        jongroArrivalBus({ vehId: "100000015", plainNo: "서울70사5509", staOrd: 13, sectOrd: 13, traTime: 77, arrmsg: "곧 도착", rerideDiv: 2, rerideNum: 5 }),
+        jongroArrivalBus({ ...bus18, staOrd: 13, traTime: 735, arrmsg: "12분15초후[11번째 전]" }),
+      ]),
+    ]);
 
-    // Act & Assert
-    expect((await service.getGroup("jongro07")).data.buses).toEqual([
-      { stationIndex: 5, carNumber: "5537", estimatedTime: 40, latitude: "37.587", longitude: "126.998", kind: "estimated" },
+    // Act
+    const group = await service.getGroup("jongro02");
+
+    // Assert
+    expect(group.data.buses.map((bus) => "tracked" in bus && bus.tracked.status)).toEqual(["waiting"]);
+    expect(group.data.stationEtas.map((eta) => [eta.stationIndex, eta.arrivals.map((a) => [a.carNumber, a.state, a.minutes, a.message])])).toEqual([
+      [1, [["5512", "waiting", null, "곧 도착"], [null, "waiting", null, "출발대기"]]],
+      [2, [["5512", "waiting", null, "1분47초후[1번째 전]"], [null, "waiting", null, "출발대기"]]],
+      [12, [["5509", "arriving", null, "곧 도착"], ["5512", "waiting", null, "12분15초후[11번째 전]"]]],
+    ]);
+    expect(group.data.stationEtas[0]!.arrivals[0]).toMatchObject({ stopsAway: 0, crowding: "relaxed", passengerCount: 1 });
+  });
+
+  it("serves a position a section behind its arrival rows as running (종로07 vehicle 100000035, position 19:22:58, rows 19:23:36)", async () => {
+    // Arrange
+    busCache.values.set("jongro_locations_07", [
+      jongroPositionDoc({
+        sequence: "5",
+        stationId: "100000421",
+        carNumber: "5536",
+        latitude: "37.585896",
+        longitude: "126.996981",
+        vehicleId: "100000035",
+        sectDist: 0,
+        fullSectDist: 0.225,
+        isAtStop: true,
+        observedAt: "2026-10-17T19:22:58+09:00",
+        isStationary: false,
+      }),
+    ]);
+    const bus35 = { vehId: "100000035", plainNo: "서울70사5536", sectOrd: 7, rerideDiv: 2, rerideNum: 3 };
+    busCache.values.set("jongro_stations_07", [
+      jongroArrivalDoc({
+        stationId: "100900031",
+        sequence: "7",
+        eventDate: "2026-10-17 19:23:36.0",
+        eta: "곧 도착",
+        buses: [jongroArrivalBus({ ...bus35, staOrd: 7, traTime: 38, arrmsg: "곧 도착" }), noArrivalBus({ staOrd: 7, arrmsg: "출발대기" })],
+      }),
+      jongroArrivalDoc({
+        stationId: "100900017",
+        sequence: "8",
+        eventDate: "2026-10-17 19:23:36.0",
+        eta: "1분23초후[1번째 전]",
+        buses: [jongroArrivalBus({ ...bus35, staOrd: 8, traTime: 83, arrmsg: "1분23초후[1번째 전]" }), noArrivalBus({ staOrd: 8, arrmsg: "출발대기" })],
+      }),
+    ]);
+
+    // Act
+    const group = await service.getGroup("jongro07");
+
+    // Assert
+    expect(group.data.buses).toEqual([
+      {
+        stationIndex: 4,
+        carNumber: "5536",
+        estimatedTime: 0,
+        latitude: "37.585896",
+        longitude: "126.996981",
+        kind: "tracked",
+        tracked: {
+          status: "running",
+          vehicleId: "100000035",
+          observedAt: "2026-10-17T19:22:58+09:00",
+          crowding: "relaxed",
+          isLastBus: false,
+          progress: 0,
+          segmentMeters: 225,
+          nextStopInSec: null,
+        },
+      },
     ]);
   });
 });

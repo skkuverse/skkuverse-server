@@ -1,48 +1,35 @@
+import type { z } from "zod";
 import type { SupportedLang } from "../infra/types";
+import type { subwayRegistryFile } from "./subway.schema";
 
 export type LocalizedName = Readonly<Record<SupportedLang, string>>;
 
 export type SubwayDirection = "up" | "down";
 
-export interface StationDirection {
-  name: LocalizedName;
-  upstreamStationIds: readonly string[];
-  watchedStationIds: readonly string[];
-  nextStationId: string;
-}
-
-export type StationTimetable = { source: "korail" } | { source: "seoul-station"; stationCode: string };
-
-export interface SeoulStationIds {
-  subwayId: string;
-  stationName: string;
-  trainMapLine: string;
-  timetable: StationTimetable;
-}
-
-export interface SubwayStation {
-  id: string;
-  operatorCode: string;
-  lineCode: string;
-  stationCode: string;
-  name: LocalizedName;
-  directions: Readonly<Record<SubwayDirection, StationDirection>>;
-  seoul: SeoulStationIds;
-}
+export type SubwayRegistry = z.output<typeof subwayRegistryFile>;
+export type SubwayLine = SubwayRegistry["lines"][number];
+export type SubwayStation = SubwayRegistry["stations"][number];
+export type SubwayPlatform = SubwayStation["platforms"][number];
+export type SubwayNeighbor = SubwayRegistry["neighbors"][string];
+export type PlatformDirection = SubwayPlatform["directions"]["up"];
+export type PlatformTimetable = SubwayPlatform["timetable"];
+export type TrainNumbering = SubwayLine["seoul"]["trainNumbers"];
 
 export type TrainState = "approaching" | "arrived" | "departed";
 
 export interface TrainEvent {
   trainNo: string;
-  stationId: string;
+  platformId: string;
   state: TrainState;
   stateChangedAt: Date;
   destination: string;
+  // WHY: only a line matched to runs carries it, and reads it only where its destination names both directions (design D14).
+  reportedDirection?: SubwayDirection;
 }
 
 export interface CountdownRow {
   trainNo: string;
-  stationId: string;
+  platformId: string;
   generatedAt: Date;
   remainingSec: number;
 }

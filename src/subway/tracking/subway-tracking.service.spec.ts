@@ -1,10 +1,12 @@
 /**
- * SubwayTrackingService over FakeSubwayRepository, the real timetable door
+ * SubwayTrackingService over FakeSubwayRepository (through the real
+ * SubwayStateService), the real timetable door
  * (on FakeHolidaysService and the committed weekday tables), the real estimate
  * door and a scripted Clock, fed one upstream's observations per tick as the
  * pollers hand them. What it guards: each tick replaces both stations'
  * documents with their next three trains per direction, at absolute instants
- * and the tick's time; a train late at `의왕` is estimated late at `성균관대`; a
+ * and the tick's time, and a later tick rewrites only the documents whose
+ * trains changed while its listeners get every platform; a train late at `의왕` is estimated late at `성균관대`; a
  * departure the train map shows ends a train the API still lists as arrived;
  * a positive countdown is served `live` until its source has been silent for
  * 90 s; a train missing for a minute keeps its delay and position, and still
@@ -21,22 +23,31 @@
  * before its first stop, from the time it is scheduled to pass that station.
  * Its timetable-only document, which the arrivals route serves for a stale
  * state, lists every train `scheduled`, whatever the tracker has observed,
- * and leaves the countdown memory to the ticks.
+ * and leaves the countdown memory to the ticks. On a trainset line (a synthetic Shinbundang timetable, hand-written
+ * in the shape scripts/subway-timetable/convert.py writes for it, on a fake timetable door), an observed trainset
+ * becomes the history of the run it is matched to, which the tick's listeners see, and is served at that run's
+ * scheduled arrival plus its delay; a trainset that matches no run is not served.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { FakeSubwayTimetableService } from "../../../__tests__/helpers/fakes/subway/subway-timetable.service.fake";
 import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/subway.repository.fake";
 import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
+import { SubwayMatchingService } from "../matching/subway-matching.service";
+import { SUBWAY_REGISTRY } from "../subway.config";
+import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
-import type { CountdownRow, SubwayProvider, TrainEvent } from "../subway.types";
+import type { CountdownRow, SubwayPlatform, SubwayProvider, TrainEvent } from "../subway.types";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
+import type { Timetable } from "../timetable/subway-timetable.types";
 import { SubwayTrackingService } from "./subway-tracking.service";
+import type { TrackedTick } from "./subway-tracking.types";
 
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
 const SUNGKYUNKWAN = "KR-1-0153";
@@ -49,7 +60,8 @@ function setup(atKst = at) {
   const repository = new FakeSubwayRepository();
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
   const clock = { now: () => now } as Clock;
-  const service = new SubwayTrackingService(asReal<SubwayRepository>(repository), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
+  const service = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(repository)), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
+  new SubwayMatchingService(service, clock).onModuleInit();
   const tickAt = (kst: string, provider: SubwayProvider): Promise<void> => {
     now = atKst(kst);
     return service.track(provider);
@@ -64,13 +76,13 @@ function upstream(source: string, events: TrainEvent[] = [], countdownRows: Coun
 const api = (events: TrainEvent[] = [], countdownRows: CountdownRow[] = []) => upstream("seoul-subway-api", events, countdownRows);
 const trainMap = (events: TrainEvent[] = []) => upstream("seoul-trainmap", events);
 
-function event(trainNo: string, stationId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent {
-  return { trainNo, stationId, state, stateChangedAt: at(kst), destination };
+function event(trainNo: string, platformId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent {
+  return { trainNo, platformId, state, stateChangedAt: at(kst), destination };
 }
 
 const countdown = (trainNo: string, generatedKst: string, remainingSec: number): CountdownRow => ({
   trainNo,
-  stationId: HYEHWA,
+  platformId: HYEHWA,
   generatedAt: at(generatedKst),
   remainingSec,
 });
@@ -80,7 +92,7 @@ afterEach(() => {
 });
 
 describe("SubwayTrackingService.track", () => {
-  it("replaces both stations' documents with three trains per direction at the tick's time", async () => {
+  it("replaces every platform's document with three trains per direction at the tick's time", async () => {
     // Arrange
     const { repository, tickAt } = setup();
 
@@ -88,7 +100,8 @@ describe("SubwayTrackingService.track", () => {
     await tickAt("20:39:10", api());
 
     // Assert
-    expect([...repository.docs.keys()]).toEqual([SUNGKYUNKWAN, HYEHWA]);
+    expect([...repository.docs.keys()]).toEqual(SUBWAY_REGISTRY.stations.flatMap((station) => station.platforms.map((platform) => platform.id)));
+    expect([...repository.docs.keys()].slice(0, 2)).toEqual([SUNGKYUNKWAN, HYEHWA]);
     for (const doc of repository.docs.values()) {
       expect(doc.generatedAt).toEqual(at("20:39:10"));
       expect(doc.serviceDate).toBe("2026-10-16");
@@ -186,7 +199,7 @@ describe("SubwayTrackingService.track", () => {
     // Assert
     expect(logger.info).toHaveBeenCalledTimes(1);
     expect(logger.info).toHaveBeenCalledWith(
-      expect.objectContaining({ event: "subway.tracking.countdown_diverged", trainNo: "4674", stationId: HYEHWA, divergenceSec: 470 }),
+      expect.objectContaining({ event: "subway.tracking.countdown_diverged", trainNo: "4674", platformId: HYEHWA, divergenceSec: 470 }),
       expect.any(String),
     );
   });
@@ -203,8 +216,8 @@ describe("SubwayTrackingService.track", () => {
     // Assert
     const rejected = jest.mocked(logger.info).mock.calls.filter(([fields]) => (fields as { event?: string }).event === "subway.tracking.countdown_rejected");
     expect(rejected.map(([fields]) => fields)).toEqual([
-      expect.objectContaining({ trainNo: "4674", stationId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
-      expect.objectContaining({ trainNo: "4676", stationId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
+      expect.objectContaining({ trainNo: "4674", platformId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
+      expect.objectContaining({ trainNo: "4676", platformId: HYEHWA, reason: "spent", liveArrivalAt: at("20:40:50"), suppressed: 0 }),
     ]);
   });
 
@@ -248,6 +261,25 @@ describe("SubwayTrackingService.track", () => {
     expect(trainNos).not.toContain("9999");
   });
 
+  it("Quiet tick: hands its listeners every platform while it rewrites only the documents whose trains changed", async () => {
+    // With nothing observed, Sungkyunkwan Univ.'s overdue trains are awaited, served from now, so they move each
+    // tick; Jeongja's Shinbundang trains are all scheduled and hold still.
+    // Arrange
+    const { service, repository, tickAt } = setup();
+    const ticks: TrackedTick[] = [];
+    service.addTickListener(async (tick) => {
+      ticks.push(tick);
+    });
+    await tickAt("20:39:10", api());
+
+    // Act
+    await tickAt("20:39:30", trainMap());
+
+    // Assert
+    expect(ticks[1]?.platforms.map((platform) => platform.platformId)).toEqual([...repository.docs.keys()]);
+    expect([repository.docs.get(SUNGKYUNKWAN)?.generatedAt, repository.docs.get("DX-D1-4312")?.generatedAt]).toEqual([at("20:39:30"), at("20:39:10")]);
+  });
+
   it("observes no upstream and writes nothing at 03:00 KST, outside the service window", async () => {
     // Arrange
     const { repository, tickAt } = setup();
@@ -273,9 +305,9 @@ describe("SubwayTrackingService.track", () => {
 });
 
 describe("SubwayTrackingService.track for an express passing stations it does not call at", () => {
-  const expressEvent = (trainNo: string, stationId: string, state: TrainEvent["state"], kst: string): TrainEvent => ({
+  const expressEvent = (trainNo: string, platformId: string, state: TrainEvent["state"], kst: string): TrainEvent => ({
     trainNo,
-    stationId,
+    platformId,
     state,
     stateChangedAt: onSaturday(kst),
     destination: Number(trainNo) % 2 === 0 ? "청량리" : "신창",
@@ -334,9 +366,9 @@ describe("SubwayTrackingService.track for an express passing stations it does no
 });
 
 describe("SubwayTrackingService.track for an express seen before its first stop", () => {
-  const southbound = (trainNo: string, stationId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent => ({
+  const southbound = (trainNo: string, platformId: string, state: TrainEvent["state"], kst: string, destination: string): TrainEvent => ({
     trainNo,
-    stationId,
+    platformId,
     state,
     stateChangedAt: onSaturday(kst),
     destination,
@@ -398,9 +430,185 @@ describe("SubwayTrackingService.findScheduledArrivals", () => {
     const { service } = setup();
 
     // Act
-    const doc = await service.findScheduledArrivals("S1-2-222", at("20:39:20"));
+    const doc = await service.findScheduledArrivals("S1-2-220", at("20:39:20"));
 
     // Assert
     expect(doc).toBeNull();
+  });
+});
+
+const onMonday = (kst: string): Date => new Date(`2026-10-19T${kst}+09:00`);
+const PANGYO = "DX-D1-4311";
+const JEONGJA = "DX-D1-4312";
+const SHINBUNDANG_STATIONS = ["DX-D1-4309", "DX-D1-4310", PANGYO, JEONGJA, "DX-D1-D13", "DX-D1-D14", "DX-D1-D15"];
+
+const kstSec = (hhmm: string): number => {
+  const [hours, minutes] = hhmm.split(":").map(Number);
+  return (hours ?? 0) * 3600 + (minutes ?? 0) * 60;
+};
+
+function shinbundangRun(trainNo: string, direction: "up" | "down", firstHhmm: string, stations: readonly string[]) {
+  const stops = stations.map((station, index) => ({ station, arr: kstSec(firstHhmm) + index * 60, dep: kstSec(firstHhmm) + index * 60 }));
+  return { trainNo, direction, destination: direction === "up" ? "신사" : "광교", express: false, stops };
+}
+
+// Synthetic: down runs at Pangyo 21:02 and 21:10, one up run, a minute between stations.
+const SHINBUNDANG_WEEKDAY: Timetable = {
+  source: { kind: "shinbundang-station-timetable", ref: "synthetic", revision: "2026-10-17" },
+  operator: "DX",
+  line: "D1",
+  dayType: "weekday",
+  stations: SHINBUNDANG_STATIONS,
+  trains: [
+    shinbundangRun("1031", "down", "21:00", SHINBUNDANG_STATIONS),
+    shinbundangRun("1033", "down", "21:08", SHINBUNDANG_STATIONS),
+    shinbundangRun("1032", "up", "21:00", [...SHINBUNDANG_STATIONS].reverse()),
+  ],
+};
+
+const JEONGJA_SHINBUNDANG: SubwayPlatform = {
+  id: JEONGJA,
+  line: "D1",
+  timetable: { source: "shinbundang" },
+  directions: {
+    up: {
+      name: { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" },
+      upstreamPlatformIds: ["DX-D1-D13", "DX-D1-D14", "DX-D1-D15"],
+      watchedPlatformIds: [],
+      nextPlatformId: PANGYO,
+    },
+    down: {
+      name: { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" },
+      upstreamPlatformIds: [PANGYO, "DX-D1-4310", "DX-D1-4309"],
+      watchedPlatformIds: [],
+      nextPlatformId: "DX-D1-D13",
+    },
+  },
+};
+
+const JEONGJA_SUIN_BUNDANG_STATIONS = ["KR-K1-K229", "KR-K1-K230", "KR-K1-K231"];
+
+// Synthetic: one up train calling at Jeongja at 21:02.
+const SUIN_BUNDANG_WEEKDAY: Timetable = {
+  source: { kind: "korail-xlsx", ref: "synthetic", revision: "2026-10-17" },
+  operator: "KR",
+  line: "K1",
+  dayType: "weekday",
+  stations: JEONGJA_SUIN_BUNDANG_STATIONS,
+  trains: [{ ...shinbundangRun("6180", "up", "21:01", [...JEONGJA_SUIN_BUNDANG_STATIONS].reverse()), destination: "왕십리" }],
+};
+
+const JEONGJA_SUIN_BUNDANG: SubwayPlatform = {
+  id: "KR-K1-K230",
+  line: "K1",
+  timetable: { source: "korail" },
+  directions: {
+    up: { ...JEONGJA_SHINBUNDANG.directions.up, upstreamPlatformIds: ["KR-K1-K231"], nextPlatformId: "KR-K1-K229" },
+    down: { ...JEONGJA_SHINBUNDANG.directions.down, upstreamPlatformIds: ["KR-K1-K229"], nextPlatformId: "KR-K1-K231" },
+  },
+};
+
+function setupShinbundang({ withMatcher = true } = {}) {
+  let now = onMonday("21:00:00");
+  const repository = new FakeSubwayRepository();
+  const platforms = [JEONGJA_SHINBUNDANG, JEONGJA_SUIN_BUNDANG];
+  const timetable = new FakeSubwayTimetableService(platforms, [SHINBUNDANG_WEEKDAY, SUIN_BUNDANG_WEEKDAY]);
+  const clock = { now: () => now } as Clock;
+  const estimate = new SubwayEstimateService(new SubwayCountdownService());
+  const service = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(repository)), asReal<SubwayTimetableService>(timetable), estimate, clock);
+  if (withMatcher) new SubwayMatchingService(service, clock).onModuleInit();
+  const ticks: TrackedTick[] = [];
+  service.addTickListener(async (tick) => {
+    ticks.push(tick);
+  });
+  const tickAt = (kst: string, events: TrainEvent[]): Promise<void> => {
+    now = onMonday(kst);
+    return service.track(api(events));
+  };
+  return { repository, ticks, tickAt };
+}
+
+function trainset(trainNo: string, platformId: string, kst: string): TrainEvent {
+  return { trainNo, platformId, state: "arrived", stateChangedAt: onMonday(kst), destination: "광교" };
+}
+
+describe("SubwayTrackingService.track on a trainset line", () => {
+  it("Trainset late at 판교: serves trainset 18 as the 21:02 run, at its 정자 arrival plus its 70 s delay", async () => {
+    // Arrange
+    const { repository, tickAt } = setupShinbundang();
+
+    // Act
+    await tickAt("21:03:10", [trainset("18", PANGYO, "21:03:10")]);
+
+    // Assert
+    expect(repository.docs.get(JEONGJA)?.directions.down[0]).toEqual({
+      trainNo: "1031",
+      destination: "광교",
+      express: false,
+      arrivalAt: onMonday("21:04:10"),
+      source: "estimated",
+      position: { stationId: PANGYO, state: "arrived" },
+    });
+  });
+
+  it("hands the tick's listeners the trainset's event under its run's number", async () => {
+    // Arrange
+    const { ticks, tickAt } = setupShinbundang();
+
+    // Act
+    await tickAt("21:03:15", [trainset("18", PANGYO, "21:03:10")]);
+
+    // Assert
+    expect(ticks[0]?.platforms[0]?.events).toEqual([{ ...trainset("18", PANGYO, "21:03:10"), trainNo: "1031" }]);
+  });
+
+  it("keeps the trainset on its run on the next tick, at its delay there", async () => {
+    // Arrange
+    const { repository, tickAt } = setupShinbundang();
+    await tickAt("21:03:15", [trainset("18", PANGYO, "21:03:10")]);
+
+    // Act
+    await tickAt("21:04:15", [trainset("18", JEONGJA, "21:04:00")]);
+
+    // Assert
+    const train = repository.docs.get(JEONGJA)?.directions.down.find((t) => t.trainNo === "1031");
+    expect([train?.arrivalAt, train?.position]).toEqual([onMonday("21:04:00"), { stationId: JEONGJA, state: "arrived" }]);
+  });
+
+  it("serves no train from a trainset that matches no run: before any run is due, every run stays scheduled", async () => {
+    // Arrange
+    const { repository, tickAt } = setupShinbundang();
+
+    // Act
+    await tickAt("20:55:05", [trainset("3", PANGYO, "20:55:00")]);
+
+    // Assert
+    const down = repository.docs.get(JEONGJA)?.directions.down ?? [];
+    expect(down.map((t) => [t.trainNo, t.source])).toEqual([
+      ["1031", "scheduled"],
+      ["1033", "scheduled"],
+    ]);
+  });
+
+  it("passes another line's events as they are, on the tick that matches the trainset line's", async () => {
+    // Arrange
+    const { repository, tickAt } = setupShinbundang();
+    const suinBundang: TrainEvent = { trainNo: "6180", platformId: "KR-K1-K231", state: "arrived", stateChangedAt: onMonday("21:02:00"), destination: "왕십리" };
+
+    // Act
+    await tickAt("21:02:00", [suinBundang, trainset("18", PANGYO, "21:02:00")]);
+
+    // Assert
+    const train = repository.docs.get("KR-K1-K230")?.directions.up[0];
+    expect([train?.trainNo, train?.arrivalAt, train?.source]).toEqual(["6180", onMonday("21:03:00"), "estimated"]);
+  });
+
+  it("rejects the tick of a trainset line when no run matcher is registered, and writes nothing", async () => {
+    // Arrange
+    const { repository, tickAt } = setupShinbundang({ withMatcher: false });
+
+    // Act & Assert
+    await expect(tickAt("21:03:10", [trainset("18", PANGYO, "21:03:10")])).rejects.toThrow("no run matcher");
+    expect(repository.docs.size).toBe(0);
   });
 });

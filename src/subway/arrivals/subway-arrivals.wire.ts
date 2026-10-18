@@ -22,16 +22,22 @@ const directionArrivals = z.object({
   trains: z.array(trainArrival),
 });
 
-export const subwayStationArrivals = z.object({
-  station: z.object({
-    id: z.string(),
-    operatorCode: z.string(),
-    lineCode: z.string(),
-    stationCode: z.string(),
-    name: z.string(),
-  }),
+/** WHY: a line's display data comes from the server, so the app keeps no line table; `color` is six hex digits, no `#`. */
+const subwayLine = z.object({ code: z.string(), name: z.string(), badge: z.string(), color: z.string() });
+
+const lineArrivals = z.object({
+  line: subwayLine,
+  /** WHY: the KRIC id of this line's platform at the station, `<operator>-<line>-<station>`. */
+  platformId: z.string(),
+  /** WHY: per line: each platform has its own document and falls back to the timetable alone on its own. */
   generatedAt: z.iso.datetime(),
   directions: z.array(directionArrivals),
+});
+
+export const subwayStationArrivals = z.object({
+  /** WHY: `id` is the physical station's slug, which the route takes. */
+  station: z.object({ id: z.string(), name: z.string() }),
+  lines: z.array(lineArrivals),
 });
 
 export type SubwayStationArrivals = z.input<typeof subwayStationArrivals>;

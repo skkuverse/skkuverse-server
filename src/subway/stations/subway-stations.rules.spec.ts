@@ -1,50 +1,55 @@
 /**
- * A served station as other modules read it: its title is its name with the
- * station suffix each language writes (a space before it in English only), and
- * its line carries the label and the color the operator gives it. A station on
- * a line with neither throws, so it fails the boot instead of drawing a blank
- * icon or an untranslated label.
+ * A served station as other modules read it: its slug, its title (its name
+ * with the station suffix each language writes, a space before it in English
+ * only) and, in its platforms' order, each line's code, name, badge and color
+ * from the registry, whose boot check refuses a platform on an unlisted line.
  */
-import { SUBWAY_STATIONS } from "../subway.constants";
-import type { SubwayStation } from "../subway.types";
+import { SUBWAY_REGISTRY } from "../subway.config";
+import { toSubwayLine } from "../subway.rules";
+import type { SubwayLine, SubwayStation } from "../subway.types";
 import { toServedStation } from "./subway-stations.rules";
 
-const [sungkyunkwan, hyehwa] = SUBWAY_STATIONS as [SubwayStation, SubwayStation];
+const stationOf = (slug: string) => SUBWAY_REGISTRY.stations.find((station) => station.id === slug) as SubwayStation;
+const lineOf = (code: string): SubwayLine => toSubwayLine(code);
 
 describe("toServedStation", () => {
-  it("titles Hyehwa with the suffix and labels and paints line 4", () => {
+  it("titles Hyehwa with the suffix and lists line 4 with its name, badge and color", () => {
     // Act
-    const served = toServedStation(hyehwa);
+    const served = toServedStation(stationOf("hyehwa"), lineOf);
 
     // Assert
     expect(served).toEqual({
-      id: "S1-4-420",
+      id: "hyehwa",
       title: { ko: "혜화역", en: "Hyehwa Station", zh: "惠化站" },
-      lineCode: "4",
-      lineLabel: { ko: "4호선", en: "Line 4", zh: "4号线" },
-      lineColor: "00A5DE",
+      lines: [{ code: "4", name: { ko: "4호선", en: "Line 4", zh: "4号线" }, badge: { ko: "4", en: "4", zh: "4" }, color: "00A5DE" }],
     });
   });
 
-  it("titles Sungkyunkwan Univ. with the suffix and labels and paints line 1", () => {
+  it("titles Sungkyunkwan Univ. with the suffix and lists line 1", () => {
     // Act
-    const served = toServedStation(sungkyunkwan);
+    const served = toServedStation(stationOf("sungkyunkwan"), lineOf);
 
     // Assert
     expect(served).toEqual({
-      id: "KR-1-0153",
+      id: "sungkyunkwan",
       title: { ko: "성균관대역", en: "Sungkyunkwan Univ. Station", zh: "成均馆大学站" },
-      lineCode: "1",
-      lineLabel: { ko: "1호선", en: "Line 1", zh: "1号线" },
-      lineColor: "0052A4",
+      lines: [{ code: "1", name: { ko: "1호선", en: "Line 1", zh: "1号线" }, badge: { ko: "1", en: "1", zh: "1" }, color: "0052A4" }],
     });
   });
 
-  it.each(["2", "", "01"])("throws on a station on line %j, which has no label or color", (lineCode) => {
+  it("lists a transfer station's lines in its platforms' order", () => {
     // Arrange
-    const unknownLine = { ...hyehwa, lineCode };
+    const hyehwa = stationOf("hyehwa");
+    const sungkyunkwan = stationOf("sungkyunkwan");
+    const transfer: SubwayStation = { ...hyehwa, id: "transfer", platforms: [...hyehwa.platforms, ...sungkyunkwan.platforms] };
 
-    // Act & Assert
-    expect(() => toServedStation(unknownLine)).toThrow(/line/);
+    // Act
+    const served = toServedStation(transfer, lineOf);
+
+    // Assert
+    expect(served.lines.map((line) => [line.code, line.badge.en, line.color])).toEqual([
+      ["4", "4", "00A5DE"],
+      ["1", "1", "0052A4"],
+    ]);
   });
 });

@@ -32,7 +32,7 @@ export function mapStations(stations: ReadonlyArray<AnyStation>): MappedStation[
   return stations.map((station, index) => ({
     index,
     name: station.stationName,
-    subtitle: ("subtitle" in station ? station.subtitle : null) || station.stationNumber || null,
+    subtitle: ("subtitle" in station ? station.subtitle : null) || null,
     stationNumber: station.stationNumber || null,
     isFirstStation: station.isFirstStation,
     isLastStation: station.isLastStation,
@@ -60,7 +60,6 @@ function toJongroGroup(route: RegistryRoute, lang: SupportedLang) {
       refreshInterval: route.refreshInterval,
       lastStationIndex: route.stations.length - 1,
       stations: mapStations(route.stations),
-      routeOverlay: null,
       features: [],
       stationsVersion: route.stationsVersion,
     },
@@ -94,7 +93,6 @@ function toHsscGroup(lang: SupportedLang, webviewOrigin: string) {
       refreshInterval: 10,
       lastStationIndex: 10,
       stations: mapStations(HSSC_STATIONS),
-      routeOverlay: null,
       features: [{ type: "info", url: `${webviewOrigin}/bus/hssc/info` }],
     },
   };

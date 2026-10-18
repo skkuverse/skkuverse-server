@@ -11,3 +11,8 @@ export interface EmptySpell {
   since: Date;
   lastAt: Date;
 }
+
+export interface TrainMapLine {
+  trainMapLine: string;
+  platformIdByName: ReadonlyMap<string, string>;
+}
