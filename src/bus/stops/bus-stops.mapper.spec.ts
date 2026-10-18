@@ -242,6 +242,20 @@ describe("resolveStopSequences", () => {
     expect(stops[0]).toEqual({ id: "nsc-opposite", name: "N센터 건너편" });
   });
 
+  it.each(["ko", "en", "zh"] as const)("Stops without maps: leaves out every map and keeps every other field and sequence (%s)", (lang) => {
+    // Arrange
+    const ids = ["commute-jeongja", "commute-jamsil", "commute-gwanggyo"];
+    const withMaps = resolveStopSequences(ids, lang, { catalog });
+
+    // Act
+    const withoutMaps = resolveStopSequences(ids, lang, { catalog, hasStopMaps: false });
+
+    // Assert
+    expect(withMaps.stops.filter((stop) => "map" in stop).map((stop) => stop.id)).toEqual(["jeongja-exit3", "nsc-welfare"]);
+    expect(withoutMaps.stops).toEqual(withMaps.stops.map(({ map: _map, ...stop }) => stop));
+    expect(withoutMaps.sequences).toEqual(withMaps.sequences);
+  });
+
   describe("the subway station a stop is at", () => {
     const TITLES = new Map([["jeongja", { ko: "정자역", en: "Jeongja Station", zh: "亭子站" }]]);
     const tagged: ScheduleStopCatalog = {

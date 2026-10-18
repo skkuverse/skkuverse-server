@@ -336,3 +336,29 @@ describe("GET /bus/config and the registry", () => {
     });
   });
 });
+
+// WHY: the app draws a stop's map card exactly when `map` is there (hide-commute-stop-maps).
+describe("GET /bus/config stop maps", () => {
+  type Stop = { id: string; map?: unknown };
+
+  it.each(["ko", "en", "zh"])("Commute stops without maps: no commute stop has a map, every campus stop keeps one (%s)", async (lang) => {
+    // Act
+    const [commute, campus, all] = await Promise.all(
+      ["/bus/config/commute", "/bus/config/campus", "/bus/config"].map((url) => request(httpServer).get(url).set("Accept-Language", lang)),
+    );
+
+    // Assert
+    expect([commute!.status, campus!.status, all!.status]).toEqual([200, 200, 200]);
+    const commuteStops: Stop[] = commute!.body.data.screen.stops;
+    const campusStops: Stop[] = campus!.body.data.screen.stops;
+    expect(commuteStops.length).toBeGreaterThan(0);
+    for (const stop of commuteStops) expect(stop).not.toHaveProperty("map");
+    expect(campusStops.map((stop) => stop.id)).toEqual(expect.arrayContaining(["nsc-n-center", "nsc-opposite"]));
+    for (const stop of campusStops) expect(stop).toHaveProperty("map", { markers: [], paths: [] });
+    const groups: Array<{ id: string; screen: { stops?: Stop[] } }> = all!.body.data.groups;
+    expect(groups.find((group) => group.id === "commute")!.screen.stops).toEqual(commuteStops);
+    expect(groups.find((group) => group.id === "campus")!.screen.stops).toEqual(campusStops);
+    expectWire(busGroup, commute!.body.data);
+    expectWire(busConfig, all!.body.data);
+  });
+});

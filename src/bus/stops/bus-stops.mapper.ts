@@ -11,6 +11,8 @@ interface StopSources {
   catalog: Readonly<ScheduleStopCatalog>;
   /** WHY: station slug → title; absent where no stop names a station. */
   subwayTitles?: SubwayTitles;
+  /** WHY: false leaves out every stop's map, guide or not; absent serves each guide. */
+  hasStopMaps?: boolean;
 }
 
 // QUIRK(naver): NAVER Map's unofficial panorama app link, built here so a format change is one deploy, not an
@@ -60,6 +62,8 @@ function toServedStop(stop: ScheduleStop, lang: SupportedLang, titles: SubwayTit
   return served;
 }
 
+const withoutGuide = ({ guide: _guide, ...stop }: ScheduleStop): ScheduleStop => stop;
+
 function toServedSequenceStop(entry: SequenceStop, name: I18n, lang: SupportedLang): ServedSequenceStop {
   const served: ServedSequenceStop = { label: textIn(name, lang), action: entry.action, timing: entry.timing };
   if (entry.stopId) served.stopId = entry.stopId;
@@ -75,7 +79,7 @@ function toServedSequenceStop(entry: SequenceStop, name: I18n, lang: SupportedLa
  * is named by its catalog stop or its own label, `stops` lists each referenced stop once in order of first
  * reference, and a service without sequences is absent from `sequences`.
  */
-export function resolveStopSequences(serviceIds: readonly string[], lang: SupportedLang, { catalog, subwayTitles = new Map() }: StopSources): ResolvedStops {
+export function resolveStopSequences(serviceIds: readonly string[], lang: SupportedLang, { catalog, subwayTitles = new Map(), hasStopMaps = true }: StopSources): ResolvedStops {
   const sequences: ResolvedStops["sequences"] = {};
   const referenced: string[] = [];
   const byId = (id: string): ScheduleStop => {
@@ -101,5 +105,6 @@ export function resolveStopSequences(serviceIds: readonly string[], lang: Suppor
       ]),
     );
   }
-  return { sequences, stops: referenced.map((id) => toServedStop(byId(id), lang, subwayTitles)) };
+  const catalogStops = referenced.map((id) => (hasStopMaps ? byId(id) : withoutGuide(byId(id))));
+  return { sequences, stops: catalogStops.map((stop) => toServedStop(stop, lang, subwayTitles)) };
 }
