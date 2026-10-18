@@ -150,19 +150,19 @@ class Times(unittest.TestCase):
 
 
 class KorailNames(unittest.TestCase):
-    def test_maps_the_nine_covered_short_names(self):
+    def test_maps_the_eleven_covered_short_names(self):
         # Arrange
-        names = ["병점", "세류", "수원", "화서", "성균관", "의왕", "당정", "군포", "금정"]
+        names = ["병점", "세류", "수원", "화서", "성균관", "의왕", "당정", "군포", "금정", "명학", "안양"]
 
         # Act
         codes = [convert.korail_code(name, "test") for name in names]
 
         # Assert
-        self.assertEqual(codes, ["KR-1-P157", "KR-1-1715", "KR-1-P155", "KR-1-P154", "KR-1-0153", "KR-1-P152", "KR-1-P151", "KR-1-P150", "KR-1-P149"])
+        self.assertEqual(codes, ["KR-1-P157", "KR-1-1715", "KR-1-P155", "KR-1-P154", "KR-1-0153", "KR-1-P152", "KR-1-P151", "KR-1-P150", "KR-1-P149", "KR-1-P148", "KR-1-P147"])
 
     def test_leaves_other_stations_unmapped(self):
         # Act & Assert
-        self.assertEqual([convert.korail_code(name, "test") for name in ("서동탄", "세마", "1지청", "명학")], [None, None, None, None])
+        self.assertEqual([convert.korail_code(name, "test") for name in ("서동탄", "세마", "1지청", "관악")], [None, None, None, None])
 
     def test_refuses_a_covered_looking_name_with_the_sheet_and_row(self):
         # Arrange
@@ -416,15 +416,22 @@ class SuinBundang(unittest.TestCase):
         with open(os.path.join(scratch.name, "korail-k1-weekday.json"), encoding="utf-8") as handle:
             return {t["trainNo"]: t for t in json.load(handle)["trains"]}
 
-    def test_maps_the_fourteen_window_short_names(self):
+    def test_maps_the_twenty_eight_covered_short_names_from_wangsimni_to_giheung(self):
         # Arrange
-        names = ["선정릉", "선릉", "한티", "도곡", "구룡역", "개포동", "대모산", "이매", "서현", "수내", "정자", "미금", "오리", "죽전"]
+        names = [
+            "왕십리", "서울숲", "로데오", "강남구", "선정릉", "선릉", "한티", "도곡", "구룡역", "개포동", "대모산", "수서", "복정", "가천대",
+            "태평", "모란", "야탑", "이매", "서현", "수내", "정자", "미금", "오리", "죽전", "보정", "구성", "신갈", "기흥",
+        ]
 
         # Act
         codes = [convert.korail_code(name, "test", self.line) for name in names]
 
         # Assert
-        self.assertEqual(codes, ["KR-K1-K%d" % n for n in (214, 215, 216, 217, 218, 219, 220, 227, 228, 229, 230, 231, 232, 233)])
+        self.assertEqual(codes, ["KR-K1-K%d" % n for n in range(210, 238)])
+
+    def test_leaves_the_stations_beyond_the_covered_ones_unmapped(self):
+        # Act & Assert
+        self.assertEqual([convert.korail_code(name, "test", self.line) for name in ("청량리", "상갈", "신인천")], [None, None, None])
 
     def test_writes_the_xlsx_terminus_names_as_the_upstreams_write_them(self):
         # Act
@@ -444,12 +451,33 @@ class SuinBundang(unittest.TestCase):
         self.assertEqual(list(built), ["6001"])
         self.assertEqual(built["6001"]["destination"], "인천")
         self.assertEqual(built["6001"]["direction"], "down")
-        self.assertEqual([s["station"] for s in built["6001"]["stops"]], ["KR-K1-K227", "KR-K1-K228", "KR-K1-K229", "KR-K1-K230", "KR-K1-K231", "KR-K1-K232", "KR-K1-K233"])
+        self.assertEqual([s["station"] for s in built["6001"]["stops"]], ["KR-K1-K225", "KR-K1-K227", "KR-K1-K228", "KR-K1-K229", "KR-K1-K230", "KR-K1-K231", "KR-K1-K232", "KR-K1-K233", "KR-K1-K234"])
 
     def test_refuses_an_express_that_passes_a_window_station(self):
         # Act & Assert
         with self.assertRaisesRegex(convert.ConvertError, "6303.*passes KR-K1-K232"):
             self.build(self.trains)
+
+    def test_accepts_an_express_that_passes_bojeong_and_leaves_that_station_out_of_its_stops(self):
+        # Arrange
+        express = dict(self.trains[2][3])
+        express["오리"] = (fraction(7, 12), fraction(7, 12, 30))
+        express["보정"] = (None, fraction(7, 16))
+        express["구성"] = (fraction(7, 18), None)
+        stations = K1_DOWN_STATIONS + ["구성"]
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        cells = korail_sheet(stations, {2: ("K6303", "모란", "고색", express)})
+
+        # Act
+        with contextlib.redirect_stdout(io.StringIO()):
+            convert.build_korail_line(scratch.name, self.line, "weekday", xlsx({"평일하행": cells, "휴일하행": cells}))
+        with open(os.path.join(scratch.name, "korail-k1-weekday.json"), encoding="utf-8") as handle:
+            built = {t["trainNo"]: t for t in json.load(handle)["trains"]}
+
+        # Assert
+        self.assertTrue(built["6303"]["express"])
+        self.assertEqual([s["station"] for s in built["6303"]["stops"]][-3:], ["KR-K1-K232", "KR-K1-K233", "KR-K1-K235"])
 
     def test_refuses_a_pass_on_a_train_not_numbered_63xx(self):
         # Arrange
@@ -463,9 +491,9 @@ class SuinBundang(unittest.TestCase):
 
 
 class CommittedSuinBundang(unittest.TestCase):
-    WINDOWS = (["KR-K1-K%d" % n for n in range(214, 221)], ["KR-K1-K%d" % n for n in range(227, 234)])
+    WINDOWS = (["KR-K1-K%d" % n for n in range(210, 234)], ["KR-K1-K237"])
 
-    def test_every_express_stops_at_every_window_station(self):
+    def test_every_express_stops_at_every_covered_station_from_wangsimni_to_jukjeon_and_at_giheung(self):
         # Arrange
         with open(os.path.join(TIMETABLE_DIR, "korail-k1-weekday.json"), encoding="utf-8") as handle:
             expresses = [t for t in json.load(handle)["trains"] if t["express"]]

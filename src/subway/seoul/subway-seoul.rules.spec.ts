@@ -26,6 +26,9 @@ const LINE_1_NAMES = {
   화서: "KR-1-P154",
   수원: "KR-1-P155",
   세류: "KR-1-1715",
+  병점: "KR-1-P157",
+  명학: "KR-1-P148",
+  안양: "KR-1-P147",
 };
 const LINE_4_NAMES = {
   혜화: "S1-4-420",
@@ -35,8 +38,16 @@ const LINE_4_NAMES = {
   동대문: "S1-4-421",
   동대문역사문화공원: "S1-4-422",
   충무로: "S1-4-423",
+  수유: "S1-4-414",
+  미아: "S1-4-415",
+  미아사거리: "S1-4-416",
+  명동: "S1-4-424",
+  회현: "S1-4-425",
+  서울: "S1-4-426",
 };
-// WHY: every name checked against the 2026-10-17 21:05–21:21 position rows and the train map pages (task 6.1.1).
+// WHY: every name checked against the 2026-10-17 21:05–21:21 position rows and the train map pages (task 6.1.1), and the
+// ones added by design D17 against the 2026-10-18 11:16–11:35 position rows and train map pages (line 4 writes Seoul
+// Station as `서울`).
 const LINE_2_NAMES = {
   잠실: "S1-2-216",
   강남: "S1-2-222",
@@ -51,6 +62,10 @@ const LINE_2_NAMES = {
   교대: "S1-2-223",
   서초: "S1-2-224",
   방배: "S1-2-225",
+  건대입구: "S1-2-212",
+  사당: "S1-2-226",
+  낙성대: "S1-2-227",
+  서울대입구: "S1-2-228",
 };
 const LINE_3_NAMES = {
   도곡: "S1-3-334",
@@ -62,9 +77,30 @@ const LINE_3_NAMES = {
   대치: "S1-3-335",
   학여울: "S1-3-336",
   대청: "S1-3-337",
+  압구정: "S1-3-326",
+  신사: "S1-3-327",
+  잠원: "S1-3-328",
+  일원: "S1-3-338",
+  수서: "S1-3-339",
+  가락시장: "S1-3-340",
+  경찰병원: "S1-3-341",
+  오금: "S1-3-342",
 };
 // WHY: the API writes two line 8 stations with a bracketed suffix the train map leaves out (task 6.2.1).
-const LINE_8_STATIONS = { 잠실: "S1-8-2815", 강동구청: "S1-8-2813", 석촌: "S1-8-2816", 송파: "S1-8-2817", 가락시장: "S1-8-2818" };
+const LINE_8_STATIONS = {
+  잠실: "S1-8-2815",
+  강동구청: "S1-8-2813",
+  석촌: "S1-8-2816",
+  송파: "S1-8-2817",
+  가락시장: "S1-8-2818",
+  장자호수공원: "GU-8-2808",
+  암사역사공원: "S1-8-2809",
+  암사: "S1-8-2811",
+  문정: "S1-8-2819",
+  장지: "S1-8-2820",
+  복정: "S1-8-2821",
+  남위례: "S1-8-2828",
+};
 const LINE_8_API_NAMES = { ...LINE_8_STATIONS, "천호(풍납토성)": "S1-8-2812", "몽촌토성(평화의문)": "S1-8-2814" };
 const LINE_8_MAP_NAMES = { ...LINE_8_STATIONS, 천호: "S1-8-2812", 몽촌토성: "S1-8-2814" };
 const SHINBUNDANG_NAMES = {
@@ -100,6 +136,20 @@ const SUIN_BUNDANG_NAMES = {
   미금: "KR-K1-K231",
   오리: "KR-K1-K232",
   죽전: "KR-K1-K233",
+  왕십리: "KR-K1-K210",
+  서울숲: "KR-K1-K211",
+  압구정로데오: "KR-K1-K212",
+  강남구청: "KR-K1-K213",
+  수서: "KR-K1-K221",
+  복정: "KR-K1-K222",
+  가천대: "KR-K1-K223",
+  태평: "KR-K1-K224",
+  모란: "KR-K1-K225",
+  야탑: "KR-K1-K226",
+  보정: "KR-K1-K234",
+  구성: "KR-K1-K235",
+  신갈: "KR-K1-K236",
+  기흥: "KR-K1-K237",
 };
 
 describe("toSeoulLines", () => {
