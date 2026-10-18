@@ -111,8 +111,8 @@ describe("loadSubwayRegistry", () => {
     ],
     [
       "a watched platform neither served nor a neighbor",
-      (raw: Json) => (at(raw, [...SUNGKYUNKWAN, "directions", "down"])["watchedPlatformIds"] = ["KR-1-P148"]),
-      'stations.0.platforms.0.directions.down.watchedPlatformIds.0: "KR-1-P148" is neither a served platform nor a neighbor',
+      (raw: Json) => (at(raw, [...SUNGKYUNKWAN, "directions", "down"])["watchedPlatformIds"] = ["KR-1-P146"]),
+      'stations.0.platforms.0.directions.down.watchedPlatformIds.0: "KR-1-P146" is neither a served platform nor a neighbor',
     ],
     [
       "a previous neighbor without a name",
