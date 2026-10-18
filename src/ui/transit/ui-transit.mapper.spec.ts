@@ -1,9 +1,9 @@
 /**
  * toTransitSection resolves one checked section for a request: a bus item
  * takes its group's label, card and screen, a subway item its physical
- * station's title, its lines' names joined as its subtitle and each line's
- * code, name, color and marker (in place of an icon), and a link item its own
- * text in the request language and its served action. Every kind carries a
+ * station's title, a null subtitle (its markers name its lines) and each
+ * line's code, name, color and marker (in place of an icon), and a link item
+ * its own text in the request language and its served action. Every kind carries a
  * title, a subtitle and an action, never a live arrival, and a bus item whose
  * group is not among the visible ones is left out. A group item serves its own
  * text, icon and initial state, and its children exactly as at the top of a
@@ -136,7 +136,7 @@ describe("toTransitSection", () => {
     expect(parsesAsWire(resolved)).toBe(true);
   });
 
-  it("Hyehwa in Korean: serves its suffixed title, its line name as subtitle and its line, with no icon", () => {
+  it("Hyehwa in Korean: serves its suffixed title, a null subtitle and its line, with no icon", () => {
     // Act
     const resolved = resolve(section({ kind: "subway", stationId: "hyehwa" }));
 
@@ -147,7 +147,7 @@ describe("toTransitSection", () => {
         id: "subway:hyehwa",
         stationId: "hyehwa",
         title: "혜화역",
-        subtitle: "4호선",
+        subtitle: null,
         lines: [{ code: "4", name: "4호선", color: "00A5DE", marker: { text: "4", color: "007FAB" } }],
         action: { actionType: "route", actionValue: "/subway?station=hyehwa" },
       },
@@ -156,14 +156,14 @@ describe("toTransitSection", () => {
     expect(parsesAsWire(resolved)).toBe(true);
   });
 
-  it("Transfer station: serves 정자 with both lines in order, their names joined as its subtitle", () => {
+  it("Transfer station: serves 정자 with both lines in order and a null subtitle", () => {
     // Act
     const resolved = resolve(section({ kind: "subway", stationId: "jeongja" }));
 
     // Assert
     expect(resolved.items[0]).toMatchObject({
       title: "정자역",
-      subtitle: "신분당선 · 수인분당선",
+      subtitle: null,
       lines: [
         { code: "D1", name: "신분당선", color: "D4003B", marker: { text: "신", color: "D4003B" } },
         { code: "K1", name: "수인분당선", color: "F5A200", marker: { text: "수", color: "A26B00" } },
@@ -172,19 +172,32 @@ describe("toTransitSection", () => {
     expect(parsesAsWire(resolved)).toBe(true);
   });
 
-  it("Line names in English: serves the subtitle, each name and marker text in English, codes and colors unchanged", () => {
+  it("Line names in English: serves each name and marker text in English, codes and colors unchanged, and still no subtitle", () => {
     // Act
     const resolved = resolve(section({ kind: "subway", stationId: "jeongja" }), "en");
 
     // Assert
     expect(resolved.items[0]).toMatchObject({
       title: "Jeongja Station",
-      subtitle: "Shinbundang Line · Suin–Bundang Line",
+      subtitle: null,
       lines: [
         { code: "D1", name: "Shinbundang Line", color: "D4003B", marker: { text: "신", color: "D4003B" } },
         { code: "K1", name: "Suin–Bundang Line", color: "F5A200", marker: { text: "수", color: "A26B00" } },
       ],
     });
+  });
+
+  it.each(["ko", "en", "zh"] as const)("serves every registered station with a null subtitle in %s, beside a bus item that keeps its card's", (lang) => {
+    // Arrange
+    const stations = new SubwayStationsService().listStations();
+    const stationById = new Map(stations.map((station) => [station.id, station]));
+    const items: ItemRaw[] = [{ kind: "bus", groupId: "hssc" }, ...stations.map((station) => ({ kind: "subway" as const, stationId: station.id }))];
+
+    // Act
+    const resolved = toTransitSection(section(...items), { lang, busGroupById: new Map([["hssc", group()]]), stationById });
+
+    // Assert
+    expect(resolved.items.map((item) => [item.kind, item.subtitle])).toEqual([["bus", "정차소 ↔ 600주년 기념관"], ...stations.map(() => ["subway", null])]);
   });
 
   it("serves each registered station's lines as SubwayStationsService lists them, in the request language", () => {

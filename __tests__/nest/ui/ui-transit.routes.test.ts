@@ -70,7 +70,7 @@ describe("GET /ui/home/transit", () => {
     expectWire(transitLayout, res.body.data);
   });
 
-  it("Hyehwa in Korean: serves 혜화 as a station row with its line, first in hssc", async () => {
+  it("Hyehwa in Korean: serves 혜화 as a station row with its line and a null subtitle, first in hssc", async () => {
     // Act
     const res = await request(httpServer).get("/ui/home/transit").set("Accept-Language", "ko");
 
@@ -81,7 +81,7 @@ describe("GET /ui/home/transit", () => {
       id: "subway:hyehwa",
       stationId: "hyehwa",
       title: "혜화역",
-      subtitle: "4호선",
+      subtitle: null,
       lines: [{ code: "4", name: "4호선", color: "00A5DE", marker: { text: "4", color: "007FAB" } }],
       action: { actionType: "route", actionValue: "/subway?station=hyehwa" },
     });
@@ -115,13 +115,13 @@ describe("GET /ui/home/transit", () => {
       "subway:yangjae",
       "subway:gwanggyo-jungang",
     ]);
-    expect(group.items[2]).toMatchObject({ id: "subway:dogok", subtitle: "3호선 · 수인분당선", lines: [{ code: "3" }, { code: "K1", color: "F5A200", marker: { text: "수", color: "A26B00" } }] });
+    expect(group.items[2]).toMatchObject({ id: "subway:dogok", subtitle: null, lines: [{ code: "3" }, { code: "K1", color: "F5A200", marker: { text: "수", color: "A26B00" } }] });
     expect(group.items[3]).toEqual({
       kind: "subway",
       id: "subway:gangnam",
       stationId: "gangnam",
       title: "강남역",
-      subtitle: "2호선 · 신분당선",
+      subtitle: null,
       lines: [
         { code: "2", name: "2호선", color: "00A84D", marker: { text: "2", color: "00893F" } },
         { code: "D1", name: "신분당선", color: "D4003B", marker: { text: "신", color: "D4003B" } },
@@ -132,7 +132,7 @@ describe("GET /ui/home/transit", () => {
     expectWire(transitLayout, res.body.data);
   });
 
-  it("Transfer station: serves 정자 first in the group with its 신분당 then its 수인분당 line, and their names joined as its subtitle", async () => {
+  it("Transfer station: serves 정자 first in the group with its 신분당 then its 수인분당 line, and a null subtitle", async () => {
     // Act
     const res = await request(httpServer).get("/ui/home/transit").set("Accept-Language", "ko");
 
@@ -143,7 +143,7 @@ describe("GET /ui/home/transit", () => {
       id: "subway:jeongja",
       stationId: "jeongja",
       title: "정자역",
-      subtitle: "신분당선 · 수인분당선",
+      subtitle: null,
       lines: [
         { code: "D1", name: "신분당선", color: "D4003B", marker: { text: "신", color: "D4003B" } },
         { code: "K1", name: "수인분당선", color: "F5A200", marker: { text: "수", color: "A26B00" } },
@@ -185,6 +185,21 @@ describe("GET /ui/home/transit", () => {
     const idsOf = (body: { data: { sections: Array<{ id: string; items: Array<{ id: string }> }> } }) =>
       body.data.sections.map((s) => [s.id, s.items.map((served) => served.id)]);
     expect(idsOf(en.body)).toEqual(idsOf(ko.body));
+  });
+
+  it.each(["ko", "en", "zh"])("Subway rows carry no subtitle in %s: every station row serves null, and every bus row keeps its own", async (lang) => {
+    // Act
+    const res = await request(httpServer).get("/ui/home/transit").set("Accept-Language", lang);
+
+    // Assert
+    expect(res.status).toBe(200);
+    type Row = { kind: string; id: string; subtitle: string | null; items?: Row[] };
+    const rows = (res.body.data.sections as Array<{ items: Row[] }>).flatMap((s) => s.items).flatMap((row) => [row, ...(row.items ?? [])]);
+    expect(rows.filter((row) => row.kind === "subway").map((row) => [row.id, row.subtitle])).toEqual(
+      ["hyehwa", "sungkyunkwan", "jeongja", "jamsil", "dogok", "gangnam", "yangjae", "gwanggyo-jungang"].map((id) => [`subway:${id}`, null]),
+    );
+    expect(rows.filter((row) => row.kind === "bus").every((row) => typeof row.subtitle === "string" && row.subtitle.length > 0)).toBe(true);
+    expectWire(transitLayout, res.body.data);
   });
 
   it("is cached privately for five minutes and carries no arrival data", async () => {
