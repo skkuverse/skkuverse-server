@@ -180,8 +180,13 @@ once a day into `jongro_route_paths`, and seeds a missing one from
 `src/bus/route-path/jongro-route-paths.seed.json`
 ([bus architecture](../explanation/bus-architecture.md)).
 
-- **Colour, width, outline, zoom bounds:** their entries in `map.constants.ts`
-  (`ROUTE_LINE_STYLE` and each layer's `color`). A deploy.
+- **Colour, width, outline, zoom bounds:** the `style` of `ROUTE_LINE_LAYER`
+  in `map.constants.ts`, one style for all three. Its colour is the routes'
+  `themeColor` in `src/bus/jongro-routes.json`, and the route test fails when
+  the two differ. A deploy.
+- **Which line lies on top:** the layer order in `BASE_LAYERS`; a later layer
+  draws over an earlier one, so `jongro07_route` comes after
+  `jongro08_route` ([Draw order](../reference/map-overlays-api.md#draw-order)).
 - **On by default:** set `defaultVisibleWhen` to `{ kind: "always" }` on the
   layer. It reaches every installed app with the next `/map/config`, so decide
   it with the app owner first.

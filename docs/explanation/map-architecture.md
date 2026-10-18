@@ -101,6 +101,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 - The event map is timezone-free: windows and facet options are absolute instants, compared with no zone arithmetic.
 - `degraded` never reaches the wire. The campus fallback is sent with `DEGRADED_CACHE_CONTROL` (`no-store`), the transit fallback with `DEGRADED_TRANSIT_CACHE_CONTROL` (a minute): the snapshot still draws the routes correctly.
 - A transit overlay is the stored line as stored, unclosed, on its route line layer; the route line layers are off by default, so an installed app fetches `/map/overlays/transit` only once a user turns one on.
+- The route line layers share one style in the routes' `themeColor` (`src/bus/jongro-routes.json`), and their order in `BASE_LAYERS` is their draw order: the app adds them in that order and the later one lies on top, so `jongro07_route` comes after `jongro08_route` ([Draw order](../reference/map-overlays-api.md#draw-order)).
 - Cloudflare caches `/map/overlays/campus`, `/map/overlays/transit` and both event routes without varying on `Accept-Language`, so their bodies carry every language and their `meta` names none: `ResponseInterceptor` leaves `lang` out of any response with a `public` or `s-maxage` `Cache-Control`.
 - Only `MapModule` binds the general limiter on `/map/config` and `/map/overlays`; the sub-modules bind nothing.
 - The `.wire` files publish what is served today, including the campus overlay's string `placeId`.
