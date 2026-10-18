@@ -8,7 +8,9 @@
  * A tracked Jongro bus (add-jongro-bus-positions): its rows found by vehicle,
  * its status (waiting at a terminal or by its next-stop text, at a stop,
  * running), its progress through the section and its seconds to the next
- * stop re-based to TOPIS's observation time.
+ * stop re-based to TOPIS's observation time; a position a full section behind
+ * its arrival rows served running, and a waiting vehicle's arrivals read
+ * waiting (D7).
  */
 
 import { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
@@ -18,12 +20,16 @@ import { BusRegistryService } from "../../registry/bus-registry.service";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { jongroArrivalBus, jongroPositionDoc, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import {
+  isLaggingPosition,
+  toHighestSectOrd,
   toJongroBusTracking,
   toNextStopInSec,
   toProgress,
   toStationEtas,
   toTrackedStatus,
   toVehicleBuses,
+  toWaitingArrival,
+  toWaitingVehicleIds,
 } from "./bus-realtime-group.rules";
 
 describe("toStationEtas", () => {
@@ -279,5 +285,106 @@ describe("toJongroBusTracking", () => {
 
     // Assert
     expect(tracking).toMatchObject({ crowding: null, isLastBus: false, nextStopInSec: null });
+  });
+});
+
+// WHY: the arrival API counts the section toward the next stop, one ahead of the position's sectOrd, so a gap of
+// 2 means the position is a section stale (add-jongro-bus-positions D7, 966 of 1,032 same-epoch pairs at 1).
+describe("isLaggingPosition", () => {
+  it.each([
+    ["no row names the vehicle", undefined, false],
+    ["the next stop's section", 6, false],
+    ["a section ahead of that", 7, true],
+    ["two sections ahead of that", 8, true],
+  ] as const)("%s → %s", (_case, highestSectOrd, expected) => {
+    // Act & Assert
+    expect(isLaggingPosition(jongroPositionDoc({ sequence: "5" }), highestSectOrd)).toBe(expected);
+  });
+});
+
+describe("toHighestSectOrd", () => {
+  it("takes the highest sectOrd any row gives the vehicle, in either slot (arr_100900004_1792232615)", () => {
+    // Arrange
+    const rows = [
+      { buses: [jongroArrivalBus({ vehId: "100000035", staOrd: 7, sectOrd: 7, arrmsg: "곧 도착" }), noArrivalBus({ staOrd: 7, arrmsg: "출발대기" })] },
+      { buses: [jongroArrivalBus({ vehId: "100000114", staOrd: 16, sectOrd: 16, arrmsg: "곧 도착" }), jongroArrivalBus({ vehId: "100000035", staOrd: 16, sectOrd: 7 })] },
+      { buses: [jongroArrivalBus({ vehId: "100000035", staOrd: 6, sectOrd: 6 }), noArrivalBus({ staOrd: 6 })] },
+    ];
+
+    // Act & Assert
+    expect(toHighestSectOrd(rows, "100000035")).toBe(7);
+  });
+
+  it("is undefined for a vehicle no row names", () => {
+    // Act & Assert
+    expect(toHighestSectOrd([{ buses: [noArrivalBus({ staOrd: 2, arrmsg: "출발대기" })] }], "100000018")).toBeUndefined();
+  });
+});
+
+describe("toTrackedStatus with a lagging position", () => {
+  // Route 07 vehicle 100000035's position at 19:22:58 (pos_100900004_1792232595), stopFlag 1 at ord 5.
+  const stale35 = jongroPositionDoc({ sequence: "5", stationId: "100000421", vehicleId: "100000035", sectDist: 0, fullSectDist: 0.225, isAtStop: true, observedAt: "2026-10-17T19:22:58+09:00" });
+  // Route 02 vehicle 100000018 standing still at its origin at 19:21:01 (pos_100900008_1792232472).
+  const idle18 = jongroPositionDoc({ sequence: "1", stationId: "100900204", vehicleId: "100000018", sectDist: 0.031, fullSectDist: 0.259, isStationary: true });
+
+  it.each([
+    ["at a stop, the rows a section ahead", stale35, ROUTE07, 7, undefined, "running"],
+    ["at a stop, the rows at the next stop's section", stale35, ROUTE07, 6, "arriving", "atStop"],
+    ["standing still at the origin, the rows a section ahead", idle18, ROUTE02, 3, undefined, "running"],
+    ["standing still at the origin, 곧 도착 at the next stop", idle18, ROUTE02, 2, "arriving", "waiting"],
+    ["with a 출발대기 next stop, the rows a section ahead", stale35, ROUTE07, 7, "waiting", "running"],
+  ] as const)("%s → %s", (_case, position, route, highestSectOrd, nextStopState, expected) => {
+    // Act & Assert
+    expect(toTrackedStatus(position, { ...route, nextStopState, highestSectOrd })).toBe(expected);
+  });
+
+  it("tracks a lagging bus as running with the position's progress and no countdown without a next-stop row", () => {
+    // Act
+    const tracking = toJongroBusTracking(stale35, {
+      ...ROUTE07,
+      highestSectOrd: 7,
+      nextStop: undefined,
+      arrival: { state: "arriving", crowding: "relaxed", isLastBus: false },
+    });
+
+    // Assert
+    expect(tracking).toEqual({
+      status: "running",
+      vehicleId: "100000035",
+      observedAt: "2026-10-17T19:22:58+09:00",
+      crowding: "relaxed",
+      isLastBus: false,
+      progress: 0,
+      segmentMeters: 225,
+      nextStopInSec: null,
+    });
+  });
+});
+
+describe("toWaitingArrival", () => {
+  const arrival = { stopsAway: 0, isLastBus: false, carNumber: "5512", crowding: "relaxed" as const, passengerCount: 1 };
+
+  it.each([
+    ["곧 도착", { ...arrival, minutes: null, state: "arriving" as const, message: "곧 도착" }],
+    ["a timed text", { ...arrival, minutes: 2, stopsAway: 1, state: "running" as const, message: "1분47초후[1번째 전]" }],
+  ])("serves %s as waiting with no minutes, keeping the message and the rest", (_case, input) => {
+    // Act & Assert
+    expect(toWaitingArrival(input)).toEqual({ ...input, state: "waiting", minutes: null });
+  });
+});
+
+describe("toWaitingVehicleIds", () => {
+  it("collects the vehicles of tracked buses whose status is waiting", () => {
+    // Arrange
+    const common = { stationIndex: 0, carNumber: "5512", estimatedTime: 0 };
+    const tracked = { observedAt: "2026-10-17T19:21:01+09:00", crowding: null, isLastBus: false };
+    const buses = [
+      { ...common, kind: "tracked" as const, tracked: { status: "waiting" as const, vehicleId: "100000018", ...tracked } },
+      { ...common, kind: "tracked" as const, tracked: { status: "atStop" as const, vehicleId: "100000015", ...tracked } },
+      { ...common, kind: "estimated" as const },
+    ];
+
+    // Act & Assert
+    expect(toWaitingVehicleIds(buses)).toEqual(new Set(["100000018"]));
   });
 });

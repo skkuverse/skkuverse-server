@@ -1,6 +1,8 @@
 import type { JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
+import type { Arrival, RealtimeBus } from "./bus-realtime-group.wire";
 import type {
   CachedArrivalFields,
+  StatusContext,
   JongroBusTracking,
   JongroRouteStations,
   NextStopBus,
@@ -33,12 +35,26 @@ export function toVehicleBuses(rows: readonly Pick<JongroArrivalDoc, "eventDate"
   return { nextStop: named.find(({ bus }) => bus.staOrd === sectOrd + 1), firstNamed: named[0]?.bus };
 }
 
+export function toHighestSectOrd(rows: readonly Pick<JongroArrivalDoc, "buses">[], vehicleId: string): number | undefined {
+  const sectOrds = rows.flatMap((row) => row.buses.filter((bus) => bus.vehId === vehicleId).map((bus) => bus.sectOrd));
+  return sectOrds.length > 0 ? Math.max(...sectOrds) : undefined;
+}
+
+// EVIDENCE: the arrival API counts the section toward the next stop, one past the position's sectOrd in 966 of
+// 1,032 same-moment pairs (2026-10-17 capture); two past means the position is a section stale.
+const MIN_LAGGING_SECTION_GAP = 2;
+
+export function isLaggingPosition(position: Pick<JongroBusPositionDoc, "sequence">, highestSectOrd: number | undefined): boolean {
+  return highestSectOrd !== undefined && highestSectOrd - Number(position.sequence) >= MIN_LAGGING_SECTION_GAP;
+}
+
 // WHY: an idling bus at a terminal reports stopFlag 0, so standing still there is waiting (add-jongro-bus-positions
 // D4); the last index is a terminal (route 02's is its origin's stop again) and never running.
 export function toTrackedStatus(
   position: JongroBusPositionDoc,
-  { stationCount, turnaroundTopisId, nextStopState }: Pick<TrackingContext, "stationCount" | "turnaroundTopisId"> & { nextStopState: string | undefined },
+  { stationCount, turnaroundTopisId, nextStopState, highestSectOrd }: StatusContext,
 ): JongroBusTracking["status"] {
+  if (isLaggingPosition(position, highestSectOrd)) return "running";
   const stationIndex = Number(position.sequence) - 1;
   const isLastIndex = stationIndex >= stationCount - 1;
   const isAtTerminal = stationIndex === 0 || isLastIndex || position.stationId === turnaroundTopisId;
@@ -76,4 +92,14 @@ export function toJongroBusTracking(position: JongroBusPositionDoc, context: Tra
     segmentMeters: Math.round(position.fullSectDist * 1000),
     nextStopInSec: isRunning ? toNextStopInSec(context.nextStop, position.observedAt) : null,
   };
+}
+
+// WHY: TOPIS prints its arriving-soon text at the next stop for a bus idling at its origin
+// (add-jongro-bus-positions D7), so a waiting vehicle's arrivals follow its joined position.
+export function toWaitingArrival(arrival: Arrival): Arrival {
+  return { ...arrival, state: "waiting", minutes: null };
+}
+
+export function toWaitingVehicleIds(buses: readonly RealtimeBus[]): Set<string> {
+  return new Set(buses.flatMap((bus) => (bus.kind === "tracked" && bus.tracked.status === "waiting" ? [bus.tracked.vehicleId] : [])));
 }
