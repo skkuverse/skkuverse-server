@@ -60,7 +60,6 @@ function toJongroGroup(route: RegistryRoute, lang: SupportedLang) {
       refreshInterval: route.refreshInterval,
       lastStationIndex: route.stations.length - 1,
       stations: mapStations(route.stations),
-      routeOverlay: null,
       features: [],
       stationsVersion: route.stationsVersion,
     },
@@ -94,7 +93,6 @@ function toHsscGroup(lang: SupportedLang, webviewOrigin: string) {
       refreshInterval: 10,
       lastStationIndex: 10,
       stations: mapStations(HSSC_STATIONS),
-      routeOverlay: null,
       features: [{ type: "info", url: `${webviewOrigin}/bus/hssc/info` }],
     },
   };

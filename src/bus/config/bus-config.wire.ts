@@ -35,7 +35,6 @@ const realtimeScreen = z.object({
   refreshInterval: z.number(),
   lastStationIndex: z.int(),
   stations: z.array(station),
-  routeOverlay: z.null(),
   features: z.array(feature),
   /** WHY: a Jongro route's stations version; the realtime response carries the same while this config is current. */
   stationsVersion: z.string().optional(),

@@ -72,13 +72,6 @@
       "GET bus/realtime/data/:groupId"
     ]
   },
-  "bus-route-overlay.routeOverlay": {
-    "source": "src/bus/route-overlay/bus-route-overlay.wire.ts",
-    "export": "routeOverlay",
-    "routes": [
-      "GET bus/route/:routeId"
-    ]
-  },
   "bus-schedule.scheduleDay": {
     "source": "src/bus/schedule/bus-schedule.wire.ts",
     "export": "scheduleDay",
