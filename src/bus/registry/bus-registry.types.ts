@@ -22,7 +22,6 @@ export interface RegistryRoute extends JongroRoute {
   readonly stationsVersion: string;
   readonly turnaroundTopisId: string;
   readonly registryStations: ReadonlyArray<RegistryStation>;
-  readonly positionsUrl: string;
   readonly stations: ReadonlyArray<JongroStation>;
   readonly mapping: Readonly<JongroStationMapping>;
   readonly topisIds: ReadonlyArray<string>;

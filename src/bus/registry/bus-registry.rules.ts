@@ -15,8 +15,9 @@ export function toObservedStations(rows: readonly ArrivalRowStation[]): Observed
     .map((row) => ({ topisId: row.stationId, arsId: row.stationNumber, stationName: row.stationName }));
 }
 
-// QUIRK(topis): each position row names the route's turnaround stop (`trnstnid`); no bus running names none.
-export function toTurnaroundTopisId(sightingTurnaroundIds: readonly string[], storedTopisId: string): string {
+// QUIRK(topis): each position row names the route's turnaround stop (`trnstnid`); no bus running names none, and a
+// row without one is no observation.
+export function toTurnaroundTopisId(sightingTurnaroundIds: ReadonlyArray<string | undefined>, storedTopisId: string): string {
   const [first] = sightingTurnaroundIds;
   const isAgreed = first !== undefined && first !== "" && sightingTurnaroundIds.every((id) => id === first);
   return isAgreed ? first : storedTopisId;

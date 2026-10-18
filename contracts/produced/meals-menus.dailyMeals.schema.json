@@ -1,0 +1,265 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string"
+    },
+    "campus": {
+      "type": "string",
+      "enum": [
+        "hssc",
+        "nsc"
+      ]
+    },
+    "cafeterias": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "object",
+            "properties": {
+              "ko": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ko",
+              "en"
+            ]
+          },
+          "building": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "skkuId": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "name": {
+                    "type": "object",
+                    "properties": {
+                      "ko": {
+                        "type": "string"
+                      },
+                      "en": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ko",
+                      "en"
+                    ]
+                  }
+                },
+                "required": [
+                  "skkuId",
+                  "name"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "ko": {
+                    "type": "string"
+                  },
+                  "en": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ko",
+                  "en"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "B",
+                    "L",
+                    "D",
+                    "S",
+                    "R"
+                  ]
+                },
+                "corners": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "floor": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "isFixedMenu": {
+                        "type": "boolean"
+                      },
+                      "likes": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "imageUrl": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "priceKrw": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "single",
+                                "set"
+                              ]
+                            },
+                            "dishes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "quantity": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "options": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "extraKrw": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "extraKrw"
+                                ]
+                              }
+                            },
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "priceKrw",
+                            "kind",
+                            "dishes",
+                            "quantity",
+                            "options",
+                            "tags"
+                          ]
+                        }
+                      },
+                      "needsReview": {
+                        "type": "boolean"
+                      },
+                      "rawText": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "floor",
+                      "isFixedMenu",
+                      "likes",
+                      "imageUrl",
+                      "items",
+                      "needsReview",
+                      "rawText"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "code",
+                "corners"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "building",
+          "floor",
+          "meals"
+        ]
+      }
+    }
+  },
+  "required": [
+    "date",
+    "campus",
+    "cafeterias"
+  ]
+}

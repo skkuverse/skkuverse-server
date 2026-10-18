@@ -11,23 +11,19 @@ const path = require("path");
 const SKKU_CAMPUS_MAP =
   "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
 
-// Mirrors the URL composition of src/bus/bus.mapper.ts and src/bus/registry/bus-registry.mapper.ts: one shared
-// service key, each route's busRouteId from src/bus/jongro-routes.json, and its station count from the committed
-// snapshot src/bus/registry/jongro-stations.seed.json (the live list is the jongro_routes collection, which this
-// script does not read). Keep the fixture names as `${route.id}_list` / `_loc` so legacy paths
+// Mirrors the URL composition of src/bus/bus.mapper.ts: one shared service key and each route's busRouteId from
+// src/bus/jongro-routes.json. Keep the fixture names as `${route.id}_list` / `_loc` so legacy paths
 // `__fixtures__/<date>/jongro07_list/<time>.json` stay stable.
 const SEOUL_BUS_BASE = "http://ws.bus.go.kr/api/rest";
 const SEOUL_BUS_KEY = process.env.SEOUL_BUS_SERVICE_KEY;
-const readSrcJson = (...parts) => JSON.parse(fs.readFileSync(path.join(__dirname, "..", "src", "bus", ...parts), "utf8"));
-const stationCountById = new Map(readSrcJson("registry", "jongro-stations.seed.json").map((seed) => [seed.id, seed.stations.length]));
-const jongroRoutes = readSrcJson("jongro-routes.json");
+const jongroRoutes = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "src", "bus", "jongro-routes.json"), "utf8"));
 const buildListUrl = (busRouteId) =>
   `${SEOUL_BUS_BASE}/arrive/getArrInfoByRouteAll?serviceKey=${SEOUL_BUS_KEY}&busRouteId=${busRouteId}&resultType=json`;
-const buildLocUrl = (busRouteId, stationCount) =>
-  `${SEOUL_BUS_BASE}/buspos/getBusPosByRouteSt?serviceKey=${SEOUL_BUS_KEY}&busRouteId=${busRouteId}&startOrd=1&endOrd=${stationCount}&resultType=json`;
+const buildLocUrl = (busRouteId) =>
+  `${SEOUL_BUS_BASE}/buspos/getBusPosByRtid?serviceKey=${SEOUL_BUS_KEY}&busRouteId=${busRouteId}&resultType=json`;
 const jongroApis = jongroRoutes.flatMap((r) => [
   { name: `${r.id}_list`, url: buildListUrl(r.busRouteId) },
-  { name: `${r.id}_loc`, url: buildLocUrl(r.busRouteId, stationCountById.get(r.id)) },
+  { name: `${r.id}_loc`, url: buildLocUrl(r.busRouteId) },
 ]);
 
 const APIs = [

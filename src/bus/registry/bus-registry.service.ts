@@ -2,7 +2,7 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { jongroRoutes, seoulBusServiceKey } from "../bus.config";
+import { jongroRoutes } from "../bus.config";
 import type { JongroRoute } from "../bus.types";
 import { stationsSeed } from "./bus-registry.config";
 import { REGISTRY_TTL_MS } from "./bus-registry.constants";
@@ -45,7 +45,7 @@ export class BusRegistryService implements OnModuleInit {
   }
 
   // WHY: the poller's arrival list and position rows, compared each tick with the stored stations (design D9).
-  async observe(route: RegistryRoute, arrivals: readonly ArrivalRowStation[], sightingTurnaroundIds: readonly string[]): Promise<void> {
+  async observe(route: RegistryRoute, arrivals: readonly ArrivalRowStation[], sightingTurnaroundIds: ReadonlyArray<string | undefined>): Promise<void> {
     const stations = toObservedStations(arrivals);
     if (stations.length === 0) return;
     const turnaroundTopisId = toTurnaroundTopisId(sightingTurnaroundIds, route.turnaroundTopisId);
@@ -130,7 +130,7 @@ export class BusRegistryService implements OnModuleInit {
       throw new BusRegistryMissingError(routeId);
     }
     this.warnUnmatchedTransferLines(route, doc);
-    return toRegistryRoute(route, doc, seoulBusServiceKey);
+    return toRegistryRoute(route, doc);
   }
 
   // WHY: stations change at runtime now, so an override nothing matches is a warning, not a boot failure.

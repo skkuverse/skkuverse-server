@@ -4,7 +4,10 @@
  * route's positions and arrival ETAs with each station's arrivals placed by
  * the registry's stations and its stations version, a missing registry route
  * is a 503, an unknown group is a 404, and meta carries the KST clock and the
- * bus count.
+ * bus count. Every bus says its kind: HSSC buses are estimated, and each
+ * Jongro bus is tracked from its cached position joined with its vehicle's
+ * arrival rows (waiting, at a stop or running, with its countdown), except a
+ * position cached before the tracking fields, which is served as estimated.
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -23,6 +26,7 @@ import {
   jongroArrivalBus,
   jongroArrivalDoc,
   jongroPositionDoc,
+  legacyJongroPositionDoc,
   noArrivalBus,
 } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { Clock } from "../../../infra/clock";
@@ -66,7 +70,8 @@ describe("BusRealtimeGroupService.getGroup", () => {
 
     // Assert
     expect(group).toEqual({
-      data: { groupId: "hssc", buses: [{ stationIndex: 1, carNumber: "0000", estimatedTime: 30 }], stationEtas: [] },
+      // WHY: kind is what add-jongro-bus-positions adds to every bus (task 2.2).
+      data: { groupId: "hssc", buses: [{ stationIndex: 1, carNumber: "0000", estimatedTime: 30, kind: "estimated" }], stationEtas: [] },
       meta: { currentTime: "10:00 AM", totalBuses: 1 },
     });
   });
@@ -85,11 +90,31 @@ describe("BusRealtimeGroupService.getGroup", () => {
     const group = await service.getGroup("jongro07");
 
     // Assert
-    // WHY: arrivals (improve-jongro-realtime 3.1) and stationsVersion (5.4) are the fields this change adds.
+    // WHY: arrivals (improve-jongro-realtime 3.1) and stationsVersion (5.4) are the fields this change adds;
+    // kind and tracked are add-jongro-bus-positions' (task 2.2), the bus's crowding from the ord 1 row naming it.
     expect(group.data).toEqual({
       groupId: "jongro07",
       stationsVersion: versionOf("jongro07"),
-      buses: [{ stationIndex: 5, carNumber: "5537", estimatedTime: 0, latitude: "37.587", longitude: "126.998" }],
+      buses: [
+        {
+          stationIndex: 5,
+          carNumber: "5537",
+          estimatedTime: 0,
+          latitude: "37.587",
+          longitude: "126.998",
+          kind: "tracked",
+          tracked: {
+            status: "running",
+            vehicleId: "100000103",
+            observedAt: "2026-10-20T10:00:00+09:00",
+            crowding: "relaxed",
+            isLastBus: false,
+            progress: 0.5,
+            segmentMeters: 300,
+            nextStopInSec: null,
+          },
+        },
+      ],
       stationEtas: [
         {
           stationIndex: 0,
@@ -221,5 +246,159 @@ describe("BusRealtimeGroupService.getGroup and the registry", () => {
 
     // Act & Assert
     await expect(service.getGroup("jongro02")).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE", httpStatus: 503 });
+  });
+});
+
+// WHY: each Jongro bus is tracked by joining its cached position with its vehicle's arrival rows at serve time
+// (add-jongro-bus-positions D4). The rows are the 2026-10-17 production capture's (pos_/arr_<busRouteId>_<epoch>).
+describe("BusRealtimeGroupService.getGroup tracked buses", () => {
+  const trackedOf = async (groupId: string) => (await service.getGroup(groupId)).data.buses.map((bus) => ("tracked" in bus ? bus.tracked : bus.kind));
+
+  it("serves a running bus with its countdown re-based to its observation (종로02 vehicle 100000058, epoch 1792231942)", async () => {
+    // Arrange
+    busCache.values.set("jongro_locations_02", [
+      jongroPositionDoc({
+        sequence: "17",
+        stationName: "종로2가",
+        stationId: "100000104",
+        carNumber: "2008",
+        estimatedTime: 0,
+        latitude: "37.576595",
+        longitude: "126.985792",
+        vehicleId: "100000058",
+        sectDist: 0.114,
+        fullSectDist: 0.251,
+        isAtStop: false,
+        observedAt: "2026-10-17T19:12:02+09:00",
+        isStationary: false,
+      }),
+    ]);
+    busCache.values.set("jongro_stations_02", [
+      jongroArrivalDoc({
+        stationId: "100900172",
+        sequence: "18",
+        eventDate: "2026-10-17 19:12:10.0",
+        eta: "곧 도착",
+        buses: [
+          jongroArrivalBus({ vehId: "100000058", plainNo: "서울75사2008", staOrd: 18, sectOrd: 18, traTime: 20, arrmsg: "곧 도착", rerideDiv: 2, rerideNum: 1 }),
+          noArrivalBus({ staOrd: 18 }),
+        ],
+      }),
+      jongroArrivalDoc({
+        stationId: "100900203",
+        sequence: "19",
+        eventDate: "2026-10-17 19:12:10.0",
+        eta: "1분36초후[1번째 전]",
+        buses: [
+          jongroArrivalBus({ vehId: "100000058", plainNo: "서울75사2008", staOrd: 19, sectOrd: 18, traTime: 96, arrmsg: "1분36초후[1번째 전]", rerideDiv: 2, rerideNum: 30 }),
+          noArrivalBus({ staOrd: 19 }),
+        ],
+      }),
+    ]);
+
+    // Act
+    const group = await service.getGroup("jongro02");
+
+    // Assert
+    expect(group.data.buses).toEqual([
+      {
+        stationIndex: 16,
+        carNumber: "2008",
+        estimatedTime: 0,
+        latitude: "37.576595",
+        longitude: "126.985792",
+        kind: "tracked",
+        tracked: {
+          status: "running",
+          vehicleId: "100000058",
+          observedAt: "2026-10-17T19:12:02+09:00",
+          crowding: "relaxed",
+          isLastBus: false,
+          progress: 0.114 / 0.251,
+          segmentMeters: 251,
+          nextStopInSec: 28,
+        },
+      },
+    ]);
+  });
+
+  it("serves a bus with stopFlag 1 at a stop (종로07 vehicle 100000103, epoch 1792231921)", async () => {
+    // Arrange
+    busCache.values.set("jongro_locations_07", [
+      jongroPositionDoc({ sequence: "14", stationId: "100900043", carNumber: "5537", vehicleId: "100000103", sectDist: 0, fullSectDist: 0.295, isAtStop: true, observedAt: "2026-10-17T19:11:44+09:00" }),
+    ]);
+    busCache.values.set("jongro_stations_07", [
+      jongroArrivalDoc({
+        stationId: "100000125",
+        sequence: "15",
+        eventDate: "2026-10-17 19:11:46.0",
+        eta: "곧 도착",
+        buses: [jongroArrivalBus({ vehId: "100000103", staOrd: 15, sectOrd: 15, traTime: 61, arrmsg: "곧 도착", rerideDiv: 2, rerideNum: 0 }), noArrivalBus({ staOrd: 15 })],
+      }),
+    ]);
+
+    // Act & Assert
+    expect(await trackedOf("jongro07")).toEqual([
+      { status: "atStop", vehicleId: "100000103", observedAt: "2026-10-17T19:11:44+09:00", crowding: "relaxed", isLastBus: false },
+    ]);
+  });
+
+  it("serves a bus standing still at its origin and named on no row as waiting (종로02 vehicle 100000018, epoch 1792231942)", async () => {
+    // Arrange
+    busCache.values.set("jongro_locations_02", [
+      jongroPositionDoc({ sequence: "1", stationId: "100900204", carNumber: "5512", vehicleId: "100000018", sectDist: 0.043, fullSectDist: 0.259, observedAt: "2026-10-17T19:11:58+09:00", isStationary: true }),
+    ]);
+    busCache.values.set("jongro_stations_02", [
+      jongroArrivalDoc({ stationId: "100900202", sequence: "2", eta: "출발대기", buses: [noArrivalBus({ staOrd: 2, arrmsg: "출발대기" }), noArrivalBus({ staOrd: 2, arrmsg: "출발대기" })] }),
+    ]);
+
+    // Act & Assert
+    expect(await trackedOf("jongro02")).toEqual([
+      { status: "waiting", vehicleId: "100000018", observedAt: "2026-10-17T19:11:58+09:00", crowding: null, isLastBus: false },
+    ]);
+  });
+
+  it("serves a bus whose next stop reads 출발대기 as waiting (종로07 vehicle 100000035, epoch 1792232187)", async () => {
+    // Arrange
+    busCache.values.set("jongro_locations_07", [
+      jongroPositionDoc({ sequence: "1", stationId: "100900220", carNumber: "5536", vehicleId: "100000035", sectDist: 0, fullSectDist: 0.201, observedAt: "2026-10-17T19:16:06+09:00", isStationary: false }),
+    ]);
+    busCache.values.set("jongro_stations_07", [
+      jongroArrivalDoc({
+        stationId: "100900221",
+        sequence: "2",
+        eventDate: "2026-10-17 19:16:06.0",
+        eta: "출발대기",
+        buses: [jongroArrivalBus({ vehId: "100000035", plainNo: "서울70사5536", staOrd: 2, sectOrd: 2, traTime: 228, arrmsg: "출발대기", rerideDiv: 0, rerideNum: 0 }), noArrivalBus({ staOrd: 2 })],
+      }),
+    ]);
+
+    // Act & Assert
+    expect(await trackedOf("jongro07")).toEqual([
+      { status: "waiting", vehicleId: "100000035", observedAt: "2026-10-17T19:16:06+09:00", crowding: null, isLastBus: false },
+    ]);
+  });
+
+  it("never serves a bus at the last index as running (hand-edited: no 2026-10-17 row reached 종로02's ord 27)", async () => {
+    // Arrange
+    busCache.values.set("jongro_locations_02", [
+      jongroPositionDoc({ sequence: "27", stationId: "100900204", carNumber: "5509", vehicleId: "100000015", sectDist: 0, fullSectDist: 0.1, isAtStop: false, observedAt: "2026-10-17T19:11:49+09:00" }),
+    ]);
+
+    // Act
+    const group = await service.getGroup("jongro02");
+
+    // Assert
+    expect(group.data.buses.map((bus) => [bus.stationIndex, "tracked" in bus && bus.tracked.status])).toEqual([[26, "atStop"]]);
+  });
+
+  it("serves a position cached before the tracking fields as an estimated bus", async () => {
+    // Arrange
+    busCache.values.set("jongro_locations_07", [legacyJongroPositionDoc({ sequence: "6", carNumber: "5537", estimatedTime: 40 })]);
+
+    // Act & Assert
+    expect((await service.getGroup("jongro07")).data.buses).toEqual([
+      { stationIndex: 5, carNumber: "5537", estimatedTime: 40, latitude: "37.587", longitude: "126.998", kind: "estimated" },
+    ]);
   });
 });
