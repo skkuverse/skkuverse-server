@@ -7,6 +7,7 @@ import { HolidaysSyncModule } from "./holidays/sync/holidays-sync.module";
 import { BusModule } from "./bus/bus.module";
 import { BusCacheModule } from "./bus/cache/bus-cache.module";
 import { BusRegistryModule } from "./bus/registry/bus-registry.module";
+import { BusRoutePathModule } from "./bus/route-path/bus-route-path.module";
 import { BusRealtimeModule } from "./bus/realtime/bus-realtime.module";
 import { BusRealtimeHsscModule } from "./bus/realtime/hssc/bus-realtime-hssc.module";
 import { BusRealtimeJongroModule } from "./bus/realtime/jongro/bus-realtime-jongro.module";
@@ -44,6 +45,7 @@ import { MapModule } from "./map/map.module";
 import { MapLayerSetModule } from "./map/layer-set/map-layer-set.module";
 import { MapConfigModule } from "./map/config/map-config.module";
 import { MapCampusModule } from "./map/campus/map-campus.module";
+import { MapTransitModule } from "./map/transit/map-transit.module";
 import { MapEventModule } from "./map/event/map-event.module";
 import { MapEventDetailsModule } from "./map/event-details/map-event-details.module";
 import { NoticesModule } from "./notices/notices.module";
@@ -82,6 +84,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusModule,
     BusCacheModule,
     BusRegistryModule,
+    BusRoutePathModule,
     BusRealtimeModule,
     BusRealtimeHsscModule,
     BusRealtimeJongroModule,
@@ -121,6 +124,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     MapLayerSetModule,
     MapConfigModule,
     MapCampusModule,
+    MapTransitModule,
     MapEventModule,
     MapEventDetailsModule,
     NoticesModule,

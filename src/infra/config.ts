@@ -33,6 +33,7 @@ const config = {
     collections: {
       busCache: process.env.MONGO_CACHE_COLLECTION || "bus_cache",
       jongroRoutes: "jongro_routes",
+      jongroRoutePaths: "jongro_route_paths",
     },
   },
 

@@ -202,6 +202,9 @@ describe("bus_cache between a poller process and an api replica", () => {
       "jongro-02",
       "jongro-07",
       "jongro-08",
+      "jongro-path-02",
+      "jongro-path-07",
+      "jongro-path-08",
       "station",
     ]);
   });

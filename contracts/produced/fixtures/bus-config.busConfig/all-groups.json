@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); every group kept, its stations, services and stops cut to the first two; the always-null screen.routeOverlay since dropped from the contract",
+  "_about": "GET /bus/config captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); every group kept, its stations, services and stops cut to the first two; the always-null screen.routeOverlay since dropped from the contract; each Jongro station subtitle nulled since the stop-number fallback was dropped (2026-10-18); each Jongro screen.refreshInterval set to 25 for the 25 s poll (2026-10-18)",
   "data": {
     "groups": [
       {
@@ -362,13 +362,13 @@
         },
         "screen": {
           "dataEndpoint": "/bus/realtime/data/jongro02",
-          "refreshInterval": 40,
+          "refreshInterval": 25,
           "lastStationIndex": 26,
           "stations": [
             {
               "index": 0,
               "name": "성균관대학교",
-              "subtitle": "01881",
+              "subtitle": null,
               "stationNumber": "01881",
               "isFirstStation": true,
               "isLastStation": false,
@@ -378,7 +378,7 @@
             {
               "index": 1,
               "name": "서울성곽.성대후문",
-              "subtitle": "01515",
+              "subtitle": null,
               "stationNumber": "01515",
               "isFirstStation": false,
               "isLastStation": false,
@@ -404,13 +404,13 @@
         },
         "screen": {
           "dataEndpoint": "/bus/realtime/data/jongro07",
-          "refreshInterval": 40,
+          "refreshInterval": 25,
           "lastStationIndex": 21,
           "stations": [
             {
               "index": 0,
               "name": "성균관대운동장",
-              "subtitle": "01617",
+              "subtitle": null,
               "stationNumber": "01617",
               "isFirstStation": true,
               "isLastStation": false,
@@ -420,7 +420,7 @@
             {
               "index": 1,
               "name": "학생회관",
-              "subtitle": "01618",
+              "subtitle": null,
               "stationNumber": "01618",
               "isFirstStation": false,
               "isLastStation": false,
@@ -446,13 +446,13 @@
         },
         "screen": {
           "dataEndpoint": "/bus/realtime/data/jongro08",
-          "refreshInterval": 40,
+          "refreshInterval": 25,
           "lastStationIndex": 30,
           "stations": [
             {
               "index": 0,
               "name": "명륜3가종점",
-              "subtitle": "01503",
+              "subtitle": null,
               "stationNumber": "01503",
               "isFirstStation": true,
               "isLastStation": false,
@@ -462,7 +462,7 @@
             {
               "index": 1,
               "name": "샘미용실.종로구청소년상담복지센터",
-              "subtitle": "01511",
+              "subtitle": null,
               "stationNumber": "01511",
               "isFirstStation": false,
               "isLastStation": false,
