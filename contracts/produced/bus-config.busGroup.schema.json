@@ -158,9 +158,6 @@
                 ]
               }
             },
-            "routeOverlay": {
-              "type": "null"
-            },
             "features": {
               "type": "array",
               "items": {
@@ -188,7 +185,6 @@
             "refreshInterval",
             "lastStationIndex",
             "stations",
-            "routeOverlay",
             "features"
           ]
         },

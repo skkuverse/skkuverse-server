@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); every group kept, its stations, services and stops cut to the first two",
+  "_about": "GET /bus/config captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); every group kept, its stations, services and stops cut to the first two; the always-null screen.routeOverlay since dropped from the contract",
   "data": {
     "groups": [
       {
@@ -41,7 +41,6 @@
               "transferLines": []
             }
           ],
-          "routeOverlay": null,
           "features": [
             {
               "type": "info",
@@ -387,7 +386,6 @@
               "transferLines": []
             }
           ],
-          "routeOverlay": null,
           "features": []
         }
       },
@@ -430,7 +428,6 @@
               "transferLines": []
             }
           ],
-          "routeOverlay": null,
           "features": []
         }
       },
@@ -473,7 +470,6 @@
               "transferLines": []
             }
           ],
-          "routeOverlay": null,
           "features": []
         }
       }

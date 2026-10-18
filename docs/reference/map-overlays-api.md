@@ -1250,7 +1250,7 @@ Stated plainly, because each one is a real constraint on the next deploy rather 
 
 `/map/markers/campus` and `/map/markers/event` are **gone**, not deprecated, and so are the two legacy
 `/map/overlays` handlers — a hardcoded building table behind `?category=` that the v2 migration
-orphaned, and a jongro polyline lookup that `GET /bus/route/:routeId` already did better. Deleting the
+orphaned, and a jongro polyline lookup that no client rendered. Deleting the
 second is what freed this prefix: its `@Get(":overlayId")` would have swallowed `/map/overlays/campus`
 and answered `404 Overlay 'campus' not found`.
 
