@@ -12,7 +12,7 @@
  * read alone (__tests__/nest/subway/fixtures/, see each file's first line).
  * Each line's class has its own shape: `T<code>_<Y|N>_<1|2>_` on lines 1, 3
  * and 4, line 2's direction digit 1 to 6, its branch trains' 3 to 6 dropped,
- * and line 8's `T<code>_<1|2>_<0|1>_`; a title names its destination with
+ * and line 8's `T<code>_<0|1|2>_<0|1>_`; a title names its destination with
  * the suffix for "bound for" or, for a line 2 circle train, as its inner or
  * outer circle, which becomes the destination.
  */
@@ -235,6 +235,15 @@ describe("toTrainMapTrains on lines 2, 3 and 8", () => {
 
     // Assert
     expect(trains).toEqual([{ trainNo: "8210", stationName: "잠실", status: "출발", destination: "별내" }]);
+  });
+
+  it("8호선 markup: reads class T2824_0_1_v2, flag 0 for 접근, titled 8057 approaching 단대오거리 for 모란", () => {
+    // Act
+    // WHY: the line=0 page of 2026-10-18 10:16 KST wrote this div; flag 0 marks an approaching train on line 8, as on lines 5 to 7.
+    const trains = toTrainMapTrains(`<div class="8line_metro">${trainDiv("8057열차  단대오거리 접근 모란행", "T2824_0_1_v2 tip")}</div>`, "8");
+
+    // Assert
+    expect(trains).toEqual([{ trainNo: "8057", stationName: "단대오거리", status: "접근", destination: "모란" }]);
   });
 
   it("reads all 28 trains of line 3, its Korail block's K3312 as 3312", () => {
