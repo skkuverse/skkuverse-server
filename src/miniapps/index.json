@@ -42,7 +42,7 @@
     },
     {
       "id": "booth-box",
-      "name": "랜덤 컨텐츠",
+      "name": "선물상자",
       "order": 9,
       "homeLogo": { "kind": "emoji", "emoji": "🎁" },
       "hidden": true
