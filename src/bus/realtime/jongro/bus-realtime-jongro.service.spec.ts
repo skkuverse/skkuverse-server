@@ -8,7 +8,10 @@
  * failure, a missing registry route included, so the poller registry counts it.
  * Each stored bus keeps its vehicle fields, sits at its section ord, and is
  * stationary when its vehicle stood still since the poller's previous
- * observation of it (never on the first after a restart).
+ * observation of it (never on the first after a restart), or when it idles at
+ * its origin: at index 0 with lastStTm 0 and not moved 10 m since the previous
+ * observation, a frozen observation time included, or at its first
+ * observation off a stop.
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -22,6 +25,7 @@ import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes
 import { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
 import { jongroArrivalDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import { jongroSighting } from "../../../../__tests__/helpers/bus/jongro-sighting";
+import originIdling from "../../../../__tests__/nest/bus/fixtures/jongro02-origin-idling-sightings.json";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../../infra/clock";
 import { jongroRoutes } from "../../bus.config";
@@ -32,6 +36,7 @@ import type { BusRegistryRepository } from "../../registry/bus-registry.reposito
 import { BusRegistryService } from "../../registry/bus-registry.service";
 import type { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 import { BusRealtimeJongroService } from "./bus-realtime-jongro.service";
+import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 let now = NOW;
@@ -415,5 +420,52 @@ describe("BusRealtimeJongroService.refresh vehicle tracking", () => {
 
     // Assert
     expect(await stationaryOf()).toEqual([true]);
+  });
+});
+
+// WHY: TOPIS stops advancing dataTm for a bus idling at its origin, so the still-across-two-observations rule
+// alone served bus 2009 running on 2026-10-18; lastStTm 0 marks the origin.
+describe("BusRealtimeJongroService.refresh origin idling", () => {
+  const { firstAtOrigin, creepingOut, leftOrigin } = originIdling.vehicle100000018;
+  const stationaryAcross = async (ticks: JongroBusSighting[]) => {
+    const stationary: boolean[] = [];
+    for (const sighting of ticks) {
+      client.sightings = [sighting];
+      await service.refresh(route("02"));
+      stationary.push((await service.listPositions("02"))![0]!.isStationary);
+    }
+    return stationary;
+  };
+
+  it("marks a vehicle at the origin with lastStTm 0 stationary at its first observation", async () => {
+    // Act
+    const stationary = await stationaryAcross([firstAtOrigin]);
+
+    // Assert
+    expect(stationary).toEqual([true]);
+  });
+
+  it("keeps a vehicle stationary while TOPIS repeats its observation time at the origin", async () => {
+    // Act
+    const stationary = await stationaryAcross(originIdling.frozen2009);
+
+    // Assert
+    expect(stationary).toEqual([true, false, true]);
+  });
+
+  it("does not mark a vehicle creeping 23 m out of the origin stationary, and marks it again after 8 m", async () => {
+    // Act
+    const stationary = await stationaryAcross(creepingOut);
+
+    // Assert
+    expect(stationary).toEqual([true, false, true]);
+  });
+
+  it("does not mark a vehicle stationary once it left the origin", async () => {
+    // Act
+    const stationary = await stationaryAcross([creepingOut[2]!, leftOrigin]);
+
+    // Assert
+    expect(stationary).toEqual([true, false]);
   });
 });

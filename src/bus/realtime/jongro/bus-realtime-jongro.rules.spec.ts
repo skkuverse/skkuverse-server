@@ -3,9 +3,11 @@
  * strings read as a number, the dwell timer at a
  * stop (reset after 10 minutes) at each threshold, the cache keys, TOPIS's
  * observation time as a KST instant, and whether a bus stood still between
- * two observations (under 10 m).
+ * two observations (under 10 m), and whether it idles at its origin (at
+ * index 0 with lastStTm 0, and not moved 10 m since the previous observation).
  */
 import {
+  isIdlingAtOrigin,
   isNoResultHeaderCd,
   isStationary,
   isUsableHeaderCd,
@@ -176,5 +178,54 @@ describe("isStationary", () => {
   it("keeps the previous answer when the observation time goes back", () => {
     // Act & Assert
     expect(isStationary({ ...observation, isStationary: true }, { sectOrd: 1, sectDist: 0.09, observedAt: "2026-10-17T19:11:00+09:00" })).toBe(true);
+  });
+});
+
+// WHY: TOPIS stops advancing dataTm for a bus idling at its origin (bus 2009, 2026-10-18), and lastStTm, the
+// seconds to the terminal, is 0 only at sectOrd 1 (148 of 148 captured rows there, 0 of 969 elsewhere).
+describe("isIdlingAtOrigin", () => {
+  const previous = { sectOrd: 1, sectDist: 0.044, observedAt: "2026-10-18T11:55:13+09:00", isStationary: false };
+  const atOrigin = { sectOrd: 1, sectDist: 0.044, isAtStop: false, lastStTm: 0 };
+
+  it.each([
+    ["at the origin with lastStTm 0 and stopFlag 0", true, atOrigin],
+    ["at a stop", false, { ...atOrigin, isAtStop: true }],
+    ["with lastStTm 1863", false, { ...atOrigin, lastStTm: 1863 }],
+    ["with no lastStTm", false, { ...atOrigin, lastStTm: undefined }],
+    ["in section 2 with lastStTm 0", false, { ...atOrigin, sectOrd: 2 }],
+  ])("a first observation %s → %s, as after a poller restart", (_title, expected, current) => {
+    // Act & Assert
+    expect(isIdlingAtOrigin(undefined, current)).toBe(expected);
+  });
+
+  it.each([
+    [0.044, true],
+    [0.053, true],
+    [0.054, false],
+    [0.056, false],
+    [0.035, true],
+    [0.034, false],
+  ])("after an observation at sectDist 0.044, at sectDist %d → %s", (sectDist, expected) => {
+    // Act & Assert
+    expect(isIdlingAtOrigin(previous, { ...atOrigin, sectDist })).toBe(expected);
+  });
+
+  it("holds at a stop once the vehicle was observed before", () => {
+    // Act & Assert
+    expect(isIdlingAtOrigin(previous, { ...atOrigin, isAtStop: true })).toBe(true);
+  });
+
+  it("is false when the previous observation was in another section", () => {
+    // Act & Assert
+    expect(isIdlingAtOrigin({ ...previous, sectOrd: 27 }, atOrigin)).toBe(false);
+  });
+
+  it.each([
+    ["lastStTm 1863", { ...atOrigin, lastStTm: 1863 }],
+    ["no lastStTm", { ...atOrigin, lastStTm: undefined }],
+    ["section 2", { ...atOrigin, sectOrd: 2 }],
+  ])("is false with %s, however still", (_title, current) => {
+    // Act & Assert
+    expect(isIdlingAtOrigin({ ...previous, sectOrd: current.sectOrd }, current)).toBe(false);
   });
 });
