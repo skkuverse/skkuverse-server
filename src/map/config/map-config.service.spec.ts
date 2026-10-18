@@ -184,7 +184,7 @@ describe("MapConfigService", () => {
     const ko = await svc.getMapConfig("ko");
 
     // Assert
-    expect(ko.layers.map((l) => l.id)).toEqual(["building_numbers", "building_labels", "campus_geometry", "jongro02_route", "jongro07_route", "jongro08_route"]);
+    expect(ko.layers.map((l) => l.id)).toEqual(["building_numbers", "building_labels", "campus_geometry", "jongro02_route", "jongro08_route", "jongro07_route"]);
     expect(ko.chips.map((c) => c.id)).toEqual(BASE_CHIPS.map((c) => c.id));
   });
 
@@ -209,7 +209,7 @@ describe("MapConfigService", () => {
     const ko = await svc.getMapConfig("ko");
 
     // Assert
-    expect(ko.layers.map((l) => l.id)).toEqual(["building_numbers", "building_labels", "campus_geometry", "jongro02_route", "jongro07_route", "jongro08_route"]);
+    expect(ko.layers.map((l) => l.id)).toEqual(["building_numbers", "building_labels", "campus_geometry", "jongro02_route", "jongro08_route", "jongro07_route"]);
     expect(ko.chips.map((c) => c.id)).toEqual(BASE_CHIPS.map((c) => c.id));
   });
 
@@ -255,8 +255,8 @@ describe("MapConfigService", () => {
       "building_labels",
       "campus_geometry",
       "jongro02_route",
-      "jongro07_route",
       "jongro08_route",
+      "jongro07_route",
     ]);
   });
 
