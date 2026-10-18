@@ -884,20 +884,46 @@ The Jongno village bus lines 종로02, 07 and 08, one `kind: "path"` overlay per
 `null`, so a line is a backdrop; `text` names the route in every language; the place-only fields are
 stated empty.
 
-Each overlay's `layerId` is `<route id>_route`. The three layers are in `BASE_LAYERS`, opt-in:
+Each overlay's `layerId` is `<route id>_route`. The three layers are in `BASE_LAYERS`, opt-in, in
+this order:
 
-| Layer | Label (ko / en / zh) | `style.color` |
-| --- | --- | --- |
-| `jongro02_route` | 종로02 노선 / Jongno 02 Route / 钟路02路线 | `2E7D32` |
-| `jongro07_route` | 종로07 노선 / Jongno 07 Route / 钟路07路线 | `EF6C00` |
-| `jongro08_route` | 종로08 노선 / Jongno 08 Route / 钟路08路线 | `6A1B9A` |
+| Layer | Label (ko / en / zh) |
+| --- | --- |
+| `jongro02_route` | 종로02 노선 / Jongno 02 Route / 钟路02路线 |
+| `jongro08_route` | 종로08 노선 / Jongno 08 Route / 钟路08路线 |
+| `jongro07_route` | 종로07 노선 / Jongno 07 Route / 钟路07路线 |
 
 Every one has `defaultVisibleWhen: { kind: "never" }`, `userConfigurable: true`, `chipGroupId: null`
-and `style: { color, width: 5, outlineWidth: 1.5, outlineColor: "FFFFFF", minZoom: 13 }`: the
-opt-in row of §4, so an installed app keeps a tile in its filter sheet and fetches this route only
-once a user turns a line on. The app's `MapRouteOverlay` reads `color`, `width`, `outlineWidth`,
-`outlineColor`, `minZoom` and `maxZoom`, and no `zIndex`; NAVER draws a path beneath every marker, so
-the lines never cover a building label.
+and the same style, `{ color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20",
+minZoom: 13 }`: the opt-in row of §4, so an installed app keeps a tile in its filter sheet and fetches
+this route only once a user turns a line on. The app's `MapRouteOverlay` reads `color`, `width`,
+`outlineWidth`, `outlineColor`, `minZoom` and `maxZoom`, and no `zIndex`; NAVER draws a path beneath
+every marker, so the lines never cover a building label.
+
+**One green.** Every route is drawn in the village-bus green `4CAF50`, the routes' `themeColor` in
+`src/bus/jongro-routes.json` and the colour of their bus cards; the route test pins the two equal. A
+colour per route was tried and rejected by the owner. The dark-green edge (`1B5E20`) keeps the line
+legible over the green of parks and the campus, where a white edge or none washes out. Telling
+overlapping routes apart is the job of tone, edge and direction arrows, as NAVER Map does for a route's
+two directions; see the stage-2 note in openspec change `add-jongro-route-lines`, D8.
+
+#### Draw order
+
+종로07 and 08 share about 60% of 07's line (02 overlaps neither), and 07 must lie on top. The server
+cannot send a draw order the app reads (`MapRouteOverlay` passes no `zIndex`), so it relies on what
+the installed app (`origin/main`) does:
+
+- `CampusScreen` renders one `MapOverlayLayer` per layer in `/map/config` order, and each draws only
+  the overlays whose `layerId` is its own. The order of overlays in this response decides nothing,
+  since every route has its own layer.
+- `@mj-studio/react-native-naver-map` 2.9 adds an overlay to the native map when it mounts and ignores
+  the child index (iOS `insertReactSubview`, Android `addOverlay`). Both route layers read this one
+  cached response, so when both are on they mount in the same commit, in layer order.
+- NAVER draws the later of two overlays with equal `zIndex` on top. **Unverified** on a device.
+
+So `jongro08_route` is listed before `jongro07_route`, which also puts 08's tile before 07's in the
+filter sheet. A user who turns 07 on first and 08 later still gets 08 on top until the map remounts:
+the order a layer is turned on in is the app's, not the server's.
 
 **The degraded branch.** When the bus module cannot read a route's stored line, or has none, it draws
 that route from its committed snapshot (`src/bus/route-path/jongro-route-paths.seed.json`) and the

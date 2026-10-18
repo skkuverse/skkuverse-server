@@ -71,7 +71,7 @@ The layer-set loader imports the root's and its own rules, mappers, schemas, con
 | Add next year's festival | a new JSON in `src/map/layer-set/`, `LAYER_SET_FILES`, and `scripts/copy-build-assets.js` | Yes; three edits, and a missed third breaks production only |
 | Add a permanent chip | `BASE_CHIPS` in `map-layer-set.constants.ts` | Yes |
 | Change how a pin or zone is drawn | `BASE_LAYERS[].style`, `EVENT_LAYER_STYLE`, `EVENT_SHAPE_STYLE` | Yes |
-| Recolour a Jongno route line, or turn the lines on by default | its `BASE_LAYERS` entry, `ROUTE_LINE_STYLE`, `ROUTE_LINE_LAYER` in `map.constants.ts` | Yes; the default reaches installed apps with the next `/map/config` |
+| Recolour the Jongno route lines, change which one lies on top, or turn them on by default | `ROUTE_LINE_LAYER` in `map.constants.ts` (one style in the routes' `themeColor`, and the default), the order of their `BASE_LAYERS` entries | Yes; the default reaches installed apps with the next `/map/config` |
 | Fix a Jongno route's geometry | nothing in `src/map/`: `src/bus/route-path/` syncs it from TOPIS daily ([configure map overlays](../how-to/configure-map-overlays.md)) | No |
 | Add a field to every overlay | `map.wire.ts`, then every producer (`map-campus.mapper.ts`, `map-event.mapper.ts`) | Yes, plus an app release |
 | Add a sheet block type | `map-event-details.wire.ts`, `map-event-details.mapper.ts`, the importer's copy, an app renderer | Yes, plus an app release; older builds drop it |
