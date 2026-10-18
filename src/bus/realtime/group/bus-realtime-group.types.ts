@@ -30,6 +30,13 @@ export interface JongroBusTracking {
   progress: number;
   segmentMeters: number;
   nextStopInSec: number | null;
+  trajectory: TrajectoryKnot[];
+}
+
+/** WHY: a point a tracked bus passes: s is its station index plus the fraction of the section toward the next. */
+export interface TrajectoryKnot {
+  atMs: number;
+  s: number;
 }
 
 /** WHY: a vehicle's bus on the arrival row of its next stop, with when TOPIS made that row (mkTm). */
@@ -52,7 +59,10 @@ export interface TrackingContext {
   arrival: Pick<Arrival, "state" | "crowding" | "isLastBus"> | undefined;
   /** WHY: the highest sectOrd an arrival row gives the vehicle; absent when no row names it. */
   highestSectOrd?: number;
+  /** WHY: every arrival row's bus naming the vehicle, by staOrd, which its trajectory's next stops come from. */
+  namedBuses: readonly NextStopBus[];
 }
+
 
 /** WHY: what decides a tracked status beyond the position: the route's terminals and the vehicle's arrival rows. */
 export type StatusContext = Pick<TrackingContext, "stationCount" | "turnaroundTopisId" | "highestSectOrd"> & { nextStopState: string | undefined };

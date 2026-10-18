@@ -8,7 +8,9 @@
  * Jongro bus is tracked from its cached position joined with its vehicle's
  * arrival rows (waiting, at a stop or running, with its countdown); a waiting
  * vehicle's arrivals read waiting, and a position a full section behind its
- * arrival rows is served running.
+ * arrival rows is served running. A running or atStop bus carries its
+ * trajectory, a waiting one none, and meta carries the server's instant at
+ * +09:00 (add-jongro-bus-trajectory).
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -72,7 +74,8 @@ describe("BusRealtimeGroupService.getGroup", () => {
     expect(group).toEqual({
       // WHY: kind is what add-jongro-bus-positions adds to every bus (task 2.2).
       data: { groupId: "hssc", buses: [{ stationIndex: 1, carNumber: "0000", estimatedTime: 30, kind: "estimated" }], stationEtas: [] },
-      meta: { currentTime: "10:00 AM", totalBuses: 1 },
+      // WHY: serverNow is what add-jongro-bus-trajectory adds to meta (task 2.2).
+      meta: { currentTime: "10:00 AM", totalBuses: 1, serverNow: "2026-10-20T10:00:00+09:00" },
     });
   });
 
@@ -91,7 +94,8 @@ describe("BusRealtimeGroupService.getGroup", () => {
 
     // Assert
     // WHY: arrivals (improve-jongro-realtime 3.1) and stationsVersion (5.4) are the fields this change adds;
-    // kind and tracked are add-jongro-bus-positions' (task 2.2), the bus's crowding from the ord 1 row naming it.
+    // kind and tracked are add-jongro-bus-positions' (task 2.2), the bus's crowding from the ord 1 row naming it;
+    // trajectory is add-jongro-bus-trajectory's (task 2.2), the observation alone since no row names its next stop.
     expect(group.data).toEqual({
       groupId: "jongro07",
       stationsVersion: versionOf("jongro07"),
@@ -112,6 +116,11 @@ describe("BusRealtimeGroupService.getGroup", () => {
             progress: 0.5,
             segmentMeters: 300,
             nextStopInSec: null,
+            // (An agent tooling note is left out of the public history.)
+            trajectory: [
+              { at: "2026-10-20T10:00:00+09:00", s: 5.5 },
+              { at: "2026-10-20T10:00:38+09:00", s: 6 },
+            ],
           },
         },
       ],
@@ -300,6 +309,7 @@ describe("BusRealtimeGroupService.getGroup tracked buses", () => {
     const group = await service.getGroup("jongro02");
 
     // Assert
+    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
     expect(group.data.buses).toEqual([
       {
         stationIndex: 16,
@@ -317,6 +327,11 @@ describe("BusRealtimeGroupService.getGroup tracked buses", () => {
           progress: 0.114 / 0.251,
           segmentMeters: 251,
           nextStopInSec: 28,
+          trajectory: [
+            { at: "2026-10-17T19:12:02+09:00", s: 16 + 0.114 / 0.251 },
+            { at: "2026-10-17T19:12:30+09:00", s: 17 },
+            { at: "2026-10-17T19:13:46+09:00", s: 18 },
+          ],
         },
       },
     ]);
@@ -338,8 +353,20 @@ describe("BusRealtimeGroupService.getGroup tracked buses", () => {
     ]);
 
     // Act & Assert
+    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
     expect(await trackedOf("jongro07")).toEqual([
-      { status: "atStop", vehicleId: "100000103", observedAt: "2026-10-17T19:11:44+09:00", crowding: "relaxed", isLastBus: false },
+      {
+        status: "atStop",
+        vehicleId: "100000103",
+        observedAt: "2026-10-17T19:11:44+09:00",
+        crowding: "relaxed",
+        isLastBus: false,
+        trajectory: [
+          { at: "2026-10-17T19:11:44+09:00", s: 13 },
+          { at: "2026-10-17T19:11:59+09:00", s: 13 },
+          { at: "2026-10-17T19:12:47+09:00", s: 14 },
+        ],
+      },
     ]);
   });
 
@@ -476,6 +503,7 @@ describe("BusRealtimeGroupService.getGroup waiting arrivals and lagging position
     const group = await service.getGroup("jongro07");
 
     // Assert
+    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
     expect(group.data.buses).toEqual([
       {
         stationIndex: 4,
@@ -493,8 +521,99 @@ describe("BusRealtimeGroupService.getGroup waiting arrivals and lagging position
           progress: 0,
           segmentMeters: 225,
           nextStopInSec: null,
+          // (An agent tooling note is left out of the public history.)
+          trajectory: [
+            { at: "2026-10-17T19:22:58+09:00", s: 4 },
+            { at: "2026-10-17T19:23:54+09:00", s: 5 },
+            { at: "2026-10-17T19:24:14+09:00", s: 6 },
+            { at: "2026-10-17T19:24:59+09:00", s: 7 },
+          ],
         },
       },
     ]);
   });
 });
+
+// WHY: the app interpolates each tracked bus through its trajectory against meta.serverNow
+// (add-jongro-bus-trajectory D1). The rows are route 02's at epoch 1792314485 (pos_/arr_100900008, 2026-10-18 capture).
+describe("BusRealtimeGroupService.getGroup trajectories", () => {
+  const madeAt = "2026-10-18 18:07:53.0";
+  const bus88 = { vehId: "100000088", plainNo: "서울75사5501", sectOrd: 9, rerideDiv: 2, rerideNum: 6 };
+  const bus58 = { vehId: "100000058", plainNo: "서울75사2008", sectOrd: 19, rerideDiv: 2, rerideNum: 3 };
+  const row = (stationId: string, staOrd: number, first: Partial<ReturnType<typeof jongroArrivalBus>>, second?: Partial<ReturnType<typeof jongroArrivalBus>>) => {
+    const buses = [jongroArrivalBus({ ...first, staOrd }), second ? jongroArrivalBus({ ...second, staOrd }) : noArrivalBus({ staOrd, arrmsg: "출발대기" })];
+    return jongroArrivalDoc({ stationId, sequence: String(staOrd), eventDate: madeAt, eta: buses[0]!.arrmsg, buses });
+  };
+
+  beforeEach(() => {
+    busCache.values.set("jongro_locations_02", [
+      jongroPositionDoc({ sequence: "1", stationId: "100900204", carNumber: "2009", latitude: "37.588427", longitude: "126.990041", vehicleId: "100000059", sectDist: 0.043, fullSectDist: 0.259, observedAt: "2026-10-18T18:07:53+09:00", isStationary: true }),
+      jongroPositionDoc({ sequence: "8", stationId: "100900048", carNumber: "5501", latitude: "37.579524", longitude: "126.984928", vehicleId: "100000088", sectDist: 0.015, fullSectDist: 0.118, observedAt: "2026-10-18T18:07:45+09:00" }),
+      jongroPositionDoc({ sequence: "18", stationId: "100900189", carNumber: "2008", latitude: "37.577173", longitude: "126.986118", vehicleId: "100000058", sectDist: 0, fullSectDist: 0.191, isAtStop: true, observedAt: "2026-10-18T18:07:51+09:00", atStopSince: "2026-10-18T18:07:51+09:00" }),
+    ]);
+    busCache.values.set("jongro_stations_02", [
+      row("100900202", 2, { ...noArrivalBus(), arrmsg: "출발대기" }),
+      row("100900092", 9, { ...bus88, traTime: 15, arrmsg: "곧 도착" }),
+      row("100900086", 10, { ...bus88, traTime: 47, arrmsg: "1분후[1번째 전]" }),
+      row("100900081", 11, { ...bus88, traTime: 161, arrmsg: "2분후[2번째 전]" }),
+      row("100900078", 12, { ...bus88, traTime: 208, arrmsg: "3분28초후[3번째 전]" }),
+      row("100900131", 19, { ...bus58, traTime: 65, arrmsg: "곧 도착" }, { ...bus88, traTime: 921, arrmsg: "15분21초후[10번째 전]" }),
+      row("100900168", 20, { ...bus58, traTime: 126, arrmsg: "2분6초후[1번째 전]" }, { ...bus88, traTime: 982, arrmsg: "16분22초후[11번째 전]" }),
+      row("100900162", 21, { ...bus58, traTime: 182, arrmsg: "3분2초후[2번째 전]" }, { ...bus88, traTime: 1038, arrmsg: "17분18초후[12번째 전]" }),
+      row("100900157", 22, { ...bus58, traTime: 226, arrmsg: "3분46초후[3번째 전]" }, { ...bus88, traTime: 1082, arrmsg: "18분2초후[13번째 전]" }),
+    ]);
+  });
+
+  it("serves a running bus through its next three stops and an atStop bus through its departure, and a waiting bus none", async () => {
+    // Act
+    const group = await service.getGroup("jongro02");
+
+    // Assert
+    expect(group.data.buses.map((bus) => "tracked" in bus && [bus.tracked.status, "trajectory" in bus.tracked ? bus.tracked.trajectory : null])).toEqual([
+      ["waiting", null],
+      [
+        "running",
+        [
+          { at: "2026-10-18T18:07:45+09:00", s: 7 + 0.015 / 0.118 },
+          { at: "2026-10-18T18:08:08+09:00", s: 8 },
+          { at: "2026-10-18T18:08:40+09:00", s: 9 },
+          { at: "2026-10-18T18:10:34+09:00", s: 10 },
+        ],
+      ],
+      [
+        "atStop",
+        [
+          { at: "2026-10-18T18:07:51+09:00", s: 17 },
+          { at: "2026-10-18T18:08:06+09:00", s: 17 },
+          { at: "2026-10-18T18:08:58+09:00", s: 18 },
+          { at: "2026-10-18T18:09:59+09:00", s: 19 },
+          { at: "2026-10-18T18:10:55+09:00", s: 20 },
+        ],
+      ],
+    ]);
+  });
+
+  it("states the server's instant at +09:00 in meta", async () => {
+    // Act
+    const group = await service.getGroup("jongro02");
+
+    // Assert
+    expect(group.meta).toEqual({ currentTime: "10:00 AM", totalBuses: 3, serverNow: "2026-10-20T10:00:00+09:00" });
+  });
+});
+
+// WHY: s is in stationIndex's index space and knot 0 stays in the bus's own section (agreed with skkuverse-app).
+describe("BusRealtimeGroupService.getGroup trajectory index space", () => {
+  it.each([0, 0.15, 0.3, 0.31])("serves knot 0 with floor(s) equal to the bus's stationIndex at sectDist %d of 0.3", async (sectDist) => {
+    // Arrange
+    busCache.values.set("jongro_locations_07", [jongroPositionDoc({ sequence: "6", sectDist, fullSectDist: 0.3 })]);
+
+    // Act
+    const [bus] = (await service.getGroup("jongro07")).data.buses;
+
+    // Assert
+    const trajectory = bus && "tracked" in bus && "trajectory" in bus.tracked ? bus.tracked.trajectory : [];
+    expect(Math.floor(trajectory[0]!.s)).toBe(bus!.stationIndex);
+  });
+});
+

@@ -7,8 +7,12 @@
     "max": 173,
     "reason": "ADR 0010 D9, no domain seam: toBusGroups is the bus list as one ordered literal per group (hssc, campus, fasttrack, commute, then each Jongro route), and each group's field order is the ETag input; the realtime and schedule groups share the card, badge and station helpers, so a sub-module would hold group builders and nothing else."
   },
+  "src/bus/realtime/group/bus-realtime-group.rules.ts": {
+    "max": 138,
+    "reason": "ADR 0010 D9, no reachable seam: the trajectory (`toTrajectory`) is built from the same joined position and vehicle rows as the tracked status and the next-stop countdown (`toProgress`, `toNextStopInSec`, `toNamedBuses`, `toStopArrivalMs`), and a sibling sub-module cannot hold it, since `BusRealtimeGroupService` is at the four-dependency constructor cap in eslint.config.js and a parent never imports a child (sub-modules.test.ts), as add-jongro-bus-positions D6 found for the tracking rules."
+  },
   "src/bus/realtime/group/bus-realtime-group.wire.ts": {
-    "max": 97,
+    "max": 104,
     "reason": "(An agent tooling note is left out of the public history.)"
   },
   "src/bus/stops/bus-stops.rules.ts": {

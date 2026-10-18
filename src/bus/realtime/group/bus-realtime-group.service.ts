@@ -10,8 +10,16 @@ import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { BusRealtimeArrivalService } from "../arrival/bus-realtime-arrival.service";
 import { BusRealtimeHsscService } from "../hssc/bus-realtime-hssc.service";
 import { BusRealtimeJongroService } from "../jongro/bus-realtime-jongro.service";
-import { toClockTime, toRealtimeBuses, toTrackedBus } from "./bus-realtime-group.mapper";
-import { toHighestSectOrd, toJongroBusTracking, toStationEtas, toVehicleBuses, toWaitingArrival, toWaitingVehicleIds } from "./bus-realtime-group.rules";
+import { toClockTime, toKstInstant, toRealtimeBuses, toTrackedBus } from "./bus-realtime-group.mapper";
+import {
+  toHighestSectOrd,
+  toJongroBusTracking,
+  toNamedBuses,
+  toStationEtas,
+  toVehicleBuses,
+  toWaitingArrival,
+  toWaitingVehicleIds,
+} from "./bus-realtime-group.rules";
 import type { GroupView } from "./bus-realtime-group.types";
 import type { RealtimeBus, RealtimeGroup, RealtimeGroupMeta, StationEta } from "./bus-realtime-group.wire";
 
@@ -31,9 +39,10 @@ export class BusRealtimeGroupService {
     if (!source) throw new AppError("GROUP_NOT_FOUND", `Unknown groupId: ${groupId}`, 404);
     const view = await source();
     const { buses } = view;
+    const now = this.clock.now();
     return withMeta(
       { groupId, buses, stationEtas: view.stationEtas, ...(view.stationsVersion !== undefined && { stationsVersion: view.stationsVersion }) },
-      { currentTime: toClockTime(this.clock.now()), totalBuses: buses.length },
+      { currentTime: toClockTime(now), totalBuses: buses.length, serverNow: toKstInstant(now.getTime()) },
     );
   }
 
@@ -63,7 +72,8 @@ export class BusRealtimeGroupService {
     const namedBus = nextStop?.bus ?? firstNamed;
     const [arrival] = namedBus ? this.arrival.toArrivals([namedBus], route.seatCount) : [];
     const highestSectOrd = toHighestSectOrd(rows, position.vehicleId);
-    const context = { stationCount: route.topisIds.length, turnaroundTopisId: route.turnaroundTopisId, nextStop, arrival, highestSectOrd };
+    const namedBuses = toNamedBuses(rows, position.vehicleId);
+    const context = { stationCount: route.topisIds.length, turnaroundTopisId: route.turnaroundTopisId, nextStop, arrival, highestSectOrd, namedBuses };
     return toTrackedBus(position, toJongroBusTracking(position, context));
   }
 

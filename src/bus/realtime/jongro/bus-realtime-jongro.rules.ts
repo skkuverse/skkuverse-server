@@ -70,6 +70,15 @@ export function isIdlingAtOrigin(
   return previous.sectOrd === current.sectOrd && toMovedMeters(previous, current) < MAX_STATIONARY_MOVE_METERS;
 }
 
+// WHY: an atStop bus's dwell counts from the first observation at its stop, so its departure is not reset each tick.
+export function toAtStopSince(
+  previous: JongroVehicleObservation | undefined,
+  current: Pick<JongroBusSighting, "sectOrd" | "isAtStop" | "observedAt">,
+): string | undefined {
+  if (!current.isAtStop) return undefined;
+  return previous?.sectOrd === current.sectOrd && previous.atStopSince ? previous.atStopSince : current.observedAt;
+}
+
 function toMovedMeters(previous: Pick<JongroVehicleObservation, "sectDist">, current: Pick<JongroVehicleObservation, "sectDist">): number {
   return Math.round(Math.abs(current.sectDist - previous.sectDist) * 1000);
 }
