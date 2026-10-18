@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/ui/home/transit captured from production 2026-10-18 17:34 KST (Accept-Language en), with the commute pilot card open and every served subway station listed; untrimmed; converted 2026-10-18 for the serve-subway-line-markers wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color })",
+  "_about": "GET https://api.skkuverse.com/ui/home/transit captured from production 2026-10-18 17:34 KST (Accept-Language en), with the commute pilot card open and every served subway station listed; untrimmed; converted 2026-10-18 for the serve-subway-line-markers wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); then, for the null subway subtitle, every subway item's `subtitle` set to null by script on 2026-10-18, as the server now serves it (bus, link and group subtitles unchanged)",
   "data": {
     "version": 1,
     "sections": [
@@ -36,7 +36,7 @@
             "id": "subway:hyehwa",
             "stationId": "hyehwa",
             "title": "Hyehwa Station",
-            "subtitle": "Line 4",
+            "subtitle": null,
             "lines": [
               {
                 "code": "4",
@@ -129,7 +129,7 @@
             "id": "subway:sungkyunkwan",
             "stationId": "sungkyunkwan",
             "title": "Sungkyunkwan Univ. Station",
-            "subtitle": "Line 1",
+            "subtitle": null,
             "lines": [
               {
                 "code": "1",
@@ -179,7 +179,7 @@
                 "id": "subway:jeongja",
                 "stationId": "jeongja",
                 "title": "Jeongja Station",
-                "subtitle": "Shinbundang Line · Suin–Bundang Line",
+                "subtitle": null,
                 "lines": [
                   {
                     "code": "D1",
@@ -210,7 +210,7 @@
                 "id": "subway:jamsil",
                 "stationId": "jamsil",
                 "title": "Jamsil Station",
-                "subtitle": "Line 2 · Line 8",
+                "subtitle": null,
                 "lines": [
                   {
                     "code": "2",
@@ -241,7 +241,7 @@
                 "id": "subway:dogok",
                 "stationId": "dogok",
                 "title": "Dogok Station",
-                "subtitle": "Line 3 · Suin–Bundang Line",
+                "subtitle": null,
                 "lines": [
                   {
                     "code": "3",
@@ -272,7 +272,7 @@
                 "id": "subway:gangnam",
                 "stationId": "gangnam",
                 "title": "Gangnam Station",
-                "subtitle": "Line 2 · Shinbundang Line",
+                "subtitle": null,
                 "lines": [
                   {
                     "code": "2",
@@ -303,7 +303,7 @@
                 "id": "subway:yangjae",
                 "stationId": "yangjae",
                 "title": "Yangjae Station",
-                "subtitle": "Line 3 · Shinbundang Line",
+                "subtitle": null,
                 "lines": [
                   {
                     "code": "3",
@@ -334,7 +334,7 @@
                 "id": "subway:gwanggyo-jungang",
                 "stationId": "gwanggyo-jungang",
                 "title": "Gwanggyojungang Station",
-                "subtitle": "Shinbundang Line",
+                "subtitle": null,
                 "lines": [
                   {
                     "code": "D1",
