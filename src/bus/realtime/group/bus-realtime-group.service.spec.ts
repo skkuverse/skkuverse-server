@@ -6,8 +6,7 @@
  * is a 503, an unknown group is a 404, and meta carries the KST clock and the
  * bus count. Every bus says its kind: HSSC buses are estimated, and each
  * Jongro bus is tracked from its cached position joined with its vehicle's
- * arrival rows (waiting, at a stop or running, with its countdown), except a
- * position cached before the tracking fields, which is served as estimated.
+ * arrival rows (waiting, at a stop or running, with its countdown).
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -26,7 +25,6 @@ import {
   jongroArrivalBus,
   jongroArrivalDoc,
   jongroPositionDoc,
-  legacyJongroPositionDoc,
   noArrivalBus,
 } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { Clock } from "../../../infra/clock";
@@ -390,15 +388,5 @@ describe("BusRealtimeGroupService.getGroup tracked buses", () => {
 
     // Assert
     expect(group.data.buses.map((bus) => [bus.stationIndex, "tracked" in bus && bus.tracked.status])).toEqual([[26, "atStop"]]);
-  });
-
-  it("serves a position cached before the tracking fields as an estimated bus", async () => {
-    // Arrange
-    busCache.values.set("jongro_locations_07", [legacyJongroPositionDoc({ sequence: "6", carNumber: "5537", estimatedTime: 40 })]);
-
-    // Act & Assert
-    expect((await service.getGroup("jongro07")).data.buses).toEqual([
-      { stationIndex: 5, carNumber: "5537", estimatedTime: 40, latitude: "37.587", longitude: "126.998", kind: "estimated" },
-    ]);
   });
 });
