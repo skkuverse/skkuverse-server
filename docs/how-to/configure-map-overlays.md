@@ -3,7 +3,7 @@ title: Configure Map Overlays
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-09-24
+last-updated: 2026-10-18
 audience: internal
 ---
 
@@ -59,6 +59,7 @@ The single most useful question before any change: **does this need a deploy?**
 | --- | --- | --- |
 | A booth, zone or line's position, title, hours, buttons | the sheet, then re-import | No |
 | Add or remove a zone, a route line, a footprint | the sheet, then re-import | No |
+| A Jongno bus route's line | nothing: the bus module syncs it from TOPIS daily | No |
 | Take the whole festival down now | the activation's `enabled` flag | No |
 | A layer's colour, opacity, outline, zoom bounds | the layer set JSON, or `map.constants.ts` | Yes |
 | Which layer a booth category lands on | the layer set JSON's category table | Yes |
@@ -169,6 +170,29 @@ userConfigurable: true,                   // was false
 That is a deploy. Until then the layer is the "defined but inert" quadrant that
 `userConfigurable`'s contract calls out as meaningful — better than shipping a
 control that does nothing.
+
+### Change the Jongno route lines
+
+The `jongro02_route`, `jongro07_route` and `jongro08_route` layers draw the
+village bus lines from `GET /map/overlays/transit`. Their geometry is not
+authored here: `src/bus/route-path/` syncs each line from TOPIS `busRouteInfo`
+once a day into `jongro_route_paths`, and seeds a missing one from
+`src/bus/route-path/jongro-route-paths.seed.json`
+([bus architecture](../explanation/bus-architecture.md)).
+
+- **Colour, width, outline, zoom bounds:** their entries in `map.constants.ts`
+  (`ROUTE_LINE_STYLE` and each layer's `color`). A deploy.
+- **On by default:** set `defaultVisibleWhen` to `{ kind: "always" }` on the
+  layer. It reaches every installed app with the next `/map/config`, so decide
+  it with the app owner first.
+- **A line that did not update:** look for `bus.jongro.path_change_held` in the
+  poller's log. A change of more than 30% of the points or the length, a line
+  of under 10 points or one with no station is held, never written. If the new
+  line is right, refresh the seed file from TOPIS and write the line into the
+  route's document by hand; the next sync compares with what is stored.
+- **A new Jongno route:** add it to `src/bus/jongro-routes.json` and to both
+  seed files (the registry's stations and this line), then its layer to
+  `BASE_LAYERS`. The seed loaders refuse a configured route with no snapshot.
 
 ### Make a category a backdrop
 

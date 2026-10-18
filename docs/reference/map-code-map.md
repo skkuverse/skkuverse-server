@@ -3,7 +3,7 @@ title: Map Code Map
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-11
+last-updated: 2026-10-18
 audience: internal
 ---
 
@@ -21,6 +21,7 @@ Read them in this order: each depends only on the ones before it.
 | `src/map/layer-set/` | The festival structure tier: the layer-set JSON files, their loader (`map-layer-set.config.ts`) and schema, the cross-reference rules, the chip validator, the festival layer and chip specs, and `MapLayerSetService`, which answers which layer set is live |
 | `src/map/config/` | `GET /map/config`: campuses, layers, chips and camera defaults |
 | `src/map/campus/` | `GET /map/overlays/campus`: buildings and campus shapes, the static fallback, and the Cache-Control that refuses to cache it |
+| `src/map/transit/` | `GET /map/overlays/transit`: the Jongno route lines `BusRoutePathService` answers, as path overlays, and the shorter Cache-Control of its snapshot fallback |
 | `src/map/event/` | `GET /map/overlays/event`: a festival's places as overlays |
 | `src/map/event-details/` | `GET /map/overlays/event/details`: the sheet behind each event overlay |
 
@@ -49,9 +50,10 @@ The layer-set loader imports the root's and its own rules, mappers, schemas, con
 | `__tests__/nest/map/map-overlay-interactive.test.ts` | `interactive: false`, `tapChip`, and one layer holding all three kinds |
 | `src/map/event-details/map-event-details.service.spec.ts` | The sheet projection and every drop |
 | `src/map/campus/map-campus.service.spec.ts` | Both building layers, the campus shapes, the degraded fallback |
+| `src/map/transit/map-transit.mapper.spec.ts`, `src/map/transit/map-transit.service.spec.ts`, `__tests__/nest/map/map-transit.routes.test.ts` | One path per route on its route line layer, the geometry as stored, both Cache-Control values, the opt-in layers in `/map/config`, the limiter |
 | `src/map/map.repository.spec.ts` | The activation query, its sort, and the three indexes on the right collections |
 | `src/map/map.schema.spec.ts`, `src/map/event/map-event.mapper.spec.ts` | The place schemas agreeing with the places importer; the overlay read refusing exactly the places drawing would throw on |
-| `__tests__/nest/map/map.routes.test.ts` | The four routes through the production pipeline: envelope, Cache-Control, the retired URLs |
+| `__tests__/nest/map/map.routes.test.ts` | The config, campus and event routes through the production pipeline: envelope, Cache-Control, the retired URLs |
 | `__tests__/nest/map/map-places-import.test.ts`, `map-place-detail-import.test.ts`, `campus-shapes-import.test.ts`, `eventmap-db.test.ts` | The importers and the committed sheets |
 | `__tests__/nest/map/map-config-assets.test.ts` | Every declared layer set is also in the build-asset copy list |
 
@@ -69,6 +71,8 @@ The layer-set loader imports the root's and its own rules, mappers, schemas, con
 | Add next year's festival | a new JSON in `src/map/layer-set/`, `LAYER_SET_FILES`, and `scripts/copy-build-assets.js` | Yes; three edits, and a missed third breaks production only |
 | Add a permanent chip | `BASE_CHIPS` in `map-layer-set.constants.ts` | Yes |
 | Change how a pin or zone is drawn | `BASE_LAYERS[].style`, `EVENT_LAYER_STYLE`, `EVENT_SHAPE_STYLE` | Yes |
+| Recolour a Jongno route line, or turn the lines on by default | its `BASE_LAYERS` entry, `ROUTE_LINE_STYLE`, `ROUTE_LINE_LAYER` in `map.constants.ts` | Yes; the default reaches installed apps with the next `/map/config` |
+| Fix a Jongno route's geometry | nothing in `src/map/`: `src/bus/route-path/` syncs it from TOPIS daily ([configure map overlays](../how-to/configure-map-overlays.md)) | No |
 | Add a field to every overlay | `map.wire.ts`, then every producer (`map-campus.mapper.ts`, `map-event.mapper.ts`) | Yes, plus an app release |
 | Add a sheet block type | `map-event-details.wire.ts`, `map-event-details.mapper.ts`, the importer's copy, an app renderer | Yes, plus an app release; older builds drop it |
 | Add an overlay kind | an arm in `mapOverlay`, a producer branch, an app renderer | Yes, plus an app release |
