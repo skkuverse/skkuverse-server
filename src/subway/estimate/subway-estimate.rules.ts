@@ -11,7 +11,7 @@ interface Candidate {
   train: ScheduledTrain;
   servedAt: ScheduledStop;
   scheduledArrivalAt: Date;
-  history: TrainHistory | null;
+  sighting: TrainHistory | null;
   delaySec: number | null;
 }
 
@@ -30,18 +30,22 @@ function toStandingLateSec(stop: ScheduledStop, latest: TrainProgress, now: Date
   return isStanding && stop.departureAt ? secondsBetween(now, stop.departureAt) : Number.NEGATIVE_INFINITY;
 }
 
-export function toDelaySec(train: ScheduledTrain, latest: TrainProgress, now: Date): number | null {
+function toEventDelaySec(train: ScheduledTrain, latest: TrainProgress): number | null {
   const stop = train.stops.find((s) => s.platformId === latest.platformId);
   const scheduledAt = stop ? toScheduledAt(stop, latest.state) : null;
-  if (!stop || !scheduledAt) return null;
-  const delaySec = secondsBetween(latest.at, scheduledAt);
-  return isDelayInRange(delaySec) ? Math.max(delaySec, toStandingLateSec(stop, latest, now)) : null;
+  return scheduledAt ? secondsBetween(latest.at, scheduledAt) : null;
 }
 
-const isAtServedStation = (candidate: Candidate): boolean => candidate.history?.latest.platformId === candidate.servedAt.platformId;
+export function toDelaySec(train: ScheduledTrain, latest: TrainProgress, now: Date): number | null {
+  const stop = train.stops.find((s) => s.platformId === latest.platformId);
+  const delaySec = toEventDelaySec(train, latest);
+  return stop && delaySec !== null && isDelayInRange(delaySec) ? Math.max(delaySec, toStandingLateSec(stop, latest, now)) : null;
+}
+
+const isAtServedStation = (candidate: Candidate): boolean => candidate.sighting?.latest.platformId === candidate.servedAt.platformId;
 
 function hasPassed(candidate: Candidate): boolean {
-  const latest = candidate.history?.latest;
+  const latest = candidate.sighting?.latest;
   const platformIds = candidate.train.stops.map((stop) => stop.platformId);
   const [latestIndex, servedIndex] = [platformIds.indexOf(latest?.platformId ?? ""), platformIds.indexOf(candidate.servedAt.platformId)];
   return latestIndex > servedIndex || (latestIndex === servedIndex && latest?.state === "departed");
@@ -84,9 +88,8 @@ function toCandidate(input: EstimateInput, train: ScheduledTrain): Candidate | n
   const servedAt = train.stops.find((stop) => stop.platformId === input.platformId);
   const scheduledArrivalAt = servedAt?.arrivalAt ?? servedAt?.departureAt;
   if (!servedAt || !scheduledArrivalAt) return null;
-  const known = input.histories.get(train.trainNo);
-  const delaySec = known ? toOwnDelaySec(input, train, known.latest) : null;
-  return { train, servedAt, scheduledArrivalAt, history: known && delaySec !== null ? known : null, delaySec };
+  const sighting = input.histories.get(train.trainNo) ?? null;
+  return { train, servedAt, scheduledArrivalAt, sighting, delaySec: sighting ? toOwnDelaySec(input, train, sighting.latest) : null };
 }
 
 function toLentDelaySec(candidate: Candidate, ahead: readonly Candidate[]): number | null {
@@ -95,26 +98,25 @@ function toLentDelaySec(candidate: Candidate, ahead: readonly Candidate[]): numb
   return ahead.filter(isLender).at(-1)?.delaySec ?? null;
 }
 
-// WHY: at the served station a train's arrival is observed and standing there delays only its departure, which a
-// Korail section never reports; the train counts as gone once that departure is overrun (design D4).
+// WHY: at the served station a train's arrival is observed whatever its delay, standing there delays only its
+// departure (design D4), and a seen train is placed by its own sighting, never by another train's delay (design D16).
 function toServedDelaySec(candidate: Candidate, ahead: readonly Candidate[]): number | null {
-  const latest = candidate.history?.latest;
-  return latest && isAtServedStation(candidate) ? toDelaySec(candidate.train, latest, latest.at) : (candidate.delaySec ?? toLentDelaySec(candidate, ahead));
+  if (candidate.sighting && isAtServedStation(candidate)) return toEventDelaySec(candidate.train, candidate.sighting.latest);
+  return candidate.delaySec ?? (candidate.sighting ? null : toLentDelaySec(candidate, ahead));
 }
 
-function isSeenAtOrPast(input: EstimateInput, candidate: Candidate): boolean {
+function isSeenAtOrPast(candidate: Candidate): boolean {
   const platformIds = candidate.train.stops.map((stop) => stop.platformId);
-  const latestPlatformId = input.histories.get(candidate.train.trainNo)?.latest.platformId;
+  const latestPlatformId = candidate.sighting?.latest.platformId;
   return latestPlatformId !== undefined && platformIds.indexOf(latestPlatformId) >= platformIds.indexOf(candidate.servedAt.platformId);
 }
 
 // WHY: on the tracker's path every train is seen at the served station (2026-10-17: all 157 to 16:35), so one overdue
 // there with a row stop before it is late, not gone, until a later train on its track (no local) is seen there.
 function isAwaitedTrain(input: EstimateInput, candidate: Candidate, later: readonly Candidate[]): boolean {
-  const isOvertaken = later.some((other) => other.train.express === candidate.train.express && isSeenAtOrPast(input, other));
+  const isOvertaken = later.some((other) => other.train.express === candidate.train.express && isSeenAtOrPast(other));
   const isInDelayRange = plusSec(candidate.servedAt.departureAt ?? candidate.scheduledArrivalAt, MAX_DELAY_SEC) >= input.now;
-  const isUnseen = !candidate.history && !isSeenAtOrPast(input, candidate);
-  return input.isTracked && isUnseen && candidate.train.stops[0] !== candidate.servedAt && isInDelayRange && !isOvertaken;
+  return input.isTracked && !isSeenAtOrPast(candidate) && candidate.train.stops[0] !== candidate.servedAt && isInDelayRange && !isOvertaken;
 }
 
 function toAwaitedArrival(candidate: Candidate, now: Date): TrainArrival {
@@ -124,13 +126,14 @@ function toAwaitedArrival(candidate: Candidate, now: Date): TrainArrival {
 
 function hasLeft(candidate: Candidate, delaySec: number | null, now: Date): boolean {
   const departureAt = plusSec(candidate.servedAt.departureAt ?? candidate.scheduledArrivalAt, delaySec ?? 0);
-  if (!candidate.history) return departureAt < now;
-  return hasPassed(candidate) || (isAtServedStation(candidate) && plusSec(departureAt, MAX_STANDING_PAST_DEPARTURE_SEC) < now);
+  if (hasPassed(candidate)) return true;
+  if (isAtServedStation(candidate)) return plusSec(departureAt, MAX_STANDING_PAST_DEPARTURE_SEC) < now;
+  return candidate.delaySec === null && departureAt < now;
 }
 
 function toArrival(candidate: Candidate, delaySec: number | null): TrainArrival {
   const { trainNo, direction, destination, express } = candidate.train;
-  const latest = candidate.history?.latest;
+  const latest = candidate.sighting?.latest;
   return {
     trainNo,
     direction,

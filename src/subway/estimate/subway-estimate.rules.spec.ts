@@ -1,9 +1,11 @@
 /**
  * The arrival estimates (design D4, D5). A train's delay is its latest event against its own timetable row
- * (approaching = scheduled arrival − 30 s), ignored outside −120…+2,700 s, and at least how long it has stood
+ * (approaching = scheduled arrival − 30 s), not used outside −120…+2,700 s, and at least how long it has stood
  * past its scheduled departure; its arrival at the served station is that station's scheduled arrival plus
  * the delay (`estimated`). An unobserved train borrows the delay of the nearest observed train ahead within
- * 30 minutes, or is served at its scheduled time (`scheduled`). A positive published countdown wins
+ * 30 minutes, or is served at its scheduled time (`scheduled`), as is a train seen with a delay out of range.
+ * A sighting counts whatever its delay (design D16): a train seen at the station is at its observed arrival, and
+ * one seen leaving it or past it is gone. A positive published countdown wins
  * (`recptnDt` + `barvlDt`, `live`), and a gap over 120 s to the timetable estimate is returned as a divergence.
  */
 import type { CountdownRow, SubwayDirection } from "../subway.types";
@@ -194,7 +196,7 @@ describe("toStationArrivals", () => {
     expect(arrivals.find((a) => a.trainNo === "0495")?.source).toBe(source);
   });
 
-  it("serves a train whose delay is out of range like an unobserved one, a likely train-number mismatch", () => {
+  it("serves a train whose delay is out of range at its scheduled time, without using that delay, and keeps where it was seen", () => {
     // Arrange
     const histories = historiesOf(history("0493", { platformId: UIWANG, state: "arrived", at: at("20:58:29") }));
 
@@ -202,7 +204,7 @@ describe("toStationArrivals", () => {
     const { arrivals } = toStationArrivals(input({ trains: [T0493], histories, now: at("20:58:30") }));
 
     // Assert
-    expect(arrivals.map((a) => [a.arrivalAt, a.source, a.position])).toEqual([[at("21:04:00"), "scheduled", null]]);
+    expect(arrivals.map((a) => [a.arrivalAt, a.source, a.position])).toEqual([[at("21:04:00"), "scheduled", { platformId: UIWANG, state: "arrived" }]]);
   });
 
   it.each([
@@ -749,6 +751,180 @@ describe("toStationArrivals, for a tracked train seen at or past the station", (
 
     // Assert
     expect(arrivals).toEqual([]);
+  });
+});
+
+const JAMSIL = "S1-2-216";
+const GANGNAM = "S1-2-222";
+
+/** A line 2 inner-circle train on the 2026-10-18 holiday table, from Guui to Gangnam, as `[platformId, arrival, departure]` in KST. */
+function innerCircleTrain(trainNo: string, stops: readonly [string, string, string][]): ScheduledTrain {
+  return { ...trainWithStops(trainNo, "up", stops), destination: "내선순환" };
+}
+
+const T2130 = innerCircleTrain("2130", [
+  ["S1-2-213", "10:14:30", "10:15:00"],
+  ["S1-2-214", "10:16:00", "10:16:30"],
+  ["S1-2-215", "10:18:30", "10:19:00"],
+  [JAMSIL, "10:20:30", "10:21:00"],
+  ["S1-2-217", "10:22:30", "10:23:00"],
+  ["S1-2-218", "10:24:30", "10:25:00"],
+  ["S1-2-219", "10:26:30", "10:27:00"],
+  ["S1-2-220", "10:28:30", "10:29:00"],
+  ["S1-2-221", "10:30:30", "10:31:00"],
+  [GANGNAM, "10:32:00", "10:33:00"],
+]);
+
+const T2132 = innerCircleTrain("2132", [
+  ["S1-2-213", "10:19:00", "10:19:30"],
+  ["S1-2-214", "10:20:30", "10:21:00"],
+  ["S1-2-215", "10:23:00", "10:23:30"],
+  [JAMSIL, "10:25:00", "10:26:00"],
+  ["S1-2-217", "10:27:30", "10:28:00"],
+  ["S1-2-218", "10:29:30", "10:30:00"],
+  ["S1-2-219", "10:31:30", "10:32:00"],
+  ["S1-2-220", "10:33:30", "10:34:30"],
+  ["S1-2-221", "10:36:00", "10:36:30"],
+  [GANGNAM, "10:37:30", "10:38:00"],
+]);
+
+const T2134 = innerCircleTrain("2134", [
+  ["S1-2-213", "10:25:30", "10:26:00"],
+  ["S1-2-214", "10:27:00", "10:27:30"],
+  ["S1-2-215", "10:29:30", "10:30:00"],
+  [JAMSIL, "10:31:30", "10:32:00"],
+  ["S1-2-217", "10:33:30", "10:34:00"],
+  ["S1-2-218", "10:35:30", "10:36:00"],
+  ["S1-2-219", "10:37:30", "10:38:00"],
+  ["S1-2-220", "10:39:30", "10:40:30"],
+  ["S1-2-221", "10:42:00", "10:42:30"],
+  [GANGNAM, "10:43:30", "10:44:00"],
+]);
+
+const innerCircleHistory = (trainNo: string, latest: Omit<TrainProgress, "ordinal">): TrainHistory => ({
+  ...history(trainNo, latest, "up"),
+  destination: "내선순환",
+});
+
+/** 2130 left Jamsil at 10:28:15, 435 s late, so it lends 2132 and 2134 a delay of 435 s. */
+const H2130 = innerCircleHistory("2130", { platformId: JAMSIL, state: "departed", at: at("10:28:15") });
+
+const innerCircleArrivals = (platformId: string, histories: Map<string, TrainHistory>, now: string): TrainArrival[] =>
+  toStationArrivals(input({ platformId, direction: "up", trains: [T2130, T2132, T2134], histories, isTracked: true, now: at(now) })).arrivals;
+
+describe("toStationArrivals, for a train seen with a delay out of range", () => {
+  // 2026-10-18: 2132 arrived at Jamsil at 10:21:18 and left at 10:22:49, 222 s early; with its sighting dropped as a likely
+  // number mismatch it borrowed 2130's delay, stayed listed at Jamsil (10:32:15 at 10:30) and was served at Gangnam at
+  // 10:44:45 while it arrived there at 10:34:40.
+  it("leaves out 2132 at 잠실 at 10:30, seen leaving it at 10:22:49, 191 s before its scheduled departure", () => {
+    // Arrange
+    const histories = historiesOf(H2130, innerCircleHistory("2132", { platformId: JAMSIL, state: "departed", at: at("10:22:49") }));
+
+    // Act
+    const arrivals = innerCircleArrivals(JAMSIL, histories, "10:30:00");
+
+    // Assert
+    expect(arrivals.map((a) => a.trainNo)).toEqual(["2134"]);
+  });
+
+  it.each([
+    ["121 s early", -121],
+    ["120 s early", -120],
+    ["119 s early", -119],
+  ])("leaves out 2132 at 잠실 once it is seen leaving it %s, whatever that delay", (_label, offsetSec) => {
+    // Arrange
+    const departedAt = plusSec(at("10:26:00"), offsetSec);
+    const histories = historiesOf(
+      innerCircleHistory("2130", { platformId: "S1-2-214", state: "departed", at: at("10:22:55") }),
+      innerCircleHistory("2132", { platformId: JAMSIL, state: "departed", at: departedAt }),
+    );
+
+    // Act
+    const arrivals = innerCircleArrivals(JAMSIL, histories, "10:24:30");
+
+    // Assert
+    expect(arrivals.map((a) => a.trainNo)).not.toContain("2132");
+  });
+
+  it.each([
+    ["222 s early, as observed", -222],
+    ["121 s early", -121],
+    ["120 s early", -120],
+    ["119 s early", -119],
+  ])("serves 2132, arrived at 잠실 %s, at its observed arrival while it stands there", (_label, offsetSec) => {
+    // Arrange
+    const arrivedAt = plusSec(at("10:25:00"), offsetSec);
+    const histories = historiesOf(
+      innerCircleHistory("2130", { platformId: "S1-2-213", state: "departed", at: at("10:21:25") }),
+      innerCircleHistory("2132", { platformId: JAMSIL, state: "arrived", at: arrivedAt }),
+    );
+
+    // Act
+    const arrivals = innerCircleArrivals(JAMSIL, histories, "10:23:10");
+
+    // Assert
+    expect(arrivals.find((a) => a.trainNo === "2132")).toMatchObject({
+      arrivalAt: arrivedAt,
+      source: "estimated",
+      position: { platformId: JAMSIL, state: "arrived" },
+    });
+  });
+
+  it("serves 2132 at 강남 at its scheduled 10:37:30, seen leaving 삼성 170 s early, not at 10:44:45 with 2130's 435 s", () => {
+    // Arrange
+    const histories = historiesOf(H2130, innerCircleHistory("2132", { platformId: "S1-2-219", state: "departed", at: at("10:29:10") }));
+
+    // Act
+    const arrivals = innerCircleArrivals(GANGNAM, histories, "10:30:00");
+
+    // Assert
+    expect(arrivals.map((a) => [a.trainNo, a.arrivalAt, a.source, a.position])).toEqual([
+      ["2132", at("10:37:30"), "scheduled", { platformId: "S1-2-219", state: "departed" }],
+      ["2130", at("10:39:15"), "estimated", { platformId: JAMSIL, state: "departed" }],
+      ["2134", at("10:50:45"), "estimated", null],
+    ]);
+  });
+
+  it.each([
+    ["121 s early", -121, "10:37:30", "scheduled"],
+    ["120 s early", -120, "10:35:30", "estimated"],
+    ["119 s early", -119, "10:35:31", "estimated"],
+  ])("serves 2132 at 강남, seen leaving 삼성 %s, from its own delay only inside the range", (_label, offsetSec, arrival, source) => {
+    // Arrange
+    const departedAt = plusSec(at("10:32:00"), offsetSec);
+    const histories = historiesOf(H2130, innerCircleHistory("2132", { platformId: "S1-2-219", state: "departed", at: departedAt }));
+
+    // Act
+    const arrivals = innerCircleArrivals(GANGNAM, histories, "10:30:30");
+
+    // Assert
+    expect(arrivals.find((a) => a.trainNo === "2132")).toMatchObject({ arrivalAt: at(arrival), source });
+  });
+
+  it("does not lend 2132's delay, out of range, to 2134 behind it", () => {
+    // Arrange
+    const histories = historiesOf(innerCircleHistory("2132", { platformId: "S1-2-219", state: "departed", at: at("10:29:10") }));
+
+    // Act
+    const arrivals = innerCircleArrivals(GANGNAM, histories, "10:30:00");
+
+    // Assert
+    expect(arrivals.find((a) => a.trainNo === "2134")).toMatchObject({ arrivalAt: at("10:43:30"), source: "scheduled" });
+  });
+
+  it("reports 2132's countdown, arrived at 잠실 222 s early, as at the station and serves its observed arrival", () => {
+    // Arrange
+    const histories = historiesOf(innerCircleHistory("2132", { platformId: JAMSIL, state: "arrived", at: at("10:21:18") }));
+    const row: CountdownRow = { trainNo: "2132", platformId: JAMSIL, generatedAt: at("10:21:00"), remainingSec: 60 };
+
+    // Act
+    const { arrivals, rejections } = toStationArrivals(
+      input({ platformId: JAMSIL, direction: "up", trains: [T2132], histories, countdownRows: [row], isTracked: true, now: at("10:21:30") }),
+    );
+
+    // Assert
+    expect(arrivals.map((a) => [a.arrivalAt, a.source])).toEqual([[at("10:21:18"), "estimated"]]);
+    expect(rejections.map((r) => r.reason)).toEqual(["at_station"]);
   });
 });
 
