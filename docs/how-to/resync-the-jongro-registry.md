@@ -34,7 +34,7 @@ An applied change logs `bus.jongro.registry_synced` (warn) with `fromVersion`, `
 
 1. Find the line in Loki: `{container=~"skkuverse-poller.*"} | json | event="bus.jongro.registry_change_held"`. It carries `code`, `fromVersion`, `toVersion`, `observed` (the whole list TOPIS answered, in ord order) and the `added`, `removed`, `moved` and `renamed` stops. It is logged once per distinct list, so a quiet log does not mean the list stopped.
 2. Check the list against TOPIS: `getStaionByRoute?busRouteId=<busRouteId>` (the ids are in `src/bus/jongro-routes.json`) and the operator's notice. A list that is another route's, or that drops most stops, is a bad answer: do nothing, and the poller keeps the stored list.
-3. For a real reroute, write it. Use the `observed` list as it is, and the turnaround stop the position rows name (`trnstnid` of `getBusPosByRouteSt`), or the stored one when no bus runs:
+3. For a real reroute, write it. Use the `observed` list as it is, and the turnaround stop the position rows name (`trnstnid` of `getBusPosByRtid`), or the stored one when no bus runs:
 
    ```js
    // mongosh, against bus_campus (never bus_campus_dev for production)

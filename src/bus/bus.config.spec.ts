@@ -45,6 +45,13 @@ describe("jongroRoutes derived from jongro-routes.json", () => {
     expect(jongroRoutes[1]!.arrivalsUrl).toContain("&busRouteId=100900004&resultType=json");
   });
 
+  it("builds each route's position URL over the whole route, whatever its stations", () => {
+    // Act & Assert
+    expect(jongroRoutes.map((r) => r.positionsUrl.replace(/serviceKey=[^&]*/, "serviceKey=K"))).toEqual(
+      ["100900008", "100900004", "100900005"].map((id) => `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRtid?serviceKey=K&busRouteId=${id}&resultType=json`),
+    );
+  });
+
   it("keys the transfer badges of the 2026-09 review by ARS number", () => {
     // Arrange
     const linesOf = (code: string, arsId: string) => jongroRoutes.find((r) => r.code === code)!.transferLinesByArsId[arsId]?.map((t) => t.line);

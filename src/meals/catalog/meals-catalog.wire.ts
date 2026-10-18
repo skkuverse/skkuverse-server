@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CAFETERIA_CAMPUSES } from "./meals-catalog.constants";
+import { CAFETERIA_CAMPUSES } from "../meals.constants";
 
 const bilingualText = z.object({ ko: z.string(), en: z.string() });
 

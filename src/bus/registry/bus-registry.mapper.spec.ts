@@ -1,16 +1,13 @@
 /**
  * The route the registry derives from a stored document and the committed
- * config: the position URL over every stored ord (byte-identical to what
- * production has called), served stations with their ends, the turnaround
+ * config: served stations with their ends, the turnaround
  * stop and the transfer lines of their ARS number, and the TOPIS id → first
  * ord mapping that places a bus.
  */
 import type { JongroRoute } from "../bus.types";
 import type { JongroRouteDocument } from "./bus-registry.document";
-import { toJongroPositionsUrl, toRegistryRoute, toRegistryStations } from "./bus-registry.mapper";
+import { toRegistryRoute, toRegistryStations } from "./bus-registry.mapper";
 
-const FIXED_KEY =
-  "FAKEseoulBusServiceKeyForTestsOnlyNotARealKey0000%2BFAKE%2Fseoul%2Bbus%2Ftest0key%3D%3D";
 
 const committed: JongroRoute = {
   id: "jongro07",
@@ -21,6 +18,7 @@ const committed: JongroRoute = {
   refreshInterval: 40,
   seatCount: 18,
   arrivalsUrl: "unused",
+  positionsUrl: "unused",
   transferLinesByArsId: { "01589": [{ line: "1", color: "0052A4" }] },
 };
 
@@ -33,36 +31,19 @@ const documentOf = (topisIds: string[], overrides: Partial<JongroRouteDocument> 
   ...overrides,
 });
 
-describe("toJongroPositionsUrl", () => {
-  it("builds the 종로02 loc URL identically (endOrd=26)", () => {
-    // Act & Assert
-    expect(toJongroPositionsUrl("100900008", 26, FIXED_KEY)).toBe(
-      `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRouteSt?serviceKey=${FIXED_KEY}&busRouteId=100900008&startOrd=1&endOrd=26&resultType=json`,
-    );
-  });
-
-  it("builds the 종로07 loc URL identically (endOrd=22)", () => {
-    // Act & Assert
-    expect(toJongroPositionsUrl("100900004", 22, FIXED_KEY)).toBe(
-      `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRouteSt?serviceKey=${FIXED_KEY}&busRouteId=100900004&startOrd=1&endOrd=22&resultType=json`,
-    );
-  });
-});
-
 describe("toRegistryRoute", () => {
   it("keeps the committed fields and adds the stored version, turnaround stop and stations", () => {
     // Act
-    const route = toRegistryRoute(committed, documentOf(["A", "B", "C"]), FIXED_KEY);
+    const route = toRegistryRoute(committed, documentOf(["A", "B", "C"]));
 
     // Assert
     expect(route).toMatchObject({ id: "jongro07", seatCount: 18, stationsVersion: "0123456789abcdef", turnaroundTopisId: "B" });
     expect(route.topisIds).toEqual(["A", "B", "C"]);
-    expect(route.positionsUrl).toContain("&busRouteId=100900004&startOrd=1&endOrd=3&");
   });
 
   it("serves the first and last stored stations as the ends and the turnaround stop as the rotation", () => {
     // Act
-    const { stations } = toRegistryRoute(committed, documentOf(["A", "B", "C"]), FIXED_KEY);
+    const { stations } = toRegistryRoute(committed, documentOf(["A", "B", "C"]));
 
     // Assert
     expect(stations.map((s) => [s.sequence, s.stationName, s.stationNumber, s.isFirstStation, s.isLastStation, s.isRotationStation])).toEqual([
@@ -78,7 +59,7 @@ describe("toRegistryRoute", () => {
     doc.stations[2] = { ...doc.stations[2]!, arsId: "01589" };
 
     // Act
-    const { stations } = toRegistryRoute(committed, doc, FIXED_KEY);
+    const { stations } = toRegistryRoute(committed, doc);
 
     // Assert
     expect(stations.map((s) => s.transferLines)).toEqual([[], [], [{ line: "1", color: "0052A4" }]]);
@@ -88,7 +69,7 @@ describe("toRegistryRoute", () => {
   // loop-closing repeat must not steal the mapping from ord 1.
   it("maps a loop-closing repeat to its first ord, and lists every ord in topisIds", () => {
     // Act
-    const { mapping, topisIds } = toRegistryRoute(committed, documentOf(["A", "B", "A"]), FIXED_KEY);
+    const { mapping, topisIds } = toRegistryRoute(committed, documentOf(["A", "B", "A"]));
 
     // Assert
     expect(mapping["A"]).toEqual({ sequence: 1, stationName: "stop A" });
@@ -97,7 +78,7 @@ describe("toRegistryRoute", () => {
 
   it("maps no TOPIS id the registry does not list, Object.prototype names included", () => {
     // Act
-    const { mapping } = toRegistryRoute(committed, documentOf(["100900204", "100900197"]), FIXED_KEY);
+    const { mapping } = toRegistryRoute(committed, documentOf(["100900204", "100900197"]));
 
     // Assert
     expect(mapping["constructor"]).toBeUndefined();
@@ -107,7 +88,7 @@ describe("toRegistryRoute", () => {
 
   it("maps a listed TOPIS id that names an Object.prototype member", () => {
     // Act
-    const { mapping } = toRegistryRoute(committed, documentOf(["100900204", "constructor"]), FIXED_KEY);
+    const { mapping } = toRegistryRoute(committed, documentOf(["100900204", "constructor"]));
 
     // Assert
     expect(mapping["constructor"]).toEqual({ sequence: 2, stationName: "stop constructor" });

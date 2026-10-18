@@ -1,10 +1,10 @@
 /**
- * The arrival URL every Jongro route polls: byte-identical to the URL
- * production has called since the registry was introduced, so a refactor of
- * the builder cannot change what TOPIS is asked. The position URL depends on
- * the stored stations, so it is the registry's (bus-registry.mapper.spec.ts).
+ * The two TOPIS URLs every Jongro route polls: the arrival URL byte-identical
+ * to the one production has called since the registry was introduced, and the
+ * position URL of getBusPosByRtid, which answers the whole route (no ord
+ * range) and names its turnaround stop.
  */
-import { toJongroArrivalsUrl } from "./bus.mapper";
+import { toJongroArrivalsUrl, toJongroPositionsUrl } from "./bus.mapper";
 
 const FIXED_KEY =
   "FAKEseoulBusServiceKeyForTestsOnlyNotARealKey0000%2BFAKE%2Fseoul%2Bbus%2Ftest0key%3D%3D";
@@ -21,6 +21,15 @@ describe("toJongroArrivalsUrl", () => {
     // Act & Assert
     expect(toJongroArrivalsUrl("100900004", FIXED_KEY)).toBe(
       `http://ws.bus.go.kr/api/rest/arrive/getArrInfoByRouteAll?serviceKey=${FIXED_KEY}&busRouteId=100900004&resultType=json`,
+    );
+  });
+});
+
+describe("toJongroPositionsUrl", () => {
+  it("asks getBusPosByRtid for the whole 종로07 route", () => {
+    // Act & Assert
+    expect(toJongroPositionsUrl("100900004", FIXED_KEY)).toBe(
+      `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRtid?serviceKey=${FIXED_KEY}&busRouteId=100900004&resultType=json`,
     );
   });
 });

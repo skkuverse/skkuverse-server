@@ -89,6 +89,13 @@ const config = {
     },
   },
 
+  meals: {
+    dbName: dbNameFor(process.env.MONGO_MEALS_DB_NAME),
+    collections: {
+      menus: "meals",
+    },
+  },
+
   miniapps: {
     dbName: dbNameFor(process.env.MONGO_MINIAPPS_DB_NAME),
     collections: {

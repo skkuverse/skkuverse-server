@@ -4,7 +4,8 @@
  * their numbers parsed, a row without them rejected), "0" and "4" accepted, any other
  * header code rejected with the code attached, "4" (no result, TOPIS's
  * overnight answer) read as an empty list, and any other answer without a
- * list rejected.
+ * list rejected; a position row's vehicle, section, stop flag and KST
+ * observation time kept, a row with one of them malformed rejected.
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
 
@@ -14,8 +15,7 @@ import { jongroRoutes } from "../../bus.config";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 
 const axios = require("axios") as { get: jest.Mock };
-// WHY: the position URL covers the stored stations, so it comes from the registry; any URL stands in for it here.
-const route07 = { ...jongroRoutes.find((r) => r.code === "07")!, positionsUrl: "http://ws.bus.go.kr/api/rest/buspos/getBusPosByRouteSt?busRouteId=100900004&endOrd=22" };
+const route07 = jongroRoutes.find((r) => r.code === "07")!;
 const respond = (data: unknown) => axios.get.mockResolvedValue({ data });
 // What TOPIS sends in a row's bus fields when it names no bus (topis-jongro-arrivals.json, the second bus of jongro07Waiting ord 2).
 const NO_BUS_FIELDS = Object.fromEntries(
@@ -259,14 +259,45 @@ describe("BusRealtimeJongroClient.fetchSightings", () => {
     // Arrange
     respond({
       msgHeader: { headerCd: "0" },
-      msgBody: { itemList: [{ lastStnId: "100900197", tmX: "126.998", tmY: "37.587", plainNo: "서울74사5537" }] },
+      msgBody: {
+        itemList: [
+          {
+            lastStnId: "100900197",
+            gpsX: "126.998",
+            gpsY: "37.587",
+            plainNo: "서울74사5537",
+            trnstnid: "100900028",
+            vehId: "100000103",
+            sectOrd: "6",
+            sectDist: "0.1",
+            fullSectDist: "0.3",
+            stopFlag: "0",
+            dataTm: "20261020100000",
+          },
+        ],
+      },
     });
 
     // Act
     const result = await new BusRealtimeJongroClient().fetchSightings(route07);
 
     // Assert
-    expect(result).toEqual([{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537" }]);
+    // WHY: the vehicle fields are what add-jongro-bus-positions adds (task 1.1); the row carries them as TOPIS does.
+    expect(result).toEqual([
+      {
+        stationId: "100900197",
+        latitude: "37.587",
+        longitude: "126.998",
+        carNumber: "5537",
+        turnaroundStationId: "100900028",
+        vehicleId: "100000103",
+        sectOrd: 6,
+        sectDist: 0.1,
+        fullSectDist: 0.3,
+        isAtStop: false,
+        observedAt: "2026-10-20T10:00:00+09:00",
+      },
+    ]);
     expect(axios.get).toHaveBeenCalledWith(route07.positionsUrl, { timeout: 10000 });
   });
 
@@ -326,5 +357,104 @@ describe("BusRealtimeJongroClient.fetchSightings turnaround stop", () => {
       ["100900221", "100900028"],
       ["100900043", "100900028"],
     ]);
+  });
+});
+
+// WHY: getBusPosByRtid is the position endpoint that names the turnaround stop; it puts the coordinates in gpsY/gpsX
+// and leaves tmX/tmY null (the 2026-10-17 capture), so a row without a stop or a coordinate is not its shape.
+describe("BusRealtimeJongroClient.fetchSightings over getBusPosByRtid", () => {
+  it("reads the coordinates from gpsY and gpsX, as strings", async () => {
+    // Arrange
+    respond(positionsFixture.jongro07);
+
+    // Act
+    const sightings = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    // WHY: each sighting also carries its vehicle fields since add-jongro-bus-positions (task 1.1), pinned below.
+    expect(sightings.map(({ stationId, latitude, longitude, carNumber, turnaroundStationId }) => ({ stationId, latitude, longitude, carNumber, turnaroundStationId }))).toEqual([
+      { stationId: "100900221", latitude: "37.586893", longitude: "126.994075", carNumber: "5538", turnaroundStationId: "100900028" },
+      { stationId: "100900043", latitude: "37.576948", longitude: "127.002008", carNumber: "5537", turnaroundStationId: "100900028" },
+    ]);
+  });
+
+  it("reads a row without trnstnid as naming no turnaround stop", async () => {
+    // Arrange
+    const [row] = positionsFixture.jongro07.msgBody.itemList;
+    respond({ msgHeader: { headerCd: "0" }, msgBody: { itemList: [{ ...row, trnstnid: undefined }] } });
+
+    // Act
+    const [sighting] = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sighting).toHaveProperty("turnaroundStationId", undefined);
+    expect(sighting!.stationId).toBe("100900221");
+  });
+
+  it.each(["lastStnId", "gpsX", "gpsY"])("rejects a row without %s, naming the field", async (field) => {
+    // Arrange
+    const [row] = positionsFixture.jongro07.msgBody.itemList;
+    respond({ msgHeader: { headerCd: "0" }, msgBody: { itemList: [{ ...row, [field]: null }] } });
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchSightings(route07)).rejects.toMatchObject({
+      name: "UpstreamError",
+      upstream: "topis",
+      message: `TOPIS row has no ${field} (jongro 07 location)`,
+    });
+  });
+});
+
+// WHY: the vehicle, its place in the section, the stop flag and TOPIS's observation time are what the realtime
+// response tracks a bus by (add-jongro-bus-positions D2); none was malformed in the 1,117 captured rows.
+describe("BusRealtimeJongroClient.fetchSightings vehicle fields", () => {
+  it("keeps each captured row's vehicle, section, stop flag and observation time", async () => {
+    // Arrange
+    respond(positionsFixture.jongro07);
+
+    // Act
+    const sightings = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sightings.map(({ vehicleId, sectOrd, sectDist, fullSectDist, isAtStop, observedAt }) => ({ vehicleId, sectOrd, sectDist, fullSectDist, isAtStop, observedAt }))).toEqual([
+      { vehicleId: "100000114", sectOrd: 2, sectDist: 0.06, fullSectDist: 0.289, isAtStop: false, observedAt: "2026-10-17T19:11:45+09:00" },
+      { vehicleId: "100000103", sectOrd: 14, sectDist: 0, fullSectDist: 0.295, isAtStop: true, observedAt: "2026-10-17T19:11:44+09:00" },
+    ]);
+  });
+
+  it.each([
+    ["vehId", "", "vehId"],
+    ["vehId", null, "vehId"],
+    ["sectOrd", "x", "sectOrd"],
+    ["sectDist", null, "sectDist"],
+    ["fullSectDist", "", "fullSectDist"],
+    ["dataTm", "2026-10-17 19:11:45", "dataTm"],
+  ])("rejects a row whose %s is %j, naming the field", async (field, value, named) => {
+    // Arrange
+    const [row] = positionsFixture.jongro07.msgBody.itemList;
+    respond({ msgHeader: { headerCd: "0" }, msgBody: { itemList: [{ ...row, [field]: value }] } });
+
+    // Act & Assert
+    await expect(new BusRealtimeJongroClient().fetchSightings(route07)).rejects.toMatchObject({
+      name: "UpstreamError",
+      upstream: "topis",
+      message: `TOPIS row has a malformed ${named} (jongro 07 location)`,
+    });
+  });
+
+  it.each([
+    ["1", true],
+    ["0", false],
+    [null, false],
+  ])("reads stopFlag %j as at a stop: %s", async (stopFlag, expected) => {
+    // Arrange
+    const [row] = positionsFixture.jongro07.msgBody.itemList;
+    respond({ msgHeader: { headerCd: "0" }, msgBody: { itemList: [{ ...row, stopFlag }] } });
+
+    // Act
+    const [sighting] = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sighting!.isAtStop).toBe(expected);
   });
 });

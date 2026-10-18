@@ -57,8 +57,16 @@ const JONGRO07_LOC_BODY = {
   msgHeader: TOPIS_OK,
   msgBody: {
     itemList: [
-      { lastStnId: "100900197", tmX: "126.998", tmY: "37.587", plainNo: "서울74사5537", busType: "1" },
-      { lastStnId: "999999999", tmX: "126.990", tmY: "37.580", plainNo: "서울74사0001", busType: "1" },
+      // WHY: vehId, sectOrd, sectDist, fullSectDist, stopFlag and dataTm are getBusPosByRtid fields the client reads
+      // since add-jongro-bus-positions; their shape follows __tests__/nest/bus/fixtures/topis-jongro-positions.json.
+      {
+        ...{ lastStnId: "100900197", gpsX: "126.998", gpsY: "37.587", tmX: null, tmY: null, trnstnid: "100900028", plainNo: "서울74사5537", busType: "1" },
+        ...{ vehId: "100000103", sectOrd: "6", sectDist: "0.1", fullSectDist: "0.25", stopFlag: "0", dataTm: "20261020095930" },
+      },
+      {
+        ...{ lastStnId: "999999999", gpsX: "126.990", gpsY: "37.580", tmX: null, tmY: null, trnstnid: "100900028", plainNo: "서울74사0001", busType: "1" },
+        ...{ vehId: "100000001", sectOrd: "9", sectDist: "0.05", fullSectDist: "0.3", stopFlag: "1", dataTm: "20261020095931" },
+      },
     ],
   },
 };
@@ -235,8 +243,9 @@ describe("bus_cache between a poller process and an api replica", () => {
       data: {
         groupId: "hssc",
         buses: [
-          { stationIndex: 1, carNumber: "0000", estimatedTime: 30 },
-          { stationIndex: 7, carNumber: "0000", estimatedTime: 120 },
+          // WHY: kind is what add-jongro-bus-positions adds to every bus (task 2.2).
+          { stationIndex: 1, carNumber: "0000", estimatedTime: 30, kind: "estimated" },
+          { stationIndex: 7, carNumber: "0000", estimatedTime: 120, kind: "estimated" },
         ],
         stationEtas: [],
       },
@@ -380,7 +389,28 @@ describe("bus_cache between a poller process and an api replica", () => {
     });
     expect(res.body.data).toEqual({
       groupId: "jongro07",
-      buses: [{ stationIndex: 5, carNumber: "5537", estimatedTime: 0, latitude: "37.587", longitude: "126.998" }],
+      // WHY: kind and tracked are what add-jongro-bus-positions adds (task 2.2); crowding is the ord 1 row's, the first
+      // naming vehicle 100000103, and no row is its next stop's (ord 7).
+      buses: [
+        {
+          stationIndex: 5,
+          carNumber: "5537",
+          estimatedTime: 0,
+          latitude: "37.587",
+          longitude: "126.998",
+          kind: "tracked",
+          tracked: {
+            status: "running",
+            vehicleId: "100000103",
+            observedAt: "2026-10-20T09:59:30+09:00",
+            crowding: "relaxed",
+            isLastBus: false,
+            progress: 0.4,
+            segmentMeters: 250,
+            nextStopInSec: null,
+          },
+        },
+      ],
       // WHY: each station's arrivals is the field improve-jongro-realtime adds (task 3.1); eta is as before.
       stationEtas: [
         { stationIndex: 0, eta: "3분후[2번째 전]", arrivals: [running5537(3, 1, "3분후[2번째 전]"), WAITING_NO_VEHICLE] },
