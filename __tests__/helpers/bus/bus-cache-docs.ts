@@ -6,7 +6,6 @@
  */
 import type {
   HsscBusDoc,
-  LegacyJongroBusPositionDoc,
   JongroArrivalBus,
   JongroArrivalDoc,
   JongroBusPositionDoc,
@@ -52,11 +51,6 @@ export function jongroPositionDoc(extra: Partial<JongroBusPositionDoc> = {}): Jo
 }
 
 /** A position as the poller wrote it before add-jongro-bus-positions. */
-export function legacyJongroPositionDoc(extra: Partial<LegacyJongroBusPositionDoc> = {}): LegacyJongroBusPositionDoc {
-  const { sequence, stationName, carNumber, eventDate, estimatedTime, stationId, latitude, longitude, recordTime } = jongroPositionDoc();
-  return { sequence, stationName, carNumber, eventDate, estimatedTime, stationId, latitude, longitude, recordTime, ...extra };
-}
-
 /** A bus of an arrival row; the default is 종로07's 서울70사5537 two stops before ord 3, 3 minutes away. */
 export function jongroArrivalBus(extra: Partial<JongroArrivalBus> = {}): JongroArrivalBus {
   return {

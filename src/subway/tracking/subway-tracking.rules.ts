@@ -15,8 +15,8 @@ export function toTrainNo(raw: string): string | null {
 
 const toOrdinal = (stationIndex: number, state: TrainState): number => STATES_PER_STATION * stationIndex + STATE_STEPS[state];
 
-export function toProgressOrdinal(route: readonly string[], event: Pick<TrainEvent, "stationId" | "state">): number | null {
-  const stationIndex = route.indexOf(event.stationId);
+export function toProgressOrdinal(route: readonly string[], event: Pick<TrainEvent, "platformId" | "state">): number | null {
+  const stationIndex = route.indexOf(event.platformId);
   return stationIndex < 0 ? null : toOrdinal(stationIndex, event.state);
 }
 
@@ -24,20 +24,20 @@ export function toProgressOrdinal(route: readonly string[], event: Pick<TrainEve
 // replaces a stop event; before its first stop or its stop at the served station it stays there, timed from that
 // next stop (design D4), since that last stop may be Geumjeong, a whole express run back.
 function toStopProgress(tick: TrackingTick, route: readonly string[], event: TrainEvent): TrainProgress | null {
-  const stopStationIds = tick.stopStationIdsByTrainNo.get(event.trainNo);
-  const stationIndex = route.indexOf(event.stationId);
+  const stopPlatformIds = tick.stopPlatformIdsByTrainNo.get(event.trainNo);
+  const stationIndex = route.indexOf(event.platformId);
   const at = event.stateChangedAt;
   if (stationIndex < 0) return null;
-  const progress: TrainProgress = { stationId: event.stationId, state: event.state, at, ordinal: toOrdinal(stationIndex, event.state) };
-  if (!stopStationIds || stopStationIds.includes(event.stationId)) return progress;
-  const lastStopId = route.slice(0, stationIndex).filter((stationId) => stopStationIds.includes(stationId)).at(-1);
-  const nextStopId = route.slice(stationIndex).find((stationId) => stopStationIds.includes(stationId));
-  if (lastStopId === undefined || nextStopId === tick.stationId) return progress;
-  return { stationId: lastStopId, state: "departed", at, ordinal: toOrdinal(route.indexOf(lastStopId), "departed") };
+  const progress: TrainProgress = { platformId: event.platformId, state: event.state, at, ordinal: toOrdinal(stationIndex, event.state) };
+  if (!stopPlatformIds || stopPlatformIds.includes(event.platformId)) return progress;
+  const lastStopId = route.slice(0, stationIndex).filter((platformId) => stopPlatformIds.includes(platformId)).at(-1);
+  const nextStopId = route.slice(stationIndex).find((platformId) => stopPlatformIds.includes(platformId));
+  if (lastStopId === undefined || nextStopId === tick.platformId) return progress;
+  return { platformId: lastStopId, state: "departed", at, ordinal: toOrdinal(route.indexOf(lastStopId), "departed") };
 }
 
 // WHY: both operators number up trains even and down trains odd (every train of the committed timetables);
-// a destination the timetables name decides first.
+// a destination the timetable runs in one direction only decides first (line 2's Seongsu runs both ways).
 export function toDirection(
   train: Pick<TrainEvent, "trainNo" | "destination">,
   directionByDestination: ReadonlyMap<string, SubwayDirection>,
@@ -48,11 +48,13 @@ export function toDirection(
 export function toDirectionByDestination(
   trains: readonly Pick<TimetableTrain, "direction" | "destination">[],
 ): Map<string, SubwayDirection> {
-  return new Map(trains.map((train) => [train.destination, train.direction]));
+  const toDestinations = (direction: SubwayDirection): Set<string> => new Set(trains.filter((t) => t.direction === direction).map((t) => t.destination));
+  const [upDestinations, downDestinations] = [toDestinations("up"), toDestinations("down")];
+  return new Map(trains.filter((t) => !(upDestinations.has(t.destination) && downDestinations.has(t.destination))).map((t) => [t.destination, t.direction]));
 }
 
-export function toStopStationIdsByTrainNo(trains: readonly Pick<ScheduledTrain, "trainNo" | "stops">[]): Map<string, string[]> {
-  return new Map(trains.map((train) => [train.trainNo, train.stops.map((stop) => stop.stationId)]));
+export function toStopPlatformIdsByTrainNo(trains: readonly Pick<ScheduledTrain, "trainNo" | "stops">[]): Map<string, string[]> {
+  return new Map(trains.map((train) => [train.trainNo, train.stops.map((stop) => stop.platformId)]));
 }
 
 export function toLatestProgress(latest: TrainProgress, candidate: TrainProgress): TrainProgress {
@@ -83,7 +85,7 @@ function withEvent(tick: TrackingTick, known: TrainHistory | undefined, event: T
 }
 
 function isSeenAtOrPastStation(tick: TrackingTick, history: TrainHistory): boolean {
-  const approachingOrdinal = toProgressOrdinal(tick.routes[history.direction], { stationId: tick.stationId, state: "approaching" });
+  const approachingOrdinal = toProgressOrdinal(tick.routes[history.direction], { platformId: tick.platformId, state: "approaching" });
   return approachingOrdinal !== null && history.latest.ordinal >= approachingOrdinal;
 }
 

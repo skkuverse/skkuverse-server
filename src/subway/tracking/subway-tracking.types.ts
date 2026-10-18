@@ -1,9 +1,9 @@
 import type { SubwayArrivalsDoc } from "../subway.document";
 import type { CountdownRow, SubwayDirection, TrainEvent, TrainState } from "../subway.types";
-import type { LineRoutes } from "../timetable/subway-timetable.types";
+import type { LineRoutes, PlatformSchedule } from "../timetable/subway-timetable.types";
 
 export interface TrainProgress {
-  stationId: string;
+  platformId: string;
   state: TrainState;
   at: Date;
   ordinal: number;
@@ -22,8 +22,8 @@ export interface TrackingTick {
   responseEvents: readonly (readonly TrainEvent[])[];
   routes: LineRoutes;
   directionByDestination: ReadonlyMap<string, SubwayDirection>;
-  stationId: string;
-  stopStationIdsByTrainNo: ReadonlyMap<string, readonly string[]>;
+  platformId: string;
+  stopPlatformIdsByTrainNo: ReadonlyMap<string, readonly string[]>;
   now: Date;
 }
 
@@ -37,8 +37,8 @@ export interface StationObservations {
   countdownRows: readonly CountdownRow[];
 }
 
-export interface TrackedStation {
-  stationId: string;
+export interface TrackedPlatform {
+  platformId: string;
   lineCode: string;
   serviceDate: string;
   events: readonly TrainEvent[];
@@ -48,7 +48,9 @@ export interface TrackedStation {
 export interface TrackedTick {
   source: string;
   trackedAt: Date;
-  stations: readonly TrackedStation[];
+  platforms: readonly TrackedPlatform[];
 }
 
 export type TrackedTickListener = (tick: TrackedTick) => Promise<void>;
+
+export type RunMatcher = (schedule: PlatformSchedule, events: readonly TrainEvent[], now: Date) => TrainEvent[];

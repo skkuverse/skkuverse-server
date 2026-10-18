@@ -3,10 +3,11 @@
  * train, over crawls at most MAX_EMPTY_CRAWL_GAP_MS apart, and when that is
  * too long to be the quiet before the first train (line 4 at 05:16 KST on
  * 2026-10-17). A longer gap between crawls, such as the overnight closure,
- * starts the spell over.
+ * starts the spell over. And which train of the map is a branch train, by its
+ * class's direction digit: 3 and above, which only line 2's shape lets through.
  */
 import { MAX_EMPTY_CRAWL_GAP_MS, MAX_EMPTY_LINE_MS } from "./subway-seoul-trainmap.constants";
-import { isEmptyTooLong, toEmptySpell } from "./subway-seoul-trainmap.rules";
+import { isBranchTrain, isEmptyTooLong, toEmptySpell } from "./subway-seoul-trainmap.rules";
 
 const SINCE = new Date("2026-10-16T20:16:00Z");
 const after = (ms: number): Date => new Date(SINCE.getTime() + ms);
@@ -41,5 +42,19 @@ describe("isEmptyTooLong", () => {
   ])("judges a spell %s (%i ms) too long: %s", (_label, spellMs, expected) => {
     // Act & Assert
     expect(isEmptyTooLong({ since: SINCE, lastAt: after(spellMs) })).toBe(expected);
+  });
+});
+
+describe("isBranchTrain", () => {
+  it.each([
+    ["0", false],
+    ["1", false],
+    ["2", false],
+    ["3", true],
+    ["4", true],
+    ["6", true],
+  ])("judges direction digit %s a branch train's: %s", (directionDigit, expected) => {
+    // Act & Assert
+    expect(isBranchTrain(directionDigit)).toBe(expected);
   });
 });

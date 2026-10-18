@@ -1,13 +1,18 @@
 /**
  * toTransitSection resolves one checked section for a request: a bus item
- * takes its group's label, card and screen, a subway item its station's
- * title, line label and line color, and a link item its own text in the
- * request language and its served action. Every kind carries the same
- * display fields and an action, never a live arrival, and a bus item whose
- * group is not among the visible ones is left out.
+ * takes its group's label, card and screen, a subway item its physical
+ * station's title, its lines' names joined as its subtitle and each line's
+ * code, name, badge and color (in place of an icon), and a link item its own
+ * text in the request language and its served action. Every kind carries a
+ * title, a subtitle and an action, never a live arrival, and a bus item whose
+ * group is not among the visible ones is left out. A group item serves its own
+ * text, icon and initial state, and its children exactly as at the top of a
+ * section, with no action and never its `visibleWith`; it is left out while
+ * its `visibleWith` bus group is not visible, and when no child is left.
  */
 import type { BusGroup } from "../../bus/config/bus-config.wire";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
+import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
 import type { ServedStation } from "../../subway/stations/subway-stations.types";
 import { toTransitSection } from "./ui-transit.mapper";
 import type { TransitLayoutRaw } from "./ui-transit.schema";
@@ -23,17 +28,25 @@ function group(overrides: Partial<BusGroup> = {}): BusGroup {
     label: "인사캠 셔틀버스",
     visibility: { type: "always" },
     card: { themeColor: "003626", iconType: "shuttle", busTypeText: "성대", subtitle: "정차소 ↔ 600주년 기념관" },
-    screen: { dataEndpoint: "/bus/realtime/data/hssc", refreshInterval: 10, lastStationIndex: 10, stations: [], routeOverlay: null, features: [] },
+    screen: { dataEndpoint: "/bus/realtime/data/hssc", refreshInterval: 10, lastStationIndex: 10, stations: [], features: [] },
     ...overrides,
   };
 }
 
 const HYEHWA: ServedStation = {
-  id: "S1-4-420",
+  id: "hyehwa",
   title: { ko: "혜화역", en: "Hyehwa Station", zh: "惠化站" },
-  lineCode: "4",
-  lineLabel: { ko: "4호선", en: "Line 4", zh: "4号线" },
-  lineColor: "00A5DE",
+  lines: [{ code: "4", name: { ko: "4호선", en: "Line 4", zh: "4号线" }, badge: { ko: "4", en: "4", zh: "4" }, color: "00A5DE" }],
+};
+
+// WHY: hand-written as design D2a and D2b give Jeongja, which the registry serves only once its lines are registered.
+const JEONGJA: ServedStation = {
+  id: "jeongja",
+  title: { ko: "정자역", en: "Jeongja Station", zh: "亭子站" },
+  lines: [
+    { code: "D1", name: { ko: "신분당선", en: "Shinbundang Line", zh: "新盆唐线" }, badge: { ko: "신분당", en: "Shinbundang", zh: "新盆唐" }, color: "D4003B" },
+    { code: "K1", name: { ko: "수인분당선", en: "Suin–Bundang Line", zh: "水仁·盆唐线" }, badge: { ko: "수인분당", en: "Suin–Bundang", zh: "水仁盆唐" }, color: "F5A200" },
+  ],
 };
 
 const LINK: ItemRaw = {
@@ -45,13 +58,29 @@ const LINK: ItemRaw = {
   actionValue: "/skku/taxi",
 };
 
+type GroupRaw = Extract<ItemRaw, { kind: "group" }>;
+
+function stationGroup(overrides: Partial<GroupRaw> = {}): GroupRaw {
+  return {
+    kind: "group",
+    id: "commute-stations",
+    title: { ko: "통학버스 정류장 지하철", en: "Subway at shuttle stops" },
+    subtitle: { ko: "혜화 · 정자", en: "Hyehwa · Jeongja" },
+    icon: { type: "subway", color: "8B95A1", text: { ko: "환승", en: "Transfer" } },
+    initialState: "collapsed",
+    visibleWith: { kind: "bus", groupId: "hssc" },
+    items: [{ kind: "subway", stationId: "hyehwa" }, { kind: "subway", stationId: "jeongja" }],
+    ...overrides,
+  };
+}
+
 function section(...items: ItemRaw[]): SectionRaw {
   return { type: "item_list", id: "hssc", title: { ko: "인사캠", en: "HSSC" }, items };
 }
 
 function resolve(raw: SectionRaw, lang: "ko" | "en" | "zh" = "ko", groups: BusGroup[] = [group()]) {
   const busGroupById = new Map(groups.map((busGroup) => [busGroup.id, busGroup]));
-  return toTransitSection(raw, { lang, busGroupById, stationById: new Map([[HYEHWA.id, HYEHWA]]) });
+  return toTransitSection(raw, { lang, busGroupById, stationById: new Map([HYEHWA, JEONGJA].map((station) => [station.id, station])) });
 }
 
 const parsesAsWire = (resolved: ReturnType<typeof resolve>): boolean => transitLayout.safeParse({ version: 1, sections: [resolved] }).success;
@@ -97,31 +126,69 @@ describe("toTransitSection", () => {
     expect(parsesAsWire(resolved)).toBe(true);
   });
 
-  it("serves Hyehwa in Korean with its suffixed title, line label and line color", () => {
+  it("Hyehwa in Korean: serves its suffixed title, its line name as subtitle and its line, with no icon", () => {
     // Act
-    const resolved = resolve(section({ kind: "subway", stationId: "S1-4-420" }));
+    const resolved = resolve(section({ kind: "subway", stationId: "hyehwa" }));
 
     // Assert
     expect(resolved.items).toEqual([
       {
         kind: "subway",
-        id: "subway:S1-4-420",
-        stationId: "S1-4-420",
+        id: "subway:hyehwa",
+        stationId: "hyehwa",
         title: "혜화역",
         subtitle: "4호선",
-        icon: { type: "subway", color: "00A5DE", text: "4" },
-        action: { actionType: "route", actionValue: "/subway?station=S1-4-420" },
+        lines: [{ code: "4", name: "4호선", badge: "4", color: "00A5DE" }],
+        action: { actionType: "route", actionValue: "/subway?station=hyehwa" },
       },
     ]);
+    expect(resolved.items[0]).not.toHaveProperty("icon");
     expect(parsesAsWire(resolved)).toBe(true);
   });
 
-  it("serves Hyehwa in English", () => {
+  it("Transfer station: serves 정자 with both lines in order, their names joined as its subtitle", () => {
     // Act
-    const resolved = resolve(section({ kind: "subway", stationId: "S1-4-420" }), "en");
+    const resolved = resolve(section({ kind: "subway", stationId: "jeongja" }));
 
     // Assert
-    expect(resolved.items[0]).toMatchObject({ title: "Hyehwa Station", subtitle: "Line 4" });
+    expect(resolved.items[0]).toMatchObject({
+      title: "정자역",
+      subtitle: "신분당선 · 수인분당선",
+      lines: [
+        { code: "D1", name: "신분당선", badge: "신분당", color: "D4003B" },
+        { code: "K1", name: "수인분당선", badge: "수인분당", color: "F5A200" },
+      ],
+    });
+    expect(parsesAsWire(resolved)).toBe(true);
+  });
+
+  it("Line names in English: serves the subtitle, each name and badge in English, codes and colors unchanged", () => {
+    // Act
+    const resolved = resolve(section({ kind: "subway", stationId: "jeongja" }), "en");
+
+    // Assert
+    expect(resolved.items[0]).toMatchObject({
+      title: "Jeongja Station",
+      subtitle: "Shinbundang Line · Suin–Bundang Line",
+      lines: [
+        { code: "D1", name: "Shinbundang Line", badge: "Shinbundang", color: "D4003B" },
+        { code: "K1", name: "Suin–Bundang Line", badge: "Suin–Bundang", color: "F5A200" },
+      ],
+    });
+  });
+
+  it("serves each registered station's lines as SubwayStationsService lists them, in the request language", () => {
+    // Arrange
+    const stations = new SubwayStationsService().listStations();
+    const stationById = new Map(stations.map((station) => [station.id, station]));
+    const items = stations.map((station) => ({ kind: "subway" as const, stationId: station.id }));
+
+    // Act
+    const resolved = toTransitSection(section(...items), { lang: "zh", busGroupById: new Map(), stationById });
+
+    // Assert
+    const served = resolved.items.map((item) => (item.kind === "subway" ? item.lines : []));
+    expect(served).toEqual(stations.map((station) => station.lines.map((line) => ({ ...line, name: line.name.zh, badge: line.badge.zh }))));
   });
 
   it("serves a link in the request language, with no subtitle as null and a web view path on the web view origin", () => {
@@ -172,9 +239,80 @@ describe("toTransitSection", () => {
 
   it("leaves out a bus item whose group is not visible, and keeps the others in order", () => {
     // Act
-    const resolved = resolve(section({ kind: "bus", groupId: "commute" }, LINK, { kind: "subway", stationId: "S1-4-420" }));
+    const resolved = resolve(section({ kind: "bus", groupId: "commute" }, LINK, { kind: "subway", stationId: "hyehwa" }));
 
     // Assert
-    expect(resolved.items.map((served) => served.id)).toEqual(["taxi-share", "subway:S1-4-420"]);
+    expect(resolved.items.map((served) => served.id)).toEqual(["taxi-share", "subway:hyehwa"]);
+  });
+
+  it("serves a group in the request language with its children as at the top of a section, and no action or visibleWith", () => {
+    // Arrange
+    const children: ItemRaw[] = [{ kind: "subway", stationId: "hyehwa" }, { kind: "bus", groupId: "hssc" }, LINK];
+    const topLevel = resolve(section(...children), "en").items;
+
+    // Act
+    const resolved = resolve(section(stationGroup({ items: children as GroupRaw["items"] })), "en");
+
+    // Assert
+    expect(resolved.items).toEqual([
+      {
+        kind: "group",
+        id: "group:commute-stations",
+        title: "Subway at shuttle stops",
+        subtitle: "Hyehwa · Jeongja",
+        icon: { type: "subway", color: "8B95A1", text: "Transfer" },
+        initialState: "collapsed",
+        items: topLevel,
+      },
+    ]);
+    expect(parsesAsWire(resolved)).toBe(true);
+  });
+
+  it("Initial state served as written: serves expanded, and a group with no subtitle with a null subtitle", () => {
+    // Act
+    const resolved = resolve(section(stationGroup({ initialState: "expanded", subtitle: undefined })));
+
+    // Assert
+    expect(resolved.items[0]).toMatchObject({ initialState: "expanded", subtitle: null, title: "통학버스 정류장 지하철" });
+    expect(parsesAsWire(resolved)).toBe(true);
+  });
+
+  it("serves a group with no visibleWith whatever bus groups are visible", () => {
+    // Act
+    const resolved = resolve(section(stationGroup({ visibleWith: undefined })), "ko", []);
+
+    // Assert
+    expect(resolved.items.map((served) => served.id)).toEqual(["group:commute-stations"]);
+  });
+
+  it("leaves out a group whose visibleWith bus group is not visible, though its children are", () => {
+    // Act
+    const resolved = resolve(section({ kind: "subway", stationId: "hyehwa" }, stationGroup({ visibleWith: { kind: "bus", groupId: "commute" }, items: [{ kind: "subway", stationId: "jeongja" }] })));
+
+    // Assert
+    expect(resolved.items.map((served) => served.id)).toEqual(["subway:hyehwa"]);
+  });
+
+  it("leaves out a hidden bus child and keeps the group's other children in order", () => {
+    // Act
+    const resolved = resolve(section(stationGroup({ items: [{ kind: "bus", groupId: "commute" }, { kind: "subway", stationId: "jeongja" }, { kind: "bus", groupId: "hssc" }] })));
+
+    // Assert
+    expect(resolved.items[0]?.kind === "group" && resolved.items[0].items.map((served) => served.id)).toEqual(["subway:jeongja", "bus:hssc"]);
+  });
+
+  it("Group emptied: leaves out a group whose bus children are all hidden", () => {
+    // Act
+    const resolved = resolve(section(LINK, stationGroup({ visibleWith: undefined, items: [{ kind: "bus", groupId: "commute" }, { kind: "bus", groupId: "fasttrack" }] })));
+
+    // Assert
+    expect(resolved.items.map((served) => served.id)).toEqual(["taxi-share"]);
+  });
+
+  it("throws on a station inside a group that is not served", () => {
+    // Act & Assert
+    expect(() => resolve(section(stationGroup({ items: [{ kind: "subway", stationId: "gangnam" }] })))).toThrow(
+      'transit layout places subway station "gangnam", which is not served',
+    );
   });
 });

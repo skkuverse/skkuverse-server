@@ -1,97 +1,309 @@
 /**
- * The lines the `seoul` provider polls, derived from the served stations:
- * one per Seoul `subwayId`, with the Seoul API's line name, the train-map
- * line, the served stations to ask arrivals for, and the table from each
- * Seoul station name of the line (the served stations, their upstream
- * stations and their watched stations) to its KRIC station id. A station or line without a Seoul name
- * fails at boot instead of dropping its trains. And one upstream tick's calls
- * settled apart: what answered is kept beside what failed, and only a tick
- * whose every call failed has nothing to hand on.
+ * The lines the `seoul` provider polls, derived from the registry: one per
+ * line, with the Seoul API's ids, the train-map line and its numbering, and the tables from each name the line's rows write (its
+ * served platforms and its neighbors) to its platform id, by the Seoul API's
+ * name and by the train map's where a neighbor's differs. And one upstream
+ * tick's calls settled apart: what answered is kept beside what failed, and
+ * only a tick whose every call failed has nothing to hand on.
  */
-import { SUBWAY_STATIONS } from "../subway.constants";
-import type { CountdownRow, SubwayStation, TrainEvent } from "../subway.types";
-import { SEOUL_LINE_NAME_BY_SUBWAY_ID, SEOUL_STATION_NAME_BY_ID } from "./subway-seoul.constants";
-import { toSeoulLines, toSettledObservations } from "./subway-seoul.rules";
+import { SUBWAY_REGISTRY } from "../subway.config";
+import type { CountdownRow, SubwayRegistry, TrainEvent } from "../subway.types";
+import { toSeoulLines, toSeoulStations, toSettledObservations, toTrainMapLines } from "./subway-seoul.rules";
 
-const [SUNGKYUNKWAN, HYEHWA] = SUBWAY_STATIONS as [SubwayStation, SubwayStation];
+const copyOf = (): SubwayRegistry => JSON.parse(JSON.stringify(SUBWAY_REGISTRY)) as SubwayRegistry;
+const tables = ({ platformIdByApiName, platformIdByTrainMapName, ...line }: ReturnType<typeof toSeoulLines>[number]) => ({
+  ...line,
+  platformIdByApiName: Object.fromEntries(platformIdByApiName),
+  platformIdByTrainMapName: Object.fromEntries(platformIdByTrainMapName),
+});
+
+const LINE_1_NAMES = {
+  성균관대: "KR-1-0153",
+  금정: "KR-1-P149",
+  군포: "KR-1-P150",
+  당정: "KR-1-P151",
+  의왕: "KR-1-P152",
+  화서: "KR-1-P154",
+  수원: "KR-1-P155",
+  세류: "KR-1-1715",
+};
+const LINE_4_NAMES = {
+  혜화: "S1-4-420",
+  길음: "S1-4-417",
+  성신여대입구: "S1-4-418",
+  한성대입구: "S1-4-419",
+  동대문: "S1-4-421",
+  동대문역사문화공원: "S1-4-422",
+  충무로: "S1-4-423",
+};
+// WHY: every name checked against the 2026-10-17 21:05–21:21 position rows and the train map pages (task 6.1.1).
+const LINE_2_NAMES = {
+  잠실: "S1-2-216",
+  강남: "S1-2-222",
+  구의: "S1-2-213",
+  강변: "S1-2-214",
+  잠실나루: "S1-2-215",
+  잠실새내: "S1-2-217",
+  종합운동장: "S1-2-218",
+  삼성: "S1-2-219",
+  선릉: "S1-2-220",
+  역삼: "S1-2-221",
+  교대: "S1-2-223",
+  서초: "S1-2-224",
+  방배: "S1-2-225",
+};
+const LINE_3_NAMES = {
+  도곡: "S1-3-334",
+  양재: "S1-3-332",
+  고속터미널: "S1-3-329",
+  교대: "S1-3-330",
+  남부터미널: "S1-3-331",
+  매봉: "S1-3-333",
+  대치: "S1-3-335",
+  학여울: "S1-3-336",
+  대청: "S1-3-337",
+};
+// WHY: the API writes two line 8 stations with a bracketed suffix the train map leaves out (task 6.2.1).
+const LINE_8_STATIONS = { 잠실: "S1-8-2815", 강동구청: "S1-8-2813", 석촌: "S1-8-2816", 송파: "S1-8-2817", 가락시장: "S1-8-2818" };
+const LINE_8_API_NAMES = { ...LINE_8_STATIONS, "천호(풍납토성)": "S1-8-2812", "몽촌토성(평화의문)": "S1-8-2814" };
+const LINE_8_MAP_NAMES = { ...LINE_8_STATIONS, 천호: "S1-8-2812", 몽촌토성: "S1-8-2814" };
+const SHINBUNDANG_NAMES = {
+  정자: "DX-D1-4312",
+  강남: "DX-D1-4307",
+  양재: "DX-D1-4308",
+  광교중앙: "DX-D1-4318",
+  신사: "DX-D1-D04",
+  논현: "DX-D1-4305",
+  신논현: "DX-D1-4306",
+  양재시민의숲: "DX-D1-4309",
+  청계산입구: "DX-D1-4310",
+  판교: "DX-D1-4311",
+  미금: "DX-D1-D13",
+  동천: "DX-D1-D14",
+  수지구청: "DX-D1-D15",
+  성복: "DX-D1-4316",
+  상현: "DX-D1-4317",
+  광교: "DX-D1-4319",
+};
+const SUIN_BUNDANG_NAMES = {
+  정자: "KR-K1-K230",
+  도곡: "KR-K1-K217",
+  선정릉: "KR-K1-K214",
+  선릉: "KR-K1-K215",
+  한티: "KR-K1-K216",
+  구룡: "KR-K1-K218",
+  개포동: "KR-K1-K219",
+  대모산입구: "KR-K1-K220",
+  이매: "KR-K1-K227",
+  서현: "KR-K1-K228",
+  수내: "KR-K1-K229",
+  미금: "KR-K1-K231",
+  오리: "KR-K1-K232",
+  죽전: "KR-K1-K233",
+};
 
 describe("toSeoulLines", () => {
-  it("gives 1호선 and 4호선, each with its served station and the Seoul names of its covered stations, 금정 watched beyond 1호선's", () => {
+  it("gives each line with its served stations and the Seoul names of its platforms, 금정 watched beyond 1호선's", () => {
     // Act
-    const lines = toSeoulLines(SUBWAY_STATIONS, SEOUL_LINE_NAME_BY_SUBWAY_ID, SEOUL_STATION_NAME_BY_ID);
+    const lines = toSeoulLines(SUBWAY_REGISTRY);
 
     // Assert
-    expect(lines.map(({ stationIdByName, ...line }) => ({ ...line, stationIdByName: Object.fromEntries(stationIdByName) }))).toEqual([
+    expect(lines.map(tables)).toEqual([
       {
         subwayId: "1001",
         lineName: "1호선",
         trainMapLine: "1",
-        stationNames: ["성균관대"],
-        stationIdByName: {
-          성균관대: "KR-1-0153",
-          화서: "KR-1-P154",
-          수원: "KR-1-P155",
-          세류: "KR-1-1715",
-          의왕: "KR-1-P152",
-          당정: "KR-1-P151",
-          군포: "KR-1-P150",
-          금정: "KR-1-P149",
-        },
+        trainNumbers: "timetable",
+        platformIdByApiName: LINE_1_NAMES,
+        platformIdByTrainMapName: LINE_1_NAMES,
       },
       {
         subwayId: "1004",
         lineName: "4호선",
         trainMapLine: "4",
-        stationNames: ["혜화"],
-        stationIdByName: {
-          혜화: "S1-4-420",
-          동대문: "S1-4-421",
-          동대문역사문화공원: "S1-4-422",
-          충무로: "S1-4-423",
-          한성대입구: "S1-4-419",
-          성신여대입구: "S1-4-418",
-          길음: "S1-4-417",
-        },
+        trainNumbers: "timetable",
+        platformIdByApiName: LINE_4_NAMES,
+        platformIdByTrainMapName: LINE_4_NAMES,
+      },
+      {
+        subwayId: "1002",
+        lineName: "2호선",
+        trainMapLine: "2",
+        trainNumbers: "circle",
+        platformIdByApiName: LINE_2_NAMES,
+        platformIdByTrainMapName: LINE_2_NAMES,
+      },
+      {
+        subwayId: "1003",
+        lineName: "3호선",
+        trainMapLine: "3",
+        trainNumbers: "timetable",
+        platformIdByApiName: LINE_3_NAMES,
+        platformIdByTrainMapName: LINE_3_NAMES,
+      },
+      {
+        subwayId: "1008",
+        lineName: "8호선",
+        trainMapLine: "8",
+        trainNumbers: "timetable",
+        platformIdByApiName: LINE_8_API_NAMES,
+        platformIdByTrainMapName: LINE_8_MAP_NAMES,
+      },
+      {
+        subwayId: "1075",
+        lineName: "수인분당선",
+        trainMapLine: undefined,
+        trainNumbers: "timetable",
+        platformIdByApiName: SUIN_BUNDANG_NAMES,
+        platformIdByTrainMapName: SUIN_BUNDANG_NAMES,
+      },
+      {
+        subwayId: "1077",
+        lineName: "신분당선",
+        trainMapLine: undefined,
+        trainNumbers: "trainset",
+        platformIdByApiName: SHINBUNDANG_NAMES,
+        platformIdByTrainMapName: SHINBUNDANG_NAMES,
       },
     ]);
   });
 
-  it("puts two served stations of one line on that one line", () => {
+  it("maps a neighbor by its train-map name on the map and by its Seoul name in the API", () => {
     // Arrange
-    const uijeongbu = { ...SUNGKYUNKWAN, id: "KR-1-X100", seoul: { ...SUNGKYUNKWAN.seoul, stationName: "의정부" } };
+    const registry = copyOf();
+    registry.neighbors["S1-4-417"] = { line: "4", seoulName: "길음(동덕여대)", trainMapName: "길음" };
 
     // Act
-    const lines = toSeoulLines([SUNGKYUNKWAN, uijeongbu], SEOUL_LINE_NAME_BY_SUBWAY_ID, SEOUL_STATION_NAME_BY_ID);
+    const line4 = toSeoulLines(registry)[1];
 
     // Assert
-    expect(lines).toHaveLength(1);
-    expect(lines[0]?.stationNames).toEqual(["성균관대", "의정부"]);
-    expect(lines[0]?.stationIdByName.get("의정부")).toBe("KR-1-X100");
+    expect(line4?.platformIdByApiName.get("길음(동덕여대)")).toBe("S1-4-417");
+    expect(line4?.platformIdByApiName.has("길음")).toBe(false);
+    expect(line4?.platformIdByTrainMapName.get("길음")).toBe("S1-4-417");
   });
 
-  it("fails for an upstream station without a Seoul name", () => {
+  it("puts two served stations of one line on that one line", () => {
     // Arrange
-    const names = Object.fromEntries(Object.entries(SEOUL_STATION_NAME_BY_ID).filter(([id]) => id !== "KR-1-P154"));
+    const registry = copyOf();
+    const sungkyunkwan = registry.stations[0]!;
+    registry.stations.push({ ...sungkyunkwan, id: "uijeongbu", seoulName: "의정부", platforms: [{ ...sungkyunkwan.platforms[0]!, id: "KR-1-X100" }] });
 
-    // Act & Assert
-    expect(() => toSeoulLines([SUNGKYUNKWAN], SEOUL_LINE_NAME_BY_SUBWAY_ID, names)).toThrow(/KR-1-P154/);
+    // Act
+    const lines = toSeoulLines(registry);
+
+    // Assert
+    expect(lines).toHaveLength(SUBWAY_REGISTRY.lines.length);
+    expect(lines[0]?.platformIdByApiName.get("성균관대")).toBe("KR-1-0153");
+    expect(lines[0]?.platformIdByApiName.get("의정부")).toBe("KR-1-X100");
   });
 
-  it("fails for a station whose subwayId has no line name", () => {
-    // Act & Assert
-    expect(() => toSeoulLines([HYEHWA], { "1001": "1호선" }, SEOUL_STATION_NAME_BY_ID)).toThrow(/1004/);
+  it("leaves out the train-map line of a line with no map", () => {
+    // Arrange
+    const registry = copyOf();
+    delete registry.lines[1]!.seoul.trainMapLine;
+
+    // Act
+    const lines = toSeoulLines(registry);
+
+    // Assert
+    expect(lines.map((line) => line.trainMapLine)).toEqual(["1", undefined, "2", "3", "8", undefined, undefined]);
+  });
+});
+
+describe("toSeoulStations", () => {
+  it("gives each served station its one arrival call by Seoul name, its rows' subwayId mapped to its platform", () => {
+    // Act
+    const stations = toSeoulStations(SUBWAY_REGISTRY);
+
+    // Assert
+    expect(stations.map(({ seoulName, platformBySubwayId }) => [seoulName, Object.fromEntries(platformBySubwayId)])).toEqual([
+      ["성균관대", { "1001": { platformId: "KR-1-0153", trainNumbers: "timetable" } }],
+      ["혜화", { "1004": { platformId: "S1-4-420", trainNumbers: "timetable" } }],
+      [
+        "정자",
+        {
+          "1077": { platformId: "DX-D1-4312", trainNumbers: "trainset" },
+          "1075": { platformId: "KR-K1-K230", trainNumbers: "timetable" },
+        },
+      ],
+      [
+        "잠실",
+        {
+          "1002": { platformId: "S1-2-216", trainNumbers: "circle" },
+          "1008": { platformId: "S1-8-2815", trainNumbers: "timetable" },
+        },
+      ],
+      [
+        "도곡",
+        {
+          "1003": { platformId: "S1-3-334", trainNumbers: "timetable" },
+          "1075": { platformId: "KR-K1-K217", trainNumbers: "timetable" },
+        },
+      ],
+      [
+        "강남",
+        {
+          "1002": { platformId: "S1-2-222", trainNumbers: "circle" },
+          "1077": { platformId: "DX-D1-4307", trainNumbers: "trainset" },
+        },
+      ],
+      [
+        "양재",
+        {
+          "1003": { platformId: "S1-3-332", trainNumbers: "timetable" },
+          "1077": { platformId: "DX-D1-4308", trainNumbers: "trainset" },
+        },
+      ],
+      ["광교중앙", { "1077": { platformId: "DX-D1-4318", trainNumbers: "trainset" } }],
+    ]);
+  });
+
+  it("maps both lines of a transfer station in its one call", () => {
+    // Arrange
+    const registry = copyOf();
+    const [sungkyunkwan, hyehwa] = registry.stations as [SubwayRegistry["stations"][number], SubwayRegistry["stations"][number]];
+    registry.stations = [{ ...hyehwa, platforms: [...hyehwa.platforms, ...sungkyunkwan.platforms] }];
+
+    // Act
+    const [station] = toSeoulStations(registry);
+
+    // Assert
+    expect(station?.seoulName).toBe("혜화");
+    expect([...(station?.platformBySubwayId.entries() ?? [])].map(([subwayId, platform]) => [subwayId, platform.platformId])).toEqual([
+      ["1004", "S1-4-420"],
+      ["1001", "KR-1-0153"],
+    ]);
+  });
+});
+
+describe("toTrainMapLines", () => {
+  it("crawls each line with a train map, through its train-map names, and leaves out a line with none", () => {
+    // Arrange
+    const registry = copyOf();
+    delete registry.lines[0]!.seoul.trainMapLine;
+
+    // Act
+    const lines = toTrainMapLines(toSeoulLines(registry));
+
+    // Assert
+    expect(lines.map(({ trainMapLine, platformIdByName }) => [trainMapLine, platformIdByName.get("혜화")])).toEqual([
+      ["4", "S1-4-420"],
+      ["2", undefined],
+      ["3", undefined],
+      ["8", undefined],
+    ]);
   });
 });
 
 describe("toSettledObservations", () => {
   const event = (trainNo: string): TrainEvent => ({
     trainNo,
-    stationId: "KR-1-0153",
+    platformId: "KR-1-0153",
     state: "arrived",
     stateChangedAt: new Date("2026-10-16T20:16:00Z"),
     destination: "광운대",
   });
-  const row: CountdownRow = { trainNo: "4674", stationId: "S1-4-420", generatedAt: new Date("2026-10-16T20:16:00Z"), remainingSec: 150 };
+  const row: CountdownRow = { trainNo: "4674", platformId: "S1-4-420", generatedAt: new Date("2026-10-16T20:16:00Z"), remainingSec: 150 };
   const answered = <T>(value: T): PromiseSettledResult<T> => ({ status: "fulfilled", value });
   const failed = <T>(reason: Error): PromiseSettledResult<T> => ({ status: "rejected", reason });
   const line4Down = new Error("seoul-trainmap: line 4: no train");

@@ -4,7 +4,8 @@
  * recording stand-in for the poller registry), the tracker, the timetable and
  * estimate doors and the arrivals route, over FakeSubwaySeoulApiClient,
  * FakeSubwaySeoulTrainmapClient (the line 1 and 4 positions and the line 4
- * page captured on 2026-10-16 22:27 KST; the line 1 page dates from 20:45, so
+ * page captured on 2026-10-16 22:27 KST, joined with the line 1 page as the one
+ * page of every line the crawl reads; the line 1 page dates from 20:45, so
  * its trains are too far from their timetable rows to count), FakeSubwayRepository, FakeHolidaysRepository and a
  * scripted Clock. Each test is a scenario of the spec's "Serving survives a
  * failing source" requirement: a train map that cannot be parsed fails its own
@@ -23,11 +24,13 @@ import { Clock } from "../../../src/infra/clock";
 import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
 import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
 import { SubwayEstimateModule } from "../../../src/subway/estimate/subway-estimate.module";
+import { SubwayMatchingModule } from "../../../src/subway/matching/subway-matching.module";
 import { SubwaySeoulApiClient } from "../../../src/subway/seoul-api/subway-seoul-api.client";
 import { SubwaySeoulApiModule } from "../../../src/subway/seoul-api/subway-seoul-api.module";
 import { SubwaySeoulTrainmapClient } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.client";
 import { SubwaySeoulTrainmapModule } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.module";
 import { SubwaySeoulModule } from "../../../src/subway/seoul/subway-seoul.module";
+import { SUBWAY_REGISTRY } from "../../../src/subway/subway.config";
 import { SubwayModule } from "../../../src/subway/subway.module";
 import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
@@ -44,6 +47,8 @@ const FIXTURES = path.join(__dirname, "fixtures");
 const rows = <T>(name: string, list: string): T[] => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), "utf8"))[list];
 const page = (name: string): string => fs.readFileSync(path.join(FIXTURES, name), "utf8");
 
+// WHY: the train map is one page for every line, requested as line 0.
+const ALL_LINES = "0";
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
 const clock = { current: at("22:27:30"), now(): Date { return this.current; } };
 const ticks = new Map<string, Tick>();
@@ -76,6 +81,7 @@ beforeEach(async () => {
       SubwaySeoulApiModule,
       SubwaySeoulTrainmapModule,
       SubwayTrackingModule,
+      SubwayMatchingModule,
       SubwaySeoulModule,
       SubwayArrivalsModule,
     ],
@@ -100,23 +106,20 @@ function answerApi(): void {
   apiClient.arrivals.clear();
 }
 
-// WHY: all 4 calls: a tick whose arrivals calls still answer is tracked (subway-seoul.service.spec.ts).
+// WHY: every call of the tick, one per registered line and station: a tick whose arrivals calls still answer is
+// tracked (subway-seoul.service.spec.ts).
 function failApi(): void {
   const outage = new Error("seoul-subway-api: HTTP 503");
-  apiClient.positions.set("1호선", outage);
-  apiClient.positions.set("4호선", outage);
-  apiClient.arrivals.set("성균관대", outage);
-  apiClient.arrivals.set("혜화", outage);
+  for (const line of SUBWAY_REGISTRY.lines) apiClient.positions.set(line.seoul.lineName, outage);
+  for (const station of SUBWAY_REGISTRY.stations) apiClient.arrivals.set(station.seoulName, outage);
 }
 
 function answerTrainMap(): void {
-  trainmapClient.pages.set("1", page("trainmap-line1.html"));
-  trainmapClient.pages.set("4", page("trainmap-line4.html"));
+  trainmapClient.pages.set(ALL_LINES, `${page("trainmap-line1.html")}${page("trainmap-line4.html")}`);
 }
 
 function breakTrainMap(): void {
-  trainmapClient.pages.set("1", "<html><body>시스템 점검 중입니다</body></html>");
-  trainmapClient.pages.set("4", "<html><body>시스템 점검 중입니다</body></html>");
+  trainmapClient.pages.set(ALL_LINES, "<html><body>시스템 점검 중입니다</body></html>");
 }
 
 function tickAt(kst: string, name: "subway-seoul" | "subway-trainmap"): Promise<unknown> {
@@ -132,7 +135,8 @@ function getAt(kst: string, stationId: string): request.Test {
 }
 
 type WireTrain = { trainNo: string; source: string; stopsAway: number | null };
-const trainsOf = (body: { data: { directions: { trains: WireTrain[] }[] } }): WireTrain[] => body.data.directions.flatMap((d) => d.trains);
+const trainsOf = (body: { data: { lines: { directions: { trains: WireTrain[] }[] }[] } }): WireTrain[] =>
+  body.data.lines.flatMap((line) => line.directions.flatMap((d) => d.trains));
 
 describe("Serving survives a failing source", () => {
   it("Crawl breaks: responses keep succeeding with API-based arrivals, and the crawl job reports failing", async () => {
@@ -143,11 +147,11 @@ describe("Serving survives a failing source", () => {
     const crawl = tickAt("22:27:30", "subway-trainmap");
     await expect(crawl).rejects.toMatchObject({ source: "seoul-trainmap" });
     await tickAt("22:27:31", "subway-seoul");
-    const res = await getAt("22:27:33", "KR-1-0153");
+    const res = await getAt("22:27:33", "sungkyunkwan");
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.generatedAt).toBe(at("22:27:31").toISOString());
+    expect(res.body.data.lines[0].generatedAt).toBe(at("22:27:31").toISOString());
     const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.stopsAway !== null);
     expect(observed.length).toBeGreaterThan(0);
   });
@@ -159,11 +163,11 @@ describe("Serving survives a failing source", () => {
     // Act
     await expect(tickAt("22:27:30", "subway-seoul")).rejects.toThrow("seoul-subway-api: HTTP 503");
     await tickAt("22:27:31", "subway-trainmap");
-    const res = await getAt("22:27:33", "S1-4-420");
+    const res = await getAt("22:27:33", "hyehwa");
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.generatedAt).toBe(at("22:27:31").toISOString());
+    expect(res.body.data.lines[0].generatedAt).toBe(at("22:27:31").toISOString());
     const observed = trainsOf(res.body).filter((train) => train.source === "estimated" && train.stopsAway !== null);
     expect(observed.length).toBeGreaterThan(0);
   });
@@ -179,10 +183,10 @@ describe("Serving survives a failing source", () => {
       const upstream = second % 20 === 0 ? "subway-trainmap" : "subway-seoul";
       outcomes.push(await tickAt(toKst(at("22:27:31"), second), upstream).catch((err: unknown) => err));
     }
-    const oneMinuteIn = await getAt("22:28:31", "S1-4-420");
+    const oneMinuteIn = await getAt("22:28:31", "hyehwa");
 
     // Act
-    const threeMinutesIn = await getAt("22:30:31", "S1-4-420");
+    const threeMinutesIn = await getAt("22:30:31", "hyehwa");
 
     // Assert
     expect(outcomes.every((outcome) => outcome instanceof Error)).toBe(true);

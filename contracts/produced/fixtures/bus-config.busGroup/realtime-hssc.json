@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config/hssc captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); stations cut to the first two",
+  "_about": "GET /bus/config/hssc captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); stations cut to the first two; the always-null screen.routeOverlay since dropped from the contract",
   "data": {
     "id": "hssc",
     "screenType": "realtime",
@@ -39,7 +39,6 @@
           "transferLines": []
         }
       ],
-      "routeOverlay": null,
       "features": [
         {
           "type": "info",

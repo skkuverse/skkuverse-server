@@ -48,7 +48,7 @@ export class FakeSubwayHistoryRepository implements PublicOf<SubwayHistoryReposi
   async updateObservedArrival(arrival: ObservedArrival, resolvedAt: Date): Promise<void> {
     this.write();
     for (const [key, record] of this.predictions) {
-      const isTrainAtStation = record.serviceDate === arrival.serviceDate && record.trainNo === arrival.trainNo && record.stationId === arrival.stationId;
+      const isTrainAtStation = record.serviceDate === arrival.serviceDate && record.trainNo === arrival.trainNo && record.stationId === arrival.platformId;
       if (!isTrainAtStation || !isResolvableBy(record, arrival, resolvedAt)) continue;
       const { observedAt, observedState } = arrival;
       this.predictions.set(key, { ...record, status: "resolved", observedAt, observedState, resolvedAt, errorSec: toErrorSec(record.predictedAt, observedAt) });

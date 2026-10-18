@@ -1,30 +1,45 @@
-import type { CountdownRow, SubwayStation, TrainEvent } from "../subway.types";
-import type { SeoulLine, SettledObservations } from "./subway-seoul.types";
+import type { CountdownRow, SubwayRegistry, TrainEvent } from "../subway.types";
+import type { TrainMapLine } from "../seoul-trainmap/subway-seoul-trainmap.types";
+import type { SeoulLine, SeoulStation, SettledObservations } from "./subway-seoul.types";
 
-export function toSeoulLines(
-  stations: readonly SubwayStation[],
-  lineNameBySubwayId: Readonly<Record<string, string>>,
-  stationNameById: Readonly<Record<string, string>>,
-): SeoulLine[] {
-  const firstOfLine = stations.filter((station, i) => stations.findIndex((s) => s.seoul.subwayId === station.seoul.subwayId) === i);
-  return firstOfLine.map(({ seoul: { subwayId, trainMapLine } }) => {
-    const lineName = lineNameBySubwayId[subwayId];
-    if (lineName === undefined) throw new Error(`subway: no Seoul line name for subwayId ${subwayId}`);
-    const served = stations.filter((station) => station.seoul.subwayId === subwayId);
-    const stationIdByName = new Map(
-      served.flatMap((station) => [[station.seoul.stationName, station.id] as const, ...toObservedNames(station, stationNameById)]),
-    );
-    return { subwayId, lineName, trainMapLine, stationNames: served.map((s) => s.seoul.stationName), stationIdByName };
+// WHY: a row names its station, not its platform, so each line maps the names it writes to its own platforms: the
+// served ones and their neighbors, by the Seoul API's name and by the train map's where that differs.
+export function toSeoulLines(registry: SubwayRegistry): SeoulLine[] {
+  return registry.lines.map(({ code, seoul }) => {
+    const stations = registry.stations.flatMap((station) => station.platforms.filter((p) => p.line === code).map((platform) => ({ station, platform })));
+    const neighbors = Object.entries(registry.neighbors).filter(([, neighbor]) => neighbor.line === code);
+    const platformIdByApiName = new Map([
+      ...stations.map(({ station, platform }) => [station.seoulName, platform.id] as const),
+      ...neighbors.map(([id, neighbor]) => [neighbor.seoulName, id] as const),
+    ]);
+    const platformIdByTrainMapName = new Map([
+      ...stations.map(({ station, platform }) => [station.seoulName, platform.id] as const),
+      ...neighbors.map(([id, neighbor]) => [neighbor.trainMapName ?? neighbor.seoulName, id] as const),
+    ]);
+    const { subwayId, lineName, trainMapLine, trainNumbers } = seoul;
+    return { subwayId, lineName, trainMapLine, trainNumbers, platformIdByApiName, platformIdByTrainMapName };
   });
 }
 
-function toObservedNames(station: SubwayStation, stationNameById: Readonly<Record<string, string>>): Array<readonly [string, string]> {
-  const stationIds = Object.values(station.directions).flatMap((direction) => [...direction.upstreamStationIds, ...direction.watchedStationIds]);
-  return stationIds.map((stationId) => {
-    const stationName = stationNameById[stationId];
-    if (stationName === undefined) throw new Error(`subway: no Seoul station name for ${stationId}`);
-    return [stationName, stationId] as const;
-  });
+// WHY: one arrival call per physical station answers every line there, so each station maps a row's `subwayId` to
+// its own platform of that line.
+export function toSeoulStations(registry: SubwayRegistry): SeoulStation[] {
+  const lineByCode = new Map(registry.lines.map((line) => [line.code, line.seoul]));
+  return registry.stations.map(({ seoulName, platforms }) => ({
+    seoulName,
+    platformBySubwayId: new Map(
+      platforms.flatMap(({ id, line }) => {
+        const seoul = lineByCode.get(line);
+        return seoul ? [[seoul.subwayId, { platformId: id, trainNumbers: seoul.trainNumbers }] as const] : [];
+      }),
+    ),
+  }));
+}
+
+export function toTrainMapLines(lines: readonly SeoulLine[]): TrainMapLine[] {
+  return lines.flatMap(({ trainMapLine, platformIdByTrainMapName }) =>
+    trainMapLine === undefined ? [] : [{ trainMapLine, platformIdByName: platformIdByTrainMapName }],
+  );
 }
 
 export function toSettledObservations(

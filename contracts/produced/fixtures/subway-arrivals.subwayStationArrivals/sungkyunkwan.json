@@ -1,56 +1,64 @@
 {
-  "_about": "GET /subway/stations/KR-1-0153/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction",
+  "_about": "GET /subway/stations/KR-1-0153/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction; reshaped the same day, no value changed, into the per-station wire of add-commute-station-subway (GET /subway/stations/sungkyunkwan/arrivals, its one line entry carrying the line display data from the registry)",
   "data": {
     "station": {
-      "id": "KR-1-0153",
-      "operatorCode": "KR",
-      "lineCode": "1",
-      "stationCode": "0153",
+      "id": "sungkyunkwan",
       "name": "성균관대"
     },
-    "generatedAt": "2026-10-17T02:39:07.605Z",
-    "directions": [
+    "lines": [
       {
-        "direction": "up",
-        "name": "서울 방면",
-        "previousStation": {
-          "id": "KR-1-P154",
-          "name": "화서"
+        "line": {
+          "code": "1",
+          "name": "1호선",
+          "badge": "1",
+          "color": "0052A4"
         },
-        "nextStation": {
-          "id": "KR-1-P152",
-          "name": "의왕"
-        },
-        "trains": [
+        "platformId": "KR-1-0153",
+        "generatedAt": "2026-10-17T02:39:07.605Z",
+        "directions": [
           {
-            "trainNo": "0444",
-            "destination": "광운대",
-            "express": false,
-            "arrivalAt": "2026-10-17T02:44:37.605Z",
-            "stopsAway": 2,
-            "source": "estimated"
-          }
-        ]
-      },
-      {
-        "direction": "down",
-        "name": "천안·서동탄 방면",
-        "previousStation": {
-          "id": "KR-1-P152",
-          "name": "의왕"
-        },
-        "nextStation": {
-          "id": "KR-1-P154",
-          "name": "화서"
-        },
-        "trains": [
+            "direction": "up",
+            "name": "서울 방면",
+            "previousStation": {
+              "id": "KR-1-P154",
+              "name": "화서"
+            },
+            "nextStation": {
+              "id": "KR-1-P152",
+              "name": "의왕"
+            },
+            "trains": [
+              {
+                "trainNo": "0444",
+                "destination": "광운대",
+                "express": false,
+                "arrivalAt": "2026-10-17T02:44:37.605Z",
+                "stopsAway": 2,
+                "source": "estimated"
+              }
+            ]
+          },
           {
-            "trainNo": "1915",
-            "destination": "천안",
-            "express": true,
-            "arrivalAt": "2026-10-17T02:38:38.000Z",
-            "stopsAway": 0,
-            "source": "estimated"
+            "direction": "down",
+            "name": "천안·서동탄 방면",
+            "previousStation": {
+              "id": "KR-1-P152",
+              "name": "의왕"
+            },
+            "nextStation": {
+              "id": "KR-1-P154",
+              "name": "화서"
+            },
+            "trains": [
+              {
+                "trainNo": "1915",
+                "destination": "천안",
+                "express": true,
+                "arrivalAt": "2026-10-17T02:38:38.000Z",
+                "stopsAway": 0,
+                "source": "estimated"
+              }
+            ]
           }
         ]
       }

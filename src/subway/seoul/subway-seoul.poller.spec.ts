@@ -9,6 +9,8 @@
  * nothing, until 00:00 KST; a failing source rejects its own ticks only;
  * and within one tick, what answered reaches the tracker before the tick
  * rejects with the failure, so a failing line loses no other line's trains.
+ * Each ceiling is about twice a weekday's calls as the registry derives them
+ * (design D9 of add-commute-station-subway), so a station that outgrows one fails here.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
@@ -26,10 +28,13 @@ import logger from "../../infra/logger";
 import type { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
+import { SubwayMatchingService } from "../matching/subway-matching.service";
 import type { SubwaySeoulApiClient } from "../seoul-api/subway-seoul-api.client";
 import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import type { SubwaySeoulTrainmapClient } from "../seoul-trainmap/subway-seoul-trainmap.client";
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
+import { SUBWAY_REGISTRY } from "../subway.config";
+import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
@@ -44,6 +49,18 @@ const subway = config.subway as { enabled: boolean; apiDailyCap: number; trainMa
 
 type Tick = () => Promise<unknown>;
 
+// WHY: the train map is one page for every line (line=0); the line 1 and line 4 captures joined stand for it.
+const ALL_LINES = "0";
+const LINES_1_AND_4_PAGE = `${page("trainmap-line1.html")}${page("trainmap-line4.html")}`;
+const BROKEN_LINE_4 = '<div class="4line_metro"><div class="T0421_Q_9_v2 tip" title="4050열차  동대문 도착 진접행"></div></div>';
+// WHY: one position call per registered line and one arrival call per registered station, however many the registry holds.
+const API_CALLS_PER_TICK = SUBWAY_REGISTRY.lines.length + SUBWAY_REGISTRY.stations.length;
+// WHY: 05:00 to 01:10 KST, the weekday window the service-window tests below pin; a sibling's constants are not importable.
+const WEEKDAY_WINDOW_SEC = (20 * 60 + 10) * 60;
+// WHY: the intervals the registration test pins (10 s and 15 s); a crawl is one request (line=0).
+const WEEKDAY_API_CALLS = API_CALLS_PER_TICK * (WEEKDAY_WINDOW_SEC / 10);
+const WEEKDAY_CRAWLS = WEEKDAY_WINDOW_SEC / 15;
+
 function setup(startIso: string) {
   let now = new Date(startIso);
   const clock = { now: () => now } as Clock;
@@ -52,15 +69,15 @@ function setup(startIso: string) {
   apiClient.positions.set("4호선", rows("realtime-position-line4.json", "realtimePositionList"));
   apiClient.arrivals.set("혜화", rows("realtime-arrival-hyehwa.json", "realtimeArrivalList"));
   const trainmapClient = new FakeSubwaySeoulTrainmapClient();
-  trainmapClient.pages.set("1", page("trainmap-line1.html"));
-  trainmapClient.pages.set("4", page("trainmap-line4.html"));
+  trainmapClient.pages.set(ALL_LINES, LINES_1_AND_4_PAGE);
   const seoul = new SubwaySeoulService(
     new SubwaySeoulApiService(asReal<SubwaySeoulApiClient>(apiClient)),
     new SubwaySeoulTrainmapService(asReal<SubwaySeoulTrainmapClient>(trainmapClient)),
     clock,
   );
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
-  const tracking = new SubwayTrackingService(asReal<SubwayRepository>(new FakeSubwayRepository()), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
+  const tracking = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(new FakeSubwayRepository())), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
+  new SubwayMatchingService(tracking, clock).onModuleInit();
   const registerPoller = jest.fn();
   new SubwaySeoulPoller({ registerPoller } as unknown as PollerRegistryService, seoul, tracking).onModuleInit();
   const tickOf = (name: string): Tick => registerPoller.mock.calls.find((c) => c[2] === name)?.[0] as Tick;
@@ -125,11 +142,11 @@ describe("SubwaySeoulPoller ticks only in the service window", () => {
 
   it.each([
     ["04:59:59 on a Friday", "2026-10-15T19:59:59Z", 0],
-    ["05:00 on a Friday", "2026-10-15T20:00:00Z", 4],
-    ["01:09:59 after a Friday", "2026-10-16T16:09:59Z", 4],
+    ["05:00 on a Friday", "2026-10-15T20:00:00Z", API_CALLS_PER_TICK],
+    ["01:09:59 after a Friday", "2026-10-16T16:09:59Z", API_CALLS_PER_TICK],
     ["01:10 after a Friday", "2026-10-16T16:10:00Z", 0],
-    ["05:00 on a Saturday", "2026-10-16T20:00:00Z", 4],
-    ["00:29:59 after a Saturday", "2026-10-17T15:29:59Z", 4],
+    ["05:00 on a Saturday", "2026-10-16T20:00:00Z", API_CALLS_PER_TICK],
+    ["00:29:59 after a Saturday", "2026-10-17T15:29:59Z", API_CALLS_PER_TICK],
     ["00:30 after a Saturday", "2026-10-17T15:30:00Z", 0],
   ])("makes the API's calls at %s: %i", async (_label, iso, callCount) => {
     // Arrange
@@ -150,34 +167,53 @@ describe("SubwaySeoulPoller daily ceilings", () => {
 
   it("rejects the API's ticks once its ceiling is reached, calling nothing, until 00:00 KST", async () => {
     // Arrange
-    subway.apiDailyCap = 4;
+    subway.apiDailyCap = API_CALLS_PER_TICK;
     const { apiClient, tickAt } = setup("2026-10-16T14:59:00Z");
     await tickAt("2026-10-16T14:59:00Z", "subway-seoul");
 
     // Act
     const atCeiling = tickAt("2026-10-16T14:59:59Z", "subway-seoul");
-    await expect(atCeiling).rejects.toMatchObject({ name: "DailyCapError", provider: "seoul-subway-api", cap: 4 });
+    await expect(atCeiling).rejects.toMatchObject({ name: "DailyCapError", provider: "seoul-subway-api", cap: API_CALLS_PER_TICK });
     const callsAtCeiling = apiClient.calls.length;
     await tickAt("2026-10-16T15:00:00Z", "subway-seoul");
 
     // Assert
-    expect(callsAtCeiling).toBe(4);
-    expect(apiClient.calls).toHaveLength(8);
+    expect(callsAtCeiling).toBe(API_CALLS_PER_TICK);
+    expect(apiClient.calls).toHaveLength(2 * API_CALLS_PER_TICK);
   });
 
-  it("keeps the train map's ceiling apart from the API's", async () => {
+  it("keeps the train map's ceiling apart from the API's, one taken per crawl's single request", async () => {
     // Arrange
-    subway.trainMapDailyCap = 2;
+    subway.trainMapDailyCap = 1;
     const { apiClient, tickAt } = setup("2026-10-16T11:00:00Z");
     await tickAt("2026-10-16T11:00:00Z", "subway-trainmap");
 
     // Act
     const atCeiling = tickAt("2026-10-16T11:00:15Z", "subway-trainmap");
-    await expect(atCeiling).rejects.toMatchObject({ name: "DailyCapError", provider: "seoul-trainmap", cap: 2 });
+    await expect(atCeiling).rejects.toMatchObject({ name: "DailyCapError", provider: "seoul-trainmap", cap: 1 });
     await tickAt("2026-10-16T11:00:20Z", "subway-seoul");
 
     // Assert
-    expect(apiClient.calls).toHaveLength(4);
+    expect(apiClient.calls).toHaveLength(API_CALLS_PER_TICK);
+  });
+});
+
+describe("SubwaySeoulPoller daily ceilings against a weekday's calls", () => {
+  it("counts a weekday's calls from the registry: 7,260 API ticks and 4,840 crawls in the 72,600 s window", () => {
+    // Act & Assert
+    expect([WEEKDAY_WINDOW_SEC, WEEKDAY_API_CALLS / API_CALLS_PER_TICK, WEEKDAY_CRAWLS]).toEqual([72_600, 7_260, 4_840]);
+  });
+
+  it.each([
+    ["seoul-subway-api", () => subway.apiDailyCap, WEEKDAY_API_CALLS],
+    ["seoul-trainmap", () => subway.trainMapDailyCap, WEEKDAY_CRAWLS],
+  ])("keeps %s's ceiling between 1.8 and 2.5 times a weekday's calls", (_source, ceilingOf, weekdayCalls) => {
+    // Act
+    const ratio = ceilingOf() / weekdayCalls;
+
+    // Assert
+    expect(ratio).toBeGreaterThanOrEqual(1.8);
+    expect(ratio).toBeLessThanOrEqual(2.5);
   });
 });
 
@@ -189,7 +225,7 @@ describe("SubwaySeoulPoller sources fail apart", () => {
   it("rejects the train map's tick on a page it cannot parse while the API's tick resolves", async () => {
     // Arrange
     const { trainmapClient, tickAt } = setup("2026-10-16T11:00:00Z");
-    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    trainmapClient.pages.set(ALL_LINES, "<html>점검 중</html>");
 
     // Act
     const trainMapTick = tickAt("2026-10-16T11:00:00Z", "subway-trainmap");
@@ -212,13 +248,13 @@ describe("SubwaySeoulPoller tracks what answered before it reports a failure", (
     });
     return ticks;
   }
-  const eventsAt = (ticks: readonly TrackedTick[], stationId: string): string[] =>
-    ticks.flatMap((tick) => tick.stations.filter((s) => s.stationId === stationId).flatMap((s) => s.events.map((e) => `${e.trainNo} ${e.state}`)));
+  const eventsAt = (ticks: readonly TrackedTick[], platformId: string): string[] =>
+    ticks.flatMap((tick) => tick.platforms.filter((s) => s.platformId === platformId).flatMap((s) => s.events.map((e) => `${e.trainNo} ${e.state}`)));
 
-  it("tracks line 1's train-map events and still rejects the tick when line 4's page does not parse", async () => {
+  it("tracks line 1's train-map events and still rejects the tick when line 4's block does not parse", async () => {
     // Arrange
     const { trainmapClient, tracking, tickAt } = setup("2026-10-16T11:45:00Z");
-    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    trainmapClient.pages.set(ALL_LINES, `${page("trainmap-line1.html")}${BROKEN_LINE_4}`);
     const ticks = listenTo(tracking);
 
     // Act
@@ -249,8 +285,7 @@ describe("SubwaySeoulPoller tracks what answered before it reports a failure", (
   it("tracks nothing and rejects the tick when every line fails", async () => {
     // Arrange
     const { trainmapClient, tracking, tickAt } = setup("2026-10-16T11:45:00Z");
-    trainmapClient.pages.set("1", "<html>점검 중</html>");
-    trainmapClient.pages.set("4", "<html>점검 중</html>");
+    trainmapClient.pages.set(ALL_LINES, "<html>점검 중</html>");
     const ticks = listenTo(tracking);
 
     // Act

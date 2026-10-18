@@ -2,9 +2,12 @@
  * SubwayArrivalsService over FakeSubwayRepository, the real tracker's
  * timetable-only document (on the real timetable door, FakeHolidaysService and
  * the committed weekday tables) and a fixed Clock. What it guards: an unserved
- * station finds nothing; a state at most 2 minutes old is served as the
- * tracker stored it; an older or missing state, or SUBWAY=off, serves the
- * timetable alone at the request's time, every train `scheduled`.
+ * station, a KRIC platform id included, finds nothing; a platform's state at
+ * most 2 minutes old is served as the tracker stored it; an older or missing
+ * state, or SUBWAY=off, serves that platform's timetable alone at the
+ * request's time, every train `scheduled`; and at a station of two platforms
+ * each is judged on its own ("One line stale"), on Gangnam's line 2 and Shinbundang
+ * platforms.
  */
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
@@ -15,6 +18,7 @@ import config from "../../infra/config";
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import type { SubwayArrivalsDoc } from "../subway.document";
+import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
@@ -27,18 +31,19 @@ function setup() {
   const repository = new FakeSubwayRepository();
   const clock = { now: () => NOW } as Clock;
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
-  const tracking = new SubwayTrackingService(asReal<SubwayRepository>(repository), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
+  const tracking = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(repository)), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   return { repository, service: new SubwayArrivalsService(asReal<SubwayRepository>(repository), tracking, clock) };
 }
 
-function storedAgo(ageMs: number): SubwayArrivalsDoc {
+function storedAgo(ageMs: number, platformId = "S1-4-420"): SubwayArrivalsDoc {
   const generatedAt = new Date(NOW.getTime() - ageMs);
   const live = { trainNo: "4674", destination: "불암산", express: false, arrivalAt: new Date("2026-10-16T11:42:50Z"), source: "live" as const, position: null };
-  return { _id: "S1-4-420", generatedAt, serviceDate: "2026-10-16", directions: { up: [live], down: [] } };
+  return { _id: platformId, generatedAt, serviceDate: "2026-10-16", directions: { up: [live], down: [] } };
 }
 
-const sourcesOf = (arrivals: Awaited<ReturnType<SubwayArrivalsService["findStationArrivals"]>>) =>
-  arrivals?.directions.flatMap((d) => d.trains.map((t) => t.source));
+type Arrivals = Awaited<ReturnType<SubwayArrivalsService["findStationArrivals"]>>;
+
+const sourcesOf = (arrivals: Arrivals, index = 0) => arrivals?.lines[index]?.directions.flatMap((d) => d.trains.map((t) => t.source));
 
 const enabled = subway.enabled;
 afterEach(() => {
@@ -46,12 +51,12 @@ afterEach(() => {
 });
 
 describe("SubwayArrivalsService.findStationArrivals", () => {
-  it("finds nothing for a station it does not serve", async () => {
+  it.each(["seoul", "S1-4-420"])("finds nothing for %s, which it does not serve as a station", async (stationId) => {
     // Arrange
     const { service } = setup();
 
     // Act
-    const arrivals = await service.findStationArrivals("S1-2-222", "ko");
+    const arrivals = await service.findStationArrivals(stationId, "ko");
 
     // Assert
     expect(arrivals).toBeNull();
@@ -63,10 +68,10 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     repository.docs.set("S1-4-420", storedAgo(120_000));
 
     // Act
-    const arrivals = await service.findStationArrivals("S1-4-420", "ko");
+    const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
-    expect(arrivals?.generatedAt).toBe("2026-10-16T11:39:00.000Z");
+    expect(arrivals?.lines[0]?.generatedAt).toBe("2026-10-16T11:39:00.000Z");
     expect(sourcesOf(arrivals)).toEqual(["live"]);
   });
 
@@ -79,10 +84,10 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     arrange(repository);
 
     // Act
-    const arrivals = await service.findStationArrivals("S1-4-420", "ko");
+    const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
-    expect(arrivals?.generatedAt).toBe(NOW.toISOString());
+    expect(arrivals?.lines[0]?.generatedAt).toBe(NOW.toISOString());
     expect(sourcesOf(arrivals)).toEqual(Array(6).fill("scheduled"));
   });
 
@@ -93,9 +98,27 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     repository.docs.set("S1-4-420", storedAgo(5_000));
 
     // Act
-    const arrivals = await service.findStationArrivals("S1-4-420", "ko");
+    const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
     expect(sourcesOf(arrivals)).toEqual(Array(6).fill("scheduled"));
+  });
+
+  it("One line stale: serves the fresh platform from its document and the stale one from its timetable alone", async () => {
+    // Arrange
+    const { service, repository } = setup();
+    repository.docs.set("S1-2-222", storedAgo(5_000, "S1-2-222"));
+    repository.docs.set("DX-D1-4307", storedAgo(121_000, "DX-D1-4307"));
+
+    // Act
+    const arrivals = await service.findStationArrivals("gangnam", "ko");
+
+    // Assert
+    expect(arrivals?.lines.map((l) => [l.platformId, l.generatedAt])).toEqual([
+      ["S1-2-222", "2026-10-16T11:40:55.000Z"],
+      ["DX-D1-4307", NOW.toISOString()],
+    ]);
+    expect(sourcesOf(arrivals, 0)).toEqual(["live"]);
+    expect(sourcesOf(arrivals, 1)).toEqual(Array(6).fill("scheduled"));
   });
 });

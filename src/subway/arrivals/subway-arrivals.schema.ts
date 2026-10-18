@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const STATION_ID = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/;
+const STATION_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-// WHY: the KRIC shape of a station id (`SubwayStation.id`); whether the station is served is findSubwayStation's.
-export const stationIdParam = z.string().regex(STATION_ID, { error: "stationId must be <operator>-<line>-<station>" });
+// WHY: the shape of a station's slug (`SubwayStation.id`); whether the station is served is findSubwayStation's.
+export const stationIdParam = z.string().regex(STATION_SLUG, { error: "stationId must be a lowercase slug" });

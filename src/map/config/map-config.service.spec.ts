@@ -478,7 +478,7 @@ describe("MapConfigService", () => {
 
   // The three legacy /map/overlays tests that stood here are gone with their
   // methods: getOverlaysByCategory and computeEtag served a hardcoded building
-  // table that the v2 migration orphaned, and getOverlayById duplicated
-  // GET /bus/route/:routeId with less in the payload. Their coverage moved to
+  // table that the v2 migration orphaned, and getOverlayById served a jongro
+  // polyline that no client rendered. Their coverage moved to
   // map.routes.test.ts, which now pins that both URLs 404.
 });

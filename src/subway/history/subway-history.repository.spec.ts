@@ -176,7 +176,7 @@ describe("SubwayHistoryRepository.updateObservedArrival", () => {
   it("resolves, in one update, the train's records at the station made before the tick that saw the arrived row, open or resolved by an approaching row", async () => {
     // Act
     await repository.updateObservedArrival(
-      { serviceDate: "2026-10-16", trainNo: "0692", stationId: "KR-1-0153", observedAt, observedState: "arrived" },
+      { serviceDate: "2026-10-16", trainNo: "0692", platformId: "KR-1-0153", observedAt, observedState: "arrived" },
       at("21:05:51"),
     );
 
@@ -198,7 +198,7 @@ describe("SubwayHistoryRepository.updateObservedArrival", () => {
   it("resolves by an approaching row only the open records made before the tick that saw it", async () => {
     // Act
     await repository.updateObservedArrival(
-      { serviceDate: "2026-10-16", trainNo: "0692", stationId: "KR-1-0153", observedAt, observedState: "approaching" },
+      { serviceDate: "2026-10-16", trainNo: "0692", platformId: "KR-1-0153", observedAt, observedState: "approaching" },
       at("21:05:51"),
     );
 

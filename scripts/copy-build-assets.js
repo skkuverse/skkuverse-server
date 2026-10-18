@@ -42,13 +42,28 @@ const assets = [
   ["src/ui/transit/transit-layout.json", "dist/src/ui/transit/transit-layout.json"],
   // ui/campus/ui-campus.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/ui/campus/campus-banners.json", "dist/src/ui/campus/campus-banners.json"],
+  // src/subway/subway.config.ts reads this with fs.readFileSync(__dirname/<name>)
+  ["src/subway/subway-registry.json", "dist/src/subway/subway-registry.json"],
   // The subway timetable config reads these with fs.readFileSync(__dirname/<name>);
   // scripts/subway-timetable/convert.py writes them.
   ["src/subway/timetable/korail-1-weekday.json", "dist/src/subway/timetable/korail-1-weekday.json"],
   ["src/subway/timetable/korail-1-holiday.json", "dist/src/subway/timetable/korail-1-holiday.json"],
+  ["src/subway/timetable/korail-k1-weekday.json", "dist/src/subway/timetable/korail-k1-weekday.json"],
+  ["src/subway/timetable/korail-k1-holiday.json", "dist/src/subway/timetable/korail-k1-holiday.json"],
   ["src/subway/timetable/seoul-4-weekday.json", "dist/src/subway/timetable/seoul-4-weekday.json"],
   ["src/subway/timetable/seoul-4-saturday.json", "dist/src/subway/timetable/seoul-4-saturday.json"],
   ["src/subway/timetable/seoul-4-holiday.json", "dist/src/subway/timetable/seoul-4-holiday.json"],
+  ["src/subway/timetable/seoul-2-weekday.json", "dist/src/subway/timetable/seoul-2-weekday.json"],
+  ["src/subway/timetable/seoul-2-saturday.json", "dist/src/subway/timetable/seoul-2-saturday.json"],
+  ["src/subway/timetable/seoul-2-holiday.json", "dist/src/subway/timetable/seoul-2-holiday.json"],
+  ["src/subway/timetable/seoul-3-weekday.json", "dist/src/subway/timetable/seoul-3-weekday.json"],
+  ["src/subway/timetable/seoul-3-saturday.json", "dist/src/subway/timetable/seoul-3-saturday.json"],
+  ["src/subway/timetable/seoul-3-holiday.json", "dist/src/subway/timetable/seoul-3-holiday.json"],
+  ["src/subway/timetable/seoul-8-weekday.json", "dist/src/subway/timetable/seoul-8-weekday.json"],
+  ["src/subway/timetable/seoul-8-saturday.json", "dist/src/subway/timetable/seoul-8-saturday.json"],
+  ["src/subway/timetable/seoul-8-holiday.json", "dist/src/subway/timetable/seoul-8-holiday.json"],
+  ["src/subway/timetable/shinbundang-d1-weekday.json", "dist/src/subway/timetable/shinbundang-d1-weekday.json"],
+  ["src/subway/timetable/shinbundang-d1-holiday.json", "dist/src/subway/timetable/shinbundang-d1-holiday.json"],
   // map/layer-set/map-layer-set.config.ts reads these with fs.readFileSync(__dirname/<name>).
   // Every entry in its LAYER_SET_FILES must appear here — it lists files
   // explicitly rather than readdir'ing precisely so a miss shows up as a named

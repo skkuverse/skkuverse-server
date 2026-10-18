@@ -5,7 +5,7 @@ import type { TrainHistory } from "../tracking/subway-tracking.types";
 export type ArrivalSource = "live" | "estimated" | "scheduled";
 
 export interface TrainPosition {
-  stationId: string;
+  platformId: string;
   state: TrainState;
 }
 
@@ -21,7 +21,7 @@ export interface TrainArrival {
 
 export interface CountdownDivergence {
   trainNo: string;
-  stationId: string;
+  platformId: string;
   liveArrivalAt: Date;
   estimatedArrivalAt: Date;
   divergenceSec: number;
@@ -31,7 +31,7 @@ export type CountdownRejectionReason = "spent" | "out_of_range" | "at_station";
 
 export interface CountdownRejection {
   trainNo: string;
-  stationId: string;
+  platformId: string;
   reason: CountdownRejectionReason;
   liveArrivalAt: Date;
   estimatedArrivalAt: Date;
@@ -52,7 +52,7 @@ export interface StationArrivals extends CountdownFindings {
 }
 
 export interface EstimateInput {
-  stationId: string;
+  platformId: string;
   direction: SubwayDirection;
   trains: readonly ScheduledTrain[];
   histories: ReadonlyMap<string, TrainHistory>;

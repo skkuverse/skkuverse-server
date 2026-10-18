@@ -14,10 +14,27 @@ type Issue = { path: IssuePath; message: string };
 interface Located<T> {
   at: IssuePath;
   value: T;
+  sectionId: string;
 }
 
 const itemsOf = (layout: TransitLayoutRaw): Array<Located<TransitItemRaw>> =>
-  layout.sections.flatMap((section, i) => section.items.map((value, j) => ({ at: ["sections", i, "items", j], value })));
+  layout.sections.flatMap((section, sectionIndex) =>
+    section.items.flatMap((value, itemIndex) => {
+      const at = ["sections", sectionIndex, "items", itemIndex];
+      const children = value.kind === "group" ? value.items.map((child, k) => ({ at: [...at, "items", k], value: child, sectionId: section.id })) : [];
+      return [{ at, value, sectionId: section.id }, ...children];
+    }),
+  );
+
+function visibleWithIssue({ at, value, sectionId }: Located<TransitItemRaw>, items: ReadonlyArray<Located<TransitItemRaw>>, references: TransitLayoutReferences): Issue | null {
+  if (value.kind !== "group" || value.visibleWith === undefined) return null;
+  const { groupId } = value.visibleWith;
+  const issueAt = [...at, "visibleWith", "groupId"];
+  if (!references.busGroupIds.includes(groupId)) return { path: issueAt, message: `"${groupId}" is not a bus group` };
+  // WHY: the app draws a group under the bus row it follows, so the two must share a section.
+  const isPlacedBeside = items.some((item) => item.sectionId === sectionId && item.value.kind === "bus" && item.value.groupId === groupId);
+  return isPlacedBeside ? null : { path: issueAt, message: `bus group "${groupId}" is not placed in section "${sectionId}"` };
+}
 
 function referenceIssue({ at, value }: Located<TransitItemRaw>, references: TransitLayoutReferences): Issue | null {
   if (value.kind === "bus" && !references.busGroupIds.includes(value.groupId)) {
@@ -46,7 +63,7 @@ export function loadTransitLayout(raw: unknown, references: TransitLayoutReferen
   const schema = transitLayoutFile.superRefine((layout, ctx) => {
     const items = itemsOf(layout);
     const issues = [
-      ...items.flatMap((item) => referenceIssue(item, references) ?? []),
+      ...items.flatMap((item) => referenceIssue(item, references) ?? visibleWithIssue(item, items, references) ?? []),
       ...unplacedIssues(items.map((item) => item.value), references),
     ];
     for (const { path: at, message } of issues) ctx.addIssue({ code: "custom", path: at, message });

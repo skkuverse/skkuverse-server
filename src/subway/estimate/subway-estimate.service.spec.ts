@@ -24,29 +24,29 @@ const T4540: ScheduledTrain = {
     ["S1-4-421", "10:51:00", "10:51:30"],
     [HYEHWA, "10:53:30", "10:54:00"],
     ["S1-4-419", "10:55:30", "10:56:00"],
-  ].map(([stationId, arrival, departure]) => ({ stationId: stationId!, arrivalAt: at(arrival!), departureAt: at(departure!) })),
+  ].map(([platformId, arrival, departure]) => ({ platformId: platformId!, arrivalAt: at(arrival!), departureAt: at(departure!) })),
 };
 
 const historyAt = (latest: Omit<TrainProgress, "ordinal">): ReadonlyMap<string, TrainHistory> =>
   new Map([["4540", { trainNo: "4540", direction: "up", destination: "불암산", latest: { ...latest, ordinal: 0 }, lastSeenAt: latest.at }]]);
 
-const row = (generatedAt: string): CountdownRow => ({ trainNo: "4540", stationId: HYEHWA, generatedAt: at(generatedAt), remainingSec: 150 });
+const row = (generatedAt: string): CountdownRow => ({ trainNo: "4540", platformId: HYEHWA, generatedAt: at(generatedAt), remainingSec: 150 });
 
 describe("SubwayEstimateService.estimateArrivals", () => {
   it("serves 4540 at 10:56:55 while 동대문 republishes its 150 s, then from its approach at 10:57:06, not 10:58:05 and 10:59:05", () => {
     // Arrange
     const estimate = new SubwayEstimateService(new SubwayCountdownService());
     const ticks = [
-      { now: "10:55:12", generatedAt: "10:54:25", latest: { stationId: "S1-4-421", state: "arrived", at: at("10:54:33") } },
-      { now: "10:56:12", generatedAt: "10:55:35", latest: { stationId: "S1-4-421", state: "departed", at: at("10:55:49") } },
-      { now: "10:57:12", generatedAt: "10:56:35", latest: { stationId: HYEHWA, state: "approaching", at: at("10:57:06") } },
+      { now: "10:55:12", generatedAt: "10:54:25", latest: { platformId: "S1-4-421", state: "arrived", at: at("10:54:33") } },
+      { now: "10:56:12", generatedAt: "10:55:35", latest: { platformId: "S1-4-421", state: "departed", at: at("10:55:49") } },
+      { now: "10:57:12", generatedAt: "10:56:35", latest: { platformId: HYEHWA, state: "approaching", at: at("10:57:06") } },
     ] as const;
 
     // Act
     const served = ticks.map((tick) =>
       estimate
         .estimateArrivals({
-          stationId: HYEHWA,
+          platformId: HYEHWA,
           direction: "up",
           trains: [T4540],
           histories: historyAt(tick.latest),
@@ -66,8 +66,8 @@ describe("SubwayEstimateService.listScheduledArrivals", () => {
   it("serves 4540 at its scheduled 10:53:30 and leaves the countdown memory as the ticks left it", () => {
     // Arrange
     const estimate = new SubwayEstimateService(new SubwayCountdownService());
-    const tick = { stationId: HYEHWA, direction: "up", trains: [T4540] } as const;
-    const histories = historyAt({ stationId: "S1-4-421", state: "departed", at: at("10:55:49") });
+    const tick = { platformId: HYEHWA, direction: "up", trains: [T4540] } as const;
+    const histories = historyAt({ platformId: "S1-4-421", state: "departed", at: at("10:55:49") });
     estimate.estimateArrivals({ ...tick, histories, countdownRows: [row("10:54:25")], now: at("10:55:12") });
 
     // Act
