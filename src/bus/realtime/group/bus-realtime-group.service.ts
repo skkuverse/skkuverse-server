@@ -11,7 +11,7 @@ import { BusRealtimeArrivalService } from "../arrival/bus-realtime-arrival.servi
 import { BusRealtimeHsscService } from "../hssc/bus-realtime-hssc.service";
 import { BusRealtimeJongroService } from "../jongro/bus-realtime-jongro.service";
 import { toClockTime, toRealtimeBuses, toTrackedBus } from "./bus-realtime-group.mapper";
-import { toJongroBusTracking, toStationEtas, toVehicleBuses } from "./bus-realtime-group.rules";
+import { toHighestSectOrd, toJongroBusTracking, toStationEtas, toVehicleBuses, toWaitingArrival, toWaitingVehicleIds } from "./bus-realtime-group.rules";
 import type { GroupView } from "./bus-realtime-group.types";
 import type { RealtimeBus, RealtimeGroup, RealtimeGroupMeta, StationEta } from "./bus-realtime-group.wire";
 
@@ -50,9 +50,10 @@ export class BusRealtimeGroupService {
       this.jongro.listPositions(route.code),
       this.jongro.listArrivals(route.code),
     ]);
+    const trackedBuses = (buses ?? []).map((position) => this.toJongroBus(registryRoute, rows ?? [], position));
     return {
-      buses: (buses ?? []).map((position) => this.toJongroBus(registryRoute, rows ?? [], position)),
-      stationEtas: this.toJongroStationEtas(registryRoute, rows ?? []),
+      buses: trackedBuses,
+      stationEtas: this.toJongroStationEtas(registryRoute, rows ?? [], toWaitingVehicleIds(trackedBuses)),
       stationsVersion: registryRoute.stationsVersion,
     };
   }
@@ -61,13 +62,16 @@ export class BusRealtimeGroupService {
     const { nextStop, firstNamed } = toVehicleBuses(rows, position.vehicleId, Number(position.sequence));
     const namedBus = nextStop?.bus ?? firstNamed;
     const [arrival] = namedBus ? this.arrival.toArrivals([namedBus], route.seatCount) : [];
-    const context = { stationCount: route.topisIds.length, turnaroundTopisId: route.turnaroundTopisId, nextStop, arrival };
+    const highestSectOrd = toHighestSectOrd(rows, position.vehicleId);
+    const context = { stationCount: route.topisIds.length, turnaroundTopisId: route.turnaroundTopisId, nextStop, arrival, highestSectOrd };
     return toTrackedBus(position, toJongroBusTracking(position, context));
   }
 
-  private toJongroStationEtas(route: RegistryRoute, rows: readonly JongroArrivalDoc[]): StationEta[] {
-    return rows.flatMap((row) =>
-      toStationEtas(route, [row]).map((placed) => ({ ...placed, arrivals: this.arrival.toArrivals(row.buses, route.seatCount) })),
-    );
+  private toJongroStationEtas(route: RegistryRoute, rows: readonly JongroArrivalDoc[], waitingVehicleIds: ReadonlySet<string>): StationEta[] {
+    const toArrivals = (row: JongroArrivalDoc) =>
+      row.buses.flatMap((bus) =>
+        this.arrival.toArrivals([bus], route.seatCount).map((arrival) => (waitingVehicleIds.has(bus.vehId) ? toWaitingArrival(arrival) : arrival)),
+      );
+    return rows.flatMap((row) => toStationEtas(route, [row]).map((placed) => ({ ...placed, arrivals: toArrivals(row) })));
   }
 }
