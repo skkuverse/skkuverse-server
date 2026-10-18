@@ -20,6 +20,7 @@
           "dataTm": "20261017191145",
           "sectDist": "0.06",
           "fullSectDist": "0.289",
+          "lastStTm": "1387",
           "stopFlag": "0"
         },
         {
@@ -35,6 +36,7 @@
           "dataTm": "20261017191144",
           "sectDist": "0",
           "fullSectDist": "0.295",
+          "lastStTm": "711",
           "stopFlag": "1"
         }
       ]

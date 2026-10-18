@@ -32,7 +32,7 @@ const BUS_SLOTS: readonly BusSlot[] = ["1", "2"];
 type TrackedPositionField = "vehId" | "sectOrd" | "sectDist" | "fullSectDist" | "dataTm";
 
 // QUIRK(topis): a getBusPosByRtid row; its coordinates are gpsX/gpsY (tmX/tmY come null), its turnaround stop
-// trnstnid, sectDist and fullSectDist km, stopFlag "1" at a stop, dataTm a KST yyyyMMddHHmmss.
+// trnstnid, sectDist and fullSectDist km, stopFlag "1" at a stop, dataTm a KST yyyyMMddHHmmss, lastStTm seconds.
 interface TopisPositionRow {
   lastStnId: string | null;
   trnstnid?: string | null;
@@ -45,6 +45,7 @@ interface TopisPositionRow {
   fullSectDist: string | null;
   stopFlag: string | null;
   dataTm: string | null;
+  lastStTm?: string | null;
 }
 
 @Injectable()
@@ -135,6 +136,7 @@ export class BusRealtimeJongroClient {
       fullSectDist: parsed("fullSectDist", toTopisDecimal),
       isAtStop: row.stopFlag?.trim() === "1",
       observedAt: parsed("dataTm", toObservedAt),
+      lastStTm: toTopisInteger(row.lastStTm) ?? undefined,
     };
   }
 }

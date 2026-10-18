@@ -1,6 +1,8 @@
 import type { BusCacheKey } from "../../cache/bus-cache.document";
 import { DWELL_RESET_MINUTES, MAX_STATIONARY_MOVE_METERS } from "./bus-realtime-jongro.constants";
-import type { JongroBusDwell, JongroVehicleObservation } from "./bus-realtime-jongro.types";
+import type { JongroBusDwell, JongroBusSighting, JongroVehicleObservation } from "./bus-realtime-jongro.types";
+
+const ORIGIN_SECT_ORD = 1;
 
 export function toArrivalsKey(code: string): BusCacheKey & `jongro_stations_${string}` {
   return `jongro_stations_${code}`;
@@ -54,5 +56,20 @@ export function isStationary(
 ): boolean {
   if (!previous || previous.sectOrd !== current.sectOrd) return false;
   if (Date.parse(current.observedAt) <= Date.parse(previous.observedAt)) return previous.isStationary;
-  return Math.round(Math.abs(current.sectDist - previous.sectDist) * 1000) < MAX_STATIONARY_MOVE_METERS;
+  return toMovedMeters(previous, current) < MAX_STATIONARY_MOVE_METERS;
+}
+
+// WHY: TOPIS stops advancing dataTm for a bus idling at its origin, so a repeated observation counts as not moved;
+// lastStTm 0 is the origin (EVIDENCE: 148 of 148 rows at sectOrd 1 on 2026-10-17, 0 of 969 elsewhere).
+export function isIdlingAtOrigin(
+  previous: JongroVehicleObservation | undefined,
+  current: Pick<JongroBusSighting, "sectOrd" | "sectDist" | "isAtStop" | "lastStTm">,
+): boolean {
+  if (current.sectOrd !== ORIGIN_SECT_ORD || current.lastStTm !== 0) return false;
+  if (!previous) return !current.isAtStop;
+  return previous.sectOrd === current.sectOrd && toMovedMeters(previous, current) < MAX_STATIONARY_MOVE_METERS;
+}
+
+function toMovedMeters(previous: Pick<JongroVehicleObservation, "sectDist">, current: Pick<JongroVehicleObservation, "sectDist">): number {
+  return Math.round(Math.abs(current.sectDist - previous.sectDist) * 1000);
 }

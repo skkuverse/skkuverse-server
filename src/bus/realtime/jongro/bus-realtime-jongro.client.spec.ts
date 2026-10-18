@@ -5,7 +5,8 @@
  * header code rejected with the code attached, "4" (no result, TOPIS's
  * overnight answer) read as an empty list, and any other answer without a
  * list rejected; a position row's vehicle, section, stop flag and KST
- * observation time kept, a row with one of them malformed rejected.
+ * observation time kept, a row with one of them malformed rejected, and its
+ * lastStTm kept as a number when it is one.
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
 
@@ -456,5 +457,44 @@ describe("BusRealtimeJongroClient.fetchSightings vehicle fields", () => {
 
     // Assert
     expect(sighting!.isAtStop).toBe(expected);
+  });
+});
+
+// WHY: lastStTm, the seconds to the terminal, is 0 only at the origin, which tells an idling bus there
+// apart from one creeping out; every one of the 1,117 captured rows carried it.
+describe("BusRealtimeJongroClient.fetchSightings seconds to the terminal", () => {
+  it("keeps each captured row's lastStTm as a number", async () => {
+    // Arrange
+    respond(positionsFixture.jongro07);
+
+    // Act
+    const sightings = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sightings.map((sighting) => sighting.lastStTm)).toEqual([1387, 711]);
+  });
+
+  it("reads lastStTm \"0\" as 0", async () => {
+    // Arrange
+    const [row] = positionsFixture.jongro07.msgBody.itemList;
+    respond({ msgHeader: { headerCd: "0" }, msgBody: { itemList: [{ ...row, lastStTm: "0" }] } });
+
+    // Act
+    const [sighting] = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sighting!.lastStTm).toBe(0);
+  });
+
+  it.each([null, "", "x"])("reads lastStTm %j as unknown", async (lastStTm) => {
+    // Arrange
+    const [row] = positionsFixture.jongro07.msgBody.itemList;
+    respond({ msgHeader: { headerCd: "0" }, msgBody: { itemList: [{ ...row, lastStTm }] } });
+
+    // Act
+    const [sighting] = await new BusRealtimeJongroClient().fetchSightings(route07);
+
+    // Assert
+    expect(sighting!.lastStTm).toBeUndefined();
   });
 });
