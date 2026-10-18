@@ -16,9 +16,9 @@ const legacyBusFields = {
 };
 
 /**
- * WHY: s (station index plus the fraction of the section toward the next) at instant `at`, +09:00, read against
- * meta.serverNow. Ascending at, non-decreasing s: the observation, an atStop bus's departure, then up to three next
- * stops at TOPIS's re-based travel times, 20 s or more apart; the app moves the bus linearly and holds at the last knot.
+ * WHY: s (stationIndex plus the section fraction; knot 0's floor is stationIndex) at `at`, +09:00, read against
+ * meta.serverNow. Ascending: the observation, an atStop bus's departure, up to three next stops at TOPIS's re-based
+ * times (the first at 4 m/s without one), 20 s or more apart; the app moves linearly and holds at the last knot.
  */
 const trajectory = z.array(z.object({ at: z.iso.datetime({ offset: true }), s: z.number().min(0) })).min(1);
 

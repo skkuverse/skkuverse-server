@@ -8,3 +8,11 @@ export const MIN_SEGMENT_SECONDS = 20;
 
 // WHY: the contract proposed to skkuverse-app (add-jongro-bus-trajectory D2); a poll every 25 s replaces them long before.
 export const TRAJECTORY_STOPS_AHEAD = 3;
+
+// WHY: the app's own speed, so one predictor: with a trajectory the app ignores nextStopInSec and segmentMeters, so a
+// next stop TOPIS gives no time for is reached at this speed (agreed with skkuverse-app, add-jongro-bus-trajectory D2).
+export const ASSUMED_SPEED_METERS_PER_SECOND = 4;
+
+// WHY: knot 0 stays in the bus's own section, floor(s) == stationIndex (agreed with skkuverse-app), even when TOPIS's
+// sectDist reaches fullSectDist.
+export const MAX_FIRST_KNOT_FRACTION = 0.999;

@@ -1,5 +1,11 @@
 import type { JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
-import { DWELL_SECONDS, MIN_SEGMENT_SECONDS, TRAJECTORY_STOPS_AHEAD } from "./bus-realtime-group.constants";
+import {
+  ASSUMED_SPEED_METERS_PER_SECOND,
+  DWELL_SECONDS,
+  MAX_FIRST_KNOT_FRACTION,
+  MIN_SEGMENT_SECONDS,
+  TRAJECTORY_STOPS_AHEAD,
+} from "./bus-realtime-group.constants";
 import type { Arrival, RealtimeBus } from "./bus-realtime-group.wire";
 import type {
   CachedArrivalFields,
@@ -90,23 +96,33 @@ function toDepartureMs({ atStopSince }: Pick<JongroBusPositionDoc, "atStopSince"
   return observedAtMs + Math.max(0, DWELL_SECONDS - dwelledSeconds) * 1000;
 }
 
+// WHY: TOPIS's re-based time; the first next stop without one from the rest of its section (all of it after a departure).
+function toStopArrivalMs(position: JongroBusPositionDoc, row: NextStopBus | undefined, start: { isNextStop: boolean; progress: number; departureMs: number }): number | null {
+  const inSec = toNextStopInSec(row, position.observedAt);
+  if (inSec !== null) return Date.parse(position.observedAt) + inSec * 1000;
+  if (!start.isNextStop || position.fullSectDist <= 0) return null;
+  const remainingMeters = Math.round((1 - start.progress) * position.fullSectDist * 1000);
+  return start.departureMs + Math.round(remainingMeters / ASSUMED_SPEED_METERS_PER_SECOND) * 1000;
+}
+
 // WHY: the knots the app moves a bus through (add-jongro-bus-trajectory D2): its observation, an atStop bus's departure,
-// then each next stop at its re-based travel time, MIN_SEGMENT_SECONDS after the knot before, since TOPIS's can invert.
+// then each next stop at its re-based travel time (the first by distance without one), held MIN_SEGMENT_SECONDS apart.
 export function toTrajectory(position: JongroBusPositionDoc, status: JongroBusTracking["status"], { stationCount, namedBuses }: Pick<TrackingContext, "stationCount" | "namedBuses">): TrajectoryKnot[] {
   if (status === "waiting") return [];
   const stationIndex = Number(position.sequence) - 1;
   const observedAtMs = Date.parse(position.observedAt);
   const progress = status === "running" ? toProgress(position.sectDist, position.fullSectDist) : 0;
-  const knots: TrajectoryKnot[] = [{ atMs: observedAtMs, s: stationIndex + progress }];
+  const knots: TrajectoryKnot[] = [{ atMs: observedAtMs, s: stationIndex + Math.min(progress, MAX_FIRST_KNOT_FRACTION) }];
   const lastIndex = stationCount - 1;
   if (stationIndex >= lastIndex) return knots;
   const departureMs = status === "atStop" ? toDepartureMs(position, observedAtMs) : observedAtMs;
   if (departureMs > observedAtMs) knots.push({ atMs: departureMs, s: stationIndex });
   let previousMs = departureMs;
   for (let index = stationIndex + 1; index <= Math.min(stationIndex + TRAJECTORY_STOPS_AHEAD, lastIndex); index++) {
-    const inSec = toNextStopInSec(namedBuses.find(({ bus }) => bus.staOrd === index + 1), position.observedAt);
-    if (inSec === null) break;
-    previousMs = Math.max(observedAtMs + inSec * 1000, previousMs + MIN_SEGMENT_SECONDS * 1000);
+    const row = namedBuses.find(({ bus }) => bus.staOrd === index + 1);
+    const arrivalMs = toStopArrivalMs(position, row, { isNextStop: index === stationIndex + 1, progress, departureMs });
+    if (arrivalMs === null) break;
+    previousMs = Math.max(arrivalMs, previousMs + MIN_SEGMENT_SECONDS * 1000);
     knots.push({ atMs: previousMs, s: index });
   }
   return knots;
