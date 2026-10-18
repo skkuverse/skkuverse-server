@@ -8,6 +8,7 @@
  * group left it when it gained v2 fields; campus-shuttle.test.ts checks its v1
  * fields against fixtures/bus-config-campus-v1.json instead.
  */
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import type { SupportedLang } from "../../infra/types";
@@ -318,5 +319,63 @@ describe("BusConfigService and the registry", () => {
 
     // Act & Assert
     expect(service.listGroupIds()).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
+  });
+});
+
+// WHY: the owner hid the commute stops' map cards (hide-commute-stop-maps); the campus group serves catalog stops
+// the commute group shares, nsc-n-center and nsc-opposite, and keeps theirs.
+describe("BusConfigService stop maps per group", () => {
+  const WITH_MAPS: Record<string, { json: string; etag: string }> = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/bus/fixtures/bus-config-commute-stop-maps.json"), "utf8"),
+  );
+  type Stop = { id: string; map?: unknown };
+  const stopsOf = (group: unknown): Stop[] => (group as { screen: { stops: Stop[] } }).screen.stops;
+  const capturedWithoutMaps = (lang: SupportedLang): string => {
+    const group = JSON.parse(WITH_MAPS[`commute:${lang}`]!.json) as { screen: { stops: Stop[] } };
+    group.screen.stops = group.screen.stops.map(({ map: _map, ...stop }) => stop);
+    return JSON.stringify(group);
+  };
+
+  it.each(["ko", "en", "zh"] as const)("serves no commute stop a map (%s)", async (lang) => {
+    // Act
+    const stops = stopsOf(await service.getGroupById("commute", lang));
+
+    // Assert
+    expect(stops.length).toBeGreaterThan(0);
+    for (const stop of stops) expect(stop).not.toHaveProperty("map");
+  });
+
+  it.each(["ko", "en", "zh"] as const)("serves the commute group as captured with each stop's map left out, byte for byte (%s)", async (lang) => {
+    // Arrange
+    const expected = capturedWithoutMaps(lang);
+
+    // Act & Assert
+    expect(JSON.stringify(await service.getGroupById("commute", lang))).toBe(expected);
+    expect(await service.computeGroupEtag("commute", lang)).toBe(`"${crypto.createHash("md5").update(expected).digest("hex")}"`);
+  });
+
+  it.each(["ko", "en", "zh"] as const)("keeps every campus stop's map, the stops it shares with commute included (%s)", async (lang) => {
+    // Arrange
+    const captured = stopsOf(JSON.parse(WITH_MAPS[`commute:${lang}`]!.json));
+
+    // Act
+    const stops = stopsOf(await service.getGroupById("campus", lang));
+
+    // Assert
+    expect(stops.map((stop) => stop.id)).toEqual(expect.arrayContaining(["nsc-n-center", "nsc-opposite"]));
+    for (const stop of stops) expect(stop).toHaveProperty("map");
+    for (const id of ["nsc-n-center", "nsc-opposite"]) {
+      expect(stops.find((stop) => stop.id === id)!.map).toEqual(captured.find((stop) => stop.id === id)!.map);
+    }
+  });
+
+  it("leaves out commute stop maps in the all-groups body too, and only there", async () => {
+    // Act
+    const groups = await service.getBusGroups("ko");
+
+    // Assert
+    const served = groups.flatMap((group) => ((group.screen as { stops?: Stop[] }).stops ?? []).map((stop) => ({ group: group.id, stop })));
+    expect(served.filter(({ group }) => group === "commute").length).toBeGreaterThan(0);
+    expect(new Set(served.filter(({ stop }) => "map" in stop).map(({ group }) => group))).toEqual(new Set(["campus"]));
   });
 });

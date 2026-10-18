@@ -1,5 +1,5 @@
 {
-  "_about": "generated 2026-10-18 from GET /bus/config/commute on a local build of feat/stop-subway-link (NODE_ENV=development, ROLE=api, _dev databases), Accept-Language ko, because production does not serve stops[].subwayStation yet; apart from that field the untrimmed body equals production's /bus/config/commute the same day. Re-capture from production after the deploy; services cut to the first two, each to its first route type's stop sequence, cut to two stops; stops cut to the first two (jeongja-exit3, with its station, and nsc-n-center, without); guide markers and walks cut to one, the walk to its first two points",
+  "_about": "generated 2026-10-18 from GET /bus/config/commute on a local build of feat/stop-subway-link (NODE_ENV=development, ROLE=api, _dev databases), Accept-Language ko, because production does not serve stops[].subwayStation yet; apart from that field the untrimmed body equals production's /bus/config/commute the same day. Re-capture from production after the deploy; services cut to the first two, each to its first route type's stop sequence, cut to two stops; stops cut to the first two (jeongja-exit3, with its station, and nsc-n-center, without); guide markers and walks cut to one, the walk to its first two points Each commute stop's map is removed by hand since hide-commute-stop-maps (2026-10-18), which serves no commute stop a map; nothing else changed.",
   "data": {
     "id": "commute",
     "screenType": "schedule",
@@ -105,37 +105,6 @@
           },
           "photoUrl": "https://media.skkuverse.com/commute/stops/jeongja-exit3/ko-f3580542.jpg",
           "streetViewUrl": "https://inapp.map.naver.com/launchApp/panorama/street?street=on&vrpanoid=4MWo62oDv4KAFMmR86SRaA&vrpanopan=-75&vrpanotilt=0&vrpanofov=80&appTargetPage=panorama%2Fstreet&id=4MWo62oDv4KAFMmR86SRaA&pan=-75&tilt=0&fov=80&fallbackUrl=https%3A%2F%2Fviewer.map.naver.com%2Fpanorama%2F%3Fid%3D4MWo62oDv4KAFMmR86SRaA%26heading%3D-75%26tilt%3D0%26fov%3D80&app=Y&appmarket=N",
-          "map": {
-            "markers": [
-              {
-                "id": "exit3",
-                "kind": "subwayExit",
-                "label": "3번 출구",
-                "number": 3,
-                "coords": {
-                  "lat": 37.365922,
-                  "lng": 127.107774
-                }
-              }
-            ],
-            "paths": [
-              {
-                "kind": "walk",
-                "from": "exit3",
-                "to": "stop",
-                "points": [
-                  {
-                    "lat": 37.365922,
-                    "lng": 127.107774
-                  },
-                  {
-                    "lat": 37.365882,
-                    "lng": 127.107844
-                  }
-                ]
-              }
-            ]
-          },
           "subwayStation": {
             "id": "jeongja",
             "title": "정자역"
@@ -150,11 +119,7 @@
             "lng": 126.975057
           },
           "photoUrl": "https://media.skkuverse.com/bus/stops/nsc-n-center/original-53c0cde5.jpg",
-          "streetViewUrl": "https://inapp.map.naver.com/launchApp/panorama/street?street=on&vrpanoid=YntS5LxXHav0lPF1zQf9tA&vrpanopan=152&vrpanotilt=2&vrpanofov=80&appTargetPage=panorama%2Fstreet&id=YntS5LxXHav0lPF1zQf9tA&pan=152&tilt=2&fov=80&fallbackUrl=https%3A%2F%2Fviewer.map.naver.com%2Fpanorama%2F%3Fid%3DYntS5LxXHav0lPF1zQf9tA%26heading%3D152%26tilt%3D2%26fov%3D80&app=Y&appmarket=N",
-          "map": {
-            "markers": [],
-            "paths": []
-          }
+          "streetViewUrl": "https://inapp.map.naver.com/launchApp/panorama/street?street=on&vrpanoid=YntS5LxXHav0lPF1zQf9tA&vrpanopan=152&vrpanotilt=2&vrpanofov=80&appTargetPage=panorama%2Fstreet&id=YntS5LxXHav0lPF1zQf9tA&pan=152&tilt=2&fov=80&fallbackUrl=https%3A%2F%2Fviewer.map.naver.com%2Fpanorama%2F%3Fid%3DYntS5LxXHav0lPF1zQf9tA%26heading%3D152%26tilt%3D2%26fov%3D80&app=Y&appmarket=N"
         }
       ],
       "features": [

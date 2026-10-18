@@ -6,6 +6,7 @@ import { jongroRoutes } from "../bus.config";
 import { BusRegistryService } from "../registry/bus-registry.service";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import { BusStopsService } from "../stops/bus-stops.service";
+import { HAS_STOP_MAPS_BY_GROUP } from "./bus-config.config";
 import { CAMPUS_SERVICE_IDS, COMMUTE_SERVICE_IDS } from "./bus-config.constants";
 import { toBusGroupIds, toBusGroups } from "./bus-config.mapper";
 import type { BusGroup } from "./bus-config.wire";
@@ -57,8 +58,8 @@ export class BusConfigService {
 
   private toGroups(lang: SupportedLang, routes: readonly RegistryRoute[]): BusGroup[] {
     const stops = {
-      campus: this.stops.servedSequences(CAMPUS_SERVICE_IDS, lang),
-      commute: this.stops.servedSequences(COMMUTE_SERVICE_IDS, lang),
+      campus: this.stops.servedSequences(CAMPUS_SERVICE_IDS, lang, HAS_STOP_MAPS_BY_GROUP.campus),
+      commute: this.stops.servedSequences(COMMUTE_SERVICE_IDS, lang, HAS_STOP_MAPS_BY_GROUP.commute),
     };
     return toBusGroups({ lang, stops, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN });
   }
