@@ -1,0 +1,121 @@
+{
+  "_about": "Sightings in the shape BusRealtimeJongroClient.fetchSightings returns (src/bus/realtime/jongro/bus-realtime-jongro.types.ts). vehicle100000018: captured from TOPIS buspos/getBusPosByRtid?busRouteId=100900008 (종로02) on 2026-10-17 from production (pos_100900008_1792231921, _1792232431, _1792232451, _1792232472 and _1792232492), one sighting per row of vehicle 100000018, every other row dropped. frozen2009: hand-written, never captured, modeled on 종로02 bus 2009 on 2026-10-18 11:55-12:00 KST, which sat at sectOrd 1 with sectDist 0.056, stopFlag 0 and lastStTm 0 while TOPIS kept its dataTm at 11:55:33 for over four minutes; its vehicle id is made up, and its first sighting borrows 100000018's 12 m move (0.044 to 0.056) so the bus enters the freeze running.",
+  "vehicle100000018": {
+    "firstAtOrigin": {
+      "stationId": "100900204",
+      "latitude": "37.588444",
+      "longitude": "126.990028",
+      "carNumber": "5512",
+      "turnaroundStationId": "100900121",
+      "vehicleId": "100000018",
+      "sectOrd": 1,
+      "sectDist": 0.043,
+      "fullSectDist": 0.259,
+      "isAtStop": false,
+      "observedAt": "2026-10-17T19:11:40+09:00",
+      "lastStTm": 0
+    },
+    "creepingOut": [
+      {
+        "stationId": "100900204",
+        "latitude": "37.588464",
+        "longitude": "126.990004",
+        "carNumber": "5512",
+        "turnaroundStationId": "100900121",
+        "vehicleId": "100000018",
+        "sectOrd": 1,
+        "sectDist": 0,
+        "fullSectDist": 0.259,
+        "isAtStop": false,
+        "observedAt": "2026-10-17T19:20:26+09:00",
+        "lastStTm": 0
+      },
+      {
+        "stationId": "100900204",
+        "latitude": "37.588648",
+        "longitude": "126.990551",
+        "carNumber": "5512",
+        "turnaroundStationId": "100900121",
+        "vehicleId": "100000018",
+        "sectOrd": 1,
+        "sectDist": 0.023,
+        "fullSectDist": 0.259,
+        "isAtStop": false,
+        "observedAt": "2026-10-17T19:20:40+09:00",
+        "lastStTm": 0
+      },
+      {
+        "stationId": "100900204",
+        "latitude": "37.588707",
+        "longitude": "126.990208",
+        "carNumber": "5512",
+        "turnaroundStationId": "100900121",
+        "vehicleId": "100000018",
+        "sectOrd": 1,
+        "sectDist": 0.031,
+        "fullSectDist": 0.259,
+        "isAtStop": false,
+        "observedAt": "2026-10-17T19:21:01+09:00",
+        "lastStTm": 0
+      }
+    ],
+    "leftOrigin": {
+      "stationId": "100900202",
+      "latitude": "37.589249",
+      "longitude": "126.989677",
+      "carNumber": "5512",
+      "turnaroundStationId": "100900121",
+      "vehicleId": "100000018",
+      "sectOrd": 2,
+      "sectDist": 0.016,
+      "fullSectDist": 0.551,
+      "isAtStop": false,
+      "observedAt": "2026-10-17T19:21:23+09:00",
+      "lastStTm": 1863
+    }
+  },
+  "frozen2009": [
+    {
+      "stationId": "100900204",
+      "latitude": "37.588422",
+      "longitude": "126.990045",
+      "carNumber": "2009",
+      "turnaroundStationId": "100900121",
+      "vehicleId": "100000999",
+      "sectOrd": 1,
+      "sectDist": 0.044,
+      "fullSectDist": 0.259,
+      "isAtStop": false,
+      "observedAt": "2026-10-18T11:55:13+09:00",
+      "lastStTm": 0
+    },
+    {
+      "stationId": "100900204",
+      "latitude": "37.588626",
+      "longitude": "126.990177",
+      "carNumber": "2009",
+      "turnaroundStationId": "100900121",
+      "vehicleId": "100000999",
+      "sectOrd": 1,
+      "sectDist": 0.056,
+      "fullSectDist": 0.259,
+      "isAtStop": false,
+      "observedAt": "2026-10-18T11:55:33+09:00",
+      "lastStTm": 0
+    },
+    {
+      "stationId": "100900204",
+      "latitude": "37.588626",
+      "longitude": "126.990177",
+      "carNumber": "2009",
+      "turnaroundStationId": "100900121",
+      "vehicleId": "100000999",
+      "sectOrd": 1,
+      "sectDist": 0.056,
+      "fullSectDist": 0.259,
+      "isAtStop": false,
+      "observedAt": "2026-10-18T11:55:33+09:00",
+      "lastStTm": 0
+    }
+  ]
+}

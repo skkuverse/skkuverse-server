@@ -14,6 +14,8 @@ export interface JongroBusSighting {
   isAtStop: boolean;
   /** WHY: TOPIS's observation time as an ISO-8601 instant at +09:00. */
   observedAt: string;
+  /** QUIRK(topis): seconds to the terminal, 0 only at sectOrd 1; absent when the row carries no number. */
+  lastStTm?: number;
 }
 
 /** WHY: since when a bus has been at its last passed station (ISO instant), and for how many seconds. */
