@@ -79,8 +79,9 @@ describe("GET /app/config", () => {
     // either side, just a page whose buttons stop doing anything.
     //
     // The webview host, the standalone ESKARA site whose pages open ticket
-    // links through `link.open`, the 음식 룰렛 roulette and the 랜덤 컨텐츠 box
-    // whose results open the map through `map.openPlace`, 플리 예습, whose
+    // links through `link.open`, the 음식 룰렛 roulette, whose results open the
+    // map through `map.openPlace`, the 선물상자 box, whose links go out through
+    // `share.open`, 플리 예습, whose
     // song buttons open YouTube and Spotify, and 인자셔틀, whose night boarding
     // spot opens the map, and 무대 타임테이블, which sends
     // nothing of its own yet. Exact equality rather than `toContain`,
