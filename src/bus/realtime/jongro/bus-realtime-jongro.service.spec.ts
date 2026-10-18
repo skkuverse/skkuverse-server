@@ -6,6 +6,9 @@
  * the arrival list and turnaround stops to the registry sync (applied at the
  * third identical tick, never blocking the cache writes), and rejects on any
  * failure, a missing registry route included, so the poller registry counts it.
+ * Each stored bus keeps its vehicle fields, sits at its section ord, and is
+ * stationary when its vehicle stood still since the poller's previous
+ * observation of it (never on the first after a restart).
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -18,6 +21,7 @@ import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/
 import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-jongro.client.fake";
 import { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
 import { jongroArrivalDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
+import { jongroSighting } from "../../../../__tests__/helpers/bus/jongro-sighting";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../../infra/clock";
 import { jongroRoutes } from "../../bus.config";
@@ -113,7 +117,7 @@ describe("BusRealtimeJongroService.listArrivals", () => {
 describe("BusRealtimeJongroService.listPositions", () => {
   it("maps location data with station mapping", async () => {
     // Arrange
-    client.sightings = [{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537", turnaroundStationId: "100900028" }];
+    client.sightings = [jongroSighting({ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537", sectOrd: 6 })];
 
     // Act
     await runTickAndFlush();
@@ -135,7 +139,7 @@ describe("BusRealtimeJongroService.listPositions", () => {
 
   it("drops a bus at a stop the registry does not list", async () => {
     // Arrange
-    client.sightings = [{ stationId: "999999999", latitude: "37.5", longitude: "126.9", carNumber: "0001", turnaroundStationId: "100900028" }];
+    client.sightings = [jongroSighting({ stationId: "999999999", latitude: "37.5", longitude: "126.9", carNumber: "0001" })];
 
     // Act
     await service.refresh(route("07"));
@@ -146,7 +150,7 @@ describe("BusRealtimeJongroService.listPositions", () => {
 
   it("times a bus's dwell at its stop from the first tick that saw it there", async () => {
     // Arrange
-    client.sightings = [{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537", turnaroundStationId: "100900028" }];
+    client.sightings = [jongroSighting({ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537", sectOrd: 6 })];
     await service.refresh(route("07"));
     now = new Date(NOW.getTime() + 80_000);
 
@@ -237,7 +241,7 @@ describe("BusRealtimeJongroService.refresh and the registry", () => {
 
     // Act
     for (let i = 0; i < 3; i++) await service.refresh(route("07"));
-    client.sightings = [{ stationId: "100000999", latitude: "37.5", longitude: "127.0", carNumber: "0009" }];
+    client.sightings = [jongroSighting({ stationId: "100000999", latitude: "37.5", longitude: "127.0", carNumber: "0009", turnaroundStationId: undefined, sectOrd: 23 })];
     await service.refresh(route("07"));
 
     // Assert
@@ -249,7 +253,7 @@ describe("BusRealtimeJongroService.refresh and the registry", () => {
   it("keeps the stored turnaround stop when the position rows name none", async () => {
     // Arrange
     client.arrivals = arrivalsOf([...storedIdsOf("jongro07"), "100000999"]);
-    client.sightings = [{ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537" }];
+    client.sightings = [jongroSighting({ turnaroundStationId: undefined })];
 
     // Act
     for (let i = 0; i < 3; i++) await service.refresh(route("07"));
@@ -278,5 +282,138 @@ describe("BusRealtimeJongroService.refresh and the registry", () => {
     // Act & Assert
     await expect(service.refresh(route("02"))).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE" });
     expect([...busCache.values.keys()]).toEqual([]);
+  });
+});
+
+// WHY: the realtime response tracks each bus from its stored vehicle fields (add-jongro-bus-positions D2, D3).
+describe("BusRealtimeJongroService.refresh vehicle tracking", () => {
+  // Route 02 vehicle 100000018 idling at ord 1 (pos_100900008_1792231921 and _1792231942, 2026-10-17 capture).
+  const idle18 = (observedAt: string, sectDist = 0.043) =>
+    jongroSighting({
+      stationId: "100900204",
+      latitude: "37.588444",
+      longitude: "126.990028",
+      carNumber: "5512",
+      turnaroundStationId: "100900121",
+      vehicleId: "100000018",
+      sectOrd: 1,
+      sectDist,
+      fullSectDist: 0.259,
+      isAtStop: false,
+      observedAt,
+    });
+  const stationaryOf = async () => (await service.listPositions("02"))!.map((p) => ("isStationary" in p ? p.isStationary : "legacy"));
+
+  it("stores each bus's vehicle fields at its section ord", async () => {
+    // Arrange
+    client.sightings = [idle18("2026-10-17T19:11:40+09:00")];
+
+    // Act
+    await service.refresh(route("02"));
+
+    // Assert
+    expect(busCache.values.get("jongro_locations_02")).toEqual([
+      {
+        sequence: "1",
+        stationName: "성균관대학교",
+        carNumber: "5512",
+        eventDate: NOW.toISOString(),
+        estimatedTime: 0,
+        stationId: "100900204",
+        latitude: "37.588444",
+        longitude: "126.990028",
+        recordTime: NOW.toISOString(),
+        vehicleId: "100000018",
+        sectDist: 0.043,
+        fullSectDist: 0.259,
+        isAtStop: false,
+        observedAt: "2026-10-17T19:11:40+09:00",
+        isStationary: false,
+      },
+    ]);
+  });
+
+  it("places a bus at the loop end by its section ord, not the stop's first ord", async () => {
+    // Arrange
+    client.sightings = [idle18("2026-10-17T19:11:40+09:00", 0)];
+    client.sightings[0]!.sectOrd = 27;
+
+    // Act
+    await service.refresh(route("02"));
+
+    // Assert
+    expect((await service.listPositions("02"))!.map((p) => p.sequence)).toEqual(["27"]);
+  });
+
+  it("marks a vehicle stationary at its second observation without a move", async () => {
+    // Arrange
+    client.sightings = [idle18("2026-10-17T19:11:40+09:00")];
+    await service.refresh(route("02"));
+    client.sightings = [idle18("2026-10-17T19:11:58+09:00")];
+
+    // Act
+    await service.refresh(route("02"));
+
+    // Assert
+    expect(await stationaryOf()).toEqual([true]);
+  });
+
+  it("does not mark it stationary after a 12 m move", async () => {
+    // Arrange
+    client.sightings = [idle18("2026-10-17T19:14:40+09:00", 0.044)];
+    await service.refresh(route("02"));
+    client.sightings = [idle18("2026-10-17T19:14:58+09:00", 0.056)];
+
+    // Act
+    await service.refresh(route("02"));
+
+    // Assert
+    expect(await stationaryOf()).toEqual([false]);
+  });
+
+  it("forgets every vehicle on a restart, so the first observation is never stationary", async () => {
+    // Arrange
+    client.sightings = [idle18("2026-10-17T19:11:40+09:00")];
+    await service.refresh(route("02"));
+    const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
+    service = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(client), new BusCacheService(asReal<BusCacheRepository>(busCache)), registry, clock);
+    client.sightings = [idle18("2026-10-17T19:11:58+09:00")];
+
+    // Act
+    await service.refresh(route("02"));
+
+    // Assert
+    expect(await stationaryOf()).toEqual([false]);
+  });
+
+  it("forgets a vehicle missing from a tick", async () => {
+    // Arrange
+    client.sightings = [idle18("2026-10-17T19:11:40+09:00")];
+    await service.refresh(route("02"));
+    client.sightings = [];
+    await service.refresh(route("02"));
+    client.sightings = [idle18("2026-10-17T19:12:19+09:00")];
+
+    // Act
+    await service.refresh(route("02"));
+
+    // Assert
+    expect(await stationaryOf()).toEqual([false]);
+  });
+
+  it("keeps each route's vehicles apart", async () => {
+    // Arrange
+    client.sightings = [idle18("2026-10-17T19:11:40+09:00")];
+    await service.refresh(route("02"));
+    // The same vehicle id on 07 moved, so 02 would read it as moving if the routes shared one memory.
+    client.sightings = [jongroSighting({ vehicleId: "100000018", sectOrd: 1, stationId: "100900220", sectDist: 0.2, observedAt: "2026-10-17T19:11:58+09:00" })];
+    await service.refresh(route("07"));
+    client.sightings = [idle18("2026-10-17T19:11:58+09:00")];
+
+    // Act
+    await service.refresh(route("02"));
+
+    // Assert
+    expect(await stationaryOf()).toEqual([true]);
   });
 });

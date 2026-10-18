@@ -8,30 +8,231 @@
     "buses": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "stationIndex": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "estimated"
+              },
+              "stationIndex": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "carNumber": {
+                "type": "string"
+              },
+              "estimatedTime": {
+                "type": "number",
+                "deprecated": true,
+                "description": "Legacy: seconds at the last passed stop; tracked buses carry tracked.status"
+              },
+              "latitude": {
+                "type": "string"
+              },
+              "longitude": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "stationIndex",
+              "carNumber",
+              "estimatedTime"
+            ]
           },
-          "carNumber": {
-            "type": "string"
-          },
-          "estimatedTime": {
-            "type": "number"
-          },
-          "latitude": {
-            "type": "string"
-          },
-          "longitude": {
-            "type": "string"
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "tracked"
+              },
+              "stationIndex": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "carNumber": {
+                "type": "string"
+              },
+              "estimatedTime": {
+                "type": "number",
+                "deprecated": true,
+                "description": "Legacy: seconds at the last passed stop; tracked buses carry tracked.status"
+              },
+              "latitude": {
+                "type": "string"
+              },
+              "longitude": {
+                "type": "string"
+              },
+              "tracked": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "const": "running"
+                      },
+                      "vehicleId": {
+                        "type": "string"
+                      },
+                      "observedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                      },
+                      "crowding": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "relaxed",
+                              "normal",
+                              "crowded"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "isLastBus": {
+                        "type": "boolean"
+                      },
+                      "progress": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "segmentMeters": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "nextStopInSec": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "vehicleId",
+                      "observedAt",
+                      "crowding",
+                      "isLastBus",
+                      "progress",
+                      "segmentMeters",
+                      "nextStopInSec"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "const": "atStop"
+                      },
+                      "vehicleId": {
+                        "type": "string"
+                      },
+                      "observedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                      },
+                      "crowding": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "relaxed",
+                              "normal",
+                              "crowded"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "isLastBus": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "vehicleId",
+                      "observedAt",
+                      "crowding",
+                      "isLastBus"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "const": "waiting"
+                      },
+                      "vehicleId": {
+                        "type": "string"
+                      },
+                      "observedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                      },
+                      "crowding": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "relaxed",
+                              "normal",
+                              "crowded"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "isLastBus": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "vehicleId",
+                      "observedAt",
+                      "crowding",
+                      "isLastBus"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "stationIndex",
+              "carNumber",
+              "estimatedTime",
+              "tracked"
+            ]
           }
-        },
-        "required": [
-          "stationIndex",
-          "carNumber",
-          "estimatedTime"
         ]
       }
     },

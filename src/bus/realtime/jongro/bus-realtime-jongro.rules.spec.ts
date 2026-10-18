@@ -1,14 +1,19 @@
 /**
  * The Jongro rules: which TOPIS header codes carry data, which of TOPIS's
  * strings read as a number, the dwell timer at a
- * stop (reset after 10 minutes) at each threshold, and the cache keys.
+ * stop (reset after 10 minutes) at each threshold, the cache keys, TOPIS's
+ * observation time as a KST instant, and whether a bus stood still between
+ * two observations (under 10 m).
  */
 import {
   isNoResultHeaderCd,
+  isStationary,
   isUsableHeaderCd,
   toArrivalsKey,
   toDwell,
+  toObservedAt,
   toPositionsKey,
+  toTopisDecimal,
   toTopisInteger,
 } from "./bus-realtime-jongro.rules";
 import { jongroRoutes } from "../../bus.config";
@@ -89,5 +94,87 @@ describe("toPositionsKey", () => {
   it("keys a route's positions by its code", () => {
     // Act & Assert
     expect(toPositionsKey(route07.code)).toBe("jongro_locations_07");
+  });
+});
+
+describe("toTopisDecimal", () => {
+  it.each([
+    ["0.043", 0.043],
+    ["0", 0],
+    [" 0.259 ", 0.259],
+    ["12", 12],
+    ["", null],
+    ["0.04km", null],
+    ["-0.1", null],
+    [null, null],
+    [undefined, null],
+  ])("%j → %j", (text, expected) => {
+    // Act & Assert
+    expect(toTopisDecimal(text)).toBe(expected);
+  });
+});
+
+// QUIRK(topis): getBusPosByRtid's dataTm is a KST wall clock with no offset (the 2026-10-17 capture).
+describe("toObservedAt", () => {
+  it.each([
+    ["20261017191140", "2026-10-17T19:11:40+09:00"],
+    ["20261019013000", "2026-10-19T01:30:00+09:00"],
+    [" 20261017191140 ", "2026-10-17T19:11:40+09:00"],
+    ["2026101719114", null],
+    ["2026-10-17 19:11:40", null],
+    ["", null],
+    [null, null],
+    [undefined, null],
+  ])("%j → %j", (dataTm, expected) => {
+    // Act & Assert
+    expect(toObservedAt(dataTm)).toBe(expected);
+  });
+
+  it("names the KST instant, not the UTC wall clock", () => {
+    // Act
+    const observedAt = toObservedAt("20261020013000")!;
+
+    // Assert
+    expect(new Date(observedAt).toISOString()).toBe("2026-10-19T16:30:00.000Z");
+    expect(new Date(observedAt).toISOString()).not.toBe("2026-10-20T01:30:00.000Z");
+  });
+});
+
+// WHY: a bus idling at its origin reports stopFlag 0 (add-jongro-bus-positions D3), so standing still is judged
+// from two observations of the same vehicle.
+describe("isStationary", () => {
+  const observation = { sectOrd: 1, sectDist: 0.043, observedAt: "2026-10-17T19:11:40+09:00", isStationary: false };
+  const LATER = "2026-10-17T19:11:58+09:00";
+
+  it("is false for a vehicle not observed before, as after a poller restart", () => {
+    // Act & Assert
+    expect(isStationary(undefined, { sectOrd: 1, sectDist: 0.043, observedAt: LATER })).toBe(false);
+  });
+
+  it.each([
+    [0.043, true],
+    [0.052, true],
+    [0.053, false],
+    [0.054, false],
+    [0.033, false],
+    [0.034, true],
+  ])("a later observation at sectDist %d → %s", (sectDist, expected) => {
+    // Act & Assert
+    expect(isStationary(observation, { sectOrd: 1, sectDist, observedAt: LATER })).toBe(expected);
+  });
+
+  it("is false when the bus is in another section, however near", () => {
+    // Act & Assert
+    expect(isStationary(observation, { sectOrd: 2, sectDist: 0.043, observedAt: LATER })).toBe(false);
+  });
+
+  it.each([true, false])("keeps the previous answer (%s) when TOPIS repeats the same observation", (previous) => {
+    // Act & Assert
+    expect(isStationary({ ...observation, isStationary: previous }, { sectOrd: 1, sectDist: 0.09, observedAt: observation.observedAt })).toBe(previous);
+  });
+
+  it("keeps the previous answer when the observation time goes back", () => {
+    // Act & Assert
+    expect(isStationary({ ...observation, isStationary: true }, { sectOrd: 1, sectDist: 0.09, observedAt: "2026-10-17T19:11:00+09:00" })).toBe(true);
   });
 });

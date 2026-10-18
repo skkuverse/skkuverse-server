@@ -85,18 +85,31 @@ describe("GET /bus/realtime/data/:groupId", () => {
     expect(jongro.status).toBe(200);
     expect(res.status).toBe(200);
     expect(res.body.meta.totalBuses).toBe(1);
+    // WHY: kind and tracked are what add-jongro-bus-positions adds (task 2.2); the top-level fields are as before.
     expect(jongro.body.data.buses[0]).toEqual({
       stationIndex: 2, // 3 - 1
       carNumber: "1234",
       estimatedTime: 120,
       latitude: "37.5",
       longitude: "127.0",
+      kind: "tracked",
+      tracked: {
+        status: "running",
+        vehicleId: "100000103",
+        observedAt: "2026-10-20T10:00:00+09:00",
+        crowding: null,
+        isLastBus: false,
+        progress: 0.5,
+        segmentMeters: 300,
+        nextStopInSec: null,
+      },
     });
     // The HSSC bus has no latitude/longitude keys (conditional spread).
     expect(res.body.data.buses[0]).toEqual({
       stationIndex: 0,
       carNumber: "5678",
       estimatedTime: 60,
+      kind: "estimated",
     });
     expect(res.body.data.buses[0]).not.toHaveProperty("latitude");
   });
@@ -164,6 +177,55 @@ describe("GET /bus/realtime/data/:groupId bodies", () => {
       expectWire(realtimeGroup, body.data);
       expectWire(realtimeGroupMeta, meta);
     }
+  });
+});
+
+// WHY: every bus says whether it is estimated or tracked, and a tracked bus's status decides which fields it
+// carries (add-jongro-bus-positions D1); each status must parse with the published schema.
+describe("GET /bus/realtime/data/jongro02 tracked buses", () => {
+  it("serves a running, an atStop and a waiting bus that parse with the published wire schema", async () => {
+    // Arrange
+    busCache.values.set("jongro_locations_02", [
+      jongroPositionDoc({ sequence: "17", stationId: "100000104", vehicleId: "100000058", sectDist: 0.114, fullSectDist: 0.251, observedAt: "2026-10-17T19:12:02+09:00" }),
+      jongroPositionDoc({ sequence: "15", stationId: "100000103", vehicleId: "100000059", isAtStop: true, observedAt: "2026-10-17T19:12:01+09:00" }),
+      jongroPositionDoc({ sequence: "1", stationId: "100900204", vehicleId: "100000018", isStationary: true, observedAt: "2026-10-17T19:11:58+09:00" }),
+    ]);
+    busCache.values.set("jongro_stations_02", [
+      jongroArrivalDoc({
+        stationId: "100900172",
+        sequence: "18",
+        eventDate: "2026-10-17 19:12:10.0",
+        eta: "곧 도착",
+        buses: [jongroArrivalBus({ vehId: "100000058", staOrd: 18, sectOrd: 18, traTime: 20, arrmsg: "곧 도착", rerideNum: 1 }), noArrivalBus({ staOrd: 18 })],
+      }),
+    ]);
+
+    // Act
+    const res = await request(httpServer).get("/bus/realtime/data/jongro02");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(realtimeGroup, res.body.data);
+    expect(res.body.data.buses.map((bus: { kind: string; tracked: { status: string } }) => [bus.kind, bus.tracked.status])).toEqual([
+      ["tracked", "running"],
+      ["tracked", "atStop"],
+      ["tracked", "waiting"],
+    ]);
+    expect(res.body.data.buses[0].tracked).toMatchObject({ nextStopInSec: 28, segmentMeters: 251 });
+    expect(Object.keys(res.body.data.buses[1].tracked).sort()).toEqual(["crowding", "isLastBus", "observedAt", "status", "vehicleId"]);
+  });
+
+  it("serves every HSSC bus as estimated, with no tracked object", async () => {
+    // Arrange
+    busCache.values.set("hssc", [hsscBusDoc()]);
+
+    // Act
+    const res = await request(httpServer).get("/bus/realtime/data/hssc");
+
+    // Assert
+    expectWire(realtimeGroup, res.body.data);
+    expect(res.body.data.buses).toEqual([expect.objectContaining({ kind: "estimated" })]);
+    expect(res.body.data.buses[0]).not.toHaveProperty("tracked");
   });
 });
 
