@@ -1,7 +1,7 @@
 ---
 title: Runtime Roles — Pollers Write, Api Replicas Read
 type: adr
-status: draft
+status: accepted
 owner: zoyoong124@gmail.com
 last-updated: 2026-10-19
 audience: internal
@@ -13,7 +13,7 @@ audience: internal
 
 ## Status
 
-Draft — 2026-10-19. The decisions come from the OpenSpec change `isolate-api-from-pollers` (`openspec/changes/isolate-api-from-pollers/design.md`); its `tasks.md` is the record of which rules hold in code so far. The ADR becomes accepted when the change is archived.
+Accepted — 2026-10-19, shipped in PR #288 and verified in production the same day. The decisions come from the OpenSpec change `isolate-api-from-pollers` (`openspec/changes/archive/2026-10-19-isolate-api-from-pollers/design.md`).
 
 It supersedes one consequence drawn from [ADR 0009](0009-multi-origin-active-active.md): that every role, api replicas included, seeds the Jongro registry and route lines at boot, so that a standby host running api replicas without a poller could serve on its first deploy (`improve-jongro-realtime` D7). ADR 0009's second host was removed on 2026-10-03, and a poller ships in every deploy.
 
