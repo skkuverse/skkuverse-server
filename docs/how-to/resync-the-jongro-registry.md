@@ -55,7 +55,7 @@ An applied change logs `bus.jongro.registry_synced` (warn) with `fromVersion`, `
 
 ### A missing document
 
-While buses run, wait: the poller inserts the route within three ticks (about 75 s) and logs `bus.jongro.registry_bootstrapped`. Its tick writes no `bus_cache` entry for the route until then, and resolves, so `poller.failing` does not fire. Overnight no position row names a turnaround stop, so nothing is counted until the first bus runs.
+While buses run, wait: the poller inserts the route within three ticks (about 75 s) and logs `bus.jongro.registry_bootstrapped`. Its tick writes no `bus_cache` entry for the route until then, and rejects with `BusRegistryBootstrappingError`; the inserting tick resolves, so a daytime bootstrap stays under the three failures that declare `poller.failing`. Overnight no position row names a turnaround stop, so nothing is counted until the first bus runs: `jongro-<code>` is declared failing and logs `poller.recovered` at the insert.
 
 To serve the route before then, insert it by hand:
 
