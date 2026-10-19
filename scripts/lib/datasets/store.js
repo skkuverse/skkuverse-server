@@ -124,12 +124,16 @@ async function rollback(db, dataset, to, { baseRevision, by, now, note }) {
 }
 
 /**
- * `source`'s current data as the next revision of `target`, recording `copiedFrom`.
+ * `source`'s data at `sourceRevision`, the revision the caller checked, as the
+ * next revision of `target`, recording `copiedFrom`. `{ ok: false, reason:
+ * "source-moved", checked, current }` when source is at another revision now.
  * `baseRevision` is target's revision read at start, or null when target has none.
+ * Nothing is written to `source`.
  */
-async function copy(source, target, dataset, { baseRevision, by, now, note }) {
+async function copy(source, target, dataset, { sourceRevision, baseRevision, by, now, note }) {
   const from = await readDataset(source, dataset);
   if (from === null) return { ok: false, reason: "missing" };
+  if (from.revision !== sourceRevision) return { ok: false, reason: "source-moved", checked: sourceRevision, current: currentOf(from) };
   const copiedFrom = { database: source.databaseName, revision: from.revision };
   return write(target, dataset, from.data, { baseRevision, by, now, note, command: "copy-prod-to-dev", copiedFrom });
 }

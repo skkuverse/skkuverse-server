@@ -222,6 +222,13 @@ function refusalOf(result, ctx, base) {
         "Nothing written. Pull it and push without --create.",
     );
   }
+  if (result.reason === "source-moved") {
+    const { revision, updatedBy, updatedAt } = result.current;
+    return new Refusal(
+      `${ctx.names.prod} moved to revision ${revision} (${updatedBy}, ${iso(updatedAt)}) after revision ${result.checked} was checked. ` +
+        "Nothing written. Run copy-prod-to-dev again.",
+    );
+  }
   if (result.reason === "pruned") return new Refusal(`revision ${ctx.args.revision} was pruned; the oldest kept is ${result.oldestKept}.`);
   if (result.reason === "no-revision") return new Refusal(`${dataset} has no revision ${ctx.args.revision}.`);
   return new Refusal(`${dataset}: no dataset in ${ctx.dbName}. Create it with \`push ${dataset} --create --file <json>\`.`);
@@ -428,7 +435,7 @@ async function copyProdToDev(ctx) {
     before: current === null ? null : current.data,
     after: source.data,
     summary: `production revision ${source.revision} into ${base === null ? "a new dataset" : `revision ${base + 1}`}`,
-    write: (meta) => store.copy(prod, ctx.db, dataset, { ...meta, baseRevision: base }),
+    write: (meta) => store.copy(prod, ctx.db, dataset, { ...meta, sourceRevision: source.revision, baseRevision: base }),
   });
   if (result !== null) reportStored(ctx, result, base);
   return EXIT_OK;
