@@ -12,6 +12,10 @@
  * The code-held sources (`miniapps`, `busGroups`, `subwayStations`,
  * `busServices`) list the identities the compiled checkout serves, the same
  * lists the server checks against (move-editorial-datasets D3).
+ *
+ * The wave A datasets (`campus-banners`, `transit-layout`) are checked at push
+ * with the checks the boot refused a committed file on (D4, D5), through the
+ * tool's own checkData.
  */
 import path from "node:path";
 import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
@@ -21,6 +25,7 @@ import { SubwayStationsService } from "../../../src/subway/stations/subway-stati
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { loadCatalog } = require("../../../scripts/lib/datasets/catalog");
+const { checkData } = require("../../../scripts/lib/datasets/checks");
 
 const SRC = path.join(__dirname, "../../../src");
 const CONFIG = path.join(SRC, "infra/config");
@@ -29,6 +34,16 @@ const srcLoader = (relativePath: string): unknown => require(path.join(SRC, rela
 const fixture = require("../ui/fixtures/home-layout.dataset.json") as Record<string, unknown>;
 const { _about, ...homeLayout } = fixture;
 void _about;
+
+/** A dataset fixture's data, as the push imports it: a fresh copy without `_about`. */
+function datasetFixture(relativePath: string): Record<string, unknown> {
+  const { _about: note, ...data } = structuredClone(require(relativePath)) as Record<string, unknown>;
+  void note;
+  return data;
+}
+
+type Issue = { dataset: string; path: Array<string | number>; message: string };
+const issueLines = (issues: Issue[]): string[] => issues.map((issue) => `${issue.dataset}: ${issue.path.join(".")}: ${issue.message}`);
 
 describe("loadCatalog", () => {
   it("accepts revision 1 of the stored home layout with the server's schema", () => {
@@ -141,5 +156,49 @@ describe("loadCatalog code-held sources", () => {
     // Act & Assert
     expect(sources.busGroups.ids()).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
     expect(sources.busServices.has("campus-inja")).toBe(true);
+  });
+});
+
+describe("loadCatalog campus-banners", () => {
+  const banners = () => datasetFixture("../ui/fixtures/campus-banners.dataset.json") as { items: Array<Record<string, unknown>> };
+
+  it("is owned by src/ui/campus and accepts revision 1 with no issue and no reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["campus-banners"];
+
+    // Act
+    const issues = checkData(catalog, "campus-banners", banners(), {});
+
+    // Assert
+    expect(entry.owner).toBe("src/ui/campus");
+    expect(issues).toEqual([]);
+    expect(entry.referencesOf(entry.schema.parse(banners()))).toEqual([]);
+  });
+
+  it("refuses a banner whose miniapp target is unregistered, naming its actionValue path and the id", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = banners();
+    data.items[2] = { ...data.items[2], actionType: "miniapp", actionValue: "no-such-miniapp/entry" };
+
+    // Act
+    const lines = issueLines(checkData(catalog, "campus-banners", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^campus-banners: items\.2\.actionValue: .*no-such-miniapp/)]);
+  });
+
+  it("refuses an image off the media bucket, naming its imageUrl path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = banners();
+    data.items[0] = { ...data.items[0], imageUrl: "https://evil.com/a.webp" };
+
+    // Act
+    const lines = issueLines(checkData(catalog, "campus-banners", data, {}));
+
+    // Assert
+    expect(lines).toEqual(["campus-banners: items.0.imageUrl: must be an object on the media bucket"]);
   });
 });
