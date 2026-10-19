@@ -2,6 +2,7 @@ import { z } from "zod";
 import { linkActionType } from "../../shared/link-action.wire";
 import { findRepeatedId } from "../ui.rules";
 import { bannerImageFile, carouselFields, localizedText, mediaUrl, slug } from "../ui.schema";
+import type { StoredHomeLayout } from "./ui-home.document";
 import { DEFAULT_MINIAPP_FEED_LIMIT, HOME_LAYOUT_VERSION, MAX_MINIAPP_FEED_LIMIT, MIN_MINIAPP_FEED_LIMIT } from "./ui-home.constants";
 
 const tileIconFile = z.discriminatedUnion("kind", [
@@ -28,12 +29,7 @@ const homeCarousel = z
     message: "may place the default banner once",
   });
 
-const tileGridFile = z.strictObject({
-  type: z.literal("tile_grid"),
-  id: slug,
-  title: localizedText.optional(),
-  tiles: z.array(tileFile).min(1),
-});
+const tileGridFile = z.strictObject({ type: z.literal("tile_grid"), id: slug, title: localizedText.optional(), tiles: z.array(tileFile).min(1) });
 
 const miniAppFeedFile = z.strictObject({
   type: z.literal("miniapp_feed"),
@@ -56,6 +52,8 @@ export const homeLayoutFile = z
   });
 
 export type HomeLayoutRaw = z.output<typeof homeLayoutFile>;
+
+export const storedHomeLayout = z.object({ revision: z.int().positive(), data: homeLayoutFile }) satisfies z.ZodType<StoredHomeLayout>;
 type SectionRaw = HomeLayoutRaw["sections"][number];
 export type TileRaw = Extract<SectionRaw, { type: "tile_grid" }>["tiles"][number];
 
