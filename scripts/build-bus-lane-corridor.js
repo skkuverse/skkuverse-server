@@ -4,12 +4,16 @@
  *
  *
  *
+ *
+ *
+ *
  */
 const fs = require("node:fs");
 const path = require("node:path");
+const { readWorkingFile, workingFilePath, writeWorkingFile } = require("./lib/datasets/working-file");
 
 const ROOT = path.join(__dirname, "..");
-const LANE_FILE = path.join(ROOT, "src/bus/eta/lane/bus-lane.json");
+const DATASET = "bus-lane-corridor";
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 const TOPIS_URL = "http://ws.bus.go.kr/api/rest";
 const NAVER_URL = "https://maps.apigw.ntruss.com/map-direction/v1/driving";
@@ -56,13 +60,12 @@ const CORRIDOR_STATIONS = new Set([
   "금토JC", "판교IC", "서울TG", "금곡", "죽전", "신갈JC",
 ]);
 
-const PLACEHOLDER_HOURS = { from: "07:00", to: "21:00" };
-
 function parseArgs(argv) {
-  const args = { osm: null, saveOsm: null, topisDir: null, dryRun: false, checkProbe: null, checkEntryExit: false };
+  const args = { file: workingFilePath(ROOT, "dev", DATASET), osm: null, saveOsm: null, topisDir: null, dryRun: false, checkProbe: null, checkEntryExit: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--osm") args.osm = argv[++i];
+    if (arg === "--file") args.file = argv[++i];
+    else if (arg === "--osm") args.osm = argv[++i];
     else if (arg === "--save-osm") args.saveOsm = argv[++i];
     else if (arg === "--topis-dir") args.topisDir = argv[++i];
     else if (arg === "--dry-run") args.dryRun = true;
@@ -272,29 +275,21 @@ async function readOsm(args) {
   return JSON.parse(text);
 }
 
-function readLaneFile() {
-  return fs.existsSync(LANE_FILE) ? JSON.parse(fs.readFileSync(LANE_FILE, "utf8")) : null;
-}
-
-function placeholderEntryExit(centerline) {
-  const north = centerline[0];
-  const south = centerline[centerline.length - 1];
-  return { southbound: { entry: north, exit: south }, northbound: { entry: south, exit: north } };
+/** The pulled working file at `file`; throws naming what is wrong with it, so nothing is fetched or written. */
+function readCorridorFile(file) {
+  const working = readWorkingFile(file);
+  if (working.dataset !== DATASET) throw new Error(`${file} holds ${working.dataset}, not ${DATASET}`);
+  if (!working.data?.entryExit) throw new Error(`${file} has no data.entryExit: pull ${DATASET} again`);
+  return working;
 }
 
 async function build(args) {
+  const working = readCorridorFile(args.file);
   const osm = await readOsm(args);
   const { centerline, carriageways } = buildCenterline(osm);
   const boundaries = buildBoundaries(osm, centerline);
   const probeRoutes = await buildProbeRoutes(args.topisDir);
-  const existing = readLaneFile();
-  const lane = {
-    laneHours: existing?.laneHours ?? PLACEHOLDER_HOURS,
-    strategies: existing?.strategies ?? {},
-    corridor: { centerline, boundaries },
-    entryExit: existing?.entryExit ?? placeholderEntryExit(centerline),
-    probeRoutes,
-  };
+  const data = { ...working.data, corridor: { centerline, boundaries }, probeRoutes };
   const spacing = cumulative(centerline).slice(1).map((a, i, all) => a - (i === 0 ? 0 : all[i - 1]));
   process.stdout.write(
     `  carriageway points: ${JSON.stringify(carriageways)}\n` +
@@ -303,9 +298,8 @@ async function build(args) {
       `  boundaries: ${boundaries.map((b) => `${b.name} ${b.alongM}`).join(", ")}\n`,
   );
   if (args.dryRun) return;
-  fs.mkdirSync(path.dirname(LANE_FILE), { recursive: true });
-  fs.writeFileSync(LANE_FILE, `${JSON.stringify(lane, null, 2)}\n`);
-  process.stdout.write(`  wrote ${path.relative(ROOT, LANE_FILE)}\n`);
+  writeWorkingFile(args.file, { ...working, data });
+  process.stdout.write(`  wrote ${args.file}; push it with npm run data -- push ${DATASET}${working.target === "prod" ? " --prod" : ""} --file ${args.file}\n`);
 }
 
 
@@ -406,8 +400,8 @@ async function checkEntryExit(lane) {
 const args = parseArgs(process.argv.slice(2));
 
 async function main() {
-  if (args.checkProbe) return checkProbe(readLaneFile(), args.checkProbe);
-  if (args.checkEntryExit) return checkEntryExit(readLaneFile());
+  if (args.checkProbe) return checkProbe(readCorridorFile(args.file).data, args.checkProbe);
+  if (args.checkEntryExit) return checkEntryExit(readCorridorFile(args.file).data);
   return build(args);
 }
 
