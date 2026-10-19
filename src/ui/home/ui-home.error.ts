@@ -7,3 +7,11 @@ export class UiHomeLayoutUnavailableError extends AppError {
     this.name = "UiHomeLayoutUnavailableError";
   }
 }
+
+// WHY: only a failed read of the dataset answers 503; any other error is a fault in this code and reaches the filter as a 500.
+export class UiHomeLayoutReadError extends Error {
+  constructor(cause: unknown) {
+    super(`The home layout dataset could not be read: ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
+    this.name = "UiHomeLayoutReadError";
+  }
+}

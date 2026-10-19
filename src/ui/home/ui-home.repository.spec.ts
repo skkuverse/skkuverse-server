@@ -6,7 +6,9 @@
  * document by `_id`, projecting only the revision and the data, bounded by
  * `maxTimeMS`, on the content database's `datasets`. A missing document and
  * one that fails the schema both read as `null`, each logged at error so a
- * person looks: the service then serves its last good layout or a 503.
+ * person looks, at most once a minute (an invalid one once a minute per
+ * revision): the service then serves its last good layout or a 503. A failed
+ * read rejects as UiHomeLayoutReadError.
  *
  * src/infra/db.ts (whose client src/infra/mongo.ts opens collections on) and
  * src/infra/logger.ts are mocked.
@@ -43,6 +45,12 @@ const LAYOUT = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<st
 delete LAYOUT._about;
 
 const repository = new UiHomeRepository();
+const NOW = new Date("2026-10-19T03:00:00.000Z");
+const LOG_INTERVAL_MS = 60_000;
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   findOne.mockReset();
@@ -121,5 +129,50 @@ describe("UiHomeRepository.findHomeLayout", () => {
 
     // Act & Assert
     await expect(repository.findHomeLayout()).rejects.toThrow("server selection timed out");
+  });
+
+  it("rejects a failing read as UiHomeLayoutReadError, carrying the driver's error as its cause", async () => {
+    // Arrange
+    const failure = new Error("server selection timed out");
+    findOne.mockRejectedValue(failure);
+
+    // Act & Assert
+    await expect(repository.findHomeLayout()).rejects.toMatchObject({ name: "UiHomeLayoutReadError", cause: failure });
+  });
+
+  it("logs a missing document at most once a minute, then with the lines it held back", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    const fresh = new UiHomeRepository();
+    findOne.mockResolvedValue(null);
+
+    // Act
+    for (let read = 0; read < 5; read++) await fresh.findHomeLayout();
+    jest.setSystemTime(NOW.getTime() + LOG_INTERVAL_MS);
+    await fresh.findHomeLayout();
+
+    // Assert
+    expect(mockLogger.error.mock.calls.map(([fields]) => fields)).toEqual([
+      expect.objectContaining({ event: "ui.home_layout.missing", suppressed: 0 }),
+      expect.objectContaining({ event: "ui.home_layout.missing", suppressed: 4 }),
+    ]);
+  });
+
+  it("logs an invalid revision at most once a minute, and a new invalid revision at once", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    const fresh = new UiHomeRepository();
+    findOne.mockResolvedValue({ _id: "home-layout", revision: 6, data: { ...LAYOUT, extra: 1 } });
+
+    // Act
+    for (let read = 0; read < 3; read++) await fresh.findHomeLayout();
+    findOne.mockResolvedValue({ _id: "home-layout", revision: 7, data: { ...LAYOUT, extra: 1 } });
+    await fresh.findHomeLayout();
+
+    // Assert
+    expect(mockLogger.error.mock.calls.map(([fields]) => fields)).toEqual([
+      expect.objectContaining({ event: "ui.home_layout.invalid", revision: 6, suppressed: 0 }),
+      expect.objectContaining({ event: "ui.home_layout.invalid", revision: 7, suppressed: 0 }),
+    ]);
   });
 });
