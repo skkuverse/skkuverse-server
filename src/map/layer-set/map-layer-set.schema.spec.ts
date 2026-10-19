@@ -1,10 +1,10 @@
 /**
- * The layer-set shape and its checks. `layerSetFile`: the shipped file
- * parses, every top-level field is required, and the defaults a field left out
- * reads as. `checkedLayerSet`: what the push and the read refuse in one set,
- * each issue at its path (move-editorial-datasets D6), every rejection the
- * committed-file loader made (`parseLayerSetFile`, map-layer-set.config.spec.ts)
- * ported here. `layerSetsDataset`: the `map-layer-sets` dataset a push checks,
+ * The layer-set shape and its checks. `layerSetFile`: revision 1 of the stored
+ * set parses, every top-level field is required, and the defaults a field left
+ * out reads as. `checkedLayerSet`: what the push and the read refuse in one
+ * set, each issue at its path (move-editorial-datasets D6), every rejection the
+ * deleted committed-file loader made ported here, and what an explicit null, a
+ * false or an omitted optional field reads as. `layerSetsDataset`: the `map-layer-sets` dataset a push checks,
  * one set per `layerSetId`. `storedLayerSets`: the stored envelope the read
  * parses, each set on its own, so a bad or repeated set is left out with its
  * issues and the others serve (ADR 0010 D5's fail-soft, per set).
@@ -12,9 +12,6 @@
 import fs from "fs";
 import path from "path";
 import { checkedLayerSet, i18nTextFile, layerSetFile, layerSetsDataset, mapCamera, storedLayerSets, toOptionWindow } from "./map-layer-set.schema";
-
-const RAW = fs.readFileSync(path.join(__dirname, "eskara-2026.json"), "utf8");
-const raw = (): Record<string, unknown> => JSON.parse(RAW);
 
 const FIXTURE = fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/map/fixtures/map-layer-sets.dataset.json"), "utf8");
 
@@ -37,14 +34,14 @@ function issuesOf(set: unknown): Array<{ path: string; message: string }> {
 }
 
 describe("layerSetFile", () => {
-  it("parses the shipped layer set", () => {
+  it("parses revision 1 of the stored layer set", () => {
     // Act & Assert
-    expect(layerSetFile.safeParse(raw()).success).toBe(true);
+    expect(layerSetFile.safeParse(fixtureSet()).success).toBe(true);
   });
 
   it.each(Object.keys(layerSetFile.shape))("refuses a file without %s", (field) => {
     // Arrange
-    const file = raw();
+    const file = fixtureSet();
     delete file[field];
 
     // Act & Assert
@@ -53,7 +50,7 @@ describe("layerSetFile", () => {
 
   it("reads absent defaults as always on, a pin, a tappable exact place", () => {
     // Arrange
-    const file = raw() as { layers: Array<Record<string, unknown>>; itemDefaults: { fallback: Record<string, unknown> } };
+    const file = fixtureSet() as { layers: Array<Record<string, unknown>>; itemDefaults: { fallback: Record<string, unknown> } };
     delete file.layers[0]?.defaultVisibleWhen;
     delete file.layers[0]?.markerStyle;
     file.itemDefaults.fallback = { layerId: file.itemDefaults.fallback.layerId, pinPriority: 0 };
@@ -127,8 +124,9 @@ type Mutation = (set: Record<string, any>) => void;
 const chipById = (set: Record<string, any>, id: string): Record<string, any> => set.chips.find((c: { id: string }) => c.id === id);
 
 /**
- * Every rejection of map-layer-set.config.spec.ts, by its old title: the edit it made, the path the issue now
- * stands at, and the words of a message this repository writes (zod's own words for a type or enum are not pinned).
+ * Every rejection of the deleted committed-file loader's spec, by its old title: the edit it made, the path the
+ * issue now stands at, and the words of a message this repository writes (zod's own words for a type or enum are
+ * not pinned).
  */
 const PORTED_REJECTIONS: Array<[title: string, mutate: Mutation, path: string, message: RegExp | null]> = [
   ["rejects an itemDefaults entry pointing at a layer that does not exist", (s) => { s.itemDefaults.byCategory.bar.layerId = "nope"; }, "", /byCategory\["bar"\]\.layerId "nope" is not in config\.layers/],
@@ -211,13 +209,13 @@ const PORTED_REJECTIONS: Array<[title: string, mutate: Mutation, path: string, m
 ];
 
 describe("checkedLayerSet", () => {
-  it("passes the fixture's layer set, parsed as the committed-file loader parsed it", () => {
+  it("passes the fixture's layer set, and parses it as layerSetFile does", () => {
     // Act
     const parsed = checkedLayerSet.safeParse(fixtureSet());
 
     // Assert
     expect(parsed.success).toBe(true);
-    expect(parsed.data).toEqual(layerSetFile.parse(raw()));
+    expect(parsed.data).toEqual(layerSetFile.parse(fixtureSet()));
   });
 
   it.each(PORTED_REJECTIONS)("%s, at its path", (_title, mutate, issuePath, message) => {
@@ -257,6 +255,95 @@ describe("checkedLayerSet", () => {
 
     // Act & Assert
     expect(issuesOf(set)).toEqual([]);
+  });
+});
+
+describe("checkedLayerSet, on the values a set may write or leave out", () => {
+  it("reads an explicit null defaultVisibleWhen as always on, the way it reads an absent one", () => {
+    // Arrange
+    const set = fixtureSet();
+    set.layers[0].defaultVisibleWhen = null;
+
+    // Act & Assert
+    expect(checkedLayerSet.parse(set).layers[0]!.defaultVisibleWhen).toEqual({ kind: "always" });
+  });
+
+  it("keeps a scheduled layer's windows as written, a wrap past midnight included", () => {
+    // Arrange
+    // 18:00 after 00:00 says "past midnight" rather than being a swapped pair.
+    const set = fixtureSet();
+    set.layers[0].defaultVisibleWhen = { kind: "scheduled", windows: [{ start: "18:00", end: "00:00" }, { start: "11:00", end: "14:00" }] };
+
+    // Act & Assert
+    expect(checkedLayerSet.parse(set).layers[0]!.defaultVisibleWhen).toEqual({
+      kind: "scheduled",
+      windows: [{ start: "18:00", end: "00:00" }, { start: "11:00", end: "14:00" }],
+    });
+  });
+
+  it("reads an explicit null interactive as tappable, and carries an explicit false through", () => {
+    // Arrange
+    // A null must not fail closed and silently take every tap off the category.
+    const set = fixtureSet();
+    set.itemDefaults.fallback.interactive = null;
+    set.itemDefaults.byCategory.bar.interactive = false;
+
+    // Act
+    const parsed = checkedLayerSet.parse(set);
+
+    // Assert
+    expect(parsed.itemDefaults.fallback.interactive).toBe(true);
+    expect(parsed.itemDefaults.byCategory.bar!.interactive).toBe(false);
+  });
+
+  it("accepts textLabel, the bare caption a zone's name is drawn with", () => {
+    // Arrange
+    const set = fixtureSet();
+    set.layers[0].markerStyle = "textLabel";
+
+    // Act & Assert
+    expect(checkedLayerSet.parse(set).layers[0]!.markerStyle).toBe("textLabel");
+  });
+
+  it("leaves an absent chip camera absent, so the chip flies to the set's camera", () => {
+    // Arrange
+    const set = fixtureSet();
+    delete set.chips[0].camera;
+
+    // Act & Assert
+    expect(checkedLayerSet.parse(set).chips[0]!.camera).toBeUndefined();
+  });
+
+  it("passes a multi-layer chip that carries its label", () => {
+    // Arrange
+    const set = fixtureSet();
+    set.chips[0].layerIds = [set.layers[0].id, set.layers[1].id];
+    set.chips[0].label = { ko: "먹거리·주점" };
+
+    // Act & Assert
+    expect(issuesOf(set)).toEqual([]);
+  });
+
+  it("passes a set with no facets and no lists: [] is how a festival says it has none", () => {
+    // Arrange
+    const set = fixtureSet();
+    set.facets = [];
+    for (const chip of set.chips) delete chip.list;
+
+    // Act & Assert
+    expect(issuesOf(set)).toEqual([]);
+  });
+
+  it("parses a day option's bounds into its window as instants, and gives a tag option none", () => {
+    // Act
+    const facets = checkedLayerSet.parse(fixtureSet()).facets;
+
+    // Assert
+    expect(facets.find((f) => f.id === "day")!.options[0]!.window).toEqual({
+      from: new Date("2026-09-30T21:00:00.000Z"),
+      until: new Date("2026-10-01T21:00:00.000Z"),
+    });
+    expect(facets.find((f) => f.id === "org")!.options.every((o) => o.window === null)).toBe(true);
   });
 });
 

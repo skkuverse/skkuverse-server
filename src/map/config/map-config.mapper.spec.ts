@@ -3,7 +3,7 @@
  * with their label resolved and every other field passed through in order,
  * chips with a resolved label, an absolute web view URL and their list, and
  * the camera defaults. The chip row is also projected as /map/config serves
- * it, base chips plus the live festival's from the real `eskara-2026.json`,
+ * it, base chips plus the live festival's from revision 1 of `map-layer-sets`,
  * read through MapLayerSetService as the config service reads it.
  */
 import type { Clock } from "../../infra/clock";
@@ -11,7 +11,7 @@ import { pick } from "../../infra/i18n";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import type { MapLayerSetRepository } from "../layer-set/map-layer-set.repository";
-import { fixtureLayerSetRepository } from "../../../__tests__/helpers/map/layer-sets-fixture";
+import { fixtureLayerSet, fixtureLayerSetRepository } from "../../../__tests__/helpers/map/layer-sets-fixture";
 import { MiniappsService } from "../../miniapps/miniapps.service";
 import type { MapChipSpec } from "../layer-set/map-layer-set.types";
 import { BASE_LAYERS } from "../map.constants";
@@ -19,7 +19,6 @@ import type { MapRepository } from "../map.repository";
 import { toMapChips, toMapConfig, toMapLayers } from "./map-config.mapper";
 import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 
 const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
 const LAYER_SET = new MapLayerSetService(
@@ -30,7 +29,7 @@ const LAYER_SET = new MapLayerSetService(
 );
 
 const LANGS = ["ko", "en", "zh"] as const;
-const CONFIG = shippedLayerSet();
+const CONFIG = fixtureLayerSet();
 const BASE_CHIPS = LAYER_SET.servedChipSpecs(null);
 
 /** What /map/config serves while this festival is live. */

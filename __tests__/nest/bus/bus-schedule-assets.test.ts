@@ -1,6 +1,5 @@
 /**
- * The build-asset registration guard for the bus schedule's JSON files,
- * modeled on map-config-assets.test.ts.
+ * The build-asset registration guard for the bus schedule's JSON files.
  *
  * `tsc` does not copy JSON, so every file a module reads at runtime must be
  * staged into dist/ by scripts/copy-build-assets.js. A miss breaks production

@@ -1,0 +1,5 @@
+{
+  "_about": "Revision 1 of the skku-rest-days dataset (skku_content.datasets, _id skku-rest-days): src/bus/schedule/skku-rest-days.json as production served it on 2026-10-19 at source commit 5c0ee5a9, without its _comment and _example keys, whose documentation moved to docs/how-to/edit-runtime-data.md (move-editorial-datasets D8, task 11.2). MM-DD keys recur yearly, YYYY-MM-DD keys apply once. The push imports this data with _about removed. Nothing else trimmed.",
+  "09-25": "건학기념일",
+  "09-28": "공자탄신일"
+}

@@ -13,9 +13,9 @@ import type { MapPlaceDoc, OverlayPlaceDoc } from "../map.document";
 import { overlayPlaceDoc } from "../map.schema";
 import { toEventOverlay } from "./map-event.mapper";
 import type { EventOverlayContext } from "./map-event.types";
-import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
+import { fixtureLayerSet } from "../../../__tests__/helpers/map/layer-sets-fixture";
 
-const CONFIG = shippedLayerSet();
+const CONFIG = fixtureLayerSet();
 
 function context(): EventOverlayContext {
   return { layerSet: CONFIG, drops: { actions: [], facets: [] }, isKnownMiniAppTarget: () => true };

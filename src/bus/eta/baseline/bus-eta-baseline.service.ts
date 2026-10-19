@@ -15,9 +15,9 @@ interface TickState {
 }
 
 /**
- * WHY: `shuttle-eta-baseline`: a prediction for every run the smart view shows from now on, when missing, expired or
- * older than the latest 04:00 KST; a bus-lane run reuses a fixed value, others are TMAP calls 250 ms apart, a failed
- * one waiting 30 minutes so one bad run cannot use up the day's calls. Failures report as the live one's.
+ * WHY: `shuttle-eta-baseline`: a prediction for every run the smart view shows from now on outside a suspension, when
+ * missing, expired or older than the latest 04:00 KST; a bus-lane run reuses a fixed value, others are TMAP calls 250 ms
+ * apart, a failed one waiting 30 minutes so one bad run cannot use up the day's calls. Failures report as the live one's.
  */
 export class BusEtaBaselineService {
   private failure: unknown = null;

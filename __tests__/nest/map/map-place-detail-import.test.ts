@@ -18,9 +18,9 @@ import { PLACE_BLOCK_TYPES, PLACE_DETAIL_ACTION_TYPES } from "../../../src/map/e
 import { PLACE_KINDS } from "../../../src/map/map.constants";
 import { isAbsoluteHttpsUrl } from "../../../src/shared/link-target.util";
 import { isInstagramPostUrl, isInstagramProfileUrl } from "../../../src/map/event-details/map-event-details.rules";
-import { getLayerSetConfig } from "../../../src/map/layer-set/map-layer-set.config";
 import { parseMiniAppTarget } from "../../../src/miniapps/miniapps.rules";
 import { presentationFor } from "../../../src/map/map.rules";
+import { fixtureLayerSet } from "../../helpers/map/layer-sets-fixture";
 
 // scripts/ is plain CommonJS excluded from tsconfig, so this is a require.
 const reader = require("../../../scripts/lib/map-places-file");
@@ -356,12 +356,11 @@ describe("the committed sheet's food trucks", () => {
   it("gives a detail only to places a tap can reach", () => {
     // Arrange
     // A detail on an inert category is served to no one — the pin has no tap.
-    const loaded = getLayerSetConfig(LAYER_SET_ID);
-    if (!loaded?.config) throw new Error(`${LAYER_SET_ID} failed to load: ${loaded?.error}`);
+    const layerSet = fixtureLayerSet(LAYER_SET_ID);
 
     // Act & Assert
     for (const d of detailed) {
-      expect([d._id, presentationFor(loaded.config, d.category).interactive]).toEqual([d._id, true]);
+      expect([d._id, presentationFor(layerSet, d.category).interactive]).toEqual([d._id, true]);
     }
   });
 });

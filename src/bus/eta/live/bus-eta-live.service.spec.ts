@@ -10,6 +10,11 @@
  * answer or fails; one call per model; the probe primed once, ten minutes
  * before a bus-lane window opens; and a TOPIS failure reported until a
  * position request succeeds, whatever NAVER does.
+ *
+ * Over the stored schedule content (move-editorial-datasets D9), through the
+ * real BusEtaService and BusScheduleService: content never read rejects the
+ * tick with no directions call, which the poller registry reports as failing,
+ * and a suspension stored in the content plans no run.
  */
 import moment from "moment-timezone";
 import { DailyCapError } from "../../../shared/daily-cap.error";
@@ -22,6 +27,19 @@ import type { EtaRun, EtaSequence } from "../bus-eta.types";
 import type { SequenceStrategy } from "../lane/bus-eta-lane.types";
 import type { LegTime } from "../probe/bus-eta-probe.types";
 import { BusEtaLiveService } from "./bus-eta-live.service";
+import { serviceNoticesWithSuspension, storedScheduleContentRepository, storedScheduleContentService } from "../../../../__tests__/helpers/bus/schedule-content";
+import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
+import { FakeBusScheduleContentRepository } from "../../../../__tests__/helpers/fakes/bus/bus-schedule-content.repository.fake";
+import { FakeBusScheduleRepository } from "../../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
+import { FakeHolidaysService } from "../../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
+import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
+import type { HolidaysService } from "../../../holidays/holidays.service";
+import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
+import type { BusScheduleRepository } from "../../schedule/bus-schedule.repository";
+import { BusScheduleService } from "../../schedule/bus-schedule.service";
+import { BusStopsService } from "../../stops/bus-stops.service";
+import type { BusEtaRepository } from "../bus-eta.repository";
+import { BusEtaService } from "../bus-eta.service";
 import type { LiveTravel } from "./bus-eta-live.types";
 
 const DATE = "2026-10-12"; // a Monday
@@ -448,5 +466,104 @@ describe("BusEtaLiveService.tick priming", () => {
     await expect(live.tick(at("12:20"))).rejects.toBe(TOPIS_DOWN);
     await expect(live.tick(at("12:25"))).rejects.toBe(TOPIS_DOWN);
     await expect(live.tick(at("12:30"))).resolves.toEqual({ calls: 1, written: 1 });
+  });
+});
+
+describe("BusEtaLiveService.tick over the stored schedule content", () => {
+  // Monday 2026-10-12, 09:30 KST: the 10:00 run is inside its live window.
+  const NOW = at("09:30");
+  const clock = { now: () => NOW };
+  const WEEKDAYS = [
+    { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "10:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["10:00", null, null] }] },
+  ];
+
+  function liveOver(content: FakeBusScheduleContentRepository, fetchOffsets: jest.Mock): BusEtaLiveService {
+    const timetable = new FakeBusScheduleRepository();
+    timetable.patterns = WEEKDAYS;
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, new BusStopsService(new SubwayStationsService()));
+    return new BusEtaLiveService({
+      sequences: [SEQ],
+      runsOn: (sequence, date) => eta.runsOn(sequence, date),
+      travel: carTravel(fetchOffsets),
+      readEtas: async () => [],
+      writeEtas: async () => undefined,
+      cap: new DailyCap("naver", 1000),
+    });
+  }
+
+  it("rejects with BUS_SCHEDULE_UNAVAILABLE, with no directions call, while no schedule content was ever read", async () => {
+    // Arrange
+    const fetchOffsets = jest.fn().mockResolvedValue(OFFSETS);
+    const live = liveOver(new FakeBusScheduleContentRepository(), fetchOffsets);
+
+    // Act & Assert
+    await expect(live.tick(NOW)).rejects.toMatchObject({ code: "BUS_SCHEDULE_UNAVAILABLE", httpStatus: 503 });
+    expect(fetchOffsets).not.toHaveBeenCalled();
+  });
+
+  it("makes no directions call on a day inside a stored suspension", async () => {
+    // Arrange
+    const suspended = storedScheduleContentRepository();
+    suspended.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-10-12", until: "2026-10-16" }));
+    const fetchOffsets = jest.fn().mockResolvedValue(OFFSETS);
+
+    // Act
+    const tick = await liveOver(suspended, fetchOffsets).tick(NOW);
+
+    // Assert
+    expect(tick).toEqual({ calls: 0, written: 0 });
+    expect(fetchOffsets).not.toHaveBeenCalled();
+  });
+
+  it("calls directions once for the day's run outside a suspension", async () => {
+    // Arrange
+    const fetchOffsets = jest.fn().mockResolvedValue(OFFSETS);
+
+    // Act
+    const tick = await liveOver(storedScheduleContentRepository(), fetchOffsets).tick(NOW);
+
+    // Assert
+    expect(tick).toEqual({ calls: 1, written: 1 });
+    expect(fetchOffsets).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("BusEtaLiveService.tick after the schedule content recovers", () => {
+  const WEEKDAYS = [
+    { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "10:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["10:00", null, null] }] },
+  ];
+
+  it("resolves the first tick after the content is pushed, with no NAVER call to clear the failure", async () => {
+    // Arrange
+    // 07:00 KST: the 10:00 run's live window opens at 09:00, so no tick here calls NAVER.
+    let now = at("07:00");
+    const clock = { now: () => now };
+    const content = new FakeBusScheduleContentRepository();
+    const timetable = new FakeBusScheduleRepository();
+    timetable.patterns = WEEKDAYS;
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, new BusStopsService(new SubwayStationsService()));
+    const fetchOffsets = jest.fn().mockResolvedValue(OFFSETS);
+    const live = new BusEtaLiveService({
+      sequences: [SEQ],
+      runsOn: (sequence, date) => eta.runsOn(sequence, date),
+      travel: carTravel(fetchOffsets),
+      readEtas: async () => [],
+      writeEtas: async () => undefined,
+      cap: new DailyCap("naver", 1000),
+    });
+    await expect(live.tick(now)).rejects.toMatchObject({ code: "BUS_SCHEDULE_UNAVAILABLE" });
+    const pushed = storedScheduleContentRepository();
+    for (const [name, doc] of pushed.datasets) content.datasets.set(name, doc);
+
+    // Act
+    // One dataset TTL later, the next read sees the pushed content.
+    now = at("07:02");
+    const tick = await live.tick(now);
+
+    // Assert
+    expect(tick).toEqual({ calls: 0, written: 0 });
+    expect(fetchOffsets).not.toHaveBeenCalled();
   });
 });

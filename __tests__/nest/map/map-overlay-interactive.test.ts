@@ -1,9 +1,9 @@
 /**
  * `interactive: false` — how a zone is drawn without becoming a tap target.
  *
- * Its own file because it needs a layer set the shipped `eskara-2026.json` does
- * not describe, so the live layer set is stubbed wholesale rather than driven
- * through the real config loader as `src/map/event/map-event.service.spec.ts`
+ * Its own file because it needs a layer set revision 1 of `map-layer-sets` does
+ * not describe, so the live layer set is stubbed wholesale rather than read
+ * from the stored dataset's fixture as `src/map/event/map-event.service.spec.ts`
  * does.
  *
  * The behaviour matters because the alternative shapes were both worse. A

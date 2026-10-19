@@ -1,7 +1,7 @@
 /**
  * MapEventService: the place → overlay projection behind GET /map/overlays/event,
- * run over FakeMapRepository, the real layer-set service and the shipped
- * layer-set config. The places query itself is pinned in map.repository.spec.ts.
+ * run over FakeMapRepository, the real layer-set service and revision 1 of
+ * the map-layer-sets dataset. The places query itself is pinned in map.repository.spec.ts.
  *
  * One document in, one marker out. There is no join any more: a booth that runs
  * on both festival days is ONE document carrying two opening windows, which is
@@ -22,7 +22,7 @@ import type { Clock } from "../../infra/clock";
 import { MiniappsService } from "../../miniapps/miniapps.service";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import type { MapLayerSetRepository } from "../layer-set/map-layer-set.repository";
-import { fixtureLayerSetRepository } from "../../../__tests__/helpers/map/layer-sets-fixture";
+import { fixtureLayerSet, fixtureLayerSetRepository } from "../../../__tests__/helpers/map/layer-sets-fixture";
 import { EVENT_CACHE_TTL_MS } from "../map.constants";
 import type { MapPlaceDoc } from "../map.document";
 import type { MapRepository } from "../map.repository";
@@ -31,7 +31,6 @@ import { MapEventService } from "./map-event.service";
 import { logText } from "../../../__tests__/helpers/log-text";
 import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 
 const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
 
@@ -63,7 +62,7 @@ beforeEach(() => {
   clearEventOverlaysCache();
 });
 
-const CONFIG = shippedLayerSet();
+const CONFIG = fixtureLayerSet();
 
 const DAY_1 = {
   startAt: new Date("2026-10-01T09:00:00.000Z"),

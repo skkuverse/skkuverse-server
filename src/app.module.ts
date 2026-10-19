@@ -14,6 +14,7 @@ import { BusRealtimeJongroModule } from "./bus/realtime/jongro/bus-realtime-jong
 import { BusRealtimeArrivalModule } from "./bus/realtime/arrival/bus-realtime-arrival.module";
 import { BusRealtimeGroupModule } from "./bus/realtime/group/bus-realtime-group.module";
 import { BusStopsModule } from "./bus/stops/bus-stops.module";
+import { BusScheduleContentModule } from "./bus/schedule-content/bus-schedule-content.module";
 import { BusScheduleModule } from "./bus/schedule/bus-schedule.module";
 import { BusEtaModule } from "./bus/eta/bus-eta.module";
 import { BusEtaLaneModule } from "./bus/eta/lane/bus-eta-lane.module";
@@ -91,6 +92,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusRealtimeArrivalModule,
     BusRealtimeGroupModule,
     BusStopsModule,
+    BusScheduleContentModule,
     BusScheduleModule,
     BusEtaModule,
     BusEtaLaneModule,

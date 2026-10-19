@@ -1,14 +1,13 @@
 import { z } from "zod";
 import { isRecord } from "../../shared/object.util";
-import type { ServiceNotice } from "../bus.types";
-import type { BusOverrideDoc, BusScheduleDoc } from "./bus-schedule.document";
-import type { RestDays } from "./bus-schedule.types";
+import type { BusOverrideDoc, BusScheduleDoc, OverrideNotice } from "./bus-schedule.document";
+import type { RestDays } from "../schedule-content/bus-schedule-content.types";
 import type { ScheduleEntry } from "./bus-schedule.wire";
 
 // WHY: entries and notices are served as stored, so they are checked, not rebuilt: a rebuilt object would
 // reorder its keys and move every week's ETag.
 const storedEntry = z.custom<ScheduleEntry>(isRecord);
-const storedNotice = z.custom<ServiceNotice>(isRecord);
+const storedNotice = z.custom<OverrideNotice>(isRecord);
 
 export const busScheduleDoc = z.object({
   serviceId: z.string(),
