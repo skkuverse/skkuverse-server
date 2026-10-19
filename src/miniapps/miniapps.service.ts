@@ -3,7 +3,6 @@ import { Clock } from "../infra/clock";
 import { createDatasetLoader, type DatasetLoader } from "../infra/dataset-loader";
 import logger from "../infra/logger";
 import { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../infra/origins";
-import { committedRegistry } from "./miniapps.config";
 import { REGISTRY_LOG_INTERVAL_MS } from "./miniapps.constants";
 import { MiniappsRegistryReadError, MiniappsRegistryUnavailableError } from "./miniapps.error";
 import { resolveLogo, toMiniAppRegistry } from "./miniapps.mapper";
@@ -39,12 +38,18 @@ export class MiniappsService {
     return this.loader.get();
   }
 
-  parseTarget(value: unknown): MiniAppTarget | null {
-    return parseMiniAppTarget(value);
+  // WHY: for a reader whose documented degraded answer serves without the registry rather than a 503.
+  async findCurrent(): Promise<MiniAppRegistry | null> {
+    try {
+      return await this.loader.get();
+    } catch (err) {
+      if (err instanceof MiniappsRegistryUnavailableError) return null;
+      throw err;
+    }
   }
 
-  isKnownMiniAppTarget(value: unknown): boolean {
-    return committedRegistry.isKnownMiniAppTarget(value);
+  parseTarget(value: unknown): MiniAppTarget | null {
+    return parseMiniAppTarget(value);
   }
 
   resolveLogo(logo: MiniAppLogoRaw): MiniAppLogo {

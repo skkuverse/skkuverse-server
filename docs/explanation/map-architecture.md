@@ -22,7 +22,7 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | The places importer (`scripts/lib/map-places-file.js`) | — | Places written to Mongo, checked by the same rules the server reads with | `overlayPlaceDoc`, `sheetPlaceDoc` |
 | The building module | `skku` | Buildings and hand-authored campus shapes | `BuildingService`, injected into `MapCampusService` |
 | The bus module | — | Each Jongro route's stored line as TOPIS draws it, a route with none left out and flagged, or `503` when nothing can be read | `BusRoutePathService`, injected into `MapTransitService` |
-| The mini-app registry | — | Which mini-app targets a sheet button or a link chip may open | `MiniappsService.isKnownMiniAppTarget`, injected into `MapEventService` and `MapLayerSetService` |
+| The mini-app registry | — | Which mini-app targets a sheet button may open, from one snapshot of the stored `miniapps` dataset per reload, read only once a live layer set has places | `MiniappsService.findCurrent`, injected into `MapEventService` |
 | GeoJSON | `geojson` | The `[lng, lat]` position order and ring winding, served as stored | `map.wire.ts` |
 | The NAVER map SDK | `naver-map` | Polygon defaults the base and festival styles override | `BASE_LAYERS`, `EVENT_SHAPE_STYLE` |
 | skkuverse-app | — | Nothing; it reads the five routes | `GET /map/config` and the overlay routes |
@@ -61,8 +61,7 @@ flowchart LR
   layerSet --> event
   layerSet --> details
   building["BuildingService"] -->|buildings, campus shapes| campus["MapCampusService"]
-  miniapps["MiniappsService"] -->|isKnownMiniAppTarget| event
-  miniapps -->|isKnownMiniAppTarget, at boot| layerSet
+  miniapps["MiniappsService"] -->|findCurrent, isKnownMiniAppTarget| event
   config --> r1["GET /map/config"]
   campus -->|CAMPUS_CACHE_CONTROL or DEGRADED_CACHE_CONTROL| r2["GET /map/overlays/campus"]
   bus["BusRoutePathService"] -->|route lines| transit["MapTransitService"]
@@ -97,7 +96,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 - The layer sets are read only while an activation is live, through the dataset loader (`createDatasetLoader`: `DATASET_CACHE_TTL_MS`, with a `DATASET_STALE_WINDOW_MS` stale window). With no good value ever read (the dataset missing, invalid or unreadable), `/map/config` serves the base map and the event routes serve no overlay and no sheet, logged at error at most once a minute as `map.layer_sets.unavailable`. That is the degraded answer [ADR 0013's read contract](../decisions/0013-runtime-data-in-mongodb.md#d6-the-read-contract) allows, never a `503`.
 - A live activation naming a set the dataset lacks, or one left out, serves the base map, logged once per activation and revision as `map.eventmap.activation_unservable` (`no_layer_set` or `layer_set_rejected`). Close a window before you remove its set.
 - A push reaches `/map/config` within `DATASET_CACHE_TTL_MS`, a minute, and the event routes, which cache their answer for `EVENT_CACHE_TTL_MS` on top, within that plus five seconds. The `/map/config` ETag is the hash of the body, so it changes with a revision exactly when the served body does.
-- A bad base chip stops the boot: `assertValidChipSpecs` against the base layers, and `assertValidLinkChips` against the mini-app registry, when Nest builds `MapLayerSetService`. A bad layer set, place, button, block or facet value is dropped and logged, never thrown into a request.
+- A bad base chip stops the boot: `assertValidChipSpecs` against the base layers, and `assertValidLinkChips`, which refuses any `miniapp` link chip since a code-held chip may not name data, when Nest builds `MapLayerSetService`. A bad layer set, place, button, block or facet value is dropped and logged, never thrown into a request. With no mini-app registry ever read, every `miniapp` button is dropped as unresolved and `map.event_overlays.registry_unavailable` logs at error once a minute; the places still serve.
 - A link chip's `webview` value is served absolute (`toServedActionValue`); its other values are served as written. A layer set authors only `focus` chips.
 - The activation read is cached for `EVENT_CACHE_TTL_MS` with an `EVENT_STALE_WINDOW_MS` stale window, and a cached activation is still checked against the clock, so its window closes on time. `/map/config` answers with the base layers when the lookup fails.
 - Both event routes cache their whole projection on the same TTL, and both overlay collections are one response per data source, pins and shapes together.
