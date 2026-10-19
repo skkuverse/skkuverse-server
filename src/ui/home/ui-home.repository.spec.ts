@@ -39,7 +39,7 @@ import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import { logText } from "../../../__tests__/helpers/log-text";
 import { UiHomeRepository } from "./ui-home.repository";
 
-// The committed home-layout.json, kept as the fixture the dataset is seeded from.
+// A copy of revision 1 of the stored home-layout dataset as of 2026-10-19.
 const DATASET_FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/home-layout.dataset.json");
 const LAYOUT = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<string, unknown>;
 delete LAYOUT._about;

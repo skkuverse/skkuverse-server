@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-written: the committed src/ui/home/home-layout.json as of 2026-10-19 (251167f2), which production served at /ui/home that day, so the home-layout dataset seeded from it answers the same bodies. Never captured from a database: no dataset existed yet.",
+  "_about": "A copy of revision 1 of the stored home-layout dataset (skku_content.datasets, _id home-layout) as of 2026-10-19, the data production serves at /ui/home. Revision 1 was pushed from this file's content, the layout committed in the repository until move-runtime-data-to-db task 7.1; checked equal to the stored data on 2026-10-19. Nothing trimmed.",
   "version": 1,
   "sections": [
     {

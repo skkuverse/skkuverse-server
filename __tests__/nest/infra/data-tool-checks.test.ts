@@ -162,7 +162,41 @@ describe("checkData", () => {
     ]);
   });
 
-  it("accepts the committed home layout", () => {
+  it("refuses a home layout that places a tile twice, naming the second placement", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const layout = structuredClone(homeLayout) as { sections: Array<{ type: string; tiles?: Array<Record<string, unknown>> }> };
+    const grid = layout.sections.findIndex((section) => section.type === "tile_grid");
+    const tiles = layout.sections[grid]!.tiles!;
+    tiles.push(structuredClone(tiles[0]!));
+
+    // Act
+    const issues = checkData(catalog, "home-layout", layout, {});
+
+    // Assert
+    expect(issues).toEqual([
+      { dataset: "home-layout", path: ["sections", grid, "tiles", tiles.length - 1, "id"], message: `tile "${tiles[0]!.id}" is placed more than once` },
+    ]);
+  });
+
+  it("refuses a home layout link tile whose icon is two emoji, naming the icon's path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const layout = structuredClone(homeLayout) as { sections: Array<{ type: string; tiles?: Array<Record<string, unknown>> }> };
+    const grid = layout.sections.findIndex((section) => section.type === "tile_grid");
+    const tile = layout.sections[grid]!.tiles![0]!;
+    tile.icon = { kind: "emoji", emoji: "🗺️🗺️" };
+
+    // Act
+    const issues = checkData(catalog, "home-layout", layout, {});
+
+    // Assert
+    expect(issues).toEqual([
+      { dataset: "home-layout", path: ["sections", grid, "tiles", 0, "icon", "emoji"], message: `"${tile.id}" icon must be exactly one emoji` },
+    ]);
+  });
+
+  it("accepts revision 1 of the stored home layout", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);
 
