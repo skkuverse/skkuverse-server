@@ -52,7 +52,7 @@ function loadCatalog(load) {
   const { transitLayoutFile } = load("ui/transit/ui-transit.schema");
   const { toTransitLayoutIssues, transitLayoutReferences } = load("ui/transit/ui-transit.rules");
   const { layerSetsDataset } = load("map/layer-set/map-layer-set.schema");
-  const { busServiceNoticesDataset } = load("bus/schedule-content/bus-schedule-content.schema");
+  const { busServiceNoticesDataset, skkuRestDaysDataset } = load("bus/schedule-content/bus-schedule-content.schema");
   const { serviceNoticesReferences } = load("bus/schedule-content/bus-schedule-content.rules");
   const { MiniappsService } = load("miniapps/miniapps.service");
   const { jongroRoutes } = load("bus/bus.config");
@@ -104,6 +104,12 @@ function loadCatalog(load) {
         owner: "src/bus/schedule-content",
         schema: busServiceNoticesDataset,
         referencesOf: serviceNoticesReferences,
+      },
+      // MM-DD recurs yearly, YYYY-MM-DD applies once; every key must be on the calendar.
+      "skku-rest-days": {
+        owner: "src/bus/schedule-content",
+        schema: skkuRestDaysDataset,
+        referencesOf: () => [],
       },
     },
   };
