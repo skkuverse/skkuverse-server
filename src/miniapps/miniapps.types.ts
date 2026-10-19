@@ -24,3 +24,11 @@ export interface RegistryIds {
   index: { miniApps: ReadonlyArray<{ id: string }> };
   details: Readonly<Record<string, { id: string }>>;
 }
+
+export type StartUrls = Readonly<Record<string, { startUrl: string }>>;
+
+export interface RegistrySite {
+  /** WHY: first-party origin → the mini app src/infra/origins.ts names as its owner. */
+  owners: Readonly<Record<string, string>>;
+  webviewOrigin: string;
+}

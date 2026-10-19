@@ -2,10 +2,11 @@ import fs from "fs";
 import path from "path";
 import type { z } from "zod";
 import { parseConfigFile } from "../infra/config-file";
-import { FIRST_PARTY_MINIAPP_ORIGINS, WEB_ORIGIN } from "../infra/origins";
+import { FIRST_PARTY_MINIAPP_ORIGINS, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../infra/origins";
 import { isRecord } from "../shared/object.util";
 import { SHELL_BARS, SHELL_HEADERS, SHELL_STATUS_BARS } from "./miniapps.constants";
 import { toIndexEntry } from "./miniapps.mapper";
+import { toRegistryIssues } from "./miniapps.rules";
 import { checkedRegistry, type MiniAppDetailRaw, type RegistryFile } from "./miniapps.schema";
 import type { LoadedRegistry } from "./miniapps.types";
 
@@ -126,10 +127,18 @@ function indexIdsOf(index: unknown): string[] {
   return entries.flatMap((entry) => (isRecord(entry) && typeof entry.id === "string" ? [entry.id] : []));
 }
 
+// WHY: the committed files pass the owner check a `miniapps` push will, so the dataset made from them does too.
+function assertOwnedOrigins(file: RegistryFile): void {
+  const issues = toRegistryIssues(file, { owners: MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, webviewOrigin: WEBVIEW_ORIGIN });
+  if (issues.length > 0) throw new Error(`${LABEL}: ${issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ")}`);
+}
+
 function readRegistry(): LoadedRegistry {
   const index = readJson("index.json");
   const details = Object.fromEntries(indexIdsOf(index).map((id) => [id, readJson("details", `${id}.json`)]));
-  return toLoadedRegistry(loadRegistry(index, details), FIRST_PARTY_MINIAPP_ORIGINS);
+  const file = loadRegistry(index, details);
+  assertOwnedOrigins(file);
+  return toLoadedRegistry(file, FIRST_PARTY_MINIAPP_ORIGINS);
 }
 
 export const registry: Readonly<LoadedRegistry> = Object.freeze(readRegistry());
