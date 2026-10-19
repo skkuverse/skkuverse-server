@@ -35,7 +35,7 @@ A process that runs pollers (`poller`, `combined`) calls the upstream data APIs 
 
 A read that serves a client takes its data from MongoDB only. It never falls back to a value a poller holds in the same process, so `combined` and `api` answer identically for the same stored data. State a poller keeps from one tick to the next (an HSSC bus's first sighting, a Jongro vehicle's last observation, a pending registry change) stays in the poller's memory, because the poller computes with it; it reaches clients only through what the poller writes.
 
-Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/move-miniapp-registry/design.md`, D8): the first-party mini app manifest origins join what pollers call. A poller per origin stores each manifest's shell fields in `miniapp_manifests`; until the api reads them (the change's wave B), D2's temporary sixth call stays.
+Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/move-miniapp-registry/design.md`, D8): the first-party mini app manifest origins join what pollers call. A poller per origin stores each manifest's shell fields in `miniapp_manifests`, and since the change's wave B the api reads them from there (D9 of that design), so no api replica fetches a manifest.
 
 ### D2. Five request-scoped upstream calls stay in api
 
@@ -49,7 +49,9 @@ An api replica calls an upstream only on behalf of the request it is serving, an
 | The FCM Cloud Function, for mini app push | `src/miniapps/notifications/` |
 | Firebase ID token verification | (A perimeter detail is left out of the public history.) |
 
-The first-party mini app manifest fetch (`src/miniapps/catalog/`) is a temporary sixth: it moves to a poller with the mini app registry. Any other upstream call belongs in a poller.
+Any other upstream call belongs in a poller.
+
+Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/move-miniapp-registry/design.md`, D9): the temporary sixth call, the first-party mini app manifest fetch at api boot and on `GET /miniapps/:id`, is gone. The manifest pollers fetch it (D1), and the detail route reads what they stored.
 
 ### D3. No writes at boot from api
 
@@ -73,7 +75,7 @@ A switch that turns off a poller (`SUBWAY`, `SHUTTLE_ETA`, `BUILDING_SYNC`) stop
 
 ### D6. Freshness by TTL, not by cross-process signals
 
-A process sees another process's write when its cache entry expires. No writer notifies the readers, and nothing restarts them. Each cache below holds its bound because, once its TTL has passed, a read waits for the reload instead of answering from the expired value. Bus schedules, overrides, stored holidays and route lines do because their stale window covers only a failed reload (`serveStale: "on-reload-failure"` in `src/infra/cached-loader.ts`); the registry and buildings do because they have no stale window at all:
+A process sees another process's write when its cache entry expires. No writer notifies the readers, and nothing restarts them. Each cache below holds its bound because, once its TTL has passed, a read waits for the reload instead of answering from the expired value. Bus schedules, overrides, stored holidays, route lines and mini app manifests do because their stale window covers only a failed reload (`serveStale: "on-reload-failure"` in `src/infra/cached-loader.ts`); the registry and buildings do because they have no stale window at all:
 
 | Data | Written by | Bound |
 | --- | --- | --- |
@@ -83,10 +85,13 @@ A process sees another process's write when its cache entry expires. No writer n
 | Jongro route lines | The route-line poller | 10 minutes |
 | Buildings | The building sync | 5 minutes |
 | Datasets (`npm run data`) | An operator, with the tool ([ADR 0013](0013-runtime-data-in-mongodb.md)) | 1 minute, in every role that reads them |
+| Mini app manifests | The manifest pollers, one per first-party origin | 5 minutes from the change on the origin: a 4-minute poll and a 1-minute read |
 
 Reference data that a database outage must not take down (bus schedules, overrides, stored holidays, route lines) keeps a stale window that covers only a failed reload: it serves the last good value for at least an hour and logs `cache.reload_failed`. In that mode the first read after each TTL waits for the reload, so while Atlas is unreachable such a read can stall for up to `serverSelectionTimeoutMS` (5 s, `src/infra/db.ts`) about once per TTL before it serves the stale value; this is accepted. A cache whose stale window also answers while a reload runs (the default mode) is late by up to TTL plus one reload, and states its bound that way. A writer may still clear its own process's cache after a write, so the poller sees its own write at once.
 
 Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (`openspec/changes/archive/2026-10-20-move-editorial-datasets/design.md`, D12): the Datasets row. A dataset reader holds the same `on-reload-failure` stale window, for 24 hours.
+
+Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/move-miniapp-registry/design.md`, D9): the Mini app manifests row. The detail route's read holds the same `on-reload-failure` stale window, for 24 hours; with no good read it merges no manifest and serves the registry's own shell.
 
 ## Consequences
 
