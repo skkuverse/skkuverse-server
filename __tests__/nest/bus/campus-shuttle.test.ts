@@ -10,6 +10,7 @@ import path from "path";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
 import { storedBusRegistryService } from "../../helpers/bus/bus-registry";
+import { serviceNoticesFixture } from "../../helpers/bus/schedule-content";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 import { haversineM } from "../../../src/shared/distance.util";
@@ -224,11 +225,12 @@ describe("인자셔틀 stops and sequences (spec scenarios)", () => {
 });
 
 describe("인자셔틀 notices", () => {
-  const serviceConfig = require("../../../src/bus/bus.constants").SERVICE_CONFIG;
+  // Revision 1 of the bus-service-notices dataset, which holds each service's notices.
+  const { services } = serviceNoticesFixture();
 
   it.each(["campus-inja", "campus-jain"])("%s shows one ai banner: arrivals reflect live traffic", (serviceId) => {
     // Act & Assert
-    expect(serviceConfig[serviceId].notices).toEqual([
+    expect(services[serviceId]!.notices).toEqual([
       { style: "ai", text: "도착 시간은 실시간 교통 상황을 반영해요" },
     ]);
   });

@@ -45,7 +45,8 @@ export class BusEtaService {
   async runsOn(sequence: EtaSequence, date: string): Promise<EtaRun[]> {
     const week = await this.schedule.resolveWeek(sequence.serviceId, date);
     const day = week?.days.find((d) => d.date === date);
-    return day ? runsOfDay(day, { serviceId: sequence.serviceId, routeType: sequence.routeType, sequenceLength: sequence.stops.length }) : [];
+    if (!day || (await this.schedule.isSuspendedOn(sequence.serviceId, date))) return [];
+    return runsOfDay(day, { serviceId: sequence.serviceId, routeType: sequence.routeType, sequenceLength: sequence.stops.length });
   }
 
   async upcomingRuns(sequence: EtaSequence, now: Date): Promise<EtaRun[]> {

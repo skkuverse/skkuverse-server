@@ -1,4 +1,3 @@
-import type { ServiceNotice } from "../bus.types";
 import type { ScheduleEntry } from "./bus-schedule.wire";
 
 // CONTRACT(scripts): written by scripts/set-campus-schedule.js from scripts/data/*-schedule.json.
@@ -13,11 +12,16 @@ export interface BusScheduleDoc {
   effectiveUntil?: string;
 }
 
+export interface OverrideNotice {
+  style: "info" | "warning" | "error" | string;
+  text: string;
+}
+
 interface BusOverrideFields {
   serviceId: string;
   date: string;
   label?: string | null;
-  notices: ServiceNotice[];
+  notices: OverrideNotice[];
 }
 
 // CONTRACT(scripts): written by scripts/seed-eskara.js, scripts/seed-vacation-2026.js and
