@@ -2,7 +2,7 @@ import type { LatLng } from "../../../shared/lat-lng.types";
 import { toKstDate } from "../../../shared/kst-date.util";
 import { liveDoc } from "./bus-eta-live.mapper";
 import type { EtaTravel, ShuttleEtaDoc } from "../bus-eta.document";
-import type { EtaSequence } from "../bus-eta.types";
+import type { EtaRun, EtaSequence } from "../bus-eta.types";
 import type { LaneDirection } from "../lane/bus-eta-lane.types";
 import type { LegTime } from "../probe/bus-eta-probe.types";
 import { isPrimeMinute, toBusLaneOffsets, toLiveWork, toModelGroups } from "./bus-eta-live.rules";
@@ -26,7 +26,7 @@ interface DueGroup extends ModelGroup {
 /**
  * WHY: `shuttle-eta-live`: NAVER real-time travel times for today's runs, one call per sequence, travel model and
  * tick for every run in its window. A tick writes what it got, then rejects with its first error, and keeps rejecting
- * on later ticks until a call to the upstream that failed succeeds, so the registry reports one outage; it never logs.
+ * until a request to what failed (NAVER, TOPIS, the day's runs) succeeds, so the registry reports one outage; no log.
  */
 export class BusEtaLiveService {
   private readonly failures = new Map<LiveUpstream, unknown>();
@@ -39,15 +39,26 @@ export class BusEtaLiveService {
     const live = (await this.deps.readEtas(serviceIds, [today])).filter((d) => d.kind === "live");
     const state: TickState = { now, existing: new Map(live.map((d) => [d._id, d])), out: [], calls: 0, succeeded: new Set(), failed: new Map(), firstError: null, needsPrime: false };
     for (const sequence of this.deps.sequences) {
-      await this.tickSequence(sequence, today, state).catch((err: unknown) => this.hold(state, "naver", err));
+      const runs = await this.runsOn(sequence, today, state);
+      if (runs) await this.tickSequence(sequence, runs, state).catch((err: unknown) => this.hold(state, "naver", err));
     }
     if (state.needsPrime) await this.prime(state);
     if (state.out.length > 0) await this.deps.writeEtas(state.out);
     return this.settle(state);
   }
 
-  private async tickSequence(sequence: EtaSequence, today: string, state: TickState): Promise<void> {
-    const runs = await this.deps.runsOn(sequence, today);
+  private async runsOn(sequence: EtaSequence, today: string, state: TickState): Promise<EtaRun[] | null> {
+    try {
+      const runs = await this.deps.runsOn(sequence, today);
+      state.succeeded.add("schedule");
+      return runs;
+    } catch (err: unknown) {
+      this.hold(state, "schedule", err);
+      return null;
+    }
+  }
+
+  private async tickSequence(sequence: EtaSequence, runs: readonly EtaRun[], state: TickState): Promise<void> {
     state.needsPrime ||= runs.some((run) => isPrimeMinute(run, state.now) && this.deps.travel.strategyOfRun(run).strategy === "busLane");
     const work = toLiveWork(runs, state.existing, state.now);
     state.out.push(...work.fallback);

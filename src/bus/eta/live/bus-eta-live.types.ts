@@ -37,5 +37,5 @@ export interface ModelGroup {
   inWindow: EtaRun[];
 }
 
-/** WHY: the upstream a held tick failure belongs to; each stays failing until a request to it succeeds. */
-export type LiveUpstream = "naver" | "topis";
+/** WHY: the upstream a held tick failure belongs to (`schedule`: the day's runs); each stays failing until a request to it succeeds. */
+export type LiveUpstream = "naver" | "topis" | "schedule";

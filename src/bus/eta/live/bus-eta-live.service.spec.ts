@@ -528,3 +528,42 @@ describe("BusEtaLiveService.tick over the stored schedule content", () => {
     expect(fetchOffsets).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("BusEtaLiveService.tick after the schedule content recovers", () => {
+  const WEEKDAYS = [
+    { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "10:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["10:00", null, null] }] },
+  ];
+
+  it("resolves the first tick after the content is pushed, with no NAVER call to clear the failure", async () => {
+    // Arrange
+    // 07:00 KST: the 10:00 run's live window opens at 09:00, so no tick here calls NAVER.
+    let now = at("07:00");
+    const clock = { now: () => now };
+    const content = new FakeBusScheduleContentRepository();
+    const timetable = new FakeBusScheduleRepository();
+    timetable.patterns = WEEKDAYS;
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, new BusStopsService(new SubwayStationsService()));
+    const fetchOffsets = jest.fn().mockResolvedValue(OFFSETS);
+    const live = new BusEtaLiveService({
+      sequences: [SEQ],
+      runsOn: (sequence, date) => eta.runsOn(sequence, date),
+      travel: carTravel(fetchOffsets),
+      readEtas: async () => [],
+      writeEtas: async () => undefined,
+      cap: new DailyCap("naver", 1000),
+    });
+    await expect(live.tick(now)).rejects.toMatchObject({ code: "BUS_SCHEDULE_UNAVAILABLE" });
+    const pushed = storedScheduleContentRepository();
+    for (const [name, doc] of pushed.datasets) content.datasets.set(name, doc);
+
+    // Act
+    // One dataset TTL later, the next read sees the pushed content.
+    now = at("07:02");
+    const tick = await live.tick(now);
+
+    // Assert
+    expect(tick).toEqual({ calls: 0, written: 0 });
+    expect(fetchOffsets).not.toHaveBeenCalled();
+  });
+});
