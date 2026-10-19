@@ -21,14 +21,15 @@ export function toPathVersion(fetched: FetchedRoutePath): string {
 const changedShare = (stored: number, observed: number): number => (stored === 0 ? 1 : Math.abs(observed - stored) / stored);
 
 // WHY: a held change is never written, so an answer from another route or a broken one cannot redraw the map
-// (add-jongro-route-lines D3); the operator resolves it as the registry's held change.
+// (add-jongro-route-lines D3); with no stored line only the absolute checks can apply.
 export function toPathSyncDecision(
-  stored: { pathVersion: string; shape: PathShape },
+  stored: { pathVersion: string; shape: PathShape } | null,
   observed: { pathVersion: string; shape: PathShape; stationCount: number },
 ): PathSyncDecision {
-  if (stored.pathVersion === observed.pathVersion) return { kind: "unchanged" };
+  if (stored?.pathVersion === observed.pathVersion) return { kind: "unchanged" };
   if (observed.shape.pointCount < MIN_PATH_POINTS_TO_TRUST) return { kind: "hold", reason: "tooFewPoints" };
   if (observed.stationCount === 0) return { kind: "hold", reason: "noStations" };
+  if (stored === null) return { kind: "apply" };
   if (changedShare(stored.shape.pointCount, observed.shape.pointCount) > MAX_PATH_CHANGE_SHARE_TO_APPLY) return { kind: "hold", reason: "pointCountChanged" };
   if (changedShare(stored.shape.lengthMeters, observed.shape.lengthMeters) > MAX_PATH_CHANGE_SHARE_TO_APPLY) return { kind: "hold", reason: "lengthChanged" };
   return { kind: "apply" };
