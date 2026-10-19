@@ -32,6 +32,7 @@
     "eventmap:revive-dev": "NODE_OPTIONS=--dns-result-order=ipv4first node scripts/eventmap-revive-dev.js",
     "campus:shapes": "NODE_OPTIONS=--dns-result-order=ipv4first node scripts/import-campus-shapes.js",
     "schedule": "NODE_OPTIONS=--dns-result-order=ipv4first node scripts/set-campus-schedule.js",
+    "data": "npm run build --silent && NODE_OPTIONS=--dns-result-order=ipv4first node scripts/data.js",
     "contracts:export": "node scripts/export-contracts.js",
     "env:pull": "python3 scripts/render_env.py --keys config/env.dev.keys --out .env --local -p backend -c dev_server"
   },
