@@ -1,7 +1,7 @@
 /**
  * GET /miniapps and GET /miniapps/:id through the production pipeline
- * (buildTestApp): the real catalog controller, service and registry, over a
- * manifest client that answers no shell fields and the notification fakes.
+ * (buildTestApp): the real catalog controller, service and registry, over no
+ * stored manifests and the notification fakes.
  *
  * These endpoints are the SSOT the mobile client replaced its bundled registry
  * with, so the guards that matter are: the index is ordered, image logo URIs are
@@ -16,14 +16,12 @@ import { Clock } from "../../../src/infra/clock";
 import { ConfigModule } from "../../../src/config/config.module";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { MiniappsModule } from "../../../src/miniapps/miniapps.module";
-import { MiniappsCatalogClient } from "../../../src/miniapps/catalog/miniapps-catalog.client";
 import { MiniappsCatalogModule } from "../../../src/miniapps/catalog/miniapps-catalog.module";
 import { MiniappsManifestClient } from "../../../src/miniapps/manifest/miniapps-manifest.client";
 import { MiniappsManifestRepository } from "../../../src/miniapps/manifest/miniapps-manifest.repository";
 import { MiniappsNotificationsClient } from "../../../src/miniapps/notifications/miniapps-notifications.client";
 import { MiniappsNotificationsModule } from "../../../src/miniapps/notifications/miniapps-notifications.module";
 import { MiniappsNotificationsRepository } from "../../../src/miniapps/notifications/miniapps-notifications.repository";
-import { FakeMiniappsCatalogClient } from "../../helpers/fakes/miniapps/miniapps-catalog.client.fake";
 import { FakeMiniappsManifestClient } from "../../helpers/fakes/miniapps/miniapps-manifest.client.fake";
 import { FakeMiniappsManifestRepository } from "../../helpers/fakes/miniapps/miniapps-manifest.repository.fake";
 import { FakeMiniappsNotificationsClient } from "../../helpers/fakes/miniapps/miniapps-notifications.client.fake";
@@ -40,12 +38,11 @@ let httpServer: import("http").Server;
 const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
 
 beforeAll(async () => {
-  // The manifest client answers no shell fields, as a first-party mini app
-  // whose origin is unreachable does: every mini app keeps its registry shell.
+  // No manifest is stored, as for a first-party mini app whose origin has never
+  // answered the poller: every mini app keeps its registry shell.
   app = await buildTestApp({
     imports: [ConfigModule, SchedulingModule, MiniappsModule, MiniappsNotificationsModule, MiniappsCatalogModule],
     overrides: [
-      { provide: MiniappsCatalogClient, useValue: new FakeMiniappsCatalogClient() },
       { provide: MiniappsManifestClient, useValue: new FakeMiniappsManifestClient() },
       { provide: MiniappsManifestRepository, useValue: new FakeMiniappsManifestRepository() },
       { provide: MiniappsNotificationsRepository, useValue: new FakeMiniappsNotificationsRepository() },

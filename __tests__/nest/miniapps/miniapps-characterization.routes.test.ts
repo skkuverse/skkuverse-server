@@ -8,9 +8,9 @@
  * A regression pin: a failure is a regression to report, and an expected value
  * changes only with the behavior it pins (`.claude/rules/tests.md`).
  *
- * Each first-party mini app's manifest is the one its origin served in
- * production on 2026-10-19 (fixtures/manifests.capture.json), handed to the
- * manifest fake parsed, as the client parses it. With them, each detail's body
+ * Each first-party origin's stored manifest is the one it served in production
+ * on 2026-10-19 (fixtures/manifests.capture.json), seeded into the stored
+ * manifest fake parsed, as the poller stores it. With them, each detail's body
  * and weak ETag equal what production served at 2026-10-19T19:09:46Z, commit
  * f8dda24b: the six first-party shells come from their manifests, the four
  * third-party ones are the defaults.
@@ -20,24 +20,13 @@ import path from "path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
-import { MiniappsCatalogClient } from "../../../src/miniapps/catalog/miniapps-catalog.client";
+import { MiniappsManifestRepository } from "../../../src/miniapps/manifest/miniapps-manifest.repository";
 import { parseShellFields } from "../../../src/miniapps/miniapps.mapper";
-import type { ShellConfig } from "../../../src/miniapps/miniapps.wire";
-import { FakeMiniappsCatalogClient } from "../../helpers/fakes/miniapps/miniapps-catalog.client.fake";
+import { FakeMiniappsManifestRepository } from "../../helpers/fakes/miniapps/miniapps-manifest.repository.fake";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 const CAPTURED_AT: Clock = { now: () => new Date("2026-10-19T19:09:46.000Z") };
-
-// WHY: the owner of each first-party origin, as each detail's startUrl names it.
-const ORIGIN_BY_MINIAPP: Record<string, string> = {
-  "eskara-2026": "https://eskara.miniapp.skkuverse.com",
-  mukja: "https://mukja.mini.skkuverse.com",
-  playlist: "https://playlist.mini.skkuverse.com",
-  "booth-box": "https://booth-box.mini.skkuverse.com",
-  inja: "https://inja.mini.skkuverse.com",
-  timetable: "https://timetable.mini.skkuverse.com",
-};
 
 /** What production served for each id at CAPTURED_AT: the body text and its weak ETag. */
 const CAPTURED_DETAILS: Record<string, { text: string; etag: string }> = {
@@ -93,20 +82,24 @@ const NOT_FOUND = {
   text: '{"error":{"code":"MINIAPP_NOT_FOUND","message":"Unknown mini-app id: no-such-app"}}',
 };
 
-function capturedShellFields(): Record<string, Partial<ShellConfig>> {
-  const capture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/manifests.capture.json"), "utf8")) as Record<string, { shell?: unknown }>;
-  return Object.fromEntries(Object.entries(ORIGIN_BY_MINIAPP).map(([id, origin]) => [id, parseShellFields(capture[origin]?.shell)]));
+async function storedCapturedManifests(): Promise<FakeMiniappsManifestRepository> {
+  const capture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/manifests.capture.json"), "utf8")) as Record<string, unknown>;
+  delete capture._about;
+  const repository = new FakeMiniappsManifestRepository();
+  for (const [origin, manifest] of Object.entries(capture)) {
+    await repository.upsertManifest(origin, parseShellFields((manifest as { shell?: unknown }).shell), CAPTURED_AT.now());
+  }
+  return repository;
 }
 
 let app: NestExpressApplication;
 
 beforeAll(async () => {
-  const manifests = new FakeMiniappsCatalogClient();
-  manifests.shellFields = capturedShellFields();
+  const manifests = await storedCapturedManifests();
   app = await buildTestApp({
     imports: appModulesUnder("src/config/", "src/scheduling/", "src/miniapps/"),
     overrides: [
-      { provide: MiniappsCatalogClient, useValue: manifests },
+      { provide: MiniappsManifestRepository, useValue: manifests },
       { provide: Clock, useValue: CAPTURED_AT },
     ],
     role: "api",
