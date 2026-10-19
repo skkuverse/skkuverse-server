@@ -1,0 +1,101 @@
+{
+  "_about": "Revision 1 of the bus-service-notices dataset (skku_content.datasets, _id bus-service-notices): each service's notices and suspension, in SERVICE_CONFIG's order, generated from the compiled SERVICE_CONFIG of src/bus/bus.constants.ts as production served it on 2026-10-19 at source commit 5c0ee5a9 (bus content unchanged since; move-editorial-datasets D7, task 11.2) with: npm run build && node -e \"const {SERVICE_CONFIG}=require('./dist/src/bus/bus.constants'); console.log(JSON.stringify({services:Object.fromEntries(Object.entries(SERVICE_CONFIG).map(([id,e])=>[id,{notices:e.notices,suspend:e.suspend}]))}))\". The push imports this data with _about removed. Nothing trimmed.",
+  "services": {
+    "campus-inja": {
+      "notices": [
+        {
+          "style": "ai",
+          "text": "도착 시간은 실시간 교통 상황을 반영해요"
+        }
+      ],
+      "suspend": null
+    },
+    "campus-jain": {
+      "notices": [
+        {
+          "style": "ai",
+          "text": "도착 시간은 실시간 교통 상황을 반영해요"
+        }
+      ],
+      "suspend": null
+    },
+    "fasttrack-inja": {
+      "notices": [
+        {
+          "style": "warning",
+          "text": "ESKARA 기간 한정 운행"
+        }
+      ],
+      "suspend": null
+    },
+    "commute-jeongja": {
+      "notices": [
+        {
+          "style": "info",
+          "text": "시범 운행 · 무료 · 킹고M QR 탑승"
+        },
+        {
+          "style": "ai",
+          "text": "도착 시간은 실시간 교통 상황을 반영해요"
+        }
+      ],
+      "suspend": null
+    },
+    "commute-jamsil": {
+      "notices": [
+        {
+          "style": "info",
+          "text": "시범 운행 · 무료 · 킹고M QR 탑승"
+        },
+        {
+          "style": "ai",
+          "text": "도착 시간은 실시간 교통 상황을 반영해요"
+        }
+      ],
+      "suspend": null
+    },
+    "commute-dogok": {
+      "notices": [
+        {
+          "style": "info",
+          "text": "시범 운행 · 무료 · 킹고M QR 탑승"
+        },
+        {
+          "style": "ai",
+          "text": "도착 시간은 실시간 교통 상황을 반영해요"
+        }
+      ],
+      "suspend": null
+    },
+    "commute-gangnam-yangjae": {
+      "notices": [
+        {
+          "style": "info",
+          "text": "시범 운행 · 무료 · 킹고M QR 탑승"
+        },
+        {
+          "style": "info",
+          "text": "등교: 강남역 → 양재역 → 자과캠\n하교: 자과캠 → 양재역 → 강남역"
+        },
+        {
+          "style": "ai",
+          "text": "도착 시간은 실시간 교통 상황을 반영해요"
+        }
+      ],
+      "suspend": null
+    },
+    "commute-gwanggyo": {
+      "notices": [
+        {
+          "style": "info",
+          "text": "시범 운행 · 무료 · 킹고M QR 탑승"
+        },
+        {
+          "style": "ai",
+          "text": "도착 시간은 실시간 교통 상황을 반영해요"
+        }
+      ],
+      "suspend": null
+    }
+  }
+}
