@@ -51,7 +51,7 @@ The first-party mini app manifest fetch (`src/miniapps/catalog/`) is a temporary
 
 ### D3. No writes at boot from api
 
-An api replica inserts, updates and deletes no document and creates no index or collection while it boots. Each repository keeps declaring its indexes next to the query they serve (`.claude/rules/architecture.md`), and `ensureIndexesAtBoot` (`src/infra/mongo.ts`) runs them only where pollers run. The poller ships in every deploy, so the indexes exist before an api replica's first write (`sent_notifications`, written by the dispatch route).
+(An operations detail is left out of the public history.)
 
 A collection that must hold a document before anything can serve it gets that document from a writer: the Jongro poller bootstraps a missing registry route from TOPIS, and the daily route-line sync writes a missing line. Nothing is seeded from a committed snapshot.
 
