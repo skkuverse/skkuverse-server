@@ -3,7 +3,8 @@
  * meters over its points, a version that changes with any point or station,
  * and the sync decision: unchanged content writes nothing, and a line of too
  * few points, no station, or a point count or length more than 30% off the
- * stored line is held, each at its threshold.
+ * stored line is held, each at its threshold. With no stored line, only the
+ * point and station checks hold a first line (isolate-api-from-pollers D3).
  */
 import type { Position } from "../../shared/geojson.types";
 import type { RoutePathStation } from "./bus-route-path.document";
@@ -103,5 +104,29 @@ describe("toPathSyncDecision", () => {
   ])("compares a %i m line with the stored 5000 m at a 30%% share", (lengthMeters, expected) => {
     // Act & Assert
     expect(decide({ pointCount: 100, lengthMeters })).toEqual(expected);
+  });
+});
+
+// WHY: with no snapshot, a fresh database stores a route's first line from TOPIS on the absolute checks alone
+// (isolate-api-from-pollers D3).
+describe("toPathSyncDecision with no stored line", () => {
+  const decideFirst = (pointCount: number, stationCount = 22) => toPathSyncDecision(null, { pathVersion: "new", shape: { pointCount, lengthMeters: 1 }, stationCount });
+
+  it.each([
+    [9, { kind: "hold", reason: "tooFewPoints" }],
+    [10, { kind: "apply" }],
+    [11, { kind: "apply" }],
+    [5000, { kind: "apply" }],
+  ])("on a first line of %i points → %j", (pointCount, expected) => {
+    // Act & Assert
+    expect(decideFirst(pointCount)).toEqual(expected);
+  });
+
+  it.each([
+    [0, { kind: "hold", reason: "noStations" }],
+    [1, { kind: "apply" }],
+  ])("on a first line with %i stations → %j", (stationCount, expected) => {
+    // Act & Assert
+    expect(decideFirst(241, stationCount)).toEqual(expected);
   });
 });
