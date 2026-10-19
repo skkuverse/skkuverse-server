@@ -1,4 +1,5 @@
 import type { LinkActionType } from "../shared/link-action.wire";
+import type { RegistryFile } from "./miniapps.schema";
 
 export interface DeliveryCounts {
   sent: number;
@@ -31,3 +32,15 @@ export interface SentNotificationDoc {
   delivery: DeliveryCounts | null;
   deliveryError?: DeliveryError;
 }
+
+// CONTRACT(scripts): written by scripts/lib/datasets/store.js (npm run data), which validates at push;
+// the server still parses it where it reads it.
+export interface MiniAppsDatasetDoc {
+  _id: string;
+  revision: number;
+  data: RegistryFile;
+  updatedAt: Date;
+  updatedBy: string;
+}
+
+export type StoredMiniApps = Pick<MiniAppsDatasetDoc, "revision" | "data">;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isMediaUrl } from "../infra/media-url";
 import { SHELL_BACKGROUND_RE } from "./miniapps.constants";
+import type { StoredMiniApps } from "./miniapps.document";
 import { isServableStartUrl, isSingleEmoji, toRegistryCrossReferenceIssues } from "./miniapps.rules";
 import { miniAppDetail } from "./miniapps.wire";
 
@@ -64,3 +65,5 @@ export type MiniAppIndexEntryRaw = z.output<typeof withBothLogos>;
 export type MiniAppDetailRaw = z.output<typeof detailRaw>;
 
 export type RegistryFile = z.output<typeof checkedRegistry>;
+
+export const storedRegistry = z.object({ revision: z.int().positive(), data: checkedRegistry }) satisfies z.ZodType<StoredMiniApps>;

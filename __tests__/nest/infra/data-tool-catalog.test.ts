@@ -23,7 +23,7 @@
 import path from "node:path";
 import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
-import { MiniappsService } from "../../../src/miniapps/miniapps.service";
+import { fixtureMiniappsService } from "../../helpers/miniapps/registry-fixture";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
@@ -118,7 +118,7 @@ describe("loadCatalog code-held sources", () => {
   // BusConfigService.listGroupIds reads neither of its providers.
   const busConfig = new BusConfigService(null as never, null as never);
   const servedIds = {
-    miniapps: () => new MiniappsService().list.map((entry) => entry.id),
+    miniapps: () => fixtureMiniappsService().list.map((entry) => entry.id),
     busGroups: () => busConfig.listGroupIds(),
     subwayStations: () => new SubwayStationsService().listStations().map((station) => station.id),
     busServices: () => Object.keys(SERVICE_CONFIG),

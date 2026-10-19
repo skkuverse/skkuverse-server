@@ -19,7 +19,7 @@ import { FakeUiCampusRepository } from "../../../__tests__/helpers/fakes/ui/ui-c
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { MiniappsService } from "../../miniapps/miniapps.service";
+import { fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { DATASET_CACHE_TTL_MS } from "../../shared/dataset.constants";
 import type { UiCampusRepository } from "./ui-campus.repository";
 import { UiCampusService } from "./ui-campus.service";
@@ -56,7 +56,7 @@ let service: UiCampusService;
 beforeEach(() => {
   jest.clearAllMocks();
   repository = new FakeUiCampusRepository();
-  service = new UiCampusService(asReal<UiCampusRepository>(repository), new MiniappsService(), clock);
+  service = new UiCampusService(asReal<UiCampusRepository>(repository), fixtureMiniappsService(), clock);
 });
 
 afterEach(() => {

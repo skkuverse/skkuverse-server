@@ -35,7 +35,7 @@ import type { BusGroup } from "../../../bus/config/bus-config.wire";
 import { BusStopsService } from "../../../bus/stops/bus-stops.service";
 import type { Clock } from "../../../infra/clock";
 import logger from "../../../infra/logger";
-import { MiniappsService } from "../../../miniapps/miniapps.service";
+import { fixtureMiniappsService } from "../../../../__tests__/helpers/miniapps/registry-fixture";
 import { DATASET_CACHE_TTL_MS } from "../../../shared/dataset.constants";
 import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
 import type { UiTransitRepository } from "../ui-transit.repository";
@@ -73,7 +73,7 @@ function withVisibility(visibilityByGroupId: Record<string, BusGroupVisibility>)
 
 function serviceAt(iso: string): UiTransitTabService {
   const clock: Clock = { now: () => new Date(iso) };
-  const layouts = new UiTransitService(asReal<UiTransitRepository>(repository), new MiniappsService(), clock);
+  const layouts = new UiTransitService(asReal<UiTransitRepository>(repository), fixtureMiniappsService(), clock);
   return new UiTransitTabService(layouts, asReal<BusConfigService>(busConfig), new SubwayStationsService(), clock);
 }
 

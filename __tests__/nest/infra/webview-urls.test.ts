@@ -17,7 +17,7 @@
  * of these payloads is covered without this file being updated.
  */
 import type { Clock } from "../../../src/infra/clock";
-import { MiniappsService } from "../../../src/miniapps/miniapps.service";
+import { fixtureMiniappsService } from "../../helpers/miniapps/registry-fixture";
 import type { UiCampusRepository } from "../../../src/ui/campus/ui-campus.repository";
 import { UiCampusService } from "../../../src/ui/campus/ui-campus.service";
 import fs from "fs";
@@ -79,7 +79,7 @@ function storedCampusBanners(): UiCampusRepository {
 
 // WHY: read when the tests run, since the bus config reads its stations from a registry holding the routes stored on 2026-10-17.
 const payloads: Record<string, () => unknown> = {
-  "GET /ui/home/campus": () => new UiCampusService(storedCampusBanners(), new MiniappsService(), clock).getCampusSheet("ko"),
+  "GET /ui/home/campus": () => new UiCampusService(storedCampusBanners(), fixtureMiniappsService(), clock).getCampusSheet("ko"),
   "GET /ui/home/scroll": () => new UiScrollService().listScrollCards("ko"),
   "GET /bus/config": async () => new BusConfigService(new BusStopsService(new SubwayStationsService()), storedBusRegistryService()).getBusGroups(),
   "src/miniapps/details/*.json": () => registryDetails,

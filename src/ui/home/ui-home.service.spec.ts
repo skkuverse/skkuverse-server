@@ -20,6 +20,7 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { MiniappsService } from "../../miniapps/miniapps.service";
+import { fixtureMiniappsService, fixtureRegistryRepository } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { DATASET_CACHE_TTL_MS, DATASET_STALE_WINDOW_MS } from "../../shared/dataset.constants";
 import type { UiHomeRepository } from "./ui-home.repository";
 import { UiHomeService } from "./ui-home.service";
@@ -50,7 +51,7 @@ let service: UiHomeService;
 beforeEach(() => {
   jest.clearAllMocks();
   repository = new FakeUiHomeRepository();
-  service = new UiHomeService(asReal<UiHomeRepository>(repository), new MiniappsService(), clock);
+  service = new UiHomeService(asReal<UiHomeRepository>(repository), fixtureMiniappsService(), clock);
 });
 
 afterEach(() => {
@@ -200,7 +201,7 @@ describe("UiHomeService.getHomeLayout with no good layout", () => {
   beforeEach(() => {
     jest.useFakeTimers({ now: NOW });
     at = NOW;
-    service = new UiHomeService(asReal<UiHomeRepository>(repository), new MiniappsService(), movingClock);
+    service = new UiHomeService(asReal<UiHomeRepository>(repository), fixtureMiniappsService(), movingClock);
   });
 
   it("reads a missing layout at most once per TTL, answering 503 in between", async () => {
@@ -273,7 +274,7 @@ describe("UiHomeService.getHomeLayout with no good layout", () => {
         throw fault;
       }
     }
-    service = new UiHomeService(asReal<UiHomeRepository>(repository), new FaultyMiniapps(), movingClock);
+    service = new UiHomeService(asReal<UiHomeRepository>(repository), new FaultyMiniapps(fixtureRegistryRepository(), movingClock), movingClock);
     repository.storeHomeLayout(layoutOf(grid({ kind: "miniapp", id: "eskara" })));
 
     // Act & Assert

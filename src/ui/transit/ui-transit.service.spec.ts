@@ -19,7 +19,7 @@ import { FakeUiTransitRepository } from "../../../__tests__/helpers/fakes/ui/ui-
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { MiniappsService } from "../../miniapps/miniapps.service";
+import { fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { DATASET_CACHE_TTL_MS } from "../../shared/dataset.constants";
 import type { UiTransitRepository } from "./ui-transit.repository";
 import type { TransitLayoutRaw } from "./ui-transit.schema";
@@ -47,7 +47,7 @@ let service: UiTransitService;
 beforeEach(() => {
   jest.clearAllMocks();
   repository = new FakeUiTransitRepository();
-  service = new UiTransitService(asReal<UiTransitRepository>(repository), new MiniappsService(), clock);
+  service = new UiTransitService(asReal<UiTransitRepository>(repository), fixtureMiniappsService(), clock);
 });
 
 afterEach(() => {

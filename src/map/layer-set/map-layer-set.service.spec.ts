@@ -35,7 +35,7 @@ import type { LiveActivation } from "../map.document";
 import type { MapRepository } from "../map.repository";
 import type { MapLayerSetRepository } from "./map-layer-set.repository";
 import { MapLayerSetService } from "./map-layer-set.service";
-import { MiniappsService } from "../../miniapps/miniapps.service";
+import { fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
 
 const NOW = new Date("2026-09-16T09:00:00.000Z");
 const mockFindActiveActivation = jest.fn<Promise<LiveActivation | null>, [Date]>();
@@ -71,7 +71,7 @@ beforeEach(() => {
   repository.findActiveActivation = mockFindActiveActivation;
   layerSets = new FakeMapLayerSetRepository();
   layerSets.storeLayerSets(fixtureLayerSets());
-  service = new MapLayerSetService(asReal<MapRepository>(repository), asReal<MapLayerSetRepository>(layerSets), fakeClock, new MiniappsService());
+  service = new MapLayerSetService(asReal<MapRepository>(repository), asReal<MapLayerSetRepository>(layerSets), fakeClock, fixtureMiniappsService());
 });
 
 afterEach(() => {

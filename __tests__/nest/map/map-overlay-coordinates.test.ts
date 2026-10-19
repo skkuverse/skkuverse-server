@@ -20,7 +20,7 @@ import fs from "fs";
 import path from "path";
 
 import type { Clock } from "../../../src/infra/clock";
-import { MiniappsService } from "../../../src/miniapps/miniapps.service";
+import { fixtureMiniappsService } from "../../helpers/miniapps/registry-fixture";
 import { MapEventService } from "../../../src/map/event/map-event.service";
 import { MapLayerSetService } from "../../../src/map/layer-set/map-layer-set.service";
 import type { MapLayerSetRepository } from "../../../src/map/layer-set/map-layer-set.repository";
@@ -44,8 +44,8 @@ beforeEach(() => {
   repository = new FakeMapRepository();
   repository.findActiveActivation = mockFindActiveActivation;
   const real = asReal<MapRepository>(repository);
-  const layerSet = new MapLayerSetService(real, asReal<MapLayerSetRepository>(fixtureLayerSetRepository()), CLOCK, new MiniappsService());
-  service = new MapEventService(real, layerSet, new MiniappsService());
+  const layerSet = new MapLayerSetService(real, asReal<MapLayerSetRepository>(fixtureLayerSetRepository()), CLOCK, fixtureMiniappsService());
+  service = new MapEventService(real, layerSet, fixtureMiniappsService());
 });
 
 // scripts/ is excluded from tsconfig (plain CommonJS operator tooling), so this

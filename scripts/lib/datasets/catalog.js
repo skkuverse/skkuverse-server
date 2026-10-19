@@ -54,20 +54,21 @@ function loadCatalog(load) {
   const { layerSetsDataset } = load("map/layer-set/map-layer-set.schema");
   const { busServiceNoticesDataset, skkuRestDaysDataset } = load("bus/schedule-content/bus-schedule-content.schema");
   const { serviceNoticesReferences } = load("bus/schedule-content/bus-schedule-content.rules");
-  const { MiniappsService } = load("miniapps/miniapps.service");
+  const { committedRegistry } = load("miniapps/miniapps.config");
   const { jongroRoutes } = load("bus/bus.config");
   const { SERVICE_CONFIG } = load("bus/bus.constants");
   const { toBusGroupIds } = load("bus/config/bus-config.mapper");
   const { SubwayStationsService } = load("subway/stations/subway-stations.service");
 
-  // No constructor dependencies: the registry is read from the committed files at import.
-  const miniapps = new MiniappsService();
+  // The committed registry's snapshot, the one the server's MiniappsService getters read; it reads no
+  // config, while the service's dataset door does. move-miniapp-registry task 10.2 replaces this source.
+  const miniapps = committedRegistry;
   const busGroups = codeHeldSource("src/bus", toBusGroupIds(jongroRoutes));
   const subwayStations = codeHeldSource("src/subway", new SubwayStationsService().listStations().map((station) => station.id));
 
   return {
     sources: {
-      miniapps: { owner: "src/miniapps", has: (id) => miniapps.isRegistered(id), ids: () => miniapps.list.map((entry) => entry.id) },
+      miniapps: { owner: "src/miniapps", has: (id) => miniapps.isRegistered(id), ids: () => miniapps.indexEntries.map((entry) => entry.id) },
       busGroups,
       subwayStations,
       busServices: codeHeldSource("src/bus", Object.keys(SERVICE_CONFIG)),

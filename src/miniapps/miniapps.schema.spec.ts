@@ -11,12 +11,13 @@
  * check made of the committed files (loadRegistry in miniapps.config.spec.ts)
  * is a refusal here at the path of the value at fault, the cross-references
  * between the index and the details included, so `npm run data` can name it.
+ * storedRegistry is the stored document's revision and data.
  */
 import fs from "fs";
 import path from "path";
 import type { z } from "zod";
 import { fixtureRegistry } from "../../__tests__/helpers/miniapps/registry-fixture";
-import { checkedRegistry, registryFile } from "./miniapps.schema";
+import { checkedRegistry, registryFile, storedRegistry } from "./miniapps.schema";
 
 const readJson = (...segments: string[]): unknown => JSON.parse(fs.readFileSync(path.join(__dirname, ...segments), "utf8"));
 
@@ -298,3 +299,29 @@ describe("checkedRegistry", () => {
   });
 });
 
+
+describe("storedRegistry", () => {
+  it("accepts the fixture stored as revision 1", () => {
+    // Act & Assert
+    expect(storedRegistry.safeParse({ revision: 1, data: fixtureRegistry() }).success).toBe(true);
+  });
+
+  it.each(Object.keys(storedRegistry.shape))("refuses a document missing %s", (field) => {
+    // Arrange
+    const stored: Record<string, unknown> = { revision: 1, data: fixtureRegistry() };
+    delete stored[field];
+
+    // Act & Assert
+    expect(storedRegistry.safeParse(stored).success).toBe(false);
+  });
+
+  it.each([[0], [1.5], ["1"]])("refuses a revision that is not a positive integer, %j", (revision) => {
+    // Act & Assert
+    expect(storedRegistry.safeParse({ revision, data: fixtureRegistry() }).success).toBe(false);
+  });
+
+  it("refuses stored data that fails checkedRegistry", () => {
+    // Act & Assert
+    expect(storedRegistry.safeParse({ revision: 1, data: minimal({}, { id: "b" }) }).success).toBe(false);
+  });
+});
