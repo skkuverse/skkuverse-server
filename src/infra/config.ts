@@ -203,9 +203,8 @@ const config = {
     return requiredEnv.envRole(process.env);
   },
 
-  /** WHY: only `api` leaves the pollers to another container; `poller` and `combined` run them. */
   runsPollers(): boolean {
-    return requiredEnv.envRole(process.env) !== "api";
+    return requiredEnv.isPollingRole(requiredEnv.envRole(process.env));
   },
 
   getModeLabel(): string {
