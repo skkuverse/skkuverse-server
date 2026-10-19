@@ -3,11 +3,14 @@
  * either top-level field does not, a feed section without a limit gets the
  * default one, and ids repeat neither across sections and banners nor across
  * tiles.
+ *
+ * And the stored `home-layout` dataset as the repository reads it: a document
+ * `npm run data` stored passes, and one missing its revision or its data does not.
  */
 import fs from "fs";
 import path from "path";
 import { DEFAULT_MINIAPP_FEED_LIMIT } from "./ui-home.constants";
-import { homeLayoutFile } from "./ui-home.schema";
+import { homeLayoutFile, storedHomeLayout } from "./ui-home.schema";
 
 const COMMITTED = JSON.parse(fs.readFileSync(path.join(__dirname, "home-layout.json"), "utf8")) as Record<string, unknown>;
 
@@ -176,5 +179,49 @@ describe("homeLayoutFile refuses each structural mistake the boot check refused"
   it.each([1, 10])("accepts a feed limit of %p", (limit) => {
     // Act & Assert
     expect(issueLines(layoutOf(feedSection({ limit })))).toEqual([]);
+  });
+});
+
+// The committed home-layout.json, kept as the fixture the dataset is seeded from.
+const DATASET_FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/home-layout.dataset.json");
+
+/** A `datasets` document as scripts/lib/datasets/store.js writes it, with the fixture as its data. */
+function storedDocument(): Record<string, unknown> {
+  const data = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<string, unknown>;
+  delete data._about;
+  return { _id: "home-layout", revision: 3, data, updatedAt: new Date("2026-10-19T03:00:00.000Z"), updatedBy: "alice@example.com" };
+}
+
+describe("storedHomeLayout", () => {
+  it("parses a stored home-layout document", () => {
+    // Act
+    const parsed = storedHomeLayout.safeParse(storedDocument());
+
+    // Assert
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.revision).toBe(3);
+  });
+
+  it.each(Object.keys(storedHomeLayout.shape))("refuses a stored document without its %s", (field) => {
+    // Arrange
+    const rest = storedDocument();
+    delete rest[field];
+
+    // Act & Assert
+    expect(storedHomeLayout.safeParse(rest).success).toBe(false);
+  });
+
+  it.each([0, -1, 1.5, "3"])("refuses a revision of %p", (revision) => {
+    // Act & Assert
+    expect(storedHomeLayout.safeParse({ ...storedDocument(), revision }).success).toBe(false);
+  });
+
+  it("refuses stored data the layout schema refuses", () => {
+    // Arrange
+    const stored = storedDocument();
+    const data = { ...(stored.data as Record<string, unknown>), extra: 1 };
+
+    // Act & Assert
+    expect(storedHomeLayout.safeParse({ ...stored, data }).success).toBe(false);
   });
 });
