@@ -3,9 +3,10 @@
  * timetable-only document (on the real timetable door, FakeHolidaysService and
  * the committed weekday tables) and a fixed Clock. What it guards: an unserved
  * station, a KRIC platform id included, finds nothing; a platform's state at
- * most 2 minutes old is served as the tracker stored it; an older or missing
- * state, or SUBWAY=off, serves that platform's timetable alone at the
- * request's time, every train `scheduled`; and at a station of two platforms
+ * most 2 minutes old is served as the tracker stored it, whatever SUBWAY says,
+ * since the switch stops only the poller (ADR 0012, D5); an older or missing
+ * state serves that platform's timetable alone at the request's time, every
+ * train `scheduled`; and at a station of two platforms
  * each is judged on its own ("One line stale"), on Gangnam's line 2 and Shinbundang
  * platforms.
  */
@@ -91,7 +92,7 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     expect(sourcesOf(arrivals)).toEqual(Array(6).fill("scheduled"));
   });
 
-  it("serves the timetable alone with SUBWAY=off, a fresh state notwithstanding", async () => {
+  it("serves a fresh stored state with SUBWAY=off, which stops only the poller", async () => {
     // Arrange
     subway.enabled = false;
     const { service, repository } = setup();
@@ -101,6 +102,21 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     const arrivals = await service.findStationArrivals("hyehwa", "ko");
 
     // Assert
+    expect(arrivals?.lines[0]?.generatedAt).toBe("2026-10-16T11:40:55.000Z");
+    expect(sourcesOf(arrivals)).toEqual(["live"]);
+  });
+
+  it("serves the timetable alone, every train scheduled, with SUBWAY=off and no fresh state", async () => {
+    // Arrange
+    subway.enabled = false;
+    const { service, repository } = setup();
+    repository.docs.set("S1-4-420", storedAgo(121_000));
+
+    // Act
+    const arrivals = await service.findStationArrivals("hyehwa", "ko");
+
+    // Assert
+    expect(arrivals?.lines[0]?.generatedAt).toBe(NOW.toISOString());
     expect(sourcesOf(arrivals)).toEqual(Array(6).fill("scheduled"));
   });
 
