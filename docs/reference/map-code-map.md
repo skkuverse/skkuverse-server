@@ -3,7 +3,7 @@ title: Map Code Map
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-18
+last-updated: 2026-10-19
 audience: internal
 ---
 
@@ -21,7 +21,7 @@ Read them in this order: each depends only on the ones before it.
 | `src/map/layer-set/` | The festival structure tier: the layer-set JSON files, their loader (`map-layer-set.config.ts`) and schema, the cross-reference rules, the chip validator, the festival layer and chip specs, and `MapLayerSetService`, which answers which layer set is live |
 | `src/map/config/` | `GET /map/config`: campuses, layers, chips and camera defaults |
 | `src/map/campus/` | `GET /map/overlays/campus`: buildings and campus shapes, the static fallback, and the Cache-Control that refuses to cache it |
-| `src/map/transit/` | `GET /map/overlays/transit`: the Jongno route lines `BusRoutePathService` answers, as path overlays, and the shorter Cache-Control of its snapshot fallback |
+| `src/map/transit/` | `GET /map/overlays/transit`: the Jongno route lines `BusRoutePathService` answers, as path overlays, and the shorter Cache-Control when a route has no stored line |
 | `src/map/event/` | `GET /map/overlays/event`: a festival's places as overlays |
 | `src/map/event-details/` | `GET /map/overlays/event/details`: the sheet behind each event overlay |
 
