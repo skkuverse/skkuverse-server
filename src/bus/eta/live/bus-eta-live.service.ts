@@ -45,6 +45,8 @@ export class BusEtaLiveService {
       if (runs) await this.tickSequence(sequence, runs, state).catch((err: unknown) => this.hold(state, "naver", err));
     }
     if (state.needsPrime) await this.prime(state);
+    // WHY: a held corridor failure is retried each tick, or a push waits for the next bus-lane run, up to about 60 h.
+    if (this.failures.has("corridor")) await this.corridorOf(state);
     if (state.out.length > 0) await this.deps.writeEtas(state.out);
     return this.settle(state);
   }
@@ -92,7 +94,7 @@ export class BusEtaLiveService {
     this.pushDocs(due, { offsetsSec: toBusLaneOffsets(route, leg.corridorSec), travel }, state);
   }
 
-  // WHY: read once per tick, only when a bus-lane run is due; with none read, the tick reports failing after its writes.
+  // WHY: read at most once per tick, when a bus-lane run is due or a corridor failure is held; none read rejects the tick.
   private corridorOf(state: TickState): Promise<LaneCorridorSnapshot | null> {
     state.corridor ??= this.deps.travel.corridor().then((corridor) => {
       if (corridor === null) this.hold(state, "corridor", new BusEtaLaneUnavailableError());
