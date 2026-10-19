@@ -4,13 +4,17 @@
  * `ko`, `en` and `zh` for the banners in fixtures/campus-banners.dataset.json,
  * through the production pipeline with only `Clock` overridden. The app boots
  * every module `src/app.module.ts` imports under `src/ui/campus/`, over a real
- * `mongod`, where the banners will be stored once they move.
+ * `mongod`.
  *
  * A regression pin: a failure is a regression to report, and an expected value
- * changes only with the behavior it pins (`.claude/rules/tests.md`). Today the
- * banners are read from the committed campus-banners.json, which the fixture
- * equals (ui-dataset-fixtures.test.ts); moving them to the content database
- * must not change a byte here.
+ * changes only with the behavior it pins (`.claude/rules/tests.md`). The
+ * expected values were pinned while the banners were read from the committed
+ * campus-banners.json, which the fixture equals (ui-dataset-fixtures.test.ts);
+ * moving them to the content database must not change a byte here.
+ *
+ * The banners are stored in the real `mongod`'s content database the way
+ * `npm run data` stores them: the fixture's data pushed through the tool's own
+ * scripts/lib/datasets/store.js, as revision 1 of `campus-banners`.
  *
  * Every banner closes at 2026-10-03T00:00+09:00 and has no start, so two
  * clocks pin the sheet:
@@ -29,6 +33,9 @@ import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
+
+// scripts/ is plain CommonJS outside tsconfig, so require rather than import.
+const store = require("../../../scripts/lib/datasets/store");
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
@@ -59,6 +66,13 @@ interface FixtureBanner {
 function fixtureBanners(): FixtureBanner[] {
   const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/campus-banners.dataset.json"), "utf8")) as { items: FixtureBanner[] };
   return fixture.items;
+}
+
+/** The carousel fixtures/campus-banners.dataset.json holds, without its provenance note. */
+function fixtureCarousel(): Record<string, unknown> {
+  const carousel = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/campus-banners.dataset.json"), "utf8")) as Record<string, unknown>;
+  delete carousel._about;
+  return carousel;
 }
 
 /** The envelope served in `lang` while every banner shows, key order included, so its JSON text is the served bytes. */
@@ -97,6 +111,8 @@ beforeAll(async () => {
   db = require("../../../src/infra/db") as Db;
   const config = require("../../../src/infra/config") as Config;
   assertConfigReaches(mongod, config.mongo.url);
+  const content = db.getClient().db(config.content.dbName);
+  await store.create(content, "campus-banners", fixtureCarousel(), { by: "characterization@example.com", now: CAPTURED_AT.now() });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {
