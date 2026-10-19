@@ -2,7 +2,7 @@
  * Characterization of the `bus_cache` read path over a real `mongod`
  * (harden-test-suite task 6.3, design D6), in the production topology: a poller
  * process writes what it fetched to `bus_cache`, and an api replica, whose own
- * pollers never run, serves the realtime and station routes from it.
+ * pollers never run, serves the realtime routes from it.
  *
  * Each test boots two apps on one mongod, both with ROLE=api so no poller
  * starts on its own: a "poller" app, booted under a spy on
@@ -52,7 +52,6 @@ const HSSC_ITEMS = [
   { line_no: "2", inout: "ENTERED", stop_no: "9", seq: "1", stop_name: "혜화역 1번출구 셔틀버스 정류소", get_date: "2026-10-20 오전 9:58:00" },
 ];
 const TOPIS_OK = { headerCd: "0", headerMsg: "정상적으로 처리되었습니다.", itemCount: 0 };
-const STATION_BODY = { msgHeader: TOPIS_OK, msgBody: { itemList: [{ arrmsg1: "3분후[2번째 전]", stId: "100000018" }] } };
 const JONGRO07_LOC_BODY = {
   msgHeader: TOPIS_OK,
   msgBody: {
@@ -94,20 +93,18 @@ const JONGRO07_LIST_BODY = {
 };
 
 /** What each upstream answers, by host and path; set per test. */
-const upstream = { hssc: HSSC_ITEMS as unknown, station: STATION_BODY as unknown, requests: [] as string[] };
+const upstream = { hssc: HSSC_ITEMS as unknown, requests: [] as string[] };
 
 function upstreamApi(req: http.IncomingMessage, res: http.ServerResponse): void {
   const url = req.url ?? "";
   upstream.requests.push(url);
   const body = url.startsWith("/test-hssc/")
     ? upstream.hssc
-    : url.startsWith("/test-station/")
-      ? upstream.station
-      : url.includes("/buspos/") && url.includes("busRouteId=100900004")
-        ? JONGRO07_LOC_BODY
-        : url.includes("/arrive/") && url.includes("busRouteId=100900004")
-          ? JONGRO07_LIST_BODY
-          : { msgHeader: { headerCd: "4", headerMsg: "결과가 없습니다." }, msgBody: { itemList: null } };
+    : url.includes("/buspos/") && url.includes("busRouteId=100900004")
+      ? JONGRO07_LOC_BODY
+      : url.includes("/arrive/") && url.includes("busRouteId=100900004")
+        ? JONGRO07_LIST_BODY
+        : { msgHeader: { headerCd: "4", headerMsg: "결과가 없습니다." }, msgBody: { itemList: null } };
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify(body));
 }
@@ -157,7 +154,6 @@ afterAll(async () => {
 
 beforeEach(async () => {
   upstream.hssc = HSSC_ITEMS;
-  upstream.station = STATION_BODY;
   upstream.requests = [];
   await clearCollections(db.getClient().db(config.mongo.dbName));
   const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller");
@@ -205,7 +201,6 @@ describe("bus_cache between a poller process and an api replica", () => {
       "jongro-path-02",
       "jongro-path-07",
       "jongro-path-08",
-      "station",
     ]);
   });
 
@@ -267,48 +262,6 @@ describe("bus_cache between a poller process and an api replica", () => {
     // Assert
     expect(await busCache.findOne({ _id: "hssc" as never })).toEqual({ _id: "hssc", _updatedAt: NOW, data: [] });
     expect(res.body.data.buses).toEqual([]);
-  });
-
-  it("stores TOPIS station and HSSC ticks under `station` and `hssc` and composes /bus/station/01592 from both", async () => {
-    // Act
-    await tick("station");
-    await tick("hssc");
-    const res = await get("/bus/station/01592");
-
-    // Assert
-    expect(await busCache.findOne({ _id: "station" as never })).toEqual({
-      _id: "station",
-      _updatedAt: NOW,
-      data: "3분후[2번째 전]",
-    });
-    expect(res.status).toBe(200);
-    expect(res.body.meta).toEqual({ lang: "ko", totalCount: 2 });
-    expect(res.body.data).toEqual([
-      {
-        busNm: "종로07",
-        busSupportTime: true,
-        msg1ShowMessage: true,
-        msg1Message: "3분후[2번째 전]",
-        msg1RemainStation: null,
-        msg1RemainSeconds: null,
-        msg2ShowMessage: false,
-        msg2Message: null,
-        msg2RemainStation: null,
-        msg2RemainSeconds: null,
-      },
-      {
-        busNm: "인사캠셔틀",
-        busSupportTime: false,
-        msg1ShowMessage: true,
-        msg1Message: "4 정거장 전",
-        msg1RemainStation: null,
-        msg1RemainSeconds: null,
-        msg2ShowMessage: true,
-        msg2Message: null,
-        msg2RemainStation: null,
-        msg2RemainSeconds: null,
-      },
-    ]);
   });
 
   it("stores a Jongro tick under jongro_locations_07 and jongro_stations_07 and serves both on /bus/realtime/data/jongro07", async () => {
@@ -431,19 +384,14 @@ describe("bus_cache between a poller process and an api replica", () => {
     });
   });
 
-  it("serves the api replica's own empty poller memory when bus_cache holds nothing", async () => {
+  it("serves no bus when bus_cache holds nothing", async () => {
     // Act
-    const [hssc, jongro, station] = await Promise.all([
-      get("/bus/realtime/data/hssc"),
-      get("/bus/realtime/data/jongro07"),
-      get("/bus/station/01592"),
-    ]);
+    const [hssc, jongro] = await Promise.all([get("/bus/realtime/data/hssc"), get("/bus/realtime/data/jongro07")]);
 
     // Assert
     expect(hssc.body.data).toEqual({ groupId: "hssc", buses: [], stationEtas: [] });
     // WHY: stationsVersion is the registry's (improve-jongro-realtime 5.4), seeded from the committed snapshot.
     expect(jongro.body.data).toEqual({ groupId: "jongro07", buses: [], stationEtas: [], stationsVersion: "0346768f2b776f45" });
-    expect(station.body.data.map((s: { msg1Message: string }) => s.msg1Message)).toEqual(["정보 없음", "도착 정보 없음"]);
     expect(upstream.requests).toEqual([]);
   });
 
@@ -468,15 +416,13 @@ describe("bus_cache between a poller process and an api replica", () => {
 // WHY: overnight TOPIS answers "4" (no result) and HSSC an empty array; the pollers write that as an empty
 // value, so a key goes missing only when its poller stops writing, which is what bus.cache.missing reports.
 describe("bus_cache when the upstreams list no bus", () => {
-  const TOPIS_NO_RESULT = { msgHeader: { headerCd: "4", headerMsg: "결과가 없습니다." }, msgBody: { itemList: null } };
-  const PATHS = ["/bus/realtime/data/hssc", "/bus/realtime/data/jongro02", "/bus/realtime/data/jongro08", "/bus/station/01592"];
+  const PATHS = ["/bus/realtime/data/hssc", "/bus/realtime/data/jongro02", "/bus/realtime/data/jongro08"];
   const tickAll = async () => {
-    for (const name of ["hssc", "station", "jongro-02", "jongro-08"]) await tick(name);
+    for (const name of ["hssc", "jongro-02", "jongro-08"]) await tick(name);
   };
 
   beforeEach(() => {
     upstream.hssc = [];
-    upstream.station = TOPIS_NO_RESULT;
   });
 
   it("writes an empty value under every key", async () => {
@@ -490,7 +436,6 @@ describe("bus_cache when the upstreams list no bus", () => {
       { _id: "jongro_locations_08", _updatedAt: NOW, data: [] },
       { _id: "jongro_stations_02", _updatedAt: NOW, data: [] },
       { _id: "jongro_stations_08", _updatedAt: NOW, data: [] },
-      { _id: "station", _updatedAt: NOW, data: "정보 없음" },
     ]);
   });
 
