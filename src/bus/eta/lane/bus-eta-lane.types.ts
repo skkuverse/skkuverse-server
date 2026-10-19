@@ -40,6 +40,7 @@ export interface ProbeRoute {
   sectOrds: Record<LaneDirection, SectionRange>;
 }
 
+export type LaneStrategies = Readonly<Record<string, Readonly<Record<string, SequenceStrategy>>>>;
 export interface LaneConfig {
   laneHours: LaneHours;
   /** WHY: serviceId → routeType → strategy; a sequence left out is `car`. */
