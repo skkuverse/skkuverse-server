@@ -1,17 +1,18 @@
-import type { BusGroup } from "../../bus/config/bus-config.wire";
-import type { SupportedLang } from "../../infra/types";
-import type { ServedStation } from "../../subway/stations/subway-stations.types";
-import { toLocalizedText } from "../ui.mapper";
-import { toServedActionValue } from "../../shared/link-action.util";
-import { toTransitItemId } from "./ui-transit.rules";
-import type { TransitChildRaw, TransitItemRaw, TransitLayoutRaw } from "./ui-transit.schema";
-import type { TransitLayout } from "./ui-transit.wire";
+import type { BusGroup } from "../../../bus/config/bus-config.wire";
+import type { SupportedLang } from "../../../infra/types";
+import type { ServedStation } from "../../../subway/stations/subway-stations.types";
+import { toLocalizedText } from "../../ui.mapper";
+import { toServedActionValue } from "../../../shared/link-action.util";
+import { toTransitItemId } from "../ui-transit.rules";
+import type { TransitItemRaw, TransitLayoutRaw } from "../ui-transit.schema";
+import type { TransitLayout } from "../ui-transit.wire";
 
 type TransitSection = TransitLayout["sections"][number];
 type TransitItem = TransitSection["items"][number];
 type TransitChild = Exclude<TransitItem, { kind: "group" }>;
 type LinkItemRaw = Extract<TransitItemRaw, { kind: "link" }>;
 type GroupItemRaw = Extract<TransitItemRaw, { kind: "group" }>;
+type TransitChildRaw = GroupItemRaw["items"][number];
 
 interface TransitSectionContext {
   lang: SupportedLang;
@@ -62,7 +63,7 @@ function toLinkTransitItem(link: LinkItemRaw, lang: SupportedLang): TransitChild
   };
 }
 
-// WHY: the loader placed every referent at boot; a group missing here is one outside its visibility.
+// WHY: each load left out the referents the server does not serve; a group missing here is one outside its visibility.
 function toTransitChildren(item: TransitChildRaw, context: TransitSectionContext): TransitChild[] {
   if (item.kind === "link") return [toLinkTransitItem(item, context.lang)];
   if (item.kind === "bus") {
