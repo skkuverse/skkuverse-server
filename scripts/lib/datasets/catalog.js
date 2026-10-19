@@ -46,6 +46,8 @@ function codeHeldSource(owner, ids) {
 function loadCatalog(load) {
   const { homeLayoutFile } = load("ui/home/ui-home.schema");
   const { homeLayoutReferences, toHomeLayoutIssues } = load("ui/home/ui-home.rules");
+  const { campusBannersFile } = load("ui/campus/ui-campus.schema");
+  const { campusBannerReferences, toCampusBannerIssues } = load("ui/campus/ui-campus.rules");
   const { MiniappsService } = load("miniapps/miniapps.service");
   const { jongroRoutes } = load("bus/bus.config");
   const { SERVICE_CONFIG } = load("bus/bus.constants");
@@ -68,6 +70,12 @@ function loadCatalog(load) {
         schema: homeLayoutFile,
         issuesOf: (layout) => toHomeLayoutIssues(layout, miniapps),
         referencesOf: (layout) => homeLayoutReferences(layout, miniapps),
+      },
+      "campus-banners": {
+        owner: "src/ui/campus",
+        schema: campusBannersFile,
+        issuesOf: (banners) => toCampusBannerIssues(banners, miniapps),
+        referencesOf: (banners) => campusBannerReferences(banners, miniapps),
       },
     },
   };
