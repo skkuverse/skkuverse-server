@@ -5,6 +5,5 @@
   "src/bus/stops/bus-stops.service.ts": "pure delegation: the stop catalog's door for the config and estimate flows (ADR 0010 D1); its constructor reads the catalog once through `readStopCatalog` against the served subway stations and keeps their titles, and each method is one call into `resolveStopSequences` or `etaOptIns`, whose specs cover the parse, the served stops and the opt-ins",
   "src/miniapps/miniapps.service.ts": "pure delegation: the mini-app registry's door (ADR 0010 D1), each method one statement forwarding to the registry `miniapps.config.ts` loads, whose spec pins the parse, the sort and the origin owners, or to a `miniapps.rules.ts` or `miniapps.mapper.ts` function its own spec covers",
   "src/ui/campus/ui-campus.service.ts": "delegation: reads the banners once through ui-campus.config.ts (its spec) and hands them to toCampusSheet (ui-campus.mapper.spec.ts) with the clock's time and the web view origin",
-  "src/ui/home/ui-home.service.ts": "delegation: reads the layout once through ui-home.config.ts (its spec) and hands it to toHomeLayout (ui-home.mapper.spec.ts) with the clock's time and the registry's logo resolver",
   "src/ui/scroll/ui-scroll.service.ts": "pure delegation: hands the language and the web view origin to toScrollCards, which ui-scroll.mapper.spec.ts covers"
 }

@@ -10,15 +10,28 @@
  * moved to MongoDB; the move must not change a byte of it. The app boots every
  * module `src/app.module.ts` imports under `src/ui/home/`.
  *
+ * The layout is stored in a real `mongod`'s content database the way
+ * `npm run data` stores it: the fixture's data pushed through the tool's own
+ * scripts/lib/datasets/store.js, as revision 1 of `home-layout`.
+ *
  * The clock stands at 12:00 KST on 2026-10-19. The layout holds no banner
  * window, so the instant changes nothing today; it is fixed so that it never
  * does by accident.
  */
+import fs from "fs";
+import path from "path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
-import { buildTestApp } from "../../helpers/nest/build-test-app";
+
+// scripts/ is plain CommonJS outside tsconfig, so require rather than import.
+const store = require("../../../scripts/lib/datasets/store");
+
+type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
+type Config = typeof import("../../../src/infra/config");
+type Db = typeof import("../../../src/infra/db");
 
 const CLOCK: Clock = { now: () => new Date("2026-10-19T03:00:00.000Z") };
 
@@ -84,18 +97,42 @@ function servedBody(lang: Lang): unknown {
   };
 }
 
+/** The layout fixtures/home-layout.dataset.json holds, without its provenance note. */
+function fixtureLayout(): Record<string, unknown> {
+  const layout = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/home-layout.dataset.json"), "utf8")) as Record<string, unknown>;
+  delete layout._about;
+  return layout;
+}
+
+let mongod: TestMongod;
+let db: Db;
 let app: NestExpressApplication;
 
 beforeAll(async () => {
+  mongod = await startMongod();
+  db = require("../../../src/infra/db") as Db;
+  const config = require("../../../src/infra/config") as Config;
+  assertConfigReaches(mongod, config.mongo.url);
+  const content = db.getClient().db(config.content.dbName);
+  await store.create(content, "home-layout", fixtureLayout(), { by: "characterization@example.com", now: CLOCK.now() });
+}, MONGOD_START_TIMEOUT_MS);
+
+beforeAll(async () => {
+  const { buildTestApp } = require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp };
   app = await buildTestApp({
     imports: appModulesUnder("src/ui/home/"),
     overrides: [{ provide: Clock, useValue: CLOCK }],
     role: "api",
   });
-});
+}, APP_BOOT_TIMEOUT_MS);
 
 afterAll(async () => {
-  await app?.close();
+  try {
+    await app?.close();
+    await db?.closeClient();
+  } finally {
+    await mongod?.stop();
+  }
 });
 
 describe("GET /ui/home over the committed layout", () => {
