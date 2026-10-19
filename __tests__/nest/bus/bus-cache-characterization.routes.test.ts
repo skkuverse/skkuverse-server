@@ -394,7 +394,7 @@ describe("bus_cache between a poller process and an api replica", () => {
         { stationIndex: 0, eta: "3분후[2번째 전]", arrivals: [running5537(3, 1, "3분후[2번째 전]"), WAITING_NO_VEHICLE] },
         { stationIndex: 1, eta: "5분후[3번째 전]", arrivals: [running5537(5, 2, "5분후[3번째 전]"), WAITING_NO_VEHICLE] },
       ],
-      // WHY: the registry's stations version (improve-jongro-realtime 5.4), seeded from the committed snapshot.
+      // WHY: the registry's stations version (improve-jongro-realtime 5.4), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
       stationsVersion: "0346768f2b776f45",
     });
   });
@@ -405,7 +405,7 @@ describe("bus_cache between a poller process and an api replica", () => {
 
     // Assert
     expect(hssc.body.data).toEqual({ groupId: "hssc", buses: [], stationEtas: [] });
-    // WHY: stationsVersion is the registry's (improve-jongro-realtime 5.4), seeded from the committed snapshot.
+    // WHY: stationsVersion is the registry's (improve-jongro-realtime 5.4), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
     expect(jongro.body.data).toEqual({ groupId: "jongro07", buses: [], stationEtas: [], stationsVersion: "0346768f2b776f45" });
     expect(upstream.requests).toEqual([]);
   });
