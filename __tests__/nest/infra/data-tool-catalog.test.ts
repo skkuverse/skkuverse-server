@@ -15,7 +15,8 @@
  *
  * The wave A datasets (`campus-banners`, `transit-layout`) are checked at push
  * with the checks the boot refused a committed file on (D4, D5), through the
- * tool's own checkData.
+ * tool's own checkData. So is wave B's `map-layer-sets`, with the checks the
+ * layer-set loader refused a file on and one set per `layerSetId` (D6).
  */
 import path from "node:path";
 import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
@@ -270,5 +271,50 @@ describe("loadCatalog transit-layout", () => {
     // Assert
     expect(new Set(references.map((reference) => reference.dataset))).toEqual(new Set(["busGroups", "subwayStations"]));
     expect(references.every((reference) => catalog.sources[reference.dataset].has(reference.id))).toBe(true);
+  });
+});
+
+describe("loadCatalog map-layer-sets", () => {
+  const layerSets = () => datasetFixture("../map/fixtures/map-layer-sets.dataset.json") as { layerSets: Array<Record<string, any>> };
+
+  it("is owned by src/map/layer-set and accepts revision 1 with no issue and no reference, naming its sets", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["map-layer-sets"];
+
+    // Act
+    const issues = checkData(catalog, "map-layer-sets", layerSets(), {});
+
+    // Assert
+    expect(issues).toEqual([]);
+    expect(entry.owner).toBe("src/map/layer-set");
+    expect(entry.referencesOf(entry.schema.parse(layerSets()))).toEqual([]);
+    expect(entry.idsOf(entry.schema.parse(layerSets()))).toEqual(["eskara-2026"]);
+  });
+
+  it("Chip names an unknown layer: refuses the set, naming its index, the chip and the id", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = layerSets();
+    data.layerSets[0]!.chips[0].layerIds = ["nope"];
+
+    // Act
+    const lines = issueLines(checkData(catalog, "map-layer-sets", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['map-layer-sets: layerSets.0.chips: chip "eskara26_view_bar": "nope" is not a layer']);
+  });
+
+  it("Two sets share an id: refuses the push, naming the second one's path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = layerSets();
+    data.layerSets.push(structuredClone(data.layerSets[0]!));
+
+    // Act
+    const lines = issueLines(checkData(catalog, "map-layer-sets", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['map-layer-sets: layerSets.1.layerSetId: repeats the layer set "eskara-2026" of layerSets[0]']);
   });
 });
