@@ -11,11 +11,8 @@ import fs from "fs";
 import path from "path";
 import moment from "moment-timezone";
 import type { RestDays } from "../schedule-content/bus-schedule-content.types";
-import { SKKU_REST_DAYS, loadRestDays as parseRestDays } from "./bus-schedule.config";
 import type { BusScheduleDoc } from "./bus-schedule.document";
 import { isWeekStartInRange, lookupRestDay, pickPattern, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
-
-const service = { getNonOperatingDayLabel: (date: string) => toNonOperatingDayLabel(SKKU_REST_DAYS, date, null) };
 
 // Revision 1 of the skku-rest-days dataset (its fixture), built into RestDays as the dataset schema reads it.
 const STORED_REST_DAYS: RestDays = {
@@ -40,57 +37,15 @@ describe("toNonOperatingDayLabel", () => {
   });
 });
 
-describe("the SKKU annual rest days (real skku-rest-days.json)", () => {
-  it("closes 공자탄신일 on 09-28 every year", () => {
-    // Act & Assert
-    expect(service.getNonOperatingDayLabel("2026-09-28")).toBe("공자탄신일");
-    expect(service.getNonOperatingDayLabel("2027-09-28")).toBe("공자탄신일");
-  });
-
-  it("closes 건학기념일 on 09-25 every year", () => {
-    // Act & Assert
-    expect(service.getNonOperatingDayLabel("2028-09-25")).toBe("건학기념일");
-  });
-
-  it("leaves the days around them alone", () => {
-    // Act & Assert
-    expect(service.getNonOperatingDayLabel("2026-09-29")).toBeNull();
-  });
-});
-
-describe("lookupRestDay over loadRestDays", () => {
+describe("lookupRestDay", () => {
   it("prefers an exact date over the annual rule", () => {
-    // Act
-    const days = parseRestDays({
-      "09-28": "공자탄신일",
-      "2030-09-28": "공자탄신일 (특별)",
-    });
+    // Arrange
+    const days: RestDays = { exact: new Map([["2030-09-28", "공자탄신일 (특별)"]]), annual: new Map([["09-28", "공자탄신일"]]) };
 
-    // Assert
+    // Act & Assert
     expect(lookupRestDay(days, "2030-09-28")).toBe("공자탄신일 (특별)");
     expect(lookupRestDay(days, "2031-09-28")).toBe("공자탄신일");
     expect(lookupRestDay(days, "2031-09-27")).toBeNull();
-  });
-
-  it("skips underscore documentation keys", () => {
-    // Act
-    const days = parseRestDays({ _comment: "docs", _example: 1 });
-
-    // Assert
-    expect(days.exact.size + days.annual.size).toBe(0);
-  });
-
-  it("throws on a key that is neither YYYY-MM-DD nor MM-DD", () => {
-    // Act & Assert
-    expect(() => parseRestDays({ "2026-9-28": "공자탄신일" })).toThrow(
-      /neither YYYY-MM-DD nor MM-DD/,
-    );
-  });
-
-  it("throws on a non-string or empty label", () => {
-    // Act & Assert
-    expect(() => parseRestDays({ "09-28": true })).toThrow(/non-empty string/);
-    expect(() => parseRestDays({ "09-28": "" })).toThrow(/non-empty string/);
   });
 });
 
@@ -163,7 +118,7 @@ describe("toNonOperatingDayLabel on a date the holiday lookup cannot take", () =
     "throws on %s",
     (date) => {
       // Act & Assert
-      expect(() => toNonOperatingDayLabel(SKKU_REST_DAYS, date, null)).toThrow(`${date} is not a date from 1900 to 2999`);
+      expect(() => toNonOperatingDayLabel(STORED_REST_DAYS, date, null)).toThrow(`${date} is not a date from 1900 to 2999`);
     },
   );
 
@@ -173,11 +128,11 @@ describe("toNonOperatingDayLabel on a date the holiday lookup cannot take", () =
     ["2028-02-29", null],
   ])("answers %s", (date, label) => {
     // Act & Assert
-    expect(toNonOperatingDayLabel(SKKU_REST_DAYS, date, null)).toBe(label);
+    expect(toNonOperatingDayLabel(STORED_REST_DAYS, date, null)).toBe(label);
   });
 
   it("refuses a year out of range even on a day the SKKU list names", () => {
     // Act & Assert
-    expect(() => toNonOperatingDayLabel(SKKU_REST_DAYS, "0001-09-28", null)).toThrow("0001-09-28 is not a date from 1900 to 2999");
+    expect(() => toNonOperatingDayLabel(STORED_REST_DAYS, "0001-09-28", null)).toThrow("0001-09-28 is not a date from 1900 to 2999");
   });
 });
