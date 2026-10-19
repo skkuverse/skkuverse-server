@@ -6,16 +6,22 @@ import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
 import { mongoCollection } from "../../infra/mongo";
-import { BUS_SCHEDULE_CONTENT_LOG_INTERVAL_MS, BUS_SERVICE_NOTICES_DATASET } from "./bus-schedule-content.constants";
-import type { BusServiceNoticesDatasetDoc } from "./bus-schedule-content.document";
+import { BUS_SCHEDULE_CONTENT_LOG_INTERVAL_MS, BUS_SERVICE_NOTICES_DATASET, SKKU_REST_DAYS_DATASET } from "./bus-schedule-content.constants";
+import type { BusServiceNoticesDatasetDoc, SkkuRestDaysDatasetDoc } from "./bus-schedule-content.document";
 import { BusScheduleContentReadError } from "./bus-schedule-content.error";
-import { storedServiceNotices } from "./bus-schedule-content.schema";
-import type { DatasetLogEvents, ServiceNoticesRevision } from "./bus-schedule-content.types";
+import { storedRestDays, storedServiceNotices } from "./bus-schedule-content.schema";
+import type { DatasetLogEvents, RestDaysRevision, ServiceNoticesRevision } from "./bus-schedule-content.types";
 
 const SERVICE_NOTICES_EVENTS: DatasetLogEvents = {
   dataset: BUS_SERVICE_NOTICES_DATASET,
   missing: "bus.service_notices.missing",
   invalid: "bus.service_notices.invalid",
+};
+
+const REST_DAYS_EVENTS: DatasetLogEvents = {
+  dataset: SKKU_REST_DAYS_DATASET,
+  missing: "bus.rest_days.missing",
+  invalid: "bus.rest_days.invalid",
 };
 
 @Injectable()
@@ -34,6 +40,18 @@ export class BusScheduleContentRepository {
     return this.reportInvalid(SERVICE_NOTICES_EVENTS, doc.revision, parsed.error);
   }
 
+  async findRestDays(): Promise<RestDaysRevision | null> {
+    const doc = await this.restDays()
+      .findOne({ _id: SKKU_REST_DAYS_DATASET }, { projection: { revision: 1, data: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS })
+      .catch((err: unknown) => {
+        throw new BusScheduleContentReadError(SKKU_REST_DAYS_DATASET, err);
+      });
+    if (doc === null) return this.reportMissing(REST_DAYS_EVENTS);
+    const parsed = storedRestDays.safeParse(doc);
+    if (parsed.success) return { revision: parsed.data.revision, restDays: parsed.data.data };
+    return this.reportInvalid(REST_DAYS_EVENTS, doc.revision, parsed.error);
+  }
+
   private reportMissing({ dataset, missing }: DatasetLogEvents): null {
     const taken = this.logThrottle.take(`${dataset}:missing`);
     if (taken) logger.error({ event: missing, dataset, ...taken }, "Bus schedule content dataset not found");
@@ -50,5 +68,9 @@ export class BusScheduleContentRepository {
 
   private serviceNotices(): Collection<BusServiceNoticesDatasetDoc> {
     return mongoCollection<BusServiceNoticesDatasetDoc>(config.content.dbName, config.content.collections.datasets);
+  }
+
+  private restDays(): Collection<SkkuRestDaysDatasetDoc> {
+    return mongoCollection<SkkuRestDaysDatasetDoc>(config.content.dbName, config.content.collections.datasets);
   }
 }

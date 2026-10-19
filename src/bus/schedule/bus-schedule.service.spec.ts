@@ -25,7 +25,7 @@ jest.mock("./bus-schedule.rules", () => ({
 import { FakeBusScheduleRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { FakeBusScheduleContentRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule-content.repository.fake";
-import { serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../../__tests__/helpers/bus/schedule-content";
+import { restDaysFixture, serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../../__tests__/helpers/bus/schedule-content";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
@@ -1035,6 +1035,30 @@ describe("BusScheduleService over the stored schedule content (move-editorial-da
 
     // Assert
     expect(smart).toEqual({ serviceId: "campus-inja", status: "suspended", resumeDate: "2026-03-16", from: null, selectedDate: null, days: [] });
+  });
+
+  it("serves a pushed one-off rest day as no service with its label after the TTL, on holiday-respecting services only, an override still winning", async () => {
+    // Arrange
+    getNonOperatingDayLabel.mockImplementation(jest.requireActual("./bus-schedule.rules").toNonOperatingDayLabel);
+    repository.patterns = [WEEKDAYS, { ...WEEKDAYS, serviceId: "fasttrack-inja" }, { ...WEEKDAYS, serviceId: "campus-jain" }];
+    repository.overrides = [{ serviceId: "campus-jain", date: "2026-03-11", type: "replace", label: "특별 운행", notices: [], entries: WEEKDAYS.entries }];
+    const before = await service.resolveWeek("campus-inja", "2026-03-09");
+    content.storeRestDays({ ...restDaysFixture(), "2026-03-11": "학사휴교" });
+
+    // Act
+    jest.advanceTimersByTime(59_000);
+    const beforeTtl = await service.resolveWeek("campus-inja", "2026-03-09");
+    jest.advanceTimersByTime(1_000);
+    const inja = await service.resolveWeek("campus-inja", "2026-03-09");
+    const fasttrack = await service.resolveWeek("fasttrack-inja", "2026-03-09");
+    const jain = await service.resolveWeek("campus-jain", "2026-03-09");
+
+    // Assert
+    expect(before!.days[2]).toMatchObject({ date: "2026-03-11", display: "schedule" });
+    expect(beforeTtl!.days[2]).toMatchObject({ date: "2026-03-11", display: "schedule" });
+    expect(inja!.days[2]).toEqual({ date: "2026-03-11", dayOfWeek: 3, display: "noService", label: "학사휴교", notices: [], schedule: [] });
+    expect(fasttrack!.days[2]).toMatchObject({ date: "2026-03-11", display: "schedule", label: null });
+    expect(jain!.days[2]).toMatchObject({ date: "2026-03-11", display: "schedule", label: "특별 운행" });
   });
 
   it("answers null for an unknown service without reading the content, even when it is unavailable", async () => {

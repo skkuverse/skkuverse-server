@@ -6,13 +6,14 @@ import { serviceConfigOf } from "../bus.rules";
 import { BUS_SCHEDULE_CONTENT_LOG_INTERVAL_MS } from "./bus-schedule-content.constants";
 import { BusScheduleContentReadError, BusScheduleContentUnavailableError } from "./bus-schedule-content.error";
 import { BusScheduleContentRepository } from "./bus-schedule-content.repository";
-import type { ScheduleContent, ServiceNoticesRevision } from "./bus-schedule-content.types";
+import type { RestDaysRevision, ScheduleContent, ServiceNoticesRevision } from "./bus-schedule-content.types";
 
 @Injectable()
 export class BusScheduleContentService {
   // WHY: a reload every TTL re-finds the same stale ids; each is logged once per revision this process loads.
   private loggedNoticesRevision: number | null = null;
   private readonly serviceNotices: DatasetLoader<ServiceNoticesRevision>;
+  private readonly restDays: DatasetLoader<RestDaysRevision>;
 
   constructor(
     private readonly repository: BusScheduleContentRepository,
@@ -27,13 +28,23 @@ export class BusScheduleContentService {
       readFailedEvent: "bus.service_notices.read_failed",
       logIntervalMs: BUS_SCHEDULE_CONTENT_LOG_INTERVAL_MS,
     });
+    this.restDays = createDatasetLoader({
+      name: "bus.rest_days",
+      load: () => repository.findRestDays(),
+      clock,
+      isReadError: (err): err is BusScheduleContentReadError => err instanceof BusScheduleContentReadError,
+      toUnavailable: () => new BusScheduleContentUnavailableError(),
+      readFailedEvent: "bus.rest_days.read_failed",
+      logIntervalMs: BUS_SCHEDULE_CONTENT_LOG_INTERVAL_MS,
+    });
   }
 
   async current(): Promise<ScheduleContent> {
-    const { revision, services } = await this.serviceNotices.get();
+    const [{ revision, services }, restDays] = await Promise.all([this.serviceNotices.get(), this.restDays.get()]);
     const contentOf = (serviceId: string) => (Object.hasOwn(services, serviceId) ? services[serviceId] : undefined);
     return {
-      revisionKey: String(revision),
+      revisionKey: `${revision}.${restDays.revision}`,
+      restDays: restDays.restDays,
       noticesOf: (serviceId) => contentOf(serviceId)?.notices ?? [],
       suspendOf: (serviceId) => contentOf(serviceId)?.suspend ?? null,
     };

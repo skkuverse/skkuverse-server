@@ -1,7 +1,8 @@
 /**
  * Revision 1 of the bus schedule content datasets as production stores them
- * (fixtures/bus-service-notices.dataset.json of bus, without its provenance
- * note), and an in-memory content repository holding it, which a spec of a
+ * (fixtures/bus-service-notices.dataset.json and skku-rest-days.dataset.json
+ * of bus, without their provenance notes), and an in-memory content
+ * repository holding both, which a spec of a
  * reader of the timetable builds on, and a BusScheduleContentService over that
  * repository. A test that needs other content changes a copy and stores it as
  * the next revision.
@@ -41,10 +42,18 @@ export function serviceNoticesWithNotices(serviceId: string, notices: Array<{ st
   return data;
 }
 
+/** A fresh copy of revision 1 of `skku-rest-days`: each MM-DD or YYYY-MM-DD key with its label. */
+export function restDaysFixture(): Record<string, string> {
+  const data = JSON.parse(fs.readFileSync(path.join(FIXTURES, "skku-rest-days.dataset.json"), "utf8")) as Record<string, string>;
+  delete data._about;
+  return data;
+}
+
 /** An in-memory content repository holding revision 1 of every bus schedule content dataset. */
 export function storedScheduleContentRepository(): FakeBusScheduleContentRepository {
   const repository = new FakeBusScheduleContentRepository();
   repository.storeServiceNotices(serviceNoticesFixture());
+  repository.storeRestDays(restDaysFixture());
   return repository;
 }
 

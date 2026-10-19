@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { isRecord } from "../../shared/object.util";
 import type { BusOverrideDoc, BusScheduleDoc, OverrideNotice } from "./bus-schedule.document";
-import type { RestDays } from "./bus-schedule.types";
+import type { RestDays } from "../schedule-content/bus-schedule-content.types";
 import type { ScheduleEntry } from "./bus-schedule.wire";
 
 // WHY: entries and notices are served as stored, so they are checked, not rebuilt: a rebuilt object would

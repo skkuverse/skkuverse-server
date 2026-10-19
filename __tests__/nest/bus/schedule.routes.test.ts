@@ -40,7 +40,7 @@ import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
-import { serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../helpers/bus/schedule-content";
+import { serviceNoticesFixture, serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../helpers/bus/schedule-content";
 import { FakeBusEtaRepository } from "../../helpers/fakes/bus/bus-eta.repository.fake";
 import { FakeBusScheduleContentRepository } from "../../helpers/fakes/bus/bus-schedule-content.repository.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
@@ -712,6 +712,26 @@ describe("GET /bus/schedule/data/:serviceId/week and /smart with no schedule con
       // Assert
       expect(res.status).toBe(503);
       expect(res.body.error).toEqual({ code: "BUS_SCHEDULE_UNAVAILABLE", message: "The shuttle schedules are unavailable" });
+      expect(res.headers["cache-control"]).toBeUndefined();
+    } finally {
+      await unread.app.close();
+    }
+  });
+
+  it("answers smart with 503 BUS_SCHEDULE_UNAVAILABLE when only the rest days are missing", async () => {
+    // Arrange
+    const noRestDays = new FakeBusScheduleContentRepository();
+    noRestDays.storeServiceNotices(serviceNoticesFixture());
+    const unread = await bootApp(noRestDays);
+    unread.timetable.patterns = [pattern("campus-inja", [1, 2, 3, 4, 5])];
+
+    try {
+      // Act
+      const res = await request(unread.app.getHttpServer()).get("/bus/schedule/data/campus-inja/smart");
+
+      // Assert
+      expect(res.status).toBe(503);
+      expect(res.body.error.code).toBe("BUS_SCHEDULE_UNAVAILABLE");
       expect(res.headers["cache-control"]).toBeUndefined();
     } finally {
       await unread.app.close();

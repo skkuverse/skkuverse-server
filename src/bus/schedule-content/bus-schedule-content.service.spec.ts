@@ -1,12 +1,12 @@
 /**
  * BusScheduleContentService over an in-memory dataset store and a fixed clock
  * (ADR 0013, D6; move-editorial-datasets D9): the editorial content each
- * shuttle timetable folds in, read from the stored `bus-service-notices`
- * dataset, cached for DATASET_CACHE_TTL_MS so a push serves within a minute,
+ * shuttle timetable folds in, read from the stored `bus-service-notices` and
+ * `skku-rest-days` datasets, each cached for DATASET_CACHE_TTL_MS so a push serves within a minute,
  * kept through a failed or invalid reload, and unavailable (503) when no good
- * value was ever read. `current()` answers one snapshot: each service's
- * notices and suspension and the revision key a cache derived from it is
- * keyed by. A service the dataset leaves out has neither; a stored id the code
+ * value of either was ever read. `current()` answers one snapshot: each
+ * service's notices and suspension, SKKU's rest days, and the revision key,
+ * folding both revisions, that a cache derived from it is keyed by. A service the dataset leaves out has neither; a stored id the code
  * does not define is ignored and logged once per revision.
  *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake
@@ -16,6 +16,7 @@ jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error
 
 import fs from "fs";
 import path from "path";
+import { restDaysFixture } from "../../../__tests__/helpers/bus/schedule-content";
 import { FakeBusScheduleContentRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule-content.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../infra/clock";
@@ -52,6 +53,7 @@ let service: BusScheduleContentService;
 beforeEach(() => {
   jest.clearAllMocks();
   repository = new FakeBusScheduleContentRepository();
+  repository.storeRestDays(restDaysFixture());
   service = new BusScheduleContentService(asReal<BusScheduleContentRepository>(repository), clock);
 });
 
@@ -180,5 +182,85 @@ describe("BusScheduleContentService.current", () => {
     expect(afterFailure.revisionKey).toBe(good.revisionKey);
     expect(afterInvalid.revisionKey).toBe(good.revisionKey);
     expect(afterInvalid.noticesOf("campus-inja")).toEqual([LIVE_TRAFFIC]);
+  });
+});
+
+describe("BusScheduleContentService.current rest days", () => {
+  it("answers the stored rest days, yearly and one-off", async () => {
+    // Arrange
+    repository.storeServiceNotices(fixtureNotices());
+    repository.storeRestDays({ ...restDaysFixture(), "2027-03-02": "학사휴교" });
+
+    // Act
+    const content = await service.current();
+
+    // Assert
+    expect(content.restDays).toEqual({
+      exact: new Map([["2027-03-02", "학사휴교"]]),
+      annual: new Map([["09-25", "건학기념일"], ["09-28", "공자탄신일"]]),
+    });
+  });
+
+  it("folds a rest days push into the revision key once the TTL has passed, and not before", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    repository.storeServiceNotices(fixtureNotices());
+    const before = await service.current();
+    repository.storeRestDays({ ...restDaysFixture(), "2027-03-02": "학사휴교" });
+
+    // Act
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS - 1);
+    const beforeTtl = await service.current();
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    const atTtl = await service.current();
+
+    // Assert
+    expect(beforeTtl.revisionKey).toBe(before.revisionKey);
+    expect(beforeTtl.restDays.exact.size).toBe(0);
+    expect(atTtl.revisionKey).not.toBe(before.revisionKey);
+    expect(atTtl.restDays.exact.get("2027-03-02")).toBe("학사휴교");
+    expect(atTtl.noticesOf("campus-inja")).toEqual(before.noticesOf("campus-inja"));
+  });
+
+  it("keys two snapshots apart that differ in either dataset's revision alone", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    repository.storeServiceNotices(fixtureNotices());
+    const first = await service.current();
+    repository.storeServiceNotices(fixtureNotices());
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    const noticesPushed = await service.current();
+    repository.storeRestDays(restDaysFixture());
+    jest.setSystemTime(NOW.getTime() + 2 * DATASET_CACHE_TTL_MS);
+    const restDaysPushed = await service.current();
+
+    // Act & Assert
+    expect(new Set([first.revisionKey, noticesPushed.revisionKey, restDaysPushed.revisionKey]).size).toBe(3);
+  });
+
+  it("answers BUS_SCHEDULE_UNAVAILABLE (503) while the rest days were never read, even with notices stored", async () => {
+    // Arrange
+    const noRestDays = new FakeBusScheduleContentRepository();
+    noRestDays.storeServiceNotices(fixtureNotices());
+    const unread = new BusScheduleContentService(asReal<BusScheduleContentRepository>(noRestDays), clock);
+
+    // Act & Assert
+    await expect(unread.current()).rejects.toMatchObject({ code: "BUS_SCHEDULE_UNAVAILABLE", httpStatus: 503 });
+  });
+
+  it("keeps serving the last good rest days when a reload finds an invalid revision", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    repository.storeServiceNotices(fixtureNotices());
+    const good = await service.current();
+    repository.storeRestDays({ ...restDaysFixture(), "02-30": "휴일" });
+
+    // Act
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    const afterInvalid = await service.current();
+
+    // Assert
+    expect(afterInvalid.revisionKey).toBe(good.revisionKey);
+    expect(afterInvalid.restDays).toEqual(good.restDays);
   });
 });

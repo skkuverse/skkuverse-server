@@ -5,7 +5,7 @@
  * `bus-service-notices` push names: each stored service id, which must be a
  * service the code defines (`busServices`, move-editorial-datasets D7).
  */
-import { isCalendarDate, serviceNoticesReferences } from "./bus-schedule-content.rules";
+import { isCalendarDate, isRestDayKey, serviceNoticesReferences, toRestDays } from "./bus-schedule-content.rules";
 
 describe("isCalendarDate", () => {
   it.each([
@@ -50,5 +50,46 @@ describe("serviceNoticesReferences", () => {
   it("names nothing for no stored service", () => {
     // Act & Assert
     expect(serviceNoticesReferences({ services: {} })).toEqual([]);
+  });
+});
+
+describe("isRestDayKey", () => {
+  it.each([
+    ["09-28", true],
+    ["02-29", true],
+    ["02-30", false],
+    ["13-01", false],
+    ["00-01", false],
+    ["2027-03-02", true],
+    ["2027-02-29", false],
+    ["2028-02-29", true],
+    ["1899-12-31", false],
+    ["1900-01-01", true],
+    ["2999-12-31", true],
+    ["3000-01-01", false],
+    ["_comment", false],
+    ["9-28", false],
+    ["2027-3-02", false],
+  ])("%j is a rest day key: %s", (key, expected) => {
+    // Act & Assert
+    expect(isRestDayKey(key)).toBe(expected);
+  });
+});
+
+describe("toRestDays", () => {
+  it("files each MM-DD key as yearly and each YYYY-MM-DD key as one-off, with its label", () => {
+    // Act
+    const restDays = toRestDays({ "09-28": "공자탄신일", "2027-03-02": "학사휴교", "09-25": "건학기념일" });
+
+    // Assert
+    expect(restDays).toEqual({
+      exact: new Map([["2027-03-02", "학사휴교"]]),
+      annual: new Map([["09-28", "공자탄신일"], ["09-25", "건학기념일"]]),
+    });
+  });
+
+  it("answers no rest day for none", () => {
+    // Act & Assert
+    expect(toRestDays({})).toEqual({ exact: new Map(), annual: new Map() });
   });
 });

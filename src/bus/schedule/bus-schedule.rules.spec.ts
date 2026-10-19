@@ -7,12 +7,25 @@
  * (src/holidays/holidays.service.spec.ts).
  */
 
+import fs from "fs";
+import path from "path";
 import moment from "moment-timezone";
+import type { RestDays } from "../schedule-content/bus-schedule-content.types";
 import { SKKU_REST_DAYS, loadRestDays as parseRestDays } from "./bus-schedule.config";
 import type { BusScheduleDoc } from "./bus-schedule.document";
 import { isWeekStartInRange, lookupRestDay, pickPattern, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
 
 const service = { getNonOperatingDayLabel: (date: string) => toNonOperatingDayLabel(SKKU_REST_DAYS, date, null) };
+
+// Revision 1 of the skku-rest-days dataset (its fixture), built into RestDays as the dataset schema reads it.
+const STORED_REST_DAYS: RestDays = {
+  exact: new Map(),
+  annual: new Map(
+    Object.entries(JSON.parse(fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/bus/fixtures/skku-rest-days.dataset.json"), "utf8")) as Record<string, string>).filter(
+      ([key]) => key !== "_about",
+    ),
+  ),
+};
 
 describe("toNonOperatingDayLabel", () => {
   it.each([
@@ -23,7 +36,7 @@ describe("toNonOperatingDayLabel", () => {
     ["null on an ordinary day", "2026-03-03", null, null],
   ])("%s: %s with %s → %s", (_label, date, publicHoliday, label) => {
     // Act & Assert
-    expect(toNonOperatingDayLabel(SKKU_REST_DAYS, date, publicHoliday)).toBe(label);
+    expect(toNonOperatingDayLabel(STORED_REST_DAYS, date, publicHoliday)).toBe(label);
   });
 });
 

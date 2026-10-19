@@ -14,9 +14,10 @@
  * `/week` takes its week from `?from=` and refuses one more than a year from
  * today, so `Clock` stands at 10:00 KST on Tuesday 2026-10-20. Each test boots
  * its own app: ScheduleService keeps a resolved week in memory for an hour,
- * which one test pins on purpose. Each service's notices are revision 1 of the
- * `bus-service-notices` dataset, stored in the content database through the
- * data tool's scripts/lib/datasets/store.js (move-editorial-datasets D9).
+ * which one test pins on purpose. Each service's notices and SKKU's rest days
+ * are revision 1 of the `bus-service-notices` and `skku-rest-days` datasets,
+ * stored in the content database through the data tool's
+ * scripts/lib/datasets/store.js (move-editorial-datasets D8, D9).
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Collection, Document } from "mongodb";
@@ -67,8 +68,11 @@ beforeAll(async () => {
   const busDb = db.getClient().db(config.mongo.dbName);
   schedules = busDb.collection("bus_schedules");
   overrides = busDb.collection("bus_overrides");
-  const { serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
-  await store.create(db.getClient().db(config.content.dbName), "bus-service-notices", serviceNoticesFixture(), { by: "characterization@example.com", now: NOW });
+  const { restDaysFixture, serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
+  const content = db.getClient().db(config.content.dbName);
+  const storedBy = { by: "characterization@example.com", now: NOW };
+  await store.create(content, "bus-service-notices", serviceNoticesFixture(), storedBy);
+  await store.create(content, "skku-rest-days", restDaysFixture(), storedBy);
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {

@@ -13,7 +13,6 @@ import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import { serviceConfigOf } from "../bus.rules";
 import { BusScheduleContentService } from "../schedule-content/bus-schedule-content.service";
 import type { SuspendDates } from "../schedule-content/bus-schedule-content.types";
-import { SKKU_REST_DAYS } from "./bus-schedule.config";
 import { BusScheduleRepository } from "./bus-schedule.repository";
 import { firstSelectableDate, isWeekStartInRange, pickPattern, toDay, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
 import type { WeekRequest } from "./bus-schedule.types";
@@ -149,7 +148,7 @@ export class BusScheduleService {
       const override = overrideByDate.get(dateStr);
       const restDayLabel =
         !override && serviceConfig.respectsKoreanHolidays
-          ? toNonOperatingDayLabel(SKKU_REST_DAYS, dateStr, await this.holidays.holidayName(dateStr))
+          ? toNonOperatingDayLabel(content.restDays, dateStr, await this.holidays.holidayName(dateStr))
           : null;
       const pattern = override || restDayLabel ? undefined : this.patternOn(serviceId, patterns, date);
       days.push(toDay(date, { override, restDayLabel, pattern, serviceNotices, config: serviceConfig }));
