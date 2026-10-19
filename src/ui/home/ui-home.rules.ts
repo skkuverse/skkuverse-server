@@ -2,7 +2,7 @@ import { isBrokenLinkAction } from "../../shared/link-action.util";
 import type { BannerImageRaw } from "../ui.schema";
 import type { MiniAppRegistry } from "../ui.types";
 import type { HomeLayoutRaw, TileRaw } from "./ui-home.schema";
-import type { HomeLayoutIssue } from "./ui-home.types";
+import type { HomeLayoutIssue, HomeLayoutReference } from "./ui-home.types";
 
 type SectionRaw = HomeLayoutRaw["sections"][number];
 type LinkTileRaw = Extract<TileRaw, { kind: "link" }>;
@@ -54,4 +54,27 @@ export function toHomeLayoutIssues(layout: HomeLayoutRaw, registry: MiniAppRegis
     })),
     ...brokenIcons.map(({ at, value }) => ({ path: [...at, "icon", "emoji"], message: `"${value.id}" icon must be exactly one emoji` })),
   ];
+}
+
+type TargetGrammar = Pick<MiniAppRegistry, "parseTarget">;
+
+function targetReferences({ at, value: link }: Located<BannerImageRaw | LinkTileRaw>, grammar: TargetGrammar): HomeLayoutReference[] {
+  const target = link.actionType === "miniapp" ? grammar.parseTarget(link.actionValue) : null;
+  return target === null ? [] : [{ dataset: "miniapps", id: target.id, path: [...at, "actionValue"] }];
+}
+
+function tileReferences(tile: Located<TileRaw>, grammar: TargetGrammar): HomeLayoutReference[] {
+  if (isLinkTile(tile)) return targetReferences(tile, grammar);
+  return tile.value.kind === "miniapp" ? [{ dataset: "miniapps", id: tile.value.id, path: [...tile.at, "id"] }] : [];
+}
+
+function sectionReferences(section: Located<SectionRaw>, grammar: TargetGrammar): HomeLayoutReference[] {
+  const { at, value } = section;
+  if (value.type === "miniapp_feed") return [{ dataset: "miniapps", id: value.miniAppId, path: [...at, "miniAppId"] }];
+  if (value.type === "banner_carousel") return bannersOf(section).flatMap((banner) => targetReferences(banner, grammar));
+  return tilesOf(section).flatMap((tile) => tileReferences(tile, grammar));
+}
+
+export function homeLayoutReferences(layout: HomeLayoutRaw, grammar: TargetGrammar): HomeLayoutReference[] {
+  return locatedSections(layout).flatMap((section) => sectionReferences(section, grammar));
 }
