@@ -21,7 +21,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
 import { MiniappsCatalogClient } from "../../../src/miniapps/catalog/miniapps-catalog.client";
-import { parseShellFields } from "../../../src/miniapps/catalog/miniapps-catalog.mapper";
+import { parseShellFields } from "../../../src/miniapps/miniapps.mapper";
 import type { ShellConfig } from "../../../src/miniapps/miniapps.wire";
 import { FakeMiniappsCatalogClient } from "../../helpers/fakes/miniapps/miniapps-catalog.client.fake";
 import { appModulesUnder } from "../../helpers/nest/app-modules";

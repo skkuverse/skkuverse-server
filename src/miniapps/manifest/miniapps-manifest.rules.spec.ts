@@ -4,7 +4,7 @@
  * host, a plain-http page or a third party is never fetched.
  */
 import { FIRST_PARTY_MINIAPP_ORIGINS } from "../../infra/origins";
-import { firstPartyOrigin } from "./miniapps-catalog.rules";
+import { firstPartyOrigin } from "./miniapps-manifest.rules";
 
 describe("firstPartyOrigin", () => {
   it("accepts a startUrl on a first-party mini-app origin", () => {

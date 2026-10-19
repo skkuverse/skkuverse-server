@@ -128,6 +128,7 @@ const config = {
     dbName: dbNameFor(process.env.MONGO_MINIAPPS_DB_NAME),
     collections: {
       sentNotifications: "sent_notifications",
+      manifests: "miniapp_manifests",
     },
     feedLimit: 50,
   },
