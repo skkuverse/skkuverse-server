@@ -31,7 +31,7 @@ The tool prints the database name first on every run. The `_dev` database lives 
 - A checkout of the code you mean to validate against. `npm run data` runs `npm run build` first and loads the schemas from `dist/src`, so the build output is always this checkout's.
 
 > [!WARNING]
-> Never print, paste or share `MONGO_URL`, in a terminal log, an issue or a chat. The tool itself prints database names only, and removes the URL's credentials and hosts from every line, error messages included. Keep it that way when you report a failure: copy the tool's output, not your `.env`.
+> Never print, paste or share `MONGO_URL`, in a terminal log, an issue or a chat. The tool itself prints database names only, and removes the URL's credentials and hosts from every line, error messages included: with `mongodb+srv`, every replica host of the cluster's domain, and any IP address. Keep it that way when you report a failure: copy the tool's output, not your `.env`.
 
 ## Steps
 

@@ -31,7 +31,8 @@
  * be dropped without dropping the word next to it.
  *
  * MONGO_URL is never printed, in part or whole: every line this tool prints
- * passes through a redactor of its credentials and hosts, and an error prints
+ * passes through a redactor of its credentials, its hosts (with mongodb+srv,
+ * every host of the cluster domain) and any IPv4 address, and an error prints
  * only its class and redacted message, never a stack.
  */
 const { execFileSync } = require("node:child_process");
@@ -99,30 +100,47 @@ function parseArgs(argv) {
   return { ...args, command, dataset, revision: revision && Number(revision), limit: args.limit && Number(args.limit) };
 }
 
-/** Replaces MONGO_URL, its credentials and its hosts in any text. */
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const IPV4 = /\b\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?\b/g;
+
+/**
+ * Replaces MONGO_URL, its credentials, its hosts and any IPv4 address in any
+ * text. With mongodb+srv, every host under the SRV host's parent domain too:
+ * the driver's errors name the replica hosts the SRV record resolved to. The
+ * user name is redacted only as `user:` or `user@`, so a database name that
+ * contains it still prints whole.
+ */
 function redactorFor(url) {
   const secrets = new Set();
-  const match = /^mongodb(?:\+srv)?:\/\/(?:([^@/]*)@)?([^/?#]*)/.exec(url ?? "");
+  const patterns = [];
+  const match = /^mongodb(\+srv)?:\/\/(?:([^@/]*)@)?([^/?#]*)/.exec(url ?? "");
   if (url) secrets.add(url);
   if (match) {
-    for (const part of (match[1] ?? "").split(":")) {
-      secrets.add(part);
+    const decoded = (part) => {
       try {
-        secrets.add(decodeURIComponent(part));
+        return decodeURIComponent(part);
       } catch {
-        // a malformed escape: the raw part is redacted already
+        return part;
       }
+    };
+    const [user = "", ...passwordParts] = (match[2] ?? "").split(":");
+    for (const name of new Set([user, decoded(user)].filter(Boolean))) {
+      patterns.push(new RegExp(`${escapeRegExp(name)}(?=[:@])`, "g"));
     }
-    for (const host of match[2].split(",")) {
+    for (const part of [passwordParts.join(":"), ...passwordParts]) [part, decoded(part)].forEach((each) => secrets.add(each));
+    for (const host of match[3].split(",")) {
       secrets.add(host);
       secrets.add(host.replace(/:[^:]*$/, ""));
     }
+    const parent = match[1] ? match[3].replace(/:[^:]*$/, "").split(".").slice(1).join(".") : "";
+    if (parent.includes(".")) patterns.push(new RegExp(`(?:[A-Za-z0-9-]+\\.)*${escapeRegExp(parent)}(?::\\d+)?`, "gi"));
   }
   const ordered = [...secrets].filter((s) => s.length > 0).sort((a, b) => b.length - a.length);
   return (text) => {
     let out = String(text);
     for (const secret of ordered) out = out.split(secret).join("<redacted>");
-    return out.replace(/mongodb(?:\+srv)?:\/\/\S*/g, "mongodb://<redacted>");
+    for (const pattern of patterns) out = out.replace(pattern, "<redacted>");
+    return out.replace(IPV4, "<redacted>").replace(/mongodb(?:\+srv)?:\/\/\S*/g, "mongodb://<redacted>");
   };
 }
 
