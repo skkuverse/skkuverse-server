@@ -71,17 +71,17 @@ A switch that turns off a poller (`SUBWAY`, `SHUTTLE_ETA`, `BUILDING_SYNC`) stop
 
 ### D6. Freshness by TTL, not by cross-process signals
 
-A process sees another process's write when its cache entry expires. No writer notifies the readers, and nothing restarts them. Each cache below holds its bound because, once its TTL has passed, a read waits for the reload instead of answering from the expired value (`serveStale: "on-reload-failure"` in `src/infra/cached-loader.ts`):
+A process sees another process's write when its cache entry expires. No writer notifies the readers, and nothing restarts them. Each cache below holds its bound because, once its TTL has passed, a read waits for the reload instead of answering from the expired value. Bus schedules, overrides, stored holidays and route lines do because their stale window covers only a failed reload (`serveStale: "on-reload-failure"` in `src/infra/cached-loader.ts`); the registry and buildings do because they have no stale window at all:
 
 | Data | Written by | Bound |
 | --- | --- | --- |
 | Bus schedules and overrides | `npm run schedule` and the override scripts | 1 minute |
 | The Jongro registry | The Jongro poller | 1 minute or less |
-| Stored public holidays | The holidays poller | 10 minutes |
+| Stored public holidays | The holidays poller | 10 minutes; 11 on bus schedule responses, whose week cache keeps the labels it computed up to a minute longer |
 | Jongro route lines | The route-line poller | 10 minutes |
 | Buildings | The building sync | 5 minutes |
 
-Reference data that a database outage must not take down (bus schedules, overrides, stored holidays, route lines) keeps a stale window that covers only a failed reload: it serves the last good value for at least an hour and logs `cache.reload_failed`. A cache whose stale window also answers while a reload runs (the default mode) is late by up to TTL plus one reload, and states its bound that way. A writer may still clear its own process's cache after a write, so the poller sees its own write at once.
+Reference data that a database outage must not take down (bus schedules, overrides, stored holidays, route lines) keeps a stale window that covers only a failed reload: it serves the last good value for at least an hour and logs `cache.reload_failed`. In that mode the first read after each TTL waits for the reload, so while Atlas is unreachable such a read can stall for up to `serverSelectionTimeoutMS` (5 s, `src/infra/db.ts`) about once per TTL before it serves the stale value; this is accepted. A cache whose stale window also answers while a reload runs (the default mode) is late by up to TTL plus one reload, and states its bound that way. A writer may still clear its own process's cache after a write, so the poller sees its own write at once.
 
 ## Consequences
 

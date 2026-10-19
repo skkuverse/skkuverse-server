@@ -273,11 +273,6 @@ describe("createCachedLoader", () => {
   });
 });
 
-/**
- * CACHE=off, the development default: a _dev database change must show on the
- * next request, so every get() loads. A loader marked keepWhenCacheOff (the AI
- * overview, the mini-app manifests) keeps caching.
- */
 describe("createCachedLoader with serveStale on-reload-failure", () => {
   it("waits for the reload once the TTL has passed, so the next read returns the change", async () => {
     // Arrange
@@ -333,6 +328,11 @@ describe("createCachedLoader with serveStale on-reload-failure", () => {
   });
 });
 
+/**
+ * CACHE=off, the development default: a _dev database change must show on the
+ * next request, so every get() loads. A loader marked keepWhenCacheOff (the AI
+ * overview, the mini-app manifests) keeps caching.
+ */
 describe("createCachedLoader with CACHE=off", () => {
   beforeEach(() => {
     config.cache.enabled = false;
