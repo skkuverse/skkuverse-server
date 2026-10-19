@@ -51,14 +51,15 @@ const DEV = allowlist("config/env.dev.keys");
 // Production adds SENTRY_DSN, so its list is the longest.
 const REQUIRED = requiredValues({ NODE_ENV: "production" }).map((v) => v.env);
 
-/** Run describeMissingRequired() with exactly `names` set, under `nodeEnv`. */
-function missingWithOnly(names: string[], nodeEnv: string): string[] {
-  const touched = new Set([...REQUIRED, ...names, "NODE_ENV", "USE_PROD_API", "API_HSSC_NEW_DEV"]);
+/** Run describeMissingRequired() with exactly `names` set, under `nodeEnv` and, when given, `role`. */
+function missingWithOnly(names: string[], nodeEnv: string, role?: string): string[] {
+  const touched = new Set([...REQUIRED, ...names, "NODE_ENV", "USE_PROD_API", "API_HSSC_NEW_DEV", "ROLE"]);
   const saved = new Map([...touched].map((k) => [k, process.env[k]]));
   try {
     for (const k of touched) delete process.env[k];
     for (const k of names) process.env[k] = `value-of-${k}`;
     process.env.NODE_ENV = nodeEnv;
+    if (role !== undefined) process.env.ROLE = role;
     let missing: string[] = [];
     jest.isolateModules(() => {
       missing = require("../../../src/infra/required-env").describeMissingRequired();
@@ -121,6 +122,19 @@ describe("config/env.*.keys — the names render_env.py writes", () => {
     // Assert
     expect(inline.size).toBeGreaterThan(0);
     expect(PRD.filter((name) => inline.has(name))).toEqual([]);
+  });
+
+  it.each([
+    ["prd", PRD, "production", "api"],
+    ["prd", PRD, "production", "poller"],
+    ["prd", PRD, "production", "combined"],
+    ["dev", DEV, "development", "combined"],
+  ])("a %s .env without MONGO_CONTENT_DB_NAME fails the check in %s, ROLE=%s", (_label, names, nodeEnv, role) => {
+    // Arrange
+    const withoutContent = names.filter((n) => n !== "MONGO_CONTENT_DB_NAME");
+
+    // Act & Assert
+    expect(missingWithOnly(withoutContent, nodeEnv, role)).toEqual(["  content.dbName (env: MONGO_CONTENT_DB_NAME)"]);
   });
 
   it.each([
