@@ -172,6 +172,35 @@ describe("BusRealtimeJongroService.listPositions", () => {
   });
 });
 
+// WHY: every role reads bus_cache only, so combined answers as an api replica does (ADR 0012, D1).
+describe("BusRealtimeJongroService reads after its own tick", () => {
+  it("serves no arrivals once the bus_cache entry is gone, though a tick filled the process's memory", async () => {
+    // Arrange
+    client.arrivals = [jongroArrivalDoc()];
+    await service.refresh(route("07"));
+    busCache.values.delete("jongro_stations_07");
+
+    // Act
+    const arrivals = await service.listArrivals("07");
+
+    // Assert
+    expect(arrivals).toBeUndefined();
+  });
+
+  it("serves no positions once the bus_cache entry is gone, though a tick filled the process's memory", async () => {
+    // Arrange
+    client.sightings = [jongroSighting({ stationId: "100900197", sectOrd: 6 })];
+    await service.refresh(route("07"));
+    busCache.values.delete("jongro_locations_07");
+
+    // Act
+    const positions = await service.listPositions("07");
+
+    // Assert
+    expect(positions).toBeUndefined();
+  });
+});
+
 describe("BusRealtimeJongroService.refresh", () => {
   describe("error handling", () => {
     it("rejects each route's tick on an API error; state stays undefined", async () => {

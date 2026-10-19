@@ -31,8 +31,8 @@ export class BusRealtimeHsscService {
     await this.cache.write("hssc", this.buses);
   }
 
-  // WHY: an api replica runs no poller, so its memory stays empty and only bus_cache has buses.
+  // WHY: never the poller's own memory, so combined answers as an api replica does (ADR 0012, D1).
   async listBuses(): Promise<HsscBusDoc[]> {
-    return (await this.cache.read("hssc")) ?? this.buses;
+    return (await this.cache.read("hssc")) ?? [];
   }
 }

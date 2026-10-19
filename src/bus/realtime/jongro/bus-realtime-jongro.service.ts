@@ -13,8 +13,6 @@ import type { JongroBusSighting, JongroVehicleObservation } from "./bus-realtime
 
 @Injectable()
 export class BusRealtimeJongroService {
-  private readonly arrivalsByCode = new Map<string, JongroArrivalDoc[]>();
-  private readonly positionsByCode = new Map<string, JongroBusPositionDoc[]>();
   private readonly firstSeenAtByStationIdByCode = new Map<string, Map<string, string>>();
   private readonly observationByVehicleIdByCode = new Map<string, Map<string, JongroVehicleObservation>>();
 
@@ -38,18 +36,17 @@ export class BusRealtimeJongroService {
     return this.registry.routeOf(routeId);
   }
 
-  // WHY: an api replica runs no poller: its memory is empty (undefined before a first tick) and bus_cache serves.
+  // WHY: never the poller's own memory, so combined answers as an api replica does (ADR 0012, D1).
   async listArrivals(code: string): Promise<JongroArrivalDoc[] | undefined> {
-    return (await this.cache.read(toArrivalsKey(code))) ?? this.arrivalsByCode.get(code);
+    return (await this.cache.read(toArrivalsKey(code))) ?? undefined;
   }
 
   async listPositions(code: string): Promise<JongroBusPositionDoc[] | undefined> {
-    return (await this.cache.read(toPositionsKey(code))) ?? this.positionsByCode.get(code);
+    return (await this.cache.read(toPositionsKey(code))) ?? undefined;
   }
 
   private async refreshArrivals(route: RegistryRoute): Promise<JongroArrivalDoc[]> {
     const arrivals = await this.client.fetchArrivals(route);
-    this.arrivalsByCode.set(route.code, arrivals);
     await this.cache.write(toArrivalsKey(route.code), arrivals);
     return arrivals;
   }
@@ -59,7 +56,6 @@ export class BusRealtimeJongroService {
     const now = this.clock.now();
     const observationByVehicleId = this.observeVehicles(route.code, sightings);
     const positions = sightings.flatMap((sighting) => this.toPositions(route, sighting, { now, observation: observationByVehicleId.get(sighting.vehicleId) }));
-    this.positionsByCode.set(route.code, positions);
     await this.cache.write(toPositionsKey(route.code), positions);
     return sightings;
   }
