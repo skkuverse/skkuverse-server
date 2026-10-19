@@ -8,9 +8,10 @@
  *
  * Only `Clock` is overridden. The poller boot runs under a spy on
  * PollerRegistryService#registerPoller that registers nothing, so no tick calls
- * an upstream. The mini app manifest prefetch, the one boot fetch api keeps
- * (ADR 0012, D2), answers 404 from a stubbed `fetch`; any other upstream call
- * fails the test through the network guard.
+ * an upstream. An api boot fetches nothing (ADR 0012, D1; move-miniapp-registry
+ * spec runtime-roles, "api boots and serves a mini app detail"): a stubbed
+ * `fetch` records every URL it is asked for, and any other upstream call fails
+ * the test through the network guard.
  *
  * The mirror for the poller (ADR 0012, D4): booted with ROLE=poller and every
  * api-scoped value deleted, each poller it registers runs once, its upstream
@@ -101,7 +102,14 @@ describe("booting every module on an empty database", () => {
 
     // Assert
     expect(await userDatabases(db.getClient())).toEqual([]);
-    expect(fetched.every((url) => url.endsWith("/skkuverse.json"))).toBe(true);
+  }, APP_BOOT_TIMEOUT_MS);
+
+  it("as an api replica fetches nothing", async () => {
+    // Act
+    await bootAndSettle("api");
+
+    // Assert
+    expect(fetched).toEqual([]);
   }, APP_BOOT_TIMEOUT_MS);
 
   it("as the poller ensures the indexes the repositories declare", async () => {

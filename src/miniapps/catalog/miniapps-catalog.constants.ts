@@ -8,11 +8,7 @@ export const DEFAULT_SHELL: Readonly<ShellConfig> = Object.freeze({
   background: "#FFFFFF",
 });
 
-export const CACHE_TTL_MS = 5 * 60 * 1000;
-
-export const FETCH_FAILED_LOG_INTERVAL_MS = 10 * 60_000;
-
-/** WHY: the registry ships with the build and changes only on deploy; five minutes bounds how long one takes to show. */
+/** WHY: five minutes bounds how long a registry deploy or a manifest change takes to reach a client, on top of the server's own bound. */
 export const REGISTRY_CACHE_CONTROL = "public, max-age=300";
 
 /**
