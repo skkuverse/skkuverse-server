@@ -62,7 +62,7 @@ Every reader of a dataset keeps the same contract:
 
 The TTL, the stale window and the dataset document's shape are shared by every reader; each reader keeps its own repository read and schema.
 
-Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (`openspec/changes/move-editorial-datasets/design.md`, D12):
+Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (`openspec/changes/archive/2026-10-20-move-editorial-datasets/design.md`, D12):
 
 - **A documented degraded answer may stand in for the 503.** A dataset whose capability documents an answer that serves without it may serve that answer instead of the 503, and logs the unavailable dataset at error. The festival layer sets are the case: `/map/config` serves the base map.
 - **A derived cache keeps the bound or states its own.** A route that caches what it derives from a dataset either keys that cache by the dataset's revision, so a push still serves within a minute, or states its own longer bound in the dataset's capability.

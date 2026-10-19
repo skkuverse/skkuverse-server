@@ -84,7 +84,7 @@ A process sees another process's write when its cache entry expires. No writer n
 
 Reference data that a database outage must not take down (bus schedules, overrides, stored holidays, route lines) keeps a stale window that covers only a failed reload: it serves the last good value for at least an hour and logs `cache.reload_failed`. In that mode the first read after each TTL waits for the reload, so while Atlas is unreachable such a read can stall for up to `serverSelectionTimeoutMS` (5 s, `src/infra/db.ts`) about once per TTL before it serves the stale value; this is accepted. A cache whose stale window also answers while a reload runs (the default mode) is late by up to TTL plus one reload, and states its bound that way. A writer may still clear its own process's cache after a write, so the poller sees its own write at once.
 
-Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (`openspec/changes/move-editorial-datasets/design.md`, D12): the Datasets row. A dataset reader holds the same `on-reload-failure` stale window, for 24 hours.
+Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (`openspec/changes/archive/2026-10-20-move-editorial-datasets/design.md`, D12): the Datasets row. A dataset reader holds the same `on-reload-failure` stale window, for 24 hours.
 
 ## Consequences
 
