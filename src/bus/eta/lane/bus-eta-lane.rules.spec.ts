@@ -6,7 +6,8 @@
  * The strategies and lane hours are code (move-reference-datasets D9): `assertLaneStrategies` is the check
  * BusEtaLaneService's construction runs over them against the sequences the app estimates, so a bad constant fails
  * the boot, naming every issue. `corridorIssues` is what a `bus-lane-corridor` push is refused on beyond its schema
- * (spec "Corridor push checks the geometry"); the lane hours are no longer corridor data.
+ * (spec "Corridor push checks the geometry"), including each entry and exit point's distance from the centerline
+ * and each direction's order along it; the lane hours are no longer corridor data.
  */
 import { corridorFixture } from "../../../../__tests__/helpers/bus/bus-lane-corridor";
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
@@ -31,6 +32,8 @@ const STRATEGIES: LaneConfig["strategies"] = {
 const STEP_M = (6_371_000 * 0.01 * Math.PI) / 180;
 // The centerline's length rounded to the meter, as the corridor script writes its last boundary.
 const END_M = Math.round(2 * STEP_M);
+// One degree of longitude at 37.48° N, the centerline's south end, on the same sphere, as the projection flattens it there.
+const LNG_DEGREE_M = ((6_371_000 * Math.PI) / 180) * Math.cos((37.48 * Math.PI) / 180);
 
 function config(overrides: Partial<LaneConfig> = {}): LaneConfig {
   return {
@@ -295,6 +298,49 @@ describe("corridorIssues", () => {
 
     // Assert
     expect(issues).toEqual([{ path: ["corridor", "boundaries", last, "alongM"], message: expect.stringContaining('"신갈JC"') }]);
+  });
+
+  it.each(["southbound", "northbound"] as const)("refuses %s entry and exit swapped, naming the direction's path", (direction) => {
+    // Arrange
+    const data = corridorFixture();
+    const { entry, exit } = data.entryExit[direction];
+    data.entryExit[direction] = { entry: exit, exit: entry };
+
+    // Act
+    const issues = corridorIssues(data);
+
+    // Assert
+    expect(issues).toEqual([{ path: ["entryExit", direction], message: expect.stringContaining(direction) }]);
+  });
+
+  it("refuses an entry 3 km off the centerline, naming its path", () => {
+    // Arrange
+    const data = corridorFixture();
+    const { entry } = data.entryExit.southbound;
+    data.entryExit.southbound.entry = { lat: entry.lat, lng: entry.lng + 3000 / LNG_DEGREE_M };
+
+    // Act
+    const issues = corridorIssues(data);
+
+    // Assert
+    expect(issues).toEqual([{ path: ["entryExit", "southbound", "entry"], message: expect.stringContaining("off the centerline") }]);
+  });
+
+  it.each([
+    ["499 m", 499, true],
+    ["501 m", 501, false],
+  ])("checks that an exit lies at most 500 m off the centerline: %s off", (_case, offsetM, passes) => {
+    // Arrange
+    const base = config();
+    // The southbound exit is the centerline's last vertex, so moving it east moves it straight off the line.
+    const exit = { lat: 37.48, lng: 127.02 + offsetM / LNG_DEGREE_M };
+    const shifted = config({ entryExit: { ...base.entryExit, southbound: { ...base.entryExit.southbound, exit } } });
+
+    // Act
+    const issues = corridorIssues(shifted);
+
+    // Assert
+    expect(issues).toEqual(passes ? [] : [{ path: ["entryExit", "southbound", "exit"], message: expect.stringContaining("501 m off the centerline") }]);
   });
 
   it("Probe route listed twice: refuses 200000205 listed again, naming the second entry's routeId", () => {

@@ -27,6 +27,14 @@ const COMMITTED_LANE_FILE = path.join(ROOT, "src/bus/eta/lane/bus-lane.json");
 
 const PULLED = { dataset: "bus-lane-corridor", target: "dev", baseRevision: 3, pulledAt: "2026-10-20T03:00:00.000Z" };
 
+// Entry and exit points on the synthetic corridor (lng 127.0502, 37.52 to 37.29), on each carriageway's side, where
+// revision 1 puts them on the real one: about 1 km past 한남IC and at 신갈JC. Revision 1's own points lie 3 to 5 km
+// off this corridor, which the push refuses.
+const SYNTHETIC_ENTRY_EXIT = {
+  southbound: { entry: { lat: 37.5115, lng: 127.05 }, exit: { lat: 37.2925, lng: 127.05 } },
+  northbound: { entry: { lat: 37.2925, lng: 127.0504 }, exit: { lat: 37.5115, lng: 127.0504 } },
+};
+
 let dir: string;
 
 beforeEach(() => {
@@ -37,8 +45,8 @@ afterEach(() => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-/** A working file as `pull` writes it, holding revision 1 of the corridor; returns its path. */
-function pulledWorkingFile(envelope: Record<string, unknown> = PULLED, data: unknown = corridorFixture()): string {
+/** A working file as `pull` writes it, holding revision 1 of the corridor with entry and exit points on the synthetic one; returns its path. */
+function pulledWorkingFile(envelope: Record<string, unknown> = PULLED, data: unknown = { ...corridorFixture(), entryExit: SYNTHETIC_ENTRY_EXIT }): string {
   const file = path.join(dir, "bus-lane-corridor.json");
   fs.writeFileSync(file, `${JSON.stringify({ ...envelope, data }, null, 2)}\n`);
   return file;
@@ -66,7 +74,7 @@ describe("scripts/build-bus-lane-corridor.js on a pulled working file", () => {
     expect(Object.keys(written)).toEqual(["dataset", "target", "baseRevision", "pulledAt", "data"]);
     expect(written).toMatchObject(PULLED);
     expect(Object.keys(written.data)).toEqual(["corridor", "entryExit", "probeRoutes"]);
-    expect(written.data.entryExit).toEqual(corridorFixture().entryExit);
+    expect(written.data.entryExit).toEqual(SYNTHETIC_ENTRY_EXIT);
     expect(written.data.corridor.boundaries).toEqual([
       { name: "한남IC", alongM: 0 },
       { name: "반포IC", alongM: 2224 },
