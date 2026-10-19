@@ -8,10 +8,14 @@
  * production stored them (fixtures/jongro-registry-routes.json of bus).
  *
  * A regression pin: a failure is a regression to report, and an expected value
- * changes only with the behavior it pins (`.claude/rules/tests.md`). Today the
- * layout is read from the committed transit-layout.json, which the fixture
- * equals (ui-dataset-fixtures.test.ts); moving it to the content database must
- * not change a byte here.
+ * changes only with the behavior it pins (`.claude/rules/tests.md`). The
+ * expected values were pinned while the layout was read from the committed
+ * transit-layout.json, which the fixture equals (ui-dataset-fixtures.test.ts);
+ * moving it to the content database must not change a byte here.
+ *
+ * The layout is stored in the real `mongod`'s content database the way
+ * `npm run data` stores it: the fixture's data pushed through the tool's own
+ * scripts/lib/datasets/store.js, as revision 1 of `transit-layout`.
  *
  * The bus groups' visibility windows are the only input that moves with the
  * time, so four clocks pin the tab:
@@ -26,6 +30,8 @@
  *   after the campus shuttle's, and the commute card is hidden.
  */
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import type { JongroRouteDocument } from "../../../src/bus/registry/bus-registry.document";
@@ -33,6 +39,9 @@ import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import captured from "./fixtures/transit-production.capture.json";
+
+// scripts/ is plain CommonJS outside tsconfig, so require rather than import.
+const store = require("../../../scripts/lib/datasets/store");
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type BusRegistryHelpers = typeof import("../../helpers/bus/bus-registry");
@@ -83,6 +92,13 @@ function fasttrackItem(lang: Lang): ItemBody {
   } as ItemBody;
 }
 
+/** The layout fixtures/transit-layout.dataset.json holds, without its provenance note. */
+function fixtureLayout(): Record<string, unknown> {
+  const layout = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/transit-layout.dataset.json"), "utf8")) as Record<string, unknown>;
+  delete layout._about;
+  return layout;
+}
+
 function capturedBody(lang: Lang): TransitBody {
   return structuredClone(captured[lang].body) as TransitBody;
 }
@@ -126,6 +142,8 @@ beforeAll(async () => {
     .db(config.mongo.dbName)
     .collection<JongroRouteDocument>(config.mongo.collections.jongroRoutes)
     .insertMany(storedJongroRouteDocuments());
+  const content = db.getClient().db(config.content.dbName);
+  await store.create(content, "transit-layout", fixtureLayout(), { by: "characterization@example.com", now: CLOCKS.capturedAt });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

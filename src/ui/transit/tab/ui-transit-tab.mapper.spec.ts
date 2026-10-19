@@ -10,13 +10,13 @@
  * section, with no action and never its `visibleWith`; it is left out while
  * its `visibleWith` bus group is not visible, and when no child is left.
  */
-import type { BusGroup } from "../../bus/config/bus-config.wire";
-import { WEBVIEW_ORIGIN } from "../../infra/origins";
-import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
-import type { ServedStation } from "../../subway/stations/subway-stations.types";
-import { toTransitSection } from "./ui-transit.mapper";
-import type { TransitLayoutRaw } from "./ui-transit.schema";
-import { transitLayout } from "./ui-transit.wire";
+import type { BusGroup } from "../../../bus/config/bus-config.wire";
+import { WEBVIEW_ORIGIN } from "../../../infra/origins";
+import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
+import type { ServedStation } from "../../../subway/stations/subway-stations.types";
+import { toTransitSection } from "./ui-transit-tab.mapper";
+import type { TransitLayoutRaw } from "../ui-transit.schema";
+import { transitLayout } from "../ui-transit.wire";
 
 type SectionRaw = TransitLayoutRaw["sections"][number];
 type ItemRaw = SectionRaw["items"][number];

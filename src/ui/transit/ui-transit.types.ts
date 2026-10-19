@@ -1,3 +1,4 @@
+import type { TransitLayoutRaw } from "./ui-transit.schema";
 import type { MiniAppReference, MiniAppRegistry } from "../ui.types";
 
 export interface TransitLayoutReferences {
@@ -12,3 +13,10 @@ export interface TransitLayoutIssue {
 }
 
 export type TransitLayoutReference = MiniAppReference | { dataset: "busGroups" | "subwayStations"; id: string; path: Array<string | number> };
+
+export interface TransitLayoutRevision {
+  revision: number;
+  layout: TransitLayoutRaw;
+}
+
+export type ServedTransitIds = Pick<TransitLayoutReferences, "busGroupIds" | "stationIds">;

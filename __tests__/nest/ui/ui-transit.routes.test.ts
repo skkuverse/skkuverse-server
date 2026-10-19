@@ -1,26 +1,37 @@
 /**
  * GET /ui/home/transit over main.ts's pipeline (the general limiter UiModule
- * binds on /ui, ResponseInterceptor, HttpExceptionFilter), with the committed
- * transit-layout.json, the real bus groups and the real served stations on a
- * fixed clock (2026-10-20, the commute pilot running, fasttrack closed).
+ * binds on /ui, ResponseInterceptor, HttpExceptionFilter), with the stored
+ * `transit-layout` dataset read through FakeUiTransitRepository seeded from
+ * fixtures/transit-layout.dataset.json (what transit-layout.json held), the
+ * real bus groups and the real served stations on a fixed clock (2026-10-20,
+ * the commute pilot running, fasttrack closed).
  *
  * Asserts the envelope, the three sections in order in Korean, each subway
  * row as one physical station by slug with its lines and no icon, the commute
  * stations group below the commute bus row with its stations, the English
  * titles under unchanged ids, the private five-minute Cache-Control, that no
  * item carries live arrival data, and the wire.
+ *
+ * Two more apps boot over other stores: one that never held a layout answers
+ * 503 TRANSIT_LAYOUT_UNAVAILABLE with no Cache-Control, and one whose layout
+ * places a station the server no longer serves serves the rest with 200.
  */
+import fs from "fs";
+import path from "path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
+import { UiTransitTabModule } from "../../../src/ui/transit/tab/ui-transit-tab.module";
 import { UiTransitModule } from "../../../src/ui/transit/ui-transit.module";
+import { UiTransitRepository } from "../../../src/ui/transit/ui-transit.repository";
 import { transitLayout } from "../../../src/ui/transit/ui-transit.wire";
 import { UiModule } from "../../../src/ui/ui.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { FakeUiTransitRepository } from "../../helpers/fakes/ui/ui-transit.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 // WHY: 12:00 KST on 2026-10-20, so the commute card is open and the answer does not depend on the day the suite runs.
@@ -28,15 +39,29 @@ const CLOCK: Clock = { now: () => new Date("2026-10-20T03:00:00.000Z") };
 
 const ARRIVAL_KEY = /arriv|eta|countdown|remaining/i;
 
+/** The layout fixtures/transit-layout.dataset.json holds, as `npm run data` stores it. */
+function fixtureLayout(): Record<string, unknown> {
+  const layout = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/transit-layout.dataset.json"), "utf8")) as Record<string, unknown>;
+  delete layout._about;
+  return layout;
+}
+
+function storedTransitLayout(layout: Record<string, unknown> | null): FakeUiTransitRepository {
+  const repository = new FakeUiTransitRepository();
+  if (layout !== null) repository.storeTransitLayout(layout);
+  return repository;
+}
+
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 
 beforeAll(async () => {
   app = await buildTestApp({
-    imports: [SchedulingModule, BusModule, UiModule, UiTransitModule],
+    imports: [SchedulingModule, BusModule, UiModule, UiTransitModule, UiTransitTabModule],
     overrides: [
       { provide: Clock, useValue: CLOCK },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
+      { provide: UiTransitRepository, useValue: storedTransitLayout(fixtureLayout()) },
     ],
     role: "api",
   });
@@ -210,5 +235,61 @@ describe("GET /ui/home/transit", () => {
     expect(res.status).toBe(200);
     expect(res.headers["cache-control"]).toBe("private, max-age=300");
     expect(keysOf(res.body.data).filter((key) => ARRIVAL_KEY.test(key))).toEqual([]);
+  });
+});
+
+describe("GET /ui/home/transit over other stored layouts", () => {
+  let other: NestExpressApplication | undefined;
+
+  async function bootTransit(layout: Record<string, unknown> | null): Promise<import("http").Server> {
+    other = await buildTestApp({
+      imports: [SchedulingModule, BusModule, UiModule, UiTransitModule, UiTransitTabModule],
+      overrides: [
+        { provide: Clock, useValue: CLOCK },
+        { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
+        { provide: UiTransitRepository, useValue: storedTransitLayout(layout) },
+      ],
+      role: "api",
+    });
+    return other.getHttpServer();
+  }
+
+  afterEach(async () => {
+    await other?.close();
+    other = undefined;
+  });
+
+  it("answers 503 TRANSIT_LAYOUT_UNAVAILABLE with no Cache-Control when no layout was ever read", async () => {
+    // Arrange
+    const server = await bootTransit(null);
+
+    // Act
+    const res = await request(server).get("/ui/home/transit");
+
+    // Assert
+    expect(res.status).toBe(503);
+    expect(res.body.error).toEqual({ code: "TRANSIT_LAYOUT_UNAVAILABLE", message: "The transit layout is unavailable" });
+    expect(res.headers["cache-control"]).toBeUndefined();
+  });
+
+  it("Station removed by a deploy: leaves out a stored station the server no longer serves and serves the rest with 200", async () => {
+    // Arrange
+    const layout = fixtureLayout() as { sections: Array<{ id: string; items: Array<Record<string, unknown>> }> };
+    layout.sections[1]!.items.splice(1, 0, { kind: "subway", stationId: "removed-by-a-deploy" });
+    const server = await bootTransit(layout);
+
+    // Act
+    const res = await request(server).get("/ui/home/transit");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.sections[1].items.map((served: { id: string }) => served.id)).toEqual([
+      "subway:hyehwa",
+      "bus:hssc",
+      "bus:jongro02",
+      "bus:jongro07",
+      "bus:jongro08",
+    ]);
+    expectWire(transitLayout, res.body.data);
   });
 });

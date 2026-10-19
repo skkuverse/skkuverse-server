@@ -29,6 +29,7 @@ import { UiModule } from "./ui/ui.module";
 import { UiHomeModule } from "./ui/home/ui-home.module";
 import { UiTransitListModule } from "./ui/transit-list/ui-transit-list.module";
 import { UiTransitModule } from "./ui/transit/ui-transit.module";
+import { UiTransitTabModule } from "./ui/transit/tab/ui-transit-tab.module";
 import { UiScrollModule } from "./ui/scroll/ui-scroll.module";
 import { UiCampusModule } from "./ui/campus/ui-campus.module";
 import { BuildingModule } from "./building/building.module";
@@ -105,6 +106,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     UiHomeModule,
     UiTransitListModule,
     UiTransitModule,
+    UiTransitTabModule,
     UiScrollModule,
     UiCampusModule,
     BuildingModule,
