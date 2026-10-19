@@ -412,4 +412,45 @@ describe("npm run data", () => {
     expect(result.out + result.err).not.toContain(closed);
     expect(result.out + result.err).not.toContain(SENTINEL);
   });
+
+  it("never prints a replica host of an SRV MONGO_URL, or an IP address, that an error names", async () => {
+    // Arrange
+    // An SRV URL names only the cluster host; the driver's errors name the replica hosts it resolved to, and raw IPs.
+    const env = { MONGO_URL: `mongodb+srv://skku:${SENTINEL}@cluster0.abcde.mongodb.net/?retryWrites=true`, MONGO_CONTENT_DB_NAME: BASE };
+    const failingWith = (message: string) => () => {
+      throw new Error(message);
+    };
+    const messages = [
+      "connection 3 to ac-abc123-shard-00-01.abcde.mongodb.net:27017 closed",
+      "connect ECONNREFUSED 10.0.12.34:27017",
+      "read ECONNRESET from 52.79.1.2",
+    ];
+
+    // Act
+    const runs = await Promise.all(messages.map((message) => data(["history", "home-layout"], { env, load: failingWith(message) })));
+
+    // Assert
+    expect(runs.map((r) => r.code)).toEqual([1, 1, 1]);
+    expect(runs[0]!.err).toContain("connection 3 to");
+    for (const { out, err } of runs) {
+      for (const secret of ["abcde.mongodb.net", "ac-abc123-shard-00-01", "10.0.12.34", "52.79.1.2", SENTINEL]) {
+        expect(out + err).not.toContain(secret);
+      }
+    }
+  });
+
+  it("keeps the database banner whole when the user name is part of the database name", async () => {
+    // Arrange
+    const closed = `127.0.0.1:${await freeLoopbackPort()}`;
+    const env = { MONGO_URL: `mongodb://skku:${SENTINEL}@${closed}/?authSource=admin`, MONGO_CONTENT_DB_NAME: BASE };
+
+    // Act
+    const result = await data(["history", "home-layout"], { env });
+
+    // Assert
+    expect(result.code).toBe(1);
+    expect(result.out).toContain(`database   ${DEV}`);
+    expect(result.out + result.err).not.toContain(SENTINEL);
+    expect(result.out + result.err).not.toContain(closed);
+  });
 });
