@@ -18,10 +18,6 @@ export class MiniappsService {
     return registry.indexEntries;
   }
 
-  get firstPartyOrigins(): Readonly<Record<string, string>> {
-    return registry.ownerByOrigin;
-  }
-
   isRegistered(id: string): boolean {
     return registry.detailsById.has(id);
   }

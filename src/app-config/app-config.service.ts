@@ -1,15 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import config from "../infra/config";
-import { BRIDGE_ORIGINS, WEB_ORIGIN } from "../infra/origins";
-import { MiniappsService } from "../miniapps/miniapps.service";
+import { BRIDGE_ORIGINS, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEB_ORIGIN } from "../infra/origins";
 import type { AppClientConfig } from "./app-config.wire";
 
 // WHY: the bridge allowlist rides on /app/config because the app already fetches it at boot: the
 // list is in hand before the first webview opens, with no second request to wait on.
 @Injectable()
 export class AppConfigService {
-  constructor(private readonly miniApps: MiniappsService) {}
-
   getConfig(): AppClientConfig {
     const { ios, android } = config.app;
     return {
@@ -17,7 +14,7 @@ export class AppConfigService {
       android,
       webview: { bridgeOrigins: [...BRIDGE_ORIGINS] },
       web: { origin: WEB_ORIGIN },
-      miniapps: { origins: { ...this.miniApps.firstPartyOrigins } },
+      miniapps: { origins: { ...MINIAPP_ID_BY_FIRST_PARTY_ORIGIN } },
     };
   }
 }
