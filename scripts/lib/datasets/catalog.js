@@ -16,7 +16,10 @@
  *
  *   owner            the src/ folder that reads it
  *   schema           the zod schema the server's repository parses `data` with
- *   issuesOf(data)   checks a schema cannot hold, as { path, message }
+ *   issuesOf(data, { storedOf })
+ *                    checks a schema cannot hold, as { path, message };
+ *                    `storedOf(name)` is another dataset's parsed content in
+ *                    the target database, or null (scripts/lib/datasets/checks.js)
  *   referencesOf(data)
  *                    every identity the data names, as { dataset, id, path };
  *                    `dataset` is another catalog dataset or a code-held source
