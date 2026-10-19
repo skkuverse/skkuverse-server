@@ -1,14 +1,11 @@
-import fs from "fs";
-import path from "path";
 import type { z } from "zod";
 import { parseConfigFile } from "../infra/config-file";
-import { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../infra/origins";
+import { WEB_ORIGIN } from "../infra/origins";
 import { isRecord } from "../shared/object.util";
 import { SHELL_BARS, SHELL_HEADERS, SHELL_STATUS_BARS } from "./miniapps.constants";
-import { toIndexEntry, toMiniAppRegistry } from "./miniapps.mapper";
-import { toRegistryIssues } from "./miniapps.rules";
+import { toIndexEntry } from "./miniapps.mapper";
 import { checkedRegistry, type MiniAppDetailRaw, type RegistryFile } from "./miniapps.schema";
-import type { LoadedRegistry, MiniAppRegistry } from "./miniapps.types";
+import type { LoadedRegistry } from "./miniapps.types";
 
 type Issue = z.core.$ZodRawIssue;
 type Words = (id: string, issue: Issue) => string | undefined;
@@ -116,30 +113,3 @@ export function toLoadedRegistry({ index, details }: RegistryFile, firstPartyOri
   const ownerByOrigin = toOwnerByOrigin([...detailsById.values()], firstPartyOrigins);
   return { version: index.version, indexEntries: Object.freeze(indexEntries), detailsById, ownerByOrigin };
 }
-
-// WHY: read next to the compiled file at runtime; scripts/copy-build-assets.js stages each JSON file into dist/.
-function readJson(...segments: string[]): unknown {
-  return JSON.parse(fs.readFileSync(path.join(__dirname, ...segments), "utf8"));
-}
-
-function indexIdsOf(index: unknown): string[] {
-  const entries: unknown[] = isRecord(index) && Array.isArray(index.miniApps) ? index.miniApps : [];
-  return entries.flatMap((entry) => (isRecord(entry) && typeof entry.id === "string" ? [entry.id] : []));
-}
-
-// WHY: the committed files pass the owner check a `miniapps` push will, so the dataset made from them does too.
-function assertOwnedOrigins(file: RegistryFile): void {
-  const issues = toRegistryIssues(file, { owners: MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, webviewOrigin: WEBVIEW_ORIGIN });
-  if (issues.length > 0) throw new Error(`${LABEL}: ${issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ")}`);
-}
-
-function readRegistry(): Readonly<RegistryFile> {
-  const index = readJson("index.json");
-  const details = Object.fromEntries(indexIdsOf(index).map((id) => [id, readJson("details", `${id}.json`)]));
-  const file = loadRegistry(index, details);
-  assertOwnedOrigins(file);
-  return file;
-}
-
-// WHY: revision 0, since the committed files are no stored revision; MiniappsService's getters read them until every reader awaits current().
-export const committedRegistry: MiniAppRegistry = toMiniAppRegistry(readRegistry(), 0, WEB_ORIGIN);

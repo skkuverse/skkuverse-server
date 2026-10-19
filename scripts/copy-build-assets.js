@@ -15,9 +15,8 @@ const assets = [
   ["src/bus/eta/lane/bus-lane.json", "dist/src/bus/eta/lane/bus-lane.json"],
   // src/bus/bus.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/jongro-routes.json", "dist/src/bus/jongro-routes.json"],
-  // miniapps/miniapps.config.ts reads these with fs.readFileSync(__dirname/<name>).
-  // Every details/<id>.json listed in index.json must appear here too — the
-  // loader reads them eagerly at boot, so a missing file is a startup crash.
+  // The mini app registry's committed files: the server reads the `miniapps` dataset
+  // instead, and move-miniapp-registry task 12.1 deletes these with their entries.
   ["src/miniapps/index.json", "dist/src/miniapps/index.json"],
   [
     "src/miniapps/details/eskara-2026.json",
