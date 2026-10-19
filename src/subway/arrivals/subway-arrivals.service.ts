@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../../infra/clock";
-import config from "../../infra/config";
 import type { SupportedLang } from "../../infra/types";
 import type { SubwayArrivalsDoc } from "../subway.document";
 import { SubwayRepository } from "../subway.repository";
@@ -29,9 +28,8 @@ export class SubwayArrivalsService {
     return toSubwayStationArrivals(station, platformDocs, lang);
   }
 
-  // WHY: with SUBWAY=off nothing writes the state, so the timetable alone is served without reading it.
+  // WHY: read whatever SUBWAY says: the switch stops only the poller, and another container may run it (ADR 0012, D5).
   private async listFreshArrivals(now: Date): Promise<ReadonlyMap<string, SubwayArrivalsDoc>> {
-    if (!config.subway.enabled) return new Map();
     const docs = await this.repository.listArrivals();
     return new Map(docs.filter((doc) => isFreshState(doc.generatedAt, now)).map((doc) => [doc._id, doc]));
   }
