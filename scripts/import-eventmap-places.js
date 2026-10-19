@@ -20,6 +20,10 @@
  *   --dry-run              validate and report, write nothing
  *   --delete-missing       delete places absent from the sheet
  *
+ * Each `miniapp` action is checked against the mini app registry the server on
+ * the same side serves: the `miniapps` dataset of the content database
+ * (MONGO_CONTENT_DB_NAME, `_dev` unless NODE_ENV=production, as for eventmap).
+ *
  * `--delete-missing` really deletes. There is no `lifecycle: "retired"` to fall
  * back on any more, and that is the point: a cancelled booth is removed from the
  * sheet and removed from Mongo, which is what leaves an empty `hours` free to
@@ -32,7 +36,7 @@ const path = require("path");
 const { MongoClient } = require("mongodb");
 
 const { parsePlacesFile } = require("./lib/map-places-file");
-const { ensureActivation, resolveDbName, upsertPlaces } = require("./lib/eventmap-db");
+const { ensureActivation, readMiniAppIds, resolveContentDbName, resolveDbName, upsertPlaces } = require("./lib/eventmap-db");
 
 const DEFAULT_FILE = path.join(__dirname, "data", "eskara-2026-places.json");
 const DEFAULT_LAYER_SET_ID = "eskara-2026";
@@ -83,6 +87,16 @@ function windowHistogram(docs) {
     .join("  ");
 }
 
+/**
+ * The sheet parsed against the mini app registry `contentDb` holds, so a
+ * `miniapp` action naming an id that database's server would not serve is
+ * refused here rather than dropped at read.
+ */
+async function parseSheet(text, { layerSetId, contentDb }) {
+  const miniAppIds = await readMiniAppIds(contentDb);
+  return parsePlacesFile(text, { layerSetId, miniAppIds });
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
@@ -92,27 +106,30 @@ async function main() {
     process.exit(1);
   }
   const dbName = resolveDbName();
-
+  const contentDbName = resolveContentDbName();
   const text = fs.readFileSync(args.file, "utf8");
-  const { docs, errors } = parsePlacesFile(text, { layerSetId: args.layerSetId });
-
-  console.log(`file       ${args.file}`);
-  console.log(`layerSetId ${args.layerSetId}`);
-  console.log(`database   ${dbName}`);
-  console.log(`parsed     ${docs.length} place(s), ${errors.length} problem(s)`);
-  if (docs.length > 0) console.log(`windows    ${windowHistogram(docs)}`);
-
-  // Abort before touching Mongo. A rejected place means the sheet is wrong, and
-  // importing the other 60 would hide that behind a map that looks fine.
-  if (errors.length > 0) {
-    console.error("\nRejected — nothing was written:");
-    for (const e of errors) console.error(`  ${e}`);
-    process.exit(1);
-  }
 
   const client = new MongoClient(mongoUrl);
   await client.connect();
   try {
+    const { docs, errors } = await parseSheet(text, { layerSetId: args.layerSetId, contentDb: client.db(contentDbName) });
+
+    console.log(`file       ${args.file}`);
+    console.log(`layerSetId ${args.layerSetId}`);
+    console.log(`database   ${dbName}`);
+    console.log(`registry   ${contentDbName}`);
+    console.log(`parsed     ${docs.length} place(s), ${errors.length} problem(s)`);
+    if (docs.length > 0) console.log(`windows    ${windowHistogram(docs)}`);
+
+    // Abort before writing. A rejected place means the sheet is wrong, and
+    // importing the other 60 would hide that behind a map that looks fine.
+    if (errors.length > 0) {
+      console.error("\nRejected — nothing was written:");
+      for (const e of errors) console.error(`  ${e}`);
+      process.exitCode = 1;
+      return;
+    }
+
     const db = client.db(dbName);
     const places = db.collection("places");
     const activations = db.collection("activations");
@@ -174,4 +191,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, windowHistogram };
+module.exports = { parseArgs, parseSheet, windowHistogram };

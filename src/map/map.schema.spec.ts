@@ -5,6 +5,7 @@
  * boundary 4.3), and the live activation.
  */
 import { liveActivation, overlayPlaceDoc, sheetPlaceDoc } from "./map.schema";
+import { fixtureMiniAppIds } from "../../__tests__/helpers/miniapps/registry-fixture";
 
 // The importer is CommonJS and outside tsconfig, so it is required.
 const { parsePlacesFile } = require("../../scripts/lib/map-places-file");
@@ -25,7 +26,7 @@ const ROW: Row = {
 
 function imported(row: Row): unknown[] {
   const file = JSON.stringify({ layerSetId: "eskara-2026", campus: "nsc", places: [row] });
-  return parsePlacesFile(file, { layerSetId: "eskara-2026" }).docs;
+  return parsePlacesFile(file, { layerSetId: "eskara-2026", miniAppIds: fixtureMiniAppIds() }).docs;
 }
 
 const DOC = imported(ROW)[0] as Row;
