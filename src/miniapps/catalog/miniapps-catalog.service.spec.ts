@@ -31,9 +31,12 @@ beforeEach(() => {
 });
 
 describe("MiniappsCatalogService.index", () => {
-  it("serves the registry's version and its ordered list", () => {
+  it("serves the registry's version and its ordered list", async () => {
+    // Arrange
+    const snapshot = await registry.current();
+
     // Act & Assert
-    expect(service.index()).toEqual({ version: registry.version, miniApps: [...registry.list] });
+    expect(await service.index()).toEqual({ version: snapshot.version, miniApps: [...snapshot.indexEntries] });
   });
 });
 
@@ -55,6 +58,6 @@ describe("MiniappsCatalogService.detail", () => {
     const detail = await service.detail("mukja");
 
     // Assert
-    expect(detail).toEqual({ ...registry.getDetail("mukja"), shell: { ...DEFAULT_SHELL, bar: "none" } });
+    expect(detail).toEqual({ ...(await registry.current()).detailOf("mukja"), shell: { ...DEFAULT_SHELL, bar: "none" } });
   });
 });

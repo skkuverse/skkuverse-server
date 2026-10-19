@@ -9,9 +9,9 @@ import { MiniappsRegistryReadError, MiniappsRegistryUnavailableError } from "./m
 import { resolveLogo, toMiniAppRegistry } from "./miniapps.mapper";
 import { MiniappsRepository } from "./miniapps.repository";
 import { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } from "./miniapps.rules";
-import type { MiniAppDetailRaw, MiniAppLogoRaw } from "./miniapps.schema";
+import type { MiniAppLogoRaw } from "./miniapps.schema";
 import type { MiniAppRegistry, MiniAppsRegistryRevision, MiniAppTarget } from "./miniapps.types";
-import type { MiniAppIndexEntry, MiniAppLogo } from "./miniapps.wire";
+import type { MiniAppLogo } from "./miniapps.wire";
 
 // SEE: docs/decisions/0010-server-architecture.md (D1): the door other features read the registry through.
 @Injectable()
@@ -39,20 +39,8 @@ export class MiniappsService {
     return this.loader.get();
   }
 
-  get version(): number {
-    return committedRegistry.version;
-  }
-
-  get list(): ReadonlyArray<Readonly<MiniAppIndexEntry>> {
-    return committedRegistry.indexEntries;
-  }
-
   isRegistered(id: string): boolean {
     return committedRegistry.isRegistered(id);
-  }
-
-  getDetail(id: string): Readonly<MiniAppDetailRaw> | undefined {
-    return committedRegistry.detailOf(id);
   }
 
   parseTarget(value: unknown): MiniAppTarget | null {
