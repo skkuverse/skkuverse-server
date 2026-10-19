@@ -21,3 +21,9 @@ export interface ScheduleContent {
   noticesOf(serviceId: string): readonly StoredServiceNotice[];
   suspendOf(serviceId: string): SuspendDates | null;
 }
+
+export interface BusServiceReference {
+  dataset: "busServices";
+  id: string;
+  path: Array<string | number>;
+}

@@ -1,9 +1,11 @@
 /**
  * The calendar check the schedule content datasets share: a date is a real
  * day written YYYY-MM-DD, so a push cannot store a day the calendar does not
- * have, or one the strict reads would not find.
+ * have, or one the strict reads would not find. And the identities a
+ * `bus-service-notices` push names: each stored service id, which must be a
+ * service the code defines (`busServices`, move-editorial-datasets D7).
  */
-import { isCalendarDate } from "./bus-schedule-content.rules";
+import { isCalendarDate, serviceNoticesReferences } from "./bus-schedule-content.rules";
 
 describe("isCalendarDate", () => {
   it.each([
@@ -22,5 +24,31 @@ describe("isCalendarDate", () => {
   ])("%j is a calendar date: %s", (value, expected) => {
     // Act & Assert
     expect(isCalendarDate(value)).toBe(expected);
+  });
+});
+
+describe("serviceNoticesReferences", () => {
+  it("names each stored service as a busServices reference at its path, in stored order", () => {
+    // Arrange
+    const data = {
+      services: {
+        "campus-inja": { notices: [], suspend: null },
+        "campus-jaja": { notices: [{ style: "info" as const, text: "공지" }], suspend: null },
+      },
+    };
+
+    // Act
+    const references = serviceNoticesReferences(data);
+
+    // Assert
+    expect(references).toEqual([
+      { dataset: "busServices", id: "campus-inja", path: ["services", "campus-inja"] },
+      { dataset: "busServices", id: "campus-jaja", path: ["services", "campus-jaja"] },
+    ]);
+  });
+
+  it("names nothing for no stored service", () => {
+    // Act & Assert
+    expect(serviceNoticesReferences({ services: {} })).toEqual([]);
   });
 });

@@ -29,11 +29,6 @@ const translations: Translations = {
     en: "HSSC ↔ NSC",
     zh: "人文校区 ↔ 自然校区",
   },
-  "buslist.inja.notice": {
-    ko: "25년도 2학기 인자셔틀 시간표 업데이트",
-    en: "2025 Fall INJA shuttle schedule updated",
-    zh: "2025年第二学期仁自班车时刻表已更新",
-  },
   "buslist.jongro02.title": {
     ko: "종로 02",
     en: "Jongro 02",
