@@ -280,7 +280,7 @@ describe("store.copy", () => {
     await storeRevisions(dev, "home-layout", 3);
 
     // Act
-    const result = await store.copy(prod, dev, "home-layout", { baseRevision: 3, by: BOB, now: LATER });
+    const result = await store.copy(prod, dev, "home-layout", { sourceRevision: 12, baseRevision: 3, by: BOB, now: LATER });
 
     // Assert
     expect(result).toEqual({ ok: true, revision: 4 });
@@ -299,7 +299,7 @@ describe("store.copy", () => {
     await storeRevisions(prod, "home-layout", 2);
 
     // Act
-    const result = await store.copy(prod, dev, "home-layout", { baseRevision: null, by: BOB, now: LATER });
+    const result = await store.copy(prod, dev, "home-layout", { sourceRevision: 2, baseRevision: null, by: BOB, now: LATER });
 
     // Assert
     expect(result).toEqual({ ok: true, revision: 1 });
@@ -307,6 +307,24 @@ describe("store.copy", () => {
       command: "copy-prod-to-dev",
       copiedFrom: { database: "data_tool_store", revision: 2 },
     });
+  });
+
+  it("writes nothing when production moved past the revision that was checked", async () => {
+    // Arrange
+    await storeRevisions(prod, "home-layout", 2);
+    await storeRevisions(dev, "home-layout", 1);
+    // The tool checked and showed revision 2; production then moved to 3 before the copy.
+    await store.push(prod, "home-layout", layout("unchecked"), { baseRevision: 2, by: ALICE, now: LATER });
+    const prodEntries = await revisionsOf(prod, "home-layout");
+
+    // Act
+    const result = await store.copy(prod, dev, "home-layout", { sourceRevision: 2, baseRevision: 1, by: BOB, now: LATER });
+
+    // Assert
+    expect(result).toMatchObject({ ok: false, reason: "source-moved", checked: 2, current: { revision: 3, updatedBy: ALICE } });
+    expect(await store.readDataset(dev, "home-layout")).toMatchObject({ revision: 1, data: layout("r1") });
+    expect(await revisionsOf(prod, "home-layout")).toEqual(prodEntries);
+    expect(await store.readDataset(prod, "home-layout")).toMatchObject({ revision: 3, data: layout("unchecked") });
   });
 
   it("refuses when production has no such dataset", async () => {
