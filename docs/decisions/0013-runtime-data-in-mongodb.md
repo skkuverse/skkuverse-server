@@ -32,11 +32,15 @@ Runtime data that moves out of the repository is stored as a dataset: one docume
 
 Once a dataset is stored, the repository holds no copy of it: no committed file, no fallback in the image.
 
+Amended 2026-10-20 by the OpenSpec change `move-reference-datasets` (`openspec/changes/move-reference-datasets/design.md`, D4): a parted dataset is a header manifest plus content-identified parts. Its `datasets` document stays the header and its `data` is the manifest, naming each part by its key and an id derived from its content; each part is one document of `dataset_parts`, never changed once stored, and a reader reads it by `_id`.
+
 ### D2. Identities stay in code
 
 What the code branches on stays in code: route ids, service ids, enums, the origins in `src/infra/origins.ts`, UI-label translations, and the hash-locked notices contract files. A dataset holds the data that names those identities, never the identities themselves. The mini app registry stays in code in the first stage, and datasets reference it as a code-held source.
 
 Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/archive/2026-10-20-move-miniapp-registry/design.md`, D2, D5 and D6): the mini app registry is the `miniapps` dataset, and the three ui datasets reference it as a dataset, resolved against the copy stored in the database a push targets. Who owns each first-party origin stays in code (`MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` in `src/infra/origins.ts`): a push must agree with it, and a read that does not is logged.
+
+Amended 2026-10-20 by the OpenSpec change `move-reference-datasets` (`openspec/changes/move-reference-datasets/design.md`, D2, D9 and D10): subway identities and their labels (lines, stations and platforms, with their names, colors and markers) stay in code, and each platform's directions and each station's neighbors are the `subway-topology` dataset. Jongro route ids stay in code, and each route's attributes (theme color, icon, refresh interval, seat count, transfer lines) are the `jongro-route-attributes` dataset. Bus-lane strategies and lane hours stay in code, since they decide which estimate model a run gets; the corridor geometry is the `bus-lane-corridor` dataset.
 
 ### D3. The tool is the only writer
 
@@ -47,6 +51,8 @@ Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/cha
 Every push, rollback and copy records the stored version in `dataset_revisions` (`<dataset>@<revision>`), the current one included. The newest 50 revisions of each dataset are kept, and the current one is never pruned. A rollback stores an earlier revision's data as a new revision; history is never rewritten.
 
 A push names the revision it was pulled at and is stored only if the dataset is still at that revision, in one conditional update. Otherwise it writes nothing and reports the current revision, its author and its time. The dataset is written before its history entry, with no transaction, so only the winner of the update writes history; a run that finds the current revision without an entry records it before anything else, except where a run writes nothing to production before a confirmation: there it records the entry as the first step of the confirmed write.
+
+Amended 2026-10-20 by the OpenSpec change `move-reference-datasets` (`openspec/changes/move-reference-datasets/design.md`, D4): retention counts header revisions. A part is kept while a retained revision names it, and the part the current header names is never deleted, so a rollback finds every part of the revision it restores.
 
 ### D5. Validation is the server's compiled code; references are declared per dataset
 
@@ -84,6 +90,6 @@ Code, not datasets, holds: the identities of D2; the schemas, rules and readers;
 - **ADR 0010 D13's scripts row is not used for datasets.** The tool loads the server's compiled schemas and rules, so no hand-written validator or equivalence spec mirrors them.
 - **A schema change can strand stored data.** D7's check is a manual step for now; running it inside the deploy is an open question of the change.
 - **Atlas reads grow by one `findOne` per dataset per replica per minute while the dataset's route is requested**, estimated in the change's design (D8).
-- **Polling roles read datasets too.** A dataset that a poller's work depends on (the bus schedule content the shuttle ETA pollers plan runs with) is read in `poller` and `combined` as in `api`, under the same contract. Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (D12).
+- **Polling roles read datasets too.** A dataset that a poller's work depends on (the bus schedule content the shuttle ETA pollers plan runs with) is read in `poller` and `combined` as in `api`, under the same contract. Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (D12). Amended 2026-10-20 by the OpenSpec change `move-reference-datasets` (`openspec/changes/move-reference-datasets/design.md`, D3 and D7): the subway pollers read datasets too, the Seoul pollers matching upstream names through `subway-topology` and the tracker scheduling from `subway-timetables`.
 - **No code-held source remains for mini apps.** A check that needs another dataset's content reads it from the target database through `issuesOf`'s `storedOf`, so a production push is checked against production's registry. Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (D6).
 - **Production data is edited from a laptop with `MONGO_URL`.** A database user scoped to the content database is an open question of the change.
