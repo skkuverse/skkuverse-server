@@ -35,7 +35,7 @@ A process that runs pollers (`poller`, `combined`) calls the upstream data APIs 
 
 A read that serves a client takes its data from MongoDB only. It never falls back to a value a poller holds in the same process, so `combined` and `api` answer identically for the same stored data. State a poller keeps from one tick to the next (an HSSC bus's first sighting, a Jongro vehicle's last observation, a pending registry change) stays in the poller's memory, because the poller computes with it; it reaches clients only through what the poller writes.
 
-Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/move-miniapp-registry/design.md`, D8): the first-party mini app manifest origins join what pollers call. A poller per origin stores each manifest's shell fields in `miniapp_manifests`, and since the change's wave B the api reads them from there (D9 of that design), so no api replica fetches a manifest.
+Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/archive/2026-10-20-move-miniapp-registry/design.md`, D8): the first-party mini app manifest origins join what pollers call. A poller per origin stores each manifest's shell fields in `miniapp_manifests`, and since the change's wave B the api reads them from there (D9 of that design), so no api replica fetches a manifest.
 
 ### D2. Five request-scoped upstream calls stay in api
 
@@ -51,7 +51,7 @@ An api replica calls an upstream only on behalf of the request it is serving, an
 
 Any other upstream call belongs in a poller.
 
-Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/move-miniapp-registry/design.md`, D9): the temporary sixth call, the first-party mini app manifest fetch at api boot and on `GET /miniapps/:id`, is gone. The manifest pollers fetch it (D1), and the detail route reads what they stored.
+Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/archive/2026-10-20-move-miniapp-registry/design.md`, D9): the temporary sixth call, the first-party mini app manifest fetch at api boot and on `GET /miniapps/:id`, is gone. The manifest pollers fetch it (D1), and the detail route reads what they stored.
 
 ### D3. No writes at boot from api
 
@@ -91,7 +91,7 @@ Reference data that a database outage must not take down (bus schedules, overrid
 
 Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (`openspec/changes/archive/2026-10-20-move-editorial-datasets/design.md`, D12): the Datasets row. A dataset reader holds the same `on-reload-failure` stale window, for 24 hours.
 
-Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/move-miniapp-registry/design.md`, D9): the Mini app manifests row. The detail route's read holds the same `on-reload-failure` stale window, for 24 hours; with no good read it merges no manifest and serves the registry's own shell.
+Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/archive/2026-10-20-move-miniapp-registry/design.md`, D9): the Mini app manifests row. The detail route's read holds the same `on-reload-failure` stale window, for 24 hours; with no good read it merges no manifest and serves the registry's own shell.
 
 ## Consequences
 

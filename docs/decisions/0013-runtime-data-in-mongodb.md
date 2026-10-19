@@ -36,7 +36,7 @@ Once a dataset is stored, the repository holds no copy of it: no committed file,
 
 What the code branches on stays in code: route ids, service ids, enums, the origins in `src/infra/origins.ts`, UI-label translations, and the hash-locked notices contract files. A dataset holds the data that names those identities, never the identities themselves. The mini app registry stays in code in the first stage, and datasets reference it as a code-held source.
 
-Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/move-miniapp-registry/design.md`, D2, D5 and D6): the mini app registry is the `miniapps` dataset, and the three ui datasets reference it as a dataset, resolved against the copy stored in the database a push targets. Who owns each first-party origin stays in code (`MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` in `src/infra/origins.ts`): a push must agree with it, and a read that does not is logged.
+Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/archive/2026-10-20-move-miniapp-registry/design.md`, D2, D5 and D6): the mini app registry is the `miniapps` dataset, and the three ui datasets reference it as a dataset, resolved against the copy stored in the database a push targets. Who owns each first-party origin stays in code (`MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` in `src/infra/origins.ts`): a push must agree with it, and a read that does not is logged.
 
 ### D3. The tool is the only writer
 
