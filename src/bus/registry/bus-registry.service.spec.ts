@@ -407,7 +407,7 @@ describe("BusRegistryService.bootstrap", () => {
     };
 
     // Act
-    await bootstrapTimes(3, captured07().slice(0, 5), [TURNAROUND_07]);
+    await bootstrapTimes(3, captured07().slice(0, 13), [TURNAROUND_07]);
 
     // Assert
     expect(repository.routes.get("jongro07")).toEqual(operatorDoc);
