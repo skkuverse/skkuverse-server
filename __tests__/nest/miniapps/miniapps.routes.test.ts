@@ -52,6 +52,7 @@ beforeAll(async () => {
       { provide: MiniappsNotificationsClient, useValue: new FakeMiniappsNotificationsClient() },
       { provide: Clock, useValue: CLOCK },
     ],
+    role: "api",
   });
   httpServer = app.getHttpServer();
 });
