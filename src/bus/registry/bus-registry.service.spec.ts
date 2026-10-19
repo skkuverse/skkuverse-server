@@ -26,6 +26,7 @@ import { jongroRoutes } from "../bus.config";
 import { capturedStationsOf, storedJongroRouteDocuments } from "../../../__tests__/helpers/bus/bus-registry";
 import type { BusRegistryRepository } from "./bus-registry.repository";
 import { toStationsVersion } from "./bus-registry.rules";
+import { BusRegistryBootstrappingError } from "./bus-registry.error";
 import { BusRegistryService } from "./bus-registry.service";
 import type { ObservedStation, RegistryRoute } from "./bus-registry.types";
 
@@ -42,6 +43,9 @@ const storeRoutes = () => {
 };
 const rowsOf = (stations: readonly ObservedStation[]) =>
   stations.map((s, index) => ({ stationId: s.topisId, sequence: String(index + 1), stationName: s.stationName, stationNumber: s.arsId }));
+const ignoreBootstrapping = (err: unknown): void => {
+  if (!(err instanceof BusRegistryBootstrappingError)) throw err;
+};
 const storedStationsOf = (routeId: string) => repository.routes.get(routeId)!.stations.map(({ topisId, arsId, stationName }) => ({ topisId, arsId, stationName }));
 
 async function observeTimes(routeId: string, stations: readonly ObservedStation[], times: number, turnaroundIds: string[] = []): Promise<void> {
@@ -331,8 +335,47 @@ describe("BusRegistryService.bootstrap", () => {
   const TURNAROUND_07 = "100900028";
 
   async function bootstrapTimes(times: number, stations: readonly ObservedStation[], turnaroundIds: Array<string | undefined>): Promise<void> {
-    for (let i = 0; i < times; i++) await service.bootstrap(route07, rowsOf(stations), turnaroundIds);
+    for (let i = 0; i < times; i++) await service.bootstrap(route07, rowsOf(stations), turnaroundIds).catch(ignoreBootstrapping);
   }
+  const outcomeOf = (stations: readonly ObservedStation[], turnaroundIds: Array<string | undefined>): Promise<unknown> =>
+    service.bootstrap(route07, rowsOf(stations), turnaroundIds).then(() => "resolved", (err: unknown) => err);
+
+  it("rejects each observation before the insert with the count so far, and resolves the one that inserts", async () => {
+    // Act
+    const outcomes: unknown[] = [];
+    for (let i = 0; i < 3; i++) outcomes.push(await outcomeOf(captured07(), [TURNAROUND_07]));
+
+    // Assert
+    expect(outcomes.slice(0, 2)).toEqual([expect.any(BusRegistryBootstrappingError), expect.any(BusRegistryBootstrappingError)]);
+    expect(outcomes.slice(0, 2)).toMatchObject([{ routeId: "jongro07", observationCount: 1 }, { routeId: "jongro07", observationCount: 2 }]);
+    expect(outcomes[2]).toBe("resolved");
+  });
+
+  it("rejects an observation that counts nothing with the count so far", async () => {
+    // Arrange
+    await bootstrapTimes(2, captured07(), [TURNAROUND_07]);
+
+    // Act
+    const outcome = await outcomeOf(captured07(), []);
+
+    // Assert
+    expect(outcome).toBeInstanceOf(BusRegistryBootstrappingError);
+    expect(outcome).toMatchObject({ observationCount: 2 });
+  });
+
+  it("resolves the insert that finds a document another writer stored first", async () => {
+    // Arrange
+    const operatorDoc = { ...storedJongroRouteDocuments(NOW).find((doc) => doc._id === "jongro07")!, stationsVersion: "operator-edit" };
+    await bootstrapTimes(2, captured07(), [TURNAROUND_07]);
+    repository.routes.set("jongro07", structuredClone(operatorDoc));
+
+    // Act
+    const outcome = await outcomeOf(captured07(), [TURNAROUND_07]);
+
+    // Assert
+    expect(outcome).toBe("resolved");
+    expect(repository.routes.get("jongro07")).toEqual(operatorDoc);
+  });
 
   it("inserts the route at the third identical observation, logs it, and serves it at once", async () => {
     // Act

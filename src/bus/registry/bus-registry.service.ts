@@ -6,7 +6,7 @@ import { jongroRoutes } from "../bus.config";
 import type { JongroRoute } from "../bus.types";
 import { REGISTRY_TTL_MS } from "./bus-registry.constants";
 import type { JongroRouteDocument } from "./bus-registry.document";
-import { BusRegistryMissingError } from "./bus-registry.error";
+import { BusRegistryBootstrappingError, BusRegistryMissingError } from "./bus-registry.error";
 import { toRegistryRoute, toRegistryStations } from "./bus-registry.mapper";
 import { BusRegistryRepository } from "./bus-registry.repository";
 import {
@@ -64,13 +64,15 @@ export class BusRegistryService {
     }
   }
 
-  // WHY: a route with no document is inserted from TOPIS by the one poller, never over a stored one (ADR 0012, D3).
+  // WHY: a route with no document is inserted from TOPIS by the one poller, never over a stored one (ADR 0012, D3);
+  // until one is stored the observation rejects, so the poller's tick reports the missing route.
   async bootstrap(route: JongroRoute, arrivals: readonly ArrivalRowStation[], sightingTurnaroundIds: ReadonlyArray<string | undefined>): Promise<void> {
     const stations = toObservedStations(arrivals);
     const turnaroundTopisId = toAgreedTurnaroundTopisId(sightingTurnaroundIds);
     const decision = toBootstrapDecision({ stations, turnaroundTopisId, pending: this.pendingByRouteId.get(route.id) });
+    if (decision.kind === "insert") return this.insert(route, { stations, turnaroundTopisId: decision.turnaroundTopisId, stationsVersion: decision.stationsVersion });
     if (decision.kind === "pending") this.pendingByRouteId.set(route.id, decision.pending);
-    else if (decision.kind === "insert") await this.insert(route, { stations, turnaroundTopisId: decision.turnaroundTopisId, stationsVersion: decision.stationsVersion });
+    throw new BusRegistryBootstrappingError(route.id, this.pendingByRouteId.get(route.id)?.count ?? 0);
   }
 
   // WHY: the poller's arrival list and position rows, compared each tick with the stored stations (design D9).

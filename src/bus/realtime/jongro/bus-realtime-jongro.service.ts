@@ -23,8 +23,8 @@ export class BusRealtimeJongroService {
     private readonly clock: Clock,
   ) {}
 
-  // WHY: rejects on a failed fetch, a bus_cache write or a registry write, so the poller registry reports the tick;
-  // the registry sync runs after both keys are written, so a held change never blocks them.
+  // WHY: rejects on a failed fetch, a bus_cache write, a registry write or a route still bootstrapping, so the poller
+  // registry reports the tick; the registry sync runs after both keys are written, so a held change never blocks them.
   async refresh(route: JongroRoute): Promise<void> {
     const registryRoute = await this.registry.findRouteOf(route.id);
     if (registryRoute === null) return this.bootstrapRegistry(route);

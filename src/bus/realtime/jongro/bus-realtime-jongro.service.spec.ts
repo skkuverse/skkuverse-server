@@ -7,7 +7,9 @@
  * the third identical tick, never blocking the cache writes), and rejects on
  * any failure, so the poller registry counts it. A route with no registry
  * document writes no bus_cache key: its tick hands both lists to the
- * registry's bootstrap and resolves (isolate-api-from-pollers D2).
+ * registry's bootstrap and rejects until the tick that inserts the route
+ * resolves, so the poller registry alerts on a route that stays missing
+ * (isolate-api-from-pollers D2).
  * Each stored bus keeps its vehicle fields, sits at its section ord, and is
  * stationary when its vehicle stood still since the poller's previous
  * observation of it (never on the first after a restart), or when it idles at
@@ -328,20 +330,33 @@ describe("BusRealtimeJongroService.refresh for a route with no registry document
     client.sightings = [jongroSighting({ stationId: stored08[3]!, sectOrd: 4, turnaroundStationId: TURNAROUND_08 })];
   });
 
-  it("fetches both lists, writes no bus_cache key and resolves", async () => {
+  const refreshSettled = (): Promise<unknown> => service.refresh(route("08")).then(() => "resolved", (err: unknown) => err);
+
+  it("fetches both lists, writes no bus_cache key and rejects as bootstrapping", async () => {
     // Act
     const outcome = service.refresh(route("08"));
 
     // Assert
-    await expect(outcome).resolves.toBeUndefined();
+    await expect(outcome).rejects.toMatchObject({ name: "BusRegistryBootstrappingError", routeId: "jongro08", observationCount: 1 });
     expect(new Set(client.positionsRouteIds)).toEqual(new Set([route("08").busRouteId]));
     expect([...busCache.values.keys()]).toEqual([]);
     expect(registryRepository.routes.has("jongro08")).toBe(false);
   });
 
+  it("rejects the ticks before the insert and resolves the one that inserts", async () => {
+    // Act
+    const outcomes: unknown[] = [];
+    for (let i = 0; i < 3; i++) outcomes.push(await refreshSettled());
+
+    // Assert
+    expect(outcomes.slice(0, 2)).toMatchObject([{ name: "BusRegistryBootstrappingError" }, { name: "BusRegistryBootstrappingError" }]);
+    expect(outcomes[2]).toBe("resolved");
+    expect(registryRepository.routes.has("jongro08")).toBe(true);
+  });
+
   it("inserts the route from TOPIS at the third tick, and the next tick writes both keys by it", async () => {
     // Act
-    for (let i = 0; i < 3; i++) await service.refresh(route("08"));
+    for (let i = 0; i < 3; i++) await refreshSettled();
     const keysAfterThird = [...busCache.values.keys()];
     await service.refresh(route("08"));
 
@@ -358,9 +373,11 @@ describe("BusRealtimeJongroService.refresh for a route with no registry document
     client.sightings = [];
 
     // Act
-    for (let i = 0; i < 3; i++) await service.refresh(route("08"));
+    const outcomes: unknown[] = [];
+    for (let i = 0; i < 3; i++) outcomes.push(await refreshSettled());
 
     // Assert
+    expect(outcomes).toMatchObject([1, 2, 3].map(() => ({ name: "BusRegistryBootstrappingError", observationCount: 0 })));
     expect(registryRepository.routes.has("jongro08")).toBe(false);
     expect([...busCache.values.keys()]).toEqual([]);
   });
