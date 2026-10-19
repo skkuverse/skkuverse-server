@@ -11,7 +11,10 @@
  * 304. The last block applies stored arrival estimates (spec
  * shuttle-arrival-eta) from the faked estimate store. Public holidays come
  * from the faked calendar store, empty unless a test stores a year, so a day
- * is answered by the rule-based lookup as before the calendar existed.
+ * is answered by the rule-based lookup as before the calendar existed. Each
+ * service's notices and suspension come from the faked content store, holding
+ * revision 1 of `bus-service-notices` unless a test stores another
+ * (move-editorial-datasets D9).
  */
 
 import fs from "fs";
@@ -24,16 +27,22 @@ import { BusEtaModule } from "../../../src/bus/eta/bus-eta.module";
 import { BusEtaRepository } from "../../../src/bus/eta/bus-eta.repository";
 import { BusEtaSmartModule } from "../../../src/bus/eta/smart/bus-eta-smart.module";
 import { BusModule } from "../../../src/bus/bus.module";
+import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
+import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusScheduleModule } from "../../../src/bus/schedule/bus-schedule.module";
 import { BusScheduleRepository } from "../../../src/bus/schedule/bus-schedule.repository";
 import { BusScheduleService } from "../../../src/bus/schedule/bus-schedule.service";
+import { BusScheduleContentRepository } from "../../../src/bus/schedule-content/bus-schedule-content.repository";
 import { scheduleWeek, smartSchedule } from "../../../src/bus/schedule/bus-schedule.wire";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
+import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { serviceNoticesFixture, serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../helpers/bus/schedule-content";
 import { FakeBusEtaRepository } from "../../helpers/fakes/bus/bus-eta.repository.fake";
+import { FakeBusScheduleContentRepository } from "../../helpers/fakes/bus/bus-schedule-content.repository.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
@@ -47,10 +56,11 @@ interface TestApp {
   timetable: FakeBusScheduleRepository;
   estimates: FakeBusEtaRepository;
   holidays: FakeHolidaysRepository;
+  content: FakeBusScheduleContentRepository;
 }
 
 // WHY: the clock reads the (possibly fake-timer) Date, so a test fixes or advances the time with jest.
-async function bootApp(): Promise<TestApp> {
+async function bootApp(content = storedScheduleContentRepository()): Promise<TestApp> {
   const timetable = new FakeBusScheduleRepository();
   const estimates = new FakeBusEtaRepository();
   const holidays = new FakeHolidaysRepository();
@@ -58,25 +68,27 @@ async function bootApp(): Promise<TestApp> {
     imports: [SchedulingModule, BusModule, BusStopsModule, BusScheduleModule, BusEtaModule, BusEtaSmartModule],
     overrides: [
       { provide: BusScheduleRepository, useValue: timetable },
+      { provide: BusScheduleContentRepository, useValue: content },
       { provide: BusEtaRepository, useValue: estimates },
       { provide: HolidaysRepository, useValue: holidays },
       { provide: Clock, useValue: { now: () => new Date() } },
     ],
     role: "api",
   });
-  return { app, timetable, estimates, holidays };
+  return { app, timetable, estimates, holidays, content };
 }
 
 let app: NestExpressApplication;
 let timetable: FakeBusScheduleRepository;
 let holidays: FakeHolidaysRepository;
+let content: FakeBusScheduleContentRepository;
 let httpServer: import("http").Server;
 let resolveWeek: jest.SpyInstance;
 let resolveSmartSchedule: jest.SpyInstance;
 
 beforeEach(async () => {
   jest.useFakeTimers({ now: new Date("2026-03-10T03:00:00.000Z"), doNotFake: [...DO_NOT_FAKE] });
-  ({ app, timetable, holidays } = await bootApp());
+  ({ app, timetable, holidays, content } = await bootApp());
   timetable.patterns = [pattern("campus-inja", [1, 2, 3, 4, 5])];
   httpServer = app.getHttpServer();
   resolveWeek = jest.spyOn(app.get(BusScheduleService), "resolveWeek");
@@ -84,7 +96,6 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  SERVICE_CONFIG["campus-inja"]!.suspend = null;
   await app.close();
   jest.useRealTimers();
   jest.restoreAllMocks();
@@ -257,7 +268,7 @@ describe("GET /bus/schedule/data/:serviceId/smart", () => {
 
   it("suspended response includes i18n message and resumeDate", async () => {
     // Arrange
-    SERVICE_CONFIG["campus-inja"]!.suspend = { from: "2026-03-01", until: "2026-08-31" };
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-03-01", until: "2026-08-31" }));
 
     // Act
     const res = await request(httpServer).get("/bus/schedule/data/campus-inja/smart");
@@ -298,7 +309,7 @@ describe("GET /bus/schedule/data/:serviceId/smart", () => {
 
   it("ETag uses status when from is null (suspended)", async () => {
     // Arrange
-    SERVICE_CONFIG["campus-inja"]!.suspend = { from: "2026-03-01", until: "2026-08-31" };
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-03-01", until: "2026-08-31" }));
 
     // Act
     const res = await request(httpServer).get("/bus/schedule/data/campus-inja/smart");
@@ -320,7 +331,7 @@ describe("GET /bus/schedule/data/:serviceId/smart", () => {
 
   it("suspended with Accept-Language: en returns English message", async () => {
     // Arrange
-    SERVICE_CONFIG["campus-inja"]!.suspend = { from: "2026-03-01", until: "2026-08-31" };
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-03-01", until: "2026-08-31" }));
 
     // Act
     const res = await request(httpServer)
@@ -626,7 +637,7 @@ describe("GET /bus/schedule/data/:serviceId/week and /smart bodies", () => {
 
   it("a suspended smart body parses with the published smartSchedule wire", async () => {
     // Arrange
-    SERVICE_CONFIG["campus-inja"]!.suspend = { from: "2026-03-01", until: "2026-08-31" };
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-03-01", until: "2026-08-31" }));
 
     // Act
     const res = await request(httpServer).get("/bus/schedule/data/campus-inja/smart");
@@ -685,5 +696,138 @@ describe("GET /bus/schedule/data/:serviceId/week on a day the official calendar 
     // Assert
     expect(res.status).toBe(200);
     expect(res.body.data.days[0]).toMatchObject({ date: "2026-09-28", display: "noService", label: "공자탄신일" });
+  });
+});
+
+describe("GET /bus/schedule/data/:serviceId/week and /smart with no schedule content ever read", () => {
+  it.each(["week?from=2026-03-09", "smart"])("answers %s with 503 BUS_SCHEDULE_UNAVAILABLE and no Cache-Control", async (route) => {
+    // Arrange
+    const unread = await bootApp(new FakeBusScheduleContentRepository());
+    unread.timetable.patterns = [pattern("campus-inja", [1, 2, 3, 4, 5])];
+
+    try {
+      // Act
+      const res = await request(unread.app.getHttpServer()).get(`/bus/schedule/data/campus-inja/${route}`);
+
+      // Assert
+      expect(res.status).toBe(503);
+      expect(res.body.error).toEqual({ code: "BUS_SCHEDULE_UNAVAILABLE", message: "The shuttle schedules are unavailable" });
+      expect(res.headers["cache-control"]).toBeUndefined();
+    } finally {
+      await unread.app.close();
+    }
+  });
+
+  it("answers smart with 503 BUS_SCHEDULE_UNAVAILABLE when only the rest days are missing", async () => {
+    // Arrange
+    const noRestDays = new FakeBusScheduleContentRepository();
+    noRestDays.storeServiceNotices(serviceNoticesFixture());
+    const unread = await bootApp(noRestDays);
+    unread.timetable.patterns = [pattern("campus-inja", [1, 2, 3, 4, 5])];
+
+    try {
+      // Act
+      const res = await request(unread.app.getHttpServer()).get("/bus/schedule/data/campus-inja/smart");
+
+      // Assert
+      expect(res.status).toBe(503);
+      expect(res.body.error.code).toBe("BUS_SCHEDULE_UNAVAILABLE");
+      expect(res.headers["cache-control"]).toBeUndefined();
+    } finally {
+      await unread.app.close();
+    }
+  });
+
+  it("still answers 404 SERVICE_NOT_FOUND for an unknown service", async () => {
+    // Arrange
+    const unread = await bootApp(new FakeBusScheduleContentRepository());
+
+    try {
+      // Act
+      const res = await request(unread.app.getHttpServer()).get("/bus/schedule/data/campus-jaja/week");
+
+      // Assert
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe("SERVICE_NOT_FOUND");
+    } finally {
+      await unread.app.close();
+    }
+  });
+});
+
+describe("GET /bus/schedule/data/:serviceId/week ETag across a content push", () => {
+  const WEEK = "/bus/schedule/data/campus-inja/week?from=2026-03-09";
+  const TRAFFIC_NOTICE = { style: "warning", text: "교통 통제로 늦어질 수 있어요" };
+
+  it("answers 200 with a new ETag to the old one once a pushed notice of its service is served", async () => {
+    // Arrange
+    const before = await request(httpServer).get(WEEK);
+    content.storeServiceNotices(serviceNoticesWithNotices("campus-inja", [TRAFFIC_NOTICE]));
+    jest.setSystemTime(new Date(Date.now() + 60_000));
+
+    // Act
+    const res = await request(httpServer).get(WEEK).set("If-None-Match", before.headers.etag);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.headers.etag).toMatch(/^"week-campus-inja-2026-03-09-[a-f0-9]{32}"$/);
+    expect(res.headers.etag).not.toBe(before.headers.etag);
+    expect(res.body.data.days[0].notices).toEqual([{ ...TRAFFIC_NOTICE, source: "service" }]);
+  });
+
+  it("keeps its ETag and answers 304 when only another service's notice is pushed", async () => {
+    // Arrange
+    const before = await request(httpServer).get(WEEK);
+    content.storeServiceNotices(serviceNoticesWithNotices("commute-jamsil", [TRAFFIC_NOTICE]));
+    jest.setSystemTime(new Date(Date.now() + 60_000));
+
+    // Act
+    const res = await request(httpServer).get(WEEK).set("If-None-Match", before.headers.etag);
+    const fresh = await request(httpServer).get(WEEK);
+
+    // Assert
+    expect(res.status).toBe(304);
+    expect(fresh.headers.etag).toBe(before.headers.etag);
+  });
+});
+
+describe("GET /bus/config across a content push", () => {
+  it("keeps its body and ETag, since it reads no schedule content", async () => {
+    // Arrange
+    const stored = storedScheduleContentRepository();
+    const withConfig = await buildTestApp({
+      imports: [SchedulingModule, BusModule, BusStopsModule, BusScheduleModule, BusConfigModule],
+      overrides: [
+        { provide: BusScheduleRepository, useValue: new FakeBusScheduleRepository() },
+        { provide: BusScheduleContentRepository, useValue: stored },
+        { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
+        { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+        { provide: Clock, useValue: { now: () => new Date() } },
+      ],
+      role: "api",
+    });
+
+    try {
+      const server = withConfig.getHttpServer();
+      const before = await request(server).get("/bus/config");
+      await request(server).get("/bus/schedule/data/campus-inja/week?from=2026-03-09");
+      stored.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-03-01", until: "2026-08-31" }));
+      stored.storeServiceNotices(serviceNoticesWithNotices("commute-jamsil", [{ style: "warning", text: "운행 변경" }]));
+      jest.setSystemTime(new Date(Date.now() + 60_000));
+
+      // Act
+      const week = await request(server).get("/bus/schedule/data/commute-jamsil/week?from=2026-03-09");
+      const after = await request(server).get("/bus/config").set("If-None-Match", before.headers.etag);
+      const fresh = await request(server).get("/bus/config");
+
+      // Assert
+      expect(before.status).toBe(200);
+      expect(week.status).toBe(200);
+      expect(after.status).toBe(304);
+      expect(fresh.headers.etag).toBe(before.headers.etag);
+      expect(fresh.text).toBe(before.text);
+    } finally {
+      await withConfig.close();
+    }
   });
 });

@@ -15,7 +15,7 @@ import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
-import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
+import { serviceNoticesFixture } from "../../helpers/bus/schedule-content";
 import { haversineM } from "../../../src/shared/distance.util";
 import { Clock } from "../../../src/infra/clock";
 import type { SupportedLang } from "../../../src/infra/types";
@@ -414,7 +414,8 @@ describe("commute arrival estimates", () => {
 
   it("keeps the pilot notice first, for the banner, and ends with the live-traffic ai notice", async () => {
     // Act
-    const notices = Object.fromEntries(COMMUTE_IDS.map((id) => [id, SERVICE_CONFIG[id]!.notices.map((n) => `${n.style}:${n.text}`)]));
+    const { services } = serviceNoticesFixture();
+    const notices = Object.fromEntries(COMMUTE_IDS.map((id) => [id, services[id]!.notices.map((n) => `${n.style}:${n.text}`)]));
 
     // Assert
     const pilot = "info:시범 운행 · 무료 · 킹고M QR 탑승";

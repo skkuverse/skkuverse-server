@@ -4,9 +4,14 @@
  * yet departed, none for a suspended service), and the stored documents it
  * drops when their stop count no longer fits their sequence. Over the real
  * BusScheduleService, a timetable another process writes reaches the runs one
- * week-cache TTL later, so the ETA pollers need no restart (ADR 0012, D6).
+ * week-cache TTL later, so the ETA pollers need no restart (ADR 0012, D6); the
+ * schedule content the timetable folds in comes from an in-memory dataset
+ * store, so a stored suspension or rest day plans no run and content never read rejects
+ * the runs (bus-eta-live.service.spec.ts pins the tick that then rejects).
  */
 import { FakeBusEtaRepository } from "../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
+import { restDaysFixture, serviceNoticesWithSuspension, storedScheduleContentRepository, storedScheduleContentService } from "../../../__tests__/helpers/bus/schedule-content";
+import { FakeBusScheduleContentRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule-content.repository.fake";
 import { FakeBusScheduleRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
@@ -40,6 +45,7 @@ describe("BusEtaService runs", () => {
   const schedule = {
     resolveWeek: jest.fn(async () => week),
     resolveSmartSchedule: jest.fn(async () => ({ ...week, status: "active" as const, selectedDate: "2026-10-12" })),
+    isSuspendedOn: jest.fn(async () => false),
   };
 
   it("runsOn reads one date of the resolved week", async () => {
@@ -138,7 +144,7 @@ describe("BusEtaService runs over the stored timetable", () => {
     const pattern = (time: string) => [{ serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4], entries: [{ index: 1, time, routeType: "regular", busCount: 1, notes: null, stopTimes: [time, null, null] }] }];
     stored.patterns = pattern("08:00");
     const clock = { now: () => new Date() };
-    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(stored), asReal<HolidaysService>(new FakeHolidaysService()), clock);
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(stored), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock), clock);
     const eta = build(schedule);
     await eta.runsOn(SEQUENCE, "2026-03-09");
     stored.patterns = pattern("09:30");
@@ -152,5 +158,116 @@ describe("BusEtaService runs over the stored timetable", () => {
     // Assert
     expect(before.map((r) => r.time)).toEqual(["08:00"]);
     expect(after.map((r) => r.time)).toEqual(["09:30"]);
+  });
+});
+
+describe("BusEtaService runs over the stored schedule content (move-editorial-datasets D9)", () => {
+  // Monday 2026-10-12, 09:30 KST: the 10:00 run is inside its live window.
+  const NOW = new Date("2026-10-12T00:30:00.000Z");
+  const clock = { now: () => NOW };
+  const WEEKDAYS = [
+    { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "10:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["10:00", null, null] }] },
+  ];
+  function etaOver(content: FakeBusScheduleContentRepository): BusEtaService {
+    const timetable = new FakeBusScheduleRepository();
+    timetable.patterns = WEEKDAYS;
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+    return build(schedule);
+  }
+
+  it("rejects runsOn and upcomingRuns with BUS_SCHEDULE_UNAVAILABLE while no schedule content was ever read", async () => {
+    // Arrange
+    const eta = etaOver(new FakeBusScheduleContentRepository());
+
+    // Act & Assert
+    await expect(eta.runsOn(SEQUENCE, "2026-10-12")).rejects.toMatchObject({ code: "BUS_SCHEDULE_UNAVAILABLE" });
+    await expect(eta.upcomingRuns(SEQUENCE, NOW)).rejects.toMatchObject({ code: "BUS_SCHEDULE_UNAVAILABLE" });
+  });
+
+  it("plans no run on a day inside a stored suspension", async () => {
+    // Arrange
+    const suspended = storedScheduleContentRepository();
+    suspended.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-10-12", until: "2026-10-16" }));
+    const eta = etaOver(suspended);
+
+    // Act
+    const runs = await eta.runsOn(SEQUENCE, "2026-10-12");
+    const upcoming = await eta.upcomingRuns(SEQUENCE, NOW);
+
+    // Assert
+    expect(runs).toEqual([]);
+    expect(upcoming).toEqual([]);
+  });
+
+  it("plans no run on a one-off rest day stored in the content", async () => {
+    // Arrange
+    const restDay = storedScheduleContentRepository();
+    restDay.storeRestDays({ ...restDaysFixture(), "2026-10-12": "학사휴교" });
+    const eta = etaOver(restDay);
+
+    // Act
+    const runs = await eta.runsOn(SEQUENCE, "2026-10-12");
+    const upcoming = await eta.upcomingRuns(SEQUENCE, NOW);
+
+    // Assert
+    expect(runs).toEqual([]);
+    expect(upcoming.map((r) => r.date)).not.toContain("2026-10-12");
+  });
+
+  it("plans the day's runs outside a suspension", async () => {
+    // Arrange
+    const eta = etaOver(storedScheduleContentRepository());
+
+    // Act
+    const runs = await eta.runsOn(SEQUENCE, "2026-10-12");
+
+    // Assert
+    expect(runs.map((r) => `${r.date} ${r.time}`)).toEqual(["2026-10-12 10:00"]);
+  });
+});
+
+describe("BusEtaService.upcomingRuns before a stored suspension", () => {
+  // Saturday 2026-12-19, 12:00 KST: no weekday run is left this week, so the smart view shows the week of 12-21.
+  const SATURDAY = new Date("2026-12-19T03:00:00.000Z");
+  const clock = { now: () => SATURDAY };
+  const weekdays = (serviceId: string) => ({
+    serviceId,
+    patternId: "weekday",
+    days: [1, 2, 3, 4, 5],
+    entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["08:00", null, null] }],
+  });
+  const JAIN: EtaSequence = { ...SEQUENCE, serviceId: "campus-jain" };
+
+  function etaOver(content: FakeBusScheduleContentRepository): BusEtaService {
+    const timetable = new FakeBusScheduleRepository();
+    timetable.patterns = [weekdays("campus-inja"), weekdays("campus-jain")];
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+    return build(schedule);
+  }
+
+  it("plans no run on the days of a winter-break suspension that starts on 12-21, and leaves other services' runs", async () => {
+    // Arrange
+    const winterBreak = storedScheduleContentRepository();
+    winterBreak.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-12-21", until: "2027-02-28" }));
+    const eta = etaOver(winterBreak);
+
+    // Act
+    const suspended = await eta.upcomingRuns(SEQUENCE, SATURDAY);
+    const running = await eta.upcomingRuns(JAIN, SATURDAY);
+
+    // Assert
+    expect(suspended).toEqual([]);
+    expect(running.map((r) => `${r.date} ${r.time}`)).toEqual(["2026-12-21 08:00", "2026-12-22 08:00", "2026-12-23 08:00", "2026-12-24 08:00", "2026-12-25 08:00"]);
+  });
+
+  it("plans the same week's runs with no suspension stored", async () => {
+    // Arrange
+    const eta = etaOver(storedScheduleContentRepository());
+
+    // Act
+    const runs = await eta.upcomingRuns(SEQUENCE, SATURDAY);
+
+    // Assert
+    expect(runs.map((r) => r.date)).toEqual(["2026-12-21", "2026-12-22", "2026-12-23", "2026-12-24", "2026-12-25"]);
   });
 });

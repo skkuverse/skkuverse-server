@@ -45,14 +45,20 @@ export class BusEtaService {
   async runsOn(sequence: EtaSequence, date: string): Promise<EtaRun[]> {
     const week = await this.schedule.resolveWeek(sequence.serviceId, date);
     const day = week?.days.find((d) => d.date === date);
-    return day ? runsOfDay(day, { serviceId: sequence.serviceId, routeType: sequence.routeType, sequenceLength: sequence.stops.length }) : [];
+    if (!day || (await this.schedule.isSuspendedOn(sequence.serviceId, date))) return [];
+    return runsOfDay(day, { serviceId: sequence.serviceId, routeType: sequence.routeType, sequenceLength: sequence.stops.length });
   }
 
+  // WHY: the smart view still shows the timetable of a day inside a suspension that has not started; no run is
+  // planned for that day.
   async upcomingRuns(sequence: EtaSequence, now: Date): Promise<EtaRun[]> {
     const smart = await this.schedule.resolveSmartSchedule(sequence.serviceId);
     if (!smart || smart.status !== "active") return [];
-    return smart.days
-      .flatMap((day) => runsOfDay(day, { serviceId: sequence.serviceId, routeType: sequence.routeType, sequenceLength: sequence.stops.length }))
-      .filter((run) => run.departAt.getTime() > now.getTime());
+    const runs: EtaRun[] = [];
+    for (const day of smart.days) {
+      if (await this.schedule.isSuspendedOn(sequence.serviceId, day.date)) continue;
+      runs.push(...runsOfDay(day, { serviceId: sequence.serviceId, routeType: sequence.routeType, sequenceLength: sequence.stops.length }));
+    }
+    return runs.filter((run) => run.departAt.getTime() > now.getTime());
   }
 }

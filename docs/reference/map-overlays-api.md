@@ -995,8 +995,8 @@ documents twice.
 
 ## 7. The festival layer set
 
-A festival's layers are **authored in its config** — `src/map/layer-set/<layerSetId>.json`,
-`layers[]` — and present in `GET /map/config` only while that layer set's activation window is open.
+A festival's layers are **authored in its layer set** — one entry of the `map-layer-sets` dataset,
+`layers[]`, pushed with `npm run data` — and present in `GET /map/config` only while that layer set's activation window is open.
 The window is the on/off lever (`npm run eventmap open|close`), so a festival starts and ends with no
 deploy and the layers simply stop existing afterwards rather than lingering as dead toggles.
 
@@ -1247,11 +1247,6 @@ The rules:
 There is no translation-miss case any more. Labels are inline `{ko, en?, zh?}` on the layer and the
 chip, resolved with the one `pick()` in `src/infra/i18n.ts`, so a label with no `ko` is a rejected
 config and a base layer with no label does not compile.
-
-`src/map/map.constants.ts` and `src/map/layer-set/map-layer-set.mapper.ts` are **leaf modules** of this seam:
-`eventmap.config.ts` imports them to validate at load, so they may never import it — or anything that
-does — back. `eslint.config.js` refuses such an import for those two files; the rule is executable,
-not prose.
 
 ### 8.7 Reserved: the "nearby" chip
 
@@ -1532,7 +1527,7 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 | Detail shape (stored and wire) | `src/map/event-details/map-event-details.wire.ts` |
 | Media host and its URL rule | `MEDIA_ORIGIN` in `src/infra/origins.ts`, `src/infra/media-url.ts` |
 | "Which layer set is live, and is its config usable" | `src/map/layer-set/map-layer-set.service.ts` |
-| Festival layers, chips, labels, colours, camera, category → layer table | `src/map/layer-set/<layerSetId>.json` |
+| Festival layers, chips, labels, colours, camera, category → layer table | the `map-layer-sets` dataset (`npm run data`), parsed by `checkedLayerSet` in `src/map/layer-set/map-layer-set.schema.ts` |
 | Category → presentation resolver (both producers) | `presentationFor` in `src/map/layer-set/map-layer-set.schema.ts` |
 | `DailyWindow`, `LayerDefaultVisibility`, and why this axis is wall-clock | `src/map/layer-set/map-layer-set.schema.ts` |
 | List facets and sort (`EventFacetDef`, `EventChipListDef`), and their wire form (`MapChipList`) | `src/map/layer-set/map-layer-set.schema.ts`, `src/map/config/map-config.wire.ts` |

@@ -21,8 +21,10 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | `campus-banners` | `GET /ui/home/campus` | 503 `CAMPUS_BANNERS_UNAVAILABLE` | `miniapps`: each banner's `miniapp` action |
 | `transit-layout` | `GET /ui/home/transit` | 503 `TRANSIT_LAYOUT_UNAVAILABLE` | `busGroups` and `subwayStations`: every one the checkout serves, each placed exactly once; `miniapps`: each `miniapp` link |
 | `map-layer-sets` | `GET /map/config`, `GET /map/overlays/event`, `GET /map/overlays/event/details`, while an activation is live | the base map, 200; the event routes serve nothing | none; each set is checked against the base layers and chips, one per `layerSetId` ([configure-map-overlays.md](configure-map-overlays.md#add-or-edit-a-festival)) |
+| `bus-service-notices` | `GET /bus/schedule/data/:serviceId/smart` and `/week`, and the shuttle estimate pollers | 503 `BUS_SCHEDULE_UNAVAILABLE`; a poller tick rejects | `busServices`: each key is a service the checkout defines ([below](#edit-a-shuttle-notice-or-suspension)) |
+| `skku-rest-days` | the same routes and pollers | 503 `BUS_SCHEDULE_UNAVAILABLE`; a poller tick rejects | none; each key is on the calendar ([below](#add-a-skku-rest-day)) |
 
-A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. `miniapps`, `busGroups` and `subwayStations` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
+A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. The poller reads the two bus datasets too, so a push reaches the shuttle estimates within the same minute. `miniapps`, `busGroups`, `subwayStations` and `busServices` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
 
 Every push is validated with the server's own schema and rules, compiled from your checkout, and checked for references: a home layout tile that names a mini app the registry does not have is refused, naming the tile's path. Nothing is written while any issue stands.
 
@@ -120,6 +122,34 @@ npm run data -- copy-prod-to-dev home-layout
 
 It stores production's current data as the next `_dev` revision and records which production revision it copied. Pull `_dev` again afterwards: a working file pulled before the copy is now stale.
 
+### Edit a shuttle notice or suspension
+
+`bus-service-notices` holds each shuttle service's notices and suspension, keyed by service id: `{ "services": { "<serviceId>": { "notices": [...], "suspend": null } } }`. Service ids and what the code does with a service stay in `SERVICE_CONFIG` (`src/bus/bus.constants.ts`); a service the dataset leaves out shows no notice and is never suspended.
+
+- A notice is `{ "style": "info" | "warning" | "ai", "text": "…" }`, shown on every day with a timetable, in order. The app has no `error` style (it would draw one as `info`), so a push with it is refused. Apps draw `notices[0]` as the banner, so keep the 통학셔틀 pilot notice first and the live-traffic `ai` notice last.
+- A suspension is `{ "from": "YYYY-MM-DD", "until": "YYYY-MM-DD" }`, both days included. Inside it the smart view answers `status: "suspended"` with `resumeDate` the day after `until`, and the estimate pollers plan no run.
+
+To suspend the 인자셔틀 for the winter break, pull production, set `campus-inja`'s `suspend`, and push:
+
+```json
+"campus-inja": { "notices": [{ "style": "ai", "text": "도착 시간은 실시간 교통 상황을 반영해요" }], "suspend": { "from": "2026-12-21", "until": "2027-02-28" } }
+```
+
+```bash
+npm run data -- push bus-service-notices --prod --note "winter break suspension"
+```
+
+On 2026-12-22 the smart view answers `suspended` with `resumeDate: "2027-03-01"`. Before the suspension starts, the smart view still shows its days' timetable (on Saturday 12-19, the week of 12-21), but the estimate pollers already plan no run on them, so those runs carry no estimate. Set `suspend` back to `null` to end it early.
+
+### Add a SKKU rest day
+
+`skku-rest-days` holds SKKU's own rest days (founding days, 학사휴교), on which every service with `respectsKoreanHolidays` runs no timetable. Each key is a date and each value the label shown on the day:
+
+- `MM-DD` recurs every year (`"09-28": "공자탄신일"`); `02-29` is allowed, `02-30` is refused.
+- `YYYY-MM-DD` applies once (`"2027-03-02": "학사휴교"`), from 1900 to 2999.
+
+A one-off date wins over a yearly one on the same day, either wins over a public holiday, and a `bus_overrides` document for that service and date wins over all three. Public holidays never go here: the server reads them from the official calendar. Use an override instead when the closure must carry a notice.
+
 ### Check before a deploy
 
 The server reads datasets the code may no longer accept. A deploy restarts every replica with an empty cache, so a stored home layout the new schema rejects answers 503 on `/ui/home` until a valid push, and a removed mini app loses every tile that names it. Before merging a change that tightens a dataset's schema or rules, or removes an identity a dataset references (a mini app from the registry, a bus group, a served subway station), run from that change's checkout:
@@ -146,6 +176,7 @@ It runs the push checks on the stored data of every dataset, writes nothing, and
 
 - [ADR 0013](../decisions/0013-runtime-data-in-mongodb.md): why runtime data lives in MongoDB, and the read contract every dataset reader keeps
 - [configure-home.md](configure-home.md): what the home layout, the campus banners and the transit layout hold
+- [bus-architecture.md](../explanation/bus-architecture.md): how the schedule routes and the estimate pollers fold in the two bus datasets
 - [register-a-miniapp.md](register-a-miniapp.md): the registry a home layout's references resolve against
 - `scripts/data.js`: the command line; `scripts/lib/datasets/`: the catalog, checks, store and working file
 - [docs/README.md](../README.md): writing rules

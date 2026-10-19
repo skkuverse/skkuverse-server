@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { parseConfigFile } from "../../infra/config-file";
 import { restDaysFile } from "./bus-schedule.schema";
-import type { RestDays } from "./bus-schedule.types";
+import type { RestDays } from "../schedule-content/bus-schedule-content.types";
 
 // WHY: read next to the compiled file at runtime; scripts/copy-build-assets.js stages the JSON into dist/.
 const REST_DAYS_FILE = path.join(__dirname, "skku-rest-days.json");

@@ -1,12 +1,6 @@
 import type { MapLayerStyle } from "../map.types";
 import type { MapChipSpec } from "./map-layer-set.types";
 
-/**
- * WHY: listed, not read from the folder: a file missing from scripts/copy-build-assets.js then fails as a named
- * ENOENT instead of a festival that silently never appears.
- */
-export const LAYER_SET_FILES = ["eskara-2026.json"] as const;
-
 export const MAP_LAYER_SETS_DATASET = "map-layer-sets";
 
 // WHY: a missing, invalid or unavailable dataset recurs on every read; one line a minute, as docs/reference/logging.md asks.

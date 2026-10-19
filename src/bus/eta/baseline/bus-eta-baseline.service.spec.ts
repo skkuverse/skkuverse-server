@@ -181,6 +181,7 @@ describe("BusEtaBaselineService.tick", () => {
           },
         ],
       }),
+      isSuspendedOn: jest.fn().mockResolvedValue(false),
     } as unknown as BusScheduleService;
     const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, new BusStopsService(new SubwayStationsService()));
     const fetchOffsets = jest.fn().mockResolvedValue(OFFSETS);

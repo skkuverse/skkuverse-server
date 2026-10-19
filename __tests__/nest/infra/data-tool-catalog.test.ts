@@ -16,7 +16,9 @@
  * The wave A datasets (`campus-banners`, `transit-layout`) are checked at push
  * with the checks the boot refused a committed file on (D4, D5), through the
  * tool's own checkData. So is wave B's `map-layer-sets`, with the checks the
- * layer-set loader refused a file on and one set per `layerSetId` (D6).
+ * layer-set loader refused a file on and one set per `layerSetId` (D6). Wave
+ * C's `bus-service-notices` names only services the checkout defines (D7), and
+ * its `skku-rest-days` keys only calendar month-days and dates (D8).
  */
 import path from "node:path";
 import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
@@ -316,5 +318,80 @@ describe("loadCatalog map-layer-sets", () => {
 
     // Assert
     expect(lines).toEqual(['map-layer-sets: layerSets.1.layerSetId: repeats the layer set "eskara-2026" of layerSets[0]']);
+  });
+});
+
+describe("loadCatalog bus-service-notices", () => {
+  const notices = () => datasetFixture("../bus/fixtures/bus-service-notices.dataset.json") as { services: Record<string, any> };
+
+  it("is owned by src/bus/schedule-content and accepts revision 1, naming each service as a busServices reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["bus-service-notices"];
+
+    // Act
+    const issues = checkData(catalog, "bus-service-notices", notices(), {});
+
+    // Assert
+    expect(issues).toEqual([]);
+    expect(entry.owner).toBe("src/bus/schedule-content");
+    expect(entry.referencesOf(entry.schema.parse(notices())).map((ref: { dataset: string; id: string }) => `${ref.dataset}:${ref.id}`)).toEqual(
+      Object.keys(SERVICE_CONFIG).map((serviceId) => `busServices:${serviceId}`),
+    );
+  });
+
+  it("Unknown service: refuses notices for campus-jaja, naming its path and the id", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = notices();
+    data.services["campus-jaja"] = { notices: [{ style: "info", text: "공지" }], suspend: null };
+
+    // Act
+    const lines = issueLines(checkData(catalog, "bus-service-notices", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['bus-service-notices: services.campus-jaja: "campus-jaja" is not in busServices']);
+  });
+
+  it("Suspension out of order: refuses it, naming its until path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = notices();
+    data.services["campus-inja"].suspend = { from: "2027-02-28", until: "2026-12-21" };
+
+    // Act
+    const lines = issueLines(checkData(catalog, "bus-service-notices", data, {}));
+
+    // Assert
+    expect(lines).toEqual(["bus-service-notices: services.campus-inja.suspend.until: until must not be before from"]);
+  });
+});
+
+describe("loadCatalog skku-rest-days", () => {
+  const restDays = () => datasetFixture("../bus/fixtures/skku-rest-days.dataset.json") as Record<string, string>;
+
+  it("is owned by src/bus/schedule-content and accepts revision 1 with no reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["skku-rest-days"];
+
+    // Act
+    const issues = checkData(catalog, "skku-rest-days", restDays(), {});
+
+    // Assert
+    expect(issues).toEqual([]);
+    expect(entry.owner).toBe("src/bus/schedule-content");
+    expect(entry.referencesOf(entry.schema.parse(restDays()))).toEqual([]);
+  });
+
+  it("Day that is not on the calendar: refuses the key 02-30, naming it", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const lines = issueLines(checkData(catalog, "skku-rest-days", { ...restDays(), "02-30": "휴일" }, {}));
+
+    // Assert
+    expect(lines).toEqual(["skku-rest-days: 02-30: must be a calendar MM-DD or a calendar YYYY-MM-DD from 1900 to 2999"]);
   });
 });

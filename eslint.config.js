@@ -561,48 +561,6 @@ function glossaryDenylistBlocks() {
   }));
 }
 
-
-// The layer-set loader (src/map/layer-set/map-layer-set.config.ts) reads its files when it is first imported, and
-// checks them against the catalogue and the chip rules. A file it imports that imported it back would hand the
-// loader a half-initialised module (`BASE_LAYERS` undefined at load, a TypeError naming nothing useful).
-// Each block carries the patterns of the block it replaces for its files.
-const LAYER_SET_LOADER_PATTERN = {
-  group: ["**/map-layer-set.config", "./map-layer-set.config"],
-  message: "the layer-set loader imports this file at load: importing it back closes a cycle.",
-};
-const LAYER_SET_LEAVES = [
-  "src/map/map.{constants,rules,mapper,schema,types}.ts",
-  "src/map/layer-set/map-layer-set.{constants,rules,mapper,schema,types}.ts",
-];
-
-function layerSetLeafBlocks() {
-  const isPure = (glob) => /rules|mapper/.test(glob);
-  return [
-    {
-      name: "layer-set-leaves",
-      files: LAYER_SET_LEAVES,
-      ignores: ["**/*.spec.ts", "src/map/**/*.{rules,mapper}.ts"],
-      rules: {
-        "no-restricted-imports": [
-          "error",
-          { patterns: [GET_CLIENT_PATTERN, MONGO_COLLECTION_PATTERN, QUERY_IMPORT_PATTERN, LAYER_SET_LOADER_PATTERN] },
-        ],
-      },
-    },
-    {
-      name: "layer-set-leaves-pure",
-      files: LAYER_SET_LEAVES.flatMap((glob) => (isPure(glob) ? [glob.replace(/\{[^}]*\}/, "{rules,mapper}")] : [])),
-      ignores: ["**/*.spec.ts"],
-      rules: {
-        "no-restricted-imports": [
-          "error",
-          { patterns: [...PURE_IMPORT_PATTERNS, MONGO_PATTERN, QUERY_IMPORT_PATTERN, LAYER_SET_LOADER_PATTERN] },
-        ],
-      },
-    },
-  ];
-}
-
 const jestGlobals = {
   describe: "readonly",
   it: "readonly",
@@ -820,7 +778,6 @@ module.exports = [
       ],
     },
   },
-  ...layerSetLeafBlocks(),
   {
     // The boundaries above read import declarations: a `require()` or an `import()` call would pass them all,
     // so non-spec src/ loads modules only through `import`. Specs may still require a module after setup.

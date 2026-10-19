@@ -18,14 +18,12 @@ Read them in this order: each depends only on the ones before it.
 | Folder | Holds |
 | --- | --- |
 | `src/map/` (root) | `MapModule` (the `/map` limiter), `MapRepository` (places, activations, their indexes), the stored documents, `BASE_LAYERS` and the other constants, the overlay wire both overlay routes share, the place schemas (`overlayPlaceDoc`, `sheetPlaceDoc`), `presentationFor`, `toI18nText`, `toOverlay` |
-| `src/map/layer-set/` | The festival structure tier: `MapLayerSetRepository`, which reads the `map-layer-sets` dataset, the layer set's schemas (one set, the dataset, the stored envelope), the cross-reference rules, the chip validator, the festival layer and chip specs, and `MapLayerSetService`, which answers which layer set is live. `map-layer-set.config.ts` and `eskara-2026.json`, the committed file and its loader, stay for the specs until they are deleted |
+| `src/map/layer-set/` | The festival structure tier: `MapLayerSetRepository`, which reads the `map-layer-sets` dataset, the layer set's schemas (one set, the dataset, the stored envelope), the cross-reference rules, the chip validator, the festival layer and chip specs, and `MapLayerSetService`, which answers which layer set is live. No layer set is committed: each is an entry of the dataset |
 | `src/map/config/` | `GET /map/config`: campuses, layers, chips and camera defaults |
 | `src/map/campus/` | `GET /map/overlays/campus`: buildings and campus shapes, the static fallback, and the Cache-Control that refuses to cache it |
 | `src/map/transit/` | `GET /map/overlays/transit`: the Jongno route lines `BusRoutePathService` answers, as path overlays, and the shorter Cache-Control when a route has no stored line |
 | `src/map/event/` | `GET /map/overlays/event`: a festival's places as overlays |
 | `src/map/event-details/` | `GET /map/overlays/event/details`: the sheet behind each event overlay |
-
-The committed-file loader imports the root's and its own rules, mappers, schemas, constants and types at load, so none of them may import it back; `eslint.config.js` (block `layer-set-leaves`) refuses that import.
 
 ## Boot time and request time
 
@@ -42,12 +40,11 @@ The committed-file loader imports the root's and its own rules, mappers, schemas
 
 | Test | Pins |
 | --- | --- |
-| `src/map/layer-set/map-layer-set.schema.spec.ts` | Every layer-set rejection, at its path; the dataset's unique ids; the stored envelope, set by set |
+| `src/map/layer-set/map-layer-set.schema.spec.ts` | Every layer-set rejection, at its path; what a null, a `false` or an omitted field reads as; the dataset's unique ids; the stored envelope, set by set |
 | `src/map/layer-set/map-layer-set.repository.spec.ts`, `__tests__/nest/map/map-layer-sets-dataset.test.ts` | The dataset read's query, the left-out sets and their logs; the round trip from `npm run data`'s store |
 | `src/map/layer-set/map-layer-set.service.spec.ts` | The live-event answer, the dataset TTL, the unservable and unavailable logs, the activation cache and its stale window |
 | `__tests__/nest/map/map-layer-set-characterization.routes.test.ts` | `/map/config` and both event routes, byte for byte, at the production capture and inside the eskara-2026 window |
-| `src/map/layer-set/map-layer-set.config.spec.ts` | The committed file's loader, by its exact messages, until it is deleted |
-| `src/map/layer-set/map-layer-set.rules.spec.ts`, `src/map/layer-set/map-layer-set.mapper.spec.ts`, `src/map/config/map-config.mapper.spec.ts`, `__tests__/nest/map/map-chips-wire.test.ts` | The chip group rules; the reset chip and the shipped chip row; the chips as served |
+| `src/map/layer-set/map-layer-set.rules.spec.ts`, `src/map/layer-set/map-layer-set.mapper.spec.ts`, `src/map/config/map-config.mapper.spec.ts`, `__tests__/nest/map/map-chips-wire.test.ts` | The chip group rules; the reset chip and the stored chip row; the chips as served |
 | `src/map/config/map-config.service.spec.ts` | The `/map/config` body with and without a festival |
 | `src/map/event/map-event.service.spec.ts`, `__tests__/nest/map/map-overlay-coordinates.test.ts` | The event projection, the unrenderable-place skip, `[lng, lat]` order |
 | `__tests__/nest/map/map-overlay-interactive.test.ts` | `interactive: false`, `tapChip`, and one layer holding all three kinds |
@@ -57,8 +54,7 @@ The committed-file loader imports the root's and its own rules, mappers, schemas
 | `src/map/map.repository.spec.ts` | The activation query, its sort, and the three indexes on the right collections |
 | `src/map/map.schema.spec.ts`, `src/map/event/map-event.mapper.spec.ts` | The place schemas agreeing with the places importer; the overlay read refusing exactly the places drawing would throw on |
 | `__tests__/nest/map/map.routes.test.ts` | The config, campus and event routes through the production pipeline: envelope, Cache-Control, the retired URLs, the base map with no layer set read, a festival pushed with no restart, the ETag across revisions |
-| `__tests__/nest/map/map-places-import.test.ts`, `map-place-detail-import.test.ts`, `campus-shapes-import.test.ts`, `eventmap-db.test.ts` | The importers and the committed sheets |
-| `__tests__/nest/map/map-config-assets.test.ts` | The committed layer set is also in the build-asset copy list, until it is deleted |
+| `__tests__/nest/map/map-places-import.test.ts`, `map-place-detail-import.test.ts`, `campus-shapes-import.test.ts`, `eventmap-db.test.ts` | The importers and the committed sheets, the sheet's categories against the stored layer set |
 
 ## Change map
 

@@ -117,7 +117,7 @@ describe("sub-module direction rule applies as specified", () => {
 
   it("leaves specs outside the scopes, JSON assets and shared roles alone", () => {
     expect(subModuleViolations("src/building/building.service.spec.ts", 'import { x } from "./sync/building-sync.mapper";')).toEqual([]);
-    expect(subModuleViolations("src/map/map-layerset.config.ts", 'import set from "./config/eskara-2026.json";')).toEqual([]);
+    expect(subModuleViolations("src/map/map-layerset.config.ts", 'import set from "./config/festival.json";')).toEqual([]);
     expect(subModuleViolations("src/http/x.middleware.ts", 'import { y } from "./sub/y";')).toEqual([]);
   });
 });

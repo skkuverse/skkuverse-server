@@ -9,10 +9,10 @@
  *
  * A regression pin: a failure is a regression to report, and an expected value
  * changes only with the behavior it pins (`.claude/rules/tests.md`). The
- * expected values were pinned while the layer set was read from the committed
- * eskara-2026.json, which fixtures/map-layer-sets.dataset.json holds
- * (map-dataset-fixtures.test.ts); moving it to the content database must not
- * change a byte here.
+ * expected values were pinned while the layer set was read from a committed
+ * file, of which fixtures/map-layer-sets.dataset.json, revision 1 of the
+ * stored dataset, is a copy; moving it to the content database changed no
+ * byte here.
  *
  * The layer set is stored in the real `mongod`'s content database the way
  * `npm run data` stores it: the fixture's data pushed through the tool's own

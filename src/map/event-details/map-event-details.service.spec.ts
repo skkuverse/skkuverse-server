@@ -335,7 +335,7 @@ describe("MapEventDetailsService.getEventPlaceDetails", () => {
 
   it("gives no detail to a place on an inert category, which nothing can tap", async () => {
     // Arrange
-    // `control_entry_label` is authored `interactive: false` in eskara-2026.json.
+    // `control_entry_label` is stored `interactive: false` in revision 1 of map-layer-sets.
     arrange([place(truckDetail(), { category: "control_entry_label" })]);
 
     // Act
@@ -348,7 +348,7 @@ describe("MapEventDetailsService.getEventPlaceDetails", () => {
 
   it("gives no detail to a place whose tap runs a chip, which opens no sheet", async () => {
     // Arrange
-    // `food_zone` carries `tapChip: eskara26_view_food` in eskara-2026.json.
+    // `food_zone` carries `tapChip: eskara26_view_food` in revision 1 of map-layer-sets.
     arrange([place(truckDetail(), { category: "food_zone" })]);
 
     // Act
