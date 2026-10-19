@@ -9,7 +9,7 @@ const ROUTE_PATH_PROJECTION = { busRouteId: 1, path: 1, stations: 1, pathVersion
 
 @Injectable()
 export class BusRoutePathRepository {
-  // WHY: $setOnInsert on the route id, so a seed never overwrites a stored line, however old the snapshot.
+  // WHY: $setOnInsert on the route id, so a first sync never overwrites a line another writer stored first.
   async insertRoutePath({ _id, ...routePath }: JongroRoutePathDocument): Promise<boolean> {
     const result = await this.routePaths().updateOne({ _id }, { $setOnInsert: routePath }, { upsert: true });
     return result.upsertedCount === 1;

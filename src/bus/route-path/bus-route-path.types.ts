@@ -14,8 +14,8 @@ export interface RoutePath extends FetchedRoutePath {
 
 export interface RoutePaths {
   routePaths: RoutePath[];
-  /** WHY: a route came from the committed snapshot, so a client should not cache the answer long. */
-  isSeedFallback: boolean;
+  /** WHY: a configured route has no stored line yet, so a client should not cache the answer long. */
+  hasMissingRoutes: boolean;
 }
 
 export interface PathShape {

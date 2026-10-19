@@ -8,7 +8,7 @@ export class MapTransitService {
   constructor(private readonly routePaths: BusRoutePathService) {}
 
   async getTransitOverlays(): Promise<TransitOverlays> {
-    const { routePaths, isSeedFallback } = await this.routePaths.listRoutePaths();
-    return { overlays: toTransitOverlays(routePaths), degraded: isSeedFallback };
+    const { routePaths, hasMissingRoutes } = await this.routePaths.listRoutePaths();
+    return { overlays: toTransitOverlays(routePaths), degraded: hasMissingRoutes };
   }
 }
