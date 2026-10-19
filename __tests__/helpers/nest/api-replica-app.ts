@@ -1,8 +1,8 @@
 /**
  * Every module `src/app.module.ts` imports, booted as an api replica (ROLE=api)
  * with the repositories the bus, subway and map read routes reach replaced by
- * fakes holding production-shaped data, the mini app manifest client by its
- * fake, and a fixed `Clock`. The other repositories stay real: an api replica
+ * fakes holding production-shaped data, the mini app manifest clients and
+ * the stored manifests by their fakes, and a fixed `Clock`. The other repositories stay real: an api replica
  * touches no database at boot (ADR 0012, D3), and the routes a caller requests
  * must not reach them.
  *
@@ -17,6 +17,8 @@ import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
 import { Clock } from "../../../src/infra/clock";
 import { MapRepository } from "../../../src/map/map.repository";
 import { MiniappsCatalogClient } from "../../../src/miniapps/catalog/miniapps-catalog.client";
+import { MiniappsManifestClient } from "../../../src/miniapps/manifest/miniapps-manifest.client";
+import { MiniappsManifestRepository } from "../../../src/miniapps/manifest/miniapps-manifest.repository";
 import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { storedBusRegistryRepository } from "../bus/bus-registry";
 import { storedBusRoutePathRepository } from "../bus/bus-route-path";
@@ -24,6 +26,8 @@ import { FakeBusCacheRepository } from "../fakes/bus/bus-cache.repository.fake";
 import { FakeHolidaysRepository } from "../fakes/holidays/holidays.repository.fake";
 import { FakeMapRepository } from "../fakes/map/map.repository.fake";
 import { FakeMiniappsCatalogClient } from "../fakes/miniapps/miniapps-catalog.client.fake";
+import { FakeMiniappsManifestClient } from "../fakes/miniapps/miniapps-manifest.client.fake";
+import { FakeMiniappsManifestRepository } from "../fakes/miniapps/miniapps-manifest.repository.fake";
 import { FakeSubwayRepository } from "../fakes/subway/subway.repository.fake";
 import { appModulesUnder } from "./app-modules";
 import { buildTestApp } from "./build-test-app";
@@ -40,6 +44,8 @@ export function buildApiReplicaApp(): Promise<NestExpressApplication> {
       { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
       { provide: MapRepository, useValue: new FakeMapRepository() },
       { provide: MiniappsCatalogClient, useValue: new FakeMiniappsCatalogClient() },
+      { provide: MiniappsManifestClient, useValue: new FakeMiniappsManifestClient() },
+      { provide: MiniappsManifestRepository, useValue: new FakeMiniappsManifestRepository() },
       { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
       { provide: Clock, useValue: CLOCK },
     ],

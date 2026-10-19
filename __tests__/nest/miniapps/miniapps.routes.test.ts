@@ -14,13 +14,18 @@ import request from "supertest";
 import { MEDIA_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
 import { Clock } from "../../../src/infra/clock";
 import { ConfigModule } from "../../../src/config/config.module";
+import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { MiniappsModule } from "../../../src/miniapps/miniapps.module";
 import { MiniappsCatalogClient } from "../../../src/miniapps/catalog/miniapps-catalog.client";
 import { MiniappsCatalogModule } from "../../../src/miniapps/catalog/miniapps-catalog.module";
+import { MiniappsManifestClient } from "../../../src/miniapps/manifest/miniapps-manifest.client";
+import { MiniappsManifestRepository } from "../../../src/miniapps/manifest/miniapps-manifest.repository";
 import { MiniappsNotificationsClient } from "../../../src/miniapps/notifications/miniapps-notifications.client";
 import { MiniappsNotificationsModule } from "../../../src/miniapps/notifications/miniapps-notifications.module";
 import { MiniappsNotificationsRepository } from "../../../src/miniapps/notifications/miniapps-notifications.repository";
 import { FakeMiniappsCatalogClient } from "../../helpers/fakes/miniapps/miniapps-catalog.client.fake";
+import { FakeMiniappsManifestClient } from "../../helpers/fakes/miniapps/miniapps-manifest.client.fake";
+import { FakeMiniappsManifestRepository } from "../../helpers/fakes/miniapps/miniapps-manifest.repository.fake";
 import { FakeMiniappsNotificationsClient } from "../../helpers/fakes/miniapps/miniapps-notifications.client.fake";
 import { FakeMiniappsNotificationsRepository } from "../../helpers/fakes/miniapps/miniapps-notifications.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
@@ -38,9 +43,11 @@ beforeAll(async () => {
   // The manifest client answers no shell fields, as a first-party mini app
   // whose origin is unreachable does: every mini app keeps its registry shell.
   app = await buildTestApp({
-    imports: [ConfigModule, MiniappsModule, MiniappsNotificationsModule, MiniappsCatalogModule],
+    imports: [ConfigModule, SchedulingModule, MiniappsModule, MiniappsNotificationsModule, MiniappsCatalogModule],
     overrides: [
       { provide: MiniappsCatalogClient, useValue: new FakeMiniappsCatalogClient() },
+      { provide: MiniappsManifestClient, useValue: new FakeMiniappsManifestClient() },
+      { provide: MiniappsManifestRepository, useValue: new FakeMiniappsManifestRepository() },
       { provide: MiniappsNotificationsRepository, useValue: new FakeMiniappsNotificationsRepository() },
       { provide: MiniappsNotificationsClient, useValue: new FakeMiniappsNotificationsClient() },
       { provide: Clock, useValue: CLOCK },

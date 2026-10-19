@@ -20,6 +20,7 @@ import { BusRoutePathClient } from "../../../src/bus/route-path/bus-route-path.c
 import { HolidaysSyncClient } from "../../../src/holidays/sync/holidays-sync.client";
 import { Clock } from "../../../src/infra/clock";
 import { MiniappsCatalogClient } from "../../../src/miniapps/catalog/miniapps-catalog.client";
+import { MiniappsManifestClient } from "../../../src/miniapps/manifest/miniapps-manifest.client";
 import { NoticesDispatchClient } from "../../../src/notices/dispatch/notices-dispatch.client";
 import { SubwaySeoulApiClient } from "../../../src/subway/seoul-api/subway-seoul-api.client";
 import { SubwaySeoulTrainmapClient } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.client";
@@ -33,6 +34,7 @@ import { FakeBusRealtimeJongroClient } from "../fakes/bus/bus-realtime-jongro.cl
 import { FakeBusRoutePathClient } from "../fakes/bus/bus-route-path.client.fake";
 import { FakeHolidaysSyncClient } from "../fakes/holidays/holidays-sync.client.fake";
 import { FakeMiniappsCatalogClient } from "../fakes/miniapps/miniapps-catalog.client.fake";
+import { FakeMiniappsManifestClient } from "../fakes/miniapps/miniapps-manifest.client.fake";
 import { FakeNoticesDispatchClient } from "../fakes/notices/notices-dispatch.client.fake";
 import { FakeSubwaySeoulApiClient } from "../fakes/subway/subway-seoul-api.client.fake";
 import { FakeSubwaySeoulTrainmapClient } from "../fakes/subway/subway-seoul-trainmap.client.fake";
@@ -55,6 +57,7 @@ export function buildPollerApp(): Promise<NestExpressApplication> {
       { provide: BusRoutePathClient, useValue: new FakeBusRoutePathClient() },
       { provide: HolidaysSyncClient, useValue: new FakeHolidaysSyncClient() },
       { provide: MiniappsCatalogClient, useValue: new FakeMiniappsCatalogClient() },
+      { provide: MiniappsManifestClient, useValue: new FakeMiniappsManifestClient() },
       { provide: NoticesDispatchClient, useValue: new FakeNoticesDispatchClient() },
       { provide: SubwaySeoulApiClient, useValue: new FakeSubwaySeoulApiClient() },
       { provide: SubwaySeoulTrainmapClient, useValue: new FakeSubwaySeoulTrainmapClient() },
