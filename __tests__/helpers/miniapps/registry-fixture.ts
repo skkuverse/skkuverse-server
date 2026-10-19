@@ -23,6 +23,11 @@ export function fixtureRegistry(): { index: { version: number; miniApps: Array<R
   return dataset;
 }
 
+/** The fixture's mini app ids, in index order: what the places importer reads from the stored registry. */
+export function fixtureMiniAppIds(): string[] {
+  return fixtureRegistry().index.miniApps.map((entry) => String(entry.id));
+}
+
 const FIXED_CLOCK: Clock = { now: () => new Date("2026-10-20T03:00:00.000Z") };
 
 /** A FakeMiniappsRepository holding the fixture as revision 1, typed as the real repository a constructor takes. */

@@ -22,8 +22,9 @@
  * festival's `miniapp` buttons are checked against.
  *
  * The eventmap database holds what its scripts write: the 77 places of
- * scripts/data/eskara-2026-places.json, parsed by scripts/lib/map-places-file.js
- * and written by scripts/lib/eventmap-db.js, the eskara-2026 activation open
+ * scripts/data/eskara-2026-places.json, parsed by the importer's parseSheet
+ * (scripts/import-eventmap-places.js) against the stored registry and written
+ * by scripts/lib/eventmap-db.js, the eskara-2026 activation open
  * from 00:00 KST on 2026-10-01 to 06:00 KST on 2026-10-03, and an activation
  * for `spring-2027`, a layer set the server does not have, open in March 2027.
  * `/map/config` names the Naver map style, so the test serves production's
@@ -50,7 +51,7 @@ import festival from "./fixtures/map-festival.expected.json";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const store = require("../../../scripts/lib/datasets/store");
-const { parsePlacesFile } = require("../../../scripts/lib/map-places-file");
+const { parseSheet } = require("../../../scripts/import-eventmap-places");
 const { enableActivation, ensureActivation, upsertPlaces } = require("../../../scripts/lib/eventmap-db");
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
@@ -113,17 +114,17 @@ beforeAll(async () => {
   const config = require("../../../src/infra/config") as Config;
   assertConfigReaches(mongod, config.mongo.url);
   const eventmap = db.getClient().db(config.eventmap.dbName);
+  const content = db.getClient().db(config.content.dbName);
+  const { fixtureRegistry } = require("../../helpers/miniapps/registry-fixture") as RegistryFixture;
+  await store.create(content, "miniapps", fixtureRegistry(), { by: "characterization@example.com", now: IMPORTED_AT });
   const placesFile = fs.readFileSync(path.join(__dirname, "../../../scripts/data/eskara-2026-places.json"), "utf8");
-  const { docs, errors } = parsePlacesFile(placesFile, { layerSetId: "eskara-2026" });
+  const { docs, errors } = await parseSheet(placesFile, { layerSetId: "eskara-2026", contentDb: content });
   expect(errors).toEqual([]);
   await upsertPlaces(eventmap.collection("places"), docs, IMPORTED_AT);
   await ensureActivation(eventmap.collection("activations"), "eskara-2026", IMPORTED_AT);
   await enableActivation(eventmap.collection("activations"), "eskara-2026", IMPORTED_AT, ESKARA_WINDOW.from, ESKARA_WINDOW.until);
   await enableActivation(eventmap.collection("activations"), "spring-2027", IMPORTED_AT, SPRING_WINDOW.from, SPRING_WINDOW.until);
-  const content = db.getClient().db(config.content.dbName);
   await store.create(content, "map-layer-sets", fixtureLayerSets(), { by: "characterization@example.com", now: IMPORTED_AT });
-  const { fixtureRegistry } = require("../../helpers/miniapps/registry-fixture") as RegistryFixture;
-  await store.create(content, "miniapps", fixtureRegistry(), { by: "characterization@example.com", now: IMPORTED_AT });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

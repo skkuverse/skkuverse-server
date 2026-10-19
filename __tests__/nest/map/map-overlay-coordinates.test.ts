@@ -20,7 +20,7 @@ import fs from "fs";
 import path from "path";
 
 import type { Clock } from "../../../src/infra/clock";
-import { fixtureMiniappsService } from "../../helpers/miniapps/registry-fixture";
+import { fixtureMiniAppIds, fixtureMiniappsService } from "../../helpers/miniapps/registry-fixture";
 import { MapEventService } from "../../../src/map/event/map-event.service";
 import { MapLayerSetService } from "../../../src/map/layer-set/map-layer-set.service";
 import type { MapLayerSetRepository } from "../../../src/map/layer-set/map-layer-set.repository";
@@ -119,7 +119,7 @@ describe("event overlay coordinates, end to end from the survey sheet", () => {
   it("emits every place at the coordinates the sheet recorded", async () => {
     // Arrange
     const raw = fs.readFileSync(REAL_FILE, "utf8");
-    const { docs, errors } = parsePlacesFile(raw, { layerSetId: LAYER_SET_ID });
+    const { docs, errors } = parsePlacesFile(raw, { layerSetId: LAYER_SET_ID, miniAppIds: fixtureMiniAppIds() });
 
     // If the committed sheet stops parsing, that is its own bug — fail loudly
     // rather than silently testing zero rows.
@@ -162,7 +162,7 @@ describe("event overlay coordinates, end to end from the survey sheet", () => {
   it("puts every overlay on the Korean peninsula, not in the ocean", async () => {
     // Arrange
     const raw = fs.readFileSync(REAL_FILE, "utf8");
-    const { docs } = parsePlacesFile(raw, { layerSetId: LAYER_SET_ID });
+    const { docs } = parsePlacesFile(raw, { layerSetId: LAYER_SET_ID, miniAppIds: fixtureMiniAppIds() });
 
     mockFindActiveActivation.mockResolvedValue({ _id: LAYER_SET_ID } as Awaited<
       ReturnType<MapRepository["findActiveActivation"]>

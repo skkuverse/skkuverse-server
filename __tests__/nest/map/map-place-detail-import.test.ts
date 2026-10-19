@@ -21,6 +21,7 @@ import { isInstagramPostUrl, isInstagramProfileUrl } from "../../../src/map/even
 import { parseMiniAppTarget } from "../../../src/miniapps/miniapps.rules";
 import { presentationFor } from "../../../src/map/map.rules";
 import { fixtureLayerSet } from "../../helpers/map/layer-sets-fixture";
+import { fixtureMiniAppIds } from "../../helpers/miniapps/registry-fixture";
 
 // scripts/ is plain CommonJS excluded from tsconfig, so this is a require.
 const reader = require("../../../scripts/lib/map-places-file");
@@ -46,7 +47,7 @@ function withDetail(detail: unknown) {
       },
     ],
   };
-  return parsePlacesFile(JSON.stringify(doc), { layerSetId: LAYER_SET_ID });
+  return parsePlacesFile(JSON.stringify(doc), { layerSetId: LAYER_SET_ID, miniAppIds: fixtureMiniAppIds() });
 }
 
 /** A detail with one of every block and both action types. */
@@ -326,6 +327,7 @@ describe("the importer's copies agree with the server", () => {
 describe("the committed sheet's food trucks", () => {
   const { docs } = parsePlacesFile(fs.readFileSync(REAL_FILE, "utf8"), {
     layerSetId: LAYER_SET_ID,
+    miniAppIds: fixtureMiniAppIds(),
   });
   const trucks = docs.filter((d: { _id: string }) => d._id.startsWith(`${LAYER_SET_ID}-truck-`));
   const detailed = docs.filter((d: { detail: unknown }) => d.detail !== null);
