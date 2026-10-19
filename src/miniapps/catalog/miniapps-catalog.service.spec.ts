@@ -11,11 +11,11 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { MiniappsManifestClient } from "../manifest/miniapps-manifest.client";
 import type { MiniappsManifestRepository } from "../manifest/miniapps-manifest.repository";
 import { MiniappsManifestService } from "../manifest/miniapps-manifest.service";
-import { MiniappsService } from "../miniapps.service";
+import { fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { DEFAULT_SHELL } from "./miniapps-catalog.constants";
 import { MiniappsCatalogService } from "./miniapps-catalog.service";
 
-const registry = new MiniappsService();
+const registry = fixtureMiniappsService();
 const CLOCK = { now: () => new Date("2026-10-20T01:00:00Z") };
 let manifests: FakeMiniappsManifestRepository;
 let service: MiniappsCatalogService;

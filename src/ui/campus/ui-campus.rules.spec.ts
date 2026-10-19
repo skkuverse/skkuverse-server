@@ -15,11 +15,11 @@
  */
 import fs from "fs";
 import path from "path";
-import { MiniappsService } from "../../miniapps/miniapps.service";
+import { fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { campusBannerReferences, toCampusBannerIssues, withoutUnresolvedBanners } from "./ui-campus.rules";
 import { campusBannersFile, type CampusBannerCarouselRaw } from "./ui-campus.schema";
 
-const registry = new MiniappsService();
+const registry = fixtureMiniappsService();
 
 const IMAGE_URL = "https://media.skkuverse.com/campus/banners/test-00000000.webp";
 

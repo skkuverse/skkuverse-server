@@ -1,4 +1,4 @@
-import type { MiniAppDetailRaw } from "./miniapps.schema";
+import type { MiniAppDetailRaw, RegistryFile } from "./miniapps.schema";
 import type { MiniAppIndexEntry } from "./miniapps.wire";
 
 export interface MiniAppTarget {
@@ -44,4 +44,9 @@ export interface MiniAppRegistry {
   isKnownMiniAppTarget(value: unknown): boolean;
   parseTarget(value: unknown): MiniAppTarget | null;
   isSingleEmoji(value: string): boolean;
+}
+
+export interface MiniAppsRegistryRevision {
+  revision: number;
+  registry: RegistryFile;
 }

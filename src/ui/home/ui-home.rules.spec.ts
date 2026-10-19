@@ -18,12 +18,12 @@
  */
 import fs from "fs";
 import path from "path";
-import { MiniappsService } from "../../miniapps/miniapps.service";
+import { fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import type { MiniAppRegistry } from "../ui.types";
 import { homeLayoutReferences, toHomeLayoutIssues, withoutUnresolvedItems } from "./ui-home.rules";
 import { homeLayoutFile } from "./ui-home.schema";
 
-const registry = new MiniappsService();
+const registry = fixtureMiniappsService();
 
 // A copy of revision 1 of the stored home-layout dataset as of 2026-10-19.
 const DATASET_FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/home-layout.dataset.json");

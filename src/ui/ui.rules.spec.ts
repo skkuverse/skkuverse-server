@@ -10,7 +10,7 @@
  * A `miniapp` link action names the mini app its target parses to, a reference
  * the data tool resolves against the registry.
  */
-import { MiniappsService } from "../miniapps/miniapps.service";
+import { fixtureMiniappsService } from "../../__tests__/helpers/miniapps/registry-fixture";
 import { findRepeatedId, isBannerShowing, isBusGroupVisible, toMiniAppTargetReferences } from "./ui.rules";
 
 describe("isBannerShowing", () => {
@@ -87,7 +87,7 @@ describe("isBusGroupVisible", () => {
 });
 
 describe("toMiniAppTargetReferences", () => {
-  const grammar = new MiniappsService();
+  const grammar = fixtureMiniappsService();
 
   it.each<[string, Record<string, string>, unknown[]]>([
     ["a miniapp target, by its id", { actionType: "miniapp", actionValue: "inja/entry" }, [{ dataset: "miniapps", id: "inja", path: ["at"] }]],
