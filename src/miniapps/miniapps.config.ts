@@ -2,13 +2,13 @@ import fs from "fs";
 import path from "path";
 import type { z } from "zod";
 import { parseConfigFile } from "../infra/config-file";
-import { FIRST_PARTY_MINIAPP_ORIGINS, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../infra/origins";
+import { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../infra/origins";
 import { isRecord } from "../shared/object.util";
 import { SHELL_BARS, SHELL_HEADERS, SHELL_STATUS_BARS } from "./miniapps.constants";
-import { toIndexEntry } from "./miniapps.mapper";
+import { toIndexEntry, toMiniAppRegistry } from "./miniapps.mapper";
 import { toRegistryIssues } from "./miniapps.rules";
 import { checkedRegistry, type MiniAppDetailRaw, type RegistryFile } from "./miniapps.schema";
-import type { LoadedRegistry } from "./miniapps.types";
+import type { LoadedRegistry, MiniAppRegistry } from "./miniapps.types";
 
 type Issue = z.core.$ZodRawIssue;
 type Words = (id: string, issue: Issue) => string | undefined;
@@ -133,12 +133,13 @@ function assertOwnedOrigins(file: RegistryFile): void {
   if (issues.length > 0) throw new Error(`${LABEL}: ${issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ")}`);
 }
 
-function readRegistry(): LoadedRegistry {
+function readRegistry(): Readonly<RegistryFile> {
   const index = readJson("index.json");
   const details = Object.fromEntries(indexIdsOf(index).map((id) => [id, readJson("details", `${id}.json`)]));
   const file = loadRegistry(index, details);
   assertOwnedOrigins(file);
-  return toLoadedRegistry(file, FIRST_PARTY_MINIAPP_ORIGINS);
+  return file;
 }
 
-export const registry: Readonly<LoadedRegistry> = Object.freeze(readRegistry());
+// WHY: revision 0, since the committed files are no stored revision; MiniappsService's getters read them until every reader awaits current().
+export const committedRegistry: MiniAppRegistry = toMiniAppRegistry(readRegistry(), 0, WEB_ORIGIN);

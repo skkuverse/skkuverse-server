@@ -17,8 +17,8 @@
  * its own business.
  */
 import { fixtureRegistry } from "../../__tests__/helpers/miniapps/registry-fixture";
-import { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN } from "../infra/origins";
-import { registry } from "./miniapps.config";
+import { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../infra/origins";
+import { toMiniAppRegistry } from "./miniapps.mapper";
 import { isKnownMiniAppTarget, isServableStartUrl, isSingleEmoji, parseMiniAppTarget, toMiniAppNotFound, toRegistryIssues } from "./miniapps.rules";
 import { checkedRegistry } from "./miniapps.schema";
 
@@ -51,6 +51,8 @@ describe("parseMiniAppTarget", () => {
 });
 
 describe("isKnownMiniAppTarget", () => {
+  const registry = toMiniAppRegistry(checkedRegistry.parse(fixtureRegistry()), 1, WEB_ORIGIN);
+
   it("accepts a target naming a registered mini app", () => {
     // Act & Assert
     expect(isKnownMiniAppTarget("eskara-2026/eskara/wristband", registry.detailsById)).toBe(true);
