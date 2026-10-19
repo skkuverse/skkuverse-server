@@ -1,0 +1,394 @@
+{
+  "_about": "Revision 1 of the map-layer-sets dataset (skku_content.datasets, _id map-layer-sets): one layer set, a copy of src/map/layer-set/eskara-2026.json at source commit 5c0ee5a9, the code production served /map/config, /map/overlays/event and /map/overlays/event/details from when they were captured on 2026-10-19 (move-editorial-datasets D13, task 7.1). No activation was live then, so the set is dormant. The push imports this data with _about removed. Nothing trimmed.",
+  "layerSets": [
+    {
+      "layerSetId": "eskara-2026",
+      "campus": "nsc",
+      "name": {
+        "ko": "에스카라",
+        "en": "ESKARA",
+        "zh": "ESKARA"
+      },
+      "emoji": "🌊",
+      "camera": {
+        "lat": 37.295129,
+        "lng": 126.971234,
+        "zoom": 17.5,
+        "tilt": 0,
+        "bearing": 6,
+        "durationMs": 500
+      },
+      "timezone": "Asia/Seoul",
+      "layers": [
+        {
+          "id": "eskara26_bar",
+          "label": {
+            "ko": "주점",
+            "en": "Bars",
+            "zh": "酒馆"
+          },
+          "color": "F04452",
+          "defaultVisibleWhen": {
+            "kind": "scheduled",
+            "windows": [
+              {
+                "start": "18:00",
+                "end": "04:00"
+              }
+            ]
+          }
+        },
+        {
+          "id": "eskara26_food",
+          "label": {
+            "ko": "푸드트럭",
+            "en": "Food trucks",
+            "zh": "餐车"
+          },
+          "color": "FFB800",
+          "defaultVisibleWhen": {
+            "kind": "always"
+          }
+        },
+        {
+          "id": "eskara26_booth",
+          "label": {
+            "ko": "부스",
+            "en": "Booths",
+            "zh": "摊位"
+          },
+          "color": "3182F6",
+          "defaultVisibleWhen": {
+            "kind": "scheduled",
+            "windows": [
+              {
+                "start": "04:00",
+                "end": "18:00"
+              }
+            ]
+          }
+        },
+        {
+          "id": "eskara26_facility",
+          "label": {
+            "ko": "편의시설",
+            "en": "Facilities",
+            "zh": "便利设施"
+          },
+          "color": "4CC9F0",
+          "defaultVisibleWhen": {
+            "kind": "never"
+          }
+        },
+        {
+          "id": "eskara26_control_entry",
+          "label": {
+            "ko": "진입 통제",
+            "en": "Restricted entry",
+            "zh": "禁止进入"
+          },
+          "color": "C92A2A",
+          "defaultVisibleWhen": {
+            "kind": "never"
+          },
+          "markerStyle": "textLabel"
+        },
+        {
+          "id": "eskara26_control_vehicle",
+          "label": {
+            "ko": "차량 통제",
+            "en": "Road closed",
+            "zh": "车辆管制"
+          },
+          "color": "1971C2",
+          "defaultVisibleWhen": {
+            "kind": "never"
+          },
+          "markerStyle": "textLabel"
+        },
+        {
+          "id": "eskara26_main_stage",
+          "label": {
+            "ko": "메인 스테이지",
+            "en": "Main stage",
+            "zh": "主舞台"
+          },
+          "color": "A61E4D",
+          "defaultVisibleWhen": {
+            "kind": "always"
+          },
+          "markerStyle": "textLabel"
+        },
+        {
+          "id": "eskara26_entry",
+          "label": {
+            "ko": "입장 팔찌 배부",
+            "en": "Wristbands",
+            "zh": "入场手环发放"
+          },
+          "color": "7048E8",
+          "defaultVisibleWhen": {
+            "kind": "always"
+          }
+        }
+      ],
+      "facets": [
+        {
+          "id": "day",
+          "label": {
+            "ko": "일자",
+            "en": "Day",
+            "zh": "日期"
+          },
+          "source": "hours",
+          "select": "required",
+          "options": [
+            {
+              "id": "day1",
+              "label": {
+                "ko": "10/1(목)",
+                "en": "Oct 1 (Thu)",
+                "zh": "10月1日(周四)"
+              },
+              "from": "2026-10-01T06:00:00+09:00",
+              "until": "2026-10-02T06:00:00+09:00"
+            },
+            {
+              "id": "day2",
+              "label": {
+                "ko": "10/2(금)",
+                "en": "Oct 2 (Fri)",
+                "zh": "10月2日(周五)"
+              },
+              "from": "2026-10-02T06:00:00+09:00",
+              "until": "2026-10-03T06:00:00+09:00"
+            }
+          ]
+        },
+        {
+          "id": "org",
+          "label": {
+            "ko": "운영",
+            "en": "Run by",
+            "zh": "主办"
+          },
+          "source": "tag",
+          "select": "optional",
+          "options": [
+            {
+              "id": "council",
+              "label": {
+                "ko": "총학생회",
+                "en": "Student Council",
+                "zh": "总学生会"
+              }
+            },
+            {
+              "id": "club",
+              "label": {
+                "ko": "학생단체",
+                "en": "Student groups",
+                "zh": "学生团体"
+              }
+            }
+          ]
+        }
+      ],
+      "chips": [
+        {
+          "id": "eskara26_view_bar",
+          "emoji": "🍺",
+          "layerIds": [
+            "eskara26_bar"
+          ],
+          "camera": {
+            "lat": 37.295187,
+            "lng": 126.970977,
+            "zoom": 17,
+            "tilt": 0,
+            "bearing": 6,
+            "durationMs": 500
+          },
+          "list": {
+            "facetIds": [
+              "day"
+            ],
+            "sort": {
+              "key": "order",
+              "scopeFacetId": null
+            }
+          }
+        },
+        {
+          "id": "eskara26_view_booth",
+          "emoji": "🎪",
+          "layerIds": [
+            "eskara26_booth"
+          ],
+          "camera": {
+            "lat": 37.295187,
+            "lng": 126.970977,
+            "zoom": 17,
+            "tilt": 0,
+            "bearing": 6,
+            "durationMs": 500
+          },
+          "list": {
+            "facetIds": [
+              "day",
+              "org"
+            ],
+            "sort": {
+              "key": "order",
+              "scopeFacetId": "day"
+            }
+          }
+        },
+        {
+          "id": "eskara26_view_food",
+          "emoji": "🚚",
+          "layerIds": [
+            "eskara26_food"
+          ],
+          "camera": {
+            "lat": 37.2962298,
+            "lng": 126.9716456,
+            "zoom": 17.2,
+            "tilt": 0,
+            "bearing": 6,
+            "durationMs": 500
+          },
+          "list": {
+            "facetIds": [
+              "day"
+            ],
+            "sort": {
+              "key": "title",
+              "scopeFacetId": null
+            }
+          }
+        },
+        {
+          "id": "eskara26_view_entry",
+          "emoji": "🎫",
+          "layerIds": [
+            "eskara26_entry"
+          ],
+          "camera": {
+            "lat": 37.293648,
+            "lng": 126.974831,
+            "zoom": 17,
+            "tilt": 0,
+            "bearing": 6,
+            "durationMs": 500
+          }
+        },
+        {
+          "id": "eskara26_view_facility",
+          "emoji": "🚻",
+          "layerIds": [
+            "eskara26_facility"
+          ],
+          "camera": {
+            "lat": 37.294007,
+            "lng": 126.972575,
+            "zoom": 16,
+            "tilt": 0,
+            "bearing": 6,
+            "durationMs": 500
+          }
+        },
+        {
+          "id": "eskara26_view_control",
+          "emoji": "🚧",
+          "layerIds": [
+            "eskara26_control_entry",
+            "eskara26_control_vehicle"
+          ],
+          "label": {
+            "ko": "통제구역",
+            "en": "Restricted",
+            "zh": "管制区"
+          },
+          "camera": {
+            "lat": 37.294555,
+            "lng": 126.971921,
+            "zoom": 16.2,
+            "tilt": 0,
+            "bearing": 6,
+            "durationMs": 500
+          }
+        }
+      ],
+      "itemDefaults": {
+        "byCategory": {
+          "bar": {
+            "layerId": "eskara26_bar",
+            "pinPriority": 30
+          },
+          "booth": {
+            "layerId": "eskara26_booth",
+            "pinPriority": 20
+          },
+          "food": {
+            "layerId": "eskara26_food",
+            "pinPriority": 20,
+            "locationAccuracy": "area"
+          },
+          "food_zone": {
+            "layerId": "eskara26_food",
+            "pinPriority": 0,
+            "tapChip": "eskara26_view_food"
+          },
+          "food_zone_pin": {
+            "layerId": "eskara26_food",
+            "pinPriority": 25,
+            "tapChip": "eskara26_view_food"
+          },
+          "facility": {
+            "layerId": "eskara26_facility",
+            "pinPriority": 10
+          },
+          "control_entry": {
+            "layerId": "eskara26_control_entry",
+            "pinPriority": 0,
+            "interactive": false
+          },
+          "control_vehicle": {
+            "layerId": "eskara26_control_vehicle",
+            "pinPriority": 0,
+            "interactive": false
+          },
+          "entry": {
+            "layerId": "eskara26_entry",
+            "pinPriority": 35
+          },
+          "control_entry_label": {
+            "layerId": "eskara26_control_entry",
+            "pinPriority": 0,
+            "interactive": false
+          },
+          "main_stage": {
+            "layerId": "eskara26_main_stage",
+            "pinPriority": 0,
+            "interactive": false
+          },
+          "main_stage_label": {
+            "layerId": "eskara26_main_stage",
+            "pinPriority": 0,
+            "interactive": false
+          },
+          "control_vehicle_label": {
+            "layerId": "eskara26_control_vehicle",
+            "pinPriority": 0,
+            "interactive": false
+          }
+        },
+        "fallback": {
+          "layerId": "eskara26_booth",
+          "pinPriority": 0
+        }
+      }
+    }
+  ]
+}
