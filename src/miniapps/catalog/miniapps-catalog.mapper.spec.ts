@@ -1,16 +1,17 @@
 /**
- * Unit tests for the tolerant shell-config parser copied from
- * `packages/miniapp/src/protocol/manifest.ts` in skkuverse-miniapp (see
- * parseShellFields in miniapps-catalog.mapper.ts for why it is a copy rather
- * than an import), and the detail response it shapes. These vectors mirror the `manifest` describe block in that
- * package's `test/protocol.test.ts`, adapted to this file's narrower surface
- * (no `parseShellPatch`/`shell.set` — the server only ever reads a whole
- * manifest, never a runtime patch).
+ * The manifest parse and the shell merge of a detail. parseManifest runs the
+ * vectors of the `manifest` describe block in skkuverse-miniapp's
+ * `test/protocol.test.ts` over the shell parse copied from
+ * `packages/miniapp/src/protocol/manifest.ts` (parseShellFields in
+ * src/miniapps/miniapps.mapper.ts, whose spec covers the parse field by field),
+ * adapted to this file's narrower surface (no `parseShellPatch`/`shell.set`:
+ * the server only ever reads a whole manifest, never a runtime patch). The
+ * merge puts the defaults under the registry's fields, under the manifest's.
  */
 import type { MiniAppDetailRaw } from "../miniapps.schema";
 import type { ShellConfig } from "../miniapps.wire";
 import { DEFAULT_SHELL } from "./miniapps-catalog.constants";
-import { mergeShell, parseManifest, parseShellFields, toDetailResponse } from "./miniapps-catalog.mapper";
+import { mergeShell, parseManifest, toDetailResponse } from "./miniapps-catalog.mapper";
 
 describe("parseManifest", () => {
   it("fills every field from DEFAULT_SHELL when there is nothing to read", () => {
@@ -28,76 +29,6 @@ describe("parseManifest", () => {
         shell: { bar: "top", header: "sideways", statusBar: "light", background: "#0a0b0c", x: 1 },
       }),
     ).toEqual({ shell: { ...DEFAULT_SHELL, bar: "top", statusBar: "light", background: "#0A0B0C" } });
-  });
-});
-
-describe("parseShellFields", () => {
-  it("returns {} for anything that is not a plain object", () => {
-    // Act & Assert
-    for (const value of [null, undefined, "x", 1, true, [], ["bar", "top"]]) {
-      expect(parseShellFields(value)).toEqual({});
-    }
-  });
-
-  it.each([
-    ["top"],
-    ["bottom"],
-    ["none"],
-  ])("accepts bar %j", (bar) => {
-    // Act & Assert
-    expect(parseShellFields({ bar })).toEqual({ bar });
-  });
-
-  it.each([["hide"], ["TOP"], [1], [null]])("drops an invalid bar %j", (bar) => {
-    // Act & Assert
-    expect(parseShellFields({ bar })).toEqual({});
-  });
-
-  it.each([["opaque"], ["overlay"]])("accepts header %j", (header) => {
-    // Act & Assert
-    expect(parseShellFields({ header })).toEqual({ header });
-  });
-
-  it.each([["sideways"], ["OPAQUE"], [1], [null]])("drops an invalid header %j", (header) => {
-    // Act & Assert
-    expect(parseShellFields({ header })).toEqual({});
-  });
-
-  it.each([["dark"], ["light"]])("accepts statusBar %j", (statusBar) => {
-    // Act & Assert
-    expect(parseShellFields({ statusBar })).toEqual({ statusBar });
-  });
-
-  it.each([["gray"], ["DARK"], [1], [null]])("drops an invalid statusBar %j", (statusBar) => {
-    // Act & Assert
-    expect(parseShellFields({ statusBar })).toEqual({});
-  });
-
-  it("accepts a lowercase hex background and upper-cases it", () => {
-    // Act & Assert
-    expect(parseShellFields({ background: "#0a0b0c" })).toEqual({ background: "#0A0B0C" });
-  });
-
-  it.each([["#FFF"], ["FFFFFF"], ["#GGGGGG"], [123456], [null]])(
-    "drops an invalid background %j",
-    (background) => {
-      // Act & Assert
-      expect(parseShellFields({ background })).toEqual({});
-    },
-  );
-
-  it("keeps only the four known keys, dropping everything else", () => {
-    // Act & Assert
-    expect(
-      parseShellFields({ bar: "top", extra: "nope", another: 1 }),
-    ).toEqual({ bar: "top" });
-  });
-
-  it("reads every field at once", () => {
-    // Act & Assert
-    expect(
-      parseShellFields({ bar: "none", header: "overlay", statusBar: "light", background: "#112233" }),
-    ).toEqual({ bar: "none", header: "overlay", statusBar: "light", background: "#112233" });
   });
 });
 

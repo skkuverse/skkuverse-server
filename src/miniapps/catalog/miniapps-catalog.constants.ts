@@ -8,15 +8,6 @@ export const DEFAULT_SHELL: Readonly<ShellConfig> = Object.freeze({
   background: "#FFFFFF",
 });
 
-/** WHY: where a first-party mini app serves its `public/skkuverse.json`, the @skkuverse/miniapp SDK manifest. */
-export const MANIFEST_PATH = "/skkuverse.json";
-
-/** WHY: a slow origin must not hold up the detail request that waits on it. */
-export const FETCH_TIMEOUT_MS = 3_000;
-
-/** WHY: refused whether announced or actually read, so a manifest never buffers more than this. */
-export const MAX_MANIFEST_BYTES = 16 * 1024;
-
 export const CACHE_TTL_MS = 5 * 60 * 1000;
 
 export const FETCH_FAILED_LOG_INTERVAL_MS = 10 * 60_000;
