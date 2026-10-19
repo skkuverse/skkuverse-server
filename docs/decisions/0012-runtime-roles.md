@@ -71,7 +71,7 @@ A switch that turns off a poller (`SUBWAY`, `SHUTTLE_ETA`, `BUILDING_SYNC`) stop
 
 ### D6. Freshness by TTL, not by cross-process signals
 
-A process sees another process's write when its cache entry expires. No writer notifies the readers, and nothing restarts them. Each cache's TTL is its stated freshness bound:
+A process sees another process's write when its cache entry expires. No writer notifies the readers, and nothing restarts them. Each cache below holds its bound because, once its TTL has passed, a read waits for the reload instead of answering from the expired value (`serveStale: "on-reload-failure"` in `src/infra/cached-loader.ts`):
 
 | Data | Written by | Bound |
 | --- | --- | --- |
@@ -81,7 +81,7 @@ A process sees another process's write when its cache entry expires. No writer n
 | Jongro route lines | The route-line poller | 10 minutes |
 | Buildings | The building sync | 5 minutes |
 
-Reference data that a database outage must not take down (bus schedules, overrides, stored holidays) keeps a stale window: a failed reload serves the last good value for at least an hour and logs the failure. A writer may still clear its own process's cache after a write, so the poller sees its own write at once.
+Reference data that a database outage must not take down (bus schedules, overrides, stored holidays, route lines) keeps a stale window that covers only a failed reload: it serves the last good value for at least an hour and logs `cache.reload_failed`. A cache whose stale window also answers while a reload runs (the default mode) is late by up to TTL plus one reload, and states its bound that way. A writer may still clear its own process's cache after a write, so the poller sees its own write at once.
 
 ## Consequences
 

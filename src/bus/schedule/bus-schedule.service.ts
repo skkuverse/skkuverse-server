@@ -19,8 +19,9 @@ import type { ScheduleDay, ScheduleWeek, SmartSchedule } from "./bus-schedule.wi
 
 const DATE_FORMAT = "YYYY-MM-DD";
 const HOUR_MS = 60 * 60_000;
-// SEE: docs/explanation/bus-architecture.md (Invariants)
-const WEEK_CACHE_TTL_MS = HOUR_MS;
+// SEE: docs/explanation/bus-architecture.md ("Invariants")
+const WEEK_CACHE_TTL_MS = 60_000;
+const WEEK_STALE_WINDOW_MS = HOUR_MS;
 
 @Injectable()
 export class BusScheduleService {
@@ -110,7 +111,13 @@ export class BusScheduleService {
     const key = `${serviceId}:${from}`;
     let loader = this.weeks.get(key);
     if (!loader) {
-      loader = createCachedLoader({ name: `bus.schedule.${key}`, ttlMs: WEEK_CACHE_TTL_MS, load: () => this.loadWeek(serviceId, from, serviceConfig) });
+      loader = createCachedLoader({
+        name: `bus.schedule.${key}`,
+        ttlMs: WEEK_CACHE_TTL_MS,
+        staleWindowMs: WEEK_STALE_WINDOW_MS,
+        serveStale: "on-reload-failure",
+        load: () => this.loadWeek(serviceId, from, serviceConfig),
+      });
       this.weeks.set(key, loader);
     }
     return loader;

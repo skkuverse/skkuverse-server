@@ -2,7 +2,9 @@
  * createCachedLoader: a single-flight TTL cache that never stores a failure,
  * can answer from an expired value inside its stale window while it reloads,
  * backs off one TTL after a failed reload, ignores a load that started before
- * clear(), and loads on every get() when CACHE=off.
+ * clear(), and loads on every get() when CACHE=off. With serveStale
+ * "on-reload-failure" a read past the TTL waits for the reload, and the stale
+ * window only covers a failed one, so the TTL is the freshness bound.
  */
 jest.mock("./logger", () => ({
   __esModule: true,
@@ -276,6 +278,61 @@ describe("createCachedLoader", () => {
  * next request, so every get() loads. A loader marked keepWhenCacheOff (the AI
  * overview, the mini-app manifests) keeps caching.
  */
+describe("createCachedLoader with serveStale on-reload-failure", () => {
+  it("waits for the reload once the TTL has passed, so the next read returns the change", async () => {
+    // Arrange
+    const load = jest.fn().mockResolvedValueOnce("a").mockResolvedValueOnce("b");
+    const cache = createCachedLoader({ name: "t", ttlMs: 60_000, load, staleWindowMs: 3_600_000, serveStale: "on-reload-failure" });
+    await cache.get();
+    now += 60_000;
+
+    // Act & Assert
+    await expect(cache.get()).resolves.toBe("b");
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it("shares one reload between the reads that arrive while it runs", async () => {
+    // Arrange
+    const slow = deferred<string>();
+    const load = jest.fn().mockResolvedValueOnce("a").mockImplementationOnce(() => slow.promise);
+    const cache = createCachedLoader({ name: "t", ttlMs: 60_000, load, staleWindowMs: 3_600_000, serveStale: "on-reload-failure" });
+    await cache.get();
+    now += 60_000;
+
+    // Act
+    const reads = [cache.get(), cache.get()];
+    slow.resolve("b");
+
+    // Assert
+    await expect(Promise.all(reads)).resolves.toEqual(["b", "b"]);
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it("serves the last good value when the reload fails inside the window, and logs cache.reload_failed", async () => {
+    // Arrange
+    const load = jest.fn().mockResolvedValueOnce("a").mockRejectedValue(new Error("down"));
+    const cache = createCachedLoader({ name: "schedule", ttlMs: 60_000, load, staleWindowMs: 3_600_000, serveStale: "on-reload-failure" });
+    await cache.get();
+    now += 3_600_000;
+
+    // Act & Assert
+    await expect(cache.get()).resolves.toBe("a");
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]![0]).toMatchObject({ event: "cache.reload_failed", cache: "schedule" });
+  });
+
+  it("throws once the window has passed", async () => {
+    // Arrange
+    const load = jest.fn().mockResolvedValueOnce("a").mockRejectedValue(new Error("down"));
+    const cache = createCachedLoader({ name: "t", ttlMs: 60_000, load, staleWindowMs: 3_600_000, serveStale: "on-reload-failure" });
+    await cache.get();
+    now += 60_000 + 3_600_000;
+
+    // Act & Assert
+    await expect(cache.get()).rejects.toThrow("down");
+  });
+});
+
 describe("createCachedLoader with CACHE=off", () => {
   beforeEach(() => {
     config.cache.enabled = false;

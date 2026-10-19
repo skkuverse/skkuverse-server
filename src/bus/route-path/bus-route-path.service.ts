@@ -26,6 +26,7 @@ export class BusRoutePathService {
     name: "jongro_route_paths",
     ttlMs: ROUTE_PATHS_TTL_MS,
     staleWindowMs: ROUTE_PATHS_STALE_WINDOW_MS,
+    serveStale: "on-reload-failure",
     load: () => this.repository.listRoutePaths(),
   });
 
