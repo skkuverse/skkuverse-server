@@ -2,9 +2,13 @@
  * The Jongro mapper: a sighting placed on a registry stop becomes the cached
  * bus position the realtime route reads, at its section ord with its vehicle
  * fields, and since when it has stood at its stop (add-jongro-bus-trajectory).
+ * The two TOPIS URLs every Jongro route polls: the arrival URL byte-identical
+ * to the one production has called since the registry was introduced, and the
+ * position URL of getBusPosByRtid, which answers the whole route (no ord
+ * range) and names its turnaround stop.
  */
 import { jongroSighting } from "../../../../__tests__/helpers/bus/jongro-sighting";
-import { toJongroBusPosition } from "./bus-realtime-jongro.mapper";
+import { toJongroArrivalsUrl, toJongroBusPosition, toJongroPositionsUrl } from "./bus-realtime-jongro.mapper";
 
 describe("toJongroBusPosition", () => {
   it("places the sighting on its stop with its dwell", () => {
@@ -63,5 +67,33 @@ describe("toJongroBusPosition", () => {
     // Assert
     expect(atStop).toMatchObject({ isAtStop: true, atStopSince: "2026-10-18T18:08:59+09:00" });
     expect(moving).not.toHaveProperty("atStopSince");
+  });
+});
+
+const FIXED_KEY =
+  "FAKEseoulBusServiceKeyForTestsOnlyNotARealKey0000%2BFAKE%2Fseoul%2Bbus%2Ftest0key%3D%3D";
+
+describe("toJongroArrivalsUrl", () => {
+  it("builds the 종로02 list URL identically (busRouteId=100900008)", () => {
+    // Act & Assert
+    expect(toJongroArrivalsUrl("100900008", FIXED_KEY)).toBe(
+      `http://ws.bus.go.kr/api/rest/arrive/getArrInfoByRouteAll?serviceKey=${FIXED_KEY}&busRouteId=100900008&resultType=json`,
+    );
+  });
+
+  it("builds the 종로07 list URL identically (busRouteId=100900004)", () => {
+    // Act & Assert
+    expect(toJongroArrivalsUrl("100900004", FIXED_KEY)).toBe(
+      `http://ws.bus.go.kr/api/rest/arrive/getArrInfoByRouteAll?serviceKey=${FIXED_KEY}&busRouteId=100900004&resultType=json`,
+    );
+  });
+});
+
+describe("toJongroPositionsUrl", () => {
+  it("asks getBusPosByRtid for the whole 종로07 route", () => {
+    // Act & Assert
+    expect(toJongroPositionsUrl("100900004", FIXED_KEY)).toBe(
+      `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRtid?serviceKey=${FIXED_KEY}&busRouteId=100900004&resultType=json`,
+    );
   });
 });

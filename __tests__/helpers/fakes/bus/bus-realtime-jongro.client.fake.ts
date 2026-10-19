@@ -1,7 +1,8 @@
 /**
  * Scripted BusRealtimeJongroClient: every route answers the arrivals and
  * sightings set by the test (empty, TOPIS's "no result", until set), or
- * rejects with `failWith`. `positionsUrls` records each position request.
+ * rejects with `failWith`. `positionsRouteIds` records the TOPIS route id of
+ * each position request.
  */
 import type { JongroArrivalDoc } from "../../../../src/bus/cache/bus-cache.document";
 import type { JongroRoute } from "../../../../src/bus/bus.types";
@@ -13,15 +14,15 @@ export class FakeBusRealtimeJongroClient implements PublicOf<BusRealtimeJongroCl
   arrivals: JongroArrivalDoc[] = [];
   sightings: JongroBusSighting[] = [];
   failWith: Error | null = null;
-  positionsUrls: string[] = [];
+  positionsRouteIds: string[] = [];
 
-  async fetchArrivals(_route: Pick<JongroRoute, "code" | "arrivalsUrl">): Promise<JongroArrivalDoc[]> {
+  async fetchArrivals(_route: Pick<JongroRoute, "code" | "busRouteId">): Promise<JongroArrivalDoc[]> {
     this.fail();
     return this.arrivals;
   }
 
-  async fetchSightings(route: Pick<JongroRoute, "code" | "positionsUrl">): Promise<JongroBusSighting[]> {
-    this.positionsUrls.push(route.positionsUrl);
+  async fetchSightings(route: Pick<JongroRoute, "code" | "busRouteId">): Promise<JongroBusSighting[]> {
+    this.positionsRouteIds.push(route.busRouteId);
     this.fail();
     return this.sightings;
   }

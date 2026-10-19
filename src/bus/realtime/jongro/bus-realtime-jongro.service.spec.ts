@@ -284,7 +284,7 @@ describe("BusRealtimeJongroService.refresh and the registry", () => {
     // Assert
     expect(storedIdsOf("jongro07")).toEqual(ids);
     expect((await service.listPositions("07"))!.map((p) => [p.sequence, p.stationName])).toEqual([["23", "stop 100000999"]]);
-    expect(new Set(client.positionsUrls)).toEqual(new Set([route("07").positionsUrl]));
+    expect(new Set(client.positionsRouteIds)).toEqual(new Set([route("07").busRouteId]));
   });
 
   it("keeps the stored turnaround stop when the position rows name none", async () => {
@@ -334,7 +334,7 @@ describe("BusRealtimeJongroService.refresh for a route with no registry document
 
     // Assert
     await expect(outcome).resolves.toBeUndefined();
-    expect(new Set(client.positionsUrls)).toEqual(new Set([route("08").positionsUrl]));
+    expect(new Set(client.positionsRouteIds)).toEqual(new Set([route("08").busRouteId]));
     expect([...busCache.values.keys()]).toEqual([]);
     expect(registryRepository.routes.has("jongro08")).toBe(false);
   });

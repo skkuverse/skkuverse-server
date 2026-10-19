@@ -15,7 +15,20 @@ const { switches, errors: switchErrors } = resolveRuntimeSwitches(
 // end of this file runs before any caller reads one. No DB name falls back to another database.
 const asRequired = (value: string | undefined): string => value as string;
 const dbNameFor = (baseName: string | undefined): string => asRequired(requiredEnv.dbNameFor(mode, baseName));
-const apiUrl = (prod: string, dev: string): string => asRequired(requiredEnv.apiUrl(mode, process.env, { prod, dev }));
+
+const requiredByEnv = new Map(requiredEnv.requiredValues(process.env).map((v) => [v.env, v]));
+
+// WHY: a value read in a role that does not require it throws at that read, so a wrong scope in
+// required-env.ts fails loudly instead of putting `undefined` in a URL (ADR 0012, D4).
+function roleScoped(envName: string): string {
+  const entry = requiredByEnv.get(envName);
+  if (entry === undefined) throw new Error(`${envName} is not in src/infra/required-env.ts`);
+  const role = requiredEnv.envRole(process.env);
+  if (!requiredEnv.isRequiredIn(entry.scope, role)) {
+    throw new Error(`${envName} (scope ${entry.scope}) is read in ROLE=${role}; widen its scope in src/infra/required-env.ts`);
+  }
+  return asRequired(entry.value);
+}
 
 const FCM_TIMEOUT_MS = 30 * 1000;
 
@@ -59,15 +72,21 @@ const config = {
       notices: process.env.MONGO_NOTICES_COLLECTION || "notices",
     },
     // WHY: no default: a filter boundary that reverted to an old date would expose hidden notices.
-    serviceStartDate: asRequired(process.env.NOTICES_SERVICE_START_DATE),
+    get serviceStartDate(): string {
+      return roleScoped("NOTICES_SERVICE_START_DATE");
+    },
 
     // CONTRACT(skkuverse-ai): skkuverse-ai/docs/notice-overview-api.md owns this API.
     overview: {
-      aiApiUrl: asRequired(process.env.AI_API_URL),
+      get aiApiUrl(): string {
+        return roleScoped("AI_API_URL");
+      },
     },
 
     dispatch: {
-      internalToken: asRequired(process.env.INTERNAL_DISPATCH_TOKEN),
+      get internalToken(): string {
+        return roleScoped("INTERNAL_DISPATCH_TOKEN");
+      },
       // SEE: docs/decisions/0008-dispatch-age-gate-on-publication-date.md — measured against the
       // notice's publication `date`, not crawl time; 14 days matched 2,498 of 2,498 real pushes.
       maxAgeDays: 14,
@@ -124,15 +143,21 @@ const config = {
     enabled: switches.cacheEnabled,
   },
 
-  // WHY: the keys are required even while SHUTTLE_ETA is off, so a rendered .env without them fails at
-  // boot, not at a poller's first tick.
+  // WHY: the keys are required where pollers run even while SHUTTLE_ETA is off, so a rendered .env without
+  // them fails at boot, not at a poller's first tick.
   shuttleEta: {
     enabled: switches.shuttleEtaEnabled,
     naver: {
-      keyId: asRequired(process.env.NAVER_API_KEY_ID),
-      key: asRequired(process.env.NAVER_API_KEY),
+      get keyId(): string {
+        return roleScoped("NAVER_API_KEY_ID");
+      },
+      get key(): string {
+        return roleScoped("NAVER_API_KEY");
+      },
     },
-    tmapAppKey: asRequired(process.env.TMAP_APP_KEY),
+    get tmapAppKey(): string {
+      return roleScoped("TMAP_APP_KEY");
+    },
     naverDailyCap: 1000,
     // WHY: about four times a Friday's bus-lane probe requests, and a tenth of the TOPIS function's daily quota.
     topisDailyCap: 2000,
@@ -145,7 +170,9 @@ const config = {
   // crawl per 15 s (add-commute-station-subway design D9), so only a runaway loop reaches one.
   subway: {
     enabled: switches.subwayEnabled,
-    seoulApiKey: asRequired(process.env.SEOUL_SUBWAY_API_KEY),
+    get seoulApiKey(): string {
+      return roleScoped("SEOUL_SUBWAY_API_KEY");
+    },
     apiDailyCap: 220_000,
     trainMapDailyCap: 10_000,
     collections: {
@@ -156,7 +183,9 @@ const config = {
   },
 
   holidays: {
-    serviceKey: asRequired(process.env.DATA_GO_KR_SERVICE_KEY),
+    get serviceKey(): string {
+      return roleScoped("DATA_GO_KR_SERVICE_KEY");
+    },
     collections: {
       publicHolidays: "public_holidays",
     },
@@ -190,12 +219,18 @@ const config = {
   },
 
   naver: {
-    styleId: asRequired(process.env.NAVER_MAP_STYLE_ID),
+    get styleId(): string {
+      return roleScoped("NAVER_MAP_STYLE_ID");
+    },
   },
 
   api: {
-    hsscNew: apiUrl("API_HSSC_NEW_PROD", "API_HSSC_NEW_DEV"),
-    seoulBusServiceKey: asRequired(process.env.SEOUL_BUS_SERVICE_KEY),
+    get hsscNew(): string {
+      return roleScoped("API_HSSC_NEW_PROD");
+    },
+    get seoulBusServiceKey(): string {
+      return roleScoped("SEOUL_BUS_SERVICE_KEY");
+    },
   },
 
   // WHY: read per call, not at import: ROLE is set per execution context, and a test sets it per case.

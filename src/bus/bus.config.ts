@@ -27,20 +27,19 @@ const SERVICE_KEY_MESSAGES: Readonly<Record<ServiceKeyProblem, string>> = {
 };
 
 // WHY: the test environment runs without the key (jest.setup.ts), so only a malformed one fails there.
-function checkServiceKey(key: unknown): string {
+function checkServiceKey(key: unknown): void {
   const problem = validateServiceKey(key);
   if (problem !== null && !(config.isTest && problem === "missing")) {
     throw new Error(`SEOUL_BUS_SERVICE_KEY invalid: ${SERVICE_KEY_MESSAGES[problem]}`);
   }
-  return String(key);
 }
 
-export function loadJongroRoutes(raw: unknown, serviceKey: string): ReadonlyArray<JongroRoute> {
+export function loadJongroRoutes(raw: unknown): ReadonlyArray<JongroRoute> {
   const entries = parseConfigFile(JONGRO_ROUTES_WORDS, jongroRoutesConfig, raw);
-  return deepFreeze(entries.map((entry) => toJongroRoute(entry, serviceKey)));
+  return deepFreeze(entries.map((entry) => toJongroRoute(entry)));
 }
 
-export const jongroRoutes = loadJongroRoutes(
-  JSON.parse(fs.readFileSync(JONGRO_ROUTES_FILE, "utf8")),
-  checkServiceKey(config.api.seoulBusServiceKey),
-);
+// WHY: only a role that polls TOPIS holds the key (ADR 0012, D4); there a malformed one still fails the boot.
+if (config.runsPollers()) checkServiceKey(config.api.seoulBusServiceKey);
+
+export const jongroRoutes = loadJongroRoutes(JSON.parse(fs.readFileSync(JONGRO_ROUTES_FILE, "utf8")));

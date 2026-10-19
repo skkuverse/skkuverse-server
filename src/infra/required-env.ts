@@ -71,48 +71,64 @@ export function apiUrl(
   return env[keys.dev] || env[keys.prod];
 }
 
+/** WHY: the roles a value is required in, from the code that reads it (ADR 0012, D4). */
+export type RequiredScope = "all" | "poller" | "api";
+
 export interface RequiredValue {
   name: string;
   env: string;
   value: string | undefined;
+  scope: RequiredScope;
+}
+
+export function isRequiredIn(scope: RequiredScope, role: Role): boolean {
+  return scope === "all" || role === "combined" || scope === role;
 }
 
 export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
   const mode = envMode(env);
-  const db = (name: string, key: string): RequiredValue => ({ name, env: key, value: dbNameFor(mode, env[key]) });
-  const raw = (name: string, key: string): RequiredValue => ({ name, env: key, value: env[key] });
+  const db = (name: string, key: string): RequiredValue => ({ name, env: key, value: dbNameFor(mode, env[key]), scope: "all" });
+  const raw = (name: string, key: string, scope: RequiredScope): RequiredValue => ({ name, env: key, value: env[key], scope });
   return [
-    raw("mongo.url", "MONGO_URL"),
+    raw("mongo.url", "MONGO_URL", "all"),
     db("mongo.dbName", "MONGO_DB_NAME_BUS_CAMPUS"),
     {
       name: "api.hsscNew",
       env: "API_HSSC_NEW_PROD",
       value: apiUrl(mode, env, { prod: "API_HSSC_NEW_PROD", dev: "API_HSSC_NEW_DEV" }),
+      scope: "poller",
     },
-    raw("api.seoulBusServiceKey", "SEOUL_BUS_SERVICE_KEY"),
-    raw("naver.styleId", "NAVER_MAP_STYLE_ID"),
+    raw("api.seoulBusServiceKey", "SEOUL_BUS_SERVICE_KEY", "poller"),
+    raw("naver.styleId", "NAVER_MAP_STYLE_ID", "api"),
     db("building.dbName", "MONGO_BUILDING_DB_NAME"),
     db("notices.dbName", "MONGO_NOTICES_DB_NAME"),
     db("eventmap.dbName", "MONGO_EVENTMAP_DB_NAME"),
     db("miniapps.dbName", "MONGO_MINIAPPS_DB_NAME"),
     db("meals.dbName", "MONGO_MEALS_DB_NAME"),
-    raw("notices.serviceStartDate", "NOTICES_SERVICE_START_DATE"),
-    raw("push.functionUrl", "FCM_FUNCTION_URL"),
-    raw("push.apiKey", "FCM_API_KEY"),
-    raw("notices.dispatch.internalToken", "INTERNAL_DISPATCH_TOKEN"),
-    raw("notices.overview.aiApiUrl", "AI_API_URL"),
-    raw("shuttleEta.naver.keyId", "NAVER_API_KEY_ID"),
-    raw("shuttleEta.naver.key", "NAVER_API_KEY"),
-    raw("shuttleEta.tmapAppKey", "TMAP_APP_KEY"),
-    raw("holidays.serviceKey", "DATA_GO_KR_SERVICE_KEY"),
-    raw("subway.seoulApiKey", "SEOUL_SUBWAY_API_KEY"),
+    raw("notices.serviceStartDate", "NOTICES_SERVICE_START_DATE", "api"),
+    raw("push.functionUrl", "FCM_FUNCTION_URL", "all"),
+    raw("push.apiKey", "FCM_API_KEY", "all"),
+    raw("notices.dispatch.internalToken", "INTERNAL_DISPATCH_TOKEN", "api"),
+    raw("notices.overview.aiApiUrl", "AI_API_URL", "api"),
+    raw("shuttleEta.naver.keyId", "NAVER_API_KEY_ID", "poller"),
+    raw("shuttleEta.naver.key", "NAVER_API_KEY", "poller"),
+    raw("shuttleEta.tmapAppKey", "TMAP_APP_KEY", "poller"),
+    raw("holidays.serviceKey", "DATA_GO_KR_SERVICE_KEY", "poller"),
+    raw("subway.seoulApiKey", "SEOUL_SUBWAY_API_KEY", "poller"),
     // WHY: production must report errors somewhere; elsewhere Sentry is opt-in.
-    ...(mode.isProduction ? [raw("sentry.dsn", "SENTRY_DSN")] : []),
+    ...(mode.isProduction ? [raw("sentry.dsn", "SENTRY_DSN", "all")] : []),
   ];
 }
 
+// WHY: an unknown ROLE checks every value; roleErrors() refuses the boot on its own.
+function checkedRole(env: NodeJS.ProcessEnv): Role {
+  const label = envRoleLabel(env);
+  return isRole(label) ? label : "combined";
+}
+
 export function listMissingRequired(env: NodeJS.ProcessEnv): RequiredValue[] {
-  return requiredValues(env).filter((v) => !v.value);
+  const role = checkedRole(env);
+  return requiredValues(env).filter((v) => isRequiredIn(v.scope, role) && !v.value);
 }
 
 export function describeMissingRequired(env: NodeJS.ProcessEnv = process.env): string[] {

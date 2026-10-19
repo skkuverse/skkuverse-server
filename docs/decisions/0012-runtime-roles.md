@@ -60,7 +60,7 @@ A collection that must hold a document before anything can serve it gets that do
 Each required value names the roles that need it:
 
 - **poller**: the upstream keys only pollers use (HSSC, TOPIS, NAVER Directions, TMAP, data.go.kr, the Seoul subway API).
-- **api**: what only serving uses (the AI API, the NAVER map style, the internal dispatch token).
+- **api**: what only serving uses (the AI API, the NAVER map style, the internal dispatch token, the notices service start date).
 - **all**: everything both use (MongoDB, the FCM function, Sentry).
 
 A process exits at boot, naming each missing value its role needs, and ignores the values its role does not. A value read in a role that does not require it throws at its first read, so a wrongly scoped value fails loudly instead of becoming `undefined` in a URL. One rendered `.env` still feeds every container; the scope is about what boot requires, not what is present.

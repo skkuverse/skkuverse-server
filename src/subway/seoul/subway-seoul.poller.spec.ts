@@ -88,7 +88,8 @@ function setup(startIso: string) {
   return { registerPoller, apiClient, trainmapClient, tracking, tickAt };
 }
 
-const restore = { ...subway };
+// The API key is a read-only getter (ADR 0012, D4); the tests change only these.
+const restore = { enabled: subway.enabled, apiDailyCap: subway.apiDailyCap, trainMapDailyCap: subway.trainMapDailyCap };
 afterEach(() => {
   Object.assign(subway, restore);
   jest.clearAllMocks();
