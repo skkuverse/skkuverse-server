@@ -40,7 +40,7 @@ describe("busServiceNoticesDataset", () => {
     expect(JSON.stringify(parsed.data)).toBe(JSON.stringify(fixtureNotices()));
   });
 
-  it.each(["info", "warning", "error", "ai"])("accepts the %s style", (style) => {
+  it.each(["info", "warning", "ai"])("accepts the %s style", (style) => {
     // Arrange
     const data = fixtureNotices();
     data.services["campus-inja"].notices = [{ style, text: "공지" }];
@@ -53,6 +53,15 @@ describe("busServiceNoticesDataset", () => {
     // Arrange
     const data = fixtureNotices();
     data.services["campus-inja"].notices = [{ style: "info", text: "공지" }, { style, text: "공지" }];
+
+    // Act & Assert
+    expect(noticeIssuesOf(data)).toEqual(["services.campus-inja.notices.1.style"]);
+  });
+
+  it("refuses the error style, which the app reads as info, at its path", () => {
+    // Arrange
+    const data = fixtureNotices();
+    data.services["campus-inja"].notices = [{ style: "info", text: "공지" }, { style: "error", text: "공지" }];
 
     // Act & Assert
     expect(noticeIssuesOf(data)).toEqual(["services.campus-inja.notices.1.style"]);
