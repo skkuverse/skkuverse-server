@@ -222,6 +222,7 @@ describe("requiredValues scopes each value to the roles that read it", () => {
       MONGO_EVENTMAP_DB_NAME: "all",
       MONGO_MINIAPPS_DB_NAME: "all",
       MONGO_MEALS_DB_NAME: "all",
+      MONGO_CONTENT_DB_NAME: "all",
       NOTICES_SERVICE_START_DATE: "api",
       FCM_FUNCTION_URL: "all",
       FCM_API_KEY: "all",
@@ -276,5 +277,29 @@ describe("listMissingRequired checks only the values the role needs", () => {
     // Act & Assert
     expect(missingIn("poler", "AI_API_URL")).toEqual(["AI_API_URL"]);
     expect(missingIn("poler", "TMAP_APP_KEY")).toEqual(["TMAP_APP_KEY"]);
+  });
+});
+
+describe("requiredValues MONGO_CONTENT_DB_NAME", () => {
+  // The content database holds the datasets every replica serves and the poller may later write (ADR 0013).
+  it.each([
+    ["production", "skku_content"],
+    ["development", "skku_content_dev"],
+    ["test", "skku_content_test"],
+  ])("names the content database in %s as %s, required in every role", (nodeEnv, dbName) => {
+    // Act
+    const content = requiredValues({ NODE_ENV: nodeEnv, MONGO_CONTENT_DB_NAME: "skku_content" }).find((v) => v.env === "MONGO_CONTENT_DB_NAME");
+
+    // Assert
+    expect(content).toEqual({ name: "content.dbName", env: "MONGO_CONTENT_DB_NAME", value: dbName, scope: "all" });
+  });
+
+  it.each(["api", "poller", "combined"])("refuses a ROLE=%s boot without it, naming it", (role) => {
+    // Arrange
+    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", ROLE: role };
+    delete env.MONGO_CONTENT_DB_NAME;
+
+    // Act & Assert
+    expect(() => validateEnv(env)).toThrow(/content\.dbName \(env: MONGO_CONTENT_DB_NAME\)/);
   });
 });

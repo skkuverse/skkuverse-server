@@ -18,7 +18,9 @@
 #
 # Databases: in production mode dbNameFor() is a no-op, so every database name
 # the server writes is overridden to its _dev name here — bus_campus,
-# skkumap, skku_notices, eventmap, miniapps. A new database must be
+# skkumap, skku_notices, eventmap, miniapps, and skku_content, which the
+# api reads the datasets from (docs/decisions/0013-runtime-data-in-mongodb.md).
+# A new database must be
 # added here too: env_file .env injects the production names, and one left out
 # is written to in production. eventmap was in exactly that state once
 # (skkuverse#14).
@@ -51,6 +53,7 @@ x-api-dev-env: &api-dev-env
   - MONGO_NOTICES_DB_NAME=skku_notices_dev
   - MONGO_EVENTMAP_DB_NAME=eventmap_dev
   - MONGO_MINIAPPS_DB_NAME=miniapps_dev
+  - MONGO_CONTENT_DB_NAME=skku_content_dev
   - SENTRY_DSN=disabled
   - PUSH_DELIVERY=suppressed
   - BUILDING_SYNC=off
@@ -69,6 +72,7 @@ services:
       - MONGO_NOTICES_DB_NAME=skku_notices_dev
       - MONGO_EVENTMAP_DB_NAME=eventmap_dev
       - MONGO_MINIAPPS_DB_NAME=miniapps_dev
+      - MONGO_CONTENT_DB_NAME=skku_content_dev
       - SENTRY_DSN=disabled
       - PUSH_DELIVERY=suppressed
       - BUILDING_SYNC=off

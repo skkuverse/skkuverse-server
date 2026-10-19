@@ -105,6 +105,7 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
     db("eventmap.dbName", "MONGO_EVENTMAP_DB_NAME"),
     db("miniapps.dbName", "MONGO_MINIAPPS_DB_NAME"),
     db("meals.dbName", "MONGO_MEALS_DB_NAME"),
+    db("content.dbName", "MONGO_CONTENT_DB_NAME"),
     raw("notices.serviceStartDate", "NOTICES_SERVICE_START_DATE", "api"),
     raw("push.functionUrl", "FCM_FUNCTION_URL", "all"),
     raw("push.apiKey", "FCM_API_KEY", "all"),

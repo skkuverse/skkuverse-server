@@ -116,6 +116,14 @@ const config = {
     },
   },
 
+  content: {
+    dbName: dbNameFor(process.env.MONGO_CONTENT_DB_NAME),
+    collections: {
+      datasets: "datasets",
+      datasetRevisions: "dataset_revisions",
+    },
+  },
+
   miniapps: {
     dbName: dbNameFor(process.env.MONGO_MINIAPPS_DB_NAME),
     collections: {

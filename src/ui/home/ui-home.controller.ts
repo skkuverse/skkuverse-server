@@ -12,7 +12,7 @@ export class UiHomeController {
 
   @Get("home")
   @CacheControl(UI_CACHE_CONTROL)
-  getHome(@Lang() lang: SupportedLang): HomeLayout {
+  async getHome(@Lang() lang: SupportedLang): Promise<HomeLayout> {
     return this.home.getHomeLayout(lang);
   }
 }
