@@ -1,10 +1,13 @@
 import { z } from "zod";
 import { isHex6 } from "../../infra/color";
-import { LOCATION_ACCURACIES } from "../map.constants";
+import { isRecord } from "../../shared/object.util";
+import { BASE_LAYERS, LOCATION_ACCURACIES } from "../map.constants";
 import type { DailyWindow } from "../map.types";
-import { HHMM_RE } from "./map-layer-set.constants";
-import { chipLabelIssue, listSortIssue, optionIssues } from "./map-layer-set.rules";
-import type { ConfigIssue } from "./map-layer-set.types";
+import type { StoredLayerSets } from "./map-layer-set.document";
+import { BASE_CHIPS, HHMM_RE } from "./map-layer-set.constants";
+import { eventChipSpecs, eventLayerSpecs } from "./map-layer-set.mapper";
+import { chipLabelIssue, crossReferenceIssue, listSortIssue, optionIssues, validateChipSpecs } from "./map-layer-set.rules";
+import type { CheckedLayerSets, ConfigIssue } from "./map-layer-set.types";
 
 const text = z.string().regex(/\S/);
 
@@ -96,3 +99,44 @@ export type LayerSet = z.output<typeof layerSetFile>;
 export type EventFacetDef = LayerSet["facets"][number];
 export type EventListSort = z.output<typeof sort>;
 export type ItemPresentation = z.output<typeof presentation>;
+
+// WHY: the served chip row is checked only once the set's own references hold, as the committed-file loader did.
+export const checkedLayerSet = layerSetFile.superRefine((set, ctx) => {
+  const reference = crossReferenceIssue(set);
+  if (reference !== null) return addIssue(ctx, [[], reference]);
+  const chipErrors = validateChipSpecs([...BASE_CHIPS, ...eventChipSpecs(set)], [...BASE_LAYERS, ...eventLayerSpecs(set)]);
+  chipErrors.forEach((error) => addIssue(ctx, [["chips"], error]));
+});
+
+function repeatIssue(ids: ReadonlyArray<unknown>, index: number): ConfigIssue | null {
+  const first = ids.indexOf(ids[index]);
+  return first < index ? [["layerSetId"], `repeats the layer set "${String(ids[index])}" of layerSets[${first}]`] : null;
+}
+
+export const layerSetsDataset = z.object({ layerSets: z.array(checkedLayerSet) }).superRefine(({ layerSets }, ctx) => {
+  const ids = layerSets.map((set) => set.layerSetId);
+  ids.forEach((_, index) => {
+    const found = repeatIssue(ids, index);
+    if (found) addIssue(ctx, [["layerSets", index, ...found[0]], found[1]]);
+  });
+});
+
+/** WHY: each set parses alone, so a bad or repeated one is left out with its issues and the others serve (ADR 0010 D5). */
+function toCheckedLayerSets(sets: readonly unknown[]): CheckedLayerSets {
+  const ids = sets.map((set) => (isRecord(set) && typeof set.layerSetId === "string" ? set.layerSetId : null));
+  const checked: CheckedLayerSets = { layerSets: [], rejected: [] };
+  sets.forEach((set, index) => {
+    const parsed = checkedLayerSet.safeParse(set);
+    const repeat = ids[index] === null ? null : repeatIssue(ids, index);
+    const issues = parsed.success ? [] : parsed.error.issues.map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`);
+    if (repeat) issues.push(`${repeat[0].join(".")}: ${repeat[1]}`);
+    if (parsed.success && issues.length === 0) checked.layerSets.push(Object.freeze(parsed.data));
+    else checked.rejected.push({ index, layerSetId: ids[index] ?? null, issues });
+  });
+  return checked;
+}
+
+export const storedLayerSets = z.object({
+  revision: z.int().positive(),
+  data: z.object({ layerSets: z.array(z.unknown()) }).transform(({ layerSets }) => toCheckedLayerSets(layerSets)),
+}) satisfies z.ZodType<StoredLayerSets>;
