@@ -3,7 +3,7 @@ import type { BusGroupVisibility } from "../bus/config/bus-config.types";
 import type { LinkActionType } from "../shared/link-action.wire";
 import { KST_TIME_ZONE } from "../shared/time-zone.constants";
 import type { BannerImageRaw } from "./ui.schema";
-import type { MiniAppReference, TargetGrammar } from "./ui.types";
+import type { MiniAppGrammar, MiniAppReference, MiniAppRegistry, TargetGrammar } from "./ui.types";
 
 export function isBannerShowing(image: Pick<BannerImageRaw, "startAt" | "endAt">, now: Date): boolean {
   const at = now.getTime();
@@ -16,6 +16,16 @@ type LinkAction = { actionType?: LinkActionType; actionValue?: string };
 export function toMiniAppTargetReferences(link: LinkAction, path: MiniAppReference["path"], grammar: TargetGrammar): MiniAppReference[] {
   const target = link.actionType === "miniapp" ? grammar.parseTarget(link.actionValue) : null;
   return target === null ? [] : [{ dataset: "miniapps", id: target.id, path }];
+}
+
+// WHY: data that names no mini app is checked with no registry read; with no reference, no id is ever asked about.
+export function toGrammarOnlyRegistry(grammar: MiniAppGrammar): MiniAppRegistry {
+  return {
+    isRegistered: () => false,
+    isKnownMiniAppTarget: () => false,
+    parseTarget: (value) => grammar.parseTarget(value),
+    isSingleEmoji: (value) => grammar.isSingleEmoji(value),
+  };
 }
 
 export function findRepeatedId<T extends { id: string }>(items: readonly T[]): T | undefined {

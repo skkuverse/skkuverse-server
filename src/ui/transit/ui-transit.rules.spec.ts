@@ -24,7 +24,7 @@
 import fs from "fs";
 import path from "path";
 import { BusConfigService } from "../../bus/config/bus-config.service";
-import { fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
+import { fixtureRegistrySnapshot } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
 import { toTransitItemId, toTransitLayoutIssues, transitLayoutReferences, withoutUnresolvedItems } from "./ui-transit.rules";
 import { transitLayoutFile, type TransitLayoutRaw } from "./ui-transit.schema";
@@ -42,7 +42,7 @@ describe("toTransitItemId", () => {
   });
 });
 
-const registry = fixtureMiniappsService();
+const registry = fixtureRegistrySnapshot();
 const references: TransitLayoutReferences = { busGroupIds: ["campus", "hssc"], stationIds: ["hyehwa"], registry };
 const withCommute: TransitLayoutReferences = { ...references, busGroupIds: ["campus", "hssc", "commute"], stationIds: ["hyehwa", "jamsil", "gangnam"] };
 

@@ -39,10 +39,6 @@ export class MiniappsService {
     return this.loader.get();
   }
 
-  isRegistered(id: string): boolean {
-    return committedRegistry.isRegistered(id);
-  }
-
   parseTarget(value: unknown): MiniAppTarget | null {
     return parseMiniAppTarget(value);
   }

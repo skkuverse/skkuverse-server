@@ -196,9 +196,6 @@ describe("MiniappsService committed-file getters, until every reader awaits curr
     const registry = await service.current();
 
     // Assert
-    for (const id of [...registry.detailsById.keys(), "no-such-app"]) {
-      expect(service.isRegistered(id)).toBe(registry.isRegistered(id));
-    }
     expect(service.isKnownMiniAppTarget("eskara-2026/eskara")).toBe(registry.isKnownMiniAppTarget("eskara-2026/eskara"));
   });
 });

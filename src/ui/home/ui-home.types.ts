@@ -18,3 +18,9 @@ export interface HomeLayoutRevision {
   revision: number;
   layout: HomeLayoutRaw;
 }
+
+/** WHY: keyed `<layout revision>@<registry revision>`, `-` for none read, so a push of either recomputes it. */
+export interface ResolvedHomeLayout {
+  key: string;
+  layout: HomeLayoutRaw;
+}
