@@ -163,7 +163,13 @@ doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js 
 npm run data -- push bus-lane-corridor --prod --note "corridor rebuilt from OSM"
 ```
 
-`--dry-run` prints the summary and writes nothing; `--check-entry-exit` routes both directions through the file's entry and exit points with NAVER. The live poller reads a push within a minute.
+`--dry-run` prints the summary and writes nothing. After any `entryExit` edit, run the entry-exit check before the push, with the pull's `--file`:
+
+```bash
+doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js --file .data/prod/bus-lane-corridor.json --check-entry-exit
+```
+
+It routes both directions through the file's entry and exit points with NAVER; a point NAVER cannot route through fails every forced route, and each bus-lane run then loses its live value. Of `entryExit`, the push itself refuses only a point more than 500 m off the centerline, or a direction whose exit lies before its entry along it. The live poller reads a push within a minute.
 
 ### Check before a deploy
 

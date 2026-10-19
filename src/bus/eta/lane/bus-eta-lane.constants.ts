@@ -16,6 +16,9 @@ export const LANE_STRATEGIES: LaneStrategies = {
   },
 };
 
+// EVIDENCE: revision 1's southbound exit lies 328 m past the centerline's end; a typo moves a point kilometers.
+export const MAX_ENTRY_EXIT_OFFSET_M = 500;
+
 export const BUS_LANE_CORRIDOR_DATASET = "bus-lane-corridor";
 
 // WHY: a missing, invalid or unreadable corridor recurs on every read; one line a minute, as docs/reference/logging.md asks.

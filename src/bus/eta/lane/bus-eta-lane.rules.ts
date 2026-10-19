@@ -2,8 +2,8 @@ import { haversineM } from "../../../shared/distance.util";
 import type { LatLng } from "../../../shared/lat-lng.types";
 import { projectOntoPolyline } from "../../../shared/polyline.util";
 import type { EtaRun } from "../bus-eta.types";
-import { LANE_HOURS } from "./bus-eta-lane.constants";
-import type { CorridorEnds, LaneConfigIssue, LaneCorridor, LaneCorridorData, LaneHours, LaneStrategies, LegBounds, ProbeRoute, SequenceKey, SequenceStrategy } from "./bus-eta-lane.types";
+import { LANE_HOURS, MAX_ENTRY_EXIT_OFFSET_M } from "./bus-eta-lane.constants";
+import type { CorridorEnds, LaneConfigIssue, LaneCorridor, LaneCorridorData, LaneDirection, LaneHours, LaneStrategies, LegBounds, ProbeRoute, SequenceKey, SequenceStrategy } from "./bus-eta-lane.types";
 
 // WHY: the corridor script writes the last boundary as the length rounded to the meter; a larger gap means the
 // centerline changed without its boundaries.
@@ -78,9 +78,17 @@ function probeRouteIssues(route: ProbeRoute, index: number, earlier: readonly Pr
   return issues;
 }
 
+function entryExitIssues({ corridor, entryExit }: LaneCorridorData, direction: LaneDirection): LaneConfigIssue[] {
+  const offsets = Object.entries(entryExit[direction]).map(([end, point]) => ({ end, offsetM: projectOntoPolyline(corridor.centerline, point).offsetM }));
+  const issues = offsets.filter(({ offsetM }) => offsetM > MAX_ENTRY_EXIT_OFFSET_M).map(({ end, offsetM }) => ({ path: ["entryExit", direction, end], message: `lies ${Math.round(offsetM)} m off the centerline, past ${MAX_ENTRY_EXIT_OFFSET_M} m` }));
+  const { fromAlongM, toAlongM } = toLegBounds(corridor, entryExit[direction]);
+  if (direction === "southbound" ? fromAlongM < toAlongM : fromAlongM > toAlongM) return issues;
+  return [...issues, { path: ["entryExit", direction], message: `the entry (${Math.round(fromAlongM)} m along) and the exit (${Math.round(toAlongM)} m) run against ${direction}` }];
+}
+
 export function corridorIssues(data: LaneCorridorData): LaneConfigIssue[] {
   const routes = data.probeRoutes.flatMap((route, i) => probeRouteIssues(route, i, data.probeRoutes.slice(0, i)));
-  return [...boundaryIssues(data.corridor), ...routes];
+  return [...boundaryIssues(data.corridor), ...routes, ...entryExitIssues(data, "southbound"), ...entryExitIssues(data, "northbound")];
 }
 
 /** WHY: lane hours compare the run's KST departure, `from` inclusive and `to` exclusive, so a 21:00 run is a car run. */
