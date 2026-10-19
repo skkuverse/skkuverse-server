@@ -15,7 +15,6 @@ import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
-import { serviceNoticesFixture } from "../../helpers/bus/schedule-content";
 import { haversineM } from "../../../src/shared/distance.util";
 import { Clock } from "../../../src/infra/clock";
 import type { SupportedLang } from "../../../src/infra/types";
@@ -410,23 +409,6 @@ describe("commute arrival estimates", () => {
 
     // Assert
     for (const serviceId of COMMUTE_IDS) expect(optIns.get(serviceId)).toEqual(["up", "down"]);
-  });
-
-  it("keeps the pilot notice first, for the banner, and ends with the live-traffic ai notice", async () => {
-    // Act
-    const { services } = serviceNoticesFixture();
-    const notices = Object.fromEntries(COMMUTE_IDS.map((id) => [id, services[id]!.notices.map((n) => `${n.style}:${n.text}`)]));
-
-    // Assert
-    const pilot = "info:시범 운행 · 무료 · 킹고M QR 탑승";
-    const ai = "ai:도착 시간은 실시간 교통 상황을 반영해요";
-    expect(notices).toEqual({
-      "commute-jeongja": [pilot, ai],
-      "commute-jamsil": [pilot, ai],
-      "commute-dogok": [pilot, ai],
-      "commute-gangnam-yangjae": [pilot, "info:등교: 강남역 → 양재역 → 자과캠\n하교: 자과캠 → 양재역 → 강남역", ai],
-      "commute-gwanggyo": [pilot, ai],
-    });
   });
 });
 

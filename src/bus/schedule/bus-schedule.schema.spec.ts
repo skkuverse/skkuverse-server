@@ -1,10 +1,9 @@
 /**
  * The timetable document schemas: a document as the scripts write it passes, a
  * copy missing any required field fails, and entries and notices pass through
- * as the same objects. restDaysFile refuses a key that is neither a date nor a
- * month-day, and a label that is not a non-empty string.
+ * as the same objects.
  */
-import { busOverrideDoc, busScheduleDoc, restDaysFile, weekQuery } from "./bus-schedule.schema";
+import { busOverrideDoc, busScheduleDoc, weekQuery } from "./bus-schedule.schema";
 
 const PATTERN = { serviceId: "campus-inja", patternId: "weekday", days: [1, 2], entries: [{ time: "08:00" }] };
 const OVERRIDE = { serviceId: "campus-inja", date: "2026-10-21", type: "replace", label: null, notices: [{ style: "info", text: "x" }], entries: [] };
@@ -64,18 +63,6 @@ describe("busOverrideDoc by type", () => {
   it.each(["noservice", "Replace", "closed", ""])("rejects the type %j", (type) => {
     // Act & Assert
     expect(busOverrideDoc.safeParse({ ...OVERRIDE, type }).success).toBe(false);
-  });
-});
-
-describe("restDaysFile", () => {
-  it.each([
-    [{ _comment: "docs", "09-28": "공자탄신일", "2030-09-28": "특별" }, true],
-    [{ "2026-9-28": "공자탄신일" }, false],
-    [{ "09-28": "" }, false],
-    [{ "09-28": true }, false],
-  ])("%j → %s", (raw, expected) => {
-    // Act & Assert
-    expect(restDaysFile.safeParse(raw).success).toBe(expected);
   });
 });
 

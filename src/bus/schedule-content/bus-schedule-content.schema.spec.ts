@@ -6,8 +6,7 @@
  * `storedServiceNotices`: the stored envelope the read parses.
  * `skkuRestDaysDataset` (D8): SKKU's rest days, each key a calendar month-day
  * (one a leap year has) or a calendar date from 1900 to 2999, each label
- * non-empty, read as `RestDays` (the fixture against the committed file's
- * loadRestDays is __tests__/nest/bus/bus-dataset-fixtures.test.ts's).
+ * non-empty, read as `RestDays`.
  * `storedRestDays`: its stored envelope.
  */
 import fs from "fs";
@@ -198,7 +197,7 @@ describe("skkuRestDaysDataset", () => {
     expect(restDayIssuesOf({ [key]: "휴일" })).toEqual([]);
   });
 
-  it.each(["02-30", "13-01", "00-10", "2027-02-30", "2027-02-29", "1899-12-31", "3000-01-01", "_comment", "_about", "2-28", "2027-3-02", "0928", "", "09-28 "])(
+  it.each(["02-30", "13-01", "00-10", "2027-02-30", "2027-02-29", "1899-12-31", "3000-01-01", "_comment", "_about", "2-28", "2027-3-02", "2026-9-28", "0928", "", "09-28 "])(
     "refuses the key %j at its path",
     (key) => {
       // Act & Assert

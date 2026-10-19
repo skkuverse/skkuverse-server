@@ -9,8 +9,6 @@ const assets = [
   ["src/notices/categories.json", "dist/src/notices/categories.json"],
   ["src/notices/sources.json", "dist/src/notices/sources.json"],
   ["src/notices/exclude-reasons.json", "dist/src/notices/exclude-reasons.json"],
-  // src/bus/schedule/bus-schedule.config.ts reads this with fs.readFileSync(__dirname/<name>)
-  ["src/bus/schedule/skku-rest-days.json", "dist/src/bus/schedule/skku-rest-days.json"],
   // src/bus/stops/bus-stops.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/stops/schedule-stops.json", "dist/src/bus/stops/schedule-stops.json"],
   // src/bus/eta/lane/bus-eta-lane.config.ts reads this with fs.readFileSync(__dirname/<name>)
