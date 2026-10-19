@@ -1,6 +1,6 @@
 /**
  * The datasets `npm run data` knows, and the server code that validates each
- * one (openspec/changes/move-runtime-data-to-db, design D1 and D6).
+ * one (openspec/changes/archive/2026-10-19-move-runtime-data-to-db, design D1 and D6).
  *
  * `loadCatalog(load)` takes a loader of server modules by their path under
  * src/, without an extension: scripts/data.js passes one that requires the

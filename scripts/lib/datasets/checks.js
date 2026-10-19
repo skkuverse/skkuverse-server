@@ -1,6 +1,6 @@
 /**
  * The checks `npm run data` runs before every write, and `check` runs on
- * stored data (openspec/changes/move-runtime-data-to-db, design D6). Each
+ * stored data (openspec/changes/archive/2026-10-19-move-runtime-data-to-db, design D6). Each
  * collects every issue as { dataset, path, message }, so an operator sees all
  * of them at once:
  *
