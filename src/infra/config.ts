@@ -196,7 +196,6 @@ const config = {
   api: {
     hsscNew: apiUrl("API_HSSC_NEW_PROD", "API_HSSC_NEW_DEV"),
     seoulBusServiceKey: asRequired(process.env.SEOUL_BUS_SERVICE_KEY),
-    stationHyehwa: asRequired(process.env.API_STATION_HEWA),
   },
 
   // WHY: read per call, not at import: ROLE is set per execution context, and a test sets it per case.
