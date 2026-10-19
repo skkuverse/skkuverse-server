@@ -1,6 +1,7 @@
 /**
  * The committed Jongro route config loaded from jongro-routes.json: each
- * route's identity, seat count, arrival URL and transfer lines by ARS number,
+ * route's identity, TOPIS route id, seat count and transfer lines by ARS number
+ * (the TOPIS URLs are the client's, built with the key at each call),
  * frozen so a mutation downstream throws, and the boot-time refusals of a
  * malformed file. The stations are not here: they live in the registry
  * (src/bus/registry/, improve-jongro-realtime D6).
@@ -9,7 +10,7 @@ import { jongroRoutes, loadJongroRoutes } from "./bus.config";
 
 function issuesOf(raw: unknown): string[] {
   try {
-    loadJongroRoutes(raw, "test-seoul-bus-key");
+    loadJongroRoutes(raw);
     return [];
   } catch (err) {
     return (err as Error).message.split("; ");
@@ -39,17 +40,13 @@ describe("jongroRoutes derived from jongro-routes.json", () => {
     ]);
   });
 
-  it("builds each route's arrival URL from its TOPIS route id", () => {
-    // Act & Assert
-    expect(jongroRoutes[1]!.arrivalsUrl).toContain("/arrive/getArrInfoByRouteAll?serviceKey=");
-    expect(jongroRoutes[1]!.arrivalsUrl).toContain("&busRouteId=100900004&resultType=json");
-  });
+  it("holds no TOPIS URL or service key, so a role without the key can import it", () => {
+    // Act
+    const serialized = JSON.stringify(jongroRoutes);
 
-  it("builds each route's position URL over the whole route, whatever its stations", () => {
-    // Act & Assert
-    expect(jongroRoutes.map((r) => r.positionsUrl.replace(/serviceKey=[^&]*/, "serviceKey=K"))).toEqual(
-      ["100900008", "100900004", "100900005"].map((id) => `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRtid?serviceKey=K&busRouteId=${id}&resultType=json`),
-    );
+    // Assert
+    expect(serialized).not.toContain("serviceKey");
+    expect(serialized).not.toContain(process.env.SEOUL_BUS_SERVICE_KEY as string);
   });
 
   it("keys the transfer badges of the 2026-09 review by ARS number", () => {

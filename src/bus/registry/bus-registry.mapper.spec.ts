@@ -17,8 +17,6 @@ const committed: JongroRoute = {
   iconType: "village",
   refreshInterval: 40,
   seatCount: 18,
-  arrivalsUrl: "unused",
-  positionsUrl: "unused",
   transferLinesByArsId: { "01589": [{ line: "1", color: "0052A4" }] },
 };
 

@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import axios from "axios";
+import config from "../../../infra/config";
 import { UpstreamError } from "../../../infra/upstream.error";
 import type { JongroArrivalBus, JongroArrivalDoc } from "../../cache/bus-cache.document";
 import type { JongroRoute } from "../../bus.types";
 import { toCarNumber } from "../bus-realtime.mapper";
+import { toJongroArrivalsUrl, toJongroPositionsUrl } from "./bus-realtime-jongro.mapper";
 import { isNoResultHeaderCd, isUsableHeaderCd, toObservedAt, toTopisDecimal, toTopisInteger } from "./bus-realtime-jongro.rules";
 import type { JongroBusSighting } from "./bus-realtime-jongro.types";
 
@@ -50,15 +52,15 @@ interface TopisPositionRow {
 
 @Injectable()
 export class BusRealtimeJongroClient {
-  async fetchArrivals(route: Pick<JongroRoute, "code" | "arrivalsUrl">): Promise<JongroArrivalDoc[]> {
+  async fetchArrivals(route: Pick<JongroRoute, "code" | "busRouteId">): Promise<JongroArrivalDoc[]> {
     const what = `jongro ${route.code} list`;
-    const rows = await this.fetchRows<TopisArrivalRow>(route.arrivalsUrl, what);
+    const rows = await this.fetchRows<TopisArrivalRow>(toJongroArrivalsUrl(route.busRouteId, config.api.seoulBusServiceKey), what);
     return rows.map((row) => this.toArrival(row, what));
   }
 
-  async fetchSightings(route: Pick<JongroRoute, "code" | "positionsUrl">): Promise<JongroBusSighting[]> {
+  async fetchSightings(route: Pick<JongroRoute, "code" | "busRouteId">): Promise<JongroBusSighting[]> {
     const what = `jongro ${route.code} location`;
-    const rows = await this.fetchRows<TopisPositionRow>(route.positionsUrl, what);
+    const rows = await this.fetchRows<TopisPositionRow>(toJongroPositionsUrl(route.busRouteId, config.api.seoulBusServiceKey), what);
     return rows.map((row) => this.toSighting(row, what));
   }
 

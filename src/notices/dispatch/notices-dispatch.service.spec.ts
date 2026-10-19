@@ -467,6 +467,24 @@ describe("NoticesDispatchService.sweepPending", () => {
     expect(filter.pushAttempts).toEqual({ $not: { $gte: 2 } });
   });
 
+  it("sweeps in the poller, which holds no internal token (ADR 0012, D4)", async () => {
+    // Arrange
+    mockCollection.findOneAndUpdate.mockResolvedValueOnce(null);
+    const previous = process.env.ROLE;
+    process.env.ROLE = "poller";
+
+    try {
+      // Act
+      const summary = await service.sweepPending("safety-net");
+
+      // Assert
+      expect(summary).toMatchObject({ status: "ok", processed: 0 });
+    } finally {
+      if (previous === undefined) delete process.env.ROLE;
+      else process.env.ROLE = previous;
+    }
+  });
+
   it("treats an empty claim result as a queue drained and stops looping", async () => {
     // Arrange
     mockCollection.findOneAndUpdate.mockResolvedValueOnce(null);

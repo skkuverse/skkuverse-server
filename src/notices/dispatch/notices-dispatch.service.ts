@@ -39,7 +39,8 @@ export class NoticesDispatchService {
     this.sweepInFlight = true;
     const startedAt = this.clock.now().getTime();
     try {
-      const claimed = await this.claimBatch({ ...config.notices.dispatch, ...policy });
+      const { maxAgeDays, claimLeaseMs, maxAttempts, sweepBatchCap } = config.notices.dispatch;
+      const claimed = await this.claimBatch({ maxAgeDays, claimLeaseMs, maxAttempts, sweepBatchCap, ...policy });
       const tally = await this.dispatchAll(claimed);
       const summary: SweepSummary = {
         status: "ok",

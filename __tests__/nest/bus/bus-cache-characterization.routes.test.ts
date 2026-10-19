@@ -15,6 +15,9 @@
  * 6.6). The 5-second test also freezes `Date`, which `createCachedLoader`
  * (src/infra/cached-loader.ts) reads for its TTL.
  *
+ * A tick runs under ROLE=poller: the two apps share one process.env, and the
+ * pollers' upstream keys are readable only where pollers run (ADR 0012, D4).
+ *
  * A regression pin: a failure is a regression to report, and an expected value
  * changes only with the behavior it pins (`.claude/rules/tests.md`).
  */
@@ -188,7 +191,14 @@ function bootApp(): Promise<NestExpressApplication> {
 async function tick(name: string): Promise<void> {
   const poller = pollers.get(name);
   if (!poller) throw new Error(`no poller registered as ${name}: ${[...pollers.keys()].join(", ")}`);
-  await poller();
+  const role = process.env.ROLE;
+  process.env.ROLE = "poller";
+  try {
+    await poller();
+  } finally {
+    if (role === undefined) delete process.env.ROLE;
+    else process.env.ROLE = role;
+  }
 }
 
 function get(path: string): request.Test {
