@@ -10,8 +10,9 @@
  * toMiniAppRegistry, the frozen snapshot every reader takes of one registry
  * revision (move-miniapp-registry design D3): the index in `order` with both
  * logos resolved under the web origin it is given, each detail by its id, and the
- * lookups the old MiniappsService answered from the committed files. It is
- * pure and reads no config, so the data tool builds the same snapshot.
+ * lookups every reader asks of it (isRegistered, detailOf and the target
+ * grammar). It is pure and reads no config, so the data tool builds the same
+ * snapshot.
  */
 import { fixtureRegistry } from "../../__tests__/helpers/miniapps/registry-fixture";
 import { WEB_ORIGIN } from "../infra/origins";
@@ -199,7 +200,6 @@ describe("toMiniAppRegistry", () => {
     expect(registry.detailOf("no-such-app")).toBeUndefined();
   });
 
-  // Ported from miniapps.rules.spec.ts's isKnownMiniAppTarget block, which read the committed registry.
   it("accepts a target naming a registered mini app", () => {
     // Act & Assert
     expect(snapshot().isKnownMiniAppTarget("eskara-2026/eskara/wristband")).toBe(true);
