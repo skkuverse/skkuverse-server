@@ -14,8 +14,6 @@ export interface JongroRoute {
   readonly transferLinesByArsId: Readonly<Record<string, ReadonlyArray<TransferLine>>>;
 }
 
-export type ServiceKeyProblem = "missing" | "not-url-encoded";
-
 export interface ServiceNotice {
   style: "info" | "warning" | "error" | string;
   text: string;
