@@ -11,7 +11,7 @@
  * Code-shaped means `@`-prefixed, dotted, lowerCamelCase with an inner
  * capital, PascalCase with two words, an UPPER_CASE constant, or a title
  * that is one identifier (`resolve`, `Gone`); a title that opens in prose
- * ("the reads' query objects", "committed transit-layout.json") describes a
+ * ("the reads' query objects", "committed schedule-stops.json") describes a
  * scenario and is not checked. A name the sibling re-exports through
  * `export *` or destructures counts as exported.
  *
@@ -169,7 +169,7 @@ describe("spec title rule applies as specified", () => {
     "UiHomeService",
     "UiHomeService.getHomeLayout",
     "UiHomeService.getHomeLayout, phase 1",
-    "committed transit-layout.json",
+    "committed schedule-stops.json",
     "the reads' query objects",
     "miniapp_feed section",
     "building tiers",

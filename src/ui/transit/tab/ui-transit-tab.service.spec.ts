@@ -46,7 +46,7 @@ const mockedLogger = logger as unknown as Record<"info" | "warn" | "error", jest
 const callsOf = (level: "warn" | "error", event: string) =>
   mockedLogger[level].mock.calls.filter(([fields]) => fields?.event === event).map(([fields]) => fields);
 
-// Revision 1 of the transit-layout dataset: what transit-layout.json held at 5c0ee5a9.
+// Revision 1 of the transit-layout dataset, as stored on 2026-10-19.
 function fixtureLayout(): Record<string, unknown> {
   const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "../../../../__tests__/nest/ui/fixtures/transit-layout.dataset.json"), "utf8")) as Record<string, unknown>;
   delete fixture._about;

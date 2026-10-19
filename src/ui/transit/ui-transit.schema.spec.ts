@@ -1,5 +1,5 @@
 /**
- * The structure of transit-layout.json: version 1, sections of type
+ * The structure of the transit-layout dataset: version 1, sections of type
  * `item_list` with a slug id, an optional localized title and at least one item, and
  * items that place a bus group, a subway station, a written link or a group.
  * A group has a slug id, a localized title, an optional subtitle, an icon, a

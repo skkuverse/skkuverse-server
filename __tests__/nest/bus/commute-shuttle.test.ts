@@ -459,7 +459,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
   let app: NestExpressApplication;
   let httpServer: import("http").Server;
 
-  /** The transit tab's layout as stored: revision 1 of the `transit-layout` dataset, which holds what transit-layout.json held. */
+  /** The transit tab's layout as stored: revision 1 of the `transit-layout` dataset (fixtures/transit-layout.dataset.json of ui). */
   function storedTransitLayout(): FakeUiTransitRepository {
     const layout = JSON.parse(fs.readFileSync(path.join(__dirname, "../ui/fixtures/transit-layout.dataset.json"), "utf8")) as Record<string, unknown>;
     delete layout._about;
