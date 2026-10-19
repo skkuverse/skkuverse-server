@@ -6,7 +6,7 @@ import { FIRST_PARTY_MINIAPP_ORIGINS, WEB_ORIGIN } from "../infra/origins";
 import { isRecord } from "../shared/object.util";
 import { SHELL_BARS, SHELL_HEADERS, SHELL_STATUS_BARS } from "./miniapps.constants";
 import { toIndexEntry } from "./miniapps.mapper";
-import { registryFile, type MiniAppDetailRaw, type RegistryFile } from "./miniapps.schema";
+import { checkedRegistry, type MiniAppDetailRaw, type RegistryFile } from "./miniapps.schema";
 import type { LoadedRegistry } from "./miniapps.types";
 
 type Issue = z.core.$ZodRawIssue;
@@ -90,24 +90,9 @@ export function toRegistryWords(raw: unknown): (issue: Issue) => string | undefi
   };
 }
 
-function crossReferenceIssues({ index, details }: RegistryFile): string[] {
-  const ids = index.miniApps.map((entry) => entry.id);
-  const detailIds = Object.keys(details);
-  const mismatched = Object.entries(details).filter(([id, detail]) => detail.id !== id);
-  return [
-    ...(new Set(ids).size !== ids.length ? ["duplicate ids in index"] : []),
-    ...ids.filter((id) => !detailIds.includes(id)).map((id) => `index id "${id}" has no detail`),
-    ...mismatched.map(([id, detail]) => `detail.id "${detail.id}" != index id "${id}"`),
-    ...detailIds.filter((id) => !ids.includes(id)).map((id) => `detail "${id}" not present in index`),
-  ];
-}
-
 export function loadRegistry(index: unknown, details: Readonly<Record<string, unknown>>): Readonly<RegistryFile> {
-  const schema = registryFile.superRefine((file, ctx) => {
-    for (const message of crossReferenceIssues(file)) ctx.addIssue({ code: "custom", path: [], message });
-  });
   const raw = { index, details };
-  return parseConfigFile({ label: LABEL, error: toRegistryWords(raw) }, schema, raw);
+  return parseConfigFile({ label: LABEL, error: toRegistryWords(raw) }, checkedRegistry, raw);
 }
 
 function ownerOf(details: readonly MiniAppDetailRaw[], origin: string): string {

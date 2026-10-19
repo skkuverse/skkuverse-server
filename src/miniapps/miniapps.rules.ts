@@ -1,7 +1,7 @@
 import { AppError } from "../http/app.error";
 import { isOnWebviewOrigin, toWebviewUrl } from "../infra/webview-url";
 import { isRootRelativePath } from "../shared/link-target.util";
-import type { MiniAppTarget } from "./miniapps.types";
+import type { MiniAppTarget, RegistryIds, RegistryIssue } from "./miniapps.types";
 
 const PICTOGRAPHIC_RE = /\p{Extended_Pictographic}/u;
 const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
@@ -40,6 +40,17 @@ export function parseMiniAppTarget(value: unknown): MiniAppTarget | null {
 export function isKnownMiniAppTarget(value: unknown, registry: ReadonlyMap<string, unknown>): boolean {
   const target = parseMiniAppTarget(value);
   return target !== null && registry.has(target.id);
+}
+
+export function toRegistryCrossReferenceIssues({ index, details }: RegistryIds): RegistryIssue[] {
+  const ids = index.miniApps.map((entry) => entry.id);
+  const entryIdPath = (position: number) => ["index", "miniApps", position, "id"];
+  return [
+    ...ids.flatMap((id, position) => (ids.indexOf(id) !== position ? [{ path: entryIdPath(position), message: `duplicate ids in index: "${id}"` }] : [])),
+    ...ids.flatMap((id, position) => (Object.hasOwn(details, id) ? [] : [{ path: entryIdPath(position), message: `index id "${id}" has no detail` }])),
+    ...Object.entries(details).flatMap(([id, detail]) => (detail.id === id ? [] : [{ path: ["details", id, "id"], message: `detail.id "${detail.id}" != index id "${id}"` }])),
+    ...Object.keys(details).flatMap((id) => (ids.includes(id) ? [] : [{ path: ["details", id], message: `detail "${id}" not present in index` }])),
+  ];
 }
 
 export function toMiniAppNotFound(id: string): AppError {
