@@ -17,7 +17,7 @@ export function isSingleEmoji(value: string): boolean {
 
 /**
  * WHY: the web view routes by path, so a fragment or its bare root lands on the wrong page at HTTP 200.
- * Only our own origin is held to it: a third party's routing is its own, and a refusal here fails the boot.
+ * Only our own origin is held to it: a third party's routing is its own, and a refusal here refuses the push.
  */
 export function isServableStartUrl(startUrl: string): boolean {
   return !isOnWebviewOrigin(startUrl) || toWebviewUrl(startUrl) !== null;
@@ -57,10 +57,18 @@ export function toMiniAppNotFound(id: string): AppError {
   return new AppError("MINIAPP_NOT_FOUND", `Unknown mini-app id: ${id}`, 404);
 }
 
-const originOf = (url: string): string | null => (URL.canParse(url) ? new URL(url).origin : null);
+// WHY: DNS reads `a.skkuverse.com.` as `a.skkuverse.com`, so a trailing dot must not move a URL off its owner's origin.
+function toDotlessUrl(url: string): URL | null {
+  if (!URL.canParse(url)) return null;
+  const parsed = new URL(url);
+  parsed.hostname = parsed.hostname.replace(/\.$/, "");
+  return parsed;
+}
+
+const originOf = (url: string): string | null => toDotlessUrl(url)?.origin ?? null;
 
 const isOurHost = (url: string): boolean => {
-  const host = URL.canParse(url) ? new URL(url).hostname : "";
+  const host = toDotlessUrl(url)?.hostname ?? "";
   return host === "skkuverse.com" || host.endsWith(".skkuverse.com");
 };
 

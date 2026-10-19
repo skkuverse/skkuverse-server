@@ -17,7 +17,7 @@
  * of these payloads is covered without this file being updated.
  */
 import type { Clock } from "../../../src/infra/clock";
-import { fixtureMiniappsService } from "../../helpers/miniapps/registry-fixture";
+import { fixtureMiniappsService, fixtureRegistry } from "../../helpers/miniapps/registry-fixture";
 import type { UiCampusRepository } from "../../../src/ui/campus/ui-campus.repository";
 import { UiCampusService } from "../../../src/ui/campus/ui-campus.service";
 import fs from "fs";
@@ -45,25 +45,16 @@ function webviewUrlsIn(value: unknown): string[] {
 }
 
 /**
- * The mini-app registry is walked too: it is the one place a webview URL would
- * be hand-typed rather than built from WEBVIEW_ORIGIN.
+ * The mini-app registry is walked too, as stored (the fixture, revision 1 of the
+ * `miniapps` dataset): it is the one place a webview URL would be hand-typed
+ * rather than built from WEBVIEW_ORIGIN.
  *
  * Safe to fold in whole: `webviewUrlsIn` filters on the string `webview.`, and
  * the four third-party entries (`student.skku.edu`, `www.skkuw.com`,
  * `webzine.skku.edu`) do not match it. Their URLs answer to their own hosts'
  * rules, not to the assertions below.
  */
-const registryDetails = Object.fromEntries(
-  fs
-    .readdirSync(path.join(__dirname, "../../../src/miniapps/details"))
-    .filter((f) => f.endsWith(".json"))
-    .map((f) => [
-      f,
-      JSON.parse(
-        fs.readFileSync(path.join(__dirname, "../../../src/miniapps/details", f), "utf8"),
-      ) as unknown,
-    ]),
-);
+const registryDetails = fixtureRegistry().details;
 
 // After the festival's campus banners closed (10/3), as on the day this test was pinned.
 const clock: Clock = { now: () => new Date("2026-10-13T03:00:00.000Z") };
@@ -82,7 +73,7 @@ const payloads: Record<string, () => unknown> = {
   "GET /ui/home/campus": () => new UiCampusService(storedCampusBanners(), fixtureMiniappsService(), clock).getCampusSheet("ko"),
   "GET /ui/home/scroll": () => new UiScrollService().listScrollCards("ko"),
   "GET /bus/config": async () => new BusConfigService(new BusStopsService(new SubwayStationsService()), storedBusRegistryService()).getBusGroups(),
-  "src/miniapps/details/*.json": () => registryDetails,
+  "the stored miniapps dataset's details": () => registryDetails,
 };
 
 describe("webview URLs the API hands out", () => {

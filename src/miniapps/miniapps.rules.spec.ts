@@ -164,12 +164,26 @@ describe("toRegistryIssues", () => {
     ["an unlisted mini-app host", "https://wave-run.mini.skkuverse.com/"],
     ["the apex host", "https://skkuverse.com/wave-run"],
     ["a listed host over plain http", "http://mukja.mini.skkuverse.com/"],
+    ["an unlisted mini-app host written with a trailing dot", "https://wave.mini.skkuverse.com./"],
+    ["the apex host written with a trailing dot", "https://skkuverse.com./"],
   ])("refuses a skkuverse.com start page on %s, at its startUrl", (_label, startUrl) => {
     // Act
     const issues = toRegistryIssues(startingAt({ "wave-run": startUrl }), { owners: {}, webviewOrigin: WEBVIEW_ORIGIN });
 
     // Assert
     expect(issues).toEqual([{ path: ["details", "wave-run", "startUrl"], message: expect.any(String) }]);
+  });
+
+  it("refuses a second mini app on an owned origin written with a trailing dot, at its startUrl, naming the owner", () => {
+    // Arrange
+    // WHY: DNS resolves `mukja.mini.skkuverse.com.` to the owner's host, so the dot must not hide whose origin it is.
+    const registryFile = withStartUrls({ skkuw: "https://mukja.mini.skkuverse.com./x" });
+
+    // Act
+    const issues = toRegistryIssues(registryFile, SITE);
+
+    // Assert
+    expect(issues).toEqual([{ path: ["details", "skkuw", "startUrl"], message: expect.stringContaining('"mukja"') }]);
   });
 
   it.each([

@@ -265,9 +265,9 @@ describe("GET /miniapps/:id", () => {
 
   it("404s on a path-traversal-shaped slug", async () => {
     // Arrange
-    // The loader reads details/<id>.json off disk at boot, never per-request,
-    // so a traversal slug can only miss the Map — but assert it, because that
-    // guarantee lives in the loader's design and not in the route.
+    // The id is only ever a key into the stored registry's details, never a
+    // path, so a traversal slug can only miss the Map — but assert it, because
+    // that guarantee lives in the snapshot's design and not in the route.
     const res = await request(httpServer).get("/miniapps/..%2F..%2Fpackage");
 
     // Act & Assert

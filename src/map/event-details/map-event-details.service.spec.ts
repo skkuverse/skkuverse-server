@@ -18,7 +18,7 @@ import fs from "fs";
 import path from "path";
 import type { Clock } from "../../infra/clock";
 import { MEDIA_ORIGIN } from "../../infra/origins";
-import { fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
+import { fixtureMiniAppIds, fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { MapEventService } from "../event/map-event.service";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import type { MapLayerSetRepository } from "../layer-set/map-layer-set.repository";
@@ -369,6 +369,7 @@ describe("the committed sheet, importer to wire", () => {
     jest.clearAllMocks();
     const { docs, errors } = parsePlacesFile(fs.readFileSync(REAL_FILE, "utf8"), {
       layerSetId: "eskara-2026",
+      miniAppIds: fixtureMiniAppIds(),
     });
     expect(errors).toEqual([]);
     mockFindActiveActivation.mockResolvedValue({

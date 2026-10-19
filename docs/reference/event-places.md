@@ -204,8 +204,10 @@ One file per layer set: `scripts/data/<layerSetId>-places.json`.
 - **A page of a registered mini app is a `miniapp` action, not `external`.** Write the target, not the
   URL: `"actionType": "miniapp", "actionValue": "eskara-2026/eskara/wristband"`. It opens inside the
   mini-app shell, under that mini app's name and badge, instead of the generic web view. The importer
-  refuses a target whose id is not in `src/miniapps/index.json`, so a typo fails the import rather than
-  shipping a sheet with the button silently missing. The grammar is in
+  refuses a target whose id the stored `miniapps` dataset does not register, read from the content
+  database on the same side as its eventmap database (`MONGO_CONTENT_DB_NAME`, `_dev` unless
+  `NODE_ENV=production`), so a typo fails the import rather than shipping a sheet with the button
+  silently missing. With no registry stored there, it refuses to run. The grammar is in
   [map-overlays-api.md §2.0](map-overlays-api.md).
 
 ### 5.3 A place's `detail` — the sheet body
