@@ -2,8 +2,11 @@
  * BusScheduleService over an in-memory timetable store: how a week resolves
  * (an override, then a rest day or holiday, then the pattern in effect, then
  * the fallback display), the week cache and its TTL, and the smart view's
- * opening day, suspension and noData. The holiday lookup is stubbed per test;
- * SERVICE_CONFIG is shared, and the suspend-window tests change it in place.
+ * opening day, suspension and noData. The holiday lookup is stubbed per test.
+ * Each service's notices and suspension come from an in-memory content store
+ * holding revision 1 of `bus-service-notices`; a test that needs other content
+ * stores it as the next revision before its first read (move-editorial-datasets
+ * D9).
  */
 
 jest.mock("../../infra/logger", () => ({
@@ -21,10 +24,13 @@ jest.mock("./bus-schedule.rules", () => ({
 
 import { FakeBusScheduleRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
+import { FakeBusScheduleContentRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule-content.repository.fake";
+import { serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../../__tests__/helpers/bus/schedule-content";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
-import { SERVICE_CONFIG as serviceConfig } from "../bus.constants";
+import type { BusScheduleContentRepository } from "../schedule-content/bus-schedule-content.repository";
+import { BusScheduleContentService } from "../schedule-content/bus-schedule-content.service";
 import type { BusScheduleDoc } from "./bus-schedule.document";
 import type { BusScheduleRepository } from "./bus-schedule.repository";
 import { BusScheduleService } from "./bus-schedule.service";
@@ -36,12 +42,21 @@ const { toNonOperatingDayLabel: getNonOperatingDayLabel } = require("./bus-sched
 const clock: Clock = { now: () => new Date() };
 
 let repository: FakeBusScheduleRepository;
+let content: FakeBusScheduleContentRepository;
 let service: BusScheduleService;
+
+const SUSPENSION = { from: "2026-06-21", until: "2026-08-31" };
+
+function scheduleServiceOver(timetable: FakeBusScheduleRepository, stored: FakeBusScheduleContentRepository): BusScheduleService {
+  const contentService = new BusScheduleContentService(asReal<BusScheduleContentRepository>(stored), clock);
+  return new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), contentService, clock);
+}
 
 beforeEach(() => {
   repository = new FakeBusScheduleRepository();
+  content = storedScheduleContentRepository();
   getNonOperatingDayLabel.mockImplementation(() => null);
-  service = new BusScheduleService(asReal<BusScheduleRepository>(repository), asReal<HolidaysService>(new FakeHolidaysService()), clock);
+  service = scheduleServiceOver(repository, content);
 });
 
 afterEach(() => {
@@ -105,33 +120,26 @@ describe("BusScheduleService.resolveWeek", () => {
   });
 
   it("override type replace → display schedule with override entries and merged notices", async () => {
-    // campus-inja carries no service notice of its own, so the test sets one:
-    // the merge must not depend on the copy service-config.ts holds today.
     // Arrange
-    const savedNotices = serviceConfig["campus-inja"]!.notices;
-    serviceConfig["campus-inja"]!.notices = [{ style: "info", text: "서비스 공지" }];
+    // The service notice is set here, so the merge does not depend on the content stored today.
+    content.storeServiceNotices(serviceNoticesWithNotices("campus-inja", [{ style: "info", text: "서비스 공지" }]));
+    repository.patterns = [
+      { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
+    ];
+    repository.overrides = [
+      { serviceId: "campus-inja", date: "2026-03-09", type: "replace", label: "ESKARA 1일차", notices: [{ style: "warning", text: "특별 운행" }], entries: [{ index: 1, time: "10:00", routeType: "fasttrack", busCount: 2, notes: "special" }] },
+    ];
 
     // Act & Assert
-    try {
-      repository.patterns = [
-        { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
-      ];
-      repository.overrides = [
-        { serviceId: "campus-inja", date: "2026-03-09", type: "replace", label: "ESKARA 1일차", notices: [{ style: "warning", text: "특별 운행" }], entries: [{ index: 1, time: "10:00", routeType: "fasttrack", busCount: 2, notes: "special" }] },
-      ];
-
-      const result = await service.resolveWeek("campus-inja", "2026-03-09");
-      const monday = result!.days[0]!;
-      expect(monday.display).toBe("schedule");
-      expect(monday.label).toBe("ESKARA 1일차");
-      expect((monday.schedule[0]! as { time: string }).time).toBe("10:00");
-      expect(monday.notices).toEqual([
-        { style: "info", text: "서비스 공지", source: "service" },
-        { style: "warning", text: "특별 운행", source: "override" },
-      ]);
-    } finally {
-      serviceConfig["campus-inja"]!.notices = savedNotices;
-    }
+    const result = await service.resolveWeek("campus-inja", "2026-03-09");
+    const monday = result!.days[0]!;
+    expect(monday.display).toBe("schedule");
+    expect(monday.label).toBe("ESKARA 1일차");
+    expect((monday.schedule[0]! as { time: string }).time).toBe("10:00");
+    expect(monday.notices).toEqual([
+      { style: "info", text: "서비스 공지", source: "service" },
+      { style: "warning", text: "특별 운행", source: "override" },
+    ]);
   });
 
   it("campus-inja and campus-jain schedule days carry the live-traffic ai notice", async () => {
@@ -831,7 +839,7 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     // Arrange
     jest.useFakeTimers();
     jest.setSystemTime(new Date("2026-07-15T03:00:00.000Z"));
-    serviceConfig["campus-inja"]!.suspend = { from: "2026-06-21", until: "2026-08-31" };
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", SUSPENSION));
 
     const callsBefore = repository.reads;
 
@@ -846,7 +854,6 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     expect(result!.days).toHaveLength(0);
     expect(repository.reads).toBe(callsBefore);
 
-    serviceConfig["campus-inja"]!.suspend = null;
     jest.useRealTimers();
   });
 
@@ -854,7 +861,7 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     // Arrange
     jest.useFakeTimers();
     jest.setSystemTime(new Date("2026-09-02T03:00:00.000Z"));
-    serviceConfig["campus-inja"]!.suspend = { from: "2026-06-21", until: "2026-08-31" };
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", SUSPENSION));
     repository.patterns = [
       { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
     ];
@@ -866,7 +873,6 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     expect(result!.status).toBe("active");
     expect(result!.selectedDate).not.toBeNull();
 
-    serviceConfig["campus-inja"]!.suspend = null;
     jest.useRealTimers();
   });
 
@@ -890,7 +896,7 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     // Arrange
     jest.useFakeTimers();
     jest.setSystemTime(new Date("2026-08-31T03:00:00.000Z"));
-    serviceConfig["campus-inja"]!.suspend = { from: "2026-06-21", until: "2026-08-31" };
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", SUSPENSION));
 
     // Act
     const result = await service.resolveSmartSchedule("campus-inja");
@@ -898,7 +904,6 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     // Assert
     expect(result!.status).toBe("suspended");
 
-    serviceConfig["campus-inja"]!.suspend = null;
     jest.useRealTimers();
   });
 
@@ -906,7 +911,7 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     // Arrange
     jest.useFakeTimers();
     jest.setSystemTime(new Date("2026-09-01T03:00:00.000Z"));
-    serviceConfig["campus-inja"]!.suspend = { from: "2026-06-21", until: "2026-08-31" };
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", SUSPENSION));
     repository.patterns = [
       { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
     ];
@@ -917,7 +922,6 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     // Assert
     expect(result!.status).not.toBe("suspended");
 
-    serviceConfig["campus-inja"]!.suspend = null;
     jest.useRealTimers();
   });
 
@@ -925,7 +929,7 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     // Arrange
     jest.useFakeTimers();
     jest.setSystemTime(new Date("2026-06-21T03:00:00.000Z"));
-    serviceConfig["campus-inja"]!.suspend = { from: "2026-06-21", until: "2026-08-31" };
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", SUSPENSION));
 
     // Act
     const result = await service.resolveSmartSchedule("campus-inja");
@@ -933,7 +937,6 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     // Assert
     expect(result!.status).toBe("suspended");
 
-    serviceConfig["campus-inja"]!.suspend = null;
     jest.useRealTimers();
   });
 
@@ -941,7 +944,7 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     // Arrange
     jest.useFakeTimers();
     jest.setSystemTime(new Date("2026-06-20T03:00:00.000Z"));
-    serviceConfig["campus-inja"]!.suspend = { from: "2026-06-21", until: "2026-08-31" };
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", SUSPENSION));
     repository.patterns = [
       { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
     ];
@@ -952,54 +955,107 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     // Assert
     expect(result!.status).not.toBe("suspended");
 
-    serviceConfig["campus-inja"]!.suspend = null;
+    jest.useRealTimers();
+  });
+});
+
+describe("BusScheduleService over the stored schedule content (move-editorial-datasets D9)", () => {
+  const WEEKDAYS = { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] };
+  const TRAFFIC_NOTICE = { style: "warning", text: "교통 통제로 늦어질 수 있어요" };
+
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate", "queueMicrotask"] });
+    jest.setSystemTime(new Date("2026-03-10T03:00:00.000Z"));
+    repository.patterns = [WEEKDAYS];
+  });
+
+  afterEach(() => {
     jest.useRealTimers();
   });
 
-  it("invalid suspend config (from > until) → ignored, logs warning", async () => {
+  it("carries a service's stored notices on its operating days, and none on a day without service", async () => {
     // Arrange
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date("2026-07-15T03:00:00.000Z"));
-    serviceConfig["campus-inja"]!.suspend = { from: "2026-08-31", until: "2026-06-21" };
-    repository.patterns = [
-      { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
-    ];
+    content.storeServiceNotices(serviceNoticesWithNotices("campus-inja", [TRAFFIC_NOTICE, { style: "ai", text: "AI 안내" }]));
 
     // Act
-    const result = await service.resolveSmartSchedule("campus-inja");
+    const week = await service.resolveWeek("campus-inja", "2026-03-09");
 
     // Assert
-    expect(result!.status).not.toBe("suspended");
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ serviceId: "campus-inja", suspend: expect.any(Object) }),
-      expect.stringContaining("invalid suspend config"),
-    );
-
-    serviceConfig["campus-inja"]!.suspend = null;
-    jest.useRealTimers();
+    expect(week!.days[0]!.notices).toEqual([
+      { ...TRAFFIC_NOTICE, source: "service" },
+      { style: "ai", text: "AI 안내", source: "service" },
+    ]);
+    expect(week!.days[5]).toMatchObject({ display: "hidden", notices: [] });
   });
 
-  it("invalid suspend date format → ignored, logs warning", async () => {
+  it("serves a pushed notice in a week it had cached once the content's TTL has passed, before the week's own TTL", async () => {
     // Arrange
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date("2026-07-15T03:00:00.000Z"));
-    serviceConfig["campus-inja"]!.suspend = { from: "bad-date", until: "2026-08-31" };
-    repository.patterns = [
-      { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
-    ];
+    await service.resolveWeek("campus-jain", "2026-03-09");
+    jest.advanceTimersByTime(50_000);
+    await service.resolveWeek("campus-inja", "2026-03-09");
+    content.storeServiceNotices(serviceNoticesWithNotices("campus-inja", [TRAFFIC_NOTICE]));
 
     // Act
-    const result = await service.resolveSmartSchedule("campus-inja");
+    jest.advanceTimersByTime(9_000);
+    const beforePush = await service.resolveWeek("campus-inja", "2026-03-09");
+    jest.advanceTimersByTime(1_000);
+    const afterPush = await service.resolveWeek("campus-inja", "2026-03-09");
 
     // Assert
-    expect(result!.status).not.toBe("suspended");
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ serviceId: "campus-inja" }),
-      expect.stringContaining("invalid suspend config"),
-    );
+    expect(beforePush!.days[0]!.notices.map((n) => n.text)).toEqual(["도착 시간은 실시간 교통 상황을 반영해요"]);
+    expect(afterPush!.days[0]!.notices).toEqual([{ ...TRAFFIC_NOTICE, source: "service" }]);
+  });
 
-    serviceConfig["campus-inja"]!.suspend = null;
-    jest.useRealTimers();
+  it("drops the weeks cached under an older revision once a new one is read", async () => {
+    // Arrange
+    // The cache is private; its keys are what shows that no week of the older revision is kept.
+    const cachedWeeks = () => [...(service as unknown as { weeks: Map<string, unknown> }).weeks.keys()];
+    await service.resolveWeek("campus-inja", "2026-03-09");
+    await service.resolveWeek("campus-jain", "2026-03-16");
+    const olderRevision = cachedWeeks();
+    content.storeServiceNotices(serviceNoticesWithNotices("campus-inja", [TRAFFIC_NOTICE]));
+    jest.advanceTimersByTime(60_000);
+
+    // Act
+    await service.resolveWeek("campus-inja", "2026-03-09");
+
+    // Assert
+    expect(olderRevision).toHaveLength(2);
+    expect(cachedWeeks()).toHaveLength(1);
+    expect(cachedWeeks()[0]).toMatch(/^campus-inja:2026-03-09:/);
+    expect(olderRevision).not.toContain(cachedWeeks()[0]);
+  });
+
+  it("answers suspended from a suspension stored in the content, resuming the day after it", async () => {
+    // Arrange
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-03-01", until: "2026-03-15" }));
+
+    // Act
+    const smart = await service.resolveSmartSchedule("campus-inja");
+
+    // Assert
+    expect(smart).toEqual({ serviceId: "campus-inja", status: "suspended", resumeDate: "2026-03-16", from: null, selectedDate: null, days: [] });
+  });
+
+  it("answers null for an unknown service without reading the content, even when it is unavailable", async () => {
+    // Arrange
+    const unread = scheduleServiceOver(repository, new FakeBusScheduleContentRepository());
+
+    // Act & Assert
+    await expect(unread.resolveWeek("campus-jaja", "2026-03-09")).resolves.toBeNull();
+    await expect(unread.resolveSmartSchedule("campus-jaja")).resolves.toBeNull();
+  });
+
+  it("rejects the week and the smart view with BUS_SCHEDULE_UNAVAILABLE (503) while no content was ever read", async () => {
+    // Arrange
+    const empty = new FakeBusScheduleContentRepository();
+    empty.failWith = new Error("server selection timed out");
+    const unread = scheduleServiceOver(repository, empty);
+
+    // Act & Assert
+    await expect(unread.resolveWeek("campus-inja", "2026-03-09")).rejects.toMatchObject({ code: "BUS_SCHEDULE_UNAVAILABLE", httpStatus: 503 });
+    await expect(unread.resolveSmartSchedule("campus-inja")).rejects.toMatchObject({ code: "BUS_SCHEDULE_UNAVAILABLE", httpStatus: 503 });
+    expect(repository.reads).toBe(0);
   });
 });
 

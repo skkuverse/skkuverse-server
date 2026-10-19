@@ -10,7 +10,9 @@
  * A regression pin: a failure is a regression to report, and an expected value
  * changes only with the behavior it pins (`.claude/rules/tests.md`). The
  * expected values were pinned while each service's notices, its suspension and
- * SKKU's rest days were still committed in code.
+ * SKKU's rest days were still committed in code, of which revision 1 of each
+ * dataset, and so each fixture, is a copy; serving them from the content
+ * database changed no byte here.
  *
  * The expected values are production's own answers
  * (fixtures/schedule-production.capture.json, source commit 5c0ee5a9), and the
@@ -18,7 +20,10 @@
  * `mongod` holds what production held then: the committed timetables
  * (scripts/data/*-schedule.json, built the way `npm run schedule` writes them,
  * with no override), the Jongno registry (fixtures/jongro-registry-routes.json
- * of bus) and no stored public holiday, so date-holidays answers. The smart
+ * of bus), no stored public holiday, so date-holidays answers, and the content
+ * database holds the fixture of `bus-service-notices` as revision 1, pushed the
+ * way `npm run data` stores it, through the tool's own
+ * scripts/lib/datasets/store.js. The smart
  * view merges stored arrival estimates, which the pollers wrote from NAVER and
  * TMAP and no test can reproduce, so `shuttle_eta` is seeded from the captured
  * bodies themselves: one document per estimated run, its offsets the captured
@@ -32,7 +37,9 @@
  *
  * A suspension of `campus-inja` is pinned last, by an app of its own whose
  * clock stands inside the window, since the timetable caches a resolved week
- * and the suspension is read per request.
+ * and the suspension is read per request. Each case pushes the suspension as
+ * the next revision before that app's first read and pushes revision 1's data
+ * back after it.
  */
 import crypto from "crypto";
 import fs from "fs";
@@ -47,9 +54,11 @@ import captured from "./fixtures/schedule-production.capture.json";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
+const store = require("../../../scripts/lib/datasets/store");
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type BusRegistryHelpers = typeof import("../../helpers/bus/bus-registry");
+type ScheduleContentHelpers = typeof import("../../helpers/bus/schedule-content");
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 
@@ -121,6 +130,20 @@ let mongod: TestMongod;
 let db: Db;
 let buildTestApp: BuildTestApp;
 let app: NestExpressApplication;
+let content: import("mongodb").Db;
+
+const STORED_BY = { by: "characterization@example.com", now: CAPTURED_AT };
+
+/** Pushes `campus-inja` suspended as the next revision of bus-service-notices; the returned call pushes revision 1's data back. */
+async function storeSuspension(suspend: { from: string; until: string }): Promise<() => Promise<void>> {
+  const { serviceNoticesFixture, serviceNoticesWithSuspension } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
+  const pushNext = async (data: unknown) => {
+    const { revision } = await store.readDataset(content, "bus-service-notices");
+    await store.push(content, "bus-service-notices", data, { baseRevision: revision, ...STORED_BY });
+  };
+  await pushNext(serviceNoticesWithSuspension("campus-inja", suspend));
+  return () => pushNext(serviceNoticesFixture());
+}
 
 async function bootAt(at: Date): Promise<NestExpressApplication> {
   const clock: Clock = { now: () => at };
@@ -143,6 +166,9 @@ beforeAll(async () => {
   await busDb.collection<JongroRouteDocument>(config.mongo.collections.jongroRoutes).insertMany(storedJongroRouteDocuments());
   const estimates = SERVICE_IDS.flatMap((serviceId) => estimatesOf(serviceId, (captured.smart[serviceId].ko.body.data as { days: CapturedDay[] }).days));
   await busDb.collection("shuttle_eta").insertMany(estimates);
+  content = db.getClient().db(config.content.dbName);
+  const { serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
+  await store.create(content, "bus-service-notices", serviceNoticesFixture(), STORED_BY);
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {
@@ -232,9 +258,7 @@ describe("GET /bus/schedule/data/campus-inja/smart inside a suspension", () => {
 
   it.each(LANGS)("answers in %s suspended until the day after the window, with no day", async (lang) => {
     // Arrange
-    const { SERVICE_CONFIG } = require("../../../src/bus/bus.constants");
-    const saved = SERVICE_CONFIG["campus-inja"].suspend;
-    SERVICE_CONFIG["campus-inja"].suspend = { ...SUSPENSION };
+    const restore = await storeSuspension(SUSPENSION);
     const data = { serviceId: "campus-inja", status: "suspended", resumeDate: "2027-03-01", from: null, selectedDate: null, days: [], message: MESSAGES[lang] };
     let res: request.Response;
 
@@ -242,7 +266,7 @@ describe("GET /bus/schedule/data/campus-inja/smart inside a suspension", () => {
     try {
       res = await request(suspended.getHttpServer()).get("/bus/schedule/data/campus-inja/smart").set("Accept-Language", lang);
     } finally {
-      SERVICE_CONFIG["campus-inja"].suspend = saved;
+      await restore();
     }
 
     // Assert

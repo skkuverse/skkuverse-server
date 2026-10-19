@@ -5,6 +5,7 @@
  * timetable when the estimates cannot be read.
  */
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
+import { storedScheduleContentService } from "../../../../__tests__/helpers/bus/schedule-content";
 import { FakeBusScheduleRepository } from "../../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeHolidaysService } from "../../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
@@ -44,7 +45,7 @@ beforeEach(() => {
   ];
   estimates = new FakeBusEtaRepository();
   estimates.docs.set(LIVE._id, LIVE);
-  const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), clock);
+  const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock), clock);
   service = new BusEtaSmartService(schedule, asReal<BusEtaRepository>(estimates), new BusStopsService(new SubwayStationsService()), clock);
 });
 

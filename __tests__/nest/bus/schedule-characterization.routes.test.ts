@@ -14,7 +14,9 @@
  * `/week` takes its week from `?from=` and refuses one more than a year from
  * today, so `Clock` stands at 10:00 KST on Tuesday 2026-10-20. Each test boots
  * its own app: ScheduleService keeps a resolved week in memory for an hour,
- * which one test pins on purpose.
+ * which one test pins on purpose. Each service's notices are revision 1 of the
+ * `bus-service-notices` dataset, stored in the content database through the
+ * data tool's scripts/lib/datasets/store.js (move-editorial-datasets D9).
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Collection, Document } from "mongodb";
@@ -23,7 +25,11 @@ import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 
+// scripts/ is plain CommonJS outside tsconfig, so require rather than import.
+const store = require("../../../scripts/lib/datasets/store");
+
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
+type ScheduleContentHelpers = typeof import("../../helpers/bus/schedule-content");
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 
@@ -61,6 +67,8 @@ beforeAll(async () => {
   const busDb = db.getClient().db(config.mongo.dbName);
   schedules = busDb.collection("bus_schedules");
   overrides = busDb.collection("bus_overrides");
+  const { serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
+  await store.create(db.getClient().db(config.content.dbName), "bus-service-notices", serviceNoticesFixture(), { by: "characterization@example.com", now: NOW });
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
