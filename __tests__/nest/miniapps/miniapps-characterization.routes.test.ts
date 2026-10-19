@@ -9,8 +9,8 @@
  * changes only with the behavior it pins (`.claude/rules/tests.md`).
  *
  * Each first-party origin's stored manifest is the one it served in production
- * on 2026-10-19 (fixtures/manifests.capture.json), seeded into the stored
- * manifest fake parsed, as the poller stores it. With them, each detail's body
+ * on 2026-10-19 (fixtures/manifests.capture.json), stored parsed in the test
+ * mongod's `miniapp_manifests`, as the poller stores it. With them, each detail's body
  * and weak ETag equal what production served at 2026-10-19T19:09:46Z, commit
  * f8dda24b: the six first-party shells come from their manifests, the four
  * third-party ones are the defaults.
@@ -20,17 +20,28 @@
  * index, every detail and the 404 answered the bytes, `Cache-Control`, `Vary`
  * and ETag pinned here, so the move of the registry into the `miniapps`
  * dataset must reproduce them.
+ *
+ * The registry is stored in a real `mongod`'s content database the way
+ * `npm run data` stores it: fixtures/miniapps.dataset.json without its
+ * provenance note, pushed through the tool's own scripts/lib/datasets/store.js
+ * as revision 1 of `miniapps` (task 9.1).
  */
 import fs from "fs";
 import path from "path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
-import { MiniappsManifestRepository } from "../../../src/miniapps/manifest/miniapps-manifest.repository";
-import { parseShellFields } from "../../../src/miniapps/miniapps.mapper";
-import { FakeMiniappsManifestRepository } from "../../helpers/fakes/miniapps/miniapps-manifest.repository.fake";
+import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
-import { buildTestApp } from "../../helpers/nest/build-test-app";
+
+// scripts/ is plain CommonJS outside tsconfig, so require rather than import.
+const store = require("../../../scripts/lib/datasets/store");
+
+type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
+type Config = typeof import("../../../src/infra/config");
+type Db = typeof import("../../../src/infra/db");
+type MiniappsMapper = typeof import("../../../src/miniapps/miniapps.mapper");
+type RegistryFixture = typeof import("../../helpers/miniapps/registry-fixture");
 
 const CAPTURED_AT: Clock = { now: () => new Date("2026-10-19T19:09:46.000Z") };
 
@@ -90,32 +101,50 @@ const NOT_FOUND = {
   etag: 'W/"53-xxcrm+A9KTvtPOJ7bpIdjoH0vU8"',
 };
 
-async function storedCapturedManifests(): Promise<FakeMiniappsManifestRepository> {
+/** The captured manifests' shell fields, parsed as the poller parses them, as its stored documents. */
+function capturedManifestDocs(): Array<{ _id: string; shell: unknown; fetchedAt: Date }> {
+  const { parseShellFields } = require("../../../src/miniapps/miniapps.mapper") as MiniappsMapper;
   const capture = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/manifests.capture.json"), "utf8")) as Record<string, unknown>;
   delete capture._about;
-  const repository = new FakeMiniappsManifestRepository();
-  for (const [origin, manifest] of Object.entries(capture)) {
-    await repository.upsertManifest(origin, parseShellFields((manifest as { shell?: unknown }).shell), CAPTURED_AT.now());
-  }
-  return repository;
+  return Object.entries(capture).map(([origin, manifest]) => ({
+    _id: origin,
+    shell: parseShellFields((manifest as { shell?: unknown }).shell),
+    fetchedAt: CAPTURED_AT.now(),
+  }));
 }
 
+let mongod: TestMongod;
+let db: Db;
 let app: NestExpressApplication;
 
 beforeAll(async () => {
-  const manifests = await storedCapturedManifests();
+  mongod = await startMongod();
+  db = require("../../../src/infra/db") as Db;
+  const config = require("../../../src/infra/config") as Config;
+  assertConfigReaches(mongod, config.mongo.url);
+  const { fixtureRegistry } = require("../../helpers/miniapps/registry-fixture") as RegistryFixture;
+  const content = db.getClient().db(config.content.dbName);
+  await store.create(content, "miniapps", fixtureRegistry(), { by: "characterization@example.com", now: CAPTURED_AT.now() });
+  // The manifest poller's own write (MiniappsManifestRepository.upsertManifest), one document per origin.
+  await db.getClient().db(config.miniapps.dbName).collection(config.miniapps.collections.manifests).insertMany(capturedManifestDocs() as never[]);
+}, MONGOD_START_TIMEOUT_MS);
+
+beforeAll(async () => {
+  const { buildTestApp } = require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp };
   app = await buildTestApp({
     imports: appModulesUnder("src/config/", "src/scheduling/", "src/miniapps/"),
-    overrides: [
-      { provide: MiniappsManifestRepository, useValue: manifests },
-      { provide: Clock, useValue: CAPTURED_AT },
-    ],
+    overrides: [{ provide: Clock, useValue: CAPTURED_AT }],
     role: "api",
   });
-});
+}, APP_BOOT_TIMEOUT_MS);
 
 afterAll(async () => {
-  await app?.close();
+  try {
+    await app?.close();
+    await db?.closeClient();
+  } finally {
+    await mongod?.stop();
+  }
 });
 
 describe("GET /miniapps", () => {

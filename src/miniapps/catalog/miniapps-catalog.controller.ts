@@ -21,14 +21,14 @@ export class MiniappsCatalogController {
 
   @Get()
   @CacheControl(REGISTRY_CACHE_CONTROL)
-  index(): MiniAppIndex {
+  index(): Promise<MiniAppIndex> {
     return this.catalog.index();
   }
 
   @Get(":id/notifications")
   @CacheControl(FEED_CACHE_CONTROL)
   async feed(@Param("id") id: string, @Lang() lang: SupportedLang): Promise<MiniAppFeed> {
-    if (!this.miniApps.isRegistered(id)) throw toMiniAppNotFound(id);
+    if (!(await this.miniApps.current()).isRegistered(id)) throw toMiniAppNotFound(id);
     return this.notifications.feed(id, lang);
   }
 

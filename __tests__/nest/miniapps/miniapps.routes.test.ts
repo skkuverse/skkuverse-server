@@ -1,13 +1,17 @@
 /**
  * GET /miniapps and GET /miniapps/:id through the production pipeline
- * (buildTestApp): the real catalog controller, service and registry, over no
- * stored manifests and the notification fakes.
+ * (buildTestApp): the real catalog controller, service and registry door, over
+ * the `miniapps` dataset fixture stored in the registry fake, no stored
+ * manifests and the notification fakes.
  *
  * These endpoints are the SSOT the mobile client replaced its bundled registry
  * with, so the guards that matter are: the index is ordered, image logo URIs are
  * absolute under WEB_ORIGIN or MEDIA_ORIGIN (never a bare path — the client renders them
  * directly into <Image source={{uri}}>), every index id resolves to a detail,
- * and an unknown slug 404s rather than 200-ing with null.
+ * and an unknown slug 404s rather than 200-ing with null. A replica that never
+ * read the registry answers 503 MINIAPP_REGISTRY_UNAVAILABLE on every registry
+ * route, uncached, and a pushed registry revision is served within a minute
+ * (move-miniapp-registry task 9.1, design D4).
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -16,6 +20,8 @@ import { Clock } from "../../../src/infra/clock";
 import { ConfigModule } from "../../../src/config/config.module";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { MiniappsModule } from "../../../src/miniapps/miniapps.module";
+import { MiniappsRepository } from "../../../src/miniapps/miniapps.repository";
+import { DATASET_CACHE_TTL_MS } from "../../../src/shared/dataset.constants";
 import { MiniappsCatalogModule } from "../../../src/miniapps/catalog/miniapps-catalog.module";
 import { MiniappsManifestClient } from "../../../src/miniapps/manifest/miniapps-manifest.client";
 import { MiniappsManifestRepository } from "../../../src/miniapps/manifest/miniapps-manifest.repository";
@@ -26,6 +32,8 @@ import { FakeMiniappsManifestClient } from "../../helpers/fakes/miniapps/miniapp
 import { FakeMiniappsManifestRepository } from "../../helpers/fakes/miniapps/miniapps-manifest.repository.fake";
 import { FakeMiniappsNotificationsClient } from "../../helpers/fakes/miniapps/miniapps-notifications.client.fake";
 import { FakeMiniappsNotificationsRepository } from "../../helpers/fakes/miniapps/miniapps-notifications.repository.fake";
+import { FakeMiniappsRepository } from "../../helpers/fakes/miniapps/miniapps.repository.fake";
+import { fixtureRegistry } from "../../helpers/miniapps/registry-fixture";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { miniAppIndex } from "../../../src/miniapps/catalog/miniapps-catalog.wire";
@@ -37,12 +45,11 @@ let httpServer: import("http").Server;
 // WHY: one fixed instant, so nothing these routes answer depends on the day the suite runs.
 const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
 
-beforeAll(async () => {
-  // No manifest is stored, as for a first-party mini app whose origin has never
-  // answered the poller: every mini app keeps its registry shell.
-  app = await buildTestApp({
+function bootCatalogApp(registry: FakeMiniappsRepository): Promise<NestExpressApplication> {
+  return buildTestApp({
     imports: [ConfigModule, SchedulingModule, MiniappsModule, MiniappsNotificationsModule, MiniappsCatalogModule],
     overrides: [
+      { provide: MiniappsRepository, useValue: registry },
       { provide: MiniappsManifestClient, useValue: new FakeMiniappsManifestClient() },
       { provide: MiniappsManifestRepository, useValue: new FakeMiniappsManifestRepository() },
       { provide: MiniappsNotificationsRepository, useValue: new FakeMiniappsNotificationsRepository() },
@@ -51,6 +58,12 @@ beforeAll(async () => {
     ],
     role: "api",
   });
+}
+
+beforeAll(async () => {
+  // No manifest is stored, as for a first-party mini app whose origin has never
+  // answered the poller: every mini app keeps its registry shell.
+  app = await bootCatalogApp(FakeMiniappsRepository.seededWith(fixtureRegistry()));
   httpServer = app.getHttpServer();
 });
 
@@ -280,5 +293,74 @@ describe("GET /miniapps and GET /miniapps/:id wire", () => {
 
     // Assert
     for (const res of details) expectWire(miniAppDetail, res.body.data);
+  });
+});
+
+describe("the registry routes on a replica that has never read the registry", () => {
+  let unreadApp: NestExpressApplication;
+
+  beforeAll(async () => {
+    const unreachable = new FakeMiniappsRepository();
+    unreachable.failWith = new Error("server selection timed out");
+    unreadApp = await bootCatalogApp(unreachable);
+  });
+
+  afterAll(async () => {
+    await unreadApp.close();
+  });
+
+  it.each(["/miniapps", "/miniapps/hssc", "/miniapps/hssc/notifications"])("answer %s with 503 MINIAPP_REGISTRY_UNAVAILABLE, uncached", async (url) => {
+    // Act
+    const res = await request(unreadApp.getHttpServer()).get(url);
+
+    // Assert
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({ error: { code: "MINIAPP_REGISTRY_UNAVAILABLE", message: "The mini app registry is unavailable" } });
+    expect(res.headers["cache-control"]).toBeUndefined();
+  });
+});
+
+describe("a registry push while the app runs", () => {
+  const T0 = new Date("2026-10-14T03:00:00.000Z");
+  let liveApp: NestExpressApplication;
+  let registry: FakeMiniappsRepository;
+
+  /** The fixture with one more third-party mini app, `wave-run`, registered. */
+  function withWaveRun(): ReturnType<typeof fixtureRegistry> {
+    const pushed = fixtureRegistry();
+    pushed.index.miniApps.push({ id: "wave-run", name: "Wave Run", order: 50, homeLogo: { kind: "emoji", emoji: "🌊" } });
+    pushed.details["wave-run"] = { version: 1, id: "wave-run", startUrl: "https://wave-run.example.com/", verified: false, relatedLinks: [] };
+    return pushed;
+  }
+
+  beforeEach(async () => {
+    // Only Date is faked: the registry cache reads Date.now(), and the HTTP stack keeps its real timers.
+    jest.useFakeTimers({ now: T0, doNotFake: ["nextTick", "setImmediate", "clearImmediate", "setTimeout", "clearTimeout", "setInterval", "clearInterval", "queueMicrotask", "hrtime", "performance"] });
+    registry = FakeMiniappsRepository.seededWith(fixtureRegistry());
+    liveApp = await bootCatalogApp(registry);
+  });
+
+  afterEach(async () => {
+    await liveApp.close();
+    jest.useRealTimers();
+  });
+
+  it("lists a pushed mini app and serves its detail within the dataset TTL, with no restart", async () => {
+    // Arrange
+    await request(liveApp.getHttpServer()).get("/miniapps");
+    registry.storeRegistry(withWaveRun());
+
+    // Act
+    jest.setSystemTime(T0.getTime() + DATASET_CACHE_TTL_MS - 1);
+    const beforeTtl = await request(liveApp.getHttpServer()).get("/miniapps/wave-run");
+    jest.setSystemTime(T0.getTime() + DATASET_CACHE_TTL_MS);
+    const index = await request(liveApp.getHttpServer()).get("/miniapps");
+    const detail = await request(liveApp.getHttpServer()).get("/miniapps/wave-run");
+
+    // Assert
+    expect(beforeTtl.status).toBe(404);
+    expect(index.body.data.miniApps.map((entry: { id: string }) => entry.id)).toContain("wave-run");
+    expect(detail.status).toBe(200);
+    expect(detail.body.data.startUrl).toBe("https://wave-run.example.com/");
   });
 });

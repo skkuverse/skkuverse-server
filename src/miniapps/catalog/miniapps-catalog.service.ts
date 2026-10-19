@@ -12,12 +12,13 @@ export class MiniappsCatalogService {
     private readonly manifests: MiniappsManifestService,
   ) {}
 
-  index(): MiniAppIndex {
-    return { version: this.miniApps.version, miniApps: [...this.miniApps.list] };
+  async index(): Promise<MiniAppIndex> {
+    const registry = await this.miniApps.current();
+    return { version: registry.version, miniApps: [...registry.indexEntries] };
   }
 
   async detail(id: string): Promise<MiniAppDetail | null> {
-    const detail = this.miniApps.getDetail(id);
+    const detail = (await this.miniApps.current()).detailOf(id);
     if (!detail) return null;
     return toDetailResponse(detail, await this.manifests.shellFieldsFor(detail.startUrl));
   }
