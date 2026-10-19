@@ -8,7 +8,15 @@
  * defaulting, the English i18n switch, the /home/campus section structure, the
  * Cache-Control of /home and /home/campus, and that /home/transitlist and
  * /home/scroll send none.
+ *
+ * The home layout is the stored `home-layout` dataset (ADR 0013), read through
+ * FakeUiHomeRepository seeded from fixtures/home-layout.dataset.json. Two more
+ * apps boot over other stores: one that never held a layout answers 503 with no
+ * Cache-Control, and one whose layout names a mini app the registry does not
+ * hold serves the rest of the layout.
  */
+import fs from "fs";
+import path from "path";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";
@@ -17,10 +25,12 @@ import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { UiCampusModule } from "../../../src/ui/campus/ui-campus.module";
 import { UiHomeModule } from "../../../src/ui/home/ui-home.module";
+import { UiHomeRepository } from "../../../src/ui/home/ui-home.repository";
 import { UiScrollModule } from "../../../src/ui/scroll/ui-scroll.module";
 import { UiTransitListModule } from "../../../src/ui/transit-list/ui-transit-list.module";
 import { UiModule } from "../../../src/ui/ui.module";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { FakeUiHomeRepository } from "../../helpers/fakes/ui/ui-home.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { campusSheet } from "../../../src/ui/campus/ui-campus.wire";
@@ -31,6 +41,19 @@ import { transitList, transitListMeta } from "../../../src/ui/transit-list/ui-tr
 // WHY: one fixed instant (12:00 KST, 2026-10-14), so the answers do not depend on the day the suite runs.
 const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
 
+/** The layout fixtures/home-layout.dataset.json holds, as `npm run data` stores it. */
+function committedLayout(): Record<string, unknown> {
+  const layout = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/home-layout.dataset.json"), "utf8")) as Record<string, unknown>;
+  delete layout._about;
+  return layout;
+}
+
+function storedHomeLayout(layout: Record<string, unknown> | null): FakeUiHomeRepository {
+  const repository = new FakeUiHomeRepository();
+  if (layout !== null) repository.storeHomeLayout(layout);
+  return repository;
+}
+
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 
@@ -40,6 +63,7 @@ beforeAll(async () => {
     overrides: [
       { provide: Clock, useValue: CLOCK },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
+      { provide: UiHomeRepository, useValue: storedHomeLayout(committedLayout()) },
     ],
     role: "api",
   });
@@ -239,5 +263,57 @@ describe("/ui bodies against their wire schemas", () => {
     expect(res.body.data.length).toBeGreaterThan(0);
     expectWire(transitList, res.body.data);
     expectWire(transitListMeta, meta);
+  });
+});
+
+describe("GET /ui/home over other stored layouts", () => {
+  let other: NestExpressApplication | undefined;
+
+  async function bootHome(layout: Record<string, unknown> | null): Promise<import("http").Server> {
+    other = await buildTestApp({
+      imports: [UiModule, UiHomeModule],
+      overrides: [
+        { provide: Clock, useValue: CLOCK },
+        { provide: UiHomeRepository, useValue: storedHomeLayout(layout) },
+      ],
+      role: "api",
+    });
+    return other.getHttpServer();
+  }
+
+  afterEach(async () => {
+    await other?.close();
+    other = undefined;
+  });
+
+  it("answers 503 HOME_LAYOUT_UNAVAILABLE with no Cache-Control when no layout was ever read", async () => {
+    // Arrange
+    const server = await bootHome(null);
+
+    // Act
+    const res = await request(server).get("/ui/home");
+
+    // Assert
+    expect(res.status).toBe(503);
+    expect(res.body.error).toEqual({ code: "HOME_LAYOUT_UNAVAILABLE", message: "The home layout is unavailable" });
+    expect(res.headers["cache-control"]).toBeUndefined();
+  });
+
+  it("leaves out the tile of a mini app the registry no longer holds and serves the rest with 200", async () => {
+    // Arrange
+    const layout = committedLayout() as { sections: Array<{ type: string; tiles?: Array<Record<string, unknown>> }> };
+    const tiles = layout.sections.find((section) => section.type === "tile_grid")!.tiles!;
+    const servedTileIds = tiles.map((tile) => tile.id);
+    tiles.splice(1, 0, { kind: "miniapp", id: "removed-by-a-deploy" });
+    const server = await bootHome(layout);
+
+    // Act
+    const res = await request(server).get("/ui/home");
+
+    // Assert
+    expect(res.status).toBe(200);
+    const grid = res.body.data.sections.find((section: { type: string }) => section.type === "tile_grid");
+    expect(grid.tiles.map((tile: { id: string }) => tile.id)).toEqual(servedTileIds);
+    expectWire(homeLayout, res.body.data);
   });
 });
