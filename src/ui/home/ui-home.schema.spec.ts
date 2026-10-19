@@ -1,6 +1,6 @@
 /**
- * The structure of home-layout.json: the committed file parses, a copy missing
- * either top-level field does not, a feed section without a limit gets the
+ * The structure of a home layout: revision 1 of the stored dataset parses, a
+ * copy missing either top-level field does not, a feed section without a limit gets the
  * default one, and ids repeat neither across sections and banners nor across
  * tiles.
  *
@@ -12,20 +12,27 @@ import path from "path";
 import { DEFAULT_MINIAPP_FEED_LIMIT } from "./ui-home.constants";
 import { homeLayoutFile, storedHomeLayout } from "./ui-home.schema";
 
-const COMMITTED = JSON.parse(fs.readFileSync(path.join(__dirname, "home-layout.json"), "utf8")) as Record<string, unknown>;
+// A copy of revision 1 of the stored home-layout dataset as of 2026-10-19.
+const DATASET_FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/home-layout.dataset.json");
+
+function storedLayout(): Record<string, unknown> {
+  const layout = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<string, unknown>;
+  delete layout._about;
+  return layout;
+}
 
 const feed = { type: "miniapp_feed", id: "eskara_feed", miniAppId: "eskara-2026" };
 const grid = (id: string, tileId: string) => ({ type: "tile_grid", id, tiles: [{ kind: "game", id: tileId }] });
 
 describe("homeLayoutFile", () => {
-  it("parses the committed home-layout.json", () => {
+  it("parses revision 1 of the stored layout", () => {
     // Act & Assert
-    expect(homeLayoutFile.safeParse(COMMITTED).success).toBe(true);
+    expect(homeLayoutFile.safeParse(storedLayout()).success).toBe(true);
   });
 
   it.each(Object.keys(homeLayoutFile.shape))("refuses a layout without its %s", (field) => {
     // Arrange
-    const rest: Record<string, unknown> = { ...COMMITTED };
+    const rest = storedLayout();
     delete rest[field];
 
     // Act & Assert
@@ -182,14 +189,9 @@ describe("homeLayoutFile refuses each structural mistake the boot check refused"
   });
 });
 
-// The committed home-layout.json, kept as the fixture the dataset is seeded from.
-const DATASET_FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/home-layout.dataset.json");
-
 /** A `datasets` document as scripts/lib/datasets/store.js writes it, with the fixture as its data. */
 function storedDocument(): Record<string, unknown> {
-  const data = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<string, unknown>;
-  delete data._about;
-  return { _id: "home-layout", revision: 3, data, updatedAt: new Date("2026-10-19T03:00:00.000Z"), updatedBy: "alice@example.com" };
+  return { _id: "home-layout", revision: 3, data: storedLayout(), updatedAt: new Date("2026-10-19T03:00:00.000Z"), updatedBy: "alice@example.com" };
 }
 
 describe("storedHomeLayout", () => {

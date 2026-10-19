@@ -23,7 +23,7 @@ const { _about, ...homeLayout } = fixture;
 void _about;
 
 describe("loadCatalog", () => {
-  it("accepts the committed home layout with the server's schema", () => {
+  it("accepts revision 1 of the stored home layout with the server's schema", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);
 
