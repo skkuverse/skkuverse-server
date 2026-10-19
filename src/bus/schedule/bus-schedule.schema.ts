@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { isRecord } from "../../shared/object.util";
 import type { BusOverrideDoc, BusScheduleDoc, OverrideNotice } from "./bus-schedule.document";
-import type { RestDays } from "../schedule-content/bus-schedule-content.types";
 import type { ScheduleEntry } from "./bus-schedule.wire";
 
 // WHY: entries and notices are served as stored, so they are checked, not rebuilt: a rebuilt object would
@@ -32,22 +31,6 @@ export const busOverrideDoc = z.discriminatedUnion("type", [
   z.object({ ...overrideFields, type: z.literal("replace"), entries: z.array(storedEntry) }),
   z.object({ ...overrideFields, type: z.literal("noService"), entries: z.array(storedEntry).optional() }),
 ]) satisfies z.ZodType<BusOverrideDoc>;
-
-const EXACT_KEY = /^\d{4}-\d{2}-\d{2}$/;
-const ANNUAL_KEY = /^\d{2}-\d{2}$/;
-
-/** WHY: keys starting with "_" document the file and are skipped; any other key must be a date or a month-day. */
-export const restDaysFile = z.record(z.string(), z.unknown()).transform((raw, ctx): RestDays => {
-  const restDays: RestDays = { exact: new Map(), annual: new Map() };
-  for (const [key, value] of Object.entries(raw)) {
-    if (key.startsWith("_")) continue;
-    if (typeof value !== "string" || value === "") ctx.addIssue({ code: "custom", path: [], message: `"${key}" needs a non-empty string label` });
-    else if (EXACT_KEY.test(key)) restDays.exact.set(key, value);
-    else if (ANNUAL_KEY.test(key)) restDays.annual.set(key, value);
-    else ctx.addIssue({ code: "custom", path: [], message: `"${key}" is neither YYYY-MM-DD nor MM-DD` });
-  }
-  return restDays;
-});
 
 const WEEK_START = /^\d{4}-\d{2}-\d{2}$/;
 const WEEK_START_MESSAGE = "from must be YYYY-MM-DD";

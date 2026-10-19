@@ -1,6 +1,0 @@
-{
-  "_comment": "SKKU's own rest days (founding days, 학사휴교, etc.) on which the 인자셔틀 does not run. Two key forms: \"MM-DD\" recurs every year, \"YYYY-MM-DD\" applies once. Value = the Korean label shown on the day chip. Precedence: YYYY-MM-DD > MM-DD > Korean public holiday (date-holidays computes those, so they never go here). Any other key form throws at boot. Keys starting with \"_\" are ignored. A change needs a server deploy.",
-  "_example": "\"2027-03-02\": \"학사휴교\" (once) / \"09-28\": \"공자탄신일\" (every year)",
-  "09-25": "건학기념일",
-  "09-28": "공자탄신일"
-}

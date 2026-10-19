@@ -12,8 +12,8 @@
     "expects": 547
   },
   "bus": {
-    "tests": 1001,
-    "expects": 1813
+    "tests": 1081,
+    "expects": 1972
   },
   "config": {
     "tests": 9,
