@@ -6,3 +6,9 @@ export interface HomeLayoutIssue {
   path: Array<string | number>;
   message: string;
 }
+
+export interface HomeLayoutReference {
+  dataset: "miniapps";
+  id: string;
+  path: Array<string | number>;
+}

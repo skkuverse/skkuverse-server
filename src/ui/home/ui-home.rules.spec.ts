@@ -7,11 +7,15 @@
  *
  * The registry is the real one: an id the tests treat as registered is in
  * src/miniapps/index.json, and "nope" is not.
+ *
+ * And the mini apps a layout references, wherever it names one, so a push can
+ * refuse a dangling one and a removal can find who still names it. A target is
+ * read with the registry's own grammar, so its path is not part of the id.
  */
 import fs from "fs";
 import path from "path";
 import { MiniappsService } from "../../miniapps/miniapps.service";
-import { toHomeLayoutIssues } from "./ui-home.rules";
+import { homeLayoutReferences, toHomeLayoutIssues } from "./ui-home.rules";
 import { homeLayoutFile } from "./ui-home.schema";
 
 const registry = new MiniappsService();
@@ -196,5 +200,80 @@ describe("toHomeLayoutIssues", () => {
       { path: ["sections", 1, "tiles", 0, "actionValue"], message: '"campus-map" actionValue "campus" is not valid for "route"' },
       { path: ["sections", 1, "tiles", 0, "icon", "emoji"], message: '"campus-map" icon must be exactly one emoji' },
     ]);
+  });
+});
+
+describe("homeLayoutReferences", () => {
+  it("lists the mini app of a miniapp tile, at its id", () => {
+    // Act & Assert
+    expect(homeLayoutReferences(layout(grid(), grid({ id: "more", tiles: [{ kind: "game", id: "wave-run" }, { kind: "miniapp", id: "inja" }] })), registry)).toEqual([
+      { dataset: "miniapps", id: "mukja", path: ["sections", 0, "tiles", 0, "id"] },
+      { dataset: "miniapps", id: "inja", path: ["sections", 1, "tiles", 1, "id"] },
+    ]);
+  });
+
+  it("lists the mini app of a feed section, at its miniAppId", () => {
+    // Act & Assert
+    expect(homeLayoutReferences(layout(feed()), registry)).toEqual([{ dataset: "miniapps", id: "eskara-2026", path: ["sections", 0, "miniAppId"] }]);
+  });
+
+  it.each([
+    ["its root", "eskara-2026"],
+    ["a path", "eskara-2026/eskara/wristband"],
+  ])("lists the mini app a link tile's miniapp action targets at %s, at its actionValue", (_label, actionValue) => {
+    // Act & Assert
+    expect(homeLayoutReferences(linkTile({ actionType: "miniapp", actionValue }), registry)).toEqual([
+      { dataset: "miniapps", id: "eskara-2026", path: ["sections", 0, "tiles", 1, "actionValue"] },
+    ]);
+  });
+
+  it.each([
+    ["its root", "eskara-2026"],
+    ["a path", "eskara-2026/eskara/wristband"],
+  ])("lists the mini app a banner's miniapp action targets at %s, at its actionValue", (_label, actionValue) => {
+    // Act & Assert
+    expect(homeLayoutReferences(banner({ actionValue }), registry)).toEqual([
+      { dataset: "miniapps", id: "eskara-2026", path: ["sections", 0, "items", 1, "actionValue"] },
+    ]);
+  });
+
+  it("lists an unregistered mini app too: whether it resolves is the checks' to say", () => {
+    // Act & Assert
+    expect(homeLayoutReferences(layout(tiles({ kind: "miniapp", id: "nope" })), registry)).toEqual([
+      { dataset: "miniapps", id: "nope", path: ["sections", 0, "tiles", 0, "id"] },
+    ]);
+  });
+
+  it.each([
+    ["a game tile", () => layout(tiles({ kind: "game", id: "wave-run" }))],
+    ["a route link tile", () => linkTile({})],
+    ["an external banner", () => banner({ actionType: "external", actionValue: "https://pf.kakao.com/_cjxexdG/chat" })],
+    ["a webview banner", () => banner({ actionType: "webview", actionValue: "/skku/lostandfound" })],
+    ["a banner with no action", () => banner({ actionType: undefined, actionValue: undefined })],
+    ["a miniapp target the grammar refuses", () => banner({ actionValue: "eskara-2026//evil.com/x" })],
+    ["a route action whose value reads as a mini app id", () => banner({ actionType: "route", actionValue: "mukja" })],
+  ])("lists nothing for %s", (_label, build) => {
+    // Act & Assert
+    expect(homeLayoutReferences(build(), registry)).toEqual([]);
+  });
+
+  it("lists every reference in section order, and none in the committed layout", () => {
+    // Arrange
+    const committed = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<string, unknown>;
+    delete committed._about;
+    const built = layout(
+      carousel({ items: [image({ actionValue: "hssc/" }), { type: "default" }] }),
+      feed({ miniAppId: "inja" }),
+      tiles(link({ actionType: "miniapp", actionValue: "mukja" }), { kind: "miniapp", id: "skkuw" }),
+    );
+
+    // Act & Assert
+    expect(homeLayoutReferences(built, registry)).toEqual([
+      { dataset: "miniapps", id: "hssc", path: ["sections", 0, "items", 0, "actionValue"] },
+      { dataset: "miniapps", id: "inja", path: ["sections", 1, "miniAppId"] },
+      { dataset: "miniapps", id: "mukja", path: ["sections", 2, "tiles", 0, "actionValue"] },
+      { dataset: "miniapps", id: "skkuw", path: ["sections", 2, "tiles", 1, "id"] },
+    ]);
+    expect(homeLayoutReferences(homeLayoutFile.parse(committed), registry)).toEqual([]);
   });
 });

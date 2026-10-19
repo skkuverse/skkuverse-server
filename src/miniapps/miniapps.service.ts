@@ -2,8 +2,9 @@ import { Injectable } from "@nestjs/common";
 import { WEB_ORIGIN } from "../infra/origins";
 import { registry } from "./miniapps.config";
 import { resolveLogo } from "./miniapps.mapper";
-import { isKnownMiniAppTarget, isSingleEmoji } from "./miniapps.rules";
+import { isKnownMiniAppTarget, isSingleEmoji, parseMiniAppTarget } from "./miniapps.rules";
 import type { MiniAppDetailRaw, MiniAppLogoRaw } from "./miniapps.schema";
+import type { MiniAppTarget } from "./miniapps.types";
 import type { MiniAppIndexEntry, MiniAppLogo } from "./miniapps.wire";
 
 // SEE: docs/decisions/0010-server-architecture.md (D1): the door other features read the registry through.
@@ -31,6 +32,10 @@ export class MiniappsService {
 
   getDetail(id: string): Readonly<MiniAppDetailRaw> | undefined {
     return registry.detailsById.get(id);
+  }
+
+  parseTarget(value: unknown): MiniAppTarget | null {
+    return parseMiniAppTarget(value);
   }
 
   isKnownMiniAppTarget(value: unknown): boolean {
