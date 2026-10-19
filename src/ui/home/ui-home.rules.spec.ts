@@ -25,7 +25,7 @@ import { homeLayoutFile } from "./ui-home.schema";
 
 const registry = new MiniappsService();
 
-// The committed home-layout.json, kept as the fixture the dataset is seeded from.
+// A copy of revision 1 of the stored home-layout dataset as of 2026-10-19.
 const DATASET_FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/home-layout.dataset.json");
 
 const IMAGE_URL = "https://media.skkuverse.com/home/banners/test-00000000.jpg";
@@ -77,13 +77,13 @@ const banner = (overrides: Record<string, unknown>) => layout(carousel({ items: 
 const linkTile = (overrides: Record<string, unknown>) => layout(tiles({ kind: "game", id: "wave-run" }, link(overrides)));
 
 describe("toHomeLayoutIssues", () => {
-  it("finds no issue in the committed layout", () => {
+  it("finds no issue in revision 1 of the stored layout", () => {
     // Arrange
-    const committed = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<string, unknown>;
-    delete committed._about;
+    const stored = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<string, unknown>;
+    delete stored._about;
 
     // Act & Assert
-    expect(toHomeLayoutIssues(homeLayoutFile.parse(committed), registry)).toEqual([]);
+    expect(toHomeLayoutIssues(homeLayoutFile.parse(stored), registry)).toEqual([]);
   });
 
   it.each([
@@ -262,10 +262,10 @@ describe("homeLayoutReferences", () => {
     expect(homeLayoutReferences(build(), registry)).toEqual([]);
   });
 
-  it("lists every reference in section order, and none in the committed layout", () => {
+  it("lists every reference in section order, and none in revision 1 of the stored layout", () => {
     // Arrange
-    const committed = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<string, unknown>;
-    delete committed._about;
+    const stored = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<string, unknown>;
+    delete stored._about;
     const built = layout(
       carousel({ items: [image({ actionValue: "hssc/" }), { type: "default" }] }),
       feed({ miniAppId: "inja" }),
@@ -279,7 +279,7 @@ describe("homeLayoutReferences", () => {
       { dataset: "miniapps", id: "mukja", path: ["sections", 2, "tiles", 0, "actionValue"] },
       { dataset: "miniapps", id: "skkuw", path: ["sections", 2, "tiles", 1, "id"] },
     ]);
-    expect(homeLayoutReferences(homeLayoutFile.parse(committed), registry)).toEqual([]);
+    expect(homeLayoutReferences(homeLayoutFile.parse(stored), registry)).toEqual([]);
   });
 });
 

@@ -1,62 +1,82 @@
 {
   "app-config": {
-    "tests": 9,
-    "expects": 23
+    "tests": 16,
+    "expects": 41
   },
   "architecture": {
     "tests": 414,
     "expects": 539
   },
   "building": {
-    "tests": 225,
-    "expects": 481
+    "tests": 261,
+    "expects": 547
   },
   "bus": {
-    "tests": 593,
-    "expects": 1194
+    "tests": 1004,
+    "expects": 1820
   },
   "config": {
-    "tests": 6,
-    "expects": 8
+    "tests": 9,
+    "expects": 13
+  },
+  "contracts": {
+    "tests": 30,
+    "expects": 42
+  },
+  "health": {
+    "tests": 5,
+    "expects": 13
+  },
+  "holidays": {
+    "tests": 62,
+    "expects": 118
   },
   "http": {
     "tests": 42,
     "expects": 113
   },
   "infra": {
-    "tests": 221,
-    "expects": 518
+    "tests": 396,
+    "expects": 914
   },
   "map": {
-    "tests": 433,
-    "expects": 844
+    "tests": 452,
+    "expects": 885
+  },
+  "meals": {
+    "tests": 54,
+    "expects": 87
   },
   "miniapps": {
-    "tests": 145,
-    "expects": 248
+    "tests": 203,
+    "expects": 325
   },
   "nest": {
-    "tests": 15,
-    "expects": 20
+    "tests": 28,
+    "expects": 49
   },
   "notices": {
-    "tests": 338,
-    "expects": 705
+    "tests": 339,
+    "expects": 706
   },
   "scheduling": {
-    "tests": 23,
-    "expects": 50
+    "tests": 28,
+    "expects": 64
   },
   "scripts": {
     "tests": 28,
     "expects": 51
   },
   "shared": {
-    "tests": 28,
-    "expects": 39
+    "tests": 68,
+    "expects": 91
+  },
+  "subway": {
+    "tests": 468,
+    "expects": 712
   },
   "ui": {
-    "tests": 32,
-    "expects": 79
+    "tests": 198,
+    "expects": 330
   }
 }

@@ -3,7 +3,7 @@ title: Event Places — Storage, Authoring and Operations
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-09-24
+last-updated: 2026-10-19
 audience: internal
 ---
 
@@ -410,8 +410,10 @@ npm run eventmap -- close                      # end it early (no --prod: _dev)
 It refuses `NODE_ENV=production` and `--prod`, and runs both steps with `NODE_ENV=development`. Only a
 local server reads `_dev`, so point a dev build at it (`EXPO_PUBLIC_BASE_URL`,
 [test-the-app-against-a-local-server.md](../how-to/test-the-app-against-a-local-server.md)); beta and
-TestFlight builds call production. The home layout and campus banners are committed files, not data:
-reverse-apply their takedown commit on a local checkout to see them too.
+TestFlight builds call production. The campus banners are a committed file: reverse-apply their
+takedown commit on a local checkout to see them too. The home layout is the `home-layout` dataset
+since 2026-10-19: push the festival layout to `_dev` with `npm run data`
+([configure-home.md](../how-to/configure-home.md)).
 
 ## 7. Source of truth (file map)
 

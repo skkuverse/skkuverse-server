@@ -3,7 +3,7 @@ title: Test the App Against a Local Server
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-17
+last-updated: 2026-10-19
 audience: internal
 ---
 
@@ -30,7 +30,7 @@ Development also accepts loopback CORS origins (`http://localhost:*`, `http://12
 
 The bus pollers (HSSC, Jongro, station) keep running locally, because the bus screens need them.
 
-Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuilds `.ts`, a second watcher re-runs `scripts/copy-build-assets.js` when any `src/**/*.json` changes (only the files listed there reach `dist/`), and nodemon restarts on either. Data read once at boot (notice tabs, mini-app registry, home layout, timetable stops) changes only through that restart.
+Code and JSON config are reloaded by `npm run dev` itself: `tsc --watch` rebuilds `.ts`, a second watcher re-runs `scripts/copy-build-assets.js` when any `src/**/*.json` changes (only the files listed there reach `dist/`), and nodemon restarts on either. Data read once at boot (notice tabs, mini-app registry, timetable stops) changes only through that restart. The home layout is no file: it is the `home-layout` dataset in `_dev`, read on every request under `CACHE=off`, so a `npm run data` push shows on the next request ([configure-home.md](configure-home.md)).
 
 ## Prerequisites
 
@@ -101,7 +101,7 @@ Sentry is off locally: the dev keys carry no `SENTRY_DSN`, and `npm run verify:s
 | Android cannot connect to `localhost` | Inside the emulator `localhost` is the emulator. Use `10.0.2.2` or `adb reverse`. |
 | A phone cannot connect | The phone is on a different network, or the macOS firewall blocks node. A `cloudflared` tunnel avoids both. |
 | A change in a `_dev` database does not show, and no request reaches the server log | The phone's HTTP cache is answering from an earlier run with `CACHE=on` (`max-age` up to 24 h, kept across app restarts). Clear the app's storage or reinstall it once. |
-| A change does not show, and the request does reach the server | The data is read once at boot (notice tabs, mini-app registry, home layout): save any `.ts` or `.json` file under `src/` to restart, or the screen caches it in the app (React Query `staleTime`): pull to refresh or reopen the screen. |
+| A change does not show, and the request does reach the server | The data is read once at boot (notice tabs, mini-app registry): save any `.ts` or `.json` file under `src/` to restart, or the screen caches it in the app (React Query `staleTime`): pull to refresh or reopen the screen. |
 | Boot fails with `config.invalid_runtime_switch` | A switch has a value outside its enum, or one of the three refused combinations. |
 | Boot fails with `config.invalid_role` | `ROLE` is set to a value other than `api`, `poller` or `combined`. Leave it unset for a local run, which boots as `combined`. |
 | A local web page gets no `Access-Control-Allow-Origin` | Only `http://localhost:*` and `http://127.0.0.1:*` are allowed in development, not LAN addresses. |

@@ -34,8 +34,6 @@ const assets = [
   ["src/miniapps/details/nsc.json", "dist/src/miniapps/details/nsc.json"],
   ["src/miniapps/details/skkuw.json", "dist/src/miniapps/details/skkuw.json"],
   ["src/miniapps/details/skkuzine.json", "dist/src/miniapps/details/skkuzine.json"],
-  // ui/home/ui-home.config.ts reads this with fs.readFileSync(__dirname/<name>)
-  ["src/ui/home/home-layout.json", "dist/src/ui/home/home-layout.json"],
   // ui/transit/ui-transit.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/ui/transit/transit-layout.json", "dist/src/ui/transit/transit-layout.json"],
   // ui/campus/ui-campus.config.ts reads this with fs.readFileSync(__dirname/<name>)

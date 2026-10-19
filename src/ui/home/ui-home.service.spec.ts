@@ -30,10 +30,10 @@ const mockedLogger = logger as unknown as Record<"info" | "warn" | "error", jest
 const callsOf = (level: "warn" | "error", event: string) =>
   mockedLogger[level].mock.calls.filter(([fields]) => fields?.event === event).map(([fields]) => fields);
 
-// The committed home-layout.json, kept as the fixture the dataset is seeded from.
+// A copy of revision 1 of the stored home-layout dataset as of 2026-10-19.
 const DATASET_FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/home-layout.dataset.json");
 
-function committedLayout(): Record<string, unknown> {
+function storedLayout(): Record<string, unknown> {
   const layout = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<string, unknown>;
   delete layout._about;
   return layout;
@@ -60,7 +60,7 @@ afterEach(() => {
 describe("UiHomeService.getHomeLayout", () => {
   it("serves the stored layout in the request's language", async () => {
     // Arrange
-    repository.storeHomeLayout(committedLayout());
+    repository.storeHomeLayout(storedLayout());
 
     // Act
     const layout = await service.getHomeLayout("en");
@@ -99,7 +99,7 @@ describe("UiHomeService.getHomeLayout", () => {
   it("serves the last layout through failed reloads inside the stale window, logging each", async () => {
     // Arrange
     jest.useFakeTimers({ now: NOW });
-    repository.storeHomeLayout(committedLayout());
+    repository.storeHomeLayout(storedLayout());
     const earlier = await service.getHomeLayout("ko");
     repository.failWith = new Error("server selection timed out");
 
@@ -137,7 +137,7 @@ describe("UiHomeService.getHomeLayout", () => {
 
   it("answers HOME_LAYOUT_UNAVAILABLE (503) on a first read that finds an invalid layout", async () => {
     // Arrange
-    repository.storeHomeLayout({ ...committedLayout(), extra: 1 });
+    repository.storeHomeLayout({ ...storedLayout(), extra: 1 });
 
     // Act & Assert
     await expect(service.getHomeLayout("ko")).rejects.toMatchObject({ code: "HOME_LAYOUT_UNAVAILABLE", httpStatus: 503 });
