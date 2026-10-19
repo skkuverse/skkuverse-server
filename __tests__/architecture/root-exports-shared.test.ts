@@ -19,6 +19,11 @@
  * are `live/`, `baseline/` and `smart/`) is a root too, held the same way: its
  * flows are its own sub-folders, and any file outside it is another module.
  *
+ * The data tool's catalog (scripts/lib/datasets/catalog.js) loads server
+ * modules by their path under src/ (`load("ui/transit/ui-transit.rules")`)
+ * and runs their exports at push, so each name it destructures from a load is
+ * a use by another module.
+ *
  * Where an export goes when its flow's role file is at its size cap is ADR
  * 0010 D9's: the file splits along a domain seam, never overflowing into
  * another role file or the module root, and a file with no seam takes a
@@ -51,6 +56,34 @@ function importsByModule(file: string, source: string): Map<string, Set<string>>
     for (const name of i.imported === "*" ? membersRead(i.local) : [i.imported]) names.add(name);
     out.set(i.target, names);
   }
+  return out;
+}
+
+const CATALOG = "scripts/lib/datasets/catalog.js";
+
+/** The path a `load("<path>")` call names, or `undefined` for any other expression. */
+function loadedPath(expression: ts.Expression | undefined): string | undefined {
+  if (!expression || !ts.isCallExpression(expression) || !ts.isIdentifier(expression.expression) || expression.expression.text !== "load") return undefined;
+  const [first] = expression.arguments;
+  return first && ts.isStringLiteral(first) ? first.text : undefined;
+}
+
+/** `src/<path>` → the names the catalog destructures from each `load("<path>")`, by their exported name. */
+function catalogLoadsByModule(file: string, source: string): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  const visit = (n: ts.Node): void => {
+    const loaded = ts.isVariableDeclaration(n) && ts.isObjectBindingPattern(n.name) ? loadedPath(n.initializer) : undefined;
+    if (loaded !== undefined && ts.isVariableDeclaration(n) && ts.isObjectBindingPattern(n.name)) {
+      const names = out.get(`src/${loaded}`) ?? new Set<string>();
+      for (const element of n.name.elements) {
+        const key = element.propertyName ?? element.name;
+        if (ts.isIdentifier(key)) names.add(key.text);
+      }
+      out.set(`src/${loaded}`, names);
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(parseSource(file, source));
   return out;
 }
 
@@ -154,7 +187,7 @@ function rootsWithSubModules(files: Iterable<string>): Set<string> {
 
 /** `<file>: <name>` for each root export of a module or sub-module with sub-modules that fewer than two flows share. */
 export function unsharedRootExports(sources: ReadonlyMap<string, string>): string[] {
-  const imports = [...sources].map(([file, source]) => [file, importsByModule(file, source)] as const);
+  const imports = [...sources].map(([file, source]) => [file, file === CATALOG ? catalogLoadsByModule(file, source) : importsByModule(file, source)] as const);
   const roots = rootsWithSubModules(sources.keys());
   return [...sources].flatMap(([file, source]) => {
     const match = SHARED_ROLES.exec(file);
@@ -267,10 +300,31 @@ describe("root-exports-shared rule applies to nested module roots", () => {
   });
 });
 
+describe("root-exports-shared rule counts the data tool's catalog as another module", () => {
+  it("passes an export that only scripts/lib/datasets/catalog.js loads, by its path under src/", () => {
+    // Arrange
+    const sources = new Map([
+      ["src/x/x.rules.ts", "export const CATALOG_ONLY = 1;\nexport const RENAMED = 2;\nexport const ONE_FLOW = 3;\nexport const OTHER_PATH = 4;"],
+      ["src/x/a/x-a.service.ts", 'import { ONE_FLOW } from "../x.rules";'],
+      ["src/x/b/x-b.service.ts", "export const B = 1;"],
+      [
+        "scripts/lib/datasets/catalog.js",
+        'function loadCatalog(load) {\n  const { CATALOG_ONLY, RENAMED: renamed } = load("x/x.rules");\n  const { OTHER_PATH } = load("y/y.rules");\n}',
+      ],
+    ]);
+
+    // Act
+    const violations = unsharedRootExports(sources);
+
+    // Assert
+    expect(violations).toEqual(["src/x/x.rules.ts: ONE_FLOW", "src/x/x.rules.ts: OTHER_PATH"]);
+  });
+});
+
 describe("root exports of modules with sub-modules", () => {
   it("are shared by two flows, the root or another module", () => {
     // Arrange
-    const sources = new Map(sourceFiles().map((f) => [f, readSource(f)]));
+    const sources = new Map([...sourceFiles(), CATALOG].map((f) => [f, readSource(f)]));
 
     // Act
     const violations = unsharedRootExports(sources);
