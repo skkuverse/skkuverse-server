@@ -14,6 +14,12 @@
  * apps boot over other stores: one that never held a layout answers 503 with no
  * Cache-Control, and one whose layout names a mini app the registry does not
  * hold serves the rest of the layout.
+ *
+ * The campus banners are the stored `campus-banners` dataset, read through
+ * FakeUiCampusRepository seeded from fixtures/campus-banners.dataset.json. Two
+ * more apps boot over other stores: one that never held banners answers 503
+ * CAMPUS_BANNERS_UNAVAILABLE with no Cache-Control, and one whose banner opens
+ * a mini app the registry does not hold serves the other banner.
  */
 import fs from "fs";
 import path from "path";
@@ -24,12 +30,14 @@ import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.re
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { UiCampusModule } from "../../../src/ui/campus/ui-campus.module";
+import { UiCampusRepository } from "../../../src/ui/campus/ui-campus.repository";
 import { UiHomeModule } from "../../../src/ui/home/ui-home.module";
 import { UiHomeRepository } from "../../../src/ui/home/ui-home.repository";
 import { UiScrollModule } from "../../../src/ui/scroll/ui-scroll.module";
 import { UiTransitListModule } from "../../../src/ui/transit-list/ui-transit-list.module";
 import { UiModule } from "../../../src/ui/ui.module";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { FakeUiCampusRepository } from "../../helpers/fakes/ui/ui-campus.repository.fake";
 import { FakeUiHomeRepository } from "../../helpers/fakes/ui/ui-home.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
@@ -54,6 +62,19 @@ function storedHomeLayout(layout: Record<string, unknown> | null): FakeUiHomeRep
   return repository;
 }
 
+/** The banners fixtures/campus-banners.dataset.json holds, as `npm run data` stores them. */
+function fixtureBanners(): Record<string, unknown> {
+  const banners = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/campus-banners.dataset.json"), "utf8")) as Record<string, unknown>;
+  delete banners._about;
+  return banners;
+}
+
+function storedCampusBanners(banners: Record<string, unknown> | null): FakeUiCampusRepository {
+  const repository = new FakeUiCampusRepository();
+  if (banners !== null) repository.storeCampusBanners(banners);
+  return repository;
+}
+
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 
@@ -64,6 +85,7 @@ beforeAll(async () => {
       { provide: Clock, useValue: CLOCK },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: UiHomeRepository, useValue: storedHomeLayout(fixtureLayout()) },
+      { provide: UiCampusRepository, useValue: storedCampusBanners(fixtureBanners()) },
     ],
     role: "api",
   });
@@ -315,5 +337,55 @@ describe("GET /ui/home over other stored layouts", () => {
     const grid = res.body.data.sections.find((section: { type: string }) => section.type === "tile_grid");
     expect(grid.tiles.map((tile: { id: string }) => tile.id)).toEqual(servedTileIds);
     expectWire(homeLayout, res.body.data);
+  });
+});
+
+describe("GET /ui/home/campus over other stored banners", () => {
+  let other: NestExpressApplication | undefined;
+
+  async function bootCampus(banners: Record<string, unknown> | null): Promise<import("http").Server> {
+    other = await buildTestApp({
+      imports: [UiModule, UiCampusModule],
+      overrides: [
+        { provide: Clock, useValue: CLOCK },
+        { provide: UiCampusRepository, useValue: storedCampusBanners(banners) },
+      ],
+      role: "api",
+    });
+    return other.getHttpServer();
+  }
+
+  afterEach(async () => {
+    await other?.close();
+    other = undefined;
+  });
+
+  it("answers 503 CAMPUS_BANNERS_UNAVAILABLE with no Cache-Control when no banners were ever read", async () => {
+    // Arrange
+    const server = await bootCampus(null);
+
+    // Act
+    const res = await request(server).get("/ui/home/campus");
+
+    // Assert
+    expect(res.status).toBe(503);
+    expect(res.body.error).toEqual({ code: "CAMPUS_BANNERS_UNAVAILABLE", message: "The campus banners are unavailable" });
+    expect(res.headers["cache-control"]).toBeUndefined();
+  });
+
+  it("leaves out the banner of a mini app the registry no longer holds and serves the other with 200", async () => {
+    // Arrange
+    const banners = fixtureBanners() as { items: Array<Record<string, unknown>> };
+    const [kept, removed] = banners.items.slice(0, 2).map(({ endAt: _endAt, ...open }) => open);
+    banners.items = [{ ...removed, actionType: "miniapp", actionValue: "removed-by-a-deploy" }, kept!];
+    const server = await bootCampus(banners);
+
+    // Act
+    const res = await request(server).get("/ui/home/campus");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.sections.map((section: { items: Array<{ id: string }> }) => section.items.map((banner) => banner.id))).toEqual([[kept!.id]]);
+    expectWire(campusSheet, res.body.data);
   });
 });

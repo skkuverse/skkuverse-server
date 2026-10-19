@@ -2,10 +2,14 @@
  * The structure of campus-banners.json: the committed file parses, a copy
  * missing any carousel field does not, and the carousel id and its banner ids
  * are one namespace.
+ *
+ * storedCampusBanners parses the `campus-banners` document as
+ * scripts/lib/datasets/store.js writes it: a positive whole revision and the
+ * carousel as its data.
  */
 import fs from "fs";
 import path from "path";
-import { campusBannersFile } from "./ui-campus.schema";
+import { campusBannersFile, storedCampusBanners } from "./ui-campus.schema";
 
 const COMMITTED = JSON.parse(fs.readFileSync(path.join(__dirname, "campus-banners.json"), "utf8")) as Record<
   string,
@@ -81,5 +85,48 @@ describe("campusBannersFile, on the carousels the boot check refused", () => {
   ])("names where %s repeats", (_label, raw, issue) => {
     // Act & Assert
     expect(issuesOf(raw)).toEqual([issue]);
+  });
+});
+
+describe("storedCampusBanners", () => {
+  const FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/campus-banners.dataset.json");
+
+  /** A `datasets` document as scripts/lib/datasets/store.js writes it, with revision 1 of the banners as its data. */
+  function storedDocument(): Record<string, unknown> {
+    const data = JSON.parse(fs.readFileSync(FIXTURE, "utf8")) as Record<string, unknown>;
+    delete data._about;
+    return { _id: "campus-banners", revision: 2, data, updatedAt: new Date("2026-10-19T03:00:00.000Z"), updatedBy: "alice@example.com" };
+  }
+
+  it("parses a stored campus-banners document", () => {
+    // Act
+    const parsed = storedCampusBanners.safeParse(storedDocument());
+
+    // Assert
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.revision).toBe(2);
+  });
+
+  it.each(["revision", "data"])("refuses a stored document without its %s", (field) => {
+    // Arrange
+    const rest = storedDocument();
+    delete rest[field];
+
+    // Act & Assert
+    expect(storedCampusBanners.safeParse(rest).success).toBe(false);
+  });
+
+  it.each([0, -1, 1.5, "3"])("refuses a revision of %p", (revision) => {
+    // Act & Assert
+    expect(storedCampusBanners.safeParse({ ...storedDocument(), revision }).success).toBe(false);
+  });
+
+  it("refuses stored data the carousel schema refuses", () => {
+    // Arrange
+    const stored = storedDocument();
+    const data = { ...(stored.data as Record<string, unknown>), extra: 1 };
+
+    // Act & Assert
+    expect(storedCampusBanners.safeParse({ ...stored, data }).success).toBe(false);
   });
 });
