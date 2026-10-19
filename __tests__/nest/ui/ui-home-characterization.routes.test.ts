@@ -135,7 +135,7 @@ afterAll(async () => {
   }
 });
 
-describe("GET /ui/home over the committed layout", () => {
+describe("GET /ui/home over revision 1 of the stored layout", () => {
   it.each<Lang>(["ko", "en", "zh"])("answers in %s the bytes production served, cacheable by the client alone", async (lang) => {
     // Act
     const res = await request(app.getHttpServer()).get("/ui/home").set("Accept-Language", lang);

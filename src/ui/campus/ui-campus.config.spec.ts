@@ -4,7 +4,7 @@
  * request.
  *
  * The check shares its carousel rules with the home layout
- * (ui-home.config.spec.ts covers those one by one), so this file pins what
+ * (ui-home.schema.spec.ts covers those one by one), so this file pins what
  * differs for campus.
  */
 import { MiniappsService } from "../../miniapps/miniapps.service";

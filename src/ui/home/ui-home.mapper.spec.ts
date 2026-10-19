@@ -1,15 +1,15 @@
 /**
  * toHomeLayout resolves the checked layout for one request: a banner shows only
  * inside its window, an emptied carousel stays, text is in the request language
- * with ko behind it, a media icon becomes a uri, and nothing kept only on disk
- * (a window, the untranslated text) reaches the wire.
+ * with ko behind it, a feed section without a limit gets the default one, a
+ * media icon becomes a uri, and nothing kept only in the stored layout (a
+ * window, the untranslated text) reaches the wire.
  */
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
 import { MiniappsService } from "../../miniapps/miniapps.service";
-import { loadHomeLayout } from "./ui-home.config";
 import { toHomeLayout } from "./ui-home.mapper";
-import type { HomeLayoutRaw } from "./ui-home.schema";
+import { homeLayoutFile } from "./ui-home.schema";
 
 const registry = new MiniappsService();
 
@@ -56,6 +56,17 @@ function link(overrides: Record<string, unknown> = {}): Record<string, unknown> 
 
 const tiles = (...list: Record<string, unknown>[]) => grid({ tiles: list });
 
+function feed(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    type: "miniapp_feed",
+    id: "eskara_feed",
+    miniAppId: "eskara-2026",
+    title: { ko: "에스카라 실시간 소식", en: "ESKARA live" },
+    limit: 3,
+    ...overrides,
+  };
+}
+
 function layout(...sections: Record<string, unknown>[]): Record<string, unknown> {
   return { version: 1, sections };
 }
@@ -67,8 +78,7 @@ describe("toHomeLayout", () => {
   };
 
   function resolveAt(iso: string, raw: Record<string, unknown>, lang: SupportedLang = "ko") {
-    const loaded = loadHomeLayout(raw, registry) as HomeLayoutRaw;
-    return toHomeLayout(loaded, { lang, now: new Date(iso), resolveLogo: (logo) => registry.resolveLogo(logo) });
+    return toHomeLayout(homeLayoutFile.parse(raw), { lang, now: new Date(iso), resolveLogo: (logo) => registry.resolveLogo(logo) });
   }
 
   it("shows a windowed banner only inside [startAt, endAt)", () => {
@@ -108,7 +118,7 @@ describe("toHomeLayout", () => {
     expect(zh.sections[1]).toMatchObject({ title: "Mini games" });
   });
 
-  it("ships no on-disk-only field", () => {
+  it("ships no field kept only in the stored layout", () => {
     // Arrange
     const raw = layout(carousel({ items: [image(WINDOW)] }), grid());
 
@@ -164,6 +174,20 @@ describe("toHomeLayout", () => {
         },
       ],
     });
+  });
+
+  it("resolves a feed section with its title in the request language, and one without a title or limit with the default limit", () => {
+    // Arrange
+    const raw = layout(feed(), feed({ id: "bare", title: undefined, limit: undefined }));
+
+    // Act
+    const { sections } = resolveAt("2026-09-25T00:00:00Z", raw, "en");
+
+    // Assert
+    expect(sections).toEqual([
+      { type: "miniapp_feed", id: "eskara_feed", miniAppId: "eskara-2026", title: "ESKARA live", limit: 3 },
+      { type: "miniapp_feed", id: "bare", miniAppId: "eskara-2026", limit: 3 },
+    ]);
   });
 
   it("serves a root-relative web view tile on the web view origin", () => {

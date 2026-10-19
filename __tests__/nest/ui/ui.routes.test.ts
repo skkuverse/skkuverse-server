@@ -42,7 +42,7 @@ import { transitList, transitListMeta } from "../../../src/ui/transit-list/ui-tr
 const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
 
 /** The layout fixtures/home-layout.dataset.json holds, as `npm run data` stores it. */
-function committedLayout(): Record<string, unknown> {
+function fixtureLayout(): Record<string, unknown> {
   const layout = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/home-layout.dataset.json"), "utf8")) as Record<string, unknown>;
   delete layout._about;
   return layout;
@@ -63,7 +63,7 @@ beforeAll(async () => {
     overrides: [
       { provide: Clock, useValue: CLOCK },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
-      { provide: UiHomeRepository, useValue: storedHomeLayout(committedLayout()) },
+      { provide: UiHomeRepository, useValue: storedHomeLayout(fixtureLayout()) },
     ],
     role: "api",
   });
@@ -301,7 +301,7 @@ describe("GET /ui/home over other stored layouts", () => {
 
   it("leaves out the tile of a mini app the registry no longer holds and serves the rest with 200", async () => {
     // Arrange
-    const layout = committedLayout() as { sections: Array<{ type: string; tiles?: Array<Record<string, unknown>> }> };
+    const layout = fixtureLayout() as { sections: Array<{ type: string; tiles?: Array<Record<string, unknown>> }> };
     const tiles = layout.sections.find((section) => section.type === "tile_grid")!.tiles!;
     const servedTileIds = tiles.map((tile) => tile.id);
     tiles.splice(1, 0, { kind: "miniapp", id: "removed-by-a-deploy" });
