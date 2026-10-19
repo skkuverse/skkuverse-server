@@ -1,6 +1,6 @@
 /**
  * The file `npm run data -- pull` writes and `push` reads
- * (openspec/changes/move-runtime-data-to-db, design D5):
+ * (openspec/changes/archive/2026-10-19-move-runtime-data-to-db, design D5):
  *
  *   .data/<dev|prod>/<dataset>.json
  *   { "dataset", "target": "dev" | "prod", "baseRevision", "pulledAt", "data" }

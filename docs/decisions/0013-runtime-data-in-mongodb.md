@@ -1,7 +1,7 @@
 ---
 title: Runtime Data Lives in MongoDB
 type: adr
-status: draft
+status: accepted
 owner: zoyoong124@gmail.com
 last-updated: 2026-10-19
 audience: internal
@@ -13,7 +13,7 @@ audience: internal
 
 ## Status
 
-Draft — 2026-10-19. The decisions come from the OpenSpec change `move-runtime-data-to-db` (`openspec/changes/move-runtime-data-to-db/design.md`), whose pilot dataset is the home layout. It is accepted when that change is archived.
+Accepted — 2026-10-19, shipped in PR #289 (reader) and PR #290 (committed file removed), each verified byte-identical in production. The decisions come from the OpenSpec change `move-runtime-data-to-db` (`openspec/changes/archive/2026-10-19-move-runtime-data-to-db/design.md`), whose pilot dataset is the home layout.
 
 It amends [ADR 0010](0010-server-architecture.md) D5 ("Static JSON" fails the boot) for data that leaves the repository, and replaces ADR 0010 D13's "server `src/` ↔ server `scripts/`" row for datasets. It relies on [ADR 0012](0012-runtime-roles.md): a script writes, and every replica reads within a TTL.
 

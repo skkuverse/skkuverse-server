@@ -1,6 +1,6 @@
 /**
  * The MongoDB protocol of `npm run data` (scripts/lib/datasets/store.js,
- * design D4 and D5 of openspec/changes/move-runtime-data-to-db), over a real
+ * design D4 and D5 of openspec/changes/archive/2026-10-19-move-runtime-data-to-db), over a real
  * `mongod`:
  *
  *   - a dataset is one `datasets` document whose revision only moves forward

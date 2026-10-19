@@ -1,6 +1,6 @@
 /**
  * The `npm run data` catalog (scripts/lib/datasets/catalog.js, design D1 and
- * D6 of openspec/changes/move-runtime-data-to-db): the datasets the tool knows
+ * D6 of openspec/changes/archive/2026-10-19-move-runtime-data-to-db): the datasets the tool knows
  * and the server code that validates each one. The command line loads it over
  * `dist/src`; this test loads the same catalog over `src/` through ts-jest, so
  * the catalog covered here is the catalog the tool runs.
