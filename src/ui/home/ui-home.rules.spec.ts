@@ -5,8 +5,9 @@
  * grammar and ids), and an emoji icon is exactly one emoji. Each issue names
  * its path, so a push can say where and a reader can leave that item out.
  *
- * The registry is the real one: an id the tests treat as registered is in
- * src/miniapps/index.json, and "nope" is not.
+ * The registry is the snapshot of revision 1 of the `miniapps` dataset fixture
+ * (__tests__/nest/miniapps/fixtures/miniapps.dataset.json): an id the tests
+ * treat as registered is in it, and "nope" is not.
  *
  * And the mini apps a layout references, wherever it names one, so a push can
  * refuse a dangling one and a removal can find who still names it. A target is
@@ -18,12 +19,12 @@
  */
 import fs from "fs";
 import path from "path";
-import { fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
+import { fixtureRegistrySnapshot } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import type { MiniAppRegistry } from "../ui.types";
 import { homeLayoutReferences, toHomeLayoutIssues, withoutUnresolvedItems } from "./ui-home.rules";
 import { homeLayoutFile } from "./ui-home.schema";
 
-const registry = fixtureMiniappsService();
+const registry = fixtureRegistrySnapshot();
 
 // A copy of revision 1 of the stored home-layout dataset as of 2026-10-19.
 const DATASET_FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/home-layout.dataset.json");

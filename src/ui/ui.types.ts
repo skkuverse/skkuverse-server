@@ -1,6 +1,10 @@
 import type { MiniappsService } from "../miniapps/miniapps.service";
 
-export type MiniAppRegistry = Pick<MiniappsService, "isRegistered" | "isKnownMiniAppTarget" | "isSingleEmoji" | "parseTarget">;
+type MiniAppRegistrySnapshot = Awaited<ReturnType<MiniappsService["current"]>>;
+
+export type MiniAppRegistry = Pick<MiniAppRegistrySnapshot, "isRegistered" | "isKnownMiniAppTarget" | "isSingleEmoji" | "parseTarget">;
+
+export type MiniAppGrammar = Pick<MiniappsService, "parseTarget" | "isSingleEmoji">;
 
 export type TargetGrammar = Pick<MiniAppRegistry, "parseTarget">;
 

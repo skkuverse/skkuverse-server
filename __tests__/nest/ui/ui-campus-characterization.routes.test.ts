@@ -15,6 +15,9 @@
  * The banners are stored in the real `mongod`'s content database the way
  * `npm run data` stores them: the fixture's data pushed through the tool's own
  * scripts/lib/datasets/store.js, as revision 1 of `campus-banners`.
+ * The mini app registry is stored beside it the same way, as revision 1 of
+ * `miniapps` (__tests__/nest/miniapps/fixtures/miniapps.dataset.json); no banner
+ * names a mini app, so the route reads no registry (move-miniapp-registry D4).
  *
  * Every banner closes at 2026-10-03T00:00+09:00 and has no start, so two
  * clocks pin the sheet:
@@ -40,6 +43,7 @@ const store = require("../../../scripts/lib/datasets/store");
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
+type RegistryFixture = typeof import("../../helpers/miniapps/registry-fixture");
 
 type Lang = "ko" | "en" | "zh";
 
@@ -113,6 +117,8 @@ beforeAll(async () => {
   assertConfigReaches(mongod, config.mongo.url);
   const content = db.getClient().db(config.content.dbName);
   await store.create(content, "campus-banners", fixtureCarousel(), { by: "characterization@example.com", now: CAPTURED_AT.now() });
+  const { fixtureRegistry } = require("../../helpers/miniapps/registry-fixture") as RegistryFixture;
+  await store.create(content, "miniapps", fixtureRegistry(), { by: "characterization@example.com", now: CAPTURED_AT.now() });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

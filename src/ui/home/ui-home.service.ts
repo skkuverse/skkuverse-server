@@ -4,29 +4,31 @@ import { createDatasetLoader, type DatasetLoader } from "../../infra/dataset-loa
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
 import { MiniappsService } from "../../miniapps/miniapps.service";
+import { toGrammarOnlyRegistry } from "../ui.rules";
 import { HOME_LAYOUT_LOG_INTERVAL_MS } from "./ui-home.constants";
 import { UiHomeLayoutReadError, UiHomeLayoutUnavailableError } from "./ui-home.error";
 import { toHomeLayout } from "./ui-home.mapper";
 import { UiHomeRepository } from "./ui-home.repository";
-import { toHomeLayoutIssues, withoutUnresolvedItems } from "./ui-home.rules";
+import { homeLayoutReferences, toHomeLayoutIssues, withoutUnresolvedItems } from "./ui-home.rules";
 import type { HomeLayoutRaw } from "./ui-home.schema";
-import type { HomeLayoutIssue } from "./ui-home.types";
+import type { HomeLayoutIssue, HomeLayoutRevision, ResolvedHomeLayout } from "./ui-home.types";
 import type { HomeLayout } from "./ui-home.wire";
 
+// SEE: docs/explanation/ui-architecture.md ("Invariants"): one registry snapshot per request, only when the layout names a mini app.
 @Injectable()
 export class UiHomeService {
-  // WHY: a reload every TTL re-finds the same items; each is logged once per revision this process loads.
-  private loggedRevision: number | null = null;
-  private readonly loader: DatasetLoader<HomeLayoutRaw>;
+  // WHY: the filter runs once per pair of revisions, so each left-out item is logged once per pair, not per request.
+  private resolved: ResolvedHomeLayout | null = null;
+  private readonly loader: DatasetLoader<HomeLayoutRevision>;
 
   constructor(
-    private readonly repository: UiHomeRepository,
+    repository: UiHomeRepository,
     private readonly miniApps: MiniappsService,
     private readonly clock: Clock,
   ) {
     this.loader = createDatasetLoader({
       name: "ui.home_layout",
-      load: () => this.loadHomeLayout(),
+      load: () => repository.findHomeLayout(),
       clock,
       isReadError: (err): err is UiHomeLayoutReadError => err instanceof UiHomeLayoutReadError,
       toUnavailable: () => new UiHomeLayoutUnavailableError(),
@@ -36,24 +38,24 @@ export class UiHomeService {
   }
 
   async getHomeLayout(lang: SupportedLang): Promise<HomeLayout> {
-    const layout = await this.loader.get();
+    const layout = await this.resolvedLayout(await this.loader.get());
     const resolveLogo = this.miniApps.resolveLogo.bind(this.miniApps);
     return toHomeLayout(layout, { lang, now: this.clock.now(), resolveLogo });
   }
 
-  private async loadHomeLayout(): Promise<HomeLayoutRaw | null> {
-    const stored = await this.repository.findHomeLayout();
-    if (stored === null) return null;
-    const issues = toHomeLayoutIssues(stored.layout, this.miniApps);
-    this.logLeftOutItems(stored.revision, issues);
-    return withoutUnresolvedItems(stored.layout, issues);
+  private async resolvedLayout({ revision, layout }: HomeLayoutRevision): Promise<HomeLayoutRaw> {
+    const registry = homeLayoutReferences(layout, this.miniApps).length > 0 ? await this.miniApps.current() : null;
+    const key = `${revision}@${registry?.revision ?? "-"}`;
+    if (this.resolved?.key === key) return this.resolved.layout;
+    const issues = toHomeLayoutIssues(layout, registry ?? toGrammarOnlyRegistry(this.miniApps));
+    this.logLeftOutItems({ revision, registryRevision: registry?.revision ?? null }, issues);
+    this.resolved = { key, layout: withoutUnresolvedItems(layout, issues) };
+    return this.resolved.layout;
   }
 
-  private logLeftOutItems(revision: number, issues: readonly HomeLayoutIssue[]): void {
-    if (revision === this.loggedRevision) return;
-    this.loggedRevision = revision;
+  private logLeftOutItems(revisions: { revision: number; registryRevision: number | null }, issues: readonly HomeLayoutIssue[]): void {
     for (const { path, message } of issues) {
-      logger.error({ event: "ui.home_layout.item_left_out", revision, path: path.join("."), reason: message }, "Home layout item left out: it names what the server cannot serve");
+      logger.error({ event: "ui.home_layout.item_left_out", ...revisions, path: path.join("."), reason: message }, "Home layout item left out: it names what the server cannot serve");
     }
   }
 }
