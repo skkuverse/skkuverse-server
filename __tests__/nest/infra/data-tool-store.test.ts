@@ -11,12 +11,13 @@
  *   - the newest 50 revisions are kept, never pruning the current one;
  *   - a rollback and a copy from production are new revisions, never a rewrite.
  */
-import type { Db, MongoClient as MongoClientType } from "mongodb";
-import { MONGOD_START_TIMEOUT_MS, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
+import type { Db } from "mongodb";
+import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const store = require("../../../scripts/lib/datasets/store");
-const { MongoClient } = require("mongodb") as typeof import("mongodb");
+
+type DbModule = typeof import("../../../src/infra/db");
 
 const NOW = new Date("2026-10-19T03:00:00.000Z");
 const LATER = new Date("2026-10-19T04:00:00.000Z");
@@ -26,20 +27,21 @@ const BOB = "bob@example.com";
 const layout = (title: string) => ({ version: 1, sections: [{ type: "tile_grid", id: "t", title: { ko: title } }] });
 
 let mongod: TestMongod;
-let client: MongoClientType;
+let dbModule: DbModule;
 let dev: Db;
 let prod: Db;
 
 beforeAll(async () => {
   mongod = await startMongod();
-  client = await new MongoClient(mongod.uri).connect();
-  dev = client.db("data_tool_store_dev");
-  prod = client.db("data_tool_store");
+  dbModule = require("../../../src/infra/db") as DbModule;
+  assertConfigReaches(mongod, (require("../../../src/infra/config") as { mongo: { url: string } }).mongo.url);
+  dev = dbModule.getClient().db("data_tool_store_dev");
+  prod = dbModule.getClient().db("data_tool_store");
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
   try {
-    await client?.close();
+    await dbModule?.closeClient();
   } finally {
     await mongod?.stop();
   }
