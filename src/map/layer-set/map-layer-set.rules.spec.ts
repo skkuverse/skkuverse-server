@@ -2,26 +2,24 @@
  * The layer-set checks that span more than one value: a facet option's window
  * (instants with an offset, from before until, none on a tag option, days that
  * do not overlap) and the references between layers, facets, lists, chips and
- * the category table, each reported with the path the loader prints. And the
+ * the category table, each reported with the path a push prints. And the
  * chip validator with chipGroupOf: every rule exercised with deliberately
- * broken input, because a correct shipped row proves nothing about whether a
+ * broken input, because a correct stored row proves nothing about whether a
  * wrong one would be caught. Its catalogue is the base map's layers plus two
- * festival layers in one chip group, as a live festival adds them; the shipped
- * row itself is checked in map-layer-set.mapper.spec.ts.
+ * festival layers in one chip group, as a live festival adds them; the row of
+ * revision 1 of map-layer-sets is checked in map-layer-set.mapper.spec.ts.
  *
  * A link chip's target is checked against the mini-app registry when Nest
  * builds the layer-set service, so the import-time validator leaves it alone
  * and assertValidLinkChips reports every broken one together.
  */
-import { parseLayerSetFile } from "./map-layer-set.config";
+import { fixtureLayerSet } from "../../../__tests__/helpers/map/layer-sets-fixture";
 import { BASE_LAYERS } from "../map.constants";
 import type { LayerSpec } from "../map.types";
 import { assertValidChipSpecs, assertValidLinkChips, crossReferenceIssue, optionIssues, validateChipSpecs } from "./map-layer-set.rules";
 import type { LayerSet } from "./map-layer-set.schema";
-import fs from "fs";
-import path from "path";
 
-const CONFIG: LayerSet = parseLayerSetFile(JSON.parse(fs.readFileSync(path.join(__dirname, "eskara-2026.json"), "utf8")));
+const CONFIG: LayerSet = fixtureLayerSet();
 
 const day = (id: string, from: string, until: string): { id: string; from: string; until: string } => ({ id, from, until });
 
@@ -71,7 +69,7 @@ describe("optionIssues", () => {
 });
 
 describe("crossReferenceIssue", () => {
-  it("finds nothing in the shipped config", () => {
+  it("finds nothing in revision 1 of the stored layer sets", () => {
     // Act & Assert
     expect(crossReferenceIssue(CONFIG)).toBeNull();
   });
@@ -86,7 +84,7 @@ describe("crossReferenceIssue", () => {
     );
   });
 
-  it("reports the first problem in loader order: layers before facets", () => {
+  it("reports the first problem in check order: layers before facets", () => {
     // Arrange
     const broken = { ...CONFIG, layers: [], facets: [...CONFIG.facets, ...CONFIG.facets] };
 

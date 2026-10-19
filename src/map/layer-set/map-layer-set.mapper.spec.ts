@@ -1,22 +1,19 @@
 /**
  * The layer set's projections: festival layers and chips as the specs
  * /map/config serves (fresh objects, never the frozen config's own), a facet
- * option's window as instants, and a zod issue in the words and path the
- * loader has always printed. The chip row read from the real
- * `eskara-2026.json` is checked against the chip rules, and the reset chip,
+ * option's window as instants. The chip row of revision 1 of the stored
+ * `map-layer-sets` dataset is checked against the chip rules, and the reset chip,
  * authored nowhere, is synthesised from the festival's name, emoji and the
  * layers that come on by themselves, so it cannot drift from the layer list.
  */
-import fs from "fs";
-import path from "path";
-import { parseLayerSetFile } from "./map-layer-set.config";
+import { fixtureLayerSet } from "../../../__tests__/helpers/map/layer-sets-fixture";
 import { BASE_LAYERS } from "../map.constants";
 import { BASE_CHIPS, EVENT_LAYER_STYLE, EVENT_SHAPE_STYLE } from "./map-layer-set.constants";
 import { assertValidChipSpecs, validateChipSpecs } from "./map-layer-set.rules";
 import { eventChipSpecs, eventLayerSpecs, resetChip } from "./map-layer-set.mapper";
 import type { LayerSet } from "./map-layer-set.schema";
 
-const CONFIG = parseLayerSetFile(JSON.parse(fs.readFileSync(path.join(__dirname, "eskara-2026.json"), "utf8")));
+const CONFIG = fixtureLayerSet();
 
 /** What /map/config serves while this festival is live. */
 const CATALOGUE = [...BASE_LAYERS, ...eventLayerSpecs(CONFIG)];
@@ -164,7 +161,7 @@ describe("the reset chip", () => {
     expect([...all.action.layerIds].sort()).toEqual([...expected].sort());
 
     // The bug this guards: naming every festival layer makes the reset chip
-    // scope reach a layer that ships opt-in. The shipped config has such a
+    // scope reach a layer that ships opt-in. The stored set has such a
     // layer, so the guard is not vacuous.
     const optIn = CONFIG.layers.find((l) => l.defaultVisibleWhen.kind === "never");
     expect(optIn).toBeDefined();
@@ -203,7 +200,7 @@ describe("the reset chip", () => {
 describe("authored chips", () => {
   it("inherit the label of their one layer when none is authored", () => {
     // Arrange
-    // The shipped config authors every label (its chips read singular where the
+    // The stored set authors every label (its chips read singular where the
     // layers read plural), so the convenience is exercised on a synthetic one.
     const unlabelled: LayerSet = {
       ...CONFIG,
@@ -249,7 +246,7 @@ describe("authored chips", () => {
 
   it("fall back to the config's camera when a chip authors none", () => {
     // Arrange
-    // The shipped config authors a camera on every chip, so the fallback is
+    // The stored set authors a camera on every chip, so the fallback is
     // exercised on a synthetic one — it is what makes the field additive for a
     // config written before it existed.
     const bare: LayerSet = {

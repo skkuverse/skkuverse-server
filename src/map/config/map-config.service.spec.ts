@@ -12,8 +12,7 @@ import type { Clock } from "../../infra/clock";
 import { FakeMapLayerSetRepository } from "../../../__tests__/helpers/fakes/map/map-layer-set.repository.fake";
 import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import { fixtureLayerSets, fixtureLayerSetRepository } from "../../../__tests__/helpers/map/layer-sets-fixture";
-import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
+import { fixtureLayerSet, fixtureLayerSets, fixtureLayerSetRepository } from "../../../__tests__/helpers/map/layer-sets-fixture";
 import type { MapLayerSetRepository } from "../layer-set/map-layer-set.repository";
 import type { LayerSet } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
@@ -27,11 +26,11 @@ import { MapConfigService } from "./map-config.service";
 const BASE_LAYER_COUNT = 6;
 
 /**
- * The REAL shipped config. It loads with no mock — the loader reads the file
- * relative to its own directory — so every expectation below derives from it
- * rather than restating a count that the next festival would break.
+ * Revision 1 of the stored layer sets, the set production serves for the
+ * festival, so every expectation below derives from it rather than restating
+ * a count that the next festival would break.
  */
-const CONFIG: LayerSet = shippedLayerSet();
+const CONFIG: LayerSet = fixtureLayerSet();
 
 const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
 
@@ -441,8 +440,8 @@ describe("MapConfigService", () => {
    * Asserted on the WIRE rather than on the layer set JSON, and the difference
    * is the point. The layer-set schema (map-layer-set.schema.ts) reads five named
    * members out of each authored layer and builds a fresh object, so a "shape"
-   * typed into eskara-2026.json is dropped and could never reach a response. A
-   * test guarding the config file would pass while someone stamped a shape onto
+   * typed into a stored layer set is dropped and could never reach a response. A
+   * test guarding the layer set would pass while someone stamped a shape onto
    * EVENT_LAYER_STYLE, which is the edit that would actually ship one.
    */
   it("sends no style.shape, leaving every place marker on the client's dot-then-pin default", async () => {

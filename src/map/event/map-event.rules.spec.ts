@@ -6,9 +6,9 @@
  */
 import type { MapPlaceDoc, PlaceAction } from "../map.document";
 import { actionDropReason, facetsOf, isValidActionValue, orderByOptionOf } from "./map-event.rules";
-import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
+import { fixtureLayerSet } from "../../../__tests__/helpers/map/layer-sets-fixture";
 
-const CONFIG = shippedLayerSet();
+const CONFIG = fixtureLayerSet();
 const knownTargets = (value: string): boolean => value.split("/")[0] === "eskara-2026";
 const DAY_1_START = CONFIG.facets[0]?.options[0]?.window?.from ?? new Date(0);
 

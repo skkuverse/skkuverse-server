@@ -18,10 +18,11 @@ import path from "path";
 // is a require rather than an import.
 const { parsePlacesFile } = require("../../../scripts/lib/map-places-file");
 
-import { getLayerSetConfig } from "../../../src/map/layer-set/map-layer-set.config";
 import { presentationFor } from "../../../src/map/map.rules";
+import { fixtureLayerSet } from "../../helpers/map/layer-sets-fixture";
 
-const CONFIG = getLayerSetConfig("eskara-2026")!.config!;
+// Revision 1 of the stored map-layer-sets dataset, the layer set this sheet's places are drawn with.
+const CONFIG = fixtureLayerSet();
 const DAY_FACET = CONFIG.facets.find((f) => f.id === "day")!;
 
 const LAYER_SET_ID = "eskara-2026";
@@ -79,6 +80,20 @@ describe("parsePlacesFile — the committed sheet", () => {
     // Act & Assert
     expect(errors).toEqual([]);
     expect(docs.length).toBeGreaterThan(50);
+  });
+
+  it("uses only categories the stored layer set maps", () => {
+    // Act
+    // The sheet reaches Mongo through an importer and the layer set through `npm run data`, on different clocks.
+    // A category added here and forgotten there does not fail: it falls through `itemDefaults.fallback` to the
+    // grey "Other" layer and draws, the failure that looks like success. The fallback is for a category typed
+    // into Mongo at 22:00 (ADR 0004 invariant 2); nothing in the reviewed sheet may rely on it.
+    const unmapped = [...new Set((docs as Array<{ category: string }>).map((d) => d.category))].filter(
+      (category) => !(category in CONFIG.itemDefaults.byCategory),
+    );
+
+    // Assert
+    expect(unmapped).toEqual([]);
   });
 
   it("emits one document per place, with no day marker anywhere in the id", () => {

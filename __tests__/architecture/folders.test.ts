@@ -139,7 +139,7 @@ describe("folder rule applies as specified", () => {
     expect(folderViolation("src/bus/eta", ["src/bus/eta/eta.module.ts", "src/bus/eta/eta.service.ts"])).toBe(
       false,
     );
-    expect(folderViolation("src/map/config", ["src/map/config/eskara-2026.json"])).toBe(false);
+    expect(folderViolation("src/map/config", ["src/map/config/festival.json"])).toBe(false);
     expect(
       folderViolation("src/miniapps/details", ["src/miniapps/details/a.json", "src/miniapps/details/b/c.json"]),
     ).toBe(false);
@@ -235,7 +235,7 @@ describe("split-root rule applies as specified", () => {
         "src/building/catalog/building-catalog.controller.ts",
         "src/building/sync/building-sync.module.ts",
         "src/building/sync/building-sync.poller.ts",
-        "src/map/config/eskara-2026.json",
+        "src/map/config/festival.json",
         "src/map/map.module.ts",
         "src/map/map-config.controller.ts",
       ]),

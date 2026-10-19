@@ -1,3 +1,1 @@
-{
-  "src/map/layer-set/map-layer-set.config.ts": "ADR 0010 D5, operator-edited content files fail soft: a bad layer set is logged and left out while the base map keeps serving, so the loader keeps its own parse; its first-issue messages are pinned byte for byte by map-layer-set.config.spec.ts"
-}
+{}
