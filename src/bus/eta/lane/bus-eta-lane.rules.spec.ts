@@ -2,9 +2,23 @@
  * The lane config's rules: the travel strategy a sequence takes (`car` unless the config names it), the configured
  * sequences the app does not estimate, and the cross-checks a well-typed corridor must still pass. Then which runs
  * are bus-lane runs, and where a direction's entry and exit lie along the corridor.
+ *
+ * The strategies and lane hours are code (move-reference-datasets D9): `assertLaneStrategies` is the check
+ * BusEtaLaneService's construction runs over them against the sequences the app estimates, so a bad constant fails
+ * the boot, naming every issue.
  */
-import { corridorIssues, strategyIssues, strategyOf, strategyOfRun, toLegBounds } from "./bus-eta-lane.rules";
+import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
+import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
+import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
+import type { BusScheduleService } from "../../schedule/bus-schedule.service";
+import { BusStopsService } from "../../stops/bus-stops.service";
+import type { BusEtaRepository } from "../bus-eta.repository";
+import { BusEtaService } from "../bus-eta.service";
+import { LANE_HOURS, LANE_STRATEGIES } from "./bus-eta-lane.constants";
+import { assertLaneStrategies, corridorIssues, strategyIssues, strategyOf, strategyOfRun, toLegBounds } from "./bus-eta-lane.rules";
 import type { LaneConfig } from "./bus-eta-lane.types";
+
+const estimatedSequences = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, new BusStopsService(new SubwayStationsService())).sequences();
 
 const STRATEGIES: LaneConfig["strategies"] = {
   "campus-inja": { regular: { strategy: "busLane", direction: "southbound" } },
@@ -75,6 +89,88 @@ describe("strategyOf", () => {
 
     // Assert
     expect(strategy).toEqual({ strategy: "car" });
+  });
+  it("gives each sequence the app estimates today's strategy: the shuttle between campuses on the bus lane, the commute shuttle by car", () => {
+    // Act
+    const strategies = estimatedSequences.map((s) => [s.serviceId, s.routeType, strategyOf(LANE_STRATEGIES, s)]);
+
+    // Assert
+    expect(strategies).toEqual([
+      ["campus-inja", "regular", { strategy: "busLane", direction: "southbound" }],
+      ["campus-inja", "hakbu", { strategy: "busLane", direction: "southbound" }],
+      ["campus-jain", "regular", { strategy: "busLane", direction: "northbound" }],
+      ["campus-jain", "hakbu", { strategy: "busLane", direction: "northbound" }],
+      ...["jeongja", "jamsil", "dogok", "gangnam-yangjae", "gwanggyo"].flatMap((route) => [
+        [`commute-${route}`, "up", { strategy: "car" }],
+        [`commute-${route}`, "down", { strategy: "car" }],
+      ]),
+    ]);
+    expect(LANE_HOURS).toEqual({ from: "07:00", to: "21:00" });
+  });
+});
+
+describe("assertLaneStrategies", () => {
+  const thrown = (run: () => void): string => {
+    try {
+      run();
+      return "";
+    } catch (err) {
+      return (err as Error).message;
+    }
+  };
+
+  it("passes today's strategies and lane hours against the sequences the app estimates", () => {
+    // Act & Assert
+    expect(() => assertLaneStrategies(LANE_STRATEGIES, estimatedSequences)).not.toThrow();
+  });
+
+  it("throws for a strategy on a sequence that is not estimated, naming the sequence at its path", () => {
+    // Arrange
+    const strategies = { ...LANE_STRATEGIES, "fasttrack-inja": { regular: { strategy: "busLane", direction: "southbound" } as const } };
+
+    // Act
+    const message = thrown(() => assertLaneStrategies(strategies, estimatedSequences));
+
+    // Assert
+    expect(message).toMatch(/strategies\.fasttrack-inja\.regular: "fasttrack-inja regular" is not an estimated sequence/);
+  });
+
+  it("throws for lane hours out of order, naming them", () => {
+    // Act
+    const message = thrown(() => assertLaneStrategies(LANE_STRATEGIES, estimatedSequences, { from: "21:00", to: "07:00" }));
+
+    // Assert
+    expect(message).toMatch(/laneHours: from 21:00 must be before to 07:00/);
+  });
+
+  it("accepts lane hours one minute long and refuses them empty", () => {
+    // Act
+    const oneMinute = thrown(() => assertLaneStrategies(LANE_STRATEGIES, estimatedSequences, { from: "07:00", to: "07:01" }));
+    const empty = thrown(() => assertLaneStrategies(LANE_STRATEGIES, estimatedSequences, { from: "07:00", to: "07:00" }));
+
+    // Assert
+    expect(oneMinute).toBe("");
+    expect(empty).toMatch(/laneHours: from 07:00 must be before to 07:00/);
+  });
+
+  it("throws for a lane hour that is not HH:mm, naming its path", () => {
+    // Act
+    const message = thrown(() => assertLaneStrategies(LANE_STRATEGIES, estimatedSequences, { from: "7:00", to: "21:00" }));
+
+    // Assert
+    expect(message).toMatch(/laneHours\.from: must be HH:mm/);
+  });
+
+  it("names every issue at once: a sequence that is not estimated and lane hours out of order", () => {
+    // Arrange
+    const strategies = { ...LANE_STRATEGIES, "campus-inja": { ...LANE_STRATEGIES["campus-inja"], night: { strategy: "car" } as const } };
+
+    // Act
+    const message = thrown(() => assertLaneStrategies(strategies, estimatedSequences, { from: "21:00", to: "07:00" }));
+
+    // Assert
+    expect(message).toContain("strategies.campus-inja.night: ");
+    expect(message).toContain("laneHours: ");
   });
 });
 

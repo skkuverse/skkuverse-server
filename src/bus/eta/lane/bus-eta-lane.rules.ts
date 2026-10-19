@@ -2,28 +2,21 @@ import { haversineM } from "../../../shared/distance.util";
 import type { LatLng } from "../../../shared/lat-lng.types";
 import { projectOntoPolyline } from "../../../shared/polyline.util";
 import type { EtaRun } from "../bus-eta.types";
-import type {
-  CorridorEnds,
-  LaneConfig,
-  LaneConfigIssue,
-  LaneCorridor,
-  LegBounds,
-  ProbeRoute,
-  SequenceKey,
-  SequenceStrategy,
-} from "./bus-eta-lane.types";
+import { LANE_HOURS } from "./bus-eta-lane.constants";
+import type { CorridorEnds, LaneConfig, LaneConfigIssue, LaneCorridor, LaneHours, LaneStrategies, LegBounds, ProbeRoute, SequenceKey, SequenceStrategy } from "./bus-eta-lane.types";
 
 // WHY: the corridor script writes the last boundary as the length rounded to the meter; a larger gap means the
 // centerline changed without its boundaries.
 const MAX_END_MISMATCH_M = 1;
 
 const CAR: SequenceStrategy = { strategy: "car" };
+const HOUR_MINUTE = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
-export function strategyOf(strategies: LaneConfig["strategies"], { serviceId, routeType }: SequenceKey): SequenceStrategy {
+export function strategyOf(strategies: LaneStrategies, { serviceId, routeType }: SequenceKey): SequenceStrategy {
   return strategies[serviceId]?.[routeType] ?? CAR;
 }
 
-export function strategyIssues(strategies: LaneConfig["strategies"], sequences: readonly SequenceKey[]): LaneConfigIssue[] {
+export function strategyIssues(strategies: LaneStrategies, sequences: readonly SequenceKey[]): LaneConfigIssue[] {
   const estimated = new Set(sequences.map((s) => `${s.serviceId} ${s.routeType}`));
   return Object.entries(strategies).flatMap(([serviceId, byRouteType]) =>
     Object.keys(byRouteType)
@@ -33,6 +26,18 @@ export function strategyIssues(strategies: LaneConfig["strategies"], sequences: 
         message: `"${serviceId} ${routeType}" is not an estimated sequence; only an estimated one takes a strategy`,
       })),
   );
+}
+
+function laneHoursIssues(hours: LaneHours): LaneConfigIssue[] {
+  const malformed = Object.entries(hours).filter(([, hour]) => !HOUR_MINUTE.test(hour));
+  if (malformed.length > 0) return malformed.map(([key]) => ({ path: ["laneHours", key], message: "must be HH:mm" }));
+  return hours.from < hours.to ? [] : [{ path: ["laneHours"], message: `from ${hours.from} must be before to ${hours.to}` }];
+}
+
+/** WHY: the strategies and lane hours are code, so a bad one fails the boot naming every issue, as a config file would. */
+export function assertLaneStrategies(strategies: LaneStrategies, sequences: readonly SequenceKey[], hours: LaneHours = LANE_HOURS): void {
+  const issues = [...strategyIssues(strategies, sequences), ...laneHoursIssues(hours)];
+  if (issues.length > 0) throw new Error(`bus-eta-lane.constants.ts: ${issues.map(({ path, message }) => `${path.join(".")}: ${message}`).join("; ")}`);
 }
 
 function centerlineLengthM(centerline: readonly LatLng[]): number {
@@ -81,7 +86,7 @@ export function corridorIssues(config: LaneConfig): LaneConfigIssue[] {
 }
 
 /** WHY: lane hours compare the run's KST departure, `from` inclusive and `to` exclusive, so a 21:00 run is a car run. */
-export function strategyOfRun(config: Pick<LaneConfig, "strategies" | "laneHours">, run: SequenceKey & Pick<EtaRun, "time">): SequenceStrategy {
+export function strategyOfRun(config: { strategies: LaneStrategies; laneHours: LaneHours }, run: SequenceKey & Pick<EtaRun, "time">): SequenceStrategy {
   const strategy = strategyOf(config.strategies, run);
   const { from, to } = config.laneHours;
   return strategy.strategy === "busLane" && run.time >= from && run.time < to ? strategy : CAR;
