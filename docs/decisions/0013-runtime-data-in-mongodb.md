@@ -44,7 +44,7 @@ What the code branches on stays in code: route ids, service ids, enums, the orig
 
 Every push, rollback and copy records the stored version in `dataset_revisions` (`<dataset>@<revision>`), the current one included. The newest 50 revisions of each dataset are kept, and the current one is never pruned. A rollback stores an earlier revision's data as a new revision; history is never rewritten.
 
-A push names the revision it was pulled at and is stored only if the dataset is still at that revision, in one conditional update. Otherwise it writes nothing and reports the current revision, its author and its time. The dataset is written before its history entry, with no transaction, so only the winner of the update writes history; a run that finds the current revision without an entry records it before anything else.
+A push names the revision it was pulled at and is stored only if the dataset is still at that revision, in one conditional update. Otherwise it writes nothing and reports the current revision, its author and its time. The dataset is written before its history entry, with no transaction, so only the winner of the update writes history; a run that finds the current revision without an entry records it before anything else, except where a run writes nothing to production before a confirmation: there it records the entry as the first step of the confirmed write.
 
 ### D5. Validation is the server's compiled code; references are declared per dataset
 

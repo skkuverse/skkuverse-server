@@ -232,19 +232,30 @@ function refuseIssues(issues) {
   return new Refusal([`REFUSED: ${issues.length} issue(s), nothing written:`, ...lines].join("\n"));
 }
 
-/** The repair of design D4, or, for a run that must write nothing, a note. */
+/** True when production is written only after the operator confirms at the prompt. */
+const confirmsAtPrompt = (args) => args.prod && !args.yes;
+
+async function repair(ctx, db, dataset) {
+  const result = await store.repair(db, dataset);
+  if (result.repaired) {
+    ctx.out(`repaired: ${dataset} revision ${result.revision} had no history entry; recorded it from the stored dataset.`);
+  }
+}
+
+/**
+ * The repair of design D4, or a note for a run that writes nothing before a
+ * confirmation: `--dry-run`, `check`, and `--prod` without `--yes`, whose
+ * confirmed write repairs first (confirmAndWrite).
+ */
 async function repairOrReport(ctx, db, dataset) {
-  if (ctx.args.dryRun || ctx.args.command === "check") {
+  if (ctx.args.dryRun || ctx.args.command === "check" || confirmsAtPrompt(ctx.args)) {
     const revision = await store.findUnrecorded(db, dataset);
     if (revision !== null) {
       ctx.out(`note: ${dataset} revision ${revision} has no history entry (a write stopped after storing it); the next write records it.`);
     }
     return;
   }
-  const result = await store.repair(db, dataset);
-  if (result.repaired) {
-    ctx.out(`repaired: ${dataset} revision ${result.revision} had no history entry; recorded it from the stored dataset.`);
-  }
+  await repair(ctx, db, dataset);
 }
 
 /** Prints the diff, then writes after the confirmation production needs. */
@@ -264,6 +275,7 @@ async function confirmAndWrite(ctx, { before, after, summary, write }) {
     const answer = await ctx.ask(`write ${summary} to ${ctx.dbName} (PRODUCTION)? type y to confirm: `);
     if (answer.trim() !== "y") throw new Refusal("not confirmed; nothing written.");
   }
+  if (confirmsAtPrompt(ctx.args)) await repair(ctx, ctx.db, ctx.args.dataset);
   return write({ by, now: ctx.now(), note: ctx.args.note });
 }
 

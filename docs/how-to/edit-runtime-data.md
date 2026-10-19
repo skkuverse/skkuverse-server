@@ -130,7 +130,7 @@ It runs the push checks on the stored data of every dataset, writes nothing, and
 | `... was pulled from the development database, so it cannot be pushed to <prod>` | You pushed a `_dev` working file with `--prod`. | `pull --prod` and redo the edit on `.data/prod/`. |
 | `refusing to write ... (PRODUCTION) without a confirmation` | A production write with no terminal and no `--yes`. | Run it in a terminal, or pass `--yes` where the diff is reviewed. |
 | `dist/src is missing: run npm run build first` | You ran `node scripts/data.js` without a build. | Use `npm run data`, which builds first. |
-| `repaired: ... had no history entry` | A push stopped between storing the dataset and recording its history. The tool recorded the entry. | Nothing. `check` and `--dry-run` only report it as a `note:`. |
+| `repaired: ... had no history entry` | A push stopped between storing the dataset and recording its history. The tool recorded the entry. | Nothing. `check`, `--dry-run` and a `--prod` run without `--yes` only report it as a `note:`; with `--prod`, a `push` or `rollback` you confirm records it first. |
 | `MongoServerSelectionError: ...` with `<redacted>` in it | The database could not be reached; the host is hidden on purpose. | Check your network and `.env`, without printing them. |
 
 ## Related
