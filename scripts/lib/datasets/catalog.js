@@ -74,6 +74,8 @@ function loadCatalog(load) {
   const { layerSetsDataset } = load("map/layer-set/map-layer-set.schema");
   const { busServiceNoticesDataset, skkuRestDaysDataset } = load("bus/schedule-content/bus-schedule-content.schema");
   const { serviceNoticesReferences } = load("bus/schedule-content/bus-schedule-content.rules");
+  const { laneCorridorDataset } = load("bus/eta/lane/bus-eta-lane.schema");
+  const { corridorIssues } = load("bus/eta/lane/bus-eta-lane.rules");
   const { checkedRegistry } = load("miniapps/miniapps.schema");
   const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
   const { toMiniAppRegistry } = load("miniapps/miniapps.mapper");
@@ -140,6 +142,13 @@ function loadCatalog(load) {
       "skku-rest-days": {
         owner: "src/bus/schedule-content",
         schema: skkuRestDaysDataset,
+        referencesOf: () => [],
+      },
+      // The corridor geometry only: which runs use it, and the lane hours, stay in code (move-reference-datasets D9).
+      "bus-lane-corridor": {
+        owner: "src/bus/eta/lane",
+        schema: laneCorridorDataset,
+        issuesOf: corridorIssues,
         referencesOf: () => [],
       },
     },

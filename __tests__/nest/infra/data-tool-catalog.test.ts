@@ -25,9 +25,15 @@
  * layer-set loader refused a file on and one set per `layerSetId` (D6). Wave
  * C's `bus-service-notices` names only services the checkout defines (D7), and
  * its `skku-rest-days` keys only calendar month-days and dates (D8).
+ *
+ * The `bus-lane-corridor` dataset (move-reference-datasets D9) is checked with
+ * the server's corridor schema and `corridorIssues`, the geometry checks the
+ * boot refused bus-lane.json on; the lane hours and strategies are code.
  */
 import path from "node:path";
 import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
+import { corridorIssues } from "../../../src/bus/eta/lane/bus-eta-lane.rules";
+import { laneCorridorDataset } from "../../../src/bus/eta/lane/bus-eta-lane.schema";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import { fixtureRegistry, fixtureRegistryWithWaveRun } from "../../helpers/miniapps/registry-fixture";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
@@ -566,5 +572,62 @@ describe("loadCatalog skku-rest-days", () => {
 
     // Assert
     expect(lines).toEqual(["skku-rest-days: 02-30: must be a calendar MM-DD or a calendar YYYY-MM-DD from 1900 to 2999"]);
+  });
+});
+
+describe("loadCatalog bus-lane-corridor", () => {
+  const corridor = () => datasetFixture("../bus/fixtures/bus-lane-corridor.dataset.json") as { corridor: { boundaries: Array<{ alongM: number }> }; probeRoutes: unknown[] };
+
+  it("is owned by src/bus/eta/lane, takes laneCorridorDataset and corridorIssues, and accepts revision 1 with no issue and no reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["bus-lane-corridor"];
+
+    // Act
+    const issues = checkData(catalog, "bus-lane-corridor", corridor(), {});
+
+    // Assert
+    expect(entry.owner).toBe("src/bus/eta/lane");
+    expect(entry.schema).toBe(laneCorridorDataset);
+    expect(entry.issuesOf).toBe(corridorIssues);
+    expect(issues).toEqual([]);
+    expect(entry.referencesOf(entry.schema.parse(corridor()))).toEqual([]);
+  });
+
+  it("Boundary past the end: refuses a last boundary 500 m past the centerline's end, naming that boundary's path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = corridor();
+    data.corridor.boundaries[8]!.alongM += 500;
+
+    // Act
+    const lines = issueLines(checkData(catalog, "bus-lane-corridor", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^bus-lane-corridor: corridor\.boundaries\.8\.alongM: "신갈JC" must be at the centerline's end/)]);
+  });
+
+  it("Probe route listed twice: refuses 200000205 listed again, naming the second entry's routeId", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = corridor();
+    data.probeRoutes.push(structuredClone(data.probeRoutes[0]));
+
+    // Act
+    const lines = issueLines(checkData(catalog, "bus-lane-corridor", data, {}));
+
+    // Assert
+    expect(lines).toEqual(["bus-lane-corridor: probeRoutes.3.routeId: 8800: route 200000205 is listed twice"]);
+  });
+
+  it("refuses the lane hours, which are code, as a key the dataset does not hold", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const lines = issueLines(checkData(catalog, "bus-lane-corridor", { ...corridor(), laneHours: { from: "07:00", to: "21:00" } }, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^bus-lane-corridor: : .*laneHours/)]);
   });
 });
