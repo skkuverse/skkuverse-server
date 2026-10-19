@@ -139,7 +139,7 @@ To suspend the 인자셔틀 for the winter break, pull production, set `campus-i
 npm run data -- push bus-service-notices --prod --note "winter break suspension"
 ```
 
-On 2026-12-22 the smart view answers `suspended` with `resumeDate: "2027-03-01"`. Set `suspend` back to `null` to end it early.
+On 2026-12-22 the smart view answers `suspended` with `resumeDate: "2027-03-01"`. Before the suspension starts, the smart view still shows its days' timetable (on Saturday 12-19, the week of 12-21), but the estimate pollers already plan no run on them, so those runs carry no estimate. Set `suspend` back to `null` to end it early.
 
 ### Add a SKKU rest day
 
