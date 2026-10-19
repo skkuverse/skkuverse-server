@@ -4,8 +4,10 @@
  * snapshot (move-reference-datasets D9): at most one request per probe route and minute,
  * shared by both directions; no corridor time without a snapshot 5 to 15
  * minutes older; a corridor time once a prime ten minutes earlier gives every
- * bus a partner, with its spans recorded once; and every client failure,
- * the daily cap included, rejecting for the live tick to handle.
+ * bus a partner, with its spans recorded once; every client failure,
+ * the daily cap included, rejecting for the live tick to handle; and a new
+ * corridor revision starting the pairing over, since along-distances of two
+ * revisions do not compare.
  */
 import { corridorFixture, corridorSnapshot } from "../../../../__tests__/helpers/bus/bus-lane-corridor";
 import { FakeBusEtaProbeClient } from "../../../../__tests__/helpers/fakes/bus/bus-eta-probe.client.fake";
@@ -172,5 +174,26 @@ describe("BusEtaProbeService.legTime over an edited corridor", () => {
 
     // Assert
     expect(client.calls.map((call) => call.routeId).sort()).toEqual(["228000174", "228000175"]);
+  });
+});
+
+describe("BusEtaProbeService.legTime after a corridor push", () => {
+  it("pairs no fix taken under the earlier revision with one taken under the new one", async () => {
+    // Arrange
+    const { client, spans, probe } = setup();
+    client.positionsByRoute.set("200000205", southbound8800([5, 45, 85], minutesBefore(10)));
+    await probe.prime(CORRIDOR, minutesBefore(10));
+    const pushed = corridorSnapshot(corridorFixture(), 2);
+    client.positionsByRoute.set("200000205", southbound8800([25, 65, 105], minutesBefore(5)));
+    await probe.prime(pushed, minutesBefore(5));
+    client.positionsByRoute.set("200000205", southbound8800([45, 85, 125], NOW));
+
+    // Act
+    await probe.legTime(pushed, "southbound", NOW);
+
+    // Assert
+    // Revision 1's fixes are ten minutes old, the partner age a span prefers; only revision 2's five-minute-old ones may pair.
+    const fromAts = [...spans.spans.values()].map((span) => span.fromAt);
+    expect(fromAts).toEqual(Array.from({ length: 3 }, () => new Date(minutesBefore(5).getTime() - 45_000)));
   });
 });

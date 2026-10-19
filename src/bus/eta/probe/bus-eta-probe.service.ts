@@ -26,6 +26,7 @@ export class BusEtaProbeService {
   private readonly requests = new Map<string, { minute: number; fixes: Promise<CorridorFix[]> }>();
   private history: RouteSnapshot[] = [];
   private spansOfMinute: { minute: number; spans: Promise<LaneSpan[]> } | null = null;
+  private revision: number | null = null;
 
   constructor(
     private readonly client: BusEtaProbeClient,
@@ -33,13 +34,24 @@ export class BusEtaProbeService {
   ) {}
 
   async prime(corridor: LaneCorridorSnapshot, now: Date): Promise<void> {
+    this.clearOnNewRevision(corridor);
     await this.snapshot(corridor, now);
   }
 
   async legTime(corridor: LaneCorridorSnapshot, direction: LaneDirection, now: Date): Promise<LegTime> {
+    this.clearOnNewRevision(corridor);
     const spans = await this.spansAt(corridor, now);
     const leg = corridor.legBoundsOf(direction);
     return toLegTime(spans.filter((span) => span.direction === direction), leg);
+  }
+
+  // WHY: a fix's along-distance holds only on the centerline it was projected onto, so a push starts the pairing over.
+  private clearOnNewRevision(corridor: LaneCorridorSnapshot): void {
+    if (this.revision === corridor.revision) return;
+    this.revision = corridor.revision;
+    this.history = [];
+    this.requests.clear();
+    this.spansOfMinute = null;
   }
 
   // WHY: both directions read one minute's spans, so each span is paired and written once.
