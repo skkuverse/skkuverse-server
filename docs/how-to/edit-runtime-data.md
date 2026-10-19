@@ -169,7 +169,7 @@ npm run data -- push bus-lane-corridor --prod --note "corridor rebuilt from OSM"
 doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js --file .data/prod/bus-lane-corridor.json --check-entry-exit
 ```
 
-It routes both directions through the file's entry and exit points with NAVER; a point NAVER cannot route through fails every forced route, and each bus-lane run then loses its live value. Of `entryExit`, the push itself refuses only a point more than 500 m off the centerline, or a direction whose exit lies before its entry along it. The live poller reads a push within a minute.
+It routes both directions through the file's entry and exit points with NAVER; a point NAVER cannot route through fails every forced route, and each bus-lane run then loses its live value. Of `entryExit`, the push itself refuses only a point more than 500 m off the centerline, or a direction whose exit lies before its entry along it. The live poller reads a push within two minutes (two ticks): the corridor cache lives 60 s, as long as a tick.
 
 ### Check before a deploy
 
