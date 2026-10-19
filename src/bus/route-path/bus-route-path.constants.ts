@@ -13,5 +13,6 @@ export const PATH_VERSION_LENGTH = 16;
 // WHY: the line changes at most daily; a replica reads a synced line within ten minutes.
 export const ROUTE_PATHS_TTL_MS = 10 * 60_000;
 
-// WHY: a line changes a few times a year, so an Atlas outage keeps the last good lines for a day before the 503.
+// WHY: a line changes a few times a year, so a failed reload keeps the last good lines for a day before the 503;
+// a reload that succeeds is always waited for, so the TTL stays the freshness bound.
 export const ROUTE_PATHS_STALE_WINDOW_MS = 24 * 60 * 60_000;

@@ -110,6 +110,22 @@ describe("BusRoutePathService.listRoutePaths", () => {
     await expect(service.listRoutePaths()).rejects.toMatchObject({ code: "JONGRO_ROUTE_PATHS_UNAVAILABLE", httpStatus: 503 });
   });
 
+  it("serves a line another process wrote once the TTL has passed, not the expired one (ADR 0012, D6)", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    storeLines();
+    await service.listRoutePaths();
+    repository.routePaths.delete("jongro07");
+
+    // Act
+    jest.setSystemTime(NOW.getTime() + ROUTE_PATHS_TTL_MS);
+    const { routePaths, hasMissingRoutes } = await service.listRoutePaths();
+
+    // Assert
+    expect(routePaths.map((line) => line.routeId)).toEqual(["jongro02", "jongro08"]);
+    expect(hasMissingRoutes).toBe(true);
+  });
+
   it("serves the earlier lines through a failed read inside the stale window", async () => {
     // Arrange
     jest.useFakeTimers({ now: NOW });

@@ -3,15 +3,20 @@ import logger from "./logger";
 
 /**
  * WHY: single-flight, so an expiry never becomes a burst of identical loads, and failures are never
- * cached. Inside `staleWindowMs` an expired value is served while a reload runs, and outlives a failed
- * one (logged, retried once per TTL). The value is shared: callers treat it as read-only.
+ * cached. Inside `staleWindowMs` an expired value outlives a failed reload (logged, retried once per
+ * TTL), and by default is also served while a reload runs. The value is shared: callers treat it as read-only.
  */
+
+// WHY: "on-reload-failure" waits for the reload past the TTL, so the TTL bounds how stale a read can be
+// while the database answers; the default answers at once from the expired value (ADR 0012, D6).
+export type StaleServing = "while-reloading" | "on-reload-failure";
 
 export interface CachedLoaderOptions<T> {
   name: string;
   ttlMs: number;
   load: () => Promise<T>;
   staleWindowMs?: number;
+  serveStale?: StaleServing;
   // WHY: for a load that costs more than staleness does on a laptop (an LLM call, a production fetch).
   keepWhenCacheOff?: boolean;
 }
@@ -26,6 +31,7 @@ interface LoaderState<T> {
   readonly ttlMs: number;
   readonly load: () => Promise<T>;
   readonly staleWindowMs: number;
+  readonly serveStale: StaleServing;
   readonly keepWhenCacheOff: boolean;
   value: { data: T; loadedAt: number } | null;
   freshUntil: number;
@@ -74,6 +80,10 @@ function reload<T>(state: LoaderState<T>): Promise<T> {
   return attempt;
 }
 
+function isServedWhileReloading<T>(state: LoaderState<T>, now: number): boolean {
+  return state.serveStale === "while-reloading" && state.value !== null && now < staleUntil(state);
+}
+
 function get<T>(state: LoaderState<T>): Promise<T> {
   // WHY: read per call, so a test can flip CACHE.
   if (!config.cache.enabled && !state.keepWhenCacheOff) {
@@ -81,7 +91,7 @@ function get<T>(state: LoaderState<T>): Promise<T> {
   }
   const now = Date.now();
   if (state.value && now < state.freshUntil) return Promise.resolve(state.value.data);
-  if (state.value && now < staleUntil(state)) {
+  if (state.value && isServedWhileReloading(state, now)) {
     // WHY: unawaited: a failure inside the window logs itself; one that ends past it surfaces on the
     // next get(), which waits for its own reload.
     if (!state.inFlight) reload(state).catch(() => undefined);
@@ -111,6 +121,7 @@ export function createCachedLoader<T>(opts: CachedLoaderOptions<T>): CachedLoade
     ttlMs,
     load,
     staleWindowMs,
+    serveStale: opts.serveStale ?? "while-reloading",
     keepWhenCacheOff: opts.keepWhenCacheOff ?? false,
     value: null,
     freshUntil: 0,
