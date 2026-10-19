@@ -3,7 +3,7 @@ title: App Config Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-11
+last-updated: 2026-10-20
 audience: internal
 ---
 
@@ -13,13 +13,13 @@ audience: internal
 
 ## Context
 
-App config owns no data. It assembles one body from values the server reads at boot, the same for every client, and the app fetches it once per cold start. The values belong to their sources: the version gates to the deploy's environment, the origins to `src/infra/origins.ts` and the mini-app registry.
+App config owns no data. It assembles one body from values the server reads at boot, the same for every client, and the app fetches it once per cold start. The values belong to their sources: the version gates to the deploy's environment, the origins and each first-party mini app origin's owner to `src/infra/origins.ts`. It reads no dataset, so a registry outage never reaches the force-update gate.
 
 | System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
 | Doppler, through the deploy's environment | — | The minimum version and update URL per platform (`APP_IOS_MIN_VERSION` and its siblings) | `config.app` in `src/infra/config.ts` |
 | The first-party web origins | — | The origins allowed to talk to the native bridge, and the web app's origin | `BRIDGE_ORIGINS` and `WEB_ORIGIN` in `src/infra/origins.ts` |
-| The mini-app registry | — | Each first-party mini app's origin | `firstPartyOrigins` of `MiniappsService`, built in `src/miniapps/miniapps.config.ts` |
+| The first-party mini app owners | — | Each first-party mini app origin and the mini app that owns it | `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` in `src/infra/origins.ts` |
 | skkuverse-app | — | Nothing; it reads the body at boot | `GET /app/config` |
 
 ## Glossary
@@ -30,15 +30,14 @@ App config owns no data. It assembles one body from values the server reads at b
 | platform gate (`platformGate`) | One platform's `minVersion` and `updateUrl`: below `minVersion`, the app blocks on its force-update screen | `config.app` | `forceUpdate` |
 | bridge origins | The origins whose pages may post messages to the app's native bridge | `BRIDGE_ORIGINS` | — |
 | web origin | The origin of the first-party web app | `WEB_ORIGIN` | — |
-| mini-app origins | Each first-party mini app's id with its origin, so the app opens such a URL in that mini app's shell | `firstPartyOrigins` | — |
+| mini-app origins | Each first-party mini app's id with its origin, so the app opens such a URL in that mini app's shell | `MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` | — |
 
 ## Structure
 
 ```mermaid
 flowchart LR
   env["deploy environment, from Doppler"] -->|config.app| svc["AppConfigService"]
-  origins["src/infra/origins.ts"] -->|BRIDGE_ORIGINS, WEB_ORIGIN| svc
-  mini["mini-app registry"] -->|firstPartyOrigins| svc
+  origins["src/infra/origins.ts"] -->|BRIDGE_ORIGINS, WEB_ORIGIN, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN| svc
   svc -->|APP_CONFIG_CACHE_CONTROL| route["GET /app/config"]
   route -->|ios, android| gate["app: InitGate and ForceUpdateScreen"]
   route -->|webview.bridgeOrigins| bridge["app: webview and mini-app shell bridge"]
@@ -69,5 +68,5 @@ What the app reads, from `skkuverse-app/packages/shared/src/app/parser.ts` and i
 ## Related
 
 - [Web origins](web-origins.md): why each first-party host is a constant, and bridge versus CORS
-- [Register a mini app](../how-to/register-a-miniapp.md): where `firstPartyOrigins` comes from
+- [Register a mini app](../how-to/register-a-miniapp.md): adding a first-party origin and its owner
 - [ADR 0010](../decisions/0010-server-architecture.md): the module shape
