@@ -189,7 +189,7 @@ describe("GET /ui/home/campus", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.body.meta.lang).toBe("ko");
-    // Every committed banner ended with ESKARA 2026 (ui-campus.config.spec.ts
+    // Every banner of revision 1 ended with ESKARA 2026 (ui-campus.mapper.spec.ts
     // pins the window), and the service buttons moved to the map's chip row.
     expect(res.body.data).toEqual({ minAppVersion: "2.0.0", sections: [] });
   });

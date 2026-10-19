@@ -1,7 +1,7 @@
 /**
- * The structure of campus-banners.json: the committed file parses, a copy
- * missing any carousel field does not, and the carousel id and its banner ids
- * are one namespace.
+ * The structure of the campus-banners dataset: revision 1
+ * (fixtures/campus-banners.dataset.json) parses, a copy missing any carousel
+ * field does not, and the carousel id and its banner ids are one namespace.
  *
  * storedCampusBanners parses the `campus-banners` document as
  * scripts/lib/datasets/store.js writes it: a positive whole revision and the
@@ -11,20 +11,24 @@ import fs from "fs";
 import path from "path";
 import { campusBannersFile, storedCampusBanners } from "./ui-campus.schema";
 
-const COMMITTED = JSON.parse(fs.readFileSync(path.join(__dirname, "campus-banners.json"), "utf8")) as Record<
-  string,
-  unknown
->;
+const FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/campus-banners.dataset.json");
+
+/** Revision 1 of the campus banners, without the fixture's provenance note. */
+function revisionOne(): Record<string, unknown> {
+  const data = JSON.parse(fs.readFileSync(FIXTURE, "utf8")) as Record<string, unknown>;
+  delete data._about;
+  return data;
+}
 
 describe("campusBannersFile", () => {
-  it("parses the committed campus-banners.json", () => {
+  it("parses revision 1 of the dataset", () => {
     // Act & Assert
-    expect(campusBannersFile.safeParse(COMMITTED).success).toBe(true);
+    expect(campusBannersFile.safeParse(revisionOne()).success).toBe(true);
   });
 
   it.each(Object.keys(campusBannersFile.shape))("refuses a carousel without its %s", (field) => {
     // Arrange
-    const rest: Record<string, unknown> = { ...COMMITTED };
+    const rest = revisionOne();
     delete rest[field];
 
     // Act & Assert
@@ -33,15 +37,16 @@ describe("campusBannersFile", () => {
 
   it("refuses two banners with one id", () => {
     // Arrange
-    const [first] = COMMITTED.items as Record<string, unknown>[];
-    const twice = { ...COMMITTED, items: [first, first] };
+    const banners = revisionOne();
+    const [first] = banners.items as Record<string, unknown>[];
+    const twice = { ...banners, items: [first, first] };
 
     // Act & Assert
     expect(campusBannersFile.safeParse(twice).success).toBe(false);
   });
 });
 
-describe("campusBannersFile, on the carousels the boot check refused", () => {
+describe("campusBannersFile, on carousels a push refuses", () => {
   const IMAGE_URL = "https://media.skkuverse.com/campus/banners/test-00000000.webp";
 
   function image(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -89,13 +94,9 @@ describe("campusBannersFile, on the carousels the boot check refused", () => {
 });
 
 describe("storedCampusBanners", () => {
-  const FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/campus-banners.dataset.json");
-
   /** A `datasets` document as scripts/lib/datasets/store.js writes it, with revision 1 of the banners as its data. */
   function storedDocument(): Record<string, unknown> {
-    const data = JSON.parse(fs.readFileSync(FIXTURE, "utf8")) as Record<string, unknown>;
-    delete data._about;
-    return { _id: "campus-banners", revision: 2, data, updatedAt: new Date("2026-10-19T03:00:00.000Z"), updatedBy: "alice@example.com" };
+    return { _id: "campus-banners", revision: 2, data: revisionOne(), updatedAt: new Date("2026-10-19T03:00:00.000Z"), updatedBy: "alice@example.com" };
   }
 
   it("parses a stored campus-banners document", () => {

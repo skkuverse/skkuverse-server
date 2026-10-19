@@ -152,14 +152,14 @@ describe("path rules apply as specified", () => {
 
   it("finds literal JSON reads and skips dynamic ones", () => {
     const source = [
-      'fs.readFileSync(path.join(__dirname, "transit-layout.json"), "utf8")',
+      'fs.readFileSync(path.join(__dirname, "schedule-stops.json"), "utf8")',
       'readFileSync(join(__dirname, "config", "a.json"), "utf8")',
       "fs.readFileSync(path.join(__dirname, ...segments))",
       'path.join(__dirname, "config", fileName)',
     ].join("\n");
-    expect(literalJsonReads("src/ui/transit/ui-transit.config.ts", source)).toEqual([
-      "src/ui/transit/transit-layout.json",
-      "src/ui/transit/config/a.json",
+    expect(literalJsonReads("src/bus/stops/bus-stops.config.ts", source)).toEqual([
+      "src/bus/stops/schedule-stops.json",
+      "src/bus/stops/config/a.json",
     ]);
   });
 
