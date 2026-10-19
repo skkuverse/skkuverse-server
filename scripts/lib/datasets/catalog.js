@@ -67,7 +67,7 @@ function loadCatalog(load) {
 
   return {
     sources: {
-      miniapps: { owner: "src/miniapps", has: (id) => miniapps.isRegistered(id), ids: () => [...miniapps.map.keys()] },
+      miniapps: { owner: "src/miniapps", has: (id) => miniapps.isRegistered(id), ids: () => miniapps.list.map((entry) => entry.id) },
       busGroups,
       subwayStations,
       busServices: codeHeldSource("src/bus", Object.keys(SERVICE_CONFIG)),

@@ -118,7 +118,7 @@ describe("loadCatalog code-held sources", () => {
   // BusConfigService.listGroupIds reads neither of its providers.
   const busConfig = new BusConfigService(null as never, null as never);
   const servedIds = {
-    miniapps: () => [...new MiniappsService().map.keys()],
+    miniapps: () => new MiniappsService().list.map((entry) => entry.id),
     busGroups: () => busConfig.listGroupIds(),
     subwayStations: () => new SubwayStationsService().listStations().map((station) => station.id),
     busServices: () => Object.keys(SERVICE_CONFIG),

@@ -18,10 +18,6 @@ export class MiniappsService {
     return registry.indexEntries;
   }
 
-  get map(): ReadonlyMap<string, Readonly<MiniAppDetailRaw>> {
-    return registry.detailsById;
-  }
-
   get firstPartyOrigins(): Readonly<Record<string, string>> {
     return registry.ownerByOrigin;
   }
