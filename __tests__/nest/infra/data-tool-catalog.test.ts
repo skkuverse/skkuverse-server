@@ -9,9 +9,15 @@
  * the catalog must not load src/infra/config.ts, which exits on a missing value
  * and picks `_dev` on its own.
  *
- * The code-held sources (`miniapps`, `busGroups`, `subwayStations`,
- * `busServices`) list the identities the compiled checkout serves, the same
- * lists the server checks against (move-editorial-datasets D3).
+ * The code-held sources (`busGroups`, `subwayStations`, `busServices`) list
+ * the identities the compiled checkout serves, the same lists the server
+ * checks against (move-editorial-datasets D3).
+ *
+ * The mini app registry is the `miniapps` dataset (move-miniapp-registry D6):
+ * its push runs the server's registry schema and the first-party owner check,
+ * it lists its ids for others to reference, and the three ui datasets check
+ * their mini app ids and targets against the `miniapps` the target database
+ * stores (`storedOf`), refused as not stored when it holds none.
  *
  * The wave A datasets (`campus-banners`, `transit-layout`) are checked at push
  * with the checks the boot refused a committed file on (D4, D5), through the
@@ -23,7 +29,7 @@
 import path from "node:path";
 import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
-import { MiniappsService } from "../../../src/miniapps/miniapps.service";
+import { fixtureRegistry, fixtureRegistryWithWaveRun } from "../../helpers/miniapps/registry-fixture";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
@@ -78,22 +84,24 @@ describe("loadCatalog", () => {
     expect(messages.join("\n")).toContain("actoinType");
   });
 
-  it("declares the home layout's checks and its references to the code-held mini app registry", () => {
+  it("declares the home layout's checks and its references to the stored mini app registry", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);
     const entry = catalog.datasets["home-layout"];
     const parsed = entry.schema.parse(homeLayout);
+    const registry = catalog.datasets.miniapps.schema.parse(fixtureRegistry());
+    const registeredIds: string[] = catalog.datasets.miniapps.idsOf(registry);
 
     // Act
-    const issues = entry.issuesOf(parsed);
+    const issues = entry.issuesOf(parsed, { storedOf: (name: string) => (name === "miniapps" ? registry : null) });
     const references = entry.referencesOf(parsed);
 
     // Assert
     expect(entry.owner).toBe("src/ui/home");
     expect(issues).toEqual([]);
     expect(references.every((ref: { dataset: string }) => ref.dataset === "miniapps")).toBe(true);
-    expect(references.every((ref: { id: string }) => catalog.sources.miniapps.has(ref.id))).toBe(true);
-    expect(catalog.sources.miniapps.has("no-such-miniapp")).toBe(false);
+    expect(references.every((ref: { id: string }) => registeredIds.includes(ref.id))).toBe(true);
+    expect(registeredIds).not.toContain("no-such-miniapp");
   });
 
   it("never loads src/infra/config", () => {
@@ -118,14 +126,12 @@ describe("loadCatalog code-held sources", () => {
   // BusConfigService.listGroupIds reads neither of its providers.
   const busConfig = new BusConfigService(null as never, null as never);
   const servedIds = {
-    miniapps: () => [...new MiniappsService().map.keys()],
     busGroups: () => busConfig.listGroupIds(),
     subwayStations: () => new SubwayStationsService().listStations().map((station) => station.id),
     busServices: () => Object.keys(SERVICE_CONFIG),
   };
 
   it.each([
-    ["miniapps", "src/miniapps"],
     ["busGroups", "src/bus"],
     ["subwayStations", "src/subway"],
     ["busServices", "src/bus"],
@@ -142,7 +148,7 @@ describe("loadCatalog code-held sources", () => {
     expect(source.ids().length).toBeGreaterThan(0);
   });
 
-  it.each(["miniapps", "busGroups", "subwayStations", "busServices"] as const)("answers has() for every %s id it lists, and no other", (name) => {
+  it.each(["busGroups", "subwayStations", "busServices"] as const)("answers has() for every %s id it lists, and no other", (name) => {
     // Arrange
     const source = loadCatalog(srcLoader).sources[name];
 
@@ -159,6 +165,173 @@ describe("loadCatalog code-held sources", () => {
     // Act & Assert
     expect(sources.busGroups.ids()).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
     expect(sources.busServices.has("campus-inja")).toBe(true);
+  });
+});
+
+describe("loadCatalog miniapps", () => {
+  type Registry = ReturnType<typeof fixtureRegistry>;
+
+  it("is owned by src/miniapps, has no code-held source, and accepts revision 1 with no issue and no reference, listing its ten ids", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets.miniapps;
+
+    // Act
+    const issues = checkData(catalog, "miniapps", fixtureRegistry(), {});
+
+    // Assert
+    expect(entry.owner).toBe("src/miniapps");
+    expect(catalog.sources.miniapps).toBeUndefined();
+    expect(issues).toEqual([]);
+    expect(entry.referencesOf(entry.schema.parse(fixtureRegistry()))).toEqual([]);
+    expect(entry.idsOf(entry.schema.parse(fixtureRegistry()))).toEqual(["inja", "eskara-2026", "timetable", "mukja", "playlist", "booth-box", "hssc", "nsc", "skkuw", "skkuzine"]);
+  });
+
+  it("Index entry without a detail: refuses wave-run, naming its index path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data: Registry = fixtureRegistryWithWaveRun();
+    delete data.details["wave-run"];
+
+    // Act
+    const lines = issueLines(checkData(catalog, "miniapps", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^miniapps: index\.miniApps\.10\.id: .*wave-run/)]);
+  });
+
+  it("Owner moved to another mini app: refuses mukja's and playlist's startUrl, naming both paths", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data: Registry = fixtureRegistry();
+    data.details.mukja!.startUrl = "https://mukja.example.com/";
+    data.details.playlist!.startUrl = "https://mukja.mini.skkuverse.com/";
+
+    // Act
+    const issues = checkData(catalog, "miniapps", data, {}) as Issue[];
+
+    // Assert
+    expect(issues.map((issue) => issue.path.join("."))).toEqual(expect.arrayContaining(["details.mukja.startUrl", "details.playlist.startUrl"]));
+    expect(issues.every((issue) => issue.dataset === "miniapps")).toBe(true);
+  });
+
+  it("Unlisted first-party host: refuses a start page on wave-run.mini.skkuverse.com, naming its startUrl path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data: Registry = fixtureRegistryWithWaveRun();
+    data.details["wave-run"]!.startUrl = "https://wave-run.mini.skkuverse.com/";
+
+    // Act
+    const lines = issueLines(checkData(catalog, "miniapps", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^miniapps: details\.wave-run\.startUrl: .*wave-run\.mini\.skkuverse\.com/)]);
+  });
+
+  it("Third-party start page: accepts a mini app on another host", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const issues = checkData(catalog, "miniapps", fixtureRegistryWithWaveRun(), {});
+
+    // Assert
+    expect(issues).toEqual([]);
+  });
+
+  it("Removing a mini app the home layout names: refuses, naming home-layout, the tile's path and the id", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const layout = structuredClone(homeLayout) as { sections: Array<{ type: string; tiles?: Array<Record<string, unknown>> }> };
+    const grid = layout.sections.findIndex((section) => section.type === "tile_grid");
+    layout.sections[grid]!.tiles!.push({ kind: "miniapp", id: "skkuw" });
+    const at = layout.sections[grid]!.tiles!.length - 1;
+    const data: Registry = fixtureRegistry();
+    data.index.miniApps = data.index.miniApps.filter((entry) => entry.id !== "skkuw");
+    delete data.details.skkuw;
+
+    // Act
+    const issues = checkData(catalog, "miniapps", data, { miniapps: fixtureRegistry(), "home-layout": layout });
+
+    // Assert
+    expect(issues).toEqual([{ dataset: "home-layout", path: ["sections", grid, "tiles", at, "id"], message: '"skkuw" is no longer in miniapps' }]);
+  });
+});
+
+describe("loadCatalog ui datasets against the stored miniapps", () => {
+  type Layout = { sections: Array<{ type: string; tiles?: Array<Record<string, unknown>> }> };
+  const development = () => ({ miniapps: fixtureRegistryWithWaveRun() });
+  const production = () => ({ miniapps: fixtureRegistry() });
+
+  function layoutWithWaveRunTile(): { layout: Layout; path: Array<string | number> } {
+    const layout = structuredClone(homeLayout) as Layout;
+    const grid = layout.sections.findIndex((section) => section.type === "tile_grid");
+    // The game tile wave-run gives way: tile ids are one namespace.
+    const tiles = layout.sections[grid]!.tiles!.filter((tile) => tile.id !== "wave-run");
+    tiles.push({ kind: "miniapp", id: "wave-run" });
+    layout.sections[grid]!.tiles = tiles;
+    return { layout, path: ["sections", grid, "tiles", tiles.length - 1, "id"] };
+  }
+
+  it("Development and production registries differ: stores a home layout's wave-run tile in _dev and refuses it in production", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const { layout, path: tilePath } = layoutWithWaveRunTile();
+
+    // Act
+    const toDevelopment = checkData(catalog, "home-layout", layout, development());
+    const toProduction = checkData(catalog, "home-layout", layout, production()) as Issue[];
+
+    // Assert
+    expect(toDevelopment).toEqual([]);
+    expect(toProduction.map((issue) => [issue.dataset, issue.path])).toEqual([["home-layout", tilePath]]);
+    expect(toProduction[0]!.message).toContain("wave-run");
+  });
+
+  it("Referenced dataset not stored: refuses a home layout's wave-run tile, naming its path and miniapps as not stored", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const { layout, path: tilePath } = layoutWithWaveRunTile();
+
+    // Act
+    const issues = checkData(catalog, "home-layout", layout, {});
+
+    // Assert
+    expect(issues).toEqual([{ dataset: "home-layout", path: tilePath, message: '"wave-run" is not in miniapps (no stored dataset)' }]);
+  });
+
+  it("Target registered only in development: refuses a banner targeting wave-run in production, naming its actionValue path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const banners = datasetFixture("../ui/fixtures/campus-banners.dataset.json") as { items: Array<Record<string, unknown>> };
+    banners.items[2] = { ...banners.items[2], actionType: "miniapp", actionValue: "wave-run/entry" };
+
+    // Act
+    const toDevelopment = checkData(catalog, "campus-banners", banners, development());
+    const toProduction = issueLines(checkData(catalog, "campus-banners", banners, production()));
+    const toNone = issueLines(checkData(catalog, "campus-banners", banners, {}));
+
+    // Assert
+    expect(toDevelopment).toEqual([]);
+    expect(toProduction).toEqual([expect.stringMatching(/^campus-banners: items\.2\.actionValue: .*wave-run/)]);
+    expect(toNone).toEqual(['campus-banners: items.2.actionValue: "wave-run" is not in miniapps (no stored dataset)']);
+  });
+
+  it("Link to a mini app the target database lacks: refuses a transit link to wave-run, naming its path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const layout = datasetFixture("../ui/fixtures/transit-layout.dataset.json") as { sections: Array<{ items: Array<Record<string, unknown>> }> };
+    layout.sections[0]!.items.push({ kind: "link", id: "wave", title: { ko: "웨이브" }, icon: { type: "taxi", color: "FFB300", text: { ko: "W" } }, actionType: "miniapp", actionValue: "wave-run" });
+
+    // Act
+    const toDevelopment = checkData(catalog, "transit-layout", layout, development());
+    const toProduction = issueLines(checkData(catalog, "transit-layout", layout, production()));
+    const toNone = issueLines(checkData(catalog, "transit-layout", layout, {}));
+
+    // Assert
+    expect(toDevelopment).toEqual([]);
+    expect(toProduction).toEqual([expect.stringMatching(/^transit-layout: sections\.0\.items\.2\.actionValue: .*wave-run/)]);
+    expect(toNone).toEqual(['transit-layout: sections.0.items.2.actionValue: "wave-run" is not in miniapps (no stored dataset)']);
   });
 });
 

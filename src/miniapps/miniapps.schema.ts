@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { isMediaUrl } from "../infra/media-url";
 import { SHELL_BACKGROUND_RE } from "./miniapps.constants";
-import { isServableStartUrl, isSingleEmoji } from "./miniapps.rules";
+import type { StoredMiniApps } from "./miniapps.document";
+import { isServableStartUrl, isSingleEmoji, toRegistryCrossReferenceIssues } from "./miniapps.rules";
 import { miniAppDetail } from "./miniapps.wire";
 
 // WHY: site-root-relative, so WEB_ORIGIN stays the one place that host is written.
@@ -52,10 +53,17 @@ export const registryFile = z.object({
   details: z.record(z.string(), detailRaw),
 });
 
+// WHY: the index and the details name each other, so a push that adds one half without the other is refused.
+export const checkedRegistry = registryFile.superRefine((file, ctx) => {
+  for (const { path, message } of toRegistryCrossReferenceIssues(file)) ctx.addIssue({ code: "custom", path, message });
+});
+
 export type MiniAppLogoRaw = z.output<typeof miniAppLogoRaw>;
 
 export type MiniAppIndexEntryRaw = z.output<typeof withBothLogos>;
 
 export type MiniAppDetailRaw = z.output<typeof detailRaw>;
 
-export type RegistryFile = z.output<typeof registryFile>;
+export type RegistryFile = z.output<typeof checkedRegistry>;
+
+export const storedRegistry = z.object({ revision: z.int().positive(), data: checkedRegistry }) satisfies z.ZodType<StoredMiniApps>;

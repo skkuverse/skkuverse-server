@@ -18,6 +18,10 @@
  * serve is left out, and a served one the layout does not place is not
  * served; each is logged once per revision, and neither throws.
  *
+ * Revision 1 holds no `miniapp` link, so the tab reads no mini app registry: a
+ * replica that has never read it, while it cannot be read, serves the tab
+ * (move-miniapp-registry D4, spec "Transit tab with no mini app link").
+ *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake
  * system time; the mapper's clock stays the injected one.
  */
@@ -35,7 +39,8 @@ import type { BusGroup } from "../../../bus/config/bus-config.wire";
 import { BusStopsService } from "../../../bus/stops/bus-stops.service";
 import type { Clock } from "../../../infra/clock";
 import logger from "../../../infra/logger";
-import { MiniappsService } from "../../../miniapps/miniapps.service";
+import { FakeMiniappsRepository } from "../../../../__tests__/helpers/fakes/miniapps/miniapps.repository.fake";
+import { fixtureMiniappsService, miniappsServiceOver } from "../../../../__tests__/helpers/miniapps/registry-fixture";
 import { DATASET_CACHE_TTL_MS } from "../../../shared/dataset.constants";
 import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
 import type { UiTransitRepository } from "../ui-transit.repository";
@@ -73,7 +78,7 @@ function withVisibility(visibilityByGroupId: Record<string, BusGroupVisibility>)
 
 function serviceAt(iso: string): UiTransitTabService {
   const clock: Clock = { now: () => new Date(iso) };
-  const layouts = new UiTransitService(asReal<UiTransitRepository>(repository), new MiniappsService(), clock);
+  const layouts = new UiTransitService(asReal<UiTransitRepository>(repository), fixtureMiniappsService(), clock);
   return new UiTransitTabService(layouts, asReal<BusConfigService>(busConfig), new SubwayStationsService(), clock);
 }
 
@@ -439,5 +444,24 @@ describe("UiTransitTabService.getTransitLayout over the stored dataset", () => {
 
     // Assert
     expect(served).toEqual(good);
+  });
+});
+
+describe("UiTransitTabService.getTransitLayout with the registry unavailable", () => {
+  it("serves revision 1, which has no miniapp link, from a replica that has never read the registry", async () => {
+    // Arrange
+    const clock: Clock = { now: () => new Date("2026-10-20T03:00:00Z") };
+    const unreachable = new FakeMiniappsRepository();
+    unreachable.failWith = new Error("server selection timed out");
+    const layouts = new UiTransitService(asReal<UiTransitRepository>(repository), miniappsServiceOver(unreachable, clock), clock);
+    const service = new UiTransitTabService(layouts, asReal<BusConfigService>(busConfig), new SubwayStationsService(), clock);
+
+    // Act
+    const tab = await service.getTransitLayout("ko");
+
+    // Assert
+    expect(tab).toEqual(await serviceAt("2026-10-20T03:00:00Z").getTransitLayout("ko"));
+    expect(tab.sections.length).toBeGreaterThan(0);
+    expect(unreachable.readCount).toBe(0);
   });
 });

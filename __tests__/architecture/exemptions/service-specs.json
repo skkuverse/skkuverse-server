@@ -1,8 +1,7 @@
 {
-  "src/app-config/app-config.service.ts": "assembles /app/config from config.app, the origin lists and the mini-app registry with no decision of its own; app-config.routes.test.ts pins the whole body",
+  "src/app-config/app-config.service.ts": "assembles /app/config from config.app and the constants of `src/infra/origins.ts`, the bridge origins and each first-party origin's owner, with no decision of its own; app-config.routes.test.ts pins the whole body",
   "src/building/building.service.ts": "pure delegation: building's door for other features (ADR 0010, D1), forwarding each call to BuildingRepository unchanged; building.repository.spec.ts pins the reads",
   "src/bus/cache/bus-cache.service.ts": "pure delegation: the bus_cache door its sibling flows read and write through (ADR 0010 D1), each method forwarding to `BusCacheRepository` unchanged, whose spec pins the read, the upsert and the 5 s memory",
   "src/bus/stops/bus-stops.service.ts": "pure delegation: the stop catalog's door for the config and estimate flows (ADR 0010 D1); its constructor reads the catalog once through `readStopCatalog` against the served subway stations and keeps their titles, and each method is one call into `resolveStopSequences` or `etaOptIns`, whose specs cover the parse, the served stops and the opt-ins",
-  "src/miniapps/miniapps.service.ts": "pure delegation: the mini-app registry's door (ADR 0010 D1), each method one statement forwarding to the registry `miniapps.config.ts` loads, whose spec pins the parse, the sort and the origin owners, or to a `miniapps.rules.ts` or `miniapps.mapper.ts` function its own spec covers",
   "src/ui/scroll/ui-scroll.service.ts": "pure delegation: hands the language and the web view origin to toScrollCards, which ui-scroll.mapper.spec.ts covers"
 }

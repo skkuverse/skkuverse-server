@@ -7,9 +7,7 @@
  * poller keeps the last stored manifest: an unreachable origin, a non-2xx, a
  * redirect (raw or opaque), a body that is not JSON, a body over
  * MAX_MANIFEST_BYTES whether announced or read, and the FETCH_TIMEOUT_MS
- * abort. The cases moved here from miniapps-catalog.client.spec.ts with the
- * fetch (move-miniapp-registry task 2.3); each failure that answered `{}`
- * there rejects here, since the catch stayed with the catalog.
+ * abort.
  */
 import { FETCH_TIMEOUT_MS, MAX_MANIFEST_BYTES } from "./miniapps-manifest.constants";
 import { MiniappsManifestClient } from "./miniapps-manifest.client";

@@ -4,7 +4,6 @@ import { Clock } from "../../infra/clock";
 import { createDatasetLoader, type DatasetLoader } from "../../infra/dataset-loader";
 import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
-import { MiniappsService } from "../../miniapps/miniapps.service";
 import { BASE_LAYERS, EVENT_CACHE_TTL_MS, EVENT_STALE_WINDOW_MS } from "../map.constants";
 import { MapRepository } from "../map.repository";
 import type { LayerSpec } from "../map.types";
@@ -35,10 +34,9 @@ export class MapLayerSetService {
     private readonly repository: MapRepository,
     layerSetRepository: MapLayerSetRepository,
     private readonly clock: Clock,
-    miniApps: MiniappsService,
   ) {
     assertValidChipSpecs(BASE_CHIPS, BASE_LAYERS);
-    assertValidLinkChips(BASE_CHIPS, miniApps);
+    assertValidLinkChips(BASE_CHIPS);
     this.unavailableThrottle = createLogThrottle(MAP_LAYER_SETS_LOG_INTERVAL_MS, () => clock.now().getTime());
     this.layerSets = createDatasetLoader({
       name: "map.layer_sets",

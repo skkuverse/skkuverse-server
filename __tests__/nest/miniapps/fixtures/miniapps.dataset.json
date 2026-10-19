@@ -1,0 +1,203 @@
+{
+  "_about": "Revision 1 of the miniapps dataset (move-miniapp-registry tasks 6.2 and 11.2, design D2), built mechanically on 2026-10-20 from the committed registry at commit 2e10b910, unchanged through production commit cd9484d9: src/miniapps/index.json as index, and each src/miniapps/details/<id>.json under its id, in index order. Push it with this _about removed. Nothing trimmed.",
+  "index": {
+    "version": 1,
+    "miniApps": [
+      {
+        "id": "inja",
+        "name": "축제 인자셔틀",
+        "order": 5,
+        "homeLogo": {
+          "kind": "emoji",
+          "emoji": "🚌"
+        },
+        "hidden": true
+      },
+      {
+        "id": "eskara-2026",
+        "name": "축제 가이드",
+        "order": 4,
+        "homeLogo": {
+          "kind": "emoji",
+          "emoji": "📖"
+        },
+        "shellLogo": {
+          "kind": "media",
+          "url": "https://media.skkuverse.com/miniapps/eskara-2026/logo-03a86934.jpg"
+        },
+        "hidden": true
+      },
+      {
+        "id": "timetable",
+        "name": "무대 타임테이블",
+        "order": 6,
+        "homeLogo": {
+          "kind": "emoji",
+          "emoji": "📅"
+        },
+        "hidden": true
+      },
+      {
+        "id": "mukja",
+        "name": "음식 룰렛",
+        "order": 8,
+        "homeLogo": {
+          "kind": "emoji",
+          "emoji": "😋"
+        },
+        "hidden": true
+      },
+      {
+        "id": "playlist",
+        "name": "플리 예습",
+        "order": 7,
+        "homeLogo": {
+          "kind": "emoji",
+          "emoji": "🎧"
+        },
+        "hidden": true
+      },
+      {
+        "id": "booth-box",
+        "name": "선물상자",
+        "order": 9,
+        "homeLogo": {
+          "kind": "emoji",
+          "emoji": "🎁"
+        },
+        "hidden": true
+      },
+      {
+        "id": "hssc",
+        "name": "인사캠 총학생회",
+        "shortName": "인사캠 총학",
+        "order": 10,
+        "homeLogo": {
+          "kind": "remote",
+          "path": "/miniapps/hssc.png"
+        },
+        "hidden": true
+      },
+      {
+        "id": "nsc",
+        "name": "자과캠 총학생회",
+        "shortName": "자과캠 총학",
+        "order": 20,
+        "homeLogo": {
+          "kind": "remote",
+          "path": "/miniapps/nsc.png"
+        },
+        "hidden": true
+      },
+      {
+        "id": "skkuw",
+        "name": "성대신문",
+        "order": 30,
+        "homeLogo": {
+          "kind": "remote",
+          "path": "/miniapps/skkuw.png"
+        },
+        "hidden": true
+      },
+      {
+        "id": "skkuzine",
+        "name": "성균웹진",
+        "order": 40,
+        "homeLogo": {
+          "kind": "remote",
+          "path": "/miniapps/skkuzine.png"
+        },
+        "hidden": true
+      }
+    ]
+  },
+  "details": {
+    "inja": {
+      "version": 1,
+      "id": "inja",
+      "startUrl": "https://inja.mini.skkuverse.com/",
+      "verified": true,
+      "relatedLinks": []
+    },
+    "eskara-2026": {
+      "version": 1,
+      "id": "eskara-2026",
+      "startUrl": "https://eskara.miniapp.skkuverse.com/eskara",
+      "verified": true,
+      "relatedLinks": []
+    },
+    "timetable": {
+      "version": 1,
+      "id": "timetable",
+      "startUrl": "https://timetable.mini.skkuverse.com/",
+      "verified": true,
+      "relatedLinks": []
+    },
+    "mukja": {
+      "version": 1,
+      "id": "mukja",
+      "startUrl": "https://mukja.mini.skkuverse.com/",
+      "verified": true,
+      "relatedLinks": []
+    },
+    "playlist": {
+      "version": 1,
+      "id": "playlist",
+      "startUrl": "https://playlist.mini.skkuverse.com/",
+      "verified": true,
+      "relatedLinks": []
+    },
+    "booth-box": {
+      "version": 1,
+      "id": "booth-box",
+      "startUrl": "https://booth-box.mini.skkuverse.com/",
+      "verified": true,
+      "relatedLinks": []
+    },
+    "hssc": {
+      "version": 1,
+      "id": "hssc",
+      "startUrl": "https://student.skku.edu/student/notice2.do",
+      "verified": true,
+      "relatedLinks": []
+    },
+    "nsc": {
+      "version": 1,
+      "id": "nsc",
+      "startUrl": "https://student.skku.edu/student/notice3.do",
+      "verified": true,
+      "relatedLinks": []
+    },
+    "skkuw": {
+      "version": 1,
+      "id": "skkuw",
+      "startUrl": "https://www.skkuw.com/",
+      "verified": true,
+      "relatedLinks": []
+    },
+    "skkuzine": {
+      "version": 1,
+      "id": "skkuzine",
+      "startUrl": "https://webzine.skku.edu/skkuzine/index.do",
+      "verified": true,
+      "description": "성균웹진은 우리 성균관대학교의 하나뿐인 공식 웹진입니다. 성균관대학교의 SKKU와 인터넷 잡지라는 뜻의 webzine이 합쳐져서 만든 이름입니다. 2001년부터 정식 발간된 성균웹진은 성균관대학교의 각종 소식들과 흥미롭고 유익한 내용들을 담아내고 있습니다.",
+      "relatedLinks": [
+        {
+          "url": "https://linktr.ee/skku_webzine"
+        },
+        {
+          "label": "카카오톡 채널 바로가기",
+          "url": "https://pf.kakao.com/_skkuwebzine/friend"
+        },
+        {
+          "label": "인스타그램",
+          "url": "https://www.instagram.com/skku_webzine"
+        }
+      ],
+      "noticeBanner": {
+        "title": "성균웹진 6월호가 발행되었어요! 📢",
+        "subtitle": "방금 · 공지"
+      }
+    }
+  }
+}

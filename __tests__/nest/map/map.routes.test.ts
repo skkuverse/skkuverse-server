@@ -11,6 +11,10 @@
  * gave (move-editorial-datasets D6): with no layer set ever read, a live
  * festival serves the base map, not a 503; and a festival pushed and opened
  * while the app runs is served within the dataset TTL, with no restart.
+ *
+ * The mini app registry is the stored `miniapps` dataset, read through
+ * FakeMiniappsRepository seeded from the dataset fixture
+ * (__tests__/nest/miniapps/fixtures/miniapps.dataset.json).
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -25,9 +29,12 @@ import { MapLayerSetRepository } from "../../../src/map/layer-set/map-layer-set.
 import type { ActivationDoc, MapPlaceDoc } from "../../../src/map/map.document";
 import { MapModule } from "../../../src/map/map.module";
 import { MapRepository } from "../../../src/map/map.repository";
+import { MiniappsRepository } from "../../../src/miniapps/miniapps.repository";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeMapLayerSetRepository } from "../../helpers/fakes/map/map-layer-set.repository.fake";
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
+import { FakeMiniappsRepository } from "../../helpers/fakes/miniapps/miniapps.repository.fake";
+import { fixtureRegistry } from "../../helpers/miniapps/registry-fixture";
 import { fixtureLayerSetRepository, fixtureLayerSets } from "../../helpers/map/layer-sets-fixture";
 import { DATASET_CACHE_TTL_MS } from "../../../src/shared/dataset.constants";
 import { Clock } from "../../../src/infra/clock";
@@ -107,6 +114,7 @@ beforeAll(async () => {
       { provide: BuildingRepository, useValue: buildings },
       { provide: MapRepository, useValue: map },
       { provide: MapLayerSetRepository, useValue: fixtureLayerSetRepository() },
+      { provide: MiniappsRepository, useValue: FakeMiniappsRepository.seededWith(fixtureRegistry()) },
       { provide: Clock, useValue: CLOCK },
     ],
     role: "api",
@@ -321,6 +329,7 @@ async function bootMapApp(map: FakeMapRepository, layerSets: FakeMapLayerSetRepo
       { provide: BuildingRepository, useValue: new FakeBuildingRepository() },
       { provide: MapRepository, useValue: map },
       { provide: MapLayerSetRepository, useValue: layerSets },
+      { provide: MiniappsRepository, useValue: FakeMiniappsRepository.seededWith(fixtureRegistry()) },
       { provide: Clock, useValue: CLOCK },
     ],
     role: "api",

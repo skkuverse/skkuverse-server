@@ -11,3 +11,8 @@ export const SHELL_BACKGROUND_RE = /^#[0-9A-Fa-f]{6}$/;
  * short with no stale window, so the person who tapped the push waits for the new row instead of the old.
  */
 export const FEED_CACHE_TTL_MS = 3_000;
+
+export const MINIAPPS_DATASET = "miniapps";
+
+// WHY: a missing or invalid registry recurs on every read; one line a minute, as docs/reference/logging.md asks.
+export const REGISTRY_LOG_INTERVAL_MS = 60_000;

@@ -29,7 +29,7 @@ Read them in this order: each depends only on the ones before it.
 
 | When | What runs | If it fails |
 | --- | --- | --- |
-| boot | Base chips checked against the base layers (`assertValidChipSpecs`) and the mini-app registry (`assertValidLinkChips`), when Nest builds `MapLayerSetService` | The boot stops: repository code, a PR fixes it |
+| boot | Base chips checked against the base layers (`assertValidChipSpecs`) and their link values (`assertValidLinkChips`, which refuses a `miniapp` link chip), when Nest builds `MapLayerSetService` | The boot stops: repository code, a PR fixes it |
 | boot | `MapRepository.ensureIndexes` on `places` and `activations` | Logged; the boot does not wait for it |
 | per request | The live layer set: the cached activation, checked against the clock | Caught in `/map/config`, which serves the base layers |
 | per `DATASET_CACHE_TTL_MS`, only while an activation is live | `map-layer-sets` read, each set checked on its own | A bad or repeated set is left out and logged once per revision; with no good value ever read, the base map serves and the event routes serve nothing |

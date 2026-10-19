@@ -12,7 +12,10 @@
  *
  * The layout is stored in a real `mongod`'s content database the way
  * `npm run data` stores it: the fixture's data pushed through the tool's own
- * scripts/lib/datasets/store.js, as revision 1 of `home-layout`.
+ * scripts/lib/datasets/store.js, as revision 1 of `home-layout`. The mini app
+ * registry is stored beside it the same way, as revision 1 of `miniapps`
+ * (__tests__/nest/miniapps/fixtures/miniapps.dataset.json); the layout names
+ * no mini app, so the route reads no registry (move-miniapp-registry D4).
  *
  * The clock stands at 12:00 KST on 2026-10-19. The layout holds no banner
  * window, so the instant changes nothing today; it is fixed so that it never
@@ -32,6 +35,7 @@ const store = require("../../../scripts/lib/datasets/store");
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
+type RegistryFixture = typeof import("../../helpers/miniapps/registry-fixture");
 
 const CLOCK: Clock = { now: () => new Date("2026-10-19T03:00:00.000Z") };
 
@@ -115,6 +119,8 @@ beforeAll(async () => {
   assertConfigReaches(mongod, config.mongo.url);
   const content = db.getClient().db(config.content.dbName);
   await store.create(content, "home-layout", fixtureLayout(), { by: "characterization@example.com", now: CLOCK.now() });
+  const { fixtureRegistry } = require("../../helpers/miniapps/registry-fixture") as RegistryFixture;
+  await store.create(content, "miniapps", fixtureRegistry(), { by: "characterization@example.com", now: CLOCK.now() });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

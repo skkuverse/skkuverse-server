@@ -1,7 +1,7 @@
 import { AppError } from "../http/app.error";
 import { isOnWebviewOrigin, toWebviewUrl } from "../infra/webview-url";
 import { isRootRelativePath } from "../shared/link-target.util";
-import type { MiniAppTarget } from "./miniapps.types";
+import type { MiniAppTarget, RegistryIds, RegistryIssue, RegistrySite, StartUrls } from "./miniapps.types";
 
 const PICTOGRAPHIC_RE = /\p{Extended_Pictographic}/u;
 const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
@@ -42,6 +42,47 @@ export function isKnownMiniAppTarget(value: unknown, registry: ReadonlyMap<strin
   return target !== null && registry.has(target.id);
 }
 
+export function toRegistryCrossReferenceIssues({ index, details }: RegistryIds): RegistryIssue[] {
+  const ids = index.miniApps.map((entry) => entry.id);
+  const entryIdPath = (position: number) => ["index", "miniApps", position, "id"];
+  return [
+    ...ids.flatMap((id, position) => (ids.indexOf(id) !== position ? [{ path: entryIdPath(position), message: `duplicate ids in index: "${id}"` }] : [])),
+    ...ids.flatMap((id, position) => (Object.hasOwn(details, id) ? [] : [{ path: entryIdPath(position), message: `index id "${id}" has no detail` }])),
+    ...Object.entries(details).flatMap(([id, detail]) => (detail.id === id ? [] : [{ path: ["details", id, "id"], message: `detail.id "${detail.id}" != index id "${id}"` }])),
+    ...Object.keys(details).flatMap((id) => (ids.includes(id) ? [] : [{ path: ["details", id], message: `detail "${id}" not present in index` }])),
+  ];
+}
+
 export function toMiniAppNotFound(id: string): AppError {
   return new AppError("MINIAPP_NOT_FOUND", `Unknown mini-app id: ${id}`, 404);
+}
+
+const originOf = (url: string): string | null => (URL.canParse(url) ? new URL(url).origin : null);
+
+const isOurHost = (url: string): boolean => {
+  const host = URL.canParse(url) ? new URL(url).hostname : "";
+  return host === "skkuverse.com" || host.endsWith(".skkuverse.com");
+};
+
+function ownerIssues(details: StartUrls, origin: string, owner: string): RegistryIssue[] {
+  const detail = details[owner];
+  if (detail === undefined) return [{ path: ["details"], message: `first-party origin ${origin} belongs to "${owner}", which is not registered` }];
+  if (originOf(detail.startUrl) === origin) return [];
+  return [{ path: ["details", owner, "startUrl"], message: `"${owner}" owns ${origin}, so its startUrl must be on it` }];
+}
+
+function startUrlIssues(id: string, startUrl: string, site: RegistrySite): RegistryIssue[] {
+  const origin = originOf(startUrl);
+  const owner = origin === null ? undefined : site.owners[origin];
+  if (owner !== undefined && owner !== id) return [{ path: ["details", id, "startUrl"], message: `${origin} belongs to "${owner}", not "${id}"` }];
+  if (owner !== undefined || origin === site.webviewOrigin || !isOurHost(startUrl)) return [];
+  return [{ path: ["details", id, "startUrl"], message: `${origin} is on skkuverse.com but is neither the web view nor a first-party origin in src/infra/origins.ts` }];
+}
+
+// WHY: who owns a first-party origin is a trust decision held in code; a push may not move a shell to another mini app.
+export function toRegistryIssues({ details }: { details: StartUrls }, site: RegistrySite): RegistryIssue[] {
+  return [
+    ...Object.entries(site.owners).flatMap(([origin, owner]) => ownerIssues(details, origin, owner)),
+    ...Object.entries(details).flatMap(([id, detail]) => startUrlIssues(id, detail.startUrl, site)),
+  ];
 }

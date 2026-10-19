@@ -13,7 +13,7 @@ audience: internal
 
 ## Overview
 
-The layout is the `home-layout` dataset in the content database ([ADR 0013](../decisions/0013-runtime-data-in-mongodb.md)), edited only with `npm run data` ([edit-runtime-data.md](edit-runtime-data.md)). A push is validated with the server's own code before anything is written, so a bad layout is refused at your terminal instead of served. The structure rules are in `src/ui/home/ui-home.schema.ts` (the carousel's in `src/ui/ui.schema.ts`), the checks against the mini-app registry in `src/ui/home/ui-home.rules.ts`, and the served shape in `src/ui/home/ui-home.wire.ts`. Every api replica serves a push within 60 seconds; the app may keep the old response for its 5-minute `Cache-Control` on top of that.
+The layout is the `home-layout` dataset in the content database ([ADR 0013](../decisions/0013-runtime-data-in-mongodb.md)), edited only with `npm run data` ([edit-runtime-data.md](edit-runtime-data.md)). A push is validated with the server's own code before anything is written, so a bad layout is refused at your terminal instead of served. The structure rules are in `src/ui/home/ui-home.schema.ts` (the carousel's in `src/ui/ui.schema.ts`), the checks against the mini-app registry in `src/ui/home/ui-home.rules.ts`, run against the `miniapps` dataset stored in the database the push targets, and the served shape in `src/ui/home/ui-home.wire.ts`. Every api replica serves a push within 60 seconds; the app may keep the old response for its 5-minute `Cache-Control` on top of that.
 
 The layout has two kinds of section, drawn in the order they are listed:
 
@@ -27,7 +27,7 @@ The layout has two kinds of section, drawn in the order they are listed:
 
   | `kind` | Fields | Name and icon from | Tap |
   | --- | --- | --- | --- |
-  | `miniapp` | `id` | The mini-app registry (`src/miniapps/index.json`) | Opens the mini app |
+  | `miniapp` | `id` | The mini-app registry (the `miniapps` dataset) | Opens the mini app |
   | `game` | `id` | The app's bundled games (skkuverse-app `features/games`) | Opens the native game |
   | `link` | `id`, `title`, `icon`, `actionType`, `actionValue` | The tile itself | Runs the action |
 
@@ -38,7 +38,7 @@ The layout has two kinds of section, drawn in the order they are listed:
 
 Text (`alt`, `title`) is written as `{ "ko": ..., "en"?: ..., "zh"?: ... }`, and `ko` is required. The server picks one language per request, and `Vary: Accept-Language` is already set.
 
-**App releases that predate this endpoint never call it.** They still draw a single flat grid from the registry's `order` and `hidden`. So when you move a mini app between sections, keep `hidden` in `index.json` meaningful for those older releases.
+**App releases that predate this endpoint never call it.** They still draw a single flat grid from the registry's `order` and `hidden`. So when you move a mini app between sections, keep `hidden` in the `miniapps` dataset meaningful for those older releases.
 
 ## Prerequisites
 
@@ -126,7 +126,7 @@ Bus groups and stations come from the code, so a deploy can change them while th
 
 ### Rearrange the grids
 
-Edit the `tile_grid` sections: reorder tiles, move a tile to another grid, add a grid, or add or remove a `title`. To add a new mini app, register it in `src/miniapps/` first and deploy (see [register-a-miniapp.md](register-a-miniapp.md)), since a push refuses an id the registry does not have.
+Edit the `tile_grid` sections: reorder tiles, move a tile to another grid, add a grid, or add or remove a `title`. To add a new mini app, push it to the `miniapps` dataset first and wait a minute (see [register-a-miniapp.md](register-a-miniapp.md)), since a push refuses an id the target database's registry does not have.
 
 The `home_tiles` grid starts with the map's four permanent chips (건물지도, 건물코드, 분실물, 문의하기) from `BASE_CHIPS` in [`src/map/layer-set/map-layer-set.constants.ts`](../../src/map/layer-set/map-layer-set.constants.ts), with the same ids, titles and served actions. This is a convention, not a check: no push refuses a layout where the two differ, so when you change one, change the other. App builds that drop a `link` chip still reach the four links here. The games follow in the same grid, because the app puts a 24 pt gap after every grid: a second grid reads as a new section, while tiles in one grid wrap at the normal row spacing. The Hall of Fame card stays under the first grid that holds a game.
 
@@ -166,7 +166,7 @@ The app fetches the entries itself from `GET /miniapps/:id/notifications` (cache
 ## Troubleshooting
 
 - **A push prints `REFUSED`**: each line names a path and what failed. Common causes are a misspelt key (unknown keys are refused), a mini-app id missing from the registry, an id placed in two grids, or an emoji icon that is not exactly one emoji. Nothing was written.
-- **A tile or section is missing, and the log has `ui.home_layout.item_left_out`**: the stored layout names something the running code cannot serve, usually a mini app a deploy removed. The server leaves that item out (and a grid it empties), serves the rest, and logs each item once per revision with its `path`. Push a layout without it; before removing a mini app, run `npm run data -- check --prod` ([register-a-miniapp.md](register-a-miniapp.md)).
+- **A tile or section is missing, and the log has `ui.home_layout.item_left_out`**: the stored layout names something the running code cannot serve, usually a mini app a deploy removed. The server leaves that item out (and a grid it empties), serves the rest, and logs each item once per pair of layout and registry revisions with its `path`. Push a layout without it; a `miniapps` push that removes a mini app is refused while a stored layout names it ([register-a-miniapp.md](register-a-miniapp.md#remove-a-mini-app)). A tile pushed in the minute after its mini app's registry push is left out until the replica reads the new registry.
 - **`/ui/home` answers 503 `HOME_LAYOUT_UNAVAILABLE`**: the replica has never read a good layout. `ui.home_layout.missing` means no `home-layout` dataset exists in that database (create it with `push --create`); `ui.home_layout.invalid` names the stored revision and each issue, which happens when a deploy's schema rejects stored data (run `check --prod` before such a deploy). A replica that had a good layout keeps serving it for 24 hours instead, logging `cache.reload_failed`. Each line repeats at most once a minute, with `suppressed` counting the ones held back, and a replica with no good layout reads again only once a minute, so a fixing push is served within 60 s.
 - **A banner shows in dev but not in production**: its `startAt`/`endAt` window is evaluated on the server's clock. Remember the offset in the window.
 - **`/ui/home/campus` answers 503 `CAMPUS_BANNERS_UNAVAILABLE`, or `/ui/home/transit` 503 `TRANSIT_LAYOUT_UNAVAILABLE`**: as for the home layout, with `ui.campus_banners.*` or `ui.transit_layout.*` lines. Create the dataset with `push --create`, or fix the stored revision the log names.
@@ -176,5 +176,5 @@ The app fetches the entries itself from `GET /miniapps/:id/notifications` (cache
 ## Related
 
 - [edit-runtime-data.md](edit-runtime-data.md): every `npm run data` command, conflicts and rollback.
-- [`src/miniapps/index.json`](../../src/miniapps/index.json): the registry the grids reference.
+- [register-a-miniapp.md](register-a-miniapp.md): the `miniapps` dataset the grids reference.
 - skkuverse-app `packages/shared/src/home/`: the client parser, which skips section, item and tile types it does not know.

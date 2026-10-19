@@ -1,6 +1,8 @@
 import { isRecord } from "../shared/object.util";
 import { SHELL_BACKGROUND_RE, SHELL_BARS, SHELL_HEADERS, SHELL_STATUS_BARS } from "./miniapps.constants";
-import type { MiniAppIndexEntryRaw, MiniAppLogoRaw } from "./miniapps.schema";
+import { isKnownMiniAppTarget, isSingleEmoji, parseMiniAppTarget } from "./miniapps.rules";
+import type { MiniAppDetailRaw, MiniAppIndexEntryRaw, MiniAppLogoRaw, RegistryFile } from "./miniapps.schema";
+import type { MiniAppRegistry } from "./miniapps.types";
 import type { MiniAppIndexEntry, MiniAppLogo, ShellConfig } from "./miniapps.wire";
 
 const pick = <T extends string>(value: unknown, allowed: readonly T[]): T | undefined => allowed.find((option) => option === value);
@@ -45,4 +47,20 @@ export function parseShellFields(value: unknown): Partial<ShellConfig> {
     ...(statusBar ? { statusBar } : {}),
     ...(background ? { background: background.toUpperCase() } : {}),
   };
+}
+
+export function toMiniAppRegistry({ index, details }: RegistryFile, revision: number, webOrigin: string): MiniAppRegistry {
+  const detailsById: ReadonlyMap<string, Readonly<MiniAppDetailRaw>> = new Map(Object.entries(details).map(([id, detail]) => [id, Object.freeze(detail)]));
+  const indexEntries = [...index.miniApps].sort((a, b) => a.order - b.order).map((entry) => toIndexEntry(entry, webOrigin));
+  return Object.freeze({
+    revision,
+    version: index.version,
+    indexEntries: Object.freeze(indexEntries),
+    detailsById,
+    isRegistered: (id: string) => detailsById.has(id),
+    detailOf: (id: string) => detailsById.get(id),
+    isKnownMiniAppTarget: (value: unknown) => isKnownMiniAppTarget(value, detailsById),
+    parseTarget: parseMiniAppTarget,
+    isSingleEmoji,
+  });
 }

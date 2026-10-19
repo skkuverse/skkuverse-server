@@ -6,9 +6,17 @@
  * copied from `packages/miniapp/src/protocol/manifest.ts` in skkuverse-miniapp
  * (parseShellFields says why it is a copy): a bad value is dropped, a hex
  * background is upper-cased, and an unknown key never passes.
+ *
+ * toMiniAppRegistry, the frozen snapshot every reader takes of one registry
+ * revision (move-miniapp-registry design D3): the index in `order` with both
+ * logos resolved under the web origin it is given, each detail by its id, and the
+ * lookups the old MiniappsService answered from the committed files. It is
+ * pure and reads no config, so the data tool builds the same snapshot.
  */
-import { parseShellFields, resolveLogo, toIndexEntry } from "./miniapps.mapper";
-import type { MiniAppIndexEntryRaw } from "./miniapps.schema";
+import { fixtureRegistry } from "../../__tests__/helpers/miniapps/registry-fixture";
+import { WEB_ORIGIN } from "../infra/origins";
+import { parseShellFields, resolveLogo, toIndexEntry, toMiniAppRegistry } from "./miniapps.mapper";
+import { checkedRegistry, type MiniAppIndexEntryRaw } from "./miniapps.schema";
 
 const WEB = "https://web.test";
 
@@ -120,5 +128,99 @@ describe("parseShellFields", () => {
     expect(
       parseShellFields({ bar: "none", header: "overlay", statusBar: "light", background: "#112233" }),
     ).toEqual({ bar: "none", header: "overlay", statusBar: "light", background: "#112233" });
+  });
+});
+
+describe("toMiniAppRegistry", () => {
+  const FIXTURE_IDS = ["eskara-2026", "inja", "timetable", "playlist", "mukja", "booth-box", "hssc", "nsc", "skkuw", "skkuzine"];
+  const snapshot = () => toMiniAppRegistry(checkedRegistry.parse(fixtureRegistry()), 7, WEB_ORIGIN);
+
+  it("carries the revision it was read at and the index's version", () => {
+    // Act
+    const registry = snapshot();
+
+    // Assert
+    expect({ revision: registry.revision, version: registry.version }).toEqual({ revision: 7, version: 1 });
+  });
+
+  it("serves the index in ascending order, not the stored order", () => {
+    // Act
+    const ids = snapshot().indexEntries.map((entry) => entry.id);
+
+    // Assert
+    expect(ids).toEqual(FIXTURE_IDS);
+  });
+
+  it("resolves both logos of each entry, a path under the web origin and an emoji as it is", () => {
+    // Act
+    const hssc = snapshot().indexEntries.find((entry) => entry.id === "hssc");
+    const inja = snapshot().indexEntries.find((entry) => entry.id === "inja");
+
+    // Assert
+    expect(hssc).toEqual({
+      id: "hssc",
+      name: "인사캠 총학생회",
+      shortName: "인사캠 총학",
+      order: 10,
+      homeLogo: { kind: "remote", uri: "https://skkuverse.com/miniapps/hssc.png" },
+      shellLogo: { kind: "remote", uri: "https://skkuverse.com/miniapps/hssc.png" },
+      hidden: true,
+    });
+    expect(inja?.shellLogo).toEqual({ kind: "emoji", emoji: "🚌" });
+  });
+
+  it("is frozen, its index, each entry and each detail", () => {
+    // Act
+    const registry = snapshot();
+
+    // Assert
+    expect(Object.isFrozen(registry)).toBe(true);
+    expect(Object.isFrozen(registry.indexEntries)).toBe(true);
+    expect(registry.indexEntries.every((entry) => Object.isFrozen(entry))).toBe(true);
+    expect(Object.isFrozen(registry.detailOf("skkuzine"))).toBe(true);
+  });
+
+  it("registers exactly the fixture's ids", () => {
+    // Act
+    const registry = snapshot();
+
+    // Assert
+    expect(FIXTURE_IDS.every((id) => registry.isRegistered(id))).toBe(true);
+    expect(registry.isRegistered("no-such-app")).toBe(false);
+    expect(registry.isRegistered("toString")).toBe(false);
+  });
+
+  it("answers each id's detail as stored, and nothing for an unknown id", () => {
+    // Act
+    const registry = snapshot();
+
+    // Assert
+    expect(registry.detailOf("skkuzine")).toEqual(fixtureRegistry().details.skkuzine);
+    expect(registry.detailOf("no-such-app")).toBeUndefined();
+  });
+
+  // Ported from miniapps.rules.spec.ts's isKnownMiniAppTarget block, which read the committed registry.
+  it("accepts a target naming a registered mini app", () => {
+    // Act & Assert
+    expect(snapshot().isKnownMiniAppTarget("eskara-2026/eskara/wristband")).toBe(true);
+  });
+
+  it("refuses a well-formed target naming nothing registered, and a malformed one", () => {
+    // Act & Assert
+    expect(snapshot().isKnownMiniAppTarget("no-such-app/x")).toBe(false);
+    expect(snapshot().isKnownMiniAppTarget("eskara-2026//evil.com/x")).toBe(false);
+  });
+
+  it("parses a target with the grammar, whether or not it is registered", () => {
+    // Act & Assert
+    expect(snapshot().parseTarget("eskara-2026/eskara/wristband")).toEqual({ id: "eskara-2026", path: "/eskara/wristband" });
+    expect(snapshot().parseTarget("no-such-app")).toEqual({ id: "no-such-app" });
+    expect(snapshot().parseTarget(42)).toBeNull();
+  });
+
+  it("counts one emoji in graphemes", () => {
+    // Act & Assert
+    expect(snapshot().isSingleEmoji("👩‍🍳")).toBe(true);
+    expect(snapshot().isSingleEmoji("🍢🍗")).toBe(false);
   });
 });

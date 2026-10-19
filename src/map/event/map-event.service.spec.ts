@@ -13,13 +13,20 @@
  * recognise makes the marker vanish inside the client parser with no error, an
  * unmapped category would drop a real booth off the festival map, and a lost
  * `zh` leaves a map whose layer labels are Chinese and whose booths are not.
+ *
+ * The registry is read only once a live layer set has places, and its outage
+ * costs a `miniapp` button, never a booth (move-miniapp-registry D4): with no
+ * registry ever read, every place keeps its other buttons and loses its
+ * `miniapp` ones, and `map.event_overlays.registry_unavailable` is logged at
+ * error.
  */
 
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
 
 import type { Clock } from "../../infra/clock";
-import { MiniappsService } from "../../miniapps/miniapps.service";
+import { FakeMiniappsRepository } from "../../../__tests__/helpers/fakes/miniapps/miniapps.repository.fake";
+import { fixtureMiniappsService, miniappsServiceOver } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import type { MapLayerSetRepository } from "../layer-set/map-layer-set.repository";
 import { fixtureLayerSet, fixtureLayerSetRepository } from "../../../__tests__/helpers/map/layer-sets-fixture";
@@ -44,8 +51,8 @@ let mockPlaces: jest.SpyInstance<ReturnType<MapRepository["listPlacesByLayerSetI
 /** A cold service: the activation and overlay caches live on the instances. */
 function newService(): MapEventService {
   const real = asReal<MapRepository>(repository);
-  const layerSet = new MapLayerSetService(real, asReal<MapLayerSetRepository>(fixtureLayerSetRepository()), CLOCK, new MiniappsService());
-  return new MapEventService(real, layerSet, new MiniappsService());
+  const layerSet = new MapLayerSetService(real, asReal<MapLayerSetRepository>(fixtureLayerSetRepository()), CLOCK);
+  return new MapEventService(real, layerSet, fixtureMiniappsService());
 }
 
 let service: MapEventService;
@@ -968,5 +975,53 @@ describe("MapEventService.getEventOverlays — list facets", () => {
     // Assert
     expect(o.facets.org).toEqual([]);
     expect(o.orderByOption).toEqual({});
+  });
+});
+
+describe("MapEventService.getEventOverlays with the registry unavailable", () => {
+  let unreachable: FakeMiniappsRepository;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFindActiveActivation.mockResolvedValue({ _id: "eskara-2026" } as Awaited<ReturnType<MapRepository["findActiveActivation"]>>);
+    unreachable = new FakeMiniappsRepository();
+    unreachable.failWith = new Error("server selection timed out");
+    const real = asReal<MapRepository>(repository);
+    const layerSet = new MapLayerSetService(real, asReal<MapLayerSetRepository>(fixtureLayerSetRepository()), CLOCK);
+    service = new MapEventService(real, layerSet, miniappsServiceOver(unreachable, CLOCK));
+  });
+
+  it("serves every place, keeping its other buttons and dropping its miniapp one, and logs the registry at error", async () => {
+    // Arrange
+    const label = { ko: "안내" };
+    arrange([
+      place({
+        actions: [
+          { id: "wristband", label, actionType: "miniapp", actionValue: "eskara-2026/eskara/wristband" },
+          { id: "map", label, actionType: "route", actionValue: "/map/hssc" },
+        ],
+      }),
+    ]);
+
+    // Act
+    const { overlays } = await getEventOverlays();
+
+    // Assert
+    expect(overlays.map((overlay) => overlay.id)).toEqual(["eskara-2026-booth-01"]);
+    expect(overlays[0]!.actions.map((action) => action.id)).toEqual(["map"]);
+    expect(mockLogger.error).toHaveBeenCalledWith(expect.objectContaining({ event: "map.event_overlays.registry_unavailable", layerSetId: "eskara-2026" }), expect.any(String));
+  });
+
+  it("reads no registry when no festival is live", async () => {
+    // Arrange
+    mockFindActiveActivation.mockResolvedValue(null);
+
+    // Act
+    const { overlays } = await getEventOverlays();
+
+    // Assert
+    expect(overlays).toEqual([]);
+    expect(unreachable.readCount).toBe(0);
+    expect(mockLogger.error).not.toHaveBeenCalled();
   });
 });

@@ -16,7 +16,6 @@ import { fixtureLayerSet, fixtureLayerSets, fixtureLayerSetRepository } from "..
 import type { MapLayerSetRepository } from "../layer-set/map-layer-set.repository";
 import type { LayerSet } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
-import { MiniappsService } from "../../miniapps/miniapps.service";
 import { EVENT_CACHE_TTL_MS } from "../map.constants";
 import type { MapRepository } from "../map.repository";
 import { MapConfigService } from "./map-config.service";
@@ -39,7 +38,6 @@ const BASE_CHIPS = new MapLayerSetService(
   asReal<MapRepository>(new FakeMapRepository()),
   asReal<MapLayerSetRepository>(new FakeMapLayerSetRepository()),
   CLOCK,
-  new MiniappsService(),
 ).servedChipSpecs(null);
 const EVENT_LAYER_IDS = new Set(CONFIG.layers.map((l) => l.id));
 
@@ -57,7 +55,7 @@ describe("MapConfigService", () => {
     repository.findActiveActivation = findActiveActivation;
     layerSets = fixtureLayerSetRepository();
     config = new MapConfigService(
-      new MapLayerSetService(asReal<MapRepository>(repository), asReal<MapLayerSetRepository>(layerSets), CLOCK, new MiniappsService()),
+      new MapLayerSetService(asReal<MapRepository>(repository), asReal<MapLayerSetRepository>(layerSets), CLOCK),
     );
   }
   const svc = {

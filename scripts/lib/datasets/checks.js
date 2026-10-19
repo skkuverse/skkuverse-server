@@ -6,9 +6,14 @@
  *
  *   1. the dataset's schema (later checks need its parsed output, so a schema
  *      failure stops there);
- *   2. its `issuesOf`;
+ *   2. its `issuesOf(parsed, { storedOf })`, where `storedOf(name)` is the
+ *      parsed data being checked when `name` is its own dataset, the parsed
+ *      stored data of any other in the target database, or null when none is
+ *      stored or it no longer parses: a check that needs another dataset's
+ *      content, not only its ids, reads the copy that database serves
+ *      (move-miniapp-registry D6);
  *   3. outgoing references: each identity it names is in the target's stored
- *      `idsOf`, or in a code-held source of the catalog;
+ *      `idsOf` (the same `storedOf`), or in a code-held source of the catalog;
  *   4. incoming references: each stored dataset that names this one still
  *      resolves against the data being checked.
  *
@@ -48,12 +53,18 @@ function parsedStored(catalog, name, stored) {
   return result.success ? result.data : null;
 }
 
+/** The data being checked under its own name, else the parsed stored data of `name`, else null. */
+function storedOf(catalog, context, name) {
+  if (name === context.name) return context.parsed;
+  return catalog.datasets[name] ? parsedStored(catalog, name, context.stored) : null;
+}
+
 function resolves(catalog, ref, context) {
   const source = catalog.sources[ref.dataset];
   if (source) return { ok: source.has(ref.id) };
   const target = catalog.datasets[ref.dataset];
   if (!target || !target.idsOf) return { ok: false, note: " (not a dataset others may reference)" };
-  const data = ref.dataset === context.name ? context.parsed : parsedStored(catalog, ref.dataset, context.stored);
+  const data = storedOf(catalog, context, ref.dataset);
   if (data === null) return { ok: false, note: " (no stored dataset)" };
   return { ok: target.idsOf(data).includes(ref.id) };
 }
@@ -88,7 +99,7 @@ function checkData(catalog, name, data, stored) {
   const result = entry.schema.safeParse(data);
   if (!result.success) return zodIssues(name, result.error);
   const context = { name, parsed: result.data, stored };
-  const own = entry.issuesOf ? entry.issuesOf(result.data).map((issue) => ({ dataset: name, ...issue })) : [];
+  const own = entry.issuesOf ? entry.issuesOf(result.data, { storedOf: (other) => storedOf(catalog, context, other) }).map((issue) => ({ dataset: name, ...issue })) : [];
   return onePerPath([...own, ...outgoingIssues(catalog, context), ...incomingIssues(catalog, context)]);
 }
 

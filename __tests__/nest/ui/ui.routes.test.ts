@@ -20,6 +20,10 @@
  * more apps boot over other stores: one that never held banners answers 503
  * CAMPUS_BANNERS_UNAVAILABLE with no Cache-Control, and one whose banner opens
  * a mini app the registry does not hold serves the other banner.
+ *
+ * The mini app registry is the stored `miniapps` dataset, read through
+ * FakeMiniappsRepository seeded from the dataset fixture
+ * (__tests__/nest/miniapps/fixtures/miniapps.dataset.json).
  */
 import fs from "fs";
 import path from "path";
@@ -28,6 +32,7 @@ import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { Clock } from "../../../src/infra/clock";
+import { MiniappsRepository } from "../../../src/miniapps/miniapps.repository";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { UiCampusModule } from "../../../src/ui/campus/ui-campus.module";
 import { UiCampusRepository } from "../../../src/ui/campus/ui-campus.repository";
@@ -37,8 +42,10 @@ import { UiScrollModule } from "../../../src/ui/scroll/ui-scroll.module";
 import { UiTransitListModule } from "../../../src/ui/transit-list/ui-transit-list.module";
 import { UiModule } from "../../../src/ui/ui.module";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { FakeMiniappsRepository } from "../../helpers/fakes/miniapps/miniapps.repository.fake";
 import { FakeUiCampusRepository } from "../../helpers/fakes/ui/ui-campus.repository.fake";
 import { FakeUiHomeRepository } from "../../helpers/fakes/ui/ui-home.repository.fake";
+import { fixtureRegistry } from "../../helpers/miniapps/registry-fixture";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { campusSheet } from "../../../src/ui/campus/ui-campus.wire";
@@ -86,6 +93,7 @@ beforeAll(async () => {
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: UiHomeRepository, useValue: storedHomeLayout(fixtureLayout()) },
       { provide: UiCampusRepository, useValue: storedCampusBanners(fixtureBanners()) },
+      { provide: MiniappsRepository, useValue: FakeMiniappsRepository.seededWith(fixtureRegistry()) },
     ],
     role: "api",
   });
@@ -297,6 +305,7 @@ describe("GET /ui/home over other stored layouts", () => {
       overrides: [
         { provide: Clock, useValue: CLOCK },
         { provide: UiHomeRepository, useValue: storedHomeLayout(layout) },
+        { provide: MiniappsRepository, useValue: FakeMiniappsRepository.seededWith(fixtureRegistry()) },
       ],
       role: "api",
     });
@@ -349,6 +358,7 @@ describe("GET /ui/home/campus over other stored banners", () => {
       overrides: [
         { provide: Clock, useValue: CLOCK },
         { provide: UiCampusRepository, useValue: storedCampusBanners(banners) },
+        { provide: MiniappsRepository, useValue: FakeMiniappsRepository.seededWith(fixtureRegistry()) },
       ],
       role: "api",
     });

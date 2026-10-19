@@ -17,6 +17,7 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 
 | Dataset | Served on | Never read | References |
 | --- | --- | --- | --- |
+| `miniapps` | `GET /miniapps`, `GET /miniapps/:id`, the feed and send routes, and every dataset below that names a mini app | 503 `MINIAPP_REGISTRY_UNAVAILABLE` | none; each first-party origin's owner is the one `src/infra/origins.ts` names. Named by the three ui datasets, so a push may not drop an id they name ([register-a-miniapp.md](register-a-miniapp.md)) |
 | `home-layout` | `GET /ui/home` | 503 `HOME_LAYOUT_UNAVAILABLE` | `miniapps`: each `miniapp` tile, feed and `miniapp` action |
 | `campus-banners` | `GET /ui/home/campus` | 503 `CAMPUS_BANNERS_UNAVAILABLE` | `miniapps`: each banner's `miniapp` action |
 | `transit-layout` | `GET /ui/home/transit` | 503 `TRANSIT_LAYOUT_UNAVAILABLE` | `busGroups` and `subwayStations`: every one the checkout serves, each placed exactly once; `miniapps`: each `miniapp` link |
@@ -24,9 +25,9 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | `bus-service-notices` | `GET /bus/schedule/data/:serviceId/smart` and `/week`, and the shuttle estimate pollers | 503 `BUS_SCHEDULE_UNAVAILABLE`; a poller tick rejects | `busServices`: each key is a service the checkout defines ([below](#edit-a-shuttle-notice-or-suspension)) |
 | `skku-rest-days` | the same routes and pollers | 503 `BUS_SCHEDULE_UNAVAILABLE`; a poller tick rejects | none; each key is on the calendar ([below](#add-a-skku-rest-day)) |
 
-A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. The poller reads the two bus datasets too, so a push reaches the shuttle estimates within the same minute. `miniapps`, `busGroups`, `subwayStations` and `busServices` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
+A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. The poller reads the two bus datasets too, so a push reaches the shuttle estimates within the same minute. `busGroups`, `subwayStations` and `busServices` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
 
-Every push is validated with the server's own schema and rules, compiled from your checkout, and checked for references: a home layout tile that names a mini app the registry does not have is refused, naming the tile's path. Nothing is written while any issue stands.
+Every push is validated with the server's own schema and rules, compiled from your checkout, and checked for references against the datasets stored in the database it targets: a home layout tile that names a mini app that database's `miniapps` does not hold is refused, naming the tile's path, and so is a `miniapps` push that drops an id a stored layout still names. Nothing is written while any issue stands.
 
 | Target | Database | How |
 | --- | --- | --- |
@@ -165,7 +166,7 @@ It runs the push checks on the stored data of every dataset, writes nothing, and
 | Message | Meaning | What to do |
 | --- | --- | --- |
 | `CONFLICT: <dataset> is at revision <n>, stored by <who> at <time>` | Someone pushed since you pulled. Nothing was written. | Pull again, redo your edit on the new file, push. |
-| `REFUSED: <n> issue(s), nothing written`, one line per `<dataset> <path> <message>` | The data fails the schema, a rule, or a reference. | Fix each path. An unknown key such as `actoinType` is a typo; `"<id>" is not a registered mini app` names the registry. |
+| `REFUSED: <n> issue(s), nothing written`, one line per `<dataset> <path> <message>` | The data fails the schema, a rule, or a reference. | Fix each path. An unknown key such as `actoinType` is a typo; `"<id>" is not a registered mini app` names the target database's registry, and `"<id>" is not in miniapps (no stored dataset)` means it holds none yet. |
 | `... was pulled from the development database, so it cannot be pushed to <prod>` | You pushed a `_dev` working file with `--prod`. | `pull --prod` and redo the edit on `.data/prod/`. |
 | `refusing to write ... (PRODUCTION) without a confirmation` | A production write with no terminal and no `--yes`. | Run it in a terminal, or pass `--yes` where the diff is reviewed. |
 | `dist/src is missing: run npm run build first` | You ran `node scripts/data.js` without a build. | Use `npm run data`, which builds first. |

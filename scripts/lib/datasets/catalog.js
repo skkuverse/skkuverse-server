@@ -16,12 +16,16 @@
  *
  *   owner            the src/ folder that reads it
  *   schema           the zod schema the server's repository parses `data` with
- *   issuesOf(data)   checks a schema cannot hold, as { path, message }
+ *   issuesOf(data, { storedOf })
+ *                    checks a schema cannot hold, as { path, message };
+ *                    `storedOf(name)` is another dataset's parsed content in
+ *                    the target database, or null (scripts/lib/datasets/checks.js)
  *   referencesOf(data)
  *                    every identity the data names, as { dataset, id, path };
  *                    `dataset` is another catalog dataset or a code-held source
- *   idsOf(data)      the identities others may reference (`map-layer-sets`
- *                    names its layer sets; nothing references them yet)
+ *   idsOf(data)      the identities others may reference (`miniapps` its ids,
+ *                    which the three ui datasets name; `map-layer-sets` its
+ *                    layer sets, which nothing references yet)
  *
  * `issuesOf`, `referencesOf` and `idsOf` take the schema's parsed output.
  *
@@ -44,6 +48,22 @@ function codeHeldSource(owner, ids) {
   return { owner, has: (id) => known.has(id), ids: () => [...ids] };
 }
 
+/**
+ * The registry the ui checks read: the target database's stored `miniapps` as the server snapshots it, or,
+ * with none stored, the grammar alone. Then every well-formed id and target passes here, and the outgoing
+ * reference check names each one as `(no stored dataset)` at its path (move-miniapp-registry D6).
+ */
+function registryOf(storedOf, { toMiniAppRegistry, parseMiniAppTarget, isSingleEmoji, webOrigin }) {
+  const stored = storedOf("miniapps");
+  if (stored !== null) return toMiniAppRegistry(stored, 0, webOrigin);
+  return {
+    isRegistered: () => true,
+    isKnownMiniAppTarget: (value) => parseMiniAppTarget(value) !== null,
+    parseTarget: parseMiniAppTarget,
+    isSingleEmoji,
+  };
+}
+
 function loadCatalog(load) {
   const { homeLayoutFile } = load("ui/home/ui-home.schema");
   const { homeLayoutReferences, toHomeLayoutIssues } = load("ui/home/ui-home.rules");
@@ -54,43 +74,54 @@ function loadCatalog(load) {
   const { layerSetsDataset } = load("map/layer-set/map-layer-set.schema");
   const { busServiceNoticesDataset, skkuRestDaysDataset } = load("bus/schedule-content/bus-schedule-content.schema");
   const { serviceNoticesReferences } = load("bus/schedule-content/bus-schedule-content.rules");
-  const { MiniappsService } = load("miniapps/miniapps.service");
+  const { checkedRegistry } = load("miniapps/miniapps.schema");
+  const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
+  const { toMiniAppRegistry } = load("miniapps/miniapps.mapper");
+  const { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } = load("infra/origins");
   const { jongroRoutes } = load("bus/bus.config");
   const { SERVICE_CONFIG } = load("bus/bus.constants");
   const { toBusGroupIds } = load("bus/config/bus-config.mapper");
   const { SubwayStationsService } = load("subway/stations/subway-stations.service");
 
-  // No constructor dependencies: the registry is read from the committed files at import.
-  const miniapps = new MiniappsService();
+  const grammar = { parseTarget: parseMiniAppTarget };
+  const registryParts = { toMiniAppRegistry, parseMiniAppTarget, isSingleEmoji, webOrigin: WEB_ORIGIN };
   const busGroups = codeHeldSource("src/bus", toBusGroupIds(jongroRoutes));
   const subwayStations = codeHeldSource("src/subway", new SubwayStationsService().listStations().map((station) => station.id));
 
   return {
     sources: {
-      miniapps: { owner: "src/miniapps", has: (id) => miniapps.isRegistered(id), ids: () => [...miniapps.map.keys()] },
       busGroups,
       subwayStations,
       busServices: codeHeldSource("src/bus", Object.keys(SERVICE_CONFIG)),
     },
     datasets: {
+      // Its ids are what the ui datasets name; who owns a first-party origin stays in src/infra/origins.ts.
+      miniapps: {
+        owner: "src/miniapps",
+        schema: checkedRegistry,
+        issuesOf: (registry) => toRegistryIssues(registry, { owners: MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, webviewOrigin: WEBVIEW_ORIGIN }),
+        referencesOf: () => [],
+        idsOf: ({ index }) => index.miniApps.map((entry) => entry.id),
+      },
       "home-layout": {
         owner: "src/ui/home",
         schema: homeLayoutFile,
-        issuesOf: (layout) => toHomeLayoutIssues(layout, miniapps),
-        referencesOf: (layout) => homeLayoutReferences(layout, miniapps),
+        issuesOf: (layout, { storedOf }) => toHomeLayoutIssues(layout, registryOf(storedOf, registryParts)),
+        referencesOf: (layout) => homeLayoutReferences(layout, grammar),
       },
       "campus-banners": {
         owner: "src/ui/campus",
         schema: campusBannersFile,
-        issuesOf: (banners) => toCampusBannerIssues(banners, miniapps),
-        referencesOf: (banners) => campusBannerReferences(banners, miniapps),
+        issuesOf: (banners, { storedOf }) => toCampusBannerIssues(banners, registryOf(storedOf, registryParts)),
+        referencesOf: (banners) => campusBannerReferences(banners, grammar),
       },
       // A push is checked against this checkout's groups and stations, so it must place each exactly once.
       "transit-layout": {
         owner: "src/ui/transit",
         schema: transitLayoutFile,
-        issuesOf: (layout) => toTransitLayoutIssues(layout, { busGroupIds: busGroups.ids(), stationIds: subwayStations.ids(), registry: miniapps }),
-        referencesOf: (layout) => transitLayoutReferences(layout, miniapps),
+        issuesOf: (layout, { storedOf }) =>
+          toTransitLayoutIssues(layout, { busGroupIds: busGroups.ids(), stationIds: subwayStations.ids(), registry: registryOf(storedOf, registryParts) }),
+        referencesOf: (layout) => transitLayoutReferences(layout, grammar),
       },
       // Every layer set's checks run in its schema; an activation in the eventmap database names a set by its id.
       "map-layer-sets": {
