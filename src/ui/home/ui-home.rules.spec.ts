@@ -11,11 +11,16 @@
  * And the mini apps a layout references, wherever it names one, so a push can
  * refuse a dangling one and a removal can find who still names it. A target is
  * read with the registry's own grammar, so its path is not part of the id.
+ *
+ * And what a reader serves when a stored layout names a mini app a deploy has
+ * removed: the layout without each item an issue points into, an emptied grid
+ * left out with it, everything else in its order.
  */
 import fs from "fs";
 import path from "path";
 import { MiniappsService } from "../../miniapps/miniapps.service";
-import { homeLayoutReferences, toHomeLayoutIssues } from "./ui-home.rules";
+import type { MiniAppRegistry } from "../ui.types";
+import { homeLayoutReferences, toHomeLayoutIssues, withoutUnresolvedItems } from "./ui-home.rules";
 import { homeLayoutFile } from "./ui-home.schema";
 
 const registry = new MiniappsService();
@@ -275,5 +280,86 @@ describe("homeLayoutReferences", () => {
       { dataset: "miniapps", id: "skkuw", path: ["sections", 2, "tiles", 1, "id"] },
     ]);
     expect(homeLayoutReferences(homeLayoutFile.parse(committed), registry)).toEqual([]);
+  });
+});
+
+describe("withoutUnresolvedItems", () => {
+  // The registry after a deploy that removed mukja, as the reader sees it.
+  const withoutMukja: MiniAppRegistry = {
+    isRegistered: (id) => id !== "mukja" && registry.isRegistered(id),
+    isKnownMiniAppTarget: (value) => {
+      const target = registry.parseTarget(value);
+      return target !== null && target.id !== "mukja" && registry.isRegistered(target.id);
+    },
+    isSingleEmoji: (value) => registry.isSingleEmoji(value),
+    parseTarget: (value) => registry.parseTarget(value),
+  };
+  const served = (built: ReturnType<typeof layout>) => withoutUnresolvedItems(built, toHomeLayoutIssues(built, withoutMukja));
+
+  const buildingMap = link({ id: "building_map", actionValue: "/map/hssc" });
+
+  it("leaves a removed mini app's tile out of its grid and keeps the others in order", () => {
+    // Arrange
+    const built = layout(tiles({ kind: "miniapp", id: "mukja" }, buildingMap, { kind: "game", id: "wave-run" }));
+
+    // Act & Assert
+    expect(served(built)).toEqual(layout(tiles(buildingMap, { kind: "game", id: "wave-run" })));
+  });
+
+  it("leaves out the feed section of a removed mini app and serves the sections around it in order", () => {
+    // Arrange
+    const built = layout(carousel(), feed({ miniAppId: "mukja" }), grid({ id: "more", tiles: [{ kind: "game", id: "wave-run" }] }));
+
+    // Act & Assert
+    expect(served(built)).toEqual(layout(carousel(), grid({ id: "more", tiles: [{ kind: "game", id: "wave-run" }] })));
+  });
+
+  it("leaves out a grid, title included, when every tile names a removed mini app", () => {
+    // Arrange
+    const emptied = grid({ title: { ko: "먹자" }, tiles: [{ kind: "miniapp", id: "mukja" }, link({ actionType: "miniapp", actionValue: "mukja/menu" })] });
+    const built = layout(carousel(), emptied, feed());
+
+    // Act & Assert
+    expect(served(built)).toEqual(layout(carousel(), feed()));
+  });
+
+  it("leaves out a banner whose miniapp action targets a removed mini app and keeps the carousel's other items", () => {
+    // Arrange
+    const kept = image({ id: "banner-b", actionValue: "inja" });
+    const built = layout(carousel({ items: [image({ actionValue: "mukja/menu" }), { type: "default" }, kept] }));
+
+    // Act & Assert
+    expect(served(built)).toEqual(layout(carousel({ items: [{ type: "default" }, kept] })));
+  });
+
+  it("leaves out the tile an icon or action issue points into", () => {
+    // Arrange
+    const built = layout(tiles(link({ id: "a" }), link({ id: "b" }), link({ id: "c" })));
+    const issues = [
+      { path: ["sections", 0, "tiles", 0, "icon", "emoji"], message: '"a" icon must be exactly one emoji' },
+      { path: ["sections", 0, "tiles", 2, "actionValue"], message: '"c" actionValue "x" is not valid for "route"' },
+    ];
+
+    // Act & Assert
+    expect(withoutUnresolvedItems(built, issues)).toEqual(layout(tiles(link({ id: "b" }))));
+  });
+
+  it("refuses an issue whose path names no section, rather than serve the item it meant", () => {
+    // Act & Assert
+    expect(() => withoutUnresolvedItems(layout(grid()), [{ path: ["version"], message: "x" }])).toThrow("home layout issue path version names no section");
+  });
+
+  it("serves the layout as it is with no issue, and changes nothing it was given", () => {
+    // Arrange
+    const built = layout(carousel(), feed({ miniAppId: "mukja" }), grid());
+    const before = structuredClone(built);
+
+    // Act
+    const unchanged = withoutUnresolvedItems(built, []);
+    served(built);
+
+    // Assert
+    expect(unchanged).toEqual(before);
+    expect(built).toEqual(before);
   });
 });
