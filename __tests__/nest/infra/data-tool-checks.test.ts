@@ -14,6 +14,12 @@
  * No dataset of this stage declares `idsOf`, so the incoming check runs on a
  * two-dataset catalog built here. `check` reads stored data over a real
  * `mongod` and must write nothing.
+ *
+ * `issuesOf(data, { storedOf })` gets the other datasets' content, not only
+ * their ids (move-miniapp-registry D6): `storedOf(name)` is the pushed data for
+ * the dataset being checked, the parsed stored data of any other, and null
+ * when nothing is stored. A reference resolves against the copy stored in the
+ * database the push targets, so two databases can answer differently.
  */
 import path from "node:path";
 import type { Db } from "mongodb";
@@ -205,6 +211,75 @@ describe("checkData", () => {
 
     // Assert
     expect(issues).toEqual([]);
+  });
+});
+
+describe("checkData's issuesOf context", () => {
+  /** `pinboard`'s issuesOf records what storedOf answers; `registry` parses its ids upper-cased. */
+  function recordingCatalog(asked: string[]): { seen: Record<string, unknown>; catalog: unknown } {
+    const seen: Record<string, unknown> = {};
+    const catalog = {
+      sources: {},
+      datasets: {
+        registry: {
+          owner: "src/registry",
+          schema: z.strictObject({ ids: z.array(z.string().transform((id) => id.toUpperCase())) }),
+          referencesOf: () => [],
+          idsOf: (data: Registry) => data.ids,
+        },
+        pinboard: {
+          owner: "src/pinboard",
+          schema: z.strictObject({ pins: z.array(z.string()) }),
+          issuesOf: (_data: unknown, { storedOf }: { storedOf: (name: string) => unknown }) => {
+            for (const name of asked) seen[name] = storedOf(name);
+            return [];
+          },
+          referencesOf: (data: { pins: string[] }) => data.pins.map((id, i) => ({ dataset: "registry", id, path: ["pins", i] })),
+        },
+      },
+    };
+    return { seen, catalog };
+  }
+
+  it("hands issuesOf the pushed data under its own name, the parsed stored data of another, and null for none stored", () => {
+    // Arrange
+    const { seen, catalog } = recordingCatalog(["pinboard", "registry", "nothing"]);
+
+    // Act
+    checkData(catalog, "pinboard", { pins: ["A"] }, { registry: { ids: ["a", "b"] } });
+
+    // Assert
+    expect(seen).toEqual({ pinboard: { pins: ["A"] }, registry: { ids: ["A", "B"] }, nothing: null });
+  });
+
+  it("hands issuesOf the data being pushed when it asks for its own dataset by name", () => {
+    // Arrange
+    const { seen, catalog } = recordingCatalog(["registry"]);
+    (catalog as { datasets: { registry: Record<string, unknown> } }).datasets.registry.issuesOf = (_data: unknown, { storedOf }: { storedOf: (name: string) => unknown }) => {
+      seen.registry = storedOf("registry");
+      return [];
+    };
+
+    // Act
+    checkData(catalog, "registry", { ids: ["c"] }, { registry: { ids: ["a", "b"] } });
+
+    // Assert
+    expect(seen.registry).toEqual({ ids: ["C"] });
+  });
+
+  it("resolves a reference against the copy stored in the database the push targets", () => {
+    // Arrange
+    const { catalog } = recordingCatalog([]);
+    const development = { registry: { ids: ["a", "wave"] } };
+    const production = { registry: { ids: ["a"] } };
+
+    // Act
+    const toDevelopment = checkData(catalog, "pinboard", { pins: ["WAVE"] }, development);
+    const toProduction = checkData(catalog, "pinboard", { pins: ["WAVE"] }, production);
+
+    // Assert
+    expect(toDevelopment).toEqual([]);
+    expect(toProduction).toEqual([{ dataset: "pinboard", path: ["pins", 0], message: '"WAVE" is not in registry' }]);
   });
 });
 
