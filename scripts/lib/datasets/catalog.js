@@ -48,6 +48,8 @@ function loadCatalog(load) {
   const { homeLayoutReferences, toHomeLayoutIssues } = load("ui/home/ui-home.rules");
   const { campusBannersFile } = load("ui/campus/ui-campus.schema");
   const { campusBannerReferences, toCampusBannerIssues } = load("ui/campus/ui-campus.rules");
+  const { transitLayoutFile } = load("ui/transit/ui-transit.schema");
+  const { toTransitLayoutIssues, transitLayoutReferences } = load("ui/transit/ui-transit.rules");
   const { MiniappsService } = load("miniapps/miniapps.service");
   const { jongroRoutes } = load("bus/bus.config");
   const { SERVICE_CONFIG } = load("bus/bus.constants");
@@ -56,12 +58,14 @@ function loadCatalog(load) {
 
   // No constructor dependencies: the registry is read from the committed files at import.
   const miniapps = new MiniappsService();
+  const busGroups = codeHeldSource("src/bus", toBusGroupIds(jongroRoutes));
+  const subwayStations = codeHeldSource("src/subway", new SubwayStationsService().listStations().map((station) => station.id));
 
   return {
     sources: {
       miniapps: { owner: "src/miniapps", has: (id) => miniapps.isRegistered(id), ids: () => [...miniapps.map.keys()] },
-      busGroups: codeHeldSource("src/bus", toBusGroupIds(jongroRoutes)),
-      subwayStations: codeHeldSource("src/subway", new SubwayStationsService().listStations().map((station) => station.id)),
+      busGroups,
+      subwayStations,
       busServices: codeHeldSource("src/bus", Object.keys(SERVICE_CONFIG)),
     },
     datasets: {
@@ -76,6 +80,13 @@ function loadCatalog(load) {
         schema: campusBannersFile,
         issuesOf: (banners) => toCampusBannerIssues(banners, miniapps),
         referencesOf: (banners) => campusBannerReferences(banners, miniapps),
+      },
+      // A push is checked against this checkout's groups and stations, so it must place each exactly once.
+      "transit-layout": {
+        owner: "src/ui/transit",
+        schema: transitLayoutFile,
+        issuesOf: (layout) => toTransitLayoutIssues(layout, { busGroupIds: busGroups.ids(), stationIds: subwayStations.ids(), registry: miniapps }),
+        referencesOf: (layout) => transitLayoutReferences(layout, miniapps),
       },
     },
   };

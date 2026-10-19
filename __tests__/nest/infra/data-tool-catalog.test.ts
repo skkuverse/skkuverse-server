@@ -202,3 +202,73 @@ describe("loadCatalog campus-banners", () => {
     expect(lines).toEqual(["campus-banners: items.0.imageUrl: must be an object on the media bucket"]);
   });
 });
+
+describe("loadCatalog transit-layout", () => {
+  type Section = { id: string; items: Array<Record<string, unknown>> };
+  const layout = () => datasetFixture("../ui/fixtures/transit-layout.dataset.json") as { sections: Section[] };
+
+  it("is owned by src/ui/transit and accepts revision 1 against the checkout's bus groups, stations and registry", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const issues = checkData(catalog, "transit-layout", layout(), {});
+
+    // Assert
+    expect(catalog.datasets["transit-layout"].owner).toBe("src/ui/transit");
+    expect(issues).toEqual([]);
+  });
+
+  it("New bus group not placed: refuses a layout without jongro08, naming the unplaced group", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = layout();
+    const hssc = data.sections.find((section) => section.id === "hssc")!;
+    hssc.items = hssc.items.filter((item) => item.groupId !== "jongro08");
+
+    // Act
+    const lines = issueLines(checkData(catalog, "transit-layout", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['transit-layout: sections: bus group "jongro08" is not placed']);
+  });
+
+  it("Unknown group: refuses a placed nope group, naming the item's path and nope", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = layout();
+    data.sections[0]!.items.push({ kind: "bus", groupId: "nope" });
+
+    // Act
+    const lines = issueLines(checkData(catalog, "transit-layout", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['transit-layout: sections.0.items.2.groupId: "nope" is not a bus group']);
+  });
+
+  it("Station placed twice: refuses subway:hyehwa in two sections, naming the second placement", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = layout();
+    data.sections[2]!.items.push({ kind: "subway", stationId: "hyehwa" });
+
+    // Act
+    const lines = issueLines(checkData(catalog, "transit-layout", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^transit-layout: sections\.2\.items\.3: item "subway:hyehwa" is placed more than once$/)]);
+  });
+
+  it("lists its bus group, station and mini app references against the code-held sources", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["transit-layout"];
+
+    // Act
+    const references = entry.referencesOf(entry.schema.parse(layout())) as Array<{ dataset: string; id: string }>;
+
+    // Assert
+    expect(new Set(references.map((reference) => reference.dataset))).toEqual(new Set(["busGroups", "subwayStations"]));
+    expect(references.every((reference) => catalog.sources[reference.dataset].has(reference.id))).toBe(true);
+  });
+});
