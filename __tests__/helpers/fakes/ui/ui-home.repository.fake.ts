@@ -6,9 +6,10 @@
  * document reads as `null`. `storeHomeLayout` stores data unchecked at the next
  * revision, as `npm run data` would without its checks, so a test can seed an
  * invalid one. `failWith` makes the next reads reject, as a database error
- * would; `readCount` counts the reads that reached the store.
+ * would, wrapped in UiHomeLayoutReadError as the real read wraps it; `readCount` counts the reads that reached the store.
  */
 import { HOME_LAYOUT_DATASET } from "../../../../src/ui/home/ui-home.constants";
+import { UiHomeLayoutReadError } from "../../../../src/ui/home/ui-home.error";
 import type { UiHomeRepository } from "../../../../src/ui/home/ui-home.repository";
 import { storedHomeLayout } from "../../../../src/ui/home/ui-home.schema";
 import type { HomeLayoutRevision } from "../../../../src/ui/home/ui-home.types";
@@ -28,7 +29,7 @@ export class FakeUiHomeRepository implements PublicOf<UiHomeRepository> {
   }
 
   async findHomeLayout(): Promise<HomeLayoutRevision | null> {
-    if (this.failWith) throw this.failWith;
+    if (this.failWith) throw new UiHomeLayoutReadError(this.failWith);
     this.readCount += 1;
     const doc = this.datasets.get(HOME_LAYOUT_DATASET);
     if (doc === undefined) return null;

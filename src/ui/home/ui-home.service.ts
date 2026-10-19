@@ -1,11 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { createCachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
+import config from "../../infra/config";
+import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
 import { MiniappsService } from "../../miniapps/miniapps.service";
 import { DATASET_CACHE_TTL_MS, DATASET_STALE_WINDOW_MS } from "../../shared/dataset.constants";
-import { UiHomeLayoutUnavailableError } from "./ui-home.error";
+import { HOME_LAYOUT_LOG_INTERVAL_MS } from "./ui-home.constants";
+import { UiHomeLayoutReadError, UiHomeLayoutUnavailableError } from "./ui-home.error";
 import { toHomeLayout } from "./ui-home.mapper";
 import { UiHomeRepository } from "./ui-home.repository";
 import { toHomeLayoutIssues, withoutUnresolvedItems } from "./ui-home.rules";
@@ -17,6 +20,10 @@ import type { HomeLayout } from "./ui-home.wire";
 export class UiHomeService {
   // WHY: a reload every TTL re-finds the same items; each is logged once per revision this process loads.
   private loggedRevision: number | null = null;
+  // WHY: the loader caches no failure; with no good layout, Atlas sees one read per TTL, not one per request.
+  private unavailableUntil = 0;
+  private lastFailure: unknown = null;
+  private readonly readFailedThrottle = createLogThrottle(HOME_LAYOUT_LOG_INTERVAL_MS, () => this.clock.now().getTime());
   private readonly loader = createCachedLoader({
     name: "ui.home_layout",
     ttlMs: DATASET_CACHE_TTL_MS,
@@ -38,13 +45,23 @@ export class UiHomeService {
   }
 
   private async cachedHomeLayout(): Promise<HomeLayoutRaw> {
+    if (this.clock.now().getTime() < this.unavailableUntil) throw new UiHomeLayoutUnavailableError();
     try {
       return await this.loader.get();
     } catch (err) {
-      if (err instanceof UiHomeLayoutUnavailableError) throw err;
-      logger.error({ event: "ui.home_layout.read_failed", err }, "Home layout unreadable with none cached");
+      if (!(err instanceof UiHomeLayoutUnavailableError || err instanceof UiHomeLayoutReadError)) throw err;
+      // WHY: every caller waiting on one failed load receives the same error; it is one failure to remember and log.
+      if (err === this.lastFailure) throw new UiHomeLayoutUnavailableError();
+      this.lastFailure = err;
+      if (config.cache.enabled) this.unavailableUntil = this.clock.now().getTime() + DATASET_CACHE_TTL_MS;
+      if (err instanceof UiHomeLayoutReadError) this.logReadFailed(err);
       throw new UiHomeLayoutUnavailableError();
     }
+  }
+
+  private logReadFailed({ cause: driverError }: UiHomeLayoutReadError): void {
+    const taken = this.readFailedThrottle.take("read_failed");
+    if (taken) logger.error({ event: "ui.home_layout.read_failed", err: driverError, ...taken }, "Home layout unreadable with none cached");
   }
 
   private async loadHomeLayout(): Promise<HomeLayoutRaw> {

@@ -4,7 +4,8 @@
  * layout is read from the stored `home-layout` dataset, cached for
  * DATASET_CACHE_TTL_MS so a push serves within a minute, kept through a failed
  * or invalid reload inside DATASET_STALE_WINDOW_MS, and unavailable (503) when
- * no good layout was ever read. An item that names a mini app the registry no
+ * no good layout was ever read, remembered for one TTL so a missing layout is
+ * read once a minute, and a fault in this code is not turned into one. An item that names a mini app the registry no
  * longer holds is left out and logged once per revision.
  *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake
@@ -184,5 +185,99 @@ describe("UiHomeService.getHomeLayout", () => {
       expect.objectContaining({ revision: 1, path: "sections.0.tiles.0.id" }),
       expect.objectContaining({ revision: 2, path: "sections.0.tiles.0.id" }),
     ]);
+  });
+});
+
+describe("UiHomeService.getHomeLayout with no good layout", () => {
+  // WHY: the unavailable state is timed by the injected clock, the loader by the system time; both move together here.
+  let at = NOW;
+  const movingClock: Clock = { now: () => at };
+  const moveTo = (ms: number) => {
+    at = new Date(ms);
+    jest.setSystemTime(ms);
+  };
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: NOW });
+    at = NOW;
+    service = new UiHomeService(asReal<UiHomeRepository>(repository), new MiniappsService(), movingClock);
+  });
+
+  it("reads a missing layout at most once per TTL, answering 503 in between", async () => {
+    // Act
+    const answers: unknown[] = [];
+    for (let request = 0; request < 5; request++) {
+      moveTo(NOW.getTime() + request * 1_000);
+      answers.push(await service.getHomeLayout("ko").catch((err: unknown) => err));
+    }
+    const readsInFirstTtl = repository.readCount;
+    moveTo(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    await service.getHomeLayout("ko").catch(() => undefined);
+
+    // Assert
+    expect(answers).toEqual(Array(5).fill(expect.objectContaining({ code: "HOME_LAYOUT_UNAVAILABLE", httpStatus: 503 })));
+    expect(readsInFirstTtl).toBe(1);
+    expect(repository.readCount).toBe(2);
+  });
+
+  it("serves a layout pushed while it was unavailable within one TTL", async () => {
+    // Arrange
+    await service.getHomeLayout("ko").catch(() => undefined);
+    repository.storeHomeLayout(layoutOf(grid({ kind: "game", id: "wave-run" })));
+
+    // Act
+    moveTo(NOW.getTime() + DATASET_CACHE_TTL_MS - 1);
+    const beforeTtl = await service.getHomeLayout("ko").catch((err: unknown) => err);
+    moveTo(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    const atTtl = await service.getHomeLayout("ko");
+
+    // Assert
+    expect(beforeTtl).toMatchObject({ code: "HOME_LAYOUT_UNAVAILABLE", httpStatus: 503 });
+    expect(tileIdsOf(atTtl)).toEqual(["wave-run"]);
+  });
+
+  it("logs one read_failed for one failed read, however many requests waited on it", async () => {
+    // Arrange
+    repository.failWith = new Error("server selection timed out");
+
+    // Act
+    const answers = await Promise.allSettled(Array.from({ length: 5 }, () => service.getHomeLayout("ko")));
+
+    // Assert
+    expect(answers.every((answer) => answer.status === "rejected")).toBe(true);
+    expect(callsOf("error", "ui.home_layout.read_failed")).toHaveLength(1);
+  });
+
+  it("counts failed reads, not the requests that waited on them, in a later read_failed's suppressed", async () => {
+    // Arrange
+    repository.failWith = new Error("server selection timed out");
+    const fiveRequests = () => Promise.allSettled(Array.from({ length: 5 }, () => service.getHomeLayout("ko")));
+
+    // Act
+    await fiveRequests();
+    moveTo(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    await fiveRequests();
+
+    // Assert
+    expect(callsOf("error", "ui.home_layout.read_failed")).toEqual([
+      expect.objectContaining({ suppressed: 0 }),
+      expect.objectContaining({ suppressed: 0 }),
+    ]);
+  });
+
+  it("lets a fault in this code reach the exception filter as itself, not as a 503", async () => {
+    // Arrange
+    const fault = new TypeError("cannot read properties of undefined");
+    class FaultyMiniapps extends MiniappsService {
+      override isRegistered(): boolean {
+        throw fault;
+      }
+    }
+    service = new UiHomeService(asReal<UiHomeRepository>(repository), new FaultyMiniapps(), movingClock);
+    repository.storeHomeLayout(layoutOf(grid({ kind: "miniapp", id: "eskara" })));
+
+    // Act & Assert
+    await expect(service.getHomeLayout("ko")).rejects.toBe(fault);
+    expect(callsOf("error", "ui.home_layout.read_failed")).toEqual([]);
   });
 });
