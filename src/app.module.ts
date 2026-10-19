@@ -58,6 +58,7 @@ import { NoticesDetailModule } from "./notices/detail/notices-detail.module";
 import { NoticesDispatchModule } from "./notices/dispatch/notices-dispatch.module";
 import { MiniappsModule } from "./miniapps/miniapps.module";
 import { MiniappsNotificationsModule } from "./miniapps/notifications/miniapps-notifications.module";
+import { MiniappsManifestModule } from "./miniapps/manifest/miniapps-manifest.module";
 import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
 import { SubwayModule } from "./subway/subway.module";
 import { SubwayStationsModule } from "./subway/stations/subway-stations.module";
@@ -139,6 +140,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     NoticesDispatchModule,
     MiniappsModule,
     MiniappsNotificationsModule,
+    MiniappsManifestModule,
     MiniappsCatalogModule,
     SubwayModule,
     SubwayStationsModule,
