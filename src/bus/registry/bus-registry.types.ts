@@ -50,3 +50,14 @@ export type SyncDecision =
   | { kind: "pending"; pending: PendingObservation }
   | { kind: "hold"; pending: PendingObservation }
   | { kind: "apply" };
+
+export interface BootstrapObservation {
+  stations: readonly ObservedStation[];
+  turnaroundTopisId: string | null;
+  pending: PendingObservation | undefined;
+}
+
+export type BootstrapDecision =
+  | { kind: "skip" }
+  | { kind: "pending"; pending: PendingObservation }
+  | { kind: "insert"; stationsVersion: string; turnaroundTopisId: string };

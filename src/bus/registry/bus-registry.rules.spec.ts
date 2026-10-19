@@ -5,11 +5,16 @@
  * follows the position list only when its rows agree; the changed share and
  * the diff of two lists; and the decision to wait, apply at the third
  * identical tick, or hold a change to more than 30% of the stops. The one
- * duplicate stop a route may hold is its last ord repeating its first.
+ * duplicate stop a route may hold is its last ord repeating its first. A
+ * route with no document is bootstrapped (isolate-api-from-pollers D2): only a
+ * non-empty list with a turnaround stop every position row agrees on counts,
+ * by its stations version, and the third identical tick inserts it.
  */
 import type { ObservedStation, PendingObservation } from "./bus-registry.types";
 import {
   isLoopClosingRepeat,
+  toAgreedTurnaroundTopisId,
+  toBootstrapDecision,
   toChangedShare,
   toObservedStations,
   toStationDiff,
@@ -76,6 +81,50 @@ describe("toTurnaroundTopisId", () => {
   ])("when %s", (_case, sightingIds, expected) => {
     // Act & Assert
     expect(toTurnaroundTopisId(sightingIds, "T1")).toBe(expected);
+  });
+});
+
+describe("toAgreedTurnaroundTopisId", () => {
+  it.each([
+    ["the position rows agree", ["T2", "T2"], "T2"],
+    ["no bus is running", [], null],
+    ["the rows disagree", ["T2", "T3"], null],
+    ["a row has no id", ["T2", ""], null],
+    ["the rows name no turnaround stop", [undefined, undefined], null],
+  ])("when %s", (_case, sightingIds, expected) => {
+    // Act & Assert
+    expect(toAgreedTurnaroundTopisId(sightingIds)).toBe(expected);
+  });
+});
+
+describe("toBootstrapDecision", () => {
+  const pendingOf = (stationsVersion: string, count: number): PendingObservation => ({ stationsVersion, count });
+  const version = toStationsVersion(TEN, "5");
+
+  it.each([
+    ["a first tick", undefined, { kind: "pending", pending: pendingOf(version, 1) }],
+    ["a second identical tick", pendingOf(version, 1), { kind: "pending", pending: pendingOf(version, 2) }],
+    ["a third identical tick", pendingOf(version, 2), { kind: "insert", stationsVersion: version, turnaroundTopisId: "5" }],
+    ["a different list after two", pendingOf("other", 2), { kind: "pending", pending: pendingOf(version, 1) }],
+  ])("on %s", (_case, pending, expected) => {
+    // Act & Assert
+    expect(toBootstrapDecision({ stations: TEN, turnaroundTopisId: "5", pending })).toEqual(expected);
+  });
+
+  it("counts the same stops with another turnaround stop as a different list", () => {
+    // Act & Assert
+    expect(toBootstrapDecision({ stations: TEN, turnaroundTopisId: "6", pending: pendingOf(version, 2) })).toEqual({
+      kind: "pending",
+      pending: pendingOf(toStationsVersion(TEN, "6"), 1),
+    });
+  });
+
+  it.each([
+    ["an empty list", [], "5"],
+    ["no agreed turnaround stop", TEN, null],
+  ])("counts nothing for %s", (_case, stations, turnaroundTopisId) => {
+    // Act & Assert
+    expect(toBootstrapDecision({ stations, turnaroundTopisId, pending: pendingOf(version, 2) })).toEqual({ kind: "skip" });
   });
 });
 
