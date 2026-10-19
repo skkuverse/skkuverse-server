@@ -12,5 +12,5 @@ export const LEAP_YEAR = 2000;
 export const BUS_SCHEDULE_CONTENT_LOG_INTERVAL_MS = 60_000;
 
 // CONTRACT(skkuverse-app): skkuverse-app/packages/shared/src/types/bus.ts (`ScheduleNoticeStyle`) names the styles the
-// schedule screen draws; any other draws an unstyled banner. It lacks `error`, which design D7 of move-editorial-datasets keeps.
-export const SERVICE_NOTICE_STYLES = ["info", "warning", "error", "ai"] as const;
+// schedule screen draws; its parser reads any other, `error` included, as `info`.
+export const SERVICE_NOTICE_STYLES = ["info", "warning", "ai"] as const;

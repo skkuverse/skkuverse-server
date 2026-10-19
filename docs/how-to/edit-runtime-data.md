@@ -126,7 +126,7 @@ It stores production's current data as the next `_dev` revision and records whic
 
 `bus-service-notices` holds each shuttle service's notices and suspension, keyed by service id: `{ "services": { "<serviceId>": { "notices": [...], "suspend": null } } }`. Service ids and what the code does with a service stay in `SERVICE_CONFIG` (`src/bus/bus.constants.ts`); a service the dataset leaves out shows no notice and is never suspended.
 
-- A notice is `{ "style": "info" | "warning" | "error" | "ai", "text": "…" }`, shown on every day with a timetable, in order. Apps draw `notices[0]` as the banner, so keep the 통학셔틀 pilot notice first and the live-traffic `ai` notice last.
+- A notice is `{ "style": "info" | "warning" | "ai", "text": "…" }`, shown on every day with a timetable, in order. The app has no `error` style (it would draw one as `info`), so a push with it is refused. Apps draw `notices[0]` as the banner, so keep the 통학셔틀 pilot notice first and the live-traffic `ai` notice last.
 - A suspension is `{ "from": "YYYY-MM-DD", "until": "YYYY-MM-DD" }`, both days included. Inside it the smart view answers `status: "suspended"` with `resumeDate` the day after `until`, and the estimate pollers plan no run.
 
 To suspend the 인자셔틀 for the winter break, pull production, set `campus-inja`'s `suspend`, and push:
