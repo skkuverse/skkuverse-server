@@ -6,11 +6,11 @@
  * BusScheduleService, a timetable another process writes reaches the runs one
  * week-cache TTL later, so the ETA pollers need no restart (ADR 0012, D6); the
  * schedule content the timetable folds in comes from an in-memory dataset
- * store, so a stored suspension plans no run and content never read rejects
+ * store, so a stored suspension or rest day plans no run and content never read rejects
  * the runs (bus-eta-live.service.spec.ts pins the tick that then rejects).
  */
 import { FakeBusEtaRepository } from "../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
-import { serviceNoticesWithSuspension, storedScheduleContentRepository, storedScheduleContentService } from "../../../__tests__/helpers/bus/schedule-content";
+import { restDaysFixture, serviceNoticesWithSuspension, storedScheduleContentRepository, storedScheduleContentService } from "../../../__tests__/helpers/bus/schedule-content";
 import { FakeBusScheduleContentRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule-content.repository.fake";
 import { FakeBusScheduleRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
@@ -197,6 +197,21 @@ describe("BusEtaService runs over the stored schedule content (move-editorial-da
     // Assert
     expect(runs).toEqual([]);
     expect(upcoming).toEqual([]);
+  });
+
+  it("plans no run on a one-off rest day stored in the content", async () => {
+    // Arrange
+    const restDay = storedScheduleContentRepository();
+    restDay.storeRestDays({ ...restDaysFixture(), "2026-10-12": "학사휴교" });
+    const eta = etaOver(restDay);
+
+    // Act
+    const runs = await eta.runsOn(SEQUENCE, "2026-10-12");
+    const upcoming = await eta.upcomingRuns(SEQUENCE, NOW);
+
+    // Assert
+    expect(runs).toEqual([]);
+    expect(upcoming.map((r) => r.date)).not.toContain("2026-10-12");
   });
 
   it("plans the day's runs outside a suspension", async () => {

@@ -4,10 +4,14 @@
  * (move-editorial-datasets D13): the push imports the fixture with `_about`
  * removed, and the reader deploy is byte-compared against production as it
  * served the committed file. A pull request that edits one of the pair without
- * the other fails here. The case is deleted with skku-rest-days.json.
+ * the other fails here, and so does a dataset schema that reads the fixture
+ * as other rest days than the boot read the file as. The cases are deleted
+ * with skku-rest-days.json.
  */
 import fs from "fs";
 import path from "path";
+import { skkuRestDaysDataset } from "../../../src/bus/schedule-content/bus-schedule-content.schema";
+import { loadRestDays } from "../../../src/bus/schedule/bus-schedule.config";
 
 const ROOT = path.join(__dirname, "../../..");
 const readJson = (relativePath: string): Record<string, unknown> =>
@@ -25,5 +29,17 @@ describe("the skku-rest-days fixture against the committed file", () => {
     expect(_about).toEqual(expect.stringContaining("5c0ee5a9"));
     expect(fixture).toEqual(source);
     expect(Object.keys(fixture)).toEqual(Object.keys(source));
+  });
+
+  it("reads, with the dataset's schema, as the RestDays loadRestDays gives for the committed file", () => {
+    // Arrange
+    const { _about, ...fixture } = readJson("__tests__/nest/bus/fixtures/skku-rest-days.dataset.json");
+
+    // Act
+    const parsed = skkuRestDaysDataset.parse(fixture);
+
+    // Assert
+    expect(_about).toEqual(expect.any(String));
+    expect(parsed).toEqual(loadRestDays(readJson("src/bus/schedule/skku-rest-days.json")));
   });
 });

@@ -21,9 +21,9 @@
  * (scripts/data/*-schedule.json, built the way `npm run schedule` writes them,
  * with no override), the Jongno registry (fixtures/jongro-registry-routes.json
  * of bus), no stored public holiday, so date-holidays answers, and the content
- * database holds the fixture of `bus-service-notices` as revision 1, pushed the
- * way `npm run data` stores it, through the tool's own
- * scripts/lib/datasets/store.js. The smart
+ * database holds the fixtures of `bus-service-notices` and `skku-rest-days` as
+ * revision 1, pushed the way `npm run data` stores them, through the tool's
+ * own scripts/lib/datasets/store.js. The smart
  * view merges stored arrival estimates, which the pollers wrote from NAVER and
  * TMAP and no test can reproduce, so `shuttle_eta` is seeded from the captured
  * bodies themselves: one document per estimated run, its offsets the captured
@@ -167,8 +167,9 @@ beforeAll(async () => {
   const estimates = SERVICE_IDS.flatMap((serviceId) => estimatesOf(serviceId, (captured.smart[serviceId].ko.body.data as { days: CapturedDay[] }).days));
   await busDb.collection("shuttle_eta").insertMany(estimates);
   content = db.getClient().db(config.content.dbName);
-  const { serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
+  const { restDaysFixture, serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
   await store.create(content, "bus-service-notices", serviceNoticesFixture(), STORED_BY);
+  await store.create(content, "skku-rest-days", restDaysFixture(), STORED_BY);
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

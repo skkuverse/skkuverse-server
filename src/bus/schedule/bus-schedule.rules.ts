@@ -2,7 +2,8 @@ import moment from "moment-timezone";
 import { toHolidayYear } from "../../shared/korean-public-holiday.util";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { BusOverrideDoc, BusScheduleDoc } from "./bus-schedule.document";
-import type { DaySources, PickedPattern, RestDays, SuspendWindow } from "./bus-schedule.types";
+import type { RestDays } from "../schedule-content/bus-schedule-content.types";
+import type { DaySources, PickedPattern, SuspendWindow } from "./bus-schedule.types";
 import type { ScheduleDay, ScheduleNotice } from "./bus-schedule.wire";
 
 const DATE_FORMAT = "YYYY-MM-DD";
