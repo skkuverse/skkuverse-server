@@ -1,7 +1,8 @@
 /**
  * The home layout as loaded: the boot-time check (loadHomeLayout: the structure
- * in ui-home.schema.ts plus the registry references) and the committed
- * home-layout.json, resolved per request.
+ * in ui-home.schema.ts plus the registry issues of ui-home.rules.ts, whose
+ * cases live in their own specs) and the committed home-layout.json, resolved
+ * per request.
  *
  * The check runs against OUR OWN config, so each rejection here is a deploy
  * that must not start. Mini-app ids are checked against the real registry.
@@ -67,8 +68,6 @@ function link(overrides: Record<string, unknown> = {}): Record<string, unknown> 
   };
 }
 
-const tiles = (...list: Record<string, unknown>[]) => grid({ tiles: list });
-
 function layout(...sections: Record<string, unknown>[]): Record<string, unknown> {
   return { version: 1, sections };
 }
@@ -116,86 +115,25 @@ describe("committed home-layout.json", () => {
 });
 
 describe("loadHomeLayout", () => {
+  // The cases of each check live with the check: structure and duplicate ids in ui-home.schema.spec.ts,
+  // registry issues in ui-home.rules.spec.ts. These pin that the boot still refuses both kinds.
   it("accepts a well-formed layout", () => {
     // Act & Assert
     expect(() => loadHomeLayout(layout(carousel(), grid()))).not.toThrow();
   });
 
-  it("accepts every tile kind in one grid", () => {
-    // Arrange
-    const mixed = tiles(
-      { kind: "game", id: "wave-run" },
-      { kind: "miniapp", id: "mukja" },
-      link(),
-      link({ id: "notice", icon: { kind: "media", url: IMAGE_URL }, actionType: "miniapp", actionValue: "inja" }),
+  it("refuses a registry issue, naming its path", () => {
+    // Act & Assert
+    expect(() => loadHomeLayout(layout(grid(), grid({ id: "more", tiles: [link({ icon: { kind: "emoji", emoji: "🗺️🗺️" } })] })))).toThrow(
+      /^home layout: sections\.1\.tiles\.0\.icon\.emoji: "campus-map" icon must be exactly one emoji$/,
     );
-
-    // Act & Assert
-    expect(() => loadHomeLayout(layout(mixed))).not.toThrow();
   });
 
-  it.each<[string, Record<string, unknown>]>([
-    ["an unknown root key", { ...layout(), extra: 1 }],
-    ["a version other than 1", { version: 2, sections: [] }],
-    ["an unknown section type", layout({ type: "hero", id: "x" })],
-    ["a duplicate id across sections and banners", layout(carousel(), grid({ id: "banner-a" }))],
-    ["an unknown carousel key", layout(carousel({ autoRotate: 5 }))],
-    ["an aspect ratio below 1", layout(carousel({ aspectRatio: 0.5 }))],
-    ["an aspect ratio given as a string", layout(carousel({ aspectRatio: "2.25" }))],
-    ["a rotation of 1 second", layout(carousel({ autoRotateSec: 1 }))],
-    ["a fractional rotation", layout(carousel({ autoRotateSec: 4.5 }))],
-    ["an empty items list", layout(carousel({ items: [] }))],
-    ["the default placed twice", layout(carousel({ items: [{ type: "default" }, { type: "default" }] }))],
-    ["a key on the default item", layout(carousel({ items: [{ type: "default", id: "x" }] }))],
-    ["an image off the media bucket", layout(carousel({ items: [image({ imageUrl: "https://evil.com/a.jpg" })] }))],
-    ["an image with no ko alt", layout(carousel({ items: [image({ alt: { en: "Banner" } })] }))],
-    ["an actionType without an actionValue", layout(carousel({ items: [image({ actionValue: undefined })] }))],
-    ["an unregistered miniapp action", layout(carousel({ items: [image({ actionValue: "nope" })] }))],
-    ["a relative external action", layout(carousel({ items: [image({ actionType: "external", actionValue: "/x" })] }))],
-    ["an unknown action type", layout(carousel({ items: [image({ actionType: "map" })] }))],
-    ["a window with no offset", layout(carousel({ items: [image({ endAt: "2026-10-03T00:00:00" })] }))],
-    [
-      "a window that ends before it starts",
-      layout(carousel({ items: [image({ startAt: "2026-10-03T00:00:00+09:00", endAt: "2026-10-01T00:00:00+09:00" })] })),
-    ],
-    ["an unregistered mini app in a grid", layout(tiles({ kind: "miniapp", id: "nope" }))],
-    ["an empty grid", layout(grid({ tiles: [] }))],
-    ["the old miniAppIds key", layout(grid({ tiles: undefined, miniAppIds: ["mukja"] }))],
-    ["one mini app in two grids", layout(grid(), grid({ id: "games" }))],
-    ["one tile id under two kinds", layout(tiles({ kind: "miniapp", id: "mukja" }, link({ id: "mukja" })))],
-    ["an unknown tile kind", layout(tiles({ kind: "screen", id: "campus" }))],
-    ["a game id that is not a slug", layout(tiles({ kind: "game", id: "Wave Run" }))],
-    ["an extra key on an id tile", layout(tiles({ kind: "game", id: "wave-run", title: { ko: "파도" } }))],
-    ["a link with no title", layout(tiles(link({ title: undefined })))],
-    ["a link with no action", layout(tiles(link({ actionType: undefined, actionValue: undefined })))],
-    ["a link with a relative route", layout(tiles(link({ actionValue: "campus" })))],
-    ["a link icon of two emoji", layout(tiles(link({ icon: { kind: "emoji", emoji: "🗺️🗺️" } })))],
-    ["a link icon off the media bucket", layout(tiles(link({ icon: { kind: "media", url: "https://evil.com/a.png" } })))],
-    ["a link icon in the registry's legacy path spelling", layout(tiles(link({ icon: { kind: "remote", path: "/a.png" } })))],
-    ["a blank title", layout(grid({ title: { ko: " " } }))],
-  ])("rejects %s", (_label, raw) => {
+  it("refuses a structural issue, naming its path", () => {
     // Act & Assert
-    expect(() => loadHomeLayout(raw)).toThrow(/^home layout: /);
-  });
-
-  it.each<[string, Record<string, unknown>, string]>([
-    ["an unregistered mini app tile", layout(grid(), grid({ id: "more", tiles: [{ kind: "miniapp", id: "nope" }] })), "sections.1.tiles.0.id"],
-    ["an unregistered feed", layout(grid(), { type: "miniapp_feed", id: "feed", miniAppId: "nope" }), "sections.1.miniAppId"],
-    ["a broken banner action", layout(carousel({ items: [{ type: "default" }, image({ actionValue: "nope" })] })), "sections.0.items.1.actionValue"],
-    ["a broken link tile action", layout(tiles({ kind: "game", id: "wave-run" }, link({ actionValue: "campus" }))), "sections.0.tiles.1.actionValue"],
-    ["a link icon of two emoji", layout(grid(), grid({ id: "more", tiles: [link({ icon: { kind: "emoji", emoji: "🗺️🗺️" } })] })), "sections.1.tiles.0.icon.emoji"],
-  ])("names the path of %s", (_label, raw, path) => {
-    // Act & Assert
-    expect(() => loadHomeLayout(raw)).toThrow(new RegExp(`^home layout: ${path.replaceAll(".", "\\.")}: `));
-  });
-
-  it.each<[string, Record<string, unknown>, string]>([
-    ["a banner id repeated as a section id", layout(carousel(), grid({ id: "banner-a" })), 'sections.1.id: duplicate id "banner-a"'],
-    ["a section id repeated as a banner id", layout(grid({ id: "banner-a" }), carousel()), 'sections.1.items.0.id: duplicate id "banner-a"'],
-    ["a tile placed twice", layout(grid(), grid({ id: "more", tiles: [link(), link()] })), 'sections.1.tiles.1.id: tile "campus-map" is placed more than once'],
-  ])("names where %s repeats", (_label, raw, issue) => {
-    // Act & Assert
-    expect(() => loadHomeLayout(raw)).toThrow(`home layout: ${issue}`);
+    expect(() => loadHomeLayout(layout(grid(), grid({ id: "more", tiles: [link(), link()] })))).toThrow(
+      'home layout: sections.1.tiles.1.id: tile "campus-map" is placed more than once',
+    );
   });
 });
 
@@ -210,42 +148,6 @@ describe("miniapp_feed section", () => {
       ...overrides,
     };
   }
-
-  it("accepts a well-formed feed section", () => {
-    // Act & Assert
-    expect(() => loadHomeLayout(layout(carousel(), feed(), grid()))).not.toThrow();
-  });
-
-  it("accepts one with no title and no limit", () => {
-    // Act & Assert
-    expect(() =>
-      loadHomeLayout(layout(feed({ title: undefined, limit: undefined }))),
-    ).not.toThrow();
-  });
-
-  it("rejects a mini app the registry does not know", () => {
-    // Act & Assert
-    expect(() => loadHomeLayout(layout(feed({ miniAppId: "no-such-app" })))).toThrow(
-      /not a registered mini app/,
-    );
-  });
-
-  it("rejects an unknown key, so a misspelling cannot pass boot and do nothing", () => {
-    // Act & Assert
-    expect(() => loadHomeLayout(layout(feed({ limt: 3 })))).toThrow(/limt/);
-  });
-
-  it.each([0, 11, 2.5, "3"])("rejects limit %p", (limit) => {
-    // Act & Assert
-    expect(() => loadHomeLayout(layout(feed({ limit })))).toThrow(/limit/);
-  });
-
-  it("shares the section id namespace", () => {
-    // Act & Assert
-    expect(() => loadHomeLayout(layout(carousel(), feed({ id: "home_top" })))).toThrow(
-      /duplicate id/,
-    );
-  });
 
   it("resolves to the wire shape with the title in the request language and a default limit", () => {
     // Arrange

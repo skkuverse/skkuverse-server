@@ -1,0 +1,57 @@
+import { isBrokenLinkAction } from "../../shared/link-action.util";
+import type { BannerImageRaw } from "../ui.schema";
+import type { MiniAppRegistry } from "../ui.types";
+import type { HomeLayoutRaw, TileRaw } from "./ui-home.schema";
+import type { HomeLayoutIssue } from "./ui-home.types";
+
+type SectionRaw = HomeLayoutRaw["sections"][number];
+type LinkTileRaw = Extract<TileRaw, { kind: "link" }>;
+type IssuePath = HomeLayoutIssue["path"];
+
+interface Located<T> {
+  at: IssuePath;
+  value: T;
+}
+
+const isLinkTile = (tile: Located<TileRaw>): tile is Located<LinkTileRaw> => tile.value.kind === "link";
+
+function tilesOf({ at, value }: Located<SectionRaw>): Array<Located<TileRaw>> {
+  return value.type === "tile_grid" ? value.tiles.map((tile, i) => ({ at: [...at, "tiles", i], value: tile })) : [];
+}
+
+function bannersOf({ at, value }: Located<SectionRaw>): Array<Located<BannerImageRaw>> {
+  const items = value.type === "banner_carousel" ? value.items : [];
+  return items.flatMap((item, i) => (item.type === "image" ? [{ at: [...at, "items", i], value: item }] : []));
+}
+
+function linksOf(section: Located<SectionRaw>): Array<Located<BannerImageRaw | LinkTileRaw>> {
+  return [...bannersOf(section), ...tilesOf(section).filter(isLinkTile)];
+}
+
+function miniAppIdsOf(section: Located<SectionRaw>): Array<Located<string>> {
+  const { at, value } = section;
+  if (value.type === "miniapp_feed") return [{ at: [...at, "miniAppId"], value: value.miniAppId }];
+  return tilesOf(section).flatMap((tile) => (tile.value.kind === "miniapp" ? [{ at: [...tile.at, "id"], value: tile.value.id }] : []));
+}
+
+function locatedSections(layout: HomeLayoutRaw): Array<Located<SectionRaw>> {
+  return layout.sections.map((value, i) => ({ at: ["sections", i], value }));
+}
+
+const isBrokenIcon = (tile: LinkTileRaw, registry: MiniAppRegistry): boolean =>
+  tile.icon.kind === "emoji" && !registry.isSingleEmoji(tile.icon.emoji);
+
+export function toHomeLayoutIssues(layout: HomeLayoutRaw, registry: MiniAppRegistry): HomeLayoutIssue[] {
+  const sections = locatedSections(layout);
+  const unregistered = sections.flatMap(miniAppIdsOf).filter((id) => !registry.isRegistered(id.value));
+  const brokenLinks = sections.flatMap(linksOf).filter((link) => isBrokenLinkAction(link.value, registry));
+  const brokenIcons = sections.flatMap(tilesOf).filter(isLinkTile).filter((tile) => isBrokenIcon(tile.value, registry));
+  return [
+    ...unregistered.map(({ at, value }) => ({ path: at, message: `"${value}" is not a registered mini app` })),
+    ...brokenLinks.map(({ at, value: link }) => ({
+      path: [...at, "actionValue"],
+      message: `"${link.id}" actionValue "${link.actionValue}" is not valid for "${link.actionType}"`,
+    })),
+    ...brokenIcons.map(({ at, value }) => ({ path: [...at, "icon", "emoji"], message: `"${value.id}" icon must be exactly one emoji` })),
+  ];
+}
