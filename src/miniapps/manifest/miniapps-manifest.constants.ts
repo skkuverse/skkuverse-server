@@ -1,7 +1,7 @@
 /** WHY: where a first-party mini app serves its `public/skkuverse.json`, the @skkuverse/miniapp SDK manifest. */
 export const MANIFEST_PATH = "/skkuverse.json";
 
-/** WHY: a slow origin must not hold up what waits on its manifest: a detail request, or the next poll. */
+/** WHY: a slow origin must not run its poller's tick into the next one. */
 export const FETCH_TIMEOUT_MS = 3_000;
 
 /** WHY: refused whether announced or actually read, so a manifest never buffers more than this. */

@@ -19,15 +19,18 @@ export const WEB_ORIGIN = "https://skkuverse.com";
 // WHY: images only: never in BRIDGE_ORIGINS or CORS_ORIGINS; nothing on it is a page or reads this API.
 export const MEDIA_ORIGIN = "https://media.skkuverse.com";
 
-// WHY: only an origin one mini app owns outright: the app opens any URL on it in that mini app's shell.
-export const FIRST_PARTY_MINIAPP_ORIGINS = [
-  ESKARA_MINIAPP_ORIGIN,
-  MUKJA_MINIAPP_ORIGIN,
-  PLAYLIST_MINIAPP_ORIGIN,
-  BOOTH_BOX_MINIAPP_ORIGIN,
-  INJA_MINIAPP_ORIGIN,
-  TIMETABLE_MINIAPP_ORIGIN,
-] as const;
+// WHY: a trust decision held in code, not in the registry dataset: the app opens any URL on the
+// origin in the shell of the mini app named here, with the bridge.
+export const MINIAPP_ID_BY_FIRST_PARTY_ORIGIN: Readonly<Record<string, string>> = Object.freeze({
+  [ESKARA_MINIAPP_ORIGIN]: "eskara-2026",
+  [MUKJA_MINIAPP_ORIGIN]: "mukja",
+  [PLAYLIST_MINIAPP_ORIGIN]: "playlist",
+  [BOOTH_BOX_MINIAPP_ORIGIN]: "booth-box",
+  [INJA_MINIAPP_ORIGIN]: "inja",
+  [TIMETABLE_MINIAPP_ORIGIN]: "timetable",
+});
+
+export const FIRST_PARTY_MINIAPP_ORIGINS: readonly string[] = Object.freeze(Object.keys(MINIAPP_ID_BY_FIRST_PARTY_ORIGIN));
 
 // WHY: each entry is a trust decision: it hands `Linking.openURL` and the map-select channel to every
 // page its host serves.

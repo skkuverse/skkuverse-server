@@ -16,6 +16,9 @@
  * The layout is stored in the real `mongod`'s content database the way
  * `npm run data` stores it: the fixture's data pushed through the tool's own
  * scripts/lib/datasets/store.js, as revision 1 of `transit-layout`.
+ * The mini app registry is stored beside it the same way, as revision 1 of
+ * `miniapps` (__tests__/nest/miniapps/fixtures/miniapps.dataset.json); no link
+ * names a mini app, so the route reads no registry (move-miniapp-registry D4).
  *
  * The bus groups' visibility windows are the only input that moves with the
  * time, so four clocks pin the tab:
@@ -47,6 +50,7 @@ type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTes
 type BusRegistryHelpers = typeof import("../../helpers/bus/bus-registry");
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
+type RegistryFixture = typeof import("../../helpers/miniapps/registry-fixture");
 
 type Lang = "ko" | "en" | "zh";
 const LANGS: Lang[] = ["ko", "en", "zh"];
@@ -144,6 +148,8 @@ beforeAll(async () => {
     .insertMany(storedJongroRouteDocuments());
   const content = db.getClient().db(config.content.dbName);
   await store.create(content, "transit-layout", fixtureLayout(), { by: "characterization@example.com", now: CLOCKS.capturedAt });
+  const { fixtureRegistry } = require("../../helpers/miniapps/registry-fixture") as RegistryFixture;
+  await store.create(content, "miniapps", fixtureRegistry(), { by: "characterization@example.com", now: CLOCKS.capturedAt });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

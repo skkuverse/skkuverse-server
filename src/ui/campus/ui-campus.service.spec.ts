@@ -8,6 +8,11 @@
  * out and logged once per revision; a carousel left with no banner is left out
  * as one whose every banner has closed.
  *
+ * And the registry revision each request reads (move-miniapp-registry D4, D7): banners that name a mini app
+ * take one registry snapshot per request, so a registry push reaches them within a TTL with the banners
+ * unchanged, and a left-out banner is logged once per pair of revisions. Banners that name none read no
+ * registry, so they serve while it is unavailable; banners that name one answer MINIAPP_REGISTRY_UNAVAILABLE.
+ *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake
  * system time; the mapper's clock stays the injected one.
  */
@@ -19,7 +24,8 @@ import { FakeUiCampusRepository } from "../../../__tests__/helpers/fakes/ui/ui-c
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { MiniappsService } from "../../miniapps/miniapps.service";
+import { FakeMiniappsRepository } from "../../../__tests__/helpers/fakes/miniapps/miniapps.repository.fake";
+import { fixtureMiniappsService, fixtureRegistry, fixtureRegistryWithWaveRun, miniappsServiceOver } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { DATASET_CACHE_TTL_MS } from "../../shared/dataset.constants";
 import type { UiCampusRepository } from "./ui-campus.repository";
 import { UiCampusService } from "./ui-campus.service";
@@ -56,7 +62,7 @@ let service: UiCampusService;
 beforeEach(() => {
   jest.clearAllMocks();
   repository = new FakeUiCampusRepository();
-  service = new UiCampusService(asReal<UiCampusRepository>(repository), new MiniappsService(), clock);
+  service = new UiCampusService(asReal<UiCampusRepository>(repository), fixtureMiniappsService(), clock);
 });
 
 afterEach(() => {
@@ -185,5 +191,93 @@ describe("UiCampusService.getCampusSheet", () => {
       expect.objectContaining({ revision: 1, path: "items.1.actionValue" }),
       expect.objectContaining({ revision: 2, path: "items.1.actionValue" }),
     ]);
+  });
+});
+
+describe("UiCampusService.getCampusSheet against the registry revision each request reads", () => {
+  let registry: FakeMiniappsRepository;
+
+  const serviceOver = (miniapps: FakeMiniappsRepository) => new UiCampusService(asReal<UiCampusRepository>(repository), miniappsServiceOver(miniapps, clock), clock);
+  const unreachableRegistry = () => {
+    const unreachable = new FakeMiniappsRepository();
+    unreachable.failWith = new Error("server selection timed out");
+    return unreachable;
+  };
+
+  beforeEach(() => {
+    registry = FakeMiniappsRepository.seededWith(fixtureRegistry());
+    service = serviceOver(registry);
+  });
+
+  it("serves a banner left out under one registry revision once a registry push adds its mini app, the banners unchanged", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    repository.storeCampusBanners(carousel(image("a"), image("wave", { actionType: "miniapp", actionValue: "wave-run" })));
+    const before = await service.getCampusSheet("ko");
+    registry.storeRegistry(fixtureRegistryWithWaveRun());
+
+    // Act
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS - 1);
+    const beforeTtl = await service.getCampusSheet("ko");
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    const atTtl = await service.getCampusSheet("ko");
+
+    // Assert
+    expect(bannerIdsOf(before)).toEqual(["a"]);
+    expect(bannerIdsOf(beforeTtl)).toEqual(["a"]);
+    expect(bannerIdsOf(atTtl)).toEqual(["a", "wave"]);
+    expect(repository.readCount).toBe(2);
+  });
+
+  it("logs a left-out banner once per pair of banner and registry revisions", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    repository.storeCampusBanners(carousel(image("a"), image("wave", { actionType: "miniapp", actionValue: "wave-run" })));
+
+    // Act
+    await service.getCampusSheet("ko");
+    await service.getCampusSheet("ko");
+    registry.storeRegistry(fixtureRegistry());
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    await service.getCampusSheet("ko");
+    await service.getCampusSheet("ko");
+
+    // Assert
+    expect(callsOf("error", "ui.campus_banners.item_left_out")).toEqual([
+      expect.objectContaining({ revision: 1, registryRevision: 1, path: "items.1.actionValue" }),
+      expect.objectContaining({ revision: 1, registryRevision: 2, path: "items.1.actionValue" }),
+    ]);
+  });
+
+  it("serves banners that name no mini app while the registry is unavailable, reading no registry", async () => {
+    // Arrange
+    const unreachable = unreachableRegistry();
+    service = serviceOver(unreachable);
+    repository.storeCampusBanners(carousel(image("a"), image("b", { actionType: "webview", actionValue: "/skku/lostandfound" })));
+
+    // Act
+    const sheet = await service.getCampusSheet("ko");
+
+    // Assert
+    expect(bannerIdsOf(sheet)).toEqual(["a", "b"]);
+    expect(unreachable.readCount).toBe(0);
+  });
+
+  it("serves revision 1, which names no mini app, while the registry is unavailable", async () => {
+    // Arrange
+    service = serviceOver(unreachableRegistry());
+    repository.storeCampusBanners(fixtureBanners());
+
+    // Act & Assert
+    expect(await service.getCampusSheet("ko")).toEqual({ minAppVersion: "2.0.0", sections: [] });
+  });
+
+  it("answers MINIAPP_REGISTRY_UNAVAILABLE (503) for banners that name a mini app while no registry was ever read", async () => {
+    // Arrange
+    service = serviceOver(unreachableRegistry());
+    repository.storeCampusBanners(carousel(image("a"), image("inja", { actionType: "miniapp", actionValue: "inja" })));
+
+    // Act & Assert
+    await expect(service.getCampusSheet("ko")).rejects.toMatchObject({ code: "MINIAPP_REGISTRY_UNAVAILABLE", httpStatus: 503 });
   });
 });

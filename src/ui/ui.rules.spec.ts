@@ -9,9 +9,13 @@
  *
  * A `miniapp` link action names the mini app its target parses to, a reference
  * the data tool resolves against the registry.
+ *
+ * Data that names no mini app is checked against the grammar alone: no id is
+ * registered, so a target that does not parse is broken as it is against the
+ * registry, and the grammar answers as the registry's own.
  */
-import { MiniappsService } from "../miniapps/miniapps.service";
-import { findRepeatedId, isBannerShowing, isBusGroupVisible, toMiniAppTargetReferences } from "./ui.rules";
+import { fixtureMiniappsService } from "../../__tests__/helpers/miniapps/registry-fixture";
+import { findRepeatedId, isBannerShowing, isBusGroupVisible, toGrammarOnlyRegistry, toMiniAppTargetReferences } from "./ui.rules";
 
 describe("isBannerShowing", () => {
   const window = { startAt: "2026-10-01T00:00:00+09:00", endAt: "2026-10-03T00:00:00+09:00" };
@@ -87,7 +91,7 @@ describe("isBusGroupVisible", () => {
 });
 
 describe("toMiniAppTargetReferences", () => {
-  const grammar = new MiniappsService();
+  const grammar = fixtureMiniappsService();
 
   it.each<[string, Record<string, string>, unknown[]]>([
     ["a miniapp target, by its id", { actionType: "miniapp", actionValue: "inja/entry" }, [{ dataset: "miniapps", id: "inja", path: ["at"] }]],
@@ -98,5 +102,23 @@ describe("toMiniAppTargetReferences", () => {
   ])("lists %s", (_label, link, references) => {
     // Act & Assert
     expect(toMiniAppTargetReferences(link as never, ["at"], grammar)).toEqual(references);
+  });
+});
+
+describe("toGrammarOnlyRegistry", () => {
+  const registry = toGrammarOnlyRegistry(fixtureMiniappsService());
+
+  it("registers no id and knows no target, so it is asked only about data that names no mini app", () => {
+    // Act & Assert
+    expect(registry.isRegistered("inja")).toBe(false);
+    expect(registry.isKnownMiniAppTarget("inja:relative")).toBe(false);
+  });
+
+  it("answers the grammar as the registry does", () => {
+    // Act & Assert
+    expect(registry.parseTarget("inja/entry")).toEqual({ id: "inja", path: "/entry" });
+    expect(registry.parseTarget("inja:relative")).toBeNull();
+    expect(registry.isSingleEmoji("🚌")).toBe(true);
+    expect(registry.isSingleEmoji("🚌🚌")).toBe(false);
   });
 });

@@ -8,6 +8,11 @@
  * read once a minute, and a fault in this code is not turned into one. An item that names a mini app the registry no
  * longer holds is left out and logged once per revision.
  *
+ * And the registry revision each request reads (move-miniapp-registry D4, D7): a layout that names a mini app
+ * takes one registry snapshot per request, so a registry push reaches it within a TTL with the layout unchanged,
+ * and a left-out item is logged once per pair of revisions. A layout that names none reads no registry, so it
+ * serves while the registry is unavailable; one that names a mini app answers MINIAPP_REGISTRY_UNAVAILABLE.
+ *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake
  * system time; the mapper's clock stays the injected one.
  */
@@ -20,6 +25,14 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { MiniappsService } from "../../miniapps/miniapps.service";
+import { FakeMiniappsRepository } from "../../../__tests__/helpers/fakes/miniapps/miniapps.repository.fake";
+import {
+  fixtureMiniappsService,
+  fixtureRegistry,
+  fixtureRegistryRepository,
+  fixtureRegistryWithWaveRun,
+  miniappsServiceOver,
+} from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { DATASET_CACHE_TTL_MS, DATASET_STALE_WINDOW_MS } from "../../shared/dataset.constants";
 import type { UiHomeRepository } from "./ui-home.repository";
 import { UiHomeService } from "./ui-home.service";
@@ -50,7 +63,7 @@ let service: UiHomeService;
 beforeEach(() => {
   jest.clearAllMocks();
   repository = new FakeUiHomeRepository();
-  service = new UiHomeService(asReal<UiHomeRepository>(repository), new MiniappsService(), clock);
+  service = new UiHomeService(asReal<UiHomeRepository>(repository), fixtureMiniappsService(), clock);
 });
 
 afterEach(() => {
@@ -200,7 +213,7 @@ describe("UiHomeService.getHomeLayout with no good layout", () => {
   beforeEach(() => {
     jest.useFakeTimers({ now: NOW });
     at = NOW;
-    service = new UiHomeService(asReal<UiHomeRepository>(repository), new MiniappsService(), movingClock);
+    service = new UiHomeService(asReal<UiHomeRepository>(repository), fixtureMiniappsService(), movingClock);
   });
 
   it("reads a missing layout at most once per TTL, answering 503 in between", async () => {
@@ -269,15 +282,98 @@ describe("UiHomeService.getHomeLayout with no good layout", () => {
     // Arrange
     const fault = new TypeError("cannot read properties of undefined");
     class FaultyMiniapps extends MiniappsService {
-      override isRegistered(): boolean {
-        throw fault;
+      override async current(): ReturnType<MiniappsService["current"]> {
+        const registry = await super.current();
+        return {
+          ...registry,
+          isRegistered: () => {
+            throw fault;
+          },
+        };
       }
     }
-    service = new UiHomeService(asReal<UiHomeRepository>(repository), new FaultyMiniapps(), movingClock);
+    service = new UiHomeService(asReal<UiHomeRepository>(repository), new FaultyMiniapps(fixtureRegistryRepository(), movingClock), movingClock);
     repository.storeHomeLayout(layoutOf(grid({ kind: "miniapp", id: "eskara" })));
 
     // Act & Assert
     await expect(service.getHomeLayout("ko")).rejects.toBe(fault);
     expect(callsOf("error", "ui.home_layout.read_failed")).toEqual([]);
+  });
+});
+
+describe("UiHomeService.getHomeLayout against the registry revision each request reads", () => {
+  let registry: FakeMiniappsRepository;
+
+  const serviceOver = (miniapps: FakeMiniappsRepository) => new UiHomeService(asReal<UiHomeRepository>(repository), miniappsServiceOver(miniapps, clock), clock);
+
+  beforeEach(() => {
+    registry = FakeMiniappsRepository.seededWith(fixtureRegistry());
+    service = serviceOver(registry);
+  });
+
+  it("serves a tile left out under one registry revision once a registry push adds its mini app, the layout unchanged", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    repository.storeHomeLayout(layoutOf(grid({ kind: "miniapp", id: "wave-run" }, { kind: "game", id: "subway-typing" })));
+    const before = await service.getHomeLayout("ko");
+    registry.storeRegistry(fixtureRegistryWithWaveRun());
+
+    // Act
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS - 1);
+    const beforeTtl = await service.getHomeLayout("ko");
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    const atTtl = await service.getHomeLayout("ko");
+
+    // Assert
+    expect(tileIdsOf(before)).toEqual(["subway-typing"]);
+    expect(tileIdsOf(beforeTtl)).toEqual(["subway-typing"]);
+    expect(tileIdsOf(atTtl)).toEqual(["wave-run", "subway-typing"]);
+    expect(repository.datasets.get("home-layout")?.revision).toBe(1);
+  });
+
+  it("logs a left-out item once per pair of layout and registry revisions", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    repository.storeHomeLayout(layoutOf(grid({ kind: "miniapp", id: "wave-run" }, { kind: "game", id: "subway-typing" })));
+
+    // Act
+    await service.getHomeLayout("ko");
+    await service.getHomeLayout("ko");
+    registry.storeRegistry(fixtureRegistry());
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    await service.getHomeLayout("ko");
+    await service.getHomeLayout("ko");
+
+    // Assert
+    expect(callsOf("error", "ui.home_layout.item_left_out")).toEqual([
+      expect.objectContaining({ revision: 1, registryRevision: 1, path: "sections.0.tiles.0.id" }),
+      expect.objectContaining({ revision: 1, registryRevision: 2, path: "sections.0.tiles.0.id" }),
+    ]);
+  });
+
+  it("serves a layout that names no mini app while the registry is unavailable, reading no registry", async () => {
+    // Arrange
+    const unreachable = new FakeMiniappsRepository();
+    unreachable.failWith = new Error("server selection timed out");
+    service = serviceOver(unreachable);
+    repository.storeHomeLayout(storedLayout());
+
+    // Act
+    const layout = await service.getHomeLayout("ko");
+
+    // Assert
+    expect(tileIdsOf(layout)).toEqual(["building_map", "building_code", "lost_found", "inquiry", "subway-typing", "wave-run"]);
+    expect(unreachable.readCount).toBe(0);
+  });
+
+  it("answers MINIAPP_REGISTRY_UNAVAILABLE (503) for a layout that names a mini app while no registry was ever read", async () => {
+    // Arrange
+    const unreachable = new FakeMiniappsRepository();
+    unreachable.failWith = new Error("server selection timed out");
+    service = serviceOver(unreachable);
+    repository.storeHomeLayout(layoutOf(grid({ kind: "miniapp", id: "mukja" }, { kind: "game", id: "wave-run" })));
+
+    // Act & Assert
+    await expect(service.getHomeLayout("ko")).rejects.toMatchObject({ code: "MINIAPP_REGISTRY_UNAVAILABLE", httpStatus: 503 });
   });
 });

@@ -7,11 +7,11 @@
  */
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
-import { MiniappsService } from "../../miniapps/miniapps.service";
+import { fixtureMiniappsService } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { toHomeLayout } from "./ui-home.mapper";
 import { homeLayoutFile } from "./ui-home.schema";
 
-const registry = new MiniappsService();
+const registry = fixtureMiniappsService();
 
 const IMAGE_URL = "https://media.skkuverse.com/home/banners/test-00000000.jpg";
 

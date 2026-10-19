@@ -10,6 +10,12 @@
  * one the layout does not place (`ui.transit_layout.unplaced`) without adding
  * it, each once per revision.
  *
+ * And the registry revision each request reads (move-miniapp-registry D4, D7): a layout with a `miniapp`
+ * link takes one registry snapshot per request, so a registry push reaches it within a TTL with the layout
+ * unchanged, and a left-out link is logged once per pair of revisions. A layout with no `miniapp` link reads
+ * no registry, so it serves while the registry is unavailable; one with a link answers
+ * MINIAPP_REGISTRY_UNAVAILABLE.
+ *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake
  * system time.
  */
@@ -19,7 +25,8 @@ import { FakeUiTransitRepository } from "../../../__tests__/helpers/fakes/ui/ui-
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { MiniappsService } from "../../miniapps/miniapps.service";
+import { FakeMiniappsRepository } from "../../../__tests__/helpers/fakes/miniapps/miniapps.repository.fake";
+import { fixtureMiniappsService, fixtureRegistry, fixtureRegistryWithWaveRun, miniappsServiceOver } from "../../../__tests__/helpers/miniapps/registry-fixture";
 import { DATASET_CACHE_TTL_MS } from "../../shared/dataset.constants";
 import type { UiTransitRepository } from "./ui-transit.repository";
 import type { TransitLayoutRaw } from "./ui-transit.schema";
@@ -47,7 +54,7 @@ let service: UiTransitService;
 beforeEach(() => {
   jest.clearAllMocks();
   repository = new FakeUiTransitRepository();
-  service = new UiTransitService(asReal<UiTransitRepository>(repository), new MiniappsService(), clock);
+  service = new UiTransitService(asReal<UiTransitRepository>(repository), fixtureMiniappsService(), clock);
 });
 
 afterEach(() => {
@@ -166,5 +173,85 @@ describe("UiTransitService.getStoredLayout", () => {
     // Act & Assert
     await expect(service.getStoredLayout(SERVED)).rejects.toMatchObject({ code: "TRANSIT_LAYOUT_UNAVAILABLE", httpStatus: 503 });
     expect(callsOf("ui.transit_layout.read_failed")).toEqual([expect.objectContaining({ err: failure })]);
+  });
+});
+
+describe("UiTransitService.getStoredLayout against the registry revision each request reads", () => {
+  let registry: FakeMiniappsRepository;
+  const WAVE_LINK = { ...LINK, id: "wave", actionValue: "wave-run" };
+
+  const serviceOver = (miniapps: FakeMiniappsRepository) => new UiTransitService(asReal<UiTransitRepository>(repository), miniappsServiceOver(miniapps, clock), clock);
+  const unreachableRegistry = () => {
+    const unreachable = new FakeMiniappsRepository();
+    unreachable.failWith = new Error("server selection timed out");
+    return unreachable;
+  };
+
+  beforeEach(() => {
+    registry = FakeMiniappsRepository.seededWith(fixtureRegistry());
+    service = serviceOver(registry);
+  });
+
+  it("serves a link left out under one registry revision once a registry push adds its mini app, the layout unchanged", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    repository.storeTransitLayout(layoutOf(...PLACED, WAVE_LINK));
+    const before = await service.getStoredLayout(SERVED);
+    registry.storeRegistry(fixtureRegistryWithWaveRun());
+
+    // Act
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS - 1);
+    const beforeTtl = await service.getStoredLayout(SERVED);
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    const atTtl = await service.getStoredLayout(SERVED);
+
+    // Assert
+    expect(itemIdsOf(before)).toEqual([["bus:campus", "bus:hssc", "subway:hyehwa"]]);
+    expect(itemIdsOf(beforeTtl)).toEqual([["bus:campus", "bus:hssc", "subway:hyehwa"]]);
+    expect(itemIdsOf(atTtl)).toEqual([["bus:campus", "bus:hssc", "subway:hyehwa", "wave"]]);
+    expect(repository.readCount).toBe(2);
+  });
+
+  it("logs a left-out link once per pair of layout and registry revisions", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    repository.storeTransitLayout(layoutOf(...PLACED, WAVE_LINK));
+
+    // Act
+    await service.getStoredLayout(SERVED);
+    await service.getStoredLayout(SERVED);
+    registry.storeRegistry(fixtureRegistry());
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    await service.getStoredLayout(SERVED);
+    await service.getStoredLayout(SERVED);
+
+    // Assert
+    expect(callsOf("ui.transit_layout.item_left_out")).toEqual([
+      expect.objectContaining({ revision: 1, registryRevision: 1, path: "sections.0.items.3.actionValue" }),
+      expect.objectContaining({ revision: 1, registryRevision: 2, path: "sections.0.items.3.actionValue" }),
+    ]);
+  });
+
+  it("serves a layout with no miniapp link while the registry is unavailable, reading no registry", async () => {
+    // Arrange
+    const unreachable = unreachableRegistry();
+    service = serviceOver(unreachable);
+    repository.storeTransitLayout(layoutOf(...PLACED, { ...LINK, actionType: "route", actionValue: "/map/hssc" }));
+
+    // Act
+    const layout = await service.getStoredLayout(SERVED);
+
+    // Assert
+    expect(itemIdsOf(layout)).toEqual([["bus:campus", "bus:hssc", "subway:hyehwa", "taxi-share"]]);
+    expect(unreachable.readCount).toBe(0);
+  });
+
+  it("answers MINIAPP_REGISTRY_UNAVAILABLE (503) for a layout with a miniapp link while no registry was ever read", async () => {
+    // Arrange
+    service = serviceOver(unreachableRegistry());
+    repository.storeTransitLayout(layoutOf(...PLACED, LINK));
+
+    // Act & Assert
+    await expect(service.getStoredLayout(SERVED)).rejects.toMatchObject({ code: "MINIAPP_REGISTRY_UNAVAILABLE", httpStatus: 503 });
   });
 });

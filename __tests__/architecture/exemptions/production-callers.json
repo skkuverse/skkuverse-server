@@ -1,4 +1,3 @@
 {
-  "src/miniapps/miniapps.service.ts: MiniappsService.map": "Public for the data tool, not for a spec: `scripts/lib/datasets/catalog.js` lists the `miniapps` code-held source's ids from it in registry file order, outside the src/ tree this rule scans, since its src/ reader (the catalog's manifest prefetch) gave way to stored manifest reads (ADR 0010 D2); move-miniapp-registry wave C deletes that source and this entry",
   "src/notices/dispatch/notices-dispatch.service.ts: NoticesDispatchService.dispatchGroup": "notices-dispatch.service.spec.ts pins one group's writes, its lease release when a write after the send fails, and its rejection paths by calling `dispatchGroup` directly, which a sweep reaches only through claims; making it private waits on that spec's rewrite over fakes (docs/plans/private-file, ADR 0011 D2)"
 }

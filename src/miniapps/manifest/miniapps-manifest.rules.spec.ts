@@ -1,7 +1,7 @@
 /**
- * firstPartyOrigin: which startUrls this server fetches a manifest for. Only an
- * https origin on the first-party list counts, matched whole, so a lookalike
- * host, a plain-http page or a third party is never fetched.
+ * firstPartyOrigin: which startUrls a detail takes a stored manifest for. Only
+ * an https origin on the first-party list counts, matched whole, so a
+ * lookalike host, a plain-http page or a third party is never restyled.
  */
 import { FIRST_PARTY_MINIAPP_ORIGINS } from "../../infra/origins";
 import { firstPartyOrigin } from "./miniapps-manifest.rules";
