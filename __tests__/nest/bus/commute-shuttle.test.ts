@@ -12,7 +12,7 @@ import path from "path";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import { COMMUTE_SERVICE_IDS } from "../../../src/bus/config/bus-config.constants";
 import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
-import { seededBusRegistryService } from "../../helpers/bus/bus-registry";
+import { storedBusRegistryRepository, storedBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
@@ -40,16 +40,15 @@ import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracki
 import { SubwayMatchingModule } from "../../../src/subway/matching/subway-matching.module";
 import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
-import { FakeBusRegistryRepository } from "../../helpers/fakes/bus/bus-registry.repository.fake";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 let busConfig: BusConfigService;
 const groupsByLang = new Map<SupportedLang, BusGroup[]>();
-// WHY: the stations come from the registry, seeded here as a boot seeds it; the groups are read once.
+// WHY: the stations come from the registry, holding the routes stored on 2026-10-17; the groups are read once.
 beforeAll(async () => {
-  busConfig = new BusConfigService(new BusStopsService(new SubwayStationsService()), await seededBusRegistryService());
+  busConfig = new BusConfigService(new BusStopsService(new SubwayStationsService()), storedBusRegistryService());
   for (const lang of ["ko", "en", "zh"] as const) groupsByLang.set(lang, await busConfig.getBusGroups(lang));
 });
 const getBusGroups = (lang: SupportedLang = "ko"): BusGroup[] => groupsByLang.get(lang)!;
@@ -476,7 +475,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
       overrides: [
         { provide: Clock, useValue: PILOT_NOON },
         { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
-        { provide: BusRegistryRepository, useValue: new FakeBusRegistryRepository() },
+        { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
       ],
       role: "api",

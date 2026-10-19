@@ -12,7 +12,8 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import type { SupportedLang } from "../../infra/types";
-import { FakeBusRegistryRepository } from "../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
+import { storedBusRegistryRepository } from "../../../__tests__/helpers/bus/bus-registry";
+import type { FakeBusRegistryRepository } from "../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { BusRegistryRepository } from "../registry/bus-registry.repository";
 import { BusRegistryService } from "../registry/bus-registry.service";
@@ -28,15 +29,14 @@ let registryRepository: FakeBusRegistryRepository;
 let service: BusConfigService;
 const clock = { now: () => new Date("2026-10-17T12:00:00Z") };
 
-async function seededService(): Promise<BusConfigService> {
+async function freshService(): Promise<BusConfigService> {
   const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
-  await registry.onModuleInit();
   return new BusConfigService(new BusStopsService(new SubwayStationsService()), registry);
 }
 
 beforeEach(async () => {
-  registryRepository = new FakeBusRegistryRepository();
-  service = await seededService();
+  registryRepository = storedBusRegistryRepository();
+  service = await freshService();
 });
 
 describe("BusConfigService.getBusGroups", () => {
@@ -285,7 +285,7 @@ describe("BusConfigService and the registry", () => {
     doc.stationsVersion = "reordered";
 
     // Act
-    const group = (await (await seededService()).getGroupById("jongro07", "ko")) as { screen: { stations: Array<{ name: string }> } };
+    const group = (await (await freshService()).getGroupById("jongro07", "ko")) as { screen: { stations: Array<{ name: string }> } };
 
     // Assert
     expect(group.screen.stations.slice(0, 2).map((s) => s.name)).toEqual(["학생회관", "성균관대운동장"]);
@@ -295,7 +295,7 @@ describe("BusConfigService and the registry", () => {
     // Arrange
     const [etag, groupEtag, hsscEtag] = [await service.computeEtag("ko"), await service.computeGroupEtag("jongro07", "ko"), await service.computeGroupEtag("hssc", "ko")];
     registryRepository.routes.get("jongro07")!.stationsVersion = "synced";
-    const reread = await seededService();
+    const reread = await freshService();
 
     // Act & Assert
     expect(await reread.computeEtag("ko")).not.toBe(etag);

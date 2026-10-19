@@ -4,15 +4,13 @@
  * an observation is the arrival list ordered by ord; the turnaround stop
  * follows the position list only when its rows agree; the changed share and
  * the diff of two lists; and the decision to wait, apply at the third
- * identical tick, or hold a change to more than 30% of the stops. The one
- * duplicate stop a route may hold is its last ord repeating its first. A
+ * identical tick, or hold a change to more than 30% of the stops. A
  * route with no document is bootstrapped (isolate-api-from-pollers D2): only a
  * non-empty list with a turnaround stop every position row agrees on counts,
  * by its stations version, and the third identical tick inserts it.
  */
 import type { ObservedStation, PendingObservation } from "./bus-registry.types";
 import {
-  isLoopClosingRepeat,
   toAgreedTurnaroundTopisId,
   toBootstrapDecision,
   toChangedShare,
@@ -217,17 +215,5 @@ describe("toSyncDecision", () => {
 
     // Act & Assert
     expect(toSyncDecision({ storedVersion: toStationsVersion(TEN, "4"), observedVersion: version, pending: pendingOf(version, 2), changedShare: toChangedShare(TEN, TEN) })).toEqual({ kind: "apply" });
-  });
-});
-
-describe("isLoopClosingRepeat", () => {
-  it.each([
-    [["A", "B", "A"], 2, true],
-    [["A", "B", "B"], 2, false],
-    [["A", "A", "B"], 1, false],
-    [["A"], 0, false],
-  ])("%j at %i → %s", (topisIds, index, expected) => {
-    // Act & Assert
-    expect(isLoopClosingRepeat(topisIds, index)).toBe(expected);
   });
 });

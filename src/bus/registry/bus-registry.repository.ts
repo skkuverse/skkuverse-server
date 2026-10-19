@@ -12,7 +12,7 @@ const ROUTE_PROJECTION = { stations: 1, turnaroundTopisId: 1, stationsVersion: 1
 
 @Injectable()
 export class BusRegistryRepository {
-  // WHY: $setOnInsert on the route id, so a seed never overwrites a stored list, however old the snapshot.
+  // WHY: $setOnInsert on the route id, so a bootstrap never overwrites a list another writer stored first.
   async insertRoute({ _id, ...route }: JongroRouteDocument): Promise<boolean> {
     const result = await this.routes().updateOne({ _id }, { $setOnInsert: route }, { upsert: true });
     return result.upsertedCount === 1;

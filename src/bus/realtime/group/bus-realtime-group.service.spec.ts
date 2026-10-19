@@ -22,7 +22,8 @@ jest.mock("../../../infra/logger", () => ({
 import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusRealtimeHsscClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.client.fake";
 import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-jongro.client.fake";
-import { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
+import { storedBusRegistryRepository } from "../../../../__tests__/helpers/bus/bus-registry";
+import type { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import {
   hsscBusDoc,
@@ -53,9 +54,8 @@ const versionOf = (routeId: string) => registryRepository.routes.get(routeId)!.s
 
 beforeEach(async () => {
   busCache = new FakeBusCacheRepository();
-  registryRepository = new FakeBusRegistryRepository();
+  registryRepository = storedBusRegistryRepository();
   const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
-  await registry.onModuleInit();
   const cache = new BusCacheService(asReal<BusCacheRepository>(busCache));
   const hssc = new BusRealtimeHsscService(asReal<BusRealtimeHsscClient>(new FakeBusRealtimeHsscClient()), cache, clock);
   const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cache, registry, clock);
