@@ -3,7 +3,7 @@ title: Configure Map Overlays
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-19
+last-updated: 2026-10-20
 audience: internal
 ---
 
@@ -50,7 +50,9 @@ The single most useful question before any change: **does this need a deploy?**
   scripts/data/*.json ──► npm run <import> ──► Mongo ──► the overlay routes
        (repo, PR)                              (ops, live)      (60 s / 1 day TTL)
 
-  src/map/layer-set/<layerSetId>.json ──► the festival's layers, chips, categories
+  .data/<target>/map-layer-sets.json ──► npm run data -- push ──► the festival's
+       (git-ignored working file)        (ops, live in 60 s)      layers, chips, categories
+
   src/map/map.constants.ts       ──► the permanent layers
        (repo, PR + deploy)
 ```
@@ -61,9 +63,11 @@ The single most useful question before any change: **does this need a deploy?**
 | Add or remove a zone, a route line, a footprint | the sheet, then re-import | No |
 | A Jongno bus route's line | nothing: the bus module syncs it from TOPIS daily | No |
 | Take the whole festival down now | the activation's `enabled` flag | No |
-| A layer's colour, opacity, outline, zoom bounds | the layer set JSON, or `map.constants.ts` | Yes |
-| Which layer a booth category lands on | the layer set JSON's category table | Yes |
-| Whether a category is tappable | the layer set JSON's category table | Yes |
+| Add a festival, or change its layers, chips or camera | its layer set in `map-layer-sets`, with `npm run data` | No |
+| A festival layer's colour, opacity, outline, zoom bounds | its layer set in `map-layer-sets` | No |
+| A permanent layer's style | `map.constants.ts` | Yes |
+| Which layer a booth category lands on | the layer set's category table (`itemDefaults`) | No |
+| Whether a category is tappable | the layer set's category table (`itemDefaults`) | No |
 | Add a permanent layer | `map.constants.ts` | Yes |
 | Add a new `kind` | the type union, a producer, and the client | Yes, plus an app release |
 
@@ -78,6 +82,49 @@ The single most useful question before any change: **does this need a deploy?**
   `package.json` (SSOT — do not memorise the flags, run with `--dry-run` first).
 
 ## Steps
+
+### Add or edit a festival
+
+A festival is three things, each written by its own tool, in this order:
+
+1. **Its layer set**, in the `map-layer-sets` dataset: the layers, chips, list
+   facets, camera and category table. Pull the dataset, add an entry to
+   `layerSets` (or edit one), preview it, then push it:
+
+   ```bash
+   npm run data -- pull map-layer-sets
+   # edit .data/dev/map-layer-sets.json: one entry per festival, each with its own layerSetId
+   npm run data -- push map-layer-sets --dry-run
+   npm run data -- push map-layer-sets --note "add spring-2027"
+   ```
+
+   A push is refused, naming the set's index and path, for any issue in any
+   set: a chip naming a layer the set does not define, a category naming no
+   layer, a layer id the base map already uses, or a `layerSetId` stored twice.
+   Repeat with `--prod` for production ([edit-runtime-data.md](edit-runtime-data.md)).
+   A stored set no activation names is dormant: nothing reads it.
+2. **Its places**, in the eventmap database: `npm run eventmap:import` with
+   `--layer-set-id <layerSetId>`. The import also creates the festival's
+   activation, disabled.
+3. **Its window**: open the activation with
+   `npm run eventmap -- open --layer-set-id <layerSetId>`, `--prod` for
+   production ([event-places.md §6.2](../reference/event-places.md#62-the-window--and-the-kill-switch)).
+   Opening it is user-visible at once.
+
+Within a minute of the push and the window, `/map/config` serves the
+festival's layers and chips, with no deploy and no restart; the event routes,
+which cache for five seconds more, follow within 65 seconds.
+
+> [!WARNING]
+> Close a festival's window before you remove its layer set. The tool cannot
+> see the eventmap database, so it pushes a revision without the set, and the
+> live festival leaves the map within a minute: the server logs
+> `map.eventmap.activation_unservable` and serves the base map.
+
+If a stored set fails the server's checks at read (a schema tightened by a
+deploy), only that set is left out, logged as `map.layer_sets.invalid_set`
+with its issues; the others keep serving. Run `npm run data -- check --prod`
+from the new checkout before such a deploy.
 
 ### Draw a festival zone or a route line
 
@@ -114,7 +161,7 @@ because a zone is a place whose geometry happens to be an area.
    introduced. A place carries one form or the other — both, or neither, is a
    rejected sheet.
 3. Make sure the `category` you used resolves to a layer. If it is new, add it to
-   the layer set's category table (that half **is** a deploy — see below).
+   the layer set's category table with `npm run data` ([Add or edit a festival](#add-or-edit-a-festival)).
 4. Dry-run the import, read the report, then run it for real.
 5. The change is live within the event route's TTL. No deploy, no restart.
 
@@ -207,8 +254,8 @@ set's `itemDefaults`. It resolves to `tap: null` on the wire.
 
 Per category, not per layer or per place: two categories may map to one layer,
 so a single 구역 layer can hold tappable stage zones and an inert boundary. An
-absent value means `true` — never fail closed — and a non-boolean is rejected at
-config load rather than coerced, because `"false"` is truthy.
+absent value means `true` — never fail closed — and a non-boolean is refused at
+push rather than coerced, because `"false"` is truthy.
 
 ### Make a category's tap run a chip
 
@@ -222,7 +269,7 @@ sheet. Set `tapChip` to a chip id on its **category**:
 
 The wire carries `tap: { "kind": "chip", "chipId": … }`, and the app runs that
 chip exactly as the chip row would. The details route serves no sheet for the
-category. Config load refuses a `tapChip` naming no authored chip, and one on an
+category. A push is refused for a `tapChip` naming no authored chip, and one on an
 `interactive: false` category. App builds older than the kind draw the shape
 inert. Contract: [map-overlays-api.md §2.6](../reference/map-overlays-api.md).
 
@@ -271,7 +318,7 @@ outline is a solid black blob with no border, hiding the booths inside it.
 `EVENT_SHAPE_STYLE` in `map-layer-set.constants.ts` supplies both for every festival
 layer, and derives the outline colour from the category colour.
 
-Festival layer colours are authored per layer in the layer set JSON, because a
+Festival layer colours are authored per layer in the layer set, because a
 category colour is content. The permanent layers deliberately send **no**
 colour: the base map's palette is a design token that resolves per theme, and a
 hex from the server cannot.
@@ -305,7 +352,8 @@ Work top-down — the earlier entries are far more common.
 | --- | --- | --- |
 | Import rejected, nothing written | A rule in the sheet reader | Read the error list; every message names the exact path. Nothing is written when any row is bad, on purpose |
 | Shape imported, never appears | `layerId` names no layer | The server logs a warn naming the id it could not resolve. Campus shapes must name a `BASE_LAYERS` entry |
-| Festival shape imported, lands on the wrong layer | Its `category` is not in the category table | An unmapped category silently falls back rather than dropping the booth — check the table in the layer set JSON |
+| Festival shape imported, lands on the wrong layer | Its `category` is not in the category table | An unmapped category silently falls back rather than dropping the booth — check the table in the layer set (`npm run data -- pull map-layer-sets`) |
+| Festival window open, the map shows the base layers only | The layer set is missing from `map-layer-sets`, was left out at read, or the dataset cannot be read | Grep the logs for `map.eventmap.activation_unservable` (its `reason` and `issues`) and `map.layer_sets.unavailable`; push a fixed set |
 | Shape appears but cannot be tapped | The category is authored `interactive: false`, or a campus shape has `skkuId: null` | Both resolve to `tap: null`, which is the intended spelling for a backdrop |
 | Tapping a shape does nothing on one phone and runs a chip on another | Its category has `tapChip`, and the first phone's app predates the `chip` tap kind | Expected: an older build parses the tap as `null` and draws the shape inert |
 | Zone renders as a dark blob covering the booths | Its layer has no `fillOpacity` | The client defaults the fill to opaque — see [Style a layer](#style-a-layer) |

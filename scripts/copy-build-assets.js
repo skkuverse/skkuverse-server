@@ -34,10 +34,6 @@ const assets = [
   ["src/miniapps/details/nsc.json", "dist/src/miniapps/details/nsc.json"],
   ["src/miniapps/details/skkuw.json", "dist/src/miniapps/details/skkuw.json"],
   ["src/miniapps/details/skkuzine.json", "dist/src/miniapps/details/skkuzine.json"],
-  // ui/transit/ui-transit.config.ts reads this with fs.readFileSync(__dirname/<name>)
-  ["src/ui/transit/transit-layout.json", "dist/src/ui/transit/transit-layout.json"],
-  // ui/campus/ui-campus.config.ts reads this with fs.readFileSync(__dirname/<name>)
-  ["src/ui/campus/campus-banners.json", "dist/src/ui/campus/campus-banners.json"],
   // src/subway/subway.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/subway/subway-registry.json", "dist/src/subway/subway-registry.json"],
   // The subway timetable config reads these with fs.readFileSync(__dirname/<name>);

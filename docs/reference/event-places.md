@@ -3,7 +3,7 @@ title: Event Places — Storage, Authoring and Operations
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-19
+last-updated: 2026-10-20
 audience: internal
 ---
 
@@ -21,7 +21,7 @@ audience: internal
 | Served by | `GET /map/overlays/event`, `GET /map/overlays/event/details` and `GET /map/config` — there is no `/eventmap` route |
 | Authored by | `scripts/data/<layerSetId>-places.json` → `npm run eventmap:import` |
 | Switched by | `npm run eventmap -- open\|close` |
-| Structure tier | `src/map/layer-set/<layerSetId>.json` — layers, chips, category table |
+| Structure tier | the `map-layer-sets` dataset (content database), one entry per `layerSetId` — layers, chips, category table; `npm run data -- push map-layer-sets` |
 
 ### 1.1 What this replaced
 
@@ -425,9 +425,9 @@ since 2026-10-19: push the festival layout to `_dev` with `npm run data`
 | Places → sheet details | `src/map/event-details/map-event-details.mapper.ts`, shape in `src/map/event-details/map-event-details.wire.ts` |
 | Media host rule | `MEDIA_ORIGIN` in `src/infra/origins.ts`, `src/infra/media-url.ts` |
 | Live layer set + usable config | `src/map/layer-set/map-layer-set.service.ts` |
-| Structure load + validation | `src/map/layer-set/map-layer-set.config.ts` |
-| Structure types, `presentationFor` | `src/map/layer-set/map-layer-set.schema.ts` |
-| Layers, chips, name, emoji, camera, category table | `src/map/layer-set/*.json` (+ `LAYER_SET_FILES` and `copy-build-assets.js`) |
+| Structure read + per-set validation | `src/map/layer-set/map-layer-set.repository.ts`, `storedLayerSets` in `src/map/layer-set/map-layer-set.schema.ts` |
+| Structure types and push checks | `src/map/layer-set/map-layer-set.schema.ts` (`layerSetFile`, `checkedLayerSet`, `layerSetsDataset`); `presentationFor` in `src/map/map.rules.ts` |
+| Layers, chips, name, emoji, camera, category table | the `map-layer-sets` dataset (content database), edited with `npm run data` ([configure-map-overlays.md](../how-to/configure-map-overlays.md#add-or-edit-a-festival)) |
 | Sheet → documents (pure) | `scripts/lib/map-places-file.js` |
 | Importer | `scripts/import-eventmap-places.js` + `scripts/lib/eventmap-db.js` |
 | Authored content | `scripts/data/eskara-2026-places.json` |

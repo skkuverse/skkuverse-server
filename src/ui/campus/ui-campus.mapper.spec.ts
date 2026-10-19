@@ -2,14 +2,14 @@
  * toCampusSheet serves the resolved banner carousel as the sheet's only
  * section, and drops it once every banner is outside its window: the campus
  * sheet has no default banner to draw in an empty slot, and its service
- * buttons moved to the map's chip row.
+ * buttons moved to the map's chip row. Revision 1 of the dataset
+ * (fixtures/campus-banners.dataset.json) shows until the end of ESKARA 2026
+ * and nothing after.
  */
-import { MiniappsService } from "../../miniapps/miniapps.service";
-import { loadCampusBanners } from "./ui-campus.config";
+import fs from "fs";
+import path from "path";
 import { toCampusSheet } from "./ui-campus.mapper";
-import type { CampusBannerCarouselRaw } from "./ui-campus.schema";
-
-const registry = new MiniappsService();
+import { campusBannersFile } from "./ui-campus.schema";
 
 const IMAGE_URL = "https://media.skkuverse.com/campus/banners/test-00000000.webp";
 
@@ -32,7 +32,7 @@ describe("toCampusSheet", () => {
   const WINDOW = { startAt: "2026-10-01T00:00:00+09:00", endAt: "2026-10-03T00:00:00+09:00" };
 
   function sectionsAt(iso: string, raw: Record<string, unknown>) {
-    const banners = loadCampusBanners(raw, registry) as CampusBannerCarouselRaw;
+    const banners = campusBannersFile.parse(raw);
     return toCampusSheet({ banners, lang: "ko", now: new Date(iso) }).sections;
   }
 
@@ -57,5 +57,19 @@ describe("toCampusSheet", () => {
 
     // Assert
     expect(sections).toEqual([]);
+  });
+
+  it("closes every banner of revision 1 of the dataset when ESKARA 2026 ends", () => {
+    // Arrange
+    const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/ui/fixtures/campus-banners.dataset.json"), "utf8")) as Record<string, unknown>;
+    delete fixture._about;
+
+    // Act
+    const lastSecond = sectionsAt("2026-10-02T23:59:59+09:00", fixture);
+    const festivalOver = sectionsAt("2026-10-03T00:00:00+09:00", fixture);
+
+    // Assert
+    expect(lastSecond.map((s) => s.type)).toEqual(["banner_carousel"]);
+    expect(festivalOver).toEqual([]);
   });
 });

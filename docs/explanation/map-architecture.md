@@ -3,21 +3,21 @@ title: Map Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-19
+last-updated: 2026-10-20
 audience: internal
 ---
 
 # Map Architecture
 
-> What `src/map/` serves under `/map`: the map's layers and chips, the campus overlays it mirrors from the building module, the Jongro route lines it draws from the bus module, and a festival's places, overlays and sheets. Read it before you change a layer, a chip, the layer-set file or an overlay field.
+> What `src/map/` serves under `/map`: the map's layers and chips, the campus overlays it mirrors from the building module, the Jongro route lines it draws from the bus module, and a festival's places, overlays and sheets. Read it before you change a layer, a chip, a layer set or an overlay field.
 
 ## Context
 
-Map owns two things: the base map's layer catalogue, and the festival structure tier, one layer-set JSON file per festival committed next to its loader. The buildings and campus shapes it draws are the building module's, the Jongro route lines the bus module's, and the festival's places and activations are written by ops scripts into Mongo; map only reads them. Each route is its own sub-module (`config/`, `campus/`, `transit/`, `event/`, `event-details/`), and `layer-set/` answers "which festival is live, and how is it drawn" for three of them; the root holds the places repository, the shared overlay wire and the base layers.
+Map owns two things: the base map's layer catalogue, and the festival structure tier: every festival's layer set, stored as the `map-layer-sets` dataset in the content database and edited with `npm run data`, so a festival is added with no deploy. The buildings and campus shapes it draws are the building module's, the Jongro route lines the bus module's, and the festival's places and activations are written by ops scripts into Mongo; map only reads them. Each route is its own sub-module (`config/`, `campus/`, `transit/`, `event/`, `event-details/`), and `layer-set/` answers "which festival is live, and how is it drawn" for three of them; the root holds the places repository, the shared overlay wire and the base layers.
 
 | System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
-| The layer-set files | — | Each festival's layers, chips, list facets and category table, shipped with a deploy | `getLayerSetConfig` |
+| The `map-layer-sets` dataset (content database `datasets`, written by `npm run data`) | `mongodb` | Each festival's layers, chips, list facets and category table, one set per `layerSetId`, checked at push and again at read | `MapLayerSetRepository` |
 | `places` and `activations` (eventmap database) | `mongodb` | The festival's places, and the window that switches a layer set on | `MapRepository` |
 | The places importer (`scripts/lib/map-places-file.js`) | — | Places written to Mongo, checked by the same rules the server reads with | `overlayPlaceDoc`, `sheetPlaceDoc` |
 | The building module | `skku` | Buildings and hand-authored campus shapes | `BuildingService`, injected into `MapCampusService` |
@@ -32,9 +32,10 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | Term | Means | Derived from | Not |
 | --- | --- | --- | --- |
 | layer (`LayerSpec`) | One kind of thing with one toggle: what is drawn, its style, its endpoint and its chip group | `BASE_LAYERS`, `eventLayerSpecs` | — |
-| layer set (`LayerSet`) | One festival's layers, chips, facets, camera and category table, as one JSON file | `layerSetFile` in `map-layer-set.schema.ts` | `festivalConfig`, `layerConfig` |
+| layer set (`LayerSet`) | One festival's layers, chips, facets, camera and category table, one entry of the `map-layer-sets` dataset | `layerSetFile` and `checkedLayerSet` in `map-layer-set.schema.ts` | `festivalConfig`, `layerConfig` |
+| rejected layer set (`RejectedLayerSet`) | A stored set that fails its checks at read, or repeats an earlier `layerSetId`: left out, not served, and logged once per revision | `storedLayerSets` | — |
 | activation (`ActivationDoc`) | The Mongo switch that makes a layer set live between `activeFrom` and `activeUntil` while `enabled` | `findActiveActivation` | `eventWindow` |
-| live layer set | The layer set whose activation is open now and whose file this build loaded | `MapLayerSetService.liveLayerSet` | `currentFestival` |
+| live layer set | The layer set whose activation is open now and which the stored dataset holds and serves | `MapLayerSetService.liveLayerSet` | `currentFestival` |
 | place (`MapPlaceDoc`) | One operating entity of a festival: a spot, its geometry, its windows and its buttons | the places importer | — |
 | overlay (`MapOverlay`) | One drawable thing, tagged by the renderer that draws it (`marker`, `polygon`, `path`) | `toEventOverlay`, the campus mappers | — |
 | chip (`MapChipSpec`) | One pill above the map: a camera, the layers it turns on, and the list it opens; or a link it opens | `eventChipSpecs`, `BASE_CHIPS` | `filterButton` |
@@ -52,7 +53,7 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 
 ```mermaid
 flowchart LR
-  file["layer-set JSON"] -->|getLayerSetConfig, checked at import| layerSet["MapLayerSetService"]
+  sets[("map-layer-sets")] -->|MapLayerSetRepository, each set checked, cached 60 s| layerSet["MapLayerSetService"]
   acts[("activations")] -->|findActiveActivation, cached| layerSet
   places[("places")] -->|MapRepository| event["MapEventService"]
   places -->|MapRepository| details["MapEventDetailsService"]
@@ -91,10 +92,14 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 
 ## Invariants
 
-- A layer-set file is read and checked once, when `map-layer-set.config.ts` is first imported; a bad file is logged as `map.layerset.config_rejected` and skipped, so the base map keeps serving and only the festival is missing. Its messages name the exact path, and a spec pins them.
-- The loader's leaves (the root and layer-set rules, mappers, schemas, constants and types) never import the loader: an ESLint block refuses it, because the loader imports them at load.
-- A bad base chip stops the boot: `assertValidChipSpecs` at import, and `assertValidLinkChips` against the mini-app registry when Nest builds `MapLayerSetService`. A bad festival file, place, button, block or facet value is dropped and logged, never thrown into a request.
-- A link chip's `webview` value is served absolute (`toServedActionValue`); its other values are served as written. A festival file authors only `focus` chips.
+- A push of `map-layer-sets` is refused for every issue of any set (`layerSetsDataset`): its structure, its cross-references, its chip row against the base layers and chips, and a `layerSetId` stored twice.
+- At read, each stored set is checked on its own (`storedLayerSets`): a bad or repeated one is left out and logged once per revision as `map.layer_sets.invalid_set`, with its id and issues, and every other set keeps serving: the fail-soft of [ADR 0010's validation decision](../decisions/0010-server-architecture.md#d5-validation-zod), per set.
+- The layer sets are read only while an activation is live, through the dataset loader (`createDatasetLoader`: `DATASET_CACHE_TTL_MS`, with a `DATASET_STALE_WINDOW_MS` stale window). With no good value ever read (the dataset missing, invalid or unreadable), `/map/config` serves the base map and the event routes serve no overlay and no sheet, logged at error at most once a minute as `map.layer_sets.unavailable`. That is the degraded answer [ADR 0013's read contract](../decisions/0013-runtime-data-in-mongodb.md#d6-the-read-contract) allows, never a `503`.
+- A live activation naming a set the dataset lacks, or one left out, serves the base map, logged once per activation and revision as `map.eventmap.activation_unservable` (`no_layer_set` or `layer_set_rejected`). Close a window before you remove its set.
+- A push reaches `/map/config` within `DATASET_CACHE_TTL_MS`, a minute, and the event routes, which cache their answer for `EVENT_CACHE_TTL_MS` on top, within that plus five seconds. The `/map/config` ETag is the hash of the body, so it changes with a revision exactly when the served body does.
+- `map-layer-set.config.ts` still loads the committed `eskara-2026.json`, for the specs only, until that file is deleted. The leaves it imports (the root and layer-set rules, mappers, schemas, constants and types) never import it back: an ESLint block refuses it.
+- A bad base chip stops the boot: `assertValidChipSpecs` against the base layers, and `assertValidLinkChips` against the mini-app registry, when Nest builds `MapLayerSetService`. A bad layer set, place, button, block or facet value is dropped and logged, never thrown into a request.
+- A link chip's `webview` value is served absolute (`toServedActionValue`); its other values are served as written. A layer set authors only `focus` chips.
 - The activation read is cached for `EVENT_CACHE_TTL_MS` with an `EVENT_STALE_WINDOW_MS` stale window, and a cached activation is still checked against the clock, so its window closes on time. `/map/config` answers with the base layers when the lookup fails.
 - Both event routes cache their whole projection on the same TTL, and both overlay collections are one response per data source, pins and shapes together.
 - A stored geometry is served as stored: points and lines by reference, polygon rings rewound (`toWirePolygon`); the only rebuilt pair is a building's, from its `location`.
@@ -107,6 +112,8 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 - The `.wire` files publish what is served today, including the campus overlay's string `placeId`.
 
 ## Open questions
+
+- `npm run data` cannot refuse removing a layer set that an enabled activation names: the activations are in the eventmap database, outside the content database the tool reads.
 
 - Overlay `fields` and the `content` action type parse in the app and draw nothing.
 - The place schemas the server reads with (`overlayPlaceDoc`, `sheetPlaceDoc`) check what makes a place undrawable, not the importer's whole rule set; a hand edit the importer would refuse can still be served if it draws.

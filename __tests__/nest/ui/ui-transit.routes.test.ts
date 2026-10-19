@@ -2,7 +2,7 @@
  * GET /ui/home/transit over main.ts's pipeline (the general limiter UiModule
  * binds on /ui, ResponseInterceptor, HttpExceptionFilter), with the stored
  * `transit-layout` dataset read through FakeUiTransitRepository seeded from
- * fixtures/transit-layout.dataset.json (what transit-layout.json held), the
+ * fixtures/transit-layout.dataset.json (revision 1 of the dataset), the
  * real bus groups and the real served stations on a fixed clock (2026-10-20,
  * the commute pilot running, fasttrack closed).
  *

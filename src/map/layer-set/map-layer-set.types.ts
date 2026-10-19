@@ -15,3 +15,18 @@ export interface MapChipSpec {
 export type LoadedConfig = { config: LayerSet; error: null } | { config: null; error: string };
 
 export type ConfigIssue = readonly [path: PropertyKey[], message: string];
+
+export interface RejectedLayerSet {
+  index: number;
+  layerSetId: string | null;
+  issues: string[];
+}
+
+export interface CheckedLayerSets {
+  layerSets: LayerSet[];
+  rejected: RejectedLayerSet[];
+}
+
+export interface MapLayerSetsRevision extends CheckedLayerSets {
+  revision: number;
+}
