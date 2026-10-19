@@ -1,23 +1,33 @@
 /**
- * MiniappsCatalogService over the real registry and a fake manifest client.
- * What it guards: the index serves the registry's version and ordered list, an
- * unknown id answers null without asking for a manifest, and a known id's
- * detail takes the manifest's shell fields over the registry's.
+ * MiniappsCatalogService over the real registry and the manifest service over
+ * the stored-manifest fake. What it guards: the index serves the registry's
+ * version and ordered list, an unknown id answers null without reading a
+ * manifest, and a known id's detail takes its stored manifest's shell fields
+ * over the registry's.
  */
-import { FakeMiniappsCatalogClient } from "../../../__tests__/helpers/fakes/miniapps/miniapps-catalog.client.fake";
+import { FakeMiniappsManifestClient } from "../../../__tests__/helpers/fakes/miniapps/miniapps-manifest.client.fake";
+import { FakeMiniappsManifestRepository } from "../../../__tests__/helpers/fakes/miniapps/miniapps-manifest.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import type { MiniappsManifestClient } from "../manifest/miniapps-manifest.client";
+import type { MiniappsManifestRepository } from "../manifest/miniapps-manifest.repository";
+import { MiniappsManifestService } from "../manifest/miniapps-manifest.service";
 import { MiniappsService } from "../miniapps.service";
-import type { MiniappsCatalogClient } from "./miniapps-catalog.client";
 import { DEFAULT_SHELL } from "./miniapps-catalog.constants";
 import { MiniappsCatalogService } from "./miniapps-catalog.service";
 
 const registry = new MiniappsService();
-let client: FakeMiniappsCatalogClient;
+const CLOCK = { now: () => new Date("2026-10-20T01:00:00Z") };
+let manifests: FakeMiniappsManifestRepository;
 let service: MiniappsCatalogService;
 
 beforeEach(() => {
-  client = new FakeMiniappsCatalogClient();
-  service = new MiniappsCatalogService(registry, asReal<MiniappsCatalogClient>(client));
+  manifests = new FakeMiniappsManifestRepository();
+  const manifestService = new MiniappsManifestService(
+    asReal<MiniappsManifestClient>(new FakeMiniappsManifestClient()),
+    asReal<MiniappsManifestRepository>(manifests),
+    CLOCK,
+  );
+  service = new MiniappsCatalogService(registry, manifestService);
 });
 
 describe("MiniappsCatalogService.index", () => {
@@ -34,12 +44,12 @@ describe("MiniappsCatalogService.detail", () => {
 
     // Assert
     expect(detail).toBeNull();
-    expect(client.requests).toEqual([]);
+    expect(manifests.reads).toBe(0);
   });
 
   it("serves the registry detail with the manifest's shell fields over the defaults", async () => {
     // Arrange
-    client.shellFields["mukja"] = { bar: "none" };
+    await manifests.upsertManifest("https://mukja.mini.skkuverse.com", { bar: "none" }, CLOCK.now());
 
     // Act
     const detail = await service.detail("mukja");

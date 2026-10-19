@@ -6,3 +6,5 @@ export interface MiniAppManifestDoc {
   shell: Partial<ShellConfig>;
   fetchedAt: Date;
 }
+
+export type StoredManifestShell = Pick<MiniAppManifestDoc, "_id" | "shell">;
