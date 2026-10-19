@@ -14,6 +14,12 @@
  * and weak ETag equal what production served at 2026-10-19T19:09:46Z, commit
  * f8dda24b: the six first-party shells come from their manifests, the four
  * third-party ones are the defaults.
+ *
+ * Production was captured again for wave C (task 6.1) at 2026-10-19T20:12:37Z,
+ * commit cd9484d9, after wave B moved the api to the stored manifests: the
+ * index, every detail and the 404 answered the bytes, `Cache-Control`, `Vary`
+ * and ETag pinned here, so the move of the registry into the `miniapps`
+ * dataset must reproduce them.
  */
 import fs from "fs";
 import path from "path";
@@ -72,14 +78,16 @@ const CAPTURED_DETAILS: Record<string, { text: string; etag: string }> = {
   },
 };
 
-/** What today's code serves for the index, pinned on 2026-10-20. */
+/** What production served for the index at 2026-10-19T20:12:37Z, commit cd9484d9: the body text and its weak ETag. */
 const INDEX = {
   text: '{"meta":{},"data":{"version":1,"miniApps":[{"id":"eskara-2026","name":"축제 가이드","order":4,"homeLogo":{"kind":"emoji","emoji":"📖"},"shellLogo":{"kind":"remote","uri":"https://media.skkuverse.com/miniapps/eskara-2026/logo-03a86934.jpg"},"hidden":true},{"id":"inja","name":"축제 인자셔틀","order":5,"homeLogo":{"kind":"emoji","emoji":"🚌"},"shellLogo":{"kind":"emoji","emoji":"🚌"},"hidden":true},{"id":"timetable","name":"무대 타임테이블","order":6,"homeLogo":{"kind":"emoji","emoji":"📅"},"shellLogo":{"kind":"emoji","emoji":"📅"},"hidden":true},{"id":"playlist","name":"플리 예습","order":7,"homeLogo":{"kind":"emoji","emoji":"🎧"},"shellLogo":{"kind":"emoji","emoji":"🎧"},"hidden":true},{"id":"mukja","name":"음식 룰렛","order":8,"homeLogo":{"kind":"emoji","emoji":"😋"},"shellLogo":{"kind":"emoji","emoji":"😋"},"hidden":true},{"id":"booth-box","name":"선물상자","order":9,"homeLogo":{"kind":"emoji","emoji":"🎁"},"shellLogo":{"kind":"emoji","emoji":"🎁"},"hidden":true},{"id":"hssc","name":"인사캠 총학생회","shortName":"인사캠 총학","order":10,"homeLogo":{"kind":"remote","uri":"https://skkuverse.com/miniapps/hssc.png"},"shellLogo":{"kind":"remote","uri":"https://skkuverse.com/miniapps/hssc.png"},"hidden":true},{"id":"nsc","name":"자과캠 총학생회","shortName":"자과캠 총학","order":20,"homeLogo":{"kind":"remote","uri":"https://skkuverse.com/miniapps/nsc.png"},"shellLogo":{"kind":"remote","uri":"https://skkuverse.com/miniapps/nsc.png"},"hidden":true},{"id":"skkuw","name":"성대신문","order":30,"homeLogo":{"kind":"remote","uri":"https://skkuverse.com/miniapps/skkuw.png"},"shellLogo":{"kind":"remote","uri":"https://skkuverse.com/miniapps/skkuw.png"},"hidden":true},{"id":"skkuzine","name":"성균웹진","order":40,"homeLogo":{"kind":"remote","uri":"https://skkuverse.com/miniapps/skkuzine.png"},"shellLogo":{"kind":"remote","uri":"https://skkuverse.com/miniapps/skkuzine.png"},"hidden":true}]}}',
   etag: 'W/"7c7-0wqpe2B0Ak+F6GQN/8E13qBmWZA"',
 };
 
+/** What production answered for an unregistered id at 2026-10-19T20:12:40Z, commit cd9484d9. */
 const NOT_FOUND = {
   text: '{"error":{"code":"MINIAPP_NOT_FOUND","message":"Unknown mini-app id: no-such-app"}}',
+  etag: 'W/"53-xxcrm+A9KTvtPOJ7bpIdjoH0vU8"',
 };
 
 async function storedCapturedManifests(): Promise<FakeMiniappsManifestRepository> {
@@ -156,5 +164,13 @@ describe("GET /miniapps/no-such-app", () => {
     expect(res.text).toBe(NOT_FOUND.text);
     expect(res.headers["cache-control"]).toBeUndefined();
     expect(res.headers.vary).toBe("Accept-Language, Origin");
+  });
+
+  it("answers the 404 with the ETag production sent", async () => {
+    // Act
+    const res = await request(app.getHttpServer()).get("/miniapps/no-such-app");
+
+    // Assert
+    expect(res.headers.etag).toBe(NOT_FOUND.etag);
   });
 });
