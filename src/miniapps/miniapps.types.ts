@@ -14,3 +14,13 @@ export interface LoadedRegistry {
   /** WHY: first-party origin → the mini app that owns it, so the app opens any URL there in that shell. */
   ownerByOrigin: Readonly<Record<string, string>>;
 }
+
+export interface RegistryIssue {
+  path: Array<string | number>;
+  message: string;
+}
+
+export interface RegistryIds {
+  index: { miniApps: ReadonlyArray<{ id: string }> };
+  details: Readonly<Record<string, { id: string }>>;
+}
