@@ -78,3 +78,35 @@ function sectionReferences(section: Located<SectionRaw>, grammar: TargetGrammar)
 export function homeLayoutReferences(layout: HomeLayoutRaw, grammar: TargetGrammar): HomeLayoutReference[] {
   return locatedSections(layout).flatMap((section) => sectionReferences(section, grammar));
 }
+
+type EntryList = "tiles" | "items";
+
+interface UnresolvedItem {
+  section: number;
+  entry?: { list: EntryList; index: number };
+}
+
+function toUnresolvedItem({ path }: HomeLayoutIssue): UnresolvedItem {
+  const [root, section, list, index] = path;
+  if (root !== "sections" || typeof section !== "number") throw new Error(`home layout issue path ${path.join(".")} names no section`);
+  const isEntry = (list === "tiles" || list === "items") && typeof index === "number";
+  return isEntry ? { section, entry: { list, index } } : { section };
+}
+
+function withoutEntries(section: SectionRaw, unresolved: readonly UnresolvedItem[]): SectionRaw | null {
+  const isUnresolved = (list: EntryList, index: number): boolean => unresolved.some(({ entry }) => entry?.list === list && entry.index === index);
+  if (unresolved.some(({ entry }) => entry === undefined)) return null;
+  if (section.type === "banner_carousel") return { ...section, items: section.items.filter((_, i) => !isUnresolved("items", i)) };
+  if (section.type !== "tile_grid") return section;
+  const tiles = section.tiles.filter((_, i) => !isUnresolved("tiles", i));
+  return tiles.length === 0 ? null : { ...section, tiles };
+}
+
+export function withoutUnresolvedItems(layout: HomeLayoutRaw, issues: readonly HomeLayoutIssue[]): HomeLayoutRaw {
+  const unresolved = issues.map(toUnresolvedItem);
+  const sections = layout.sections.flatMap((section, sectionIndex) => {
+    const kept = withoutEntries(section, unresolved.filter((item) => item.section === sectionIndex));
+    return kept === null ? [] : [kept];
+  });
+  return { ...layout, sections };
+}
