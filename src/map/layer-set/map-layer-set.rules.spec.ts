@@ -9,12 +9,15 @@
  * festival layers in one chip group, as a live festival adds them; the row of
  * revision 1 of map-layer-sets is checked in map-layer-set.mapper.spec.ts.
  *
- * A link chip's target is checked against the mini-app registry when Nest
- * builds the layer-set service, so the import-time validator leaves it alone
- * and assertValidLinkChips reports every broken one together.
+ * A link chip's value is checked when Nest builds the layer-set service, so
+ * the import-time validator leaves it alone and assertValidLinkChips reports
+ * every broken one together. A code-held chip may not name a mini app, which
+ * is data (move-miniapp-registry D4): a `miniapp` link chip is refused, even
+ * to a registered one, and the base chips pass.
  */
 import { fixtureLayerSet } from "../../../__tests__/helpers/map/layer-sets-fixture";
 import { BASE_LAYERS } from "../map.constants";
+import { BASE_CHIPS } from "./map-layer-set.constants";
 import type { LayerSpec } from "../map.types";
 import { assertValidChipSpecs, assertValidLinkChips, crossReferenceIssue, optionIssues, validateChipSpecs } from "./map-layer-set.rules";
 import type { LayerSet } from "./map-layer-set.schema";
@@ -228,9 +231,6 @@ const linkSpec = (id: string, actionType: string, actionValue: string): unknown 
   list: null,
 });
 
-// The registry's own target grammar is pinned in the miniapps rules spec; here only its answer matters.
-const registry = { isKnownMiniAppTarget: (value: string): boolean => value === "eskara-2026" };
-
 describe("validateChipSpecs on a link chip", () => {
   it("leaves its target to the registry check", () => {
     // Act
@@ -254,13 +254,12 @@ describe("validateChipSpecs on a link chip", () => {
 
 describe("assertValidLinkChips", () => {
   it.each([
-    ["miniapp", "eskara-2026"],
     ["external", "https://pf.kakao.com/_cjxexdG/chat"],
     ["webview", "/skku/lostandfound"],
     ["route", "/map/hssc"],
   ])("accepts a %s link to %p", (actionType, actionValue) => {
     // Act & Assert
-    expect(() => assertValidLinkChips(asSpecs([linkSpec("ok", actionType, actionValue)]), registry)).not.toThrow();
+    expect(() => assertValidLinkChips(asSpecs([linkSpec("ok", actionType, actionValue)]))).not.toThrow();
   });
 
   it.each([
@@ -271,9 +270,21 @@ describe("assertValidLinkChips", () => {
     ["route", ""],
   ])("refuses a %s link to %p, naming the chip", (actionType, actionValue) => {
     // Act & Assert
-    expect(() => assertValidLinkChips(asSpecs([linkSpec("broken", actionType, actionValue)]), registry)).toThrow(
+    expect(() => assertValidLinkChips(asSpecs([linkSpec("broken", actionType, actionValue)]))).toThrow(
       `FATAL [map chips]: 1 invalid chip definition(s):\n  - chip "broken": actionValue "${actionValue}" is not valid for "${actionType}"`,
     );
+  });
+
+  it("refuses a miniapp link chip even to a registered mini app: a code-held chip may not name one", () => {
+    // Act & Assert
+    expect(() => assertValidLinkChips(asSpecs([linkSpec("festival", "miniapp", "eskara-2026")]))).toThrow(
+      'FATAL [map chips]: 1 invalid chip definition(s):\n  - chip "festival": actionValue "eskara-2026" is not valid for "miniapp"',
+    );
+  });
+
+  it("passes the base chips", () => {
+    // Act & Assert
+    expect(() => assertValidLinkChips(BASE_CHIPS)).not.toThrow();
   });
 
   it("reports every broken link chip together and ignores the other kinds", () => {
@@ -285,6 +296,6 @@ describe("assertValidLinkChips", () => {
     ]);
 
     // Act & Assert
-    expect(() => assertValidLinkChips(specs, registry)).toThrow(/^FATAL \[map chips\]: 2 invalid chip definition\(s\):\n {2}- chip "a".*\n {2}- chip "b"/);
+    expect(() => assertValidLinkChips(specs)).toThrow(/^FATAL \[map chips\]: 2 invalid chip definition\(s\):\n {2}- chip "a".*\n {2}- chip "b"/);
   });
 });

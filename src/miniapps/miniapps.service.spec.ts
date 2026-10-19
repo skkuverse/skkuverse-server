@@ -172,6 +172,41 @@ describe("MiniappsService.current", () => {
   });
 });
 
+describe("MiniappsService.findCurrent", () => {
+  it("answers the snapshot current() serves", async () => {
+    // Arrange
+    repository.storeRegistry(fixtureRegistry());
+
+    // Act
+    const registry = await service.findCurrent();
+
+    // Assert
+    expect(registry).toBe(await service.current());
+  });
+
+  it("answers null where current() answers MINIAPP_REGISTRY_UNAVAILABLE, for a reader that serves without it", async () => {
+    // Arrange
+    repository.failWith = new Error("server selection timed out");
+
+    // Act
+    const registry = await service.findCurrent();
+
+    // Assert
+    expect(registry).toBeNull();
+  });
+
+  it("lets a fault in this code through rather than answering null", async () => {
+    // Arrange
+    const fault = new TypeError("cannot read properties of undefined");
+    repository.findRegistry = async () => {
+      throw fault;
+    };
+
+    // Act & Assert
+    await expect(service.findCurrent()).rejects.toBe(fault);
+  });
+});
+
 describe("MiniappsService grammar", () => {
   it("parses targets, counts emoji and resolves logos with no read", () => {
     // Act
@@ -184,18 +219,5 @@ describe("MiniappsService grammar", () => {
     expect(isEmoji).toBe(true);
     expect(logo).toEqual({ kind: "remote", uri: "https://skkuverse.com/miniapps/hssc.png" });
     expect(repository.readCount).toBe(0);
-  });
-});
-
-describe("MiniappsService committed-file getters, until every reader awaits current()", () => {
-  it("answer what current() answers for revision 1, the fixture made from the committed files", async () => {
-    // Arrange
-    repository.storeRegistry(fixtureRegistry());
-
-    // Act
-    const registry = await service.current();
-
-    // Assert
-    expect(service.isKnownMiniAppTarget("eskara-2026/eskara")).toBe(registry.isKnownMiniAppTarget("eskara-2026/eskara"));
   });
 });

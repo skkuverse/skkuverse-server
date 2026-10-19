@@ -44,7 +44,7 @@ beforeEach(() => {
   repository = new FakeMapRepository();
   repository.findActiveActivation = mockFindActiveActivation;
   const real = asReal<MapRepository>(repository);
-  const layerSet = new MapLayerSetService(real, asReal<MapLayerSetRepository>(fixtureLayerSetRepository()), CLOCK, fixtureMiniappsService());
+  const layerSet = new MapLayerSetService(real, asReal<MapLayerSetRepository>(fixtureLayerSetRepository()), CLOCK);
   service = new MapEventService(real, layerSet, fixtureMiniappsService());
 });
 

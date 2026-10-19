@@ -16,7 +16,10 @@
  *
  * The layer set is stored in the real `mongod`'s content database the way
  * `npm run data` stores it: the fixture's data pushed through the tool's own
- * scripts/lib/datasets/store.js, as revision 1 of `map-layer-sets`.
+ * scripts/lib/datasets/store.js, as revision 1 of `map-layer-sets`. The mini
+ * app registry is stored beside it the same way, as revision 1 of `miniapps`
+ * (__tests__/nest/miniapps/fixtures/miniapps.dataset.json), which the
+ * festival's `miniapp` buttons are checked against.
  *
  * The eventmap database holds what its scripts write: the 77 places of
  * scripts/data/eskara-2026-places.json, parsed by scripts/lib/map-places-file.js
@@ -53,6 +56,7 @@ const { enableActivation, ensureActivation, upsertPlaces } = require("../../../s
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
+type RegistryFixture = typeof import("../../helpers/miniapps/registry-fixture");
 
 type Lang = "ko" | "en" | "zh";
 const LANGS: Lang[] = ["ko", "en", "zh"];
@@ -118,6 +122,8 @@ beforeAll(async () => {
   await enableActivation(eventmap.collection("activations"), "spring-2027", IMPORTED_AT, SPRING_WINDOW.from, SPRING_WINDOW.until);
   const content = db.getClient().db(config.content.dbName);
   await store.create(content, "map-layer-sets", fixtureLayerSets(), { by: "characterization@example.com", now: IMPORTED_AT });
+  const { fixtureRegistry } = require("../../helpers/miniapps/registry-fixture") as RegistryFixture;
+  await store.create(content, "miniapps", fixtureRegistry(), { by: "characterization@example.com", now: IMPORTED_AT });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

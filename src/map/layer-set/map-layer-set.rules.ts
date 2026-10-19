@@ -123,7 +123,7 @@ function focusErrors(id: string, layerIds: readonly string[], catalogue: readonl
 
 function actionErrors(id: string, action: MapChipActionSpec, catalogue: readonly LayerSpec[]): string[] {
   if (action.kind === "focus") return focusErrors(id, action.layerIds, catalogue);
-  // WHY: a link's target needs the mini-app registry, which only Nest provides: assertValidLinkChips checks it.
+  // WHY: a link chip is checked apart, by assertValidLinkChips, so its refusal names its action value.
   if (action.kind === "link") return [];
   return toWebviewUrl(action.url) === null ? [`chip "${id}": "${action.url}" is not a usable web view URL`] : [];
 }
@@ -154,13 +154,13 @@ export function assertValidChipSpecs(
   throwChipErrors(validateChipSpecs(specs, catalogue));
 }
 
-export function assertValidLinkChips(
-  specs: ReadonlyArray<{ id: string; action: MapChipActionSpec }>,
-  registry: { isKnownMiniAppTarget(value: string): boolean },
-): void {
+// WHY: a code-held chip may not name a mini app, which is data; so no `miniapp` target is known to it.
+const NO_MINIAPPS = { isKnownMiniAppTarget: (): boolean => false };
+
+export function assertValidLinkChips(specs: ReadonlyArray<{ id: string; action: MapChipActionSpec }>): void {
   throwChipErrors(
     specs.flatMap(({ id, action }) =>
-      action.kind === "link" && isBrokenLinkAction(action, registry)
+      action.kind === "link" && isBrokenLinkAction(action, NO_MINIAPPS)
         ? [`chip "${id}": actionValue "${action.actionValue}" is not valid for "${action.actionType}"`]
         : [],
     ),
