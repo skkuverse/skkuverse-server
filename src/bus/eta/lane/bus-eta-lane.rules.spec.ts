@@ -18,7 +18,7 @@ import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaService } from "../bus-eta.service";
 import { LANE_HOURS, LANE_STRATEGIES } from "./bus-eta-lane.constants";
 import { assertLaneStrategies, corridorIssues, strategyIssues, strategyOf, strategyOfRun, toLegBounds } from "./bus-eta-lane.rules";
-import type { LaneConfig } from "./bus-eta-lane.types";
+import type { LaneConfigFile as LaneConfig } from "./bus-eta-lane.schema";
 
 const estimatedSequences = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, new BusStopsService(new SubwayStationsService())).sequences();
 

@@ -8,6 +8,7 @@
 import moment from "moment-timezone";
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
 import { FakeBusEtaForecastClient } from "../../../../__tests__/helpers/fakes/bus/bus-eta-forecast.client.fake";
+import { FakeBusEtaLaneRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta-lane.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import { DailyCapError } from "../../../shared/daily-cap.error";
 import { BusEtaDirectionsError } from "../bus-eta.error";
@@ -23,9 +24,15 @@ import { BusEtaService } from "../bus-eta.service";
 import type { EtaRun, EtaSequence } from "../bus-eta.types";
 import type { BusEtaForecastClient } from "../forecast/bus-eta-forecast.client";
 import { BusEtaForecastService } from "../forecast/bus-eta-forecast.service";
+import type { BusEtaLaneRepository } from "../lane/bus-eta-lane.repository";
 import { BusEtaLaneService } from "../lane/bus-eta-lane.service";
 import { BusEtaBaselineService } from "./bus-eta-baseline.service";
 
+
+// The baseline flow reads only the lane strategies, never the stored corridor (move-reference-datasets D9).
+function laneWithNoCorridor(eta: BusEtaService): BusEtaLaneService {
+  return new BusEtaLaneService(eta, asReal<BusEtaLaneRepository>(new FakeBusEtaLaneRepository()), { now: () => new Date("2026-10-20T00:00:00.000Z") });
+}
 const SEQ: EtaSequence = {
   serviceId: "campus-inja",
   routeType: "regular",
@@ -242,7 +249,7 @@ describe("BusEtaBaselineService.tick bus-lane runs (design D7)", () => {
     for (const doc of stored) repository.docs.set(doc._id, doc);
     const eta = new BusEtaService(asReal<BusEtaRepository>(repository), {} as BusScheduleService, new BusStopsService(new SubwayStationsService()));
     const tmap = new FakeBusEtaForecastClient();
-    const forecast = new BusEtaForecastService(new BusEtaLaneService(eta), asReal<BusEtaForecastClient>(tmap), eta);
+    const forecast = new BusEtaForecastService(laneWithNoCorridor(eta), asReal<BusEtaForecastClient>(tmap), eta);
     const sequence = eta.sequences().find((s) => s.serviceId === "campus-inja" && s.routeType === "regular")!;
     const engine = new BusEtaBaselineService({
       sequences: [sequence],

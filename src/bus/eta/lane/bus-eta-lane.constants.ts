@@ -15,3 +15,8 @@ export const LANE_STRATEGIES: LaneStrategies = {
     hakbu: { strategy: "busLane", direction: "northbound" },
   },
 };
+
+export const BUS_LANE_CORRIDOR_DATASET = "bus-lane-corridor";
+
+// WHY: a missing, invalid or unreadable corridor recurs on every read; one line a minute, as docs/reference/logging.md asks.
+export const BUS_LANE_CORRIDOR_LOG_INTERVAL_MS = 60_000;

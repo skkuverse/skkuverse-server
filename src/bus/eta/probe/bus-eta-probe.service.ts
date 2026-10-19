@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { BusEtaLaneService } from "../lane/bus-eta-lane.service";
-import type { LaneDirection, ProbeRoute } from "../lane/bus-eta-lane.types";
+import type { LaneCorridorSnapshot, LaneDirection, ProbeRoute } from "../lane/bus-eta-lane.types";
 import { BusEtaProbeClient } from "./bus-eta-probe.client";
 import { spanDoc } from "./bus-eta-probe.mapper";
 import { BusEtaProbeRepository } from "./bus-eta-probe.repository";
@@ -29,32 +28,31 @@ export class BusEtaProbeService {
   private spansOfMinute: { minute: number; spans: Promise<LaneSpan[]> } | null = null;
 
   constructor(
-    private readonly lane: BusEtaLaneService,
     private readonly client: BusEtaProbeClient,
     private readonly repository: BusEtaProbeRepository,
   ) {}
 
-  async prime(now: Date): Promise<void> {
-    await this.snapshot(now);
+  async prime(corridor: LaneCorridorSnapshot, now: Date): Promise<void> {
+    await this.snapshot(corridor, now);
   }
 
-  async legTime(direction: LaneDirection, now: Date): Promise<LegTime> {
-    const spans = await this.spansAt(now);
-    const leg = this.lane.legBoundsOf(direction);
+  async legTime(corridor: LaneCorridorSnapshot, direction: LaneDirection, now: Date): Promise<LegTime> {
+    const spans = await this.spansAt(corridor, now);
+    const leg = corridor.legBoundsOf(direction);
     return toLegTime(spans.filter((span) => span.direction === direction), leg);
   }
 
   // WHY: both directions read one minute's spans, so each span is paired and written once.
-  private spansAt(now: Date): Promise<LaneSpan[]> {
+  private spansAt(corridor: LaneCorridorSnapshot, now: Date): Promise<LaneSpan[]> {
     const minute = Math.floor(now.getTime() / MINUTE_MS);
-    if (this.spansOfMinute?.minute !== minute) this.spansOfMinute = { minute, spans: this.pairAndRecord(now, minute) };
+    if (this.spansOfMinute?.minute !== minute) this.spansOfMinute = { minute, spans: this.pairAndRecord(corridor, now, minute) };
     return this.spansOfMinute.spans;
   }
 
-  private async pairAndRecord(now: Date, minute: number): Promise<LaneSpan[]> {
-    const current = await this.snapshot(now);
+  private async pairAndRecord(corridor: LaneCorridorSnapshot, now: Date, minute: number): Promise<LaneSpan[]> {
+    const current = await this.snapshot(corridor, now);
     const earlier = this.history.filter((snapshot) => snapshot.minute < minute);
-    const spans = this.lane.probeRoutes().flatMap((route, index) =>
+    const spans = corridor.probeRoutes.flatMap((route, index) =>
       toSpans(route.routeId, current[index] ?? [], earlier.filter((s) => s.routeId === route.routeId).flatMap((s) => s.fixes)),
     );
     await this.repository.recordSpans(spans.map(spanDoc));
@@ -62,21 +60,22 @@ export class BusEtaProbeService {
   }
 
   // WHY: every route is asked before the first failure rejects, so the routes that answered still enter the history.
-  private async snapshot(now: Date): Promise<CorridorFix[][]> {
+  private async snapshot(corridor: LaneCorridorSnapshot, now: Date): Promise<CorridorFix[][]> {
     const minute = Math.floor(now.getTime() / MINUTE_MS);
     this.history = this.history.filter((snapshot) => snapshot.minute > minute - HISTORY_MINUTES);
-    const settled = await Promise.allSettled(this.lane.probeRoutes().map((route) => this.request(route, now, minute)));
+    const settled = await Promise.allSettled(corridor.probeRoutes.map((route) => this.request(corridor, route, now)));
     const failure = settled.find((outcome) => outcome.status === "rejected");
     if (failure) throw failure.reason;
     return settled.map((outcome) => (outcome.status === "fulfilled" ? outcome.value : []));
   }
 
   // WHY: a route is asked at most once a minute; a failed request stays failed until the next minute.
-  private request(route: ProbeRoute, now: Date, minute: number): Promise<CorridorFix[]> {
+  private request(corridor: LaneCorridorSnapshot, route: ProbeRoute, now: Date): Promise<CorridorFix[]> {
+    const minute = Math.floor(now.getTime() / MINUTE_MS);
     const cached = this.requests.get(route.routeId);
     if (cached?.minute === minute) return cached.fixes;
     const fixes = this.client.fetchPositions(route.routeId, now).then((positions) => {
-      const routeFixes = positions.flatMap((position) => toCorridorFix(this.lane.corridor(), route, position) ?? []);
+      const routeFixes = positions.flatMap((position) => toCorridorFix(corridor.corridor, route, position) ?? []);
       this.history.push({ routeId: route.routeId, minute, fixes: routeFixes });
       return routeFixes;
     });
