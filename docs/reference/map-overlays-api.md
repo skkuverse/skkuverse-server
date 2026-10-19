@@ -3,7 +3,7 @@ title: Map Overlays API Reference
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-19
+last-updated: 2026-10-20
 audience: internal
 ---
 
@@ -1015,7 +1015,7 @@ the mapping exists; the materializer and this route both resolve through it
 `layerId` that names no layer, or a set where every layer is `{ "kind": "never" }` is a rejected
 config (§8.6).
 
-**How to author the schedules**, which the file cannot say about itself: windows on two layers of one
+**How to author the schedules**, which the layer set cannot say about itself: windows on two layers of one
 group should be authored to hand over rather than overlap, because two crowded layers drawn at once
 is the problem `defaultVisibleWhen` exists to solve — half-open bounds make `[11:00, 18:00)` and
 `[18:00, 00:00)` exactly adjacent. Hand over around the whole clock, too: a gap between the last
@@ -1024,11 +1024,12 @@ window and the first is a stretch when the map opens with neither layer drawn, w
 `hours`: a booth whose own hours run past its layer's window is still a marker the user can turn on,
 and its pin is one chip away.
 
-The values as served for ESKARA 2026 are the file itself — read it rather than a copy here.
+The values as served for ESKARA 2026 are its entry in the `map-layer-sets` dataset — pull it with
+`npm run data -- pull map-layer-sets` rather than read a copy here.
 
-Next year's festival is therefore a new JSON file (registered in `LAYER_SET_FILES` and
-`scripts/copy-build-assets.js`) plus Mongo content. No route, no TypeScript, no client branch: the
-ids inside the file are the festival's to choose, and `eskara26_*` is a choice, not a requirement.
+Next year's festival is therefore a new entry in `map-layer-sets`, pushed with `npm run data`, plus
+Mongo content. No route, no TypeScript, no client branch, no deploy: the ids inside the set are the
+festival's to choose, and `eskara26_*` is a choice, not a requirement.
 
 ### 7.1 The fallback layer — the one that is not a bug
 
@@ -1217,31 +1218,31 @@ be served beside and **returns** every problem it finds, accumulated. Two caller
 
 | Row | When | On failure |
 | --- | --- | --- |
-| `BASE_CHIPS` against `BASE_LAYERS` | module import, `src/map/layer-set/map-layer-set.config.ts` | throws `FATAL [map chips]` — repo TypeScript, a PR fixes it, the boot must not proceed |
+| `BASE_CHIPS` against `BASE_LAYERS` | when Nest builds `MapLayerSetService` | throws `FATAL [map chips]` — repo TypeScript, a PR fixes it, the boot must not proceed |
 | `BASE_CHIPS`' `link` actions against the mini-app registry, by `assertValidLinkChips` | when Nest builds `MapLayerSetService` | throws `FATAL [map chips]`, as above; `validateChipSpecs` leaves a `link` chip to this check, because only Nest provides the registry |
-| the festival row (reset chip + authored chips) against **the full served catalogue** (base + festival layers) | config load, `parseLayerSetFile` in `src/map/layer-set/map-layer-set.config.ts` | the layer set is **rejected**: logged once with the path, and `/map/config` serves the base layers only — the festival is off the campus map until the file is fixed |
+| the festival row (reset chip + authored chips) against **the full served catalogue** (base + festival layers) | at push, `layerSetsDataset` through `npm run data`; again at read, `checkedLayerSet` in `storedLayerSets` (`src/map/layer-set/map-layer-set.schema.ts`) | the push is **refused**, naming the set and the path; a stored set that fails at read (a schema tightened by a deploy) is **left out**: logged once per revision with its issues, and while it is live `/map/config` serves the base layers only — the festival is off the campus map until a fixed set is pushed, and every other set keeps serving |
 
-The second row is a deliberate posture with a cost worth naming: a config typo takes the whole
-festival off the map rather than degrading part of it. That is preferred to drawing from a category
+The last row is a deliberate posture with a cost worth naming: a bad set takes the whole festival off
+the map rather than degrading part of it. That is preferred to drawing from a category
 table the server could not validate, and 건물번호 keeps serving throughout.
 
 The rules:
 
 | Rule | Where |
 | --- | --- |
-| a festival layer id does not reuse a base layer id | `parseLayerSetFile` |
-| every `itemDefaults.*.layerId` and every chip `layerIds[]` entry names a layer of the set | `parseLayerSetFile` (`layerId`), `validateChipSpecs` (chips) |
+| a festival layer id does not reuse a base layer id | `crossReferenceIssue` |
+| every `itemDefaults.*.layerId` and every chip `layerIds[]` entry names a layer of the set | `crossReferenceIssue` (`layerId`), `validateChipSpecs` (chips) |
 | every named layer has a non-null `chipGroupId` | `validateChipSpecs` |
 | a chip's `layerIds` do not straddle two groups | `validateChipSpecs` |
 | chip ids are unique — including against the synthesised reset chip's | `validateChipSpecs`, the only place that collision is visible at all |
 | a `webview` URL passes `toWebviewUrl` | `validateChipSpecs` |
 | a `link` action passes `isBrokenLinkAction` (a known mini-app target, an https URL, a web view URL, a root-relative route) | `assertValidLinkChips` |
-| at least one layer is not `defaultVisibleWhen.kind: "never"`, so the reset chip is scoped to something | `parseLayerSetFile` |
-| every `DailyWindow` bound is `"HH:MM"` on a 24-hour clock — `"24:00"` and `"7:00"` refused | `parseLayerSetFile` |
-| a `DailyWindow`'s bounds differ; `start > end` is legal and wraps past midnight | `parseLayerSetFile` |
-| `kind: "scheduled"` carries at least one window, and no other `kind` carries a `windows` key | `parseLayerSetFile` |
-| `config.timezone` is `Asia/Seoul` — the one zone the wall-clock contract can honour (§4.2) | `parseLayerSetFile` |
-| a multi-layer chip carries a label; `layerIds` is non-empty; `color` is bare six-digit hex | `parseLayerSetFile` |
+| at least one layer is not `defaultVisibleWhen.kind: "never"`, so the reset chip is scoped to something | `crossReferenceIssue` |
+| every `DailyWindow` bound is `"HH:MM"` on a 24-hour clock — `"24:00"` and `"7:00"` refused | `layerSetFile` |
+| a `DailyWindow`'s bounds differ; `start > end` is legal and wraps past midnight | `layerSetFile` |
+| `kind: "scheduled"` carries at least one window, and no other `kind` carries a `windows` key | `layerSetFile` |
+| a set's `timezone` is `Asia/Seoul` — the one zone the wall-clock contract can honour (§4.2) | `layerSetFile` |
+| a multi-layer chip carries a label; `layerIds` is non-empty; `color` is bare six-digit hex | `layerSetFile` |
 
 There is no translation-miss case any more. Labels are inline `{ko, en?, zh?}` on the layer and the
 chip, resolved with the one `pick()` in `src/infra/i18n.ts`, so a label with no `ko` is a rejected
@@ -1331,7 +1332,7 @@ the client never does date arithmetic:
 
 Option ids are unique across the whole config, not just within a facet, so an `orderByOption` key
 names one option without a facet prefix. A sort scope must be one of the same list's facets. Both
-rules are enforced at config load (§8.6).
+rules are enforced at push and at read (§8.6).
 
 Everything here is additive. An app that predates it drops `list`, `facets` and `orderByOption` in
 its parsers and keeps listing places unfiltered in `order`.
@@ -1422,16 +1423,16 @@ So §4 describes shipped behaviour rather than a promise about the wire. What ma
 it lasted is still the reason rule 1 is spelled the way it is: absent meant `true`, so a client that
 had never heard of the flag behaved exactly as if every layer were configurable.
 
-### 9.4 Next year's festival is a config file
+### 9.4 Next year's festival is data
 
 Nothing that is not data names the festival any more: the route is `/map/overlays/event`, the tap
 kind is `event`, the chip group is the layer set id, and the layers, chips, labels, colours, camera,
-name and emoji are all in `src/map/layer-set/<layerSetId>.json`. `eskara27` is a new file, a
-`LAYER_SET_FILES` entry, a `copy-build-assets.js` line, and Mongo content. That is ADR 0004 invariant 1
+name and emoji are all in the festival's entry of the `map-layer-sets` dataset. `eskara27` is a new
+entry pushed with `npm run data`, and Mongo content, with no deploy. That is ADR 0004 invariant 1
 — "next year's event arrives as data" — honoured, after an earlier revision of this section chose to
 violate it for unambiguity.
 
-What stays festival-named is chosen, not required: the **layer and chip ids inside the file**
+What stays festival-named is chosen, not required: the **layer and chip ids inside the set**
 (`eskara26_bar`, `eskara26_view_bar`). A generic `event_bar` would let a user's 주점 toggle survive
 into next year's festival; a festival-named one does not, and does not need to — it is a different
 festival — while a log line, a deep link or a bug report can still say which one. The base-map layer

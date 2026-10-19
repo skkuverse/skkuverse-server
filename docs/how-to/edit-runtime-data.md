@@ -20,8 +20,9 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | `home-layout` | `GET /ui/home` | 503 `HOME_LAYOUT_UNAVAILABLE` | `miniapps`: each `miniapp` tile, feed and `miniapp` action |
 | `campus-banners` | `GET /ui/home/campus` | 503 `CAMPUS_BANNERS_UNAVAILABLE` | `miniapps`: each banner's `miniapp` action |
 | `transit-layout` | `GET /ui/home/transit` | 503 `TRANSIT_LAYOUT_UNAVAILABLE` | `busGroups` and `subwayStations`: every one the checkout serves, each placed exactly once; `miniapps`: each `miniapp` link |
+| `map-layer-sets` | `GET /map/config`, `GET /map/overlays/event`, `GET /map/overlays/event/details`, while an activation is live | the base map, 200; the event routes serve nothing | none; each set is checked against the base layers and chips, one per `layerSetId` ([configure-map-overlays.md](configure-map-overlays.md#add-or-edit-a-festival)) |
 
-A never-read answer is what a replica that has no good value serves, with no `Cache-Control`; one that read a good value keeps serving it for 24 hours through failed reads. `miniapps`, `busGroups` and `subwayStations` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
+A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. `miniapps`, `busGroups` and `subwayStations` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
 
 Every push is validated with the server's own schema and rules, compiled from your checkout, and checked for references: a home layout tile that names a mini app the registry does not have is refused, naming the tile's path. Nothing is written while any issue stands.
 
