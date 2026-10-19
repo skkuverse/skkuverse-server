@@ -56,14 +56,6 @@ const assets = [
   ["src/subway/timetable/seoul-8-holiday.json", "dist/src/subway/timetable/seoul-8-holiday.json"],
   ["src/subway/timetable/shinbundang-d1-weekday.json", "dist/src/subway/timetable/shinbundang-d1-weekday.json"],
   ["src/subway/timetable/shinbundang-d1-holiday.json", "dist/src/subway/timetable/shinbundang-d1-holiday.json"],
-  // map/layer-set/map-layer-set.config.ts reads these with fs.readFileSync(__dirname/<name>).
-  // Every entry in its LAYER_SET_FILES must appear here — it lists files
-  // explicitly rather than readdir'ing precisely so a miss shows up as a named
-  // ENOENT in the logs instead of a silently absent event map.
-  [
-    "src/map/layer-set/eskara-2026.json",
-    "dist/src/map/layer-set/eskara-2026.json",
-  ],
 ];
 
 for (const [src, dest] of assets) {

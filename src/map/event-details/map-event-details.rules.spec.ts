@@ -5,7 +5,7 @@
  * authored inert, or one whose tap runs a chip.
  */
 import { isInstagramPostUrl, isInstagramProfileUrl, isNonBlankId, isPlaceKind, sheetlessReason } from "./map-event-details.rules";
-import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
+import { fixtureLayerSet } from "../../../__tests__/helpers/map/layer-sets-fixture";
 
 describe("isInstagramProfileUrl", () => {
   it.each([
@@ -46,7 +46,7 @@ describe("isNonBlankId and isPlaceKind", () => {
 });
 
 describe("sheetlessReason", () => {
-  const CONFIG = shippedLayerSet();
+  const CONFIG = fixtureLayerSet();
 
   it.each([
     ["a booth, which taps to its place", "booth", null],

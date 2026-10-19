@@ -17,13 +17,12 @@ import { MapCampusModule } from "../../../src/map/campus/map-campus.module";
 import { MapConfigModule } from "../../../src/map/config/map-config.module";
 import { MapEventDetailsModule } from "../../../src/map/event-details/map-event-details.module";
 import { MapEventModule } from "../../../src/map/event/map-event.module";
-import { getLayerSetConfig } from "../../../src/map/layer-set/map-layer-set.config";
 import { BASE_CHIPS } from "../../../src/map/layer-set/map-layer-set.constants";
 import { MapLayerSetModule } from "../../../src/map/layer-set/map-layer-set.module";
 import { MapModule } from "../../../src/map/map.module";
 import { MapRepository } from "../../../src/map/map.repository";
 import { MapLayerSetRepository } from "../../../src/map/layer-set/map-layer-set.repository";
-import { fixtureLayerSetRepository } from "../../helpers/map/layer-sets-fixture";
+import { fixtureLayerSet, fixtureLayerSetRepository } from "../../helpers/map/layer-sets-fixture";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
 import { Clock } from "../../../src/infra/clock";
@@ -39,8 +38,8 @@ const CLOCK: Clock = { now: () => new Date("2026-10-14T03:00:00.000Z") };
 const mockFindActiveActivation = jest.fn<ReturnType<MapRepository["findActiveActivation"]>, [Date]>();
 const findActiveActivation: MapRepository["findActiveActivation"] = mockFindActiveActivation;
 
-// The real config loads with no mock; the counts below derive from it.
-const CONFIG = getLayerSetConfig("eskara-2026")!.config!;
+// Revision 1 of the stored layer sets, which the fake repository serves; the counts below derive from it.
+const CONFIG = fixtureLayerSet();
 
 describe("GET /map/config (real map services)", () => {
   let app: NestExpressApplication;

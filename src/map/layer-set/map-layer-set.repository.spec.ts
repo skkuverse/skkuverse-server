@@ -44,7 +44,7 @@ import { logText } from "../../../__tests__/helpers/log-text";
 import { MapLayerSetRepository } from "./map-layer-set.repository";
 import { checkedLayerSet } from "./map-layer-set.schema";
 
-// Revision 1 of the map-layer-sets dataset: the committed eskara-2026.json at 5c0ee5a9.
+// Revision 1 of the map-layer-sets dataset, as stored in skku_content and skku_content_dev.
 const DATASET_FIXTURE = path.join(__dirname, "../../../__tests__/nest/map/fixtures/map-layer-sets.dataset.json");
 
 function fixtureSet(): Record<string, any> {

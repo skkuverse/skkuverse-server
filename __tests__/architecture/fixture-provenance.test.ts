@@ -46,7 +46,7 @@ describe("fixture provenance rule applies as specified", () => {
     ["__tests__/architecture/fixtures/ratchet/sorted.json", true],
     ["__tests__/nest/bus/fixtures/notes.md", false],
     ["__fixtures__/raw.json", false],
-    ["src/map/config/eskara-2026.json", false],
+    ["src/map/config/festival.json", false],
     ["__tests__/nest/bus/fixtures.json", false],
   ])("%s is a fixture: %s", (file, expected) => {
     // Act & Assert
