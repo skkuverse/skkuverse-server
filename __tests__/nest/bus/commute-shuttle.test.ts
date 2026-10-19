@@ -31,7 +31,10 @@ import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
 import { busGroup } from "../../../src/bus/config/bus-config.wire";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { UiModule } from "../../../src/ui/ui.module";
+import { UiTransitTabModule } from "../../../src/ui/transit/tab/ui-transit-tab.module";
 import { UiTransitModule } from "../../../src/ui/transit/ui-transit.module";
+import { UiTransitRepository } from "../../../src/ui/transit/ui-transit.repository";
+import { FakeUiTransitRepository } from "../../helpers/fakes/ui/ui-transit.repository.fake";
 import { SubwayModule } from "../../../src/subway/subway.module";
 import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
@@ -456,6 +459,15 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
   let app: NestExpressApplication;
   let httpServer: import("http").Server;
 
+  /** The transit tab's layout as stored: revision 1 of the `transit-layout` dataset, which holds what transit-layout.json held. */
+  function storedTransitLayout(): FakeUiTransitRepository {
+    const layout = JSON.parse(fs.readFileSync(path.join(__dirname, "../ui/fixtures/transit-layout.dataset.json"), "utf8")) as Record<string, unknown>;
+    delete layout._about;
+    const repository = new FakeUiTransitRepository();
+    repository.storeTransitLayout(layout);
+    return repository;
+  }
+
   beforeAll(async () => {
     app = await buildTestApp({
       imports: [
@@ -465,6 +477,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
         BusConfigModule,
         UiModule,
         UiTransitModule,
+        UiTransitTabModule,
         SubwayModule,
         SubwayTimetableModule,
         SubwayEstimateModule,
@@ -477,6 +490,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
         { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
+        { provide: UiTransitRepository, useValue: storedTransitLayout() },
       ],
       role: "api",
     });

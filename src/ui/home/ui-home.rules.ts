@@ -1,6 +1,7 @@
 import { isBrokenLinkAction } from "../../shared/link-action.util";
+import { toMiniAppTargetReferences } from "../ui.rules";
 import type { BannerImageRaw } from "../ui.schema";
-import type { MiniAppRegistry } from "../ui.types";
+import type { MiniAppRegistry, TargetGrammar } from "../ui.types";
 import type { HomeLayoutRaw, TileRaw } from "./ui-home.schema";
 import type { HomeLayoutIssue, HomeLayoutReference } from "./ui-home.types";
 
@@ -56,11 +57,8 @@ export function toHomeLayoutIssues(layout: HomeLayoutRaw, registry: MiniAppRegis
   ];
 }
 
-type TargetGrammar = Pick<MiniAppRegistry, "parseTarget">;
-
 function targetReferences({ at, value: link }: Located<BannerImageRaw | LinkTileRaw>, grammar: TargetGrammar): HomeLayoutReference[] {
-  const target = link.actionType === "miniapp" ? grammar.parseTarget(link.actionValue) : null;
-  return target === null ? [] : [{ dataset: "miniapps", id: target.id, path: [...at, "actionValue"] }];
+  return toMiniAppTargetReferences(link, [...at, "actionValue"], grammar);
 }
 
 function tileReferences(tile: Located<TileRaw>, grammar: TargetGrammar): HomeLayoutReference[] {

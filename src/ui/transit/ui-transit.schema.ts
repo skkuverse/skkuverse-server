@@ -4,6 +4,7 @@ import { linkActionType } from "../../shared/link-action.wire";
 import { findRepeatedId } from "../ui.rules";
 import { localizedText, slug } from "../ui.schema";
 import { TRANSIT_LAYOUT_VERSION } from "./ui-transit.constants";
+import type { StoredTransitLayout } from "./ui-transit.document";
 import { toTransitItemId } from "./ui-transit.rules";
 
 const transitIconFile = z.strictObject({
@@ -60,4 +61,5 @@ export const transitLayoutFile = z
 
 export type TransitLayoutRaw = z.output<typeof transitLayoutFile>;
 export type TransitItemRaw = TransitSectionRaw["items"][number];
-export type TransitChildRaw = z.output<typeof transitChildFile>;
+
+export const storedTransitLayout = z.object({ revision: z.int().positive(), data: transitLayoutFile }) satisfies z.ZodType<StoredTransitLayout>;

@@ -10,7 +10,7 @@
  * Each scenario sets env, then loads the module fresh with
  * jest.isolateModules().
  */
-import { envRole, isPollingRole, listMissingRequired, requiredValues, roleErrors, ROLES, validateEnv } from "./required-env";
+import { envRole, isPollingRole, listMalformedRequired, listMissingRequired, requiredValues, roleErrors, ROLES, validateEnv } from "./required-env";
 
 const HSSC_KEYS = ["API_HSSC_NEW_PROD", "API_HSSC_NEW_DEV"] as const;
 
@@ -301,5 +301,59 @@ describe("requiredValues MONGO_CONTENT_DB_NAME", () => {
 
     // Act & Assert
     expect(() => validateEnv(env)).toThrow(/content\.dbName \(env: MONGO_CONTENT_DB_NAME\)/);
+  });
+});
+
+describe("listMalformedRequired SEOUL_BUS_SERVICE_KEY", () => {
+  // A raw base64 key splits the TOPIS query string, and TOPIS rejects it as if it were down.
+  const FIXED_KEY = "FAKEseoulBusServiceKeyForTestsOnlyNotARealKey0000%2BFAKE%2Fseoul%2Bbus%2Ftest0key%3D%3D";
+  const envWithKey = (role: string | undefined, key: string | undefined): NodeJS.ProcessEnv => {
+    const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "development", ROLE: role };
+    if (key === undefined) delete env.SEOUL_BUS_SERVICE_KEY;
+    else env.SEOUL_BUS_SERVICE_KEY = key;
+    return env;
+  };
+  const malformedIn = (role: string | undefined, key: string | undefined): string[] =>
+    listMalformedRequired(envWithKey(role, key)).map((v) => v.env);
+
+  it.each([
+    ["poller", ["SEOUL_BUS_SERVICE_KEY"]],
+    ["combined", ["SEOUL_BUS_SERVICE_KEY"]],
+    [undefined, ["SEOUL_BUS_SERVICE_KEY"]],
+    ["api", []],
+  ])("with a raw base64 key, ROLE=%s reports %j", (role, malformed) => {
+    // Act & Assert
+    expect(malformedIn(role, "ABC+DEF/GH==")).toEqual(malformed);
+  });
+
+  it.each(["ABC+DEF=", "ABC/DEF", "ABC=", "ABC&DEF", "ABC DEF"])("reports %j, which is not URL-encoded", (key) => {
+    // Act & Assert
+    expect(malformedIn("poller", key)).toEqual(["SEOUL_BUS_SERVICE_KEY"]);
+  });
+
+  it.each([FIXED_KEY, "test-seoul-bus-key"])("accepts the URL-encoded key %j", (key) => {
+    // Act & Assert
+    expect(malformedIn("poller", key)).toEqual([]);
+  });
+
+  it.each([undefined, ""])("reports a key of %j as missing, not malformed", (key) => {
+    // Act
+    const missing = listMissingRequired(envWithKey("poller", key)).map((v) => v.env);
+
+    // Assert
+    expect(missing).toEqual(["SEOUL_BUS_SERVICE_KEY"]);
+    expect(malformedIn("poller", key)).toEqual([]);
+  });
+
+  it.each(["poller", "combined"])("refuses a ROLE=%s boot with a malformed key, naming it and how to fix it", (role) => {
+    // Act & Assert
+    expect(() => validateEnv(envWithKey(role, "ABC+DEF="))).toThrow(
+      /api\.seoulBusServiceKey \(env: SEOUL_BUS_SERVICE_KEY\): must be URL-encoded.*encodeURIComponent/,
+    );
+  });
+
+  it("lets a ROLE=api boot with a malformed key, which only the pollers read", () => {
+    // Act & Assert
+    expect(() => validateEnv(envWithKey("api", "ABC+DEF="))).not.toThrow();
   });
 });

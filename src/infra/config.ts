@@ -290,6 +290,17 @@ if (missing.length > 0) {
   }
 }
 
+const malformed = requiredEnv.listMalformedRequired(process.env).map(({ name, env, format }) => ({ name, env, problem: format?.message }));
+if (malformed.length > 0) {
+  logger.fatal(
+    { event: "config.malformed_required", malformed },
+    "Malformed required config — fix the env vars in `malformed`",
+  );
+  if (!isTest) {
+    process.exit(1);
+  }
+}
+
 if (switchErrors.length > 0) {
   logger.fatal(
     { event: "config.invalid_runtime_switch", errors: switchErrors },
