@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { StoredLaneCorridor } from "./bus-eta-lane.document";
-import type { LaneConfig, LaneCorridorData } from "./bus-eta-lane.types";
+import type { LaneCorridorData } from "./bus-eta-lane.types";
 
 const latLng = z.strictObject({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) });
 
@@ -40,4 +40,6 @@ export const laneConfigFile = z.object({
   laneHours: z.object({ from: hourMinute, to: hourMinute }),
   strategies: z.record(z.string(), z.record(z.string(), sequenceStrategy)),
   ...laneCorridorDataset.shape,
-}) satisfies z.ZodType<LaneConfig>;
+});
+
+export type LaneConfigFile = z.output<typeof laneConfigFile>;

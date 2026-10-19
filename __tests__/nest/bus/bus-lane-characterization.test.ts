@@ -12,7 +12,9 @@
  * changes only with the behavior it pins (`.claude/rules/tests.md`). The
  * expected values were pinned while the corridor was the committed
  * src/bus/eta/lane/bus-lane.json, of which revision 1 of `bus-lane-corridor`
- * (fixtures/bus-lane-corridor.dataset.json) is a copy.
+ * (fixtures/bus-lane-corridor.dataset.json) is a copy; the content database
+ * holds that revision, stored through the tool's own
+ * scripts/lib/datasets/store.js, and reading it changed no value here.
  *
  * The timetable is synthetic: one Friday pattern of `campus-inja` with a 14:00
  * `hakbu` run, inside the lane hours, and a 21:30 `regular` run, past them, which
@@ -43,6 +45,7 @@ type BuildBusPollerApp = typeof import("../../helpers/bus/bus-poller-app")["buil
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type Registry = typeof import("../../../src/scheduling/poller-registry.service")["PollerRegistryService"];
+type BusLaneCorridorHelpers = typeof import("../../helpers/bus/bus-lane-corridor");
 type ScheduleContentHelpers = typeof import("../../helpers/bus/schedule-content");
 
 const at = (hhmm: string, seconds = 0): Date => new Date(new Date(`2026-10-23T${hhmm}:00+09:00`).getTime() + seconds * 1000);
@@ -110,6 +113,8 @@ beforeAll(async () => {
   const storedBy = { by: "characterization@example.com", now: at("00:00") };
   await store.create(content, "bus-service-notices", serviceNoticesFixture(), storedBy);
   await store.create(content, "skku-rest-days", restDaysFixture(), storedBy);
+  const { corridorFixture } = require("../../helpers/bus/bus-lane-corridor") as BusLaneCorridorHelpers;
+  await store.create(content, "bus-lane-corridor", corridorFixture(), storedBy);
 }, MONGOD_START_TIMEOUT_MS);
 
 afterEach(async () => {

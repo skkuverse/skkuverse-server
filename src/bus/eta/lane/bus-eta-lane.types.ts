@@ -41,11 +41,7 @@ export interface ProbeRoute {
 }
 
 export type LaneStrategies = Readonly<Record<string, Readonly<Record<string, SequenceStrategy>>>>;
-export type LaneCorridorData = Pick<LaneConfig, "corridor" | "entryExit" | "probeRoutes">;
-export interface LaneConfig {
-  laneHours: LaneHours;
-  /** WHY: serviceId → routeType → strategy; a sequence left out is `car`. */
-  strategies: Record<string, Record<string, SequenceStrategy>>;
+export interface LaneCorridorData {
   corridor: LaneCorridor;
   entryExit: Record<LaneDirection, CorridorEnds>;
   probeRoutes: ProbeRoute[];
@@ -61,4 +57,13 @@ export type SequenceKey = Pick<EtaSequence, "serviceId" | "routeType">;
 export interface LegBounds {
   fromAlongM: number;
   toAlongM: number;
+}
+
+/** WHY: one stored corridor revision as the live tick reads it: the geometry, the probe routes and each direction's leg. */
+export interface LaneCorridorSnapshot {
+  revision: number;
+  corridor: LaneCorridor;
+  probeRoutes: readonly ProbeRoute[];
+  corridorEndsOf(direction: LaneDirection): CorridorEnds;
+  legBoundsOf(direction: LaneDirection): LegBounds;
 }
