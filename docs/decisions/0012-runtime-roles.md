@@ -3,7 +3,7 @@ title: Runtime Roles — Pollers Write, Api Replicas Read
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-19
+last-updated: 2026-10-20
 audience: internal
 ---
 
@@ -31,9 +31,11 @@ It supersedes one consequence drawn from [ADR 0009](0009-multi-origin-active-act
 
 ### D1. Pollers write; api replicas read
 
-A process that runs pollers (`poller`, `combined`) calls the upstream data APIs (HSSC, TOPIS, the Seoul subway API and train map, NAVER, TMAP, data.go.kr, the SKKU campus map) and writes what it learns to MongoDB. An api replica reads MongoDB through caches and calls none of those APIs, at boot or while serving. Scripts (`npm run schedule` and the other data scripts) and other repositories (skkuverse-crawler) are writers too; api reads what they write the same way.
+A process that runs pollers (`poller`, `combined`) calls the upstream data APIs (HSSC, TOPIS, the Seoul subway API and train map, NAVER, TMAP, data.go.kr, the SKKU campus map, the first-party mini app manifest origins) and writes what it learns to MongoDB. An api replica reads MongoDB through caches and calls none of those APIs, at boot or while serving. Scripts (`npm run schedule` and the other data scripts) and other repositories (skkuverse-crawler) are writers too; api reads what they write the same way.
 
 A read that serves a client takes its data from MongoDB only. It never falls back to a value a poller holds in the same process, so `combined` and `api` answer identically for the same stored data. State a poller keeps from one tick to the next (an HSSC bus's first sighting, a Jongro vehicle's last observation, a pending registry change) stays in the poller's memory, because the poller computes with it; it reaches clients only through what the poller writes.
+
+Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/move-miniapp-registry/design.md`, D8): the first-party mini app manifest origins join what pollers call. A poller per origin stores each manifest's shell fields in `miniapp_manifests`; until the api reads them (the change's wave B), D2's temporary sixth call stays.
 
 ### D2. Five request-scoped upstream calls stay in api
 
