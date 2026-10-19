@@ -62,6 +62,11 @@ Every reader of a dataset keeps the same contract:
 
 The TTL, the stale window and the dataset document's shape are shared by every reader; each reader keeps its own repository read and schema.
 
+Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (`openspec/changes/move-editorial-datasets/design.md`, D12):
+
+- **A documented degraded answer may stand in for the 503.** A dataset whose capability documents an answer that serves without it may serve that answer instead of the 503, and logs the unavailable dataset at error. The festival layer sets are the case: `/map/config` serves the base map.
+- **A derived cache keeps the bound or states its own.** A route that caches what it derives from a dataset either keys that cache by the dataset's revision, so a push still serves within a minute, or states its own longer bound in the dataset's capability.
+
 ### D7. `check --prod` before a schema change or a removed identity
 
 A deploy restarts every replica with an empty cache, so the stale window does not cover a schema the new code rejects. Before merging a change that tightens a dataset's schema or removes an identity a dataset may reference, run `npm run data -- check --prod` from the new checkout, and push a fixed dataset first if it reports an issue.
@@ -77,4 +82,5 @@ Code, not datasets, holds: the identities of D2; the schemas, rules and readers;
 - **ADR 0010 D13's scripts row is not used for datasets.** The tool loads the server's compiled schemas and rules, so no hand-written validator or equivalence spec mirrors them.
 - **A schema change can strand stored data.** D7's check is a manual step for now; running it inside the deploy is an open question of the change.
 - **Atlas reads grow by one `findOne` per dataset per replica per minute while the dataset's route is requested**, estimated in the change's design (D8).
+- **Polling roles read datasets too.** A dataset that a poller's work depends on (the bus schedule content the shuttle ETA pollers plan runs with) is read in `poller` and `combined` as in `api`, under the same contract. Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (D12).
 - **Production data is edited from a laptop with `MONGO_URL`.** A database user scoped to the content database is an open question of the change.
