@@ -3,7 +3,7 @@ title: Transit Route Planner
 type: plan
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-19
+last-updated: 2026-10-20
 audience: internal
 ---
 
@@ -48,7 +48,7 @@ The order of work: **normalize every source into one departure format first**; c
 | Taxi | leave now | TMAP car route, cached per origin–destination pair for ~5 min | to build; reuse the TMAP key `src/bus/eta/forecast/` uses |
 
 > [!NOTE]
-> Do not reuse the 인자셔틀 ETA as the taxi time: during bus-lane hours it is computed with the bus-lane strategy (`src/bus/eta/lane/bus-lane.json`), and a taxi cannot use the lane.
+> Do not reuse the 인자셔틀 ETA as the taxi time: during bus-lane hours it is computed with the bus-lane strategy (`LANE_STRATEGIES` in `src/bus/eta/lane/bus-eta-lane.constants.ts`), and a taxi cannot use the lane.
 
 ## Common departure format
 
