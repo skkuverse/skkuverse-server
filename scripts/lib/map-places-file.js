@@ -158,7 +158,7 @@ function asFields(value, where, errors) {
   return out;
 }
 
-function asActions(value, where, errors) {
+function asActions(value, where, errors, miniAppIds) {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) {
     errors.push(`${where} must be an array of actions`);
@@ -196,7 +196,7 @@ function asActions(value, where, errors) {
         errors.push(`${at}.actionValue must be a mini-app target: <miniAppId>[/path]`);
         return;
       }
-      if (!REGISTERED_MINIAPP_IDS.includes(target.id)) {
+      if (!miniAppIds.includes(target.id)) {
         errors.push(`${at}.actionValue names an unregistered mini app "${target.id}"`);
         return;
       }
@@ -287,13 +287,6 @@ function parseMiniAppTarget(value) {
   if (!ROOT_RELATIVE_PATH_RE.test(path)) return null;
   return { id, path };
 }
-
-/**
- * The ids the server registers, read from the registry's own file rather than
- * copied: this is data that changes whenever a mini app is added, and a copy
- * would go stale silently. The importer runs from a checkout, where src/ exists.
- */
-const REGISTERED_MINIAPP_IDS = require("../../src/miniapps/index.json").miniApps.map((m) => m.id);
 
 /** The path segments of an https Instagram URL, or null for anything else. */
 function instagramSegments(value) {
@@ -691,7 +684,7 @@ function asPlace(raw, i, ctx, errors) {
       : asI18n(raw.subtitle, `${where2}.subtitle`, own);
   const hours = asHours(raw.hours, `${where2}.hours`, own);
   const fields = asFields(raw.fields, `${where2}.fields`, own);
-  const actions = asActions(raw.actions, `${where2}.actions`, own);
+  const actions = asActions(raw.actions, `${where2}.actions`, own, ctx.miniAppIds);
   const detail =
     raw.detail === undefined || raw.detail === null
       ? null
@@ -726,11 +719,17 @@ function asPlace(raw, i, ctx, errors) {
 }
 
 /**
+ * `miniAppIds` are the ids of the mini app registry the target database holds
+ * (the `miniapps` dataset; the importer reads them with `readMiniAppIds` in
+ * eventmap-db.js), so a `miniapp` action is checked against the registry the
+ * server will serve it with. Required: no list would pass every id.
+ *
  * @param {string} text     the file's contents
- * @param {{layerSetId: string}} opts  the layer set being imported
+ * @param {{layerSetId: string, miniAppIds: string[]}} opts  the layer set being imported, and the registered ids
  * @returns {{docs: object[], errors: string[]}}
  */
-function parsePlacesFile(text, { layerSetId }) {
+function parsePlacesFile(text, { layerSetId, miniAppIds }) {
+  if (!Array.isArray(miniAppIds)) throw new Error("parsePlacesFile needs miniAppIds, the ids of the stored mini app registry");
   const errors = [];
   let root;
   try {
@@ -759,7 +758,7 @@ function parsePlacesFile(text, { layerSetId }) {
     return { docs: [], errors };
   }
 
-  const ctx = { layerSetId, campus: root.campus };
+  const ctx = { layerSetId, campus: root.campus, miniAppIds };
   const docs = [];
   const seen = new Set();
   root.places.forEach((raw, i) => {

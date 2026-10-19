@@ -8,6 +8,7 @@
  * No dotenv here — the executable scripts load it. Requiring this file has no
  * side effects.
  */
+const { readDataset } = require("./datasets/store");
 const { upsertDocs } = require("./upsert-docs");
 
 /**
@@ -27,6 +28,35 @@ function resolveDbName() {
   if (nodeEnv === "production") return base;
   if (nodeEnv === "test") return `${base}_test`;
   return `${base}_dev`;
+}
+
+/**
+ * The content database (`npm run data`'s datasets) on the same side as
+ * resolveDbName: the importer checks a sheet against the registry of the
+ * environment it writes to, never the other one.
+ */
+function resolveContentDbName() {
+  const base = process.env.MONGO_CONTENT_DB_NAME;
+  if (!base) {
+    throw new Error("MONGO_CONTENT_DB_NAME not set in .env");
+  }
+  const nodeEnv = process.env.NODE_ENV || "development";
+  if (nodeEnv === "production") return base;
+  if (nodeEnv === "test") return `${base}_test`;
+  return `${base}_dev`;
+}
+
+/**
+ * The mini app ids the stored `miniapps` dataset registers: what the server
+ * serves a `miniapp` action against. With no registry stored there is nothing
+ * to check against, so the import stops rather than passing every id.
+ */
+async function readMiniAppIds(db) {
+  const stored = await readDataset(db, "miniapps");
+  if (!stored) {
+    throw new Error(`no miniapps dataset in ${db.databaseName}: push it with \`npm run data -- push miniapps\` first`);
+  }
+  return stored.data.index.miniApps.map((entry) => entry.id);
 }
 
 /** Everything the sheet owns. `updatedAt` is excluded — see upsertPlaces. */
@@ -94,6 +124,8 @@ async function enableActivation(collection, layerSetId, now, activeFrom, activeU
 module.exports = {
   enableActivation,
   ensureActivation,
+  readMiniAppIds,
+  resolveContentDbName,
   resolveDbName,
   upsertPlaces,
 };

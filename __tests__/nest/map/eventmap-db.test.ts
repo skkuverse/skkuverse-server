@@ -11,6 +11,7 @@
 import fs from "fs";
 import path from "path";
 import { BSON } from "mongodb";
+import { fixtureMiniAppIds } from "../../helpers/miniapps/registry-fixture";
 
 // scripts/ is plain CommonJS excluded from tsconfig, so these are requires.
 const { upsertPlaces } = require("../../../scripts/lib/eventmap-db");
@@ -32,6 +33,7 @@ function asStored<T>(doc: T): T {
 
 const { docs } = parsePlacesFile(fs.readFileSync(REAL_FILE, "utf8"), {
   layerSetId: "eskara-2026",
+  miniAppIds: fixtureMiniAppIds(),
 });
 const truck = docs.find((d: { detail: unknown }) => d.detail !== null);
 

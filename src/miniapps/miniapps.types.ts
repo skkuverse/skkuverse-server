@@ -7,14 +7,6 @@ export interface MiniAppTarget {
   path?: string;
 }
 
-export interface LoadedRegistry {
-  version: number;
-  indexEntries: ReadonlyArray<Readonly<MiniAppIndexEntry>>;
-  detailsById: ReadonlyMap<string, Readonly<MiniAppDetailRaw>>;
-  /** WHY: first-party origin → the mini app that owns it, so the app opens any URL there in that shell. */
-  ownerByOrigin: Readonly<Record<string, string>>;
-}
-
 export interface RegistryIssue {
   path: Array<string | number>;
   message: string;

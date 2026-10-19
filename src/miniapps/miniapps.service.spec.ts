@@ -10,9 +10,8 @@
  * logged at error once per revision. The grammar (targets, emoji, logos) is
  * code, so it answers with no read.
  *
- * Until every reader awaits current() (move-miniapp-registry tasks 9.x), the
- * synchronous getters read the committed files; the last block pins that they
- * answer what current() answers for revision 1, the fixture made from them.
+ * findCurrent() answers the same snapshot, or null where current() answers
+ * the 503, for a reader that serves without the registry.
  *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake
  * system time; the loader's clock stays the injected one.

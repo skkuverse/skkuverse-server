@@ -20,6 +20,7 @@ const { parsePlacesFile } = require("../../../scripts/lib/map-places-file");
 
 import { presentationFor } from "../../../src/map/map.rules";
 import { fixtureLayerSet } from "../../helpers/map/layer-sets-fixture";
+import { fixtureMiniAppIds } from "../../helpers/miniapps/registry-fixture";
 
 // Revision 1 of the stored map-layer-sets dataset, the layer set this sheet's places are drawn with.
 const CONFIG = fixtureLayerSet();
@@ -48,7 +49,7 @@ function parse(overrides: Record<string, unknown> = {}, placeOver: Record<string
     ],
     ...overrides,
   };
-  return parsePlacesFile(JSON.stringify(doc), { layerSetId: LAYER_SET_ID });
+  return parsePlacesFile(JSON.stringify(doc), { layerSetId: LAYER_SET_ID, miniAppIds: fixtureMiniAppIds() });
 }
 
 /** The one error message, when exactly one is expected. */
@@ -74,7 +75,7 @@ function positionsOf(geometry: { type: string; coordinates: unknown }): [number,
 
 describe("parsePlacesFile — the committed sheet", () => {
   const raw = fs.readFileSync(REAL_FILE, "utf8");
-  const { docs, errors } = parsePlacesFile(raw, { layerSetId: LAYER_SET_ID });
+  const { docs, errors } = parsePlacesFile(raw, { layerSetId: LAYER_SET_ID, miniAppIds: fixtureMiniAppIds() });
 
   it("parses with no errors", () => {
     // Act & Assert
@@ -347,7 +348,7 @@ describe("parsePlacesFile — identity and shape", () => {
     // Assert
     expect(result.errors).toEqual([]);
     expect(
-      soleError(parsePlacesFile(JSON.stringify(doubled), { layerSetId: LAYER_SET_ID })),
+      soleError(parsePlacesFile(JSON.stringify(doubled), { layerSetId: LAYER_SET_ID, miniAppIds: fixtureMiniAppIds() })),
     ).toMatch(/duplicate/);
   });
 
@@ -760,6 +761,7 @@ describe("parsePlacesFile — pasted geometry", () => {
 describe("parsePlacesFile — the committed sheet against the list facets", () => {
   const { docs } = parsePlacesFile(fs.readFileSync(REAL_FILE, "utf8"), {
     layerSetId: LAYER_SET_ID,
+    miniAppIds: fixtureMiniAppIds(),
   });
   type Doc = {
     _id: string;
