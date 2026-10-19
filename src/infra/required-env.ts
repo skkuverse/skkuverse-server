@@ -74,12 +74,26 @@ export function apiUrl(
 /** WHY: the roles a value is required in, from the code that reads it (ADR 0012, D4). */
 export type RequiredScope = "all" | "poller" | "api";
 
+export interface RequiredFormat {
+  pattern: RegExp;
+  message: string;
+}
+
 export interface RequiredValue {
   name: string;
   env: string;
   value: string | undefined;
   scope: RequiredScope;
+  format?: RequiredFormat;
 }
+
+// QUIRK(topis): a raw base64 key (`+`, `=`, `/`) splits the query string and TOPIS rejects it as if it
+// were down, so the key must be stored URL-encoded.
+const URL_ENCODED_KEY: RequiredFormat = {
+  pattern: /^[A-Za-z0-9_%-]+$/,
+  message:
+    "must be URL-encoded (allowed chars: [A-Za-z0-9_%-]). Re-encode the raw key with encodeURIComponent() before storing in .env.",
+};
 
 export function isRequiredIn(scope: RequiredScope, role: Role): boolean {
   return scope === "all" || role === "combined" || scope === role;
@@ -98,7 +112,7 @@ export function requiredValues(env: NodeJS.ProcessEnv): RequiredValue[] {
       value: apiUrl(mode, env, { prod: "API_HSSC_NEW_PROD", dev: "API_HSSC_NEW_DEV" }),
       scope: "poller",
     },
-    raw("api.seoulBusServiceKey", "SEOUL_BUS_SERVICE_KEY", "poller"),
+    { ...raw("api.seoulBusServiceKey", "SEOUL_BUS_SERVICE_KEY", "poller"), format: URL_ENCODED_KEY },
     raw("naver.styleId", "NAVER_MAP_STYLE_ID", "api"),
     db("building.dbName", "MONGO_BUILDING_DB_NAME"),
     db("notices.dbName", "MONGO_NOTICES_DB_NAME"),
@@ -132,6 +146,20 @@ export function listMissingRequired(env: NodeJS.ProcessEnv): RequiredValue[] {
   return requiredValues(env).filter((v) => isRequiredIn(v.scope, role) && !v.value);
 }
 
+function isMalformed({ value, format }: RequiredValue): boolean {
+  return Boolean(value && format && !format.pattern.test(value));
+}
+
+// WHY: a missing value is listMissingRequired's; this reports only a present one in the wrong shape.
+export function listMalformedRequired(env: NodeJS.ProcessEnv): RequiredValue[] {
+  const role = checkedRole(env);
+  return requiredValues(env).filter((v) => isRequiredIn(v.scope, role) && isMalformed(v));
+}
+
+export function describeMalformedRequired(env: NodeJS.ProcessEnv = process.env): string[] {
+  return listMalformedRequired(env).map(({ name, env: key, format }) => `  ${name} (env: ${key}): ${format?.message}`);
+}
+
 export function describeMissingRequired(env: NodeJS.ProcessEnv = process.env): string[] {
   return listMissingRequired(env).map(({ name, env: key }) => `  ${name} (env: ${key})`);
 }
@@ -144,6 +172,10 @@ export function validateEnv(env: NodeJS.ProcessEnv = process.env): void {
     throw new Error(
       `FATAL: Missing required config — set these env vars:\n${missing.join("\n")}`,
     );
+  }
+  const malformed = describeMalformedRequired(env);
+  if (malformed.length > 0) {
+    throw new Error(`FATAL: Malformed required config — fix these env vars:\n${malformed.join("\n")}`);
   }
   const { errors } = resolveRuntimeSwitches(env, runtimeMode(nodeEnv));
   if (errors.length > 0) {

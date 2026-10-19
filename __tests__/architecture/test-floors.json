@@ -12,8 +12,8 @@
     "expects": 547
   },
   "bus": {
-    "tests": 1004,
-    "expects": 1820
+    "tests": 1001,
+    "expects": 1813
   },
   "config": {
     "tests": 9,
@@ -36,8 +36,8 @@
     "expects": 113
   },
   "infra": {
-    "tests": 396,
-    "expects": 914
+    "tests": 412,
+    "expects": 944
   },
   "map": {
     "tests": 452,
