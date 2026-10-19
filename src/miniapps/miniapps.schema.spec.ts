@@ -1,43 +1,33 @@
 /**
- * registryFile, the structure of the committed mini-app registry. What it
- * guards: the committed index.json and details/*.json pass; a file missing
- * either half fails; an index entry gets both logos, the absent one taking
- * the other's; a detail's shell keeps only the fields it sets; and a key no
- * level declares fails, at every object level. The words
- * a refusal names its entry with are miniapps.config.spec.ts's.
+ * registryFile, the structure of the mini app registry. What it guards: the
+ * fixture, revision 1 of the stored `miniapps` dataset, passes; a registry
+ * missing either half fails; an index entry gets both logos, the absent one
+ * taking the other's; a detail's shell keeps only the fields it sets; and a
+ * key no level declares fails, at every object level.
  *
  * checkedRegistry, the `miniapps` dataset a push is checked against and a
- * read parses (move-miniapp-registry design D3, D6): every refusal the boot
- * check made of the committed files (loadRegistry in miniapps.config.spec.ts)
- * is a refusal here at the path of the value at fault, the cross-references
- * between the index and the details included, so `npm run data` can name it.
- * storedRegistry is the stored document's revision and data.
+ * read parses (move-miniapp-registry design D3, D6, D13): every refusal the
+ * old boot check made of the committed files is a refusal here at the path of
+ * the value at fault, the cross-references between the index and the details
+ * included, so `npm run data` can name it; a push lists zod's message with
+ * that path, so no custom words are pinned. storedRegistry is the stored
+ * document's revision and data.
  */
-import fs from "fs";
-import path from "path";
 import type { z } from "zod";
 import { fixtureRegistry } from "../../__tests__/helpers/miniapps/registry-fixture";
 import { checkedRegistry, registryFile, storedRegistry } from "./miniapps.schema";
 
-const readJson = (...segments: string[]): unknown => JSON.parse(fs.readFileSync(path.join(__dirname, ...segments), "utf8"));
-
-const index = readJson("index.json") as { miniApps: Array<{ id: string }> };
-const committed = {
-  index,
-  details: Object.fromEntries(index.miniApps.map(({ id }) => [id, readJson("details", `${id}.json`)])),
-};
-
 const DETAIL = { version: 1, id: "a", startUrl: "https://a.test/", verified: true, relatedLinks: [] };
 
 describe("registryFile", () => {
-  it("passes the committed registry", () => {
+  it("passes the fixture, revision 1 of the stored registry", () => {
     // Act & Assert
-    expect(registryFile.safeParse(committed).success).toBe(true);
+    expect(registryFile.safeParse(fixtureRegistry()).success).toBe(true);
   });
 
   it.each(Object.keys(registryFile.shape))("fails a registry missing %s", (field) => {
     // Arrange
-    const missing: Record<string, unknown> = { ...committed };
+    const missing: Record<string, unknown> = { ...fixtureRegistry() };
     delete missing[field];
 
     // Act & Assert
@@ -231,6 +221,18 @@ describe("checkedRegistry", () => {
     // Act & Assert
     for (const value of values) {
       expect(pathsOf(minimal({}, { shell: { [field]: value } }))).toEqual([[...DETAIL_A, "shell", field]]);
+    }
+  });
+
+  it.each([
+    ["bar", ["top", "bottom", "none"]],
+    ["header", ["opaque", "overlay"]],
+    ["statusBar", ["dark", "light"]],
+    ["background", ["#FFFFFF", "#0a0b0c"]],
+  ] as const)("accepts each shell %s the app reads", (field, values) => {
+    // Act & Assert
+    for (const value of values) {
+      expect(issuesOf(minimal({}, { shell: { [field]: value } }))).toEqual([]);
     }
   });
 

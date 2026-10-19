@@ -15,22 +15,6 @@ const assets = [
   ["src/bus/eta/lane/bus-lane.json", "dist/src/bus/eta/lane/bus-lane.json"],
   // src/bus/bus.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/jongro-routes.json", "dist/src/bus/jongro-routes.json"],
-  // The mini app registry's committed files: the server reads the `miniapps` dataset
-  // instead, and move-miniapp-registry task 12.1 deletes these with their entries.
-  ["src/miniapps/index.json", "dist/src/miniapps/index.json"],
-  [
-    "src/miniapps/details/eskara-2026.json",
-    "dist/src/miniapps/details/eskara-2026.json",
-  ],
-  ["src/miniapps/details/hssc.json", "dist/src/miniapps/details/hssc.json"],
-  ["src/miniapps/details/inja.json", "dist/src/miniapps/details/inja.json"],
-  ["src/miniapps/details/mukja.json", "dist/src/miniapps/details/mukja.json"],
-  ["src/miniapps/details/playlist.json", "dist/src/miniapps/details/playlist.json"],
-  ["src/miniapps/details/booth-box.json", "dist/src/miniapps/details/booth-box.json"],
-  ["src/miniapps/details/timetable.json", "dist/src/miniapps/details/timetable.json"],
-  ["src/miniapps/details/nsc.json", "dist/src/miniapps/details/nsc.json"],
-  ["src/miniapps/details/skkuw.json", "dist/src/miniapps/details/skkuw.json"],
-  ["src/miniapps/details/skkuzine.json", "dist/src/miniapps/details/skkuzine.json"],
   // src/subway/subway.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/subway/subway-registry.json", "dist/src/subway/subway-registry.json"],
   // The subway timetable config reads these with fs.readFileSync(__dirname/<name>);

@@ -25,8 +25,9 @@
  *   api.skkuverse.com, which reads production. Point a dev build at the local
  *   server with EXPO_PUBLIC_BASE_URL
  *   (docs/how-to/test-the-app-against-a-local-server.md).
- * - The home layout, campus banners and mini-app registry are committed files,
- *   not data. Reverse-apply the takedown commit on a local checkout for those.
+ * - The home layout, campus banners and mini-app registry are datasets in the
+ *   content database, not eventmap data. Restore them in `_dev` with
+ *   `npm run data` (docs/how-to/edit-runtime-data.md).
  * - The app hides festival layers unless its festival gate is open
  *   (`__DEV__ || beta`, or FESTIVAL_OVERRIDE in skkuverse-app).
  */

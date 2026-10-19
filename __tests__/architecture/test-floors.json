@@ -48,8 +48,8 @@
     "expects": 87
   },
   "miniapps": {
-    "tests": 203,
-    "expects": 325
+    "tests": 256,
+    "expects": 445
   },
   "nest": {
     "tests": 28,
