@@ -3,7 +3,7 @@ import type { LatLng } from "../../../shared/lat-lng.types";
 import { projectOntoPolyline } from "../../../shared/polyline.util";
 import type { EtaRun } from "../bus-eta.types";
 import { LANE_HOURS } from "./bus-eta-lane.constants";
-import type { CorridorEnds, LaneConfig, LaneConfigIssue, LaneCorridor, LaneHours, LaneStrategies, LegBounds, ProbeRoute, SequenceKey, SequenceStrategy } from "./bus-eta-lane.types";
+import type { CorridorEnds, LaneConfigIssue, LaneCorridor, LaneCorridorData, LaneHours, LaneStrategies, LegBounds, ProbeRoute, SequenceKey, SequenceStrategy } from "./bus-eta-lane.types";
 
 // WHY: the corridor script writes the last boundary as the length rounded to the meter; a larger gap means the
 // centerline changed without its boundaries.
@@ -44,7 +44,7 @@ function centerlineLengthM(centerline: readonly LatLng[]): number {
   return centerline.reduce((sum, point, i) => (i === 0 ? sum : sum + haversineM(centerline[i - 1] ?? point, point)), 0);
 }
 
-function boundaryIssues({ centerline, boundaries }: LaneConfig["corridor"]): LaneConfigIssue[] {
+function boundaryIssues({ centerline, boundaries }: LaneCorridor): LaneConfigIssue[] {
   const at = (index: number) => ["corridor", "boundaries", index, "alongM"];
   const issues: LaneConfigIssue[] = [];
   const first = boundaries[0];
@@ -78,11 +78,9 @@ function probeRouteIssues(route: ProbeRoute, index: number, earlier: readonly Pr
   return issues;
 }
 
-export function corridorIssues(config: LaneConfig): LaneConfigIssue[] {
-  const { from, to } = config.laneHours;
-  const hours = from < to ? [] : [{ path: ["laneHours"], message: `from ${from} must be before to ${to}` }];
-  const routes = config.probeRoutes.flatMap((route, i) => probeRouteIssues(route, i, config.probeRoutes.slice(0, i)));
-  return [...hours, ...boundaryIssues(config.corridor), ...routes];
+export function corridorIssues(data: LaneCorridorData): LaneConfigIssue[] {
+  const routes = data.probeRoutes.flatMap((route, i) => probeRouteIssues(route, i, data.probeRoutes.slice(0, i)));
+  return [...boundaryIssues(data.corridor), ...routes];
 }
 
 /** WHY: lane hours compare the run's KST departure, `from` inclusive and `to` exclusive, so a 21:00 run is a car run. */

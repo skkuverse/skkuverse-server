@@ -41,6 +41,7 @@ export interface ProbeRoute {
 }
 
 export type LaneStrategies = Readonly<Record<string, Readonly<Record<string, SequenceStrategy>>>>;
+export type LaneCorridorData = Pick<LaneConfig, "corridor" | "entryExit" | "probeRoutes">;
 export interface LaneConfig {
   laneHours: LaneHours;
   /** WHY: serviceId → routeType → strategy; a sequence left out is `car`. */

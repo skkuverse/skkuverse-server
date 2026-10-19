@@ -5,8 +5,10 @@
  *
  * The strategies and lane hours are code (move-reference-datasets D9): `assertLaneStrategies` is the check
  * BusEtaLaneService's construction runs over them against the sequences the app estimates, so a bad constant fails
- * the boot, naming every issue.
+ * the boot, naming every issue. `corridorIssues` is what a `bus-lane-corridor` push is refused on beyond its schema
+ * (spec "Corridor push checks the geometry"); the lane hours are no longer corridor data.
  */
+import { corridorFixture } from "../../../../__tests__/helpers/bus/bus-lane-corridor";
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
@@ -235,7 +237,6 @@ describe("corridorIssues", () => {
   it("lists every cross-check issue at once", () => {
     // Arrange
     const broken = config({
-      laneHours: { from: "21:00", to: "07:00" },
       corridor: {
         ...config().corridor,
         boundaries: [
@@ -256,7 +257,6 @@ describe("corridorIssues", () => {
 
     // Assert
     expect(issues.map((issue) => issue.path)).toEqual([
-      ["laneHours"],
       ["corridor", "boundaries", 0, "alongM"],
       ["corridor", "boundaries", 2, "alongM"],
       ["corridor", "boundaries", 3, "alongM"],
@@ -279,14 +279,34 @@ describe("corridorIssues", () => {
     expect(issues).toEqual([{ path: ["probeRoutes", 0, "sectOrds"], message: expect.stringContaining("8800") }]);
   });
 
-  it("accepts lane hours one minute long and refuses them empty", () => {
+  it("passes revision 1 of the bus-lane-corridor dataset", () => {
+    // Act & Assert
+    expect(corridorIssues(corridorFixture())).toEqual([]);
+  });
+
+  it("Boundary past the end: refuses a last boundary 500 m past the centerline's end, naming that boundary's path", () => {
+    // Arrange
+    const data = corridorFixture();
+    const last = data.corridor.boundaries.length - 1;
+    data.corridor.boundaries[last]!.alongM += 500;
+
     // Act
-    const oneMinute = corridorIssues(config({ laneHours: { from: "07:00", to: "07:01" } }));
-    const empty = corridorIssues(config({ laneHours: { from: "07:00", to: "07:00" } }));
+    const issues = corridorIssues(data);
 
     // Assert
-    expect(oneMinute).toEqual([]);
-    expect(empty).toEqual([{ path: ["laneHours"], message: expect.stringContaining("07:00") }]);
+    expect(issues).toEqual([{ path: ["corridor", "boundaries", last, "alongM"], message: expect.stringContaining('"신갈JC"') }]);
+  });
+
+  it("Probe route listed twice: refuses 200000205 listed again, naming the second entry's routeId", () => {
+    // Arrange
+    const data = corridorFixture();
+    data.probeRoutes.push(structuredClone(data.probeRoutes[0]!));
+
+    // Act
+    const issues = corridorIssues(data);
+
+    // Assert
+    expect(issues).toEqual([{ path: ["probeRoutes", 3, "routeId"], message: expect.stringContaining("200000205") }]);
   });
 });
 
