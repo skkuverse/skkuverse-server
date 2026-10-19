@@ -61,6 +61,36 @@ describe("BusRealtimeHsscService.listBuses", () => {
   });
 });
 
+// WHY: every role reads bus_cache only, so combined answers as an api replica does (ADR 0012, D1).
+describe("BusRealtimeHsscService.listBuses after its own tick", () => {
+  it("serves no bus once the bus_cache entry is gone, though a tick filled the process's memory", async () => {
+    // Arrange
+    client.buses = [createApiItem("혜화동로터리", "6", koreanNow())];
+    await service.refresh();
+    busCache.values.delete("hssc");
+
+    // Act
+    const buses = await service.listBuses();
+
+    // Assert
+    expect(buses).toEqual([]);
+  });
+
+  it("keeps the first sighting across ticks while bus_cache serves", async () => {
+    // Arrange
+    client.buses = [createApiItem("혜화동로터리", "6", koreanNow(2))];
+    await service.refresh();
+    busCache.values.delete("hssc");
+    client.buses = [createApiItem("혜화동로터리", "6", koreanNow())];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect((await service.listBuses())[0]!.estimatedTime).toBe(120);
+  });
+});
+
 describe("BusRealtimeHsscService.refresh", () => {
   describe("stopNameMapping", () => {
     it("maps 농구장정류소 correctly", async () => {

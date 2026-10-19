@@ -3,7 +3,7 @@ title: Map Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-18
+last-updated: 2026-10-19
 audience: internal
 ---
 
@@ -21,7 +21,7 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | `places` and `activations` (eventmap database) | `mongodb` | The festival's places, and the window that switches a layer set on | `MapRepository` |
 | The places importer (`scripts/lib/map-places-file.js`) | — | Places written to Mongo, checked by the same rules the server reads with | `overlayPlaceDoc`, `sheetPlaceDoc` |
 | The building module | `skku` | Buildings and hand-authored campus shapes | `BuildingService`, injected into `MapCampusService` |
-| The bus module | — | Each Jongro route's line as TOPIS draws it, or the committed snapshot's when the stored one is missing or unreadable | `BusRoutePathService`, injected into `MapTransitService` |
+| The bus module | — | Each Jongro route's stored line as TOPIS draws it, a route with none left out and flagged, or `503` when nothing can be read | `BusRoutePathService`, injected into `MapTransitService` |
 | The mini-app registry | — | Which mini-app targets a sheet button or a link chip may open | `MiniappsService.isKnownMiniAppTarget`, injected into `MapEventService` and `MapLayerSetService` |
 | GeoJSON | `geojson` | The `[lng, lat]` position order and ring winding, served as stored | `map.wire.ts` |
 | The NAVER map SDK | `naver-map` | Polygon defaults the base and festival styles override | `BASE_LAYERS`, `EVENT_SHAPE_STYLE` |
@@ -45,7 +45,7 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | presentation (`ItemPresentation`) | A category's layer, pin priority, tap and location accuracy | `presentationFor` | `categoryStyle` |
 | facet | A list filter axis a chip may show; an `hours` facet is derived from a place's windows, a `tag` facet is authored | `facetsOf` | — |
 | sheet (`PlaceSheet`) | The body a tapped place opens: its head, buttons and blocks | `toPlaceSheet` | `sheetBody` |
-| degraded | An overlay route fell back to a static answer: the campus overlay to `FALLBACK_MARKERS` because the buildings read was empty, the transit overlay to the bus module's snapshot | `MapCampusService.getCampusOverlays`, `MapTransitService.getTransitOverlays` | `isFallback` |
+| degraded | An overlay route fell back to a static answer: the campus overlay to `FALLBACK_MARKERS` because the buildings read was empty, the transit overlay to the stored lines alone because a route has none | `MapCampusService.getCampusOverlays`, `MapTransitService.getTransitOverlays` | `isFallback` |
 | route line layer | A base layer that draws one Jongro route's line, opt-in (`defaultVisibleWhen` `never`, `userConfigurable`), named after the route (`jongro07_route`) | `BASE_LAYERS` | — |
 
 ## Structure
@@ -99,7 +99,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 - Both event routes cache their whole projection on the same TTL, and both overlay collections are one response per data source, pins and shapes together.
 - A stored geometry is served as stored: points and lines by reference, polygon rings rewound (`toWirePolygon`); the only rebuilt pair is a building's, from its `location`.
 - The event map is timezone-free: windows and facet options are absolute instants, compared with no zone arithmetic.
-- `degraded` never reaches the wire. The campus fallback is sent with `DEGRADED_CACHE_CONTROL` (`no-store`), the transit fallback with `DEGRADED_TRANSIT_CACHE_CONTROL` (a minute): the snapshot still draws the routes correctly.
+- `degraded` never reaches the wire. The campus fallback is sent with `DEGRADED_CACHE_CONTROL` (`no-store`), the transit answer with a route left out with `DEGRADED_TRANSIT_CACHE_CONTROL` (a minute), so the line shows within a minute of its first sync.
 - A transit overlay is the stored line as stored, unclosed, on its route line layer; the route line layers are off by default, so an installed app fetches `/map/overlays/transit` only once a user turns one on.
 - The route line layers share one style in the routes' `themeColor` (`src/bus/jongro-routes.json`), and their order in `BASE_LAYERS` is their draw order: the app adds them in that order and the later one lies on top, so `jongro07_route` comes after `jongro08_route` ([Draw order](../reference/map-overlays-api.md#draw-order)).
 - Cloudflare caches `/map/overlays/campus`, `/map/overlays/transit` and both event routes without varying on `Accept-Language`, so their bodies carry every language and their `meta` names none: `ResponseInterceptor` leaves `lang` out of any response with a `public` or `s-maxage` `Cache-Control`.

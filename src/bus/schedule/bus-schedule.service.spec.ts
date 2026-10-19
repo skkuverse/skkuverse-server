@@ -417,6 +417,67 @@ describe("BusScheduleService.resolveWeek", () => {
   });
 });
 
+describe("BusScheduleService week cache freshness (ADR 0012, D6)", () => {
+  const WEEKDAY = { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4] };
+  const at = (time: string) => [{ index: 1, time, routeType: "regular", busCount: 1, notes: null }];
+  const mondayTimes = async (): Promise<Array<string | undefined> | undefined> =>
+    (await service.resolveWeek("campus-inja", "2026-03-09"))?.days[0]!.schedule.map((entry) => entry.time);
+
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate", "queueMicrotask"] });
+    jest.setSystemTime(new Date("2026-03-09T00:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("serves a timetable written by another process 61 s later, with no restart", async () => {
+    // Arrange
+    repository.patterns = [{ ...WEEKDAY, entries: at("08:00") }];
+    await mondayTimes();
+    repository.patterns = [{ ...WEEKDAY, entries: at("09:30") }];
+
+    // Act
+    jest.advanceTimersByTime(61_000);
+    const times = await mondayTimes();
+
+    // Assert
+    expect(times).toEqual(["09:30"]);
+  });
+
+  it("keeps serving the last week when a reload fails within an hour, and logs cache.reload_failed", async () => {
+    // Arrange
+    repository.patterns = [{ ...WEEKDAY, entries: at("08:00") }];
+    await mondayTimes();
+    repository.failWith = new Error("atlas unreachable");
+
+    // Act
+    jest.advanceTimersByTime(60 * 60 * 1000);
+    const times = await mondayTimes();
+
+    // Assert
+    expect(times).toEqual(["08:00"]);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "cache.reload_failed", cache: "bus.schedule.campus-inja:2026-03-09" }),
+      expect.any(String),
+    );
+  });
+
+  it("fails a read once the last good week is over an hour past its TTL", async () => {
+    // Arrange
+    repository.patterns = [{ ...WEEKDAY, entries: at("08:00") }];
+    await mondayTimes();
+    repository.failWith = new Error("atlas unreachable");
+
+    // Act
+    jest.advanceTimersByTime(60_000 + 60 * 60 * 1000);
+
+    // Assert
+    await expect(mondayTimes()).rejects.toThrow("atlas unreachable");
+  });
+});
+
 describe("pattern effective ranges", () => {
   const entry = (time: string) => ({ index: 1, time, routeType: "regular", busCount: 1, notes: null });
   const pilot = {

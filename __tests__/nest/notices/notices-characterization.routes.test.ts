@@ -14,6 +14,9 @@
  * Documents are built from one production document (fixtures/notice-document.json)
  * with the fields each case is about overridden. `$search` paths are out of scope.
  *
+ * As in production, a poller boot ensures the indexes (ADR 0012: an api replica
+ * creates none) before the api app that serves the routes boots.
+ *
  * The clock: the notices services read the time through `Clock`, which stands at
  * 2026-10-19T16:30:00Z, 01:30 KST on the 20th: the KST day and the UTC day
  * differ, so the age gate's zone shows.
@@ -32,6 +35,7 @@ import { LoopbackServers } from "../../helpers/nest/loopback-servers";
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
+type Registry = typeof import("../../../src/scheduling/poller-registry.service")["PollerRegistryService"];
 
 const NOW = new Date("2026-10-19T16:30:00Z");
 const CLOCK = { now: (): Date => new Date(NOW) };
@@ -136,6 +140,7 @@ beforeAll(async () => {
   notices = db.getClient().db(config.notices.dbName).collection(config.notices.collections.notices);
   // The crawler owns this unique index; production has it, so a seeding mistake fails here too.
   await notices.createIndex({ articleNo: 1, sourceId: 1 }, { unique: true });
+  await ensureIndexesAsThePoller();
   app = await bootApp();
 }, MONGOD_START_TIMEOUT_MS);
 
@@ -162,6 +167,28 @@ function bootApp(): Promise<NestExpressApplication> {
     overrides: [{ provide: Clock, useValue: CLOCK }],
     role: "api",
   });
+}
+
+/** Boots the poller with no poller registered, so nothing ticks, and waits for the list read's hinted index. */
+async function ensureIndexesAsThePoller(): Promise<void> {
+  const { PollerRegistryService } = require("../../../src/scheduling/poller-registry.service") as { PollerRegistryService: Registry };
+  const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller").mockImplementation(() => undefined);
+  const poller = await buildTestApp({
+    imports: appModulesUnder("src/scheduling/", "src/notices/"),
+    overrides: [{ provide: Clock, useValue: CLOCK }],
+    role: "poller",
+  });
+  try {
+    let names: string[] = [];
+    for (let waited = 0; !names.includes("sourceId_1_date_-1__id_-1"); waited += 20) {
+      if (waited > 5_000) throw new Error("the poller boot made no notices list index within 5 s");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      names = (await notices.indexes()).map((index) => index.name ?? "");
+    }
+  } finally {
+    registered.mockRestore();
+    await poller.close();
+  }
 }
 
 function list(query: string): request.Test {

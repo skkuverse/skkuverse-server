@@ -29,7 +29,6 @@ const jongroApis = jongroRoutes.flatMap((r) => [
 const APIs = [
   { name: "hssc", url: process.env.API_HSSC_NEW_PROD },
   ...jongroApis,
-  { name: "station_hyehwa", url: process.env.API_STATION_HEWA },
   // --- SKKU building APIs (PR4b types.ts 검증용; 30-min cron으로 captured) ---
   {
     name: "building_list_hssc",

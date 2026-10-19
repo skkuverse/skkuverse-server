@@ -3,7 +3,7 @@ title: Transit Route Planner
 type: plan
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-17
+last-updated: 2026-10-19
 audience: internal
 ---
 
@@ -134,7 +134,7 @@ Ordered so the format is settled on the easiest source first and 7800 waits for 
 
 ## HSSC shuttle estimate
 
-The shuttle API gives each bus's last passed station (its sequence in `HSSC_ETA_STATIONS`, `src/bus/station/bus-station.constants.ts`) and how long it has been there (`estimatedTime`, dwell seconds, not an ETA). Today `src/bus/station/bus-station.rules.ts` turns that into "N 정거장 전" only.
+The shuttle API gives each bus's last passed station (its `seq` on the circular route, numbered as in the table below) and how long it has been there (`estimatedTime`, dwell seconds, not an ETA). Nothing turns that into an estimate today: the Hyehwa station route, which turned it into "N 정거장 전" only, was deleted with [ADR 0012](../decisions/0012-runtime-roles.md).
 
 Estimated segment times (2026-10-17), in the API's numbering:
 

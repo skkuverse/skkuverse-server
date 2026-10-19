@@ -6,7 +6,9 @@
  * overnight answer) read as an empty list, and any other answer without a
  * list rejected; a position row's vehicle, section, stop flag and KST
  * observation time kept, a row with one of them malformed rejected, and its
- * lastStTm kept as a number when it is one.
+ * lastStTm kept as a number when it is one. Each URL is built from the route's
+ * TOPIS id and SEOUL_BUS_SERVICE_KEY at the call, so importing the route config
+ * needs no key, and a role that does not poll refuses to build one (ADR 0012, D4).
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
 
@@ -17,6 +19,7 @@ import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
 
 const axios = require("axios") as { get: jest.Mock };
 const route07 = jongroRoutes.find((r) => r.code === "07")!;
+const KEY = process.env.SEOUL_BUS_SERVICE_KEY;
 const respond = (data: unknown) => axios.get.mockResolvedValue({ data });
 // What TOPIS sends in a row's bus fields when it names no bus (topis-jongro-arrivals.json, the second bus of jongro07Waiting ord 2).
 const NO_BUS_FIELDS = Object.fromEntries(
@@ -70,7 +73,10 @@ describe("BusRealtimeJongroClient.fetchArrivals", () => {
       stationNumber: "01504",
       eta: "3분후[1번째 전]",
     });
-    expect(axios.get).toHaveBeenCalledWith(route07.arrivalsUrl, { timeout: 10000 });
+    expect(axios.get).toHaveBeenCalledWith(
+      `http://ws.bus.go.kr/api/rest/arrive/getArrInfoByRouteAll?serviceKey=${KEY}&busRouteId=100900004&resultType=json`,
+      { timeout: 10000 },
+    );
   });
 
   it("extracts last 4 chars of plainNo1 as carNumber", async () => {
@@ -299,7 +305,10 @@ describe("BusRealtimeJongroClient.fetchSightings", () => {
         observedAt: "2026-10-20T10:00:00+09:00",
       },
     ]);
-    expect(axios.get).toHaveBeenCalledWith(route07.positionsUrl, { timeout: 10000 });
+    expect(axios.get).toHaveBeenCalledWith(
+      `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRtid?serviceKey=${KEY}&busRouteId=100900004&resultType=json`,
+      { timeout: 10000 },
+    );
   });
 
   it("reads no result (4), TOPIS's overnight answer, as no bus", async () => {
@@ -496,5 +505,24 @@ describe("BusRealtimeJongroClient.fetchSightings seconds to the terminal", () =>
 
     // Assert
     expect(sighting!.lastStTm).toBeUndefined();
+  });
+});
+
+describe("BusRealtimeJongroClient outside a polling role", () => {
+  it("refuses to build a TOPIS URL under ROLE=api, naming the key, and sends nothing", async () => {
+    // Arrange
+    const previous = process.env.ROLE;
+    process.env.ROLE = "api";
+    axios.get.mockClear();
+
+    try {
+      // Act & Assert
+      await expect(new BusRealtimeJongroClient().fetchArrivals(route07)).rejects.toThrow(/SEOUL_BUS_SERVICE_KEY/);
+      await expect(new BusRealtimeJongroClient().fetchSightings(route07)).rejects.toThrow(/SEOUL_BUS_SERVICE_KEY/);
+      expect(axios.get).not.toHaveBeenCalled();
+    } finally {
+      if (previous === undefined) delete process.env.ROLE;
+      else process.env.ROLE = previous;
+    }
   });
 });

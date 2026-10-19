@@ -3,7 +3,7 @@ title: Configure Map Overlays
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-18
+last-updated: 2026-10-19
 audience: internal
 ---
 
@@ -176,8 +176,8 @@ control that does nothing.
 The `jongro02_route`, `jongro07_route` and `jongro08_route` layers draw the
 village bus lines from `GET /map/overlays/transit`. Their geometry is not
 authored here: `src/bus/route-path/` syncs each line from TOPIS `busRouteInfo`
-once a day into `jongro_route_paths`, and seeds a missing one from
-`src/bus/route-path/jongro-route-paths.seed.json`
+once a day into `jongro_route_paths`, writing a missing one at its first
+trusted answer; no line is committed
 ([bus architecture](../explanation/bus-architecture.md)).
 
 - **Colour, width, outline, zoom bounds:** the `style` of `ROUTE_LINE_LAYER`
@@ -193,11 +193,11 @@ once a day into `jongro_route_paths`, and seeds a missing one from
 - **A line that did not update:** look for `bus.jongro.path_change_held` in the
   poller's log. A change of more than 30% of the points or the length, a line
   of under 10 points or one with no station is held, never written. If the new
-  line is right, refresh the seed file from TOPIS and write the line into the
-  route's document by hand; the next sync compares with what is stored.
-- **A new Jongno route:** add it to `src/bus/jongro-routes.json` and to both
-  seed files (the registry's stations and this line), then its layer to
-  `BASE_LAYERS`. The seed loaders refuse a configured route with no snapshot.
+  line is right, write it into the route's document by hand; the next sync
+  compares with what is stored.
+- **A new Jongno route:** add it to `src/bus/jongro-routes.json`, then its
+  layer to `BASE_LAYERS`. The poller bootstraps its stations once a bus runs
+  and the daily sync, which runs at the poller's start, writes its line.
 
 ### Make a category a backdrop
 

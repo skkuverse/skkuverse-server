@@ -3,7 +3,7 @@ title: Map Overlays API Reference
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-18
+last-updated: 2026-10-19
 audience: internal
 ---
 
@@ -875,7 +875,7 @@ missing its body would take every sheet of the festival down with it.
 
 ### 5.5 `GET /map/overlays/transit`
 
-`Cache-Control: public, max-age=3600` — or **`public, max-age=60`** on the degraded branch.
+`Cache-Control: public, max-age=3600` — or **`public, max-age=60`** on the degraded branch, and `503` when no line can be read.
 
 The Jongno village bus lines 종로02, 07 and 08, one `kind: "path"` overlay per route, in the order of
 `src/bus/jongro-routes.json`. No parameters. The geometry is the bus module's stored line
@@ -925,11 +925,14 @@ So `jongro08_route` is listed before `jongro07_route`, which also puts 08's tile
 filter sheet. A user who turns 07 on first and 08 later still gets 08 on top until the map remounts:
 the order a layer is turned on in is the app's, not the server's.
 
-**The degraded branch.** When the bus module cannot read a route's stored line, or has none, it draws
-that route from its committed snapshot (`src/bus/route-path/jongro-route-paths.seed.json`) and the
-response is sent with `public, max-age=60` instead of an hour. Unlike the campus fallback this answer
-is a correct map, so it may be cached briefly: a short shared cache spares the database while it is
-down, and the stored lines are back within a minute of recovery. `degraded` never reaches the body.
+**The degraded branch.** No line is committed with the code. When a configured route has no stored
+line (a fresh database before the poller's first daily sync, which runs at its start), the response
+leaves that route's overlay out, the bus module logs `bus.jongro.path_missing` at error, and the
+response is sent with `public, max-age=60` instead of an hour, so the line appears within a minute of
+being written. When the read fails, the bus module serves the lines it read last for up to a day
+(`ROUTE_PATHS_STALE_WINDOW_MS`); a read that fails with nothing read before answers `503`
+`{ "error": { "code": "JONGRO_ROUTE_PATHS_UNAVAILABLE", … } }` rather than an empty overlay a shared
+cache would keep. `degraded` never reaches the body.
 
 The stations TOPIS answers with each line are stored but not drawn yet: the place-dot marker ignores a
 layer's `zIndex`, so a stop caption could win over a building name. A stop layer waits for that app
@@ -1522,7 +1525,7 @@ shape §4.0 exists to avoid — to buy a rollout ordering that a JS-only OTA can
 | Response builder, campuses, activation lookup | `src/map/config/map-config.mapper.ts` |
 | Buildings + campus geometry → overlays, empty-DB fallback | `src/map/campus/map-campus.mapper.ts` |
 | Jongno route lines → overlays | `src/map/transit/map-transit.mapper.ts` |
-| Jongno route lines: storage, TOPIS sync, snapshot | `src/bus/route-path/` (`jongro_route_paths`, `jongro-route-paths.seed.json`) |
+| Jongno route lines: storage, TOPIS sync | `src/bus/route-path/` (`jongro_route_paths`) |
 | Event places → overlays | `src/map/event/map-event.mapper.ts` |
 | Event places → sheet details, and the serve-time checks | `src/map/event-details/map-event-details.mapper.ts` |
 | Detail shape (stored and wire) | `src/map/event-details/map-event-details.wire.ts` |

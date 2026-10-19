@@ -1,11 +1,26 @@
 #!/usr/bin/env node
 /**
- * (An operations detail is left out of the public history.)
+ * Move the 2026 semester start from Sep 1 to Aug 31.
  *
+ * The vacation timetable is stored as one type:"replace" override per weekday
+ * in bus_campus.bus_overrides (seeded by scripts/seed-vacation-2026.js). There
+ * is no "semester start date" value anywhere — the semester resumes on the
+ * first date that has NO override, because ScheduleService.resolveWeek falls
+ * through from step 1 (override) to step 3 (bus_schedules weekly pattern).
  *
+ * The seeder ran through 2026-08-31, a Monday, which put the semester start on
+ * Tue Sep 1. Deleting that one date for both services makes Mon Aug 31 match
+ * the "weekday" pattern (days [1,2,3,4]) and serve the semester timetable;
+ * Fri 2026-08-28 stays the last vacation day.
  *
+ * Usage:
+ *   node scripts/unseed-vacation-2026-0831.js --dry-run   # preview, no writes
+ *   node scripts/unseed-vacation-2026-0831.js             # delete from prod bus_campus
  *
+ * Idempotent: re-running deletes 0 docs once the dates are gone.
  *
+ * NOTE: every process reloads a cached week a minute after it read it
+ * (WEEK_CACHE_TTL_MS), so the change is served within a minute; no restart.
  */
 require("dotenv").config();
 const { MongoClient } = require("mongodb");

@@ -21,9 +21,8 @@
  * src/bus/schedule/bus-schedule.repository.ts. Nothing to undo afterwards — past dates are
  * never queried.
  *
- * NOTE: api containers cache a resolved week for 1 hour per process. Write
- * before the deploy that recreates them, or restart every api replica on
- * every host.
+ * NOTE: every process reloads a cached week a minute after it read it
+ * (WEEK_CACHE_TTL_MS), so the write is served within a minute; no restart.
  */
 const path = require("node:path");
 

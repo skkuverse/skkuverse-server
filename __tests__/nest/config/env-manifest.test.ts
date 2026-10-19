@@ -10,14 +10,21 @@
  *   - no listed name is also set inline in docker-compose.yml, where the inline
  *     value would silently win over the rendered one;
  *   - config.ts and the Nest bootstrap both check the one required list in
- *     src/infra/required-env.ts, so the two fail-loud layers cannot drift apart.
+ *     src/infra/required-env.ts, so the two fail-loud layers cannot drift apart;
+ *   - with every poller-scoped name gone, an api replica passes the check,
+ *     boots every module and serves the bus, subway and map read routes from
+ *     fakes (ADR 0012, D4), so no import, boot or read path needs a poller key.
  *
  * Files are read with patterns rather than parsers: their shape is fixed and
  * the repo avoids the dependency.
  */
 import fs from "fs";
 import path from "path";
+import type { NestExpressApplication } from "@nestjs/platform-express";
+import request from "supertest";
 import { requiredValues } from "../../../src/infra/required-env";
+
+type BuildApiReplicaApp = typeof import("../../helpers/nest/api-replica-app")["buildApiReplicaApp"];
 
 const root = path.join(__dirname, "../../..");
 const read = (rel: string) => fs.readFileSync(path.join(root, rel), "utf8");
@@ -123,4 +130,51 @@ describe("config/env.*.keys — the names render_env.py writes", () => {
     // Act & Assert
     expect(new Set(names).size).toBe(names.length);
   });
+});
+
+describe("an api replica without the pollers' keys", () => {
+  const POLLER_NAMES = [...requiredValues({ NODE_ENV: "production" }).filter((v) => v.scope === "poller").map((v) => v.env), "API_HSSC_NEW_DEV"];
+  const saved = new Map([...POLLER_NAMES, "ROLE"].map((name) => [name, process.env[name]]));
+  let app: NestExpressApplication;
+
+  beforeAll(async () => {
+    for (const name of POLLER_NAMES) delete process.env[name];
+    process.env.ROLE = "api";
+    const { buildApiReplicaApp } = require("../../helpers/nest/api-replica-app") as { buildApiReplicaApp: BuildApiReplicaApp };
+    app = await buildApiReplicaApp();
+  });
+
+  afterAll(async () => {
+    await app?.close();
+    for (const [name, value] of saved) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  });
+
+  it("passes the boot check with every poller-scoped name missing", () => {
+    // Arrange
+    const missing: string[] = [];
+
+    // Act
+    jest.isolateModules(() => {
+      missing.push(...require("../../../src/infra/required-env").describeMissingRequired({ ...process.env, NODE_ENV: "production", SENTRY_DSN: "x" }));
+    });
+
+    // Assert
+    expect(POLLER_NAMES.every((name) => process.env[name] === undefined)).toBe(true);
+    expect(missing).toEqual([]);
+  });
+
+  it.each(["/bus/config", "/bus/realtime/data/jongro07", "/subway/stations/hyehwa/arrivals", "/map/overlays/transit"])(
+    "serves %s from the stored data",
+    async (url) => {
+      // Act
+      const res = await request(app.getHttpServer()).get(url);
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(res.body.data).toBeDefined();
+    },
+  );
 });

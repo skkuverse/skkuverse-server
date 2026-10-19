@@ -1,5 +1,5 @@
 /**
- * BusRegistryRepository over a mocked Mongo seam (src/infra/db): seeding is
+ * BusRegistryRepository over a mocked Mongo seam (src/infra/db): inserting is
  * an upsert of `$setOnInsert` on the route id, so it inserts once and never
  * overwrites; the read is bounded, projects the stored fields and parses the
  * document; and replacing the stations is guarded by the stations version the

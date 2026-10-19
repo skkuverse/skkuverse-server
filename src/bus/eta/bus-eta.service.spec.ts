@@ -2,11 +2,17 @@
  * BusEtaService over an in-memory store and a stub schedule: the runs it reads
  * from the resolved timetable (one date of a week, or the smart view's runs not
  * yet departed, none for a suspended service), and the stored documents it
- * drops when their stop count no longer fits their sequence.
+ * drops when their stop count no longer fits their sequence. Over the real
+ * BusScheduleService, a timetable another process writes reaches the runs one
+ * week-cache TTL later, so the ETA pollers need no restart (ADR 0012, D6).
  */
 import { FakeBusEtaRepository } from "../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
+import { FakeBusScheduleRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
+import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import type { BusScheduleService } from "../schedule/bus-schedule.service";
+import type { HolidaysService } from "../../holidays/holidays.service";
+import type { BusScheduleRepository } from "../schedule/bus-schedule.repository";
+import { BusScheduleService } from "../schedule/bus-schedule.service";
 import type { ScheduleDay, ScheduleEntry } from "../schedule/bus-schedule.wire";
 import { BusStopsService } from "../stops/bus-stops.service";
 import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
@@ -116,5 +122,35 @@ describe("BusEtaService.listFixedFitting", () => {
 
     // Assert
     expect(read).toEqual([{ _id: fits._id, serviceId: "campus-inja", routeType: "regular", date: "2026-10-13", time: "13:30", offsetsSec: [0, 4320] }]);
+  });
+});
+
+describe("BusEtaService runs over the stored timetable", () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("runsOn uses a timetable another process wrote once the week cache's 60 s TTL has passed", async () => {
+    // Arrange
+    jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate", "queueMicrotask"] });
+    jest.setSystemTime(new Date("2026-03-09T00:00:00.000Z"));
+    const stored = new FakeBusScheduleRepository();
+    const pattern = (time: string) => [{ serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4], entries: [{ index: 1, time, routeType: "regular", busCount: 1, notes: null, stopTimes: [time, null, null] }] }];
+    stored.patterns = pattern("08:00");
+    const clock = { now: () => new Date() };
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(stored), asReal<HolidaysService>(new FakeHolidaysService()), clock);
+    const eta = build(schedule);
+    await eta.runsOn(SEQUENCE, "2026-03-09");
+    stored.patterns = pattern("09:30");
+
+    // Act
+    jest.advanceTimersByTime(59_000);
+    const before = await eta.runsOn(SEQUENCE, "2026-03-09");
+    jest.advanceTimersByTime(2_000);
+    const after = await eta.runsOn(SEQUENCE, "2026-03-09");
+
+    // Assert
+    expect(before.map((r) => r.time)).toEqual(["08:00"]);
+    expect(after.map((r) => r.time)).toEqual(["09:30"]);
   });
 });

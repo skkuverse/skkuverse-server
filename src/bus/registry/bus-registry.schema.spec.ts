@@ -1,6 +1,6 @@
 /**
  * jongroRouteDocument, the parse of a stored registry document: the shape the
- * seed writes passes, and a copy missing any field fails, so a hand-edited
+ * bootstrap writes passes, and a copy missing any field fails, so a hand-edited
  * document that lost one is refused where it is read.
  */
 import { jongroRouteDocument } from "./bus-registry.schema";
