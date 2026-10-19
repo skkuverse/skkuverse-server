@@ -32,3 +32,16 @@ export interface RegistrySite {
   owners: Readonly<Record<string, string>>;
   webviewOrigin: string;
 }
+
+/** WHY: one registry revision, frozen, so every check and the response of one request agree. */
+export interface MiniAppRegistry {
+  readonly revision: number;
+  readonly version: number;
+  readonly indexEntries: ReadonlyArray<Readonly<MiniAppIndexEntry>>;
+  readonly detailsById: ReadonlyMap<string, Readonly<MiniAppDetailRaw>>;
+  isRegistered(id: string): boolean;
+  detailOf(id: string): Readonly<MiniAppDetailRaw> | undefined;
+  isKnownMiniAppTarget(value: unknown): boolean;
+  parseTarget(value: unknown): MiniAppTarget | null;
+  isSingleEmoji(value: string): boolean;
+}

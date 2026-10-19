@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { WEB_ORIGIN } from "../infra/origins";
-import { registry } from "./miniapps.config";
+import { committedRegistry } from "./miniapps.config";
 import { resolveLogo } from "./miniapps.mapper";
-import { isKnownMiniAppTarget, isSingleEmoji, parseMiniAppTarget } from "./miniapps.rules";
+import { isSingleEmoji, parseMiniAppTarget } from "./miniapps.rules";
 import type { MiniAppDetailRaw, MiniAppLogoRaw } from "./miniapps.schema";
 import type { MiniAppTarget } from "./miniapps.types";
 import type { MiniAppIndexEntry, MiniAppLogo } from "./miniapps.wire";
@@ -11,19 +11,19 @@ import type { MiniAppIndexEntry, MiniAppLogo } from "./miniapps.wire";
 @Injectable()
 export class MiniappsService {
   get version(): number {
-    return registry.version;
+    return committedRegistry.version;
   }
 
   get list(): ReadonlyArray<Readonly<MiniAppIndexEntry>> {
-    return registry.indexEntries;
+    return committedRegistry.indexEntries;
   }
 
   isRegistered(id: string): boolean {
-    return registry.detailsById.has(id);
+    return committedRegistry.isRegistered(id);
   }
 
   getDetail(id: string): Readonly<MiniAppDetailRaw> | undefined {
-    return registry.detailsById.get(id);
+    return committedRegistry.detailOf(id);
   }
 
   parseTarget(value: unknown): MiniAppTarget | null {
@@ -31,7 +31,7 @@ export class MiniappsService {
   }
 
   isKnownMiniAppTarget(value: unknown): boolean {
-    return isKnownMiniAppTarget(value, registry.detailsById);
+    return committedRegistry.isKnownMiniAppTarget(value);
   }
 
   resolveLogo(logo: MiniAppLogoRaw): MiniAppLogo {
