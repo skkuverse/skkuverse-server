@@ -6,8 +6,12 @@
  * range, both whole days in KST. The instants below fall on different dates in
  * UTC and KST, so a check in the host's zone fails them. A first-day time that
  * does not parse throws rather than hiding the group.
+ *
+ * A `miniapp` link action names the mini app its target parses to, a reference
+ * the data tool resolves against the registry.
  */
-import { findRepeatedId, isBannerShowing, isBusGroupVisible } from "./ui.rules";
+import { MiniappsService } from "../miniapps/miniapps.service";
+import { findRepeatedId, isBannerShowing, isBusGroupVisible, toMiniAppTargetReferences } from "./ui.rules";
 
 describe("isBannerShowing", () => {
   const window = { startAt: "2026-10-01T00:00:00+09:00", endAt: "2026-10-03T00:00:00+09:00" };
@@ -79,5 +83,20 @@ describe("isBusGroupVisible", () => {
 
     // Act & Assert
     expect(() => isBusGroupVisible(broken, new Date("2026-10-20T00:00:00Z"))).toThrow(/fromTime/);
+  });
+});
+
+describe("toMiniAppTargetReferences", () => {
+  const grammar = new MiniappsService();
+
+  it.each<[string, Record<string, string>, unknown[]]>([
+    ["a miniapp target, by its id", { actionType: "miniapp", actionValue: "inja/entry" }, [{ dataset: "miniapps", id: "inja", path: ["at"] }]],
+    ["an unregistered miniapp target, so the tool can name it", { actionType: "miniapp", actionValue: "nope" }, [{ dataset: "miniapps", id: "nope", path: ["at"] }]],
+    ["nothing for a target that does not parse", { actionType: "miniapp", actionValue: "inja:relative" }, []],
+    ["nothing for another action type, even one whose value parses as a target", { actionType: "external", actionValue: "inja" }, []],
+    ["nothing for no action", {}, []],
+  ])("lists %s", (_label, link, references) => {
+    // Act & Assert
+    expect(toMiniAppTargetReferences(link as never, ["at"], grammar)).toEqual(references);
   });
 });
