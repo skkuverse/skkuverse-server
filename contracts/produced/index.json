@@ -101,20 +101,6 @@
       "GET bus/schedule/data/:serviceId/smart"
     ]
   },
-  "bus-station.stationArrivals": {
-    "source": "src/bus/station/bus-station.wire.ts",
-    "export": "stationArrivals",
-    "routes": [
-      "GET bus/station/:stationId"
-    ]
-  },
-  "bus-station.stationArrivalsMeta": {
-    "source": "src/bus/station/bus-station.wire.ts",
-    "export": "stationArrivalsMeta",
-    "routes": [
-      "GET bus/station/:stationId"
-    ]
-  },
   "bus.jongroRoutesFile": {
     "source": "src/bus/bus.wire.ts",
     "export": "jongroRoutesFile",

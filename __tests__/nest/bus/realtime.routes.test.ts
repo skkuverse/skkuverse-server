@@ -24,12 +24,12 @@ import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { hsscBusDoc, jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc, noArrivalBus } from "../../helpers/bus/bus-cache-docs";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
-import { FakeBusRegistryRepository } from "../../helpers/fakes/bus/bus-registry.repository.fake";
+import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const busCache = new FakeBusCacheRepository();
-const registryRepository = new FakeBusRegistryRepository();
+const registryRepository = storedBusRegistryRepository();
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;

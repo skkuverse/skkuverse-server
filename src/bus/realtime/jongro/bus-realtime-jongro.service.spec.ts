@@ -1,11 +1,15 @@
 /**
  * BusRealtimeJongroService over a scripted client, an in-memory bus_cache and
- * a registry seeded from the committed snapshot: a route's tick stores its
- * arrivals and its bus positions under the route's code, places each bus on
- * the registry's stop (sequence and name), times its dwell at that stop, hands
- * the arrival list and turnaround stops to the registry sync (applied at the
- * third identical tick, never blocking the cache writes), and rejects on any
- * failure, a missing registry route included, so the poller registry counts it.
+ * a registry holding the routes stored on 2026-10-17: a route's tick stores
+ * its arrivals and its bus positions under the route's code, places each bus
+ * on the registry's stop (sequence and name), times its dwell at that stop,
+ * hands the arrival list and turnaround stops to the registry sync (applied at
+ * the third identical tick, never blocking the cache writes), and rejects on
+ * any failure, so the poller registry counts it. A route with no registry
+ * document writes no bus_cache key: its tick hands both lists to the
+ * registry's bootstrap and rejects until the tick that inserts the route
+ * resolves, so the poller registry alerts on a route that stays missing
+ * (isolate-api-from-pollers D2).
  * Each stored bus keeps its vehicle fields, sits at its section ord, and is
  * stationary when its vehicle stood still since the poller's previous
  * observation of it (never on the first after a restart), or when it idles at
@@ -23,7 +27,8 @@ jest.mock("../../../infra/logger", () => ({
 
 import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-jongro.client.fake";
-import { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
+import type { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
+import { storedBusRegistryRepository } from "../../../../__tests__/helpers/bus/bus-registry";
 import { jongroArrivalDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import { jongroSighting } from "../../../../__tests__/helpers/bus/jongro-sighting";
 import originIdling from "../../../../__tests__/nest/bus/fixtures/jongro02-origin-idling-sightings.json";
@@ -59,9 +64,8 @@ beforeEach(async () => {
   now = NOW;
   client = new FakeBusRealtimeJongroClient();
   busCache = new FakeBusCacheRepository();
-  registryRepository = new FakeBusRegistryRepository();
+  registryRepository = storedBusRegistryRepository();
   const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
-  await registry.onModuleInit();
   const cache = new BusCacheService(asReal<BusCacheRepository>(busCache));
   service = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(client), cache, registry, clock);
 });
@@ -172,6 +176,35 @@ describe("BusRealtimeJongroService.listPositions", () => {
   });
 });
 
+// WHY: every role reads bus_cache only, so combined answers as an api replica does (ADR 0012, D1).
+describe("BusRealtimeJongroService reads after its own tick", () => {
+  it("serves no arrivals once the bus_cache entry is gone, though a tick filled the process's memory", async () => {
+    // Arrange
+    client.arrivals = [jongroArrivalDoc()];
+    await service.refresh(route("07"));
+    busCache.values.delete("jongro_stations_07");
+
+    // Act
+    const arrivals = await service.listArrivals("07");
+
+    // Assert
+    expect(arrivals).toBeUndefined();
+  });
+
+  it("serves no positions once the bus_cache entry is gone, though a tick filled the process's memory", async () => {
+    // Arrange
+    client.sightings = [jongroSighting({ stationId: "100900197", sectOrd: 6 })];
+    await service.refresh(route("07"));
+    busCache.values.delete("jongro_locations_07");
+
+    // Act
+    const positions = await service.listPositions("07");
+
+    // Assert
+    expect(positions).toBeUndefined();
+  });
+});
+
 describe("BusRealtimeJongroService.refresh", () => {
   describe("error handling", () => {
     it("rejects each route's tick on an API error; state stays undefined", async () => {
@@ -253,7 +286,7 @@ describe("BusRealtimeJongroService.refresh and the registry", () => {
     // Assert
     expect(storedIdsOf("jongro07")).toEqual(ids);
     expect((await service.listPositions("07"))!.map((p) => [p.sequence, p.stationName])).toEqual([["23", "stop 100000999"]]);
-    expect(new Set(client.positionsUrls)).toEqual(new Set([route("07").positionsUrl]));
+    expect(new Set(client.positionsRouteIds)).toEqual(new Set([route("07").busRouteId]));
   });
 
   it("keeps the stored turnaround stop when the position rows name none", async () => {
@@ -281,13 +314,81 @@ describe("BusRealtimeJongroService.refresh and the registry", () => {
     expect(busCache.values.get("jongro_locations_07")).toEqual([]);
   });
 
-  it("rejects the tick and writes nothing when the route's registry document is missing", async () => {
+});
+
+// WHY: a fresh database gets its routes from TOPIS through the poller, not a snapshot (isolate-api-from-pollers D2).
+describe("BusRealtimeJongroService.refresh for a route with no registry document", () => {
+  const TURNAROUND_08 = "100000153";
+  const arrivalsOf = (topisIds: readonly string[]): JongroArrivalDoc[] =>
+    topisIds.map((stationId, index) => jongroArrivalDoc({ stationId, sequence: String(index + 1), stationName: `stop ${stationId}`, stationNumber: `0${index}` }));
+  let stored08: string[];
+
+  beforeEach(() => {
+    stored08 = registryRepository.routes.get("jongro08")!.stations.map((station) => station.topisId);
+    registryRepository.routes.delete("jongro08");
+    client.arrivals = arrivalsOf(stored08);
+    client.sightings = [jongroSighting({ stationId: stored08[3]!, sectOrd: 4, turnaroundStationId: TURNAROUND_08 })];
+  });
+
+  const refreshSettled = (): Promise<unknown> => service.refresh(route("08")).then(() => "resolved", (err: unknown) => err);
+
+  it("fetches both lists, writes no bus_cache key and rejects as bootstrapping", async () => {
+    // Act
+    const outcome = service.refresh(route("08"));
+
+    // Assert
+    await expect(outcome).rejects.toMatchObject({ name: "BusRegistryBootstrappingError", routeId: "jongro08", observationCount: 1 });
+    expect(new Set(client.positionsRouteIds)).toEqual(new Set([route("08").busRouteId]));
+    expect([...busCache.values.keys()]).toEqual([]);
+    expect(registryRepository.routes.has("jongro08")).toBe(false);
+  });
+
+  it("rejects the ticks before the insert and resolves the one that inserts", async () => {
+    // Act
+    const outcomes: unknown[] = [];
+    for (let i = 0; i < 3; i++) outcomes.push(await refreshSettled());
+
+    // Assert
+    expect(outcomes.slice(0, 2)).toMatchObject([{ name: "BusRegistryBootstrappingError" }, { name: "BusRegistryBootstrappingError" }]);
+    expect(outcomes[2]).toBe("resolved");
+    expect(registryRepository.routes.has("jongro08")).toBe(true);
+  });
+
+  it("inserts the route from TOPIS at the third tick, and the next tick writes both keys by it", async () => {
+    // Act
+    for (let i = 0; i < 3; i++) await refreshSettled();
+    const keysAfterThird = [...busCache.values.keys()];
+    await service.refresh(route("08"));
+
+    // Assert
+    expect(keysAfterThird).toEqual([]);
+    expect(registryRepository.routes.get("jongro08")).toMatchObject({ turnaroundTopisId: TURNAROUND_08 });
+    expect(registryRepository.routes.get("jongro08")!.stations.map((station) => station.topisId)).toEqual(stored08);
+    expect(busCache.values.get("jongro_stations_08")).toHaveLength(stored08.length);
+    expect((await service.listPositions("08"))!.map((p) => p.sequence)).toEqual(["4"]);
+  });
+
+  it("inserts nothing at night, when no bus names a turnaround stop", async () => {
     // Arrange
-    registryRepository.routes.delete("jongro02");
+    client.sightings = [];
+
+    // Act
+    const outcomes: unknown[] = [];
+    for (let i = 0; i < 3; i++) outcomes.push(await refreshSettled());
+
+    // Assert
+    expect(outcomes).toMatchObject([1, 2, 3].map(() => ({ name: "BusRegistryBootstrappingError", observationCount: 0 })));
+    expect(registryRepository.routes.has("jongro08")).toBe(false);
+    expect([...busCache.values.keys()]).toEqual([]);
+  });
+
+  it("still rejects when TOPIS fails", async () => {
+    // Arrange
+    client.failWith = new Error("TOPIS error code (jongro 08 list)");
 
     // Act & Assert
-    await expect(service.refresh(route("02"))).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE" });
-    expect([...busCache.values.keys()]).toEqual([]);
+    await expect(service.refresh(route("08"))).rejects.toThrow("TOPIS error code");
+    expect(registryRepository.routes.has("jongro08")).toBe(false);
   });
 });
 

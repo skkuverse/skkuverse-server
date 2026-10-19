@@ -1,8 +1,9 @@
 /**
  * HolidaysRepository's read of `public_holidays`, one document per year keyed
  * by the year: every stored year, projected and bounded (which
- * FakeHolidaysRepository follows), read at most once an hour, served stale for
- * a day when a reload fails, and read again after clearCache(), which the
+ * FakeHolidaysRepository follows), read at most once every ten minutes and
+ * waiting for that read once the ten minutes pass, served stale for a day when
+ * a reload fails, and read again after clearCache(), which the
  * holiday sync calls after writing. The writes are
  * holidays-sync.repository.spec.ts's.
  */
@@ -21,6 +22,7 @@ import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { HolidaysRepository } from "./holidays.repository";
 
 const HOUR_MS = 60 * 60_000;
+const TEN_MINUTES_MS = 10 * 60_000;
 const NOW = new Date("2026-10-16T16:30:00Z");
 const YEAR_2026 = {
   _id: 2026,
@@ -56,20 +58,34 @@ describe("HolidaysRepository.listYears", () => {
     expect(find).toHaveBeenCalledWith({}, { projection: { _id: 1, holidays: 1, fetchedAt: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS });
   });
 
-  it("reads once an hour, not once per call", async () => {
+  it("reads once every ten minutes, not once per call", async () => {
     // Arrange
     await repository.listYears();
-    jest.advanceTimersByTime(HOUR_MS - 1);
+    jest.advanceTimersByTime(TEN_MINUTES_MS - 1);
     await repository.listYears();
-    const readsWithinTheHour = find.mock.calls.length;
+    const readsWithinTenMinutes = find.mock.calls.length;
 
     // Act
     jest.advanceTimersByTime(1);
     await repository.listYears();
 
     // Assert
-    expect(readsWithinTheHour).toBe(1);
+    expect(readsWithinTenMinutes).toBe(1);
     expect(find).toHaveBeenCalledTimes(2);
+  });
+
+  it("sees a holiday the poller stored ten minutes later (ADR 0012, D6)", async () => {
+    // Arrange
+    await repository.listYears();
+    const announced = { ...YEAR_2026, holidays: [...YEAR_2026.holidays, { date: "2026-10-20", name: "임시공휴일" }] };
+    toArray.mockResolvedValue([announced]);
+
+    // Act
+    jest.advanceTimersByTime(TEN_MINUTES_MS);
+    const years = await repository.listYears();
+
+    // Assert
+    expect(years).toEqual([announced]);
   });
 
   it("serves the last good years when a reload fails within the day", async () => {

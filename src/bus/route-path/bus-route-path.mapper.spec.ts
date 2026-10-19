@@ -1,12 +1,11 @@
 /**
  * The route path mappers (add-jongro-route-lines D2, D4): TOPIS points and
  * stations into a line in `no` order as [lng, lat] and stations in `seq`
- * order with their turnaround flag; a snapshot entry into the same shape with
- * each station's sequence from its place; the stored document with its
+ * order with their turnaround flag; the stored document with its
  * version; and the read shape the map draws, by route id and code.
  */
 import type { RoutePathStation } from "./bus-route-path.document";
-import { toFetchedRoutePath, toRoutePath, toRoutePathDocument, toSeedRoutePath } from "./bus-route-path.mapper";
+import { toFetchedRoutePath, toRoutePath, toRoutePathDocument } from "./bus-route-path.mapper";
 import { toPathVersion } from "./bus-route-path.rules";
 import type { TopisRouteStation } from "./bus-route-path.schema";
 
@@ -43,20 +42,6 @@ describe("toFetchedRoutePath", () => {
       { topisId: "100900221", arsId: "01611", stationName: "stop 1", sequence: 1, lng: 126.991, lat: 37.58, isTurnaround: false },
       { topisId: "100900222", arsId: "01612", stationName: "stop 2", sequence: 2, lng: 126.992, lat: 37.58, isTurnaround: true },
     ]);
-  });
-});
-
-describe("toSeedRoutePath", () => {
-  it("numbers the snapshot's stations from one in their order and keeps the line as committed", () => {
-    // Arrange
-    const first = { topisId: "t1", arsId: "a1", stationName: "s1", lng: 127, lat: 37.5, isTurnaround: false };
-
-    // Act
-    const fetched = toSeedRoutePath({ id: "jongro07", stations: [first, { ...first, topisId: "t2" }], path: [[127, 37.5]] });
-
-    // Assert
-    expect(fetched.stations.map((s) => [s.topisId, s.sequence])).toEqual([["t1", 1], ["t2", 2]]);
-    expect(fetched.path).toEqual([[127, 37.5]]);
   });
 });
 

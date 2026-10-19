@@ -106,10 +106,10 @@ describe("BusCacheRepository.upsert", () => {
 
   it("stamps _updatedAt with the clock's time", async () => {
     // Act
-    await busCache.upsert("station", "3분후[2번째 전]");
+    await busCache.upsert("hssc", []);
 
     // Assert
-    expect(mockUpdateOne.mock.calls[0]![1]).toEqual({ $set: { data: "3분후[2번째 전]", _updatedAt: NOW } });
+    expect(mockUpdateOne.mock.calls[0]![1]).toEqual({ $set: { data: [], _updatedAt: NOW } });
   });
 });
 
@@ -136,7 +136,7 @@ describe("BusCacheRepository.findValue", () => {
     mockFindOne.mockResolvedValueOnce(null);
 
     // Act
-    const result = await busCache.findValue("station");
+    const result = await busCache.findValue("jongro_locations_07");
 
     // Assert
     expect(result).toBeNull();
@@ -196,8 +196,8 @@ describe("BusCacheRepository.findValue", () => {
   it("re-queries after the in-mem TTL expires", async () => {
     // Arrange
     mockFindOne.mockResolvedValue({
-      _id: "station",
-      data: "3분후[2번째 전]",
+      _id: "hssc",
+      data: [],
       _updatedAt: new Date(),
     });
     let now = 1_000_000;
@@ -205,17 +205,17 @@ describe("BusCacheRepository.findValue", () => {
 
     try {
       // Act & Assert
-      await busCache.findValue("station");
+      await busCache.findValue("hssc");
       expect(mockFindOne).toHaveBeenCalledTimes(1);
 
       // Within TTL → memory
-      await busCache.findValue("station");
+      await busCache.findValue("hssc");
       expect(mockFindOne).toHaveBeenCalledTimes(1);
 
       // Advance past TTL → re-query
       now += 5001;
       jest.setSystemTime(now);
-      await busCache.findValue("station");
+      await busCache.findValue("hssc");
       expect(mockFindOne).toHaveBeenCalledTimes(2);
     } finally {
       jest.useRealTimers();
@@ -308,10 +308,10 @@ describe("BusCacheRepository.findValue on a missing key", () => {
   it("throttles each key on its own", async () => {
     // Act
     await repository.findValue("hssc");
-    await repository.findValue("station");
+    await repository.findValue("jongro_stations_07");
 
     // Assert
-    expect(missingWarnings().map(([fields]) => fields.key)).toEqual(["hssc", "station"]);
+    expect(missingWarnings().map(([fields]) => fields.key)).toEqual(["hssc", "jongro_stations_07"]);
   });
 
   it("does not warn when the key holds an empty list, a poller's answer for no bus", async () => {
@@ -328,10 +328,10 @@ describe("BusCacheRepository.findValue on a missing key", () => {
 
   it("does not warn when the key holds a value", async () => {
     // Arrange
-    mockFindOne.mockResolvedValue({ _id: "station", data: "3분후[2번째 전]", _updatedAt: NOW });
+    mockFindOne.mockResolvedValue({ _id: "jongro_stations_07", data: [jongroArrivalDoc()], _updatedAt: NOW });
 
     // Act
-    await repository.findValue("station");
+    await repository.findValue("jongro_stations_07");
 
     // Assert
     expect(missingWarnings()).toEqual([]);

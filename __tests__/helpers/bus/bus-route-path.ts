@@ -1,0 +1,34 @@
+/**
+ * The Jongro route lines as production stored them on 2026-10-18
+ * (fixtures/jongro-route-paths.json): each route's line as TOPIS answered it,
+ * its stored documents, and an in-memory repository holding them. No process
+ * seeds the lines any more (isolate-api-from-pollers D3), so a test that needs
+ * a stored line stores it here.
+ */
+import { jongroRoutes } from "../../../src/bus/bus.config";
+import type { JongroRoutePathDocument } from "../../../src/bus/route-path/bus-route-path.document";
+import { toRoutePathDocument } from "../../../src/bus/route-path/bus-route-path.mapper";
+import type { FetchedRoutePath } from "../../../src/bus/route-path/bus-route-path.types";
+import capturedLines from "../../nest/bus/fixtures/jongro-route-paths.json";
+import { FakeBusRoutePathRepository } from "../fakes/bus/bus-route-path.repository.fake";
+
+const STORED_AT = new Date("2026-10-18T03:00:00Z");
+
+export function capturedRoutePathOf(routeId: string): FetchedRoutePath {
+  const entry = capturedLines.routes.find((route) => route.id === routeId);
+  if (entry === undefined) throw new Error(`jongro-route-paths.json has no ${routeId}`);
+  return {
+    path: entry.path.map(([lng, lat]) => [lng!, lat!]),
+    stations: entry.stations.map((station, index) => ({ ...station, sequence: index + 1 })),
+  };
+}
+
+export function storedJongroRoutePathDocuments(syncedAt = STORED_AT): JongroRoutePathDocument[] {
+  return jongroRoutes.map((route) => toRoutePathDocument(route, capturedRoutePathOf(route.id), syncedAt));
+}
+
+export function storedBusRoutePathRepository(syncedAt = STORED_AT): FakeBusRoutePathRepository {
+  const repository = new FakeBusRoutePathRepository();
+  for (const doc of storedJongroRoutePathDocuments(syncedAt)) repository.routePaths.set(doc._id, doc);
+  return repository;
+}

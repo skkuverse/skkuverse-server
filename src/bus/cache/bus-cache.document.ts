@@ -72,7 +72,6 @@ export interface JongroBusPositionDoc {
 
 export interface BusCacheValueByKey {
   hssc: HsscBusDoc[];
-  station: string;
   [key: `jongro_stations_${string}`]: JongroArrivalDoc[];
   [key: `jongro_locations_${string}`]: JongroBusPositionDoc[];
 }

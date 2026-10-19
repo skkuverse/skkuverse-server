@@ -1,12 +1,14 @@
 /**
  * BusRegistryService over an in-memory registry repository and a fixed clock
- * (improve-jongro-realtime D6–D9): every boot seeds a missing route from the
- * committed snapshot and never overwrites a stored one; a seeded route
- * derives the stations, mapping and URLs production served from
- * jongro-routes.json; a missing document fails with a 503 and an error line;
- * reads are cached for 30 s; and the poller's observations follow TOPIS's
- * stop list: applied at the third identical tick, held over 30%, an empty
- * list ignored, every applied change logged with its diff.
+ * (improve-jongro-realtime D6–D9, isolate-api-from-pollers D2): a stored
+ * route derives the stations, mapping and URLs production served from
+ * jongro-routes.json; a missing document fails a read with a 503 and an error
+ * line, while the poller's read answers null; reads are cached for 30 s; the
+ * poller's observations follow TOPIS's stop list: applied at the third
+ * identical tick, held over 30%, an empty list ignored, every applied change
+ * logged with its diff; and a route with no document is inserted from the
+ * third identical observation with an agreed turnaround stop, never over a
+ * document another writer stored first.
  */
 jest.mock("../../infra/logger", () => ({
   info: jest.fn(),
@@ -20,9 +22,11 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { logText } from "../../../__tests__/helpers/log-text";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { stationsSeed } from "./bus-registry.config";
+import { jongroRoutes } from "../bus.config";
+import { capturedStationsOf, storedJongroRouteDocuments } from "../../../__tests__/helpers/bus/bus-registry";
 import type { BusRegistryRepository } from "./bus-registry.repository";
 import { toStationsVersion } from "./bus-registry.rules";
+import { BusRegistryBootstrappingError } from "./bus-registry.error";
 import { BusRegistryService } from "./bus-registry.service";
 import type { ObservedStation, RegistryRoute } from "./bus-registry.types";
 
@@ -34,9 +38,14 @@ const callsOf = (level: "info" | "warn" | "error", event: string) => mockedLogge
 let repository: FakeBusRegistryRepository;
 let service: BusRegistryService;
 
-const seedOf = (routeId: string) => stationsSeed.find((seed) => seed.id === routeId)!;
+const storeRoutes = () => {
+  for (const doc of storedJongroRouteDocuments(NOW)) repository.routes.set(doc._id, doc);
+};
 const rowsOf = (stations: readonly ObservedStation[]) =>
   stations.map((s, index) => ({ stationId: s.topisId, sequence: String(index + 1), stationName: s.stationName, stationNumber: s.arsId }));
+const ignoreBootstrapping = (err: unknown): void => {
+  if (!(err instanceof BusRegistryBootstrappingError)) throw err;
+};
 const storedStationsOf = (routeId: string) => repository.routes.get(routeId)!.stations.map(({ topisId, arsId, stationName }) => ({ topisId, arsId, stationName }));
 
 async function observeTimes(routeId: string, stations: readonly ObservedStation[], times: number, turnaroundIds: string[] = []): Promise<void> {
@@ -53,54 +62,10 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe("BusRegistryService.onModuleInit", () => {
-  it("seeds every configured route from the snapshot and logs one seed line each", async () => {
-    // Act
-    await service.onModuleInit();
-
-    // Assert
-    const seed07 = seedOf("jongro07");
-    expect([...repository.routes.keys()]).toEqual(["jongro02", "jongro07", "jongro08"]);
-    expect(repository.routes.get("jongro07")).toEqual({
-      _id: "jongro07",
-      stations: seed07.stations.map((s, index) => ({ ...s, sequence: index + 1 })),
-      turnaroundTopisId: "100900028",
-      stationsVersion: toStationsVersion(seed07.stations, "100900028"),
-      syncedAt: NOW,
-    });
-    expect(callsOf("warn", "bus.jongro.registry_seeded").map(([fields]) => fields.routeId)).toEqual(["jongro02", "jongro07", "jongro08"]);
-  });
-
-  it("keeps a stored document that differs from the snapshot, and logs no seed", async () => {
-    // Arrange
-    await service.onModuleInit();
-    repository.routes.get("jongro07")!.stationsVersion = "operator-edit";
-    jest.clearAllMocks();
-
-    // Act
-    await new BusRegistryService(asReal<BusRegistryRepository>(repository), clock).onModuleInit();
-
-    // Assert
-    expect(repository.routes.get("jongro07")!.stationsVersion).toBe("operator-edit");
-    expect(callsOf("warn", "bus.jongro.registry_seeded")).toEqual([]);
-  });
-
-  it("logs a failed seed at error and lets the boot go on", async () => {
-    // Arrange
-    repository.failWith = new Error("atlas down");
-
-    // Act
-    await service.onModuleInit();
-
-    // Assert
-    expect(callsOf("error", "bus.jongro.registry_seed_failed")).toHaveLength(3);
-  });
-});
-
-// The pins of jongro-routes.json before its stations moved here, read now from the seeded registry.
-describe("BusRegistryService.routeOf over the seeded snapshot", () => {
-  beforeEach(async () => {
-    await service.onModuleInit();
+// The pins of jongro-routes.json before its stations moved here, read now from the stored registry.
+describe("BusRegistryService.routeOf over the routes stored on 2026-10-17", () => {
+  beforeEach(() => {
+    storeRoutes();
   });
 
   it("builds 종로08 from TOPIS route 100900005: 31 stops, 회차 at 재향군인회관", async () => {
@@ -187,7 +152,7 @@ describe("BusRegistryService.routeOf", () => {
   it("serves a read for 30 s, then reads the store again", async () => {
     // Arrange
     jest.useFakeTimers({ now: NOW });
-    await service.onModuleInit();
+    storeRoutes();
     await service.routeOf("jongro07");
     repository.routes.get("jongro07")!.stationsVersion = "changed";
 
@@ -204,7 +169,7 @@ describe("BusRegistryService.routeOf", () => {
   it("warns once about a transfer override whose ARS number no stored station has", async () => {
     // Arrange
     jest.useFakeTimers({ now: NOW });
-    await service.onModuleInit();
+    storeRoutes();
     const doc = repository.routes.get("jongro02")!;
     doc.stations = doc.stations.filter((s) => s.arsId !== "01589");
 
@@ -221,11 +186,11 @@ describe("BusRegistryService.routeOf", () => {
 });
 
 describe("BusRegistryService.observe", () => {
-  const seed08 = () => seedOf("jongro08").stations;
-  const withAddedStop = () => [...seed08().slice(0, 10), { topisId: "NEW", arsId: "09999", stationName: "새 정류장" }, ...seed08().slice(10)];
+  const captured08 = () => capturedStationsOf("jongro08");
+  const withAddedStop = () => [...captured08().slice(0, 10), { topisId: "NEW", arsId: "09999", stationName: "새 정류장" }, ...captured08().slice(10)];
 
-  beforeEach(async () => {
-    await service.onModuleInit();
+  beforeEach(() => {
+    storeRoutes();
   });
 
   it("applies a drifted list at the third identical tick, logs its diff, and serves it at once", async () => {
@@ -235,7 +200,7 @@ describe("BusRegistryService.observe", () => {
     await observeTimes("jongro08", withAddedStop(), 1);
 
     // Assert
-    expect(beforeThird).toEqual(seed08());
+    expect(beforeThird).toEqual(captured08());
     expect(storedStationsOf("jongro08")).toEqual(withAddedStop());
     expect((await service.routeOf("jongro08")).topisIds).toHaveLength(32);
     const synced = callsOf("warn", "bus.jongro.registry_synced");
@@ -252,11 +217,11 @@ describe("BusRegistryService.observe", () => {
   it("does not apply a flapping answer", async () => {
     // Act
     await observeTimes("jongro08", withAddedStop(), 2);
-    await observeTimes("jongro08", seed08(), 1);
+    await observeTimes("jongro08", captured08(), 1);
     await observeTimes("jongro08", withAddedStop(), 2);
 
     // Assert
-    expect(storedStationsOf("jongro08")).toEqual(seed08());
+    expect(storedStationsOf("jongro08")).toEqual(captured08());
   });
 
   it("ignores an overnight no-result answer, which neither changes the stations nor the count", async () => {
@@ -267,19 +232,19 @@ describe("BusRegistryService.observe", () => {
     await observeTimes("jongro08", withAddedStop(), 1);
 
     // Assert
-    expect(afterEmpty).toEqual(seed08());
+    expect(afterEmpty).toEqual(captured08());
     expect(storedStationsOf("jongro08")).toEqual(withAddedStop());
   });
 
   it("holds a change to more than 30% of the stops and logs it at error once over five ticks", async () => {
     // Arrange
-    const wrongRoute = seed08().map((s, index) => (index < 10 ? { ...s, topisId: `OTHER${index}` } : s));
+    const wrongRoute = captured08().map((s, index) => (index < 10 ? { ...s, topisId: `OTHER${index}` } : s));
 
     // Act
     await observeTimes("jongro08", wrongRoute, 5);
 
     // Assert
-    expect(storedStationsOf("jongro08")).toEqual(seed08());
+    expect(storedStationsOf("jongro08")).toEqual(captured08());
     const held = callsOf("error", "bus.jongro.registry_change_held");
     expect(held).toHaveLength(1);
     expect(held[0]![0]).toMatchObject({ code: "08", observed: wrongRoute });
@@ -288,7 +253,7 @@ describe("BusRegistryService.observe", () => {
 
   it("applies a rename at the third tick and names the stop with its old and new names", async () => {
     // Arrange
-    const renamed = seed08().map((s, index) => (index === 4 ? { ...s, stationName: "새 이름" } : s));
+    const renamed = captured08().map((s, index) => (index === 4 ? { ...s, stationName: "새 이름" } : s));
 
     // Act
     await observeTimes("jongro08", renamed, 3);
@@ -296,16 +261,16 @@ describe("BusRegistryService.observe", () => {
     // Assert
     expect(storedStationsOf("jongro08")[4]!.stationName).toBe("새 이름");
     expect(callsOf("warn", "bus.jongro.registry_synced")[0]![0].renamed).toEqual([
-      { ord: 5, topisId: seed08()[4]!.topisId, fromName: seed08()[4]!.stationName, toName: "새 이름" },
+      { ord: 5, topisId: captured08()[4]!.topisId, fromName: captured08()[4]!.stationName, toName: "새 이름" },
     ]);
   });
 
   it("follows the position rows' turnaround stop when they agree, at the third tick", async () => {
     // Arrange
-    const otherStop = seed08()[20]!.topisId;
+    const otherStop = captured08()[20]!.topisId;
 
     // Act
-    await observeTimes("jongro08", seed08(), 3, [otherStop, otherStop]);
+    await observeTimes("jongro08", captured08(), 3, [otherStop, otherStop]);
 
     // Assert
     expect(repository.routes.get("jongro08")!.turnaroundTopisId).toBe(otherStop);
@@ -328,7 +293,168 @@ describe("BusRegistryService.observe", () => {
     for (let i = 0; i < 3; i++) await service.observe(route, rowsOf(withAddedStop()), []);
 
     // Assert
-    expect(storedStationsOf("jongro08")).toEqual(seed08());
+    expect(storedStationsOf("jongro08")).toEqual(captured08());
     expect(callsOf("warn", "bus.jongro.registry_sync_conflict")).toHaveLength(1);
+  });
+});
+
+describe("BusRegistryService.findRouteOf", () => {
+  it("answers a stored route as routeOf does", async () => {
+    // Arrange
+    storeRoutes();
+
+    // Act
+    const route = await service.findRouteOf("jongro07");
+
+    // Assert
+    expect(route).toEqual(await service.routeOf("jongro07"));
+  });
+
+  it("answers null for a missing route and logs no error, since the poller bootstraps it", async () => {
+    // Act
+    const route = await service.findRouteOf("jongro07");
+
+    // Assert
+    expect(route).toBeNull();
+    expect(mockedLogger.error).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the store cannot be read", async () => {
+    // Arrange
+    repository.failWith = new Error("atlas down");
+
+    // Act & Assert
+    await expect(service.findRouteOf("jongro07")).rejects.toThrow("atlas down");
+  });
+});
+
+// WHY: a fresh database gets its routes from TOPIS through the poller, not a snapshot (isolate-api-from-pollers D2).
+describe("BusRegistryService.bootstrap", () => {
+  const route07 = jongroRoutes.find((route) => route.id === "jongro07")!;
+  const captured07 = () => capturedStationsOf("jongro07");
+  const TURNAROUND_07 = "100900028";
+
+  async function bootstrapTimes(times: number, stations: readonly ObservedStation[], turnaroundIds: Array<string | undefined>): Promise<void> {
+    for (let i = 0; i < times; i++) await service.bootstrap(route07, rowsOf(stations), turnaroundIds).catch(ignoreBootstrapping);
+  }
+  const outcomeOf = (stations: readonly ObservedStation[], turnaroundIds: Array<string | undefined>): Promise<unknown> =>
+    service.bootstrap(route07, rowsOf(stations), turnaroundIds).then(() => "resolved", (err: unknown) => err);
+
+  it("rejects each observation before the insert with the count so far, and resolves the one that inserts", async () => {
+    // Act
+    const outcomes: unknown[] = [];
+    for (let i = 0; i < 3; i++) outcomes.push(await outcomeOf(captured07(), [TURNAROUND_07]));
+
+    // Assert
+    expect(outcomes.slice(0, 2)).toEqual([expect.any(BusRegistryBootstrappingError), expect.any(BusRegistryBootstrappingError)]);
+    expect(outcomes.slice(0, 2)).toMatchObject([{ routeId: "jongro07", observationCount: 1 }, { routeId: "jongro07", observationCount: 2 }]);
+    expect(outcomes[2]).toBe("resolved");
+  });
+
+  it("rejects an observation that counts nothing with the count so far", async () => {
+    // Arrange
+    await bootstrapTimes(2, captured07(), [TURNAROUND_07]);
+
+    // Act
+    const outcome = await outcomeOf(captured07(), []);
+
+    // Assert
+    expect(outcome).toBeInstanceOf(BusRegistryBootstrappingError);
+    expect(outcome).toMatchObject({ observationCount: 2 });
+  });
+
+  it("resolves the insert that finds a document another writer stored first", async () => {
+    // Arrange
+    const operatorDoc = { ...storedJongroRouteDocuments(NOW).find((doc) => doc._id === "jongro07")!, stationsVersion: "operator-edit" };
+    await bootstrapTimes(2, captured07(), [TURNAROUND_07]);
+    repository.routes.set("jongro07", structuredClone(operatorDoc));
+
+    // Act
+    const outcome = await outcomeOf(captured07(), [TURNAROUND_07]);
+
+    // Assert
+    expect(outcome).toBe("resolved");
+    expect(repository.routes.get("jongro07")).toEqual(operatorDoc);
+  });
+
+  it("inserts the route at the third identical observation, logs it, and serves it at once", async () => {
+    // Act
+    await bootstrapTimes(2, captured07(), [TURNAROUND_07, TURNAROUND_07]);
+    const beforeThird = repository.routes.has("jongro07");
+    await bootstrapTimes(1, captured07(), [TURNAROUND_07, TURNAROUND_07]);
+
+    // Assert
+    expect(beforeThird).toBe(false);
+    expect(repository.routes.get("jongro07")).toEqual({
+      _id: "jongro07",
+      stations: captured07().map((station, index) => ({ ...station, sequence: index + 1 })),
+      turnaroundTopisId: TURNAROUND_07,
+      stationsVersion: toStationsVersion(captured07(), TURNAROUND_07),
+      syncedAt: NOW,
+    });
+    expect((await service.routeOf("jongro07")).stations.filter((s) => s.isRotationStation).map((s) => s.stationName)).toEqual(["방송통신대앞"]);
+    const bootstrapped = callsOf("warn", "bus.jongro.registry_bootstrapped");
+    expect(bootstrapped).toHaveLength(1);
+    expect(bootstrapped[0]![0]).toMatchObject({ code: "07", stationsVersion: toStationsVersion(captured07(), TURNAROUND_07), turnaroundTopisId: TURNAROUND_07 });
+  });
+
+  it("serves the inserted route at once though a read missed it just before", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    await bootstrapTimes(2, captured07(), [TURNAROUND_07]);
+    await expect(service.routeOf("jongro07")).rejects.toMatchObject({ httpStatus: 503 });
+
+    // Act
+    await bootstrapTimes(1, captured07(), [TURNAROUND_07]);
+
+    // Assert
+    expect((await service.routeOf("jongro07")).topisIds).toHaveLength(22);
+  });
+
+  it("counts nothing at night, when no position row names a turnaround stop", async () => {
+    // Act
+    await bootstrapTimes(3, captured07(), []);
+    await bootstrapTimes(2, captured07(), [TURNAROUND_07]);
+
+    // Assert
+    expect(repository.routes.has("jongro07")).toBe(false);
+    expect(callsOf("warn", "bus.jongro.registry_bootstrapped")).toEqual([]);
+  });
+
+  it("counts nothing for an empty list or position rows that disagree", async () => {
+    // Act
+    await bootstrapTimes(2, [], [TURNAROUND_07]);
+    await bootstrapTimes(2, captured07(), [TURNAROUND_07, "100900197"]);
+
+    // Assert
+    expect(repository.routes.has("jongro07")).toBe(false);
+  });
+
+  it("starts the count over when the list changes", async () => {
+    // Act
+    await bootstrapTimes(2, captured07(), [TURNAROUND_07]);
+    await bootstrapTimes(1, captured07().slice(1), [TURNAROUND_07]);
+    await bootstrapTimes(2, captured07(), [TURNAROUND_07]);
+
+    // Assert
+    expect(repository.routes.has("jongro07")).toBe(false);
+  });
+
+  it("keeps a document another writer stored between the third observation and the insert", async () => {
+    // Arrange
+    const operatorDoc = { ...storedJongroRouteDocuments(NOW).find((doc) => doc._id === "jongro07")!, stationsVersion: "operator-edit" };
+    const insert = repository.insertRoute.bind(repository);
+    repository.insertRoute = async (doc) => {
+      repository.routes.set("jongro07", structuredClone(operatorDoc));
+      return insert(doc);
+    };
+
+    // Act
+    await bootstrapTimes(3, captured07().slice(0, 13), [TURNAROUND_07]);
+
+    // Assert
+    expect(repository.routes.get("jongro07")).toEqual(operatorDoc);
+    expect(callsOf("warn", "bus.jongro.registry_bootstrapped")).toEqual([]);
+    expect((await service.routeOf("jongro07")).stationsVersion).toBe("operator-edit");
   });
 });

@@ -1,6 +1,7 @@
 import type { Collection, Document } from "mongodb";
 import { getClient } from "./db";
 import logger from "./logger";
+import { envRole, isPollingRole } from "./required-env";
 
 export function mongoCollection<T extends Document>(dbName: string, name: string): Collection<T> {
   return getClient().db(dbName).collection<T>(name);
@@ -54,5 +55,7 @@ export function ensureIndexesAtBoot(
   create: () => Promise<unknown>,
   options: EnsureIndexesOptions = {},
 ): Promise<void> {
+  // WHY: an api replica writes nothing at boot; the poller, in every deploy, ensures each index (ADR 0012, D3).
+  if (!isPollingRole(envRole(process.env))) return Promise.resolve();
   return Promise.race([runIndexSetup(scope, create, options), nextTurn()]);
 }

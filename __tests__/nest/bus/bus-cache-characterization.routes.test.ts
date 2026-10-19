@@ -2,7 +2,7 @@
  * Characterization of the `bus_cache` read path over a real `mongod`
  * (harden-test-suite task 6.3, design D6), in the production topology: a poller
  * process writes what it fetched to `bus_cache`, and an api replica, whose own
- * pollers never run, serves the realtime and station routes from it.
+ * pollers never run, serves the realtime routes from it.
  *
  * Each test boots two apps on one mongod, both with ROLE=api so no poller
  * starts on its own: a "poller" app, booted under a spy on
@@ -15,6 +15,9 @@
  * 6.6). The 5-second test also freezes `Date`, which `createCachedLoader`
  * (src/infra/cached-loader.ts) reads for its TTL.
  *
+ * A tick runs under ROLE=poller: the two apps share one process.env, and the
+ * pollers' upstream keys are readable only where pollers run (ADR 0012, D4).
+ *
  * A regression pin: a failure is a regression to report, and an expected value
  * changes only with the behavior it pins (`.claude/rules/tests.md`).
  */
@@ -22,6 +25,7 @@ import http from "node:http";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Collection } from "mongodb";
 import request from "supertest";
+import type { JongroRouteDocument } from "../../../src/bus/registry/bus-registry.document";
 import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
@@ -32,6 +36,7 @@ type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type Axios = import("axios").AxiosStatic;
 type Registry = typeof import("../../../src/scheduling/poller-registry.service")["PollerRegistryService"];
+type StoredRoutes = typeof import("../../helpers/bus/bus-registry")["storedJongroRouteDocuments"];
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const CLOCK = { now: (): Date => new Date(NOW) };
@@ -52,7 +57,6 @@ const HSSC_ITEMS = [
   { line_no: "2", inout: "ENTERED", stop_no: "9", seq: "1", stop_name: "혜화역 1번출구 셔틀버스 정류소", get_date: "2026-10-20 오전 9:58:00" },
 ];
 const TOPIS_OK = { headerCd: "0", headerMsg: "정상적으로 처리되었습니다.", itemCount: 0 };
-const STATION_BODY = { msgHeader: TOPIS_OK, msgBody: { itemList: [{ arrmsg1: "3분후[2번째 전]", stId: "100000018" }] } };
 const JONGRO07_LOC_BODY = {
   msgHeader: TOPIS_OK,
   msgBody: {
@@ -94,20 +98,18 @@ const JONGRO07_LIST_BODY = {
 };
 
 /** What each upstream answers, by host and path; set per test. */
-const upstream = { hssc: HSSC_ITEMS as unknown, station: STATION_BODY as unknown, requests: [] as string[] };
+const upstream = { hssc: HSSC_ITEMS as unknown, requests: [] as string[] };
 
 function upstreamApi(req: http.IncomingMessage, res: http.ServerResponse): void {
   const url = req.url ?? "";
   upstream.requests.push(url);
   const body = url.startsWith("/test-hssc/")
     ? upstream.hssc
-    : url.startsWith("/test-station/")
-      ? upstream.station
-      : url.includes("/buspos/") && url.includes("busRouteId=100900004")
-        ? JONGRO07_LOC_BODY
-        : url.includes("/arrive/") && url.includes("busRouteId=100900004")
-          ? JONGRO07_LIST_BODY
-          : { msgHeader: { headerCd: "4", headerMsg: "결과가 없습니다." }, msgBody: { itemList: null } };
+    : url.includes("/buspos/") && url.includes("busRouteId=100900004")
+      ? JONGRO07_LOC_BODY
+      : url.includes("/arrive/") && url.includes("busRouteId=100900004")
+        ? JONGRO07_LIST_BODY
+        : { msgHeader: { headerCd: "4", headerMsg: "결과가 없습니다." }, msgBody: { itemList: null } };
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify(body));
 }
@@ -157,9 +159,11 @@ afterAll(async () => {
 
 beforeEach(async () => {
   upstream.hssc = HSSC_ITEMS;
-  upstream.station = STATION_BODY;
   upstream.requests = [];
   await clearCollections(db.getClient().db(config.mongo.dbName));
+  // WHY: no boot writes the registry any more (isolate-api-from-pollers D2), so the stored routes are a fixture.
+  const storedJongroRouteDocuments = (require("../../helpers/bus/bus-registry") as { storedJongroRouteDocuments: StoredRoutes }).storedJongroRouteDocuments;
+  await db.getClient().db(config.mongo.dbName).collection<JongroRouteDocument>(config.mongo.collections.jongroRoutes).insertMany(storedJongroRouteDocuments(CLOCK.now()));
   const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller");
   try {
     pollerApp = await bootApp();
@@ -187,7 +191,14 @@ function bootApp(): Promise<NestExpressApplication> {
 async function tick(name: string): Promise<void> {
   const poller = pollers.get(name);
   if (!poller) throw new Error(`no poller registered as ${name}: ${[...pollers.keys()].join(", ")}`);
-  await poller();
+  const role = process.env.ROLE;
+  process.env.ROLE = "poller";
+  try {
+    await poller();
+  } finally {
+    if (role === undefined) delete process.env.ROLE;
+    else process.env.ROLE = role;
+  }
 }
 
 function get(path: string): request.Test {
@@ -205,7 +216,6 @@ describe("bus_cache between a poller process and an api replica", () => {
       "jongro-path-02",
       "jongro-path-07",
       "jongro-path-08",
-      "station",
     ]);
   });
 
@@ -267,48 +277,6 @@ describe("bus_cache between a poller process and an api replica", () => {
     // Assert
     expect(await busCache.findOne({ _id: "hssc" as never })).toEqual({ _id: "hssc", _updatedAt: NOW, data: [] });
     expect(res.body.data.buses).toEqual([]);
-  });
-
-  it("stores TOPIS station and HSSC ticks under `station` and `hssc` and composes /bus/station/01592 from both", async () => {
-    // Act
-    await tick("station");
-    await tick("hssc");
-    const res = await get("/bus/station/01592");
-
-    // Assert
-    expect(await busCache.findOne({ _id: "station" as never })).toEqual({
-      _id: "station",
-      _updatedAt: NOW,
-      data: "3분후[2번째 전]",
-    });
-    expect(res.status).toBe(200);
-    expect(res.body.meta).toEqual({ lang: "ko", totalCount: 2 });
-    expect(res.body.data).toEqual([
-      {
-        busNm: "종로07",
-        busSupportTime: true,
-        msg1ShowMessage: true,
-        msg1Message: "3분후[2번째 전]",
-        msg1RemainStation: null,
-        msg1RemainSeconds: null,
-        msg2ShowMessage: false,
-        msg2Message: null,
-        msg2RemainStation: null,
-        msg2RemainSeconds: null,
-      },
-      {
-        busNm: "인사캠셔틀",
-        busSupportTime: false,
-        msg1ShowMessage: true,
-        msg1Message: "4 정거장 전",
-        msg1RemainStation: null,
-        msg1RemainSeconds: null,
-        msg2ShowMessage: true,
-        msg2Message: null,
-        msg2RemainStation: null,
-        msg2RemainSeconds: null,
-      },
-    ]);
   });
 
   it("stores a Jongro tick under jongro_locations_07 and jongro_stations_07 and serves both on /bus/realtime/data/jongro07", async () => {
@@ -426,24 +394,19 @@ describe("bus_cache between a poller process and an api replica", () => {
         { stationIndex: 0, eta: "3분후[2번째 전]", arrivals: [running5537(3, 1, "3분후[2번째 전]"), WAITING_NO_VEHICLE] },
         { stationIndex: 1, eta: "5분후[3번째 전]", arrivals: [running5537(5, 2, "5분후[3번째 전]"), WAITING_NO_VEHICLE] },
       ],
-      // WHY: the registry's stations version (improve-jongro-realtime 5.4), seeded from the committed snapshot.
+      // WHY: the registry's stations version (improve-jongro-realtime 5.4), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
       stationsVersion: "0346768f2b776f45",
     });
   });
 
-  it("serves the api replica's own empty poller memory when bus_cache holds nothing", async () => {
+  it("serves no bus when bus_cache holds nothing", async () => {
     // Act
-    const [hssc, jongro, station] = await Promise.all([
-      get("/bus/realtime/data/hssc"),
-      get("/bus/realtime/data/jongro07"),
-      get("/bus/station/01592"),
-    ]);
+    const [hssc, jongro] = await Promise.all([get("/bus/realtime/data/hssc"), get("/bus/realtime/data/jongro07")]);
 
     // Assert
     expect(hssc.body.data).toEqual({ groupId: "hssc", buses: [], stationEtas: [] });
-    // WHY: stationsVersion is the registry's (improve-jongro-realtime 5.4), seeded from the committed snapshot.
+    // WHY: stationsVersion is the registry's (improve-jongro-realtime 5.4), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
     expect(jongro.body.data).toEqual({ groupId: "jongro07", buses: [], stationEtas: [], stationsVersion: "0346768f2b776f45" });
-    expect(station.body.data.map((s: { msg1Message: string }) => s.msg1Message)).toEqual(["정보 없음", "도착 정보 없음"]);
     expect(upstream.requests).toEqual([]);
   });
 
@@ -468,15 +431,13 @@ describe("bus_cache between a poller process and an api replica", () => {
 // WHY: overnight TOPIS answers "4" (no result) and HSSC an empty array; the pollers write that as an empty
 // value, so a key goes missing only when its poller stops writing, which is what bus.cache.missing reports.
 describe("bus_cache when the upstreams list no bus", () => {
-  const TOPIS_NO_RESULT = { msgHeader: { headerCd: "4", headerMsg: "결과가 없습니다." }, msgBody: { itemList: null } };
-  const PATHS = ["/bus/realtime/data/hssc", "/bus/realtime/data/jongro02", "/bus/realtime/data/jongro08", "/bus/station/01592"];
+  const PATHS = ["/bus/realtime/data/hssc", "/bus/realtime/data/jongro02", "/bus/realtime/data/jongro08"];
   const tickAll = async () => {
-    for (const name of ["hssc", "station", "jongro-02", "jongro-08"]) await tick(name);
+    for (const name of ["hssc", "jongro-02", "jongro-08"]) await tick(name);
   };
 
   beforeEach(() => {
     upstream.hssc = [];
-    upstream.station = TOPIS_NO_RESULT;
   });
 
   it("writes an empty value under every key", async () => {
@@ -490,7 +451,6 @@ describe("bus_cache when the upstreams list no bus", () => {
       { _id: "jongro_locations_08", _updatedAt: NOW, data: [] },
       { _id: "jongro_stations_02", _updatedAt: NOW, data: [] },
       { _id: "jongro_stations_08", _updatedAt: NOW, data: [] },
-      { _id: "station", _updatedAt: NOW, data: "정보 없음" },
     ]);
   });
 
@@ -525,32 +485,5 @@ describe("bus_cache when the upstreams list no bus", () => {
     } finally {
       warn.mockRestore();
     }
-  });
-});
-
-// WHY: both boots above seed the registry (every role does, improve-jongro-realtime D7) against a real mongod, so
-// this pins that `$setOnInsert` inserts each route once from the snapshot and the second boot writes nothing.
-describe("jongro_routes seeded by both boots", () => {
-  it("holds one document per route, equal to the committed snapshot", async () => {
-    // Arrange
-    const seed = require("../../../src/bus/registry/jongro-stations.seed.json") as Array<{
-      id: string;
-      turnaroundTopisId: string;
-      stations: Array<{ topisId: string; arsId: string; stationName: string }>;
-    }>;
-
-    // Act
-    const docs = await db.getClient().db(config.mongo.dbName).collection("jongro_routes").find({}).sort({ _id: 1 }).toArray();
-
-    // Assert
-    expect(docs.map((doc) => ({ id: doc._id, turnaroundTopisId: doc.turnaroundTopisId, stations: doc.stations, syncedAt: doc.syncedAt }))).toEqual(
-      seed.map((route) => ({
-        id: route.id,
-        turnaroundTopisId: route.turnaroundTopisId,
-        stations: route.stations.map((station, index) => ({ ...station, sequence: index + 1 })),
-        syncedAt: CLOCK.now(),
-      })),
-    );
-    expect(docs.find((doc) => String(doc._id) === "jongro07")!.stationsVersion).toBe("0346768f2b776f45");
   });
 });

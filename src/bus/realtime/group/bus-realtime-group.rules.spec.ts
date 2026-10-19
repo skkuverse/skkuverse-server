@@ -15,10 +15,7 @@
  * re-based travel times, each at least 20 s after the previous knot.
  */
 
-import { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
-import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
-import type { BusRegistryRepository } from "../../registry/bus-registry.repository";
-import { BusRegistryService } from "../../registry/bus-registry.service";
+import { storedBusRegistryService } from "../../../../__tests__/helpers/bus/bus-registry";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { jongroArrivalBus, jongroPositionDoc, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import {
@@ -37,13 +34,12 @@ import {
 } from "./bus-realtime-group.rules";
 
 describe("toStationEtas", () => {
-  // WHY: the routes as the registry seeds them from the committed snapshot, which these stop ids come from.
+  // WHY: the routes as production stored them on 2026-10-17, which these stop ids come from.
   let r02: RegistryRoute;
   let r07: RegistryRoute;
 
   beforeAll(async () => {
-    const registry = new BusRegistryService(asReal<BusRegistryRepository>(new FakeBusRegistryRepository()), { now: () => new Date("2026-10-17T12:00:00Z") });
-    await registry.onModuleInit();
+    const registry = storedBusRegistryService();
     [r02, r07] = [await registry.routeOf("jongro02"), await registry.routeOf("jongro07")];
   });
 

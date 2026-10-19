@@ -1,8 +1,9 @@
 /**
  * MapTransitService over a scripted bus route path read (add-jongro-route-lines
- * D5, D6): the stored lines become one path overlay each, and a read the bus
- * side drew from its snapshot is marked degraded, so the controller lets a
- * shared cache keep it a minute only.
+ * D5, D6, isolate-api-from-pollers D3): the stored lines become one path
+ * overlay each, and a read that left out a route with no stored line is
+ * marked degraded, so the controller lets a shared cache keep it a minute
+ * only.
  */
 import { FakeBusRoutePathService } from "../../../__tests__/helpers/fakes/bus/bus-route-path.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
@@ -23,7 +24,7 @@ beforeEach(() => {
 describe("MapTransitService.getTransitOverlays", () => {
   it("draws each stored line as a path overlay, not degraded", async () => {
     // Arrange
-    routePaths.routePaths = { routePaths: [line("jongro02", "02"), line("jongro07", "07")], isSeedFallback: false };
+    routePaths.routePaths = { routePaths: [line("jongro02", "02"), line("jongro07", "07")], hasMissingRoutes: false };
 
     // Act
     const { overlays, degraded } = await service.getTransitOverlays();
@@ -36,9 +37,9 @@ describe("MapTransitService.getTransitOverlays", () => {
     ]);
   });
 
-  it("marks an answer drawn from the snapshot degraded and still draws it", async () => {
+  it("marks an answer with a missing route degraded and still draws the stored ones", async () => {
     // Arrange
-    routePaths.routePaths = { routePaths: [line("jongro07", "07")], isSeedFallback: true };
+    routePaths.routePaths = { routePaths: [line("jongro07", "07")], hasMissingRoutes: true };
 
     // Act
     const { overlays, degraded } = await service.getTransitOverlays();

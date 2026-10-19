@@ -11,8 +11,6 @@ export interface JongroRoute {
   readonly iconType: string;
   readonly refreshInterval: number;
   readonly seatCount: number;
-  readonly arrivalsUrl: string;
-  readonly positionsUrl: string;
   readonly transferLinesByArsId: Readonly<Record<string, ReadonlyArray<TransferLine>>>;
 }
 

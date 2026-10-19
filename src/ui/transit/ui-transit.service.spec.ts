@@ -20,7 +20,7 @@ jest.mock("./ui-transit.config", () => ({
 
 import { FakeBusConfigService } from "../../../__tests__/helpers/fakes/bus/bus-config.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import { seededBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
+import { storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { BusConfigService } from "../../bus/config/bus-config.service";
 import type { BusGroupVisibility } from "../../bus/config/bus-config.types";
 import type { BusGroup } from "../../bus/config/bus-config.wire";
@@ -36,7 +36,7 @@ const realGroupsByLang = new Map<string, BusGroup[]>();
 let busConfig: FakeBusConfigService;
 
 beforeAll(async () => {
-  const realBusConfig = new BusConfigService(new BusStopsService(new SubwayStationsService()), await seededBusRegistryService());
+  const realBusConfig = new BusConfigService(new BusStopsService(new SubwayStationsService()), storedBusRegistryService());
   for (const lang of LANGS) realGroupsByLang.set(lang, await realBusConfig.getBusGroups(lang));
 });
 

@@ -1,35 +1,27 @@
 /**
- * The two TOPIS URLs every Jongro route polls: the arrival URL byte-identical
- * to the one production has called since the registry was introduced, and the
- * position URL of getBusPosByRtid, which answers the whole route (no ord
- * range) and names its turnaround stop.
+ * A jongro-routes.json entry becomes a JongroRoute: its id, the route code after
+ * the `jongro` prefix, its TOPIS route id and display fields as written, and no
+ * TOPIS URL or key, which the client builds at each call (ADR 0012, D4).
  */
-import { toJongroArrivalsUrl, toJongroPositionsUrl } from "./bus.mapper";
+import { toJongroRoute } from "./bus.mapper";
 
-const FIXED_KEY =
-  "FAKEseoulBusServiceKeyForTestsOnlyNotARealKey0000%2BFAKE%2Fseoul%2Bbus%2Ftest0key%3D%3D";
+describe("toJongroRoute", () => {
+  it("keeps the entry's fields and reads the code after the jongro prefix", () => {
+    // Arrange
+    const entry = {
+      id: "jongro07",
+      busRouteId: "100900004",
+      themeColor: "4CAF50",
+      iconType: "village",
+      refreshInterval: 40,
+      seatCount: 18,
+      transferLinesByArsId: { "01877": [{ line: "4", color: "00A5DE" }] },
+    };
 
-describe("toJongroArrivalsUrl", () => {
-  it("builds the 종로02 list URL identically (busRouteId=100900008)", () => {
-    // Act & Assert
-    expect(toJongroArrivalsUrl("100900008", FIXED_KEY)).toBe(
-      `http://ws.bus.go.kr/api/rest/arrive/getArrInfoByRouteAll?serviceKey=${FIXED_KEY}&busRouteId=100900008&resultType=json`,
-    );
-  });
+    // Act
+    const route = toJongroRoute(entry);
 
-  it("builds the 종로07 list URL identically (busRouteId=100900004)", () => {
-    // Act & Assert
-    expect(toJongroArrivalsUrl("100900004", FIXED_KEY)).toBe(
-      `http://ws.bus.go.kr/api/rest/arrive/getArrInfoByRouteAll?serviceKey=${FIXED_KEY}&busRouteId=100900004&resultType=json`,
-    );
-  });
-});
-
-describe("toJongroPositionsUrl", () => {
-  it("asks getBusPosByRtid for the whole 종로07 route", () => {
-    // Act & Assert
-    expect(toJongroPositionsUrl("100900004", FIXED_KEY)).toBe(
-      `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRtid?serviceKey=${FIXED_KEY}&busRouteId=100900004&resultType=json`,
-    );
+    // Assert
+    expect(route).toEqual({ ...entry, code: "07" });
   });
 });

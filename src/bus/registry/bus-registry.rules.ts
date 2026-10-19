@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { MAX_CHANGED_SHARE_TO_APPLY, OBSERVATIONS_TO_APPLY, STATIONS_VERSION_LENGTH } from "./bus-registry.constants";
-import type { ArrivalRowStation, MovedStation, ObservedStation, RenamedStation, StationAt, StationDiff, SyncDecision, SyncObservation } from "./bus-registry.types";
+import type { ArrivalRowStation, BootstrapDecision, BootstrapObservation, MovedStation, ObservedStation, RenamedStation, StationAt, StationDiff, SyncDecision, SyncObservation } from "./bus-registry.types";
 
 // WHY: a station's sequence is its index, so the order alone carries it and the hash leaves it out.
 export function toStationsVersion(stations: readonly ObservedStation[], turnaroundTopisId: string): string {
@@ -17,10 +17,23 @@ export function toObservedStations(rows: readonly ArrivalRowStation[]): Observed
 
 // QUIRK(topis): each position row names the route's turnaround stop (`trnstnid`); no bus running names none, and a
 // row without one is no observation.
-export function toTurnaroundTopisId(sightingTurnaroundIds: ReadonlyArray<string | undefined>, storedTopisId: string): string {
+export function toAgreedTurnaroundTopisId(sightingTurnaroundIds: ReadonlyArray<string | undefined>): string | null {
   const [first] = sightingTurnaroundIds;
   const isAgreed = first !== undefined && first !== "" && sightingTurnaroundIds.every((id) => id === first);
-  return isAgreed ? first : storedTopisId;
+  return isAgreed ? first : null;
+}
+
+export function toTurnaroundTopisId(sightingTurnaroundIds: ReadonlyArray<string | undefined>, storedTopisId: string): string {
+  return toAgreedTurnaroundTopisId(sightingTurnaroundIds) ?? storedTopisId;
+}
+
+// WHY: a guessed turnaround stop would be stored as if known, so only a running bus that turns at one of the listed
+// stops bootstraps a route.
+export function toBootstrapDecision({ stations, turnaroundTopisId, pending }: BootstrapObservation): BootstrapDecision {
+  if (turnaroundTopisId === null || !stations.some((station) => station.topisId === turnaroundTopisId)) return { kind: "skip" };
+  const stationsVersion = toStationsVersion(stations, turnaroundTopisId);
+  const count = pending?.stationsVersion === stationsVersion ? pending.count + 1 : 1;
+  return count < OBSERVATIONS_TO_APPLY ? { kind: "pending", pending: { stationsVersion, count } } : { kind: "insert", stationsVersion, turnaroundTopisId };
 }
 
 function toCommonOrderLength(stored: readonly string[], observed: readonly string[]): number {
@@ -69,9 +82,7 @@ export function toStationDiff(stored: readonly ObservedStation[], observed: read
     const old = beforeByKey.get(station.key);
     if (old === undefined) continue;
     if (old.ord !== station.ord) moved.push({ fromOrd: old.ord, toOrd: station.ord, topisId: station.topisId, stationName: station.stationName });
-    if (old.stationName !== station.stationName) {
-      renamed.push({ ord: station.ord, topisId: station.topisId, fromName: old.stationName, toName: station.stationName });
-    }
+    if (old.stationName !== station.stationName) renamed.push({ ord: station.ord, topisId: station.topisId, fromName: old.stationName, toName: station.stationName });
   }
   return {
     added: after.filter((station) => !beforeByKey.has(station.key)).map(toStationAt),
@@ -87,9 +98,4 @@ export function toSyncDecision({ storedVersion, observedVersion, pending, change
   const next = { stationsVersion: observedVersion, count };
   if (count < OBSERVATIONS_TO_APPLY) return { kind: "pending", pending: next };
   return changedShare > MAX_CHANGED_SHARE_TO_APPLY ? { kind: "hold", pending: next } : { kind: "apply" };
-}
-
-// QUIRK(topis): some loops list their first stop again as the last ord (02: ord 1 and ord 27).
-export function isLoopClosingRepeat(topisIds: readonly string[], index: number): boolean {
-  return index > 0 && index === topisIds.length - 1 && topisIds[index] === topisIds[0];
 }
