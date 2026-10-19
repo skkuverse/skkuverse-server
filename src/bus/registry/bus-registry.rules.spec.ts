@@ -124,6 +124,20 @@ describe("toBootstrapDecision", () => {
     // Act & Assert
     expect(toBootstrapDecision({ stations, turnaroundTopisId, pending: pendingOf(version, 2) })).toEqual({ kind: "skip" });
   });
+
+  // WHY: a turnaround stop the list does not hold would be stored as if known, the same as a guessed one.
+  it("counts nothing when the agreed turnaround stop is none of the stops, and keeps no count", () => {
+    // Act & Assert
+    expect(toBootstrapDecision({ stations: TEN, turnaroundTopisId: "11", pending: pendingOf(toStationsVersion(TEN, "11"), 2) })).toEqual({ kind: "skip" });
+  });
+
+  it("counts a turnaround stop that is the list's last stop", () => {
+    // Act & Assert
+    expect(toBootstrapDecision({ stations: TEN, turnaroundTopisId: "10", pending: undefined })).toEqual({
+      kind: "pending",
+      pending: pendingOf(toStationsVersion(TEN, "10"), 1),
+    });
+  });
 });
 
 describe("toChangedShare", () => {

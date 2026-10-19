@@ -27,9 +27,10 @@ export function toTurnaroundTopisId(sightingTurnaroundIds: ReadonlyArray<string 
   return toAgreedTurnaroundTopisId(sightingTurnaroundIds) ?? storedTopisId;
 }
 
-// WHY: a guessed turnaround stop would be stored as if known, so only a running bus bootstraps a route.
+// WHY: a guessed turnaround stop would be stored as if known, so only a running bus that turns at one of the listed
+// stops bootstraps a route.
 export function toBootstrapDecision({ stations, turnaroundTopisId, pending }: BootstrapObservation): BootstrapDecision {
-  if (stations.length === 0 || turnaroundTopisId === null) return { kind: "skip" };
+  if (turnaroundTopisId === null || !stations.some((station) => station.topisId === turnaroundTopisId)) return { kind: "skip" };
   const stationsVersion = toStationsVersion(stations, turnaroundTopisId);
   const count = pending?.stationsVersion === stationsVersion ? pending.count + 1 : 1;
   return count < OBSERVATIONS_TO_APPLY ? { kind: "pending", pending: { stationsVersion, count } } : { kind: "insert", stationsVersion, turnaroundTopisId };

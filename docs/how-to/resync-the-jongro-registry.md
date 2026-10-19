@@ -13,7 +13,7 @@ audience: internal
 
 ## Overview
 
-Each Jongro route's stations live in one `jongro_routes` document in `bus_campus` (`_id` is the route id, `jongro07`). The poller compares every tick's arrival list with it and applies a change by itself at the third identical tick ([bus architecture](../explanation/bus-architecture.md), "Invariants"). No snapshot is committed: a route with no document is created by the poller from TOPIS, at the third identical tick that names a turnaround stop, so a fresh database fills itself while buses run and stays empty overnight. Two cases need a person:
+Each Jongro route's stations live in one `jongro_routes` document in `bus_campus` (`_id` is the route id, `jongro07`). The poller compares every tick's arrival list with it and applies a change by itself at the third identical tick ([bus architecture](../explanation/bus-architecture.md), "Invariants"). No snapshot is committed: a route with no document is created by the poller from TOPIS, at the third identical tick that names a turnaround stop on that list, so a fresh database fills itself while buses run and stays empty overnight. Two cases need a person:
 
 | Log line (level) | Meaning | What serves meanwhile |
 | --- | --- | --- |
