@@ -1,0 +1,124 @@
+{
+  "_about": "Revision 1 of the transit-layout dataset (skku_content.datasets, _id transit-layout): a copy of src/ui/transit/transit-layout.json at source commit 5c0ee5a9, the code production served /ui/home/transit from when it was captured on 2026-10-19 (move-editorial-datasets D13). The push imports this data with _about removed. Nothing trimmed.",
+  "version": 1,
+  "sections": [
+    {
+      "type": "item_list",
+      "id": "campus",
+      "items": [
+        {
+          "kind": "bus",
+          "groupId": "campus"
+        },
+        {
+          "kind": "bus",
+          "groupId": "fasttrack"
+        }
+      ]
+    },
+    {
+      "type": "item_list",
+      "id": "hssc",
+      "title": {
+        "ko": "인사캠",
+        "en": "HSSC",
+        "zh": "人文校区"
+      },
+      "items": [
+        {
+          "kind": "subway",
+          "stationId": "hyehwa"
+        },
+        {
+          "kind": "bus",
+          "groupId": "hssc"
+        },
+        {
+          "kind": "bus",
+          "groupId": "jongro02"
+        },
+        {
+          "kind": "bus",
+          "groupId": "jongro07"
+        },
+        {
+          "kind": "bus",
+          "groupId": "jongro08"
+        }
+      ]
+    },
+    {
+      "type": "item_list",
+      "id": "nsc",
+      "title": {
+        "ko": "자과캠",
+        "en": "NSC",
+        "zh": "自然校区"
+      },
+      "items": [
+        {
+          "kind": "subway",
+          "stationId": "sungkyunkwan"
+        },
+        {
+          "kind": "bus",
+          "groupId": "commute"
+        },
+        {
+          "kind": "group",
+          "id": "commute-stations",
+          "title": {
+            "ko": "통학버스 정류장 지하철",
+            "en": "Subway at shuttle stops",
+            "zh": "通学巴士站地铁"
+          },
+          "subtitle": {
+            "ko": "정자 · 잠실 · 도곡 · 강남 · 양재 · 광교중앙",
+            "en": "Jeongja · Jamsil · Dogok · Gangnam · Yangjae · Gwanggyojungang",
+            "zh": "亭子 · 蚕室 · 道谷 · 江南 · 良才 · 光教中央"
+          },
+          "icon": {
+            "type": "subway",
+            "color": "8B95A1",
+            "text": {
+              "ko": "환승",
+              "en": "Transfer",
+              "zh": "换乘"
+            }
+          },
+          "initialState": "collapsed",
+          "visibleWith": {
+            "kind": "bus",
+            "groupId": "commute"
+          },
+          "items": [
+            {
+              "kind": "subway",
+              "stationId": "jeongja"
+            },
+            {
+              "kind": "subway",
+              "stationId": "jamsil"
+            },
+            {
+              "kind": "subway",
+              "stationId": "dogok"
+            },
+            {
+              "kind": "subway",
+              "stationId": "gangnam"
+            },
+            {
+              "kind": "subway",
+              "stationId": "yangjae"
+            },
+            {
+              "kind": "subway",
+              "stationId": "gwanggyo-jungang"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

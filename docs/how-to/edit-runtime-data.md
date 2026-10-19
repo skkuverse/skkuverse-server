@@ -3,7 +3,7 @@ title: Edit Runtime Data
 type: how-to
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-19
+last-updated: 2026-10-20
 audience: internal
 ---
 
@@ -13,7 +13,15 @@ audience: internal
 
 ## Overview
 
-Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decisions/0013-runtime-data-in-mongodb.md)). Each dataset is one document in the content database's `datasets` collection, with a revision that only moves forward; every version stored is kept in `dataset_revisions`, the newest 50 per dataset. `npm run data` is the only writer, and the server only reads. The datasets the tool knows, and the server code that validates each one, are listed in `scripts/lib/datasets/catalog.js`; `home-layout` is the first.
+Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decisions/0013-runtime-data-in-mongodb.md)). Each dataset is one document in the content database's `datasets` collection, with a revision that only moves forward; every version stored is kept in `dataset_revisions`, the newest 50 per dataset. `npm run data` is the only writer, and the server only reads. The datasets the tool knows, and the server code that validates each one, are listed in `scripts/lib/datasets/catalog.js`:
+
+| Dataset | Served on | Never read | References |
+| --- | --- | --- | --- |
+| `home-layout` | `GET /ui/home` | 503 `HOME_LAYOUT_UNAVAILABLE` | `miniapps`: each `miniapp` tile, feed and `miniapp` action |
+| `campus-banners` | `GET /ui/home/campus` | 503 `CAMPUS_BANNERS_UNAVAILABLE` | `miniapps`: each banner's `miniapp` action |
+| `transit-layout` | `GET /ui/home/transit` | 503 `TRANSIT_LAYOUT_UNAVAILABLE` | `busGroups` and `subwayStations`: every one the checkout serves, each placed exactly once; `miniapps`: each `miniapp` link |
+
+A never-read answer is what a replica that has no good value serves, with no `Cache-Control`; one that read a good value keeps serving it for 24 hours through failed reads. `miniapps`, `busGroups` and `subwayStations` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
 
 Every push is validated with the server's own schema and rules, compiled from your checkout, and checked for references: a home layout tile that names a mini app the registry does not have is refused, naming the tile's path. Nothing is written while any issue stands.
 
@@ -113,7 +121,7 @@ It stores production's current data as the next `_dev` revision and records whic
 
 ### Check before a deploy
 
-The server reads datasets the code may no longer accept. A deploy restarts every replica with an empty cache, so a stored home layout the new schema rejects answers 503 on `/ui/home` until a valid push, and a removed mini app loses every tile that names it. Before merging a change that tightens a dataset's schema or rules, or removes an identity a dataset references (a mini app from the registry), run from that change's checkout:
+The server reads datasets the code may no longer accept. A deploy restarts every replica with an empty cache, so a stored home layout the new schema rejects answers 503 on `/ui/home` until a valid push, and a removed mini app loses every tile that names it. Before merging a change that tightens a dataset's schema or rules, or removes an identity a dataset references (a mini app from the registry, a bus group, a served subway station), run from that change's checkout:
 
 ```bash
 npm run data -- check --prod
@@ -136,7 +144,7 @@ It runs the push checks on the stored data of every dataset, writes nothing, and
 ## Related
 
 - [ADR 0013](../decisions/0013-runtime-data-in-mongodb.md): why runtime data lives in MongoDB, and the read contract every dataset reader keeps
-- [configure-home.md](configure-home.md): what the home layout holds
+- [configure-home.md](configure-home.md): what the home layout, the campus banners and the transit layout hold
 - [register-a-miniapp.md](register-a-miniapp.md): the registry a home layout's references resolve against
 - `scripts/data.js`: the command line; `scripts/lib/datasets/`: the catalog, checks, store and working file
 - [docs/README.md](../README.md): writing rules

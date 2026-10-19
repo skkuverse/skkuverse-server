@@ -3,13 +3,13 @@ title: Configure the Home Screen
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-19
+last-updated: 2026-10-20
 audience: internal
 ---
 
 # Configure the Home Screen
 
-> How to change what `GET /ui/home` serves: the banner carousel at the top of the app's home screen and the mini-app sections under it. The same carousel also runs on the campus tab's sheet ([Campus sheet banners](#campus-sheet-banners)). A home layout change is a push of the `home-layout` dataset with `npm run data`, served within a minute and with no deploy; a campus banner change is still a file edit plus a deploy.
+> How to change what `GET /ui/home` serves: the banner carousel at the top of the app's home screen and the mini-app sections under it. The same carousel also runs on the campus tab's sheet ([Campus banners](#campus-banners)), and the transit tab's order is a third dataset ([Transit layout](#transit-layout)). Each change is a push with `npm run data`, served within a minute and with no deploy.
 
 ## Overview
 
@@ -91,18 +91,38 @@ Try it on `_dev` first, then make the same edit in production with `--prod` on e
 
 4. Push it ([Edit the layout](#edit-the-layout)).
 
-### Campus sheet banners
+### Campus banners
 
-`GET /ui/home/campus` serves a second carousel as the only section of the campus tab's sheet. It lives in [`src/ui/campus/campus-banners.json`](../../src/ui/campus/campus-banners.json) and is a single `banner_carousel` object, not a layout. The rules are the home carousel's, with two differences:
+`GET /ui/home/campus` serves a second carousel as the only section of the campus tab's sheet. It is the `campus-banners` dataset, a single `banner_carousel` object, not a layout, edited like the home layout:
+
+```bash
+npm run data -- pull campus-banners
+# edit its "data"
+npm run data -- push campus-banners --dry-run
+npm run data -- push campus-banners --note "<why>"
+```
+
+The rules are the home carousel's (`src/ui/campus/ui-campus.schema.ts`, `src/ui/campus/ui-campus.rules.ts`), with two differences:
 
 - **Images only.** `{ "type": "default" }` is refused, because the campus sheet has no built-in banner for it to stand for.
 - **No empty slot.** When every image is outside its window, the section is left out of the response, and the sheet has no section at all.
 
-Add a banner the way the steps above describe, with keys under `campus/banners/`, but in the file, then `npm test` and deploy. The slot is 6:1. The ESKARA 2026 student banners are 2400 × 400 WebP, about 110 KB each: the app also opens a banner full screen, turned sideways, where its long edge spans the phone's height (about 2400 px on a 3x phone). Errors at boot start with `campus banners:`. The response also sends a 5-minute `Cache-Control`.
+Add a banner the way [Add a banner image](#add-a-banner-image) describes, with keys under `campus/banners/`, then push `campus-banners`. The slot is 6:1. The ESKARA 2026 student banners are 2400 × 400 WebP, about 110 KB each: the app also opens a banner full screen, turned sideways, where its long edge spans the phone's height (about 2400 px on a 3x phone). A push refuses a banner whose `miniapp` target the registry does not hold, naming its `actionValue` path. The response sends a 5-minute `Cache-Control`.
 
-The 28 ESKARA 2026 banners stay in the file with `endAt` set to the festival's end (`2026-10-03T00:00:00+09:00`), so the section is left out today. That is how to take a banner set down: an empty `items` is refused at boot, a closed window is not. To show them again for a UI test, move `endAt` on a local server only.
+The 28 ESKARA 2026 banners are stored with `endAt` set to the festival's end (`2026-10-03T00:00:00+09:00`), so the section is left out today. That is how to take a banner set down: an empty `items` is refused at push, a closed window is not. To show them again for a UI test, move `endAt` in `_dev` only.
 
 The app only draws this section while its festival gate is open (`isFestivalUnlocked()` in skkuverse-app). A store build shows the campus sheet empty until the festival-day flip.
+
+### Transit layout
+
+`GET /ui/home/transit` serves the transit tab's sections in the order of the `transit-layout` dataset: which bus groups, subway stations, links and groups each section holds. The texts of a bus group or station still come from the code; the layout only places them. Edit it with `npm run data -- pull/push transit-layout`, as above. Its rules are in `src/ui/transit/ui-transit.schema.ts` and `src/ui/transit/ui-transit.rules.ts`.
+
+A push is checked against your checkout's bus groups and served stations: it must place each exactly once, a group's children counted, and name no other. A group meant to be hidden keeps its place and uses its visibility in the bus config.
+
+Bus groups and stations come from the code, so a deploy can change them while the stored layout stays. The order matters:
+
+- **Before a deploy that adds a bus group or a station:** push, from that deploy's checkout, a layout that places it. Until the deploy lands, the old replicas leave the new item out and log `ui.transit_layout.item_left_out`.
+- **Before a deploy that removes one:** run `npm run data -- check --prod` from that deploy's checkout, then push the layout without it, just before or just after the deploy. In between, the removed item is unplaced on the old replicas (`ui.transit_layout.unplaced`) or left out on the new ones; both are logged and neither is a `500`.
 
 ### Rearrange the grids
 
@@ -149,7 +169,9 @@ The app fetches the entries itself from `GET /miniapps/:id/notifications` (cache
 - **A tile or section is missing, and the log has `ui.home_layout.item_left_out`**: the stored layout names something the running code cannot serve, usually a mini app a deploy removed. The server leaves that item out (and a grid it empties), serves the rest, and logs each item once per revision with its `path`. Push a layout without it; before removing a mini app, run `npm run data -- check --prod` ([register-a-miniapp.md](register-a-miniapp.md)).
 - **`/ui/home` answers 503 `HOME_LAYOUT_UNAVAILABLE`**: the replica has never read a good layout. `ui.home_layout.missing` means no `home-layout` dataset exists in that database (create it with `push --create`); `ui.home_layout.invalid` names the stored revision and each issue, which happens when a deploy's schema rejects stored data (run `check --prod` before such a deploy). A replica that had a good layout keeps serving it for 24 hours instead, logging `cache.reload_failed`. Each line repeats at most once a minute, with `suppressed` counting the ones held back, and a replica with no good layout reads again only once a minute, so a fixing push is served within 60 s.
 - **A banner shows in dev but not in production**: its `startAt`/`endAt` window is evaluated on the server's clock. Remember the offset in the window.
-- **Production crashes on boot with `ENOENT … campus-banners.json`**: the file is missing from `scripts/copy-build-assets.js`.
+- **`/ui/home/campus` answers 503 `CAMPUS_BANNERS_UNAVAILABLE`, or `/ui/home/transit` 503 `TRANSIT_LAYOUT_UNAVAILABLE`**: as for the home layout, with `ui.campus_banners.*` or `ui.transit_layout.*` lines. Create the dataset with `push --create`, or fix the stored revision the log names.
+- **A banner or a transit item is missing, and the log has `ui.campus_banners.item_left_out` or `ui.transit_layout.item_left_out`**: the stored data names something the running code does not serve, such as a mini app, bus group or station a deploy removed. Push the data without it.
+- **A bus group or station never shows on the transit tab, and the log has `ui.transit_layout.unplaced`**: a deploy added it and the stored layout does not place it. Push a layout that places it ([Transit layout](#transit-layout)).
 
 ## Related
 

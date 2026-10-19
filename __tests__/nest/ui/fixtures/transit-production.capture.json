@@ -1,0 +1,1101 @@
+{
+  "_about": "GET https://api.skkuverse.com/ui/home/transit with Accept-Language ko, en and zh, captured from production on 2026-10-19 at 14:05:27 UTC (23:05 KST), source commit 5c0ee5a9 (move-editorial-datasets task 2.1). Each entry is the status, the parsed body and the weak ETag production sent; Cache-Control was private, max-age=300 and Vary Accept-Language, Origin for all three. Nothing trimmed.",
+  "ko": {
+    "status": 200,
+    "etag": "W/\"128c-dPA3kYMmEdiThAQR3Lgl4jTvbMc\"",
+    "body": {
+      "meta": {
+        "lang": "ko"
+      },
+      "data": {
+        "version": 1,
+        "sections": [
+          {
+            "type": "item_list",
+            "id": "campus",
+            "title": null,
+            "items": [
+              {
+                "kind": "bus",
+                "id": "bus:campus",
+                "groupId": "campus",
+                "title": "인자셔틀",
+                "subtitle": "인사캠 ↔ 자과캠",
+                "icon": {
+                  "type": "shuttle",
+                  "color": "003626",
+                  "text": "성대"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/schedule?groupId=campus"
+                }
+              }
+            ]
+          },
+          {
+            "type": "item_list",
+            "id": "hssc",
+            "title": "인사캠",
+            "items": [
+              {
+                "kind": "subway",
+                "id": "subway:hyehwa",
+                "stationId": "hyehwa",
+                "title": "혜화역",
+                "subtitle": null,
+                "lines": [
+                  {
+                    "code": "4",
+                    "name": "4호선",
+                    "color": "00A5DE",
+                    "marker": {
+                      "text": "4",
+                      "color": "007FAB"
+                    }
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=hyehwa"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:hssc",
+                "groupId": "hssc",
+                "title": "인사캠 셔틀버스",
+                "subtitle": "정차소(인문.농구장) ↔ 600주년 기념관",
+                "icon": {
+                  "type": "shuttle",
+                  "color": "003626",
+                  "text": "성대"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=hssc"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:jongro02",
+                "groupId": "jongro02",
+                "title": "종로 02",
+                "subtitle": "성균관대학교 ↔ 종각역.YMCA",
+                "icon": {
+                  "type": "village",
+                  "color": "4CAF50",
+                  "text": "마을"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=jongro02"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:jongro07",
+                "groupId": "jongro07",
+                "title": "종로 07",
+                "subtitle": "성균관대운동장 ↔ 600주년기념관",
+                "icon": {
+                  "type": "village",
+                  "color": "4CAF50",
+                  "text": "마을"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=jongro07"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:jongro08",
+                "groupId": "jongro08",
+                "title": "종로 08",
+                "subtitle": "명륜3가 ↔ 종로5가",
+                "icon": {
+                  "type": "village",
+                  "color": "4CAF50",
+                  "text": "마을"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=jongro08"
+                }
+              }
+            ]
+          },
+          {
+            "type": "item_list",
+            "id": "nsc",
+            "title": "자과캠",
+            "items": [
+              {
+                "kind": "subway",
+                "id": "subway:sungkyunkwan",
+                "stationId": "sungkyunkwan",
+                "title": "성균관대역",
+                "subtitle": null,
+                "lines": [
+                  {
+                    "code": "1",
+                    "name": "1호선",
+                    "color": "0052A4",
+                    "marker": {
+                      "text": "1",
+                      "color": "0052A4"
+                    }
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=sungkyunkwan"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:commute",
+                "groupId": "commute",
+                "title": "자과캠 통학 셔틀버스",
+                "subtitle": "역 ↔ 자과캠 시범 운행",
+                "icon": {
+                  "type": "shuttle",
+                  "color": "003626",
+                  "text": "성대"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/schedule?groupId=commute"
+                }
+              },
+              {
+                "kind": "group",
+                "id": "group:commute-stations",
+                "title": "통학버스 정류장 지하철",
+                "subtitle": "정자 · 잠실 · 도곡 · 강남 · 양재 · 광교중앙",
+                "icon": {
+                  "type": "subway",
+                  "color": "8B95A1",
+                  "text": "환승"
+                },
+                "initialState": "collapsed",
+                "items": [
+                  {
+                    "kind": "subway",
+                    "id": "subway:jeongja",
+                    "stationId": "jeongja",
+                    "title": "정자역",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "D1",
+                        "name": "신분당선",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "신",
+                          "color": "D4003B"
+                        }
+                      },
+                      {
+                        "code": "K1",
+                        "name": "수인분당선",
+                        "color": "F5A200",
+                        "marker": {
+                          "text": "수",
+                          "color": "A26B00"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=jeongja"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:jamsil",
+                    "stationId": "jamsil",
+                    "title": "잠실역",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "2",
+                        "name": "2호선",
+                        "color": "00A84D",
+                        "marker": {
+                          "text": "2",
+                          "color": "00893F"
+                        }
+                      },
+                      {
+                        "code": "8",
+                        "name": "8호선",
+                        "color": "E6186C",
+                        "marker": {
+                          "text": "8",
+                          "color": "E4186B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=jamsil"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:dogok",
+                    "stationId": "dogok",
+                    "title": "도곡역",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "3",
+                        "name": "3호선",
+                        "color": "EF7C1C",
+                        "marker": {
+                          "text": "3",
+                          "color": "BB5C0D"
+                        }
+                      },
+                      {
+                        "code": "K1",
+                        "name": "수인분당선",
+                        "color": "F5A200",
+                        "marker": {
+                          "text": "수",
+                          "color": "A26B00"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=dogok"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:gangnam",
+                    "stationId": "gangnam",
+                    "title": "강남역",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "2",
+                        "name": "2호선",
+                        "color": "00A84D",
+                        "marker": {
+                          "text": "2",
+                          "color": "00893F"
+                        }
+                      },
+                      {
+                        "code": "D1",
+                        "name": "신분당선",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "신",
+                          "color": "D4003B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=gangnam"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:yangjae",
+                    "stationId": "yangjae",
+                    "title": "양재역",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "3",
+                        "name": "3호선",
+                        "color": "EF7C1C",
+                        "marker": {
+                          "text": "3",
+                          "color": "BB5C0D"
+                        }
+                      },
+                      {
+                        "code": "D1",
+                        "name": "신분당선",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "신",
+                          "color": "D4003B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=yangjae"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:gwanggyo-jungang",
+                    "stationId": "gwanggyo-jungang",
+                    "title": "광교중앙역",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "D1",
+                        "name": "신분당선",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "신",
+                          "color": "D4003B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=gwanggyo-jungang"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "en": {
+    "status": 200,
+    "etag": "W/\"129a-MtHFGQP2cx4sNORcO2vq+h942N4\"",
+    "body": {
+      "meta": {
+        "lang": "en"
+      },
+      "data": {
+        "version": 1,
+        "sections": [
+          {
+            "type": "item_list",
+            "id": "campus",
+            "title": null,
+            "items": [
+              {
+                "kind": "bus",
+                "id": "bus:campus",
+                "groupId": "campus",
+                "title": "INJA Shuttle",
+                "subtitle": "HSSC ↔ NSC",
+                "icon": {
+                  "type": "shuttle",
+                  "color": "003626",
+                  "text": "SKKU"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/schedule?groupId=campus"
+                }
+              }
+            ]
+          },
+          {
+            "type": "item_list",
+            "id": "hssc",
+            "title": "HSSC",
+            "items": [
+              {
+                "kind": "subway",
+                "id": "subway:hyehwa",
+                "stationId": "hyehwa",
+                "title": "Hyehwa Station",
+                "subtitle": null,
+                "lines": [
+                  {
+                    "code": "4",
+                    "name": "Line 4",
+                    "color": "00A5DE",
+                    "marker": {
+                      "text": "4",
+                      "color": "007FAB"
+                    }
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=hyehwa"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:hssc",
+                "groupId": "hssc",
+                "title": "HSSC Shuttle Bus",
+                "subtitle": "Bus Stop (Humanities) ↔ 600th Anniversary Hall",
+                "icon": {
+                  "type": "shuttle",
+                  "color": "003626",
+                  "text": "SKKU"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=hssc"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:jongro02",
+                "groupId": "jongro02",
+                "title": "Jongro 02",
+                "subtitle": "SKKU ↔ Jonggak Stn. YMCA",
+                "icon": {
+                  "type": "village",
+                  "color": "4CAF50",
+                  "text": "Village"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=jongro02"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:jongro07",
+                "groupId": "jongro07",
+                "title": "Jongro 07",
+                "subtitle": "SKKU Sports Ground ↔ 600th Anniversary Hall",
+                "icon": {
+                  "type": "village",
+                  "color": "4CAF50",
+                  "text": "Village"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=jongro07"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:jongro08",
+                "groupId": "jongro08",
+                "title": "Jongro 08",
+                "subtitle": "Myeongnyun 3-ga ↔ Jongno 5-ga",
+                "icon": {
+                  "type": "village",
+                  "color": "4CAF50",
+                  "text": "Village"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=jongro08"
+                }
+              }
+            ]
+          },
+          {
+            "type": "item_list",
+            "id": "nsc",
+            "title": "NSC",
+            "items": [
+              {
+                "kind": "subway",
+                "id": "subway:sungkyunkwan",
+                "stationId": "sungkyunkwan",
+                "title": "Sungkyunkwan Univ. Station",
+                "subtitle": null,
+                "lines": [
+                  {
+                    "code": "1",
+                    "name": "Line 1",
+                    "color": "0052A4",
+                    "marker": {
+                      "text": "1",
+                      "color": "0052A4"
+                    }
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=sungkyunkwan"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:commute",
+                "groupId": "commute",
+                "title": "NSC Commuter Shuttle Bus",
+                "subtitle": "Stations ↔ NSC pilot",
+                "icon": {
+                  "type": "shuttle",
+                  "color": "003626",
+                  "text": "SKKU"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/schedule?groupId=commute"
+                }
+              },
+              {
+                "kind": "group",
+                "id": "group:commute-stations",
+                "title": "Subway at shuttle stops",
+                "subtitle": "Jeongja · Jamsil · Dogok · Gangnam · Yangjae · Gwanggyojungang",
+                "icon": {
+                  "type": "subway",
+                  "color": "8B95A1",
+                  "text": "Transfer"
+                },
+                "initialState": "collapsed",
+                "items": [
+                  {
+                    "kind": "subway",
+                    "id": "subway:jeongja",
+                    "stationId": "jeongja",
+                    "title": "Jeongja Station",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "D1",
+                        "name": "Shinbundang Line",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "신",
+                          "color": "D4003B"
+                        }
+                      },
+                      {
+                        "code": "K1",
+                        "name": "Suin–Bundang Line",
+                        "color": "F5A200",
+                        "marker": {
+                          "text": "수",
+                          "color": "A26B00"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=jeongja"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:jamsil",
+                    "stationId": "jamsil",
+                    "title": "Jamsil Station",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "2",
+                        "name": "Line 2",
+                        "color": "00A84D",
+                        "marker": {
+                          "text": "2",
+                          "color": "00893F"
+                        }
+                      },
+                      {
+                        "code": "8",
+                        "name": "Line 8",
+                        "color": "E6186C",
+                        "marker": {
+                          "text": "8",
+                          "color": "E4186B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=jamsil"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:dogok",
+                    "stationId": "dogok",
+                    "title": "Dogok Station",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "3",
+                        "name": "Line 3",
+                        "color": "EF7C1C",
+                        "marker": {
+                          "text": "3",
+                          "color": "BB5C0D"
+                        }
+                      },
+                      {
+                        "code": "K1",
+                        "name": "Suin–Bundang Line",
+                        "color": "F5A200",
+                        "marker": {
+                          "text": "수",
+                          "color": "A26B00"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=dogok"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:gangnam",
+                    "stationId": "gangnam",
+                    "title": "Gangnam Station",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "2",
+                        "name": "Line 2",
+                        "color": "00A84D",
+                        "marker": {
+                          "text": "2",
+                          "color": "00893F"
+                        }
+                      },
+                      {
+                        "code": "D1",
+                        "name": "Shinbundang Line",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "신",
+                          "color": "D4003B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=gangnam"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:yangjae",
+                    "stationId": "yangjae",
+                    "title": "Yangjae Station",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "3",
+                        "name": "Line 3",
+                        "color": "EF7C1C",
+                        "marker": {
+                          "text": "3",
+                          "color": "BB5C0D"
+                        }
+                      },
+                      {
+                        "code": "D1",
+                        "name": "Shinbundang Line",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "신",
+                          "color": "D4003B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=yangjae"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:gwanggyo-jungang",
+                    "stationId": "gwanggyo-jungang",
+                    "title": "Gwanggyojungang Station",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "D1",
+                        "name": "Shinbundang Line",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "신",
+                          "color": "D4003B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=gwanggyo-jungang"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "zh": {
+    "status": 200,
+    "etag": "W/\"128e-b6sv43pV54wtb+WTVO0xAZtX/JU\"",
+    "body": {
+      "meta": {
+        "lang": "zh"
+      },
+      "data": {
+        "version": 1,
+        "sections": [
+          {
+            "type": "item_list",
+            "id": "campus",
+            "title": null,
+            "items": [
+              {
+                "kind": "bus",
+                "id": "bus:campus",
+                "groupId": "campus",
+                "title": "仁自班车",
+                "subtitle": "人文校区 ↔ 自然校区",
+                "icon": {
+                  "type": "shuttle",
+                  "color": "003626",
+                  "text": "成大"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/schedule?groupId=campus"
+                }
+              }
+            ]
+          },
+          {
+            "type": "item_list",
+            "id": "hssc",
+            "title": "人文校区",
+            "items": [
+              {
+                "kind": "subway",
+                "id": "subway:hyehwa",
+                "stationId": "hyehwa",
+                "title": "惠化站",
+                "subtitle": null,
+                "lines": [
+                  {
+                    "code": "4",
+                    "name": "4号线",
+                    "color": "00A5DE",
+                    "marker": {
+                      "text": "4",
+                      "color": "007FAB"
+                    }
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=hyehwa"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:hssc",
+                "groupId": "hssc",
+                "title": "人文校区班车",
+                "subtitle": "停车场(人文.篮球场) ↔ 600周年纪念馆",
+                "icon": {
+                  "type": "shuttle",
+                  "color": "003626",
+                  "text": "成大"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=hssc"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:jongro02",
+                "groupId": "jongro02",
+                "title": "钟路 02",
+                "subtitle": "成均馆大学 ↔ 钟阁站YMCA",
+                "icon": {
+                  "type": "village",
+                  "color": "4CAF50",
+                  "text": "村庄"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=jongro02"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:jongro07",
+                "groupId": "jongro07",
+                "title": "钟路 07",
+                "subtitle": "成均馆大学运动场 ↔ 600周年纪念馆",
+                "icon": {
+                  "type": "village",
+                  "color": "4CAF50",
+                  "text": "村庄"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=jongro07"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:jongro08",
+                "groupId": "jongro08",
+                "title": "钟路 08",
+                "subtitle": "明伦3街 ↔ 钟路5街",
+                "icon": {
+                  "type": "village",
+                  "color": "4CAF50",
+                  "text": "村庄"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/realtime?groupId=jongro08"
+                }
+              }
+            ]
+          },
+          {
+            "type": "item_list",
+            "id": "nsc",
+            "title": "自然校区",
+            "items": [
+              {
+                "kind": "subway",
+                "id": "subway:sungkyunkwan",
+                "stationId": "sungkyunkwan",
+                "title": "成均馆大学站",
+                "subtitle": null,
+                "lines": [
+                  {
+                    "code": "1",
+                    "name": "1号线",
+                    "color": "0052A4",
+                    "marker": {
+                      "text": "1",
+                      "color": "0052A4"
+                    }
+                  }
+                ],
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/subway?station=sungkyunkwan"
+                }
+              },
+              {
+                "kind": "bus",
+                "id": "bus:commute",
+                "groupId": "commute",
+                "title": "自然校区通学班车",
+                "subtitle": "地铁站 ↔ 自然校区 试运行",
+                "icon": {
+                  "type": "shuttle",
+                  "color": "003626",
+                  "text": "成大"
+                },
+                "action": {
+                  "actionType": "route",
+                  "actionValue": "/bus/schedule?groupId=commute"
+                }
+              },
+              {
+                "kind": "group",
+                "id": "group:commute-stations",
+                "title": "通学巴士站地铁",
+                "subtitle": "亭子 · 蚕室 · 道谷 · 江南 · 良才 · 光教中央",
+                "icon": {
+                  "type": "subway",
+                  "color": "8B95A1",
+                  "text": "换乘"
+                },
+                "initialState": "collapsed",
+                "items": [
+                  {
+                    "kind": "subway",
+                    "id": "subway:jeongja",
+                    "stationId": "jeongja",
+                    "title": "亭子站",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "D1",
+                        "name": "新盆唐线",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "新",
+                          "color": "D4003B"
+                        }
+                      },
+                      {
+                        "code": "K1",
+                        "name": "水仁·盆唐线",
+                        "color": "F5A200",
+                        "marker": {
+                          "text": "水",
+                          "color": "A26B00"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=jeongja"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:jamsil",
+                    "stationId": "jamsil",
+                    "title": "蚕室站",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "2",
+                        "name": "2号线",
+                        "color": "00A84D",
+                        "marker": {
+                          "text": "2",
+                          "color": "00893F"
+                        }
+                      },
+                      {
+                        "code": "8",
+                        "name": "8号线",
+                        "color": "E6186C",
+                        "marker": {
+                          "text": "8",
+                          "color": "E4186B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=jamsil"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:dogok",
+                    "stationId": "dogok",
+                    "title": "道谷站",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "3",
+                        "name": "3号线",
+                        "color": "EF7C1C",
+                        "marker": {
+                          "text": "3",
+                          "color": "BB5C0D"
+                        }
+                      },
+                      {
+                        "code": "K1",
+                        "name": "水仁·盆唐线",
+                        "color": "F5A200",
+                        "marker": {
+                          "text": "水",
+                          "color": "A26B00"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=dogok"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:gangnam",
+                    "stationId": "gangnam",
+                    "title": "江南站",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "2",
+                        "name": "2号线",
+                        "color": "00A84D",
+                        "marker": {
+                          "text": "2",
+                          "color": "00893F"
+                        }
+                      },
+                      {
+                        "code": "D1",
+                        "name": "新盆唐线",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "新",
+                          "color": "D4003B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=gangnam"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:yangjae",
+                    "stationId": "yangjae",
+                    "title": "良才站",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "3",
+                        "name": "3号线",
+                        "color": "EF7C1C",
+                        "marker": {
+                          "text": "3",
+                          "color": "BB5C0D"
+                        }
+                      },
+                      {
+                        "code": "D1",
+                        "name": "新盆唐线",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "新",
+                          "color": "D4003B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=yangjae"
+                    }
+                  },
+                  {
+                    "kind": "subway",
+                    "id": "subway:gwanggyo-jungang",
+                    "stationId": "gwanggyo-jungang",
+                    "title": "光教中央站",
+                    "subtitle": null,
+                    "lines": [
+                      {
+                        "code": "D1",
+                        "name": "新盆唐线",
+                        "color": "D4003B",
+                        "marker": {
+                          "text": "新",
+                          "color": "D4003B"
+                        }
+                      }
+                    ],
+                    "action": {
+                      "actionType": "route",
+                      "actionValue": "/subway?station=gwanggyo-jungang"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

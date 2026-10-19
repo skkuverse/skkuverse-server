@@ -12,7 +12,7 @@ export class UiCampusController {
 
   @Get("home/campus")
   @CacheControl(UI_CACHE_CONTROL)
-  getCampus(@Lang() lang: SupportedLang): CampusSheet {
+  async getCampus(@Lang() lang: SupportedLang): Promise<CampusSheet> {
     return this.campus.getCampusSheet(lang);
   }
 }

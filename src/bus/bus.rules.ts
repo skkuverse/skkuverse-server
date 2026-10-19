@@ -1,14 +1,5 @@
 import { SERVICE_CONFIG } from "./bus.constants";
-import type { ServiceConfigEntry, ServiceKeyProblem } from "./bus.types";
-
-// QUIRK(topis): a raw base64 key (`+`, `=`, `/`) splits the query string and TOPIS rejects it as if it
-// were down, so the key must be stored URL-encoded.
-const URL_ENCODED_KEY = /^[A-Za-z0-9_%-]+$/;
-
-export function validateServiceKey(key: unknown): ServiceKeyProblem | null {
-  if (typeof key !== "string" || key.length === 0) return "missing";
-  return URL_ENCODED_KEY.test(key) ? null : "not-url-encoded";
-}
+import type { ServiceConfigEntry } from "./bus.types";
 
 // WHY: own keys only, so a service id that names an Object.prototype member (`toString`) is unknown.
 export function serviceConfigOf(serviceId: string): ServiceConfigEntry | undefined {

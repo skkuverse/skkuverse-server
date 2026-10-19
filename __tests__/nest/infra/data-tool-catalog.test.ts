@@ -1,6 +1,6 @@
 /**
  * The `npm run data` catalog (scripts/lib/datasets/catalog.js, design D1 and
- * D6 of openspec/changes/move-runtime-data-to-db): the datasets the tool knows
+ * D6 of openspec/changes/archive/2026-10-19-move-runtime-data-to-db): the datasets the tool knows
  * and the server code that validates each one. The command line loads it over
  * `dist/src`; this test loads the same catalog over `src/` through ts-jest, so
  * the catalog covered here is the catalog the tool runs.
@@ -8,11 +8,24 @@
  * The tool picks its database from `--prod`, never from NODE_ENV, so loading
  * the catalog must not load src/infra/config.ts, which exits on a missing value
  * and picks `_dev` on its own.
+ *
+ * The code-held sources (`miniapps`, `busGroups`, `subwayStations`,
+ * `busServices`) list the identities the compiled checkout serves, the same
+ * lists the server checks against (move-editorial-datasets D3).
+ *
+ * The wave A datasets (`campus-banners`, `transit-layout`) are checked at push
+ * with the checks the boot refused a committed file on (D4, D5), through the
+ * tool's own checkData.
  */
 import path from "node:path";
+import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
+import { BusConfigService } from "../../../src/bus/config/bus-config.service";
+import { MiniappsService } from "../../../src/miniapps/miniapps.service";
+import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { loadCatalog } = require("../../../scripts/lib/datasets/catalog");
+const { checkData } = require("../../../scripts/lib/datasets/checks");
 
 const SRC = path.join(__dirname, "../../../src");
 const CONFIG = path.join(SRC, "infra/config");
@@ -21,6 +34,16 @@ const srcLoader = (relativePath: string): unknown => require(path.join(SRC, rela
 const fixture = require("../ui/fixtures/home-layout.dataset.json") as Record<string, unknown>;
 const { _about, ...homeLayout } = fixture;
 void _about;
+
+/** A dataset fixture's data, as the push imports it: a fresh copy without `_about`. */
+function datasetFixture(relativePath: string): Record<string, unknown> {
+  const { _about: note, ...data } = structuredClone(require(relativePath)) as Record<string, unknown>;
+  void note;
+  return data;
+}
+
+type Issue = { dataset: string; path: Array<string | number>; message: string };
+const issueLines = (issues: Issue[]): string[] => issues.map((issue) => `${issue.dataset}: ${issue.path.join(".")}: ${issue.message}`);
 
 describe("loadCatalog", () => {
   it("accepts revision 1 of the stored home layout with the server's schema", () => {
@@ -85,5 +108,167 @@ describe("loadCatalog", () => {
 
     // Assert
     expect(configLoaded).toBe(false);
+  });
+});
+
+describe("loadCatalog code-held sources", () => {
+  // BusConfigService.listGroupIds reads neither of its providers.
+  const busConfig = new BusConfigService(null as never, null as never);
+  const servedIds = {
+    miniapps: () => [...new MiniappsService().map.keys()],
+    busGroups: () => busConfig.listGroupIds(),
+    subwayStations: () => new SubwayStationsService().listStations().map((station) => station.id),
+    busServices: () => Object.keys(SERVICE_CONFIG),
+  };
+
+  it.each([
+    ["miniapps", "src/miniapps"],
+    ["busGroups", "src/bus"],
+    ["subwayStations", "src/subway"],
+    ["busServices", "src/bus"],
+  ] as const)("lists the %s ids the server serves, in its order, owned by %s", (name, owner) => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const source = catalog.sources[name];
+
+    // Assert
+    expect(source.owner).toBe(owner);
+    expect(source.ids()).toEqual(servedIds[name]());
+    expect(source.ids().length).toBeGreaterThan(0);
+  });
+
+  it.each(["miniapps", "busGroups", "subwayStations", "busServices"] as const)("answers has() for every %s id it lists, and no other", (name) => {
+    // Arrange
+    const source = loadCatalog(srcLoader).sources[name];
+
+    // Act & Assert
+    expect(source.ids().every((id: string) => source.has(id))).toBe(true);
+    expect(source.has("no-such-id")).toBe(false);
+    expect(source.has("toString")).toBe(false);
+  });
+
+  it("pins today's bus groups and a bus service", () => {
+    // Arrange
+    const { sources } = loadCatalog(srcLoader);
+
+    // Act & Assert
+    expect(sources.busGroups.ids()).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
+    expect(sources.busServices.has("campus-inja")).toBe(true);
+  });
+});
+
+describe("loadCatalog campus-banners", () => {
+  const banners = () => datasetFixture("../ui/fixtures/campus-banners.dataset.json") as { items: Array<Record<string, unknown>> };
+
+  it("is owned by src/ui/campus and accepts revision 1 with no issue and no reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["campus-banners"];
+
+    // Act
+    const issues = checkData(catalog, "campus-banners", banners(), {});
+
+    // Assert
+    expect(entry.owner).toBe("src/ui/campus");
+    expect(issues).toEqual([]);
+    expect(entry.referencesOf(entry.schema.parse(banners()))).toEqual([]);
+  });
+
+  it("refuses a banner whose miniapp target is unregistered, naming its actionValue path and the id", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = banners();
+    data.items[2] = { ...data.items[2], actionType: "miniapp", actionValue: "no-such-miniapp/entry" };
+
+    // Act
+    const lines = issueLines(checkData(catalog, "campus-banners", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^campus-banners: items\.2\.actionValue: .*no-such-miniapp/)]);
+  });
+
+  it("refuses an image off the media bucket, naming its imageUrl path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = banners();
+    data.items[0] = { ...data.items[0], imageUrl: "https://evil.com/a.webp" };
+
+    // Act
+    const lines = issueLines(checkData(catalog, "campus-banners", data, {}));
+
+    // Assert
+    expect(lines).toEqual(["campus-banners: items.0.imageUrl: must be an object on the media bucket"]);
+  });
+});
+
+describe("loadCatalog transit-layout", () => {
+  type Section = { id: string; items: Array<Record<string, unknown>> };
+  const layout = () => datasetFixture("../ui/fixtures/transit-layout.dataset.json") as { sections: Section[] };
+
+  it("is owned by src/ui/transit and accepts revision 1 against the checkout's bus groups, stations and registry", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const issues = checkData(catalog, "transit-layout", layout(), {});
+
+    // Assert
+    expect(catalog.datasets["transit-layout"].owner).toBe("src/ui/transit");
+    expect(issues).toEqual([]);
+  });
+
+  it("New bus group not placed: refuses a layout without jongro08, naming the unplaced group", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = layout();
+    const hssc = data.sections.find((section) => section.id === "hssc")!;
+    hssc.items = hssc.items.filter((item) => item.groupId !== "jongro08");
+
+    // Act
+    const lines = issueLines(checkData(catalog, "transit-layout", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['transit-layout: sections: bus group "jongro08" is not placed']);
+  });
+
+  it("Unknown group: refuses a placed nope group, naming the item's path and nope", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = layout();
+    data.sections[0]!.items.push({ kind: "bus", groupId: "nope" });
+
+    // Act
+    const lines = issueLines(checkData(catalog, "transit-layout", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['transit-layout: sections.0.items.2.groupId: "nope" is not a bus group']);
+  });
+
+  it("Station placed twice: refuses subway:hyehwa in two sections, naming the second placement", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = layout();
+    data.sections[2]!.items.push({ kind: "subway", stationId: "hyehwa" });
+
+    // Act
+    const lines = issueLines(checkData(catalog, "transit-layout", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^transit-layout: sections\.2\.items\.3: item "subway:hyehwa" is placed more than once$/)]);
+  });
+
+  it("lists its bus group, station and mini app references against the code-held sources", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["transit-layout"];
+
+    // Act
+    const references = entry.referencesOf(entry.schema.parse(layout())) as Array<{ dataset: string; id: string }>;
+
+    // Assert
+    expect(new Set(references.map((reference) => reference.dataset))).toEqual(new Set(["busGroups", "subwayStations"]));
+    expect(references.every((reference) => catalog.sources[reference.dataset].has(reference.id))).toBe(true);
   });
 });

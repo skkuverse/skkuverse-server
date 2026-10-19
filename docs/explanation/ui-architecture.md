@@ -3,7 +3,7 @@ title: Ui Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-19
+last-updated: 2026-10-20
 audience: internal
 ---
 
@@ -13,15 +13,14 @@ audience: internal
 
 ## Context
 
-Ui writes nothing. It reads the home layout from the `home-layout` dataset in the content database ([ADR 0013](../decisions/0013-runtime-data-in-mongodb.md)), serves two JSON files committed next to their readers, `campus-banners.json` and `transit-layout.json`, checked at boot, resolves each per request in the request language, and serves two lists built from other modules and translations: the bus groups and the scroll cards. Each route is its own sub-module (`home/`, `campus/`, `transit/`, `transit-list/`, `scroll/`); the root binds the limiter and holds the banner carousel the home and campus flows share and the bus group visibility both transit flows apply.
+Ui writes nothing. It reads three datasets from the content database ([ADR 0013](../decisions/0013-runtime-data-in-mongodb.md)), `home-layout`, `campus-banners` and `transit-layout`, each validated at push and parsed again at read, resolves each per request in the request language, and serves two lists built from other modules and translations: the bus groups and the scroll cards. Each route is its own sub-module (`home/`, `campus/`, `transit/tab/`, `transit-list/`, `scroll/`). `transit/` holds the stored transit layout behind `UiTransitService`, which the tab flow reads; the root binds the limiter and holds the banner carousel the home and campus flows share and the bus group visibility both transit flows apply.
 
 | System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
-| The content database | — | The `home-layout` dataset, written only by `npm run data`, which validates it at push | `UiHomeRepository.findHomeLayout` |
-| The committed config files | — | The campus carousel and the transit layout, edited by hand and shipped with a deploy | `readCampusBanners`, `readTransitLayout` |
+| The content database | — | The `home-layout`, `campus-banners` and `transit-layout` datasets, written only by `npm run data`, which validates each at push | `UiHomeRepository.findHomeLayout`, `UiCampusRepository.findCampusBanners`, `UiTransitRepository.findTransitLayout` |
 | The mini-app registry | — | Which mini apps exist, the target and emoji checks, and the logo of a link tile | `MiniappsService`, injected into `UiHomeService`, `UiCampusService` and `UiTransitService` |
-| The bus groups | — | Each group's label, card, screen type and visibility; the boot check reads only their ids (`BusConfigService.listGroupIds`) | `BusConfigService.getBusGroups`, injected into `UiTransitListService` and `UiTransitService` |
-| The served subway stations | — | Each physical station's slug and title, and each of its lines' code, name, color and marker, from subway's registry | `SubwayStationsService.listStations`, injected into `UiTransitService` |
+| The bus groups | — | Each group's label, card, screen type and visibility; the transit layout is checked against their ids (`BusConfigService.listGroupIds`) | `BusConfigService.getBusGroups`, injected into `UiTransitListService` and `UiTransitTabService` |
+| The served subway stations | — | Each physical station's slug and title, and each of its lines' code, name, color and marker, from subway's registry | `SubwayStationsService.listStations`, injected into `UiTransitTabService` |
 | moment-timezone | `moment` | A bus group's KST dates and first-day time; a strict parse still reads `24:00` as the next midnight | `isBusGroupVisible` |
 | The translations | — | The titles of the scroll cards | `t` in `src/infra/i18n.ts` |
 | skkuverse-app | — | Nothing; it reads the routes | `GET /ui/home` and its siblings |
@@ -40,27 +39,34 @@ Ui writes nothing. It reads the home layout from the `home-layout` dataset in th
 | link action | An `actionType` with its `actionValue`, checked by the type's rule | `isBrokenLinkAction` | — |
 | mini-app feed | A home card showing the latest entries of one mini app's broadcast feed, fetched by the app | the home layout | — |
 | left-out item | A tile, feed section or banner of the stored home layout that the running code cannot serve (an unregistered mini app, a broken link action or icon): not served, and logged once per revision | `withoutUnresolvedItems` over `toHomeLayoutIssues` | — |
-| campus sheet (`CampusSheet`) | The `GET /ui/home/campus` body: the campus carousel while a banner shows, else no section | `toCampusSheet` | `campusConfig` |
-| transit layout (`TransitLayout`) | The `GET /ui/home/transit` body: a version and the transit sections the transit tab draws in order | `toTransitSection` over `transit-layout.json` | — |
+| left-out banner | A banner of the stored campus carousel whose action the running code cannot serve, such as a mini app a deploy removed: not served, and logged once per revision; a carousel left with none is left out | `withoutUnresolvedBanners` over `toCampusBannerIssues` | — |
+| left-out transit item | A transit item of the stored layout that names a bus group or station the running server does not serve, or a link that no longer resolves; a group whose `visibleWith` is the fault is left out whole. Not served, and logged once per revision | `withoutUnresolvedItems` over `toTransitLayoutIssues` | — |
+| unplaced group or station | A bus group or served station the stored layout does not place: not served, never added to a section, and logged once per revision | `isUnplacedIssue` | — |
+| campus sheet (`CampusSheet`) | The `GET /ui/home/campus` body: the campus carousel while a banner shows, else no section | `toCampusSheet` over the `campus-banners` dataset | `campusConfig` |
+| transit layout (`TransitLayout`) | The `GET /ui/home/transit` body: a version and the transit sections the transit tab draws in order | `toTransitSection` over the `transit-layout` dataset | — |
 | transit section | One `item_list` of the transit layout: an id, a title (null when the layout gives none, and the app draws no header) and its transit items; one left with no item is not served | `toTransitSection` | — |
-| transit item | One row of a transit section: a `kind` (`bus`, `subway`, `link` or `group`) naming its referent, and the id, title and subtitle every kind carries; a bus, subway or link item carries an action, and a bus, link or group item an icon | a bus group, a served station, a link or a group written in `transit-layout.json` | — |
-| group item | A `group` transit item: a box the app folds and unfolds, with its own title, subtitle and icon, its initial state and the bus, subway or link items it holds, each served as at the top of a section; it holds no group and carries no action | `toGroupTransitItems` over `transit-layout.json` | — |
-| initial state | A group item's `initialState`, `collapsed` or `expanded`, written in the layout with no default and served as written: how the app first draws the box | `transit-layout.json` | — |
+| transit item | One row of a transit section: a `kind` (`bus`, `subway`, `link` or `group`) naming its referent, and the id, title and subtitle every kind carries; a bus, subway or link item carries an action, and a bus, link or group item an icon | a bus group, a served station, a link or a group written in the `transit-layout` dataset | — |
+| group item | A `group` transit item: a box the app folds and unfolds, with its own title, subtitle and icon, its initial state and the bus, subway or link items it holds, each served as at the top of a section; it holds no group and carries no action | `toGroupTransitItems` over the `transit-layout` dataset | — |
+| initial state | A group item's `initialState`, `collapsed` or `expanded`, written in the layout with no default and served as written: how the app first draws the box | the `transit-layout` dataset | — |
 | visible with | A group's `visibleWith`, one bus group of its own section: the group shows only while that bus group does, and the field is never served | `toGroupTransitItems` | — |
 | station row | A `subway` transit item: one physical station by its slug, titled with its station suffix, with a null subtitle (its markers name its lines), and `lines`, each line's code, name, color and marker (its one-character text in the request language and its color), in place of an icon; it opens `/subway?station=<slug>` | `SubwayStationsService.listStations` | — |
 | bus group card | One bus group as the transit tab lists it: its card and the screen a tap opens | `toBusGroupCard` | `busItem` |
 | scroll card (`ScrollCards`) | One of the three cards `GET /ui/home/scroll` sends | `toScrollCards` | `scrollItem` |
-| registry (`MiniAppRegistry`) | What the layout checks read from `MiniappsService`: at boot for the files, at each load for the home layout | `MiniappsService` | — |
+| registry (`MiniAppRegistry`) | What the dataset checks read from `MiniappsService`: at push from the checkout, at each load for the home layout and the campus banners, and per request for the transit layout | `MiniappsService` | — |
 
 ## Structure
 
 ```mermaid
 flowchart LR
   dataset["home-layout dataset"] -->|UiHomeRepository, parsed; left-out items dropped| home["UiHomeService"]
-  campusFile["campus-banners.json"] -->|readCampusBanners, checked against the registry| campus["UiCampusService"]
+  campusDataset["campus-banners dataset"] -->|UiCampusRepository, parsed; left-out banners dropped| campus["UiCampusService"]
   registry["MiniappsService"] -->|resolveLogo| home
+  registry -->|target checks| campus
   bus["BusConfigService"] -->|bus groups, isBusGroupVisible| transit["UiTransitListService"]
-  transitFile["transit-layout.json"] -->|readTransitLayout, checked against the groups, stations and registry| layout["UiTransitService"]
+  transitDataset["transit-layout dataset"] -->|UiTransitRepository, parsed| stored["UiTransitService"]
+  registry -->|link checks| stored
+  stored -->|the stored layout, left-out items dropped| layout["UiTransitTabService"]
+  layout -->|served group and station ids| stored
   bus -->|bus groups, isBusGroupVisible| layout
   stations["SubwayStationsService"] -->|served stations| layout
   clock["Clock"] -->|now, for each window| home
@@ -95,11 +101,12 @@ What the app reads, from `skkuverse-app/packages/shared/src/home/schema.ts`, `sk
 
 ## Invariants
 
-- The campus banners are parsed when Nest builds `UiCampusService`, so a bad file, an unregistered mini app or a broken link action stops the boot (`loadCampusBanners`). Unknown keys are refused, here and in the home layout, so a misspelt key cannot pass and do nothing.
-- The home layout is validated at push and parsed at read (`storedHomeLayout`). `UiHomeService` holds it for `DATASET_CACHE_TTL_MS`, keeps the last good one through a failed, missing or invalid reload for `DATASET_STALE_WINDOW_MS`, and with none answers `503 HOME_LAYOUT_UNAVAILABLE` without `Cache-Control`, remembered for one `DATASET_CACHE_TTL_MS` so a missing layout costs one read a minute. Only a missing or invalid layout and a failed read (`UiHomeLayoutReadError`) answer `503`; any other error is a fault and reaches the filter as a `500`. `ui.home_layout.missing`, `.invalid` (per revision) and `.read_failed` log at most once a minute, with `suppressed`. A left-out item is dropped, then a grid it empties, never a carousel.
-- The transit layout is parsed when Nest builds `UiTransitService`: an unknown bus group or station, a repeated section or item id, an empty section or group, a broken link action, a group inside a group or without `initialState`, a `visibleWith` bus group that is unknown or that its own section does not place, or a bus group or served station not placed exactly once, children of groups counted, stops the boot (`loadTransitLayout`). A group meant to be hidden keeps its place and uses its visibility. The bus groups are read per request from the bus config, whose Jongro stations come from the bus registry, so a missing registry route answers `503 JONGRO_REGISTRY_UNAVAILABLE` on both transit routes too ([bus](bus-architecture.md), "Invariants").
+- Every dataset is validated at push with the server's own schema and rules from the pushing checkout, and parsed again at read. Unknown keys are refused in all three, so a misspelt key cannot pass and do nothing.
+- The home layout is parsed at read (`storedHomeLayout`). `UiHomeService` holds it for `DATASET_CACHE_TTL_MS`, keeps the last good one through a failed, missing or invalid reload for `DATASET_STALE_WINDOW_MS`, and with none answers `503 HOME_LAYOUT_UNAVAILABLE` without `Cache-Control`, remembered for one `DATASET_CACHE_TTL_MS` so a missing layout costs one read a minute. Only a missing or invalid layout and a failed read (`UiHomeLayoutReadError`) answer `503`; any other error is a fault and reaches the filter as a `500`. `ui.home_layout.missing`, `.invalid` (per revision) and `.read_failed` log at most once a minute, with `suppressed`. A left-out item is dropped, then a grid it empties, never a carousel.
+- The campus banners (`storedCampusBanners`) and the transit layout (`storedTransitLayout`) keep the same read contract through `createDatasetLoader`, answering `503 CAMPUS_BANNERS_UNAVAILABLE` and `503 TRANSIT_LAYOUT_UNAVAILABLE` without `Cache-Control`, with their own `.missing`, `.invalid` and `.read_failed` lines under `ui.campus_banners` and `ui.transit_layout`. A banner whose action fails its check against the registry is left out (`toCampusBannerIssues`), then the carousel it empties.
+- A transit layout push is refused for a repeated section or item id, an empty section or group, a broken link action, a group inside a group or without `initialState`, a `visibleWith` bus group that is unknown or that its own section does not place, or a bus group or served station of the checkout not placed exactly once, children of groups counted (`transitLayoutFile`, `toTransitLayoutIssues`). Per request, `UiTransitTabService` hands `UiTransitService` the ids the running server serves: a left-out transit item is dropped, and an unplaced group or station is logged (`ui.transit_layout.unplaced`) and served nowhere, never appended. A group meant to be hidden keeps its place and uses its visibility. The bus groups are read per request from the bus config, whose Jongro stations come from the bus registry, so a missing registry route answers `503 JONGRO_REGISTRY_UNAVAILABLE` on both transit routes too ([bus](bus-architecture.md), "Invariants").
 - A transit item's id is `bus:`, `subway:` or `group:` and its referent's id, or a link's own slug (`toTransitItemId`); a transit item carries no arrival, which stays on each kind's own route.
-- Per request, a group whose `visibleWith` bus group is hidden is left out, then hidden bus items inside a group, then a group left with no item, then an emptied section (`toGroupTransitItems`, `UiTransitService`).
+- Per request, a group whose `visibleWith` bus group is hidden is left out, then hidden bus items inside a group, then a group left with no item, then an emptied section (`toGroupTransitItems`, `UiTransitTabService`).
 - Section and banner ids share one namespace and tile ids another (`findDuplicateId`): each is an analytics item id for a tap.
 - A banner shows inside its window on the injected `Clock` (`isBannerShowing`). `GET /ui/home`, `GET /ui/home/campus` and `GET /ui/home/transit` are cached for `UI_CACHE_CONTROL`, which also bounds how late a window takes effect.
 - An emptied home carousel is still sent, because the app draws its default banner there; an emptied campus carousel is left out, because the campus sheet has none.

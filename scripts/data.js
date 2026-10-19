@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * `npm run data`: the one tool that edits runtime datasets in the content
- * database (openspec/changes/move-runtime-data-to-db; how-to:
+ * database (openspec/changes/archive/2026-10-19-move-runtime-data-to-db; how-to:
  * docs/how-to/edit-runtime-data.md). The server only reads them.
  *
  * Usage (npm run data -- <command> ...):

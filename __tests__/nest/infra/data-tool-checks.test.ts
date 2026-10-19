@@ -1,7 +1,7 @@
 /**
  * What `npm run data` refuses before a write, and what `check` reports on
  * stored data (scripts/lib/datasets/checks.js, design D6 of
- * openspec/changes/move-runtime-data-to-db). Four checks, every issue
+ * openspec/changes/archive/2026-10-19-move-runtime-data-to-db). Four checks, every issue
  * collected with its dataset and path:
  *
  *   1. the dataset's schema;

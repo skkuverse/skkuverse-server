@@ -18,6 +18,7 @@
  */
 import type { Clock } from "../../../src/infra/clock";
 import { MiniappsService } from "../../../src/miniapps/miniapps.service";
+import type { UiCampusRepository } from "../../../src/ui/campus/ui-campus.repository";
 import { UiCampusService } from "../../../src/ui/campus/ui-campus.service";
 import fs from "fs";
 import path from "path";
@@ -27,6 +28,8 @@ import { storedBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN } from "../../../src/infra/origins";
+import { asReal } from "../../helpers/fakes/public-of";
+import { FakeUiCampusRepository } from "../../helpers/fakes/ui/ui-campus.repository.fake";
 
 
 /** Every string anywhere in `value` that names a webview host. */
@@ -65,9 +68,18 @@ const registryDetails = Object.fromEntries(
 // After the festival's campus banners closed (10/3), as on the day this test was pinned.
 const clock: Clock = { now: () => new Date("2026-10-13T03:00:00.000Z") };
 
+/** The campus banners as stored: revision 1 of the dataset, which holds what campus-banners.json held. */
+function storedCampusBanners(): UiCampusRepository {
+  const banners = JSON.parse(fs.readFileSync(path.join(__dirname, "../ui/fixtures/campus-banners.dataset.json"), "utf8")) as Record<string, unknown>;
+  delete banners._about;
+  const repository = new FakeUiCampusRepository();
+  repository.storeCampusBanners(banners);
+  return asReal<UiCampusRepository>(repository);
+}
+
 // WHY: read when the tests run, since the bus config reads its stations from a registry holding the routes stored on 2026-10-17.
 const payloads: Record<string, () => unknown> = {
-  "GET /ui/home/campus": () => new UiCampusService(new MiniappsService(), clock).getCampusSheet("ko"),
+  "GET /ui/home/campus": () => new UiCampusService(storedCampusBanners(), new MiniappsService(), clock).getCampusSheet("ko"),
   "GET /ui/home/scroll": () => new UiScrollService().listScrollCards("ko"),
   "GET /bus/config": async () => new BusConfigService(new BusStopsService(new SubwayStationsService()), storedBusRegistryService()).getBusGroups(),
   "src/miniapps/details/*.json": () => registryDetails,

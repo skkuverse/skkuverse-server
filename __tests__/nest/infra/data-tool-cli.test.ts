@@ -1,7 +1,7 @@
 /**
  * The `npm run data` command line (scripts/data.js and
  * scripts/lib/datasets/working-file.js, design D1 and D5 of
- * openspec/changes/move-runtime-data-to-db), run in this process over a real
+ * openspec/changes/archive/2026-10-19-move-runtime-data-to-db), run in this process over a real
  * `mongod` with the catalog loaded over `src/`:
  *
  *   - `_dev` is the target unless `--prod` is given;
