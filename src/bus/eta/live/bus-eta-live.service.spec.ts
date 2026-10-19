@@ -12,9 +12,10 @@
  * position request succeeds, whatever NAVER does.
  *
  * Over the stored corridor (move-reference-datasets D9): the tick reads it once,
- * only when a bus-lane run is due, and hands its snapshot to the travel model;
- * never read, a bus-lane run is served the unforced route marked `car` with no
- * position request, and the tick rejects after storing, while car runs are
+ * only when a bus-lane run is due or a corridor failure is held, and hands its
+ * snapshot to the travel model; never read, a bus-lane run is served the
+ * unforced route marked `car` with no position request, and the tick rejects
+ * after storing, until the first tick after a push, while car runs are
  * unaffected.
  *
  * Over the stored schedule content (move-editorial-datasets D9), through the
@@ -555,18 +556,20 @@ describe("BusEtaLiveService.tick over the stored corridor", () => {
     expect(travel.prime).not.toHaveBeenCalled();
   });
 
-  it("keeps rejecting until a bus-lane run reads a corridor, then resolves", async () => {
+  it("keeps rejecting while no corridor reads, and resolves at the first tick after a push, with no bus-lane run due", async () => {
     // Arrange
-    const { live, travel, doc } = laneSetup(["14:00"]);
+    // 18:10: the 18:15 run is in its window; at 18:40 it is past departure, so no bus-lane call is due.
+    const { live, travel } = laneSetup(["18:15"]);
     travel.corridor.mockResolvedValueOnce(null);
-    await live.tick(at("13:00")).catch(() => undefined);
+    await expect(live.tick(at("18:10"))).rejects.toBeInstanceOf(BusEtaLaneUnavailableError);
 
-    // Act & Assert
-    // 13:05: no call is due, so no corridor is read.
-    await expect(live.tick(at("13:05"))).rejects.toBeInstanceOf(BusEtaLaneUnavailableError);
-    // 13:10: the run's value is stale, and the corridor reads.
-    await expect(live.tick(at("13:10"))).resolves.toEqual({ calls: 1, written: 1 });
-    expect(doc("14:00")).toMatchObject({ fetchedAt: at("13:10"), travel: BUS_LANE_TRAVEL });
+    // Act
+    const tick = await live.tick(at("18:40"));
+
+    // Assert
+    expect(tick).toMatchObject({ calls: 0 });
+    expect(travel.corridor).toHaveBeenCalledTimes(2);
+    expect(travel.fetchCorridorRoute).not.toHaveBeenCalled();
   });
 });
 
