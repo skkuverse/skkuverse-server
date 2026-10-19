@@ -14,6 +14,10 @@
  * (map-dataset-fixtures.test.ts); moving it to the content database must not
  * change a byte here.
  *
+ * The layer set is stored in the real `mongod`'s content database the way
+ * `npm run data` stores it: the fixture's data pushed through the tool's own
+ * scripts/lib/datasets/store.js, as revision 1 of `map-layer-sets`.
+ *
  * The eventmap database holds what its scripts write: the 77 places of
  * scripts/data/eskara-2026-places.json, parsed by scripts/lib/map-places-file.js
  * and written by scripts/lib/eventmap-db.js, the eskara-2026 activation open
@@ -42,6 +46,7 @@ import captured from "./fixtures/map-production.capture.json";
 import festival from "./fixtures/map-festival.expected.json";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
+const store = require("../../../scripts/lib/datasets/store");
 const { parsePlacesFile } = require("../../../scripts/lib/map-places-file");
 const { enableActivation, ensureActivation, upsertPlaces } = require("../../../scripts/lib/eventmap-db");
 
@@ -77,6 +82,13 @@ interface Expected {
 }
 
 const PRODUCTION_STYLE_ID = captured.config.ko.body.data.naver.styleId;
+
+/** The layer sets fixtures/map-layer-sets.dataset.json holds, without its provenance note. */
+function fixtureLayerSets(): Record<string, unknown> {
+  const dataset = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/map-layer-sets.dataset.json"), "utf8")) as Record<string, unknown>;
+  delete dataset._about;
+  return dataset;
+}
 const EVENT_CACHE_CONTROL = "public, max-age=60";
 const VARY = "Accept-Language, Origin";
 
@@ -104,6 +116,8 @@ beforeAll(async () => {
   await ensureActivation(eventmap.collection("activations"), "eskara-2026", IMPORTED_AT);
   await enableActivation(eventmap.collection("activations"), "eskara-2026", IMPORTED_AT, ESKARA_WINDOW.from, ESKARA_WINDOW.until);
   await enableActivation(eventmap.collection("activations"), "spring-2027", IMPORTED_AT, SPRING_WINDOW.from, SPRING_WINDOW.until);
+  const content = db.getClient().db(config.content.dbName);
+  await store.create(content, "map-layer-sets", fixtureLayerSets(), { by: "characterization@example.com", now: IMPORTED_AT });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

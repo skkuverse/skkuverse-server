@@ -7,6 +7,11 @@ import type { MapChipSpec } from "./map-layer-set.types";
  */
 export const LAYER_SET_FILES = ["eskara-2026.json"] as const;
 
+export const MAP_LAYER_SETS_DATASET = "map-layer-sets";
+
+// WHY: a missing, invalid or unavailable dataset recurs on every read; one line a minute, as docs/reference/logging.md asks.
+export const MAP_LAYER_SETS_LOG_INTERVAL_MS = 60_000;
+
 // WHY: one spelling per minute, so a bound compares as a string: no "24:00" for midnight, no "7:00".
 export const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 

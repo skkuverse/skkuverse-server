@@ -22,6 +22,8 @@ import { BASE_CHIPS } from "../../../src/map/layer-set/map-layer-set.constants";
 import { MapLayerSetModule } from "../../../src/map/layer-set/map-layer-set.module";
 import { MapModule } from "../../../src/map/map.module";
 import { MapRepository } from "../../../src/map/map.repository";
+import { MapLayerSetRepository } from "../../../src/map/layer-set/map-layer-set.repository";
+import { fixtureLayerSetRepository } from "../../helpers/map/layer-sets-fixture";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
 import { Clock } from "../../../src/infra/clock";
@@ -54,6 +56,7 @@ describe("GET /map/config (real map services)", () => {
       overrides: [
         { provide: BuildingRepository, useValue: new FakeBuildingRepository() },
         { provide: MapRepository, useValue: mapRepository },
+        { provide: MapLayerSetRepository, useValue: fixtureLayerSetRepository() },
         { provide: Clock, useValue: CLOCK },
       ],
       role: "api",
