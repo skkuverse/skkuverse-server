@@ -63,7 +63,7 @@ function toLinkTransitItem(link: LinkItemRaw, lang: SupportedLang): TransitChild
   };
 }
 
-// WHY: each load left out the referents the server does not serve; a group missing here is one outside its visibility.
+// WHY: the per-request check left out the referents the server does not serve; a group missing here is one outside its visibility.
 function toTransitChildren(item: TransitChildRaw, context: TransitSectionContext): TransitChild[] {
   if (item.kind === "link") return [toLinkTransitItem(item, context.lang)];
   if (item.kind === "bus") {
