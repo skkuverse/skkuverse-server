@@ -272,6 +272,35 @@ describe("npm run data", () => {
     expect(await revisionOf(devDb())).toBeNull();
   });
 
+  it("with --prod, records a missing history entry only in a confirmed write", async () => {
+    // Arrange
+    // A push that stopped after storing revision 2 left it without its history entry.
+    await store.create(prodDb(), "home-layout", homeLayout, { by: OPERATOR, now: NOW });
+    const edited = structuredClone(homeLayout) as { sections: unknown[] };
+    await store.push(prodDb(), "home-layout", { ...edited, sections: edited.sections.slice(1) }, { baseRevision: 1, by: OPERATOR, now: NOW });
+    await prodDb().collection("dataset_revisions").deleteOne({ _id: "home-layout@2" as never });
+    const entryOf2 = () => prodDb().collection("dataset_revisions").findOne({ _id: "home-layout@2" as never });
+
+    // Act
+    const pulled = await data(["pull", "home-layout", "--prod"]);
+    const listed = await data(["history", "home-layout", "--prod"]);
+    const rollbackDeclined = await data(["rollback", "home-layout", "1", "--prod"], { isTTY: true, answer: "n" });
+    editWorkingFile("prod", "Campus Map");
+    const pushDeclined = await data(["push", "home-layout", "--prod"], { isTTY: true, answer: "n" });
+    const unrecordedBeforeConfirming = await entryOf2();
+    const confirmed = await data(["push", "home-layout", "--prod"], { isTTY: true, answer: "y" });
+
+    // Assert
+    expect([pulled, listed].map((r) => r.code)).toEqual([0, 0]);
+    expect(pulled.out).toMatch(/note: home-layout revision 2 has no history entry/);
+    expect(listed.out).toMatch(/note: home-layout revision 2 has no history entry/);
+    expect([rollbackDeclined, pushDeclined].map((r) => r.code)).toEqual([1, 1]);
+    expect(unrecordedBeforeConfirming).toBeNull();
+    expect(confirmed.code).toBe(0);
+    expect(await entryOf2()).toMatchObject({ revision: 2, note: "recorded by repair" });
+    expect(await revisionOf(prodDb())).toBe(3);
+  });
+
   it("writes nothing with --dry-run, after showing the diff", async () => {
     // Arrange
     await store.create(devDb(), "home-layout", homeLayout, { by: OPERATOR, now: NOW });
