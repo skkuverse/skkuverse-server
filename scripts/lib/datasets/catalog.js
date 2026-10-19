@@ -52,6 +52,8 @@ function loadCatalog(load) {
   const { transitLayoutFile } = load("ui/transit/ui-transit.schema");
   const { toTransitLayoutIssues, transitLayoutReferences } = load("ui/transit/ui-transit.rules");
   const { layerSetsDataset } = load("map/layer-set/map-layer-set.schema");
+  const { busServiceNoticesDataset } = load("bus/schedule-content/bus-schedule-content.schema");
+  const { serviceNoticesReferences } = load("bus/schedule-content/bus-schedule-content.rules");
   const { MiniappsService } = load("miniapps/miniapps.service");
   const { jongroRoutes } = load("bus/bus.config");
   const { SERVICE_CONFIG } = load("bus/bus.constants");
@@ -96,6 +98,12 @@ function loadCatalog(load) {
         schema: layerSetsDataset,
         referencesOf: () => [],
         idsOf: ({ layerSets }) => layerSets.map((set) => set.layerSetId),
+      },
+      // Each stored key is a service this checkout's SERVICE_CONFIG defines; ids and behavior stay in code.
+      "bus-service-notices": {
+        owner: "src/bus/schedule-content",
+        schema: busServiceNoticesDataset,
+        referencesOf: serviceNoticesReferences,
       },
     },
   };
