@@ -25,20 +25,42 @@
  * `issuesOf`, `referencesOf` and `idsOf` take the schema's parsed output.
  *
  * A code-held source is an identity list that still lives in code, resolved
- * against the compiled checkout: `has(id)`.
+ * against the compiled checkout (move-editorial-datasets D3):
+ *
+ *   owner            the src/ folder that holds the list
+ *   has(id)          whether the checkout serves `id`
+ *   ids()            every id it serves, in the server's order: a check that
+ *                    needs the whole list (an unplaced id) reads it here
+ *
+ * The lists are the ones the server checks against: `busGroups` is
+ * BusConfigService.listGroupIds's `toBusGroupIds(jongroRoutes)`,
+ * `subwayStations` SubwayStationsService.listStations's ids, `busServices`
+ * the keys of SERVICE_CONFIG.
  */
+
+function codeHeldSource(owner, ids) {
+  const known = new Set(ids);
+  return { owner, has: (id) => known.has(id), ids: () => [...ids] };
+}
 
 function loadCatalog(load) {
   const { homeLayoutFile } = load("ui/home/ui-home.schema");
   const { homeLayoutReferences, toHomeLayoutIssues } = load("ui/home/ui-home.rules");
   const { MiniappsService } = load("miniapps/miniapps.service");
+  const { jongroRoutes } = load("bus/bus.config");
+  const { SERVICE_CONFIG } = load("bus/bus.constants");
+  const { toBusGroupIds } = load("bus/config/bus-config.mapper");
+  const { SubwayStationsService } = load("subway/stations/subway-stations.service");
 
   // No constructor dependencies: the registry is read from the committed files at import.
   const miniapps = new MiniappsService();
 
   return {
     sources: {
-      miniapps: { owner: "src/miniapps", has: (id) => miniapps.isRegistered(id) },
+      miniapps: { owner: "src/miniapps", has: (id) => miniapps.isRegistered(id), ids: () => [...miniapps.map.keys()] },
+      busGroups: codeHeldSource("src/bus", toBusGroupIds(jongroRoutes)),
+      subwayStations: codeHeldSource("src/subway", new SubwayStationsService().listStations().map((station) => station.id)),
+      busServices: codeHeldSource("src/bus", Object.keys(SERVICE_CONFIG)),
     },
     datasets: {
       "home-layout": {

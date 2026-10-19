@@ -8,8 +8,16 @@
  * The tool picks its database from `--prod`, never from NODE_ENV, so loading
  * the catalog must not load src/infra/config.ts, which exits on a missing value
  * and picks `_dev` on its own.
+ *
+ * The code-held sources (`miniapps`, `busGroups`, `subwayStations`,
+ * `busServices`) list the identities the compiled checkout serves, the same
+ * lists the server checks against (move-editorial-datasets D3).
  */
 import path from "node:path";
+import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
+import { BusConfigService } from "../../../src/bus/config/bus-config.service";
+import { MiniappsService } from "../../../src/miniapps/miniapps.service";
+import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { loadCatalog } = require("../../../scripts/lib/datasets/catalog");
@@ -85,5 +93,53 @@ describe("loadCatalog", () => {
 
     // Assert
     expect(configLoaded).toBe(false);
+  });
+});
+
+describe("loadCatalog code-held sources", () => {
+  // BusConfigService.listGroupIds reads neither of its providers.
+  const busConfig = new BusConfigService(null as never, null as never);
+  const servedIds = {
+    miniapps: () => [...new MiniappsService().map.keys()],
+    busGroups: () => busConfig.listGroupIds(),
+    subwayStations: () => new SubwayStationsService().listStations().map((station) => station.id),
+    busServices: () => Object.keys(SERVICE_CONFIG),
+  };
+
+  it.each([
+    ["miniapps", "src/miniapps"],
+    ["busGroups", "src/bus"],
+    ["subwayStations", "src/subway"],
+    ["busServices", "src/bus"],
+  ] as const)("lists the %s ids the server serves, in its order, owned by %s", (name, owner) => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const source = catalog.sources[name];
+
+    // Assert
+    expect(source.owner).toBe(owner);
+    expect(source.ids()).toEqual(servedIds[name]());
+    expect(source.ids().length).toBeGreaterThan(0);
+  });
+
+  it.each(["miniapps", "busGroups", "subwayStations", "busServices"] as const)("answers has() for every %s id it lists, and no other", (name) => {
+    // Arrange
+    const source = loadCatalog(srcLoader).sources[name];
+
+    // Act & Assert
+    expect(source.ids().every((id: string) => source.has(id))).toBe(true);
+    expect(source.has("no-such-id")).toBe(false);
+    expect(source.has("toString")).toBe(false);
+  });
+
+  it("pins today's bus groups and a bus service", () => {
+    // Arrange
+    const { sources } = loadCatalog(srcLoader);
+
+    // Act & Assert
+    expect(sources.busGroups.ids()).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
+    expect(sources.busServices.has("campus-inja")).toBe(true);
   });
 });
