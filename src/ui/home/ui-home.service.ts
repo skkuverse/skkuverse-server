@@ -1,12 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { createCachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
-import config from "../../infra/config";
-import { createLogThrottle } from "../../infra/log-throttle";
+import { createDatasetLoader, type DatasetLoader } from "../../infra/dataset-loader";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
 import { MiniappsService } from "../../miniapps/miniapps.service";
-import { DATASET_CACHE_TTL_MS, DATASET_STALE_WINDOW_MS } from "../../shared/dataset.constants";
 import { HOME_LAYOUT_LOG_INTERVAL_MS } from "./ui-home.constants";
 import { UiHomeLayoutReadError, UiHomeLayoutUnavailableError } from "./ui-home.error";
 import { toHomeLayout } from "./ui-home.mapper";
@@ -20,53 +17,33 @@ import type { HomeLayout } from "./ui-home.wire";
 export class UiHomeService {
   // WHY: a reload every TTL re-finds the same items; each is logged once per revision this process loads.
   private loggedRevision: number | null = null;
-  // WHY: the loader caches no failure; with no good layout, Atlas sees one read per TTL, not one per request.
-  private unavailableUntil = 0;
-  private lastFailure: unknown = null;
-  private readonly readFailedThrottle = createLogThrottle(HOME_LAYOUT_LOG_INTERVAL_MS, () => this.clock.now().getTime());
-  private readonly loader = createCachedLoader({
-    name: "ui.home_layout",
-    ttlMs: DATASET_CACHE_TTL_MS,
-    staleWindowMs: DATASET_STALE_WINDOW_MS,
-    serveStale: "on-reload-failure",
-    load: () => this.loadHomeLayout(),
-  });
+  private readonly loader: DatasetLoader<HomeLayoutRaw>;
 
   constructor(
     private readonly repository: UiHomeRepository,
     private readonly miniApps: MiniappsService,
     private readonly clock: Clock,
-  ) {}
+  ) {
+    this.loader = createDatasetLoader({
+      name: "ui.home_layout",
+      load: () => this.loadHomeLayout(),
+      clock,
+      isReadError: (err): err is UiHomeLayoutReadError => err instanceof UiHomeLayoutReadError,
+      toUnavailable: () => new UiHomeLayoutUnavailableError(),
+      readFailedEvent: "ui.home_layout.read_failed",
+      logIntervalMs: HOME_LAYOUT_LOG_INTERVAL_MS,
+    });
+  }
 
   async getHomeLayout(lang: SupportedLang): Promise<HomeLayout> {
-    const layout = await this.cachedHomeLayout();
+    const layout = await this.loader.get();
     const resolveLogo = this.miniApps.resolveLogo.bind(this.miniApps);
     return toHomeLayout(layout, { lang, now: this.clock.now(), resolveLogo });
   }
 
-  private async cachedHomeLayout(): Promise<HomeLayoutRaw> {
-    if (this.clock.now().getTime() < this.unavailableUntil) throw new UiHomeLayoutUnavailableError();
-    try {
-      return await this.loader.get();
-    } catch (err) {
-      if (!(err instanceof UiHomeLayoutUnavailableError || err instanceof UiHomeLayoutReadError)) throw err;
-      // WHY: every caller waiting on one failed load receives the same error; it is one failure to remember and log.
-      if (err === this.lastFailure) throw new UiHomeLayoutUnavailableError();
-      this.lastFailure = err;
-      if (config.cache.enabled) this.unavailableUntil = this.clock.now().getTime() + DATASET_CACHE_TTL_MS;
-      if (err instanceof UiHomeLayoutReadError) this.logReadFailed(err);
-      throw new UiHomeLayoutUnavailableError();
-    }
-  }
-
-  private logReadFailed({ cause: driverError }: UiHomeLayoutReadError): void {
-    const taken = this.readFailedThrottle.take("read_failed");
-    if (taken) logger.error({ event: "ui.home_layout.read_failed", err: driverError, ...taken }, "Home layout unreadable with none cached");
-  }
-
-  private async loadHomeLayout(): Promise<HomeLayoutRaw> {
+  private async loadHomeLayout(): Promise<HomeLayoutRaw | null> {
     const stored = await this.repository.findHomeLayout();
-    if (stored === null) throw new UiHomeLayoutUnavailableError();
+    if (stored === null) return null;
     const issues = toHomeLayoutIssues(stored.layout, this.miniApps);
     this.logLeftOutItems(stored.revision, issues);
     return withoutUnresolvedItems(stored.layout, issues);
