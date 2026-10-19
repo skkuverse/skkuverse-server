@@ -1,7 +1,7 @@
 /**
  * Integration over BusConfigController (ETag/304 through EtagInterceptor) on
  * the production pipeline (buildTestApp); the Jongro stations come from the
- * registry, whose repository is an in-memory fake the boot seeds. Asserts group shape, 404
+ * registry, whose repository is an in-memory fake holding the routes stored on 2026-10-17. Asserts group shape, 404
  * GROUP_NOT_FOUND, 304, per-language ETag difference, and the hssc (11 stations,
  * lastStationIndex 10, refreshInterval 10) / jongro07 (22 stations,
  * refreshInterval 25) screen contents.
@@ -16,10 +16,10 @@ import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { Clock } from "../../../src/infra/clock";
 import appConfig from "../../../src/infra/config";
 import { expectWire } from "../../helpers/contracts/expect-wire";
-import { FakeBusRegistryRepository } from "../../helpers/fakes/bus/bus-registry.repository.fake";
+import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
-const registryRepository = new FakeBusRegistryRepository();
+const registryRepository = storedBusRegistryRepository();
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;

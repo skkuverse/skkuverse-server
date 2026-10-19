@@ -98,8 +98,3 @@ export function toSyncDecision({ storedVersion, observedVersion, pending, change
   if (count < OBSERVATIONS_TO_APPLY) return { kind: "pending", pending: next };
   return changedShare > MAX_CHANGED_SHARE_TO_APPLY ? { kind: "hold", pending: next } : { kind: "apply" };
 }
-
-// QUIRK(topis): some loops list their first stop again as the last ord (02: ord 1 and ord 27).
-export function isLoopClosingRepeat(topisIds: readonly string[], index: number): boolean {
-  return index > 0 && index === topisIds.length - 1 && topisIds[index] === topisIds[0];
-}

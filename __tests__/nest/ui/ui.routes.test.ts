@@ -20,7 +20,7 @@ import { UiHomeModule } from "../../../src/ui/home/ui-home.module";
 import { UiScrollModule } from "../../../src/ui/scroll/ui-scroll.module";
 import { UiTransitListModule } from "../../../src/ui/transit-list/ui-transit-list.module";
 import { UiModule } from "../../../src/ui/ui.module";
-import { FakeBusRegistryRepository } from "../../helpers/fakes/bus/bus-registry.repository.fake";
+import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { campusSheet } from "../../../src/ui/campus/ui-campus.wire";
@@ -39,7 +39,7 @@ beforeAll(async () => {
     imports: [SchedulingModule, BusModule, UiModule, UiHomeModule, UiTransitListModule, UiScrollModule, UiCampusModule],
     overrides: [
       { provide: Clock, useValue: CLOCK },
-      { provide: BusRegistryRepository, useValue: new FakeBusRegistryRepository() },
+      { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
     ],
     role: "api",
   });

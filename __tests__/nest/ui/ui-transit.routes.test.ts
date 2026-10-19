@@ -20,7 +20,7 @@ import { UiTransitModule } from "../../../src/ui/transit/ui-transit.module";
 import { transitLayout } from "../../../src/ui/transit/ui-transit.wire";
 import { UiModule } from "../../../src/ui/ui.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
-import { FakeBusRegistryRepository } from "../../helpers/fakes/bus/bus-registry.repository.fake";
+import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 // WHY: 12:00 KST on 2026-10-20, so the commute card is open and the answer does not depend on the day the suite runs.
@@ -36,7 +36,7 @@ beforeAll(async () => {
     imports: [SchedulingModule, BusModule, UiModule, UiTransitModule],
     overrides: [
       { provide: Clock, useValue: CLOCK },
-      { provide: BusRegistryRepository, useValue: new FakeBusRegistryRepository() },
+      { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
     ],
     role: "api",
   });

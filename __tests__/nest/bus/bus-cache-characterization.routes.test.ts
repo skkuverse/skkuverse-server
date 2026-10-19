@@ -22,6 +22,7 @@ import http from "node:http";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Collection } from "mongodb";
 import request from "supertest";
+import type { JongroRouteDocument } from "../../../src/bus/registry/bus-registry.document";
 import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
@@ -32,6 +33,7 @@ type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type Axios = import("axios").AxiosStatic;
 type Registry = typeof import("../../../src/scheduling/poller-registry.service")["PollerRegistryService"];
+type StoredRoutes = typeof import("../../helpers/bus/bus-registry")["storedJongroRouteDocuments"];
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const CLOCK = { now: (): Date => new Date(NOW) };
@@ -156,6 +158,9 @@ beforeEach(async () => {
   upstream.hssc = HSSC_ITEMS;
   upstream.requests = [];
   await clearCollections(db.getClient().db(config.mongo.dbName));
+  // WHY: no boot writes the registry any more (isolate-api-from-pollers D2), so the stored routes are a fixture.
+  const storedJongroRouteDocuments = (require("../../helpers/bus/bus-registry") as { storedJongroRouteDocuments: StoredRoutes }).storedJongroRouteDocuments;
+  await db.getClient().db(config.mongo.dbName).collection<JongroRouteDocument>(config.mongo.collections.jongroRoutes).insertMany(storedJongroRouteDocuments(CLOCK.now()));
   const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller");
   try {
     pollerApp = await bootApp();
@@ -470,32 +475,5 @@ describe("bus_cache when the upstreams list no bus", () => {
     } finally {
       warn.mockRestore();
     }
-  });
-});
-
-// WHY: both boots above seed the registry (every role does, improve-jongro-realtime D7) against a real mongod, so
-// this pins that `$setOnInsert` inserts each route once from the snapshot and the second boot writes nothing.
-describe("jongro_routes seeded by both boots", () => {
-  it("holds one document per route, equal to the committed snapshot", async () => {
-    // Arrange
-    const seed = require("../../../src/bus/registry/jongro-stations.seed.json") as Array<{
-      id: string;
-      turnaroundTopisId: string;
-      stations: Array<{ topisId: string; arsId: string; stationName: string }>;
-    }>;
-
-    // Act
-    const docs = await db.getClient().db(config.mongo.dbName).collection("jongro_routes").find({}).sort({ _id: 1 }).toArray();
-
-    // Assert
-    expect(docs.map((doc) => ({ id: doc._id, turnaroundTopisId: doc.turnaroundTopisId, stations: doc.stations, syncedAt: doc.syncedAt }))).toEqual(
-      seed.map((route) => ({
-        id: route.id,
-        turnaroundTopisId: route.turnaroundTopisId,
-        stations: route.stations.map((station, index) => ({ ...station, sequence: index + 1 })),
-        syncedAt: CLOCK.now(),
-      })),
-    );
-    expect(docs.find((doc) => String(doc._id) === "jongro07")!.stationsVersion).toBe("0346768f2b776f45");
   });
 });

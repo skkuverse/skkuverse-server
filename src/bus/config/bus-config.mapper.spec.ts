@@ -4,7 +4,7 @@
  * order the app lists them, the Jongro routes in registry order, and the
  * refresh a schedule service offers when it serves live arrival estimates.
  */
-import { seededBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
+import { storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { jongroRoutes as committedRoutes } from "../bus.config";
 import { SERVICE_CONFIG } from "../bus.constants";
 import type { RegistryRoute } from "../registry/bus-registry.types";
@@ -14,11 +14,11 @@ import { mapStations, toBusGroupIds, toBusGroups } from "./bus-config.mapper";
 
 const NO_STOPS = { sequences: {}, stops: [] };
 
-// WHY: the Jongro routes as the registry derives them from the seeded snapshot.
+// WHY: the Jongro routes as the registry derives them from the routes stored on 2026-10-17.
 let jongroRoutes: RegistryRoute[] = [];
 
 beforeAll(async () => {
-  jongroRoutes = await (await seededBusRegistryService()).listRoutes();
+  jongroRoutes = await storedBusRegistryService().listRoutes();
 });
 
 type ScheduleService = { serviceId: string; refresh?: unknown };

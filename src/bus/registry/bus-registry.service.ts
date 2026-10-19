@@ -1,16 +1,24 @@
-import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { jongroRoutes } from "../bus.config";
 import type { JongroRoute } from "../bus.types";
-import { stationsSeed } from "./bus-registry.config";
 import { REGISTRY_TTL_MS } from "./bus-registry.constants";
 import type { JongroRouteDocument } from "./bus-registry.document";
 import { BusRegistryMissingError } from "./bus-registry.error";
 import { toRegistryRoute, toRegistryStations } from "./bus-registry.mapper";
 import { BusRegistryRepository } from "./bus-registry.repository";
-import { toChangedShare, toObservedStations, toStationDiff, toStationsVersion, toSyncDecision, toTurnaroundTopisId } from "./bus-registry.rules";
+import {
+  toAgreedTurnaroundTopisId,
+  toBootstrapDecision,
+  toChangedShare,
+  toObservedStations,
+  toStationDiff,
+  toStationsVersion,
+  toSyncDecision,
+  toTurnaroundTopisId,
+} from "./bus-registry.rules";
 import type { ArrivalRowStation, ObservedStation, PendingObservation, RegistryRoute } from "./bus-registry.types";
 
 interface Observation {
@@ -20,7 +28,7 @@ interface Observation {
 }
 
 @Injectable()
-export class BusRegistryService implements OnModuleInit {
+export class BusRegistryService {
   private readonly loaders = new Map<string, CachedLoader<RegistryRoute>>();
   private readonly pendingByRouteId = new Map<string, PendingObservation>();
   private readonly heldVersions = new Set<string>();
@@ -31,17 +39,38 @@ export class BusRegistryService implements OnModuleInit {
     private readonly clock: Clock,
   ) {}
 
-  // WHY: every role seeds, since a standby host runs api replicas without a poller (improve-jongro-realtime D7).
-  async onModuleInit(): Promise<void> {
-    for (const route of jongroRoutes) await this.seedRoute(route);
-  }
-
   listRoutes(): Promise<RegistryRoute[]> {
     return Promise.all(jongroRoutes.map((route) => this.routeOf(route.id)));
   }
 
-  routeOf(routeId: string): Promise<RegistryRoute> {
-    return this.loaderOf(routeId).get();
+  async routeOf(routeId: string): Promise<RegistryRoute> {
+    try {
+      return await this.loaderOf(routeId).get();
+    } catch (err) {
+      if (err instanceof BusRegistryMissingError) {
+        logger.error({ event: "bus.jongro.registry_missing", routeId }, "Jongro registry route missing — see docs/how-to/resync-the-jongro-registry.md");
+      }
+      throw err;
+    }
+  }
+
+  // WHY: the poller's read, where a missing route is the cue to bootstrap it, not a fault.
+  async findRouteOf(routeId: string): Promise<RegistryRoute | null> {
+    try {
+      return await this.loaderOf(routeId).get();
+    } catch (err) {
+      if (err instanceof BusRegistryMissingError) return null;
+      throw err;
+    }
+  }
+
+  // WHY: a route with no document is inserted from TOPIS by the one poller, never over a stored one (ADR 0012, D3).
+  async bootstrap(route: JongroRoute, arrivals: readonly ArrivalRowStation[], sightingTurnaroundIds: ReadonlyArray<string | undefined>): Promise<void> {
+    const stations = toObservedStations(arrivals);
+    const turnaroundTopisId = toAgreedTurnaroundTopisId(sightingTurnaroundIds);
+    const decision = toBootstrapDecision({ stations, turnaroundTopisId, pending: this.pendingByRouteId.get(route.id) });
+    if (decision.kind === "pending") this.pendingByRouteId.set(route.id, decision.pending);
+    else if (decision.kind === "insert") await this.insert(route, { stations, turnaroundTopisId: decision.turnaroundTopisId, stationsVersion: decision.stationsVersion });
   }
 
   // WHY: the poller's arrival list and position rows, compared each tick with the stored stations (design D9).
@@ -62,24 +91,19 @@ export class BusRegistryService implements OnModuleInit {
     else await this.apply(route, observation);
   }
 
-  private async seedRoute(route: JongroRoute): Promise<void> {
-    const seed = stationsSeed.find((entry) => entry.id === route.id);
-    if (seed === undefined) throw new Error(`jongro-stations.seed.json has no ${route.id}`);
-    const doc: JongroRouteDocument = {
-      _id: route.id,
-      stations: toRegistryStations(seed.stations),
-      turnaroundTopisId: seed.turnaroundTopisId,
-      stationsVersion: toStationsVersion(seed.stations, seed.turnaroundTopisId),
-      syncedAt: this.clock.now(),
-    };
-    try {
-      if (await this.repository.insertRoute(doc)) {
-        logger.warn({ event: "bus.jongro.registry_seeded", routeId: route.id, stationsVersion: doc.stationsVersion }, "Seeded a Jongro registry route from the snapshot");
-      }
-    } catch (err) {
-      // WHY: a stored route still serves, and a missing one answers 503 at read, so a boot never crash-loops on Atlas.
-      logger.error({ event: "bus.jongro.registry_seed_failed", routeId: route.id, err }, "Could not seed a Jongro registry route");
+  private async insert(route: JongroRoute, observation: Observation): Promise<void> {
+    this.pendingByRouteId.delete(route.id);
+    const isInserted = await this.repository.insertRoute({ _id: route.id, ...observation, stations: toRegistryStations(observation.stations), syncedAt: this.clock.now() });
+    this.loaderOf(route.id).clear();
+    const fields = { code: route.code, stationsVersion: observation.stationsVersion };
+    if (!isInserted) {
+      logger.warn({ event: "bus.jongro.registry_bootstrap_conflict", ...fields }, "A Jongro registry route was stored before the bootstrap wrote; kept it");
+      return;
     }
+    logger.warn(
+      { event: "bus.jongro.registry_bootstrapped", ...fields, turnaroundTopisId: observation.turnaroundTopisId, stationCount: observation.stations.length },
+      "Bootstrapped a missing Jongro registry route from TOPIS — see docs/how-to/resync-the-jongro-registry.md",
+    );
   }
 
   private hold(route: RegistryRoute, observation: Observation, pending: PendingObservation): void {
@@ -125,10 +149,7 @@ export class BusRegistryService implements OnModuleInit {
     const route = jongroRoutes.find((entry) => entry.id === routeId);
     if (route === undefined) throw new Error(`Unknown Jongro route ${routeId}`);
     const doc = await this.repository.findRoute(routeId);
-    if (doc === null) {
-      logger.error({ event: "bus.jongro.registry_missing", routeId }, "Jongro registry route missing — see docs/how-to/resync-the-jongro-registry.md");
-      throw new BusRegistryMissingError(routeId);
-    }
+    if (doc === null) throw new BusRegistryMissingError(routeId);
     this.warnUnmatchedTransferLines(route, doc);
     return toRegistryRoute(route, doc);
   }

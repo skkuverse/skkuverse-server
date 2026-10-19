@@ -23,7 +23,7 @@ import fs from "fs";
 import path from "path";
 import { UiScrollService } from "../../../src/ui/scroll/ui-scroll.service";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
-import { seededBusRegistryService } from "../../helpers/bus/bus-registry";
+import { storedBusRegistryService } from "../../helpers/bus/bus-registry";
 import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN } from "../../../src/infra/origins";
@@ -65,11 +65,11 @@ const registryDetails = Object.fromEntries(
 // After the festival's campus banners closed (10/3), as on the day this test was pinned.
 const clock: Clock = { now: () => new Date("2026-10-13T03:00:00.000Z") };
 
-// WHY: read when the tests run, since the bus config reads its stations from a registry seeded as a boot seeds it.
+// WHY: read when the tests run, since the bus config reads its stations from a registry holding the routes stored on 2026-10-17.
 const payloads: Record<string, () => unknown> = {
   "GET /ui/home/campus": () => new UiCampusService(new MiniappsService(), clock).getCampusSheet("ko"),
   "GET /ui/home/scroll": () => new UiScrollService().listScrollCards("ko"),
-  "GET /bus/config": async () => new BusConfigService(new BusStopsService(new SubwayStationsService()), await seededBusRegistryService()).getBusGroups(),
+  "GET /bus/config": async () => new BusConfigService(new BusStopsService(new SubwayStationsService()), storedBusRegistryService()).getBusGroups(),
   "src/miniapps/details/*.json": () => registryDetails,
 };
 

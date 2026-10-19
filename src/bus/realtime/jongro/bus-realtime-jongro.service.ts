@@ -23,10 +23,11 @@ export class BusRealtimeJongroService {
     private readonly clock: Clock,
   ) {}
 
-  // WHY: rejects on a missing registry, a failed fetch, a bus_cache write or a sync write, so the poller registry
-  // reports the tick; the registry sync runs after both keys are written, so a held change never blocks them.
+  // WHY: rejects on a failed fetch, a bus_cache write or a registry write, so the poller registry reports the tick;
+  // the registry sync runs after both keys are written, so a held change never blocks them.
   async refresh(route: JongroRoute): Promise<void> {
-    const registryRoute = await this.registry.routeOf(route.id);
+    const registryRoute = await this.registry.findRouteOf(route.id);
+    if (registryRoute === null) return this.bootstrapRegistry(route);
     const [arrivals, sightings] = await Promise.all([this.refreshArrivals(registryRoute), this.refreshPositions(registryRoute)]);
     await this.registry.observe(registryRoute, arrivals, sightings.map((sighting) => sighting.turnaroundStationId));
   }
@@ -43,6 +44,12 @@ export class BusRealtimeJongroService {
 
   async listPositions(code: string): Promise<JongroBusPositionDoc[] | undefined> {
     return (await this.cache.read(toPositionsKey(code))) ?? undefined;
+  }
+
+  // WHY: with no stations a bus has no stop to sit at, so the tick only observes TOPIS until the route is stored.
+  private async bootstrapRegistry(route: JongroRoute): Promise<void> {
+    const [arrivals, sightings] = await Promise.all([this.client.fetchArrivals(route), this.client.fetchSightings(route)]);
+    await this.registry.bootstrap(route, arrivals, sightings.map((sighting) => sighting.turnaroundStationId));
   }
 
   private async refreshArrivals(route: RegistryRoute): Promise<JongroArrivalDoc[]> {
