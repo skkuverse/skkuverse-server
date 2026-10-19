@@ -51,6 +51,11 @@ export function envRole(env: NodeJS.ProcessEnv): Role {
   return label;
 }
 
+/** WHY: only `api` leaves the pollers to another container; `poller` and `combined` run them. */
+export function isPollingRole(role: Role): boolean {
+  return role !== "api";
+}
+
 export function dbNameFor(mode: EnvMode, baseName: string | undefined): string | undefined {
   if (!baseName) return baseName;
   if (mode.isTest) return `${baseName}_test`;

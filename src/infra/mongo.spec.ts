@@ -1,7 +1,8 @@
 /**
  * mongoCollection opens a named collection on the shared client, and
  * ensureIndexesAtBoot retries index setup with a growing wait, logs the outcome
- * under its scope, and never fails the boot.
+ * under its scope, and never fails the boot. Only roles that run pollers create
+ * indexes; an api replica writes nothing at boot (ADR 0012).
  */
 jest.mock("./logger", () => ({
   __esModule: true,
@@ -123,6 +124,43 @@ describe("ensureIndexesAtBoot does not hold the boot", () => {
 
     // Assert
     expect(loggedAtReturn).toBe(0);
+    expect(info).toHaveBeenCalledWith({ event: "building.indexes.ensured" }, "Indexes ensured");
+  });
+});
+
+describe("ensureIndexesAtBoot follows the role", () => {
+  const withRole = async (role: string, run: () => Promise<void>): Promise<void> => {
+    const previous = process.env.ROLE;
+    process.env.ROLE = role;
+    try {
+      await run();
+    } finally {
+      if (previous === undefined) delete process.env.ROLE;
+      else process.env.ROLE = previous;
+    }
+  };
+
+  it("never creates an index in an api replica, which writes nothing at boot", async () => {
+    // Arrange
+    const create = jest.fn().mockResolvedValue(undefined);
+
+    // Act
+    await withRole("api", () => ensureIndexesAtBoot("building", create));
+
+    // Assert
+    expect(create).not.toHaveBeenCalled();
+    expect(info).not.toHaveBeenCalled();
+  });
+
+  it.each(["poller", "combined"])("creates the indexes where pollers run (ROLE=%s)", async (role) => {
+    // Arrange
+    const create = jest.fn().mockResolvedValue(undefined);
+
+    // Act
+    await withRole(role, () => ensureIndexesAtBoot("building", create));
+
+    // Assert
+    expect(create).toHaveBeenCalledTimes(1);
     expect(info).toHaveBeenCalledWith({ event: "building.indexes.ensured" }, "Indexes ensured");
   });
 });

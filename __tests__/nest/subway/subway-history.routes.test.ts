@@ -10,8 +10,8 @@
  * station, direction, horizon and source, each with its count, nearest-rank
  * median error, median and p90 absolute error and unresolved count, leaving
  * out open records and other service dates, under `Cache-Control: no-store`.
- * Boot creates `subway_events` as a time-series collection expiring after 180
- * days. On Mongo, an observed arrival resolves the records isResolvableBy
+ * A poller boot (ADR 0012: api creates nothing at boot) creates `subway_events`
+ * as a time-series collection expiring after 180 days. On Mongo, an observed arrival resolves the records isResolvableBy
  * allows and no other: never one made at the tick that saw it (F6), an arrived
  * row replacing an approaching row's resolution, nothing predicted over 30
  * minutes before.
@@ -28,6 +28,7 @@ type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTes
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type HistoryRepositoryClass = typeof import("../../../src/subway/history/subway-history.repository")["SubwayHistoryRepository"];
+type Registry = typeof import("../../../src/scheduling/poller-registry.service")["PollerRegistryService"];
 
 const at = (iso: string): Date => new Date(`${iso}+09:00`);
 const CLOCK = { now: (): Date => at("2026-10-17T10:00:00") };
@@ -202,14 +203,32 @@ describe("SubwayHistoryRepository.updateObservedArrival on mongod", () => {
 });
 
 describe("SubwayHistoryRepository at boot", () => {
-  it("creates subway_events as a time-series collection on at, meta as its meta field, expiring after 180 days", async () => {
+  it("creates subway_events as a time-series collection on at, meta as its meta field, expiring after 180 days, where pollers run", async () => {
+    // Arrange
+    const { PollerRegistryService } = require("../../../src/scheduling/poller-registry.service") as { PollerRegistryService: Registry };
+    const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller").mockImplementation(() => undefined);
+    const pollerApp = await buildTestApp({
+      imports: appModulesUnder("src/scheduling/", "src/holidays/", "src/subway/"),
+      overrides: [{ provide: Clock, useValue: CLOCK }],
+      role: "poller",
+    });
+
     // Act
-    const [events] = await db.getClient().db(config.mongo.dbName).listCollections({ name: "subway_events" }).toArray();
+    let events: unknown;
+    try {
+      for (let attempt = 0; attempt < 50 && events === undefined; attempt++) {
+        [events] = await db.getClient().db(config.mongo.dbName).listCollections({ name: "subway_events" }).toArray();
+        if (events === undefined) await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    } finally {
+      registered.mockRestore();
+      await pollerApp.close();
+    }
 
     // Assert
     expect(events).toMatchObject({
       type: "timeseries",
       options: { timeseries: { timeField: "at", metaField: "meta", granularity: "seconds" }, expireAfterSeconds: 15_552_000 },
     });
-  });
+  }, APP_BOOT_TIMEOUT_MS);
 });

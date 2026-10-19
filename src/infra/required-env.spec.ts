@@ -10,7 +10,7 @@
  * Each scenario sets env, then loads the module fresh with
  * jest.isolateModules().
  */
-import { envRole, roleErrors, ROLES, validateEnv } from "./required-env";
+import { envRole, isPollingRole, roleErrors, ROLES, validateEnv } from "./required-env";
 
 const HSSC_KEYS = ["API_HSSC_NEW_PROD", "API_HSSC_NEW_DEV"] as const;
 
@@ -148,6 +148,17 @@ describe("envRole", () => {
   it.each(["poler", "API", "web"])("throws on ROLE=%s instead of booting as combined", (raw) => {
     // Act & Assert
     expect(() => envRole({ ROLE: raw })).toThrow(`ROLE must be one of api | poller | combined (got "${raw}")`);
+  });
+});
+
+describe("isPollingRole", () => {
+  it.each([
+    ["api", false],
+    ["poller", true],
+    ["combined", true],
+  ] as const)("ROLE=%s runs pollers: %s", (role, polls) => {
+    // Act & Assert
+    expect(isPollingRole(role)).toBe(polls);
   });
 });
 
