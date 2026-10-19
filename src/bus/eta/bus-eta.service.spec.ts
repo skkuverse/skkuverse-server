@@ -225,3 +225,49 @@ describe("BusEtaService runs over the stored schedule content (move-editorial-da
     expect(runs.map((r) => `${r.date} ${r.time}`)).toEqual(["2026-10-12 10:00"]);
   });
 });
+
+describe("BusEtaService.upcomingRuns before a stored suspension", () => {
+  // Saturday 2026-12-19, 12:00 KST: no weekday run is left this week, so the smart view shows the week of 12-21.
+  const SATURDAY = new Date("2026-12-19T03:00:00.000Z");
+  const clock = { now: () => SATURDAY };
+  const weekdays = (serviceId: string) => ({
+    serviceId,
+    patternId: "weekday",
+    days: [1, 2, 3, 4, 5],
+    entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["08:00", null, null] }],
+  });
+  const JAIN: EtaSequence = { ...SEQUENCE, serviceId: "campus-jain" };
+
+  function etaOver(content: FakeBusScheduleContentRepository): BusEtaService {
+    const timetable = new FakeBusScheduleRepository();
+    timetable.patterns = [weekdays("campus-inja"), weekdays("campus-jain")];
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+    return build(schedule);
+  }
+
+  it("plans no run on the days of a winter-break suspension that starts on 12-21, and leaves other services' runs", async () => {
+    // Arrange
+    const winterBreak = storedScheduleContentRepository();
+    winterBreak.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-12-21", until: "2027-02-28" }));
+    const eta = etaOver(winterBreak);
+
+    // Act
+    const suspended = await eta.upcomingRuns(SEQUENCE, SATURDAY);
+    const running = await eta.upcomingRuns(JAIN, SATURDAY);
+
+    // Assert
+    expect(suspended).toEqual([]);
+    expect(running.map((r) => `${r.date} ${r.time}`)).toEqual(["2026-12-21 08:00", "2026-12-22 08:00", "2026-12-23 08:00", "2026-12-24 08:00", "2026-12-25 08:00"]);
+  });
+
+  it("plans the same week's runs with no suspension stored", async () => {
+    // Arrange
+    const eta = etaOver(storedScheduleContentRepository());
+
+    // Act
+    const runs = await eta.upcomingRuns(SEQUENCE, SATURDAY);
+
+    // Assert
+    expect(runs.map((r) => r.date)).toEqual(["2026-12-21", "2026-12-22", "2026-12-23", "2026-12-24", "2026-12-25"]);
+  });
+});
