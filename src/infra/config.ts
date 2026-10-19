@@ -296,9 +296,11 @@ if (malformed.length > 0) {
     { event: "config.malformed_required", malformed },
     "Malformed required config — fix the env vars in `malformed`",
   );
-  if (!isTest) {
-    process.exit(1);
+  // WHY: a test runs without most keys, but one set in the wrong shape was set on purpose, so it fails as the boot does.
+  if (isTest) {
+    throw new Error(`FATAL: Malformed required config — fix these env vars:\n${requiredEnv.describeMalformedRequired(process.env).join("\n")}`);
   }
+  process.exit(1);
 }
 
 if (switchErrors.length > 0) {

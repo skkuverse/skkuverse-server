@@ -10,6 +10,8 @@ import type { Clock } from "../../infra/clock";
 import { pick } from "../../infra/i18n";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
+import type { MapLayerSetRepository } from "../layer-set/map-layer-set.repository";
+import { fixtureLayerSetRepository } from "../../../__tests__/helpers/map/layer-sets-fixture";
 import { MiniappsService } from "../../miniapps/miniapps.service";
 import type { MapChipSpec } from "../layer-set/map-layer-set.types";
 import { BASE_LAYERS } from "../map.constants";
@@ -20,7 +22,12 @@ import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
 
 const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
-const LAYER_SET = new MapLayerSetService(asReal<MapRepository>(new FakeMapRepository()), CLOCK, new MiniappsService());
+const LAYER_SET = new MapLayerSetService(
+  asReal<MapRepository>(new FakeMapRepository()),
+  asReal<MapLayerSetRepository>(fixtureLayerSetRepository()),
+  CLOCK,
+  new MiniappsService(),
+);
 
 const LANGS = ["ko", "en", "zh"] as const;
 const CONFIG = shippedLayerSet();

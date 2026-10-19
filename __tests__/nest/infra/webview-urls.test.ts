@@ -68,7 +68,7 @@ const registryDetails = Object.fromEntries(
 // After the festival's campus banners closed (10/3), as on the day this test was pinned.
 const clock: Clock = { now: () => new Date("2026-10-13T03:00:00.000Z") };
 
-/** The campus banners as stored: revision 1 of the dataset, which holds what campus-banners.json held. */
+/** The campus banners as stored: revision 1 of the `campus-banners` dataset (fixtures/campus-banners.dataset.json of ui). */
 function storedCampusBanners(): UiCampusRepository {
   const banners = JSON.parse(fs.readFileSync(path.join(__dirname, "../ui/fixtures/campus-banners.dataset.json"), "utf8")) as Record<string, unknown>;
   delete banners._about;

@@ -23,6 +23,8 @@ import type { Clock } from "../../../src/infra/clock";
 import { MiniappsService } from "../../../src/miniapps/miniapps.service";
 import { MapEventService } from "../../../src/map/event/map-event.service";
 import { MapLayerSetService } from "../../../src/map/layer-set/map-layer-set.service";
+import type { MapLayerSetRepository } from "../../../src/map/layer-set/map-layer-set.repository";
+import { fixtureLayerSetRepository } from "../../helpers/map/layer-sets-fixture";
 import type { MapPlaceDoc } from "../../../src/map/map.document";
 import type { MapRepository } from "../../../src/map/map.repository";
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
@@ -42,7 +44,8 @@ beforeEach(() => {
   repository = new FakeMapRepository();
   repository.findActiveActivation = mockFindActiveActivation;
   const real = asReal<MapRepository>(repository);
-  service = new MapEventService(real, new MapLayerSetService(real, CLOCK, new MiniappsService()), new MiniappsService());
+  const layerSet = new MapLayerSetService(real, asReal<MapLayerSetRepository>(fixtureLayerSetRepository()), CLOCK, new MiniappsService());
+  service = new MapEventService(real, layerSet, new MiniappsService());
 });
 
 // scripts/ is excluded from tsconfig (plain CommonJS operator tooling), so this

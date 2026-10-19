@@ -9,9 +9,9 @@
  *
  * A regression pin: a failure is a regression to report, and an expected value
  * changes only with the behavior it pins (`.claude/rules/tests.md`). The
- * expected values were pinned while the layout was read from the committed
- * transit-layout.json, which the fixture equals (ui-dataset-fixtures.test.ts);
- * moving it to the content database must not change a byte here.
+ * expected values were pinned while the layout was still a committed file,
+ * of which revision 1 of the dataset, and so the fixture, is a copy; serving
+ * it from the content database changed no byte here.
  *
  * The layout is stored in the real `mongod`'s content database the way
  * `npm run data` stores it: the fixture's data pushed through the tool's own

@@ -1,5 +1,5 @@
 /**
- * The on-disk pieces home and campus share: a captured banner image parses and
+ * The stored pieces home and campus share: a captured banner image parses and
  * a copy missing each required field does not; a carousel rotates never (0)
  * or every 2 to 30 whole seconds.
  */
@@ -15,7 +15,7 @@ const CAPTURED_IMAGE = {
 };
 
 describe("bannerImageFile", () => {
-  it("parses a banner from campus-banners.json", () => {
+  it("parses a banner of the campus-banners dataset", () => {
     // Act & Assert
     expect(bannerImageFile.safeParse(CAPTURED_IMAGE).success).toBe(true);
   });

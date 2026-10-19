@@ -21,6 +21,8 @@ import { MEDIA_ORIGIN } from "../../infra/origins";
 import { MiniappsService } from "../../miniapps/miniapps.service";
 import { MapEventService } from "../event/map-event.service";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
+import type { MapLayerSetRepository } from "../layer-set/map-layer-set.repository";
+import { fixtureLayerSetRepository } from "../../../__tests__/helpers/map/layer-sets-fixture";
 import type { MapPlaceDoc } from "../map.document";
 import type { MapRepository } from "../map.repository";
 import { MapEventDetailsService } from "./map-event-details.service";
@@ -51,7 +53,7 @@ beforeEach(() => {
   repository.findActiveActivation = mockFindActiveActivation;
   mockPlaces = jest.spyOn(repository, "listPlacesWithDetailByLayerSetId");
   const real = asReal<MapRepository>(repository);
-  const layerSet = new MapLayerSetService(real, CLOCK, new MiniappsService());
+  const layerSet = new MapLayerSetService(real, asReal<MapLayerSetRepository>(fixtureLayerSetRepository()), CLOCK, new MiniappsService());
   detailsService = new MapEventDetailsService(real, layerSet);
   eventService = new MapEventService(real, layerSet, new MiniappsService());
 });

@@ -4,21 +4,17 @@
  * the base map kept when the festival lookup fails.
  */
 
-// The config module stays REAL — the file loads with no mock — but one test
-// needs to hand /map/config a layer set whose file failed validation, which
-// the shipped file (rightly) cannot be made to do from here.
-const actualConfigModule = jest.requireActual("../layer-set/map-layer-set.config");
-const mockGetLayerSetConfig = jest.fn(actualConfigModule.getLayerSetConfig);
-jest.mock("../layer-set/map-layer-set.config", () => ({
-  ...actualConfigModule,
-  getLayerSetConfig: (...args: unknown[]) => mockGetLayerSetConfig(...args),
-}));
+// The layer sets are the stored dataset's fixture, in FakeMapLayerSetRepository; one test stores a set that
+// fails its checks, which the read leaves out.
 
 import { pick } from "../../infra/i18n";
 import type { Clock } from "../../infra/clock";
+import { FakeMapLayerSetRepository } from "../../../__tests__/helpers/fakes/map/map-layer-set.repository.fake";
 import { FakeMapRepository } from "../../../__tests__/helpers/fakes/map/map.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { fixtureLayerSets, fixtureLayerSetRepository } from "../../../__tests__/helpers/map/layer-sets-fixture";
 import { shippedLayerSet } from "../../../__tests__/helpers/map/shipped-layer-set";
+import type { MapLayerSetRepository } from "../layer-set/map-layer-set.repository";
 import type { LayerSet } from "../layer-set/map-layer-set.schema";
 import { MapLayerSetService } from "../layer-set/map-layer-set.service";
 import { MiniappsService } from "../../miniapps/miniapps.service";
@@ -40,7 +36,12 @@ const CONFIG: LayerSet = shippedLayerSet();
 const CLOCK: Clock = { now: () => new Date("2026-10-01T03:00:00.000Z") };
 
 // The chips /map/config serves off-season, read through the layer-set service as the config service reads them.
-const BASE_CHIPS = new MapLayerSetService(asReal<MapRepository>(new FakeMapRepository()), CLOCK, new MiniappsService()).servedChipSpecs(null);
+const BASE_CHIPS = new MapLayerSetService(
+  asReal<MapRepository>(new FakeMapRepository()),
+  asReal<MapLayerSetRepository>(new FakeMapLayerSetRepository()),
+  CLOCK,
+  new MiniappsService(),
+).servedChipSpecs(null);
 const EVENT_LAYER_IDS = new Set(CONFIG.layers.map((l) => l.id));
 
 // "No festival" is stated rather than inferred from an absent DB client, and
@@ -50,11 +51,15 @@ const findActiveActivation: MapRepository["findActiveActivation"] = mockFindActi
 
 describe("MapConfigService", () => {
   let config: MapConfigService;
+  let layerSets: FakeMapLayerSetRepository;
   // The event read path is cached per service instance; each test starts cold.
   function freshServices(): void {
     const repository = new FakeMapRepository();
     repository.findActiveActivation = findActiveActivation;
-    config = new MapConfigService(new MapLayerSetService(asReal<MapRepository>(repository), CLOCK, new MiniappsService()));
+    layerSets = fixtureLayerSetRepository();
+    config = new MapConfigService(
+      new MapLayerSetService(asReal<MapRepository>(repository), asReal<MapLayerSetRepository>(layerSets), CLOCK, new MiniappsService()),
+    );
   }
   const svc = {
     getMapConfig: (lang: "ko" | "en" | "zh") => config.getMapConfig(lang),
@@ -64,7 +69,6 @@ describe("MapConfigService", () => {
     freshServices();
     mockFindActiveActivation.mockReset();
     mockFindActiveActivation.mockResolvedValue(null);
-    mockGetLayerSetConfig.mockImplementation(actualConfigModule.getLayerSetConfig);
   });
 
   it("getMapConfig labels the campuses per language and serves only the base layers off-season", async () => {
@@ -199,11 +203,9 @@ describe("MapConfigService", () => {
     mockFindActiveActivation.mockResolvedValue({
       _id: "eskara-2026",
     } as Awaited<ReturnType<typeof findActiveActivation>>);
-    mockGetLayerSetConfig.mockReturnValue({
-      config: null,
-      configHash: null,
-      error: 'config.itemDefaults.fallback.layerId "nope" is not in config.layers',
-    });
+    const rejected = fixtureLayerSets();
+    (rejected.layerSets[0] as { itemDefaults: { fallback: { layerId: string } } }).itemDefaults.fallback.layerId = "nope";
+    layerSets.storeLayerSets(rejected);
 
     // Act
     const ko = await svc.getMapConfig("ko");

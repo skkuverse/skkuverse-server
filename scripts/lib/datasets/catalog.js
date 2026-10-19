@@ -20,7 +20,8 @@
  *   referencesOf(data)
  *                    every identity the data names, as { dataset, id, path };
  *                    `dataset` is another catalog dataset or a code-held source
- *   idsOf(data)      the identities others may reference (none in this stage)
+ *   idsOf(data)      the identities others may reference (`map-layer-sets`
+ *                    names its layer sets; nothing references them yet)
  *
  * `issuesOf`, `referencesOf` and `idsOf` take the schema's parsed output.
  *
@@ -50,6 +51,7 @@ function loadCatalog(load) {
   const { campusBannerReferences, toCampusBannerIssues } = load("ui/campus/ui-campus.rules");
   const { transitLayoutFile } = load("ui/transit/ui-transit.schema");
   const { toTransitLayoutIssues, transitLayoutReferences } = load("ui/transit/ui-transit.rules");
+  const { layerSetsDataset } = load("map/layer-set/map-layer-set.schema");
   const { MiniappsService } = load("miniapps/miniapps.service");
   const { jongroRoutes } = load("bus/bus.config");
   const { SERVICE_CONFIG } = load("bus/bus.constants");
@@ -87,6 +89,13 @@ function loadCatalog(load) {
         schema: transitLayoutFile,
         issuesOf: (layout) => toTransitLayoutIssues(layout, { busGroupIds: busGroups.ids(), stationIds: subwayStations.ids(), registry: miniapps }),
         referencesOf: (layout) => transitLayoutReferences(layout, miniapps),
+      },
+      // Every layer set's checks run in its schema; an activation in the eventmap database names a set by its id.
+      "map-layer-sets": {
+        owner: "src/map/layer-set",
+        schema: layerSetsDataset,
+        referencesOf: () => [],
+        idsOf: ({ layerSets }) => layerSets.map((set) => set.layerSetId),
       },
     },
   };

@@ -24,8 +24,8 @@
     "reason": "ADR 0010 D9, no domain seam: one loader of one operator-edited file reads every check here, `layerSetFile` the leaf checks (`optionIssues`, `chipLabelIssue`, `listSortIssue`) and `parseLayerSetFile` in map-layer-set.config.ts the cross-reference and chip checks, which also run at import, and `MapLayerSetService` the base chips' link check (`assertValidLinkChips`) when Nest builds it; the checks are not flows, so a sub-module would hold rules and nothing else."
   },
   "src/map/layer-set/map-layer-set.schema.ts": {
-    "max": 84,
-    "reason": "ADR 0010 D9, no domain seam: `layerSetFile` is one zod composite over one operator-edited file, parsed at runtime only by `parseLayerSetFile` in map-layer-set.config.ts, and other flows import its types alone; its leaves (camera, i18n text, nullable defaults) are not flows, so a sub-module would hold schema pieces and nothing else."
+    "max": 126,
+    "reason": "ADR 0010 D9, no domain seam: `layerSetFile` is one zod composite over one operator-edited layer set, `checkedLayerSet` runs its cross-reference and served-chip checks, `layerSetsDataset` is the `map-layer-sets` dataset a push checks and `storedLayerSets` the envelope MapLayerSetRepository parses, set by set; all four describe the one dataset, and its leaves (camera, i18n text, nullable defaults) are not flows, so a sub-module would hold schema pieces and nothing else."
   },
   "src/map/map.constants.ts": {
     "max": 55,

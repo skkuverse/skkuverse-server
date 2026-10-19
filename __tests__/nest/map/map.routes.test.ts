@@ -1,12 +1,16 @@
 /**
  * The /map routes through the production pipeline (buildTestApp) and the real
- * controllers, services, layer-set config, rules and mappers, over in-memory
- * buildings, campus shapes, activations and places. What it guards: the
+ * controllers, services, rules and mappers, over in-memory buildings, campus
+ * shapes, activations, places and the stored `map-layer-sets` dataset (its
+ * fixture, revision 1). What it guards: the
  * envelope and its language, one overlay collection per data source with pins
  * and geometry together, each route's Cache-Control (a day for the campus, none
  * stored for its degraded fallback, a minute for the event routes), `degraded`
  * never reaching the body, sibling routes answering only for themselves, and
- * the four retired URLs staying gone.
+ * the four retired URLs staying gone. And the dataset's two answers no file
+ * gave (move-editorial-datasets D6): with no layer set ever read, a live
+ * festival serves the base map, not a 503; and a festival pushed and opened
+ * while the app runs is served within the dataset TTL, with no restart.
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -17,11 +21,15 @@ import { MapConfigModule } from "../../../src/map/config/map-config.module";
 import { MapEventDetailsModule } from "../../../src/map/event-details/map-event-details.module";
 import { MapEventModule } from "../../../src/map/event/map-event.module";
 import { MapLayerSetModule } from "../../../src/map/layer-set/map-layer-set.module";
+import { MapLayerSetRepository } from "../../../src/map/layer-set/map-layer-set.repository";
 import type { ActivationDoc, MapPlaceDoc } from "../../../src/map/map.document";
 import { MapModule } from "../../../src/map/map.module";
 import { MapRepository } from "../../../src/map/map.repository";
 import { FakeBuildingRepository } from "../../helpers/fakes/building/building.repository.fake";
+import { FakeMapLayerSetRepository } from "../../helpers/fakes/map/map-layer-set.repository.fake";
 import { FakeMapRepository } from "../../helpers/fakes/map/map.repository.fake";
+import { fixtureLayerSetRepository, fixtureLayerSets } from "../../helpers/map/layer-sets-fixture";
+import { DATASET_CACHE_TTL_MS } from "../../../src/shared/dataset.constants";
 import { Clock } from "../../../src/infra/clock";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
@@ -98,6 +106,7 @@ beforeAll(async () => {
     overrides: [
       { provide: BuildingRepository, useValue: buildings },
       { provide: MapRepository, useValue: map },
+      { provide: MapLayerSetRepository, useValue: fixtureLayerSetRepository() },
       { provide: Clock, useValue: CLOCK },
     ],
     role: "api",
@@ -301,5 +310,132 @@ describe("/map bodies against their wire schemas", () => {
     expect(res.status).toBe(200);
     expect(Object.keys(res.body.data.details)).toEqual(["eskara-2026-booth-01"]);
     expectWire(eventPlaceDetails, res.body.data);
+  });
+});
+
+/** An app over its own fakes, so its caches start cold: the map's activations and places, and the stored layer sets. */
+async function bootMapApp(map: FakeMapRepository, layerSets: FakeMapLayerSetRepository): Promise<NestExpressApplication> {
+  return buildTestApp({
+    imports: [MapModule, MapLayerSetModule, MapConfigModule, MapCampusModule, MapEventModule, MapEventDetailsModule],
+    overrides: [
+      { provide: BuildingRepository, useValue: new FakeBuildingRepository() },
+      { provide: MapRepository, useValue: map },
+      { provide: MapLayerSetRepository, useValue: layerSets },
+      { provide: Clock, useValue: CLOCK },
+    ],
+    role: "api",
+  });
+}
+
+const BASE_LAYER_IDS = ["building_numbers", "building_labels", "campus_geometry", "jongro02_route", "jongro08_route", "jongro07_route"];
+const BASE_CHIP_IDS = ["building_map", "building_code", "lost_found", "inquiry"];
+
+describe("the map routes with a festival live and no layer set ever read", () => {
+  let missingApp: NestExpressApplication;
+
+  beforeAll(async () => {
+    const map = new FakeMapRepository();
+    map.activations = [{ _id: "eskara-2026", activeFrom: null, activeUntil: null, enabled: true } as ActivationDoc];
+    map.places = [BOOTH];
+    missingApp = await bootMapApp(map, new FakeMapLayerSetRepository());
+  });
+
+  afterAll(async () => {
+    await missingApp.close();
+  });
+
+  it("serves /map/config with the base layers and chips, not a 503", async () => {
+    // Act
+    const res = await request(missingApp.getHttpServer()).get("/map/config");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.layers.map((l: { id: string }) => l.id)).toEqual(BASE_LAYER_IDS);
+    expect(res.body.data.chips.map((c: { id: string }) => c.id)).toEqual(BASE_CHIP_IDS);
+    expect(res.headers["cache-control"]).toBeUndefined();
+  });
+
+  it("serves /map/overlays/event with no overlay and /map/overlays/event/details with no sheet", async () => {
+    // Act
+    const overlays = await request(missingApp.getHttpServer()).get("/map/overlays/event");
+    const details = await request(missingApp.getHttpServer()).get("/map/overlays/event/details");
+
+    // Assert
+    expect(overlays.status).toBe(200);
+    expect(overlays.body).toEqual({ meta: {}, data: { overlays: [] } });
+    expect(details.status).toBe(200);
+    expect(details.body).toEqual({ meta: {}, data: { details: {} } });
+  });
+});
+
+describe("a festival pushed and opened while the app runs", () => {
+  const T0 = new Date("2026-10-14T03:00:00.000Z");
+  const SPRING_PLACE = { ...BOOTH, _id: "spring-2027-booth-01", layerSetId: "spring-2027", title: { ko: "봄 부스" } } as MapPlaceDoc;
+  let liveApp: NestExpressApplication;
+  let map: FakeMapRepository;
+  let layerSets: FakeMapLayerSetRepository;
+
+  beforeEach(async () => {
+    // Only Date is faked: the caches read Date.now(), and the HTTP stack keeps its real timers.
+    jest.useFakeTimers({ now: T0, doNotFake: ["nextTick", "setImmediate", "clearImmediate", "setTimeout", "clearTimeout", "setInterval", "clearInterval", "queueMicrotask", "hrtime", "performance"] });
+    map = new FakeMapRepository();
+    layerSets = fixtureLayerSetRepository();
+    liveApp = await bootMapApp(map, layerSets);
+  });
+
+  afterEach(async () => {
+    await liveApp.close();
+    jest.useRealTimers();
+  });
+
+  it("serves its layers, chips and places within the dataset TTL of the push and the window, with no restart", async () => {
+    // Arrange
+    const before = await request(liveApp.getHttpServer()).get("/map/config");
+    const pushed = fixtureLayerSets();
+    pushed.layerSets.push({ ...structuredClone(pushed.layerSets[0]!), layerSetId: "spring-2027", name: { ko: "봄 축제", en: "Spring Festival" }, emoji: "🌸" });
+    layerSets.storeLayerSets(pushed);
+    map.places = [SPRING_PLACE];
+    map.activations = [{ _id: "spring-2027", activeFrom: null, activeUntil: null, enabled: true } as ActivationDoc];
+    jest.setSystemTime(T0.getTime() + DATASET_CACHE_TTL_MS);
+    // The activation cache serves its expired answer once while it re-reads behind it.
+    await request(liveApp.getHttpServer()).get("/map/config");
+    await new Promise((resolve) => setImmediate(resolve));
+
+    // Act
+    const config = await request(liveApp.getHttpServer()).get("/map/config").set("Accept-Language", "en");
+    const overlays = await request(liveApp.getHttpServer()).get("/map/overlays/event");
+
+    // Assert
+    expect(before.body.data.chips.map((c: { id: string }) => c.id)).toEqual(BASE_CHIP_IDS);
+    expect(config.status).toBe(200);
+    expect(config.body.data.chips.map((c: { id: string }) => c.id)).toEqual(expect.arrayContaining([...BASE_CHIP_IDS, "spring-2027_all"]));
+    expect(config.body.data.chips.find((c: { id: string }) => c.id === "spring-2027_all")).toMatchObject({ icon: { kind: "emoji", emoji: "🌸" }, label: "Spring Festival" });
+    expect(config.body.data.layers.filter((l: { chipGroupId: string | null }) => l.chipGroupId === "spring-2027").length).toBeGreaterThan(0);
+    expect(overlays.body.data.overlays.map((o: { id: string }) => o.id)).toEqual(["spring-2027-booth-01"]);
+  });
+
+  it("keeps the /map/config ETag across a revision that serves the same body, and changes it with one that does not", async () => {
+    // Arrange
+    map.activations = [{ _id: "eskara-2026", activeFrom: null, activeUntil: null, enabled: true } as ActivationDoc];
+    const first = await request(liveApp.getHttpServer()).get("/map/config");
+    const withDormantSet = fixtureLayerSets();
+    withDormantSet.layerSets.push({ ...structuredClone(withDormantSet.layerSets[0]!), layerSetId: "spring-2027" });
+    layerSets.storeLayerSets(withDormantSet);
+    jest.setSystemTime(T0.getTime() + DATASET_CACHE_TTL_MS);
+    const sameBody = await request(liveApp.getHttpServer()).get("/map/config");
+    const restyled = fixtureLayerSets();
+    restyled.layerSets[0]!.emoji = "🎆";
+    layerSets.storeLayerSets(restyled);
+    jest.setSystemTime(T0.getTime() + 2 * DATASET_CACHE_TTL_MS);
+
+    // Act
+    const changed = await request(liveApp.getHttpServer()).get("/map/config");
+
+    // Assert
+    expect(layerSets.readCount).toBe(3);
+    expect(sameBody.text).toBe(first.text);
+    expect(sameBody.headers.etag).toBe(first.headers.etag);
+    expect(changed.text).toContain("🎆");
+    expect(changed.headers.etag).not.toBe(first.headers.etag);
   });
 });

@@ -1,5 +1,5 @@
 {
-  "_about": "Revision 1 of the transit-layout dataset (skku_content.datasets, _id transit-layout): a copy of src/ui/transit/transit-layout.json at source commit 5c0ee5a9, the code production served /ui/home/transit from when it was captured on 2026-10-19 (move-editorial-datasets D13). The push imports this data with _about removed. Nothing trimmed.",
+  "_about": "Revision 1 of the transit-layout dataset (skku_content.datasets, _id transit-layout): a copy of that revision as stored in skku_content and skku_content_dev on 2026-10-19, which production has served /ui/home/transit from since PR #291 (move-editorial-datasets D13). The data tool pushed this data with _about removed. Nothing trimmed.",
   "version": 1,
   "sections": [
     {

@@ -39,7 +39,7 @@ import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import { logText } from "../../../__tests__/helpers/log-text";
 import { UiCampusRepository } from "./ui-campus.repository";
 
-// A copy of revision 1 of the campus-banners dataset, the committed file at 5c0ee5a9.
+// A copy of revision 1 of the campus-banners dataset as stored on 2026-10-19.
 const DATASET_FIXTURE = path.join(__dirname, "../../../__tests__/nest/ui/fixtures/campus-banners.dataset.json");
 const BANNERS = JSON.parse(fs.readFileSync(DATASET_FIXTURE, "utf8")) as Record<string, unknown>;
 delete BANNERS._about;
