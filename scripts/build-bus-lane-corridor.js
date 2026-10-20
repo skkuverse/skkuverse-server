@@ -1,9 +1,20 @@
 #!/usr/bin/env node
 /**
- * Build the 경부고속도로 bus-lane corridor of src/bus/eta/lane/bus-lane.json:
- * the centerline with its named boundaries, and each probe route's `sectOrd`
- * ranges. The other keys of that file (lane hours, strategies, entry and exit
- * points) are kept as they are; a missing file gets placeholders.
+ * Build the 경부고속도로 bus-lane corridor of the `bus-lane-corridor` dataset
+ * (move-reference-datasets D9): the centerline with its named boundaries, and
+ * each probe route's `sectOrd` ranges. It rewrites `data.corridor` and
+ * `data.probeRoutes` of a working file `npm run data -- pull` wrote, in place,
+ * keeping `data.entryExit` and the pulled revision, and writes nothing under
+ * src/. The lane hours and strategies are code (src/bus/eta/lane/).
+ *
+ * The result reaches the server only through a push, which runs the server's
+ * own corridor checks (docs/how-to/edit-runtime-data.md):
+ *
+ *   npm run data -- pull bus-lane-corridor
+ *   doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js
+ *   npm run data -- push bus-lane-corridor
+ *
+ * and the same with --prod and `--file .data/prod/bus-lane-corridor.json`.
  *
  * Sources:
  *   - centerline: OpenStreetMap (ODbL), the ways named 경부고속도로 between
@@ -18,22 +29,24 @@
  * Usage (keys come from the environment, never from argv):
  *   doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js [options]
  *
+ *   --file <file>         the pulled working file (default .data/dev/bus-lane-corridor.json)
  *   --osm <file>          read the Overpass response from a file instead of fetching it
  *   --save-osm <file>     write the fetched Overpass response there
  *   --topis-dir <dir>     read arrive-<routeId>.json (getArrInfoByRouteAll) from <dir>
  *   --dry-run             print the summary, write nothing
  *   --check-probe <dir>   instead of building, project buspos-<routeId>.json
  *                         (getBusPosByRtid) from <dir>, or fetch one snapshot per
- *                         route when <dir> is "live", against the committed corridor
+ *                         route when <dir> is "live", against the working file's corridor
  *   --check-entry-exit    instead of building, route both directions through the
- *                         committed entry and exit points with NAVER Directions 5
+ *                         working file's entry and exit points with NAVER Directions 5
  *                         (2 calls) and report legs and via-point distances
  */
 const fs = require("node:fs");
 const path = require("node:path");
+const { readWorkingFile, workingFilePath, writeWorkingFile } = require("./lib/datasets/working-file");
 
 const ROOT = path.join(__dirname, "..");
-const LANE_FILE = path.join(ROOT, "src/bus/eta/lane/bus-lane.json");
+const DATASET = "bus-lane-corridor";
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 const TOPIS_URL = "http://ws.bus.go.kr/api/rest";
 const NAVER_URL = "https://maps.apigw.ntruss.com/map-direction/v1/driving";
@@ -80,13 +93,12 @@ const CORRIDOR_STATIONS = new Set([
   "금토JC", "판교IC", "서울TG", "금곡", "죽전", "신갈JC",
 ]);
 
-const PLACEHOLDER_HOURS = { from: "07:00", to: "21:00" };
-
 function parseArgs(argv) {
-  const args = { osm: null, saveOsm: null, topisDir: null, dryRun: false, checkProbe: null, checkEntryExit: false };
+  const args = { file: workingFilePath(ROOT, "dev", DATASET), osm: null, saveOsm: null, topisDir: null, dryRun: false, checkProbe: null, checkEntryExit: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--osm") args.osm = argv[++i];
+    if (arg === "--file") args.file = argv[++i];
+    else if (arg === "--osm") args.osm = argv[++i];
     else if (arg === "--save-osm") args.saveOsm = argv[++i];
     else if (arg === "--topis-dir") args.topisDir = argv[++i];
     else if (arg === "--dry-run") args.dryRun = true;
@@ -296,29 +308,21 @@ async function readOsm(args) {
   return JSON.parse(text);
 }
 
-function readLaneFile() {
-  return fs.existsSync(LANE_FILE) ? JSON.parse(fs.readFileSync(LANE_FILE, "utf8")) : null;
-}
-
-function placeholderEntryExit(centerline) {
-  const north = centerline[0];
-  const south = centerline[centerline.length - 1];
-  return { southbound: { entry: north, exit: south }, northbound: { entry: south, exit: north } };
+/** The pulled working file at `file`; throws naming what is wrong with it, so nothing is fetched or written. */
+function readCorridorFile(file) {
+  const working = readWorkingFile(file);
+  if (working.dataset !== DATASET) throw new Error(`${file} holds ${working.dataset}, not ${DATASET}`);
+  if (!working.data?.entryExit) throw new Error(`${file} has no data.entryExit: pull ${DATASET} again`);
+  return working;
 }
 
 async function build(args) {
+  const working = readCorridorFile(args.file);
   const osm = await readOsm(args);
   const { centerline, carriageways } = buildCenterline(osm);
   const boundaries = buildBoundaries(osm, centerline);
   const probeRoutes = await buildProbeRoutes(args.topisDir);
-  const existing = readLaneFile();
-  const lane = {
-    laneHours: existing?.laneHours ?? PLACEHOLDER_HOURS,
-    strategies: existing?.strategies ?? {},
-    corridor: { centerline, boundaries },
-    entryExit: existing?.entryExit ?? placeholderEntryExit(centerline),
-    probeRoutes,
-  };
+  const data = { ...working.data, corridor: { centerline, boundaries }, probeRoutes };
   const spacing = cumulative(centerline).slice(1).map((a, i, all) => a - (i === 0 ? 0 : all[i - 1]));
   process.stdout.write(
     `  carriageway points: ${JSON.stringify(carriageways)}\n` +
@@ -327,9 +331,8 @@ async function build(args) {
       `  boundaries: ${boundaries.map((b) => `${b.name} ${b.alongM}`).join(", ")}\n`,
   );
   if (args.dryRun) return;
-  fs.mkdirSync(path.dirname(LANE_FILE), { recursive: true });
-  fs.writeFileSync(LANE_FILE, `${JSON.stringify(lane, null, 2)}\n`);
-  process.stdout.write(`  wrote ${path.relative(ROOT, LANE_FILE)}\n`);
+  writeWorkingFile(args.file, { ...working, data });
+  process.stdout.write(`  wrote ${args.file}; push it with npm run data -- push ${DATASET}${working.target === "prod" ? " --prod" : ""} --file ${args.file}\n`);
 }
 
 
@@ -430,8 +433,8 @@ async function checkEntryExit(lane) {
 const args = parseArgs(process.argv.slice(2));
 
 async function main() {
-  if (args.checkProbe) return checkProbe(readLaneFile(), args.checkProbe);
-  if (args.checkEntryExit) return checkEntryExit(readLaneFile());
+  if (args.checkProbe) return checkProbe(readCorridorFile(args.file).data, args.checkProbe);
+  if (args.checkEntryExit) return checkEntryExit(readCorridorFile(args.file).data);
   return build(args);
 }
 

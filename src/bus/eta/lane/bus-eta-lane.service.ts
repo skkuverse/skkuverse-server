@@ -1,36 +1,48 @@
 import { Injectable } from "@nestjs/common";
+import { Clock } from "../../../infra/clock";
+import { createDatasetLoader, type DatasetLoader } from "../../../infra/dataset-loader";
 import { BusEtaService } from "../bus-eta.service";
 import type { EtaRun } from "../bus-eta.types";
-import { readLaneConfig } from "./bus-eta-lane.config";
-import { strategyOfRun, toLegBounds } from "./bus-eta-lane.rules";
-import type { CorridorEnds, LaneConfig, LaneCorridor, LaneDirection, LegBounds, ProbeRoute, SequenceKey, SequenceStrategy } from "./bus-eta-lane.types";
+import { BUS_LANE_CORRIDOR_LOG_INTERVAL_MS, LANE_HOURS, LANE_STRATEGIES } from "./bus-eta-lane.constants";
+import { BusEtaLaneUnavailableError } from "../bus-eta.error";
+import { BusEtaLaneReadError } from "./bus-eta-lane.error";
+import { toCorridorSnapshot } from "./bus-eta-lane.mapper";
+import { BusEtaLaneRepository } from "./bus-eta-lane.repository";
+import { assertLaneStrategies, strategyOfRun } from "./bus-eta-lane.rules";
+import type { LaneCorridorSnapshot, SequenceKey, SequenceStrategy } from "./bus-eta-lane.types";
 
-/** WHY: bus-lane.json is read at construction and checked against the estimated sequences, so a bad one fails the boot. */
+/** WHY: the strategies and lane hours are checked against the estimated sequences at construction, so a bad one fails the boot. */
 @Injectable()
 export class BusEtaLaneService {
-  private readonly lane: Readonly<LaneConfig>;
+  private readonly corridorLoader: DatasetLoader<LaneCorridorSnapshot>;
 
-  constructor(eta: BusEtaService) {
-    this.lane = readLaneConfig(eta.sequences());
+  constructor(eta: BusEtaService, repository: BusEtaLaneRepository, clock: Clock) {
+    assertLaneStrategies(LANE_STRATEGIES, eta.sequences());
+    this.corridorLoader = createDatasetLoader({
+      name: "bus.lane_corridor",
+      load: async () => {
+        const stored = await repository.findCorridor();
+        return stored && toCorridorSnapshot(stored);
+      },
+      clock,
+      isReadError: (err): err is BusEtaLaneReadError => err instanceof BusEtaLaneReadError,
+      toUnavailable: () => new BusEtaLaneUnavailableError(),
+      readFailedEvent: "bus.lane_corridor.read_failed",
+      logIntervalMs: BUS_LANE_CORRIDOR_LOG_INTERVAL_MS,
+    });
   }
 
   strategyOfRun(run: SequenceKey & Pick<EtaRun, "time">): SequenceStrategy {
-    return strategyOfRun(this.lane, run);
+    return strategyOfRun({ strategies: LANE_STRATEGIES, laneHours: LANE_HOURS }, run);
   }
 
-  corridorEndsOf(direction: LaneDirection): CorridorEnds {
-    return this.lane.entryExit[direction];
-  }
-
-  corridor(): LaneCorridor {
-    return this.lane.corridor;
-  }
-
-  probeRoutes(): readonly ProbeRoute[] {
-    return this.lane.probeRoutes;
-  }
-
-  legBoundsOf(direction: LaneDirection): LegBounds {
-    return toLegBounds(this.lane.corridor, this.lane.entryExit[direction]);
+  // WHY: null with no good corridor read: the live tick then estimates bus-lane runs by car and reports failing.
+  async corridor(): Promise<LaneCorridorSnapshot | null> {
+    try {
+      return await this.corridorLoader.get();
+    } catch (err) {
+      if (err instanceof BusEtaLaneUnavailableError) return null;
+      throw err;
+    }
   }
 }

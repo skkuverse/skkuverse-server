@@ -2,8 +2,9 @@ import type { LatLng } from "../../../shared/lat-lng.types";
 import { toKstDate } from "../../../shared/kst-date.util";
 import { liveDoc } from "./bus-eta-live.mapper";
 import type { EtaTravel, ShuttleEtaDoc } from "../bus-eta.document";
+import { BusEtaLaneUnavailableError } from "../bus-eta.error";
 import type { EtaRun, EtaSequence } from "../bus-eta.types";
-import type { LaneDirection } from "../lane/bus-eta-lane.types";
+import type { LaneCorridorSnapshot, LaneDirection } from "../lane/bus-eta-lane.types";
 import type { LegTime } from "../probe/bus-eta-probe.types";
 import { isPrimeMinute, toBusLaneOffsets, toLiveWork, toModelGroups } from "./bus-eta-live.rules";
 import type { LiveEtaDeps, LiveTickResult, LiveUpstream, ModelGroup } from "./bus-eta-live.types";
@@ -17,6 +18,7 @@ interface TickState {
   failed: Map<LiveUpstream, unknown>;
   firstError: unknown;
   needsPrime: boolean;
+  corridor: Promise<LaneCorridorSnapshot | null> | null;
 }
 
 interface DueGroup extends ModelGroup {
@@ -37,12 +39,14 @@ export class BusEtaLiveService {
     const today = toKstDate(now);
     const serviceIds = [...new Set(this.deps.sequences.map((s) => s.serviceId))];
     const live = (await this.deps.readEtas(serviceIds, [today])).filter((d) => d.kind === "live");
-    const state: TickState = { now, existing: new Map(live.map((d) => [d._id, d])), out: [], calls: 0, succeeded: new Set(), failed: new Map(), firstError: null, needsPrime: false };
+    const state: TickState = { now, existing: new Map(live.map((d) => [d._id, d])), out: [], calls: 0, succeeded: new Set(), failed: new Map(), firstError: null, needsPrime: false, corridor: null };
     for (const sequence of this.deps.sequences) {
       const runs = await this.runsOn(sequence, today, state);
       if (runs) await this.tickSequence(sequence, runs, state).catch((err: unknown) => this.hold(state, "naver", err));
     }
     if (state.needsPrime) await this.prime(state);
+    // WHY: a held corridor failure is retried each tick, or a push waits for the next bus-lane run, up to about 60 h.
+    if (this.failures.has("corridor")) await this.corridorOf(state);
     if (state.out.length > 0) await this.deps.writeEtas(state.out);
     return this.settle(state);
   }
@@ -79,18 +83,30 @@ export class BusEtaLiveService {
 
   // WHY: a forced route that fails is held like a car call's failure, with no car call after it: NAVER is what failed.
   private async fetchBusLane(due: DueGroup, direction: LaneDirection, state: TickState): Promise<void> {
+    const corridor = await this.corridorOf(state);
+    if (corridor === null) return this.fetchCar(due, state, { model: "car" });
     this.takeCall(state);
-    const route = await this.deps.travel.fetchCorridorRoute(due.stops, direction);
+    const route = await this.deps.travel.fetchCorridorRoute(due.stops, corridor, direction);
     state.succeeded.add("naver");
-    const leg = await this.legTime(direction, state);
+    const leg = await this.legTime(corridor, direction, state);
     if (leg?.kind !== "probe") return this.fetchCar(due, state, { model: "car" });
     const travel: EtaTravel = { model: "busLane", corridorCarSec: route.corridorCarSec, corridorSec: leg.corridorSec, spanCount: leg.spanCount, coverage: leg.coverage };
     this.pushDocs(due, { offsetsSec: toBusLaneOffsets(route, leg.corridorSec), travel }, state);
   }
 
-  private async legTime(direction: LaneDirection, state: TickState): Promise<LegTime | null> {
+  // WHY: read at most once per tick, when a bus-lane run is due or a corridor failure is held; none read rejects the tick.
+  private corridorOf(state: TickState): Promise<LaneCorridorSnapshot | null> {
+    state.corridor ??= this.deps.travel.corridor().then((corridor) => {
+      if (corridor === null) this.hold(state, "corridor", new BusEtaLaneUnavailableError());
+      else state.succeeded.add("corridor");
+      return corridor;
+    });
+    return state.corridor;
+  }
+
+  private async legTime(corridor: LaneCorridorSnapshot, direction: LaneDirection, state: TickState): Promise<LegTime | null> {
     try {
-      const leg = await this.deps.travel.legTime(direction, state.now);
+      const leg = await this.deps.travel.legTime(corridor, direction, state.now);
       state.succeeded.add("topis");
       return leg;
     } catch (err: unknown) {
@@ -100,8 +116,10 @@ export class BusEtaLiveService {
   }
 
   private async prime(state: TickState): Promise<void> {
+    const corridor = await this.corridorOf(state);
+    if (corridor === null) return;
     try {
-      await this.deps.travel.prime(state.now);
+      await this.deps.travel.prime(corridor, state.now);
       state.succeeded.add("topis");
     } catch (err: unknown) {
       this.hold(state, "topis", err);

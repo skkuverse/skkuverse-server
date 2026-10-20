@@ -19,3 +19,12 @@ export class BusEtaDirectionsError extends Error {
     return this.kind === "timeout" || this.kind === "reset" || (this.kind === "http" && (this.status ?? 0) >= 500);
   }
 }
+
+// WHY: no good corridor was read yet, so the live tick estimates bus-lane runs by car and reports failing after
+// it stores them; it wraps nothing, since the poller registry logs whatever a tick rejects with.
+export class BusEtaLaneUnavailableError extends Error {
+  constructor() {
+    super("The bus-lane-corridor dataset is unavailable: bus-lane runs are estimated by car");
+    this.name = "BusEtaLaneUnavailableError";
+  }
+}

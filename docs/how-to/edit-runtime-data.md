@@ -24,6 +24,7 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | `map-layer-sets` | `GET /map/config`, `GET /map/overlays/event`, `GET /map/overlays/event/details`, while an activation is live | the base map, 200; the event routes serve nothing | none; each set is checked against the base layers and chips, one per `layerSetId` ([configure-map-overlays.md](configure-map-overlays.md#add-or-edit-a-festival)) |
 | `bus-service-notices` | `GET /bus/schedule/data/:serviceId/smart` and `/week`, and the shuttle estimate pollers | 503 `BUS_SCHEDULE_UNAVAILABLE`; a poller tick rejects | `busServices`: each key is a service the checkout defines ([below](#edit-a-shuttle-notice-or-suspension)) |
 | `skku-rest-days` | the same routes and pollers | 503 `BUS_SCHEDULE_UNAVAILABLE`; a poller tick rejects | none; each key is on the calendar ([below](#add-a-skku-rest-day)) |
+| `bus-lane-corridor` | the live shuttle estimate poller, for 인자셔틀 runs in the lane hours | each such run is estimated by car; the poller tick rejects after storing it | none; the geometry is checked: boundaries in order and the last at the centerline's end, each probe route listed once with direction ranges that do not overlap ([below](#rebuild-the-bus-lane-corridor)) |
 
 A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. The poller reads the two bus datasets too, so a push reaches the shuttle estimates within the same minute. `busGroups`, `subwayStations` and `busServices` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
 
@@ -150,6 +151,25 @@ On 2026-12-22 the smart view answers `suspended` with `resumeDate: "2027-03-01"`
 - `YYYY-MM-DD` applies once (`"2027-03-02": "학사휴교"`), from 1900 to 2999.
 
 A one-off date wins over a yearly one on the same day, either wins over a public holiday, and a `bus_overrides` document for that service and date wins over all three. Public holidays never go here: the server reads them from the official calendar. Use an override instead when the closure must carry a notice.
+
+### Rebuild the bus-lane corridor
+
+`bus-lane-corridor` holds the Gyeongbu Expressway bus-lane corridor the 인자셔틀 estimates time: the centerline with its named boundaries (`corridor`), each direction's entry and exit points (`entryExit`, which NAVER routes through) and the probe routes whose bus positions time it (`probeRoutes`, each with its TOPIS section range per direction). Which runs use it, in which direction, and the lane hours are code (`LANE_STRATEGIES` and `LANE_HOURS` in `src/bus/eta/lane/bus-eta-lane.constants.ts`). Edit an entry or exit point or a probe route by hand; rebuild the centerline and the section ranges from OpenStreetMap and TOPIS with the builder, which rewrites them in the pulled file and keeps `entryExit`:
+
+```bash
+npm run data -- pull bus-lane-corridor --prod
+doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js --file .data/prod/bus-lane-corridor.json
+doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js --file .data/prod/bus-lane-corridor.json --check-probe live
+npm run data -- push bus-lane-corridor --prod --note "corridor rebuilt from OSM"
+```
+
+`--dry-run` prints the summary and writes nothing. After any `entryExit` edit, run the entry-exit check before the push, with the pull's `--file`:
+
+```bash
+doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js --file .data/prod/bus-lane-corridor.json --check-entry-exit
+```
+
+It routes both directions through the file's entry and exit points with NAVER; a point NAVER cannot route through fails every forced route, and each bus-lane run then loses its live value. Of `entryExit`, the push itself refuses only a point more than 500 m off the centerline, or a direction whose exit lies before its entry along it. The live poller reads a push within two minutes (two ticks): the corridor cache lives 60 s, as long as a tick.
 
 ### Check before a deploy
 

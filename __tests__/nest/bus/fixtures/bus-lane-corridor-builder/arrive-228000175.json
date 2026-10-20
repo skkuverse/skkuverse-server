@@ -1,0 +1,66 @@
+{
+  "_about": "Synthetic TOPIS getArrInfoByRouteAll answer for route 228000175 (never captured: only staOrd and stNm are read): the corridor stations once each way, 20 stops further down the route than 8800's.",
+  "msgHeader": {
+    "headerCd": "0"
+  },
+  "msgBody": {
+    "itemList": [
+      {
+        "staOrd": "21",
+        "stNm": "출발지"
+      },
+      {
+        "staOrd": "22",
+        "stNm": "강남역"
+      },
+      {
+        "staOrd": "23",
+        "stNm": "한남IC"
+      },
+      {
+        "staOrd": "24",
+        "stNm": "반포IC"
+      },
+      {
+        "staOrd": "25",
+        "stNm": "양재IC(미정차)"
+      },
+      {
+        "staOrd": "26",
+        "stNm": "판교IC"
+      },
+      {
+        "staOrd": "27",
+        "stNm": "신갈JC"
+      },
+      {
+        "staOrd": "28",
+        "stNm": "수원"
+      },
+      {
+        "staOrd": "29",
+        "stNm": "신갈JC"
+      },
+      {
+        "staOrd": "30",
+        "stNm": "판교IC"
+      },
+      {
+        "staOrd": "31",
+        "stNm": "양재IC"
+      },
+      {
+        "staOrd": "32",
+        "stNm": "반포IC"
+      },
+      {
+        "staOrd": "33",
+        "stNm": "한남IC"
+      },
+      {
+        "staOrd": "34",
+        "stNm": "강남역"
+      }
+    ]
+  }
+}
