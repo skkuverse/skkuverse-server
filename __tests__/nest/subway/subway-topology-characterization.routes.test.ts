@@ -23,6 +23,12 @@
  * every expected value was pinned while it was still subway-registry.json, of
  * which revision 1 is a copy.
  *
+ * At 00:20 and 02:00 KST on Wednesday 2026-10-21, the night window production
+ * is captured in, the same seed is 14 h old, so every station answers from the
+ * committed timetables alone: the status, `Cache-Control`, `Vary`, `ETag` and
+ * bytes the code answered before the topology reader landed
+ * (fixtures/subway-arrivals-night.golden.json, generated at commit 46c6ea60).
+ *
  * A regression pin: a failure is a regression to report, and an expected
  * value changes only with the behavior it pins (`.claude/rules/tests.md`).
  */
@@ -34,6 +40,7 @@ import type { StoredTrainArrival, SubwayArrivalsDoc } from "../../../src/subway/
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import captured from "./fixtures/subway-arrivals-production.capture.json";
+import night from "./fixtures/subway-arrivals-night.golden.json";
 import seeded from "./fixtures/subway-arrivals-seed.json";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
@@ -50,7 +57,8 @@ const STATION_IDS = ["sungkyunkwan", "hyehwa", "jeongja", "jamsil", "dogok", "ga
 type StationId = (typeof STATION_IDS)[number];
 
 const NOW = new Date(captured.capturedAt);
-const CLOCK: Clock = { now: () => new Date(NOW) };
+let clockAt = NOW;
+const CLOCK: Clock = { now: () => new Date(clockAt) };
 const VARY = "Accept-Language, Origin";
 
 // The stops away of each seeded train, in its direction's order: up at the station (0), at its first upstream
@@ -175,6 +183,38 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
       expect(res.headers.vary).toBe(VARY);
       expect(res.headers.etag).toBe(weakEtagOf(JSON.stringify(expected)));
       expect(res.headers["content-type"]).toBe("application/json; charset=utf-8");
+    },
+  );
+});
+
+type NightAnswer = { status: number; cacheControl: string; vary: string; etag: string; body: unknown };
+const NIGHT_INSTANTS = Object.keys(night.instants) as Array<keyof typeof night.instants>;
+
+describe.each(NIGHT_INSTANTS)("GET /subway/stations/:stationId/arrivals at %s, timetable only", (instant) => {
+  beforeAll(() => {
+    clockAt = new Date(instant);
+  });
+
+  afterAll(() => {
+    clockAt = NOW;
+  });
+
+  it.each(LANGS.flatMap((lang) => STATION_IDS.map((stationId) => [lang, stationId] as const)))(
+    "answers in %s for %s the bytes and headers the code answered before the topology reader",
+    async (lang, stationId) => {
+      // Arrange
+      const expected = (night.instants[instant] as Record<StationId, Record<Lang, NightAnswer>>)[stationId][lang];
+
+      // Act
+      const res = await request(app.getHttpServer()).get(`/subway/stations/${stationId}/arrivals`).set("Accept-Language", lang);
+
+      // Assert
+      expect(res.status).toBe(expected.status);
+      expect(res.body).toEqual(expected.body);
+      expect(res.text).toBe(JSON.stringify(expected.body));
+      expect(res.headers["cache-control"]).toBe(expected.cacheControl);
+      expect(res.headers.vary).toBe(expected.vary);
+      expect(res.headers.etag).toBe(expected.etag);
     },
   );
 });
