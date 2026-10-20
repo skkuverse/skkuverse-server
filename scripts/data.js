@@ -507,6 +507,8 @@ async function pushParts(ctx) {
   if (current === null) throw refusalOf({ reason: "missing" }, ctx);
   const checked = await checkedParts(ctx, files);
   if (samePartIds(current.data, checked.manifest)) {
+    const { missing } = await parts.readParts(ctx.db, current.data);
+    if (missing.length > 0) return restoreParts(ctx, current, checked, missing);
     ctx.out(`no change: every part equals ${dataset} revision ${current.revision}; nothing written.`);
     return EXIT_OK;
   }
@@ -520,6 +522,22 @@ async function pushParts(ctx) {
   if (result === null) return EXIT_OK;
   reportStored(ctx, result, working.baseRevision);
   writeWorking(dir, { ...working, baseRevision: result.revision, pulledAt: iso(ctx.now()), manifest: checked.manifest });
+  return EXIT_OK;
+}
+
+/** Stores again the parts the current revision names and the directory holds unchanged, when some are missing; the header stays. */
+async function restoreParts(ctx, current, checked, missing) {
+  const { dataset } = ctx.args;
+  const keyById = new Map(current.data.parts.map((entry) => [entry.partId, entry.key]));
+  const result = await confirmAndWrite(ctx, {
+    lines: missing.map((partId) => `missing    ${keyById.get(partId)}  ${partId}`),
+    summary: `revision ${current.revision} unchanged, ${missing.length} missing part(s) stored again`,
+    warnings: checked.warnings,
+    write: (meta) => parts.restore(ctx.db, dataset, checked.parts, meta),
+  });
+  if (result === null) return EXIT_OK;
+  if (!result.ok) throw refusalOf(result, ctx);
+  ctx.out(`restored ${missing.length} part(s) of ${dataset} revision ${current.revision} in ${ctx.dbName}; the revision is unchanged.`);
   return EXIT_OK;
 }
 

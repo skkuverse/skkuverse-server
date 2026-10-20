@@ -9,7 +9,9 @@
  *     between leaves the served revision unchanged and naming only parts that
  *     exist;
  *   - a part is deleted only when neither the current header nor a retained
- *     revision names it, and only an hour after it was saved.
+ *     revision names it, and only an hour after it was last saved: a push that
+ *     finds a part already stored saves it again, so a garbage collection
+ *     running before that push's header names it keeps it.
  *
  * The command line (scripts/data.js, scripts/lib/datasets/working-dir.js) runs
  * over a two-part test catalog, `test-tables`: one part per line and day type,
@@ -292,6 +294,46 @@ describe("parts garbage collection", () => {
   });
 });
 
+describe("parts.push over a part an earlier run left unnamed", () => {
+  /** A Db that runs a garbage collection at `at` just before the header is written, as a concurrent push's would. */
+  function collectingAtHeader(real: Db, at: Date): Db {
+    return new Proxy(real, {
+      get(target, property, receiver) {
+        if (property !== "collection") return Reflect.get(target, property, receiver);
+        return (name: string) => {
+          const collection = target.collection(name);
+          if (name !== "datasets") return collection;
+          return new Proxy(collection, {
+            get: (c, p, r) =>
+              p === "updateOne"
+                ? async (...args: unknown[]) => {
+                    await parts.collectGarbage(real, DATASET, { now: at });
+                    return (c.updateOne as (...a: unknown[]) => unknown)(...args);
+                  }
+                : Reflect.get(c, p, r),
+          });
+        };
+      },
+    });
+  }
+
+  it("keeps a re-found orphan part through a garbage collection that runs before the push's header names it", async () => {
+    // Arrange
+    await parts.create(db, DATASET, [partOf(weekday1)], { by: ALICE, now: NOW });
+    const changed = table("1", "weekday", ["06:00"]);
+    await expect(parts.push(crashingAtHeader(db), DATASET, [partOf(changed)], { baseRevision: 1, by: ALICE, now: NOW })).rejects.toThrow("process killed");
+    const later = new Date(NOW.getTime() + 2 * HOUR_MS);
+
+    // Act
+    const result = await parts.push(collectingAtHeader(db, later), DATASET, [partOf(changed)], { baseRevision: 1, by: ALICE, now: later });
+
+    // Assert
+    expect(result).toEqual({ ok: true, revision: 2 });
+    expect(await db.collection("dataset_parts").findOne({ _id: partIdOf(changed) as never })).toMatchObject({ data: changed, savedAt: later });
+    expect((await parts.readParts(db, (await store.readDataset(db, DATASET)).data)).missing).toEqual([]);
+  });
+});
+
 interface Ran {
   code: number;
   out: string;
@@ -439,6 +481,24 @@ describe("npm run data, a parted dataset", () => {
     // Assert
     expect(result.code).toBe(0);
     expect(result.out).toMatch(/no change/i);
+    expect(await revisionIn(devDb())).toBe(1);
+    expect(await store.history(devDb(), DATASET)).toHaveLength(1);
+  });
+
+  it("stores a part the current revision names again when an unedited directory finds it missing", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET]);
+    await devDb().collection("dataset_parts").deleteOne({ _id: partIdOf(weekday2) as never });
+
+    // Act
+    const result = await data(["push", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).not.toMatch(/no change/i);
+    expect(result.out).toMatch(/restored 1 part/);
+    expect(await devDb().collection("dataset_parts").findOne({ _id: partIdOf(weekday2) as never })).toMatchObject({ data: weekday2 });
     expect(await revisionIn(devDb())).toBe(1);
     expect(await store.history(devDb(), DATASET)).toHaveLength(1);
   });
