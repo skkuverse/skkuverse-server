@@ -101,11 +101,6 @@
       "GET bus/schedule/data/:serviceId/smart"
     ]
   },
-  "bus.jongroRoutesFile": {
-    "source": "src/bus/bus.wire.ts",
-    "export": "jongroRoutesFile",
-    "routes": []
-  },
   "bus.servedSequenceStop": {
     "source": "src/bus/bus.wire.ts",
     "export": "servedSequenceStop",

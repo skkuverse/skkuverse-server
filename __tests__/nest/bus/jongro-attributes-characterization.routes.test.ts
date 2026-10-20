@@ -4,7 +4,7 @@
  * refresh interval, seat count and transfer lines. `/bus/config` and each
  * `/bus/config/:groupId`, `/ui/home/transit` and `/ui/home/transitlist` answer,
  * in `ko`, `en` and `zh`, the bytes, `Cache-Control`, `Vary` and `ETag`
- * production served from the committed jongro-routes.json on 2026-10-20
+ * production served from the committed route file on 2026-10-20
  * (fixtures/jongro-attributes-production.capture.json, source commit d856f333);
  * `/bus/realtime/data/jongro02`, `jongro07` and `jongro08` answer the crowding
  * each route's seat count gives the passenger counts seeded below.
@@ -19,7 +19,7 @@
  * `transit-layout`, `miniapps` and `jongro-route-attributes`, stored through
  * the tool's own scripts/lib/datasets/store.js. The attributes are the
  * dataset's since task 5.4; every expected value was pinned while they were
- * still jongro-routes.json, of which revision 1 is a copy.
+ * still the committed route file, of which revision 1 is a copy.
  *
  * A regression pin: a failure is a regression to report, and an expected value
  * changes only with the behavior it pins (`.claude/rules/tests.md`). The
