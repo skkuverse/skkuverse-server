@@ -1,23 +1,34 @@
 import { Injectable } from "@nestjs/common";
 import crypto from "crypto";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
+import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
 import { JONGRO_ROUTES } from "../bus.constants";
 import { BusRegistryService } from "../registry/bus-registry.service";
 import type { RegistryRoute } from "../registry/bus-registry.types";
+import { BusRouteAttributesService } from "../route-attributes/bus-route-attributes.service";
+import type { RouteAttributesSnapshot } from "../route-attributes/bus-route-attributes.types";
 import { BusStopsService } from "../stops/bus-stops.service";
 import { HAS_STOP_MAPS_BY_GROUP } from "./bus-config.config";
 import { CAMPUS_SERVICE_IDS, COMMUTE_SERVICE_IDS } from "./bus-config.constants";
 import { toBusGroupIds, toBusGroups } from "./bus-config.mapper";
+import type { AttributedJongroRoute } from "./bus-config.types";
 import type { BusGroup } from "./bus-config.wire";
+
+interface GroupSources {
+  routes: RegistryRoute[];
+  attributes: RouteAttributesSnapshot;
+}
 
 @Injectable()
 export class BusConfigService {
   private readonly etagCache = new Map<string, string>();
+  private readonly warnedTransferKeys = new Set<string>();
 
   constructor(
     private readonly stops: BusStopsService,
     private readonly registry: BusRegistryService,
+    private readonly routeAttributes: BusRouteAttributesService,
   ) {}
 
   // WHY: route ids never change at runtime, so the ids need no registry read and serve a boot-time check.
@@ -26,16 +37,16 @@ export class BusConfigService {
   }
 
   async getBusGroups(lang: SupportedLang = "ko"): Promise<BusGroup[]> {
-    return this.toGroups(lang, await this.registry.listRoutes());
+    return this.toGroups(lang, await this.readSources());
   }
 
-  // WHY: keyed by every route's stations version too, so a sync changes the ETag (improve-jongro-realtime D10).
+  // WHY: keyed by the attributes revision and every route's stations version, so a push or a sync changes the ETag.
   async computeEtag(lang: SupportedLang = "ko"): Promise<string> {
-    const routes = await this.registry.listRoutes();
-    const cacheKey = [lang, ...routes.map((route) => route.stationsVersion)].join(":");
+    const sources = await this.readSources();
+    const cacheKey = [lang, sources.attributes.revision, ...sources.routes.map((route) => route.stationsVersion)].join(":");
     const cached = this.etagCache.get(cacheKey);
     if (cached) return cached;
-    const etag = this.md5Etag(this.toGroups(lang, routes));
+    const etag = this.md5Etag(this.toGroups(lang, sources));
     this.etagCache.set(cacheKey, etag);
     return etag;
   }
@@ -45,23 +56,52 @@ export class BusConfigService {
   }
 
   async computeGroupEtag(id: string, lang: SupportedLang = "ko"): Promise<string | null> {
-    const routes = await this.registry.listRoutes();
-    const cacheKey = [id, lang, ...routes.map((route) => route.stationsVersion)].join(":");
+    const sources = await this.readSources();
+    const cacheKey = [id, lang, sources.attributes.revision, ...sources.routes.map((route) => route.stationsVersion)].join(":");
     const cached = this.etagCache.get(cacheKey);
     if (cached) return cached;
-    const group = this.toGroups(lang, routes).find((g) => g.id === id);
+    const group = this.toGroups(lang, sources).find((g) => g.id === id);
     if (!group) return null;
     const etag = this.md5Etag(group);
     this.etagCache.set(cacheKey, etag);
     return etag;
   }
 
-  private toGroups(lang: SupportedLang, routes: readonly RegistryRoute[]): BusGroup[] {
+  // WHY: the attributes first, so a replica that never read them answers their 503 whatever the registry holds.
+  private async readSources(): Promise<GroupSources> {
+    const attributes = await this.routeAttributes.current();
+    return { attributes, routes: await this.registry.listRoutes() };
+  }
+
+  private toGroups(lang: SupportedLang, { routes, attributes }: GroupSources): BusGroup[] {
     const stops = {
       campus: this.stops.servedSequences(CAMPUS_SERVICE_IDS, lang, HAS_STOP_MAPS_BY_GROUP.campus),
       commute: this.stops.servedSequences(COMMUTE_SERVICE_IDS, lang, HAS_STOP_MAPS_BY_GROUP.commute),
     };
-    return toBusGroups({ lang, stops, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN });
+    return toBusGroups({ lang, stops, jongroRoutes: this.toAttributedRoutes(routes, attributes), webviewOrigin: WEBVIEW_ORIGIN });
+  }
+
+  // WHY: a route without stored attributes is left out (BusRouteAttributesService logs the gap once per revision).
+  private toAttributedRoutes(routes: readonly RegistryRoute[], snapshot: RouteAttributesSnapshot): AttributedJongroRoute[] {
+    return routes.flatMap((route) => {
+      const attributes = snapshot.attributesOf(route.id);
+      if (attributes === undefined) return [];
+      this.warnUnmatchedTransferLines({ route, attributes }, snapshot.revision);
+      return [{ route, attributes }];
+    });
+  }
+
+  // WHY: stations change at runtime, so an entry no stored station has is a warning once per revision, not a refusal.
+  private warnUnmatchedTransferLines({ route, attributes }: AttributedJongroRoute, revision: number): void {
+    const arsIds = new Set(route.stations.map((station) => station.stationNumber));
+    const isNew = (arsId: string) => !arsIds.has(arsId) && !this.warnedTransferKeys.has(`${revision}:${route.id}:${arsId}`);
+    const unmatched = Object.keys(attributes.transferLinesByArsId).filter(isNew);
+    if (unmatched.length === 0) return;
+    for (const arsId of unmatched) this.warnedTransferKeys.add(`${revision}:${route.id}:${arsId}`);
+    logger.warn(
+      { event: "bus.jongro.registry_unmatched_transfer", routeId: route.id, revision, arsIds: unmatched },
+      "A stored transfer line names an ARS number no stored station has",
+    );
   }
 
   private md5Etag(value: unknown): string {

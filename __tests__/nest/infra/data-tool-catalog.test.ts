@@ -29,11 +29,17 @@
  * The `bus-lane-corridor` dataset (move-reference-datasets D9) is checked with
  * the server's corridor schema and `corridorIssues`, the geometry checks the
  * boot refused bus-lane.json on; the lane hours and strategies are code.
+ *
+ * The `jongro-route-attributes` dataset (move-reference-datasets D10) is
+ * checked with the server's attributes schema and against the `jongroRoutes`
+ * code-held source, the route ids JONGRO_ROUTES holds: one entry per route the
+ * checkout serves, no more.
  */
 import path from "node:path";
-import { SERVICE_CONFIG } from "../../../src/bus/bus.constants";
+import { JONGRO_ROUTES, SERVICE_CONFIG } from "../../../src/bus/bus.constants";
 import { corridorIssues } from "../../../src/bus/eta/lane/bus-eta-lane.rules";
 import { laneCorridorDataset } from "../../../src/bus/eta/lane/bus-eta-lane.schema";
+import { jongroRouteAttributesDataset } from "../../../src/bus/route-attributes/bus-route-attributes.schema";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import { fixtureRegistry, fixtureRegistryWithWaveRun } from "../../helpers/miniapps/registry-fixture";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
@@ -130,7 +136,7 @@ describe("loadCatalog", () => {
 
 describe("loadCatalog code-held sources", () => {
   // BusConfigService.listGroupIds reads neither of its providers.
-  const busConfig = new BusConfigService(null as never, null as never);
+  const busConfig = new BusConfigService(null as never, null as never, null as never);
   const servedIds = {
     busGroups: () => busConfig.listGroupIds(),
     subwayStations: () => new SubwayStationsService().listStations().map((station) => station.id),
@@ -162,6 +168,18 @@ describe("loadCatalog code-held sources", () => {
     expect(source.ids().every((id: string) => source.has(id))).toBe(true);
     expect(source.has("no-such-id")).toBe(false);
     expect(source.has("toString")).toBe(false);
+  });
+
+  it("lists the jongroRoutes ids JONGRO_ROUTES holds, in its order, owned by src/bus", () => {
+    // Arrange
+    const source = loadCatalog(srcLoader).sources.jongroRoutes;
+
+    // Act & Assert
+    expect(source.owner).toBe("src/bus");
+    expect(source.ids()).toEqual(JONGRO_ROUTES.map((route) => route.id));
+    expect(source.ids()).toEqual(["jongro02", "jongro07", "jongro08"]);
+    expect(source.has("jongro07")).toBe(true);
+    expect(source.has("hssc")).toBe(false);
   });
 
   it("pins today's bus groups and a bus service", () => {
@@ -629,5 +647,77 @@ describe("loadCatalog bus-lane-corridor", () => {
 
     // Assert
     expect(lines).toEqual([expect.stringMatching(/^bus-lane-corridor: : .*laneHours/)]);
+  });
+});
+
+describe("loadCatalog jongro-route-attributes", () => {
+  type Attributes = { routes: Record<string, Record<string, unknown>> };
+  const attributes = () => datasetFixture("../bus/fixtures/jongro-route-attributes.dataset.json") as Attributes;
+
+  it("is owned by src/bus/route-attributes, takes jongroRouteAttributesDataset, and accepts revision 1 with no issue and no reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["jongro-route-attributes"];
+
+    // Act
+    const issues = checkData(catalog, "jongro-route-attributes", attributes(), {});
+
+    // Assert
+    expect(entry.owner).toBe("src/bus/route-attributes");
+    expect(entry.schema).toBe(jongroRouteAttributesDataset);
+    expect(issues).toEqual([]);
+    expect(entry.referencesOf(entry.schema.parse(attributes()))).toEqual([]);
+  });
+
+  it("Seat count zero: refuses seatCount 0 for jongro07, naming routes.jongro07.seatCount", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = attributes();
+    data.routes.jongro07!.seatCount = 0;
+
+    // Act
+    const lines = issueLines(checkData(catalog, "jongro-route-attributes", data, {}));
+
+    // Assert
+    expect(lines).toEqual(["jongro-route-attributes: routes.jongro07.seatCount: required positive integer"]);
+  });
+
+  it("Route missing: refuses attributes holding jongro02 and jongro07 only, naming jongro08 as missing", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = attributes();
+    delete data.routes.jongro08;
+
+    // Act
+    const lines = issueLines(checkData(catalog, "jongro-route-attributes", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['jongro-route-attributes: routes.jongro08: missing: the checked-out code serves "jongro08", so it needs attributes']);
+  });
+
+  it("Missing seat count: refuses jongro08 without a seat count, naming jongro08", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = attributes();
+    delete data.routes.jongro08!.seatCount;
+
+    // Act
+    const lines = issueLines(checkData(catalog, "jongro-route-attributes", data, {}));
+
+    // Assert
+    expect(lines).toEqual(["jongro-route-attributes: routes.jongro08.seatCount: Invalid input: expected number, received undefined"]);
+  });
+
+  it("refuses attributes for a route the checkout does not serve, naming it", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = attributes();
+    data.routes.jongro13 = structuredClone(data.routes.jongro07!);
+
+    // Act
+    const lines = issueLines(checkData(catalog, "jongro-route-attributes", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['jongro-route-attributes: routes.jongro13: "jongro13" is not a route the checked-out code serves']);
   });
 });

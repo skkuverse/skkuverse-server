@@ -29,6 +29,7 @@ import { BusEtaSmartModule } from "../../../src/bus/eta/smart/bus-eta-smart.modu
 import { BusModule } from "../../../src/bus/bus.module";
 import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
+import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
 import { BusScheduleModule } from "../../../src/bus/schedule/bus-schedule.module";
 import { BusScheduleRepository } from "../../../src/bus/schedule/bus-schedule.repository";
 import { BusScheduleService } from "../../../src/bus/schedule/bus-schedule.service";
@@ -40,6 +41,7 @@ import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
 import { serviceNoticesFixture, serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../helpers/bus/schedule-content";
 import { FakeBusEtaRepository } from "../../helpers/fakes/bus/bus-eta.repository.fake";
 import { FakeBusScheduleContentRepository } from "../../helpers/fakes/bus/bus-schedule-content.repository.fake";
@@ -801,6 +803,7 @@ describe("GET /bus/config across a content push", () => {
         { provide: BusScheduleRepository, useValue: new FakeBusScheduleRepository() },
         { provide: BusScheduleContentRepository, useValue: stored },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
+        { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
         { provide: Clock, useValue: { now: () => new Date() } },
       ],

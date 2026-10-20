@@ -16,8 +16,10 @@
  * routes as production stored them (fixtures/jongro-registry-routes.json, the
  * stations versions the captures carry), whose `bus_cache` holds the arrival
  * rows and positions below, and whose content database holds revision 1 of
- * `transit-layout` and `miniapps`, stored through the tool's own
- * scripts/lib/datasets/store.js.
+ * `transit-layout`, `miniapps` and `jongro-route-attributes`, stored through
+ * the tool's own scripts/lib/datasets/store.js. The attributes are the
+ * dataset's since task 5.4; every expected value was pinned while they were
+ * still jongro-routes.json, of which revision 1 is a copy.
  *
  * A regression pin: a failure is a regression to report, and an expected value
  * changes only with the behavior it pins (`.claude/rules/tests.md`). The
@@ -47,6 +49,7 @@ type BusRegistryHelpers = typeof import("../../helpers/bus/bus-registry");
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type RegistryFixture = typeof import("../../helpers/miniapps/registry-fixture");
+type RouteAttributesHelpers = typeof import("../../helpers/bus/route-attributes");
 
 type Lang = "ko" | "en" | "zh";
 const LANGS: Lang[] = ["ko", "en", "zh"];
@@ -174,6 +177,8 @@ beforeAll(async () => {
   await store.create(content, "transit-layout", fixtureTransitLayout(), { by: "characterization@example.com", now: NOW });
   const { fixtureRegistry } = require("../../helpers/miniapps/registry-fixture") as RegistryFixture;
   await store.create(content, "miniapps", fixtureRegistry(), { by: "characterization@example.com", now: NOW });
+  const { routeAttributesFixture } = require("../../helpers/bus/route-attributes") as RouteAttributesHelpers;
+  await store.create(content, "jongro-route-attributes", routeAttributesFixture(), { by: "characterization@example.com", now: NOW });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

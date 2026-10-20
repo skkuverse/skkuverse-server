@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import type { SupportedLang } from "../../infra/types";
-import type { TransferLine } from "../bus.types";
+import type { JongroRouteAttributes, TransferLine } from "../bus.types";
 import type { JongroStation, RegistryRoute } from "../registry/bus-registry.types";
 import type { ResolvedStops } from "../stops/bus-stops.types";
 import type { busGroupVisibility } from "./bus-config.schema";
@@ -20,7 +20,15 @@ export interface HsscStation {
   transferLines: TransferLine[];
 }
 
-export type AnyStation = HsscStation | JongroStation;
+/** WHY: a Jongro station with its transfer lines, joined by ARS number from the route's stored attributes. */
+export type AttributedJongroStation = JongroStation & { transferLines: TransferLine[] };
+
+export type AnyStation = HsscStation | AttributedJongroStation;
+
+export interface AttributedJongroRoute {
+  route: RegistryRoute;
+  attributes: JongroRouteAttributes;
+}
 
 export interface MappedStation {
   index: number;
@@ -41,6 +49,6 @@ export interface GroupStops {
 export interface BusGroupSources {
   lang: SupportedLang;
   stops: GroupStops;
-  jongroRoutes: ReadonlyArray<RegistryRoute>;
+  jongroRoutes: ReadonlyArray<AttributedJongroRoute>;
   webviewOrigin: string;
 }
