@@ -888,6 +888,32 @@ describe("loadCatalog subway-timetables", () => {
     expect(checked.parts.map((part: { key: string }) => part.key)).toEqual(files().map(({ file }) => file.replace(/\.json$/, "")).sort());
   });
 
+  it("Seoul Metro changes line 2: describes a changed table by its trains added and removed, a moved train as both", () => {
+    // Arrange
+    const entry = loadCatalog(srcLoader).datasets["subway-timetables"];
+    const was = timetableFile.parse(files().find(({ file }) => file === "S1-2-weekday.json")!.data);
+    const [moved, dropped, ...kept] = was.trains;
+    const is = { ...was, trains: [{ ...moved!, stops: moved!.stops.map((stop) => ({ ...stop, arr: stop.arr && stop.arr + 60 })) }, ...kept] };
+
+    // Act
+    const changes = entry.parts.changesOf(was, is);
+
+    // Assert
+    expect(changes).toEqual([`trains +1 -2 (added ${moved!.trainNo}; removed ${moved!.trainNo}, ${dropped!.trainNo})`]);
+  });
+
+  it("describes an unchanged train list as no train change", () => {
+    // Arrange
+    const entry = loadCatalog(srcLoader).datasets["subway-timetables"];
+    const was = timetableFile.parse(files()[0]!.data);
+
+    // Act
+    const changes = entry.parts.changesOf(was, { ...was, source: { ...was.source, revision: "2026-11-01" } });
+
+    // Assert
+    expect(changes).toEqual(["trains unchanged"]);
+  });
+
   it("Missing Saturday table: refuses a push without S1-4-saturday, naming S1-4-420 saturday", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);

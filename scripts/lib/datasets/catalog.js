@@ -35,7 +35,9 @@
  *   parts.schema     the zod schema the server parses each part with
  *   parts.keyOf      the part's key, from its own fields
  *   parts.summaryOf  what `history` and the push report show of a part
- *
+ *   parts.changesOf(stored, pushed)
+ *                    optional: lines the push report adds to a changed part,
+ *                    both parsed with parts.schema
  * and its `issuesOf` and `referencesOf` take the parsed parts, ordered by key.
  *
  * A code-held source is an identity list that still lives in code, resolved
@@ -55,6 +57,20 @@
  * `subway-topology` is also checked against the timetable routes of every
  * served platform, read from the checkout's committed SUBWAY_TIMETABLES.
  */
+
+const SHOWN_TRAIN_NUMBERS = 8;
+
+/** A changed timetable's trains added and removed, a train counted by its whole row, so a moved train is both. */
+function trainChanges(stored, pushed) {
+  const rowsOf = (table) => table.trains.map((train) => ({ trainNo: train.trainNo, row: JSON.stringify(train) }));
+  const [before, after] = [rowsOf(stored), rowsOf(pushed)];
+  const missingFrom = (rows) => (each) => !rows.some((other) => other.row === each.row);
+  const [added, removed] = [after.filter(missingFrom(before)), before.filter(missingFrom(after))];
+  if (added.length === 0 && removed.length === 0) return ["trains unchanged"];
+  const numbers = (rows) => rows.slice(0, SHOWN_TRAIN_NUMBERS).map((each) => each.trainNo).join(", ") + (rows.length > SHOWN_TRAIN_NUMBERS ? ", ..." : "");
+  const named = [added.length > 0 && `added ${numbers(added)}`, removed.length > 0 && `removed ${numbers(removed)}`].filter(Boolean);
+  return [`trains +${added.length} -${removed.length} (${named.join("; ")})`];
+}
 
 function codeHeldSource(owner, ids) {
   const known = new Set(ids);
@@ -215,6 +231,7 @@ function loadCatalog(load) {
           schema: timetableFile,
           keyOf: toTimetableKey,
           summaryOf: (table) => ({ source: table.source, trainCount: table.trains.length }),
+          changesOf: trainChanges,
         },
         issuesOf: (tables) => toTimetableCoverageIssues(tables, servedPlatforms),
         referencesOf: () => [],
