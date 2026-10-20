@@ -4,7 +4,7 @@
  * recording stand-in for the poller registry), the tracker, the timetable and
  * estimate doors and the arrivals route, over FakeSubwaySeoulApiClient,
  * the stored topology's revision 1 in FakeSubwayTopologyRepository, the
- * committed tables in FakeSubwayTimetableRepository,
+ * trimmed fixture of revision 1 in FakeSubwayTimetableRepository,
  * FakeSubwaySeoulTrainmapClient (the line 1 and 4 positions and the line 4
  * page captured on 2026-10-16 22:27 KST, joined with the line 1 page as the one
  * page of every line the crawl reads; the line 1 page dates from 20:45, so

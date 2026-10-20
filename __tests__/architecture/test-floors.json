@@ -72,8 +72,8 @@
     "expects": 91
   },
   "subway": {
-    "tests": 468,
-    "expects": 712
+    "tests": 583,
+    "expects": 923
   },
   "ui": {
     "tests": 282,

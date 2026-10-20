@@ -11,7 +11,6 @@
 import { subwayTimetablesFixture } from "../../../__tests__/helpers/subway/timetables";
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
 import type { NetworkPlatform } from "../subway.types";
-import { SUBWAY_TIMETABLES } from "./subway-timetable.config";
 import { TIMETABLE_DAY_TYPES } from "./subway-timetable.constants";
 import {
   findSubwayPlatform,
@@ -98,14 +97,17 @@ describe("toServiceInstant", () => {
   });
 });
 
+// WHY: revision 1 of the stored subway-timetables, trimmed (fixtures/subway-timetables/ of __tests__/nest/subway).
+const STORED = subwayTimetablesFixture();
+
 describe("findTimetable", () => {
   it("serves a Saturday from the 1호선 holiday table and the 4호선 Saturday table", () => {
     // Arrange
     const serviceDate = toServiceDate(new Date("2026-10-17T03:00:00Z"));
 
     // Act
-    const korail = findTimetable(SUBWAY_TIMETABLES, SUNGKYUNKWAN, toDayType("korail", serviceDate, false));
-    const seoul = findTimetable(SUBWAY_TIMETABLES, HYEHWA, toDayType("seoul-station", serviceDate, false));
+    const korail = findTimetable(STORED, SUNGKYUNKWAN, toDayType("korail", serviceDate, false));
+    const seoul = findTimetable(STORED, HYEHWA, toDayType("seoul-station", serviceDate, false));
 
     // Assert
     expect([korail?.line, korail?.dayType, seoul?.line, seoul?.dayType]).toEqual(["1", "holiday", "4", "saturday"]);
@@ -113,8 +115,8 @@ describe("findTimetable", () => {
 
   it("serves a public holiday on a Wednesday from both lines' holiday tables", () => {
     // Act
-    const korail = findTimetable(SUBWAY_TIMETABLES, SUNGKYUNKWAN, toDayType("korail", "2026-10-14", true));
-    const seoul = findTimetable(SUBWAY_TIMETABLES, HYEHWA, toDayType("seoul-station", "2026-10-14", true));
+    const korail = findTimetable(STORED, SUNGKYUNKWAN, toDayType("korail", "2026-10-14", true));
+    const seoul = findTimetable(STORED, HYEHWA, toDayType("seoul-station", "2026-10-14", true));
 
     // Assert
     expect([korail?.line, korail?.dayType, seoul?.line, seoul?.dayType]).toEqual(["1", "holiday", "4", "holiday"]);
@@ -122,7 +124,7 @@ describe("findTimetable", () => {
 
   it("finds no table for a day type the platform's line has none of", () => {
     // Act & Assert
-    expect(findTimetable(SUBWAY_TIMETABLES, SUNGKYUNKWAN, "saturday")).toBeNull();
+    expect(findTimetable(STORED, SUNGKYUNKWAN, "saturday")).toBeNull();
   });
 });
 
@@ -131,7 +133,7 @@ describe("toScheduledTrains", () => {
     // Arrange
     const now = new Date("2026-10-16T15:10:00Z");
     const serviceDate = toServiceDate(now);
-    const weekday = findTimetable(SUBWAY_TIMETABLES, SUNGKYUNKWAN, toDayType("korail", serviceDate, false)) as Timetable;
+    const weekday = findTimetable(STORED, SUNGKYUNKWAN, toDayType("korail", serviceDate, false)) as Timetable;
 
     // Act
     const trains = toScheduledTrains(weekday, serviceDate);
@@ -185,8 +187,8 @@ describe("toScheduledTrains", () => {
 describe("toLineRoutes", () => {
   it("orders each direction's stations as its trains travel, whichever way the file lists them", () => {
     // Arrange
-    const korail = SUBWAY_TIMETABLES.find((t) => t.line === "1" && t.dayType === "weekday") as Timetable;
-    const seoul = SUBWAY_TIMETABLES.find((t) => t.line === "4" && t.dayType === "weekday") as Timetable;
+    const korail = STORED.find((t) => t.line === "1" && t.dayType === "weekday") as Timetable;
+    const seoul = STORED.find((t) => t.line === "4" && t.dayType === "weekday") as Timetable;
 
     // Act
     const [korailRoutes, seoulRoutes] = [toLineRoutes(korail), toLineRoutes(seoul)];
@@ -307,11 +309,6 @@ describe("toTimetableCoverageIssues", () => {
     // Assert
     expect(covering()).toHaveLength(18);
     expect(issues).toEqual([]);
-  });
-
-  it("returns none for the committed tables", () => {
-    // Act & Assert
-    expect(toTimetableCoverageIssues(SUBWAY_TIMETABLES, listSubwayPlatforms())).toEqual([]);
   });
 
   it("Missing Saturday table: names S1-4-420 saturday and KR-1-0153 holiday at their tables' keys", () => {

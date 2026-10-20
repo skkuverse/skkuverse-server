@@ -26,8 +26,6 @@ sys.path.insert(0, HERE)
 
 import convert  # noqa: E402
 
-TIMETABLE_DIR = os.path.join(os.path.dirname(os.path.dirname(HERE)), "src", "subway", "timetable")
-
 
 def column_letter(index):
     letters = ""
@@ -550,22 +548,6 @@ class Output(unittest.TestCase):
         self.assertIn("--out", stderr.getvalue())
 
 
-class CommittedSuinBundang(unittest.TestCase):
-    WINDOWS = (["KR-K1-K%d" % n for n in range(210, 234)], ["KR-K1-K237"])
-
-    def test_every_express_stops_at_every_covered_station_from_wangsimni_to_jukjeon_and_at_giheung(self):
-        # Arrange
-        with open(os.path.join(TIMETABLE_DIR, "korail-k1-weekday.json"), encoding="utf-8") as handle:
-            expresses = [t for t in json.load(handle)["trains"] if t["express"]]
-
-        # Act
-        stops = {t["trainNo"]: {s["station"] for s in t["stops"]} for t in expresses}
-
-        # Assert
-        self.assertEqual(sorted(stops), ["%04d" % n for n in range(6300, 6314)])
-        self.assertEqual({no: [s for window in self.WINDOWS for s in window if s not in seen] for no, seen in stops.items()}, {no: [] for no in stops})
-
-
 def pdf(objects):
     """PDF bytes from {number: dictionary bytes or (dictionary bytes, stream bytes)}, catalog first."""
     out = b"%PDF-1.5\n"
@@ -766,53 +748,6 @@ class ShinbundangChain(unittest.TestCase):
             convert.shinbundang_chain(self.pages(times), "down", self.LINE)
 
 
-class CommittedShinbundang(unittest.TestCase):
-    ORDER = ["D04", "4305", "4306", "4307", "4308", "4309", "4310", "4311", "4312", "D13", "D14", "D15", "4316", "4317", "4318", "4319"]
-    # Minutes per station page and column in the two PDFs of all_kor.zip (SBL4020, 2026-09-28), in ORDER.
-    LISTED = {
-        "weekday": {"up": [0] + [165] * 7 + [164] + [162] * 7, "down": [165] * 8 + [162] * 7 + [0]},
-        "holiday": {"up": [0] + [133] * 7 + [132] + [130] * 7, "down": [133] * 8 + [130] * 7 + [0]},
-    }
-
-    def document(self, day_type):
-        with open(os.path.join(TIMETABLE_DIR, "shinbundang-d1-%s.json" % day_type), encoding="utf-8") as handle:
-            return json.load(handle)
-
-    def test_lists_each_station_s_minutes_once_per_direction(self):
-        for day_type, expected in self.LISTED.items():
-            with self.subTest(day_type=day_type):
-                # Arrange
-                trains = self.document(day_type)["trains"]
-
-                # Act
-                listed = {d: [sum(1 for t in trains if t["direction"] == d for s in t["stops"] if s["station"] == "DX-D1-" + code and s["dep"] is not None) for code in self.ORDER] for d in ("up", "down")}
-
-                # Assert
-                self.assertEqual(listed, expected)
-
-    def test_ends_every_short_turn_at_jeongja_with_no_departure(self):
-        for day_type, count in (("weekday", 5), ("holiday", 4)):
-            with self.subTest(day_type=day_type):
-                # Act
-                ends = [t["stops"][-1] for t in self.document(day_type)["trains"] if t["destination"] == "정자"]
-
-                # Assert
-                self.assertEqual(len(ends), count)
-                self.assertEqual({(s["station"], s["dep"]) for s in ends}, {("DX-D1-4312", None)})
-
-    def test_numbers_runs_from_1001_down_and_1002_up_by_two(self):
-        for day_type in ("weekday", "holiday"):
-            with self.subTest(day_type=day_type):
-                # Arrange
-                trains = self.document(day_type)["trains"]
-
-                # Act
-                numbers = {d: sorted(int(t["trainNo"]) for t in trains if t["direction"] == d) for d in ("up", "down")}
-
-                # Assert
-                self.assertEqual(numbers, {d: list(range(first, first + 2 * len(numbers[d]), 2)) for d, first in (("up", 1002), ("down", 1001))})
-
-
 class SeoulLines(unittest.TestCase):
     @staticmethod
     def row(number, arrive, leave, destination):
@@ -907,94 +842,6 @@ class OneDirectionDestinations(unittest.TestCase):
         with self.assertRaisesRegex(convert.ConvertError, "'신도림'"):
             convert.check_one_direction(both, "test", line_of("2"))
 
-
-class CommittedTimetables(unittest.TestCase):
-    NAMES = ["korail-1-weekday.json", "korail-1-holiday.json", "seoul-4-weekday.json", "seoul-4-saturday.json", "seoul-4-holiday.json"]
-
-    def test_each_file_is_rendered_as_the_script_writes_it_and_passes_its_checks(self):
-        for name in self.NAMES:
-            with self.subTest(name=name):
-                # Arrange
-                with open(os.path.join(TIMETABLE_DIR, name), encoding="utf-8") as handle:
-                    text = handle.read()
-                document = json.loads(text)
-                served = convert.LINE1_SERVED if document["line"] == "1" else convert.LINE4_SERVED
-
-                # Act
-                for train in document["trains"]:
-                    convert.validate_train(train, served, name)
-
-                # Assert
-                self.assertEqual(convert.render(document), text)
-                self.assertEqual(document["trains"], convert.sort_trains(document["trains"]))
-
-    def test_each_korail_destination_is_a_name_the_upstreams_write(self):
-        for name in self.NAMES[:2]:
-            with self.subTest(name=name):
-                # Arrange
-                with open(os.path.join(TIMETABLE_DIR, name), encoding="utf-8") as handle:
-                    document = json.load(handle)
-
-                # Act
-                destinations = {train["destination"] for train in document["trains"]}
-
-                # Assert
-                self.assertEqual({d: convert.korail_destination(d, name) for d in destinations}, {d: d for d in destinations})
-
-    def test_no_destination_names_trains_of_both_directions(self):
-        # The tracker reads a train's direction off its destination in these files (toDirectionByDestination).
-        for name in self.NAMES:
-            with self.subTest(name=name):
-                # Arrange
-                with open(os.path.join(TIMETABLE_DIR, name), encoding="utf-8") as handle:
-                    document = json.load(handle)
-
-                # Act
-                by_direction = {d: {t["destination"] for t in document["trains"] if t["direction"] == d} for d in ("up", "down")}
-
-                # Assert
-                self.assertEqual(by_direction["up"] & by_direction["down"], set())
-
-
-class CommittedLineTables(unittest.TestCase):
-    DAY_TYPES = {"korail": ("weekday", "holiday"), "seoul": ("weekday", "saturday", "holiday"), "shinbundang": ("weekday", "holiday")}
-    # The committed files keep the names the script wrote before it named a file by its part key.
-    COMMITTED_PREFIXES = {"KR": "korail", "S1": "seoul", "DX": "shinbundang"}
-
-    def documents(self):
-        for line in convert.LINES:
-            for day_type in self.DAY_TYPES[line["source"]]:
-                name = "%s-%s-%s.json" % (self.COMMITTED_PREFIXES[line["operator"]], line["line"].lower(), day_type)
-                with open(os.path.join(TIMETABLE_DIR, name), encoding="utf-8") as handle:
-                    text = handle.read()
-                yield line, name, text, json.loads(text)
-
-    def test_each_line_file_is_rendered_as_the_script_writes_it_for_its_line(self):
-        for line, name, text, document in self.documents():
-            with self.subTest(name=name):
-                # Act
-                for train in document["trains"]:
-                    convert.validate_train(train, line["served"], name)
-
-                # Assert
-                self.assertEqual(convert.render(document), text)
-                self.assertEqual((document["operator"], document["line"], document["stations"]), (line["operator"], line["line"], convert.station_codes(line)))
-                self.assertEqual(document["trains"], convert.sort_trains(document["trains"]))
-
-    def test_each_line_file_names_each_destination_in_one_direction_except_the_line_s_declared_ones(self):
-        for line, name, _, document in self.documents():
-            with self.subTest(name=name):
-                # Act & Assert
-                convert.check_one_direction(document["trains"], name, line)
-
-    def test_every_train_is_even_up_and_odd_down(self):
-        for line, name, _, document in self.documents():
-            with self.subTest(name=name):
-                # Act
-                wrong = [t["trainNo"] for t in document["trains"] if int(t["trainNo"]) % 2 != (0 if t["direction"] == "up" else 1)]
-
-                # Assert
-                self.assertEqual(wrong, [])
 
 if __name__ == "__main__":
     unittest.main(verbosity=1)

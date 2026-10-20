@@ -31,7 +31,7 @@ export const TIMETABLES_LOG_INTERVAL_MS = 60_000;
 // import): a train due within it should be seen on its own, not lent a delay.
 export const MIN_VIEW_BEFORE_PLATFORM_SEC = 10 * MINUTE_SEC;
 
-// EVIDENCE: the longest run of the committed tables between two stops of one train with no stop between them, the
+// EVIDENCE: the longest run of subway-timetables revision 1 between two stops of one train with no stop between them, the
 // line 1 express from Geumjeong to Sungkyunkwan Univ.; between two adjacent stations 420 s (Cheonggyesan to Pangyo).
 export const MAX_UNOBSERVED_RUN_SEC = 510;
 

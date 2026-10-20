@@ -9,8 +9,8 @@
  * production pipeline with only `Clock` overridden. It runs over a real
  * `mongod` whose content database holds revision 1 of `subway-topology`
  * (stored through the tool's own scripts/lib/datasets/store.js) and, since
- * task 10.3, revision 1 of `subway-timetables`: the trimmed fixture of task
- * 9.1, stored through scripts/lib/datasets/parts.js; whose
+ * task 10.3, revision 1 of `subway-timetables`: the trimmed fixture of tasks
+ * 9.1 and 11.1, stored through scripts/lib/datasets/parts.js; whose
  * `public_holidays` holds 2026 with Christmas, and whose `subway_arrivals`
  * starts empty, so every platform is served from its timetable alone.
  *

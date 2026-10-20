@@ -9,8 +9,7 @@
  * for the Shinbundang line (design D8): minute times, arrival equal to departure, runs numbered from 1001 down and 1002
  * up, on a shortened route.
  */
-import fs from "fs";
-import path from "path";
+import { subwayTimetablesFixture } from "../../../__tests__/helpers/subway/timetables";
 import { APPROACH_LEAD_MS } from "../subway.constants";
 import type { SubwayDirection, TrainEvent } from "../subway.types";
 import type { LineRoutes, ScheduledTrain } from "../timetable/subway-timetable.types";
@@ -76,20 +75,17 @@ describe("toOneDirectionDestinations", () => {
   });
 });
 
-describe("toOneDirectionDestinations over the committed 신분당선 tables", () => {
+describe("toOneDirectionDestinations over the stored 신분당선 tables", () => {
   // WHY: the destinations the 2026-10-17 positions wrote, `신사` and `광교` (task 6.3.1), must each name one direction.
   const tableTrains = (dayType: string) =>
-    (JSON.parse(fs.readFileSync(path.join(__dirname, `../timetable/shinbundang-d1-${dayType}.json`), "utf8")) as { trains: ScheduledTrain[] }).trains;
+    subwayTimetablesFixture().find((table) => table.line === "D1" && table.dayType === dayType)!.trains as unknown as ScheduledTrain[];
 
-  it.each([
-    ["weekday", [["광교", "down"], ["신사", "up"]]],
-    ["holiday", [["광교", "down"], ["신사", "up"], ["정자", "down"]]],
-  ])("reads the %s table's one-direction destinations as %j, 정자 both ways on weekdays", (dayType, expected) => {
+  it.each(["weekday", "holiday"])("reads 신사 as up and 광교 as down in the %s table", (dayType) => {
     // Act
     const directionByDestination = toOneDirectionDestinations(tableTrains(dayType));
 
     // Assert
-    expect([...directionByDestination].sort()).toEqual(expected);
+    expect([directionByDestination.get("신사"), directionByDestination.get("광교")]).toEqual(["up", "down"]);
   });
 });
 
