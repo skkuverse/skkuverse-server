@@ -6,7 +6,11 @@
  * matches the route id pattern and appears once. The attributes are the
  * `jongro-route-attributes` dataset's; nothing here holds a TOPIS URL or key.
  */
-import { JONGRO_ROUTE_ID_PATTERN, JONGRO_ROUTES } from "./bus.constants";
+import { JONGRO_ROUTES } from "./bus.constants";
+
+// WHY: two-digit codes as Seoul names village buses, so `jongro_locations_07` has no `_007` twin. Held here since the
+// committed route file it checked was deleted (move-reference-datasets D15): the ids are code, so a spec checks them.
+const JONGRO_ROUTE_ID_PATTERN = /^jongro(0[1-9]|[1-9]\d+)$/;
 
 describe("JONGRO_ROUTES", () => {
   it("holds 02, 07 and 08 in order with their TOPIS route ids", () => {

@@ -3,7 +3,7 @@
  * dataset (move-reference-datasets D10): each Jongro route's card, refresh
  * interval, seat count and transfer lines, keyed by route id. A push is refused
  * on it and the read parses with it. Revision 1 (the fixture) passes as it is;
- * each check the committed jongro-routes.json was refused on is refused at its
+ * each check the committed route file was refused on is refused at its
  * path, under `routes.<routeId>`. storedRouteAttributes, the stored document as
  * the repository reads it, needs its revision and data.
  */
@@ -117,5 +117,52 @@ describe("storedRouteAttributes", () => {
     // Assert
     expect(result.success).toBe(false);
     expect(result.error!.issues.map((issue) => issue.path)).toEqual([[field]]);
+  });
+});
+
+// Ported from bus.config.spec.ts's pins of the committed route file (move-reference-datasets D15), now over revision 1.
+describe("revision 1 of jongro-route-attributes", () => {
+  it("gives every route a seat count of 18", () => {
+    // Act
+    const seatCounts = Object.values(storedFixture().routes).map((route) => route.seatCount);
+
+    // Assert
+    expect(seatCounts).toEqual([18, 18, 18]);
+  });
+
+  // A stop served by several routes (07/08 share ten) is one physical stop, so it must
+  // show the same subway badges everywhere; a badge edited on one route only would drift silently.
+  it("gives an ARS number the same transfer lines on every route", () => {
+    // Arrange
+    const linesByArsId = new Map<string, string>();
+    const mismatches: string[] = [];
+
+    // Act
+    for (const [routeId, route] of Object.entries(storedFixture().routes)) {
+      for (const [arsId, lines] of Object.entries(route.transferLinesByArsId)) {
+        const seen = linesByArsId.get(arsId);
+        if (seen === undefined) linesByArsId.set(arsId, JSON.stringify(lines));
+        else if (seen !== JSON.stringify(lines)) mismatches.push(`${routeId} ${arsId}`);
+      }
+    }
+
+    // Assert
+    expect(linesByArsId.size).toBeGreaterThan(0);
+    expect(mismatches).toEqual([]);
+  });
+
+  it("uses one color per subway line across every route", () => {
+    // Arrange
+    const colorsByLine = new Map<string, Set<string>>();
+
+    // Act
+    for (const route of Object.values(storedFixture().routes)) {
+      for (const transfer of Object.values(route.transferLinesByArsId).flat()) {
+        colorsByLine.set(transfer.line, (colorsByLine.get(transfer.line) ?? new Set()).add(transfer.color));
+      }
+    }
+
+    // Assert
+    expect([...colorsByLine].filter(([, colors]) => colors.size > 1)).toEqual([]);
   });
 });
