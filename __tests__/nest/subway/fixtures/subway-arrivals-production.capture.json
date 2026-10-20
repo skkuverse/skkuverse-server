@@ -1,0 +1,1816 @@
+{
+  "_about": "GET https://api.skkuverse.com/subway/stations/<id>/arrivals for the 8 served stations with Accept-Language ko, en and zh, captured from production on 2026-10-20 at 01:12:46Z (10:12 KST), source commit d856f333 (move-reference-datasets task 6.1, the live half). Every capture was 200 with private, max-age=5, its trains live or estimated. Trimmed to the static fields: meta, the station, and per line its display data, platform id and per direction its name and previous and next stations; generatedAt and the trains, which follow the moving trains, are dropped.",
+  "capturedAt": "2026-10-20T01:12:46Z",
+  "stations": {
+    "sungkyunkwan": {
+      "ko": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "ko"
+        },
+        "station": {
+          "id": "sungkyunkwan",
+          "name": "성균관대"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "1",
+              "name": "1호선",
+              "color": "0052A4",
+              "marker": {
+                "text": "1",
+                "color": "0052A4"
+              }
+            },
+            "platformId": "KR-1-0153",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "서울 방면",
+                "previousStation": {
+                  "id": "KR-1-P154",
+                  "name": "화서"
+                },
+                "nextStation": {
+                  "id": "KR-1-P152",
+                  "name": "의왕"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "천안·서동탄 방면",
+                "previousStation": {
+                  "id": "KR-1-P152",
+                  "name": "의왕"
+                },
+                "nextStation": {
+                  "id": "KR-1-P154",
+                  "name": "화서"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "en": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "en"
+        },
+        "station": {
+          "id": "sungkyunkwan",
+          "name": "Sungkyunkwan Univ."
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "1",
+              "name": "Line 1",
+              "color": "0052A4",
+              "marker": {
+                "text": "1",
+                "color": "0052A4"
+              }
+            },
+            "platformId": "KR-1-0153",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Toward Seoul",
+                "previousStation": {
+                  "id": "KR-1-P154",
+                  "name": "Hwaseo"
+                },
+                "nextStation": {
+                  "id": "KR-1-P152",
+                  "name": "Uiwang"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Toward Cheonan / Seodongtan",
+                "previousStation": {
+                  "id": "KR-1-P152",
+                  "name": "Uiwang"
+                },
+                "nextStation": {
+                  "id": "KR-1-P154",
+                  "name": "Hwaseo"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "zh": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "zh"
+        },
+        "station": {
+          "id": "sungkyunkwan",
+          "name": "成均馆大学"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "1",
+              "name": "1号线",
+              "color": "0052A4",
+              "marker": {
+                "text": "1",
+                "color": "0052A4"
+              }
+            },
+            "platformId": "KR-1-0153",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "首尔方向",
+                "previousStation": {
+                  "id": "KR-1-P154",
+                  "name": "华西"
+                },
+                "nextStation": {
+                  "id": "KR-1-P152",
+                  "name": "义王"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "天安·西东滩方向",
+                "previousStation": {
+                  "id": "KR-1-P152",
+                  "name": "义王"
+                },
+                "nextStation": {
+                  "id": "KR-1-P154",
+                  "name": "华西"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "hyehwa": {
+      "ko": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "ko"
+        },
+        "station": {
+          "id": "hyehwa",
+          "name": "혜화"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "4",
+              "name": "4호선",
+              "color": "00A5DE",
+              "marker": {
+                "text": "4",
+                "color": "007FAB"
+              }
+            },
+            "platformId": "S1-4-420",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "불암산·진접 방면",
+                "previousStation": {
+                  "id": "S1-4-421",
+                  "name": "동대문"
+                },
+                "nextStation": {
+                  "id": "S1-4-419",
+                  "name": "한성대입구"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "오이도·안산 방면",
+                "previousStation": {
+                  "id": "S1-4-419",
+                  "name": "한성대입구"
+                },
+                "nextStation": {
+                  "id": "S1-4-421",
+                  "name": "동대문"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "en": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "en"
+        },
+        "station": {
+          "id": "hyehwa",
+          "name": "Hyehwa"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "4",
+              "name": "Line 4",
+              "color": "00A5DE",
+              "marker": {
+                "text": "4",
+                "color": "007FAB"
+              }
+            },
+            "platformId": "S1-4-420",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Toward Buramsan / Jinjeop",
+                "previousStation": {
+                  "id": "S1-4-421",
+                  "name": "Dongdaemun"
+                },
+                "nextStation": {
+                  "id": "S1-4-419",
+                  "name": "Hansung Univ."
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Toward Oido / Ansan",
+                "previousStation": {
+                  "id": "S1-4-419",
+                  "name": "Hansung Univ."
+                },
+                "nextStation": {
+                  "id": "S1-4-421",
+                  "name": "Dongdaemun"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "zh": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "zh"
+        },
+        "station": {
+          "id": "hyehwa",
+          "name": "惠化"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "4",
+              "name": "4号线",
+              "color": "00A5DE",
+              "marker": {
+                "text": "4",
+                "color": "007FAB"
+              }
+            },
+            "platformId": "S1-4-420",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "佛岩山·榛接方向",
+                "previousStation": {
+                  "id": "S1-4-421",
+                  "name": "东大门"
+                },
+                "nextStation": {
+                  "id": "S1-4-419",
+                  "name": "汉城大入口"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "乌耳岛·安山方向",
+                "previousStation": {
+                  "id": "S1-4-419",
+                  "name": "汉城大入口"
+                },
+                "nextStation": {
+                  "id": "S1-4-421",
+                  "name": "东大门"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "jeongja": {
+      "ko": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "ko"
+        },
+        "station": {
+          "id": "jeongja",
+          "name": "정자"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "D1",
+              "name": "신분당선",
+              "color": "D4003B",
+              "marker": {
+                "text": "신",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4312",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "신사 방면",
+                "previousStation": {
+                  "id": "DX-D1-D13",
+                  "name": "미금"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4311",
+                  "name": "판교"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "광교 방면",
+                "previousStation": {
+                  "id": "DX-D1-4311",
+                  "name": "판교"
+                },
+                "nextStation": {
+                  "id": "DX-D1-D13",
+                  "name": "미금"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "K1",
+              "name": "수인분당선",
+              "color": "F5A200",
+              "marker": {
+                "text": "수",
+                "color": "A26B00"
+              }
+            },
+            "platformId": "KR-K1-K230",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "청량리 방면",
+                "previousStation": {
+                  "id": "KR-K1-K231",
+                  "name": "미금"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K229",
+                  "name": "수내"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "인천 방면",
+                "previousStation": {
+                  "id": "KR-K1-K229",
+                  "name": "수내"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K231",
+                  "name": "미금"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "en": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "en"
+        },
+        "station": {
+          "id": "jeongja",
+          "name": "Jeongja"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "D1",
+              "name": "Shinbundang Line",
+              "color": "D4003B",
+              "marker": {
+                "text": "신",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4312",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Toward Sinsa",
+                "previousStation": {
+                  "id": "DX-D1-D13",
+                  "name": "Migeum"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4311",
+                  "name": "Pangyo"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Toward Gwanggyo",
+                "previousStation": {
+                  "id": "DX-D1-4311",
+                  "name": "Pangyo"
+                },
+                "nextStation": {
+                  "id": "DX-D1-D13",
+                  "name": "Migeum"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "K1",
+              "name": "Suin–Bundang Line",
+              "color": "F5A200",
+              "marker": {
+                "text": "수",
+                "color": "A26B00"
+              }
+            },
+            "platformId": "KR-K1-K230",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Toward Cheongnyangni",
+                "previousStation": {
+                  "id": "KR-K1-K231",
+                  "name": "Migeum"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K229",
+                  "name": "Sunae"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Toward Incheon",
+                "previousStation": {
+                  "id": "KR-K1-K229",
+                  "name": "Sunae"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K231",
+                  "name": "Migeum"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "zh": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "zh"
+        },
+        "station": {
+          "id": "jeongja",
+          "name": "亭子"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "D1",
+              "name": "新盆唐线",
+              "color": "D4003B",
+              "marker": {
+                "text": "新",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4312",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "新沙方向",
+                "previousStation": {
+                  "id": "DX-D1-D13",
+                  "name": "美金"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4311",
+                  "name": "板桥"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "光教方向",
+                "previousStation": {
+                  "id": "DX-D1-4311",
+                  "name": "板桥"
+                },
+                "nextStation": {
+                  "id": "DX-D1-D13",
+                  "name": "美金"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "K1",
+              "name": "水仁·盆唐线",
+              "color": "F5A200",
+              "marker": {
+                "text": "水",
+                "color": "A26B00"
+              }
+            },
+            "platformId": "KR-K1-K230",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "清凉里方向",
+                "previousStation": {
+                  "id": "KR-K1-K231",
+                  "name": "美金"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K229",
+                  "name": "薮内"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "仁川方向",
+                "previousStation": {
+                  "id": "KR-K1-K229",
+                  "name": "薮内"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K231",
+                  "name": "美金"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "jamsil": {
+      "ko": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "ko"
+        },
+        "station": {
+          "id": "jamsil",
+          "name": "잠실"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "2",
+              "name": "2호선",
+              "color": "00A84D",
+              "marker": {
+                "text": "2",
+                "color": "00893F"
+              }
+            },
+            "platformId": "S1-2-216",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "내선순환",
+                "previousStation": {
+                  "id": "S1-2-215",
+                  "name": "잠실나루"
+                },
+                "nextStation": {
+                  "id": "S1-2-217",
+                  "name": "잠실새내"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "외선순환",
+                "previousStation": {
+                  "id": "S1-2-217",
+                  "name": "잠실새내"
+                },
+                "nextStation": {
+                  "id": "S1-2-215",
+                  "name": "잠실나루"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "8",
+              "name": "8호선",
+              "color": "E6186C",
+              "marker": {
+                "text": "8",
+                "color": "E4186B"
+              }
+            },
+            "platformId": "S1-8-2815",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "별내 방면",
+                "previousStation": {
+                  "id": "S1-8-2816",
+                  "name": "석촌"
+                },
+                "nextStation": {
+                  "id": "S1-8-2814",
+                  "name": "몽촌토성"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "모란 방면",
+                "previousStation": {
+                  "id": "S1-8-2814",
+                  "name": "몽촌토성"
+                },
+                "nextStation": {
+                  "id": "S1-8-2816",
+                  "name": "석촌"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "en": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "en"
+        },
+        "station": {
+          "id": "jamsil",
+          "name": "Jamsil"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "2",
+              "name": "Line 2",
+              "color": "00A84D",
+              "marker": {
+                "text": "2",
+                "color": "00893F"
+              }
+            },
+            "platformId": "S1-2-216",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Inner circle",
+                "previousStation": {
+                  "id": "S1-2-215",
+                  "name": "Jamsillaru"
+                },
+                "nextStation": {
+                  "id": "S1-2-217",
+                  "name": "Jamsilsaenae"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Outer circle",
+                "previousStation": {
+                  "id": "S1-2-217",
+                  "name": "Jamsilsaenae"
+                },
+                "nextStation": {
+                  "id": "S1-2-215",
+                  "name": "Jamsillaru"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "8",
+              "name": "Line 8",
+              "color": "E6186C",
+              "marker": {
+                "text": "8",
+                "color": "E4186B"
+              }
+            },
+            "platformId": "S1-8-2815",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Toward Byeollae",
+                "previousStation": {
+                  "id": "S1-8-2816",
+                  "name": "Seokchon"
+                },
+                "nextStation": {
+                  "id": "S1-8-2814",
+                  "name": "Mongchontoseong"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Toward Moran",
+                "previousStation": {
+                  "id": "S1-8-2814",
+                  "name": "Mongchontoseong"
+                },
+                "nextStation": {
+                  "id": "S1-8-2816",
+                  "name": "Seokchon"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "zh": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "zh"
+        },
+        "station": {
+          "id": "jamsil",
+          "name": "蚕室"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "2",
+              "name": "2号线",
+              "color": "00A84D",
+              "marker": {
+                "text": "2",
+                "color": "00893F"
+              }
+            },
+            "platformId": "S1-2-216",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "内环",
+                "previousStation": {
+                  "id": "S1-2-215",
+                  "name": "蚕室渡口"
+                },
+                "nextStation": {
+                  "id": "S1-2-217",
+                  "name": "蚕室新川"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "外环",
+                "previousStation": {
+                  "id": "S1-2-217",
+                  "name": "蚕室新川"
+                },
+                "nextStation": {
+                  "id": "S1-2-215",
+                  "name": "蚕室渡口"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "8",
+              "name": "8号线",
+              "color": "E6186C",
+              "marker": {
+                "text": "8",
+                "color": "E4186B"
+              }
+            },
+            "platformId": "S1-8-2815",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "别内方向",
+                "previousStation": {
+                  "id": "S1-8-2816",
+                  "name": "石村"
+                },
+                "nextStation": {
+                  "id": "S1-8-2814",
+                  "name": "梦村土城"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "牡丹方向",
+                "previousStation": {
+                  "id": "S1-8-2814",
+                  "name": "梦村土城"
+                },
+                "nextStation": {
+                  "id": "S1-8-2816",
+                  "name": "石村"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "dogok": {
+      "ko": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "ko"
+        },
+        "station": {
+          "id": "dogok",
+          "name": "도곡"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "3",
+              "name": "3호선",
+              "color": "EF7C1C",
+              "marker": {
+                "text": "3",
+                "color": "BB5C0D"
+              }
+            },
+            "platformId": "S1-3-334",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "대화 방면",
+                "previousStation": {
+                  "id": "S1-3-335",
+                  "name": "대치"
+                },
+                "nextStation": {
+                  "id": "S1-3-333",
+                  "name": "매봉"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "오금 방면",
+                "previousStation": {
+                  "id": "S1-3-333",
+                  "name": "매봉"
+                },
+                "nextStation": {
+                  "id": "S1-3-335",
+                  "name": "대치"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "K1",
+              "name": "수인분당선",
+              "color": "F5A200",
+              "marker": {
+                "text": "수",
+                "color": "A26B00"
+              }
+            },
+            "platformId": "KR-K1-K217",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "청량리 방면",
+                "previousStation": {
+                  "id": "KR-K1-K218",
+                  "name": "구룡"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K216",
+                  "name": "한티"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "인천 방면",
+                "previousStation": {
+                  "id": "KR-K1-K216",
+                  "name": "한티"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K218",
+                  "name": "구룡"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "en": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "en"
+        },
+        "station": {
+          "id": "dogok",
+          "name": "Dogok"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "3",
+              "name": "Line 3",
+              "color": "EF7C1C",
+              "marker": {
+                "text": "3",
+                "color": "BB5C0D"
+              }
+            },
+            "platformId": "S1-3-334",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Toward Daehwa",
+                "previousStation": {
+                  "id": "S1-3-335",
+                  "name": "Daechi"
+                },
+                "nextStation": {
+                  "id": "S1-3-333",
+                  "name": "Maebong"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Toward Ogeum",
+                "previousStation": {
+                  "id": "S1-3-333",
+                  "name": "Maebong"
+                },
+                "nextStation": {
+                  "id": "S1-3-335",
+                  "name": "Daechi"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "K1",
+              "name": "Suin–Bundang Line",
+              "color": "F5A200",
+              "marker": {
+                "text": "수",
+                "color": "A26B00"
+              }
+            },
+            "platformId": "KR-K1-K217",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Toward Cheongnyangni",
+                "previousStation": {
+                  "id": "KR-K1-K218",
+                  "name": "Guryong"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K216",
+                  "name": "Hanti"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Toward Incheon",
+                "previousStation": {
+                  "id": "KR-K1-K216",
+                  "name": "Hanti"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K218",
+                  "name": "Guryong"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "zh": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "zh"
+        },
+        "station": {
+          "id": "dogok",
+          "name": "道谷"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "3",
+              "name": "3号线",
+              "color": "EF7C1C",
+              "marker": {
+                "text": "3",
+                "color": "BB5C0D"
+              }
+            },
+            "platformId": "S1-3-334",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "大化方向",
+                "previousStation": {
+                  "id": "S1-3-335",
+                  "name": "大峙"
+                },
+                "nextStation": {
+                  "id": "S1-3-333",
+                  "name": "梅峰"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "梧琴方向",
+                "previousStation": {
+                  "id": "S1-3-333",
+                  "name": "梅峰"
+                },
+                "nextStation": {
+                  "id": "S1-3-335",
+                  "name": "大峙"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "K1",
+              "name": "水仁·盆唐线",
+              "color": "F5A200",
+              "marker": {
+                "text": "水",
+                "color": "A26B00"
+              }
+            },
+            "platformId": "KR-K1-K217",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "清凉里方向",
+                "previousStation": {
+                  "id": "KR-K1-K218",
+                  "name": "九龙"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K216",
+                  "name": "韩峙"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "仁川方向",
+                "previousStation": {
+                  "id": "KR-K1-K216",
+                  "name": "韩峙"
+                },
+                "nextStation": {
+                  "id": "KR-K1-K218",
+                  "name": "九龙"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "gangnam": {
+      "ko": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "ko"
+        },
+        "station": {
+          "id": "gangnam",
+          "name": "강남"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "2",
+              "name": "2호선",
+              "color": "00A84D",
+              "marker": {
+                "text": "2",
+                "color": "00893F"
+              }
+            },
+            "platformId": "S1-2-222",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "내선순환",
+                "previousStation": {
+                  "id": "S1-2-221",
+                  "name": "역삼"
+                },
+                "nextStation": {
+                  "id": "S1-2-223",
+                  "name": "교대"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "외선순환",
+                "previousStation": {
+                  "id": "S1-2-223",
+                  "name": "교대"
+                },
+                "nextStation": {
+                  "id": "S1-2-221",
+                  "name": "역삼"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "D1",
+              "name": "신분당선",
+              "color": "D4003B",
+              "marker": {
+                "text": "신",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4307",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "신사 방면",
+                "previousStation": {
+                  "id": "DX-D1-4308",
+                  "name": "양재"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4306",
+                  "name": "신논현"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "광교 방면",
+                "previousStation": {
+                  "id": "DX-D1-4306",
+                  "name": "신논현"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4308",
+                  "name": "양재"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "en": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "en"
+        },
+        "station": {
+          "id": "gangnam",
+          "name": "Gangnam"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "2",
+              "name": "Line 2",
+              "color": "00A84D",
+              "marker": {
+                "text": "2",
+                "color": "00893F"
+              }
+            },
+            "platformId": "S1-2-222",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Inner circle",
+                "previousStation": {
+                  "id": "S1-2-221",
+                  "name": "Yeoksam"
+                },
+                "nextStation": {
+                  "id": "S1-2-223",
+                  "name": "Seoul Nat'l Univ. of Education"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Outer circle",
+                "previousStation": {
+                  "id": "S1-2-223",
+                  "name": "Seoul Nat'l Univ. of Education"
+                },
+                "nextStation": {
+                  "id": "S1-2-221",
+                  "name": "Yeoksam"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "D1",
+              "name": "Shinbundang Line",
+              "color": "D4003B",
+              "marker": {
+                "text": "신",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4307",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Toward Sinsa",
+                "previousStation": {
+                  "id": "DX-D1-4308",
+                  "name": "Yangjae"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4306",
+                  "name": "Sinnonhyeon"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Toward Gwanggyo",
+                "previousStation": {
+                  "id": "DX-D1-4306",
+                  "name": "Sinnonhyeon"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4308",
+                  "name": "Yangjae"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "zh": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "zh"
+        },
+        "station": {
+          "id": "gangnam",
+          "name": "江南"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "2",
+              "name": "2号线",
+              "color": "00A84D",
+              "marker": {
+                "text": "2",
+                "color": "00893F"
+              }
+            },
+            "platformId": "S1-2-222",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "内环",
+                "previousStation": {
+                  "id": "S1-2-221",
+                  "name": "驿三"
+                },
+                "nextStation": {
+                  "id": "S1-2-223",
+                  "name": "教大"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "外环",
+                "previousStation": {
+                  "id": "S1-2-223",
+                  "name": "教大"
+                },
+                "nextStation": {
+                  "id": "S1-2-221",
+                  "name": "驿三"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "D1",
+              "name": "新盆唐线",
+              "color": "D4003B",
+              "marker": {
+                "text": "新",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4307",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "新沙方向",
+                "previousStation": {
+                  "id": "DX-D1-4308",
+                  "name": "良才"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4306",
+                  "name": "新论岘"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "光教方向",
+                "previousStation": {
+                  "id": "DX-D1-4306",
+                  "name": "新论岘"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4308",
+                  "name": "良才"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "yangjae": {
+      "ko": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "ko"
+        },
+        "station": {
+          "id": "yangjae",
+          "name": "양재"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "3",
+              "name": "3호선",
+              "color": "EF7C1C",
+              "marker": {
+                "text": "3",
+                "color": "BB5C0D"
+              }
+            },
+            "platformId": "S1-3-332",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "대화 방면",
+                "previousStation": {
+                  "id": "S1-3-333",
+                  "name": "매봉"
+                },
+                "nextStation": {
+                  "id": "S1-3-331",
+                  "name": "남부터미널"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "오금 방면",
+                "previousStation": {
+                  "id": "S1-3-331",
+                  "name": "남부터미널"
+                },
+                "nextStation": {
+                  "id": "S1-3-333",
+                  "name": "매봉"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "D1",
+              "name": "신분당선",
+              "color": "D4003B",
+              "marker": {
+                "text": "신",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4308",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "신사 방면",
+                "previousStation": {
+                  "id": "DX-D1-4309",
+                  "name": "양재시민의숲"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4307",
+                  "name": "강남"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "광교 방면",
+                "previousStation": {
+                  "id": "DX-D1-4307",
+                  "name": "강남"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4309",
+                  "name": "양재시민의숲"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "en": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "en"
+        },
+        "station": {
+          "id": "yangjae",
+          "name": "Yangjae"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "3",
+              "name": "Line 3",
+              "color": "EF7C1C",
+              "marker": {
+                "text": "3",
+                "color": "BB5C0D"
+              }
+            },
+            "platformId": "S1-3-332",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Toward Daehwa",
+                "previousStation": {
+                  "id": "S1-3-333",
+                  "name": "Maebong"
+                },
+                "nextStation": {
+                  "id": "S1-3-331",
+                  "name": "Nambu Bus Terminal"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Toward Ogeum",
+                "previousStation": {
+                  "id": "S1-3-331",
+                  "name": "Nambu Bus Terminal"
+                },
+                "nextStation": {
+                  "id": "S1-3-333",
+                  "name": "Maebong"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "D1",
+              "name": "Shinbundang Line",
+              "color": "D4003B",
+              "marker": {
+                "text": "신",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4308",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Toward Sinsa",
+                "previousStation": {
+                  "id": "DX-D1-4309",
+                  "name": "Yangjae Citizen's Forest"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4307",
+                  "name": "Gangnam"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Toward Gwanggyo",
+                "previousStation": {
+                  "id": "DX-D1-4307",
+                  "name": "Gangnam"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4309",
+                  "name": "Yangjae Citizen's Forest"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "zh": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "zh"
+        },
+        "station": {
+          "id": "yangjae",
+          "name": "良才"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "3",
+              "name": "3号线",
+              "color": "EF7C1C",
+              "marker": {
+                "text": "3",
+                "color": "BB5C0D"
+              }
+            },
+            "platformId": "S1-3-332",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "大化方向",
+                "previousStation": {
+                  "id": "S1-3-333",
+                  "name": "梅峰"
+                },
+                "nextStation": {
+                  "id": "S1-3-331",
+                  "name": "南部客运站"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "梧琴方向",
+                "previousStation": {
+                  "id": "S1-3-331",
+                  "name": "南部客运站"
+                },
+                "nextStation": {
+                  "id": "S1-3-333",
+                  "name": "梅峰"
+                }
+              }
+            ]
+          },
+          {
+            "line": {
+              "code": "D1",
+              "name": "新盆唐线",
+              "color": "D4003B",
+              "marker": {
+                "text": "新",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4308",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "新沙方向",
+                "previousStation": {
+                  "id": "DX-D1-4309",
+                  "name": "良才市民之林"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4307",
+                  "name": "江南"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "光教方向",
+                "previousStation": {
+                  "id": "DX-D1-4307",
+                  "name": "江南"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4309",
+                  "name": "良才市民之林"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "gwanggyo-jungang": {
+      "ko": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "ko"
+        },
+        "station": {
+          "id": "gwanggyo-jungang",
+          "name": "광교중앙"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "D1",
+              "name": "신분당선",
+              "color": "D4003B",
+              "marker": {
+                "text": "신",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4318",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "신사 방면",
+                "previousStation": {
+                  "id": "DX-D1-4319",
+                  "name": "광교"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4317",
+                  "name": "상현"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "광교 방면",
+                "previousStation": {
+                  "id": "DX-D1-4317",
+                  "name": "상현"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4319",
+                  "name": "광교"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "en": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "en"
+        },
+        "station": {
+          "id": "gwanggyo-jungang",
+          "name": "Gwanggyojungang"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "D1",
+              "name": "Shinbundang Line",
+              "color": "D4003B",
+              "marker": {
+                "text": "신",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4318",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "Toward Sinsa",
+                "previousStation": {
+                  "id": "DX-D1-4319",
+                  "name": "Gwanggyo"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4317",
+                  "name": "Sanghyeon"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "Toward Gwanggyo",
+                "previousStation": {
+                  "id": "DX-D1-4317",
+                  "name": "Sanghyeon"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4319",
+                  "name": "Gwanggyo"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "zh": {
+        "status": 200,
+        "cacheControl": "private, max-age=5",
+        "meta": {
+          "lang": "zh"
+        },
+        "station": {
+          "id": "gwanggyo-jungang",
+          "name": "光教中央"
+        },
+        "lines": [
+          {
+            "line": {
+              "code": "D1",
+              "name": "新盆唐线",
+              "color": "D4003B",
+              "marker": {
+                "text": "新",
+                "color": "D4003B"
+              }
+            },
+            "platformId": "DX-D1-4318",
+            "directions": [
+              {
+                "direction": "up",
+                "name": "新沙方向",
+                "previousStation": {
+                  "id": "DX-D1-4319",
+                  "name": "光教"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4317",
+                  "name": "上岘"
+                }
+              },
+              {
+                "direction": "down",
+                "name": "光教方向",
+                "previousStation": {
+                  "id": "DX-D1-4317",
+                  "name": "上岘"
+                },
+                "nextStation": {
+                  "id": "DX-D1-4319",
+                  "name": "光教"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

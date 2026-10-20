@@ -1,0 +1,967 @@
+{
+  "_about": "Synthetic, hand-written for the subway-topology characterization (move-reference-datasets task 6.3): one fresh subway_arrivals document per served platform, generated 6 s before the test clock. Per platform its up trains stand at the station, at its first upstream platform and at its last, and its down trains at its second upstream platform, at no position, and at its next platform, so every stopsAway rule is exercised. Never captured: the stored state of a moment cannot be replayed against fixed instants.",
+  "docs": [
+    {
+      "_id": "KR-1-0153",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9011",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "KR-1-0153",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9012",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "KR-1-P154",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9013",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "KR-1-1715",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9014",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "KR-1-P151",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9015",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9016",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "KR-1-P154",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "S1-4-420",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9021",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-4-420",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9022",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-4-421",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9023",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-4-423",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9024",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-4-418",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9025",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9026",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-4-421",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "DX-D1-4312",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9031",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "DX-D1-4312",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9032",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-D13",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9033",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-D15",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9034",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "DX-D1-4310",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9035",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9036",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-D13",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "KR-K1-K230",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9041",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "KR-K1-K230",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9042",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "KR-K1-K231",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9043",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "KR-K1-K233",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9044",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "KR-K1-K228",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9045",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9046",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "KR-K1-K231",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "S1-2-216",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9051",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-2-216",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9052",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-2-215",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9053",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-2-213",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9054",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-2-218",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9055",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9056",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-2-215",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "S1-8-2815",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9061",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-8-2815",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9062",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-8-2816",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9063",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-8-2818",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9064",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-8-2813",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9065",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9066",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-8-2816",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "S1-3-334",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9071",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-3-334",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9072",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-3-335",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9073",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-3-337",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9074",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-3-332",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9075",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9076",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-3-335",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "KR-K1-K217",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9081",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "KR-K1-K217",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9082",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "KR-K1-K218",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9083",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "KR-K1-K220",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9084",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "KR-K1-K215",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9085",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9086",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "KR-K1-K218",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "S1-2-222",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9091",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-2-222",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9092",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-2-221",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9093",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-2-219",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9094",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-2-224",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9095",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9096",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-2-221",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "DX-D1-4307",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9101",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "DX-D1-4307",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9102",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-4308",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9103",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-4310",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9104",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "DX-D1-4305",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9105",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9106",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-4308",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "S1-3-332",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9111",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-3-332",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9112",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-3-333",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9113",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-3-335",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9114",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "S1-3-330",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9115",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9116",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "S1-3-333",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "DX-D1-4308",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9121",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "DX-D1-4308",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9122",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-4309",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9123",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-4311",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9124",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "DX-D1-4306",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9125",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9126",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-4309",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "_id": "DX-D1-4318",
+      "generatedAt": "2026-10-20T01:12:40.000Z",
+      "serviceDate": "2026-10-20",
+      "directions": {
+        "up": [
+          {
+            "trainNo": "9131",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:13:06.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "DX-D1-4318",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9132",
+            "destination": "상행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:15:16.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-4319",
+              "state": "departed"
+            }
+          },
+          {
+            "trainNo": "9133",
+            "destination": "상행종착",
+            "express": true,
+            "arrivalAt": "2026-10-20T01:19:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-4319",
+              "state": "approaching"
+            }
+          }
+        ],
+        "down": [
+          {
+            "trainNo": "9134",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:14:21.000Z",
+            "source": "live",
+            "position": {
+              "stationId": "DX-D1-4316",
+              "state": "arrived"
+            }
+          },
+          {
+            "trainNo": "9135",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:21:46.000Z",
+            "source": "scheduled",
+            "position": null
+          },
+          {
+            "trainNo": "9136",
+            "destination": "하행종착",
+            "express": false,
+            "arrivalAt": "2026-10-20T01:27:46.000Z",
+            "source": "estimated",
+            "position": {
+              "stationId": "DX-D1-4319",
+              "state": "departed"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
