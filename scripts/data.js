@@ -318,6 +318,7 @@ async function confirmAndWrite(ctx, { before, after, lines: report, summary, war
 function reportStored(ctx, result, base) {
   if (!result.ok) throw refusalOf(result, ctx, base);
   ctx.out(`stored ${ctx.args.dataset} revision ${result.revision} in ${ctx.dbName}.`);
+  if (result.garbageError) ctx.out(`warning: the garbage collection after the write failed (${result.garbageError}); the next write collects its parts.`);
   ctx.out("Every api replica that serves it reads it within 60 s, with no restart.");
 }
 

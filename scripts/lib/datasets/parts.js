@@ -26,7 +26,9 @@
  *      than PART_GRACE_MS ago.
  *
  * A run that dies before 2 leaves orphan parts and the served revision
- * unchanged; step 3 of a later run removes them. The grace keeps one
+ * unchanged; step 3 of a later run removes them. Step 3 failing after 2 does
+ * not fail the write: the result carries `garbageError`, and the next write
+ * collects what this one left. The grace keeps one
  * operator's step 3 from deleting the parts of a concurrent push that has not
  * yet won its step 2.
  *
@@ -116,6 +118,17 @@ async function collectGarbage(db, dataset, { now }) {
   return { deleted: result.deletedCount };
 }
 
+/** Step 3 after a header write that succeeded: `result`, plus `garbageError` (its class and message) when step 3 throws. */
+async function collectingGarbage(db, dataset, now, result) {
+  if (!result.ok) return result;
+  try {
+    await collectGarbage(db, dataset, { now });
+    return result;
+  } catch (err) {
+    return { ...result, garbageError: `${err.name}: ${err.message}` };
+  }
+}
+
 /** The parts a manifest names, in its order, as `{ key, partId, data }`, and the ids of those not stored. */
 async function readParts(db, manifest) {
   const ids = partIdsOf(manifest);
@@ -131,9 +144,7 @@ async function writeParted(db, dataset, parts, meta, writeHeader) {
   const storedParts = parts.map((part) => toStoredPart(dataset, part));
   const stored = await storeParts(db, dataset, storedParts, meta);
   if (!stored.ok) return stored;
-  const result = await writeHeader(toManifest(storedParts));
-  if (result.ok) await collectGarbage(db, dataset, meta);
-  return result;
+  return collectingGarbage(db, dataset, meta.now, await writeHeader(toManifest(storedParts)));
 }
 
 /** Stores `parts` again, writing no header: for a revision that names a part no longer stored. */
@@ -160,9 +171,7 @@ async function rollback(db, dataset, to, { baseRevision, by, now, note }) {
   if (!found.ok) return found;
   const { missing } = await readParts(db, found.entry.data);
   if (missing.length > 0) return { ok: false, reason: "missing-parts", partIds: missing };
-  const result = await store.rollback(db, dataset, to, { baseRevision, by, now, note });
-  if (result.ok) await collectGarbage(db, dataset, { now });
-  return result;
+  return collectingGarbage(db, dataset, now, await store.rollback(db, dataset, to, { baseRevision, by, now, note }));
 }
 
 /**
@@ -177,9 +186,7 @@ async function copy(source, target, dataset, { sourceRevision, baseRevision, by,
   const docs = await source.collection(PARTS).find({ _id: { $in: found.parts.map((part) => part.partId) } }).toArray();
   const copied = await storeParts(target, dataset, docs.map((doc) => ({ partId: doc._id, sha256: doc.sha256, key: doc.key, data: doc.data })), { by, now });
   if (!copied.ok) return copied;
-  const result = await store.copy(source, target, dataset, { sourceRevision, baseRevision, by, now, note });
-  if (result.ok) await collectGarbage(target, dataset, { now });
-  return result;
+  return collectingGarbage(target, dataset, now, await store.copy(source, target, dataset, { sourceRevision, baseRevision, by, now, note }));
 }
 
 module.exports = { PART_GRACE_MS, collectGarbage, copy, create, push, readParts, restore, rollback, toManifest, toStoredPart };

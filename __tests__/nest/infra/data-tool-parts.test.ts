@@ -334,6 +334,33 @@ describe("parts.push over a part an earlier run left unnamed", () => {
   });
 });
 
+describe("a garbage collection that fails after the header is written", () => {
+  // WHY: an index under the name step 3 creates, with other options, makes its createIndex throw after the header.
+  async function breakGarbageCollection(target: Db): Promise<void> {
+    await target.collection("dataset_parts").dropIndex("dataset_1");
+    await target.collection("dataset_parts").createIndex({ dataset: 1 }, { name: "dataset_1", sparse: true });
+  }
+
+  it("leaves rollback and copy reporting the revision they stored, with the failure", async () => {
+    // Arrange
+    await parts.create(db, DATASET, [partOf(weekday1)], { by: ALICE, now: NOW });
+    await parts.push(db, DATASET, [partOf(weekday2)], { baseRevision: 1, by: ALICE, now: NOW });
+    await parts.create(devDb(), DATASET, [partOf(weekday1)], { by: ALICE, now: NOW });
+    await breakGarbageCollection(db);
+    await breakGarbageCollection(devDb());
+
+    // Act
+    const rolledBack = await parts.rollback(db, DATASET, 1, { baseRevision: 2, by: ALICE, now: NOW });
+    const copied = await parts.copy(db, devDb(), DATASET, { sourceRevision: 3, baseRevision: 1, by: ALICE, now: NOW });
+
+    // Assert
+    expect(rolledBack).toMatchObject({ ok: true, revision: 3, garbageError: expect.stringMatching(/^MongoServerError: /) });
+    expect(copied).toMatchObject({ ok: true, revision: 2, garbageError: expect.stringMatching(/^MongoServerError: /) });
+    expect(await revisionIn(db)).toBe(3);
+    expect(await revisionIn(devDb())).toBe(2);
+  });
+});
+
 interface Ran {
   code: number;
   out: string;
@@ -521,6 +548,26 @@ describe("npm run data, a parted dataset", () => {
     expect(await devDb().collection("dataset_parts").findOne({ _id: partIdOf(weekday2) as never })).toMatchObject({ data: weekday2 });
     expect(await revisionIn(devDb())).toBe(1);
     expect(await store.history(devDb(), DATASET)).toHaveLength(1);
+  });
+
+  it("reports a push stored, with a warning, when the garbage collection after its header fails", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET]);
+    writeJson(partFile("dev", "2-weekday.json"), table("2", "weekday", ["05:45"]));
+    // WHY: an index under the name step 3 creates, with other options, makes its createIndex throw after the header.
+    await devDb().collection("dataset_parts").dropIndex("dataset_1");
+    await devDb().collection("dataset_parts").createIndex({ dataset: 1 }, { name: "dataset_1", sparse: true });
+
+    // Act
+    const result = await data(["push", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toContain("stored test-tables revision 2 in parts_content_dev.");
+    expect(result.out).toMatch(/warning: the garbage collection after the write failed \(MongoServerError: .*\); the next write collects/);
+    expect(await revisionIn(devDb())).toBe(2);
+    expect(readJson(path.join(workingDir("dev"), "working.json"))).toMatchObject({ baseRevision: 2 });
   });
 
   it("refuses a push from a stale pull, naming the current revision", async () => {
