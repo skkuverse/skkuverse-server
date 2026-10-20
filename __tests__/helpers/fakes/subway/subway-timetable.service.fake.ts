@@ -2,8 +2,8 @@
  * SubwayTimetableService over the platforms and timetables a spec hands it, for a line the committed
  * registry and tables do not serve yet: it builds each platform's schedule with the real timetable rules
  * (service date, day type, routes, scheduled instants), as the real service does over the committed ones, with
- * no public holiday. Which committed table a platform reads, and the holiday calendar, are
- * subway-timetable.service.spec.ts's.
+ * no public holiday, every platform's table at hand. Which stored table a platform reads, the holiday calendar and
+ * a table that cannot be read are subway-timetable.service.spec.ts's.
  */
 import type { SubwayPlatform } from "../../../../src/subway/subway.types";
 import {
@@ -15,7 +15,7 @@ import {
   toServiceDate,
 } from "../../../../src/subway/timetable/subway-timetable.rules";
 import type { SubwayTimetableService } from "../../../../src/subway/timetable/subway-timetable.service";
-import type { PlatformSchedule, Timetable } from "../../../../src/subway/timetable/subway-timetable.types";
+import type { PlatformSchedule, PlatformSchedules, Timetable } from "../../../../src/subway/timetable/subway-timetable.types";
 import type { PublicOf } from "../public-of";
 
 export class FakeSubwayTimetableService implements PublicOf<SubwayTimetableService> {
@@ -24,8 +24,8 @@ export class FakeSubwayTimetableService implements PublicOf<SubwayTimetableServi
     private readonly timetables: readonly Timetable[],
   ) {}
 
-  async listPlatformSchedules(now: Date): Promise<PlatformSchedule[]> {
-    return this.platforms.map((platform) => this.toPlatformSchedule(platform, toServiceDate(now)));
+  async listPlatformSchedules(now: Date): Promise<PlatformSchedules> {
+    return { schedules: this.platforms.map((platform) => this.toPlatformSchedule(platform, toServiceDate(now))), unavailable: null };
   }
 
   async findPlatformSchedule(platformId: string, now: Date): Promise<PlatformSchedule | null> {

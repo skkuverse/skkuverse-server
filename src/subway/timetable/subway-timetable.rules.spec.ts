@@ -19,9 +19,12 @@ import {
   toLineRoutes,
   toScheduledTrains,
   toServiceDate,
+  toEvictedTimetableKeys,
+  toPlatformTimetableKey,
   toServiceInstant,
   toTimetableCoverageIssues,
   toTimetableKey,
+  toUncoveredPlatformIdsByKey,
 } from "./subway-timetable.rules";
 import type { Timetable } from "./subway-timetable.types";
 
@@ -203,6 +206,84 @@ describe("toTimetableKey", () => {
 
     // Assert
     expect(tableKey).toBe(key);
+  });
+});
+
+describe("toPlatformTimetableKey", () => {
+  it.each([
+    ["성균관대 1호선 on a holiday", "KR-1-0153", "holiday", "KR-1-holiday"],
+    ["혜화 4호선 on a Saturday", "S1-4-420", "saturday", "S1-4-saturday"],
+    ["정자 신분당선 on a weekday", "DX-D1-4312", "weekday", "DX-D1-weekday"],
+  ] as const)("keys %s's table by the platform's operator and line and the day type", (_label, platformId, dayType, key) => {
+    // Act
+    const tableKey = toPlatformTimetableKey(findSubwayPlatform(platformId) as NetworkPlatform, dayType);
+
+    // Assert
+    expect(tableKey).toBe(key);
+  });
+});
+
+describe("toEvictedTimetableKeys", () => {
+  const held = (entries: Record<string, string>) => new Map(Object.entries(entries).map(([key, lastServiceDate]) => [key, { lastServiceDate }]));
+
+  it("Service day changes: drops S1-4-weekday, last used on Friday, once Saturday needs S1-4-saturday", () => {
+    // Act
+    const evicted = toEvictedTimetableKeys(held({ "S1-4-weekday": "2026-10-16" }), "2026-10-17", new Set(["S1-4-saturday", "KR-1-holiday"]));
+
+    // Assert
+    expect(evicted).toEqual(["S1-4-weekday"]);
+  });
+
+  it("keeps a table last used the day before when the service day needs the same table again", () => {
+    // Act
+    const evicted = toEvictedTimetableKeys(held({ "S1-4-weekday": "2026-10-20", "KR-1-weekday": "2026-10-20" }), "2026-10-21", new Set(["S1-4-weekday", "KR-1-weekday"]));
+
+    // Assert
+    expect(evicted).toEqual([]);
+  });
+
+  it("keeps a table used on the service day being scheduled, needed or not", () => {
+    // Act
+    const evicted = toEvictedTimetableKeys(held({ "S1-4-holiday": "2026-10-21", "S1-4-weekday": "2026-10-21" }), "2026-10-21", new Set(["S1-4-weekday"]));
+
+    // Assert
+    expect(evicted).toEqual([]);
+  });
+
+  it("drops only the tables of an earlier day the service day does not need, whatever their line", () => {
+    // Act
+    const evicted = toEvictedTimetableKeys(
+      held({ "KR-1-weekday": "2026-10-16", "S1-4-weekday": "2026-10-16", "S1-2-weekday": "2026-10-17" }),
+      "2026-10-17",
+      new Set(["KR-1-holiday", "S1-4-saturday", "S1-2-saturday"]),
+    );
+
+    // Assert
+    expect(evicted).toEqual(["KR-1-weekday", "S1-4-weekday"]);
+  });
+});
+
+describe("toUncoveredPlatformIdsByKey", () => {
+  it("names, by each table key the stored ones lack, every platform that key serves, in served order", () => {
+    // Arrange
+    const keys = new Set(["S1-2-weekday", "S1-2-holiday", "KR-1-weekday"]);
+
+    // Act
+    const uncovered = toUncoveredPlatformIdsByKey(keys, [SUNGKYUNKWAN, ...(["S1-2-216", "S1-2-222"].map(findSubwayPlatform) as NetworkPlatform[])]);
+
+    // Assert
+    expect([...uncovered]).toEqual([
+      ["KR-1-holiday", ["KR-1-0153"]],
+      ["S1-2-saturday", ["S1-2-216", "S1-2-222"]],
+    ]);
+  });
+
+  it("returns none when every key is stored", () => {
+    // Act
+    const uncovered = toUncoveredPlatformIdsByKey(new Set(["S1-4-weekday", "S1-4-saturday", "S1-4-holiday"]), [HYEHWA]);
+
+    // Assert
+    expect(uncovered.size).toBe(0);
   });
 });
 

@@ -1,7 +1,7 @@
 /**
  * GET /subway/stations/:stationId/arrivals through the real controller, the
  * arrivals service, the tracker and its run matcher, the timetable and
- * estimate doors and the committed weekday tables, with FakeSubwayRepository, FakeHolidaysRepository,
+ * estimate doors and the committed weekday tables stored in FakeSubwayTimetableRepository, with FakeSubwayRepository, FakeHolidaysRepository,
  * the stored topology's revision 1 in FakeSubwayTopologyRepository
  * and a scripted Clock. The tracker is fed one upstream's observations per
  * tick, as the pollers feed it. What it guards: a station is requested by its
@@ -42,12 +42,14 @@ import path from "path";
 import { toCountdownRows } from "../../../src/subway/seoul-api/subway-seoul-api.mapper";
 import type { SeoulArrivalRow } from "../../../src/subway/seoul-api/subway-seoul-api.schema";
 import { toSeoulStations } from "../../../src/subway/seoul/subway-seoul.rules";
+import { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-timetable.repository";
 import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { storedSubwayTopologyRepository, subwayRegistryFixture } from "../../helpers/subway/topology";
+import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
 
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
 const clock = { current: at("20:41:00"), now(): Date { return this.current; } };
@@ -64,6 +66,7 @@ beforeAll(async () => {
       { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
       { provide: SubwayRepository, useValue: subwayRepository },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
+      { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },
       { provide: Clock, useValue: clock },
     ],
   });

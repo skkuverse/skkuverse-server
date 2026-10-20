@@ -23,11 +23,8 @@
  * platform is a served platform or a neighbor, so the pollers can name it.
  * Revision 1 holds against the committed timetables of every day type.
  */
-import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
-import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
-import type { HolidaysService } from "../../holidays/holidays.service";
-import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import type { LineRoutes } from "../timetable/subway-timetable.types";
 import { SUBWAY_LINES, SUBWAY_NETWORK, SUBWAY_STATIONS } from "../subway.constants";
 import type { SubwayNetwork } from "../subway.types";
@@ -191,8 +188,8 @@ describe("toRouteIssues", () => {
   const DAYS = ["2026-10-16T03:00:00Z", "2026-10-17T03:00:00Z", "2026-10-18T03:00:00Z"];
 
   async function committedRoutes(): Promise<Record<string, LineRoutes[]>> {
-    const service = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
-    const schedules = (await Promise.all(DAYS.map((day) => service.listPlatformSchedules(new Date(day))))).flat();
+    const service = storedSubwayTimetableService();
+    const schedules = (await Promise.all(DAYS.map((day) => service.listPlatformSchedules(new Date(day))))).flatMap((listed) => listed.schedules);
     const routesByPlatformId: Record<string, LineRoutes[]> = {};
     for (const { platform, lineRoutes } of schedules) (routesByPlatformId[platform.id] ??= []).push(lineRoutes);
     return routesByPlatformId;

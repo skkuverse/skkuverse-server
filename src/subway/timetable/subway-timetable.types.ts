@@ -1,4 +1,5 @@
 import type { NetworkPlatform, PlatformTimetable, SubwayDirection } from "../subway.types";
+import type { SubwayTimetablesUnavailableError } from "./subway-timetable.error";
 
 export type TimetableSource = PlatformTimetable["source"];
 
@@ -49,4 +50,17 @@ export interface PlatformSchedule {
   dayType: DayType;
   lineRoutes: LineRoutes;
   trains: readonly ScheduledTrain[];
+}
+
+export interface PlatformSchedules {
+  schedules: PlatformSchedule[];
+  // WHY: a tick writes the platforms it could schedule, then rejects with this, naming the tables it had none of.
+  unavailable: SubwayTimetablesUnavailableError | null;
+}
+
+/** WHY: one revision of the stored manifest, each table's part id by key, and when a manifest first named each part. */
+export interface ManifestSnapshot {
+  revision: number;
+  partIdByKey: ReadonlyMap<string, string>;
+  firstNamedAtByPartId: ReadonlyMap<string, number>;
 }
