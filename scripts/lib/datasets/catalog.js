@@ -40,7 +40,7 @@
  * The lists are the ones the server checks against: `busGroups` is
  * BusConfigService.listGroupIds's `toBusGroupIds(JONGRO_ROUTES)`,
  * `subwayStations` SubwayStationsService.listStations's ids, `busServices`
- * the keys of SERVICE_CONFIG.
+ * the keys of SERVICE_CONFIG, `jongroRoutes` the ids of JONGRO_ROUTES.
  */
 
 function codeHeldSource(owner, ids) {
@@ -76,6 +76,8 @@ function loadCatalog(load) {
   const { serviceNoticesReferences } = load("bus/schedule-content/bus-schedule-content.rules");
   const { laneCorridorDataset } = load("bus/eta/lane/bus-eta-lane.schema");
   const { corridorIssues } = load("bus/eta/lane/bus-eta-lane.rules");
+  const { jongroRouteAttributesDataset } = load("bus/route-attributes/bus-route-attributes.schema");
+  const { toRouteAttributesIssues } = load("bus/route-attributes/bus-route-attributes.rules");
   const { checkedRegistry } = load("miniapps/miniapps.schema");
   const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
   const { toMiniAppRegistry } = load("miniapps/miniapps.mapper");
@@ -87,6 +89,7 @@ function loadCatalog(load) {
   const grammar = { parseTarget: parseMiniAppTarget };
   const registryParts = { toMiniAppRegistry, parseMiniAppTarget, isSingleEmoji, webOrigin: WEB_ORIGIN };
   const busGroups = codeHeldSource("src/bus", toBusGroupIds(JONGRO_ROUTES));
+  const jongroRoutes = codeHeldSource("src/bus", JONGRO_ROUTES.map((route) => route.id));
   const subwayStations = codeHeldSource("src/subway", new SubwayStationsService().listStations().map((station) => station.id));
 
   return {
@@ -94,6 +97,7 @@ function loadCatalog(load) {
       busGroups,
       subwayStations,
       busServices: codeHeldSource("src/bus", Object.keys(SERVICE_CONFIG)),
+      jongroRoutes,
     },
     datasets: {
       // Its ids are what the ui datasets name; who owns a first-party origin stays in src/infra/origins.ts.
@@ -148,6 +152,13 @@ function loadCatalog(load) {
         owner: "src/bus/eta/lane",
         schema: laneCorridorDataset,
         issuesOf: corridorIssues,
+        referencesOf: () => [],
+      },
+      // Each Jongro route's card, refresh interval, seat count and transfer lines; its id stays in code (move-reference-datasets D10).
+      "jongro-route-attributes": {
+        owner: "src/bus/route-attributes",
+        schema: jongroRouteAttributesDataset,
+        issuesOf: (attributes) => toRouteAttributesIssues(attributes, jongroRoutes.ids()),
         referencesOf: () => [],
       },
     },

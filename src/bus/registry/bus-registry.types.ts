@@ -1,4 +1,4 @@
-import type { JongroRoute, JongroRouteAttributes, TransferLine } from "../bus.types";
+import type { JongroRoute } from "../bus.types";
 import type { RegistryStation } from "./bus-registry.document";
 
 export type ObservedStation = Omit<RegistryStation, "sequence">;
@@ -13,12 +13,11 @@ export interface JongroStation {
   isFirstStation: boolean;
   isLastStation: boolean;
   isRotationStation: boolean;
-  transferLines: TransferLine[];
 }
 
 export type JongroStationMapping = Record<string, { sequence: number; stationName: string }>;
 
-export interface RegistryRoute extends JongroRoute, JongroRouteAttributes {
+export interface RegistryRoute extends JongroRoute {
   readonly stationsVersion: string;
   readonly turnaroundTopisId: string;
   readonly registryStations: ReadonlyArray<RegistryStation>;

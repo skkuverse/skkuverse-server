@@ -2,11 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { jongroRoutes } from "../bus.config";
 import { JONGRO_ROUTES } from "../bus.constants";
-import type { JongroRoute, JongroRouteAttributes } from "../bus.types";
+import { toJongroRoute } from "../bus.mapper";
+import type { JongroRoute } from "../bus.types";
 import { REGISTRY_TTL_MS } from "./bus-registry.constants";
-import type { JongroRouteDocument } from "./bus-registry.document";
 import { BusRegistryBootstrappingError, BusRegistryMissingError } from "./bus-registry.error";
 import { toRegistryRoute, toRegistryStations } from "./bus-registry.mapper";
 import { BusRegistryRepository } from "./bus-registry.repository";
@@ -33,7 +32,6 @@ export class BusRegistryService {
   private readonly loaders = new Map<string, CachedLoader<RegistryRoute>>();
   private readonly pendingByRouteId = new Map<string, PendingObservation>();
   private readonly heldVersions = new Set<string>();
-  private readonly warnedTransferKeys = new Set<string>();
 
   constructor(
     private readonly repository: BusRegistryRepository,
@@ -149,20 +147,10 @@ export class BusRegistryService {
   }
 
   private async loadRoute(routeId: string): Promise<RegistryRoute> {
-    const route = jongroRoutes.find((entry) => entry.id === routeId);
-    if (route === undefined) throw new Error(`Unknown Jongro route ${routeId}`);
+    const identity = JONGRO_ROUTES.find((entry) => entry.id === routeId);
+    if (identity === undefined) throw new Error(`Unknown Jongro route ${routeId}`);
     const doc = await this.repository.findRoute(routeId);
     if (doc === null) throw new BusRegistryMissingError(routeId);
-    this.warnUnmatchedTransferLines(route, doc);
-    return toRegistryRoute(route, doc);
-  }
-
-  // WHY: stations change at runtime now, so an override nothing matches is a warning, not a boot failure.
-  private warnUnmatchedTransferLines(route: JongroRoute & JongroRouteAttributes, doc: JongroRouteDocument): void {
-    const arsIds = new Set(doc.stations.map((station) => station.arsId));
-    const unmatched = Object.keys(route.transferLinesByArsId).filter((arsId) => !arsIds.has(arsId) && !this.warnedTransferKeys.has(`${route.id}:${arsId}`));
-    if (unmatched.length === 0) return;
-    for (const arsId of unmatched) this.warnedTransferKeys.add(`${route.id}:${arsId}`);
-    logger.warn({ event: "bus.jongro.registry_unmatched_transfer", routeId: route.id, arsIds: unmatched }, "A transfer override names an ARS number no stored station has");
+    return toRegistryRoute(toJongroRoute(identity), doc);
   }
 }

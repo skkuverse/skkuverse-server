@@ -19,7 +19,6 @@ jest.mock("../../infra/logger", () => ({
 
 import { FakeBusRegistryRepository } from "../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import { logText } from "../../../__tests__/helpers/log-text";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { JONGRO_ROUTES } from "../bus.constants";
@@ -29,7 +28,7 @@ import type { BusRegistryRepository } from "./bus-registry.repository";
 import { toStationsVersion } from "./bus-registry.rules";
 import { BusRegistryBootstrappingError } from "./bus-registry.error";
 import { BusRegistryService } from "./bus-registry.service";
-import type { ObservedStation, RegistryRoute } from "./bus-registry.types";
+import type { ObservedStation } from "./bus-registry.types";
 
 const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
 
@@ -85,8 +84,7 @@ describe("BusRegistryService.routeOf over the routes stored on 2026-10-17", () =
     expect(r08.stations.filter((s) => s.isRotationStation).map((s) => s.stationName)).toEqual(["서울특별시재향군인회관"]);
     expect(r08.stations[15]!.isRotationStation).toBe(true);
     expect(r08.stations[16]!.stationName).toBe("종로5가역.광장시장");
-    expect(r08.stations[16]!.transferLines).toEqual([{ line: "1", color: "0052A4" }]);
-    expect(r08.stations[9]!.transferLines).toEqual([{ line: "4", color: "00A5DE" }]);
+    expect(r08).not.toHaveProperty("transferLinesByArsId");
   });
 
   it("preserves station counts (02=27, 07=22), the loop close and the turnaround stops in TOPIS order", async () => {
@@ -121,24 +119,6 @@ describe("BusRegistryService.routeOf over the routes stored on 2026-10-17", () =
     expect(r07.mapping["100000424"]).toEqual({ sequence: 3, stationName: "비천당" });
   });
 
-  it("carries the transfer badges of the 2026-09 review on the stations they belong to", async () => {
-    // Arrange
-    const r02 = await service.routeOf("jongro02");
-    const linesOf = (route: RegistryRoute, name: string, nth = 0) =>
-      route.stations.filter((s) => s.stationName === name)[nth]!.transferLines.map((t) => t.line);
-
-    // Assert
-    expect(r02.stations[11]!.transferLines).toEqual([
-      { line: "1", color: "0052A4" },
-      { line: "3", color: "EF7C1C" },
-      { line: "5", color: "996CAC" },
-    ]);
-    expect(linesOf(r02, "조계사")).toEqual(["1"]);
-    expect(linesOf(r02, "가회동주민센터", 1)).toEqual(["3"]);
-    expect(linesOf(await service.routeOf("jongro08"), "효제초교.연동교회.김마리아활동터")).toEqual(["1"]);
-    expect(linesOf(await service.routeOf("jongro07"), "성대입구")).toEqual(["4"]);
-  });
-
   it("lists every configured route", async () => {
     // Act & Assert
     expect((await service.listRoutes()).map((route) => route.id)).toEqual(["jongro02", "jongro07", "jongro08"]);
@@ -167,24 +147,6 @@ describe("BusRegistryService.routeOf", () => {
     // Assert
     expect(cached.stationsVersion).not.toBe("changed");
     expect(reread.stationsVersion).toBe("changed");
-  });
-
-  it("warns once about a transfer override whose ARS number no stored station has", async () => {
-    // Arrange
-    jest.useFakeTimers({ now: NOW });
-    storeRoutes();
-    const doc = repository.routes.get("jongro02")!;
-    doc.stations = doc.stations.filter((s) => s.arsId !== "01589");
-
-    // Act
-    await service.routeOf("jongro02");
-    jest.setSystemTime(NOW.getTime() + 30_001);
-    await service.routeOf("jongro02");
-
-    // Assert
-    const warnings = callsOf("warn", "bus.jongro.registry_unmatched_transfer");
-    expect(warnings).toHaveLength(1);
-    expect(logText(warnings[0])).toContain("01589");
   });
 });
 

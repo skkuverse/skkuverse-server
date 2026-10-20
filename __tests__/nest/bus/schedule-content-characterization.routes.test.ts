@@ -59,6 +59,7 @@ const store = require("../../../scripts/lib/datasets/store");
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type BusRegistryHelpers = typeof import("../../helpers/bus/bus-registry");
 type ScheduleContentHelpers = typeof import("../../helpers/bus/schedule-content");
+type RouteAttributesHelpers = typeof import("../../helpers/bus/route-attributes");
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 
@@ -170,6 +171,8 @@ beforeAll(async () => {
   const { restDaysFixture, serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
   await store.create(content, "bus-service-notices", serviceNoticesFixture(), STORED_BY);
   await store.create(content, "skku-rest-days", restDaysFixture(), STORED_BY);
+  const { routeAttributesFixture } = require("../../helpers/bus/route-attributes") as RouteAttributesHelpers;
+  await store.create(content, "jongro-route-attributes", routeAttributesFixture(), STORED_BY);
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {
