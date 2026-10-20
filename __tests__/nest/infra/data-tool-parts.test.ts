@@ -791,6 +791,47 @@ describe("npm run data, a parted dataset's history", () => {
   });
 });
 
+describe("npm run data, a dataset whose check reads a parted one", () => {
+  // WHY: the test catalog plus `test-routes`, one document that reads the stored test-tables and refuses a line none of them runs.
+  const ROUTES = "test-routes";
+  const routesCatalog = {
+    ...tablesCatalog,
+    datasets: {
+      ...tablesCatalog.datasets,
+      [ROUTES]: {
+        owner: "src/test-routes",
+        schema: z.strictObject({ lines: z.array(z.string()) }),
+        reads: [DATASET],
+        issuesOf: (routes: { lines: string[] }, { storedOf }: { storedOf: (name: string) => Table[] | null }) => {
+          const tables = storedOf(DATASET);
+          if (tables === null) return [{ path: [], message: "no stored test-tables" }];
+          return routes.lines.flatMap((line, i) => (tables.some((t) => t.line === line) ? [] : [{ path: ["lines", i], message: `no stored table runs line ${line}` }]));
+        },
+        referencesOf: () => [],
+      },
+    },
+  };
+
+  it("push --create checks it against the parts the target database stores, never the other's", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await parts.create(prodDb(), DATASET, [partOf(weekday1)], { by: ALICE, now: NOW });
+    const file = path.join(root, "routes.json");
+    writeJson(file, { lines: ["1", "2"] });
+
+    // Act
+    const toDev = await data(["push", ROUTES, "--create", "--file", file], { catalog: routesCatalog });
+    const toProd = await data(["push", ROUTES, "--create", "--file", file, "--prod", "--yes"], { catalog: routesCatalog });
+
+    // Assert
+    expect(toDev.code).toBe(0);
+    expect(toProd.code).toBe(1);
+    expect(toProd.err).toContain("no stored table runs line 2");
+    expect(await store.readDataset(devDb(), ROUTES)).toMatchObject({ revision: 1, data: { lines: ["1", "2"] } });
+    expect(await store.readDataset(prodDb(), ROUTES)).toBeNull();
+  });
+});
+
 describe("npm run data, warnings", () => {
   // WHY: the test catalog with one more check that only warns: a line with no holiday table.
   const entry = tablesCatalog.datasets[DATASET];

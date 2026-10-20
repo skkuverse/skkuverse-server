@@ -31,7 +31,13 @@
  * A parted dataset (openspec/changes/move-reference-datasets, design D4) runs
  * its part schema on each part instead of 1, refuses a key two parts share,
  * and runs 2 to 4 on the set of parts ordered by key. Its stored `data` is a
- * manifest, so `storedOf` reads it as null for another dataset's check.
+ * manifest. A dataset whose check needs a parted one's content names it in its
+ * entry's `reads`: `readStored`, given the datasets about to be checked, adds
+ * each part's `data` to the manifest entries of every dataset they read, from
+ * the same database, and `storedOf` hands over those parts parsed with the part
+ * schema and ordered by key. It is null when a part is not stored or fails the
+ * schema, and for a parted dataset no check reads, whose parts are never
+ * fetched (task 11.1).
  */
 
 const { readParts } = require("./parts");
@@ -59,12 +65,22 @@ function entryOf(catalog, name) {
 }
 
 /**
- * The parsed stored data of `name`, or null when nothing is stored or it no longer parses. A parted
- * dataset's stored data is its manifest, not its content, so it is null too.
+ * A parted dataset's parts, parsed and ordered by key, when readStored added every part's data to its
+ * manifest; null when one is missing or fails the part schema.
  */
+function parsedParts({ schema }, manifest) {
+  if (!Array.isArray(manifest.parts) || manifest.parts.some((entry) => entry.data === undefined)) return null;
+  const entries = [...manifest.parts].sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  const results = entries.map((entry) => schema.safeParse(entry.data));
+  return results.every((result) => result.success) ? results.map((result) => result.data) : null;
+}
+
+/** The parsed stored data of `name`, or null when nothing is stored or it no longer parses. */
 function parsedStored(catalog, name, stored) {
-  if (stored[name] === undefined || entryOf(catalog, name).parts) return null;
-  const result = entryOf(catalog, name).schema.safeParse(stored[name]);
+  if (stored[name] === undefined) return null;
+  const entry = entryOf(catalog, name);
+  if (entry.parts) return parsedParts(entry.parts, stored[name]);
+  const result = entry.schema.safeParse(stored[name]);
   return result.success ? result.data : null;
 }
 
@@ -167,24 +183,36 @@ function checkParts(catalog, name, files, stored) {
   return { issues, warnings, parts: issues.length > 0 ? [] : parsed.map(({ key, data }) => ({ key, data, summary: summaryOf(data) })) };
 }
 
-/** Every catalog dataset's stored `data`, by name, and its revision. Reads only. */
-async function readStored(db, catalog) {
+/** `manifest` with each stored part's `data` added to its entry; a part not stored keeps none. */
+async function withPartData(db, manifest) {
+  const { parts } = await readParts(db, manifest);
+  const dataById = new Map(parts.map((part) => [part.partId, part.data]));
+  return { ...manifest, parts: manifest.parts.map((entry) => (dataById.has(entry.partId) ? { ...entry, data: dataById.get(entry.partId) } : entry)) };
+}
+
+/**
+ * Every catalog dataset's stored `data`, by name, and its revision, plus the part data of each parted dataset
+ * that the checks of `names` read (their entries' `reads`). Reads only.
+ */
+async function readStored(db, catalog, names = []) {
   const docs = await db
     .collection(DATASETS)
     .find({ _id: { $in: Object.keys(catalog.datasets) } }, { projection: { revision: 1, data: 1 } })
     .toArray();
-  return {
-    stored: Object.fromEntries(docs.map((doc) => [doc._id, doc.data])),
-    revisions: Object.fromEntries(docs.map((doc) => [doc._id, doc.revision])),
-  };
+  const stored = Object.fromEntries(docs.map((doc) => [doc._id, doc.data]));
+  const read = new Set(names.flatMap((name) => entryOf(catalog, name).reads ?? []));
+  for (const name of read) if (stored[name] !== undefined && entryOf(catalog, name).parts) stored[name] = await withPartData(db, stored[name]);
+  return { stored, revisions: Object.fromEntries(docs.map((doc) => [doc._id, doc.revision])) };
 }
 
 /**
  * A parted dataset's stored `{ issues, warnings }`: checkParts' on the parts its manifest names, or, when one is
  * not stored, each missing part and the schema issues of the others (the set's checks would only repeat the gap).
+ * A manifest readStored filled for another dataset's check is not read again.
  */
 async function storedPartIssues(db, catalog, name, stored) {
-  const found = await readParts(db, stored[name]);
+  const isFilled = stored[name].parts.every((entry) => entry.data !== undefined);
+  const found = isFilled ? { parts: stored[name].parts, missing: [] } : await readParts(db, stored[name]);
   const files = found.parts.map(({ key, data }) => ({ file: key, data }));
   if (found.missing.length === 0) return checkParts(catalog, name, files, stored);
   const keyById = new Map(stored[name].parts.map((entry) => [entry.partId, entry.key]));
@@ -199,7 +227,7 @@ async function storedPartIssues(db, catalog, name, stored) {
  */
 async function checkStored(db, catalog, names) {
   names.forEach((name) => entryOf(catalog, name));
-  const { stored, revisions } = await readStored(db, catalog);
+  const { stored, revisions } = await readStored(db, catalog, names);
   const present = names.filter((name) => stored[name] !== undefined);
   const [issues, warnings] = [[], []];
   for (const name of present) {
