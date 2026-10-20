@@ -2,14 +2,14 @@
  * A served station as other modules read it: its slug, its title (its name
  * with the station suffix each language writes, a space before it in English
  * only) and, in its platforms' order, each line's code, name, color and marker
- * from the registry, whose boot check refuses a platform on an unlisted line.
+ * from the code's lines, whose spec refuses a platform on an unlisted line.
  */
-import { SUBWAY_REGISTRY } from "../subway.config";
+import { SUBWAY_STATIONS } from "../subway.constants";
 import { toSubwayLine } from "../subway.rules";
-import type { SubwayLine, SubwayStation } from "../subway.types";
+import type { NetworkStation, SubwayLine } from "../subway.types";
 import { toServedStation } from "./subway-stations.rules";
 
-const stationOf = (slug: string) => SUBWAY_REGISTRY.stations.find((station) => station.id === slug) as SubwayStation;
+const stationOf = (slug: string) => SUBWAY_STATIONS.find((station) => station.id === slug) as NetworkStation;
 const lineOf = (code: string): SubwayLine => toSubwayLine(code);
 
 describe("toServedStation", () => {
@@ -41,7 +41,7 @@ describe("toServedStation", () => {
     // Arrange
     const hyehwa = stationOf("hyehwa");
     const sungkyunkwan = stationOf("sungkyunkwan");
-    const transfer: SubwayStation = { ...hyehwa, id: "transfer", platforms: [...hyehwa.platforms, ...sungkyunkwan.platforms] };
+    const transfer: NetworkStation = { ...hyehwa, id: "transfer", platforms: [...hyehwa.platforms, ...sungkyunkwan.platforms] };
 
     // Act
     const served = toServedStation(transfer, lineOf);

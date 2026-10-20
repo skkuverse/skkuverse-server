@@ -6,11 +6,12 @@
  * tick's calls settled apart: what answered is kept beside what failed, and
  * only a tick whose every call failed has nothing to hand on.
  */
-import { SUBWAY_REGISTRY } from "../subway.config";
+import { subwayRegistryFixture } from "../../../__tests__/helpers/subway/topology";
 import type { CountdownRow, SubwayRegistry, TrainEvent } from "../subway.types";
 import { toSeoulLines, toSeoulStations, toSettledObservations, toTrainMapLines } from "./subway-seoul.rules";
 
-const copyOf = (): SubwayRegistry => JSON.parse(JSON.stringify(SUBWAY_REGISTRY)) as SubwayRegistry;
+const REGISTRY = subwayRegistryFixture();
+const copyOf = (): SubwayRegistry => JSON.parse(JSON.stringify(REGISTRY)) as SubwayRegistry;
 const tables = ({ platformIdByApiName, platformIdByTrainMapName, ...line }: ReturnType<typeof toSeoulLines>[number]) => ({
   ...line,
   platformIdByApiName: Object.fromEntries(platformIdByApiName),
@@ -155,7 +156,7 @@ const SUIN_BUNDANG_NAMES = {
 describe("toSeoulLines", () => {
   it("gives each line with its served stations and the Seoul names of its platforms, 금정 watched beyond 1호선's", () => {
     // Act
-    const lines = toSeoulLines(SUBWAY_REGISTRY);
+    const lines = toSeoulLines(REGISTRY);
 
     // Assert
     expect(lines.map(tables)).toEqual([
@@ -242,7 +243,7 @@ describe("toSeoulLines", () => {
     const lines = toSeoulLines(registry);
 
     // Assert
-    expect(lines).toHaveLength(SUBWAY_REGISTRY.lines.length);
+    expect(lines).toHaveLength(REGISTRY.lines.length);
     expect(lines[0]?.platformIdByApiName.get("성균관대")).toBe("KR-1-0153");
     expect(lines[0]?.platformIdByApiName.get("의정부")).toBe("KR-1-X100");
   });
@@ -263,7 +264,7 @@ describe("toSeoulLines", () => {
 describe("toSeoulStations", () => {
   it("gives each served station its one arrival call by Seoul name, its rows' subwayId mapped to its platform", () => {
     // Act
-    const stations = toSeoulStations(SUBWAY_REGISTRY);
+    const stations = toSeoulStations(REGISTRY);
 
     // Assert
     expect(stations.map(({ seoulName, platformBySubwayId }) => [seoulName, Object.fromEntries(platformBySubwayId)])).toEqual([

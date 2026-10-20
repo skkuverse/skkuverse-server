@@ -1,8 +1,8 @@
 import moment from "moment-timezone";
 import { toKstDate } from "../../shared/kst-date.util";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
-import { SUBWAY_REGISTRY } from "../subway.config";
-import type { SubwayDirection, SubwayPlatform, SubwayRegistry } from "../subway.types";
+import { SUBWAY_STATIONS } from "../subway.constants";
+import type { NetworkPlatform, SubwayDirection } from "../subway.types";
 import {
   SERVICE_DAY_START_HOUR,
   SERVICE_WINDOW_CLOSES_SEC,
@@ -16,12 +16,12 @@ const SECOND_MS = 1000;
 const SUNDAY = 0;
 const SATURDAY = 6;
 
-export function listSubwayPlatforms(registry: SubwayRegistry = SUBWAY_REGISTRY): SubwayPlatform[] {
-  return registry.stations.flatMap((station) => station.platforms);
+export function listSubwayPlatforms(): NetworkPlatform[] {
+  return SUBWAY_STATIONS.flatMap((station) => station.platforms);
 }
 
-export function findSubwayPlatform(id: string, registry: SubwayRegistry = SUBWAY_REGISTRY): SubwayPlatform | null {
-  return listSubwayPlatforms(registry).find((platform) => platform.id === id) ?? null;
+export function findSubwayPlatform(id: string): NetworkPlatform | null {
+  return listSubwayPlatforms().find((platform) => platform.id === id) ?? null;
 }
 
 export function toServiceDate(instant: Date): string {
@@ -39,7 +39,7 @@ export function toServiceInstant(serviceDate: string, secondsOfServiceDay: numbe
   return new Date(moment.tz(serviceDate, KST_TIME_ZONE).valueOf() + secondsOfServiceDay * SECOND_MS);
 }
 
-export function findTimetable(timetables: readonly Timetable[], platform: SubwayPlatform, dayType: DayType): Timetable | null {
+export function findTimetable(timetables: readonly Timetable[], platform: NetworkPlatform, dayType: DayType): Timetable | null {
   const [operator] = platform.id.split("-");
   const isPlatformTable = (timetable: Timetable): boolean => timetable.operator === operator && timetable.line === platform.line;
   return timetables.find((t) => isPlatformTable(t) && t.dayType === dayType) ?? null;
@@ -67,7 +67,7 @@ export function toLineRoutes(timetable: Timetable): LineRoutes {
   return { up: toRoute(timetable, "up"), down: toRoute(timetable, "down") };
 }
 
-export function assertTimetablesCover(platforms: readonly SubwayPlatform[], timetables: readonly Timetable[]): void {
+export function assertTimetablesCover(platforms: readonly NetworkPlatform[], timetables: readonly Timetable[]): void {
   const missing = platforms.flatMap((platform) =>
     TIMETABLE_DAY_TYPES[platform.timetable.source]
       .filter((dayType) => findTimetable(timetables, platform, dayType) === null)
