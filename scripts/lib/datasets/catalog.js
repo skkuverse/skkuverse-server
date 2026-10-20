@@ -17,9 +17,11 @@
  *   owner            the src/ folder that reads it
  *   schema           the zod schema the server's repository parses `data` with
  *   issuesOf(data, { storedOf })
- *                    checks a schema cannot hold, as { path, message };
- *                    `storedOf(name)` is another dataset's parsed content in
- *                    the target database, or null (scripts/lib/datasets/checks.js)
+ *                    checks a schema cannot hold, as { path, message }, and
+ *                    `warning: true` on one that is reported and refuses
+ *                    nothing; `storedOf(name)` is another dataset's parsed
+ *                    content in the target database, or null
+ *                    (scripts/lib/datasets/checks.js)
  *   referencesOf(data)
  *                    every identity the data names, as { dataset, id, path };
  *                    `dataset` is another catalog dataset or a code-held source
@@ -56,6 +58,10 @@
  *
  * `subway-topology` is also checked against the timetable routes of every
  * served platform, read from the checkout's committed SUBWAY_TIMETABLES.
+ * `subway-timetables` is checked the other way, its pushed routes against the
+ * target's stored `subway-topology`, and its tracked stops against the run
+ * properties, both as warnings: a coverage change pushes its tables first and
+ * its topology after, and the topology push is the gate that refuses.
  */
 
 const SHOWN_TRAIN_NUMBERS = 8;
@@ -120,7 +126,7 @@ function loadCatalog(load) {
   const { toRouteIssues, toTopologyIssues } = load("subway/topology/subway-topology.rules");
   const { SUBWAY_TIMETABLES } = load("subway/timetable/subway-timetable.config");
   const { TIMETABLE_DAY_TYPES } = load("subway/timetable/subway-timetable.constants");
-  const { findTimetable, toLineRoutes, toTimetableCoverageIssues, toTimetableKey } = load("subway/timetable/subway-timetable.rules");
+  const { findTimetable, toLineRoutes, toTimetableCoverageIssues, toTimetableKey, toTrackedStopIssues } = load("subway/timetable/subway-timetable.rules");
   const { timetableFile } = load("subway/timetable/subway-timetable.schema");
 
   const grammar = { parseTarget: parseMiniAppTarget };
@@ -132,20 +138,28 @@ function loadCatalog(load) {
   const subwayPlatforms = codeHeldSource("src/subway", servedPlatforms.map((platform) => platform.id));
   // A topology is checked against this checkout's network, which must hold together first; its issues name the constants.
   const networkIssues = toNetworkIssues(SUBWAY_NETWORK).map((issue) => ({ path: ["SUBWAY_NETWORK", ...issue.path], message: `src/subway/subway.constants.ts: ${issue.message}` }));
-  // WHY: the committed timetables are this checkout's until wave D (move-reference-datasets D5) stores them; then
-  // these routes come from the target database's `subway-timetables` through `storedOf`. One route per distinct table.
-  const routesByPlatformId = Object.fromEntries(
-    SUBWAY_STATIONS.flatMap((station) => station.platforms).map((platform) => {
-      const tables = TIMETABLE_DAY_TYPES[platform.timetable.source].map((dayType) => findTimetable(SUBWAY_TIMETABLES, platform, dayType)).filter(Boolean);
-      const routes = [...new Map(tables.map((table) => [JSON.stringify(toLineRoutes(table)), toLineRoutes(table)])).values()];
-      return [platform.id, routes];
-    }),
-  );
+  // Each served platform's routes in `tables`, one per distinct table of a day type its source declares.
+  const routesOf = (tables) =>
+    Object.fromEntries(
+      servedPlatforms.map((platform) => {
+        const found = TIMETABLE_DAY_TYPES[platform.timetable.source].map((dayType) => findTimetable(tables, platform, dayType)).filter(Boolean);
+        return [platform.id, [...new Map(found.map((table) => [JSON.stringify(toLineRoutes(table)), toLineRoutes(table)])).values()]];
+      }),
+    );
+  // WHY: the committed timetables are this checkout's until task 11.1 deletes them; then these routes come from the
+  // target database's `subway-timetables` through `storedOf`.
+  const committedRoutes = routesOf(SUBWAY_TIMETABLES);
   // A topology is checked against the routes once its stops resolve: an unresolved stop would repeat there as an order issue.
   const topologyIssues = (topology) => {
     const issues = [...networkIssues, ...toTopologyIssues(topology, SUBWAY_NETWORK)];
-    return issues.length > 0 ? issues : toRouteIssues(topology, routesByPlatformId);
+    return issues.length > 0 ? issues : toRouteIssues(topology, committedRoutes);
   };
+  const asWarnings = (issues, at = []) => issues.map((issue) => ({ path: [...at, ...issue.path], message: issue.message, warning: true }));
+  // The pushed routes against the stored topology, whose own push refuses a disagreement: warning here lets either go first.
+  const timetableRouteWarnings = (tables, topology) =>
+    topology === null
+      ? asWarnings([{ path: [], message: "no stored subway-topology, so the tables' routes were not checked against it" }], ["subway-topology"])
+      : asWarnings(toRouteIssues(topology, routesOf(tables)), ["subway-topology"]);
 
   return {
     sources: {
@@ -233,7 +247,11 @@ function loadCatalog(load) {
           summaryOf: (table) => ({ source: table.source, trainCount: table.trains.length }),
           changesOf: trainChanges,
         },
-        issuesOf: (tables) => toTimetableCoverageIssues(tables, servedPlatforms),
+        issuesOf: (tables, { storedOf }) => [
+          ...toTimetableCoverageIssues(tables, servedPlatforms),
+          ...timetableRouteWarnings(tables, storedOf("subway-topology")),
+          ...asWarnings(toTrackedStopIssues(tables, servedPlatforms)),
+        ],
         referencesOf: () => [],
       },
     },

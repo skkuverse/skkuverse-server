@@ -25,7 +25,8 @@
  *
  * This file is the command-line surface only: arguments, the target, the
  * confirmation, printing and exit codes (0 done or no change, 1 refused, 2
- * usage). The datasets and their validation are scripts/lib/datasets/catalog.js
+ * usage). A check's warning is printed with the diff or by `check` and leaves
+ * the exit code at 0. The datasets and their validation are scripts/lib/datasets/catalog.js
  * over the compiled dist/src (so `npm run data` builds first), the checks
  * checks.js, the MongoDB protocol store.js (and parts.js for a parted
  * dataset), the pulled file working-file.js (working-dir.js).
@@ -47,7 +48,7 @@ const { isDeepStrictEqual } = require("node:util");
 const { MongoClient } = require("mongodb");
 
 const { loadCatalog } = require("./lib/datasets/catalog");
-const { checkData, checkParts, checkStored, readStored } = require("./lib/datasets/checks");
+const { checkContent, checkParts, checkStored, readStored } = require("./lib/datasets/checks");
 const parts = require("./lib/datasets/parts");
 const store = require("./lib/datasets/store");
 const { readPartFiles, readWorkingDir, workingDirPath, writeWorking, writeWorkingDir } = require("./lib/datasets/working-dir");
@@ -251,9 +252,17 @@ function refusalOf(result, ctx, base) {
   return new Refusal(`${dataset}: no dataset in ${ctx.dbName}. Create it with \`push ${dataset} --create ${source}\`.`);
 }
 
+const issueLine = (issue) => `${issue.dataset}  ${issue.path.join(".") || "(root)"}  ${issue.message}`;
+
 function refuseIssues(issues) {
-  const lines = issues.map((issue) => `  ${issue.dataset}  ${issue.path.join(".") || "(root)"}  ${issue.message}`);
-  return new Refusal([`REFUSED: ${issues.length} issue(s), nothing written:`, ...lines].join("\n"));
+  return new Refusal([`REFUSED: ${issues.length} issue(s), nothing written:`, ...issues.map((issue) => `  ${issueLine(issue)}`)].join("\n"));
+}
+
+/** Prints each warning: a check's finding that refuses nothing. */
+function printWarnings(ctx, warnings) {
+  if (warnings.length === 0) return;
+  ctx.out(`${warnings.length} warning(s), not refused:`);
+  warnings.forEach((warning) => ctx.out(`  warning  ${issueLine(warning)}`));
 }
 
 const isParted = (ctx) => Boolean(ctx.catalog.datasets[ctx.args.dataset].parts);
@@ -284,12 +293,13 @@ async function repairOrReport(ctx, db, dataset) {
   await repair(ctx, db, dataset);
 }
 
-/** Prints the diff (or a parted dataset's report, `lines`), then writes after the confirmation production needs. */
-async function confirmAndWrite(ctx, { before, after, lines: report, summary, write }) {
+/** Prints the diff (or a parted dataset's report, `lines`) and the checks' warnings, then writes after the confirmation production needs. */
+async function confirmAndWrite(ctx, { before, after, lines: report, summary, warnings = [], write }) {
   const lines = report ?? (before === null ? [`+ ${summary}: ${JSON.stringify(after).length} bytes of JSON`] : diffLines(before, after));
   ctx.out(`diff of ${ctx.args.dataset} (${summary}):`);
   lines.slice(0, DIFF_LINE_LIMIT).forEach((line) => ctx.out(`  ${line}`));
   if (lines.length > DIFF_LINE_LIMIT) ctx.out(`  ... ${lines.length - DIFF_LINE_LIMIT} more changed paths`);
+  printWarnings(ctx, warnings);
   if (ctx.args.dryRun) {
     ctx.out("[dry run] nothing written.");
     return null;
@@ -311,9 +321,12 @@ function reportStored(ctx, result, base) {
   ctx.out("Every api replica that serves it reads it within 60 s, with no restart.");
 }
 
-async function storedIssues(ctx, db, data) {
+/** `data`'s warnings, or a refusal listing every issue. */
+async function checkedWarnings(ctx, db, data) {
   const { stored } = await readStored(db, ctx.catalog);
-  return checkData(ctx.catalog, ctx.args.dataset, data, stored);
+  const { issues, warnings } = checkContent(ctx.catalog, ctx.args.dataset, data, stored);
+  if (issues.length > 0) throw refuseIssues(issues);
+  return warnings;
 }
 
 async function pull(ctx) {
@@ -339,12 +352,12 @@ async function create(ctx) {
   }
   const current = await store.readDataset(ctx.db, dataset);
   if (current !== null) throw refusalOf({ reason: "exists", current }, ctx);
-  const issues = await storedIssues(ctx, ctx.db, data);
-  if (issues.length > 0) throw refuseIssues(issues);
+  const warnings = await checkedWarnings(ctx, ctx.db, data);
   const result = await confirmAndWrite(ctx, {
     before: null,
     after: data,
     summary: "new dataset, revision 1",
+    warnings,
     write: (meta) => store.create(ctx.db, dataset, data, meta),
   });
   if (result !== null) reportStored(ctx, result, null);
@@ -393,12 +406,12 @@ async function push(ctx) {
     return EXIT_OK;
   }
   if (current.revision !== working.baseRevision) throw refusalOf({ reason: "conflict", current }, ctx, working.baseRevision);
-  const issues = await storedIssues(ctx, ctx.db, working.data);
-  if (issues.length > 0) throw refuseIssues(issues);
+  const warnings = await checkedWarnings(ctx, ctx.db, working.data);
   const result = await confirmAndWrite(ctx, {
     before: current.data,
     after: working.data,
     summary: `revision ${current.revision} -> ${current.revision + 1}`,
+    warnings,
     write: (meta) => store.push(ctx.db, dataset, working.data, { ...meta, baseRevision: working.baseRevision }),
   });
   if (result === null) return EXIT_OK;
@@ -429,12 +442,13 @@ function partReport(before, after, changesByKey = new Map()) {
 const partIdLines = (manifest) => manifest.parts.map((entry) => `${entry.key} ${entry.partId}`).join("\n");
 const samePartIds = (before, after) => partIdLines(before) === partIdLines(after);
 
-/** The checked parts of `files` and their manifest, or a refusal listing every issue. */
+/** The checked parts of `files`, their manifest and the checks' warnings, or a refusal listing every issue. */
 async function checkedParts(ctx, files) {
   const { stored } = await readStored(ctx.db, ctx.catalog);
   const checked = checkParts(ctx.catalog, ctx.args.dataset, files, stored);
   if (checked.issues.length > 0) throw refuseIssues(checked.issues);
-  return { parts: checked.parts, manifest: parts.toManifest(checked.parts.map((part) => parts.toStoredPart(ctx.args.dataset, part))) };
+  const manifest = parts.toManifest(checked.parts.map((part) => parts.toStoredPart(ctx.args.dataset, part)));
+  return { parts: checked.parts, manifest, warnings: checked.warnings };
 }
 
 /** The parts `manifest` names, or a refusal naming every one that is not stored. */
@@ -476,6 +490,7 @@ async function createParts(ctx) {
   const result = await confirmAndWrite(ctx, {
     lines: partReport(null, checked.manifest),
     summary: `new dataset of ${checked.parts.length} part(s), revision 1`,
+    warnings: checked.warnings,
     write: (meta) => parts.create(ctx.db, dataset, checked.parts, meta),
   });
   if (result !== null) reportStored(ctx, result, null);
@@ -499,6 +514,7 @@ async function pushParts(ctx) {
   const result = await confirmAndWrite(ctx, {
     lines: partReport(current.data, checked.manifest, await partChanges(ctx, current, checked)),
     summary: `revision ${current.revision} -> ${current.revision + 1}`,
+    warnings: checked.warnings,
     write: (meta) => parts.push(ctx.db, dataset, checked.parts, { ...meta, baseRevision: working.baseRevision }),
   });
   if (result === null) return EXIT_OK;
@@ -522,10 +538,11 @@ async function rollbackParts(ctx, current, entry) {
     ctx.out(`no change: revision ${revision} names the parts of the current revision ${current.revision}; nothing written.`);
     return EXIT_OK;
   }
-  await checkedNamedParts(ctx, ctx.db, entry.data, revision);
+  const { warnings } = await checkedNamedParts(ctx, ctx.db, entry.data, revision);
   const result = await confirmAndWrite(ctx, {
     lines: partReport(current.data, entry.data),
     summary: `revision ${current.revision} -> ${current.revision + 1}, the parts of revision ${revision}`,
+    warnings,
     write: (meta) => parts.rollback(ctx.db, dataset, revision, { ...meta, baseRevision: current.revision }),
   });
   if (result !== null) reportStored(ctx, result, current.revision);
@@ -538,11 +555,12 @@ async function copyPartsToDev(ctx, prod, source, current) {
     ctx.out(`no change: ${ctx.dbName} revision ${current.revision} already names production revision ${source.revision}'s parts.`);
     return EXIT_OK;
   }
-  await checkedNamedParts(ctx, prod, source.data, source.revision);
+  const { warnings } = await checkedNamedParts(ctx, prod, source.data, source.revision);
   const base = current === null ? null : current.revision;
   const result = await confirmAndWrite(ctx, {
     lines: partReport(current === null ? null : current.data, source.data),
     summary: `production revision ${source.revision} into ${base === null ? "a new dataset" : `revision ${base + 1}`}`,
+    warnings,
     write: (meta) => parts.copy(prod, ctx.db, dataset, { ...meta, sourceRevision: source.revision, baseRevision: base }),
   });
   if (result !== null) reportStored(ctx, result, base);
@@ -579,12 +597,12 @@ async function rollback(ctx) {
     ctx.out(`no change: revision ${revision}'s data equals the current revision ${current.revision}; nothing written.`);
     return EXIT_OK;
   }
-  const issues = await storedIssues(ctx, ctx.db, found.entry.data);
-  if (issues.length > 0) throw refuseIssues(issues);
+  const warnings = await checkedWarnings(ctx, ctx.db, found.entry.data);
   const result = await confirmAndWrite(ctx, {
     before: current.data,
     after: found.entry.data,
     summary: `revision ${current.revision} -> ${current.revision + 1}, the data of revision ${revision}`,
+    warnings,
     write: (meta) => store.rollback(ctx.db, dataset, revision, { ...meta, baseRevision: current.revision }),
   });
   if (result !== null) reportStored(ctx, result, current.revision);
@@ -604,13 +622,13 @@ async function copyProdToDev(ctx) {
     ctx.out(`no change: ${ctx.dbName} revision ${current.revision} already holds production revision ${source.revision}'s data.`);
     return EXIT_OK;
   }
-  const issues = await storedIssues(ctx, ctx.db, source.data);
-  if (issues.length > 0) throw refuseIssues(issues);
+  const warnings = await checkedWarnings(ctx, ctx.db, source.data);
   const base = current === null ? null : current.revision;
   const result = await confirmAndWrite(ctx, {
     before: current === null ? null : current.data,
     after: source.data,
     summary: `production revision ${source.revision} into ${base === null ? "a new dataset" : `revision ${base + 1}`}`,
+    warnings,
     write: (meta) => store.copy(prod, ctx.db, dataset, { ...meta, sourceRevision: source.revision, baseRevision: base }),
   });
   if (result !== null) reportStored(ctx, result, base);
@@ -623,9 +641,9 @@ async function check(ctx) {
   const result = await checkStored(ctx.db, ctx.catalog, names);
   result.checked.forEach(({ dataset, revision }) => ctx.out(`checked  ${dataset} revision ${revision}`));
   result.missing.forEach((dataset) => ctx.out(`skipped  ${dataset}: no dataset yet in ${ctx.dbName}`));
+  printWarnings(ctx, result.warnings ?? []);
   if (result.issues.length > 0) {
-    const lines = result.issues.map((issue) => `  ${issue.dataset}  ${issue.path.join(".") || "(root)"}  ${issue.message}`);
-    ctx.err([`FAIL: ${result.issues.length} issue(s) in stored data:`, ...lines].join("\n"));
+    ctx.err([`FAIL: ${result.issues.length} issue(s) in stored data:`, ...result.issues.map((issue) => `  ${issueLine(issue)}`)].join("\n"));
     return EXIT_REFUSED;
   }
   ctx.out("OK: the stored data passes every check of this checkout.");

@@ -16,6 +16,9 @@
  * and a coverage check that every line has a weekday table. A parted dataset
  * is pulled into a directory and pushed back from it, keyed by `keyOf`, with a
  * report of every part and the same safety rules as a single document.
+ *
+ * A dataset's check may return a warning (`warning: true`): it is printed in
+ * the push report and in `check`, and refuses nothing (wave D review F1).
  */
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -658,5 +661,58 @@ describe("npm run data, a parted dataset's history", () => {
     expect(second).toMatch(/2-weekday\s+\{"trainCount":2\}/);
     expect(first).toMatch(/2-weekday\s+\{"trainCount":1\}/);
     expect(first).toMatch(/1-weekday\s+\{"trainCount":2\}/);
+  });
+});
+
+describe("npm run data, warnings", () => {
+  // WHY: the test catalog with one more check that only warns: a line with no holiday table.
+  const entry = tablesCatalog.datasets[DATASET];
+  const holidayWarnings = (tables: Table[]) => LINES.filter((line) => !tables.some((t) => t.line === line && t.dayType === "holiday")).map((line) => ({ path: [line], message: `line ${line} has no holiday table`, warning: true }));
+  const warningCatalog = { ...tablesCatalog, datasets: { [DATASET]: { ...entry, issuesOf: (tables: Table[]) => [...entry.issuesOf(tables), ...holidayWarnings(tables)] } } };
+
+  it("push prints each warning in the report, refuses nothing, and stores the next revision", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2), partOf(holiday1)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET], { catalog: warningCatalog });
+    writeJson(partFile("dev", "2-weekday.json"), table("2", "weekday", ["05:31", "05:45"]));
+
+    // Act
+    const result = await data(["push", DATASET], { catalog: warningCatalog });
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/changed\s+2-weekday/);
+    expect(result.out).toMatch(/warning\s+test-tables\s+2\s+line 2 has no holiday table\n/);
+    expect(result.out).not.toContain("line 1 has no holiday table");
+    expect(await revisionIn(devDb())).toBe(2);
+  });
+
+  it("push still refuses on an issue that is not a warning, printing the refusal", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET], { catalog: warningCatalog });
+    fs.rmSync(partFile("dev", "2-weekday.json"));
+
+    // Act
+    const result = await data(["push", DATASET], { catalog: warningCatalog });
+
+    // Assert
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("line 2 has no weekday table");
+    expect(await revisionIn(devDb())).toBe(1);
+  });
+
+  it("check prints the stored data's warnings and exits 0", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+
+    // Act
+    const result = await data(["check", DATASET], { catalog: warningCatalog });
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/warning\s+test-tables\s+1\s+line 1 has no holiday table\n/);
+    expect(result.out).toMatch(/warning\s+test-tables\s+2\s+line 2 has no holiday table\n/);
+    expect(result.out).toContain("OK");
   });
 });
