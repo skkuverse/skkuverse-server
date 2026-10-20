@@ -296,7 +296,7 @@ class KorailBuild(unittest.TestCase):
             handle.write(xlsx({"경부장항_평일_상": korail_sheet(UP_STATIONS, trains)}))
         with contextlib.redirect_stdout(io.StringIO()):
             convert.build_korail(directory, path, path)
-        with open(os.path.join(directory, "korail-1-weekday.json"), encoding="utf-8") as handle:
+        with open(os.path.join(directory, "KR-1-weekday.json"), encoding="utf-8") as handle:
             return {t["trainNo"]: t["destination"] for t in json.load(handle)["trains"]}
 
     def test_writes_each_train_with_the_destination_the_upstreams_write(self):
@@ -413,7 +413,7 @@ class SuinBundang(unittest.TestCase):
         cells = korail_sheet(K1_DOWN_STATIONS, trains)
         with contextlib.redirect_stdout(io.StringIO()):
             convert.build_korail_line(scratch.name, self.line, "weekday", xlsx({"평일하행": cells, "휴일하행": cells}))
-        with open(os.path.join(scratch.name, "korail-k1-weekday.json"), encoding="utf-8") as handle:
+        with open(os.path.join(scratch.name, "KR-K1-weekday.json"), encoding="utf-8") as handle:
             return {t["trainNo"]: t for t in json.load(handle)["trains"]}
 
     def test_maps_the_twenty_eight_covered_short_names_from_wangsimni_to_giheung(self):
@@ -472,7 +472,7 @@ class SuinBundang(unittest.TestCase):
         # Act
         with contextlib.redirect_stdout(io.StringIO()):
             convert.build_korail_line(scratch.name, self.line, "weekday", xlsx({"평일하행": cells, "휴일하행": cells}))
-        with open(os.path.join(scratch.name, "korail-k1-weekday.json"), encoding="utf-8") as handle:
+        with open(os.path.join(scratch.name, "KR-K1-weekday.json"), encoding="utf-8") as handle:
             built = {t["trainNo"]: t for t in json.load(handle)["trains"]}
 
         # Assert
@@ -488,6 +488,66 @@ class SuinBundang(unittest.TestCase):
         # Act & Assert
         with self.assertRaisesRegex(convert.ConvertError, "passes a station but is not numbered 63xx"):
             self.build({1: ("K6001", "모란", "신인천", local)})
+
+
+class Output(unittest.TestCase):
+    """The converter writes into the directory `npm run data -- pull subway-timetables` made, one file per part key."""
+
+    TRAIN = {"trainNo": "4004", "direction": "up", "destination": "진접", "express": False, "stops": [{"station": "S1-4-420", "arr": 36000, "dep": 36030}]}
+
+    def setUp(self):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.directory = scratch.name
+
+    def document(self, revision):
+        return convert.timetable("seoul-station-timetable", convert.SEOUL_API, revision, "S1", "4", "weekday", ["S1-4-420"], [dict(self.TRAIN)])
+
+    def write(self, document):
+        with contextlib.redirect_stdout(io.StringIO()):
+            convert.write(self.directory, line_of("4"), document)
+        with open(os.path.join(self.directory, "S1-4-weekday.json"), encoding="utf-8") as handle:
+            return json.load(handle)
+
+    def test_names_each_file_by_its_part_key(self):
+        # Act
+        self.write(self.document("2026-10-20"))
+
+        # Assert
+        self.assertEqual(os.listdir(self.directory), ["S1-4-weekday.json"])
+
+    def test_keeps_the_revision_of_a_pulled_part_whose_trains_are_unchanged(self):
+        # Arrange
+        pulled = self.document("2026-10-16")
+        with open(os.path.join(self.directory, "S1-4-weekday.json"), "w", encoding="utf-8") as handle:
+            handle.write(json.dumps(pulled, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+
+        # Act
+        written = self.write(self.document("2026-11-01"))
+
+        # Assert
+        self.assertEqual(written["source"]["revision"], "2026-10-16")
+
+    def test_writes_the_new_revision_when_a_train_changed(self):
+        # Arrange
+        self.write(self.document("2026-10-16"))
+        changed = self.document("2026-11-01")
+        changed["trains"][0]["stops"][0]["arr"] = 36060
+
+        # Act
+        written = self.write(changed)
+
+        # Assert
+        self.assertEqual(written["source"]["revision"], "2026-11-01")
+
+    def test_requires_the_output_directory(self):
+        # Act
+        with contextlib.redirect_stderr(io.StringIO()) as stderr, self.assertRaises(SystemExit) as caught:
+            convert.main(["--only", "korail"])
+
+        # Assert
+        self.assertEqual(caught.exception.code, 2)
+        self.assertIn("--out", stderr.getvalue())
 
 
 class CommittedSuinBundang(unittest.TestCase):
@@ -898,11 +958,13 @@ class CommittedTimetables(unittest.TestCase):
 
 class CommittedLineTables(unittest.TestCase):
     DAY_TYPES = {"korail": ("weekday", "holiday"), "seoul": ("weekday", "saturday", "holiday"), "shinbundang": ("weekday", "holiday")}
+    # The committed files keep the names the script wrote before it named a file by its part key.
+    COMMITTED_PREFIXES = {"KR": "korail", "S1": "seoul", "DX": "shinbundang"}
 
     def documents(self):
         for line in convert.LINES:
             for day_type in self.DAY_TYPES[line["source"]]:
-                name = "%s-%s.json" % (line["file"], day_type)
+                name = "%s-%s-%s.json" % (self.COMMITTED_PREFIXES[line["operator"]], line["line"].lower(), day_type)
                 with open(os.path.join(TIMETABLE_DIR, name), encoding="utf-8") as handle:
                     text = handle.read()
                 yield line, name, text, json.loads(text)

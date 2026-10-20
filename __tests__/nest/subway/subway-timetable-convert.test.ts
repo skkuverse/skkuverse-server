@@ -1,6 +1,8 @@
 /**
- * scripts/subway-timetable/convert.py builds the committed timetables in
- * src/subway/timetable/ (OpenSpec add-subway-arrivals, design D6). This
+ * scripts/subway-timetable/convert.py builds the subway timetables, one file
+ * per part of the subway-timetables dataset (OpenSpec add-subway-arrivals,
+ * design D6; move-reference-datasets, design D6), of which
+ * src/subway/timetable/ holds the copy revision 1 is pushed from. This
  * guards three things without the network or the Doppler key:
  *
  *   - the script's own rules (train-number normalization, Excel fractions to
