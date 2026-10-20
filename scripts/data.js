@@ -407,8 +407,11 @@ async function push(ctx) {
   return EXIT_OK;
 }
 
-/** One line per key of either manifest: `unchanged`, `changed` with its summary's differences, `added` or `removed`. */
-function partReport(before, after) {
+/**
+ * One line per key of either manifest: `unchanged`, `changed` with its summary's differences (and, from
+ * `changesByKey`, what the catalog's `changesOf` read between the stored and the pushed part), `added` or `removed`.
+ */
+function partReport(before, after, changesByKey = new Map()) {
   const beforeByKey = new Map((before?.parts ?? []).map((entry) => [entry.key, entry]));
   const afterByKey = new Map(after.parts.map((entry) => [entry.key, entry]));
   const keys = [...new Set([...beforeByKey.keys(), ...afterByKey.keys()])].sort();
@@ -418,7 +421,8 @@ function partReport(before, after) {
     if (was === undefined) return `added      ${key}  ${show(is.summary)}`;
     if (was.partId === is.partId) return `unchanged  ${key}`;
     const differences = diffLines(was.summary, is.summary).map((line) => line.slice(2));
-    return `changed    ${key}  ${differences.length > 0 ? differences.join("; ") : "same summary, other content"}`;
+    const described = [differences.length > 0 ? differences.join("; ") : "same summary, other content", ...(changesByKey.get(key) ?? [])];
+    return `changed    ${key}  ${described.join("; ")}`;
   });
 }
 
@@ -440,6 +444,17 @@ async function readNamedParts(ctx, db, manifest, revision) {
     throw new Refusal(`${ctx.args.dataset} revision ${revision} names ${found.missing.length} part(s) not stored in ${db.databaseName}: ${found.missing.join(", ")}`);
   }
   return found.parts;
+}
+
+/** By changed key, the catalog's `changesOf(stored, pushed)` over the parsed parts; none when the catalog has no `changesOf`. */
+async function partChanges(ctx, current, checked) {
+  const { schema, changesOf } = ctx.catalog.datasets[ctx.args.dataset].parts;
+  if (!changesOf) return new Map();
+  const pushedIds = new Map(checked.manifest.parts.map((entry) => [entry.key, entry.partId]));
+  const changed = current.data.parts.filter((entry) => pushedIds.has(entry.key) && pushedIds.get(entry.key) !== entry.partId);
+  const { parts: stored } = await parts.readParts(ctx.db, { parts: changed });
+  const pushedByKey = new Map(checked.parts.map((part) => [part.key, part.data]));
+  return new Map(stored.map(({ key, data }) => [key, changesOf(schema.parse(data), pushedByKey.get(key))]));
 }
 
 async function pullParts(ctx, current) {
@@ -482,7 +497,7 @@ async function pushParts(ctx) {
   }
   if (current.revision !== working.baseRevision) throw refusalOf({ reason: "conflict", current }, ctx, working.baseRevision);
   const result = await confirmAndWrite(ctx, {
-    lines: partReport(current.data, checked.manifest),
+    lines: partReport(current.data, checked.manifest, await partChanges(ctx, current, checked)),
     summary: `revision ${current.revision} -> ${current.revision + 1}`,
     write: (meta) => parts.push(ctx.db, dataset, checked.parts, { ...meta, baseRevision: working.baseRevision }),
   });

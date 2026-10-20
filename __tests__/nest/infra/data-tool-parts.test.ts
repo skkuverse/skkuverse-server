@@ -296,13 +296,13 @@ interface Ran {
 }
 
 /** Runs the tool as `npm run data -- <argv>` would, over the test catalog and the test mongod. */
-async function data(argv: string[], options: { isTTY?: boolean; answer?: string } = {}): Promise<Ran> {
+async function data(argv: string[], options: { isTTY?: boolean; answer?: string; catalog?: unknown } = {}): Promise<Ran> {
   const out: string[] = [];
   const err: string[] = [];
   const code = await run(argv, {
     env: { MONGO_URL: mongoUrl, MONGO_CONTENT_DB_NAME: BASE },
     root,
-    catalog: tablesCatalog,
+    catalog: options.catalog ?? tablesCatalog,
     stdout: { write: (text: string) => out.push(text) },
     stderr: { write: (text: string) => err.push(text) },
     isTTY: options.isTTY ?? false,
@@ -366,6 +366,24 @@ describe("npm run data, a parted dataset", () => {
     expect(header.data.parts.map((entry: ManifestEntry) => entry.key)).toEqual(["1-weekday", "2-holiday", "2-weekday"]);
     expect(header.data.parts[0].partId).toBe(partIdOf(weekday1));
     expect(readJson(path.join(workingDir("dev"), "working.json"))).toMatchObject({ baseRevision: 2, manifest: header.data });
+  });
+
+  it("reports a changed part's content differences, read against the stored part, when the catalog describes them", async () => {
+    // Arrange
+    const entry = tablesCatalog.datasets[DATASET];
+    const changesOf = (was: Table, is: Table) => [`trains +${is.trains.filter((t) => !was.trains.includes(t)).join(",")} -${was.trains.filter((t) => !is.trains.includes(t)).join(",")}`];
+    const describing = { ...tablesCatalog, datasets: { [DATASET]: { ...entry, parts: { ...entry.parts, changesOf } } } };
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET], { catalog: describing });
+    writeJson(partFile("dev", "2-weekday.json"), table("2", "weekday", ["05:45"]));
+
+    // Act
+    const result = await data(["push", DATASET, "--dry-run"], { catalog: describing });
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/changed\s+2-weekday\s+same summary, other content; trains \+05:45 -05:31\n/);
+    expect(result.out).toMatch(/unchanged\s+1-weekday\n/);
   });
 
   it("refuses two files with the same key, naming both, and writes nothing", async () => {
