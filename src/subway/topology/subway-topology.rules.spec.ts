@@ -14,12 +14,25 @@
  * else the station of a platform the code serves. A topology pushed ahead of
  * a deploy can promote a neighbor to a served platform the running code does
  * not know yet, dropping the neighbor entry that named it.
+ *
+ * toRouteIssues checks a topology against each served platform's timetable
+ * routes, as the tracker follows them: a direction's upstream platforms are
+ * the three stops before it on the route, nearest first, its next platform
+ * the stop after it, and its watched platforms the rest of the route before
+ * the upstream ones, nearest first; and every stop on the route before the
+ * platform is a served platform or a neighbor, so the pollers can name it.
+ * Revision 1 holds against the committed timetables of every day type.
  */
+import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
+import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
+import type { HolidaysService } from "../../holidays/holidays.service";
+import { SubwayTimetableService } from "../timetable/subway-timetable.service";
+import type { LineRoutes } from "../timetable/subway-timetable.types";
 import { SUBWAY_LINES, SUBWAY_NETWORK, SUBWAY_STATIONS } from "../subway.constants";
 import type { SubwayNetwork } from "../subway.types";
 import { toSubwayRegistry } from "./subway-topology.mapper";
-import { toMissingPlatformIds, toTopologyIssues, toUnknownPlatformIds, toUnnamedStopIds } from "./subway-topology.rules";
+import { toMissingPlatformIds, toRouteIssues, toTopologyIssues, toUnknownPlatformIds, toUnnamedStopIds } from "./subway-topology.rules";
 import type { SubwayTopologyData } from "./subway-topology.types";
 
 const NETWORK: SubwayNetwork = { lines: SUBWAY_LINES, stations: SUBWAY_STATIONS };
@@ -170,5 +183,81 @@ describe("toUnnamedStopIds", () => {
 
     // Act & Assert
     expect(unnamedIn(data)).toEqual([]);
+  });
+});
+
+describe("toRouteIssues", () => {
+  // WHY: a Friday, a Saturday and a Sunday, so every day type's table gives its routes.
+  const DAYS = ["2026-10-16T03:00:00Z", "2026-10-17T03:00:00Z", "2026-10-18T03:00:00Z"];
+
+  async function committedRoutes(): Promise<Record<string, LineRoutes[]>> {
+    const service = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
+    const schedules = (await Promise.all(DAYS.map((day) => service.listPlatformSchedules(new Date(day))))).flat();
+    const routesByPlatformId: Record<string, LineRoutes[]> = {};
+    for (const { platform, lineRoutes } of schedules) (routesByPlatformId[platform.id] ??= []).push(lineRoutes);
+    return routesByPlatformId;
+  }
+
+  const routeIssueLinesOf = async (topology: Record<string, any>): Promise<string[]> =>
+    toRouteIssues(topology as SubwayTopologyData, await committedRoutes()).map((issue) => `${issue.path.join(".")}: ${issue.message}`);
+
+  it("finds no issue in revision 1 against the committed timetables of every day type", async () => {
+    // Act
+    const lines = await routeIssueLinesOf(fixture());
+
+    // Assert
+    expect(lines).toEqual([]);
+  });
+
+  it.each([
+    [
+      "Upstream reordered: 혜화 down's second and third upstream platforms swapped",
+      (data: Record<string, any>) => {
+        const ids = data.platforms["S1-4-420"].down.upstreamPlatformIds;
+        [ids[1], ids[2]] = [ids[2], ids[1]];
+      },
+      /^platforms\.S1-4-420\.down\.upstreamPlatformIds: .*"S1-4-419","S1-4-418","S1-4-417"/,
+    ],
+    [
+      "a next platform that is not the stop after the platform",
+      (data: Record<string, any>) => (data.platforms["KR-1-0153"].up.nextPlatformId = "KR-1-P151"),
+      /^platforms\.KR-1-0153\.up\.nextPlatformId: .*"KR-1-P152"/,
+    ],
+    [
+      "watched platforms out of route order",
+      (data: Record<string, any>) => data.platforms["KR-1-0153"].down.watchedPlatformIds.reverse(),
+      /^platforms\.KR-1-0153\.down\.watchedPlatformIds: .*"KR-1-P149","KR-1-P148","KR-1-P147"/,
+    ],
+    [
+      "Watched platform dropped with its neighbor: 성균관대 down without 안양 (KR-1-P147)",
+      (data: Record<string, any>) => {
+        data.platforms["KR-1-0153"].down.watchedPlatformIds.pop();
+        delete data.neighbors["KR-1-P147"];
+      },
+      /^platforms\.KR-1-0153\.down: "KR-1-P147" .*neither a served platform nor a neighbor/,
+    ],
+  ])("reports %s, with its path", async (_case, arrange, issue) => {
+    // Arrange
+    const data = fixture();
+    arrange(data);
+
+    // Act
+    const lines = await routeIssueLinesOf(data);
+
+    // Assert
+    expect(lines).toEqual(expect.arrayContaining([expect.stringMatching(issue)]));
+  });
+
+  it("checks only the platforms that have both an entry and routes, leaving the unplaced and unknown ones to toTopologyIssues", async () => {
+    // Arrange
+    const data = fixture();
+    delete data.platforms["S1-2-222"];
+    data.platforms["S1-9-999"] = data.platforms["S1-4-420"];
+
+    // Act
+    const lines = await routeIssueLinesOf(data);
+
+    // Assert
+    expect(lines).toEqual([]);
   });
 });
