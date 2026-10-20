@@ -43,7 +43,7 @@ export class SubwayTimetableService {
   private toPlatformSchedule(platform: NetworkPlatform, serviceDate: string, isPublicHoliday: boolean): PlatformSchedule {
     const dayType = toDayType(platform.timetable.source, serviceDate, isPublicHoliday);
     const timetable = findTimetable(SUBWAY_TIMETABLES, platform, dayType);
-    // WHY: unreachable: assertTimetablesCover stops the boot when a declared day type has no table.
+    // WHY: unreachable: the coverage check in subway-timetable.config stops the boot when a declared day type has no table.
     if (!timetable) throw new Error(`subway timetables: no ${dayType} table for ${platform.id}`);
     return { platform, serviceDate, dayType, lineRoutes: toLineRoutes(timetable), trains: toScheduledTrains(timetable, serviceDate) };
   }

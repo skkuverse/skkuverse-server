@@ -29,6 +29,15 @@
  *
  * `issuesOf`, `referencesOf` and `idsOf` take the schema's parsed output.
  *
+ * A parted dataset (scripts/lib/datasets/parts.js) declares `parts` in place
+ * of `schema`:
+ *
+ *   parts.schema     the zod schema the server parses each part with
+ *   parts.keyOf      the part's key, from its own fields
+ *   parts.summaryOf  what `history` and the push report show of a part
+ *
+ * and its `issuesOf` and `referencesOf` take the parsed parts, ordered by key.
+ *
  * A code-held source is an identity list that still lives in code, resolved
  * against the compiled checkout (move-editorial-datasets D3):
  *
@@ -95,14 +104,16 @@ function loadCatalog(load) {
   const { toRouteIssues, toTopologyIssues } = load("subway/topology/subway-topology.rules");
   const { SUBWAY_TIMETABLES } = load("subway/timetable/subway-timetable.config");
   const { TIMETABLE_DAY_TYPES } = load("subway/timetable/subway-timetable.constants");
-  const { findTimetable, toLineRoutes } = load("subway/timetable/subway-timetable.rules");
+  const { findTimetable, toLineRoutes, toTimetableCoverageIssues, toTimetableKey } = load("subway/timetable/subway-timetable.rules");
+  const { timetableFile } = load("subway/timetable/subway-timetable.schema");
 
   const grammar = { parseTarget: parseMiniAppTarget };
   const registryParts = { toMiniAppRegistry, parseMiniAppTarget, isSingleEmoji, webOrigin: WEB_ORIGIN };
   const busGroups = codeHeldSource("src/bus", toBusGroupIds(JONGRO_ROUTES));
   const jongroRoutes = codeHeldSource("src/bus", JONGRO_ROUTES.map((route) => route.id));
   const subwayStations = codeHeldSource("src/subway", new SubwayStationsService().listStations().map((station) => station.id));
-  const subwayPlatforms = codeHeldSource("src/subway", SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)));
+  const servedPlatforms = SUBWAY_STATIONS.flatMap((station) => station.platforms);
+  const subwayPlatforms = codeHeldSource("src/subway", servedPlatforms.map((platform) => platform.id));
   // A topology is checked against this checkout's network, which must hold together first; its issues name the constants.
   const networkIssues = toNetworkIssues(SUBWAY_NETWORK).map((issue) => ({ path: ["SUBWAY_NETWORK", ...issue.path], message: `src/subway/subway.constants.ts: ${issue.message}` }));
   // WHY: the committed timetables are this checkout's until wave D (move-reference-datasets D5) stores them; then
@@ -195,6 +206,17 @@ function loadCatalog(load) {
         owner: "src/subway/topology",
         schema: subwayTopologyDataset,
         issuesOf: topologyIssues,
+        referencesOf: () => [],
+      },
+      // One table per operator line and day type, a part each; every served platform needs one per day type its source declares (move-reference-datasets D5, D6).
+      "subway-timetables": {
+        owner: "src/subway/timetable",
+        parts: {
+          schema: timetableFile,
+          keyOf: toTimetableKey,
+          summaryOf: (table) => ({ source: table.source, trainCount: table.trains.length }),
+        },
+        issuesOf: (tables) => toTimetableCoverageIssues(tables, servedPlatforms),
         referencesOf: () => [],
       },
     },

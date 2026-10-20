@@ -3,14 +3,14 @@
  * midnight is the previous day's), which day type each timetable source serves on a date, and how a
  * timetable's seconds become instants. Also the code's platforms, each found by its KRIC id with its line and
  * timetable source, and revision 1 of the stored topology's upstream, watched and next platforms and direction
- * names for each; which committed table a platform reads, the travel order of a line per direction, and the boot
- * check that every source's declared day types have a table.
+ * names for each; which table a platform reads, the travel order of a line per direction, each table's key, and
+ * the push check that every served platform's source has a table for each day type it declares.
  */
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
 import type { NetworkPlatform } from "../subway.types";
 import { SUBWAY_TIMETABLES } from "./subway-timetable.config";
+import { TIMETABLE_DAY_TYPES } from "./subway-timetable.constants";
 import {
-  assertTimetablesCover,
   findSubwayPlatform,
   findTimetable,
   isInServiceWindow,
@@ -20,6 +20,8 @@ import {
   toScheduledTrains,
   toServiceDate,
   toServiceInstant,
+  toTimetableCoverageIssues,
+  toTimetableKey,
 } from "./subway-timetable.rules";
 import type { Timetable } from "./subway-timetable.types";
 
@@ -190,22 +192,76 @@ describe("toLineRoutes", () => {
   });
 });
 
-describe("assertTimetablesCover", () => {
-  it("passes for the committed tables", () => {
-    // Act & Assert
-    expect(() => assertTimetablesCover(listSubwayPlatforms(), SUBWAY_TIMETABLES)).not.toThrow();
+describe("toTimetableKey", () => {
+  it.each([
+    ["1호선's weekday table", { operator: "KR", line: "1", dayType: "weekday" }, "KR-1-weekday"],
+    ["4호선's Saturday table", { operator: "S1", line: "4", dayType: "saturday" }, "S1-4-saturday"],
+    ["신분당선's holiday table", { operator: "DX", line: "D1", dayType: "holiday" }, "DX-D1-holiday"],
+  ] as const)("keys %s by its operator, line and day type", (_label, fields, key) => {
+    // Act
+    const tableKey = toTimetableKey(table(fields));
+
+    // Assert
+    expect(tableKey).toBe(key);
+  });
+});
+
+describe("toTimetableCoverageIssues", () => {
+  // WHY: one small table per day type each served platform's source declares, the coverage a push must hold.
+  const covering = (): Timetable[] => {
+    const keys = listSubwayPlatforms().flatMap((platform) =>
+      TIMETABLE_DAY_TYPES[platform.timetable.source].map((dayType) => ({ operator: platform.id.split("-")[0] ?? "", line: platform.line, dayType })),
+    );
+    return [...new Map(keys.map((fields) => [`${fields.operator}-${fields.line}-${fields.dayType}`, table(fields)])).values()];
+  };
+
+  it("returns none for one table per day type of every served platform's source", () => {
+    // Act
+    const issues = toTimetableCoverageIssues(covering(), listSubwayPlatforms());
+
+    // Assert
+    expect(covering()).toHaveLength(18);
+    expect(issues).toEqual([]);
   });
 
-  it("names every platform and day type its source declares but no table serves", () => {
+  it("returns none for the committed tables", () => {
+    // Act & Assert
+    expect(toTimetableCoverageIssues(SUBWAY_TIMETABLES, listSubwayPlatforms())).toEqual([]);
+  });
+
+  it("Missing Saturday table: names S1-4-420 saturday and KR-1-0153 holiday at their tables' keys", () => {
     // Arrange
-    const withoutSaturdayOrKorailHoliday = SUBWAY_TIMETABLES.filter(
+    const withoutSaturdayOrKorailHoliday = covering().filter(
       (t) => !(t.line === "4" && t.dayType === "saturday") && !(t.line === "1" && t.dayType === "holiday"),
     );
 
-    // Act & Assert
-    expect(() => assertTimetablesCover(listSubwayPlatforms(), withoutSaturdayOrKorailHoliday)).toThrow(
-      "subway timetables: no table for KR-1-0153 holiday, S1-4-420 saturday",
-    );
+    // Act
+    const issues = toTimetableCoverageIssues(withoutSaturdayOrKorailHoliday, listSubwayPlatforms());
+
+    // Assert
+    expect(issues).toEqual([
+      { path: ["KR-1-holiday"], message: "no table for KR-1-0153 holiday" },
+      { path: ["S1-4-saturday"], message: "no table for S1-4-420 saturday" },
+    ]);
+  });
+
+  it("names every platform a missing table serves, once at its key", () => {
+    // Arrange
+    const withoutLine2Saturday = covering().filter((t) => !(t.line === "2" && t.dayType === "saturday"));
+
+    // Act
+    const issues = toTimetableCoverageIssues(withoutLine2Saturday, listSubwayPlatforms());
+
+    // Assert
+    expect(issues).toEqual([{ path: ["S1-2-saturday"], message: "no table for S1-2-216 saturday, S1-2-222 saturday" }]);
+  });
+
+  it("asks a table of no platform it is not handed", () => {
+    // Act
+    const issues = toTimetableCoverageIssues([], [HYEHWA]);
+
+    // Assert
+    expect(issues.map((issue) => issue.path[0])).toEqual(["S1-4-weekday", "S1-4-saturday", "S1-4-holiday"]);
   });
 });
 
