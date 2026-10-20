@@ -30,6 +30,8 @@ interface HeldTimetable {
   lastServiceDate: string;
 }
 
+type TableSchedule = Pick<PlatformSchedule, "lineRoutes" | "trains">;
+
 interface ServiceDay {
   serviceDate: string;
   isPublicHoliday: boolean;
@@ -69,9 +71,10 @@ export class SubwayTimetableService {
     const day = await this.toServiceDay(now);
     const platforms = listSubwayPlatforms();
     const tables = await this.findTables(platforms.map((platform) => this.keyOf(platform, day)), day);
+    const tableScheduleByKey = new Map([...tables].flatMap(([key, table]) => (table ? [[key, this.toTableSchedule(table, day)] as const] : [])));
     const schedules = platforms.flatMap((platform) => {
-      const table = tables.get(this.keyOf(platform, day));
-      return table ? [this.toPlatformSchedule(platform, day, table)] : [];
+      const tableSchedule = tableScheduleByKey.get(this.keyOf(platform, day));
+      return tableSchedule ? [this.toPlatformSchedule(platform, day, tableSchedule)] : [];
     });
     const missingKeys = [...tables].filter(([, table]) => table === null).map(([key]) => key);
     return { schedules, unavailable: missingKeys.length > 0 ? new SubwayTimetablesUnavailableError(missingKeys) : null };
@@ -84,7 +87,7 @@ export class SubwayTimetableService {
     const key = this.keyOf(platform, day);
     const table = (await this.findTables([key], day)).get(key);
     if (!table) throw new SubwayTimetablesUnavailableError([key]);
-    return this.toPlatformSchedule(platform, day, table);
+    return this.toPlatformSchedule(platform, day, this.toTableSchedule(table, day));
   }
 
   async isInServiceWindow(now: Date): Promise<boolean> {
@@ -103,9 +106,15 @@ export class SubwayTimetableService {
     return toPlatformTimetableKey(platform, toDayType(platform.timetable.source, serviceDate, isPublicHoliday));
   }
 
-  private toPlatformSchedule(platform: NetworkPlatform, { serviceDate, isPublicHoliday }: ServiceDay, table: Timetable): PlatformSchedule {
+  // WHY: a tick converts tens of thousands of stops, so a table's routes and trains are converted once per call and
+  // shared by its platforms, not once per platform; consumers sort only arrays they derive.
+  private toTableSchedule(table: Timetable, { serviceDate }: ServiceDay): TableSchedule {
+    return { lineRoutes: toLineRoutes(table), trains: toScheduledTrains(table, serviceDate) };
+  }
+
+  private toPlatformSchedule(platform: NetworkPlatform, { serviceDate, isPublicHoliday }: ServiceDay, tableSchedule: TableSchedule): PlatformSchedule {
     const dayType = toDayType(platform.timetable.source, serviceDate, isPublicHoliday);
-    return { platform, serviceDate, dayType, lineRoutes: toLineRoutes(table), trains: toScheduledTrains(table, serviceDate) };
+    return { platform, serviceDate, dayType, ...tableSchedule };
   }
 
   // WHY: eviction runs per call, so a process holds at most one day type per line (move-reference-datasets D7).
