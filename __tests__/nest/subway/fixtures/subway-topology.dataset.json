@@ -1,5 +1,5 @@
 {
-  "_about": "Revision 1 of the subway-topology dataset: src/subway/subway-registry.json as production served it at commit d856f333 (captured 2026-10-20), its platform directions keyed by platform id in the registry order, and its neighbors. The lines, stations and platform identities stay in code as SUBWAY_LINES and SUBWAY_STATIONS (move-reference-datasets D2, D3 and D14). Not trimmed.",
+  "_about": "Revision 1 of the subway-topology dataset: the committed subway registry file as production served it at commit d856f333 (captured 2026-10-20; the file was deleted in move-reference-datasets task 10.6), its platform directions keyed by platform id in the registry order, and its neighbors. The lines, stations and platform identities stay in code as SUBWAY_LINES and SUBWAY_STATIONS (move-reference-datasets D2, D3 and D14). Not trimmed.",
   "platforms": {
     "KR-1-0153": {
       "up": {

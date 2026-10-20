@@ -1,4 +1,6 @@
-import type { NetworkIssue, PlatformDirection, SubwayDirection, SubwayNetwork } from "../subway.types";
+import { MAX_UPSTREAM_PLATFORMS, SUBWAY_STATIONS } from "../subway.constants";
+import type { NetworkIssue, PlatformDirection, SubwayDirection, SubwayNetwork, SubwayRegistry } from "../subway.types";
+import type { LineRoutes } from "../timetable/subway-timetable.types";
 import type { SubwayTopologyData } from "./subway-topology.types";
 
 type IssuePath = NetworkIssue["path"];
@@ -68,4 +70,47 @@ export function toTopologyIssues(topology: SubwayTopologyData, network: SubwayNe
     ...namedPlatformIssues(topology, network),
     ...neighborLineIssues(topology, network),
   ];
+}
+
+// WHY: the stops the arrivals mapper serves as null, named as it names them: a topology pushed ahead of a deploy may
+// promote a neighbor to a platform the running code does not serve yet, dropping the entry that named it.
+export function toUnnamedStopIds(registry: SubwayRegistry): string[] {
+  const servedIds = new Set(SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)));
+  const stopIds = registry.stations.flatMap((station) =>
+    station.platforms.flatMap((platform) => DIRECTIONS.flatMap((direction) => [platform.directions[direction].upstreamPlatformIds[0], platform.directions[direction].nextPlatformId])),
+  );
+  const isUnnamed = (id: string): boolean => !servedIds.has(id) && registry.neighbors[id]?.name === undefined;
+  return [...new Set(stopIds.filter((id): id is string => id !== undefined && isUnnamed(id)))];
+}
+
+const ROUTE_PLACES = { upstreamPlatformIds: "the stops before", watchedPlatformIds: "the stops before the upstream ones of", nextPlatformId: "the stop after" } as const;
+
+function directionRouteIssues(at: IssuePath, direction: PlatformDirection, { route, platformId }: { route: readonly string[]; platformId: string }): NetworkIssue[] {
+  const index = route.indexOf(platformId);
+  if (index === -1) return [{ path: at, message: `"${platformId}" is not on its timetable route` }];
+  const start = Math.max(0, index - MAX_UPSTREAM_PLATFORMS);
+  const expected = { upstreamPlatformIds: route.slice(start, index).reverse(), watchedPlatformIds: route.slice(0, start).reverse(), nextPlatformId: route[index + 1] ?? null };
+  return (Object.keys(ROUTE_PLACES) as Array<keyof typeof ROUTE_PLACES>)
+    .filter((key) => JSON.stringify(direction[key]) !== JSON.stringify(expected[key]))
+    .map((key) => ({ path: [...at, key], message: `must be ${JSON.stringify(expected[key])}, ${ROUTE_PLACES[key]} "${platformId}" on its timetable route, nearest first` }));
+}
+
+// WHY: the tracker follows every stop on the route before a served platform, and the pollers name a stop's rows only by
+// a served platform or a neighbor (spec "Topology push follows the timetable routes"). Each route is one day type's.
+export function toRouteIssues(topology: SubwayTopologyData, routesByPlatformId: Readonly<Record<string, readonly LineRoutes[]>>): NetworkIssue[] {
+  const isNamedStop = (id: string): boolean => Object.hasOwn(routesByPlatformId, id) || Object.hasOwn(topology.neighbors, id);
+  const issues = Object.entries(routesByPlatformId).flatMap(([platformId, routes]) =>
+    routes.flatMap((lineRoutes) =>
+      DIRECTIONS.flatMap((direction): NetworkIssue[] => {
+        const directions = topology.platforms[platformId];
+        if (directions === undefined) return [];
+        const at = ["platforms", platformId, direction];
+        const route = lineRoutes[direction];
+        const unnamed = route.slice(0, Math.max(0, route.indexOf(platformId))).filter((id) => !isNamedStop(id));
+        const unnamedIssues = unnamed.map((id) => ({ path: at, message: `"${id}" is on the timetable route the tracker follows to "${platformId}", and is neither a served platform nor a neighbor` }));
+        return [...directionRouteIssues(at, directions[direction], { route, platformId }), ...unnamedIssues];
+      }),
+    ),
+  );
+  return [...new Map(issues.map((issue) => [`${issue.path.join(".")}: ${issue.message}`, issue])).values()];
 }

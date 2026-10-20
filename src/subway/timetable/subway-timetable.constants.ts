@@ -21,3 +21,8 @@ export const SERVICE_WINDOW_CLOSES_SEC: Readonly<Record<DayType, number>> = {
   saturday: 24 * HOUR_SEC + 30 * MINUTE_SEC,
   holiday: 24 * HOUR_SEC + 30 * MINUTE_SEC,
 };
+
+export const SUBWAY_TIMETABLES_DATASET = "subway-timetables";
+
+// WHY: a missing, invalid or unreadable dataset recurs on every read; one line a minute, as docs/reference/logging.md asks.
+export const TIMETABLES_LOG_INTERVAL_MS = 60_000;

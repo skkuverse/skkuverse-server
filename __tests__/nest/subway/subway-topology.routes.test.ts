@@ -13,7 +13,9 @@
  *   upstream call.
  * - A served platform the stored topology lacks is left out of its station,
  *   which answers 200 with its other platform; an entry for a platform the
- *   code does not serve changes no answer.
+ *   code does not serve changes no answer, and a neighbor such a push promotes
+ *   to a served platform, its neighbor entry dropped, is served as a null
+ *   previous or next station.
  * - The Seoul API poller matches rows at a neighbor a push adds once the TTL
  *   has passed, and keeps matching with the last good topology through a
  *   failed reload.
@@ -257,6 +259,24 @@ describe("GET /subway/stations/:stationId/arrivals with the stored topology", ()
     // Assert
     expect(answers.map(([pushed]) => JSON.parse(pushed!).data.station.id)).toEqual(stationIds);
     for (const [pushed, expected] of answers) expect(pushed).toBe(expected);
+  });
+
+  it("Topology pushed ahead of a deploy: answers Sungkyunkwan 200, its previous station up and next station down null, when a push promotes neighbor KR-1-P154 to a platform", async () => {
+    // Arrange
+    const ahead = subwayTopologyFixture();
+    ahead.platforms["KR-1-P154"] = ahead.platforms["KR-1-0153"]!;
+    delete ahead.neighbors["KR-1-P154"];
+    const app = await boot(storesHolding(ahead));
+
+    // Act
+    const res = await arrivalsOf(app, "sungkyunkwan", "en");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(directionsOf(res.body, "KR-1-0153")?.map(({ direction, previousStation, nextStation }) => [direction, previousStation, nextStation])).toEqual([
+      ["up", null, { id: "KR-1-P152", name: "Uiwang" }],
+      ["down", { id: "KR-1-P152", name: "Uiwang" }, null],
+    ]);
   });
 
   it("answers 404 SUBWAY_STATION_NOT_FOUND for a platform id, which the topology keys but no station is", async () => {

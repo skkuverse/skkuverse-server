@@ -1,7 +1,7 @@
 /**
  * SubwayTrackingService over FakeSubwayRepository (through the real
  * SubwayStateService), the real timetable door
- * (on FakeHolidaysService and the committed weekday tables), the real estimate
+ * (on FakeHolidaysService and the committed tables, stored in a fake), the real estimate
  * door and a scripted Clock, fed one upstream's observations per tick as the
  * pollers hand them. What it guards: each tick replaces both stations'
  * documents with their next three trains per direction, at absolute instants
@@ -26,15 +26,17 @@
  * and leaves the countdown memory to the ticks. On a trainset line (a synthetic Shinbundang timetable, hand-written
  * in the shape scripts/subway-timetable/convert.py writes for it, on a fake timetable door), an observed trainset
  * becomes the history of the run it is matched to, which the tick's listeners see, and is served at that run's
- * scheduled arrival plus its delay; a trainset that matches no run is not served.
+ * scheduled arrival plus its delay; a trainset that matches no run is not served. A tick that needs a table its
+ * process cannot read writes every other platform, hands them to its listeners, then rejects with the 503
+ * SUBWAY_TIMETABLES_UNAVAILABLE naming the table (move-reference-datasets D7).
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
-import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { FakeSubwayTimetableService } from "../../../__tests__/helpers/fakes/subway/subway-timetable.service.fake";
+import type { FakeSubwayTimetableRepository } from "../../../__tests__/helpers/fakes/subway/subway-timetable.repository.fake";
 import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/subway.repository.fake";
-import type { HolidaysService } from "../../holidays/holidays.service";
+import { storedSubwayTimetableRepository, storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
@@ -44,7 +46,7 @@ import { SUBWAY_STATIONS } from "../subway.constants";
 import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
 import type { CountdownRow, SubwayPlatform, SubwayProvider, TrainEvent } from "../subway.types";
-import { SubwayTimetableService } from "../timetable/subway-timetable.service";
+import type { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import type { Timetable } from "../timetable/subway-timetable.types";
 import { SubwayTrackingService } from "./subway-tracking.service";
 import type { TrackedTick } from "./subway-tracking.types";
@@ -55,11 +57,11 @@ const HYEHWA = "S1-4-420";
 
 const onSaturday = (kst: string): Date => new Date(`2026-10-17T${kst}+09:00`);
 
-function setup(atKst = at) {
+function setup(atKst = at, timetables: FakeSubwayTimetableRepository = storedSubwayTimetableRepository()) {
   let now = atKst("20:39:10");
   const repository = new FakeSubwayRepository();
-  const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
   const clock = { now: () => now } as Clock;
+  const timetable = storedSubwayTimetableService({ repository: timetables, clock });
   const service = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(repository)), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   new SubwayMatchingService(service, clock).onModuleInit();
   const tickAt = (kst: string, provider: SubwayProvider): Promise<void> => {
@@ -497,6 +499,54 @@ const SUIN_BUNDANG_WEEKDAY: Timetable = {
   stations: JEONGJA_SUIN_BUNDANG_STATIONS,
   trains: [{ ...shinbundangRun("6180", "up", "21:01", [...JEONGJA_SUIN_BUNDANG_STATIONS].reverse()), destination: "왕십리" }],
 };
+
+describe("SubwayTrackingService.track without a table", () => {
+  function setupWithoutKorailWeekday() {
+    const timetables = storedSubwayTimetableRepository();
+    const parts = (timetables.header?.data as { parts: Array<{ key: string; partId: string }> }).parts;
+    timetables.parts.delete(parts.find((part) => part.key === "KR-1-weekday")?.partId ?? "");
+    return setup(at, timetables);
+  }
+
+  it("Poller tick without a table: writes every other platform's arrivals, then rejects with SUBWAY_TIMETABLES_UNAVAILABLE naming KR-1-weekday", async () => {
+    // Arrange
+    const { repository, tickAt } = setupWithoutKorailWeekday();
+
+    // Act
+    const tick = tickAt("20:39:10", api());
+
+    // Assert
+    await expect(tick).rejects.toMatchObject({ name: "SubwayTimetablesUnavailableError", code: "SUBWAY_TIMETABLES_UNAVAILABLE", httpStatus: 503, keys: ["KR-1-weekday"] });
+    const others = SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)).filter((id) => id !== SUNGKYUNKWAN);
+    expect([...repository.docs.keys()]).toEqual(others);
+  });
+
+  it("hands its listeners the platforms it scheduled before it rejects", async () => {
+    // Arrange
+    const { service, tickAt } = setupWithoutKorailWeekday();
+    const ticks: TrackedTick[] = [];
+    service.addTickListener(async (tick) => {
+      ticks.push(tick);
+    });
+
+    // Act
+    await tickAt("20:39:10", api()).catch(() => undefined);
+
+    // Assert
+    expect(ticks.map((tick) => tick.platforms.length)).toEqual([12]);
+  });
+
+  it("finds no timetable-only document for 성균관대 but rejects with the unavailable error", async () => {
+    // Arrange
+    const { service } = setupWithoutKorailWeekday();
+
+    // Act
+    const doc = service.findScheduledArrivals(SUNGKYUNKWAN, at("20:39:10"));
+
+    // Assert
+    await expect(doc).rejects.toMatchObject({ code: "SUBWAY_TIMETABLES_UNAVAILABLE", keys: ["KR-1-weekday"] });
+  });
+});
 
 const JEONGJA_SUIN_BUNDANG: SubwayPlatform = {
   id: "KR-K1-K230",

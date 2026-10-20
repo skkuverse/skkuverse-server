@@ -3,7 +3,8 @@
  * on fakes: the real `seoul` provider and its pollers (registered into a
  * recording stand-in for the poller registry), the tracker, the timetable and
  * estimate doors and the arrivals route, over FakeSubwaySeoulApiClient,
- * the stored topology's revision 1 in FakeSubwayTopologyRepository,
+ * the stored topology's revision 1 in FakeSubwayTopologyRepository, the
+ * committed tables in FakeSubwayTimetableRepository,
  * FakeSubwaySeoulTrainmapClient (the line 1 and 4 positions and the line 4
  * page captured on 2026-10-16 22:27 KST, joined with the line 1 page as the one
  * page of every line the crawl reads; the line 1 page dates from 20:45, so
@@ -35,6 +36,7 @@ import { SUBWAY_LINES, SUBWAY_STATIONS } from "../../../src/subway/subway.consta
 import { SubwayModule } from "../../../src/subway/subway.module";
 import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
+import { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-timetable.repository";
 import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
 import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracking.module";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
@@ -43,6 +45,7 @@ import { FakeSubwaySeoulTrainmapClient } from "../../helpers/fakes/subway/subway
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
+import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
 
 type Tick = () => Promise<unknown>;
 
@@ -92,6 +95,7 @@ beforeEach(async () => {
       { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
       { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
+      { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },
       { provide: SubwaySeoulApiClient, useValue: apiClient },
       { provide: SubwaySeoulTrainmapClient, useValue: trainmapClient },
       { provide: Clock, useValue: clock },

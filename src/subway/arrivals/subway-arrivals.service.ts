@@ -38,7 +38,7 @@ export class SubwayArrivalsService {
     return new Map(docs.filter((doc) => isFreshState(doc.generatedAt, now)).map((doc) => [doc._id, doc]));
   }
 
-  // WHY: unreachable for a registered platform: assertTimetablesCover stops the boot when one has no table.
+  // WHY: unreachable for a served platform: the timetable door throws the 503 SUBWAY_TIMETABLES_UNAVAILABLE when it has no table.
   private async findScheduledArrivals(platformId: string, now: Date): Promise<SubwayArrivalsDoc> {
     const doc = await this.tracking.findScheduledArrivals(platformId, now);
     if (!doc) throw new Error(`subway: no timetable-only arrivals for ${platformId}`);

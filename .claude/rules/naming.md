@@ -69,5 +69,6 @@ One concept, one name (ADR 0010, D1). Each feature module's glossary is the Glos
 | Term | Meaning | Not |
 | --- | --- | --- |
 | wire | A shape a deployable of this repository writes to another repository (a response body, a push payload); its zod schema is in `<base>.wire.ts`, its type the `z.input` of that schema | `contract` (the `CONTRACT(<repo>):` tag, the umbrella's contracts), `dto` |
-| dataset | Runtime data the server serves, stored as one document of the content database's `datasets`, keyed by its name (`home-layout`) and written only by `npm run data` (ADR 0013); a committed `.config` file is not one | — |
+| dataset | Runtime data the server serves, stored as one document of the content database's `datasets`, keyed by its name (`home-layout`) and written only by `npm run data` (ADR 0013); a parted dataset's document is its header, a manifest naming its parts; a committed `.config` file is not one | — |
+| part | One piece of a parted dataset: a `dataset_parts` document under `<dataset>/<key>@<sha256 prefix>`, never changed once stored and named by every manifest that holds its content | `chunk`, `shard` |
 | revision | A dataset's version number: 1 when created, one more per push, rollback or copy; every revision is kept in `dataset_revisions` | `version` (a layout's wire format version) |

@@ -17,11 +17,11 @@ function toWireTrain(train: StoredTrainArrival, direction: PlatformDirection, pl
   return { trainNo, destination, express, arrivalAt: arrivalAt.toISOString(), stopsAway, source };
 }
 
+// WHY: a stop with no name is served as null, as a terminus is, not as a 500: a topology pushed ahead of a deploy may
+// drop the entry that named it (SubwayTopologyService logs it once per revision).
 function toNeighborStation(id: string | undefined, lang: SupportedLang, registry: SubwayRegistry): WireDirection["nextStation"] {
-  if (id === undefined) return null;
-  const name = findPlatformName(id, registry);
-  if (!name) throw new Error(`subway: no neighbor name for ${id}`);
-  return { id, name: name[lang] };
+  const name = id === undefined ? null : findPlatformName(id, registry);
+  return id === undefined || name === null ? null : { id, name: name[lang] };
 }
 
 function toWireLine({ platform, doc }: { platform: SubwayPlatform; doc: SubwayArrivalsDoc }, lang: SupportedLang, registry: SubwayRegistry): WireLine {

@@ -5,13 +5,8 @@
  * lines and stations keep the code's order and labels. A served platform the
  * topology has no entry for is left out of its station; an entry for a
  * platform the code does not serve joins nothing.
- *
- * Until subway-registry.json is deleted (task 10.6, which deletes the last
- * describe here), revision 1 joined to SUBWAY_NETWORK equals the registry the
- * committed file loads.
  */
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
-import { SUBWAY_REGISTRY } from "../subway.config";
 import { SUBWAY_NETWORK } from "../subway.constants";
 import { toSubwayRegistry } from "./subway-topology.mapper";
 
@@ -52,15 +47,5 @@ describe("toSubwayRegistry", () => {
 
     // Assert
     expect(registry.stations.flatMap((station) => station.platforms.map((platform) => platform.id))).not.toContain("S1-9-999");
-  });
-});
-
-describe("toSubwayRegistry over revision 1 against the committed registry", () => {
-  it("equals SUBWAY_REGISTRY, which subway-registry.json loads", () => {
-    // Act
-    const registry = toSubwayRegistry(SUBWAY_NETWORK, subwayTopologyFixture());
-
-    // Assert
-    expect(registry).toEqual(SUBWAY_REGISTRY);
   });
 });

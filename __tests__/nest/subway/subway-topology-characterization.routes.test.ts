@@ -5,7 +5,7 @@
  * stops away from the direction's upstream platforms. For every served
  * station in `ko`, `en` and `zh`, `GET /subway/stations/:id/arrivals` answers
  * the full body, status, `Cache-Control`, `Vary` and `ETag` today's code
- * answers from the committed subway-registry.json; its static fields (meta,
+ * answers from the committed registry file; its static fields (meta,
  * the station, each line's display data and platform id, each direction's
  * name and neighbors) are those production served on 2026-10-20
  * (fixtures/subway-arrivals-production.capture.json, source commit d856f333).
@@ -20,14 +20,16 @@
  * timetable is read; and whose content database holds revision 1 of
  * `subway-topology`, stored through the tool's own
  * scripts/lib/datasets/store.js. The topology is the dataset's since task 7.4;
- * every expected value was pinned while it was still subway-registry.json, of
+ * every expected value was pinned while it was still the committed registry file, of
  * which revision 1 is a copy.
  *
  * At 00:20 and 02:00 KST on Wednesday 2026-10-21, the night window production
  * is captured in, the same seed is 14 h old, so every station answers from the
- * committed timetables alone: the status, `Cache-Control`, `Vary`, `ETag` and
- * bytes the code answered before the topology reader landed
+ * timetables alone: the status, `Cache-Control`, `Vary`, `ETag` and bytes the
+ * code answered from the committed timetables before the topology reader landed
  * (fixtures/subway-arrivals-night.golden.json, generated at commit 46c6ea60).
+ * Since task 10.3 the timetables are revision 1 of `subway-timetables`, the
+ * trimmed fixture of task 9.1 stored through scripts/lib/datasets/parts.js.
  *
  * A regression pin: a failure is a regression to report, and an expected
  * value changes only with the behavior it pins (`.claude/rules/tests.md`).
@@ -50,6 +52,7 @@ type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTes
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type TopologyHelpers = typeof import("../../helpers/subway/topology");
+type TimetableHelpers = typeof import("../../helpers/subway/timetables");
 
 type Lang = "ko" | "en" | "zh";
 const LANGS: Lang[] = ["ko", "en", "zh"];
@@ -145,6 +148,8 @@ beforeAll(async () => {
   const { subwayTopologyFixture } = require("../../helpers/subway/topology") as TopologyHelpers;
   const content = db.getClient().db(config.content.dbName);
   await store.create(content, "subway-topology", subwayTopologyFixture(), { by: "characterization@example.com", now: NOW });
+  const { storeSubwayTimetablesFixture } = require("../../helpers/subway/timetables") as TimetableHelpers;
+  await storeSubwayTimetablesFixture(content, { by: "characterization@example.com", now: NOW });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

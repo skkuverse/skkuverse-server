@@ -40,7 +40,16 @@
  * with the server's topology schema and `toTopologyIssues` against the
  * checkout's SUBWAY_LINES and SUBWAY_STATIONS: one entry per served platform
  * (the `subwayPlatforms` code-held source), no more, and every named stop
- * resolvable; a checkout whose own identities clash refuses every push.
+ * resolvable; a checkout whose own identities clash refuses every push. A
+ * topology whose stops resolve is then checked against the checkout's
+ * committed timetable routes (`toRouteIssues`): upstream, watched and next
+ * platforms in route order, and every stop the tracker follows named.
+ *
+ * The `subway-timetables` dataset (move-reference-datasets D4, D5, D6) is
+ * stored in parts, one per table: each part runs the server's `timetableFile`
+ * schema and is keyed by `toTimetableKey` (`<operator>-<line>-<dayType>`),
+ * two tables of one key are refused, and the set is refused while a platform
+ * the checkout serves has no table for a day type its source declares.
  */
 import path from "node:path";
 import { JONGRO_ROUTES, SERVICE_CONFIG } from "../../../src/bus/bus.constants";
@@ -52,10 +61,13 @@ import { fixtureRegistry, fixtureRegistryWithWaveRun } from "../../helpers/minia
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 import { SUBWAY_STATIONS } from "../../../src/subway/subway.constants";
 import { subwayTopologyDataset } from "../../../src/subway/topology/subway-topology.schema";
+import { toTimetableKey } from "../../../src/subway/timetable/subway-timetable.rules";
+import { timetableFile } from "../../../src/subway/timetable/subway-timetable.schema";
+import { subwayTimetableFixtureFiles } from "../../helpers/subway/timetables";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { loadCatalog } = require("../../../scripts/lib/datasets/catalog");
-const { checkData } = require("../../../scripts/lib/datasets/checks");
+const { checkData, checkParts } = require("../../../scripts/lib/datasets/checks");
 
 const SRC = path.join(__dirname, "../../../src");
 const CONFIG = path.join(SRC, "infra/config");
@@ -801,6 +813,34 @@ describe("loadCatalog subway-topology", () => {
     expect(lines).toEqual(['subway-topology: platforms.S1-4-420.up.watchedPlatformIds.3: "S1-3-330" is on line "3", not "4"']);
   });
 
+  it("Upstream reordered: refuses 혜화 down's second and third upstream platforms swapped, naming the direction's list and the route's order", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = topology();
+    const ids = data.platforms["S1-4-420"]!.down.upstreamPlatformIds;
+    [ids[1], ids[2]] = [ids[2], ids[1]];
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^subway-topology: platforms\.S1-4-420\.down\.upstreamPlatformIds: .*\["S1-4-419","S1-4-418","S1-4-417"\]/)]);
+  });
+
+  it("Watched platform dropped with its neighbor: refuses 성균관대 down without 안양 (KR-1-P147), naming the stop the tracker follows", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = topology();
+    data.platforms["KR-1-0153"]!.down.watchedPlatformIds.pop();
+    delete data.neighbors["KR-1-P147"];
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
+
+    // Assert
+    expect(lines).toContainEqual(expect.stringMatching(/^subway-topology: platforms\.KR-1-0153\.down: "KR-1-P147" .*neither a served platform nor a neighbor$/));
+  });
+
   it("refuses four upstream platforms with the server's schema, naming the direction's list", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);
@@ -812,5 +852,104 @@ describe("loadCatalog subway-topology", () => {
 
     // Assert
     expect(lines).toEqual([expect.stringMatching(/^subway-topology: platforms\.KR-1-0153\.up\.upstreamPlatformIds: /)]);
+  });
+});
+
+describe("loadCatalog subway-timetables", () => {
+  type Files = Array<{ file: string; data: any }>;
+  const files = (): Files => subwayTimetableFixtureFiles().map(({ file, table }) => ({ file, data: table }));
+
+  it("is owned by src/subway/timetable and stores parts with timetableFile, keyed by toTimetableKey, summarized by source and train count", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["subway-timetables"];
+    const table = files()[0]!.data;
+
+    // Act
+    const summary = entry.parts.summaryOf(timetableFile.parse(table));
+
+    // Assert
+    expect(entry.owner).toBe("src/subway/timetable");
+    expect(entry.parts.schema).toBe(timetableFile);
+    expect(entry.parts.keyOf).toBe(toTimetableKey);
+    expect(summary).toEqual({ source: table.source, trainCount: table.trains.length });
+    expect(entry.referencesOf([])).toEqual([]);
+  });
+
+  it("accepts the 18 tables of the fixture with no issue, one part per key in key order", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const checked = checkParts(catalog, "subway-timetables", files(), {});
+
+    // Assert
+    expect(checked.issues).toEqual([]);
+    expect(checked.parts.map((part: { key: string }) => part.key)).toEqual(files().map(({ file }) => file.replace(/\.json$/, "")).sort());
+  });
+
+  it("Seoul Metro changes line 2: describes a changed table by its trains added and removed, a moved train as both", () => {
+    // Arrange
+    const entry = loadCatalog(srcLoader).datasets["subway-timetables"];
+    const was = timetableFile.parse(files().find(({ file }) => file === "S1-2-weekday.json")!.data);
+    const [moved, dropped, ...kept] = was.trains;
+    const is = { ...was, trains: [{ ...moved!, stops: moved!.stops.map((stop) => ({ ...stop, arr: stop.arr && stop.arr + 60 })) }, ...kept] };
+
+    // Act
+    const changes = entry.parts.changesOf(was, is);
+
+    // Assert
+    expect(changes).toEqual([`trains +1 -2 (added ${moved!.trainNo}; removed ${moved!.trainNo}, ${dropped!.trainNo})`]);
+  });
+
+  it("describes an unchanged train list as no train change", () => {
+    // Arrange
+    const entry = loadCatalog(srcLoader).datasets["subway-timetables"];
+    const was = timetableFile.parse(files()[0]!.data);
+
+    // Act
+    const changes = entry.parts.changesOf(was, { ...was, source: { ...was.source, revision: "2026-11-01" } });
+
+    // Assert
+    expect(changes).toEqual(["trains unchanged"]);
+  });
+
+  it("Missing Saturday table: refuses a push without S1-4-saturday, naming S1-4-420 saturday", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const withoutSaturday = files().filter(({ file }) => file !== "S1-4-saturday.json");
+
+    // Act
+    const lines = issueLines(checkParts(catalog, "subway-timetables", withoutSaturday, {}).issues);
+
+    // Assert
+    expect(lines).toEqual(["subway-timetables: S1-4-saturday: no table for S1-4-420 saturday"]);
+  });
+
+  it("Malformed train number: refuses a table holding K602, naming the table and the train's path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const tables = files();
+    tables.find(({ file }) => file === "KR-1-weekday.json")!.data.trains[2].trainNo = "K602";
+
+    // Act
+    const lines = issueLines(checkParts(catalog, "subway-timetables", tables, {}).issues);
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^subway-timetables: KR-1-weekday\.json\.trains\.2\.trainNo: /)]);
+  });
+
+  it("Duplicate table: refuses two tables for 1호선 weekdays, naming both", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const tables = files();
+    const weekday = tables.find(({ file }) => file === "KR-1-weekday.json")!;
+    tables.push({ file: "korail-1-weekday.json", data: structuredClone(weekday.data) });
+
+    // Act
+    const lines = issueLines(checkParts(catalog, "subway-timetables", tables, {}).issues);
+
+    // Assert
+    expect(lines).toEqual(['subway-timetables: KR-1-weekday: key "KR-1-weekday" is in more than one part: KR-1-weekday.json, korail-1-weekday.json']);
   });
 });

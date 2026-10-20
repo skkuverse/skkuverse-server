@@ -18,8 +18,8 @@ import type { RunMatcher, SourceCountdownRows, StationObservations, TrackedPlatf
 const DIVERGENCE_LOG_INTERVAL_MS = 10 * 60_000;
 
 // WHY: the per-train histories live in memory: one poller process writes subway_arrivals (design D2), and a
-// restart rebuilds them from the next ticks (design D8). An upstream is observed only in the service window.
-// A train only in countdown rows, absent from the timetable, is not served: every estimate starts from one.
+// restart rebuilds them from the next ticks (design D8). A train absent from the timetable is not served, and a
+// platform whose table cannot be read is skipped, the tick rejecting after the rest (move-reference-datasets D7).
 @Injectable()
 export class SubwayTrackingService {
   private readonly historiesByPlatformId = new Map<string, ReadonlyMap<string, TrainHistory>>();
@@ -45,7 +45,7 @@ export class SubwayTrackingService {
     const now = this.clock.now();
     this.countdownRowsBySource.set(observations.source, { observedAt: now, rows: observations.countdownRows });
     const countdownRows = toLiveCountdownRows([...this.countdownRowsBySource.values()], now);
-    const schedules = await this.timetable.listPlatformSchedules(now);
+    const { schedules, unavailable } = await this.timetable.listPlatformSchedules(now);
     const lineEvents = this.toRunNumberedEvents(observations.events, schedules, now);
     const platforms = schedules.map((schedule): TrackedPlatform => {
       const events = toNewestEvents(lineEvents.filter((event) => schedule.lineRoutes.up.includes(event.platformId)), now);
@@ -55,6 +55,7 @@ export class SubwayTrackingService {
     });
     await this.state.writeArrivals(platforms.map((platform) => platform.arrivals));
     for (const listener of this.tickListeners) await listener({ source: observations.source, trackedAt: now, platforms });
+    if (unavailable) throw unavailable;
   }
 
   // WHY: the accuracy history listens here instead of the tracker calling it, so serving never depends on it;
