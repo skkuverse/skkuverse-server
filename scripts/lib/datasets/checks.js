@@ -22,7 +22,14 @@
  * dataset and path, the first one found.
  *
  * `stored` maps a dataset name to its stored `data`.
+ *
+ * A parted dataset (openspec/changes/move-reference-datasets, design D4) runs
+ * its part schema on each part instead of 1, refuses a key two parts share,
+ * and runs 2 to 4 on the set of parts ordered by key. Its stored `data` is a
+ * manifest, so `storedOf` reads it as null for another dataset's check.
  */
+
+const { readParts } = require("./parts");
 
 const DATASETS = "datasets";
 
@@ -46,9 +53,12 @@ function entryOf(catalog, name) {
   return entry;
 }
 
-/** The parsed stored data of `name`, or null when nothing is stored or it no longer parses. */
+/**
+ * The parsed stored data of `name`, or null when nothing is stored or it no longer parses. A parted
+ * dataset's stored data is its manifest, not its content, so it is null too.
+ */
 function parsedStored(catalog, name, stored) {
-  if (stored[name] === undefined) return null;
+  if (stored[name] === undefined || entryOf(catalog, name).parts) return null;
   const result = entryOf(catalog, name).schema.safeParse(stored[name]);
   return result.success ? result.data : null;
 }
@@ -98,9 +108,49 @@ function checkData(catalog, name, data, stored) {
   const entry = entryOf(catalog, name);
   const result = entry.schema.safeParse(data);
   if (!result.success) return zodIssues(name, result.error);
-  const context = { name, parsed: result.data, stored };
-  const own = entry.issuesOf ? entry.issuesOf(result.data, { storedOf: (other) => storedOf(catalog, context, other) }).map((issue) => ({ dataset: name, ...issue })) : [];
+  return contentIssues(catalog, entry, { name, parsed: result.data, stored });
+}
+
+/** The issues of `parsed` as `name`'s content after its schema: its own, then its outgoing and incoming references. */
+function contentIssues(catalog, entry, context) {
+  const storedOfContext = (other) => storedOf(catalog, context, other);
+  const own = entry.issuesOf ? entry.issuesOf(context.parsed, { storedOf: storedOfContext }).map((issue) => ({ dataset: context.name, ...issue })) : [];
   return onePerPath([...own, ...outgoingIssues(catalog, context), ...incomingIssues(catalog, context)]);
+}
+
+function duplicateKeyIssues(name, parsed) {
+  const filesByKey = new Map();
+  parsed.forEach(({ key, file }) => filesByKey.set(key, [...(filesByKey.get(key) ?? []), file]));
+  return [...filesByKey]
+    .filter(([, files]) => files.length > 1)
+    .map(([key, files]) => ({ dataset: name, path: [key], message: `key "${key}" is in more than one part: ${files.join(", ")}` }));
+}
+
+/** Each part's schema issues, the path opening with its file. */
+function partSchemaIssues(name, results) {
+  return results.flatMap(({ file, result }) =>
+    result.success ? [] : result.error.issues.map((issue) => ({ dataset: name, path: [file, ...issue.path], message: issue.message })),
+  );
+}
+
+/**
+ * A parted dataset's parts, `files` as `{ file, data }`: each runs the part schema (an issue's path opens
+ * with its file), each is keyed by `keyOf`, a key may appear once, and the set, ordered by key, runs the
+ * dataset's checks as its content. `{ issues, parts }`, `parts` as `{ key, data, summary }` when there is
+ * no issue.
+ */
+function checkParts(catalog, name, files, stored) {
+  const entry = entryOf(catalog, name);
+  const { schema, keyOf, summaryOf } = entry.parts;
+  const results = files.map(({ file, data }) => ({ file, result: schema.safeParse(data) }));
+  const schemaIssues = partSchemaIssues(name, results);
+  if (schemaIssues.length > 0) return { issues: schemaIssues, parts: [] };
+  const parsed = results.map(({ file, result }) => ({ file, key: keyOf(result.data), data: result.data }));
+  const duplicates = duplicateKeyIssues(name, parsed);
+  if (duplicates.length > 0) return { issues: duplicates, parts: [] };
+  parsed.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  const issues = contentIssues(catalog, entry, { name, parsed: parsed.map((part) => part.data), stored });
+  return { issues, parts: issues.length > 0 ? [] : parsed.map(({ key, data }) => ({ key, data, summary: summaryOf(data) })) };
 }
 
 /** Every catalog dataset's stored `data`, by name, and its revision. Reads only. */
@@ -115,16 +165,34 @@ async function readStored(db, catalog) {
   };
 }
 
-/** `check`: the issues of the stored data of `names`. Writes nothing. */
+/**
+ * A parted dataset's stored issues: checkParts' issues on the parts its manifest names, or, when one is not
+ * stored, each missing part and the schema issues of the others (the set's checks would only repeat the gap).
+ */
+async function storedPartIssues(db, catalog, name, stored) {
+  const found = await readParts(db, stored[name]);
+  const files = found.parts.map(({ key, data }) => ({ file: key, data }));
+  if (found.missing.length === 0) return checkParts(catalog, name, files, stored).issues;
+  const keyById = new Map(stored[name].parts.map((entry) => [entry.partId, entry.key]));
+  const missing = found.missing.map((partId) => ({ dataset: name, path: [keyById.get(partId)], message: `part ${partId} is not stored` }));
+  const { schema } = entryOf(catalog, name).parts;
+  return [...missing, ...partSchemaIssues(name, files.map(({ file, data }) => ({ file, result: schema.safeParse(data) })))];
+}
+
+/** `check`: the issues of the stored data of `names`; a parted dataset's parts are read by the ids its header names. Writes nothing. */
 async function checkStored(db, catalog, names) {
   names.forEach((name) => entryOf(catalog, name));
   const { stored, revisions } = await readStored(db, catalog);
   const present = names.filter((name) => stored[name] !== undefined);
+  const issues = [];
+  for (const name of present) {
+    issues.push(...(entryOf(catalog, name).parts ? await storedPartIssues(db, catalog, name, stored) : checkData(catalog, name, stored[name], stored)));
+  }
   return {
     checked: present.map((dataset) => ({ dataset, revision: revisions[dataset] })),
     missing: names.filter((name) => stored[name] === undefined),
-    issues: onePerPath(present.flatMap((name) => checkData(catalog, name, stored[name], stored))),
+    issues: onePerPath(issues),
   };
 }
 
-module.exports = { checkData, checkStored, readStored };
+module.exports = { checkData, checkParts, checkStored, readStored };

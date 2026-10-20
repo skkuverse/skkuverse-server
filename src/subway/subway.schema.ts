@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { isHex6 } from "../infra/color";
+import { MAX_UPSTREAM_PLATFORMS } from "./subway.constants";
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const PLATFORM_ID = /^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/;
 const SEOUL_STATION_CODE = /^\d{4}$/;
 const SUBWAY_ID = /^\d{4}$/;
-const MAX_UPSTREAM_PLATFORMS = 3;
 
 const localizedName = z.strictObject({ ko: z.string().min(1), en: z.string().min(1), zh: z.string().min(1) });
 

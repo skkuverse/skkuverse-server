@@ -16,12 +16,11 @@ jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error
 
 import fs from "fs";
 import path from "path";
-import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
 import { FakeSubwaySeoulApiClient } from "../../../__tests__/helpers/fakes/subway/subway-seoul-api.client.fake";
 import { FakeSubwaySeoulTrainmapClient } from "../../../__tests__/helpers/fakes/subway/subway-seoul-trainmap.client.fake";
 import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/subway.repository.fake";
-import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
 import config from "../../infra/config";
 import logger from "../../infra/logger";
@@ -38,7 +37,6 @@ import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-train
 import { SUBWAY_LINES, SUBWAY_STATIONS } from "../subway.constants";
 import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
-import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
 import type { TrackedTick } from "../tracking/subway-tracking.types";
 import { SubwaySeoulPoller } from "./subway-seoul.poller";
@@ -78,7 +76,7 @@ function setup(startIso: string, topology = storedSubwayTopologyRepository()) {
     clock,
     storedSubwayTopologyService(topology, clock),
   );
-  const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
+  const timetable = storedSubwayTimetableService({ clock });
   const tracking = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(new FakeSubwayRepository())), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   new SubwayMatchingService(tracking, clock).onModuleInit();
   const registerPoller = jest.fn();

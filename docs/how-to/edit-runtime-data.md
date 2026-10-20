@@ -9,11 +9,11 @@ audience: internal
 
 # Edit Runtime Data
 
-> How to read and change a dataset in the content database with `npm run data`: pull, edit, push, history, rollback, copying production into `_dev`, and the `check` to run before a deploy that changes a dataset's schema or removes an identity a dataset names.
+> How to read and change a dataset in the content database with `npm run data`: pull, edit, push, history, rollback, copying production into `_dev`, a parted dataset's directory of part files, and the `check` to run before a deploy that changes a dataset's schema or removes an identity a dataset names.
 
 ## Overview
 
-Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decisions/0013-runtime-data-in-mongodb.md)). Each dataset is one document in the content database's `datasets` collection, with a revision that only moves forward; every version stored is kept in `dataset_revisions`, the newest 50 per dataset. `npm run data` is the only writer, and the server only reads. The datasets the tool knows, and the server code that validates each one, are listed in `scripts/lib/datasets/catalog.js`:
+Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decisions/0013-runtime-data-in-mongodb.md)). Each dataset is one document in the content database's `datasets` collection, with a revision that only moves forward; every version stored is kept in `dataset_revisions`, the newest 50 per dataset. A dataset too large for one document is parted: that document is its header, and its parts live in `dataset_parts` ([below](#edit-a-parted-dataset)). `npm run data` is the only writer, and the server only reads. The datasets the tool knows, and the server code that validates each one, are listed in `scripts/lib/datasets/catalog.js`:
 
 | Dataset | Served on | Never read | References |
 | --- | --- | --- | --- |
@@ -27,6 +27,7 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | `jongro-route-attributes` | `GET /bus/config`, `GET /bus/config/:groupId`, `GET /ui/home/transit`, `GET /ui/home/transitlist`, `GET /bus/realtime/data/jongro*` | `/bus/config` and the two ui routes serve 200 without the Jongro groups; a Jongro group and `/bus/realtime/data/jongro*` answer 503 `JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE`; the other groups and `/bus/realtime/data/hssc` serve | `jongroRoutes`: exactly one entry per route the checkout serves ([below](#edit-a-jongro-routes-card-or-seat-count)) |
 | `bus-lane-corridor` | the live shuttle estimate poller, for 인자셔틀 runs in the lane hours | each such run is estimated by car; the poller tick rejects after storing it | none; the geometry is checked: boundaries in order and the last at the centerline's end, each probe route listed once with direction ranges that do not overlap ([below](#rebuild-the-bus-lane-corridor)) |
 | `subway-topology` | `GET /subway/stations/:id/arrivals`, and the `subway-seoul` and `subway-trainmap` pollers | 503 `SUBWAY_TOPOLOGY_UNAVAILABLE`; each poller tick rejects before any upstream call | `subwayPlatforms`: exactly one entry per platform the checkout serves, and every named stop a served platform or a neighbor ([below](#edit-subway-coverage)) |
+| `subway-timetables` (parted: one part per operator line and day type) | `GET /subway/stations/:id/arrivals` for a platform with no fresh arrival state, and the `subway-seoul` and `subway-trainmap` pollers | 503 `SUBWAY_TIMETABLES_UNAVAILABLE`, only for an answer that needs a table; a poller tick writes the platforms it could schedule, then rejects | none; each table parses with the server's schema, one per key, and every platform the checkout serves has one for each day type its source declares ([update-subway-timetables.md](update-subway-timetables.md)) |
 
 A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. The poller reads the two bus datasets and `subway-topology` too, so a push reaches the shuttle estimates and the subway pollers within the same minute. `busGroups`, `subwayStations`, `subwayPlatforms`, `busServices` and `jongroRoutes` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
 
@@ -126,6 +127,41 @@ npm run data -- copy-prod-to-dev home-layout
 
 It stores production's current data as the next `_dev` revision and records which production revision it copied. Pull `_dev` again afterwards: a working file pulled before the copy is now stale.
 
+### Edit a parted dataset
+
+A parted dataset is one whose catalog entry declares `parts`. Its `datasets` document is a header whose data is a manifest, `{ "parts": [{ "key", "partId", "summary" }] }` ordered by key, and each part is one document of `dataset_parts`, stored under `<dataset>/<key>@<first 16 hex of its sha256>`. A part never changes once stored: a revision that keeps a part's content names the same document, so the history holds only manifests.
+
+1. Pull it. This writes a directory, not a file:
+
+   ```text
+   .data/dev/<dataset>/working.json        the dataset, target, pulled revision and manifest
+   .data/dev/<dataset>/parts/<key>.json    one file per part, its data
+   ```
+
+2. Edit the part files, regenerate them with the dataset's converter, add a file or delete one. Leave `working.json` alone. The push keys each file by the content's own key (the catalog's `keyOf`), not by the file name, and refuses two files with the same key.
+3. Preview with `--dry-run`, then push with a note:
+
+   ```bash
+   npm run data -- push <dataset> --dry-run
+   npm run data -- push <dataset> --note "why"
+   ```
+
+   The push runs the part schema on every file and the dataset's own checks on the whole set, then reports one line per key before it writes:
+
+   ```text
+   diff of <dataset> (revision 3 -> 4):
+     unchanged  1-holiday
+     changed    1-weekday  trainCount: 210 -> 212
+     added      2-holiday  {"trainCount":96}
+     removed    4-weekday  {"trainCount":180}
+   ```
+
+   A directory whose parts all equal the stored ones reports "no change" and writes nothing. The push writes the new parts first, then the header, under the same check of the pulled revision as any push: a push that stops in between leaves the served revision unchanged. `--prod`, its confirmation, the target guard (`--dir` points the push at another pulled directory) and `--dry-run` work as for a single document.
+
+To create one, put its part files in a directory, under any names, and push with `--create --dir <dir>`.
+
+`history` prints each revision's per-part summary under its line. A rollback stores the earlier revision's manifest as a new revision; its parts are still stored, since a part is deleted only when neither the current header nor any of the 50 kept revisions names it, and only an hour after it was saved. A rollback that finds a named part missing is refused, naming it. `copy-prod-to-dev` copies the named parts into `_dev` before the header, and `check` reads every named part and runs the push checks on them.
+
 ### Edit a shuttle notice or suspension
 
 `bus-service-notices` holds each shuttle service's notices and suspension, keyed by service id: `{ "services": { "<serviceId>": { "notices": [...], "suspend": null } } }`. Service ids and what the code does with a service stay in `SERVICE_CONFIG` (`src/bus/bus.constants.ts`); a service the dataset leaves out shows no notice and is never suspended.
@@ -185,7 +221,7 @@ It routes both directions through the file's entry and exit points with NAVER; a
 
 ### Edit subway coverage
 
-`subway-topology` holds, for each served subway platform keyed by its platform id, its two directions (`up`, `down`): the direction's localized `name`, up to three `upstreamPlatformIds` nearest first (the first is the previous station), the `watchedPlatformIds` beyond them and the `nextPlatformId`; and the `neighbors`, each stop those name that no station serves, by platform id, with its `line`, its `seoulName`, a `trainMapName` where the train map writes another, and a localized `name` where it is a previous or next station. The lines, stations and platforms, with their names, colors, markers, Seoul ids and timetable sources, stay in code (`SUBWAY_LINES` and `SUBWAY_STATIONS` in `src/subway/subway.constants.ts`). A push that leaves out a platform the checkout serves, names one it does not, names a stop that is neither served nor a neighbor or is on another line, or leaves a previous or next neighbor unnamed is refused at its path. A push reaches the arrivals route and the pollers within a minute: a neighbor added there matches the upstream rows written at its Seoul name.
+`subway-topology` holds, for each served subway platform keyed by its platform id, its two directions (`up`, `down`): the direction's localized `name`, up to three `upstreamPlatformIds` nearest first (the first is the previous station), the `watchedPlatformIds` beyond them and the `nextPlatformId`; and the `neighbors`, each stop those name that no station serves, by platform id, with its `line`, its `seoulName`, a `trainMapName` where the train map writes another, and a localized `name` where it is a previous or next station. The lines, stations and platforms, with their names, colors, markers, Seoul ids and timetable sources, stay in code (`SUBWAY_LINES` and `SUBWAY_STATIONS` in `src/subway/subway.constants.ts`). A push that leaves out a platform the checkout serves, names one it does not, names a stop that is neither served nor a neighbor or is on another line, or leaves a previous or next neighbor unnamed is refused at its path; so is one whose upstream, watched or next platforms break the order of the platform's timetable route (the checkout's committed tables), or that leaves a stop on that route before the platform neither served nor a neighbor. A push reaches the arrivals route and the pollers within a minute: a neighbor added there matches the upstream rows written at its Seoul name.
 
 ```bash
 npm run data -- pull subway-topology --prod
@@ -193,7 +229,7 @@ npm run data -- pull subway-topology --prod
 npm run data -- push subway-topology --prod --note "watch 관악 for 성균관대 down"
 ```
 
-A watched or upstream stop must also be a station the converter writes into its line's timetables (`scripts/subway-timetable/convert.py`), so a coverage change usually reruns it too. A deploy that adds a station or platform pushes its topology from that checkout first: until then the platform is left out of its station's arrivals and logs `subway.topology.platform_missing`.
+A watched or upstream stop must also be a station the converter writes into its line's timetables (`scripts/subway-timetable/convert.py`), so a coverage change usually reruns it too ([update-subway-timetables.md](update-subway-timetables.md)). A change that adds a station or platform deploys first, then pushes its topology from that checkout. Until the push, the new platform is left out of its station's arrivals and logs `subway.topology.platform_missing`, while the stored neighbor entry still names it as a stop. Pushed before the deploy, the topology drops that neighbor entry while the running code does not serve the platform yet: each direction that names it as its previous or next station serves `null` there and logs `subway.topology.stop_unnamed`, and the pollers drop the rows written at its Seoul name.
 
 ### Check before a deploy
 
@@ -215,6 +251,9 @@ It runs the push checks on the stored data of every dataset, writes nothing, and
 | `refusing to write ... (PRODUCTION) without a confirmation` | A production write with no terminal and no `--yes`. | Run it in a terminal, or pass `--yes` where the diff is reviewed. |
 | `dist/src is missing: run npm run build first` | You ran `node scripts/data.js` without a build. | Use `npm run data`, which builds first. |
 | `repaired: ... had no history entry` | A push stopped between storing the dataset and recording its history. The tool recorded the entry. | Nothing. `check`, `--dry-run` and a `--prod` run without `--yes` only report it as a `note:`; with `--prod`, a `push` or `rollback` you confirm records it first. |
+| `key "<key>" is in more than one part: <files>` | Two part files hold content with the same key. Nothing was written. | Delete or fix one of the files. |
+| `... part(s) the revision names are not stored` | A rollback names a part that is gone. Nothing was written. | Roll back to another revision, or push the parts again from a directory. |
+| `part <id> is stored with different content under the same id` | Two parts' hashes share their first 16 hex digits. The header was not written and nothing was overwritten. | Report it; do not delete the stored part. |
 | `MongoServerSelectionError: ...` with `<redacted>` in it | The database could not be reached; the host is hidden on purpose. | Check your network and `.env`, without printing them. |
 
 ## Related
@@ -223,6 +262,7 @@ It runs the push checks on the stored data of every dataset, writes nothing, and
 - [configure-home.md](configure-home.md): what the home layout, the campus banners and the transit layout hold
 - [bus-architecture.md](../explanation/bus-architecture.md): how the schedule routes and the estimate pollers fold in the two bus datasets
 - [subway-architecture.md](../explanation/subway-architecture.md): what of the subway network stays in code and what `subway-topology` holds
+- [update-subway-timetables.md](update-subway-timetables.md): rebuilding and pushing `subway-timetables`, the parted dataset
 - [register-a-miniapp.md](register-a-miniapp.md): the registry a home layout's references resolve against
-- `scripts/data.js`: the command line; `scripts/lib/datasets/`: the catalog, checks, store and working file
+- `scripts/data.js`: the command line; `scripts/lib/datasets/`: the catalog, checks, store and working file, and for a parted dataset its parts and working directory
 - [docs/README.md](../README.md): writing rules

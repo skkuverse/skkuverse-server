@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { StoredTimetableManifest, SubwayTimetablePartDoc } from "./subway-timetable.document";
 import type { Timetable } from "./subway-timetable.types";
 
 const secondsOfServiceDay = z.number().int().nonnegative().nullable();
@@ -21,3 +22,12 @@ export const timetableFile = z.object({
   stations: z.array(z.string().min(1)).min(1),
   trains: z.array(timetableTrain),
 }) satisfies z.ZodType<Timetable>;
+
+const manifestPart = z.object({ key: z.string().min(1), partId: z.string().min(1) });
+
+export const storedTimetableManifest = z.object({
+  revision: z.int().positive(),
+  data: z.object({ parts: z.array(manifestPart) }),
+}) satisfies z.ZodType<StoredTimetableManifest>;
+
+export const storedTimetablePart = z.object({ data: timetableFile }) satisfies z.ZodType<Pick<SubwayTimetablePartDoc, "data">>;

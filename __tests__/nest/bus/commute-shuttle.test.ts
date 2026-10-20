@@ -39,6 +39,7 @@ import { FakeUiTransitRepository } from "../../helpers/fakes/ui/ui-transit.repos
 import { SubwayModule } from "../../../src/subway/subway.module";
 import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
+import { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-timetable.repository";
 import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
 import { SubwayEstimateModule } from "../../../src/subway/estimate/subway-estimate.module";
 import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracking.module";
@@ -48,6 +49,7 @@ import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
 import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
+import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 let busConfig: BusConfigService;
@@ -479,6 +481,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
         { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
+        { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },
         { provide: UiTransitRepository, useValue: storedTransitLayout() },
       ],
       role: "api",

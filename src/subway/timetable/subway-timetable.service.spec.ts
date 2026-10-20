@@ -1,7 +1,8 @@
 /**
  * SubwayTimetableService, the timetable door the tracking and arrivals flows
  * read, over a scripted HolidaysService (the fake in
- * __tests__/helpers/fakes/holidays/). What it guards: each platform's schedule
+ * __tests__/helpers/fakes/holidays/) and an in-memory `subway-timetables`
+ * store. What it guards: each platform's schedule
  * is its own source's table for the service day (the Korail holiday table and
  * the Seoul Saturday table on a Saturday, both holiday tables on a public
  * holiday that falls on a Wednesday, Friday's weekday table for a train past
@@ -17,20 +18,37 @@
  * platform or from where it starts, and no station of the line is skipped.
  * The day-type, window and instant rules themselves are
  * subway-timetable.rules.spec.ts's.
+ *
+ * The read path (move-reference-datasets D7, spec `subway-timetables`): no
+ * table is read when the service is built; a table is read only when a
+ * platform of its line is scheduled for the service day, once per stored
+ * content, and held until a later service day needs another of its line; a
+ * new revision reads only its changed tables, within a minute; a table that
+ * cannot be read, or fails the schema, leaves the held copy serving for 24 h
+ * after the manifest first named it, then its platforms have no schedule; a
+ * platform with no table is reported: one schedule throws the 503
+ * SubwayTimetablesUnavailableError, the list leaves it out and carries the
+ * error naming its key; and a served platform whose table the revision lacks
+ * is logged once per revision. The manifest's cached loader reads `Date.now()`,
+ * so the TTL is crossed with Jest's fake system time.
  */
+jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
-import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import type { HolidaysService } from "../../holidays/holidays.service";
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
+import { committedSubwayTimetables, storedSubwayTimetableRepository, storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
+import type { Clock } from "../../infra/clock";
+import logger from "../../infra/logger";
+import { DATASET_CACHE_TTL_MS } from "../../shared/dataset.constants";
 import { SUBWAY_STATIONS } from "../subway.constants";
-import { SubwayTimetableService } from "./subway-timetable.service";
+import type { PlatformSchedule, Timetable } from "./subway-timetable.types";
 
 // WHY: revision 1 of the stored topology, the directions these checks hold against the committed timetables.
 const TOPOLOGY = subwayTopologyFixture();
+const mockedLogger = logger as unknown as Record<"error" | "warn", jest.Mock>;
 
 function setup() {
   const holidays = new FakeHolidaysService();
-  return { holidays, service: new SubwayTimetableService(asReal<HolidaysService>(holidays)) };
+  return { holidays, service: storedSubwayTimetableService({ holidays }) };
 }
 
 describe("SubwayTimetableService.listPlatformSchedules", () => {
@@ -39,7 +57,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
     const { service } = setup();
 
     // Act
-    const schedules = await service.listPlatformSchedules(new Date("2026-10-17T03:00:00Z"));
+    const { schedules } = await service.listPlatformSchedules(new Date("2026-10-17T03:00:00Z"));
 
     // Assert
     expect(schedules.map((s) => [s.platform.id, s.serviceDate, s.dayType])).toEqual([
@@ -65,7 +83,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
     holidays.names.set("2026-10-14", "테스트공휴일");
 
     // Act
-    const schedules = await service.listPlatformSchedules(new Date("2026-10-14T03:00:00Z"));
+    const { schedules } = await service.listPlatformSchedules(new Date("2026-10-14T03:00:00Z"));
 
     // Assert
     expect(new Set(schedules.map((s) => s.dayType))).toEqual(new Set(["holiday"]));
@@ -77,7 +95,9 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
     const { service } = setup();
 
     // Act
-    const [sungkyunkwan] = await service.listPlatformSchedules(new Date("2026-10-16T15:13:00Z"));
+    const {
+      schedules: [sungkyunkwan],
+    } = await service.listPlatformSchedules(new Date("2026-10-16T15:13:00Z"));
 
     // Assert
     expect([sungkyunkwan?.serviceDate, sungkyunkwan?.dayType]).toEqual(["2026-10-16", "weekday"]);
@@ -90,7 +110,9 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
     const { service } = setup();
 
     // Act
-    const [sungkyunkwan, hyehwa] = await service.listPlatformSchedules(new Date("2026-10-16T03:00:00Z"));
+    const {
+      schedules: [sungkyunkwan, hyehwa],
+    } = await service.listPlatformSchedules(new Date("2026-10-16T03:00:00Z"));
 
     // Assert
     expect(sungkyunkwan?.lineRoutes.down.slice(0, 7)).toEqual(["KR-1-P147", "KR-1-P148", "KR-1-P149", "KR-1-P150", "KR-1-P151", "KR-1-P152", "KR-1-0153"]);
@@ -102,7 +124,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
     const { service } = setup();
 
     // Act
-    const schedules = await service.listPlatformSchedules(new Date("2026-10-16T03:00:00Z"));
+    const { schedules } = await service.listPlatformSchedules(new Date("2026-10-16T03:00:00Z"));
 
     // Assert
     const routeOf = (platformId: string) => schedules.find((s) => s.platform.id === platformId)?.lineRoutes;
@@ -115,7 +137,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
     const { service } = setup();
 
     // Act
-    const schedules = await service.listPlatformSchedules(new Date("2026-10-16T03:00:00Z"));
+    const { schedules } = await service.listPlatformSchedules(new Date("2026-10-16T03:00:00Z"));
 
     // Assert
     const watched = schedules.flatMap(({ platform, lineRoutes }) =>
@@ -135,7 +157,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
     const { service } = setup();
 
     // Act
-    const schedules = await service.listPlatformSchedules(new Date("2026-10-16T03:00:00Z"));
+    const { schedules } = await service.listPlatformSchedules(new Date("2026-10-16T03:00:00Z"));
 
     // Assert
     const neighbors = schedules.flatMap(({ platform, lineRoutes }) =>
@@ -227,7 +249,7 @@ describe("SubwayTimetableService.listPlatformSchedules over the tracked stations
 
   async function listTracked() {
     const { service } = setup();
-    const schedules = (await Promise.all(DAYS.map((day) => service.listPlatformSchedules(new Date(day))))).flat();
+    const schedules = (await Promise.all(DAYS.map((day) => service.listPlatformSchedules(new Date(day))))).flatMap((listed) => listed.schedules);
     return schedules.flatMap(({ platform, lineRoutes, trains, dayType }) =>
       (["up", "down"] as const).map((direction) => {
         const route = lineRoutes[direction];
@@ -305,5 +327,279 @@ describe("SubwayTimetableService.listPlatformSchedules over the tracked stations
       }),
     );
     expect([...new Set(skipped)]).toEqual([]);
+  });
+});
+
+describe("SubwayTimetableService over the stored subway-timetables", () => {
+  // Tuesday 2026-10-20 02:00 KST, the service day of Monday.
+  const NIGHT = new Date("2026-10-19T17:00:00.000Z");
+  const MINUTE_MS = 60_000;
+  const DAY_MS = 24 * 60 * MINUTE_MS;
+
+  function setupStored(tables: readonly Timetable[] = committedSubwayTimetables()) {
+    let now = NIGHT;
+    const clock: Clock = { now: () => now };
+    const repository = storedSubwayTimetableRepository(tables);
+    const holidays = new FakeHolidaysService();
+    const service = storedSubwayTimetableService({ repository, holidays, clock });
+    // The clock and Date.now() move together: the service reads the one, the manifest's cached loader the other.
+    const advanceTo = (instant: Date | string): Date => {
+      now = new Date(instant);
+      jest.setSystemTime(now);
+      return now;
+    };
+    const partIdOf = (key: string): string => {
+      const parts = (repository.header?.data as { parts: Array<{ key: string; partId: string }> }).parts;
+      return parts.find((part) => part.key === key)?.partId ?? "";
+    };
+    return { repository, service, advanceTo, partIdOf, now: () => now };
+  }
+
+  const tableOf = (tables: readonly Timetable[], key: string): Timetable => tables.find((t) => `${t.operator}-${t.line}-${t.dayType}` === key)!;
+  const withShiftedTrains = (tables: readonly Timetable[], key: string, seconds: number): Timetable[] =>
+    tables.map((t) =>
+      t === tableOf(tables, key)
+        ? { ...t, trains: t.trains.map((train) => ({ ...train, stops: train.stops.map((stop) => ({ ...stop, arr: stop.arr && stop.arr + seconds, dep: stop.dep && stop.dep + seconds })) })) }
+        : t,
+    );
+  const arrivalsAt = (schedule: { trains: ReadonlyArray<{ stops: ReadonlyArray<{ platformId: string; arrivalAt: Date | null }> }> } | null, platformId: string) =>
+    schedule?.trains.flatMap((train) => train.stops.filter((stop) => stop.platformId === platformId).map((stop) => stop.arrivalAt?.toISOString())) ?? [];
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: NIGHT });
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("reads neither the manifest nor a table when it is built", () => {
+    // Act
+    const { repository } = setupStored();
+
+    // Assert
+    expect(repository.manifestReads).toBe(0);
+    expect(repository.tableReads).toEqual([]);
+  });
+
+  it("Night request: reads S1-4-weekday once for 혜화 at 02:00 on a Tuesday, then serves later requests from the held copy", async () => {
+    // Arrange
+    const { repository, service, partIdOf } = setupStored();
+
+    // Act
+    const schedules: Array<PlatformSchedule | null> = [];
+    for (let request = 0; request < 3; request++) schedules.push(await service.findPlatformSchedule("S1-4-420", NIGHT));
+
+    // Assert
+    expect(repository.tableReads).toEqual([partIdOf("S1-4-weekday")]);
+    expect(schedules.map((schedule) => [schedule?.serviceDate, schedule?.dayType])).toEqual(Array(3).fill(["2026-10-19", "weekday"]));
+    expect(schedules[2]?.trains.length).toBeGreaterThan(0);
+  });
+
+  it("reads a line's table once for two of its platforms scheduled at once", async () => {
+    // Arrange
+    const { repository, service, partIdOf } = setupStored();
+
+    // Act
+    await Promise.all([service.findPlatformSchedule("S1-2-216", NIGHT), service.findPlatformSchedule("S1-2-222", NIGHT)]);
+
+    // Assert
+    expect(repository.tableReads).toEqual([partIdOf("S1-2-weekday")]);
+  });
+
+  it("lists every served platform's schedule, reading each line's table of the day once", async () => {
+    // Arrange
+    const { repository, service } = setupStored();
+
+    // Act
+    const listed = await service.listPlatformSchedules(NIGHT);
+    await service.listPlatformSchedules(NIGHT);
+
+    // Assert
+    expect(listed.schedules).toHaveLength(13);
+    expect(listed.unavailable).toBeNull();
+    expect(repository.tableReads.map((partId) => partId.replace(/^subway-timetables\/|@.*$/g, "")).sort()).toEqual([
+      "DX-D1-weekday",
+      "KR-1-weekday",
+      "KR-K1-weekday",
+      "S1-2-weekday",
+      "S1-3-weekday",
+      "S1-4-weekday",
+      "S1-8-weekday",
+    ]);
+  });
+
+  it("Service day changes: a Saturday answer reads S1-4-saturday and drops S1-4-weekday, which Monday reads again", async () => {
+    // Arrange
+    const { repository, service, advanceTo, partIdOf } = setupStored();
+
+    // Act
+    await service.findPlatformSchedule("S1-4-420", advanceTo("2026-10-23T01:00:00.000Z"));
+    await service.findPlatformSchedule("S1-4-420", advanceTo("2026-10-23T18:30:00.000Z"));
+    await service.findPlatformSchedule("S1-4-420", advanceTo("2026-10-25T01:00:00.000Z"));
+    const monday = await service.findPlatformSchedule("S1-4-420", advanceTo("2026-10-26T01:00:00.000Z"));
+
+    // Assert
+    expect(repository.tableReads).toEqual([partIdOf("S1-4-weekday"), partIdOf("S1-4-saturday"), partIdOf("S1-4-holiday"), partIdOf("S1-4-weekday")]);
+    expect(monday?.dayType).toBe("weekday");
+  });
+
+  it("keeps a weekday table from Tuesday into Wednesday without reading it again", async () => {
+    // Arrange
+    const { repository, service, advanceTo } = setupStored();
+
+    // Act
+    await service.listPlatformSchedules(advanceTo("2026-10-20T01:00:00.000Z"));
+    await service.listPlatformSchedules(advanceTo("2026-10-21T01:00:00.000Z"));
+
+    // Assert
+    expect(repository.tableReads).toHaveLength(7);
+  });
+
+  it("New timetable while the poller runs: schedules 성균관대 from a KR-1-weekday pushed at 10:00 by 10:01, reading only that table", async () => {
+    // Arrange
+    const tables = committedSubwayTimetables();
+    const { repository, service, advanceTo, partIdOf } = setupStored(tables);
+    const before = await service.listPlatformSchedules(advanceTo("2026-10-20T01:00:00.000Z"));
+    repository.storeTables(withShiftedTrains(tables, "KR-1-weekday", 120));
+
+    // Act
+    const after = await service.listPlatformSchedules(advanceTo(new Date(Date.parse("2026-10-20T01:00:00.000Z") + MINUTE_MS + 1)));
+
+    // Assert
+    expect(repository.tableReads.slice(7)).toEqual([partIdOf("KR-1-weekday")]);
+    const shifted = arrivalsAt(before.schedules[0] ?? null, "KR-1-0153").map((iso) => iso && new Date(Date.parse(iso) + 120_000).toISOString());
+    expect(arrivalsAt(after.schedules[0] ?? null, "KR-1-0153")).toEqual(shifted);
+  });
+
+  it("Invalid table in a new revision: keeps serving the held KR-1-weekday for 24 h, reading the new part once a minute, then has none", async () => {
+    // Arrange
+    const tables = committedSubwayTimetables();
+    const { repository, service, advanceTo, partIdOf } = setupStored(tables);
+    const pushedAt = Date.parse("2026-10-20T01:00:00.000Z");
+    const held = await service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt)));
+    const invalid = tables.map((t) => (t === tableOf(tables, "KR-1-weekday") ? { ...t, trains: [{ ...t.trains[0]!, trainNo: "K602" }] } : t));
+    repository.storeTables(invalid);
+
+    // Act
+    const served = await service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt + MINUTE_MS + 1)));
+    await service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt + MINUTE_MS + 30_000)));
+    const late = service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt + MINUTE_MS + DAY_MS + 1)));
+
+    // Assert
+    expect(served?.trains).toEqual(held?.trains.map((train) => ({ ...train, stops: train.stops })));
+    await expect(late).rejects.toMatchObject({ code: "SUBWAY_TIMETABLES_UNAVAILABLE", httpStatus: 503, keys: ["KR-1-weekday"] });
+    expect(repository.tableReads.filter((partId) => partId === partIdOf("KR-1-weekday"))).toHaveLength(2);
+  });
+
+  it("Fallback needs a table: rejects 혜화's schedule with the 503 SUBWAY_TIMETABLES_UNAVAILABLE when nothing was ever read and the database is unreachable", async () => {
+    // Arrange
+    const { repository, service } = setupStored();
+    repository.failWith = new Error("server selection timed out");
+
+    // Act
+    const schedule = service.findPlatformSchedule("S1-4-420", NIGHT);
+
+    // Assert
+    await expect(schedule).rejects.toMatchObject({ name: "SubwayTimetablesUnavailableError", code: "SUBWAY_TIMETABLES_UNAVAILABLE", httpStatus: 503, keys: ["S1-4-weekday"] });
+  });
+
+  it("finds no schedule for a platform it does not serve, reading nothing", async () => {
+    // Arrange
+    const { repository, service } = setupStored();
+
+    // Act
+    const schedule = await service.findPlatformSchedule("S1-2-220", NIGHT);
+
+    // Assert
+    expect(schedule).toBeNull();
+    expect(repository.tableReads).toEqual([]);
+  });
+
+  it("answers the service window with the database unreachable, reading no dataset", async () => {
+    // Arrange
+    const { repository, service } = setupStored();
+    repository.failWith = new Error("server selection timed out");
+
+    // Act
+    const isInside = await service.isInServiceWindow(new Date("2026-10-20T01:00:00.000Z"));
+
+    // Assert
+    expect(isInside).toBe(true);
+    expect(repository.manifestReads).toBe(0);
+  });
+
+  it("Atlas unreachable during service hours: keeps scheduling every platform from the held tables", async () => {
+    // Arrange
+    const { repository, service, advanceTo } = setupStored();
+    await service.listPlatformSchedules(advanceTo("2026-10-20T01:00:00.000Z"));
+    repository.failWith = new Error("server selection timed out");
+
+    // Act
+    const listed = await service.listPlatformSchedules(advanceTo("2026-10-20T01:10:00.000Z"));
+
+    // Assert
+    expect(listed.schedules).toHaveLength(13);
+    expect(listed.unavailable).toBeNull();
+  });
+
+  it("Poller tick without a table: lists the platforms it could schedule, with the error naming KR-1-weekday, which it could not read", async () => {
+    // Arrange
+    const { repository, service, partIdOf } = setupStored();
+    repository.parts.delete(partIdOf("KR-1-weekday"));
+
+    // Act
+    const listed = await service.listPlatformSchedules(new Date("2026-10-20T01:00:00.000Z"));
+
+    // Assert
+    expect(listed.schedules.map((schedule) => schedule.platform.id)).toEqual(SUBWAY_STATIONS.flatMap((station) => station.platforms.map((p) => p.id)).filter((id) => id !== "KR-1-0153"));
+    expect(listed.unavailable).toMatchObject({ code: "SUBWAY_TIMETABLES_UNAVAILABLE", httpStatus: 503, keys: ["KR-1-weekday"] });
+  });
+
+  it("Deploy adds a line before its tables are pushed: logs a served platform whose table the revision lacks once per revision", async () => {
+    // Arrange
+    const tables = committedSubwayTimetables();
+    const withoutSaturday = tables.filter((t) => t !== tableOf(tables, "S1-4-saturday"));
+    const { repository, service, advanceTo } = setupStored(withoutSaturday);
+
+    // Act
+    await service.listPlatformSchedules(advanceTo("2026-10-20T01:00:00.000Z"));
+    await service.listPlatformSchedules(advanceTo("2026-10-20T01:02:00.000Z"));
+    repository.storeTables(withoutSaturday);
+    const listed = await service.listPlatformSchedules(advanceTo("2026-10-20T01:04:00.000Z"));
+
+    // Assert
+    expect(listed.schedules).toHaveLength(13);
+    expect(mockedLogger.error.mock.calls.map(([fields]) => fields)).toEqual([
+      expect.objectContaining({ event: "subway.timetables.table_missing", revision: 1, key: "S1-4-saturday", platformIds: ["S1-4-420"] }),
+      expect.objectContaining({ event: "subway.timetables.table_missing", revision: 2, key: "S1-4-saturday", platformIds: ["S1-4-420"] }),
+    ]);
+  });
+
+  it("rejects the Saturday schedule of 혜화 when the revision lacks S1-4-saturday", async () => {
+    // Arrange
+    const tables = committedSubwayTimetables();
+    const { service } = setupStored(tables.filter((t) => t !== tableOf(tables, "S1-4-saturday")));
+
+    // Act
+    const schedule = service.findPlatformSchedule("S1-4-420", new Date("2026-10-24T01:00:00.000Z"));
+
+    // Assert
+    await expect(schedule).rejects.toMatchObject({ code: "SUBWAY_TIMETABLES_UNAVAILABLE", keys: ["S1-4-saturday"] });
+  });
+
+  it("reads the manifest again only after a minute", async () => {
+    // Arrange
+    const { repository, service, advanceTo } = setupStored();
+
+    // Act
+    await service.findPlatformSchedule("S1-4-420", advanceTo("2026-10-20T01:00:00.000Z"));
+    await service.findPlatformSchedule("S1-4-420", advanceTo("2026-10-20T01:00:59.000Z"));
+    await service.findPlatformSchedule("S1-4-420", advanceTo("2026-10-20T01:01:01.000Z"));
+
+    // Assert
+    expect(repository.manifestReads).toBe(2);
+    expect(DATASET_CACHE_TTL_MS).toBe(MINUTE_MS);
   });
 });

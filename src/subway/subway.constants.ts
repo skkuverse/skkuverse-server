@@ -3,6 +3,8 @@ import type { LocalizedName, NetworkStation, SubwayLine, SubwayNetwork } from ".
 // WHY: an approaching train is taken to arrive this long after its approach was shown (design D4).
 export const APPROACH_LEAD_MS = 30_000;
 
+export const MAX_UPSTREAM_PLATFORMS = 3;
+
 const named = (ko: string, en: string, zh: string): LocalizedName => ({ ko, en, zh });
 const marked = (ko: string, zh: string, color: string): SubwayLine["marker"] => ({ text: { ko, en: ko, zh }, color });
 

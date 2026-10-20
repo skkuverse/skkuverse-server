@@ -1,15 +1,18 @@
 /**
- * subwayRegistryFile, the shape of the committed subway registry (design D2):
- * the committed file passes; a copy missing any field of a line, a station, a
+ * subwayRegistryFile, the shape of the subway registry (design D2): the
+ * registry the code's network and revision 1 of `subway-topology` join into
+ * passes; a copy missing any field of a line, a station, a
  * platform, a direction, a line's marker or a neighbor fails; a slug, a
  * platform id, a color, a marker color, a Seoul station code or an upstream
  * list off its shape fails with its path, and so does a marker whose text is
  * not exactly one character (one grapheme) in any language.
- * The checks across entries are loadSubwayRegistry's, until task 10.6.
+ * The checks across entries are toNetworkIssues' and toTopologyIssues'.
  */
+import { subwayRegistryFixture } from "../../__tests__/helpers/subway/topology";
 import { subwayRegistryFile } from "./subway.schema";
 
-const committed = require("./subway-registry.json") as Record<string, unknown>;
+// WHY: the registry readers serve from revision 1, the shape the deleted committed registry file held.
+const committed = subwayRegistryFixture() as unknown as Record<string, unknown>;
 
 type Json = Record<string, unknown>;
 
@@ -31,7 +34,7 @@ function without(path: readonly (string | number)[], field: string): Json {
 }
 
 describe("subwayRegistryFile", () => {
-  it("accepts the committed subway-registry.json", () => {
+  it("accepts the registry revision 1 joins into", () => {
     // Act & Assert
     expect(messagesOf(committed)).toEqual([]);
   });

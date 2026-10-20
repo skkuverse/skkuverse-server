@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Build the committed subway timetables in src/subway/timetable/ (OpenSpec add-subway-arrivals, design D6, and
-add-commute-station-subway, design D8).
+"""Build the subway timetables, one file per part of the `subway-timetables` dataset (OpenSpec add-subway-arrivals,
+design D6; add-commute-station-subway, design D8; move-reference-datasets, design D6). The server reads the stored
+dataset; `npm run data` is its only writer and checks every file with the server's own schema and coverage rule.
 
 When to rerun:
 
@@ -15,21 +16,31 @@ When to rerun:
     - A served station or one of its upstream or watched stations changes (the line's entry in LINES:
       its stations and served platforms).
 
-How to rerun (from the repository root):
+How to rerun (from the repository root; docs/how-to/update-subway-timetables.md):
 
-    doppler run -p backend -c dev_personal -- python3 -I scripts/subway-timetable/convert.py
+    npm run data -- pull subway-timetables
+    doppler run -p backend -c dev_personal -- python3 -I scripts/subway-timetable/convert.py --out .data/dev/subway-timetables/parts [--line 2]
+    npm run data -- push subway-timetables --dry-run
+    npm run data -- push subway-timetables --note "Seoul Metro 2026-11 timetable"
+
+then the same against production with --prod, from a production pull. `--out` is required: the converter writes
+only into the pulled directory, and a rebuild of one source or line leaves the other files as pulled. The push
+reports each table as unchanged, changed, added or removed, and stores only the changed ones.
 
 The Seoul part reads SEOUL_OPENAPI_GENERAL_KEY from the environment, and no other variable; Doppler
 backend/dev_personal holds it, a config no service renders. `--only korail` needs no key. `--korail-weekday FILE` and `--korail-holiday FILE` read local
 copies of the two 1호선 Korail URLs instead of downloading them, `--korail-k1 FILE` of the 수인분당 one,
-`--shinbundang-zip FILE` of all_kor.zip. Only the Seoul part needs the key. Review the diff, then commit the JSON.
+`--shinbundang-zip FILE` of all_kor.zip. Only the Seoul part needs the key.
 
-What it writes, per operator line and day type:
+What it writes, one file per operator line and day type, named by its part key (<operator>-<line>-<dayType>):
 
-    korail-1-weekday.json, korail-1-holiday.json                      1호선, Korail xlsx
-    korail-k1-weekday.json, korail-k1-holiday.json                    수인분당선, Korail xlsx (one file)
-    seoul-{2,3,4,8}-{weekday,saturday,holiday}.json                    2/3/4/8호선, SearchSTNTimeTableByIDService
-    shinbundang-d1-weekday.json, shinbundang-d1-holiday.json          신분당선, the operator's per-station PDFs
+    KR-1-weekday.json, KR-1-holiday.json                       1호선, Korail xlsx
+    KR-K1-weekday.json, KR-K1-holiday.json                     수인분당선, Korail xlsx (one file)
+    S1-{2,3,4,8}-{weekday,saturday,holiday}.json               2/3/4/8호선, SearchSTNTimeTableByIDService
+    DX-D1-weekday.json, DX-D1-holiday.json                     신분당선, the operator's per-station PDFs
+
+A rebuilt Seoul table whose trains equal the pulled file's keeps the pulled revision (keep_revision), so it pushes
+as unchanged.
 
 Each file lists the trains that stop at one of its line's served platforms (LINES) with their stops among
 the covered stations, in travel order. A line covers every station between its served platforms and, on each side,
@@ -161,7 +172,6 @@ KORAIL_ABBREVIATIONS = {"1지청": "청량리", "지하서": "서울"}
 LINE1 = {
     "line": "1",
     "operator": "KR",
-    "file": "korail-1",
     "source": "korail",
     "stations": LINE1_STATIONS,
     "up_order": "listed",
@@ -177,7 +187,6 @@ LINE1 = {
 LINE4 = {
     "line": "4",
     "operator": "S1",
-    "file": "seoul-4",
     "source": "seoul",
     "stations": LINE4_STATIONS,
     "up_order": "reversed",
@@ -191,7 +200,6 @@ LINE4 = {
 LINE2 = {
     "line": "2",
     "operator": "S1",
-    "file": "seoul-2",
     "source": "seoul",
     "stations": tuple(("S1-2-%d" % n, "%04d" % n) for n in range(212, 229)),
     "up_order": "listed",
@@ -209,7 +217,6 @@ LINE2 = {
 LINE3 = {
     "line": "3",
     "operator": "S1",
-    "file": "seoul-3",
     "source": "seoul",
     "stations": tuple(("S1-3-%d" % n, "%04d" % n) for n in range(326, 343)),
     "up_order": "reversed",
@@ -221,7 +228,6 @@ LINE3 = {
 LINE8 = {
     "line": "8",
     "operator": "S1",
-    "file": "seoul-8",
     "source": "seoul",
     "stations": (
         ("GU-8-2808", "2809"),
@@ -240,7 +246,6 @@ LINE8 = {
 LINEK1 = {
     "line": "K1",
     "operator": "KR",
-    "file": "korail-k1",
     "source": "korail",
     "stations": (
         ("KR-K1-K210", "왕십리"),
@@ -291,7 +296,6 @@ LINEK1 = {
 LINED1 = {
     "line": "D1",
     "operator": "DX",
-    "file": "shinbundang-d1",
     "source": "shinbundang",
     "stations": (
         ("DX-D1-D04", "신사"),
@@ -1280,8 +1284,13 @@ def keep_revision(path, document):
     return document
 
 
+def part_key(document):
+    """The table's key in the subway-timetables dataset, which `npm run data` keys its part by (toTimetableKey)."""
+    return "%s-%s-%s" % (document["operator"], document["line"], document["dayType"])
+
+
 def write(out_dir, line, document):
-    name = "%s-%s.json" % (line["file"], document["dayType"])
+    name = "%s.json" % part_key(document)
     path = os.path.join(out_dir, name)
     if document["source"]["kind"] == "seoul-station-timetable":
         document = keep_revision(path, document)
@@ -1365,11 +1374,10 @@ def build_seoul(out_dir, today, lines=SEOUL_LINES):
 
 
 def main(argv=None):
-    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    parser = argparse.ArgumentParser(description="Build src/subway/timetable/*.json from the Korail xlsx files and the Seoul API.")
+    parser = argparse.ArgumentParser(description="Build the subway-timetables parts from the Korail xlsx files, the Seoul API and the Shinbundang PDFs.")
     parser.add_argument("--only", choices=("korail", "seoul", "shinbundang"), help="build one source only")
     parser.add_argument("--line", action="append", choices=[line["line"] for line in LINES], help="build this line only; repeatable")
-    parser.add_argument("--out", default=os.path.join(root, "src", "subway", "timetable"), help="output directory")
+    parser.add_argument("--out", required=True, help="the parts/ directory of a pulled subway-timetables (.data/<dev|prod>/subway-timetables/parts)")
     parser.add_argument("--korail-weekday", help="a local copy of KORAIL_WEEKDAY_URL")
     parser.add_argument("--korail-holiday", help="a local copy of KORAIL_HOLIDAY_URL")
     parser.add_argument("--korail-k1", help="a local copy of KORAIL_K1_URL")
