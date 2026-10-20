@@ -40,7 +40,8 @@
  * The lists are the ones the server checks against: `busGroups` is
  * BusConfigService.listGroupIds's `toBusGroupIds(JONGRO_ROUTES)`,
  * `subwayStations` SubwayStationsService.listStations's ids, `busServices`
- * the keys of SERVICE_CONFIG, `jongroRoutes` the ids of JONGRO_ROUTES.
+ * the keys of SERVICE_CONFIG, `jongroRoutes` the ids of JONGRO_ROUTES,
+ * `subwayPlatforms` the platform ids of SUBWAY_STATIONS.
  */
 
 function codeHeldSource(owner, ids) {
@@ -85,12 +86,19 @@ function loadCatalog(load) {
   const { JONGRO_ROUTES, SERVICE_CONFIG } = load("bus/bus.constants");
   const { toBusGroupIds } = load("bus/config/bus-config.mapper");
   const { SubwayStationsService } = load("subway/stations/subway-stations.service");
+  const { SUBWAY_NETWORK, SUBWAY_STATIONS } = load("subway/subway.constants");
+  const { toNetworkIssues } = load("subway/subway.rules");
+  const { subwayTopologyDataset } = load("subway/topology/subway-topology.schema");
+  const { toTopologyIssues } = load("subway/topology/subway-topology.rules");
 
   const grammar = { parseTarget: parseMiniAppTarget };
   const registryParts = { toMiniAppRegistry, parseMiniAppTarget, isSingleEmoji, webOrigin: WEB_ORIGIN };
   const busGroups = codeHeldSource("src/bus", toBusGroupIds(JONGRO_ROUTES));
   const jongroRoutes = codeHeldSource("src/bus", JONGRO_ROUTES.map((route) => route.id));
   const subwayStations = codeHeldSource("src/subway", new SubwayStationsService().listStations().map((station) => station.id));
+  const subwayPlatforms = codeHeldSource("src/subway", SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)));
+  // A topology is checked against this checkout's network, which must hold together first; its issues name the constants.
+  const networkIssues = toNetworkIssues(SUBWAY_NETWORK).map((issue) => ({ path: ["SUBWAY_NETWORK", ...issue.path], message: `src/subway/subway.constants.ts: ${issue.message}` }));
 
   return {
     sources: {
@@ -98,6 +106,7 @@ function loadCatalog(load) {
       subwayStations,
       busServices: codeHeldSource("src/bus", Object.keys(SERVICE_CONFIG)),
       jongroRoutes,
+      subwayPlatforms,
     },
     datasets: {
       // Its ids are what the ui datasets name; who owns a first-party origin stays in src/infra/origins.ts.
@@ -159,6 +168,13 @@ function loadCatalog(load) {
         owner: "src/bus/route-attributes",
         schema: jongroRouteAttributesDataset,
         issuesOf: (attributes) => toRouteAttributesIssues(attributes, jongroRoutes.ids()),
+        referencesOf: () => [],
+      },
+      // Each served platform's directions and the neighbor stops; the lines, stations and platforms stay in code (move-reference-datasets D2, D3).
+      "subway-topology": {
+        owner: "src/subway/topology",
+        schema: subwayTopologyDataset,
+        issuesOf: (topology) => [...networkIssues, ...toTopologyIssues(topology, SUBWAY_NETWORK)],
         referencesOf: () => [],
       },
     },

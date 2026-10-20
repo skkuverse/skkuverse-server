@@ -27,13 +27,15 @@ import config from "../../infra/config";
 import logger from "../../infra/logger";
 import type { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
+import { FakeSubwayTopologyRepository } from "../../../__tests__/helpers/fakes/subway/subway-topology.repository.fake";
+import { storedSubwayTopologyRepository, storedSubwayTopologyService, subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import { SubwayMatchingService } from "../matching/subway-matching.service";
 import type { SubwaySeoulApiClient } from "../seoul-api/subway-seoul-api.client";
 import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import type { SubwaySeoulTrainmapClient } from "../seoul-trainmap/subway-seoul-trainmap.client";
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
-import { SUBWAY_REGISTRY } from "../subway.config";
+import { SUBWAY_LINES, SUBWAY_STATIONS } from "../subway.constants";
 import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
 import { SubwayTimetableService } from "../timetable/subway-timetable.service";
@@ -54,14 +56,14 @@ const ALL_LINES = "0";
 const LINES_1_AND_4_PAGE = `${page("trainmap-line1.html")}${page("trainmap-line4.html")}`;
 const BROKEN_LINE_4 = '<div class="4line_metro"><div class="T0421_Q_9_v2 tip" title="4050열차  동대문 도착 진접행"></div></div>';
 // WHY: one position call per registered line and one arrival call per registered station, however many the registry holds.
-const API_CALLS_PER_TICK = SUBWAY_REGISTRY.lines.length + SUBWAY_REGISTRY.stations.length;
+const API_CALLS_PER_TICK = SUBWAY_LINES.length + SUBWAY_STATIONS.length;
 // WHY: 05:00 to 01:10 KST, the weekday window the service-window tests below pin; a sibling's constants are not importable.
 const WEEKDAY_WINDOW_SEC = (20 * 60 + 10) * 60;
 // WHY: the intervals the registration test pins (10 s and 15 s); a crawl is one request (line=0).
 const WEEKDAY_API_CALLS = API_CALLS_PER_TICK * (WEEKDAY_WINDOW_SEC / 10);
 const WEEKDAY_CRAWLS = WEEKDAY_WINDOW_SEC / 15;
 
-function setup(startIso: string) {
+function setup(startIso: string, topology = storedSubwayTopologyRepository()) {
   let now = new Date(startIso);
   const clock = { now: () => now } as Clock;
   const apiClient = new FakeSubwaySeoulApiClient();
@@ -74,6 +76,7 @@ function setup(startIso: string) {
     new SubwaySeoulApiService(asReal<SubwaySeoulApiClient>(apiClient)),
     new SubwaySeoulTrainmapService(asReal<SubwaySeoulTrainmapClient>(trainmapClient)),
     clock,
+    storedSubwayTopologyService(topology, clock),
   );
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
   const tracking = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(new FakeSubwayRepository())), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
@@ -195,6 +198,24 @@ describe("SubwaySeoulPoller daily ceilings", () => {
     await tickAt("2026-10-16T11:00:20Z", "subway-seoul");
 
     // Assert
+    expect(apiClient.calls).toHaveLength(API_CALLS_PER_TICK);
+  });
+
+  it("Poller without a topology: rejects the API's ticks before any call, taking nothing from its ceiling", async () => {
+    // Arrange
+    subway.apiDailyCap = API_CALLS_PER_TICK;
+    const topology = new FakeSubwayTopologyRepository();
+    const { apiClient, tickAt } = setup("2026-10-16T11:00:00Z", topology);
+
+    // Act
+    const unread = await tickAt("2026-10-16T11:00:00Z", "subway-seoul").catch((err: unknown) => err);
+    const callsUnread = apiClient.calls.length;
+    topology.storeTopology(subwayTopologyFixture());
+    await tickAt("2026-10-16T11:01:00Z", "subway-seoul");
+
+    // Assert
+    expect(unread).toMatchObject({ code: "SUBWAY_TOPOLOGY_UNAVAILABLE", httpStatus: 503 });
+    expect(callsUnread).toBe(0);
     expect(apiClient.calls).toHaveLength(API_CALLS_PER_TICK);
   });
 });

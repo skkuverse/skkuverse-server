@@ -8,11 +8,12 @@
  * station whatever its state there, and unknown (null) for a station off the
  * list, a watched one such as Geumjeong included, or a train nothing has reported.
  */
-import { SUBWAY_REGISTRY } from "../subway.config";
+import { subwayRegistryFixture } from "../../../__tests__/helpers/subway/topology";
 import type { SubwayPlatform } from "../subway.types";
 import { findPlatformName, findSubwayStation, isFreshState, toStopsAway } from "./subway-arrivals.rules";
 
 const GENERATED_AT = new Date("2026-10-16T11:41:00Z");
+const REGISTRY = subwayRegistryFixture();
 
 describe("isFreshState", () => {
   it.each([
@@ -29,7 +30,7 @@ describe("isFreshState", () => {
 });
 
 describe("toStopsAway", () => {
-  const SUNGKYUNKWAN = SUBWAY_REGISTRY.stations[0]?.platforms[0] as SubwayPlatform;
+  const SUNGKYUNKWAN = REGISTRY.stations[0]?.platforms[0] as SubwayPlatform;
   const DOWN = SUNGKYUNKWAN.directions.down;
 
   it.each([
@@ -64,7 +65,7 @@ describe("findSubwayStation", () => {
     ["gwanggyo-jungang", ["DX-D1-4318"], "광교중앙", { ko: "광교중앙", en: "Gwanggyojungang", zh: "光教中央" }],
   ])("finds %s with its platforms, its Seoul name and its names", (slug, platformIds, seoulName, name) => {
     // Act
-    const station = findSubwayStation(slug);
+    const station = findSubwayStation(slug, REGISTRY);
 
     // Assert
     expect(station?.platforms.map((platform) => platform.id)).toEqual(platformIds);
@@ -74,7 +75,7 @@ describe("findSubwayStation", () => {
 
   it.each(["S1-4-420", "KR-1-0153", "Hyehwa", "seoul", ""])("finds no station for %j", (slug) => {
     // Act
-    const station = findSubwayStation(slug);
+    const station = findSubwayStation(slug, REGISTRY);
 
     // Assert
     expect(station).toBeNull();
@@ -115,11 +116,11 @@ describe("findPlatformName", () => {
     ["DX-D1-4308", { ko: "양재", en: "Yangjae", zh: "良才" }],
   ])("names %s in every language", (platformId, name) => {
     // Act & Assert
-    expect(findPlatformName(platformId)).toEqual(name);
+    expect(findPlatformName(platformId, REGISTRY)).toEqual(name);
   });
 
   it.each(["KR-1-P149", "S1-4-499"])("finds no name for %s, which is neither a named neighbor nor served", (platformId) => {
     // Act & Assert
-    expect(findPlatformName(platformId)).toBeNull();
+    expect(findPlatformName(platformId, REGISTRY)).toBeNull();
   });
 });

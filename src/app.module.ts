@@ -63,6 +63,7 @@ import { MiniappsManifestModule } from "./miniapps/manifest/miniapps-manifest.mo
 import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
 import { SubwayModule } from "./subway/subway.module";
 import { SubwayStationsModule } from "./subway/stations/subway-stations.module";
+import { SubwayTopologyModule } from "./subway/topology/subway-topology.module";
 import { SubwayTimetableModule } from "./subway/timetable/subway-timetable.module";
 import { SubwayCountdownModule } from "./subway/countdown/subway-countdown.module";
 import { SubwayEstimateModule } from "./subway/estimate/subway-estimate.module";
@@ -146,6 +147,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     MiniappsCatalogModule,
     SubwayModule,
     SubwayStationsModule,
+    SubwayTopologyModule,
     SubwayTimetableModule,
     SubwayCountdownModule,
     SubwayEstimateModule,

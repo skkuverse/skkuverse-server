@@ -8,7 +8,7 @@ export interface RegistryStation {
 }
 
 export interface JongroRouteDocument {
-  /** WHY: the route id of jongro-routes.json (`jongro07`). */
+  /** WHY: a route id of JONGRO_ROUTES (`jongro07`). */
   _id: string;
   stations: RegistryStation[];
   turnaroundTopisId: string;

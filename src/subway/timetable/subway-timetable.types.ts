@@ -1,4 +1,4 @@
-import type { PlatformTimetable, SubwayDirection, SubwayPlatform } from "../subway.types";
+import type { NetworkPlatform, PlatformTimetable, SubwayDirection } from "../subway.types";
 
 export type TimetableSource = PlatformTimetable["source"];
 
@@ -44,7 +44,7 @@ export interface ScheduledTrain {
 }
 
 export interface PlatformSchedule {
-  platform: SubwayPlatform;
+  platform: NetworkPlatform;
   serviceDate: string;
   dayType: DayType;
   lineRoutes: LineRoutes;

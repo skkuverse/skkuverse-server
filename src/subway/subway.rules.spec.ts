@@ -1,11 +1,85 @@
 /**
- * A line of the committed registry by its code (design D2): its Seoul ids,
+ * toNetworkIssues, the checks over the identities the code holds
+ * (move-reference-datasets D2): SUBWAY_LINES and SUBWAY_STATIONS pass, and a network with a
+ * repeated station, platform, line code or subwayId, a platform on an unlisted
+ * line, a second platform of one line at a station, or a line no platform uses
+ * gets one issue each, with its path.
+ *
+ * A line of SUBWAY_LINES by its code (design D2): its Seoul ids,
  * its numbering, its color and its marker (one character: a numbered line's
  * number, a named line's first syllable in Korean). A code the
  * registry does not list throws: the registry's boot check makes that
  * unreachable for a registered platform.
  */
-import { toSubwayLine } from "./subway.rules";
+import { SUBWAY_LINES, SUBWAY_STATIONS } from "./subway.constants";
+import { toNetworkIssues, toSubwayLine } from "./subway.rules";
+import type { NetworkStation, SubwayLine, SubwayNetwork } from "./subway.types";
+
+const NETWORK: SubwayNetwork = { lines: SUBWAY_LINES, stations: SUBWAY_STATIONS };
+
+interface MutableNetwork {
+  lines: SubwayLine[];
+  stations: NetworkStation[];
+}
+
+const networkCopy = (): MutableNetwork => structuredClone({ lines: [...NETWORK.lines], stations: [...NETWORK.stations] });
+const NEXT_STATION = NETWORK.stations.length;
+const NEXT_LINE = NETWORK.lines.length;
+
+describe("toNetworkIssues", () => {
+  it("finds no issue in the code's lines and stations", () => {
+    // Act & Assert
+    expect(toNetworkIssues(NETWORK)).toEqual([]);
+  });
+
+  it.each([
+    [
+      "a repeated station",
+      (network: MutableNetwork) => network.stations.push({ ...network.stations[1]!, platforms: [{ ...network.stations[1]!.platforms[0]!, id: "S1-4-499" }] }),
+      { path: ["stations", NEXT_STATION, "id"], message: 'station "hyehwa" is listed twice' },
+    ],
+    [
+      "a repeated platform",
+      (network: MutableNetwork) => network.stations.push({ ...network.stations[1]!, id: "hyehwa-two" }),
+      { path: ["stations", NEXT_STATION, "platforms", 0, "id"], message: 'platform "S1-4-420" is listed twice' },
+    ],
+    [
+      "a repeated line code",
+      (network: MutableNetwork) => network.lines.push({ ...network.lines[1]!, seoul: { ...network.lines[1]!.seoul, subwayId: "1099" } }),
+      { path: ["lines", NEXT_LINE, "code"], message: 'line "4" is listed twice' },
+    ],
+    [
+      "a repeated subwayId",
+      (network: MutableNetwork) => (network.lines[1]!.seoul.subwayId = "1001"),
+      { path: ["lines", 1, "seoul", "subwayId"], message: 'subwayId "1001" is listed twice' },
+    ],
+    [
+      "a platform on an unlisted line",
+      (network: MutableNetwork) => (network.stations[1]!.platforms[0]!.line = "9"),
+      { path: ["stations", 1, "platforms", 0, "line"], message: '"9" is not a listed line' },
+    ],
+    [
+      "two platforms of one line at one station",
+      (network: MutableNetwork) => network.stations[1]!.platforms.push({ ...network.stations[1]!.platforms[0]!, id: "S1-4-499" }),
+      { path: ["stations", 1, "platforms", 1, "line"], message: 'station "hyehwa" has a second platform on line "4"' },
+    ],
+    [
+      "a line no platform uses",
+      (network: MutableNetwork) => network.lines.push({ ...network.lines[1]!, code: "9", seoul: { ...network.lines[1]!.seoul, subwayId: "1009" } }),
+      { path: ["lines", NEXT_LINE, "code"], message: 'line "9" has no platform' },
+    ],
+  ])("reports %s with its path", (_case, arrange, issue) => {
+    // Arrange
+    const network = networkCopy();
+    arrange(network);
+
+    // Act
+    const issues = toNetworkIssues(network);
+
+    // Assert
+    expect(issues).toContainEqual(issue);
+  });
+});
 
 describe("toSubwayLine", () => {
   it.each([

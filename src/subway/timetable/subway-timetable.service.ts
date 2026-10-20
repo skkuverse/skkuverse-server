@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { HolidaysService } from "../../holidays/holidays.service";
-import type { SubwayPlatform } from "../subway.types";
+import type { NetworkPlatform } from "../subway.types";
 import { SUBWAY_TIMETABLES } from "./subway-timetable.config";
 import {
   findSubwayPlatform,
@@ -36,11 +36,11 @@ export class SubwayTimetableService {
   async isInServiceWindow(now: Date): Promise<boolean> {
     const serviceDate = toServiceDate(now);
     const isPublicHoliday = await this.isPublicHoliday(serviceDate);
-    const dayTypeOf = (platform: SubwayPlatform) => toDayType(platform.timetable.source, serviceDate, isPublicHoliday);
+    const dayTypeOf = (platform: NetworkPlatform) => toDayType(platform.timetable.source, serviceDate, isPublicHoliday);
     return listSubwayPlatforms().some((platform) => isInServiceWindow(dayTypeOf(platform), serviceDate, now));
   }
 
-  private toPlatformSchedule(platform: SubwayPlatform, serviceDate: string, isPublicHoliday: boolean): PlatformSchedule {
+  private toPlatformSchedule(platform: NetworkPlatform, serviceDate: string, isPublicHoliday: boolean): PlatformSchedule {
     const dayType = toDayType(platform.timetable.source, serviceDate, isPublicHoliday);
     const timetable = findTimetable(SUBWAY_TIMETABLES, platform, dayType);
     // WHY: unreachable: assertTimetablesCover stops the boot when a declared day type has no table.
