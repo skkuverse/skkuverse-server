@@ -40,7 +40,7 @@ import logger from "../../infra/logger";
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
 import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import { SubwayMatchingService } from "../matching/subway-matching.service";
-import { SUBWAY_REGISTRY } from "../subway.config";
+import { SUBWAY_STATIONS } from "../subway.constants";
 import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
 import type { CountdownRow, SubwayPlatform, SubwayProvider, TrainEvent } from "../subway.types";
@@ -100,7 +100,7 @@ describe("SubwayTrackingService.track", () => {
     await tickAt("20:39:10", api());
 
     // Assert
-    expect([...repository.docs.keys()]).toEqual(SUBWAY_REGISTRY.stations.flatMap((station) => station.platforms.map((platform) => platform.id)));
+    expect([...repository.docs.keys()]).toEqual(SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)));
     expect([...repository.docs.keys()].slice(0, 2)).toEqual([SUNGKYUNKWAN, HYEHWA]);
     for (const doc of repository.docs.values()) {
       expect(doc.generatedAt).toEqual(at("20:39:10"));

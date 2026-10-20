@@ -1,0 +1,5264 @@
+{
+ "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh at 00:20 and 02:00 KST on Wednesday 2026-10-21 (service day Tuesday 2026-10-20), timetable only, over the subway-topology characterization's seed (every arrival state 14 h old) and the committed timetables, generated 2026-10-20 at commit 46c6ea60, before the topology reader landed (move-reference-datasets task 6.3). Each answer keeps its status, Cache-Control, Vary, ETag and body; the body's bytes are JSON.stringify of it.",
+ "instants": {
+  "2026-10-20T15:20:00.000Z": {
+   "sungkyunkwan": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"254-uiOuUzKXnu/MxcGNdte0c3wV4NM\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "sungkyunkwan",
+        "name": "성균관대"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "1",
+          "name": "1호선",
+          "color": "0052A4",
+          "marker": {
+           "text": "1",
+           "color": "0052A4"
+          }
+         },
+         "platformId": "KR-1-0153",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "서울 방면",
+           "previousStation": {
+            "id": "KR-1-P154",
+            "name": "화서"
+           },
+           "nextStation": {
+            "id": "KR-1-P152",
+            "name": "의왕"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "천안·서동탄 방면",
+           "previousStation": {
+            "id": "KR-1-P152",
+            "name": "의왕"
+           },
+           "nextStation": {
+            "id": "KR-1-P154",
+            "name": "화서"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"25b-kEHLiNiqZFtfEUX4vAvmyH2ObuM\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "sungkyunkwan",
+        "name": "Sungkyunkwan Univ."
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "1",
+          "name": "Line 1",
+          "color": "0052A4",
+          "marker": {
+           "text": "1",
+           "color": "0052A4"
+          }
+         },
+         "platformId": "KR-1-0153",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Seoul",
+           "previousStation": {
+            "id": "KR-1-P154",
+            "name": "Hwaseo"
+           },
+           "nextStation": {
+            "id": "KR-1-P152",
+            "name": "Uiwang"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Cheonan / Seodongtan",
+           "previousStation": {
+            "id": "KR-1-P152",
+            "name": "Uiwang"
+           },
+           "nextStation": {
+            "id": "KR-1-P154",
+            "name": "Hwaseo"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"255-apCpl8KcNtg9Wo1d/2PhlGTcx/o\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "sungkyunkwan",
+        "name": "成均馆大学"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "1",
+          "name": "1号线",
+          "color": "0052A4",
+          "marker": {
+           "text": "1",
+           "color": "0052A4"
+          }
+         },
+         "platformId": "KR-1-0153",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "首尔方向",
+           "previousStation": {
+            "id": "KR-1-P154",
+            "name": "华西"
+           },
+           "nextStation": {
+            "id": "KR-1-P152",
+            "name": "义王"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "天安·西东滩方向",
+           "previousStation": {
+            "id": "KR-1-P152",
+            "name": "义王"
+           },
+           "nextStation": {
+            "id": "KR-1-P154",
+            "name": "华西"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "hyehwa": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"519-ujDUw7zQLPFEWgk1oxFTkGTFwio\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "hyehwa",
+        "name": "혜화"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "4",
+          "name": "4호선",
+          "color": "00A5DE",
+          "marker": {
+           "text": "4",
+           "color": "007FAB"
+          }
+         },
+         "platformId": "S1-4-420",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "불암산·진접 방면",
+           "previousStation": {
+            "id": "S1-4-421",
+            "name": "동대문"
+           },
+           "nextStation": {
+            "id": "S1-4-419",
+            "name": "한성대입구"
+           },
+           "trains": [
+            {
+             "trainNo": "4702",
+             "destination": "불암산",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "4222",
+             "destination": "불암산",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:39:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "4704",
+             "destination": "한성대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:58:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "오이도·안산 방면",
+           "previousStation": {
+            "id": "S1-4-419",
+            "name": "한성대입구"
+           },
+           "nextStation": {
+            "id": "S1-4-421",
+            "name": "동대문"
+           },
+           "trains": [
+            {
+             "trainNo": "4219",
+             "destination": "사당",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:30:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "4221",
+             "destination": "서울역",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:48:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"512-xtYyyKTqjtUa0+viKijEwr1HZq0\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "hyehwa",
+        "name": "Hyehwa"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "4",
+          "name": "Line 4",
+          "color": "00A5DE",
+          "marker": {
+           "text": "4",
+           "color": "007FAB"
+          }
+         },
+         "platformId": "S1-4-420",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Buramsan / Jinjeop",
+           "previousStation": {
+            "id": "S1-4-421",
+            "name": "Dongdaemun"
+           },
+           "nextStation": {
+            "id": "S1-4-419",
+            "name": "Hansung Univ."
+           },
+           "trains": [
+            {
+             "trainNo": "4702",
+             "destination": "불암산",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "4222",
+             "destination": "불암산",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:39:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "4704",
+             "destination": "한성대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:58:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "Toward Oido / Ansan",
+           "previousStation": {
+            "id": "S1-4-419",
+            "name": "Hansung Univ."
+           },
+           "nextStation": {
+            "id": "S1-4-421",
+            "name": "Dongdaemun"
+           },
+           "trains": [
+            {
+             "trainNo": "4219",
+             "destination": "사당",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:30:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "4221",
+             "destination": "서울역",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:48:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"517-lGeqjq0vwpVl3T3blToBhbwh58Q\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "hyehwa",
+        "name": "惠化"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "4",
+          "name": "4号线",
+          "color": "00A5DE",
+          "marker": {
+           "text": "4",
+           "color": "007FAB"
+          }
+         },
+         "platformId": "S1-4-420",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "佛岩山·榛接方向",
+           "previousStation": {
+            "id": "S1-4-421",
+            "name": "东大门"
+           },
+           "nextStation": {
+            "id": "S1-4-419",
+            "name": "汉城大入口"
+           },
+           "trains": [
+            {
+             "trainNo": "4702",
+             "destination": "불암산",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "4222",
+             "destination": "불암산",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:39:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "4704",
+             "destination": "한성대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:58:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "乌耳岛·安山方向",
+           "previousStation": {
+            "id": "S1-4-419",
+            "name": "汉城大入口"
+           },
+           "nextStation": {
+            "id": "S1-4-421",
+            "name": "东大门"
+           },
+           "trains": [
+            {
+             "trainNo": "4219",
+             "destination": "사당",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:30:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "4221",
+             "destination": "서울역",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:48:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "jeongja": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"660-TPD6YCmYbwyUQ8xcYcEID7io/tY\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "jeongja",
+        "name": "정자"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "신분당선",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4312",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "신사 방면",
+           "previousStation": {
+            "id": "DX-D1-D13",
+            "name": "미금"
+           },
+           "nextStation": {
+            "id": "DX-D1-4311",
+            "name": "판교"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "광교 방면",
+           "previousStation": {
+            "id": "DX-D1-4311",
+            "name": "판교"
+           },
+           "nextStation": {
+            "id": "DX-D1-D13",
+            "name": "미금"
+           },
+           "trains": [
+            {
+             "trainNo": "1327",
+             "destination": "광교",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1329",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1331",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:45:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "수인분당선",
+          "color": "F5A200",
+          "marker": {
+           "text": "수",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K230",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "청량리 방면",
+           "previousStation": {
+            "id": "KR-K1-K231",
+            "name": "미금"
+           },
+           "nextStation": {
+            "id": "KR-K1-K229",
+            "name": "수내"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "인천 방면",
+           "previousStation": {
+            "id": "KR-K1-K229",
+            "name": "수내"
+           },
+           "nextStation": {
+            "id": "KR-K1-K231",
+            "name": "미금"
+           },
+           "trains": [
+            {
+             "trainNo": "6253",
+             "destination": "죽전",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"66d-NTTokceC20zCFJu2VYoSlbs599c\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "jeongja",
+        "name": "Jeongja"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "Shinbundang Line",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4312",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Sinsa",
+           "previousStation": {
+            "id": "DX-D1-D13",
+            "name": "Migeum"
+           },
+           "nextStation": {
+            "id": "DX-D1-4311",
+            "name": "Pangyo"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Gwanggyo",
+           "previousStation": {
+            "id": "DX-D1-4311",
+            "name": "Pangyo"
+           },
+           "nextStation": {
+            "id": "DX-D1-D13",
+            "name": "Migeum"
+           },
+           "trains": [
+            {
+             "trainNo": "1327",
+             "destination": "광교",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1329",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1331",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:45:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "Suin–Bundang Line",
+          "color": "F5A200",
+          "marker": {
+           "text": "수",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K230",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Cheongnyangni",
+           "previousStation": {
+            "id": "KR-K1-K231",
+            "name": "Migeum"
+           },
+           "nextStation": {
+            "id": "KR-K1-K229",
+            "name": "Sunae"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Incheon",
+           "previousStation": {
+            "id": "KR-K1-K229",
+            "name": "Sunae"
+           },
+           "nextStation": {
+            "id": "KR-K1-K231",
+            "name": "Migeum"
+           },
+           "trains": [
+            {
+             "trainNo": "6253",
+             "destination": "죽전",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"65e-geFVkoKPUtVxeACIE/Mx+4R+Yx4\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "jeongja",
+        "name": "亭子"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "新盆唐线",
+          "color": "D4003B",
+          "marker": {
+           "text": "新",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4312",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "新沙方向",
+           "previousStation": {
+            "id": "DX-D1-D13",
+            "name": "美金"
+           },
+           "nextStation": {
+            "id": "DX-D1-4311",
+            "name": "板桥"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "光教方向",
+           "previousStation": {
+            "id": "DX-D1-4311",
+            "name": "板桥"
+           },
+           "nextStation": {
+            "id": "DX-D1-D13",
+            "name": "美金"
+           },
+           "trains": [
+            {
+             "trainNo": "1327",
+             "destination": "광교",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1329",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1331",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:45:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "水仁·盆唐线",
+          "color": "F5A200",
+          "marker": {
+           "text": "水",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K230",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "清凉里方向",
+           "previousStation": {
+            "id": "KR-K1-K231",
+            "name": "美金"
+           },
+           "nextStation": {
+            "id": "KR-K1-K229",
+            "name": "薮内"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "仁川方向",
+           "previousStation": {
+            "id": "KR-K1-K229",
+            "name": "薮内"
+           },
+           "nextStation": {
+            "id": "KR-K1-K231",
+            "name": "美金"
+           },
+           "trains": [
+            {
+             "trainNo": "6253",
+             "destination": "죽전",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "jamsil": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"a31-qZh4G4wfhAPakKbdfSS03s+BngE\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "jamsil",
+        "name": "잠실"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "2호선",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-216",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "내선순환",
+           "previousStation": {
+            "id": "S1-2-215",
+            "name": "잠실나루"
+           },
+           "nextStation": {
+            "id": "S1-2-217",
+            "name": "잠실새내"
+           },
+           "trains": [
+            {
+             "trainNo": "2516",
+             "destination": "신도림",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2518",
+             "destination": "서울대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2520",
+             "destination": "삼성",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "외선순환",
+           "previousStation": {
+            "id": "S1-2-217",
+            "name": "잠실새내"
+           },
+           "nextStation": {
+            "id": "S1-2-215",
+            "name": "잠실나루"
+           },
+           "trains": [
+            {
+             "trainNo": "2505",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2509",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2513",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:49:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "8",
+          "name": "8호선",
+          "color": "E6186C",
+          "marker": {
+           "text": "8",
+           "color": "E4186B"
+          }
+         },
+         "platformId": "S1-8-2815",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "별내 방면",
+           "previousStation": {
+            "id": "S1-8-2816",
+            "name": "석촌"
+           },
+           "nextStation": {
+            "id": "S1-8-2814",
+            "name": "몽촌토성"
+           },
+           "trains": [
+            {
+             "trainNo": "8320",
+             "destination": "별내",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:50.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "8322",
+             "destination": "암사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:46:20.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "8324",
+             "destination": "잠실",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:59:50.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "모란 방면",
+           "previousStation": {
+            "id": "S1-8-2814",
+            "name": "몽촌토성"
+           },
+           "nextStation": {
+            "id": "S1-8-2816",
+            "name": "석촌"
+           },
+           "trains": [
+            {
+             "trainNo": "8319",
+             "destination": "모란",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "8321",
+             "destination": "가락시장",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"a36-KUoKLajH5dM0PH5RWnViu2yUUn4\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "jamsil",
+        "name": "Jamsil"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "Line 2",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-216",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Inner circle",
+           "previousStation": {
+            "id": "S1-2-215",
+            "name": "Jamsillaru"
+           },
+           "nextStation": {
+            "id": "S1-2-217",
+            "name": "Jamsilsaenae"
+           },
+           "trains": [
+            {
+             "trainNo": "2516",
+             "destination": "신도림",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2518",
+             "destination": "서울대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2520",
+             "destination": "삼성",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "Outer circle",
+           "previousStation": {
+            "id": "S1-2-217",
+            "name": "Jamsilsaenae"
+           },
+           "nextStation": {
+            "id": "S1-2-215",
+            "name": "Jamsillaru"
+           },
+           "trains": [
+            {
+             "trainNo": "2505",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2509",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2513",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:49:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "8",
+          "name": "Line 8",
+          "color": "E6186C",
+          "marker": {
+           "text": "8",
+           "color": "E4186B"
+          }
+         },
+         "platformId": "S1-8-2815",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Byeollae",
+           "previousStation": {
+            "id": "S1-8-2816",
+            "name": "Seokchon"
+           },
+           "nextStation": {
+            "id": "S1-8-2814",
+            "name": "Mongchontoseong"
+           },
+           "trains": [
+            {
+             "trainNo": "8320",
+             "destination": "별내",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:50.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "8322",
+             "destination": "암사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:46:20.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "8324",
+             "destination": "잠실",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:59:50.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "Toward Moran",
+           "previousStation": {
+            "id": "S1-8-2814",
+            "name": "Mongchontoseong"
+           },
+           "nextStation": {
+            "id": "S1-8-2816",
+            "name": "Seokchon"
+           },
+           "trains": [
+            {
+             "trainNo": "8319",
+             "destination": "모란",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "8321",
+             "destination": "가락시장",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"a23-qLcm1Jz8FCBkZqYsONem8EIF8oY\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "jamsil",
+        "name": "蚕室"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "2号线",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-216",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "内环",
+           "previousStation": {
+            "id": "S1-2-215",
+            "name": "蚕室渡口"
+           },
+           "nextStation": {
+            "id": "S1-2-217",
+            "name": "蚕室新川"
+           },
+           "trains": [
+            {
+             "trainNo": "2516",
+             "destination": "신도림",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2518",
+             "destination": "서울대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2520",
+             "destination": "삼성",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "外环",
+           "previousStation": {
+            "id": "S1-2-217",
+            "name": "蚕室新川"
+           },
+           "nextStation": {
+            "id": "S1-2-215",
+            "name": "蚕室渡口"
+           },
+           "trains": [
+            {
+             "trainNo": "2505",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2509",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2513",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:49:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "8",
+          "name": "8号线",
+          "color": "E6186C",
+          "marker": {
+           "text": "8",
+           "color": "E4186B"
+          }
+         },
+         "platformId": "S1-8-2815",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "别内方向",
+           "previousStation": {
+            "id": "S1-8-2816",
+            "name": "石村"
+           },
+           "nextStation": {
+            "id": "S1-8-2814",
+            "name": "梦村土城"
+           },
+           "trains": [
+            {
+             "trainNo": "8320",
+             "destination": "별내",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:50.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "8322",
+             "destination": "암사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:46:20.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "8324",
+             "destination": "잠실",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:59:50.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "牡丹方向",
+           "previousStation": {
+            "id": "S1-8-2814",
+            "name": "梦村土城"
+           },
+           "nextStation": {
+            "id": "S1-8-2816",
+            "name": "石村"
+           },
+           "trains": [
+            {
+             "trainNo": "8319",
+             "destination": "모란",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "8321",
+             "destination": "가락시장",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "dogok": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"6db-IesWsg16x0dR6kqFE3OmooHAmm8\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "dogok",
+        "name": "도곡"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "3호선",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-334",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "대화 방면",
+           "previousStation": {
+            "id": "S1-3-335",
+            "name": "대치"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "매봉"
+           },
+           "trains": [
+            {
+             "trainNo": "3432",
+             "destination": "독립문",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:23:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3434",
+             "destination": "압구정",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:41:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "오금 방면",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "매봉"
+           },
+           "nextStation": {
+            "id": "S1-3-335",
+            "name": "대치"
+           },
+           "trains": [
+            {
+             "trainNo": "3411",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:24:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3413",
+             "destination": "오금",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3415",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:42:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "수인분당선",
+          "color": "F5A200",
+          "marker": {
+           "text": "수",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K217",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "청량리 방면",
+           "previousStation": {
+            "id": "KR-K1-K218",
+            "name": "구룡"
+           },
+           "nextStation": {
+            "id": "KR-K1-K216",
+            "name": "한티"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "인천 방면",
+           "previousStation": {
+            "id": "KR-K1-K216",
+            "name": "한티"
+           },
+           "nextStation": {
+            "id": "KR-K1-K218",
+            "name": "구룡"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"6e3-h/UFpA+3+iAHLAMfdW7gYZPR4hg\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "dogok",
+        "name": "Dogok"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "Line 3",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-334",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Daehwa",
+           "previousStation": {
+            "id": "S1-3-335",
+            "name": "Daechi"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "Maebong"
+           },
+           "trains": [
+            {
+             "trainNo": "3432",
+             "destination": "독립문",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:23:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3434",
+             "destination": "압구정",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:41:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "Toward Ogeum",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "Maebong"
+           },
+           "nextStation": {
+            "id": "S1-3-335",
+            "name": "Daechi"
+           },
+           "trains": [
+            {
+             "trainNo": "3411",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:24:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3413",
+             "destination": "오금",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3415",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:42:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "Suin–Bundang Line",
+          "color": "F5A200",
+          "marker": {
+           "text": "수",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K217",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Cheongnyangni",
+           "previousStation": {
+            "id": "KR-K1-K218",
+            "name": "Guryong"
+           },
+           "nextStation": {
+            "id": "KR-K1-K216",
+            "name": "Hanti"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Incheon",
+           "previousStation": {
+            "id": "KR-K1-K216",
+            "name": "Hanti"
+           },
+           "nextStation": {
+            "id": "KR-K1-K218",
+            "name": "Guryong"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"6d9-7jghOGa7YB/5EG5HbwL4s/6EjDU\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "dogok",
+        "name": "道谷"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "3号线",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-334",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "大化方向",
+           "previousStation": {
+            "id": "S1-3-335",
+            "name": "大峙"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "梅峰"
+           },
+           "trains": [
+            {
+             "trainNo": "3432",
+             "destination": "독립문",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:23:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3434",
+             "destination": "압구정",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:41:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "梧琴方向",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "梅峰"
+           },
+           "nextStation": {
+            "id": "S1-3-335",
+            "name": "大峙"
+           },
+           "trains": [
+            {
+             "trainNo": "3411",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:24:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3413",
+             "destination": "오금",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3415",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:42:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "水仁·盆唐线",
+          "color": "F5A200",
+          "marker": {
+           "text": "水",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K217",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "清凉里方向",
+           "previousStation": {
+            "id": "KR-K1-K218",
+            "name": "九龙"
+           },
+           "nextStation": {
+            "id": "KR-K1-K216",
+            "name": "韩峙"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "仁川方向",
+           "previousStation": {
+            "id": "KR-K1-K216",
+            "name": "韩峙"
+           },
+           "nextStation": {
+            "id": "KR-K1-K218",
+            "name": "九龙"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "gangnam": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"90d-YKqOw2DkIXuP7KZk5orzuk7/Hog\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "gangnam",
+        "name": "강남"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "2호선",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-222",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "내선순환",
+           "previousStation": {
+            "id": "S1-2-221",
+            "name": "역삼"
+           },
+           "nextStation": {
+            "id": "S1-2-223",
+            "name": "교대"
+           },
+           "trains": [
+            {
+             "trainNo": "2514",
+             "destination": "홍대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2516",
+             "destination": "신도림",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2518",
+             "destination": "서울대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "외선순환",
+           "previousStation": {
+            "id": "S1-2-223",
+            "name": "교대"
+           },
+           "nextStation": {
+            "id": "S1-2-221",
+            "name": "역삼"
+           },
+           "trains": [
+            {
+             "trainNo": "2509",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:22:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2513",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:37:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2517",
+             "destination": "삼성",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "신분당선",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4307",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "신사 방면",
+           "previousStation": {
+            "id": "DX-D1-4308",
+            "name": "양재"
+           },
+           "nextStation": {
+            "id": "DX-D1-4306",
+            "name": "신논현"
+           },
+           "trains": [
+            {
+             "trainNo": "1330",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:24:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1332",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:36:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "광교 방면",
+           "previousStation": {
+            "id": "DX-D1-4306",
+            "name": "신논현"
+           },
+           "nextStation": {
+            "id": "DX-D1-4308",
+            "name": "양재"
+           },
+           "trains": [
+            {
+             "trainNo": "1331",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"94a-kOBVMfdxbdb/WFtIrCkondpXnuE\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "gangnam",
+        "name": "Gangnam"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "Line 2",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-222",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Inner circle",
+           "previousStation": {
+            "id": "S1-2-221",
+            "name": "Yeoksam"
+           },
+           "nextStation": {
+            "id": "S1-2-223",
+            "name": "Seoul Nat'l Univ. of Education"
+           },
+           "trains": [
+            {
+             "trainNo": "2514",
+             "destination": "홍대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2516",
+             "destination": "신도림",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2518",
+             "destination": "서울대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "Outer circle",
+           "previousStation": {
+            "id": "S1-2-223",
+            "name": "Seoul Nat'l Univ. of Education"
+           },
+           "nextStation": {
+            "id": "S1-2-221",
+            "name": "Yeoksam"
+           },
+           "trains": [
+            {
+             "trainNo": "2509",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:22:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2513",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:37:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2517",
+             "destination": "삼성",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "Shinbundang Line",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4307",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Sinsa",
+           "previousStation": {
+            "id": "DX-D1-4308",
+            "name": "Yangjae"
+           },
+           "nextStation": {
+            "id": "DX-D1-4306",
+            "name": "Sinnonhyeon"
+           },
+           "trains": [
+            {
+             "trainNo": "1330",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:24:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1332",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:36:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "Toward Gwanggyo",
+           "previousStation": {
+            "id": "DX-D1-4306",
+            "name": "Sinnonhyeon"
+           },
+           "nextStation": {
+            "id": "DX-D1-4308",
+            "name": "Yangjae"
+           },
+           "trains": [
+            {
+             "trainNo": "1331",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"8ff-xH+Eb3LxA4couPAYSamXSHmSzKk\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "gangnam",
+        "name": "江南"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "2号线",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-222",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "内环",
+           "previousStation": {
+            "id": "S1-2-221",
+            "name": "驿三"
+           },
+           "nextStation": {
+            "id": "S1-2-223",
+            "name": "教大"
+           },
+           "trains": [
+            {
+             "trainNo": "2514",
+             "destination": "홍대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:21:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2516",
+             "destination": "신도림",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:33:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2518",
+             "destination": "서울대입구",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "外环",
+           "previousStation": {
+            "id": "S1-2-223",
+            "name": "教大"
+           },
+           "nextStation": {
+            "id": "S1-2-221",
+            "name": "驿三"
+           },
+           "trains": [
+            {
+             "trainNo": "2509",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:22:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2513",
+             "destination": "외선순환",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:37:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "2517",
+             "destination": "삼성",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:54:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "新盆唐线",
+          "color": "D4003B",
+          "marker": {
+           "text": "新",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4307",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "新沙方向",
+           "previousStation": {
+            "id": "DX-D1-4308",
+            "name": "良才"
+           },
+           "nextStation": {
+            "id": "DX-D1-4306",
+            "name": "新论岘"
+           },
+           "trains": [
+            {
+             "trainNo": "1330",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:24:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1332",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:36:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "光教方向",
+           "previousStation": {
+            "id": "DX-D1-4306",
+            "name": "新论岘"
+           },
+           "nextStation": {
+            "id": "DX-D1-4308",
+            "name": "良才"
+           },
+           "trains": [
+            {
+             "trainNo": "1331",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:27:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "yangjae": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"894-7PhP0lUdzGB+G5hLk72EVYVkKMU\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "yangjae",
+        "name": "양재"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "3호선",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-332",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "대화 방면",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "매봉"
+           },
+           "nextStation": {
+            "id": "S1-3-331",
+            "name": "남부터미널"
+           },
+           "trains": [
+            {
+             "trainNo": "3432",
+             "destination": "독립문",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:27:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3434",
+             "destination": "압구정",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "오금 방면",
+           "previousStation": {
+            "id": "S1-3-331",
+            "name": "남부터미널"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "매봉"
+           },
+           "trains": [
+            {
+             "trainNo": "3411",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:20:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3413",
+             "destination": "오금",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:28:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3415",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "신분당선",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4308",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "신사 방면",
+           "previousStation": {
+            "id": "DX-D1-4309",
+            "name": "양재시민의숲"
+           },
+           "nextStation": {
+            "id": "DX-D1-4307",
+            "name": "강남"
+           },
+           "trains": [
+            {
+             "trainNo": "1330",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:22:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1332",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "광교 방면",
+           "previousStation": {
+            "id": "DX-D1-4307",
+            "name": "강남"
+           },
+           "nextStation": {
+            "id": "DX-D1-4309",
+            "name": "양재시민의숲"
+           },
+           "trains": [
+            {
+             "trainNo": "1331",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:29:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"8ae-4cfpEsuXaKSUt7nc85rM7jGktwY\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "yangjae",
+        "name": "Yangjae"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "Line 3",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-332",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Daehwa",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "Maebong"
+           },
+           "nextStation": {
+            "id": "S1-3-331",
+            "name": "Nambu Bus Terminal"
+           },
+           "trains": [
+            {
+             "trainNo": "3432",
+             "destination": "독립문",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:27:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3434",
+             "destination": "압구정",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "Toward Ogeum",
+           "previousStation": {
+            "id": "S1-3-331",
+            "name": "Nambu Bus Terminal"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "Maebong"
+           },
+           "trains": [
+            {
+             "trainNo": "3411",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:20:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3413",
+             "destination": "오금",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:28:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3415",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "Shinbundang Line",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4308",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Sinsa",
+           "previousStation": {
+            "id": "DX-D1-4309",
+            "name": "Yangjae Citizen's Forest"
+           },
+           "nextStation": {
+            "id": "DX-D1-4307",
+            "name": "Gangnam"
+           },
+           "trains": [
+            {
+             "trainNo": "1330",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:22:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1332",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "Toward Gwanggyo",
+           "previousStation": {
+            "id": "DX-D1-4307",
+            "name": "Gangnam"
+           },
+           "nextStation": {
+            "id": "DX-D1-4309",
+            "name": "Yangjae Citizen's Forest"
+           },
+           "trains": [
+            {
+             "trainNo": "1331",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:29:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"890-y5nK9mrxteszyziOBjJSF4NNzlo\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "yangjae",
+        "name": "良才"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "3号线",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-332",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "大化方向",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "梅峰"
+           },
+           "nextStation": {
+            "id": "S1-3-331",
+            "name": "南部客运站"
+           },
+           "trains": [
+            {
+             "trainNo": "3432",
+             "destination": "독립문",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:27:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3434",
+             "destination": "압구정",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:46:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "梧琴方向",
+           "previousStation": {
+            "id": "S1-3-331",
+            "name": "南部客运站"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "梅峰"
+           },
+           "trains": [
+            {
+             "trainNo": "3411",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:20:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3413",
+             "destination": "오금",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:28:30.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "3415",
+             "destination": "수서",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "新盆唐线",
+          "color": "D4003B",
+          "marker": {
+           "text": "新",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4308",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "新沙方向",
+           "previousStation": {
+            "id": "DX-D1-4309",
+            "name": "良才市民之林"
+           },
+           "nextStation": {
+            "id": "DX-D1-4307",
+            "name": "江南"
+           },
+           "trains": [
+            {
+             "trainNo": "1330",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:22:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1332",
+             "destination": "신사",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:34:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          },
+          {
+           "direction": "down",
+           "name": "光教方向",
+           "previousStation": {
+            "id": "DX-D1-4307",
+            "name": "江南"
+           },
+           "nextStation": {
+            "id": "DX-D1-4309",
+            "name": "良才市民之林"
+           },
+           "trains": [
+            {
+             "trainNo": "1331",
+             "destination": "정자",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:29:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "gwanggyo-jungang": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"367-hzAEPWiFZmbXXStFr8qWkQGr7/4\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "gwanggyo-jungang",
+        "name": "광교중앙"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "신분당선",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4318",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "신사 방면",
+           "previousStation": {
+            "id": "DX-D1-4319",
+            "name": "광교"
+           },
+           "nextStation": {
+            "id": "DX-D1-4317",
+            "name": "상현"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "광교 방면",
+           "previousStation": {
+            "id": "DX-D1-4317",
+            "name": "상현"
+           },
+           "nextStation": {
+            "id": "DX-D1-4319",
+            "name": "광교"
+           },
+           "trains": [
+            {
+             "trainNo": "1325",
+             "destination": "광교",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:28:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1327",
+             "destination": "광교",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"379-TdxJ1fcbvEsbPRX/YTaope3ATb0\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "gwanggyo-jungang",
+        "name": "Gwanggyojungang"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "Shinbundang Line",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4318",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Sinsa",
+           "previousStation": {
+            "id": "DX-D1-4319",
+            "name": "Gwanggyo"
+           },
+           "nextStation": {
+            "id": "DX-D1-4317",
+            "name": "Sanghyeon"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Gwanggyo",
+           "previousStation": {
+            "id": "DX-D1-4317",
+            "name": "Sanghyeon"
+           },
+           "nextStation": {
+            "id": "DX-D1-4319",
+            "name": "Gwanggyo"
+           },
+           "trains": [
+            {
+             "trainNo": "1325",
+             "destination": "광교",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:28:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1327",
+             "destination": "광교",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"365-SskuGlJMMD82NAz3zhA+3wy9hIk\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "gwanggyo-jungang",
+        "name": "光教中央"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "新盆唐线",
+          "color": "D4003B",
+          "marker": {
+           "text": "新",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4318",
+         "generatedAt": "2026-10-20T15:20:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "新沙方向",
+           "previousStation": {
+            "id": "DX-D1-4319",
+            "name": "光教"
+           },
+           "nextStation": {
+            "id": "DX-D1-4317",
+            "name": "上岘"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "光教方向",
+           "previousStation": {
+            "id": "DX-D1-4317",
+            "name": "上岘"
+           },
+           "nextStation": {
+            "id": "DX-D1-4319",
+            "name": "光教"
+           },
+           "trains": [
+            {
+             "trainNo": "1325",
+             "destination": "광교",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:28:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            },
+            {
+             "trainNo": "1327",
+             "destination": "광교",
+             "express": false,
+             "arrivalAt": "2026-10-20T15:38:00.000Z",
+             "stopsAway": null,
+             "source": "scheduled"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   }
+  },
+  "2026-10-20T17:00:00.000Z": {
+   "sungkyunkwan": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"254-OfJBYfK4RvB7JSdUr67eCuXSVpA\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "sungkyunkwan",
+        "name": "성균관대"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "1",
+          "name": "1호선",
+          "color": "0052A4",
+          "marker": {
+           "text": "1",
+           "color": "0052A4"
+          }
+         },
+         "platformId": "KR-1-0153",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "서울 방면",
+           "previousStation": {
+            "id": "KR-1-P154",
+            "name": "화서"
+           },
+           "nextStation": {
+            "id": "KR-1-P152",
+            "name": "의왕"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "천안·서동탄 방면",
+           "previousStation": {
+            "id": "KR-1-P152",
+            "name": "의왕"
+           },
+           "nextStation": {
+            "id": "KR-1-P154",
+            "name": "화서"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"25b-K6zOFOsS8vpTmgC5ZdemXq+YosI\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "sungkyunkwan",
+        "name": "Sungkyunkwan Univ."
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "1",
+          "name": "Line 1",
+          "color": "0052A4",
+          "marker": {
+           "text": "1",
+           "color": "0052A4"
+          }
+         },
+         "platformId": "KR-1-0153",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Seoul",
+           "previousStation": {
+            "id": "KR-1-P154",
+            "name": "Hwaseo"
+           },
+           "nextStation": {
+            "id": "KR-1-P152",
+            "name": "Uiwang"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Cheonan / Seodongtan",
+           "previousStation": {
+            "id": "KR-1-P152",
+            "name": "Uiwang"
+           },
+           "nextStation": {
+            "id": "KR-1-P154",
+            "name": "Hwaseo"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"255-u0f921seSbfDnr1Aml7zIms5NEs\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "sungkyunkwan",
+        "name": "成均馆大学"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "1",
+          "name": "1号线",
+          "color": "0052A4",
+          "marker": {
+           "text": "1",
+           "color": "0052A4"
+          }
+         },
+         "platformId": "KR-1-0153",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "首尔方向",
+           "previousStation": {
+            "id": "KR-1-P154",
+            "name": "华西"
+           },
+           "nextStation": {
+            "id": "KR-1-P152",
+            "name": "义王"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "天安·西东滩方向",
+           "previousStation": {
+            "id": "KR-1-P152",
+            "name": "义王"
+           },
+           "nextStation": {
+            "id": "KR-1-P154",
+            "name": "华西"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "hyehwa": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"266-1OxGxaLYIeBcjcrBYzdFQHXyjvc\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "hyehwa",
+        "name": "혜화"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "4",
+          "name": "4호선",
+          "color": "00A5DE",
+          "marker": {
+           "text": "4",
+           "color": "007FAB"
+          }
+         },
+         "platformId": "S1-4-420",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "불암산·진접 방면",
+           "previousStation": {
+            "id": "S1-4-421",
+            "name": "동대문"
+           },
+           "nextStation": {
+            "id": "S1-4-419",
+            "name": "한성대입구"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "오이도·안산 방면",
+           "previousStation": {
+            "id": "S1-4-419",
+            "name": "한성대입구"
+           },
+           "nextStation": {
+            "id": "S1-4-421",
+            "name": "동대문"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"25f-nW8gcDw8oOMnLztTAL/2TooyrtY\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "hyehwa",
+        "name": "Hyehwa"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "4",
+          "name": "Line 4",
+          "color": "00A5DE",
+          "marker": {
+           "text": "4",
+           "color": "007FAB"
+          }
+         },
+         "platformId": "S1-4-420",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Buramsan / Jinjeop",
+           "previousStation": {
+            "id": "S1-4-421",
+            "name": "Dongdaemun"
+           },
+           "nextStation": {
+            "id": "S1-4-419",
+            "name": "Hansung Univ."
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Oido / Ansan",
+           "previousStation": {
+            "id": "S1-4-419",
+            "name": "Hansung Univ."
+           },
+           "nextStation": {
+            "id": "S1-4-421",
+            "name": "Dongdaemun"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"264-mJmCtTdiU0rR7fRW2kBwz3m/2tI\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "hyehwa",
+        "name": "惠化"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "4",
+          "name": "4号线",
+          "color": "00A5DE",
+          "marker": {
+           "text": "4",
+           "color": "007FAB"
+          }
+         },
+         "platformId": "S1-4-420",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "佛岩山·榛接方向",
+           "previousStation": {
+            "id": "S1-4-421",
+            "name": "东大门"
+           },
+           "nextStation": {
+            "id": "S1-4-419",
+            "name": "汉城大入口"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "乌耳岛·安山方向",
+           "previousStation": {
+            "id": "S1-4-419",
+            "name": "汉城大入口"
+           },
+           "nextStation": {
+            "id": "S1-4-421",
+            "name": "东大门"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "jeongja": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"446-ZW82DP9KmP4ujsuKHPfQxxU7L14\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "jeongja",
+        "name": "정자"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "신분당선",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4312",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "신사 방면",
+           "previousStation": {
+            "id": "DX-D1-D13",
+            "name": "미금"
+           },
+           "nextStation": {
+            "id": "DX-D1-4311",
+            "name": "판교"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "광교 방면",
+           "previousStation": {
+            "id": "DX-D1-4311",
+            "name": "판교"
+           },
+           "nextStation": {
+            "id": "DX-D1-D13",
+            "name": "미금"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "수인분당선",
+          "color": "F5A200",
+          "marker": {
+           "text": "수",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K230",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "청량리 방면",
+           "previousStation": {
+            "id": "KR-K1-K231",
+            "name": "미금"
+           },
+           "nextStation": {
+            "id": "KR-K1-K229",
+            "name": "수내"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "인천 방면",
+           "previousStation": {
+            "id": "KR-K1-K229",
+            "name": "수내"
+           },
+           "nextStation": {
+            "id": "KR-K1-K231",
+            "name": "미금"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"453-0RE1uzFd/8Db49g5El8i18vINPs\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "jeongja",
+        "name": "Jeongja"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "Shinbundang Line",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4312",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Sinsa",
+           "previousStation": {
+            "id": "DX-D1-D13",
+            "name": "Migeum"
+           },
+           "nextStation": {
+            "id": "DX-D1-4311",
+            "name": "Pangyo"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Gwanggyo",
+           "previousStation": {
+            "id": "DX-D1-4311",
+            "name": "Pangyo"
+           },
+           "nextStation": {
+            "id": "DX-D1-D13",
+            "name": "Migeum"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "Suin–Bundang Line",
+          "color": "F5A200",
+          "marker": {
+           "text": "수",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K230",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Cheongnyangni",
+           "previousStation": {
+            "id": "KR-K1-K231",
+            "name": "Migeum"
+           },
+           "nextStation": {
+            "id": "KR-K1-K229",
+            "name": "Sunae"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Incheon",
+           "previousStation": {
+            "id": "KR-K1-K229",
+            "name": "Sunae"
+           },
+           "nextStation": {
+            "id": "KR-K1-K231",
+            "name": "Migeum"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"444-FRs2F+tKWvQYyYQl+ZZ3mrgpGt4\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "jeongja",
+        "name": "亭子"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "新盆唐线",
+          "color": "D4003B",
+          "marker": {
+           "text": "新",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4312",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "新沙方向",
+           "previousStation": {
+            "id": "DX-D1-D13",
+            "name": "美金"
+           },
+           "nextStation": {
+            "id": "DX-D1-4311",
+            "name": "板桥"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "光教方向",
+           "previousStation": {
+            "id": "DX-D1-4311",
+            "name": "板桥"
+           },
+           "nextStation": {
+            "id": "DX-D1-D13",
+            "name": "美金"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "水仁·盆唐线",
+          "color": "F5A200",
+          "marker": {
+           "text": "水",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K230",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "清凉里方向",
+           "previousStation": {
+            "id": "KR-K1-K231",
+            "name": "美金"
+           },
+           "nextStation": {
+            "id": "KR-K1-K229",
+            "name": "薮内"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "仁川方向",
+           "previousStation": {
+            "id": "KR-K1-K229",
+            "name": "薮内"
+           },
+           "nextStation": {
+            "id": "KR-K1-K231",
+            "name": "美金"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "jamsil": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"444-RL3S7BMUSNs1TeuT2Dwu8BHNEaU\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "jamsil",
+        "name": "잠실"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "2호선",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-216",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "내선순환",
+           "previousStation": {
+            "id": "S1-2-215",
+            "name": "잠실나루"
+           },
+           "nextStation": {
+            "id": "S1-2-217",
+            "name": "잠실새내"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "외선순환",
+           "previousStation": {
+            "id": "S1-2-217",
+            "name": "잠실새내"
+           },
+           "nextStation": {
+            "id": "S1-2-215",
+            "name": "잠실나루"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "8",
+          "name": "8호선",
+          "color": "E6186C",
+          "marker": {
+           "text": "8",
+           "color": "E4186B"
+          }
+         },
+         "platformId": "S1-8-2815",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "별내 방면",
+           "previousStation": {
+            "id": "S1-8-2816",
+            "name": "석촌"
+           },
+           "nextStation": {
+            "id": "S1-8-2814",
+            "name": "몽촌토성"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "모란 방면",
+           "previousStation": {
+            "id": "S1-8-2814",
+            "name": "몽촌토성"
+           },
+           "nextStation": {
+            "id": "S1-8-2816",
+            "name": "석촌"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"449-GN3In+NYo4I0aFRa37dCDzmlCfM\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "jamsil",
+        "name": "Jamsil"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "Line 2",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-216",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Inner circle",
+           "previousStation": {
+            "id": "S1-2-215",
+            "name": "Jamsillaru"
+           },
+           "nextStation": {
+            "id": "S1-2-217",
+            "name": "Jamsilsaenae"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Outer circle",
+           "previousStation": {
+            "id": "S1-2-217",
+            "name": "Jamsilsaenae"
+           },
+           "nextStation": {
+            "id": "S1-2-215",
+            "name": "Jamsillaru"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "8",
+          "name": "Line 8",
+          "color": "E6186C",
+          "marker": {
+           "text": "8",
+           "color": "E4186B"
+          }
+         },
+         "platformId": "S1-8-2815",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Byeollae",
+           "previousStation": {
+            "id": "S1-8-2816",
+            "name": "Seokchon"
+           },
+           "nextStation": {
+            "id": "S1-8-2814",
+            "name": "Mongchontoseong"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Moran",
+           "previousStation": {
+            "id": "S1-8-2814",
+            "name": "Mongchontoseong"
+           },
+           "nextStation": {
+            "id": "S1-8-2816",
+            "name": "Seokchon"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"436-wMkE6/mwmVacT07+HKT0ks5nQ3M\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "jamsil",
+        "name": "蚕室"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "2号线",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-216",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "内环",
+           "previousStation": {
+            "id": "S1-2-215",
+            "name": "蚕室渡口"
+           },
+           "nextStation": {
+            "id": "S1-2-217",
+            "name": "蚕室新川"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "外环",
+           "previousStation": {
+            "id": "S1-2-217",
+            "name": "蚕室新川"
+           },
+           "nextStation": {
+            "id": "S1-2-215",
+            "name": "蚕室渡口"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "8",
+          "name": "8号线",
+          "color": "E6186C",
+          "marker": {
+           "text": "8",
+           "color": "E4186B"
+          }
+         },
+         "platformId": "S1-8-2815",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "别内方向",
+           "previousStation": {
+            "id": "S1-8-2816",
+            "name": "石村"
+           },
+           "nextStation": {
+            "id": "S1-8-2814",
+            "name": "梦村土城"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "牡丹方向",
+           "previousStation": {
+            "id": "S1-8-2814",
+            "name": "梦村土城"
+           },
+           "nextStation": {
+            "id": "S1-8-2816",
+            "name": "石村"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "dogok": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"434-p+/sFuuRL7giu5o3JX1t5tqJ+Cs\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "dogok",
+        "name": "도곡"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "3호선",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-334",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "대화 방면",
+           "previousStation": {
+            "id": "S1-3-335",
+            "name": "대치"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "매봉"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "오금 방면",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "매봉"
+           },
+           "nextStation": {
+            "id": "S1-3-335",
+            "name": "대치"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "수인분당선",
+          "color": "F5A200",
+          "marker": {
+           "text": "수",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K217",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "청량리 방면",
+           "previousStation": {
+            "id": "KR-K1-K218",
+            "name": "구룡"
+           },
+           "nextStation": {
+            "id": "KR-K1-K216",
+            "name": "한티"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "인천 방면",
+           "previousStation": {
+            "id": "KR-K1-K216",
+            "name": "한티"
+           },
+           "nextStation": {
+            "id": "KR-K1-K218",
+            "name": "구룡"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"43c-1MNO2ZEsNJRbabUZU/qMGnfAGO0\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "dogok",
+        "name": "Dogok"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "Line 3",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-334",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Daehwa",
+           "previousStation": {
+            "id": "S1-3-335",
+            "name": "Daechi"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "Maebong"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Ogeum",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "Maebong"
+           },
+           "nextStation": {
+            "id": "S1-3-335",
+            "name": "Daechi"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "Suin–Bundang Line",
+          "color": "F5A200",
+          "marker": {
+           "text": "수",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K217",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Cheongnyangni",
+           "previousStation": {
+            "id": "KR-K1-K218",
+            "name": "Guryong"
+           },
+           "nextStation": {
+            "id": "KR-K1-K216",
+            "name": "Hanti"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Incheon",
+           "previousStation": {
+            "id": "KR-K1-K216",
+            "name": "Hanti"
+           },
+           "nextStation": {
+            "id": "KR-K1-K218",
+            "name": "Guryong"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"432-bLX3BCxO9OY7UBkI5erGrQryxyw\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "dogok",
+        "name": "道谷"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "3号线",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-334",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "大化方向",
+           "previousStation": {
+            "id": "S1-3-335",
+            "name": "大峙"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "梅峰"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "梧琴方向",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "梅峰"
+           },
+           "nextStation": {
+            "id": "S1-3-335",
+            "name": "大峙"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "K1",
+          "name": "水仁·盆唐线",
+          "color": "F5A200",
+          "marker": {
+           "text": "水",
+           "color": "A26B00"
+          }
+         },
+         "platformId": "KR-K1-K217",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "清凉里方向",
+           "previousStation": {
+            "id": "KR-K1-K218",
+            "name": "九龙"
+           },
+           "nextStation": {
+            "id": "KR-K1-K216",
+            "name": "韩峙"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "仁川方向",
+           "previousStation": {
+            "id": "KR-K1-K216",
+            "name": "韩峙"
+           },
+           "nextStation": {
+            "id": "KR-K1-K218",
+            "name": "九龙"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "gangnam": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"434-PvL3zG08epFSIT47LLeyUH1CA24\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "gangnam",
+        "name": "강남"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "2호선",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-222",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "내선순환",
+           "previousStation": {
+            "id": "S1-2-221",
+            "name": "역삼"
+           },
+           "nextStation": {
+            "id": "S1-2-223",
+            "name": "교대"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "외선순환",
+           "previousStation": {
+            "id": "S1-2-223",
+            "name": "교대"
+           },
+           "nextStation": {
+            "id": "S1-2-221",
+            "name": "역삼"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "신분당선",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4307",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "신사 방면",
+           "previousStation": {
+            "id": "DX-D1-4308",
+            "name": "양재"
+           },
+           "nextStation": {
+            "id": "DX-D1-4306",
+            "name": "신논현"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "광교 방면",
+           "previousStation": {
+            "id": "DX-D1-4306",
+            "name": "신논현"
+           },
+           "nextStation": {
+            "id": "DX-D1-4308",
+            "name": "양재"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"471-eTEN0b58/eD0qfYaea+NtXh5p2s\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "gangnam",
+        "name": "Gangnam"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "Line 2",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-222",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Inner circle",
+           "previousStation": {
+            "id": "S1-2-221",
+            "name": "Yeoksam"
+           },
+           "nextStation": {
+            "id": "S1-2-223",
+            "name": "Seoul Nat'l Univ. of Education"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Outer circle",
+           "previousStation": {
+            "id": "S1-2-223",
+            "name": "Seoul Nat'l Univ. of Education"
+           },
+           "nextStation": {
+            "id": "S1-2-221",
+            "name": "Yeoksam"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "Shinbundang Line",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4307",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Sinsa",
+           "previousStation": {
+            "id": "DX-D1-4308",
+            "name": "Yangjae"
+           },
+           "nextStation": {
+            "id": "DX-D1-4306",
+            "name": "Sinnonhyeon"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Gwanggyo",
+           "previousStation": {
+            "id": "DX-D1-4306",
+            "name": "Sinnonhyeon"
+           },
+           "nextStation": {
+            "id": "DX-D1-4308",
+            "name": "Yangjae"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"426-+6Wd0iWsJHDxj6a1fRbMkxje3xM\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "gangnam",
+        "name": "江南"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "2",
+          "name": "2号线",
+          "color": "00A84D",
+          "marker": {
+           "text": "2",
+           "color": "00893F"
+          }
+         },
+         "platformId": "S1-2-222",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "内环",
+           "previousStation": {
+            "id": "S1-2-221",
+            "name": "驿三"
+           },
+           "nextStation": {
+            "id": "S1-2-223",
+            "name": "教大"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "外环",
+           "previousStation": {
+            "id": "S1-2-223",
+            "name": "教大"
+           },
+           "nextStation": {
+            "id": "S1-2-221",
+            "name": "驿三"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "新盆唐线",
+          "color": "D4003B",
+          "marker": {
+           "text": "新",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4307",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "新沙方向",
+           "previousStation": {
+            "id": "DX-D1-4308",
+            "name": "良才"
+           },
+           "nextStation": {
+            "id": "DX-D1-4306",
+            "name": "新论岘"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "光教方向",
+           "previousStation": {
+            "id": "DX-D1-4306",
+            "name": "新论岘"
+           },
+           "nextStation": {
+            "id": "DX-D1-4308",
+            "name": "良才"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "yangjae": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"45a-a9BvzoDmN92H1VGc9UqEkqF2dFs\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "yangjae",
+        "name": "양재"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "3호선",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-332",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "대화 방면",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "매봉"
+           },
+           "nextStation": {
+            "id": "S1-3-331",
+            "name": "남부터미널"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "오금 방면",
+           "previousStation": {
+            "id": "S1-3-331",
+            "name": "남부터미널"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "매봉"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "신분당선",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4308",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "신사 방면",
+           "previousStation": {
+            "id": "DX-D1-4309",
+            "name": "양재시민의숲"
+           },
+           "nextStation": {
+            "id": "DX-D1-4307",
+            "name": "강남"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "광교 방면",
+           "previousStation": {
+            "id": "DX-D1-4307",
+            "name": "강남"
+           },
+           "nextStation": {
+            "id": "DX-D1-4309",
+            "name": "양재시민의숲"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"474-gWo053SpPaDzpmeupSumx+NSmZA\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "yangjae",
+        "name": "Yangjae"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "Line 3",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-332",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Daehwa",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "Maebong"
+           },
+           "nextStation": {
+            "id": "S1-3-331",
+            "name": "Nambu Bus Terminal"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Ogeum",
+           "previousStation": {
+            "id": "S1-3-331",
+            "name": "Nambu Bus Terminal"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "Maebong"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "Shinbundang Line",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4308",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Sinsa",
+           "previousStation": {
+            "id": "DX-D1-4309",
+            "name": "Yangjae Citizen's Forest"
+           },
+           "nextStation": {
+            "id": "DX-D1-4307",
+            "name": "Gangnam"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Gwanggyo",
+           "previousStation": {
+            "id": "DX-D1-4307",
+            "name": "Gangnam"
+           },
+           "nextStation": {
+            "id": "DX-D1-4309",
+            "name": "Yangjae Citizen's Forest"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"456-b80fLhhkF23WgQGV4G2BV+Uh+O0\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "yangjae",
+        "name": "良才"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "3",
+          "name": "3号线",
+          "color": "EF7C1C",
+          "marker": {
+           "text": "3",
+           "color": "BB5C0D"
+          }
+         },
+         "platformId": "S1-3-332",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "大化方向",
+           "previousStation": {
+            "id": "S1-3-333",
+            "name": "梅峰"
+           },
+           "nextStation": {
+            "id": "S1-3-331",
+            "name": "南部客运站"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "梧琴方向",
+           "previousStation": {
+            "id": "S1-3-331",
+            "name": "南部客运站"
+           },
+           "nextStation": {
+            "id": "S1-3-333",
+            "name": "梅峰"
+           },
+           "trains": []
+          }
+         ]
+        },
+        {
+         "line": {
+          "code": "D1",
+          "name": "新盆唐线",
+          "color": "D4003B",
+          "marker": {
+           "text": "新",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4308",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "新沙方向",
+           "previousStation": {
+            "id": "DX-D1-4309",
+            "name": "良才市民之林"
+           },
+           "nextStation": {
+            "id": "DX-D1-4307",
+            "name": "江南"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "光教方向",
+           "previousStation": {
+            "id": "DX-D1-4307",
+            "name": "江南"
+           },
+           "nextStation": {
+            "id": "DX-D1-4309",
+            "name": "良才市民之林"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   },
+   "gwanggyo-jungang": {
+    "ko": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"25a-cSvbtRxXnuGIoSKi84ptj9ZaBmY\"",
+     "body": {
+      "meta": {
+       "lang": "ko"
+      },
+      "data": {
+       "station": {
+        "id": "gwanggyo-jungang",
+        "name": "광교중앙"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "신분당선",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4318",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "신사 방면",
+           "previousStation": {
+            "id": "DX-D1-4319",
+            "name": "광교"
+           },
+           "nextStation": {
+            "id": "DX-D1-4317",
+            "name": "상현"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "광교 방면",
+           "previousStation": {
+            "id": "DX-D1-4317",
+            "name": "상현"
+           },
+           "nextStation": {
+            "id": "DX-D1-4319",
+            "name": "광교"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "en": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"26c-pROV/s52qrUpMMQE0cNkAT9+GpQ\"",
+     "body": {
+      "meta": {
+       "lang": "en"
+      },
+      "data": {
+       "station": {
+        "id": "gwanggyo-jungang",
+        "name": "Gwanggyojungang"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "Shinbundang Line",
+          "color": "D4003B",
+          "marker": {
+           "text": "신",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4318",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "Toward Sinsa",
+           "previousStation": {
+            "id": "DX-D1-4319",
+            "name": "Gwanggyo"
+           },
+           "nextStation": {
+            "id": "DX-D1-4317",
+            "name": "Sanghyeon"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "Toward Gwanggyo",
+           "previousStation": {
+            "id": "DX-D1-4317",
+            "name": "Sanghyeon"
+           },
+           "nextStation": {
+            "id": "DX-D1-4319",
+            "name": "Gwanggyo"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "zh": {
+     "status": 200,
+     "cacheControl": "private, max-age=5",
+     "vary": "Accept-Language, Origin",
+     "etag": "W/\"258-IElUAwQrsBSM6iBCWf8d1nJqbuU\"",
+     "body": {
+      "meta": {
+       "lang": "zh"
+      },
+      "data": {
+       "station": {
+        "id": "gwanggyo-jungang",
+        "name": "光教中央"
+       },
+       "lines": [
+        {
+         "line": {
+          "code": "D1",
+          "name": "新盆唐线",
+          "color": "D4003B",
+          "marker": {
+           "text": "新",
+           "color": "D4003B"
+          }
+         },
+         "platformId": "DX-D1-4318",
+         "generatedAt": "2026-10-20T17:00:00.000Z",
+         "directions": [
+          {
+           "direction": "up",
+           "name": "新沙方向",
+           "previousStation": {
+            "id": "DX-D1-4319",
+            "name": "光教"
+           },
+           "nextStation": {
+            "id": "DX-D1-4317",
+            "name": "上岘"
+           },
+           "trains": []
+          },
+          {
+           "direction": "down",
+           "name": "光教方向",
+           "previousStation": {
+            "id": "DX-D1-4317",
+            "name": "上岘"
+           },
+           "nextStation": {
+            "id": "DX-D1-4319",
+            "name": "光教"
+           },
+           "trains": []
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   }
+  }
+ }
+}

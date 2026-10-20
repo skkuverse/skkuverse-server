@@ -3,6 +3,7 @@ import { Clock } from "../../infra/clock";
 import type { SupportedLang } from "../../infra/types";
 import type { SubwayArrivalsDoc } from "../subway.document";
 import { SubwayRepository } from "../subway.repository";
+import { SubwayTopologyService } from "../topology/subway-topology.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
 import { toSubwayStationArrivals } from "./subway-arrivals.mapper";
 import { findSubwayStation, isFreshState } from "./subway-arrivals.rules";
@@ -14,18 +15,21 @@ export class SubwayArrivalsService {
     private readonly repository: SubwayRepository,
     private readonly tracking: SubwayTrackingService,
     private readonly clock: Clock,
+    private readonly topology: SubwayTopologyService,
   ) {}
 
-  // WHY: each platform has its own document, so each is served fresh or from its timetable alone on its own.
+  // WHY: each platform has its own document, so each is served fresh or from its timetable alone on its own; the
+  // topology comes first, so its 503 needs no read of the state.
   async findStationArrivals(stationId: string, lang: SupportedLang): Promise<SubwayStationArrivals | null> {
-    const station = findSubwayStation(stationId);
+    const { registry } = await this.topology.current();
+    const station = findSubwayStation(stationId, registry);
     if (!station) return null;
     const now = this.clock.now();
     const freshById = await this.listFreshArrivals(now);
     const platformDocs = await Promise.all(
       station.platforms.map(async (platform) => ({ platform, doc: freshById.get(platform.id) ?? (await this.findScheduledArrivals(platform.id, now)) })),
     );
-    return toSubwayStationArrivals(station, platformDocs, lang);
+    return toSubwayStationArrivals(station, platformDocs, { lang, registry });
   }
 
   // WHY: read whatever SUBWAY says: the switch stops only the poller, and another container may run it (ADR 0012, D5).

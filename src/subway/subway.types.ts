@@ -1,10 +1,13 @@
 import type { z } from "zod";
 import type { SupportedLang } from "../infra/types";
-import type { subwayRegistryFile } from "./subway.schema";
+import type { subwayNetwork, subwayRegistryFile } from "./subway.schema";
 
 export type LocalizedName = Readonly<Record<SupportedLang, string>>;
 
 export type SubwayDirection = "up" | "down";
+
+export type NetworkStation = z.output<typeof subwayNetwork>["stations"][number];
+export type NetworkPlatform = NetworkStation["platforms"][number];
 
 export type SubwayRegistry = z.output<typeof subwayRegistryFile>;
 export type SubwayLine = SubwayRegistry["lines"][number];
@@ -15,6 +18,16 @@ export type SubwayNeighbor = SubwayRegistry["neighbors"][string];
 export type PlatformDirection = SubwayPlatform["directions"]["up"];
 export type PlatformTimetable = SubwayPlatform["timetable"];
 export type TrainNumbering = SubwayLine["seoul"]["trainNumbers"];
+
+export interface NetworkIssue {
+  path: Array<string | number>;
+  message: string;
+}
+
+export interface SubwayNetwork {
+  lines: readonly SubwayLine[];
+  stations: readonly NetworkStation[];
+}
 
 export type TrainState = "approaching" | "arrived" | "departed";
 

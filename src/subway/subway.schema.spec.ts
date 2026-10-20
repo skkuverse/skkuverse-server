@@ -5,7 +5,7 @@
  * platform id, a color, a marker color, a Seoul station code or an upstream
  * list off its shape fails with its path, and so does a marker whose text is
  * not exactly one character (one grapheme) in any language.
- * The checks across entries are the config's (subway.config.spec.ts).
+ * The checks across entries are loadSubwayRegistry's, until task 10.6.
  */
 import { subwayRegistryFile } from "./subway.schema";
 

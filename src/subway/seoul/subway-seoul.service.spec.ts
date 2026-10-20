@@ -20,12 +20,14 @@ import path from "path";
 import { FakeSubwaySeoulApiClient } from "../../../__tests__/helpers/fakes/subway/subway-seoul-api.client.fake";
 import { FakeSubwaySeoulTrainmapClient } from "../../../__tests__/helpers/fakes/subway/subway-seoul-trainmap.client.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { FakeSubwayTopologyRepository } from "../../../__tests__/helpers/fakes/subway/subway-topology.repository.fake";
+import { storedSubwayTopologyRepository, storedSubwayTopologyService } from "../../../__tests__/helpers/subway/topology";
 import type { Clock } from "../../infra/clock";
 import type { SubwaySeoulApiClient } from "../seoul-api/subway-seoul-api.client";
 import { SubwaySeoulApiService } from "../seoul-api/subway-seoul-api.service";
 import type { SubwaySeoulTrainmapClient } from "../seoul-trainmap/subway-seoul-trainmap.client";
 import { SubwaySeoulTrainmapService } from "../seoul-trainmap/subway-seoul-trainmap.service";
-import { SUBWAY_REGISTRY } from "../subway.config";
+import { SUBWAY_LINES, SUBWAY_STATIONS } from "../subway.constants";
 import type { TrainEvent } from "../subway.types";
 import { SubwaySeoulService } from "./subway-seoul.service";
 
@@ -37,10 +39,10 @@ const NOW = new Date("2026-10-16T11:45:00Z");
 // WHY: the train map is one page for every line (line=0); the line 1 and line 4 captures joined stand for it.
 const ALL_LINES = "0";
 const BROKEN_LINE_4 = '<div class="4line_metro"><div class="T0421_Q_9_v2 tip" title="4050열차  동대문 도착 진접행"></div></div>';
-const LINE_NAMES = SUBWAY_REGISTRY.lines.map((line) => line.seoul.lineName);
-const STATION_NAMES = SUBWAY_REGISTRY.stations.map((station) => station.seoulName);
+const LINE_NAMES = SUBWAY_LINES.map((line) => line.seoul.lineName);
+const STATION_NAMES = SUBWAY_STATIONS.map((station) => station.seoulName);
 
-function setup(now: Date = NOW) {
+function setup(now: Date = NOW, topology = storedSubwayTopologyRepository()) {
   const apiClient = new FakeSubwaySeoulApiClient();
   apiClient.positions.set("1호선", rows("realtime-position-line1.json", "realtimePositionList"));
   apiClient.positions.set("4호선", rows("realtime-position-line4.json", "realtimePositionList"));
@@ -52,8 +54,9 @@ function setup(now: Date = NOW) {
     new SubwaySeoulApiService(asReal<SubwaySeoulApiClient>(apiClient)),
     new SubwaySeoulTrainmapService(asReal<SubwaySeoulTrainmapClient>(trainmapClient)),
     { now: () => now } as Clock,
+    storedSubwayTopologyService(topology),
   );
-  return { service, apiClient, trainmapClient };
+  return { service, apiClient, trainmapClient, topology };
 }
 
 const summary = (events: readonly TrainEvent[]) => events.map((e) => `${e.trainNo} ${e.platformId} ${e.state}`).sort();
@@ -229,5 +232,34 @@ describe("SubwaySeoulService keeps each call's answer when another call of its t
 
     // Act & Assert
     await expect(service.observeApi()).rejects.toBe(failures[0]);
+  });
+});
+
+describe("SubwaySeoulService reads the stored topology", () => {
+  it.each(["observeApi", "observeTrainMap"] as const)("Poller without a topology: rejects %s before any upstream call", async (observe) => {
+    // Arrange
+    const { service, apiClient, trainmapClient } = setup(NOW, new FakeSubwayTopologyRepository());
+
+    // Act
+    const failure = await service[observe]().catch((err: unknown) => err);
+
+    // Assert
+    expect(failure).toMatchObject({ code: "SUBWAY_TOPOLOGY_UNAVAILABLE", httpStatus: 503 });
+    expect([apiClient.calls, trainmapClient.calls]).toEqual([[], []]);
+  });
+
+  it("matches a row at a neighbor only the stored topology names", async () => {
+    // Arrange
+    const topology = storedSubwayTopologyRepository();
+    const stored = topology.stored as { data: { neighbors: Record<string, unknown> } };
+    delete stored.data.neighbors["KR-1-P154"];
+    const { service } = setup(NOW, topology);
+
+    // Act
+    const observations = await service.observeApi();
+
+    // Assert
+    expect(summary(observations.events).filter((line) => line.includes("KR-1-P154"))).toEqual([]);
+    expect(summary(observations.events)).toContain("0501 KR-1-1715 arrived");
   });
 });

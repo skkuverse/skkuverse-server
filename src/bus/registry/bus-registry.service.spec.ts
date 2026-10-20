@@ -2,7 +2,7 @@
  * BusRegistryService over an in-memory registry repository and a fixed clock
  * (improve-jongro-realtime D6–D9, isolate-api-from-pollers D2): a stored
  * route derives the stations, mapping and URLs production served from
- * jongro-routes.json; a missing document fails a read with a 503 and an error
+ * the route file they replaced; a missing document fails a read with a 503 and an error
  * line, while the poller's read answers null; reads are cached for 30 s; the
  * poller's observations follow TOPIS's stop list: applied at the third
  * identical tick, held over 30%, an empty list ignored, every applied change
@@ -64,7 +64,7 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-// The pins of jongro-routes.json before its stations moved here, read now from the stored registry.
+// The pins of the committed route file before its stations moved here, read now from the stored registry.
 describe("BusRegistryService.routeOf over the routes stored on 2026-10-17", () => {
   beforeEach(() => {
     storeRoutes();

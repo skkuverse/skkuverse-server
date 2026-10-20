@@ -17,7 +17,7 @@ const glyph = z.string().refine((text) => [...GRAPHEMES.segment(text)].length ==
 
 const lineMarkerFile = z.strictObject({ text: z.strictObject({ ko: glyph, en: glyph, zh: glyph }), color: hex6 });
 
-const platformId = z.string().regex(PLATFORM_ID, { error: "must be <operator>-<line>-<station>" });
+export const platformId = z.string().regex(PLATFORM_ID, { error: "must be <operator>-<line>-<station>" });
 
 const subwayLineFile = z.strictObject({
   code: z.string().min(1),
@@ -38,31 +38,31 @@ const platformTimetable = z.discriminatedUnion("source", [
   z.strictObject({ source: z.literal("shinbundang") }),
 ]);
 
-const platformDirection = z.strictObject({
+export const platformDirection = z.strictObject({
   name: localizedName,
   upstreamPlatformIds: z.array(platformId).max(MAX_UPSTREAM_PLATFORMS),
   watchedPlatformIds: z.array(platformId),
   nextPlatformId: platformId,
 });
 
-const subwayPlatformFile = z.strictObject({
-  id: platformId,
-  line: z.string().min(1),
-  timetable: platformTimetable,
-  directions: z.strictObject({ up: platformDirection, down: platformDirection }),
-});
+const networkPlatform = z.strictObject({ id: platformId, line: z.string().min(1), timetable: platformTimetable });
 
-const subwayStationFile = z.strictObject({
-  id: z.string().regex(SLUG, { error: "must be a lowercase slug" }),
-  name: localizedName,
-  seoulName: z.string().min(1),
-  platforms: z.array(subwayPlatformFile).min(1),
-});
+const subwayPlatformFile = networkPlatform.extend({ directions: z.strictObject({ up: platformDirection, down: platformDirection }) });
 
-const subwayNeighborFile = z.strictObject({ line: z.string().min(1), seoulName: z.string().min(1), trainMapName: z.string().min(1).optional(), name: localizedName.optional() });
+const stationFields = { id: z.string().regex(SLUG, { error: "must be a lowercase slug" }), name: localizedName, seoulName: z.string().min(1) };
+
+const subwayStationFile = z.strictObject({ ...stationFields, platforms: z.array(subwayPlatformFile).min(1) });
+
+export const subwayNeighbor = z.strictObject({ line: z.string().min(1), seoulName: z.string().min(1), trainMapName: z.string().min(1).optional(), name: localizedName.optional() });
+
+// WHY: the identities and labels the code holds (move-reference-datasets D2); directions and neighbors are subway-topology's.
+export const subwayNetwork = z.strictObject({
+  lines: z.array(subwayLineFile).min(1),
+  stations: z.array(z.strictObject({ ...stationFields, platforms: z.array(networkPlatform).min(1) })).min(1),
+});
 
 export const subwayRegistryFile = z.strictObject({
   lines: z.array(subwayLineFile).min(1),
   stations: z.array(subwayStationFile).min(1),
-  neighbors: z.record(platformId, subwayNeighborFile),
+  neighbors: z.record(platformId, subwayNeighbor),
 });

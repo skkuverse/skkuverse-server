@@ -14,7 +14,7 @@ export interface RoutePathStation {
 }
 
 export interface JongroRoutePathDocument {
-  /** WHY: the route id of jongro-routes.json (`jongro07`). */
+  /** WHY: a route id of JONGRO_ROUTES (`jongro07`). */
   _id: string;
   busRouteId: string;
   /** QUIRK(topis): getRoutePath's points in `no` order, as [lng, lat]; a loop does not end on its first point. */

@@ -1,11 +1,13 @@
 /**
  * The service-day rules: which service day an instant belongs to (it starts at 03:00 KST, so a train past
  * midnight is the previous day's), which day type each timetable source serves on a date, and how a
- * timetable's seconds become instants. Also the registry's platforms, each found by its KRIC id with its
- * line, timetable source, upstream, watched and next platforms and direction names; which committed table a platform reads, the travel order of a
- * line per direction, and the boot check that every source's declared day types have a table.
+ * timetable's seconds become instants. Also the code's platforms, each found by its KRIC id with its line and
+ * timetable source, and revision 1 of the stored topology's upstream, watched and next platforms and direction
+ * names for each; which committed table a platform reads, the travel order of a line per direction, and the boot
+ * check that every source's declared day types have a table.
  */
-import type { SubwayPlatform } from "../subway.types";
+import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
+import type { NetworkPlatform } from "../subway.types";
 import { SUBWAY_TIMETABLES } from "./subway-timetable.config";
 import {
   assertTimetablesCover,
@@ -21,8 +23,9 @@ import {
 } from "./subway-timetable.rules";
 import type { Timetable } from "./subway-timetable.types";
 
-const SUNGKYUNKWAN = findSubwayPlatform("KR-1-0153") as SubwayPlatform;
-const HYEHWA = findSubwayPlatform("S1-4-420") as SubwayPlatform;
+const SUNGKYUNKWAN = findSubwayPlatform("KR-1-0153") as NetworkPlatform;
+const HYEHWA = findSubwayPlatform("S1-4-420") as NetworkPlatform;
+const TOPOLOGY = subwayTopologyFixture();
 
 function table(overrides: Partial<Timetable>): Timetable {
   return {
@@ -250,7 +253,7 @@ describe("listSubwayPlatforms", () => {
   });
 });
 
-describe("findSubwayPlatform", () => {
+describe("revision 1 of subway-topology at each served platform", () => {
   it.each([
     ["KR-1-0153", "up", ["KR-1-P154", "KR-1-P155", "KR-1-1715"]],
     ["KR-1-0153", "down", ["KR-1-P152", "KR-1-P151", "KR-1-P150"]],
@@ -280,10 +283,10 @@ describe("findSubwayPlatform", () => {
     ["DX-D1-4318", "down", ["DX-D1-4317", "DX-D1-4316", "DX-D1-D15"]],
   ] as const)("lists the upstream platforms of %s %s nearest first", (id, direction, upstreamPlatformIds) => {
     // Act
-    const platform = findSubwayPlatform(id);
+    const directions = TOPOLOGY.platforms[id];
 
     // Assert
-    expect(platform?.directions[direction].upstreamPlatformIds).toEqual(upstreamPlatformIds);
+    expect(directions?.[direction].upstreamPlatformIds).toEqual(upstreamPlatformIds);
   });
 
   it.each([
@@ -315,10 +318,10 @@ describe("findSubwayPlatform", () => {
     ["DX-D1-4318", "down", ["DX-D1-D14", "DX-D1-D13", "DX-D1-4312", "DX-D1-4311", "DX-D1-4310", "DX-D1-4309", "DX-D1-4308", "DX-D1-4307", "DX-D1-4306", "DX-D1-4305", "DX-D1-D04"]],
   ] as const)("lists the watched platforms of %s %s, beyond its upstream ones, nearest first", (id, direction, watchedPlatformIds) => {
     // Act
-    const platform = findSubwayPlatform(id);
+    const directions = TOPOLOGY.platforms[id];
 
     // Assert
-    expect(platform?.directions[direction].watchedPlatformIds).toEqual(watchedPlatformIds);
+    expect(directions?.[direction].watchedPlatformIds).toEqual(watchedPlatformIds);
   });
 
   it.each([
@@ -350,12 +353,37 @@ describe("findSubwayPlatform", () => {
     ["DX-D1-4318", "down", "DX-D1-4319"],
   ] as const)("names the next platform of %s %s", (id, direction, nextPlatformId) => {
     // Act
-    const platform = findSubwayPlatform(id);
+    const directions = TOPOLOGY.platforms[id];
 
     // Assert
-    expect(platform?.directions[direction].nextPlatformId).toBe(nextPlatformId);
+    expect(directions?.[direction].nextPlatformId).toBe(nextPlatformId);
   });
 
+  it.each([
+    ["KR-1-0153", { ko: "서울 방면", en: "Toward Seoul", zh: "首尔方向" }, { ko: "천안·서동탄 방면", en: "Toward Cheonan / Seodongtan", zh: "天安·西东滩方向" }],
+    ["S1-4-420", { ko: "불암산·진접 방면", en: "Toward Buramsan / Jinjeop", zh: "佛岩山·榛接方向" }, { ko: "오이도·안산 방면", en: "Toward Oido / Ansan", zh: "乌耳岛·安山方向" }],
+    ["S1-2-216", { ko: "내선순환", en: "Inner circle", zh: "内环" }, { ko: "외선순환", en: "Outer circle", zh: "外环" }],
+    ["S1-2-222", { ko: "내선순환", en: "Inner circle", zh: "内环" }, { ko: "외선순환", en: "Outer circle", zh: "外环" }],
+    ["S1-3-334", { ko: "대화 방면", en: "Toward Daehwa", zh: "大化方向" }, { ko: "오금 방면", en: "Toward Ogeum", zh: "梧琴方向" }],
+    ["S1-3-332", { ko: "대화 방면", en: "Toward Daehwa", zh: "大化方向" }, { ko: "오금 방면", en: "Toward Ogeum", zh: "梧琴方向" }],
+    ["KR-K1-K230", { ko: "청량리 방면", en: "Toward Cheongnyangni", zh: "清凉里方向" }, { ko: "인천 방면", en: "Toward Incheon", zh: "仁川方向" }],
+    ["S1-8-2815", { ko: "별내 방면", en: "Toward Byeollae", zh: "别内方向" }, { ko: "모란 방면", en: "Toward Moran", zh: "牡丹方向" }],
+    ["KR-K1-K217", { ko: "청량리 방면", en: "Toward Cheongnyangni", zh: "清凉里方向" }, { ko: "인천 방면", en: "Toward Incheon", zh: "仁川方向" }],
+    ["DX-D1-4312", { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" }, { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" }],
+    ["DX-D1-4307", { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" }, { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" }],
+    ["DX-D1-4308", { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" }, { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" }],
+    ["DX-D1-4318", { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" }, { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" }],
+  ])("names %s's directions in every language", (id, upName, downName) => {
+    // Act
+    const directions = TOPOLOGY.platforms[id];
+
+    // Assert
+    expect(directions?.up.name).toEqual(upName);
+    expect(directions?.down.name).toEqual(downName);
+  });
+});
+
+describe("findSubwayPlatform", () => {
   it.each([
     ["KR-1-0153", "1", { source: "korail" }],
     ["S1-4-420", "4", { source: "seoul-station", stationCode: "0420" }],
@@ -377,29 +405,6 @@ describe("findSubwayPlatform", () => {
     // Assert
     expect(platform?.line).toBe(line);
     expect(platform?.timetable).toEqual(timetable);
-  });
-
-  it.each([
-    ["KR-1-0153", { ko: "서울 방면", en: "Toward Seoul", zh: "首尔方向" }, { ko: "천안·서동탄 방면", en: "Toward Cheonan / Seodongtan", zh: "天安·西东滩方向" }],
-    ["S1-4-420", { ko: "불암산·진접 방면", en: "Toward Buramsan / Jinjeop", zh: "佛岩山·榛接方向" }, { ko: "오이도·안산 방면", en: "Toward Oido / Ansan", zh: "乌耳岛·安山方向" }],
-    ["S1-2-216", { ko: "내선순환", en: "Inner circle", zh: "内环" }, { ko: "외선순환", en: "Outer circle", zh: "外环" }],
-    ["S1-2-222", { ko: "내선순환", en: "Inner circle", zh: "内环" }, { ko: "외선순환", en: "Outer circle", zh: "外环" }],
-    ["S1-3-334", { ko: "대화 방면", en: "Toward Daehwa", zh: "大化方向" }, { ko: "오금 방면", en: "Toward Ogeum", zh: "梧琴方向" }],
-    ["S1-3-332", { ko: "대화 방면", en: "Toward Daehwa", zh: "大化方向" }, { ko: "오금 방면", en: "Toward Ogeum", zh: "梧琴方向" }],
-    ["KR-K1-K230", { ko: "청량리 방면", en: "Toward Cheongnyangni", zh: "清凉里方向" }, { ko: "인천 방면", en: "Toward Incheon", zh: "仁川方向" }],
-    ["S1-8-2815", { ko: "별내 방면", en: "Toward Byeollae", zh: "别内方向" }, { ko: "모란 방면", en: "Toward Moran", zh: "牡丹方向" }],
-    ["KR-K1-K217", { ko: "청량리 방면", en: "Toward Cheongnyangni", zh: "清凉里方向" }, { ko: "인천 방면", en: "Toward Incheon", zh: "仁川方向" }],
-    ["DX-D1-4312", { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" }, { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" }],
-    ["DX-D1-4307", { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" }, { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" }],
-    ["DX-D1-4308", { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" }, { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" }],
-    ["DX-D1-4318", { ko: "신사 방면", en: "Toward Sinsa", zh: "新沙方向" }, { ko: "광교 방면", en: "Toward Gwanggyo", zh: "光教方向" }],
-  ])("names %s's directions in every language", (id, upName, downName) => {
-    // Act
-    const platform = findSubwayPlatform(id);
-
-    // Assert
-    expect(platform?.directions.up.name).toEqual(upName);
-    expect(platform?.directions.down.name).toEqual(downName);
   });
 
   it.each(["S1-2-220", "KR-1-P154", "kr-1-0153", "hyehwa", ""])("finds no platform for %j", (id) => {
