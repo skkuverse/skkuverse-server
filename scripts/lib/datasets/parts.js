@@ -31,6 +31,10 @@
  * deploy (ADR 0012 D3). Step 3's `{ dataset: 1 }` index is created here, as
  * store.js creates `dataset_revisions`' index; no api process runs that query.
  *
+ * A rollback names an earlier manifest only after finding every part it
+ * names, and a copy writes the parts into the target before the header; both
+ * then collect garbage as a push does.
+ *
  * A part handed in is `{ key, data, summary }`: `data` the part schema's parsed
  * output, `summary` what `history` and the push report show of it.
  */
@@ -139,4 +143,35 @@ function push(db, dataset, parts, { baseRevision, by, now, note }) {
   return writeParted(db, dataset, parts, { by, now }, (manifest) => store.push(db, dataset, manifest, { baseRevision, by, now, note }));
 }
 
-module.exports = { PART_GRACE_MS, collectGarbage, create, push, readParts, toManifest, toStoredPart };
+/**
+ * Revision `to`'s manifest as the next revision (store.rollback), after checking that every part it names
+ * is stored: `{ ok: false, reason: "missing-parts", partIds }` otherwise.
+ */
+async function rollback(db, dataset, to, { baseRevision, by, now, note }) {
+  const found = await store.readRevision(db, dataset, to);
+  if (!found.ok) return found;
+  const { missing } = await readParts(db, found.entry.data);
+  if (missing.length > 0) return { ok: false, reason: "missing-parts", partIds: missing };
+  const result = await store.rollback(db, dataset, to, { baseRevision, by, now, note });
+  if (result.ok) await collectGarbage(db, dataset, { now });
+  return result;
+}
+
+/**
+ * `source`'s header at `sourceRevision` as the next revision of `target` (store.copy), after copying every
+ * part it names into `target`: a part is copied before the header that names it, as a push writes it.
+ */
+async function copy(source, target, dataset, { sourceRevision, baseRevision, by, now, note }) {
+  const from = await store.readDataset(source, dataset);
+  if (from === null || from.revision !== sourceRevision) return store.copy(source, target, dataset, { sourceRevision, baseRevision, by, now, note });
+  const found = await readParts(source, from.data);
+  if (found.missing.length > 0) return { ok: false, reason: "missing-parts", partIds: found.missing };
+  const docs = await source.collection(PARTS).find({ _id: { $in: found.parts.map((part) => part.partId) } }).toArray();
+  const copied = await storeParts(target, dataset, docs.map((doc) => ({ partId: doc._id, sha256: doc.sha256, key: doc.key, data: doc.data })), { by, now });
+  if (!copied.ok) return copied;
+  const result = await store.copy(source, target, dataset, { sourceRevision, baseRevision, by, now, note });
+  if (result.ok) await collectGarbage(target, dataset, { now });
+  return result;
+}
+
+module.exports = { PART_GRACE_MS, collectGarbage, copy, create, push, readParts, rollback, toManifest, toStoredPart };

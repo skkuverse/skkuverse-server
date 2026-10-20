@@ -29,6 +29,8 @@
  * manifest, so `storedOf` reads it as null for another dataset's check.
  */
 
+const { readParts } = require("./parts");
+
 const DATASETS = "datasets";
 
 function zodIssues(dataset, error) {
@@ -124,6 +126,13 @@ function duplicateKeyIssues(name, parsed) {
     .map(([key, files]) => ({ dataset: name, path: [key], message: `key "${key}" is in more than one part: ${files.join(", ")}` }));
 }
 
+/** Each part's schema issues, the path opening with its file. */
+function partSchemaIssues(name, results) {
+  return results.flatMap(({ file, result }) =>
+    result.success ? [] : result.error.issues.map((issue) => ({ dataset: name, path: [file, ...issue.path], message: issue.message })),
+  );
+}
+
 /**
  * A parted dataset's parts, `files` as `{ file, data }`: each runs the part schema (an issue's path opens
  * with its file), each is keyed by `keyOf`, a key may appear once, and the set, ordered by key, runs the
@@ -134,9 +143,7 @@ function checkParts(catalog, name, files, stored) {
   const entry = entryOf(catalog, name);
   const { schema, keyOf, summaryOf } = entry.parts;
   const results = files.map(({ file, data }) => ({ file, result: schema.safeParse(data) }));
-  const schemaIssues = results.flatMap(({ file, result }) =>
-    result.success ? [] : result.error.issues.map((issue) => ({ dataset: name, path: [file, ...issue.path], message: issue.message })),
-  );
+  const schemaIssues = partSchemaIssues(name, results);
   if (schemaIssues.length > 0) return { issues: schemaIssues, parts: [] };
   const parsed = results.map(({ file, result }) => ({ file, key: keyOf(result.data), data: result.data }));
   const duplicates = duplicateKeyIssues(name, parsed);
@@ -158,15 +165,33 @@ async function readStored(db, catalog) {
   };
 }
 
-/** `check`: the issues of the stored data of `names`. Writes nothing. */
+/**
+ * A parted dataset's stored issues: checkParts' issues on the parts its manifest names, or, when one is not
+ * stored, each missing part and the schema issues of the others (the set's checks would only repeat the gap).
+ */
+async function storedPartIssues(db, catalog, name, stored) {
+  const found = await readParts(db, stored[name]);
+  const files = found.parts.map(({ key, data }) => ({ file: key, data }));
+  if (found.missing.length === 0) return checkParts(catalog, name, files, stored).issues;
+  const keyById = new Map(stored[name].parts.map((entry) => [entry.partId, entry.key]));
+  const missing = found.missing.map((partId) => ({ dataset: name, path: [keyById.get(partId)], message: `part ${partId} is not stored` }));
+  const { schema } = entryOf(catalog, name).parts;
+  return [...missing, ...partSchemaIssues(name, files.map(({ file, data }) => ({ file, result: schema.safeParse(data) })))];
+}
+
+/** `check`: the issues of the stored data of `names`; a parted dataset's parts are read by the ids its header names. Writes nothing. */
 async function checkStored(db, catalog, names) {
   names.forEach((name) => entryOf(catalog, name));
   const { stored, revisions } = await readStored(db, catalog);
   const present = names.filter((name) => stored[name] !== undefined);
+  const issues = [];
+  for (const name of present) {
+    issues.push(...(entryOf(catalog, name).parts ? await storedPartIssues(db, catalog, name, stored) : checkData(catalog, name, stored[name], stored)));
+  }
   return {
     checked: present.map((dataset) => ({ dataset, revision: revisions[dataset] })),
     missing: names.filter((name) => stored[name] === undefined),
-    issues: onePerPath(present.flatMap((name) => checkData(catalog, name, stored[name], stored))),
+    issues: onePerPath(issues),
   };
 }
 

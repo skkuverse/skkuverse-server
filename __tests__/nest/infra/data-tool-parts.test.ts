@@ -515,3 +515,130 @@ describe("npm run data, a parted dataset", () => {
     }
   });
 });
+
+describe("npm run data, a parted dataset's history", () => {
+  const changed2 = table("2", "weekday", ["05:31", "05:50"]);
+
+  it("rollback stores the earlier revision's manifest as a new revision, every part it names still stored", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await parts.push(devDb(), DATASET, [partOf(weekday1), partOf(changed2)], { baseRevision: 1, by: ALICE, now: NOW });
+    const revision1 = (await store.readRevision(devDb(), DATASET, 1)).entry.data;
+
+    // Act
+    const result = await data(["rollback", DATASET, "1"]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/changed\s+2-weekday/);
+    const header = await store.readDataset(devDb(), DATASET);
+    expect(header).toMatchObject({ revision: 3, data: revision1 });
+    const found = await parts.readParts(devDb(), header.data);
+    expect(found.missing).toEqual([]);
+    expect(found.parts.map((part: { data: Table }) => part.data)).toEqual([weekday1, weekday2]);
+  });
+
+  it("rollback refuses a revision that names a part no longer stored, naming it, and writes nothing", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await parts.push(devDb(), DATASET, [partOf(weekday1), partOf(changed2)], { baseRevision: 1, by: ALICE, now: NOW });
+    await devDb().collection("dataset_parts").deleteOne({ _id: partIdOf(weekday2) as never });
+
+    // Act
+    const viaTool = await data(["rollback", DATASET, "1"]);
+    const viaStore = await parts.rollback(devDb(), DATASET, 1, { baseRevision: 2, by: ALICE, now: NOW });
+
+    // Assert
+    expect(viaTool.code).toBe(1);
+    expect(viaTool.err).toContain(partIdOf(weekday2));
+    expect(viaStore).toEqual({ ok: false, reason: "missing-parts", partIds: [partIdOf(weekday2)] });
+    expect(await revisionIn(devDb())).toBe(2);
+  });
+
+  it("copy-prod-to-dev copies the parts production's revision names, then the header", async () => {
+    // Arrange
+    await parts.create(prodDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+
+    // Act
+    const result = await data(["copy-prod-to-dev", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    const header = await store.readDataset(devDb(), DATASET);
+    expect(header).toMatchObject({ revision: 1, data: (await store.readDataset(prodDb(), DATASET)).data });
+    expect((await store.history(devDb(), DATASET))[0]).toMatchObject({ copiedFrom: { database: BASE, revision: 1 } });
+    const found = await parts.readParts(devDb(), header.data);
+    expect(found.missing).toEqual([]);
+    expect(found.parts.map((part: { data: Table }) => part.data)).toEqual([weekday1, weekday2]);
+  });
+
+  it("copy-prod-to-dev writes no header when a part cannot be copied", async () => {
+    // Arrange
+    await parts.create(prodDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    const impostor = { _id: partIdOf(weekday2), dataset: DATASET, key: "2-weekday", sha256: "f".repeat(64), data: {}, savedAt: NOW, savedBy: ALICE };
+    await devDb().collection("dataset_parts").insertOne(impostor as never);
+
+    // Act
+    const result = await data(["copy-prod-to-dev", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(1);
+    expect(result.err).toContain(partIdOf(weekday2));
+    expect(await revisionIn(devDb())).toBeNull();
+    expect(await devDb().collection("dataset_parts").findOne({ _id: partIdOf(weekday2) as never })).toEqual(impostor);
+  });
+
+  it("check reads every part the header names and runs the push checks on them", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await parts.create(prodDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    const passing = await data(["check", DATASET]);
+    await devDb().collection("dataset_parts").updateOne({ _id: partIdOf(weekday1) as never }, { $set: { "data.trains": ["5:30"] } });
+    await devDb().collection("dataset_parts").deleteOne({ _id: partIdOf(weekday2) as never });
+    const broken = { parts: [(await store.readDataset(prodDb(), DATASET)).data.parts[0]] };
+    await prodDb().collection("datasets").updateOne({ _id: DATASET as never }, { $set: { data: broken } });
+
+    // Act
+    const failing = await data(["check", DATASET]);
+    const uncovered = await data(["check", DATASET, "--prod"]);
+
+    // Assert
+    expect(passing.code).toBe(0);
+    expect(failing.code).toBe(1);
+    expect(failing.err).toContain("1-weekday.trains.0");
+    expect(failing.err).toContain(partIdOf(weekday2));
+    expect(uncovered.code).toBe(1);
+    expect(uncovered.err).toContain("line 2 has no weekday table");
+  });
+
+  it("records a missing history entry from the header", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await parts.push(devDb(), DATASET, [partOf(weekday1), partOf(changed2)], { baseRevision: 1, by: ALICE, now: NOW });
+    await devDb().collection("dataset_revisions").deleteOne({ _id: `${DATASET}@2` as never });
+
+    // Act
+    const result = await data(["history", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/repaired: test-tables revision 2/);
+    expect((await store.readRevision(devDb(), DATASET, 2)).entry).toMatchObject({ data: (await store.readDataset(devDb(), DATASET)).data });
+  });
+
+  it("history prints each revision's per-part summary", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await parts.push(devDb(), DATASET, [partOf(weekday1), partOf(changed2)], { baseRevision: 1, by: ALICE, now: NOW });
+
+    // Act
+    const result = await data(["history", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    const [second, first] = result.out.split(/^\s*\d+\s+\d{4}-\d{2}-\d{2}T.*$/m).slice(1);
+    expect(second).toMatch(/2-weekday\s+\{"trainCount":2\}/);
+    expect(first).toMatch(/2-weekday\s+\{"trainCount":1\}/);
+    expect(first).toMatch(/1-weekday\s+\{"trainCount":2\}/);
+  });
+});

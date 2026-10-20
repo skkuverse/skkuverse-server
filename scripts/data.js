@@ -242,6 +242,9 @@ function refusalOf(result, ctx, base) {
         `${dataset}'s header was not written; report this, nothing is overwritten.`,
     );
   }
+  if (result.reason === "missing-parts") {
+    return new Refusal(`${dataset}: ${result.partIds.length} part(s) the revision names are not stored: ${result.partIds.join(", ")}. Nothing written.`);
+  }
   if (result.reason === "pruned") return new Refusal(`revision ${ctx.args.revision} was pruned; the oldest kept is ${result.oldestKept}.`);
   if (result.reason === "no-revision") return new Refusal(`${dataset} has no revision ${ctx.args.revision}.`);
   const source = isParted(ctx) ? "--dir <dir>" : "--file <json>";
@@ -489,6 +492,48 @@ async function pushParts(ctx) {
   return EXIT_OK;
 }
 
+/** The parts a stored manifest names, checked as a push checks them; refuses one that is missing. */
+async function checkedNamedParts(ctx, db, manifest, revision) {
+  const named = await readNamedParts(ctx, db, manifest, revision);
+  return checkedParts(
+    ctx,
+    named.map(({ key, data }) => ({ file: key, data })),
+  );
+}
+
+async function rollbackParts(ctx, current, entry) {
+  const { dataset, revision } = ctx.args;
+  if (samePartIds(current.data, entry.data)) {
+    ctx.out(`no change: revision ${revision} names the parts of the current revision ${current.revision}; nothing written.`);
+    return EXIT_OK;
+  }
+  await checkedNamedParts(ctx, ctx.db, entry.data, revision);
+  const result = await confirmAndWrite(ctx, {
+    lines: partReport(current.data, entry.data),
+    summary: `revision ${current.revision} -> ${current.revision + 1}, the parts of revision ${revision}`,
+    write: (meta) => parts.rollback(ctx.db, dataset, revision, { ...meta, baseRevision: current.revision }),
+  });
+  if (result !== null) reportStored(ctx, result, current.revision);
+  return EXIT_OK;
+}
+
+async function copyPartsToDev(ctx, prod, source, current) {
+  const { dataset } = ctx.args;
+  if (current !== null && samePartIds(current.data, source.data)) {
+    ctx.out(`no change: ${ctx.dbName} revision ${current.revision} already names production revision ${source.revision}'s parts.`);
+    return EXIT_OK;
+  }
+  await checkedNamedParts(ctx, prod, source.data, source.revision);
+  const base = current === null ? null : current.revision;
+  const result = await confirmAndWrite(ctx, {
+    lines: partReport(current === null ? null : current.data, source.data),
+    summary: `production revision ${source.revision} into ${base === null ? "a new dataset" : `revision ${base + 1}`}`,
+    write: (meta) => parts.copy(prod, ctx.db, dataset, { ...meta, sourceRevision: source.revision, baseRevision: base }),
+  });
+  if (result !== null) reportStored(ctx, result, base);
+  return EXIT_OK;
+}
+
 async function history(ctx) {
   const { dataset } = ctx.args;
   await repairOrReport(ctx, ctx.db, dataset);
@@ -502,6 +547,7 @@ async function history(ctx) {
     const note = entry.note === undefined ? "" : `  "${entry.note}"`;
     const marker = entry.revision === current.revision ? "  <- current" : "";
     ctx.out(`${String(entry.revision).padStart(5)}  ${iso(entry.savedAt)}  ${entry.savedBy}  ${describeEntry(entry)}${note}${marker}`);
+    if (isParted(ctx)) entry.data.parts.forEach(({ key, summary }) => ctx.out(`         ${key}  ${show(summary)}`));
   }
   return EXIT_OK;
 }
@@ -513,6 +559,7 @@ async function rollback(ctx) {
   if (current === null) throw refusalOf({ reason: "missing" }, ctx);
   const found = await store.readRevision(ctx.db, dataset, revision);
   if (!found.ok) throw refusalOf(found, ctx);
+  if (isParted(ctx)) return rollbackParts(ctx, current, found.entry);
   if (isDeepStrictEqual(current.data, found.entry.data)) {
     ctx.out(`no change: revision ${revision}'s data equals the current revision ${current.revision}; nothing written.`);
     return EXIT_OK;
@@ -537,6 +584,7 @@ async function copyProdToDev(ctx) {
   const source = await store.readDataset(prod, dataset);
   if (source === null) throw new Refusal(`${dataset}: no dataset in ${ctx.names.prod}; nothing to copy.`);
   const current = await store.readDataset(ctx.db, dataset);
+  if (isParted(ctx)) return copyPartsToDev(ctx, prod, source, current);
   if (current !== null && isDeepStrictEqual(current.data, source.data)) {
     ctx.out(`no change: ${ctx.dbName} revision ${current.revision} already holds production revision ${source.revision}'s data.`);
     return EXIT_OK;
