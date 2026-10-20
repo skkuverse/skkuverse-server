@@ -431,6 +431,26 @@ describe("npm run data, a parted dataset", () => {
     expect(result.out).toMatch(/unchanged\s+1-weekday\n/);
   });
 
+  it("reports a changed part whose stored copy fails this checkout's schema, and still pushes", async () => {
+    // Arrange
+    const entry = tablesCatalog.datasets[DATASET];
+    const changesOf = (was: Table, is: Table) => [`trains ${was.trains.length} -> ${is.trains.length}`];
+    const describing = { ...tablesCatalog, datasets: { [DATASET]: { ...entry, parts: { ...entry.parts, changesOf } } } };
+    // WHY: stored before `dayType` was required, so this checkout's schema rejects it.
+    const older = { key: "2-weekday", data: { line: "2", trains: ["05:31"] }, summary: { trainCount: 1 } };
+    await parts.create(devDb(), DATASET, [partOf(weekday1), older], { by: ALICE, now: NOW });
+    await data(["pull", DATASET], { catalog: describing });
+    writeJson(partFile("dev", "2-weekday.json"), table("2", "weekday", ["05:45"]));
+
+    // Act
+    const result = await data(["push", DATASET], { catalog: describing });
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/changed\s+2-weekday\s+same summary, other content; stored part fails this checkout's schema\n/);
+    expect(await revisionIn(devDb())).toBe(2);
+  });
+
   it("refuses two files with the same key, naming both, and writes nothing", async () => {
     // Arrange
     await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
