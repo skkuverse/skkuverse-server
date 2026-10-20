@@ -1,7 +1,7 @@
 /**
  * GET /subway/stations/:stationId/arrivals through the real controller, the
  * arrivals service, the tracker and its run matcher, the timetable and
- * estimate doors and the committed weekday tables stored in FakeSubwayTimetableRepository, with FakeSubwayRepository, FakeHolidaysRepository,
+ * estimate doors and the trimmed fixture of revision 1 stored in FakeSubwayTimetableRepository, with FakeSubwayRepository, FakeHolidaysRepository,
  * the stored topology's revision 1 in FakeSubwayTopologyRepository
  * and a scripted Clock. The tracker is fed one upstream's observations per
  * tick, as the pollers feed it. What it guards: a station is requested by its

@@ -9,13 +9,18 @@
  *     between leaves the served revision unchanged and naming only parts that
  *     exist;
  *   - a part is deleted only when neither the current header nor a retained
- *     revision names it, and only an hour after it was saved.
+ *     revision names it, and only an hour after it was last saved: a push that
+ *     finds a part already stored saves it again, so a garbage collection
+ *     running before that push's header names it keeps it.
  *
  * The command line (scripts/data.js, scripts/lib/datasets/working-dir.js) runs
  * over a two-part test catalog, `test-tables`: one part per line and day type,
  * and a coverage check that every line has a weekday table. A parted dataset
  * is pulled into a directory and pushed back from it, keyed by `keyOf`, with a
  * report of every part and the same safety rules as a single document.
+ *
+ * A dataset's check may return a warning (`warning: true`): it is printed in
+ * the push report and in `check`, and refuses nothing (wave D review F1).
  */
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -289,6 +294,73 @@ describe("parts garbage collection", () => {
   });
 });
 
+describe("parts.push over a part an earlier run left unnamed", () => {
+  /** A Db that runs a garbage collection at `at` just before the header is written, as a concurrent push's would. */
+  function collectingAtHeader(real: Db, at: Date): Db {
+    return new Proxy(real, {
+      get(target, property, receiver) {
+        if (property !== "collection") return Reflect.get(target, property, receiver);
+        return (name: string) => {
+          const collection = target.collection(name);
+          if (name !== "datasets") return collection;
+          return new Proxy(collection, {
+            get: (c, p, r) =>
+              p === "updateOne"
+                ? async (...args: unknown[]) => {
+                    await parts.collectGarbage(real, DATASET, { now: at });
+                    return (c.updateOne as (...a: unknown[]) => unknown)(...args);
+                  }
+                : Reflect.get(c, p, r),
+          });
+        };
+      },
+    });
+  }
+
+  it("keeps a re-found orphan part through a garbage collection that runs before the push's header names it", async () => {
+    // Arrange
+    await parts.create(db, DATASET, [partOf(weekday1)], { by: ALICE, now: NOW });
+    const changed = table("1", "weekday", ["06:00"]);
+    await expect(parts.push(crashingAtHeader(db), DATASET, [partOf(changed)], { baseRevision: 1, by: ALICE, now: NOW })).rejects.toThrow("process killed");
+    const later = new Date(NOW.getTime() + 2 * HOUR_MS);
+
+    // Act
+    const result = await parts.push(collectingAtHeader(db, later), DATASET, [partOf(changed)], { baseRevision: 1, by: ALICE, now: later });
+
+    // Assert
+    expect(result).toEqual({ ok: true, revision: 2 });
+    expect(await db.collection("dataset_parts").findOne({ _id: partIdOf(changed) as never })).toMatchObject({ data: changed, savedAt: later });
+    expect((await parts.readParts(db, (await store.readDataset(db, DATASET)).data)).missing).toEqual([]);
+  });
+});
+
+describe("a garbage collection that fails after the header is written", () => {
+  // WHY: an index under the name step 3 creates, with other options, makes its createIndex throw after the header.
+  async function breakGarbageCollection(target: Db): Promise<void> {
+    await target.collection("dataset_parts").dropIndex("dataset_1");
+    await target.collection("dataset_parts").createIndex({ dataset: 1 }, { name: "dataset_1", sparse: true });
+  }
+
+  it("leaves rollback and copy reporting the revision they stored, with the failure", async () => {
+    // Arrange
+    await parts.create(db, DATASET, [partOf(weekday1)], { by: ALICE, now: NOW });
+    await parts.push(db, DATASET, [partOf(weekday2)], { baseRevision: 1, by: ALICE, now: NOW });
+    await parts.create(devDb(), DATASET, [partOf(weekday1)], { by: ALICE, now: NOW });
+    await breakGarbageCollection(db);
+    await breakGarbageCollection(devDb());
+
+    // Act
+    const rolledBack = await parts.rollback(db, DATASET, 1, { baseRevision: 2, by: ALICE, now: NOW });
+    const copied = await parts.copy(db, devDb(), DATASET, { sourceRevision: 3, baseRevision: 1, by: ALICE, now: NOW });
+
+    // Assert
+    expect(rolledBack).toMatchObject({ ok: true, revision: 3, garbageError: expect.stringMatching(/^MongoServerError: /) });
+    expect(copied).toMatchObject({ ok: true, revision: 2, garbageError: expect.stringMatching(/^MongoServerError: /) });
+    expect(await revisionIn(db)).toBe(3);
+    expect(await revisionIn(devDb())).toBe(2);
+  });
+});
+
 interface Ran {
   code: number;
   out: string;
@@ -386,6 +458,26 @@ describe("npm run data, a parted dataset", () => {
     expect(result.out).toMatch(/unchanged\s+1-weekday\n/);
   });
 
+  it("reports a changed part whose stored copy fails this checkout's schema, and still pushes", async () => {
+    // Arrange
+    const entry = tablesCatalog.datasets[DATASET];
+    const changesOf = (was: Table, is: Table) => [`trains ${was.trains.length} -> ${is.trains.length}`];
+    const describing = { ...tablesCatalog, datasets: { [DATASET]: { ...entry, parts: { ...entry.parts, changesOf } } } };
+    // WHY: stored before `dayType` was required, so this checkout's schema rejects it.
+    const older = { key: "2-weekday", data: { line: "2", trains: ["05:31"] }, summary: { trainCount: 1 } };
+    await parts.create(devDb(), DATASET, [partOf(weekday1), older], { by: ALICE, now: NOW });
+    await data(["pull", DATASET], { catalog: describing });
+    writeJson(partFile("dev", "2-weekday.json"), table("2", "weekday", ["05:45"]));
+
+    // Act
+    const result = await data(["push", DATASET], { catalog: describing });
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/changed\s+2-weekday\s+same summary, other content; stored part fails this checkout's schema\n/);
+    expect(await revisionIn(devDb())).toBe(2);
+  });
+
   it("refuses two files with the same key, naming both, and writes nothing", async () => {
     // Arrange
     await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
@@ -438,6 +530,44 @@ describe("npm run data, a parted dataset", () => {
     expect(result.out).toMatch(/no change/i);
     expect(await revisionIn(devDb())).toBe(1);
     expect(await store.history(devDb(), DATASET)).toHaveLength(1);
+  });
+
+  it("stores a part the current revision names again when an unedited directory finds it missing", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET]);
+    await devDb().collection("dataset_parts").deleteOne({ _id: partIdOf(weekday2) as never });
+
+    // Act
+    const result = await data(["push", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).not.toMatch(/no change/i);
+    expect(result.out).toMatch(/restored 1 part/);
+    expect(await devDb().collection("dataset_parts").findOne({ _id: partIdOf(weekday2) as never })).toMatchObject({ data: weekday2 });
+    expect(await revisionIn(devDb())).toBe(1);
+    expect(await store.history(devDb(), DATASET)).toHaveLength(1);
+  });
+
+  it("reports a push stored, with a warning, when the garbage collection after its header fails", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET]);
+    writeJson(partFile("dev", "2-weekday.json"), table("2", "weekday", ["05:45"]));
+    // WHY: an index under the name step 3 creates, with other options, makes its createIndex throw after the header.
+    await devDb().collection("dataset_parts").dropIndex("dataset_1");
+    await devDb().collection("dataset_parts").createIndex({ dataset: 1 }, { name: "dataset_1", sparse: true });
+
+    // Act
+    const result = await data(["push", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toContain("stored test-tables revision 2 in parts_content_dev.");
+    expect(result.out).toMatch(/warning: the garbage collection after the write failed \(MongoServerError: .*\); the next write collects/);
+    expect(await revisionIn(devDb())).toBe(2);
+    expect(readJson(path.join(workingDir("dev"), "working.json"))).toMatchObject({ baseRevision: 2 });
   });
 
   it("refuses a push from a stale pull, naming the current revision", async () => {
@@ -658,5 +788,99 @@ describe("npm run data, a parted dataset's history", () => {
     expect(second).toMatch(/2-weekday\s+\{"trainCount":2\}/);
     expect(first).toMatch(/2-weekday\s+\{"trainCount":1\}/);
     expect(first).toMatch(/1-weekday\s+\{"trainCount":2\}/);
+  });
+});
+
+describe("npm run data, a dataset whose check reads a parted one", () => {
+  // WHY: the test catalog plus `test-routes`, one document that reads the stored test-tables and refuses a line none of them runs.
+  const ROUTES = "test-routes";
+  const routesCatalog = {
+    ...tablesCatalog,
+    datasets: {
+      ...tablesCatalog.datasets,
+      [ROUTES]: {
+        owner: "src/test-routes",
+        schema: z.strictObject({ lines: z.array(z.string()) }),
+        reads: [DATASET],
+        issuesOf: (routes: { lines: string[] }, { storedOf }: { storedOf: (name: string) => Table[] | null }) => {
+          const tables = storedOf(DATASET);
+          if (tables === null) return [{ path: [], message: "no stored test-tables" }];
+          return routes.lines.flatMap((line, i) => (tables.some((t) => t.line === line) ? [] : [{ path: ["lines", i], message: `no stored table runs line ${line}` }]));
+        },
+        referencesOf: () => [],
+      },
+    },
+  };
+
+  it("push --create checks it against the parts the target database stores, never the other's", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await parts.create(prodDb(), DATASET, [partOf(weekday1)], { by: ALICE, now: NOW });
+    const file = path.join(root, "routes.json");
+    writeJson(file, { lines: ["1", "2"] });
+
+    // Act
+    const toDev = await data(["push", ROUTES, "--create", "--file", file], { catalog: routesCatalog });
+    const toProd = await data(["push", ROUTES, "--create", "--file", file, "--prod", "--yes"], { catalog: routesCatalog });
+
+    // Assert
+    expect(toDev.code).toBe(0);
+    expect(toProd.code).toBe(1);
+    expect(toProd.err).toContain("no stored table runs line 2");
+    expect(await store.readDataset(devDb(), ROUTES)).toMatchObject({ revision: 1, data: { lines: ["1", "2"] } });
+    expect(await store.readDataset(prodDb(), ROUTES)).toBeNull();
+  });
+});
+
+describe("npm run data, warnings", () => {
+  // WHY: the test catalog with one more check that only warns: a line with no holiday table.
+  const entry = tablesCatalog.datasets[DATASET];
+  const holidayWarnings = (tables: Table[]) => LINES.filter((line) => !tables.some((t) => t.line === line && t.dayType === "holiday")).map((line) => ({ path: [line], message: `line ${line} has no holiday table`, warning: true }));
+  const warningCatalog = { ...tablesCatalog, datasets: { [DATASET]: { ...entry, issuesOf: (tables: Table[]) => [...entry.issuesOf(tables), ...holidayWarnings(tables)] } } };
+
+  it("push prints each warning in the report, refuses nothing, and stores the next revision", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2), partOf(holiday1)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET], { catalog: warningCatalog });
+    writeJson(partFile("dev", "2-weekday.json"), table("2", "weekday", ["05:31", "05:45"]));
+
+    // Act
+    const result = await data(["push", DATASET], { catalog: warningCatalog });
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/changed\s+2-weekday/);
+    expect(result.out).toMatch(/warning\s+test-tables\s+2\s+line 2 has no holiday table\n/);
+    expect(result.out).not.toContain("line 1 has no holiday table");
+    expect(await revisionIn(devDb())).toBe(2);
+  });
+
+  it("push still refuses on an issue that is not a warning, printing the refusal", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET], { catalog: warningCatalog });
+    fs.rmSync(partFile("dev", "2-weekday.json"));
+
+    // Act
+    const result = await data(["push", DATASET], { catalog: warningCatalog });
+
+    // Assert
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("line 2 has no weekday table");
+    expect(await revisionIn(devDb())).toBe(1);
+  });
+
+  it("check prints the stored data's warnings and exits 0", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+
+    // Act
+    const result = await data(["check", DATASET], { catalog: warningCatalog });
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/warning\s+test-tables\s+1\s+line 1 has no holiday table\n/);
+    expect(result.out).toMatch(/warning\s+test-tables\s+2\s+line 2 has no holiday table\n/);
+    expect(result.out).toContain("OK");
   });
 });

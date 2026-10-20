@@ -20,6 +20,12 @@
  * the dataset being checked, the parsed stored data of any other, and null
  * when nothing is stored. A reference resolves against the copy stored in the
  * database the push targets, so two databases can answer differently.
+ *
+ * A parted dataset's stored data is its manifest. A dataset whose check needs
+ * another's parts declares it in `reads`: `readStored` then adds each part's
+ * data to that manifest, read from the same database, and `storedOf` hands
+ * the parts over, parsed and ordered by key. No other check reads a part, so a
+ * push of any other dataset fetches none (move-reference-datasets task 11.1).
  */
 import path from "node:path";
 import type { Db } from "mongodb";
@@ -27,8 +33,9 @@ import { z } from "zod";
 import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
-const { checkData, checkStored } = require("../../../scripts/lib/datasets/checks");
+const { checkData, checkStored, readStored } = require("../../../scripts/lib/datasets/checks");
 const { loadCatalog } = require("../../../scripts/lib/datasets/catalog");
+const parts = require("../../../scripts/lib/datasets/parts");
 const store = require("../../../scripts/lib/datasets/store");
 
 type DbModule = typeof import("../../../src/infra/db");
@@ -72,6 +79,50 @@ const twoDatasets = {
     },
   },
 };
+
+interface Table {
+  line: string;
+  trains: string[];
+}
+interface Routes {
+  lines: string[];
+}
+
+/** `routes` reads the parted `tables` and refuses a line no stored table runs; `notes` reads nothing. */
+const readingCatalog = {
+  sources: {},
+  datasets: {
+    tables: {
+      owner: "src/tables",
+      parts: {
+        schema: z.strictObject({ line: z.string(), trains: z.array(z.string().regex(/^\d\d:\d\d$/)) }),
+        keyOf: (table: Table) => table.line,
+        summaryOf: (table: Table) => ({ trainCount: table.trains.length }),
+      },
+      referencesOf: () => [],
+    },
+    routes: {
+      owner: "src/routes",
+      schema: z.strictObject({ lines: z.array(z.string()) }),
+      reads: ["tables"],
+      issuesOf: (routes: Routes, { storedOf }: { storedOf: (name: string) => Table[] | null }) => {
+        const tables = storedOf("tables");
+        if (tables === null) return [{ path: [], message: "no stored tables" }];
+        return routes.lines.flatMap((line, i) => (tables.some((table) => table.line === line) ? [] : [{ path: ["lines", i], message: `no stored table runs line ${line}` }]));
+      },
+      referencesOf: () => [],
+    },
+    notes: {
+      owner: "src/notes",
+      schema: z.strictObject({ text: z.string() }),
+      referencesOf: () => [],
+    },
+  },
+};
+
+const partOf = (table: Table) => ({ key: table.line, data: table, summary: { trainCount: table.trains.length } });
+const line1 = { line: "1", trains: ["05:30"] };
+const line2 = { line: "2", trains: ["05:31"] };
 
 describe("checkData", () => {
   it("passes data that every check accepts", () => {
@@ -283,6 +334,58 @@ describe("checkData's issuesOf context", () => {
   });
 });
 
+describe("checkData's storedOf for a parted dataset", () => {
+  it("hands a check the parts of a dataset it reads, parsed and ordered by key, from the manifest readStored filled", () => {
+    // Arrange
+    const stored = { tables: { parts: [{ key: "2", data: line2 }, { key: "1", data: line1 }] } };
+
+    // Act
+    const issues = [["1", "2"], ["1", "3"]].map((lines) => checkData(readingCatalog, "routes", { lines }, stored));
+
+    // Assert
+    expect(issues).toEqual([[], [{ dataset: "routes", path: ["lines", 1], message: "no stored table runs line 3" }]]);
+  });
+
+  it("hands over the parts in key order whatever order the manifest lists them in", () => {
+    // Arrange
+    const seen: unknown[] = [];
+    const recording = {
+      ...readingCatalog,
+      datasets: {
+        ...readingCatalog.datasets,
+        routes: {
+          ...readingCatalog.datasets.routes,
+          issuesOf: (_routes: Routes, { storedOf }: { storedOf: (name: string) => unknown }) => {
+            seen.push(storedOf("tables"));
+            return [];
+          },
+        },
+      },
+    };
+
+    // Act
+    checkData(recording, "routes", { lines: [] }, { tables: { parts: [{ key: "2", data: line2 }, { key: "1", data: line1 }] } });
+
+    // Assert
+    expect(seen).toEqual([[line1, line2]]);
+  });
+
+  it("reads a parted dataset as null when its manifest lacks a part's data or a part fails its schema", () => {
+    // Arrange
+    const unread = { tables: { parts: [{ key: "1", partId: "tables/1@0" }] } };
+    const malformed = { tables: { parts: [{ key: "1", data: { line: "1", trains: ["5:30"] } }] } };
+
+    // Act
+    const issues = [unread, malformed].map((stored) => checkData(readingCatalog, "routes", { lines: ["1"] }, stored));
+
+    // Assert
+    expect(issues).toEqual([
+      [{ dataset: "routes", path: [], message: "no stored tables" }],
+      [{ dataset: "routes", path: [], message: "no stored tables" }],
+    ]);
+  });
+});
+
 describe("checkStored", () => {
   let mongod: TestMongod;
   let dbModule: DbModule;
@@ -306,6 +409,21 @@ describe("checkStored", () => {
   beforeEach(async () => {
     await clearCollections(db);
   });
+
+  /** `real`, counting each time a read opens `dataset_parts`. */
+  function countingPartReads(real: Db): { db: Db; reads: () => number } {
+    let count = 0;
+    const counted = new Proxy(real, {
+      get(target, property, receiver) {
+        if (property !== "collection") return Reflect.get(target, property, receiver);
+        return (name: string) => {
+          if (name === "dataset_parts") count += 1;
+          return target.collection(name);
+        };
+      },
+    });
+    return { db: counted, reads: () => count };
+  }
 
   const snapshot = async () => ({
     collections: (await db.listCollections().toArray()).map((c) => c.name).sort(),
@@ -336,6 +454,48 @@ describe("checkStored", () => {
       ],
     });
     expect(await snapshot()).toEqual(before);
+  });
+
+  it("readStored adds each part's data to the manifest of a dataset a checked one reads, and reads no part for any other", async () => {
+    // Arrange
+    await parts.create(db, "tables", [partOf(line1), partOf(line2)], { by: "a@example.com", now: NOW });
+    const counted = countingPartReads(db);
+
+    // Act
+    const forNotes = await readStored(counted.db, readingCatalog, ["notes"]);
+    const readsForNotes = counted.reads();
+    const forRoutes = await readStored(counted.db, readingCatalog, ["routes"]);
+
+    // Assert
+    expect(readsForNotes).toBe(0);
+    expect(forNotes.stored.tables.parts.map((entry: Record<string, unknown>) => Object.keys(entry).sort())).toEqual([
+      ["key", "partId", "summary"],
+      ["key", "partId", "summary"],
+    ]);
+    expect(forRoutes.stored.tables.parts.map((entry: { key: string; data: Table }) => [entry.key, entry.data])).toEqual([
+      ["1", line1],
+      ["2", line2],
+    ]);
+    expect(forRoutes.revisions).toEqual({ tables: 1 });
+  });
+
+  it("checks a dataset that reads a parted one against the parts stored in its own database, never another's", async () => {
+    // Arrange
+    const other = dbModule.getClient().db("data_tool_checks_other");
+    await other.dropDatabase();
+    await parts.create(db, "tables", [partOf(line1), partOf(line2)], { by: "a@example.com", now: NOW });
+    await parts.create(other, "tables", [partOf(line1)], { by: "a@example.com", now: NOW });
+    await store.create(db, "routes", { lines: ["1", "2"] }, { by: "a@example.com", now: NOW });
+    await store.create(other, "routes", { lines: ["1", "2"] }, { by: "a@example.com", now: NOW });
+
+    // Act
+    const here = await checkStored(db, readingCatalog, ["routes"]);
+    const there = await checkStored(other, readingCatalog, ["routes"]);
+
+    // Assert
+    expect(here.issues).toEqual([]);
+    expect(there.issues).toEqual([{ dataset: "routes", path: ["lines", 1], message: "no stored table runs line 2" }]);
+    await other.dropDatabase();
   });
 
   it("lists a dataset with nothing stored as missing, not as an issue", async () => {

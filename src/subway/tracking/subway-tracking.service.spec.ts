@@ -1,7 +1,7 @@
 /**
  * SubwayTrackingService over FakeSubwayRepository (through the real
  * SubwayStateService), the real timetable door
- * (on FakeHolidaysService and the committed tables, stored in a fake), the real estimate
+ * (on FakeHolidaysService and the trimmed fixture of revision 1, stored in a fake), the real estimate
  * door and a scripted Clock, fed one upstream's observations per tick as the
  * pollers hand them. What it guards: each tick replaces both stations'
  * documents with their next three trains per direction, at absolute instants

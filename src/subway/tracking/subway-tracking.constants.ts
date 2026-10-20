@@ -4,7 +4,7 @@ export const STATE_STEPS: Readonly<Record<TrainState, number>> = { approaching: 
 
 export const MAX_ROW_AHEAD_MS = 5 * 60_000;
 
-// EVIDENCE: the longest scheduled run between two row stops of the committed timetables is 510 s, an express from
+// EVIDENCE: the longest scheduled run between two row stops of subway-timetables revision 1 is 510 s, an express from
 // Geumjeong to Sungkyunkwan Univ., which no upstream reliably reports in between; held this long, it keeps its delay through it.
 export const MISSING_TRAIN_HOLD_MS = 15 * 60_000;
 

@@ -69,6 +69,17 @@ diff of subway-timetables (revision 1 -> 2):
 
 A train counts by its whole row, so a train whose times moved is listed as both added and removed. Check that only the tables you rebuilt changed, and that each train count is plausible. A refusal names the table and the path, such as `S1-4-saturday: no table for S1-4-420 saturday` or `KR-1-weekday.json.trains.2.trainNo: ...`, and writes nothing.
 
+Warnings follow the table lines and refuse nothing; `check` prints them too:
+
+```text
+2 warning(s), not refused:
+  warning  subway-timetables  subway-topology.platforms.S1-4-420.down.upstreamPlatformIds  must be ["S1-4-418","S1-4-417","S1-4-416"], ...
+  warning  subway-timetables  S1-4-weekday.S1-4-420.down  the tracked stops skip a station between S1-4-418 and S1-4-420
+```
+
+- A `subway-topology.…` warning means the pushed routes disagree with the stored topology. When the coverage change is deliberate, push the matching topology next ([edit-runtime-data.md](edit-runtime-data.md)); its push refuses until the two agree. Otherwise the converter lost a station: fix it before pushing.
+- A warning at `<key>.<platform>.<direction>` names a run over 510 s between two stops the tracker follows, a train in view under 10 minutes before the platform, or a skipped station. The tracker's estimate is blind there, so close the gap in the topology's watched platforms and the converter's covered stations.
+
 ### Push to production
 
 Pull production and repeat the rebuild there, or copy the `parts/` files of the reviewed `_dev` directory into the production one; never push the `_dev` directory with `--prod`, which the tool refuses.
