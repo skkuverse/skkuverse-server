@@ -11,10 +11,12 @@
  *   keeps the ETag.
  * - The Jongro realtime groups compute crowding from the stored seat count.
  * - A route the code serves with no stored attributes is left out of the
- *   config and the transit routes, and its realtime route answers 503.
- * - Attributes never read: the five routes answer 503
- *   JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE with no Cache-Control, and
- *   `/bus/realtime/data/hssc` serves as before.
+ *   config and the transit routes, and its group and realtime routes answer
+ *   503 (review F2).
+ * - Attributes never read: `/bus/config`, every other group and the ui
+ *   transit routes answer 200 without the Jongro groups (review F1); the Jongro
+ *   group and realtime routes answer 503 JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE
+ *   with no Cache-Control, and `/bus/realtime/data/hssc` serves as before.
  * - The Jongro poller ticks with no attributes stored, reading none.
  *
  * Each test boots its own app over its own stores, so no dataset cache crosses
@@ -293,13 +295,27 @@ describe("a route the code serves with no stored attributes", () => {
 
     // Act
     const res = await request(app.getHttpServer()).get("/bus/config");
-    const group = await request(app.getHttpServer()).get("/bus/config/jongro08");
 
     // Assert
     expect(res.status).toBe(200);
     expect(res.body.data.groups.map((g: Group) => g.id)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07"]);
-    expect(group.status).toBe(404);
-    expect(group.body.error.code).toBe("GROUP_NOT_FOUND");
+  });
+
+  // WHY: review F2: the group route answers what the realtime route answers, so the app sees one outage, not a 404.
+  it("Group of a route without attributes: answers /bus/config/jongro08 with 503 JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE, and an unknown group with 404", async () => {
+    // Arrange
+    const app = await boot(storesHolding(withoutJongro08()));
+
+    // Act
+    const group = await request(app.getHttpServer()).get("/bus/config/jongro08");
+    const unknown = await request(app.getHttpServer()).get("/bus/config/jongro13");
+
+    // Assert
+    expect(group.status).toBe(503);
+    expect(group.body.error).toEqual(UNAVAILABLE);
+    expect(group.headers["cache-control"]).toBeUndefined();
+    expect(unknown.status).toBe(404);
+    expect(unknown.body.error.code).toBe("GROUP_NOT_FOUND");
   });
 
   it("is left out of /ui/home/transitlist and /ui/home/transit, which answer 200", async () => {
@@ -335,11 +351,9 @@ describe("a route the code serves with no stored attributes", () => {
 
 describe("attributes never read", () => {
   it.each([
-    ["/bus/config"],
+    ["/bus/config/jongro02"],
     ["/bus/config/jongro07"],
-    ["/bus/config/hssc"],
-    ["/ui/home/transit"],
-    ["/ui/home/transitlist"],
+    ["/bus/config/jongro08"],
     ["/bus/realtime/data/jongro02"],
     ["/bus/realtime/data/jongro07"],
     ["/bus/realtime/data/jongro08"],
@@ -354,6 +368,53 @@ describe("attributes never read", () => {
     expect(res.status).toBe(503);
     expect(res.body.error).toEqual(UNAVAILABLE);
     expect(res.headers["cache-control"]).toBeUndefined();
+  });
+
+  // WHY: review F1: a replica that never read the attributes loses the Jongro groups only, not the shuttle and subway ones.
+  it("Fresh replica: answers /bus/config with 200, an ETag and the groups other than Jongro", async () => {
+    // Arrange
+    const app = await boot(storesHolding(null));
+
+    // Act
+    const res = await request(app.getHttpServer()).get("/bus/config");
+    const revalidated = await request(app.getHttpServer()).get("/bus/config").set("If-None-Match", res.headers.etag);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.groups.map((g: Group) => g.id)).toEqual(["hssc", "campus", "fasttrack", "commute"]);
+    expect(res.headers.etag).toMatch(/^"[a-f0-9]{32}"$/);
+    expect(res.headers["cache-control"]).toBe("private, max-age=300");
+    expect(revalidated.status).toBe(304);
+  });
+
+  it.each([["hssc"], ["campus"], ["fasttrack"], ["commute"]])("Fresh replica: answers /bus/config/%s with 200, reading no attributes", async (id) => {
+    // Arrange
+    const stores = storesHolding(null);
+    const app = await boot(stores);
+
+    // Act
+    const res = await request(app.getHttpServer()).get(`/bus/config/${id}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe(id);
+    expect(stores.attributes.readCount).toBe(0);
+  });
+
+  it("Fresh replica: answers /ui/home/transitlist and /ui/home/transit with 200 and no Jongro group", async () => {
+    // Arrange
+    const app = await boot(storesHolding(null));
+
+    // Act
+    const list = await request(app.getHttpServer()).get("/ui/home/transitlist");
+    const tab = await request(app.getHttpServer()).get("/ui/home/transit");
+
+    // Assert
+    expect(list.status).toBe(200);
+    expect(list.body.data.map((card: { groupId: string }) => card.groupId)).toEqual(["hssc", "campus", "commute"]);
+    expect(tab.status).toBe(200);
+    expect(JSON.stringify(tab.body)).not.toContain("jongro");
+    expect(JSON.stringify(tab.body)).toContain("bus:hssc");
   });
 
   it("HSSC realtime needs no attributes: serves /bus/realtime/data/hssc with 200", async () => {

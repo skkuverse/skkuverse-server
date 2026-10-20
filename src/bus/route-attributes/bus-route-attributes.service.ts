@@ -37,6 +37,16 @@ export class BusRouteAttributesService {
     return this.loader.get();
   }
 
+  // WHY: for a reader that serves the other groups without the Jongro routes; the loader and repository log the cause at error.
+  async findCurrent(): Promise<RouteAttributesSnapshot | null> {
+    try {
+      return await this.loader.get();
+    } catch (err) {
+      if (err instanceof BusRouteAttributesUnavailableError) return null;
+      throw err;
+    }
+  }
+
   // WHY: for a reader of one route: a route the revision lacks answers the same 503 as attributes never read.
   async attributesOf(routeId: string): Promise<JongroRouteAttributes> {
     const attributes = (await this.loader.get()).attributesOf(routeId);
