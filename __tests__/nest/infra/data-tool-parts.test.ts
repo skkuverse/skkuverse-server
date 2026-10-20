@@ -1,6 +1,6 @@
 /**
  * Parted datasets in `npm run data` (scripts/lib/datasets/parts.js, design D4
- * of openspec/changes/move-reference-datasets), over a real `mongod`:
+ * of openspec/changes/archive/2026-10-20-move-reference-datasets), over a real `mongod`:
  *
  *   - a parted dataset is its `datasets` header, whose data is a manifest
  *     naming each part by its key and a content-derived id, plus one
