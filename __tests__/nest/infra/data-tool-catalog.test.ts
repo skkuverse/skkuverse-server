@@ -40,7 +40,10 @@
  * with the server's topology schema and `toTopologyIssues` against the
  * checkout's SUBWAY_LINES and SUBWAY_STATIONS: one entry per served platform
  * (the `subwayPlatforms` code-held source), no more, and every named stop
- * resolvable; a checkout whose own identities clash refuses every push.
+ * resolvable; a checkout whose own identities clash refuses every push. A
+ * topology whose stops resolve is then checked against the checkout's
+ * committed timetable routes (`toRouteIssues`): upstream, watched and next
+ * platforms in route order, and every stop the tracker follows named.
  */
 import path from "node:path";
 import { JONGRO_ROUTES, SERVICE_CONFIG } from "../../../src/bus/bus.constants";
@@ -799,6 +802,34 @@ describe("loadCatalog subway-topology", () => {
 
     // Assert
     expect(lines).toEqual(['subway-topology: platforms.S1-4-420.up.watchedPlatformIds.3: "S1-3-330" is on line "3", not "4"']);
+  });
+
+  it("Upstream reordered: refuses 혜화 down's second and third upstream platforms swapped, naming the direction's list and the route's order", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = topology();
+    const ids = data.platforms["S1-4-420"]!.down.upstreamPlatformIds;
+    [ids[1], ids[2]] = [ids[2], ids[1]];
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^subway-topology: platforms\.S1-4-420\.down\.upstreamPlatformIds: .*\["S1-4-419","S1-4-418","S1-4-417"\]/)]);
+  });
+
+  it("Watched platform dropped with its neighbor: refuses 성균관대 down without 안양 (KR-1-P147), naming the stop the tracker follows", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = topology();
+    data.platforms["KR-1-0153"]!.down.watchedPlatformIds.pop();
+    delete data.neighbors["KR-1-P147"];
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
+
+    // Assert
+    expect(lines).toContainEqual(expect.stringMatching(/^subway-topology: platforms\.KR-1-0153\.down: "KR-1-P147" .*neither a served platform nor a neighbor$/));
   });
 
   it("refuses four upstream platforms with the server's schema, naming the direction's list", () => {
