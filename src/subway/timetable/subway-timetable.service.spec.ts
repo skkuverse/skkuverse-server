@@ -21,8 +21,12 @@
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { HolidaysService } from "../../holidays/holidays.service";
-import { SUBWAY_REGISTRY } from "../subway.config";
+import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
+import { SUBWAY_STATIONS } from "../subway.constants";
 import { SubwayTimetableService } from "./subway-timetable.service";
+
+// WHY: revision 1 of the stored topology, the directions these checks hold against the committed timetables.
+const TOPOLOGY = subwayTopologyFixture();
 
 function setup() {
   const holidays = new FakeHolidaysService();
@@ -117,7 +121,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
     const watched = schedules.flatMap(({ platform, lineRoutes }) =>
       (["up", "down"] as const).map((direction) => {
         const route = lineRoutes[direction];
-        const { upstreamPlatformIds, watchedPlatformIds } = platform.directions[direction];
+        const { upstreamPlatformIds, watchedPlatformIds } = TOPOLOGY.platforms[platform.id]![direction];
         const beyond = route.indexOf(platform.id) - upstreamPlatformIds.length;
         return [watchedPlatformIds, route.slice(Math.max(0, beyond - watchedPlatformIds.length), beyond).reverse()];
       }),
@@ -138,7 +142,7 @@ describe("SubwayTimetableService.listPlatformSchedules", () => {
       (["up", "down"] as const).map((direction) => {
         const route = lineRoutes[direction];
         const at = route.indexOf(platform.id);
-        const { upstreamPlatformIds, nextPlatformId } = platform.directions[direction];
+        const { upstreamPlatformIds, nextPlatformId } = TOPOLOGY.platforms[platform.id]![direction];
         return [[upstreamPlatformIds, nextPlatformId], [route.slice(Math.max(0, at - 3), at).reverse(), route[at + 1]]];
       }),
     );
@@ -243,13 +247,13 @@ describe("SubwayTimetableService.listPlatformSchedules over the tracked stations
     const tracked = await listTracked();
 
     // Assert
-    const served = new Set(SUBWAY_REGISTRY.stations.flatMap((station) => station.platforms.map((platform) => platform.id)));
+    const served = new Set(SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)));
     const declared = tracked.map(({ platform, direction, tracked: stations }) => {
-      const { upstreamPlatformIds, watchedPlatformIds } = platform.directions[direction];
+      const { upstreamPlatformIds, watchedPlatformIds } = TOPOLOGY.platforms[platform.id]![direction];
       return [[...upstreamPlatformIds, ...watchedPlatformIds], stations.slice(0, -1).reverse()];
     });
     expect(declared.map(([named]) => named)).toEqual(declared.map(([, onRoute]) => onRoute));
-    const unnamed = tracked.flatMap(({ tracked: stations }) => stations.filter((id) => !served.has(id) && SUBWAY_REGISTRY.neighbors[id] === undefined));
+    const unnamed = tracked.flatMap(({ tracked: stations }) => stations.filter((id) => !served.has(id) && TOPOLOGY.neighbors[id] === undefined));
     expect(unnamed).toEqual([]);
   });
 
