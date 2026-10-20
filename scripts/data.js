@@ -5,10 +5,13 @@
  * docs/how-to/edit-runtime-data.md). The server only reads them.
  *
  * Usage (npm run data -- <command> ...):
- *   pull <dataset>                        write .data/<dev|prod>/<dataset>.json
- *   push <dataset> [--file <working file>]
- *                                         store the edited working file
+ *   pull <dataset>                        write .data/<dev|prod>/<dataset>.json, or
+ *                                         .data/<dev|prod>/<dataset>/ for a parted dataset
+ *   push <dataset> [--file <working file> | --dir <working dir>]
+ *                                         store the edited working file or directory
  *   push <dataset> --create --file <json> store revision 1 from a plain JSON file
+ *   push <dataset> --create --dir <dir>   store revision 1 of a parted dataset from a
+ *                                         directory of part files
  *   history <dataset> [--limit <n>]       list stored revisions, newest first
  *   rollback <dataset> <revision>         store an earlier revision as a new one
  *   copy-prod-to-dev <dataset>            store production's data as a new _dev revision
@@ -24,7 +27,8 @@
  * confirmation, printing and exit codes (0 done or no change, 1 refused, 2
  * usage). The datasets and their validation are scripts/lib/datasets/catalog.js
  * over the compiled dist/src (so `npm run data` builds first), the checks
- * checks.js, the MongoDB protocol store.js, the pulled file working-file.js.
+ * checks.js, the MongoDB protocol store.js (and parts.js for a parted
+ * dataset), the pulled file working-file.js (working-dir.js).
  *
  * Why --prod and not NODE_ENV: as scripts/set-campus-schedule.js says, an env
  * var is silently lost when a command is pasted across two lines; a flag cannot
@@ -43,8 +47,10 @@ const { isDeepStrictEqual } = require("node:util");
 const { MongoClient } = require("mongodb");
 
 const { loadCatalog } = require("./lib/datasets/catalog");
-const { checkData, checkStored, readStored } = require("./lib/datasets/checks");
+const { checkData, checkParts, checkStored, readStored } = require("./lib/datasets/checks");
+const parts = require("./lib/datasets/parts");
 const store = require("./lib/datasets/store");
+const { readPartFiles, readWorkingDir, workingDirPath, writeWorking, writeWorkingDir } = require("./lib/datasets/working-dir");
 const { readWorkingFile, workingFilePath, writeWorkingFile } = require("./lib/datasets/working-file");
 
 const REPO_ROOT = path.join(__dirname, "..");
@@ -57,7 +63,7 @@ const SERVER_SELECTION_TIMEOUT_MS = 10_000;
 
 const USAGE = [
   "usage: npm run data -- <command> [<dataset>] [options]",
-  "  pull <dataset> | push <dataset> [--file f] | push <dataset> --create --file f",
+  "  pull <dataset> | push <dataset> [--file f | --dir d] | push <dataset> --create (--file f | --dir d)",
   "  history <dataset> [--limit n] | rollback <dataset> <revision>",
   "  copy-prod-to-dev <dataset> | check [<dataset>]",
   "  options: --prod --yes --dry-run --note <text> --by <email>",
@@ -66,7 +72,7 @@ const USAGE = [
 const NEEDS_DATASET = new Set(["pull", "push", "history", "rollback", "copy-prod-to-dev"]);
 const COMMANDS = new Set([...NEEDS_DATASET, "check"]);
 const FLAGS = { "--prod": "prod", "--yes": "yes", "--dry-run": "dryRun", "--create": "create" };
-const VALUED = { "--file": "file", "--note": "note", "--by": "by", "--limit": "limit" };
+const VALUED = { "--file": "file", "--dir": "dir", "--note": "note", "--by": "by", "--limit": "limit" };
 
 class UsageError extends Error {}
 class Refusal extends Error {}
@@ -92,7 +98,8 @@ function parseArgs(argv) {
   if (NEEDS_DATASET.has(command) && !dataset) throw new UsageError(`${command} needs a dataset`);
   if (rest.length > 0 || (revision !== undefined && command !== "rollback")) throw new UsageError("too many arguments");
   if (command === "rollback" && !/^[1-9]\d*$/.test(revision ?? "")) throw new UsageError("rollback needs a revision number");
-  if (args.create && (command !== "push" || !args.file)) throw new UsageError("--create goes with push and --file <json>");
+  if (args.create && (command !== "push" || !(args.file || args.dir))) throw new UsageError("--create goes with push and --file <json> or --dir <dir>");
+  if (args.file && args.dir) throw new UsageError("pass --file or --dir, not both");
   if (command === "copy-prod-to-dev" && args.prod) {
     throw new UsageError("copy-prod-to-dev writes only the _dev database; drop --prod (nothing copies into production)");
   }
@@ -229,15 +236,24 @@ function refusalOf(result, ctx, base) {
         "Nothing written. Run copy-prod-to-dev again.",
     );
   }
+  if (result.reason === "collision") {
+    return new Refusal(
+      `part ${result.partId} is stored with different content under the same id (a sha256 prefix collision). ` +
+        `${dataset}'s header was not written; report this, nothing is overwritten.`,
+    );
+  }
   if (result.reason === "pruned") return new Refusal(`revision ${ctx.args.revision} was pruned; the oldest kept is ${result.oldestKept}.`);
   if (result.reason === "no-revision") return new Refusal(`${dataset} has no revision ${ctx.args.revision}.`);
-  return new Refusal(`${dataset}: no dataset in ${ctx.dbName}. Create it with \`push ${dataset} --create --file <json>\`.`);
+  const source = isParted(ctx) ? "--dir <dir>" : "--file <json>";
+  return new Refusal(`${dataset}: no dataset in ${ctx.dbName}. Create it with \`push ${dataset} --create ${source}\`.`);
 }
 
 function refuseIssues(issues) {
   const lines = issues.map((issue) => `  ${issue.dataset}  ${issue.path.join(".") || "(root)"}  ${issue.message}`);
   return new Refusal([`REFUSED: ${issues.length} issue(s), nothing written:`, ...lines].join("\n"));
 }
+
+const isParted = (ctx) => Boolean(ctx.catalog.datasets[ctx.args.dataset].parts);
 
 /** True when production is written only after the operator confirms at the prompt. */
 const confirmsAtPrompt = (args) => args.prod && !args.yes;
@@ -265,9 +281,9 @@ async function repairOrReport(ctx, db, dataset) {
   await repair(ctx, db, dataset);
 }
 
-/** Prints the diff, then writes after the confirmation production needs. */
-async function confirmAndWrite(ctx, { before, after, summary, write }) {
-  const lines = before === null ? [`+ ${summary}: ${JSON.stringify(after).length} bytes of JSON`] : diffLines(before, after);
+/** Prints the diff (or a parted dataset's report, `lines`), then writes after the confirmation production needs. */
+async function confirmAndWrite(ctx, { before, after, lines: report, summary, write }) {
+  const lines = report ?? (before === null ? [`+ ${summary}: ${JSON.stringify(after).length} bytes of JSON`] : diffLines(before, after));
   ctx.out(`diff of ${ctx.args.dataset} (${summary}):`);
   lines.slice(0, DIFF_LINE_LIMIT).forEach((line) => ctx.out(`  ${line}`));
   if (lines.length > DIFF_LINE_LIMIT) ctx.out(`  ... ${lines.length - DIFF_LINE_LIMIT} more changed paths`);
@@ -302,6 +318,7 @@ async function pull(ctx) {
   await repairOrReport(ctx, ctx.db, dataset);
   const current = await store.readDataset(ctx.db, dataset);
   if (current === null) throw refusalOf({ reason: "missing" }, ctx);
+  if (isParted(ctx)) return pullParts(ctx, current);
   const file = workingFilePath(ctx.root, ctx.target, dataset);
   writeWorkingFile(file, { dataset, target: ctx.target, baseRevision: current.revision, pulledAt: iso(ctx.now()), data: current.data });
   ctx.out(`pulled ${dataset} revision ${current.revision} (${current.updatedBy}, ${iso(current.updatedAt)})`);
@@ -331,18 +348,12 @@ async function create(ctx) {
   return EXIT_OK;
 }
 
-function readTargetedFile(ctx) {
+/** Refuses a working file or directory at `where` that holds another dataset or was pulled from the other target. */
+function refuseUntargeted(ctx, where, working) {
   const { dataset } = ctx.args;
-  const file = ctx.args.file ?? workingFilePath(ctx.root, ctx.target, dataset);
-  let working;
-  try {
-    working = readWorkingFile(file);
-  } catch (err) {
-    throw new Refusal(err.message, { cause: err });
-  }
-  const shown = path.relative(process.cwd(), file);
+  const shown = path.relative(process.cwd(), where);
   if (working.dataset !== dataset) throw new Refusal(`${shown} holds ${working.dataset}, not ${dataset}.`);
-  if (working.target === ctx.target) return { file, working };
+  if (working.target === ctx.target) return;
   const from = working.target === "dev" ? "development" : "production";
   throw new Refusal(
     `${shown} was pulled from the ${from} database, so it cannot be pushed to ${ctx.dbName}. ` +
@@ -350,7 +361,24 @@ function readTargetedFile(ctx) {
   );
 }
 
+/** Rethrows what a reader of the working file or directory threw as a refusal. */
+function refusingOnError(read) {
+  try {
+    return read();
+  } catch (err) {
+    throw new Refusal(err.message, { cause: err });
+  }
+}
+
+function readTargetedFile(ctx) {
+  const file = ctx.args.file ?? workingFilePath(ctx.root, ctx.target, ctx.args.dataset);
+  const working = refusingOnError(() => readWorkingFile(file));
+  refuseUntargeted(ctx, file, working);
+  return { file, working };
+}
+
 async function push(ctx) {
+  if (isParted(ctx)) return ctx.args.create ? createParts(ctx) : pushParts(ctx);
   if (ctx.args.create) return create(ctx);
   const { dataset } = ctx.args;
   const { file, working } = readTargetedFile(ctx);
@@ -373,6 +401,91 @@ async function push(ctx) {
   if (result === null) return EXIT_OK;
   reportStored(ctx, result, working.baseRevision);
   writeWorkingFile(file, { ...working, baseRevision: result.revision, pulledAt: iso(ctx.now()) });
+  return EXIT_OK;
+}
+
+/** One line per key of either manifest: `unchanged`, `changed` with its summary's differences, `added` or `removed`. */
+function partReport(before, after) {
+  const beforeByKey = new Map((before?.parts ?? []).map((entry) => [entry.key, entry]));
+  const afterByKey = new Map(after.parts.map((entry) => [entry.key, entry]));
+  const keys = [...new Set([...beforeByKey.keys(), ...afterByKey.keys()])].sort();
+  return keys.map((key) => {
+    const [was, is] = [beforeByKey.get(key), afterByKey.get(key)];
+    if (is === undefined) return `removed    ${key}  ${show(was.summary)}`;
+    if (was === undefined) return `added      ${key}  ${show(is.summary)}`;
+    if (was.partId === is.partId) return `unchanged  ${key}`;
+    const differences = diffLines(was.summary, is.summary).map((line) => line.slice(2));
+    return `changed    ${key}  ${differences.length > 0 ? differences.join("; ") : "same summary, other content"}`;
+  });
+}
+
+const partIdLines = (manifest) => manifest.parts.map((entry) => `${entry.key} ${entry.partId}`).join("\n");
+const samePartIds = (before, after) => partIdLines(before) === partIdLines(after);
+
+/** The checked parts of `files` and their manifest, or a refusal listing every issue. */
+async function checkedParts(ctx, files) {
+  const { stored } = await readStored(ctx.db, ctx.catalog);
+  const checked = checkParts(ctx.catalog, ctx.args.dataset, files, stored);
+  if (checked.issues.length > 0) throw refuseIssues(checked.issues);
+  return { parts: checked.parts, manifest: parts.toManifest(checked.parts.map((part) => parts.toStoredPart(ctx.args.dataset, part))) };
+}
+
+/** The parts `manifest` names, or a refusal naming every one that is not stored. */
+async function readNamedParts(ctx, db, manifest, revision) {
+  const found = await parts.readParts(db, manifest);
+  if (found.missing.length > 0) {
+    throw new Refusal(`${ctx.args.dataset} revision ${revision} names ${found.missing.length} part(s) not stored in ${db.databaseName}: ${found.missing.join(", ")}`);
+  }
+  return found.parts;
+}
+
+async function pullParts(ctx, current) {
+  const { dataset } = ctx.args;
+  const named = await readNamedParts(ctx, ctx.db, current.data, current.revision);
+  const dir = workingDirPath(ctx.root, ctx.target, dataset);
+  writeWorkingDir(dir, { dataset, target: ctx.target, baseRevision: current.revision, pulledAt: iso(ctx.now()), manifest: current.data }, named);
+  ctx.out(`pulled ${dataset} revision ${current.revision} (${current.updatedBy}, ${iso(current.updatedAt)}), ${named.length} part(s)`);
+  ctx.out(`working directory  ${path.relative(process.cwd(), dir)}`);
+  return EXIT_OK;
+}
+
+async function createParts(ctx) {
+  const { dataset } = ctx.args;
+  const files = refusingOnError(() => readPartFiles(ctx.args.dir));
+  const current = await store.readDataset(ctx.db, dataset);
+  if (current !== null) throw refusalOf({ reason: "exists", current }, ctx);
+  const checked = await checkedParts(ctx, files);
+  const result = await confirmAndWrite(ctx, {
+    lines: partReport(null, checked.manifest),
+    summary: `new dataset of ${checked.parts.length} part(s), revision 1`,
+    write: (meta) => parts.create(ctx.db, dataset, checked.parts, meta),
+  });
+  if (result !== null) reportStored(ctx, result, null);
+  return EXIT_OK;
+}
+
+async function pushParts(ctx) {
+  const { dataset } = ctx.args;
+  const dir = ctx.args.dir ?? workingDirPath(ctx.root, ctx.target, dataset);
+  const { working, files } = refusingOnError(() => readWorkingDir(dir));
+  refuseUntargeted(ctx, dir, working);
+  await repairOrReport(ctx, ctx.db, dataset);
+  const current = await store.readDataset(ctx.db, dataset);
+  if (current === null) throw refusalOf({ reason: "missing" }, ctx);
+  const checked = await checkedParts(ctx, files);
+  if (samePartIds(current.data, checked.manifest)) {
+    ctx.out(`no change: every part equals ${dataset} revision ${current.revision}; nothing written.`);
+    return EXIT_OK;
+  }
+  if (current.revision !== working.baseRevision) throw refusalOf({ reason: "conflict", current }, ctx, working.baseRevision);
+  const result = await confirmAndWrite(ctx, {
+    lines: partReport(current.data, checked.manifest),
+    summary: `revision ${current.revision} -> ${current.revision + 1}`,
+    write: (meta) => parts.push(ctx.db, dataset, checked.parts, { ...meta, baseRevision: working.baseRevision }),
+  });
+  if (result === null) return EXIT_OK;
+  reportStored(ctx, result, working.baseRevision);
+  writeWorking(dir, { ...working, baseRevision: result.revision, pulledAt: iso(ctx.now()), manifest: checked.manifest });
   return EXIT_OK;
 }
 
@@ -470,8 +583,9 @@ async function connectAndRun(ctx, url, serverSelectionTimeoutMS) {
 
 /**
  * Runs one command and resolves its exit code. `deps` replaces what the
- * command line takes from the process, for the tests: env, root, load,
- * stdout, stderr, isTTY, ask, now, whoami and serverSelectionTimeoutMS.
+ * command line takes from the process, for the tests: env, root, load (or a
+ * whole catalog), stdout, stderr, isTTY, ask, now, whoami and
+ * serverSelectionTimeoutMS.
  */
 async function run(argv, deps = {}) {
   const env = deps.env ?? process.env;
@@ -483,9 +597,11 @@ async function run(argv, deps = {}) {
   try {
     const args = parseArgs(argv);
     const root = deps.root ?? REPO_ROOT;
-    const catalog = loadCatalog(deps.load ?? distLoader(root));
+    const catalog = deps.catalog ?? loadCatalog(deps.load ?? distLoader(root));
     for (const name of [args.dataset].filter(Boolean)) {
       if (!catalog.datasets[name]) throw new UsageError(`unknown dataset "${name}" (known: ${Object.keys(catalog.datasets).join(", ")})`);
+      if (catalog.datasets[name].parts && args.file) throw new UsageError(`${name} is stored in parts: push it from a directory with --dir, not --file`);
+      if (!catalog.datasets[name].parts && args.dir) throw new UsageError(`${name} is one document: push it with --file, not --dir`);
     }
     const names = databaseNames(env);
     if (!env.MONGO_URL) throw new Refusal("MONGO_URL is not set in .env (run `npm run env:pull`).");

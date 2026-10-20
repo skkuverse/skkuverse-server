@@ -109,6 +109,17 @@ async function collectGarbage(db, dataset, { now }) {
   return { deleted: result.deletedCount };
 }
 
+/** The parts a manifest names, in its order, as `{ key, partId, data }`, and the ids of those not stored. */
+async function readParts(db, manifest) {
+  const ids = partIdsOf(manifest);
+  const docs = await db.collection(PARTS).find({ _id: { $in: ids } }).toArray();
+  const byId = new Map(docs.map((doc) => [doc._id, doc]));
+  return {
+    parts: manifest.parts.filter((entry) => byId.has(entry.partId)).map(({ key, partId }) => ({ key, partId, data: byId.get(partId).data })),
+    missing: ids.filter((id) => !byId.has(id)),
+  };
+}
+
 async function writeParted(db, dataset, parts, meta, writeHeader) {
   const storedParts = parts.map((part) => toStoredPart(dataset, part));
   const stored = await storeParts(db, dataset, storedParts, meta);
@@ -128,4 +139,4 @@ function push(db, dataset, parts, { baseRevision, by, now, note }) {
   return writeParted(db, dataset, parts, { by, now }, (manifest) => store.push(db, dataset, manifest, { baseRevision, by, now, note }));
 }
 
-module.exports = { PART_GRACE_MS, collectGarbage, create, push, toManifest, toStoredPart };
+module.exports = { PART_GRACE_MS, collectGarbage, create, push, readParts, toManifest, toStoredPart };

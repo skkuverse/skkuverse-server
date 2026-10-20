@@ -10,14 +10,25 @@
  *     exist;
  *   - a part is deleted only when neither the current header nor a retained
  *     revision names it, and only an hour after it was saved.
+ *
+ * The command line (scripts/data.js, scripts/lib/datasets/working-dir.js) runs
+ * over a two-part test catalog, `test-tables`: one part per line and day type,
+ * and a coverage check that every line has a weekday table. A parted dataset
+ * is pulled into a directory and pushed back from it, keyed by `keyOf`, with a
+ * report of every part and the same safety rules as a single document.
  */
 import { createHash } from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import type { Db } from "mongodb";
+import { z } from "zod";
 import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const parts = require("../../../scripts/lib/datasets/parts");
 const store = require("../../../scripts/lib/datasets/store");
+const { run } = require("../../../scripts/data");
 
 type DbModule = typeof import("../../../src/infra/db");
 
@@ -57,15 +68,44 @@ const partIdOf = (t: Table): string => `${DATASET}/${t.line}-${t.dayType}@${sha2
 const weekday1 = table("1", "weekday", ["05:30", "05:40"]);
 const weekday2 = table("2", "weekday", ["05:31"]);
 
+const LINES = ["1", "2"];
+const SENTINEL = "Sentinel-Pa55word-9d1e";
+const USER = "partstool";
+const BASE = "parts_content";
+const DEV = "parts_content_dev";
+
+/** A parted dataset: one table per line and day type, every line with a weekday table. */
+const tablesCatalog = {
+  sources: {},
+  datasets: {
+    [DATASET]: {
+      owner: "src/test-tables",
+      parts: {
+        schema: z.strictObject({ line: z.string(), dayType: z.enum(["weekday", "holiday"]), trains: z.array(z.string().regex(/^\d\d:\d\d$/)) }),
+        keyOf: (t: Table) => `${t.line}-${t.dayType}`,
+        summaryOf: (t: Table) => ({ trainCount: t.trains.length }),
+      },
+      issuesOf: (tables: Table[]) =>
+        LINES.filter((line) => !tables.some((t) => t.line === line && t.dayType === "weekday")).map((line) => ({ path: [line], message: `line ${line} has no weekday table` })),
+      referencesOf: () => [],
+    },
+  },
+};
+
 let mongod: TestMongod;
 let dbModule: DbModule;
 let db: Db;
+let mongoUrl: string;
+let root: string;
 
 beforeAll(async () => {
   mongod = await startMongod();
   dbModule = require("../../../src/infra/db") as DbModule;
   assertConfigReaches(mongod, (require("../../../src/infra/config") as { mongo: { url: string } }).mongo.url);
   db = dbModule.getClient().db("data_tool_parts_dev");
+  // WHY: a password the tool must never print; a mongod without --auth still checks credentials it is sent.
+  await dbModule.getClient().db("admin").command({ createUser: USER, pwd: SENTINEL, roles: ["root"] });
+  mongoUrl = mongod.uri.replace("mongodb://", `mongodb://${USER}:${SENTINEL}@`) + "?authSource=admin";
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
@@ -78,7 +118,17 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await db.dropDatabase();
+  await devDb().dropDatabase();
+  await prodDb().dropDatabase();
+  root = fs.mkdtempSync(path.join(os.tmpdir(), "data-tool-parts-"));
 });
+
+afterEach(() => {
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+const devDb = (): Db => dbModule.getClient().db(DEV);
+const prodDb = (): Db => dbModule.getClient().db(BASE);
 
 const storedParts = (dataset = DATASET) => db.collection("dataset_parts").find({ dataset }).sort({ _id: 1 }).toArray();
 const manifestOf = async (): Promise<ManifestEntry[]> => (await store.readDataset(db, DATASET)).data.parts;
@@ -236,5 +286,232 @@ describe("parts garbage collection", () => {
     // Assert
     expect(result).toEqual({ deleted: 0 });
     expect((await storedParts()).map((part) => part._id)).toEqual([partIdOf(weekday1)]);
+  });
+});
+
+interface Ran {
+  code: number;
+  out: string;
+  err: string;
+}
+
+/** Runs the tool as `npm run data -- <argv>` would, over the test catalog and the test mongod. */
+async function data(argv: string[], options: { isTTY?: boolean; answer?: string } = {}): Promise<Ran> {
+  const out: string[] = [];
+  const err: string[] = [];
+  const code = await run(argv, {
+    env: { MONGO_URL: mongoUrl, MONGO_CONTENT_DB_NAME: BASE },
+    root,
+    catalog: tablesCatalog,
+    stdout: { write: (text: string) => out.push(text) },
+    stderr: { write: (text: string) => err.push(text) },
+    isTTY: options.isTTY ?? false,
+    ask: async () => options.answer ?? "",
+    now: () => NOW,
+    whoami: () => ALICE,
+    serverSelectionTimeoutMS: 1_000,
+  });
+  return { code, out: out.join(""), err: err.join("") };
+}
+
+const holiday1 = table("1", "holiday", ["06:00"]);
+const workingDir = (target: "dev" | "prod") => path.join(root, ".data", target, DATASET);
+const partFile = (target: "dev" | "prod", name: string) => path.join(workingDir(target), "parts", name);
+const readJson = (file: string) => JSON.parse(fs.readFileSync(file, "utf8"));
+const writeJson = (file: string, value: unknown) => fs.writeFileSync(file, JSON.stringify(value, null, 2));
+const revisionIn = async (target: Db): Promise<number | null> => (await store.readDataset(target, DATASET))?.revision ?? null;
+const partCountIn = (target: Db) => target.collection("dataset_parts").countDocuments({ dataset: DATASET });
+
+describe("npm run data, a parted dataset", () => {
+  it("pull writes the working file and one file per part under .data/<target>/<dataset>/", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+
+    // Act
+    const result = await data(["pull", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(readJson(path.join(workingDir("dev"), "working.json"))).toEqual({
+      dataset: DATASET,
+      target: "dev",
+      baseRevision: 1,
+      pulledAt: NOW.toISOString(),
+      manifest: (await store.readDataset(devDb(), DATASET)).data,
+    });
+    expect(fs.readdirSync(path.join(workingDir("dev"), "parts")).sort()).toEqual(["1-weekday.json", "2-weekday.json"]);
+    expect(readJson(partFile("dev", "1-weekday.json"))).toEqual(weekday1);
+  });
+
+  it("push keys each part by keyOf, reports every key, and stores the next revision", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2), partOf(holiday1)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET]);
+    fs.renameSync(partFile("dev", "1-weekday.json"), partFile("dev", "renamed.json"));
+    writeJson(partFile("dev", "2-weekday.json"), table("2", "weekday", ["05:31", "05:45"]));
+    fs.rmSync(partFile("dev", "1-holiday.json"));
+    writeJson(partFile("dev", "new.json"), table("2", "holiday", ["07:00"]));
+
+    // Act
+    const result = await data(["push", DATASET, "--note", "line 2 update"]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/unchanged\s+1-weekday/);
+    expect(result.out).toMatch(/changed\s+2-weekday\s.*trainCount: 1 -> 2/);
+    expect(result.out).toMatch(/added\s+2-holiday/);
+    expect(result.out).toMatch(/removed\s+1-holiday/);
+    const header = await store.readDataset(devDb(), DATASET);
+    expect(header.revision).toBe(2);
+    expect(header.data.parts.map((entry: ManifestEntry) => entry.key)).toEqual(["1-weekday", "2-holiday", "2-weekday"]);
+    expect(header.data.parts[0].partId).toBe(partIdOf(weekday1));
+    expect(readJson(path.join(workingDir("dev"), "working.json"))).toMatchObject({ baseRevision: 2, manifest: header.data });
+  });
+
+  it("refuses two files with the same key, naming both, and writes nothing", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET]);
+    writeJson(partFile("dev", "copy.json"), table("1", "weekday", ["09:00"]));
+
+    // Act
+    const result = await data(["push", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("1-weekday");
+    expect(result.err).toContain("copy.json");
+    expect(result.err).toContain("1-weekday.json");
+    expect(await revisionIn(devDb())).toBe(1);
+    expect(await partCountIn(devDb())).toBe(2);
+  });
+
+  it("refuses a part the part schema rejects and a set the dataset's checks reject, naming each, and writes nothing", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET]);
+    writeJson(partFile("dev", "1-weekday.json"), table("1", "weekday", ["5:30"]));
+    fs.rmSync(partFile("dev", "2-weekday.json"));
+    const schemaRun = await data(["push", DATASET]);
+    writeJson(partFile("dev", "1-weekday.json"), weekday1);
+
+    // Act
+    const coverageRun = await data(["push", DATASET]);
+
+    // Assert
+    expect(schemaRun.code).toBe(1);
+    expect(schemaRun.err).toContain("1-weekday.json.trains.0");
+    expect(coverageRun.code).toBe(1);
+    expect(coverageRun.err).toContain("line 2 has no weekday table");
+    expect(await revisionIn(devDb())).toBe(1);
+    expect(await partCountIn(devDb())).toBe(2);
+  });
+
+  it("reports no change for an unedited directory and writes nothing", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET]);
+
+    // Act
+    const result = await data(["push", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/no change/i);
+    expect(await revisionIn(devDb())).toBe(1);
+    expect(await store.history(devDb(), DATASET)).toHaveLength(1);
+  });
+
+  it("refuses a push from a stale pull, naming the current revision", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET]);
+    await parts.push(devDb(), DATASET, [partOf(weekday1), partOf(weekday2), partOf(holiday1)], { baseRevision: 1, by: "bob@example.com", now: NOW });
+    writeJson(partFile("dev", "2-weekday.json"), table("2", "weekday", ["05:59"]));
+
+    // Act
+    const result = await data(["push", DATASET]);
+
+    // Assert
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("revision 2");
+    expect(result.err).toContain("bob@example.com");
+    expect(await revisionIn(devDb())).toBe(2);
+  });
+
+  it("refuses a directory pulled from _dev with --prod, and writes nothing", async () => {
+    // Arrange
+    await parts.create(devDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await parts.create(prodDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET]);
+    writeJson(partFile("dev", "2-weekday.json"), table("2", "weekday", ["05:59"]));
+
+    // Act
+    const result = await data(["push", DATASET, "--prod", "--yes", "--dir", workingDir("dev")]);
+
+    // Assert
+    expect(result.code).toBe(1);
+    expect(result.err).toMatch(/pulled from the development database/);
+    expect(await revisionIn(prodDb())).toBe(1);
+    expect(await partCountIn(prodDb())).toBe(2);
+  });
+
+  it("writes no part and no header to production without --yes on a non-TTY, or with --dry-run", async () => {
+    // Arrange
+    await parts.create(prodDb(), DATASET, [partOf(weekday1), partOf(weekday2)], { by: ALICE, now: NOW });
+    await data(["pull", DATASET, "--prod"]);
+    writeJson(partFile("prod", "2-weekday.json"), table("2", "weekday", ["05:59"]));
+
+    // Act
+    const unconfirmed = await data(["push", DATASET, "--prod"]);
+    const dryRun = await data(["push", DATASET, "--prod", "--yes", "--dry-run"]);
+
+    // Assert
+    expect(unconfirmed.code).toBe(1);
+    expect(unconfirmed.err).toContain("--yes");
+    expect(dryRun.code).toBe(0);
+    expect(dryRun.out).toMatch(/changed\s+2-weekday/);
+    expect(await revisionIn(prodDb())).toBe(1);
+    expect(await partCountIn(prodDb())).toBe(2);
+  });
+
+  it("push --create --dir stores revision 1 from a plain directory of part files", async () => {
+    // Arrange
+    const dir = path.join(root, "tables");
+    fs.mkdirSync(dir);
+    writeJson(path.join(dir, "a.json"), weekday2);
+    writeJson(path.join(dir, "b.json"), weekday1);
+
+    // Act
+    const result = await data(["push", DATASET, "--create", "--dir", dir, "--note", "import"]);
+
+    // Assert
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/added\s+1-weekday/);
+    expect(result.out).toMatch(/added\s+2-weekday/);
+    expect(await store.readDataset(devDb(), DATASET)).toMatchObject({
+      revision: 1,
+      data: { parts: [{ key: "1-weekday", partId: partIdOf(weekday1) }, { key: "2-weekday", partId: partIdOf(weekday2) }] },
+    });
+    expect(await revisionIn(prodDb())).toBeNull();
+  });
+
+  it("never prints MONGO_URL or any part of it", async () => {
+    // Arrange
+    const dir = path.join(root, "tables");
+    fs.mkdirSync(dir);
+    writeJson(path.join(dir, "1-weekday.json"), weekday1);
+    writeJson(path.join(dir, "2-weekday.json"), weekday2);
+
+    // Act
+    const runs = [await data(["push", DATASET, "--create", "--dir", dir]), await data(["pull", DATASET]), await data(["push", DATASET])];
+
+    // Assert
+    expect(runs.map((r) => r.code)).toEqual([0, 0, 0]);
+    for (const { out, err } of runs) {
+      expect(out + err).not.toContain(SENTINEL);
+      expect(out + err).not.toContain(USER);
+      expect(out + err).not.toContain(mongod.uri.replace("mongodb://", "").replace(/\/$/, ""));
+    }
   });
 });
