@@ -1,24 +1,15 @@
 /**
- * The route the registry derives from a stored document and the committed
- * config: served stations with their ends, the turnaround
- * stop and the transfer lines of their ARS number, and the TOPIS id → first
- * ord mapping that places a bus.
+ * The route the registry derives from a stored document and the route's
+ * identity in code: served stations with their ends and the turnaround stop,
+ * and the TOPIS id → first ord mapping that places a bus. The transfer lines
+ * are stored attributes the config view joins (move-reference-datasets D10).
  */
 import type { JongroRoute } from "../bus.types";
 import type { JongroRouteDocument } from "./bus-registry.document";
 import { toRegistryRoute, toRegistryStations } from "./bus-registry.mapper";
 
 
-const committed: JongroRoute = {
-  id: "jongro07",
-  code: "07",
-  busRouteId: "100900004",
-  themeColor: "4CAF50",
-  iconType: "village",
-  refreshInterval: 40,
-  seatCount: 18,
-  transferLinesByArsId: { "01589": [{ line: "1", color: "0052A4" }] },
-};
+const committed: JongroRoute = { id: "jongro07", code: "07", busRouteId: "100900004" };
 
 const documentOf = (topisIds: string[], overrides: Partial<JongroRouteDocument> = {}): JongroRouteDocument => ({
   _id: "jongro07",
@@ -35,7 +26,8 @@ describe("toRegistryRoute", () => {
     const route = toRegistryRoute(committed, documentOf(["A", "B", "C"]));
 
     // Assert
-    expect(route).toMatchObject({ id: "jongro07", seatCount: 18, stationsVersion: "0123456789abcdef", turnaroundTopisId: "B" });
+    expect(route).toMatchObject({ id: "jongro07", code: "07", busRouteId: "100900004", stationsVersion: "0123456789abcdef", turnaroundTopisId: "B" });
+    expect(route).not.toHaveProperty("seatCount");
     expect(route.topisIds).toEqual(["A", "B", "C"]);
   });
 
@@ -49,18 +41,6 @@ describe("toRegistryRoute", () => {
       ["2", "stop B", "ars-B", false, false, true],
       ["3", "stop C", "ars-C", false, true, false],
     ]);
-  });
-
-  it("gives a station the transfer lines of its ARS number, wherever it sits", () => {
-    // Arrange
-    const doc = documentOf(["A", "B", "C"]);
-    doc.stations[2] = { ...doc.stations[2]!, arsId: "01589" };
-
-    // Act
-    const { stations } = toRegistryRoute(committed, doc);
-
-    // Assert
-    expect(stations.map((s) => s.transferLines)).toEqual([[], [], [{ line: "1", color: "0052A4" }]]);
   });
 
   // A bus whose last passed stop is the terminal has just left it, so the

@@ -1,0 +1,57 @@
+{
+  "_about": "Revision 1 of the jongro-route-attributes dataset: src/bus/jongro-routes.json as production served it at commit d856f333 (captured 2026-10-20), keyed by route id, without id and busRouteId, which stay in code as JONGRO_ROUTES (move-reference-datasets D10 and D14). Not trimmed.",
+  "routes": {
+    "jongro02": {
+      "themeColor": "4CAF50",
+      "iconType": "village",
+      "refreshInterval": 25,
+      "seatCount": 18,
+      "transferLinesByArsId": {
+        "01200": [{"line": "3", "color": "EF7C1C"}],
+        "01564": [{"line": "3", "color": "EF7C1C"}],
+        "01570": [{"line": "3", "color": "EF7C1C"}],
+        "01576": [{"line": "3", "color": "EF7C1C"}],
+        "01583": [{"line": "3", "color": "EF7C1C"}],
+        "01589": [{"line": "1", "color": "0052A4"}, {"line": "3", "color": "EF7C1C"}, {"line": "5", "color": "996CAC"}],
+        "01596": [{"line": "1", "color": "0052A4"}, {"line": "3", "color": "EF7C1C"}, {"line": "5", "color": "996CAC"}],
+        "01683": [{"line": "1", "color": "0052A4"}],
+        "01805": [{"line": "3", "color": "EF7C1C"}],
+        "01812": [{"line": "3", "color": "EF7C1C"}],
+        "01826": [{"line": "3", "color": "EF7C1C"}],
+        "01888": [{"line": "1", "color": "0052A4"}],
+        "01889": [{"line": "1", "color": "0052A4"}]
+      }
+    },
+    "jongro07": {
+      "themeColor": "4CAF50",
+      "iconType": "village",
+      "refreshInterval": 25,
+      "seatCount": 18,
+      "transferLinesByArsId": {
+        "01220": [{"line": "4", "color": "00A5DE"}],
+        "01221": [{"line": "4", "color": "00A5DE"}],
+        "01592": [{"line": "4", "color": "00A5DE"}],
+        "01697": [{"line": "4", "color": "00A5DE"}],
+        "01876": [{"line": "4", "color": "00A5DE"}],
+        "01877": [{"line": "4", "color": "00A5DE"}]
+      }
+    },
+    "jongro08": {
+      "themeColor": "4CAF50",
+      "iconType": "village",
+      "refreshInterval": 25,
+      "seatCount": 18,
+      "transferLinesByArsId": {
+        "01220": [{"line": "4", "color": "00A5DE"}],
+        "01221": [{"line": "4", "color": "00A5DE"}],
+        "01249": [{"line": "1", "color": "0052A4"}],
+        "01592": [{"line": "4", "color": "00A5DE"}],
+        "01725": [{"line": "1", "color": "0052A4"}],
+        "01794": [{"line": "1", "color": "0052A4"}],
+        "01876": [{"line": "4", "color": "00A5DE"}],
+        "01877": [{"line": "4", "color": "00A5DE"}],
+        "01879": [{"line": "1", "color": "0052A4"}]
+      }
+    }
+  }
+}

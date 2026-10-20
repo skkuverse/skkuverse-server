@@ -2,7 +2,7 @@ import type { JongroRoute } from "../bus.types";
 import type { JongroRouteDocument, RegistryStation } from "./bus-registry.document";
 import type { JongroStation, JongroStationMapping, ObservedStation, RegistryRoute } from "./bus-registry.types";
 
-function toJongroStations(route: JongroRoute, doc: JongroRouteDocument): JongroStation[] {
+function toJongroStations(doc: JongroRouteDocument): JongroStation[] {
   const last = doc.stations.length - 1;
   return doc.stations.map((station, index) => ({
     sequence: String(index + 1),
@@ -11,7 +11,6 @@ function toJongroStations(route: JongroRoute, doc: JongroRouteDocument): JongroS
     isFirstStation: index === 0,
     isLastStation: index === last,
     isRotationStation: station.topisId === doc.turnaroundTopisId,
-    transferLines: (route.transferLinesByArsId[station.arsId] ?? []).map((t) => ({ line: t.line, color: t.color })),
   }));
 }
 
@@ -31,7 +30,7 @@ export function toRegistryRoute(route: JongroRoute, doc: JongroRouteDocument): R
     stationsVersion: doc.stationsVersion,
     turnaroundTopisId: doc.turnaroundTopisId,
     registryStations: doc.stations,
-    stations: toJongroStations(route, doc),
+    stations: toJongroStations(doc),
     mapping: toStationMapping(doc.stations),
     topisIds: doc.stations.map((station) => station.topisId),
   };

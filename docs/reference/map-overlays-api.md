@@ -878,7 +878,7 @@ missing its body would take every sheet of the festival down with it.
 `Cache-Control: public, max-age=3600` — or **`public, max-age=60`** on the degraded branch, and `503` when no line can be read.
 
 The Jongno village bus lines 종로02, 07 and 08, one `kind: "path"` overlay per route, in the order of
-`src/bus/jongro-routes.json`. No parameters. The geometry is the bus module's stored line
+`JONGRO_ROUTES` (`src/bus/bus.constants.ts`). No parameters. The geometry is the bus module's stored line
 (`jongro_route_paths`, synced from TOPIS `busRouteInfo/getRoutePath` once a day), served as stored:
 `[lng, lat]` in TOPIS order, a loop left unclosed, 252 / 241 / 488 points on 2026-10-18. `tap` is
 `null`, so a line is a backdrop; `text` names the route in every language; the place-only fields are
@@ -900,9 +900,9 @@ this route only once a user turns a line on. The app's `MapRouteOverlay` reads `
 `outlineWidth`, `outlineColor`, `minZoom` and `maxZoom`, and no `zIndex`; NAVER draws a path beneath
 every marker, so the lines never cover a building label.
 
-**One green.** Every route is drawn in the village-bus green `4CAF50`, the routes' `themeColor` in
-`src/bus/jongro-routes.json` and the colour of their bus cards; the route test pins the two equal. A
-colour per route was tried and rejected by the owner. The dark-green edge (`1B5E20`) keeps the line
+**One green.** Every route is drawn in the village-bus green `4CAF50`, the map's own constant: a push of
+a route's card colour (`themeColor` in `jongro-route-attributes`) never moves it, and the route test
+pins `4CAF50` for every route layer. A colour per route was tried and rejected by the owner. The dark-green edge (`1B5E20`) keeps the line
 legible over the green of parks and the campus, where a white edge or none washes out. Telling
 overlapping routes apart is the job of tone, edge and direction arrows, as NAVER Map does for a route's
 two directions; see the stage-2 note in openspec change `add-jongro-route-lines`, D8.

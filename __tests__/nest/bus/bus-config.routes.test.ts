@@ -12,11 +12,13 @@ import request from "supertest";
 import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
 import { busConfig, busGroup } from "../../../src/bus/config/bus-config.wire";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
+import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { Clock } from "../../../src/infra/clock";
 import appConfig from "../../../src/infra/config";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 const registryRepository = storedBusRegistryRepository();
@@ -29,6 +31,7 @@ beforeAll(async () => {
     imports: [BusStopsModule, BusConfigModule],
     overrides: [
       { provide: BusRegistryRepository, useValue: registryRepository },
+      { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
       { provide: Clock, useValue: { now: () => new Date("2026-10-20T03:00:00Z") } },
     ],
     role: "api",

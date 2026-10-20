@@ -72,7 +72,7 @@ The TTL, the stale window and the dataset document's shape are shared by every r
 
 Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (`openspec/changes/archive/2026-10-20-move-editorial-datasets/design.md`, D12):
 
-- **A documented degraded answer may stand in for the 503.** A dataset whose capability documents an answer that serves without it may serve that answer instead of the 503, and logs the unavailable dataset at error. The festival layer sets are the case: `/map/config` serves the base map.
+- **A documented degraded answer may stand in for the 503.** A dataset whose capability documents an answer that serves without it may serve that answer instead of the 503, and logs the unavailable dataset at error. The festival layer sets are one case: `/map/config` serves the base map. The Jongro route attributes are the second (amended 2026-10-20 by `move-reference-datasets`, `openspec/changes/move-reference-datasets/design.md` D10): `/bus/config` and the ui transit routes serve without the Jongro groups, while a Jongro group's `/bus/config/:groupId` and its realtime route answer the 503.
 - **A derived cache keeps the bound or states its own.** A route that caches what it derives from a dataset either keys that cache by the dataset's revision, so a push still serves within a minute, or states its own longer bound in the dataset's capability.
 
 ### D7. `check --prod` before a schema change or a removed identity

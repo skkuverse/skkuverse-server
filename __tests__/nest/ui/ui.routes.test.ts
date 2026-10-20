@@ -31,6 +31,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
+import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
 import { Clock } from "../../../src/infra/clock";
 import { MiniappsRepository } from "../../../src/miniapps/miniapps.repository";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
@@ -42,6 +43,7 @@ import { UiScrollModule } from "../../../src/ui/scroll/ui-scroll.module";
 import { UiTransitListModule } from "../../../src/ui/transit-list/ui-transit-list.module";
 import { UiModule } from "../../../src/ui/ui.module";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
 import { FakeMiniappsRepository } from "../../helpers/fakes/miniapps/miniapps.repository.fake";
 import { FakeUiCampusRepository } from "../../helpers/fakes/ui/ui-campus.repository.fake";
 import { FakeUiHomeRepository } from "../../helpers/fakes/ui/ui-home.repository.fake";
@@ -91,6 +93,7 @@ beforeAll(async () => {
     overrides: [
       { provide: Clock, useValue: CLOCK },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
+      { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
       { provide: UiHomeRepository, useValue: storedHomeLayout(fixtureLayout()) },
       { provide: UiCampusRepository, useValue: storedCampusBanners(fixtureBanners()) },
       { provide: MiniappsRepository, useValue: FakeMiniappsRepository.seededWith(fixtureRegistry()) },

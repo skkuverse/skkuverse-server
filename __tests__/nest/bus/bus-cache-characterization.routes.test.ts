@@ -37,6 +37,7 @@ type Db = typeof import("../../../src/infra/db");
 type Axios = import("axios").AxiosStatic;
 type Registry = typeof import("../../../src/scheduling/poller-registry.service")["PollerRegistryService"];
 type StoredRoutes = typeof import("../../helpers/bus/bus-registry")["storedJongroRouteDocuments"];
+type RouteAttributesHelpers = typeof import("../../helpers/bus/route-attributes");
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const CLOCK = { now: (): Date => new Date(NOW) };
@@ -145,6 +146,11 @@ beforeAll(async () => {
   PollerRegistryService = (require("../../../src/scheduling/poller-registry.service") as { PollerRegistryService: Registry })
     .PollerRegistryService;
   busCache = db.getClient().db(config.mongo.dbName).collection(config.mongo.collections.busCache);
+  // WHY: the Jongro realtime groups read each route's seat count from revision 1 of jongro-route-attributes,
+  // stored as `npm run data` stores it (move-reference-datasets D10).
+  const store = require("../../../scripts/lib/datasets/store");
+  const { routeAttributesFixture } = require("../../helpers/bus/route-attributes") as RouteAttributesHelpers;
+  await store.create(db.getClient().db(config.content.dbName), "jongro-route-attributes", routeAttributesFixture(), { by: "characterization@example.com", now: NOW });
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {

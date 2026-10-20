@@ -228,9 +228,9 @@ trusted answer; no line is committed
 ([bus architecture](../explanation/bus-architecture.md)).
 
 - **Colour, width, outline, zoom bounds:** the `style` of `ROUTE_LINE_LAYER`
-  in `map.constants.ts`, one style for all three. Its colour is the routes'
-  `themeColor` in `src/bus/jongro-routes.json`, and the route test fails when
-  the two differ. A deploy.
+  in `map.constants.ts`, one style for all three, the map's own green: a push
+  of a route's card colour (`jongro-route-attributes`) leaves it alone, and
+  the route test pins `4CAF50` for every route layer. A deploy.
 - **Which line lies on top:** the layer order in `BASE_LAYERS`; a later layer
   draws over an earlier one, so `jongro07_route` comes after
   `jongro08_route` ([Draw order](../reference/map-overlays-api.md#draw-order)).
@@ -242,8 +242,10 @@ trusted answer; no line is committed
   of under 10 points or one with no station is held, never written. If the new
   line is right, write it into the route's document by hand; the next sync
   compares with what is stored.
-- **A new Jongno route:** add it to `src/bus/jongro-routes.json`, then its
-  layer to `BASE_LAYERS`. The poller bootstraps its stations once a bus runs
+- **A new Jongno route:** add it to `JONGRO_ROUTES` in `src/bus/bus.constants.ts`,
+  push its attributes from that checkout
+  ([edit-runtime-data.md](edit-runtime-data.md#edit-a-jongro-routes-card-or-seat-count)),
+  then add its layer to `BASE_LAYERS`. The poller bootstraps its stations once a bus runs
   and the daily sync, which runs at the poller's start, writes its line.
 
 ### Make a category a backdrop

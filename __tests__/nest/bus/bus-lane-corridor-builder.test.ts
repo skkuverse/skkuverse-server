@@ -23,7 +23,8 @@ import { corridorFixture } from "../../helpers/bus/bus-lane-corridor";
 const ROOT = path.join(__dirname, "../../..");
 const SCRIPT = path.join(ROOT, "scripts/build-bus-lane-corridor.js");
 const SOURCES = path.join(__dirname, "fixtures/bus-lane-corridor-builder");
-const COMMITTED_LANE_FILE = path.join(ROOT, "src/bus/eta/lane/bus-lane.json");
+// WHY: the builder once rewrote a committed file in this folder (move-reference-datasets D9); a run adds nothing to it.
+const LANE_DIR = path.join(ROOT, "src/bus/eta/lane");
 
 const PULLED = { dataset: "bus-lane-corridor", target: "dev", baseRevision: 3, pulledAt: "2026-10-20T03:00:00.000Z" };
 
@@ -63,7 +64,7 @@ describe("scripts/build-bus-lane-corridor.js on a pulled working file", () => {
   it("Rebuild from OSM: rewrites data.corridor and data.probeRoutes in place, keeping data.entryExit and the pull's revision", () => {
     // Arrange
     const file = pulledWorkingFile();
-    const committedBefore = fs.readFileSync(COMMITTED_LANE_FILE, "utf8");
+    const laneFilesBefore = fs.readdirSync(LANE_DIR);
 
     // Act
     const run = runBuilder(buildArgs(file));
@@ -93,7 +94,8 @@ describe("scripts/build-bus-lane-corridor.js on a pulled working file", () => {
       { routeId: "228000175", name: "5005", sectOrds: { southbound: { from: 22, to: 27 }, northbound: { from: 28, to: 33 } } },
     ]);
     expect(corridorIssues(laneCorridorDataset.parse(written.data))).toEqual([]);
-    expect(fs.readFileSync(COMMITTED_LANE_FILE, "utf8")).toBe(committedBefore);
+    expect(fs.readdirSync(LANE_DIR)).toEqual(laneFilesBefore);
+    expect(laneFilesBefore.filter((name) => name.endsWith(".json"))).toEqual([]);
     expect(run.stdout).toContain(`wrote ${file}`);
   });
 

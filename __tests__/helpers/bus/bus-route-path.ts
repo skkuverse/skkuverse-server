@@ -5,12 +5,15 @@
  * seeds the lines any more (isolate-api-from-pollers D3), so a test that needs
  * a stored line stores it here.
  */
-import { jongroRoutes } from "../../../src/bus/bus.config";
+import { JONGRO_ROUTES } from "../../../src/bus/bus.constants";
+import { toJongroRoute } from "../../../src/bus/bus.mapper";
 import type { JongroRoutePathDocument } from "../../../src/bus/route-path/bus-route-path.document";
 import { toRoutePathDocument } from "../../../src/bus/route-path/bus-route-path.mapper";
 import type { FetchedRoutePath } from "../../../src/bus/route-path/bus-route-path.types";
 import capturedLines from "../../nest/bus/fixtures/jongro-route-paths.json";
 import { FakeBusRoutePathRepository } from "../fakes/bus/bus-route-path.repository.fake";
+
+const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
 
 const STORED_AT = new Date("2026-10-18T03:00:00Z");
 

@@ -11,8 +11,6 @@ const assets = [
   ["src/notices/exclude-reasons.json", "dist/src/notices/exclude-reasons.json"],
   // src/bus/stops/bus-stops.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/stops/schedule-stops.json", "dist/src/bus/stops/schedule-stops.json"],
-  // src/bus/eta/lane/bus-eta-lane.config.ts reads this with fs.readFileSync(__dirname/<name>)
-  ["src/bus/eta/lane/bus-lane.json", "dist/src/bus/eta/lane/bus-lane.json"],
   // src/bus/bus.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/jongro-routes.json", "dist/src/bus/jongro-routes.json"],
   // src/subway/subway.config.ts reads this with fs.readFileSync(__dirname/<name>)

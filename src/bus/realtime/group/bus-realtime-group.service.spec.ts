@@ -23,6 +23,7 @@ import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/
 import { FakeBusRealtimeHsscClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.client.fake";
 import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-jongro.client.fake";
 import { storedBusRegistryRepository } from "../../../../__tests__/helpers/bus/bus-registry";
+import { storedRouteAttributesService } from "../../../../__tests__/helpers/bus/route-attributes";
 import type { FakeBusRegistryRepository } from "../../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import {
@@ -59,7 +60,7 @@ beforeEach(async () => {
   const cache = new BusCacheService(asReal<BusCacheRepository>(busCache));
   const hssc = new BusRealtimeHsscService(asReal<BusRealtimeHsscClient>(new FakeBusRealtimeHsscClient()), cache, clock);
   const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cache, registry, clock);
-  service = new BusRealtimeGroupService(hssc, jongro, new BusRealtimeArrivalService(), clock);
+  service = new BusRealtimeGroupService(hssc, jongro, new BusRealtimeArrivalService(storedRouteAttributesService()), clock);
 });
 
 describe("BusRealtimeGroupService.getGroup", () => {
@@ -233,7 +234,7 @@ describe("BusRealtimeGroupService.getGroup and the registry", () => {
     const cache = new BusCacheService(asReal<BusCacheRepository>(busCache));
     const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cache, freshRegistry, clock);
     const hssc = new BusRealtimeHsscService(asReal<BusRealtimeHsscClient>(new FakeBusRealtimeHsscClient()), cache, clock);
-    const fresh = new BusRealtimeGroupService(hssc, jongro, new BusRealtimeArrivalService(), clock);
+    const fresh = new BusRealtimeGroupService(hssc, jongro, new BusRealtimeArrivalService(storedRouteAttributesService()), clock);
     busCache.values.set("jongro_stations_07", [jongroArrivalDoc({ stationId: "100900220", sequence: "2", eta: "곧 도착" })]);
 
     // Act

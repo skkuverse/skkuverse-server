@@ -8,11 +8,16 @@
  * group left it when it gained v2 fields; campus-shuttle.test.ts checks its v1
  * fields against fixtures/bus-config-campus-v1.json instead.
  */
+const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+jest.mock("../../infra/logger", () => mockLogger);
+
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import type { SupportedLang } from "../../infra/types";
 import { storedBusRegistryRepository } from "../../../__tests__/helpers/bus/bus-registry";
+import { routeAttributesFixture, storedRouteAttributesRepository, storedRouteAttributesService } from "../../../__tests__/helpers/bus/route-attributes";
+import type { FakeBusRouteAttributesRepository } from "../../../__tests__/helpers/fakes/bus/bus-route-attributes.repository.fake";
 import type { FakeBusRegistryRepository } from "../../../__tests__/helpers/fakes/bus/bus-registry.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { BusRegistryRepository } from "../registry/bus-registry.repository";
@@ -26,16 +31,18 @@ const FIXTURE: Record<string, { json: string; etag: string }> = JSON.parse(
 );
 
 let registryRepository: FakeBusRegistryRepository;
+let attributesRepository: FakeBusRouteAttributesRepository;
 let service: BusConfigService;
 const clock = { now: () => new Date("2026-10-17T12:00:00Z") };
 
 async function freshService(): Promise<BusConfigService> {
   const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
-  return new BusConfigService(new BusStopsService(new SubwayStationsService()), registry);
+  return new BusConfigService(new BusStopsService(new SubwayStationsService()), registry, storedRouteAttributesService(attributesRepository, clock));
 }
 
 beforeEach(async () => {
   registryRepository = storedBusRegistryRepository();
+  attributesRepository = storedRouteAttributesRepository();
   service = await freshService();
 });
 
@@ -306,7 +313,7 @@ describe("BusConfigService and the registry", () => {
   it("refuses the config with a 503 when a Jongro registry route is missing", async () => {
     // Arrange
     registryRepository.routes.delete("jongro08");
-    const missing = new BusConfigService(new BusStopsService(new SubwayStationsService()), new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock));
+    const missing = await freshService();
 
     // Act & Assert
     await expect(missing.getBusGroups("ko")).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE", httpStatus: 503 });
@@ -319,6 +326,110 @@ describe("BusConfigService and the registry", () => {
 
     // Act & Assert
     expect(service.listGroupIds()).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
+  });
+});
+
+// WHY: each Jongro route's card, refresh interval and transfer lines are stored attributes, joined here
+// (move-reference-datasets D10), so the ETag is keyed by their revision too.
+describe("BusConfigService and the stored route attributes", () => {
+  it("leaves out a route the stored attributes lack, and serves the others", async () => {
+    // Arrange
+    const lacking = routeAttributesFixture();
+    delete lacking.routes.jongro08;
+    attributesRepository = storedRouteAttributesRepository(lacking);
+
+    // Act
+    const groups = await (await freshService()).getBusGroups("ko");
+
+    // Assert
+    expect(groups.map((g) => g.id)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07"]);
+  });
+
+  // WHY: review F1 of move-reference-datasets: attributes never read cost the Jongro groups only, not the shuttle ones.
+  it("serves the config without the Jongro groups when no attributes were read, reading no registry", async () => {
+    // Arrange
+    const [hsscEtag, hssc] = [await service.computeGroupEtag("hssc", "ko"), await service.getGroupById("hssc", "ko")];
+    attributesRepository.stored = null;
+    registryRepository.failWith = new Error("atlas down");
+    const fresh = await freshService();
+
+    // Act
+    const groups = await fresh.getBusGroups("ko");
+    const etag = await fresh.computeEtag("ko");
+
+    // Assert
+    expect(groups.map((g) => g.id)).toEqual(["hssc", "campus", "fasttrack", "commute"]);
+    expect(etag).toBe(`"${crypto.createHash("md5").update(JSON.stringify(groups)).digest("hex")}"`);
+    expect(await fresh.getGroupById("hssc", "ko")).toEqual(hssc);
+    expect(await fresh.computeGroupEtag("hssc", "ko")).toBe(hsscEtag);
+  });
+
+  it.each(["jongro02", "jongro07", "jongro08"])("refuses the %s group with JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE when no attributes were read", async (id) => {
+    // Arrange
+    attributesRepository.stored = null;
+    const fresh = await freshService();
+
+    // Act & Assert
+    await expect(fresh.getGroupById(id, "ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", httpStatus: 503 });
+    await expect(fresh.computeGroupEtag(id, "ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", httpStatus: 503 });
+  });
+
+  // WHY: review F2 of move-reference-datasets: the group answers what its realtime route answers, not a 404.
+  it("refuses the group of a route the stored attributes lack with JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE, and an unknown id with none", async () => {
+    // Arrange
+    const lacking = routeAttributesFixture();
+    delete lacking.routes.jongro08;
+    attributesRepository = storedRouteAttributesRepository(lacking);
+    const fresh = await freshService();
+
+    // Act & Assert
+    await expect(fresh.getGroupById("jongro08", "ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", httpStatus: 503 });
+    await expect(fresh.computeGroupEtag("jongro08", "ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", httpStatus: 503 });
+    expect(await fresh.getGroupById("jongro13", "ko")).toBeNull();
+    expect(await fresh.computeGroupEtag("jongro13", "ko")).toBeNull();
+  });
+
+  it("changes the config and group ETags when a revision changes a card, and keeps the HSSC group's", async () => {
+    // Arrange
+    const [etag, groupEtag, hsscEtag] = [await service.computeEtag("ko"), await service.computeGroupEtag("jongro08", "ko"), await service.computeGroupEtag("hssc", "ko")];
+    const pushed = routeAttributesFixture();
+    pushed.routes.jongro08 = { ...pushed.routes.jongro08!, themeColor: "1E88E5" };
+    attributesRepository.storeAttributes(pushed);
+    const reread = await freshService();
+
+    // Act & Assert
+    expect(await reread.computeEtag("ko")).not.toBe(etag);
+    expect(await reread.computeGroupEtag("jongro08", "ko")).not.toBe(groupEtag);
+    expect(await reread.computeGroupEtag("hssc", "ko")).toBe(hsscEtag);
+  });
+
+  it("keeps the config ETag for a revision that changes no body", async () => {
+    // Arrange
+    const etag = await service.computeEtag("ko");
+    attributesRepository.storeAttributes(routeAttributesFixture());
+    const reread = await freshService();
+
+    // Act & Assert
+    expect(await reread.computeEtag("ko")).toBe(etag);
+  });
+
+  // Ported from BusRegistryService.routeOf, where the warning sat while the transfer lines were committed.
+  it("warns once per revision about a stored transfer line whose ARS number no stored station has", async () => {
+    // Arrange
+    const doc = registryRepository.routes.get("jongro02")!;
+    doc.stations = doc.stations.filter((s) => s.arsId !== "01589");
+    const fresh = await freshService();
+    mockLogger.warn.mockClear();
+
+    // Act
+    await fresh.getBusGroups("ko");
+    await fresh.getBusGroups("en");
+    await fresh.computeEtag("ko");
+
+    // Assert
+    const warnings = mockLogger.warn.mock.calls.filter(([fields]) => fields.event === "bus.jongro.registry_unmatched_transfer");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]![0]).toMatchObject({ routeId: "jongro02", revision: 1, arsIds: ["01589"] });
   });
 });
 

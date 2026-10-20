@@ -20,7 +20,10 @@ import {
   toTopisDecimal,
   toTopisInteger,
 } from "./bus-realtime-jongro.rules";
-import { jongroRoutes } from "../../bus.config";
+import { JONGRO_ROUTES } from "../../bus.constants";
+import { toJongroRoute } from "../../bus.mapper";
+
+const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const route07 = jongroRoutes.find((r) => r.code === "07")!;

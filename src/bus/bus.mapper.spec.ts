@@ -1,27 +1,25 @@
 /**
- * A jongro-routes.json entry becomes a JongroRoute: its id, the route code after
- * the `jongro` prefix, its TOPIS route id and display fields as written, and no
- * TOPIS URL or key, which the client builds at each call (ADR 0012, D4).
+ * A Jongro route's identity in code becomes a JongroRoute: its id, the route
+ * code after the `jongro` prefix and its TOPIS route id, and no TOPIS URL or
+ * key, which the client builds at each call (ADR 0012, D4). The attributes are
+ * stored, not part of the route (move-reference-datasets D10).
  */
 import { toJongroRoute } from "./bus.mapper";
 
 describe("toJongroRoute", () => {
-  it("keeps the entry's fields and reads the code after the jongro prefix", () => {
+  it("keeps the identity's fields and reads the code after the jongro prefix", () => {
     // Arrange
-    const entry = {
-      id: "jongro07",
-      busRouteId: "100900004",
-      themeColor: "4CAF50",
-      iconType: "village",
-      refreshInterval: 40,
-      seatCount: 18,
-      transferLinesByArsId: { "01877": [{ line: "4", color: "00A5DE" }] },
-    };
+    const identity = { id: "jongro07", busRouteId: "100900004" };
 
     // Act
-    const route = toJongroRoute(entry);
+    const route = toJongroRoute(identity);
 
     // Assert
-    expect(route).toEqual({ ...entry, code: "07" });
+    expect(route).toEqual({ id: "jongro07", code: "07", busRouteId: "100900004" });
+  });
+
+  it("reads a two-digit code past 09", () => {
+    // Act & Assert
+    expect(toJongroRoute({ id: "jongro13", busRouteId: "1" }).code).toBe("13");
   });
 });

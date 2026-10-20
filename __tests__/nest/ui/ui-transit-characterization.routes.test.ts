@@ -19,6 +19,8 @@
  * The mini app registry is stored beside it the same way, as revision 1 of
  * `miniapps` (__tests__/nest/miniapps/fixtures/miniapps.dataset.json); no link
  * names a mini app, so the route reads no registry (move-miniapp-registry D4).
+ * So are the Jongro route attributes the bus cards take their color and icon
+ * from, as revision 1 of `jongro-route-attributes` (move-reference-datasets D10).
  *
  * The bus groups' visibility windows are the only input that moves with the
  * time, so four clocks pin the tab:
@@ -51,6 +53,7 @@ type BusRegistryHelpers = typeof import("../../helpers/bus/bus-registry");
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type RegistryFixture = typeof import("../../helpers/miniapps/registry-fixture");
+type RouteAttributesHelpers = typeof import("../../helpers/bus/route-attributes");
 
 type Lang = "ko" | "en" | "zh";
 const LANGS: Lang[] = ["ko", "en", "zh"];
@@ -150,6 +153,8 @@ beforeAll(async () => {
   await store.create(content, "transit-layout", fixtureLayout(), { by: "characterization@example.com", now: CLOCKS.capturedAt });
   const { fixtureRegistry } = require("../../helpers/miniapps/registry-fixture") as RegistryFixture;
   await store.create(content, "miniapps", fixtureRegistry(), { by: "characterization@example.com", now: CLOCKS.capturedAt });
+  const { routeAttributesFixture } = require("../../helpers/bus/route-attributes") as RouteAttributesHelpers;
+  await store.create(content, "jongro-route-attributes", routeAttributesFixture(), { by: "characterization@example.com", now: CLOCKS.capturedAt });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {
