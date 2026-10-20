@@ -460,7 +460,10 @@ async function readNamedParts(ctx, db, manifest, revision) {
   return found.parts;
 }
 
-/** By changed key, the catalog's `changesOf(stored, pushed)` over the parsed parts; none when the catalog has no `changesOf`. */
+/**
+ * By changed key, the catalog's `changesOf(stored, pushed)` over the parsed parts; none when the catalog has no
+ * `changesOf`. A stored part this checkout's schema rejects gets a line saying so, and the push goes on.
+ */
 async function partChanges(ctx, current, checked) {
   const { schema, changesOf } = ctx.catalog.datasets[ctx.args.dataset].parts;
   if (!changesOf) return new Map();
@@ -468,7 +471,12 @@ async function partChanges(ctx, current, checked) {
   const changed = current.data.parts.filter((entry) => pushedIds.has(entry.key) && pushedIds.get(entry.key) !== entry.partId);
   const { parts: stored } = await parts.readParts(ctx.db, { parts: changed });
   const pushedByKey = new Map(checked.parts.map((part) => [part.key, part.data]));
-  return new Map(stored.map(({ key, data }) => [key, changesOf(schema.parse(data), pushedByKey.get(key))]));
+  return new Map(
+    stored.map(({ key, data }) => {
+      const parsed = schema.safeParse(data);
+      return [key, parsed.success ? changesOf(parsed.data, pushedByKey.get(key)) : ["stored part fails this checkout's schema"]];
+    }),
+  );
 }
 
 async function pullParts(ctx, current) {
