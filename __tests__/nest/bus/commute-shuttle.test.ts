@@ -38,6 +38,7 @@ import { UiTransitRepository } from "../../../src/ui/transit/ui-transit.reposito
 import { FakeUiTransitRepository } from "../../helpers/fakes/ui/ui-transit.repository.fake";
 import { SubwayModule } from "../../../src/subway/subway.module";
 import { SubwayRepository } from "../../../src/subway/subway.repository";
+import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
 import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
 import { SubwayEstimateModule } from "../../../src/subway/estimate/subway-estimate.module";
 import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracking.module";
@@ -46,6 +47,7 @@ import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arriva
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
+import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 let busConfig: BusConfigService;
@@ -476,6 +478,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
+        { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
         { provide: UiTransitRepository, useValue: storedTransitLayout() },
       ],
       role: "api",

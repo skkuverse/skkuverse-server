@@ -35,6 +35,12 @@
  * checked with the server's attributes schema and against the `jongroRoutes`
  * code-held source, the route ids JONGRO_ROUTES holds: one entry per route the
  * checkout serves, no more.
+ *
+ * The `subway-topology` dataset (move-reference-datasets D2, D3) is checked
+ * with the server's topology schema and `toTopologyIssues` against the
+ * checkout's SUBWAY_LINES and SUBWAY_STATIONS: one entry per served platform
+ * (the `subwayPlatforms` code-held source), no more, and every named stop
+ * resolvable; a checkout whose own identities clash refuses every push.
  */
 import path from "node:path";
 import { JONGRO_ROUTES, SERVICE_CONFIG } from "../../../src/bus/bus.constants";
@@ -44,6 +50,8 @@ import { jongroRouteAttributesDataset } from "../../../src/bus/route-attributes/
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import { fixtureRegistry, fixtureRegistryWithWaveRun } from "../../helpers/miniapps/registry-fixture";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
+import { SUBWAY_STATIONS } from "../../../src/subway/subway.constants";
+import { subwayTopologyDataset } from "../../../src/subway/topology/subway-topology.schema";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { loadCatalog } = require("../../../scripts/lib/datasets/catalog");
@@ -181,6 +189,18 @@ describe("loadCatalog code-held sources", () => {
     expect(source.ids()).toEqual(["jongro02", "jongro07", "jongro08"]);
     expect(source.has("jongro07")).toBe(true);
     expect(source.has("hssc")).toBe(false);
+  });
+
+  it("lists the subwayPlatforms ids SUBWAY_STATIONS holds, in its order, owned by src/subway", () => {
+    // Arrange
+    const source = loadCatalog(srcLoader).sources.subwayPlatforms;
+
+    // Act & Assert
+    expect(source.owner).toBe("src/subway");
+    expect(source.ids()).toEqual(SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)));
+    expect(source.ids()).toHaveLength(13);
+    expect(source.has("S1-4-420")).toBe(true);
+    expect(source.has("hyehwa")).toBe(false);
   });
 
   it("pins today's bus groups and a bus service", () => {
@@ -720,5 +740,77 @@ describe("loadCatalog jongro-route-attributes", () => {
 
     // Assert
     expect(lines).toEqual(['jongro-route-attributes: routes.jongro13: "jongro13" is not a route the checked-out code serves']);
+  });
+});
+
+describe("loadCatalog subway-topology", () => {
+  type Topology = { platforms: Record<string, Record<string, any>>; neighbors: Record<string, Record<string, unknown>> };
+  const topology = () => datasetFixture("../subway/fixtures/subway-topology.dataset.json") as Topology;
+
+  it("is owned by src/subway/topology, takes subwayTopologyDataset, and accepts revision 1 with no issue and no reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["subway-topology"];
+
+    // Act
+    const issues = checkData(catalog, "subway-topology", topology(), {});
+
+    // Assert
+    expect(entry.owner).toBe("src/subway/topology");
+    expect(entry.schema).toBe(subwayTopologyDataset);
+    expect(issues).toEqual([]);
+    expect(entry.referencesOf(entry.schema.parse(topology()))).toEqual([]);
+  });
+
+  it("Platform added in code: refuses a topology without S1-2-222, naming it as unplaced", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = topology();
+    delete data.platforms["S1-2-222"];
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['subway-topology: platforms.S1-2-222: platform "S1-2-222" is unplaced: the checked-out code serves it, so it needs directions']);
+  });
+
+  it("Unknown platform: refuses an entry for S1-9-999, naming its path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = topology();
+    data.platforms["S1-9-999"] = structuredClone(data.platforms["S1-4-420"]!);
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['subway-topology: platforms.S1-9-999: "S1-9-999" is not a platform the checked-out code serves']);
+  });
+
+  it("Watched stop on another line: refuses S1-3-330 among S1-4-420's watched platforms, naming the path and both lines", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = topology();
+    data.platforms["S1-4-420"]!.up.watchedPlatformIds.push("S1-3-330");
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['subway-topology: platforms.S1-4-420.up.watchedPlatformIds.3: "S1-3-330" is on line "3", not "4"']);
+  });
+
+  it("refuses four upstream platforms with the server's schema, naming the direction's list", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = topology();
+    data.platforms["KR-1-0153"]!.up.upstreamPlatformIds.push("KR-1-1716");
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^subway-topology: platforms\.KR-1-0153\.up\.upstreamPlatformIds: /)]);
   });
 });

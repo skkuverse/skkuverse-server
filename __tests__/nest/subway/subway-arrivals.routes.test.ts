@@ -1,7 +1,8 @@
 /**
  * GET /subway/stations/:stationId/arrivals through the real controller, the
  * arrivals service, the tracker and its run matcher, the timetable and
- * estimate doors and the committed weekday tables, with FakeSubwayRepository, FakeHolidaysRepository
+ * estimate doors and the committed weekday tables, with FakeSubwayRepository, FakeHolidaysRepository,
+ * the stored topology's revision 1 in FakeSubwayTopologyRepository
  * and a scripted Clock. The tracker is fed one upstream's observations per
  * tick, as the pollers feed it. What it guards: a station is requested by its
  * slug, and the 200 body names it and holds one line entry per platform, with
@@ -41,11 +42,12 @@ import path from "path";
 import { toCountdownRows } from "../../../src/subway/seoul-api/subway-seoul-api.mapper";
 import type { SeoulArrivalRow } from "../../../src/subway/seoul-api/subway-seoul-api.schema";
 import { toSeoulStations } from "../../../src/subway/seoul/subway-seoul.rules";
-import { SUBWAY_REGISTRY } from "../../../src/subway/subway.config";
+import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { storedSubwayTopologyRepository, subwayRegistryFixture } from "../../helpers/subway/topology";
 
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
 const clock = { current: at("20:41:00"), now(): Date { return this.current; } };
@@ -61,6 +63,7 @@ beforeAll(async () => {
     overrides: [
       { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
       { provide: SubwayRepository, useValue: subwayRepository },
+      { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
       { provide: Clock, useValue: clock },
     ],
   });
@@ -241,7 +244,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     // Arrange
     const fetchedAt = new Date("2026-10-17T21:07:00+09:00");
     const captured = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/realtime-arrival-jamsil.json"), "utf8")) as { realtimeArrivalList: SeoulArrivalRow[] };
-    const jamsil = toSeoulStations(SUBWAY_REGISTRY).find((station) => station.seoulName === "잠실");
+    const jamsil = toSeoulStations(subwayRegistryFixture()).find((station) => station.seoulName === "잠실");
     const countdownRows = toCountdownRows(captured.realtimeArrivalList, jamsil?.platformBySubwayId ?? new Map(), fetchedAt);
     clock.current = fetchedAt;
     await app.get(SubwayTrackingService).track({ observe: async () => ({ source: "seoul-subway-api", events: [], countdownRows }) });

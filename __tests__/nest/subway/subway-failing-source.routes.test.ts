@@ -3,6 +3,7 @@
  * on fakes: the real `seoul` provider and its pollers (registered into a
  * recording stand-in for the poller registry), the tracker, the timetable and
  * estimate doors and the arrivals route, over FakeSubwaySeoulApiClient,
+ * the stored topology's revision 1 in FakeSubwayTopologyRepository,
  * FakeSubwaySeoulTrainmapClient (the line 1 and 4 positions and the line 4
  * page captured on 2026-10-16 22:27 KST, joined with the line 1 page as the one
  * page of every line the crawl reads; the line 1 page dates from 20:45, so
@@ -30,16 +31,18 @@ import { SubwaySeoulApiModule } from "../../../src/subway/seoul-api/subway-seoul
 import { SubwaySeoulTrainmapClient } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.client";
 import { SubwaySeoulTrainmapModule } from "../../../src/subway/seoul-trainmap/subway-seoul-trainmap.module";
 import { SubwaySeoulModule } from "../../../src/subway/seoul/subway-seoul.module";
-import { SUBWAY_REGISTRY } from "../../../src/subway/subway.config";
+import { SUBWAY_LINES, SUBWAY_STATIONS } from "../../../src/subway/subway.constants";
 import { SubwayModule } from "../../../src/subway/subway.module";
 import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
+import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
 import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracking.module";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
 import { FakeSubwaySeoulApiClient } from "../../helpers/fakes/subway/subway-seoul-api.client.fake";
 import { FakeSubwaySeoulTrainmapClient } from "../../helpers/fakes/subway/subway-seoul-trainmap.client.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
 
 type Tick = () => Promise<unknown>;
 
@@ -88,6 +91,7 @@ beforeEach(async () => {
     overrides: [
       { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
       { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
+      { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
       { provide: SubwaySeoulApiClient, useValue: apiClient },
       { provide: SubwaySeoulTrainmapClient, useValue: trainmapClient },
       { provide: Clock, useValue: clock },
@@ -110,8 +114,8 @@ function answerApi(): void {
 // tracked (subway-seoul.service.spec.ts).
 function failApi(): void {
   const outage = new Error("seoul-subway-api: HTTP 503");
-  for (const line of SUBWAY_REGISTRY.lines) apiClient.positions.set(line.seoul.lineName, outage);
-  for (const station of SUBWAY_REGISTRY.stations) apiClient.arrivals.set(station.seoulName, outage);
+  for (const line of SUBWAY_LINES) apiClient.positions.set(line.seoul.lineName, outage);
+  for (const station of SUBWAY_STATIONS) apiClient.arrivals.set(station.seoulName, outage);
 }
 
 function answerTrainMap(): void {

@@ -13,13 +13,15 @@
  * one, null with no position or one off the upstream list. A neighbor
  * without a name is refused, never served unnamed.
  */
+import { subwayRegistryFixture } from "../../../__tests__/helpers/subway/topology";
 import type { SubwayArrivalsDoc } from "../subway.document";
 import type { SubwayPlatform, SubwayStation } from "../subway.types";
 import { toSubwayStationArrivals } from "./subway-arrivals.mapper";
 import { findSubwayStation } from "./subway-arrivals.rules";
 
-const HYEHWA = findSubwayStation("hyehwa") as SubwayStation;
-const SUNGKYUNKWAN = findSubwayStation("sungkyunkwan") as SubwayStation;
+const REGISTRY = subwayRegistryFixture();
+const HYEHWA = findSubwayStation("hyehwa", REGISTRY) as SubwayStation;
+const SUNGKYUNKWAN = findSubwayStation("sungkyunkwan", REGISTRY) as SubwayStation;
 const HYEHWA_PLATFORM = HYEHWA.platforms[0] as SubwayPlatform;
 const GENERATED_AT = new Date("2026-10-16T11:41:00Z");
 const DOC: SubwayArrivalsDoc = {
@@ -70,7 +72,7 @@ const DOC: SubwayArrivalsDoc = {
 describe("toSubwayStationArrivals", () => {
   it("names the station by its slug, its line, each direction and its neighbors in Korean, and counts each train's stops away", () => {
     // Act
-    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], "ko");
+    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], { lang: "ko", registry: REGISTRY });
 
     // Assert
     expect(response).toEqual({
@@ -113,7 +115,7 @@ describe("toSubwayStationArrivals", () => {
     ["zh", "惠化", "4号线", ["佛岩山·榛接方向", "乌耳岛·安山方向"]],
   ] as const)("labels the station, its line and its directions in %s", (lang, stationName, lineName, directionNames) => {
     // Act
-    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], lang);
+    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], { lang, registry: REGISTRY });
 
     // Assert
     const [line] = response.lines;
@@ -132,7 +134,7 @@ describe("toSubwayStationArrivals", () => {
     const platform = station.platforms[0] as SubwayPlatform;
 
     // Act
-    const response = toSubwayStationArrivals(station, [{ platform, doc: { ...DOC, _id: platform.id } }], lang);
+    const response = toSubwayStationArrivals(station, [{ platform, doc: { ...DOC, _id: platform.id } }], { lang, registry: REGISTRY });
 
     // Assert
     expect(response.lines[0]?.directions.map((d) => [d.previousStation?.name, d.nextStation?.name])).toEqual(neighborNames);
@@ -144,7 +146,7 @@ describe("toSubwayStationArrivals", () => {
     const stale = { ...DOC, _id: "KR-1-0153", generatedAt: new Date("2026-10-16T11:30:00Z"), directions: { up: [], down: [] } };
 
     // Act
-    const response = toSubwayStationArrivals(transfer, transfer.platforms.map((platform, i) => ({ platform, doc: i === 0 ? DOC : stale })), "en");
+    const response = toSubwayStationArrivals(transfer, transfer.platforms.map((platform, i) => ({ platform, doc: i === 0 ? DOC : stale })), { lang: "en", registry: REGISTRY });
 
     // Assert
     expect(response.lines.map((l) => [l.line.code, l.line.marker.text, l.line.color, l.platformId, l.generatedAt])).toEqual([
@@ -159,11 +161,11 @@ describe("toSubwayStationArrivals", () => {
     ["zh", "新盆唐线", "新"],
   ] as const)("serves a named line's name and marker text in %s, its colors in every language", (lang, name, text) => {
     // Arrange
-    const jeongja = findSubwayStation("jeongja") as SubwayStation;
+    const jeongja = findSubwayStation("jeongja", REGISTRY) as SubwayStation;
     const platform = jeongja.platforms[0] as SubwayPlatform;
 
     // Act
-    const response = toSubwayStationArrivals(jeongja, [{ platform, doc: { ...DOC, _id: platform.id } }], lang);
+    const response = toSubwayStationArrivals(jeongja, [{ platform, doc: { ...DOC, _id: platform.id } }], { lang, registry: REGISTRY });
 
     // Assert
     expect(response.lines[0]?.line).toEqual({ code: "D1", name, color: "D4003B", marker: { text, color: "D4003B" } });
@@ -175,6 +177,6 @@ describe("toSubwayStationArrivals", () => {
     const platform: SubwayPlatform = { ...HYEHWA_PLATFORM, directions: { ...HYEHWA_PLATFORM.directions, up } };
 
     // Act & Assert
-    expect(() => toSubwayStationArrivals(HYEHWA, [{ platform, doc: DOC }], "ko")).toThrow("S1-4-499");
+    expect(() => toSubwayStationArrivals(HYEHWA, [{ platform, doc: DOC }], { lang: "ko", registry: REGISTRY })).toThrow("S1-4-499");
   });
 });

@@ -17,7 +17,11 @@
  * document per served platform (fixtures/subway-arrivals-seed.json): its
  * trains stand at the station, at upstream platforms, at no position and at
  * the next platform, so every train is served from the stored state and no
- * timetable is read.
+ * timetable is read; and whose content database holds revision 1 of
+ * `subway-topology`, stored through the tool's own
+ * scripts/lib/datasets/store.js. The topology is the dataset's since task 7.4;
+ * every expected value was pinned while it was still subway-registry.json, of
+ * which revision 1 is a copy.
  *
  * A regression pin: a failure is a regression to report, and an expected
  * value changes only with the behavior it pins (`.claude/rules/tests.md`).
@@ -32,9 +36,13 @@ import { appModulesUnder } from "../../helpers/nest/app-modules";
 import captured from "./fixtures/subway-arrivals-production.capture.json";
 import seeded from "./fixtures/subway-arrivals-seed.json";
 
+// scripts/ is plain CommonJS outside tsconfig, so require rather than import.
+const store = require("../../../scripts/lib/datasets/store");
+
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
+type TopologyHelpers = typeof import("../../helpers/subway/topology");
 
 type Lang = "ko" | "en" | "zh";
 const LANGS: Lang[] = ["ko", "en", "zh"];
@@ -126,6 +134,9 @@ beforeAll(async () => {
   assertConfigReaches(mongod, config.mongo.url);
   const subwayDb = db.getClient().db(config.mongo.dbName);
   await subwayDb.collection<SubwayArrivalsDoc>(config.subway.collections.arrivals).insertMany(seeded.docs.map(toStoredDoc));
+  const { subwayTopologyFixture } = require("../../helpers/subway/topology") as TopologyHelpers;
+  const content = db.getClient().db(config.content.dbName);
+  await store.create(content, "subway-topology", subwayTopologyFixture(), { by: "characterization@example.com", now: NOW });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

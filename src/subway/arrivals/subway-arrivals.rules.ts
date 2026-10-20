@@ -1,15 +1,16 @@
-import { SUBWAY_REGISTRY } from "../subway.config";
 import type { StoredTrainArrival } from "../subway.document";
+import { SUBWAY_STATIONS } from "../subway.constants";
 import type { LocalizedName, PlatformDirection, SubwayRegistry, SubwayStation } from "../subway.types";
 import { MAX_STATE_AGE_MS } from "./subway-arrivals.constants";
 
-export function findSubwayStation(slug: string, registry: SubwayRegistry = SUBWAY_REGISTRY): SubwayStation | null {
+export function findSubwayStation(slug: string, registry: SubwayRegistry): SubwayStation | null {
   return registry.stations.find((station) => station.id === slug) ?? null;
 }
 
-// WHY: a served platform named as a neighbor stop takes its station's name, which the registry gives no neighbor entry.
-export function findPlatformName(platformId: string, registry: SubwayRegistry = SUBWAY_REGISTRY): LocalizedName | null {
-  const servedAt = registry.stations.find((station) => station.platforms.some((platform) => platform.id === platformId));
+// WHY: a served platform named as a neighbor stop takes its station's name, which the code holds even when the stored
+// topology leaves that platform out; the topology gives such a platform no neighbor entry.
+export function findPlatformName(platformId: string, registry: SubwayRegistry): LocalizedName | null {
+  const servedAt = SUBWAY_STATIONS.find((station) => station.platforms.some((platform) => platform.id === platformId));
   return registry.neighbors[platformId]?.name ?? servedAt?.name ?? null;
 }
 

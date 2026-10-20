@@ -13,6 +13,7 @@
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/subway.repository.fake";
+import { storedSubwayTopologyService } from "../../../__tests__/helpers/subway/topology";
 import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
 import config from "../../infra/config";
@@ -33,7 +34,7 @@ function setup() {
   const clock = { now: () => NOW } as Clock;
   const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
   const tracking = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(repository)), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
-  return { repository, service: new SubwayArrivalsService(asReal<SubwayRepository>(repository), tracking, clock) };
+  return { repository, service: new SubwayArrivalsService(asReal<SubwayRepository>(repository), tracking, clock, storedSubwayTopologyService()) };
 }
 
 function storedAgo(ageMs: number, platformId = "S1-4-420"): SubwayArrivalsDoc {
