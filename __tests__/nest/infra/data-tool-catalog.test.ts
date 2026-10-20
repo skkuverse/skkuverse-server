@@ -49,7 +49,11 @@
  * stored in parts, one per table: each part runs the server's `timetableFile`
  * schema and is keyed by `toTimetableKey` (`<operator>-<line>-<dayType>`),
  * two tables of one key are refused, and the set is refused while a platform
- * the checkout serves has no table for a day type its source declares.
+ * the checkout serves has no table for a day type its source declares. Its
+ * routes are then checked against the target's stored `subway-topology`, and
+ * the stops the tracker follows against the run properties
+ * (`toTrackedStopIssues`), as warnings: a coverage change pushes its tables
+ * first, and the topology push stays the gate that refuses (wave D review F1).
  */
 import path from "node:path";
 import { JONGRO_ROUTES, SERVICE_CONFIG } from "../../../src/bus/bus.constants";
@@ -951,5 +955,79 @@ describe("loadCatalog subway-timetables", () => {
 
     // Assert
     expect(lines).toEqual(['subway-timetables: KR-1-weekday: key "KR-1-weekday" is in more than one part: KR-1-weekday.json, korail-1-weekday.json']);
+  });
+});
+
+describe("loadCatalog subway-timetables against the stored subway-topology", () => {
+  type Files = Array<{ file: string; data: any }>;
+  const files = (): Files => subwayTimetableFixtureFiles().map(({ file, table }) => ({ file, data: table }));
+  const stored = () => ({ "subway-topology": datasetFixture("../subway/fixtures/subway-topology.dataset.json") });
+  // WHY: 혜화 down's nearest upstream station dropped from every line 4 table, as a converter run that lost it would.
+  const withoutS14419 = (): Files =>
+    files().map(({ file, data }) =>
+      file.startsWith("S1-4-")
+        ? {
+            file,
+            data: {
+              ...data,
+              stations: data.stations.filter((id: string) => id !== "S1-4-419"),
+              trains: data.trains.map((train: any) => ({ ...train, stops: train.stops.filter((stop: any) => stop.station !== "S1-4-419") })),
+            },
+          }
+        : { file, data },
+    );
+
+  it("accepts the fixture against revision 1 of the topology with no issue and no warning", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const checked = checkParts(catalog, "subway-timetables", files(), stored());
+
+    // Assert
+    expect(checked.issues).toEqual([]);
+    expect(checked.warnings).toEqual([]);
+  });
+
+  it("warns, and does not refuse, when the tables' routes disagree with the stored topology", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const checked = checkParts(catalog, "subway-timetables", withoutS14419(), stored());
+
+    // Assert
+    expect(checked.issues).toEqual([]);
+    expect(checked.parts).toHaveLength(18);
+    const lines = issueLines(checked.warnings);
+    expect(lines.filter((line) => line.startsWith("subway-timetables: subway-topology.platforms.S1-4-420."))).toHaveLength(3);
+    expect(lines).toContainEqual(expect.stringMatching(/^subway-timetables: subway-topology\.platforms\.S1-4-420\.down\.upstreamPlatformIds: .*\["S1-4-418","S1-4-417","S1-4-416"\]/));
+  });
+
+  it("warns of a station skipped between the stops the tracker follows, in each line 4 table", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const lines = issueLines(checkParts(catalog, "subway-timetables", withoutS14419(), stored()).warnings);
+
+    // Assert
+    expect(lines).toEqual(
+      expect.arrayContaining(
+        ["weekday", "saturday", "holiday"].map((dayType) => `subway-timetables: S1-4-${dayType}.S1-4-420.down: the tracked stops skip a station between S1-4-418 and S1-4-420`),
+      ),
+    );
+  });
+
+  it("warns that the routes went unchecked when the target stores no topology", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const checked = checkParts(catalog, "subway-timetables", files(), {});
+
+    // Assert
+    expect(checked.issues).toEqual([]);
+    expect(issueLines(checked.warnings)).toEqual(["subway-timetables: subway-topology: no stored subway-topology, so the tables' routes were not checked against it"]);
   });
 });

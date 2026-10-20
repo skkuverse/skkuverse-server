@@ -4,17 +4,22 @@ import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import { SUBWAY_STATIONS } from "../subway.constants";
 import type { NetworkIssue, NetworkPlatform, SubwayDirection } from "../subway.types";
 import {
+  ADJACENT_PLATFORM_ID_PAIRS,
+  MAX_UNOBSERVED_RUN_SEC,
+  MIN_VIEW_BEFORE_PLATFORM_SEC,
+  RUN_START_PLATFORM_IDS,
   SERVICE_DAY_START_HOUR,
   SERVICE_WINDOW_CLOSES_SEC,
   SERVICE_WINDOW_OPENS_SEC,
   TIMETABLE_DAY_TYPES,
 } from "./subway-timetable.constants";
-import type { DayType, LineRoutes, ScheduledTrain, Timetable, TimetableSource } from "./subway-timetable.types";
+import type { DayType, LineRoutes, ScheduledTrain, Timetable, TimetableSource, TimetableStop } from "./subway-timetable.types";
 
 const HOUR_MS = 3_600_000;
 const SECOND_MS = 1000;
 const SUNDAY = 0;
 const SATURDAY = 6;
+const SHOWN_TRAIN_COUNT = 3;
 
 export function listSubwayPlatforms(): NetworkPlatform[] {
   return SUBWAY_STATIONS.flatMap((station) => station.platforms);
@@ -97,4 +102,69 @@ export function toEvictedTimetableKeys(held: ReadonlyMap<string, { lastServiceDa
 export function isInServiceWindow(dayType: DayType, serviceDate: string, now: Date): boolean {
   const secondsOfServiceDay = (now.getTime() - toServiceInstant(serviceDate, 0).getTime()) / SECOND_MS;
   return secondsOfServiceDay >= SERVICE_WINDOW_OPENS_SEC && secondsOfServiceDay < SERVICE_WINDOW_CLOSES_SEC[dayType];
+}
+
+interface TrackedStops {
+  path: NetworkIssue["path"];
+  platformId: string;
+  stations: readonly string[];
+  trains: Array<{ trainNo: string; stops: readonly TimetableStop[] }>;
+}
+
+function toTrackedStops(timetable: Timetable, platform: NetworkPlatform): TrackedStops[] {
+  const routes = toLineRoutes(timetable);
+  return (["up", "down"] as const).map((direction) => {
+    const stations = routes[direction].slice(0, routes[direction].indexOf(platform.id) + 1);
+    const trains = timetable.trains
+      .filter((t) => t.direction === direction && t.stops.some((stop) => stop.station === platform.id))
+      .map((t) => ({ trainNo: t.trainNo, stops: t.stops.filter((stop) => stations.includes(stop.station)) }));
+    return { path: [toTimetableKey(timetable), platform.id, direction], platformId: platform.id, stations, trains };
+  });
+}
+
+function longRuns({ trains }: TrackedStops): string[] {
+  return trains.flatMap(({ trainNo, stops }) =>
+    stops.slice(1).flatMap((stop, index) => {
+      const from = stops[index];
+      const leftAt = from?.dep ?? from?.arr ?? null;
+      const runSec = stop.arr === null || leftAt === null ? 0 : stop.arr - leftAt;
+      return runSec > MAX_UNOBSERVED_RUN_SEC ? [`${trainNo} ${from?.station}→${stop.station} ${runSec} s`] : [];
+    }),
+  );
+}
+
+function shortViews({ trains, platformId }: TrackedStops): string[] {
+  return trains.flatMap(({ trainNo, stops }) => {
+    const [first] = stops;
+    const at = stops.find((stop) => stop.station === platformId);
+    if (!first || !at || first === at || first.arr === null || RUN_START_PLATFORM_IDS.includes(first.station)) return [];
+    const viewSec = (at.arr ?? at.dep ?? 0) - first.arr;
+    return viewSec < MIN_VIEW_BEFORE_PLATFORM_SEC ? [`${trainNo} from ${first.station} ${viewSec} s`] : [];
+  });
+}
+
+function isAdjacent(before: string, after: string): boolean {
+  const codeOf = (id: string): number => Number(id.slice(-2));
+  const isListedPair = ADJACENT_PLATFORM_ID_PAIRS.some((pair) => pair.includes(before) && pair.includes(after));
+  return Math.abs(codeOf(before) - codeOf(after)) === 1 || isListedPair;
+}
+
+const listed = (rows: readonly string[]): string => rows.slice(0, SHOWN_TRAIN_COUNT).join(", ") + (rows.length > SHOWN_TRAIN_COUNT ? ", ..." : "");
+
+// WHY: the tracker sees a train only at the stops it follows to a platform, so a long run between two of them, a
+// train in view too briefly before the platform or a station skipped between them leaves its estimate blind there.
+export function toTrackedStopIssues(timetables: readonly Timetable[], platforms: readonly NetworkPlatform[]): NetworkIssue[] {
+  const tracked = timetables.flatMap((t) => platforms.filter((p) => toPlatformTimetableKey(p, t.dayType) === toTimetableKey(t)).flatMap((p) => toTrackedStops(t, p)));
+  return tracked.flatMap((each) => {
+    const [runs, views] = [longRuns(each), shortViews(each)];
+    const skips = each.stations.slice(1).flatMap((id, index) => {
+      const before = each.stations[index] ?? "";
+      return isAdjacent(before, id) ? [] : [`the tracked stops skip a station between ${before} and ${id}`];
+    });
+    return [
+      ...(runs.length > 0 ? [`${runs.length} train(s) run over ${MAX_UNOBSERVED_RUN_SEC} s between two tracked stops: ${listed(runs)}`] : []),
+      ...(views.length > 0 ? [`${views.length} train(s) in view under ${MIN_VIEW_BEFORE_PLATFORM_SEC} s before it: ${listed(views)}`] : []),
+      ...skips,
+    ].map((message) => ({ path: each.path, message }));
+  });
 }
