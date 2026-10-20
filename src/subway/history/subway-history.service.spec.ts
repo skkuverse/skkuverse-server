@@ -1,6 +1,6 @@
 /**
  * SubwayHistoryService listening to the real tracker (over FakeSubwayRepository,
- * the real timetable door on FakeHolidaysService and the committed weekday
+ * the real timetable door on FakeHolidaysService and the stored committed weekday
  * tables, the real estimate door), writing to FakeSubwayHistoryRepository, at
  * a scripted Clock, fed one upstream's observations per tick as the pollers
  * feed the tracker. What it guards, by the subway-arrival-accuracy spec's
@@ -20,11 +20,10 @@
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
-import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
 import { FakeSubwayHistoryRepository } from "../../../__tests__/helpers/fakes/subway/subway-history.repository.fake";
 import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/subway.repository.fake";
-import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
@@ -33,7 +32,6 @@ import { SubwayMatchingService } from "../matching/subway-matching.service";
 import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
 import type { SubwayProvider, TrainEvent } from "../subway.types";
-import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
 import type { SubwayHistoryRepository } from "./subway-history.repository";
 import { SubwayHistoryService } from "./subway-history.service";
@@ -46,7 +44,7 @@ function setup() {
   const clock = { now: () => now } as Clock;
   const arrivals = new FakeSubwayRepository();
   const history = new FakeSubwayHistoryRepository();
-  const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
+  const timetable = storedSubwayTimetableService({ clock });
   const tracking = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(arrivals)), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   new SubwayMatchingService(tracking, clock).onModuleInit();
   const service = new SubwayHistoryService(asReal<SubwayHistoryRepository>(history), tracking, clock);

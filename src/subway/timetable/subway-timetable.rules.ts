@@ -39,10 +39,16 @@ export function toServiceInstant(serviceDate: string, secondsOfServiceDay: numbe
   return new Date(moment.tz(serviceDate, KST_TIME_ZONE).valueOf() + secondsOfServiceDay * SECOND_MS);
 }
 
+export function toTimetableKey({ operator, line, dayType }: Pick<Timetable, "operator" | "line" | "dayType">): string {
+  return `${operator}-${line}-${dayType}`;
+}
+
+export function toPlatformTimetableKey(platform: NetworkPlatform, dayType: DayType): string {
+  return toTimetableKey({ operator: platform.id.split("-")[0] ?? "", line: platform.line, dayType });
+}
+
 export function findTimetable(timetables: readonly Timetable[], platform: NetworkPlatform, dayType: DayType): Timetable | null {
-  const [operator] = platform.id.split("-");
-  const isPlatformTable = (timetable: Timetable): boolean => timetable.operator === operator && timetable.line === platform.line;
-  return timetables.find((t) => isPlatformTable(t) && t.dayType === dayType) ?? null;
+  return timetables.find((t) => toTimetableKey(t) === toPlatformTimetableKey(platform, dayType)) ?? null;
 }
 
 // WHY: every tick reads tables of tens of thousands of stop times, so the time zone is applied once per table,
@@ -67,20 +73,25 @@ export function toLineRoutes(timetable: Timetable): LineRoutes {
   return { up: toRoute(timetable, "up"), down: toRoute(timetable, "down") };
 }
 
-export function toTimetableKey({ operator, line, dayType }: Pick<Timetable, "operator" | "line" | "dayType">): string {
-  return `${operator}-${line}-${dayType}`;
+// WHY: by missing table, every platform it would serve, so a push refusal and the read's gap line name each one.
+export function toUncoveredPlatformIdsByKey(keys: ReadonlySet<string>, platforms: readonly NetworkPlatform[]): Map<string, string[]> {
+  const platformIdsByKey = new Map<string, string[]>();
+  const uncovered = platforms.flatMap((platform) =>
+    TIMETABLE_DAY_TYPES[platform.timetable.source].map((dayType) => ({ key: toPlatformTimetableKey(platform, dayType), id: platform.id })),
+  );
+  for (const { key, id } of uncovered.filter((each) => !keys.has(each.key))) platformIdsByKey.set(key, [...(platformIdsByKey.get(key) ?? []), id]);
+  return platformIdsByKey;
 }
 
-// WHY: one issue per missing table, naming every platform it serves, so a push refusal lists each platform and day type.
 export function toTimetableCoverageIssues(timetables: readonly Timetable[], platforms: readonly NetworkPlatform[]): NetworkIssue[] {
-  const missingByKey = new Map<string, string[]>();
-  for (const platform of platforms) {
-    for (const dayType of TIMETABLE_DAY_TYPES[platform.timetable.source].filter((each) => findTimetable(timetables, platform, each) === null)) {
-      const key = toTimetableKey({ operator: platform.id.split("-")[0] ?? "", line: platform.line, dayType });
-      missingByKey.set(key, [...(missingByKey.get(key) ?? []), `${platform.id} ${dayType}`]);
-    }
-  }
-  return [...missingByKey].map(([key, missing]) => ({ path: [key], message: `no table for ${missing.join(", ")}` }));
+  const uncovered = toUncoveredPlatformIdsByKey(new Set(timetables.map(toTimetableKey)), platforms);
+  return [...uncovered].map(([key, ids]) => ({ path: [key], message: `no table for ${ids.map((id) => `${id} ${key.split("-").at(-1)}`).join(", ")}` }));
+}
+
+// WHY: a table last used for an earlier service day goes unless this day needs it again, so a process holds at most
+// one day type per line and a weekday's tables, kept from Tuesday into Wednesday, are not read again.
+export function toEvictedTimetableKeys(held: ReadonlyMap<string, { lastServiceDate: string }>, serviceDate: string, neededKeys: ReadonlySet<string>): string[] {
+  return [...held].filter(([key, { lastServiceDate }]) => lastServiceDate < serviceDate && !neededKeys.has(key)).map(([key]) => key);
 }
 
 export function isInServiceWindow(dayType: DayType, serviceDate: string, now: Date): boolean {

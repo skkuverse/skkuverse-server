@@ -5,14 +5,20 @@
  * catalog's `subway-timetables` entry and stores through
  * scripts/lib/datasets/parts.js is one header, whose manifest names one part
  * per table key, and one `dataset_parts` document per table, each read back
- * equal to the table pushed.
+ * equal to the table pushed. SubwayTimetableRepository reads that header at
+ * its revision and each table by its part id as the server's schema parses
+ * it; a part the schema refuses, or a header or part not stored, reads as
+ * `null`, so nothing is served from it.
  *
  * The writer is the tool's own catalog, checks and parts modules, not a copy
  * of their document shapes, so a change to how the tool stores a parted
- * dataset that the reader does not follow fails here.
+ * dataset that the reader does not follow fails here. The repository comes
+ * from a Nest testing module, as the app builds it.
  */
 import path from "node:path";
 import type { Db as MongoDb } from "mongodb";
+import { Test } from "@nestjs/testing";
+import type { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-timetable.repository";
 import type { Timetable } from "../../../src/subway/timetable/subway-timetable.types";
 import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { subwayTimetableFixtureFiles } from "../../helpers/subway/timetables";
@@ -25,6 +31,7 @@ const store = require("../../../scripts/lib/datasets/store");
 
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
+type RepositoryModule = typeof import("../../../src/subway/timetable/subway-timetable.repository");
 type CheckedPart = { key: string; data: Timetable; summary: unknown };
 type ManifestEntry = { key: string; partId: string; summary: { source: unknown; trainCount: number } };
 
@@ -36,6 +43,7 @@ const DATASET = "subway-timetables";
 let mongod: TestMongod;
 let db: Db;
 let content: MongoDb;
+let repository: SubwayTimetableRepository;
 
 /** The fixture's tables as the push checks them: parsed, keyed and summarized by the catalog entry. */
 function checkedFixture(): CheckedPart[] {
@@ -52,6 +60,9 @@ beforeAll(async () => {
   const config = require("../../../src/infra/config") as Config;
   assertConfigReaches(mongod, config.mongo.url);
   content = db.getClient().db(config.content.dbName);
+  const { SubwayTimetableRepository: Repository } = require("../../../src/subway/timetable/subway-timetable.repository") as RepositoryModule;
+  const testingModule = await Test.createTestingModule({ providers: [Repository] }).compile();
+  repository = testingModule.get(Repository);
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
@@ -107,5 +118,62 @@ describe("the subway timetables stored by npm run data", () => {
     const changed = [...after].filter(([key, partId]) => before.get(key) !== partId).map(([key]) => key);
     expect(changed).toEqual(["S1-2-holiday", "S1-2-saturday", "S1-2-weekday"]);
     expect(await content.collection("dataset_parts").countDocuments({ dataset: DATASET })).toBe(21);
+  });
+});
+
+describe("the subway timetables stored by npm run data, read by SubwayTimetableRepository", () => {
+  it("reads revision 1's manifest, then each table by its part id, equal to the table pushed", async () => {
+    // Arrange
+    const checked = checkedFixture();
+    await parts.create(content, DATASET, checked, { by: AUTHOR, now: NOW });
+
+    // Act
+    const manifest = await repository.findManifest();
+    const tables = await Promise.all((manifest?.data.parts ?? []).map((part) => repository.findTable(part, manifest?.revision ?? 0)));
+
+    // Assert
+    expect(manifest?.revision).toBe(1);
+    expect(manifest?.data.parts.map((part) => part.key)).toEqual(checked.map((part) => part.key));
+    expect(tables).toEqual(checked.map((part) => part.data));
+  });
+
+  it("reads a stored part the schema refuses as null", async () => {
+    // Arrange
+    const checked = checkedFixture();
+    const refused = checked.map((part) => (part.key === "KR-1-weekday" ? { ...part, data: { ...part.data, dayType: "sunday" } } : part));
+    await parts.create(content, DATASET, refused, { by: AUTHOR, now: NOW });
+    const manifest = await repository.findManifest();
+    const entry = manifest!.data.parts.find((part) => part.key === "KR-1-weekday")!;
+
+    // Act
+    const table = await repository.findTable(entry, manifest!.revision);
+
+    // Assert
+    expect(table).toBeNull();
+  });
+
+  it("reads a part the manifest names but the store lost as null", async () => {
+    // Arrange
+    await parts.create(content, DATASET, checkedFixture(), { by: AUTHOR, now: NOW });
+    const manifest = await repository.findManifest();
+    const entry = manifest!.data.parts[0]!;
+    await content.collection("dataset_parts").deleteOne({ _id: entry.partId as never });
+
+    // Act
+    const table = await repository.findTable(entry, manifest!.revision);
+
+    // Assert
+    expect(table).toBeNull();
+  });
+
+  it("reads a database that holds no subway-timetables dataset as null", async () => {
+    // Arrange
+    await store.create(content, "home-layout", { version: 1, sections: [] }, { by: AUTHOR, now: NOW });
+
+    // Act
+    const manifest = await repository.findManifest();
+
+    // Assert
+    expect(manifest).toBeNull();
   });
 });

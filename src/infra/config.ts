@@ -121,6 +121,7 @@ const config = {
     collections: {
       datasets: "datasets",
       datasetRevisions: "dataset_revisions",
+      datasetParts: "dataset_parts",
     },
   },
 

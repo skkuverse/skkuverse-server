@@ -25,9 +25,11 @@
  *
  * At 00:20 and 02:00 KST on Wednesday 2026-10-21, the night window production
  * is captured in, the same seed is 14 h old, so every station answers from the
- * committed timetables alone: the status, `Cache-Control`, `Vary`, `ETag` and
- * bytes the code answered before the topology reader landed
+ * timetables alone: the status, `Cache-Control`, `Vary`, `ETag` and bytes the
+ * code answered from the committed timetables before the topology reader landed
  * (fixtures/subway-arrivals-night.golden.json, generated at commit 46c6ea60).
+ * Since task 10.3 the timetables are revision 1 of `subway-timetables`, the
+ * trimmed fixture of task 9.1 stored through scripts/lib/datasets/parts.js.
  *
  * A regression pin: a failure is a regression to report, and an expected
  * value changes only with the behavior it pins (`.claude/rules/tests.md`).
@@ -50,6 +52,7 @@ type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTes
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type TopologyHelpers = typeof import("../../helpers/subway/topology");
+type TimetableHelpers = typeof import("../../helpers/subway/timetables");
 
 type Lang = "ko" | "en" | "zh";
 const LANGS: Lang[] = ["ko", "en", "zh"];
@@ -145,6 +148,8 @@ beforeAll(async () => {
   const { subwayTopologyFixture } = require("../../helpers/subway/topology") as TopologyHelpers;
   const content = db.getClient().db(config.content.dbName);
   await store.create(content, "subway-topology", subwayTopologyFixture(), { by: "characterization@example.com", now: NOW });
+  const { storeSubwayTimetablesFixture } = require("../../helpers/subway/timetables") as TimetableHelpers;
+  await storeSubwayTimetablesFixture(content, { by: "characterization@example.com", now: NOW });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

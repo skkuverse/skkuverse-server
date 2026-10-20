@@ -1,7 +1,7 @@
 /**
  * Every module `src/app.module.ts` imports, booted as an api replica (ROLE=api)
  * with the repositories the bus, subway and map read routes reach replaced by
- * fakes holding production-shaped data (the subway topology included), the mini app manifest client and
+ * fakes holding production-shaped data (the subway topology and timetables included), the mini app manifest client and
  * the stored manifests by their fakes, and a fixed `Clock`. The other repositories stay real: an api replica
  * touches no database at boot (ADR 0012, D3), and the routes a caller requests
  * must not reach them.
@@ -21,6 +21,7 @@ import { MiniappsManifestClient } from "../../../src/miniapps/manifest/miniapps-
 import { MiniappsManifestRepository } from "../../../src/miniapps/manifest/miniapps-manifest.repository";
 import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
+import { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-timetable.repository";
 import { storedBusRegistryRepository } from "../bus/bus-registry";
 import { storedRouteAttributesRepository } from "../bus/route-attributes";
 import { storedBusRoutePathRepository } from "../bus/bus-route-path";
@@ -31,6 +32,7 @@ import { FakeMiniappsManifestClient } from "../fakes/miniapps/miniapps-manifest.
 import { FakeMiniappsManifestRepository } from "../fakes/miniapps/miniapps-manifest.repository.fake";
 import { FakeSubwayRepository } from "../fakes/subway/subway.repository.fake";
 import { storedSubwayTopologyRepository } from "../subway/topology";
+import { storedSubwayTimetableRepository } from "../subway/timetables";
 import { appModulesUnder } from "./app-modules";
 import { buildTestApp } from "./build-test-app";
 
@@ -50,6 +52,7 @@ export function buildApiReplicaApp(): Promise<NestExpressApplication> {
       { provide: MiniappsManifestRepository, useValue: new FakeMiniappsManifestRepository() },
       { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
+      { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },
       { provide: Clock, useValue: CLOCK },
     ],
     role: "api",

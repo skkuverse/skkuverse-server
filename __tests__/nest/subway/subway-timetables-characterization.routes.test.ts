@@ -8,7 +8,9 @@
  * `src/scheduling/` and `src/subway/`, as an api replica, through the
  * production pipeline with only `Clock` overridden. It runs over a real
  * `mongod` whose content database holds revision 1 of `subway-topology`
- * (stored through the tool's own scripts/lib/datasets/store.js), whose
+ * (stored through the tool's own scripts/lib/datasets/store.js) and, since
+ * task 10.3, revision 1 of `subway-timetables`: the trimmed fixture of task
+ * 9.1, stored through scripts/lib/datasets/parts.js; whose
  * `public_holidays` holds 2026 with Christmas, and whose `subway_arrivals`
  * starts empty, so every platform is served from its timetable alone.
  *
@@ -46,6 +48,7 @@ type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTes
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type TopologyHelpers = typeof import("../../helpers/subway/topology");
+type TimetableHelpers = typeof import("../../helpers/subway/timetables");
 type TrackingModule = typeof import("../../../src/subway/tracking/subway-tracking.service");
 
 type Lang = "ko" | "en" | "zh";
@@ -128,6 +131,8 @@ beforeAll(async () => {
   const { subwayTopologyFixture } = require("../../helpers/subway/topology") as TopologyHelpers;
   const content = db.getClient().db(config.content.dbName);
   await store.create(content, "subway-topology", subwayTopologyFixture(), { by: "characterization@example.com", now: SEEDED_AT });
+  const { storeSubwayTimetablesFixture } = require("../../helpers/subway/timetables") as TimetableHelpers;
+  await storeSubwayTimetablesFixture(content, { by: "characterization@example.com", now: SEEDED_AT });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

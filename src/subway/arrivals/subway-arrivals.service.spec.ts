@@ -1,7 +1,7 @@
 /**
  * SubwayArrivalsService over FakeSubwayRepository, the real tracker's
  * timetable-only document (on the real timetable door, FakeHolidaysService and
- * the committed weekday tables) and a fixed Clock. What it guards: an unserved
+ * the committed weekday tables, stored in a fake) and a fixed Clock. What it guards: an unserved
  * station, a KRIC platform id included, finds nothing; a platform's state at
  * most 2 minutes old is served as the tracker stored it, whatever SUBWAY says,
  * since the switch stops only the poller (ADR 0012, D5); an older or missing
@@ -10,11 +10,10 @@
  * each is judged on its own ("One line stale"), on Gangnam's line 2 and Shinbundang
  * platforms.
  */
-import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
+import { storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
 import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/subway.repository.fake";
 import { storedSubwayTopologyService } from "../../../__tests__/helpers/subway/topology";
-import type { HolidaysService } from "../../holidays/holidays.service";
 import type { Clock } from "../../infra/clock";
 import config from "../../infra/config";
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
@@ -22,7 +21,6 @@ import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import type { SubwayArrivalsDoc } from "../subway.document";
 import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
-import { SubwayTimetableService } from "../timetable/subway-timetable.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
 import { SubwayArrivalsService } from "./subway-arrivals.service";
 
@@ -32,7 +30,7 @@ const subway = config.subway as { enabled: boolean };
 function setup() {
   const repository = new FakeSubwayRepository();
   const clock = { now: () => NOW } as Clock;
-  const timetable = new SubwayTimetableService(asReal<HolidaysService>(new FakeHolidaysService()));
+  const timetable = storedSubwayTimetableService({ clock });
   const tracking = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(repository)), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
   return { repository, service: new SubwayArrivalsService(asReal<SubwayRepository>(repository), tracking, clock, storedSubwayTopologyService()) };
 }
