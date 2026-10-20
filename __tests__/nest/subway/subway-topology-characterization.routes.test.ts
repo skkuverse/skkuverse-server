@@ -5,7 +5,7 @@
  * stops away from the direction's upstream platforms. For every served
  * station in `ko`, `en` and `zh`, `GET /subway/stations/:id/arrivals` answers
  * the full body, status, `Cache-Control`, `Vary` and `ETag` today's code
- * answers from the committed subway-registry.json; its static fields (meta,
+ * answers from the committed registry file; its static fields (meta,
  * the station, each line's display data and platform id, each direction's
  * name and neighbors) are those production served on 2026-10-20
  * (fixtures/subway-arrivals-production.capture.json, source commit d856f333).
@@ -20,7 +20,7 @@
  * timetable is read; and whose content database holds revision 1 of
  * `subway-topology`, stored through the tool's own
  * scripts/lib/datasets/store.js. The topology is the dataset's since task 7.4;
- * every expected value was pinned while it was still subway-registry.json, of
+ * every expected value was pinned while it was still the committed registry file, of
  * which revision 1 is a copy.
  *
  * At 00:20 and 02:00 KST on Wednesday 2026-10-21, the night window production
