@@ -17,8 +17,8 @@ export interface SubwayTimetablesDatasetDoc {
 
 export type StoredTimetableManifest = Pick<SubwayTimetablesDatasetDoc, "revision" | "data">;
 
-// CONTRACT(scripts): written once by scripts/lib/datasets/parts.js under `<dataset>/<key>@<sha256 prefix>` and never
-// changed; its data is the table in canonical JSON, keys sorted.
+// CONTRACT(scripts): written by scripts/lib/datasets/parts.js under `<dataset>/<key>@<sha256 prefix>`; its data, the
+// table in canonical JSON with keys sorted, never changes.
 export interface SubwayTimetablePartDoc {
   _id: string;
   dataset: string;

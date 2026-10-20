@@ -9,18 +9,21 @@
  *
  * `sha256` is taken over the part's canonical JSON (keys sorted), and `data`
  * is stored in that form, so a pulled part pushed back unedited has the same
- * id. A part never changes once stored: the same content in a later revision
- * names the same document.
+ * id. A part's data never changes once stored: the same content in a later
+ * revision names the same document. Its `savedAt` is when a write last stored
+ * or found it, so the grace below also covers a part a push finds already
+ * stored, an orphan of an earlier run that is old enough to collect.
  *
  * Write order, with no transaction:
  *
- *   1. upsert every part by `_id` (insert only); an existing `_id` whose full
- *      `sha256` differs stops the run before the header, overwriting nothing;
+ *   1. upsert every part by `_id`, inserting its data or moving an existing
+ *      one's `savedAt` forward; an existing `_id` whose full `sha256` differs
+ *      stops the run before the header, overwriting nothing;
  *   2. the header's conditional update, its history entry and the pruning of
  *      old revisions, exactly as store.js does for any dataset;
  *   3. garbage collection: delete this dataset's parts that neither the current
- *      header nor a retained revision names, and that were saved more than
- *      PART_GRACE_MS ago.
+ *      header nor a retained revision names, and that were last saved more
+ *      than PART_GRACE_MS ago.
  *
  * A run that dies before 2 leaves orphan parts and the served revision
  * unchanged; step 3 of a later run removes them. The grace keeps one
@@ -77,8 +80,8 @@ function toManifest(storedParts) {
 const partIdsOf = (manifest) => (Array.isArray(manifest?.parts) ? manifest.parts.map((entry) => entry.partId) : []);
 
 /**
- * Step 1: inserts each part that is not stored yet. `{ ok: false, reason:
- * "collision", partId }` at the first stored `_id` whose full hash differs.
+ * Step 1: inserts each part that is not stored yet and moves a stored one's `savedAt` to `now`. `{ ok: false,
+ * reason: "collision", partId }` at the first stored `_id` whose full hash differs.
  */
 async function storeParts(db, dataset, storedParts, { by, now }) {
   const collection = db.collection(PARTS);
@@ -87,7 +90,7 @@ async function storeParts(db, dataset, storedParts, { by, now }) {
       // The filter holds the full hash, so a stored id with another hash makes the upsert's insert a duplicate key.
       await collection.updateOne(
         { _id: part.partId, sha256: part.sha256 },
-        { $setOnInsert: { dataset, key: part.key, data: part.data, savedAt: now, savedBy: by } },
+        { $setOnInsert: { dataset, key: part.key, data: part.data, savedBy: by }, $max: { savedAt: now } },
         { upsert: true },
       );
     } catch (err) {
@@ -133,6 +136,11 @@ async function writeParted(db, dataset, parts, meta, writeHeader) {
   return result;
 }
 
+/** Stores `parts` again, writing no header: for a revision that names a part no longer stored. */
+function restore(db, dataset, parts, { by, now }) {
+  return storeParts(db, dataset, parts.map((part) => toStoredPart(dataset, part)), { by, now });
+}
+
 /** Revision 1 of a new parted dataset; refuses an existing one as store.create does. */
 function create(db, dataset, parts, { by, now, note }) {
   return writeParted(db, dataset, parts, { by, now }, (manifest) => store.create(db, dataset, manifest, { by, now, note }));
@@ -174,4 +182,4 @@ async function copy(source, target, dataset, { sourceRevision, baseRevision, by,
   return result;
 }
 
-module.exports = { PART_GRACE_MS, collectGarbage, copy, create, push, readParts, rollback, toManifest, toStoredPart };
+module.exports = { PART_GRACE_MS, collectGarbage, copy, create, push, readParts, restore, rollback, toManifest, toStoredPart };
