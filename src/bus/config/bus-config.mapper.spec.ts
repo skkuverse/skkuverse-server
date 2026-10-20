@@ -5,7 +5,7 @@
  * refresh a schedule service offers when it serves live arrival estimates.
  */
 import { storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
-import { jongroRoutes as committedRoutes } from "../bus.config";
+import { JONGRO_ROUTES } from "../bus.constants";
 import { SERVICE_CONFIG } from "../bus.constants";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import { HSSC_STATIONS } from "./bus-config.constants";
@@ -64,7 +64,7 @@ describe("mapStations", () => {
 describe("toBusGroupIds", () => {
   it("lists the fixed groups, then every configured Jongro route, without their stations", () => {
     // Act & Assert
-    expect(toBusGroupIds(committedRoutes)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
+    expect(toBusGroupIds(JONGRO_ROUTES)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
   });
 });
 

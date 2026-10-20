@@ -1,18 +1,10 @@
 import { JONGRO_ROUTE_ID_PREFIX } from "./bus.constants";
-import type { JongroRoute } from "./bus.types";
-import type { JongroRoutesFile } from "./bus.wire";
+import type { JongroRoute, JongroRouteIdentity } from "./bus.types";
 
-type JongroRouteEntry = JongroRoutesFile[number];
-
-export function toJongroRoute(entry: JongroRouteEntry): JongroRoute {
+export function toJongroRoute(identity: JongroRouteIdentity): JongroRoute {
   return {
-    id: entry.id,
-    code: entry.id.slice(JONGRO_ROUTE_ID_PREFIX.length),
-    busRouteId: entry.busRouteId,
-    themeColor: entry.themeColor,
-    iconType: entry.iconType,
-    refreshInterval: entry.refreshInterval,
-    seatCount: entry.seatCount,
-    transferLinesByArsId: entry.transferLinesByArsId,
+    id: identity.id,
+    code: identity.id.slice(JONGRO_ROUTE_ID_PREFIX.length),
+    busRouteId: identity.busRouteId,
   };
 }

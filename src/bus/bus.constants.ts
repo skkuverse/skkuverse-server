@@ -1,4 +1,4 @@
-import type { ServiceConfigEntry, ServiceConfigMap } from "./bus.types";
+import type { JongroRouteIdentity, ServiceConfigEntry, ServiceConfigMap } from "./bus.types";
 
 export const SEOUL_BUS_API_URL = "http://ws.bus.go.kr/api/rest";
 
@@ -6,6 +6,13 @@ export const SEOUL_BUS_API_URL = "http://ws.bus.go.kr/api/rest";
 export const JONGRO_ROUTE_ID_PATTERN = /^jongro(0[1-9]|[1-9]\d+)$/;
 
 export const JONGRO_ROUTE_ID_PREFIX = "jongro";
+
+// WHY: identities only, in the app's order; each route's card, seat count and transfer lines are stored attributes.
+export const JONGRO_ROUTES: ReadonlyArray<Readonly<JongroRouteIdentity>> = Object.freeze([
+  Object.freeze({ id: "jongro02", busRouteId: "100900008" }),
+  Object.freeze({ id: "jongro07", busRouteId: "100900004" }),
+  Object.freeze({ id: "jongro08", busRouteId: "100900005" }),
+]);
 
 // WHY: the live estimate poller runs every 60 s; an app refreshing estimates faster would only read its HTTP cache.
 export const ESTIMATES_MAX_AGE_S = 60;

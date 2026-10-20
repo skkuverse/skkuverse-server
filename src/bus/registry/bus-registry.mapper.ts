@@ -1,8 +1,8 @@
-import type { JongroRoute } from "../bus.types";
+import type { JongroRoute, JongroRouteAttributes } from "../bus.types";
 import type { JongroRouteDocument, RegistryStation } from "./bus-registry.document";
 import type { JongroStation, JongroStationMapping, ObservedStation, RegistryRoute } from "./bus-registry.types";
 
-function toJongroStations(route: JongroRoute, doc: JongroRouteDocument): JongroStation[] {
+function toJongroStations(route: JongroRouteAttributes, doc: JongroRouteDocument): JongroStation[] {
   const last = doc.stations.length - 1;
   return doc.stations.map((station, index) => ({
     sequence: String(index + 1),
@@ -25,7 +25,7 @@ function toStationMapping(stations: readonly RegistryStation[]): JongroStationMa
   return mapping;
 }
 
-export function toRegistryRoute(route: JongroRoute, doc: JongroRouteDocument): RegistryRoute {
+export function toRegistryRoute(route: JongroRoute & JongroRouteAttributes, doc: JongroRouteDocument): RegistryRoute {
   return {
     ...route,
     stationsVersion: doc.stationsVersion,

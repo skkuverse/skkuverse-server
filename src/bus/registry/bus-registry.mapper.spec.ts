@@ -4,12 +4,12 @@
  * stop and the transfer lines of their ARS number, and the TOPIS id → first
  * ord mapping that places a bus.
  */
-import type { JongroRoute } from "../bus.types";
+import type { JongroRoute, JongroRouteAttributes } from "../bus.types";
 import type { JongroRouteDocument } from "./bus-registry.document";
 import { toRegistryRoute, toRegistryStations } from "./bus-registry.mapper";
 
 
-const committed: JongroRoute = {
+const committed: JongroRoute & JongroRouteAttributes = {
   id: "jongro07",
   code: "07",
   busRouteId: "100900004",
