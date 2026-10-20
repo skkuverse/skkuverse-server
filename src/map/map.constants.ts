@@ -10,8 +10,8 @@ export const EVENT_STALE_WINDOW_MS = 10 * 60_000;
 const CAMPUS_OVERLAYS_ENDPOINT = "/map/overlays/campus";
 const TRANSIT_OVERLAYS_ENDPOINT = "/map/overlays/transit";
 
-// WHY: opt-in, so installed apps draw no line until a user turns one on (add-jongro-route-lines D6); one green, every
-// route's `themeColor` in src/bus/jongro-routes.json, with a dark edge that stays legible over green parks (D8).
+// WHY: opt-in, so installed apps draw no line until a user turns one on (add-jongro-route-lines D6); one green for every
+// route, never its stored card color, with a dark edge that stays legible over green parks (D8; move-reference-datasets D11).
 const ROUTE_LINE_LAYER = { defaultVisibleWhen: { kind: "never" }, userConfigurable: true, endpoint: TRANSIT_OVERLAYS_ENDPOINT, chipGroupId: null, style: { color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20", minZoom: 13 } } as const;
 
 export const LOCATION_ACCURACIES = ["exact", "area"] as const;
