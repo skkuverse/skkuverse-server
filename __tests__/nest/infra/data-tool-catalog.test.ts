@@ -28,7 +28,8 @@
  *
  * The `bus-lane-corridor` dataset (move-reference-datasets D9) is checked with
  * the server's corridor schema and `corridorIssues`, the geometry checks the
- * boot refused bus-lane.json on; the lane hours and strategies are code.
+ * boot refused the committed corridor file on; the lane hours and strategies
+ * are code.
  *
  * The `jongro-route-attributes` dataset (move-reference-datasets D10) is
  * checked with the server's attributes schema and against the `jongroRoutes`
