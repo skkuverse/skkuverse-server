@@ -1,6 +1,6 @@
 /**
  * The directory `npm run data -- pull` writes for a parted dataset and `push`
- * reads (openspec/changes/move-reference-datasets, design D4):
+ * reads (openspec/changes/archive/2026-10-20-move-reference-datasets, design D4):
  *
  *   .data/<dev|prod>/<dataset>/working.json
  *     { "dataset", "target": "dev" | "prod", "baseRevision", "pulledAt", "manifest" }

@@ -1,5 +1,5 @@
 /**
- * How `npm run data` stores a parted dataset (openspec/changes/move-reference-datasets,
+ * How `npm run data` stores a parted dataset (openspec/changes/archive/2026-10-20-move-reference-datasets,
  * design D4): a dataset too large for one document is its `datasets` header,
  * whose data is a manifest, plus one `dataset_parts` document per part.
  *
