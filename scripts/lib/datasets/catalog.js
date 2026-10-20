@@ -28,6 +28,9 @@
  *   idsOf(data)      the identities others may reference (`miniapps` its ids,
  *                    which the three ui datasets name; `map-layer-sets` its
  *                    layer sets, which nothing references yet)
+ *   reads            optional: the parted datasets whose parts its check
+ *                    reads through `storedOf`. The tool fetches a parted
+ *                    dataset's parts only for a check that names it here.
  *
  * `issuesOf`, `referencesOf` and `idsOf` take the schema's parsed output.
  *
@@ -57,11 +60,12 @@
  * `subwayPlatforms` the platform ids of SUBWAY_STATIONS.
  *
  * `subway-topology` is also checked against the timetable routes of every
- * served platform, read from the checkout's committed SUBWAY_TIMETABLES.
- * `subway-timetables` is checked the other way, its pushed routes against the
- * target's stored `subway-topology`, and its tracked stops against the run
- * properties, both as warnings: a coverage change pushes its tables first and
- * its topology after, and the topology push is the gate that refuses.
+ * served platform, read from the target's stored `subway-timetables` (it
+ * `reads` them), and refused when that database stores none this checkout can
+ * read. `subway-timetables` is checked the other way, its pushed routes
+ * against the target's stored `subway-topology`, and its tracked stops against
+ * the run properties, both as warnings: a coverage change pushes its tables
+ * first and its topology after, and the topology push is the gate that refuses.
  */
 
 const SHOWN_TRAIN_NUMBERS = 8;
@@ -124,7 +128,6 @@ function loadCatalog(load) {
   const { toNetworkIssues } = load("subway/subway.rules");
   const { subwayTopologyDataset } = load("subway/topology/subway-topology.schema");
   const { toRouteIssues, toTopologyIssues } = load("subway/topology/subway-topology.rules");
-  const { SUBWAY_TIMETABLES } = load("subway/timetable/subway-timetable.config");
   const { TIMETABLE_DAY_TYPES } = load("subway/timetable/subway-timetable.constants");
   const { findTimetable, toLineRoutes, toTimetableCoverageIssues, toTimetableKey, toTrackedStopIssues } = load("subway/timetable/subway-timetable.rules");
   const { timetableFile } = load("subway/timetable/subway-timetable.schema");
@@ -146,13 +149,16 @@ function loadCatalog(load) {
         return [platform.id, [...new Map(found.map((table) => [JSON.stringify(toLineRoutes(table)), toLineRoutes(table)])).values()]];
       }),
     );
-  // WHY: the committed timetables are this checkout's until task 11.1 deletes them; then these routes come from the
-  // target database's `subway-timetables` through `storedOf`.
-  const committedRoutes = routesOf(SUBWAY_TIMETABLES);
-  // A topology is checked against the routes once its stops resolve: an unresolved stop would repeat there as an order issue.
-  const topologyIssues = (topology) => {
+  const noStoredTimetables = {
+    path: ["subway-timetables"],
+    message: "no stored subway-timetables this checkout can read, so the routes were not checked: push subway-timetables first",
+  };
+  // A topology is checked against the target's stored routes once its stops resolve: an unresolved stop would repeat there as an order issue.
+  const topologyIssues = (topology, { storedOf }) => {
     const issues = [...networkIssues, ...toTopologyIssues(topology, SUBWAY_NETWORK)];
-    return issues.length > 0 ? issues : toRouteIssues(topology, committedRoutes);
+    if (issues.length > 0) return issues;
+    const tables = storedOf("subway-timetables");
+    return tables === null ? [noStoredTimetables] : toRouteIssues(topology, routesOf(tables));
   };
   const asWarnings = (issues, at = []) => issues.map((issue) => ({ path: [...at, ...issue.path], message: issue.message, warning: true }));
   // The pushed routes against the stored topology, whose own push refuses a disagreement: warning here lets either go first.
@@ -235,6 +241,7 @@ function loadCatalog(load) {
       "subway-topology": {
         owner: "src/subway/topology",
         schema: subwayTopologyDataset,
+        reads: ["subway-timetables"],
         issuesOf: topologyIssues,
         referencesOf: () => [],
       },

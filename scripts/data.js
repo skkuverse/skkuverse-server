@@ -324,7 +324,7 @@ function reportStored(ctx, result, base) {
 
 /** `data`'s warnings, or a refusal listing every issue. */
 async function checkedWarnings(ctx, db, data) {
-  const { stored } = await readStored(db, ctx.catalog);
+  const { stored } = await readStored(db, ctx.catalog, [ctx.args.dataset]);
   const { issues, warnings } = checkContent(ctx.catalog, ctx.args.dataset, data, stored);
   if (issues.length > 0) throw refuseIssues(issues);
   return warnings;
@@ -445,7 +445,7 @@ const samePartIds = (before, after) => partIdLines(before) === partIdLines(after
 
 /** The checked parts of `files`, their manifest and the checks' warnings, or a refusal listing every issue. */
 async function checkedParts(ctx, files) {
-  const { stored } = await readStored(ctx.db, ctx.catalog);
+  const { stored } = await readStored(ctx.db, ctx.catalog, [ctx.args.dataset]);
   const checked = checkParts(ctx.catalog, ctx.args.dataset, files, stored);
   if (checked.issues.length > 0) throw refuseIssues(checked.issues);
   const manifest = parts.toManifest(checked.parts.map((part) => parts.toStoredPart(ctx.args.dataset, part)));

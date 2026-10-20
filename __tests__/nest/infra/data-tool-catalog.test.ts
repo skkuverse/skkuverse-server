@@ -761,7 +761,13 @@ describe("loadCatalog jongro-route-attributes", () => {
 
 describe("loadCatalog subway-topology", () => {
   type Topology = { platforms: Record<string, Record<string, any>>; neighbors: Record<string, Record<string, unknown>> };
+  type Files = Array<{ file: string; data: any }>;
   const topology = () => datasetFixture("../subway/fixtures/subway-topology.dataset.json") as Topology;
+  const timetableFiles = (): Files => subwayTimetableFixtureFiles().map(({ file, table }) => ({ file, data: table }));
+  // WHY: the target's stored subway-timetables as readStored hands them to a check that reads them: the manifest, each part's data added.
+  const storedTimetables = (files: Files = timetableFiles()) => ({
+    "subway-timetables": { parts: files.map(({ file, data }) => ({ key: file.replace(/\.json$/, ""), data })) },
+  });
 
   it("is owned by src/subway/topology, takes subwayTopologyDataset, and accepts revision 1 with no issue and no reference", () => {
     // Arrange
@@ -769,13 +775,59 @@ describe("loadCatalog subway-topology", () => {
     const entry = catalog.datasets["subway-topology"];
 
     // Act
-    const issues = checkData(catalog, "subway-topology", topology(), {});
+    const issues = checkData(catalog, "subway-topology", topology(), storedTimetables());
 
     // Assert
     expect(entry.owner).toBe("src/subway/topology");
     expect(entry.schema).toBe(subwayTopologyDataset);
     expect(issues).toEqual([]);
     expect(entry.referencesOf(entry.schema.parse(topology()))).toEqual([]);
+  });
+
+  it("reads the stored subway-timetables, the only dataset whose parts its check needs", () => {
+    // Act
+    const { reads } = loadCatalog(srcLoader).datasets["subway-topology"];
+
+    // Assert
+    expect(reads).toEqual(["subway-timetables"]);
+  });
+
+  it("Tables stored without a station: refuses revision 1 when the target's stored line 4 tables skip S1-4-419, the routes read from them", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const withoutS14419 = timetableFiles().map(({ file, data }) =>
+      file.startsWith("S1-4-")
+        ? {
+            file,
+            data: {
+              ...data,
+              stations: data.stations.filter((id: string) => id !== "S1-4-419"),
+              trains: data.trains.map((train: any) => ({ ...train, stops: train.stops.filter((stop: any) => stop.station !== "S1-4-419") })),
+            },
+          }
+        : { file, data },
+    );
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-topology", topology(), storedTimetables(withoutS14419)));
+
+    // Assert
+    expect(lines).toContainEqual(expect.stringMatching(/^subway-topology: platforms\.S1-4-420\.down\.upstreamPlatformIds: .*\["S1-4-418","S1-4-417","S1-4-416"\]/));
+    expect(lines.every((line) => line.startsWith("subway-topology: platforms.S1-4-420."))).toBe(true);
+  });
+
+  it("No stored timetables: refuses revision 1, naming subway-timetables, when the target stores none it can read", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const unparsable = storedTimetables();
+    unparsable["subway-timetables"].parts[0]!.data.trains[0].trainNo = "K602";
+
+    // Act
+    const lines = [{}, unparsable].map((stored) => issueLines(checkData(catalog, "subway-topology", topology(), stored)));
+
+    // Assert
+    const refusal = "subway-topology: subway-timetables: no stored subway-timetables this checkout can read, so the routes were not checked: push subway-timetables first";
+    expect(lines).toEqual([[refusal], [refusal]]);
   });
 
   it("Platform added in code: refuses a topology without S1-2-222, naming it as unplaced", () => {
@@ -825,7 +877,7 @@ describe("loadCatalog subway-topology", () => {
     [ids[1], ids[2]] = [ids[2], ids[1]];
 
     // Act
-    const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
+    const lines = issueLines(checkData(catalog, "subway-topology", data, storedTimetables()));
 
     // Assert
     expect(lines).toEqual([expect.stringMatching(/^subway-topology: platforms\.S1-4-420\.down\.upstreamPlatformIds: .*\["S1-4-419","S1-4-418","S1-4-417"\]/)]);
@@ -839,7 +891,7 @@ describe("loadCatalog subway-topology", () => {
     delete data.neighbors["KR-1-P147"];
 
     // Act
-    const lines = issueLines(checkData(catalog, "subway-topology", data, {}));
+    const lines = issueLines(checkData(catalog, "subway-topology", data, storedTimetables()));
 
     // Assert
     expect(lines).toContainEqual(expect.stringMatching(/^subway-topology: platforms\.KR-1-0153\.down: "KR-1-P147" .*neither a served platform nor a neighbor$/));
