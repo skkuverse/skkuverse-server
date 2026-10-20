@@ -8,6 +8,7 @@
  */
 import { FakeBusEtaForecastClient } from "../../../../__tests__/helpers/fakes/bus/bus-eta-forecast.client.fake";
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
+import { FakeBusEtaLaneRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta-lane.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import config from "../../../infra/config";
 import type { LatLng } from "../../../shared/lat-lng.types";
@@ -18,11 +19,17 @@ import type { ShuttleEtaDoc } from "../bus-eta.document";
 import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaService } from "../bus-eta.service";
 import type { EtaRun } from "../bus-eta.types";
+import type { BusEtaLaneRepository } from "../lane/bus-eta-lane.repository";
 import { BusEtaLaneService } from "../lane/bus-eta-lane.service";
 import type { BusEtaForecastClient } from "./bus-eta-forecast.client";
 import { BusEtaForecastService } from "./bus-eta-forecast.service";
 
 // 04:00 KST on Tuesday 2026-10-20, still the 19th in UTC.
+
+// The baseline flow reads only the lane strategies, never the stored corridor (move-reference-datasets D9).
+function laneWithNoCorridor(eta: BusEtaService): BusEtaLaneService {
+  return new BusEtaLaneService(eta, asReal<BusEtaLaneRepository>(new FakeBusEtaLaneRepository()), { now: () => new Date("2026-10-20T00:00:00.000Z") });
+}
 const NOW = new Date("2026-10-19T19:00:00.000Z");
 const STOPS: LatLng[] = [
   { lat: 37.587367, lng: 126.993643 },
@@ -57,7 +64,7 @@ function setup(stored: ShuttleEtaDoc[] = []) {
   for (const doc of stored) repository.docs.set(doc._id, doc);
   const eta = new BusEtaService(asReal<BusEtaRepository>(repository), {} as BusScheduleService, new BusStopsService(new SubwayStationsService()));
   const tmap = new FakeBusEtaForecastClient();
-  const forecast = new BusEtaForecastService(new BusEtaLaneService(eta), asReal<BusEtaForecastClient>(tmap), eta);
+  const forecast = new BusEtaForecastService(laneWithNoCorridor(eta), asReal<BusEtaForecastClient>(tmap), eta);
   return { forecast, tmap, repository };
 }
 

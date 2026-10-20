@@ -4,7 +4,7 @@ import type { EtaRun, EtaSequence } from "../bus-eta.types";
 import type { SequenceStrategy } from "../lane/bus-eta-lane.types";
 import type { BusEtaTravelService } from "../travel/bus-eta-travel.service";
 
-export type LiveTravel = Pick<BusEtaTravelService, "strategyOfRun" | "fetchOffsets" | "fetchCorridorRoute" | "legTime" | "prime">;
+export type LiveTravel = Pick<BusEtaTravelService, "strategyOfRun" | "corridor" | "fetchOffsets" | "fetchCorridorRoute" | "legTime" | "prime">;
 
 export interface LiveEtaDeps {
   sequences: readonly EtaSequence[];
@@ -37,5 +37,5 @@ export interface ModelGroup {
   inWindow: EtaRun[];
 }
 
-/** WHY: the upstream a held tick failure belongs to (`schedule`: the day's runs); each stays failing until a request to it succeeds. */
-export type LiveUpstream = "naver" | "topis" | "schedule";
+/** WHY: the upstream a held tick failure belongs to (`schedule`: the day's runs, `corridor`: the stored corridor); each stays failing until a request to it succeeds. */
+export type LiveUpstream = "naver" | "topis" | "schedule" | "corridor";
