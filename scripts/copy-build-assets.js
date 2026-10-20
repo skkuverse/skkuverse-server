@@ -11,10 +11,8 @@ const assets = [
   ["src/notices/exclude-reasons.json", "dist/src/notices/exclude-reasons.json"],
   // src/bus/stops/bus-stops.config.ts reads this with fs.readFileSync(__dirname/<name>)
   ["src/bus/stops/schedule-stops.json", "dist/src/bus/stops/schedule-stops.json"],
-  // src/subway/subway.config.ts reads this with fs.readFileSync(__dirname/<name>)
-  ["src/subway/subway-registry.json", "dist/src/subway/subway-registry.json"],
-  // The subway timetable config reads these with fs.readFileSync(__dirname/<name>);
-  // scripts/subway-timetable/convert.py writes them.
+  // src/subway/timetable/subway-timetable.config.ts reads these with fs.readFileSync(__dirname/<name>),
+  // for the npm run data catalog's subway-topology check; revision 1 of subway-timetables is their copy.
   ["src/subway/timetable/korail-1-weekday.json", "dist/src/subway/timetable/korail-1-weekday.json"],
   ["src/subway/timetable/korail-1-holiday.json", "dist/src/subway/timetable/korail-1-holiday.json"],
   ["src/subway/timetable/korail-k1-weekday.json", "dist/src/subway/timetable/korail-k1-weekday.json"],
