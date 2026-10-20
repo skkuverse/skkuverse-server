@@ -10,8 +10,9 @@
  * station, each by id and by name in that language, and its trains; each
  * train its arrival instant as an ISO string and how many stops away it is,
  * from its stored position: 0 at the served station, 1 to 3 at an upstream
- * one, null with no position or one off the upstream list. A neighbor
- * without a name is refused, never served unnamed.
+ * one, null with no position or one off the upstream list. A previous or
+ * next stop it has no name for is served as null, as a terminus is, and the
+ * rest of the line still serves.
  */
 import { subwayRegistryFixture } from "../../../__tests__/helpers/subway/topology";
 import type { SubwayArrivalsDoc } from "../subway.document";
@@ -171,12 +172,18 @@ describe("toSubwayStationArrivals", () => {
     expect(response.lines[0]?.line).toEqual({ code: "D1", name, color: "D4003B", marker: { text, color: "D4003B" } });
   });
 
-  it("refuses a next station it has no name for rather than serving it unnamed", () => {
+  it("serves null for a previous and a next station it has no name for, and the rest of the direction as before", () => {
     // Arrange
-    const up = { ...HYEHWA_PLATFORM.directions.up, nextPlatformId: "S1-4-499" };
+    const up = { ...HYEHWA_PLATFORM.directions.up, upstreamPlatformIds: ["S1-4-498", "S1-4-422", "S1-4-423"], nextPlatformId: "S1-4-499" };
     const platform: SubwayPlatform = { ...HYEHWA_PLATFORM, directions: { ...HYEHWA_PLATFORM.directions, up } };
 
-    // Act & Assert
-    expect(() => toSubwayStationArrivals(HYEHWA, [{ platform, doc: DOC }], { lang: "ko", registry: REGISTRY })).toThrow("S1-4-499");
+    // Act
+    const response = toSubwayStationArrivals(HYEHWA, [{ platform, doc: DOC }], { lang: "ko", registry: REGISTRY });
+
+    // Assert
+    const [upDirection, downDirection] = response.lines[0]?.directions ?? [];
+    expect([upDirection?.previousStation, upDirection?.nextStation]).toEqual([null, null]);
+    expect([upDirection?.name, upDirection?.trains.map((train) => train.trainNo)]).toEqual(["불암산·진접 방면", ["4674", "4676"]]);
+    expect(downDirection?.previousStation).toEqual({ id: "S1-4-419", name: "한성대입구" });
   });
 });

@@ -4,7 +4,8 @@
  * network joined to the stored directions and neighbors, built once per revision, cached for DATASET_CACHE_TTL_MS so
  * a push is served within a minute and kept through a failed reload for DATASET_STALE_WINDOW_MS. An entry for a
  * platform the code does not serve is ignored, and a served platform the revision lacks is left out; each is logged
- * at error once per revision. With no good value, `current()` throws the 503 SubwayTopologyUnavailableError.
+ * at error once per revision, as is a previous or next stop the registry has no name for, which the route serves as
+ * null. With no good value, `current()` throws the 503 SubwayTopologyUnavailableError.
  *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake system time.
  */
@@ -115,6 +116,27 @@ describe("SubwayTopologyService.current", () => {
     // Assert
     expect(snapshot.registry).toEqual(toSubwayRegistry(SUBWAY_NETWORK, subwayTopologyFixture()));
     expect(loggedEvents("error")).toEqual([expect.objectContaining({ event: "subway.topology.platform_unknown", revision: 1, platformId: "S1-9-999" })]);
+  });
+
+  it("Topology pushed ahead of a deploy: logs a neighbor the push promotes to a served platform as unknown and as an unnamed stop, once per revision", async () => {
+    // Arrange
+    const { repository, topology, advanceTo } = setup();
+    const ahead = subwayTopologyFixture();
+    ahead.platforms["KR-1-P154"] = ahead.platforms["KR-1-0153"]!;
+    delete ahead.neighbors["KR-1-P154"];
+    repository.storeTopology(ahead);
+
+    // Act
+    const snapshot = await topology.current();
+    advanceTo(DATASET_CACHE_TTL_MS);
+    await topology.current();
+
+    // Assert
+    expect(snapshot.registry.neighbors["KR-1-P154"]).toBeUndefined();
+    expect(loggedEvents("error")).toEqual([
+      expect.objectContaining({ event: "subway.topology.platform_unknown", revision: 1, platformId: "KR-1-P154" }),
+      expect.objectContaining({ event: "subway.topology.stop_unnamed", revision: 1, platformId: "KR-1-P154" }),
+    ]);
   });
 
   it("Deploy ahead of the topology: leaves a served platform the revision lacks out of its station, logged at error once per revision", async () => {

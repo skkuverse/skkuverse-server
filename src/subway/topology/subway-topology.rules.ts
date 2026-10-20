@@ -1,4 +1,5 @@
-import type { NetworkIssue, PlatformDirection, SubwayDirection, SubwayNetwork } from "../subway.types";
+import { SUBWAY_STATIONS } from "../subway.constants";
+import type { NetworkIssue, PlatformDirection, SubwayDirection, SubwayNetwork, SubwayRegistry } from "../subway.types";
 import type { SubwayTopologyData } from "./subway-topology.types";
 
 type IssuePath = NetworkIssue["path"];
@@ -68,4 +69,15 @@ export function toTopologyIssues(topology: SubwayTopologyData, network: SubwayNe
     ...namedPlatformIssues(topology, network),
     ...neighborLineIssues(topology, network),
   ];
+}
+
+// WHY: the stops the arrivals mapper serves as null, named as it names them: a topology pushed ahead of a deploy may
+// promote a neighbor to a platform the running code does not serve yet, dropping the entry that named it.
+export function toUnnamedStopIds(registry: SubwayRegistry): string[] {
+  const servedIds = new Set(SUBWAY_STATIONS.flatMap((station) => station.platforms.map((platform) => platform.id)));
+  const stopIds = registry.stations.flatMap((station) =>
+    station.platforms.flatMap((platform) => DIRECTIONS.flatMap((direction) => [platform.directions[direction].upstreamPlatformIds[0], platform.directions[direction].nextPlatformId])),
+  );
+  const isUnnamed = (id: string): boolean => !servedIds.has(id) && registry.neighbors[id]?.name === undefined;
+  return [...new Set(stopIds.filter((id): id is string => id !== undefined && isUnnamed(id)))];
 }
