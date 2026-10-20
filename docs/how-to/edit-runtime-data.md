@@ -193,7 +193,7 @@ npm run data -- pull subway-topology --prod
 npm run data -- push subway-topology --prod --note "watch 관악 for 성균관대 down"
 ```
 
-A watched or upstream stop must also be a station the converter writes into its line's timetables (`scripts/subway-timetable/convert.py`), so a coverage change usually reruns it too. A deploy that adds a station or platform pushes its topology from that checkout first: until then the platform is left out of its station's arrivals and logs `subway.topology.platform_missing`.
+A watched or upstream stop must also be a station the converter writes into its line's timetables (`scripts/subway-timetable/convert.py`), so a coverage change usually reruns it too. A change that adds a station or platform deploys first, then pushes its topology from that checkout. Until the push, the new platform is left out of its station's arrivals and logs `subway.topology.platform_missing`, while the stored neighbor entry still names it as a stop. Pushed before the deploy, the topology drops that neighbor entry while the running code does not serve the platform yet: each direction that names it as its previous or next station serves `null` there and logs `subway.topology.stop_unnamed`, and the pollers drop the rows written at its Seoul name.
 
 ### Check before a deploy
 

@@ -9,12 +9,17 @@
  * map. A served platform with no entry is unplaced and an entry for a
  * platform the code does not serve is unknown, each named at its path.
  * toMissingPlatformIds and toUnknownPlatformIds list those two, which the
- * read logs.
+ * read logs. toUnnamedStopIds lists the previous and next stops a registry
+ * has no name for, as the arrivals mapper names them: a neighbor's own name,
+ * else the station of a platform the code serves. A topology pushed ahead of
+ * a deploy can promote a neighbor to a served platform the running code does
+ * not know yet, dropping the neighbor entry that named it.
  */
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
-import { SUBWAY_LINES, SUBWAY_STATIONS } from "../subway.constants";
+import { SUBWAY_LINES, SUBWAY_NETWORK, SUBWAY_STATIONS } from "../subway.constants";
 import type { SubwayNetwork } from "../subway.types";
-import { toMissingPlatformIds, toTopologyIssues, toUnknownPlatformIds } from "./subway-topology.rules";
+import { toSubwayRegistry } from "./subway-topology.mapper";
+import { toMissingPlatformIds, toTopologyIssues, toUnknownPlatformIds, toUnnamedStopIds } from "./subway-topology.rules";
 import type { SubwayTopologyData } from "./subway-topology.types";
 
 const NETWORK: SubwayNetwork = { lines: SUBWAY_LINES, stations: SUBWAY_STATIONS };
@@ -126,5 +131,44 @@ describe("toUnknownPlatformIds", () => {
 
     // Act & Assert
     expect(toUnknownPlatformIds(data as SubwayTopologyData, PLATFORM_IDS)).toEqual(["S1-9-999"]);
+  });
+});
+
+describe("toUnnamedStopIds", () => {
+  const unnamedIn = (data: Record<string, any>): string[] => toUnnamedStopIds(toSubwayRegistry(SUBWAY_NETWORK, data as SubwayTopologyData));
+
+  it("lists none for revision 1, whose upstream stops past the first carry no name", () => {
+    // Act & Assert
+    expect(unnamedIn(fixture())).toEqual([]);
+  });
+
+  it("Topology pushed ahead of a deploy: lists KR-1-P154 once when a push serves it and drops its neighbor entry, though 성균관대 names it both ways", () => {
+    // Arrange
+    const data = fixture();
+    data.platforms["KR-1-P154"] = data.platforms["KR-1-0153"];
+    delete data.neighbors["KR-1-P154"];
+
+    // Act & Assert
+    expect(unnamedIn(data)).toEqual(["KR-1-P154"]);
+  });
+
+  it("lists a next stop whose neighbor has no name, and not an upstream stop past the first", () => {
+    // Arrange
+    const data = fixture();
+    delete data.neighbors["KR-1-P152"].name;
+    data.platforms["S1-4-420"].up.upstreamPlatformIds[1] = "S1-4-498";
+
+    // Act & Assert
+    expect(unnamedIn(data)).toEqual(["KR-1-P152"]);
+  });
+
+  it("names a served platform by its station, even one the topology leaves out", () => {
+    // Arrange
+    const data = fixture();
+    data.platforms["S1-3-334"].up.nextPlatformId = "S1-3-332";
+    delete data.platforms["DX-D1-4308"];
+
+    // Act & Assert
+    expect(unnamedIn(data)).toEqual([]);
   });
 });
