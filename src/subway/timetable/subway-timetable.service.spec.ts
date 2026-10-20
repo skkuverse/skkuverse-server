@@ -10,8 +10,8 @@
  * order, which continues each direction's upstream platforms with its watched
  * ones; one platform's schedule is found by its platform id, and an unserved
  * id finds none; and the service window opens at 05:00 KST and closes at 01:10 after a
- * weekday and at 00:30 after a Saturday or a holiday. Over the committed
- * tables of all three day types, the tracked stations (design D17): every
+ * weekday and at 00:30 after a Saturday or a holiday. Over the trimmed
+ * fixture of revision 1, all three day types, the tracked stations (design D17): every
  * station before a platform on its route is declared upstream or watched and
  * named by the provider, no run between two tracked stops of a train exceeds
  * the longest express run, every train is in view 10 minutes before the
@@ -35,14 +35,14 @@
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
-import { committedSubwayTimetables, storedSubwayTimetableRepository, storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
+import { subwayTimetablesFixture, storedSubwayTimetableRepository, storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
 import type { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { DATASET_CACHE_TTL_MS } from "../../shared/dataset.constants";
 import { SUBWAY_STATIONS } from "../subway.constants";
 import type { PlatformSchedule, Timetable } from "./subway-timetable.types";
 
-// WHY: revision 1 of the stored topology, the directions these checks hold against the committed timetables.
+// WHY: revision 1 of the stored topology, the directions these checks hold against revision 1 of the timetables.
 const TOPOLOGY = subwayTopologyFixture();
 const mockedLogger = logger as unknown as Record<"error" | "warn", jest.Mock>;
 
@@ -233,7 +233,7 @@ describe("SubwayTimetableService.listPlatformSchedules over the tracked stations
   // WHY: the longest horizon the estimate is measured at (PREDICTION_HORIZONS_MIN in history/, which a timetable
   // spec may not import): a train due within it should be seen on its own, not lent a delay.
   const HORIZON_SEC = 10 * 60;
-  // EVIDENCE: the longest run of the committed tables between two stops of one train with no stop between them is
+  // EVIDENCE: the longest run of subway-timetables revision 1 between two stops of one train with no stop between them is
   // 510 s, the line 1 express from Geumjeong to Sungkyunkwan Univ., and between two adjacent stations 420 s
   // (Shinbundang, Cheonggyesan to Pangyo).
   const MAX_UNOBSERVED_RUN_SEC = 510;
@@ -336,7 +336,7 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
   const MINUTE_MS = 60_000;
   const DAY_MS = 24 * 60 * MINUTE_MS;
 
-  function setupStored(tables: readonly Timetable[] = committedSubwayTimetables()) {
+  function setupStored(tables: readonly Timetable[] = subwayTimetablesFixture()) {
     let now = NIGHT;
     const clock: Clock = { now: () => now };
     const repository = storedSubwayTimetableRepository(tables);
@@ -459,7 +459,7 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
 
   it("New timetable while the poller runs: schedules 성균관대 from a KR-1-weekday pushed at 10:00 by 10:01, reading only that table", async () => {
     // Arrange
-    const tables = committedSubwayTimetables();
+    const tables = subwayTimetablesFixture();
     const { repository, service, advanceTo, partIdOf } = setupStored(tables);
     const before = await service.listPlatformSchedules(advanceTo("2026-10-20T01:00:00.000Z"));
     repository.storeTables(withShiftedTrains(tables, "KR-1-weekday", 120));
@@ -475,7 +475,7 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
 
   it("Invalid table in a new revision: keeps serving the held KR-1-weekday for 24 h, reading the new part once a minute, then has none", async () => {
     // Arrange
-    const tables = committedSubwayTimetables();
+    const tables = subwayTimetablesFixture();
     const { repository, service, advanceTo, partIdOf } = setupStored(tables);
     const pushedAt = Date.parse("2026-10-20T01:00:00.000Z");
     const held = await service.findPlatformSchedule("KR-1-0153", advanceTo(new Date(pushedAt)));
@@ -559,7 +559,7 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
 
   it("Deploy adds a line before its tables are pushed: logs a served platform whose table the revision lacks once per revision", async () => {
     // Arrange
-    const tables = committedSubwayTimetables();
+    const tables = subwayTimetablesFixture();
     const withoutSaturday = tables.filter((t) => t !== tableOf(tables, "S1-4-saturday"));
     const { repository, service, advanceTo } = setupStored(withoutSaturday);
 
@@ -579,7 +579,7 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
 
   it("rejects the Saturday schedule of 혜화 when the revision lacks S1-4-saturday", async () => {
     // Arrange
-    const tables = committedSubwayTimetables();
+    const tables = subwayTimetablesFixture();
     const { service } = setupStored(tables.filter((t) => t !== tableOf(tables, "S1-4-saturday")));
 
     // Act

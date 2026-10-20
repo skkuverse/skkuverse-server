@@ -39,6 +39,10 @@
     "max": 160,
     "reason": "ADR 0010 D9, no domain seam a sub-module can take: every function here feeds `toStationArrivals`, which composes each train's candidate, its delay (`toDelaySec`, at a station its row passes against `toPassingStop`), the delay lent to unobserved trains, the overdue unseen train the tracker still awaits (`isAwaitedTrain`), the departure estimated at the served station and the countdown a train may count, and a sibling or parent never imports a sub-module's rules (D3), so the pass-time half cannot move to src/subway/timetable/; the countdown's memory across ticks, the one part only the service reads, is src/subway/countdown/."
   },
+  "src/subway/timetable/subway-timetable.rules.ts": {
+    "max": 150,
+    "reason": "ADR 0010 D9, no domain seam: the push checks over a set of tables, `toTimetableCoverageIssues` and the tracked-stop warnings `toTrackedStopIssues` that scripts/lib/datasets/catalog.js runs, are built from the same keys and routes the read path schedules with (`toTimetableKey`, `toPlatformTimetableKey`, `toLineRoutes`), and `toUncoveredPlatformIdsByKey` serves both the push refusal and the read's gap log in `SubwayTimetableService`; a sub-module holding the push half would be a Nest module with no provider, imported by nothing in src/, holding rules alone."
+  },
   "src/subway/topology/subway-topology.rules.ts": {
     "max": 103,
     "reason": "ADR 0010 D9, no domain seam: every function here judges the one `subway-topology` dataset against the code, `toTopologyIssues` and `toRouteIssues` at push through scripts/lib/datasets/catalog.js, `toMissingPlatformIds`, `toUnknownPlatformIds` and `toUnnamedStopIds` at read in `SubwayTopologyService`; the route checks read the timetable routes only as `import type`, a sibling never imports another sub-module's rules (D3), so they cannot move to src/subway/timetable/, and a sub-module of topology would hold rules and nothing else."

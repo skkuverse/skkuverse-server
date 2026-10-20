@@ -1,13 +1,13 @@
 /**
- * The timetable shape: a file as scripts/subway-timetable/convert.py writes it passes, a copy missing any field
+ * The timetable shape: a stored part as scripts/subway-timetable/convert.py writes it passes, a copy missing any field
  * fails, and a train number that is not four digits or a negative time fails. The `subway-timetables` header as
  * npm run data stores it: its revision and its manifest, one part id per table key.
  */
-import fs from "fs";
-import path from "path";
+import { subwayTimetableFixtureFiles } from "../../../__tests__/helpers/subway/timetables";
 import { storedTimetableManifest, timetableFile } from "./subway-timetable.schema";
 
-const COMMITTED = JSON.parse(fs.readFileSync(path.join(__dirname, "korail-1-weekday.json"), "utf8")) as Record<string, unknown>;
+// WHY: the KR-1-weekday part of revision 1, trimmed (fixtures/subway-timetables/ of __tests__/nest/subway).
+const STORED = subwayTimetableFixtureFiles().find(({ file }) => file === "KR-1-weekday.json")!.table as unknown as Record<string, unknown>;
 
 const TRAIN = {
   trainNo: "0493",
@@ -17,12 +17,12 @@ const TRAIN = {
   stops: [{ station: "KR-1-0153", arr: 74460, dep: 74490 }],
 };
 
-const FILE = { ...COMMITTED, trains: [TRAIN] };
+const FILE = { ...STORED, trains: [TRAIN] };
 
 describe("timetableFile", () => {
-  it("accepts a committed file as the script writes it", () => {
+  it("accepts a stored part as the script writes it", () => {
     // Act & Assert
-    expect(timetableFile.safeParse(COMMITTED).success).toBe(true);
+    expect(timetableFile.safeParse(STORED).success).toBe(true);
   });
 
   it.each(Object.keys(timetableFile.shape))("rejects a file without %s", (field) => {

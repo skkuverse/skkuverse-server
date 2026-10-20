@@ -21,7 +21,7 @@
  * the stop after it, and its watched platforms the rest of the route before
  * the upstream ones, nearest first; and every stop on the route before the
  * platform is a served platform or a neighbor, so the pollers can name it.
- * Revision 1 holds against the committed timetables of every day type.
+ * Revision 1 holds against the stored timetables (the fixture) of every day type.
  */
 import { storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
@@ -187,7 +187,7 @@ describe("toRouteIssues", () => {
   // WHY: a Friday, a Saturday and a Sunday, so every day type's table gives its routes.
   const DAYS = ["2026-10-16T03:00:00Z", "2026-10-17T03:00:00Z", "2026-10-18T03:00:00Z"];
 
-  async function committedRoutes(): Promise<Record<string, LineRoutes[]>> {
+  async function storedRoutes(): Promise<Record<string, LineRoutes[]>> {
     const service = storedSubwayTimetableService();
     const schedules = (await Promise.all(DAYS.map((day) => service.listPlatformSchedules(new Date(day))))).flatMap((listed) => listed.schedules);
     const routesByPlatformId: Record<string, LineRoutes[]> = {};
@@ -196,9 +196,9 @@ describe("toRouteIssues", () => {
   }
 
   const routeIssueLinesOf = async (topology: Record<string, any>): Promise<string[]> =>
-    toRouteIssues(topology as SubwayTopologyData, await committedRoutes()).map((issue) => `${issue.path.join(".")}: ${issue.message}`);
+    toRouteIssues(topology as SubwayTopologyData, await storedRoutes()).map((issue) => `${issue.path.join(".")}: ${issue.message}`);
 
-  it("finds no issue in revision 1 against the committed timetables of every day type", async () => {
+  it("finds no issue in revision 1 against the stored timetables of every day type", async () => {
     // Act
     const lines = await routeIssueLinesOf(fixture());
 

@@ -4,11 +4,13 @@
  * timetable's seconds become instants. Also the code's platforms, each found by its KRIC id with its line and
  * timetable source, and revision 1 of the stored topology's upstream, watched and next platforms and direction
  * names for each; which table a platform reads, the travel order of a line per direction, each table's key, and
- * the push check that every served platform's source has a table for each day type it declares.
+ * the push check that every served platform's source has a table for each day type it declares, and the push
+ * warnings over the stops the tracker follows to each served platform: no run over 510 s between two of them,
+ * each train in view for 10 minutes before the platform, and no station of the line skipped between them.
  */
+import { subwayTimetablesFixture } from "../../../__tests__/helpers/subway/timetables";
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
 import type { NetworkPlatform } from "../subway.types";
-import { SUBWAY_TIMETABLES } from "./subway-timetable.config";
 import { TIMETABLE_DAY_TYPES } from "./subway-timetable.constants";
 import {
   findSubwayPlatform,
@@ -24,9 +26,10 @@ import {
   toServiceInstant,
   toTimetableCoverageIssues,
   toTimetableKey,
+  toTrackedStopIssues,
   toUncoveredPlatformIdsByKey,
 } from "./subway-timetable.rules";
-import type { Timetable } from "./subway-timetable.types";
+import type { Timetable, TimetableTrain } from "./subway-timetable.types";
 
 const SUNGKYUNKWAN = findSubwayPlatform("KR-1-0153") as NetworkPlatform;
 const HYEHWA = findSubwayPlatform("S1-4-420") as NetworkPlatform;
@@ -94,14 +97,17 @@ describe("toServiceInstant", () => {
   });
 });
 
+// WHY: revision 1 of the stored subway-timetables, trimmed (fixtures/subway-timetables/ of __tests__/nest/subway).
+const STORED = subwayTimetablesFixture();
+
 describe("findTimetable", () => {
   it("serves a Saturday from the 1호선 holiday table and the 4호선 Saturday table", () => {
     // Arrange
     const serviceDate = toServiceDate(new Date("2026-10-17T03:00:00Z"));
 
     // Act
-    const korail = findTimetable(SUBWAY_TIMETABLES, SUNGKYUNKWAN, toDayType("korail", serviceDate, false));
-    const seoul = findTimetable(SUBWAY_TIMETABLES, HYEHWA, toDayType("seoul-station", serviceDate, false));
+    const korail = findTimetable(STORED, SUNGKYUNKWAN, toDayType("korail", serviceDate, false));
+    const seoul = findTimetable(STORED, HYEHWA, toDayType("seoul-station", serviceDate, false));
 
     // Assert
     expect([korail?.line, korail?.dayType, seoul?.line, seoul?.dayType]).toEqual(["1", "holiday", "4", "saturday"]);
@@ -109,8 +115,8 @@ describe("findTimetable", () => {
 
   it("serves a public holiday on a Wednesday from both lines' holiday tables", () => {
     // Act
-    const korail = findTimetable(SUBWAY_TIMETABLES, SUNGKYUNKWAN, toDayType("korail", "2026-10-14", true));
-    const seoul = findTimetable(SUBWAY_TIMETABLES, HYEHWA, toDayType("seoul-station", "2026-10-14", true));
+    const korail = findTimetable(STORED, SUNGKYUNKWAN, toDayType("korail", "2026-10-14", true));
+    const seoul = findTimetable(STORED, HYEHWA, toDayType("seoul-station", "2026-10-14", true));
 
     // Assert
     expect([korail?.line, korail?.dayType, seoul?.line, seoul?.dayType]).toEqual(["1", "holiday", "4", "holiday"]);
@@ -118,7 +124,7 @@ describe("findTimetable", () => {
 
   it("finds no table for a day type the platform's line has none of", () => {
     // Act & Assert
-    expect(findTimetable(SUBWAY_TIMETABLES, SUNGKYUNKWAN, "saturday")).toBeNull();
+    expect(findTimetable(STORED, SUNGKYUNKWAN, "saturday")).toBeNull();
   });
 });
 
@@ -127,7 +133,7 @@ describe("toScheduledTrains", () => {
     // Arrange
     const now = new Date("2026-10-16T15:10:00Z");
     const serviceDate = toServiceDate(now);
-    const weekday = findTimetable(SUBWAY_TIMETABLES, SUNGKYUNKWAN, toDayType("korail", serviceDate, false)) as Timetable;
+    const weekday = findTimetable(STORED, SUNGKYUNKWAN, toDayType("korail", serviceDate, false)) as Timetable;
 
     // Act
     const trains = toScheduledTrains(weekday, serviceDate);
@@ -181,8 +187,8 @@ describe("toScheduledTrains", () => {
 describe("toLineRoutes", () => {
   it("orders each direction's stations as its trains travel, whichever way the file lists them", () => {
     // Arrange
-    const korail = SUBWAY_TIMETABLES.find((t) => t.line === "1" && t.dayType === "weekday") as Timetable;
-    const seoul = SUBWAY_TIMETABLES.find((t) => t.line === "4" && t.dayType === "weekday") as Timetable;
+    const korail = STORED.find((t) => t.line === "1" && t.dayType === "weekday") as Timetable;
+    const seoul = STORED.find((t) => t.line === "4" && t.dayType === "weekday") as Timetable;
 
     // Act
     const [korailRoutes, seoulRoutes] = [toLineRoutes(korail), toLineRoutes(seoul)];
@@ -305,11 +311,6 @@ describe("toTimetableCoverageIssues", () => {
     expect(issues).toEqual([]);
   });
 
-  it("returns none for the committed tables", () => {
-    // Act & Assert
-    expect(toTimetableCoverageIssues(SUBWAY_TIMETABLES, listSubwayPlatforms())).toEqual([]);
-  });
-
   it("Missing Saturday table: names S1-4-420 saturday and KR-1-0153 holiday at their tables' keys", () => {
     // Arrange
     const withoutSaturdayOrKorailHoliday = covering().filter(
@@ -343,6 +344,116 @@ describe("toTimetableCoverageIssues", () => {
 
     // Assert
     expect(issues.map((issue) => issue.path[0])).toEqual(["S1-4-weekday", "S1-4-saturday", "S1-4-holiday"]);
+  });
+});
+
+describe("toTrackedStopIssues", () => {
+  type Stop = [station: string, arr: number | null, dep: number | null];
+  const train = (trainNo: string, direction: "up" | "down", stops: Stop[]): TimetableTrain => ({
+    trainNo,
+    direction,
+    destination: "test",
+    express: false,
+    stops: stops.map(([station, arr, dep]) => ({ station, arr, dep })),
+  });
+  // WHY: a down train from four stations out, so the down route runs from S1-4-424 and its view is long enough.
+  const DOWN = train("9001", "down", [
+    ["S1-4-424", 0, 30],
+    ["S1-4-423", 150, 180],
+    ["S1-4-422", 300, 330],
+    ["S1-4-421", 450, 480],
+    ["S1-4-420", 600, 630],
+  ]);
+  const hyehwaWeekday = (up: TimetableTrain[], stations = ["S1-4-416", "S1-4-417", "S1-4-418", "S1-4-419", "S1-4-420", "S1-4-421", "S1-4-422", "S1-4-423", "S1-4-424"]): Timetable =>
+    table({ source: { kind: "seoul-station", ref: "test", revision: "2026-10-01" }, operator: "S1", line: "4", stations, trains: [...up, DOWN] });
+  // WHY: the run from S1-4-418 to S1-4-419 lasts `gapSec`, every other run 90 to 100 s, and the train is in view 400 s plus the gap.
+  const withRunOf = (gapSec: number): TimetableTrain =>
+    train("4001", "up", [
+      ["S1-4-416", 0, 30],
+      ["S1-4-417", 120, 150],
+      ["S1-4-418", 240, 270],
+      ["S1-4-419", 270 + gapSec, 300 + gapSec],
+      ["S1-4-420", 400 + gapSec, 430 + gapSec],
+    ]);
+  // WHY: a train that starts at S1-4-418 and reaches S1-4-420 `viewSec` after its first arrival.
+  const inViewFor = (viewSec: number): TimetableTrain =>
+    train("4002", "up", [
+      ["S1-4-418", 1000, 1030],
+      ["S1-4-419", 1000 + viewSec / 2, 1030 + viewSec / 2],
+      ["S1-4-420", 1000 + viewSec, 1030 + viewSec],
+    ]);
+
+  it("returns none for the stored tables of the subway-timetables fixture", () => {
+    // Act
+    const issues = toTrackedStopIssues(subwayTimetablesFixture(), listSubwayPlatforms());
+
+    // Assert
+    expect(issues).toEqual([]);
+  });
+
+  it.each([
+    [509, 0],
+    [510, 0],
+    [511, 1],
+  ])("warns of a %i s run between two tracked stops: %i issue(s)", (gapSec, count) => {
+    // Act
+    const issues = toTrackedStopIssues([hyehwaWeekday([withRunOf(gapSec)])], [HYEHWA]);
+
+    // Assert
+    expect(issues).toHaveLength(count);
+  });
+
+  it("names the table, the platform, the direction and the train of a long run", () => {
+    // Act
+    const issues = toTrackedStopIssues([hyehwaWeekday([withRunOf(600)])], [HYEHWA]);
+
+    // Assert
+    expect(issues).toEqual([{ path: ["S1-4-weekday", "S1-4-420", "up"], message: "1 train(s) run over 510 s between two tracked stops: 4001 S1-4-418→S1-4-419 600 s" }]);
+  });
+
+  it.each([
+    [599, 1],
+    [600, 0],
+    [601, 0],
+  ])("warns of a train in view %i s before the platform: %i issue(s)", (viewSec, count) => {
+    // Act
+    const issues = toTrackedStopIssues([hyehwaWeekday([inViewFor(viewSec)])], [HYEHWA]);
+
+    // Assert
+    expect(issues).toHaveLength(count);
+  });
+
+  it("names the train and where it comes into view when it is in view too briefly", () => {
+    // Act
+    const issues = toTrackedStopIssues([hyehwaWeekday([inViewFor(420)])], [HYEHWA]);
+
+    // Assert
+    expect(issues).toEqual([{ path: ["S1-4-weekday", "S1-4-420", "up"], message: "1 train(s) in view under 600 s before it: 4002 from S1-4-418 420 s" }]);
+  });
+
+  it("warns of a station of the line skipped between two tracked stops, naming both", () => {
+    // Arrange
+    const stations = ["S1-4-416", "S1-4-417", "S1-4-419", "S1-4-420", "S1-4-421", "S1-4-422", "S1-4-423", "S1-4-424"];
+    const up = train("4003", "up", [
+      ["S1-4-416", 0, 30],
+      ["S1-4-417", 150, 180],
+      ["S1-4-419", 400, 430],
+      ["S1-4-420", 650, 680],
+    ]);
+
+    // Act
+    const issues = toTrackedStopIssues([hyehwaWeekday([up], stations)], [HYEHWA]);
+
+    // Assert
+    expect(issues).toEqual([{ path: ["S1-4-weekday", "S1-4-420", "up"], message: "the tracked stops skip a station between S1-4-417 and S1-4-419" }]);
+  });
+
+  it("checks a table only at the platforms it serves on its day type", () => {
+    // Act
+    const issues = toTrackedStopIssues([hyehwaWeekday([withRunOf(600)])], [SUNGKYUNKWAN]);
+
+    // Assert
+    expect(issues).toEqual([]);
   });
 });
 
