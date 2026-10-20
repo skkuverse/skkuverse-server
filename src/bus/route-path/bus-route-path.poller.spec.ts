@@ -4,9 +4,12 @@
  * tick is that route's sync and rejects with it (add-jongro-route-lines D3).
  */
 import type { PollerRegistryService } from "../../scheduling/poller-registry.service";
-import { jongroRoutes } from "../bus.config";
+import { JONGRO_ROUTES } from "../bus.constants";
+import { toJongroRoute } from "../bus.mapper";
 import { BusRoutePathPoller } from "./bus-route-path.poller";
 import type { BusRoutePathService } from "./bus-route-path.service";
+
+const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
 
 const sync = jest.fn();
 const registerPoller = jest.fn();

@@ -19,7 +19,10 @@ import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaService } from "../bus-eta.service";
 import { LANE_HOURS, LANE_STRATEGIES } from "./bus-eta-lane.constants";
 import { assertLaneStrategies, corridorIssues, strategyIssues, strategyOf, strategyOfRun, toLegBounds } from "./bus-eta-lane.rules";
-import type { LaneConfigFile as LaneConfig } from "./bus-eta-lane.schema";
+import type { LaneCorridorData, LaneHours, LaneStrategies } from "./bus-eta-lane.types";
+
+// The strategies and lane hours beside a corridor, as one value the cases below vary.
+type LaneConfig = LaneCorridorData & { laneHours: LaneHours; strategies: LaneStrategies };
 
 const estimatedSequences = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, new BusStopsService(new SubwayStationsService())).sequences();
 

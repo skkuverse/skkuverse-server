@@ -2,8 +2,8 @@ import { t } from "../../infra/i18n";
 import type { SupportedLang } from "../../infra/types";
 import { ESTIMATES_MAX_AGE_S } from "../bus.constants";
 import { serviceConfigOf } from "../bus.rules";
-import type { JongroRoute } from "../bus.types";
-import type { RegistryRoute } from "../registry/bus-registry.types";
+import type { JongroRoute, JongroRouteAttributes } from "../bus.types";
+import type { JongroStation, RegistryRoute } from "../registry/bus-registry.types";
 import type { ResolvedStops } from "../stops/bus-stops.types";
 import type { BusGroup, ServiceRefresh } from "./bus-config.wire";
 import {
@@ -15,7 +15,7 @@ import {
   SKKU_GREEN,
 } from "./bus-config.constants";
 import { COMMUTE_VISIBILITY, FASTTRACK_VISIBILITY } from "./bus-config.config";
-import type { AnyStation, BusGroupSources, BusGroupVisibility, MappedStation } from "./bus-config.types";
+import type { AnyStation, AttributedJongroStation, BusGroupSources, BusGroupVisibility, MappedStation } from "./bus-config.types";
 
 const always = (): BusGroupVisibility => ({ type: "always" });
 
@@ -41,25 +41,31 @@ export function mapStations(stations: ReadonlyArray<AnyStation>): MappedStation[
   }));
 }
 
+// WHY: keyed by ARS number, so a stop's badges follow it when a sync moves it; own keys only.
+const withTransferLines = (station: JongroStation, { transferLinesByArsId: byArsId }: JongroRouteAttributes): AttributedJongroStation => {
+  const lines = station.stationNumber !== null && Object.hasOwn(byArsId, station.stationNumber) ? (byArsId[station.stationNumber] ?? []) : [];
+  return { ...station, transferLines: lines.map((transfer) => ({ line: transfer.line, color: transfer.color })) };
+};
+
 // WHY: the field order is the ETag's input (md5 of the JSON), so it never changes for an unchanged group;
 // stationsVersion comes last for the same reason.
-function toJongroGroup(route: RegistryRoute, lang: SupportedLang) {
+function toJongroGroup(route: RegistryRoute, attributes: JongroRouteAttributes, lang: SupportedLang) {
   return {
     id: route.id,
     screenType: "realtime" as const,
     label: t(`busconfig.label.${route.id}`, lang),
     visibility: always(),
     card: {
-      themeColor: route.themeColor,
-      iconType: route.iconType,
+      themeColor: attributes.themeColor,
+      iconType: attributes.iconType,
       busTypeText: t("buslist.village.busTypeText", lang),
       subtitle: t(`buslist.${route.id}.subtitle`, lang),
     },
     screen: {
       dataEndpoint: `/bus/realtime/data/${route.id}`,
-      refreshInterval: route.refreshInterval,
+      refreshInterval: attributes.refreshInterval,
       lastStationIndex: route.stations.length - 1,
-      stations: mapStations(route.stations),
+      stations: mapStations(route.stations.map((station) => withTransferLines(station, attributes))),
       features: [],
       stationsVersion: route.stationsVersion,
     },
@@ -180,6 +186,6 @@ export function toBusGroups({ lang, stops, jongroRoutes, webviewOrigin }: BusGro
     toCampusGroup(lang, stops.campus, webviewOrigin),
     toFasttrackGroup(lang),
     toCommuteGroup(lang, stops.commute, webviewOrigin),
-    ...jongroRoutes.map((route) => toJongroGroup(route, lang)),
+    ...jongroRoutes.map(({ route, attributes }) => toJongroGroup(route, attributes, lang)),
   ];
 }

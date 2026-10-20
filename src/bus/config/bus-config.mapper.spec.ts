@@ -2,24 +2,35 @@
  * The bus group mappers: a station as the app lists it (0-based index, the
  * English subtitle, null without one, never the stop number), the groups in the
  * order the app lists them, the Jongro routes in registry order, and the
- * refresh a schedule service offers when it serves live arrival estimates.
+ * refresh a schedule service offers when it serves live arrival estimates. A
+ * Jongro group joins its route's stored attributes (move-reference-datasets
+ * D10): the card's theme color and icon type, the refresh interval, and each
+ * station's transfer lines by its ARS number.
  */
 import { storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
-import { jongroRoutes as committedRoutes } from "../bus.config";
+import { routeAttributesFixture } from "../../../__tests__/helpers/bus/route-attributes";
+import { JONGRO_ROUTES } from "../bus.constants";
 import { SERVICE_CONFIG } from "../bus.constants";
-import type { RegistryRoute } from "../registry/bus-registry.types";
+import type { JongroRouteAttributes } from "../bus.types";
+import type { AttributedJongroRoute } from "./bus-config.types";
 import { HSSC_STATIONS } from "./bus-config.constants";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import { mapStations, toBusGroupIds, toBusGroups } from "./bus-config.mapper";
 
 const NO_STOPS = { sequences: {}, stops: [] };
 
-// WHY: the Jongro routes as the registry derives them from the routes stored on 2026-10-17.
-let jongroRoutes: RegistryRoute[] = [];
+// WHY: the Jongro routes as the registry derives them from the routes stored on 2026-10-17, with revision 1's attributes.
+let jongroRoutes: AttributedJongroRoute[] = [];
 
 beforeAll(async () => {
-  jongroRoutes = await storedBusRegistryService().listRoutes();
+  const { routes } = routeAttributesFixture();
+  jongroRoutes = (await storedBusRegistryService().listRoutes()).map((route) => ({ route, attributes: routes[route.id]! }));
 });
+
+const jongroGroupOf = (routes: AttributedJongroRoute[], id: string) =>
+  toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN }).find((g) => g.id === id)!;
+
+type JongroScreen = { refreshInterval: number; stations: Array<{ name: string; stationNumber: string | null; transferLines: Array<{ line: string; color: string }> }> };
 
 type ScheduleService = { serviceId: string; refresh?: unknown };
 
@@ -50,7 +61,7 @@ describe("mapStations", () => {
   // WHY: the owner dropped the stop-number fallback (2026-10-18); the stop number stays in its own field.
   it("leaves a station without its own subtitle at null and keeps its stop number apart", () => {
     // Arrange
-    const station = { ...jongroRoutes[0]!.stations[0]!, stationNumber: "01881" };
+    const station = { ...jongroRoutes[0]!.route.stations[0]!, stationNumber: "01881", transferLines: [] };
 
     // Act
     const [mapped] = mapStations([station]);
@@ -64,7 +75,7 @@ describe("mapStations", () => {
 describe("toBusGroupIds", () => {
   it("lists the fixed groups, then every configured Jongro route, without their stations", () => {
     // Act & Assert
-    expect(toBusGroupIds(committedRoutes)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
+    expect(toBusGroupIds(JONGRO_ROUTES)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
   });
 });
 
@@ -139,8 +150,70 @@ describe("toBusGroups for a Jongro route", () => {
 
     // Assert
     const screen = groups.find((g) => g.id === "jongro07")!.screen as Record<string, unknown>;
-    expect(screen.stationsVersion).toBe(jongroRoutes[1]!.stationsVersion);
+    expect(screen.stationsVersion).toBe(jongroRoutes[1]!.route.stationsVersion);
     expect(Object.keys(screen).at(-1)).toBe("stationsVersion");
     expect(groups.find((g) => g.id === "hssc")!.screen).not.toHaveProperty("stationsVersion");
+  });
+
+  it("takes the card's theme color and icon type and the screen's refresh interval from the route's attributes", () => {
+    // Arrange
+    const attributes: JongroRouteAttributes = { ...jongroRoutes[1]!.attributes, themeColor: "1E88E5", iconType: "town", refreshInterval: 30 };
+
+    // Act
+    const group = jongroGroupOf([{ ...jongroRoutes[1]!, attributes }], "jongro07");
+
+    // Assert
+    expect(group.card).toMatchObject({ themeColor: "1E88E5", iconType: "town" });
+    expect((group.screen as unknown as JongroScreen).refreshInterval).toBe(30);
+  });
+
+  it("gives a station the transfer lines of its ARS number, wherever it sits, and none to a station without an entry", () => {
+    // Arrange
+    const { route } = jongroRoutes[1]!;
+    const moved = { ...route, stations: [route.stations[1]!, { ...route.stations[0]!, stationNumber: "01589" }] };
+    const attributes: JongroRouteAttributes = { ...jongroRoutes[1]!.attributes, transferLinesByArsId: { "01589": [{ line: "1", color: "0052A4" }] } };
+
+    // Act
+    const group = jongroGroupOf([{ route: moved, attributes }], "jongro07");
+
+    // Assert
+    expect((group.screen as unknown as JongroScreen).stations.map((s) => s.transferLines)).toEqual([[], [{ line: "1", color: "0052A4" }]]);
+  });
+
+  it("gives no transfer lines to a station whose ARS number names an Object.prototype member", () => {
+    // Arrange
+    const { route, attributes } = jongroRoutes[1]!;
+    const odd = { ...route, stations: [{ ...route.stations[0]!, stationNumber: "constructor" }] };
+
+    // Act
+    const group = jongroGroupOf([{ route: odd, attributes }], "jongro07");
+
+    // Assert
+    expect((group.screen as unknown as JongroScreen).stations[0]!.transferLines).toEqual([]);
+  });
+
+  // Ported from BusRegistryService.routeOf's pins of the 2026-09 review, now joined here from the stored attributes.
+  it("carries the transfer badges of the 2026-09 review on the stations they belong to", () => {
+    // Arrange
+    const screenOf = (id: string) => jongroGroupOf(jongroRoutes, id).screen as unknown as JongroScreen;
+    const linesOf = (id: string, name: string, nth = 0) => screenOf(id).stations.filter((s) => s.name === name)[nth]!.transferLines.map((t) => t.line);
+
+    // Act
+    const r02 = screenOf("jongro02");
+    const r08 = screenOf("jongro08");
+
+    // Assert
+    expect(r02.stations[11]!.transferLines).toEqual([
+      { line: "1", color: "0052A4" },
+      { line: "3", color: "EF7C1C" },
+      { line: "5", color: "996CAC" },
+    ]);
+    expect(linesOf("jongro02", "조계사")).toEqual(["1"]);
+    expect(linesOf("jongro02", "가회동주민센터", 1)).toEqual(["3"]);
+    expect(linesOf("jongro08", "효제초교.연동교회.김마리아활동터")).toEqual(["1"]);
+    expect(linesOf("jongro07", "성대입구")).toEqual(["4"]);
+    expect(r08.stations[16]!.name).toBe("종로5가역.광장시장");
+    expect(r08.stations[16]!.transferLines).toEqual([{ line: "1", color: "0052A4" }]);
+    expect(r08.stations[9]!.transferLines).toEqual([{ line: "4", color: "00A5DE" }]);
   });
 });

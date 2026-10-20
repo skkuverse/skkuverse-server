@@ -11,12 +11,15 @@ const path = require("path");
 const SKKU_CAMPUS_MAP =
   "https://www.skku.edu/skku/about/campusInfo/campusMap.do";
 
-// Mirrors the URL composition of src/bus/bus.mapper.ts: one shared service key and each route's busRouteId from
-// src/bus/jongro-routes.json. Keep the fixture names as `${route.id}_list` / `_loc` so legacy paths
+// Mirrors the URL composition of src/bus/realtime/jongro/bus-realtime-jongro.client.ts: one shared service key and
+// each route's busRouteId from JONGRO_ROUTES in src/bus/bus.constants.ts, read from the compiled dist/ (run
+// `npm run build` first). Keep the fixture names as `${route.id}_list` / `_loc` so legacy paths
 // `__fixtures__/<date>/jongro07_list/<time>.json` stay stable.
 const SEOUL_BUS_BASE = "http://ws.bus.go.kr/api/rest";
 const SEOUL_BUS_KEY = process.env.SEOUL_BUS_SERVICE_KEY;
-const jongroRoutes = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "src", "bus", "jongro-routes.json"), "utf8"));
+const BUS_CONSTANTS = path.join(__dirname, "..", "dist", "src", "bus", "bus.constants.js");
+if (!fs.existsSync(BUS_CONSTANTS)) throw new Error(`${BUS_CONSTANTS} is missing: run \`npm run build\` first.`);
+const { JONGRO_ROUTES: jongroRoutes } = require(BUS_CONSTANTS);
 const buildListUrl = (busRouteId) =>
   `${SEOUL_BUS_BASE}/arrive/getArrInfoByRouteAll?serviceKey=${SEOUL_BUS_KEY}&busRouteId=${busRouteId}&resultType=json`;
 const buildLocUrl = (busRouteId) =>

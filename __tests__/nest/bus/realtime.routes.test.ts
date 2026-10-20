@@ -13,6 +13,7 @@ import { BusCacheModule } from "../../../src/bus/cache/bus-cache.module";
 import { BusCacheRepository } from "../../../src/bus/cache/bus-cache.repository";
 import { BusRegistryModule } from "../../../src/bus/registry/bus-registry.module";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
+import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
 import { BusRealtimeModule } from "../../../src/bus/realtime/bus-realtime.module";
 import { BusRealtimeGroupModule } from "../../../src/bus/realtime/group/bus-realtime-group.module";
 import { realtimeGroup, realtimeGroupMeta } from "../../../src/bus/realtime/group/bus-realtime-group.wire";
@@ -25,6 +26,7 @@ import { hsscBusDoc, jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc, noAr
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
@@ -40,6 +42,7 @@ beforeAll(async () => {
     overrides: [
       { provide: BusCacheRepository, useValue: busCache },
       { provide: BusRegistryRepository, useValue: registryRepository },
+      { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
       { provide: Clock, useValue: { now: () => NOW } },
     ],
     role: "api",
