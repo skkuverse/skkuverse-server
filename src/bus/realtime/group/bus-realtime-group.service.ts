@@ -3,7 +3,8 @@ import { AppError } from "../../../http/app.error";
 import { withMeta } from "../../../http/response.interceptor";
 import type { WithMeta } from "../../../http/response.types";
 import { Clock } from "../../../infra/clock";
-import { jongroRoutes } from "../../bus.config";
+import { JONGRO_ROUTES } from "../../bus.constants";
+import { toJongroRoute } from "../../bus.mapper";
 import type { JongroRoute } from "../../bus.types";
 import type { JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
@@ -48,7 +49,7 @@ export class BusRealtimeGroupService {
 
   private sourcesByGroupId(): Map<string, GroupSource> {
     const sources = new Map<string, GroupSource>([["hssc", async () => ({ buses: toRealtimeBuses(await this.hssc.listBuses()), stationEtas: [] })]]);
-    for (const route of jongroRoutes) sources.set(route.id, () => this.readJongroGroup(route));
+    for (const route of JONGRO_ROUTES.map(toJongroRoute)) sources.set(route.id, () => this.readJongroGroup(route));
     return sources;
   }
 

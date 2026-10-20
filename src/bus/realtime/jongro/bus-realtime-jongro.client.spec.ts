@@ -14,8 +14,11 @@ jest.mock("axios", () => ({ get: jest.fn() }));
 
 import arrivalsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-arrivals.json";
 import positionsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-positions.json";
-import { jongroRoutes } from "../../bus.config";
+import { JONGRO_ROUTES } from "../../bus.constants";
+import { toJongroRoute } from "../../bus.mapper";
 import { BusRealtimeJongroClient } from "./bus-realtime-jongro.client";
+
+const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
 
 const axios = require("axios") as { get: jest.Mock };
 const route07 = jongroRoutes.find((r) => r.code === "07")!;

@@ -38,7 +38,7 @@
  *                    needs the whole list (an unplaced id) reads it here
  *
  * The lists are the ones the server checks against: `busGroups` is
- * BusConfigService.listGroupIds's `toBusGroupIds(jongroRoutes)`,
+ * BusConfigService.listGroupIds's `toBusGroupIds(JONGRO_ROUTES)`,
  * `subwayStations` SubwayStationsService.listStations's ids, `busServices`
  * the keys of SERVICE_CONFIG.
  */
@@ -80,14 +80,13 @@ function loadCatalog(load) {
   const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
   const { toMiniAppRegistry } = load("miniapps/miniapps.mapper");
   const { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } = load("infra/origins");
-  const { jongroRoutes } = load("bus/bus.config");
-  const { SERVICE_CONFIG } = load("bus/bus.constants");
+  const { JONGRO_ROUTES, SERVICE_CONFIG } = load("bus/bus.constants");
   const { toBusGroupIds } = load("bus/config/bus-config.mapper");
   const { SubwayStationsService } = load("subway/stations/subway-stations.service");
 
   const grammar = { parseTarget: parseMiniAppTarget };
   const registryParts = { toMiniAppRegistry, parseMiniAppTarget, isSingleEmoji, webOrigin: WEB_ORIGIN };
-  const busGroups = codeHeldSource("src/bus", toBusGroupIds(jongroRoutes));
+  const busGroups = codeHeldSource("src/bus", toBusGroupIds(JONGRO_ROUTES));
   const subwayStations = codeHeldSource("src/subway", new SubwayStationsService().listStations().map((station) => station.id));
 
   return {

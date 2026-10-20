@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import crypto from "crypto";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import type { SupportedLang } from "../../infra/types";
-import { jongroRoutes } from "../bus.config";
+import { JONGRO_ROUTES } from "../bus.constants";
 import { BusRegistryService } from "../registry/bus-registry.service";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import { BusStopsService } from "../stops/bus-stops.service";
@@ -22,7 +22,7 @@ export class BusConfigService {
 
   // WHY: route ids never change at runtime, so the ids need no registry read and serve a boot-time check.
   listGroupIds(): string[] {
-    return toBusGroupIds(jongroRoutes);
+    return toBusGroupIds(JONGRO_ROUTES);
   }
 
   async getBusGroups(lang: SupportedLang = "ko"): Promise<BusGroup[]> {

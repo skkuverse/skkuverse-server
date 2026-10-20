@@ -3,7 +3,8 @@ import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { jongroRoutes } from "../bus.config";
-import type { JongroRoute } from "../bus.types";
+import { JONGRO_ROUTES } from "../bus.constants";
+import type { JongroRoute, JongroRouteAttributes } from "../bus.types";
 import { REGISTRY_TTL_MS } from "./bus-registry.constants";
 import type { JongroRouteDocument } from "./bus-registry.document";
 import { BusRegistryBootstrappingError, BusRegistryMissingError } from "./bus-registry.error";
@@ -40,7 +41,7 @@ export class BusRegistryService {
   ) {}
 
   listRoutes(): Promise<RegistryRoute[]> {
-    return Promise.all(jongroRoutes.map((route) => this.routeOf(route.id)));
+    return Promise.all(JONGRO_ROUTES.map((route) => this.routeOf(route.id)));
   }
 
   async routeOf(routeId: string): Promise<RegistryRoute> {
@@ -157,7 +158,7 @@ export class BusRegistryService {
   }
 
   // WHY: stations change at runtime now, so an override nothing matches is a warning, not a boot failure.
-  private warnUnmatchedTransferLines(route: JongroRoute, doc: JongroRouteDocument): void {
+  private warnUnmatchedTransferLines(route: JongroRoute & JongroRouteAttributes, doc: JongroRouteDocument): void {
     const arsIds = new Set(doc.stations.map((station) => station.arsId));
     const unmatched = Object.keys(route.transferLinesByArsId).filter((arsId) => !arsIds.has(arsId) && !this.warnedTransferKeys.has(`${route.id}:${arsId}`));
     if (unmatched.length === 0) return;

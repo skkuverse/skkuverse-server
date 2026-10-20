@@ -7,6 +7,11 @@ export interface JongroRoute {
   readonly id: string;
   readonly code: string;
   readonly busRouteId: string;
+}
+
+export type JongroRouteIdentity = Pick<JongroRoute, "id" | "busRouteId">;
+
+export interface JongroRouteAttributes {
   readonly themeColor: string;
   readonly iconType: string;
   readonly refreshInterval: number;

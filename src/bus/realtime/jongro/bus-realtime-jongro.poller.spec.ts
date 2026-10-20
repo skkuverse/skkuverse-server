@@ -4,9 +4,12 @@
  * that route's refresh and rejects with it.
  */
 import type { PollerRegistryService } from "../../../scheduling/poller-registry.service";
-import { jongroRoutes } from "../../bus.config";
+import { JONGRO_ROUTES } from "../../bus.constants";
+import { toJongroRoute } from "../../bus.mapper";
 import { BusRealtimeJongroPoller } from "./bus-realtime-jongro.poller";
 import type { BusRealtimeJongroService } from "./bus-realtime-jongro.service";
+
+const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
 
 const refresh = jest.fn();
 const registerPoller = jest.fn();
