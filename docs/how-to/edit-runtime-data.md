@@ -26,8 +26,9 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | `skku-rest-days` | the same routes and pollers | 503 `BUS_SCHEDULE_UNAVAILABLE`; a poller tick rejects | none; each key is on the calendar ([below](#add-a-skku-rest-day)) |
 | `jongro-route-attributes` | `GET /bus/config`, `GET /bus/config/:groupId`, `GET /ui/home/transit`, `GET /ui/home/transitlist`, `GET /bus/realtime/data/jongro*` | `/bus/config` and the two ui routes serve 200 without the Jongro groups; a Jongro group and `/bus/realtime/data/jongro*` answer 503 `JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE`; the other groups and `/bus/realtime/data/hssc` serve | `jongroRoutes`: exactly one entry per route the checkout serves ([below](#edit-a-jongro-routes-card-or-seat-count)) |
 | `bus-lane-corridor` | the live shuttle estimate poller, for 인자셔틀 runs in the lane hours | each such run is estimated by car; the poller tick rejects after storing it | none; the geometry is checked: boundaries in order and the last at the centerline's end, each probe route listed once with direction ranges that do not overlap ([below](#rebuild-the-bus-lane-corridor)) |
+| `subway-topology` | `GET /subway/stations/:id/arrivals`, and the `subway-seoul` and `subway-trainmap` pollers | 503 `SUBWAY_TOPOLOGY_UNAVAILABLE`; each poller tick rejects before any upstream call | `subwayPlatforms`: exactly one entry per platform the checkout serves, and every named stop a served platform or a neighbor ([below](#edit-subway-coverage)) |
 
-A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. The poller reads the two bus datasets too, so a push reaches the shuttle estimates within the same minute. `busGroups`, `subwayStations` and `busServices` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
+A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. The poller reads the two bus datasets and `subway-topology` too, so a push reaches the shuttle estimates and the subway pollers within the same minute. `busGroups`, `subwayStations`, `subwayPlatforms`, `busServices` and `jongroRoutes` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
 
 Every push is validated with the server's own schema and rules, compiled from your checkout, and checked for references against the datasets stored in the database it targets: a home layout tile that names a mini app that database's `miniapps` does not hold is refused, naming the tile's path, and so is a `miniapps` push that drops an id a stored layout still names. Nothing is written while any issue stands.
 
@@ -182,6 +183,18 @@ doppler run -p backend -c dev_server -- node scripts/build-bus-lane-corridor.js 
 
 It routes both directions through the file's entry and exit points with NAVER; a point NAVER cannot route through fails every forced route, and each bus-lane run then loses its live value. Of `entryExit`, the push itself refuses only a point more than 500 m off the centerline, or a direction whose exit lies before its entry along it. The live poller reads a push within two minutes (two ticks): the corridor cache lives 60 s, as long as a tick.
 
+### Edit subway coverage
+
+`subway-topology` holds, for each served subway platform keyed by its platform id, its two directions (`up`, `down`): the direction's localized `name`, up to three `upstreamPlatformIds` nearest first (the first is the previous station), the `watchedPlatformIds` beyond them and the `nextPlatformId`; and the `neighbors`, each stop those name that no station serves, by platform id, with its `line`, its `seoulName`, a `trainMapName` where the train map writes another, and a localized `name` where it is a previous or next station. The lines, stations and platforms, with their names, colors, markers, Seoul ids and timetable sources, stay in code (`SUBWAY_LINES` and `SUBWAY_STATIONS` in `src/subway/subway.constants.ts`). A push that leaves out a platform the checkout serves, names one it does not, names a stop that is neither served nor a neighbor or is on another line, or leaves a previous or next neighbor unnamed is refused at its path. A push reaches the arrivals route and the pollers within a minute: a neighbor added there matches the upstream rows written at its Seoul name.
+
+```bash
+npm run data -- pull subway-topology --prod
+# edit .data/prod/subway-topology.json
+npm run data -- push subway-topology --prod --note "watch 관악 for 성균관대 down"
+```
+
+A watched or upstream stop must also be a station the converter writes into its line's timetables (`scripts/subway-timetable/convert.py`), so a coverage change usually reruns it too. A deploy that adds a station or platform pushes its topology from that checkout first: until then the platform is left out of its station's arrivals and logs `subway.topology.platform_missing`.
+
 ### Check before a deploy
 
 The server reads datasets the code may no longer accept. A deploy restarts every replica with an empty cache, so a stored home layout the new schema rejects answers 503 on `/ui/home` until a valid push, and a removed mini app loses every tile that names it. Before merging a change that tightens a dataset's schema or rules, or removes an identity a dataset references (a mini app from the registry, a bus group, a served subway station), run from that change's checkout:
@@ -209,6 +222,7 @@ It runs the push checks on the stored data of every dataset, writes nothing, and
 - [ADR 0013](../decisions/0013-runtime-data-in-mongodb.md): why runtime data lives in MongoDB, and the read contract every dataset reader keeps
 - [configure-home.md](configure-home.md): what the home layout, the campus banners and the transit layout hold
 - [bus-architecture.md](../explanation/bus-architecture.md): how the schedule routes and the estimate pollers fold in the two bus datasets
+- [subway-architecture.md](../explanation/subway-architecture.md): what of the subway network stays in code and what `subway-topology` holds
 - [register-a-miniapp.md](register-a-miniapp.md): the registry a home layout's references resolve against
 - `scripts/data.js`: the command line; `scripts/lib/datasets/`: the catalog, checks, store and working file
 - [docs/README.md](../README.md): writing rules
