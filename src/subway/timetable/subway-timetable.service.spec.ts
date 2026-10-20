@@ -29,7 +29,8 @@
  * platform with no table is reported: one schedule throws the 503
  * SubwayTimetablesUnavailableError, the list leaves it out and carries the
  * error naming its key; and a served platform whose table the revision lacks
- * is logged once per revision. The manifest's cached loader reads `Date.now()`,
+ * is logged once per revision; one list converts each table of the day once,
+ * its platforms sharing the routes and trains. The manifest's cached loader reads `Date.now()`,
  * so the TTL is crossed with Jest's fake system time.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
@@ -406,6 +407,24 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
 
     // Assert
     expect(repository.tableReads).toEqual([partIdOf("S1-2-weekday")]);
+  });
+
+  it("converts each table of the day once per list, handing its platforms the same routes and trains", async () => {
+    // Arrange
+    const { service } = setupStored();
+
+    // Act
+    const { schedules } = await service.listPlatformSchedules(NIGHT);
+
+    // Assert
+    // WHY: a tick converts tens of thousands of stops; 13 platforms read 7 tables, so a conversion per platform doubles it.
+    const keyOf = (s: PlatformSchedule): string => `${s.platform.id.split("-")[0]}-${s.platform.line}-${s.dayType}`;
+    const firstByKey = new Map(schedules.map((s) => [keyOf(s), s] as const).reverse());
+    expect(schedules).toHaveLength(13);
+    expect(firstByKey.size).toBe(7);
+    expect(new Set(schedules.map((s) => s.trains)).size).toBe(7);
+    expect(new Set(schedules.map((s) => s.lineRoutes)).size).toBe(7);
+    expect(schedules.filter((s) => s.trains !== firstByKey.get(keyOf(s))?.trains || s.lineRoutes !== firstByKey.get(keyOf(s))?.lineRoutes)).toEqual([]);
   });
 
   it("lists every served platform's schedule, reading each line's table of the day once", async () => {
