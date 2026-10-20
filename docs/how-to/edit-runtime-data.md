@@ -24,6 +24,7 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | `map-layer-sets` | `GET /map/config`, `GET /map/overlays/event`, `GET /map/overlays/event/details`, while an activation is live | the base map, 200; the event routes serve nothing | none; each set is checked against the base layers and chips, one per `layerSetId` ([configure-map-overlays.md](configure-map-overlays.md#add-or-edit-a-festival)) |
 | `bus-service-notices` | `GET /bus/schedule/data/:serviceId/smart` and `/week`, and the shuttle estimate pollers | 503 `BUS_SCHEDULE_UNAVAILABLE`; a poller tick rejects | `busServices`: each key is a service the checkout defines ([below](#edit-a-shuttle-notice-or-suspension)) |
 | `skku-rest-days` | the same routes and pollers | 503 `BUS_SCHEDULE_UNAVAILABLE`; a poller tick rejects | none; each key is on the calendar ([below](#add-a-skku-rest-day)) |
+| `jongro-route-attributes` | `GET /bus/config`, `GET /bus/config/:groupId`, `GET /ui/home/transit`, `GET /ui/home/transitlist`, `GET /bus/realtime/data/jongro*` | 503 `JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE` on each; `/bus/realtime/data/hssc` serves | `jongroRoutes`: exactly one entry per route the checkout serves ([below](#edit-a-jongro-routes-card-or-seat-count)) |
 | `bus-lane-corridor` | the live shuttle estimate poller, for 인자셔틀 runs in the lane hours | each such run is estimated by car; the poller tick rejects after storing it | none; the geometry is checked: boundaries in order and the last at the centerline's end, each probe route listed once with direction ranges that do not overlap ([below](#rebuild-the-bus-lane-corridor)) |
 
 A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. The poller reads the two bus datasets too, so a push reaches the shuttle estimates within the same minute. `busGroups`, `subwayStations` and `busServices` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
@@ -151,6 +152,16 @@ On 2026-12-22 the smart view answers `suspended` with `resumeDate: "2027-03-01"`
 - `YYYY-MM-DD` applies once (`"2027-03-02": "학사휴교"`), from 1900 to 2999.
 
 A one-off date wins over a yearly one on the same day, either wins over a public holiday, and a `bus_overrides` document for that service and date wins over all three. Public holidays never go here: the server reads them from the official calendar. Use an override instead when the closure must carry a notice.
+
+### Edit a Jongro route's card or seat count
+
+`jongro-route-attributes` holds each Jongno village bus route's card and capacity, keyed by route id: `{ "routes": { "jongro07": { "themeColor": "4CAF50", "iconType": "village", "refreshInterval": 25, "seatCount": 18, "transferLinesByArsId": { "01220": [{ "line": "4", "color": "00A5DE" }] } } } }`. The ids and TOPIS route ids stay in code (`JONGRO_ROUTES` in `src/bus/bus.constants.ts`); the stations are the registry's. Colors are six hex digits without `#`, `seatCount` a positive integer (crowding is relaxed up to it, normal up to 1.5 times it), and a stop's subway badges are keyed by its ARS number, so they follow the stop when TOPIS moves it. A push that leaves out a route the checkout serves, or names one it does not, is refused. A push reaches every route within a minute, the `/bus/config` ETag included; the map's route lines keep their own green. A transfer line whose ARS number no stored station has serves nothing and logs `bus.jongro.registry_unmatched_transfer`. A deploy that adds a route pushes its attributes from that checkout first: until then the route is left out of `/bus/config` and its realtime route answers 503.
+
+```bash
+npm run data -- pull jongro-route-attributes --prod
+# edit .data/prod/jongro-route-attributes.json
+npm run data -- push jongro-route-attributes --prod --note "jongro07 seat count 25"
+```
 
 ### Rebuild the bus-lane corridor
 

@@ -33,7 +33,7 @@ An applied change logs `bus.jongro.registry_synced` (warn) with `fromVersion`, `
 ### A held change
 
 1. Find the line in Loki: `{container=~"skkuverse-poller.*"} | json | event="bus.jongro.registry_change_held"`. It carries `code`, `fromVersion`, `toVersion`, `observed` (the whole list TOPIS answered, in ord order) and the `added`, `removed`, `moved` and `renamed` stops. It is logged once per distinct list, so a quiet log does not mean the list stopped.
-2. Check the list against TOPIS: `getStaionByRoute?busRouteId=<busRouteId>` (the ids are in `src/bus/jongro-routes.json`) and the operator's notice. A list that is another route's, or that drops most stops, is a bad answer: do nothing, and the poller keeps the stored list.
+2. Check the list against TOPIS: `getStaionByRoute?busRouteId=<busRouteId>` (the ids are `JONGRO_ROUTES` in `src/bus/bus.constants.ts`) and the operator's notice. A list that is another route's, or that drops most stops, is a bad answer: do nothing, and the poller keeps the stored list.
 3. For a real reroute, write it. Use the `observed` list as it is, and the turnaround stop the position rows name (`trnstnid` of `getBusPosByRtid`), or the stored one when no bus runs:
 
    ```js
@@ -83,7 +83,7 @@ To serve the route before then, insert it by hand:
 
 - **`bus.jongro.registry_sync_conflict` (warn).** The stored version changed between the poller's read and its write, usually a hand write as above. Nothing was written; the next ticks compare against the new document.
 - **`bus.jongro.registry_bootstrap_conflict` (warn).** A document appeared between the poller's third observation and its insert, usually a hand insert. The stored one is kept.
-- **`bus.jongro.registry_unmatched_transfer` (warn).** A `transferLinesByArsId` entry in `src/bus/jongro-routes.json` names an ARS number no stored station has, so that stop's subway badges are gone. Fix the key in a pull request after a renumbered stop.
+- **`bus.jongro.registry_unmatched_transfer` (warn, once per route, ARS number and revision).** A `transferLinesByArsId` entry in the stored `jongro-route-attributes` names an ARS number no stored station has, so that stop's subway badges are gone. After a renumbered stop, fix the key with a push, no deploy ([edit-runtime-data.md](edit-runtime-data.md#edit-a-jongro-routes-card-or-seat-count)).
 - **The realtime screen and `/bus/config` disagree on `stationsVersion`.** `/bus/config` is cached by clients for up to five minutes (`private, max-age=300`); this clears by itself.
 
 ## Related
