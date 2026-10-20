@@ -36,7 +36,7 @@ function toStopProgress(tick: TrackingTick, route: readonly string[], event: Tra
   return { platformId: lastStopId, state: "departed", at, ordinal: toOrdinal(route.indexOf(lastStopId), "departed") };
 }
 
-// WHY: both operators number up trains even and down trains odd (every train of the committed timetables);
+// WHY: both operators number up trains even and down trains odd (every train of revision 1 of subway-timetables);
 // a destination the timetable runs in one direction only decides first (line 2's Seongsu runs both ways).
 export function toDirection(
   train: Pick<TrainEvent, "trainNo" | "destination">,

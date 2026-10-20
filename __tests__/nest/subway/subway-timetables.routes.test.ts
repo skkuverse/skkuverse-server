@@ -2,11 +2,10 @@
  * The readers of the stored `subway-timetables` dataset (move-reference-datasets
  * D7, D8; spec `subway-timetables`), over main.ts's pipeline with every
  * repository and upstream client faked, the stored topology's revision 1, the
- * poller registry replaced by one that records each tick, and the committed
- * tables stored as revision 1 in FakeSubwayTimetableRepository:
+ * poller registry replaced by one that records each tick, and the trimmed
+ * fixture of revision 1 stored in FakeSubwayTimetableRepository:
  *
- * - The app boots without loading the committed timetable files (their loader
- *   module throws if anything requires it) and reads no table at boot.
+ * - The app reads no table at boot.
  * - Live arrivals fresh: `GET /subway/stations/:id/arrivals` reads no table,
  *   and answers 200 even when the timetables cannot be read.
  * - Night request: a timetable-only answer reads its line's table once, and
@@ -22,10 +21,6 @@
  * tests. A push lands within the TTL through Jest's fake system time, which
  * `createCachedLoader` reads; the clock reads it too.
  */
-jest.mock("../../../src/subway/timetable/subway-timetable.config", () => {
-  throw new Error("the committed timetables were loaded");
-});
-
 import { Global, Module } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -89,7 +84,7 @@ function freshState(): FakeSubwayRepository {
   return repository;
 }
 
-/** The trimmed fixture's tables, the committed ones' trains around the pinned instants (task 9.1). */
+/** The trimmed fixture's tables, revision 1's trains around the pinned instants (tasks 9.1 and 11.1). */
 const fixtureTables = (): Timetable[] => subwayTimetableFixtureFiles().map(({ table }) => table);
 
 function storesHolding(tables: readonly Timetable[], state = new FakeSubwayRepository()): Stores {
@@ -146,7 +141,7 @@ const arrivalsOf = (app: NestExpressApplication, stationId: string) => request(a
 const partKeys = (stores: Stores): string[] => stores.timetables.tableReads.map((partId) => partId.replace(/^subway-timetables\/|@.*$/g, ""));
 
 describe("the subway timetables at boot", () => {
-  it("boots without loading the committed timetable files, and reads no table", async () => {
+  it("boots and reads no table", async () => {
     // Arrange
     at(DAY);
     const stores = storesHolding(fixtureTables());

@@ -1,7 +1,7 @@
 /**
  * SubwayArrivalsService over FakeSubwayRepository, the real tracker's
  * timetable-only document (on the real timetable door, FakeHolidaysService and
- * the committed weekday tables, stored in a fake) and a fixed Clock. What it guards: an unserved
+ * the trimmed fixture of revision 1, stored in a fake) and a fixed Clock. What it guards: an unserved
  * station, a KRIC platform id included, finds nothing; a platform's state at
  * most 2 minutes old is served as the tracker stored it, whatever SUBWAY says,
  * since the switch stops only the poller (ADR 0012, D5); an older or missing

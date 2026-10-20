@@ -1,15 +1,16 @@
 /**
  * The trimmed `subway-timetables` fixture (fixtures/subway-timetables/ of
- * subway, one file per table, move-reference-datasets task 9.1): each
- * committed table with only the trains that reach a served platform around the
- * pinned instants the wave D characterization runs at. A fresh copy per call,
- * without the provenance note, as the part schema parses it.
+ * subway, one file per table, move-reference-datasets tasks 9.1 and 11.1):
+ * each part of revision 1 with only the trains that reach a served platform
+ * around the pinned instants the wave D characterization runs at, and around
+ * the instants the unit and route tests read the tables at. A fresh copy per
+ * call, without the provenance note, as the part schema parses it.
  *
  * Also an in-memory repository holding tables as one stored revision, and a
  * SubwayTimetableService over it, which a spec of a reader of the timetables
  * (the tracker, the arrivals route, the Seoul pollers) builds on. The service
- * and the committed tables are required when called, so a test over a real
- * `mongod` can import this file before src/infra/config.ts may load.
+ * is required when called, so a test over a real `mongod` can import this file
+ * before src/infra/config.ts may load.
  */
 import fs from "fs";
 import path from "path";
@@ -23,7 +24,6 @@ import { FakeHolidaysService } from "../fakes/holidays/holidays.service.fake";
 import { asReal } from "../fakes/public-of";
 import { FakeSubwayTimetableRepository } from "../fakes/subway/subway-timetable.repository.fake";
 
-type ConfigModule = typeof import("../../../src/subway/timetable/subway-timetable.config");
 type ServiceModule = typeof import("../../../src/subway/timetable/subway-timetable.service");
 
 const STORED_AT: Clock = { now: () => new Date("2026-10-20T03:00:00.000Z") };
@@ -48,13 +48,8 @@ export function subwayTimetablesFixture(): Timetable[] {
   return subwayTimetableFixtureFiles().map(({ table }) => table);
 }
 
-/** The committed tables (src/subway/timetable/*.json) until task 11.1 deletes them, loaded when called. */
-export function committedSubwayTimetables(): readonly Timetable[] {
-  return (require("../../../src/subway/timetable/subway-timetable.config") as ConfigModule).SUBWAY_TIMETABLES;
-}
-
-/** A FakeSubwayTimetableRepository holding `tables` (the committed ones by default) as revision 1. */
-export function storedSubwayTimetableRepository(tables: readonly Timetable[] = committedSubwayTimetables()): FakeSubwayTimetableRepository {
+/** A FakeSubwayTimetableRepository holding `tables` (the fixture's by default) as revision 1. */
+export function storedSubwayTimetableRepository(tables: readonly Timetable[] = subwayTimetablesFixture()): FakeSubwayTimetableRepository {
   const repository = new FakeSubwayTimetableRepository();
   repository.storeTables(tables);
   return repository;

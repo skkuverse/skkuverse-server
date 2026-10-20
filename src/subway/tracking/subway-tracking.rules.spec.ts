@@ -347,7 +347,7 @@ describe("mergeObservations at stations an express passes", () => {
   const BYEONGJEOM = "KR-1-P157";
   const SERYU = "KR-1-1715";
   const SUWON = "KR-1-P155";
-  // The stops of 1910, 1912 (up) and 1913 (down) among the stations of korail-1-holiday.json.
+  // The stops of 1910, 1912 (up) and 1913 (down) among the stations of the KR-1-holiday table.
   const STOP_STATION_IDS_BY_TRAIN_NO = new Map([
     ["1910", [BYEONGJEOM, SUWON, SUNGKYUNKWAN]],
     ["1912", [BYEONGJEOM, SUWON, SUNGKYUNKWAN]],

@@ -1,7 +1,7 @@
 /**
  * SubwayHistoryService listening to the real tracker (over FakeSubwayRepository,
- * the real timetable door on FakeHolidaysService and the stored committed weekday
- * tables, the real estimate door), writing to FakeSubwayHistoryRepository, at
+ * the real timetable door on FakeHolidaysService and the trimmed fixture of revision 1
+ * of the timetables, the real estimate door), writing to FakeSubwayHistoryRepository, at
  * a scripted Clock, fed one upstream's observations per tick as the pollers
  * feed the tracker. What it guards, by the subway-arrival-accuracy spec's
  * scenarios: a record is written at the tick a train's served lead time first
