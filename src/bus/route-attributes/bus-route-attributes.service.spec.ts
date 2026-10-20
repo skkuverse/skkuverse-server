@@ -4,7 +4,8 @@
  * route's attributes, cached for DATASET_CACHE_TTL_MS so a push is seen within a minute and kept through a failed
  * reload for DATASET_STALE_WINDOW_MS. A route the code serves that the revision lacks, and a stored route the code
  * does not serve, are each logged once per revision. With no good value, `current()` throws the 503
- * BusRouteAttributesUnavailableError the routes that serve the attributes answer with.
+ * BusRouteAttributesUnavailableError the routes that serve the attributes answer with; `findCurrent()` answers null
+ * instead, for the readers that serve the other groups without them.
  *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake system time.
  */
@@ -215,5 +216,68 @@ describe("BusRouteAttributesService.attributesOf", () => {
 
     // Assert
     expect(failure).toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", httpStatus: 503 });
+  });
+});
+
+// WHY: the readers that serve something without the Jongro routes (the bus config, the ui transit routes) take the
+// never-read answer as none instead of a 503 (move-reference-datasets review F1).
+describe("BusRouteAttributesService.findCurrent", () => {
+  it("answers the stored revision as current() does", async () => {
+    // Arrange
+    const { repository, attributes } = setup();
+    repository.storeAttributes(routeAttributesFixture());
+
+    // Act
+    const snapshot = await attributes.findCurrent();
+
+    // Assert
+    expect(snapshot?.revision).toBe(1);
+    expect(snapshot?.attributesOf("jongro07")?.seatCount).toBe(18);
+  });
+
+  it("answers null with no attributes stored, and with only an invalid revision", async () => {
+    // Arrange
+    const { repository, attributes, advanceTo } = setup();
+
+    // Act
+    const missing = await attributes.findCurrent();
+    repository.storeAttributes({ routes: { jongro07: { seatCount: 0 } } });
+    advanceTo(DATASET_CACHE_TTL_MS);
+    const invalid = await attributes.findCurrent();
+
+    // Assert
+    expect([missing, invalid]).toEqual([null, null]);
+    expect(repository.readCount).toBe(2);
+  });
+
+  it("Fresh replica, database down: answers null and still logs the failed read at error", async () => {
+    // Arrange
+    const { repository, attributes } = setup();
+    repository.failWith = new Error("server selection timed out");
+
+    // Act
+    const snapshot = await attributes.findCurrent();
+
+    // Assert
+    expect(snapshot).toBeNull();
+    expect(loggedEvents("error")).toEqual([expect.objectContaining({ event: "bus.route_attributes.read_failed" })]);
+  });
+
+  it("keeps the last good revision through failed reloads for the stale window, then answers null", async () => {
+    // Arrange
+    const { repository, attributes, advanceTo } = setup();
+    repository.storeAttributes(routeAttributesFixture());
+    await attributes.findCurrent();
+    repository.failWith = new Error("server selection timed out");
+
+    // Act
+    advanceTo(DATASET_STALE_WINDOW_MS - 1);
+    const held = await attributes.findCurrent();
+    advanceTo(DATASET_STALE_WINDOW_MS + DATASET_CACHE_TTL_MS);
+    const past = await attributes.findCurrent();
+
+    // Assert
+    expect(held?.revision).toBe(1);
+    expect(past).toBeNull();
   });
 });

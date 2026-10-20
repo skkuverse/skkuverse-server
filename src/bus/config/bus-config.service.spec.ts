@@ -345,16 +345,48 @@ describe("BusConfigService and the stored route attributes", () => {
     expect(groups.map((g) => g.id)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07"]);
   });
 
-  it("refuses the config with JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE when no attributes were read, whatever the registry holds", async () => {
+  // WHY: review F1 of move-reference-datasets: attributes never read cost the Jongro groups only, not the shuttle ones.
+  it("serves the config without the Jongro groups when no attributes were read, reading no registry", async () => {
+    // Arrange
+    const [hsscEtag, hssc] = [await service.computeGroupEtag("hssc", "ko"), await service.getGroupById("hssc", "ko")];
+    attributesRepository.stored = null;
+    registryRepository.failWith = new Error("atlas down");
+    const fresh = await freshService();
+
+    // Act
+    const groups = await fresh.getBusGroups("ko");
+    const etag = await fresh.computeEtag("ko");
+
+    // Assert
+    expect(groups.map((g) => g.id)).toEqual(["hssc", "campus", "fasttrack", "commute"]);
+    expect(etag).toBe(`"${crypto.createHash("md5").update(JSON.stringify(groups)).digest("hex")}"`);
+    expect(await fresh.getGroupById("hssc", "ko")).toEqual(hssc);
+    expect(await fresh.computeGroupEtag("hssc", "ko")).toBe(hsscEtag);
+  });
+
+  it.each(["jongro02", "jongro07", "jongro08"])("refuses the %s group with JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE when no attributes were read", async (id) => {
     // Arrange
     attributesRepository.stored = null;
-    registryRepository.routes.delete("jongro08");
     const fresh = await freshService();
 
     // Act & Assert
-    await expect(fresh.getBusGroups("ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", httpStatus: 503 });
-    await expect(fresh.computeEtag("ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE" });
-    await expect(fresh.computeGroupEtag("hssc", "ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE" });
+    await expect(fresh.getGroupById(id, "ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", httpStatus: 503 });
+    await expect(fresh.computeGroupEtag(id, "ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", httpStatus: 503 });
+  });
+
+  // WHY: review F2 of move-reference-datasets: the group answers what its realtime route answers, not a 404.
+  it("refuses the group of a route the stored attributes lack with JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE, and an unknown id with none", async () => {
+    // Arrange
+    const lacking = routeAttributesFixture();
+    delete lacking.routes.jongro08;
+    attributesRepository = storedRouteAttributesRepository(lacking);
+    const fresh = await freshService();
+
+    // Act & Assert
+    await expect(fresh.getGroupById("jongro08", "ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", httpStatus: 503 });
+    await expect(fresh.computeGroupEtag("jongro08", "ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", httpStatus: 503 });
+    expect(await fresh.getGroupById("jongro13", "ko")).toBeNull();
+    expect(await fresh.computeGroupEtag("jongro13", "ko")).toBeNull();
   });
 
   it("changes the config and group ETags when a revision changes a card, and keeps the HSSC group's", async () => {

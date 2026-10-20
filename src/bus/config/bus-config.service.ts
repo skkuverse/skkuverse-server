@@ -17,8 +17,11 @@ import type { BusGroup } from "./bus-config.wire";
 
 interface GroupSources {
   routes: RegistryRoute[];
-  attributes: RouteAttributesSnapshot;
+  attributes: RouteAttributesSnapshot | null;
 }
+
+// WHY: with no attributes read, no Jongro group is built, so the registry is not read either (move-reference-datasets D10).
+const NO_JONGRO_SOURCES: GroupSources = { routes: [], attributes: null };
 
 @Injectable()
 export class BusConfigService {
@@ -43,7 +46,7 @@ export class BusConfigService {
   // WHY: keyed by the attributes revision and every route's stations version, so a push or a sync changes the ETag.
   async computeEtag(lang: SupportedLang = "ko"): Promise<string> {
     const sources = await this.readSources();
-    const cacheKey = [lang, sources.attributes.revision, ...sources.routes.map((route) => route.stationsVersion)].join(":");
+    const cacheKey = [lang, sources.attributes?.revision ?? "none", ...sources.routes.map((route) => route.stationsVersion)].join(":");
     const cached = this.etagCache.get(cacheKey);
     if (cached) return cached;
     const etag = this.md5Etag(this.toGroups(lang, sources));
@@ -52,12 +55,12 @@ export class BusConfigService {
   }
 
   async getGroupById(id: string, lang: SupportedLang = "ko"): Promise<BusGroup | null> {
-    return (await this.getBusGroups(lang)).find((g) => g.id === id) || null;
+    return this.toGroups(lang, await this.readGroupSources(id)).find((g) => g.id === id) || null;
   }
 
   async computeGroupEtag(id: string, lang: SupportedLang = "ko"): Promise<string | null> {
-    const sources = await this.readSources();
-    const cacheKey = [id, lang, sources.attributes.revision, ...sources.routes.map((route) => route.stationsVersion)].join(":");
+    const sources = await this.readGroupSources(id);
+    const cacheKey = [id, lang, sources.attributes?.revision ?? "none", ...sources.routes.map((route) => route.stationsVersion)].join(":");
     const cached = this.etagCache.get(cacheKey);
     if (cached) return cached;
     const group = this.toGroups(lang, sources).find((g) => g.id === id);
@@ -67,10 +70,18 @@ export class BusConfigService {
     return etag;
   }
 
-  // WHY: the attributes first, so a replica that never read them answers their 503 whatever the registry holds.
   private async readSources(): Promise<GroupSources> {
-    const attributes = await this.routeAttributes.current();
-    return { attributes, routes: await this.registry.listRoutes() };
+    const attributes = await this.routeAttributes.findCurrent();
+    return attributes === null ? NO_JONGRO_SOURCES : { attributes, routes: await this.registry.listRoutes() };
+  }
+
+  // WHY: a Jongro group answers its realtime route's 503 when the attributes were never read or lack its route
+  // (move-reference-datasets D10); any other group reads no Jongro data.
+  private async readGroupSources(id: string): Promise<GroupSources> {
+    const isJongroGroup = JONGRO_ROUTES.some((route) => route.id === id);
+    if (!isJongroGroup) return NO_JONGRO_SOURCES;
+    await this.routeAttributes.attributesOf(id);
+    return { attributes: await this.routeAttributes.current(), routes: await this.registry.listRoutes() };
   }
 
   private toGroups(lang: SupportedLang, { routes, attributes }: GroupSources): BusGroup[] {
@@ -82,7 +93,8 @@ export class BusConfigService {
   }
 
   // WHY: a route without stored attributes is left out (BusRouteAttributesService logs the gap once per revision).
-  private toAttributedRoutes(routes: readonly RegistryRoute[], snapshot: RouteAttributesSnapshot): AttributedJongroRoute[] {
+  private toAttributedRoutes(routes: readonly RegistryRoute[], snapshot: RouteAttributesSnapshot | null): AttributedJongroRoute[] {
+    if (snapshot === null) return [];
     return routes.flatMap((route) => {
       const attributes = snapshot.attributesOf(route.id);
       if (attributes === undefined) return [];
