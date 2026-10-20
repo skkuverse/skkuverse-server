@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { parseConfigFile } from "../../infra/config-file";
-import { assertTimetablesCover, listSubwayPlatforms } from "./subway-timetable.rules";
+import { listSubwayPlatforms, toTimetableCoverageIssues } from "./subway-timetable.rules";
 import { timetableFile } from "./subway-timetable.schema";
 import type { Timetable } from "./subway-timetable.types";
 
@@ -36,4 +36,5 @@ export const SUBWAY_TIMETABLES: readonly Timetable[] = TIMETABLE_FILES.map((file
   loadTimetable(file, JSON.parse(fs.readFileSync(path.join(__dirname, file), "utf8"))),
 );
 
-assertTimetablesCover(listSubwayPlatforms(), SUBWAY_TIMETABLES);
+const coverageIssues = toTimetableCoverageIssues(SUBWAY_TIMETABLES, listSubwayPlatforms());
+if (coverageIssues.length > 0) throw new Error(`subway timetables: ${coverageIssues.map((issue) => issue.message).join("; ")}`);

@@ -2,7 +2,7 @@ import moment from "moment-timezone";
 import { toKstDate } from "../../shared/kst-date.util";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import { SUBWAY_STATIONS } from "../subway.constants";
-import type { NetworkPlatform, SubwayDirection } from "../subway.types";
+import type { NetworkIssue, NetworkPlatform, SubwayDirection } from "../subway.types";
 import {
   SERVICE_DAY_START_HOUR,
   SERVICE_WINDOW_CLOSES_SEC,
@@ -67,13 +67,20 @@ export function toLineRoutes(timetable: Timetable): LineRoutes {
   return { up: toRoute(timetable, "up"), down: toRoute(timetable, "down") };
 }
 
-export function assertTimetablesCover(platforms: readonly NetworkPlatform[], timetables: readonly Timetable[]): void {
-  const missing = platforms.flatMap((platform) =>
-    TIMETABLE_DAY_TYPES[platform.timetable.source]
-      .filter((dayType) => findTimetable(timetables, platform, dayType) === null)
-      .map((dayType) => `${platform.id} ${dayType}`),
-  );
-  if (missing.length > 0) throw new Error(`subway timetables: no table for ${missing.join(", ")}`);
+export function toTimetableKey({ operator, line, dayType }: Pick<Timetable, "operator" | "line" | "dayType">): string {
+  return `${operator}-${line}-${dayType}`;
+}
+
+// WHY: one issue per missing table, naming every platform it serves, so a push refusal lists each platform and day type.
+export function toTimetableCoverageIssues(timetables: readonly Timetable[], platforms: readonly NetworkPlatform[]): NetworkIssue[] {
+  const missingByKey = new Map<string, string[]>();
+  for (const platform of platforms) {
+    for (const dayType of TIMETABLE_DAY_TYPES[platform.timetable.source].filter((each) => findTimetable(timetables, platform, each) === null)) {
+      const key = toTimetableKey({ operator: platform.id.split("-")[0] ?? "", line: platform.line, dayType });
+      missingByKey.set(key, [...(missingByKey.get(key) ?? []), `${platform.id} ${dayType}`]);
+    }
+  }
+  return [...missingByKey].map(([key, missing]) => ({ path: [key], message: `no table for ${missing.join(", ")}` }));
 }
 
 export function isInServiceWindow(dayType: DayType, serviceDate: string, now: Date): boolean {
