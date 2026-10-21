@@ -927,12 +927,13 @@ the order a layer is turned on in is the app's, not the server's.
 
 **The degraded branch.** No line is committed with the code. When a configured route has no stored
 line (a fresh database before the poller's first daily sync, which runs at its start), the response
-leaves that route's overlay out, the bus module logs `bus.jongro.path_missing` at error, and the
-response is sent with `public, max-age=60` instead of an hour, so the line appears within a minute of
+leaves that route's overlay out, the bus module logs `bus.jongro.path_missing` at error (at most once a
+minute), and the response is sent with `public, max-age=60` instead of an hour, so the line appears within a minute of
 being written. When the read fails, the bus module serves the lines it read last for up to a day
 (`ROUTE_PATHS_STALE_WINDOW_MS`); a read that fails with nothing read before answers `503`
 `{ "error": { "code": "JONGRO_ROUTE_PATHS_UNAVAILABLE", … } }` rather than an empty overlay a shared
-cache would keep. `degraded` never reaches the body.
+cache would keep, and so does every request for the next 30 s (`ROUTE_PATHS_RETRY_MS`) before the
+store is read again. `degraded` never reaches the body.
 
 The stations TOPIS answers with each line are stored but not drawn yet: the place-dot marker ignores a
 layer's `zIndex`, so a stop caption could win over a building name. A stop layer waits for that app

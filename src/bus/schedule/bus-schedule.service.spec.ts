@@ -1259,3 +1259,58 @@ describe("자과캠 통학셔틀 resolution (built from scripts/data/commute-sch
     }
   });
 });
+
+// WHY: a stop page lists the next three runs, so after Friday's last run it reads the week after the shown one (unify-bus-stops review F2).
+describe("BusScheduleService.resolveFollowingWeek", () => {
+  const weekdays: BusScheduleDoc = {
+    serviceId: "campus-inja",
+    patternId: "weekday",
+    days: [1, 2, 3, 4, 5],
+    entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }],
+  };
+
+  afterEach(() => jest.useRealTimers());
+
+  it("answers the week after the given Monday as the smart view shows a week: hidden days dropped, suspended and no-service days empty", async () => {
+    // Arrange
+    jest.useFakeTimers();
+    // 20:00 KST on Friday 12-18, after the week's last run.
+    jest.setSystemTime(new Date("2026-12-18T11:00:00.000Z"));
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-12-22", until: "2026-12-23" }));
+    repository.patterns = [weekdays];
+    repository.overrides = [{ serviceId: "campus-inja", date: "2026-12-25", type: "noService", label: "성탄절", notices: [], entries: [] }];
+
+    // Act
+    const days = await service.resolveFollowingWeek("campus-inja", "2026-12-14");
+
+    // Assert
+    expect(days!.map((d) => [d.date, d.display, d.schedule.length])).toEqual([
+      ["2026-12-21", "schedule", 1],
+      ["2026-12-22", "noService", 0],
+      ["2026-12-23", "noService", 0],
+      ["2026-12-24", "schedule", 1],
+      ["2026-12-25", "noService", 0],
+    ]);
+  });
+
+  it("reads the following week once per cache TTL", async () => {
+    // Arrange
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-12-18T11:00:00.000Z"));
+    repository.patterns = [weekdays];
+    await service.resolveFollowingWeek("campus-inja", "2026-12-14");
+    const readsAfterFirst = repository.reads;
+
+    // Act
+    await service.resolveFollowingWeek("campus-inja", "2026-12-14");
+
+    // Assert
+    expect(readsAfterFirst).toBe(2);
+    expect(repository.reads).toBe(2);
+  });
+
+  it("answers null for an unknown service", async () => {
+    // Act & Assert
+    expect(await service.resolveFollowingWeek("nope", "2026-12-14")).toBeNull();
+  });
+});

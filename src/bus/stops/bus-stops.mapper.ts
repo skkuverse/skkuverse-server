@@ -111,6 +111,11 @@ export function resolveStopSequences(serviceIds: readonly string[], lang: Suppor
   return { sequences, stops: catalogStops.map((stop) => toServedStop(stop, lang, subwayTitles)) };
 }
 
+/** WHY: one stop as a stop page serves it: its config record, never its map, which belongs to a group's screen. */
+export function toStopRecord(stop: ScheduleStop, lang: SupportedLang, subwayTitles: SubwayTitles): ServedStop {
+  return toServedStop(withoutGuide(stop), lang, subwayTitles);
+}
+
 /** WHY: one stored revision as its readers take it, frozen, with each alias keyed by its ARS number. */
 export function toBusStopsSnapshot({ revision, data }: StoredBusStops): BusStopsSnapshot {
   const stopIdByArsId = new Map(data.stops.flatMap((stop) => (stop.arsIds ?? []).map((arsId) => [arsId, stop.id] as const)));

@@ -1,0 +1,25 @@
+{
+  "_about": "Hand-written from a capture: GET /bus/stops/hssc-hyehwa-exit1/arrivals from a local api replica of unify-bus-stops wave 3 (ROLE=api, NODE_ENV=development, _dev databases) 2026-10-22 02:41 KST, Accept-Language ko, whose bus_cache held no HSSC bus; approaching is the spec scenario \"Two buses before the stop\" (buses at indexes 1 and 4, the stop at 6). Converted 2026-10-22 when each entry took its own kind (arrivals, approaching), no other value changed.",
+  "data": {
+    "stop": {
+      "id": "hssc-hyehwa-exit1",
+      "name": "혜화역 1번출구"
+    },
+    "routes": [
+      {
+        "groupId": "hssc",
+        "kind": "approaching",
+        "label": "인사캠 셔틀버스",
+        "stationIndex": 6,
+        "approaching": [
+          {
+            "stopsAway": 2
+          },
+          {
+            "stopsAway": 5
+          }
+        ]
+      }
+    ]
+  }
+}

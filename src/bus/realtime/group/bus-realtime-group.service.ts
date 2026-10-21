@@ -37,15 +37,20 @@ export class BusRealtimeGroupService {
   ) {}
 
   async getGroup(groupId: string): Promise<WithMeta<RealtimeGroup, RealtimeGroupMeta>> {
-    const source = this.sourcesByGroupId().get(groupId);
-    if (!source) throw new AppError("GROUP_NOT_FOUND", `Unknown groupId: ${groupId}`, 404);
-    const view = await source();
+    const view = await this.findGroupView(groupId);
+    if (!view) throw new AppError("GROUP_NOT_FOUND", `Unknown groupId: ${groupId}`, 404);
     const { buses } = view;
     const now = this.clock.now();
     return withMeta(
       { groupId, buses, stationEtas: view.stationEtas, ...(view.stationsVersion !== undefined && { stationsVersion: view.stationsVersion }) },
       { currentTime: toClockTime(now), totalBuses: buses.length, serverNow: toKstInstant(now.getTime()) },
     );
+  }
+
+  // WHY: the one view of a group, which the realtime route and the stop page both serve (unify-bus-stops D17).
+  findGroupView(groupId: string): Promise<GroupView | null> {
+    const source = this.sourcesByGroupId().get(groupId);
+    return source ? source() : Promise.resolve(null);
   }
 
   private sourcesByGroupId(): Map<string, GroupSource> {
