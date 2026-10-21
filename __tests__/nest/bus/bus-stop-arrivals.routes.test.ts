@@ -4,7 +4,9 @@
  * 404 BUS_STOP_NOT_FOUND, the configuration order, a Jongno entry equal to the realtime view, a Jongno route left
  * out, the HSSC buses as stops away, the next three shuttle runs at a stop (14:10 KST, and 01:30 KST when the UTC
  * date is the day before), continued into the following week after Friday's last run, a suspended service, the
- * 503 with the stops never read, no-store, and no outbound request.
+ * 503 with the stops never read, no-store, and no outbound request. From wave 4 (design D12), every `stopId` a
+ * realtime station of `/bus/config` serves opens a page that lists that group at the station's first index, an
+ * aliased pole's included.
  *
  * Every store is in memory: bus_cache, the registry and route lines production stored (helpers/bus/), revision 1
  * of `bus-stops`, `jongro-route-attributes` and the schedule content, a timetable and estimates seeded per test.
@@ -607,5 +609,55 @@ describe("GET /bus/stops/:stopId/arrivals: the stop data", () => {
     expect(takeBlockedConnections()).toEqual([]);
     expect(stores.jongroClient.positionsRouteIds).toEqual([]);
     expect(stores.routePathClient.requestedIds).toEqual([]);
+  });
+});
+
+describe("GET /bus/stops/:stopId/arrivals from a realtime station's stopId", () => {
+  type Station = { index: number; stopId?: string };
+  const REALTIME_GROUP_IDS = ["hssc", "jongro02", "jongro07", "jongro08"];
+
+  /** Each realtime station's stop id with its group and the first index of the group that names it. */
+  async function linkedStops(server: import("http").Server): Promise<Array<{ groupId: string; stopId: string; stationIndex: number }>> {
+    const groups = await Promise.all(REALTIME_GROUP_IDS.map(async (groupId) => ({ groupId, res: await request(server).get(`/bus/config/${groupId}`) })));
+    return groups.flatMap(({ groupId, res }) => {
+      const stations = (res.body.data as { screen: { stations: Station[] } }).screen.stations;
+      const firstIndexByStopId = new Map<string, number>();
+      for (const station of stations) if (station.stopId && !firstIndexByStopId.has(station.stopId)) firstIndexByStopId.set(station.stopId, station.index);
+      return [...firstIndexByStopId].map(([stopId, stationIndex]) => ({ groupId, stopId, stationIndex }));
+    });
+  }
+
+  it("answers every linked stop's page, listing the group at the station's first index", async () => {
+    // Arrange
+    const server = await boot(freshStores());
+    const links = await linkedStops(server);
+
+    // Act
+    const pages = await Promise.all(links.map(async (link) => ({ link, res: await request(server).get(`/bus/stops/${link.stopId}/arrivals`) })));
+
+    // Assert
+    expect(links).toHaveLength(9 + 26 + 22 + 31);
+    for (const { link, res } of pages) {
+      expect({ ...link, status: res.status }).toEqual({ ...link, status: 200 });
+      expect(res.body.data.stop.id).toBe(link.stopId);
+      expect(routesOf(res.body).filter((route) => route.groupId === link.groupId).map((route) => route.stationIndex)).toEqual([link.stationIndex]);
+    }
+  });
+
+  it("Confirmed same curb: links 종로07's station 01618 to the local stop aliasing it, whose page lists the shuttle and 종로07", async () => {
+    // Arrange
+    const stores = { ...freshStores(), stops: storedBusStopsRepository(aliased("hssc-bus-lot", ["01618"])) };
+    const server = await boot(stores);
+    const link = (await linkedStops(server)).find((candidate) => candidate.groupId === "jongro07" && candidate.stopId === "hssc-bus-lot");
+
+    // Act
+    const res = await request(server).get("/bus/stops/hssc-bus-lot/arrivals");
+
+    // Assert
+    expect(link).toEqual({ groupId: "jongro07", stopId: "hssc-bus-lot", stationIndex: 1 });
+    expect(res.status).toBe(200);
+    expectWire(busStopArrivals, res.body.data);
+    expect(routesOf(res.body).map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
+    expect(routesOf(res.body).find((route) => route.groupId === "jongro07")!.stationIndex).toBe(1);
   });
 });
