@@ -114,5 +114,5 @@ export function resolveStopSequences(serviceIds: readonly string[], lang: Suppor
 /** WHY: one stored revision as its readers take it, frozen, with each alias keyed by its ARS number. */
 export function toBusStopsSnapshot({ revision, data }: StoredBusStops): BusStopsSnapshot {
   const stopIdByArsId = new Map(data.stops.flatMap((stop) => (stop.arsIds ?? []).map((arsId) => [arsId, stop.id] as const)));
-  return { revision, catalog: deepFreeze({ stops: data.stops, sequences: data.sequences }), hssc: deepFreeze(data.hssc.stations), stopIdByArsId };
+  return deepFreeze({ revision, catalog: { stops: data.stops, sequences: data.sequences }, hssc: data.hssc.stations, stopIdByArsId });
 }
