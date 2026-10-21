@@ -11,6 +11,9 @@
  * that starts on the smart view's opening day plans no run of the days after it either,
  * until the smart view leaves `suspended`.
  */
+const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+jest.mock("../../infra/logger", () => mockLogger);
+
 import { FakeBusEtaRepository } from "../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
 import { restDaysFixture, serviceNoticesWithSuspension, storedScheduleContentRepository, storedScheduleContentService } from "../../../__tests__/helpers/bus/schedule-content";
 import { FakeBusScheduleContentRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule-content.repository.fake";
@@ -164,6 +167,23 @@ describe("BusEtaService over the stored stops (unify-bus-stops design D16)", () 
     // A document fetched before the push no longer fits, so it is left out rather than failing the whole write.
     await expect(eta.upsertFitting([doc([0, 4500]), doc([0, 4500, 4800])])).resolves.toMatchObject({ written: 1 });
     expect(repository.docs.get(doc([0, 4500, 4800])._id)?.offsetsSec).toEqual([0, 4500, 4800]);
+  });
+
+  it("upsertFitting logs how many documents it leaves out at info, and nothing when every one fits (review F3)", async () => {
+    // Arrange
+    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, storedBusStopsService(storedBusStopsRepository(), clock));
+    mockLogger.info.mockClear();
+    await eta.upsertFitting([doc([0, 4500])]);
+    const linesWhenAllFit = mockLogger.info.mock.calls.length;
+
+    // Act
+    const written = await eta.upsertFitting([doc([0, 4500, 4800]), doc([0, 4500, 4800, 4900]), doc([0, 4500])]);
+
+    // Assert
+    expect(linesWhenAllFit).toBe(0);
+    expect(written.written).toBe(1);
+    expect(mockLogger.info).toHaveBeenCalledTimes(1);
+    expect(mockLogger.info.mock.calls[0]![0]).toEqual({ event: "bus.eta.estimates_dropped", revision: 1, droppedCount: 2 });
   });
 
   it("Never read: sequences(), listFitting and upsertFitting reject with the 503 BUS_STOPS_UNAVAILABLE", async () => {

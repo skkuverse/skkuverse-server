@@ -83,6 +83,22 @@ describe("BusStopsService.current", () => {
     expect([...snapshot.stopIdByArsId]).toEqual([["01618", "hssc-bus-lot"]]);
   });
 
+  it("answers a snapshot whose alias map and fields refuse a change (review F6)", async () => {
+    // Arrange
+    const { repository, stops } = setup();
+    const aliased = fixture();
+    aliased.stops = aliased.stops.map((stop) => (stop.id === "hssc-bus-lot" ? { ...stop, arsIds: ["01618"] } : stop));
+    repository.storeStops(aliased);
+
+    // Act
+    const snapshot = await stops.current();
+
+    // Assert
+    expect(() => (snapshot.stopIdByArsId as Map<string, string>).set("01616", "hssc-600th")).toThrow(TypeError);
+    expect(Object.isFrozen(snapshot)).toBe(true);
+    expect(snapshot.stopIdByArsId.get("01616")).toBeUndefined();
+  });
+
   it("Photo replaced: serves a push that changes jeongja-exit3's photo once the TTL has passed, and not before", async () => {
     // Arrange
     const { repository, stops, advanceTo } = setup();

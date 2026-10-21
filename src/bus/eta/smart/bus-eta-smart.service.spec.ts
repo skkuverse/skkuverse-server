@@ -4,6 +4,9 @@
  * Cache-Control, the estimates it applies, read at most once per 30 s, and the
  * stored timetable when the estimates or the stops cannot be read.
  */
+const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+jest.mock("../../../infra/logger", () => mockLogger);
+
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
 import { storedScheduleContentService } from "../../../../__tests__/helpers/bus/schedule-content";
 import { FakeBusScheduleRepository } from "../../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
@@ -91,6 +94,31 @@ describe("BusEtaSmartService.getSmart", () => {
     // Assert
     expect(smart.data.status).toBe("active");
     expect(smart.data.days[0]!.schedule[0]).toEqual({ index: 1, time: "10:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["10:00", null] });
+  });
+
+  it("logs bus.eta.stops_unavailable, not bus.eta.read_failed, when the stops are the cause (review F6)", async () => {
+    // Arrange
+    const neverRead = new BusEtaSmartService(schedule, asReal<BusEtaRepository>(estimates), storedBusStopsService(new FakeBusStopsRepository()), clock);
+    mockLogger.warn.mockClear();
+
+    // Act
+    await neverRead.getSmart("campus-inja", "ko");
+
+    // Assert
+    expect(mockLogger.warn.mock.calls.map(([fields]) => fields.event)).toEqual(["bus.eta.stops_unavailable"]);
+    expect(mockLogger.warn.mock.calls[0]![0]).toMatchObject({ serviceId: "campus-inja", suppressed: 0, err: expect.objectContaining({ code: "BUS_STOPS_UNAVAILABLE" }) });
+  });
+
+  it("logs bus.eta.read_failed when the estimates cannot be read and the stops can", async () => {
+    // Arrange
+    estimates.failWith = new Error("down");
+    mockLogger.warn.mockClear();
+
+    // Act
+    await service.getSmart("campus-inja", "ko");
+
+    // Assert
+    expect(mockLogger.warn.mock.calls.map(([fields]) => fields.event)).toEqual(["bus.eta.read_failed"]);
   });
 
   it("refuses an unknown service with SERVICE_NOT_FOUND", async () => {
