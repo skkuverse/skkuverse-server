@@ -5,7 +5,7 @@
  * stored revision itself is checked at push and at read (unify-bus-stops D16).
  *
  * Ported in unify-bus-stops task 4.3 (design D15): the catalog these cases
- * pass is revision 1 instead of src/bus/stops/schedule-stops.json, which was
+ * pass is revision 1 instead of the committed stop catalog, which was
  * deleted; its root message names the dataset instead of the file.
  *
  * toBusStopsIssues is every check a `bus-stops` push runs after its schema

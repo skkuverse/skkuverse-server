@@ -9,8 +9,8 @@
  * storedBusStops, the stored document as the repository reads it, needs its
  * revision and data.
  *
- * Ported from this file's stopCatalogFile cases, which went with
- * schedule-stops.json in unify-bus-stops task 4.3 (design D15): "passes the
+ * Ported from this file's stopCatalogFile cases, which went with the
+ * committed stop catalog in unify-bus-stops task 4.3 (design D15): "passes the
  * committed catalog through as it is" → "passes revision 1 as it is"; "fails a
  * broken catalog with the check's words" → "fails a copy that is not the
  * catalog's structure" here and "rejects a malformed root" in
