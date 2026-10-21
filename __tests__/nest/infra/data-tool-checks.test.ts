@@ -26,6 +26,14 @@
  * data to that manifest, read from the same database, and `storedOf` hands
  * the parts over, parsed and ordered by key. No other check reads a part, so a
  * push of any other dataset fetches none (move-reference-datasets task 11.1).
+ *
+ * A dataset whose check reads a collection outside the content database
+ * declares it in `collections` (unify-bus-stops design D6, spec
+ * runtime-datasets): `checkStored` and `readCollections` read each declared
+ * collection through the caller's reader, which picks the target environment,
+ * and `issuesOf` gets it from `collectionOf(key)`, null when it was not read.
+ * A check never reads a collection its dataset does not declare, and no other
+ * dataset's check reads one.
  */
 import path from "node:path";
 import type { Db } from "mongodb";
@@ -33,7 +41,7 @@ import { z } from "zod";
 import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
-const { checkData, checkStored, readStored } = require("../../../scripts/lib/datasets/checks");
+const { checkContent, checkData, checkStored, readCollections, readStored } = require("../../../scripts/lib/datasets/checks");
 const { loadCatalog } = require("../../../scripts/lib/datasets/catalog");
 const parts = require("../../../scripts/lib/datasets/parts");
 const store = require("../../../scripts/lib/datasets/store");
@@ -116,6 +124,51 @@ const readingCatalog = {
       owner: "src/notes",
       schema: z.strictObject({ text: z.string() }),
       referencesOf: () => [],
+    },
+  },
+};
+
+interface Runs {
+  stopCount: number;
+}
+interface TimetableDoc {
+  id: string;
+  stopTimes: string[];
+}
+type CollectionOf = (key: string) => TimetableDoc[] | null;
+
+/** `runs` checks its stop count against the declared `timetables` collection; `notes` declares none. */
+const collectionCatalog = {
+  sources: {},
+  collections: { timetables: { database: "MONGO_DB_NAME_TIMETABLES", name: "timetables" } },
+  datasets: {
+    runs: {
+      owner: "src/runs",
+      schema: z.strictObject({ stopCount: z.number() }),
+      collections: ["timetables"],
+      issuesOf: (runs: Runs, { collectionOf }: { collectionOf: CollectionOf }) => {
+        const docs = collectionOf("timetables");
+        if (docs === null) return [{ path: [], message: "timetables not read", warning: true }];
+        return docs.flatMap((doc) => (doc.stopTimes.length === runs.stopCount ? [] : [{ path: ["stopCount"], message: `${doc.id} lists ${doc.stopTimes.length}` }]));
+      },
+      referencesOf: () => [],
+    },
+    notes: {
+      owner: "src/notes",
+      schema: z.strictObject({ text: z.string() }),
+      referencesOf: () => [],
+    },
+  },
+};
+
+/** collectionCatalog with a `notes` check that reads `timetables`, which `notes` does not declare. */
+const undeclaredReadCatalog = {
+  ...collectionCatalog,
+  datasets: {
+    ...collectionCatalog.datasets,
+    notes: {
+      ...collectionCatalog.datasets.notes,
+      issuesOf: (_notes: unknown, { collectionOf }: { collectionOf: CollectionOf }) => (collectionOf("timetables") ?? []).map(() => ({ path: [], message: "read" })),
     },
   },
 };
@@ -386,6 +439,30 @@ describe("checkData's storedOf for a parted dataset", () => {
   });
 });
 
+describe("checkData's collectionOf", () => {
+  it("hands a check the declared collection it was given, and refuses on what it finds there", () => {
+    // Act
+    const issues = checkData(collectionCatalog, "runs", { stopCount: 3 }, {}, { timetables: [{ id: "a", stopTimes: ["07:40", "08:45"] }] });
+
+    // Assert
+    expect(issues).toEqual([{ dataset: "runs", path: ["stopCount"], message: "a lists 2" }]);
+  });
+
+  it("hands null for a declared collection that was not read, which the check reports as a warning", () => {
+    // Act
+    const { issues, warnings } = checkContent(collectionCatalog, "runs", { stopCount: 3 }, {});
+
+    // Assert
+    expect(issues).toEqual([]);
+    expect(warnings).toEqual([{ dataset: "runs", path: [], message: "timetables not read", warning: true }]);
+  });
+
+  it("throws when a check reads a collection its dataset does not declare", () => {
+    // Act & Assert
+    expect(() => checkData(undeclaredReadCatalog, "notes", { text: "x" }, {}, { timetables: [] })).toThrow('notes reads the collection "timetables", which its catalog entry does not declare');
+  });
+});
+
 describe("checkStored", () => {
   let mongod: TestMongod;
   let dbModule: DbModule;
@@ -496,6 +573,38 @@ describe("checkStored", () => {
     expect(here.issues).toEqual([]);
     expect(there.issues).toEqual([{ dataset: "routes", path: ["lines", 1], message: "no stored table runs line 2" }]);
     await other.dropDatabase();
+  });
+
+  it("reads each collection a checked, stored dataset declares through the reader, and none for any other", async () => {
+    // Arrange
+    await store.create(db, "runs", { stopCount: 3 }, { by: "a@example.com", now: NOW });
+    await store.create(db, "notes", { text: "x" }, { by: "a@example.com", now: NOW });
+    const reader = jest.fn(async () => [{ id: "a", stopTimes: ["07:40", "08:45"] }]);
+
+    // Act
+    const forNotes = await checkStored(db, collectionCatalog, ["notes"], reader);
+    const readsForNotes = reader.mock.calls.length;
+    const forBoth = await checkStored(db, collectionCatalog, ["runs", "notes"], reader);
+
+    // Assert
+    expect(readsForNotes).toBe(0);
+    expect(forNotes.issues).toEqual([]);
+    expect(reader.mock.calls).toEqual([["timetables", collectionCatalog.collections.timetables]]);
+    expect(forBoth.issues).toEqual([{ dataset: "runs", path: ["stopCount"], message: "a lists 2" }]);
+  });
+
+  it("readCollections reads the collections the named datasets declare, once each, and nothing for a dataset that declares none", async () => {
+    // Arrange
+    const reader = jest.fn(async () => []);
+
+    // Act
+    const forNotes = await readCollections(collectionCatalog, ["notes"], reader);
+    const forRuns = await readCollections(collectionCatalog, ["runs", "runs"], reader);
+
+    // Assert
+    expect(forNotes).toEqual({});
+    expect(forRuns).toEqual({ timetables: [] });
+    expect(reader).toHaveBeenCalledTimes(1);
   });
 
   it("lists a dataset with nothing stored as missing, not as an issue", async () => {

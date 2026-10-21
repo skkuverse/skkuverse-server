@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import logger from "../../infra/logger";
 import { BusScheduleService } from "../schedule/bus-schedule.service";
 import { BusStopsService } from "../stops/bus-stops.service";
 import type { FixedEstimate, ShuttleEtaDoc } from "./bus-eta.document";
@@ -42,8 +43,11 @@ export class BusEtaService {
 
   // WHY: a push between a tick's read of the sequences and its write changes their stop counts; only what fits is written.
   async upsertFitting(docs: ShuttleEtaDoc[]): Promise<UpsertResult> {
-    const { sequenceLength } = await this.current();
-    return this.repository.upsertEstimates(docs.filter((d) => d.offsetsSec.length === sequenceLength(d.serviceId, d.routeType)), sequenceLength);
+    const { revision, sequenceLength } = await this.current();
+    const fitting = docs.filter((d) => d.offsetsSec.length === sequenceLength(d.serviceId, d.routeType));
+    const droppedCount = docs.length - fitting.length;
+    if (droppedCount > 0) logger.info({ event: "bus.eta.estimates_dropped", revision, droppedCount }, "Estimates fetched for an older stop count left out of the write");
+    return this.repository.upsertEstimates(fitting, sequenceLength);
   }
 
   // WHY: runs come from the resolved timetable, so an override, a rest day, a holiday or a suspension removes a

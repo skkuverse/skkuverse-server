@@ -18,6 +18,21 @@ describe("deepFreeze", () => {
     expect(Object.isFrozen(value.routes[0]!.stations[0])).toBe(true);
     expect(Object.isFrozen(value.routes)).toBe(true);
   });
+
+  it("makes a nested Map refuse set, delete and clear, keeping its entries and freezing their values", () => {
+    // Arrange
+    const value = { byId: new Map([["a", { name: "x" }]]) };
+
+    // Act
+    deepFreeze(value);
+
+    // Assert
+    expect(() => value.byId.set("b", { name: "y" })).toThrow(TypeError);
+    expect(() => value.byId.delete("a")).toThrow(TypeError);
+    expect(() => value.byId.clear()).toThrow(TypeError);
+    expect([...value.byId]).toEqual([["a", { name: "x" }]]);
+    expect(Object.isFrozen(value.byId.get("a"))).toBe(true);
+  });
 });
 
 describe("serviceConfigOf", () => {

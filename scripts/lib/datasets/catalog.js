@@ -32,6 +32,10 @@
  *   reads            optional: the parted datasets whose parts its check
  *                    reads through `storedOf`. The tool fetches a parted
  *                    dataset's parts only for a check that names it here.
+ *   collections      optional: the keys of the catalog's `collections` its
+ *                    check reads through `issuesOf`'s `collectionOf(key)`,
+ *                    read from the environment the run targets, or null when
+ *                    not read (openspec/changes/unify-bus-stops, design D6)
  *
  * `issuesOf`, `referencesOf` and `idsOf` take the schema's parsed output.
  *
@@ -45,6 +49,25 @@
  *                    optional: lines the push report adds to a changed part,
  *                    both parsed with parts.schema
  * and its `issuesOf` and `referencesOf` take the parsed parts, ordered by key.
+ *
+ * A collection is one outside the content database that a check reads, never
+ * writes:
+ *
+ *   database         the .env name of its database's base name; the tool
+ *                    adds `_dev` without --prod, as the server does
+ *   name, projection what it reads
+ *   keyOf(doc)       a document's identity
+ *   fromFile(raw)    optional: the documents its own writer would store from
+ *                    the file `push --against <file>` names, which replace the
+ *                    stored ones of the same key for that push's check
+ *   applyCommand(file, prod, { create })
+ *                    optional: the command that writes that file, printed
+ *                    after the push; `create` when the file holds a key the
+ *                    target does not store
+ *
+ * `busSchedules` is the stored shuttle timetables, which `npm run schedule`
+ * writes; `bus-stops` reads it so a sequence and its timetable entries agree
+ * (`stopTimesMismatches`, run by both writers).
  *
  * A code-held source is an identity list that still lives in code, resolved
  * against the compiled checkout (move-editorial-datasets D3):
@@ -72,7 +95,30 @@
  * widens in code first.
  */
 
+const { buildDocuments, parseTimetableFile, stopTimesMismatches } = require("../campus-schedule-file");
+
 const SHOWN_TRAIN_NUMBERS = 8;
+const SHOWN_STOP_TIME_MISMATCHES = 3;
+
+/** `word` as one shell word: as it is when plain, else single-quoted. */
+const shellWord = (word) => (/^[\w./@:+-]+$/.test(word) ? word : `'${word.replace(/'/g, "'\\''")}'`);
+
+/** One issue per sequence whose timetable entries do not fit it, naming the first few; a warning when they were not read. */
+function timetableIssues({ sequences }, docs) {
+  if (docs === null) return [{ path: [], message: "bus_schedules was not read, so the sequences were not checked against the timetables", warning: true }];
+  const bySequence = new Map();
+  for (const mismatch of stopTimesMismatches(docs, sequences)) {
+    const key = `${mismatch.serviceId}\u0000${mismatch.routeType}`;
+    bySequence.set(key, [...(bySequence.get(key) ?? []), mismatch]);
+  }
+  return [...bySequence.values()].map((mismatches) => {
+    const { serviceId, routeType } = mismatches[0];
+    const count = mismatches.length === 1 ? "1 timetable entry does not" : `${mismatches.length} timetable entries do not`;
+    const shown = mismatches.slice(0, SHOWN_STOP_TIME_MISMATCHES).map((mismatch) => mismatch.message);
+    const more = mismatches.length > SHOWN_STOP_TIME_MISMATCHES ? [`and ${mismatches.length - SHOWN_STOP_TIME_MISMATCHES} more`] : [];
+    return { path: ["sequences", serviceId, routeType], message: `${count} fit this sequence: ${[...shown, ...more].join("; ")}` };
+  });
+}
 
 /** A changed timetable's trains added and removed, a train counted by its whole row, so a moved train is both. */
 function trainChanges(stored, pushed) {
@@ -122,8 +168,7 @@ function loadCatalog(load) {
   const { jongroRouteAttributesDataset } = load("bus/route-attributes/bus-route-attributes.schema");
   const { toRouteAttributesIssues } = load("bus/route-attributes/bus-route-attributes.rules");
   const { busStopsDataset } = load("bus/stops/bus-stops.schema");
-  const { etaOptIns } = load("bus/stops/bus-stops.rules");
-  const { busStopsReferences, toBusStopsIssues } = load("bus/stops/check/bus-stops-check.rules");
+  const { busStopsReferences, etaOptIns, toBusStopsIssues } = load("bus/stops/bus-stops.rules");
   const { LANE_STRATEGIES } = load("bus/eta/lane/bus-eta-lane.constants");
   const { checkedRegistry } = load("miniapps/miniapps.schema");
   const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
@@ -182,6 +227,17 @@ function loadCatalog(load) {
       : asWarnings(toRouteIssues(topology, routesOf(tables)), ["subway-topology"]);
 
   return {
+    collections: {
+      busSchedules: {
+        database: "MONGO_DB_NAME_BUS_CAMPUS",
+        name: "bus_schedules",
+        projection: { _id: 0, serviceId: 1, patternId: 1, "entries.time": 1, "entries.routeType": 1, "entries.stopTimes": 1 },
+        keyOf: (doc) => `${doc.serviceId}/${doc.patternId}`,
+        fromFile: (raw) => buildDocuments(parseTimetableFile(raw)),
+        applyCommand: (file, prod, { create = false } = {}) =>
+          `npm run schedule -- --file ${shellWord(file)}${create ? " --create" : ""}${prod ? " --prod" : ""}`,
+      },
+    },
     sources: {
       busGroups,
       subwayStations,
@@ -267,17 +323,21 @@ function loadCatalog(load) {
         referencesOf: () => [],
       },
       // The local stops, the shuttle sequences and the HSSC line; the service ids, estimate opt-ins, travel strategies and
-      // HSSC position count stay in code (unify-bus-stops D3, D4). Its stop ids are what later datasets may name.
+      // HSSC position count stay in code (unify-bus-stops D3, D4). Its stop ids are what later datasets may name. Its
+      // sequences are checked against the target's stored timetables, whose stop times follow them (D6).
       "bus-stops": {
         owner: "src/bus/stops",
         schema: busStopsDataset,
-        issuesOf: (data) =>
-          toBusStopsIssues(data, {
+        collections: ["busSchedules"],
+        issuesOf: (data, { collectionOf }) => [
+          ...toBusStopsIssues(data, {
             knownServiceIds: new Set(Object.keys(SERVICE_CONFIG)),
             optIns: etaOptIns(SERVICE_CONFIG),
             stationIds: new Set(subwayStations.ids()),
             laneStrategies: LANE_STRATEGIES,
           }),
+          ...timetableIssues(data, collectionOf("busSchedules")),
+        ],
         referencesOf: busStopsReferences,
         idsOf: ({ stops }) => stops.map((stop) => stop.id),
       },

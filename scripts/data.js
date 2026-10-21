@@ -17,6 +17,13 @@
  *   copy-prod-to-dev <dataset>            store production's data as a new _dev revision
  *   check [<dataset>]                     run the push checks on stored data; writes nothing
  *
+ *   --against <timetable file>
+ *               push or rollback, of a dataset that reads the stored timetables
+ *               (bus-stops): check against the documents `npm run schedule`
+ *               would write from that file instead of the stored ones of the
+ *               same service and pattern, then print that command for the
+ *               same target (a sequence-length change; docs/how-to/edit-bus-stops.md)
+ *
  *   --prod      target the production database (default: the _dev one)
  *   --yes       confirm a production write without a terminal prompt
  *   --dry-run   print the target and the diff, write nothing
@@ -29,7 +36,9 @@
  * the exit code at 0. The datasets and their validation are scripts/lib/datasets/catalog.js
  * over the compiled dist/src (so `npm run data` builds first), the checks
  * checks.js, the MongoDB protocol store.js (and parts.js for a parted
- * dataset), the pulled file working-file.js (working-dir.js).
+ * dataset), the pulled file working-file.js (working-dir.js). A collection a
+ * check reads outside the content database (the catalog's `collections`) is
+ * read here, from the target environment, and never written.
  *
  * Why --prod and not NODE_ENV: as scripts/set-campus-schedule.js says, an env
  * var is silently lost when a command is pasted across two lines; a flag cannot
@@ -48,7 +57,7 @@ const { isDeepStrictEqual } = require("node:util");
 const { MongoClient } = require("mongodb");
 
 const { loadCatalog } = require("./lib/datasets/catalog");
-const { checkContent, checkParts, checkStored, readStored } = require("./lib/datasets/checks");
+const { checkContent, checkParts, checkStored, readCollections, readStored } = require("./lib/datasets/checks");
 const parts = require("./lib/datasets/parts");
 const store = require("./lib/datasets/store");
 const { readPartFiles, readWorkingDir, workingDirPath, writeWorking, writeWorkingDir } = require("./lib/datasets/working-dir");
@@ -67,13 +76,13 @@ const USAGE = [
   "  pull <dataset> | push <dataset> [--file f | --dir d] | push <dataset> --create (--file f | --dir d)",
   "  history <dataset> [--limit n] | rollback <dataset> <revision>",
   "  copy-prod-to-dev <dataset> | check [<dataset>]",
-  "  options: --prod --yes --dry-run --note <text> --by <email>",
+  "  options: --prod --yes --dry-run --note <text> --by <email> --against <timetable file> (push, rollback)",
 ].join("\n");
 
 const NEEDS_DATASET = new Set(["pull", "push", "history", "rollback", "copy-prod-to-dev"]);
 const COMMANDS = new Set([...NEEDS_DATASET, "check"]);
 const FLAGS = { "--prod": "prod", "--yes": "yes", "--dry-run": "dryRun", "--create": "create" };
-const VALUED = { "--file": "file", "--dir": "dir", "--note": "note", "--by": "by", "--limit": "limit" };
+const VALUED = { "--file": "file", "--dir": "dir", "--note": "note", "--by": "by", "--limit": "limit", "--against": "against" };
 
 class UsageError extends Error {}
 class Refusal extends Error {}
@@ -101,6 +110,7 @@ function parseArgs(argv) {
   if (command === "rollback" && !/^[1-9]\d*$/.test(revision ?? "")) throw new UsageError("rollback needs a revision number");
   if (args.create && (command !== "push" || !(args.file || args.dir))) throw new UsageError("--create goes with push and --file <json> or --dir <dir>");
   if (args.file && args.dir) throw new UsageError("pass --file or --dir, not both");
+  if (args.against && command !== "push" && command !== "rollback") throw new UsageError("--against goes with push or rollback");
   if (command === "copy-prod-to-dev" && args.prod) {
     throw new UsageError("copy-prod-to-dev writes only the _dev database; drop --prod (nothing copies into production)");
   }
@@ -322,12 +332,60 @@ function reportStored(ctx, result, base) {
   ctx.out("Every api replica that serves it reads it within 60 s, with no restart.");
 }
 
+/** The key of the collection `--against` replaces for `dataset`: the one it declares that a file can stand in for. */
+function againstKeyOf(catalog, dataset) {
+  return (catalog.datasets[dataset].collections ?? []).find((key) => catalog.collections[key].fromFile);
+}
+
+/** `--against`'s documents: what the collection's own writer would store from the file. */
+function againstDocs(ctx, spec) {
+  let raw;
+  try {
+    raw = JSON.parse(fs.readFileSync(ctx.args.against, "utf8"));
+  } catch (err) {
+    throw new Refusal(`cannot read ${ctx.args.against} as JSON: ${err.message}`, { cause: err });
+  }
+  return refusingOnError(() => spec.fromFile(raw));
+}
+
+/**
+ * Reads a declared collection from the target environment's database, with `--against`'s documents in place of
+ * the stored ones of the same key. Reads only.
+ */
+function collectionReader(ctx) {
+  return async (key, spec) => {
+    const base = ctx.env[spec.database];
+    if (!base) throw new Refusal(`${spec.database} is not set in .env (run \`npm run env:pull\`); ${ctx.args.dataset ?? "the check"} reads ${spec.name} there.`);
+    const database = ctx.target === "prod" ? base : `${base}_dev`;
+    const stored = await ctx.client.db(database).collection(spec.name).find({}, { projection: spec.projection }).toArray();
+    if (!ctx.args.against || key !== againstKeyOf(ctx.catalog, ctx.args.dataset)) {
+      ctx.out(`reads      ${database}.${spec.name}`);
+      return stored;
+    }
+    const fromFile = againstDocs(ctx, spec);
+    const replaced = new Set(fromFile.map(spec.keyOf));
+    const storedKeys = new Set(stored.map(spec.keyOf));
+    ctx.against.creates = fromFile.some((doc) => !storedKeys.has(spec.keyOf(doc)));
+    ctx.out(`reads      ${database}.${spec.name}, with ${ctx.args.against} in place of its documents of the same service and pattern`);
+    return [...stored.filter((doc) => !replaced.has(spec.keyOf(doc))), ...fromFile];
+  };
+}
+
 /** `data`'s warnings, or a refusal listing every issue. */
 async function checkedWarnings(ctx, db, data) {
   const { stored } = await readStored(db, ctx.catalog, [ctx.args.dataset]);
-  const { issues, warnings } = checkContent(ctx.catalog, ctx.args.dataset, data, stored);
+  const collections = await readCollections(ctx.catalog, [ctx.args.dataset], ctx.readCollection);
+  const { issues, warnings } = checkContent(ctx.catalog, ctx.args.dataset, data, stored, collections);
   if (issues.length > 0) throw refuseIssues(issues);
   return warnings;
+}
+
+/** After a push or rollback `--against` a file: the command that writes it to the same target, which follows at once. */
+function printApplyCommand(ctx) {
+  if (!ctx.args.against) return;
+  const spec = ctx.catalog.collections[againstKeyOf(ctx.catalog, ctx.args.dataset)];
+  const command = spec.applyCommand(ctx.args.against, ctx.args.prod, { create: ctx.against.creates });
+  ctx.out(ctx.args.dryRun ? `[dry run] a push would be followed at once by: ${command}` : `next: apply the file to the same target at once: ${command}`);
 }
 
 async function pull(ctx) {
@@ -362,6 +420,7 @@ async function create(ctx) {
     write: (meta) => store.create(ctx.db, dataset, data, meta),
   });
   if (result !== null) reportStored(ctx, result, null);
+  printApplyCommand(ctx);
   return EXIT_OK;
 }
 
@@ -415,9 +474,11 @@ async function push(ctx) {
     warnings,
     write: (meta) => store.push(ctx.db, dataset, working.data, { ...meta, baseRevision: working.baseRevision }),
   });
-  if (result === null) return EXIT_OK;
-  reportStored(ctx, result, working.baseRevision);
-  writeWorkingFile(file, { ...working, baseRevision: result.revision, pulledAt: iso(ctx.now()) });
+  if (result !== null) {
+    reportStored(ctx, result, working.baseRevision);
+    writeWorkingFile(file, { ...working, baseRevision: result.revision, pulledAt: iso(ctx.now()) });
+  }
+  printApplyCommand(ctx);
   return EXIT_OK;
 }
 
@@ -446,7 +507,8 @@ const samePartIds = (before, after) => partIdLines(before) === partIdLines(after
 /** The checked parts of `files`, their manifest and the checks' warnings, or a refusal listing every issue. */
 async function checkedParts(ctx, files) {
   const { stored } = await readStored(ctx.db, ctx.catalog, [ctx.args.dataset]);
-  const checked = checkParts(ctx.catalog, ctx.args.dataset, files, stored);
+  const collections = await readCollections(ctx.catalog, [ctx.args.dataset], ctx.readCollection);
+  const checked = checkParts(ctx.catalog, ctx.args.dataset, files, stored, collections);
   if (checked.issues.length > 0) throw refuseIssues(checked.issues);
   const manifest = parts.toManifest(checked.parts.map((part) => parts.toStoredPart(ctx.args.dataset, part)));
   return { parts: checked.parts, manifest, warnings: checked.warnings };
@@ -633,6 +695,7 @@ async function rollback(ctx) {
     write: (meta) => store.rollback(ctx.db, dataset, revision, { ...meta, baseRevision: current.revision }),
   });
   if (result !== null) reportStored(ctx, result, current.revision);
+  printApplyCommand(ctx);
   return EXIT_OK;
 }
 
@@ -665,7 +728,7 @@ async function copyProdToDev(ctx) {
 async function check(ctx) {
   const names = ctx.args.dataset ? [ctx.args.dataset] : Object.keys(ctx.catalog.datasets);
   for (const name of names) await repairOrReport(ctx, ctx.db, name);
-  const result = await checkStored(ctx.db, ctx.catalog, names);
+  const result = await checkStored(ctx.db, ctx.catalog, names, ctx.readCollection);
   result.checked.forEach(({ dataset, revision }) => ctx.out(`checked  ${dataset} revision ${revision}`));
   result.missing.forEach((dataset) => ctx.out(`skipped  ${dataset}: no dataset yet in ${ctx.dbName}`));
   printWarnings(ctx, result.warnings ?? []);
@@ -683,7 +746,9 @@ async function connectAndRun(ctx, url, serverSelectionTimeoutMS) {
   const client = new MongoClient(url, { serverSelectionTimeoutMS });
   try {
     await client.connect();
-    return await HANDLERS[ctx.args.command]({ ...ctx, client, db: client.db(ctx.dbName) });
+    // WHY: `against` is shared by reference, so what the reader finds in the file reaches the handler's context.
+    const connected = { ...ctx, client, db: client.db(ctx.dbName), against: { creates: false } };
+    return await HANDLERS[ctx.args.command]({ ...connected, readCollection: collectionReader(connected) });
   } finally {
     await client.close();
   }
@@ -710,6 +775,7 @@ async function run(argv, deps = {}) {
       if (!catalog.datasets[name]) throw new UsageError(`unknown dataset "${name}" (known: ${Object.keys(catalog.datasets).join(", ")})`);
       if (catalog.datasets[name].parts && args.file) throw new UsageError(`${name} is stored in parts: push it from a directory with --dir, not --file`);
       if (!catalog.datasets[name].parts && args.dir) throw new UsageError(`${name} is one document: push it with --file, not --dir`);
+      if (args.against && !againstKeyOf(catalog, name)) throw new UsageError(`${name} reads no collection a timetable file replaces; --against goes with push bus-stops`);
     }
     const names = databaseNames(env);
     if (!env.MONGO_URL) throw new Refusal("MONGO_URL is not set in .env (run `npm run env:pull`).");
@@ -718,6 +784,7 @@ async function run(argv, deps = {}) {
     out(`database   ${dbName}   ${args.prod ? "<- PRODUCTION" : "(dev; pass --prod for production)"}`);
     const ctx = {
       args,
+      env,
       catalog,
       names,
       target,

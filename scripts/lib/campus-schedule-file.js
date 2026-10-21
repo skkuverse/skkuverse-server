@@ -34,11 +34,11 @@ function entryRank(entry, routeTypes) {
 /**
  * `stopTimes` lists the time at each stop of the run, in the order the bus
  * reaches them; the stop sequence itself (names, board/alight, scheduled or
- * estimated) is the service's in src/bus/stops/schedule-stops.json, and a
- * jest test checks the two have the same length. `null` is a time nobody
- * knows (only allowed at an estimated stop — also checked by that test). The
- * first stop is where the run departs, so it must equal `time`, which every
- * client already reads.
+ * estimated) is the service's in the stored bus-stops dataset, and
+ * stopTimesMismatches (below) checks the two have the same length. `null` is a
+ * time nobody knows (only allowed at an estimated stop — also checked there).
+ * The first stop is where the run departs, so it must equal `time`, which
+ * every client already reads.
  */
 function checkStopTimes(entry, patternId) {
   const at = `${patternId} ${entry.time}`;
@@ -324,6 +324,42 @@ function diffEntries(currentEntries, targetEntries, routeTypes) {
   return lines;
 }
 
+function stopTimesMismatch(entry, sequence) {
+  if (sequence === undefined) return "stop times, but bus-stops holds no sequence for this route type";
+  if (!Array.isArray(entry.stopTimes)) return `no stop times for a sequence of ${sequence.length} stops`;
+  if (entry.stopTimes.length !== sequence.length) return `${entry.stopTimes.length} stop times for a sequence of ${sequence.length} stops`;
+  const unknown = entry.stopTimes.findIndex((t, i) => t === null && sequence[i].timing !== "estimated");
+  return unknown === -1 ? null : `no time at stop ${unknown}, which the sequence schedules`;
+}
+
+/**
+ * The entries of `docs` (bus_schedules documents, or what buildDocuments makes
+ * of a file) whose stop times do not follow their sequence in `sequences`, the
+ * stored bus-stops dataset's `data.sequences` (service id -> route type -> the
+ * stops of every run): a count other than the sequence's stops, a null where
+ * the sequence schedules the stop, no stop times, or stop times for a route
+ * type with no sequence. A service with no sequence whose entries carry no stop
+ * times is not checked. Each as { serviceId, routeType, patternId, time,
+ * message }, the message naming all four.
+ *
+ * Both writers run it (openspec/changes/unify-bus-stops design D6): `npm run
+ * data -- push bus-stops` against the target's stored timetables, and `npm run
+ * schedule` against the target's stored bus-stops. It reads the sequences raw,
+ * counting stops and reading `timing`, since this is CommonJS outside dist/.
+ */
+function stopTimesMismatches(docs, sequences) {
+  return docs.flatMap((doc) => {
+    const byRouteType = sequences[doc.serviceId];
+    return (doc.entries ?? []).flatMap((entry) => {
+      if (byRouteType === undefined && entry.stopTimes === undefined) return [];
+      const message = stopTimesMismatch(entry, byRouteType?.[entry.routeType]);
+      if (message === null) return [];
+      const { serviceId, patternId } = doc;
+      return [{ serviceId, routeType: entry.routeType, patternId, time: entry.time, message: `${serviceId} ${entry.routeType} ${entry.time} (${patternId}): ${message}` }];
+    });
+  });
+}
+
 module.exports = {
   buildDocuments,
   diffEntries,
@@ -332,4 +368,5 @@ module.exports = {
   entryRank,
   findOverlaps,
   parseTimetableFile,
+  stopTimesMismatches,
 };
