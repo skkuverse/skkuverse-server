@@ -123,6 +123,7 @@ function loadCatalog(load) {
   const { checkedRegistry } = load("miniapps/miniapps.schema");
   const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
   const { toMiniAppRegistry } = load("miniapps/miniapps.mapper");
+  const { gamesFile } = load("games/games.schema");
   const { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } = load("infra/origins");
   const { JONGRO_ROUTES, SERVICE_CONFIG } = load("bus/bus.constants");
   const { toBusGroupIds } = load("bus/config/bus-config.mapper");
@@ -186,6 +187,12 @@ function loadCatalog(load) {
         issuesOf: (registry) => toRegistryIssues(registry, { owners: MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, webviewOrigin: WEBVIEW_ORIGIN }),
         referencesOf: () => [],
         idsOf: ({ index }) => index.miniApps.map((entry) => entry.id),
+      },
+      // Only what exposes each hosted game; who owns a game origin stays in src/infra/origins.ts (add-game-factory D3).
+      games: {
+        owner: "src/games",
+        schema: gamesFile,
+        referencesOf: () => [],
       },
       "home-layout": {
         owner: "src/ui/home",

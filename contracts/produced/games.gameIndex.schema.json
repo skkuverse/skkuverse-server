@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "games": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "entryUrl": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "minHostProtocol": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "entryUrl",
+          "enabled",
+          "minHostProtocol"
+        ]
+      }
+    }
+  },
+  "required": [
+    "games"
+  ]
+}

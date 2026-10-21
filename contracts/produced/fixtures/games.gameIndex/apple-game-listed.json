@@ -1,0 +1,9 @@
+{
+  "_about": "Hand-written 2026-10-21, since the route is not deployed yet: GET /games once the games dataset lists apple-game enabled and suika-game disabled (skkuverse-app add-game-factory tasks 3.5 and 5.2), as games.routes.test.ts serves __tests__/helpers/games/games-fixture.ts listedGames(); the whole body",
+  "data": {
+    "games": [
+      { "id": "apple-game", "entryUrl": "https://apple-game.game.skkuverse.com/", "enabled": true, "minHostProtocol": 1 },
+      { "id": "suika-game", "entryUrl": "https://suika-game.game.skkuverse.com/", "enabled": false, "minHostProtocol": 1 }
+    ]
+  }
+}

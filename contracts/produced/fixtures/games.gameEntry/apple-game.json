@@ -1,0 +1,4 @@
+{
+  "_about": "Hand-written 2026-10-21, since the route is not deployed yet: GET /games/apple-game once the games dataset lists apple-game (skkuverse-app add-game-factory task 3.5), as games.routes.test.ts serves __tests__/helpers/games/games-fixture.ts listedGames(); the whole entry",
+  "data": { "id": "apple-game", "entryUrl": "https://apple-game.game.skkuverse.com/", "enabled": true, "minHostProtocol": 1 }
+}

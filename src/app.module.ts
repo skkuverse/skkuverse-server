@@ -61,6 +61,7 @@ import { MiniappsModule } from "./miniapps/miniapps.module";
 import { MiniappsNotificationsModule } from "./miniapps/notifications/miniapps-notifications.module";
 import { MiniappsManifestModule } from "./miniapps/manifest/miniapps-manifest.module";
 import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
+import { GamesModule } from "./games/games.module";
 import { SubwayModule } from "./subway/subway.module";
 import { SubwayStationsModule } from "./subway/stations/subway-stations.module";
 import { SubwayTopologyModule } from "./subway/topology/subway-topology.module";
@@ -145,6 +146,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     MiniappsNotificationsModule,
     MiniappsManifestModule,
     MiniappsCatalogModule,
+    GamesModule,
     SubwayModule,
     SubwayStationsModule,
     SubwayTopologyModule,

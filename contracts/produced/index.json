@@ -131,6 +131,20 @@
     "export": "pushPayload",
     "routes": []
   },
+  "games.gameEntry": {
+    "source": "src/games/games.wire.ts",
+    "export": "gameEntry",
+    "routes": [
+      "GET games/:id"
+    ]
+  },
+  "games.gameIndex": {
+    "source": "src/games/games.wire.ts",
+    "export": "gameIndex",
+    "routes": [
+      "GET games"
+    ]
+  },
   "link-action.linkActionType": {
     "source": "src/shared/link-action.wire.ts",
     "export": "linkActionType",
