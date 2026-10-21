@@ -16,3 +16,10 @@ export const ROUTE_PATHS_TTL_MS = 10 * 60_000;
 // WHY: a line changes a few times a year, so a failed reload keeps the last good lines for a day before the 503;
 // a reload that succeeds is always waited for, so the TTL stays the freshness bound.
 export const ROUTE_PATHS_STALE_WINDOW_MS = 24 * 60 * 60_000;
+
+// WHY: a read that fails with nothing cached is not cached by its loader, so without a hold every stop page would read
+// again; one retry per 30 s per process bounds the reads an Atlas outage costs.
+export const ROUTE_PATHS_RETRY_MS = 30_000;
+
+// WHY: a missing or unreadable line recurs on every request; one line a minute, as docs/reference/logging.md asks.
+export const ROUTE_PATHS_LOG_INTERVAL_MS = 60_000;

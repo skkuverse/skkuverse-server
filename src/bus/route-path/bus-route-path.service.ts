@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { createCachedLoader } from "../../infra/cached-loader";
 import { Clock } from "../../infra/clock";
+import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
 import { JONGRO_ROUTES } from "../bus.constants";
 import { toJongroRoute } from "../bus.mapper";
 import type { JongroRoute } from "../bus.types";
 import { BusRoutePathClient } from "./bus-route-path.client";
-import { ROUTE_PATHS_STALE_WINDOW_MS, ROUTE_PATHS_TTL_MS } from "./bus-route-path.constants";
+import { ROUTE_PATHS_LOG_INTERVAL_MS, ROUTE_PATHS_RETRY_MS, ROUTE_PATHS_STALE_WINDOW_MS, ROUTE_PATHS_TTL_MS } from "./bus-route-path.constants";
 import type { JongroRoutePathDocument } from "./bus-route-path.document";
 import { BusRoutePathUnavailableError } from "./bus-route-path.error";
 import { toRoutePath, toRoutePathDocument } from "./bus-route-path.mapper";
@@ -23,6 +24,9 @@ interface HeldChange {
 @Injectable()
 export class BusRoutePathService {
   private readonly heldVersions = new Set<string>();
+  private readonly logThrottle = createLogThrottle(ROUTE_PATHS_LOG_INTERVAL_MS, () => this.clock.now().getTime());
+  // WHY: the loader caches no failure, so a cold outage would otherwise cost one read per stop page.
+  private failedReadHeldUntilMs = 0;
   private readonly loader = createCachedLoader({
     name: "jongro_route_paths",
     ttlMs: ROUTE_PATHS_TTL_MS,
@@ -42,8 +46,9 @@ export class BusRoutePathService {
     const byId = new Map((await this.readStored()).map((doc) => [doc._id, doc]));
     const jongroRoutes = JONGRO_ROUTES.map(toJongroRoute);
     const missingIds = jongroRoutes.filter((route) => !byId.has(route.id)).map((route) => route.id);
-    if (missingIds.length > 0) {
-      logger.error({ event: "bus.jongro.path_missing", routeIds: missingIds }, "Jongro route lines missing; left out of the overlays");
+    const ticket = missingIds.length > 0 ? this.logThrottle.take(`missing:${missingIds.join(",")}`) : null;
+    if (ticket) {
+      logger.error({ event: "bus.jongro.path_missing", routeIds: missingIds, suppressed: ticket.suppressed }, "Jongro route lines missing; left out of the overlays");
     }
     return {
       routePaths: jongroRoutes.flatMap((route) => {
@@ -68,10 +73,13 @@ export class BusRoutePathService {
   }
 
   private async readStored(): Promise<JongroRoutePathDocument[]> {
+    if (this.clock.now().getTime() < this.failedReadHeldUntilMs) throw new BusRoutePathUnavailableError();
     try {
       return await this.loader.get();
     } catch (err) {
-      logger.error({ event: "bus.jongro.path_read_failed", err }, "Jongro route lines unreadable with none cached");
+      this.failedReadHeldUntilMs = this.clock.now().getTime() + ROUTE_PATHS_RETRY_MS;
+      const ticket = this.logThrottle.take("read_failed");
+      if (ticket) logger.error({ event: "bus.jongro.path_read_failed", suppressed: ticket.suppressed, err }, "Jongro route lines unreadable with none cached");
       throw new BusRoutePathUnavailableError();
     }
   }
@@ -105,6 +113,7 @@ export class BusRoutePathService {
   private async apply(route: JongroRoute, stored: JongroRoutePathDocument | null, next: JongroRoutePathDocument): Promise<void> {
     const isWritten = stored === null ? await this.repository.insertRoutePath(next) : await this.repository.updateRoutePath(stored.pathVersion, next);
     this.loader.clear();
+    this.failedReadHeldUntilMs = 0;
     const versions = { routeId: route.id, fromVersion: stored?.pathVersion ?? null, toVersion: next.pathVersion };
     if (!isWritten) {
       logger.warn({ event: "bus.jongro.path_sync_conflict", ...versions }, "The Jongro route line changed before the sync wrote; nothing written");
