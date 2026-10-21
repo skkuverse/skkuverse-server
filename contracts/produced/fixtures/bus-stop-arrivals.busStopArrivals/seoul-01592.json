@@ -1,0 +1,47 @@
+{
+  "_about": "Hand-written from a capture: GET /bus/stops/seoul-01592/arrivals from a local api replica of unify-bus-stops wave 3 (ROLE=api, NODE_ENV=development, _dev databases) 2026-10-22 02:41 KST, Accept-Language ko, whose bus_cache held no Jongro rows since no poller writes _dev; the 종로07 entry's one arrival is copied from contracts/produced/fixtures/bus.arrival/running.json, so the fixture shows a pole two Jongno routes share with an arrival. Converted 2026-10-22 when each entry took its own kind (arrivals, approaching), no other value changed.",
+  "data": {
+    "stop": {
+      "id": "seoul-01592",
+      "name": "혜화역1번출구",
+      "coords": {
+        "lat": 37.5834729904,
+        "lng": 127.0017632862
+      },
+      "arsIds": [
+        "01592"
+      ]
+    },
+    "routes": [
+      {
+        "groupId": "jongro07",
+        "kind": "arrivals",
+        "label": "종로 07",
+        "stationIndex": 16,
+        "towards": "혜화동로터리",
+        "stationsVersion": "0346768f2b776f45",
+        "arrivals": [
+          {
+            "minutes": 2,
+            "stopsAway": 1,
+            "state": "running",
+            "isLastBus": false,
+            "carNumber": "5538",
+            "crowding": "relaxed",
+            "passengerCount": 7,
+            "message": "2분19초후[1번째 전]"
+          }
+        ]
+      },
+      {
+        "groupId": "jongro08",
+        "kind": "arrivals",
+        "label": "종로 08",
+        "stationIndex": 22,
+        "towards": "혜화동로터리",
+        "stationsVersion": "52e82cc449046288",
+        "arrivals": []
+      }
+    ]
+  }
+}

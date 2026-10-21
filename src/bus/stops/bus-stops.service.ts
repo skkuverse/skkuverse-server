@@ -8,10 +8,11 @@ import type { LocalizedName } from "../../subway/subway.types";
 import { SERVICE_CONFIG } from "../bus.constants";
 import { BUS_STOPS_LOG_INTERVAL_MS } from "./bus-stops.constants";
 import { BusStopsReadError, BusStopsUnavailableError } from "./bus-stops.error";
-import { resolveStopSequences, toBusStopsSnapshot } from "./bus-stops.mapper";
+import { resolveStopSequences, toBusStopsSnapshot, toStopRecord } from "./bus-stops.mapper";
 import { BusStopsRepository } from "./bus-stops.repository";
 import { etaOptIns, subwayStationErrors, validateStopCatalog } from "./bus-stops.rules";
-import type { BusStopsSnapshot, EtaOptIns, ResolvedStops } from "./bus-stops.types";
+import type { BusStopsSnapshot, EtaOptIns, ResolvedStops, ScheduleStop } from "./bus-stops.types";
+import type { ServedStop } from "../bus.wire";
 
 // SEE: docs/explanation/bus-architecture.md ("Invariants"): the config groups, the smart view and the estimate pollers read the stops here.
 @Injectable()
@@ -48,6 +49,10 @@ export class BusStopsService {
 
   servedSequences(snapshot: BusStopsSnapshot, serviceIds: readonly string[], { lang, hasStopMaps }: { lang: SupportedLang; hasStopMaps: boolean }): ResolvedStops {
     return resolveStopSequences(serviceIds, lang, { catalog: snapshot.catalog, subwayTitles: this.subwayTitles, hasStopMaps });
+  }
+
+  servedStop(stop: ScheduleStop, lang: SupportedLang): ServedStop {
+    return toStopRecord(stop, lang, this.subwayTitles);
   }
 
   etaOptIns(): EtaOptIns {

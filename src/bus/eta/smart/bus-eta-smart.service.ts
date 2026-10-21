@@ -43,17 +43,31 @@ export class BusEtaSmartService {
   ) {}
 
   async getSmart(serviceId: string, lang: SupportedLang): Promise<WithEtag<SmartSchedule>> {
+    const data = await this.resolveSmart(serviceId, lang);
+    const hash = crypto.createHash("md5").update(JSON.stringify(data)).digest("hex");
+    const maxAge = serviceConfigOf(serviceId)?.eta?.routeTypes ? ESTIMATES_MAX_AGE_S : MAX_AGE_S;
+    // WHY: private, since the body is in the request's language and a shared cache would serve it to every language.
+    return withEtag(data, `"smart-${serviceId}-${data.from || data.status}-${hash}"`, `private, max-age=${maxAge}`);
+  }
+
+  // WHY: the smart view's body without the ETag's hash, for a caller that serves no ETag (the no-store stop page).
+  async resolveSmart(serviceId: string, lang: SupportedLang): Promise<SmartSchedule> {
     const serviceConfig = serviceConfigOf(serviceId);
     const resolved = serviceConfig ? await this.schedule.resolveSmartSchedule(serviceId) : null;
     if (!resolved) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${serviceId}`, 404);
     // WHY: applied to a copy after the schedule cache and before hashing, so the ETag follows the estimates.
     const etaRouteTypes = serviceConfig?.eta?.routeTypes;
     const result = etaRouteTypes && resolved.status === "active" ? await this.withEstimates(resolved, etaRouteTypes) : resolved;
-    const data = withStatusMessage(result, lang);
-    const hash = crypto.createHash("md5").update(JSON.stringify(data)).digest("hex");
-    const maxAge = etaRouteTypes ? ESTIMATES_MAX_AGE_S : MAX_AGE_S;
-    // WHY: private, since the body is in the request's language and a shared cache would serve it to every language.
-    return withEtag(data, `"smart-${serviceId}-${data.from || data.status}-${hash}"`, `private, max-age=${maxAge}`);
+    return withStatusMessage(result, lang);
+  }
+
+  // WHY: the week after an active smart schedule's, estimates applied by the same precedence, for the stop page's runs.
+  async resolveFollowingWeek(smart: SmartSchedule): Promise<SmartSchedule["days"]> {
+    if (smart.status !== "active" || smart.from === null) return [];
+    const days = await this.schedule.resolveFollowingWeek(smart.serviceId, smart.from);
+    if (!days) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${smart.serviceId}`, 404);
+    const etaRouteTypes = serviceConfigOf(smart.serviceId)?.eta?.routeTypes;
+    return etaRouteTypes ? (await this.withEstimates({ ...smart, days }, etaRouteTypes)).days : days;
   }
 
   // WHY: the schedule as resolved when the estimates or the stops cannot be read.

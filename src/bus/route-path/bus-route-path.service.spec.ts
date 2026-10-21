@@ -4,7 +4,9 @@
  * D3): the read answers every stored route in the configured order, cached,
  * leaves a missing route out with an error line and a flag, serves the last
  * good lines through a failed read inside the stale window, and fails with a
- * 503 when a read fails with nothing cached; the daily sync writes a route's
+ * 503 when a read fails with nothing cached, holding that failure for
+ * ROUTE_PATHS_RETRY_MS and logging both at most once a minute, since the
+ * no-store stop page reads the lines per request; the daily sync writes a route's
  * first line on the absolute checks alone, writes nothing for unchanged
  * content, holds a suspicious change with a warning, and writes a plausible
  * one, guarded by the version it read. No boot writes a line.
@@ -21,7 +23,7 @@ import { JONGRO_ROUTES } from "../bus.constants";
 import { toJongroRoute } from "../bus.mapper";
 import { capturedRoutePathOf, storedJongroRoutePathDocuments } from "../../../__tests__/helpers/bus/bus-route-path";
 import type { BusRoutePathClient } from "./bus-route-path.client";
-import { ROUTE_PATHS_STALE_WINDOW_MS, ROUTE_PATHS_TTL_MS } from "./bus-route-path.constants";
+import { ROUTE_PATHS_LOG_INTERVAL_MS, ROUTE_PATHS_RETRY_MS, ROUTE_PATHS_STALE_WINDOW_MS, ROUTE_PATHS_TTL_MS } from "./bus-route-path.constants";
 import type { BusRoutePathRepository } from "./bus-route-path.repository";
 import { toPathVersion } from "./bus-route-path.rules";
 import { BusRoutePathService } from "./bus-route-path.service";
@@ -150,6 +152,79 @@ describe("BusRoutePathService.listRoutePaths", () => {
   it("keeps the stale window at a day at least, so an Atlas outage never blanks the overlay sooner", () => {
     // Act & Assert
     expect(ROUTE_PATHS_STALE_WINDOW_MS).toBeGreaterThanOrEqual(24 * 60 * 60_000);
+  });
+});
+
+// WHY: the stop page is no-store and reads the lines per request, so an outage or a missing line must cost neither a
+// MongoDB read nor an error line per page (unify-bus-stops pre-deploy review F3).
+describe("BusRoutePathService.listRoutePaths read per request", () => {
+  let nowMs: number;
+  let perRequest: BusRoutePathService;
+
+  beforeEach(() => {
+    nowMs = NOW.getTime();
+    perRequest = new BusRoutePathService(asReal<BusRoutePathRepository>(repository), asReal<BusRoutePathClient>(client), { now: () => new Date(nowMs) });
+  });
+
+  it("logs a missing route at most once a minute, counting the lines it held back", async () => {
+    // Arrange
+    storeLines();
+    repository.routePaths.delete("jongro07");
+
+    // Act
+    await perRequest.listRoutePaths();
+    await perRequest.listRoutePaths();
+    const withinTheMinute = callsOf("error", "bus.jongro.path_missing").length;
+    nowMs += ROUTE_PATHS_LOG_INTERVAL_MS;
+    const { hasMissingRoutes } = await perRequest.listRoutePaths();
+
+    // Assert
+    expect(hasMissingRoutes).toBe(true);
+    expect(withinTheMinute).toBe(1);
+    expect(callsOf("error", "bus.jongro.path_missing")).toEqual([
+      expect.objectContaining({ routeIds: ["jongro07"], suppressed: 0 }),
+      expect.objectContaining({ routeIds: ["jongro07"], suppressed: 1 }),
+    ]);
+  });
+
+  it("holds a failed read with nothing cached for ROUTE_PATHS_RETRY_MS, answering the 503 without a read, then reads again", async () => {
+    // Arrange
+    repository.failWith = new Error("atlas down");
+    await expect(perRequest.listRoutePaths()).rejects.toMatchObject({ code: "JONGRO_ROUTE_PATHS_UNAVAILABLE" });
+
+    // Act
+    nowMs += ROUTE_PATHS_RETRY_MS - 1;
+    const held = perRequest.listRoutePaths();
+    await expect(held).rejects.toMatchObject({ code: "JONGRO_ROUTE_PATHS_UNAVAILABLE", httpStatus: 503 });
+    const readsWhileHeld = repository.listCount;
+    repository.failWith = null;
+    storeLines();
+    nowMs += 1;
+    const { routePaths } = await perRequest.listRoutePaths();
+
+    // Assert
+    expect(readsWhileHeld).toBe(1);
+    expect(repository.listCount).toBe(2);
+    expect(routePaths).toHaveLength(3);
+    expect(callsOf("error", "bus.jongro.path_read_failed")).toHaveLength(1);
+  });
+
+  it("logs a read that keeps failing at most once a minute", async () => {
+    // Arrange
+    repository.failWith = new Error("atlas down");
+
+    // Act
+    for (const offsetMs of [0, ROUTE_PATHS_RETRY_MS, ROUTE_PATHS_LOG_INTERVAL_MS]) {
+      nowMs = NOW.getTime() + offsetMs;
+      await perRequest.listRoutePaths().catch(() => undefined);
+    }
+
+    // Assert
+    expect(repository.listCount).toBe(3);
+    expect(callsOf("error", "bus.jongro.path_read_failed")).toEqual([
+      expect.objectContaining({ suppressed: 0 }),
+      expect.objectContaining({ suppressed: 1 }),
+    ]);
   });
 });
 

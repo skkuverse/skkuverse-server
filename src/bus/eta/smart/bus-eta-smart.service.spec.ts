@@ -2,7 +2,8 @@
  * BusEtaSmartService over in-memory timetable and estimate stores, a fixed
  * clock and revision 1 of the stored bus-stops: the smart view's ETag and
  * Cache-Control, the estimates it applies, read at most once per 30 s, and the
- * stored timetable when the estimates or the stops cannot be read.
+ * stored timetable when the estimates or the stops cannot be read; the same body
+ * without an ETag for a caller that serves none (the stop page, review F5).
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../../infra/logger", () => mockLogger);
@@ -133,5 +134,69 @@ describe("BusEtaSmartService.getSmart", () => {
     // Assert
     expect(smart.data).toMatchObject({ status: "noData", message: "Schedule information is being prepared" });
     expect(smart.cacheControl).toBe("private, max-age=300");
+  });
+});
+
+// WHY: the stop page is no-store and serves no ETag, so it must not hash each service's week per request (unify-bus-stops review F5).
+describe("BusEtaSmartService.resolveSmart", () => {
+  it("answers the smart view's body, estimates applied, with no ETag or Cache-Control", async () => {
+    // Act
+    const resolved = await service.resolveSmart("campus-inja", "ko");
+
+    // Assert
+    expect(resolved).toEqual((await service.getSmart("campus-inja", "ko")).data);
+    expect(resolved.days[0]!.schedule[0]).toMatchObject({ stopTimes: ["10:00", "10:51"], eta: { source: "live" } });
+    expect(resolved).not.toHaveProperty("etag");
+    expect(resolved).not.toHaveProperty("cacheControl");
+  });
+
+  it("carries the localized message on a status other than active", async () => {
+    // Act
+    const resolved = await service.resolveSmart("fasttrack-inja", "en");
+
+    // Assert
+    expect(resolved).toMatchObject({ status: "noData", message: "Schedule information is being prepared" });
+  });
+
+  it("refuses an unknown service with SERVICE_NOT_FOUND", async () => {
+    // Act & Assert
+    await expect(service.resolveSmart("nope", "ko")).rejects.toMatchObject({ code: "SERVICE_NOT_FOUND", httpStatus: 404 });
+  });
+});
+
+// WHY: a stop page that finds fewer than three runs in the shown week continues into the next one (unify-bus-stops review F2).
+describe("BusEtaSmartService.resolveFollowingWeek", () => {
+  const PREDICTED: ShuttleEtaDoc = {
+    ...LIVE,
+    _id: "campus-inja|regular|2026-10-19|10:00|baseline",
+    kind: "baseline",
+    date: "2026-10-19",
+    departAt: new Date("2026-10-19T01:00:00.000Z"),
+    offsetsSec: [0, 3000],
+  };
+
+  it("answers the days of the week after the smart schedule's, with their estimates applied", async () => {
+    // Arrange
+    estimates.docs.set(PREDICTED._id, PREDICTED);
+    const smart = await service.resolveSmart("campus-inja", "ko");
+
+    // Act
+    const days = await service.resolveFollowingWeek(smart);
+
+    // Assert
+    expect(days.map((day) => day.date)).toEqual(["2026-10-19"]);
+    expect(days[0]!.schedule[0]).toMatchObject({ time: "10:00", stopTimes: ["10:00", "10:50"], eta: { source: "predicted" } });
+  });
+
+  it("answers no day unless the smart schedule is active", async () => {
+    // Arrange
+    const smart = await service.resolveSmart("fasttrack-inja", "ko");
+
+    // Act
+    const days = await service.resolveFollowingWeek(smart);
+
+    // Assert
+    expect(smart.status).toBe("noData");
+    expect(days).toEqual([]);
   });
 });

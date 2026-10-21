@@ -85,8 +85,18 @@ export class BusScheduleService {
     if (!selectedDate) return this.noDataResult(serviceId);
     const suspendedFromOpening = this.suspendedResult(serviceId, suspend, moment.tz(selectedDate, DATE_FORMAT, KST_TIME_ZONE));
     if (suspendedFromOpening) return suspendedFromOpening;
-    const days = shown.days.filter((d) => d.display !== "hidden").map((d) => toSuspendedDay(d, suspend));
-    return { serviceId, status: "active", from: shown.from, selectedDate, days };
+    return { serviceId, status: "active", from: shown.from, selectedDate, days: this.toShownDays(shown.days, suspend) };
+  }
+
+  // WHY: the week after a smart schedule's `from`, shown as the smart view shows its own week, for a caller that
+  // lists runs past the shown week's end (the stop page).
+  async resolveFollowingWeek(serviceId: string, from: string): Promise<ScheduleDay[] | null> {
+    const serviceConfig = serviceConfigOf(serviceId);
+    if (!serviceConfig) return null;
+    const content = await this.content.current();
+    const nextMonday = moment.tz(from, DATE_FORMAT, KST_TIME_ZONE).add(1, "week").format(DATE_FORMAT);
+    const week = await this.weekLoader({ serviceId, from: nextMonday, serviceConfig, content }).get();
+    return this.toShownDays(week.days, content.suspendOf(serviceId));
   }
 
   // WHY: the week view serves a suspended service's timetable as stored; the estimate pollers plan no run inside it.
@@ -94,6 +104,10 @@ export class BusScheduleService {
     const content = await this.content.current();
     const window = toSuspendWindow(content.suspendOf(serviceId), moment.tz(date, DATE_FORMAT, KST_TIME_ZONE));
     return window !== null && !window.invalid && window.resumeDate !== null;
+  }
+
+  private toShownDays(days: readonly ScheduleDay[], suspend: SuspendDates | null): ScheduleDay[] {
+    return days.filter((d) => d.display !== "hidden").map((d) => toSuspendedDay(d, suspend));
   }
 
   private suspendedResult(serviceId: string, suspend: SuspendDates | null, today: moment.Moment): SmartSchedule | null {

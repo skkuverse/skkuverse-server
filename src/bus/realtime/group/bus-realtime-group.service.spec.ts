@@ -630,3 +630,37 @@ describe("BusRealtimeGroupService.getGroup trajectory index space", () => {
   });
 });
 
+
+// WHY: the stop page reads the same view as the realtime route, so placement and the waiting rewrite are one code
+// path (unify-bus-stops D17).
+describe("BusRealtimeGroupService.findGroupView", () => {
+  it("answers the buses, station ETAs and stations version the realtime route serves", async () => {
+    // Arrange
+    busCache.values.set("jongro_locations_07", [jongroPositionDoc({ sequence: "6", carNumber: "5537" })]);
+    busCache.values.set("jongro_stations_07", [jongroArrivalDoc({ stationId: "100900220", sequence: "1", eta: "3분후[2번째 전]" })]);
+    const { data } = await service.getGroup("jongro07");
+
+    // Act
+    const view = await service.findGroupView("jongro07");
+
+    // Assert
+    expect(view).toEqual({ buses: data.buses, stationEtas: data.stationEtas, stationsVersion: data.stationsVersion });
+    expect(view!.stationEtas).toHaveLength(1);
+  });
+
+  it("answers the HSSC buses with no station ETAs and no stations version", async () => {
+    // Arrange
+    busCache.values.set("hssc", [hsscBusDoc({ sequence: "4", carNumber: "0001", estimatedTime: 0 })]);
+
+    // Act
+    const view = await service.findGroupView("hssc");
+
+    // Assert
+    expect(view).toEqual({ buses: [{ stationIndex: 3, carNumber: "0001", estimatedTime: 0, kind: "estimated" }], stationEtas: [] });
+  });
+
+  it("answers null for a group it does not serve", async () => {
+    // Act & Assert
+    expect(await service.findGroupView("nope")).toBeNull();
+  });
+});

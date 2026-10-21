@@ -33,6 +33,38 @@ describe("deepFreeze", () => {
     expect([...value.byId]).toEqual([["a", { name: "x" }]]);
     expect(Object.isFrozen(value.byId.get("a"))).toBe(true);
   });
+
+  // Review F6 of unify-bus-stops wave 2: a frozen parent was taken as already deep-frozen, so a Map inside kept working mutators.
+  it("locks a Map and freezes an object inside a parent frozen before deepFreeze saw it", () => {
+    // Arrange
+    const value = Object.freeze({ byId: new Map([["a", { name: "x" }]]), nested: { name: "y" } });
+
+    // Act
+    deepFreeze(value);
+
+    // Assert
+    expect(() => value.byId.set("b", { name: "z" })).toThrow(TypeError);
+    expect(Object.isFrozen(value.byId.get("a"))).toBe(true);
+    expect(Object.isFrozen(value.nested)).toBe(true);
+  });
+
+  it.each([
+    ["Map", () => Object.freeze(new Map([["a", 1]]))],
+    ["Set", () => Object.freeze(new Set(["a"]))],
+  ])("refuses a %s frozen before deepFreeze could lock it, since its entries could still change", (_kind, collection) => {
+    // Act & Assert
+    expect(() => deepFreeze({ ids: collection() })).toThrow(TypeError);
+  });
+
+  it("freezes a locked Map again, and a cycle, without throwing", () => {
+    // Arrange
+    const value: { byId: Map<string, unknown>; self?: unknown } = { byId: new Map([["a", { name: "x" }]]) };
+    value.self = value;
+    deepFreeze(value);
+
+    // Act & Assert
+    expect(() => deepFreeze(value)).not.toThrow();
+  });
 });
 
 describe("serviceConfigOf", () => {

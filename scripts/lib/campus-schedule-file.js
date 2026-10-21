@@ -16,6 +16,8 @@
  * A file declares its own route types: they are the join key with the app's
  * badges, and each shuttle has different ones.
  */
+const moment = require("moment-timezone");
+
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -342,9 +344,10 @@ function stopTimesMismatch(entry, sequence) {
  * times is not checked. Each as { serviceId, routeType, patternId, time,
  * message }, the message naming all four.
  *
- * Both writers run it (openspec/changes/unify-bus-stops design D6): `npm run
- * data -- push bus-stops` against the target's stored timetables, and `npm run
- * schedule` against the target's stored bus-stops. It reads the sequences raw,
+ * Both writers run it (openspec/changes/unify-bus-stops design D6) over the
+ * served half of splitExpired: `npm run data -- push bus-stops` against the
+ * target's stored timetables, and `npm run schedule` against the target's
+ * stored bus-stops. It reads the sequences raw,
  * counting stops and reading `timing`, since this is CommonJS outside dist/.
  */
 function stopTimesMismatches(docs, sequences) {
@@ -360,6 +363,39 @@ function stopTimesMismatches(docs, sequences) {
   });
 }
 
+/** `now`'s date in Seoul, the date ScheduleService resolves today by (src/bus/schedule/bus-schedule.service.ts). */
+function kstDateOf(now) {
+  return moment(now).tz("Asia/Seoul").format("YYYY-MM-DD");
+}
+
+/**
+ * The documents of `docs` that serve a date from today (KST) on, and the rest,
+ * each with the line that says why it is not checked. It mirrors
+ * isPatternInEffect in src/bus/schedule/bus-schedule.rules.ts, which serves a
+ * date only while it is not after `effectiveUntil`: a pattern ending today
+ * still serves today, and one with no end never stops.
+ *
+ * Both writers check only the served half with stopTimesMismatches (review F1
+ * of openspec/changes/unify-bus-stops wave 2): `npm run schedule` never deletes
+ * a pattern, so an old semester's stays stored, and checking its stop times
+ * against a new sequence length would refuse both tools for good. The smart
+ * view may still show it on an earlier day of this week, where the estimate
+ * mapper leaves an entry that does not fit its sequence as stored.
+ */
+function splitExpired(docs, now) {
+  const today = kstDateOf(now);
+  const isExpired = (doc) => doc.effectiveUntil !== undefined && doc.effectiveUntil < today;
+  return {
+    served: docs.filter((doc) => !isExpired(doc)),
+    expired: docs.filter(isExpired).map(({ serviceId, patternId, effectiveUntil }) => ({
+      serviceId,
+      patternId,
+      effectiveUntil,
+      message: `${serviceId}/${patternId} ended ${effectiveUntil}, before today ${today} (KST): it serves no date ahead, so its stop times are not checked`,
+    })),
+  };
+}
+
 module.exports = {
   buildDocuments,
   diffEntries,
@@ -368,5 +404,6 @@ module.exports = {
   entryRank,
   findOverlaps,
   parseTimetableFile,
+  splitExpired,
   stopTimesMismatches,
 };

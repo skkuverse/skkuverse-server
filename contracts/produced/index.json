@@ -101,6 +101,18 @@
       "GET bus/schedule/data/:serviceId/smart"
     ]
   },
+  "bus-stop-arrivals.busStopArrivals": {
+    "source": "src/bus/stop-arrivals/bus-stop-arrivals.wire.ts",
+    "export": "busStopArrivals",
+    "routes": [
+      "GET bus/stops/:stopId/arrivals"
+    ]
+  },
+  "bus.arrival": {
+    "source": "src/bus/bus.wire.ts",
+    "export": "arrival",
+    "routes": []
+  },
   "bus.servedSequenceStop": {
     "source": "src/bus/bus.wire.ts",
     "export": "servedSequenceStop",

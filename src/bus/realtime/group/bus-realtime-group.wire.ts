@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { arrival } from "../../bus.wire";
 
-const crowding = z.enum(["relaxed", "normal", "crowded"]).nullable();
+const crowding = arrival.shape.crowding;
 
 const legacyBusFields = {
   /**
@@ -59,21 +60,6 @@ const realtimeBus = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("estimated"), ...legacyBusFields }),
   z.object({ kind: z.literal("tracked"), ...legacyBusFields, tracked: trackedStatus }),
 ]);
-
-const arrival = z.object({
-  /** WHY: whole minutes, at least 1, for a running bus only; TOPIS's seconds are not accurate to the second. */
-  minutes: z.int().nullable(),
-  stopsAway: z.int().nullable(),
-  /** WHY: from the bus's text, which wins over its numbers, except a waiting tracked vehicle's, which reads waiting. */
-  state: z.enum(["running", "arriving", "waiting", "ended", "noInfo", "unknown"]),
-  isLastBus: z.boolean(),
-  carNumber: z.string().nullable(),
-  crowding,
-  /** QUIRK(topis): card taps in minus taps out, so riders who skip the tap out are still counted. */
-  passengerCount: z.int().nullable(),
-  /** QUIRK(topis): this bus's own arrival text, in Korean, served as it comes. */
-  message: z.string(),
-});
 
 const stationEta = z.object({
   stationIndex: z.int(),
