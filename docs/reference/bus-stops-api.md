@@ -77,6 +77,8 @@ A local stop's block is its `/bus/config` record (`screen.stops[]`) without `map
 
 `routes` lists one entry per served route at the stop, in the order `/bus/config` lists its groups (`hssc`, `campus`, `commute`, then each Jongno route), then a group's services and route types. Only routes the server serves appear; no TOPIS route outside 종로02, 07 and 08 is listed. Each entry's `kind` names what it serves and fixes its fields, as a realtime bus's `kind` does: `arrivals` (a Jongno route), `approaching` (the HSSC line) or `schedule` (a shuttle). It is an extensible enum: a client switches on `kind` alone and skips an entry of a kind it does not know.
 
+The published schema (`contracts/produced/bus-stop-arrivals.busStopArrivals.schema.json`) is a closed `oneOf` over today's three kinds, so a client must not parse `routes` as one array against it: an entry of a kind added later would fail the whole page. Parse each entry on its own and leniently, keep the ones that parse, and skip an entry whose `kind` this build does not know, or that fails to parse, without dropping the stop block or the other entries.
+
 | Entry | Fields |
 | --- | --- |
 | Jongno, `kind: "arrivals"` | `groupId` (`jongro07`), `label`, `stationIndex` (its index in the group's `/bus/config` stations), `towards` (the next station's name, `null` at the last index), `stationsVersion` (as the realtime route serves it) and `arrivals`: exactly that index's `stationEtas[].arrivals` in `/bus/realtime/data/:groupId` for the same stored state, a waiting vehicle's arrivals included |
