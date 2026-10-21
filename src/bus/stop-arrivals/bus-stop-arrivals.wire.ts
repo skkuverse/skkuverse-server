@@ -9,7 +9,7 @@ const stopBlock = servedStop.omit({ map: true }).extend({
 
 const jongroEntry = z.object({
   groupId: z.string(),
-  kind: z.literal("realtime"),
+  kind: z.literal("arrivals"),
   label: z.string(),
   stationIndex: z.int(),
   /** WHY: the next station's name, so a client can tell the two directions of a loop apart; null at the last index. */
@@ -22,7 +22,7 @@ const jongroEntry = z.object({
 
 const hsscEntry = z.object({
   groupId: z.string(),
-  kind: z.literal("realtime"),
+  kind: z.literal("approaching"),
   label: z.string(),
   stationIndex: z.int(),
   /** WHY: the HSSC API gives positions and no prediction, so only how far each bus is: 0 at the stop, nearest first. */
@@ -53,12 +53,12 @@ const shuttleEntry = z.object({
 });
 
 /**
- * WHY: one answer per stop, so the app polls one route (D7); `routes` in /bus/config's order. A realtime entry with
- * `arrivals` is Jongno's, one with `approaching` HSSC's; a client skips an entry of a kind or shape it does not know.
+ * WHY: one answer per stop, so the app polls one route (D7); `routes` in /bus/config's order. `kind` names what an
+ * entry serves, as a realtime bus's does; it is an extensible enum, and a client skips an entry of a kind it does not know.
  */
 export const busStopArrivals = z.object({
   stop: stopBlock,
-  routes: z.array(z.union([jongroEntry, hsscEntry, shuttleEntry])),
+  routes: z.array(z.discriminatedUnion("kind", [jongroEntry, hsscEntry, shuttleEntry])),
 });
 
 export type BusStopArrivals = z.input<typeof busStopArrivals>;

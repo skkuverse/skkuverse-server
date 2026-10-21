@@ -90,7 +90,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
     expect(page?.routes).toEqual([
       expect.objectContaining({ groupId: "campus", label: "HSSC → NSC", routeType: "regular", next: [{ date: "2026-10-20", departure: "14:30", time: "14:30", estimated: false }] }),
       expect.objectContaining({ groupId: "campus", label: "HSSC → NSC", routeType: "hakbu" }),
-      { groupId: "jongro07", kind: "realtime", label: "Jongro 07", stationIndex: 1, towards: "비천당", stationsVersion: versionOf("jongro07"), arrivals: [] },
+      { groupId: "jongro07", kind: "arrivals", label: "Jongro 07", stationIndex: 1, towards: "비천당", stationsVersion: versionOf("jongro07"), arrivals: [] },
     ]);
   });
 
@@ -118,7 +118,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
     const page = await service.findStopArrivals("hssc-hyehwa-exit1", "zh");
 
     // Assert
-    expect(page?.routes).toEqual([{ groupId: "hssc", kind: "realtime", label: "人文校区班车", stationIndex: 6, approaching: [{ stopsAway: 2 }, { stopsAway: 5 }] }]);
+    expect(page?.routes).toEqual([{ groupId: "hssc", kind: "approaching", label: "人文校区班车", stationIndex: 6, approaching: [{ stopsAway: 2 }, { stopsAway: 5 }] }]);
   });
 
   it("leaves out a route whose read fails, logged at error once a minute, and serves the rest", async () => {
