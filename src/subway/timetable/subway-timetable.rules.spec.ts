@@ -6,7 +6,8 @@
  * names for each; which table a platform reads, the travel order of a line per direction, each table's key, and
  * the push check that every served platform's source has a table for each day type it declares, and the push
  * warnings over the stops the tracker follows to each served platform: no run over 510 s between two of them,
- * each train in view for 10 minutes before the platform, and no station of the line skipped between them.
+ * each train in view for 10 minutes before the platform, and no station of the line skipped between them. The
+ * push check that every stop time at a served platform falls inside the service window of its table's day type.
  */
 import { subwayTimetablesFixture } from "../../../__tests__/helpers/subway/timetables";
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
@@ -24,6 +25,7 @@ import {
   toEvictedTimetableKeys,
   toPlatformTimetableKey,
   toServiceInstant,
+  toServiceWindowIssues,
   toTimetableCoverageIssues,
   toTimetableKey,
   toTrackedStopIssues,
@@ -474,6 +476,103 @@ describe("isInServiceWindow", () => {
 
     // Assert
     expect(isInside).toBe(inside);
+  });
+});
+
+describe("toServiceWindowIssues", () => {
+  const hyehwa = (dayType: "weekday" | "saturday" | "holiday", arr: number | null, dep: number | null, station = "S1-4-420"): Timetable =>
+    table({
+      source: { kind: "seoul-station", ref: "test", revision: "2026-10-01" },
+      operator: "S1",
+      line: "4",
+      dayType,
+      stations: ["S1-4-419", "S1-4-420", "S1-4-421"],
+      trains: [{ trainNo: "4001", direction: "up", destination: "test", express: false, stops: [{ station, arr, dep }] }],
+    });
+
+  it("returns none for the stored tables of the subway-timetables fixture", () => {
+    // Act
+    const issues = toServiceWindowIssues(subwayTimetablesFixture(), listSubwayPlatforms());
+
+    // Assert
+    expect(issues).toEqual([]);
+  });
+
+  it.each([
+    ["weekday", 17999, 1],
+    ["weekday", 18000, 0],
+    ["weekday", 18001, 0],
+    ["weekday", 90599, 0],
+    ["weekday", 90600, 1],
+    ["weekday", 90601, 1],
+    ["saturday", 17999, 1],
+    ["saturday", 18000, 0],
+    ["saturday", 88199, 0],
+    ["saturday", 88200, 1],
+    ["saturday", 88201, 1],
+    ["holiday", 17999, 1],
+    ["holiday", 18000, 0],
+    ["holiday", 88199, 0],
+    ["holiday", 88200, 1],
+    ["holiday", 88201, 1],
+  ] as const)("refuses a %s arrival at %i s: %i issue(s)", (dayType, seconds, count) => {
+    // Act
+    const issues = toServiceWindowIssues([hyehwa(dayType, seconds, null)], [HYEHWA]);
+
+    // Assert
+    expect(issues).toHaveLength(count);
+  });
+
+  it.each([
+    [17999, 1],
+    [18000, 0],
+  ])("checks a departure too: %i s, %i issue(s)", (seconds, count) => {
+    // Act
+    const issues = toServiceWindowIssues([hyehwa("weekday", null, seconds)], [HYEHWA]);
+
+    // Assert
+    expect(issues).toHaveLength(count);
+  });
+
+  it("names the table, the platform, the train and its time", () => {
+    // Act
+    const issues = toServiceWindowIssues([hyehwa("weekday", 17940, 17970)], [HYEHWA]);
+
+    // Assert
+    expect(issues).toEqual([{ path: ["S1-4-weekday", "S1-4-420"], message: "2 stop time(s) outside the service window: 4001 17940 s, 4001 17970 s" }]);
+  });
+
+  it("ignores a stop at a station that is not the served platform", () => {
+    // Act
+    const issues = toServiceWindowIssues([hyehwa("weekday", 1000, 1030, "S1-4-419")], [HYEHWA]);
+
+    // Assert
+    expect(issues).toEqual([]);
+  });
+
+  it("checks a table only at the platforms it serves on its day type", () => {
+    // Act
+    const issues = toServiceWindowIssues([hyehwa("weekday", 1000, 1030)], [SUNGKYUNKWAN]);
+
+    // Assert
+    expect(issues).toEqual([]);
+  });
+
+  it("ignores a table of another operator that holds a stop at the platform's station", () => {
+    // Arrange
+    // WHY: the stop matches the platform's id, so only the table-key match keeps this table off the platform.
+    const korailLine4 = table({
+      operator: "KR",
+      line: "4",
+      stations: ["S1-4-419", "S1-4-420", "S1-4-421"],
+      trains: [{ trainNo: "4001", direction: "up", destination: "test", express: false, stops: [{ station: "S1-4-420", arr: 1000, dep: 1030 }] }],
+    });
+
+    // Act
+    const issues = toServiceWindowIssues([korailLine4], [HYEHWA]);
+
+    // Assert
+    expect(issues).toEqual([]);
   });
 });
 

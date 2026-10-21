@@ -13,7 +13,7 @@ audience: internal
 
 ## Overview
 
-The timetables are the `subway-timetables` dataset in the content database, a parted dataset: one part per operator line and day type, keyed `<operator>-<line>-<dayType>` (`KR-1-weekday`, `S1-4-saturday`), 18 today ([subway-architecture.md](../explanation/subway-architecture.md#structure)). `scripts/subway-timetable/convert.py` builds the parts from the official sources, and `npm run data` is their only writer: a push checks every table with the server's own schema and refuses one while a platform the checkout serves has no table for a day type its source declares. The poller and every api replica read a push within a minute, and read only the tables that changed.
+The timetables are the `subway-timetables` dataset in the content database, a parted dataset: one part per operator line and day type, keyed `<operator>-<line>-<dayType>` (`KR-1-weekday`, `S1-4-saturday`), 18 today ([subway-architecture.md](../explanation/subway-architecture.md#structure)). `scripts/subway-timetable/convert.py` builds the parts from the official sources, and `npm run data` is their only writer: a push checks every table with the server's own schema and refuses one while a platform the checkout serves has no table for a day type its source declares, or while a train stops at a served platform outside the service window (05:00 to 25:10 on weekdays, 24:30 on Saturdays and holidays). The poller and every api replica read a push within a minute, and read only the tables that changed.
 
 Rerun when:
 
@@ -67,7 +67,7 @@ diff of subway-timetables (revision 1 -> 2):
   removed    S1-9-holiday  {"source":{...},"trainCount":250}
 ```
 
-A train counts by its whole row, so a train whose times moved is listed as both added and removed. Check that only the tables you rebuilt changed, and that each train count is plausible. A refusal names the table and the path, such as `S1-4-saturday: no table for S1-4-420 saturday` or `KR-1-weekday.json.trains.2.trainNo: ...`, and writes nothing.
+A train counts by its whole row, so a train whose times moved is listed as both added and removed. Check that only the tables you rebuilt changed, and that each train count is plausible. A refusal names the table and the path, such as `S1-4-saturday: no table for S1-4-420 saturday`, `KR-1-weekday.KR-1-0153: 1 stop time(s) outside the service window: 0409 17940 s` or `KR-1-weekday.json.trains.2.trainNo: ...`, and writes nothing. A train outside the service window needs the window widened first: change `SERVICE_WINDOW_OPENS_SEC` or `SERVICE_WINDOW_CLOSES_SEC` in `src/subway/timetable/subway-timetable.constants.ts`, deploy, then push.
 
 Warnings follow the table lines and refuse nothing; `check` prints them too:
 
