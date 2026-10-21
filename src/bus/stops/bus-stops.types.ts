@@ -1,6 +1,7 @@
 import type { I18n, SupportedLang } from "../../infra/types";
 import type { LatLng } from "../../shared/lat-lng.types";
 import type { ServedSequenceStop, ServedStop } from "../bus.wire";
+import type { HsscLineStation } from "./bus-stops.document";
 
 export interface StopPhoto {
   original: string;
@@ -37,6 +38,7 @@ export interface ScheduleStop {
   guide?: StopGuide;
   /** WHY: the subway registry's slug; the boot check refused one the registry does not serve. */
   subwayStationId?: string;
+  arsIds?: string[];
 }
 
 export interface SequenceStop {
@@ -61,3 +63,5 @@ export interface ResolvedStops {
   sequences: Record<string, Record<string, ServedSequenceStop[]>>;
   stops: ServedStop[];
 }
+
+export type BusStopsSnapshot = Readonly<{ revision: number; catalog: Readonly<ScheduleStopCatalog>; hssc: readonly HsscLineStation[]; stopIdByArsId: ReadonlyMap<string, string> }>;
