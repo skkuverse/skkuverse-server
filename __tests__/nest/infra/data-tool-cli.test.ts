@@ -11,17 +11,24 @@
  *   - a production write needs a confirmation on a TTY or `--yes`, and
  *     `--dry-run` writes nothing;
  *   - the tool refuses to run without the compiled `dist/src`;
- *   - nothing it prints contains MONGO_URL or any part of it.
+ *   - nothing it prints contains MONGO_URL or any part of it;
+ *   - `push bus-stops` and `check` read `bus_campus.bus_schedules` of the
+ *     target environment, never the other, and refuse sequences the stored
+ *     stop times do not fit; `--against <timetable file>` checks against that
+ *     file instead and prints the `npm run schedule` command that applies it
+ *     (unify-bus-stops design D6, specs bus-stops and runtime-datasets).
  */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { Db, MongoClient } from "mongodb";
+import { busStopsFixture } from "../../helpers/bus/bus-stops";
 import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, freeLoopbackPort, startMongod, type TestMongod } from "../../helpers/mongod";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { run } = require("../../../scripts/data");
 const store = require("../../../scripts/lib/datasets/store");
+const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
 
 type DbModule = typeof import("../../../src/infra/db");
 
@@ -481,5 +488,134 @@ describe("npm run data", () => {
     expect(result.out).toContain(`database   ${DEV}`);
     expect(result.out + result.err).not.toContain(SENTINEL);
     expect(result.out + result.err).not.toContain(closed);
+  });
+});
+
+describe("npm run data bus-stops against the stored timetables", () => {
+  const BUS_CAMPUS = "bus_campus";
+  const env = () => ({ MONGO_URL: mongoUrl, MONGO_CONTENT_DB_NAME: BASE, MONGO_DB_NAME_BUS_CAMPUS: BUS_CAMPUS });
+  const COMMUTE_FILE = path.join(REPO, "scripts/data/commute-schedule.json");
+  const commuteTimetable = () => JSON.parse(fs.readFileSync(COMMUTE_FILE, "utf8"));
+  const timetableDocs = (raw: unknown): Array<Record<string, any>> => buildDocuments(parseTimetableFile(raw));
+  // The commute timetable with one more time on every 강남·양재 하교 run, for a fourth stop.
+  const withFourthDownTime = () => {
+    const raw = commuteTimetable();
+    for (const pattern of raw.patterns.filter((p: { serviceIds: string[] }) => p.serviceIds.includes("commute-gangnam-yangjae"))) {
+      for (const entry of pattern.entries.filter((e: { routeType: string }) => e.routeType === "down")) entry.stopTimes.push(null);
+    }
+    return raw;
+  };
+  const seed = async (database: string, raw: unknown) => {
+    await client.db(database).collection("bus_schedules").insertMany(timetableDocs(raw));
+  };
+  const stopsFile = () => {
+    const file = path.join(root, "bus-stops.json");
+    fs.writeFileSync(file, JSON.stringify(busStopsFixture()));
+    return file;
+  };
+
+  beforeEach(async () => {
+    await client.db(`${BUS_CAMPUS}_dev`).dropDatabase();
+    await client.db(BUS_CAMPUS).dropDatabase();
+  });
+
+  it("Production push reads production timetables: a push to _dev is checked against _dev's, and one with --prod against production's", async () => {
+    // Arrange
+    await seed(`${BUS_CAMPUS}_dev`, withFourthDownTime());
+    await seed(BUS_CAMPUS, commuteTimetable());
+    const file = stopsFile();
+
+    // Act
+    const dev = await data(["push", "bus-stops", "--create", "--file", file], { env: env() });
+    const prod = await data(["push", "bus-stops", "--create", "--file", file, "--prod", "--yes"], { env: env() });
+
+    // Assert
+    expect(dev.code).toBe(1);
+    expect(dev.out).toContain(`reads      ${BUS_CAMPUS}_dev.bus_schedules`);
+    expect(dev.err).toContain("sequences.commute-gangnam-yangjae.down");
+    expect(dev.err).toContain("commute-gangnam-yangjae down 17:00 (pilot): 4 stop times for a sequence of 3 stops");
+    expect(await store.readDataset(devDb(), "bus-stops")).toBeNull();
+    expect(prod.code).toBe(0);
+    expect(prod.out).toContain(`reads      ${BUS_CAMPUS}.bus_schedules`);
+    expect(prod.out).not.toContain(`${BUS_CAMPUS}_dev`);
+    expect((await store.readDataset(prodDb(), "bus-stops"))?.revision).toBe(1);
+  });
+
+  it("Check reads the same: check --prod refuses against production's timetables, and check against _dev's passes, writing nothing", async () => {
+    // Arrange
+    await store.create(devDb(), "bus-stops", busStopsFixture(), { by: OPERATOR, now: NOW });
+    await store.create(prodDb(), "bus-stops", busStopsFixture(), { by: OPERATOR, now: NOW });
+    await seed(`${BUS_CAMPUS}_dev`, commuteTimetable());
+    await seed(BUS_CAMPUS, withFourthDownTime());
+    const stored = await client.db(BUS_CAMPUS).collection("bus_schedules").find().toArray();
+
+    // Act
+    const prod = await data(["check", "bus-stops", "--prod"], { env: env() });
+    const dev = await data(["check", "bus-stops"], { env: env() });
+
+    // Assert
+    expect(prod.code).toBe(1);
+    expect(prod.err).toContain("commute-gangnam-yangjae down 17:00 (pilot): 4 stop times for a sequence of 3 stops");
+    expect(dev.code).toBe(0);
+    expect(await client.db(BUS_CAMPUS).collection("bus_schedules").find().toArray()).toEqual(stored);
+  });
+
+  it("Sequence pushed with its timetable: refuses a fourth 하교 stop against the stored entries, stores it --against the file that lists four, and names the npm run schedule command", async () => {
+    // Arrange
+    await seed(`${BUS_CAMPUS}_dev`, commuteTimetable());
+    await store.create(devDb(), "bus-stops", busStopsFixture(), { by: OPERATOR, now: NOW });
+    await data(["pull", "bus-stops"], { env: env() });
+    const working = path.join(root, ".data", "dev", "bus-stops.json");
+    const pulled = JSON.parse(fs.readFileSync(working, "utf8"));
+    pulled.data.sequences["commute-gangnam-yangjae"].down.push({ stopId: "jamsil-exit5", action: "alight", timing: "estimated" });
+    fs.writeFileSync(working, JSON.stringify(pulled));
+    const next = path.join(root, "commute-schedule.json");
+    fs.writeFileSync(next, JSON.stringify(withFourthDownTime()));
+
+    // Act
+    const alone = await data(["push", "bus-stops"], { env: env() });
+    const against = await data(["push", "bus-stops", "--against", next], { env: env() });
+
+    // Assert
+    expect(alone.code).toBe(1);
+    expect(alone.err).toContain("commute-gangnam-yangjae down 17:00 (pilot): 3 stop times for a sequence of 4 stops");
+    expect(against.code).toBe(0);
+    expect(against.out).toContain(`with ${next} in place of its documents of the same service and pattern`);
+    expect(against.out).toContain(`npm run schedule -- --file ${next}`);
+    expect(against.out).not.toContain(`npm run schedule -- --file ${next} --prod`);
+    expect((await store.readDataset(devDb(), "bus-stops"))?.revision).toBe(2);
+    expect(await client.db(`${BUS_CAMPUS}_dev`).collection("bus_schedules").find({}, { projection: { _id: 0 } }).toArray()).toEqual(timetableDocs(commuteTimetable()));
+  });
+
+  it("refuses --against outside a push, or for a dataset that reads no timetable, as a usage error", async () => {
+    // Arrange
+    const next = path.join(root, "commute-schedule.json");
+    fs.writeFileSync(next, JSON.stringify(commuteTimetable()));
+
+    // Act
+    const check = await data(["check", "bus-stops", "--against", next], { env: env() });
+    const other = await data(["push", "home-layout", "--against", next], { env: env() });
+
+    // Assert
+    expect([check.code, other.code]).toEqual([2, 2]);
+    expect(check.err).toContain("--against goes with push");
+    expect(other.err).toContain("home-layout reads no collection a timetable file replaces");
+  });
+
+  it("refuses a bus-stops push when MONGO_DB_NAME_BUS_CAMPUS is not set, and pushes another dataset without reading any timetable", async () => {
+    // Arrange
+    const file = stopsFile();
+    const layout = path.join(root, "home-layout.json");
+    fs.writeFileSync(layout, JSON.stringify(homeLayout));
+
+    // Act
+    const stops = await data(["push", "bus-stops", "--create", "--file", file]);
+    const home = await data(["push", "home-layout", "--create", "--file", layout]);
+
+    // Assert
+    expect(stops.code).toBe(1);
+    expect(stops.err).toContain("MONGO_DB_NAME_BUS_CAMPUS is not set in .env");
+    expect(home.code).toBe(0);
+    expect(home.out).not.toContain("bus_schedules");
   });
 });

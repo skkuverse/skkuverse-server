@@ -19,7 +19,7 @@ import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
 import { storedBusRegistryService } from "../../helpers/bus/bus-registry";
 import { storedRouteAttributesService } from "../../helpers/bus/route-attributes";
-import { storedBusStopsService } from "../../helpers/bus/bus-stops";
+import { busStopsFixture, storedBusStopsService } from "../../helpers/bus/bus-stops";
 import type { SupportedLang } from "../../../src/infra/types";
 
 let busConfig: BusConfigService;
@@ -38,6 +38,7 @@ const {
   diffRange,
   findOverlaps,
   parseTimetableFile,
+  stopTimesMismatches,
 } = require("../../../scripts/lib/campus-schedule-file");
 
 const REAL_FILE = path.join(__dirname, "../../../scripts/data/campus-schedule.json");
@@ -451,5 +452,57 @@ describe("findOverlaps", () => {
 
     // Assert
     expect(findOverlaps([target], [sameKey, otherService])).toEqual([]);
+  });
+});
+
+// unify-bus-stops design D6: both writers of a sequence and its timetable refuse a run whose stop times do not
+// follow the sequence, `npm run data -- push bus-stops` and `npm run schedule`, through this one function.
+describe("stopTimesMismatches", () => {
+  const sequences = (busStopsFixture() as { sequences: Record<string, Record<string, unknown[]>> }).sequences;
+  const docsOf = (file: string) => buildDocuments(parseTimetableFile(JSON.parse(fs.readFileSync(path.join(__dirname, "../../../scripts/data", file), "utf8"))));
+  const gangnam = (entries: unknown[]) => [{ serviceId: "commute-gangnam-yangjae", patternId: "pilot", entries }];
+
+  it("finds none in either committed timetable against revision 1's sequences", () => {
+    // Act & Assert
+    expect(stopTimesMismatches([...docsOf("campus-schedule.json"), ...docsOf("commute-schedule.json")], sequences)).toEqual([]);
+  });
+
+  it("One time short: names the service, the route type and the entry time of a 등교 run with two times for three stops", () => {
+    // Act
+    const mismatches = stopTimesMismatches(gangnam([{ time: "07:40", routeType: "up", stopTimes: ["07:40", "08:45"] }]), sequences);
+
+    // Assert
+    expect(mismatches).toEqual([
+      { serviceId: "commute-gangnam-yangjae", routeType: "up", patternId: "pilot", time: "07:40", message: "commute-gangnam-yangjae up 07:40 (pilot): 2 stop times for a sequence of 3 stops" },
+    ]);
+  });
+
+  it.each([
+    [["07:40", "07:45", "08:45"], []],
+    [["07:40", "07:45", null], []],
+    [["07:40", null, "08:45"], ["commute-gangnam-yangjae up 07:40 (pilot): no time at stop 1, which the sequence schedules"]],
+    [["07:40", "07:45", "08:45", "09:00"], ["commute-gangnam-yangjae up 07:40 (pilot): 4 stop times for a sequence of 3 stops"]],
+  ])("stop times %j give %j", (stopTimes, messages) => {
+    // Act
+    const mismatches = stopTimesMismatches(gangnam([{ time: "07:40", routeType: "up", stopTimes }]), sequences);
+
+    // Assert
+    expect(mismatches.map((mismatch: { message: string }) => mismatch.message)).toEqual(messages);
+  });
+
+  it("names an entry without stop times, and one of a route type the service has no sequence for", () => {
+    // Act
+    const mismatches = stopTimesMismatches(gangnam([{ time: "07:40", routeType: "up" }, { time: "08:00", routeType: "hakbu", stopTimes: ["08:00", "09:00"] }]), sequences);
+
+    // Assert
+    expect(mismatches.map((mismatch: { message: string }) => mismatch.message)).toEqual([
+      "commute-gangnam-yangjae up 07:40 (pilot): no stop times for a sequence of 3 stops",
+      "commute-gangnam-yangjae hakbu 08:00 (pilot): stop times, but bus-stops holds no sequence for this route type",
+    ]);
+  });
+
+  it("checks nothing of a service with no sequence whose entries carry no stop times", () => {
+    // Act & Assert
+    expect(stopTimesMismatches([{ serviceId: "fasttrack-inja", patternId: "weekday", entries: [{ time: "08:00", routeType: "regular" }] }], sequences)).toEqual([]);
   });
 });
