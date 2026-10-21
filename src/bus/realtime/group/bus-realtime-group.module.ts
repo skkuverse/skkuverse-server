@@ -11,5 +11,6 @@ import { BusRealtimeGroupService } from "./bus-realtime-group.service";
   imports: [BusRealtimeModule, BusRealtimeHsscModule, BusRealtimeJongroModule, BusRealtimeArrivalModule],
   controllers: [BusRealtimeGroupController],
   providers: [BusRealtimeGroupService, Clock],
+  exports: [BusRealtimeGroupService],
 })
 export class BusRealtimeGroupModule {}
