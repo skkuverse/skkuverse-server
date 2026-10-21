@@ -164,8 +164,7 @@ function loadCatalog(load) {
   const { jongroRouteAttributesDataset } = load("bus/route-attributes/bus-route-attributes.schema");
   const { toRouteAttributesIssues } = load("bus/route-attributes/bus-route-attributes.rules");
   const { busStopsDataset } = load("bus/stops/bus-stops.schema");
-  const { etaOptIns } = load("bus/stops/bus-stops.rules");
-  const { busStopsReferences, toBusStopsIssues } = load("bus/stops/check/bus-stops-check.rules");
+  const { busStopsReferences, etaOptIns, toBusStopsIssues } = load("bus/stops/bus-stops.rules");
   const { LANE_STRATEGIES } = load("bus/eta/lane/bus-eta-lane.constants");
   const { checkedRegistry } = load("miniapps/miniapps.schema");
   const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
