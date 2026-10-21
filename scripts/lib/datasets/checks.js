@@ -41,7 +41,8 @@
  *
  * A dataset whose check reads a collection outside the content database
  * declares its key in its entry's `collections`, and the catalog's
- * `collections` names each one (openspec/changes/unify-bus-stops, design D6).
+ * `collections` names each one
+ * (openspec/changes/archive/2026-10-22-unify-bus-stops, design D6).
  * `readCollections(catalog, names, readCollection)` reads every collection the
  * datasets `names` declare, once each, through the caller's
  * `readCollection(key, spec)`, which picks the target environment's database

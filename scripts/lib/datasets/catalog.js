@@ -35,7 +35,9 @@
  *   collections      optional: the keys of the catalog's `collections` its
  *                    check reads through `issuesOf`'s `collectionOf(key)`,
  *                    read from the environment the run targets, or null when
- *                    not read (openspec/changes/unify-bus-stops, design D6)
+ *                    not read
+ *                    (openspec/changes/archive/2026-10-22-unify-bus-stops,
+ *                    design D6)
  *
  * `issuesOf`, `referencesOf` and `idsOf` take the schema's parsed output.
  *
