@@ -1,10 +1,10 @@
 /**
  * Every module `src/app.module.ts` imports under `src/scheduling/` and
  * `src/bus/`, booted as the poller (ROLE=poller) with every upstream client a
- * bus poller calls replaced by a fake, NAVER and TOPIS by the caller's, and the
- * caller's `Clock`. The repositories stay real: the caller provides the
- * database (a test `mongod`), so a poller's reads and writes run as in
- * production.
+ * bus poller calls replaced by a fake, NAVER and TOPIS by the caller's, TMAP by
+ * the caller's when given, and the caller's `Clock`. The repositories stay
+ * real: the caller provides the database (a test `mongod`), so a poller's
+ * reads and writes run as in production.
  *
  * A caller requires this file only after starting `mongod`: it loads `src/`,
  * and src/infra/config.ts reads the env at import.
@@ -31,14 +31,15 @@ import { buildTestApp } from "../nest/build-test-app";
 export interface BusPollerUpstreams {
   naver: FakeBusEtaTravelClient;
   topis: FakeBusEtaProbeClient;
+  tmap?: FakeBusEtaForecastClient;
   clock: Clock;
 }
 
-export function buildBusPollerApp({ naver, topis, clock }: BusPollerUpstreams): Promise<NestExpressApplication> {
+export function buildBusPollerApp({ naver, topis, tmap = new FakeBusEtaForecastClient(), clock }: BusPollerUpstreams): Promise<NestExpressApplication> {
   return buildTestApp({
     imports: appModulesUnder("src/scheduling/", "src/bus/"),
     overrides: [
-      { provide: BusEtaForecastClient, useValue: new FakeBusEtaForecastClient() },
+      { provide: BusEtaForecastClient, useValue: tmap },
       { provide: BusEtaProbeClient, useValue: topis },
       { provide: BusEtaTravelClient, useValue: naver },
       { provide: BusRealtimeHsscClient, useValue: new FakeBusRealtimeHsscClient() },
