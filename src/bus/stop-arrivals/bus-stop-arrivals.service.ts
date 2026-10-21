@@ -64,7 +64,7 @@ export class BusStopArrivalsService {
   }
 
   private async toShuttleEntry(route: ShuttleStopRoute, reads: PageReads): Promise<StopArrivalsRoute> {
-    const schedule = await this.readOnce(reads.schedules, route.serviceId, async () => (await this.smart.getSmart(route.serviceId, reads.lang)).data);
+    const schedule = await this.readOnce(reads.schedules, route.serviceId, () => this.smart.resolveSmart(route.serviceId, reads.lang));
     return toShuttleEntry(route, t(`busconfig.service.${route.serviceId}`, reads.lang), { status: schedule.status, next: toNextRuns(schedule, route, reads.now) });
   }
 

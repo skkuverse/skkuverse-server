@@ -2,7 +2,8 @@
  * BusEtaSmartService over in-memory timetable and estimate stores, a fixed
  * clock and revision 1 of the stored bus-stops: the smart view's ETag and
  * Cache-Control, the estimates it applies, read at most once per 30 s, and the
- * stored timetable when the estimates or the stops cannot be read.
+ * stored timetable when the estimates or the stops cannot be read; the same body
+ * without an ETag for a caller that serves none (the stop page, review F5).
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../../infra/logger", () => mockLogger);
@@ -133,5 +134,32 @@ describe("BusEtaSmartService.getSmart", () => {
     // Assert
     expect(smart.data).toMatchObject({ status: "noData", message: "Schedule information is being prepared" });
     expect(smart.cacheControl).toBe("private, max-age=300");
+  });
+});
+
+// WHY: the stop page is no-store and serves no ETag, so it must not hash each service's week per request (unify-bus-stops review F5).
+describe("BusEtaSmartService.resolveSmart", () => {
+  it("answers the smart view's body, estimates applied, with no ETag or Cache-Control", async () => {
+    // Act
+    const resolved = await service.resolveSmart("campus-inja", "ko");
+
+    // Assert
+    expect(resolved).toEqual((await service.getSmart("campus-inja", "ko")).data);
+    expect(resolved.days[0]!.schedule[0]).toMatchObject({ stopTimes: ["10:00", "10:51"], eta: { source: "live" } });
+    expect(resolved).not.toHaveProperty("etag");
+    expect(resolved).not.toHaveProperty("cacheControl");
+  });
+
+  it("carries the localized message on a status other than active", async () => {
+    // Act
+    const resolved = await service.resolveSmart("fasttrack-inja", "en");
+
+    // Assert
+    expect(resolved).toMatchObject({ status: "noData", message: "Schedule information is being prepared" });
+  });
+
+  it("refuses an unknown service with SERVICE_NOT_FOUND", async () => {
+    // Act & Assert
+    await expect(service.resolveSmart("nope", "ko")).rejects.toMatchObject({ code: "SERVICE_NOT_FOUND", httpStatus: 404 });
   });
 });
