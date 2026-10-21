@@ -44,7 +44,8 @@ export class UiHomeService {
   }
 
   private async resolvedLayout({ revision, layout }: HomeLayoutRevision): Promise<HomeLayoutRaw> {
-    const registry = homeLayoutReferences(layout, this.miniApps).length > 0 ? await this.miniApps.current() : null;
+    const namesMiniApp = homeLayoutReferences(layout, this.miniApps).some((reference) => reference.dataset === "miniapps");
+    const registry = namesMiniApp ? await this.miniApps.current() : null;
     const key = `${revision}@${registry?.revision ?? "-"}`;
     if (this.resolved?.key === key) return this.resolved.layout;
     const issues = toHomeLayoutIssues(layout, registry ?? toGrammarOnlyRegistry(this.miniApps));

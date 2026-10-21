@@ -34,7 +34,7 @@ function laneHoursIssues(hours: LaneHours): LaneConfigIssue[] {
   return hours.from < hours.to ? [] : [{ path: ["laneHours"], message: `from ${hours.from} must be before to ${hours.to}` }];
 }
 
-/** WHY: the strategies and lane hours are code, so a bad one fails the boot naming every issue, as a config file would. */
+/** WHY: the strategies and lane hours are code, checked against each bus-stops revision's sequences, naming every issue. */
 export function assertLaneStrategies(strategies: LaneStrategies, sequences: readonly SequenceKey[], hours: LaneHours = LANE_HOURS): void {
   const issues = [...strategyIssues(strategies, sequences), ...laneHoursIssues(hours)];
   if (issues.length > 0) throw new Error(`bus-eta-lane.constants.ts: ${issues.map(({ path, message }) => `${path.join(".")}: ${message}`).join("; ")}`);

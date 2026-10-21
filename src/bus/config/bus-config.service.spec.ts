@@ -22,8 +22,7 @@ import type { FakeBusRegistryRepository } from "../../../__tests__/helpers/fakes
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { BusRegistryRepository } from "../registry/bus-registry.repository";
 import { BusRegistryService } from "../registry/bus-registry.service";
-import { BusStopsService } from "../stops/bus-stops.service";
-import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
+import { storedBusStopsService } from "../../../__tests__/helpers/bus/bus-stops";
 import { BusConfigService } from "./bus-config.service";
 
 const FIXTURE: Record<string, { json: string; etag: string }> = JSON.parse(
@@ -37,7 +36,7 @@ const clock = { now: () => new Date("2026-10-17T12:00:00Z") };
 
 async function freshService(): Promise<BusConfigService> {
   const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
-  return new BusConfigService(new BusStopsService(new SubwayStationsService()), registry, storedRouteAttributesService(attributesRepository, clock));
+  return new BusConfigService(storedBusStopsService(), registry, storedRouteAttributesService(attributesRepository, clock));
 }
 
 beforeEach(async () => {

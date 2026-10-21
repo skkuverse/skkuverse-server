@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isMediaUrl } from "../infra/media-url";
+import { REGISTRY_ID_RE } from "../shared/registry-id.constants";
 import { SHELL_BACKGROUND_RE } from "./miniapps.constants";
 import type { StoredMiniApps } from "./miniapps.document";
 import { isServableStartUrl, isSingleEmoji, toRegistryCrossReferenceIssues } from "./miniapps.rules";
@@ -7,7 +8,6 @@ import { miniAppDetail } from "./miniapps.wire";
 
 // WHY: site-root-relative, so WEB_ORIGIN stays the one place that host is written.
 const LOGO_PATH_RE = /^\/[\w\-./]+$/;
-const MINIAPP_ID_RE = /^[a-z0-9-]+$/;
 const HTTP_URL_RE = /^https?:\/\//;
 
 const miniAppLogoRaw = z.discriminatedUnion("kind", [
@@ -18,7 +18,7 @@ const miniAppLogoRaw = z.discriminatedUnion("kind", [
 
 // WHY: strict, because a misspelt key (`homelogo`) would pass and do nothing: the loader reads these names only.
 const indexEntryRaw = z.strictObject({
-  id: z.string().regex(MINIAPP_ID_RE),
+  id: z.string().regex(REGISTRY_ID_RE),
   name: z.string(),
   shortName: z.string().optional(),
   order: z.number(),

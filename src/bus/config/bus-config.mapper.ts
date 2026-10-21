@@ -1,6 +1,6 @@
 import { t } from "../../infra/i18n";
 import type { SupportedLang } from "../../infra/types";
-import { ESTIMATES_MAX_AGE_S } from "../bus.constants";
+import { ESTIMATES_MAX_AGE_S, HSSC_POSITION_COUNT } from "../bus.constants";
 import { serviceConfigOf } from "../bus.rules";
 import type { JongroRoute, JongroRouteAttributes } from "../bus.types";
 import type { JongroStation, RegistryRoute } from "../registry/bus-registry.types";
@@ -11,7 +11,6 @@ import {
   COMMUTE_SERVICE_IDS,
   FASTTRACK_ORANGE,
   HAKBU_BLUE,
-  HSSC_STATIONS,
   SKKU_GREEN,
 } from "./bus-config.constants";
 import { COMMUTE_VISIBILITY, FASTTRACK_VISIBILITY } from "./bus-config.config";
@@ -31,9 +30,9 @@ const routeBadge = (id: string, color: string, lang: SupportedLang) => ({ id, la
 export function mapStations(stations: ReadonlyArray<AnyStation>): MappedStation[] {
   return stations.map((station, index) => ({
     index,
-    name: station.stationName,
+    name: "stationName" in station ? station.stationName : station.name,
     subtitle: ("subtitle" in station ? station.subtitle : null) || null,
-    stationNumber: station.stationNumber || null,
+    stationNumber: ("stationNumber" in station && station.stationNumber) || null,
     isFirstStation: station.isFirstStation,
     isLastStation: station.isLastStation,
     isRotationStation: station.isRotationStation,
@@ -87,7 +86,7 @@ function scheduleServices(serviceIds: readonly string[], lang: SupportedLang, se
   }));
 }
 
-function toHsscGroup(lang: SupportedLang, webviewOrigin: string) {
+function toHsscGroup(lang: SupportedLang, stations: BusGroupSources["hsscStations"], webviewOrigin: string) {
   return {
     id: "hssc",
     screenType: "realtime" as const,
@@ -97,8 +96,8 @@ function toHsscGroup(lang: SupportedLang, webviewOrigin: string) {
     screen: {
       dataEndpoint: "/bus/realtime/data/hssc",
       refreshInterval: 10,
-      lastStationIndex: 10,
-      stations: mapStations(HSSC_STATIONS),
+      lastStationIndex: HSSC_POSITION_COUNT - 1,
+      stations: mapStations(stations),
       features: [{ type: "info", url: `${webviewOrigin}/bus/hssc/info` }],
     },
   };
@@ -180,9 +179,9 @@ export function toBusGroupIds(routes: ReadonlyArray<Pick<JongroRoute, "id">>): s
 }
 
 /** WHY: the bus groups in the order the app lists them: hssc, campus, fasttrack, commute, then every Jongro route. */
-export function toBusGroups({ lang, stops, jongroRoutes, webviewOrigin }: BusGroupSources): BusGroup[] {
+export function toBusGroups({ lang, stops, hsscStations, jongroRoutes, webviewOrigin }: BusGroupSources): BusGroup[] {
   return [
-    toHsscGroup(lang, webviewOrigin),
+    toHsscGroup(lang, hsscStations, webviewOrigin),
     toCampusGroup(lang, stops.campus, webviewOrigin),
     toFasttrackGroup(lang),
     toCommuteGroup(lang, stops.commute, webviewOrigin),

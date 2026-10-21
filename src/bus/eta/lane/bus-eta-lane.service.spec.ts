@@ -1,6 +1,8 @@
 /**
- * BusEtaLaneService, the lane's door: the strategies and lane hours are code, so a bad one against the estimated
- * sequences fails construction, and a run's strategy follows the lane hours. The corridor is the stored
+ * BusEtaLaneService, the lane's door: the strategies and lane hours are code, checked against each bus-stops
+ * revision's estimated sequences (unify-bus-stops design D16), so a revision they do not fit rejects every tick and is
+ * logged once (it replaces the check at construction, whose case "fails construction when the lane strategies name a
+ * sequence the app does not estimate" is now "Strategy for an unknown sequence"); a run's strategy follows the lane hours. The corridor is the stored
  * `bus-lane-corridor` dataset (move-reference-datasets D9; ADR 0013, D6), read over an in-memory store and a fixed
  * clock: `corridor()` answers one revision's snapshot (its centerline, probe routes, each direction's ends and leg
  * bounds), cached for DATASET_CACHE_TTL_MS so a push is seen within a minute, kept through a failed reload for
@@ -13,20 +15,21 @@ jest.mock("../../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), er
 import { corridorFixture } from "../../../../__tests__/helpers/bus/bus-lane-corridor";
 import { FakeBusEtaLaneRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta-lane.repository.fake";
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
+import { FakeBusStopsRepository } from "../../../../__tests__/helpers/fakes/bus/bus-stops.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../../infra/clock";
 import logger from "../../../infra/logger";
 import { DATASET_CACHE_TTL_MS, DATASET_STALE_WINDOW_MS } from "../../../shared/dataset.constants";
-import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
 import type { BusScheduleService } from "../../schedule/bus-schedule.service";
-import { BusStopsService } from "../../stops/bus-stops.service";
+import { storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
 import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaService } from "../bus-eta.service";
+import type { EtaSequence } from "../bus-eta.types";
 import type { BusEtaLaneRepository } from "./bus-eta-lane.repository";
 import { BusEtaLaneService } from "./bus-eta-lane.service";
 
 const NOW = new Date("2026-10-20T04:00:00.000Z");
-const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, new BusStopsService(new SubwayStationsService()));
+const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, storedBusStopsService());
 const mockedLogger = logger as unknown as Record<"error", jest.Mock>;
 
 function setup(sequencesOf: BusEtaService = eta) {
@@ -51,13 +54,42 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe("BusEtaLaneService", () => {
-  it("fails construction when the lane strategies name a sequence the app does not estimate", () => {
+describe("BusEtaLaneService.sequences", () => {
+  it("answers the estimated sequences of the current bus-stops revision, which the lane strategies fit", async () => {
     // Arrange
-    const noSequences = { sequences: () => [] } as unknown as BusEtaService;
+    const { lane } = setup();
+
+    // Act
+    const sequences = await lane.sequences();
+
+    // Assert
+    expect(sequences).toEqual(await eta.sequences());
+    expect(mockedLogger.error).not.toHaveBeenCalled();
+  });
+
+  it("Strategy for an unknown sequence: rejects every tick of a revision that leaves a strategy's sequence unestimated, logged once", async () => {
+    // Arrange
+    const unestimated: readonly EtaSequence[] = [];
+    const { lane } = setup({ sequences: async () => unestimated } as unknown as BusEtaService);
+
+    // Act
+    const first = lane.sequences();
+    await first.catch(() => undefined);
+    const second = lane.sequences();
+
+    // Assert
+    await expect(first).rejects.toThrow(/campus-inja regular/);
+    await expect(second).rejects.toThrow(/campus-inja regular/);
+    expect(mockedLogger.error.mock.calls.map(([fields]) => fields.event)).toEqual(["bus.eta.lane_strategy_unmatched"]);
+  });
+
+  it("rejects while the stops were never read, as the estimated sequences do", async () => {
+    // Arrange
+    const never = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, storedBusStopsService(new FakeBusStopsRepository()));
+    const { lane } = setup(never);
 
     // Act & Assert
-    expect(() => setup(noSequences)).toThrow(/campus-inja regular/);
+    await expect(lane.sequences()).rejects.toMatchObject({ code: "BUS_STOPS_UNAVAILABLE", httpStatus: 503 });
   });
 });
 

@@ -13,6 +13,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { BusCacheRepository } from "../../../src/bus/cache/bus-cache.repository";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
+import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
 import { BusRoutePathRepository } from "../../../src/bus/route-path/bus-route-path.repository";
 import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
 import { Clock } from "../../../src/infra/clock";
@@ -23,6 +24,7 @@ import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
 import { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-timetable.repository";
 import { storedBusRegistryRepository } from "../bus/bus-registry";
+import { storedBusStopsRepository } from "../bus/bus-stops";
 import { storedRouteAttributesRepository } from "../bus/route-attributes";
 import { storedBusRoutePathRepository } from "../bus/bus-route-path";
 import { FakeBusCacheRepository } from "../fakes/bus/bus-cache.repository.fake";
@@ -45,6 +47,7 @@ export function buildApiReplicaApp(): Promise<NestExpressApplication> {
       { provide: BusCacheRepository, useValue: new FakeBusCacheRepository() },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
+      { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
       { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
       { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
       { provide: MapRepository, useValue: new FakeMapRepository() },

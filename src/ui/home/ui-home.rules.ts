@@ -2,6 +2,7 @@ import { isBrokenLinkAction } from "../../shared/link-action.util";
 import { toMiniAppTargetReferences } from "../ui.rules";
 import type { BannerImageRaw } from "../ui.schema";
 import type { MiniAppRegistry, TargetGrammar } from "../ui.types";
+import { BUNDLED_GAME_IDS } from "./ui-home.constants";
 import type { HomeLayoutRaw, TileRaw } from "./ui-home.schema";
 import type { HomeLayoutIssue, HomeLayoutReference } from "./ui-home.types";
 
@@ -63,7 +64,8 @@ function targetReferences({ at, value: link }: Located<BannerImageRaw | LinkTile
 
 function tileReferences(tile: Located<TileRaw>, grammar: TargetGrammar): HomeLayoutReference[] {
   if (isLinkTile(tile)) return targetReferences(tile, grammar);
-  return tile.value.kind === "miniapp" ? [{ dataset: "miniapps", id: tile.value.id, path: [...tile.at, "id"] }] : [];
+  const dataset = tile.value.kind === "game" ? "games" : "miniapps";
+  return dataset === "games" && BUNDLED_GAME_IDS.includes(tile.value.id) ? [] : [{ dataset, id: tile.value.id, path: [...tile.at, "id"] }];
 }
 
 function sectionReferences(section: Located<SectionRaw>, grammar: TargetGrammar): HomeLayoutReference[] {

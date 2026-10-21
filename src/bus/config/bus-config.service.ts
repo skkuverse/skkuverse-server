@@ -9,8 +9,9 @@ import type { RegistryRoute } from "../registry/bus-registry.types";
 import { BusRouteAttributesService } from "../route-attributes/bus-route-attributes.service";
 import type { RouteAttributesSnapshot } from "../route-attributes/bus-route-attributes.types";
 import { BusStopsService } from "../stops/bus-stops.service";
+import type { BusStopsSnapshot } from "../stops/bus-stops.types";
 import { HAS_STOP_MAPS_BY_GROUP } from "./bus-config.config";
-import { CAMPUS_SERVICE_IDS, COMMUTE_SERVICE_IDS } from "./bus-config.constants";
+import { CAMPUS_SERVICE_IDS, COMMUTE_SERVICE_IDS, STOP_GROUP_IDS } from "./bus-config.constants";
 import { toBusGroupIds, toBusGroups } from "./bus-config.mapper";
 import type { AttributedJongroRoute } from "./bus-config.types";
 import type { BusGroup } from "./bus-config.wire";
@@ -18,10 +19,16 @@ import type { BusGroup } from "./bus-config.wire";
 interface GroupSources {
   routes: RegistryRoute[];
   attributes: RouteAttributesSnapshot | null;
+  stops: BusStopsSnapshot;
 }
 
+type JongroSources = Omit<GroupSources, "stops">;
+
 // WHY: with no attributes read, no Jongro group is built, so the registry is not read either (move-reference-datasets D10).
-const NO_JONGRO_SOURCES: GroupSources = { routes: [], attributes: null };
+const NO_JONGRO_SOURCES: JongroSources = { routes: [], attributes: null };
+
+// WHY: a group that reads no stops is built beside shuttle groups from none, which its lookup by id drops (unify-bus-stops D5).
+const NO_STOPS: BusStopsSnapshot = { revision: 0, catalog: { stops: [], sequences: {} }, hssc: [], stopIdByArsId: new Map() };
 
 @Injectable()
 export class BusConfigService {
@@ -43,10 +50,10 @@ export class BusConfigService {
     return this.toGroups(lang, await this.readSources());
   }
 
-  // WHY: keyed by the attributes revision and every route's stations version, so a push or a sync changes the ETag.
+  // WHY: keyed by both datasets' revisions and every route's stations version, so a push or a sync changes the ETag.
   async computeEtag(lang: SupportedLang = "ko"): Promise<string> {
     const sources = await this.readSources();
-    const cacheKey = [lang, sources.attributes?.revision ?? "none", ...sources.routes.map((route) => route.stationsVersion)].join(":");
+    const cacheKey = [lang, sources.attributes?.revision ?? "none", sources.stops.revision, ...sources.routes.map((route) => route.stationsVersion)].join(":");
     const cached = this.etagCache.get(cacheKey);
     if (cached) return cached;
     const etag = this.md5Etag(this.toGroups(lang, sources));
@@ -60,7 +67,7 @@ export class BusConfigService {
 
   async computeGroupEtag(id: string, lang: SupportedLang = "ko"): Promise<string | null> {
     const sources = await this.readGroupSources(id);
-    const cacheKey = [id, lang, sources.attributes?.revision ?? "none", ...sources.routes.map((route) => route.stationsVersion)].join(":");
+    const cacheKey = [id, lang, sources.attributes?.revision ?? "none", sources.stops.revision, ...sources.routes.map((route) => route.stationsVersion)].join(":");
     const cached = this.etagCache.get(cacheKey);
     if (cached) return cached;
     const group = this.toGroups(lang, sources).find((g) => g.id === id);
@@ -71,25 +78,28 @@ export class BusConfigService {
   }
 
   private async readSources(): Promise<GroupSources> {
+    const stops = await this.stops.current();
     const attributes = await this.routeAttributes.findCurrent();
-    return attributes === null ? NO_JONGRO_SOURCES : { attributes, routes: await this.registry.listRoutes() };
+    return attributes === null ? { ...NO_JONGRO_SOURCES, stops } : { attributes, routes: await this.registry.listRoutes(), stops };
   }
 
   // WHY: a Jongro group answers its realtime route's 503 when the attributes were never read or lack its route
-  // (move-reference-datasets D10); any other group reads no Jongro data.
+  // (move-reference-datasets D10), and a shuttle group the stops' 503 when they were never read.
   private async readGroupSources(id: string): Promise<GroupSources> {
+    const stops = STOP_GROUP_IDS.includes(id) ? await this.stops.current() : NO_STOPS;
     const isJongroGroup = JONGRO_ROUTES.some((route) => route.id === id);
-    if (!isJongroGroup) return NO_JONGRO_SOURCES;
+    if (!isJongroGroup) return { ...NO_JONGRO_SOURCES, stops };
     await this.routeAttributes.attributesOf(id);
-    return { attributes: await this.routeAttributes.current(), routes: await this.registry.listRoutes() };
+    return { attributes: await this.routeAttributes.current(), routes: await this.registry.listRoutes(), stops };
   }
 
-  private toGroups(lang: SupportedLang, { routes, attributes }: GroupSources): BusGroup[] {
-    const stops = {
-      campus: this.stops.servedSequences(CAMPUS_SERVICE_IDS, lang, HAS_STOP_MAPS_BY_GROUP.campus),
-      commute: this.stops.servedSequences(COMMUTE_SERVICE_IDS, lang, HAS_STOP_MAPS_BY_GROUP.commute),
+  private toGroups(lang: SupportedLang, { routes, attributes, stops }: GroupSources): BusGroup[] {
+    const served = {
+      campus: this.stops.servedSequences(stops, CAMPUS_SERVICE_IDS, { lang, hasStopMaps: HAS_STOP_MAPS_BY_GROUP.campus }),
+      commute: this.stops.servedSequences(stops, COMMUTE_SERVICE_IDS, { lang, hasStopMaps: HAS_STOP_MAPS_BY_GROUP.commute }),
     };
-    return toBusGroups({ lang, stops, jongroRoutes: this.toAttributedRoutes(routes, attributes), webviewOrigin: WEBVIEW_ORIGIN });
+    const jongroRoutes = this.toAttributedRoutes(routes, attributes);
+    return toBusGroups({ lang, stops: served, hsscStations: stops.hssc, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
   }
 
   // WHY: a route without stored attributes is left out (BusRouteAttributesService logs the gap once per revision).

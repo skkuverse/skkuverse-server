@@ -23,7 +23,7 @@ export interface ServiceConfigEntry {
   nonOperatingDayDisplay: "hidden" | "visible" | string;
   /** WHY: opt-in, so a new shuttle never loses its timetable to a holiday by default. */
   respectsKoreanHolidays?: boolean;
-  /** WHY: opt-in per route type; each one's stop sequence is checked when the stop catalog loads. */
+  /** WHY: opt-in per route type; each one's stop sequence is checked at each bus-stops push. */
   eta?: { routeTypes: string[] };
 }
 

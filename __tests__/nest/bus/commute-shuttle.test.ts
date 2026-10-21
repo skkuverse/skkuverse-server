@@ -14,8 +14,7 @@ import { COMMUTE_SERVICE_IDS } from "../../../src/bus/config/bus-config.constant
 import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../helpers/bus/bus-registry";
 import { storedRouteAttributesRepository, storedRouteAttributesService } from "../../helpers/bus/route-attributes";
-import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
-import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
+import { storedBusStopsService, storedBusStopsRepository } from "../../helpers/bus/bus-stops";
 import { haversineM } from "../../../src/shared/distance.util";
 import { Clock } from "../../../src/infra/clock";
 import type { SupportedLang } from "../../../src/infra/types";
@@ -31,6 +30,7 @@ import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
 import { busGroup } from "../../../src/bus/config/bus-config.wire";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
+import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
 import { UiModule } from "../../../src/ui/ui.module";
 import { UiTransitTabModule } from "../../../src/ui/transit/tab/ui-transit-tab.module";
 import { UiTransitModule } from "../../../src/ui/transit/ui-transit.module";
@@ -56,7 +56,7 @@ let busConfig: BusConfigService;
 const groupsByLang = new Map<SupportedLang, BusGroup[]>();
 // WHY: the stations come from the registry, holding the routes stored on 2026-10-17; the groups are read once.
 beforeAll(async () => {
-  busConfig = new BusConfigService(new BusStopsService(new SubwayStationsService()), storedBusRegistryService(), storedRouteAttributesService());
+  busConfig = new BusConfigService(storedBusStopsService(), storedBusRegistryService(), storedRouteAttributesService());
   for (const lang of ["ko", "en", "zh"] as const) groupsByLang.set(lang, await busConfig.getBusGroups(lang));
 });
 const getBusGroups = (lang: SupportedLang = "ko"): BusGroup[] => groupsByLang.get(lang)!;
@@ -226,9 +226,13 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
   const stopById = (id: string, lang: "ko" | "en" | "zh" = "ko") => stops(lang).find((s) => s.id === id)!;
   // WHY: the commute group serves no stop map (hide-commute-stop-maps); the catalog keeps each guide, read here as
   // a group that serves maps would draw it.
-  const catalogStops = new BusStopsService(new SubwayStationsService());
+  const catalogStops = storedBusStopsService();
+  let snapshot: Awaited<ReturnType<typeof catalogStops.current>>;
+  beforeAll(async () => {
+    snapshot = await catalogStops.current();
+  });
   const guideMapOf = (id: string, lang: "ko" | "en" | "zh" = "ko") =>
-    catalogStops.servedSequences(COMMUTE_SERVICE_IDS, lang, true).stops.find((s) => s.id === id)!.map as Record<string, any>;
+    catalogStops.servedSequences(snapshot, COMMUTE_SERVICE_IDS, { lang, hasStopMaps: true }).stops.find((s) => s.id === id)!.map as Record<string, any>;
   const brief = (seq: SeqStop[]) => seq.map((st) => `${st.action}:${st.label}:${st.timing}`);
 
   it("정자 boarding: the run boards at 정자역 3번 출구 and arrives at N센터 앞, the first campus drop point (estimated)", async () => {
@@ -411,7 +415,7 @@ describe("commute arrival estimates", () => {
 
   it("opts every commute service's 등교 and 하교 runs in to estimates", async () => {
     // Act
-    const optIns = new BusStopsService(new SubwayStationsService()).etaOptIns();
+    const optIns = storedBusStopsService().etaOptIns();
 
     // Assert
     for (const serviceId of COMMUTE_IDS) expect(optIns.get(serviceId)).toEqual(["up", "down"]);
@@ -479,6 +483,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
         { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
+        { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
         { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
         { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
         { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },

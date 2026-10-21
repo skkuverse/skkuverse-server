@@ -1,0 +1,6 @@
+{
+  "_about": "Hand-written 2026-10-21, since the route is not deployed yet: GET /games over revision 1 of the games dataset (__tests__/nest/games/fixtures/games.dataset.json), which lists no game; the whole body",
+  "data": {
+    "games": []
+  }
+}

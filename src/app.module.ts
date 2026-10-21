@@ -14,6 +14,7 @@ import { BusRealtimeHsscModule } from "./bus/realtime/hssc/bus-realtime-hssc.mod
 import { BusRealtimeJongroModule } from "./bus/realtime/jongro/bus-realtime-jongro.module";
 import { BusRealtimeArrivalModule } from "./bus/realtime/arrival/bus-realtime-arrival.module";
 import { BusRealtimeGroupModule } from "./bus/realtime/group/bus-realtime-group.module";
+import { BusStopsCheckModule } from "./bus/stops/check/bus-stops-check.module";
 import { BusStopsModule } from "./bus/stops/bus-stops.module";
 import { BusScheduleContentModule } from "./bus/schedule-content/bus-schedule-content.module";
 import { BusScheduleModule } from "./bus/schedule/bus-schedule.module";
@@ -61,6 +62,7 @@ import { MiniappsModule } from "./miniapps/miniapps.module";
 import { MiniappsNotificationsModule } from "./miniapps/notifications/miniapps-notifications.module";
 import { MiniappsManifestModule } from "./miniapps/manifest/miniapps-manifest.module";
 import { MiniappsCatalogModule } from "./miniapps/catalog/miniapps-catalog.module";
+import { GamesModule } from "./games/games.module";
 import { SubwayModule } from "./subway/subway.module";
 import { SubwayStationsModule } from "./subway/stations/subway-stations.module";
 import { SubwayTopologyModule } from "./subway/topology/subway-topology.module";
@@ -96,6 +98,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusRealtimeArrivalModule,
     BusRealtimeGroupModule,
     BusStopsModule,
+    BusStopsCheckModule,
     BusScheduleContentModule,
     BusScheduleModule,
     BusEtaModule,
@@ -145,6 +148,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     MiniappsNotificationsModule,
     MiniappsManifestModule,
     MiniappsCatalogModule,
+    GamesModule,
     SubwayModule,
     SubwayStationsModule,
     SubwayTopologyModule,

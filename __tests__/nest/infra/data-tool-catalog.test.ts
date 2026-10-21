@@ -36,6 +36,12 @@
  * code-held source, the route ids JONGRO_ROUTES holds: one entry per route the
  * checkout serves, no more.
  *
+ * The `bus-stops` dataset (unify-bus-stops D4) is checked with the server's
+ * stops schema and `toBusStopsIssues` against the checkout's services, their
+ * estimate opt-ins, the served subway stations and the lane strategies; it
+ * references the `subwayStations` and `busServices` code-held sources, and
+ * others may reference its stop ids.
+ *
  * The `subway-topology` dataset (move-reference-datasets D2, D3) is checked
  * with the server's topology schema and `toTopologyIssues` against the
  * checkout's SUBWAY_LINES and SUBWAY_STATIONS: one entry per served platform
@@ -60,6 +66,7 @@ import { JONGRO_ROUTES, SERVICE_CONFIG } from "../../../src/bus/bus.constants";
 import { corridorIssues } from "../../../src/bus/eta/lane/bus-eta-lane.rules";
 import { laneCorridorDataset } from "../../../src/bus/eta/lane/bus-eta-lane.schema";
 import { jongroRouteAttributesDataset } from "../../../src/bus/route-attributes/bus-route-attributes.schema";
+import { busStopsDataset } from "../../../src/bus/stops/bus-stops.schema";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import { fixtureRegistry, fixtureRegistryWithWaveRun } from "../../helpers/miniapps/registry-fixture";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
@@ -1098,5 +1105,105 @@ describe("loadCatalog subway-timetables against the stored subway-topology", () 
     // Assert
     expect(checked.issues).toEqual([]);
     expect(issueLines(checked.warnings)).toEqual(["subway-timetables: subway-topology: no stored subway-topology, so the tables' routes were not checked against it"]);
+  });
+});
+
+describe("loadCatalog bus-stops", () => {
+  const stops = () => datasetFixture("../bus/fixtures/bus-stops.dataset.json") as Record<string, any>;
+
+  it("is owned by src/bus/stops, takes busStopsDataset, and accepts revision 1 with no issue", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["bus-stops"];
+
+    // Act
+    const issues = checkData(catalog, "bus-stops", stops(), {});
+
+    // Assert
+    expect(entry.owner).toBe("src/bus/stops");
+    expect(entry.schema).toBe(busStopsDataset);
+    expect(issues).toEqual([]);
+  });
+
+  it("references each stop's subway station and each sequence's service, and lists its stop ids for others to reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["bus-stops"];
+    const parsed = entry.schema.parse(stops());
+
+    // Act
+    const references = entry.referencesOf(parsed);
+    const ids = entry.idsOf(parsed);
+
+    // Assert
+    expect(references.filter((ref: { dataset: string }) => ref.dataset === "subwayStations")).toContainEqual({ dataset: "subwayStations", id: "jeongja", path: ["stops", 0, "subwayStationId"] });
+    expect(references.filter((ref: { dataset: string }) => ref.dataset === "busServices").map((ref: { id: string }) => ref.id)).toEqual(Object.keys(stops().sequences));
+    expect(new Set(references.map((ref: { dataset: string }) => ref.dataset))).toEqual(new Set(["subwayStations", "busServices"]));
+    expect(ids).toEqual(stops().stops.map((stop: { id: string }) => stop.id));
+    expect(ids).toContain("hssc-main-gate-in");
+  });
+
+  it("references an overlay entry's subway station", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["bus-stops"];
+    const parsed = entry.schema.parse({ ...stops(), topis: { "01592": { subwayStationId: "hyehwa" } } });
+
+    // Act & Assert
+    expect(entry.referencesOf(parsed)).toContainEqual({ dataset: "subwayStations", id: "hyehwa", path: ["topis", "01592", "subwayStationId"] });
+  });
+
+  it("Unknown station stops the boot: refuses jeongja-exit2 naming the station jeongja2, once at its path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = stops();
+    const index = data.stops.findIndex((stop: { id: string }) => stop.id === "jeongja-exit2");
+    data.stops[index].subwayStationId = "jeongja2";
+
+    // Act
+    const lines = issueLines(checkData(catalog, "bus-stops", data, {}));
+
+    // Assert
+    expect(lines).toEqual([`bus-stops: stops.${index}.subwayStationId: stop jeongja-exit2: subwayStationId "jeongja2" is not a served subway station`]);
+  });
+
+  it("Strategy for an unknown sequence: refuses data without campus-inja regular, naming the sequence LANE_STRATEGIES sets busLane for, once", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = stops();
+    delete data.sequences["campus-inja"].regular;
+
+    // Act
+    const lines = issueLines(checkData(catalog, "bus-stops", data, {}));
+
+    // Assert
+    // The opt-in check names the same path first, and the tool keeps one issue per path.
+    expect(lines).toEqual(["bus-stops: sequences.campus-inja.regular: sequences campus-inja.regular: opted in to estimates but has no stop sequence"]);
+  });
+
+  it("Ten positions: refuses an HSSC line of ten, naming the line and the count", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = stops();
+    data.hssc.stations.pop();
+
+    // Act
+    const lines = issueLines(checkData(catalog, "bus-stops", data, {}));
+
+    // Assert
+    expect(lines).toEqual(["bus-stops: hssc.stations: must list exactly 11 positions, the count the HSSC realtime view fills"]);
+  });
+
+  it("Unknown service: refuses sequences of campus-jaja, naming its path", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = stops();
+    data.sequences["campus-jaja"] = data.sequences["campus-jain"];
+
+    // Act
+    const lines = issueLines(checkData(catalog, "bus-stops", data, {}));
+
+    // Assert
+    expect(lines).toEqual(["bus-stops: sequences.campus-jaja: sequences campus-jaja: unknown service"]);
   });
 });

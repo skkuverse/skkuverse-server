@@ -11,6 +11,10 @@ export const JONGRO_ROUTES: ReadonlyArray<Readonly<JongroRouteIdentity>> = Objec
   Object.freeze({ id: "jongro08", busRouteId: "100900005" }),
 ]);
 
+// QUIRK(hssc): toLinearSequence (src/bus/realtime/hssc) maps the API's circular stops onto this many positions,
+// so the stored HSSC line holds exactly as many (unify-bus-stops design D3).
+export const HSSC_POSITION_COUNT = 11;
+
 // WHY: the live estimate poller runs every 60 s; an app refreshing estimates faster would only read its HTTP cache.
 export const ESTIMATES_MAX_AGE_S = 60;
 

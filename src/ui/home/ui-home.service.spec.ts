@@ -11,7 +11,8 @@
  * And the registry revision each request reads (move-miniapp-registry D4, D7): a layout that names a mini app
  * takes one registry snapshot per request, so a registry push reaches it within a TTL with the layout unchanged,
  * and a left-out item is logged once per pair of revisions. A layout that names none reads no registry, so it
- * serves while the registry is unavailable; one that names a mini app answers MINIAPP_REGISTRY_UNAVAILABLE.
+ * serves while the registry is unavailable, and a game tile, which names the games dataset, is not a mini app;
+ * one that names a mini app answers MINIAPP_REGISTRY_UNAVAILABLE.
  *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake
  * system time; the mapper's clock stays the injected one.
@@ -363,6 +364,21 @@ describe("UiHomeService.getHomeLayout against the registry revision each request
 
     // Assert
     expect(tileIdsOf(layout)).toEqual(["building_map", "building_code", "lost_found", "inquiry", "subway-typing", "wave-run"]);
+    expect(unreachable.readCount).toBe(0);
+  });
+
+  it("serves a layout whose only named game is one no build bundles while the registry is unavailable, reading no registry", async () => {
+    // Arrange
+    const unreachable = new FakeMiniappsRepository();
+    unreachable.failWith = new Error("server selection timed out");
+    service = serviceOver(unreachable);
+    repository.storeHomeLayout(layoutOf(grid({ kind: "game", id: "new-game" }, { kind: "game", id: "wave-run" })));
+
+    // Act
+    const layout = await service.getHomeLayout("ko");
+
+    // Assert
+    expect(tileIdsOf(layout)).toEqual(["new-game", "wave-run"]);
     expect(unreachable.readCount).toBe(0);
   });
 

@@ -50,6 +50,7 @@ type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type Registry = typeof import("../../../src/scheduling/poller-registry.service")["PollerRegistryService"];
 type BusLaneCorridorHelpers = typeof import("../../helpers/bus/bus-lane-corridor");
+type BusStopsHelpers = typeof import("../../helpers/bus/bus-stops");
 type ScheduleContentHelpers = typeof import("../../helpers/bus/schedule-content");
 
 const at = (hhmm: string, seconds = 0): Date => new Date(new Date(`2026-10-23T${hhmm}:00+09:00`).getTime() + seconds * 1000);
@@ -144,6 +145,8 @@ beforeAll(async () => {
   await store.create(content, "skku-rest-days", restDaysFixture(), storedBy);
   const { corridorFixture } = require("../../helpers/bus/bus-lane-corridor") as BusLaneCorridorHelpers;
   await store.create(content, "bus-lane-corridor", corridorFixture(), storedBy);
+  const { busStopsFixture } = require("../../helpers/bus/bus-stops") as BusStopsHelpers;
+  await store.create(content, "bus-stops", busStopsFixture(), storedBy);
 }, MONGOD_START_TIMEOUT_MS);
 
 afterEach(async () => {

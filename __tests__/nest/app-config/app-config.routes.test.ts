@@ -8,7 +8,7 @@
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { BRIDGE_ORIGINS, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
+import { BRIDGE_ORIGINS, GAME_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } from "../../../src/infra/origins";
 import { ConfigModule } from "../../../src/config/config.module";
 import { AppConfigModule } from "../../../src/app-config/app-config.module";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
@@ -116,6 +116,21 @@ describe("GET /app/config", () => {
       "https://inja.mini.skkuverse.com": "inja",
       "https://timetable.mini.skkuverse.com": "timetable",
     });
+  });
+
+  it("grants no first-party game origin the bridge or a mini app's shell", async () => {
+    // Arrange
+    const gameOrigins = Object.keys(GAME_ID_BY_FIRST_PARTY_ORIGIN);
+
+    // Act
+    const res = await request(httpServer).get("/app/config");
+
+    // Assert
+    // A game page is trusted only through its own list: in either of these it
+    // would get every mini-app grant, or open in a mini app's shell.
+    expect(gameOrigins.length).toBeGreaterThan(0);
+    expect((res.body.data.webview.bridgeOrigins as string[]).filter((origin) => gameOrigins.includes(origin))).toEqual([]);
+    expect(Object.keys(res.body.data.miniapps.origins as Record<string, string>).filter((origin) => gameOrigins.includes(origin))).toEqual([]);
   });
 
   it("lists only absolute https origins in bridgeOrigins", async () => {
