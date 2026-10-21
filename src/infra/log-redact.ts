@@ -17,6 +17,11 @@ const SECRET_PARAM = /key|token|secret|password|passwd|signature|sig$|auth|sessi
 
 const REDACTED = "[REDACTED]";
 
+// QUIRK(seoul-open-api): Seoul's open APIs take the key as the path segment before the response type
+// (`<host>/<prefix>/<key>/json/<service>/...`), where no parameter name shows it.
+const PATH_KEY_HOST = /(^|\.)seoul\.go\.kr$/i;
+const RESPONSE_TYPE_SEGMENT = /^(json|xml|xmlf|xls|xlsf)$/i;
+
 /**
  * QUIRK(axios): an error carries its request config (headers with cookies, a URL with a service key)
  * under `config`, and the raw socket objects under `request` / `response`.
@@ -37,7 +42,14 @@ export function maskUrl(url: string): string {
   }
   const absolute = /^[a-z][a-z0-9+.-]*:\/\//i.test(url);
   const prefix = absolute ? `${parsed.protocol}//${parsed.host}` : "";
-  return `${prefix}${parsed.pathname}${parsed.search}`;
+  const pathname = absolute && PATH_KEY_HOST.test(parsed.hostname) ? maskPathKey(parsed.pathname) : parsed.pathname;
+  return `${prefix}${pathname}${parsed.search}`;
+}
+
+function maskPathKey(pathname: string): string {
+  const segments = pathname.split("/");
+  const isKeySegment = (index: number): boolean => index > 0 && RESPONSE_TYPE_SEGMENT.test(segments[index + 1] ?? "");
+  return segments.map((segment, index) => (isKeySegment(index) ? REDACTED : segment)).join("/");
 }
 
 export function maskQuery(query: string): string {

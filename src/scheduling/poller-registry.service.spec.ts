@@ -233,11 +233,11 @@ describe("PollerRegistryService", () => {
       expect(Sentry.captureException).not.toHaveBeenCalled();
     });
 
-    it("declares a slow poller on its first failure, and logs its recovery", async () => {
+    it("declares a slow poller (15 minutes or more between ticks) on its first failure, and logs its recovery", async () => {
       // Arrange
       let calls = 0;
       const fn = jest.fn(() => (++calls === 1 ? Promise.reject(new Error("sweep failed")) : undefined));
-      registry.registerPoller(fn, 60_000, "slow");
+      registry.registerPoller(fn, 15 * 60_000, "slow");
 
       // Act
       registry.onApplicationBootstrap();
@@ -246,12 +246,86 @@ describe("PollerRegistryService", () => {
       // Assert
       expect(events(logger.error)).toEqual(["poller.failing"]);
 
-      jest.advanceTimersByTime(60_000);
+      jest.advanceTimersByTime(15 * 60_000);
       await settle();
       expect(logger.info).toHaveBeenCalledWith(
         expect.objectContaining({ event: "poller.recovered", name: "slow", failures: 1 }),
         "Poller recovered",
       );
+      expect(declaredFailing()).toEqual([]);
+    });
+
+    // A transient upstream blip (a timeout, an ECONNRESET) on a poller ticking every 1 to 15 minutes
+    // recovers on the next tick, so it must not open a Sentry Issue.
+    it.each([
+      ["at one minute", 60_000],
+      ["at four minutes", 4 * 60_000],
+      ["just under 15 minutes", 15 * 60_000 - 1],
+    ])("lets a minute-scale poller's single failure pass %s", async (_label, intervalMs) => {
+      // Arrange
+      let calls = 0;
+      const fn = jest.fn(() => (++calls === 1 ? Promise.reject(new Error("ECONNRESET")) : undefined));
+      registry.registerPoller(fn, intervalMs, "manifest");
+
+      // Act
+      registry.onApplicationBootstrap();
+      await settle();
+      jest.advanceTimersByTime(intervalMs);
+      await settle();
+
+      // Assert
+      expect(fn).toHaveBeenCalledTimes(2);
+      expect(logger.error).not.toHaveBeenCalled();
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(events(logger.info)).not.toContain("poller.recovered");
+    });
+
+    it.each([
+      ["at one minute", 60_000],
+      ["at four minutes", 4 * 60_000],
+      ["just under 15 minutes", 15 * 60_000 - 1],
+    ])("declares a minute-scale poller failing on its second failure in a row %s, once, and resets on recovery", async (_label, intervalMs) => {
+      // Arrange
+      let failing = true;
+      const fn = jest.fn(() => (failing ? Promise.reject(new Error("manifest 503")) : undefined));
+      registry.registerPoller(fn, intervalMs, "manifest");
+
+      // Act
+      registry.onApplicationBootstrap();
+      await settle();
+
+      // Assert
+      expect(logger.error).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(intervalMs);
+      await settle();
+      expect(events(logger.error)).toEqual(["poller.failing"]);
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "manifest", failures: 2 }),
+        "Poller failing",
+      );
+      expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+      expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
+        tags: { poller: "manifest" },
+      });
+
+      jest.advanceTimersByTime(intervalMs);
+      await settle();
+      expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+
+      failing = false;
+      jest.advanceTimersByTime(intervalMs);
+      await settle();
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.objectContaining({ event: "poller.recovered", name: "manifest", failures: 3 }),
+        "Poller recovered",
+      );
+      expect(declaredFailing()).toEqual([]);
+
+      failing = true;
+      jest.advanceTimersByTime(intervalMs);
+      await settle();
+      expect(Sentry.captureException).toHaveBeenCalledTimes(1);
       expect(declaredFailing()).toEqual([]);
     });
 
@@ -261,7 +335,7 @@ describe("PollerRegistryService", () => {
         () => {
           throw new Error("sync");
         },
-        60_000,
+        15 * 60_000,
         "thrower",
       );
 

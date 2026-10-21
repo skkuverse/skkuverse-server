@@ -28,7 +28,7 @@
  *
  * `stored` maps a dataset name to its stored `data`.
  *
- * A parted dataset (openspec/changes/move-reference-datasets, design D4) runs
+ * A parted dataset (openspec/changes/archive/2026-10-20-move-reference-datasets, design D4) runs
  * its part schema on each part instead of 1, refuses a key two parts share,
  * and runs 2 to 4 on the set of parts ordered by key. Its stored `data` is a
  * manifest. A dataset whose check needs a parted one's content names it in its
