@@ -3,17 +3,26 @@
  * what a tick keeps and stores. Stale thresholds, the stop-name mapping and
  * the circular → linear sequence math are asserted exactly, and every failure
  * rejects so the poller registry counts it, leaving the served list as it was.
+ * Each tick also appends the feed's events to the event log once each, every
+ * row the feed sends including the ones too stale to serve, after bus_cache,
+ * and warns once when the feed's rows stop parsing, a format change.
  */
+const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+jest.mock("../../../infra/logger", () => mockLogger);
+
 import "moment/locale/ko";
 import moment from "moment-timezone";
 import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusRealtimeHsscClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.client.fake";
+import { FakeBusRealtimeHsscRepository } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import { hsscBusDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
+import { logText } from "../../../../__tests__/helpers/log-text";
 import type { Clock } from "../../../infra/clock";
 import type { BusCacheRepository } from "../../cache/bus-cache.repository";
 import { BusCacheService } from "../../cache/bus-cache.service";
 import type { BusRealtimeHsscClient } from "./bus-realtime-hssc.client";
+import type { BusRealtimeHsscRepository } from "./bus-realtime-hssc.repository";
 import { BusRealtimeHsscService } from "./bus-realtime-hssc.service";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
@@ -37,13 +46,15 @@ function createApiItem(
 
 let client: FakeBusRealtimeHsscClient;
 let busCache: FakeBusCacheRepository;
+let feedLog: FakeBusRealtimeHsscRepository;
 let service: BusRealtimeHsscService;
 
 beforeEach(() => {
   client = new FakeBusRealtimeHsscClient();
   busCache = new FakeBusCacheRepository();
+  feedLog = new FakeBusRealtimeHsscRepository();
   const cache = new BusCacheService(asReal<BusCacheRepository>(busCache));
-  service = new BusRealtimeHsscService(asReal<BusRealtimeHsscClient>(client), cache, clock);
+  service = new BusRealtimeHsscService(asReal<BusRealtimeHsscClient>(client), cache, asReal<BusRealtimeHsscRepository>(feedLog), clock);
 });
 
 describe("BusRealtimeHsscService.listBuses", () => {
@@ -272,5 +283,222 @@ describe("BusRealtimeHsscService.refresh", () => {
       // Assert
       expect(busCache.values.get("hssc")).toEqual([expect.objectContaining({ stationName: "혜화동로터리 [미정차]" })]);
     });
+  });
+});
+
+describe("BusRealtimeHsscService.refresh feed event log", () => {
+  const LEFT_AT_ROTARY = { line_no: "32149", inout: "LEFT", stop_no: "284258", seq: "1", stop_name: "혜화동로터리", get_date: "2026-10-20 오전 9:59:30" };
+
+  it("appends each row as an event with its parsed time and the tick's time", async () => {
+    // Arrange
+    client.buses = [LEFT_AT_ROTARY];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(feedLog.feedEvents).toEqual([
+      {
+        lineNo: "32149",
+        seq: 1,
+        stopNo: "284258",
+        stopName: "혜화동로터리",
+        inout: "LEFT",
+        getDate: new Date("2026-10-20T00:59:30.000Z"),
+        rawGetDate: "2026-10-20 오전 9:59:30",
+        polledAt: NOW,
+      },
+    ]);
+  });
+
+  it("hands a row the feed repeats on the next tick to no write", async () => {
+    // Arrange
+    client.buses = [LEFT_AT_ROTARY];
+    await service.refresh();
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(feedLog.batches.map((batch) => batch.length)).toEqual([1, 0]);
+  });
+
+  it("appends the next event of a line, at the same stop or the next", async () => {
+    // Arrange
+    client.buses = [{ ...LEFT_AT_ROTARY, inout: "ENTERED", get_date: "2026-10-20 오전 9:59:10" }];
+    await service.refresh();
+    client.buses = [LEFT_AT_ROTARY];
+    await service.refresh();
+    client.buses = [{ ...LEFT_AT_ROTARY, seq: "2", get_date: "2026-10-20 오전 10:01:02" }];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(feedLog.feedEvents.map((event) => [event.seq, event.inout])).toEqual([
+      [1, "ENTERED"],
+      [1, "LEFT"],
+      [2, "LEFT"],
+    ]);
+  });
+
+  it("appends a row too stale to serve, a frozen line included, once", async () => {
+    // Arrange
+    const frozen = { ...LEFT_AT_ROTARY, line_no: "32153", get_date: "2025-02-14 오후 3:04:05" };
+    client.buses = [frozen];
+    await service.refresh();
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(busCache.values.get("hssc")).toEqual([]);
+    expect(feedLog.feedEvents).toEqual([expect.objectContaining({ lineNo: "32153", getDate: new Date("2025-02-14T06:04:05.000Z") })]);
+  });
+
+  it("keeps an EMERGENCY row as received", async () => {
+    // Arrange
+    client.buses = [{ ...LEFT_AT_ROTARY, inout: "EMERGENCY" }];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(feedLog.feedEvents.map((event) => event.inout)).toEqual(["EMERGENCY"]);
+  });
+
+  it("leaves out a row whose time does not parse and logs the rest", async () => {
+    // Arrange
+    client.buses = [{ ...LEFT_AT_ROTARY, line_no: "32150", get_date: "2026-10-20 9:59:30" }, LEFT_AT_ROTARY];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(feedLog.feedEvents.map((event) => event.lineNo)).toEqual(["32149"]);
+  });
+
+  it("stores an event a restarted poller sends again once", async () => {
+    // Arrange
+    client.buses = [LEFT_AT_ROTARY];
+    await service.refresh();
+    const restarted = new BusRealtimeHsscService(
+      asReal<BusRealtimeHsscClient>(client),
+      new BusCacheService(asReal<BusCacheRepository>(busCache)),
+      asReal<BusRealtimeHsscRepository>(feedLog),
+      clock,
+    );
+
+    // Act
+    await restarted.refresh();
+
+    // Assert
+    expect(feedLog.feedEvents).toHaveLength(1);
+  });
+
+  it("rejects when the log write fails, after bus_cache is written, and retries the event on the next tick", async () => {
+    // Arrange
+    client.buses = [LEFT_AT_ROTARY];
+    feedLog.failWith = new Error("mongo down");
+
+    // Act & Assert
+    await expect(service.refresh()).rejects.toThrow("mongo down");
+    expect(busCache.values.has("hssc")).toBe(true);
+    feedLog.failWith = null;
+    await service.refresh();
+    expect(feedLog.feedEvents).toEqual([expect.objectContaining({ lineNo: "32149", inout: "LEFT" })]);
+  });
+
+  it("writes no event on an API error", async () => {
+    // Arrange
+    client.failWith = new Error("Network error");
+
+    // Act & Assert
+    await expect(service.refresh()).rejects.toThrow("Network error");
+    expect(feedLog.batches).toEqual([]);
+  });
+});
+
+describe("BusRealtimeHsscService.refresh feed format change", () => {
+  const PARSED = { line_no: "32149", inout: "LEFT", stop_no: "284258", seq: "1", stop_name: "혜화동로터리", get_date: "2026-10-20 오전 9:59:30" };
+  const UNPARSED = { ...PARSED, get_date: "2026-10-20 09:59:30" };
+  const warnings = () => mockLogger.warn.mock.calls.filter(([fields]) => fields.event === "bus.hssc.feed_events_unparsed");
+  const recoveries = () => mockLogger.info.mock.calls.filter(([fields]) => fields.event === "bus.hssc.feed_events_parsed");
+
+  beforeEach(() => {
+    mockLogger.warn.mockClear();
+    mockLogger.info.mockClear();
+  });
+
+  it("warns once, with a raw get_date, while every row of every tick fails to parse", async () => {
+    // Arrange
+    client.buses = [UNPARSED, { ...UNPARSED, line_no: "32150" }];
+
+    // Act
+    await service.refresh();
+    await service.refresh();
+    await service.refresh();
+
+    // Assert
+    expect(warnings()).toHaveLength(1);
+    expect(logText(warnings()[0])).toContain("2026-10-20 09:59:30");
+  });
+
+  it("does not warn while one row of the tick parses", async () => {
+    // Arrange
+    client.buses = [UNPARSED, PARSED];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(warnings()).toEqual([]);
+  });
+
+  it("does not warn for a tick with no row", async () => {
+    // Arrange
+    client.buses = [];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(warnings()).toEqual([]);
+    expect(recoveries()).toEqual([]);
+  });
+
+  it("keeps the warning through a night with no row, so the format change is not reported twice", async () => {
+    // Arrange
+    client.buses = [UNPARSED];
+    await service.refresh();
+    client.buses = [];
+    await service.refresh();
+    client.buses = [UNPARSED];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(warnings()).toHaveLength(1);
+    expect(recoveries()).toEqual([]);
+  });
+
+  it("logs the recovery once rows parse again, and warns again on the next change", async () => {
+    // Arrange
+    client.buses = [UNPARSED];
+    await service.refresh();
+    client.buses = [];
+    await service.refresh();
+    client.buses = [PARSED];
+    await service.refresh();
+    await service.refresh();
+    client.buses = [UNPARSED];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(recoveries()).toHaveLength(1);
+    expect(warnings()).toHaveLength(2);
   });
 });

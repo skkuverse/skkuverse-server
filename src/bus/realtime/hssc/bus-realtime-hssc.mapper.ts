@@ -1,6 +1,7 @@
 import type { HsscApiBus, HsscBusDoc } from "../../cache/bus-cache.document";
 import { HSSC_EVENT_DATE_FORMAT, STATION_NAME_BY_HSSC_NAME } from "./bus-realtime-hssc.constants";
-import type { HsscBusTiming } from "./bus-realtime-hssc.types";
+import type { HsscFeedEventDoc } from "./bus-realtime-hssc.document";
+import type { HsscBusTiming, HsscFeedEventTiming } from "./bus-realtime-hssc.types";
 
 export function toHsscBus(item: HsscApiBus, { sequence, firstSeenAt, dwellSeconds }: HsscBusTiming): HsscBusDoc {
   return {
@@ -11,5 +12,18 @@ export function toHsscBus(item: HsscApiBus, { sequence, firstSeenAt, dwellSecond
     eventDate: firstSeenAt.format(HSSC_EVENT_DATE_FORMAT),
     estimatedTime: dwellSeconds,
     isLastBus: false,
+  };
+}
+
+export function toHsscFeedEventDoc(item: HsscApiBus, { seq, getDate }: HsscFeedEventTiming, polledAt: Date): HsscFeedEventDoc {
+  return {
+    lineNo: item.line_no,
+    seq,
+    stopNo: item.stop_no,
+    stopName: item.stop_name,
+    inout: item.inout,
+    getDate,
+    rawGetDate: item.get_date,
+    polledAt,
   };
 }

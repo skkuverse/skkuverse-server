@@ -9,6 +9,9 @@ import {
   STALE_MINUTES_AT_TURNAROUND,
   TURNAROUND_STATION_NAME,
 } from "./bus-realtime-hssc.constants";
+import type { HsscFeedEventTiming } from "./bus-realtime-hssc.types";
+
+const SEQ_PATTERN = /^\d+$/;
 
 // QUIRK(hssc): seq is the stop's index on the circular route (0-10); the app counts stops 1-11 from the
 // first stop after the turnaround, so 5 → 1 … 10 → 6 and 0 → 7 … 4 → 11.
@@ -32,4 +35,20 @@ export function isFresh(bus: Pick<HsscBusDoc, "stationName" | "eventDate">, now:
   const firstSeenAt = moment.tz(bus.eventDate, HSSC_EVENT_DATE_FORMAT, KST_TIME_ZONE);
   const cutoff = moment(now).tz(KST_TIME_ZONE).subtract(staleMinutes, "minutes");
   return !firstSeenAt.isBefore(cutoff);
+}
+
+// WHY: the feed repeats an event on every tick until the bus reaches its next stop; this is the event's identity.
+export function toFeedEventKey(item: HsscApiBus): string {
+  return [item.line_no, item.seq, item.get_date, item.inout].join("|");
+}
+
+// WHY: strict, so a row in another shape is left out of the event log rather than stored at a guessed instant.
+export function toFeedEventTiming(item: HsscApiBus): HsscFeedEventTiming | null {
+  const getDate = moment.tz(item.get_date, HSSC_API_DATE_FORMAT, "ko", true, KST_TIME_ZONE);
+  if (!SEQ_PATTERN.test(item.seq) || !getDate.isValid()) return null;
+  return { seq: parseInt(item.seq, 10), getDate: getDate.toDate() };
+}
+
+export function isUnparsedFeed(items: readonly HsscApiBus[]): boolean {
+  return items.length > 0 && items.every((item) => toFeedEventTiming(item) === null);
 }
