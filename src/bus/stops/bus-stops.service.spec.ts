@@ -160,6 +160,38 @@ describe("BusStopsService.current", () => {
   });
 });
 
+describe("BusStopsService.current with a revision the catalog checks refuse", () => {
+  const withStation = (subwayStationId: string): BusStopsData => {
+    const data = fixture();
+    data.stops = data.stops.map((stop) => (stop.id === "jeongja-exit2" ? { ...stop, subwayStationId } : stop));
+    return data;
+  };
+
+  it("Unknown station: never serves a stored revision naming a station this code does not serve, so a fresh replica answers 503", async () => {
+    // Arrange
+    const { repository, stops } = setup();
+    repository.storeStops(withStation("jeongja2"));
+
+    // Act & Assert
+    await expect(stops.current()).rejects.toBeInstanceOf(BusStopsUnavailableError);
+  });
+
+  it("keeps serving the last good revision after a push the catalog checks refuse", async () => {
+    // Arrange
+    const { repository, stops, advanceTo } = setup();
+    repository.storeStops(fixture());
+    await stops.current();
+    repository.storeStops(withStation("jeongja2"));
+
+    // Act
+    advanceTo(DATASET_CACHE_TTL_MS);
+    const served = await stops.current();
+
+    // Assert
+    expect(served.revision).toBe(1);
+  });
+});
+
 describe("BusStopsService.servedSequences", () => {
   it("resolves the snapshot's commute sequences and stops in English, without their maps", async () => {
     // Arrange

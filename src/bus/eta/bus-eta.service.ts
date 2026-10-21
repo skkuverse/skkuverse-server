@@ -40,8 +40,10 @@ export class BusEtaService {
     return fixed.filter((d) => d.offsetsSec.length === sequenceLength(d.serviceId, d.routeType));
   }
 
+  // WHY: a push between a tick's read of the sequences and its write changes their stop counts; only what fits is written.
   async upsertFitting(docs: ShuttleEtaDoc[]): Promise<UpsertResult> {
-    return this.repository.upsertEstimates(docs, (await this.current()).sequenceLength);
+    const { sequenceLength } = await this.current();
+    return this.repository.upsertEstimates(docs.filter((d) => d.offsetsSec.length === sequenceLength(d.serviceId, d.routeType)), sequenceLength);
   }
 
   // WHY: runs come from the resolved timetable, so an override, a rest day, a holiday or a suspension removes a
