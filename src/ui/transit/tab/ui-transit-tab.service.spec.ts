@@ -37,7 +37,7 @@ import { storedRouteAttributesService } from "../../../../__tests__/helpers/bus/
 import { BusConfigService } from "../../../bus/config/bus-config.service";
 import type { BusGroupVisibility } from "../../../bus/config/bus-config.types";
 import type { BusGroup } from "../../../bus/config/bus-config.wire";
-import { BusStopsService } from "../../../bus/stops/bus-stops.service";
+import { storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
 import type { Clock } from "../../../infra/clock";
 import logger from "../../../infra/logger";
 import { FakeMiniappsRepository } from "../../../../__tests__/helpers/fakes/miniapps/miniapps.repository.fake";
@@ -66,7 +66,7 @@ let busConfig: FakeBusConfigService;
 let repository: FakeUiTransitRepository;
 
 beforeAll(async () => {
-  const realBusConfig = new BusConfigService(new BusStopsService(new SubwayStationsService()), storedBusRegistryService(), storedRouteAttributesService());
+  const realBusConfig = new BusConfigService(storedBusStopsService(), storedBusRegistryService(), storedRouteAttributesService());
   for (const lang of LANGS) realGroupsByLang.set(lang, await realBusConfig.getBusGroups(lang));
 });
 

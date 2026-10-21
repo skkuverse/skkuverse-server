@@ -36,7 +36,7 @@ export interface ScheduleStop {
   photo?: StopPhoto;
   panorama?: StopPanorama;
   guide?: StopGuide;
-  /** WHY: the subway registry's slug; the boot check refused one the registry does not serve. */
+  /** WHY: the subway registry's slug; a push refuses one the registry does not serve. */
   subwayStationId?: string;
   arsIds?: string[];
 }

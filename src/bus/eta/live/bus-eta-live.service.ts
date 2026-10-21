@@ -36,11 +36,12 @@ export class BusEtaLiveService {
   constructor(private readonly deps: LiveEtaDeps) {}
 
   async tick(now: Date): Promise<LiveTickResult> {
+    const sequences = await this.deps.sequences();
     const today = toKstDate(now);
-    const serviceIds = [...new Set(this.deps.sequences.map((s) => s.serviceId))];
+    const serviceIds = [...new Set(sequences.map((s) => s.serviceId))];
     const live = (await this.deps.readEtas(serviceIds, [today])).filter((d) => d.kind === "live");
     const state: TickState = { now, existing: new Map(live.map((d) => [d._id, d])), out: [], calls: 0, succeeded: new Set(), failed: new Map(), firstError: null, needsPrime: false, corridor: null };
-    for (const sequence of this.deps.sequences) {
+    for (const sequence of sequences) {
       const runs = await this.runsOn(sequence, today, state);
       if (runs) await this.tickSequence(sequence, runs, state).catch((err: unknown) => this.hold(state, "naver", err));
     }

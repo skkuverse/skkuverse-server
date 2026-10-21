@@ -17,8 +17,7 @@ import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import config from "../../../infra/config";
 import type { LatLng } from "../../../shared/lat-lng.types";
 import type { BusScheduleService } from "../../schedule/bus-schedule.service";
-import { BusStopsService } from "../../stops/bus-stops.service";
-import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
+import { storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
 import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaService } from "../bus-eta.service";
 import type { BusEtaLaneRepository } from "../lane/bus-eta-lane.repository";
@@ -37,7 +36,7 @@ const STOPS: LatLng[] = [
 ];
 const CREDENTIALS = { keyId: config.shuttleEta.naver.keyId, key: config.shuttleEta.naver.key };
 
-const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, new BusStopsService(new SubwayStationsService()));
+const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, storedBusStopsService());
 const CORRIDOR = corridorSnapshot();
 
 function setup() {

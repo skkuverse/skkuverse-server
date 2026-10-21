@@ -1,3 +1,8 @@
+export const BUS_STOPS_DATASET = "bus-stops";
+
+// WHY: a missing, invalid or unreadable dataset recurs on every read; one line a minute, as docs/reference/logging.md asks.
+export const BUS_STOPS_LOG_INTERVAL_MS = 60_000;
+
 // SEE: docs/explanation/bus-architecture.md ("Glossary"): a stop id names one pole, opaque to clients.
 export const STOP_ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 

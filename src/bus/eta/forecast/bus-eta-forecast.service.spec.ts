@@ -13,8 +13,7 @@ import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import config from "../../../infra/config";
 import type { LatLng } from "../../../shared/lat-lng.types";
 import type { BusScheduleService } from "../../schedule/bus-schedule.service";
-import { BusStopsService } from "../../stops/bus-stops.service";
-import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
+import { storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaService } from "../bus-eta.service";
@@ -62,7 +61,7 @@ function liveFixed(date: string, time: string, opts: { offsetsSec?: number[]; fr
 function setup(stored: ShuttleEtaDoc[] = []) {
   const repository = new FakeBusEtaRepository();
   for (const doc of stored) repository.docs.set(doc._id, doc);
-  const eta = new BusEtaService(asReal<BusEtaRepository>(repository), {} as BusScheduleService, new BusStopsService(new SubwayStationsService()));
+  const eta = new BusEtaService(asReal<BusEtaRepository>(repository), {} as BusScheduleService, storedBusStopsService());
   const tmap = new FakeBusEtaForecastClient();
   const forecast = new BusEtaForecastService(laneWithNoCorridor(eta), asReal<BusEtaForecastClient>(tmap), eta);
   return { forecast, tmap, repository };

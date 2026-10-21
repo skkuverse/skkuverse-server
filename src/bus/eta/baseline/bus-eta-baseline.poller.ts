@@ -23,7 +23,7 @@ export class BusEtaBaselinePoller implements OnModuleInit {
   onModuleInit(): void {
     if (!config.shuttleEta.enabled) return logger.info({ event: "bus.eta.disabled", poller: "shuttle-eta-baseline" }, "SHUTTLE_ETA=off: poller not registered");
     const baseline = new BusEtaBaselineService({
-      sequences: this.eta.sequences(),
+      sequences: () => this.forecast.sequences(),
       upcomingRuns: (sequence, now) => this.eta.upcomingRuns(sequence, now),
       forecast: this.forecast,
       readEtas: (serviceIds, dates) => this.eta.listFitting(serviceIds, dates),

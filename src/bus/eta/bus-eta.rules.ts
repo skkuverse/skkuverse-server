@@ -24,19 +24,19 @@ export function runsOfDay(day: ScheduleDay, { serviceId, routeType, sequenceLeng
   });
 }
 
-// WHY: the catalog loader refused an opted-in sequence that is missing, holds a label or lacks coordinates, so a
-// throw here means the loader and this disagree.
+// WHY: a bus-stops push refuses an opted-in sequence that is missing, holds a label or lacks coordinates, so a
+// throw here means the push checks and this disagree.
 export function toEtaSequences(catalog: Readonly<ScheduleStopCatalog>, optIns: EtaOptIns): EtaSequence[] {
   const coords = new Map(catalog.stops.map((s) => [s.id, s.coords]));
   const coordsOf = (stopId: string | undefined): LatLng => {
     const found = stopId === undefined ? undefined : coords.get(stopId);
-    if (!found) throw new Error(`schedule-stops.json: opted-in stop ${stopId} has no coordinates`);
+    if (!found) throw new Error(`bus-stops: opted-in stop ${stopId} has no coordinates`);
     return found;
   };
   return [...optIns].flatMap(([serviceId, routeTypes]) =>
     routeTypes.map((routeType) => {
       const sequence = catalog.sequences[serviceId]?.[routeType];
-      if (!sequence) throw new Error(`schedule-stops.json: no ${serviceId} ${routeType} sequence to estimate`);
+      if (!sequence) throw new Error(`bus-stops: no ${serviceId} ${routeType} sequence to estimate`);
       return { serviceId, routeType, stops: sequence.map((stop) => coordsOf(stop.stopId)) };
     }),
   );

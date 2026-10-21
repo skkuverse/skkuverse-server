@@ -32,6 +32,7 @@ import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
+import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
 import { Clock } from "../../../src/infra/clock";
 import { MiniappsRepository } from "../../../src/miniapps/miniapps.repository";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
@@ -44,6 +45,7 @@ import { UiTransitListModule } from "../../../src/ui/transit-list/ui-transit-lis
 import { UiModule } from "../../../src/ui/ui.module";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
+import { storedBusStopsRepository } from "../../helpers/bus/bus-stops";
 import { FakeMiniappsRepository } from "../../helpers/fakes/miniapps/miniapps.repository.fake";
 import { FakeUiCampusRepository } from "../../helpers/fakes/ui/ui-campus.repository.fake";
 import { FakeUiHomeRepository } from "../../helpers/fakes/ui/ui-home.repository.fake";
@@ -94,6 +96,7 @@ beforeAll(async () => {
       { provide: Clock, useValue: CLOCK },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
+      { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
       { provide: UiHomeRepository, useValue: storedHomeLayout(fixtureLayout()) },
       { provide: UiCampusRepository, useValue: storedCampusBanners(fixtureBanners()) },
       { provide: MiniappsRepository, useValue: FakeMiniappsRepository.seededWith(fixtureRegistry()) },

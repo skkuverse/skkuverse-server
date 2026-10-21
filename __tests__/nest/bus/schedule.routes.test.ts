@@ -30,6 +30,7 @@ import { BusModule } from "../../../src/bus/bus.module";
 import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
+import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
 import { BusScheduleModule } from "../../../src/bus/schedule/bus-schedule.module";
 import { BusScheduleRepository } from "../../../src/bus/schedule/bus-schedule.repository";
 import { BusScheduleService } from "../../../src/bus/schedule/bus-schedule.service";
@@ -42,6 +43,7 @@ import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
+import { storedBusStopsRepository } from "../../helpers/bus/bus-stops";
 import { serviceNoticesFixture, serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../helpers/bus/schedule-content";
 import { FakeBusEtaRepository } from "../../helpers/fakes/bus/bus-eta.repository.fake";
 import { FakeBusScheduleContentRepository } from "../../helpers/fakes/bus/bus-schedule-content.repository.fake";
@@ -72,6 +74,7 @@ async function bootApp(content = storedScheduleContentRepository()): Promise<Tes
       { provide: BusScheduleRepository, useValue: timetable },
       { provide: BusScheduleContentRepository, useValue: content },
       { provide: BusEtaRepository, useValue: estimates },
+      { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
       { provide: HolidaysRepository, useValue: holidays },
       { provide: Clock, useValue: { now: () => new Date() } },
     ],
@@ -804,6 +807,7 @@ describe("GET /bus/config across a content push", () => {
         { provide: BusScheduleContentRepository, useValue: stored },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
+        { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
         { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
         { provide: Clock, useValue: { now: () => new Date() } },
       ],

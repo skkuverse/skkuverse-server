@@ -28,7 +28,7 @@ export class BusEtaBaselineService {
 
   async tick(now: Date): Promise<BaselineTickResult> {
     const runs: SequencedRun[] = [];
-    for (const sequence of this.deps.sequences) {
+    for (const sequence of await this.deps.sequences()) {
       for (const run of await this.deps.upcomingRuns(sequence, now)) runs.push({ sequence, run });
     }
     const state: TickState = { out: [], calls: 0, succeeded: false, firstError: null };

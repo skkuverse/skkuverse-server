@@ -21,8 +21,9 @@ import type { HolidaysService } from "../../holidays/holidays.service";
 import type { BusScheduleRepository } from "../schedule/bus-schedule.repository";
 import { BusScheduleService } from "../schedule/bus-schedule.service";
 import type { ScheduleDay, ScheduleEntry } from "../schedule/bus-schedule.wire";
-import { BusStopsService } from "../stops/bus-stops.service";
-import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
+import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from "../../../__tests__/helpers/bus/bus-stops";
+import { FakeBusStopsRepository } from "../../../__tests__/helpers/fakes/bus/bus-stops.repository.fake";
+import { DATASET_CACHE_TTL_MS } from "../../shared/dataset.constants";
 import type { ShuttleEtaDoc } from "./bus-eta.document";
 import type { BusEtaRepository } from "./bus-eta.repository";
 import { BusEtaService } from "./bus-eta.service";
@@ -35,7 +36,7 @@ const entry = (time: string, routeType: string): ScheduleEntry => ({ time, route
 const SEQUENCE: EtaSequence = { serviceId: "campus-inja", routeType: "regular", stops: [{ lat: 37.5, lng: 127 }, { lat: 37.4, lng: 127 }, { lat: 37.3, lng: 127 }] };
 
 const build = (schedule: Partial<BusScheduleService>, repository = new FakeBusEtaRepository()) =>
-  new BusEtaService(asReal<BusEtaRepository>(repository), schedule as BusScheduleService, new BusStopsService(new SubwayStationsService()));
+  new BusEtaService(asReal<BusEtaRepository>(repository), schedule as BusScheduleService, storedBusStopsService());
 
 describe("BusEtaService runs", () => {
   const week = {
@@ -96,6 +97,81 @@ describe("BusEtaService.listFitting", () => {
     // Assert
     await expect(build({}, repository).listFitting(["campus-inja"], ["2026-10-12"])).resolves.toEqual([fresh, hakbu]);
     expect(read).toHaveBeenCalledWith(["campus-inja"], ["2026-10-12"]);
+  });
+});
+
+describe("BusEtaService over the stored stops (unify-bus-stops design D16)", () => {
+  const NOW = new Date("2026-10-21T13:52:00.000Z");
+  const UNAVAILABLE = { code: "BUS_STOPS_UNAVAILABLE", httpStatus: 503 };
+  const DO_NOT_FAKE = ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "setImmediate", "clearImmediate", "queueMicrotask", "nextTick", "performance"] as const;
+  const clock = { now: () => new Date(Date.now()) };
+  const inja = (sequences: readonly EtaSequence[]) => sequences.find((s) => s.serviceId === "campus-inja" && s.routeType === "regular");
+  // The campus-inja regular run with a third stop, nsc-opposite, after nsc-n-center.
+  const withThirdInjaStop = (): Record<string, any> => {
+    const data = busStopsFixture() as Record<string, any>;
+    data.sequences["campus-inja"].regular.push({ stopId: "nsc-opposite", action: "alight", timing: "estimated" });
+    return data;
+  };
+  const doc = (offsetsSec: number[]) =>
+    ({ _id: `campus-inja|regular|2026-10-22|07:00|live|${offsetsSec.length}`, serviceId: "campus-inja", routeType: "regular", date: "2026-10-22", offsetsSec }) as ShuttleEtaDoc;
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: NOW, doNotFake: [...DO_NOT_FAKE] });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("Stop coordinates corrected: sequences() follows a push of nsc-n-center's coordinates once the TTL has passed, and not before", async () => {
+    // Arrange
+    const stopsRepository = storedBusStopsRepository();
+    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, storedBusStopsService(stopsRepository, clock));
+    await eta.sequences();
+    const corrected = busStopsFixture() as Record<string, any>;
+    corrected.stops.find((stop: { id: string }) => stop.id === "nsc-n-center").coords = { lat: 37.2925, lng: 126.9751 };
+    stopsRepository.storeStops(corrected);
+
+    // Act
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS - 1);
+    const before = inja(await eta.sequences());
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    const after = inja(await eta.sequences());
+
+    // Assert
+    expect(before?.stops[1]).toEqual({ lat: 37.292298, lng: 126.975057 });
+    expect(after?.stops[1]).toEqual({ lat: 37.2925, lng: 126.9751 });
+  });
+
+  it("listFitting and upsertFitting take the stop counts of the revision now stored", async () => {
+    // Arrange
+    const stopsRepository = storedBusStopsRepository();
+    const repository = new FakeBusEtaRepository();
+    for (const d of [doc([0, 4500]), doc([0, 4500, 4620])]) repository.docs.set(d._id, d);
+    const eta = new BusEtaService(asReal<BusEtaRepository>(repository), {} as BusScheduleService, storedBusStopsService(stopsRepository, clock));
+    const twoStops = await eta.listFitting(["campus-inja"], ["2026-10-22"]);
+    stopsRepository.storeStops(withThirdInjaStop());
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+
+    // Act
+    const threeStops = await eta.listFitting(["campus-inja"], ["2026-10-22"]);
+    const written = await eta.upsertFitting([doc([0, 4500, 4700])]);
+
+    // Assert
+    expect(twoStops.map((d) => d.offsetsSec.length)).toEqual([2]);
+    expect(threeStops.map((d) => d.offsetsSec.length)).toEqual([3]);
+    expect(written.written).toBe(1);
+    await expect(eta.upsertFitting([doc([0, 4500])])).rejects.toThrow(/offsets do not fit/);
+  });
+
+  it("Never read: sequences(), listFitting and upsertFitting reject with the 503 BUS_STOPS_UNAVAILABLE", async () => {
+    // Arrange
+    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, storedBusStopsService(new FakeBusStopsRepository(), clock));
+
+    // Act & Assert
+    await expect(eta.sequences()).rejects.toMatchObject(UNAVAILABLE);
+    await expect(eta.listFitting(["campus-inja"], ["2026-10-22"])).rejects.toMatchObject(UNAVAILABLE);
+    await expect(eta.upsertFitting([])).rejects.toMatchObject(UNAVAILABLE);
   });
 });
 

@@ -13,8 +13,7 @@ import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import { DailyCapError } from "../../../shared/daily-cap.error";
 import { BusEtaDirectionsError } from "../bus-eta.error";
 import type { BusScheduleService } from "../../schedule/bus-schedule.service";
-import { BusStopsService } from "../../stops/bus-stops.service";
-import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
+import { storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import { etaDocId } from "../bus-eta.mapper";
 import { baselineDoc } from "./bus-eta-baseline.mapper";
@@ -63,7 +62,7 @@ function setup(opts: { runs?: EtaRun[]; cap?: number; store?: Map<string, Shuttl
   );
   const runs = opts.runs ?? RUNS;
   const poller = new BusEtaBaselineService({
-    sequences: [SEQ],
+    sequences: async () => [SEQ],
     upcomingRuns: async (_s, now) => runs.filter((r) => r.departAt.getTime() > now.getTime()),
     forecast: { fetchOffsets, reusableFixedByRun: async () => new Map() },
     readEtas,
@@ -190,10 +189,10 @@ describe("BusEtaBaselineService.tick", () => {
       }),
       isSuspendedOn: jest.fn().mockResolvedValue(false),
     } as unknown as BusScheduleService;
-    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, new BusStopsService(new SubwayStationsService()));
+    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, storedBusStopsService());
     const fetchOffsets = jest.fn().mockResolvedValue(OFFSETS);
     const poller = new BusEtaBaselineService({
-      sequences: [SEQ],
+      sequences: async () => [SEQ],
       upcomingRuns: (s, now) => eta.upcomingRuns(s, now),
       forecast: { fetchOffsets, reusableFixedByRun: async () => new Map() },
       readEtas: async () => [],
@@ -247,12 +246,11 @@ describe("BusEtaBaselineService.tick bus-lane runs (design D7)", () => {
   function setupWithForecast(runs: EtaRun[], stored: ShuttleEtaDoc[]) {
     const repository = new FakeBusEtaRepository();
     for (const doc of stored) repository.docs.set(doc._id, doc);
-    const eta = new BusEtaService(asReal<BusEtaRepository>(repository), {} as BusScheduleService, new BusStopsService(new SubwayStationsService()));
+    const eta = new BusEtaService(asReal<BusEtaRepository>(repository), {} as BusScheduleService, storedBusStopsService());
     const tmap = new FakeBusEtaForecastClient();
     const forecast = new BusEtaForecastService(laneWithNoCorridor(eta), asReal<BusEtaForecastClient>(tmap), eta);
-    const sequence = eta.sequences().find((s) => s.serviceId === "campus-inja" && s.routeType === "regular")!;
     const engine = new BusEtaBaselineService({
-      sequences: [sequence],
+      sequences: async () => (await eta.sequences()).filter((s) => s.serviceId === "campus-inja" && s.routeType === "regular"),
       upcomingRuns: async (_s, now) => runs.filter((r) => r.departAt.getTime() > now.getTime()),
       forecast,
       readEtas: (serviceIds, dates) => eta.listFitting(serviceIds, dates),

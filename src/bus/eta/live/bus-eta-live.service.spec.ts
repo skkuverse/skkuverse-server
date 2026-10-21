@@ -42,10 +42,9 @@ import { FakeBusScheduleRepository } from "../../../../__tests__/helpers/fakes/b
 import { FakeHolidaysService } from "../../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import type { HolidaysService } from "../../../holidays/holidays.service";
-import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
 import type { BusScheduleRepository } from "../../schedule/bus-schedule.repository";
 import { BusScheduleService } from "../../schedule/bus-schedule.service";
-import { BusStopsService } from "../../stops/bus-stops.service";
+import { storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
 import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaService } from "../bus-eta.service";
 import type { LiveTravel } from "./bus-eta-live.types";
@@ -75,7 +74,7 @@ function setup(times: string[], opts: { cap?: number } = {}) {
   const store = new Map<string, ShuttleEtaDoc>();
   const fetchOffsets = jest.fn().mockResolvedValue(OFFSETS);
   const poller = new BusEtaLiveService({
-    sequences: [SEQ],
+    sequences: async () => [SEQ],
     runsOn: async (_s, date) => (date === DATE ? times.map(run) : []),
     travel: carTravel(fetchOffsets),
     readEtas: async (serviceIds, dates) =>
@@ -280,7 +279,7 @@ function laneSetup(times: string[], opts: { sequences?: EtaSequence[]; strategyO
   };
   const sequences = opts.sequences ?? [INJA];
   const live = new BusEtaLiveService({
-    sequences,
+    sequences: async () => sequences,
     runsOn: async (s, date) => (date === DATE ? times.map((time) => ({ ...run(time), serviceId: s.serviceId })) : []),
     travel,
     readEtas: async (serviceIds, dates) => [...store.values()].filter((d) => serviceIds.includes(d.serviceId) && dates.includes(d.date)),
@@ -585,9 +584,9 @@ describe("BusEtaLiveService.tick over the stored schedule content", () => {
     const timetable = new FakeBusScheduleRepository();
     timetable.patterns = WEEKDAYS;
     const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
-    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, new BusStopsService(new SubwayStationsService()));
+    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, storedBusStopsService());
     return new BusEtaLiveService({
-      sequences: [SEQ],
+      sequences: async () => [SEQ],
       runsOn: (sequence, date) => eta.runsOn(sequence, date),
       travel: carTravel(fetchOffsets),
       readEtas: async () => [],
@@ -647,10 +646,10 @@ describe("BusEtaLiveService.tick after the schedule content recovers", () => {
     const timetable = new FakeBusScheduleRepository();
     timetable.patterns = WEEKDAYS;
     const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
-    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, new BusStopsService(new SubwayStationsService()));
+    const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, storedBusStopsService());
     const fetchOffsets = jest.fn().mockResolvedValue(OFFSETS);
     const live = new BusEtaLiveService({
-      sequences: [SEQ],
+      sequences: async () => [SEQ],
       runsOn: (sequence, date) => eta.runsOn(sequence, date),
       travel: carTravel(fetchOffsets),
       readEtas: async () => [],
