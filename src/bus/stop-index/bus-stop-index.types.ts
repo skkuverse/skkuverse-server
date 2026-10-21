@@ -14,6 +14,8 @@ export interface JongroStopRoute {
   stationIndex: number;
   /** WHY: the next station's name, or null at the route's last index. */
   towards: string | null;
+  /** WHY: the stations version the index was placed by, which the realtime view must match to serve this index's arrivals. */
+  stationsVersion: string;
 }
 
 export interface HsscStopRoute {

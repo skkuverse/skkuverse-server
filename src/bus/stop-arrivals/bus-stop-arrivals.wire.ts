@@ -53,8 +53,8 @@ const shuttleEntry = z.object({
 });
 
 /**
- * WHY: one answer per stop for the app's stop page, so it polls one route (unify-bus-stops D7). `routes` follows the
- * order of /bus/config's groups, then a group's services and route types; an unknown `kind` is a client's to skip.
+ * WHY: one answer per stop, so the app polls one route (D7); `routes` in /bus/config's order. A realtime entry with
+ * `arrivals` is Jongno's, one with `approaching` HSSC's; a client skips an entry of a kind or shape it does not know.
  */
 export const busStopArrivals = z.object({
   stop: stopBlock,

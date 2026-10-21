@@ -44,14 +44,18 @@ export class BusStopArrivalsService {
     return { stop: toStopBlock(stop, this.index.servedRecordOf(stop, lang)), routes: entries.flatMap((entry) => (entry ? [entry] : [])) };
   }
 
-  private toEntry(route: StopRoute, reads: PageReads): Promise<StopArrivalsRoute> {
+  private toEntry(route: StopRoute, reads: PageReads): Promise<StopArrivalsRoute | null> {
     if (route.kind === "jongro") return this.toJongroEntry(route, reads);
     if (route.kind === "hssc") return this.toHsscEntry(route, reads);
     return this.toShuttleEntry(route, reads);
   }
 
-  private async toJongroEntry(route: JongroStopRoute, reads: PageReads): Promise<StopArrivalsRoute> {
-    return toJongroEntry(route, await this.viewOf(route.groupId, reads), t(`busconfig.label.${route.groupId}`, reads.lang));
+  // WHY: the index and the view read the registry apart, so a sync between them would place another station's
+  // arrivals at this index; that poll leaves the entry out, and the next one serves it.
+  private async toJongroEntry(route: JongroStopRoute, reads: PageReads): Promise<StopArrivalsRoute | null> {
+    const view = await this.viewOf(route.groupId, reads);
+    if (view.stationsVersion !== route.stationsVersion) return null;
+    return toJongroEntry(route, view, t(`busconfig.label.${route.groupId}`, reads.lang));
   }
 
   private async toHsscEntry(route: HsscStopRoute, reads: PageReads): Promise<StopArrivalsRoute> {

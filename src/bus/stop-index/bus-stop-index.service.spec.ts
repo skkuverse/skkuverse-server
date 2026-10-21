@@ -42,6 +42,7 @@ function setup({ aliases = {} as Record<string, string[]> } = {}) {
     storedBusStopsService(stopsRepository, { now: () => new Date() }),
     storedBusRegistryService(registryRepository),
     asReal<BusRoutePathService>(routePaths),
+    { now: () => new Date() },
   );
   return { service, data, stopsRepository, registryRepository, routePaths };
 }
@@ -83,7 +84,7 @@ describe("BusStopIndexService.findStop and the index it reads", () => {
 
     // Assert
     expect(before).toBeNull();
-    expect(after?.routes).toEqual([{ kind: "jongro", groupId: "jongro08", stationIndex: 31, towards: null }]);
+    expect(after?.routes).toEqual([{ kind: "jongro", groupId: "jongro08", stationIndex: 31, towards: null, stationsVersion: "added-01999" }]);
   });
 
   it("warns of an alias no stored station has once per revision", async () => {
@@ -239,5 +240,52 @@ describe("BusStopIndexService.servedRecordOf", () => {
 
     // Act & Assert
     expect(service.servedRecordOf(stop, "ko")).toBeNull();
+  });
+});
+
+// WHY: a registry outage must not cost a MongoDB read and an error line per stop page (unify-bus-stops review F2, F3).
+describe("BusStopIndexService.findStop while the registry cannot be read", () => {
+  const events = (level: "warn" | "error", event: string) => jest.mocked(logger[level]).mock.calls.filter((call) => (call[0] as { event?: string }).event === event);
+
+  it("answers a pole the 503 JONGRO_REGISTRY_UNAVAILABLE on a database error, logs the unread routes, and finds the local stops", async () => {
+    // Arrange
+    const { service, registryRepository } = setup();
+    registryRepository.failWith = new Error("connection timed out");
+
+    // Act & Assert
+    await expect(service.findStop("seoul-01592")).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE", httpStatus: 503 });
+    expect((await service.findStop("hssc-bus-lot"))?.id).toBe("hssc-bus-lot");
+    expect(events("error", "bus.stop_index.registry_unread")).toHaveLength(1);
+    expect(logText(events("error", "bus.stop_index.registry_unread")[0])).toContain("jongro07");
+  });
+
+  it("reads an unread route again only once REGISTRY_RETRY_MS has passed", async () => {
+    // Arrange
+    const { service, registryRepository } = setup();
+    registryRepository.routes.delete("jongro07");
+
+    // Act
+    await service.findStop("hssc-bus-lot");
+    await service.findStop("nsc-n-center");
+    const beforeRetry = events("error", "bus.jongro.registry_missing").length;
+    jest.setSystemTime(NOW.getTime() + PAST_REGISTRY_TTL_MS);
+    await service.findStop("hssc-bus-lot");
+
+    // Assert
+    expect(beforeRetry).toBe(1);
+    expect(events("error", "bus.jongro.registry_missing")).toHaveLength(2);
+  });
+
+  it("serves an aliased pole's local stop while the route that lists the pole cannot be read", async () => {
+    // Arrange
+    const { service, registryRepository } = setup({ aliases: { "hssc-bus-lot": ["01618"] } });
+    registryRepository.routes.delete("jongro07");
+
+    // Act
+    const stop = await service.findStop("seoul-01618");
+
+    // Assert
+    expect(stop?.id).toBe("hssc-bus-lot");
+    expect(stop?.routes.map((route) => route.groupId)).toEqual(["campus", "campus"]);
   });
 });
