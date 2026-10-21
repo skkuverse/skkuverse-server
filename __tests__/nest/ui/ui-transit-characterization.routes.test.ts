@@ -50,6 +50,7 @@ const store = require("../../../scripts/lib/datasets/store");
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type BusRegistryHelpers = typeof import("../../helpers/bus/bus-registry");
+type BusStopsHelpers = typeof import("../../helpers/bus/bus-stops");
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type RegistryFixture = typeof import("../../helpers/miniapps/registry-fixture");
@@ -155,6 +156,8 @@ beforeAll(async () => {
   await store.create(content, "miniapps", fixtureRegistry(), { by: "characterization@example.com", now: CLOCKS.capturedAt });
   const { routeAttributesFixture } = require("../../helpers/bus/route-attributes") as RouteAttributesHelpers;
   await store.create(content, "jongro-route-attributes", routeAttributesFixture(), { by: "characterization@example.com", now: CLOCKS.capturedAt });
+  const { busStopsFixture } = require("../../helpers/bus/bus-stops") as BusStopsHelpers;
+  await store.create(content, "bus-stops", busStopsFixture(), { by: "characterization@example.com", now: CLOCKS.capturedAt });
 }, MONGOD_START_TIMEOUT_MS);
 
 beforeAll(async () => {

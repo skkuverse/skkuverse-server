@@ -4,8 +4,7 @@
  * opted-in sequences carry their stops' coordinates in order.
  */
 import type { ScheduleDay, ScheduleEntry } from "../schedule/bus-schedule.wire";
-import { BusStopsService } from "../stops/bus-stops.service";
-import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
+import { storedBusStopsService } from "../../../__tests__/helpers/bus/bus-stops";
 import { runsOfDay, toEtaSequences, toSequenceLength } from "./bus-eta.rules";
 
 function day(date: string, schedule: ScheduleEntry[], display = "schedule"): ScheduleDay {
@@ -62,12 +61,13 @@ describe("runsOfDay", () => {
 });
 
 describe("toEtaSequences", () => {
-  it("lists the opted-in route types with their stops' coordinates, in order", () => {
+  it("lists the opted-in route types with their stops' coordinates, in order", async () => {
     // Arrange
-    const stops = new BusStopsService(new SubwayStationsService());
+    const stops = storedBusStopsService();
+    const { catalog } = await stops.current();
 
     // Act
-    const seqs = toEtaSequences(stops.catalog(), stops.etaOptIns());
+    const seqs = toEtaSequences(catalog, stops.etaOptIns());
 
     // Assert
     expect(seqs.map((s) => `${s.serviceId}.${s.routeType}:${s.stops.length}`)).toEqual([

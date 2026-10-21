@@ -12,11 +12,11 @@
 import { corridorFixture } from "../../../../__tests__/helpers/bus/bus-lane-corridor";
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
-import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
 import type { BusScheduleService } from "../../schedule/bus-schedule.service";
-import { BusStopsService } from "../../stops/bus-stops.service";
+import { storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
 import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaService } from "../bus-eta.service";
+import type { EtaSequence } from "../bus-eta.types";
 import { LANE_HOURS, LANE_STRATEGIES } from "./bus-eta-lane.constants";
 import { assertLaneStrategies, corridorIssues, strategyIssues, strategyOf, strategyOfRun, toLegBounds } from "./bus-eta-lane.rules";
 import type { LaneCorridorData, LaneHours, LaneStrategies } from "./bus-eta-lane.types";
@@ -24,7 +24,12 @@ import type { LaneCorridorData, LaneHours, LaneStrategies } from "./bus-eta-lane
 // The strategies and lane hours beside a corridor, as one value the cases below vary.
 type LaneConfig = LaneCorridorData & { laneHours: LaneHours; strategies: LaneStrategies };
 
-const estimatedSequences = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, new BusStopsService(new SubwayStationsService())).sequences();
+// The sequences revision 1 of bus-stops estimates, read once before the cases.
+let estimatedSequences: readonly EtaSequence[] = [];
+
+beforeAll(async () => {
+  estimatedSequences = await new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), {} as BusScheduleService, storedBusStopsService()).sequences();
+});
 
 const STRATEGIES: LaneConfig["strategies"] = {
   "campus-inja": { regular: { strategy: "busLane", direction: "southbound" } },

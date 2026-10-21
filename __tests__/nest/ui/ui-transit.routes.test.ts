@@ -23,6 +23,7 @@ import request from "supertest";
 import { BusModule } from "../../../src/bus/bus.module";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
+import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { UiTransitTabModule } from "../../../src/ui/transit/tab/ui-transit-tab.module";
@@ -33,6 +34,7 @@ import { UiModule } from "../../../src/ui/ui.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
+import { storedBusStopsRepository } from "../../helpers/bus/bus-stops";
 import { FakeUiTransitRepository } from "../../helpers/fakes/ui/ui-transit.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
@@ -64,6 +66,7 @@ beforeAll(async () => {
       { provide: Clock, useValue: CLOCK },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
+      { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
       { provide: UiTransitRepository, useValue: storedTransitLayout(fixtureLayout()) },
     ],
     role: "api",
@@ -251,6 +254,7 @@ describe("GET /ui/home/transit over other stored layouts", () => {
         { provide: Clock, useValue: CLOCK },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
+        { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
         { provide: UiTransitRepository, useValue: storedTransitLayout(layout) },
       ],
       role: "api",

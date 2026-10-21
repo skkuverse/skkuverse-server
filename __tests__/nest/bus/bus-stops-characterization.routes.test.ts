@@ -69,6 +69,7 @@ const store = require("../../../scripts/lib/datasets/store");
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type BuildBusPollerApp = typeof import("../../helpers/bus/bus-poller-app")["buildBusPollerApp"];
 type BusRegistryHelpers = typeof import("../../helpers/bus/bus-registry");
+type BusStopsHelpers = typeof import("../../helpers/bus/bus-stops");
 type BusRoutePathHelpers = typeof import("../../helpers/bus/bus-route-path");
 type BusLaneCorridorHelpers = typeof import("../../helpers/bus/bus-lane-corridor");
 type ScheduleContentHelpers = typeof import("../../helpers/bus/schedule-content");
@@ -261,6 +262,8 @@ beforeAll(async () => {
   await store.create(content, "miniapps", fixtureRegistry(), STORED_BY);
   const { routeAttributesFixture } = require("../../helpers/bus/route-attributes") as RouteAttributesHelpers;
   await store.create(content, "jongro-route-attributes", routeAttributesFixture(), STORED_BY);
+  const { busStopsFixture } = require("../../helpers/bus/bus-stops") as BusStopsHelpers;
+  await store.create(content, "bus-stops", busStopsFixture(), STORED_BY);
   const { restDaysFixture, serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
   await store.create(content, "bus-service-notices", serviceNoticesFixture(), STORED_BY);
   await store.create(content, "skku-rest-days", restDaysFixture(), STORED_BY);

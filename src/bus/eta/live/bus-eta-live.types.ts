@@ -7,7 +7,7 @@ import type { BusEtaTravelService } from "../travel/bus-eta-travel.service";
 export type LiveTravel = Pick<BusEtaTravelService, "strategyOfRun" | "corridor" | "fetchOffsets" | "fetchCorridorRoute" | "legTime" | "prime">;
 
 export interface LiveEtaDeps {
-  sequences: readonly EtaSequence[];
+  sequences(): Promise<readonly EtaSequence[]>;
   runsOn(sequence: EtaSequence, date: string): Promise<EtaRun[]>;
   travel: LiveTravel;
   readEtas(serviceIds: string[], dates: string[]): Promise<ShuttleEtaDoc[]>;

@@ -17,6 +17,8 @@ const shuttleEta = config.shuttleEta as { enabled: boolean };
 const registerPoller = jest.fn();
 const registry = { registerPoller } as unknown as PollerRegistryService;
 const NOW = new Date("2026-10-12T00:30:00.000Z");
+// WHY: what the estimated sequences reject with while the stops were never read (BusStopsUnavailableError).
+const NEVER_READ = Object.assign(new Error("The bus stops are unavailable"), { code: "BUS_STOPS_UNAVAILABLE" });
 const clock: Clock = { now: () => NOW };
 const eta = {
   sequences: () => [],
@@ -25,7 +27,9 @@ const eta = {
   listFitting: jest.fn(async () => []),
   upsertFitting: jest.fn(),
 } as unknown as BusEtaService;
-const forecast = { fetchOffsets: jest.fn() } as unknown as BusEtaForecastService;
+const forecastSequences = jest.fn(async (): Promise<unknown[]> => []);
+const fetchOffsets = jest.fn();
+const forecast = { sequences: forecastSequences, fetchOffsets } as unknown as BusEtaForecastService;
 
 describe("BusEtaBaselinePoller.onModuleInit", () => {
   const enabled = shuttleEta.enabled;
@@ -67,5 +71,19 @@ describe("BusEtaBaselinePoller.onModuleInit", () => {
     // Assert
     expect(registerPoller.mock.calls.map((c) => [c[2], c[1]])).toEqual([["shuttle-eta-baseline", 300_000]]);
     await expect((registerPoller.mock.calls[0]![0] as () => Promise<unknown>)()).resolves.toEqual({ calls: 0, written: 0 });
+  });
+
+  it("Never read: a tick while the stops were never read rejects, asking TMAP nothing", async () => {
+    // Arrange
+    shuttleEta.enabled = true;
+    forecastSequences.mockRejectedValueOnce(NEVER_READ);
+    new BusEtaBaselinePoller(registry, eta, forecast, clock).onModuleInit();
+
+    // Act
+    const tick = (registerPoller.mock.calls[0]![0] as () => Promise<unknown>)();
+
+    // Assert
+    await expect(tick).rejects.toBe(NEVER_READ);
+    expect(fetchOffsets).not.toHaveBeenCalled();
   });
 });

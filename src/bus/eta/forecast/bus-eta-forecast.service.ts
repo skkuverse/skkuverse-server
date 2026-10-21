@@ -4,12 +4,12 @@ import { toKstDate } from "../../../shared/kst-date.util";
 import type { LatLng } from "../../../shared/lat-lng.types";
 import type { FixedEstimate } from "../bus-eta.document";
 import { BusEtaService } from "../bus-eta.service";
-import type { EtaRun } from "../bus-eta.types";
+import type { EtaRun, EtaSequence } from "../bus-eta.types";
 import { BusEtaLaneService } from "../lane/bus-eta-lane.service";
 import { BusEtaForecastClient } from "./bus-eta-forecast.client";
 import { reusableFixedDates, toReusableFixedByRun } from "./bus-eta-forecast.rules";
 
-/** WHY: the baseline flow's door to its predictions: the TMAP forecast, and a bus-lane run's last fixed value. */
+/** WHY: the baseline flow's door to its predictions: the sequences the lane strategies fit, the TMAP forecast, and a bus-lane run's last fixed value. */
 @Injectable()
 export class BusEtaForecastService {
   constructor(
@@ -17,6 +17,10 @@ export class BusEtaForecastService {
     private readonly client: BusEtaForecastClient,
     private readonly eta: BusEtaService,
   ) {}
+
+  sequences(): Promise<readonly EtaSequence[]> {
+    return this.lane.sequences();
+  }
 
   // WHY: config.ts exits at boot without the key while SHUTTLE_ETA is on, the only state in which a call is made.
   fetchOffsets(stops: readonly LatLng[], departAt: Date): Promise<number[]> {

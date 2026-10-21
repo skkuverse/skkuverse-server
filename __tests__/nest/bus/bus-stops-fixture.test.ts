@@ -6,10 +6,25 @@
  * trailing bracketed note removed, and the HSSC line with the settled stop ids
  * in wire order. This test is deleted with the committed files (task 4.3).
  */
-import { HSSC_STATIONS } from "../../../src/bus/config/bus-config.constants";
 import { busStopsFixture } from "../../helpers/bus/bus-stops";
 
 const committedCatalog = require("../../../src/bus/stops/schedule-stops.json");
+
+// WHY: HSSC_STATIONS as src/bus/config/bus-config.constants.ts held it at 98a4992b, without the unread `sequence`,
+// `stationNumber` and `busType`; the constant left src/ when the HSSC group began to read the stored line.
+const HSSC_STATIONS = [
+  { stationName: "농구장", subtitle: "Basketball Court (Shuttle Bus Stop)", isFirstStation: true, isLastStation: false, isRotationStation: false, transferLines: [] },
+  { stationName: "학생회관", subtitle: "Student Center", isFirstStation: false, isLastStation: false, isRotationStation: false, transferLines: [] },
+  { stationName: "정문", subtitle: "Main Gate of SKKU", isFirstStation: false, isLastStation: false, isRotationStation: false, transferLines: [] },
+  { stationName: "올림픽기념국민생활관 [하차전용]", subtitle: "Olympic Hall [Drop-off Only]", isFirstStation: false, isLastStation: false, isRotationStation: false, transferLines: [] },
+  { stationName: "혜화동우체국 [하차전용]", subtitle: "Hyehwa Postoffice [Drop-off Only]", isFirstStation: false, isLastStation: false, isRotationStation: false, transferLines: [] },
+  { stationName: "혜화동로터리 [미정차]", subtitle: "Hyehwa Rotary [Non-stop]", isFirstStation: false, isLastStation: false, isRotationStation: false, transferLines: [] },
+  { stationName: "혜화역 1번출구", subtitle: "Hyehwa Station (Shuttle Bus Stop)", isFirstStation: false, isLastStation: false, isRotationStation: false, transferLines: [{ line: "4", color: "00A5DE" }] },
+  { stationName: "혜화동로터리 [미정차]", subtitle: "Hyehwa Rotary [Non-stop]", isFirstStation: false, isLastStation: false, isRotationStation: false, transferLines: [] },
+  { stationName: "성균관대입구사거리", subtitle: "SKKU Junction", isFirstStation: false, isLastStation: false, isRotationStation: false, transferLines: [] },
+  { stationName: "정문", subtitle: "Main Gate of SKKU", isFirstStation: false, isLastStation: false, isRotationStation: false, transferLines: [] },
+  { stationName: "600주년기념관", subtitle: "600th Anniversary Hall", isFirstStation: false, isLastStation: true, isRotationStation: false, transferLines: [] },
+];
 
 // Design D1's table, by station index; the two 혜화동로터리 [미정차] positions name no stop.
 const HSSC_STOP_IDS = [
