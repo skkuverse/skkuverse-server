@@ -11,7 +11,7 @@ const stopId = z
   .regex(STOP_ID_PATTERN, "must be lower-case letters and digits in words joined by single hyphens")
   .refine((id) => !id.startsWith(TOPIS_STOP_ID_PREFIX), `must not start with "${TOPIS_STOP_ID_PREFIX}", which a TOPIS pole's stop id takes`);
 
-// WHY: the catalog checks name each stop and sequence in their own words at push (bus-stops-check.rules.ts), so the
+// WHY: the catalog checks name each stop and sequence in their own words at push (bus-stops.rules.ts), so the
 // structure here stops at what they need: a stop keeps every field it has, and a sequence stop is any value.
 const stop = z.looseObject({ id: stopId, arsIds: z.array(arsId).optional() }).transform((checked: unknown) => checked as ScheduleStop);
 

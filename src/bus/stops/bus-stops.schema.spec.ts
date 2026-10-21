@@ -5,7 +5,7 @@
  * structure fails at its path, a stop id outside the stop id grammar or under
  * the TOPIS prefix fails, the HSSC line holds exactly HSSC_POSITION_COUNT
  * positions, and every alias and overlay key is a five-digit ARS number. The
- * catalog's own checks run at push (bus-stops-check.rules.spec.ts).
+ * catalog's own checks run at push (toBusStopsIssues, bus-stops.rules.spec.ts).
  * storedBusStops, the stored document as the repository reads it, needs its
  * revision and data.
  *
