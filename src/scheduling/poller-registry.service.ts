@@ -17,16 +17,20 @@ interface PollerRegistration {
 
 interface PollerHealth {
   isFast: boolean;
+  failAfter: number;
   failures: number;
   failingSince: number | null;
   isDeclaredFailing: boolean;
   lastReportAt: number;
 }
 
-// WHY: a fast poller is declared failing only after a run of failed ticks, so one timeout pages no
-// one; a slow one (a minute or more between ticks) on its first, since by its third it is an hour late.
+// WHY: a poller ticking more often than every 15 minutes is declared failing only after a run of
+// failed ticks, so one timeout or reset opens no Issue; a slower one on its first, since its second
+// comes 15 minutes or more later.
 const FAST_POLLER_MS = 60_000;
 const FAST_FAIL_AFTER = 3;
+const MINUTE_SCALE_POLLER_MS = 15 * 60_000;
+const MINUTE_SCALE_FAIL_AFTER = 2;
 const STILL_FAILING_EVERY_MS = 15 * 60_000;
 
 // QUIRK(sentry): the cron monitor is created from MONITOR_CONFIG on its first check-in, and raises an
@@ -121,6 +125,7 @@ export class PollerRegistryService
   private trackHealth(name: string, intervalMs: number): PollerHealth {
     const health: PollerHealth = {
       isFast: intervalMs < FAST_POLLER_MS,
+      failAfter: this.toFailAfter(intervalMs),
       failures: 0,
       failingSince: null,
       isDeclaredFailing: false,
@@ -128,6 +133,12 @@ export class PollerRegistryService
     };
     this.health.set(name, health);
     return health;
+  }
+
+  private toFailAfter(intervalMs: number): number {
+    if (intervalMs < FAST_POLLER_MS) return FAST_FAIL_AFTER;
+    if (intervalMs < MINUTE_SCALE_POLLER_MS) return MINUTE_SCALE_FAIL_AFTER;
+    return 1;
   }
 
   private recordSuccess(name: string, health: PollerHealth): void {
@@ -151,9 +162,8 @@ export class PollerRegistryService
     const now = Date.now();
     health.failures += 1;
     if (health.failingSince === null) health.failingSince = now;
-    const failAfter = health.isFast ? FAST_FAIL_AFTER : 1;
 
-    if (!health.isDeclaredFailing && health.failures >= failAfter) {
+    if (!health.isDeclaredFailing && health.failures >= health.failAfter) {
       health.isDeclaredFailing = true;
       health.lastReportAt = now;
       logger.error(
@@ -183,8 +193,8 @@ export class PollerRegistryService
     );
   }
 
-  // WHY: a slow poller's first failure already opened its own Issue, and its "error" would last an
-  // interval (a week for building-sync), hiding the fast pollers.
+  // WHY: a poller a minute or more between ticks already opened its own Issue when declared, and its
+  // "error" would last an interval (a week for building-sync), hiding the fast pollers.
   private heartbeat(): void {
     const down = [...this.health.values()].some((h) => h.isFast && h.isDeclaredFailing);
     Sentry.captureCheckIn(
