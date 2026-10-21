@@ -17,6 +17,8 @@ const shuttleEta = config.shuttleEta as { enabled: boolean };
 const registerPoller = jest.fn();
 const registry = { registerPoller } as unknown as PollerRegistryService;
 const NOW = new Date("2026-10-12T00:30:00.000Z");
+// WHY: what the estimated sequences reject with while the stops were never read (BusStopsUnavailableError).
+const NEVER_READ = Object.assign(new Error("The bus stops are unavailable"), { code: "BUS_STOPS_UNAVAILABLE" });
 const clock: Clock = { now: () => NOW };
 const eta = {
   sequences: () => [],
@@ -25,7 +27,7 @@ const eta = {
   listFitting: jest.fn(async () => []),
   upsertFitting: jest.fn(),
 } as unknown as BusEtaService;
-const travel = { strategyOfRun: jest.fn(), fetchOffsets: jest.fn(), fetchCorridorRoute: jest.fn(), legTime: jest.fn(), prime: jest.fn() };
+const travel = { sequences: jest.fn(async (): Promise<unknown[]> => []), strategyOfRun: jest.fn(), fetchOffsets: jest.fn(), fetchCorridorRoute: jest.fn(), legTime: jest.fn(), prime: jest.fn() };
 const client = travel as unknown as BusEtaTravelService;
 
 describe("BusEtaLivePoller.onModuleInit", () => {
@@ -81,5 +83,21 @@ describe("BusEtaLivePoller.onModuleInit", () => {
     // Assert
     expect(registerPoller.mock.calls.map((c) => [c[2], c[1]])).toEqual([["shuttle-eta-live", 60_000]]);
     await expect((registerPoller.mock.calls[0]![0] as () => Promise<unknown>)()).resolves.toEqual({ calls: 0, written: 0 });
+  });
+
+  it("Never read: a tick while the stops were never read rejects, asking NAVER and TOPIS nothing", async () => {
+    // Arrange
+    shuttleEta.enabled = true;
+    travel.sequences.mockRejectedValueOnce(NEVER_READ);
+    new BusEtaLivePoller(registry, eta, client, clock).onModuleInit();
+
+    // Act
+    const tick = (registerPoller.mock.calls[0]![0] as () => Promise<unknown>)();
+
+    // Assert
+    await expect(tick).rejects.toBe(NEVER_READ);
+    expect(travel.fetchOffsets).not.toHaveBeenCalled();
+    expect(travel.prime).not.toHaveBeenCalled();
+    expect(travel.legTime).not.toHaveBeenCalled();
   });
 });

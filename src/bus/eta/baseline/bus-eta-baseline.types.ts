@@ -6,7 +6,7 @@ import type { BusEtaForecastService } from "../forecast/bus-eta-forecast.service
 export type BaselineForecast = Pick<BusEtaForecastService, "fetchOffsets" | "reusableFixedByRun">;
 
 export interface BaselineEtaDeps {
-  sequences: readonly EtaSequence[];
+  sequences(): Promise<readonly EtaSequence[]>;
   upcomingRuns(sequence: EtaSequence, now: Date): Promise<EtaRun[]>;
   forecast: BaselineForecast;
   readEtas(serviceIds: string[], dates: string[]): Promise<ShuttleEtaDoc[]>;

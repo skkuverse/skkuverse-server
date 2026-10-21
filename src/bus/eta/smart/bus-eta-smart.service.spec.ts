@@ -1,8 +1,8 @@
 /**
  * BusEtaSmartService over in-memory timetable and estimate stores, a fixed
- * clock and the real stop catalog: the smart view's ETag and Cache-Control,
- * the estimates it applies, read at most once per 30 s, and the stored
- * timetable when the estimates cannot be read.
+ * clock and revision 1 of the stored bus-stops: the smart view's ETag and
+ * Cache-Control, the estimates it applies, read at most once per 30 s, and the
+ * stored timetable when the estimates or the stops cannot be read.
  */
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
 import { storedScheduleContentService } from "../../../../__tests__/helpers/bus/schedule-content";
@@ -13,8 +13,8 @@ import type { HolidaysService } from "../../../holidays/holidays.service";
 import type { Clock } from "../../../infra/clock";
 import type { BusScheduleRepository } from "../../schedule/bus-schedule.repository";
 import { BusScheduleService } from "../../schedule/bus-schedule.service";
-import { BusStopsService } from "../../stops/bus-stops.service";
-import { SubwayStationsService } from "../../../subway/stations/subway-stations.service";
+import { storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
+import { FakeBusStopsRepository } from "../../../../__tests__/helpers/fakes/bus/bus-stops.repository.fake";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import type { BusEtaRepository } from "../bus-eta.repository";
 import { BusEtaSmartService } from "./bus-eta-smart.service";
@@ -36,6 +36,7 @@ const LIVE: ShuttleEtaDoc = {
 };
 
 let estimates: FakeBusEtaRepository;
+let schedule: BusScheduleService;
 let service: BusEtaSmartService;
 
 beforeEach(() => {
@@ -45,8 +46,8 @@ beforeEach(() => {
   ];
   estimates = new FakeBusEtaRepository();
   estimates.docs.set(LIVE._id, LIVE);
-  const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock), clock);
-  service = new BusEtaSmartService(schedule, asReal<BusEtaRepository>(estimates), new BusStopsService(new SubwayStationsService()), clock);
+  schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock), clock);
+  service = new BusEtaSmartService(schedule, asReal<BusEtaRepository>(estimates), storedBusStopsService(), clock);
 });
 
 describe("BusEtaSmartService.getSmart", () => {
@@ -77,6 +78,18 @@ describe("BusEtaSmartService.getSmart", () => {
     const smart = await service.getSmart("campus-inja", "ko");
 
     // Assert
+    expect(smart.data.days[0]!.schedule[0]).toEqual({ index: 1, time: "10:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["10:00", null] });
+  });
+
+  it("Smart schedule without stops: serves the stored timetable without estimates while the stops were never read", async () => {
+    // Arrange
+    const neverRead = new BusEtaSmartService(schedule, asReal<BusEtaRepository>(estimates), storedBusStopsService(new FakeBusStopsRepository()), clock);
+
+    // Act
+    const smart = await neverRead.getSmart("campus-inja", "ko");
+
+    // Assert
+    expect(smart.data.status).toBe("active");
     expect(smart.data.days[0]!.schedule[0]).toEqual({ index: 1, time: "10:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["10:00", null] });
   });
 

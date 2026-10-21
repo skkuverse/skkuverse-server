@@ -56,11 +56,11 @@ export class BusEtaSmartService {
     return withEtag(data, `"smart-${serviceId}-${data.from || data.status}-${hash}"`, `private, max-age=${maxAge}`);
   }
 
-  // WHY: the schedule as resolved when the estimates cannot be read.
+  // WHY: the schedule as resolved when the estimates or the stops cannot be read.
   private async withEstimates(result: SmartSchedule, routeTypes: readonly string[]): Promise<SmartSchedule> {
     try {
-      const estimates = await this.servedEstimates();
-      return applyEstimates(result, { routeTypes, sequences: this.stops.catalog().sequences[result.serviceId] ?? {}, estimates });
+      const [estimates, { catalog }] = await Promise.all([this.servedEstimates(), this.stops.current()]);
+      return applyEstimates(result, { routeTypes, sequences: catalog.sequences[result.serviceId] ?? {}, estimates });
     } catch (err: unknown) {
       const ticket = this.etaReadThrottle.take(result.serviceId);
       if (ticket) {

@@ -1,0 +1,4 @@
+{
+  "_about": "Hand-written: revision 1 of the games dataset as its first push stores it, before any game is hosted (skkuverse-app add-game-factory design D10). It lists no game, so the app opens every game it bundles from its bundled page; it was never captured because no revision is stored yet.",
+  "games": []
+}

@@ -38,6 +38,7 @@ import { BusRegistryModule } from "../../../src/bus/registry/bus-registry.module
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesModule } from "../../../src/bus/route-attributes/bus-route-attributes.module";
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
+import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
 import type { JongroRouteAttributesData } from "../../../src/bus/route-attributes/bus-route-attributes.types";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { Clock } from "../../../src/infra/clock";
@@ -51,6 +52,7 @@ import { UiTransitRepository } from "../../../src/ui/transit/ui-transit.reposito
 import { UiModule } from "../../../src/ui/ui.module";
 import { jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc, noArrivalBus } from "../../helpers/bus/bus-cache-docs";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
+import { storedBusStopsRepository } from "../../helpers/bus/bus-stops";
 import { routeAttributesFixture } from "../../helpers/bus/route-attributes";
 import { FakeBusCacheRepository } from "../../helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusRealtimeJongroClient } from "../../helpers/fakes/bus/bus-realtime-jongro.client.fake";
@@ -122,6 +124,7 @@ async function boot(stores: Stores): Promise<NestExpressApplication> {
       { provide: BusCacheRepository, useValue: stores.busCache },
       { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
       { provide: BusRouteAttributesRepository, useValue: stores.attributes },
+      { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
       { provide: BusRealtimeJongroClient, useValue: stores.jongroClient },
       { provide: UiTransitRepository, useValue: transitLayoutRepository() },
     ],

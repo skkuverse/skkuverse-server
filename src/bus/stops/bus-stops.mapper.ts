@@ -1,7 +1,9 @@
 import { pick } from "../../infra/i18n";
 import type { I18n, SupportedLang } from "../../infra/types";
 import type { LocalizedName } from "../../subway/subway.types";
-import type { ResolvedStops, ScheduleStop, ScheduleStopCatalog, SequenceStop, StopGuide, StopPanorama } from "./bus-stops.types";
+import { deepFreeze } from "../bus.rules";
+import type { StoredBusStops } from "./bus-stops.document";
+import type { BusStopsSnapshot, ResolvedStops, ScheduleStop, ScheduleStopCatalog, SequenceStop, StopGuide, StopPanorama } from "./bus-stops.types";
 import type { ServedSequenceStop, ServedStop, StopMap } from "../bus.wire";
 
 type SubwayTitles = ReadonlyMap<string, LocalizedName>;
@@ -29,7 +31,7 @@ export function toStreetViewUrl({ panoId, pan, tilt, fov }: StopPanorama): strin
   );
 }
 
-// WHY: the catalog loader refused a name or label without a Korean text, which pick() falls back to.
+// WHY: a bus-stops push refuses a name or label without a Korean text, which pick() falls back to.
 const textIn = (text: I18n, lang: SupportedLang): string => pick(text, lang) ?? text.ko;
 
 /** WHY: places become markers labeled in the request language, walks become paths; both arrays always present. */
@@ -43,7 +45,7 @@ function toStopMap(guide: StopGuide, lang: SupportedLang): StopMap {
 function toStopSubwayStation({ id: stopId, subwayStationId: id }: ScheduleStop, lang: SupportedLang, titles: SubwayTitles): StopSubwayStation | null {
   if (id === undefined) return null;
   const title = titles.get(id);
-  if (!title) throw new Error(`schedule-stops.json: stop ${stopId} names subway station ${id}, which the catalog loader refuses`);
+  if (!title) throw new Error(`bus-stops: stop ${stopId} names subway station ${id}, which a push refuses`);
   return { id, title: title[lang] };
 }
 
@@ -84,12 +86,12 @@ export function resolveStopSequences(serviceIds: readonly string[], lang: Suppor
   const referenced: string[] = [];
   const byId = (id: string): ScheduleStop => {
     const stop = catalog.stops.find((s) => s.id === id);
-    if (!stop) throw new Error(`schedule-stops.json: no stop ${id}, which the catalog loader refuses`);
+    if (!stop) throw new Error(`bus-stops: no stop ${id}, which a push refuses`);
     return stop;
   };
   const nameOf = (entry: SequenceStop): I18n => {
     if (entry.stopId) return byId(entry.stopId).name;
-    if (!entry.label) throw new Error("schedule-stops.json: a sequence stop with neither stopId nor label, which the catalog loader refuses");
+    if (!entry.label) throw new Error("bus-stops: a sequence stop with neither stopId nor label, which a push refuses");
     return entry.label;
   };
   for (const serviceId of serviceIds) {
@@ -107,4 +109,10 @@ export function resolveStopSequences(serviceIds: readonly string[], lang: Suppor
   }
   const catalogStops = referenced.map((id) => (hasStopMaps ? byId(id) : withoutGuide(byId(id))));
   return { sequences, stops: catalogStops.map((stop) => toServedStop(stop, lang, subwayTitles)) };
+}
+
+/** WHY: one stored revision as its readers take it, frozen, with each alias keyed by its ARS number. */
+export function toBusStopsSnapshot({ revision, data }: StoredBusStops): BusStopsSnapshot {
+  const stopIdByArsId = new Map(data.stops.flatMap((stop) => (stop.arsIds ?? []).map((arsId) => [arsId, stop.id] as const)));
+  return { revision, catalog: deepFreeze({ stops: data.stops, sequences: data.sequences }), hssc: deepFreeze(data.hssc.stations), stopIdByArsId };
 }

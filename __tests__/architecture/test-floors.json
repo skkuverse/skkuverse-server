@@ -23,6 +23,10 @@
     "tests": 30,
     "expects": 42
   },
+  "games": {
+    "tests": 68,
+    "expects": 116
+  },
   "health": {
     "tests": 5,
     "expects": 13

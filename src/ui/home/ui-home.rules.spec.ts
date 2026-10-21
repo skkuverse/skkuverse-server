@@ -11,7 +11,9 @@
  *
  * And the mini apps a layout references, wherever it names one, so a push can
  * refuse a dangling one and a removal can find who still names it. A target is
- * read with the registry's own grammar, so its path is not part of the id.
+ * read with the registry's own grammar, so its path is not part of the id. A
+ * game tile references the games dataset, unless it names one of the games
+ * installed builds ship bundled (BUNDLED_GAME_IDS), which open without a listing.
  *
  * And what a reader serves when a stored layout names a mini app a deploy has
  * removed: the layout without each item an issue points into, an emptied grid
@@ -362,5 +364,20 @@ describe("withoutUnresolvedItems", () => {
     // Assert
     expect(unchanged).toEqual(before);
     expect(built).toEqual(before);
+  });
+});
+
+describe("homeLayoutReferences of game tiles", () => {
+  it.each(["wave-run", "subway-typing", "apple-game", "suika-game"])("lists nothing for %s, which installed builds ship bundled", (id) => {
+    // Act & Assert
+    expect(homeLayoutReferences(layout(tiles({ kind: "game", id })), registry)).toEqual([]);
+  });
+
+  it("lists a game no build bundles as a reference to the games dataset, at its id", () => {
+    // Act & Assert
+    expect(homeLayoutReferences(layout(tiles({ kind: "miniapp", id: "mukja" }, { kind: "game", id: "new-game" })), registry)).toEqual([
+      { dataset: "miniapps", id: "mukja", path: ["sections", 0, "tiles", 0, "id"] },
+      { dataset: "games", id: "new-game", path: ["sections", 0, "tiles", 1, "id"] },
+    ]);
   });
 });

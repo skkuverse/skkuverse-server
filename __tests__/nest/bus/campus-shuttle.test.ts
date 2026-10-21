@@ -11,8 +11,7 @@ import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
 import { storedBusRegistryService } from "../../helpers/bus/bus-registry";
 import { storedRouteAttributesService } from "../../helpers/bus/route-attributes";
-import { BusStopsService } from "../../../src/bus/stops/bus-stops.service";
-import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
+import { storedBusStopsService } from "../../helpers/bus/bus-stops";
 import { haversineM } from "../../../src/shared/distance.util";
 import type { LatLng } from "../../../src/shared/lat-lng.types";
 
@@ -22,7 +21,7 @@ let busConfig: BusConfigService;
 const groupsByLang = new Map<SupportedLang, BusGroup[]>();
 // WHY: the stations come from the registry, holding the routes stored on 2026-10-17; the groups are read once.
 beforeAll(async () => {
-  busConfig = new BusConfigService(new BusStopsService(new SubwayStationsService()), storedBusRegistryService(), storedRouteAttributesService());
+  busConfig = new BusConfigService(storedBusStopsService(), storedBusRegistryService(), storedRouteAttributesService());
   for (const lang of ["ko", "en", "zh"] as const) groupsByLang.set(lang, await busConfig.getBusGroups(lang));
 });
 const getBusGroups = (lang: SupportedLang = "ko"): BusGroup[] => groupsByLang.get(lang)!;

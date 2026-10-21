@@ -23,7 +23,7 @@ export class BusEtaLivePoller implements OnModuleInit {
   onModuleInit(): void {
     if (!config.shuttleEta.enabled) return logger.info({ event: "bus.eta.disabled", poller: "shuttle-eta-live" }, "SHUTTLE_ETA=off: poller not registered");
     const live = new BusEtaLiveService({
-      sequences: this.eta.sequences(),
+      sequences: () => this.travel.sequences(),
       runsOn: (sequence, date) => this.eta.runsOn(sequence, date),
       travel: this.travel,
       readEtas: (serviceIds, dates) => this.eta.listFitting(serviceIds, dates),

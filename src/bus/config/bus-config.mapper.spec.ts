@@ -5,19 +5,26 @@
  * refresh a schedule service offers when it serves live arrival estimates. A
  * Jongro group joins its route's stored attributes (move-reference-datasets
  * D10): the card's theme color and icon type, the refresh interval, and each
- * station's transfer lines by its ARS number.
+ * station's transfer lines by its ARS number. The HSSC line is the stored
+ * bus-stops revision 1's (unify-bus-stops D3); ported (old → new): "lists an
+ * HSSC station with its English subtitle" maps that line instead of
+ * HSSC_STATIONS, with the same expected station.
  */
 import { storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
+import { busStopsFixture } from "../../../__tests__/helpers/bus/bus-stops";
 import { routeAttributesFixture } from "../../../__tests__/helpers/bus/route-attributes";
 import { JONGRO_ROUTES } from "../bus.constants";
 import { SERVICE_CONFIG } from "../bus.constants";
 import type { JongroRouteAttributes } from "../bus.types";
+import type { BusStopsData } from "../stops/bus-stops.document";
 import type { AttributedJongroRoute } from "./bus-config.types";
-import { HSSC_STATIONS } from "./bus-config.constants";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
 import { mapStations, toBusGroupIds, toBusGroups } from "./bus-config.mapper";
 
 const NO_STOPS = { sequences: {}, stops: [] };
+
+// WHY: the HSSC line of the stored bus-stops revision 1, which the HSSC group serves.
+const HSSC_LINE = (busStopsFixture() as unknown as BusStopsData).hssc.stations;
 
 // WHY: the Jongro routes as the registry derives them from the routes stored on 2026-10-17, with revision 1's attributes.
 let jongroRoutes: AttributedJongroRoute[] = [];
@@ -28,22 +35,40 @@ beforeAll(async () => {
 });
 
 const jongroGroupOf = (routes: AttributedJongroRoute[], id: string) =>
-  toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN }).find((g) => g.id === id)!;
+  toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN }).find((g) => g.id === id)!;
 
 type JongroScreen = { refreshInterval: number; stations: Array<{ name: string; stationNumber: string | null; transferLines: Array<{ line: string; color: string }> }> };
 
 type ScheduleService = { serviceId: string; refresh?: unknown };
 
 function scheduleServicesById(): Map<string, ScheduleService> {
-  const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+  const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
   const services = groups.flatMap((g) => ("services" in g.screen ? (g.screen.services as ScheduleService[]) : []));
   return new Map(services.map((s) => [s.serviceId, s]));
 }
 
 describe("mapStations", () => {
+  it("lists the stored HSSC line's 혜화역 1번출구 position with its subway line, no stop number and no stop id", () => {
+    // Act
+    const mapped = mapStations(HSSC_LINE);
+
+    // Assert
+    expect(mapped).toHaveLength(11);
+    expect(mapped[6]).toEqual({
+      index: 6,
+      name: "혜화역 1번출구",
+      subtitle: "Hyehwa Station (Shuttle Bus Stop)",
+      stationNumber: null,
+      isFirstStation: false,
+      isLastStation: false,
+      isRotationStation: false,
+      transferLines: [{ line: "4", color: "00A5DE" }],
+    });
+  });
+
   it("lists an HSSC station with its English subtitle", () => {
     // Act
-    const [first] = mapStations(HSSC_STATIONS);
+    const [first] = mapStations(HSSC_LINE);
 
     // Assert
     expect(first).toEqual({
@@ -82,7 +107,7 @@ describe("toBusGroupIds", () => {
 describe("toBusGroups", () => {
   it("orders hssc, campus, fasttrack, commute, then the Jongro routes", () => {
     // Act
-    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
 
     // Assert
     expect(groups.map((g) => g.id)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"]);
@@ -90,7 +115,7 @@ describe("toBusGroups", () => {
 
   it("leaves out `stops` when a schedule group references none", () => {
     // Act
-    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
 
     // Assert
     expect(groups[1]!.screen).not.toHaveProperty("stops");
@@ -146,7 +171,7 @@ describe("toBusGroups refresh", () => {
 describe("toBusGroups for a Jongro route", () => {
   it("appends the route's stations version to its realtime screen, last", () => {
     // Act
-    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+    const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
 
     // Assert
     const screen = groups.find((g) => g.id === "jongro07")!.screen as Record<string, unknown>;
