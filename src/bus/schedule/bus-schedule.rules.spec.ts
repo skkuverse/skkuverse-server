@@ -2,8 +2,8 @@
  * The timetable rules: the non-operating-day label (the SKKU list first, then
  * the public-holiday name it is given, null on an ordinary day, and a
  * RangeError on a date the holiday lookup cannot take), the rest-day lookup,
- * the week-start parameter, which pattern a date resolves to, and the
- * suspension window. Which dates are public holidays is HolidaysService's
+ * the week-start parameter, which pattern a date resolves to, the
+ * suspension window, and a day the smart view shows inside it. Which dates are public holidays is HolidaysService's
  * (src/holidays/holidays.service.spec.ts).
  */
 
@@ -12,7 +12,8 @@ import path from "path";
 import moment from "moment-timezone";
 import type { RestDays } from "../schedule-content/bus-schedule-content.types";
 import type { BusScheduleDoc } from "./bus-schedule.document";
-import { isWeekStartInRange, lookupRestDay, pickPattern, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
+import { isWeekStartInRange, lookupRestDay, pickPattern, toNonOperatingDayLabel, toSuspendedDay, toSuspendWindow } from "./bus-schedule.rules";
+import type { ScheduleDay } from "./bus-schedule.wire";
 
 // Revision 1 of the skku-rest-days dataset (its fixture), built into RestDays as the dataset schema reads it.
 const STORED_REST_DAYS: RestDays = {
@@ -92,6 +93,42 @@ describe("toSuspendWindow", () => {
   });
 });
 
+
+describe("toSuspendedDay", () => {
+  const SUSPEND = { from: "2026-12-15", until: "2026-12-16" };
+  const scheduled = (date: string, dayOfWeek: number): ScheduleDay => ({
+    date,
+    dayOfWeek,
+    display: "schedule",
+    label: "기말고사",
+    notices: [{ style: "info", text: "서비스 공지", source: "service" }],
+    schedule: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }],
+  });
+  const noService = (date: string, dayOfWeek: number): ScheduleDay => ({ date, dayOfWeek, display: "noService", label: null, notices: [], schedule: [] });
+
+  it.each([
+    ["the day before from keeps its timetable", "2026-12-14", 1, SUSPEND, scheduled("2026-12-14", 1)],
+    ["from itself is no service", "2026-12-15", 2, SUSPEND, noService("2026-12-15", 2)],
+    ["until itself is no service", "2026-12-16", 3, SUSPEND, noService("2026-12-16", 3)],
+    ["the day after until keeps its timetable", "2026-12-17", 4, SUSPEND, scheduled("2026-12-17", 4)],
+    ["no suspension keeps its timetable", "2026-12-15", 2, null, scheduled("2026-12-15", 2)],
+    ["an invalid suspension keeps its timetable", "2026-12-15", 2, { from: "2026-12-16", until: "2026-12-15" }, scheduled("2026-12-15", 2)],
+  ])("%s", (_case, date, dayOfWeek, suspend, expected) => {
+    // Act & Assert
+    expect(toSuspendedDay(scheduled(date, dayOfWeek), suspend)).toEqual(expected);
+  });
+
+  it("returns a copy, leaving the day it was given as it was", () => {
+    // Arrange
+    const day = scheduled("2026-12-15", 2);
+
+    // Act
+    toSuspendedDay(day, SUSPEND);
+
+    // Assert
+    expect(day).toEqual(scheduled("2026-12-15", 2));
+  });
+});
 
 describe("isWeekStartInRange", () => {
   // WHY: 2026-03-09T16:30Z is already 2026-03-10 in KST, so a UTC reading would move every bound a day.

@@ -14,7 +14,7 @@ import { serviceConfigOf } from "../bus.rules";
 import { BusScheduleContentService } from "../schedule-content/bus-schedule-content.service";
 import type { SuspendDates } from "../schedule-content/bus-schedule-content.types";
 import { BusScheduleRepository } from "./bus-schedule.repository";
-import { firstSelectableDate, isWeekStartInRange, pickPattern, toDay, toNonOperatingDayLabel, toSuspendWindow } from "./bus-schedule.rules";
+import { firstSelectableDate, isWeekStartInRange, pickPattern, toDay, toNonOperatingDayLabel, toSuspendedDay, toSuspendWindow } from "./bus-schedule.rules";
 import type { WeekRequest } from "./bus-schedule.types";
 import type { ScheduleDay, ScheduleWeek, SmartSchedule } from "./bus-schedule.wire";
 
@@ -70,7 +70,8 @@ export class BusScheduleService {
     if (!serviceConfig) return null;
     const content = await this.content.current();
     const today = moment(this.clock.now()).tz(KST_TIME_ZONE);
-    const suspended = this.suspendedResult(serviceId, content.suspendOf(serviceId), today);
+    const suspend = content.suspendOf(serviceId);
+    const suspended = this.suspendedResult(serviceId, suspend, today);
     if (suspended) return suspended;
 
     const thisMonday = today.clone().isoWeekday(1).startOf("day");
@@ -82,7 +83,9 @@ export class BusScheduleService {
       selectedDate = firstSelectableDate(shown.days, 0);
     }
     if (!selectedDate) return this.noDataResult(serviceId);
-    const days = shown.days.filter((d) => d.display !== "hidden");
+    const suspendedFromOpening = this.suspendedResult(serviceId, suspend, moment.tz(selectedDate, DATE_FORMAT, KST_TIME_ZONE));
+    if (suspendedFromOpening) return suspendedFromOpening;
+    const days = shown.days.filter((d) => d.display !== "hidden").map((d) => toSuspendedDay(d, suspend));
     return { serviceId, status: "active", from: shown.from, selectedDate, days };
   }
 
