@@ -38,6 +38,16 @@
  * schema and ordered by key. It is null when a part is not stored or fails the
  * schema, and for a parted dataset no check reads, whose parts are never
  * fetched (task 11.1).
+ *
+ * A dataset whose check reads a collection outside the content database
+ * declares its key in its entry's `collections`, and the catalog's
+ * `collections` names each one (openspec/changes/unify-bus-stops, design D6).
+ * `readCollections(catalog, names, readCollection)` reads every collection the
+ * datasets `names` declare, once each, through the caller's
+ * `readCollection(key, spec)`, which picks the target environment's database
+ * (scripts/data.js); `checkStored` does so for the stored datasets it checks.
+ * A check reads them with `collectionOf(key)`, null for one that was not read;
+ * reading a collection its entry does not declare throws.
  */
 
 const { readParts } = require("./parts");
@@ -124,17 +134,26 @@ function incomingIssues(catalog, { name, parsed, stored }) {
     });
 }
 
-/** `{ issues, warnings }` of `data` as dataset `name`, given the other datasets' `stored` data. */
-function checkContent(catalog, name, data, stored) {
+/**
+ * `{ issues, warnings }` of `data` as dataset `name`, given the other datasets' `stored` data and the
+ * `collections` read for its check (readCollections).
+ */
+function checkContent(catalog, name, data, stored, collections = {}) {
   const entry = entryOf(catalog, name);
   const result = entry.schema.safeParse(data);
   if (!result.success) return { issues: zodIssues(name, result.error), warnings: [] };
-  return contentIssues(catalog, entry, { name, parsed: result.data, stored });
+  return contentIssues(catalog, entry, { name, parsed: result.data, stored, collections });
 }
 
-/** Every issue of `data` as dataset `name` that refuses it, given the other datasets' `stored` data. */
-function checkData(catalog, name, data, stored) {
-  return checkContent(catalog, name, data, stored).issues;
+/** Every issue of `data` as dataset `name` that refuses it, given the other datasets' `stored` data and its `collections`. */
+function checkData(catalog, name, data, stored, collections = {}) {
+  return checkContent(catalog, name, data, stored, collections).issues;
+}
+
+/** The declared collection `key` as read for `name`'s check, null when it was not read; throws for one `name` does not declare. */
+function collectionOf(entry, { name, collections = {} }, key) {
+  if (!(entry.collections ?? []).includes(key)) throw new Error(`${name} reads the collection "${key}", which its catalog entry does not declare`);
+  return collections[key] ?? null;
 }
 
 /**
@@ -143,7 +162,10 @@ function checkData(catalog, name, data, stored) {
  */
 function contentIssues(catalog, entry, context) {
   const storedOfContext = (other) => storedOf(catalog, context, other);
-  const own = entry.issuesOf ? entry.issuesOf(context.parsed, { storedOf: storedOfContext }).map((issue) => ({ dataset: context.name, ...issue })) : [];
+  const collectionOfContext = (key) => collectionOf(entry, context, key);
+  const own = entry.issuesOf
+    ? entry.issuesOf(context.parsed, { storedOf: storedOfContext, collectionOf: collectionOfContext }).map((issue) => ({ dataset: context.name, ...issue }))
+    : [];
   const found = [...own, ...outgoingIssues(catalog, context), ...incomingIssues(catalog, context)];
   return { issues: onePerPath(found.filter((issue) => !issue.warning)), warnings: found.filter((issue) => issue.warning) };
 }
@@ -169,7 +191,7 @@ function partSchemaIssues(name, results) {
  * dataset's checks as its content. `{ issues, warnings, parts }`, `parts` as `{ key, data, summary }` when
  * there is no issue; a warning keeps the parts.
  */
-function checkParts(catalog, name, files, stored) {
+function checkParts(catalog, name, files, stored, collections = {}) {
   const entry = entryOf(catalog, name);
   const { schema, keyOf, summaryOf } = entry.parts;
   const results = files.map(({ file, data }) => ({ file, result: schema.safeParse(data) }));
@@ -179,7 +201,7 @@ function checkParts(catalog, name, files, stored) {
   const duplicates = duplicateKeyIssues(name, parsed);
   if (duplicates.length > 0) return { issues: duplicates, warnings: [], parts: [] };
   parsed.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
-  const { issues, warnings } = contentIssues(catalog, entry, { name, parsed: parsed.map((part) => part.data), stored });
+  const { issues, warnings } = contentIssues(catalog, entry, { name, parsed: parsed.map((part) => part.data), stored, collections });
   return { issues, warnings, parts: issues.length > 0 ? [] : parsed.map(({ key, data }) => ({ key, data, summary: summaryOf(data) })) };
 }
 
@@ -205,16 +227,28 @@ async function readStored(db, catalog, names = []) {
   return { stored, revisions: Object.fromEntries(docs.map((doc) => [doc._id, doc.revision])) };
 }
 
+/** Each collection the datasets `names` declare, by key, read once through `readCollection(key, spec)`. Reads only. */
+async function readCollections(catalog, names, readCollection) {
+  const keys = [...new Set(names.flatMap((name) => entryOf(catalog, name).collections ?? []))];
+  const collections = {};
+  for (const key of keys) {
+    const spec = catalog.collections?.[key];
+    if (!spec) throw new Error(`the catalog declares no collection "${key}"`);
+    collections[key] = await readCollection(key, spec);
+  }
+  return collections;
+}
+
 /**
  * A parted dataset's stored `{ issues, warnings }`: checkParts' on the parts its manifest names, or, when one is
  * not stored, each missing part and the schema issues of the others (the set's checks would only repeat the gap).
  * A manifest readStored filled for another dataset's check is not read again.
  */
-async function storedPartIssues(db, catalog, name, stored) {
+async function storedPartIssues(db, catalog, name, stored, collections) {
   const isFilled = stored[name].parts.every((entry) => entry.data !== undefined);
   const found = isFilled ? { parts: stored[name].parts, missing: [] } : await readParts(db, stored[name]);
   const files = found.parts.map(({ key, data }) => ({ file: key, data }));
-  if (found.missing.length === 0) return checkParts(catalog, name, files, stored);
+  if (found.missing.length === 0) return checkParts(catalog, name, files, stored, collections);
   const keyById = new Map(stored[name].parts.map((entry) => [entry.partId, entry.key]));
   const missing = found.missing.map((partId) => ({ dataset: name, path: [keyById.get(partId)], message: `part ${partId} is not stored` }));
   const { schema } = entryOf(catalog, name).parts;
@@ -223,15 +257,19 @@ async function storedPartIssues(db, catalog, name, stored) {
 
 /**
  * `check`: the issues of the stored data of `names`, and `warnings` when there is one; a parted dataset's parts
- * are read by the ids its header names. Writes nothing.
+ * are read by the ids its header names, and the collections the stored ones declare through `readCollection`
+ * (none without it). Writes nothing.
  */
-async function checkStored(db, catalog, names) {
+async function checkStored(db, catalog, names, readCollection) {
   names.forEach((name) => entryOf(catalog, name));
   const { stored, revisions } = await readStored(db, catalog, names);
   const present = names.filter((name) => stored[name] !== undefined);
+  const collections = readCollection ? await readCollections(catalog, present, readCollection) : {};
   const [issues, warnings] = [[], []];
   for (const name of present) {
-    const found = entryOf(catalog, name).parts ? await storedPartIssues(db, catalog, name, stored) : checkContent(catalog, name, stored[name], stored);
+    const found = entryOf(catalog, name).parts
+      ? await storedPartIssues(db, catalog, name, stored, collections)
+      : checkContent(catalog, name, stored[name], stored, collections);
     issues.push(...found.issues);
     warnings.push(...found.warnings);
   }
@@ -243,4 +281,4 @@ async function checkStored(db, catalog, names) {
   };
 }
 
-module.exports = { checkContent, checkData, checkParts, checkStored, readStored };
+module.exports = { checkContent, checkData, checkParts, checkStored, readCollections, readStored };

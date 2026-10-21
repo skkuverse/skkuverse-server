@@ -40,7 +40,10 @@
  * stops schema and `toBusStopsIssues` against the checkout's services, their
  * estimate opt-ins, the served subway stations and the lane strategies; it
  * references the `subwayStations` and `busServices` code-held sources, and
- * others may reference its stop ids.
+ * others may reference its stop ids. It is the one dataset that declares a
+ * collection outside the content database, `busSchedules` (unify-bus-stops
+ * D6): its sequences are refused when a timetable entry's stop times do not
+ * fit them, naming the service, the route type and the entry time.
  *
  * The `subway-topology` dataset (move-reference-datasets D2, D3) is checked
  * with the server's topology schema and `toTopologyIssues` against the
@@ -78,7 +81,8 @@ import { subwayTimetableFixtureFiles } from "../../helpers/subway/timetables";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
 const { loadCatalog } = require("../../../scripts/lib/datasets/catalog");
-const { checkData, checkParts } = require("../../../scripts/lib/datasets/checks");
+const { checkContent, checkData, checkParts } = require("../../../scripts/lib/datasets/checks");
+const { buildDocuments, parseTimetableFile } = require("../../../scripts/lib/campus-schedule-file");
 
 const SRC = path.join(__dirname, "../../../src");
 const CONFIG = path.join(SRC, "infra/config");
@@ -1205,5 +1209,84 @@ describe("loadCatalog bus-stops", () => {
 
     // Assert
     expect(lines).toEqual(["bus-stops: sequences.campus-jaja: sequences campus-jaja: unknown service"]);
+  });
+});
+
+describe("loadCatalog bus-stops against the target's stored timetables", () => {
+  const stops = () => datasetFixture("../bus/fixtures/bus-stops.dataset.json") as Record<string, any>;
+  const timetable = (file: string): Array<Record<string, any>> =>
+    buildDocuments(parseTimetableFile(structuredClone(require(path.join(__dirname, "../../../scripts/data", file)))));
+  const storedTimetables = () => ({ busSchedules: [...timetable("campus-schedule.json"), ...timetable("commute-schedule.json")] });
+
+  it("declares bus_campus.bus_schedules, and no other dataset declares a collection", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const declaring = Object.entries(catalog.datasets).filter(([, entry]) => (entry as { collections?: string[] }).collections);
+
+    // Assert
+    expect(declaring.map(([name, entry]) => [name, (entry as { collections: string[] }).collections])).toEqual([["bus-stops", ["busSchedules"]]]);
+    expect(catalog.collections.busSchedules).toMatchObject({ database: "MONGO_DB_NAME_BUS_CAMPUS", name: "bus_schedules" });
+  });
+
+  it("accepts revision 1 against both committed timetables, as npm run schedule stores them", () => {
+    // Act
+    const checked = checkContent(loadCatalog(srcLoader), "bus-stops", stops(), {}, storedTimetables());
+
+    // Assert
+    expect(checked).toEqual({ issues: [], warnings: [] });
+  });
+
+  it("Stop added to a sequence: refuses a fourth 강남·양재 하교 stop while the stored entries list three times, naming the service, the route type and the entry times", () => {
+    // Arrange
+    const data = stops();
+    data.sequences["commute-gangnam-yangjae"].down.push({ stopId: "jamsil-exit5", action: "alight", timing: "estimated" });
+
+    // Act
+    const lines = issueLines(checkData(loadCatalog(srcLoader), "bus-stops", data, {}, storedTimetables()));
+
+    // Assert
+    const short = (time: string) => `commute-gangnam-yangjae down ${time} (pilot): 3 stop times for a sequence of 4 stops`;
+    expect(lines).toEqual([`bus-stops: sequences.commute-gangnam-yangjae.down: 4 timetable entries do not fit this sequence: ${short("17:00")}; ${short("18:00")}; ${short("19:15")}; and 1 more`]);
+  });
+
+  it("refuses a stored entry with no time at a stop the sequence schedules", () => {
+    // Arrange
+    const timetables = storedTimetables();
+    const gangnam = timetables.busSchedules.find((doc) => doc.serviceId === "commute-gangnam-yangjae")!;
+    gangnam.entries[0].stopTimes[1] = null;
+
+    // Act
+    const lines = issueLines(checkData(loadCatalog(srcLoader), "bus-stops", stops(), {}, timetables));
+
+    // Assert
+    expect(lines).toEqual([
+      "bus-stops: sequences.commute-gangnam-yangjae.up: 1 timetable entry does not fit this sequence: commute-gangnam-yangjae up 07:40 (pilot): no time at stop 1, which the sequence schedules",
+    ]);
+  });
+
+  it("warns, refusing nothing, when the timetables were not read", () => {
+    // Act
+    const checked = checkContent(loadCatalog(srcLoader), "bus-stops", stops(), {});
+
+    // Assert
+    expect(checked.issues).toEqual([]);
+    expect(issueLines(checked.warnings)).toEqual(["bus-stops: : bus_schedules was not read, so the sequences were not checked against the timetables"]);
+  });
+
+  it("reads a timetable file for --against as the documents npm run schedule writes from it, keyed by service and pattern", () => {
+    // Arrange
+    const { busSchedules } = loadCatalog(srcLoader).collections;
+    const raw = structuredClone(require("../../../scripts/data/commute-schedule.json"));
+
+    // Act
+    const docs = busSchedules.fromFile(raw);
+
+    // Assert
+    expect(docs).toEqual(timetable("commute-schedule.json"));
+    expect(docs.map(busSchedules.keyOf)).toContain("commute-gangnam-yangjae/pilot");
+    expect(busSchedules.applyCommand("scripts/data/commute-schedule.json", true)).toBe("npm run schedule -- --file scripts/data/commute-schedule.json --prod");
+    expect(busSchedules.applyCommand("next.json", false)).toBe("npm run schedule -- --file next.json");
   });
 });
