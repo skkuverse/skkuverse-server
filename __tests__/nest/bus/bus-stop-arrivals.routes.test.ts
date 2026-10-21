@@ -395,7 +395,7 @@ describe("GET /bus/stops/:stopId/arrivals: the HSSC entry", () => {
     expectWire(busStopArrivals, res.body.data);
   });
 
-  it("a bus at the stop is 0 stops away, and a bus past it is left out", async () => {
+  it("a bus at the stop is 0 stops away, and a bus just past it is the farthest, round the loop", async () => {
     // Arrange
     const stores = freshStores();
     stores.busCache.values.set("hssc", [hsscBusDoc({ sequence: "9" }), hsscBusDoc({ sequence: "7" })]);
@@ -405,10 +405,10 @@ describe("GET /bus/stops/:stopId/arrivals: the HSSC entry", () => {
     const res = await request(server).get("/bus/stops/hssc-hyehwa-exit1/arrivals");
 
     // Assert
-    expect(routesOf(res.body)[0]).toMatchObject({ stationIndex: 6, approaching: [{ stopsAway: 0 }] });
+    expect(routesOf(res.body)[0]).toMatchObject({ stationIndex: 6, approaching: [{ stopsAway: 0 }, { stopsAway: 9 }] });
   });
 
-  it("Bus past the stop: the only bus at index 8 leaves approaching empty", async () => {
+  it("Bus past the stop: the only bus at index 8 is 9 positions from index 6, round the loop", async () => {
     // Arrange
     const stores = freshStores();
     stores.busCache.values.set("hssc", [hsscBusDoc({ sequence: "9" })]);
@@ -418,7 +418,7 @@ describe("GET /bus/stops/:stopId/arrivals: the HSSC entry", () => {
     const res = await request(server).get("/bus/stops/hssc-hyehwa-exit1/arrivals");
 
     // Assert
-    expect(routesOf(res.body)[0]).toMatchObject({ stationIndex: 6, approaching: [] });
+    expect(routesOf(res.body)[0]).toMatchObject({ stationIndex: 6, approaching: [{ stopsAway: 9 }] });
   });
 });
 

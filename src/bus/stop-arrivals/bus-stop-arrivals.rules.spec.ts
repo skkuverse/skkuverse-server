@@ -1,6 +1,6 @@
 /**
- * What a stop page decides (unify-bus-stops design D8 and D9; spec bus-stop-arrivals): how many stops each HSSC bus
- * at or before the stop is from it, nearest first, and a shuttle stop's next three runs in Asia/Seoul: a run counts
+ * What a stop page decides (unify-bus-stops design D8 and D9; spec bus-stop-arrivals): how many of the HSSC loop's
+ * 11 positions each bus is from the stop, counted forward round the loop, nearest first, and a shuttle stop's next three runs in Asia/Seoul: a run counts
  * while its time at the stop, or its departure when that is unknown, is not before the current minute; a stop time
  * before the departure is the next day's; `estimated` follows the smart view's `eta` at an estimated stop; and no run
  * is listed unless the smart schedule is active.
@@ -11,10 +11,14 @@ import { toApproaching, toNextRuns } from "./bus-stop-arrivals.rules";
 describe("toApproaching", () => {
   it.each([
     [[1, 4], 6, [{ stopsAway: 2 }, { stopsAway: 5 }]],
-    [[8], 6, []],
-    [[7, 6, 5], 6, [{ stopsAway: 0 }, { stopsAway: 1 }]],
+    [[8], 6, [{ stopsAway: 9 }]],
+    [[7, 6, 5], 6, [{ stopsAway: 0 }, { stopsAway: 1 }, { stopsAway: 10 }]],
     [[], 6, []],
     [[0, 3, 0], 3, [{ stopsAway: 0 }, { stopsAway: 3 }, { stopsAway: 3 }]],
+    // WHY: 600주년기념관 (10) runs on to 농구장 (0), the loop's first position, and 농구장 is 10 positions short of 600주년기념관.
+    [[10], 0, [{ stopsAway: 1 }]],
+    [[0], 10, [{ stopsAway: 10 }]],
+    [[10, 9], 10, [{ stopsAway: 0 }, { stopsAway: 1 }]],
   ])("buses at %j, stop at %d → %j", (indexes, stationIndex, expected) => {
     // Arrange
     const buses = indexes.map((index) => ({ stationIndex: index }));
