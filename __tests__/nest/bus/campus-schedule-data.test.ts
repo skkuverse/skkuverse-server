@@ -38,6 +38,7 @@ const {
   diffRange,
   findOverlaps,
   parseTimetableFile,
+  splitExpired,
   stopTimesMismatches,
 } = require("../../../scripts/lib/campus-schedule-file");
 
@@ -489,5 +490,50 @@ describe("stopTimesMismatches", () => {
   it("checks nothing of a service with no sequence whose entries carry no stop times", () => {
     // Act & Assert
     expect(stopTimesMismatches([{ serviceId: "fasttrack-inja", patternId: "weekday", entries: [{ time: "08:00", routeType: "regular" }] }], sequences)).toEqual([]);
+  });
+});
+
+// unify-bus-stops wave 2 review F1: a pattern that serves no date from today on takes no part in the stop-time
+// check, so a new semester's pattern with a new sequence length is not deadlocked by the old one, which `npm run
+// schedule` never deletes. "Today" is the KST date, the one ScheduleService resolves a day by.
+describe("splitExpired", () => {
+  // 01:30 KST on 2026-10-20, still 2026-10-19 in UTC.
+  const NOW = new Date("2026-10-19T16:30:00Z");
+  const pattern = (effectiveUntil?: string) => ({ serviceId: "commute-gangnam-yangjae", patternId: "pilot", effectiveFrom: "2026-08-31", ...(effectiveUntil ? { effectiveUntil } : {}), entries: [] });
+
+  it.each([
+    ["2026-10-19", false],
+    ["2026-10-20", true],
+    ["2026-10-21", true],
+    [undefined, true],
+  ])("a pattern ending %s is served from today 2026-10-20 (KST) on: %s", (effectiveUntil, served) => {
+    // Act
+    const split = splitExpired([pattern(effectiveUntil)], NOW);
+
+    // Assert
+    expect(split.served.length).toBe(served ? 1 : 0);
+    expect(split.expired.length).toBe(served ? 0 : 1);
+  });
+
+  it("names the pattern, its end and today's KST date, not the UTC one, for each one it leaves out", () => {
+    // Act
+    const { expired } = splitExpired([pattern("2026-10-19")], NOW);
+
+    // Assert
+    expect(expired.map((each: { message: string }) => each.message)).toEqual([
+      "commute-gangnam-yangjae/pilot ended 2026-10-19, before today 2026-10-20 (KST): it serves no date ahead, so its stop times are not checked",
+    ]);
+    expect(expired[0].message).not.toContain("today 2026-10-19");
+  });
+
+  it("keeps the served patterns in their order, for stopTimesMismatches to check", () => {
+    // Arrange
+    const docs = [pattern("2026-12-18"), pattern("2026-10-01"), pattern()];
+
+    // Act
+    const { served } = splitExpired(docs, NOW);
+
+    // Assert
+    expect(served).toEqual([docs[0], docs[2]]);
   });
 });

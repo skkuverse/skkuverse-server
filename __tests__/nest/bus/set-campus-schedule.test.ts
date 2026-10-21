@@ -55,6 +55,7 @@ async function schedule(argv: string[]): Promise<Ran> {
     env: { MONGO_URL: mongod.uri, MONGO_DB_NAME_BUS_CAMPUS: BUS_CAMPUS, MONGO_CONTENT_DB_NAME: CONTENT },
     out: (line = "") => out.push(`${line}\n`),
     err: (line = "") => err.push(`${line}\n`),
+    now: () => NOW,
   });
   return { code, out: out.join(""), err: err.join("") };
 }
@@ -193,6 +194,29 @@ describe("npm run schedule against the stored bus-stops sequences", () => {
     expect(prodDryRun.code).toBe(0);
     expect(prodDryRun.err).not.toContain("stop times for a sequence");
     expect(await schedules(true).countDocuments()).toBe(0);
+  });
+});
+
+// Review F1 of wave 2: a pattern that serves no date from today on (2026-10-22 in KST at NOW) is left out of the
+// check and named as skipped, as `npm run data -- push bus-stops` leaves it out; one ending today is still checked.
+describe("npm run schedule with a pattern no longer served", () => {
+  it.each([
+    ["2026-10-21", 0],
+    ["2026-10-22", 1],
+    ["2026-10-23", 1],
+  ])("writes three 하교 times against four stops only when the file ends before today: ending %s exits %d", async (until, code) => {
+    // Arrange
+    await store.create(contentDb(false), "bus-stops", withFourthDownStop(), { by: OPERATOR, now: NOW });
+    const file = timetableFile({ ...commuteTimetable(), effectiveUntil: until });
+
+    // Act
+    const result = await schedule(["--file", file, "--create"]);
+
+    // Assert
+    expect(result.code).toBe(code);
+    expect(result.out.includes(`skipped    commute-gangnam-yangjae/pilot ended ${until}, before today 2026-10-22 (KST)`)).toBe(code === 0);
+    expect(result.err.includes("commute-gangnam-yangjae down 17:00 (pilot): 3 stop times for a sequence of 4 stops")).toBe(code === 1);
+    expect(await schedules(false).countDocuments()).toBe(code === 0 ? 5 : 0);
   });
 });
 

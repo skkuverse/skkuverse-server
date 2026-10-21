@@ -649,6 +649,96 @@ describe("npm run data bus-stops against the stored timetables", () => {
     expect(other.err).toContain("home-layout reads no collection a timetable file replaces");
   });
 
+  // Review F1 of wave 2: `npm run schedule` never deletes a pattern, so an old semester's stays stored. One that serves
+  // no date from today on (2026-10-19 in KST at NOW) is left out of the check, or a new semester's pattern with a new
+  // sequence length could never be pushed beside it. A pattern ending today still serves today, so it is checked.
+  it.each([
+    ["2026-10-18", 0],
+    ["2026-10-19", 1],
+    ["2026-10-20", 1],
+  ])("New semester beside an old one: --against a winter file of four 하교 times, the stored pilot ending %s exits %d", async (until, code) => {
+    // Arrange
+    const pilot = { ...commuteTimetable(), effectiveFrom: "2026-08-31", effectiveUntil: until };
+    await seed(`${BUS_CAMPUS}_dev`, pilot);
+    await store.create(devDb(), "bus-stops", busStopsFixture(), { by: OPERATOR, now: NOW });
+    await data(["pull", "bus-stops"], { env: env() });
+    const working = path.join(root, ".data", "dev", "bus-stops.json");
+    const pulled = JSON.parse(fs.readFileSync(working, "utf8"));
+    pulled.data.sequences["commute-gangnam-yangjae"].down.push({ stopId: "jamsil-exit5", action: "alight", timing: "estimated" });
+    fs.writeFileSync(working, JSON.stringify(pulled));
+    const winter = withFourthDownTime();
+    winter.patterns = winter.patterns.map((pattern: { patternId: string }) => ({ ...pattern, patternId: "winter" }));
+    const next = path.join(root, "winter.json");
+    fs.writeFileSync(next, JSON.stringify({ ...winter, effectiveFrom: "2026-10-21", effectiveUntil: "2027-02-26" }));
+
+    // Act
+    const pushed = await data(["push", "bus-stops", "--against", next], { env: env() });
+    const checked = await data(["check", "bus-stops"], { env: env() });
+
+    // Assert
+    expect(pushed.code).toBe(code);
+    expect(pushed.out.includes(`skipped    commute-gangnam-yangjae/pilot ended ${until}, before today 2026-10-19 (KST)`)).toBe(code === 0);
+    expect(pushed.err.includes("commute-gangnam-yangjae down 17:00 (pilot): 3 stop times for a sequence of 4 stops")).toBe(code === 1);
+    expect((await store.readDataset(devDb(), "bus-stops"))?.revision).toBe(code === 0 ? 2 : 1);
+    expect(checked.code).toBe(0);
+    expect(checked.out.includes("skipped    commute-gangnam-yangjae/pilot")).toBe(code === 0);
+  });
+
+  it.each([
+    ["2026-10-18", 0],
+    ["2026-10-19", 1],
+  ])("Sequence or route type removed: stored stop times of a service with no sequence, and of a route type its service lacks, ending %s, exit %d", async (until, code) => {
+    // Arrange
+    const entry = (time: string, routeType: string, end: string) => ({ time, routeType, busCount: 1, notes: null, stopTimes: [time, end] });
+    const removed = {
+      semester: "2026-1",
+      effectiveFrom: "2026-03-02",
+      effectiveUntil: until,
+      routeTypes: ["regular", "express"],
+      patterns: [
+        { patternId: "2026-1", days: [1], serviceIds: ["fasttrack-inja"], entries: [entry("08:00", "regular", "08:40")] },
+        { patternId: "2026-1", days: [2], serviceIds: ["commute-gangnam-yangjae"], entries: [entry("07:00", "express", "07:50")] },
+      ],
+    };
+    await seed(`${BUS_CAMPUS}_dev`, commuteTimetable());
+    await seed(`${BUS_CAMPUS}_dev`, removed);
+
+    // Act
+    const pushed = await data(["push", "bus-stops", "--create", "--file", stopsFile()], { env: env() });
+
+    // Assert
+    expect(pushed.code).toBe(code);
+    expect(pushed.out.includes(`skipped    fasttrack-inja/2026-1 ended ${until}`)).toBe(code === 0);
+    expect(pushed.out.includes(`skipped    commute-gangnam-yangjae/2026-1 ended ${until}`)).toBe(code === 0);
+    expect(pushed.err.includes("fasttrack-inja regular 08:00 (2026-1): stop times, but bus-stops holds no sequence")).toBe(code === 1);
+    expect(pushed.err.includes("commute-gangnam-yangjae express 07:00 (2026-1): stop times, but bus-stops holds no sequence")).toBe(code === 1);
+    expect(pushed.out).not.toContain("skipped    commute-gangnam-yangjae/pilot");
+  });
+
+  // Review F2 of wave 2: after a length change reaches production, copying it into _dev meets _dev's old timetable.
+  it("Copy of a length change: refuses production's four-stop revision against _dev's three-time entries, and copies it --against the file that lists four", async () => {
+    // Arrange
+    await seed(`${BUS_CAMPUS}_dev`, commuteTimetable());
+    await store.create(devDb(), "bus-stops", busStopsFixture(), { by: OPERATOR, now: NOW });
+    const fourStops = busStopsFixture() as Record<string, any>;
+    fourStops.sequences["commute-gangnam-yangjae"].down.push({ stopId: "jamsil-exit5", action: "alight", timing: "estimated" });
+    await store.create(prodDb(), "bus-stops", fourStops, { by: OPERATOR, now: NOW });
+    const next = path.join(root, "commute-schedule.json");
+    fs.writeFileSync(next, JSON.stringify(withFourthDownTime()));
+
+    // Act
+    const alone = await data(["copy-prod-to-dev", "bus-stops"], { env: env() });
+    const against = await data(["copy-prod-to-dev", "bus-stops", "--against", next], { env: env() });
+
+    // Assert
+    expect(alone.code).toBe(1);
+    expect(alone.err).toContain("commute-gangnam-yangjae down 17:00 (pilot): 3 stop times for a sequence of 4 stops");
+    expect(against.code).toBe(0);
+    expect(against.out).toContain(`next: apply the file to the same target at once: npm run schedule -- --file ${next}`);
+    expect(against.out).not.toContain(`--file ${next} --prod`);
+    expect(await store.readDataset(devDb(), "bus-stops")).toMatchObject({ revision: 2, data: fourStops });
+  });
+
   it("refuses a bus-stops push when MONGO_DB_NAME_BUS_CAMPUS is not set, and pushes another dataset without reading any timetable", async () => {
     // Arrange
     const file = stopsFile();
