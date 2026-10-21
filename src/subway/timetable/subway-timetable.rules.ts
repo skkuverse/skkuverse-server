@@ -99,9 +99,12 @@ export function toEvictedTimetableKeys(held: ReadonlyMap<string, { lastServiceDa
   return [...held].filter(([key, { lastServiceDate }]) => lastServiceDate < serviceDate && !neededKeys.has(key)).map(([key]) => key);
 }
 
-export function isInServiceWindow(dayType: DayType, serviceDate: string, now: Date): boolean {
-  const secondsOfServiceDay = (now.getTime() - toServiceInstant(serviceDate, 0).getTime()) / SECOND_MS;
+function isInServiceWindowSec(dayType: DayType, secondsOfServiceDay: number): boolean {
   return secondsOfServiceDay >= SERVICE_WINDOW_OPENS_SEC && secondsOfServiceDay < SERVICE_WINDOW_CLOSES_SEC[dayType];
+}
+
+export function isInServiceWindow(dayType: DayType, serviceDate: string, now: Date): boolean {
+  return isInServiceWindowSec(dayType, (now.getTime() - toServiceInstant(serviceDate, 0).getTime()) / SECOND_MS);
 }
 
 interface TrackedStops {
@@ -167,4 +170,22 @@ export function toTrackedStopIssues(timetables: readonly Timetable[], platforms:
       ...skips,
     ].map((message) => ({ path: each.path, message }));
   });
+}
+
+function toStopTimesOutsideServiceWindow(timetable: Timetable, platform: NetworkPlatform): string[] {
+  const isOutside = (seconds: number | null): seconds is number => seconds !== null && !isInServiceWindowSec(timetable.dayType, seconds);
+  return timetable.trains.flatMap(({ trainNo, stops }) =>
+    stops.filter((stop) => stop.station === platform.id).flatMap((stop) => [stop.arr, stop.dep].filter(isOutside).map((seconds) => `${trainNo} ${seconds} s`)),
+  );
+}
+
+// WHY: the tracker observes only inside the service window, so a stop time outside it would never be tracked.
+export function toServiceWindowIssues(timetables: readonly Timetable[], platforms: readonly NetworkPlatform[]): NetworkIssue[] {
+  const servedBy = (timetable: Timetable) => platforms.filter((p) => toPlatformTimetableKey(p, timetable.dayType) === toTimetableKey(timetable));
+  return timetables.flatMap((timetable) =>
+    servedBy(timetable).flatMap((platform) => {
+      const outside = toStopTimesOutsideServiceWindow(timetable, platform);
+      return outside.length > 0 ? [{ path: [toTimetableKey(timetable), platform.id], message: `${outside.length} stop time(s) outside the service window: ${listed(outside)}` }] : [];
+    }),
+  );
 }
