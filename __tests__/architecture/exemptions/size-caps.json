@@ -46,5 +46,9 @@
   "src/subway/topology/subway-topology.rules.ts": {
     "max": 103,
     "reason": "ADR 0010 D9, no domain seam: every function here judges the one `subway-topology` dataset against the code, `toTopologyIssues` and `toRouteIssues` at push through scripts/lib/datasets/catalog.js, `toMissingPlatformIds`, `toUnknownPlatformIds` and `toUnnamedStopIds` at read in `SubwayTopologyService`; the route checks read the timetable routes only as `import type`, a sibling never imports another sub-module's rules (D3), so they cannot move to src/subway/timetable/, and a sub-module of topology would hold rules and nothing else."
+  },
+  "src/ui/home/ui-home.rules.ts": {
+    "max": 93,
+    "reason": "ADR 0010 D9, no domain seam: the push checks `toHomeLayoutIssues` and `homeLayoutReferences` that scripts/lib/datasets/catalog.js runs and the read filter `withoutUnresolvedItems` that `UiHomeService` applies walk the same located sections, tiles and banners (`locatedSections`, `tilesOf`, `bannersOf`), so a sub-module holding the push half would repeat those walkers and be a Nest module with no provider, imported by nothing in src/, holding rules alone."
   }
 }

@@ -5,8 +5,17 @@ export interface GameIssue {
   message: string;
 }
 
+export interface LocatedId {
+  id: string;
+  path: Array<string | number>;
+}
+
 export interface GameIds {
   games: ReadonlyArray<{ id: string }>;
+}
+
+export interface EntryUrls {
+  games: ReadonlyArray<{ id: string; entryUrl: string }>;
 }
 
 /** WHY: one registry revision, frozen, so the index and the detail of one request agree. */
