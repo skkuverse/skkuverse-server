@@ -6,8 +6,8 @@ const STOP_LABEL = /^stop (\S+): /;
 const STOP_INDEX_LABEL = /^stops\[(\d+)\]/;
 const SEQUENCE_LABEL = /^sequences ([^.\s:[]+)(?:\.([^\s:[]+))?(?:\[(\d+)\])?/;
 
-// WHY: the catalog checks label each issue in the words the boot failure showed ("stop <id>", "sequences
-// <service>.<route type>[<index>]"); the label is read back into the dataset path the push report prints.
+// WHY: the catalog checks label each issue ("stop <id>", "sequences <service>.<route type>[<index>]"); the label is
+// read back into the dataset path the push report prints.
 function catalogPathOf(message: string, stopIds: readonly string[]): Array<string | number> {
   const stopIndex = STOP_INDEX_LABEL.exec(message);
   if (stopIndex) return ["stops", Number(stopIndex[1])];
@@ -18,11 +18,21 @@ function catalogPathOf(message: string, stopIds: readonly string[]): Array<strin
   return ["sequences", serviceId, ...(routeType === undefined ? [] : [routeType]), ...(index === undefined ? [] : [Number(index)])];
 }
 
+// WHY: the tool keeps one issue per path (scripts/lib/datasets/checks.js), so the messages of one path are one issue.
+function joinedByPath(issues: readonly BusStopsIssue[]): BusStopsIssue[] {
+  const byPath = new Map<string, BusStopsIssue>();
+  for (const { path, message } of issues) {
+    const earlier = byPath.get(JSON.stringify(path));
+    byPath.set(JSON.stringify(path), { path, message: earlier ? `${earlier.message}; ${message}` : message });
+  }
+  return [...byPath.values()];
+}
+
 function catalogIssues(data: BusStopsData, { knownServiceIds, optIns, stationIds }: BusStopsCheckContext): BusStopsIssue[] {
   const stopIds = data.stops.map((stop) => stop.id);
   const issues = validateStopCatalog(data, knownServiceIds, optIns).map((message) => ({ path: catalogPathOf(message, stopIds), message }));
   const stationIssues = subwayStationErrors(data, stationIds).map((message) => ({ path: [...catalogPathOf(message, stopIds), "subwayStationId"], message }));
-  return [...issues, ...stationIssues];
+  return joinedByPath([...issues, ...stationIssues]);
 }
 
 // WHY: a strategy only travels with an estimated sequence: one the code opts in and the data holds.

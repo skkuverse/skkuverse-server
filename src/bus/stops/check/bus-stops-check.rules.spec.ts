@@ -75,7 +75,30 @@ describe("toBusStopsIssues", () => {
     const issues = toBusStopsIssues(data as BusStopsData, context);
 
     // Assert
-    expect(issues).toContainEqual({ path: ["stops", index], message: "stop jeongja-exit3: coords must be { lat, lng } inside South Korea (lat 33–39, lng 124–132)" });
+    const atStop = issues.filter((issue) => issue.path.join(".") === `stops.${index}`);
+    expect(atStop).toHaveLength(1);
+    expect(atStop[0]!.message.split("; ")).toContain("stop jeongja-exit3: coords must be { lat, lng } inside South Korea (lat 33–39, lng 124–132)");
+  });
+
+  it("names every fault of one stop in the one issue at its path: bad coordinates, an off-host photo and a fov of 90", () => {
+    // Arrange
+    const data = fixture();
+    const index = indexOfStop(data, "jeongja-exit3");
+    const stop = data.stops[index];
+    data.stops[index] = { ...stop, coords: { lat: stop.coords.lng, lng: stop.coords.lat }, photo: { original: "https://example.com/stop.jpg" }, panorama: { ...stop.panorama, fov: 90 } };
+
+    // Act
+    const atStop = toBusStopsIssues(data as BusStopsData, context).filter((issue) => issue.path.join(".") === `stops.${index}`);
+
+    // Assert
+    expect(atStop).toHaveLength(1);
+    expect(atStop[0]!.message.split("; ")).toEqual(
+      expect.arrayContaining([
+        "stop jeongja-exit3: coords must be { lat, lng } inside South Korea (lat 33–39, lng 124–132)",
+        "stop jeongja-exit3: photo.original is not a media.skkuverse.com URL",
+        "stop jeongja-exit3: panorama.fov must be an integer in 25..80",
+      ]),
+    );
   });
 
   it("Photo on another host: names the stop", () => {

@@ -161,7 +161,9 @@ describe("BusEtaService over the stored stops (unify-bus-stops design D16)", () 
     expect(twoStops.map((d) => d.offsetsSec.length)).toEqual([2]);
     expect(threeStops.map((d) => d.offsetsSec.length)).toEqual([3]);
     expect(written.written).toBe(1);
-    await expect(eta.upsertFitting([doc([0, 4500])])).rejects.toThrow(/offsets do not fit/);
+    // A document fetched before the push no longer fits, so it is left out rather than failing the whole write.
+    await expect(eta.upsertFitting([doc([0, 4500]), doc([0, 4500, 4800])])).resolves.toMatchObject({ written: 1 });
+    expect(repository.docs.get(doc([0, 4500, 4800])._id)?.offsetsSec).toEqual([0, 4500, 4800]);
   });
 
   it("Never read: sequences(), listFitting and upsertFitting reject with the 503 BUS_STOPS_UNAVAILABLE", async () => {
