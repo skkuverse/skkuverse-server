@@ -271,3 +271,31 @@ describe("BusEtaService.upcomingRuns before a stored suspension", () => {
     expect(runs.map((r) => r.date)).toEqual(["2026-12-21", "2026-12-22", "2026-12-23", "2026-12-24", "2026-12-25"]);
   });
 });
+
+describe("BusEtaService.upcomingRuns before a suspension that starts mid-week", () => {
+  // Monday 2026-12-14, 07:00 KST; the suspension runs Thursday 12-17 to Friday 12-18.
+  const MONDAY = new Date("2026-12-13T22:00:00.000Z");
+  const clock = { now: () => MONDAY };
+
+  it("plans the runs before the suspension and none inside it", async () => {
+    // Arrange
+    const timetable = new FakeBusScheduleRepository();
+    timetable.patterns = [
+      {
+        serviceId: "campus-inja",
+        patternId: "weekday",
+        days: [1, 2, 3, 4, 5],
+        entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["08:00", null, null] }],
+      },
+    ];
+    const content = storedScheduleContentRepository();
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-12-17", until: "2026-12-18" }));
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+
+    // Act
+    const runs = await build(schedule).upcomingRuns(SEQUENCE, MONDAY);
+
+    // Assert
+    expect(runs.map((r) => r.date)).toEqual(["2026-12-14", "2026-12-15", "2026-12-16"]);
+  });
+});

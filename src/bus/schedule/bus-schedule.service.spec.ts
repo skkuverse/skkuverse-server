@@ -943,8 +943,9 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
   it("suspend boundary: day before from → not suspended", async () => {
     // Arrange
     jest.useFakeTimers();
-    jest.setSystemTime(new Date("2026-06-20T03:00:00.000Z"));
-    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", SUSPENSION));
+    // Thursday 12:00 KST, so the opening day is today, the day before a Friday `from`.
+    jest.setSystemTime(new Date("2026-06-18T03:00:00.000Z"));
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { ...SUSPENSION, from: "2026-06-19" }));
     repository.patterns = [
       { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] },
     ];
@@ -956,6 +957,78 @@ describe("BusScheduleService.resolveSmartSchedule", () => {
     expect(result!.status).not.toBe("suspended");
 
     jest.useRealTimers();
+  });
+});
+
+describe("BusScheduleService.resolveSmartSchedule before a stored suspension", () => {
+  const weekdays: BusScheduleDoc = {
+    serviceId: "campus-inja",
+    patternId: "weekday",
+    days: [1, 2, 3, 4, 5],
+    entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }],
+  };
+
+  afterEach(() => jest.useRealTimers());
+
+  it("answers suspended on the Saturday before a suspension that starts on Monday", async () => {
+    // Arrange
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-12-19T03:00:00.000Z")); // Sat 12:00 KST
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-12-21", until: "2027-02-28" }));
+    repository.patterns = [weekdays];
+
+    // Act
+    const result = await service.resolveSmartSchedule("campus-inja");
+
+    // Assert
+    expect(result).toEqual({ serviceId: "campus-inja", status: "suspended", resumeDate: "2027-03-01", from: null, selectedDate: null, days: [] });
+  });
+
+  it("shows the days inside a suspension that starts later this week as no service, by the KST date", async () => {
+    // Arrange
+    jest.useFakeTimers();
+    // 01:30 KST on Tuesday 12-15; still Monday 12-14 in UTC.
+    jest.setSystemTime(new Date("2026-12-14T16:30:00.000Z"));
+    const notices = serviceNoticesWithNotices("campus-inja", [{ style: "info", text: "서비스 공지" }]);
+    notices.services["campus-inja"] = { ...notices.services["campus-inja"]!, suspend: { from: "2026-12-16", until: "2026-12-17" } };
+    content.storeServiceNotices(notices);
+    repository.patterns = [weekdays];
+
+    // Act
+    const result = await service.resolveSmartSchedule("campus-inja");
+
+    // Assert
+    expect(result!.status).toBe("active");
+    expect(result!.selectedDate).toBe("2026-12-15");
+    expect(result!.selectedDate).not.toBe("2026-12-14");
+    expect(result!.days.map((d) => [d.date, d.display, d.schedule.length, d.notices.length, d.label])).toEqual([
+      ["2026-12-14", "schedule", 1, 1, null],
+      ["2026-12-15", "schedule", 1, 1, null],
+      ["2026-12-16", "noService", 0, 0, null],
+      ["2026-12-17", "noService", 0, 0, null],
+      ["2026-12-18", "schedule", 1, 1, null],
+    ]);
+  });
+
+  it("leaves the week view of the same week as stored", async () => {
+    // Arrange
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-12-14T16:30:00.000Z"));
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-12-16", until: "2026-12-17" }));
+    repository.patterns = [weekdays];
+    await service.resolveSmartSchedule("campus-inja");
+
+    // Act
+    const week = await service.resolveWeek("campus-inja", "2026-12-14");
+
+    // Assert
+    expect(week!.days.slice(0, 5).map((d) => [d.date, d.display, d.schedule.length])).toEqual([
+      ["2026-12-14", "schedule", 1],
+      ["2026-12-15", "schedule", 1],
+      ["2026-12-16", "schedule", 1],
+      ["2026-12-17", "schedule", 1],
+      ["2026-12-18", "schedule", 1],
+    ]);
   });
 });
 

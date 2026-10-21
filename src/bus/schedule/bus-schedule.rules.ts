@@ -88,3 +88,10 @@ export function toSuspendWindow(suspend: unknown, today: moment.Moment): Suspend
 export function firstSelectableDate(days: readonly ScheduleDay[], fromIndex: number): string | null {
   return days.slice(fromIndex).find(isSelectable)?.date ?? null;
 }
+
+// WHY: a copy, because the week cache holds the day by reference and the week view serves it as stored.
+export function toSuspendedDay(day: ScheduleDay, suspend: unknown): ScheduleDay {
+  const window = toSuspendWindow(suspend, moment.tz(day.date, DATE_FORMAT, KST_TIME_ZONE));
+  if (!window || window.invalid || !window.resumeDate) return day;
+  return { ...day, display: "noService", label: null, notices: [], schedule: [] };
+}
