@@ -1,16 +1,21 @@
 /**
  * The boarding-stop catalog validator (stops and stop sequences): one case per rule in the
  * bus-schedule-config spec, each asserting the error names its stop or
- * service. The committed catalog itself is checked against the built config in
- * src/bus/config/bus-config.service.spec.ts.
+ * service. Revision 1 of the bus-stops dataset (the fixture) passes it; the
+ * stored revision itself is checked at push and at read (unify-bus-stops D16).
+ *
+ * Ported in unify-bus-stops task 4.3 (design D15): the catalog these cases
+ * pass is revision 1 instead of src/bus/stops/schedule-stops.json, which was
+ * deleted; its root message names the dataset instead of the file.
  */
+import { busStopsFixture } from "../../../__tests__/helpers/bus/bus-stops";
 import { SERVICE_CONFIG as serviceConfig } from "../bus.constants";
 import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
-import { readStopCatalog } from "./bus-stops.config";
 import { etaOptIns, subwayStationErrors, validateStopCatalog } from "./bus-stops.rules";
+import type { ScheduleStopCatalog } from "./bus-stops.types";
 
 const SERVED_STATIONS = new Set(new SubwayStationsService().listStations().map((station) => station.id));
-const stopCatalog = readStopCatalog(SERVED_STATIONS);
+const stopCatalog = busStopsFixture() as unknown as ScheduleStopCatalog;
 
 const SERVICES = new Set(["commute-jeongja"]);
 const MEDIA = "https://media.skkuverse.com/commute/stops/jeongja-exit3";
@@ -87,7 +92,7 @@ describe("validateStopCatalog", () => {
 
   it("rejects a malformed root", () => {
     // Act & Assert
-    expect(validateStopCatalog([], SERVICES)).toEqual(["schedule-stops.json must be { stops: [], sequences: {} }"]);
+    expect(validateStopCatalog([], SERVICES)).toEqual(["bus-stops must be { stops: [], sequences: {} }"]);
   });
 
   it("rejects a duplicate stop id", () => {

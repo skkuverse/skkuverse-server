@@ -1,8 +1,4 @@
 /**
- * stopCatalogFile carries the catalog checks through a parse: the committed
- * catalog passes as it is against the served subway stations, and a broken
- * one fails with each check's own words.
- *
  * busStopsDataset is the shape of the `bus-stops` dataset (unify-bus-stops
  * design D1, D3 and D4): a push is refused on it and the read parses with it.
  * Revision 1 (the fixture) passes as it is; a copy that is not the catalog's
@@ -13,66 +9,18 @@
  * storedBusStops, the stored document as the repository reads it, needs its
  * revision and data.
  *
- * Ported from this file's stopCatalogFile cases: "passes the committed catalog
- * through as it is" → "passes revision 1 as it is"; "fails a broken catalog
- * with the check's words" → "fails a copy that is not the catalog's
- * structure"; the subway station cases → bus-stops-check.rules.spec.ts.
+ * Ported from this file's stopCatalogFile cases, which went with
+ * schedule-stops.json in unify-bus-stops task 4.3 (design D15): "passes the
+ * committed catalog through as it is" → "passes revision 1 as it is"; "fails a
+ * broken catalog with the check's words" → "fails a copy that is not the
+ * catalog's structure" here and "rejects a malformed root" in
+ * bus-stops.rules.spec.ts; the subway station cases → "Unknown station stops
+ * the boot" and "reports a catalog issue beside a station issue" of
+ * toBusStopsIssues.
  */
 import { busStopsFixture } from "../../../__tests__/helpers/bus/bus-stops";
-import { HSSC_POSITION_COUNT, SERVICE_CONFIG } from "../bus.constants";
-import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
-import { busStopsDataset, stopCatalogFile, storedBusStops } from "./bus-stops.schema";
-import { etaOptIns } from "./bus-stops.rules";
-
-const raw = require("./schedule-stops.json");
-const stationIds = new Set(new SubwayStationsService().listStations().map((station) => station.id));
-const schema = stopCatalogFile({ knownServiceIds: new Set(Object.keys(SERVICE_CONFIG)), optIns: etaOptIns(SERVICE_CONFIG), stationIds });
-
-describe("stopCatalogFile", () => {
-  it("passes the committed catalog through as it is", () => {
-    // Act & Assert
-    expect(schema.parse(raw)).toBe(raw);
-  });
-
-  it("fails a broken catalog with the check's words", () => {
-    // Act
-    const result = schema.safeParse([]);
-
-    // Assert
-    expect(result.success).toBe(false);
-    expect(result.error!.issues.map((issue) => issue.message)).toEqual(["schedule-stops.json must be { stops: [], sequences: {} }"]);
-  });
-
-  it("fails the committed catalog with jeongja-exit2 naming the station jeongja2", () => {
-    // Arrange
-    const broken = structuredClone(raw);
-    broken.stops.find((stop: { id: string }) => stop.id === "jeongja-exit2").subwayStationId = "jeongja2";
-
-    // Act
-    const result = schema.safeParse(broken);
-
-    // Assert
-    expect(result.success).toBe(false);
-    expect(result.error!.issues.map((issue) => issue.message)).toEqual(['stop jeongja-exit2: subwayStationId "jeongja2" is not a served subway station']);
-  });
-
-  it("reports the station issue beside the other catalog issues, in one parse", () => {
-    // Arrange
-    const broken = structuredClone(raw);
-    const stop = broken.stops.find((s: { id: string }) => s.id === "jeongja-exit2");
-    stop.subwayStationId = "jeongja2";
-    stop.name = {};
-
-    // Act
-    const result = schema.safeParse(broken);
-
-    // Assert
-    expect(result.error!.issues.map((issue) => issue.message)).toEqual([
-      "stop jeongja-exit2: name has no Korean text",
-      'stop jeongja-exit2: subwayStationId "jeongja2" is not a served subway station',
-    ]);
-  });
-});
+import { HSSC_POSITION_COUNT } from "../bus.constants";
+import { busStopsDataset, storedBusStops } from "./bus-stops.schema";
 
 // The fixture as untyped JSON, so a test can break its shape.
 const fixture = (): Record<string, any> => busStopsFixture();

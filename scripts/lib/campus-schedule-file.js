@@ -34,11 +34,11 @@ function entryRank(entry, routeTypes) {
 /**
  * `stopTimes` lists the time at each stop of the run, in the order the bus
  * reaches them; the stop sequence itself (names, board/alight, scheduled or
- * estimated) is the service's in src/bus/stops/schedule-stops.json, and a
- * jest test checks the two have the same length. `null` is a time nobody
- * knows (only allowed at an estimated stop — also checked by that test). The
- * first stop is where the run departs, so it must equal `time`, which every
- * client already reads.
+ * estimated) is the service's in the stored bus-stops dataset, and
+ * stopTimesMismatches (below) checks the two have the same length. `null` is a
+ * time nobody knows (only allowed at an estimated stop — also checked there).
+ * The first stop is where the run departs, so it must equal `time`, which
+ * every client already reads.
  */
 function checkStopTimes(entry, patternId) {
   const at = `${patternId} ${entry.time}`;

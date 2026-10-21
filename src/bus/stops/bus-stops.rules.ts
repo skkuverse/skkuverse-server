@@ -314,7 +314,7 @@ export function etaOptIns(serviceConfig: ServiceConfigMap): Map<string, readonly
 }
 
 export function validateStopCatalog(raw: unknown, knownServiceIds: ReadonlySet<string>, optIns: EtaOptIns = new Map()): string[] {
-  if (!isRecord(raw) || !Array.isArray(raw.stops) || !isRecord(raw.sequences)) return ["schedule-stops.json must be { stops: [], sequences: {} }"];
+  if (!isRecord(raw) || !Array.isArray(raw.stops) || !isRecord(raw.sequences)) return ["bus-stops must be { stops: [], sequences: {} }"];
   const stopIds = new Set<string>();
   const errors = stopsErrors(raw.stops, stopIds);
   const context = { knownServiceIds, stopIds, walks: walkDirections(raw.stops) };

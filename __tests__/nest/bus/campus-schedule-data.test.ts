@@ -198,21 +198,6 @@ describe("every committed timetable file", () => {
       }
     });
 
-    it("gives every run one stop time per sequence stop, null only where the stop is estimated", () => {
-      // Act & Assert
-      for (const doc of docs) {
-        const seq = service(doc.serviceId)!.stopSequences!;
-        for (const e of doc.entries) {
-          const stops = seq[e.routeType]!;
-          const at = `${doc.serviceId} ${e.routeType} ${e.time}`;
-          expect(`${at} ${e.stopTimes?.length}`).toBe(`${at} ${stops.length}`);
-          e.stopTimes!.forEach((t, k) => {
-            if (t === null) expect(`${at} #${k} ${stops[k]!.timing}`).toBe(`${at} #${k} estimated`);
-          });
-        }
-      }
-    });
-
     it("keeps every sequence stop note to eight characters, for the timetable's notes column", () => {
       // Act & Assert
       for (const doc of docs) {
