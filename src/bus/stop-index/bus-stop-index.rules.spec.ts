@@ -6,13 +6,15 @@
  * stop, each HSSC position and sequence stop maps to its entry, and the routes follow the order of `/bus/config`.
  *
  * Built over revision 1 of `bus-stops` and the registry production stored on 2026-10-17
- * (__tests__/helpers/bus/), with a copy changed where a case needs other data.
+ * (__tests__/helpers/bus/), with a copy changed where a case needs other data. A pole's stop id is the bus root's
+ * `toPoleStopId`, which `/bus/config` serves too (wave 4); ported (old → new): `toTopisStopId` "prefixes the ARS
+ * number" → src/bus/bus.rules.spec.ts `toPoleStopId`.
  */
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from "../../../__tests__/helpers/bus/bus-stops";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import type { BusStopsSnapshot } from "../stops/bus-stops.types";
-import { toPoleArsId, toStopIndex, toTopisStopId } from "./bus-stop-index.rules";
+import { toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
 
 type FixtureStop = { id: string; arsIds?: string[] };
 
@@ -30,13 +32,6 @@ async function routesOf(edit: (repository: ReturnType<typeof storedBusRegistryRe
 
 const versionOf = (routes: RegistryRoute[], routeId: string) => routes.find((route) => route.id === routeId)!.stationsVersion;
 const routesAt = (index: ReturnType<typeof toStopIndex>, stopId: string) => index.stopById.get(stopId)?.routes;
-
-describe("toTopisStopId", () => {
-  it("prefixes the ARS number", () => {
-    // Act & Assert
-    expect(toTopisStopId("01592")).toBe("seoul-01592");
-  });
-});
 
 describe("toPoleArsId", () => {
   it.each([

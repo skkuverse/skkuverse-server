@@ -1,4 +1,4 @@
-import { SERVICE_CONFIG } from "./bus.constants";
+import { ARS_ID_PATTERN, SERVICE_CONFIG, TOPIS_STOP_ID_PREFIX } from "./bus.constants";
 import type { ServiceConfigEntry } from "./bus.types";
 
 // WHY: own keys only, so a service id that names an Object.prototype member (`toString`) is unknown.
@@ -33,4 +33,15 @@ export function deepFreeze<T>(value: T, seen: WeakSet<object> = new WeakSet()): 
   Object.freeze(value);
   for (const key of Object.getOwnPropertyNames(value)) deepFreeze((value as Record<string, unknown>)[key], seen);
   return value;
+}
+
+// QUIRK(topis): a virtual stop carries the ARS number 0 or none, and no pole stands there.
+function isPoleArsId(arsId: string | null): arsId is string {
+  return arsId !== null && ARS_ID_PATTERN.test(arsId) && Number(arsId) !== 0;
+}
+
+/** WHY: the stop a TOPIS pole is: the local stop aliasing its ARS number, else `seoul-<arsId>`; a virtual stop is none. */
+export function toPoleStopId(arsId: string | null, stopIdByArsId: ReadonlyMap<string, string>): string | null {
+  if (!isPoleArsId(arsId)) return null;
+  return stopIdByArsId.get(arsId) ?? `${TOPIS_STOP_ID_PREFIX}${arsId}`;
 }

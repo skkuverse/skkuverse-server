@@ -1,9 +1,14 @@
 /**
  * The bus module's shared rules: a parsed config is frozen deep so no request
- * can change it, and a service id resolves only to SERVICE_CONFIG's own keys.
+ * can change it, a service id resolves only to SERVICE_CONFIG's own keys, and
+ * a TOPIS pole's stop id is the local stop aliasing it, else `seoul-<arsId>`,
+ * and none for a virtual stop (unify-bus-stops design D1, D2 and D12), which
+ * the stop index and the realtime stations of `/bus/config` both serve. Ported
+ * (old → new): `toTopisStopId` "prefixes the ARS number" of
+ * src/bus/stop-index/bus-stop-index.rules.spec.ts is the first case below.
  * The TOPIS key's format check is src/infra/required-env.spec.ts's.
  */
-import { deepFreeze, serviceConfigOf } from "./bus.rules";
+import { deepFreeze, serviceConfigOf, toPoleStopId } from "./bus.rules";
 
 describe("deepFreeze", () => {
   it("freezes every nested object and array, and returns the same value", () => {
@@ -87,5 +92,40 @@ describe("serviceConfigOf for the commute services", () => {
     // Assert
     expect(new Set(entries).size).toBe(COMMUTE_IDS.length);
     expect(new Set(entries.map((entry) => entry?.eta)).size).toBe(COMMUTE_IDS.length);
+  });
+});
+
+describe("toPoleStopId", () => {
+  const NO_ALIASES = new Map<string, string>();
+
+  it.each([
+    ["01592", "seoul-01592"],
+    ["00001", "seoul-00001"],
+    ["0", null],
+    ["00000", null],
+    ["", null],
+    ["1592", null],
+    ["015920", null],
+    [null, null],
+  ])("gives the ARS number %s the stop id %s", (arsId, stopId) => {
+    // Act & Assert
+    expect(toPoleStopId(arsId, NO_ALIASES)).toBe(stopId);
+  });
+
+  it("gives an aliased pole its local stop's id, and every other pole its own", () => {
+    // Arrange
+    const aliases = new Map([["01618", "hssc-bus-lot"]]);
+
+    // Act & Assert
+    expect(toPoleStopId("01618", aliases)).toBe("hssc-bus-lot");
+    expect(toPoleStopId("01616", aliases)).toBe("seoul-01616");
+  });
+
+  it("gives a virtual stop no id even when an alias names it", () => {
+    // Arrange
+    const aliases = new Map([["00000", "hssc-bus-lot"]]);
+
+    // Act & Assert
+    expect(toPoleStopId("00000", aliases)).toBeNull();
   });
 });

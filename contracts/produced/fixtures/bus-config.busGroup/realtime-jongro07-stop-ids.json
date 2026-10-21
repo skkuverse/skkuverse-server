@@ -1,0 +1,48 @@
+{
+  "_about": "GET /bus/config/jongro07 captured from production 2026-10-20 (Accept-Language ko, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to the first two, each with the stopId that wave 4 of unify-bus-stops appends (hand-added: production served no stopId at the capture)",
+  "data": {
+    "id": "jongro07",
+    "screenType": "realtime",
+    "label": "종로 07",
+    "visibility": {
+      "type": "always"
+    },
+    "card": {
+      "themeColor": "4CAF50",
+      "iconType": "village",
+      "busTypeText": "마을",
+      "subtitle": "성균관대운동장 ↔ 600주년기념관"
+    },
+    "screen": {
+      "dataEndpoint": "/bus/realtime/data/jongro07",
+      "refreshInterval": 25,
+      "lastStationIndex": 21,
+      "stations": [
+        {
+          "index": 0,
+          "name": "성균관대운동장",
+          "subtitle": null,
+          "stationNumber": "01617",
+          "isFirstStation": true,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "transferLines": [],
+          "stopId": "seoul-01617"
+        },
+        {
+          "index": 1,
+          "name": "학생회관",
+          "subtitle": null,
+          "stationNumber": "01618",
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "transferLines": [],
+          "stopId": "seoul-01618"
+        }
+      ],
+      "features": [],
+      "stationsVersion": "0346768f2b776f45"
+    }
+  }
+}

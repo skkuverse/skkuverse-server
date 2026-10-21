@@ -35,7 +35,9 @@ Every stop of a sequence or the HSSC line, and every Jongno pole, has a stop pag
 | A shuttle entry's next runs | The stored timetable and estimates, through the smart schedule; boarding and drop-off stops alike |
 | An HSSC entry's buses | `bus_cache`, as the HSSC realtime route serves them |
 
-A push that changes a stop, a sequence or an alias reaches its page within a minute. A slug renamed or removed answers `404` on its page, so never rename a served one: the app may hold it.
+Every realtime station of `/bus/config` names its stop page as `stopId`, its last field: an HSSC position its `stopId` here, a Jongno station `seoul-<ARS number>` or the local stop aliasing it, and a position with none (the two non-stop 혜화동로터리 rows) no key ([bus-stops-api.md](../reference/bus-stops-api.md#stop-ids-on-the-realtime-stations)).
+
+A push that changes a stop, a sequence or an alias reaches its page within a minute, and an alias the `stopId` of its pole's stations in each Jongro group, whose ETag changes with it. A slug renamed or removed answers `404` on its page, so never rename a served one: the app may hold it.
 
 | Part | Rules a push checks |
 | --- | --- |
@@ -94,6 +96,22 @@ A sequence and its timetable are written by two tools, and each refuses a length
    npm run data -- push bus-stops --prod --note "jeongja-exit3 photo"
    npm run data -- check bus-stops --prod
    ```
+
+### Add an alias
+
+Add one only for a pair confirmed on site to be one pole: two stops however close stay two pages until then (none is confirmed today; unify-bus-stops design D2 lists the candidates).
+
+1. Pull `_dev` and add the pole's ARS number to the local stop's `arsIds`:
+
+   ```json
+   { "id": "hssc-bus-lot", "name": { "ko": "학생회관 버스 주차장" }, "arsIds": ["01618"] }
+   ```
+
+2. Push to `_dev` with `--dry-run` first, then for real, and `check bus-stops`, as above.
+3. Within a minute, `/bus/stops/seoul-01618/arrivals` answers the page of `hssc-bus-lot` with both its shuttle runs and 종로07, `/bus/config/jongro07` serves `stopId: "hssc-bus-lot"` on the station with `stationNumber` `01618` under a new ETag, and no `bus.stop_index.alias_unmatched` warning names the number (one does when no stored station has it).
+4. Make the same edit in production, push with `--prod` and `check bus-stops --prod`.
+
+Removing an alias is the same edit in reverse: the pole's own page `seoul-<ARS number>` serves again, and the stations name it.
 
 ### Change a sequence's length
 

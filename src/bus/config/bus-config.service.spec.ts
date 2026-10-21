@@ -7,6 +7,14 @@
  * changing what installed apps receive — say so in the commit. The `campus`
  * group left it when it gained v2 fields; campus-shuttle.test.ts checks its v1
  * fields against fixtures/bus-config-campus-v1.json instead.
+ *
+ * From wave 4 of unify-bus-stops (design D12) each realtime station carries
+ * its `stopId`, on purpose: the HSSC and Jongro groups pinned before it
+ * (fixtures/bus-config-before-registry.json) are served with exactly their
+ * stations' stop ids appended (__tests__/helpers/bus/station-stop-ids.ts) and
+ * the matching md5 ETag, and with every `stopId` removed they are the pinned
+ * JSON. The Jongro groups read `bus-stops` for their stop ids, so they answer
+ * its 503 while it was never read.
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
@@ -22,7 +30,9 @@ import type { FakeBusRegistryRepository } from "../../../__tests__/helpers/fakes
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { BusRegistryRepository } from "../registry/bus-registry.repository";
 import { BusRegistryService } from "../registry/bus-registry.service";
-import { storedBusStopsService } from "../../../__tests__/helpers/bus/bus-stops";
+import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from "../../../__tests__/helpers/bus/bus-stops";
+import { HSSC_STOP_IDS, md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../../__tests__/helpers/bus/station-stop-ids";
+import { FakeBusStopsRepository } from "../../../__tests__/helpers/fakes/bus/bus-stops.repository.fake";
 import { BusConfigService } from "./bus-config.service";
 
 const FIXTURE: Record<string, { json: string; etag: string }> = JSON.parse(
@@ -260,7 +270,7 @@ describe("BusConfigService and the registry", () => {
     fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/bus/fixtures/bus-config-before-registry.json"), "utf8"),
   );
 
-  it.each(["hssc:ko", "campus:ko", "commute:ko", "hssc:en", "campus:en", "commute:en"])("keeps %s byte for byte", async (key) => {
+  it.each(["campus:ko", "commute:ko", "campus:en", "commute:en"])("keeps %s byte for byte", async (key) => {
     // Arrange
     const [id, lang] = key.split(":") as [string, SupportedLang];
 
@@ -269,10 +279,26 @@ describe("BusConfigService and the registry", () => {
     expect(await service.computeGroupEtag(id, lang)).toBe(BEFORE[key]!.etag);
   });
 
-  it.each(["jongro02:ko", "jongro07:ko", "jongro08:en"])("serves %s as before, with only stationsVersion appended to its screen", async (key) => {
+  it.each(["hssc:ko", "hssc:en"])("serves %s as before, with only its stations' stop ids appended", async (key) => {
+    // Arrange
+    const [id, lang] = key.split(":") as [string, SupportedLang];
+    const expected = withStationStopIds(JSON.parse(BEFORE[key]!.json) as { id: string });
+
+    // Act
+    const group = await service.getGroupById(id, lang);
+
+    // Assert
+    expect(JSON.stringify(group)).toBe(JSON.stringify(expected));
+    expect(JSON.stringify(withoutStationStopIds(group))).toBe(BEFORE[key]!.json);
+    expect(await service.computeGroupEtag(id, lang)).toBe(md5EtagOf(expected));
+    expect(await service.computeGroupEtag(id, lang)).not.toBe(BEFORE[key]!.etag);
+  });
+
+  it.each(["jongro02:ko", "jongro07:ko", "jongro08:en"])("serves %s as before, with only stationsVersion appended to its screen and stop ids to its stations", async (key) => {
     // Arrange
     const [id, lang] = key.split(":") as [string, SupportedLang];
     const routeId = id;
+    const pinned = JSON.parse(BEFORE[key]!.json) as { id: string };
 
     // Act
     const group = (await service.getGroupById(id, lang)) as { screen: Record<string, unknown> };
@@ -281,7 +307,8 @@ describe("BusConfigService and the registry", () => {
     const { stationsVersion, ...screen } = group.screen;
     expect(stationsVersion).toBe(registryRepository.routes.get(routeId)!.stationsVersion);
     expect(Object.keys(group.screen).at(-1)).toBe("stationsVersion");
-    expect(JSON.stringify({ ...group, screen })).toBe(BEFORE[key]!.json);
+    expect(JSON.stringify({ ...group, screen })).toBe(JSON.stringify(withStationStopIds(pinned)));
+    expect(JSON.stringify(withoutStationStopIds({ ...group, screen }))).toBe(BEFORE[key]!.json);
   });
 
   it("lists a route's stored stations in their stored order", async () => {
@@ -487,5 +514,74 @@ describe("BusConfigService stop maps per group", () => {
     const served = groups.flatMap((group) => ((group.screen as { stops?: Stop[] }).stops ?? []).map((stop) => ({ group: group.id, stop })));
     expect(served.filter(({ group }) => group === "commute").length).toBeGreaterThan(0);
     expect(new Set(served.filter(({ stop }) => "map" in stop).map(({ group }) => group))).toEqual(new Set(["campus"]));
+  });
+});
+
+// WHY: from wave 4 a realtime station names its stop (unify-bus-stops D12), so the Jongro groups read bus-stops for
+// their aliases and answer its 503 while it was never read (spec bus-stops "Jongro groups need the stops from wave 4").
+describe("BusConfigService stop ids on realtime stations", () => {
+  type Station = { index: number; stationNumber: string | null; stopId?: string };
+  const stationsOf = (group: unknown) => (group as { screen: { stations: Station[] } }).screen.stations;
+
+  async function serviceOver(stops: FakeBusStopsRepository): Promise<BusConfigService> {
+    const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
+    return new BusConfigService(storedBusStopsService(stops), registry, storedRouteAttributesService(attributesRepository, clock));
+  }
+
+  function aliasing(arsId: string, stopId: string): Record<string, unknown> {
+    const data = busStopsFixture() as { stops: Array<{ id: string; arsIds?: string[] }> };
+    data.stops.find((stop) => stop.id === stopId)!.arsIds = [arsId];
+    return data;
+  }
+
+  it.each(["jongro02", "jongro07", "jongro08"])("Jongro group from wave 4: refuses %s with BUS_STOPS_UNAVAILABLE while bus-stops was never read", async (id) => {
+    // Arrange
+    const fresh = await serviceOver(new FakeBusStopsRepository());
+
+    // Act & Assert
+    await expect(fresh.getGroupById(id, "ko")).rejects.toMatchObject({ code: "BUS_STOPS_UNAVAILABLE", httpStatus: 503 });
+    await expect(fresh.computeGroupEtag(id, "ko")).rejects.toMatchObject({ code: "BUS_STOPS_UNAVAILABLE", httpStatus: 503 });
+  });
+
+  it("serves fasttrack and answers an unknown id with none while bus-stops was never read", async () => {
+    // Arrange
+    const fresh = await serviceOver(new FakeBusStopsRepository());
+
+    // Act & Assert
+    expect((await fresh.getGroupById("fasttrack", "ko"))?.id).toBe("fasttrack");
+    expect(await fresh.getGroupById("jongro13", "ko")).toBeNull();
+  });
+
+  it("Non-stop HSSC position: gives the HSSC stations their stored stop ids and indexes 5 and 7 no key", async () => {
+    // Act
+    const stations = stationsOf(await service.getGroupById("hssc", "en"));
+
+    // Assert
+    expect(stations.map((station) => station.stopId ?? null)).toEqual(HSSC_STOP_IDS);
+    expect(stations[5]).not.toHaveProperty("stopId");
+    expect(stations[7]).not.toHaveProperty("stopId");
+  });
+
+  it("gives an aliased pole its owner in the group and the all-groups body, and changes only the ETags that serve it", async () => {
+    // Arrange
+    const stops = storedBusStopsRepository();
+    const before = await serviceOver(stops);
+    const etags = { config: await before.computeEtag("ko"), jongro07: await before.computeGroupEtag("jongro07", "ko"), jongro08: await before.computeGroupEtag("jongro08", "ko"), hssc: await before.computeGroupEtag("hssc", "ko") };
+    stops.storeStops(aliasing("01618", "hssc-bus-lot"));
+    const after = await serviceOver(stops);
+
+    // Act
+    const group = stationsOf(await after.getGroupById("jongro07", "ko"));
+    const all = stationsOf((await after.getBusGroups("ko")).find((candidate) => candidate.id === "jongro07"));
+
+    // Assert
+    for (const stations of [group, all]) {
+      expect(stations.find((station) => station.stationNumber === "01618")!.stopId).toBe("hssc-bus-lot");
+      expect(stations.find((station) => station.stationNumber === "01616")!.stopId).toBe("seoul-01616");
+    }
+    expect(await after.computeEtag("ko")).not.toBe(etags.config);
+    expect(await after.computeGroupEtag("jongro07", "ko")).not.toBe(etags.jongro07);
+    expect(await after.computeGroupEtag("jongro08", "ko")).toBe(etags.jongro08);
+    expect(await after.computeGroupEtag("hssc", "ko")).toBe(etags.hssc);
   });
 });
