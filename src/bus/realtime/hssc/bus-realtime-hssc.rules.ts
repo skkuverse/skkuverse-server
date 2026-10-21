@@ -48,3 +48,7 @@ export function toFeedEventTiming(item: HsscApiBus): HsscFeedEventTiming | null 
   if (!SEQ_PATTERN.test(item.seq) || !getDate.isValid()) return null;
   return { seq: parseInt(item.seq, 10), getDate: getDate.toDate() };
 }
+
+export function isUnparsedFeed(items: readonly HsscApiBus[]): boolean {
+  return items.length > 0 && items.every((item) => toFeedEventTiming(item) === null);
+}

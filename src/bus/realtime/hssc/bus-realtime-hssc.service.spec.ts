@@ -4,8 +4,12 @@
  * the circular → linear sequence math are asserted exactly, and every failure
  * rejects so the poller registry counts it, leaving the served list as it was.
  * Each tick also appends the feed's events to the event log once each, every
- * row the feed sends including the ones too stale to serve, after bus_cache.
+ * row the feed sends including the ones too stale to serve, after bus_cache,
+ * and warns once when the feed's rows stop parsing, a format change.
  */
+const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+jest.mock("../../../infra/logger", () => mockLogger);
+
 import "moment/locale/ko";
 import moment from "moment-timezone";
 import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/bus-cache.repository.fake";
@@ -13,6 +17,7 @@ import { FakeBusRealtimeHsscClient } from "../../../../__tests__/helpers/fakes/b
 import { FakeBusRealtimeHsscRepository } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.repository.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import { hsscBusDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
+import { logText } from "../../../../__tests__/helpers/log-text";
 import type { Clock } from "../../../infra/clock";
 import type { BusCacheRepository } from "../../cache/bus-cache.repository";
 import { BusCacheService } from "../../cache/bus-cache.service";
@@ -411,5 +416,89 @@ describe("BusRealtimeHsscService.refresh feed event log", () => {
     // Act & Assert
     await expect(service.refresh()).rejects.toThrow("Network error");
     expect(feedLog.batches).toEqual([]);
+  });
+});
+
+describe("BusRealtimeHsscService.refresh feed format change", () => {
+  const PARSED = { line_no: "32149", inout: "LEFT", stop_no: "284258", seq: "1", stop_name: "혜화동로터리", get_date: "2026-10-20 오전 9:59:30" };
+  const UNPARSED = { ...PARSED, get_date: "2026-10-20 09:59:30" };
+  const warnings = () => mockLogger.warn.mock.calls.filter(([fields]) => fields.event === "bus.hssc.feed_events_unparsed");
+  const recoveries = () => mockLogger.info.mock.calls.filter(([fields]) => fields.event === "bus.hssc.feed_events_parsed");
+
+  beforeEach(() => {
+    mockLogger.warn.mockClear();
+    mockLogger.info.mockClear();
+  });
+
+  it("warns once, with a raw get_date, while every row of every tick fails to parse", async () => {
+    // Arrange
+    client.buses = [UNPARSED, { ...UNPARSED, line_no: "32150" }];
+
+    // Act
+    await service.refresh();
+    await service.refresh();
+    await service.refresh();
+
+    // Assert
+    expect(warnings()).toHaveLength(1);
+    expect(logText(warnings()[0])).toContain("2026-10-20 09:59:30");
+  });
+
+  it("does not warn while one row of the tick parses", async () => {
+    // Arrange
+    client.buses = [UNPARSED, PARSED];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(warnings()).toEqual([]);
+  });
+
+  it("does not warn for a tick with no row", async () => {
+    // Arrange
+    client.buses = [];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(warnings()).toEqual([]);
+    expect(recoveries()).toEqual([]);
+  });
+
+  it("keeps the warning through a night with no row, so the format change is not reported twice", async () => {
+    // Arrange
+    client.buses = [UNPARSED];
+    await service.refresh();
+    client.buses = [];
+    await service.refresh();
+    client.buses = [UNPARSED];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(warnings()).toHaveLength(1);
+    expect(recoveries()).toEqual([]);
+  });
+
+  it("logs the recovery once rows parse again, and warns again on the next change", async () => {
+    // Arrange
+    client.buses = [UNPARSED];
+    await service.refresh();
+    client.buses = [];
+    await service.refresh();
+    client.buses = [PARSED];
+    await service.refresh();
+    await service.refresh();
+    client.buses = [UNPARSED];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(recoveries()).toHaveLength(1);
+    expect(warnings()).toHaveLength(2);
   });
 });
