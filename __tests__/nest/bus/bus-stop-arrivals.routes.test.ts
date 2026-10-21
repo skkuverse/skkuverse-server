@@ -194,9 +194,9 @@ describe("GET /bus/stops/:stopId/arrivals: the stop block", () => {
     expect(res.headers["cache-control"]).toBe("no-store");
     expect(res.body.meta).toEqual({ lang: "ko" });
     expect(res.body.data.stop).toEqual({ id: "seoul-01592", name: "혜화역1번출구", coords: { lat: 37.5834729904, lng: 127.0017632862 }, arsIds: ["01592"] });
-    expect(routesOf(res.body).map((route) => [route.groupId, route.stationIndex, route.towards])).toEqual([
-      ["jongro07", 16, "혜화동로터리"],
-      ["jongro08", 22, "혜화동로터리"],
+    expect(routesOf(res.body).map((route) => [route.groupId, route.kind, route.stationIndex, route.towards])).toEqual([
+      ["jongro07", "arrivals", 16, "혜화동로터리"],
+      ["jongro08", "arrivals", 22, "혜화동로터리"],
     ]);
     expectWire(busStopArrivals, res.body.data);
   });
@@ -279,10 +279,10 @@ describe("GET /bus/stops/:stopId/arrivals: routes in configuration order", () =>
     // Assert
     expect(byPole.status).toBe(200);
     expect(byPole.body.data.stop).toMatchObject({ id: "hssc-bus-lot", arsIds: ["01618"] });
-    expect(routesOf(byPole.body).map((route) => [route.groupId, route.serviceId ?? null, route.routeType ?? null])).toEqual([
-      ["campus", "campus-inja", "regular"],
-      ["campus", "campus-inja", "hakbu"],
-      ["jongro07", null, null],
+    expect(routesOf(byPole.body).map((route) => [route.groupId, route.kind, route.serviceId ?? null, route.routeType ?? null])).toEqual([
+      ["campus", "schedule", "campus-inja", "regular"],
+      ["campus", "schedule", "campus-inja", "hakbu"],
+      ["jongro07", "arrivals", null, null],
     ]);
     expect(bySlug.body.data).toEqual(byPole.body.data);
     expectWire(busStopArrivals, byPole.body.data);
@@ -333,7 +333,7 @@ describe("GET /bus/stops/:stopId/arrivals: Jongno entries", () => {
     const entry = routesOf(res.body).find((route) => route.groupId === "jongro07")!;
     expect(entry).toEqual({
       groupId: "jongro07",
-      kind: "realtime",
+      kind: "arrivals",
       label: "종로 07",
       stationIndex: 16,
       towards: "혜화동로터리",
@@ -391,7 +391,7 @@ describe("GET /bus/stops/:stopId/arrivals: the HSSC entry", () => {
     const res = await request(server).get("/bus/stops/hssc-hyehwa-exit1/arrivals");
 
     // Assert
-    expect(routesOf(res.body)).toEqual([{ groupId: "hssc", kind: "realtime", label: "인사캠 셔틀버스", stationIndex: 6, approaching: [{ stopsAway: 2 }, { stopsAway: 5 }] }]);
+    expect(routesOf(res.body)).toEqual([{ groupId: "hssc", kind: "approaching", label: "인사캠 셔틀버스", stationIndex: 6, approaching: [{ stopsAway: 2 }, { stopsAway: 5 }] }]);
     expectWire(busStopArrivals, res.body.data);
   });
 

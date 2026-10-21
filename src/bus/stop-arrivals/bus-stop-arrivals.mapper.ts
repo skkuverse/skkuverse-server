@@ -19,11 +19,11 @@ export function toStopBlock(stop: FoundStop, record: ServedStop | null): StopBlo
 export function toJongroEntry({ groupId, stationIndex, towards }: JongroStopRoute, { stationEtas, stationsVersion }: GroupView, label: string): JongroEntry {
   if (stationsVersion === undefined) throw new Error(`bus: the realtime view of ${groupId} has no stations version`);
   const arrivals = stationEtas.filter((eta) => eta.stationIndex === stationIndex).flatMap((eta) => eta.arrivals);
-  return { groupId, kind: "realtime", label, stationIndex, towards, stationsVersion, arrivals };
+  return { groupId, kind: "arrivals", label, stationIndex, towards, stationsVersion, arrivals };
 }
 
 export function toHsscEntry({ groupId, stationIndex }: HsscStopRoute, label: string, approaching: Approaching[]): HsscEntry {
-  return { groupId, kind: "realtime", label, stationIndex, approaching };
+  return { groupId, kind: "approaching", label, stationIndex, approaching };
 }
 
 export function toShuttleEntry({ groupId, serviceId, routeType, action }: ShuttleStopRoute, label: string, { status, next }: Pick<ShuttleEntry, "status" | "next">): ShuttleEntry {

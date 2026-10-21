@@ -47,12 +47,12 @@ A pole a local stop aliases (`arsIds` in `bus-stops`, pushed only after an on-si
     "stop": { "id": "seoul-01592", "name": "혜화역1번출구", "coords": { "lat": 37.5834729904, "lng": 127.0017632862 }, "arsIds": ["01592"] },
     "routes": [
       {
-        "groupId": "jongro07", "kind": "realtime", "label": "종로 07", "stationIndex": 16, "towards": "혜화동로터리", "stationsVersion": "0346768f2b776f45",
+        "groupId": "jongro07", "kind": "arrivals", "label": "종로 07", "stationIndex": 16, "towards": "혜화동로터리", "stationsVersion": "0346768f2b776f45",
         "arrivals": [
           { "minutes": 2, "stopsAway": 1, "state": "running", "isLastBus": false, "carNumber": "5538", "crowding": "relaxed", "passengerCount": 7, "message": "2분19초후[1번째 전]" }
         ]
       },
-      { "groupId": "jongro08", "kind": "realtime", "label": "종로 08", "stationIndex": 22, "towards": "혜화동로터리", "stationsVersion": "52e82cc449046288", "arrivals": [] }
+      { "groupId": "jongro08", "kind": "arrivals", "label": "종로 08", "stationIndex": 22, "towards": "혜화동로터리", "stationsVersion": "52e82cc449046288", "arrivals": [] }
     ]
   }
 }
@@ -75,12 +75,12 @@ A local stop's block is its `/bus/config` record (`screen.stops[]`) without `map
 
 ### Routes
 
-`routes` lists one entry per served route at the stop, in the order `/bus/config` lists its groups (`hssc`, `campus`, `commute`, then each Jongno route), then a group's services and route types. Only routes the server serves appear; no TOPIS route outside 종로02, 07 and 08 is listed. Both realtime kinds share `kind: "realtime"`: an entry with `arrivals` is a Jongno route's and one with `approaching` the HSSC line's. A client skips an entry whose `kind` or shape it does not know.
+`routes` lists one entry per served route at the stop, in the order `/bus/config` lists its groups (`hssc`, `campus`, `commute`, then each Jongno route), then a group's services and route types. Only routes the server serves appear; no TOPIS route outside 종로02, 07 and 08 is listed. Each entry's `kind` names what it serves and fixes its fields, as a realtime bus's `kind` does: `arrivals` (a Jongno route), `approaching` (the HSSC line) or `schedule` (a shuttle). It is an extensible enum: a client switches on `kind` alone and skips an entry of a kind it does not know.
 
 | Entry | Fields |
 | --- | --- |
-| Jongno, `kind: "realtime"` with `arrivals` | `groupId` (`jongro07`), `label`, `stationIndex` (its index in the group's `/bus/config` stations), `towards` (the next station's name, `null` at the last index), `stationsVersion` (as the realtime route serves it) and `arrivals`: exactly that index's `stationEtas[].arrivals` in `/bus/realtime/data/:groupId` for the same stored state, a waiting vehicle's arrivals included |
-| HSSC, `kind: "realtime"` with `approaching` | `groupId: "hssc"`, `label`, `stationIndex` and `approaching`: one `{ stopsAway }` per bus at or before the stop on the line, nearest first, `0` for a bus at the stop; a bus past the stop is left out. The HSSC API gives positions only, so no minutes are served |
+| Jongno, `kind: "arrivals"` | `groupId` (`jongro07`), `label`, `stationIndex` (its index in the group's `/bus/config` stations), `towards` (the next station's name, `null` at the last index), `stationsVersion` (as the realtime route serves it) and `arrivals`: exactly that index's `stationEtas[].arrivals` in `/bus/realtime/data/:groupId` for the same stored state, a waiting vehicle's arrivals included |
+| HSSC, `kind: "approaching"` | `groupId: "hssc"`, `label`, `stationIndex` and `approaching`: one `{ stopsAway }` per bus at or before the stop on the line, nearest first, `0` for a bus at the stop; a bus past the stop is left out. The HSSC API gives positions only, so no minutes are served |
 | Shuttle, `kind: "schedule"` | `groupId` (`campus`, `commute`), `label` (the service's label), `serviceId`, `routeType`, `action` (`board` or `alight`), `status` (the smart schedule's: `active`, `suspended` or `noData`) and `next` |
 
 `next` holds up to three runs, empty unless `status` is `active`:

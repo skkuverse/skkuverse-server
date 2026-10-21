@@ -68,7 +68,7 @@ describe("toJongroEntry", () => {
     // Act & Assert
     expect(toJongroEntry({ kind: "jongro", groupId: "jongro07", stationIndex: 16, towards: "혜화동로터리", stationsVersion: "abc" }, view, "종로 07")).toEqual({
       groupId: "jongro07",
-      kind: "realtime",
+      kind: "arrivals",
       label: "종로 07",
       stationIndex: 16,
       towards: "혜화동로터리",
@@ -92,7 +92,7 @@ describe("toHsscEntry", () => {
     // Act & Assert
     expect(toHsscEntry({ kind: "hssc", groupId: "hssc", stationIndex: 6 }, "인사캠 셔틀버스", [{ stopsAway: 2 }])).toEqual({
       groupId: "hssc",
-      kind: "realtime",
+      kind: "approaching",
       label: "인사캠 셔틀버스",
       stationIndex: 6,
       approaching: [{ stopsAway: 2 }],

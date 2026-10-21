@@ -65,7 +65,7 @@
     "routes": {
       "type": "array",
       "items": {
-        "anyOf": [
+        "oneOf": [
           {
             "type": "object",
             "properties": {
@@ -74,7 +74,7 @@
               },
               "kind": {
                 "type": "string",
-                "const": "realtime"
+                "const": "arrivals"
               },
               "label": {
                 "type": "string"
@@ -204,7 +204,7 @@
               },
               "kind": {
                 "type": "string",
-                "const": "realtime"
+                "const": "approaching"
               },
               "label": {
                 "type": "string"
