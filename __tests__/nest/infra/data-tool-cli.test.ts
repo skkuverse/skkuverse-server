@@ -587,6 +587,53 @@ describe("npm run data bus-stops against the stored timetables", () => {
     expect(await client.db(`${BUS_CAMPUS}_dev`).collection("bus_schedules").find({}, { projection: { _id: 0 } }).toArray()).toEqual(timetableDocs(commuteTimetable()));
   });
 
+  it("Rollback of a length change: refuses the three-stop revision against the stored four-time entries, and rolls back --against the file that lists three", async () => {
+    // Arrange
+    await seed(`${BUS_CAMPUS}_dev`, withFourthDownTime());
+    await store.create(devDb(), "bus-stops", busStopsFixture(), { by: OPERATOR, now: NOW });
+    const fourStops = busStopsFixture() as Record<string, any>;
+    fourStops.sequences["commute-gangnam-yangjae"].down.push({ stopId: "jamsil-exit5", action: "alight", timing: "estimated" });
+    await store.push(devDb(), "bus-stops", fourStops, { baseRevision: 1, by: OPERATOR, now: NOW });
+    const previous = path.join(root, "commute-schedule.json");
+    fs.writeFileSync(previous, JSON.stringify(commuteTimetable()));
+
+    // Act
+    const alone = await data(["rollback", "bus-stops", "1"], { env: env() });
+    const against = await data(["rollback", "bus-stops", "1", "--against", previous], { env: env() });
+
+    // Assert
+    expect(alone.code).toBe(1);
+    expect(alone.err).toContain("commute-gangnam-yangjae down 17:00 (pilot): 4 stop times for a sequence of 3 stops");
+    expect(against.code).toBe(0);
+    expect(against.out).toContain(`next: apply the file to the same target at once: npm run schedule -- --file ${previous}`);
+    expect((await store.readDataset(devDb(), "bus-stops"))?.revision).toBe(3);
+  });
+
+  it("names --create in the command when the file holds a pattern the target does not store, and says a dry run wrote nothing", async () => {
+    // Arrange
+    const raw = commuteTimetable();
+    raw.patterns = raw.patterns.map((pattern: { patternId: string }) => ({ ...pattern, patternId: "winter" }));
+    await seed(`${BUS_CAMPUS}_dev`, commuteTimetable());
+    await store.create(devDb(), "bus-stops", busStopsFixture(), { by: OPERATOR, now: NOW });
+    await data(["pull", "bus-stops"], { env: env() });
+    const working = path.join(root, ".data", "dev", "bus-stops.json");
+    const pulled = JSON.parse(fs.readFileSync(working, "utf8"));
+    pulled.data.stops[0].detail = { ko: "파리바게뜨 앞" };
+    fs.writeFileSync(working, JSON.stringify(pulled));
+    const next = path.join(root, "winter.json");
+    fs.writeFileSync(next, JSON.stringify(raw));
+
+    // Act
+    const dryRun = await data(["push", "bus-stops", "--against", next, "--dry-run"], { env: env() });
+    const pushed = await data(["push", "bus-stops", "--against", next], { env: env() });
+
+    // Assert
+    expect(dryRun.code).toBe(0);
+    expect(dryRun.out).toContain(`[dry run] a push would be followed at once by: npm run schedule -- --file ${next} --create`);
+    expect(dryRun.out).not.toContain("next: apply");
+    expect(pushed.out).toContain(`next: apply the file to the same target at once: npm run schedule -- --file ${next} --create`);
+  });
+
   it("refuses --against outside a push, or for a dataset that reads no timetable, as a usage error", async () => {
     // Arrange
     const next = path.join(root, "commute-schedule.json");

@@ -1289,4 +1289,13 @@ describe("loadCatalog bus-stops against the target's stored timetables", () => {
     expect(busSchedules.applyCommand("scripts/data/commute-schedule.json", true)).toBe("npm run schedule -- --file scripts/data/commute-schedule.json --prod");
     expect(busSchedules.applyCommand("next.json", false)).toBe("npm run schedule -- --file next.json");
   });
+
+  it("names --create in the apply command for a file with a pattern the target lacks, and quotes a path with a space", () => {
+    // Arrange
+    const { busSchedules } = loadCatalog(srcLoader).collections;
+
+    // Act & Assert
+    expect(busSchedules.applyCommand("next.json", true, { create: true })).toBe("npm run schedule -- --file next.json --create --prod");
+    expect(busSchedules.applyCommand("my timetables/next.json", false)).toBe("npm run schedule -- --file 'my timetables/next.json'");
+  });
 });

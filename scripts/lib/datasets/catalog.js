@@ -60,9 +60,10 @@
  *   fromFile(raw)    optional: the documents its own writer would store from
  *                    the file `push --against <file>` names, which replace the
  *                    stored ones of the same key for that push's check
- *   applyCommand(file, prod)
+ *   applyCommand(file, prod, { create })
  *                    optional: the command that writes that file, printed
- *                    after the push
+ *                    after the push; `create` when the file holds a key the
+ *                    target does not store
  *
  * `busSchedules` is the stored shuttle timetables, which `npm run schedule`
  * writes; `bus-stops` reads it so a sequence and its timetable entries agree
@@ -98,6 +99,9 @@ const { buildDocuments, parseTimetableFile, stopTimesMismatches } = require("../
 
 const SHOWN_TRAIN_NUMBERS = 8;
 const SHOWN_STOP_TIME_MISMATCHES = 3;
+
+/** `word` as one shell word: as it is when plain, else single-quoted. */
+const shellWord = (word) => (/^[\w./@:+-]+$/.test(word) ? word : `'${word.replace(/'/g, "'\\''")}'`);
 
 /** One issue per sequence whose timetable entries do not fit it, naming the first few; a warning when they were not read. */
 function timetableIssues({ sequences }, docs) {
@@ -230,7 +234,8 @@ function loadCatalog(load) {
         projection: { _id: 0, serviceId: 1, patternId: 1, "entries.time": 1, "entries.routeType": 1, "entries.stopTimes": 1 },
         keyOf: (doc) => `${doc.serviceId}/${doc.patternId}`,
         fromFile: (raw) => buildDocuments(parseTimetableFile(raw)),
-        applyCommand: (file, prod) => `npm run schedule -- --file ${file}${prod ? " --prod" : ""}`,
+        applyCommand: (file, prod, { create = false } = {}) =>
+          `npm run schedule -- --file ${shellWord(file)}${create ? " --create" : ""}${prod ? " --prod" : ""}`,
       },
     },
     sources: {

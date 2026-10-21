@@ -36,7 +36,7 @@ What stays in code, and needs a deploy to change: the service ids and which rout
 | A sequence | At least two stops, the first boarding, one alighting; a stop once per sequence; an estimated one with its first stop scheduled and at most seven stops |
 | `hssc.stations` | Exactly `HSSC_POSITION_COUNT` positions in wire order, only the first flagged first and the last flagged last, each `stopId` a stop of this dataset or `null`, no stop named twice |
 | `arsIds` | Five-digit ARS numbers, each claimed by one stop only |
-| A sequence against the stored timetables | Every entry of its service and route type in the target's `bus_campus.bus_schedules` (`_dev` without `--prod`) has one `stopTimes` time per stop, `null` only at an estimated stop; a refusal names the service, the route type and each entry time |
+| A sequence against the stored timetables | Every entry of its service and route type in the target's `bus_campus.bus_schedules` (`_dev` without `--prod`) has one `stopTimes` time per stop, `null` only at an estimated stop; a refusal names the service, the route type and the first three entry times |
 
 A sequence and its timetable are written by two tools, and each refuses a length the other side does not match: `npm run data -- push bus-stops` checks against the stored timetables, and `npm run schedule` checks a timetable file against the stored `bus-stops`, each in the database it targets. A sequence-length change pushes the sequence with `--against` the new timetable file, then applies that file at once ([below](#change-a-sequences-length)).
 
@@ -87,7 +87,7 @@ A sequence and its timetable are written by two tools, and each refuses a length
 Adding or removing a stop of a sequence changes the length of every `stopTimes` of its service and route type, which `npm run schedule` writes from `scripts/data/campus-schedule.json` or `scripts/data/commute-schedule.json`. Each writer refuses while the other side is old, so the sequence goes first, checked against the new timetable file:
 
 1. Edit the sequence in `.data/dev/bus-stops.json` and the timetable file: one more (or one fewer) time in every `stopTimes` of that service and route type, `null` where the new stop is estimated.
-2. Push the sequence against the file. The tool checks against the file's entries in place of the stored ones of the same service and pattern, and prints the command that applies the file:
+2. Push the sequence against the file. The tool checks against the file's entries in place of the stored ones of the same service and pattern, and prints the command that applies the file (with `--create` when the file holds a pattern the target does not store). A stored pattern the file does not list is still checked: `npm run schedule` lists it as "not in this file" and never deletes it, so ask the owner before a length change of a service that has one. `--dry-run` previews the push and names the command; `npm run schedule` cannot be previewed before the push, since it refuses the new file against the stored sequences:
 
    ```bash
    npm run data -- push bus-stops --against scripts/data/commute-schedule.json --note "gangnam down: Nonhyeon stop"
@@ -95,7 +95,7 @@ Adding or removing a stop of a sequence changes the length of every `stopTimes` 
 
 3. Apply the timetable at once with the printed command, here `npm run schedule -- --file scripts/data/commute-schedule.json`. Between the two writes the smart view serves the old stop times against the new stops, and the stored estimates of that sequence are dropped and fetched again.
 4. Check both sides: `npm run data -- check bus-stops` and `npm run schedule -- --file scripts/data/commute-schedule.json --check`.
-5. Repeat with `--prod` on both commands (`push bus-stops --prod --against …`, then the printed `npm run schedule … --prod`).
+5. Repeat in production: `npm run data -- pull bus-stops --prod`, the same edit in `.data/prod/bus-stops.json`, `npm run data -- push bus-stops --prod --against <timetable file>`, then the printed `npm run schedule … --prod`.
 
 ### Roll back
 
@@ -104,7 +104,11 @@ npm run data -- history bus-stops --prod
 npm run data -- rollback bus-stops <revision> --prod
 ```
 
-A rollback runs the push checks and reaches every route within a minute, like a push. A rollback that changes a sequence's length is refused while the stored timetable fits the newer one: apply the matching timetable file as in [Change a sequence's length](#change-a-sequences-length).
+A rollback runs the push checks and reaches every route within a minute, like a push. A rollback that changes a sequence's length is refused while the stored timetable fits the newer one: roll back `--against` the timetable file of that revision's length, then apply it with the printed command, as in [Change a sequence's length](#change-a-sequences-length):
+
+```bash
+npm run data -- rollback bus-stops <revision> --prod --against scripts/data/commute-schedule.json
+```
 
 ## Verify
 
