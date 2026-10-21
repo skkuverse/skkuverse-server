@@ -108,6 +108,20 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
     expect(realtime.readGroupIds).toEqual(["jongro07"]);
   });
 
+  // WHY: the page is no-store, so the smart view's ETag would be a JSON.stringify and an md5 per service per request (review F5).
+  it("reads each smart schedule without the smart view's ETag", async () => {
+    // Arrange
+    const { service, smart } = setup();
+    smart.schedules.set("campus-inja", activeSchedule("campus-inja", ["14:30"]));
+
+    // Act
+    await service.findStopArrivals("hssc-bus-lot", "ko");
+
+    // Assert
+    expect(smart.readServiceIds).toEqual(["campus-inja"]);
+    expect(smart.etagReadServiceIds).toEqual([]);
+  });
+
   it("serves every HSSC bus as stops away round the loop, one past the stop farthest", async () => {
     // Arrange
     const { service, realtime } = setup();
