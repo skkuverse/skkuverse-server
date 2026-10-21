@@ -2,12 +2,13 @@
  * The HSSC rules: the circular → linear stop sequence, the dwell timer that
  * keeps a bus's first sighting at a stop, and the stale windows (3 minutes at
  * the turnaround, 10 elsewhere) at each threshold, and a feed event's key and
- * its strictly parsed stop index and time.
+ * its strictly parsed stop index and time, and a feed none of whose rows
+ * parse.
  */
 import "moment/locale/ko";
 import moment from "moment-timezone";
 import type { HsscBusDoc } from "../../cache/bus-cache.document";
-import { isFresh, toDwellSeconds, toFeedEventKey, toFeedEventTiming, toFirstSeenAt, toLinearSequence } from "./bus-realtime-hssc.rules";
+import { isFresh, isUnparsedFeed, toDwellSeconds, toFeedEventKey, toFeedEventTiming, toFirstSeenAt, toLinearSequence } from "./bus-realtime-hssc.rules";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const kst = (minutesAgo: number): string =>
@@ -131,5 +132,19 @@ describe("toFeedEventTiming", () => {
   ])("is null for a seq that is %s", (_shape, seq) => {
     // Act & Assert
     expect(toFeedEventTiming({ ...ROW, seq })).toBeNull();
+  });
+});
+
+describe("isUnparsedFeed", () => {
+  const UNPARSED = { ...ROW, get_date: "2026-10-20 9:59:30" };
+
+  it.each([
+    ["is true when every row fails to parse", [UNPARSED, { ...UNPARSED, line_no: "2" }], true],
+    ["is false when one row of several parses", [UNPARSED, ROW], false],
+    ["is false when every row parses", [ROW], false],
+    ["is false when the feed lists no row", [], false],
+  ])("%s", (_case, rows, expected) => {
+    // Act & Assert
+    expect(isUnparsedFeed(rows)).toBe(expected);
   });
 });
