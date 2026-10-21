@@ -163,3 +163,40 @@ describe("BusEtaSmartService.resolveSmart", () => {
     await expect(service.resolveSmart("nope", "ko")).rejects.toMatchObject({ code: "SERVICE_NOT_FOUND", httpStatus: 404 });
   });
 });
+
+// WHY: a stop page that finds fewer than three runs in the shown week continues into the next one (unify-bus-stops review F2).
+describe("BusEtaSmartService.resolveFollowingWeek", () => {
+  const PREDICTED: ShuttleEtaDoc = {
+    ...LIVE,
+    _id: "campus-inja|regular|2026-10-19|10:00|baseline",
+    kind: "baseline",
+    date: "2026-10-19",
+    departAt: new Date("2026-10-19T01:00:00.000Z"),
+    offsetsSec: [0, 3000],
+  };
+
+  it("answers the days of the week after the smart schedule's, with their estimates applied", async () => {
+    // Arrange
+    estimates.docs.set(PREDICTED._id, PREDICTED);
+    const smart = await service.resolveSmart("campus-inja", "ko");
+
+    // Act
+    const days = await service.resolveFollowingWeek(smart);
+
+    // Assert
+    expect(days.map((day) => day.date)).toEqual(["2026-10-19"]);
+    expect(days[0]!.schedule[0]).toMatchObject({ time: "10:00", stopTimes: ["10:00", "10:50"], eta: { source: "predicted" } });
+  });
+
+  it("answers no day unless the smart schedule is active", async () => {
+    // Arrange
+    const smart = await service.resolveSmart("fasttrack-inja", "ko");
+
+    // Act
+    const days = await service.resolveFollowingWeek(smart);
+
+    // Assert
+    expect(smart.status).toBe("noData");
+    expect(days).toEqual([]);
+  });
+});

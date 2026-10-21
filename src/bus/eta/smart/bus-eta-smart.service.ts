@@ -61,6 +61,15 @@ export class BusEtaSmartService {
     return withStatusMessage(result, lang);
   }
 
+  // WHY: the week after an active smart schedule's, estimates applied by the same precedence, for the stop page's runs.
+  async resolveFollowingWeek(smart: SmartSchedule): Promise<SmartSchedule["days"]> {
+    if (smart.status !== "active" || smart.from === null) return [];
+    const days = await this.schedule.resolveFollowingWeek(smart.serviceId, smart.from);
+    if (!days) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${smart.serviceId}`, 404);
+    const etaRouteTypes = serviceConfigOf(smart.serviceId)?.eta?.routeTypes;
+    return etaRouteTypes ? (await this.withEstimates({ ...smart, days }, etaRouteTypes)).days : days;
+  }
+
   // WHY: the schedule as resolved when the estimates or the stops cannot be read.
   private async withEstimates(result: SmartSchedule, routeTypes: readonly string[]): Promise<SmartSchedule> {
     const [estimates, stops] = await Promise.allSettled([this.servedEstimates(), this.stops.current()]);

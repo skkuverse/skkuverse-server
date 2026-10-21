@@ -2,7 +2,8 @@
  * Scripted BusEtaSmartService for the stop page: `resolveSmart` answers the smart schedule set in `schedules` for a
  * service, or rejects with the error `failWith` holds for it, or with the 404 the real one answers for a service it
  * has none of; `readServiceIds` records every read. `getSmart` answers the same with an ETag, and records its reads
- * in `etagReadServiceIds` apart, so a test can tell which one a caller paid for.
+ * in `etagReadServiceIds` apart, so a test can tell which one a caller paid for. `resolveFollowingWeek` answers the
+ * days set in `followingWeeks` for the schedule's service (none by default) and records `followingReadServiceIds`.
  */
 import { AppError } from "../../../../src/http/app.error";
 import type { WithEtag } from "../../../../src/http/response.types";
@@ -16,6 +17,8 @@ export class FakeBusEtaSmartService implements PublicOf<BusEtaSmartService> {
   failWith = new Map<string, Error>();
   readServiceIds: string[] = [];
   etagReadServiceIds: string[] = [];
+  followingWeeks = new Map<string, SmartSchedule["days"]>();
+  followingReadServiceIds: string[] = [];
 
   async getSmart(serviceId: string, _lang: SupportedLang): Promise<WithEtag<SmartSchedule>> {
     this.etagReadServiceIds.push(serviceId);
@@ -25,6 +28,11 @@ export class FakeBusEtaSmartService implements PublicOf<BusEtaSmartService> {
   async resolveSmart(serviceId: string, _lang: SupportedLang): Promise<SmartSchedule> {
     this.readServiceIds.push(serviceId);
     return this.scheduleOf(serviceId);
+  }
+
+  async resolveFollowingWeek(smart: SmartSchedule): Promise<SmartSchedule["days"]> {
+    this.followingReadServiceIds.push(smart.serviceId);
+    return structuredClone(this.followingWeeks.get(smart.serviceId) ?? []);
   }
 
   private scheduleOf(serviceId: string): SmartSchedule {

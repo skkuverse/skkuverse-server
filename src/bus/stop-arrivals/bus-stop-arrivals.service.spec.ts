@@ -2,8 +2,9 @@
  * BusStopArrivalsService over the stop index (real, over in-memory stores) and scripted realtime and smart views
  * (unify-bus-stops design D7-D9 and D17; spec bus-stop-arrivals): an unknown stop is null; each served route at a
  * stop gets its entry, in the index's order and labeled in the request language; one page reads each group's view
- * and each service's smart schedule once; and a route whose read fails is left out of the page, logged at error at
- * most once a minute per route, while the rest is served.
+ * and each service's smart schedule once, and the week after it only when the shown week holds fewer than three runs
+ * (review F2); and a route whose read fails is left out of the page, logged at error at most once a minute per route,
+ * while the rest is served.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 import { storedBusRegistryService, storedJongroRouteDocuments } from "../../../__tests__/helpers/bus/bus-registry";
@@ -59,6 +60,14 @@ const activeSchedule = (serviceId: string, times: string[]): SmartSchedule => ({
       ]),
     },
   ],
+});
+
+const dayOf = (date: string, times: string[]): SmartSchedule["days"][number] => ({
+  date,
+  dayOfWeek: 1,
+  display: "schedule",
+  notices: [],
+  schedule: times.map((time) => ({ time, routeType: "regular", stopTimes: [time, null] })),
 });
 
 const leftOutLogs = () => jest.mocked(logger.error).mock.calls.filter((call) => (call[0] as { event?: string }).event === "bus.stop_arrivals.route_left_out");
@@ -133,6 +142,52 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
 
     // Assert
     expect(page?.routes).toEqual([{ groupId: "hssc", kind: "approaching", label: "人文校区班车", stationIndex: 6, approaching: [{ stopsAway: 2 }, { stopsAway: 5 }, { stopsAway: 9 }] }]);
+  });
+
+  it("continues into the following week when the shown week holds fewer than three runs", async () => {
+    // Arrange
+    const { service, smart } = setup();
+    smart.schedules.set("campus-inja", activeSchedule("campus-inja", ["14:00", "14:30"]));
+    smart.followingWeeks.set("campus-inja", [dayOf("2026-10-26", ["14:00", "14:30", "15:00"])]);
+
+    // Act
+    const page = await service.findStopArrivals("hssc-bus-lot", "ko");
+
+    // Assert
+    const regular = page?.routes.find((route) => route.kind === "schedule" && route.routeType === "regular");
+    expect(regular).toMatchObject({
+      next: [
+        { date: "2026-10-20", departure: "14:30", time: "14:30", estimated: false },
+        { date: "2026-10-26", departure: "14:00", time: "14:00", estimated: false },
+        { date: "2026-10-26", departure: "14:30", time: "14:30", estimated: false },
+      ],
+    });
+    expect(smart.followingReadServiceIds).toEqual(["campus-inja"]);
+  });
+
+  it("reads no following week while the shown week holds three runs at every route type of the stop", async () => {
+    // Arrange
+    const { service, smart } = setup();
+    smart.schedules.set("campus-inja", activeSchedule("campus-inja", ["14:30", "15:00", "15:30"]));
+
+    // Act
+    await service.findStopArrivals("hssc-bus-lot", "ko");
+
+    // Assert
+    expect(smart.followingReadServiceIds).toEqual([]);
+  });
+
+  it("reads no following week for a schedule that is not active", async () => {
+    // Arrange
+    const { service, smart } = setup();
+    smart.schedules.set("campus-inja", { serviceId: "campus-inja", status: "suspended", resumeDate: "2026-11-02", from: null, selectedDate: null, days: [] });
+
+    // Act
+    const page = await service.findStopArrivals("hssc-bus-lot", "ko");
+
+    // Assert
+    expect(page?.routes.map((route) => route.kind === "schedule" && route.next)).toEqual([[], []]);
+    expect(smart.followingReadServiceIds).toEqual([]);
   });
 
   it("leaves out a route whose read fails, logged at error once a minute, and serves the rest", async () => {
