@@ -4,9 +4,10 @@
  * minutes, so one mini app's origin down marks only its own poller failing
  * (move-miniapp-registry D8). A tick is that origin's refresh and rejects with
  * it. The registry is a `registerPoller` spy (ADR 0011 D2) and the service a
- * stub; whether a process runs its pollers (ROLE) is the registry's.
+ * stub; whether a process runs its pollers (ROLE) is the registry's. A game
+ * origin serves no mini-app manifest, so none of its hosts is polled.
  */
-import { FIRST_PARTY_MINIAPP_ORIGINS } from "../../infra/origins";
+import { FIRST_PARTY_MINIAPP_ORIGINS, GAME_ID_BY_FIRST_PARTY_ORIGIN } from "../../infra/origins";
 import type { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { MiniappsManifestPoller } from "./miniapps-manifest.poller";
 import type { MiniappsManifestService } from "./miniapps-manifest.service";
@@ -57,5 +58,17 @@ describe("MiniappsManifestPoller.onModuleInit", () => {
     // Act & Assert
     await expect(Promise.resolve(tick())).resolves.toBeUndefined();
     expect(refresh.mock.calls).toEqual([["https://timetable.mini.skkuverse.com"]]);
+  });
+
+  it("registers no poller for a first-party game origin", () => {
+    // Arrange
+    const gameHosts = Object.keys(GAME_ID_BY_FIRST_PARTY_ORIGIN).map((origin) => new URL(origin).hostname);
+
+    // Act
+    new MiniappsManifestPoller(registry, manifests).onModuleInit();
+
+    // Assert
+    const names = registerPoller.mock.calls.map(([, , name]) => name);
+    expect(names.filter((name) => gameHosts.some((host) => name.endsWith(host)))).toEqual([]);
   });
 });

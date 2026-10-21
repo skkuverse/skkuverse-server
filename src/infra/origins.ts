@@ -32,6 +32,15 @@ export const MINIAPP_ID_BY_FIRST_PARTY_ORIGIN: Readonly<Record<string, string>> 
 
 export const FIRST_PARTY_MINIAPP_ORIGINS: readonly string[] = Object.freeze(Object.keys(MINIAPP_ID_BY_FIRST_PARTY_ORIGIN));
 
+// WHY: a trust list of its own, kept out of BRIDGE_ORIGINS, CORS_ORIGINS and the mini-app owners: a page
+// here gets only the game methods, granted per message to the game named here, never the mini-app shell.
+export const GAME_ID_BY_FIRST_PARTY_ORIGIN: Readonly<Record<string, string>> = Object.freeze({
+  "https://apple-game.game.skkuverse.com": "apple-game",
+  "https://suika-game.game.skkuverse.com": "suika-game",
+  "https://wave-run.game.skkuverse.com": "wave-run",
+  "https://subway-typing.game.skkuverse.com": "subway-typing",
+});
+
 // WHY: each entry is a trust decision: it hands `Linking.openURL` and the map-select channel to every
 // page its host serves.
 export const BRIDGE_ORIGINS = [WEBVIEW_ORIGIN, ...FIRST_PARTY_MINIAPP_ORIGINS] as const;
