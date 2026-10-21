@@ -92,7 +92,7 @@ A local stop's block is its `/bus/config` record (`screen.stops[]`) without `map
 | `time` | `HH:mm` \| null | The run's time at this stop, from the timetable or, at an estimated stop, from the smart schedule's estimate; `null` when neither gives one. A time before `departure` is the next day's |
 | `estimated` | boolean | `true` when `time` comes from an arrival estimate |
 
-A run counts while its time at this stop, or its departure when that time is `null`, is not before the current minute in Asia/Seoul, and runs are ordered by that same time. Boarding and drop-off stops are both served.
+A run counts while its time at this stop, or its departure when that time is `null`, is not before the current minute in Asia/Seoul, and runs are ordered by that same time. When the smart schedule's week holds fewer than three, `next` continues into the following week, as the smart schedule would show it: a Friday evening after the last run lists the next Monday's, and a day of no service or inside a suspension lists none. Boarding and drop-off stops are both served.
 
 ### Errors
 

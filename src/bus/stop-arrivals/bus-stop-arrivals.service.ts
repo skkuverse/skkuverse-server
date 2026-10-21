@@ -10,10 +10,10 @@ import type { GroupView } from "../realtime/group/bus-realtime-group.types";
 import type { SmartSchedule } from "../schedule/bus-schedule.wire";
 import { BusStopIndexService } from "../stop-index/bus-stop-index.service";
 import type { HsscStopRoute, JongroStopRoute, ShuttleStopRoute, StopRoute } from "../stop-index/bus-stop-index.types";
-import { LEFT_OUT_LOG_INTERVAL_MS } from "./bus-stop-arrivals.constants";
+import { LEFT_OUT_LOG_INTERVAL_MS, NEXT_RUN_COUNT } from "./bus-stop-arrivals.constants";
 import { toHsscEntry, toJongroEntry, toShuttleEntry, toStopBlock } from "./bus-stop-arrivals.mapper";
 import { toApproaching, toNextRuns } from "./bus-stop-arrivals.rules";
-import type { StopArrivalsRoute } from "./bus-stop-arrivals.types";
+import type { ScheduledRun, StopArrivalsRoute } from "./bus-stop-arrivals.types";
 import type { BusStopArrivals } from "./bus-stop-arrivals.wire";
 
 /** WHY: what one page reads, each group's view and each service's schedule once, however many entries share it. */
@@ -22,6 +22,7 @@ interface PageReads {
   now: Date;
   views: Map<string, Promise<GroupView>>;
   schedules: Map<string, Promise<SmartSchedule>>;
+  followingWeeks: Map<string, Promise<SmartSchedule["days"]>>;
 }
 
 // SEE: docs/reference/bus-stops-api.md: built from stored data only, through the realtime and smart views' own caches.
@@ -39,7 +40,7 @@ export class BusStopArrivalsService {
   async findStopArrivals(stopId: string, lang: SupportedLang): Promise<BusStopArrivals | null> {
     const stop = await this.index.findStop(stopId);
     if (!stop) return null;
-    const reads: PageReads = { lang, now: this.clock.now(), views: new Map(), schedules: new Map() };
+    const reads: PageReads = { lang, now: this.clock.now(), views: new Map(), schedules: new Map(), followingWeeks: new Map() };
     const entries = await Promise.all(stop.routes.map((route) => this.toEntry(route, reads).catch((err: unknown) => this.leaveOut(stop.id, route, err))));
     return { stop: toStopBlock(stop, this.index.servedRecordOf(stop, lang)), routes: entries.flatMap((entry) => (entry ? [entry] : [])) };
   }
@@ -65,7 +66,15 @@ export class BusStopArrivalsService {
 
   private async toShuttleEntry(route: ShuttleStopRoute, reads: PageReads): Promise<StopArrivalsRoute> {
     const schedule = await this.readOnce(reads.schedules, route.serviceId, () => this.smart.resolveSmart(route.serviceId, reads.lang));
-    return toShuttleEntry(route, t(`busconfig.service.${route.serviceId}`, reads.lang), { status: schedule.status, next: toNextRuns(schedule, route, reads.now) });
+    return toShuttleEntry(route, t(`busconfig.service.${route.serviceId}`, reads.lang), { status: schedule.status, next: await this.nextRunsOf(schedule, route, reads) });
+  }
+
+  // WHY: after a week's last run (a Friday evening) the shown week holds none, so the page reads on into the next.
+  private async nextRunsOf(schedule: SmartSchedule, route: ShuttleStopRoute, reads: PageReads): Promise<ScheduledRun[]> {
+    const next = toNextRuns(schedule, route, reads.now);
+    if (next.length >= NEXT_RUN_COUNT || schedule.status !== "active") return next;
+    const followingDays = await this.readOnce(reads.followingWeeks, route.serviceId, () => this.smart.resolveFollowingWeek(schedule));
+    return toNextRuns({ ...schedule, days: [...schedule.days, ...followingDays] }, route, reads.now);
   }
 
   private viewOf(groupId: string, reads: PageReads): Promise<GroupView> {

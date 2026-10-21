@@ -3,7 +3,8 @@
  * through the production pipeline (buildTestApp), against every scenario of spec bus-stop-arrivals: the stop block,
  * 404 BUS_STOP_NOT_FOUND, the configuration order, a Jongno entry equal to the realtime view, a Jongno route left
  * out, the HSSC buses as stops away, the next three shuttle runs at a stop (14:10 KST, and 01:30 KST when the UTC
- * date is the day before), a suspended service, the 503 with the stops never read, no-store, and no outbound request.
+ * date is the day before), continued into the following week after Friday's last run, a suspended service, the
+ * 503 with the stops never read, no-store, and no outbound request.
  *
  * Every store is in memory: bus_cache, the registry and route lines production stored (helpers/bus/), revision 1
  * of `bus-stops`, `jongro-route-attributes` and the schedule content, a timetable and estimates seeded per test.
@@ -66,6 +67,8 @@ import { takeBlockedConnections } from "../../helpers/network-guard";
 
 // WHY: Tuesday 2026-10-20 14:10 KST, the spec's "Boarding stop" instant.
 const AT_14_10_KST = new Date("2026-10-20T05:10:00.000Z");
+// WHY: 20:00 KST on Friday 2026-10-23, after the week's last run (review F2).
+const AT_FRIDAY_20_00_KST = new Date("2026-10-23T11:00:00.000Z");
 // WHY: 01:30 KST on Tuesday the 20th, when the UTC date is still Monday the 19th.
 const AT_01_30_KST = new Date("2026-10-19T16:30:00.000Z");
 
@@ -447,7 +450,13 @@ describe("GET /bus/stops/:stopId/arrivals: shuttle entries", () => {
         { date: "2026-10-20", departure: "15:30", time: "15:30", estimated: false },
       ],
     });
-    expect(hakbu).toMatchObject({ routeType: "hakbu", next: [{ date: "2026-10-23", departure: "13:00", time: "13:00", estimated: false }] });
+    expect(hakbu).toMatchObject({
+      routeType: "hakbu",
+      next: [
+        { date: "2026-10-23", departure: "13:00", time: "13:00", estimated: false },
+        { date: "2026-10-30", departure: "13:00", time: "13:00", estimated: false },
+      ],
+    });
     expectWire(busStopArrivals, res.body.data);
   });
 
@@ -495,6 +504,45 @@ describe("GET /bus/stops/:stopId/arrivals: shuttle entries", () => {
       "commute-gwanggyo:up",
     ]);
     expectWire(busStopArrivals, res.body.data);
+  });
+
+  it("Friday evening: after the week's last run, the next runs are the following week's", async () => {
+    // Arrange
+    const server = await boot(freshStores(), AT_FRIDAY_20_00_KST);
+
+    // Act
+    const res = await request(server).get("/bus/stops/hssc-bus-lot/arrivals");
+
+    // Assert
+    const [regular, hakbu] = routesOf(res.body);
+    expect(regular).toMatchObject({
+      status: "active",
+      next: [
+        { date: "2026-10-26", departure: "14:00", time: "14:00", estimated: false },
+        { date: "2026-10-26", departure: "14:30", time: "14:30", estimated: false },
+        { date: "2026-10-26", departure: "15:00", time: "15:00", estimated: false },
+      ],
+    });
+    expect(hakbu).toMatchObject({ next: [{ date: "2026-10-30", departure: "13:00", time: "13:00", estimated: false }] });
+    expectWire(busStopArrivals, res.body.data);
+  });
+
+  it("Friday evening before a suspension: the following week's suspended days list no run", async () => {
+    // Arrange
+    const stores = freshStores();
+    stores.content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-10-26", until: "2026-10-27" }));
+    const server = await boot(stores, AT_FRIDAY_20_00_KST);
+
+    // Act
+    const res = await request(server).get("/bus/stops/hssc-bus-lot/arrivals");
+
+    // Assert
+    const [regular] = routesOf(res.body);
+    expect(regular!.next).toEqual([
+      { date: "2026-10-28", departure: "14:00", time: "14:00", estimated: false },
+      { date: "2026-10-28", departure: "14:30", time: "14:30", estimated: false },
+      { date: "2026-10-28", departure: "15:00", time: "15:00", estimated: false },
+    ]);
   });
 
   it("Suspended service: the entry carries the smart schedule's status and an empty next", async () => {
