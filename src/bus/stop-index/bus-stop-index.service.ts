@@ -63,6 +63,7 @@ export class BusStopIndexService {
     const key = [snapshot.revision, ...reads.map((read) => (read.status === "fulfilled" ? read.value.stationsVersion : "unread"))].join(":");
     const failed = reads.find((read): read is PromiseRejectedResult => read.status === "rejected");
     const index = held?.key === key ? held.index : this.buildIndex(snapshot, reads, failed);
+    if (failed) this.logUnreadRoutes(reads);
     this.built = { key, index, retryAtMs: failed ? nowMs + REGISTRY_RETRY_MS : null };
     return index;
   }
@@ -70,8 +71,7 @@ export class BusStopIndexService {
   private buildIndex(snapshot: StopIndex["snapshot"], reads: PromiseSettledResult<RegistryRoute>[], failed: PromiseRejectedResult | undefined): StopIndex {
     const routes = reads.flatMap((read): RegistryRoute[] => (read.status === "fulfilled" ? [read.value] : []));
     const index: StopIndex = { ...toStopIndex(snapshot, routes), ...(failed && { registryFailure: failed.reason }) };
-    if (failed) this.logUnreadRoutes(reads);
-    else this.warnUnmatchedAliases(index);
+    if (!failed) this.warnUnmatchedAliases(index);
     return index;
   }
 

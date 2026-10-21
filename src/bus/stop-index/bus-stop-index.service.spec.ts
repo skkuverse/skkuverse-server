@@ -276,6 +276,25 @@ describe("BusStopIndexService.findStop while the registry cannot be read", () =>
     expect(events("error", "bus.jongro.registry_missing")).toHaveLength(2);
   });
 
+  it("logs a route that stays unread on the retries too, at most once a minute (review F1)", async () => {
+    // Arrange
+    const { service, registryRepository } = setup();
+    registryRepository.failWith = new Error("connection timed out");
+    await service.findStop("hssc-bus-lot");
+
+    // Act
+    jest.setSystemTime(NOW.getTime() + PAST_REGISTRY_TTL_MS);
+    await service.findStop("hssc-bus-lot");
+    const withinTheMinute = events("error", "bus.stop_index.registry_unread").length;
+    jest.setSystemTime(NOW.getTime() + 2 * PAST_REGISTRY_TTL_MS);
+    await service.findStop("hssc-bus-lot");
+
+    // Assert
+    expect(withinTheMinute).toBe(1);
+    expect(events("error", "bus.stop_index.registry_unread")).toHaveLength(2);
+    expect(events("error", "bus.stop_index.registry_unread")[1]![0]).toMatchObject({ routeIds: ["jongro02", "jongro07", "jongro08"], suppressed: 1 });
+  });
+
   it("serves an aliased pole's local stop while the route that lists the pole cannot be read", async () => {
     // Arrange
     const { service, registryRepository } = setup({ aliases: { "hssc-bus-lot": ["01618"] } });
