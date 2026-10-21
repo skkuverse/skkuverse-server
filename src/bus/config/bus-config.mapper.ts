@@ -1,6 +1,6 @@
 import { t } from "../../infra/i18n";
 import type { SupportedLang } from "../../infra/types";
-import { ESTIMATES_MAX_AGE_S } from "../bus.constants";
+import { ESTIMATES_MAX_AGE_S, HSSC_POSITION_COUNT } from "../bus.constants";
 import { serviceConfigOf } from "../bus.rules";
 import type { JongroRoute, JongroRouteAttributes } from "../bus.types";
 import type { JongroStation, RegistryRoute } from "../registry/bus-registry.types";
@@ -97,7 +97,7 @@ function toHsscGroup(lang: SupportedLang, webviewOrigin: string) {
     screen: {
       dataEndpoint: "/bus/realtime/data/hssc",
       refreshInterval: 10,
-      lastStationIndex: 10,
+      lastStationIndex: HSSC_POSITION_COUNT - 1,
       stations: mapStations(HSSC_STATIONS),
       features: [{ type: "info", url: `${webviewOrigin}/bus/hssc/info` }],
     },
