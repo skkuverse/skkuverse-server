@@ -12,6 +12,7 @@
  *   - a file with stop times is refused while the target stores no bus-stops;
  *   - --dry-run and --check run the same check.
  */
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -192,5 +193,16 @@ describe("npm run schedule against the stored bus-stops sequences", () => {
     expect(prodDryRun.code).toBe(0);
     expect(prodDryRun.err).not.toContain("stop times for a sequence");
     expect(await schedules(true).countDocuments()).toBe(0);
+  });
+});
+
+describe("npm run schedule from the command line", () => {
+  it("prints a usage error to stderr and exits 1, before reading .env's database", () => {
+    // Act
+    const result = spawnSync(process.execPath, [path.join(REPO, "scripts/set-campus-schedule.js"), "--bogus"], { encoding: "utf8" });
+
+    // Assert
+    expect(result.status).toBe(1);
+    expect(result.stderr.trim()).toBe("unknown argument: --bogus");
   });
 });
