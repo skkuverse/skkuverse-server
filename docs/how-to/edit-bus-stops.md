@@ -24,6 +24,19 @@ The `bus-stops` dataset holds every local stop the server serves ([bus architect
 
 What stays in code, and needs a deploy to change: the service ids and which route types get arrival estimates (`SERVICE_CONFIG` in `src/bus/bus.constants.ts`), the travel strategies (`LANE_STRATEGIES`), the HSSC position count (`HSSC_POSITION_COUNT`) and how the HSSC API's stop names map to positions (`src/bus/realtime/hssc/`). Jongno stops are TOPIS's and are never stored here.
 
+Every stop of a sequence or the HSSC line, and every Jongno pole, has a stop page, `GET /bus/stops/:stopId/arrivals` ([bus-stops-api.md](../reference/bus-stops-api.md)). What it shows, and where each part comes from:
+
+| On the page | From |
+| --- | --- |
+| The stop's name, detail, photo, street view and subway link | The stop's record in this dataset, as `/bus/config` serves it, without its map guide |
+| The stop's coordinates | The stop's `coords`; for a Jongno pole, or an aliased stop with none, the pole's on the stored route line |
+| A Jongno pole's name and id | The stored registry station (`seoul-<ARS number>`, its Korean name): not this dataset |
+| The routes and their order | The HSSC line's `stopId`s and the sequences' stops here, then the registry's poles, in `/bus/config`'s group order; an alias in `arsIds` adds its pole's Jongno routes to the local stop |
+| A shuttle entry's next runs | The stored timetable and estimates, through the smart schedule; boarding and drop-off stops alike |
+| An HSSC entry's buses | `bus_cache`, as the HSSC realtime route serves them |
+
+A push that changes a stop, a sequence or an alias reaches its page within a minute. A slug renamed or removed answers `404` on its page, so never rename a served one: the app may hold it.
+
 | Part | Rules a push checks |
 | --- | --- |
 | A stop's `id` | Lower-case words of `a-z` and `0-9` joined by single hyphens, unique, never starting with `seoul-` (a TOPIS pole's derived id). An id on the wire never changes: clients hold it |

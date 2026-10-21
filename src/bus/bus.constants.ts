@@ -11,6 +11,17 @@ export const JONGRO_ROUTES: ReadonlyArray<Readonly<JongroRouteIdentity>> = Objec
   Object.freeze({ id: "jongro08", busRouteId: "100900005" }),
 ]);
 
+// SEE: docs/explanation/bus-architecture.md ("Glossary"): a stop id names one pole, a TOPIS pole's derived from its ARS number.
+export const STOP_ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+export const TOPIS_STOP_ID_PREFIX = "seoul-";
+export const ARS_ID_PATTERN = /^\d{5}$/;
+
+// WHY: the groups that serve stop sequences, their services in /bus/config's order, which the stop page follows.
+export const STOP_SERVICE_IDS_BY_GROUP_ID = {
+  campus: ["campus-inja", "campus-jain"],
+  commute: ["commute-jeongja", "commute-jamsil", "commute-dogok", "commute-gangnam-yangjae", "commute-gwanggyo"],
+} as const;
+
 // QUIRK(hssc): toLinearSequence (src/bus/realtime/hssc) maps the API's circular stops onto this many positions,
 // so the stored HSSC line holds exactly as many (unify-bus-stops design D3).
 export const HSSC_POSITION_COUNT = 11;
@@ -37,9 +48,7 @@ export const SERVICE_CONFIG: ServiceConfigMap = {
     respectsKoreanHolidays: true,
     eta: { routeTypes: ["regular", "hakbu"] },
   },
-  "fasttrack-inja": {
-    nonOperatingDayDisplay: "hidden",
-  },
+  "fasttrack-inja": { nonOperatingDayDisplay: "hidden" },
   "commute-jeongja": commuteService(),
   "commute-jamsil": commuteService(),
   "commute-dogok": commuteService(),

@@ -1,0 +1,76 @@
+{
+  "_about": "GET /bus/stops/hssc-bus-lot/arrivals captured from a local api replica of unify-bus-stops wave 3 (ROLE=api, NODE_ENV=development, _dev databases, push suppressed) 2026-10-22 02:41 KST, Accept-Language ko; untrimmed: the catalog stop's config record without its map, and the 인자셔틀's next three regular and 학부대학 runs from the _dev timetable, with no estimate stored in _dev.",
+  "data": {
+    "stop": {
+      "id": "hssc-bus-lot",
+      "name": "학생회관 버스 주차장",
+      "detail": "600주년기념관 맞은편",
+      "coords": {
+        "lat": 37.587367,
+        "lng": 126.993643
+      },
+      "photoUrl": "https://media.skkuverse.com/bus/stops/hssc-bus-lot/original-b431e3b1.jpg",
+      "streetViewUrl": "https://inapp.map.naver.com/launchApp/panorama/street?street=on&vrpanoid=oCt8OYgXgYopNL-f4h4MAw&vrpanopan=-24&vrpanotilt=0&vrpanofov=80&appTargetPage=panorama%2Fstreet&id=oCt8OYgXgYopNL-f4h4MAw&pan=-24&tilt=0&fov=80&fallbackUrl=https%3A%2F%2Fviewer.map.naver.com%2Fpanorama%2F%3Fid%3DoCt8OYgXgYopNL-f4h4MAw%26heading%3D-24%26tilt%3D0%26fov%3D80&app=Y&appmarket=N"
+    },
+    "routes": [
+      {
+        "groupId": "campus",
+        "kind": "schedule",
+        "label": "인사캠 → 자과캠",
+        "serviceId": "campus-inja",
+        "routeType": "regular",
+        "action": "board",
+        "status": "active",
+        "next": [
+          {
+            "date": "2026-10-22",
+            "departure": "07:00",
+            "time": "07:00",
+            "estimated": false
+          },
+          {
+            "date": "2026-10-22",
+            "departure": "10:00",
+            "time": "10:00",
+            "estimated": false
+          },
+          {
+            "date": "2026-10-22",
+            "departure": "12:00",
+            "time": "12:00",
+            "estimated": false
+          }
+        ]
+      },
+      {
+        "groupId": "campus",
+        "kind": "schedule",
+        "label": "인사캠 → 자과캠",
+        "serviceId": "campus-inja",
+        "routeType": "hakbu",
+        "action": "board",
+        "status": "active",
+        "next": [
+          {
+            "date": "2026-10-23",
+            "departure": "08:00",
+            "time": "08:00",
+            "estimated": false
+          },
+          {
+            "date": "2026-10-23",
+            "departure": "08:20",
+            "time": "08:20",
+            "estimated": false
+          },
+          {
+            "date": "2026-10-23",
+            "departure": "10:00",
+            "time": "10:00",
+            "estimated": false
+          }
+        ]
+      }
+    ]
+  }
+}

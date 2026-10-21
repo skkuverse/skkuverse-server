@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { HSSC_POSITION_COUNT } from "../bus.constants";
-import { ARS_ID_PATTERN, STOP_ID_PATTERN, TOPIS_STOP_ID_PREFIX } from "./bus-stops.constants";
+import { ARS_ID_PATTERN, HSSC_POSITION_COUNT, STOP_ID_PATTERN, TOPIS_STOP_ID_PREFIX } from "../bus.constants";
 import type { BusStopsData, StoredBusStops } from "./bus-stops.document";
 import type { ScheduleStop, SequenceStop } from "./bus-stops.types";
 
