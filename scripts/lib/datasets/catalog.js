@@ -26,7 +26,8 @@
  *                    every identity the data names, as { dataset, id, path };
  *                    `dataset` is another catalog dataset or a code-held source
  *   idsOf(data)      the identities others may reference (`miniapps` its ids,
- *                    which the three ui datasets name; `map-layer-sets` its
+ *                    which the three ui datasets name; `games` its ids, which
+ *                    home-layout's game tiles name; `map-layer-sets` its
  *                    layer sets, which nothing references yet)
  *   reads            optional: the parted datasets whose parts its check
  *                    reads through `storedOf`. The tool fetches a parted
@@ -124,7 +125,8 @@ function loadCatalog(load) {
   const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
   const { toMiniAppRegistry } = load("miniapps/miniapps.mapper");
   const { gamesFile } = load("games/games.schema");
-  const { MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } = load("infra/origins");
+  const { gameIdsOf, toGameOriginIssues, toTakenIdIssues } = load("games/games.rules");
+  const { GAME_ID_BY_FIRST_PARTY_ORIGIN, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEBVIEW_ORIGIN, WEB_ORIGIN } = load("infra/origins");
   const { JONGRO_ROUTES, SERVICE_CONFIG } = load("bus/bus.constants");
   const { toBusGroupIds } = load("bus/config/bus-config.mapper");
   const { SubwayStationsService } = load("subway/stations/subway-stations.service");
@@ -164,6 +166,10 @@ function loadCatalog(load) {
     const tables = storedOf("subway-timetables");
     return tables === null ? [noStoredTimetables] : toRouteIssues(topology, routesOf(tables));
   };
+  // Mini apps and games share one id namespace, so each registry's push is checked against the other's stored ids.
+  const miniAppIdsAt = ({ index }) => index.miniApps.map((entry, position) => ({ id: entry.id, path: ["index", "miniApps", position, "id"] }));
+  const storedMiniAppIds = (registry) => (registry === null ? [] : registry.index.miniApps.map((entry) => entry.id));
+  const storedGameIds = (games) => (games === null ? [] : games.games.map((game) => game.id));
   const asWarnings = (issues, at = []) => issues.map((issue) => ({ path: [...at, ...issue.path], message: issue.message, warning: true }));
   // The pushed routes against the stored topology, whose own push refuses a disagreement: warning here lets either go first.
   const timetableRouteWarnings = (tables, topology) =>
@@ -184,15 +190,24 @@ function loadCatalog(load) {
       miniapps: {
         owner: "src/miniapps",
         schema: checkedRegistry,
-        issuesOf: (registry) => toRegistryIssues(registry, { owners: MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, webviewOrigin: WEBVIEW_ORIGIN }),
+        issuesOf: (registry, { storedOf }) => [
+          ...toRegistryIssues(registry, { owners: MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, webviewOrigin: WEBVIEW_ORIGIN }),
+          ...toTakenIdIssues(miniAppIdsAt(registry), storedGameIds(storedOf("games")), "games"),
+        ],
         referencesOf: () => [],
         idsOf: ({ index }) => index.miniApps.map((entry) => entry.id),
       },
       // Only what exposes each hosted game; who owns a game origin stays in src/infra/origins.ts (add-game-factory D3).
+      // Its ids are what home-layout's game tiles name, but for the games installed builds ship bundled.
       games: {
         owner: "src/games",
         schema: gamesFile,
+        issuesOf: (games, { storedOf }) => [
+          ...toTakenIdIssues(gameIdsOf(games), storedMiniAppIds(storedOf("miniapps")), "miniapps"),
+          ...toGameOriginIssues(games, GAME_ID_BY_FIRST_PARTY_ORIGIN),
+        ],
         referencesOf: () => [],
+        idsOf: ({ games }) => games.map((game) => game.id),
       },
       "home-layout": {
         owner: "src/ui/home",

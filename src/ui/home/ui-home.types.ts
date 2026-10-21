@@ -9,7 +9,7 @@ export interface HomeLayoutIssue {
 }
 
 export interface HomeLayoutReference {
-  dataset: "miniapps";
+  dataset: "miniapps" | "games";
   id: string;
   path: Array<string | number>;
 }

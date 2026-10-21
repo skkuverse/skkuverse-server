@@ -3,7 +3,7 @@ title: Edit Runtime Data
 type: how-to
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-20
+last-updated: 2026-10-22
 audience: internal
 ---
 
@@ -18,7 +18,8 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | Dataset | Served on | Never read | References |
 | --- | --- | --- | --- |
 | `miniapps` | `GET /miniapps`, `GET /miniapps/:id`, the feed and send routes, and every dataset below that names a mini app | 503 `MINIAPP_REGISTRY_UNAVAILABLE` | none; each first-party origin's owner is the one `src/infra/origins.ts` names. Named by the three ui datasets, so a push may not drop an id they name ([register-a-miniapp.md](register-a-miniapp.md)) |
-| `home-layout` | `GET /ui/home` | 503 `HOME_LAYOUT_UNAVAILABLE` | `miniapps`: each `miniapp` tile, feed and `miniapp` action |
+| `games` | `GET /games`, `GET /games/:id` | 503 `GAME_REGISTRY_UNAVAILABLE` | none; each entry URL is on the origin `src/infra/origins.ts` maps to its id, and no id is one the stored `miniapps` holds, nor a mini app's id one it lists. Named by home layout game tiles, so a push may not drop an id a stored layout names |
+| `home-layout` | `GET /ui/home` | 503 `HOME_LAYOUT_UNAVAILABLE` | `miniapps`: each `miniapp` tile, feed and `miniapp` action; `games`: each `game` tile but the bundled games (`BUNDLED_GAME_IDS`) |
 | `campus-banners` | `GET /ui/home/campus` | 503 `CAMPUS_BANNERS_UNAVAILABLE` | `miniapps`: each banner's `miniapp` action |
 | `transit-layout` | `GET /ui/home/transit` | 503 `TRANSIT_LAYOUT_UNAVAILABLE` | `busGroups` and `subwayStations`: every one the checkout serves, each placed exactly once; `miniapps`: each `miniapp` link |
 | `map-layer-sets` | `GET /map/config`, `GET /map/overlays/event`, `GET /map/overlays/event/details`, while an activation is live | the base map, 200; the event routes serve nothing | none; each set is checked against the base layers and chips, one per `layerSetId` ([configure-map-overlays.md](configure-map-overlays.md#add-or-edit-a-festival)) |

@@ -3,7 +3,7 @@ title: Configure the Home Screen
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-20
+last-updated: 2026-10-22
 audience: internal
 ---
 
@@ -28,10 +28,10 @@ The layout has two kinds of section, drawn in the order they are listed:
   | `kind` | Fields | Name and icon from | Tap |
   | --- | --- | --- | --- |
   | `miniapp` | `id` | The mini-app registry (the `miniapps` dataset) | Opens the mini app |
-  | `game` | `id` | The app's bundled games (skkuverse-app `features/games`) | Opens the native game |
+  | `game` | `id` | The app's own config for that game (skkuverse-app `features/games`) | Opens the game, hosted or bundled |
   | `link` | `id`, `title`, `icon`, `actionType`, `actionValue` | The tile itself | Runs the action |
 
-  - A `miniapp` id must be registered. A `game` id is checked for shape only, because only the app knows which games a build ships; a build without the game drops the tile.
+  - A `miniapp` id must be registered. A `game` id must be listed in the `games` dataset of the database you push to, or be one of the games installed builds ship bundled (`BUNDLED_GAME_IDS` in `src/ui/home/ui-home.constants.ts`), which open bundled while unlisted. A build that does not know the game drops the tile.
   - A `link` tile is for anything that is neither, such as an app screen. `icon` is `{ "kind": "emoji", "emoji": "…" }` or `{ "kind": "media", "url": "…" }`, and the action follows the banner rules below.
   - A tile id may appear only once on the screen, whatever its kind.
   - The app drops a tile whose `kind` it does not know, so a new kind never breaks a released build.

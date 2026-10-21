@@ -3,7 +3,7 @@ title: Games Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-21
+last-updated: 2026-10-22
 audience: internal
 ---
 
@@ -13,7 +13,7 @@ audience: internal
 
 ## Context
 
-The registry is the `games` dataset in the content database ([ADR 0013](../decisions/0013-runtime-data-in-mongodb.md)), written only by `npm run data`, which checks each push with `gamesFile`. `GamesRepository.findGames` reads it, and `GamesService` serves it through `createDatasetLoader` as one frozen registry per revision. An entry holds exposure only: its id, its entry URL, whether it is enabled, and the lowest game protocol a host must speak. Whether a game is ranked, how its scores are checked, its copy and its overlay belong to skkuverse-app and its functions, never to this registry. Which origin each game owns stays in code, apart from every mini-app list (`GAME_ID_BY_FIRST_PARTY_ORIGIN` in `src/infra/origins.ts`). The module has one flow, so its controller sits at the root.
+The registry is the `games` dataset in the content database ([ADR 0013](../decisions/0013-runtime-data-in-mongodb.md)), written only by `npm run data`, which checks each push with `gamesFile`, `toGameOriginIssues` and `toTakenIdIssues`. `GamesRepository.findGames` reads it, and `GamesService` serves it through `createDatasetLoader` as one frozen registry per revision. An entry holds exposure only: its id, its entry URL, whether it is enabled, and the lowest game protocol a host must speak. Whether a game is ranked, how its scores are checked, its copy and its overlay belong to skkuverse-app and its functions, never to this registry. Which origin each game owns stays in code, apart from every mini-app list (`GAME_ID_BY_FIRST_PARTY_ORIGIN` in `src/infra/origins.ts`); each revision read is checked against it and a mismatch is logged. Games and mini apps share one id namespace, so a push of either registry is refused for an id the other holds, and a home layout `game` tile names a listed game or one of the games installed builds ship bundled (`BUNDLED_GAME_IDS`). The module has one flow, so its controller sits at the root.
 
 | System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
@@ -51,7 +51,7 @@ flowchart LR
 
 ## Invariants
 
-- The registry is checked at push (`gamesFile`) and parsed again at read (`storedGames`). `GamesService` keeps the read contract of `createDatasetLoader`: a push serves within `DATASET_CACHE_TTL_MS`, an invalid or failed reload keeps the last good registry, and with none both routes answer `503 GAME_REGISTRY_UNAVAILABLE` without `Cache-Control`, so a client keeps the copy it cached.
+- The registry is checked at push (`gamesFile`; `toGameOriginIssues` against the origins in code; `toTakenIdIssues` against the stored `miniapps`, and the `miniapps` push against the stored `games`; the home layout's references to its ids) and parsed again at read (`storedGames`). A revision read that disagrees with the origins in code is served and logged as `games.registry.owner_mismatch`, once per revision. `GamesService` keeps the read contract of `createDatasetLoader`: a push serves within `DATASET_CACHE_TTL_MS`, an invalid or failed reload keeps the last good registry, and with none both routes answer `503 GAME_REGISTRY_UNAVAILABLE` without `Cache-Control`, so a client keeps the copy it cached.
 - The index lists every entry, disabled ones included: a listed id is never opened from a copy a build bundles, and an unlisted one is.
 - A served entry is built from its named fields (`toGameEntry`), so no stored value reaches the wire past the schema.
 - An unlisted id answers `404 GAME_NOT_FOUND`, which no shared cache keeps.
