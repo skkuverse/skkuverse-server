@@ -995,6 +995,23 @@ describe("loadCatalog subway-timetables", () => {
     expect(lines).toEqual([expect.stringMatching(/^subway-timetables: KR-1-weekday\.json\.trains\.2\.trainNo: /)]);
   });
 
+  it("Train outside the service window: refuses a KR-1-weekday table whose train reaches KR-1-0153 at 04:59, naming the table, platform and train", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const tables = files();
+    const weekday = tables.find(({ file }) => file === "KR-1-weekday.json")!.data;
+    const early = weekday.trains.find((train: any) => train.stops.some((stop: any) => stop.station === "KR-1-0153"));
+    early.stops = early.stops.map((stop: any) => (stop.station === "KR-1-0153" ? { ...stop, arr: 17940, dep: 17970 } : stop));
+
+    // Act
+    const checked = checkParts(catalog, "subway-timetables", tables, {});
+
+    // Assert
+    expect(issueLines(checked.issues)).toEqual([`subway-timetables: KR-1-weekday.KR-1-0153: 2 stop time(s) outside the service window: ${early.trainNo} 17940 s, ${early.trainNo} 17970 s`]);
+    expect(checked.parts).toEqual([]);
+    expect(issueLines(checked.warnings).filter((line) => line.includes("service window"))).toEqual([]);
+  });
+
   it("Duplicate table: refuses two tables for 1호선 weekdays, naming both", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);

@@ -66,6 +66,9 @@
  * against the target's stored `subway-topology`, and its tracked stops against
  * the run properties, both as warnings: a coverage change pushes its tables
  * first and its topology after, and the topology push is the gate that refuses.
+ * A stop time at a served platform outside the service window
+ * (`SERVICE_WINDOW_*` in src/subway/timetable) refuses the push: the window
+ * widens in code first.
  */
 
 const SHOWN_TRAIN_NUMBERS = 8;
@@ -129,7 +132,7 @@ function loadCatalog(load) {
   const { subwayTopologyDataset } = load("subway/topology/subway-topology.schema");
   const { toRouteIssues, toTopologyIssues } = load("subway/topology/subway-topology.rules");
   const { TIMETABLE_DAY_TYPES } = load("subway/timetable/subway-timetable.constants");
-  const { findTimetable, toLineRoutes, toTimetableCoverageIssues, toTimetableKey, toTrackedStopIssues } = load("subway/timetable/subway-timetable.rules");
+  const { findTimetable, toLineRoutes, toServiceWindowIssues, toTimetableCoverageIssues, toTimetableKey, toTrackedStopIssues } = load("subway/timetable/subway-timetable.rules");
   const { timetableFile } = load("subway/timetable/subway-timetable.schema");
 
   const grammar = { parseTarget: parseMiniAppTarget };
@@ -256,6 +259,7 @@ function loadCatalog(load) {
         },
         issuesOf: (tables, { storedOf }) => [
           ...toTimetableCoverageIssues(tables, servedPlatforms),
+          ...toServiceWindowIssues(tables, servedPlatforms),
           ...timetableRouteWarnings(tables, storedOf("subway-topology")),
           ...asWarnings(toTrackedStopIssues(tables, servedPlatforms)),
         ],

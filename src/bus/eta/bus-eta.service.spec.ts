@@ -7,7 +7,9 @@
  * week-cache TTL later, so the ETA pollers need no restart (ADR 0012, D6); the
  * schedule content the timetable folds in comes from an in-memory dataset
  * store, so a stored suspension or rest day plans no run and content never read rejects
- * the runs (bus-eta-live.service.spec.ts pins the tick that then rejects).
+ * the runs (bus-eta-live.service.spec.ts pins the tick that then rejects). A suspension
+ * that starts on the smart view's opening day plans no run of the days after it either,
+ * until the smart view leaves `suspended`.
  */
 import { FakeBusEtaRepository } from "../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
 import { restDaysFixture, serviceNoticesWithSuspension, storedScheduleContentRepository, storedScheduleContentService } from "../../../__tests__/helpers/bus/schedule-content";
@@ -269,5 +271,66 @@ describe("BusEtaService.upcomingRuns before a stored suspension", () => {
 
     // Assert
     expect(runs.map((r) => r.date)).toEqual(["2026-12-21", "2026-12-22", "2026-12-23", "2026-12-24", "2026-12-25"]);
+  });
+});
+
+describe("BusEtaService.upcomingRuns before a suspension that starts mid-week", () => {
+  // Monday 2026-12-14, 07:00 KST; the suspension runs Thursday 12-17 to Friday 12-18.
+  const MONDAY = new Date("2026-12-13T22:00:00.000Z");
+  const clock = { now: () => MONDAY };
+
+  it("plans the runs before the suspension and none inside it", async () => {
+    // Arrange
+    const timetable = new FakeBusScheduleRepository();
+    timetable.patterns = [
+      {
+        serviceId: "campus-inja",
+        patternId: "weekday",
+        days: [1, 2, 3, 4, 5],
+        entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["08:00", null, null] }],
+      },
+    ];
+    const content = storedScheduleContentRepository();
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-12-17", until: "2026-12-18" }));
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+
+    // Act
+    const runs = await build(schedule).upcomingRuns(SEQUENCE, MONDAY);
+
+    // Assert
+    expect(runs.map((r) => r.date)).toEqual(["2026-12-14", "2026-12-15", "2026-12-16"]);
+  });
+});
+
+describe("BusEtaService.upcomingRuns around a suspension that starts on the next operating day", () => {
+  // Saturday 2026-12-19, 12:00 KST, and Wednesday 2026-12-23, 07:00 KST (still Tuesday 12-22 in UTC, inside the suspension).
+  const SATURDAY = new Date("2026-12-19T03:00:00.000Z");
+  const WEDNESDAY = new Date("2026-12-22T22:00:00.000Z");
+  const weekdays = {
+    serviceId: "campus-inja",
+    patternId: "weekday",
+    days: [1, 2, 3, 4, 5],
+    entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["08:00", null, null] }],
+  };
+
+  function etaAt(now: Date): BusEtaService {
+    const clock = { now: () => now };
+    const timetable = new FakeBusScheduleRepository();
+    timetable.patterns = [weekdays];
+    const content = storedScheduleContentRepository();
+    content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-12-21", until: "2026-12-22" }));
+    return build(new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock));
+  }
+
+  it("plans nothing on the Saturday before, and the rest of the week once the smart view leaves suspended", async () => {
+    // Act
+    const onSaturday = await etaAt(SATURDAY).upcomingRuns(SEQUENCE, SATURDAY);
+    const onWednesday = await etaAt(WEDNESDAY).upcomingRuns(SEQUENCE, WEDNESDAY);
+
+    // Assert
+    // The Saturday smart view opens on Monday 12-21, inside the suspension, so it answers suspended and no run of
+    // 12-23..12-25 is planned until Wednesday.
+    expect(onSaturday).toEqual([]);
+    expect(onWednesday.map((r) => r.date)).toEqual(["2026-12-23", "2026-12-24", "2026-12-25"]);
   });
 });
