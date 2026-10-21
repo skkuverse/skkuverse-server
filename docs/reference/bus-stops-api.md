@@ -9,7 +9,7 @@ audience: internal
 
 # Bus Stops API
 
-> The contract for `GET /bus/stops/:stopId/arrivals`, the stop page: one answer per stop with every route the server serves there, the Jongno arrivals, the HSSC buses on their way and the next shuttle runs. Read it before building a screen on the response. How stops are identified and indexed is [explanation/bus-architecture.md](../explanation/bus-architecture.md); what each part's data is and how to edit it is [how-to/edit-bus-stops.md](../how-to/edit-bus-stops.md).
+> The contract for `GET /bus/stops/:stopId/arrivals`, the stop page: one answer per stop with every route the server serves there, the Jongno arrivals, the HSSC buses on their way and the next shuttle runs, and for the `stopId` each realtime station of `/bus/config` links it by. Read it before building a screen on the response. How stops are identified and indexed is [explanation/bus-architecture.md](../explanation/bus-architecture.md); what each part's data is and how to edit it is [how-to/edit-bus-stops.md](../how-to/edit-bus-stops.md).
 
 ## Summary
 
@@ -35,6 +35,27 @@ A stop id names one physical pole, never a place, and is opaque to clients. It m
 | HSSC stop | the dataset's slug | `hssc-hyehwa-exit1` | `bus-stops` `hssc.stations[].stopId`; the two non-stop 혜화동로터리 positions have none |
 
 A pole a local stop aliases (`arsIds` in `bus-stops`, pushed only after an on-site confirmation) resolves to that local stop: `seoul-<ARS number>` answers the local stop's page, whose `stop.id` is the slug. Without an alias two sources stay two stops, however close: `hssc-600th` and `seoul-01616` are two pages. A route that lists a pole twice, as 종로02 lists its terminal `01881` first and last, serves it at its first index only.
+
+## Stop ids on the realtime stations
+
+Each station of a realtime group (`hssc`, `jongro02`, `jongro07`, `jongro08`) in `GET /bus/config` and `GET /bus/config/:groupId` carries `stopId`, its last field, the id of its stop page (unify-bus-stops design D12):
+
+| Station | `stopId` |
+| --- | --- |
+| An HSSC position | The `bus-stops` `hssc.stations[].stopId`; no key at the two non-stop 혜화동로터리 positions (indexes 5 and 7) |
+| A Jongno station | `seoul-<stationNumber>`, or the local stop aliasing that ARS number; no key for a virtual stop (ARS number empty or `0`). A pole a route lists twice (종로02's `01881`) carries its id at both indexes |
+
+```json
+{ "index": 16, "name": "혜화역1번출구", "subtitle": null, "stationNumber": "01592", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [{ "line": "4", "color": "00A5DE" }], "stopId": "seoul-01592" }
+```
+
+Every other field keeps its value and order, and the schedule groups and `stationEtas[]` gain nothing: removing every `stopId` key leaves the body served before the field, which is what installed apps parse (`parseRealtimeStation` reads named fields only). The field is `stopId` in `busGroup` (`src/bus/config/bus-config.wire.ts`), optional in `contracts/produced/bus-config.busGroup.schema.json`, with the fixtures `realtime-hssc-stop-ids.json` and `realtime-jongro07-stop-ids.json`.
+
+| | |
+| --- | --- |
+| ETag | Each realtime group's and the all-groups ETag changed once when the field shipped, in every language; an alias push changes the ETags of the groups whose stations it renames and the all-groups ETag, and no other |
+| Never read | While a replica has never read a good `bus-stops`, the Jongro groups answer `503 BUS_STOPS_UNAVAILABLE` with no `Cache-Control`, like `/bus/config` and the `hssc`, `campus` and `commute` groups; `fasttrack` and the realtime data routes still serve |
+| Following one | `/bus/stops/<stopId>/arrivals` answers its page, or `404 BUS_STOP_NOT_FOUND` once the stop is gone (a pole TOPIS removed, a slug retired by a later alias): a client reads that as "stop gone" |
 
 ## GET /bus/stops/:stopId/arrivals
 

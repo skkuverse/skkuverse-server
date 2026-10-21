@@ -1,24 +1,15 @@
 import { ARS_ID_PATTERN, STOP_SERVICE_IDS_BY_GROUP_ID, TOPIS_STOP_ID_PREFIX } from "../bus.constants";
-import { deepFreeze } from "../bus.rules";
+import { deepFreeze, toPoleStopId } from "../bus.rules";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import type { BusStopsSnapshot, ScheduleStop } from "../stops/bus-stops.types";
 import type { IndexedStop, StopIndex, StopRoute } from "./bus-stop-index.types";
 
 const HSSC_GROUP_ID = "hssc";
 
-export function toTopisStopId(arsId: string): string {
-  return `${TOPIS_STOP_ID_PREFIX}${arsId}`;
-}
-
 export function toPoleArsId(stopId: string): string | null {
   if (!stopId.startsWith(TOPIS_STOP_ID_PREFIX)) return null;
   const arsId = stopId.slice(TOPIS_STOP_ID_PREFIX.length);
   return ARS_ID_PATTERN.test(arsId) ? arsId : null;
-}
-
-// QUIRK(topis): a virtual stop carries the ARS number 0 or none, and no pole stands there.
-function isPoleArsId(arsId: string): boolean {
-  return ARS_ID_PATTERN.test(arsId) && Number(arsId) !== 0;
 }
 
 class StopIndexBuilder {
@@ -58,9 +49,9 @@ class StopIndexBuilder {
   addJongroRoute(route: RegistryRoute): void {
     const seenArsIds = new Set<string>();
     route.registryStations.forEach(({ arsId, topisId, stationName }, stationIndex) => {
-      if (!isPoleArsId(arsId) || seenArsIds.has(arsId)) return;
+      const stopId = toPoleStopId(arsId, this.snapshot.stopIdByArsId);
+      if (stopId === null || seenArsIds.has(arsId)) return;
       seenArsIds.add(arsId);
-      const stopId = this.snapshot.stopIdByArsId.get(arsId) ?? toTopisStopId(arsId);
       this.stopIdByArsId.set(arsId, stopId);
       const towards = route.registryStations[stationIndex + 1]?.stationName ?? null;
       const stop = this.addRoute(stopId, { kind: "jongro", groupId: route.id, stationIndex, towards, stationsVersion: route.stationsVersion });

@@ -1,0 +1,67 @@
+{
+  "_about": "GET /bus/config/hssc captured from production 2026-10-20 (Accept-Language en, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to indexes 4-6, each stop with the stopId that wave 4 of unify-bus-stops appends and the non-stop index 5 with none (hand-added: production served no stopId at the capture)",
+  "data": {
+    "id": "hssc",
+    "screenType": "realtime",
+    "label": "HSSC Shuttle Bus",
+    "visibility": {
+      "type": "always"
+    },
+    "card": {
+      "themeColor": "003626",
+      "iconType": "shuttle",
+      "busTypeText": "SKKU",
+      "subtitle": "Bus Stop (Humanities) ↔ 600th Anniversary Hall"
+    },
+    "screen": {
+      "dataEndpoint": "/bus/realtime/data/hssc",
+      "refreshInterval": 10,
+      "lastStationIndex": 10,
+      "stations": [
+        {
+          "index": 4,
+          "name": "혜화동우체국 [하차전용]",
+          "subtitle": "Hyehwa Postoffice [Drop-off Only]",
+          "stationNumber": null,
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "transferLines": [],
+          "stopId": "hssc-hyehwa-post-office"
+        },
+        {
+          "index": 5,
+          "name": "혜화동로터리 [미정차]",
+          "subtitle": "Hyehwa Rotary [Non-stop]",
+          "stationNumber": null,
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "transferLines": []
+        },
+        {
+          "index": 6,
+          "name": "혜화역 1번출구",
+          "subtitle": "Hyehwa Station (Shuttle Bus Stop)",
+          "stationNumber": null,
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "transferLines": [
+            {
+              "line": "4",
+              "color": "00A5DE"
+            }
+          ],
+          "stopId": "hssc-hyehwa-exit1"
+        }
+      ],
+      "features": [
+        {
+          "type": "info",
+          "url": "https://webview.skkuverse.com/bus/hssc/info"
+        }
+      ]
+    }
+  }
+}

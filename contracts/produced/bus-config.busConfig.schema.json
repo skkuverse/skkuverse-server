@@ -149,6 +149,9 @@
                               "color"
                             ]
                           }
+                        },
+                        "stopId": {
+                          "type": "string"
                         }
                       },
                       "required": [

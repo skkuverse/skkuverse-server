@@ -7,8 +7,11 @@
  *
  * - Never read: `/bus/config`, its `hssc`, `campus` and `commute` groups,
  *   `/ui/home/transit` and `/ui/home/transitlist` answer 503
- *   BUS_STOPS_UNAVAILABLE with no Cache-Control, while `fasttrack`, the Jongro
- *   groups and the realtime routes serve.
+ *   BUS_STOPS_UNAVAILABLE with no Cache-Control, while `fasttrack` and the
+ *   realtime routes serve. From wave 4 (spec "Jongro groups need the stops
+ *   from wave 4") the Jongro groups' stations name their stops, so
+ *   `/bus/config/jongro02`, `jongro07` and `jongro08` answer that 503 too; the
+ *   case that served `/bus/config/jongro07` before wave 4 moved there.
  * - A push that replaces a commute stop's photo reaches `/bus/config` and
  *   `/bus/config/commute`, ETag included, once the dataset TTL has passed, and
  *   leaves `/bus/config/hssc`'s ETag as it was.
@@ -138,7 +141,23 @@ describe("bus stops never read", () => {
     },
   );
 
-  it.each(["/bus/config/fasttrack", "/bus/config/jongro07", "/bus/realtime/data/hssc", "/bus/realtime/data/jongro07"])(
+  it.each(["/bus/config/jongro02", "/bus/config/jongro07", "/bus/config/jongro08"])(
+    "Jongro group from wave 4: answers %s with 503 BUS_STOPS_UNAVAILABLE and no Cache-Control",
+    async (url) => {
+      // Arrange
+      const app = await boot(stopsHolding(null));
+
+      // Act
+      const res = await request(app.getHttpServer()).get(url);
+
+      // Assert
+      expect(res.status).toBe(503);
+      expect(res.body).toEqual({ error: UNAVAILABLE });
+      expect(res.headers["cache-control"]).toBeUndefined();
+    },
+  );
+
+  it.each(["/bus/config/fasttrack", "/bus/realtime/data/hssc", "/bus/realtime/data/jongro07"])(
     "Groups that read no stops: answers %s with 200 while no bus-stops is stored",
     async (url) => {
       // Arrange
