@@ -21,6 +21,7 @@ jest.mock("../../../infra/logger", () => ({
 
 import { FakeBusCacheRepository } from "../../../../__tests__/helpers/fakes/bus/bus-cache.repository.fake";
 import { FakeBusRealtimeHsscClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.client.fake";
+import { FakeBusRealtimeHsscRepository } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-hssc.repository.fake";
 import { FakeBusRealtimeJongroClient } from "../../../../__tests__/helpers/fakes/bus/bus-realtime-jongro.client.fake";
 import { storedBusRegistryRepository } from "../../../../__tests__/helpers/bus/bus-registry";
 import { storedRouteAttributesService } from "../../../../__tests__/helpers/bus/route-attributes";
@@ -40,6 +41,7 @@ import type { BusRegistryRepository } from "../../registry/bus-registry.reposito
 import { BusRegistryService } from "../../registry/bus-registry.service";
 import { BusRealtimeArrivalService } from "../arrival/bus-realtime-arrival.service";
 import type { BusRealtimeHsscClient } from "../hssc/bus-realtime-hssc.client";
+import type { BusRealtimeHsscRepository } from "../hssc/bus-realtime-hssc.repository";
 import { BusRealtimeHsscService } from "../hssc/bus-realtime-hssc.service";
 import type { BusRealtimeJongroClient } from "../jongro/bus-realtime-jongro.client";
 import { BusRealtimeJongroService } from "../jongro/bus-realtime-jongro.service";
@@ -58,7 +60,12 @@ beforeEach(async () => {
   registryRepository = storedBusRegistryRepository();
   const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
   const cache = new BusCacheService(asReal<BusCacheRepository>(busCache));
-  const hssc = new BusRealtimeHsscService(asReal<BusRealtimeHsscClient>(new FakeBusRealtimeHsscClient()), cache, clock);
+  const hssc = new BusRealtimeHsscService(
+    asReal<BusRealtimeHsscClient>(new FakeBusRealtimeHsscClient()),
+    cache,
+    asReal<BusRealtimeHsscRepository>(new FakeBusRealtimeHsscRepository()),
+    clock,
+  );
   const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cache, registry, clock);
   service = new BusRealtimeGroupService(hssc, jongro, new BusRealtimeArrivalService(storedRouteAttributesService()), clock);
 });
@@ -233,7 +240,12 @@ describe("BusRealtimeGroupService.getGroup and the registry", () => {
     const freshRegistry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
     const cache = new BusCacheService(asReal<BusCacheRepository>(busCache));
     const jongro = new BusRealtimeJongroService(asReal<BusRealtimeJongroClient>(new FakeBusRealtimeJongroClient()), cache, freshRegistry, clock);
-    const hssc = new BusRealtimeHsscService(asReal<BusRealtimeHsscClient>(new FakeBusRealtimeHsscClient()), cache, clock);
+    const hssc = new BusRealtimeHsscService(
+      asReal<BusRealtimeHsscClient>(new FakeBusRealtimeHsscClient()),
+      cache,
+      asReal<BusRealtimeHsscRepository>(new FakeBusRealtimeHsscRepository()),
+      clock,
+    );
     const fresh = new BusRealtimeGroupService(hssc, jongro, new BusRealtimeArrivalService(storedRouteAttributesService()), clock);
     busCache.values.set("jongro_stations_07", [jongroArrivalDoc({ stationId: "100900220", sequence: "2", eta: "곧 도착" })]);
 
