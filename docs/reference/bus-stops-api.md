@@ -53,7 +53,7 @@ Every other field keeps its value and order, and the schedule groups and `statio
 
 | | |
 | --- | --- |
-| ETag | Each realtime group's and the all-groups ETag changed once when the field shipped, in every language; an alias push changes the ETags of the groups whose stations it renames, and no other |
+| ETag | Each realtime group's and the all-groups ETag changed once when the field shipped, in every language; an alias push changes the ETags of the groups whose stations it renames and the all-groups ETag, and no other |
 | Never read | While a replica has never read a good `bus-stops`, the Jongro groups answer `503 BUS_STOPS_UNAVAILABLE` with no `Cache-Control`, like `/bus/config` and the `hssc`, `campus` and `commute` groups; `fasttrack` and the realtime data routes still serve |
 | Following one | `/bus/stops/<stopId>/arrivals` answers its page, or `404 BUS_STOP_NOT_FOUND` once the stop is gone (a pole TOPIS removed, a slug retired by a later alias): a client reads that as "stop gone" |
 

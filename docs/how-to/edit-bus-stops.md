@@ -56,7 +56,7 @@ A push that changes a stop, a sequence or an alias reaches its page within a min
 A sequence and its timetable are written by two tools, and each refuses a length the other side does not match: `npm run data -- push bus-stops` checks against the stored timetables, and `npm run schedule` checks a timetable file against the stored `bus-stops`, each in the database it targets. A sequence-length change pushes the sequence with `--against` the new timetable file, then applies that file at once ([below](#change-a-sequences-length)).
 
 > [!WARNING]
-> Push from a checkout at the deployed `main`. The tool checks with your checkout's compiled code, and every replica checks the stored revision again with the deployed code when it reads it. A revision the deployed code refuses (one a newer or older checkout accepts) is not served: each replica logs `bus.stops.invalid` once and keeps its last good revision for 24 hours, then `/bus/config` and the shuttle groups answer `503 BUS_STOPS_UNAVAILABLE`; a replica that restarts in that time answers the 503 at once. `bus.stops.invalid` is the signal: roll back to the last good revision ([below](#roll-back)).
+> Push from a checkout at the deployed `main`. The tool checks with your checkout's compiled code, and every replica checks the stored revision again with the deployed code when it reads it. A revision the deployed code refuses (one a newer or older checkout accepts) is not served: each replica logs `bus.stops.invalid` once and keeps its last good revision for 24 hours, then `/bus/config`, the shuttle groups and the Jongro groups answer `503 BUS_STOPS_UNAVAILABLE`; a replica that restarts in that time answers the 503 at once. `bus.stops.invalid` is the signal: roll back to the last good revision ([below](#roll-back)).
 
 ## Prerequisites
 
@@ -101,10 +101,10 @@ A sequence and its timetable are written by two tools, and each refuses a length
 
 Add one only for a pair confirmed on site to be one pole: two stops however close stay two pages until then (none is confirmed today; unify-bus-stops design D2 lists the candidates).
 
-1. Pull `_dev` and add the pole's ARS number to the local stop's `arsIds`:
+1. Pull `_dev` and add the pole's ARS number to the local stop's `arsIds`, keeping every other field of its entry:
 
    ```json
-   { "id": "hssc-bus-lot", "name": { "ko": "학생회관 버스 주차장" }, "arsIds": ["01618"] }
+   { "id": "hssc-bus-lot", "…": "the entry's other fields, unchanged", "arsIds": ["01618"] }
    ```
 
 2. Push to `_dev` with `--dry-run` first, then for real, and `check bus-stops`, as above.
