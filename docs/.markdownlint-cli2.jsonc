@@ -13,6 +13,7 @@
         "explanation/app-config-architecture.md",
         "explanation/building-architecture.md",
         "explanation/bus-architecture.md",
+        "explanation/games-architecture.md",
         "explanation/health-architecture.md",
         "explanation/holidays-architecture.md",
         "explanation/map-architecture.md",
