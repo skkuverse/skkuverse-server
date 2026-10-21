@@ -78,6 +78,7 @@ const CAMPUS_INJA_PATTERNS = [
 
 interface Stores {
   busCache: FakeBusCacheRepository;
+  registry: ReturnType<typeof storedBusRegistryRepository>;
   stops: FakeBusStopsRepository;
   attributes: FakeBusRouteAttributesRepository;
   timetable: FakeBusScheduleRepository;
@@ -92,6 +93,7 @@ function freshStores(): Stores {
   timetable.patterns = structuredClone(CAMPUS_INJA_PATTERNS);
   return {
     busCache: new FakeBusCacheRepository(),
+    registry: storedBusRegistryRepository(),
     stops: storedBusStopsRepository(),
     attributes: storedRouteAttributesRepository(),
     timetable,
@@ -129,7 +131,7 @@ async function boot(stores: Stores, now = AT_14_10_KST): Promise<import("http").
     ],
     overrides: [
       { provide: BusCacheRepository, useValue: stores.busCache },
-      { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
+      { provide: BusRegistryRepository, useValue: stores.registry },
       { provide: BusRouteAttributesRepository, useValue: stores.attributes },
       { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
       { provide: BusRoutePathClient, useValue: stores.routePathClient },
@@ -341,6 +343,24 @@ describe("GET /bus/stops/:stopId/arrivals: Jongno entries", () => {
     expect(lineArrivals).toHaveLength(2);
     expect(lineArrivals.map((arrival: { state: string }) => arrival.state)).toEqual(["running", "waiting"]);
     expect(routesOf(res.body).find((route) => route.groupId === "jongro08")).toMatchObject({ stationIndex: 22, arrivals: [] });
+    expectWire(busStopArrivals, res.body.data);
+  });
+
+  it("Registry route missing: 200 with the stop block and only the route that can be read", async () => {
+    // Arrange
+    const stores = freshStores();
+    stores.registry.routes.delete("jongro07");
+    const server = await boot(stores);
+
+    // Act
+    const res = await request(server).get("/bus/stops/seoul-01592/arrivals");
+    const onlyOnMissing = await request(server).get("/bus/stops/seoul-01616/arrivals");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(routesOf(res.body).map((route) => route.groupId)).toEqual(["jongro08"]);
+    expect(onlyOnMissing.status).toBe(503);
+    expect(onlyOnMissing.body.error.code).toBe("JONGRO_REGISTRY_UNAVAILABLE");
     expectWire(busStopArrivals, res.body.data);
   });
 

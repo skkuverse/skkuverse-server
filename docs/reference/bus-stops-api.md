@@ -75,7 +75,7 @@ A local stop's block is its `/bus/config` record (`screen.stops[]`) without `map
 
 ### Routes
 
-`routes` lists one entry per served route at the stop, in the order `/bus/config` lists its groups (`hssc`, `campus`, `commute`, then each Jongno route), then a group's services and route types. Only routes the server serves appear; no TOPIS route outside 종로02, 07 and 08 is listed. A client skips an entry whose `kind` or shape it does not know.
+`routes` lists one entry per served route at the stop, in the order `/bus/config` lists its groups (`hssc`, `campus`, `commute`, then each Jongno route), then a group's services and route types. Only routes the server serves appear; no TOPIS route outside 종로02, 07 and 08 is listed. Both realtime kinds share `kind: "realtime"`: an entry with `arrivals` is a Jongno route's and one with `approaching` the HSSC line's. A client skips an entry whose `kind` or shape it does not know.
 
 | Entry | Fields |
 | --- | --- |
@@ -100,9 +100,9 @@ A run counts while its time at this stop, or its departure when that time is `nu
 | --- | --- | --- |
 | `404` | `BUS_STOP_NOT_FOUND` | The id is malformed, or no served route stops at it (`seoul-99999`, a pole TOPIS removed) |
 | `503` | `BUS_STOPS_UNAVAILABLE` | This replica has never read a good `bus-stops` value; no `Cache-Control` |
-| `503` | `JONGRO_REGISTRY_UNAVAILABLE` | A `seoul-` pole is asked for while a Jongno route's stored registry cannot be read, and no readable route names the pole |
+| `503` | `JONGRO_REGISTRY_UNAVAILABLE` | A `seoul-` pole is asked for while a Jongno route's stored registry cannot be read, and neither a readable route nor an alias names the pole |
 
-A route whose source cannot be read (its attributes or registry for a Jongno entry, the timetable for a shuttle entry) is left out of `routes` and logged at error as `bus.stop_arrivals.route_left_out`, at most once a minute per route; the rest of the page is served with `200`.
+A Jongno route whose stored registry cannot be read is left out of the stop index, logged at error as `bus.stop_index.registry_unread` at most once a minute, and read again at most every `REGISTRY_RETRY_MS`; an aliased pole on it still answers its local stop's page. A route whose other source cannot be read (its attributes for a Jongno entry, the timetable for a shuttle entry) is left out of `routes` and logged at error as `bus.stop_arrivals.route_left_out`, at most once a minute per route. Either way the rest of the page is served with `200`. A Jongno entry whose realtime view was placed by another stations version than the index (a TOPIS sync between the two reads) is left out of that one response.
 
 ## Freshness and cost
 

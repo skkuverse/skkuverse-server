@@ -28,6 +28,7 @@ async function routesOf(edit: (repository: ReturnType<typeof storedBusRegistryRe
   return storedBusRegistryService(repository).listRoutes();
 }
 
+const versionOf = (routes: RegistryRoute[], routeId: string) => routes.find((route) => route.id === routeId)!.stationsVersion;
 const routesAt = (index: ReturnType<typeof toStopIndex>, stopId: string) => index.stopById.get(stopId)?.routes;
 
 describe("toTopisStopId", () => {
@@ -60,8 +61,8 @@ describe("toStopIndex", () => {
 
     // Assert
     expect(routesAt(index, "seoul-01592")).toEqual([
-      { kind: "jongro", groupId: "jongro07", stationIndex: 16, towards: "혜화동로터리" },
-      { kind: "jongro", groupId: "jongro08", stationIndex: 22, towards: "혜화동로터리" },
+      { kind: "jongro", groupId: "jongro07", stationIndex: 16, towards: "혜화동로터리", stationsVersion: versionOf(routes, "jongro07") },
+      { kind: "jongro", groupId: "jongro08", stationIndex: 22, towards: "혜화동로터리", stationsVersion: versionOf(routes, "jongro08") },
     ]);
     expect(index.stopById.get("seoul-01592")).toMatchObject({ id: "seoul-01592", localStop: null, poles: [{ arsId: "01592", topisId: "100900075", stationName: "혜화역1번출구" }] });
     expect(index.stopIdByArsId.get("01592")).toBe("seoul-01592");
@@ -75,8 +76,8 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes);
 
     // Assert
-    expect(routesAt(index, "seoul-01722")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 3, towards: "유림회관앞" }]);
-    expect(routesAt(index, "seoul-01615")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 19, towards: "비천당" }]);
+    expect(routesAt(index, "seoul-01722")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 3, towards: "유림회관앞", stationsVersion: versionOf(routes, "jongro07") }]);
+    expect(routesAt(index, "seoul-01615")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 19, towards: "비천당", stationsVersion: versionOf(routes, "jongro07") }]);
   });
 
   it("serves 02's repeated terminal 01881 at index 0 only", async () => {
@@ -87,7 +88,7 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes);
 
     // Assert
-    expect(routesAt(index, "seoul-01881")).toEqual([{ kind: "jongro", groupId: "jongro02", stationIndex: 0, towards: "서울성곽.성대후문" }]);
+    expect(routesAt(index, "seoul-01881")).toEqual([{ kind: "jongro", groupId: "jongro02", stationIndex: 0, towards: "서울성곽.성대후문", stationsVersion: versionOf(routes, "jongro02") }]);
   });
 
   it("names nothing at the last index of a route", async () => {
@@ -98,7 +99,7 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes);
 
     // Assert
-    expect(routesAt(index, "seoul-01616")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 21, towards: null }]);
+    expect(routesAt(index, "seoul-01616")).toEqual([{ kind: "jongro", groupId: "jongro07", stationIndex: 21, towards: null, stationsVersion: versionOf(routes, "jongro07") }]);
   });
 
   it.each(["0", "", "00000", "1592", "015920"])("gives a station with the ARS number %p no stop", async (arsId) => {
@@ -228,7 +229,7 @@ describe("toStopIndex", () => {
     const index = toStopIndex(snapshot, routes);
 
     // Assert
-    expect(routesAt(index, "seoul-01999")).toEqual([{ kind: "jongro", groupId: "jongro08", stationIndex: 30, towards: null }]);
+    expect(routesAt(index, "seoul-01999")).toEqual([{ kind: "jongro", groupId: "jongro08", stationIndex: 30, towards: null, stationsVersion: versionOf(routes, "jongro08") }]);
     expect(index.stopById.has("seoul-01543")).toBe(false);
   });
 

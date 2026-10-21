@@ -66,7 +66,7 @@ describe("toJongroEntry", () => {
     };
 
     // Act & Assert
-    expect(toJongroEntry({ kind: "jongro", groupId: "jongro07", stationIndex: 16, towards: "혜화동로터리" }, view, "종로 07")).toEqual({
+    expect(toJongroEntry({ kind: "jongro", groupId: "jongro07", stationIndex: 16, towards: "혜화동로터리", stationsVersion: "abc" }, view, "종로 07")).toEqual({
       groupId: "jongro07",
       kind: "realtime",
       label: "종로 07",
@@ -79,7 +79,7 @@ describe("toJongroEntry", () => {
 
   it("serves no arrivals where the view has no row, and refuses a view with no stations version", () => {
     // Arrange
-    const route = { kind: "jongro" as const, groupId: "jongro07", stationIndex: 16, towards: null };
+    const route = { kind: "jongro" as const, groupId: "jongro07", stationIndex: 16, towards: null, stationsVersion: "abc" };
 
     // Act & Assert
     expect(toJongroEntry(route, { buses: [], stationEtas: [], stationsVersion: "abc" }, "종로 07").arrivals).toEqual([]);

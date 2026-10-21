@@ -10,7 +10,6 @@ export function toTopisStopId(arsId: string): string {
   return `${TOPIS_STOP_ID_PREFIX}${arsId}`;
 }
 
-// WHY: the ARS number a TOPIS stop id names, or null for a local slug.
 export function toPoleArsId(stopId: string): string | null {
   if (!stopId.startsWith(TOPIS_STOP_ID_PREFIX)) return null;
   const arsId = stopId.slice(TOPIS_STOP_ID_PREFIX.length);
@@ -64,7 +63,7 @@ class StopIndexBuilder {
       const stopId = this.snapshot.stopIdByArsId.get(arsId) ?? toTopisStopId(arsId);
       this.stopIdByArsId.set(arsId, stopId);
       const towards = route.registryStations[stationIndex + 1]?.stationName ?? null;
-      const stop = this.addRoute(stopId, { kind: "jongro", groupId: route.id, stationIndex, towards });
+      const stop = this.addRoute(stopId, { kind: "jongro", groupId: route.id, stationIndex, towards, stationsVersion: route.stationsVersion });
       if (!stop.poles.some((pole) => pole.arsId === arsId)) stop.poles.push({ arsId, topisId, stationName });
     });
   }
