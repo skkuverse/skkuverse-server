@@ -80,7 +80,7 @@ A local stop's block is its `/bus/config` record (`screen.stops[]`) without `map
 | Entry | Fields |
 | --- | --- |
 | Jongno, `kind: "arrivals"` | `groupId` (`jongro07`), `label`, `stationIndex` (its index in the group's `/bus/config` stations), `towards` (the next station's name, `null` at the last index), `stationsVersion` (as the realtime route serves it) and `arrivals`: exactly that index's `stationEtas[].arrivals` in `/bus/realtime/data/:groupId` for the same stored state, a waiting vehicle's arrivals included |
-| HSSC, `kind: "approaching"` | `groupId: "hssc"`, `label`, `stationIndex` and `approaching`: one `{ stopsAway }` per bus at or before the stop on the line, nearest first, `0` for a bus at the stop; a bus past the stop is left out. The HSSC API gives positions only, so no minutes are served |
+| HSSC, `kind: "approaching"` | `groupId: "hssc"`, `label`, `stationIndex` and `approaching`: one `{ stopsAway }` per bus on the line, nearest first: the positions from the bus forward to the stop round the loop (11 positions, the non-stop rows included), `0` for a bus at the stop, so a bus just past it is the farthest. The HSSC API gives positions only, so no minutes are served |
 | Shuttle, `kind: "schedule"` | `groupId` (`campus`, `commute`), `label` (the service's label), `serviceId`, `routeType`, `action` (`board` or `alight`), `status` (the smart schedule's: `active`, `suspended` or `noData`) and `next` |
 
 `next` holds up to three runs, empty unless `status` is `active`:

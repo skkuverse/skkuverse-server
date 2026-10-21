@@ -108,7 +108,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
     expect(realtime.readGroupIds).toEqual(["jongro07"]);
   });
 
-  it("serves the HSSC buses at or before the stop", async () => {
+  it("serves every HSSC bus as stops away round the loop, one past the stop farthest", async () => {
     // Arrange
     const { service, realtime } = setup();
     const bus = (stationIndex: number) => ({ stationIndex, carNumber: "0001", estimatedTime: 0, kind: "estimated" as const });
@@ -118,7 +118,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
     const page = await service.findStopArrivals("hssc-hyehwa-exit1", "zh");
 
     // Assert
-    expect(page?.routes).toEqual([{ groupId: "hssc", kind: "approaching", label: "人文校区班车", stationIndex: 6, approaching: [{ stopsAway: 2 }, { stopsAway: 5 }] }]);
+    expect(page?.routes).toEqual([{ groupId: "hssc", kind: "approaching", label: "人文校区班车", stationIndex: 6, approaching: [{ stopsAway: 2 }, { stopsAway: 5 }, { stopsAway: 9 }] }]);
   });
 
   it("leaves out a route whose read fails, logged at error once a minute, and serves the rest", async () => {

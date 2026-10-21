@@ -1,5 +1,6 @@
 import moment from "moment-timezone";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
+import { HSSC_POSITION_COUNT } from "../bus.constants";
 import type { RealtimeBus } from "../realtime/group/bus-realtime-group.wire";
 import type { SmartSchedule } from "../schedule/bus-schedule.wire";
 import type { ShuttleStopRoute } from "../stop-index/bus-stop-index.types";
@@ -11,11 +12,11 @@ const DAY_MS = 24 * 60 * MINUTE_MS;
 
 type RunStop = Pick<ShuttleStopRoute, "routeType" | "sequenceIndex" | "timing">;
 
-/** WHY: a bus at the stop is 0 stops away; one past it is left out, since the line it runs on does not return (D8). */
+// WHY: the HSSC line is a loop drawn from 농구장, so a bus past the stop reaches it on its next lap; positions count
+// as the realtime screen draws them, the non-stop rows included, and a bus at the stop is 0 (D8).
 export function toApproaching(buses: ReadonlyArray<Pick<RealtimeBus, "stationIndex">>, stationIndex: number): Approaching[] {
   return buses
-    .map((bus) => stationIndex - bus.stationIndex)
-    .filter((stopsAway) => stopsAway >= 0)
+    .map((bus) => (stationIndex - bus.stationIndex + HSSC_POSITION_COUNT) % HSSC_POSITION_COUNT)
     .sort((a, b) => a - b)
     .map((stopsAway) => ({ stopsAway }));
 }
