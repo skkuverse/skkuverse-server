@@ -1,0 +1,325 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "stop": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "coords": {
+          "type": "object",
+          "properties": {
+            "lat": {
+              "type": "number"
+            },
+            "lng": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "lat",
+            "lng"
+          ]
+        },
+        "photoUrl": {
+          "type": "string"
+        },
+        "streetViewUrl": {
+          "type": "string"
+        },
+        "subwayStation": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title"
+          ]
+        },
+        "arsIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "groupId": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "const": "realtime"
+              },
+              "label": {
+                "type": "string"
+              },
+              "stationIndex": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "towards": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "stationsVersion": {
+                "type": "string"
+              },
+              "arrivals": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "minutes": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "stopsAway": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "arriving",
+                        "waiting",
+                        "ended",
+                        "noInfo",
+                        "unknown"
+                      ]
+                    },
+                    "isLastBus": {
+                      "type": "boolean"
+                    },
+                    "carNumber": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "crowding": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "relaxed",
+                            "normal",
+                            "crowded"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "passengerCount": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "minutes",
+                    "stopsAway",
+                    "state",
+                    "isLastBus",
+                    "carNumber",
+                    "crowding",
+                    "passengerCount",
+                    "message"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "groupId",
+              "kind",
+              "label",
+              "stationIndex",
+              "towards",
+              "stationsVersion",
+              "arrivals"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "groupId": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "const": "realtime"
+              },
+              "label": {
+                "type": "string"
+              },
+              "stationIndex": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "approaching": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "stopsAway": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "stopsAway"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "groupId",
+              "kind",
+              "label",
+              "stationIndex",
+              "approaching"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "groupId": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "const": "schedule"
+              },
+              "label": {
+                "type": "string"
+              },
+              "serviceId": {
+                "type": "string"
+              },
+              "routeType": {
+                "type": "string"
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "board",
+                  "alight"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "suspended",
+                  "noData"
+                ]
+              },
+              "next": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "departure": {
+                      "type": "string"
+                    },
+                    "time": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "estimated": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "departure",
+                    "time",
+                    "estimated"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "groupId",
+              "kind",
+              "label",
+              "serviceId",
+              "routeType",
+              "action",
+              "status",
+              "next"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "stop",
+    "routes"
+  ]
+}

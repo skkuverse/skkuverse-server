@@ -8,5 +8,6 @@ import { BusEtaSmartService } from "./bus-eta-smart.service";
   imports: [BusEtaModule],
   controllers: [BusEtaSmartController],
   providers: [BusEtaSmartService, Clock],
+  exports: [BusEtaSmartService],
 })
 export class BusEtaSmartModule {}

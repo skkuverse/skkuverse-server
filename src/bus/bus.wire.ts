@@ -31,6 +31,24 @@ export const servedStop = z.object({
   subwayStation: stopSubwayStation.optional(),
 });
 
+const crowding = z.enum(["relaxed", "normal", "crowded"]).nullable();
+
+/** WHY: one of the next two buses TOPIS names for a Jongno station, as the realtime route and the stop page serve it. */
+export const arrival = z.object({
+  /** WHY: whole minutes, at least 1, for a running bus only; TOPIS's seconds are not accurate to the second. */
+  minutes: z.int().nullable(),
+  stopsAway: z.int().nullable(),
+  /** WHY: from the bus's text, which wins over its numbers, except a waiting tracked vehicle's, which reads waiting. */
+  state: z.enum(["running", "arriving", "waiting", "ended", "noInfo", "unknown"]),
+  isLastBus: z.boolean(),
+  carNumber: z.string().nullable(),
+  crowding,
+  /** QUIRK(topis): card taps in minus taps out, so riders who skip the tap out are still counted. */
+  passengerCount: z.int().nullable(),
+  /** QUIRK(topis): this bus's own arrival text, in Korean, served as it comes. */
+  message: z.string(),
+});
+
 export type ServedSequenceStop = z.input<typeof servedSequenceStop>;
 export type StopMap = z.input<typeof stopMap>;
 export type ServedStop = z.input<typeof servedStop>;

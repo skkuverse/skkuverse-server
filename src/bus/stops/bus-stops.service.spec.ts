@@ -238,3 +238,38 @@ describe("BusStopsService.etaOptIns", () => {
     expect(stops.etaOptIns()).toEqual(etaOptIns(SERVICE_CONFIG));
   });
 });
+
+// WHY: a stop page serves a stop as its config record, so the two cannot drift (unify-bus-stops spec bus-stop-arrivals).
+describe("BusStopsService.servedStop", () => {
+  it.each(["en", "zh"] as const)("serves a stop as the commute group's record of it in %s, without its map", async (lang) => {
+    // Arrange
+    const { repository, stops } = setup();
+    repository.storeStops(fixture());
+    const snapshot = await stops.current();
+    const record = stops.servedSequences(snapshot, ["commute-jeongja"], { lang, hasStopMaps: false }).stops.find((stop) => stop.id === "jeongja-exit3");
+    const stop = snapshot.catalog.stops.find((candidate) => candidate.id === "jeongja-exit3")!;
+
+    // Act
+    const served = stops.servedStop(stop, lang);
+
+    // Assert
+    expect(served).toEqual(record);
+    expect(served).toMatchObject({ id: "jeongja-exit3", subwayStation: { id: "jeongja" } });
+    expect(served).not.toHaveProperty("map");
+  });
+
+  it("leaves out the map of a stop with a guide", async () => {
+    // Arrange
+    const { repository, stops } = setup();
+    repository.storeStops(fixture());
+    const snapshot = await stops.current();
+    const stop = snapshot.catalog.stops.find((candidate) => candidate.guide !== undefined)!;
+
+    // Act
+    const served = stops.servedStop(stop, "ko");
+
+    // Assert
+    expect(served.id).toBe(stop.id);
+    expect(served).not.toHaveProperty("map");
+  });
+});
