@@ -5,3 +5,8 @@ export interface HsscBusTiming {
   firstSeenAt: moment.Moment;
   dwellSeconds: number;
 }
+
+export interface HsscFeedEventTiming {
+  seq: number;
+  getDate: Date;
+}
