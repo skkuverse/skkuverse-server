@@ -4,7 +4,9 @@
  * registry, whose repository is an in-memory fake holding the routes stored on 2026-10-17. Asserts group shape, 404
  * GROUP_NOT_FOUND, 304, per-language ETag difference, and the hssc (11 stations,
  * lastStationIndex 10, refreshInterval 10) / jongro07 (22 stations,
- * refreshInterval 25) screen contents.
+ * refreshInterval 25) screen contents, and from wave 4 of unify-bus-stops
+ * (spec bus-stops "Realtime stations carry their stop id") each realtime
+ * station's `stopId`, last, in the group and the all-groups body.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -21,6 +23,7 @@ import { expectWire } from "../../helpers/contracts/expect-wire";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
 import { storedBusStopsRepository } from "../../helpers/bus/bus-stops";
+import { HSSC_STOP_IDS } from "../../helpers/bus/station-stop-ids";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 const registryRepository = storedBusRegistryRepository();
@@ -366,5 +369,48 @@ describe("GET /bus/config stop maps", () => {
     expect(groups.find((group) => group.id === "campus")!.screen.stops).toEqual(campusStops);
     expectWire(busGroup, commute!.body.data);
     expectWire(busConfig, all!.body.data);
+  });
+});
+
+describe("GET /bus/config realtime station stop ids", () => {
+  type Station = { index: number; stationNumber: string | null; stopId?: string };
+  type Group = { id: string; screen: { stations: Station[] } };
+
+  it("Jongno station: serves 종로07's station 01592 with stopId seoul-01592 after transferLines", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/config/jongro07");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(busGroup, res.body.data);
+    const station = (res.body.data as Group).screen.stations.find((candidate) => candidate.stationNumber === "01592")!;
+    expect(station.stopId).toBe("seoul-01592");
+    expect(Object.keys(station).slice(-2)).toEqual(["transferLines", "stopId"]);
+  });
+
+  it("Non-stop HSSC position: serves the HSSC stations their stop ids, and index 5 no stopId key", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/config/hssc").set("Accept-Language", "zh");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(busGroup, res.body.data);
+    const stations = (res.body.data as Group).screen.stations;
+    expect(stations.map((station) => station.stopId ?? null)).toEqual(HSSC_STOP_IDS);
+    expect(stations[5]).not.toHaveProperty("stopId");
+  });
+
+  it("serves the same stations in /bus/config as in each realtime group", async () => {
+    // Act
+    const config = await request(httpServer).get("/bus/config");
+    const groups = await Promise.all(["hssc", "jongro02", "jongro07", "jongro08"].map((id) => request(httpServer).get(`/bus/config/${id}`)));
+
+    // Assert
+    expectWire(busConfig, config.body.data);
+    for (const res of groups) {
+      const group = res.body.data as Group;
+      expect(group.screen.stations.filter((station) => station.stopId !== undefined).length).toBeGreaterThan(0);
+      expect((config.body.data.groups as Group[]).find((candidate) => candidate.id === group.id)!.screen.stations).toEqual(group.screen.stations);
+    }
   });
 });

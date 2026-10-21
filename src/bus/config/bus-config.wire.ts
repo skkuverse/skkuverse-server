@@ -15,6 +15,7 @@ const station = z.object({
   stationNumber: z.string().nullable(),
   ...{ isFirstStation: z.boolean(), isLastStation: z.boolean(), isRotationStation: z.boolean() },
   transferLines: z.array(z.object({ line: z.string(), color: z.string() })),
+  stopId: z.string().optional(),
 });
 
 const feature = z.object({ type: z.string(), url: z.string() });

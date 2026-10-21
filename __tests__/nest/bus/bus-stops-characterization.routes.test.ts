@@ -41,6 +41,16 @@
  * value changes only with the behavior it pins (`.claude/rules/tests.md`).
  * Cloudflare weakens the origin's ETag with `W/` when it compresses, so ETags
  * are compared without that prefix.
+ *
+ * Wave 4 (unify-bus-stops design D12, task 7.2) changes one pinned behavior on
+ * purpose: each realtime station of `/bus/config` and of the `hssc` and Jongro
+ * groups carries its `stopId`, last. Those bodies are now the captured ones
+ * with exactly the stations' stop ids appended
+ * (__tests__/helpers/bus/station-stop-ids.ts), and their ETags the md5 of that
+ * JSON, as `BusConfigService` computes every config ETag; with every `stopId`
+ * removed each is the captured body, and the captured ETag no longer answers
+ * 304. The capture itself is unchanged, and the schedule groups still answer
+ * its bytes and ETags.
  */
 import crypto from "crypto";
 import fs from "fs";
@@ -59,6 +69,7 @@ import { FakeBusEtaProbeClient } from "../../helpers/fakes/bus/bus-eta-probe.cli
 import { FakeBusEtaTravelClient } from "../../helpers/fakes/bus/bus-eta-travel.client.fake";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
+import { md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../helpers/bus/station-stop-ids";
 import captured from "./fixtures/bus-stops-production.capture.json";
 import storedRoutes from "./fixtures/jongro-registry-routes.json";
 
@@ -82,6 +93,7 @@ type Registry = typeof import("../../../src/scheduling/poller-registry.service")
 type Lang = "ko" | "en" | "zh";
 const LANGS: Lang[] = ["ko", "en", "zh"];
 const GROUP_IDS = ["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07", "jongro08"] as const;
+const SCHEDULE_GROUP_IDS = GROUP_IDS.filter((groupId) => !["hssc", "jongro02", "jongro07", "jongro08"].includes(groupId));
 const ROUTE_IDS = ["jongro02", "jongro07", "jongro08"] as const;
 type RouteId = (typeof ROUTE_IDS)[number];
 const SERVICE_IDS = Object.keys(captured.smart) as Array<keyof typeof captured.smart>;
@@ -302,27 +314,56 @@ function expectCaptured(res: request.Response, capture: Captured): void {
   expect(originEtagOf(res.headers.etag)).toBe(originEtagOf(capture.etag));
 }
 
+/** The capture with every realtime station's stop id appended, as served from wave 4, and its ETag. */
+function configFromWave4(lang: Lang): Captured {
+  const capture = configCapture(lang);
+  const groups = capture.body.data.groups.map(withStationStopIds);
+  return { ...capture, etag: md5EtagOf(groups), body: { ...capture.body, data: { ...capture.body.data, groups } } };
+}
+
 describe("GET /bus/config", () => {
-  it.each(LANGS)("answers in %s the bytes and ETag production served", async (lang) => {
+  it.each(LANGS)("answers in %s the bytes production served with only the realtime stations' stop ids appended, and their ETag", async (lang) => {
     // Act
     const res = await get("/bus/config", lang);
 
     // Assert
-    expectCaptured(res, configCapture(lang));
+    expectCaptured(res, configFromWave4(lang));
+    expect(withoutStationStopIds(res.body.data)).toEqual(configCapture(lang).body.data);
+    expect(originEtagOf(res.headers.etag)).not.toBe(originEtagOf(configCapture(lang).etag));
   });
 
-  it.each(LANGS)("answers 304 in %s to the ETag production served", async (lang) => {
+  it.each(LANGS)("answers 304 in %s to the ETag from wave 4, and 200 to the one production served before it", async (lang) => {
     // Act
-    const res = await get("/bus/config", lang).set("If-None-Match", configCapture(lang).etag!);
+    const current = await get("/bus/config", lang).set("If-None-Match", configFromWave4(lang).etag!);
+    const before = await get("/bus/config", lang).set("If-None-Match", configCapture(lang).etag!);
 
     // Assert
-    expect(res.status).toBe(304);
-    expect(res.text).toBe("");
+    expect(current.status).toBe(304);
+    expect(current.text).toBe("");
+    expect(before.status).toBe(200);
   });
 });
 
 describe("GET /bus/config/:groupId", () => {
-  it.each(LANGS.flatMap((lang) => GROUP_IDS.map((groupId) => [lang, groupId] as const)))(
+  it.each(LANGS.flatMap((lang) => (["hssc", "jongro02", "jongro07", "jongro08"] as const).map((groupId) => [lang, groupId] as const)))(
+    "answers in %s for %s the group production served with only its stations' stop ids appended, and its ETag",
+    async (lang, groupId) => {
+      // Arrange
+      const capture = configCapture(lang);
+      const group = withStationStopIds(groupOf(lang, groupId));
+      const expected = { status: 200, etag: md5EtagOf(group), cacheControl: capture.cacheControl, vary: capture.vary, body: { meta: { lang }, data: group } };
+
+      // Act
+      const res = await get(`/bus/config/${groupId}`, lang);
+
+      // Assert
+      expectCaptured(res, expected);
+      expect(withoutStationStopIds(res.body.data)).toEqual(groupOf(lang, groupId));
+      expect(originEtagOf(res.headers.etag)).not.toBe(originEtagOf(capture.groupEtags[groupId]));
+    },
+  );
+
+  it.each(LANGS.flatMap((lang) => SCHEDULE_GROUP_IDS.map((groupId) => [lang, groupId] as const)))(
     "answers in %s for %s the group production served, with its ETag",
     async (lang, groupId) => {
       // Arrange
