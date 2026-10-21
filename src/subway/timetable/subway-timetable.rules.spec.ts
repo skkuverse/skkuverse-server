@@ -557,6 +557,23 @@ describe("toServiceWindowIssues", () => {
     // Assert
     expect(issues).toEqual([]);
   });
+
+  it("ignores a table of another operator that holds a stop at the platform's station", () => {
+    // Arrange
+    // WHY: the stop matches the platform's id, so only the table-key match keeps this table off the platform.
+    const korailLine4 = table({
+      operator: "KR",
+      line: "4",
+      stations: ["S1-4-419", "S1-4-420", "S1-4-421"],
+      trains: [{ trainNo: "4001", direction: "up", destination: "test", express: false, stops: [{ station: "S1-4-420", arr: 1000, dep: 1030 }] }],
+    });
+
+    // Act
+    const issues = toServiceWindowIssues([korailLine4], [HYEHWA]);
+
+    // Assert
+    expect(issues).toEqual([]);
+  });
 });
 
 describe("listSubwayPlatforms", () => {
