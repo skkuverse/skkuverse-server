@@ -64,6 +64,11 @@
  *                    optional: the command that writes that file, printed
  *                    after the push; `create` when the file holds a key the
  *                    target does not store
+ *   splitExpired(docs, now)
+ *                    optional: `{ served, expired }`, the documents the server
+ *                    serves from today on and the rest, each with a
+ *                    `message`; the check reads only the served ones, and the
+ *                    tool prints each other one as skipped
  *
  * `busSchedules` is the stored shuttle timetables, which `npm run schedule`
  * writes; `bus-stops` reads it so a sequence and its timetable entries agree
@@ -95,7 +100,7 @@
  * widens in code first.
  */
 
-const { buildDocuments, parseTimetableFile, stopTimesMismatches } = require("../campus-schedule-file");
+const { buildDocuments, parseTimetableFile, splitExpired, stopTimesMismatches } = require("../campus-schedule-file");
 
 const SHOWN_TRAIN_NUMBERS = 8;
 const SHOWN_STOP_TIME_MISMATCHES = 3;
@@ -231,9 +236,10 @@ function loadCatalog(load) {
       busSchedules: {
         database: "MONGO_DB_NAME_BUS_CAMPUS",
         name: "bus_schedules",
-        projection: { _id: 0, serviceId: 1, patternId: 1, "entries.time": 1, "entries.routeType": 1, "entries.stopTimes": 1 },
+        projection: { _id: 0, serviceId: 1, patternId: 1, effectiveUntil: 1, "entries.time": 1, "entries.routeType": 1, "entries.stopTimes": 1 },
         keyOf: (doc) => `${doc.serviceId}/${doc.patternId}`,
         fromFile: (raw) => buildDocuments(parseTimetableFile(raw)),
+        splitExpired,
         applyCommand: (file, prod, { create = false } = {}) =>
           `npm run schedule -- --file ${shellWord(file)}${create ? " --create" : ""}${prod ? " --prod" : ""}`,
       },
