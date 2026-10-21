@@ -9,7 +9,7 @@ audience: internal
 
 # Edit Bus Stops
 
-> How to change a shuttle stop, its photo, street view or map guide, a stop sequence's labels and notes, or an HSSC station label, with `npm run data` and no deploy: pull `bus-stops`, edit, push to `_dev`, then to production, and roll back.
+> How to change a shuttle stop, its photo, street view or map guide, a stop sequence's labels, notes or length, or an HSSC station label, with `npm run data` and no deploy: pull `bus-stops`, edit, push to `_dev`, then to production, and roll back.
 
 ## Overview
 
@@ -36,8 +36,12 @@ What stays in code, and needs a deploy to change: the service ids and which rout
 | A sequence | At least two stops, the first boarding, one alighting; a stop once per sequence; an estimated one with its first stop scheduled and at most seven stops |
 | `hssc.stations` | Exactly `HSSC_POSITION_COUNT` positions in wire order, only the first flagged first and the last flagged last, each `stopId` a stop of this dataset or `null`, no stop named twice |
 | `arsIds` | Five-digit ARS numbers, each claimed by one stop only |
+| A sequence against the stored timetables | Every entry of its service and route type in the target's `bus_campus.bus_schedules` (`_dev` without `--prod`) has one `stopTimes` time per stop, `null` only at an estimated stop; a refusal names the service, the route type and the first three entry times |
 
-A sequence's length must match its timetable's `stopTimes` (`scripts/data/*-schedule.json`, written by `npm run schedule`). Do not add or remove a sequence stop here until the timetable for it is ready.
+A sequence and its timetable are written by two tools, and each refuses a length the other side does not match: `npm run data -- push bus-stops` checks against the stored timetables, and `npm run schedule` checks a timetable file against the stored `bus-stops`, each in the database it targets. A sequence-length change pushes the sequence with `--against` the new timetable file, then applies that file at once ([below](#change-a-sequences-length)).
+
+> [!WARNING]
+> Push from a checkout at the deployed `main`. The tool checks with your checkout's compiled code, and every replica checks the stored revision again with the deployed code when it reads it. A revision the deployed code refuses (one a newer or older checkout accepts) is not served: each replica logs `bus.stops.invalid` once and keeps its last good revision for 24 hours, then `/bus/config` and the shuttle groups answer `503 BUS_STOPS_UNAVAILABLE`; a replica that restarts in that time answers the 503 at once. `bus.stops.invalid` is the signal: roll back to the last good revision ([below](#roll-back)).
 
 ## Prerequisites
 
@@ -78,6 +82,21 @@ A sequence's length must match its timetable's `stopTimes` (`scripts/data/*-sche
    npm run data -- check bus-stops --prod
    ```
 
+### Change a sequence's length
+
+Adding or removing a stop of a sequence changes the length of every `stopTimes` of its service and route type, which `npm run schedule` writes from `scripts/data/campus-schedule.json` or `scripts/data/commute-schedule.json`. Each writer refuses while the other side is old, so the sequence goes first, checked against the new timetable file:
+
+1. Edit the sequence in `.data/dev/bus-stops.json` and the timetable file: one more (or one fewer) time in every `stopTimes` of that service and route type, `null` where the new stop is estimated.
+2. Push the sequence against the file. The tool checks against the file's entries in place of the stored ones of the same service and pattern, and prints the command that applies the file (with `--create` when the file holds a pattern the target does not store). A stored pattern the file does not list is still checked: `npm run schedule` lists it as "not in this file" and never deletes it, so ask the owner before a length change of a service that has one. `--dry-run` previews the push and names the command; `npm run schedule` cannot be previewed before the push, since it refuses the new file against the stored sequences:
+
+   ```bash
+   npm run data -- push bus-stops --against scripts/data/commute-schedule.json --note "gangnam down: Nonhyeon stop"
+   ```
+
+3. Apply the timetable at once with the printed command, here `npm run schedule -- --file scripts/data/commute-schedule.json`. Between the two writes the smart view serves the old stop times against the new stops, and the stored estimates of that sequence are dropped and fetched again.
+4. Check both sides: `npm run data -- check bus-stops` and `npm run schedule -- --file scripts/data/commute-schedule.json --check`.
+5. Repeat in production: `npm run data -- pull bus-stops --prod`, the same edit in `.data/prod/bus-stops.json`, `npm run data -- push bus-stops --prod --against <timetable file>`, then the printed `npm run schedule … --prod`.
+
 ### Roll back
 
 ```bash
@@ -85,11 +104,15 @@ npm run data -- history bus-stops --prod
 npm run data -- rollback bus-stops <revision> --prod
 ```
 
-A rollback runs the push checks and reaches every route within a minute, like a push.
+A rollback runs the push checks and reaches every route within a minute, like a push. A rollback that changes a sequence's length is refused while the stored timetable fits the newer one: roll back `--against` the timetable file of that revision's length, then apply it with the printed command, as in [Change a sequence's length](#change-a-sequences-length):
+
+```bash
+npm run data -- rollback bus-stops <revision> --prod --against scripts/data/commute-schedule.json
+```
 
 ## Verify
 
-- `npm run data -- check bus-stops --prod` exits `0`.
+- `npm run data -- check bus-stops --prod` exits `0`, and after a length change `npm run schedule -- --file <timetable file> --check --prod` does too.
 - Within a minute, `/bus/config/<group>` answers the new body with a new ETag, and an untouched group keeps its ETag.
 - (An operations detail is left out of the public history.)
 
@@ -101,3 +124,7 @@ A rollback runs the push checks and reaches every route within a minute, like a 
 | The push is refused at `hssc.stations` | Not exactly `HSSC_POSITION_COUNT` positions | The count is code: change it there, with the HSSC API matching, first |
 | The push is refused naming a lane strategy | `LANE_STRATEGIES` sets one for a sequence the data drops | Keep the sequence, or remove the strategy in code and deploy first |
 | `/bus/config` answers `503 BUS_STOPS_UNAVAILABLE` | A replica has never read a good `bus-stops` (missing, invalid or unreadable) | `npm run data -- check bus-stops --prod`; roll back to the last good revision |
+| `bus.stops.invalid` in the logs after a push the tool accepted | The checkout you pushed from is not the deployed code, which refuses the revision | Roll back to the last good revision now, within the 24 hours, then push again from a checkout at the deployed `main` |
+| The push is refused at `sequences.<service>.<route type>`, "timetable entries do not fit this sequence" | The stored `stopTimes` of that service and route type have the sequence's old length | A length change: push `--against` the new timetable file, then apply it ([above](#change-a-sequences-length)) |
+| `npm run schedule` fails with `MISMATCH` lines | The file's `stopTimes` do not fit the target's stored `bus-stops` sequences | Fix the file, or push the new sequence first with `--against` this file |
+| `npm run schedule` fails with `bus-stops is not stored` | The target content database holds no `bus-stops` | Push `bus-stops` to that target first |

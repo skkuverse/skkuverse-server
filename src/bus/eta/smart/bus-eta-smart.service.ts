@@ -58,19 +58,23 @@ export class BusEtaSmartService {
 
   // WHY: the schedule as resolved when the estimates or the stops cannot be read.
   private async withEstimates(result: SmartSchedule, routeTypes: readonly string[]): Promise<SmartSchedule> {
-    try {
-      const [estimates, { catalog }] = await Promise.all([this.servedEstimates(), this.stops.current()]);
-      return applyEstimates(result, { routeTypes, sequences: catalog.sequences[result.serviceId] ?? {}, estimates });
-    } catch (err: unknown) {
-      const ticket = this.etaReadThrottle.take(result.serviceId);
-      if (ticket) {
-        logger.warn(
-          { event: "bus.eta.read_failed", serviceId: result.serviceId, suppressed: ticket.suppressed, err },
-          "arrival estimates unavailable, serving the stored timetable",
-        );
-      }
+    const [estimates, stops] = await Promise.allSettled([this.servedEstimates(), this.stops.current()]);
+    if (stops.status === "rejected") {
+      this.warnUnestimated(result.serviceId, "bus.eta.stops_unavailable", stops.reason);
       return result;
     }
+    try {
+      if (estimates.status === "rejected") throw estimates.reason;
+      return applyEstimates(result, { routeTypes, sequences: stops.value.catalog.sequences[result.serviceId] ?? {}, estimates: estimates.value });
+    } catch (err: unknown) {
+      this.warnUnestimated(result.serviceId, "bus.eta.read_failed", err);
+      return result;
+    }
+  }
+
+  private warnUnestimated(serviceId: string, event: "bus.eta.read_failed" | "bus.eta.stops_unavailable", err: unknown): void {
+    const ticket = this.etaReadThrottle.take(`${event} ${serviceId}`);
+    if (ticket) logger.warn({ event, serviceId, suppressed: ticket.suppressed, err }, "arrival estimates unavailable, serving the stored timetable");
   }
 
   private async servedEstimates(): Promise<Map<string, ServedEstimate>> {

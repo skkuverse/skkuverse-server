@@ -376,7 +376,7 @@ async function checkProbe(lane, source) {
   if (totals.wrongSide > 0) process.exitCode = 1;
 }
 
-// Inside the 2 calls each, the stops of 인자셔틀 (src/bus/stops/schedule-stops.json).
+// Inside the 2 calls each, the stops of 인자셔틀 (the bus-stops dataset's hssc-bus-lot, nsc-n-center, nsc-opposite and hssc-600th).
 const CHECK_TRIPS = {
   southbound: { start: { lat: 37.587367, lng: 126.993643 }, goal: { lat: 37.292298, lng: 126.975057 } },
   northbound: { start: { lat: 37.292536, lng: 126.975077 }, goal: { lat: 37.587258, lng: 126.993904 } },
