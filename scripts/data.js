@@ -18,7 +18,7 @@
  *   check [<dataset>]                     run the push checks on stored data; writes nothing
  *
  *   --against <timetable file>
- *               push only, of a dataset that reads the stored timetables
+ *               push or rollback, of a dataset that reads the stored timetables
  *               (bus-stops): check against the documents `npm run schedule`
  *               would write from that file instead of the stored ones of the
  *               same service and pattern, then print that command for the
@@ -76,7 +76,7 @@ const USAGE = [
   "  pull <dataset> | push <dataset> [--file f | --dir d] | push <dataset> --create (--file f | --dir d)",
   "  history <dataset> [--limit n] | rollback <dataset> <revision>",
   "  copy-prod-to-dev <dataset> | check [<dataset>]",
-  "  options: --prod --yes --dry-run --note <text> --by <email> --against <timetable file> (push)",
+  "  options: --prod --yes --dry-run --note <text> --by <email> --against <timetable file> (push, rollback)",
 ].join("\n");
 
 const NEEDS_DATASET = new Set(["pull", "push", "history", "rollback", "copy-prod-to-dev"]);
@@ -110,7 +110,7 @@ function parseArgs(argv) {
   if (command === "rollback" && !/^[1-9]\d*$/.test(revision ?? "")) throw new UsageError("rollback needs a revision number");
   if (args.create && (command !== "push" || !(args.file || args.dir))) throw new UsageError("--create goes with push and --file <json> or --dir <dir>");
   if (args.file && args.dir) throw new UsageError("pass --file or --dir, not both");
-  if (args.against && command !== "push") throw new UsageError("--against goes with push");
+  if (args.against && command !== "push" && command !== "rollback") throw new UsageError("--against goes with push or rollback");
   if (command === "copy-prod-to-dev" && args.prod) {
     throw new UsageError("copy-prod-to-dev writes only the _dev database; drop --prod (nothing copies into production)");
   }
@@ -364,6 +364,8 @@ function collectionReader(ctx) {
     }
     const fromFile = againstDocs(ctx, spec);
     const replaced = new Set(fromFile.map(spec.keyOf));
+    const storedKeys = new Set(stored.map(spec.keyOf));
+    ctx.against.creates = fromFile.some((doc) => !storedKeys.has(spec.keyOf(doc)));
     ctx.out(`reads      ${database}.${spec.name}, with ${ctx.args.against} in place of its documents of the same service and pattern`);
     return [...stored.filter((doc) => !replaced.has(spec.keyOf(doc))), ...fromFile];
   };
@@ -378,11 +380,12 @@ async function checkedWarnings(ctx, db, data) {
   return warnings;
 }
 
-/** After a push `--against` a file: the command that writes it to the same target, which follows at once. */
+/** After a push or rollback `--against` a file: the command that writes it to the same target, which follows at once. */
 function printApplyCommand(ctx) {
   if (!ctx.args.against) return;
   const spec = ctx.catalog.collections[againstKeyOf(ctx.catalog, ctx.args.dataset)];
-  ctx.out(`next: apply the file to the same target at once: ${spec.applyCommand(ctx.args.against, ctx.args.prod)}`);
+  const command = spec.applyCommand(ctx.args.against, ctx.args.prod, { create: ctx.against.creates });
+  ctx.out(ctx.args.dryRun ? `[dry run] a push would be followed at once by: ${command}` : `next: apply the file to the same target at once: ${command}`);
 }
 
 async function pull(ctx) {
@@ -692,6 +695,7 @@ async function rollback(ctx) {
     write: (meta) => store.rollback(ctx.db, dataset, revision, { ...meta, baseRevision: current.revision }),
   });
   if (result !== null) reportStored(ctx, result, current.revision);
+  printApplyCommand(ctx);
   return EXIT_OK;
 }
 
@@ -742,7 +746,8 @@ async function connectAndRun(ctx, url, serverSelectionTimeoutMS) {
   const client = new MongoClient(url, { serverSelectionTimeoutMS });
   try {
     await client.connect();
-    const connected = { ...ctx, client, db: client.db(ctx.dbName) };
+    // WHY: `against` is shared by reference, so what the reader finds in the file reaches the handler's context.
+    const connected = { ...ctx, client, db: client.db(ctx.dbName), against: { creates: false } };
     return await HANDLERS[ctx.args.command]({ ...connected, readCollection: collectionReader(connected) });
   } finally {
     await client.close();
