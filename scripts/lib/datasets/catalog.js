@@ -121,6 +121,10 @@ function loadCatalog(load) {
   const { corridorIssues } = load("bus/eta/lane/bus-eta-lane.rules");
   const { jongroRouteAttributesDataset } = load("bus/route-attributes/bus-route-attributes.schema");
   const { toRouteAttributesIssues } = load("bus/route-attributes/bus-route-attributes.rules");
+  const { busStopsDataset } = load("bus/stops/bus-stops.schema");
+  const { etaOptIns } = load("bus/stops/bus-stops.rules");
+  const { busStopsReferences, toBusStopsIssues } = load("bus/stops/check/bus-stops-check.rules");
+  const { LANE_STRATEGIES } = load("bus/eta/lane/bus-eta-lane.constants");
   const { checkedRegistry } = load("miniapps/miniapps.schema");
   const { isSingleEmoji, parseMiniAppTarget, toRegistryIssues } = load("miniapps/miniapps.rules");
   const { toMiniAppRegistry } = load("miniapps/miniapps.mapper");
@@ -261,6 +265,21 @@ function loadCatalog(load) {
         schema: jongroRouteAttributesDataset,
         issuesOf: (attributes) => toRouteAttributesIssues(attributes, jongroRoutes.ids()),
         referencesOf: () => [],
+      },
+      // The local stops, the shuttle sequences and the HSSC line; the service ids, estimate opt-ins, travel strategies and
+      // HSSC position count stay in code (unify-bus-stops D3, D4). Its stop ids are what later datasets may name.
+      "bus-stops": {
+        owner: "src/bus/stops",
+        schema: busStopsDataset,
+        issuesOf: (data) =>
+          toBusStopsIssues(data, {
+            knownServiceIds: new Set(Object.keys(SERVICE_CONFIG)),
+            optIns: etaOptIns(SERVICE_CONFIG),
+            stationIds: new Set(subwayStations.ids()),
+            laneStrategies: LANE_STRATEGIES,
+          }),
+        referencesOf: busStopsReferences,
+        idsOf: ({ stops }) => stops.map((stop) => stop.id),
       },
       // Each served platform's directions and the neighbor stops; the lines, stations and platforms stay in code (move-reference-datasets D2, D3).
       "subway-topology": {

@@ -1,6 +1,6 @@
 import type { BusStopsData } from "../bus-stops.document";
 import { subwayStationErrors, validateStopCatalog } from "../bus-stops.rules";
-import type { BusStopsCheckContext, BusStopsIssue } from "./bus-stops-check.types";
+import type { BusStopsCheckContext, BusStopsIssue, BusStopsReference } from "./bus-stops-check.types";
 
 const STOP_LABEL = /^stop (\S+): /;
 const STOP_INDEX_LABEL = /^stops\[(\d+)\]/;
@@ -79,4 +79,14 @@ function overlayIssues({ topis = {} }: BusStopsData, { stationIds }: BusStopsChe
 /** WHY: every check a bus-stops push runs after its schema, each issue at its path (unify-bus-stops design D1 to D4). */
 export function toBusStopsIssues(data: BusStopsData, context: BusStopsCheckContext): BusStopsIssue[] {
   return [...catalogIssues(data, context), ...laneStrategyIssues(data, context), ...hsscLineIssues(data), ...aliasIssues(data), ...overlayIssues(data, context)];
+}
+
+/** WHY: what the dataset names in the code-held sources: each stop's and overlay entry's subway station, each sequence's service. */
+export function busStopsReferences({ stops, sequences, topis = {} }: BusStopsData): BusStopsReference[] {
+  const station = (id: string | undefined, path: Array<string | number>): BusStopsReference[] => (id === undefined ? [] : [{ dataset: "subwayStations", id, path }]);
+  return [
+    ...stops.flatMap((stop, index) => station(stop.subwayStationId, ["stops", index, "subwayStationId"])),
+    ...Object.entries(topis).flatMap(([arsId, overlay]) => station(overlay.subwayStationId, ["topis", arsId, "subwayStationId"])),
+    ...Object.keys(sequences).map((serviceId): BusStopsReference => ({ dataset: "busServices", id: serviceId, path: ["sequences", serviceId] })),
+  ];
 }

@@ -13,3 +13,9 @@ export interface BusStopsCheckContext {
   stationIds: ReadonlySet<string>;
   laneStrategies: LaneStrategies;
 }
+
+export interface BusStopsReference {
+  dataset: "subwayStations" | "busServices";
+  id: string;
+  path: Array<string | number>;
+}
