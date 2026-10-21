@@ -8,8 +8,11 @@ import type { busGroupVisibility } from "./bus-config.schema";
 
 export type BusGroupVisibility = z.output<typeof busGroupVisibility>;
 
-/** WHY: a Jongro station with its transfer lines, joined by ARS number from the route's stored attributes. */
-export type AttributedJongroStation = JongroStation & { transferLines: TransferLine[] };
+/**
+ * WHY: a Jongro station with its transfer lines, joined by ARS number from the route's stored attributes, and the stop
+ * its pole is, null for a virtual stop.
+ */
+export type AttributedJongroStation = JongroStation & { transferLines: TransferLine[]; stopId?: string | null };
 
 export type AnyStation = HsscLineStation | AttributedJongroStation;
 
@@ -27,6 +30,7 @@ export interface MappedStation {
   isLastStation: boolean;
   isRotationStation: boolean;
   transferLines: AnyStation["transferLines"];
+  stopId?: string;
 }
 
 export interface GroupStops {
@@ -38,6 +42,8 @@ export interface BusGroupSources {
   lang: SupportedLang;
   stops: GroupStops;
   hsscStations: readonly HsscLineStation[];
+  /** WHY: the bus-stops aliases, by ARS number, which name the stop of a Jongno station whose pole a local stop is. */
+  stopIdByArsId: ReadonlyMap<string, string>;
   jongroRoutes: ReadonlyArray<AttributedJongroRoute>;
   webviewOrigin: string;
 }

@@ -84,10 +84,11 @@ export class BusConfigService {
   }
 
   // WHY: a Jongro group answers its realtime route's 503 when the attributes were never read or lack its route
-  // (move-reference-datasets D10), and a shuttle group the stops' 503 when they were never read.
+  // (move-reference-datasets D10), and a group that names stops, a Jongro one's by alias (unify-bus-stops D12), the
+  // stops' 503 when they were never read.
   private async readGroupSources(id: string): Promise<GroupSources> {
-    const stops = STOP_GROUP_IDS.includes(id) ? await this.stops.current() : NO_STOPS;
     const isJongroGroup = JONGRO_ROUTES.some((route) => route.id === id);
+    const stops = isJongroGroup || STOP_GROUP_IDS.includes(id) ? await this.stops.current() : NO_STOPS;
     if (!isJongroGroup) return { ...NO_JONGRO_SOURCES, stops };
     await this.routeAttributes.attributesOf(id);
     return { attributes: await this.routeAttributes.current(), routes: await this.registry.listRoutes(), stops };
@@ -99,7 +100,7 @@ export class BusConfigService {
       commute: this.stops.servedSequences(stops, COMMUTE_SERVICE_IDS, { lang, hasStopMaps: HAS_STOP_MAPS_BY_GROUP.commute }),
     };
     const jongroRoutes = this.toAttributedRoutes(routes, attributes);
-    return toBusGroups({ lang, stops: served, hsscStations: stops.hssc, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
+    return toBusGroups({ lang, stops: served, hsscStations: stops.hssc, stopIdByArsId: stops.stopIdByArsId, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
   }
 
   // WHY: a route without stored attributes is left out (BusRouteAttributesService logs the gap once per revision).
