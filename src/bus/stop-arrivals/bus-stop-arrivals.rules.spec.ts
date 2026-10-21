@@ -15,7 +15,7 @@ describe("toApproaching", () => {
     [[7, 6, 5], 6, [{ stopsAway: 0 }, { stopsAway: 1 }, { stopsAway: 10 }]],
     [[], 6, []],
     [[0, 3, 0], 3, [{ stopsAway: 0 }, { stopsAway: 3 }, { stopsAway: 3 }]],
-    // WHY: 600주년기념관 (10) runs on to 농구장 (0), the loop's first position, and 농구장 is 10 positions short of 600주년기념관.
+    // WHY: the 600th Anniversary Hall (10) runs on to the basketball court (0), the loop's first position, which is 10 positions short of the hall.
     [[10], 0, [{ stopsAway: 1 }]],
     [[0], 10, [{ stopsAway: 10 }]],
     [[10, 9], 10, [{ stopsAway: 0 }, { stopsAway: 1 }]],
