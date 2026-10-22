@@ -5,7 +5,7 @@
  * a tracked bus carries its tracking under `tracked` with the running-only
  * fields only when running, and the clock reads as the KST wall time
  * "hh:mm AM/PM". A running or atStop bus serves its trajectory knots with
- * their instants at +09:00 (add-jongro-bus-trajectory), and an instant reads
+ * their instants at +09:00, and an instant reads
  * as ISO-8601 at +09:00.
  */
 import { jongroPositionDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
@@ -21,7 +21,7 @@ describe("toRealtimeBuses", () => {
     ]);
 
     // Assert
-    // WHY: kind is the field add-jongro-bus-positions adds to every bus (task 2.2); the rest is as before.
+    // WHY: every bus carries kind beside its other fields.
     expect(buses[0]).toEqual({ stationIndex: 2, carNumber: "1234", estimatedTime: 120, latitude: "37.5", longitude: "127.0", kind: "estimated" });
     expect(buses[1]).toEqual({ stationIndex: 0, carNumber: "5678", estimatedTime: 60, kind: "estimated" });
     expect(buses[1]).not.toHaveProperty("latitude");
@@ -49,7 +49,7 @@ describe("toTrackedBus", () => {
 
   it("serves a running bus with its legacy fields and its tracking", () => {
     // Act & Assert
-    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
+    // WHY: a running or atStop bus carries a trajectory.
     expect(toTrackedBus(position, tracking)).toEqual({
       stationIndex: 16,
       carNumber: "2008",
@@ -77,7 +77,7 @@ describe("toTrackedBus", () => {
 
     // Assert
     expect(bus).toMatchObject({ kind: "tracked" });
-    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
+    // WHY: a running or atStop bus carries a trajectory.
     expect("tracked" in bus && bus.tracked).toEqual({
       status,
       vehicleId: "100000058",

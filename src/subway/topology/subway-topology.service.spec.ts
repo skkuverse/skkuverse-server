@@ -1,5 +1,5 @@
 /**
- * SubwayTopologyService, the door to the stored `subway-topology` dataset (move-reference-datasets D3; ADR 0013, D6),
+ * SubwayTopologyService, the door to the stored `subway-topology` dataset (ADR 0013, D6),
  * read over an in-memory store and a fixed clock. `current()` answers one revision with its registry: the code-held
  * network joined to the stored directions and neighbors, built once per revision, cached for DATASET_CACHE_TTL_MS so
  * a push is served within a minute and kept through a failed reload for DATASET_STALE_WINDOW_MS. An entry for a

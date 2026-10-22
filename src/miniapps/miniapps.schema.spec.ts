@@ -6,7 +6,7 @@
  * key no level declares fails, at every object level.
  *
  * checkedRegistry, the `miniapps` dataset a push is checked against and a
- * read parses (move-miniapp-registry design D3, D6, D13): every refusal the
+ * read parses: every refusal the
  * old boot check made of the committed files is a refusal here at the path of
  * the value at fault, the cross-references between the index and the details
  * included, so `npm run data` can name it; a push lists zod's message with

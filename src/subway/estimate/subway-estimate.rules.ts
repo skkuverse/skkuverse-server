@@ -63,7 +63,7 @@ function toRunSec(stops: readonly ScheduledStop[]): number | null {
   return runSec;
 }
 
-// WHY: a train's row has no time at a station it passes (design D4); a train calling there and at its next stop
+// WHY: a train's row has no time at a station it passes; a train calling there and at its next stop
 // runs between them in the sum of its legs, its stands left out, which the nearest one in time gives.
 function toPassingStop(train: ScheduledTrain, trains: readonly ScheduledTrain[], platformId: string): ScheduledStop | null {
   const passes = trains.flatMap((caller) => {
@@ -99,7 +99,7 @@ function toLentDelaySec(candidate: Candidate, ahead: readonly Candidate[]): numb
 }
 
 // WHY: at the served station a train's arrival is observed whatever its delay, standing there delays only its
-// departure (design D4), and a seen train is placed by its own sighting, never by another train's delay (design D16).
+// departure, and a seen train is placed by its own sighting, never by another train's delay.
 function toServedDelaySec(candidate: Candidate, ahead: readonly Candidate[]): number | null {
   if (candidate.sighting && isAtServedStation(candidate)) return toEventDelaySec(candidate.train, candidate.sighting.latest);
   return candidate.delaySec ?? (candidate.sighting ? null : toLentDelaySec(candidate, ahead));
@@ -146,7 +146,7 @@ function toArrival(candidate: Candidate, delaySec: number | null): TrainArrival 
 }
 
 // WHY: a train seen at the station has outrun its countdown, a spent one counts no more, and one implying a delay
-// out of range is likelier for a train not running yet, as a first train at its origin (design D4).
+// out of range is likelier for a train not running yet, as a first train at its origin.
 function toRejectionReason(candidate: Candidate, row: CountdownRow, now: Date): CountdownRejectionReason | null {
   const liveArrivalAt = plusSec(row.generatedAt, row.remainingSec);
   if (isAtServedStation(candidate)) return "at_station";

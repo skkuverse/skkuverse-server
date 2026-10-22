@@ -10,7 +10,7 @@
  * and within one tick, what answered reaches the tracker before the tick
  * rejects with the failure, so a failing line loses no other line's trains.
  * Each ceiling is about twice a weekday's calls as the registry derives them
- * (design D9 of add-commute-station-subway), so a station that outgrows one fails here.
+ * (ADR 0017, D3), so a station that outgrows one fails here.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 

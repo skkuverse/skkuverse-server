@@ -15,6 +15,6 @@ export const FASTTRACK_VISIBILITY = dateRange("2026-03-01", "2026-03-07");
 // its smart view opens on that run. SEE: docs/project-docs.md (Visibility)
 export const COMMUTE_VISIBILITY = dateRange("2026-10-12", "2026-12-18", "11:55");
 
-// WHY: the owner hid the commute stops' map cards on 2026-10-18 (hide-commute-stop-maps); the catalog keeps every
+// WHY: the owner hid the commute stops' map cards on 2026-10-18; the catalog keeps every
 // guide, since the campus group serves nsc-n-center and nsc-opposite too.
 export const HAS_STOP_MAPS_BY_GROUP = { campus: true, commute: false } as const satisfies Record<keyof GroupStops, boolean>;

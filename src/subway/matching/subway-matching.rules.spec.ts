@@ -1,12 +1,12 @@
 /**
- * Run matching on a line whose upstream numbers trainsets, not trips (design D7): an event's direction comes
+ * Run matching on a line whose upstream numbers trainsets, not trips (ADR 0017, D7): an event's direction comes
  * from a destination the timetable names in one direction only; a new trainset takes the unmatched run of
  * that direction, calling where it is seen, whose scheduled time for the event is nearest the event's time
  * within −120…+2,700 s, and never one that puts it ahead of a matched trainset in front of it or behind one
  * following it; a trainset keeps its run while it keeps its direction and the run calls where it is seen, and
  * releases it on a turnaround or after 15 minutes unseen; an event that matches no run is dropped and
  * reported. The timetable is synthetic, hand-written in the shape scripts/subway-timetable/convert.py writes
- * for the Shinbundang line (design D8): minute times, arrival equal to departure, runs numbered from 1001 down and 1002
+ * for the Shinbundang line: minute times, arrival equal to departure, runs numbered from 1001 down and 1002
  * up, on a shortened route.
  */
 import { subwayTimetablesFixture } from "../../../__tests__/helpers/subway/timetables";
@@ -76,7 +76,7 @@ describe("toOneDirectionDestinations", () => {
 });
 
 describe("toOneDirectionDestinations over the stored 신분당선 tables", () => {
-  // WHY: the destinations the 2026-10-17 positions wrote, `신사` and `광교` (task 6.3.1), must each name one direction.
+  // WHY: the destinations the 2026-10-17 positions wrote, `신사` and `광교`, must each name one direction.
   const tableTrains = (dayType: string) =>
     subwayTimetablesFixture().find((table) => table.line === "D1" && table.dayType === dayType)!.trains as unknown as ScheduledTrain[];
 

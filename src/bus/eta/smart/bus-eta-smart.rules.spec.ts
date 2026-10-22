@@ -1,6 +1,5 @@
 /**
- * Which stored estimate a run is served with (design D8, spec "Precedence of
- * sources"): frozen > live (at most 15 minutes old) > predicted (unexpired).
+ * Which stored estimate a run is served with: frozen > live (at most 15 minutes old) > predicted (unexpired).
  * And how a run's offsets respect a scheduled stop after the first: the bus
  * never leaves it before its timetable time.
  */

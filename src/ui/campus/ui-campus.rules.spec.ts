@@ -1,6 +1,6 @@
 /**
- * The checks a campus carousel needs beyond its schema, as pure functions
- * (move-editorial-datasets D4): `npm run data` refuses a push on any issue,
+ * The checks a campus carousel needs beyond its schema, as pure functions:
+ * `npm run data` refuses a push on any issue,
  * and the reader leaves out each banner an issue points into.
  *
  * - toCampusBannerIssues finds every banner whose action value fails its

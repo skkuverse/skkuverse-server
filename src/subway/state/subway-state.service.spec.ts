@@ -1,8 +1,8 @@
 /**
- * SubwayStateService over FakeSubwayRepository, handed each tick's arrivals documents as the tracker hands them
- * (add-commute-station-subway design D10). What it guards, by the subway-arrivals spec's scenarios: a quiet tick
- * rewrites no platform whose trains are unchanged since its last write ("Quiet tick"), a platform unchanged for
- * 60 s is rewritten with the tick's `generatedAt` ("Freshness kept"), only the platforms that changed are
+ * SubwayStateService over FakeSubwayRepository, handed each tick's arrivals documents as the tracker hands them.
+ * What it guards: a quiet tick
+ * rewrites no platform whose trains are unchanged since its last write, a platform unchanged for
+ * 60 s is rewritten with the tick's `generatedAt`, only the platforms that changed are
  * written, a new process writes every platform on its first tick, and a failed write is remembered as unwritten,
  * so the next tick writes it again. The documents are hand-written in the shape the tracker writes.
  */

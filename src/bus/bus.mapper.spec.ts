@@ -2,7 +2,7 @@
  * A Jongro route's identity in code becomes a JongroRoute: its id, the route
  * code after the `jongro` prefix and its TOPIS route id, and no TOPIS URL or
  * key, which the client builds at each call (ADR 0012, D4). The attributes are
- * stored, not part of the route (move-reference-datasets D10).
+ * stored, not part of the route (ADR 0013, D2).
  */
 import { toJongroRoute } from "./bus.mapper";
 

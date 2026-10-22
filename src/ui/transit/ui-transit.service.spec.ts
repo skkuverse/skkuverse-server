@@ -1,7 +1,7 @@
 /**
  * UiTransitService, the stored transit layout's door, over an in-memory
- * dataset store and the real mini app registry (ADR 0013, D6;
- * move-editorial-datasets D5). It reads the `transit-layout` dataset through
+ * dataset store and the real mini app registry (ADR 0013, D6).
+ * It reads the `transit-layout` dataset through
  * createDatasetLoader, so a push serves after DATASET_CACHE_TTL_MS, an invalid
  * reload keeps the last good layout, and a layout never read answers 503
  * TRANSIT_LAYOUT_UNAVAILABLE. Against the bus groups and stations its caller
@@ -10,7 +10,7 @@
  * one the layout does not place (`ui.transit_layout.unplaced`) without adding
  * it, each once per revision.
  *
- * And the registry revision each request reads (move-miniapp-registry D4, D7): a layout with a `miniapp`
+ * And the registry revision each request reads: a layout with a `miniapp`
  * link takes one registry snapshot per request, so a registry push reaches it within a TTL with the layout
  * unchanged, and a left-out link is logged once per pair of revisions. A layout with no `miniapp` link reads
  * no registry, so it serves while the registry is unavailable; one with a link answers

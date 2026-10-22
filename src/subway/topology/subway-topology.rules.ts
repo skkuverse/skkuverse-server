@@ -58,7 +58,7 @@ function neighborLineIssues({ neighbors }: SubwayTopologyData, network: SubwayNe
   });
 }
 
-/** WHY: the stored topology must place exactly the platforms the checked-out code serves (spec "Topology push names every code-held platform exactly once"). */
+/** WHY: the stored topology must place exactly the platforms the checked-out code serves. */
 export function toTopologyIssues(topology: SubwayTopologyData, network: SubwayNetwork): NetworkIssue[] {
   const platformIds = network.stations.flatMap((station) => station.platforms.map((platform) => platform.id));
   return [
@@ -96,7 +96,7 @@ function directionRouteIssues(at: IssuePath, direction: PlatformDirection, { rou
 }
 
 // WHY: the tracker follows every stop on the route before a served platform, and the pollers name a stop's rows only by
-// a served platform or a neighbor (spec "Topology push follows the timetable routes"). Each route is one day type's.
+// a served platform or a neighbor. Each route is one day type's.
 export function toRouteIssues(topology: SubwayTopologyData, routesByPlatformId: Readonly<Record<string, readonly LineRoutes[]>>): NetworkIssue[] {
   const isNamedStop = (id: string): boolean => Object.hasOwn(routesByPlatformId, id) || Object.hasOwn(topology.neighbors, id);
   const issues = Object.entries(routesByPlatformId).flatMap(([platformId, routes]) =>

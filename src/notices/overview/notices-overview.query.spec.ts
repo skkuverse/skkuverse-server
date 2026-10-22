@@ -1,5 +1,5 @@
 /**
- * A structure pin (tests.md): the retrieval aggregate (spec: "Candidate scope", "Candidate selection"). Scope
+ * A structure pin (tests.md): the retrieval aggregate. Scope
  * filters live inside both sub-pipelines, the vector stage names no model, and the fused result is capped and
  * projected to the candidate fields.
  */

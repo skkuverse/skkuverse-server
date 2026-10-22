@@ -1,5 +1,5 @@
 /**
- * How a stop page is assembled (unify-bus-stops design D7-D9; spec bus-stop-arrivals): the stop block, from its
+ * How a stop page is assembled: the stop block, from its
  * config record for a local stop (coordinates from its pole when it has none, aliases as arsIds) or from its pole
  * for a TOPIS one; a Jongno entry carrying its view's arrivals at its index; an HSSC entry; a shuttle entry.
  */

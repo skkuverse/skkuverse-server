@@ -1,5 +1,5 @@
 /**
- * subwayRegistryFile, the shape of the subway registry (design D2): the
+ * subwayRegistryFile, the shape of the subway registry: the
  * registry the code's network and revision 1 of `subway-topology` join into
  * passes; a copy missing any field of a line, a station, a
  * platform, a direction, a line's marker or a neighbor fails; a slug, a

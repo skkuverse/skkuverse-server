@@ -1,5 +1,5 @@
 /**
- * The route path mappers (add-jongro-route-lines D2, D4): TOPIS points and
+ * The route path mappers: TOPIS points and
  * stations into a line in `no` order as [lng, lat] and stations in `seq`
  * order with their turnaround flag; the stored document with its
  * version; and the read shape the map draws, by route id and code.

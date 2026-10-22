@@ -2,7 +2,7 @@
  * The layer-set shape and its checks. `layerSetFile`: revision 1 of the stored
  * set parses, every top-level field is required, and the defaults a field left
  * out reads as. `checkedLayerSet`: what the push and the read refuse in one
- * set, each issue at its path (move-editorial-datasets D6), every rejection the
+ * set, each issue at its path, every rejection the
  * deleted committed-file loader made ported here, and what an explicit null, a
  * false or an omitted optional field reads as. `layerSetsDataset`: the `map-layer-sets` dataset a push checks,
  * one set per `layerSetId`. `storedLayerSets`: the stored envelope the read

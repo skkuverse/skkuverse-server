@@ -46,7 +46,7 @@ function platformLineIssues(network: SubwayNetwork): NetworkIssue[] {
   ];
 }
 
-/** WHY: no boot check of code against code; the data tool runs it before a topology push (move-reference-datasets D2). */
+/** WHY: no boot check of code against code; the data tool runs it before a topology push (ADR 0013, D2). */
 export function toNetworkIssues(network: SubwayNetwork): NetworkIssue[] {
   return [...duplicateIssues(network), ...platformLineIssues(network)];
 }

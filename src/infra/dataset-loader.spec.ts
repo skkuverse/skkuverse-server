@@ -1,6 +1,6 @@
 /**
  * createDatasetLoader: the read contract of ADR 0013 D6 that every dataset
- * reader shares (move-editorial-datasets D2). A value is served for
+ * reader shares. A value is served for
  * DATASET_CACHE_TTL_MS and reloaded after; a reload that fails inside
  * DATASET_STALE_WINDOW_MS serves the last value; with no good value, a load
  * that finds nothing or fails to read answers the caller's unavailable error,

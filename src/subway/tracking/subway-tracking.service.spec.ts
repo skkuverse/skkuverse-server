@@ -28,7 +28,7 @@
  * becomes the history of the run it is matched to, which the tick's listeners see, and is served at that run's
  * scheduled arrival plus its delay; a trainset that matches no run is not served. A tick that needs a table its
  * process cannot read writes every other platform, hands them to its listeners, then rejects with the 503
- * SUBWAY_TIMETABLES_UNAVAILABLE naming the table (move-reference-datasets D7).
+ * SUBWAY_TIMETABLES_UNAVAILABLE naming the table.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 

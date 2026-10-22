@@ -1,6 +1,6 @@
 /**
  * The Jongro routes the code serves, held in code as their identities only
- * (move-reference-datasets D10): each route's id and TOPIS route id, in the
+ * (ADR 0013, D2): each route's id and TOPIS route id, in the
  * order the app lists the groups. The id is what the pollers, `bus_cache`
  * keys, the registry's `_id`s and the group ids are built from, so each one
  * matches the route id pattern and appears once. The attributes are the
@@ -8,8 +8,8 @@
  */
 import { JONGRO_ROUTES } from "./bus.constants";
 
-// WHY: two-digit codes as Seoul names village buses, so `jongro_locations_07` has no `_007` twin. Held here since the
-// committed route file it checked was deleted (move-reference-datasets D15): the ids are code, so a spec checks them.
+// WHY: two-digit codes as Seoul names village buses, so `jongro_locations_07` has no `_007` twin. The ids are code
+// (ADR 0013, D2), so a spec checks them.
 const JONGRO_ROUTE_ID_PATTERN = /^jongro(0[1-9]|[1-9]\d+)$/;
 
 describe("JONGRO_ROUTES", () => {

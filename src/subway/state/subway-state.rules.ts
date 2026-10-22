@@ -1,7 +1,7 @@
 import type { StoredTrainArrival, SubwayArrivalsDoc } from "../subway.document";
 
 // WHY: half the arrivals route's 120 s staleness limit (MAX_STATE_AGE_MS), so a platform whose trains stay
-// unchanged is rewritten before it could be served as stale while the tracker runs (design D10).
+// unchanged is rewritten before it could be served as stale while the tracker runs.
 const MAX_UNCHANGED_WRITE_AGE_MS = 60_000;
 
 function toTrainKey(train: StoredTrainArrival): string {

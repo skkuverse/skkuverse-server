@@ -1,9 +1,9 @@
 /**
- * `shuttle-eta-baseline` (design D10): the 04:00 KST refresh, no refetch after
+ * `shuttle-eta-baseline`: the 04:00 KST refresh, no refetch after
  * a restart, the 30-minute backoff, the 250 ms spacing, the daily cap and
  * non-operating days. Ticks take an explicit `now`. A bus-lane run with a
- * fixed value of the same weekday and time reuses it with no TMAP call (design
- * D7); any other run is forecast by TMAP.
+ * fixed value of the same weekday and time reuses it with no TMAP call
+ * (ADR 0015, D8); any other run is forecast by TMAP.
  */
 import moment from "moment-timezone";
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
@@ -28,7 +28,7 @@ import { BusEtaLaneService } from "../lane/bus-eta-lane.service";
 import { BusEtaBaselineService } from "./bus-eta-baseline.service";
 
 
-// The baseline flow reads only the lane strategies, never the stored corridor (move-reference-datasets D9).
+// The baseline flow reads only the lane strategies, never the stored corridor.
 function laneWithNoCorridor(eta: BusEtaService): BusEtaLaneService {
   return new BusEtaLaneService(eta, asReal<BusEtaLaneRepository>(new FakeBusEtaLaneRepository()), { now: () => new Date("2026-10-20T00:00:00.000Z") });
 }
@@ -219,7 +219,7 @@ describe("BusEtaBaselineService.tick", () => {
   });
 });
 
-describe("BusEtaBaselineService.tick bus-lane runs (design D7)", () => {
+describe("BusEtaBaselineService.tick bus-lane runs (ADR 0015, D8)", () => {
   // 04:00 KST on Tuesday 2026-10-20, still the 19th in UTC.
   const NOW = new Date("2026-10-19T19:00:00.000Z");
   const tuesday = (time: string): EtaRun => run("2026-10-20", time);

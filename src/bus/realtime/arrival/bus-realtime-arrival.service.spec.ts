@@ -3,7 +3,7 @@
  * station's arrivals through: a bus is listed when TOPIS gave it a text,
  * first bus first, each through the arrival rules with the route's seat count.
  * seatCountOf answers that seat count from the stored `jongro-route-attributes`
- * (move-reference-datasets D10), and a 503 for a route the revision lacks.
+ * (ADR 0013, D6), and a 503 for a route the revision lacks.
  */
 import { jongroArrivalBus, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import { routeAttributesFixture, storedRouteAttributesRepository, storedRouteAttributesService } from "../../../../__tests__/helpers/bus/route-attributes";

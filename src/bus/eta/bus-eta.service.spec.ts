@@ -103,7 +103,7 @@ describe("BusEtaService.listFitting", () => {
   });
 });
 
-describe("BusEtaService over the stored stops (unify-bus-stops design D16)", () => {
+describe("BusEtaService over the stored stops", () => {
   const NOW = new Date("2026-10-21T13:52:00.000Z");
   const UNAVAILABLE = { code: "BUS_STOPS_UNAVAILABLE", httpStatus: 503 };
   const DO_NOT_FAKE = ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "setImmediate", "clearImmediate", "queueMicrotask", "nextTick", "performance"] as const;
@@ -261,7 +261,7 @@ describe("BusEtaService runs over the stored timetable", () => {
   });
 });
 
-describe("BusEtaService runs over the stored schedule content (move-editorial-datasets D9)", () => {
+describe("BusEtaService runs over the stored schedule content", () => {
   // Monday 2026-10-12, 09:30 KST: the 10:00 run is inside its live window.
   const NOW = new Date("2026-10-12T00:30:00.000Z");
   const clock = { now: () => NOW };

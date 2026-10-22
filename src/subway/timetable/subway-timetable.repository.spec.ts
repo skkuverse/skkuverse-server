@@ -1,7 +1,6 @@
 /**
  * SubwayTimetableRepository: the reads of the stored `subway-timetables` dataset, which `npm run data` writes as a
- * header manifest and one `dataset_parts` document per table, and the server only parses (ADR 0013, D1 and D6;
- * move-reference-datasets D4 and D7).
+ * header manifest and one `dataset_parts` document per table, and the server only parses (ADR 0013, D1 and D6).
  *
  * The query objects are pinned here, since FakeSubwayTimetableRepository copies them: the header by `_id` on the
  * content database's `datasets`, projecting the revision and each part's key and id; a table by its part id on

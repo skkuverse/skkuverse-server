@@ -1,16 +1,15 @@
 /**
- * The boarding-stop catalog validator (stops and stop sequences): one case per rule in the
- * bus-schedule-config spec, each asserting the error names its stop or
+ * The boarding-stop catalog validator (stops and stop sequences): one case per rule,
+ * each asserting the error names its stop or
  * service. Revision 1 of the bus-stops dataset (the fixture) passes it; the
- * stored revision itself is checked at push and at read (unify-bus-stops D16).
+ * stored revision itself is checked at push and at read.
  *
- * Ported in unify-bus-stops task 4.3 (design D15): the catalog these cases
+ * Ported: the catalog these cases
  * pass is revision 1 instead of the committed stop catalog, which was
  * deleted; its root message names the dataset instead of the file.
  *
- * toBusStopsIssues is every check a `bus-stops` push runs after its schema
- * (unify-bus-stops design D1 to D4; specs bus-schedule-config, bus-stops and
- * shuttle-arrival-eta): the catalog checks that stopped the boot of the
+ * toBusStopsIssues is every check a `bus-stops` push runs after its schema:
+ * the catalog checks that stopped the boot of the
  * committed file, in their own words, the stop subway stations, the estimate
  * opt-ins, the lane strategies against the sequences the data estimates, the
  * HSSC line, and the aliases and overlay. Each issue names its path in the
@@ -26,8 +25,7 @@
  * unknown sequence".
  *
  * Moved from src/bus/stops/check/bus-stops-check.rules.spec.ts unchanged,
- * when the push checks came back into this file (unify-bus-stops wave 2,
- * review F7).
+ * when the push checks came back into this file.
  */
 import { busStopsFixture } from "../../../__tests__/helpers/bus/bus-stops";
 import { SERVICE_CONFIG as serviceConfig } from "../bus.constants";
@@ -293,7 +291,7 @@ describe("validateStopCatalog", () => {
     expect(validateStopCatalog(catalog(withGuide(guide)), SERVICES)).toEqual(['stop jeongja-exit3: guide.walks[0]: "exit4" is not a place of this stop']);
   });
 
-  it("rejects a walk longer than 500 m (spec scenario: 620 m)", () => {
+  it("rejects a walk longer than 500 m (620 m)", () => {
     // Arrange
     const far = { lat: 37.371498, lng: EXIT.lng }; // 620 m north of the exit
 

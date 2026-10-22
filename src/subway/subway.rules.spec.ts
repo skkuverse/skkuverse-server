@@ -1,11 +1,11 @@
 /**
  * toNetworkIssues, the checks over the identities the code holds
- * (move-reference-datasets D2): SUBWAY_LINES and SUBWAY_STATIONS pass, and a network with a
+ * (ADR 0013, D2): SUBWAY_LINES and SUBWAY_STATIONS pass, and a network with a
  * repeated station, platform, line code or subwayId, a platform on an unlisted
  * line, a second platform of one line at a station, or a line no platform uses
  * gets one issue each, with its path.
  *
- * A line of SUBWAY_LINES by its code (design D2): its Seoul ids,
+ * A line of SUBWAY_LINES by its code: its Seoul ids,
  * its numbering, its color and its marker (one character: a numbered line's
  * number, a named line's first syllable in Korean). A code the
  * registry does not list throws: the registry's boot check makes that

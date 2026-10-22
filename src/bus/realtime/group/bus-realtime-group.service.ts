@@ -47,7 +47,7 @@ export class BusRealtimeGroupService {
     );
   }
 
-  // WHY: the one view of a group, which the realtime route and the stop page both serve (unify-bus-stops D17).
+  // WHY: the one view of a group, which the realtime route and the stop page both serve.
   findGroupView(groupId: string): Promise<GroupView | null> {
     const source = this.sourcesByGroupId().get(groupId);
     return source ? source() : Promise.resolve(null);
@@ -59,7 +59,7 @@ export class BusRealtimeGroupService {
     return sources;
   }
 
-  // WHY: placed by the stored stations, which a missing registry route answers with a 503 (improve-jongro-realtime D7);
+  // WHY: placed by the stored stations, which a missing registry route answers with a 503 (ADR 0012, D3);
   // the seat count is read first, so attributes never read answer their own 503 whatever the registry holds.
   private async readJongroGroup(route: JongroRoute): Promise<GroupView> {
     const seatCount = await this.arrival.seatCountOf(route.id);

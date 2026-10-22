@@ -46,8 +46,8 @@ const LINE_4_NAMES = {
   회현: "S1-4-425",
   서울: "S1-4-426",
 };
-// WHY: every name checked against the 2026-10-17 21:05–21:21 position rows and the train map pages (task 6.1.1), and the
-// ones added by design D17 against the 2026-10-18 11:16–11:35 position rows and train map pages (line 4 writes Seoul
+// WHY: every name checked against the 2026-10-17 21:05–21:21 position rows and the train map pages, and the
+// ones tracked for coverage (ADR 0017, D6) against the 2026-10-18 11:16–11:35 position rows and train map pages (line 4 writes Seoul
 // Station as `서울`).
 const LINE_2_NAMES = {
   잠실: "S1-2-216",
@@ -87,7 +87,7 @@ const LINE_3_NAMES = {
   경찰병원: "S1-3-341",
   오금: "S1-3-342",
 };
-// WHY: the API writes two line 8 stations with a bracketed suffix the train map leaves out (task 6.2.1).
+// WHY: the API writes two line 8 stations with a bracketed suffix the train map leaves out.
 const LINE_8_STATIONS = {
   잠실: "S1-8-2815",
   강동구청: "S1-8-2813",

@@ -39,7 +39,7 @@ const HYEHWA: ServedStation = {
   lines: [{ code: "4", name: { ko: "4호선", en: "Line 4", zh: "4号线" }, color: "00A5DE", marker: { text: { ko: "4", en: "4", zh: "4" }, color: "007FAB" } }],
 };
 
-// WHY: hand-written as design D2a and D2b give Jeongja, which the registry serves only once its lines are registered.
+// WHY: hand-written, since the registry serves Jeongja only once its lines are registered.
 const JEONGJA: ServedStation = {
   id: "jeongja",
   title: { ko: "정자역", en: "Jeongja Station", zh: "亭子站" },

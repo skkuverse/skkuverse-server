@@ -1,6 +1,6 @@
 /**
  * BusEtaLaneRepository: the read of the stored `bus-lane-corridor` dataset, which `npm run data` writes and the
- * server only parses (ADR 0013, D6; move-reference-datasets D9).
+ * server only parses (ADR 0013, D6).
  *
  * The query object is pinned here, since FakeBusEtaLaneRepository copies it: one document by `_id`, projecting only
  * the revision and the data, bounded by `maxTimeMS`, on the content database's `datasets`. A missing document and

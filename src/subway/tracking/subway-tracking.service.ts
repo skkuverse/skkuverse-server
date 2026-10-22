@@ -17,9 +17,9 @@ import type { RunMatcher, SourceCountdownRows, StationObservations, TrackedPlatf
 
 const DIVERGENCE_LOG_INTERVAL_MS = 10 * 60_000;
 
-// WHY: the per-train histories live in memory: one poller process writes subway_arrivals (design D2), and a
-// restart rebuilds them from the next ticks (design D8). A train absent from the timetable is not served, and a
-// platform whose table cannot be read is skipped, the tick rejecting after the rest (move-reference-datasets D7).
+// WHY: the per-train histories live in memory: one poller process writes subway_arrivals (ADR 0012, D1), and a
+// restart rebuilds them from the next ticks. A train absent from the timetable is not served, and a
+// platform whose table cannot be read is skipped, the tick rejecting after the rest.
 @Injectable()
 export class SubwayTrackingService {
   private readonly historiesByPlatformId = new Map<string, ReadonlyMap<string, TrainHistory>>();
@@ -65,7 +65,7 @@ export class SubwayTrackingService {
   }
 
   // WHY: the matching flow registers here, as the history listens, so the tracker keeps its four dependencies; a
-  // tick on a trainset line with none registered fails rather than serve trainset numbers as trips (design D7).
+  // tick on a trainset line with none registered fails rather than serve trainset numbers as trips.
   setRunMatcher(matcher: RunMatcher): void {
     this.runMatcher = matcher;
   }
@@ -76,7 +76,7 @@ export class SubwayTrackingService {
   }
 
   // WHY: a trainset line's upstream numbers trainsets, not trips, so its events reach the histories under the runs
-  // they are matched to, and one matching no run is dropped (design D7); every other line's pass as they are.
+  // they are matched to, and one matching no run is dropped (ADR 0017, D7); every other line's pass as they are.
   private toRunNumberedEvents(events: readonly TrainEvent[], schedules: readonly PlatformSchedule[], now: Date): TrainEvent[] {
     const isTrainsetLine = (schedule: PlatformSchedule): boolean => toSubwayLine(schedule.platform.line).seoul.trainNumbers === "trainset";
     const trainsetSchedules = [...new Map(schedules.filter(isTrainsetLine).map((schedule) => [schedule.platform.line, schedule])).values()];
@@ -117,7 +117,7 @@ export class SubwayTrackingService {
     return toArrivalsDoc(stamp, { up: arrivalsOf("up"), down: arrivalsOf("down") });
   }
 
-  // WHY: design D5: the live countdown is still served; the accuracy report later shows which was closer.
+  // WHY: the live countdown is still served (ADR 0017, D5); the accuracy report later shows which was closer.
   private logDivergences(divergences: readonly CountdownDivergence[]): void {
     for (const divergence of divergences) {
       const ticket = this.divergenceThrottle.take(`${divergence.platformId} ${divergence.trainNo}`);

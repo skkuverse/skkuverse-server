@@ -2,7 +2,7 @@
  * MiniappsManifestPoller registers one poller per first-party origin of
  * src/infra/origins.ts, named `miniapp-manifest-<hostname>`, every four
  * minutes, so one mini app's origin down marks only its own poller failing
- * (move-miniapp-registry D8). A tick is that origin's refresh and rejects with
+ * (ADR 0012, D1). A tick is that origin's refresh and rejects with
  * it. The registry is a `registerPoller` spy (ADR 0011 D2) and the service a
  * stub; whether a process runs its pollers (ROLE) is the registry's. A game
  * origin serves no mini-app manifest, so none of its hosts is polled.

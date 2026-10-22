@@ -7,7 +7,7 @@
  * The compiler, filter and sort tests are structure pins of the aggregation:
  * they say what the pipeline objects look like, not which documents match or
  * in what order they come back. That query meaning is for a real-mongod spec
- * (harden-test-suite D6), so add no other pins here.
+ * (ADR 0011, D6), so add no other pins here.
  */
 import type { Document } from "mongodb";
 import { SPACE_TIERS, tierRegex } from "./building-search.rules";

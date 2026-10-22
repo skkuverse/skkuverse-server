@@ -1,5 +1,5 @@
 /**
- * laneCorridorDataset, the shape of the `bus-lane-corridor` dataset (move-reference-datasets D9): the corridor, its
+ * laneCorridorDataset, the shape of the `bus-lane-corridor` dataset: the corridor, its
  * entry and exit points and the probe routes, which a push is refused on and the read parses with. Revision 1 (the
  * fixture) passes as it is, and each structure and range case the committed corridor file was refused on is refused
  * at its path. storedLaneCorridor, the stored document as the repository reads it, needs its revision and data.

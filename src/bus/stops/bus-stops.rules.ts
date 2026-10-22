@@ -440,7 +440,7 @@ function overlayIssues({ topis = {} }: BusStopsData, { stationIds }: BusStopsChe
   });
 }
 
-/** WHY: every check a bus-stops push runs after its schema, each issue at its path (unify-bus-stops design D1 to D4). */
+/** WHY: every check a bus-stops push runs after its schema, each issue at its path. */
 export function toBusStopsIssues(data: BusStopsData, context: BusStopsCheckContext): BusStopsIssue[] {
   return [...catalogIssues(data, context), ...laneStrategyIssues(data, context), ...hsscLineIssues(data), ...aliasIssues(data), ...overlayIssues(data, context)];
 }

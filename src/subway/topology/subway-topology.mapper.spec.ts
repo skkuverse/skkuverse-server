@@ -1,6 +1,6 @@
 /**
  * toSubwayRegistry, the code-held network joined to one stored topology
- * (move-reference-datasets D2, D3): every served platform takes its two
+ * (ADR 0013, D2): every served platform takes its two
  * directions from the topology, the neighbors are the topology's, and the
  * lines and stations keep the code's order and labels. A served platform the
  * topology has no entry for is left out of its station; an entry for a

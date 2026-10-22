@@ -1,11 +1,11 @@
 /**
- * The registry's sync rules (improve-jongro-realtime D6, D9): the stations
+ * The registry's sync rules (ADR 0014, D4): the stations
  * version is a stable hash of the ordered stations and the turnaround stop;
  * an observation is the arrival list ordered by ord; the turnaround stop
  * follows the position list only when its rows agree; the changed share and
  * the diff of two lists; and the decision to wait, apply at the third
  * identical tick, or hold a change to more than 30% of the stops. A
- * route with no document is bootstrapped (isolate-api-from-pollers D2): only a
+ * route with no document is bootstrapped (ADR 0012, D3): only a
  * non-empty list with a turnaround stop every position row agrees on counts,
  * by its stations version, and the third identical tick inserts it.
  */

@@ -1,5 +1,5 @@
 /**
- * SubwaySeoulTrainmapClient against the Seoul Metro train map (design D11).
+ * SubwaySeoulTrainmapClient against the Seoul Metro train map (ADR 0017, D2).
  * What it guards: one POST per line with a 5 s timeout, a User-Agent naming
  * skkuverse and no redirect followed; the page handed back as text, the
  * captured 2026-10-16 line 1 page as it came; and every failure (an HTTP

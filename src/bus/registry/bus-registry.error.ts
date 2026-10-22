@@ -2,7 +2,7 @@ import { AppError } from "../../http/app.error";
 import { OBSERVATIONS_TO_APPLY } from "./bus-registry.constants";
 
 // WHY: an answer, not a fault: the route renders it as a 503, and the poller bootstraps the route instead. Nothing
-// serves a committed list, which may be months old (improve-jongro-realtime D7).
+// serves a committed list, which may be months old (ADR 0012, D3).
 export class BusRegistryMissingError extends AppError {
   constructor(readonly routeId: string) {
     super("JONGRO_REGISTRY_UNAVAILABLE", `The station registry of ${routeId} is unavailable`, 503);
