@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { realtimeArrival as arrival, servedStop } from "../bus.wire";
+import { arrival, operation, servedStop, vehicle } from "../bus.wire";
+
+const instant = z.iso.datetime({ offset: true });
 
 /** WHY: the stop as /bus/config serves its record, without the map a group's screen draws; arsIds are its TOPIS poles. */
 const stopBlock = servedStop.omit({ map: true }).extend({
@@ -7,58 +9,53 @@ const stopBlock = servedStop.omit({ map: true }).extend({
   arsIds: z.array(z.string()).optional(),
 });
 
-const jongroEntry = z.object({
+/** WHY: exactly the live route's station entry at stationIndex for the same stored state (ADR 0019, D12). */
+const liveEntry = z.object({
+  kind: z.literal("live"),
   groupId: z.string(),
-  kind: z.literal("arrivals"),
   label: z.string(),
-  stationIndex: z.int(),
-  /** WHY: the next station's name, so a client can tell the two directions of a loop apart; null at the last index. */
+  stationIndex: z.int().min(0),
+  /** WHY: the next station with a stop, so a client tells a loop's two directions apart; null at a line's last index. */
   towards: z.string().nullable(),
-  /** WHY: the stations version the index was placed by, the same as the realtime route's. */
-  stationsVersion: z.string(),
-  /** WHY: exactly the realtime route's arrivals at this station index for the same stored state. */
+  /** WHY: the stations version the index was placed by, the same as the live route's; null for HSSC. */
+  stationsVersion: z.string().nullable(),
+  updatedAt: instant.nullable(),
+  operation,
+  /** WHY: the vehicles its arrivals name, once each. */
+  vehicles: z.array(vehicle),
   arrivals: z.array(arrival),
 });
 
-const hsscEntry = z.object({
-  groupId: z.string(),
-  kind: z.literal("approaching"),
-  label: z.string(),
-  stationIndex: z.int(),
-  /** WHY: the HSSC API gives positions and no prediction, so only how far each bus is: 0 at the stop, nearest first. */
-  approaching: z.array(z.object({ stopsAway: z.int().min(0) })),
-});
+/** WHY: a run keeps its identity, its departure from the origin, so a run with no time at this stop still sorts and labels. */
+const timetableArrival = arrival.extend({ runDepartureAt: instant });
 
-const scheduledRun = z.object({
-  /** WHY: the run's KST date, YYYY-MM-DD. */
-  date: z.string(),
-  departure: z.string(),
-  /** WHY: the run's time at this stop, HH:mm, or null when neither the timetable nor an estimate gives one. */
-  time: z.string().nullable(),
-  /** WHY: true when `time` comes from an arrival estimate, as the smart view marks it with `eta`. */
-  estimated: z.boolean(),
-});
-
-const shuttleEntry = z.object({
+const timetableEntry = z.object({
+  kind: z.literal("timetable"),
   groupId: z.string(),
-  kind: z.literal("schedule"),
   label: z.string(),
   serviceId: z.string(),
   routeType: z.string(),
   action: z.enum(["board", "alight"]),
-  /** WHY: the smart schedule's status; `next` is empty unless it is active. */
-  status: z.enum(["active", "suspended", "noData"]),
-  /** WHY: up to three runs whose time here, or departure when that is unknown, is not before the current minute. */
-  next: z.array(scheduledRun),
+  /** WHY: the smart schedule's status: active is running; arrivals is empty unless it is. */
+  operation,
+  vehicles: z.array(vehicle).max(0),
+  /** WHY: up to three runs, each listed until its time here passes, or its departure when no time is known here. */
+  arrivals: z.array(timetableArrival),
 });
 
 /**
- * WHY: one answer per stop, so the app polls one route; `routes` in /bus/config's order. `kind` names what an
- * entry serves, as a realtime bus's does; it is an extensible enum, and a client skips an entry of a kind it does not know.
+ * WHY: one answer per stop, so the app polls one route; `routes` in /bus/config's order. `kind` names what an entry
+ * serves; it is an open enum, and a client skips an entry of a kind it does not know (ADR 0019, D3).
  */
 export const busStopArrivals = z.object({
   stop: stopBlock,
-  routes: z.array(z.discriminatedUnion("kind", [jongroEntry, hsscEntry, shuttleEntry])),
+  routes: z.array(z.discriminatedUnion("kind", [liveEntry, timetableEntry])),
+});
+
+export const busStopArrivalsMeta = z.object({
+  /** WHY: the server's clock at +09:00 when it built the response, which a client's clock offset is read from. */
+  serverNow: instant,
 });
 
 export type BusStopArrivals = z.input<typeof busStopArrivals>;
+export type BusStopArrivalsMeta = z.input<typeof busStopArrivalsMeta>;

@@ -1,11 +1,14 @@
 /**
  * How a stop page is assembled: the stop block, from its
  * config record for a local stop (coordinates from its pole when it has none, aliases as arsIds) or from its pole
- * for a TOPIS one; a Jongno entry carrying its view's arrivals at its index; an HSSC entry; a shuttle entry.
+ * for a TOPIS one; a live entry carrying the live route's station entry at its index and the vehicles it names
+ * (ADR 0019, D12); a timetable entry carrying its runs.
  */
 import type { BusStopsSnapshot } from "../stops/bus-stops.types";
 import type { FoundStop } from "../stop-index/bus-stop-index.types";
-import { toHsscEntry, toJongroEntry, toShuttleEntry, toStopBlock } from "./bus-stop-arrivals.mapper";
+import type { Arrival, Vehicle } from "../bus.wire";
+import type { LiveGroup } from "../live/bus-live.wire";
+import { toLiveEntry, toStopBlock, toTimetableEntry } from "./bus-stop-arrivals.mapper";
 
 const SNAPSHOT = { revision: 1 } as BusStopsSnapshot;
 const POLE = { arsId: "01592", topisId: "100900075", stationName: "혜화역1번출구" };
@@ -51,71 +54,70 @@ describe("toStopBlock", () => {
   });
 });
 
-describe("toJongroEntry", () => {
-  const ARRIVAL = { minutes: 4, stopsAway: 2, state: "running" as const, isLastBus: false, carNumber: "2701", crowding: null, passengerCount: null, message: "4분후[2번째 전]" };
+const arrival = (vehicleId: string | null, providerText: string): Arrival => ({
+  status: "enRoute",
+  expectedArrivalAt: "2026-10-20T14:14:00+09:00",
+  ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
+  basis: "provider",
+  stopsAway: 2,
+  isLastBus: false,
+  vehicleId,
+  providerText,
+});
+const vehicle = (id: string): Vehicle => ({ id, plateNumber: null, occupancy: null, isLastBus: null, position: null, trajectory: null });
 
-  it("carries the view's arrivals at the entry's index and its stations version", () => {
-    // Arrange
-    const view = {
-      buses: [],
-      stationEtas: [
-        { stationIndex: 15, eta: "x", arrivals: [{ ...ARRIVAL, message: "other" }] },
-        { stationIndex: 16, eta: "4분후[2번째 전]", arrivals: [ARRIVAL] },
-      ],
-      stationsVersion: "abc",
-    };
+describe("toLiveEntry", () => {
+  const group: LiveGroup = {
+    groupId: "jongro07",
+    stationsVersion: "abc",
+    updatedAt: "2026-10-20T14:09:55+09:00",
+    operation: "running",
+    vehicles: [vehicle("a"), vehicle("b"), vehicle("c")],
+    stations: [
+      { stationIndex: 15, stopId: "seoul-01591", arsId: "01591", operation: "running", arrivals: [arrival("c", "other")] },
+      { stationIndex: 16, stopId: "seoul-01592", arsId: "01592", operation: "running", arrivals: [arrival("a", "4분후[2번째 전]"), arrival(null, "출발대기")] },
+    ],
+  };
 
+  it("carries the live route's station entry at its index and only the vehicles its arrivals name", () => {
     // Act & Assert
-    expect(toJongroEntry({ kind: "jongro", groupId: "jongro07", stationIndex: 16, towards: "혜화동로터리", stationsVersion: "abc" }, view, "종로 07")).toEqual({
+    expect(toLiveEntry({ groupId: "jongro07", stationIndex: 16 }, group, { label: "종로 07", towards: "혜화동로터리" })).toEqual({
+      kind: "live",
       groupId: "jongro07",
-      kind: "arrivals",
       label: "종로 07",
       stationIndex: 16,
       towards: "혜화동로터리",
       stationsVersion: "abc",
-      arrivals: [ARRIVAL],
+      updatedAt: "2026-10-20T14:09:55+09:00",
+      operation: "running",
+      vehicles: [vehicle("a")],
+      arrivals: [arrival("a", "4분후[2번째 전]"), arrival(null, "출발대기")],
     });
   });
 
-  it("serves no arrivals where the view has no row, and refuses a view with no stations version", () => {
-    // Arrange
-    const route = { kind: "jongro" as const, groupId: "jongro07", stationIndex: 16, towards: null, stationsVersion: "abc" };
-
+  it("serves no data and no arrival at a station the live route states nothing for", () => {
     // Act & Assert
-    expect(toJongroEntry(route, { buses: [], stationEtas: [], stationsVersion: "abc" }, "종로 07").arrivals).toEqual([]);
-    expect(() => toJongroEntry(route, { buses: [], stationEtas: [] }, "종로 07")).toThrow("jongro07");
+    expect(toLiveEntry({ groupId: "jongro07", stationIndex: 3 }, group, { label: "종로 07", towards: null })).toMatchObject({ operation: "noData", vehicles: [], arrivals: [] });
   });
 });
 
-describe("toHsscEntry", () => {
-  it("carries the buses on their way", () => {
-    // Act & Assert
-    expect(toHsscEntry({ kind: "hssc", groupId: "hssc", stationIndex: 6 }, "인사캠 셔틀버스", [{ stopsAway: 2 }])).toEqual({
-      groupId: "hssc",
-      kind: "approaching",
-      label: "인사캠 셔틀버스",
-      stationIndex: 6,
-      approaching: [{ stopsAway: 2 }],
-    });
-  });
-});
-
-describe("toShuttleEntry", () => {
-  it("carries the run's service, route type, action, status and next runs", () => {
+describe("toTimetableEntry", () => {
+  it("carries the run's service, route type, action, operation and runs, with no vehicle", () => {
     // Arrange
     const route = { kind: "shuttle" as const, groupId: "campus", serviceId: "campus-inja", routeType: "regular", sequenceIndex: 0, action: "board" as const, timing: "scheduled" as const };
-    const next = [{ date: "2026-10-20", departure: "14:30", time: "14:30", estimated: false }];
+    const arrivals = [{ ...arrival(null, ""), status: "scheduled" as const, providerText: null, runDepartureAt: "2026-10-20T14:30:00+09:00" }];
 
     // Act & Assert
-    expect(toShuttleEntry(route, "인사캠 → 자과캠", { status: "active", next })).toEqual({
+    expect(toTimetableEntry(route, "인사캠 → 자과캠", { operation: "running", arrivals })).toEqual({
+      kind: "timetable",
       groupId: "campus",
-      kind: "schedule",
       label: "인사캠 → 자과캠",
       serviceId: "campus-inja",
       routeType: "regular",
       action: "board",
-      status: "active",
-      next,
+      operation: "running",
+      vehicles: [],
+      arrivals,
     });
   });
 });

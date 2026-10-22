@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-written from a capture: GET /bus/stops/hssc-hyehwa-exit1/arrivals from a local api replica (ROLE=api, NODE_ENV=development, _dev databases) 2026-10-22 02:41 KST, Accept-Language ko, whose bus_cache held no HSSC bus; approaching is the scenario \"Two buses before the stop\" (buses at indexes 1 and 4, the stop at 6). Converted 2026-10-22 when each entry took its own kind (arrivals, approaching), no other value changed.",
+  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/hssc-hyehwa-exit1/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (an HSSC stop with two buses on their way, each with its estimate); untrimmed.",
   "data": {
     "stop": {
       "id": "hssc-hyehwa-exit1",
@@ -7,16 +7,212 @@
     },
     "routes": [
       {
+        "kind": "live",
         "groupId": "hssc",
-        "kind": "approaching",
         "label": "인사캠 셔틀버스",
         "stationIndex": 6,
-        "approaching": [
+        "towards": "성균관대입구사거리",
+        "stationsVersion": null,
+        "updatedAt": "2026-10-20T14:09:55+09:00",
+        "operation": "running",
+        "vehicles": [
           {
-            "stopsAway": 2
+            "id": "32149",
+            "plateNumber": null,
+            "occupancy": null,
+            "isLastBus": null,
+            "position": {
+              "stationIndex": 1,
+              "status": "inTransit",
+              "progress": null,
+              "sectionMeters": null,
+              "coords": null,
+              "nextStationAt": "2026-10-20T14:10:24+09:00",
+              "positionAt": "2026-10-20T14:09:30+09:00",
+              "checkedAt": "2026-10-20T14:09:55+09:00"
+            },
+            "trajectory": [
+              {
+                "at": "2026-10-20T14:09:30+09:00",
+                "s": 1
+              },
+              {
+                "at": "2026-10-20T14:10:24+09:00",
+                "s": 2
+              },
+              {
+                "at": "2026-10-20T14:10:48+09:00",
+                "s": 2
+              },
+              {
+                "at": "2026-10-20T14:12:39+09:00",
+                "s": 3
+              },
+              {
+                "at": "2026-10-20T14:13:03+09:00",
+                "s": 3
+              },
+              {
+                "at": "2026-10-20T14:14:37+09:00",
+                "s": 4
+              },
+              {
+                "at": "2026-10-20T14:14:58+09:00",
+                "s": 4
+              },
+              {
+                "at": "2026-10-20T14:15:22+09:00",
+                "s": 5
+              },
+              {
+                "at": "2026-10-20T14:15:34+09:00",
+                "s": 5
+              },
+              {
+                "at": "2026-10-20T14:16:55+09:00",
+                "s": 6
+              },
+              {
+                "at": "2026-10-20T14:19:49+09:00",
+                "s": 6
+              },
+              {
+                "at": "2026-10-20T14:20:19+09:00",
+                "s": 7
+              },
+              {
+                "at": "2026-10-20T14:20:31+09:00",
+                "s": 7
+              },
+              {
+                "at": "2026-10-20T14:21:41+09:00",
+                "s": 8
+              },
+              {
+                "at": "2026-10-20T14:22:44+09:00",
+                "s": 8
+              },
+              {
+                "at": "2026-10-20T14:23:12+09:00",
+                "s": 9
+              },
+              {
+                "at": "2026-10-20T14:23:42+09:00",
+                "s": 9
+              },
+              {
+                "at": "2026-10-20T14:24:39+09:00",
+                "s": 10
+              },
+              {
+                "at": "2026-10-20T14:25:12+09:00",
+                "s": 10
+              },
+              {
+                "at": "2026-10-20T14:25:42+09:00",
+                "s": 11
+              }
+            ]
           },
           {
-            "stopsAway": 5
+            "id": "32150",
+            "plateNumber": null,
+            "occupancy": null,
+            "isLastBus": null,
+            "position": {
+              "stationIndex": 4,
+              "status": "inTransit",
+              "progress": null,
+              "sectionMeters": null,
+              "coords": null,
+              "nextStationAt": "2026-10-20T14:10:00+09:00",
+              "positionAt": "2026-10-20T14:09:30+09:00",
+              "checkedAt": "2026-10-20T14:09:55+09:00"
+            },
+            "trajectory": [
+              {
+                "at": "2026-10-20T14:09:30+09:00",
+                "s": 4
+              },
+              {
+                "at": "2026-10-20T14:10:00+09:00",
+                "s": 5
+              },
+              {
+                "at": "2026-10-20T14:10:12+09:00",
+                "s": 5
+              },
+              {
+                "at": "2026-10-20T14:11:33+09:00",
+                "s": 6
+              },
+              {
+                "at": "2026-10-20T14:14:27+09:00",
+                "s": 6
+              },
+              {
+                "at": "2026-10-20T14:14:57+09:00",
+                "s": 7
+              },
+              {
+                "at": "2026-10-20T14:15:09+09:00",
+                "s": 7
+              },
+              {
+                "at": "2026-10-20T14:16:19+09:00",
+                "s": 8
+              },
+              {
+                "at": "2026-10-20T14:17:22+09:00",
+                "s": 8
+              },
+              {
+                "at": "2026-10-20T14:17:50+09:00",
+                "s": 9
+              },
+              {
+                "at": "2026-10-20T14:18:20+09:00",
+                "s": 9
+              },
+              {
+                "at": "2026-10-20T14:19:17+09:00",
+                "s": 10
+              },
+              {
+                "at": "2026-10-20T14:19:50+09:00",
+                "s": 10
+              },
+              {
+                "at": "2026-10-20T14:20:20+09:00",
+                "s": 11
+              }
+            ]
+          }
+        ],
+        "arrivals": [
+          {
+            "status": "enRoute",
+            "expectedArrivalAt": "2026-10-20T14:11:33+09:00",
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 1,
+            "isLastBus": null,
+            "vehicleId": "32150",
+            "providerText": null
+          },
+          {
+            "status": "enRoute",
+            "expectedArrivalAt": "2026-10-20T14:16:55+09:00",
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 4,
+            "isLastBus": null,
+            "vehicleId": "32149",
+            "providerText": null
           }
         ]
       }

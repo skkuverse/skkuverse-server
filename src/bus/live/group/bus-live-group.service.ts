@@ -24,7 +24,8 @@ export class BusLiveGroupService {
     return withMeta(group, { serverNow: toKstInstant(this.clock.now().getTime()) });
   }
 
-  private async findLiveGroup(groupId: string): Promise<LiveGroup> {
+  // WHY: the one live answer of a group, which the live route and the stop page both serve (ADR 0019, D12).
+  async findLiveGroup(groupId: string): Promise<LiveGroup> {
     const group = groupId === HSSC_GROUP_ID ? await this.hssc.findLiveGroup() : await this.jongro.findLiveGroup(groupId);
     if (group) return group;
     if (this.config.listGroupIds().includes(groupId)) throw new AppError("GROUP_NOT_LIVE", `Group ${groupId} has a timetable, not a live route`, 404);

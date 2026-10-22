@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-written from a capture: GET /bus/stops/seoul-01592/arrivals from a local api replica (ROLE=api, NODE_ENV=development, _dev databases) 2026-10-22 02:41 KST, Accept-Language ko, whose bus_cache held no Jongro rows since no poller writes _dev; the 종로07 entry's one arrival is copied from contracts/produced/fixtures/bus.arrival/running.json, so the fixture shows a pole two Jongno routes share with an arrival. Converted 2026-10-22 when each entry took its own kind (arrivals, approaching), no other value changed.",
+  "_about": "Synthetic, reshaped by ADR 0019 before any consumer: GET /bus/stops/seoul-01592/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts (a pole 종로07 and 종로08 share, 종로07 with one arrival and its tracked bus); untrimmed.",
   "data": {
     "stop": {
       "id": "seoul-01592",
@@ -14,32 +14,77 @@
     },
     "routes": [
       {
+        "kind": "live",
         "groupId": "jongro07",
-        "kind": "arrivals",
         "label": "종로 07",
         "stationIndex": 16,
         "towards": "혜화동로터리",
         "stationsVersion": "0346768f2b776f45",
+        "updatedAt": "2026-10-20T14:09:55+09:00",
+        "operation": "running",
+        "vehicles": [
+          {
+            "id": "100000203",
+            "plateNumber": "서울74사2703",
+            "occupancy": {
+              "level": "relaxed",
+              "passengerCount": 9
+            },
+            "isLastBus": false,
+            "position": {
+              "stationIndex": 14,
+              "status": "inTransit",
+              "progress": 0.5,
+              "sectionMeters": 300,
+              "coords": {
+                "lat": 37.587,
+                "lng": 126.998
+              },
+              "nextStationAt": null,
+              "positionAt": "2026-10-20T14:09:30+09:00",
+              "checkedAt": "2026-10-20T14:09:55+09:00"
+            },
+            "trajectory": [
+              {
+                "at": "2026-10-20T14:09:30+09:00",
+                "s": 14.5
+              },
+              {
+                "at": "2026-10-20T14:10:08+09:00",
+                "s": 15
+              },
+              {
+                "at": "2026-10-20T14:13:50+09:00",
+                "s": 16
+              }
+            ]
+          }
+        ],
         "arrivals": [
           {
-            "minutes": 2,
-            "stopsAway": 1,
-            "state": "running",
+            "status": "enRoute",
+            "expectedArrivalAt": "2026-10-20T14:13:50+09:00",
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "provider",
+            "stopsAway": 2,
             "isLastBus": false,
-            "carNumber": "5538",
-            "crowding": "relaxed",
-            "passengerCount": 7,
-            "message": "2분19초후[1번째 전]"
+            "vehicleId": "100000203",
+            "providerText": "4분10초후[2번째 전]"
           }
         ]
       },
       {
+        "kind": "live",
         "groupId": "jongro08",
-        "kind": "arrivals",
         "label": "종로 08",
         "stationIndex": 22,
         "towards": "혜화동로터리",
         "stationsVersion": "52e82cc449046288",
+        "updatedAt": null,
+        "operation": "noData",
+        "vehicles": [],
         "arrivals": []
       }
     ]
