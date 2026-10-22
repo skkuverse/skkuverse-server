@@ -164,6 +164,17 @@ Each realtime group's `screen` in `GET /bus/config` and `GET /bus/config/:groupI
 
 Each realtime group's ETag and the all-groups ETag changed once, in every language, when the fields shipped.
 
+## The deprecated realtime route
+
+`GET /bus/realtime/data/:groupId`, which installed bundles call through `screen.dataEndpoint`, is frozen: its body is pinned byte for byte by `__tests__/nest/bus/bus-cache-characterization.routes.test.ts`, and its wire (`bus-realtime-group.realtimeGroup`) is published as deprecated. It answers two headers more:
+
+| Header | Value |
+| --- | --- |
+| `Deprecation` | `@1792594800` (RFC 9745: 2026-10-22 00:00 KST) |
+| `Link` | `</bus/live/<groupId>>; rel="successor-version"` |
+
+Each call is counted in the log as `bus.realtime.deprecated_route_called` (warn), one line an hour per group, `X-App-Version` and `X-Platform`, with `suppressed` counting the calls in between. The app sends no OTA bundle id, and old and new bundles share a native version, so the counts are per version, which is enough: only bundles from before the migration call this route. `Sunset` is added, and the route removed, once those calls are gone.
+
 ## Errors
 
 | Status | `error.code` | When |

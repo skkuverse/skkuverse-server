@@ -90,3 +90,9 @@ export interface JongroReading {
   arrivalsCheckedAt: Date | null;
   positionsCheckedAt: Date | null;
 }
+
+/** QUIRK(app): the X-App-Version and X-Platform headers skkuverse-app sends on every request; null when absent. */
+export interface DeprecatedCaller {
+  appVersion: string | null;
+  platform: string | null;
+}

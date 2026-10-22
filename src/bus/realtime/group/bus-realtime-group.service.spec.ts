@@ -35,6 +35,7 @@ import {
   noArrivalBus,
 } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { Clock } from "../../../infra/clock";
+import logger from "../../../infra/logger";
 import type { BusCacheRepository } from "../../cache/bus-cache.repository";
 import { BusCacheService } from "../../cache/bus-cache.service";
 import type { BusRegistryRepository } from "../../registry/bus-registry.repository";
@@ -679,5 +680,30 @@ describe("BusRealtimeGroupService.findJongroReading", () => {
   it("answers null for a group that is not a Jongno route", async () => {
     // Act & Assert
     expect(await Promise.all([service.findJongroReading("hssc"), service.findJongroReading("nope")])).toEqual([null, null]);
+  });
+});
+
+// WHY: installed bundles call the deprecated route until their devices update; an hourly line per group, app version
+// and platform counts them (ADR 0019, D11), since the app sends no OTA bundle id.
+describe("BusRealtimeGroupService.recordDeprecatedCall", () => {
+  const calls = () => jest.mocked(logger.warn).mock.calls.filter(([fields]) => (fields as { event?: string }).event === "bus.realtime.deprecated_route_called");
+
+  it("logs a call once an hour per group, app version and platform, counting the calls it skipped", () => {
+    // Arrange
+    jest.mocked(logger.warn).mockClear();
+    const client = { appVersion: "3.6.2", platform: "ios" };
+
+    // Act
+    service.recordDeprecatedCall("hssc", client);
+    service.recordDeprecatedCall("hssc", client);
+    service.recordDeprecatedCall("hssc", { appVersion: "3.6.2", platform: "android" });
+    service.recordDeprecatedCall("hssc", { appVersion: null, platform: null });
+
+    // Assert
+    expect(calls().map(([fields]) => fields)).toEqual([
+      { event: "bus.realtime.deprecated_route_called", groupId: "hssc", appVersion: "3.6.2", platform: "ios", suppressed: 0 },
+      { event: "bus.realtime.deprecated_route_called", groupId: "hssc", appVersion: "3.6.2", platform: "android", suppressed: 0 },
+      { event: "bus.realtime.deprecated_route_called", groupId: "hssc", appVersion: null, platform: null, suppressed: 0 },
+    ]);
   });
 });

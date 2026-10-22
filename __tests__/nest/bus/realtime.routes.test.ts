@@ -318,3 +318,27 @@ describe("GET /bus/realtime/data/:groupId and the registry", () => {
     }
   });
 });
+
+// WHY: the route is frozen and superseded by GET /bus/live/:groupId (ADR 0019, D11); installed bundles read no header.
+describe("GET /bus/realtime/data/:groupId deprecation", () => {
+  it("answers Deprecation (RFC 9745) and a Link to its successor, its body unchanged", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/realtime/data/jongro07").set("X-App-Version", "3.6.2").set("X-Platform", "ios");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.headers.deprecation).toBe("@1792594800");
+    expect(res.headers.link).toBe('</bus/live/jongro07>; rel="successor-version"');
+    expect(res.body.data).toEqual({ groupId: "jongro07", buses: [], stationEtas: [], stationsVersion: registryRepository.routes.get("jongro07")!.stationsVersion });
+  });
+
+  it("encodes the group id in the Link, so a path cannot inject a header", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/realtime/data/a%0D%0AX-Evil:%201");
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.headers["x-evil"]).toBeUndefined();
+    expect(res.headers.link).toBe('</bus/live/a%0D%0AX-Evil%3A%201>; rel="successor-version"');
+  });
+});
