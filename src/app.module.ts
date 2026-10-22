@@ -14,6 +14,7 @@ import { BusRealtimeHsscModule } from "./bus/realtime/hssc/bus-realtime-hssc.mod
 import { BusRealtimeJongroModule } from "./bus/realtime/jongro/bus-realtime-jongro.module";
 import { BusRealtimeArrivalModule } from "./bus/realtime/arrival/bus-realtime-arrival.module";
 import { BusRealtimeGroupModule } from "./bus/realtime/group/bus-realtime-group.module";
+import { BusRealtimeHsscEtaModule } from "./bus/realtime/hssc-eta/bus-realtime-hssc-eta.module";
 import { BusStopsModule } from "./bus/stops/bus-stops.module";
 import { BusScheduleContentModule } from "./bus/schedule-content/bus-schedule-content.module";
 import { BusScheduleModule } from "./bus/schedule/bus-schedule.module";
@@ -28,6 +29,8 @@ import { BusEtaSmartModule } from "./bus/eta/smart/bus-eta-smart.module";
 import { BusConfigModule } from "./bus/config/bus-config.module";
 import { BusStopIndexModule } from "./bus/stop-index/bus-stop-index.module";
 import { BusStopArrivalsModule } from "./bus/stop-arrivals/bus-stop-arrivals.module";
+import { BusShuttleGpsModule } from "./bus/private-file";
+import { BusShuttleStopModule } from "./bus/private-file";
 import { AppConfigModule } from "./app-config/app-config.module";
 import { UiModule } from "./ui/ui.module";
 import { UiHomeModule } from "./ui/home/ui-home.module";
@@ -98,6 +101,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusRealtimeJongroModule,
     BusRealtimeArrivalModule,
     BusRealtimeGroupModule,
+    BusRealtimeHsscEtaModule,
     BusStopsModule,
     BusScheduleContentModule,
     BusScheduleModule,
@@ -112,6 +116,8 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusConfigModule,
     BusStopIndexModule,
     BusStopArrivalsModule,
+    BusShuttleGpsModule,
+    BusShuttleStopModule,
     AppConfigModule,
     UiModule,
     UiHomeModule,
