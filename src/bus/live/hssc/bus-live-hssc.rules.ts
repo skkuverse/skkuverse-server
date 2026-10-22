@@ -8,7 +8,7 @@ type Knot = { atMs: number; s: number };
 function toInstants(eta: HsscEta): Pick<Arrival, "status" | "expectedArrivalAt" | "expectedDepartureAt"> {
   if (eta.status === "enRoute") return { status: "enRoute", expectedArrivalAt: toKstInstant(eta.arrivesAt.getTime()), expectedDepartureAt: null };
   if (eta.status === "arriving") return { status: "atStop", expectedArrivalAt: null, expectedDepartureAt: toKstInstant(eta.departsAt.getTime()) };
-  return { status: "waitingToDepart", expectedArrivalAt: null, expectedDepartureAt: null };
+  return { status: eta.status, expectedArrivalAt: null, expectedDepartureAt: null };
 }
 
 /** WHY: the engine's estimate from its measured medians, never a provider's (ADR 0019, D1). */
@@ -27,9 +27,9 @@ export function toHsscArrival(eta: HsscEta): Arrival {
   };
 }
 
-// WHY: the engine has no lap times for a bus laying over; at a rotary pass the bus boards no one, so it is passing.
-export function toHsscPositionStatus({ anchor, isAtStopPosition, lapTimes }: HsscLiveBus): VehiclePosition["status"] {
-  if (lapTimes.length === 0) return "waitingToDepart";
+// WHY: at a rotary pass the bus boards no one, so it is passing; a stalled bus stays where it was last seen (ADR 0018, D6).
+export function toHsscPositionStatus({ anchor, isAtStopPosition, isLayingOver }: HsscLiveBus): VehiclePosition["status"] {
+  if (isLayingOver) return "waitingToDepart";
   return !anchor.isDeparted && isAtStopPosition ? "atStop" : "inTransit";
 }
 
@@ -46,7 +46,7 @@ function toKnots({ anchor, stationIndex, departsAt, lapTimes }: HsscLiveBus): Kn
   return knots;
 }
 
-/** WHY: the engine's stop instants, so an HSSC marker moves as a Jongno one does (ADR 0019, D7); none for a bus laying over. */
+/** WHY: the engine's stop instants, so an HSSC marker moves as a Jongno one does (ADR 0019, D7); none for a bus laying over or stalled. */
 export function toHsscTrajectory(bus: HsscLiveBus): Vehicle["trajectory"] {
   if (bus.lapTimes.length === 0) return null;
   let previousMs = -Infinity;
