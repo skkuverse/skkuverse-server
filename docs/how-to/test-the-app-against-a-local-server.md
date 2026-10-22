@@ -3,7 +3,7 @@ title: Test the App Against a Local Server
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-19
+last-updated: 2026-10-22
 audience: internal
 ---
 
@@ -23,6 +23,7 @@ A local server holds credentials that reach real people. The dev Doppler config 
 | `CACHE` | `off` | `on` | A change to a `_dev` database shows on the next request. Every `createCachedLoader` (buildings, campus shapes, the event map, the mini-app feed) and the bus timetable cache load on every call, and every `Cache-Control` is rewritten to `no-store` so the phone's HTTP cache never answers for the server. |
 | `SHUTTLE_ETA` | `off` | `on` | No NAVER Directions or TMAP call: the 인자셔틀 arrival-estimate jobs, which use metered keys, do not run. Smart schedules still apply whatever estimates `bus_campus_dev.shuttle_eta` holds. Production may set it `off`. |
 | `SUBWAY` | `off` | `on` | No Seoul subway API call or train-map crawl: the subway pollers do not run. The API key and its daily quota are shared with production. Production may set it `off`. |
+| `SHUTTLE` | `off` | `on` | (A collector detail is left out of the public history.) |
 
 `CACHE=off` leaves two caches on. The AI overview cache saves an LLM call per request; its key changes when the crawler rewrites a notice's `contentHash`, but a hand edit of a body or `summary*` field in `_dev` stays cached for 30 minutes (restart to drop it). The 5-second `bus_cache` read cache is shorter than the app's poll interval.
 
