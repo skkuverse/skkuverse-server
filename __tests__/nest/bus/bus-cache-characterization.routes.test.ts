@@ -495,3 +495,46 @@ describe("bus_cache when the upstreams list no bus", () => {
     }
   });
 });
+
+// WHY: add-bus-live-api D14 freezes GET /bus/realtime/data/:groupId, so its body is pinned byte for byte from the
+// poller's tick before the live route reshapes what bus_cache keeps (the HSSC layover window, the vehicle plate).
+describe("the deprecated realtime route's body, byte for byte", () => {
+  const LAYOVER_ITEMS = [
+    ...HSSC_ITEMS,
+    // A bus laying over at the turnaround for 5 minutes, past the old route's 3-minute window.
+    { line_no: "3", inout: "ENTERED", stop_no: "5", seq: "5", stop_name: "농구장정류소", get_date: "2026-10-20 오전 9:55:00" },
+    // A bus laying over there for 2 minutes, inside it.
+    { line_no: "4", inout: "ENTERED", stop_no: "5", seq: "5", stop_name: "농구장정류소", get_date: "2026-10-20 오전 9:58:00" },
+    // A bus 12 minutes past its last event elsewhere, outside the 10-minute window.
+    { line_no: "5", inout: "LEFT", stop_no: "8", seq: "8", stop_name: "올림픽기념국민생활관", get_date: "2026-10-20 오전 9:48:00" },
+  ];
+
+  it("serves the HSSC buses of a tick with a layover as it did before the live route", async () => {
+    // Arrange
+    upstream.hssc = LAYOVER_ITEMS;
+    await tick("hssc");
+
+    // Act
+    const res = await get("/bus/realtime/data/hssc");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(
+      '{"meta":{"lang":"ko","currentTime":"10:00 AM","totalBuses":3,"serverNow":"2026-10-20T10:00:00+09:00"},"data":{"groupId":"hssc","buses":[{"stationIndex":1,"carNumber":"0000","estimatedTime":30,"kind":"estimated"},{"stationIndex":7,"carNumber":"0000","estimatedTime":120,"kind":"estimated"},{"stationIndex":0,"carNumber":"0000","estimatedTime":120,"kind":"estimated"}],"stationEtas":[]}}',
+    );
+  });
+
+  it("serves a Jongno tick as it did before the live route", async () => {
+    // Arrange
+    await tick("jongro-07");
+
+    // Act
+    const res = await get("/bus/realtime/data/jongro07");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(
+      '{"meta":{"lang":"ko","currentTime":"10:00 AM","totalBuses":1,"serverNow":"2026-10-20T10:00:00+09:00"},"data":{"groupId":"jongro07","buses":[{"stationIndex":5,"carNumber":"5537","estimatedTime":0,"latitude":"37.587","longitude":"126.998","kind":"tracked","tracked":{"status":"running","vehicleId":"100000103","observedAt":"2026-10-20T09:59:30+09:00","crowding":"relaxed","isLastBus":false,"progress":0.4,"segmentMeters":250,"nextStopInSec":null,"trajectory":[{"at":"2026-10-20T09:59:30+09:00","s":5.4},{"at":"2026-10-20T10:00:08+09:00","s":6}]}}],"stationEtas":[{"stationIndex":0,"eta":"3분후[2번째 전]","arrivals":[{"minutes":3,"stopsAway":1,"state":"running","isLastBus":false,"carNumber":"5537","crowding":"relaxed","passengerCount":9,"message":"3분후[2번째 전]"},{"minutes":null,"stopsAway":null,"state":"waiting","isLastBus":false,"carNumber":null,"crowding":null,"passengerCount":null,"message":"출발대기"}]},{"stationIndex":1,"eta":"5분후[3번째 전]","arrivals":[{"minutes":5,"stopsAway":2,"state":"running","isLastBus":false,"carNumber":"5537","crowding":"relaxed","passengerCount":9,"message":"5분후[3번째 전]"},{"minutes":null,"stopsAway":null,"state":"waiting","isLastBus":false,"carNumber":null,"crowding":null,"passengerCount":null,"message":"출발대기"}]}],"stationsVersion":"0346768f2b776f45"}}',
+    );
+  });
+});
