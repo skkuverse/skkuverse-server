@@ -9,7 +9,7 @@
   },
   "src/bus/realtime/group/bus-realtime-group.rules.ts": {
     "max": 138,
-    "reason": "ADR 0010 D9, no reachable seam: the trajectory (`toTrajectory`) is built from the same joined position and vehicle rows as the tracked status and the next-stop countdown (`toProgress`, `toNextStopInSec`, `toNamedBuses`, `toStopArrivalMs`), and a sibling sub-module cannot hold it, since `BusRealtimeGroupService` is at the four-dependency constructor cap in eslint.config.js and a parent never imports a child (sub-modules.test.ts), as add-jongro-bus-positions D6 found for the tracking rules."
+    "reason": "ADR 0010 D9, no reachable seam: the trajectory (`toTrajectory`) is built from the same joined position and vehicle rows as the tracked status and the next-stop countdown (`toProgress`, `toNextStopInSec`, `toNamedBuses`, `toStopArrivalMs`), and a sibling sub-module cannot hold it, since `BusRealtimeGroupService` is at the four-dependency constructor cap in eslint.config.js and a parent never imports a child (sub-modules.test.ts)."
   },
   "src/bus/realtime/group/bus-realtime-group.wire.ts": {
     "max": 91,
@@ -29,7 +29,7 @@
   },
   "src/map/map.constants.ts": {
     "max": 55,
-    "reason": "ADR 0010 D9, no domain seam: `BASE_LAYERS` is the one ordered layer catalogue /map/config serves, typed `as const` so `BaseLayerId` names its ids; the campus rules, the layer-set loader and service and the config flow all read it, so it stays at the map root, which holds one `.constants` file, beside the event cache constants several flows share. The Jongno route layers (add-jongro-route-lines D6) took it past the role cap."
+    "reason": "ADR 0010 D9, no domain seam: `BASE_LAYERS` is the one ordered layer catalogue /map/config serves, typed `as const` so `BaseLayerId` names its ids; the campus rules, the layer-set loader and service and the config flow all read it, so it stays at the map root, which holds one `.constants` file, beside the event cache constants several flows share. The Jongno route layers took it past the role cap."
   },
   "src/notices/list/notices-list.rules.ts": {
     "max": 182,

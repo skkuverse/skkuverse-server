@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://<origin>/skkuverse.json for the six first-party mini app origins of src/infra/origins.ts (https://eskara.miniapp.skkuverse.com, https://mukja.mini.skkuverse.com, https://playlist.mini.skkuverse.com, https://booth-box.mini.skkuverse.com, https://inja.mini.skkuverse.com, https://timetable.mini.skkuverse.com), captured from production on 2026-10-19 at 19:09:46 UTC (2026-10-20 04:09 KST) while the server ran commit f8dda24b (move-miniapp-registry task 1.1). Each value is the parsed manifest body, keyed by its origin; each answered 200 with 96 to 119 bytes. Nothing trimmed.",
+  "_about": "GET https://<origin>/skkuverse.json for the six first-party mini app origins of src/infra/origins.ts (https://eskara.miniapp.skkuverse.com, https://mukja.mini.skkuverse.com, https://playlist.mini.skkuverse.com, https://booth-box.mini.skkuverse.com, https://inja.mini.skkuverse.com, https://timetable.mini.skkuverse.com), captured from production on 2026-10-19 at 19:09:46 UTC (2026-10-20 04:09 KST) while the server ran commit f8dda24b. Each value is the parsed manifest body, keyed by its origin; each answered 200 with 96 to 119 bytes. Nothing trimmed.",
   "https://eskara.miniapp.skkuverse.com": {
     "shell": {
       "bar": "bottom",

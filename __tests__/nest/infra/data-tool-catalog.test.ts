@@ -1,6 +1,5 @@
 /**
- * The `npm run data` catalog (scripts/lib/datasets/catalog.js, design D1 and
- * D6 of openspec/changes/archive/2026-10-19-move-runtime-data-to-db): the datasets the tool knows
+ * The `npm run data` catalog (scripts/lib/datasets/catalog.js; ADR 0013, D5): the datasets the tool knows
  * and the server code that validates each one. The command line loads it over
  * `dist/src`; this test loads the same catalog over `src/` through ts-jest, so
  * the catalog covered here is the catalog the tool runs.
@@ -11,41 +10,40 @@
  *
  * The code-held sources (`busGroups`, `subwayStations`, `busServices`) list
  * the identities the compiled checkout serves, the same lists the server
- * checks against (move-editorial-datasets D3).
+ * checks against (ADR 0013, D5).
  *
- * The mini app registry is the `miniapps` dataset (move-miniapp-registry D6):
+ * The mini app registry is the `miniapps` dataset (ADR 0013, D5):
  * its push runs the server's registry schema and the first-party owner check,
  * it lists its ids for others to reference, and the three ui datasets check
  * their mini app ids and targets against the `miniapps` the target database
  * stores (`storedOf`), refused as not stored when it holds none.
  *
- * The wave A datasets (`campus-banners`, `transit-layout`) are checked at push
- * with the checks the boot refused a committed file on (D4, D5), through the
- * tool's own checkData. So is wave B's `map-layer-sets`, with the checks the
- * layer-set loader refused a file on and one set per `layerSetId` (D6). Wave
- * C's `bus-service-notices` names only services the checkout defines (D7), and
- * its `skku-rest-days` keys only calendar month-days and dates (D8).
+ * The `campus-banners` and `transit-layout` datasets are checked at push with
+ * the checks the boot refused a committed file on, through the tool's own
+ * checkData. So is `map-layer-sets`, with the checks the layer-set loader
+ * refused a file on and one set per `layerSetId`. `bus-service-notices` names
+ * only services the checkout defines, and `skku-rest-days` keys only calendar
+ * month-days and dates.
  *
- * The `bus-lane-corridor` dataset (move-reference-datasets D9) is checked with
+ * The `bus-lane-corridor` dataset (ADR 0013, D2) is checked with
  * the server's corridor schema and `corridorIssues`, the geometry checks the
  * boot refused the committed corridor file on; the lane hours and strategies
  * are code.
  *
- * The `jongro-route-attributes` dataset (move-reference-datasets D10) is
+ * The `jongro-route-attributes` dataset (ADR 0013, D2) is
  * checked with the server's attributes schema and against the `jongroRoutes`
  * code-held source, the route ids JONGRO_ROUTES holds: one entry per route the
  * checkout serves, no more.
  *
- * The `bus-stops` dataset (unify-bus-stops D4) is checked with the server's
+ * The `bus-stops` dataset is checked with the server's
  * stops schema and `toBusStopsIssues` against the checkout's services, their
  * estimate opt-ins, the served subway stations and the lane strategies; it
  * references the `subwayStations` and `busServices` code-held sources, and
  * others may reference its stop ids. It is the one dataset that declares a
- * collection outside the content database, `busSchedules` (unify-bus-stops
- * D6): its sequences are refused when a timetable entry's stop times do not
+ * collection outside the content database, `busSchedules`: its sequences are refused when a timetable entry's stop times do not
  * fit them, naming the service, the route type and the entry time.
  *
- * The `subway-topology` dataset (move-reference-datasets D2, D3) is checked
+ * The `subway-topology` dataset (ADR 0013, D2) is checked
  * with the server's topology schema and `toTopologyIssues` against the
  * checkout's SUBWAY_LINES and SUBWAY_STATIONS: one entry per served platform
  * (the `subwayPlatforms` code-held source), no more, and every named stop
@@ -54,7 +52,7 @@
  * committed timetable routes (`toRouteIssues`): upstream, watched and next
  * platforms in route order, and every stop the tracker follows named.
  *
- * The `subway-timetables` dataset (move-reference-datasets D4, D5, D6) is
+ * The `subway-timetables` dataset (ADR 0013, D1 and D3) is
  * stored in parts, one per table: each part runs the server's `timetableFile`
  * schema and is keyed by `toTimetableKey` (`<operator>-<line>-<dayType>`),
  * two tables of one key are refused, and the set is refused while a platform
@@ -62,7 +60,7 @@
  * routes are then checked against the target's stored `subway-topology`, and
  * the stops the tracker follows against the run properties
  * (`toTrackedStopIssues`), as warnings: a coverage change pushes its tables
- * first, and the topology push stays the gate that refuses (wave D review F1).
+ * first, and the topology push stays the gate that refuses.
  */
 import path from "node:path";
 import { JONGRO_ROUTES, SERVICE_CONFIG } from "../../../src/bus/bus.constants";

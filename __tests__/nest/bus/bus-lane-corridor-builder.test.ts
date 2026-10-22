@@ -1,7 +1,6 @@
 /**
  * scripts/build-bus-lane-corridor.js feeds the `bus-lane-corridor` dataset
- * (move-reference-datasets task 3.6, design D9; spec "The corridor builder
- * writes a working file"): it rebuilds the centerline, its boundaries and the
+ * (ADR 0013, D3): it rebuilds the centerline, its boundaries and the
  * probe routes' section ranges into a working file `npm run data -- pull`
  * wrote, in place, keeping the entry and exit points and the pull's revision,
  * so `push` sends the result. It writes nothing under src/, refuses a file the
@@ -23,7 +22,7 @@ import { corridorFixture } from "../../helpers/bus/bus-lane-corridor";
 const ROOT = path.join(__dirname, "../../..");
 const SCRIPT = path.join(ROOT, "scripts/build-bus-lane-corridor.js");
 const SOURCES = path.join(__dirname, "fixtures/bus-lane-corridor-builder");
-// WHY: the builder once rewrote a committed file in this folder (move-reference-datasets D9); a run adds nothing to it.
+// WHY: the builder once rewrote a committed file in this folder; a run adds nothing to it.
 const LANE_DIR = path.join(ROOT, "src/bus/eta/lane");
 
 const PULLED = { dataset: "bus-lane-corridor", target: "dev", baseRevision: 3, pulledAt: "2026-10-20T03:00:00.000Z" };

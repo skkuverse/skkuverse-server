@@ -1,6 +1,6 @@
 /**
  * The places importer checks each `miniapp` action against the mini app
- * registry its target database holds (move-miniapp-registry task 12.1): the
+ * registry its target database holds: the
  * `miniapps` dataset `npm run data` stored in the content database the importer
  * picks with its own NODE_ENV rule, read through scripts/lib/datasets/store.js.
  * A place naming an id that registry lacks is refused, so a typo cannot import

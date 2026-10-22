@@ -1,8 +1,7 @@
 /**
  * The /building routes through the real controllers, services, rules and
- * mappers, with an in-memory fake per repository (design D11 of
- * harden-test-suite). What it guards: query validation and its error bodies,
- * the campus filter and labels per language, the English fallback, search
+ * mappers, with an in-memory fake per repository (ADR 0011, D2 and D3). What
+ * it guards: query validation and its error bodies, the campus filter and labels per language, the English fallback, search
  * grouping and meta, the detail's floors, connections and cafeterias, an internal error's
  * body, and the Cache-Control a response may or may not carry.
  */

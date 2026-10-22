@@ -1,6 +1,6 @@
 /**
  * How `npm run data` stores a dataset in the content database
- * (openspec/changes/archive/2026-10-19-move-runtime-data-to-db, design D3 to D5). The server only
+ * (ADR 0013, D3 and D4). The server only
  * reads `datasets`; this file is its one writer, and the only reader and
  * writer of `dataset_revisions`.
  *

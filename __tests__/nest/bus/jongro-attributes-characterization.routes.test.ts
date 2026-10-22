@@ -1,6 +1,6 @@
 /**
  * Characterization of every route that serves a Jongro route's attributes
- * (move-reference-datasets task 4.3, design D14): its theme color, icon type,
+ * (ADR 0011, D6): its theme color, icon type,
  * refresh interval, seat count and transfer lines. `/bus/config` and each
  * `/bus/config/:groupId`, `/ui/home/transit` and `/ui/home/transitlist` answer,
  * in `ko`, `en` and `zh`, the bytes, `Cache-Control`, `Vary` and `ETag`
@@ -18,7 +18,7 @@
  * rows and positions below, and whose content database holds revision 1 of
  * `transit-layout`, `miniapps` and `jongro-route-attributes`, stored through
  * the tool's own scripts/lib/datasets/store.js. The attributes are the
- * dataset's since task 5.4; every expected value was pinned while they were
+ * dataset's; every expected value was pinned while they were
  * still the committed route file, of which revision 1 is a copy.
  *
  * A regression pin: a failure is a regression to report, and an expected value
@@ -27,8 +27,7 @@
  * live buses production served then cannot be replayed, so only their group
  * id and stations version are compared with the capture.
  *
- * Wave 4 of unify-bus-stops (design D12, task 7.2) changes one pinned
- * behavior on purpose: each realtime station of `/bus/config` and of the
+ * One pinned behavior changed on purpose after the capture: each realtime station of `/bus/config` and of the
  * `hssc` and Jongro groups carries its `stopId`, last. Those bodies are now
  * the captured ones with exactly the stations' stop ids appended
  * (__tests__/helpers/bus/station-stop-ids.ts) and their ETags the md5 of that
@@ -214,7 +213,7 @@ afterAll(async () => {
 
 const get = (url: string, lang: Lang) => request(app.getHttpServer()).get(url).set("Accept-Language", lang);
 
-/** The captured body with every realtime station's stop id appended, as served from wave 4. */
+/** The captured body with every realtime station's stop id appended, as served after the capture. */
 function configBodyFromWave4(lang: Lang): ConfigBody {
   const body = configCapture(lang).body;
   return { ...body, data: { ...body.data, groups: body.data.groups.map(withStationStopIds) } };

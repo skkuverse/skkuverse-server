@@ -1,6 +1,6 @@
 /**
  * Characterization of the subway arrivals route over the network topology
- * (move-reference-datasets task 6.3, design D14): every platform direction's
+ * (ADR 0011, D6): every platform direction's
  * name, previous and next stations in the request language, and each train's
  * stops away from the direction's upstream platforms. For every served
  * station in `ko`, `en` and `zh`, `GET /subway/stations/:id/arrivals` answers
@@ -19,8 +19,7 @@
  * the next platform, so every train is served from the stored state and no
  * timetable is read; and whose content database holds revision 1 of
  * `subway-topology`, stored through the tool's own
- * scripts/lib/datasets/store.js. The topology is the dataset's since task 7.4;
- * every expected value was pinned while it was still the committed registry file, of
+ * scripts/lib/datasets/store.js. The topology is the dataset's; every expected value was pinned while it was still the committed registry file, of
  * which revision 1 is a copy.
  *
  * At 00:20 and 02:00 KST on Wednesday 2026-10-21, the night window production
@@ -28,8 +27,8 @@
  * timetables alone: the status, `Cache-Control`, `Vary`, `ETag` and bytes the
  * code answered from the committed timetables before the topology reader landed
  * (fixtures/subway-arrivals-night.golden.json, generated at commit 46c6ea60).
- * Since task 10.3 the timetables are revision 1 of `subway-timetables`, the
- * trimmed fixture of task 9.1 stored through scripts/lib/datasets/parts.js.
+ * The timetables are revision 1 of `subway-timetables`, the trimmed fixture
+ * stored through scripts/lib/datasets/parts.js.
  *
  * A regression pin: a failure is a regression to report, and an expected
  * value changes only with the behavior it pins (`.claude/rules/tests.md`).

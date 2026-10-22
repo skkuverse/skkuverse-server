@@ -1,17 +1,13 @@
 /**
- * The routes that serve the stored `bus-stops` dataset (unify-bus-stops design
- * D5 and D16; spec `bus-stops`: "Stop data never read is unavailable" and "A
- * bus-stops push reaches every route within one minute"), over main.ts's
+ * The routes that serve the stored `bus-stops` dataset, over main.ts's
  * pipeline with every repository faked and the clock fixed at 12:00 KST on
  * 2026-10-20:
  *
  * - Never read: `/bus/config`, its `hssc`, `campus` and `commute` groups,
  *   `/ui/home/transit` and `/ui/home/transitlist` answer 503
  *   BUS_STOPS_UNAVAILABLE with no Cache-Control, while `fasttrack` and the
- *   realtime routes serve. From wave 4 (spec "Jongro groups need the stops
- *   from wave 4") the Jongro groups' stations name their stops, so
- *   `/bus/config/jongro02`, `jongro07` and `jongro08` answer that 503 too; the
- *   case that served `/bus/config/jongro07` before wave 4 moved there.
+ *   realtime routes serve. The Jongro groups' stations name their stops, so
+ *   `/bus/config/jongro02`, `jongro07` and `jongro08` answer that 503 too.
  * - A push that replaces a commute stop's photo reaches `/bus/config` and
  *   `/bus/config/commute`, ETag included, once the dataset TTL has passed, and
  *   leaves `/bus/config/hssc`'s ETag as it was.

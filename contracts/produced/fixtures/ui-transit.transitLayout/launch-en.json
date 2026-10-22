@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/ui/home/transit captured from production 2026-10-18 17:34 KST (Accept-Language en), with the commute pilot card open and every served subway station listed; untrimmed; converted 2026-10-18 for the serve-subway-line-markers wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); then, for the null subway subtitle, every subway item's `subtitle` set to null by script on 2026-10-18, as the server now serves it (bus, link and group subtitles unchanged)",
+  "_about": "GET https://api.skkuverse.com/ui/home/transit captured from production 2026-10-18 17:34 KST (Accept-Language en), with the commute pilot card open and every served subway station listed; untrimmed; converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); then, for the null subway subtitle, every subway item's `subtitle` set to null by script on 2026-10-18, as the server now serves it (bus, link and group subtitles unchanged)",
   "data": {
     "version": 1,
     "sections": [

@@ -1,6 +1,5 @@
 /**
- * Characterization of what the subway timetables serve (move-reference-datasets
- * task 9.2, design D14): the arrivals route's timetable-only answers and one
+ * Characterization of what the subway timetables serve (ADR 0011, D6): the arrivals route's timetable-only answers and one
  * tracker tick's written arrivals. Each must stay the same when the tables move
  * from committed files to the `subway-timetables` dataset.
  *
@@ -8,9 +7,8 @@
  * `src/scheduling/` and `src/subway/`, as an api replica, through the
  * production pipeline with only `Clock` overridden. It runs over a real
  * `mongod` whose content database holds revision 1 of `subway-topology`
- * (stored through the tool's own scripts/lib/datasets/store.js) and, since
- * task 10.3, revision 1 of `subway-timetables`: the trimmed fixture of tasks
- * 9.1 and 11.1, stored through scripts/lib/datasets/parts.js; whose
+ * (stored through the tool's own scripts/lib/datasets/store.js) and revision 1
+ * of `subway-timetables`: the trimmed fixture, stored through scripts/lib/datasets/parts.js; whose
  * `public_holidays` holds 2026 with Christmas, and whose `subway_arrivals`
  * starts empty, so every platform is served from its timetable alone.
  *

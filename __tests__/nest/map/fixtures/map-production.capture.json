@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9 (move-editorial-datasets task 7.1). No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed.",
+  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9. No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed.",
   "config": {
     "ko": {
       "status": 200,

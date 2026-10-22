@@ -1,7 +1,6 @@
 /**
  * The bus stops' round trip between their one writer and their reader, over a
- * real `mongod` (unify-bus-stops task 2.4, design D4 and D16; ADR 0013, D3 and
- * D6): what `npm run data` stores through scripts/lib/datasets/store.js,
+ * real `mongod` (ADR 0013, D3 and D6): what `npm run data` stores through scripts/lib/datasets/store.js,
  * BusStopsRepository reads back at the stored revision, as the server's schema
  * parses it, every stop, sequence and HSSC position in its order. A stored
  * document the schema refuses, or none at all, reads as `null`, so no route

@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config/jongro07 captured from production 2026-10-20 (Accept-Language ko, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to the first two, each with the stopId that wave 4 of unify-bus-stops appends (hand-added: production served no stopId at the capture)",
+  "_about": "GET /bus/config/jongro07 captured from production 2026-10-20 (Accept-Language ko, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to the first two, each with the stopId each realtime station carries (hand-added: production served no stopId at the capture)",
   "data": {
     "id": "jongro07",
     "screenType": "realtime",

@@ -1,6 +1,6 @@
 /**
  * The transit layout's round trip between its one writer and its reader, over a
- * real `mongod` (move-editorial-datasets task 4.6; ADR 0013, D3 and D6): what
+ * real `mongod` (ADR 0013, D3 and D6): what
  * `npm run data` stores through scripts/lib/datasets/store.js, UiTransitRepository
  * reads back unchanged, at the stored revision, and a document whose data the
  * server's schema refuses reads as `null`, so it is never served.

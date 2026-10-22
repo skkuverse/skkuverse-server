@@ -1,8 +1,7 @@
 /**
  * Characterization of every route and poller that reads the stop catalog
  * (src/bus/stops/schedule-stops.json) or the HSSC line (`HSSC_STATIONS`),
- * before both move into the `bus-stops` dataset (unify-bus-stops task 1.2,
- * design D14). `/bus/config` and each `/bus/config/:groupId`,
+ * before both move into the `bus-stops` dataset (ADR 0011, D6). `/bus/config` and each `/bus/config/:groupId`,
  * `/ui/home/transit` and `/ui/home/transitlist`, and `/smart` and `/week` of
  * every service answer, in `ko`, `en` and `zh`, the bytes, `Cache-Control`,
  * `Vary` and `ETag` production served on 2026-10-21
@@ -42,8 +41,7 @@
  * Cloudflare weakens the origin's ETag with `W/` when it compresses, so ETags
  * are compared without that prefix.
  *
- * Wave 4 (unify-bus-stops design D12, task 7.2) changes one pinned behavior on
- * purpose: each realtime station of `/bus/config` and of the `hssc` and Jongro
+ * One pinned behavior changed on purpose after the capture: each realtime station of `/bus/config` and of the `hssc` and Jongro
  * groups carries its `stopId`, last. Those bodies are now the captured ones
  * with exactly the stations' stop ids appended
  * (__tests__/helpers/bus/station-stop-ids.ts), and their ETags the md5 of that
@@ -314,7 +312,7 @@ function expectCaptured(res: request.Response, capture: Captured): void {
   expect(originEtagOf(res.headers.etag)).toBe(originEtagOf(capture.etag));
 }
 
-/** The capture with every realtime station's stop id appended, as served from wave 4, and its ETag. */
+/** The capture with every realtime station's stop id appended, as served after it, and its ETag. */
 function configFromWave4(lang: Lang): Captured {
   const capture = configCapture(lang);
   const groups = capture.body.data.groups.map(withStationStopIds);

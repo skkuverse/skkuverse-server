@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, hand-written for the subway-topology characterization (move-reference-datasets task 6.3): one fresh subway_arrivals document per served platform, generated 6 s before the test clock. Per platform its up trains stand at the station, at its first upstream platform and at its last, and its down trains at its second upstream platform, at no position, and at its next platform, so every stopsAway rule is exercised. Never captured: the stored state of a moment cannot be replayed against fixed instants.",
+  "_about": "Synthetic, hand-written for the subway-topology characterization: one fresh subway_arrivals document per served platform, generated 6 s before the test clock. Per platform its up trains stand at the station, at its first upstream platform and at its last, and its down trains at its second upstream platform, at no position, and at its next platform, so every stopsAway rule is exercised. Never captured: the stored state of a moment cannot be replayed against fixed instants.",
   "docs": [
     {
       "_id": "KR-1-0153",

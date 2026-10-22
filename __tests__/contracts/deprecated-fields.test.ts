@@ -2,7 +2,7 @@
  * Fields a wire keeps only for installed builds are published as deprecated,
  * so a client generated from contracts/produced/ learns which field to move
  * off: the realtime group's `stationEtas[].eta`, superseded by
- * `arrivals[].message` (improve-jongro-realtime, the arrivals OTA). The flag
+ * `arrivals[].message` (the arrivals OTA). The flag
  * survives the draft-07 export the artifacts use, and the committed artifact
  * carries it.
  */

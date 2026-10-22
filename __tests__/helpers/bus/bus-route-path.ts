@@ -2,7 +2,7 @@
  * The Jongro route lines as production stored them on 2026-10-18
  * (fixtures/jongro-route-paths.json): each route's line as TOPIS answered it,
  * its stored documents, and an in-memory repository holding them. No process
- * seeds the lines any more (isolate-api-from-pollers D3), so a test that needs
+ * seeds the lines at boot (ADR 0012, D3), so a test that needs
  * a stored line stores it here.
  */
 import { JONGRO_ROUTES } from "../../../src/bus/bus.constants";

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Build the 경부고속도로 bus-lane corridor of the `bus-lane-corridor` dataset
- * (move-reference-datasets D9): the centerline with its named boundaries, and
+ * (ADR 0013, D2 and D3): the centerline with its named boundaries, and
  * each probe route's `sectOrd` ranges. It rewrites `data.corridor` and
  * `data.probeRoutes` of a working file `npm run data -- pull` wrote, in place,
  * keeping `data.entryExit` and the pulled revision, and writes nothing under

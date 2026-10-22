@@ -1,6 +1,6 @@
 /**
  * The committed artifacts in `contracts/produced/` against the ones computed
- * from the `.wire` files (define-boundary-contracts design D5): which are
+ * from the `.wire` files (ADR 0010, D13): which are
  * stale, missing or extra, and the rewrite `npm run contracts:export` asks
  * for. Only the `*.json` files directly in the folder take part; the
  * hand-trimmed `fixtures/` below it are never read or written here.

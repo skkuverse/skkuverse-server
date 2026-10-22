@@ -1,10 +1,10 @@
 /**
- * Integration over BusStopArrivalsController (GET /bus/stops/:stopId/arrivals, unify-bus-stops design D7-D9)
- * through the production pipeline (buildTestApp), against every scenario of spec bus-stop-arrivals: the stop block,
+ * Integration over BusStopArrivalsController (GET /bus/stops/:stopId/arrivals)
+ * through the production pipeline (buildTestApp): the stop block,
  * 404 BUS_STOP_NOT_FOUND, the configuration order, a Jongno entry equal to the realtime view, a Jongno route left
  * out, the HSSC buses as stops away, the next three shuttle runs at a stop (14:10 KST, and 01:30 KST when the UTC
  * date is the day before), continued into the following week after Friday's last run, a suspended service, the
- * 503 with the stops never read, no-store, and no outbound request. From wave 4 (design D12), every `stopId` a
+ * 503 with the stops never read, no-store, and no outbound request. Every `stopId` a
  * realtime station of `/bus/config` serves opens a page that lists that group at the station's first index, an
  * aliased pole's included.
  *
@@ -67,7 +67,7 @@ import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.re
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { takeBlockedConnections } from "../../helpers/network-guard";
 
-// WHY: Tuesday 2026-10-20 14:10 KST, the spec's "Boarding stop" instant.
+// WHY: Tuesday 2026-10-20 14:10 KST, the "Boarding stop" test's instant.
 const AT_14_10_KST = new Date("2026-10-20T05:10:00.000Z");
 // WHY: 20:00 KST on Friday 2026-10-23, after the week's last run (review F2).
 const AT_FRIDAY_20_00_KST = new Date("2026-10-23T11:00:00.000Z");

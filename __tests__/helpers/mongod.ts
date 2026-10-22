@@ -1,6 +1,5 @@
 /**
- * A real `mongod` for boundary and characterization tests (harden-test-suite
- * design D6): one per test file, started in `beforeAll` by `startMongod()` and
+ * A real `mongod` for boundary and characterization tests (ADR 0011, D6): one per test file, started in `beforeAll` by `startMongod()` and
  * stopped in `afterAll`. Jest runs a worker's files one after another, so this
  * is also one per worker at a time.
  *

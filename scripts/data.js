@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * `npm run data`: the one tool that edits runtime datasets in the content
- * database (openspec/changes/archive/2026-10-19-move-runtime-data-to-db; how-to:
+ * database (docs/decisions/0013-runtime-data-in-mongodb.md; how-to:
  * docs/how-to/edit-runtime-data.md). The server only reads them.
  *
  * Usage (npm run data -- <command> ...):
@@ -291,7 +291,7 @@ async function repair(ctx, db, dataset) {
 }
 
 /**
- * The repair of design D4, or a note for a run that writes nothing before a
+ * The repair of ADR 0013 D4, or a note for a run that writes nothing before a
  * confirmation: `--dry-run`, `check`, and `--prod` without `--yes`, whose
  * confirmed write repairs first (confirmAndWrite).
  */

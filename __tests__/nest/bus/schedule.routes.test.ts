@@ -8,13 +8,12 @@
  * max-age=300 (60 with arrival estimates; smart is private, being in the
  * request's language), i18n message presence/absence per
  * status + en translations, and X-Response-Time present on 200 but ABSENT on
- * 304. The last block applies stored arrival estimates (spec
- * shuttle-arrival-eta) from the faked estimate store. Public holidays come
+ * 304. The last block applies stored arrival estimates from the faked
+ * estimate store. Public holidays come
  * from the faked calendar store, empty unless a test stores a year, so a day
  * is answered by the rule-based lookup as before the calendar existed. Each
  * service's notices and suspension come from the faked content store, holding
- * revision 1 of `bus-service-notices` unless a test stores another
- * (move-editorial-datasets D9).
+ * revision 1 of `bus-service-notices` unless a test stores another.
  */
 
 import fs from "fs";

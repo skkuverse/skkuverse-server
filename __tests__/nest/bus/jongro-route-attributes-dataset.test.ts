@@ -1,7 +1,6 @@
 /**
  * The Jongro route attributes' round trip between their one writer and their
- * reader, over a real `mongod` (move-reference-datasets tasks 5.2 and 5.3,
- * design D10; ADR 0013, D3 and D6): what `npm run data` stores through
+ * reader, over a real `mongod` (ADR 0013, D2, D3 and D6): what `npm run data` stores through
  * scripts/lib/datasets/store.js, BusRouteAttributesRepository reads back at the
  * stored revision, as the server's schema parses it, every route and transfer
  * line in its order. A stored document the schema refuses, or none at all,

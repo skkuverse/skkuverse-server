@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-written from a capture: GET /bus/stops/seoul-01592/arrivals from a local api replica of unify-bus-stops wave 3 (ROLE=api, NODE_ENV=development, _dev databases) 2026-10-22 02:41 KST, Accept-Language ko, whose bus_cache held no Jongro rows since no poller writes _dev; the 종로07 entry's one arrival is copied from contracts/produced/fixtures/bus.arrival/running.json, so the fixture shows a pole two Jongno routes share with an arrival. Converted 2026-10-22 when each entry took its own kind (arrivals, approaching), no other value changed.",
+  "_about": "Hand-written from a capture: GET /bus/stops/seoul-01592/arrivals from a local api replica (ROLE=api, NODE_ENV=development, _dev databases) 2026-10-22 02:41 KST, Accept-Language ko, whose bus_cache held no Jongro rows since no poller writes _dev; the 종로07 entry's one arrival is copied from contracts/produced/fixtures/bus.arrival/running.json, so the fixture shows a pole two Jongno routes share with an arrival. Converted 2026-10-22 when each entry took its own kind (arrivals, approaching), no other value changed.",
   "data": {
     "stop": {
       "id": "seoul-01592",

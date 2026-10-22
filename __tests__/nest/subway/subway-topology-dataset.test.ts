@@ -1,7 +1,6 @@
 /**
  * The subway topology's round trip between its one writer and its reader,
- * over a real `mongod` (move-reference-datasets tasks 7.2 and 7.3, design D3;
- * ADR 0013, D3 and D6): what `npm run data` stores through
+ * over a real `mongod` (ADR 0013, D3 and D6): what `npm run data` stores through
  * scripts/lib/datasets/store.js, SubwayTopologyRepository reads back at the
  * stored revision, as the server's schema parses it, every platform and
  * neighbor in its order. A stored document the schema refuses, or none at

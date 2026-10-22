@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config/hssc captured from production 2026-10-20 (Accept-Language en, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to indexes 4-6, each stop with the stopId that wave 4 of unify-bus-stops appends and the non-stop index 5 with none (hand-added: production served no stopId at the capture)",
+  "_about": "GET /bus/config/hssc captured from production 2026-10-20 (Accept-Language en, __tests__/nest/bus/fixtures/jongro-attributes-production.capture.json); stations cut to indexes 4-6, each stop with the stopId each realtime station carries and the non-stop index 5 with none (hand-added: production served no stopId at the capture)",
   "data": {
     "id": "hssc",
     "screenType": "realtime",

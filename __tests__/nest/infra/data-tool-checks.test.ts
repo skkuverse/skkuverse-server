@@ -1,7 +1,6 @@
 /**
  * What `npm run data` refuses before a write, and what `check` reports on
- * stored data (scripts/lib/datasets/checks.js, design D6 of
- * openspec/changes/archive/2026-10-19-move-runtime-data-to-db). Four checks, every issue
+ * stored data (scripts/lib/datasets/checks.js; ADR 0013, D5). Four checks, every issue
  * collected with its dataset and path:
  *
  *   1. the dataset's schema;
@@ -16,7 +15,7 @@
  * `mongod` and must write nothing.
  *
  * `issuesOf(data, { storedOf })` gets the other datasets' content, not only
- * their ids (move-miniapp-registry D6): `storedOf(name)` is the pushed data for
+ * their ids (ADR 0013, D5): `storedOf(name)` is the pushed data for
  * the dataset being checked, the parsed stored data of any other, and null
  * when nothing is stored. A reference resolves against the copy stored in the
  * database the push targets, so two databases can answer differently.
@@ -25,11 +24,10 @@
  * another's parts declares it in `reads`: `readStored` then adds each part's
  * data to that manifest, read from the same database, and `storedOf` hands
  * the parts over, parsed and ordered by key. No other check reads a part, so a
- * push of any other dataset fetches none (move-reference-datasets task 11.1).
+ * push of any other dataset fetches none.
  *
  * A dataset whose check reads a collection outside the content database
- * declares it in `collections` (unify-bus-stops design D6, spec
- * runtime-datasets): `checkStored` and `readCollections` read each declared
+ * declares it in `collections`: `checkStored` and `readCollections` read each declared
  * collection through the caller's reader, which picks the target environment,
  * and `issuesOf` gets it from `collectionOf(key)`, null when it was not read.
  * A check never reads a collection its dataset does not declare, and no other

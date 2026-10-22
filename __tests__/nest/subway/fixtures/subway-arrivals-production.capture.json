@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/subway/stations/<id>/arrivals for the 8 served stations with Accept-Language ko, en and zh, captured from production on 2026-10-20 at 01:12:46Z (10:12 KST), source commit d856f333 (move-reference-datasets task 6.1, the live half). Every capture was 200 with private, max-age=5, its trains live or estimated. Trimmed to the static fields: meta, the station, and per line its display data, platform id and per direction its name and previous and next stations; generatedAt and the trains, which follow the moving trains, are dropped.",
+  "_about": "GET https://api.skkuverse.com/subway/stations/<id>/arrivals for the 8 served stations with Accept-Language ko, en and zh, captured from production on 2026-10-20 at 01:12:46Z (10:12 KST), source commit d856f333. Every capture was 200 with private, max-age=5, its trains live or estimated. Trimmed to the static fields: meta, the station, and per line its display data, platform id and per direction its name and previous and next stations; generatedAt and the trains, which follow the moving trains, are dropped.",
   "capturedAt": "2026-10-20T01:12:46Z",
   "stations": {
     "sungkyunkwan": {

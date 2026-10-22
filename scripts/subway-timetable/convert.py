@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Build the subway timetables, one file per part of the `subway-timetables` dataset (OpenSpec add-subway-arrivals,
-design D6; add-commute-station-subway, design D8; move-reference-datasets, design D6). The server reads the stored
+"""Build the subway timetables, one file per part of the `subway-timetables` dataset
+(docs/how-to/update-subway-timetables.md; ADR 0013, D3). The server reads the stored
 dataset; `npm run data` is its only writer and checks every file with the server's own schema and coverage rule.
 
 When to rerun:
@@ -45,7 +45,7 @@ as unchanged.
 Each file lists the trains that stop at one of its line's served platforms (LINES) with their stops among
 the covered stations, in travel order. A line covers every station between its served platforms and, on each side,
 far enough that every train is in view for at least 10 minutes before it reaches a served platform, or from where it
-starts (OpenSpec add-commute-station-subway, design D17): a gap in the covered stations is a stretch where the tracker
+starts (ADR 0017, D6): a gap in the covered stations is a stretch where the tracker
 loses a train, and on lines that report no departure it holds the train at the last station it saw, late.
 Times are seconds after 00:00 of the service day. A clock time before SERVICE_DAY_START (03:00)
 belongs to the previous service day and gets 86400 added, so 00:13:30 is 87210; Seoul already writes
@@ -161,7 +161,7 @@ KORAIL_TERMINI = frozenset((
 # S1-1-150 서울역), which the train map and the Seoul API write as 청량리 and 서울.
 KORAIL_ABBREVIATIONS = {"1지청": "청량리", "지하서": "서울"}
 
-# One entry per line (OpenSpec add-commute-station-subway, design D8). Keys:
+# One entry per line. Keys:
 #   line, operator     the file's line and operator, which the server matches to a platform id
 #   file               the output name before -<day type>.json
 #   source             korail (an xlsx per day type) or seoul (SearchSTNTimeTableByIDService)

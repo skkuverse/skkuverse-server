@@ -1,6 +1,5 @@
 /**
- * An api replica writes nothing at boot (ADR 0012, D3; isolate-api-from-pollers
- * spec "An api replica writes no data at boot"): booted with ROLE=api on an
+ * An api replica writes nothing at boot (ADR 0012, D3): booted with ROLE=api on an
  * empty `mongod`, every module `src/app.module.ts` imports leaves the server
  * with no database, so no document, index or collection, and no seed. A poller
  * booted the same way ensures the indexes its repositories declare, which shows
@@ -8,8 +7,7 @@
  *
  * Only `Clock` is overridden. The poller boot runs under a spy on
  * PollerRegistryService#registerPoller that registers nothing, so no tick calls
- * an upstream. An api boot fetches nothing (ADR 0012, D1; move-miniapp-registry
- * spec runtime-roles, "api boots and serves a mini app detail"): a stubbed
+ * an upstream. An api boot fetches nothing (ADR 0012, D1): a stubbed
  * `fetch` records every URL it is asked for, and any other upstream call fails
  * the test through the network guard.
  *

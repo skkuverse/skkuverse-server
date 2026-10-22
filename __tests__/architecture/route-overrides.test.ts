@@ -1,6 +1,6 @@
 /**
  * A route test replaces only what leaves the process or reads the time
- * (harden-test-suite D2, D11, task 4.4): every provider it overrides is imported
+ * (ADR 0011, D2): every provider it overrides is imported
  * from a `*.repository`, `*.client` or `*.poller` file, or is the poller registry
  * (tests.md: a poller's double is a spy on it) or the Clock. Overriding a
  * service, a controller or a config stubs the code the route test exists to run.
