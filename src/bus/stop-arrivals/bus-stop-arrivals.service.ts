@@ -27,6 +27,7 @@ interface PageReads {
   hsscLine: readonly HsscLineStation[];
   groups: Map<string, Promise<LiveGroup>>;
   schedules: Map<string, Promise<SmartSchedule>>;
+  latestSchedules: Map<string, Promise<SmartSchedule>>;
   followingWeeks: Map<string, Promise<SmartSchedule["days"]>>;
 }
 
@@ -46,7 +47,7 @@ export class BusStopArrivalsService {
     const stop = await this.index.findStop(stopId);
     if (!stop) return null;
     const now = this.clock.now();
-    const reads: PageReads = { lang, now, hsscLine: stop.snapshot.hssc, groups: new Map(), schedules: new Map(), followingWeeks: new Map() };
+    const reads: PageReads = { lang, now, hsscLine: stop.snapshot.hssc, groups: new Map(), schedules: new Map(), latestSchedules: new Map(), followingWeeks: new Map() };
     const entries = await Promise.all(stop.routes.map((route) => this.toEntry(route, reads).catch((err: unknown) => this.leaveOut(stop.id, route, err))));
     const page = { stop: toStopBlock(stop, this.index.servedRecordOf(stop, lang)), routes: entries.flatMap((entry) => (entry ? [entry] : [])) };
     return withMeta(page, { serverNow: toKstInstant(now.getTime()) });
@@ -77,12 +78,14 @@ export class BusStopArrivalsService {
     return toTimetableEntry(route, t(`busconfig.service.${route.serviceId}`, reads.lang), { operation: OPERATION_BY_SCHEDULE_STATUS[schedule.status], arrivals });
   }
 
-  // WHY: after a week's last run (a Friday evening) the shown week holds none, so the page reads on into the next.
+  // WHY: after a week's last run (a Friday evening) the shown week holds none, so the page reads on into the next, whose
+  // runs, tomorrow's at the earliest, keep their served estimates: a live value exists only from an hour before departure.
   private async nextRunsOf(schedule: SmartSchedule, route: ShuttleStopRoute, reads: PageReads): Promise<TimetableArrival[]> {
-    const next = toTimetableArrivals(schedule, route, reads.now);
+    const latest = await this.readOnce(reads.latestSchedules, route.serviceId, () => this.smart.resolveLatestEstimates(schedule));
+    const next = toTimetableArrivals({ served: schedule, latest }, route, reads.now);
     if (next.length >= NEXT_RUN_COUNT || schedule.status !== "active") return next;
     const followingDays = await this.readOnce(reads.followingWeeks, route.serviceId, () => this.smart.resolveFollowingWeek(schedule));
-    return toTimetableArrivals({ ...schedule, days: [...schedule.days, ...followingDays] }, route, reads.now);
+    return toTimetableArrivals({ served: { ...schedule, days: [...schedule.days, ...followingDays] }, latest }, route, reads.now);
   }
 
   private groupOf(groupId: string, reads: PageReads): Promise<LiveGroup> {

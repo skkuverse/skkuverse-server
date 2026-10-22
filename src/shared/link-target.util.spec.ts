@@ -48,3 +48,89 @@ describe("isAbsoluteHttpsUrl", () => {
     expect(isAbsoluteHttpsUrl(value)).toBe(false);
   });
 });
+
+// WHY: the WHATWG parser folds `\` into `/` and drops or percent-encodes a control character, so a
+// value carrying one opens a page other than the one it spells.
+describe("isRootRelativePath refuses a backslash or a control character anywhere", () => {
+  it.each([
+    ["NUL after the slash", "/\u0000x"],
+    ["inner backslash", "/a\\b"],
+    ["trailing DEL", "/a\u007f"],
+    ["unit separator", "/a\u001fb"],
+  ])("refuses %s", (_label, value) => {
+    // Act & Assert
+    expect(isRootRelativePath(value)).toBe(false);
+  });
+});
+
+describe("isAbsoluteHttpsUrl refuses a backslash, a control character or a URL that does not parse", () => {
+  it.each([
+    ["a backslash for a host", "https://\\"],
+    ["a backslash before the host", "https://\\evil.com"],
+    ["a backslash in the path", "https://x.test/a\\b"],
+    ["BEL in the path", "https://x.test/a\u0007b"],
+    ["NUL at the end", "https://x.test/\u0000"],
+    ["DEL in the host", "https://x\u007f.test"],
+    ["an authority that does not parse", "https://?x"],
+    ["a port out of range", "https://x.test:99999/a"],
+  ])("refuses %s", (_label, value) => {
+    // Act & Assert
+    expect(isAbsoluteHttpsUrl(value)).toBe(false);
+  });
+
+  it("accepts only values that parse with a host", () => {
+    // Arrange
+    const corpus = [
+      "https://x.test",
+      "https://x.test/a?b=1#c",
+      "https://u:p@x.test/a",
+      "https://%41.test/",
+      "https://x.test:8443/a",
+      "https://[::1]/a",
+      "https://?x",
+      "https://#x",
+      "https://:443",
+      "https://[::1/a",
+      "https://x.test:99999/a",
+      "https://\\",
+      "https://\\evil.com",
+    ];
+
+    // Act
+    const accepted = corpus.filter((value) => isAbsoluteHttpsUrl(value));
+
+    // Assert
+    expect(accepted.length).toBeGreaterThan(0);
+    for (const value of accepted) {
+      expect([value, URL.canParse(value) && new URL(value).hostname !== ""]).toEqual([value, true]);
+    }
+  });
+});
+
+// WHY: a value an operator reads as one host can open another: userinfo puts the real host after `@`,
+// and an invisible format character survives the pattern while the parser drops it (`x­.test` is `x.test`).
+describe("isAbsoluteHttpsUrl refuses userinfo or a Unicode format character", () => {
+  it.each([
+    ["a user before our host", "https://skkuverse.com@evil.com/x"],
+    ["a user and password", "https://u:p@x.test/a"],
+    ["an empty password", "https://u:@x.test/a"],
+    ["a soft hyphen in the host", "https://x­.test/"],
+    ["a zero-width space in the path", "https://x.test/a​b"],
+    ["a right-to-left override", "https://x.test/‮txt.exe"],
+    ["a zero-width joiner", "https://x.test/a‍b"],
+  ])("refuses %s", (_label, value) => {
+    // Act & Assert
+    expect(isAbsoluteHttpsUrl(value)).toBe(false);
+  });
+});
+
+describe("isRootRelativePath refuses a Unicode format character", () => {
+  it.each([
+    ["a soft hyphen", "/campus­"],
+    ["a zero-width space", "/a​b"],
+    ["a right-to-left override", "/‮abc"],
+  ])("refuses %s", (_label, value) => {
+    // Act & Assert
+    expect(isRootRelativePath(value)).toBe(false);
+  });
+});

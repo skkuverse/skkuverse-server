@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ABSOLUTE_HTTPS_RE } from "../shared/link-target.constants";
+import { isAbsoluteHttpsUrl } from "../shared/link-target.util";
 import { REGISTRY_ID_RE } from "../shared/registry-id.constants";
 import type { StoredGames } from "./games.document";
 import { toDuplicateGameIdIssues } from "./games.rules";
@@ -9,7 +9,7 @@ import { gameEntry } from "./games.wire";
 const gameEntryRaw = gameEntry
   .extend({
     id: z.string().regex(REGISTRY_ID_RE),
-    entryUrl: z.string().regex(ABSOLUTE_HTTPS_RE),
+    entryUrl: z.string().refine(isAbsoluteHttpsUrl, "Invalid string: must be an https URL with a host and no userinfo"),
     minHostProtocol: z.int().positive(),
   })
   .strict();

@@ -23,8 +23,9 @@ module.exports = {
   // testMatch finds them). `npm run build` leaves a dist/ copy of src/, which
   // must never be collected or resolved as a second module tree, and neither
   // must a Claude Code isolation worktree, a full checkout under .claude/worktrees/.
-  testPathIgnorePatterns: ["/node_modules/", "/__tests__/helpers/", "/dist/", "/.claude/worktrees/"],
-  modulePathIgnorePatterns: ["/dist/", "/.claude/worktrees/"],
+  // WHY: anchored at <rootDir>, because a pattern matches the absolute path and a worktree's own root sits under one.
+  testPathIgnorePatterns: ["/node_modules/", "/__tests__/helpers/", "/dist/", "<rootDir>/.claude/worktrees/"],
+  modulePathIgnorePatterns: ["/dist/", "<rootDir>/.claude/worktrees/"],
   collectCoverage: true,
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov"],

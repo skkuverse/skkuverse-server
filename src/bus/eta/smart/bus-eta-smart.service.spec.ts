@@ -3,7 +3,9 @@
  * clock and revision 1 of the stored bus-stops: the smart view's ETag and
  * Cache-Control, the estimates it applies, read at most once per 30 s, and the
  * stored timetable when the estimates or the stops cannot be read; the same body
- * without an ETag for a caller that serves none (the stop page, review F5).
+ * without an ETag for a caller that serves none (the stop page, review F5); and, for
+ * the stop page's listing cutoff only, the schedule with each run's latest estimate
+ * applied, from the same read (ADR 0019, D12).
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../../infra/logger", () => mockLogger);
@@ -198,5 +200,46 @@ describe("BusEtaSmartService.resolveFollowingWeek", () => {
     // Assert
     expect(smart.status).toBe("noData");
     expect(days).toEqual([]);
+  });
+});
+
+// WHY: the smart view stops serving a live value 15 minutes after its fetch, while the bus is still on the road.
+describe("BusEtaSmartService.resolveLatestEstimates", () => {
+  it("applies a live value fetched 20 minutes ago, which the smart view no longer serves, from the same read", async () => {
+    // Arrange
+    estimates.docs.set(LIVE._id, { ...LIVE, fetchedAt: new Date("2026-10-12T00:20:00.000Z") });
+    const smart = await service.resolveSmart("campus-inja", "ko");
+
+    // Act
+    const latest = await service.resolveLatestEstimates(smart);
+
+    // Assert
+    expect(smart.days[0]!.schedule[0]).toEqual({ index: 1, time: "10:00", routeType: "regular", busCount: 1, notes: null, stopTimes: ["10:00", null] });
+    expect(latest.days[0]!.schedule[0]).toMatchObject({ time: "10:00", stopTimes: ["10:00", "10:51"], eta: { source: "live" } });
+    expect(estimates.unexpiredReads).toBe(1);
+  });
+
+  it("answers a schedule that is not active as it is", async () => {
+    // Arrange
+    const smart = await service.resolveSmart("fasttrack-inja", "ko");
+
+    // Act
+    const latest = await service.resolveLatestEstimates(smart);
+
+    // Assert
+    expect(latest).toEqual(smart);
+  });
+
+  it("answers the schedule as it is when the estimates cannot be read", async () => {
+    // Arrange
+    const smart = await service.resolveSmart("campus-inja", "ko");
+    estimates.failWith = new Error("down");
+    const unread = new BusEtaSmartService(schedule, asReal<BusEtaRepository>(estimates), storedBusStopsService(), clock);
+
+    // Act
+    const latest = await unread.resolveLatestEstimates(smart);
+
+    // Assert
+    expect(latest).toEqual(smart);
   });
 });
