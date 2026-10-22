@@ -45,6 +45,7 @@ export interface MiniAppNotificationHistoryEntry {
   sentAt: string;
   delivery: DeliveryCounts | null;
   deliveryError: DeliveryError | null;
+  idempotencyKey: string | null;
 }
 
 export interface SendTrace {

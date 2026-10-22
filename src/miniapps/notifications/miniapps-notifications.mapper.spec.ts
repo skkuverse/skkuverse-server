@@ -140,6 +140,19 @@ describe("toHistoryEntry", () => {
       sentAt: "2026-10-14T03:00:00.000Z",
       delivery: null,
       deliveryError: null,
+      idempotencyKey: null,
     });
+  });
+
+  it("serves the Idempotency-Key a keyed row was sent with", () => {
+    // Act & Assert
+    expect(toHistoryEntry({ ...DOC, idempotencyKey: "retry-1" }).idempotencyKey).toBe("retry-1");
+  });
+});
+
+describe("toFeedEntry of a keyed row", () => {
+  it("leaves the Idempotency-Key out of the public feed", () => {
+    // Act & Assert
+    expect(toFeedEntry({ ...DOC, idempotencyKey: "retry-1" }, "ko")).not.toHaveProperty("idempotencyKey");
   });
 });
