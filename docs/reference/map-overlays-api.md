@@ -3,7 +3,7 @@ title: Map Overlays API Reference
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-20
+last-updated: 2026-10-22
 audience: internal
 ---
 
@@ -905,7 +905,8 @@ a route's card colour (`themeColor` in `jongro-route-attributes`) never moves it
 pins `4CAF50` for every route layer. A colour per route was tried and rejected by the owner. The dark-green edge (`1B5E20`) keeps the line
 legible over the green of parks and the campus, where a white edge or none washes out. Telling
 overlapping routes apart is the job of tone, edge and direction arrows, as NAVER Map does for a route's
-two directions; see the stage-2 note in openspec change `add-jongro-route-lines`, D8.
+two directions; a later app change draws the selected route vivid, with direction chevrons and a `zIndex`
+above the others, and the rest pale.
 
 #### Draw order
 
@@ -937,7 +938,7 @@ store is read again. `degraded` never reaches the body.
 
 The stations TOPIS answers with each line are stored but not drawn yet: the place-dot marker ignores a
 layer's `zIndex`, so a stop caption could win over a building name. A stop layer waits for that app
-change (openspec change `add-jongro-route-lines`, D7).
+change.
 
 ```json
 {

@@ -99,7 +99,7 @@ A sequence and its timetable are written by two tools, and each refuses a length
 
 ### Add an alias
 
-Add one only for a pair confirmed on site to be one pole: two stops however close stay two pages until then (none is confirmed today; unify-bus-stops design D2 lists the candidates).
+(An operations detail is left out of the public history.)
 
 1. Pull `_dev` and add the pole's ARS number to the local stop's `arsIds`, keeping every other field of its entry:
 

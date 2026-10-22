@@ -20,7 +20,7 @@ audience: internal
 | Rate limit | `GeneralRateLimitMiddleware`, bound to `bus/stops` in `BusModule.configure` (`src/bus/bus.module.ts`) |
 | Wire type | `busStopArrivals` in `src/bus/stop-arrivals/bus-stop-arrivals.wire.ts`, published as `contracts/produced/bus-stop-arrivals.busStopArrivals.schema.json`, its Jongno arrivals as `bus.arrival` |
 | Controller | `src/bus/stop-arrivals/bus-stop-arrivals.controller.ts` |
-| Sources | the `bus-stops` dataset, the stored Jongno registry (`jongro_routes`) and route lines (`jongro_route_paths`), `bus_cache`, `jongro-route-attributes`, the stored timetables and `shuttle_eta`; no upstream call (unify-bus-stops design D7, D18) |
+| Sources | the `bus-stops` dataset, the stored Jongno registry (`jongro_routes`) and route lines (`jongro_route_paths`), `bus_cache`, `jongro-route-attributes`, the stored timetables and `shuttle_eta`; no upstream call |
 | Envelope | `{ meta: { lang }, data }` through the global `ResponseInterceptor` |
 | Tests | `__tests__/nest/bus/bus-stop-arrivals.routes.test.ts`, and the specs under `src/bus/stop-index/` and `src/bus/stop-arrivals/` |
 
@@ -38,7 +38,7 @@ A pole a local stop aliases (`arsIds` in `bus-stops`, pushed only after an on-si
 
 ## Stop ids on the realtime stations
 
-Each station of a realtime group (`hssc`, `jongro02`, `jongro07`, `jongro08`) in `GET /bus/config` and `GET /bus/config/:groupId` carries `stopId`, its last field, the id of its stop page (unify-bus-stops design D12):
+Each station of a realtime group (`hssc`, `jongro02`, `jongro07`, `jongro08`) in `GET /bus/config` and `GET /bus/config/:groupId` carries `stopId`, its last field, the id of its stop page:
 
 | Station | `stopId` |
 | --- | --- |
