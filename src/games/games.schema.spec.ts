@@ -93,6 +93,24 @@ describe("gamesFile", () => {
   });
 });
 
+// WHY: the pattern alone takes a value the URL parser refuses or reads as another host, so the app would
+// load nothing, or a page the entry does not name.
+describe("gamesFile entry URL is held to the https link rule", () => {
+  it.each([
+    ["an authority that does not parse", "https://?x"],
+    ["a port out of range", "https://x.test:99999/a"],
+    ["userinfo before the host", "https://a@b.test/"],
+  ])("fails %s, naming its path", (_case, entryUrl) => {
+    // Act & Assert
+    expect(messagesOf(withAppleGame({ entryUrl }))).toEqual([expect.stringMatching(/^games\.0\.entryUrl: /)]);
+  });
+
+  it("passes an https entry URL on its own host", () => {
+    // Act & Assert
+    expect(messagesOf(withAppleGame({ entryUrl: "https://apple-game.game.skkuverse.com/" }))).toEqual([]);
+  });
+});
+
 describe("storedGames", () => {
   it("passes a stored document with its revision and data", () => {
     // Act & Assert

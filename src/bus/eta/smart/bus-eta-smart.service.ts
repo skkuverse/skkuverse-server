@@ -16,8 +16,8 @@ import { BusStopsService } from "../../stops/bus-stops.service";
 import type { ShuttleEtaDoc } from "../bus-eta.document";
 import { BusEtaRepository } from "../bus-eta.repository";
 import { applyEstimates, withStatusMessage } from "./bus-eta-smart.mapper";
-import { pickEstimates } from "./bus-eta-smart.rules";
-import type { ServedEstimate } from "./bus-eta-smart.types";
+import { pickEstimates, pickLatestEstimates } from "./bus-eta-smart.rules";
+import type { EstimatePick, ServedEstimate } from "./bus-eta-smart.types";
 
 const HOUR_MS = 60 * 60_000;
 const MAX_AGE_S = 300;
@@ -57,7 +57,7 @@ export class BusEtaSmartService {
     if (!resolved) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${serviceId}`, 404);
     // WHY: applied to a copy after the schedule cache and before hashing, so the ETag follows the estimates.
     const etaRouteTypes = serviceConfig?.eta?.routeTypes;
-    const result = etaRouteTypes && resolved.status === "active" ? await this.withEstimates(resolved, etaRouteTypes) : resolved;
+    const result = etaRouteTypes && resolved.status === "active" ? await this.withEstimates(resolved, etaRouteTypes, pickEstimates) : resolved;
     return withStatusMessage(result, lang);
   }
 
@@ -67,12 +67,19 @@ export class BusEtaSmartService {
     const days = await this.schedule.resolveFollowingWeek(smart.serviceId, smart.from);
     if (!days) throw new AppError("SERVICE_NOT_FOUND", `Unknown serviceId: ${smart.serviceId}`, 404);
     const etaRouteTypes = serviceConfigOf(smart.serviceId)?.eta?.routeTypes;
-    return etaRouteTypes ? (await this.withEstimates({ ...smart, days }, etaRouteTypes)).days : days;
+    return etaRouteTypes ? (await this.withEstimates({ ...smart, days }, etaRouteTypes, pickEstimates)).days : days;
+  }
+
+  // WHY: for the stop page's listing cutoff only, never served: each run's latest estimate applied, a live value too
+  // old to serve included, from the same cached read (ADR 0019, D12).
+  async resolveLatestEstimates(smart: SmartSchedule): Promise<SmartSchedule> {
+    const etaRouteTypes = serviceConfigOf(smart.serviceId)?.eta?.routeTypes;
+    return etaRouteTypes && smart.status === "active" ? this.withEstimates(smart, etaRouteTypes, pickLatestEstimates) : smart;
   }
 
   // WHY: the schedule as resolved when the estimates or the stops cannot be read.
-  private async withEstimates(result: SmartSchedule, routeTypes: readonly string[]): Promise<SmartSchedule> {
-    const [estimates, stops] = await Promise.allSettled([this.servedEstimates(), this.stops.current()]);
+  private async withEstimates(result: SmartSchedule, routeTypes: readonly string[], pick: EstimatePick): Promise<SmartSchedule> {
+    const [estimates, stops] = await Promise.allSettled([this.pickedEstimates(pick), this.stops.current()]);
     if (stops.status === "rejected") {
       this.warnUnestimated(result.serviceId, "bus.eta.stops_unavailable", stops.reason);
       return result;
@@ -91,7 +98,7 @@ export class BusEtaSmartService {
     if (ticket) logger.warn({ event, serviceId, suppressed: ticket.suppressed, err }, "arrival estimates unavailable, serving the stored timetable");
   }
 
-  private async servedEstimates(): Promise<Map<string, ServedEstimate>> {
-    return pickEstimates(await this.docs.get(), this.clock.now());
+  private async pickedEstimates(pick: EstimatePick): Promise<Map<string, ServedEstimate>> {
+    return pick(await this.docs.get(), this.clock.now());
   }
 }

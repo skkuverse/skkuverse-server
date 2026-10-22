@@ -4,6 +4,8 @@
  * has none of; `readServiceIds` records every read. `getSmart` answers the same with an ETag, and records its reads
  * in `etagReadServiceIds` apart, so a test can tell which one a caller paid for. `resolveFollowingWeek` answers the
  * days set in `followingWeeks` for the schedule's service (none by default) and records `followingReadServiceIds`.
+ * `resolveLatestEstimates` answers the schedule set in `latestSchedules` for the service, else the one it was given,
+ * and records `latestReadServiceIds`.
  */
 import { AppError } from "../../../../src/http/app.error";
 import type { WithEtag } from "../../../../src/http/response.types";
@@ -19,6 +21,8 @@ export class FakeBusEtaSmartService implements PublicOf<BusEtaSmartService> {
   etagReadServiceIds: string[] = [];
   followingWeeks = new Map<string, SmartSchedule["days"]>();
   followingReadServiceIds: string[] = [];
+  latestSchedules = new Map<string, SmartSchedule>();
+  latestReadServiceIds: string[] = [];
 
   async getSmart(serviceId: string, _lang: SupportedLang): Promise<WithEtag<SmartSchedule>> {
     this.etagReadServiceIds.push(serviceId);
@@ -33,6 +37,11 @@ export class FakeBusEtaSmartService implements PublicOf<BusEtaSmartService> {
   async resolveFollowingWeek(smart: SmartSchedule): Promise<SmartSchedule["days"]> {
     this.followingReadServiceIds.push(smart.serviceId);
     return structuredClone(this.followingWeeks.get(smart.serviceId) ?? []);
+  }
+
+  async resolveLatestEstimates(smart: SmartSchedule): Promise<SmartSchedule> {
+    this.latestReadServiceIds.push(smart.serviceId);
+    return structuredClone(this.latestSchedules.get(smart.serviceId) ?? smart);
   }
 
   private scheduleOf(serviceId: string): SmartSchedule {

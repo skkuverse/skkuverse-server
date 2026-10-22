@@ -322,6 +322,48 @@ describe("the importer's copies agree with the server", () => {
       expect([value, reader.parseMiniAppTarget(value)]).toEqual([value, parseMiniAppTarget(value)]);
     }
   });
+
+  // WHY: these are the values the WHATWG parser repairs, so only a copy of the raw-string gate agrees.
+  it("gives the same verdict on a backslash, a control character or an authority that does not parse", () => {
+    // Arrange
+    const VALUES = [
+      "https://\\",
+      "https://\\evil.com",
+      "https://x.test/a\\b",
+      "https://x.test/a\u0007b",
+      "https://x.test/\u0000",
+      "https://?x",
+      "https://x.test:99999/a",
+      "eskara-2026/\u0000x",
+      "eskara-2026/a\\b",
+      "eskara-2026/a\u007f",
+    ];
+
+    // Act & Assert
+    for (const value of VALUES) {
+      expect([value, reader.isAbsoluteHttpsUrl(value)]).toEqual([value, isAbsoluteHttpsUrl(value)]);
+      expect([value, reader.parseMiniAppTarget(value)]).toEqual([value, parseMiniAppTarget(value)]);
+    }
+  });
+
+  it("gives the same verdict on userinfo or a Unicode format character", () => {
+    // Arrange
+    const VALUES = [
+      "https://skkuverse.com@evil.com/x",
+      "https://u:p@x.test/a",
+      "https://x­.test/",
+      "https://x.test/a​b",
+      "https://x.test/‮txt.exe",
+      "eskara-2026/a‍b",
+      "eskara-2026/campus­",
+    ];
+
+    // Act & Assert
+    for (const value of VALUES) {
+      expect([value, reader.isAbsoluteHttpsUrl(value)]).toEqual([value, isAbsoluteHttpsUrl(value)]);
+      expect([value, reader.parseMiniAppTarget(value)]).toEqual([value, parseMiniAppTarget(value)]);
+    }
+  });
 });
 
 describe("the committed sheet's food trucks", () => {
