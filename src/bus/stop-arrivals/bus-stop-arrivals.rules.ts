@@ -42,11 +42,12 @@ function toLatestStopTimesByRun(latest: SmartSchedule | undefined): Map<string, 
   return new Map(estimatedRuns);
 }
 
-// WHY: where the stop shows no timetable time, the run's latest estimate decides how long it is listed, even one
-// too old to serve; what the page shows stays the served time (ADR 0019, D12).
-function toListedTime(shown: { time: string | null; isEstimated: boolean }, latestTime: string | null | undefined): string | null {
+// WHY: where the stop shows no timetable time, the run's latest estimate, even one too old to serve, keeps it listed
+// until it arrives, and never drops it before the served time it shows (ADR 0019, D12).
+function toListedAtMs({ date, departure }: { date: string; departure: string }, shown: { time: string | null; isEstimated: boolean }, latestTime: string | null | undefined): number {
+  const shownAtMs = toRunAtMs(date, departure, shown.time);
   const isTimetableTime = shown.time !== null && !shown.isEstimated;
-  return isTimetableTime ? shown.time : (latestTime ?? shown.time);
+  return isTimetableTime || !latestTime ? shownAtMs : Math.max(toRunAtMs(date, departure, latestTime), shownAtMs);
 }
 
 type DayContext = { date: string; lastDeparture: string; latestStopTimesByRun: ReadonlyMap<string, ScheduleEntry["stopTimes"]> };
@@ -55,7 +56,7 @@ function toRun({ time: departure, stopTimes, eta }: ScheduleEntry & { time: stri
   const time = stopTimes?.[stop.sequenceIndex] ?? null;
   const isEstimated = time !== null && stop.timing === "estimated" && eta !== undefined;
   const latestTime = latestStopTimesByRun.get(runSlotOf(date, stop.routeType, departure))?.[stop.sequenceIndex];
-  const atMs = toRunAtMs(date, departure, toListedTime({ time, isEstimated }, latestTime));
+  const atMs = toListedAtMs({ date, departure }, { time, isEstimated }, latestTime);
   const shownIso = time === null ? null : toKstInstant(toRunAtMs(date, departure, time));
   const arrival: TimetableArrival = {
     status: "scheduled",
@@ -77,8 +78,8 @@ function toDayRuns({ date, schedule: entries }: SmartSchedule["days"][number], s
 
 /**
  * WHY: the next runs at one stop of a smart schedule with its estimates applied, each listed until its time here passes,
- * where the stop shows none the arrival of its latest estimate (`latest`, the same schedule with each run's newest
- * estimate applied), else its departure; a run still counts in its own minute, as the timetable gives minutes (ADR 0019, D12).
+ * where the stop shows none the later of its latest estimate's arrival (`latest`: each run's newest estimate applied)
+ * and the served estimate shown, else its departure; a run still counts in its own minute, as the timetable gives minutes (ADR 0019, D12).
  */
 export function toTimetableArrivals(schedules: SmartSchedule | ListedSchedules, stop: RunStop, now: Date): TimetableArrival[] {
   const { served: schedule, latest } = "served" in schedules ? schedules : { served: schedules, latest: undefined };
