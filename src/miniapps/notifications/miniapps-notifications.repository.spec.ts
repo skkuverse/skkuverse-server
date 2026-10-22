@@ -148,14 +148,44 @@ describe("MiniappsNotificationsRepository.onModuleInit", () => {
     );
   });
 
-  it("warns and carries on when the index cannot be created", async () => {
+});
+
+// The unique index is what stops two concurrent sends with one key from both pushing, so a failed setup is retried and paged.
+describe("MiniappsNotificationsRepository.onModuleInit when the index setup fails", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    createIndex.mockResolvedValue("ok");
+  });
+
+  it("tries three times and logs the failure at error, carrying on with the boot", async () => {
+    // Arrange
+    createIndex.mockRejectedValue(new Error("atlas down"));
+
+    // Act
+    const booted = new MiniappsNotificationsRepository().onModuleInit();
+    await jest.advanceTimersByTimeAsync(3_000);
+    await booted;
+
+    // Assert
+    expect(mockLogger.error).toHaveBeenCalledWith(expect.objectContaining({ event: "miniapps.indexes.failed", attempts: 3 }), expect.any(String));
+    expect(mockLogger.warn).not.toHaveBeenCalled();
+  });
+
+  it("ensures the indexes when a retry succeeds, logging no failure", async () => {
     // Arrange
     createIndex.mockRejectedValueOnce(new Error("atlas down"));
 
     // Act
-    await new MiniappsNotificationsRepository().onModuleInit();
+    const booted = new MiniappsNotificationsRepository().onModuleInit();
+    await jest.advanceTimersByTimeAsync(1_000);
+    await booted;
 
     // Assert
-    expect(mockLogger.warn).toHaveBeenCalledWith(expect.objectContaining({ event: "miniapps.indexes.failed" }), expect.any(String));
+    expect(mockLogger.info).toHaveBeenCalledWith(expect.objectContaining({ event: "miniapps.indexes.ensured" }), expect.any(String));
+    expect(mockLogger.error).not.toHaveBeenCalled();
   });
 });

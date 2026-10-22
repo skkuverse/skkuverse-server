@@ -10,7 +10,7 @@ const DUPLICATE_KEY_CODE = 11000;
 @Injectable()
 export class MiniappsNotificationsRepository implements OnModuleInit {
   onModuleInit(): Promise<void> {
-    return ensureIndexesAtBoot("miniapps", () => this.ensureIndexes());
+    return ensureIndexesAtBoot("miniapps", () => this.ensureIndexes(), { attempts: 3, backoffMs: 1_000, failLevel: "error" });
   }
 
   async insertSentNotification(doc: SentNotificationDoc): Promise<void> {
