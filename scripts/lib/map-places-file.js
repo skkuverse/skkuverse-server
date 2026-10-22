@@ -245,7 +245,7 @@ const MEDIA_ORIGIN = "https://media.skkuverse.com";
 
 const WHITESPACE_RE = /\s/;
 /** src/shared/link-target.constants.ts ABSOLUTE_HTTPS_RE. */
-const ABSOLUTE_HTTPS_RE = /^https:\/\/[^\s/\\\p{Cc}][^\s\\\p{Cc}]*$/u;
+const ABSOLUTE_HTTPS_RE = /^https:\/\/[^\s/\\\p{Cc}\p{Cf}][^\s\\\p{Cc}\p{Cf}]*$/u;
 const INSTAGRAM_HOSTS = ["instagram.com", "www.instagram.com"];
 /** Paths that are Instagram's own pages, not a username. */
 const INSTAGRAM_RESERVED_PATHS = ["accounts", "direct", "explore", "p", "reel", "reels", "stories"];
@@ -268,16 +268,13 @@ function isMediaUrl(value) {
 
 /** Copy of src/shared/link-target.util.ts `isAbsoluteHttpsUrl`. */
 function isAbsoluteHttpsUrl(value) {
-  return (
-    typeof value === "string" &&
-    ABSOLUTE_HTTPS_RE.test(value) &&
-    URL.canParse(value) &&
-    new URL(value).hostname !== ""
-  );
+  if (typeof value !== "string" || !ABSOLUTE_HTTPS_RE.test(value) || !URL.canParse(value)) return false;
+  const url = new URL(value);
+  return url.hostname !== "" && url.username === "" && url.password === "";
 }
 
 /** src/shared/link-target.constants.ts ROOT_RELATIVE_PATH_RE. */
-const ROOT_RELATIVE_PATH_RE = /^\/(?!\/)[^\s\\\p{Cc}]*$/u;
+const ROOT_RELATIVE_PATH_RE = /^\/(?!\/)[^\s\\\p{Cc}\p{Cf}]*$/u;
 /** TARGET_RE in src/miniapps/miniapps.rules.ts. */
 const MINIAPP_TARGET_RE = /^([a-z0-9-]+)(\/.*)?$/;
 

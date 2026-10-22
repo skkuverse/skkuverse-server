@@ -345,6 +345,25 @@ describe("the importer's copies agree with the server", () => {
       expect([value, reader.parseMiniAppTarget(value)]).toEqual([value, parseMiniAppTarget(value)]);
     }
   });
+
+  it("gives the same verdict on userinfo or a Unicode format character", () => {
+    // Arrange
+    const VALUES = [
+      "https://skkuverse.com@evil.com/x",
+      "https://u:p@x.test/a",
+      "https://x­.test/",
+      "https://x.test/a​b",
+      "https://x.test/‮txt.exe",
+      "eskara-2026/a‍b",
+      "eskara-2026/campus­",
+    ];
+
+    // Act & Assert
+    for (const value of VALUES) {
+      expect([value, reader.isAbsoluteHttpsUrl(value)]).toEqual([value, isAbsoluteHttpsUrl(value)]);
+      expect([value, reader.parseMiniAppTarget(value)]).toEqual([value, parseMiniAppTarget(value)]);
+    }
+  });
 });
 
 describe("the committed sheet's food trucks", () => {
