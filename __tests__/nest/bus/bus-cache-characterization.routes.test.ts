@@ -151,6 +151,9 @@ beforeAll(async () => {
   const store = require("../../../scripts/lib/datasets/store");
   const { routeAttributesFixture } = require("../../helpers/bus/route-attributes") as RouteAttributesHelpers;
   await store.create(db.getClient().db(config.content.dbName), "jongro-route-attributes", routeAttributesFixture(), { by: "characterization@example.com", now: NOW });
+  // WHY: the live route names each station's stop from bus-stops (ADR 0019, D5), stored as `npm run data` stores it.
+  const { busStopsFixture } = require("../../helpers/bus/bus-stops") as typeof import("../../helpers/bus/bus-stops");
+  await store.create(db.getClient().db(config.content.dbName), "bus-stops", busStopsFixture(), { by: "characterization@example.com", now: NOW });
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
@@ -522,6 +525,26 @@ describe("the deprecated realtime route's body, byte for byte", () => {
     expect(res.text).toBe(
       '{"meta":{"lang":"ko","currentTime":"10:00 AM","totalBuses":3,"serverNow":"2026-10-20T10:00:00+09:00"},"data":{"groupId":"hssc","buses":[{"stationIndex":1,"carNumber":"0000","estimatedTime":30,"kind":"estimated"},{"stationIndex":7,"carNumber":"0000","estimatedTime":120,"kind":"estimated"},{"stationIndex":0,"carNumber":"0000","estimatedTime":120,"kind":"estimated"}],"stationEtas":[]}}',
     );
+  });
+
+  // WHY: the poller keeps a layover for the live route's 15 minutes (ADR 0019, D8); the old route still leaves out past 3.
+  it("serves the 5-minute layover the old route leaves out on the live route", async () => {
+    // Arrange
+    upstream.hssc = LAYOVER_ITEMS;
+    await tick("hssc");
+
+    // Act
+    const res = await get("/bus/live/hssc");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.vehicles.map((vehicle: { id: string; position: { status: string } }) => [vehicle.id, vehicle.position.status])).toEqual([
+      ["1", "inTransit"],
+      // WHY: line 2 entered seq 1, a Hyehwa Rotary pass where the shuttle boards no one, so it is passing.
+      ["2", "inTransit"],
+      ["3", "waitingToDepart"],
+      ["4", "waitingToDepart"],
+    ]);
   });
 
   it("serves a Jongno tick as it did before the live route", async () => {

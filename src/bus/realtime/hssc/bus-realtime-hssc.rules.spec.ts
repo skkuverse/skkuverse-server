@@ -8,7 +8,7 @@
 import "moment/locale/ko";
 import moment from "moment-timezone";
 import type { HsscBusDoc } from "../../cache/bus-cache.document";
-import { isFresh, isUnparsedFeed, toDwellSeconds, toFeedEventKey, toFeedEventTiming, toFirstSeenAt, toHsscStopEvent, toLinearSequence } from "./bus-realtime-hssc.rules";
+import { isFresh, isLiveFresh, isUnparsedFeed, toDwellSeconds, toFeedEventKey, toFeedEventTiming, toFirstSeenAt, toHsscStopEvent, toLinearSequence } from "./bus-realtime-hssc.rules";
 import { hsscBusDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
@@ -70,6 +70,21 @@ describe("isFresh", () => {
   ])("%s seen %i minutes ago → %s", (stationName, minutesAgo, expected) => {
     // Act & Assert
     expect(isFresh({ stationName, eventDate: kst(minutesAgo) }, NOW)).toBe(expected);
+  });
+});
+
+// WHY: the live route waits out a layover for 15 minutes, the deprecated realtime route 3 (ADR 0019, D8).
+describe("isLiveFresh", () => {
+  it.each([
+    ["농구장 (셔틀버스정류소)", 14, true],
+    ["농구장 (셔틀버스정류소)", 15, true],
+    ["농구장 (셔틀버스정류소)", 16, false],
+    ["혜화동로터리 [미정차]", 9, true],
+    ["혜화동로터리 [미정차]", 10, true],
+    ["혜화동로터리 [미정차]", 11, false],
+  ])("%s seen %i minutes ago → %s", (stationName, minutesAgo, expected) => {
+    // Act & Assert
+    expect(isLiveFresh({ stationName, eventDate: kst(minutesAgo) }, NOW)).toBe(expected);
   });
 });
 

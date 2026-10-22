@@ -5,6 +5,7 @@ import type { HsscApiBus, HsscBusDoc } from "../../cache/bus-cache.document";
 import {
   HSSC_API_DATE_FORMAT,
   HSSC_EVENT_DATE_FORMAT,
+  LIVE_STALE_MINUTES_AT_TURNAROUND,
   STALE_MINUTES,
   STALE_MINUTES_AT_TURNAROUND,
   TURNAROUND_STATION_NAME,
@@ -30,8 +31,18 @@ export function toDwellSeconds(firstSeenAt: moment.Moment, now: Date): number {
   return Math.round(Math.abs((now.getTime() - firstSeenAt.valueOf()) / 1000));
 }
 
-export function isFresh(bus: Pick<HsscBusDoc, "stationName" | "eventDate">, now: Date): boolean {
-  const staleMinutes = bus.stationName === TURNAROUND_STATION_NAME ? STALE_MINUTES_AT_TURNAROUND : STALE_MINUTES;
+type FreshnessFields = Pick<HsscBusDoc, "stationName" | "eventDate">;
+
+export function isFresh(bus: FreshnessFields, now: Date): boolean {
+  return isFreshWithin(bus, now, STALE_MINUTES_AT_TURNAROUND);
+}
+
+export function isLiveFresh(bus: FreshnessFields, now: Date): boolean {
+  return isFreshWithin(bus, now, LIVE_STALE_MINUTES_AT_TURNAROUND);
+}
+
+function isFreshWithin(bus: FreshnessFields, now: Date, staleMinutesAtTurnaround: number): boolean {
+  const staleMinutes = bus.stationName === TURNAROUND_STATION_NAME ? staleMinutesAtTurnaround : STALE_MINUTES;
   const firstSeenAt = moment.tz(bus.eventDate, HSSC_EVENT_DATE_FORMAT, KST_TIME_ZONE);
   const cutoff = moment(now).tz(KST_TIME_ZONE).subtract(staleMinutes, "minutes");
   return !firstSeenAt.isBefore(cutoff);
