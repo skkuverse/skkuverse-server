@@ -1,5 +1,5 @@
 import { HSSC_POSITION_COUNT } from "../../bus.constants";
-import { DEPARTURE_INOUTS, NON_STOP_SEQS, SEGMENTS_BY_SEQ, TURNAROUND_SEQ } from "./bus-realtime-hssc-eta.constants";
+import { DEPARTURE_INOUTS, MAX_OVERDUE_SECONDS, MAX_OVERDUE_SECONDS_AFTER_TURNAROUND, NON_STOP_SEQS, SEGMENTS_BY_SEQ, TURNAROUND_SEQ } from "./bus-realtime-hssc-eta.constants";
 import type { HsscBusAnchor, HsscEta, HsscLapTime, HsscSegment } from "./bus-realtime-hssc-eta.types";
 
 const SECOND_MS = 1000;
@@ -41,10 +41,28 @@ export function toStopsAway(anchor: HsscBusAnchor, targetSeq: number): number {
   return passedSeqs.filter(isHsscStop).length + 1;
 }
 
+// WHY: a departed bus whose next stop event is past its travel median by more than the bound, so an estimate stops
+// sliding with the clock (ADR 0018, D6); a bus at a stop is still standing there.
+function isOverdue(anchor: HsscBusAnchor, now: Date): boolean {
+  if (!anchor.isDeparted) return false;
+  const maxOverdueSeconds = anchor.seq === TURNAROUND_SEQ ? MAX_OVERDUE_SECONDS_AFTER_TURNAROUND : MAX_OVERDUE_SECONDS;
+  const overdueMs = now.getTime() - anchor.since.getTime() - segmentOf(anchor.seq).travelSeconds * SECOND_MS;
+  return overdueMs > maxOverdueSeconds * SECOND_MS;
+}
+
+// WHY: at the turnaround, or overdue after leaving it: the feed says LEFT while the bus lays over by the stop (ADR 0018, D6).
+export function isLayingOver(anchor: HsscBusAnchor, now: Date): boolean {
+  return anchor.seq === TURNAROUND_SEQ && (!anchor.isDeparted || isOverdue(anchor, now));
+}
+
+function isStalled(anchor: HsscBusAnchor, now: Date): boolean {
+  return anchor.seq !== TURNAROUND_SEQ && isOverdue(anchor, now);
+}
+
 // WHY: the layover's end cannot be predicted (ADR 0018, D2), so no time crosses it; the turnaround
 // itself is reached by every bus heading to it.
-function isBehindLayover(anchor: HsscBusAnchor, targetSeq: number): boolean {
-  if (anchor.seq === TURNAROUND_SEQ && !anchor.isDeparted) return true;
+function isBehindLayover(anchor: HsscBusAnchor, targetSeq: number, now: Date): boolean {
+  if (isLayingOver(anchor, now)) return true;
   if (targetSeq === TURNAROUND_SEQ) return false;
   const [busLap, targetLap] = [toStationIndex(anchor.seq), toStationIndex(targetSeq)];
   return busLap > targetLap || (busLap === targetLap && anchor.isDeparted);
@@ -65,7 +83,7 @@ function toFirstLegMs(anchor: HsscBusAnchor, nowMs: number): number {
 
 /** WHY: the bus's arrival and departure at each position ahead in its lap, up to the turnaround, never across a layover. */
 export function toLapTimes(anchor: HsscBusAnchor, now: Date): HsscLapTime[] {
-  if (anchor.seq === TURNAROUND_SEQ && !anchor.isDeparted) return [];
+  if (isLayingOver(anchor, now) || isStalled(anchor, now)) return [];
   const times: HsscLapTime[] = [];
   let atMs = now.getTime() + toFirstLegMs(anchor, now.getTime());
   for (let lap = toStationIndex(anchor.seq) + 1; lap <= HSSC_POSITION_COUNT; lap++) {
@@ -85,20 +103,24 @@ function toArrivesAt(anchor: HsscBusAnchor, targetSeq: number, now: Date): Date 
 
 export function toHsscEta(anchor: HsscBusAnchor, targetSeq: number, now: Date): HsscEta {
   const common = { vehicleId: anchor.vehicleId, stopsAway: toStopsAway(anchor, targetSeq), observedAt: anchor.observedAt };
-  if (isBehindLayover(anchor, targetSeq)) return { status: "waitingToDepart", ...common };
+  if (isStalled(anchor, now)) return { status: "unknown", ...common };
+  if (isBehindLayover(anchor, targetSeq, now)) return { status: "waitingToDepart", ...common };
   if (anchor.seq === targetSeq && !anchor.isDeparted) {
     return { status: "arriving", ...common, departsAt: new Date(now.getTime() + toRestOfDwellMs(anchor, now.getTime())) };
   }
   return { status: "enRoute", ...common, arrivesAt: toArrivesAt(anchor, targetSeq, now) };
 }
 
-// WHY: a bus laying over at the turnaround is the one a rider boards there (ADR 0019, D9).
+// WHY: a bus laying over at the turnaround is the one a rider boards there (ADR 0019, D9); a stalled bus, which
+// clients skip, comes last so it never takes a served slot from a bus they show.
 function toRank(eta: HsscEta): [number, number] {
   if (eta.status === "arriving" || (eta.status === "waitingToDepart" && eta.stopsAway === 0)) return [0, 0];
-  return eta.status === "enRoute" ? [1, eta.arrivesAt.getTime()] : [2, eta.stopsAway];
+  if (eta.status === "enRoute") return [1, eta.arrivesAt.getTime()];
+  return eta.status === "waitingToDepart" ? [2, eta.stopsAway] : [3, eta.stopsAway];
 }
 
-// WHY: nearest first: a bus at the stop, then by expected arrival, then the buses behind the layover by stops away.
+// WHY: nearest first: a bus at the stop, then by expected arrival, then the buses behind the layover by stops away,
+// then the stalled ones.
 export function toStopEtas(anchors: readonly HsscBusAnchor[], targetSeq: number, now: Date): HsscEta[] {
   return anchors
     .map((anchor) => toHsscEta(anchor, targetSeq, now))

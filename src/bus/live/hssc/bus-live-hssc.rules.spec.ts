@@ -11,7 +11,7 @@ const at = (iso: string) => new Date(iso);
 const anchor = (extra: Partial<HsscLiveBus["anchor"]> = {}) => ({ vehicleId: "32149", seq: 2, isDeparted: true, since: at("2026-10-20T00:59:00Z"), observedAt: at("2026-10-20T00:59:00Z"), ...extra });
 
 function bus(extra: Partial<HsscLiveBus> = {}): HsscLiveBus {
-  return { anchor: anchor(), stationIndex: 8, isAtStopPosition: true, departsAt: null, lapTimes: [], ...extra };
+  return { anchor: anchor(), stationIndex: 8, isAtStopPosition: true, isLayingOver: false, departsAt: null, lapTimes: [], ...extra };
 }
 
 describe("toHsscArrival", () => {
@@ -50,7 +50,7 @@ describe("toHsscArrival", () => {
 
 describe("toHsscPositionStatus", () => {
   it.each([
-    ["laying over", bus({ anchor: anchor({ seq: 5, isDeparted: false }), stationIndex: 0 }), "waitingToDepart"],
+    ["laying over", bus({ anchor: anchor({ seq: 5, isDeparted: false }), stationIndex: 0, isLayingOver: true }), "waitingToDepart"],
     ["at a stop", bus({ anchor: anchor({ isDeparted: false }), lapTimes: [{ stationIndex: 9, arrivesAt: at("2026-10-20T01:01:00Z"), departsAt: null }] }), "atStop"],
     ["at a rotary pass", bus({ anchor: anchor({ seq: 1, isDeparted: false }), isAtStopPosition: false, lapTimes: [{ stationIndex: 8, arrivesAt: at("2026-10-20T01:01:00Z"), departsAt: null }] }), "inTransit"],
     ["having left a stop", bus({ lapTimes: [{ stationIndex: 9, arrivesAt: at("2026-10-20T01:01:00Z"), departsAt: null }] }), "inTransit"],
@@ -105,5 +105,38 @@ describe("toHsscTrajectory", () => {
   it("is null for a bus laying over, which is not moving", () => {
     // Act & Assert
     expect(toHsscTrajectory(bus({ anchor: anchor({ seq: 5, isDeparted: false }), stationIndex: 0 }))).toBeNull();
+  });
+});
+
+describe("toHsscArrival for an overdue bus", () => {
+  it("serves a bus the engine cannot place as unknown, with no instant and no text, so clients skip it", () => {
+    // Act & Assert
+    expect(toHsscArrival({ status: "unknown", vehicleId: "32149", stopsAway: 2, observedAt: at("2026-10-20T00:50:00Z") })).toEqual({
+      status: "unknown",
+      expectedArrivalAt: null,
+      expectedDepartureAt: null,
+      scheduledArrivalAt: null,
+      scheduledDepartureAt: null,
+      basis: "estimate",
+      stopsAway: 2,
+      isLastBus: null,
+      vehicleId: "32149",
+      providerText: null,
+    });
+  });
+});
+
+describe("toHsscPositionStatus for an overdue bus", () => {
+  it.each([
+    ["still laying over off the turnaround after the feed said it left", bus({ anchor: anchor({ seq: 5 }), stationIndex: 0, isLayingOver: true }), "waitingToDepart"],
+    ["stalled mid-route, kept where it was last seen", bus({ isLayingOver: false }), "inTransit"],
+  ])("a bus %s → %s", (_case, input, expected) => {
+    // Act & Assert
+    expect(toHsscPositionStatus(input)).toBe(expected);
+  });
+
+  it("gives a stalled bus no trajectory", () => {
+    // Act & Assert
+    expect(toHsscTrajectory(bus({ isLayingOver: false }))).toBeNull();
   });
 });

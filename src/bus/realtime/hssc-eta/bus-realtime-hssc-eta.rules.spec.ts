@@ -7,12 +7,15 @@
  * bus reaches before this one, plus one, skipping the two rotary passes (seq 1 and 10; ADR 0019, D4): 0 at the stop,
  * a lap (9) for a bus that has left it. A stop's ETAs come nearest first, a bus laying over at the turnaround first there.
  * A bus at a stop leaves it after the rest of its dwell, and its lap times run stop by stop to the turnaround.
+ * A departed bus whose next stop event is overdue past a bound (60 s after leaving the turnaround, 120 s elsewhere; ADR
+ * 0018, D6) never slides with the clock: off the turnaround it is still laying over, waiting to depart at every stop;
+ * mid-route it is unknown at every stop, with no lap times; a bus at a stop is never overdue.
  *
  * The seconds below are the medians of `SEGMENTS_BY_SEQ` (ADR 0018, D3), as seq: dwell, travel to the next:
  * 0: 174, 30; 1: 12, 70; 2: 63, 28; 3: 30, 57; 4: 33, 30; 5: layover, 21; 6: 24, 54; 7: 24, 111; 8: 24, 94; 9: 21, 24;
  * 10: 12, 81.
  */
-import { isDepartureEvent, isHsscStop, toHsscEta, toLapTimes, toSeq, toStationIndex, toStopEtas, toStopsAway } from "./bus-realtime-hssc-eta.rules";
+import { isDepartureEvent, isHsscStop, isLayingOver, toHsscEta, toLapTimes, toSeq, toStationIndex, toStopEtas, toStopsAway } from "./bus-realtime-hssc-eta.rules";
 import type { HsscBusAnchor, HsscEta } from "./bus-realtime-hssc-eta.types";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
@@ -235,5 +238,100 @@ describe("toStationIndex", () => {
   ])("seq %i is the line's station %i, and back", (seq, stationIndex) => {
     // Act & Assert
     expect([toStationIndex(seq), toSeq(stationIndex)]).toEqual([stationIndex, seq]);
+  });
+});
+
+describe("toHsscEta past the overdue bound", () => {
+  it.each([
+    ["left 우체국 143 s ago, 1 s inside the bound (24 + 120)", departed(9, 143), 0, "enRoute"],
+    ["left 우체국 144 s ago, at the bound", departed(9, 144), 0, "enRoute"],
+    ["left 우체국 145 s ago, past the bound", departed(9, 145), 0, "unknown"],
+    ["left 우체국 145 s ago, to a stop behind it in the lap", departed(9, 145), 6, "unknown"],
+    ["left 농구장 80 s ago, 1 s inside the bound (21 + 60)", departed(5, 80), 6, "enRoute"],
+    ["left 농구장 81 s ago, at the bound", departed(5, 81), 6, "enRoute"],
+    ["left 농구장 82 s ago, past the bound", departed(5, 82), 6, "waitingToDepart"],
+    ["at 혜화역 for 1000 s, a stop anchor never overdue", atStop(0, 1000), 2, "enRoute"],
+  ])("a bus %s → %s", (_case, bus, targetSeq, status) => {
+    // Act & Assert
+    expect(toHsscEta(bus, targetSeq, NOW).status).toBe(status);
+  });
+
+  it("keeps an overdue bus inside the bound arriving now at its next stop, never in the past", () => {
+    // Act & Assert
+    expect(toHsscEta(departed(5, 81), 6, NOW)).toMatchObject({ status: "enRoute", arrivesAt: NOW });
+  });
+
+  it.each([
+    ["600주년(하교), its next stop", 6, 1],
+    ["혜화역", 0, 5],
+    ["농구장, a lap away", 5, 9],
+  ])("serves a bus still laying over off the turnaround as waiting to depart at %s (seq %i), %i stops away, with no instant", (_case, targetSeq, stopsAway) => {
+    // Arrange
+    const bus = departed(5, 600);
+
+    // Act & Assert
+    expect(toHsscEta(bus, targetSeq, NOW)).toEqual({ status: "waitingToDepart", vehicleId: "32149", stopsAway, observedAt: bus.observedAt });
+  });
+
+  it("serves a bus stalled mid-route as unknown with no instant, its stops away kept", () => {
+    // Arrange
+    const bus = departed(7, 600);
+
+    // Act & Assert
+    expect(toHsscEta(bus, 9, NOW)).toEqual({ status: "unknown", vehicleId: "32149", stopsAway: 2, observedAt: bus.observedAt });
+  });
+});
+
+describe("toLapTimes past the overdue bound", () => {
+  it.each([
+    ["stalled mid-route", departed(9, 145)],
+    ["still laying over off the turnaround", departed(5, 82)],
+  ])("is empty for a bus %s", (_case, bus) => {
+    // Act & Assert
+    expect(toLapTimes(bus, NOW)).toEqual([]);
+  });
+
+  it.each([
+    ["mid-route at the bound", departed(9, 144)],
+    ["off the turnaround at the bound", departed(5, 81)],
+  ])("still runs for a bus %s", (_case, bus) => {
+    // Act & Assert
+    expect(toLapTimes(bus, NOW)).not.toEqual([]);
+  });
+});
+
+describe("isLayingOver", () => {
+  it.each([
+    ["at the turnaround", atStop(5, 1000), true],
+    ["left the turnaround 81 s ago, at the bound", departed(5, 81), false],
+    ["left the turnaround 82 s ago, past the bound", departed(5, 82), true],
+    ["stalled mid-route", departed(9, 600), false],
+    ["at another stop", atStop(0, 1000), false],
+  ])("a bus %s → %s", (_case, bus, expected) => {
+    // Act & Assert
+    expect(isLayingOver(bus, NOW)).toBe(expected);
+  });
+});
+
+describe("toStopEtas with overdue buses", () => {
+  it("lists a stalled bus after every other, and a bus laying over off the turnaround among the waiting by stops away", () => {
+    // Arrange
+    const buses = [
+      { ...departed(2, 600), vehicleId: "stalled" },
+      { ...departed(5, 600), vehicleId: "laying-over" },
+      { ...departed(4, 0), vehicleId: "past" },
+      { ...departed(2, 0), vehicleId: "near" },
+    ];
+
+    // Act
+    const etas = toStopEtas(buses, 3, NOW);
+
+    // Assert
+    expect(etas.map((eta) => [eta.vehicleId, eta.status, eta.stopsAway])).toEqual([
+      ["near", "enRoute", 1],
+      ["laying-over", "waitingToDepart", 7],
+      ["past", "waitingToDepart", 8],
+      ["stalled", "unknown", 1],
+    ]);
   });
 });
