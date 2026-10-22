@@ -5,7 +5,9 @@
  * being served raw.
  */
 import { WEBVIEW_ORIGIN } from "../infra/origins";
-import { isBrokenLinkAction, toServedActionValue } from "./link-action.util";
+import type { LinkPolicy } from "./link-action.types";
+import { isBrokenLinkAction, toLinkProblem, toServedActionValue } from "./link-action.util";
+import { isRootRelativePath } from "./link-target.util";
 
 // WHY: the registry's own target grammar is pinned by its rules spec; here only its answer matters.
 const registry = { isKnownMiniAppTarget: (value: string): boolean => /^eskara-2026(\/|$)/.test(value) };
@@ -35,6 +37,51 @@ describe("isBrokenLinkAction", () => {
   it("finds nothing broken in an item without an action", () => {
     // Act & Assert
     expect(isBrokenLinkAction({}, registry)).toBe(false);
+  });
+});
+
+describe("toLinkProblem", () => {
+  const ownOrigin: LinkPolicy = { webview: "own-origin", isKnownMiniAppTarget: registry.isKnownMiniAppTarget, isAllowedRoute: isRootRelativePath };
+  const anyHttps: LinkPolicy = { webview: "any-https", isKnownMiniAppTarget: (value) => value === "a", isAllowedRoute: (value) => value === "/campus" };
+  const acceptsAnything: LinkPolicy = { webview: "any-https", isKnownMiniAppTarget: () => true, isAllowedRoute: () => true };
+
+  it.each([
+    ["miniapp", "eskara-2026/eskara/wristband", null],
+    ["miniapp", "no-such-app", "unknown-miniapp-target"],
+    ["external", "https://pf.kakao.com/_cjxexdG/chat", null],
+    ["external", "http://pf.kakao.com/_cjxexdG/chat", "not-https-url"],
+    ["webview", "/skku/lostandfound", null],
+    ["webview", "https://webview.skkuverse.com/skku/lostandfound", null],
+    ["webview", "https://evil.example/x", "not-webview-url"],
+    ["route", "/notices", null],
+    ["route", "//evil.com", "route-not-allowed"],
+    ["route", "", "route-not-allowed"],
+  ] as const)("on the web view origin, %s %j is %p", (actionType, actionValue, expected) => {
+    // Act & Assert
+    expect(toLinkProblem(actionType, actionValue, ownOrigin)).toBe(expected);
+  });
+
+  it.each([
+    ["miniapp", "a", null],
+    ["miniapp", "b/x", "unknown-miniapp-target"],
+    ["webview", "https://evil.example/x", null],
+    ["webview", "/skku/lostandfound", "not-https-url"],
+    ["webview", "https://\\evil.com", "not-https-url"],
+    ["route", "/campus", null],
+    ["route", "/notices", "route-not-allowed"],
+  ] as const)("on any https URL, %s %j is %p", (actionType, actionValue, expected) => {
+    // Act & Assert
+    expect(toLinkProblem(actionType, actionValue, anyHttps)).toBe(expected);
+  });
+
+  it.each([
+    ["miniapp", "a ", "unknown-miniapp-target"],
+    ["miniapp", "", "unknown-miniapp-target"],
+    ["route", "/campus\n", "route-not-allowed"],
+    ["route", " /campus", "route-not-allowed"],
+  ] as const)("refuses whitespace or an empty value before the policy decides: %s %j is %p", (actionType, actionValue, expected) => {
+    // Act & Assert
+    expect(toLinkProblem(actionType, actionValue, acceptsAnything)).toBe(expected);
   });
 });
 

@@ -1,27 +1,19 @@
 import { hasAnyText } from "../../infra/i18n";
-import { toWebviewUrl } from "../../infra/webview-url";
-import { isAbsoluteHttpsUrl, isRootRelativePath } from "../../shared/link-target.util";
+import { toLinkProblem } from "../../shared/link-action.util";
+import { linkActionType } from "../../shared/link-action.wire";
+import { isRootRelativePath } from "../../shared/link-target.util";
 import { isRecord } from "../../shared/object.util";
 import type { EventFacetDef, LayerSet } from "../layer-set/map-layer-set.schema";
 import type { OverlayPlaceDoc, PlaceAction } from "../map.document";
 
-/** SEE: docs/reference/event-places.md §5: a URL opener never gets a relative string; `route` is the app's own navigator. */
+// SEE: docs/reference/map-overlays-api.md ("2.0 `actionValue` is always complete by the time it ships")
 export function isValidActionValue(action: PlaceAction, isKnownMiniAppTarget: (value: string) => boolean): boolean {
   const value: unknown = action.actionValue;
   if (typeof value !== "string") return false;
   if (action.actionType === "content") return value.trim() !== "";
-  switch (action.actionType) {
-    case "route":
-      return isRootRelativePath(value);
-    case "webview":
-      return toWebviewUrl(value) !== null;
-    case "external":
-      return isAbsoluteHttpsUrl(value);
-    case "miniapp":
-      return isKnownMiniAppTarget(value);
-    default:
-      return false;
-  }
+  const actionType = linkActionType.safeParse(action.actionType);
+  if (!actionType.success) return false;
+  return toLinkProblem(actionType.data, value, { webview: "own-origin", isKnownMiniAppTarget, isAllowedRoute: isRootRelativePath }) === null;
 }
 
 export function actionDropReason(action: PlaceAction, isKnownMiniAppTarget: (value: string) => boolean): string | null {
