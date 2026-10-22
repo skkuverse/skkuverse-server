@@ -1,5 +1,5 @@
 {
-  // Module docs (openspec module-docs spec, refactor design D16): the head and
+  // Module docs (ADR 0010, D14): the head and
   // exactly these six H2 sections in this order, nothing deeper. The filter
   // names the template and the migrated modules' docs only, relative to docs/;
   // the module-docs test checks the list. It sits here, not in the root
