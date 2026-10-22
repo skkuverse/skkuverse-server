@@ -192,6 +192,14 @@ const config = {
     },
   },
 
+  // (A collector detail is left out of the public history.)
+  shuttle: {
+    enabled: switches.shuttleEnabled,
+    get token(): string {
+      return roleScoped("SHUTTLE_TOKEN");
+    },
+  },
+
   holidays: {
     get serviceKey(): string {
       return roleScoped("DATA_GO_KR_SERVICE_KEY");
@@ -267,6 +275,7 @@ const config = {
     cache: string;
     shuttleEta: string;
     subway: string;
+    shuttle: string;
   } {
     return {
       push: switches.pushDelivery,
@@ -275,6 +284,7 @@ const config = {
       cache: switches.cacheEnabled ? "on" : "off",
       shuttleEta: switches.shuttleEtaEnabled ? "on" : "off",
       subway: switches.subwayEnabled ? "on" : "off",
+      shuttle: switches.shuttleEnabled ? "on" : "off",
     };
   },
 };

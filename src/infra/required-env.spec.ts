@@ -233,6 +233,7 @@ describe("requiredValues scopes each value to the roles that read it", () => {
       TMAP_APP_KEY: "poller",
       DATA_GO_KR_SERVICE_KEY: "poller",
       SEOUL_SUBWAY_API_KEY: "poller",
+      SHUTTLE_TOKEN: "poller",
       SENTRY_DSN: "all",
     });
   });

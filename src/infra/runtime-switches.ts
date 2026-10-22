@@ -14,6 +14,7 @@ export interface RuntimeSwitches {
   cacheEnabled: boolean;
   shuttleEtaEnabled: boolean;
   subwayEnabled: boolean;
+  shuttleEnabled: boolean;
 }
 
 export const RUNTIME_SWITCH_NAMES = [
@@ -23,6 +24,7 @@ export const RUNTIME_SWITCH_NAMES = [
   "CACHE",
   "SHUTTLE_ETA",
   "SUBWAY",
+  "SHUTTLE",
 ] as const;
 
 export function runtimeMode(nodeEnv: string | undefined): RuntimeMode {
@@ -65,7 +67,10 @@ function pushDelivery(resolution: Resolution): PushDelivery {
   return value;
 }
 
-function isOn(resolution: Resolution, name: "RATE_LIMIT" | "BUILDING_SYNC" | "CACHE" | "SHUTTLE_ETA" | "SUBWAY"): boolean {
+function isOn(
+  resolution: Resolution,
+  name: "RATE_LIMIT" | "BUILDING_SYNC" | "CACHE" | "SHUTTLE_ETA" | "SUBWAY" | "SHUTTLE",
+): boolean {
   return (resolution.read(name, ON_OFF) ?? (resolution.mode === "development" ? "off" : "on")) === "on";
 }
 
@@ -93,6 +98,7 @@ export function resolveRuntimeSwitches(
       cacheEnabled: isGuardOn(resolution, "CACHE"),
       shuttleEtaEnabled: isOn(resolution, "SHUTTLE_ETA"),
       subwayEnabled: isOn(resolution, "SUBWAY"),
+      shuttleEnabled: isOn(resolution, "SHUTTLE"),
     },
     errors,
   };

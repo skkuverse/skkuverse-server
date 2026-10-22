@@ -1,5 +1,6 @@
 /**
- * PUSH_DELIVERY / RATE_LIMIT / BUILDING_SYNC / CACHE / SHUTTLE_ETA / SUBWAY
+ * PUSH_DELIVERY / RATE_LIMIT / BUILDING_SYNC / CACHE / SHUTTLE_ETA / SUBWAY /
+ * SHUTTLE
  * (src/infra/runtime-switches.ts).
  *
  * Two halves. The resolver table pins what each mode defaults to and which
@@ -7,8 +8,8 @@
  * may not be set: production's compose file and Doppler key lists never carry
  * one (production must run on the defaults), and local verify — which runs the
  * production image on a laptop holding the real Cloud Function URL — always
- * suppresses push, the building crawl, the directions calls and the subway
- * pollers.
+ * suppresses push, the building crawl, the directions calls, the subway
+ * pollers and the Shuttle pollers.
  */
 import fs from "fs";
 import path from "path";
@@ -42,6 +43,7 @@ describe("resolveRuntimeSwitches defaults", () => {
         cacheEnabled: true,
         shuttleEtaEnabled: true,
         subwayEnabled: true,
+        shuttleEnabled: true,
       },
       errors: [],
     });
@@ -57,6 +59,7 @@ describe("resolveRuntimeSwitches defaults", () => {
         cacheEnabled: false,
         shuttleEtaEnabled: false,
         subwayEnabled: false,
+        shuttleEnabled: false,
       },
       errors: [],
     });
@@ -117,6 +120,16 @@ describe("resolveRuntimeSwitches overrides", () => {
     expect(prod).toEqual({ switches: expect.objectContaining({ subwayEnabled: false }), errors: [] });
   });
 
+  it("development may turn the Shuttle pollers on, and production may turn them off", () => {
+    // Act
+    const dev = resolveRuntimeSwitches({ SHUTTLE: "on" }, "development");
+    const prod = resolveRuntimeSwitches({ SHUTTLE: "off" }, "production");
+
+    // Assert
+    expect(dev).toEqual({ switches: expect.objectContaining({ shuttleEnabled: true }), errors: [] });
+    expect(prod).toEqual({ switches: expect.objectContaining({ shuttleEnabled: false }), errors: [] });
+  });
+
   it("refuses PUSH_DELIVERY=live in development, and stays suppressed", () => {
     // Act
     const { switches, errors } = resolveRuntimeSwitches({ PUSH_DELIVERY: "live" }, "development");
@@ -165,6 +178,7 @@ describe("resolveRuntimeSwitches overrides", () => {
     ["CACHE", "no-store"],
     ["SHUTTLE_ETA", "true"],
     ["SUBWAY", "yes"],
+    ["SHUTTLE", "1"],
   ])("reports %s=%s instead of coercing it", (name, value) => {
     // Act & Assert
     for (const mode of ["production", "development", "test"] as const) {
@@ -262,6 +276,14 @@ describe("where the switches may be set", () => {
     ])("%s run no subway poller", (_label, env) => {
       // Assert
       expect(env).toMatch(/- SUBWAY=off\n/);
+    });
+
+    it.each([
+      ["the api replicas", apiEnv],
+      ["the poller", pollerEnv],
+    ])("%s run no Shuttle poller", (_label, env) => {
+      // Assert
+      expect(env).toMatch(/- SHUTTLE=off\n/);
     });
   });
 });
