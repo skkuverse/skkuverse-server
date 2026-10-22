@@ -1,13 +1,14 @@
 import type { SupportedLang } from "../../infra/types";
 import type { SentNotificationDoc } from "../miniapps.document";
-import { LOG_TITLE_CHARS } from "./miniapps-notifications.constants";
-import type { MiniAppNotificationHistoryEntry, NotificationContent, SendTrace } from "./miniapps-notifications.types";
+import { LOG_TITLE_CHARS, NO_RECORDED_OUTCOME_ERROR } from "./miniapps-notifications.constants";
+import type { MiniAppNotificationHistoryEntry, NotificationContent, SendOutcome, SendTrace } from "./miniapps-notifications.types";
 import type { MiniAppFeedEntry } from "./miniapps-notifications.wire";
 
 interface NewNotification {
   id: string;
   miniAppId: string;
   sentAt: Date;
+  idempotencyKey?: string;
 }
 
 const actionOf = ({ actionType, actionValue }: Pick<SentNotificationDoc, "actionType" | "actionValue">): Pick<
@@ -15,9 +16,17 @@ const actionOf = ({ actionType, actionValue }: Pick<SentNotificationDoc, "action
   "actionType" | "actionValue"
 > => ({ ...(actionType ? { actionType } : {}), ...(actionValue ? { actionValue } : {}) });
 
-export function toSentNotification(content: NotificationContent, { id, miniAppId, sentAt }: NewNotification): SentNotificationDoc {
+export function toSentNotification(content: NotificationContent, { id, miniAppId, sentAt, idempotencyKey }: NewNotification): SentNotificationDoc {
   const { title_ko, body_ko, title_en, body_en } = content;
-  return { _id: id, miniAppId, title_ko, body_ko, title_en, body_en, ...actionOf(content), sentAt, delivery: null };
+  const key = idempotencyKey === undefined ? {} : { idempotencyKey };
+  return { _id: id, miniAppId, title_ko, body_ko, title_en, body_en, ...actionOf(content), sentAt, delivery: null, ...key };
+}
+
+// WHY: a row with no recorded outcome may still be sending, so a repeat is told unknown, never invited to resend.
+export function toReplayedOutcome({ _id: notificationId, delivery, deliveryError }: SentNotificationDoc): SendOutcome {
+  if (delivery) return { notificationId, delivery, outcome: "delivered" };
+  if (deliveryError) return { notificationId, delivery: null, outcome: deliveryError.outcome, error: deliveryError.error };
+  return { notificationId, delivery: null, outcome: "unknown", error: NO_RECORDED_OUTCOME_ERROR };
 }
 
 export function toSendTrace(doc: SentNotificationDoc): SendTrace {

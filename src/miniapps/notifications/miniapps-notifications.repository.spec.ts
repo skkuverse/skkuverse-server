@@ -1,18 +1,20 @@
 /**
  * MiniappsNotificationsRepository's driver calls: the feed read's filter, bound,
  * sort and limit (which FakeMiniappsNotificationsRepository follows), the two
- * record writes as `$set` of one field on one row, and the boot index that
- * serves the read. These pin the query objects; what they match against real
- * data is for a mongod spec.
+ * record writes as `$set` of one field on one row, the Idempotency-Key claim
+ * and lookup, and the boot indexes that serve the read and guard the claim.
+ * These pin the query objects; what the unique index refuses in a real mongod
+ * is __tests__/nest/miniapps/miniapps-notifications-claim.test.ts.
  */
 const toArray = jest.fn().mockResolvedValue([]);
 const limit = jest.fn(() => ({ toArray }));
 const sort = jest.fn(() => ({ limit }));
 const find = jest.fn(() => ({ sort }));
+const findOne = jest.fn().mockResolvedValue(null);
 const insertOne = jest.fn().mockResolvedValue({});
 const updateOne = jest.fn().mockResolvedValue({});
 const createIndex = jest.fn().mockResolvedValue("ok");
-const mongoCollection = jest.fn(() => ({ find, insertOne, updateOne, createIndex }));
+const mongoCollection = jest.fn(() => ({ find, findOne, insertOne, updateOne, createIndex }));
 
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
@@ -21,6 +23,7 @@ jest.mock("../../infra/mongo", () => ({
   mongoCollection: (...args: unknown[]) => mongoCollection(...(args as [])),
 }));
 
+import { MongoServerError } from "mongodb";
 import config from "../../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../../infra/db";
 import type { SentNotificationDoc } from "../miniapps.document";
@@ -72,6 +75,56 @@ describe("MiniappsNotificationsRepository writes", () => {
   });
 });
 
+describe("MiniappsNotificationsRepository.claimSentNotification", () => {
+  const doc = { _id: "n1", miniAppId: "a", idempotencyKey: "retry-1" } as SentNotificationDoc;
+
+  it("inserts the row as given and answers true", async () => {
+    // Act
+    const claimed = await new MiniappsNotificationsRepository().claimSentNotification(doc);
+
+    // Assert
+    expect(insertOne).toHaveBeenCalledWith(doc);
+    expect(claimed).toBe(true);
+  });
+
+  it("answers false when the unique index already holds the key", async () => {
+    // Arrange
+    insertOne.mockRejectedValueOnce(new MongoServerError({ code: 11000, errmsg: "E11000 duplicate key error" }));
+
+    // Act
+    const claimed = await new MiniappsNotificationsRepository().claimSentNotification(doc);
+
+    // Assert
+    expect(claimed).toBe(false);
+  });
+
+  it("rethrows any other write error", async () => {
+    // Arrange
+    insertOne.mockRejectedValueOnce(new MongoServerError({ code: 121, errmsg: "Document failed validation" }));
+
+    // Act
+    const claiming = new MiniappsNotificationsRepository().claimSentNotification(doc);
+
+    // Assert
+    await expect(claiming).rejects.toThrow("Document failed validation");
+  });
+});
+
+describe("MiniappsNotificationsRepository.findSentNotificationByIdempotencyKey", () => {
+  it("reads the one row of that mini app with that key", async () => {
+    // Arrange
+    const stored = { _id: "n1", miniAppId: "a", idempotencyKey: "retry-1" };
+    findOne.mockResolvedValueOnce(stored);
+
+    // Act
+    const found = await new MiniappsNotificationsRepository().findSentNotificationByIdempotencyKey("a", "retry-1");
+
+    // Assert
+    expect(findOne).toHaveBeenCalledWith({ miniAppId: "a", idempotencyKey: "retry-1" }, { maxTimeMS: HOT_READ_MAX_TIME_MS });
+    expect(found).toBe(stored);
+  });
+});
+
 describe("MiniappsNotificationsRepository.onModuleInit", () => {
   it("creates the index the feed read uses", async () => {
     // Act
@@ -79,6 +132,17 @@ describe("MiniappsNotificationsRepository.onModuleInit", () => {
 
     // Assert
     expect(createIndex).toHaveBeenCalledWith({ miniAppId: 1, sentAt: -1 });
+  });
+
+  it("creates the unique index on a key within one mini app, over keyed rows only", async () => {
+    // Act
+    await new MiniappsNotificationsRepository().onModuleInit();
+
+    // Assert
+    expect(createIndex).toHaveBeenCalledWith(
+      { miniAppId: 1, idempotencyKey: 1 },
+      { unique: true, partialFilterExpression: { idempotencyKey: { $type: "string" } }, name: "miniAppId_idempotencyKey_unique" },
+    );
   });
 
   it("warns and carries on when the index cannot be created", async () => {
