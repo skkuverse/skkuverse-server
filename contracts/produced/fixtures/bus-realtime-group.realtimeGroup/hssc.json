@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/realtime/data/hssc captured from production 2026-10-14 (stage 12 shape snapshot, Accept-Language ko); kind added by hand as add-jongro-bus-positions serves it on every HSSC bus.",
+  "_about": "GET /bus/realtime/data/hssc captured from production 2026-10-14 (stage 12 shape snapshot, Accept-Language ko); kind added by hand as the server serves it on every HSSC bus since PR #278.",
   "data": {
     "groupId": "hssc",
     "buses": [

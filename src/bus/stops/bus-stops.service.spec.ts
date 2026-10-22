@@ -1,5 +1,5 @@
 /**
- * BusStopsService, the door to the stored `bus-stops` dataset (unify-bus-stops design D5 and D16; ADR 0013, D6),
+ * BusStopsService, the door to the stored `bus-stops` dataset (ADR 0013, D6),
  * read over an in-memory store and a fixed clock. `current()` answers one revision as `{ revision, catalog, hssc,
  * stopIdByArsId }`: the catalog's stops and sequences and the HSSC line, frozen and built once per revision, cached
  * for DATASET_CACHE_TTL_MS so a push is served within a minute, and kept through a failed reload for
@@ -239,7 +239,7 @@ describe("BusStopsService.etaOptIns", () => {
   });
 });
 
-// WHY: a stop page serves a stop as its config record, so the two cannot drift (unify-bus-stops spec bus-stop-arrivals).
+// WHY: a stop page serves a stop as its config record, so the two cannot drift.
 describe("BusStopsService.servedStop", () => {
   it.each(["en", "zh"] as const)("serves a stop as the commute group's record of it in %s, without its map", async (lang) => {
     // Arrange

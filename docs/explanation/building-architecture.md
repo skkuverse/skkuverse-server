@@ -3,7 +3,7 @@ title: Building Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-17
+last-updated: 2026-10-22
 audience: internal
 ---
 
@@ -107,7 +107,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 - A payload item that fails its schema is dropped and logged (`building.sync.payload_items_dropped`); a list where more than `MAX_INVALID_PAYLOAD_ITEM_RATIO` fail is rejected whole. The buildInfo phase fails when more than `MAX_BUILD_INFO_FAILURE_RATIO` of its calls fail.
 - A building is re-enriched only when it is new, SKKU's `updateDt` changed, or its `enrichVersion` is not `ENRICH_VERSION` (`needsEnrichment`).
 - Data is at most one sync interval (`config.building.syncIntervalMs`) plus `BUILDING_CACHE_TTL_MS` old, and every route sends `BUILDING_CACHE_CONTROL`. Both syncs also run once when the poller boots. Development runs neither (`BUILDING_SYNC=off`).
-- An api replica serves a synced list at most `BUILDING_CACHE_TTL_MS` late: the sync's `clearCache` clears only the poller process's cache, so the TTL, not an invalidation, is the stated freshness bound ([refactor design, D15](../../openspec/changes/archive/2026-10-15-refactor-server-architecture/design.md)).
+- An api replica serves a synced list at most `BUILDING_CACHE_TTL_MS` late: the sync's `clearCache` clears only the poller process's cache, so the TTL, not an invalidation, is the stated freshness bound ([ADR 0012, D6](../decisions/0012-runtime-roles.md)).
 - The detail lists the cafeterias whose `buildNo` is the building's, in `conspaceCd` order; a building without a `buildNo` reads none and serves `[]`.
 - The cafeteria list reads every cafeteria in one cached read (`BUILDING_CACHE_TTL_MS`, no stale window) and filters it by campus, so a failed read reaches `meals`. Nothing clears it: the TTL is its freshness bound.
 - `GET /building/:skkuId` answers `400` `INVALID_ID` for an id `isSkkuId` rejects, before any read, and `404` `NOT_FOUND` for a valid id with no building.
@@ -117,7 +117,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/building/parser.ts` 
 
 ## Open questions
 
-- `ApiId` equals `SkkuId`, and no reason for keeping them apart is recorded. Merging them, which would retire `toApiId`, is open ([brand minter design](../../openspec/changes/archive/2026-10-13-enforce-single-brand-minter/design.md), Open questions).
+- `ApiId` equals `SkkuId`, and no reason for keeping them apart is recorded. Merging them, which would retire `toApiId`, is open.
 - `GET /building/list` has no caller in the app, web or mini sources, and only the response-compare script called it in the logs checked. Removing it waits for several days of logs or per-app-version counts.
 - A version stamp that api replicas check, so a sync reaches them before their TTL, is open (`spencer0124/skkuverse#64`).
 - Why spaceList stamps a `conspaceCd` on some rooms and not on others. The detail serves it on each space, and nothing joins on it there.

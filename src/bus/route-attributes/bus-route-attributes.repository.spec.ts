@@ -1,6 +1,6 @@
 /**
  * BusRouteAttributesRepository: the read of the stored `jongro-route-attributes` dataset, which `npm run data`
- * writes and the server only parses (ADR 0013, D6; move-reference-datasets D10).
+ * writes and the server only parses (ADR 0013, D6).
  *
  * The query object is pinned here, since FakeBusRouteAttributesRepository copies it: one document by `_id`,
  * projecting only the revision and the data, bounded by `maxTimeMS`, on the content database's `datasets`. A

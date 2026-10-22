@@ -1,5 +1,5 @@
 /**
- * The shuttle_eta document id (design D9): keyed by run and source.
+ * The shuttle_eta document id: keyed by run and source.
  */
 import { etaDocId } from "./bus-eta.mapper";
 import type { EtaRun } from "./bus-eta.types";

@@ -1,5 +1,5 @@
 {
-  "_about": "Revision 1 of the bus-lane-corridor dataset (skku_content.datasets, _id bus-lane-corridor): src/bus/eta/lane/bus-lane.json without laneHours and strategies, which stay in code (move-reference-datasets D9), as production served it on 2026-10-20 at source commit f74ff3f3 (the file is unchanged since f742bcb6). Corridor geometry © OpenStreetMap contributors, ODbL; probe route section ranges from TOPIS getArrInfoByRouteAll. The push imports this data with _about removed. Nothing trimmed.",
+  "_about": "Revision 1 of the bus-lane-corridor dataset (skku_content.datasets, _id bus-lane-corridor): src/bus/eta/lane/bus-lane.json without laneHours and strategies, which stay in code, as production served it on 2026-10-20 at source commit f74ff3f3 (the file is unchanged since f742bcb6). Corridor geometry © OpenStreetMap contributors, ODbL; probe route section ranges from TOPIS getArrInfoByRouteAll. The push imports this data with _about removed. Nothing trimmed.",
   "corridor": {
     "centerline": [
       {

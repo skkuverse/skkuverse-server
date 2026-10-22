@@ -1,5 +1,5 @@
 {
-  "_about": "Revision 1 of the jongro-route-attributes dataset: the Jongro route file production served at commit d856f333 (captured 2026-10-20; the file was deleted in move-reference-datasets task 7.8), keyed by route id, without id and busRouteId, which stay in code as JONGRO_ROUTES (move-reference-datasets D10 and D14). Not trimmed.",
+  "_about": "Revision 1 of the jongro-route-attributes dataset: the Jongro route file production served at commit d856f333 (captured 2026-10-20; the file is deleted), keyed by route id, without id and busRouteId, which stay in code as JONGRO_ROUTES. Not trimmed.",
   "routes": {
     "jongro02": {
       "themeColor": "4CAF50",

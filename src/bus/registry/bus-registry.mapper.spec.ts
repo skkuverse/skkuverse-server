@@ -2,7 +2,7 @@
  * The route the registry derives from a stored document and the route's
  * identity in code: served stations with their ends and the turnaround stop,
  * and the TOPIS id → first ord mapping that places a bus. The transfer lines
- * are stored attributes the config view joins (move-reference-datasets D10).
+ * are stored attributes the config view joins (ADR 0013, D2).
  */
 import type { JongroRoute } from "../bus.types";
 import type { JongroRouteDocument } from "./bus-registry.document";

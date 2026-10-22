@@ -1,6 +1,6 @@
 /**
  * The first-party mini app origins and the mini app that owns each one
- * (move-miniapp-registry design D5). The owner is a trust decision held in
+ * (ADR 0013, D2). The owner is a trust decision held in
  * code, not in the registry dataset: the app opens any URL on the origin in
  * that mini app's shell, with the bridge. So the record is spelled out here,
  * and the origin list the bridge, the manifest pollers and the registry

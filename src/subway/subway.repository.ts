@@ -6,7 +6,7 @@ import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { mongoCollection } from "../infra/mongo";
 import type { SubwayArrivalsDoc } from "./subway.document";
 
-// WHY: each api replica answers a burst of requests from one read per 2 s (design D2); the tracker rewrites
+// WHY: each api replica answers a burst of requests from one read per 2 s; the tracker rewrites
 // the documents every 10 s, so an arrival is never staler than its countdown can show.
 const ARRIVALS_TTL_MS = 2_000;
 

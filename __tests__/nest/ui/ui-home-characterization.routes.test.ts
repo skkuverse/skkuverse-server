@@ -1,6 +1,5 @@
 /**
- * Characterization of GET /ui/home (move-runtime-data-to-db task 1.2, design
- * D10): the bytes, `Cache-Control` and `Vary` it answers in `ko`, `en` and
+ * Characterization of GET /ui/home (ADR 0011, D6): the bytes, `Cache-Control` and `Vary` it answers in `ko`, `en` and
  * `zh` for the layout in fixtures/home-layout.dataset.json, through the
  * production pipeline with only `Clock` overridden.
  *
@@ -15,7 +14,7 @@
  * scripts/lib/datasets/store.js, as revision 1 of `home-layout`. The mini app
  * registry is stored beside it the same way, as revision 1 of `miniapps`
  * (__tests__/nest/miniapps/fixtures/miniapps.dataset.json); the layout names
- * no mini app, so the route reads no registry (move-miniapp-registry D4).
+ * no mini app, so the route reads no registry (docs/explanation/miniapps-architecture.md, Invariants).
  *
  * The clock stands at 12:00 KST on 2026-10-19. The layout holds no banner
  * window, so the instant changes nothing today; it is fixed so that it never

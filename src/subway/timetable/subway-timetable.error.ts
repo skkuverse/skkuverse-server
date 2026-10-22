@@ -1,7 +1,7 @@
 import { AppError } from "../../http/app.error";
 
 // WHY: an answer, not a fault: a platform whose table was never read is not served from a guess, so the arrivals
-// route answers 503 and the tracker's tick rejects once it has written the rest (move-reference-datasets D7).
+// route answers 503 and the tracker's tick rejects once it has written the rest (ADR 0013, D6).
 export class SubwayTimetablesUnavailableError extends AppError {
   constructor(readonly keys: readonly string[]) {
     super("SUBWAY_TIMETABLES_UNAVAILABLE", `The subway timetables are unavailable: ${keys.join(", ")}`, 503);

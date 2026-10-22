@@ -1,6 +1,6 @@
 /**
  * Every client-facing route declares what it sends through a `.wire` type
- * (ADR 0010, D13; define-boundary-contracts design D4), so `tsc` ties the
+ * (ADR 0010, D13), so `tsc` ties the
  * response to the schema that is published for it.
  *
  * A handler's declared return type, inside `Promise<…>`, must reference a

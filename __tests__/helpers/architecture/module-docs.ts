@@ -1,6 +1,6 @@
 /**
  * Module docs as the module-docs and glossary-coverage rules read them
- * (refactor design D16, openspec module-docs spec): which top-level src/
+ * (ADR 0010, D14): which top-level src/
  * folders are feature modules, where each one's doc lives, and a doc parsed
  * line by line into its frontmatter, fenced blocks, HTML comments, headings,
  * sections and tables, so a check reads a cell or a section, never a raw

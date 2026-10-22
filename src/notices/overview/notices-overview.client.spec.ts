@@ -1,7 +1,6 @@
 /**
  * The skkuverse-ai client: request shape, timeouts, and the classification of
- * every outcome the service has to degrade on (spec: "Graceful degradation",
- * "Budget pause").
+ * every outcome the service has to degrade on.
  */
 jest.mock("axios");
 

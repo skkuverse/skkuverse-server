@@ -11,7 +11,7 @@
  * and an unknown slug 404s rather than 200-ing with null. A replica that never
  * read the registry answers 503 MINIAPP_REGISTRY_UNAVAILABLE on every registry
  * route, uncached, and a pushed registry revision is served within a minute
- * (move-miniapp-registry task 9.1, design D4).
+ * (ADR 0013, D6).
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";

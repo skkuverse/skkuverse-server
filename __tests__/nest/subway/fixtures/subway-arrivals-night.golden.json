@@ -1,5 +1,5 @@
 {
- "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh at 00:20 and 02:00 KST on Wednesday 2026-10-21 (service day Tuesday 2026-10-20), timetable only, over the subway-topology characterization's seed (every arrival state 14 h old) and the committed timetables, generated 2026-10-20 at commit 46c6ea60, before the topology reader landed (move-reference-datasets task 6.3). Each answer keeps its status, Cache-Control, Vary, ETag and body; the body's bytes are JSON.stringify of it.",
+ "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh at 00:20 and 02:00 KST on Wednesday 2026-10-21 (service day Tuesday 2026-10-20), timetable only, over the subway-topology characterization's seed (every arrival state 14 h old) and the committed timetables, generated 2026-10-20 at commit 46c6ea60, before the topology reader landed. Each answer keeps its status, Cache-Control, Vary, ETag and body; the body's bytes are JSON.stringify of it.",
  "instants": {
   "2026-10-20T15:20:00.000Z": {
    "sungkyunkwan": {

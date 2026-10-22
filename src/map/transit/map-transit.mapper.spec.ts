@@ -1,5 +1,5 @@
 /**
- * The transit overlays (add-jongro-route-lines D6): one path per Jongno
+ * The transit overlays: one path per Jongno
  * route, in the order the bus read answers, on the route's own base layer,
  * named in every language, its geometry the stored line exactly as stored
  * (no closing point added, the pair order kept), a backdrop with no tap and

@@ -1,5 +1,5 @@
 {
-  "_about": "A copy of revision 1 of the miniapps dataset as stored on 2026-10-20 in skku_content_dev and skku_content (move-miniapp-registry tasks 6.2 and 11.2, design D2). It was built mechanically from the registry files committed at 2e10b910, unchanged through production commit cd9484d9, the index as index and each detail under its id in index order; task 12.1 deleted those files. Push it with this _about removed. Nothing trimmed.",
+  "_about": "A copy of revision 1 of the miniapps dataset as stored on 2026-10-20 in skku_content_dev and skku_content. It was built mechanically from the registry files committed at 2e10b910, unchanged through production commit cd9484d9, the index as index and each detail under its id in index order; those files are deleted. Push it with this _about removed. Nothing trimmed.",
   "index": {
     "version": 1,
     "miniApps": [

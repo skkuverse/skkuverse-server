@@ -1,6 +1,6 @@
 /**
- * The produced contracts, computed from the `.wire` files (ADR 0010, D13;
- * define-boundary-contracts design D5): one draft-07 `<id>.schema.json` per
+ * The produced contracts, computed from the `.wire` files (ADR 0010, D13):
+ * one draft-07 `<id>.schema.json` per
  * zod export, and `index.json` mapping each id to its source file, its export
  * and the routes whose declared type references it. `<id>` is
  * `<wire file base>.<export name>`, so the architecture rules on file and

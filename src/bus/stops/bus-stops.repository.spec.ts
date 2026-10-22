@@ -1,6 +1,6 @@
 /**
  * BusStopsRepository: the read of the stored `bus-stops` dataset, which `npm run data` writes and the server only
- * parses (ADR 0013, D6; unify-bus-stops design D16).
+ * parses (ADR 0013, D6).
  *
  * The query object is pinned here, since FakeBusStopsRepository copies it: one document by `_id`, projecting only
  * the revision and the data, bounded by `maxTimeMS`, on the content database's `datasets`. A missing document and

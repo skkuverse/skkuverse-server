@@ -1,6 +1,5 @@
 /**
- * The closed-world check behind the golden fixtures (define-boundary-contracts
- * design D6): a published schema is open for consumers, but every property
+ * The closed-world check behind the golden fixtures (ADR 0010, D13): a published schema is open for consumers, but every property
  * the server really sends must be declared in it. This walks a value against
  * its JSON Schema through `properties`, `items` and `anyOf`/`oneOf`, and
  * reports each property no schema declares.

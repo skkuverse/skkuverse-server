@@ -1,5 +1,5 @@
 /**
- * The 인자셔틀 group on schedule v2, against the inja-shuttle spec: its stops
+ * The 인자셔틀 group on schedule v2: its stops
  * (the school's 관리팀 answer of 2026-10-08 and the school's shuttle page, which
  * give the regular and the 학부대학 runs the same spots), one route per
  * direction for both route types, the notes, and the rule that a client

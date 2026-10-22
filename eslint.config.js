@@ -120,7 +120,7 @@ const MODULE_SCOPES = require("fs")
   .flatMap((d) => (d.isDirectory() ? [`src/${d.name}/`] : d.name.endsWith(".ts") ? [`src/${d.name}`] : []))
   .sort();
 
-// Feature modules read the time through `Clock` (design D13): every scope but the shared layers.
+// Feature modules read the time through `Clock` (ADR 0011, D5): every scope but the shared layers.
 const CLOCK_FREE_LAYERS = ["config", "http", "infra", "scheduling", "shared"];
 const CLOCK_INJECT_DIRS = MODULE_SCOPES.filter(
   (scope) => !CLOCK_FREE_LAYERS.some((layer) => scope.startsWith(`src/${layer}/`)),
@@ -537,8 +537,8 @@ function migratedTypescriptBlock() {
 }
 
 // Each feature module's forbidden synonyms: the backticked names in the Not
-// column of docs/explanation/<module>-architecture.md, nothing else (openspec
-// module-docs spec; the glossary-coverage test keeps the two in step).
+// column of docs/explanation/<module>-architecture.md, nothing else (ADR 0010,
+// D14; the glossary-coverage test keeps the two in step).
 const GLOSSARY_NOT = {
   "app-config": ["AppSettings", "forceUpdate"],
   building: ["buildingId", "buildingNo", "roomId", "level", "bucket", "searchData", "term", "geometryDoc"],
@@ -868,6 +868,13 @@ module.exports = [
     },
   },
   {
-    ignores: ["node_modules/", "coverage/", "dist/", "swagger/swagger-output.json", "src/**/*.generated.ts"],
+    ignores: [
+      "node_modules/",
+      "coverage/",
+      "dist/",
+      ".claude/worktrees/",
+      "swagger/swagger-output.json",
+      "src/**/*.generated.ts",
+    ],
   },
 ];

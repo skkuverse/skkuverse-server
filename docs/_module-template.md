@@ -12,7 +12,7 @@ audience: internal
 > One line: what `src/<module>/` owns, what it only mirrors, and who should read this before changing it.
 
 <!--
-The skeleton of docs/explanation/<module>-architecture.md (spec: openspec module-docs). Copy it, then:
+The skeleton of docs/explanation/<module>-architecture.md (`ADR 0010, D14`). Copy it, then:
 - keep exactly these six sections in this order, and no deeper heading; a section with nothing to say holds the line None.
 - keep only the three tables below; field-by-field reference belongs in the generated contracts and reference docs
 - cite a value by its constant's name, never the number; say what holds now, not what changed

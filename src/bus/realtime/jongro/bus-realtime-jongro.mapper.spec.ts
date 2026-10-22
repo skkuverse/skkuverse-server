@@ -1,7 +1,7 @@
 /**
  * The Jongro mapper: a sighting placed on a registry stop becomes the cached
  * bus position the realtime route reads, at its section ord with its vehicle
- * fields, and since when it has stood at its stop (add-jongro-bus-trajectory).
+ * fields, and since when it has stood at its stop.
  * The two TOPIS URLs every Jongro route polls: the arrival URL byte-identical
  * to the one production has called since the registry was introduced, and the
  * position URL of getBusPosByRtid, which answers the whole route (no ord
@@ -23,11 +23,12 @@ describe("toJongroBusPosition", () => {
     });
 
     // Assert
-    // WHY: the vehicle fields are what add-jongro-bus-positions adds (task 1.3); every other field is as before.
+    // WHY: the position carries the vehicle fields beside its other fields, plainNo the full plate (ADR 0019, D6).
     expect(position).toEqual({
       sequence: "6",
       stationName: "명륜새마을금고",
       carNumber: "5537",
+      plainNo: "서울74사5537",
       eventDate: "2026-10-20T01:00:00.000Z",
       estimatedTime: 40,
       stationId: "100900197",

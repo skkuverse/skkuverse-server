@@ -1,24 +1,24 @@
 /**
- * `shuttle-eta-live` (design D10): the window, the 10-minute cadence, one call
+ * `shuttle-eta-live`: the window, the 10-minute cadence, one call
  * per window, fixing at departure, the fallback, fixed values never changing,
  * failure reporting and the daily cap. Ticks take an explicit `now`, over an
  * in-memory store with writeEtas' frozen-skip rule.
  *
- * By travel model (bus-lane design D2, D5): a bus-lane run's value is the
+ * By travel model (ADR 0015, D7): a bus-lane run's value is the
  * route forced through the corridor with the probe's corridor time in place
  * of the car time; it falls back to the car route when the probe cannot
  * answer or fails; one call per model; the probe primed once, ten minutes
  * before a bus-lane window opens; and a TOPIS failure reported until a
  * position request succeeds, whatever NAVER does.
  *
- * Over the stored corridor (move-reference-datasets D9): the tick reads it once,
+ * Over the stored corridor: the tick reads it once,
  * only when a bus-lane run is due or a corridor failure is held, and hands its
  * snapshot to the travel model; never read, a bus-lane run is served the
  * unforced route marked `car` with no position request, and the tick rejects
  * after storing, until the first tick after a push, while car runs are
  * unaffected.
  *
- * Over the stored schedule content (move-editorial-datasets D9), through the
+ * Over the stored schedule content, through the
  * real BusEtaService and BusScheduleService: content never read rejects the
  * tick with no directions call, which the poller registry reports as failing,
  * and a suspension stored in the content plans no run.

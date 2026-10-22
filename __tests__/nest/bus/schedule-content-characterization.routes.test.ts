@@ -1,6 +1,6 @@
 /**
  * Characterization of the shuttle schedule routes and the bus config
- * (move-editorial-datasets task 11.3, design D13): the bytes, `Cache-Control`,
+ * (ADR 0011, D6): the bytes, `Cache-Control`,
  * `Vary` and `ETag` that GET /bus/schedule/data/:serviceId/smart (in `ko`, `en`
  * and `zh`), /week (this week and the week of 2027-09-27) and /bus/config (in
  * all three) answer for every service, through the production pipeline with
@@ -41,8 +41,7 @@
  * the next revision before that app's first read and pushes revision 1's data
  * back after it.
  *
- * Wave 4 of unify-bus-stops (design D12, task 7.2) changes `/bus/config` on
- * purpose: each realtime station carries its `stopId`, last. Its body is now
+ * `/bus/config` changed on purpose after the capture: each realtime station carries its `stopId`, last. Its body is now
  * the captured one with exactly the stations' stop ids appended
  * (__tests__/helpers/bus/station-stop-ids.ts), its ETag the md5 of that JSON,
  * as `BusConfigService` computes it, and with every `stopId` removed it is the
@@ -58,6 +57,7 @@ import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../helpers/bus/station-stop-ids";
+import { withLiveScreen, withoutLiveScreen } from "../../helpers/bus/live-screen";
 import captured from "./fixtures/schedule-production.capture.json";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
@@ -250,10 +250,10 @@ describe("GET /bus/schedule/data/:serviceId/week at the capture", () => {
 });
 
 describe("GET /bus/config at the capture", () => {
-  it.each(LANGS)("answers in %s with the bytes production served with only the realtime stations' stop ids appended, and their ETag", async (lang) => {
+  it.each(LANGS)("answers in %s with the bytes production served with only the realtime stations' stop ids and screens' live fields appended, and their ETag", async (lang) => {
     // Arrange
     const capture = captured.config[lang];
-    const groups = (capture.body.data as { groups: Array<{ id: string }> }).groups.map(withStationStopIds);
+    const groups = (capture.body.data as { groups: Array<{ id: string }> }).groups.map((group) => withLiveScreen(withStationStopIds(group)));
     const expected = { ...capture, etag: md5EtagOf(groups), body: { ...capture.body, data: { groups } } };
 
     // Act
@@ -261,7 +261,7 @@ describe("GET /bus/config at the capture", () => {
 
     // Assert
     expectCaptured(res, expected);
-    expect(withoutStationStopIds(res.body.data)).toEqual(capture.body.data);
+    expect(withoutStationStopIds(withoutLiveScreen(res.body.data))).toEqual(capture.body.data);
     expect(res.headers.etag).not.toBe(originEtagOf(capture.etag));
   });
 });

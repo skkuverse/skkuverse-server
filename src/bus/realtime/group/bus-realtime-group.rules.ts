@@ -6,7 +6,7 @@ import {
   MIN_SEGMENT_SECONDS,
   TRAJECTORY_STOPS_AHEAD,
 } from "./bus-realtime-group.constants";
-import type { Arrival, RealtimeBus } from "./bus-realtime-group.wire";
+import type { RealtimeArrival, RealtimeBus } from "./bus-realtime-group.wire";
 import type {
   CachedArrivalFields,
   StatusContext,
@@ -60,8 +60,8 @@ export function isLaggingPosition(position: Pick<JongroBusPositionDoc, "sequence
   return highestSectOrd !== undefined && highestSectOrd - Number(position.sequence) >= MIN_LAGGING_SECTION_GAP;
 }
 
-// WHY: an idling bus at a terminal reports stopFlag 0, so standing still there is waiting (add-jongro-bus-positions
-// D4); the last index is a terminal (route 02's is its origin's stop again) and never running.
+// WHY: an idling bus at a terminal reports stopFlag 0, so standing still there is waiting (ADR 0014, D3); the last
+// index is a terminal (route 02's is its origin's stop again) and never running.
 export function toTrackedStatus(
   position: JongroBusPositionDoc,
   { stationCount, turnaroundTopisId, nextStopState, highestSectOrd }: StatusContext,
@@ -79,7 +79,7 @@ export function toProgress(sectDist: number, fullSectDist: number): number {
 }
 
 // QUIRK(topis): mkTm is a KST wall clock, "yyyy-MM-dd HH:mm:ss.S", with no offset.
-function toMadeAtMs(mkTm: string): number | null {
+export function toMadeAtMs(mkTm: string): number | null {
   const match = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(?:\.\d+)?$/.exec(mkTm.trim());
   return match ? Date.parse(`${match[1]}T${match[2]}+09:00`) : null;
 }
@@ -105,7 +105,7 @@ function toStopArrivalMs(position: JongroBusPositionDoc, row: NextStopBus | unde
   return start.departureMs + Math.round(remainingMeters / ASSUMED_SPEED_METERS_PER_SECOND) * 1000;
 }
 
-// WHY: the knots the app moves a bus through (add-jongro-bus-trajectory D2): its observation, an atStop bus's departure,
+// WHY: the knots the app moves a bus through: its observation, an atStop bus's departure,
 // then each next stop at its re-based travel time (the first by distance without one), held MIN_SEGMENT_SECONDS apart.
 export function toTrajectory(position: JongroBusPositionDoc, status: JongroBusTracking["status"], { stationCount, namedBuses }: Pick<TrackingContext, "stationCount" | "namedBuses">): TrajectoryKnot[] {
   if (status === "waiting") return [];
@@ -145,8 +145,8 @@ export function toJongroBusTracking(position: JongroBusPositionDoc, context: Tra
 }
 
 // WHY: TOPIS prints its arriving-soon text at the next stop for a bus idling at its origin
-// (add-jongro-bus-positions D7), so a waiting vehicle's arrivals follow its joined position.
-export function toWaitingArrival(arrival: Arrival): Arrival {
+// (ADR 0014, D3), so a waiting vehicle's arrivals follow its joined position.
+export function toWaitingArrival(arrival: RealtimeArrival): RealtimeArrival {
   return { ...arrival, state: "waiting", minutes: null };
 }
 

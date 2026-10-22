@@ -5,7 +5,7 @@
  * the strong and weak bands partition the match set under their own caps.
  * These say what the pipeline object looks like, not which documents match or
  * in what order; that query meaning is for a real-mongod spec
- * (harden-test-suite D6), so add no new structure pins here. Each search is
+ * (ADR 0011, D6), so add no new structure pins here. Each search is
  * also pinned to the pipeline its query file builds, under the search bound.
  */
 const mockCollection = {

@@ -1,6 +1,5 @@
 /**
- * The golden fixtures of the produced contracts (ADR 0010, D13;
- * define-boundary-contracts design D6): every id in
+ * The golden fixtures of the produced contracts (ADR 0010, D13): every id in
  * `contracts/produced/index.json` has a fixture in
  * `contracts/produced/fixtures/<id>/`, each fixture is
  * `{ "_about": …, "data": … }`, its `data` parses with the wire schema the

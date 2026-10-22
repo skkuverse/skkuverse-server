@@ -1,15 +1,18 @@
 /**
- * The HSSC ETA engine (openspec add-hssc-arrival-estimates): what one fresh bus, anchored on its latest stop event,
+ * The HSSC ETA engine (ADR 0018): what one fresh bus, anchored on its latest stop event,
  * means for one stop of the loop. A bus ahead of the stop in its lap is en route, expected at an instant summed from
  * the measured dwell and travel medians, each overdue part counting 0; a bus at the stop is arriving; a bus whose path
  * crosses the turnaround layover (seq 5) it has not left (laying over there, or past the stop in this lap) is waiting to depart,
- * with no instant, except that the turnaround itself is reached by every bus heading to it. Stops away counts the 11-position
- * loop from the bus to the stop, a full lap for a bus that has left the stop, and a stop's ETAs come nearest first.
+ * with no instant, except that the turnaround itself is reached by every bus heading to it. Stops away counts the stops the
+ * bus reaches before this one, plus one, skipping the two rotary passes (seq 1 and 10; ADR 0019, D4): 0 at the stop,
+ * a lap (9) for a bus that has left it. A stop's ETAs come nearest first, a bus laying over at the turnaround first there.
+ * A bus at a stop leaves it after the rest of its dwell, and its lap times run stop by stop to the turnaround.
  *
- * The seconds below are the medians of design D3 (seq: dwell, travel to the next): 0: 174, 30; 1: 12, 70; 2: 63, 28;
- * 3: 30, 57; 4: 33, 30; 5: layover, 21; 6: 24, 54; 7: 24, 111; 8: 24, 94; 9: 21, 24; 10: 12, 81.
+ * The seconds below are the medians of `SEGMENTS_BY_SEQ` (ADR 0018, D3), as seq: dwell, travel to the next:
+ * 0: 174, 30; 1: 12, 70; 2: 63, 28; 3: 30, 57; 4: 33, 30; 5: layover, 21; 6: 24, 54; 7: 24, 111; 8: 24, 94; 9: 21, 24;
+ * 10: 12, 81.
  */
-import { isDepartureEvent, isHsscStop, toHsscEta, toStopEtas, toStopsAway } from "./bus-realtime-hssc-eta.rules";
+import { isDepartureEvent, isHsscStop, toHsscEta, toLapTimes, toSeq, toStationIndex, toStopEtas, toStopsAway } from "./bus-realtime-hssc-eta.rules";
 import type { HsscBusAnchor, HsscEta } from "./bus-realtime-hssc-eta.types";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
@@ -56,17 +59,22 @@ describe("toHsscEta", () => {
     expect(arrivalSeconds(toHsscEta(bus, 2, NOW))).toBe(30 + 12 + 70);
   });
 
-  it("serves a bus at the stop as arriving, with no instant", () => {
+  it("serves a bus at the stop as arriving, leaving after the rest of its dwell (174 s at 혜화역)", () => {
     // Act & Assert
-    expect(toHsscEta(atStop(0, 100), 0, NOW)).toEqual({ status: "arriving", vehicleId: "32149", stopsAway: 0, observedAt: secondsAgo(100) });
+    expect(toHsscEta(atStop(0, 100), 0, NOW)).toEqual({ status: "arriving", vehicleId: "32149", stopsAway: 0, observedAt: secondsAgo(100), departsAt: secondsAhead(74) });
+  });
+
+  it("serves a bus overdue at the stop as leaving now", () => {
+    // Act & Assert
+    expect(toHsscEta(atStop(0, 300), 0, NOW)).toMatchObject({ status: "arriving", departsAt: NOW });
   });
 
   it.each([
     ["laying over at 농구장, to 600주년(하교)", atStop(5, 300), 6, 1],
-    ["laying over at 농구장, to 혜화역", atStop(5, 300), 0, 6],
+    ["laying over at 농구장, to 혜화역", atStop(5, 300), 0, 5],
     ["laying over at 농구장, to 농구장 itself", atStop(5, 300), 5, 0],
-    ["just left 혜화역, to 혜화역", departed(0), 0, 11],
-    ["at 혜화역, to 600주년(하교) behind it in the lap", atStop(0), 6, 6],
+    ["just left 혜화역, to 혜화역", departed(0), 0, 9],
+    ["at 혜화역, to 600주년(하교) behind it in the lap", atStop(0), 6, 5],
     ["at 600주년(등교), to 600주년(하교) at the lap's start", atStop(4), 6, 2],
   ])("a bus %s → waiting to depart, %i stops away", (_case, bus, targetSeq, stopsAway) => {
     // Act
@@ -81,18 +89,19 @@ describe("toHsscEta", () => {
     const bus = { ...departed(0, 10), vehicleId: "32150", observedAt: secondsAgo(25) };
 
     // Act & Assert
-    expect(toHsscEta(bus, 3, NOW)).toEqual({ status: "enRoute", vehicleId: "32150", stopsAway: 3, observedAt: secondsAgo(25), arrivesAt: secondsAhead(20 + 82 + 91) });
+    expect(toHsscEta(bus, 3, NOW)).toEqual({ status: "enRoute", vehicleId: "32150", stopsAway: 2, observedAt: secondsAgo(25), arrivesAt: secondsAhead(20 + 82 + 91) });
   });
 });
 
 describe("toStopsAway", () => {
   it.each([
     [atStop(0), 0, 0],
-    [departed(0), 0, 11],
-    [atStop(0), 2, 2],
+    [departed(0), 0, 9],
+    [atStop(0), 2, 1],
     [departed(4), 5, 1],
-    [departed(5), 4, 10],
+    [departed(5), 4, 8],
     [atStop(10), 0, 1],
+    [departed(9), 0, 1],
     [atStop(2), 6, 4],
   ])("bus %j to seq %i → %i", (bus, targetSeq, expected) => {
     // Act & Assert
@@ -118,15 +127,72 @@ describe("toStopEtas", () => {
     expect(etas.map((eta) => [eta.vehicleId, eta.status, eta.stopsAway])).toEqual([
       ["here", "arriving", 0],
       ["near", "enRoute", 1],
-      ["far", "enRoute", 5],
-      ["layover", "waitingToDepart", 9],
-      ["past", "waitingToDepart", 10],
+      ["far", "enRoute", 3],
+      ["layover", "waitingToDepart", 7],
+      ["past", "waitingToDepart", 8],
+    ]);
+  });
+
+  it("lists the bus laying over at the turnaround first there, the one a rider boards", () => {
+    // Arrange
+    const buses = [{ ...departed(4, 0), vehicleId: "coming" }, { ...atStop(5, 120), vehicleId: "boarding" }];
+
+    // Act
+    const etas = toStopEtas(buses, 5, NOW);
+
+    // Assert
+    expect(etas.map((eta) => [eta.vehicleId, eta.status, eta.stopsAway])).toEqual([
+      ["boarding", "waitingToDepart", 0],
+      ["coming", "enRoute", 1],
     ]);
   });
 
   it("lists nothing when no bus is fresh", () => {
     // Act & Assert
     expect(toStopEtas([], 0, NOW)).toEqual([]);
+  });
+});
+
+describe("toLapTimes", () => {
+  it("runs from the next position to the turnaround: each arrival, then its departure after the dwell", () => {
+    // Act
+    const times = toLapTimes(departed(9, 10), NOW);
+
+    // Assert
+    const at = (seconds: number) => secondsAhead(seconds);
+    expect(times).toEqual([
+      { seq: 10, arrivesAt: at(14), departsAt: at(26) },
+      { seq: 0, arrivesAt: at(107), departsAt: at(281) },
+      { seq: 1, arrivesAt: at(311), departsAt: at(323) },
+      { seq: 2, arrivesAt: at(393), departsAt: at(456) },
+      { seq: 3, arrivesAt: at(484), departsAt: at(514) },
+      { seq: 4, arrivesAt: at(571), departsAt: at(604) },
+      { seq: 5, arrivesAt: at(634), departsAt: null },
+    ]);
+  });
+
+  it("starts after the rest of a stopped bus's dwell", () => {
+    // Act
+    const [next] = toLapTimes(atStop(4, 13), NOW);
+
+    // Assert
+    expect(next).toEqual({ seq: 5, arrivesAt: secondsAhead(20 + 30), departsAt: null });
+  });
+
+  it("agrees with the en-route instant at each stop", () => {
+    // Arrange
+    const bus = departed(6, 30);
+
+    // Act
+    const times = toLapTimes(bus, NOW);
+
+    // Assert
+    for (const { seq, arrivesAt } of times) expect(toHsscEta(bus, seq, NOW)).toMatchObject({ status: "enRoute", arrivesAt });
+  });
+
+  it("is empty for a bus laying over, whose departure cannot be predicted", () => {
+    // Act & Assert
+    expect(toLapTimes(atStop(5, 60), NOW)).toEqual([]);
   });
 });
 
@@ -156,5 +222,18 @@ describe("isDepartureEvent", () => {
   ])("%j → %s", (inout, expected) => {
     // Act & Assert
     expect(isDepartureEvent(inout)).toBe(expected);
+  });
+});
+
+describe("toStationIndex", () => {
+  it.each([
+    [5, 0],
+    [6, 1],
+    [10, 5],
+    [0, 6],
+    [4, 10],
+  ])("seq %i is the line's station %i, and back", (seq, stationIndex) => {
+    // Act & Assert
+    expect([toStationIndex(seq), toSeq(stationIndex)]).toEqual([stationIndex, seq]);
   });
 });

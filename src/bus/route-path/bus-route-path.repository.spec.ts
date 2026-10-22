@@ -1,6 +1,6 @@
 /**
  * BusRoutePathRepository over a mocked Mongo seam (src/infra/db), on
- * `jongro_route_paths` in the bus database (add-jongro-route-lines D2):
+ * `jongro_route_paths` in the bus database:
  * seeding is an upsert of `$setOnInsert` on the route id, so it inserts once
  * and never overwrites; the read of every route is bounded and projects the
  * stored fields; and replacing a line is guarded by the version the caller

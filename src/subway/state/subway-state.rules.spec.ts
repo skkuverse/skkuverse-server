@@ -1,5 +1,5 @@
 /**
- * When a platform's arrivals document is written again (add-commute-station-subway design D10): always when
+ * When a platform's arrivals document is written again: always when
  * none has been written since the process started; when any served train's number, destination, express flag,
  * arrival instant, source or position differs, a train is added or dropped in either direction, or the service
  * date changes; and otherwise once the last write is 60 s old, so a document is never served as stale while

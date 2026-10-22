@@ -58,6 +58,20 @@
       "GET bus/config/:groupId"
     ]
   },
+  "bus-live.liveGroup": {
+    "source": "src/bus/live/bus-live.wire.ts",
+    "export": "liveGroup",
+    "routes": [
+      "GET bus/live/:groupId"
+    ]
+  },
+  "bus-live.liveGroupMeta": {
+    "source": "src/bus/live/bus-live.wire.ts",
+    "export": "liveGroupMeta",
+    "routes": [
+      "GET bus/live/:groupId"
+    ]
+  },
   "bus-realtime-group.realtimeGroup": {
     "source": "src/bus/realtime/group/bus-realtime-group.wire.ts",
     "export": "realtimeGroup",
@@ -108,9 +122,26 @@
       "GET bus/stops/:stopId/arrivals"
     ]
   },
+  "bus-stop-arrivals.busStopArrivalsMeta": {
+    "source": "src/bus/stop-arrivals/bus-stop-arrivals.wire.ts",
+    "export": "busStopArrivalsMeta",
+    "routes": [
+      "GET bus/stops/:stopId/arrivals"
+    ]
+  },
   "bus.arrival": {
     "source": "src/bus/bus.wire.ts",
     "export": "arrival",
+    "routes": []
+  },
+  "bus.operation": {
+    "source": "src/bus/bus.wire.ts",
+    "export": "operation",
+    "routes": []
+  },
+  "bus.realtimeArrival": {
+    "source": "src/bus/bus.wire.ts",
+    "export": "realtimeArrival",
     "routes": []
   },
   "bus.servedSequenceStop": {
@@ -126,6 +157,16 @@
   "bus.stopMap": {
     "source": "src/bus/bus.wire.ts",
     "export": "stopMap",
+    "routes": []
+  },
+  "bus.vehicle": {
+    "source": "src/bus/bus.wire.ts",
+    "export": "vehicle",
+    "routes": []
+  },
+  "bus.vehiclePosition": {
+    "source": "src/bus/bus.wire.ts",
+    "export": "vehiclePosition",
     "routes": []
   },
   "fcm.miniAppPushPayload": {

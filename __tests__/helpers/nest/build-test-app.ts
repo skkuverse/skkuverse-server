@@ -1,5 +1,5 @@
 /**
- * The one builder for route tests (harden-test-suite D4). It boots the given
+ * The one builder for route tests (ADR 0011, D4). It boots the given
  * modules through the production HTTP pipeline, `bootstrapHttpApp` in
  * src/http/http-app.bootstrap.ts, which src/main.ts also calls, so a route test
  * exercises the real middleware order, CORS, interceptor and filter rather than

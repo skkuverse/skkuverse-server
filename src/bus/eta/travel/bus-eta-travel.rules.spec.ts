@@ -1,8 +1,7 @@
 /**
  * toNaverOffsets reads the travel time to each stop from a NAVER Directions 5
- * response, over the live response captured on 2026-10-09 (tasks.md 9.1) for
- * campus-inja.regular, and rejects the cases of spec "Implausible routes are
- * rejected"; and the route a bus-lane run is forced through: the corridor ends
+ * response, over the live response captured on 2026-10-09 for
+ * campus-inja.regular, and rejects implausible routes; and the route a bus-lane run is forced through: the corridor ends
  * as vias after the first stop, and the corridor's own leg.
  */
 import fs from "fs";

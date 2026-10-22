@@ -29,7 +29,7 @@ function toRunDelaySec(run: ScheduledTrain, event: TrainEvent): number | null {
   return scheduledAt === null ? null : (event.stateChangedAt.getTime() - scheduledAt.getTime()) / SECOND_MS;
 }
 
-// WHY: no run overtakes another on a line matched to runs (design D7), so two runs of a direction keep their order
+// WHY: no run overtakes another on a line matched to runs, so two runs of a direction keep their order
 // at the first stop both call at.
 function isRunBefore(earlier: ScheduledTrain, later: ScheduledTrain): boolean {
   for (const stop of earlier.stops) {

@@ -3,6 +3,8 @@ export interface JongroBusSighting {
   latitude: string;
   longitude: string;
   carNumber: string;
+  /** QUIRK(topis): the full plate, region and number, padded with spaces as TOPIS sends it. */
+  plainNo: string;
   /** QUIRK(topis): absent when the row names no turnaround stop, which the registry sync reads as no observation. */
   turnaroundStationId?: string;
   vehicleId: string;

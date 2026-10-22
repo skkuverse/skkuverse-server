@@ -3,7 +3,7 @@
  * station's arrivals through: a bus is listed when TOPIS gave it a text,
  * first bus first, each through the arrival rules with the route's seat count.
  * seatCountOf answers that seat count from the stored `jongro-route-attributes`
- * (move-reference-datasets D10), and a 503 for a route the revision lacks.
+ * (ADR 0013, D6), and a 503 for a route the revision lacks.
  */
 import { jongroArrivalBus, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import { routeAttributesFixture, storedRouteAttributesRepository, storedRouteAttributesService } from "../../../../__tests__/helpers/bus/route-attributes";
@@ -54,6 +54,20 @@ describe("BusRealtimeArrivalService.toArrivals", () => {
   it("lists nothing when neither bus has a text", () => {
     // Act & Assert
     expect(arrivalService().toArrivals([noArrivalBus(), noArrivalBus()], 18)).toEqual([]);
+  });
+});
+
+describe("BusRealtimeArrivalService.toTimedArrivals", () => {
+  it("pairs each bus with a text with its arrival and the seconds its time comes to", () => {
+    // Arrange
+    const first = jongroArrivalBus({ arrmsg: "곧 도착", traTime: 40, staOrd: 15, sectOrd: 15 });
+    const buses = [first, noArrivalBus({ arrmsg: "" })];
+
+    // Act
+    const timed = arrivalService().toTimedArrivals(buses, 18);
+
+    // Assert
+    expect(timed).toEqual([{ bus: first, arrival: arrivalService().toArrivals([first], 18)[0], travelSeconds: 40 }]);
   });
 });
 

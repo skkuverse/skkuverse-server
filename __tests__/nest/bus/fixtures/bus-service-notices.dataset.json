@@ -1,5 +1,5 @@
 {
-  "_about": "Revision 1 of the bus-service-notices dataset (skku_content.datasets, _id bus-service-notices): each service's notices and suspension, a copy of that revision as stored in skku_content and skku_content_dev by the push of 2026-10-19 18:13 UTC (2026-10-20 KST; skku_content_dev at 17:51 UTC), checked equal to skku_content read only on 2026-10-20, keys in stored order. Production serves the shuttle schedule routes and feeds the estimate pollers from it since PR #293 (move-editorial-datasets D7, D13). The data tool pushed this data with _about removed. Nothing trimmed.",
+  "_about": "Revision 1 of the bus-service-notices dataset (skku_content.datasets, _id bus-service-notices): each service's notices and suspension, a copy of that revision as stored in skku_content and skku_content_dev by the push of 2026-10-19 18:13 UTC (2026-10-20 KST; skku_content_dev at 17:51 UTC), checked equal to skku_content read only on 2026-10-20, keys in stored order. Production serves the shuttle schedule routes and feeds the estimate pollers from it since PR #293. The data tool pushed this data with _about removed. Nothing trimmed.",
   "services": {
     "campus-inja": {
       "notices": [

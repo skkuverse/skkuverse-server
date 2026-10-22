@@ -5,8 +5,7 @@
  * opening day, suspension and noData. The holiday lookup is stubbed per test.
  * Each service's notices and suspension come from an in-memory content store
  * holding revision 1 of `bus-service-notices`; a test that needs other content
- * stores it as the next revision before its first read (move-editorial-datasets
- * D9).
+ * stores it as the next revision before its first read.
  */
 
 jest.mock("../../infra/logger", () => ({
@@ -1032,7 +1031,7 @@ describe("BusScheduleService.resolveSmartSchedule before a stored suspension", (
   });
 });
 
-describe("BusScheduleService over the stored schedule content (move-editorial-datasets D9)", () => {
+describe("BusScheduleService over the stored schedule content", () => {
   const WEEKDAYS = { serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4, 5], entries: [{ index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null }] };
   const TRAFFIC_NOTICE = { style: "warning", text: "교통 통제로 늦어질 수 있어요" };
 
@@ -1260,7 +1259,7 @@ describe("자과캠 통학셔틀 resolution (built from scripts/data/commute-sch
   });
 });
 
-// WHY: a stop page lists the next three runs, so after Friday's last run it reads the week after the shown one (unify-bus-stops review F2).
+// WHY: a stop page lists the next three runs, so after Friday's last run it reads the week after the shown one.
 describe("BusScheduleService.resolveFollowingWeek", () => {
   const weekdays: BusScheduleDoc = {
     serviceId: "campus-inja",

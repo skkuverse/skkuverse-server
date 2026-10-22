@@ -1,6 +1,5 @@
 /**
- * Where a stop with no stored coordinates is drawn (unify-bus-stops design D17; spec bus-stop-arrivals, "Jongno
- * pole coordinates"): the stored route line's coordinates of the first of its poles that a line lists, matched
+ * Where a stop with no stored coordinates is drawn: the stored route line's coordinates of the first of its poles that a line lists, matched
  * by TOPIS id, or none.
  */
 import { capturedRoutePathOf } from "../../../__tests__/helpers/bus/bus-route-path";

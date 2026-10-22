@@ -9,7 +9,7 @@ audience: internal
 
 # Bus Stops API
 
-> The contract for `GET /bus/stops/:stopId/arrivals`, the stop page: one answer per stop with every route the server serves there, the Jongno arrivals, the HSSC buses on their way and the next shuttle runs, and for the `stopId` each realtime station of `/bus/config` links it by. Read it before building a screen on the response. How stops are identified and indexed is [explanation/bus-architecture.md](../explanation/bus-architecture.md); what each part's data is and how to edit it is [how-to/edit-bus-stops.md](../how-to/edit-bus-stops.md).
+> The contract for `GET /bus/stops/:stopId/arrivals`, the stop page: one answer per stop with every route the server serves there, each live line's arrivals as the live route serves them and the next shuttle runs, in one arrival shape ([ADR 0019](../decisions/0019-bus-live-api.md)), and for the `stopId` each realtime station of `/bus/config` links it by. Read it before building a screen on the response. How stops are identified and indexed is [explanation/bus-architecture.md](../explanation/bus-architecture.md); what each part's data is and how to edit it is [how-to/edit-bus-stops.md](../how-to/edit-bus-stops.md).
 
 ## Summary
 
@@ -18,10 +18,10 @@ audience: internal
 | Route | `GET /bus/stops/:stopId/arrivals` |
 | Auth | none |
 | Rate limit | `GeneralRateLimitMiddleware`, bound to `bus/stops` in `BusModule.configure` (`src/bus/bus.module.ts`) |
-| Wire type | `busStopArrivals` in `src/bus/stop-arrivals/bus-stop-arrivals.wire.ts`, published as `contracts/produced/bus-stop-arrivals.busStopArrivals.schema.json`, its Jongno arrivals as `bus.arrival` |
+| Wire type | `busStopArrivals` and `busStopArrivalsMeta` in `src/bus/stop-arrivals/bus-stop-arrivals.wire.ts`, published as `contracts/produced/bus-stop-arrivals.busStopArrivals.schema.json`; its arrivals and vehicles are `bus.arrival` and `bus.vehicle`, as on the live route ([bus-live-api.md](bus-live-api.md)) |
 | Controller | `src/bus/stop-arrivals/bus-stop-arrivals.controller.ts` |
-| Sources | the `bus-stops` dataset, the stored Jongno registry (`jongro_routes`) and route lines (`jongro_route_paths`), `bus_cache`, `jongro-route-attributes`, the stored timetables and `shuttle_eta`; no upstream call (unify-bus-stops design D7, D18) |
-| Envelope | `{ meta: { lang }, data }` through the global `ResponseInterceptor` |
+| Sources | the `bus-stops` dataset, the stored Jongno registry (`jongro_routes`) and route lines (`jongro_route_paths`), `bus_cache`, `jongro-route-attributes`, the stored timetables and `shuttle_eta`; no upstream call |
+| Envelope | `{ meta: { lang, serverNow }, data }` through the global `ResponseInterceptor` |
 | Tests | `__tests__/nest/bus/bus-stop-arrivals.routes.test.ts`, and the specs under `src/bus/stop-index/` and `src/bus/stop-arrivals/` |
 
 ## Stop ids
@@ -38,7 +38,7 @@ A pole a local stop aliases (`arsIds` in `bus-stops`, pushed only after an on-si
 
 ## Stop ids on the realtime stations
 
-Each station of a realtime group (`hssc`, `jongro02`, `jongro07`, `jongro08`) in `GET /bus/config` and `GET /bus/config/:groupId` carries `stopId`, its last field, the id of its stop page (unify-bus-stops design D12):
+Each station of a realtime group (`hssc`, `jongro02`, `jongro07`, `jongro08`) in `GET /bus/config` and `GET /bus/config/:groupId` carries `stopId`, its last field, the id of its stop page:
 
 | Station | `stopId` |
 | --- | --- |
@@ -59,27 +59,31 @@ Every other field keeps its value and order, and the schedule groups and `statio
 
 ## GET /bus/stops/:stopId/arrivals
 
-`Cache-Control: no-store`, like `/bus/realtime/data/:groupId`: the page carries live arrivals and positions, and the client polls it. Names and labels follow `Accept-Language` (ko, en, zh).
+`Cache-Control: no-store`, like `/bus/live/:groupId`: the page carries live arrivals and positions, and the client polls it. Names and labels follow `Accept-Language` (ko, en, zh). `meta.serverNow` is the server's clock, which the client's clock offset is read from, as on the live route.
 
 ```json
 {
-  "meta": { "lang": "ko" },
+  "meta": { "lang": "ko", "serverNow": "2026-10-20T14:10:00+09:00" },
   "data": {
     "stop": { "id": "seoul-01592", "name": "혜화역1번출구", "coords": { "lat": 37.5834729904, "lng": 127.0017632862 }, "arsIds": ["01592"] },
     "routes": [
       {
-        "groupId": "jongro07", "kind": "arrivals", "label": "종로 07", "stationIndex": 16, "towards": "혜화동로터리", "stationsVersion": "0346768f2b776f45",
-        "arrivals": [
-          { "minutes": 2, "stopsAway": 1, "state": "running", "isLastBus": false, "carNumber": "5538", "crowding": "relaxed", "passengerCount": 7, "message": "2분19초후[1번째 전]" }
-        ]
+        "kind": "live", "groupId": "jongro07", "label": "종로 07", "stationIndex": 16, "towards": "혜화동로터리",
+        "stationsVersion": "0346768f2b776f45", "updatedAt": "2026-10-20T14:09:55+09:00", "operation": "running",
+        "vehicles": [{ "id": "100000203", "plateNumber": "서울74사2703", "occupancy": { "level": "relaxed", "passengerCount": 9 }, "isLastBus": false, "position": { "...": "..." }, "trajectory": [] }],
+        "arrivals": [{
+          "status": "enRoute", "expectedArrivalAt": "2026-10-20T14:13:50+09:00", "expectedDepartureAt": null,
+          "scheduledArrivalAt": null, "scheduledDepartureAt": null, "basis": "provider",
+          "stopsAway": 2, "isLastBus": false, "vehicleId": "100000203", "providerText": "4분10초후[2번째 전]"
+        }]
       },
-      { "groupId": "jongro08", "kind": "arrivals", "label": "종로 08", "stationIndex": 22, "towards": "혜화동로터리", "stationsVersion": "52e82cc449046288", "arrivals": [] }
+      { "kind": "live", "groupId": "jongro08", "label": "종로 08", "stationIndex": 22, "towards": "혜화동로터리", "stationsVersion": "52e82cc449046288", "updatedAt": null, "operation": "noData", "vehicles": [], "arrivals": [] }
     ]
   }
 }
 ```
 
-The example is the fixture `contracts/produced/fixtures/bus-stop-arrivals.busStopArrivals/seoul-01592.json`. Beside it, `hssc-bus-lot.json` is a shuttle stop's page with its next runs, and `hssc-hyehwa-exit1.json` an HSSC stop's.
+The example is the fixture `contracts/produced/fixtures/bus-stop-arrivals.busStopArrivals/seoul-01592.json`, its vehicle's position trimmed. Beside it, `hssc-bus-lot.json` is a shuttle stop that aliases a 종로07 pole, with timetable and live entries, and `hssc-hyehwa-exit1.json` an HSSC stop with two buses on their way.
 
 ### The stop
 
@@ -96,26 +100,26 @@ A local stop's block is its `/bus/config` record (`screen.stops[]`) without `map
 
 ### Routes
 
-`routes` lists one entry per served route at the stop, in the order `/bus/config` lists its groups (`hssc`, `campus`, `commute`, then each Jongno route), then a group's services and route types. Only routes the server serves appear; no TOPIS route outside 종로02, 07 and 08 is listed. Each entry's `kind` names what it serves and fixes its fields, as a realtime bus's `kind` does: `arrivals` (a Jongno route), `approaching` (the HSSC line) or `schedule` (a shuttle). It is an extensible enum: a client switches on `kind` alone and skips an entry of a kind it does not know.
+`routes` lists one entry per served route at the stop, in the order `/bus/config` lists its groups (`hssc`, `campus`, `commute`, then each Jongno route), then a group's services and route types. Only routes the server serves appear; no TOPIS route outside 종로02, 07 and 08 is listed. Each entry's `kind` names what it serves and fixes its fields: `live` (a realtime line, Jongno or HSSC) or `timetable` (a shuttle). It is an open enum: a client switches on `kind` alone and skips an entry of a kind it does not know.
 
-The published schema (`contracts/produced/bus-stop-arrivals.busStopArrivals.schema.json`) is a closed `oneOf` over today's three kinds, so a client must not parse `routes` as one array against it: an entry of a kind added later would fail the whole page. Parse each entry on its own and leniently, keep the ones that parse, and skip an entry whose `kind` this build does not know, or that fails to parse, without dropping the stop block or the other entries.
+The published schema (`contracts/produced/bus-stop-arrivals.busStopArrivals.schema.json`) is a closed `oneOf` over today's two kinds, so a client must not parse `routes` as one array against it: an entry of a kind added later would fail the whole page. Parse each entry on its own and leniently, keep the ones that parse, and skip an entry whose `kind` this build does not know, or that fails to parse, without dropping the stop block or the other entries.
 
 | Entry | Fields |
 | --- | --- |
-| Jongno, `kind: "arrivals"` | `groupId` (`jongro07`), `label`, `stationIndex` (its index in the group's `/bus/config` stations), `towards` (the next station's name, `null` at the last index), `stationsVersion` (as the realtime route serves it) and `arrivals`: exactly that index's `stationEtas[].arrivals` in `/bus/realtime/data/:groupId` for the same stored state, a waiting vehicle's arrivals included |
-| HSSC, `kind: "approaching"` | `groupId: "hssc"`, `label`, `stationIndex` and `approaching`: one `{ stopsAway }` per bus on the line, nearest first: the positions from the bus forward to the stop round the loop (11 positions, the non-stop rows included), `0` for a bus at the stop, so a bus just past it is the farthest. The HSSC API gives positions only, so no minutes are served |
-| Shuttle, `kind: "schedule"` | `groupId` (`campus`, `commute`), `label` (the service's label), `serviceId`, `routeType`, `action` (`board` or `alight`), `status` (the smart schedule's: `active`, `suspended` or `noData`) and `next` |
+| A realtime line, `kind: "live"` | `groupId` (`hssc`, `jongro07`), `label`, `stationIndex` (its index in the group's `/bus/config` stations), `towards` (the next station with a stop: on a Jongno route the next station's name, `null` at the last index; on the HSSC loop the next station past the rotary passes), `stationsVersion` (a Jongno route's, `null` for HSSC), `updatedAt` and `operation` (the station's, `noData` where the live route states nothing), `vehicles` (those its arrivals name) and `arrivals`: exactly the live route's station entry at that index for the same stored state |
+| A shuttle, `kind: "timetable"` | `groupId` (`campus`, `commute`), `label` (the service's label), `serviceId`, `routeType`, `action` (`board` or `alight`), `operation` (the smart schedule's status: `running` when active, `suspended` or `noData`), `vehicles` (always empty) and `arrivals`, empty unless `operation` is `running` |
 
-`next` holds up to three runs, empty unless `status` is `active`:
+A timetable entry lists up to three runs, each an arrival ([bus-live-api.md](bus-live-api.md)) with `status: "scheduled"`, `stopsAway`, `vehicleId` and `providerText` null, and one more field:
 
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `date` | `YYYY-MM-DD` | The run's date in KST |
-| `departure` | `HH:mm` | The run's departure from its first stop |
-| `time` | `HH:mm` \| null | The run's time at this stop, from the timetable or, at an estimated stop, from the smart schedule's estimate; `null` when neither gives one. A time before `departure` is the next day's |
-| `estimated` | boolean | `true` when `time` comes from an arrival estimate |
+| Field | Meaning |
+| --- | --- |
+| `runDepartureAt` | The run's departure from its first stop: its identity, so a run with no time at this stop still sorts and labels |
+| `scheduledDepartureAt`, `expectedDepartureAt` | At a boarding stop: the timetable's time here, or the smart schedule's estimate when one was applied at an estimated stop |
+| `scheduledArrivalAt`, `expectedArrivalAt` | The same at an alighting stop |
+| `basis` | `estimate` when the time here is an estimate, else `timetable` |
+| `isLastBus` | `true` for the day's last run of the route type |
 
-A run counts while its time at this stop, or its departure when that time is `null`, is not before the current minute in Asia/Seoul, and runs are ordered by that same time. When the smart schedule's week holds fewer than three, `next` continues into the following week, as the smart schedule would show it: a Friday evening after the last run lists the next Monday's, and a day of no service or inside a suspension lists none. Boarding and drop-off stops are both served.
+A run is listed while its time at this stop is not before the current minute in Asia/Seoul (at an alighting stop, its estimated arrival), or its departure when no time is known there, and runs are ordered by that same time. A time before the departure is the next day's. When the smart schedule's week holds fewer than three, the runs continue into the following week, as the smart schedule would show it: a Friday evening after the last run lists the next Monday's, and a day of no service or inside a suspension lists none. Boarding and drop-off stops are both served.
 
 ### Errors
 
@@ -125,7 +129,7 @@ A run counts while its time at this stop, or its departure when that time is `nu
 | `503` | `BUS_STOPS_UNAVAILABLE` | This replica has never read a good `bus-stops` value; no `Cache-Control` |
 | `503` | `JONGRO_REGISTRY_UNAVAILABLE` | A `seoul-` pole is asked for while a Jongno route's stored registry cannot be read, and neither a readable route nor an alias names the pole |
 
-A Jongno route whose stored registry cannot be read is left out of the stop index, logged at error as `bus.stop_index.registry_unread` at most once a minute, and read again at most every `REGISTRY_RETRY_MS`; an aliased pole on it still answers its local stop's page. A route whose other source cannot be read (its attributes for a Jongno entry, the timetable for a shuttle entry) is left out of `routes` and logged at error as `bus.stop_arrivals.route_left_out`, at most once a minute per route. Either way the rest of the page is served with `200`. A Jongno entry whose realtime view was placed by another stations version than the index (a TOPIS sync between the two reads) is left out of that one response.
+A Jongno route whose stored registry cannot be read is left out of the stop index, logged at error as `bus.stop_index.registry_unread` at most once a minute, and read again at most every `REGISTRY_RETRY_MS`; an aliased pole on it still answers its local stop's page. A route whose other source cannot be read (its attributes for a Jongno entry, the timetable for a shuttle entry) is left out of `routes` and logged at error as `bus.stop_arrivals.route_left_out`, at most once a minute per route. Either way the rest of the page is served with `200`. A Jongno entry whose live answer was placed by another stations version than the index (a TOPIS sync between the two reads) is left out of that one response.
 
 ## Freshness and cost
 
@@ -133,7 +137,7 @@ A Jongno route whose stored registry cannot be read is left out of the stop inde
 | --- | --- |
 | A `bus-stops` push | within a minute (the dataset's TTL), which rebuilds the stop index |
 | A TOPIS stop list change | within the registry's `REGISTRY_TTL_MS`: a pole TOPIS adds gets a page with its Korean name, a pole it removes answers `404` |
-| Jongno and HSSC positions | `bus_cache`'s `MEMORY_TTL_MS` per replica, the realtime route's own read |
+| Jongno and HSSC positions and arrivals | `bus_cache`'s `MEMORY_TTL_MS` per replica, the live route's own read |
 | Shuttle runs and estimates | the smart schedule's week cache and estimate cache, the smart route's own reads |
 | A pole's coordinates | the route lines' `ROUTE_PATHS_TTL_MS` |
 

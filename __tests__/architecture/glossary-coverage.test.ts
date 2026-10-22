@@ -1,6 +1,6 @@
 /**
  * A module doc's glossary, context and flowchart cannot drift from the code
- * (refactor design D16; openspec module-docs spec). For each feature module:
+ * (ADR 0010, D14). For each feature module:
  *
  *   - every `QUIRK(<system>)` in a non-spec file under `src/<m>/` has `<system>`
  *     in the Context table's Quirk tag column, and a row with no quirk holds —;

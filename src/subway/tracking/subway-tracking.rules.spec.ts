@@ -1,5 +1,5 @@
 /**
- * The per-train event history (design D3): train numbers as four digits, progress as an ordinal along the
+ * The per-train event history: train numbers as four digits, progress as an ordinal along the
  * train's direction, the newest of one response's duplicate rows, regressions, older rows and rows over
  * 5 minutes ahead dropped, the earlier time winning for the same progress (so a train-map row keeps the
  * crawl that first showed it), the 15-minute hold for a missing train, and direction from destination and

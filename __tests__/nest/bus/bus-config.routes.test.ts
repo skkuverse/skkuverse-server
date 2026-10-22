@@ -4,9 +4,7 @@
  * registry, whose repository is an in-memory fake holding the routes stored on 2026-10-17. Asserts group shape, 404
  * GROUP_NOT_FOUND, 304, per-language ETag difference, and the hssc (11 stations,
  * lastStationIndex 10, refreshInterval 10) / jongro07 (22 stations,
- * refreshInterval 25) screen contents, and from wave 4 of unify-bus-stops
- * (spec bus-stops "Realtime stations carry their stop id") each realtime
- * station's `stopId`, last, in the group and the all-groups body.
+ * refreshInterval 25) screen contents, and each realtime station's `stopId`, last, in the group and the all-groups body.
  */
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -267,7 +265,7 @@ describe("GET /bus/config/:groupId refresh", () => {
   });
 });
 
-// WHY: the Jongro stations come from the registry now (improve-jongro-realtime D10, D7): each Jongro group names its
+// WHY: the Jongro stations come from the registry: each Jongro group names its
 // stations version, a stored change reaches a revalidating client as a 200, and a missing route is a 503.
 describe("GET /bus/config and the registry", () => {
   async function withCacheOff(run: () => Promise<void>): Promise<void> {
@@ -346,7 +344,7 @@ describe("GET /bus/config and the registry", () => {
   });
 });
 
-// WHY: the app draws a stop's map card exactly when `map` is there (hide-commute-stop-maps).
+// WHY: the app draws a stop's map card exactly when `map` is there (owner, 2026-10-18).
 describe("GET /bus/config stop maps", () => {
   type Stop = { id: string; map?: unknown };
 

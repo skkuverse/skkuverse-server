@@ -15,7 +15,7 @@ export class BusRoutePathRepository {
     return result.upsertedCount === 1;
   }
 
-  // WHY: three documents, written only by this module, so the read is typed, not parsed (add-jongro-route-lines D2).
+  // WHY: three documents, written only by this module, so the read is typed, not parsed.
   async listRoutePaths(): Promise<JongroRoutePathDocument[]> {
     return this.routePaths().find({}, { projection: ROUTE_PATH_PROJECTION, maxTimeMS: HOT_READ_MAX_TIME_MS }).toArray();
   }

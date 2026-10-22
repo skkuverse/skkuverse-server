@@ -3,7 +3,7 @@ title: Holidays Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-17
+last-updated: 2026-10-22
 audience: internal
 ---
 
@@ -65,7 +65,7 @@ None.
 
 ## Related
 
-- [Public holidays spec](../../openspec/changes/archive/2026-10-17-add-subway-arrivals/specs/public-holidays/spec.md): the required behavior
+- [ADR 0017, D9](../decisions/0017-subway-arrivals.md): why the official calendar, never edited by hand
 - [Bus architecture](bus-architecture.md): the shuttle schedules that read the holiday name
 - [ADR 0010](../decisions/0010-server-architecture.md): the module shape
 - [Docs index](../README.md): writing rules

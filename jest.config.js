@@ -1,4 +1,4 @@
-// Every worker runs in UTC, as CI does (harden-test-suite design D5): a test
+// Every worker runs in UTC, as CI does (ADR 0011, D5): a test
 // that leans on the host zone fails on a KST laptop too, instead of passing by
 // coincidence with production. Workers inherit this env; Node re-reads TZ on assignment.
 process.env.TZ = "UTC";
@@ -21,9 +21,10 @@ module.exports = {
   // matcher would treat each helper module as a test and fail it for having zero it() blocks.
   // Unit tests sit next to their sources as src/**/*.spec.ts (Jest's default
   // testMatch finds them). `npm run build` leaves a dist/ copy of src/, which
-  // must never be collected or resolved as a second module tree.
-  testPathIgnorePatterns: ["/node_modules/", "/__tests__/helpers/", "/dist/"],
-  modulePathIgnorePatterns: ["/dist/"],
+  // must never be collected or resolved as a second module tree, and neither
+  // must a Claude Code isolation worktree, a full checkout under .claude/worktrees/.
+  testPathIgnorePatterns: ["/node_modules/", "/__tests__/helpers/", "/dist/", "/.claude/worktrees/"],
+  modulePathIgnorePatterns: ["/dist/", "/.claude/worktrees/"],
   collectCoverage: true,
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov"],

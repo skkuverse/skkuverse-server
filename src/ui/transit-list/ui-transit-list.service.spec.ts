@@ -39,6 +39,9 @@ function busGroup(id: string, visibility: BusGroupVisibility, label = id): BusGr
       lastStationIndex: 0,
       stations: [],
       features: [],
+      liveEndpoint: `/bus/live/${id}`,
+      isLoop: false,
+      capabilities: { positionSource: "gps", occupancy: true, plateNumber: true, lastBus: true },
     },
   };
 }

@@ -23,7 +23,7 @@ export const STOP_SERVICE_IDS_BY_GROUP_ID = {
 } as const;
 
 // QUIRK(hssc): toLinearSequence (src/bus/realtime/hssc) maps the API's circular stops onto this many positions,
-// so the stored HSSC line holds exactly as many (unify-bus-stops design D3).
+// so the stored HSSC line holds exactly as many.
 export const HSSC_POSITION_COUNT = 11;
 
 // WHY: the live estimate poller runs every 60 s; an app refreshing estimates faster would only read its HTTP cache.

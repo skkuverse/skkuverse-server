@@ -1,5 +1,5 @@
 /**
- * The Seoul API's per-line decisions (design D6): an arrival row counts only
+ * The Seoul API's per-line decisions: an arrival row counts only
  * while its `recptnDt` lies from 180 s before the fetch to 30 s after it, which
  * keeps out the Shinbundang line's rows dated minutes ahead and the
  * Suin–Bundang line's frozen ones;

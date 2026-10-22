@@ -137,7 +137,7 @@ describe("BusEtaSmartService.getSmart", () => {
   });
 });
 
-// WHY: the stop page is no-store and serves no ETag, so it must not hash each service's week per request (unify-bus-stops review F5).
+// WHY: the stop page is no-store and serves no ETag, so it must not hash each service's week per request.
 describe("BusEtaSmartService.resolveSmart", () => {
   it("answers the smart view's body, estimates applied, with no ETag or Cache-Control", async () => {
     // Act
@@ -164,7 +164,7 @@ describe("BusEtaSmartService.resolveSmart", () => {
   });
 });
 
-// WHY: a stop page that finds fewer than three runs in the shown week continues into the next one (unify-bus-stops review F2).
+// WHY: a stop page that finds fewer than three runs in the shown week continues into the next one.
 describe("BusEtaSmartService.resolveFollowingWeek", () => {
   const PREDICTED: ShuttleEtaDoc = {
     ...LIVE,

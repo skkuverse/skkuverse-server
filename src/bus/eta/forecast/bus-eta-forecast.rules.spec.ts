@@ -2,10 +2,10 @@
  * The forecast rules: toTmapOffsets reads the travel time to each stop from a
  * TMAP prediction (a synthetic response shaped after the live probe of
  * 2026-10-09; TMAP's terms forbid keeping real responses past 24 h), ignoring
- * the waypoint echo after E, and rejects the cases of spec "Implausible routes
- * are rejected". reusableFixedDates and toReusableFixedByRun choose the fixed
+ * the waypoint echo after E, and rejects implausible
+ * routes. reusableFixedDates and toReusableFixedByRun choose the fixed
  * value a bus-lane run's prediction reuses: the latest of the same service,
- * route type, KST weekday and departure time (design D7).
+ * route type, KST weekday and departure time (ADR 0015, D8).
  */
 import fs from "fs";
 import path from "path";

@@ -5,7 +5,7 @@
  * trainset keeps its run on the next tick while a new instance, as after a restart, starts with none; the
  * events no run takes are logged as `subway.matching.unmatched`, at most once every 10 minutes per line, with
  * how many lines were suppressed. The timetable is synthetic, hand-written in the shape
- * scripts/subway-timetable/convert.py writes for the Shinbundang line (design D8), on a shortened route.
+ * scripts/subway-timetable/convert.py writes for the Shinbundang line, on a shortened route.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 

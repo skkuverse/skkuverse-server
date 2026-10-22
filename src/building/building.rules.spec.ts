@@ -47,7 +47,7 @@ describe("building brand minters", () => {
 
   it("isSkkuId accepts every production id, 1 to 88", () => {
     // Arrange
-    // A business rule such as "at least 100" in the minter would reject them all and stop the sync (design D3).
+    // A business rule such as "at least 100" in the minter would reject them all and stop the sync (ADR 0010, D4).
     const productionIds = Array.from({ length: 88 }, (_, i) => i + 1);
 
     // Act

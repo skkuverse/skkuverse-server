@@ -3,7 +3,7 @@ title: Resync the Jongro Registry
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-19
+last-updated: 2026-10-22
 audience: internal
 ---
 
@@ -89,5 +89,5 @@ To serve the route before then, insert it by hand:
 ## Related
 
 - [Bus architecture](../explanation/bus-architecture.md): the registry, its glossary terms and invariants
-- `openspec/changes/improve-jongro-realtime/design.md`, decisions D6 to D10
+- [ADR 0014](../decisions/0014-jongro-realtime-from-topis.md), D4: why the sync follows the arrival list
 - [ADR 0012](../decisions/0012-runtime-roles.md), D3: no process seeds at boot; the poller bootstraps a missing route

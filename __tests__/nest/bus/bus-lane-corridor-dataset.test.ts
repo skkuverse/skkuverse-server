@@ -1,7 +1,6 @@
 /**
  * The bus-lane corridor's round trip between its one writer and its reader,
- * over a real `mongod` (move-reference-datasets task 3.5, design D9; ADR 0013,
- * D3 and D6): what `npm run data` stores through scripts/lib/datasets/store.js,
+ * over a real `mongod` (ADR 0013, D2, D3 and D6): what `npm run data` stores through scripts/lib/datasets/store.js,
  * BusEtaLaneRepository reads back at the stored revision, as the server's
  * schema parses it, every centerline vertex and probe route in its order. A
  * stored document the schema refuses, or none at all, reads as `null`, so the

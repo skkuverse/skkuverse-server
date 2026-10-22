@@ -1,6 +1,6 @@
 /**
  * Characterization of the `bus_cache` read path over a real `mongod`
- * (harden-test-suite task 6.3, design D6), in the production topology: a poller
+ * (ADR 0011, D6), in the production topology: a poller
  * process writes what it fetched to `bus_cache`, and an api replica, whose own
  * pollers never run, serves the realtime routes from it.
  *
@@ -63,7 +63,7 @@ const JONGRO07_LOC_BODY = {
   msgBody: {
     itemList: [
       // WHY: vehId, sectOrd, sectDist, fullSectDist, stopFlag and dataTm are getBusPosByRtid fields the client reads
-      // since add-jongro-bus-positions; their shape follows __tests__/nest/bus/fixtures/topis-jongro-positions.json.
+      // since PR #278; their shape follows __tests__/nest/bus/fixtures/topis-jongro-positions.json.
       {
         ...{ lastStnId: "100900197", gpsX: "126.998", gpsY: "37.587", tmX: null, tmY: null, trnstnid: "100900028", plainNo: "서울74사5537", busType: "1" },
         ...{ vehId: "100000103", sectOrd: "6", sectDist: "0.1", fullSectDist: "0.25", stopFlag: "0", dataTm: "20261020095930" },
@@ -147,10 +147,13 @@ beforeAll(async () => {
     .PollerRegistryService;
   busCache = db.getClient().db(config.mongo.dbName).collection(config.mongo.collections.busCache);
   // WHY: the Jongro realtime groups read each route's seat count from revision 1 of jongro-route-attributes,
-  // stored as `npm run data` stores it (move-reference-datasets D10).
+  // stored as `npm run data` stores it (ADR 0013, D2).
   const store = require("../../../scripts/lib/datasets/store");
   const { routeAttributesFixture } = require("../../helpers/bus/route-attributes") as RouteAttributesHelpers;
   await store.create(db.getClient().db(config.content.dbName), "jongro-route-attributes", routeAttributesFixture(), { by: "characterization@example.com", now: NOW });
+  // WHY: the live route names each station's stop from bus-stops (ADR 0019, D5), stored as `npm run data` stores it.
+  const { busStopsFixture } = require("../../helpers/bus/bus-stops") as typeof import("../../helpers/bus/bus-stops");
+  await store.create(db.getClient().db(config.content.dbName), "bus-stops", busStopsFixture(), { by: "characterization@example.com", now: NOW });
 }, MONGOD_START_TIMEOUT_MS);
 
 afterAll(async () => {
@@ -167,7 +170,7 @@ beforeEach(async () => {
   upstream.hssc = HSSC_ITEMS;
   upstream.requests = [];
   await clearCollections(db.getClient().db(config.mongo.dbName));
-  // WHY: no boot writes the registry any more (isolate-api-from-pollers D2), so the stored routes are a fixture.
+  // WHY: no boot writes the registry (ADR 0012, D3), so the stored routes are a fixture.
   const storedJongroRouteDocuments = (require("../../helpers/bus/bus-registry") as { storedJongroRouteDocuments: StoredRoutes }).storedJongroRouteDocuments;
   await db.getClient().db(config.mongo.dbName).collection<JongroRouteDocument>(config.mongo.collections.jongroRoutes).insertMany(storedJongroRouteDocuments(CLOCK.now()));
   const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller");
@@ -260,12 +263,12 @@ describe("bus_cache between a poller process and an api replica", () => {
     expect(res.status).toBe(200);
     expect(res.headers["cache-control"]).toBe("no-store");
     expect(res.body).toEqual({
-      // WHY: serverNow is what add-jongro-bus-trajectory adds to meta (task 2.2), a deliberate pin change.
+      // WHY: serverNow is what PR #285 adds to meta, a deliberate pin change.
       meta: { lang: "ko", currentTime: "10:00 AM", totalBuses: 2, serverNow: "2026-10-20T10:00:00+09:00" },
       data: {
         groupId: "hssc",
         buses: [
-          // WHY: kind is what add-jongro-bus-positions adds to every bus (task 2.2).
+          // WHY: kind is what PR #278 adds to every bus.
           { stationIndex: 1, carNumber: "0000", estimatedTime: 30, kind: "estimated" },
           { stationIndex: 7, carNumber: "0000", estimatedTime: 120, kind: "estimated" },
         ],
@@ -317,7 +320,7 @@ describe("bus_cache between a poller process and an api replica", () => {
       "jongro_locations_07",
       "jongro_stations_07",
     ]);
-    // WHY: the stored arrival rows gained each row's two buses (improve-jongro-realtime task 2.2); every other
+    // WHY: the stored arrival rows gained each row's two buses (PR #275); every other
     // field keeps the value it had.
     const bus5537 = { sectOrd: 0, isLast: false, plainNo: "서울74사5537", vehId: "100000103", rerideDiv: 2, rerideNum: 9 };
     const noBus = (staOrd: number, arrmsg: string) => ({
@@ -369,7 +372,7 @@ describe("bus_cache between a poller process and an api replica", () => {
     });
     expect(res.body.data).toEqual({
       groupId: "jongro07",
-      // WHY: kind and tracked are what add-jongro-bus-positions adds (task 2.2); crowding is the ord 1 row's, the first
+      // WHY: kind and tracked are what PR #278 adds; crowding is the ord 1 row's, the first
       // naming vehicle 100000103, and no row is its next stop's (ord 7).
       buses: [
         {
@@ -388,7 +391,7 @@ describe("bus_cache between a poller process and an api replica", () => {
             progress: 0.4,
             segmentMeters: 250,
             nextStopInSec: null,
-            // WHY: trajectory is what add-jongro-bus-trajectory adds (task 2.2), a deliberate pin change: the observation,
+            // WHY: trajectory is what PR #285 adds, a deliberate pin change: the observation,
             // then the next stop from its 150 m left at 4 m/s, since no row names the vehicle there.
             trajectory: [
               { at: "2026-10-20T09:59:30+09:00", s: 5.4 },
@@ -397,12 +400,12 @@ describe("bus_cache between a poller process and an api replica", () => {
           },
         },
       ],
-      // WHY: each station's arrivals is the field improve-jongro-realtime adds (task 3.1); eta is as before.
+      // WHY: each station's arrivals is the field PR #275 adds; eta is as before.
       stationEtas: [
         { stationIndex: 0, eta: "3분후[2번째 전]", arrivals: [running5537(3, 1, "3분후[2번째 전]"), WAITING_NO_VEHICLE] },
         { stationIndex: 1, eta: "5분후[3번째 전]", arrivals: [running5537(5, 2, "5분후[3번째 전]"), WAITING_NO_VEHICLE] },
       ],
-      // WHY: the registry's stations version (improve-jongro-realtime 5.4), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
+      // WHY: the registry's stations version (PR #276), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
       stationsVersion: "0346768f2b776f45",
     });
   });
@@ -413,7 +416,7 @@ describe("bus_cache between a poller process and an api replica", () => {
 
     // Assert
     expect(hssc.body.data).toEqual({ groupId: "hssc", buses: [], stationEtas: [] });
-    // WHY: stationsVersion is the registry's (improve-jongro-realtime 5.4), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
+    // WHY: stationsVersion is the registry's (PR #276), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
     expect(jongro.body.data).toEqual({ groupId: "jongro07", buses: [], stationEtas: [], stationsVersion: "0346768f2b776f45" });
     expect(upstream.requests).toEqual([]);
   });
@@ -493,5 +496,68 @@ describe("bus_cache when the upstreams list no bus", () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+// WHY: add-bus-live-api D14 freezes GET /bus/realtime/data/:groupId, so its body is pinned byte for byte from the
+// poller's tick before the live route reshapes what bus_cache keeps (the HSSC layover window, the vehicle plate).
+describe("the deprecated realtime route's body, byte for byte", () => {
+  const LAYOVER_ITEMS = [
+    ...HSSC_ITEMS,
+    // A bus laying over at the turnaround for 5 minutes, past the old route's 3-minute window.
+    { line_no: "3", inout: "ENTERED", stop_no: "5", seq: "5", stop_name: "농구장정류소", get_date: "2026-10-20 오전 9:55:00" },
+    // A bus laying over there for 2 minutes, inside it.
+    { line_no: "4", inout: "ENTERED", stop_no: "5", seq: "5", stop_name: "농구장정류소", get_date: "2026-10-20 오전 9:58:00" },
+    // A bus 12 minutes past its last event elsewhere, outside the 10-minute window.
+    { line_no: "5", inout: "LEFT", stop_no: "8", seq: "8", stop_name: "올림픽기념국민생활관", get_date: "2026-10-20 오전 9:48:00" },
+  ];
+
+  it("serves the HSSC buses of a tick with a layover as it did before the live route", async () => {
+    // Arrange
+    upstream.hssc = LAYOVER_ITEMS;
+    await tick("hssc");
+
+    // Act
+    const res = await get("/bus/realtime/data/hssc");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(
+      '{"meta":{"lang":"ko","currentTime":"10:00 AM","totalBuses":3,"serverNow":"2026-10-20T10:00:00+09:00"},"data":{"groupId":"hssc","buses":[{"stationIndex":1,"carNumber":"0000","estimatedTime":30,"kind":"estimated"},{"stationIndex":7,"carNumber":"0000","estimatedTime":120,"kind":"estimated"},{"stationIndex":0,"carNumber":"0000","estimatedTime":120,"kind":"estimated"}],"stationEtas":[]}}',
+    );
+  });
+
+  // WHY: the poller keeps a layover for the live route's 15 minutes (ADR 0019, D8); the old route still leaves out past 3.
+  it("serves the 5-minute layover the old route leaves out on the live route", async () => {
+    // Arrange
+    upstream.hssc = LAYOVER_ITEMS;
+    await tick("hssc");
+
+    // Act
+    const res = await get("/bus/live/hssc");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.vehicles.map((vehicle: { id: string; position: { status: string } }) => [vehicle.id, vehicle.position.status])).toEqual([
+      ["1", "inTransit"],
+      // WHY: line 2 entered seq 1, a Hyehwa Rotary pass where the shuttle boards no one, so it is passing.
+      ["2", "inTransit"],
+      ["3", "waitingToDepart"],
+      ["4", "waitingToDepart"],
+    ]);
+  });
+
+  it("serves a Jongno tick as it did before the live route", async () => {
+    // Arrange
+    await tick("jongro-07");
+
+    // Act
+    const res = await get("/bus/realtime/data/jongro07");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(
+      '{"meta":{"lang":"ko","currentTime":"10:00 AM","totalBuses":1,"serverNow":"2026-10-20T10:00:00+09:00"},"data":{"groupId":"jongro07","buses":[{"stationIndex":5,"carNumber":"5537","estimatedTime":0,"latitude":"37.587","longitude":"126.998","kind":"tracked","tracked":{"status":"running","vehicleId":"100000103","observedAt":"2026-10-20T09:59:30+09:00","crowding":"relaxed","isLastBus":false,"progress":0.4,"segmentMeters":250,"nextStopInSec":null,"trajectory":[{"at":"2026-10-20T09:59:30+09:00","s":5.4},{"at":"2026-10-20T10:00:08+09:00","s":6}]}}],"stationEtas":[{"stationIndex":0,"eta":"3분후[2번째 전]","arrivals":[{"minutes":3,"stopsAway":1,"state":"running","isLastBus":false,"carNumber":"5537","crowding":"relaxed","passengerCount":9,"message":"3분후[2번째 전]"},{"minutes":null,"stopsAway":null,"state":"waiting","isLastBus":false,"carNumber":null,"crowding":null,"passengerCount":null,"message":"출발대기"}]},{"stationIndex":1,"eta":"5분후[3번째 전]","arrivals":[{"minutes":5,"stopsAway":2,"state":"running","isLastBus":false,"carNumber":"5537","crowding":"relaxed","passengerCount":9,"message":"5분후[3번째 전]"},{"minutes":null,"stopsAway":null,"state":"waiting","isLastBus":false,"carNumber":null,"crowding":null,"passengerCount":null,"message":"출발대기"}]}],"stationsVersion":"0346768f2b776f45"}}',
+    );
   });
 });

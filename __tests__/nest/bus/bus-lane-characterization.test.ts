@@ -1,6 +1,6 @@
 /**
- * Characterization of the live ETA tick's bus-lane estimates (move-reference-datasets
- * task 2.3, design D14): every live value one `shuttle-eta-live` tick stores in
+ * Characterization of the live ETA tick's bus-lane estimates (ADR 0011, D6):
+ * every live value one `shuttle-eta-live` tick stores in
  * `shuttle_eta`, with its travel model and corridor diagnostics, the probe spans it
  * records in `bus_lane_spans`, and the points it sends NAVER and the routes it asks
  * TOPIS for. The app boots every module `src/app.module.ts` imports under

@@ -3,7 +3,7 @@ title: Subway Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-20
+last-updated: 2026-10-22
 audience: internal
 ---
 
@@ -185,14 +185,14 @@ Adding a provider touches a sibling sub-module named after its jurisdiction, hol
 
 ## Open questions
 
-- Whether `recptnDt` is an event time on line `1`, and any offset to apply, waits on the first days of `subway_events` (the [add-subway-arrivals change](../../openspec/changes/archive/2026-10-17-add-subway-arrivals/design.md), Risks).
-- A countdown's divergence from the estimate is logged, not stored with the prediction as the design's countdown decision says: the report compares `live` and `estimated` only across trains.
+- Whether `recptnDt` is an event time on line `1`, and any offset to apply, waits on the first days of `subway_events`.
+- A countdown's divergence from the estimate is logged, not stored with the prediction: the report compares `live` and `estimated` only across trains.
 - Destinations are the upstreams' Korean names; the app has no localized name for a destination yet.
 
 ## Related
 
 - [Subway API reference](../reference/subway-api.md): the route's contract
-- [Subway arrivals spec](../../openspec/changes/archive/2026-10-17-add-subway-arrivals/specs/subway-arrivals/spec.md): the required behavior
+- [ADR 0017](../decisions/0017-subway-arrivals.md): the sources, budget and accuracy policy
 - [Holidays architecture](holidays-architecture.md): the public holidays that choose a timetable's day type
 - [Logging reference](../reference/logging.md): the subway pollers' own lines
 - (An operations detail is left out of the public history.)

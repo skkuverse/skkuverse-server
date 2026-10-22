@@ -1,7 +1,7 @@
 /**
- * The baseline shuttle_eta document (design D9): a TMAP prediction, keyed by
+ * The baseline shuttle_eta document: a TMAP prediction, keyed by
  * run and source, expires 24 hours after its fetch. A prediction that reuses a
- * fixed value (design D7) is that value's NAVER offsets, names it in
+ * fixed value (ADR 0015, D8) is that value's NAVER offsets, names it in
  * `derivedFrom`, and lives 24 hours from the refresh too.
  */
 import type { EtaRun } from "../bus-eta.types";

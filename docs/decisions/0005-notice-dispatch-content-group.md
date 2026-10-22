@@ -1,64 +1,44 @@
 ---
-title: 교차 게시 공지는 회차 내 content 그룹으로 1회만 발송
+title: A Cross-posted Notice Is Pushed Once per Sweep, by Content Group
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-08-04
+last-updated: 2026-10-22
 audience: internal
 ---
 
-# 0005. 교차 게시 공지는 회차 내 content 그룹으로 1회만 발송
+# 0005. A Cross-posted Notice Is Pushed Once per Sweep, by Content Group
 
-## Status
-
-Accepted — 2026-08-04 ([issue #75](https://github.com/spencer0124/skkuverse-server/issues/75)).
+> Why the dispatcher merges identical copies of one article into one Cloud Function call, and what that costs. Decided 2026-08-04 ([issue #75](https://github.com/spencer0124/skkuverse-server/issues/75)).
 
 ## Context
 
-성균관대 CMS는 **하나의 글을 여러 게시판 뷰로 동시에 노출**한다. 크롤러가 소유한 `(articleNo, sourceId)` unique 인덱스([0002](0002-notices-read-only-ownership.md)) 때문에 그 글은 Mongo 문서 N개가 되고, dispatcher가 **문서 단위로** Cloud Function을 N번 호출했다. 두 게시판을 함께 구독한 유저는 같은 글 알림을 N번 받았다.
+SKKU's CMS shows one article on several boards. The crawler's `(articleNo, sourceId)` key ([ADR 0002](0002-notices-read-only-ownership.md)) makes each a separate document, and one Cloud Function call per document sent a subscriber of two boards the same push twice. Measured on prod (6,868 notices, 2026-08-04):
 
-prod(`skku_notices.notices`, 6,868 docs) 실측(2026-08-04)으로 확인한 것:
-
-- 교차 게시 계열이 **둘**이다. 이슈에 보고된 통합게시판 **8-way**(`skku-main` + `skku-notice02~08`)와, **이슈에 없던 단과대/학과 보드 16-way**(`art·sscience·scos·liberalarts·coe·ecostat·sport·cscience` × `undergrad`+`grad`). 예: articleNo 159941.
-- 형제 문서는 `title`·`contentHash`가 **완전히 일치**한다. 같은 CMS의 필터 뷰라 HTML이 byte-identical이고 `contentHash`는 크롤러가 저장하는 그 HTML의 sha256이다.
-- 형제는 5~15초 안에 함께 크롤된다 (같은 사이클).
-- CF는 topic 목록으로 `devices.where('subscribedTopics','array-contains-any', topics)` **단일 쿼리**를 돌린다 — 기기가 여러 topic을 구독해도 1번만 반환된다. **즉 호출을 1회로 합치면 중복이 생길 자리가 없다.** 중복은 topic을 N번의 호출로 쪼갠 것이 원인이었다.
+- Two cross-post families: the 8-way 통합게시판 (`skku-main` + `skku-notice02`–`08`) and a 16-way family nobody had reported (eight colleges × `undergrad`/`grad`; e.g. articleNo 159941).
+- Copies share `title` and `contentHash` exactly: they are filtered views of one CMS page, so the HTML is byte-identical, and the hash is the crawler's sha256 of it.
+- Copies are crawled within 5–15 s of each other, in one cycle.
+- The Cloud Function queries `devices` with one `array-contains-any` over all topics of a call, so a device subscribed to several returns once. One call cannot duplicate; the duplicates came from splitting topics over calls.
 
 ## Decision
 
-**같은 sweep 회차 안에서 `title`(trim) + `contentHash`가 완전히 일치하는 문서를 한 그룹으로 묶어, topic union으로 CF를 1번만 호출한다.** (`src/notices/notices.rules.ts`의 `dedupKeyOf` + `src/notices/dispatch/notices-dispatch.service.ts`의 `dispatchGroup`)
-
-- **content 기반이라 소스별 분기가 없다.** 8-way·16-way는 물론 내일 새로 생기는 교차 게시 보드도 코드 변경 없이 잡힌다. 크롤러 변경 0, 스키마·인덱스·필드 추가 0.
-- **완전 일치만 병합한다.** 퍼지 매칭 없음. `contentHash`가 없으면(상세 fetch 실패) `_id` 기반 identity 키로 떨어져 1인 그룹이 된다 — 추측해서 병합하느니 병합을 포기한다. **오탐으로 정상 공지를 삼키는 것이 중복 알림보다 나쁘다.**
-- sweep은 **claim을 모두 끝낸 뒤 그룹핑**한다. 기존처럼 한 건씩 claim→발송하면 형제를 보기 전에 이미 발송돼 병합이 불가능하다. `sweepBatchCap`은 여전히 **문서 수** 상한(그룹 수 아님)이라 blast radius는 그대로다.
+- **Within one sweep, documents with the same trimmed `title` and `contentHash` form a group, and the group gets one call with the union of its topics** (`dedupKeyOf`, `dispatchGroup`). Content-based, so a new cross-post family needs no code.
+- **Exact match only.** No fuzzy matching; a document without a hash is a group of one. Swallowing a real notice by a false merge is worse than a duplicate push.
+- **Claim the batch, then group.** Claiming and sending one at a time sends a copy before its siblings are seen. `sweepBatchCap` still counts documents, not groups.
 - (An operations detail is left out of the public history.)
 
-### 기각한 대안
+Rejected:
 
-| 대안 | 기각 사유 |
-| --- | --- |
-| `notice_dispatch_log` 이력 컬렉션 + canonical key | 회차 밖 형제까지 잡지만 새 컬렉션·마이그레이션·정합성 관리 비용이 증상 대비 과하다. 로그로 실측한 뒤 필요해지면 재검토 |
-| 교차 게시 family를 상수로 하드코딩 | 보드가 늘 때마다 서버 배포가 필요하고, 16-way 계열처럼 아무도 모르던 family를 놓친다 |
-| 크롤러가 canonical 문서 1개만 저장 | `(articleNo, sourceId)` 소유권([0002](0002-notices-read-only-ownership.md))과 소스별 탭 목록 기능을 동시에 깬다 |
-| CF를 그대로 두고 topic을 ≤10씩 쪼개 여러 번 호출 | 쪼갠 호출이 곧 중복의 원인 — 16-way가 16번 대신 2번이 될 뿐 |
+- A `notice_dispatch_log` with a canonical key: catches siblings across sweeps, but a collection, a migration and its consistency cost more than the symptom. Revisit only if measured.
+- Hard-coding the cross-post families: a deploy per new board, and it misses families nobody knows (the 16-way one).
+- The crawler storing one canonical document: breaks [ADR 0002](0002-notices-read-only-ownership.md)'s key ownership and the per-board tab lists.
+- Splitting topics into calls of at most 10: the split is the cause of the duplicates.
 
 ## Consequences
 
-- (+) 8-way·16-way 교차 게시가 알림 **1건**으로 수렴. CF 호출 수도 같은 비율로 감소.
-- (+) `skku-main`(topic 없음)이 형제 그룹에 자연 편입 — 별도 claim+skip 1회를 낭비하지 않는다.
-- (+) 서버 단독 롤백 가능 (스키마·컬렉션·인덱스 변화 없음).
-- (An operations detail is left out of the public history.)
-- (−) **늦은 형제는 다시 발송된다** — 형제가 다음 회차에 도착하면(요약 실패 후 재시도, `sweepBatchCap` 분할, 며칠 뒤 추가 게시) 한 번 더 간다. 실측상 교차 게시 그룹의 **~30%**가 5분 초과 spread(6월 5/18, 7월 11/36). **N번 → 대부분 1번, 일부 2번**으로 개선되는 것이며, 영속 dedup은 의도적으로 미루었다.
-- (−) **교차 replica sweep race**: ping(api replica)과 30분 poller cron이 겹치면 그룹이 쪼개질 수 있다. `sweepInFlight`는 프로세스 내부만 방어. 결과는 위 한계와 동일.
-- (−) **딥링크는 대표 1개 소스를 가리킨다.** rep은 topic을 기여하는 member 중 sourceId 최소값이라, 다른 보드 구독자도 그 사본으로 열린다. 병합 조건이 hash 일치이므로 내용은 동일.
-- (−) **CMS가 다른 재게시**(markup이 다른 경우)는 hash 불일치로 안 잡힌다. 완전 일치 원칙의 의도된 결과. 실측상 형제 hash 불일치는 504그룹 중 4건(0.8%, 게시 후 수정된 경우).
-
-## 관측
-
-`sweepPending` 요약에 additive 필드 2개를 추가했다 — 크롤러 `_extract_summary`는 `processed/sent/failed`만 읽으므로 호환된다.
-
-- `cfCalls` — 실제 CF 호출 수
-- `dedupedDocs` — 병합으로 절약한 호출 수 (`sent` − 발송 그룹 수)
-- 병합 시 `[dispatch] group merged { memberCount, sourceIds, topicCount, title }` 로그
-
-배포 후 이 값들로 실제 병합률과 "늦은 형제" 빈도를 측정하고, 예상(~30%)보다 나쁘면 영속 dedup을 별도 이슈로 올린다.
+- A cross-post is one push, and Cloud Function calls fall in the same ratio. No schema, index or crawler change, so the server rolls back alone.
+- **A late sibling is pushed again.** A copy that arrives in a later sweep (a retried summary, a split batch, a re-post days later) gets its own push: about 30% of cross-post groups spread over more than 5 minutes (June 5/18, July 11/36). N pushes become one, sometimes two; persistent dedup is deferred on purpose.
+- **Replica race.** The crawler's ping and the poller's cron sweep can overlap and split a group; `sweepInFlight` guards one process only. Same result as a late sibling.
+- **The deep link opens one copy**: the lowest `sourceId` among the members that have a topic, so never a topic-less mirror such as `skku-main`. The content is identical, since the hash matched.
+- **A re-post with different markup is not merged**: its hash differs. Measured: 4 of 504 groups (0.8%), all edited after posting.
+- The sweep summary carries `cfCalls` and `dedupedDocs` for measuring the merge rate. They are additive: the crawler reads only `processed`, `sent` and `failed` from it (CONTRACT with skkuverse-crawler).

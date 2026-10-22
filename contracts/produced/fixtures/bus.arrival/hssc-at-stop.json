@@ -1,0 +1,15 @@
+{
+  "_about": "Synthetic, never captured, as the live route has no production traffic yet: taken from bus-live.liveGroup/hssc-running.json: the bus standing at its stop.",
+  "data": {
+    "status": "atStop",
+    "expectedArrivalAt": null,
+    "expectedDepartureAt": "2026-10-20T10:00:04+09:00",
+    "scheduledArrivalAt": null,
+    "scheduledDepartureAt": null,
+    "basis": "estimate",
+    "stopsAway": 0,
+    "isLastBus": null,
+    "vehicleId": "32150",
+    "providerText": null
+  }
+}

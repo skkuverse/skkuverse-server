@@ -5,7 +5,7 @@
  * observation time as a KST instant, and whether a bus stood still between
  * two observations (under 10 m), and whether it idles at its origin (at
  * index 0 with lastStTm 0, and not moved 10 m since the previous observation),
- * and since when a vehicle has stood at its current stop (add-jongro-bus-trajectory).
+ * and since when a vehicle has stood at its current stop.
  */
 import {
   isIdlingAtOrigin,
@@ -147,7 +147,7 @@ describe("toObservedAt", () => {
   });
 });
 
-// WHY: a bus idling at its origin reports stopFlag 0 (add-jongro-bus-positions D3), so standing still is judged
+// WHY: a bus idling at its origin reports stopFlag 0 (ADR 0014, D3), so standing still is judged
 // from two observations of the same vehicle.
 describe("isStationary", () => {
   const observation = { sectOrd: 1, sectDist: 0.043, observedAt: "2026-10-17T19:11:40+09:00", isStationary: false };
@@ -235,8 +235,8 @@ describe("isIdlingAtOrigin", () => {
   });
 });
 
-// WHY: an atStop bus's expected departure counts its dwell from the first observation at that stop
-// (add-jongro-bus-trajectory D4); route 08 vehicle 100000077 stood at ord 20 from 18:08:59 (2026-10-18 capture).
+// WHY: an atStop bus's expected departure counts its dwell from the first observation at that stop;
+// route 08 vehicle 100000077 stood at ord 20 from 18:08:59 (2026-10-18 capture).
 describe("toAtStopSince", () => {
   const atStop = { sectOrd: 20, isAtStop: true, observedAt: "2026-10-18T18:09:20+09:00" };
   const previous = { sectOrd: 20, sectDist: 0, observedAt: "2026-10-18T18:08:59+09:00", isStationary: false, atStopSince: "2026-10-18T18:08:59+09:00" };

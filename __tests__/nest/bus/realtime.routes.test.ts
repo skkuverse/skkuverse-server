@@ -88,7 +88,7 @@ describe("GET /bus/realtime/data/:groupId", () => {
     expect(jongro.status).toBe(200);
     expect(res.status).toBe(200);
     expect(res.body.meta.totalBuses).toBe(1);
-    // WHY: kind and tracked are what add-jongro-bus-positions adds (task 2.2); the top-level fields are as before.
+    // WHY: kind and tracked are what PR #278 adds; the top-level fields are as before.
     expect(jongro.body.data.buses[0]).toEqual({
       stationIndex: 2, // 3 - 1
       carNumber: "1234",
@@ -105,7 +105,7 @@ describe("GET /bus/realtime/data/:groupId", () => {
         progress: 0.5,
         segmentMeters: 300,
         nextStopInSec: null,
-        // WHY: trajectory is what add-jongro-bus-trajectory adds (task 2.2): the observation, then the next stop from its
+        // WHY: trajectory is what PR #285 adds: the observation, then the next stop from its
         // 150 m left at 4 m/s, since no row names the vehicle there.
         trajectory: [
           { at: "2026-10-20T10:00:00+09:00", s: 2.5 },
@@ -190,7 +190,7 @@ describe("GET /bus/realtime/data/:groupId bodies", () => {
 });
 
 // WHY: every bus says whether it is estimated or tracked, and a tracked bus's status decides which fields it
-// carries (add-jongro-bus-positions D1); each status must parse with the published schema.
+// carries; each status must parse with the published schema.
 describe("GET /bus/realtime/data/jongro02 tracked buses", () => {
   it("serves a running, an atStop and a waiting bus that parse with the published wire schema", async () => {
     // Arrange
@@ -221,7 +221,7 @@ describe("GET /bus/realtime/data/jongro02 tracked buses", () => {
       ["tracked", "waiting"],
     ]);
     expect(res.body.data.buses[0].tracked).toMatchObject({ nextStopInSec: 28, segmentMeters: 251 });
-    // WHY: trajectory is what add-jongro-bus-trajectory adds to an atStop bus (task 2.2).
+    // WHY: trajectory is what PR #285 adds to an atStop bus.
     expect(Object.keys(res.body.data.buses[1].tracked).sort()).toEqual(["crowding", "isLastBus", "observedAt", "status", "trajectory", "vehicleId"]);
   });
 
@@ -284,7 +284,7 @@ describe("GET /bus/realtime/data/jongro07 arrivals", () => {
 });
 
 // WHY: a Jongro response names the stations version it was placed by, as its /bus/config group does; HSSC has
-// none; and with its registry route gone the route answers 503 instead of an empty or stale list (D7, D10).
+// none; and with its registry route gone the route answers 503 instead of an empty or stale list.
 describe("GET /bus/realtime/data/:groupId and the registry", () => {
   it("serves jongro07's stored stations version, and none for hssc", async () => {
     // Act
@@ -316,5 +316,29 @@ describe("GET /bus/realtime/data/:groupId and the registry", () => {
       config.cache.enabled = previous;
       registryRepository.routes.set("jongro02", stored);
     }
+  });
+});
+
+// WHY: the route is frozen and superseded by GET /bus/live/:groupId (ADR 0019, D11); installed bundles read no header.
+describe("GET /bus/realtime/data/:groupId deprecation", () => {
+  it("answers Deprecation (RFC 9745) and a Link to its successor, its body unchanged", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/realtime/data/jongro07").set("X-App-Version", "3.6.2").set("X-Platform", "ios");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.headers.deprecation).toBe("@1792594800");
+    expect(res.headers.link).toBe('</bus/live/jongro07>; rel="successor-version"');
+    expect(res.body.data).toEqual({ groupId: "jongro07", buses: [], stationEtas: [], stationsVersion: registryRepository.routes.get("jongro07")!.stationsVersion });
+  });
+
+  it("encodes the group id in the Link, so a path cannot inject a header", async () => {
+    // Act
+    const res = await request(httpServer).get("/bus/realtime/data/a%0D%0AX-Evil:%201");
+
+    // Assert
+    expect(res.status).toBe(404);
+    expect(res.headers["x-evil"]).toBeUndefined();
+    expect(res.headers.link).toBe('</bus/live/a%0D%0AX-Evil%3A%201>; rel="successor-version"');
   });
 });

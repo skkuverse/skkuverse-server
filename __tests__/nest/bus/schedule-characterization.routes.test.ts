@@ -1,6 +1,6 @@
 /**
  * Characterization of the shuttle timetable route over a real `mongod`
- * (harden-test-suite task 6.3, design D6): what
+ * (ADR 0011, D6): what
  * GET /bus/schedule/data/:serviceId/week answers for timetable patterns
  * (`bus_schedules`) and per-date overrides (`bus_overrides`) seeded the way
  * `npm run schedule` writes them, through the production pipeline with only
@@ -17,7 +17,7 @@
  * which one test pins on purpose. Each service's notices and SKKU's rest days
  * are revision 1 of the `bus-service-notices` and `skku-rest-days` datasets,
  * stored in the content database through the data tool's
- * scripts/lib/datasets/store.js (move-editorial-datasets D8, D9).
+ * scripts/lib/datasets/store.js (ADR 0013, D1).
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { Collection, Document } from "mongodb";

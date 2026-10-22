@@ -8,7 +8,8 @@
 import "moment/locale/ko";
 import moment from "moment-timezone";
 import type { HsscBusDoc } from "../../cache/bus-cache.document";
-import { isFresh, isUnparsedFeed, toDwellSeconds, toFeedEventKey, toFeedEventTiming, toFirstSeenAt, toLinearSequence } from "./bus-realtime-hssc.rules";
+import { isFresh, isLiveFresh, isUnparsedFeed, toDwellSeconds, toFeedEventKey, toFeedEventTiming, toFirstSeenAt, toHsscStopEvent, toLinearSequence } from "./bus-realtime-hssc.rules";
+import { hsscBusDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
 const kst = (minutesAgo: number): string =>
@@ -72,6 +73,21 @@ describe("isFresh", () => {
   });
 });
 
+// WHY: the live route waits out a layover for 15 minutes, the deprecated realtime route 3 (ADR 0019, D8).
+describe("isLiveFresh", () => {
+  it.each([
+    ["농구장 (셔틀버스정류소)", 14, true],
+    ["농구장 (셔틀버스정류소)", 15, true],
+    ["농구장 (셔틀버스정류소)", 16, false],
+    ["혜화동로터리 [미정차]", 9, true],
+    ["혜화동로터리 [미정차]", 10, true],
+    ["혜화동로터리 [미정차]", 11, false],
+  ])("%s seen %i minutes ago → %s", (stationName, minutesAgo, expected) => {
+    // Act & Assert
+    expect(isLiveFresh({ stationName, eventDate: kst(minutesAgo) }, NOW)).toBe(expected);
+  });
+});
+
 describe("toFeedEventKey", () => {
   it("is the same for a row the feed repeats on the next tick", () => {
     // Act & Assert
@@ -132,6 +148,33 @@ describe("toFeedEventTiming", () => {
   ])("is null for a seq that is %s", (_shape, seq) => {
     // Act & Assert
     expect(toFeedEventTiming({ ...ROW, seq })).toBeNull();
+  });
+});
+
+// WHY: the live route anchors each cached bus on its latest event, parsed where the feed's date formats live
+// (ADR 0018, D1).
+describe("toHsscStopEvent", () => {
+  it("reads the line, the stop index, the event and both instants of a cached bus", () => {
+    // Act
+    const event = toHsscStopEvent(hsscBusDoc({ line_no: "32149", seq: "6", inout: "LEFT", get_date: "2026-10-20 오전 9:59:30", eventDate: "2026-10-20 09:58:10" }));
+
+    // Assert
+    expect(event).toEqual({
+      vehicleId: "32149",
+      seq: 6,
+      inout: "LEFT",
+      eventAt: new Date("2026-10-20T00:59:30.000Z"),
+      firstSeenAt: new Date("2026-10-20T00:58:10.000Z"),
+    });
+  });
+
+  it.each([
+    ["a seq that is no index", { seq: "six" }],
+    ["a get_date in another shape", { get_date: "2026-10-20 9:59:30" }],
+    ["a first sighting in another shape", { eventDate: "2026-10-20T09:58:10" }],
+  ])("is null for %s", (_shape, extra) => {
+    // Act & Assert
+    expect(toHsscStopEvent(hsscBusDoc(extra))).toBeNull();
   });
 });
 

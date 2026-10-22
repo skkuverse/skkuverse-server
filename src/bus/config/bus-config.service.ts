@@ -24,10 +24,10 @@ interface GroupSources {
 
 type JongroSources = Omit<GroupSources, "stops">;
 
-// WHY: with no attributes read, no Jongro group is built, so the registry is not read either (move-reference-datasets D10).
+// WHY: with no attributes read, no Jongro group is built, so the registry is not read either (ADR 0013, D6).
 const NO_JONGRO_SOURCES: JongroSources = { routes: [], attributes: null };
 
-// WHY: a group that reads no stops is built beside shuttle groups from none, which its lookup by id drops (unify-bus-stops D5).
+// WHY: a group that reads no stops is built beside shuttle groups from none, which its lookup by id drops.
 const NO_STOPS: BusStopsSnapshot = { revision: 0, catalog: { stops: [], sequences: {} }, hssc: [], stopIdByArsId: new Map() };
 
 @Injectable()
@@ -84,8 +84,7 @@ export class BusConfigService {
   }
 
   // WHY: a Jongro group answers its realtime route's 503 when the attributes were never read or lack its route
-  // (move-reference-datasets D10), and a group that names stops, a Jongro one's by alias (unify-bus-stops D12), the
-  // stops' 503 when they were never read.
+  // (ADR 0013, D6), and a group that names stops, a Jongro one's by alias, the stops' 503 when they were never read.
   private async readGroupSources(id: string): Promise<GroupSources> {
     const isJongroGroup = JONGRO_ROUTES.some((route) => route.id === id);
     const stops = isJongroGroup || STOP_GROUP_IDS.includes(id) ? await this.stops.current() : NO_STOPS;

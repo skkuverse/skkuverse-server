@@ -3,79 +3,73 @@ title: Runtime Data Lives in MongoDB
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-20
+last-updated: 2026-10-22
 audience: internal
 ---
 
 # 0013. Runtime Data Lives in MongoDB
 
-> Where the editorial and reference data the server serves is kept once it leaves the repository: datasets in one content database, edited only with `npm run data`, checked at push with the server's own compiled schemas and rules, and read by every replica within a stated bound. Read it before you move a committed data file to MongoDB, change a dataset's schema, or remove an identity a dataset may reference.
-
-## Status
-
-Accepted — 2026-10-19, shipped in PR #289 (reader) and PR #290 (committed file removed), each verified byte-identical in production. The decisions come from the OpenSpec change `move-runtime-data-to-db` (`openspec/changes/archive/2026-10-19-move-runtime-data-to-db/design.md`), whose pilot dataset is the home layout.
-
-It amends [ADR 0010](0010-server-architecture.md) D5 ("Static JSON" fails the boot) for data that leaves the repository, and replaces ADR 0010 D13's "server `src/` ↔ server `scripts/`" row for datasets. It relies on [ADR 0012](0012-runtime-roles.md): a script writes, and every replica reads within a TTL.
+> Where the editorial and reference data the server serves is kept once it leaves the repository: datasets in one content database, edited only with `npm run data`, checked at push with the server's own compiled schemas and rules, and read by every replica within a stated bound. Read it before you move a committed data file to MongoDB, change a dataset's schema, or remove an identity a dataset may reference. Accepted 2026-10-19 (PR #289, #290); how to edit one: [how-to/edit-runtime-data.md](../how-to/edit-runtime-data.md).
 
 ## Context
 
-- Editorial and reference data the server serves (layouts, banners, the mini app registry, timetables, stop catalogs) is committed JSON. Every edit is a pull request, a review and a production deploy, and a bad edit fails the boot of every replica.
-- ADR 0012 made "a writer stores it, every replica reads it within a bound" hold for data in MongoDB. Data a script writes reaches the replicas without a restart.
-- Scripts are CommonJS outside `tsconfig`. Some keep hand-written validators that mirror a server schema, and an equivalence spec covers only the inputs it samples.
+- Editorial and reference data (layouts, banners, the mini-app registry, timetables, stop catalogs) was committed JSON: every edit a pull request, a review and a production deploy, and a bad edit failed the boot of every replica.
+- [ADR 0012](0012-runtime-roles.md) made "a writer stores it, every replica reads it within a bound" hold for data in MongoDB.
+- Scripts are CommonJS outside `tsconfig`; hand-written validators that mirror a server schema are covered only by the inputs an equivalence spec samples.
 - A layout names identities other data owns (a home tile names a mini app). A deploy can remove such an identity while stored data still names it, and no push sees that.
 
 ## Decision
 
 ### D1. Datasets are the source of truth
 
-Runtime data that moves out of the repository is stored as a dataset: one document `{ _id: <dataset>, revision, data, updatedAt, updatedBy }` in the `datasets` collection of one content database, named by the required value `MONGO_CONTENT_DB_NAME` (scope `all`, with the `_dev` and `_test` suffixes of every database name). `data` is exactly what the server's schema parses. A dataset is one document while it is read whole, edited as one unit and well under 1 MB. Per-entity documents come only when a dataset is read one entity at a time, written entity by entity by a poller, or outgrows that size; its `datasets` document then stays its header, carrying the revision and the author.
+A dataset is one document `{ _id: <dataset>, revision, data, updatedAt, updatedBy }` in the `datasets` collection of the content database (`MONGO_CONTENT_DB_NAME`, scope `all`, with the usual `_dev` and `_test` suffixes); `data` is exactly what the server's schema parses. It stays one document while it is read whole, edited as one unit and well under 1 MB. A dataset read one entity at a time, written entity by entity, or too large becomes **parted**: its `datasets` document is the header, and its `data` a manifest naming each part by key and a content-derived id; each part is one immutable `dataset_parts` document, read by `_id`.
+
+One content database, not each module's: ui and app-config own no database, one history and one place resolve every cross-dataset reference, and a tool credential can be scoped to it alone. `bus_campus` was rejected: it holds the poller's hot collections.
+
+- A family of like items is one dataset holding an array: every festival's layer set is one `map-layer-sets` (about 8 KB a festival, one or two a year; the catalog names datasets statically). Revisit when concurrent edits conflict.
+- SKKU's rest days are the `skku-rest-days` dataset, not `bus_overrides` documents: an override is one service's exact date, unique on `(serviceId, date)`, so a yearly rest day would be a document per year per service, and a rest day ranks with public holidays, below an override.
+- Rejected for parts: ids versioned by revision (every revision rewrites every part: 265 MB of timetables at 50 kept revisions), a part collection per dataset, and GridFS or one blob (no table read or parsed alone).
 
 Once a dataset is stored, the repository holds no copy of it: no committed file, no fallback in the image.
 
-Amended 2026-10-20 by the OpenSpec change `move-reference-datasets` (`openspec/changes/archive/2026-10-20-move-reference-datasets/design.md`, D4): a parted dataset is a header manifest plus content-identified parts. Its `datasets` document stays the header and its `data` is the manifest, naming each part by its key and an id derived from its content; each part is one document of `dataset_parts`, never changed once stored, and a reader reads it by `_id`.
-
 ### D2. Identities stay in code
 
-What the code branches on stays in code: route ids, service ids, enums, the origins in `src/infra/origins.ts`, UI-label translations, and the hash-locked notices contract files. A dataset holds the data that names those identities, never the identities themselves. The mini app registry stays in code in the first stage, and datasets reference it as a code-held source.
+What the code branches on stays in code: route ids, service ids, enums, the origins in `src/infra/origins.ts` (who owns each first-party origin included: a push must agree with it, and a read that does not is logged), UI-label translations and the hash-locked notices contract files. A dataset holds the data that names those identities, never the identities. Where the line falls, per dataset:
 
-Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (`openspec/changes/archive/2026-10-20-move-miniapp-registry/design.md`, D2, D5 and D6): the mini app registry is the `miniapps` dataset, and the three ui datasets reference it as a dataset, resolved against the copy stored in the database a push targets. Who owns each first-party origin stays in code (`MINIAPP_ID_BY_FIRST_PARTY_ORIGIN` in `src/infra/origins.ts`): a push must agree with it, and a read that does not is logged.
-
-Amended 2026-10-20 by the OpenSpec change `move-reference-datasets` (`openspec/changes/archive/2026-10-20-move-reference-datasets/design.md`, D2, D9 and D10): subway identities and their labels (lines, stations and platforms, with their names, colors and markers) stay in code, and each platform's directions and each station's neighbors are the `subway-topology` dataset. Jongro route ids stay in code, and each route's attributes (theme color, icon, refresh interval, seat count, transfer lines) are the `jongro-route-attributes` dataset. Bus-lane strategies and lane hours stay in code, since they decide which estimate model a run gets; the corridor geometry is the `bus-lane-corridor` dataset.
-
-Amended 2026-10-21 by the OpenSpec change `unify-bus-stops` (`openspec/changes/archive/2026-10-22-unify-bus-stops/design.md`, D1, D3 and D4): stop identities. A Seoul TOPIS pole's stop id, `seoul-<arsId>`, is derived from the stored Jongno registry when it is read and never stored. The local stops (the stop catalog's and the HSSC line's), the shuttle sequences, the HSSC line's labels and its stop id per position are the `bus-stops` dataset. The HSSC line's position count, its upstream name matching and its turnaround stay in code, since the HSSC poller places buses by them, and the dataset's line must match the count.
+- Mini apps: the registry is the `miniapps` dataset; the ui datasets reference it as a dataset, resolved against the copy in the database a push targets.
+- Subway: lines, stations and platforms with their names, colors and markers stay in code; platform directions and station neighbors are `subway-topology`.
+- Jongno: route ids stay in code; each route's attributes (color, icon, refresh interval, seat count, transfer lines) are `jongro-route-attributes`.
+- Bus lanes: the strategies and lane hours stay in code, since they decide which estimate model a run gets; the corridor geometry is `bus-lane-corridor`.
+- Stops: a Seoul TOPIS pole's id (`seoul-<arsId>`) is derived from the stored Jongno registry at read and never stored. The local stops, the shuttle sequences and the HSSC line's labels and stop ids are `bus-stops`. The HSSC line's position count, upstream name matching and turnaround stay in code, since the HSSC poller places buses by them, and the dataset's line must match the count.
 
 ### D3. The tool is the only writer
 
-`npm run data` (`pull`, `push`, `history`, `rollback`, `copy-prod-to-dev`, `check`) is the only writer of the content database in this stage. The server only reads it, and no admin API or app edit writes it. The tool targets the `_dev` database unless `--prod` is given, prints the database name and the diff before a production write and asks to confirm it, refuses a working file pulled from the other target, and never prints `MONGO_URL`.
+`npm run data` is the only writer of the content database: the server only reads it, and no admin API or app edit writes it. The tool targets `_dev` unless `--prod` is given, prints the database and the diff and asks before a production write, refuses a working file pulled from the other target, and never prints `MONGO_URL`.
+
+A generator (`scripts/subway-timetable/convert.py`, `scripts/build-bus-lane-corridor.js`) writes files into a pulled working directory for the tool to push, never MongoDB: it would restate the schema, bypass the history, the optimistic check and the production confirmation, and need `MONGO_URL` and a driver.
 
 ### D4. Every version is kept, and a push is based on one
 
-Every push, rollback and copy records the stored version in `dataset_revisions` (`<dataset>@<revision>`), the current one included. The newest 50 revisions of each dataset are kept, and the current one is never pruned. A rollback stores an earlier revision's data as a new revision; history is never rewritten.
+Every push, rollback and copy records the stored version in `dataset_revisions`; a bounded number of recent revisions is kept (`RETAINED_REVISIONS`, `scripts/lib/datasets/store.js`) and the current one is never pruned. A part is kept while a retained revision names it, so a rollback finds every part it restores. A rollback stores an earlier revision's data as a new revision; history is never rewritten.
 
-A push names the revision it was pulled at and is stored only if the dataset is still at that revision, in one conditional update. Otherwise it writes nothing and reports the current revision, its author and its time. The dataset is written before its history entry, with no transaction, so only the winner of the update writes history; a run that finds the current revision without an entry records it before anything else, except where a run writes nothing to production before a confirmation: there it records the entry as the first step of the confirmed write.
-
-Amended 2026-10-20 by the OpenSpec change `move-reference-datasets` (`openspec/changes/archive/2026-10-20-move-reference-datasets/design.md`, D4): retention counts header revisions. A part is kept while a retained revision names it, and the part the current header names is never deleted, so a rollback finds every part of the revision it restores.
+A push names the revision it was pulled at and is stored only if the dataset is still there, in one conditional update; otherwise it writes nothing and reports who holds the current revision. There is no transaction (it would need a replica set in the round-trip tests, which run a standalone `mongod`): the dataset is written before its history entry, so only the winner writes history, and a run that finds the current revision without an entry records it first.
 
 ### D5. Validation is the server's compiled code; references are declared per dataset
 
-The tool runs over `dist/`, built from the same checkout first, so a push is checked by the zod schema the server's repository parses the dataset with and by the same pure `.rules` functions, never by a copy. Each dataset declares its checks in the tool's catalog: its schema, the issues a schema cannot hold, the identities it references, and, if others reference it, the identities it holds. A push runs the schema, the dataset's own issues, its outgoing references and the incoming references of every stored dataset that names it, collects every issue with its dataset and path, and refuses on any. `check` runs the same checks on stored data and writes nothing.
+The tool runs over `dist/`, built from the same checkout first, so a push is checked by the zod schema the server's repository parses with and by the same pure `.rules` functions, never by a copy. Each dataset's catalog entry (`scripts/lib/datasets/catalog.js`) declares its schema, the issues a schema cannot hold, the identities it references and those it holds, and any collection outside the content database its check reads (read from the environment the push targets, never the other: a `bus-stops` push reads that environment's `bus_schedules`, so a sequence and its timetable agree). A push runs all of it, plus the incoming references of every stored dataset that names it, and refuses on any issue. `check` runs the same checks on stored data and writes nothing.
+
+The tool is a CommonJS entry, `scripts/data.js`, over `dist/`. Rejected: a TypeScript entry in `src/` (not a role file, breaks the `console` and `require()` bans, ships in the image); a separate `tools/` TypeScript project; `tsx` or `ts-node` (a new dependency); running it inside Jest like `contracts:export` (the network guard refuses Atlas).
 
 ### D6. The read contract
 
-Every reader of a dataset keeps the same contract:
+Every reader of a dataset, in every role that reads it (pollers included, such as the shuttle ETA and subway pollers), keeps the same contract (`src/shared/dataset.constants.ts`):
 
 - **A bound on freshness.** A cached loader with a 60-second TTL and `serveStale: "on-reload-failure"`, so every replica serves a push within a minute while the database answers.
-- **A stale window.** After a good read, a reload that fails serves the last good value for 24 hours and logs `cache.reload_failed`.
-- **Unavailable, not empty.** With no good value, a missing dataset or a failed read answers 503 with an error body and no `Cache-Control`, never an empty or committed value.
-- **A bad document is not served.** The repository parses the stored document with the dataset's schema; one that fails is logged at error with its revision and issues and not served, and the last good value within its window serves instead.
-- **A dangling reference is left out.** An item whose reference no longer resolves is dropped from the response and logged once per revision, and the rest serves with status 200.
-
-The TTL, the stale window and the dataset document's shape are shared by every reader; each reader keeps its own repository read and schema.
-
-Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (`openspec/changes/archive/2026-10-20-move-editorial-datasets/design.md`, D12):
-
-- **A documented degraded answer may stand in for the 503.** A dataset whose capability documents an answer that serves without it may serve that answer instead of the 503, and logs the unavailable dataset at error. The festival layer sets are one case: `/map/config` serves the base map. The Jongro route attributes are the second (amended 2026-10-20 by `move-reference-datasets`, `openspec/changes/archive/2026-10-20-move-reference-datasets/design.md` D10): `/bus/config` and the ui transit routes serve without the Jongro groups, while a Jongro group's `/bus/config/:groupId` and its realtime route answer the 503.
-- **A derived cache keeps the bound or states its own.** A route that caches what it derives from a dataset either keys that cache by the dataset's revision, so a push still serves within a minute, or states its own longer bound in the dataset's capability.
+- **A stale window.** After a good read, a failed reload serves the last good value for 24 hours and logs `cache.reload_failed`: editorial data a day old is still correct to serve, and a 503 costs the screen.
+- **Unavailable, not empty.** With no good value, a missing dataset or a failed read answers 503 with an error body and no `Cache-Control`, never an empty or committed value. A dataset whose module doc documents an answer that serves without it may serve that answer instead, and logs the unavailable dataset at error: `/map/config` serves the base map without the festival layer sets; `/bus/config` and the ui transit routes serve without the Jongno groups, while a Jongno group's own route answers 503.
+- **A bad document is not served.** The repository parses the stored document with the dataset's schema; one that fails is logged at error with its revision and issues, and the last good value within its window serves.
+- **A dangling reference is left out.** An item whose reference no longer resolves is dropped and logged once per revision, and the rest serves with 200.
+- **A derived cache keeps the bound or states its own.** A cache of something derived from a dataset is keyed by the dataset's revision, or states its own longer bound in its module doc's Invariants. A cached ETag is keyed by the revision of every dataset its body is built from, or computed from the body, so a push to a dataset the route does not read leaves it alone.
 
 ### D7. `check --prod` before a schema change or a removed identity
 
@@ -83,16 +77,13 @@ A deploy restarts every replica with an empty cache, so the stale window does no
 
 ### D8. What stays in code
 
-Code, not datasets, holds: the identities of D2; the schemas, rules and readers; the response shapes (`.wire`); and data written by another repository, whose writer owns its shape (ADR 0010 D13). Data a poller writes from an upstream stays the poller's (ADR 0012 D1).
+Code holds the identities of D2, the schemas, rules and readers, the response shapes (`.wire`), and data another repository writes, whose writer owns its shape ([ADR 0010](0010-server-architecture.md) D13). Data a poller writes from an upstream stays the poller's (ADR 0012 D1).
 
 ## Consequences
 
-- **An edit needs no deploy and cannot fail a boot.** A bad edit is refused at push; a document that slips past serves the last good value or answers 503 on its own route, and the other routes keep serving.
-- **ADR 0010 D5 no longer covers moved data.** A committed config file still fails the boot; a dataset is validated at push and parsed and left out at read.
-- **ADR 0010 D13's scripts row is not used for datasets.** The tool loads the server's compiled schemas and rules, so no hand-written validator or equivalence spec mirrors them.
-- **A schema change can strand stored data.** D7's check is a manual step for now; running it inside the deploy is an open question of the change.
-- **Atlas reads grow by one `findOne` per dataset per replica per minute while the dataset's route is requested**, estimated in the change's design (D8).
-- **Polling roles read datasets too.** A dataset that a poller's work depends on (the bus schedule content the shuttle ETA pollers plan runs with) is read in `poller` and `combined` as in `api`, under the same contract. Amended 2026-10-19 by the OpenSpec change `move-editorial-datasets` (D12). Amended 2026-10-20 by the OpenSpec change `move-reference-datasets` (`openspec/changes/archive/2026-10-20-move-reference-datasets/design.md`, D3 and D7): the subway pollers read datasets too, the Seoul pollers matching upstream names through `subway-topology` and the tracker scheduling from `subway-timetables`.
-- **No code-held source remains for mini apps.** A check that needs another dataset's content reads it from the target database through `issuesOf`'s `storedOf`, so a production push is checked against production's registry. Amended 2026-10-20 by the OpenSpec change `move-miniapp-registry` (D6).
-- **A check may read a collection outside the content database.** A dataset's catalog entry declares the collections its check reads, and the tool reads them from the environment the push targets, never the other. Amended 2026-10-21 by the OpenSpec change `unify-bus-stops` (`openspec/changes/archive/2026-10-22-unify-bus-stops/design.md`, D6), effective at its wave 2: a `bus-stops` push reads that environment's `bus_campus.bus_schedules`, so a sequence and its timetable agree in length.
-- **Production data is edited from a laptop with `MONGO_URL`.** A database user scoped to the content database is an open question of the change.
+- **An edit needs no deploy and cannot fail a boot.** A bad edit is refused at push; a document that slips past serves the last good value or answers 503 on its own route, and other routes keep serving.
+- A committed config file still fails the boot (ADR 0010 D5); a dataset is validated at push and parsed at read instead, and needs no equivalence spec (ADR 0010 D13).
+- **A schema change can strand stored data.** D7's check is manual. **Open:** running it inside the deploy.
+- **Atlas reads grow by one `findOne` per dataset per replica per minute** while the dataset's route is requested.
+- **Poller memory is read over hours.** Its `docker stats` figure is dominated by each tick's garbage (about 45 MB allocated per tick): compare the minimum `anon` of its cgroup's `memory.stat` over hours, never one reading.
+- **Production data is edited from a laptop with `MONGO_URL`.** **Open:** a database user scoped to the content database.

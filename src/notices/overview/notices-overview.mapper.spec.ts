@@ -1,5 +1,5 @@
 /**
- * Citation mapping (spec: "Citation mapping"): ai positions become app numbers
+ * Citation mapping: ai positions become app numbers
  * 1..M in first-cited order, and every cite resolves to exactly one source.
  * The ai input keeps DB field names and leaves the link identity on the server.
  */
@@ -14,7 +14,7 @@ function mapped(result: ReturnType<typeof mapOverview>) {
 }
 
 describe("mapOverview", () => {
-  it("renumbers sources by first citation (spec scenario)", () => {
+  it("renumbers sources by first citation", () => {
     // Arrange
     const [a, b, c] = [candidate(), candidate(), candidate()];
     const ai = aiResponse({

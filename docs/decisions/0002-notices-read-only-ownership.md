@@ -1,41 +1,32 @@
 ---
-title: Notices — 서버는 읽기 전용, 쓰기는 크롤러·AI 소유
+title: Notices — the Server Reads, the Crawler and the AI Write
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-09-13
+last-updated: 2026-10-22
 audience: internal
 ---
 
-# 0002. Notices — 서버는 읽기 전용, 쓰기는 크롤러·AI가 소유
+# 0002. Notices — the Server Reads, the Crawler and the AI Write
 
-## Status
-
-Accepted — 2026-04-10 (백필 문서화 2026-07-22, 인덱스 이름 개정 2026-09-13)
+> Who owns which part of the `notices` collection, which three repositories share. Decided 2026-04-10.
 
 ## Context
 
-`notices` MongoDB 컬렉션은 여러 서비스가 함께 만진다. 소유권이 불명확하면 두 종류의 사고가 난다:
-
-- **인덱스 충돌:** 크롤러가 `articleNo_1_sourceId_1` unique 인덱스를 이미 만든다. 서버도 같은 인덱스를 `createIndex`하면 `IndexOptionsConflict`. 크롤러가 삭제하고 서버가 다시 만들면 크롤러 쓰기 성능을 망칠 수도.
-- **XSS 책임 경계 모호:** 크롤링한 HTML을 어디서 sanitize할지 정하지 않으면, 서버가 재정제하거나 아무도 안 하거나 둘 다 하는 상황이 생긴다.
-
-동시에 `content`는 5MB까지 가능하고, 크롤러·요약기가 언제든 새 필드를 추가할 수 있어, 서버가 컬렉션 스키마에 강결합되면 취약해진다.
+- The crawler already creates the collection's unique index. A second `createIndex` of it with other options from the server fails with `IndexOptionsConflict`, and a dropped and re-created index would hurt the crawler's writes.
+- With no owner for sanitizing crawled HTML, it is done twice or not at all.
+- A body can reach 5 MB, and the crawler and the summarizer add fields at any time, so a server tied to the whole document shape breaks on their changes.
 
 ## Decision
 
-**쓰기는 세 저장소가 각자 소유, 읽기는 서버가 전담.** 크롤러가 소유한 필드·인덱스·정제 파이프라인의 canonical 정의는 [crawler schema/notices.md](https://github.com/spencer0124/skkuverse-crawler/blob/main/docs/reference/schema/notices.md)이며, 서버 문서는 값을 복제하지 않고 아래 **소유 경계**만 기록한다.
-
-- **크롤러**가 문서 자체와 unique 인덱스를 소유(인덱스 이름·필드 정의는 위 크롤러 스키마). 서버는 이 인덱스를 건드리지 않고 상세 조회(`findOne`)에서 그대로 히트.
-- **skkuverse-ai**가 `summary*` 필드를 `$set`으로 소유.
-- **서버**는 **read-optimization 복합 인덱스**(`sourceId_1_date_-1__id_-1`) 하나만 추가 소유. 컬렉션에 **절대 쓰지 않는다**. `src/notices/list/notices-list.repository.ts`의 `onModuleInit`에서 idempotent하게 ensure. (2026-09-13 [ADR 0007](0007-notice-ordering-key.md)이 `sourceId_1_date_-1_crawledAt_-1__id_-1`을 대체 — 구 인덱스는 rolling deploy 호환을 위해 한 릴리스 동안 남겨두고 후속 릴리스에서 drop.)
-- **정제(sanitize)는 크롤러 담당.** 크롤러가 `nh3` sanitize + GFM `cleanMarkdown` 변환까지 끝내 저장하고(파이프라인·본문 4종 세부는 위 크롤러 스키마), 서버는 `cleanMarkdown → contentMarkdown` rename만 하는 pass-through. HTML·plain 본문은 API에 노출하지 않으므로 서버 레이어의 XSS 공격 표면이 사라진다 — 앱의 마크다운 렌더러가 자체 sanitize 책임.
+- **skkuverse-crawler** owns the documents, their content fields and the unique index. The canonical field and index definitions are the crawler's [schema/notices.md](https://github.com/spencer0124/skkuverse-crawler/blob/main/docs/reference/schema/notices.md); server docs never copy them.
+- **skkuverse-ai** owns the `summary*` fields, written with `$set`.
+- **The server** writes no content field. It owns its read index (`FORCE_INDEX` in `src/notices/list/notices-list.query.ts`, [ADR 0007](0007-notice-ordering-key.md)), `dispatch_pending_idx`, and the push bookkeeping fields only `NoticesDispatchRepository` writes ([ADR 0003](0003-fcm-dispatch-cloud-function-claim-lease.md)).
+- **Sanitizing is the crawler's.** It stores sanitized GFM as `cleanMarkdown`, and the server only passes it through as `contentMarkdown`. HTML and plain-text bodies are never served, so the server has no XSS surface of its own; the app's Markdown renderer sanitizes what it renders.
 
 ## Consequences
 
-- (+) 인덱스 소유권이 명확 — 충돌 불가, 각자 자기 인덱스만 관리.
-- (+) 서버가 stateless read-only라 배포·롤백이 안전 (쓰기 사이드이펙트 없음).
-- (+) XSS 방어가 한 곳(크롤러)에 모여 감사 표면이 작다.
-- (−) **크롤러와의 암묵 계약이 생긴다.** 크롤러가 `cleanMarkdown` 변환 정책·필드명을 바꾸면 서버 응답이 조용히 깨질 수 있다. 이 경계는 두 repo가 합의해야 하며, 변경 시 [reference/notices-api.md](../reference/notices-api.md)의 응답 계약과 대조 필요.
-- (−) 본문 변환 품질 이슈(GFM 테이블 misalign 등)를 서버에서 못 고친다 — 크롤러에서만 수정.
-- 관련 미시 결정(inclusion projection, `contentMarkdown` 단일 경로)은 [explanation/notices-architecture.md](../explanation/notices-architecture.md) 참조.
+- Index ownership cannot collide: each repository manages only its own indexes.
+- The server's reads have no side effect on content, so its deploys and rollbacks are safe for the data.
+- **An implicit cross-repo contract.** A crawler change to the `cleanMarkdown` conversion or a field name can break responses silently; check it against [reference/notices-api.md](../reference/notices-api.md). Body-conversion defects (a misaligned GFM table) are fixed in the crawler only.
+- Projection and body-field choices: [explanation/notices-architecture.md](../explanation/notices-architecture.md).

@@ -1,6 +1,5 @@
 /**
- * The push check a schema cannot hold (move-reference-datasets D10, spec
- * "Attributes push checks every route"): the stored attributes name exactly the
+ * The push check a schema cannot hold: the stored attributes name exactly the
  * Jongro routes the checked-out code serves. A route the code serves without
  * attributes, and attributes for a route it does not serve, are each named at
  * `routes.<routeId>`.

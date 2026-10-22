@@ -1,0 +1,6 @@
+{
+  "_about": "Synthetic: GET /bus/live/jongro07 at 10:00 KST on 2026-10-20 over bus_cache seeded in the shapes the pollers write (as jongro07.json), the stored jongro_routes, jongro-route-attributes and bus-stops fixtures of __tests__/nest/bus/fixtures; the route has no production traffic to capture yet. lang is left out, as the response interceptor adds it.",
+  "data": {
+    "serverNow": "2026-10-20T10:00:00+09:00"
+  }
+}

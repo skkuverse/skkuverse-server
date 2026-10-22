@@ -1,10 +1,10 @@
 /**
- * The arrival estimates (design D4, D5). A train's delay is its latest event against its own timetable row
+ * The arrival estimates. A train's delay is its latest event against its own timetable row
  * (approaching = scheduled arrival − 30 s), not used outside −120…+2,700 s, and at least how long it has stood
  * past its scheduled departure; its arrival at the served station is that station's scheduled arrival plus
  * the delay (`estimated`). An unobserved train borrows the delay of the nearest observed train ahead within
  * 30 minutes, or is served at its scheduled time (`scheduled`), as is a train seen with a delay out of range.
- * A sighting counts whatever its delay (design D16): a train seen at the station is at its observed arrival, and
+ * A sighting counts whatever its delay: a train seen at the station is at its observed arrival, and
  * one seen leaving it or past it is gone. A positive published countdown wins
  * (`recptnDt` + `barvlDt`, `live`), and a gap over 120 s to the timetable estimate is returned as a divergence.
  */
