@@ -868,6 +868,13 @@ module.exports = [
     },
   },
   {
-    ignores: ["node_modules/", "coverage/", "dist/", "swagger/swagger-output.json", "src/**/*.generated.ts"],
+    ignores: [
+      "node_modules/",
+      "coverage/",
+      "dist/",
+      ".claude/worktrees/",
+      "swagger/swagger-output.json",
+      "src/**/*.generated.ts",
+    ],
   },
 ];

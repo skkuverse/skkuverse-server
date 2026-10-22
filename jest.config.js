@@ -21,9 +21,10 @@ module.exports = {
   // matcher would treat each helper module as a test and fail it for having zero it() blocks.
   // Unit tests sit next to their sources as src/**/*.spec.ts (Jest's default
   // testMatch finds them). `npm run build` leaves a dist/ copy of src/, which
-  // must never be collected or resolved as a second module tree.
-  testPathIgnorePatterns: ["/node_modules/", "/__tests__/helpers/", "/dist/"],
-  modulePathIgnorePatterns: ["/dist/"],
+  // must never be collected or resolved as a second module tree, and neither
+  // must a Claude Code isolation worktree, a full checkout under .claude/worktrees/.
+  testPathIgnorePatterns: ["/node_modules/", "/__tests__/helpers/", "/dist/", "/.claude/worktrees/"],
+  modulePathIgnorePatterns: ["/dist/", "/.claude/worktrees/"],
   collectCoverage: true,
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov"],
