@@ -25,7 +25,7 @@ export function isServableStartUrl(startUrl: string): boolean {
 
 /**
  * CONTRACT(skkuverse-app): `<miniAppId>[<root-relative path>]`, the grammar of
- * skkuverse-app/packages/shared/src/miniapps/target.ts; the app resolves the path against startUrl.
+ * skkuverse-app/packages/shared/src/utils/miniapp-target.rules.ts; the app resolves the path against startUrl.
  */
 export function parseMiniAppTarget(value: unknown): MiniAppTarget | null {
   if (typeof value !== "string") return null;
