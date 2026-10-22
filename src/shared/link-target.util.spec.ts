@@ -106,3 +106,31 @@ describe("isAbsoluteHttpsUrl refuses a backslash, a control character or a URL t
     }
   });
 });
+
+// WHY: a value an operator reads as one host can open another: userinfo puts the real host after `@`,
+// and an invisible format character survives the pattern while the parser drops it (`x­.test` is `x.test`).
+describe("isAbsoluteHttpsUrl refuses userinfo or a Unicode format character", () => {
+  it.each([
+    ["a user before our host", "https://skkuverse.com@evil.com/x"],
+    ["a user and password", "https://u:p@x.test/a"],
+    ["an empty password", "https://u:@x.test/a"],
+    ["a soft hyphen in the host", "https://x­.test/"],
+    ["a zero-width space in the path", "https://x.test/a​b"],
+    ["a right-to-left override", "https://x.test/‮txt.exe"],
+    ["a zero-width joiner", "https://x.test/a‍b"],
+  ])("refuses %s", (_label, value) => {
+    // Act & Assert
+    expect(isAbsoluteHttpsUrl(value)).toBe(false);
+  });
+});
+
+describe("isRootRelativePath refuses a Unicode format character", () => {
+  it.each([
+    ["a soft hyphen", "/campus­"],
+    ["a zero-width space", "/a​b"],
+    ["a right-to-left override", "/‮abc"],
+  ])("refuses %s", (_label, value) => {
+    // Act & Assert
+    expect(isRootRelativePath(value)).toBe(false);
+  });
+});

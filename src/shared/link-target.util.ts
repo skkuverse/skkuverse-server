@@ -6,5 +6,8 @@ export function isRootRelativePath(value: string): boolean {
 
 // WHY: the raw-string pattern gates first, because the parser repairs what the pattern refuses.
 export function isAbsoluteHttpsUrl(value: unknown): value is string {
-  return typeof value === "string" && ABSOLUTE_HTTPS_RE.test(value) && URL.canParse(value) && new URL(value).hostname !== "";
+  if (typeof value !== "string" || !ABSOLUTE_HTTPS_RE.test(value) || !URL.canParse(value)) return false;
+  const url = new URL(value);
+  // QUIRK(whatwg-url): `https://skkuverse.com@evil.com` names evil.com: userinfo hides the host.
+  return url.hostname !== "" && url.username === "" && url.password === "";
 }
