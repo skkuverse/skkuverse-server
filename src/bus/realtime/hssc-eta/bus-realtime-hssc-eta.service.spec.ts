@@ -46,3 +46,17 @@ describe("BusRealtimeHsscEtaService.toStationIndex", () => {
     expect(service.toStationIndex(0)).toBe(6);
   });
 });
+
+describe("BusRealtimeHsscEtaService.isLayingOver", () => {
+  it.each([
+    ["still off the turnaround past the bound", 10 * 60_000, true],
+    ["just left the turnaround", 0, false],
+  ])("answers whether a bus that left the turnaround is %s", (_case, sinceMsAgo, expected) => {
+    // Arrange
+    const since = new Date(NOW.getTime() - sinceMsAgo);
+    const anchor = { vehicleId: "32149", seq: 5, isDeparted: true, since, observedAt: since };
+
+    // Act & Assert
+    expect(service.isLayingOver(anchor, NOW)).toBe(expected);
+  });
+});
