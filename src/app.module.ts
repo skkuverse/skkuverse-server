@@ -27,6 +27,10 @@ import { BusEtaLiveModule } from "./bus/eta/live/bus-eta-live.module";
 import { BusEtaBaselineModule } from "./bus/eta/baseline/bus-eta-baseline.module";
 import { BusEtaSmartModule } from "./bus/eta/smart/bus-eta-smart.module";
 import { BusConfigModule } from "./bus/config/bus-config.module";
+import { BusLiveModule } from "./bus/live/bus-live.module";
+import { BusLiveJongroModule } from "./bus/live/jongro/bus-live-jongro.module";
+import { BusLiveHsscModule } from "./bus/live/hssc/bus-live-hssc.module";
+import { BusLiveGroupModule } from "./bus/live/group/bus-live-group.module";
 import { BusStopIndexModule } from "./bus/stop-index/bus-stop-index.module";
 import { BusStopArrivalsModule } from "./bus/stop-arrivals/bus-stop-arrivals.module";
 import { BusShuttleGpsModule } from "./bus/private-file";
@@ -114,6 +118,10 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusEtaBaselineModule,
     BusEtaSmartModule,
     BusConfigModule,
+    BusLiveModule,
+    BusLiveJongroModule,
+    BusLiveHsscModule,
+    BusLiveGroupModule,
     BusStopIndexModule,
     BusStopArrivalsModule,
     BusShuttleGpsModule,

@@ -1,6 +1,6 @@
 /**
  * BusRegistryService over an in-memory registry repository and a fixed clock
- * (improve-jongro-realtime D6–D9, isolate-api-from-pollers D2): a stored
+ * (ADR 0012, D3; ADR 0014, D4): a stored
  * route derives the stations, mapping and URLs production served from
  * the route file they replaced; a missing document fails a read with a 503 and an error
  * line, while the poller's read answers null; reads are cached for 30 s; the
@@ -293,7 +293,7 @@ describe("BusRegistryService.findRouteOf", () => {
   });
 });
 
-// WHY: a fresh database gets its routes from TOPIS through the poller, not a snapshot (isolate-api-from-pollers D2).
+// WHY: a fresh database gets its routes from TOPIS through the poller, not a snapshot (ADR 0012, D3).
 describe("BusRegistryService.bootstrap", () => {
   const route07 = jongroRoutes.find((route) => route.id === "jongro07")!;
   const captured07 = () => capturedStationsOf("jongro07");

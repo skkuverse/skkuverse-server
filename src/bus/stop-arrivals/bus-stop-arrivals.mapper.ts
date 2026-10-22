@@ -1,7 +1,7 @@
 import type { ServedStop } from "../bus.wire";
-import type { GroupView } from "../realtime/group/bus-realtime-group.types";
-import type { FoundStop, HsscStopRoute, JongroStopRoute, ShuttleStopRoute } from "../stop-index/bus-stop-index.types";
-import type { Approaching, HsscEntry, JongroEntry, ShuttleEntry, StopBlock } from "./bus-stop-arrivals.types";
+import type { LiveGroup } from "../live/bus-live.wire";
+import type { FoundStop, ShuttleStopRoute, StopRoute } from "../stop-index/bus-stop-index.types";
+import type { LiveEntry, StopBlock, TimetableEntry } from "./bus-stop-arrivals.types";
 
 function toPoleBlock({ id, poles, coords }: FoundStop): StopBlock {
   const [pole] = poles;
@@ -16,16 +16,21 @@ export function toStopBlock(stop: FoundStop, record: ServedStop | null): StopBlo
   return { ...record, ...(record.coords === undefined && stop.coords && { coords: stop.coords }), ...(arsIds && { arsIds: [...arsIds] }) };
 }
 
-export function toJongroEntry({ groupId, stationIndex, towards }: JongroStopRoute, { stationEtas, stationsVersion }: GroupView, label: string): JongroEntry {
-  if (stationsVersion === undefined) throw new Error(`bus: the realtime view of ${groupId} has no stations version`);
-  const arrivals = stationEtas.filter((eta) => eta.stationIndex === stationIndex).flatMap((eta) => eta.arrivals);
-  return { groupId, kind: "arrivals", label, stationIndex, towards, stationsVersion, arrivals };
+// WHY: the live route lists only the stations its source states something for; any other is no data (ADR 0019, D8).
+export function toLiveEntry({ groupId, stationIndex }: Pick<StopRoute, "groupId"> & { stationIndex: number }, group: LiveGroup, { label, towards }: Pick<LiveEntry, "label" | "towards">): LiveEntry {
+  const station = group.stations.find((candidate) => candidate.stationIndex === stationIndex);
+  const arrivals = station?.arrivals ?? [];
+  const namedIds = new Set(arrivals.map(({ vehicleId }) => vehicleId));
+  return {
+    kind: "live",
+    ...{ groupId, label, stationIndex, towards },
+    ...{ stationsVersion: group.stationsVersion, updatedAt: group.updatedAt },
+    operation: station?.operation ?? "noData",
+    vehicles: group.vehicles.filter(({ id }) => namedIds.has(id)),
+    arrivals,
+  };
 }
 
-export function toHsscEntry({ groupId, stationIndex }: HsscStopRoute, label: string, approaching: Approaching[]): HsscEntry {
-  return { groupId, kind: "approaching", label, stationIndex, approaching };
-}
-
-export function toShuttleEntry({ groupId, serviceId, routeType, action }: ShuttleStopRoute, label: string, { status, next }: Pick<ShuttleEntry, "status" | "next">): ShuttleEntry {
-  return { groupId, kind: "schedule", label, serviceId, routeType, action, status, next };
+export function toTimetableEntry({ groupId, serviceId, routeType, action }: ShuttleStopRoute, label: string, { operation, arrivals }: Pick<TimetableEntry, "operation" | "arrivals">): TimetableEntry {
+  return { kind: "timetable", groupId, label, serviceId, routeType, action, operation, vehicles: [], arrivals };
 }

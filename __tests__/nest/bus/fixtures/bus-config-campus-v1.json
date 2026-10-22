@@ -1,5 +1,5 @@
 {
-  "_about": "Captured from getGroupById (then bus-config.data.ts) before the campus group gained its v2 fields (add-inja-shuttle-schedule-v2, 2026-10-08), per language: the served v1 JSON.",
+  "_about": "Captured from getGroupById (then bus-config.data.ts) before the campus group gained its v2 fields (2026-10-08), per language: the served v1 JSON.",
   "campus:ko": {
     "json": "{\"id\":\"campus\",\"screenType\":\"schedule\",\"label\":\"인자셔틀\",\"visibility\":{\"type\":\"always\"},\"card\":{\"themeColor\":\"003626\",\"iconType\":\"shuttle\",\"busTypeText\":\"성대\",\"subtitle\":\"인사캠 ↔ 자과캠\"},\"screen\":{\"defaultServiceId\":\"campus-inja\",\"services\":[{\"serviceId\":\"campus-inja\",\"label\":\"인사캠 → 자과캠\",\"endpoint\":\"/bus/schedule/data/campus-inja/smart\"},{\"serviceId\":\"campus-jain\",\"label\":\"자과캠 → 인사캠\",\"endpoint\":\"/bus/schedule/data/campus-jain/smart\"}],\"heroCard\":null,\"routeBadges\":[{\"id\":\"regular\",\"label\":\"일반\",\"color\":\"003626\"},{\"id\":\"hakbu\",\"label\":\"학부대학\",\"color\":\"1565C0\"}],\"features\":[{\"type\":\"info\",\"url\":\"https://webview.skkuverse.com/bus/campus/info\"}]}}"
   },

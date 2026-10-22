@@ -1,6 +1,6 @@
 /**
  * toTopologyIssues, the checks a `subway-topology` push runs against the
- * checked-out code's network (move-reference-datasets D3): revision 1 against
+ * checked-out code's network: revision 1 against
  * SUBWAY_NETWORK has none. Every issue the committed registry failed the boot
  * on for its directions and neighbors is one issue with its path: a named
  * stop that is neither a served platform nor a neighbor, or is on another

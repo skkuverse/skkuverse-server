@@ -1,6 +1,5 @@
 /**
- * The readers of the stored `subway-topology` dataset (move-reference-datasets
- * D3; spec `subway-topology`), over main.ts's pipeline with every repository and
+ * The readers of the stored `subway-topology` dataset, over main.ts's pipeline with every repository and
  * upstream client faked, the poller registry replaced by one that records each
  * tick, and the clock at 10:12 KST on Tuesday 2026-10-20, every platform's
  * arrival state fresh:

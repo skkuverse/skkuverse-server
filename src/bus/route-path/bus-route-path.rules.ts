@@ -20,8 +20,8 @@ export function toPathVersion(fetched: FetchedRoutePath): string {
 
 const changedShare = (stored: number, observed: number): number => (stored === 0 ? 1 : Math.abs(observed - stored) / stored);
 
-// WHY: a held change is never written, so an answer from another route or a broken one cannot redraw the map
-// (add-jongro-route-lines D3); with no stored line only the absolute checks can apply.
+// WHY: a held change is never written, so an answer from another route or a broken one cannot redraw the map;
+// with no stored line only the absolute checks can apply.
 export function toPathSyncDecision(
   stored: { pathVersion: string; shape: PathShape } | null,
   observed: { pathVersion: string; shape: PathShape; stationCount: number },

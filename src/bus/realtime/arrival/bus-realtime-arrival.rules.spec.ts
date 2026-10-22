@@ -15,16 +15,7 @@
 import arrivalsFixture from "../../../../__tests__/nest/bus/fixtures/topis-jongro-arrivals.json";
 import { jongroArrivalBus, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { JongroArrivalBus } from "../../cache/bus-cache.document";
-import {
-  isLastBus,
-  toArrival,
-  toArrivalCarNumber,
-  toArrivalState,
-  toCrowding,
-  toMinutes,
-  toPassengerCount,
-  toStopsAway,
-} from "./bus-realtime-arrival.rules";
+import { isLastBus, toArrival, toArrivalCarNumber, toArrivalState, toCrowding, toMinutes, toPassengerCount, toStopsAway, toTravelSeconds } from "./bus-realtime-arrival.rules";
 
 type FixtureResponse = (typeof arrivalsFixture)["jongro07Running"];
 
@@ -111,6 +102,23 @@ describe("isLastBus on 막차 anywhere in the text", () => {
   it("keeps 막차운행종료 as ended", () => {
     // Act & Assert
     expect(toArrivalState("막차운행종료")).toBe("ended");
+  });
+});
+
+// WHY: the live route serves an instant, TOPIS's mkTm plus these seconds, never rounded (ADR 0019, D1).
+describe("toTravelSeconds", () => {
+  it.each([
+    [192, "3분12초후[2번째 전]", 192],
+    [112, "곧 도착", 112],
+    [0, "1분40초후[1번째 전]", 100],
+    [0, "[막차]12분후", 720],
+    [0, "20초후[1번째 전]", 20],
+    [0, "곧 도착", null],
+    [0, "출발대기", null],
+    [0, "결행", null],
+  ])("traTime %i and %j → %s", (traTime, arrmsg, expected) => {
+    // Act & Assert
+    expect(toTravelSeconds(jongroArrivalBus({ traTime, arrmsg }))).toBe(expected);
   });
 });
 

@@ -22,7 +22,7 @@ export function toProgressOrdinal(route: readonly string[], event: Pick<TrainEve
 
 // WHY: a train seen at a station its row passes has left its last stop before it, at the latest then, so it never
 // replaces a stop event; before its first stop or its stop at the served station it stays there, timed from that
-// next stop (design D4), since that last stop may be Geumjeong, a whole express run back.
+// next stop, since that last stop may be Geumjeong, a whole express run back.
 function toStopProgress(tick: TrackingTick, route: readonly string[], event: TrainEvent): TrainProgress | null {
   const stopPlatformIds = tick.stopPlatformIdsByTrainNo.get(event.trainNo);
   const stationIndex = route.indexOf(event.platformId);

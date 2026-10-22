@@ -3,7 +3,7 @@
  * day written YYYY-MM-DD, so a push cannot store a day the calendar does not
  * have, or one the strict reads would not find. And the identities a
  * `bus-service-notices` push names: each stored service id, which must be a
- * service the code defines (`busServices`, move-editorial-datasets D7).
+ * service the code defines (`busServices`).
  */
 import { isCalendarDate, isRestDayKey, serviceNoticesReferences, toRestDays } from "./bus-schedule-content.rules";
 

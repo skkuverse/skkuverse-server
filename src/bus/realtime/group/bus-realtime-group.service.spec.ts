@@ -10,7 +10,7 @@
  * vehicle's arrivals read waiting, and a position a full section behind its
  * arrival rows is served running. A running or atStop bus carries its
  * trajectory, a waiting one none, and meta carries the server's instant at
- * +09:00 (add-jongro-bus-trajectory).
+ * +09:00.
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -35,6 +35,7 @@ import {
   noArrivalBus,
 } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { Clock } from "../../../infra/clock";
+import logger from "../../../infra/logger";
 import type { BusCacheRepository } from "../../cache/bus-cache.repository";
 import { BusCacheService } from "../../cache/bus-cache.service";
 import type { BusRegistryRepository } from "../../registry/bus-registry.repository";
@@ -80,9 +81,9 @@ describe("BusRealtimeGroupService.getGroup", () => {
 
     // Assert
     expect(group).toEqual({
-      // WHY: kind is what add-jongro-bus-positions adds to every bus (task 2.2).
+      // WHY: every bus carries kind.
       data: { groupId: "hssc", buses: [{ stationIndex: 1, carNumber: "0000", estimatedTime: 30, kind: "estimated" }], stationEtas: [] },
-      // WHY: serverNow is what add-jongro-bus-trajectory adds to meta (task 2.2).
+      // WHY: meta carries serverNow.
       meta: { currentTime: "10:00 AM", totalBuses: 1, serverNow: "2026-10-20T10:00:00+09:00" },
     });
   });
@@ -101,9 +102,8 @@ describe("BusRealtimeGroupService.getGroup", () => {
     const group = await service.getGroup("jongro07");
 
     // Assert
-    // WHY: arrivals (improve-jongro-realtime 3.1) and stationsVersion (5.4) are the fields this change adds;
-    // kind and tracked are add-jongro-bus-positions' (task 2.2), the bus's crowding from the ord 1 row naming it;
-    // trajectory is add-jongro-bus-trajectory's (task 2.2), the observation alone since no row names its next stop.
+    // WHY: each station carries its arrivals and the group its stationsVersion; the bus is tracked, its crowding
+    // from the ord 1 row naming it, and its trajectory is the observation alone, since no row names its next stop.
     expect(group.data).toEqual({
       groupId: "jongro07",
       stationsVersion: versionOf("jongro07"),
@@ -124,7 +124,7 @@ describe("BusRealtimeGroupService.getGroup", () => {
             progress: 0.5,
             segmentMeters: 300,
             nextStopInSec: null,
-            // (An agent tooling note is left out of the public history.)
+            // WHY: the next stop from its 150 m left at 4 m/s, agreed with skkuverse-app.
             trajectory: [
               { at: "2026-10-20T10:00:00+09:00", s: 5.5 },
               { at: "2026-10-20T10:00:38+09:00", s: 6 },
@@ -229,8 +229,8 @@ describe("BusRealtimeGroupService.getGroup", () => {
   });
 });
 
-// WHY: the realtime response names the stations version it was placed by, so the app can tell its config is stale
-// (improve-jongro-realtime D10); without a stored route there is nothing to place by (D7).
+// WHY: the realtime response names the stations version it was placed by, so the app can tell its config is stale;
+// without a stored route there is nothing to place by (ADR 0012, D3).
 describe("BusRealtimeGroupService.getGroup and the registry", () => {
   it("places arrivals by the stored stations and serves their version", async () => {
     // Arrange
@@ -271,8 +271,8 @@ describe("BusRealtimeGroupService.getGroup and the registry", () => {
   });
 });
 
-// WHY: each Jongro bus is tracked by joining its cached position with its vehicle's arrival rows at serve time
-// (add-jongro-bus-positions D4). The rows are the 2026-10-17 production capture's (pos_/arr_<busRouteId>_<epoch>).
+// WHY: each Jongro bus is tracked by joining its cached position with its vehicle's arrival rows at serve time.
+// The rows are the 2026-10-17 production capture's (pos_/arr_<busRouteId>_<epoch>).
 describe("BusRealtimeGroupService.getGroup tracked buses", () => {
   const trackedOf = async (groupId: string) => (await service.getGroup(groupId)).data.buses.map((bus) => ("tracked" in bus ? bus.tracked : bus.kind));
 
@@ -322,7 +322,7 @@ describe("BusRealtimeGroupService.getGroup tracked buses", () => {
     const group = await service.getGroup("jongro02");
 
     // Assert
-    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
+    // WHY: a running or atStop bus carries a trajectory.
     expect(group.data.buses).toEqual([
       {
         stationIndex: 16,
@@ -366,7 +366,7 @@ describe("BusRealtimeGroupService.getGroup tracked buses", () => {
     ]);
 
     // Act & Assert
-    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
+    // WHY: a running or atStop bus carries a trajectory.
     expect(await trackedOf("jongro07")).toEqual([
       {
         status: "atStop",
@@ -434,7 +434,7 @@ describe("BusRealtimeGroupService.getGroup tracked buses", () => {
 });
 
 // WHY: production showed route 02's 2009 waiting at its origin while its own arrivals read arriving at stop 1
-// (add-jongro-bus-positions D7). The rows are the 2026-10-17 capture's (pos_/arr_<busRouteId>_<epoch>).
+// (ADR 0014, D3). The rows are the 2026-10-17 capture's (pos_/arr_<busRouteId>_<epoch>).
 describe("BusRealtimeGroupService.getGroup waiting arrivals and lagging positions", () => {
   it("serves a waiting vehicle's arrivals as waiting and leaves other vehicles' (종로02 vehicle 100000018, epoch 1792232472)", async () => {
     // Arrange
@@ -516,7 +516,7 @@ describe("BusRealtimeGroupService.getGroup waiting arrivals and lagging position
     const group = await service.getGroup("jongro07");
 
     // Assert
-    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
+    // WHY: a running or atStop bus carries a trajectory.
     expect(group.data.buses).toEqual([
       {
         stationIndex: 4,
@@ -534,7 +534,8 @@ describe("BusRealtimeGroupService.getGroup waiting arrivals and lagging position
           progress: 0,
           segmentMeters: 225,
           nextStopInSec: null,
-          // (An agent tooling note is left out of the public history.)
+          // WHY: the next stop from its 225 m at 4 m/s, agreed with skkuverse-app,
+          // then the rows' ords 7 and 8.
           trajectory: [
             { at: "2026-10-17T19:22:58+09:00", s: 4 },
             { at: "2026-10-17T19:23:54+09:00", s: 5 },
@@ -547,8 +548,8 @@ describe("BusRealtimeGroupService.getGroup waiting arrivals and lagging position
   });
 });
 
-// WHY: the app interpolates each tracked bus through its trajectory against meta.serverNow
-// (add-jongro-bus-trajectory D1). The rows are route 02's at epoch 1792314485 (pos_/arr_100900008, 2026-10-18 capture).
+// WHY: the app interpolates each tracked bus through its trajectory against meta.serverNow.
+// The rows are route 02's at epoch 1792314485 (pos_/arr_100900008, 2026-10-18 capture).
 describe("BusRealtimeGroupService.getGroup trajectories", () => {
   const madeAt = "2026-10-18 18:07:53.0";
   const bus88 = { vehId: "100000088", plainNo: "서울75사5501", sectOrd: 9, rerideDiv: 2, rerideNum: 6 };
@@ -631,36 +632,78 @@ describe("BusRealtimeGroupService.getGroup trajectory index space", () => {
 });
 
 
-// WHY: the stop page reads the same view as the realtime route, so placement and the waiting rewrite are one code
-// path (unify-bus-stops D17).
-describe("BusRealtimeGroupService.findGroupView", () => {
-  it("answers the buses, station ETAs and stations version the realtime route serves", async () => {
+// WHY: the live route maps a Jongno group from the same reads and joins as this view, with when each key was written
+// (ADR 0019, D6).
+describe("BusRealtimeGroupService.findJongroReading", () => {
+  it("answers the route, each position with its tracking, each placed row read slot by slot, and the write instants", async () => {
     // Arrange
-    busCache.values.set("jongro_locations_07", [jongroPositionDoc({ sequence: "6", carNumber: "5537" })]);
-    busCache.values.set("jongro_stations_07", [jongroArrivalDoc({ stationId: "100900220", sequence: "1", eta: "3분후[2번째 전]" })]);
-    const { data } = await service.getGroup("jongro07");
+    busCache.values.set("jongro_locations_07", [jongroPositionDoc({ sequence: "6", vehicleId: "100000103" })]);
+    busCache.values.set("jongro_stations_07", [
+      jongroArrivalDoc({ stationId: "100900220", sequence: "1", eventDate: "2026-10-20 09:59:00.0", buses: [jongroArrivalBus({ staOrd: 1, traTime: 185 }), noArrivalBus({ staOrd: 1, arrmsg: "출발대기" })] }),
+    ]);
+    busCache.updatedAtByKey.set("jongro_locations_07", new Date("2026-10-20T00:59:58Z"));
 
     // Act
-    const view = await service.findGroupView("jongro07");
+    const reading = await service.findJongroReading("jongro07");
 
     // Assert
-    expect(view).toEqual({ buses: data.buses, stationEtas: data.stationEtas, stationsVersion: data.stationsVersion });
-    expect(view!.stationEtas).toHaveLength(1);
+    expect(reading!.route.stationsVersion).toBe(versionOf("jongro07"));
+    expect(reading!.positions.map(({ position, tracking }) => [position.vehicleId, tracking.status])).toEqual([["100000103", "running"]]);
+    expect(reading!.rows.map((row) => [row.stationIndex, row.madeAtMs, row.slots.map((slot) => [slot.arrival.state, slot.travelSeconds])])).toEqual([
+      [0, Date.parse("2026-10-20T00:59:00Z"), [["running", 185], ["waiting", null]]],
+    ]);
+    expect([reading!.positionsCheckedAt, reading!.arrivalsCheckedAt]).toEqual([new Date("2026-10-20T00:59:58Z"), busCache.writtenAt]);
   });
 
-  it("answers the HSSC buses with no station ETAs and no stations version", async () => {
+  it("reads a waiting vehicle's slots as waiting, as the realtime view serves them", async () => {
     // Arrange
-    busCache.values.set("hssc", [hsscBusDoc({ sequence: "4", carNumber: "0001", estimatedTime: 0 })]);
+    busCache.values.set("jongro_locations_02", [jongroPositionDoc({ sequence: "1", stationId: "100900204", vehicleId: "100000018", isStationary: true })]);
+    busCache.values.set("jongro_stations_02", [
+      jongroArrivalDoc({ stationId: "100900202", sequence: "2", buses: [jongroArrivalBus({ vehId: "100000018", staOrd: 2, sectOrd: 2, traTime: 11, arrmsg: "곧 도착" })] }),
+    ]);
 
     // Act
-    const view = await service.findGroupView("hssc");
+    const reading = await service.findJongroReading("jongro02");
 
     // Assert
-    expect(view).toEqual({ buses: [{ stationIndex: 3, carNumber: "0001", estimatedTime: 0, kind: "estimated" }], stationEtas: [] });
+    expect(reading!.rows[0]!.slots.map((slot) => [slot.arrival.state, slot.travelSeconds])).toEqual([["waiting", 11]]);
   });
 
-  it("answers null for a group it does not serve", async () => {
+  it("answers no rows, no positions and no write instants before the poller wrote", async () => {
+    // Act
+    const reading = await service.findJongroReading("jongro08");
+
+    // Assert
+    expect(reading).toMatchObject({ rows: [], positions: [], arrivalsCheckedAt: null, positionsCheckedAt: null });
+  });
+
+  it("answers null for a group that is not a Jongno route", async () => {
     // Act & Assert
-    expect(await service.findGroupView("nope")).toBeNull();
+    expect(await Promise.all([service.findJongroReading("hssc"), service.findJongroReading("nope")])).toEqual([null, null]);
+  });
+});
+
+// WHY: installed bundles call the deprecated route until their devices update; an hourly line per group, app version
+// and platform counts them (ADR 0019, D11), since the app sends no OTA bundle id.
+describe("BusRealtimeGroupService.recordDeprecatedCall", () => {
+  const calls = () => jest.mocked(logger.warn).mock.calls.filter(([fields]) => (fields as { event?: string }).event === "bus.realtime.deprecated_route_called");
+
+  it("logs a call once an hour per group, app version and platform, counting the calls it skipped", () => {
+    // Arrange
+    jest.mocked(logger.warn).mockClear();
+    const client = { appVersion: "3.6.2", platform: "ios" };
+
+    // Act
+    service.recordDeprecatedCall("hssc", client);
+    service.recordDeprecatedCall("hssc", client);
+    service.recordDeprecatedCall("hssc", { appVersion: "3.6.2", platform: "android" });
+    service.recordDeprecatedCall("hssc", { appVersion: null, platform: null });
+
+    // Assert
+    expect(calls().map(([fields]) => fields)).toEqual([
+      { event: "bus.realtime.deprecated_route_called", groupId: "hssc", appVersion: "3.6.2", platform: "ios", suppressed: 0 },
+      { event: "bus.realtime.deprecated_route_called", groupId: "hssc", appVersion: "3.6.2", platform: "android", suppressed: 0 },
+      { event: "bus.realtime.deprecated_route_called", groupId: "hssc", appVersion: null, platform: null, suppressed: 0 },
+    ]);
   });
 });

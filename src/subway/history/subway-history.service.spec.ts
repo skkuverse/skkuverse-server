@@ -3,8 +3,7 @@
  * the real timetable door on FakeHolidaysService and the trimmed fixture of revision 1
  * of the timetables, the real estimate door), writing to FakeSubwayHistoryRepository, at
  * a scripted Clock, fed one upstream's observations per tick as the pollers
- * feed the tracker. What it guards, by the subway-arrival-accuracy spec's
- * scenarios: a record is written at the tick a train's served lead time first
+ * feed the tracker. What it guards: a record is written at the tick a train's served lead time first
  * falls to or below a horizon, with the prediction served then; a train first
  * seen 2 minutes out gets only its 1-minute record; an observed arrival
  * resolves the train's records at the station made before the tick that first
@@ -14,7 +13,7 @@
  * predicted arrival with no arrival seen is marked unresolved at the next
  * minute's sweep; each source's first report of a train's state at a served
  * platform is one event, and an event at a stop the tracker only observes
- * (upstream, watched or next) is none (add-commute-station-subway design D10);
+ * (upstream, watched or next) is none;
  * and a failing history write leaves the served arrivals
  * written and the tick resolved, logged at most once every 10 minutes.
  */

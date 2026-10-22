@@ -1,6 +1,6 @@
 /**
- * Cache key (spec: "Overview cache"): what makes two requests share an overview.
- * Candidate selection (spec: "Candidate selection"): cross-posted copies count
+ * Cache key: what makes two requests share an overview.
+ * Candidate selection: cross-posted copies count
  * once, the best-ranked copy represents them, and at most 6 notices reach the ai.
  */
 import { candidate } from "../../../__tests__/helpers/overview-fixtures";

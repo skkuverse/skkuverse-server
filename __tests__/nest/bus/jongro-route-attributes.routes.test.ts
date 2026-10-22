@@ -1,7 +1,5 @@
 /**
- * The routes that serve a Jongro route's stored attributes (move-reference-datasets
- * D10 and D12; specs `jongro-route-attributes`, `jongro-station-registry` and
- * `jongro-realtime-arrivals`), over main.ts's pipeline with every repository and
+ * The routes that serve a Jongro route's stored attributes (ADR 0013, D2), over main.ts's pipeline with every repository and
  * the TOPIS client faked and the clock fixed at 12:00 KST on 2026-10-20:
  *
  * - `/bus/config` and `/bus/config/:groupId` take each Jongro card's theme color

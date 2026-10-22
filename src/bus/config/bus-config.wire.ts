@@ -39,6 +39,12 @@ const realtimeScreen = z.object({
   features: z.array(feature),
   /** WHY: a Jongro route's stations version; the realtime response carries the same while this config is current. */
   stationsVersion: z.string().optional(),
+  /** WHY: the live route the app moves to by OTA; dataEndpoint never changes, since installed bundles call it (ADR 0019, D11). */
+  liveEndpoint: z.string(),
+  /** WHY: on a loop a trajectory's s may pass the last index; place a marker at s mod the station count (ADR 0019, D7). */
+  isLoop: z.boolean(),
+  /** WHY: what the group's source can never supply; positionSource is an open enum, gps or stopEvents (ADR 0019, D2). */
+  capabilities: z.object({ positionSource: z.string(), occupancy: z.boolean(), plateNumber: z.boolean(), lastBus: z.boolean() }),
 });
 
 const scheduleScreen = z.object({

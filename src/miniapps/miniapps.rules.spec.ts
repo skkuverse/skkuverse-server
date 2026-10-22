@@ -10,8 +10,8 @@
  * counted in graphemes, and a startUrl on the web view that addresses a page.
  * And the one 404 both flows answer an unregistered id with.
  *
- * toRegistryIssues, the push check of who may start where (move-miniapp-registry
- * design D5, D6): each first-party origin is the startUrl origin of exactly the
+ * toRegistryIssues, the push check of who may start where (ADR 0013, D2):
+ * each first-party origin is the startUrl origin of exactly the
  * mini app src/infra/origins.ts names for it, and a startUrl on a skkuverse.com
  * host is a first-party origin or the web view; a third party's start page is
  * its own business.

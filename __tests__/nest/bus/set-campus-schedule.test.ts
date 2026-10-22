@@ -1,9 +1,7 @@
 /**
  * `npm run schedule` (scripts/set-campus-schedule.js) refuses a timetable
  * whose stop times do not follow the stop sequences stored in the bus-stops
- * dataset of the environment it writes, before writing anything
- * (unify-bus-stops task 4.2, design D6, spec bus-timetable-tool "Stop times
- * match the stop sequence"). Run in this process over a real `mongod`:
+ * dataset of the environment it writes, before writing anything. Run in this process over a real `mongod`:
  *
  *   - it reads `bus-stops` from the content database of its target, `_dev`
  *     without --prod and production with it, never the other;
@@ -197,7 +195,7 @@ describe("npm run schedule against the stored bus-stops sequences", () => {
   });
 });
 
-// Review F1 of wave 2: a pattern that serves no date from today on (2026-10-22 in KST at NOW) is left out of the
+// A pattern that serves no date from today on (2026-10-22 in KST at NOW) is left out of the
 // check and named as skipped, as `npm run data -- push bus-stops` leaves it out; one ending today is still checked.
 describe("npm run schedule with a pattern no longer served", () => {
   it.each([

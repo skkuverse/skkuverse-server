@@ -1,6 +1,6 @@
 /**
- * MapTransitService over a scripted bus route path read (add-jongro-route-lines
- * D5, D6, isolate-api-from-pollers D3): the stored lines become one path
+ * MapTransitService over a scripted bus route path read
+ * (ADR 0012, D3): the stored lines become one path
  * overlay each, and a read that left out a route with no stored line is
  * marked degraded, so the controller lets a shared cache keep it a minute
  * only.

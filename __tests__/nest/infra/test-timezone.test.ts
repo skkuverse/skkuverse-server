@@ -1,6 +1,6 @@
 /**
  * Every Jest worker runs in UTC whatever the host's zone (`jest.config.js`,
- * harden-test-suite design D5), so code that needs KST has to name
+ * ADR 0011, D5), so code that needs KST has to name
  * `Asia/Seoul` itself.
  */
 describe("the test time zone", () => {

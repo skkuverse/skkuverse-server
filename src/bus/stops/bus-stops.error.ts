@@ -1,7 +1,7 @@
 import { AppError } from "../../http/app.error";
 
 // WHY: an answer, not a fault: with no good stops read yet, a 200 without the shuttle groups would replace the app's
-// cached config with a wrong one, while a 503 keeps the last good one (unify-bus-stops design D5).
+// cached config with a wrong one, while a 503 keeps the last good one.
 export class BusStopsUnavailableError extends AppError {
   constructor() {
     super("BUS_STOPS_UNAVAILABLE", "The bus stops are unavailable", 503);

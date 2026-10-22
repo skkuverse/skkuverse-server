@@ -15,7 +15,7 @@
  * `zh` leaves a map whose layer labels are Chinese and whose booths are not.
  *
  * The registry is read only once a live layer set has places, and its outage
- * costs a `miniapp` button, never a booth (move-miniapp-registry D4): with no
+ * costs a `miniapp` button, never a booth: with no
  * registry ever read, every place keeps its other buttons and loses its
  * `miniapp` ones, and `map.event_overlays.registry_unavailable` is logged at
  * error.

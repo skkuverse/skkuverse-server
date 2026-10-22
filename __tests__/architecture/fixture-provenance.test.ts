@@ -1,6 +1,5 @@
 /**
- * Every fixture says where its data came from (harden-test-suite design D6,
- * task 3.5; docs/decisions/0011-test-strategy.md). A JSON file under a
+ * Every fixture says where its data came from (ADR 0011, D7). A JSON file under a
  * `fixtures/` folder is an object whose `_about` string either names the date
  * it was captured (`YYYY-MM-DD`, next to the source and what was trimmed) or
  * says it is synthetic or hand-written (and why it was never captured). Without

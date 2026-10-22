@@ -1,6 +1,6 @@
 /**
- * The real `mongod` test helper (`__tests__/helpers/mongod.ts`, harden-test-suite
- * design D6): it starts the pinned binary on loopback, the app's own Mongo client
+ * The real `mongod` test helper (`__tests__/helpers/mongod.ts`, ADR 0011, D6):
+ * it starts the pinned binary on loopback, the app's own Mongo client
  * (src/infra/db.ts) reaches it through MONGO_URL when loaded after the start, and
  * a document written through that client reads back.
  */

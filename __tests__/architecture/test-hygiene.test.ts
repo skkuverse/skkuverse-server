@@ -1,5 +1,5 @@
 /**
- * The tests themselves stay honest (harden-test-suite design D3): no focused,
+ * The tests themselves stay honest (ADR 0011, D8): no focused,
  * skipped or todo test is ever committed, every test body asserts something,
  * and every test body marks its Arrange / Act / Assert steps (tests.md). The
  * assertion and marker rules ratchet: files that broke them when the rules

@@ -1,7 +1,7 @@
 import { AppError } from "../../http/app.error";
 
 // WHY: an answer, not a fault: with no good attributes read yet, a route that serves them is a 503 rather than cards
-// without colors or crowding against no seat count (move-reference-datasets D10).
+// without colors or crowding against no seat count (ADR 0013, D6).
 export class BusRouteAttributesUnavailableError extends AppError {
   constructor() {
     super("JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", "The Jongro route attributes are unavailable", 503);

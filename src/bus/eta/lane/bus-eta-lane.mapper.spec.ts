@@ -1,5 +1,5 @@
 /**
- * toCorridorSnapshot: one stored `bus-lane-corridor` revision as the live tick reads it (move-reference-datasets D9):
+ * toCorridorSnapshot: one stored `bus-lane-corridor` revision as the live tick reads it:
  * the revision, the centerline with its boundaries, the probe routes in their stored order, each direction's entry
  * and exit, and each direction's leg bounds, the entry and the exit projected onto the centerline.
  */

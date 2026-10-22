@@ -1,7 +1,8 @@
-import moment from "moment-timezone";
+import { toKstInstant } from "../../bus.mapper";
 import type { JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import { KST_TIME_ZONE } from "../../../shared/time-zone.constants";
-import type { CachedBusFields, JongroBusTracking } from "./bus-realtime-group.types";
+import type { IncomingHttpHeaders } from "http";
+import type { CachedBusFields, DeprecatedCaller, JongroBusTracking } from "./bus-realtime-group.types";
 import type { RealtimeBus, TrackedStatus } from "./bus-realtime-group.wire";
 
 function toLegacyBusFields(bus: CachedBusFields) {
@@ -35,10 +36,6 @@ export function toTrackedBus(position: JongroBusPositionDoc, tracking: JongroBus
   return { ...toLegacyBusFields(position), kind: "tracked", tracked: toTracked(tracking) };
 }
 
-export function toKstInstant(ms: number): string {
-  return moment(ms).tz(KST_TIME_ZONE).format("YYYY-MM-DDTHH:mm:ssZ");
-}
-
 export function toClockTime(now: Date): string {
   return now.toLocaleTimeString("en-US", {
     timeZone: KST_TIME_ZONE,
@@ -46,4 +43,10 @@ export function toClockTime(now: Date): string {
     minute: "2-digit",
     hour12: true,
   });
+}
+
+const singleHeader = (value: string | string[] | undefined): string | null => (typeof value === "string" ? value : null);
+
+export function toDeprecatedCaller(headers: IncomingHttpHeaders): DeprecatedCaller {
+  return { appVersion: singleHeader(headers["x-app-version"]), platform: singleHeader(headers["x-platform"]) };
 }

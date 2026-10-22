@@ -5,12 +5,12 @@
  * matching alone can't tell 02's loop terminal (ord 1 departing, ord 27
  * arriving) apart.
  *
- * A tracked Jongro bus (add-jongro-bus-positions): its rows found by vehicle,
+ * A tracked Jongro bus: its rows found by vehicle,
  * its status (waiting at a terminal or by its next-stop text, at a stop,
  * running), its progress through the section and its seconds to the next
  * stop re-based to TOPIS's observation time; a position a full section behind
  * its arrival rows served running, and a waiting vehicle's arrivals read
- * waiting (D7). Its trajectory (add-jongro-bus-trajectory): the observation,
+ * waiting (ADR 0014, D3). Its trajectory: the observation,
  * an atStop bus's expected departure, then up to three next stops at their
  * re-based travel times, each at least 20 s after the previous knot.
  */
@@ -231,7 +231,7 @@ describe("toJongroBusTracking", () => {
     });
 
     // Assert
-    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
+    // WHY: a running or atStop bus carries a trajectory.
     expect(tracking).toEqual({
       status: "running",
       vehicleId: "100000058",
@@ -265,7 +265,7 @@ describe("toJongroBusTracking", () => {
     const tracking = toJongroBusTracking(position, { ...ROUTE07, nextStop, arrival: { state: "arriving", crowding: "relaxed", isLastBus: false }, namedBuses: [nextStop] });
 
     // Assert
-    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
+    // WHY: a running or atStop bus carries a trajectory.
     expect(tracking).toEqual({
       status: "atStop",
       vehicleId: "100000103",
@@ -301,7 +301,7 @@ describe("toJongroBusTracking", () => {
 });
 
 // WHY: the arrival API counts the section toward the next stop, one ahead of the position's sectOrd, so a gap of
-// 2 means the position is a section stale (add-jongro-bus-positions D7, 966 of 1,032 same-epoch pairs at 1).
+// 2 means the position is a section stale (966 of 1,032 same-epoch pairs at 1).
 describe("isLaggingPosition", () => {
   it.each([
     ["no row names the vehicle", undefined, false],
@@ -361,7 +361,7 @@ describe("toTrackedStatus with a lagging position", () => {
     });
 
     // Assert
-    // WHY: trajectory is what add-jongro-bus-trajectory adds to a running or atStop bus (task 2.2).
+    // WHY: a running or atStop bus carries a trajectory.
     expect(tracking).toEqual({
       status: "running",
       vehicleId: "100000035",
@@ -371,7 +371,7 @@ describe("toTrackedStatus with a lagging position", () => {
       progress: 0,
       segmentMeters: 225,
       nextStopInSec: null,
-      // (An agent tooling note is left out of the public history.)
+      // WHY: the next stop from its 225 m at 4 m/s (56 s), agreed with skkuverse-app.
       trajectory: [
         { atMs: Date.parse("2026-10-17T19:22:58+09:00"), s: 4 },
         { atMs: Date.parse("2026-10-17T19:23:54+09:00"), s: 5 },
@@ -395,7 +395,7 @@ describe("toWaitingArrival", () => {
 describe("toWaitingVehicleIds", () => {
   it("collects the vehicles of tracked buses whose status is waiting", () => {
     // Arrange
-    // An atStop bus carries its trajectory since add-jongro-bus-trajectory.
+    // An atStop bus carries its trajectory.
     const common = { stationIndex: 0, carNumber: "5512", estimatedTime: 0 };
     const tracked = { observedAt: "2026-10-17T19:21:01+09:00", crowding: null, isLastBus: false };
     const buses = [
@@ -409,7 +409,7 @@ describe("toWaitingVehicleIds", () => {
   });
 });
 
-// WHY: the app interpolates a tracked bus through knots of (instant, s) (add-jongro-bus-trajectory D2). The rows are
+// WHY: the app interpolates a tracked bus through knots of (instant, s). The rows are
 // the 2026-10-18 production capture's (pos_/arr_<busRouteId>_<epoch>), unless a case says it is hand-edited.
 describe("toTrajectory", () => {
   const ROUTE08 = { stationCount: 31 };
@@ -560,7 +560,9 @@ describe("toTrajectory", () => {
     // Act
     const trajectory = toTrajectory(running88, "running", { ...ROUTE02, namedBuses: named("100000088", "18:07:53", [10, 47]) });
 
-    // (An agent tooling note is left out of the public history.)
+    // Assert
+    // WHY: the distance fallback is part of the contract agreed with skkuverse-app:
+    // 103 m left of 118 m at 4 m/s is 26 s.
     expect(trajectory).toEqual([
       { atMs: at("18:07:45"), s: 7 + 0.015 / 0.118 },
       { atMs: at("18:08:11"), s: 8 },
@@ -594,7 +596,7 @@ describe("toNamedBuses", () => {
 });
 
 // WHY: with a trajectory the app ignores nextStopInSec and segmentMeters, so a next stop TOPIS gives no time for is
-// still reached at the app's own 4 m/s (add-jongro-bus-trajectory D2, agreed with skkuverse-app).
+// still reached at the app's own 4 m/s (agreed with skkuverse-app).
 describe("toTrajectory without a travel time", () => {
   const at = (hhmmss: string) => Date.parse(`2026-10-18T${hhmmss}+09:00`);
   const named = (vehId: string, madeAt: string, ...rows: Array<[staOrd: number, traTime: number]>) =>

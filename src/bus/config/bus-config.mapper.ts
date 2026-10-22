@@ -11,6 +11,8 @@ import {
   COMMUTE_SERVICE_IDS,
   FASTTRACK_ORANGE,
   HAKBU_BLUE,
+  HSSC_LIVE_SCREEN,
+  JONGRO_LIVE_SCREEN,
   SKKU_GREEN,
 } from "./bus-config.constants";
 import { COMMUTE_VISIBILITY, FASTTRACK_VISIBILITY } from "./bus-config.config";
@@ -49,8 +51,8 @@ const withTransferLines = (station: JongroStation, { transferLinesByArsId: byArs
 
 const withStopId = (station: AttributedJongroStation, stopIdByArsId: ReadonlyMap<string, string>): AttributedJongroStation => ({ ...station, stopId: toPoleStopId(station.stationNumber, stopIdByArsId) });
 
-// WHY: the field order is the ETag's input (md5 of the JSON), so it never changes for an unchanged group;
-// stationsVersion comes last for the same reason.
+// WHY: the field order is the ETag's input (md5 of the JSON), so it never changes for an unchanged group; the live
+// route's fields come last, after stationsVersion, for the same reason.
 function toJongroGroup({ route, attributes }: AttributedJongroRoute, stopIdByArsId: ReadonlyMap<string, string>, lang: SupportedLang) {
   return {
     id: route.id,
@@ -70,6 +72,7 @@ function toJongroGroup({ route, attributes }: AttributedJongroRoute, stopIdByArs
       stations: mapStations(route.stations.map((station) => withStopId(withTransferLines(station, attributes), stopIdByArsId))),
       features: [],
       stationsVersion: route.stationsVersion,
+      ...{ liveEndpoint: `/bus/live/${route.id}`, ...JONGRO_LIVE_SCREEN },
     },
   };
 }
@@ -102,6 +105,7 @@ function toHsscGroup(lang: SupportedLang, stations: BusGroupSources["hsscStation
       lastStationIndex: HSSC_POSITION_COUNT - 1,
       stations: mapStations(stations),
       features: [{ type: "info", url: `${webviewOrigin}/bus/hssc/info` }],
+      ...{ liveEndpoint: "/bus/live/hssc", ...HSSC_LIVE_SCREEN },
     },
   };
 }

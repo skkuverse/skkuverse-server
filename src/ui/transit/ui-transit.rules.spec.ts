@@ -5,7 +5,7 @@
  * written in the layout, which holds no colon and so never collides with the
  * other three.
  *
- * The checks a layout needs beyond its schema (move-editorial-datasets D5),
+ * The checks a layout needs beyond its schema,
  * pure, so `npm run data` refuses a push on any issue and the reader leaves
  * out the items an issue points into:
  * - toTransitLayoutIssues finds a bus group or station the code does not

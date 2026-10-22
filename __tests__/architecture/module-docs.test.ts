@@ -1,6 +1,6 @@
 /**
  * Every feature module has one architecture doc in one fixed shape
- * (refactor design D16; openspec module-docs spec): `docs/explanation/<m>-architecture.md`,
+ * (ADR 0010, D14): `docs/explanation/<m>-architecture.md`,
  * linked from the explanation table of docs/README.md, loaded for agents by
  * `.claude/rules/<m>.md` and pointed to by a `SEE:` line above `@Module`.
  *

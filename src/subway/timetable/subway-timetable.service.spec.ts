@@ -11,7 +11,7 @@
  * ones; one platform's schedule is found by its platform id, and an unserved
  * id finds none; and the service window opens at 05:00 KST and closes at 01:10 after a
  * weekday and at 00:30 after a Saturday or a holiday. Over the trimmed
- * fixture of revision 1, all three day types, the tracked stations (design D17): every
+ * fixture of revision 1, all three day types, the tracked stations (ADR 0017, D6): every
  * station before a platform on its route is declared upstream or watched and
  * named by the provider, no run between two tracked stops of a train exceeds
  * the longest express run, every train is in view 10 minutes before the
@@ -19,7 +19,7 @@
  * The day-type, window and instant rules themselves are
  * subway-timetable.rules.spec.ts's.
  *
- * The read path (move-reference-datasets D7, spec `subway-timetables`): no
+ * The read path: no
  * table is read when the service is built; a table is read only when a
  * platform of its line is scheduled for the service day, once per stored
  * content, and held until a later service day needs another of its line; a
@@ -243,7 +243,7 @@ describe("SubwayTimetableService.listPlatformSchedules over the tracked stations
   // before Konkuk Univ., which stays untracked because an outer-circle lap starts there too under the number it reaches
   // Jamsil with.
   const RUN_STARTS = ["DX-D1-D04", "DX-D1-4319", "DX-D1-4311", "DX-D1-4312", "S1-2-212"];
-  // WHY: the id frozen at first use (design D2) and the codes the 2026-05-11 KRIC list skips, each pair adjacent.
+  // WHY: the id frozen at first use and the codes the 2026-05-11 KRIC list skips, each pair adjacent.
   const ADJACENT_ACROSS_CODES = ["KR-1-P157 KR-1-1715", "KR-1-1715 KR-1-P155", "S1-8-2809 S1-8-2811", "S1-8-2821 S1-8-2828"];
   const DAYS = ["2026-10-16T03:00:00Z", "2026-10-17T03:00:00Z", "2026-10-18T03:00:00Z"];
   const SECOND_MS = 1000;

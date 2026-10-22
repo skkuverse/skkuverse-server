@@ -12,7 +12,7 @@
  * A link chip's value is checked when Nest builds the layer-set service, so
  * the import-time validator leaves it alone and assertValidLinkChips reports
  * every broken one together. A code-held chip may not name a mini app, which
- * is data (move-miniapp-registry D4): a `miniapp` link chip is refused, even
+ * is data (ADR 0013, D2): a `miniapp` link chip is refused, even
  * to a registered one, and the base chips pass.
  */
 import { fixtureLayerSet } from "../../../__tests__/helpers/map/layer-sets-fixture";

@@ -8,7 +8,7 @@
  * background is upper-cased, and an unknown key never passes.
  *
  * toMiniAppRegistry, the frozen snapshot every reader takes of one registry
- * revision (move-miniapp-registry design D3): the index in `order` with both
+ * revision: the index in `order` with both
  * logos resolved under the web origin it is given, each detail by its id, and the
  * lookups every reader asks of it (isRegistered, detailOf and the target
  * grammar). It is pure and reads no config, so the data tool builds the same

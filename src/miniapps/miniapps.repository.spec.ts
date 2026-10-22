@@ -1,7 +1,7 @@
 /**
  * MiniappsRepository: the read of the stored `miniapps` dataset, the mini app
  * registry, which `npm run data` writes and the server only parses (ADR 0013
- * D6; move-miniapp-registry design D3).
+ * D6).
  *
  * The query object is pinned here, since FakeMiniappsRepository copies it: one
  * document by `_id`, projecting only the revision and the data, bounded by

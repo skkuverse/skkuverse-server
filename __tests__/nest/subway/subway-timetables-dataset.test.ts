@@ -1,7 +1,6 @@
 /**
  * The subway timetables' round trip between their one writer and the store,
- * over a real `mongod` (move-reference-datasets tasks 10.1 and 10.2, designs
- * D4 and D5; ADR 0013, D3 and D6): what `npm run data` checks with the
+ * over a real `mongod` (ADR 0013, D1, D3 and D6): what `npm run data` checks with the
  * catalog's `subway-timetables` entry and stores through
  * scripts/lib/datasets/parts.js is one header, whose manifest names one part
  * per table key, and one `dataset_parts` document per table, each read back

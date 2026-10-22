@@ -9,7 +9,7 @@ export function toUnknownRouteIds({ routes }: JongroRouteAttributesData, routeId
   return Object.keys(routes).filter((routeId) => !served.has(routeId));
 }
 
-/** WHY: the stored attributes must name exactly the routes the checked-out code serves (spec "Attributes push checks every route"). */
+/** WHY: the stored attributes must name exactly the routes the checked-out code serves. */
 export function toRouteAttributesIssues(attributes: JongroRouteAttributesData, routeIds: readonly string[]): RouteAttributesIssue[] {
   return [
     ...toMissingRouteIds(attributes, routeIds).map((routeId) => ({

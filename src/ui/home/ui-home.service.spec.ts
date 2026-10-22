@@ -1,6 +1,6 @@
 /**
  * UiHomeService over an in-memory dataset store, the real mini app registry
- * and a fixed clock (ADR 0013, D6; move-runtime-data-to-db D7): the home
+ * and a fixed clock (ADR 0013, D6): the home
  * layout is read from the stored `home-layout` dataset, cached for
  * DATASET_CACHE_TTL_MS so a push serves within a minute, kept through a failed
  * or invalid reload inside DATASET_STALE_WINDOW_MS, and unavailable (503) when
@@ -8,7 +8,7 @@
  * read once a minute, and a fault in this code is not turned into one. An item that names a mini app the registry no
  * longer holds is left out and logged once per revision.
  *
- * And the registry revision each request reads (move-miniapp-registry D4, D7): a layout that names a mini app
+ * And the registry revision each request reads: a layout that names a mini app
  * takes one registry snapshot per request, so a registry push reaches it within a TTL with the layout unchanged,
  * and a left-out item is logged once per pair of revisions. A layout that names none reads no registry, so it
  * serves while the registry is unavailable, and a game tile, which names the games dataset, is not a mini app;

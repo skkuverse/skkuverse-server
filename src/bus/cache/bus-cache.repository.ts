@@ -6,7 +6,7 @@ import config from "../../infra/config";
 import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
 import { ensureIndexesAtBoot, mongoCollection } from "../../infra/mongo";
-import type { BusCacheDocument, BusCacheKey, BusCacheValueByKey } from "./bus-cache.document";
+import type { BusCacheDocument, BusCacheEntry, BusCacheKey, BusCacheValueByKey } from "./bus-cache.document";
 
 // WHY: each replica answers a burst of realtime requests from one read per key per 5 s.
 const MEMORY_TTL_MS = 5_000;
@@ -14,7 +14,7 @@ const MISSING_LOG_INTERVAL_MS = 60_000;
 
 @Injectable()
 export class BusCacheRepository implements OnModuleInit {
-  private readonly loaders = new Map<BusCacheKey, CachedLoader<BusCacheValueByKey[BusCacheKey] | null>>();
+  private readonly loaders = new Map<BusCacheKey, CachedLoader<BusCacheEntry<BusCacheKey> | null>>();
   private readonly missingThrottle = createLogThrottle(MISSING_LOG_INTERVAL_MS, () => this.clock.now().getTime());
 
   constructor(private readonly clock: Clock) {}
@@ -28,11 +28,15 @@ export class BusCacheRepository implements OnModuleInit {
     await this.busCache().updateOne({ _id: key }, { $set: { data: value, _updatedAt: this.clock.now() } }, { upsert: true });
   }
 
-  findValue<K extends BusCacheKey>(key: K): Promise<BusCacheValueByKey[K] | null> {
-    return this.loaderOf(key).get() as Promise<BusCacheValueByKey[K] | null>;
+  async findValue<K extends BusCacheKey>(key: K): Promise<BusCacheValueByKey[K] | null> {
+    return (await this.findEntry(key))?.value ?? null;
   }
 
-  private loaderOf(key: BusCacheKey): CachedLoader<BusCacheValueByKey[BusCacheKey] | null> {
+  findEntry<K extends BusCacheKey>(key: K): Promise<BusCacheEntry<K> | null> {
+    return this.loaderOf(key).get() as Promise<BusCacheEntry<K> | null>;
+  }
+
+  private loaderOf(key: BusCacheKey): CachedLoader<BusCacheEntry<BusCacheKey> | null> {
     const existing = this.loaders.get(key);
     if (existing) return existing;
     const loader = createCachedLoader({
@@ -51,9 +55,9 @@ export class BusCacheRepository implements OnModuleInit {
     await this.busCache().createIndex({ _updatedAt: 1 }, { expireAfterSeconds: 60, name: "ttl_updatedAt" });
   }
 
-  private async loadValue(key: BusCacheKey): Promise<BusCacheValueByKey[BusCacheKey] | null> {
+  private async loadValue(key: BusCacheKey): Promise<BusCacheEntry<BusCacheKey> | null> {
     const doc = await this.busCache().findOne({ _id: key });
-    if (doc) return doc.data;
+    if (doc) return { value: doc.data, updatedAt: doc._updatedAt };
     this.warnMissing(key);
     return null;
   }

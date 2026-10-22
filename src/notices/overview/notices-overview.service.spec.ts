@@ -1,6 +1,6 @@
 /**
  * NoticesOverviewService against stub retrieval and ai client. One block per
- * spec requirement: no candidates, degradation, budget pause, no answer, the
+ * behavior: no candidates, degradation, budget pause, no answer, the
  * cache, and the bounded response time. Validation is overviewRequest's
  * (notices-overview.schema.spec.ts); the time is the injected clock's.
  */
@@ -308,7 +308,7 @@ describe("overview cache", () => {
 
 const BUDGET_MS = 24_000;
 
-describe("bounded response time (spec: answered within 24 s even when the ai never responds)", () => {
+describe("bounded response time (answered within 24 s even when the ai never responds)", () => {
   afterEach(() => jest.useRealTimers());
 
   it("fits the retrieval cap and the ai timeout inside the 24 s budget", () => {

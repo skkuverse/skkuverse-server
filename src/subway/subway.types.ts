@@ -37,7 +37,7 @@ export interface TrainEvent {
   state: TrainState;
   stateChangedAt: Date;
   destination: string;
-  // WHY: only a line matched to runs carries it, and reads it only where its destination names both directions (design D14).
+  // WHY: only a line matched to runs carries it, and reads it only where its destination names both directions.
   reportedDirection?: SubwayDirection;
 }
 
@@ -54,7 +54,7 @@ export interface ProviderObservations {
   countdownRows: readonly CountdownRow[];
 }
 
-// WHY: one per upstream, not per provider: each upstream ticks on its own cadence and fails apart (design D7).
+// WHY: one per upstream, not per provider: each upstream ticks on its own cadence and fails apart.
 export interface SubwayProvider {
   observe(): Promise<ProviderObservations>;
 }

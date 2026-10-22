@@ -1,7 +1,7 @@
 /**
  * BusEtaTravelService, the live flow's door to the travel model, over a
  * scripted NAVER client, the lane strategies, the stored corridor
- * (move-reference-datasets D9) and the probe on a scripted TOPIS client: a
+ * and the probe on a scripted TOPIS client: a
  * run's strategy from the lane strategies, the stored corridor's snapshot, the
  * car route through the stops only, the bus-lane route forced through the
  * snapshot's corridor ends with the corridor's own car time, and the probe's

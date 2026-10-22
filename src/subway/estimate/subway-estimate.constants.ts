@@ -1,4 +1,4 @@
-// WHY: a delay outside this range is far likelier a train-number mismatch than a real delay (design D4).
+// WHY: a delay outside this range is far likelier a train-number mismatch than a real delay.
 export const MIN_DELAY_SEC = -120;
 export const MAX_DELAY_SEC = 2700;
 

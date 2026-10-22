@@ -1,7 +1,6 @@
 /**
  * The `npm run data` command line (scripts/data.js and
- * scripts/lib/datasets/working-file.js, design D1 and D5 of
- * openspec/changes/archive/2026-10-19-move-runtime-data-to-db), run in this process over a real
+ * scripts/lib/datasets/working-file.js; ADR 0013, D3 and D4), run in this process over a real
  * `mongod` with the catalog loaded over `src/`:
  *
  *   - `_dev` is the target unless `--prod` is given;
@@ -15,8 +14,7 @@
  *   - `push bus-stops` and `check` read `bus_campus.bus_schedules` of the
  *     target environment, never the other, and refuse sequences the stored
  *     stop times do not fit; `--against <timetable file>` checks against that
- *     file instead and prints the `npm run schedule` command that applies it
- *     (unify-bus-stops design D6, specs bus-stops and runtime-datasets).
+ *     file instead and prints the `npm run schedule` command that applies it.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -649,7 +647,7 @@ describe("npm run data bus-stops against the stored timetables", () => {
     expect(other.err).toContain("home-layout reads no collection a timetable file replaces");
   });
 
-  // Review F1 of wave 2: `npm run schedule` never deletes a pattern, so an old semester's stays stored. One that serves
+  // `npm run schedule` never deletes a pattern, so an old semester's stays stored. One that serves
   // no date from today on (2026-10-19 in KST at NOW) is left out of the check, or a new semester's pattern with a new
   // sequence length could never be pushed beside it. A pattern ending today still serves today, so it is checked.
   it.each([
@@ -715,7 +713,7 @@ describe("npm run data bus-stops against the stored timetables", () => {
     expect(pushed.out).not.toContain("skipped    commute-gangnam-yangjae/pilot");
   });
 
-  // Review F2 of wave 2: after a length change reaches production, copying it into _dev meets _dev's old timetable.
+  // After a length change reaches production, copying it into _dev meets _dev's old timetable.
   it("Copy of a length change: refuses production's four-stop revision against _dev's three-time entries, and copies it --against the file that lists four", async () => {
     // Arrange
     await seed(`${BUS_CAMPUS}_dev`, commuteTimetable());

@@ -9,14 +9,14 @@
  * document writes no bus_cache key: its tick hands both lists to the
  * registry's bootstrap and rejects until the tick that inserts the route
  * resolves, so the poller registry alerts on a route that stays missing
- * (isolate-api-from-pollers D2).
+ * (ADR 0012, D3).
  * Each stored bus keeps its vehicle fields, sits at its section ord, and is
  * stationary when its vehicle stood still since the poller's previous
  * observation of it (never on the first after a restart), or when it idles at
  * its origin: at index 0 with lastStTm 0 and not moved 10 m since the previous
  * observation, a frozen observation time included, or at its first
  * observation off a stop. A bus at a stop keeps since when its vehicle has
- * stood there, from the poller's memory (add-jongro-bus-trajectory).
+ * stood there, from the poller's memory.
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -124,6 +124,39 @@ describe("BusRealtimeJongroService.listArrivals", () => {
     // Assert
     expect(await service.listArrivals("07")).toEqual([]);
     expect(busCache.values.get("jongro_stations_07")).toEqual([]);
+  });
+});
+
+// WHY: the live route reads each key with when the poller wrote it (ADR 0019, D6).
+describe("BusRealtimeJongroService.findArrivalsEntry", () => {
+  it("answers the stored rows with their write instant, and null before a tick", async () => {
+    // Arrange
+    const before = await service.findArrivalsEntry("07");
+    busCache.writtenAt = new Date("2026-10-20T00:59:55Z");
+    client.arrivals = [jongroArrivalDoc()];
+    await runTickAndFlush();
+
+    // Act
+    const entry = await service.findArrivalsEntry("07");
+
+    // Assert
+    expect(before).toBeNull();
+    expect(entry).toEqual({ value: [jongroArrivalDoc()], updatedAt: new Date("2026-10-20T00:59:55Z") });
+  });
+});
+
+describe("BusRealtimeJongroService.findPositionsEntry", () => {
+  it("answers the stored positions with their write instant", async () => {
+    // Arrange
+    client.sightings = [jongroSighting({ sectOrd: 6 })];
+    await runTickAndFlush();
+
+    // Act
+    const entry = await service.findPositionsEntry("07");
+
+    // Assert
+    expect(entry?.updatedAt).toEqual(busCache.writtenAt);
+    expect(entry?.value.map((position) => [position.vehicleId, position.plainNo])).toEqual([["100000103", "서울74사5537"]]);
   });
 });
 
@@ -270,7 +303,7 @@ describe("BusRealtimeJongroService.refresh with no bus listed", () => {
   });
 });
 
-// WHY: the poller follows TOPIS's stop list through the registry (improve-jongro-realtime D9, D10).
+// WHY: the poller follows TOPIS's stop list through the registry (ADR 0014, D4).
 describe("BusRealtimeJongroService.refresh and the registry", () => {
   const arrivalsOf = (topisIds: readonly string[]): JongroArrivalDoc[] =>
     topisIds.map((stationId, index) => jongroArrivalDoc({ stationId, sequence: String(index + 1), stationName: `stop ${stationId}`, stationNumber: `0${index}` }));
@@ -319,7 +352,7 @@ describe("BusRealtimeJongroService.refresh and the registry", () => {
 
 });
 
-// WHY: a fresh database gets its routes from TOPIS through the poller, not a snapshot (isolate-api-from-pollers D2).
+// WHY: a fresh database gets its routes from TOPIS through the poller, not a snapshot (ADR 0012, D3).
 describe("BusRealtimeJongroService.refresh for a route with no registry document", () => {
   const TURNAROUND_08 = "100000153";
   const arrivalsOf = (topisIds: readonly string[]): JongroArrivalDoc[] =>
@@ -395,7 +428,7 @@ describe("BusRealtimeJongroService.refresh for a route with no registry document
   });
 });
 
-// WHY: the realtime response tracks each bus from its stored vehicle fields (add-jongro-bus-positions D2, D3).
+// WHY: the realtime response tracks each bus from its stored vehicle fields.
 describe("BusRealtimeJongroService.refresh vehicle tracking", () => {
   // Route 02 vehicle 100000018 idling at ord 1 (pos_100900008_1792231921 and _1792231942, 2026-10-17 capture).
   const idle18 = (observedAt: string, sectDist = 0.043) =>
@@ -404,6 +437,7 @@ describe("BusRealtimeJongroService.refresh vehicle tracking", () => {
       latitude: "37.588444",
       longitude: "126.990028",
       carNumber: "5512",
+      plainNo: "서울74사5512",
       turnaroundStationId: "100900121",
       vehicleId: "100000018",
       sectOrd: 1,
@@ -422,11 +456,13 @@ describe("BusRealtimeJongroService.refresh vehicle tracking", () => {
     await service.refresh(route("02"));
 
     // Assert
+    // WHY: plainNo is the full plate (ADR 0019, D6); every other field is as before.
     expect(busCache.values.get("jongro_locations_02")).toEqual([
       {
         sequence: "1",
         stationName: "성균관대학교",
         carNumber: "5512",
+        plainNo: "서울74사5512",
         eventDate: NOW.toISOString(),
         estimatedTime: 0,
         stationId: "100900204",
@@ -575,8 +611,8 @@ describe("BusRealtimeJongroService.refresh origin idling", () => {
   });
 });
 
-// WHY: an atStop bus's expected departure counts its dwell from the first observation at that stop
-// (add-jongro-bus-trajectory D4). Route 02 vehicle 100000058 (pos_100900008_1792314511, _531, _551, _612).
+// WHY: an atStop bus's expected departure counts its dwell from the first observation at that stop.
+// Route 02 vehicle 100000058 (pos_100900008_1792314511, _531, _551, _612).
 describe("BusRealtimeJongroService.refresh time at a stop", () => {
   const sighting58 = (sectOrd: number, stationId: string, isAtStop: boolean, observedAt: string, sectDist = 0) =>
     jongroSighting({ stationId, carNumber: "2008", vehicleId: "100000058", sectOrd, sectDist, fullSectDist: 0.135, isAtStop, observedAt });

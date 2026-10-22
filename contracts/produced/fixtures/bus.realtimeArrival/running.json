@@ -1,0 +1,13 @@
+{
+  "_about": "Hand-written from a capture: the second arrival at station index 11 of contracts/produced/fixtures/bus-realtime-group.realtimeGroup/jongro07.json (TOPIS getArrInfoByRouteAll busRouteId=100900004 captured 2026-10-17 19:16 KST through the arrival rules on 18 seats), copied unchanged when the arrival was published on its own for the stop page. Moved from bus.arrival when the live arrival took that name (ADR 0019).",
+  "data": {
+    "minutes": 2,
+    "stopsAway": 1,
+    "state": "running",
+    "isLastBus": false,
+    "carNumber": "5538",
+    "crowding": "relaxed",
+    "passengerCount": 7,
+    "message": "2분19초후[1번째 전]"
+  }
+}

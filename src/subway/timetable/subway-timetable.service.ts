@@ -117,7 +117,7 @@ export class SubwayTimetableService {
     return { platform, serviceDate, dayType, ...tableSchedule };
   }
 
-  // WHY: eviction runs per call, so a process holds at most one day type per line (move-reference-datasets D7).
+  // WHY: eviction runs per call, so a process holds at most one day type per line.
   private async findTables(keys: readonly string[], day: ServiceDay): Promise<Map<string, Timetable | null>> {
     const snapshot = await this.currentManifest();
     const neededKeys = new Set(listSubwayPlatforms().map((platform) => this.keyOf(platform, day)));
@@ -128,7 +128,7 @@ export class SubwayTimetableService {
   }
 
   // WHY: a held table keeps serving while its replacement cannot be read, up to a day after the manifest first named
-  // that replacement (move-reference-datasets D7); a key the manifest does not name has no table.
+  // that replacement (ADR 0013, D6); a key the manifest does not name has no table.
   private async findTable(key: string, snapshot: ManifestSnapshot | null, { serviceDate, now }: ServiceDay): Promise<Timetable | null> {
     const held = this.heldByKey.get(key);
     const partId = snapshot?.partIdByKey.get(key);

@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/ui/home/transit with Accept-Language ko, en and zh, captured from production on 2026-10-19 at 14:05:27 UTC (23:05 KST), source commit 5c0ee5a9 (move-editorial-datasets task 2.1). Each entry is the status, the parsed body and the weak ETag production sent; Cache-Control was private, max-age=300 and Vary Accept-Language, Origin for all three. Nothing trimmed.",
+  "_about": "GET https://api.skkuverse.com/ui/home/transit with Accept-Language ko, en and zh, captured from production on 2026-10-19 at 14:05:27 UTC (23:05 KST), source commit 5c0ee5a9. Each entry is the status, the parsed body and the weak ETag production sent; Cache-Control was private, max-age=300 and Vary Accept-Language, Origin for all three. Nothing trimmed.",
   "ko": {
     "status": 200,
     "etag": "W/\"128c-dPA3kYMmEdiThAQR3Lgl4jTvbMc\"",

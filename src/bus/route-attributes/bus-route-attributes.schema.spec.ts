@@ -1,6 +1,6 @@
 /**
  * jongroRouteAttributesDataset, the shape of the `jongro-route-attributes`
- * dataset (move-reference-datasets D10): each Jongro route's card, refresh
+ * dataset: each Jongro route's card, refresh
  * interval, seat count and transfer lines, keyed by route id. A push is refused
  * on it and the read parses with it. Revision 1 (the fixture) passes as it is;
  * each check the committed route file was refused on is refused at its
@@ -120,7 +120,7 @@ describe("storedRouteAttributes", () => {
   });
 });
 
-// Ported from bus.config.spec.ts's pins of the committed route file (move-reference-datasets D15), now over revision 1.
+// Ported from bus.config.spec.ts's pins of the committed route file, now over revision 1.
 describe("revision 1 of jongro-route-attributes", () => {
   it("gives every route a seat count of 18", () => {
     // Act

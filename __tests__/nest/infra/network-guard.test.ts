@@ -1,6 +1,6 @@
 /**
- * The Jest network guard (`__tests__/helpers/network-guard.ts`, harden-test-suite
- * design D5): every door to a host outside loopback refuses and names the host,
+ * The Jest network guard (`__tests__/helpers/network-guard.ts`, ADR 0011, D5):
+ * every door to a host outside loopback refuses and names the host,
  * loopback stays open for supertest and real local sockets, a server listens on
  * loopback only, and a refusal fails the test file whose code made it, never the
  * file a worker runs next.

@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/bus/schedule/data/<serviceId>/smart for the eight services in ko, en and zh, /week for each service (the current week, ko) and with ?from=2027-09-27 (ko), and GET /bus/config in ko, en and zh, captured from production on 2026-10-19 from 2026-10-19T16:56:23Z (01:56 KST on the 20th), source commit 5c0ee5a9 for bus code (move-editorial-datasets task 11.1). Each entry is the status, the parsed body, ETag, Cache-Control and Vary as served; Cloudflare's own accept-encoding Vary is dropped, and Cloudflare weakens the origin's ETag with W/ when it compresses. Nothing else trimmed.",
+  "_about": "GET https://api.skkuverse.com/bus/schedule/data/<serviceId>/smart for the eight services in ko, en and zh, /week for each service (the current week, ko) and with ?from=2027-09-27 (ko), and GET /bus/config in ko, en and zh, captured from production on 2026-10-19 from 2026-10-19T16:56:23Z (01:56 KST on the 20th), source commit 5c0ee5a9 for bus code. Each entry is the status, the parsed body, ETag, Cache-Control and Vary as served; Cloudflare's own accept-encoding Vary is dropped, and Cloudflare weakens the origin's ETag with W/ when it compresses. Nothing else trimmed.",
   "capturedAt": "2026-10-19T16:56:23Z",
   "smart": {
     "campus-inja": {

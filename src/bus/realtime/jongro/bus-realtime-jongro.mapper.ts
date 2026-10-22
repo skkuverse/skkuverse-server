@@ -23,6 +23,7 @@ export function toJongroBusPosition(
     sequence: sighting.sectOrd.toString(),
     stationName: station.stationName,
     carNumber: sighting.carNumber,
+    plainNo: sighting.plainNo,
     eventDate: firstSeenAt,
     estimatedTime: dwellSeconds,
     stationId: sighting.stationId,

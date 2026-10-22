@@ -292,13 +292,14 @@ describe("BusRealtimeJongroClient.fetchSightings", () => {
     const result = await new BusRealtimeJongroClient().fetchSightings(route07);
 
     // Assert
-    // WHY: the vehicle fields are what add-jongro-bus-positions adds (task 1.1); the row carries them as TOPIS does.
+    // WHY: the row carries the vehicle fields as TOPIS does, plainNo the full plate as TOPIS sent it (ADR 0019, D6).
     expect(result).toEqual([
       {
         stationId: "100900197",
         latitude: "37.587",
         longitude: "126.998",
         carNumber: "5537",
+        plainNo: "서울74사5537",
         turnaroundStationId: "100900028",
         vehicleId: "100000103",
         sectOrd: 6,
@@ -356,7 +357,7 @@ describe("BusRealtimeJongroClient.fetchSightings", () => {
   });
 });
 
-// WHY: the registry sync follows the turnaround stop TOPIS names on every position row (improve-jongro-realtime D9).
+// WHY: the registry sync follows the turnaround stop TOPIS names on every position row (ADR 0014, D4).
 describe("BusRealtimeJongroClient.fetchSightings turnaround stop", () => {
   it("keeps each row's turnaround stop id (trnstnid)", async () => {
     // Arrange
@@ -384,7 +385,7 @@ describe("BusRealtimeJongroClient.fetchSightings over getBusPosByRtid", () => {
     const sightings = await new BusRealtimeJongroClient().fetchSightings(route07);
 
     // Assert
-    // WHY: each sighting also carries its vehicle fields since add-jongro-bus-positions (task 1.1), pinned below.
+    // WHY: each sighting also carries its vehicle fields, pinned below.
     expect(sightings.map(({ stationId, latitude, longitude, carNumber, turnaroundStationId }) => ({ stationId, latitude, longitude, carNumber, turnaroundStationId }))).toEqual([
       { stationId: "100900221", latitude: "37.586893", longitude: "126.994075", carNumber: "5538", turnaroundStationId: "100900028" },
       { stationId: "100900043", latitude: "37.576948", longitude: "127.002008", carNumber: "5537", turnaroundStationId: "100900028" },
@@ -419,7 +420,7 @@ describe("BusRealtimeJongroClient.fetchSightings over getBusPosByRtid", () => {
 });
 
 // WHY: the vehicle, its place in the section, the stop flag and TOPIS's observation time are what the realtime
-// response tracks a bus by (add-jongro-bus-positions D2); none was malformed in the 1,117 captured rows.
+// response tracks a bus by; none was malformed in the 1,117 captured rows.
 describe("BusRealtimeJongroClient.fetchSightings vehicle fields", () => {
   it("keeps each captured row's vehicle, section, stop flag and observation time", async () => {
     // Arrange

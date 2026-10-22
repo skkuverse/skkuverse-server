@@ -1,6 +1,5 @@
 /**
- * Characterization of GET /ui/home/transit (move-editorial-datasets task 2.4,
- * design D13): the bytes, `Cache-Control`, `Vary` and `ETag` it answers in
+ * Characterization of GET /ui/home/transit (ADR 0011, D6): the bytes, `Cache-Control`, `Vary` and `ETag` it answers in
  * `ko`, `en` and `zh` for the layout in fixtures/transit-layout.dataset.json,
  * through the production pipeline with only `Clock` overridden. The app boots
  * every module `src/app.module.ts` imports under `src/ui/transit/`, over a
@@ -18,9 +17,9 @@
  * scripts/lib/datasets/store.js, as revision 1 of `transit-layout`.
  * The mini app registry is stored beside it the same way, as revision 1 of
  * `miniapps` (__tests__/nest/miniapps/fixtures/miniapps.dataset.json); no link
- * names a mini app, so the route reads no registry (move-miniapp-registry D4).
+ * names a mini app, so the route reads no registry (docs/explanation/miniapps-architecture.md, Invariants).
  * So are the Jongro route attributes the bus cards take their color and icon
- * from, as revision 1 of `jongro-route-attributes` (move-reference-datasets D10).
+ * from, as revision 1 of `jongro-route-attributes` (ADR 0013, D2).
  *
  * The bus groups' visibility windows are the only input that moves with the
  * time, so four clocks pin the tab:

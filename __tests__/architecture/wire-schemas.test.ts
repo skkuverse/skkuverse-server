@@ -1,7 +1,7 @@
 /**
  * A `.wire` file publishes what a server deployable writes to another
  * repository, so each schema in it exports to JSON Schema without losing a
- * constraint (ADR 0010, D13; define-boundary-contracts design D3). Five checks,
+ * constraint (ADR 0010, D13). Five checks,
  * no allowlist, since the rule binds the first wire file:
  *
  *   - banned calls: no `.transform`, `.refine`, `.superRefine`, `.check`,

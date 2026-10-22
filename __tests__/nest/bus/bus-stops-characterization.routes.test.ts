@@ -1,8 +1,7 @@
 /**
  * Characterization of every route and poller that reads the stop catalog
  * (src/bus/stops/schedule-stops.json) or the HSSC line (`HSSC_STATIONS`),
- * before both move into the `bus-stops` dataset (unify-bus-stops task 1.2,
- * design D14). `/bus/config` and each `/bus/config/:groupId`,
+ * before both move into the `bus-stops` dataset (ADR 0011, D6). `/bus/config` and each `/bus/config/:groupId`,
  * `/ui/home/transit` and `/ui/home/transitlist`, and `/smart` and `/week` of
  * every service answer, in `ko`, `en` and `zh`, the bytes, `Cache-Control`,
  * `Vary` and `ETag` production served on 2026-10-21
@@ -42,8 +41,7 @@
  * Cloudflare weakens the origin's ETag with `W/` when it compresses, so ETags
  * are compared without that prefix.
  *
- * Wave 4 (unify-bus-stops design D12, task 7.2) changes one pinned behavior on
- * purpose: each realtime station of `/bus/config` and of the `hssc` and Jongro
+ * One pinned behavior changed on purpose after the capture: each realtime station of `/bus/config` and of the `hssc` and Jongro
  * groups carries its `stopId`, last. Those bodies are now the captured ones
  * with exactly the stations' stop ids appended
  * (__tests__/helpers/bus/station-stop-ids.ts), and their ETags the md5 of that
@@ -70,6 +68,7 @@ import { FakeBusEtaTravelClient } from "../../helpers/fakes/bus/bus-eta-travel.c
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../helpers/bus/station-stop-ids";
+import { withLiveScreen, withoutLiveScreen } from "../../helpers/bus/live-screen";
 import captured from "./fixtures/bus-stops-production.capture.json";
 import storedRoutes from "./fixtures/jongro-registry-routes.json";
 
@@ -314,21 +313,21 @@ function expectCaptured(res: request.Response, capture: Captured): void {
   expect(originEtagOf(res.headers.etag)).toBe(originEtagOf(capture.etag));
 }
 
-/** The capture with every realtime station's stop id appended, as served from wave 4, and its ETag. */
+/** The capture with every realtime station's stop id and each realtime screen's live fields (ADR 0019) appended, as served after it, and its ETag. */
 function configFromWave4(lang: Lang): Captured {
   const capture = configCapture(lang);
-  const groups = capture.body.data.groups.map(withStationStopIds);
+  const groups = capture.body.data.groups.map((group) => withLiveScreen(withStationStopIds(group)));
   return { ...capture, etag: md5EtagOf(groups), body: { ...capture.body, data: { ...capture.body.data, groups } } };
 }
 
 describe("GET /bus/config", () => {
-  it.each(LANGS)("answers in %s the bytes production served with only the realtime stations' stop ids appended, and their ETag", async (lang) => {
+  it.each(LANGS)("answers in %s the bytes production served with only the realtime stations' stop ids and screens' live fields appended, and their ETag", async (lang) => {
     // Act
     const res = await get("/bus/config", lang);
 
     // Assert
     expectCaptured(res, configFromWave4(lang));
-    expect(withoutStationStopIds(res.body.data)).toEqual(configCapture(lang).body.data);
+    expect(withoutStationStopIds(withoutLiveScreen(res.body.data))).toEqual(configCapture(lang).body.data);
     expect(originEtagOf(res.headers.etag)).not.toBe(originEtagOf(configCapture(lang).etag));
   });
 
@@ -350,7 +349,7 @@ describe("GET /bus/config/:groupId", () => {
     async (lang, groupId) => {
       // Arrange
       const capture = configCapture(lang);
-      const group = withStationStopIds(groupOf(lang, groupId));
+      const group = withLiveScreen(withStationStopIds(groupOf(lang, groupId)));
       const expected = { status: 200, etag: md5EtagOf(group), cacheControl: capture.cacheControl, vary: capture.vary, body: { meta: { lang }, data: group } };
 
       // Act
@@ -358,7 +357,7 @@ describe("GET /bus/config/:groupId", () => {
 
       // Assert
       expectCaptured(res, expected);
-      expect(withoutStationStopIds(res.body.data)).toEqual(groupOf(lang, groupId));
+      expect(withoutStationStopIds(withoutLiveScreen(res.body.data))).toEqual(groupOf(lang, groupId));
       expect(originEtagOf(res.headers.etag)).not.toBe(originEtagOf(capture.groupEtags[groupId]));
     },
   );

@@ -1,6 +1,6 @@
 /**
  * The datasets `npm run data` knows, and the server code that validates each
- * one (openspec/changes/archive/2026-10-19-move-runtime-data-to-db, design D1 and D6).
+ * one (ADR 0013, D5).
  *
  * `loadCatalog(load)` takes a loader of server modules by their path under
  * src/, without an extension: scripts/data.js passes one that requires the
@@ -36,8 +36,6 @@
  *                    check reads through `issuesOf`'s `collectionOf(key)`,
  *                    read from the environment the run targets, or null when
  *                    not read
- *                    (openspec/changes/archive/2026-10-22-unify-bus-stops,
- *                    design D6)
  *
  * `issuesOf`, `referencesOf` and `idsOf` take the schema's parsed output.
  *
@@ -77,7 +75,7 @@
  * (`stopTimesMismatches`, run by both writers).
  *
  * A code-held source is an identity list that still lives in code, resolved
- * against the compiled checkout (move-editorial-datasets D3):
+ * against the compiled checkout (ADR 0013, D5):
  *
  *   owner            the src/ folder that holds the list
  *   has(id)          whether the checkout serves `id`
@@ -147,7 +145,7 @@ function codeHeldSource(owner, ids) {
 /**
  * The registry the ui checks read: the target database's stored `miniapps` as the server snapshots it, or,
  * with none stored, the grammar alone. Then every well-formed id and target passes here, and the outgoing
- * reference check names each one as `(no stored dataset)` at its path (move-miniapp-registry D6).
+ * reference check names each one as `(no stored dataset)` at its path (ADR 0013, D5).
  */
 function registryOf(storedOf, { toMiniAppRegistry, parseMiniAppTarget, isSingleEmoji, webOrigin }) {
   const stored = storedOf("miniapps");
@@ -265,7 +263,7 @@ function loadCatalog(load) {
         referencesOf: () => [],
         idsOf: ({ index }) => index.miniApps.map((entry) => entry.id),
       },
-      // Only what exposes each hosted game; who owns a game origin stays in src/infra/origins.ts (add-game-factory D3).
+      // Only what exposes each hosted game; who owns a game origin stays in src/infra/origins.ts (skkuverse-app add-game-factory D3).
       // Its ids are what home-layout's game tiles name, but for the games installed builds ship bundled.
       games: {
         owner: "src/games",
@@ -316,14 +314,14 @@ function loadCatalog(load) {
         schema: skkuRestDaysDataset,
         referencesOf: () => [],
       },
-      // The corridor geometry only: which runs use it, and the lane hours, stay in code (move-reference-datasets D9).
+      // The corridor geometry only: which runs use it, and the lane hours, stay in code (ADR 0013, D2).
       "bus-lane-corridor": {
         owner: "src/bus/eta/lane",
         schema: laneCorridorDataset,
         issuesOf: corridorIssues,
         referencesOf: () => [],
       },
-      // Each Jongro route's card, refresh interval, seat count and transfer lines; its id stays in code (move-reference-datasets D10).
+      // Each Jongro route's card, refresh interval, seat count and transfer lines; its id stays in code (ADR 0013, D2).
       "jongro-route-attributes": {
         owner: "src/bus/route-attributes",
         schema: jongroRouteAttributesDataset,
@@ -331,8 +329,8 @@ function loadCatalog(load) {
         referencesOf: () => [],
       },
       // The local stops, the shuttle sequences and the HSSC line; the service ids, estimate opt-ins, travel strategies and
-      // HSSC position count stay in code (unify-bus-stops D3, D4). Its stop ids are what later datasets may name. Its
-      // sequences are checked against the target's stored timetables, whose stop times follow them (D6).
+      // HSSC position count stay in code (ADR 0013, D2). Its stop ids are what later datasets may name. Its
+      // sequences are checked against the target's stored timetables, whose stop times follow them.
       "bus-stops": {
         owner: "src/bus/stops",
         schema: busStopsDataset,
@@ -349,7 +347,7 @@ function loadCatalog(load) {
         referencesOf: busStopsReferences,
         idsOf: ({ stops }) => stops.map((stop) => stop.id),
       },
-      // Each served platform's directions and the neighbor stops; the lines, stations and platforms stay in code (move-reference-datasets D2, D3).
+      // Each served platform's directions and the neighbor stops; the lines, stations and platforms stay in code (ADR 0013, D2).
       "subway-topology": {
         owner: "src/subway/topology",
         schema: subwayTopologyDataset,
@@ -357,7 +355,7 @@ function loadCatalog(load) {
         issuesOf: topologyIssues,
         referencesOf: () => [],
       },
-      // One table per operator line and day type, a part each; every served platform needs one per day type its source declares (move-reference-datasets D5, D6).
+      // One table per operator line and day type, a part each; every served platform needs one per day type its source declares (docs/how-to/update-subway-timetables.md).
       "subway-timetables": {
         owner: "src/subway/timetable",
         parts: {

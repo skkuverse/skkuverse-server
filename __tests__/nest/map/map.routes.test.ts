@@ -8,7 +8,7 @@
  * stored for its degraded fallback, a minute for the event routes), `degraded`
  * never reaching the body, sibling routes answering only for themselves, and
  * the four retired URLs staying gone. And the dataset's two answers no file
- * gave (move-editorial-datasets D6): with no layer set ever read, a live
+ * gave (ADR 0013, D6): with no layer set ever read, a live
  * festival serves the base map, not a 503; and a festival pushed and opened
  * while the app runs is served within the dataset TTL, with no restart.
  *

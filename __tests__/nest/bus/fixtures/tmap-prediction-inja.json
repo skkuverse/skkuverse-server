@@ -1,5 +1,5 @@
 {
-  "_about": "SYNTHETIC, not a TMAP response: the TMAP terms forbid using API data more than 24 hours after storing it. Shaped after the live 타임머신 probe of 2026-10-09 (tasks.md 9.1) for campus-inja.regular (학생회관 버스 주차장 -> N센터 앞 -> 복지회관 앞), predictionType arrival: a FeatureCollection whose first Point (S) carries totalTime (s) and the times, LineStrings carry each segment's time (s), the waypoint is a B1 Point and the goal an E Point, and a bare B1 echo of the sent waypoint follows E. Times, distances and route points are made up.",
+  "_about": "SYNTHETIC, not a TMAP response: the TMAP terms forbid using API data more than 24 hours after storing it. Shaped after the live 타임머신 probe of 2026-10-09 for campus-inja.regular (학생회관 버스 주차장 -> N센터 앞 -> 복지회관 앞), predictionType arrival: a FeatureCollection whose first Point (S) carries totalTime (s) and the times, LineStrings carry each segment's time (s), the waypoint is a B1 Point and the goal an E Point, and a bare B1 echo of the sent waypoint follows E. Times, distances and route points are made up.",
   "type": "FeatureCollection",
   "features": [
     {

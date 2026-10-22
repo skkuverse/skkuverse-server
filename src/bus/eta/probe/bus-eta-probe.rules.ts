@@ -5,7 +5,7 @@ import type { CorridorFix, LanePosition, LaneSpan, LegTime } from "./bus-eta-pro
 // EVIDENCE: the two carriageways lie 20–40 m apart and TOPIS GPS strays about as far; a city road beside the expressway is farther.
 const MAX_CORRIDOR_OFFSET_M = 60;
 const MINUTE_MS = 60_000;
-// WHY: a ten-minute pair makes the 40–55 s GPS lag small against the distance it measures (design D5).
+// WHY: a ten-minute pair makes the 40–55 s GPS lag small against the distance it measures.
 const PARTNER_AGE_MS = { min: 5 * MINUTE_MS, target: 10 * MINUTE_MS, max: 15 * MINUTE_MS };
 const MIN_SPEED_KMH = 5;
 // WHY: a bus stuck in a jam can read up to this far behind its earlier fix from GPS noise alone; more is no pair.

@@ -1,7 +1,6 @@
 /**
  * The `miniapps` dataset's round trip between its one writer and its reader,
- * over a real `mongod` (move-miniapp-registry task 10.3; design D2, D6; ADR
- * 0013, D3 and D6): what `npm run data` stores through
+ * over a real `mongod` (ADR 0013, D2, D3, D5 and D6): what `npm run data` stores through
  * scripts/lib/datasets/store.js, MiniappsRepository reads back parsed as the
  * server parses it (an unset shell logo filled from the home logo), at the
  * stored revision.

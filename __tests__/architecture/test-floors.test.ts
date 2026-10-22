@@ -1,5 +1,5 @@
 /**
- * No module loses tests silently (harden-test-suite design D3). Each module's
+ * No module loses tests silently (ADR 0011, D8). Each module's
  * test calls and `expect(…)` calls (its `src/<module>/**\/*.spec.ts` and
  * `__tests__/nest/<module>/**`) may not drop below `test-floors.json`. A move
  * within a module changes nothing; a deletion or merge lowers the floor in the

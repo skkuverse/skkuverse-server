@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/config/commute captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); the map of stop jeongja-exit3, cut to one marker and one two-point walk Since hide-commute-stop-maps (2026-10-18) the commute group serves no stop map; kept as the only capture of a map with a subwayExit marker and a walk, a shape no group serves today.",
+  "_about": "GET /bus/config/commute captured from production 2026-10-14 (stage 13 exact snapshot, Accept-Language ko); the map of stop jeongja-exit3, cut to one marker and one two-point walk Since 2026-10-18 the commute group serves no stop map; kept as the only capture of a map with a subwayExit marker and a walk, a shape no group serves today.",
   "data": {
     "markers": [
       {

@@ -11,16 +11,15 @@
  * group does, never serves `visibleWith`, loses its hidden bus children, is
  * not served when none is left, and keeps its initial state.
  *
- * The layout is read through createDatasetLoader (ADR 0013, D6;
- * move-editorial-datasets D5): a push serves after DATASET_CACHE_TTL_MS, a
+ * The layout is read through createDatasetLoader (ADR 0013, D6):
+ * a push serves after DATASET_CACHE_TTL_MS, a
  * never-read layout answers 503, and each load is checked against the bus
  * groups and stations the server serves. An item naming one it does not
  * serve is left out, and a served one the layout does not place is not
  * served; each is logged once per revision, and neither throws.
  *
  * Revision 1 holds no `miniapp` link, so the tab reads no mini app registry: a
- * replica that has never read it, while it cannot be read, serves the tab
- * (move-miniapp-registry D4, spec "Transit tab with no mini app link").
+ * replica that has never read it, while it cannot be read, serves the tab.
  *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake
  * system time; the mapper's clock stays the injected one.

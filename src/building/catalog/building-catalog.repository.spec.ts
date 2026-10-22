@@ -6,7 +6,7 @@
  * logged (connections are hand-authored), and the boot indexes cover the
  * catalog's reads (a building's spaces by buildNo, a connection from either
  * end, a building's cafeterias by buildNo). These pin the query objects; what they match against real data is for
- * a mongod spec (harden-test-suite D6).
+ * a mongod spec (ADR 0011, D6).
  */
 const find = jest.fn(() => ({ toArray: jest.fn().mockResolvedValue([]) }));
 const findOne = jest.fn((..._args: unknown[]) => Promise.resolve(null));

@@ -1,0 +1,149 @@
+---
+title: Bus Live API — One Arrival Shape for Every Source
+type: adr
+status: accepted
+owner: spencer0124
+last-updated: 2026-10-25
+audience: internal
+---
+
+# 0019. Bus Live API — One Arrival Shape for Every Source
+
+> Why `GET /bus/live/:groupId` and the stop page serve every realtime line, Jongno and HSSC alike, and every timetabled shuttle run in one arrival and one vehicle shape, and how the old realtime route is retired. Read it before you add a source, a field or an enum value to either route. Accepted 2026-10-22, D13 to D16 added 2026-10-23, D17 on 2026-10-24; the wire and the client rules are in [bus-live-api.md](../reference/bus-live-api.md), the flows in [bus architecture](../explanation/bus-architecture.md).
+
+## Context
+
+- The realtime route grew route by route: TOPIS's Jongno arrivals as minutes plus TOPIS's text, its buses as an `estimated`/`tracked` union over legacy fields (`carNumber: "0000"`, `estimatedTime`, coordinates as strings), and the HSSC shuttle as positions only. A client had to know which source it read to render it.
+- The HSSC shuttle now has arrival estimates ([ADR 0018](0018-hssc-arrival-estimates.md)). App 3.6.2 takes OTA updates, so the app moves to new routes by OTA while installed bundles keep calling the old one.
+- Prior art: GTFS-Realtime (`StopTimeEvent` arrival and departure, `VehicleStopStatus`, `OccupancyStatus`), SIRI StopMonitoring (`ExpectedArrivalTime` beside `AimedArrivalTime`, `NumberOfStopsAway`, `RecordedAtTime`), TfL's Unified API (`expectedArrival`, `towards`), and Seoul's BIS stop signage, which shows a bus standing at the stop as 곧 도착 until it leaves and has no departure countdown (D14).
+- The first draft was reviewed on 2026-10-22; the decisions below fold in the accepted findings.
+
+## Decision
+
+### D1. Times are instants, never countdowns
+
+An arrival carries `expectedArrivalAt` and `expectedDepartureAt` beside `scheduledArrivalAt` and `scheduledDepartureAt`, each an instant at `+09:00` or null, and a `basis` (`provider`, `estimate`, `timetable`). A countdown is wrong the moment it leaves the server; an instant is not. Two pairs, as GTFS-RT and SIRI have, because a rider at the stop wants when the bus leaves and a rider downstream when it comes. Amended by D14: on a live arrival `expectedDepartureAt` is always null, and only a timetable entry (the stop page's shuttle runs) carries departure instants. A Jongno instant is TOPIS's own prediction, `mkTm` plus `traTime` (else the time in its text), never corrected; a running bus with no time anywhere is `unknown` rather than a made-up instant.
+
+Rejected for now: an uncertainty window. Summed per-segment spreads are no bound (ADR 0018, D5). It returns for every source at once, as the backtested error by horizon.
+
+### D2. One shape; null is "unknown now", capabilities are "never"
+
+Every key is always present, and what a source cannot supply is null, never a missing key or a placeholder (`"0000"`, `"----"`). What a source can never supply is stated once per group in `/bus/config` (`capabilities`: `positionSource` `gps` or `stopEvents`, `occupancy`, `plateNumber`, `lastBus`, `lowFloor`), so a client tells "this line has no plates" from "this bus's plate is unknown". A new source (a shuttle GPS feed) changes a group's capabilities and fills fields; the shape does not move.
+
+### D3. Every enum is open
+
+`status`, `basis`, a position's `status`, `operation` and the stop page's entry `kind` may gain values. A client renders an arrival of a status it does not know by its `providerText`, or skips it when that is empty; it skips a stop page entry of a kind it does not know. This is why the published schemas are no reason to validate a whole response as one closed document.
+
+### D4. Stops away counts stops, not positions
+
+`stopsAway` is the stations with a stop the bus reaches before this one, plus one: `1` means this is its next stop, `0` that it stands here. Positions where no one boards (the HSSC's two Hyehwa Rotary passes) are never counted, so a rider reads the number as stops. A bus that just left a station is a lap away on a loop, and on the HSSC, whose lap crosses the layover, it is `waitingToDepart`. On Jongno it is one more than TOPIS's own count, `staOrd − sectOrd`, the `N` of its `[N번째 전]`: an arrival row's `sectOrd` is the staOrd of the bus's next stop (TOPIS's same-moment rows and positions, 2026-10-17 and 2026-10-22), so 곧 도착 is `1`. TOPIS also counts the stations a route passes through without stopping, named `…(미정차)` (19 of 7800's 80, 2026-10-24; none on Jongno), so those between are taken out. The first draft served TOPIS's count as is, one short, until the app caught it on 2026-10-22. TOPIS drops a bus from its station's row once it stands there, so a Jongno bus whose position stands at a station is served there from its position, first, `arriving` and `0` (D14; the first version served it `atStop`, and only where a row still named it).
+
+### D5. stationIndex is the key; stopId and arsId are not
+
+- `stationIndex` keys a station inside a group: a stop can sit on a line twice (a loop's terminal, two directions of one name), a position can have no stop, and trajectories need positions.
+- `stopId` is opaque and nullable on every live station, so a client opens a stop page without `/bus/config`. It resolves aliases and can change with a `bus-stops` push, so it is never a key and never derived by a client.
+- `arsId` is display only: the number on a TOPIS pole's sign, which tells same-named poles apart. Null on the HSSC, whose stops show none.
+- The HSSC feed's `stop_no` is never used: it differs per line for one stop. Only `seq` is stable.
+- Added 2026-10-24, for 7800: a local stop may alias a pole by its TOPIS station id (`topisIds` in `bus-stops`) beside its ARS number (`arsIds`), since TOPIS gives some poles none (7800's 성균관대학교, `200000162` toward 사당 and `200000159` toward 수원, both `arsId` `0`). A station's `stopId` is the local stop aliasing its station id, else its ARS number, else `seoul-<arsId>`; a push refuses a station id claimed twice, as it refuses an ARS number.
+- A route `/bus/config` does not list (`isListed: false` in the TOPIS route list, 7800 for now) names only the poles a local stop aliases, on the live route and in the stop index: its other stations serve `stopId: null` and add no `seoul-` stop to `GET /bus/stops`, which installed apps list. A listed route keeps the rule above.
+
+- Added 2026-10-25 ([ADR 0022](0022-journey-and-call-spec.md), D4): an alias never retires an id. `seoul-<arsId>` keeps resolving to the stop that aliases it, so a reference written with either id stays valid. An unlisted route's pole exists only through its alias, so that alias cannot be removed while the journey dataset names the pole.
+- Amended 2026-10-25 (owner): a pole's canonical stop id is its national nine-digit station id (TOPIS `stId`, the registry's `topisId`, equal to GBIS `stationId`; 국토교통부고시 제2021-200호 §14① nine digits, §14⑤ never reused, §15② kept through a rename), no longer `seoul-<arsId>`, since ARS numbers collide (`01013` is both 종로2가 and 수원 성균관대학교), stand at `0` and are reassigned. The rules above keep which stations are a stop; only the id changes. `seoul-<arsId>` is a legacy alias that never retires: a stop page asked by it answers the stop that pole is under its canonical id, with the same `503` and `404`, and a stop area may name a member by it. `GET /bus/stops` and every served `stopId` carry only canonical ids, and a catalog slug and a stop area id hold a letter, so neither can take a numeric id. ARS stays display only (`arsId`, `arsIds`, `stationNumber`).
+
+Agreed with the session that owns the stop catalog, 2026-10-22; the TOPIS alias and the unlisted rule by the owner, 2026-10-24 (Q3 of [7800-unified-arrivals.md](../plans/7800-unified-arrivals.md)).
+
+### D6. One vehicle object per bus; two clocks on its position
+
+A response lists each vehicle it mentions once and arrivals point at it by `vehicleId`: TOPIS counts passengers per station row, so copies of one bus inside each arrival would disagree. 막차 is the bus's: TOPIS flags it per row and one bus's rows can disagree (a 곧 도착 row carries no [막차] text), so a vehicle is the last bus when any row naming it says so, and every arrival naming it carries the vehicle's value. A vehicle an arrival names without a position row is served with `position: null`.
+
+Changed 2026-10-25 ([ADR 0022](0022-journey-and-call-spec.md), D2): `isLastBus` moved to the call's `isLastRun`, which every arrival naming the bus carries; the vehicle no longer has the flag.
+
+A position carries `positionAt`, when the source saw the bus there, and `checkedAt`, when this server last fetched that answer. A stop-event source repeats its last event until the next stop, so its `positionAt` is minutes old while the bus is fine; a dead feed shows in `checkedAt`. A client dims and freezes a marker on `checkedAt`'s age and extrapolates along the trajectory from `positionAt`. Each group carries `updatedAt`, its poller's last write (the staler key for Jongno), so "no buses" and "the poller stopped" differ.
+
+### D7. Loops wrap
+
+A trajectory's `s` is a station index plus the fraction of the section, as the Jongno trajectory always was, and the HSSC's comes from the engine's stop instants, so every marker moves the same way. On a group with `isLoop: true`, `s` may pass the last index: a client places the marker at `s mod stationCount`, the section after the last station leading back to station 0. Jongno 02, whose station list repeats its terminal, is not a loop.
+
+### D8. Operation is stated per station
+
+A station is `ended` when the source says the line is done there (every TOPIS slot 운행종료), `noData` when it says it has nothing (정보없음), `running` otherwise; a group is `ended` when every station is, `running` when any is, `noData` otherwise. The HSSC states nothing, so its stations are `running` while a fresh bus exists and the group is `noData` otherwise; `ended` waits for its published service hours.
+
+So that the last bus of the day is not dropped mid-layover, the live route keeps a bus laying over at 농구장 for 15 minutes (the layover's p90 is 846 s, ADR 0018 D2). The deprecated route keeps its 3.
+
+### D9. Arrivals in the order they serve the station
+
+A bus at the station first (standing there, or laying over at its own turnaround, the one a rider boards), then by expected arrival, then the buses behind a layover by stops away, then an HSSC bus stalled past its bound (`unknown`, ADR 0018 D6), which a client skips; at most two per live station (TOPIS's first and second bus, after a Jongno bus standing there, D14) and three runs per timetabled service at a stop.
+
+### D10. The client owns the minute rule
+
+The server serves instants and `meta.serverNow`; the client keeps its clock offset (the largest `serverNow − receipt` over the last five responses) and shows `max(1, round(remaining / 60))` minutes, 곧 도착 when the status is `arriving` or under a minute remains, still for up to two minutes overdue, then drops the arrival until the next poll. `arriving` is set only from the source, never from the server's clock.
+
+### D11. The old realtime route is frozen, then removed
+
+`GET /bus/realtime/data/:groupId` keeps every byte of its body, a characterization test pins them, and it answers `Deprecation` (RFC 9745) and `Link: rel="successor-version"`. `/bus/config` names each realtime group's `liveEndpoint` and never repoints `dataEndpoint`, which installed bundles call. The app sends its native version (`X-App-Version`) and platform but no OTA bundle id, and old and new bundles share native version 3.6.2, so the old route's hits are counted as hits: any call to it comes from a bundle older than the migration. `Sunset` is added, and the route removed, once that traffic is gone.
+
+### D12. The stop page is one route of the same shape
+
+`GET /bus/stops/:stopId/arrivals` lists a `live` entry per realtime group (exactly the live route's station entry for the same stored state, with `towards`, the next station with a stop) and a `timetable` entry per shuttle service, whose runs are `scheduled` arrivals carrying `runDepartureAt`, so a run with no time at the stop still sorts and labels. A run is listed until its time at the stop passes: the timetable's where the page shows one; otherwise the later of the arrival of its latest estimate (the newest fetched among its unexpired ones, served or not) and the served estimate the page shows, so a run never leaves the list before the time it shows; with neither, its departure. The page shows only the served estimate. The page was reshaped in place, since no installed app read it.
+
+### D13. Low-floor is the vehicle's, from one row
+
+A vehicle carries `isLowFloor`, true for TOPIS's low-floor type (`busType` 1), false for its general type (0), null otherwise: an articulated bus (2) says nothing of its floor, and a missing or undocumented code is no information, never a guess. It is the bus's, not a station's, so it sits on the vehicle and no arrival repeats it. One row decides it, so one bus never shows two answers: the position row when the bus has a position, else the arrival row its plate comes from (the one nearest ahead of it); the other rows are never consulted, even when the deciding row is silent. A row an older poller wrote carries no type, so during a deploy (ADR 0012) the flag is null, never an error. The HSSC feed names no type, so `capabilities.lowFloor` is false there and true on Jongno, where a null is unknown right now. Added 2026-10-23, when TOPIS named 2 of 종로02's 4 buses, 1 of 종로07's 5 and none of 종로08's 6 low-floor.
+
+### D14. A bus at the station is arriving until it leaves, with no departure countdown
+
+Owner, 2026-10-23, following Seoul's BIS stop signage: a rider does not need to tell "standing at the stop" from "about to arrive". So a live arrival has no `atStop` status and no departure instant:
+
+- A bus at or standing at the station is `arriving` with `stopsAway: 0` from the moment it is there until it leaves (an HSSC `LEFT`, a Jongno position past the station); then the station's next arrival takes over. Its `expectedArrivalAt` is what it was for `arriving` (null, or an instant at or before now); `expectedDepartureAt` is null on every live arrival (amends D1).
+- On Jongno a bus whose position stands at station k (position `atStop`, not waiting at its origin) is the first arrival at k, `arriving` and `0`, whether TOPIS dropped it from k's row (it usually does) or a row still names it; the row's other slots follow without it, two arrivals at most, and the one-source rules of D6 (the last bus is the vehicle's) hold. Its `providerText` is the row's text when a row names it there, else null.
+- Departure countdowns are dropped because the HSSC dwell estimate is a median (ADR 0018, D3): half the time the bus leaves before the time shown, and a rider who trusts it misses the bus. TOPIS gives no departure time at all.
+- `waitingToDepart` stays as it is: the HSSC 농구장 layover (3 to 14 minutes, ADR 0018 D2 and D7) and the buses behind it, and TOPIS's 출발대기 at a Jongno origin. A multi-minute layover is not "about to arrive", so a rider must not read it as 곧 도착.
+- Unchanged: `enRoute`, `unknown`, a timetable entry's `scheduled` status and both its departure instants (a shuttle's boarding time is timetable data, not a dwell), and a vehicle's position `status` (`inTransit`, `atStop`, `waitingToDepart`), which places its marker.
+
+The arrival `status` enum loses `atStop`. Removing a value is safe because a client parses statuses as an open enum (D3): a client that still knows `atStop` simply never receives it.
+
+### D15. Drop-off only is a station attribute, never a name marker
+
+Owner, 2026-10-23. The HSSC shuttle's 하교 direction stops at 올림픽기념국민생활관 and 혜화동우체국 only to let riders off, and only `[하차전용]` in their names said so, so a stop page's live entry looked boardable. As with a pass-through position, the fact is data a client reads, not text it parses:
+
+- `bus-stops` stores it per HSSC position as the optional `isAlightOnly` (absent is false, so a revision stored before it parses unchanged); a position with no stop is passed without stopping and is never drop-off only, which the dataset's schema refuses at push and at read.
+- `/bus/config` states it once per realtime station as `isAlightOnly`, right after `isPassThrough`, always false on Jongno, beside the other static station attributes the live route never repeats.
+- The stop page states it per live entry as `action`, `board` or `alight`, the same field and values a timetable entry carries, since a client opens a stop page without `/bus/config` (D5).
+- The live route's stations do not carry it. A live station is keyed by `stationIndex` into the `/bus/config` stations the client already holds to draw the line, and they state every static attribute once (`isPassThrough`, `isRotationStation`, transfer lines); D2's one shape is the arrival's and the vehicle's, which do not change. Repeating a fixed attribute on every poll would add a second source that could disagree with the config the line is drawn from. The stop page entry differs only because it stands alone.
+- A live entry's `towards` names the next stop as that stop's own page names it (its catalog stop, in the request language), never by the line row's name, so no marker leaks into it.
+- The names lose `[하차전용]` by a later `bus-stops` push, once the app OTA that reads `isAlightOnly` and `action` is adopted; until then the names keep it, so an installed bundle still shows it.
+
+### D16. Directions are a line attribute: TOPIS's terminals, the HSSC's 등교 and 하교
+
+Owner, 2026-10-23 (option A): NAVER Map shows a line's 방면 as tabs (종로07: 이화사거리 방면, 성균관대운동장 방면), and a client needs the same split to list one direction's stations and to move a bus between tabs at the turnaround.
+
+- A direction is the line's, like `isPassThrough`, so `/bus/config` states it once per realtime screen as `directions: [{ id, label, fromIndex, toIndex }]`, in line order over contiguous station indexes, and each station's `directionId`; the live route repeats neither (D15).
+- On Jongno it is TOPIS's own: `busRouteInfo/getStaionByRoute` names on each station the terminal the bus heads to (`direction`), which the daily route-path sync already fetched and now stores ([ADR 0014, D8](0014-jongro-realtime-from-topis.md)). The label flips at the station after the turnaround (`transYn: Y`): 종로07's 방송통신대앞 (seq 13) still reads 이화사거리, matching NAVER's tabs on all three routes. The server joins it to each registry station by sequence and TOPIS id, never by position alone: a station the two stores place apart, or a route with no stored line, has `directionId: null` and is never given its neighbour's; labels that do not form one block each serve no direction at all.
+- A Jongno direction's `id` is the TOPIS station id of the terminal it heads to: the next direction's first station, the line's first for the last one (종로07: `100900043` 이화사거리, `100900220` 성균관대운동장). TOPIS's text names a place, not a station (`종각역YMCA` for 종각역.YMCA, `종로5가` for 종로5가역.광장시장), so the id is derived from the line, not the text, and stays while the terminal does.
+- The HSSC feed has no direction, so the owner fixed it in code: 하교 (`fromCampus`) at positions 0 to 5, 농구장 to the first rotary pass, and 등교 (`toCampus`) at 6 to 10, 혜화역 1번출구 to 600주년기념관 (`HSSC_DIRECTIONS`, `src/bus/config/bus-config.constants.ts`).
+- The label is built by the server in the request language: Jongno `<terminal> 방면`, `To <terminal>`, `<terminal> 方向`, with TOPIS's Korean terminal name in every language as stop names are; HSSC 하교/등교, From campus/To campus, 放学/上学 (`src/infra/i18n.ts`).
+- The stop page's live entry carries `direction: { id, label } | null` beside `towards`, since it stands alone (D5): `towards` is the next stop, `direction` the 방면 the station lies on.
+
+Not chosen: a split from the registry's turnaround stop alone, which places the flip the same way but names no terminal, and labels kept by hand per route, a second source that drifts from TOPIS.
+
+### D17. Seats left are the vehicle's, from GBIS, only while fresh
+
+Owner, 2026-10-24 ([7800 plan](../plans/7800-unified-arrivals.md), §3.3 and §5). TOPIS reports no load for 7800 (`reride_Num` is 0 on every row), but GBIS's location API counts each bus's free seats, and 7800 is a seated express bus a rider lets pass when it is full.
+
+- A vehicle carries `seatsLeft`, an integer from 0, or null, right after `occupancy`. It is a key of its own: `occupancy` requires a crowding level, and a seat count is not one.
+- The source is GBIS `buslocationservice/v2/getBusLocationListv2` per route: each bus's `remainSeatCnt`, joined by `vehId`, which is the id TOPIS gives the same bus (13 of the 14 buses GBIS named on 2026-10-24 at 20:22 KST; the 14th stood at the 호매실 terminal with no TOPIS position). Its labels are not shifted, unlike `getBusArrivalItemv2`'s. A negative count, which GBIS's guide documents as no information, is null.
+- Freshness: the poller (`gbis-seats-7800`, switch `GBIS`) asks every 90 s from 04:50 to 02:30 KST (the weekday last bus leaves 사당 at 01:00 and reaches 호매실 about 02:00), and the api serves an answer at most 200 s after this server fetched it, so one failed tick keeps the seats and a second serves null. A GBIS outage or spent quota (`bus.gbis.quota_exceeded`) makes seats null and changes nothing else: arrivals and positions come from TOPIS. A bus row that does not parse rejects the whole tick, as a malformed TOPIS row does, so a format change shows as a failing poller and seats go null at the bound rather than serving part of an answer. A `bus_seats` read that fails (a timeout, a database blip) serves no seats and logs `bus.gbis.read_failed` at most once a minute; it never fails the live answer, whose arrivals `bus_cache` holds.
+- Null is every Jongno and HSSC bus (no source), a 7800 bus GBIS did not name or said it does not know, and every 7800 bus with no fresh answer. A null never means full; `0` does.
+- The poller writes one `bus_seats` document per route and the api reads it ([ADR 0012](0012-runtime-roles.md)). It is not a `bus_cache` key: that collection's TTL index drops a key a minute after its write, sooner than the 90 s tick.
+- `capabilities.seats` on `/bus/config` (D2) comes when 7800 is listed there (the plan's PR 8 and Q2): `/bus/config` stays byte for byte until then, and while no listed route has seats, a client shows a seat count only where `seatsLeft` is a number.
+- Additive: the key is new on the vehicle of the live route and the stop page, which clients parse key by key (D3) and whose published schemas allow other keys, so no version moves. Every key stays present (D2): it is null, not missing, where there is no source.
+
+Not chosen: polling every 30 s, which needs the operating account (the plan's Q7), and a join by plate, since the ids match.
+
+## Consequences
+
+- No user sees the new routes before the OTA, so there is no mixed state; the client takes over the minute and 곧 도착 rules (D10).
+- Two measured weekdays back the HSSC estimates (ADR 0018); a month of `hssc_feed_events` and TOPIS captures is the planned revision, and the window of D1 with it.
+- A run at an alighting stop has no timetable time there, so it is listed until the arrival of its most recently fetched unexpired estimate, even a live value older than the 15 minutes the smart view serves one, then the baseline prediction, and only with neither by its departure (owner, 2026-10-22), but never before the served estimate the page shows for it (2026-10-22). That estimate decides only the listing: the page shows the served estimate or none, so a stale value never shows as a time. The run read carries it beside the served one from the same cached read (`BusEtaSmartService.listRuns`); a run of the following week keeps its served estimate.
+- Directions shipped in the `/bus/config` realtime screens and the stop page on 2026-10-23 (D16): each realtime ETag changed once. Production's stored route lines carry no direction until the poller's first route-path sync after the deploy, which runs at its start and rewrites every line because the path version now hashes the field; until then a Jongno screen serves `directions: []` and null ids, never an error.
+- TOPIS's low-floor type is served as `isLowFloor` (D13); its full-bus flag (`isFullFlag`, `"0"` on every row on 2026-10-23) is not cached, and adding it to the vehicle is additive.

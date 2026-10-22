@@ -1,5 +1,5 @@
 /**
- * The stop index (unify-bus-stops design D1, D2, D10 and D17; spec bus-stops): which served routes stop at each
+ * The stop index: which served routes stop at each
  * stop, derived from one `bus-stops` snapshot and the stored Jongno registry, and never stored. A TOPIS pole's stop
  * id is `seoul-<arsId>` of its stored station, a virtual stop (ARS `0` or empty) has none, a pole two routes share is
  * one stop, a route that lists a pole twice serves it at its first index, an alias makes a pole part of its local
@@ -7,7 +7,7 @@
  *
  * Built over revision 1 of `bus-stops` and the registry production stored on 2026-10-17
  * (__tests__/helpers/bus/), with a copy changed where a case needs other data. A pole's stop id is the bus root's
- * `toPoleStopId`, which `/bus/config` serves too (wave 4); ported (old → new): `toTopisStopId` "prefixes the ARS
+ * `toPoleStopId`, which `/bus/config` serves too; ported (old → new): `toTopisStopId` "prefixes the ARS
  * number" → src/bus/bus.rules.spec.ts `toPoleStopId`.
  */
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";

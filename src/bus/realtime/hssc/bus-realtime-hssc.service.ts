@@ -8,13 +8,16 @@ import { toHsscBus, toHsscFeedEventDoc } from "./bus-realtime-hssc.mapper";
 import { BusRealtimeHsscRepository } from "./bus-realtime-hssc.repository";
 import {
   isFresh,
+  isLiveFresh,
   isUnparsedFeed,
   toDwellSeconds,
   toFeedEventKey,
   toFeedEventTiming,
   toFirstSeenAt,
+  toHsscStopEvent,
   toLinearSequence,
 } from "./bus-realtime-hssc.rules";
+import type { HsscStopEvent, HsscStopEvents } from "./bus-realtime-hssc.types";
 
 @Injectable()
 export class BusRealtimeHsscService {
@@ -30,7 +33,7 @@ export class BusRealtimeHsscService {
   ) {}
 
   // WHY: rejects on a failed fetch or bus_cache write, so the poller registry reports the tick; api replicas
-  // read bus_cache, so a failed write is a failed tick.
+  // read bus_cache, so a failed write is a failed tick. It keeps the live route's layover window, the widest.
   async refresh(): Promise<void> {
     const items = await this.client.fetchBuses();
     const now = this.clock.now();
@@ -40,7 +43,7 @@ export class BusRealtimeHsscService {
         const sequence = toLinearSequence(parseInt(item.seq, 10));
         return toHsscBus(item, { sequence, firstSeenAt, dwellSeconds: toDwellSeconds(firstSeenAt, now) });
       })
-      .filter((bus) => isFresh(bus, now));
+      .filter((bus) => isLiveFresh(bus, now));
     await this.cache.write("hssc", this.buses);
     await this.recordFeedEvents(items, now);
   }
@@ -78,8 +81,18 @@ export class BusRealtimeHsscService {
     }
   }
 
-  // WHY: never the poller's own memory, so combined answers as an api replica does (ADR 0012, D1).
+  // WHY: never the poller's own memory, so combined answers as an api replica does (ADR 0012, D1); the deprecated
+  // realtime route keeps its 3-minute layover window, which the poller judged before the live route (ADR 0019, D8).
   async listBuses(): Promise<HsscBusDoc[]> {
-    return (await this.cache.read("hssc")) ?? [];
+    const now = this.clock.now();
+    return ((await this.cache.read("hssc")) ?? []).filter((bus) => isFresh(bus, now));
+  }
+
+  // WHY: the live route anchors each cached bus on its latest event and tells a stopped poller by its write instant;
+  // a row whose dates no longer parse is left out, as the poller already warns of it (bus.hssc.feed_events_unparsed).
+  async findStopEvents(): Promise<HsscStopEvents> {
+    const entry = await this.cache.readEntry("hssc");
+    const events = (entry?.value ?? []).map(toHsscStopEvent).filter((event): event is HsscStopEvent => event !== null);
+    return { events, checkedAt: entry?.updatedAt ?? null };
   }
 }

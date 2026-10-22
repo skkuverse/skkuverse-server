@@ -1,11 +1,11 @@
 /**
- * The 자과캠 통학셔틀 group, against the commute-shuttle spec: labels that fit
+ * The 자과캠 통학셔틀 group: labels that fit
  * old clients, a card visible only during the pilot (Asia/Seoul), and the
  * committed timetable.
  *
  * Unlike the 인자셔틀 data test, the departure times ARE pinned here: they are
- * the spec's scenarios (the school's notice with its 2026-10-07 corrections,
- * confirmed by the 2026-10-08 draft), so a change to them is a spec change.
+ * the school's notice with its 2026-10-07 corrections, confirmed by the
+ * 2026-10-08 draft, so a change to them is a timetable change.
  */
 import fs from "fs";
 import path from "path";
@@ -224,7 +224,7 @@ describe("commute stop sequences (spec scenarios, from the committed catalog)", 
     services(lang).find((s) => s.serviceId === serviceId)!.stopSequences;
   const stops = (lang: "ko" | "en" | "zh" = "ko") => commute(lang).screen.stops as Array<Record<string, any>>;
   const stopById = (id: string, lang: "ko" | "en" | "zh" = "ko") => stops(lang).find((s) => s.id === id)!;
-  // WHY: the commute group serves no stop map (hide-commute-stop-maps); the catalog keeps each guide, read here as
+  // WHY: the commute group serves no stop map (owner, 2026-10-18); the catalog keeps each guide, read here as
   // a group that serves maps would draw it.
   const catalogStops = storedBusStopsService();
   let snapshot: Awaited<ReturnType<typeof catalogStops.current>>;

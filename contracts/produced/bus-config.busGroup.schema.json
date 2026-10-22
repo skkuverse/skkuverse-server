@@ -181,6 +181,35 @@
             },
             "stationsVersion": {
               "type": "string"
+            },
+            "liveEndpoint": {
+              "type": "string"
+            },
+            "isLoop": {
+              "type": "boolean"
+            },
+            "capabilities": {
+              "type": "object",
+              "properties": {
+                "positionSource": {
+                  "type": "string"
+                },
+                "occupancy": {
+                  "type": "boolean"
+                },
+                "plateNumber": {
+                  "type": "boolean"
+                },
+                "lastBus": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "positionSource",
+                "occupancy",
+                "plateNumber",
+                "lastBus"
+              ]
             }
           },
           "required": [
@@ -188,7 +217,10 @@
             "refreshInterval",
             "lastStationIndex",
             "stations",
-            "features"
+            "features",
+            "liveEndpoint",
+            "isLoop",
+            "capabilities"
           ]
         },
         {

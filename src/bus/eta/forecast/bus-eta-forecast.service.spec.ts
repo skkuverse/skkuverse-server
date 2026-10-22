@@ -2,7 +2,7 @@
  * BusEtaForecastService, the baseline flow's door to its predictions, over a
  * scripted TMAP client, the committed lane config and an in-memory store: the
  * TMAP forecast with the configured key, and the fixed value a bus-lane run's
- * prediction reuses (design D7): the latest of the same service, route type,
+ * prediction reuses (ADR 0015, D8): the latest of the same service, route type,
  * KST weekday and departure time that is fixed, live, unexpired and fits the
  * sequence; never one for a car run.
  */
@@ -25,7 +25,7 @@ import { BusEtaForecastService } from "./bus-eta-forecast.service";
 
 // 04:00 KST on Tuesday 2026-10-20, still the 19th in UTC.
 
-// The baseline flow reads only the lane strategies, never the stored corridor (move-reference-datasets D9).
+// The baseline flow reads only the lane strategies, never the stored corridor.
 function laneWithNoCorridor(eta: BusEtaService): BusEtaLaneService {
   return new BusEtaLaneService(eta, asReal<BusEtaLaneRepository>(new FakeBusEtaLaneRepository()), { now: () => new Date("2026-10-20T00:00:00.000Z") });
 }

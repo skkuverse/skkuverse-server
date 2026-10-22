@@ -1,5 +1,5 @@
 /**
- * The estimate rules (design D10): runs come from a resolved day, one per
+ * The estimate rules: runs come from a resolved day, one per
  * (route type, time), and only entries whose stopTimes fit the sequence; the
  * opted-in sequences carry their stops' coordinates in order.
  */

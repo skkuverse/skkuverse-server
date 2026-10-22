@@ -1,7 +1,6 @@
 /**
  * MapLayerSetRepository: the read of the stored `map-layer-sets` dataset,
- * which `npm run data` writes and the server only parses (ADR 0013, D6;
- * move-editorial-datasets D6).
+ * which `npm run data` writes and the server only parses (ADR 0013, D6).
  *
  * The query object is pinned here, since FakeMapLayerSetRepository copies it:
  * one document by `_id`, projecting only the revision and the data, bounded by

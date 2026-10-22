@@ -3,10 +3,10 @@
  * sequences the app does not estimate, and the cross-checks a well-typed corridor must still pass. Then which runs
  * are bus-lane runs, and where a direction's entry and exit lie along the corridor.
  *
- * The strategies and lane hours are code (move-reference-datasets D9): `assertLaneStrategies` is the check
+ * The strategies and lane hours are code (ADR 0013, D2): `assertLaneStrategies` is the check
  * BusEtaLaneService's construction runs over them against the sequences the app estimates, so a bad constant fails
  * the boot, naming every issue. `corridorIssues` is what a `bus-lane-corridor` push is refused on beyond its schema
- * (spec "Corridor push checks the geometry"), including each entry and exit point's distance from the centerline
+ * including each entry and exit point's distance from the centerline
  * and each direction's order along it; the lane hours are no longer corridor data.
  */
 import { corridorFixture } from "../../../../__tests__/helpers/bus/bus-lane-corridor";

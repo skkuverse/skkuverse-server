@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/realtime/data/hssc captured from production 2026-10-14 (stage 12 shape snapshot, Accept-Language ko); meta without lang; serverNow added by hand (add-jongro-bus-trajectory) at the capture's minute, 2026-10-14 22:26 KST",
+  "_about": "GET /bus/realtime/data/hssc captured from production 2026-10-14 (stage 12 shape snapshot, Accept-Language ko); meta without lang; serverNow added by hand (PR #285) at the capture's minute, 2026-10-14 22:26 KST",
   "data": {
     "currentTime": "10:26 PM",
     "totalBuses": 2,

@@ -1,6 +1,6 @@
 /**
  * BuildingSyncRepository's MongoDB operations, pinned literally until a real
- * mongod runs them (harden-test-suite D6): the bulk upserts' dot paths and
+ * mongod runs them (ADR 0011, D6): the bulk upserts' dot paths and
  * stamps, which layers each write reaches, the best-effort failure note, the
  * stale-space delete's filter, and the indexes this repository owns.
  * BuildingSyncService's tests run against an in-memory fake that follows

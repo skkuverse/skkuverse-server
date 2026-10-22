@@ -1,6 +1,5 @@
 /**
- * Characterization of GET /app/config (move-miniapp-registry tasks 6.1 and
- * 6.3, design D5 and D12): the bytes, `Cache-Control`, `Vary` and `ETag` it
+ * Characterization of GET /app/config (ADR 0011, D6): the bytes, `Cache-Control`, `Vary` and `ETag` it
  * answers, through the production pipeline, every module `src/app.module.ts`
  * imports under `src/app-config/` booted.
  *

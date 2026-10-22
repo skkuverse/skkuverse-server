@@ -1,6 +1,6 @@
 /**
- * Characterization of the notices routes over a real `mongod` (harden-test-suite
- * task 6.2, design D6): what the list, detail and dispatch routes answer and
+ * Characterization of the notices routes over a real `mongod` (ADR 0011, D6):
+ * what the list, detail and dispatch routes answer and
  * record today, through the production HTTP pipeline, with no repository, data
  * module or service overridden. The only doubles are at the process edge: the
  * database is a real mongod, the push Cloud Function a loopback server, the time

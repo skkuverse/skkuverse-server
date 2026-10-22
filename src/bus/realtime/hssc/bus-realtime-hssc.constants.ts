@@ -8,6 +8,10 @@ export const TURNAROUND_STATION_NAME = "농구장 (셔틀버스정류소)";
 
 export const STALE_MINUTES_AT_TURNAROUND = 3;
 
+// EVIDENCE: the layover at the turnaround lasts a median 674 s, p90 846 s (ADR 0018, D2), so the
+// live route keeps a bus laying over this long; the deprecated realtime route keeps STALE_MINUTES_AT_TURNAROUND.
+export const LIVE_STALE_MINUTES_AT_TURNAROUND = 15;
+
 export const STALE_MINUTES = 10;
 
 // QUIRK(hssc): the API's stop names, mapped to the names the app shows.

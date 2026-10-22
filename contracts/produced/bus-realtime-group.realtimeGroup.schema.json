@@ -405,5 +405,7 @@
     "groupId",
     "buses",
     "stationEtas"
-  ]
+  ],
+  "deprecated": true,
+  "description": "Deprecated: frozen; read GET /bus/live/:groupId (bus-live.liveGroup)"
 }
