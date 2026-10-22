@@ -1,7 +1,7 @@
 import type { HsscSegment } from "./bus-realtime-hssc-eta.types";
 
 // EVIDENCE: medians of the feed's ENTERED and LEFT events over about 100 laps on 2026-10-20 and 2026-10-22, by seq;
-// the method and the table are add-hssc-arrival-estimates design D3, and the days agree within about 5 s a segment.
+// the method is ADR 0018, D3, and the days agree within about 5 s a segment.
 export const SEGMENTS_BY_SEQ: readonly HsscSegment[] = [
   { dwellSeconds: 174, travelSeconds: 30 },
   { dwellSeconds: 12, travelSeconds: 70 },
