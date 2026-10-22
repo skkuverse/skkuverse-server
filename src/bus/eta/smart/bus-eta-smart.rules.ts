@@ -11,11 +11,17 @@ export function runKey({ serviceId, routeType, date, time }: RunKey): string {
   return `${serviceId}|${routeType}|${date}|${time}`;
 }
 
-function sourceOf(doc: ShuttleEtaDoc, now: Date): EtaSource | null {
-  if (doc.expiresAt.getTime() <= now.getTime()) return null;
+const isExpired = (doc: ShuttleEtaDoc, now: Date): boolean => doc.expiresAt.getTime() <= now.getTime();
+
+const kindSourceOf = (doc: ShuttleEtaDoc): EtaSource => {
   if (doc.kind === "baseline") return "predicted";
-  if (doc.frozen) return "frozen";
-  return now.getTime() - doc.fetchedAt.getTime() <= LIVE_MAX_AGE_MS ? "live" : null;
+  return doc.frozen ? "frozen" : "live";
+};
+
+function sourceOf(doc: ShuttleEtaDoc, now: Date): EtaSource | null {
+  if (isExpired(doc, now)) return null;
+  const source = kindSourceOf(doc);
+  return source !== "live" || now.getTime() - doc.fetchedAt.getTime() <= LIVE_MAX_AGE_MS ? source : null;
 }
 
 /** WHY: the best estimate per run: the fixed value, then a live value at most 15 minutes old, then an unexpired prediction. */
@@ -44,4 +50,21 @@ export function floorAtScheduledStops(offsetsSec: readonly number[], scheduledOf
     if (index > 0 && scheduled !== null && scheduled !== undefined) waitSec = Math.max(waitSec, scheduled - offset);
     return offset + waitSec;
   });
+}
+
+/**
+ * WHY: the stop page's listing cutoff only, never served as a time: per run, the newest fetch among its unexpired
+ * documents of any kind, a live value too old to serve included (ADR 0019, D12).
+ */
+export function pickLatestEstimates(docs: readonly ShuttleEtaDoc[], now: Date): Map<string, ServedEstimate> {
+  const latest = new Map<string, ServedEstimate>();
+  for (const doc of docs) {
+    if (isExpired(doc, now)) continue;
+    const key = runKey(doc);
+    const current = latest.get(key);
+    if (!current || doc.fetchedAt.getTime() > current.updatedAt.getTime()) {
+      latest.set(key, { offsetsSec: doc.offsetsSec, source: kindSourceOf(doc), updatedAt: doc.fetchedAt });
+    }
+  }
+  return latest;
 }

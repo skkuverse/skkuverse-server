@@ -4,8 +4,10 @@
  * departure when no time is known there, is not before the current minute; a stop time before the departure is the
  * next day's; a boarding stop fills the departure pair and an alighting stop the arrival pair, the estimate's when
  * the smart view applied one; each run keeps its departure, and the day's last run of its route type is the last
- * bus; no run is listed unless the smart schedule is active. And the HSSC line's next station with a stop, which
- * tells a rider the direction, round the loop.
+ * bus; no run is listed unless the smart schedule is active. Where the stop shows no timetable time, a run is listed
+ * until the arrival of its latest estimate (the newest fetched, served or not), else by its departure, while the page
+ * shows only the served estimate. And the HSSC line's next station with a stop, which tells a rider the direction,
+ * round the loop.
  */
 import type { SmartSchedule } from "../schedule/bus-schedule.wire";
 import { toTimetableArrivals, toTowards } from "./bus-stop-arrivals.rules";
@@ -161,6 +163,103 @@ describe("toTimetableArrivals", () => {
   it.each(["suspended", "noData"] as const)("lists no run while the smart schedule is %s", (status) => {
     // Act & Assert
     expect(toTimetableArrivals(schedule([day("2026-10-20", [entry("14:30", ["14:30", null])])], status), BOARD, AT_14_10_KST)).toEqual([]);
+  });
+});
+
+// WHY: the smart view stops serving a live value 15 minutes after its fetch, while the bus is still on the road.
+describe("toTimetableArrivals with each run's latest estimate", () => {
+  const STALE_LIVE_ETA = { eta: { source: "live", updatedAt: "2026-10-20T04:50:00.000Z" } };
+  const PREDICTED_ETA = { eta: { source: "predicted", updatedAt: "2026-10-19T19:00:00.000Z" } };
+  const at = (kst: string) => new Date(`2026-10-20T${kst}:00+09:00`);
+  const arrivalsAt = (served: Entry[], latest: Entry[], now: Date) =>
+    toTimetableArrivals({ served: schedule([day("2026-10-20", served)]), latest: schedule([day("2026-10-20", latest)]) }, ALIGHT, now);
+
+  it("lists a run with a fresh served estimate until that arrival, as before", () => {
+    // Arrange
+    const run = entry("14:00", ["14:00", "15:10"], LIVE_ETA);
+
+    // Act
+    const arrivals = arrivalsAt([run], [run], at("15:10"));
+
+    // Assert
+    expect(arrivals).toEqual([expect.objectContaining({ runDepartureAt: "2026-10-20T14:00:00+09:00", expectedArrivalAt: "2026-10-20T15:10:00+09:00", basis: "estimate" })]);
+    expect(arrivalsAt([run], [run], at("15:11"))).toEqual([]);
+  });
+
+  it.each([
+    ["14:10", true],
+    ["15:10", true],
+    ["15:11", false],
+  ])("with only a live value too old to serve, at %s KST lists the 14:00 run: %s, showing no time", (now, listed) => {
+    // Arrange
+    const served = [entry("14:00", ["14:00", null])];
+    const latest = [entry("14:00", ["14:00", "15:10"], STALE_LIVE_ETA)];
+
+    // Act
+    const arrivals = arrivalsAt(served, latest, at(now));
+
+    // Assert
+    expect(arrivals).toEqual(
+      listed ? [expect.objectContaining({ runDepartureAt: "2026-10-20T14:00:00+09:00", expectedArrivalAt: null, scheduledArrivalAt: null, basis: "timetable" })] : [],
+    );
+  });
+
+  it("lists a run with only a prediction until the predicted arrival, showing it", () => {
+    // Arrange
+    const run = entry("14:00", ["14:00", "15:05"], PREDICTED_ETA);
+
+    // Act
+    const arrivals = arrivalsAt([run], [run], at("15:05"));
+
+    // Assert
+    expect(arrivals).toEqual([expect.objectContaining({ expectedArrivalAt: "2026-10-20T15:05:00+09:00", basis: "estimate" })]);
+    expect(arrivalsAt([run], [run], at("15:06"))).toEqual([]);
+  });
+
+  it("counts a run with no estimate at all by its departure", () => {
+    // Arrange
+    const run = entry("14:00", ["14:00", null]);
+
+    // Act & Assert
+    expect(arrivalsAt([run], [run], at("14:00"))).toEqual([expect.objectContaining({ runDepartureAt: "2026-10-20T14:00:00+09:00", expectedArrivalAt: null })]);
+    expect(arrivalsAt([run], [run], at("14:01"))).toEqual([]);
+  });
+
+  it("lists by a live value fetched after the served prediction, still showing the prediction", () => {
+    // Arrange
+    const served = [entry("14:00", ["14:00", "15:20"], PREDICTED_ETA)];
+    const latest = [entry("14:00", ["14:00", "15:10"], STALE_LIVE_ETA)];
+
+    // Act
+    const arrivals = arrivalsAt(served, latest, at("15:10"));
+
+    // Assert
+    expect(arrivals).toEqual([expect.objectContaining({ expectedArrivalAt: "2026-10-20T15:20:00+09:00", basis: "estimate" })]);
+    expect(arrivalsAt(served, latest, at("15:11"))).toEqual([]);
+  });
+
+  it("keeps a timetable time the stop shows as the cutoff", () => {
+    // Arrange
+    const served = [entry("14:00", ["14:00", "15:20"])];
+    const latest = [entry("14:00", ["14:00", "15:10"], STALE_LIVE_ETA)];
+
+    // Act
+    const arrivals = arrivalsAt(served, latest, at("15:15"));
+
+    // Assert
+    expect(arrivals).toEqual([expect.objectContaining({ scheduledArrivalAt: "2026-10-20T15:20:00+09:00", basis: "timetable" })]);
+  });
+
+  it("orders runs by the time they are listed until", () => {
+    // Arrange
+    const served = [entry("14:00", ["14:00", null]), entry("14:20", ["14:20", "15:00"], LIVE_ETA)];
+    const latest = [entry("14:00", ["14:00", "15:10"], STALE_LIVE_ETA), entry("14:20", ["14:20", "15:00"], LIVE_ETA)];
+
+    // Act
+    const arrivals = arrivalsAt(served, latest, at("14:30"));
+
+    // Assert
+    expect(departuresOf(arrivals)).toEqual(["2026-10-20T14:20:00+09:00", "2026-10-20T14:00:00+09:00"]);
   });
 });
 

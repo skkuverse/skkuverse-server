@@ -1,10 +1,12 @@
 /**
  * Which stored estimate a run is served with: frozen > live (at most 15 minutes old) > predicted (unexpired).
+ * Which one is its latest, for the stop page's listing cutoff only: the newest fetch among its unexpired documents of
+ * any kind, a live value too old to serve included (ADR 0019, D12).
  * And how a run's offsets respect a scheduled stop after the first: the bus
  * never leaves it before its timetable time.
  */
 import type { ShuttleEtaDoc } from "../bus-eta.document";
-import { floorAtScheduledStops, pickEstimates, runKey } from "./bus-eta-smart.rules";
+import { floorAtScheduledStops, pickEstimates, pickLatestEstimates, runKey } from "./bus-eta-smart.rules";
 
 const NOW = new Date("2026-10-12T00:40:00.000Z"); // 09:40 KST, 20 minutes before the 10:00 run
 const KEY = runKey({ serviceId: "campus-inja", routeType: "regular", date: "2026-10-12", time: "10:00" });
@@ -68,6 +70,56 @@ describe("pickEstimates", () => {
 
     // Assert
     expect([...map.keys()].sort()).toEqual([KEY, runKey({ serviceId: "campus-inja", routeType: "regular", date: "2026-10-12", time: "12:00" })]);
+  });
+});
+
+describe("pickLatestEstimates", () => {
+  it("takes a live value fetched 20 minutes ago, too old to serve, over the morning's prediction", () => {
+    // Arrange
+    const docs = [doc("baseline", { fetchedAt: minutesAgo(300) }), doc("live", { fetchedAt: minutesAgo(20) })];
+
+    // Act
+    const latest = pickLatestEstimates(docs, NOW).get(KEY);
+
+    // Assert
+    expect(latest).toEqual({ offsetsSec: [0, 3060, 3180], source: "live", updatedAt: minutesAgo(20) });
+    expect(pickEstimates(docs, NOW).get(KEY)!.source).toBe("predicted");
+  });
+
+  it("takes a prediction fetched after the live value", () => {
+    // Act
+    const latest = pickLatestEstimates([doc("live", { fetchedAt: minutesAgo(30) }), doc("baseline", { fetchedAt: minutesAgo(10) })], NOW).get(KEY);
+
+    // Assert
+    expect(latest).toEqual({ offsetsSec: [0, 2800, 2950], source: "predicted", updatedAt: minutesAgo(10) });
+  });
+
+  it("marks a fixed value frozen", () => {
+    // Act
+    const latest = pickLatestEstimates([doc("live", { frozen: true, frozenAt: minutesAgo(90), fetchedAt: minutesAgo(90) })], NOW).get(KEY);
+
+    // Assert
+    expect(latest?.source).toBe("frozen");
+  });
+
+  it.each([
+    ["one millisecond before now", -1, false],
+    ["now", 0, false],
+    ["one millisecond after now", 1, true],
+  ])("a document that expires %s counts: %s", (_case, expiresInMs, counts) => {
+    // Arrange
+    const expiresAt = new Date(NOW.getTime() + expiresInMs);
+
+    // Act
+    const latest = pickLatestEstimates([doc("live", { fetchedAt: minutesAgo(40), expiresAt }), doc("baseline", { fetchedAt: minutesAgo(300) })], NOW).get(KEY);
+
+    // Assert
+    expect(latest?.source).toBe(counts ? "live" : "predicted");
+  });
+
+  it("answers no run with no unexpired document", () => {
+    // Act & Assert
+    expect(pickLatestEstimates([doc("baseline", { expiresAt: minutesAgo(1) })], NOW).size).toBe(0);
   });
 });
 
