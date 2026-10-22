@@ -1,5 +1,5 @@
 /**
- * The TOPIS busRouteInfo answers of Jongno 07 (add-jongro-route-lines D3): the
+ * The TOPIS busRouteInfo answers of Jongno 07: the
  * captured answers and each captured point and station pass with numbers
  * parsed from strings, a row missing any field fails at that field, a
  * non-decimal coordinate or a fractional `no` fails, and the answer envelope

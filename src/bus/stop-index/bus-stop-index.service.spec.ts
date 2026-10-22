@@ -1,5 +1,5 @@
 /**
- * BusStopIndexService, the door to the stop index (unify-bus-stops design D2, D5 and D17; spec bus-stops): built
+ * BusStopIndexService, the door to the stop index: built
  * from the current `bus-stops` snapshot and every stored Jongno route over in-memory stores, kept while the
  * revision and every stations version stay, and rebuilt when one changes. An alias no stored station has is warned
  * once per revision. `findStop` resolves a stop id, an aliased pole's to its local stop, with the stop's own
@@ -243,7 +243,7 @@ describe("BusStopIndexService.servedRecordOf", () => {
   });
 });
 
-// WHY: a registry outage must not cost a MongoDB read and an error line per stop page (unify-bus-stops review F2, F3).
+// WHY: a registry outage must not cost a MongoDB read and an error line per stop page.
 describe("BusStopIndexService.findStop while the registry cannot be read", () => {
   const events = (level: "warn" | "error", event: string) => jest.mocked(logger[level]).mock.calls.filter((call) => (call[0] as { event?: string }).event === event);
 

@@ -1,6 +1,6 @@
 /**
  * The served lines, stations and platforms, held in code as identities and
- * their labels (move-reference-datasets D2): the stations in served order with
+ * their labels (ADR 0013, D2): the stations in served order with
  * their platforms, on lines 1, 4, 2, 3, 8, K1 and D1, which key the stored
  * arrival state, the timetables and the transit layout. The network passes the
  * schema the registry's identities passed (slugs, platform ids, colors,

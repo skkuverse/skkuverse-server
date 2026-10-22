@@ -1,7 +1,6 @@
 /**
  * BusRoutePathService over an in-memory repository, a scripted TOPIS client
- * and a fixed clock (add-jongro-route-lines D3–D5, isolate-api-from-pollers
- * D3): the read answers every stored route in the configured order, cached,
+ * and a fixed clock (ADR 0012, D3): the read answers every stored route in the configured order, cached,
  * leaves a missing route out with an error line and a flag, serves the last
  * good lines through a failed read inside the stale window, and fails with a
  * 503 when a read fails with nothing cached, holding that failure for
@@ -156,7 +155,7 @@ describe("BusRoutePathService.listRoutePaths", () => {
 });
 
 // WHY: the stop page is no-store and reads the lines per request, so an outage or a missing line must cost neither a
-// MongoDB read nor an error line per page (unify-bus-stops pre-deploy review F3).
+// MongoDB read nor an error line per page.
 describe("BusRoutePathService.listRoutePaths read per request", () => {
   let nowMs: number;
   let perRequest: BusRoutePathService;
@@ -331,7 +330,7 @@ describe("BusRoutePathService.sync", () => {
   });
 });
 
-// WHY: a fresh database gets its lines from the daily sync, not a snapshot (isolate-api-from-pollers D3).
+// WHY: a fresh database gets its lines from the daily sync, not a snapshot (ADR 0012, D3).
 describe("BusRoutePathService.sync on an empty store", () => {
   it("writes the first line, and the read then serves it", async () => {
     // Arrange

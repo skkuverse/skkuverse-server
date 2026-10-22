@@ -1,7 +1,7 @@
 /**
  * BusEtaProbeService over a scripted TOPIS client and an in-memory span store,
  * on revision 1 of the stored corridor, which each call is handed as a
- * snapshot (move-reference-datasets D9): at most one request per probe route and minute,
+ * snapshot: at most one request per probe route and minute,
  * shared by both directions; no corridor time without a snapshot 5 to 15
  * minutes older; a corridor time once a prime ten minutes earlier gives every
  * bus a partner, with its spans recorded once; every client failure,

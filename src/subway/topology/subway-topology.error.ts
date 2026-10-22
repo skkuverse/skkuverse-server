@@ -1,7 +1,7 @@
 import { AppError } from "../../http/app.error";
 
 // WHY: an answer, not a fault: with no good topology read yet, the arrivals route answers 503 rather than directions
-// without names or stops away (move-reference-datasets D3).
+// without names or stops away (ADR 0013, D6).
 export class SubwayTopologyUnavailableError extends AppError {
   constructor() {
     super("SUBWAY_TOPOLOGY_UNAVAILABLE", "The subway topology is unavailable", 503);

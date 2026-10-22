@@ -10,8 +10,8 @@ export const EVENT_STALE_WINDOW_MS = 10 * 60_000;
 const CAMPUS_OVERLAYS_ENDPOINT = "/map/overlays/campus";
 const TRANSIT_OVERLAYS_ENDPOINT = "/map/overlays/transit";
 
-// WHY: opt-in, so installed apps draw no line until a user turns one on (add-jongro-route-lines D6); one green for every
-// route, never its stored card color, with a dark edge that stays legible over green parks (D8; move-reference-datasets D11).
+// WHY: opt-in, so installed apps draw no line until a user turns one on; one green for every
+// route, never its stored card color, with a dark edge that stays legible over green parks.
 const ROUTE_LINE_LAYER = { defaultVisibleWhen: { kind: "never" }, userConfigurable: true, endpoint: TRANSIT_OVERLAYS_ENDPOINT, chipGroupId: null, style: { color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20", minZoom: 13 } } as const;
 
 export const LOCATION_ACCURACIES = ["exact", "area"] as const;
@@ -54,7 +54,7 @@ export const BASE_LAYERS = [
     style: { fillOpacity: 0.12, outlineWidth: 1.5, minZoom: 16 },
   },
   { id: "jongro02_route", label: { ko: "종로02 노선", en: "Jongno 02 Route", zh: "钟路02路线" }, ...ROUTE_LINE_LAYER },
-  // QUIRK(naver-map): the app adds the lines in this order and the later lies on top: 07 over 08 where they share a road (D8).
+  // QUIRK(naver-map): the app adds the lines in this order and the later lies on top: 07 over 08 where they share a road.
   { id: "jongro08_route", label: { ko: "종로08 노선", en: "Jongno 08 Route", zh: "钟路08路线" }, ...ROUTE_LINE_LAYER },
   { id: "jongro07_route", label: { ko: "종로07 노선", en: "Jongno 07 Route", zh: "钟路07路线" }, ...ROUTE_LINE_LAYER },
 ] as const satisfies readonly LayerSpec[];

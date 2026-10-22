@@ -1,6 +1,6 @@
 /**
  * BuildingCafeteriaRepository's MongoDB operations on `facilities`, pinned
- * literally until a real mongod runs them (harden-test-suite D6): the bulk
+ * literally until a real mongod runs them (ADR 0011, D6): the bulk
  * upsert keyed by conspaceCd with its stamp, and the stale delete's filter,
  * which reaches only cafeterias so another kind of facility a later flow
  * writes is never cut by this one. BuildingCafeteriaService's tests run

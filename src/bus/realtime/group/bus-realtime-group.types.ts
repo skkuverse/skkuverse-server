@@ -20,7 +20,7 @@ export interface GroupView {
   stationsVersion?: string;
 }
 
-/** WHY: what a tracked bus is doing, before the wire assembles it (add-jongro-bus-positions D1). */
+/** WHY: what a tracked bus is doing, before the wire assembles it. */
 export interface JongroBusTracking {
   status: TrackedStatus["status"];
   vehicleId: string;

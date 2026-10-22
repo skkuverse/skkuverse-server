@@ -1,9 +1,9 @@
 /**
  * BusEtaLaneService, the lane's door: the strategies and lane hours are code, checked against each bus-stops
- * revision's estimated sequences (unify-bus-stops design D16), so a revision they do not fit rejects every tick and is
+ * revision's estimated sequences, so a revision they do not fit rejects every tick and is
  * logged once (it replaces the check at construction, whose case "fails construction when the lane strategies name a
  * sequence the app does not estimate" is now "Strategy for an unknown sequence"); a run's strategy follows the lane hours. The corridor is the stored
- * `bus-lane-corridor` dataset (move-reference-datasets D9; ADR 0013, D6), read over an in-memory store and a fixed
+ * `bus-lane-corridor` dataset (ADR 0013, D6), read over an in-memory store and a fixed
  * clock: `corridor()` answers one revision's snapshot (its centerline, probe routes, each direction's ends and leg
  * bounds), cached for DATASET_CACHE_TTL_MS so a push is seen within a minute, kept through a failed reload for
  * DATASET_STALE_WINDOW_MS, and `null` when no good corridor was read, which the live tick answers with the car model.

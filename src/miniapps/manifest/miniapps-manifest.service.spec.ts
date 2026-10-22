@@ -5,7 +5,7 @@
  * it, and writes nothing, so the last good manifest stays; an empty shell is
  * stored as `{}`.
  *
- * The api's side (move-miniapp-registry D9, spec miniapp-manifests): the shell
+ * The api's side (ADR 0012, D6): the shell
  * fields a detail merges are the stored ones of its startUrl's first-party
  * origin, read for all origins at once and cached a minute, so a manifest
  * change on an origin shows within the poll plus that minute. A third-party

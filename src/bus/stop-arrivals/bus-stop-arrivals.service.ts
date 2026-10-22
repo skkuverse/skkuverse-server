@@ -91,7 +91,7 @@ export class BusStopArrivalsService {
     return pending;
   }
 
-  // WHY: one route that cannot be read (its attributes, registry or timetable unavailable) leaves the rest of the page served (D17).
+  // WHY: one route that cannot be read (its attributes, registry or timetable unavailable) leaves the rest of the page served.
   private leaveOut(stopId: string, route: StopRoute, err: unknown): null {
     const serviceId = route.kind === "shuttle" ? route.serviceId : undefined;
     const ticket = this.leftOutThrottle.take(serviceId ?? route.groupId);

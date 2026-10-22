@@ -1,6 +1,6 @@
 /**
  * BusScheduleContentService over an in-memory dataset store and a fixed clock
- * (ADR 0013, D6; move-editorial-datasets D9): the editorial content each
+ * (ADR 0013, D6): the editorial content each
  * shuttle timetable folds in, read from the stored `bus-service-notices` and
  * `skku-rest-days` datasets, each cached for DATASET_CACHE_TTL_MS so a push serves within a minute,
  * kept through a failed or invalid reload, and unavailable (503) when no good

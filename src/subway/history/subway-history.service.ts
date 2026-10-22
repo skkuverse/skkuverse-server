@@ -14,7 +14,7 @@ import type { AccuracyGroup, AccuracyRange, ObservedArrival } from "./subway-his
 const DIRECTIONS: readonly SubwayDirection[] = ["up", "down"];
 const WRITE_FAILURE_KEY = "subway.history";
 
-// WHY: written only where the tracker ticks, the poller process (design D2). What was recorded lives in memory for
+// WHY: written only where the tracker ticks, the poller process (ADR 0012, D1). What was recorded lives in memory for
 // one service date, so a restart only skips the horizons crossed before it. A failed write is logged, never thrown:
 // it must not fail the tick that already wrote the served arrivals.
 @Injectable()
@@ -62,7 +62,7 @@ export class SubwayHistoryService implements OnModuleInit {
     this.observedStateKeys.clear();
   }
 
-  // WHY: only the served platform's own events are stored (add-commute-station-subway design D10): the stops the
+  // WHY: only the served platform's own events are stored: the stops the
   // tracker also observes there would multiply the writes for no report that reads them.
   private toNewEvents(source: string, platform: TrackedPlatform): SubwayEventDoc[] {
     return platform.events.flatMap((event) => {

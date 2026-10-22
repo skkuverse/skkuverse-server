@@ -4,7 +4,7 @@
  * The activation comes from the eventmap database (FakeMapRepository), the
  * layer set from the stored `map-layer-sets` dataset (FakeMapLayerSetRepository,
  * seeded with its fixture), and the time from a fake Clock, so the activation
- * read and the window check see the same instant (move-editorial-datasets D6).
+ * read and the window check see the same instant.
  *
  * No live activation reads no layer set. A live one serves its set from the
  * dataset, and a push serves within the dataset TTL. The cases worth having

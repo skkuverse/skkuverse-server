@@ -1,6 +1,6 @@
 /**
  * UiCampusService over an in-memory dataset store, the real mini app registry
- * and a fixed clock (ADR 0013, D6; move-editorial-datasets D4): the campus
+ * and a fixed clock (ADR 0013, D6): the campus
  * sheet is built from the stored `campus-banners` dataset, cached for
  * DATASET_CACHE_TTL_MS so a push serves within a minute, kept through an
  * invalid reload, and unavailable (503) when no good banners were ever read.
@@ -8,7 +8,7 @@
  * out and logged once per revision; a carousel left with no banner is left out
  * as one whose every banner has closed.
  *
- * And the registry revision each request reads (move-miniapp-registry D4, D7): banners that name a mini app
+ * And the registry revision each request reads: banners that name a mini app
  * take one registry snapshot per request, so a registry push reaches them within a TTL with the banners
  * unchanged, and a left-out banner is logged once per pair of revisions. Banners that name none read no
  * registry, so they serve while it is unavailable; banners that name one answer MINIAPP_REGISTRY_UNAVAILABLE.

@@ -11,7 +11,7 @@ import type { RunMatch } from "./subway-matching.types";
 const UNMATCHED_LOG_INTERVAL_MS = 10 * 60_000;
 
 // WHY: the matches live in memory, like the train histories: one poller process tracks, and a restart rematches
-// from the next tick (design D7).
+// from the next tick.
 @Injectable()
 export class SubwayMatchingService implements OnModuleInit {
   private readonly matchesByLine = new Map<string, ReadonlyMap<string, RunMatch>>();

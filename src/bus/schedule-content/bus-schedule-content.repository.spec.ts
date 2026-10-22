@@ -1,7 +1,7 @@
 /**
  * BusScheduleContentRepository: the reads of the stored bus schedule content
  * datasets, which `npm run data` writes and the server only parses (ADR 0013,
- * D6; move-editorial-datasets D9).
+ * D6).
  *
  * The query object is pinned here, since FakeBusScheduleContentRepository
  * copies it: one document by `_id`, projecting only the revision and the data,

@@ -1,10 +1,10 @@
 /**
- * The shapes of the bus schedule content datasets (move-editorial-datasets
- * D7). `busServiceNoticesDataset`: each service's notices and suspension, as a
+ * The shapes of the bus schedule content datasets.
+ * `busServiceNoticesDataset`: each service's notices and suspension, as a
  * push checks them: a notice style the app draws and a non-empty text, and a
  * suspension of two calendar dates in order, each refusal at its path.
  * `storedServiceNotices`: the stored envelope the read parses.
- * `skkuRestDaysDataset` (D8): SKKU's rest days, each key a calendar month-day
+ * `skkuRestDaysDataset`: SKKU's rest days, each key a calendar month-day
  * (one a leap year has) or a calendar date from 1900 to 2999, each label
  * non-empty, read as `RestDays`.
  * `storedRestDays`: its stored envelope.

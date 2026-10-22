@@ -1,5 +1,5 @@
 // WHY: a village bus line changes a few times a year; six calls a day leave TOPIS's 10,000-a-day quota per
-// operation to the realtime poller (add-jongro-route-lines D3).
+// operation to the realtime poller.
 export const SYNC_INTERVAL_MS = 24 * 60 * 60_000;
 
 // WHY: a line of a few points is a broken answer, not a route: the shortest of Jongno 02, 07 and 08 had 241 on 2026-10-18.

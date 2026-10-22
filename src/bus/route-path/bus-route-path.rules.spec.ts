@@ -1,10 +1,10 @@
 /**
- * The route path rules (add-jongro-route-lines D2, D3): a line's length in
+ * The route path rules: a line's length in
  * meters over its points, a version that changes with any point or station,
  * and the sync decision: unchanged content writes nothing, and a line of too
  * few points, no station, or a point count or length more than 30% off the
  * stored line is held, each at its threshold. With no stored line, only the
- * point and station checks hold a first line (isolate-api-from-pollers D3).
+ * point and station checks hold a first line (ADR 0012, D3).
  */
 import type { Position } from "../../shared/geojson.types";
 import type { RoutePathStation } from "./bus-route-path.document";
@@ -108,7 +108,7 @@ describe("toPathSyncDecision", () => {
 });
 
 // WHY: with no snapshot, a fresh database stores a route's first line from TOPIS on the absolute checks alone
-// (isolate-api-from-pollers D3).
+// (ADR 0012, D3).
 describe("toPathSyncDecision with no stored line", () => {
   const decideFirst = (pointCount: number, stationCount = 22) => toPathSyncDecision(null, { pathVersion: "new", shape: { pointCount, lengthMeters: 1 }, stationCount });
 

@@ -1,5 +1,5 @@
 /**
- * What a stop page decides (unify-bus-stops design D8 and D9; spec bus-stop-arrivals): how many of the HSSC loop's
+ * What a stop page decides: how many of the HSSC loop's
  * 11 positions each bus is from the stop, counted forward round the loop, nearest first, and a shuttle stop's next three runs in Asia/Seoul: a run counts
  * while its time at the stop, or its departure when that is unknown, is not before the current minute; a stop time
  * before the departure is the next day's; `estimated` follows the smart view's `eta` at an estimated stop; and no run

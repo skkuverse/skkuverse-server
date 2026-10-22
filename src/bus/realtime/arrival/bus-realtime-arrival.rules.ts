@@ -41,7 +41,7 @@ function toWholeMinutes(seconds: number): number {
   return Math.max(1, Math.round(seconds / 60));
 }
 
-// WHY: whole minutes only, since a 0–3 min prediction is off by about a minute (proposal.md); a 0 travel time
+// WHY: whole minutes only, since a 0–3 min prediction is off by about a minute (ADR 0014, D1); a 0 travel time
 // falls back to the text's own time.
 export function toMinutes(bus: JongroArrivalBus): number | null {
   if (toArrivalState(bus.arrmsg) !== "running") return null;

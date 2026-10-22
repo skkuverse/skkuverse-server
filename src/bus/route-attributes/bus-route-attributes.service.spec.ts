@@ -1,6 +1,6 @@
 /**
- * BusRouteAttributesService, the door to the stored `jongro-route-attributes` dataset (move-reference-datasets D10;
- * ADR 0013, D6), read over an in-memory store and a fixed clock. `current()` answers one revision with each code
+ * BusRouteAttributesService, the door to the stored `jongro-route-attributes` dataset
+ * (ADR 0013, D6), read over an in-memory store and a fixed clock. `current()` answers one revision with each code
  * route's attributes, cached for DATASET_CACHE_TTL_MS so a push is seen within a minute and kept through a failed
  * reload for DATASET_STALE_WINDOW_MS. A route the code serves that the revision lacks, and a stored route the code
  * does not serve, are each logged once per revision. With no good value, `current()` throws the 503
@@ -220,7 +220,7 @@ describe("BusRouteAttributesService.attributesOf", () => {
 });
 
 // WHY: the readers that serve something without the Jongro routes (the bus config, the ui transit routes) take the
-// never-read answer as none instead of a 503 (move-reference-datasets review F1).
+// never-read answer as none instead of a 503.
 describe("BusRouteAttributesService.findCurrent", () => {
   it("answers the stored revision as current() does", async () => {
     // Arrange

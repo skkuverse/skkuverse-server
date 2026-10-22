@@ -1,6 +1,6 @@
 /**
  * BusRoutePathClient over a mocked axios and the captured TOPIS busRouteInfo
- * answers of Jongno 07 (add-jongro-route-lines D3): the two URLs it sends (the
+ * answers of Jongno 07: the two URLs it sends (the
  * stored key as it is, never encoded twice), the line in `no` order as
  * [lng, lat] numbers and the stations with the turnaround flag; and every
  * failure rejecting with no key in it: a refused key (HTTP 401), a header

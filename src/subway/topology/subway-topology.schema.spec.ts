@@ -1,6 +1,6 @@
 /**
- * subwayTopologyDataset, the shape of the `subway-topology` dataset
- * (move-reference-datasets D3): each served platform's two directions, keyed
+ * subwayTopologyDataset, the shape of the `subway-topology` dataset:
+ * each served platform's two directions, keyed
  * by platform id, and the neighbor stops, keyed by platform id. A push is
  * refused on it and the read parses with it. Revision 1 (the fixture) passes
  * as it is; a copy missing any field of a direction or a neighbor, a malformed

@@ -1,6 +1,6 @@
 import type { LocalizedName, NetworkStation, SubwayLine, SubwayNetwork } from "./subway.types";
 
-// WHY: an approaching train is taken to arrive this long after its approach was shown (design D4).
+// WHY: an approaching train is taken to arrive this long after its approach was shown.
 export const APPROACH_LEAD_MS = 30_000;
 
 export const MAX_UPSTREAM_PLATFORMS = 3;
@@ -8,7 +8,7 @@ export const MAX_UPSTREAM_PLATFORMS = 3;
 const named = (ko: string, en: string, zh: string): LocalizedName => ({ ko, en, zh });
 const marked = (ko: string, zh: string, color: string): SubwayLine["marker"] => ({ text: { ko, en: ko, zh }, color });
 
-// WHY: identities and their labels, branched on or sent upstream (move-reference-datasets D2); each platform's
+// WHY: identities and their labels, branched on or sent upstream (ADR 0013, D2); each platform's
 // directions and the neighbor stops are the subway-topology dataset's. Order is the served order.
 export const SUBWAY_LINES: readonly SubwayLine[] = [
   { code: "1", name: named("1호선", "Line 1", "1号线"), color: "0052A4", marker: marked("1", "1", "0052A4"), seoul: { subwayId: "1001", lineName: "1호선", trainMapLine: "1", trainNumbers: "timetable" } },

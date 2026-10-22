@@ -53,7 +53,7 @@ const shuttleEntry = z.object({
 });
 
 /**
- * WHY: one answer per stop, so the app polls one route (D7); `routes` in /bus/config's order. `kind` names what an
+ * WHY: one answer per stop, so the app polls one route; `routes` in /bus/config's order. `kind` names what an
  * entry serves, as a realtime bus's does; it is an extensible enum, and a client skips an entry of a kind it does not know.
  */
 export const busStopArrivals = z.object({

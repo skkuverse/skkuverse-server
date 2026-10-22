@@ -17,7 +17,7 @@ export class SubwaySeoulPoller implements OnModuleInit {
     private readonly tracking: SubwayTrackingService,
   ) {}
 
-  // WHY: SUBWAY=off (the development default) registers nothing, so no upstream is called (design D8); the
+  // WHY: SUBWAY=off (the development default) registers nothing, so no upstream is called (ADR 0012, D5); the
   // tracker observes an upstream only in the service window.
   onModuleInit(): void {
     if (!config.subway.enabled) return logger.info({ event: "subway.seoul.disabled" }, "SUBWAY=off: subway pollers not registered");

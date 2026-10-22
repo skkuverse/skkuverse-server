@@ -3,19 +3,18 @@
  * English subtitle, null without one, never the stop number), the groups in the
  * order the app lists them, the Jongro routes in registry order, and the
  * refresh a schedule service offers when it serves live arrival estimates. A
- * Jongro group joins its route's stored attributes (move-reference-datasets
- * D10): the card's theme color and icon type, the refresh interval, and each
+ * Jongro group joins its route's stored attributes (ADR 0013, D2):
+ * the card's theme color and icon type, the refresh interval, and each
  * station's transfer lines by its ARS number. The HSSC line is the stored
- * bus-stops revision 1's (unify-bus-stops D3); ported (old → new): "lists an
+ * bus-stops revision 1's; ported (old → new): "lists an
  * HSSC station with its English subtitle" maps that line instead of
  * HSSC_STATIONS, with the same expected station.
  *
- * From wave 4 (unify-bus-stops D12; spec bus-stops "Realtime stations carry
- * their stop id") each station carries its stop as its last field, `stopId`:
+ * Each station carries its stop as its last field, `stopId`:
  * an HSSC position its stored stop, a Jongno station the stop its pole
  * resolves to (the local stop aliasing it, else `seoul-<arsId>`), and a
- * station with none no key. The two HSSC stations pinned before wave 4 gained
- * exactly their stop ids, on purpose.
+ * station with none no key. The two HSSC stations pinned before stop ids
+ * gained exactly their stop ids, on purpose.
  */
 import { storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture } from "../../../__tests__/helpers/bus/bus-stops";

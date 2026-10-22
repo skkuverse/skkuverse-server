@@ -1,8 +1,8 @@
 /**
- * The accuracy history's decisions (subway-arrival-accuracy spec): a horizon is
+ * The accuracy history's decisions: a horizon is
  * recorded on the tick the served lead time first falls to or below it, never
  * for a train first seen inside it; an observed arrival is an arrived row at its
- * time or an approaching row 30 s on (design D4's approach lead), never a
+ * time or an approaching row 30 s on (the approach lead), never a
  * departure; the error is the predicted instant minus the observed one; and a
  * record is unresolved once its predicted arrival is 30 minutes past. A record
  * is written open, and only a row first seen at a later tick than the one that

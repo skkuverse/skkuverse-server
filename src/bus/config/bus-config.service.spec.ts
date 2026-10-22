@@ -1,15 +1,15 @@
 /**
  * BusConfigService: the bus groups in order, per-language ETags (md5 hex),
  * unknown → null, and the rule that groups using no v2 field serialize
- * exactly as before (design D5). The fixture was captured from
+ * exactly as before. The fixture was captured from
  * `getGroupById` / `computeGroupEtag` on the code as it stood before v2
  * (2026-10-08). If it ever has to be re-captured, the change that does so is
  * changing what installed apps receive — say so in the commit. The `campus`
  * group left it when it gained v2 fields; campus-shuttle.test.ts checks its v1
  * fields against fixtures/bus-config-campus-v1.json instead.
  *
- * From wave 4 of unify-bus-stops (design D12) each realtime station carries
- * its `stopId`, on purpose: the HSSC and Jongro groups pinned before it
+ * Each realtime station carries its `stopId`,
+ * on purpose: the HSSC and Jongro groups pinned before stop ids
  * (fixtures/bus-config-before-registry.json) are served with exactly their
  * stations' stop ids appended (__tests__/helpers/bus/station-stop-ids.ts) and
  * the matching md5 ETag, and with every `stopId` removed they are the pinned
@@ -263,7 +263,7 @@ describe("Retired fields", () => {
   });
 });
 
-// WHY: the stations come from the registry now (improve-jongro-realtime D10): each Jongro group carries its route's
+// WHY: the stations come from the registry (ADR 0014, D4): each Jongro group carries its route's
 // stations version, appended last, and every other group keeps its JSON and ETag byte for byte.
 describe("BusConfigService and the registry", () => {
   const BEFORE: Record<string, { json: string; etag: string }> = JSON.parse(
@@ -356,7 +356,7 @@ describe("BusConfigService and the registry", () => {
 });
 
 // WHY: each Jongro route's card, refresh interval and transfer lines are stored attributes, joined here
-// (move-reference-datasets D10), so the ETag is keyed by their revision too.
+// (ADR 0013, D2), so the ETag is keyed by their revision too.
 describe("BusConfigService and the stored route attributes", () => {
   it("leaves out a route the stored attributes lack, and serves the others", async () => {
     // Arrange
@@ -371,7 +371,7 @@ describe("BusConfigService and the stored route attributes", () => {
     expect(groups.map((g) => g.id)).toEqual(["hssc", "campus", "fasttrack", "commute", "jongro02", "jongro07"]);
   });
 
-  // WHY: review F1 of move-reference-datasets: attributes never read cost the Jongro groups only, not the shuttle ones.
+  // WHY: attributes never read cost the Jongro groups only, not the shuttle ones.
   it("serves the config without the Jongro groups when no attributes were read, reading no registry", async () => {
     // Arrange
     const [hsscEtag, hssc] = [await service.computeGroupEtag("hssc", "ko"), await service.getGroupById("hssc", "ko")];
@@ -400,7 +400,7 @@ describe("BusConfigService and the stored route attributes", () => {
     await expect(fresh.computeGroupEtag(id, "ko")).rejects.toMatchObject({ code: "JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE", httpStatus: 503 });
   });
 
-  // WHY: review F2 of move-reference-datasets: the group answers what its realtime route answers, not a 404.
+  // WHY: the group answers what its realtime route answers, not a 404.
   it("refuses the group of a route the stored attributes lack with JONGRO_ROUTE_ATTRIBUTES_UNAVAILABLE, and an unknown id with none", async () => {
     // Arrange
     const lacking = routeAttributesFixture();
@@ -459,7 +459,7 @@ describe("BusConfigService and the stored route attributes", () => {
   });
 });
 
-// WHY: the owner hid the commute stops' map cards (hide-commute-stop-maps); the campus group serves catalog stops
+// WHY: the owner hid the commute stops' map cards (owner, 2026-10-18); the campus group serves catalog stops
 // the commute group shares, nsc-n-center and nsc-opposite, and keeps theirs.
 describe("BusConfigService stop maps per group", () => {
   const WITH_MAPS: Record<string, { json: string; etag: string }> = JSON.parse(
@@ -517,8 +517,8 @@ describe("BusConfigService stop maps per group", () => {
   });
 });
 
-// WHY: from wave 4 a realtime station names its stop (unify-bus-stops D12), so the Jongro groups read bus-stops for
-// their aliases and answer its 503 while it was never read (spec bus-stops "Jongro groups need the stops from wave 4").
+// WHY: a realtime station names its stop, so the Jongro groups read bus-stops for
+// their aliases and answer its 503 while it was never read.
 describe("BusConfigService stop ids on realtime stations", () => {
   type Station = { index: number; stationNumber: string | null; stopId?: string };
   const stationsOf = (group: unknown) => (group as { screen: { stations: Station[] } }).screen.stations;

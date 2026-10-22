@@ -1,7 +1,7 @@
 /**
  * BusRoutePathPoller registers one daily poller per Jongro route, named
  * `jongro-path-<code>`, so one dead route does not mark the others down; a
- * tick is that route's sync and rejects with it (add-jongro-route-lines D3).
+ * tick is that route's sync and rejects with it.
  */
 import type { PollerRegistryService } from "../../scheduling/poller-registry.service";
 import { JONGRO_ROUTES } from "../bus.constants";

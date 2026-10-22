@@ -1,6 +1,6 @@
 /**
- * MiniappsService, the mini app registry's door (ADR 0010 D1;
- * move-miniapp-registry design D3, D5), over an in-memory dataset store and a
+ * MiniappsService, the mini app registry's door (ADR 0010 D1),
+ * over an in-memory dataset store and a
  * fixed clock. current() is the frozen snapshot of the stored `miniapps`
  * dataset, read through the dataset read contract (ADR 0013 D6): a push is
  * served once DATASET_CACHE_TTL_MS has passed, an invalid revision after a

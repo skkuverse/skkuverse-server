@@ -1,6 +1,6 @@
 /**
- * BusStopArrivalsService over the stop index (real, over in-memory stores) and scripted realtime and smart views
- * (unify-bus-stops design D7-D9 and D17; spec bus-stop-arrivals): an unknown stop is null; each served route at a
+ * BusStopArrivalsService over the stop index (real, over in-memory stores) and scripted realtime and smart views:
+ * an unknown stop is null; each served route at a
  * stop gets its entry, in the index's order and labeled in the request language; one page reads each group's view
  * and each service's smart schedule once, and the week after it only when the shown week holds fewer than three runs
  * (review F2); and a route whose read fails is left out of the page, logged at error at most once a minute per route,

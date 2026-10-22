@@ -9,14 +9,14 @@
  * document writes no bus_cache key: its tick hands both lists to the
  * registry's bootstrap and rejects until the tick that inserts the route
  * resolves, so the poller registry alerts on a route that stays missing
- * (isolate-api-from-pollers D2).
+ * (ADR 0012, D3).
  * Each stored bus keeps its vehicle fields, sits at its section ord, and is
  * stationary when its vehicle stood still since the poller's previous
  * observation of it (never on the first after a restart), or when it idles at
  * its origin: at index 0 with lastStTm 0 and not moved 10 m since the previous
  * observation, a frozen observation time included, or at its first
  * observation off a stop. A bus at a stop keeps since when its vehicle has
- * stood there, from the poller's memory (add-jongro-bus-trajectory).
+ * stood there, from the poller's memory.
  */
 jest.mock("../../../infra/logger", () => ({
   info: jest.fn(),
@@ -270,7 +270,7 @@ describe("BusRealtimeJongroService.refresh with no bus listed", () => {
   });
 });
 
-// WHY: the poller follows TOPIS's stop list through the registry (improve-jongro-realtime D9, D10).
+// WHY: the poller follows TOPIS's stop list through the registry (ADR 0014, D4).
 describe("BusRealtimeJongroService.refresh and the registry", () => {
   const arrivalsOf = (topisIds: readonly string[]): JongroArrivalDoc[] =>
     topisIds.map((stationId, index) => jongroArrivalDoc({ stationId, sequence: String(index + 1), stationName: `stop ${stationId}`, stationNumber: `0${index}` }));
@@ -319,7 +319,7 @@ describe("BusRealtimeJongroService.refresh and the registry", () => {
 
 });
 
-// WHY: a fresh database gets its routes from TOPIS through the poller, not a snapshot (isolate-api-from-pollers D2).
+// WHY: a fresh database gets its routes from TOPIS through the poller, not a snapshot (ADR 0012, D3).
 describe("BusRealtimeJongroService.refresh for a route with no registry document", () => {
   const TURNAROUND_08 = "100000153";
   const arrivalsOf = (topisIds: readonly string[]): JongroArrivalDoc[] =>
@@ -395,7 +395,7 @@ describe("BusRealtimeJongroService.refresh for a route with no registry document
   });
 });
 
-// WHY: the realtime response tracks each bus from its stored vehicle fields (add-jongro-bus-positions D2, D3).
+// WHY: the realtime response tracks each bus from its stored vehicle fields.
 describe("BusRealtimeJongroService.refresh vehicle tracking", () => {
   // Route 02 vehicle 100000018 idling at ord 1 (pos_100900008_1792231921 and _1792231942, 2026-10-17 capture).
   const idle18 = (observedAt: string, sectDist = 0.043) =>
@@ -575,8 +575,8 @@ describe("BusRealtimeJongroService.refresh origin idling", () => {
   });
 });
 
-// WHY: an atStop bus's expected departure counts its dwell from the first observation at that stop
-// (add-jongro-bus-trajectory D4). Route 02 vehicle 100000058 (pos_100900008_1792314511, _531, _551, _612).
+// WHY: an atStop bus's expected departure counts its dwell from the first observation at that stop.
+// Route 02 vehicle 100000058 (pos_100900008_1792314511, _531, _551, _612).
 describe("BusRealtimeJongroService.refresh time at a stop", () => {
   const sighting58 = (sectOrd: number, stationId: string, isAtStop: boolean, observedAt: string, sectDist = 0) =>
     jongroSighting({ stationId, carNumber: "2008", vehicleId: "100000058", sectOrd, sectDist, fullSectDist: 0.135, isAtStop, observedAt });

@@ -7,8 +7,7 @@ import type { ObservedArrival, PredictionMade } from "./subway-history.types";
 const MINUTE_MS = 60_000;
 const SECOND_MS = 1000;
 
-// WHY: a train first seen inside a horizon has no prediction made at that horizon, so it gets no record there
-// (the spec's "Horizon already passed").
+// WHY: a train first seen inside a horizon has no prediction made at that horizon, so it gets no record there.
 export function toCrossedHorizons(previousLeadMs: number | undefined, leadMs: number): number[] {
   if (previousLeadMs === undefined) return [];
   return PREDICTION_HORIZONS_MIN.filter((horizonMin) => previousLeadMs > horizonMin * MINUTE_MS && leadMs <= horizonMin * MINUTE_MS);

@@ -1,5 +1,5 @@
 /**
- * The live shuttle_eta document (design D9): a NAVER value expires 8 days
+ * The live shuttle_eta document: a NAVER value expires 8 days
  * after its departure, and a fixed one says when it was fixed; a bus-lane run's
  * value records its travel model, and any other carries no `travel` key.
  */
@@ -52,7 +52,7 @@ describe("liveDoc travel", () => {
   });
 });
 
-describe("liveDoc life (design D7)", () => {
+describe("liveDoc life", () => {
   it("keeps a fixed value at least 8 days after its run: predictions reuse the fixed value of the same weekday 7 days earlier, with a day's margin for the refresh", () => {
     // Arrange
     const reuseAfterMs = 7 * 24 * 60 * 60_000;

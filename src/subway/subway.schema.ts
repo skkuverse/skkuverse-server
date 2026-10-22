@@ -55,7 +55,7 @@ const subwayStationFile = z.strictObject({ ...stationFields, platforms: z.array(
 
 export const subwayNeighbor = z.strictObject({ line: z.string().min(1), seoulName: z.string().min(1), trainMapName: z.string().min(1).optional(), name: localizedName.optional() });
 
-// WHY: the identities and labels the code holds (move-reference-datasets D2); directions and neighbors are subway-topology's.
+// WHY: the identities and labels the code holds (ADR 0013, D2); directions and neighbors are subway-topology's.
 export const subwayNetwork = z.strictObject({
   lines: z.array(subwayLineFile).min(1),
   stations: z.array(z.strictObject({ ...stationFields, platforms: z.array(networkPlatform).min(1) })).min(1),

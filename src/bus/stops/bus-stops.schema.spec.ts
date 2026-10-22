@@ -1,6 +1,5 @@
 /**
- * busStopsDataset is the shape of the `bus-stops` dataset (unify-bus-stops
- * design D1, D3 and D4): a push is refused on it and the read parses with it.
+ * busStopsDataset is the shape of the `bus-stops` dataset: a push is refused on it and the read parses with it.
  * Revision 1 (the fixture) passes as it is; a copy that is not the catalog's
  * structure fails at its path, a stop id outside the stop id grammar or under
  * the TOPIS prefix fails, the HSSC line holds exactly HSSC_POSITION_COUNT
@@ -10,7 +9,7 @@
  * revision and data.
  *
  * Ported from this file's stopCatalogFile cases, which went with the
- * committed stop catalog in unify-bus-stops task 4.3 (design D15): "passes the
+ * committed stop catalog: "passes the
  * committed catalog through as it is" → "passes revision 1 as it is"; "fails a
  * broken catalog with the check's words" → "fails a copy that is not the
  * catalog's structure" here and "rejects a malformed root" in

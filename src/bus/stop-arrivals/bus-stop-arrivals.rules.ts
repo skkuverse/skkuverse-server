@@ -13,7 +13,7 @@ const DAY_MS = 24 * 60 * MINUTE_MS;
 type RunStop = Pick<ShuttleStopRoute, "routeType" | "sequenceIndex" | "timing">;
 
 // WHY: the HSSC line is a loop drawn from the basketball court, so a bus past the stop reaches it on its next lap; positions count
-// as the realtime screen draws them, the non-stop rows included, and a bus at the stop is 0 (D8).
+// as the realtime screen draws them, the non-stop rows included, and a bus at the stop is 0.
 export function toApproaching(buses: ReadonlyArray<Pick<RealtimeBus, "stationIndex">>, stationIndex: number): Approaching[] {
   return buses
     .map((bus) => (stationIndex - bus.stationIndex + HSSC_POSITION_COUNT) % HSSC_POSITION_COUNT)
@@ -33,7 +33,7 @@ function toRunAtMs(date: string, departure: string, time: string | null): number
 
 /**
  * WHY: the next runs at one stop of a smart schedule with its estimates applied, ordered by their time here, or their
- * departure when that is unknown; a run still counts in its own minute, as the timetable gives minutes (D9).
+ * departure when that is unknown; a run still counts in its own minute, as the timetable gives minutes.
  */
 export function toNextRuns(schedule: SmartSchedule, { routeType, sequenceIndex, timing }: RunStop, now: Date): ScheduledRun[] {
   if (schedule.status !== "active") return [];

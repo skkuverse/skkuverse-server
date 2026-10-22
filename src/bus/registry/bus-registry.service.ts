@@ -74,7 +74,7 @@ export class BusRegistryService {
     throw new BusRegistryBootstrappingError(route.id, this.pendingByRouteId.get(route.id)?.count ?? 0);
   }
 
-  // WHY: the poller's arrival list and position rows, compared each tick with the stored stations (design D9).
+  // WHY: the poller's arrival list and position rows, compared each tick with the stored stations (ADR 0014, D4).
   async observe(route: RegistryRoute, arrivals: readonly ArrivalRowStation[], sightingTurnaroundIds: ReadonlyArray<string | undefined>): Promise<void> {
     const stations = toObservedStations(arrivals);
     if (stations.length === 0) return;

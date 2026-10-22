@@ -21,6 +21,6 @@ export interface JongroRoutePathDocument {
   path: Position[];
   stations: RoutePathStation[];
   pathVersion: string;
-  /** WHY: when the stored content was written; an unchanged sync writes nothing (add-jongro-route-lines D3). */
+  /** WHY: when the stored content was written; an unchanged sync writes nothing. */
   syncedAt: Date;
 }

@@ -47,7 +47,7 @@ function toCommonOrderLength(stored: readonly string[], observed: readonly strin
 }
 
 // WHY: the stops of the longer list outside the two lists' longest common order, so one stop added mid-route counts
-// once, not for every stop after it; a rename changes no stop (improve-jongro-realtime D9).
+// once, not for every stop after it; a rename changes no stop.
 export function toChangedShare(stored: readonly ObservedStation[], observed: readonly ObservedStation[]): number {
   const longer = Math.max(stored.length, observed.length);
   if (longer === 0) return 0;
