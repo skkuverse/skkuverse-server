@@ -3,6 +3,8 @@ import { AppError } from "../../../http/app.error";
 import { withMeta } from "../../../http/response.interceptor";
 import type { WithMeta } from "../../../http/response.types";
 import { Clock } from "../../../infra/clock";
+import { createLogThrottle } from "../../../infra/log-throttle";
+import logger from "../../../infra/logger";
 import { JONGRO_ROUTES } from "../../bus.constants";
 import { toJongroRoute, toKstInstant } from "../../bus.mapper";
 import type { JongroRoute, JongroRouteAttributes } from "../../bus.types";
@@ -22,7 +24,8 @@ import {
   toWaitingArrival,
   toWaitingVehicleIds,
 } from "./bus-realtime-group.rules";
-import type { GroupView, JongroBusTracking, JongroReading, PlacedArrivalRow } from "./bus-realtime-group.types";
+import { DEPRECATED_CALL_LOG_INTERVAL_MS } from "./bus-realtime-group.constants";
+import type { DeprecatedCaller, GroupView, JongroBusTracking, JongroReading, PlacedArrivalRow } from "./bus-realtime-group.types";
 import type { RealtimeBus, RealtimeGroup, RealtimeGroupMeta, StationEta } from "./bus-realtime-group.wire";
 
 type GroupSource = () => Promise<GroupView>;
@@ -30,12 +33,25 @@ type SeatedRoute = RegistryRoute & Pick<JongroRouteAttributes, "seatCount">;
 
 @Injectable()
 export class BusRealtimeGroupService {
+  private readonly deprecatedCallThrottle = createLogThrottle(DEPRECATED_CALL_LOG_INTERVAL_MS, () => this.clock.now().getTime());
+
   constructor(
     private readonly hssc: BusRealtimeHsscService,
     private readonly jongro: BusRealtimeJongroService,
     private readonly arrival: BusRealtimeArrivalService,
     private readonly clock: Clock,
   ) {}
+
+  // WHY: installed bundles call this route until their devices update (ADR 0019, D11); the app sends its version and
+  // platform but no OTA bundle id, so an hourly line per group, version and platform counts them.
+  recordDeprecatedCall(groupId: string, { appVersion, platform }: DeprecatedCaller): void {
+    const ticket = this.deprecatedCallThrottle.take([groupId, appVersion, platform].join("|"));
+    if (!ticket) return;
+    logger.warn(
+      { event: "bus.realtime.deprecated_route_called", groupId, appVersion, platform, suppressed: ticket.suppressed },
+      "deprecated: /bus/realtime/data called, use /bus/live",
+    );
+  }
 
   async getGroup(groupId: string): Promise<WithMeta<RealtimeGroup, RealtimeGroupMeta>> {
     const view = await this.findGroupView(groupId);

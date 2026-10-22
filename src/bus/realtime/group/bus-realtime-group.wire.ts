@@ -72,18 +72,17 @@ const stationEta = z.object({
   arrivals: z.array(arrival),
 });
 
-/**
- * CONTRACT(skkuverse-app): parsed by skkuverse-app/packages/shared/src/bus/parser.ts (parseRealtimeData),
- * which reads each station's stationIndex and eta; arrivals, stationsVersion and each bus's kind and tracked are
- * additive and not read yet.
- */
-export const realtimeGroup = z.object({
-  groupId: z.string(),
-  buses: z.array(realtimeBus),
-  stationEtas: z.array(stationEta),
-  /** WHY: a Jongro route's stations version, the same as its `/bus/config` group's while that is current. */
-  stationsVersion: z.string().optional(),
-});
+/** CONTRACT(skkuverse-app): parsed by skkuverse-app/packages/shared/src/bus/parser.ts (parseRealtimeData), which reads
+ * each station's stationIndex and eta. WHY: frozen and deprecated for GET /bus/live/:groupId (ADR 0019, D11). */
+export const realtimeGroup = z
+  .object({
+    groupId: z.string(),
+    buses: z.array(realtimeBus),
+    stationEtas: z.array(stationEta),
+    /** WHY: a Jongro route's stations version, the same as its `/bus/config` group's while that is current. */
+    stationsVersion: z.string().optional(),
+  })
+  .meta({ deprecated: true, description: "Deprecated: frozen; read GET /bus/live/:groupId (bus-live.liveGroup)" });
 
 export const realtimeGroupMeta = z.object({
   /** WHY: the server's KST wall clock as "hh:mm AM/PM". */

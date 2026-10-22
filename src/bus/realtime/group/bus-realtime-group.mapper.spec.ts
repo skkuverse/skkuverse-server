@@ -9,7 +9,7 @@
  * as ISO-8601 at +09:00.
  */
 import { jongroPositionDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
-import { toClockTime, toRealtimeBuses, toTrackedBus } from "./bus-realtime-group.mapper";
+import { toClockTime, toDeprecatedCaller, toRealtimeBuses, toTrackedBus } from "./bus-realtime-group.mapper";
 import type { JongroBusTracking } from "./bus-realtime-group.types";
 
 describe("toRealtimeBuses", () => {
@@ -136,5 +136,13 @@ describe("toTrackedBus with a trajectory", () => {
 
     // Assert
     expect("tracked" in bus && bus.tracked).not.toHaveProperty("trajectory");
+  });
+});
+
+describe("toDeprecatedCaller", () => {
+  it("reads the app's version and platform headers, null when absent or repeated", () => {
+    // Act & Assert
+    expect(toDeprecatedCaller({ "x-app-version": "3.6.2", "x-platform": "ios" })).toEqual({ appVersion: "3.6.2", platform: "ios" });
+    expect(toDeprecatedCaller({ "x-app-version": ["3.6.2", "3.6.1"] })).toEqual({ appVersion: null, platform: null });
   });
 });
