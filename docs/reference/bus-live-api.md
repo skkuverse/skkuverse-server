@@ -61,7 +61,7 @@ Trimmed from the fixtures in `contracts/produced/fixtures/bus-live.liveGroup/`: 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `groupId` | string | As asked |
-| `stationsVersion` | string \| null | A Jongno route's stations version, as `/bus/config` serves it: refetch the config when they differ. Null for the HSSC line |
+| `stationsVersion` | string \| null | A Jongno route's stations version, as `/bus/config` serves it: refetch the config when they differ ([Stations version](#stations-version)). Null for the HSSC line |
 | `updatedAt` | instant \| null | When the group's poller last wrote what this answer is built from (for Jongno, the staler of its arrivals and positions). Null when nothing is cached: the poller has not written for a minute, which differs from a poller that writes no bus |
 | `operation` | enum | `running` when any station is, `ended` when every station is, `noData` otherwise (nothing stated, or only 정보없음) |
 | `vehicles` | array | Every vehicle the answer mentions, once |
@@ -149,7 +149,15 @@ Parse each station and each vehicle on its own: one that fails to parse is skipp
 - **Clock.** `offset` is the largest `serverNow − receipt` over the last five responses (the app's `server-clock.rules.ts`).
 - **Minutes.** `remaining = expectedArrivalAt − (deviceNow + offset)`. Show `max(1, round(remaining / 60))` minutes; show 곧 도착 when `status` is `arriving` or `remaining ≤ 60 s`, and keep showing it while the arrival is overdue by up to two minutes; past that, drop the arrival until the next poll replaces it.
 - **Markers.** Dim a marker when `checkedAt` is more than 120 s old and freeze it past 180 s, whatever `positionAt` says: a stop-event source repeats its last event until the next stop, so a minutes-old `positionAt` is normal. Move a marker along `trajectory` between knots, linearly, against `serverNow`, and hold it at the last knot.
-- **Loops.** On a group whose `/bus/config` `isLoop` is true, `s` may pass the last index: place the marker at `s mod stationCount`, the section after the last station leading back to station 0. Jongno 02, whose station list repeats its terminal, is not a loop.
+- **Loops.** On a group whose `/bus/config` `isLoop` is true, `s` may pass the last index: place the marker at `s mod stationCount`, the section after the last station leading back to station 0. Jongno 02, whose station list repeats its terminal, is not a loop. The wrap matters only to a client that extrapolates without a cap; one that holds a marker at `stationIndex + 0.95` until a poll confirms the next stop wraps when a poll moves the bus to station 0, and both are valid.
+
+## Stations version
+
+`GET /bus/config/:groupId` is `private, max-age=300` with an `ETag`, so a plain refetch inside those five minutes answers from the device's HTTP cache, with the old stations. When a live answer's `stationsVersion` differs from the config's:
+
+1. Refetch `/bus/config/:groupId` with the request header `Cache-Control: no-cache`. The HTTP cache revalidates with `If-None-Match`; the server answers a bare `304` when the group is unchanged and a `200` with the new stations and `ETag` when it changed.
+2. If the refetched `screen.stationsVersion` still differs (a replica that has not read the change yet: every replica reads a stations change within a minute), keep the old stations and retry on a later poll.
+3. Never drop or hide the live data meanwhile: keep rendering it against the stations you have.
 
 ## In /bus/config
 
