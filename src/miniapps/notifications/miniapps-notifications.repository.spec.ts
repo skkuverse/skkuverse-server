@@ -120,7 +120,10 @@ describe("MiniappsNotificationsRepository.findSentNotificationByIdempotencyKey",
     const found = await new MiniappsNotificationsRepository().findSentNotificationByIdempotencyKey("a", "retry-1");
 
     // Assert
-    expect(findOne).toHaveBeenCalledWith({ miniAppId: "a", idempotencyKey: "retry-1" }, { maxTimeMS: HOT_READ_MAX_TIME_MS });
+    expect(findOne).toHaveBeenCalledWith(
+      { miniAppId: "a", idempotencyKey: { $eq: "retry-1", $type: "string" } },
+      { maxTimeMS: HOT_READ_MAX_TIME_MS },
+    );
     expect(found).toBe(stored);
   });
 });
