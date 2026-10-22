@@ -188,14 +188,15 @@ describe("toBusGroups refresh", () => {
 });
 
 describe("toBusGroups for a Jongro route", () => {
-  it("appends the route's stations version to its realtime screen, last", () => {
+  // WHY: the live route's fields follow it (ADR 0019), a deliberate change of this pin.
+  it("appends the route's stations version to its realtime screen, before the live route's fields", () => {
     // Act
     const groups = toBusGroups({ lang: "ko", stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
 
     // Assert
     const screen = groups.find((g) => g.id === "jongro07")!.screen as Record<string, unknown>;
     expect(screen.stationsVersion).toBe(jongroRoutes[1]!.route.stationsVersion);
-    expect(Object.keys(screen).at(-1)).toBe("stationsVersion");
+    expect(Object.keys(screen).slice(-4)).toEqual(["stationsVersion", "liveEndpoint", "isLoop", "capabilities"]);
     expect(groups.find((g) => g.id === "hssc")!.screen).not.toHaveProperty("stationsVersion");
   });
 

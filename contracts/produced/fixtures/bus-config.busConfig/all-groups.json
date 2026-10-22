@@ -1,5 +1,5 @@
 {
-  "_about": "generated 2026-10-18 from GET /bus/config on a local build of feat/stop-subway-link (NODE_ENV=development, ROLE=api, _dev databases), Accept-Language ko, because production does not serve stops[].subwayStation yet; apart from that field the untrimmed body equals production's /bus/config the same day. Re-capture from production after the deploy; every group kept, its stations, services, route badges and stops cut to the first two, each service to its first route type's stop sequence, cut to two stops, guide markers and walks cut to one, the walk to its first two points Each commute stop's map is removed by hand since 2026-10-18, which serves no commute stop a map; nothing else changed.",
+  "_about": "generated 2026-10-18 from GET /bus/config on a local build of feat/stop-subway-link (NODE_ENV=development, ROLE=api, _dev databases), Accept-Language ko, because production does not serve stops[].subwayStation yet; apart from that field the untrimmed body equals production's /bus/config the same day. Re-capture from production after the deploy; every group kept, its stations, services, route badges and stops cut to the first two, each service to its first route type's stop sequence, cut to two stops, guide markers and walks cut to one, the walk to its first two points Each commute stop's map is removed by hand since 2026-10-18, which serves no commute stop a map; nothing else changed. The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them.",
   "data": {
     "groups": [
       {
@@ -46,7 +46,15 @@
               "type": "info",
               "url": "https://webview.skkuverse.com/bus/hssc/info"
             }
-          ]
+          ],
+          "liveEndpoint": "/bus/live/hssc",
+          "isLoop": true,
+          "capabilities": {
+            "positionSource": "stopEvents",
+            "occupancy": false,
+            "plateNumber": false,
+            "lastBus": false
+          }
         }
       },
       {
@@ -382,7 +390,15 @@
             }
           ],
           "features": [],
-          "stationsVersion": "76d8e6770cda23aa"
+          "stationsVersion": "76d8e6770cda23aa",
+          "liveEndpoint": "/bus/live/jongro02",
+          "isLoop": false,
+          "capabilities": {
+            "positionSource": "gps",
+            "occupancy": true,
+            "plateNumber": true,
+            "lastBus": true
+          }
         }
       },
       {
@@ -425,7 +441,15 @@
             }
           ],
           "features": [],
-          "stationsVersion": "0346768f2b776f45"
+          "stationsVersion": "0346768f2b776f45",
+          "liveEndpoint": "/bus/live/jongro07",
+          "isLoop": false,
+          "capabilities": {
+            "positionSource": "gps",
+            "occupancy": true,
+            "plateNumber": true,
+            "lastBus": true
+          }
         }
       },
       {
@@ -468,7 +492,15 @@
             }
           ],
           "features": [],
-          "stationsVersion": "52e82cc449046288"
+          "stationsVersion": "52e82cc449046288",
+          "liveEndpoint": "/bus/live/jongro08",
+          "isLoop": false,
+          "capabilities": {
+            "positionSource": "gps",
+            "occupancy": true,
+            "plateNumber": true,
+            "lastBus": true
+          }
         }
       }
     ]
