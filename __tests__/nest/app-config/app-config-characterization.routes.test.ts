@@ -11,6 +11,11 @@
  * committed mini app registry; the move of the origin owners into
  * `src/infra/origins.ts` must not change a byte of it.
  *
+ * `games.origins` (skkuverse-app add-game-factory task 2.3, design D2) is the
+ * one key served since: the body is the captured bytes with it appended, so
+ * every key production served keeps its bytes and its place, and the weak ETag
+ * is the appended body's.
+ *
  * The version gates are read from the environment when src/infra/config.ts
  * loads, so the production values are set before anything loads it and
  * restored once it has.
@@ -35,6 +40,16 @@ const CAPTURED = {
   etag: 'W/"358-V1DWkp7H40DqGJ/5tyN+zeHk/MQ"',
 };
 
+/** The key appended to the captured body: each first-party game origin and the game that owns it. */
+const GAMES_KEY =
+  '"games":{"origins":{"https://apple-game.game.skkuverse.com":"apple-game","https://suika-game.game.skkuverse.com":"suika-game","https://wave-run.game.skkuverse.com":"wave-run","https://subway-typing.game.skkuverse.com":"subway-typing"}}';
+
+/** The captured body with `games` appended as the last key of `data`, and its weak ETag. */
+const SERVED = {
+  text: `${CAPTURED.text.slice(0, -2)},${GAMES_KEY}}}`,
+  etag: 'W/"444-eOL1wRWGvxbyBKTlMw9gEm9agBs"',
+};
+
 let app: NestExpressApplication;
 
 beforeAll(async () => {
@@ -57,16 +72,26 @@ afterAll(async () => {
 });
 
 describe("GET /app/config at the production capture", () => {
-  it("answers the bytes production served, cacheable by shared caches", async () => {
+  it("answers the bytes production served with games appended, cacheable by shared caches", async () => {
     // Act
     const res = await request(app.getHttpServer()).get("/app/config");
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.text).toBe(CAPTURED.text);
+    expect(res.text).toBe(SERVED.text);
     expect(res.headers["cache-control"]).toBe("public, max-age=300");
     expect(res.headers.vary).toBe("Accept-Language, Origin");
-    expect(res.headers.etag).toBe(CAPTURED.etag);
+    expect(res.headers.etag).toBe(SERVED.etag);
+  });
+
+  it("keeps every key production served byte for byte, in its place", async () => {
+    // Act
+    const res = await request(app.getHttpServer()).get("/app/config");
+
+    // Assert
+    const { games, ...captured } = res.body.data as Record<string, unknown>;
+    expect(games).toBeDefined();
+    expect(JSON.stringify({ meta: res.body.meta, data: captured })).toBe(CAPTURED.text);
   });
 
   it("answers the same bytes in every language", async () => {
@@ -75,7 +100,7 @@ describe("GET /app/config at the production capture", () => {
     const zh = await request(app.getHttpServer()).get("/app/config").set("Accept-Language", "zh");
 
     // Assert
-    expect(en.text).toBe(CAPTURED.text);
-    expect(zh.headers.etag).toBe(CAPTURED.etag);
+    expect(en.text).toBe(SERVED.text);
+    expect(zh.headers.etag).toBe(SERVED.etag);
   });
 });

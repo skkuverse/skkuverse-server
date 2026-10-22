@@ -17,6 +17,8 @@ export const appClientConfig = z.object({
   web: z.object({ origin: z.string() }),
   /** WHY: keyed by origin, so the keys are data, not fields. */
   miniapps: z.object({ origins: z.record(z.string(), z.string()) }),
+  /** WHY: optional for a reader: a body cached before the key was served has none, which means no hosted game. */
+  games: z.object({ origins: z.record(z.string(), z.string()) }).optional(),
 });
 
 export type AppClientConfig = z.input<typeof appClientConfig>;
