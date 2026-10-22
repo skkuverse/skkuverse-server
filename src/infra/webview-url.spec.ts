@@ -19,6 +19,14 @@ describe("toWebviewUrl", () => {
   });
 });
 
+// WHY: the origin would fold `\` into `/` and serve a page the value does not spell.
+describe("toWebviewUrl refuses a root-relative path with a backslash or a control character", () => {
+  it.each(["/a\\b", "/eskara/entry\u0000", "/a\u0007b"])("refuses %j", (value) => {
+    // Act & Assert
+    expect(toWebviewUrl(value)).toBeNull();
+  });
+});
+
 describe("toServedWebviewUrl", () => {
   it("serves a root-relative web view path on the web view origin, and an absolute one as it is", () => {
     // Act & Assert
