@@ -1,4 +1,4 @@
-import { ROOT_RELATIVE_PATH_RE } from "../shared/link-target.constants";
+import { isRootRelativePath } from "../shared/link-target.util";
 import { WEBVIEW_ORIGIN } from "./origins";
 
 /**
@@ -23,7 +23,7 @@ export function toWebviewUrl(value: string): string | null {
   if (value === "" || WHITESPACE_RE.test(value)) return null;
 
   // WHY: normalize first, then validate once, so both spellings answer to the same checks.
-  const absolute = ROOT_RELATIVE_PATH_RE.test(value) ? `${WEBVIEW_ORIGIN}${value}` : value;
+  const absolute = isRootRelativePath(value) ? `${WEBVIEW_ORIGIN}${value}` : value;
 
   let url: URL;
   try {
