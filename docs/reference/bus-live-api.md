@@ -151,6 +151,19 @@ Parse each station and each vehicle on its own: one that fails to parse is skipp
 - **Markers.** Dim a marker when `checkedAt` is more than 120 s old and freeze it past 180 s, whatever `positionAt` says: a stop-event source repeats its last event until the next stop, so a minutes-old `positionAt` is normal. Move a marker along `trajectory` between knots, linearly, against `serverNow`, and hold it at the last knot.
 - **Loops.** On a group whose `/bus/config` `isLoop` is true, `s` may pass the last index: place the marker at `s mod stationCount`, the section after the last station leading back to station 0. Jongno 02, whose station list repeats its terminal, is not a loop.
 
+## In /bus/config
+
+Each realtime group's `screen` in `GET /bus/config` and `GET /bus/config/:groupId` ends with three fields; every other field, `dataEndpoint` included, keeps its value, since installed bundles call whatever `dataEndpoint` says.
+
+| Field | `hssc` | `jongro02`, `jongro07`, `jongro08` | Meaning |
+| --- | --- | --- | --- |
+| `liveEndpoint` | `/bus/live/hssc` | `/bus/live/<groupId>` | This route, which the app moves to by OTA |
+| `isLoop` | `true` | `false` | Whether a trajectory's `s` may pass the last index |
+| `capabilities.positionSource` | `stopEvents` | `gps` | Open enum: `gps` brings coordinates and progress |
+| `capabilities.occupancy`, `.plateNumber`, `.lastBus` | `false` | `true` | Whether the source can ever supply them: `false` means always null, `true` that a null is unknown right now |
+
+Each realtime group's ETag and the all-groups ETag changed once, in every language, when the fields shipped.
+
 ## Errors
 
 | Status | `error.code` | When |

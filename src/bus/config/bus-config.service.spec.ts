@@ -32,6 +32,7 @@ import type { BusRegistryRepository } from "../registry/bus-registry.repository"
 import { BusRegistryService } from "../registry/bus-registry.service";
 import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from "../../../__tests__/helpers/bus/bus-stops";
 import { HSSC_STOP_IDS, md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../../__tests__/helpers/bus/station-stop-ids";
+import { withLiveScreen, withoutLiveScreen } from "../../../__tests__/helpers/bus/live-screen";
 import { FakeBusStopsRepository } from "../../../__tests__/helpers/fakes/bus/bus-stops.repository.fake";
 import { BusConfigService } from "./bus-config.service";
 
@@ -93,6 +94,29 @@ describe("BusConfigService.getBusGroups", () => {
       expect(g.screen.stations.length).toBeGreaterThan(0);
       expect(g.screen.stations[0]).toHaveProperty("index", 0);
       expect(g.screen.stations[0]).toHaveProperty("name");
+    }
+  });
+
+  // WHY: the app moves to the live route by OTA, so a realtime group names it beside the dataEndpoint installed
+  // bundles call, and says what its source can never supply (ADR 0019, D2, D7, D11).
+  it("realtime groups name their live route, whether they loop and what their source can supply, keeping dataEndpoint", async () => {
+    // Act
+    const screens = new Map((await service.getBusGroups("ko")).filter((g) => g.screenType === "realtime").map((g) => [g.id, g.screen]));
+
+    // Assert
+    expect(screens.get("hssc")).toMatchObject({
+      dataEndpoint: "/bus/realtime/data/hssc",
+      liveEndpoint: "/bus/live/hssc",
+      isLoop: true,
+      capabilities: { positionSource: "stopEvents", occupancy: false, plateNumber: false, lastBus: false },
+    });
+    for (const id of ["jongro02", "jongro07", "jongro08"]) {
+      expect(screens.get(id)).toMatchObject({
+        dataEndpoint: `/bus/realtime/data/${id}`,
+        liveEndpoint: `/bus/live/${id}`,
+        isLoop: false,
+        capabilities: { positionSource: "gps", occupancy: true, plateNumber: true, lastBus: true },
+      });
     }
   });
 
@@ -279,22 +303,23 @@ describe("BusConfigService and the registry", () => {
     expect(await service.computeGroupEtag(id, lang)).toBe(BEFORE[key]!.etag);
   });
 
-  it.each(["hssc:ko", "hssc:en"])("serves %s as before, with only its stations' stop ids appended", async (key) => {
+  // WHY: the live route's fields are what add their screens last (ADR 0019), a deliberate change of this pin.
+  it.each(["hssc:ko", "hssc:en"])("serves %s as before, with only its stations' stop ids and its screen's live fields appended", async (key) => {
     // Arrange
     const [id, lang] = key.split(":") as [string, SupportedLang];
-    const expected = withStationStopIds(JSON.parse(BEFORE[key]!.json) as { id: string });
+    const expected = withLiveScreen(withStationStopIds(JSON.parse(BEFORE[key]!.json) as { id: string }));
 
     // Act
     const group = await service.getGroupById(id, lang);
 
     // Assert
     expect(JSON.stringify(group)).toBe(JSON.stringify(expected));
-    expect(JSON.stringify(withoutStationStopIds(group))).toBe(BEFORE[key]!.json);
+    expect(JSON.stringify(withoutStationStopIds(withoutLiveScreen(group)))).toBe(BEFORE[key]!.json);
     expect(await service.computeGroupEtag(id, lang)).toBe(md5EtagOf(expected));
     expect(await service.computeGroupEtag(id, lang)).not.toBe(BEFORE[key]!.etag);
   });
 
-  it.each(["jongro02:ko", "jongro07:ko", "jongro08:en"])("serves %s as before, with only stationsVersion appended to its screen and stop ids to its stations", async (key) => {
+  it.each(["jongro02:ko", "jongro07:ko", "jongro08:en"])("serves %s as before, with only stationsVersion and the live fields appended to its screen and stop ids to its stations", async (key) => {
     // Arrange
     const [id, lang] = key.split(":") as [string, SupportedLang];
     const routeId = id;
@@ -304,9 +329,10 @@ describe("BusConfigService and the registry", () => {
     const group = (await service.getGroupById(id, lang)) as { screen: Record<string, unknown> };
 
     // Assert
-    const { stationsVersion, ...screen } = group.screen;
+    // WHY: the live route's fields follow stationsVersion (ADR 0019), a deliberate change of this pin.
+    const { stationsVersion, ...screen } = withoutLiveScreen(group).screen;
     expect(stationsVersion).toBe(registryRepository.routes.get(routeId)!.stationsVersion);
-    expect(Object.keys(group.screen).at(-1)).toBe("stationsVersion");
+    expect(Object.keys(group.screen).slice(-4)).toEqual(["stationsVersion", "liveEndpoint", "isLoop", "capabilities"]);
     expect(JSON.stringify({ ...group, screen })).toBe(JSON.stringify(withStationStopIds(pinned)));
     expect(JSON.stringify(withoutStationStopIds({ ...group, screen }))).toBe(BEFORE[key]!.json);
   });

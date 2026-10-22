@@ -57,6 +57,7 @@ import { Clock } from "../../../src/infra/clock";
 import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, startMongod, type TestMongod } from "../../helpers/mongod";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../helpers/bus/station-stop-ids";
+import { withLiveScreen, withoutLiveScreen } from "../../helpers/bus/live-screen";
 import captured from "./fixtures/schedule-production.capture.json";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
@@ -249,10 +250,10 @@ describe("GET /bus/schedule/data/:serviceId/week at the capture", () => {
 });
 
 describe("GET /bus/config at the capture", () => {
-  it.each(LANGS)("answers in %s with the bytes production served with only the realtime stations' stop ids appended, and their ETag", async (lang) => {
+  it.each(LANGS)("answers in %s with the bytes production served with only the realtime stations' stop ids and screens' live fields appended, and their ETag", async (lang) => {
     // Arrange
     const capture = captured.config[lang];
-    const groups = (capture.body.data as { groups: Array<{ id: string }> }).groups.map(withStationStopIds);
+    const groups = (capture.body.data as { groups: Array<{ id: string }> }).groups.map((group) => withLiveScreen(withStationStopIds(group)));
     const expected = { ...capture, etag: md5EtagOf(groups), body: { ...capture.body, data: { groups } } };
 
     // Act
@@ -260,7 +261,7 @@ describe("GET /bus/config at the capture", () => {
 
     // Assert
     expectCaptured(res, expected);
-    expect(withoutStationStopIds(res.body.data)).toEqual(capture.body.data);
+    expect(withoutStationStopIds(withoutLiveScreen(res.body.data))).toEqual(capture.body.data);
     expect(res.headers.etag).not.toBe(originEtagOf(capture.etag));
   });
 });

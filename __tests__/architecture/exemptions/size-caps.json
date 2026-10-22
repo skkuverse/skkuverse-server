@@ -8,8 +8,12 @@
     "reason": "ADR 0010 D9, no domain seam: `arrival`, `vehicle`, `vehiclePosition` and `operation` are the one live arrival shape that GET /bus/live/:groupId and the stop page both serve (ADR 0019), and a sibling never imports another sub-module's wire (sub-modules.test.ts), so the shapes the two routes share sit at the bus root beside the stop shapes /bus/config serves; each WHY a client reads to fall back on an open enum counts toward the cap."
   },
   "src/bus/config/bus-config.mapper.ts": {
-    "max": 177,
+    "max": 183,
     "reason": "ADR 0010 D9, no domain seam: toBusGroups is the bus list as one ordered literal per group (hssc, campus, fasttrack, commute, then each Jongro route), and each group's field order is the ETag input; the realtime and schedule groups share the card, badge and station helpers, so a sub-module would hold group builders and nothing else."
+  },
+  "src/bus/config/bus-config.wire.ts": {
+    "max": 68,
+    "reason": "ADR 0010 D9, no domain seam: `busGroup` is the one /bus/config body installed apps parse (skkuverse-app/packages/shared/src/bus/parser.ts), its realtime and schedule screens pieces of it rather than flows; the realtime screen's live route fields (`liveEndpoint`, `isLoop`, `capabilities`, ADR 0019) took it past the role cap, and a sibling never imports another sub-module's wire (sub-modules.test.ts)."
   },
   "src/bus/realtime/group/bus-realtime-group.rules.ts": {
     "max": 138,
