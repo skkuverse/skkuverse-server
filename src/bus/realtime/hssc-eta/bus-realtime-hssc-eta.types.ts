@@ -21,10 +21,20 @@ export interface HsscBusAnchor {
 
 interface HsscEtaCommon {
   vehicleId: string;
-  /** WHY: positions from the bus forward to the stop round the 11-position loop; a full lap once it left the stop. */
+  /** WHY: the stops it reaches before this one, plus one, rotary passes skipped (ADR 0019, D4); a lap once it left. */
   stopsAway: number;
   observedAt: Date;
 }
 
 /** WHY: a bus's status toward one stop; only an en-route bus has an expected arrival (ADR 0018, D2). */
-export type HsscEta = (HsscEtaCommon & { status: "enRoute"; arrivesAt: Date }) | (HsscEtaCommon & { status: "arriving" | "waitingToDepart" });
+export type HsscEta =
+  | (HsscEtaCommon & { status: "enRoute"; arrivesAt: Date })
+  | (HsscEtaCommon & { status: "arriving"; departsAt: Date })
+  | (HsscEtaCommon & { status: "waitingToDepart" });
+
+/** WHY: when a bus reaches one position of its lap and leaves it; null departure at the turnaround, its layover. */
+export interface HsscLapTime {
+  seq: number;
+  arrivesAt: Date;
+  departsAt: Date | null;
+}
