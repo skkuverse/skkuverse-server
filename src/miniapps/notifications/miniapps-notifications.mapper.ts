@@ -66,5 +66,6 @@ export function toHistoryEntry(doc: SentNotificationDoc): MiniAppNotificationHis
     sentAt: doc.sentAt.toISOString(),
     delivery: doc.delivery ?? null,
     deliveryError: doc.deliveryError ?? null,
+    idempotencyKey: doc.idempotencyKey ?? null,
   };
 }
