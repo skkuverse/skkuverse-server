@@ -4,7 +4,8 @@
  * what lets one of two concurrent sends with the same key claim it, so the
  * Cloud Function is called once. Guarded here: a second claim of a key within
  * one mini app loses, however many race; the same key under another mini app
- * and rows without a key are never refused; the lookup reads the claimed row.
+ * and rows without a key are never refused; the lookup reads the claimed row,
+ * through the unique index rather than the feed index.
  *
  * The repository comes from a Nest testing module booted as the poller, which
  * is the role that creates the index (ADR 0012, D3).
@@ -51,6 +52,11 @@ async function waitForIndex(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   throw new Error(`${INDEX_NAME} was not created within ${INDEX_WAIT_MS} ms`);
+}
+
+async function uniqueIndexAccesses(): Promise<number> {
+  const stats = await sentNotifications.aggregate<{ name: string; accesses: { ops: number } }>([{ $indexStats: {} }]).toArray();
+  return Number(stats.find((index) => index.name === INDEX_NAME)?.accesses.ops ?? 0);
 }
 
 beforeAll(async () => {
@@ -143,5 +149,19 @@ describe("MiniappsNotificationsRepository.findSentNotificationByIdempotencyKey o
     // Assert
     expect(found?._id).toBe("n1");
     expect(elsewhere).toBeNull();
+  });
+
+  it("is served by the unique index", async () => {
+    // Arrange
+    // The planner uses a partial index only for a filter it can prove lies inside the index's own filter.
+    await repository.claimSentNotification(row("n1", "hssc", "retry-5"));
+    await repository.insertSentNotification(row("n2", "hssc"));
+    const before = await uniqueIndexAccesses();
+
+    // Act
+    await repository.findSentNotificationByIdempotencyKey("hssc", "retry-5");
+
+    // Assert
+    expect((await uniqueIndexAccesses()) - before).toBe(1);
   });
 });

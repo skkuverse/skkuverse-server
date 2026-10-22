@@ -28,8 +28,10 @@ export class MiniappsNotificationsRepository implements OnModuleInit {
     }
   }
 
+  // QUIRK(mongo): the planner takes a partial index only for a filter that restates its `$type`, not for a bare equality.
   findSentNotificationByIdempotencyKey(miniAppId: string, idempotencyKey: string): Promise<SentNotificationDoc | null> {
-    return this.sentNotifications().findOne({ miniAppId, idempotencyKey }, { maxTimeMS: HOT_READ_MAX_TIME_MS });
+    const filter = { miniAppId, idempotencyKey: { $eq: idempotencyKey, $type: "string" as const } };
+    return this.sentNotifications().findOne(filter, { maxTimeMS: HOT_READ_MAX_TIME_MS });
   }
 
   async recordDelivery(id: string, delivery: DeliveryCounts): Promise<void> {
