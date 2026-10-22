@@ -11,8 +11,6 @@ export const HOME_LAYOUT_DATASET = "home-layout";
 // WHY: a missing or invalid layout recurs on every read; one line a minute, as docs/reference/logging.md asks.
 export const HOME_LAYOUT_LOG_INTERVAL_MS = 60_000;
 
-// WHY: the games older installed builds bundle (≤3.6.2 embedded bundles): on such a build a tile for one opens the
-// bundled page while the games dataset does not list it. A current build bundles none, so an unlisted game has no
-// tile there and its links land on home. Frozen, since a game made from now on ships hosted only and is listed
-// before a tile names it.
+// WHY: the games older installed builds bundle; a tile may name one before the games dataset lists it. Frozen.
+// SEE: docs/reference/games-api.md (home tiles and bundled games)
 export const BUNDLED_GAME_IDS: readonly string[] = Object.freeze(["wave-run", "subway-typing", "apple-game", "suika-game"]);
