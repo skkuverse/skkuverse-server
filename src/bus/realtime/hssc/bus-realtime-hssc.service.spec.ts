@@ -225,6 +225,30 @@ describe("BusRealtimeHsscService.refresh", () => {
       // Assert
       expect((await service.listBuses()).length).toBe(1);
     });
+
+    // WHY: the poller keeps a layover for the live route's 15 minutes; the deprecated route still serves 3 (ADR 0019, D8).
+    it("keeps a 농구장 bus laying over 4 minutes in bus_cache, which listBuses leaves out", async () => {
+      // Arrange
+      client.buses = [createApiItem("농구장정류소", "5", koreanNow(4))];
+
+      // Act
+      await service.refresh();
+
+      // Assert
+      expect(busCache.values.get("hssc")).toHaveLength(1);
+      expect(await service.listBuses()).toEqual([]);
+    });
+
+    it("drops a 농구장 bus laying over 16 minutes from bus_cache", async () => {
+      // Arrange
+      client.buses = [createApiItem("농구장정류소", "5", koreanNow(16))];
+
+      // Act
+      await service.refresh();
+
+      // Assert
+      expect(busCache.values.get("hssc")).toEqual([]);
+    });
   });
 
   describe("dwell timer", () => {
