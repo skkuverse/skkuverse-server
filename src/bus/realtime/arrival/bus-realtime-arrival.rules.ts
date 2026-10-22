@@ -1,6 +1,6 @@
 import type { JongroArrivalBus } from "../../cache/bus-cache.document";
 import { toCarNumber } from "../bus-realtime.mapper";
-import type { Arrival } from "../group/bus-realtime-group.wire";
+import type { RealtimeArrival } from "../group/bus-realtime-group.wire";
 import {
   ARRIVAL_STATE_PHRASES,
   BRACKET_TOKEN_PATTERN,
@@ -41,13 +41,17 @@ function toWholeMinutes(seconds: number): number {
   return Math.max(1, Math.round(seconds / 60));
 }
 
-// WHY: whole minutes only, since a 0–3 min prediction is off by about a minute (ADR 0014, D1); a 0 travel time
-// falls back to the text's own time.
-export function toMinutes(bus: JongroArrivalBus): number | null {
-  if (toArrivalState(bus.arrmsg) !== "running") return null;
-  if (bus.traTime > 0) return toWholeMinutes(bus.traTime);
+// WHY: the seconds from when TOPIS made the row; a 0 travel time falls back to the text's own time.
+export function toTravelSeconds(bus: JongroArrivalBus): number | null {
+  if (bus.traTime > 0) return bus.traTime;
   const timed = toTimedText(bus.arrmsg);
-  return timed ? toWholeMinutes(timed.minutes * 60 + timed.seconds) : null;
+  return timed ? timed.minutes * 60 + timed.seconds : null;
+}
+
+// WHY: whole minutes only, since a 0–3 min prediction is off by about a minute (ADR 0014, D1).
+export function toMinutes(bus: JongroArrivalBus): number | null {
+  const seconds = toArrivalState(bus.arrmsg) === "running" ? toTravelSeconds(bus) : null;
+  return seconds === null ? null : toWholeMinutes(seconds);
 }
 
 export function toStopsAway(bus: JongroArrivalBus): number | null {
@@ -70,7 +74,7 @@ export function toPassengerCount(bus: JongroArrivalBus): number | null {
   return bus.rerideDiv === PASSENGER_COUNT_TYPE ? bus.rerideNum : null;
 }
 
-export function toArrival(bus: JongroArrivalBus, seatCount: number): Arrival {
+export function toArrival(bus: JongroArrivalBus, seatCount: number): RealtimeArrival {
   return {
     minutes: toMinutes(bus),
     stopsAway: toStopsAway(bus),

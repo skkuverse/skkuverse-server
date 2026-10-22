@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { arrival } from "../../bus.wire";
+import { realtimeArrival as arrival } from "../../bus.wire";
 
 const crowding = arrival.shape.crowding;
 
@@ -98,4 +98,4 @@ export type RealtimeGroupMeta = z.input<typeof realtimeGroupMeta>;
 export type RealtimeBus = z.input<typeof realtimeBus>;
 export type TrackedStatus = z.input<typeof trackedStatus>;
 export type StationEta = z.input<typeof stationEta>;
-export type Arrival = z.input<typeof arrival>;
+export type RealtimeArrival = z.input<typeof arrival>;

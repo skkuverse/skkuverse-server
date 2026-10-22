@@ -1,6 +1,7 @@
 import type { HsscBusDoc, JongroArrivalBus, JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
-import type { Arrival, RealtimeBus, StationEta, TrackedStatus } from "./bus-realtime-group.wire";
+import type { TimedArrival } from "../arrival/bus-realtime-arrival.types";
+import type { RealtimeArrival, RealtimeBus, StationEta, TrackedStatus } from "./bus-realtime-group.wire";
 
 /** WHY: what a served bus reads from a cached HSSC bus or Jongro position; an HSSC bus has no coordinates. */
 export type CachedBusFields = Pick<HsscBusDoc | JongroBusPositionDoc, "sequence" | "carNumber" | "estimatedTime"> &
@@ -25,7 +26,7 @@ export interface JongroBusTracking {
   status: TrackedStatus["status"];
   vehicleId: string;
   observedAt: string;
-  crowding: Arrival["crowding"];
+  crowding: RealtimeArrival["crowding"];
   isLastBus: boolean;
   progress: number;
   segmentMeters: number;
@@ -56,13 +57,36 @@ export interface TrackingContext {
   stationCount: number;
   turnaroundTopisId: string;
   nextStop: NextStopBus | undefined;
-  arrival: Pick<Arrival, "state" | "crowding" | "isLastBus"> | undefined;
+  arrival: Pick<RealtimeArrival, "state" | "crowding" | "isLastBus"> | undefined;
   /** WHY: the highest sectOrd an arrival row gives the vehicle; absent when no row names it. */
   highestSectOrd?: number;
   /** WHY: every arrival row's bus naming the vehicle, by staOrd, which its trajectory's next stops come from. */
   namedBuses: readonly NextStopBus[];
 }
 
-
 /** WHY: what decides a tracked status beyond the position: the route's terminals and the vehicle's arrival rows. */
 export type StatusContext = Pick<TrackingContext, "stationCount" | "turnaroundTopisId" | "highestSectOrd"> & { nextStopState: string | undefined };
+
+/** WHY: an arrival row placed on its station, each slot read as the realtime view serves it, a waiting vehicle's waiting. */
+export interface PlacedArrivalRow {
+  stationIndex: number;
+  /** QUIRK(topis): mkTm, when TOPIS made the row, which traTime counts from; null when malformed. */
+  madeAtMs: number | null;
+  slots: TimedArrival[];
+}
+
+export interface TrackedPosition {
+  position: JongroBusPositionDoc;
+  tracking: JongroBusTracking;
+  /** WHY: when the poller last wrote the positions. */
+  checkedAt: Date;
+}
+
+/** WHY: what the live route maps a Jongno group from: this view's reads and joins, with when each key was written. */
+export interface JongroReading {
+  route: RegistryRoute;
+  rows: PlacedArrivalRow[];
+  positions: TrackedPosition[];
+  arrivalsCheckedAt: Date | null;
+  positionsCheckedAt: Date | null;
+}

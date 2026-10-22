@@ -292,13 +292,14 @@ describe("BusRealtimeJongroClient.fetchSightings", () => {
     const result = await new BusRealtimeJongroClient().fetchSightings(route07);
 
     // Assert
-    // WHY: the row carries the vehicle fields as TOPIS does.
+    // WHY: the row carries the vehicle fields as TOPIS does, plainNo the full plate as TOPIS sent it (ADR 0019, D6).
     expect(result).toEqual([
       {
         stationId: "100900197",
         latitude: "37.587",
         longitude: "126.998",
         carNumber: "5537",
+        plainNo: "서울74사5537",
         turnaroundStationId: "100900028",
         vehicleId: "100000103",
         sectOrd: 6,

@@ -72,6 +72,27 @@ describe("BusRealtimeHsscService.listBuses", () => {
   });
 });
 
+// WHY: the live route reads the cached buses as stop events with when the poller wrote them (ADR 0019, D6).
+describe("BusRealtimeHsscService.findStopEvents", () => {
+  it("answers each cached bus as its latest stop event, with the write instant", async () => {
+    // Arrange
+    busCache.values.set("hssc", [hsscBusDoc({ line_no: "32150", seq: "0" }), hsscBusDoc({ seq: "x" })]);
+    busCache.writtenAt = new Date("2026-10-20T00:59:55Z");
+
+    // Act
+    const events = await service.findStopEvents();
+
+    // Assert
+    expect(events.checkedAt).toEqual(new Date("2026-10-20T00:59:55Z"));
+    expect(events.events.map((event) => [event.vehicleId, event.seq])).toEqual([["32150", 0]]);
+  });
+
+  it("answers no event and no write instant before the poller wrote", async () => {
+    // Act & Assert
+    expect(await service.findStopEvents()).toEqual({ events: [], checkedAt: null });
+  });
+});
+
 // WHY: every role reads bus_cache only, so combined answers as an api replica does (ADR 0012, D1).
 describe("BusRealtimeHsscService.listBuses after its own tick", () => {
   it("serves no bus once the bus_cache entry is gone, though a tick filled the process's memory", async () => {

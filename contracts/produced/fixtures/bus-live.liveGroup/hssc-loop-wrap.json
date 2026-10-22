@@ -1,0 +1,227 @@
+{
+  "_about": "Synthetic: GET /bus/live/hssc at 10:00 KST on 2026-10-20 over bus_cache seeded in the shapes the pollers write (line 32149 just left 문묘입구(등교), its trajectory passing the last index back to 농구장 at s 11), the stored jongro_routes, jongro-route-attributes and bus-stops fixtures of __tests__/nest/bus/fixtures; the route has no production traffic to capture yet.",
+  "data": {
+    "groupId": "hssc",
+    "stationsVersion": null,
+    "updatedAt": "2026-10-20T09:59:55+09:00",
+    "operation": "running",
+    "vehicles": [
+      {
+        "id": "32149",
+        "plateNumber": null,
+        "occupancy": null,
+        "isLastBus": null,
+        "position": {
+          "stationIndex": 9,
+          "status": "inTransit",
+          "progress": null,
+          "sectionMeters": null,
+          "coords": null,
+          "nextStationAt": "2026-10-20T10:00:47+09:00",
+          "positionAt": "2026-10-20T09:59:50+09:00",
+          "checkedAt": "2026-10-20T09:59:55+09:00"
+        },
+        "trajectory": [
+          {
+            "at": "2026-10-20T09:59:50+09:00",
+            "s": 9
+          },
+          {
+            "at": "2026-10-20T10:00:47+09:00",
+            "s": 10
+          },
+          {
+            "at": "2026-10-20T10:01:20+09:00",
+            "s": 10
+          },
+          {
+            "at": "2026-10-20T10:01:50+09:00",
+            "s": 11
+          }
+        ]
+      }
+    ],
+    "stations": [
+      {
+        "stationIndex": 0,
+        "stopId": "hssc-basketball-court",
+        "arsId": null,
+        "operation": "running",
+        "arrivals": [
+          {
+            "status": "enRoute",
+            "expectedArrivalAt": "2026-10-20T10:01:50+09:00",
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 2,
+            "isLastBus": null,
+            "vehicleId": "32149",
+            "providerText": null
+          }
+        ]
+      },
+      {
+        "stationIndex": 1,
+        "stopId": "hssc-student-center",
+        "arsId": null,
+        "operation": "running",
+        "arrivals": [
+          {
+            "status": "waitingToDepart",
+            "expectedArrivalAt": null,
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 3,
+            "isLastBus": null,
+            "vehicleId": "32149",
+            "providerText": null
+          }
+        ]
+      },
+      {
+        "stationIndex": 2,
+        "stopId": "hssc-main-gate-out",
+        "arsId": null,
+        "operation": "running",
+        "arrivals": [
+          {
+            "status": "waitingToDepart",
+            "expectedArrivalAt": null,
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 4,
+            "isLastBus": null,
+            "vehicleId": "32149",
+            "providerText": null
+          }
+        ]
+      },
+      {
+        "stationIndex": 3,
+        "stopId": "hssc-olympic-hall",
+        "arsId": null,
+        "operation": "running",
+        "arrivals": [
+          {
+            "status": "waitingToDepart",
+            "expectedArrivalAt": null,
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 5,
+            "isLastBus": null,
+            "vehicleId": "32149",
+            "providerText": null
+          }
+        ]
+      },
+      {
+        "stationIndex": 4,
+        "stopId": "hssc-hyehwa-post-office",
+        "arsId": null,
+        "operation": "running",
+        "arrivals": [
+          {
+            "status": "waitingToDepart",
+            "expectedArrivalAt": null,
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 6,
+            "isLastBus": null,
+            "vehicleId": "32149",
+            "providerText": null
+          }
+        ]
+      },
+      {
+        "stationIndex": 6,
+        "stopId": "hssc-hyehwa-exit1",
+        "arsId": null,
+        "operation": "running",
+        "arrivals": [
+          {
+            "status": "waitingToDepart",
+            "expectedArrivalAt": null,
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 7,
+            "isLastBus": null,
+            "vehicleId": "32149",
+            "providerText": null
+          }
+        ]
+      },
+      {
+        "stationIndex": 8,
+        "stopId": "hssc-skku-junction",
+        "arsId": null,
+        "operation": "running",
+        "arrivals": [
+          {
+            "status": "waitingToDepart",
+            "expectedArrivalAt": null,
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 8,
+            "isLastBus": null,
+            "vehicleId": "32149",
+            "providerText": null
+          }
+        ]
+      },
+      {
+        "stationIndex": 9,
+        "stopId": "hssc-main-gate-in",
+        "arsId": null,
+        "operation": "running",
+        "arrivals": [
+          {
+            "status": "waitingToDepart",
+            "expectedArrivalAt": null,
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 9,
+            "isLastBus": null,
+            "vehicleId": "32149",
+            "providerText": null
+          }
+        ]
+      },
+      {
+        "stationIndex": 10,
+        "stopId": "hssc-600th-hall",
+        "arsId": null,
+        "operation": "running",
+        "arrivals": [
+          {
+            "status": "enRoute",
+            "expectedArrivalAt": "2026-10-20T10:00:47+09:00",
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 1,
+            "isLastBus": null,
+            "vehicleId": "32149",
+            "providerText": null
+          }
+        ]
+      }
+    ]
+  }
+}

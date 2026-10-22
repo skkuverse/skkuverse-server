@@ -57,6 +57,20 @@ describe("BusRealtimeArrivalService.toArrivals", () => {
   });
 });
 
+describe("BusRealtimeArrivalService.toTimedArrivals", () => {
+  it("pairs each bus with a text with its arrival and the seconds its time comes to", () => {
+    // Arrange
+    const first = jongroArrivalBus({ arrmsg: "곧 도착", traTime: 40, staOrd: 15, sectOrd: 15 });
+    const buses = [first, noArrivalBus({ arrmsg: "" })];
+
+    // Act
+    const timed = arrivalService().toTimedArrivals(buses, 18);
+
+    // Assert
+    expect(timed).toEqual([{ bus: first, arrival: arrivalService().toArrivals([first], 18)[0], travelSeconds: 40 }]);
+  });
+});
+
 describe("BusRealtimeArrivalService.seatCountOf", () => {
   it("Crowding follows the stored seat count: answers jongro07's stored 18", async () => {
     // Act & Assert

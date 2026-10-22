@@ -337,3 +337,39 @@ describe("BusCacheRepository.findValue on a missing key", () => {
     expect(missingWarnings()).toEqual([]);
   });
 });
+
+// WHY: the live route tells "no bus" from "the poller stopped" by when the poller last wrote (ADR 0019, D6).
+describe("BusCacheRepository.findEntry", () => {
+  it("returns the value with the instant its poller wrote it", async () => {
+    // Arrange
+    const writtenAt = new Date("2026-10-20T00:59:50Z");
+    mockFindOne.mockResolvedValueOnce({ _id: "hssc", data: [hsscBusDoc()], _updatedAt: writtenAt });
+
+    // Act
+    const entry = await busCache.findEntry("hssc");
+
+    // Assert
+    expect(entry).toEqual({ value: [hsscBusDoc()], updatedAt: writtenAt });
+    expect(mockFindOne).toHaveBeenCalledWith({ _id: "hssc" });
+  });
+
+  it("returns null for a missing key", async () => {
+    // Arrange
+    mockFindOne.mockResolvedValueOnce(null);
+
+    // Act & Assert
+    expect(await busCache.findEntry("jongro_stations_07")).toBeNull();
+  });
+
+  it("shares one read per key with findValue", async () => {
+    // Arrange
+    mockFindOne.mockResolvedValueOnce({ _id: "hssc", data: [], _updatedAt: NOW });
+
+    // Act
+    const [entry, value] = await Promise.all([busCache.findEntry("hssc"), busCache.findValue("hssc")]);
+
+    // Assert
+    expect([entry, value]).toEqual([{ value: [], updatedAt: NOW }, []]);
+    expect(mockFindOne).toHaveBeenCalledTimes(1);
+  });
+});

@@ -51,6 +51,8 @@ export interface JongroBusPositionDoc {
   sequence: string;
   stationName: string;
   carNumber: string;
+  /** QUIRK(topis): the full plate as TOPIS sent it, padded with spaces. */
+  plainNo: string;
   eventDate: string;
   estimatedTime: number;
   stationId: string;
@@ -82,4 +84,10 @@ export interface BusCacheDocument {
   _id: string;
   data: BusCacheValueByKey[BusCacheKey];
   _updatedAt: Date;
+}
+
+/** WHY: a key's value with when its poller last wrote it, which tells "no bus" from a stopped poller. */
+export interface BusCacheEntry<K extends BusCacheKey> {
+  value: BusCacheValueByKey[K];
+  updatedAt: Date;
 }

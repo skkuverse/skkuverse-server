@@ -1,0 +1,11 @@
+{
+  "_about": "Synthetic: GET /bus/live/hssc at 10:00 KST on 2026-10-20 over bus_cache seeded in the shapes the pollers write (no bus cached), the stored jongro_routes, jongro-route-attributes and bus-stops fixtures of __tests__/nest/bus/fixtures; the route has no production traffic to capture yet.",
+  "data": {
+    "groupId": "hssc",
+    "stationsVersion": null,
+    "updatedAt": null,
+    "operation": "noData",
+    "vehicles": [],
+    "stations": []
+  }
+}

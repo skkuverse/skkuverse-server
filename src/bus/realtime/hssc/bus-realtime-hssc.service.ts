@@ -13,8 +13,10 @@ import {
   toFeedEventKey,
   toFeedEventTiming,
   toFirstSeenAt,
+  toHsscStopEvent,
   toLinearSequence,
 } from "./bus-realtime-hssc.rules";
+import type { HsscStopEvent, HsscStopEvents } from "./bus-realtime-hssc.types";
 
 @Injectable()
 export class BusRealtimeHsscService {
@@ -81,5 +83,13 @@ export class BusRealtimeHsscService {
   // WHY: never the poller's own memory, so combined answers as an api replica does (ADR 0012, D1).
   async listBuses(): Promise<HsscBusDoc[]> {
     return (await this.cache.read("hssc")) ?? [];
+  }
+
+  // WHY: the live route anchors each cached bus on its latest event and tells a stopped poller by its write instant;
+  // a row whose dates no longer parse is left out, as the poller already warns of it (bus.hssc.feed_events_unparsed).
+  async findStopEvents(): Promise<HsscStopEvents> {
+    const entry = await this.cache.readEntry("hssc");
+    const events = (entry?.value ?? []).map(toHsscStopEvent).filter((event): event is HsscStopEvent => event !== null);
+    return { events, checkedAt: entry?.updatedAt ?? null };
   }
 }

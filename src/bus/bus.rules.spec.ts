@@ -8,7 +8,7 @@
  * src/bus/stop-index/bus-stop-index.rules.spec.ts is the first case below.
  * The TOPIS key's format check is src/infra/required-env.spec.ts's.
  */
-import { deepFreeze, serviceConfigOf, toPoleStopId } from "./bus.rules";
+import { deepFreeze, serviceConfigOf, toPoleStopId, toServedArsId } from "./bus.rules";
 
 describe("deepFreeze", () => {
   it("freezes every nested object and array, and returns the same value", () => {
@@ -92,6 +92,20 @@ describe("serviceConfigOf for the commute services", () => {
     // Assert
     expect(new Set(entries).size).toBe(COMMUTE_IDS.length);
     expect(new Set(entries.map((entry) => entry?.eta)).size).toBe(COMMUTE_IDS.length);
+  });
+});
+
+// WHY: the live route shows a pole's number on its sign and nothing for a virtual stop (ADR 0019, D5).
+describe("toServedArsId", () => {
+  it.each([
+    ["01592", "01592"],
+    ["0", null],
+    ["00000", null],
+    ["1592", null],
+    [null, null],
+  ])("%j → %j", (arsId, expected) => {
+    // Act & Assert
+    expect(toServedArsId(arsId)).toBe(expected);
   });
 });
 
