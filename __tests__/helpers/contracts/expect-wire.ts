@@ -1,6 +1,6 @@
 /**
  * A route test's check that a response body is what its wire schema
- * publishes (define-boundary-contracts design D6): the body parses with the
+ * publishes (ADR 0010, D13): the body parses with the
  * schema, and the schema's input-mode JSON Schema declares every property the
  * body carries. Pass the envelope's `data` (or its `meta`), not the envelope.
  */

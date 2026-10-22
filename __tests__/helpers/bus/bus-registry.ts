@@ -3,8 +3,8 @@
  * (fixtures/jongro-registry-routes.json): its documents, an in-memory
  * repository holding them, and a BusRegistryService over that repository,
  * which a spec of a reader of the registry (the realtime group, the bus
- * config, the ui) builds on. No process seeds the registry any more
- * (isolate-api-from-pollers D2), so a test that needs a route stores it here.
+ * config, the ui) builds on. No process seeds the registry at boot
+ * (ADR 0012, D3), so a test that needs a route stores it here.
  */
 import { BusRegistryService } from "../../../src/bus/registry/bus-registry.service";
 import type { JongroRouteDocument } from "../../../src/bus/registry/bus-registry.document";

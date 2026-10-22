@@ -1,6 +1,6 @@
 /**
  * Characterization of the shuttle schedule routes and the bus config
- * (move-editorial-datasets task 11.3, design D13): the bytes, `Cache-Control`,
+ * (ADR 0011, D6): the bytes, `Cache-Control`,
  * `Vary` and `ETag` that GET /bus/schedule/data/:serviceId/smart (in `ko`, `en`
  * and `zh`), /week (this week and the week of 2027-09-27) and /bus/config (in
  * all three) answer for every service, through the production pipeline with
@@ -41,8 +41,7 @@
  * the next revision before that app's first read and pushes revision 1's data
  * back after it.
  *
- * Wave 4 of unify-bus-stops (design D12, task 7.2) changes `/bus/config` on
- * purpose: each realtime station carries its `stopId`, last. Its body is now
+ * `/bus/config` changed on purpose after the capture: each realtime station carries its `stopId`, last. Its body is now
  * the captured one with exactly the stations' stop ids appended
  * (__tests__/helpers/bus/station-stop-ids.ts), its ETag the md5 of that JSON,
  * as `BusConfigService` computes it, and with every `stopId` removed it is the

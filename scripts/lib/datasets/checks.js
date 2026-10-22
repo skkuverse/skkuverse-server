@@ -1,6 +1,6 @@
 /**
  * The checks `npm run data` runs before every write, and `check` runs on
- * stored data (openspec/changes/archive/2026-10-19-move-runtime-data-to-db, design D6). Each
+ * stored data (ADR 0013, D5). Each
  * collects every issue as { dataset, path, message }, so an operator sees all
  * of them at once:
  *
@@ -11,7 +11,7 @@
  *      stored data of any other in the target database, or null when none is
  *      stored or it no longer parses: a check that needs another dataset's
  *      content, not only its ids, reads the copy that database serves
- *      (move-miniapp-registry D6);
+ *      (ADR 0013, D5);
  *   3. outgoing references: each identity it names is in the target's stored
  *      `idsOf` (the same `storedOf`), or in a code-held source of the catalog;
  *   4. incoming references: each stored dataset that names this one still
@@ -24,11 +24,11 @@
  * An issue `issuesOf` marks `warning: true` refuses nothing: it is returned
  * apart, as `warnings`, for the push report and `check` to print. A check
  * whose fix belongs to another dataset's push warns instead of refusing, so
- * that push can follow (move-reference-datasets, wave D review F1).
+ * that push can follow.
  *
  * `stored` maps a dataset name to its stored `data`.
  *
- * A parted dataset (openspec/changes/archive/2026-10-20-move-reference-datasets, design D4) runs
+ * A parted dataset (ADR 0013, D1) runs
  * its part schema on each part instead of 1, refuses a key two parts share,
  * and runs 2 to 4 on the set of parts ordered by key. Its stored `data` is a
  * manifest. A dataset whose check needs a parted one's content names it in its
@@ -37,12 +37,11 @@
  * the same database, and `storedOf` hands over those parts parsed with the part
  * schema and ordered by key. It is null when a part is not stored or fails the
  * schema, and for a parted dataset no check reads, whose parts are never
- * fetched (task 11.1).
+ * fetched.
  *
  * A dataset whose check reads a collection outside the content database
  * declares its key in its entry's `collections`, and the catalog's
- * `collections` names each one
- * (openspec/changes/archive/2026-10-22-unify-bus-stops, design D6).
+ * `collections` names each one.
  * `readCollections(catalog, names, readCollection)` reads every collection the
  * datasets `names` declare, once each, through the caller's
  * `readCollection(key, spec)`, which picks the target environment's database

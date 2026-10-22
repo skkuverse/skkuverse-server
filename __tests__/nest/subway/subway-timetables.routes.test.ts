@@ -1,6 +1,5 @@
 /**
- * The readers of the stored `subway-timetables` dataset (move-reference-datasets
- * D7, D8; spec `subway-timetables`), over main.ts's pipeline with every
+ * The readers of the stored `subway-timetables` dataset, over main.ts's pipeline with every
  * repository and upstream client faked, the stored topology's revision 1, the
  * poller registry replaced by one that records each tick, and the trimmed
  * fixture of revision 1 stored in FakeSubwayTimetableRepository:
@@ -84,7 +83,7 @@ function freshState(): FakeSubwayRepository {
   return repository;
 }
 
-/** The trimmed fixture's tables, revision 1's trains around the pinned instants (tasks 9.1 and 11.1). */
+/** The trimmed fixture's tables, revision 1's trains around the pinned instants. */
 const fixtureTables = (): Timetable[] => subwayTimetableFixtureFiles().map(({ table }) => table);
 
 function storesHolding(tables: readonly Timetable[], state = new FakeSubwayRepository()): Stores {

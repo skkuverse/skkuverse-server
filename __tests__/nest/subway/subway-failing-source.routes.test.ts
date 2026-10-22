@@ -9,8 +9,8 @@
  * page captured on 2026-10-16 22:27 KST, joined with the line 1 page as the one
  * page of every line the crawl reads; the line 1 page dates from 20:45, so
  * its trains are too far from their timetable rows to count), FakeSubwayRepository, FakeHolidaysRepository and a
- * scripted Clock. Each test is a scenario of the spec's "Serving survives a
- * failing source" requirement: a train map that cannot be parsed fails its own
+ * scripted Clock. Each test is a scenario of "Serving survives a failing
+ * source": a train map that cannot be parsed fails its own
  * job while the API's arrivals keep being served; a failing API leaves the
  * train map's arrivals served; and with neither upstream answering for 3
  * minutes every listed train is `scheduled`.

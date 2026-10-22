@@ -1,7 +1,6 @@
 /**
  * The festival layer sets' round trip between their one writer and their
- * reader, over a real `mongod` (move-editorial-datasets task 8.5; ADR 0013, D3
- * and D6): what `npm run data` stores through scripts/lib/datasets/store.js,
+ * reader, over a real `mongod` (ADR 0013, D3 and D6): what `npm run data` stores through scripts/lib/datasets/store.js,
  * MapLayerSetRepository reads back at the stored revision, each set as the
  * server's schema parses it. A stored set the schema refuses is left out and
  * the others still read; a document whose envelope it refuses reads as `null`,

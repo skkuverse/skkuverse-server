@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/subway/stations/jeongja/arrivals captured from production 2026-10-18 17:02 KST (a Sunday), Accept-Language ko; untrimmed: two lines (D1, K1), both directions, three trains each (11 estimated, 1 scheduled), including a train at the platform whose arrivalAt is 70 s before generatedAt; converted 2026-10-18 for the serve-subway-line-markers wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color })",
+  "_about": "GET https://api.skkuverse.com/subway/stations/jeongja/arrivals captured from production 2026-10-18 17:02 KST (a Sunday), Accept-Language ko; untrimmed: two lines (D1, K1), both directions, three trains each (11 estimated, 1 scheduled), including a train at the platform whose arrivalAt is 70 s before generatedAt; converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color })",
   "data": {
     "station": {
       "id": "jeongja",

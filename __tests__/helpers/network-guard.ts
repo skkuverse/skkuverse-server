@@ -1,5 +1,5 @@
 /**
- * Keeps every test off the network (harden-test-suite design D5). Loaded by
+ * Keeps every test off the network (ADR 0011, D5). Loaded by
  * `setupFiles` in `jest.config.js`, so it runs before each test file: a
  * connection to anything but loopback fails the test and names the host.
  *

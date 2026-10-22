@@ -1,6 +1,5 @@
 /**
- * Characterization of GET /ui/home/campus (move-editorial-datasets task 2.3,
- * design D13): the bytes, `Cache-Control`, `Vary` and `ETag` it answers in
+ * Characterization of GET /ui/home/campus (ADR 0011, D6): the bytes, `Cache-Control`, `Vary` and `ETag` it answers in
  * `ko`, `en` and `zh` for the banners in fixtures/campus-banners.dataset.json,
  * through the production pipeline with only `Clock` overridden. The app boots
  * every module `src/app.module.ts` imports under `src/ui/campus/`, over a real
@@ -17,7 +16,7 @@
  * scripts/lib/datasets/store.js, as revision 1 of `campus-banners`.
  * The mini app registry is stored beside it the same way, as revision 1 of
  * `miniapps` (__tests__/nest/miniapps/fixtures/miniapps.dataset.json); no banner
- * names a mini app, so the route reads no registry (move-miniapp-registry D4).
+ * names a mini app, so the route reads no registry (docs/explanation/miniapps-architecture.md, Invariants).
  *
  * Every banner closes at 2026-10-03T00:00+09:00 and has no start, so two
  * clocks pin the sheet:

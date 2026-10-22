@@ -1,6 +1,6 @@
 /**
- * Parted datasets in `npm run data` (scripts/lib/datasets/parts.js, design D4
- * of openspec/changes/archive/2026-10-20-move-reference-datasets), over a real `mongod`:
+ * Parted datasets in `npm run data` (scripts/lib/datasets/parts.js; ADR 0013,
+ * D1), over a real `mongod`:
  *
  *   - a parted dataset is its `datasets` header, whose data is a manifest
  *     naming each part by its key and a content-derived id, plus one
@@ -20,7 +20,7 @@
  * report of every part and the same safety rules as a single document.
  *
  * A dataset's check may return a warning (`warning: true`): it is printed in
- * the push report and in `check`, and refuses nothing (wave D review F1).
+ * the push report and in `check`, and refuses nothing.
  */
 import { createHash } from "node:crypto";
 import fs from "node:fs";

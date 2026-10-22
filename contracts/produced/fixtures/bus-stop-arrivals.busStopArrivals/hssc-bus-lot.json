@@ -1,5 +1,5 @@
 {
-  "_about": "GET /bus/stops/hssc-bus-lot/arrivals captured from a local api replica of unify-bus-stops wave 3 (ROLE=api, NODE_ENV=development, _dev databases, push suppressed) 2026-10-22 02:41 KST, Accept-Language ko; untrimmed: the catalog stop's config record without its map, and the 인자셔틀's next three regular and 학부대학 runs from the _dev timetable, with no estimate stored in _dev.",
+  "_about": "GET /bus/stops/hssc-bus-lot/arrivals captured from a local api replica (ROLE=api, NODE_ENV=development, _dev databases, push suppressed) 2026-10-22 02:41 KST, Accept-Language ko; untrimmed: the catalog stop's config record without its map, and the 인자셔틀's next three regular and 학부대학 runs from the _dev timetable, with no estimate stored in _dev.",
   "data": {
     "stop": {
       "id": "hssc-bus-lot",

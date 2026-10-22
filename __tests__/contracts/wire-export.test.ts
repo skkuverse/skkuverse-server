@@ -1,6 +1,5 @@
 /**
- * The drift check of the produced contracts (ADR 0010, D13;
- * define-boundary-contracts design D5). The `*.json` files directly in
+ * The drift check of the produced contracts (ADR 0010, D13). The `*.json` files directly in
  * `contracts/produced/` must equal what the `.wire` files export today:
  * `index.json` and one `<id>.schema.json` per zod export. `npm test` runs
  * this, so CI fails on a stale artifact; `npm run contracts:export` runs this

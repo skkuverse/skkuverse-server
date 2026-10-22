@@ -1,5 +1,5 @@
 /**
- * Every fake follows one real class (harden-test-suite 3.7, tests.md). A file
+ * Every fake follows one real class (ADR 0011, D3; tests.md). A file
  * under `__tests__/helpers/fakes/` is named `<module>/<name>.<role>.fake.ts`,
  * exactly one `src/<module>/**\/<name>.<role>.ts` exists and exports the class
  * `<Name>`, and the fake exports `class Fake<Name> implements PublicOf<<Name>>`.

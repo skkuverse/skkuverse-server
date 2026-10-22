@@ -1,6 +1,6 @@
 /**
  * Characterization of the `bus_cache` read path over a real `mongod`
- * (harden-test-suite task 6.3, design D6), in the production topology: a poller
+ * (ADR 0011, D6), in the production topology: a poller
  * process writes what it fetched to `bus_cache`, and an api replica, whose own
  * pollers never run, serves the realtime routes from it.
  *
@@ -63,7 +63,7 @@ const JONGRO07_LOC_BODY = {
   msgBody: {
     itemList: [
       // WHY: vehId, sectOrd, sectDist, fullSectDist, stopFlag and dataTm are getBusPosByRtid fields the client reads
-      // since add-jongro-bus-positions; their shape follows __tests__/nest/bus/fixtures/topis-jongro-positions.json.
+      // since PR #278; their shape follows __tests__/nest/bus/fixtures/topis-jongro-positions.json.
       {
         ...{ lastStnId: "100900197", gpsX: "126.998", gpsY: "37.587", tmX: null, tmY: null, trnstnid: "100900028", plainNo: "서울74사5537", busType: "1" },
         ...{ vehId: "100000103", sectOrd: "6", sectDist: "0.1", fullSectDist: "0.25", stopFlag: "0", dataTm: "20261020095930" },
@@ -147,7 +147,7 @@ beforeAll(async () => {
     .PollerRegistryService;
   busCache = db.getClient().db(config.mongo.dbName).collection(config.mongo.collections.busCache);
   // WHY: the Jongro realtime groups read each route's seat count from revision 1 of jongro-route-attributes,
-  // stored as `npm run data` stores it (move-reference-datasets D10).
+  // stored as `npm run data` stores it (ADR 0013, D2).
   const store = require("../../../scripts/lib/datasets/store");
   const { routeAttributesFixture } = require("../../helpers/bus/route-attributes") as RouteAttributesHelpers;
   await store.create(db.getClient().db(config.content.dbName), "jongro-route-attributes", routeAttributesFixture(), { by: "characterization@example.com", now: NOW });
@@ -167,7 +167,7 @@ beforeEach(async () => {
   upstream.hssc = HSSC_ITEMS;
   upstream.requests = [];
   await clearCollections(db.getClient().db(config.mongo.dbName));
-  // WHY: no boot writes the registry any more (isolate-api-from-pollers D2), so the stored routes are a fixture.
+  // WHY: no boot writes the registry (ADR 0012, D3), so the stored routes are a fixture.
   const storedJongroRouteDocuments = (require("../../helpers/bus/bus-registry") as { storedJongroRouteDocuments: StoredRoutes }).storedJongroRouteDocuments;
   await db.getClient().db(config.mongo.dbName).collection<JongroRouteDocument>(config.mongo.collections.jongroRoutes).insertMany(storedJongroRouteDocuments(CLOCK.now()));
   const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller");
@@ -260,12 +260,12 @@ describe("bus_cache between a poller process and an api replica", () => {
     expect(res.status).toBe(200);
     expect(res.headers["cache-control"]).toBe("no-store");
     expect(res.body).toEqual({
-      // WHY: serverNow is what add-jongro-bus-trajectory adds to meta (task 2.2), a deliberate pin change.
+      // WHY: serverNow is what PR #285 adds to meta, a deliberate pin change.
       meta: { lang: "ko", currentTime: "10:00 AM", totalBuses: 2, serverNow: "2026-10-20T10:00:00+09:00" },
       data: {
         groupId: "hssc",
         buses: [
-          // WHY: kind is what add-jongro-bus-positions adds to every bus (task 2.2).
+          // WHY: kind is what PR #278 adds to every bus.
           { stationIndex: 1, carNumber: "0000", estimatedTime: 30, kind: "estimated" },
           { stationIndex: 7, carNumber: "0000", estimatedTime: 120, kind: "estimated" },
         ],
@@ -317,7 +317,7 @@ describe("bus_cache between a poller process and an api replica", () => {
       "jongro_locations_07",
       "jongro_stations_07",
     ]);
-    // WHY: the stored arrival rows gained each row's two buses (improve-jongro-realtime task 2.2); every other
+    // WHY: the stored arrival rows gained each row's two buses (PR #275); every other
     // field keeps the value it had.
     const bus5537 = { sectOrd: 0, isLast: false, plainNo: "서울74사5537", vehId: "100000103", rerideDiv: 2, rerideNum: 9 };
     const noBus = (staOrd: number, arrmsg: string) => ({
@@ -369,7 +369,7 @@ describe("bus_cache between a poller process and an api replica", () => {
     });
     expect(res.body.data).toEqual({
       groupId: "jongro07",
-      // WHY: kind and tracked are what add-jongro-bus-positions adds (task 2.2); crowding is the ord 1 row's, the first
+      // WHY: kind and tracked are what PR #278 adds; crowding is the ord 1 row's, the first
       // naming vehicle 100000103, and no row is its next stop's (ord 7).
       buses: [
         {
@@ -388,7 +388,7 @@ describe("bus_cache between a poller process and an api replica", () => {
             progress: 0.4,
             segmentMeters: 250,
             nextStopInSec: null,
-            // WHY: trajectory is what add-jongro-bus-trajectory adds (task 2.2), a deliberate pin change: the observation,
+            // WHY: trajectory is what PR #285 adds, a deliberate pin change: the observation,
             // then the next stop from its 150 m left at 4 m/s, since no row names the vehicle there.
             trajectory: [
               { at: "2026-10-20T09:59:30+09:00", s: 5.4 },
@@ -397,12 +397,12 @@ describe("bus_cache between a poller process and an api replica", () => {
           },
         },
       ],
-      // WHY: each station's arrivals is the field improve-jongro-realtime adds (task 3.1); eta is as before.
+      // WHY: each station's arrivals is the field PR #275 adds; eta is as before.
       stationEtas: [
         { stationIndex: 0, eta: "3분후[2번째 전]", arrivals: [running5537(3, 1, "3분후[2번째 전]"), WAITING_NO_VEHICLE] },
         { stationIndex: 1, eta: "5분후[3번째 전]", arrivals: [running5537(5, 2, "5분후[3번째 전]"), WAITING_NO_VEHICLE] },
       ],
-      // WHY: the registry's stations version (improve-jongro-realtime 5.4), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
+      // WHY: the registry's stations version (PR #276), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
       stationsVersion: "0346768f2b776f45",
     });
   });
@@ -413,7 +413,7 @@ describe("bus_cache between a poller process and an api replica", () => {
 
     // Assert
     expect(hssc.body.data).toEqual({ groupId: "hssc", buses: [], stationEtas: [] });
-    // WHY: stationsVersion is the registry's (improve-jongro-realtime 5.4), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
+    // WHY: stationsVersion is the registry's (PR #276), of the routes inserted from __tests__/nest/bus/fixtures/jongro-registry-routes.json.
     expect(jongro.body.data).toEqual({ groupId: "jongro07", buses: [], stationEtas: [], stationsVersion: "0346768f2b776f45" });
     expect(upstream.requests).toEqual([]);
   });

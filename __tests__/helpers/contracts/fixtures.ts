@@ -1,5 +1,5 @@
 /**
- * The golden fixtures' checks (define-boundary-contracts design D6). Each
+ * The golden fixtures' checks (ADR 0010, D13). Each
  * produced id has at least one `contracts/produced/fixtures/<id>/<case>.json`
  * of the shape `{ "_about": "<where it comes from>", "data": … }`; its `data`
  * parses with the id's wire schema, and the id's published JSON Schema

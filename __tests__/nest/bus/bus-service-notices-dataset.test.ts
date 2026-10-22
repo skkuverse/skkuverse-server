@@ -1,7 +1,6 @@
 /**
  * The shuttle service notices' round trip between their one writer and their
- * reader, over a real `mongod` (move-editorial-datasets task 12.7; ADR 0013, D3
- * and D6): what `npm run data` stores through scripts/lib/datasets/store.js,
+ * reader, over a real `mongod` (ADR 0013, D3 and D6): what `npm run data` stores through scripts/lib/datasets/store.js,
  * BusScheduleContentRepository reads back at the stored revision, as the
  * server's schema parses it, every notice in its order. A stored document the
  * schema refuses, or none at all, reads as `null`, so it is never served.

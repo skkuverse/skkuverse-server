@@ -1,6 +1,6 @@
 /**
  * Characterization of GET /map/config, GET /map/overlays/event and GET
- * /map/overlays/event/details (move-editorial-datasets task 7.3, design D13):
+ * /map/overlays/event/details (ADR 0011, D6):
  * the bytes, `Cache-Control`, `Vary` and weak `ETag` each answers for the
  * eskara-2026 layer set, through the production pipeline with only `Clock`
  * overridden. The app boots the modules `src/app.module.ts` imports under

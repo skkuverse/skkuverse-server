@@ -1,5 +1,5 @@
 {
-  "_about": "GET /subway/stations/KR-1-0153/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction; reshaped the same day, no value changed, into the per-station wire of add-commute-station-subway (GET /subway/stations/sungkyunkwan/arrivals, its one line entry carrying the line display data from the registry); converted 2026-10-18 for the serve-subway-line-markers wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color })",
+  "_about": "GET /subway/stations/KR-1-0153/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction; reshaped the same day, no value changed, into the per-station wire (GET /subway/stations/sungkyunkwan/arrivals, its one line entry carrying the line display data from the registry); converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color })",
   "data": {
     "station": {
       "id": "sungkyunkwan",

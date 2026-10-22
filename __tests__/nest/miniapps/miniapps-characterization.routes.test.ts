@@ -1,7 +1,6 @@
 /**
  * Characterization of GET /miniapps, GET /miniapps/:id for every registered
- * id and GET /miniapps/no-such-app (move-miniapp-registry tasks 1.1 and 1.3,
- * design D12): the bytes, `Cache-Control`, `Vary` and `ETag` each answers,
+ * id and GET /miniapps/no-such-app (ADR 0011, D6): the bytes, `Cache-Control`, `Vary` and `ETag` each answers,
  * through the production pipeline as an api replica, every module
  * `src/app.module.ts` imports under `src/miniapps/` booted with a fixed `Clock`.
  *
@@ -15,8 +14,8 @@
  * f8dda24b: the six first-party shells come from their manifests, the four
  * third-party ones are the defaults.
  *
- * Production was captured again for wave C (task 6.1) at 2026-10-19T20:12:37Z,
- * commit cd9484d9, after wave B moved the api to the stored manifests: the
+ * Production was captured again at 2026-10-19T20:12:37Z, commit cd9484d9,
+ * after the api moved to the stored manifests: the
  * index, every detail and the 404 answered the bytes, `Cache-Control`, `Vary`
  * and ETag pinned here, so the move of the registry into the `miniapps`
  * dataset must reproduce them.
@@ -24,7 +23,7 @@
  * The registry is stored in a real `mongod`'s content database the way
  * `npm run data` stores it: fixtures/miniapps.dataset.json without its
  * provenance note, pushed through the tool's own scripts/lib/datasets/store.js
- * as revision 1 of `miniapps` (task 9.1).
+ * as revision 1 of `miniapps`.
  */
 import fs from "fs";
 import path from "path";

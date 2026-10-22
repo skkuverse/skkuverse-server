@@ -1,13 +1,11 @@
 /**
- * The stop ids wave 4 of unify-bus-stops adds to each realtime station of
- * `/bus/config` and `/bus/config/:groupId` (design D12; spec bus-stops
- * "Realtime stations carry their stop id"), for a test that pinned a body
- * served before the field: the HSSC positions' ids of design D1 (revision 1 of
- * `bus-stops`), and `seoul-<arsId>` of each station stored in
+ * The stop id each realtime station of `/bus/config` and
+ * `/bus/config/:groupId` carries, for a test that pinned a body served before
+ * the field: the HSSC positions' ids (revision 1 of `bus-stops`), and `seoul-<arsId>` of each station stored in
  * fixtures/jongro-registry-routes.json, of which none is a virtual stop and
  * none is aliased in revision 1.
  *
- * `withStationStopIds` derives the body served from wave 4 from a pinned one by
+ * `withStationStopIds` derives the body served with the field from a pinned one by
  * appending exactly those ids, each as its station's last field, and
  * `withoutStationStopIds` removes every station's `stopId`, so a test asserts
  * both the new body and that nothing else changed. A body's ETag is the md5 of
@@ -16,7 +14,7 @@
 import crypto from "crypto";
 import storedRoutes from "../../nest/bus/fixtures/jongro-registry-routes.json";
 
-/** Design D1's table, by station index: positions 6 and 8 (indexes 5 and 7) are the non-stop 혜화동로터리. */
+/** The HSSC positions' stop ids, by station index: positions 6 and 8 (indexes 5 and 7) are the non-stop 혜화동로터리. */
 export const HSSC_STOP_IDS: ReadonlyArray<string | null> = [
   "hssc-basketball-court",
   "hssc-student-center",

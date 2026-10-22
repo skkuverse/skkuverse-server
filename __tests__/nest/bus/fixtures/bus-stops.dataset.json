@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured: revision 1 of the bus-stops dataset (unify-bus-stops task 2.1, design D1, D3 and D4), built from src/bus/stops/schedule-stops.json at commit 50f3405c and HSSC_STATIONS (src/bus/config/bus-config.constants.ts) at commit 98a4992b, both unchanged at 099bbbb9: the catalog's stops and sequences as they are, then the nine HSSC stops named from their positions with the trailing bracketed note removed, and the HSSC line with the stop ids of design D1. No arsIds and no topis. Not trimmed.",
+  "_about": "Synthetic, never captured: revision 1 of the bus-stops dataset, built from src/bus/stops/schedule-stops.json at commit 50f3405c and HSSC_STATIONS (src/bus/config/bus-config.constants.ts) at commit 98a4992b, both unchanged at 099bbbb9: the catalog's stops and sequences as they are, then the nine HSSC stops named from their positions with the trailing bracketed note removed, and the HSSC line with those stops' ids. No arsIds and no topis. Not trimmed.",
   "stops": [
     {
       "id": "jeongja-exit3",

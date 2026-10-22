@@ -441,7 +441,7 @@ describe("findOverlaps", () => {
   });
 });
 
-// unify-bus-stops design D6: both writers of a sequence and its timetable refuse a run whose stop times do not
+// Both writers of a sequence and its timetable refuse a run whose stop times do not
 // follow the sequence, `npm run data -- push bus-stops` and `npm run schedule`, through this one function.
 describe("stopTimesMismatches", () => {
   const sequences = (busStopsFixture() as { sequences: Record<string, Record<string, unknown[]>> }).sequences;
@@ -493,7 +493,7 @@ describe("stopTimesMismatches", () => {
   });
 });
 
-// unify-bus-stops wave 2 review F1: a pattern that serves no date from today on takes no part in the stop-time
+// A pattern that serves no date from today on takes no part in the stop-time
 // check, so a new semester's pattern with a new sequence length is not deadlocked by the old one, which `npm run
 // schedule` never deletes. "Today" is the KST date, the one ScheduleService resolves a day by.
 describe("splitExpired", () => {

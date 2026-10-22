@@ -1,8 +1,8 @@
 /**
  * The trimmed `subway-timetables` fixture (fixtures/subway-timetables/ of
- * subway, one file per table, move-reference-datasets tasks 9.1 and 11.1):
+ * subway, one file per table):
  * each part of revision 1 with only the trains that reach a served platform
- * around the pinned instants the wave D characterization runs at, and around
+ * around the pinned instants the characterization runs at, and around
  * the instants the unit and route tests read the tables at. A fresh copy per
  * call, without the provenance note, as the part schema parses it.
  *

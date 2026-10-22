@@ -1,6 +1,6 @@
 /**
  * Reads test files the way Jest runs them, for the rules that guard the tests
- * themselves (harden-test-suite design D3): which calls are tests or suites,
+ * themselves (ADR 0011, D8): which calls are tests or suites,
  * which are focused, skipped or todo, what each test body asserts, and its
  * Arrange / Act / Assert markers. The TypeScript parser finds the calls, so a
  * name inside a string or a comment is never mistaken for one.
