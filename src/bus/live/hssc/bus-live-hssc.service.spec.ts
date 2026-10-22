@@ -54,3 +54,37 @@ describe("BusLiveHsscService.findLiveGroup", () => {
     expect(await service(new FakeBusCacheRepository()).findLiveGroup()).toMatchObject({ operation: "noData", stations: [], vehicles: [], updatedAt: null });
   });
 });
+
+describe("BusLiveHsscService.findLiveGroup with a bus overdue past the bound", () => {
+  it("serves a bus that left 농구장 10 min ago as still laying over: waiting to depart everywhere, no trajectory", async () => {
+    // Arrange
+    const busCache = new FakeBusCacheRepository();
+    busCache.values.set("hssc", [hsscBusDoc({ line_no: "32150", seq: "5", inout: "LEFT", get_date: "2026-10-20 오전 9:50:00", eventDate: "2026-10-20 09:47:00" })]);
+
+    // Act
+    const group = await service(busCache).findLiveGroup();
+
+    // Assert
+    expect(group.vehicles).toMatchObject([{ id: "32150", position: { stationIndex: 0, status: "waitingToDepart", nextStationAt: null }, trajectory: null }]);
+    expect(group.stations.flatMap(({ arrivals }) => arrivals).map(({ status, expectedArrivalAt, expectedDepartureAt }) => [status, expectedArrivalAt, expectedDepartureAt])).toEqual(
+      group.stations.map(() => ["waitingToDepart", null, null]),
+    );
+    expect(group.stations.find(({ stationIndex }) => stationIndex === 1)!.arrivals[0]).toMatchObject({ stopsAway: 1 });
+  });
+
+  it("serves a bus stalled mid-route as unknown at every station, kept where it was last seen with no trajectory", async () => {
+    // Arrange
+    const busCache = new FakeBusCacheRepository();
+    // The Olympic Memorial Hall stop (seq 8, the line's station 3), left 300 s ago against a 94 s median.
+    busCache.values.set("hssc", [hsscBusDoc({ line_no: "32149", seq: "8", inout: "LEFT", get_date: "2026-10-20 오전 9:55:00", eventDate: "2026-10-20 09:54:30" })]);
+
+    // Act
+    const group = await service(busCache).findLiveGroup();
+
+    // Assert
+    expect(group.vehicles).toMatchObject([{ id: "32149", position: { stationIndex: 3, status: "inTransit", nextStationAt: null }, trajectory: null }]);
+    expect(group.stations.flatMap(({ arrivals }) => arrivals).map(({ status, expectedArrivalAt, providerText }) => [status, expectedArrivalAt, providerText])).toEqual(
+      group.stations.map(() => ["unknown", null, null]),
+    );
+  });
+});

@@ -3,7 +3,7 @@ title: Bus Live API — One Arrival Shape for Every Source
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-23
 audience: internal
 ---
 
@@ -65,7 +65,7 @@ So that the last bus of the day is not dropped mid-layover, the live route keeps
 
 ### D9. Arrivals in the order they serve the station
 
-A bus at the station first (standing there, or laying over at its own turnaround, the one a rider boards), then by expected arrival, then the buses behind a layover by stops away; at most two per live station (TOPIS's first and second bus) and three runs per timetabled service at a stop.
+A bus at the station first (standing there, or laying over at its own turnaround, the one a rider boards), then by expected arrival, then the buses behind a layover by stops away, then an HSSC bus stalled past its bound (`unknown`, ADR 0018 D6), which a client skips; at most two per live station (TOPIS's first and second bus) and three runs per timetabled service at a stop.
 
 ### D10. The client owns the minute rule
 

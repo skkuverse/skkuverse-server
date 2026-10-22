@@ -14,6 +14,7 @@ const bus: HsscLiveBus = {
   anchor: { vehicleId: "32149", seq: 0, isDeparted: true, since: at("2026-10-20T00:59:00Z"), observedAt: at("2026-10-20T00:59:00Z") },
   stationIndex: 6,
   isAtStopPosition: true,
+  isLayingOver: false,
   departsAt: null,
   lapTimes: [{ stationIndex: 7, arrivesAt: at("2026-10-20T01:00:30Z"), departsAt: at("2026-10-20T01:00:42Z") }],
 };

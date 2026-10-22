@@ -26,11 +26,12 @@ interface HsscEtaCommon {
   observedAt: Date;
 }
 
-/** WHY: a bus's status toward one stop; only an en-route bus has an expected arrival (ADR 0018, D2). */
+/** WHY: a bus's status toward one stop; only an en-route bus has an expected arrival (ADR 0018, D2), and a stalled one none (D6). */
 export type HsscEta =
   | (HsscEtaCommon & { status: "enRoute"; arrivesAt: Date })
   | (HsscEtaCommon & { status: "arriving"; departsAt: Date })
-  | (HsscEtaCommon & { status: "waitingToDepart" });
+  | (HsscEtaCommon & { status: "waitingToDepart" })
+  | (HsscEtaCommon & { status: "unknown" });
 
 /** WHY: when a bus reaches one position of its lap and leaves it; null departure at the turnaround, its layover. */
 export interface HsscLapTime {

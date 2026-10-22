@@ -3,7 +3,7 @@ title: Bus Live API Reference
 type: reference
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-23
 audience: internal
 ---
 
@@ -100,13 +100,13 @@ One bus at one station. Every key is always present; null means unknown.
 | `atStop` | Standing at this station | `expectedDepartureAt` |
 | `arriving` | The source says it is about to arrive (TOPIS 곧 도착); never set from the server's clock | `expectedArrivalAt` when TOPIS gives a time |
 | `enRoute` | On its way | `expectedArrivalAt` |
-| `waitingToDepart` | Must still leave its origin or turnaround first (TOPIS 출발대기, the HSSC 농구장 layover) | none |
+| `waitingToDepart` | Must still leave its origin or turnaround first (TOPIS 출발대기, the HSSC 농구장 layover, including an HSSC bus whose feed said it left 농구장 more than 60 s past the travel median and that has not reached the next stop: it is laying over just off the stop) | none |
 | `scheduled` | A timetable run with no live vehicle (the stop page only) | the scheduled pair, the estimate when one exists |
-| `unknown` | The source sent something this server cannot classify, or a running bus with no time anywhere | none: render `providerText` |
+| `unknown` | The source sent something this server cannot classify, a running bus with no time anywhere, or an HSSC bus whose next stop event is more than 120 s past the travel median (stalled, or its feed stopped; `providerText` is null, so a client skips it) | none: render `providerText` |
 
-A Jongno instant is TOPIS's own: when it made the row (`mkTm`) plus its travel time, else plus the time in its text. An HSSC instant is the engine's, from the measured medians ([ADR 0018](../decisions/0018-hssc-arrival-estimates.md)); it never crosses the layover, so a bus that must lay over first is `waitingToDepart`.
+A Jongno instant is TOPIS's own: when it made the row (`mkTm`) plus its travel time, else plus the time in its text. An HSSC instant is the engine's, from the measured medians ([ADR 0018](../decisions/0018-hssc-arrival-estimates.md)); it never crosses the layover, so a bus that must lay over first is `waitingToDepart`. A late HSSC bus is due at `serverNow` until its next stop event is overdue past a bound (60 s after leaving 농구장, 120 s elsewhere), never in the past; past it the bus is `waitingToDepart` (still laying over off 농구장) or `unknown` (anywhere else) at every station, its position is `waitingToDepart` or kept as last seen, and its `trajectory` and `nextStationAt` are null (ADR 0018, D6).
 
-Order: a bus at the station first (standing there, or laying over at its own turnaround, the one a rider boards there), then `arriving` and `enRoute` by instant, then `waitingToDepart` by `stopsAway`. On Jongno the order is TOPIS's first and second bus.
+Order: a bus at the station first (standing there, or laying over at its own turnaround, the one a rider boards there), then `arriving` and `enRoute` by instant, then `waitingToDepart` by `stopsAway`, then `unknown`. On Jongno the order is TOPIS's first and second bus.
 
 ## Vehicles
 
