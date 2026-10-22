@@ -31,6 +31,8 @@ export interface SentNotificationDoc {
   /** WHY: null is not "not delivered": `deliveryError` says whether the call may have reached devices. */
   delivery: DeliveryCounts | null;
   deliveryError?: DeliveryError;
+  /** WHY: unique within one mini app where present, so a repeated send finds this row instead of sending again. */
+  idempotencyKey?: string;
 }
 
 // CONTRACT(scripts): written by scripts/lib/datasets/store.js (npm run data), which validates at push;
