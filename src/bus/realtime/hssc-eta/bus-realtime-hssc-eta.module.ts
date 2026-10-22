@@ -1,5 +1,8 @@
 import { Module } from "@nestjs/common";
+import { BusRealtimeHsscEtaService } from "./bus-realtime-hssc-eta.service";
 
-// WHY: the HSSC ETA engine is pure rules that no route serves yet; the arrivals API that will is its own change.
-@Module({})
+@Module({
+  providers: [BusRealtimeHsscEtaService],
+  exports: [BusRealtimeHsscEtaService],
+})
 export class BusRealtimeHsscEtaModule {}

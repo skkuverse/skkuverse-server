@@ -1,0 +1,20 @@
+{
+  "_about": "Synthetic, never captured, as the live route has no production traffic yet: taken from bus-live.liveGroup/hssc-layover.json: the bus laying over at 농구장.",
+  "data": {
+    "id": "32150",
+    "plateNumber": null,
+    "occupancy": null,
+    "isLastBus": null,
+    "position": {
+      "stationIndex": 0,
+      "status": "waitingToDepart",
+      "progress": null,
+      "sectionMeters": null,
+      "coords": null,
+      "nextStationAt": null,
+      "positionAt": "2026-10-20T09:52:00+09:00",
+      "checkedAt": "2026-10-20T09:59:55+09:00"
+    },
+    "trajectory": null
+  }
+}

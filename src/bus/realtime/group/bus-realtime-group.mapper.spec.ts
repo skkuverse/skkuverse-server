@@ -9,7 +9,7 @@
  * as ISO-8601 at +09:00.
  */
 import { jongroPositionDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
-import { toClockTime, toKstInstant, toRealtimeBuses, toTrackedBus } from "./bus-realtime-group.mapper";
+import { toClockTime, toRealtimeBuses, toTrackedBus } from "./bus-realtime-group.mapper";
 import type { JongroBusTracking } from "./bus-realtime-group.types";
 
 describe("toRealtimeBuses", () => {
@@ -136,19 +136,5 @@ describe("toTrackedBus with a trajectory", () => {
 
     // Assert
     expect("tracked" in bus && bus.tracked).not.toHaveProperty("trajectory");
-  });
-});
-
-describe("toKstInstant", () => {
-  it.each([
-    ["2026-10-19T16:30:00Z", "2026-10-20T01:30:00+09:00"],
-    ["2026-10-18T09:07:45.400Z", "2026-10-18T18:07:45+09:00"],
-  ])("%s reads %s", (instant, expected) => {
-    // Act
-    const read = toKstInstant(Date.parse(instant));
-
-    // Assert
-    expect(read).toBe(expected);
-    expect(read).not.toBe(instant);
   });
 });

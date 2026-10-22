@@ -12,7 +12,7 @@
  * 0: 174, 30; 1: 12, 70; 2: 63, 28; 3: 30, 57; 4: 33, 30; 5: layover, 21; 6: 24, 54; 7: 24, 111; 8: 24, 94; 9: 21, 24;
  * 10: 12, 81.
  */
-import { isDepartureEvent, isHsscStop, toHsscEta, toLapTimes, toStopEtas, toStopsAway } from "./bus-realtime-hssc-eta.rules";
+import { isDepartureEvent, isHsscStop, toHsscEta, toLapTimes, toSeq, toStationIndex, toStopEtas, toStopsAway } from "./bus-realtime-hssc-eta.rules";
 import type { HsscBusAnchor, HsscEta } from "./bus-realtime-hssc-eta.types";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
@@ -222,5 +222,18 @@ describe("isDepartureEvent", () => {
   ])("%j → %s", (inout, expected) => {
     // Act & Assert
     expect(isDepartureEvent(inout)).toBe(expected);
+  });
+});
+
+describe("toStationIndex", () => {
+  it.each([
+    [5, 0],
+    [6, 1],
+    [10, 5],
+    [0, 6],
+    [4, 10],
+  ])("seq %i is the line's station %i, and back", (seq, stationIndex) => {
+    // Act & Assert
+    expect([toStationIndex(seq), toSeq(stationIndex)]).toEqual([stationIndex, seq]);
   });
 });

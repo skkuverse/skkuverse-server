@@ -38,3 +38,6 @@ export interface HsscLapTime {
   arrivesAt: Date;
   departsAt: Date | null;
 }
+
+/** WHY: a lap time by the HSSC line's station index, 0 the turnaround. */
+export type HsscStationTime = Omit<HsscLapTime, "seq"> & { stationIndex: number };

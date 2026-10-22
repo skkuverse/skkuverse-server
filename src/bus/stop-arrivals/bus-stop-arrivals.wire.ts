@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { arrival, servedStop } from "../bus.wire";
+import { realtimeArrival as arrival, servedStop } from "../bus.wire";
 
 /** WHY: the stop as /bus/config serves its record, without the map a group's screen draws; arsIds are its TOPIS poles. */
 const stopBlock = servedStop.omit({ map: true }).extend({

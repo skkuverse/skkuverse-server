@@ -12,6 +12,7 @@ export function jongroSighting(extra: Partial<JongroBusSighting> = {}): JongroBu
     latitude: "37.587",
     longitude: "126.998",
     carNumber: "5537",
+    plainNo: "서울74사5537",
     turnaroundStationId: "100900028",
     vehicleId: "100000103",
     sectOrd: 6,

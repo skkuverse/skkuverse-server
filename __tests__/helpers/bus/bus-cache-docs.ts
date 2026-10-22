@@ -34,6 +34,7 @@ export function jongroPositionDoc(extra: Partial<JongroBusPositionDoc> = {}): Jo
     sequence: "6",
     stationName: "명륜새마을금고",
     carNumber: "5537",
+    plainNo: "서울74사5537",
     eventDate: "2026-10-20T01:00:00.000Z",
     estimatedTime: 0,
     stationId: "100900197",

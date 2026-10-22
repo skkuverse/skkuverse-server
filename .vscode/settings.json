@@ -7,6 +7,7 @@
     "bus.module.ts": "bus.*, *.json",
     "bus-eta.module.ts": "bus-eta.*, *.json",
     "bus-realtime.module.ts": "bus-realtime.*, *.json",
+    "bus-live.module.ts": "bus-live.*, *.json",
     "map.module.ts": "map.*, *.json",
     "miniapps.module.ts": "miniapps.*, *.json",
     "notices.module.ts": "notices.*, *.json",

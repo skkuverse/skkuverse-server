@@ -6,7 +6,7 @@ import {
   MIN_SEGMENT_SECONDS,
   TRAJECTORY_STOPS_AHEAD,
 } from "./bus-realtime-group.constants";
-import type { Arrival, RealtimeBus } from "./bus-realtime-group.wire";
+import type { RealtimeArrival, RealtimeBus } from "./bus-realtime-group.wire";
 import type {
   CachedArrivalFields,
   StatusContext,
@@ -79,7 +79,7 @@ export function toProgress(sectDist: number, fullSectDist: number): number {
 }
 
 // QUIRK(topis): mkTm is a KST wall clock, "yyyy-MM-dd HH:mm:ss.S", with no offset.
-function toMadeAtMs(mkTm: string): number | null {
+export function toMadeAtMs(mkTm: string): number | null {
   const match = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(?:\.\d+)?$/.exec(mkTm.trim());
   return match ? Date.parse(`${match[1]}T${match[2]}+09:00`) : null;
 }
@@ -146,7 +146,7 @@ export function toJongroBusTracking(position: JongroBusPositionDoc, context: Tra
 
 // WHY: TOPIS prints its arriving-soon text at the next stop for a bus idling at its origin
 // (ADR 0014, D3), so a waiting vehicle's arrivals follow its joined position.
-export function toWaitingArrival(arrival: Arrival): Arrival {
+export function toWaitingArrival(arrival: RealtimeArrival): RealtimeArrival {
   return { ...arrival, state: "waiting", minutes: null };
 }
 

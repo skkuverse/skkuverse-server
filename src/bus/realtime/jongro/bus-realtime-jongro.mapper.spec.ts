@@ -23,11 +23,12 @@ describe("toJongroBusPosition", () => {
     });
 
     // Assert
-    // WHY: the position carries the vehicle fields beside its other fields.
+    // WHY: the position carries the vehicle fields beside its other fields, plainNo the full plate (ADR 0019, D6).
     expect(position).toEqual({
       sequence: "6",
       stationName: "명륜새마을금고",
       carNumber: "5537",
+      plainNo: "서울74사5537",
       eventDate: "2026-10-20T01:00:00.000Z",
       estimatedTime: 40,
       stationId: "100900197",

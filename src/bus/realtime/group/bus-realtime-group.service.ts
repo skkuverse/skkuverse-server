@@ -4,24 +4,25 @@ import { withMeta } from "../../../http/response.interceptor";
 import type { WithMeta } from "../../../http/response.types";
 import { Clock } from "../../../infra/clock";
 import { JONGRO_ROUTES } from "../../bus.constants";
-import { toJongroRoute } from "../../bus.mapper";
+import { toJongroRoute, toKstInstant } from "../../bus.mapper";
 import type { JongroRoute, JongroRouteAttributes } from "../../bus.types";
-import type { JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
+import type { BusCacheEntry, JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import type { RegistryRoute } from "../../registry/bus-registry.types";
 import { BusRealtimeArrivalService } from "../arrival/bus-realtime-arrival.service";
 import { BusRealtimeHsscService } from "../hssc/bus-realtime-hssc.service";
 import { BusRealtimeJongroService } from "../jongro/bus-realtime-jongro.service";
-import { toClockTime, toKstInstant, toRealtimeBuses, toTrackedBus } from "./bus-realtime-group.mapper";
+import { toClockTime, toRealtimeBuses, toTrackedBus } from "./bus-realtime-group.mapper";
 import {
   toHighestSectOrd,
   toJongroBusTracking,
+  toMadeAtMs,
   toNamedBuses,
   toStationEtas,
   toVehicleBuses,
   toWaitingArrival,
   toWaitingVehicleIds,
 } from "./bus-realtime-group.rules";
-import type { GroupView } from "./bus-realtime-group.types";
+import type { GroupView, JongroBusTracking, JongroReading, PlacedArrivalRow } from "./bus-realtime-group.types";
 import type { RealtimeBus, RealtimeGroup, RealtimeGroupMeta, StationEta } from "./bus-realtime-group.wire";
 
 type GroupSource = () => Promise<GroupView>;
@@ -53,6 +54,41 @@ export class BusRealtimeGroupService {
     return source ? source() : Promise.resolve(null);
   }
 
+  // WHY: the live route maps a Jongno group from the same reads and joins as this view, with when each key was written
+  // (ADR 0019); null for a group that is not a Jongno route.
+  async findJongroReading(groupId: string): Promise<JongroReading | null> {
+    const route = JONGRO_ROUTES.map(toJongroRoute).find((candidate) => candidate.id === groupId);
+    if (!route) return null;
+    const seatCount = await this.arrival.seatCountOf(route.id);
+    const [registryRoute, positionsEntry, arrivalsEntry] = await Promise.all([
+      this.jongro.registryRouteOf(route.id),
+      this.jongro.findPositionsEntry(route.code),
+      this.jongro.findArrivalsEntry(route.code),
+    ]);
+    const seated = { ...registryRoute, seatCount };
+    const rows = arrivalsEntry?.value ?? [];
+    const track = (position: JongroBusPositionDoc, checkedAt: Date) => ({ position, tracking: this.trackPosition(seated, rows, position), checkedAt });
+    const positions = positionsEntry ? positionsEntry.value.map((position) => track(position, positionsEntry.updatedAt)) : [];
+    const waitingVehicleIds = new Set(positions.filter(({ tracking }) => tracking.status === "waiting").map(({ position }) => position.vehicleId));
+    return { route: registryRoute, rows: this.toPlacedRows(seated, rows, waitingVehicleIds), positions, ...this.checkedAtOf(arrivalsEntry, positionsEntry) };
+  }
+
+  private checkedAtOf(arrivals: BusCacheEntry<`jongro_stations_${string}`> | null, positions: BusCacheEntry<`jongro_locations_${string}`> | null) {
+    return { arrivalsCheckedAt: arrivals?.updatedAt ?? null, positionsCheckedAt: positions?.updatedAt ?? null };
+  }
+
+  private toPlacedRows(route: SeatedRoute, rows: readonly JongroArrivalDoc[], waitingVehicleIds: ReadonlySet<string>): PlacedArrivalRow[] {
+    return rows.flatMap((row) =>
+      toStationEtas(route, [row]).map(({ stationIndex }) => ({
+        stationIndex,
+        madeAtMs: toMadeAtMs(row.eventDate),
+        slots: this.arrival
+          .toTimedArrivals(row.buses, route.seatCount)
+          .map((slot) => (waitingVehicleIds.has(slot.bus.vehId) ? { ...slot, arrival: toWaitingArrival(slot.arrival) } : slot)),
+      })),
+    );
+  }
+
   private sourcesByGroupId(): Map<string, GroupSource> {
     const sources = new Map<string, GroupSource>([["hssc", async () => ({ buses: toRealtimeBuses(await this.hssc.listBuses()), stationEtas: [] })]]);
     for (const route of JONGRO_ROUTES.map(toJongroRoute)) sources.set(route.id, () => this.readJongroGroup(route));
@@ -78,13 +114,17 @@ export class BusRealtimeGroupService {
   }
 
   private toJongroBus(route: SeatedRoute, rows: readonly JongroArrivalDoc[], position: JongroBusPositionDoc): RealtimeBus {
+    return toTrackedBus(position, this.trackPosition(route, rows, position));
+  }
+
+  private trackPosition(route: SeatedRoute, rows: readonly JongroArrivalDoc[], position: JongroBusPositionDoc): JongroBusTracking {
     const { nextStop, firstNamed } = toVehicleBuses(rows, position.vehicleId, Number(position.sequence));
     const namedBus = nextStop?.bus ?? firstNamed;
     const [arrival] = namedBus ? this.arrival.toArrivals([namedBus], route.seatCount) : [];
     const highestSectOrd = toHighestSectOrd(rows, position.vehicleId);
     const namedBuses = toNamedBuses(rows, position.vehicleId);
     const context = { stationCount: route.topisIds.length, turnaroundTopisId: route.turnaroundTopisId, nextStop, arrival, highestSectOrd, namedBuses };
-    return toTrackedBus(position, toJongroBusTracking(position, context));
+    return toJongroBusTracking(position, context);
   }
 
   private toJongroStationEtas(route: SeatedRoute, rows: readonly JongroArrivalDoc[], waitingVehicleIds: ReadonlySet<string>): StationEta[] {

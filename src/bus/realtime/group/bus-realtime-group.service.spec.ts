@@ -664,3 +664,54 @@ describe("BusRealtimeGroupService.findGroupView", () => {
     expect(await service.findGroupView("nope")).toBeNull();
   });
 });
+
+// WHY: the live route maps a Jongno group from the same reads and joins as this view, with when each key was written
+// (ADR 0019, D6).
+describe("BusRealtimeGroupService.findJongroReading", () => {
+  it("answers the route, each position with its tracking, each placed row read slot by slot, and the write instants", async () => {
+    // Arrange
+    busCache.values.set("jongro_locations_07", [jongroPositionDoc({ sequence: "6", vehicleId: "100000103" })]);
+    busCache.values.set("jongro_stations_07", [
+      jongroArrivalDoc({ stationId: "100900220", sequence: "1", eventDate: "2026-10-20 09:59:00.0", buses: [jongroArrivalBus({ staOrd: 1, traTime: 185 }), noArrivalBus({ staOrd: 1, arrmsg: "출발대기" })] }),
+    ]);
+    busCache.updatedAtByKey.set("jongro_locations_07", new Date("2026-10-20T00:59:58Z"));
+
+    // Act
+    const reading = await service.findJongroReading("jongro07");
+
+    // Assert
+    expect(reading!.route.stationsVersion).toBe(versionOf("jongro07"));
+    expect(reading!.positions.map(({ position, tracking }) => [position.vehicleId, tracking.status])).toEqual([["100000103", "running"]]);
+    expect(reading!.rows.map((row) => [row.stationIndex, row.madeAtMs, row.slots.map((slot) => [slot.arrival.state, slot.travelSeconds])])).toEqual([
+      [0, Date.parse("2026-10-20T00:59:00Z"), [["running", 185], ["waiting", null]]],
+    ]);
+    expect([reading!.positionsCheckedAt, reading!.arrivalsCheckedAt]).toEqual([new Date("2026-10-20T00:59:58Z"), busCache.writtenAt]);
+  });
+
+  it("reads a waiting vehicle's slots as waiting, as the realtime view serves them", async () => {
+    // Arrange
+    busCache.values.set("jongro_locations_02", [jongroPositionDoc({ sequence: "1", stationId: "100900204", vehicleId: "100000018", isStationary: true })]);
+    busCache.values.set("jongro_stations_02", [
+      jongroArrivalDoc({ stationId: "100900202", sequence: "2", buses: [jongroArrivalBus({ vehId: "100000018", staOrd: 2, sectOrd: 2, traTime: 11, arrmsg: "곧 도착" })] }),
+    ]);
+
+    // Act
+    const reading = await service.findJongroReading("jongro02");
+
+    // Assert
+    expect(reading!.rows[0]!.slots.map((slot) => [slot.arrival.state, slot.travelSeconds])).toEqual([["waiting", 11]]);
+  });
+
+  it("answers no rows, no positions and no write instants before the poller wrote", async () => {
+    // Act
+    const reading = await service.findJongroReading("jongro08");
+
+    // Assert
+    expect(reading).toMatchObject({ rows: [], positions: [], arrivalsCheckedAt: null, positionsCheckedAt: null });
+  });
+
+  it("answers null for a group that is not a Jongno route", async () => {
+    // Act & Assert
+    expect(await Promise.all([service.findJongroReading("hssc"), service.findJongroReading("nope")])).toEqual([null, null]);
+  });
+});

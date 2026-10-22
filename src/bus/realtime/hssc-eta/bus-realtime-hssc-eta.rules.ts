@@ -12,13 +12,13 @@ export function isHsscStop(seq: number): boolean {
   return Number.isInteger(seq) && seq >= 0 && seq < HSSC_POSITION_COUNT && !NON_STOP_SEQS.includes(seq);
 }
 
-// WHY: a lap starts as a bus leaves the turnaround, so a position counts from there (0) to the stop before it (10).
-function toLapIndex(seq: number): number {
+// WHY: a lap starts as a bus leaves the turnaround, so a position counts from there (0) to the stop before it (10), the line's index.
+export function toStationIndex(seq: number): number {
   return (seq - TURNAROUND_SEQ + HSSC_POSITION_COUNT) % HSSC_POSITION_COUNT;
 }
 
-function toSeq(lapIndex: number): number {
-  return (lapIndex + TURNAROUND_SEQ) % HSSC_POSITION_COUNT;
+export function toSeq(stationIndex: number): number {
+  return (stationIndex + TURNAROUND_SEQ) % HSSC_POSITION_COUNT;
 }
 
 function segmentOf(seq: number): HsscSegment {
@@ -35,7 +35,7 @@ function dwellSecondsOf(seq: number): number {
 
 // WHY: the stops the bus reaches before this one, plus one, the rotary passes never counted (ADR 0019, D4).
 export function toStopsAway(anchor: HsscBusAnchor, targetSeq: number): number {
-  const ahead = (toLapIndex(targetSeq) - toLapIndex(anchor.seq) + HSSC_POSITION_COUNT) % HSSC_POSITION_COUNT;
+  const ahead = (toStationIndex(targetSeq) - toStationIndex(anchor.seq) + HSSC_POSITION_COUNT) % HSSC_POSITION_COUNT;
   if (ahead === 0 && !anchor.isDeparted) return 0;
   const passedSeqs = Array.from({ length: (ahead || HSSC_POSITION_COUNT) - 1 }, (_, i) => (anchor.seq + i + 1) % HSSC_POSITION_COUNT);
   return passedSeqs.filter(isHsscStop).length + 1;
@@ -46,7 +46,7 @@ export function toStopsAway(anchor: HsscBusAnchor, targetSeq: number): number {
 function isBehindLayover(anchor: HsscBusAnchor, targetSeq: number): boolean {
   if (anchor.seq === TURNAROUND_SEQ && !anchor.isDeparted) return true;
   if (targetSeq === TURNAROUND_SEQ) return false;
-  const [busLap, targetLap] = [toLapIndex(anchor.seq), toLapIndex(targetSeq)];
+  const [busLap, targetLap] = [toStationIndex(anchor.seq), toStationIndex(targetSeq)];
   return busLap > targetLap || (busLap === targetLap && anchor.isDeparted);
 }
 
@@ -68,7 +68,7 @@ export function toLapTimes(anchor: HsscBusAnchor, now: Date): HsscLapTime[] {
   if (anchor.seq === TURNAROUND_SEQ && !anchor.isDeparted) return [];
   const times: HsscLapTime[] = [];
   let atMs = now.getTime() + toFirstLegMs(anchor, now.getTime());
-  for (let lap = toLapIndex(anchor.seq) + 1; lap <= HSSC_POSITION_COUNT; lap++) {
+  for (let lap = toStationIndex(anchor.seq) + 1; lap <= HSSC_POSITION_COUNT; lap++) {
     const seq = toSeq(lap);
     const departsAtMs = seq === TURNAROUND_SEQ ? null : atMs + dwellSecondsOf(seq) * SECOND_MS;
     times.push({ seq, arrivesAt: new Date(atMs), departsAt: departsAtMs === null ? null : new Date(departsAtMs) });

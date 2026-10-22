@@ -127,6 +127,39 @@ describe("BusRealtimeJongroService.listArrivals", () => {
   });
 });
 
+// WHY: the live route reads each key with when the poller wrote it (ADR 0019, D6).
+describe("BusRealtimeJongroService.findArrivalsEntry", () => {
+  it("answers the stored rows with their write instant, and null before a tick", async () => {
+    // Arrange
+    const before = await service.findArrivalsEntry("07");
+    busCache.writtenAt = new Date("2026-10-20T00:59:55Z");
+    client.arrivals = [jongroArrivalDoc()];
+    await runTickAndFlush();
+
+    // Act
+    const entry = await service.findArrivalsEntry("07");
+
+    // Assert
+    expect(before).toBeNull();
+    expect(entry).toEqual({ value: [jongroArrivalDoc()], updatedAt: new Date("2026-10-20T00:59:55Z") });
+  });
+});
+
+describe("BusRealtimeJongroService.findPositionsEntry", () => {
+  it("answers the stored positions with their write instant", async () => {
+    // Arrange
+    client.sightings = [jongroSighting({ sectOrd: 6 })];
+    await runTickAndFlush();
+
+    // Act
+    const entry = await service.findPositionsEntry("07");
+
+    // Assert
+    expect(entry?.updatedAt).toEqual(busCache.writtenAt);
+    expect(entry?.value.map((position) => [position.vehicleId, position.plainNo])).toEqual([["100000103", "서울74사5537"]]);
+  });
+});
+
 describe("BusRealtimeJongroService.listPositions", () => {
   it("maps location data with station mapping", async () => {
     // Arrange
@@ -404,6 +437,7 @@ describe("BusRealtimeJongroService.refresh vehicle tracking", () => {
       latitude: "37.588444",
       longitude: "126.990028",
       carNumber: "5512",
+      plainNo: "서울74사5512",
       turnaroundStationId: "100900121",
       vehicleId: "100000018",
       sectOrd: 1,
@@ -422,11 +456,13 @@ describe("BusRealtimeJongroService.refresh vehicle tracking", () => {
     await service.refresh(route("02"));
 
     // Assert
+    // WHY: plainNo is the full plate (ADR 0019, D6); every other field is as before.
     expect(busCache.values.get("jongro_locations_02")).toEqual([
       {
         sequence: "1",
         stationName: "성균관대학교",
         carNumber: "5512",
+        plainNo: "서울74사5512",
         eventDate: NOW.toISOString(),
         estimatedTime: 0,
         stationId: "100900204",

@@ -1,4 +1,4 @@
-import moment from "moment-timezone";
+import { toKstInstant } from "../../bus.mapper";
 import type { JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import { KST_TIME_ZONE } from "../../../shared/time-zone.constants";
 import type { CachedBusFields, JongroBusTracking } from "./bus-realtime-group.types";
@@ -33,10 +33,6 @@ function toTracked({ status, vehicleId, observedAt, crowding, isLastBus, progres
 
 export function toTrackedBus(position: JongroBusPositionDoc, tracking: JongroBusTracking): RealtimeBus {
   return { ...toLegacyBusFields(position), kind: "tracked", tracked: toTracked(tracking) };
-}
-
-export function toKstInstant(ms: number): string {
-  return moment(ms).tz(KST_TIME_ZONE).format("YYYY-MM-DDTHH:mm:ssZ");
 }
 
 export function toClockTime(now: Date): string {

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../../../infra/clock";
 import logger from "../../../infra/logger";
-import type { JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
+import type { BusCacheEntry, JongroArrivalDoc, JongroBusPositionDoc } from "../../cache/bus-cache.document";
 import { BusCacheService } from "../../cache/bus-cache.service";
 import type { JongroRoute } from "../../bus.types";
 import { BusRegistryService } from "../../registry/bus-registry.service";
@@ -44,6 +44,15 @@ export class BusRealtimeJongroService {
 
   async listPositions(code: string): Promise<JongroBusPositionDoc[] | undefined> {
     return (await this.cache.read(toPositionsKey(code))) ?? undefined;
+  }
+
+  // WHY: the live route tells "no bus" from a stopped poller by when it wrote (ADR 0019, D6).
+  findArrivalsEntry(code: string): Promise<BusCacheEntry<`jongro_stations_${string}`> | null> {
+    return this.cache.readEntry(toArrivalsKey(code));
+  }
+
+  findPositionsEntry(code: string): Promise<BusCacheEntry<`jongro_locations_${string}`> | null> {
+    return this.cache.readEntry(toPositionsKey(code));
   }
 
   // WHY: with no stations a bus has no stop to sit at, so the tick only observes TOPIS until the route is stored.

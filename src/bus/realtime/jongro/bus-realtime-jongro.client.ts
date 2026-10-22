@@ -131,6 +131,7 @@ export class BusRealtimeJongroClient {
       latitude: field("gpsY"),
       longitude: field("gpsX"),
       carNumber: toCarNumber(row.plainNo),
+      plainNo: row.plainNo,
       turnaroundStationId: row.trnstnid?.trim() || undefined,
       vehicleId: parsed("vehId", (text) => text || null),
       sectOrd: parsed("sectOrd", toTopisInteger),

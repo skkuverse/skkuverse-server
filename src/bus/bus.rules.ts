@@ -36,12 +36,13 @@ export function deepFreeze<T>(value: T, seen: WeakSet<object> = new WeakSet()): 
 }
 
 // QUIRK(topis): a virtual stop carries the ARS number 0 or none, and no pole stands there.
-function isPoleArsId(arsId: string | null): arsId is string {
-  return arsId !== null && ARS_ID_PATTERN.test(arsId) && Number(arsId) !== 0;
+export function toServedArsId(arsId: string | null): string | null {
+  return arsId !== null && ARS_ID_PATTERN.test(arsId) && Number(arsId) !== 0 ? arsId : null;
 }
 
 /** WHY: the stop a TOPIS pole is: the local stop aliasing its ARS number, else `seoul-<arsId>`; a virtual stop is none. */
 export function toPoleStopId(arsId: string | null, stopIdByArsId: ReadonlyMap<string, string>): string | null {
-  if (!isPoleArsId(arsId)) return null;
-  return stopIdByArsId.get(arsId) ?? `${TOPIS_STOP_ID_PREFIX}${arsId}`;
+  const poleArsId = toServedArsId(arsId);
+  if (poleArsId === null) return null;
+  return stopIdByArsId.get(poleArsId) ?? `${TOPIS_STOP_ID_PREFIX}${poleArsId}`;
 }

@@ -9,7 +9,7 @@ import {
   STALE_MINUTES_AT_TURNAROUND,
   TURNAROUND_STATION_NAME,
 } from "./bus-realtime-hssc.constants";
-import type { HsscFeedEventTiming } from "./bus-realtime-hssc.types";
+import type { HsscFeedEventTiming, HsscStopEvent } from "./bus-realtime-hssc.types";
 
 const SEQ_PATTERN = /^\d+$/;
 
@@ -47,6 +47,13 @@ export function toFeedEventTiming(item: HsscApiBus): HsscFeedEventTiming | null 
   const getDate = moment.tz(item.get_date, HSSC_API_DATE_FORMAT, "ko", true, KST_TIME_ZONE);
   if (!SEQ_PATTERN.test(item.seq) || !getDate.isValid()) return null;
   return { seq: parseInt(item.seq, 10), getDate: getDate.toDate() };
+}
+
+export function toHsscStopEvent(bus: HsscBusDoc): HsscStopEvent | null {
+  const timing = toFeedEventTiming(bus);
+  const firstSeenAt = moment.tz(bus.eventDate, HSSC_EVENT_DATE_FORMAT, true, KST_TIME_ZONE);
+  if (!timing || !firstSeenAt.isValid()) return null;
+  return { vehicleId: bus.line_no, seq: timing.seq, inout: bus.inout, eventAt: timing.getDate, firstSeenAt: firstSeenAt.toDate() };
 }
 
 export function isUnparsedFeed(items: readonly HsscApiBus[]): boolean {
