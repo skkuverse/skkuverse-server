@@ -22,6 +22,10 @@ export function toSentNotification(content: NotificationContent, { id, miniAppId
   return { _id: id, miniAppId, title_ko, body_ko, title_en, body_en, ...actionOf(content), sentAt, delivery: null, ...key };
 }
 
+export function toNotificationContent({ title_ko, body_ko, title_en, body_en, ...rest }: SentNotificationDoc): NotificationContent {
+  return { title_ko, body_ko, title_en, body_en, ...actionOf(rest) };
+}
+
 // WHY: a row with no recorded outcome may still be sending, so a repeat is told unknown, never invited to resend.
 export function toReplayedOutcome({ _id: notificationId, delivery, deliveryError }: SentNotificationDoc): SendOutcome {
   if (delivery) return { notificationId, delivery, outcome: "delivered" };

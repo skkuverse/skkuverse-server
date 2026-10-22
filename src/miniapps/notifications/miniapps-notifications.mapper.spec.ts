@@ -4,7 +4,7 @@
  * fallback, and the history's nulls for rows that lack a field.
  */
 import type { SentNotificationDoc } from "../miniapps.document";
-import { toFeedEntry, toHistoryEntry, toReplayedOutcome, toSendTrace, toSentNotification } from "./miniapps-notifications.mapper";
+import { toFeedEntry, toHistoryEntry, toNotificationContent, toReplayedOutcome, toSendTrace, toSentNotification } from "./miniapps-notifications.mapper";
 
 const SENT_AT = new Date("2026-10-14T03:00:00.000Z");
 
@@ -44,6 +44,28 @@ describe("toSentNotification with an Idempotency-Key", () => {
 
     // Assert
     expect(JSON.stringify(doc)).toBe(JSON.stringify({ ...DOC, idempotencyKey: "retry-1" }));
+  });
+});
+
+describe("toNotificationContent", () => {
+  it("takes the texts and the action from a row, without its id, times or delivery", () => {
+    // Act & Assert
+    expect(toNotificationContent({ ...DOC, delivery: { sent: 1, failed: 0, cleanedUp: 0 }, idempotencyKey: "retry-1" })).toEqual({
+      title_ko: "제목",
+      body_ko: "본문",
+      title_en: "Title",
+      body_en: null,
+      actionType: "route",
+      actionValue: "/campus",
+    });
+  });
+
+  it("leaves the action out of a row that has none", () => {
+    // Arrange
+    const withoutAction: SentNotificationDoc = { ...DOC, actionType: undefined, actionValue: undefined };
+
+    // Act & Assert
+    expect(toNotificationContent(withoutAction)).toEqual({ title_ko: "제목", body_ko: "본문", title_en: "Title", body_en: null });
   });
 });
 
