@@ -1,4 +1,5 @@
 import type { SequenceStop } from "../../stops/bus-stops.types";
+import type { ShuttleEtaDoc } from "../bus-eta.document";
 
 export type EtaSource = "frozen" | "live" | "predicted";
 
@@ -7,6 +8,8 @@ export interface ServedEstimate {
   source: EtaSource;
   updatedAt: Date;
 }
+
+export type EstimatePick = (docs: readonly ShuttleEtaDoc[], now: Date) => Map<string, ServedEstimate>;
 
 export interface EstimateInputs {
   routeTypes: readonly string[];

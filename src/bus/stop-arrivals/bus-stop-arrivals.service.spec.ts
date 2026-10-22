@@ -4,8 +4,9 @@
  * stop gets its entry, in the index's order and labeled in the request language, with the server's clock in meta
  * (ADR 0019, D12); one page reads each group's live answer
  * and each service's smart schedule once, and the week after it only when the shown week holds fewer than three runs
- * (review F2); and a route whose read fails is left out of the page, logged at error at most once a minute per route,
- * while the rest is served.
+ * (review F2); a run at a drop-off is listed until the arrival of its latest estimate, read once per service, while
+ * the page shows only the served one (ADR 0019, D12); and a route whose read fails is left out of the page, logged at
+ * error at most once a minute per route, while the rest is served.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 import { storedBusRegistryService, storedJongroRouteDocuments } from "../../../__tests__/helpers/bus/bus-registry";
@@ -210,6 +211,27 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
       ["suspended", []],
     ]);
     expect(smart.followingReadServiceIds).toEqual([]);
+  });
+
+  // WHY: the smart view stops serving a live value 15 minutes after its fetch, while the bus is still on the road.
+  it("lists a run at a drop-off until its latest estimate's arrival, reading it once per service, and shows no time", async () => {
+    // Arrange
+    const { service, smart } = setup();
+    smart.schedules.set("campus-inja", activeSchedule("campus-inja", ["14:00", "14:30"]));
+    const latest = activeSchedule("campus-inja", ["14:00", "14:30"]);
+    latest.days[0]!.schedule[0] = { time: "14:00", routeType: "regular", stopTimes: ["14:00", "15:10"], eta: { source: "live", updatedAt: "2026-10-20T04:50:00.000Z" } };
+    smart.latestSchedules.set("campus-inja", latest);
+
+    // Act
+    const page = await service.findStopArrivals("nsc-n-center", "ko");
+
+    // Assert
+    const regular = page?.data.routes.find((route): route is TimetableEntry => route.kind === "timetable" && route.serviceId === "campus-inja" && route.routeType === "regular");
+    expect(regular?.arrivals.map(({ runDepartureAt, expectedArrivalAt, scheduledArrivalAt }) => [runDepartureAt, expectedArrivalAt, scheduledArrivalAt])).toEqual([
+      ["2026-10-20T14:30:00+09:00", null, null],
+      ["2026-10-20T14:00:00+09:00", null, null],
+    ]);
+    expect(smart.latestReadServiceIds.filter((serviceId) => serviceId === "campus-inja")).toEqual(["campus-inja"]);
   });
 
   it("leaves out a route whose read fails, logged at error once a minute, and serves the rest", async () => {

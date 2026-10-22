@@ -119,7 +119,7 @@ A timetable entry lists up to three runs, each an arrival ([bus-live-api.md](bus
 | `basis` | `estimate` when the time here is an estimate, else `timetable` |
 | `isLastBus` | `true` for the day's last run of the route type |
 
-A run is listed while its time at this stop is not before the current minute in Asia/Seoul (at an alighting stop, its estimated arrival), or its departure when no time is known there, and runs are ordered by that same time. A time before the departure is the next day's. When the smart schedule's week holds fewer than three, the runs continue into the following week, as the smart schedule would show it: a Friday evening after the last run lists the next Monday's, and a day of no service or inside a suspension lists none. Boarding and drop-off stops are both served.
+A run is listed while its time at this stop is not before the current minute in Asia/Seoul, and runs are ordered by that same time: the timetable's time where one is shown; otherwise (an alighting stop, whose timetable stores no time) the arrival of its most recently fetched estimate, even one too old to be shown, or its departure when it has none. The fields above still carry only the served estimate, so a run can be listed with no time at this stop. A time before the departure is the next day's. When the smart schedule's week holds fewer than three, the runs continue into the following week, as the smart schedule would show it: a Friday evening after the last run lists the next Monday's, and a day of no service or inside a suspension lists none. Boarding and drop-off stops are both served.
 
 ### Errors
 
