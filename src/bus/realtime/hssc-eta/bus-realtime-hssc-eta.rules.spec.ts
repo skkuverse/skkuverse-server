@@ -1,13 +1,14 @@
 /**
- * The HSSC ETA engine (openspec add-hssc-arrival-estimates): what one fresh bus, anchored on its latest stop event,
+ * The HSSC ETA engine (ADR 0018): what one fresh bus, anchored on its latest stop event,
  * means for one stop of the loop. A bus ahead of the stop in its lap is en route, expected at an instant summed from
  * the measured dwell and travel medians, each overdue part counting 0; a bus at the stop is arriving; a bus whose path
  * crosses the turnaround layover (seq 5) it has not left (laying over there, or past the stop in this lap) is waiting to depart,
  * with no instant, except that the turnaround itself is reached by every bus heading to it. Stops away counts the 11-position
  * loop from the bus to the stop, a full lap for a bus that has left the stop, and a stop's ETAs come nearest first.
  *
- * The seconds below are the medians of design D3 (seq: dwell, travel to the next): 0: 174, 30; 1: 12, 70; 2: 63, 28;
- * 3: 30, 57; 4: 33, 30; 5: layover, 21; 6: 24, 54; 7: 24, 111; 8: 24, 94; 9: 21, 24; 10: 12, 81.
+ * The seconds below are the medians of `SEGMENTS_BY_SEQ` (ADR 0018, D3), as seq: dwell, travel to the next:
+ * 0: 174, 30; 1: 12, 70; 2: 63, 28; 3: 30, 57; 4: 33, 30; 5: layover, 21; 6: 24, 54; 7: 24, 111; 8: 24, 94; 9: 21, 24;
+ * 10: 12, 81.
  */
 import { isDepartureEvent, isHsscStop, toHsscEta, toStopEtas, toStopsAway } from "./bus-realtime-hssc-eta.rules";
 import type { HsscBusAnchor, HsscEta } from "./bus-realtime-hssc-eta.types";

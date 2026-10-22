@@ -26,5 +26,5 @@ interface HsscEtaCommon {
   observedAt: Date;
 }
 
-/** WHY: a bus's status toward one stop; only an en-route bus has an expected arrival (add-hssc-arrival-estimates D2). */
+/** WHY: a bus's status toward one stop; only an en-route bus has an expected arrival (ADR 0018, D2). */
 export type HsscEta = (HsscEtaCommon & { status: "enRoute"; arrivesAt: Date }) | (HsscEtaCommon & { status: "arriving" | "waitingToDepart" });

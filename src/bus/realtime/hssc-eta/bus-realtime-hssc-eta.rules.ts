@@ -38,7 +38,7 @@ export function toStopsAway(anchor: HsscBusAnchor, targetSeq: number): number {
   return ahead === 0 && anchor.isDeparted ? HSSC_POSITION_COUNT : ahead;
 }
 
-// WHY: the layover's end cannot be predicted (add-hssc-arrival-estimates D2), so no time crosses it; the turnaround
+// WHY: the layover's end cannot be predicted (ADR 0018, D2), so no time crosses it; the turnaround
 // itself is reached by every bus heading to it.
 function isBehindLayover(anchor: HsscBusAnchor, targetSeq: number): boolean {
   if (anchor.seq === TURNAROUND_SEQ && !anchor.isDeparted) return true;
@@ -47,7 +47,7 @@ function isBehindLayover(anchor: HsscBusAnchor, targetSeq: number): boolean {
   return busLap > targetLap || (busLap === targetLap && anchor.isDeparted);
 }
 
-// WHY: what is left of the current dwell and the travel after it, each overdue part counting 0 (design D3).
+// WHY: what is left of the current dwell and the travel after it, each overdue part counting 0 (ADR 0018, D3).
 function toFirstLegMs(anchor: HsscBusAnchor, nowMs: number): number {
   const elapsedMs = Math.max(0, nowMs - anchor.since.getTime());
   const travelMs = segmentOf(anchor.seq).travelSeconds * SECOND_MS;
