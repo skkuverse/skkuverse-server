@@ -68,7 +68,7 @@
             "scheduledArrivalAt": null,
             "scheduledDepartureAt": null,
             "basis": "provider",
-            "stopsAway": 2,
+            "stopsAway": 3,
             "isLastBus": false,
             "vehicleId": "100000203",
             "providerText": "4분10초후[2번째 전]"

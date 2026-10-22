@@ -322,6 +322,40 @@ describe("GET /bus/config and the registry", () => {
     });
   });
 
+  // WHY: a client that sees a new stationsVersion on /bus/live refetches its group with Cache-Control: no-cache, which its
+  // HTTP cache sends as a revalidation (If-None-Match): a 304 while nothing changed, the new stations once something did.
+  it("revalidates a group: 304 while its stations are unchanged, 200 with the new version and ETag once they change", async () => {
+    // Arrange
+    const doc = registryRepository.routes.get("jongro07")!;
+    const stored = structuredClone(doc);
+
+    await withCacheOff(async () => {
+      try {
+        const first = await request(httpServer).get("/bus/config/jongro07");
+        const revalidate = (etag: string) => request(httpServer).get("/bus/config/jongro07").set("Cache-Control", "no-cache").set("If-None-Match", etag);
+        const unchanged = await revalidate(first.headers.etag);
+        doc.stations = [doc.stations[1]!, doc.stations[0]!, ...doc.stations.slice(2)].map((s, index) => ({ ...s, sequence: index + 1 }));
+        doc.stationsVersion = "synced";
+
+        // Act
+        const changed = await revalidate(first.headers.etag);
+        const again = await revalidate(changed.headers.etag);
+
+        // Assert
+        expect(first.body.data.screen.stationsVersion).toBe(stored.stationsVersion);
+        expect([unchanged.status, unchanged.text]).toEqual([304, ""]);
+        expect(changed.status).toBe(200);
+        expectWire(busGroup, changed.body.data);
+        expect(changed.headers.etag).not.toBe(first.headers.etag);
+        expect(changed.headers["cache-control"]).toBe("private, max-age=300");
+        expect(changed.body.data.screen.stationsVersion).toBe("synced");
+        expect(again.status).toBe(304);
+      } finally {
+        registryRepository.routes.set("jongro07", stored);
+      }
+    });
+  });
+
   it("answers 503 JONGRO_REGISTRY_UNAVAILABLE for the config and a group when a route is missing", async () => {
     // Arrange
     const stored = registryRepository.routes.get("jongro08")!;

@@ -36,7 +36,7 @@ Every key is always present, and what a source cannot supply is null, never a mi
 
 ### D4. Stops away counts stops, not positions
 
-`stopsAway` is the stations with a stop the bus reaches before this one, plus one: `1` means this is its next stop, `0` that it stands here. Positions where no one boards (the HSSC's two Hyehwa Rotary passes) are never counted, so a rider reads the number as stops. A bus that just left a station is a lap away on a loop, and on the HSSC, whose lap crosses the layover, it is `waitingToDepart`. TOPIS's own count (`staOrd − sectOrd`) already is this on Jongno.
+`stopsAway` is the stations with a stop the bus reaches before this one, plus one: `1` means this is its next stop, `0` that it stands here. Positions where no one boards (the HSSC's two Hyehwa Rotary passes) are never counted, so a rider reads the number as stops. A bus that just left a station is a lap away on a loop, and on the HSSC, whose lap crosses the layover, it is `waitingToDepart`. On Jongno it is one more than TOPIS's own count, `staOrd − sectOrd`, the `N` of its `[N번째 전]`: an arrival row's `sectOrd` is the staOrd of the bus's next stop (TOPIS's same-moment rows and positions, 2026-10-17 and 2026-10-22), so 곧 도착 is `1`. The first draft served TOPIS's count as is, one short, until the app caught it on 2026-10-22. TOPIS drops a bus from its station's row once it stands there, so a Jongno arrival is `atStop` and `0` only where a row still names a bus its position shows standing at that station.
 
 ### D5. stationIndex is the key; stopId and arsId are not
 
@@ -49,7 +49,7 @@ Agreed with the session that owns the stop catalog, 2026-10-22.
 
 ### D6. One vehicle object per bus; two clocks on its position
 
-A response lists each vehicle it mentions once and arrivals point at it by `vehicleId`: TOPIS counts passengers per station row, so copies of one bus inside each arrival would disagree. A vehicle an arrival names without a position row is served with `position: null`.
+A response lists each vehicle it mentions once and arrivals point at it by `vehicleId`: TOPIS counts passengers per station row, so copies of one bus inside each arrival would disagree. 막차 is the bus's: TOPIS flags it per row and one bus's rows can disagree (a 곧 도착 row carries no [막차] text), so a vehicle is the last bus when any row naming it says so, and every arrival naming it carries the vehicle's value. A vehicle an arrival names without a position row is served with `position: null`.
 
 A position carries `positionAt`, when the source saw the bus there, and `checkedAt`, when this server last fetched that answer. A stop-event source repeats its last event until the next stop, so its `positionAt` is minutes old while the bus is fine; a dead feed shows in `checkedAt`. A client dims and freezes a marker on `checkedAt`'s age and extrapolates along the trajectory from `positionAt`. Each group carries `updatedAt`, its poller's last write (the staler key for Jongno), so "no buses" and "the poller stopped" differ.
 
