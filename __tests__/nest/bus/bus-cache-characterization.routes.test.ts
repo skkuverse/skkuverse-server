@@ -216,6 +216,8 @@ describe("bus_cache between a poller process and an api replica", () => {
     // Assert
     expect([...pollers.keys()].filter((n) => !n.startsWith("shuttle-eta")).sort()).toEqual([
       "hssc",
+      "shuttle-gps",
+      "shuttle-stop-reports",
       "jongro-02",
       "jongro-07",
       "jongro-08",
