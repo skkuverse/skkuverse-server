@@ -14,6 +14,8 @@ import { BuildingSyncClient } from "../../../src/building/sync/building-sync.cli
 import { BusEtaForecastClient } from "../../../src/bus/eta/forecast/bus-eta-forecast.client";
 import { BusEtaProbeClient } from "../../../src/bus/eta/probe/bus-eta-probe.client";
 import { BusEtaTravelClient } from "../../../src/bus/eta/travel/bus-eta-travel.client";
+import { BusShuttleGpsClient } from "../../../src/bus/private-file";
+import { BusShuttleStopClient } from "../../../src/bus/private-file";
 import { BusRealtimeHsscClient } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.client";
 import { BusRealtimeJongroClient } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.client";
 import { BusRoutePathClient } from "../../../src/bus/route-path/bus-route-path.client";
@@ -28,6 +30,8 @@ import { FakeBuildingSyncClient } from "../fakes/building/building-sync.client.f
 import { FakeBusEtaForecastClient } from "../fakes/bus/bus-eta-forecast.client.fake";
 import { FakeBusEtaProbeClient } from "../fakes/bus/bus-eta-probe.client.fake";
 import { FakeBusEtaTravelClient } from "../fakes/bus/bus-eta-travel.client.fake";
+import { FakeBusShuttleGpsClient } from "../fakes/bus/private-file";
+import { FakeBusShuttleStopClient } from "../fakes/bus/private-file";
 import { FakeBusRealtimeHsscClient } from "../fakes/bus/bus-realtime-hssc.client.fake";
 import { FakeBusRealtimeJongroClient } from "../fakes/bus/bus-realtime-jongro.client.fake";
 import { FakeBusRoutePathClient } from "../fakes/bus/bus-route-path.client.fake";
@@ -50,6 +54,8 @@ export function buildPollerApp(): Promise<NestExpressApplication> {
       { provide: BusEtaForecastClient, useValue: new FakeBusEtaForecastClient() },
       { provide: BusEtaProbeClient, useValue: new FakeBusEtaProbeClient() },
       { provide: BusEtaTravelClient, useValue: new FakeBusEtaTravelClient() },
+      { provide: BusShuttleGpsClient, useValue: new FakeBusShuttleGpsClient() },
+      { provide: BusShuttleStopClient, useValue: new FakeBusShuttleStopClient() },
       { provide: BusRealtimeHsscClient, useValue: new FakeBusRealtimeHsscClient() },
       { provide: BusRealtimeJongroClient, useValue: new FakeBusRealtimeJongroClient() },
       { provide: BusRoutePathClient, useValue: new FakeBusRoutePathClient() },

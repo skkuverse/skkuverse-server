@@ -29,6 +29,8 @@ import { BusEtaSmartModule } from "./bus/eta/smart/bus-eta-smart.module";
 import { BusConfigModule } from "./bus/config/bus-config.module";
 import { BusStopIndexModule } from "./bus/stop-index/bus-stop-index.module";
 import { BusStopArrivalsModule } from "./bus/stop-arrivals/bus-stop-arrivals.module";
+import { BusShuttleGpsModule } from "./bus/private-file";
+import { BusShuttleStopModule } from "./bus/private-file";
 import { AppConfigModule } from "./app-config/app-config.module";
 import { UiModule } from "./ui/ui.module";
 import { UiHomeModule } from "./ui/home/ui-home.module";
@@ -114,6 +116,8 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusConfigModule,
     BusStopIndexModule,
     BusStopArrivalsModule,
+    BusShuttleGpsModule,
+    BusShuttleStopModule,
     AppConfigModule,
     UiModule,
     UiHomeModule,
