@@ -1,9 +1,10 @@
 /**
  * Integration over BusStopArrivalsController (GET /bus/stops/:stopId/arrivals)
  * through the production pipeline (buildTestApp): the stop block,
- * 404 BUS_STOP_NOT_FOUND, the configuration order, a Jongno entry equal to the realtime view, a Jongno route left
- * out, the HSSC buses as stops away, the next three shuttle runs at a stop (14:10 KST, and 01:30 KST when the UTC
- * date is the day before), continued into the following week after Friday's last run, a suspended service, the
+ * 404 BUS_STOP_NOT_FOUND, the configuration order, a live entry equal to the live route's station entry (ADR 0019,
+ * D12), a Jongno route left out, the HSSC buses' estimates, the next three shuttle runs at a stop as scheduled
+ * arrivals (14:10 KST, and 01:30 KST when the UTC date is the day before), continued into the following week after
+ * Friday's last run, a suspended service, the
  * 503 with the stops never read, no-store, and no outbound request. Every `stopId` a
  * realtime station of `/bus/config` serves opens a page that lists that group at the station's first index, an
  * aliased pole's included.
@@ -22,11 +23,16 @@ import type { ShuttleEtaDoc } from "../../../src/bus/eta/bus-eta.document";
 import { BusEtaModule } from "../../../src/bus/eta/bus-eta.module";
 import { BusEtaRepository } from "../../../src/bus/eta/bus-eta.repository";
 import { BusEtaSmartModule } from "../../../src/bus/eta/smart/bus-eta-smart.module";
+import { BusLiveGroupModule } from "../../../src/bus/live/group/bus-live-group.module";
+import { BusLiveHsscModule } from "../../../src/bus/live/hssc/bus-live-hssc.module";
+import { BusLiveJongroModule } from "../../../src/bus/live/jongro/bus-live-jongro.module";
+import { BusLiveModule } from "../../../src/bus/live/bus-live.module";
 import { BusRealtimeArrivalModule } from "../../../src/bus/realtime/arrival/bus-realtime-arrival.module";
 import { BusRealtimeModule } from "../../../src/bus/realtime/bus-realtime.module";
 import { BusRealtimeGroupModule } from "../../../src/bus/realtime/group/bus-realtime-group.module";
 import { BusRealtimeHsscClient } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.client";
 import { BusRealtimeHsscModule } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.module";
+import { BusRealtimeHsscEtaModule } from "../../../src/bus/realtime/hssc-eta/bus-realtime-hssc-eta.module";
 import { BusRealtimeJongroClient } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.client";
 import { BusRealtimeJongroModule } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.module";
 import { BusRegistryModule } from "../../../src/bus/registry/bus-registry.module";
@@ -41,7 +47,7 @@ import { BusScheduleContentRepository } from "../../../src/bus/schedule-content/
 import { BusScheduleModule } from "../../../src/bus/schedule/bus-schedule.module";
 import { BusScheduleRepository } from "../../../src/bus/schedule/bus-schedule.repository";
 import { BusStopArrivalsModule } from "../../../src/bus/stop-arrivals/bus-stop-arrivals.module";
-import { busStopArrivals } from "../../../src/bus/stop-arrivals/bus-stop-arrivals.wire";
+import { busStopArrivals, busStopArrivalsMeta } from "../../../src/bus/stop-arrivals/bus-stop-arrivals.wire";
 import { BusStopIndexModule } from "../../../src/bus/stop-index/bus-stop-index.module";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
@@ -125,12 +131,17 @@ async function boot(stores: Stores, now = AT_14_10_KST): Promise<import("http").
       BusRealtimeJongroModule,
       BusRealtimeArrivalModule,
       BusRealtimeGroupModule,
+      BusRealtimeHsscEtaModule,
       BusStopsModule,
       BusScheduleContentModule,
       BusScheduleModule,
       BusEtaModule,
       BusEtaSmartModule,
       BusConfigModule,
+      BusLiveModule,
+      BusLiveJongroModule,
+      BusLiveHsscModule,
+      BusLiveGroupModule,
       BusStopIndexModule,
       BusStopArrivalsModule,
     ],
@@ -186,6 +197,24 @@ function liveEstimate(time: string, offsetsSec: number[]): ShuttleEtaDoc {
 type Route = { groupId: string; kind: string; [key: string]: unknown };
 const routesOf = (body: { data: { routes: Route[] } }) => body.data.routes;
 
+type RunArrival = Record<string, string | null> & { runDepartureAt: string; basis: string };
+/** Each run of a timetable entry as its departure, its time at this stop (whichever instant it carries) and its basis. */
+const runsOf = (entry: Route | undefined) =>
+  (entry!.arrivals as RunArrival[]).map((arrival) => [
+    arrival.runDepartureAt,
+    arrival.scheduledDepartureAt ?? arrival.expectedDepartureAt ?? arrival.scheduledArrivalAt ?? arrival.expectedArrivalAt,
+    arrival.basis,
+  ]);
+const kst = (date: string, time: string) => `${date}T${time}:00+09:00`;
+const withoutLang = ({ lang: _lang, ...meta }: { lang?: string }) => meta;
+
+// An HSSC bus as the poller caches it: the feed's row with its event at a KST time on the 20th, and its linear sequence.
+function hsscBus(lineNo: string, seq: number, inout: string, kstTime: string) {
+  const [hour, minute, second] = kstTime.split(":").map(Number) as [number, number, number];
+  const clock = `${hour < 12 ? "오전" : "오후"} ${hour % 12 || 12}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
+  return hsscBusDoc({ line_no: lineNo, seq: String(seq), inout, sequence: String(seq >= 5 ? seq - 4 : seq + 7), get_date: `2026-10-20 ${clock}`, eventDate: `2026-10-20 ${kstTime}` });
+}
+
 describe("GET /bus/stops/:stopId/arrivals: the stop block", () => {
   it("Shared Jongno pole: 200, no-store, the pole with its route line's coordinates, and 종로07 then 종로08", async () => {
     // Arrange
@@ -197,13 +226,15 @@ describe("GET /bus/stops/:stopId/arrivals: the stop block", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.headers["cache-control"]).toBe("no-store");
-    expect(res.body.meta).toEqual({ lang: "ko" });
+    // WHY: serverNow is what ADR 0019 adds to meta, a deliberate change of this pin.
+    expect(res.body.meta).toEqual({ lang: "ko", serverNow: "2026-10-20T14:10:00+09:00" });
     expect(res.body.data.stop).toEqual({ id: "seoul-01592", name: "혜화역1번출구", coords: { lat: 37.5834729904, lng: 127.0017632862 }, arsIds: ["01592"] });
     expect(routesOf(res.body).map((route) => [route.groupId, route.kind, route.stationIndex, route.towards])).toEqual([
-      ["jongro07", "arrivals", 16, "혜화동로터리"],
-      ["jongro08", "arrivals", 22, "혜화동로터리"],
+      ["jongro07", "live", 16, "혜화동로터리"],
+      ["jongro08", "live", 22, "혜화동로터리"],
     ]);
     expectWire(busStopArrivals, res.body.data);
+    expectWire(busStopArrivalsMeta, withoutLang(res.body.meta));
   });
 
   it("Catalog stop: the stop equals its /bus/config/commute record in en, without map", async () => {
@@ -285,9 +316,9 @@ describe("GET /bus/stops/:stopId/arrivals: routes in configuration order", () =>
     expect(byPole.status).toBe(200);
     expect(byPole.body.data.stop).toMatchObject({ id: "hssc-bus-lot", arsIds: ["01618"] });
     expect(routesOf(byPole.body).map((route) => [route.groupId, route.kind, route.serviceId ?? null, route.routeType ?? null])).toEqual([
-      ["campus", "schedule", "campus-inja", "regular"],
-      ["campus", "schedule", "campus-inja", "hakbu"],
-      ["jongro07", "arrivals", null, null],
+      ["campus", "timetable", "campus-inja", "regular"],
+      ["campus", "timetable", "campus-inja", "hakbu"],
+      ["jongro07", "live", null, null],
     ]);
     expect(bySlug.body.data).toEqual(byPole.body.data);
     expectWire(busStopArrivals, byPole.body.data);
@@ -309,13 +340,14 @@ describe("GET /bus/stops/:stopId/arrivals: routes in configuration order", () =>
 });
 
 describe("GET /bus/stops/:stopId/arrivals: Jongno entries", () => {
-  it("Same as the line view: the 종로07 entry carries the realtime route's arrivals at index 16, the waiting rewrite included", async () => {
+  it("Same as the live route: the 종로07 entry carries the live route's station entry at index 16 and the vehicles it names", async () => {
     // Arrange
     const stores = freshStores();
     const station = { stationId: "100900075", sequence: "17", stationName: "혜화역1번출구", stationNumber: "01592" };
     stores.busCache.values.set("jongro_stations_07", [
       jongroArrivalDoc({
         ...station,
+        eventDate: "2026-10-20 14:09:40.0",
         eta: "4분10초후[2번째 전]",
         buses: [
           jongroArrivalBus({ staOrd: 17, sectOrd: 15, traTime: 250, arrmsg: "4분10초후[2번째 전]", vehId: "100000201", plainNo: "서울74사2701" }),
@@ -324,12 +356,13 @@ describe("GET /bus/stops/:stopId/arrivals: Jongno entries", () => {
       }),
     ]);
     stores.busCache.values.set("jongro_locations_07", [
-      jongroPositionDoc({ sequence: "15", stationId: "100000123", vehicleId: "100000201", carNumber: "2701" }),
-      jongroPositionDoc({ sequence: "1", stationId: "100900220", vehicleId: "100000202", carNumber: "2702", isStationary: true }),
+      jongroPositionDoc({ sequence: "15", stationId: "100000123", vehicleId: "100000201", carNumber: "2701", plainNo: "서울74사2701" }),
+      jongroPositionDoc({ sequence: "1", stationId: "100900220", vehicleId: "100000202", carNumber: "2702", plainNo: "서울74사2702", isStationary: true }),
+      jongroPositionDoc({ sequence: "20", stationId: "100900099", vehicleId: "100000203", carNumber: "2703", plainNo: "서울74사2703" }),
     ]);
     const server = await boot(stores);
-    const realtime = await request(server).get("/bus/realtime/data/jongro07");
-    const lineArrivals = realtime.body.data.stationEtas.find((eta: { stationIndex: number }) => eta.stationIndex === 16).arrivals;
+    const live = await request(server).get("/bus/live/jongro07");
+    const liveStation = live.body.data.stations.find((candidate: { stationIndex: number }) => candidate.stationIndex === 16);
 
     // Act
     const res = await request(server).get("/bus/stops/seoul-01592/arrivals");
@@ -337,17 +370,23 @@ describe("GET /bus/stops/:stopId/arrivals: Jongno entries", () => {
     // Assert
     const entry = routesOf(res.body).find((route) => route.groupId === "jongro07")!;
     expect(entry).toEqual({
+      kind: "live",
       groupId: "jongro07",
-      kind: "arrivals",
       label: "종로 07",
       stationIndex: 16,
       towards: "혜화동로터리",
-      stationsVersion: realtime.body.data.stationsVersion,
-      arrivals: lineArrivals,
+      stationsVersion: live.body.data.stationsVersion,
+      updatedAt: live.body.data.updatedAt,
+      operation: liveStation.operation,
+      vehicles: live.body.data.vehicles.filter((vehicle: { id: string }) => vehicle.id !== "100000203"),
+      arrivals: liveStation.arrivals,
     });
-    expect(lineArrivals).toHaveLength(2);
-    expect(lineArrivals.map((arrival: { state: string }) => arrival.state)).toEqual(["running", "waiting"]);
-    expect(routesOf(res.body).find((route) => route.groupId === "jongro08")).toMatchObject({ stationIndex: 22, arrivals: [] });
+    // WHY: the second bus idles at the origin, so its arrival waits to depart, as the realtime view's waiting rewrite reads it.
+    expect(entry.arrivals).toMatchObject([
+      { status: "enRoute", expectedArrivalAt: "2026-10-20T14:13:50+09:00", vehicleId: "100000201", basis: "provider" },
+      { status: "waitingToDepart", expectedArrivalAt: null, vehicleId: "100000202" },
+    ]);
+    expect(routesOf(res.body).find((route) => route.groupId === "jongro08")).toMatchObject({ stationIndex: 22, operation: "noData", arrivals: [] });
     expectWire(busStopArrivals, res.body.data);
   });
 
@@ -386,44 +425,52 @@ describe("GET /bus/stops/:stopId/arrivals: Jongno entries", () => {
 });
 
 describe("GET /bus/stops/:stopId/arrivals: the HSSC entry", () => {
-  it("Two buses before the stop: buses at indexes 1 and 4 are 2 and 5 stops from index 6, nearest first", async () => {
+  it("Two buses before the stop: each with its estimate, nearest first, heading towards the next stop past the rotary", async () => {
     // Arrange
     const stores = freshStores();
-    stores.busCache.values.set("hssc", [hsscBusDoc({ sequence: "2", carNumber: "0001" }), hsscBusDoc({ sequence: "5", carNumber: "0002" })]);
+    stores.busCache.values.set("hssc", [hsscBus("32149", 6, "LEFT", "14:09:30"), hsscBus("32150", 9, "LEFT", "14:09:30")]);
     const server = await boot(stores);
 
     // Act
     const res = await request(server).get("/bus/stops/hssc-hyehwa-exit1/arrivals");
 
     // Assert
-    expect(routesOf(res.body)).toEqual([{ groupId: "hssc", kind: "approaching", label: "인사캠 셔틀버스", stationIndex: 6, approaching: [{ stopsAway: 2 }, { stopsAway: 5 }] }]);
+    const [entry] = routesOf(res.body);
+    expect(entry).toMatchObject({ kind: "live", groupId: "hssc", label: "인사캠 셔틀버스", stationIndex: 6, towards: "성균관대입구사거리", stationsVersion: null, operation: "running" });
+    // WHY: 32150 left 혜화동우체국 30 s ago, past its 24 s of travel, so it reaches the rotary now, 12 s there, then 81 s.
+    expect(entry!.arrivals).toMatchObject([
+      { status: "enRoute", stopsAway: 1, vehicleId: "32150", basis: "estimate", expectedArrivalAt: "2026-10-20T14:11:33+09:00" },
+      { status: "enRoute", stopsAway: 4, vehicleId: "32149", basis: "estimate" },
+    ]);
+    expect((entry!.vehicles as Array<{ id: string }>).map((vehicle) => vehicle.id)).toEqual(["32149", "32150"]);
     expectWire(busStopArrivals, res.body.data);
   });
 
-  it("a bus at the stop is 0 stops away, and a bus just past it is the farthest, round the loop", async () => {
+  it("a bus at the stop stands there until its dwell ends, and a bus just past it is a lap away behind the layover", async () => {
     // Arrange
     const stores = freshStores();
-    stores.busCache.values.set("hssc", [hsscBusDoc({ sequence: "9" }), hsscBusDoc({ sequence: "7" })]);
+    stores.busCache.values.set("hssc", [hsscBus("32150", 0, "LEFT", "14:09:40"), hsscBus("32149", 0, "ENTERED", "14:09:00")]);
     const server = await boot(stores);
 
     // Act
     const res = await request(server).get("/bus/stops/hssc-hyehwa-exit1/arrivals");
 
     // Assert
-    expect(routesOf(res.body)[0]).toMatchObject({ stationIndex: 6, approaching: [{ stopsAway: 0 }, { stopsAway: 9 }] });
+    expect(routesOf(res.body)[0]!.arrivals).toMatchObject([
+      { status: "atStop", stopsAway: 0, vehicleId: "32149", expectedDepartureAt: "2026-10-20T14:11:54+09:00" },
+      { status: "waitingToDepart", stopsAway: 9, vehicleId: "32150", expectedArrivalAt: null },
+    ]);
   });
 
-  it("Bus past the stop: the only bus at index 8 is 9 positions from index 6, round the loop", async () => {
+  it("No bus: the entry serves no data and no arrival", async () => {
     // Arrange
-    const stores = freshStores();
-    stores.busCache.values.set("hssc", [hsscBusDoc({ sequence: "9" })]);
-    const server = await boot(stores);
+    const server = await boot(freshStores());
 
     // Act
     const res = await request(server).get("/bus/stops/hssc-hyehwa-exit1/arrivals");
 
     // Assert
-    expect(routesOf(res.body)[0]).toMatchObject({ stationIndex: 6, approaching: [{ stopsAway: 9 }] });
+    expect(routesOf(res.body)[0]).toMatchObject({ stationIndex: 6, operation: "noData", vehicles: [], arrivals: [] });
   });
 });
 
@@ -438,27 +485,30 @@ describe("GET /bus/stops/:stopId/arrivals: shuttle entries", () => {
     // Assert
     expect(res.status).toBe(200);
     const [regular, hakbu] = routesOf(res.body);
+    const scheduledRun = (time: string) => ({
+      status: "scheduled",
+      ...{ expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null },
+      scheduledDepartureAt: kst("2026-10-20", time),
+      basis: "timetable",
+      ...{ stopsAway: null, isLastBus: false, vehicleId: null, providerText: null },
+      runDepartureAt: kst("2026-10-20", time),
+    });
     expect(regular).toEqual({
+      kind: "timetable",
       groupId: "campus",
-      kind: "schedule",
       label: "인사캠 → 자과캠",
       serviceId: "campus-inja",
       routeType: "regular",
       action: "board",
-      status: "active",
-      next: [
-        { date: "2026-10-20", departure: "14:30", time: "14:30", estimated: false },
-        { date: "2026-10-20", departure: "15:00", time: "15:00", estimated: false },
-        { date: "2026-10-20", departure: "15:30", time: "15:30", estimated: false },
-      ],
+      operation: "running",
+      vehicles: [],
+      arrivals: [scheduledRun("14:30"), scheduledRun("15:00"), scheduledRun("15:30")],
     });
-    expect(hakbu).toMatchObject({
-      routeType: "hakbu",
-      next: [
-        { date: "2026-10-23", departure: "13:00", time: "13:00", estimated: false },
-        { date: "2026-10-30", departure: "13:00", time: "13:00", estimated: false },
-      ],
-    });
+    expect(runsOf(hakbu)).toEqual([
+      [kst("2026-10-23", "13:00"), kst("2026-10-23", "13:00"), "timetable"],
+      [kst("2026-10-30", "13:00"), kst("2026-10-30", "13:00"), "timetable"],
+    ]);
+    expect((hakbu!.arrivals as Array<{ isLastBus: boolean }>).map((arrival) => arrival.isLastBus)).toEqual([true, true]);
     expectWire(busStopArrivals, res.body.data);
   });
 
@@ -471,12 +521,8 @@ describe("GET /bus/stops/:stopId/arrivals: shuttle entries", () => {
 
     // Assert
     const [regular] = routesOf(res.body);
-    expect(regular!.next).toEqual([
-      { date: "2026-10-20", departure: "14:00", time: "14:00", estimated: false },
-      { date: "2026-10-20", departure: "14:30", time: "14:30", estimated: false },
-      { date: "2026-10-20", departure: "15:00", time: "15:00", estimated: false },
-    ]);
-    expect((regular!.next as Array<{ date: string }>).some((next) => next.date === "2026-10-19")).toBe(false);
+    expect(runsOf(regular).map(([departure]) => departure)).toEqual([kst("2026-10-20", "14:00"), kst("2026-10-20", "14:30"), kst("2026-10-20", "15:00")]);
+    expect(runsOf(regular).some(([departure]) => departure!.startsWith("2026-10-19"))).toBe(false);
   });
 
   it("Drop-off with an estimate: the estimated run's time at nsc-n-center is the estimate, the others are unknown and ordered by departure", async () => {
@@ -490,12 +536,13 @@ describe("GET /bus/stops/:stopId/arrivals: shuttle entries", () => {
 
     // Assert
     const regular = routesOf(res.body).find((route) => route.serviceId === "campus-inja" && route.routeType === "regular")!;
-    expect(regular).toMatchObject({ action: "alight", status: "active" });
-    expect(regular.next).toEqual([
-      { date: "2026-10-20", departure: "15:00", time: null, estimated: false },
-      { date: "2026-10-20", departure: "14:30", time: "15:20", estimated: true },
-      { date: "2026-10-20", departure: "15:30", time: null, estimated: false },
+    expect(regular).toMatchObject({ action: "alight", operation: "running" });
+    expect(runsOf(regular)).toEqual([
+      [kst("2026-10-20", "15:00"), null, "timetable"],
+      [kst("2026-10-20", "14:30"), kst("2026-10-20", "15:20"), "estimate"],
+      [kst("2026-10-20", "15:30"), null, "timetable"],
     ]);
+    expect((regular.arrivals as RunArrival[])[1]).toMatchObject({ expectedArrivalAt: kst("2026-10-20", "15:20"), scheduledArrivalAt: null });
     expect(routesOf(res.body).map((route) => `${route.serviceId}:${route.routeType}`)).toEqual([
       "campus-inja:regular",
       "campus-inja:hakbu",
@@ -517,15 +564,9 @@ describe("GET /bus/stops/:stopId/arrivals: shuttle entries", () => {
 
     // Assert
     const [regular, hakbu] = routesOf(res.body);
-    expect(regular).toMatchObject({
-      status: "active",
-      next: [
-        { date: "2026-10-26", departure: "14:00", time: "14:00", estimated: false },
-        { date: "2026-10-26", departure: "14:30", time: "14:30", estimated: false },
-        { date: "2026-10-26", departure: "15:00", time: "15:00", estimated: false },
-      ],
-    });
-    expect(hakbu).toMatchObject({ next: [{ date: "2026-10-30", departure: "13:00", time: "13:00", estimated: false }] });
+    expect(regular).toMatchObject({ operation: "running" });
+    expect(runsOf(regular).map(([departure]) => departure)).toEqual([kst("2026-10-26", "14:00"), kst("2026-10-26", "14:30"), kst("2026-10-26", "15:00")]);
+    expect(runsOf(hakbu).map(([departure]) => departure)).toEqual([kst("2026-10-30", "13:00")]);
     expectWire(busStopArrivals, res.body.data);
   });
 
@@ -540,14 +581,10 @@ describe("GET /bus/stops/:stopId/arrivals: shuttle entries", () => {
 
     // Assert
     const [regular] = routesOf(res.body);
-    expect(regular!.next).toEqual([
-      { date: "2026-10-28", departure: "14:00", time: "14:00", estimated: false },
-      { date: "2026-10-28", departure: "14:30", time: "14:30", estimated: false },
-      { date: "2026-10-28", departure: "15:00", time: "15:00", estimated: false },
-    ]);
+    expect(runsOf(regular).map(([departure]) => departure)).toEqual([kst("2026-10-28", "14:00"), kst("2026-10-28", "14:30"), kst("2026-10-28", "15:00")]);
   });
 
-  it("Suspended service: the entry carries the smart schedule's status and an empty next", async () => {
+  it("Suspended service: the entry's operation is suspended, with no run", async () => {
     // Arrange
     const stores = freshStores();
     stores.content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-10-19", until: "2026-10-30" }));
@@ -557,14 +594,14 @@ describe("GET /bus/stops/:stopId/arrivals: shuttle entries", () => {
     const res = await request(server).get("/bus/stops/hssc-bus-lot/arrivals");
 
     // Assert
-    expect(routesOf(res.body).map((route) => [route.routeType, route.status, route.next])).toEqual([
+    expect(routesOf(res.body).map((route) => [route.routeType, route.operation, route.arrivals])).toEqual([
       ["regular", "suspended", []],
       ["hakbu", "suspended", []],
     ]);
     expectWire(busStopArrivals, res.body.data);
   });
 
-  it("a service with no timetable answers noData and an empty next", async () => {
+  it("a service with no timetable answers noData and no run", async () => {
     // Arrange
     const server = await boot(freshStores());
 
@@ -573,7 +610,7 @@ describe("GET /bus/stops/:stopId/arrivals: shuttle entries", () => {
 
     // Assert
     expect(routesOf(res.body)).toEqual([
-      { groupId: "commute", kind: "schedule", label: expect.any(String), serviceId: "commute-jeongja", routeType: "up", action: "board", status: "noData", next: [] },
+      { kind: "timetable", groupId: "commute", label: expect.any(String), serviceId: "commute-jeongja", routeType: "up", action: "board", operation: "noData", vehicles: [], arrivals: [] },
     ]);
   });
 });

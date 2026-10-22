@@ -7,7 +7,8 @@ import type { SupportedLang } from "../../infra/types";
 import { STOP_ARRIVALS_CACHE_CONTROL } from "./bus-stop-arrivals.constants";
 import { stopIdParam } from "./bus-stop-arrivals.schema";
 import { BusStopArrivalsService } from "./bus-stop-arrivals.service";
-import type { BusStopArrivals } from "./bus-stop-arrivals.wire";
+import type { WithMeta } from "../../http/response.types";
+import type { BusStopArrivals, BusStopArrivalsMeta } from "./bus-stop-arrivals.wire";
 
 const NOT_FOUND = "BUS_STOP_NOT_FOUND";
 
@@ -20,7 +21,7 @@ export class BusStopArrivalsController {
   async stopArrivals(
     @Param("stopId", new ZodValidationPipe(stopIdParam, NOT_FOUND, { status: 404 })) stopId: string,
     @Lang() lang: SupportedLang,
-  ): Promise<BusStopArrivals> {
+  ): Promise<WithMeta<BusStopArrivals, BusStopArrivalsMeta>> {
     const arrivals = await this.arrivals.findStopArrivals(stopId, lang);
     if (!arrivals) throw new AppError(NOT_FOUND, `Bus stop ${stopId} is not served`, 404);
     return arrivals;

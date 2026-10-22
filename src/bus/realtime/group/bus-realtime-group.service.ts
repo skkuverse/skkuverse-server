@@ -48,8 +48,7 @@ export class BusRealtimeGroupService {
     );
   }
 
-  // WHY: the one view of a group, which the realtime route and the stop page both serve.
-  findGroupView(groupId: string): Promise<GroupView | null> {
+  private findGroupView(groupId: string): Promise<GroupView | null> {
     const source = this.sourcesByGroupId().get(groupId);
     return source ? source() : Promise.resolve(null);
   }

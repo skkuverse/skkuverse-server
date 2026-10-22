@@ -122,6 +122,13 @@
       "GET bus/stops/:stopId/arrivals"
     ]
   },
+  "bus-stop-arrivals.busStopArrivalsMeta": {
+    "source": "src/bus/stop-arrivals/bus-stop-arrivals.wire.ts",
+    "export": "busStopArrivalsMeta",
+    "routes": [
+      "GET bus/stops/:stopId/arrivals"
+    ]
+  },
   "bus.arrival": {
     "source": "src/bus/bus.wire.ts",
     "export": "arrival",
