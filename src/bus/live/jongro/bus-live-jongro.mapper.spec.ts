@@ -117,7 +117,7 @@ describe("toLiveJongroGroup", () => {
               expectedArrivalAt: "2026-10-20T10:02:00+09:00",
               ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
               basis: "provider",
-              stopsAway: 1,
+              stopsAway: 2,
               isLastBus: false,
               vehicleId: "100000103",
               providerText: "3분후[1번째 전]",
@@ -147,6 +147,41 @@ describe("toLiveJongroGroup", () => {
 
     // Assert
     expect(group.vehicles).toEqual([{ id: "100000200", plateNumber: "서울74사5600", occupancy: null, isLastBus: true, position: null, trajectory: null }]);
+  });
+
+  it("serves a bus's last-bus flag once: true on the vehicle and on every arrival naming it when any of its rows says so", () => {
+    // Arrange
+    // QUIRK(topis): the arriving-soon text never carries the last-bus marker, so a bus's rows can disagree; here the nearest reads false.
+    const nextStop = { bus: jongroArrivalBus({ staOrd: 2, sectOrd: 2, traTime: 40, arrmsg: "곧 도착" }), arrival: running({ state: "arriving", stopsAway: 0, message: "곧 도착" }), travelSeconds: 40 };
+    const later = { bus: jongroArrivalBus({ staOrd: 3, sectOrd: 2, traTime: 180, arrmsg: "[막차] 3분후[1번째 전]" }), arrival: running({ isLastBus: true, message: "[막차] 3분후[1번째 전]" }), travelSeconds: 180 };
+    const rows = [
+      { stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [nextStop] },
+      { stationIndex: 2, madeAtMs: MADE_AT_MS, slots: [later] },
+    ];
+
+    // Act
+    const group = toLiveJongroGroup("jongro07", reading({ rows }), new Map());
+
+    // Assert
+    expect(group.vehicles.map(({ id, isLastBus }) => [id, isLastBus])).toEqual([["100000103", true]]);
+    expect(group.stations.flatMap(({ arrivals }) => arrivals.map(({ vehicleId, isLastBus }) => [vehicleId, isLastBus]))).toEqual([
+      ["100000103", true],
+      ["100000103", true],
+    ]);
+  });
+
+  it("serves a bus its position shows standing at the station a row names it at as there, 0 stops away", () => {
+    // Arrange
+    // WHY: the position (stopFlag 1 at station index 1) is newer than the row, which still reads arriving soon there.
+    const atStop = { ...tracking, status: "atStop" as const, progress: 0, nextStopInSec: null };
+    const positions = [{ position: jongroPositionDoc({ sequence: "2", isAtStop: true }), tracking: atStop, checkedAt: POSITIONS_AT }];
+    const slot = { bus: jongroArrivalBus({ staOrd: 2, sectOrd: 2, traTime: 10, arrmsg: "곧 도착" }), arrival: running({ state: "arriving", stopsAway: 0, message: "곧 도착" }), travelSeconds: 10 };
+
+    // Act
+    const group = toLiveJongroGroup("jongro07", reading({ rows: [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [slot] }], positions }), new Map());
+
+    // Assert
+    expect(group.stations[0]?.arrivals).toMatchObject([{ status: "atStop", stopsAway: 0, vehicleId: "100000103", providerText: "곧 도착" }]);
   });
 
   it("serves a waiting bus's position with no trajectory", () => {
