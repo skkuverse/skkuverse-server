@@ -1,6 +1,6 @@
 /**
  * GET /app/config: the boot-time client config (version gates, the bridge
- * allowlist, the web origin, first-party mini-app origins) in the standard
+ * allowlist, the web origin, first-party mini-app and game origins) in the standard
  * envelope, cacheable for five minutes, with no auth. Runs main.ts's pipeline for
  * this route: request logging, JSON body, LangMiddleware, the general limiter
  * (AppConfigModule binds it on /app), the controller, ResponseInterceptor and
@@ -115,6 +115,22 @@ describe("GET /app/config", () => {
       "https://booth-box.mini.skkuverse.com": "booth-box",
       "https://inja.mini.skkuverse.com": "inja",
       "https://timetable.mini.skkuverse.com": "timetable",
+    });
+  });
+
+  it("maps each first-party game origin to its game, spelled out", async () => {
+    // Act
+    const res = await request(httpServer).get("/app/config");
+
+    // Assert
+    // Literal for the same reason as the mini-app origins: the app grants a
+    // page on one of these origins the game methods, for the game named here
+    // only, so a wrong entry hands one game's grants to another's page.
+    expect(res.body.data.games.origins).toEqual({
+      "https://apple-game.game.skkuverse.com": "apple-game",
+      "https://suika-game.game.skkuverse.com": "suika-game",
+      "https://wave-run.game.skkuverse.com": "wave-run",
+      "https://subway-typing.game.skkuverse.com": "subway-typing",
     });
   });
 
