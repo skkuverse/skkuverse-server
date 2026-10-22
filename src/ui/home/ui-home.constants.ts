@@ -12,5 +12,5 @@ export const HOME_LAYOUT_DATASET = "home-layout";
 export const HOME_LAYOUT_LOG_INTERVAL_MS = 60_000;
 
 // WHY: the games older installed builds bundle; a tile may name one before the games dataset lists it. Frozen.
-// SEE: docs/reference/games-api.md (home tiles and bundled games)
+// SEE: docs/reference/games-api.md (Push validation)
 export const BUNDLED_GAME_IDS: readonly string[] = Object.freeze(["wave-run", "subway-typing", "apple-game", "suika-game"]);
