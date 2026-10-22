@@ -4,7 +4,7 @@
  * fallback, and the history's nulls for rows that lack a field.
  */
 import type { SentNotificationDoc } from "../miniapps.document";
-import { toFeedEntry, toHistoryEntry, toSendTrace, toSentNotification } from "./miniapps-notifications.mapper";
+import { toFeedEntry, toHistoryEntry, toReplayedOutcome, toSendTrace, toSentNotification } from "./miniapps-notifications.mapper";
 
 const SENT_AT = new Date("2026-10-14T03:00:00.000Z");
 
@@ -31,6 +31,50 @@ describe("toSentNotification", () => {
 
     // Assert
     expect(JSON.stringify(doc)).toBe(JSON.stringify(DOC));
+  });
+});
+
+describe("toSentNotification with an Idempotency-Key", () => {
+  it("writes the key last, after the row's other fields", () => {
+    // Arrange
+    const content = { title_ko: "제목", body_ko: "본문", title_en: "Title", body_en: null, actionType: "route", actionValue: "/campus" } as const;
+
+    // Act
+    const doc = toSentNotification(content, { id: "n1", miniAppId: "eskara-2026", sentAt: SENT_AT, idempotencyKey: "retry-1" });
+
+    // Assert
+    expect(JSON.stringify(doc)).toBe(JSON.stringify({ ...DOC, idempotencyKey: "retry-1" }));
+  });
+});
+
+describe("toReplayedOutcome", () => {
+  it("answers a delivered row with its counts", () => {
+    // Act & Assert
+    expect(toReplayedOutcome({ ...DOC, delivery: { sent: 5, failed: 1, cleanedUp: 0 } })).toEqual({
+      notificationId: "n1",
+      delivery: { sent: 5, failed: 1, cleanedUp: 0 },
+      outcome: "delivered",
+    });
+  });
+
+  it.each(["not_sent", "unknown"] as const)("answers a failed row with its stored %s outcome and error", (outcome) => {
+    // Act & Assert
+    expect(toReplayedOutcome({ ...DOC, deliveryError: { outcome, error: "boom" } })).toEqual({
+      notificationId: "n1",
+      delivery: null,
+      outcome,
+      error: "boom",
+    });
+  });
+
+  it("answers unknown for a row with neither delivery nor deliveryError", () => {
+    // Act & Assert
+    expect(toReplayedOutcome(DOC)).toEqual({
+      notificationId: "n1",
+      delivery: null,
+      outcome: "unknown",
+      error: "the first send with this Idempotency-Key has no recorded outcome yet; check the Cloud Function log for this notificationId",
+    });
   });
 });
 

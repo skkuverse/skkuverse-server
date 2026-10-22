@@ -3,6 +3,9 @@
  * real read's filter, sort and limit (pinned in
  * miniapps-notifications.repository.spec.ts): one mini app's rows, newest
  * first. The two record writes set their field on the row, as `$set` does.
+ * A claim refuses a key one row of the same mini app already holds, as the
+ * unique partial index does, and the lookup matches both fields;
+ * `keyIndexMissing` makes every claim succeed, as before the poller builds it.
  * `failWith` makes every call reject.
  */
 import type { DeliveryCounts, DeliveryError, SentNotificationDoc } from "../../../../src/miniapps/miniapps.document";
@@ -12,12 +15,27 @@ import type { PublicOf } from "../public-of";
 export class FakeMiniappsNotificationsRepository implements PublicOf<MiniappsNotificationsRepository> {
   notifications: SentNotificationDoc[] = [];
   failWith: Error | null = null;
+  keyIndexMissing = false;
 
   async onModuleInit(): Promise<void> {}
 
   async insertSentNotification(doc: SentNotificationDoc): Promise<void> {
     this.fail();
     this.notifications.push({ ...doc });
+  }
+
+  async claimSentNotification(doc: SentNotificationDoc): Promise<boolean> {
+    this.fail();
+    const { miniAppId, idempotencyKey } = doc;
+    const held = !this.keyIndexMissing && idempotencyKey !== undefined && this.notifications.some((row) => row.miniAppId === miniAppId && row.idempotencyKey === idempotencyKey);
+    if (held) return false;
+    this.notifications.push({ ...doc });
+    return true;
+  }
+
+  async findSentNotificationByIdempotencyKey(miniAppId: string, idempotencyKey: string): Promise<SentNotificationDoc | null> {
+    this.fail();
+    return this.notifications.find((row) => row.miniAppId === miniAppId && row.idempotencyKey === idempotencyKey) ?? null;
   }
 
   async recordDelivery(id: string, delivery: DeliveryCounts): Promise<void> {
