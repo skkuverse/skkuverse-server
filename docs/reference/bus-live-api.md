@@ -90,8 +90,8 @@ One bus at one station. Every key is always present; null means unknown.
 | `expectedDepartureAt` | instant \| null | When it leaves it: a bus standing here |
 | `scheduledArrivalAt`, `scheduledDepartureAt` | instant \| null | The timetable's; null on a live line |
 | `basis` | enum | `provider` (TOPIS predicted it), `estimate` (this server did, from the HSSC engine) or `timetable` |
-| `stopsAway` | int \| null | The stations with a stop the bus reaches first, plus one: `1` its next stop, `0` standing here. A bus that just left is a lap away on a loop. Null when TOPIS names no vehicle |
-| `isLastBus` | boolean \| null | Null on the HSSC line |
+| `stopsAway` | int \| null | The stations with a stop the bus reaches first, plus one: `1` its next stop, `0` standing here. A bus that just left is a lap away on a loop. On Jongno it is one more than TOPIS's own count (the `N` of `[N번째 전]` in `providerText`, so 곧 도착 is `1`), and `0` only where a row still names a bus its position shows standing at that station: TOPIS drops a bus from its station's row once it stands there, so a standing Jongno bus usually shows only as its vehicle's `atStop` position. Null when TOPIS names no vehicle |
+| `isLastBus` | boolean \| null | The named vehicle's own `isLastBus`, the same on every arrival naming it; for a slot that names no vehicle, that slot's flag. Null on the HSSC line |
 | `vehicleId` | string \| null | A key of `vehicles`; null when the source names no vehicle (TOPIS's 출발대기 slot) |
 | `providerText` | string \| null | The upstream's own text as received (TOPIS `arrmsg`, Korean); null on the HSSC line |
 
@@ -115,7 +115,7 @@ Order: a bus at the station first (standing there, or laying over at its own tur
 | `id` | string | Stable for the service day: TOPIS `vehId`, the HSSC line number (one line is one bus) |
 | `plateNumber` | string \| null | The full plate (`서울74사5537`); shorten it on the client if the design wants the last four digits |
 | `occupancy` | object \| null | `{ level: "relaxed" \| "normal" \| "crowded", passengerCount: int \| null }`, from the TOPIS row nearest ahead of the bus |
-| `isLastBus` | boolean \| null | From the same row; null when no row names the bus |
+| `isLastBus` | boolean \| null | True when any TOPIS row naming the bus says 막차 (TOPIS flags it per row, and a 곧 도착 row carries no [막차] text); every arrival naming the bus carries this value. Null when no row names the bus |
 | `position` | object \| null | Null for a bus an arrival names but no position row has |
 | `trajectory` | array \| null | Knots `{ at, s }`, ascending; null when the bus is not moving or has no position |
 

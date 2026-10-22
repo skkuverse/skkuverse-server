@@ -53,7 +53,7 @@
             "scheduledArrivalAt": null,
             "scheduledDepartureAt": null,
             "basis": "provider",
-            "stopsAway": 1,
+            "stopsAway": 2,
             "isLastBus": false,
             "vehicleId": "100000103",
             "providerText": "3분후[1번째 전]"
@@ -85,7 +85,7 @@
             "scheduledArrivalAt": null,
             "scheduledDepartureAt": null,
             "basis": "provider",
-            "stopsAway": 2,
+            "stopsAway": 3,
             "isLastBus": false,
             "vehicleId": "100000103",
             "providerText": "5분후[2번째 전]"

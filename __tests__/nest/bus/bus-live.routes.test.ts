@@ -131,13 +131,41 @@ describe("GET /bus/live/:groupId for a Jongno route", () => {
             expectedArrivalAt: "2026-10-20T10:02:00+09:00",
             ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
             basis: "provider",
-            stopsAway: 1,
+            stopsAway: 2,
             isLastBus: false,
             vehicleId: "100000103",
             providerText: "3분후[1번째 전]",
           },
         ],
       },
+    ]);
+  });
+});
+
+describe("GET /bus/live/:groupId counts Jongno stops away as ADR 0019 D4 does", () => {
+  it("serves the station a bus heads to as 1 stop away and arriving on TOPIS's 곧 도착, the one after its [2번째 전] as 3", async () => {
+    // Arrange
+    // WHY: TOPIS's own pair for 서울70사5538 on 2026-10-17 (topis-jongro-positions.json at 19:11:45, topis-jongro-arrivals.json
+    // jongro07Running at 19:12:10), moved to 09:59 KST on the 20th: the position has it past 학생회관 (index 1) toward 비천당.
+    busCache.values.set("jongro_locations_07", [
+      jongroPositionDoc({ sequence: "2", stationId: "100900221", vehicleId: "100000114", plainNo: "서울70사5538", sectDist: 0.06, fullSectDist: 0.289, observedAt: "2026-10-20T09:59:35+09:00" }),
+    ]);
+    const bus = { vehId: "100000114", plainNo: "서울70사5538", sectOrd: 3 };
+    busCache.values.set("jongro_stations_07", [
+      jongroArrivalDoc({ stationId: "100000424", sequence: "3", eventDate: "2026-10-20 10:00:00.0", buses: [jongroArrivalBus({ ...bus, staOrd: 3, traTime: 8, arrmsg: "곧 도착" })] }),
+      jongroArrivalDoc({ stationId: "100000421", sequence: "5", eventDate: "2026-10-20 10:00:00.0", buses: [jongroArrivalBus({ ...bus, staOrd: 5, traTime: 94, arrmsg: "2분후[2번째 전]" })] }),
+    ]);
+
+    // Act
+    const res = await request(httpServer).get("/bus/live/jongro07");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(liveGroup, res.body.data);
+    expect(res.body.data.vehicles).toMatchObject([{ id: "100000114", position: { stationIndex: 1, status: "inTransit" } }]);
+    expect(res.body.data.stations.map(({ stationIndex, arrivals }: { stationIndex: number; arrivals: Array<{ status: string; stopsAway: number }> }) => [stationIndex, arrivals.map(({ status, stopsAway }) => [status, stopsAway])])).toEqual([
+      [2, [["arriving", 1]]],
+      [4, [["enRoute", 3]]],
     ]);
   });
 });
