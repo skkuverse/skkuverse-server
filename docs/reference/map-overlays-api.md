@@ -233,7 +233,10 @@ client that predates the field ignores it and opens the sheet low, as before.
 A `webview` value is authored root-relative (`/eskara/entry`) and resolved against `WEBVIEW_ORIGIN`
 at serve time, so the client only ever sees an absolute URL — a relative string handed to a URL
 opener is the shape of an open redirect. `route` is the exception and stays root-relative, because it
-reaches the app's own navigator rather than an opener.
+reaches the app's own navigator rather than an opener. An `external` value is an `https://` URL that
+parses with a host. No value carries whitespace, and a `route`, an `external` value or a root-relative
+`webview` value carries no `\` or control character either: the URL parser folds `\` into `/` and
+drops or encodes the rest, so the page opened would not be the one written. Each type's rule is `toLinkProblem` in `src/shared/link-action.util.ts`.
 
 `miniapp` is the other exception: its value is a **mini-app target**, `<miniAppId>[<root-relative
 path>]` — `eskara-2026` opens that mini app at its registered `startUrl`, and
