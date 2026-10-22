@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import config from "../infra/config";
-import { BRIDGE_ORIGINS, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEB_ORIGIN } from "../infra/origins";
+import { BRIDGE_ORIGINS, GAME_ID_BY_FIRST_PARTY_ORIGIN, MINIAPP_ID_BY_FIRST_PARTY_ORIGIN, WEB_ORIGIN } from "../infra/origins";
 import type { AppClientConfig } from "./app-config.wire";
 
 // WHY: the bridge allowlist rides on /app/config because the app already fetches it at boot: the
@@ -15,6 +15,7 @@ export class AppConfigService {
       webview: { bridgeOrigins: [...BRIDGE_ORIGINS] },
       web: { origin: WEB_ORIGIN },
       miniapps: { origins: { ...MINIAPP_ID_BY_FIRST_PARTY_ORIGIN } },
+      games: { origins: { ...GAME_ID_BY_FIRST_PARTY_ORIGIN } },
     };
   }
 }

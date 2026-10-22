@@ -344,10 +344,11 @@ function stopTimesMismatch(entry, sequence) {
  * times is not checked. Each as { serviceId, routeType, patternId, time,
  * message }, the message naming all four.
  *
- * Both writers run it (openspec/changes/unify-bus-stops design D6) over the
- * served half of splitExpired: `npm run data -- push bus-stops` against the
- * target's stored timetables, and `npm run schedule` against the target's
- * stored bus-stops. It reads the sequences raw,
+ * Both writers run it
+ * (openspec/changes/archive/2026-10-22-unify-bus-stops design D6)
+ * over the served half of splitExpired: `npm run data -- push bus-stops`
+ * against the target's stored timetables, and `npm run schedule` against the
+ * target's stored bus-stops. It reads the sequences raw,
  * counting stops and reading `timing`, since this is CommonJS outside dist/.
  */
 function stopTimesMismatches(docs, sequences) {
@@ -376,9 +377,10 @@ function kstDateOf(now) {
  * still serves today, and one with no end never stops.
  *
  * Both writers check only the served half with stopTimesMismatches (review F1
- * of openspec/changes/unify-bus-stops wave 2): `npm run schedule` never deletes
- * a pattern, so an old semester's stays stored, and checking its stop times
- * against a new sequence length would refuse both tools for good. The smart
+ * of openspec/changes/archive/2026-10-22-unify-bus-stops wave 2):
+ * `npm run schedule` never deletes a pattern, so an old semester's stays
+ * stored, and checking its stop times against a new sequence length would
+ * refuse both tools for good. The smart
  * view may still show it on an earlier day of this week, where the estimate
  * mapper leaves an entry that does not fit its sequence as stored.
  */

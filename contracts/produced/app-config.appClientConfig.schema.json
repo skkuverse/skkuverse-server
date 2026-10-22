@@ -79,6 +79,23 @@
       "required": [
         "origins"
       ]
+    },
+    "games": {
+      "type": "object",
+      "properties": {
+        "origins": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "origins"
+      ]
     }
   },
   "required": [
