@@ -41,7 +41,8 @@ import type { Clock } from "../infra/clock";
 import type { CalendarRepository } from "./calendar.repository";
 import { CalendarService } from "./calendar.service";
 import { DATASET_CACHE_TTL_MS } from "../shared/dataset.constants";
-import type { PublicHoliday } from "./calendar.types";
+import { ACADEMIC_READ_RETRY_MS } from "./calendar.constants";
+import type { AcademicPeriod, PublicHoliday } from "./calendar.types";
 
 const HOUR_MS = 60 * 60_000;
 // 01:30 KST on 2026-10-17, still the 16th in UTC.
@@ -447,6 +448,48 @@ describe("CalendarService.current dayOf academic period with no valid crawled ye
 
     // Assert
     expect(day.academicPeriod).toEqual({ kind: "semester", term: 1, source: "rule" });
+  });
+});
+
+describe("CalendarService.current when the crawled years cannot be read", () => {
+  const readFailures = () => mockLogger.error.mock.calls.filter(([fields]) => fields?.event === "academic_calendar.read_failed");
+
+  it("answers every year from the rule, logs the failure once, and reads again only after ACADEMIC_READ_RETRY_MS", async () => {
+    // Arrange
+    const repository = storedCalendarRepository().store(2026, CALENDAR_2026).storeAcademicYear(crawledYear("2026"));
+    const failure = new Error("server selection timed out");
+    repository.failAcademicWith = failure;
+    const { service, advance } = setup(repository);
+    const periods: AcademicPeriod[] = [];
+    for (let i = 0; i < 3; i++) periods.push((await (await service.current()).dayOf("2026-08-31")).academicPeriod);
+    const heldKey = (await service.current()).revisionKey;
+    const readsWhileHeld = repository.academicReadCount;
+    advance(ACADEMIC_READ_RETRY_MS);
+    repository.failAcademicWith = null;
+
+    // Act
+    const recovered = await service.current();
+
+    // Assert
+    expect(periods).toEqual(Array(3).fill({ kind: "semester", term: 2, source: "rule" }));
+    expect(readFailures()).toEqual([[expect.objectContaining({ err: failure }), expect.any(String)]]);
+    expect(readsWhileHeld).toBe(1);
+    expect((await recovered.dayOf("2026-08-31")).academicPeriod.source).toBe("crawled");
+    expect(recovered.revisionKey).not.toBe(heldKey);
+  });
+
+  it("logs one failure for the callers that wait on one failed read", async () => {
+    // Arrange
+    const repository = storedCalendarRepository();
+    repository.failAcademicWith = new Error("server selection timed out");
+    const { service } = setup(repository);
+
+    // Act
+    const calendars = await Promise.all([service.current(), service.current(), service.current()]);
+
+    // Assert
+    expect(calendars.map((calendar) => calendar.revisionKey)).toEqual(["1", "1", "1"]);
+    expect(readFailures()).toHaveLength(1);
   });
 });
 

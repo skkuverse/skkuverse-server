@@ -18,5 +18,9 @@ export const TERM_TWO_ANCHOR_DAY = "09-01";
 export const TERM_WEEKS = 16;
 export const DAYS_BACK_TO_NEAREST_MONDAY = 3;
 
+// WHY: a crawled-years read that fails with nothing cached is answered by the rule, and retried once a minute rather
+// than once a request.
+export const ACADEMIC_READ_RETRY_MS = 60_000;
+
 // WHY: a year a fallback answers recurs on every date of it; one line an hour per year shows it without a flood.
 export const RULE_FALLBACK_LOG_INTERVAL_MS = 60 * 60_000;
