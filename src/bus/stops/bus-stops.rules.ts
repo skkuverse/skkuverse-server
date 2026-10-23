@@ -2,6 +2,7 @@ import { isMediaUrl } from "../../infra/media-url";
 import { SUPPORTED_LANGS } from "../../infra/types";
 import { haversineM } from "../../shared/distance.util";
 import { isRecord } from "../../shared/object.util";
+import { isHsscPassThrough } from "../bus.rules";
 import type { ServiceConfigMap } from "../bus.types";
 import type { LaneStrategies } from "../eta/lane/bus-eta-lane.types";
 import { MAX_ETA_STOPS, MAX_WALK_M, OPTIONAL_LANGS, PANO_ID_PATTERN, STOP_END } from "./bus-stops.constants";
@@ -401,6 +402,12 @@ function laneStrategyIssues({ sequences }: BusStopsData, { optIns, laneStrategie
   );
 }
 
+function passThroughMismatchOf(stopId: string | null, index: number): string | null {
+  if ((stopId === null) === isHsscPassThrough(index)) return null;
+  const source = "(isHsscPassThrough in src/bus/bus.rules.ts)";
+  return stopId === null ? `is null, but the HSSC estimates count position ${index} as a stop ${source}` : `names the stop "${stopId}" at position ${index}, which the HSSC estimates pass through ${source}`;
+}
+
 function hsscLineIssues({ stops, hssc }: BusStopsData): BusStopsIssue[] {
   const stopIds = new Set(stops.map((stop) => stop.id));
   const positionByStopId = new Map<string, number>();
@@ -411,6 +418,8 @@ function hsscLineIssues({ stops, hssc }: BusStopsData): BusStopsIssue[] {
     if (station.isFirstStation && index !== 0) issues.push({ path: [...at, "isFirstStation"], message: "only the first position may be the first station" });
     if (station.isLastStation && index !== last) issues.push({ path: [...at, "isLastStation"], message: "only the last position may be the last station" });
     const { stopId } = station;
+    const passThroughIssue = passThroughMismatchOf(stopId, index);
+    if (passThroughIssue !== null) return [...issues, { path: [...at, "stopId"], message: passThroughIssue }];
     if (stopId === null) return issues;
     const earlier = positionByStopId.get(stopId);
     if (!stopIds.has(stopId)) issues.push({ path: [...at, "stopId"], message: `names the stop "${stopId}", which the dataset's stops do not hold` });

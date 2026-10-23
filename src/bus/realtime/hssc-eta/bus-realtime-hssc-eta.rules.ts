@@ -1,5 +1,6 @@
 import { HSSC_POSITION_COUNT } from "../../bus.constants";
-import { DEPARTURE_INOUTS, MAX_OVERDUE_SECONDS, NON_STOP_SEQS, SEGMENTS_BY_SEQ, TURNAROUND_SEQ } from "./bus-realtime-hssc-eta.constants";
+import { isHsscPassThrough } from "../../bus.rules";
+import { DEPARTURE_INOUTS, MAX_OVERDUE_SECONDS, SEGMENTS_BY_SEQ, TURNAROUND_SEQ } from "./bus-realtime-hssc-eta.constants";
 import type { HsscBusAnchor, HsscEta, HsscLapTime, HsscSegment } from "./bus-realtime-hssc-eta.types";
 
 const SECOND_MS = 1000;
@@ -15,7 +16,7 @@ export function isConfirmedDeparture(seq: number, inout: string): boolean {
 }
 
 export function isHsscStop(seq: number): boolean {
-  return Number.isInteger(seq) && seq >= 0 && seq < HSSC_POSITION_COUNT && !NON_STOP_SEQS.includes(seq);
+  return Number.isInteger(seq) && seq >= 0 && seq < HSSC_POSITION_COUNT && !isHsscPassThrough(toStationIndex(seq));
 }
 
 // WHY: a lap starts as a bus leaves the turnaround, so a position counts from there (0) to the stop before it (10), the line's index.

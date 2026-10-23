@@ -28,11 +28,11 @@
     "reason": "(An agent tooling note is left out of the public history.)"
   },
   "src/bus/realtime/hssc-eta/bus-realtime-hssc-eta.rules.ts": {
-    "max": 111,
+    "max": 112,
     "reason": "ADR 0010 D9, no reachable seam: the overdue bound (`isStalled`, ADR 0018 D6) and the layover (`isLayingOver`) decide the same anchor's lap times, layover and per-stop status from the same segment medians (`segmentOf`) the rest of the engine sums, and a sibling sub-module cannot hold them, since a sibling's rules are never imported across sub-modules (sub-modules.test.ts) and `BusLiveHsscService` is at the four-dependency constructor cap in eslint.config.js."
   },
   "src/bus/stops/bus-stops.rules.ts": {
-    "max": 406,
+    "max": 414,
     "reason": "ADR 0010 D9, no domain seam: the push checks `toBusStopsIssues` and `busStopsReferences` that scripts/lib/datasets/catalog.js runs, and the read check `BusStopsService` applies to every stored revision (`validateStopCatalog`, `subwayStationErrors`, `storedLineAndAliasErrors`), are one validator of the `bus-stops` dataset: `toBusStopsIssues` reads the labels of `validateStopCatalog`'s messages back into dataset paths, so a sub-module holding the push half would be a Nest module with no provider, imported by nothing in src/, holding rules alone. The catalog checks list every issue in the words bus-stops.rules.spec.ts pins, so they stay hand-written beside the structural schema `busStopsDataset` (docs/plans/private-file)."
   },
   "src/map/layer-set/map-layer-set.rules.ts": {
