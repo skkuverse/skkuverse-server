@@ -5,8 +5,8 @@ export interface HsscLineStation {
   /** WHY: one of the dataset's stops, or null at a position the bus passes without stopping. */
   stopId: string | null;
   name: string;
-  /** WHY: the English name, served under the Korean one in every language. */
-  subtitle: string;
+  /** WHY: the English name, served under the Korean one in every language; left out, the line carries only the arrival. */
+  subtitle?: string;
   isFirstStation: boolean;
   isLastStation: boolean;
   isRotationStation: boolean;
