@@ -4,7 +4,8 @@
  * 404 BUS_STOP_NOT_FOUND, the configuration order, a live entry equal to the live route's station entry (ADR 0019,
  * D12), a Jongno route left out, the HSSC buses' estimates, the next three shuttle runs at a stop as scheduled
  * arrivals (14:10 KST, and 01:30 KST when the UTC date is the day before), continued into the following week after
- * Friday's last run, a suspended service, the
+ * Friday's last run, a suspended service, a live entry's `action` (alight at an HSSC position the data flags drop-off
+ * only, board elsewhere) and its `towards` named as the next stop's own page names it, the
  * 503 with the stops never read, no-store, and no outbound request. Every `stopId` a
  * realtime station of `/bus/config` serves opens a page that lists that group at the station's first index, an
  * aliased pole's included.
@@ -375,6 +376,7 @@ describe("GET /bus/stops/:stopId/arrivals: Jongno entries", () => {
       label: "종로 07",
       stationIndex: 16,
       towards: "혜화동로터리",
+      action: "board",
       stationsVersion: live.body.data.stationsVersion,
       updatedAt: live.body.data.updatedAt,
       operation: liveStation.operation,
@@ -471,6 +473,51 @@ describe("GET /bus/stops/:stopId/arrivals: the HSSC entry", () => {
 
     // Assert
     expect(routesOf(res.body)[0]).toMatchObject({ stationIndex: 6, operation: "noData", vehicles: [], arrivals: [] });
+  });
+});
+
+// WHY: riders cannot board at the 하교 direction's drop-off-only stops, which only a name marker told apart (owner, 2026-10-23).
+describe("GET /bus/stops/:stopId/arrivals: drop-off-only HSSC stops", () => {
+  /** `bus-stops` revision 1 with 올림픽기념국민생활관 and 혜화동우체국 (indexes 3 and 4) flagged drop-off only. */
+  function withAlightOnlyStops(): Stores {
+    const data = busStopsFixture() as { hssc: { stations: Array<Record<string, unknown>> } };
+    data.hssc.stations[3]!.isAlightOnly = true;
+    data.hssc.stations[4]!.isAlightOnly = true;
+    return { ...freshStores(), stops: storedBusStopsRepository(data) };
+  }
+
+  it("serves the HSSC entry at 올림픽기념국민생활관 with action alight, heading towards 혜화동우체국 by its stop's name", async () => {
+    // Arrange
+    const stores = withAlightOnlyStops();
+    stores.busCache.values.set("hssc", [hsscBus("32149", 1, "LEFT", "14:09:30")]);
+    const server = await boot(stores);
+
+    // Act
+    const res = await request(server).get("/bus/stops/hssc-olympic-hall/arrivals");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(routesOf(res.body)).toEqual([expect.objectContaining({ kind: "live", groupId: "hssc", stationIndex: 3, towards: "혜화동우체국", action: "alight", operation: "running" })]);
+    expectWire(busStopArrivals, res.body.data);
+  });
+
+  it("serves a boardable HSSC stop and a Jongno pole with action board, and 정문 heads towards 올림픽기념국민생활관 without the name's marker", async () => {
+    // Arrange
+    const server = await boot(withAlightOnlyStops());
+
+    // Act
+    const gate = await request(server).get("/bus/stops/hssc-main-gate-out/arrivals");
+    const gateEn = await request(server).get("/bus/stops/hssc-main-gate-out/arrivals").set("Accept-Language", "en");
+    const pole = await request(server).get("/bus/stops/seoul-01592/arrivals");
+
+    // Assert
+    expect(routesOf(gate.body)).toEqual([expect.objectContaining({ groupId: "hssc", stationIndex: 2, towards: "올림픽기념국민생활관", action: "board" })]);
+    expect(routesOf(gateEn.body)).toEqual([expect.objectContaining({ groupId: "hssc", towards: "Olympic Hall" })]);
+    expect(routesOf(pole.body).map((route) => [route.groupId, route.action])).toEqual([
+      ["jongro07", "board"],
+      ["jongro08", "board"],
+    ]);
+    expectWire(busStopArrivals, gate.body.data);
   });
 });
 

@@ -1,0 +1,77 @@
+{
+  "_about": "Synthetic, never captured: GET /bus/config/hssc in en as the server serves bus-stops revision 2 (production's on 2026-10-23, no HSSC subtitles) with isAlightOnly true at 올림픽기념국민생활관 and 혜화동우체국 (indexes 3 and 4), the push planned after the field deploys; built by hand from realtime-hssc-stop-ids.json, stations cut to indexes 3-5. The names keep their [하차전용] marker until the app reads the flag and a later push removes it.",
+  "data": {
+    "id": "hssc",
+    "screenType": "realtime",
+    "label": "HSSC Shuttle Bus",
+    "visibility": {
+      "type": "always"
+    },
+    "card": {
+      "themeColor": "003626",
+      "iconType": "shuttle",
+      "busTypeText": "SKKU",
+      "subtitle": "Bus Stop (Humanities) ↔ 600th Anniversary Hall"
+    },
+    "screen": {
+      "dataEndpoint": "/bus/realtime/data/hssc",
+      "refreshInterval": 10,
+      "lastStationIndex": 10,
+      "stations": [
+        {
+          "index": 3,
+          "name": "올림픽기념국민생활관 [하차전용]",
+          "subtitle": null,
+          "stationNumber": null,
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "isPassThrough": false,
+          "isAlightOnly": true,
+          "transferLines": [],
+          "stopId": "hssc-olympic-hall"
+        },
+        {
+          "index": 4,
+          "name": "혜화동우체국 [하차전용]",
+          "subtitle": null,
+          "stationNumber": null,
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "isPassThrough": false,
+          "isAlightOnly": true,
+          "transferLines": [],
+          "stopId": "hssc-hyehwa-post-office"
+        },
+        {
+          "index": 5,
+          "name": "혜화동로터리 [미정차]",
+          "subtitle": null,
+          "stationNumber": null,
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "isPassThrough": true,
+          "isAlightOnly": false,
+          "transferLines": []
+        }
+      ],
+      "features": [
+        {
+          "type": "info",
+          "url": "https://webview.skkuverse.com/bus/hssc/info"
+        }
+      ],
+      "liveEndpoint": "/bus/live/hssc",
+      "isLoop": true,
+      "capabilities": {
+        "positionSource": "stopEvents",
+        "occupancy": false,
+        "plateNumber": false,
+        "lastBus": false,
+        "lowFloor": false
+      }
+    }
+  }
+}

@@ -10,6 +10,8 @@ export interface HsscLineStation {
   isFirstStation: boolean;
   isLastStation: boolean;
   isRotationStation: boolean;
+  /** WHY: riders may only get off here; a revision stored without the key reads it as false. */
+  isAlightOnly?: boolean;
   transferLines: TransferLine[];
 }
 

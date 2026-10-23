@@ -507,3 +507,59 @@ describe("GET /bus/config/hssc for a bus-stops revision without HSSC subtitles",
     expect(stations[0]!.name).toBe("농구장");
   });
 });
+
+// WHY: riders cannot board at the 하교 direction's drop-off-only stops, so the app must not show those rows as boardable.
+describe("GET /bus/config realtime station drop-off only", () => {
+  type Station = { isAlightOnly?: unknown };
+  type Group = { id: string; screen: { stations: Station[] } };
+
+  let flaggedApp: NestExpressApplication;
+
+  beforeAll(async () => {
+    const data = busStopsFixture() as { hssc: { stations: Array<Record<string, unknown>> } };
+    data.hssc.stations[3]!.isAlightOnly = true;
+    data.hssc.stations[4]!.isAlightOnly = true;
+    flaggedApp = await buildTestApp({
+      imports: [BusStopsModule, BusConfigModule],
+      overrides: [
+        { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
+        { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
+        { provide: BusStopsRepository, useValue: storedBusStopsRepository(data) },
+        { provide: Clock, useValue: { now: () => new Date("2026-10-20T03:00:00Z") } },
+      ],
+      role: "api",
+    });
+  });
+
+  afterAll(async () => {
+    await flaggedApp.close();
+  });
+
+  it("serves every station isAlightOnly false for a revision that stores no flag", async () => {
+    // Act
+    const config = await request(httpServer).get("/bus/config");
+
+    // Assert
+    expect(config.status).toBe(200);
+    expectWire(busConfig, config.body.data);
+    const realtime = (config.body.data.groups as Group[]).filter((group) => group.id === "hssc" || group.id.startsWith("jongro"));
+    expect(realtime).toHaveLength(4);
+    for (const group of realtime) expect(group.screen.stations.map((station) => station.isAlightOnly)).toEqual(group.screen.stations.map(() => false));
+  });
+
+  it("serves 올림픽기념국민생활관 and 혜화동우체국 (indexes 3 and 4) isAlightOnly true where the data flags them, every other station false, as the wire declares", async () => {
+    // Act
+    const config = await request(flaggedApp.getHttpServer()).get("/bus/config");
+    const hssc = await request(flaggedApp.getHttpServer()).get("/bus/config/hssc");
+
+    // Assert
+    expect(config.status).toBe(200);
+    expect(hssc.status).toBe(200);
+    expectWire(busConfig, config.body.data);
+    expectWire(busGroup, hssc.body.data);
+    expect((hssc.body.data as Group).screen.stations.map((station) => station.isAlightOnly)).toEqual([false, false, false, true, true, false, false, false, false, false, false]);
+    const jongro = (config.body.data.groups as Group[]).filter((group) => group.id.startsWith("jongro"));
+    expect(jongro).toHaveLength(3);
+    for (const group of jongro) expect(group.screen.stations.every((station) => station.isAlightOnly === false)).toBe(true);
+  });
+});
