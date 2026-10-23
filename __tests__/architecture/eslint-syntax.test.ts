@@ -442,6 +442,42 @@ describe("firebase/no-credential", () => {
     expect(counts).toEqual(sources.map(() => 1));
   });
 
+  it("passes src/infra/private-file's own init and export", () => {
+    // Act
+    const messages = lint(
+      "firebase/no-credential",
+      "src/infra/private-file",
+      'import admin from "firebase-admin"; admin.initializeApp({ projectId: config.firebase.projectId }); export = admin;',
+    );
+
+    // Assert
+    expect(messages).toEqual([]);
+  });
+
+  it("rejects the ways around the member checks: another name, an alias, a value read, a spread and a re-export", () => {
+    // Arrange
+    const sources = [
+      'import fb from "./firebase";',
+      'import admin from "../infra/private-file"; const fb = admin;',
+      "const { messaging } = admin;",
+      "register(admin);",
+      "admin.apps[0]!.firestore();",
+      "const send = admin.messaging;",
+      "admin.auth().verifyIdToken(...args);",
+      "const verify = admin.auth().verifyIdToken;",
+      "admin.auth().verifyIdToken.call(auth, idToken, true);",
+      'export { getFirestore } from "firebase-admin/firestore";',
+      'export * from "firebase-admin/firestore";',
+      'export { default as fb } from "firebase-admin";',
+    ];
+
+    // Act
+    const counts = sources.map((source) => lint("firebase/no-credential", file, source).length);
+
+    // Assert
+    expect(counts).toEqual(sources.map(() => 1));
+  });
+
   it("applies to src/ but not to its specs", () => {
     // Arrange
     const { files, ignores } = block("firebase/no-credential");

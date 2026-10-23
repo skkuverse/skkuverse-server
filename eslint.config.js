@@ -177,6 +177,10 @@ const CLOCK_SYNTAX = [
   },
 ];
 
+// (A perimeter detail is left out of the public history.)
+const FIREBASE_MODULE = "/^firebase-admin$|(?:^\\.|\\/infra)\\/firebase$/";
+const FIREBASE_REEXPORT = "/^firebase-admin(?:$|\\/)|(?:^\\.|\\/infra)\\/firebase$/";
+
 // no-restricted-syntax replaces rather than merges across blocks, and the role blocks above each
 // set it for their files. The rules below run beside them under their own names: the same core
 // rule, registered again by a local plugin, so a block that sets one leaves the others alone.
@@ -808,8 +812,12 @@ module.exports = [
           message: "Use the firebase-admin namespace through src/infra/private-file: its subpath entry points reach services that need a credential.",
         },
         {
+          selector: `:matches(ExportNamedDeclaration, ExportAllDeclaration)[source.value=${FIREBASE_REEXPORT}]`,
+          message: "Do not re-export Firebase: a use through the re-export escapes the `admin` checks.",
+        },
+        {
           selector:
-            "ImportDeclaration[source.value=/^firebase-admin$|\\/infra\\/firebase$/] > :matches(ImportNamespaceSpecifier, ImportSpecifier, ImportDefaultSpecifier[local.name!='admin'])",
+            `ImportDeclaration[source.value=${FIREBASE_MODULE}] > :matches(ImportNamespaceSpecifier, ImportSpecifier, ImportDefaultSpecifier[local.name!='admin'])`,
           message: "Import Firebase as `import admin from …`: the firebase/no-credential selectors read the name `admin`.",
         },
         {
@@ -820,12 +828,26 @@ module.exports = [
           message: "initializeApp takes `{ projectId }` alone: the server holds no service-account credential.",
         },
         {
-          selector: "CallExpression[callee.property.name='verifyIdToken'][arguments.length!=1]",
-          message: "verifyIdToken takes the token alone: checkRevoked reads the user record, which needs a service-account credential.",
+          selector: [
+            "CallExpression[callee.property.name='verifyIdToken'][arguments.length!=1]",
+            "CallExpression[callee.property.name='verifyIdToken'] > SpreadElement.arguments",
+            "MemberExpression[property.name='verifyIdToken']:not(CallExpression > MemberExpression.callee)",
+          ].join(", "),
+          message: "Call verifyIdToken with the token alone: checkRevoked reads the user record, which needs a service-account credential.",
         },
         {
-          selector: "CallExpression > MemberExpression.callee[object.name='admin'][property.name!=/^(?:auth|initializeApp)$/]",
+          // A credential inside initializeApp's options is reported once, by the initializeApp selector.
+          selector:
+            "MemberExpression[object.name='admin'][property.name!=/^(?:auth|initializeApp)$/]:not(CallExpression[callee.property.name='initializeApp'] MemberExpression)",
           message: "Only admin.auth() and admin.initializeApp() run without a credential: Firestore, messaging and the rest need a service account.",
+        },
+        {
+          selector: [
+            "Identifier[name='admin']:not(:matches(ImportDefaultSpecifier, ImportNamespaceSpecifier, ImportSpecifier) > Identifier)",
+            ":not(MemberExpression > Identifier.object)",
+            ":not(TSExportAssignment > Identifier.expression)",
+          ].join(""),
+          message: "Use `admin` only as `admin.auth()` or `admin.initializeApp()`: an alias, a destructuring or an argument escapes these checks.",
         },
         {
           selector: [
