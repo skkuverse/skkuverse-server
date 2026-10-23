@@ -18,7 +18,10 @@
  * `storeAcademicYear` stores one `academic_calendars` document as the crawler
  * would, unchecked and replacing the one with its `_id`, and
  * listAcademicYears reads them as the real read does: the projected fields
- * only, each parsed with the same schema, an invalid one left out.
+ * only, each parsed with the same schema, an invalid one left out. It does
+ * not cache: `academicReadCount` counts the reads, and `failAcademicWith`
+ * makes each read reject, as the real read rejects once it holds no good
+ * value inside its stale window.
  */
 import { CalendarReadError } from "../../../../src/calendar/calendar.error";
 import type { AcademicCalendarDoc, PublicHolidaysDoc } from "../../../../src/calendar/calendar.document";
@@ -38,6 +41,8 @@ export class FakeCalendarRepository implements PublicOf<CalendarRepository> {
   failRestDaysWith: Error | null = null;
   restDaysReadCount = 0;
   academicCalendars = new Map<string, Record<string, unknown>>();
+  failAcademicWith: Error | null = null;
+  academicReadCount = 0;
 
   /** Stores `holidays` as the synced document of `year`. */
   store(year: number, holidays: PublicHoliday[], fetchedAt = new Date("2026-10-16T00:00:00Z")): this {
@@ -78,6 +83,8 @@ export class FakeCalendarRepository implements PublicOf<CalendarRepository> {
   }
 
   async listAcademicYears(): Promise<readonly AcademicCalendarDoc[]> {
+    this.academicReadCount += 1;
+    if (this.failAcademicWith) throw this.failAcademicWith;
     return [...this.academicCalendars.values()].flatMap((doc) => {
       const { _id, year, contentHash, semesters, restDays } = structuredClone(doc);
       const parsed = academicCalendarDoc.safeParse({ _id, year, contentHash, semesters, restDays });

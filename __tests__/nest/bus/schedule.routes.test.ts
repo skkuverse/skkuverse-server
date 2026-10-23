@@ -52,6 +52,7 @@ import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.
 import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { storedCalendarRepository } from "../../helpers/calendar/rest-days";
+import logger from "../../../src/infra/logger";
 
 const DO_NOT_FAKE = ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "setImmediate", "clearImmediate", "queueMicrotask", "nextTick", "performance"] as const;
 const ENTRY = { index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null };
@@ -673,6 +674,26 @@ const CALENDAR_2026 = [
   { date: "2026-03-02", name: "대체공휴일(삼일절)" },
   { date: "2026-06-03", name: "전국동시지방선거" },
 ];
+
+describe("GET /bus/schedule/data/:serviceId/smart and /week while the academic calendars cannot be read", () => {
+  it("serve the timetable over the rule's semesters, logging the failed read once", async () => {
+    // Arrange
+    const errorLog = jest.spyOn(logger, "error");
+    holidays.failAcademicWith = new Error("server selection timed out");
+
+    // Act
+    const smart = await request(httpServer).get("/bus/schedule/data/campus-inja/smart");
+    const week = await request(httpServer).get("/bus/schedule/data/campus-inja/week?from=2026-03-09");
+
+    // Assert
+    expect(smart.status).toBe(200);
+    expect(smart.body.data.status).toBe("active");
+    expectWire(smartSchedule, smart.body.data);
+    expect(week.status).toBe(200);
+    expectWire(scheduleWeek, week.body.data);
+    expect(errorLog.mock.calls.filter(([fields]) => (fields as { event?: string })?.event === "academic_calendar.read_failed")).toHaveLength(1);
+  });
+});
 
 describe("GET /bus/schedule/data/:serviceId/week on a day the official calendar lists", () => {
   it.each([

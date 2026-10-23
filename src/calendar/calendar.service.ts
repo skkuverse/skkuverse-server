@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../infra/clock";
+import config from "../infra/config";
 import { createDatasetLoader, type DatasetLoader } from "../infra/dataset-loader";
 import { createLogThrottle, type LogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { lookupKoreanPublicHoliday, toHolidayYear } from "../shared/korean-public-holiday.util";
-import { REST_DAYS_LOG_INTERVAL_MS, RULE_FALLBACK_LOG_INTERVAL_MS } from "./calendar.constants";
+import { ACADEMIC_READ_RETRY_MS, REST_DAYS_LOG_INTERVAL_MS, RULE_FALLBACK_LOG_INTERVAL_MS } from "./calendar.constants";
 import { CalendarReadError, CalendarUnavailableError } from "./calendar.error";
 import { toSchoolRestDayLabel } from "./calendar.mapper";
 import { CalendarRepository } from "./calendar.repository";
@@ -18,7 +19,9 @@ import type { AcademicPeriod, CalendarDay, CalendarSnapshot, RestDays, RestDaysR
 export class CalendarService {
   private readonly rulesFallbackThrottle: LogThrottle;
   private readonly academicFallbackThrottle: LogThrottle;
+  private readonly academicReadFailedThrottle: LogThrottle;
   private readonly restDays: DatasetLoader<RestDaysRevision>;
+  private academicReadHeldUntilMs = 0;
 
   constructor(
     private readonly repository: CalendarRepository,
@@ -26,6 +29,7 @@ export class CalendarService {
   ) {
     this.rulesFallbackThrottle = createLogThrottle(RULE_FALLBACK_LOG_INTERVAL_MS, () => this.clock.now().getTime());
     this.academicFallbackThrottle = createLogThrottle(RULE_FALLBACK_LOG_INTERVAL_MS, () => this.clock.now().getTime());
+    this.academicReadFailedThrottle = createLogThrottle(ACADEMIC_READ_RETRY_MS, () => this.clock.now().getTime());
     this.restDays = createDatasetLoader({
       name: "calendar.rest_days",
       load: () => repository.findRestDays(),
@@ -45,12 +49,31 @@ export class CalendarService {
   // WHY: one read of the rest days and the crawled years answers every day a caller asks, so a cache built from its
   // days under `revisionKey` never mixes two revisions; the key changes with either but a public holiday.
   async current(): Promise<CalendarSnapshot> {
-    const [{ revision, restDays }, academicYears] = await Promise.all([this.restDays.get(), this.repository.listAcademicYears()]);
+    const [{ revision, restDays }, academicYears] = await Promise.all([this.restDays.get(), this.listAcademicYears()]);
     const crawledVersions = [...academicYears].sort((a, b) => a.year - b.year).map((doc) => `${doc.year}@${doc.contentHash}`);
     return {
       revisionKey: [String(revision), ...crawledVersions].join("|"),
       dayOf: (dateStr) => this.dayOf(dateStr, restDays, academicYears),
     };
+  }
+
+  // WHY: a failed read with nothing cached is answered by the rule, never an error to a rider (ADR 0021, D2), and is
+  // retried once ACADEMIC_READ_RETRY_MS passes rather than on every request.
+  private async listAcademicYears(): Promise<readonly AcademicCalendarDoc[]> {
+    if (this.clock.now().getTime() < this.academicReadHeldUntilMs) return [];
+    try {
+      return await this.repository.listAcademicYears();
+    } catch (err) {
+      if (config.cache.enabled) this.academicReadHeldUntilMs = this.clock.now().getTime() + ACADEMIC_READ_RETRY_MS;
+      const ticket = this.academicReadFailedThrottle.take("read_failed");
+      if (ticket) {
+        logger.error(
+          { event: "academic_calendar.read_failed", err, suppressed: ticket.suppressed },
+          "Academic calendars unreadable with none cached, answering every year from the rule",
+        );
+      }
+      return [];
+    }
   }
 
   // WHY: the public holiday is asked first, so a date it cannot take throws its RangeError even on a rest day. The
