@@ -20,7 +20,7 @@ Accepted 2026-10-23.
 - The HSSC shuttle runs 07:00 to 23:00 on weekdays in a semester and 07:00 to 19:00 in a vacation, and nothing in the server knew which dates are which.
 - SKKU publishes each academic year's calendar (`학사일정`) on `ca_de_schedule.do`, a year running from March 1 to the last day of February. skkuverse-crawler crawls it daily at 05:35 KST (module `academic-calendar`, `spencer0124/skkuverse-crawler#84`, its adr-013) into `academic_calendars` in its base database, which this server already reads as `MONGO_NOTICES_DB_NAME`. Each document holds the year's two semesters, its rest days and every raw entry, keyed by the year.
 - The date answers were spread out: the holidays module answered public holidays, the `skku-rest-days` dataset ([ADR 0013](0013-runtime-data-in-mongodb.md)) was read inside the bus schedule content, and a third source would have been a third door.
-- The crawler is not deployed yet, so production holds no `academic_calendars` document. A year can also go unpublished past March 1, or a page can change shape.
+- The crawler is deployed: production's `skku_notices.academic_calendars` holds `2026`, written 2026-10-23 12:39 UTC. `skku_notices_dev` holds none, so development and `npm run verify:serve` answer every year from the rule. A year can also go unpublished past March 1, or a page can change shape.
 
 ## Decision
 
@@ -51,8 +51,8 @@ A no-service day's label ranks three sources: the dataset's rest day, then the p
 
 ## Consequences
 
-- Until the crawler is deployed every year is answered by the rule, and `academic_calendar.rule_fallback` is logged hourly per academic year asked for.
-- Once a crawled year is stored, its rest days the dataset does not name become no-service days on the shuttles that respect holidays, and its `contentHash` joins the schedule's week cache key.
+- The deploy of this decision turns the crawl on in production at once: the stored 2026 year answers its semesters, its rest days the dataset does not name become no-service days on the shuttles that respect holidays (below a public holiday, D4), and its `contentHash` joins the schedule's week cache key.
+- A year production holds no document of (2027 until SKKU publishes it) is answered by the rule, and so is every year in development and `npm run verify:serve`, whose `skku_notices_dev` is empty; `academic_calendar.rule_fallback` is logged hourly per academic year asked for.
 - The academic period has no consumer yet; the HSSC service hours are the next.
 - The crawler's `academic-calendar` watch check compares the dataset's rest days with this server's API; it can retire once the crawled rest days are served (crawler adr-013, "Revisit when").
 - **Open:** whether a rest day inside a semester should count as a semester day for service hours; the period answers the semester today.
