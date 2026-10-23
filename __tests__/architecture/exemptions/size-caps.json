@@ -17,7 +17,7 @@
   },
   "src/bus/realtime/group/bus-realtime-group.rules.ts": {
     "max": 138,
-    "reason": "ADR 0010 D9, no reachable seam: the trajectory (`toTrajectory`) is built from the same joined position and vehicle rows as the tracked status and the next-stop countdown (`toProgress`, `toNextStopInSec`, `toNamedBuses`, `toStopArrivalMs`), and a sibling sub-module cannot hold it, since `BusRealtimeGroupService` is at the four-dependency constructor cap in eslint.config.js and a parent never imports a child (sub-modules.test.ts)."
+    "reason": "ADR 0010 D9, no reachable seam: the trajectory (`toTrajectory`) is built from the same joined position and vehicle rows as the tracked status and the next-stop countdown (`toProgress`, `toNextStopInSec`, `toNamedBuses`, `toStopArrivalMs`), and a sibling sub-module cannot hold them, since `BusRealtimeGroupService` is at the four-dependency constructor cap in eslint.config.js and a parent never imports a child (sub-modules.test.ts)."
   },
   "src/bus/realtime/group/bus-realtime-group.types.ts": {
     "max": 84,
@@ -29,7 +29,7 @@
   },
   "src/bus/realtime/hssc-eta/bus-realtime-hssc-eta.rules.ts": {
     "max": 111,
-    "reason": "ADR 0010 D9, no reachable seam: the overdue bound (`isOverdue`, `isLayingOver`, ADR 0018 D6) decides the same anchor's lap times, layover and per-stop status from the same segment medians (`segmentOf`) the rest of the engine sums, and a sibling sub-module cannot hold it, since a sibling's rules are never imported across sub-modules (sub-modules.test.ts) and `BusLiveHsscService` is at the four-dependency constructor cap in eslint.config.js."
+    "reason": "ADR 0010 D9, no reachable seam: the overdue bound (`isStalled`, ADR 0018 D6) and the layover (`isLayingOver`) decide the same anchor's lap times, layover and per-stop status from the same segment medians (`segmentOf`) the rest of the engine sums, and a sibling sub-module cannot hold them, since a sibling's rules are never imported across sub-modules (sub-modules.test.ts) and `BusLiveHsscService` is at the four-dependency constructor cap in eslint.config.js."
   },
   "src/bus/stops/bus-stops.rules.ts": {
     "max": 402,

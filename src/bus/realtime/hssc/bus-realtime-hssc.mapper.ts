@@ -1,4 +1,4 @@
-import type { HsscApiBus, HsscBusDoc } from "../../cache/bus-cache.document";
+import type { HsscAnchorRow, HsscApiBus, HsscBusDoc } from "../../cache/bus-cache.document";
 import { HSSC_EVENT_DATE_FORMAT, STATION_NAME_BY_HSSC_NAME } from "./bus-realtime-hssc.constants";
 import type { HsscFeedEventDoc } from "./bus-realtime-hssc.document";
 import type { HsscBusTiming, HsscFeedEventTiming } from "./bus-realtime-hssc.types";
@@ -13,6 +13,11 @@ export function toHsscBus(item: HsscApiBus, { sequence, firstSeenAt, dwellSecond
     estimatedTime: dwellSeconds,
     isLastBus: false,
   };
+}
+
+// WHY: no key when the feed's row anchors, so the stored entry keeps the shape the deprecated route pins (ADR 0019, D11).
+export function withAnchorRow(bus: HsscBusDoc, anchorRow: HsscAnchorRow | null): HsscBusDoc {
+  return anchorRow ? { ...bus, anchorRow } : bus;
 }
 
 export function toHsscFeedEventDoc(item: HsscApiBus, { seq, getDate }: HsscFeedEventTiming, polledAt: Date): HsscFeedEventDoc {
