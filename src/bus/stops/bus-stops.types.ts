@@ -3,10 +3,7 @@ import type { LatLng } from "../../shared/lat-lng.types";
 import type { ServedSequenceStop, ServedStop } from "../bus.wire";
 import type { HsscLineStation } from "./bus-stops.document";
 
-export interface StopPhoto {
-  original: string;
-  localized?: Partial<Record<SupportedLang, string>>;
-}
+export interface StopPhoto { original: string; localized?: Partial<Record<SupportedLang, string>> }
 
 export interface StopPanorama { panoId: string; pan: number; tilt: number; fov: number }
 
@@ -39,6 +36,8 @@ export interface ScheduleStop {
   /** WHY: the subway registry's slug; a push refuses one the registry does not serve. */
   subwayStationId?: string;
   arsIds?: string[];
+  /** WHY: the campus the stop serves, which a stop list files it under; left out, the list serves none. */
+  campus?: "hssc" | "nsc";
 }
 
 export interface SequenceStop {
