@@ -1,7 +1,6 @@
 import type { StoredTrainArrival } from "../subway.document";
 import { SUBWAY_STATIONS } from "../subway.constants";
 import type { LocalizedName, PlatformDirection, SubwayRegistry, SubwayStation } from "../subway.types";
-import { MAX_STATE_AGE_MS } from "./subway-arrivals.constants";
 
 export function findSubwayStation(slug: string, registry: SubwayRegistry): SubwayStation | null {
   return registry.stations.find((station) => station.id === slug) ?? null;
@@ -12,10 +11,6 @@ export function findSubwayStation(slug: string, registry: SubwayRegistry): Subwa
 export function findPlatformName(platformId: string, registry: SubwayRegistry): LocalizedName | null {
   const servedAt = SUBWAY_STATIONS.find((station) => station.platforms.some((platform) => platform.id === platformId));
   return registry.neighbors[platformId]?.name ?? servedAt?.name ?? null;
-}
-
-export function isFreshState(generatedAt: Date, now: Date): boolean {
-  return now.getTime() - generatedAt.getTime() <= MAX_STATE_AGE_MS;
 }
 
 export function toStopsAway(direction: PlatformDirection, platformId: string, position: StoredTrainArrival["position"]): number | null {

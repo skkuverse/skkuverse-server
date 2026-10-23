@@ -9,6 +9,7 @@ import { BusCacheModule } from "./bus/cache/bus-cache.module";
 import { BusRegistryModule } from "./bus/registry/bus-registry.module";
 import { BusRouteAttributesModule } from "./bus/route-attributes/bus-route-attributes.module";
 import { BusRoutePathModule } from "./bus/route-path/bus-route-path.module";
+import { BusHsscRouteLineModule } from "./bus/hssc-route-line/bus-hssc-route-line.module";
 import { BusRealtimeModule } from "./bus/realtime/bus-realtime.module";
 import { BusRealtimeHsscModule } from "./bus/realtime/hssc/bus-realtime-hssc.module";
 import { BusRealtimeJongroModule } from "./bus/realtime/jongro/bus-realtime-jongro.module";
@@ -74,6 +75,7 @@ import { GamesModule } from "./games/games.module";
 import { SubwayModule } from "./subway/subway.module";
 import { SubwayStationsModule } from "./subway/stations/subway-stations.module";
 import { SubwayTopologyModule } from "./subway/topology/subway-topology.module";
+import { SubwayStationCoordsModule } from "./subway/station-coords/subway-station-coords.module";
 import { SubwayTimetableModule } from "./subway/timetable/subway-timetable.module";
 import { SubwayCountdownModule } from "./subway/countdown/subway-countdown.module";
 import { SubwayEstimateModule } from "./subway/estimate/subway-estimate.module";
@@ -83,6 +85,7 @@ import { SubwayStateModule } from "./subway/state/subway-state.module";
 import { SubwayTrackingModule } from "./subway/tracking/subway-tracking.module";
 import { SubwayMatchingModule } from "./subway/matching/subway-matching.module";
 import { SubwaySeoulModule } from "./subway/seoul/subway-seoul.module";
+import { SubwayPlatformArrivalsModule } from "./subway/platform-arrivals/subway-platform-arrivals.module";
 import { SubwayArrivalsModule } from "./subway/arrivals/subway-arrivals.module";
 import { SubwayHistoryModule } from "./subway/history/subway-history.module";
 
@@ -100,6 +103,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusRegistryModule,
     BusRouteAttributesModule,
     BusRoutePathModule,
+    BusHsscRouteLineModule,
     BusRealtimeModule,
     BusRealtimeHsscModule,
     BusRealtimeJongroModule,
@@ -168,6 +172,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     SubwayModule,
     SubwayStationsModule,
     SubwayTopologyModule,
+    SubwayStationCoordsModule,
     SubwayTimetableModule,
     SubwayCountdownModule,
     SubwayEstimateModule,
@@ -177,6 +182,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     SubwayTrackingModule,
     SubwayMatchingModule,
     SubwaySeoulModule,
+    SubwayPlatformArrivalsModule,
     SubwayArrivalsModule,
     SubwayHistoryModule,
   ],

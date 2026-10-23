@@ -35,6 +35,10 @@
  * code-held source, the route ids JONGRO_ROUTES holds: one entry per route the
  * checkout serves, no more.
  *
+ * The `hssc-route-line` dataset (ADR 0013, D2; ADR 0018, D9) is checked with
+ * the server's line schema and `toRouteLineIssues`: a closed loop with no
+ * segment past MAX_ROUTE_LINE_SEGMENT_M. It names no identity.
+ *
  * The `bus-stops` dataset is checked with the server's
  * stops schema and `toBusStopsIssues` against the checkout's services, their
  * estimate opt-ins, the served subway stations and the lane strategies; it
@@ -52,6 +56,11 @@
  * committed timetable routes (`toRouteIssues`): upstream, watched and next
  * platforms in route order, and every stop the tracker follows named.
  *
+ * The `subway-station-coords` dataset (ADR 0013, D2) is checked with the
+ * server's coords schema (each point inside South Korea) and against the
+ * `subwayStations` code-held source: one entry per station the checkout
+ * serves, no more.
+ *
  * The `subway-timetables` dataset (ADR 0013, D1 and D3) is
  * stored in parts, one per table: each part runs the server's `timetableFile`
  * schema and is keyed by `toTimetableKey` (`<operator>-<line>-<dayType>`),
@@ -66,12 +75,15 @@ import path from "node:path";
 import { JONGRO_ROUTES, SERVICE_CONFIG } from "../../../src/bus/bus.constants";
 import { corridorIssues } from "../../../src/bus/eta/lane/bus-eta-lane.rules";
 import { laneCorridorDataset } from "../../../src/bus/eta/lane/bus-eta-lane.schema";
+import { toRouteLineIssues } from "../../../src/bus/hssc-route-line/bus-hssc-route-line.rules";
+import { hsscRouteLineDataset } from "../../../src/bus/hssc-route-line/bus-hssc-route-line.schema";
 import { jongroRouteAttributesDataset } from "../../../src/bus/route-attributes/bus-route-attributes.schema";
 import { busStopsDataset } from "../../../src/bus/stops/bus-stops.schema";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import { fixtureRegistry, fixtureRegistryWithWaveRun } from "../../helpers/miniapps/registry-fixture";
 import { SubwayStationsService } from "../../../src/subway/stations/subway-stations.service";
 import { SUBWAY_STATIONS } from "../../../src/subway/subway.constants";
+import { subwayStationCoordsDataset } from "../../../src/subway/station-coords/subway-station-coords.schema";
 import { subwayTopologyDataset } from "../../../src/subway/topology/subway-topology.schema";
 import { toTimetableKey } from "../../../src/subway/timetable/subway-timetable.rules";
 import { timetableFile } from "../../../src/subway/timetable/subway-timetable.schema";
@@ -696,6 +708,53 @@ describe("loadCatalog bus-lane-corridor", () => {
   });
 });
 
+describe("loadCatalog hssc-route-line", () => {
+  type Line = { path: number[][] };
+  const routeLine = () => datasetFixture("../bus/fixtures/hssc-route-line.dataset.json") as Line;
+
+  it("is owned by src/bus/hssc-route-line, takes hsscRouteLineDataset and toRouteLineIssues, and accepts revision 1 with no issue and no reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["hssc-route-line"];
+
+    // Act
+    const issues = checkData(catalog, "hssc-route-line", routeLine(), {});
+
+    // Assert
+    expect(entry.owner).toBe("src/bus/hssc-route-line");
+    expect(entry.schema).toBe(hsscRouteLineDataset);
+    expect(entry.issuesOf).toBe(toRouteLineIssues);
+    expect(issues).toEqual([]);
+    expect(entry.referencesOf(entry.schema.parse(routeLine()))).toEqual([]);
+  });
+
+  it("Open loop: refuses the line without its closing point, naming the last point", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = routeLine();
+    data.path.pop();
+
+    // Act
+    const lines = issueLines(checkData(catalog, "hssc-route-line", data, {}));
+
+    // Assert
+    expect(lines).toEqual(["hssc-route-line: path.233: the line is a loop: its last point must repeat its first, [126.992374, 37.587807]"]);
+  });
+
+  it("Swapped pair: refuses a point given as [lat, lng], naming it", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = routeLine();
+    data.path[5] = [data.path[5]![1]!, data.path[5]![0]!];
+
+    // Act
+    const lines = issueLines(checkData(catalog, "hssc-route-line", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^hssc-route-line: path\.5\.1: /)]);
+  });
+});
+
 describe("loadCatalog jongro-route-attributes", () => {
   type Attributes = { routes: Record<string, Record<string, unknown>> };
   const attributes = () => datasetFixture("../bus/fixtures/jongro-route-attributes.dataset.json") as Attributes;
@@ -765,6 +824,65 @@ describe("loadCatalog jongro-route-attributes", () => {
 
     // Assert
     expect(lines).toEqual(['jongro-route-attributes: routes.jongro13: "jongro13" is not a route the checked-out code serves']);
+  });
+});
+
+describe("loadCatalog subway-station-coords", () => {
+  type Coords = { stations: Record<string, Record<string, unknown>> };
+  const coords = () => datasetFixture("../subway/fixtures/subway-station-coords.dataset.json") as Coords;
+
+  it("is owned by src/subway/station-coords, takes subwayStationCoordsDataset, and accepts revision 1 with no issue and no reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["subway-station-coords"];
+
+    // Act
+    const issues = checkData(catalog, "subway-station-coords", coords(), {});
+
+    // Assert
+    expect(entry.owner).toBe("src/subway/station-coords");
+    expect(entry.schema).toBe(subwayStationCoordsDataset);
+    expect(issues).toEqual([]);
+    expect(entry.referencesOf(entry.schema.parse(coords()))).toEqual([]);
+  });
+
+  it("Station missing: refuses coords without dogok, naming it as missing", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = coords();
+    delete data.stations.dogok;
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-station-coords", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['subway-station-coords: stations.dogok: missing: the checked-out code serves "dogok", so it needs coords']);
+  });
+
+  it("refuses coords for a station the checkout does not serve, naming it", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = coords();
+    data.stations.suwon = { lat: 37.266, lng: 127.0 };
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-station-coords", data, {}));
+
+    // Assert
+    expect(lines).toEqual(['subway-station-coords: stations.suwon: "suwon" is not a station the checked-out code serves']);
+  });
+
+  it("Swapped point: refuses hyehwa's lat and lng swapped, naming the station", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = coords();
+    data.stations.hyehwa = { lat: 127.001844, lng: 37.582336 };
+
+    // Act
+    const lines = issueLines(checkData(catalog, "subway-station-coords", data, {}));
+
+    // Assert
+    expect(lines).toEqual(["subway-station-coords: stations.hyehwa: must be { lat, lng } inside South Korea (lat 33 to 39, lng 124 to 132)"]);
   });
 });
 

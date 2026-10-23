@@ -3,17 +3,17 @@ title: Map Architecture
 type: explanation
 status: draft
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-20
+last-updated: 2026-10-23
 audience: internal
 ---
 
 # Map Architecture
 
-> What `src/map/` serves under `/map`: the map's layers and chips, the campus overlays it mirrors from the building module, the Jongro route lines it draws from the bus module, and a festival's places, overlays and sheets. Read it before you change a layer, a chip, a layer set or an overlay field.
+> What `src/map/` serves under `/map`: the map's layers and chips, the campus overlays it mirrors from the building module, the Jongro route lines and the HSSC shuttle's loop it draws from the bus module, and a festival's places, overlays and sheets. Read it before you change a layer, a chip, a layer set or an overlay field.
 
 ## Context
 
-Map owns two things: the base map's layer catalogue, and the festival structure tier: every festival's layer set, stored as the `map-layer-sets` dataset in the content database and edited with `npm run data`, so a festival is added with no deploy. The buildings and campus shapes it draws are the building module's, the Jongro route lines the bus module's, and the festival's places and activations are written by ops scripts into Mongo; map only reads them. Each route is its own sub-module (`config/`, `campus/`, `transit/`, `event/`, `event-details/`), and `layer-set/` answers "which festival is live, and how is it drawn" for three of them; the root holds the places repository, the shared overlay wire and the base layers.
+Map owns two things: the base map's layer catalogue, and the festival structure tier: every festival's layer set, stored as the `map-layer-sets` dataset in the content database and edited with `npm run data`, so a festival is added with no deploy. The buildings and campus shapes it draws are the building module's, the Jongro route lines and the HSSC loop the bus module's, and the festival's places and activations are written by ops scripts into Mongo; map only reads them. Each route is its own sub-module (`config/`, `campus/`, `transit/`, `event/`, `event-details/`), and `layer-set/` answers "which festival is live, and how is it drawn" for three of them; the root holds the places repository, the shared overlay wire and the base layers.
 
 | System | Quirk tag | Gives | Enters at |
 | --- | --- | --- | --- |
@@ -21,7 +21,7 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | `places` and `activations` (eventmap database) | `mongodb` | The festival's places, and the window that switches a layer set on | `MapRepository` |
 | The places importer (`scripts/lib/map-places-file.js`) | — | Places written to Mongo, checked by the same rules the server reads with | `overlayPlaceDoc`, `sheetPlaceDoc` |
 | The building module | `skku` | Buildings and hand-authored campus shapes | `BuildingService`, injected into `MapCampusService` |
-| The bus module | — | Each Jongro route's stored line as TOPIS draws it, a route with none left out and flagged, or `503` when nothing can be read | `BusRoutePathService`, injected into `MapTransitService` |
+| The bus module | — | Each Jongro route's stored line as TOPIS draws it, a route with none left out and flagged, or `503` when nothing can be read; and the HSSC loop measured from GPS (the `hssc-route-line` dataset), or none when never read | `BusRoutePathService` and `BusHsscRouteLineService`, injected into `MapTransitService` |
 | The mini-app registry | — | Which mini-app targets a sheet button may open, from one snapshot of the stored `miniapps` dataset per reload, read only once a live layer set has places | `MiniappsService.findCurrent`, injected into `MapEventService` |
 | GeoJSON | `geojson` | The `[lng, lat]` position order and ring winding, served as stored | `map.wire.ts` |
 | The NAVER map SDK | `naver-map` | Polygon defaults the base and festival styles override | `BASE_LAYERS`, `EVENT_SHAPE_STYLE` |
@@ -46,8 +46,8 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | presentation (`ItemPresentation`) | A category's layer, pin priority, tap and location accuracy | `presentationFor` | `categoryStyle` |
 | facet | A list filter axis a chip may show; an `hours` facet is derived from a place's windows, a `tag` facet is authored | `facetsOf` | — |
 | sheet (`PlaceSheet`) | The body a tapped place opens: its head, buttons and blocks | `toPlaceSheet` | `sheetBody` |
-| degraded | An overlay route fell back to a static answer: the campus overlay to `FALLBACK_MARKERS` because the buildings read was empty, the transit overlay to the stored lines alone because a route has none | `MapCampusService.getCampusOverlays`, `MapTransitService.getTransitOverlays` | `isFallback` |
-| route line layer | A base layer that draws one Jongro route's line, opt-in (`defaultVisibleWhen` `never`, `userConfigurable`), named after the route (`jongro07_route`) | `BASE_LAYERS` | — |
+| degraded | An overlay route fell back to a static answer: the campus overlay to `FALLBACK_MARKERS` because the buildings read was empty, the transit overlay to the stored lines alone because a route has none or the HSSC line was never read | `MapCampusService.getCampusOverlays`, `MapTransitService.getTransitOverlays` | `isFallback` |
+| route line layer | A base layer that draws one route's line, opt-in (`defaultVisibleWhen` `never`, `userConfigurable`), named after the route (`jongro07_route`, `hssc_route`) | `BASE_LAYERS` | — |
 
 ## Structure
 
@@ -65,6 +65,7 @@ flowchart LR
   config --> r1["GET /map/config"]
   campus -->|CAMPUS_CACHE_CONTROL or DEGRADED_CACHE_CONTROL| r2["GET /map/overlays/campus"]
   bus["BusRoutePathService"] -->|route lines| transit["MapTransitService"]
+  hssc["BusHsscRouteLineService"] -->|the HSSC loop, or none| transit
   transit -->|TRANSIT_CACHE_CONTROL or DEGRADED_TRANSIT_CACHE_CONTROL| r5["GET /map/overlays/transit"]
   event -->|EVENT_CACHE_CONTROL| r3["GET /map/overlays/event"]
   details -->|EVENT_CACHE_CONTROL| r4["GET /map/overlays/event/details"]
@@ -103,8 +104,9 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 - A stored geometry is served as stored: points and lines by reference, polygon rings rewound (`toWirePolygon`); the only rebuilt pair is a building's, from its `location`.
 - The event map is timezone-free: windows and facet options are absolute instants, compared with no zone arithmetic.
 - `degraded` never reaches the wire. The campus fallback is sent with `DEGRADED_CACHE_CONTROL` (`no-store`), the transit answer with a route left out with `DEGRADED_TRANSIT_CACHE_CONTROL` (a minute), so the line shows within a minute of its first sync.
-- A transit overlay is the stored line as stored, unclosed, on its route line layer; the route line layers are off by default, so an installed app fetches `/map/overlays/transit` only once a user turns one on.
-- The route line layers share one style, the map's own village-bus green in `ROUTE_LINE_LAYER`, never a route's stored card color, so `/map/config` reads no bus dataset; their order in `BASE_LAYERS` is their draw order: the app adds them in that order and the later one lies on top, so `jongro07_route` comes after `jongro08_route` ([Draw order](../reference/map-overlays-api.md#draw-order)).
+- A transit overlay is the stored line as stored on its route line layer (a Jongno line unclosed as TOPIS draws it, the HSSC loop closed as measured); the route line layers are off by default, so an installed app fetches `/map/overlays/transit` only once a user turns one on.
+- The HSSC loop comes after the Jongno lines and changes none of them. With no good `hssc-route-line` ever read, the transit overlay serves the Jongno lines alone, degraded, logged at error by the bus module ([ADR 0013, D6](../decisions/0013-runtime-data-in-mongodb.md#d6-the-read-contract)), never a `503` of its own; a Jongno read failure still answers the Jongno `503`.
+- The Jongno route line layers share one style, the map's own village-bus green in `ROUTE_LINE_LAYER`, never a route's stored card color; `hssc_route` takes SKKU green (`003626`) with a white edge, a constant too, so `/map/config` reads no bus dataset. Their order in `BASE_LAYERS` is their draw order: the app adds them in that order and the later one lies on top, so `jongro07_route` comes after `jongro08_route`, and `hssc_route` last ([Draw order](../reference/map-overlays-api.md#draw-order)).
 - Cloudflare caches `/map/overlays/campus`, `/map/overlays/transit` and both event routes without varying on `Accept-Language`, so their bodies carry every language and their `meta` names none: `ResponseInterceptor` leaves `lang` out of any response with a `public` or `s-maxage` `Cache-Control`.
 - Only `MapModule` binds the general limiter on `/map/config` and `/map/overlays`; the sub-modules bind nothing.
 - The `.wire` files publish what is served today, including the campus overlay's string `placeId`.

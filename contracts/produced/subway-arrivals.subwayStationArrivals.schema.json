@@ -10,11 +10,34 @@
         },
         "name": {
           "type": "string"
+        },
+        "coords": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "lat": {
+                  "type": "number"
+                },
+                "lng": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "lat",
+                "lng"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
         "id",
-        "name"
+        "name",
+        "coords"
       ]
     },
     "lines": {

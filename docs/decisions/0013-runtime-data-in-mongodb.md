@@ -3,7 +3,7 @@ title: Runtime Data Lives in MongoDB
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-23
 audience: internal
 ---
 
@@ -37,10 +37,11 @@ Once a dataset is stored, the repository holds no copy of it: no committed file,
 What the code branches on stays in code: route ids, service ids, enums, the origins in `src/infra/origins.ts` (who owns each first-party origin included: a push must agree with it, and a read that does not is logged), UI-label translations and the hash-locked notices contract files. A dataset holds the data that names those identities, never the identities. Where the line falls, per dataset:
 
 - Mini apps: the registry is the `miniapps` dataset; the ui datasets reference it as a dataset, resolved against the copy in the database a push targets.
-- Subway: lines, stations and platforms with their names, colors and markers stay in code; platform directions and station neighbors are `subway-topology`.
+- Subway: lines, stations and platforms with their names, colors and markers stay in code; platform directions and station neighbors are `subway-topology`, and each station's camera point is `subway-station-coords`.
 - Jongno: route ids stay in code; each route's attributes (color, icon, refresh interval, seat count, transfer lines) are `jongro-route-attributes`.
 - Bus lanes: the strategies and lane hours stay in code, since they decide which estimate model a run gets; the corridor geometry is `bus-lane-corridor`.
 - Stops: a Seoul TOPIS pole's id (`seoul-<arsId>`) is derived from the stored Jongno registry at read and never stored. The local stops, the shuttle sequences and the HSSC line's labels and stop ids are `bus-stops`. The HSSC line's position count, upstream name matching and turnaround stay in code, since the HSSC poller places buses by them, and the dataset's line must match the count.
+- HSSC route line: the loop measured from GPS, which the map draws, is `hssc-route-line`, apart from `bus-stops` ([ADR 0018, D9](0018-hssc-arrival-estimates.md)); it names no identity, and its layer, color and name stay in code.
 
 ### D3. The tool is the only writer
 
@@ -66,7 +67,7 @@ Every reader of a dataset, in every role that reads it (pollers included, such a
 
 - **A bound on freshness.** A cached loader with a 60-second TTL and `serveStale: "on-reload-failure"`, so every replica serves a push within a minute while the database answers.
 - **A stale window.** After a good read, a failed reload serves the last good value for 24 hours and logs `cache.reload_failed`: editorial data a day old is still correct to serve, and a 503 costs the screen.
-- **Unavailable, not empty.** With no good value, a missing dataset or a failed read answers 503 with an error body and no `Cache-Control`, never an empty or committed value. A dataset whose module doc documents an answer that serves without it may serve that answer instead, and logs the unavailable dataset at error: `/map/config` serves the base map without the festival layer sets; `/bus/config` and the ui transit routes serve without the Jongno groups, while a Jongno group's own route answers 503.
+- **Unavailable, not empty.** With no good value, a missing dataset or a failed read answers 503 with an error body and no `Cache-Control`, never an empty or committed value. A dataset whose module doc documents an answer that serves without it may serve that answer instead, and logs the unavailable dataset at error: `/map/config` serves the base map without the festival layer sets; `/bus/config` and the ui transit routes serve without the Jongno groups, while a Jongno group's own route answers 503; the subway arrivals route serves a station with `coords: null`.
 - **A bad document is not served.** The repository parses the stored document with the dataset's schema; one that fails is logged at error with its revision and issues, and the last good value within its window serves.
 - **A dangling reference is left out.** An item whose reference no longer resolves is dropped and logged once per revision, and the rest serves with 200.
 - **A derived cache keeps the bound or states its own.** A cache of something derived from a dataset is keyed by the dataset's revision, or states its own longer bound in its module doc's Invariants. A cached ETag is keyed by the revision of every dataset its body is built from, or computed from the body, so a push to a dataset the route does not read leaves it alone.

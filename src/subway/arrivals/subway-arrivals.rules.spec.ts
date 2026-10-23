@@ -1,8 +1,7 @@
 /**
  * The arrivals route's lookups and decisions: a station is found by its slug
  * with its platforms, and a previous or next platform named in every language
- * (a served one by its station's name); the stored state is served while it is
- * at most 2 minutes old, and a train is so many stops away as its last
+ * (a served one by its station's name); and a train is so many stops away as its last
  * observed station says: 0 at the served station, the upstream station's
  * place in its direction's list (nearest first, from 1) at an upstream
  * station whatever its state there, and unknown (null) for a station off the
@@ -10,24 +9,9 @@
  */
 import { subwayRegistryFixture } from "../../../__tests__/helpers/subway/topology";
 import type { SubwayPlatform } from "../subway.types";
-import { findPlatformName, findSubwayStation, isFreshState, toStopsAway } from "./subway-arrivals.rules";
+import { findPlatformName, findSubwayStation, toStopsAway } from "./subway-arrivals.rules";
 
-const GENERATED_AT = new Date("2026-10-16T11:41:00Z");
 const REGISTRY = subwayRegistryFixture();
-
-describe("isFreshState", () => {
-  it.each([
-    ["119 s", "2026-10-16T11:42:59Z", true],
-    ["120 s", "2026-10-16T11:43:00Z", true],
-    ["121 s", "2026-10-16T11:43:01Z", false],
-  ])("reads a state generated %s ago as fresh: %s", (_label, nowIso, fresh) => {
-    // Act
-    const isFresh = isFreshState(GENERATED_AT, new Date(nowIso));
-
-    // Assert
-    expect(isFresh).toBe(fresh);
-  });
-});
 
 describe("toStopsAway", () => {
   const SUNGKYUNKWAN = REGISTRY.stations[0]?.platforms[0] as SubwayPlatform;

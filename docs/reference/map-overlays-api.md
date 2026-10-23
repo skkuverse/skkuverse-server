@@ -3,7 +3,7 @@ title: Map Overlays API Reference
 type: reference
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-23
 audience: internal
 ---
 
@@ -23,7 +23,7 @@ audience: internal
 | Auth | none on all five |
 | Rate limit | `GeneralRateLimitMiddleware`, applied to the `/map` prefixes in `MapModule.configure` |
 | Wire schema | `src/map/map.wire.ts` (overlays), `src/shared/geojson.types.ts` (geometry), `src/map/config/map-config.wire.ts` (chips) |
-| Producers | `src/map/campus/map-campus.mapper.ts` (buildings + campus geometry), `src/map/transit/map-transit.mapper.ts` (the Jongno bus route lines), `src/map/event/map-event.mapper.ts` (event places), `src/map/event-details/map-event-details.mapper.ts` (their sheet bodies) |
+| Producers | `src/map/campus/map-campus.mapper.ts` (buildings + campus geometry), `src/map/transit/map-transit.mapper.ts` (the Jongno bus route lines and the HSSC shuttle's loop), `src/map/event/map-event.mapper.ts` (event places), `src/map/event-details/map-event-details.mapper.ts` (their sheet bodies) |
 | Layer catalogue | `src/map/map.constants.ts` — the base layers, and the projection of a festival's `layers[]` from its config |
 | Chips | `src/map/layer-set/` — the base chips (`map-layer-set.constants.ts`), the projection of a festival's `chips[]` and the synthesised reset chip (`map-layer-set.mapper.ts`), and the validators both go through (`map-layer-set.rules.ts`) |
 | Response builder | `src/map/config/map-config.mapper.ts` |
@@ -497,8 +497,9 @@ second one. This is the paragraph a client implements from.
 
 ## 5. Endpoints
 
-One route per **data source**, not per layer: buildings come from the buildings collection, the Jongno
-bus lines from the bus module's `jongro_route_paths`, festival booths from the event map's `places`. See §6 for why layers within a source share one.
+One route per **data source**, not per layer: buildings come from the buildings collection, the bus
+lines from the bus module (the Jongno lines' `jongro_route_paths` and the HSSC loop's `hssc-route-line`
+dataset), festival booths from the event map's `places`. See §6 for why layers within a source share one.
 
 ### 5.1 `GET /map/config`
 
@@ -882,13 +883,13 @@ missing its body would take every sheet of the festival down with it.
 `Cache-Control: public, max-age=3600` — or **`public, max-age=60`** on the degraded branch, and `503` when no line can be read.
 
 The Jongno village bus lines 종로02, 07 and 08, one `kind: "path"` overlay per route, in the order of
-`JONGRO_ROUTES` (`src/bus/bus.constants.ts`). No parameters. The geometry is the bus module's stored line
+`JONGRO_ROUTES` (`src/bus/bus.constants.ts`), then the HSSC shuttle's loop. No parameters. The geometry is the bus module's stored line
 (`jongro_route_paths`, synced from TOPIS `busRouteInfo/getRoutePath` once a day), served as stored:
 `[lng, lat]` in TOPIS order, a loop left unclosed, 252 / 241 / 488 points on 2026-10-18. `tap` is
 `null`, so a line is a backdrop; `text` names the route in every language; the place-only fields are
 stated empty.
 
-Each overlay's `layerId` is `<route id>_route`. The three layers are in `BASE_LAYERS`, opt-in, in
+Each overlay's `layerId` is `<route id>_route`. The four layers are in `BASE_LAYERS`, opt-in, in
 this order:
 
 | Layer | Label (ko / en / zh) |
@@ -896,17 +897,20 @@ this order:
 | `jongro02_route` | 종로02 노선 / Jongno 02 Route / 钟路02路线 |
 | `jongro08_route` | 종로08 노선 / Jongno 08 Route / 钟路08路线 |
 | `jongro07_route` | 종로07 노선 / Jongno 07 Route / 钟路07路线 |
+| `hssc_route` | 인사캠 셔틀버스 노선 / HSSC Shuttle Bus Route / 人文校区班车路线 |
 
-Every one has `defaultVisibleWhen: { kind: "never" }`, `userConfigurable: true`, `chipGroupId: null`
-and the same style, `{ color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20",
+Every one has `defaultVisibleWhen: { kind: "never" }`, `userConfigurable: true` and `chipGroupId: null`;
+the Jongno ones share the same style, `{ color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20",
 minZoom: 13 }`: the opt-in row of §4, so an installed app keeps a tile in its filter sheet and fetches
 this route only once a user turns a line on. The app's `MapRouteOverlay` reads `color`, `width`,
 `outlineWidth`, `outlineColor`, `minZoom` and `maxZoom`, and no `zIndex`; NAVER draws a path beneath
 every marker, so the lines never cover a building label.
 
-**One green.** Every route is drawn in the village-bus green `4CAF50`, the map's own constant: a push of
+(A collector detail is left out of the public history.)
+
+**One green.** Every Jongno route is drawn in the village-bus green `4CAF50`, the map's own constant: a push of
 a route's card colour (`themeColor` in `jongro-route-attributes`) never moves it, and the route test
-pins `4CAF50` for every route layer. A colour per route was tried and rejected by the owner. The dark-green edge (`1B5E20`) keeps the line
+pins `4CAF50` for every Jongno route layer. A colour per route was tried and rejected by the owner. The dark-green edge (`1B5E20`) keeps the line
 legible over the green of parks and the campus, where a white edge or none washes out. Telling
 overlapping routes apart is the job of tone, edge and direction arrows, as NAVER Map does for a route's
 two directions; a later app change draws the selected route vivid, with direction chevrons and a `zIndex`
@@ -938,9 +942,12 @@ being written. When the read fails, the bus module serves the lines it read last
 (`ROUTE_PATHS_STALE_WINDOW_MS`); a read that fails with nothing read before answers `503`
 `{ "error": { "code": "JONGRO_ROUTE_PATHS_UNAVAILABLE", … } }` rather than an empty overlay a shared
 cache would keep, and so does every request for the next 30 s (`ROUTE_PATHS_RETRY_MS`) before the
-store is read again. `degraded` never reaches the body.
+store is read again. With no HSSC line ever read (the dataset missing, invalid or unreadable, logged at
+error as `bus.hssc_route_line.missing`, `.invalid` or `.read_failed`), the response serves the Jongno
+lines alone, exactly as they would be served with it, with `public, max-age=60`; once read, the line serves
+through failed reads for a day. `degraded` never reaches the body.
 
-The stations TOPIS answers with each line are stored but not drawn yet: the place-dot marker ignores a
+The stations TOPIS answers with each line are stored but not drawn yet, and the HSSC overlay carries none either: the place-dot marker ignores a
 layer's `zIndex`, so a stop caption could win over a building name. A stop layer waits for that app
 change.
 
@@ -975,7 +982,7 @@ change.
 
 ## 6. Why layers share endpoints
 
-Both building layers point at `/map/overlays/campus`, the three Jongno route line layers at
+Both building layers point at `/map/overlays/campus`, the four route line layers at
 `/map/overlays/transit`, and every festival layer at `/map/overlays/event`.
 
 Since a layer no longer names a renderer, layers sharing an endpoint are free to draw different
