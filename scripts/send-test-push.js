@@ -22,20 +22,28 @@ function fail(message) {
   process.exit(2);
 }
 
+function parseOptions(argv) {
+  try {
+    return parseArgs({
+      args: argv,
+      options: {
+        token: { type: "string" },
+        title: { type: "string", default: "skkuverse test" },
+        body: { type: "string", default: "test push" },
+        channel: { type: "string", default: "notice_general" },
+        data: { type: "string" },
+        cred: { type: "string", default: "gcloud" },
+        impersonate: { type: "string", default: SENDER },
+        send: { type: "boolean", default: false },
+      },
+    }).values;
+  } catch (err) {
+    return fail(err.message);
+  }
+}
+
 function readOptions(argv) {
-  const { values } = parseArgs({
-    args: argv,
-    options: {
-      token: { type: "string" },
-      title: { type: "string", default: "skkuverse test" },
-      body: { type: "string", default: "test push" },
-      channel: { type: "string", default: "notice_general" },
-      data: { type: "string" },
-      cred: { type: "string", default: "gcloud" },
-      impersonate: { type: "string", default: SENDER },
-      send: { type: "boolean", default: false },
-    },
-  });
+  const values = parseOptions(argv);
   if (!values.token) fail("missing --token");
   if (values.cred !== "gcloud") fail("--cred must be gcloud: this script holds no key");
   if (!CHANNELS.includes(values.channel)) fail(`--channel must be one of ${CHANNELS.join(", ")}`);
@@ -55,17 +63,32 @@ function readData(json) {
   return data;
 }
 
+// gcloud writes the token to stdout only; its stderr holds the reason it could not mint one.
+function firstStderrLine(err) {
+  const stderr = typeof err.stderr === "string" ? err.stderr : "";
+  const line = stderr.split("\n").find((l) => l.trim() !== "");
+  const fallback = err.code === "ENOENT" ? "gcloud is not installed or not on PATH" : `gcloud exited ${err.status}`;
+  return (line ?? fallback).trim().slice(0, 200);
+}
+
 function gcloudCredential(serviceAccount) {
   const args = ["auth", "print-access-token", `--impersonate-service-account=${serviceAccount}`];
-  return {
+  const credential = {
+    failure: undefined,
     async getAccessToken() {
-      const accessToken = execFileSync("gcloud", args, {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-      }).trim();
-      return { access_token: accessToken, expires_in: TOKEN_LIFETIME_S };
+      try {
+        const accessToken = execFileSync("gcloud", args, {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        }).trim();
+        return { access_token: accessToken, expires_in: TOKEN_LIFETIME_S };
+      } catch (err) {
+        credential.failure = firstStderrLine(err);
+        throw new Error("gcloud auth print-access-token failed", { cause: err });
+      }
     },
   };
+  return credential;
 }
 
 function toMessage(options) {
@@ -81,7 +104,8 @@ function toMessage(options) {
 
 async function main() {
   const options = readOptions(process.argv.slice(2));
-  initializeApp({ projectId: PROJECT_ID, credential: gcloudCredential(options.impersonate) });
+  const credential = gcloudCredential(options.impersonate);
+  initializeApp({ projectId: PROJECT_ID, credential });
 
   const dryRun = !options.send;
   console.log(
@@ -92,7 +116,7 @@ async function main() {
     console.log(`ok messageId=${id}`);
   } catch (err) {
     const firstLine = String(err.message ?? err).split("\n")[0].slice(0, 300);
-    console.log(`error code=${err.code ?? "?"} message=${firstLine}`);
+    console.log(`error code=${err.code ?? "?"} ${credential.failure ? `gcloud=${credential.failure}` : `message=${firstLine}`}`);
     process.exitCode = 1;
   }
 }
