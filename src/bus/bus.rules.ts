@@ -6,6 +6,14 @@ export function serviceConfigOf(serviceId: string): ServiceConfigEntry | undefin
   return Object.hasOwn(SERVICE_CONFIG, serviceId) ? SERVICE_CONFIG[serviceId] : undefined;
 }
 
+// QUIRK(hssc): the two passes of the Hyehwa Rotary (seq 10 and 1), where the shuttle boards no one; the stored line
+// names no stop at these positions, and the HSSC estimates count neither as a stop.
+const HSSC_PASS_THROUGH_STATION_INDEXES: readonly number[] = [5, 7];
+
+export function isHsscPassThrough(stationIndex: number): boolean {
+  return HSSC_PASS_THROUGH_STATION_INDEXES.includes(stationIndex);
+}
+
 const refuseChange = (): never => {
   throw new TypeError("a frozen collection cannot change");
 };

@@ -789,6 +789,33 @@ describe("toBusStopsIssues", () => {
     expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([{ path: ["hssc", "stations", 9, "stopId"], message: 'names the stop "hssc-main-gate-out", which position 2 names too' }]);
   });
 
+  // WHY: a null stopId is served as a pass-through on /bus/config while the HSSC estimates count stops by the code's pass-through
+  // positions, so the two must agree (ADR 0019 D4).
+  it("Position 4 left null: names its path, since the estimates count it as a stop", () => {
+    // Arrange
+    const data = fixture();
+    data.hssc.stations[4].stopId = null;
+
+    // Act & Assert
+    expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([
+      { path: ["hssc", "stations", 4, "stopId"], message: "is null, but the HSSC estimates count position 4 as a stop (isHsscPassThrough in src/bus/bus.rules.ts)" },
+    ]);
+  });
+
+  it("Position 5 given a stop: names its path and the stop, since the estimates pass it through", () => {
+    // Arrange
+    const data = fixture();
+    data.hssc.stations[5].stopId = "hssc-bus-lot";
+
+    // Act & Assert
+    expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([
+      {
+        path: ["hssc", "stations", 5, "stopId"],
+        message: 'names the stop "hssc-bus-lot" at position 5, which the HSSC estimates pass through (isHsscPassThrough in src/bus/bus.rules.ts)',
+      },
+    ]);
+  });
+
   it("One pole claimed twice: names both paths and 01618", () => {
     // Arrange
     const data = withStop("hssc-bus-lot", { arsIds: ["01618"] });

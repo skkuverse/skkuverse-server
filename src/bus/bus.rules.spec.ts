@@ -6,9 +6,11 @@
  * the stop index and the realtime stations of `/bus/config` both serve. Ported
  * (old → new): `toTopisStopId` "prefixes the ARS number" of
  * src/bus/stop-index/bus-stop-index.rules.spec.ts is the first case below.
- * The TOPIS key's format check is src/infra/required-env.spec.ts's.
+ * The TOPIS key's format check is src/infra/required-env.spec.ts's. The HSSC
+ * line passes through the Hyehwa Rotary at positions 5 and 7, the stored line's
+ * null stops and the positions the HSSC estimates skip.
  */
-import { deepFreeze, serviceConfigOf, toPoleStopId, toServedArsId } from "./bus.rules";
+import { deepFreeze, isHsscPassThrough, serviceConfigOf, toPoleStopId, toServedArsId } from "./bus.rules";
 
 describe("deepFreeze", () => {
   it("freezes every nested object and array, and returns the same value", () => {
@@ -96,6 +98,21 @@ describe("serviceConfigOf for the commute services", () => {
 });
 
 // WHY: the live route shows a pole's number on its sign and nothing for a virtual stop (ADR 0019, D5).
+describe("isHsscPassThrough", () => {
+  it.each([
+    [4, false],
+    [5, true],
+    [6, false],
+    [7, true],
+    [8, false],
+    [0, false],
+    [10, false],
+  ])("position %i → %s", (stationIndex, expected) => {
+    // Act & Assert
+    expect(isHsscPassThrough(stationIndex)).toBe(expected);
+  });
+});
+
 describe("toServedArsId", () => {
   it.each([
     ["01592", "01592"],

@@ -22,7 +22,7 @@ The `bus-stops` dataset holds every local stop the server serves ([bus architect
   "topis"?:    { "<ARS number>": { "name"?: { "en"?, "zh"? }, "subwayStationId"? } } }
 ```
 
-What stays in code, and needs a deploy to change: the service ids and which route types get arrival estimates (`SERVICE_CONFIG` in `src/bus/bus.constants.ts`), the travel strategies (`LANE_STRATEGIES`), the HSSC position count (`HSSC_POSITION_COUNT`) and how the HSSC API's stop names map to positions (`src/bus/realtime/hssc/`). Jongno stops are TOPIS's and are never stored here.
+What stays in code, and needs a deploy to change: the service ids and which route types get arrival estimates (`SERVICE_CONFIG` in `src/bus/bus.constants.ts`), the travel strategies (`LANE_STRATEGIES`), the HSSC position count (`HSSC_POSITION_COUNT`), the positions the shuttle passes through (`isHsscPassThrough` in `src/bus/bus.rules.ts`, 5 and 7) and how the HSSC API's stop names map to positions (`src/bus/realtime/hssc/`). Jongno stops are TOPIS's and are never stored here.
 
 Every stop of a sequence or the HSSC line, and every Jongno pole, has a stop page, `GET /bus/stops/:stopId/arrivals` ([bus-stops-api.md](../reference/bus-stops-api.md)). What it shows, and where each part comes from:
 
@@ -35,7 +35,7 @@ Every stop of a sequence or the HSSC line, and every Jongno pole, has a stop pag
 | A shuttle entry's next runs | The stored timetable and estimates, through the smart schedule; boarding and drop-off stops alike |
 | An HSSC entry's buses | `bus_cache`, as the HSSC realtime route serves them |
 
-Every realtime station of `/bus/config` names its stop page as `stopId`, its last field: an HSSC position its `stopId` here, a Jongno station `seoul-<ARS number>` or the local stop aliasing it, and a position with none (the two non-stop 혜화동로터리 rows) no key ([bus-stops-api.md](../reference/bus-stops-api.md#stop-ids-on-the-realtime-stations)). A position with none is a pass-through: `/bus/config` serves it `isPassThrough: true` and the app shows "미정차" there, so set a position's `stopId` to `null` only where the bus never stops.
+Every realtime station of `/bus/config` names its stop page as `stopId`, its last field: an HSSC position its `stopId` here, a Jongno station `seoul-<ARS number>` or the local stop aliasing it, and a position with none (the two non-stop 혜화동로터리 rows) no key ([bus-stops-api.md](../reference/bus-stops-api.md#stop-ids-on-the-realtime-stations)). A position with none is a pass-through: `/bus/config` serves it `isPassThrough: true` and the app shows "미정차" there, so a position's `stopId` is `null` exactly at the positions the code passes through (`isHsscPassThrough`), which the HSSC estimates never count as a stop; a push that leaves another position `null`, or names a stop at one of them, is refused.
 
 A push that changes a stop, a sequence or an alias reaches its page within a minute, and an alias the `stopId` of its pole's stations in each Jongro group, whose ETag changes with it. A slug renamed or removed answers `404` on its page, so never rename a served one: the app may hold it.
 
@@ -49,7 +49,7 @@ A push that changes a stop, a sequence or an alias reaches its page within a min
 | `guide` | Subway exit places, and walks of at most 500 m that start or end at the stop as the sequences use it |
 | `subwayStationId` | A station slug the subway module serves |
 | A sequence | At least two stops, the first boarding, one alighting; a stop once per sequence; an estimated one with its first stop scheduled and at most seven stops |
-| `hssc.stations` | Exactly `HSSC_POSITION_COUNT` positions in wire order, only the first flagged first and the last flagged last, each `stopId` a stop of this dataset or `null`, no stop named twice; `isAlightOnly`, when present, a boolean and never `true` at a position whose `stopId` is `null` |
+| `hssc.stations` | Exactly `HSSC_POSITION_COUNT` positions in wire order, only the first flagged first and the last flagged last, `stopId` `null` at the pass-through positions (`isHsscPassThrough`: 5 and 7) and a stop of this dataset everywhere else, no stop named twice; `isAlightOnly`, when present, a boolean and never `true` at a position whose `stopId` is `null` |
 | `arsIds` | Five-digit ARS numbers, each claimed by one stop only |
 | A sequence against the stored timetables | Every entry of its service and route type in the target's `bus_campus.bus_schedules` (`_dev` without `--prod`) has one `stopTimes` time per stop, `null` only at an estimated stop; a refusal names the service, the route type and the first three entry times. A pattern that ended before today (KST) serves no date ahead: it is printed as `skipped` and not checked |
 
@@ -178,6 +178,7 @@ Then run the printed `npm run schedule -- --file /tmp/commute-schedule.before.js
 | --- | --- | --- |
 | The push is refused at `stops.<n>.id` | The id breaks the grammar or starts with `seoul-` | Pick a slug; never rename a served one |
 | The push is refused at `hssc.stations` | Not exactly `HSSC_POSITION_COUNT` positions | The count is code: change it there, with the HSSC API matching, first |
+| The push is refused at `hssc.stations.<n>.stopId`, naming `isHsscPassThrough` | A `null` where the shuttle stops, or a stop where it passes through | The pass-through positions are code: change `isHsscPassThrough`, which the HSSC estimates read too, and deploy first |
 | The push is refused naming a lane strategy | `LANE_STRATEGIES` sets one for a sequence the data drops | Keep the sequence, or remove the strategy in code and deploy first |
 | `/bus/config` answers `503 BUS_STOPS_UNAVAILABLE` | A replica has never read a good `bus-stops` (missing, invalid or unreadable) | `npm run data -- check bus-stops --prod`; roll back to the last good revision |
 | `bus.stops.invalid` in the logs after a push the tool accepted | The checkout you pushed from is not the deployed code, which refuses the revision | Roll back to the last good revision now, within the 24 hours, then push again from a checkout at the deployed `main` |
