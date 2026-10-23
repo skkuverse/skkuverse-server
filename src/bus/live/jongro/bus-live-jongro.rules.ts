@@ -1,5 +1,6 @@
 import { toKstInstant } from "../../bus.mapper";
 import type { Arrival, Operation, Vehicle } from "../../bus.wire";
+import type { JongroBusType } from "../../cache/bus-cache.document";
 import type { TimedArrival } from "../../realtime/arrival/bus-realtime-arrival.types";
 import type { JongroReading } from "../../realtime/group/bus-realtime-group.types";
 import type { RealtimeArrival } from "../../realtime/group/bus-realtime-group.wire";
@@ -78,6 +79,12 @@ export function toOccupancy({ crowding, passengerCount }: Pick<RealtimeArrival, 
 // QUIRK(topis): a plate comes padded with spaces, and a single space when there is none.
 export function toPlateNumber(plainNo: string): string | null {
   return plainNo.trim() || null;
+}
+
+// WHY: an articulated bus's type says nothing of its floor, and no type is unknown rather than general.
+export function toLowFloor(busType: JongroBusType | undefined): boolean | null {
+  if (busType === "lowFloor") return true;
+  return busType === "general" ? false : null;
 }
 
 /** WHY: a group is as fresh as its staler key, so a stopped writer of either shows (ADR 0019, D6). */

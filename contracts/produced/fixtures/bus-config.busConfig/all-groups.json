@@ -55,7 +55,8 @@
             "positionSource": "stopEvents",
             "occupancy": false,
             "plateNumber": false,
-            "lastBus": false
+            "lastBus": false,
+            "lowFloor": false
           }
         }
       },
@@ -401,7 +402,8 @@
             "positionSource": "gps",
             "occupancy": true,
             "plateNumber": true,
-            "lastBus": true
+            "lastBus": true,
+            "lowFloor": true
           }
         }
       },
@@ -454,7 +456,8 @@
             "positionSource": "gps",
             "occupancy": true,
             "plateNumber": true,
-            "lastBus": true
+            "lastBus": true,
+            "lowFloor": true
           }
         }
       },
@@ -507,7 +510,8 @@
             "positionSource": "gps",
             "occupancy": true,
             "plateNumber": true,
-            "lastBus": true
+            "lastBus": true,
+            "lowFloor": true
           }
         }
       }

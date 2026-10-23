@@ -28,7 +28,7 @@ Rejected for now: an uncertainty window. Summed per-segment spreads are no bound
 
 ### D2. One shape; null is "unknown now", capabilities are "never"
 
-Every key is always present, and what a source cannot supply is null, never a missing key or a placeholder (`"0000"`, `"----"`). What a source can never supply is stated once per group in `/bus/config` (`capabilities`: `positionSource` `gps` or `stopEvents`, `occupancy`, `plateNumber`, `lastBus`), so a client tells "this line has no plates" from "this bus's plate is unknown". A new source (the Shuttle GPS feed) changes a group's capabilities and fills fields; the shape does not move.
+Every key is always present, and what a source cannot supply is null, never a missing key or a placeholder (`"0000"`, `"----"`). What a source can never supply is stated once per group in `/bus/config` (`capabilities`: `positionSource` `gps` or `stopEvents`, `occupancy`, `plateNumber`, `lastBus`, `lowFloor`), so a client tells "this line has no plates" from "this bus's plate is unknown". A new source (the Shuttle GPS feed) changes a group's capabilities and fills fields; the shape does not move.
 
 ### D3. Every enum is open
 
@@ -79,9 +79,13 @@ The server serves instants and `meta.serverNow`; the client keeps its clock offs
 
 `GET /bus/stops/:stopId/arrivals` lists a `live` entry per realtime group (exactly the live route's station entry for the same stored state, with `towards`, the next station with a stop) and a `timetable` entry per shuttle service, whose runs are `scheduled` arrivals carrying `runDepartureAt`, so a run with no time at the stop still sorts and labels. A run is listed until its time at the stop passes: the timetable's where the page shows one; otherwise the later of the arrival of its latest estimate (the newest fetched among its unexpired ones, served or not) and the served estimate the page shows, so a run never leaves the list before the time it shows; with neither, its departure. The page shows only the served estimate. The page was reshaped in place, since no installed app read it.
 
+### D13. Low-floor is the vehicle's, from one row
+
+A vehicle carries `isLowFloor`, true for TOPIS's low-floor type (`busType` 1), false for its general type (0), null otherwise: an articulated bus (2) says nothing of its floor, and a missing or undocumented code is no information, never a guess. It is the bus's, not a station's, so it sits on the vehicle and no arrival repeats it. One row decides it, so one bus never shows two answers: the position row when the bus has a position, else the arrival row its plate comes from (the one nearest ahead of it); the other rows are never consulted, even when the deciding row is silent. A row an older poller wrote carries no type, so during a deploy (ADR 0012) the flag is null, never an error. The HSSC feed names no type, so `capabilities.lowFloor` is false there and true on Jongno, where a null is unknown right now. Added 2026-10-23, when TOPIS named 2 of 종로02's 4 buses, 1 of 종로07's 5 and none of 종로08's 6 low-floor.
+
 ## Consequences
 
 - No user sees the new routes before the OTA, so there is no mixed state; the client takes over the minute and 곧 도착 rules (D10).
 - Two measured weekdays back the HSSC estimates (ADR 0018); a month of `hssc_feed_events` and TOPIS captures is the planned revision, and the window of D1 with it.
 - A run at an alighting stop has no timetable time there, so it is listed until the arrival of its most recently fetched unexpired estimate, even a live value older than the 15 minutes the smart view serves one, then the baseline prediction, and only with neither by its departure (owner, 2026-10-22), but never before the served estimate the page shows for it (2026-10-22). That estimate decides only the listing: the page shows the served estimate or none, so a stale value never shows as a time. The smart view applies it from the same cached read (`BusEtaSmartService.resolveLatestEstimates`); a run of the following week keeps its served estimate.
-- TOPIS's low-floor and full-bus flags (`busType`, `isFullFlag`) are not cached; adding them to the vehicle is additive.
+- TOPIS's low-floor type is served as `isLowFloor` (D13); its full-bus flag (`isFullFlag`, `"0"` on every row on 2026-10-23) is not cached, and adding it to the vehicle is additive.

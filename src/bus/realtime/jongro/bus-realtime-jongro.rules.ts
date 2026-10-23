@@ -1,5 +1,5 @@
-import type { BusCacheKey } from "../../cache/bus-cache.document";
-import { DWELL_RESET_MINUTES, MAX_STATIONARY_MOVE_METERS } from "./bus-realtime-jongro.constants";
+import type { BusCacheKey, JongroBusType } from "../../cache/bus-cache.document";
+import { BUS_TYPE_BY_CODE, DWELL_RESET_MINUTES, MAX_STATIONARY_MOVE_METERS } from "./bus-realtime-jongro.constants";
 import type { JongroBusDwell, JongroBusSighting, JongroVehicleObservation } from "./bus-realtime-jongro.types";
 
 const ORIGIN_SECT_ORD = 1;
@@ -25,6 +25,11 @@ export function isNoResultHeaderCd(headerCd: string | undefined): boolean {
 export function toTopisInteger(text: string | null | undefined): number | null {
   const trimmed = text?.trim() ?? "";
   return /^-?\d+$/.test(trimmed) ? Number(trimmed) : null;
+}
+
+// WHY: a code TOPIS does not document is no information, never a guess at the nearest type.
+export function toBusType(text: string | null | undefined): JongroBusType | null {
+  return BUS_TYPE_BY_CODE.get(text?.trim() ?? "") ?? null;
 }
 
 // WHY: TOPIS gives no arrival time, so a bus's time at its last passed station counts from the first tick that

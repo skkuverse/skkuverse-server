@@ -173,6 +173,12 @@
                         "null"
                       ]
                     },
+                    "isLowFloor": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
                     "position": {
                       "anyOf": [
                         {
@@ -311,6 +317,7 @@
                     "plateNumber",
                     "occupancy",
                     "isLastBus",
+                    "isLowFloor",
                     "position",
                     "trajectory"
                   ]
@@ -539,6 +546,12 @@
                         "null"
                       ]
                     },
+                    "isLowFloor": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
                     "position": {
                       "anyOf": [
                         {
@@ -677,6 +690,7 @@
                     "plateNumber",
                     "occupancy",
                     "isLastBus",
+                    "isLowFloor",
                     "position",
                     "trajectory"
                   ]

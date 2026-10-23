@@ -35,7 +35,7 @@ audience: internal
     "updatedAt": "2026-10-20T09:59:55+09:00",
     "operation": "running",
     "vehicles": [{
-      "id": "32149", "plateNumber": null, "occupancy": null, "isLastBus": null,
+      "id": "32149", "plateNumber": null, "occupancy": null, "isLastBus": null, "isLowFloor": null,
       "position": {
         "stationIndex": 6, "status": "inTransit", "progress": null, "sectionMeters": null, "coords": null,
         "nextStationAt": "2026-10-20T10:00:20+09:00", "positionAt": "2026-10-20T09:59:50+09:00", "checkedAt": "2026-10-20T09:59:55+09:00"
@@ -116,6 +116,7 @@ Order: a bus at the station first (standing there, or laying over at its own tur
 | `plateNumber` | string \| null | The full plate (`서울74사5537`); shorten it on the client if the design wants the last four digits |
 | `occupancy` | object \| null | `{ level: "relaxed" \| "normal" \| "crowded", passengerCount: int \| null }`, from the TOPIS row nearest ahead of the bus |
 | `isLastBus` | boolean \| null | True when any TOPIS row naming the bus says 막차 (TOPIS flags it per row, and a 곧 도착 row carries no [막차] text); every arrival naming the bus carries this value. Null when no row names the bus |
+| `isLowFloor` | boolean \| null | True for a low-floor bus (저상버스), false for a general one, from TOPIS's bus type: its position row's when it has a position, else the arrival row its plate comes from, never a mix ([ADR 0019, D13](../decisions/0019-bus-live-api.md)). Null when that row names no type (an articulated bus, a row written before the field shipped) and always on the HSSC line |
 | `position` | object \| null | Null for a bus an arrival names but no position row has |
 | `trajectory` | array \| null | Knots `{ at, s }`, ascending; null when the bus is not moving or has no position |
 
@@ -149,6 +150,7 @@ Parse each station and each vehicle on its own: one that fails to parse is skipp
 - **Clock.** `offset` is the largest `serverNow − receipt` over the last five responses (the app's `server-clock.rules.ts`).
 - **Minutes.** `remaining = expectedArrivalAt − (deviceNow + offset)`. Show `max(1, round(remaining / 60))` minutes; show 곧 도착 when `status` is `arriving` or `remaining ≤ 60 s`, and keep showing it while the arrival is overdue by up to two minutes; past that, drop the arrival until the next poll replaces it.
 - **Markers.** Dim a marker when `checkedAt` is more than 120 s old and freeze it past 180 s, whatever `positionAt` says: a stop-event source repeats its last event until the next stop, so a minutes-old `positionAt` is normal. Move a marker along `trajectory` between knots, linearly, against `serverNow`, and hold it at the last knot. A poll can take a bus back: an estimate that ran ahead of the feed is withdrawn, so a bus is served at an earlier station than before. On the HSSC line the turnaround no longer does (a bus leaves 농구장 only once a later stop reports it, ADR 0018, D7) and a feed row that puts a bus back in its lap is held off (D8), but the rule holds for every line. A client that never moves a driving marker backward still places a standing one (`waitingToDepart`, or `atStop` with no trajectory) on its served station.
+- **Low floor.** Show a 저상 badge on a vehicle whose `isLowFloor` is `true`, and nothing for `false` or `null`. Where `capabilities.lowFloor` is `false` (the HSSC line) hide the badge and any legend for it, since the source never says. A client that wants it on an arrival reads the vehicle its `vehicleId` names; arrivals carry no copy.
 - **Loops.** On a group whose `/bus/config` `isLoop` is true, `s` may pass the last index: place the marker at `s mod stationCount`, the section after the last station leading back to station 0. Jongno 02, whose station list repeats its terminal, is not a loop. The wrap matters only to a client that extrapolates without a cap; one that holds a marker at `stationIndex + 0.95` until a poll confirms the next stop wraps when a poll moves the bus to station 0, and both are valid.
 
 ## Stations version
@@ -168,9 +170,9 @@ Each realtime group's `screen` in `GET /bus/config` and `GET /bus/config/:groupI
 | `liveEndpoint` | `/bus/live/hssc` | `/bus/live/<groupId>` | This route, which the app moves to by OTA |
 | `isLoop` | `true` | `false` | Whether a trajectory's `s` may pass the last index |
 | `capabilities.positionSource` | `stopEvents` | `gps` | Open enum: `gps` brings coordinates and progress |
-| `capabilities.occupancy`, `.plateNumber`, `.lastBus` | `false` | `true` | Whether the source can ever supply them: `false` means always null, `true` that a null is unknown right now |
+| `capabilities.occupancy`, `.plateNumber`, `.lastBus`, `.lowFloor` | `false` | `true` | Whether the source can ever supply them: `false` means always null, `true` that a null is unknown right now |
 
-Each realtime group's ETag and the all-groups ETag changed once, in every language, when the fields shipped.
+Each realtime group's ETag and the all-groups ETag changed once, in every language, when the fields shipped, and once more when `lowFloor` did (2026-10-23).
 
 Each station of a realtime screen also carries `isPassThrough`, right after `isRotationStation`:
 

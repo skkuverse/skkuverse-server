@@ -21,6 +21,7 @@
             "plateNumber": null,
             "occupancy": null,
             "isLastBus": null,
+            "isLowFloor": null,
             "position": {
               "stationIndex": 1,
               "status": "inTransit",
@@ -119,6 +120,7 @@
             "plateNumber": null,
             "occupancy": null,
             "isLastBus": null,
+            "isLowFloor": null,
             "position": {
               "stationIndex": 4,
               "status": "inTransit",

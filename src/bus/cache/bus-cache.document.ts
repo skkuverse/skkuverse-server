@@ -26,6 +26,9 @@ export interface HsscBusDoc extends HsscApiBus {
 /** WHY: a bus's row as the live route anchors on it, with its first sighting, which keeps it fresh. */
 export type HsscAnchorRow = Pick<HsscBusDoc, "seq" | "inout" | "get_date" | "stationName" | "eventDate">;
 
+/** QUIRK(topis): the vehicle's type, busType "0", "1" or "2" on both Jongno endpoints; a row without one leaves it out. */
+export type JongroBusType = "general" | "lowFloor" | "articulated";
+
 export interface JongroArrivalBus {
   /** QUIRK(topis): seconds to the stop, although TOPIS's guide says minutes; 0 when it has none. */
   traTime: number;
@@ -39,6 +42,8 @@ export interface JongroArrivalBus {
   /** QUIRK(topis): 2 makes rerideNum the on-board passenger count, 4 a congestion code. */
   rerideDiv: number | null;
   rerideNum: number | null;
+  /** WHY: absent when TOPIS sent no documented code, and in a row a poller older than the field wrote (ADR 0012). */
+  busType?: JongroBusType;
 }
 
 export interface JongroArrivalDoc {
@@ -76,6 +81,8 @@ export interface JongroBusPositionDoc {
   /** WHY: the vehicle stood still since the poller's previous observation of it. */
   isStationary: boolean;
   atStopSince?: string;
+  /** WHY: absent when TOPIS sent no documented code, and in a row a poller older than the field wrote (ADR 0012). */
+  busType?: JongroBusType;
 }
 
 export interface BusCacheValueByKey {

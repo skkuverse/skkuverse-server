@@ -53,7 +53,8 @@
         "positionSource": "stopEvents",
         "occupancy": false,
         "plateNumber": false,
-        "lastBus": false
+        "lastBus": false,
+        "lowFloor": false
       }
     }
   }

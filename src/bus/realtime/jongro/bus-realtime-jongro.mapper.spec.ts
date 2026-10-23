@@ -1,7 +1,8 @@
 /**
  * The Jongro mapper: a sighting placed on a registry stop becomes the cached
  * bus position the realtime route reads, at its section ord with its vehicle
- * fields, and since when it has stood at its stop.
+ * fields, and since when it has stood at its stop, and its bus type when
+ * TOPIS named one (left out otherwise, as a poller older than the field wrote it).
  * The two TOPIS URLs every Jongro route polls: the arrival URL byte-identical
  * to the one production has called since the registry was introduced, and the
  * position URL of getBusPosByRtid, which answers the whole route (no ord
@@ -11,6 +12,28 @@ import { jongroSighting } from "../../../../__tests__/helpers/bus/jongro-sightin
 import { toJongroArrivalsUrl, toJongroBusPosition, toJongroPositionsUrl } from "./bus-realtime-jongro.mapper";
 
 describe("toJongroBusPosition", () => {
+  it.each([
+    ["lowFloor", { busType: "lowFloor" }],
+    ["general", { busType: "general" }],
+  ] as const)("keeps the sighting's bus type %s", (busType, expected) => {
+    // Arrange
+    const sighting = jongroSighting({ busType });
+
+    // Act
+    const position = toJongroBusPosition(sighting, { sequence: 6, stationName: "명륜새마을금고" }, { firstSeenAt: "2026-10-20T01:00:00.000Z", dwellSeconds: 0, isStationary: false });
+
+    // Assert
+    expect(position).toMatchObject(expected);
+  });
+
+  it("leaves the bus type out when the sighting has none", () => {
+    // Act
+    const position = toJongroBusPosition(jongroSighting(), { sequence: 6, stationName: "명륜새마을금고" }, { firstSeenAt: "2026-10-20T01:00:00.000Z", dwellSeconds: 0, isStationary: false });
+
+    // Assert
+    expect(position).not.toHaveProperty("busType");
+  });
+
   it("places the sighting on its stop with its dwell", () => {
     // Arrange
     const sighting = jongroSighting({ stationId: "100900197", latitude: "37.587", longitude: "126.998", carNumber: "5537", sectOrd: 6 });

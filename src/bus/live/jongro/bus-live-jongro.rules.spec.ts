@@ -5,6 +5,7 @@
  * than TOPIS's staOrd − sectOrd, since an arrival row's sectOrd is the next stop's own staOrd, and a bus the positions
  * show standing at the station is 0 and at the stop. A vehicle's occupancy comes from the arrival row nearest ahead of it,
  * its last-bus flag from any row that names it, carried by every arrival naming it, and its plate is TOPIS's full plate.
+ * Its low-floor flag is read from TOPIS's bus type: true for a low-floor bus, false for a general one, null otherwise.
  */
 import { jongroArrivalBus, jongroPositionDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { Arrival } from "../../bus.wire";
@@ -12,6 +13,7 @@ import type { JongroBusTracking, TrackedPosition } from "../../realtime/group/bu
 import type { RealtimeArrival } from "../../realtime/group/bus-realtime-group.wire";
 import {
   toJongroArrival,
+  toLowFloor,
   toNearestSlot,
   toOccupancy,
   toOlderInstant,
@@ -250,5 +252,19 @@ describe("toOlderInstant", () => {
   ])("%s and %s → %s", (a, b, expected) => {
     // Act & Assert
     expect(toOlderInstant(a, b)).toEqual(expected);
+  });
+});
+
+describe("toLowFloor", () => {
+  it.each([
+    ["lowFloor", true],
+    ["general", false],
+    // WHY: TOPIS's articulated type says nothing about the floor, so it is no answer rather than false.
+    ["articulated", null],
+    // WHY: a row a poller older than the field wrote, or one TOPIS sent no documented type for.
+    [undefined, null],
+  ] as const)("%j → %j", (busType, expected) => {
+    // Act & Assert
+    expect(toLowFloor(busType)).toBe(expected);
   });
 });

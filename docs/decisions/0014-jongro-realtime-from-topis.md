@@ -3,7 +3,7 @@ title: Jongro Realtime from TOPIS — What We Measured and Rely On
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-23
 audience: internal
 ---
 
@@ -43,6 +43,10 @@ The station list is compared with each tick's `getArrInfoByRouteAll` rows, which
 ### D6. skkuverse-crawler's bus module reads the registry before it runs again
 
 skkuverse-crawler's `bus-jongro` module, paused in production, polls TOPIS from its own copy of the route list from before the registry. It must read `jongro_routes` before it is re-enabled (`spencer0124/skkuverse#87`), and its calls count against the same TOPIS quota ([project-docs](../project-docs.md), "Daily Usage and Quota Check").
+
+### D7. The bus type is the vehicle's, kept as TOPIS codes it
+
+`getBusPosByRtid` names each bus's type (`busType`) and `getArrInfoByRouteAll` each slot's (`busType1`, `busType2`): `0` general, `1` low-floor, `2` articulated in TOPIS's guide. On 2026-10-23 the two agreed for every bus (종로07's 서울70사5538 read `1` on its position and on each slot naming it), and a slot with no bus read `0`. The poller keeps the three documented codes and leaves anything else out; the live route reads it per vehicle ([ADR 0019, D13](0019-bus-live-api.md)).
 
 ## Consequences
 

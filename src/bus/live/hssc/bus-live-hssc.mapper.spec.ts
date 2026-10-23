@@ -1,6 +1,6 @@
 /**
- * The HSSC line in the live shape (ADR 0019, D2, D5, D6, D8): one vehicle per fresh bus with no plate, occupancy or
- * last-bus flag the feed never gives, a position from its latest stop event checked when the poller wrote, each stop
+ * The HSSC line in the live shape (ADR 0019, D2, D5, D6, D8): one vehicle per fresh bus with no plate, occupancy,
+ * last-bus or low-floor flag the feed never gives, a position from its latest stop event checked when the poller wrote, each stop
  * a station named by its stop id with no pole number, running while a bus is fresh, and no data without one.
  */
 import type { HsscEta } from "../../realtime/hssc-eta/bus-realtime-hssc-eta.types";
@@ -37,6 +37,7 @@ describe("toLiveHsscGroup", () => {
           plateNumber: null,
           occupancy: null,
           isLastBus: null,
+          isLowFloor: null,
           position: {
             stationIndex: 6,
             status: "inTransit",

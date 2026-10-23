@@ -46,7 +46,7 @@ const realtimeScreen = z.object({
   /** WHY: on a loop a trajectory's s may pass the last index; place a marker at s mod the station count (ADR 0019, D7). */
   isLoop: z.boolean(),
   /** WHY: what the group's source can never supply; positionSource is an open enum, gps or stopEvents (ADR 0019, D2). */
-  capabilities: z.object({ positionSource: z.string(), occupancy: z.boolean(), plateNumber: z.boolean(), lastBus: z.boolean() }),
+  capabilities: z.object({ positionSource: z.string(), occupancy: z.boolean(), plateNumber: z.boolean(), lastBus: z.boolean(), lowFloor: z.boolean() }),
 });
 
 const scheduleScreen = z.object({
