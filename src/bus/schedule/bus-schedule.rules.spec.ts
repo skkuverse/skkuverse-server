@@ -11,15 +11,21 @@ import moment from "moment-timezone";
 import type { BusScheduleDoc } from "./bus-schedule.document";
 import { isWeekStartInRange, pickPattern, toNonOperatingDayLabel, toSuspendedDay, toSuspendWindow } from "./bus-schedule.rules";
 import type { ScheduleDay } from "./bus-schedule.wire";
+import type { SchoolRestDay } from "../../calendar/calendar.types";
 
 describe("toNonOperatingDayLabel", () => {
+  const dataset = (label: string): SchoolRestDay => ({ label, source: "dataset" });
+  const crawled = (label: string): SchoolRestDay => ({ label, source: "crawled" });
+
   it.each([
     ["the calendar's name passes through", "2026-03-02", "대체공휴일(삼일절)", null, "대체공휴일(삼일절)"],
     ["an election day passes through", "2026-06-03", "전국동시지방선거", null, "전국동시지방선거"],
-    ["a SKKU rest day beats a calendar name", "2026-09-28", "임시공휴일", "공자탄신일", "공자탄신일"],
-    ["a SKKU rest day with no calendar name", "2026-09-25", null, "건학기념일", "건학기념일"],
+    ["a SKKU rest day beats a calendar name", "2026-09-28", "임시공휴일", dataset("공자탄신일"), "공자탄신일"],
+    ["a SKKU rest day with no calendar name", "2026-09-25", null, dataset("건학기념일"), "건학기념일"],
+    ["a crawled rest day yields to a calendar name", "2026-09-25", "추석", crawled("건학기념일"), "추석"],
+    ["a crawled rest day with no calendar name", "2026-09-28", null, crawled("공부자탄강일"), "공부자탄강일"],
     ["null on an ordinary day", "2026-03-03", null, null, null],
-  ])("%s: %s with %s and %s → %s", (_label, _date, publicHoliday, schoolRestDay, label) => {
+  ] as Array<[string, string, string | null, SchoolRestDay | null, string | null]>)("%s: %s with %s and %o → %s", (_label, _date, publicHoliday, schoolRestDay, label) => {
     // Act & Assert
     expect(toNonOperatingDayLabel({ publicHoliday, schoolRestDay })).toBe(label);
   });

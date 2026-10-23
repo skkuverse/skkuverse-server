@@ -202,8 +202,8 @@ describe("BusScheduleContentService.current school rest days", () => {
     const content = await service.current();
 
     // Assert
-    await expect(content.dayOf("2027-03-02")).resolves.toMatchObject({ date: "2027-03-02", publicHoliday: null, schoolRestDay: "학사휴교" });
-    await expect(content.dayOf("2026-09-25")).resolves.toMatchObject({ schoolRestDay: "건학기념일" });
+    await expect(content.dayOf("2027-03-02")).resolves.toMatchObject({ date: "2027-03-02", publicHoliday: null, schoolRestDay: { label: "학사휴교", source: "dataset" } });
+    await expect(content.dayOf("2026-09-25")).resolves.toMatchObject({ schoolRestDay: { label: "건학기념일", source: "dataset" } });
     await expect(content.dayOf("2026-09-24")).resolves.toMatchObject({ schoolRestDay: null });
   });
 
@@ -225,7 +225,7 @@ describe("BusScheduleContentService.current school rest days", () => {
     expect(beforeTtl.revisionKey).toBe(before.revisionKey);
     expect(beforeTtlDay.schoolRestDay).toBeNull();
     expect(atTtl.revisionKey).not.toBe(before.revisionKey);
-    expect((await atTtl.dayOf("2027-03-02")).schoolRestDay).toBe("학사휴교");
+    expect((await atTtl.dayOf("2027-03-02")).schoolRestDay?.label).toBe("학사휴교");
     expect(atTtl.noticesOf("campus-inja")).toEqual(before.noticesOf("campus-inja"));
   });
 
