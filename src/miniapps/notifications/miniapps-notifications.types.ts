@@ -23,6 +23,9 @@ export interface NotificationContent {
 /** WHY: the snapshot the sender was authorized against, so its link is checked against the same revision. */
 export type PushSender = { miniAppId: string; registry: Pick<MiniAppRegistry, "isKnownMiniAppTarget"> };
 
+/** WHY: the first-party game ids no target may name, held in code: only a production push checks the registry against the stored games. */
+export type PushLinkScope = PushSender & { gameIds: readonly string[] };
+
 export type DraftCheck = { problems: string[] } | { content: NotificationContent };
 
 /** WHY: what a send's own call came back as; a stored row with both fields null is still running, or never saved. */
