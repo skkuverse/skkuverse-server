@@ -4,13 +4,15 @@
  * (any other date is none, in every year), `restDayLabels` holds school rest
  * days keyed as the `skku-rest-days` dataset keys them (MM-DD yearly,
  * YYYY-MM-DD once) and read with the real lookup, `academicPeriod` is the
- * period every date answers, and `revision` is the revision key it answers. How the real service answers a date (stored years,
- * the rules fallback, the dataset's freshness and unavailability, the
- * RangeError) is calendar.service.spec.ts's.
+ * period every date answers, and `revision` is the revision key a snapshot
+ * carries. A snapshot reads the scripted values when asked. How the real
+ * service answers a date (stored years, the rules fallback, the dataset's
+ * freshness and unavailability, the RangeError, one read per snapshot) is
+ * calendar.service.spec.ts's.
  */
 import { lookupRestDay, toRestDays } from "../../../../src/calendar/calendar.rules";
 import type { CalendarService } from "../../../../src/calendar/calendar.service";
-import type { AcademicPeriod, CalendarDay } from "../../../../src/calendar/calendar.types";
+import type { AcademicPeriod, CalendarDay, CalendarSnapshot } from "../../../../src/calendar/calendar.types";
 import type { PublicOf } from "../public-of";
 
 export class FakeCalendarService implements PublicOf<CalendarService> {
@@ -23,12 +25,12 @@ export class FakeCalendarService implements PublicOf<CalendarService> {
     return this.names.get(dateStr) ?? null;
   }
 
-  async dayOf(dateStr: string): Promise<CalendarDay> {
-    const schoolRestDay = lookupRestDay(toRestDays(this.restDayLabels), dateStr);
-    return { date: dateStr, publicHoliday: this.names.get(dateStr) ?? null, schoolRestDay, academicPeriod: this.academicPeriod };
+  async current(): Promise<CalendarSnapshot> {
+    return { revisionKey: this.revision, dayOf: async (dateStr) => this.dayOf(dateStr) };
   }
 
-  async revisionKey(): Promise<string> {
-    return this.revision;
+  private dayOf(dateStr: string): CalendarDay {
+    const schoolRestDay = lookupRestDay(toRestDays(this.restDayLabels), dateStr);
+    return { date: dateStr, publicHoliday: this.names.get(dateStr) ?? null, schoolRestDay, academicPeriod: this.academicPeriod };
   }
 }

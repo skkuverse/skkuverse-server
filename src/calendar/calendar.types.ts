@@ -34,3 +34,9 @@ export interface CalendarDay {
   schoolRestDay: string | null;
   academicPeriod: AcademicPeriod;
 }
+
+/** WHY: one read of every source a calendar day folds in but the public holidays, keyed by `revisionKey`. */
+export interface CalendarSnapshot {
+  revisionKey: string;
+  dayOf(dateStr: string): Promise<CalendarDay>;
+}
