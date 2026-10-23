@@ -35,7 +35,7 @@ export const BASE_CHIPS: readonly MapChipSpec[] = [
   {
     id: "shuttle_routes", emoji: "🚌", label: { ko: "셔틀 노선", en: "Shuttle Routes", zh: "班车路线" },
     action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
-    isReset: false, list: null, tabs: ["transit"],
+    isReset: false, list: null, tabs: ["map", "transit"], opensIn: "map",
   },
 ];
 

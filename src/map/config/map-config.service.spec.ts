@@ -518,7 +518,7 @@ describe("MapConfigService", () => {
     ["ko", "셔틀 노선"],
     ["en", "Shuttle Routes"],
     ["zh", "班车路线"],
-  ] as const)("serves the shuttle routes chip to the transit tab in %s, turning the four route lines on without a camera move", async (lang, label) => {
+  ] as const)("serves the shuttle routes chip to both tabs in %s, opening in the map tab and turning the four route lines on without a camera move", async (lang, label) => {
     // Act
     const served = await svc.getMapConfig(lang);
 
@@ -530,7 +530,8 @@ describe("MapConfigService", () => {
       action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
       isReset: false,
       list: null,
-      tabs: ["transit"],
+      tabs: ["map", "transit"],
+      opensIn: "map",
     });
   });
 

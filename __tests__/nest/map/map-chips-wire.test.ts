@@ -151,7 +151,8 @@ describe("GET /map/config (real map services)", () => {
         action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
         isReset: false,
         list: null,
-        tabs: ["transit"],
+        tabs: ["map", "transit"],
+        opensIn: "map",
       },
     ]);
   });
@@ -171,7 +172,8 @@ describe("GET /map/config (real map services)", () => {
       action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
       isReset: false,
       list: null,
-      tabs: ["transit"],
+      tabs: ["map", "transit"],
+      opensIn: "map",
     });
     // `camera: null` has to survive serialization: it means "do not move", which an absent key does not say.
     expect(JSON.stringify(shuttleRoutes.action)).toContain('"camera":null');
