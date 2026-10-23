@@ -1,0 +1,204 @@
+{
+  "_about": "Synthetic: GET /subway/stations, Accept-Language ko, as the route answers it 2026-10-24: the served stations of SUBWAY_STATIONS mapped by toListedStation in src/subway/station-list/subway-station-list.mapper.ts, each joined to its coords from revision 1 of subway-station-coords (__tests__/nest/subway/fixtures/subway-station-coords.dataset.json). Never captured from a running server, since the route is new; not trimmed.",
+  "data": {
+    "stations": [
+      {
+        "id": "sungkyunkwan",
+        "title": "성균관대역",
+        "lines": [
+          {
+            "code": "1",
+            "name": "1호선",
+            "color": "0052A4",
+            "marker": {
+              "text": "1",
+              "color": "0052A4"
+            }
+          }
+        ],
+        "coords": {
+          "lat": 37.300349,
+          "lng": 126.97075
+        }
+      },
+      {
+        "id": "hyehwa",
+        "title": "혜화역",
+        "lines": [
+          {
+            "code": "4",
+            "name": "4호선",
+            "color": "00A5DE",
+            "marker": {
+              "text": "4",
+              "color": "007FAB"
+            }
+          }
+        ],
+        "coords": {
+          "lat": 37.582336,
+          "lng": 127.001844
+        }
+      },
+      {
+        "id": "jeongja",
+        "title": "정자역",
+        "lines": [
+          {
+            "code": "D1",
+            "name": "신분당선",
+            "color": "D4003B",
+            "marker": {
+              "text": "신",
+              "color": "D4003B"
+            }
+          },
+          {
+            "code": "K1",
+            "name": "수인분당선",
+            "color": "F5A200",
+            "marker": {
+              "text": "수",
+              "color": "A26B00"
+            }
+          }
+        ],
+        "coords": {
+          "lat": 37.366546,
+          "lng": 127.108237
+        }
+      },
+      {
+        "id": "jamsil",
+        "title": "잠실역",
+        "lines": [
+          {
+            "code": "2",
+            "name": "2호선",
+            "color": "00A84D",
+            "marker": {
+              "text": "2",
+              "color": "00893F"
+            }
+          },
+          {
+            "code": "8",
+            "name": "8호선",
+            "color": "E6186C",
+            "marker": {
+              "text": "8",
+              "color": "E4186B"
+            }
+          }
+        ],
+        "coords": {
+          "lat": 37.513977,
+          "lng": 127.102249
+        }
+      },
+      {
+        "id": "dogok",
+        "title": "도곡역",
+        "lines": [
+          {
+            "code": "3",
+            "name": "3호선",
+            "color": "EF7C1C",
+            "marker": {
+              "text": "3",
+              "color": "BB5C0D"
+            }
+          },
+          {
+            "code": "K1",
+            "name": "수인분당선",
+            "color": "F5A200",
+            "marker": {
+              "text": "수",
+              "color": "A26B00"
+            }
+          }
+        ],
+        "coords": {
+          "lat": 37.491073,
+          "lng": 127.055319
+        }
+      },
+      {
+        "id": "gangnam",
+        "title": "강남역",
+        "lines": [
+          {
+            "code": "2",
+            "name": "2호선",
+            "color": "00A84D",
+            "marker": {
+              "text": "2",
+              "color": "00893F"
+            }
+          },
+          {
+            "code": "D1",
+            "name": "신분당선",
+            "color": "D4003B",
+            "marker": {
+              "text": "신",
+              "color": "D4003B"
+            }
+          }
+        ],
+        "coords": {
+          "lat": 37.497414,
+          "lng": 127.028008
+        }
+      },
+      {
+        "id": "yangjae",
+        "title": "양재역",
+        "lines": [
+          {
+            "code": "3",
+            "name": "3호선",
+            "color": "EF7C1C",
+            "marker": {
+              "text": "3",
+              "color": "BB5C0D"
+            }
+          },
+          {
+            "code": "D1",
+            "name": "신분당선",
+            "color": "D4003B",
+            "marker": {
+              "text": "신",
+              "color": "D4003B"
+            }
+          }
+        ],
+        "coords": {
+          "lat": 37.484143,
+          "lng": 127.034278
+        }
+      },
+      {
+        "id": "gwanggyo-jungang",
+        "title": "광교중앙역",
+        "lines": [
+          {
+            "code": "D1",
+            "name": "신분당선",
+            "color": "D4003B",
+            "marker": {
+              "text": "신",
+              "color": "D4003B"
+            }
+          }
+        ],
+        "coords": {
+          "lat": 37.288617,
+          "lng": 127.051478
+        }
+      }
+    ]
+  }
+}
