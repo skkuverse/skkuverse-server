@@ -15,6 +15,13 @@
  * the matching md5 ETag, and with every `stopId` removed they are the pinned
  * JSON. The Jongro groups read `bus-stops` for their stop ids, so they answer
  * its 503 while it was never read.
+ *
+ * Each realtime screen also serves its directions and each station its
+ * `directionId`, on purpose (__tests__/helpers/bus/line-directions.ts inserts
+ * them into those pins): a Jongno route's joined from its stored route line,
+ * none while the lines cannot be read or for a route with no line, the HSSC
+ * line's from code, reading no line; a synced direction changes the realtime
+ * ETags and no schedule group's.
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
@@ -34,6 +41,11 @@ import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from
 import { HSSC_STOP_IDS, md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../../__tests__/helpers/bus/station-stop-ids";
 import { withLiveScreen, withoutLiveScreen } from "../../../__tests__/helpers/bus/live-screen";
 import { FakeBusStopsRepository } from "../../../__tests__/helpers/fakes/bus/bus-stops.repository.fake";
+import { storedBusRoutePathRepository, storedBusRoutePathService } from "../../../__tests__/helpers/bus/bus-route-path";
+import { withLineDirections, withoutLineDirections } from "../../../__tests__/helpers/bus/line-directions";
+import type { FakeBusRoutePathRepository } from "../../../__tests__/helpers/fakes/bus/bus-route-path.repository.fake";
+import { FakeBusRoutePathService } from "../../../__tests__/helpers/fakes/bus/bus-route-path.service.fake";
+import type { BusRoutePathService } from "../route-path/bus-route-path.service";
 import { BusConfigService } from "./bus-config.service";
 
 const FIXTURE: Record<string, { json: string; etag: string }> = JSON.parse(
@@ -42,17 +54,19 @@ const FIXTURE: Record<string, { json: string; etag: string }> = JSON.parse(
 
 let registryRepository: FakeBusRegistryRepository;
 let attributesRepository: FakeBusRouteAttributesRepository;
+let routePathRepository: FakeBusRoutePathRepository;
 let service: BusConfigService;
 const clock = { now: () => new Date("2026-10-17T12:00:00Z") };
 
 async function freshService(): Promise<BusConfigService> {
   const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
-  return new BusConfigService(storedBusStopsService(), registry, storedRouteAttributesService(attributesRepository, clock));
+  return new BusConfigService(storedBusStopsService(), registry, storedRouteAttributesService(attributesRepository, clock), storedBusRoutePathService(routePathRepository));
 }
 
 beforeEach(async () => {
   registryRepository = storedBusRegistryRepository();
   attributesRepository = storedRouteAttributesRepository();
+  routePathRepository = storedBusRoutePathRepository();
   service = await freshService();
 });
 
@@ -307,14 +321,14 @@ describe("BusConfigService and the registry", () => {
   it.each(["hssc:ko", "hssc:en"])("serves %s as before, with only its stations' stop ids and its screen's live fields appended", async (key) => {
     // Arrange
     const [id, lang] = key.split(":") as [string, SupportedLang];
-    const expected = withLiveScreen(withStationStopIds(JSON.parse(BEFORE[key]!.json) as { id: string }));
+    const expected = withLineDirections(withLiveScreen(withStationStopIds(JSON.parse(BEFORE[key]!.json) as { id: string })), lang);
 
     // Act
     const group = await service.getGroupById(id, lang);
 
     // Assert
     expect(JSON.stringify(group)).toBe(JSON.stringify(expected));
-    expect(JSON.stringify(withoutStationStopIds(withoutLiveScreen(group)))).toBe(BEFORE[key]!.json);
+    expect(JSON.stringify(withoutStationStopIds(withoutLiveScreen(withoutLineDirections(group))))).toBe(BEFORE[key]!.json);
     expect(await service.computeGroupEtag(id, lang)).toBe(md5EtagOf(expected));
     expect(await service.computeGroupEtag(id, lang)).not.toBe(BEFORE[key]!.etag);
   });
@@ -333,8 +347,8 @@ describe("BusConfigService and the registry", () => {
     const { stationsVersion, ...screen } = withoutLiveScreen(group).screen;
     expect(stationsVersion).toBe(registryRepository.routes.get(routeId)!.stationsVersion);
     expect(Object.keys(group.screen).slice(-4)).toEqual(["stationsVersion", "liveEndpoint", "isLoop", "capabilities"]);
-    expect(JSON.stringify({ ...group, screen })).toBe(JSON.stringify(withStationStopIds(pinned)));
-    expect(JSON.stringify(withoutStationStopIds({ ...group, screen }))).toBe(BEFORE[key]!.json);
+    expect(JSON.stringify({ ...group, screen })).toBe(JSON.stringify(withLineDirections(withStationStopIds(pinned), lang)));
+    expect(JSON.stringify(withoutLineDirections(withoutStationStopIds({ ...group, screen })))).toBe(BEFORE[key]!.json);
   });
 
   it("lists a route's stored stations in their stored order", async () => {
@@ -551,7 +565,7 @@ describe("BusConfigService stop ids on realtime stations", () => {
 
   async function serviceOver(stops: FakeBusStopsRepository): Promise<BusConfigService> {
     const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
-    return new BusConfigService(storedBusStopsService(stops), registry, storedRouteAttributesService(attributesRepository, clock));
+    return new BusConfigService(storedBusStopsService(stops), registry, storedRouteAttributesService(attributesRepository, clock), storedBusRoutePathService(routePathRepository));
   }
 
   function aliasing(arsId: string, stopId: string): Record<string, unknown> {
@@ -609,5 +623,141 @@ describe("BusConfigService stop ids on realtime stations", () => {
     expect(await after.computeGroupEtag("jongro07", "ko")).not.toBe(etags.jongro07);
     expect(await after.computeGroupEtag("jongro08", "ko")).toBe(etags.jongro08);
     expect(await after.computeGroupEtag("hssc", "ko")).toBe(etags.hssc);
+  });
+});
+
+describe("BusConfigService directions", () => {
+  type Screen = { directions: Array<{ id: string; label: string }>; stations: Array<{ directionId: string | null }> };
+  const screenOf = async (id: string, lang: SupportedLang = "ko") => (await service.getGroupById(id, lang))!.screen as unknown as Screen;
+
+  it("serves each Jongno group the directions of its stored route line, in the request language", async () => {
+    // Act
+    const [ko, en] = [await screenOf("jongro07"), await screenOf("jongro07", "en")];
+
+    // Assert
+    expect(ko.directions.map((direction) => [direction.id, direction.label])).toEqual([
+      ["100900043", "이화사거리 방면"],
+      ["100900220", "성균관대운동장 방면"],
+    ]);
+    expect(en.directions.map((direction) => direction.label)).toEqual(["To 이화사거리", "To 성균관대운동장"]);
+    expect(ko.stations.map((station) => station.directionId)).toEqual([...Array(13).fill("100900043"), ...Array(9).fill("100900220")]);
+  });
+
+  it("serves the same directions in the all-groups body", async () => {
+    // Act
+    const groups = await service.getBusGroups("ko");
+
+    // Assert
+    const byId = new Map(groups.map((group) => [group.id, group.screen as unknown as Partial<Screen>]));
+    expect(byId.get("jongro07")!.directions).toEqual((await screenOf("jongro07")).directions);
+    expect(byId.get("hssc")!.directions!.map((direction) => direction.id)).toEqual(["fromCampus", "toCampus"]);
+    expect(byId.get("campus")).not.toHaveProperty("directions");
+  });
+
+  it("serves a route with no stored line no direction, and the others theirs", async () => {
+    // Arrange
+    routePathRepository.routePaths.delete("jongro07");
+    service = await freshService();
+
+    // Act
+    const [route07, route08] = [await screenOf("jongro07"), await screenOf("jongro08")];
+
+    // Assert
+    expect(route07.directions).toEqual([]);
+    expect(route07.stations.every((station) => station.directionId === null)).toBe(true);
+    expect(route08.directions).toHaveLength(2);
+  });
+
+  it("serves the config and every group with no Jongno direction while the route lines cannot be read", async () => {
+    // Arrange
+    routePathRepository.failWith = new Error("atlas down");
+    service = await freshService();
+
+    // Act
+    const groups = await service.getBusGroups("ko");
+    const route02 = await screenOf("jongro02");
+
+    // Assert
+    expect(groups).toHaveLength(7);
+    for (const group of groups.filter((candidate) => candidate.id.startsWith("jongro"))) expect((group.screen as unknown as Screen).directions).toEqual([]);
+    expect(route02.stations.every((station) => station.directionId === null)).toBe(true);
+    expect((await screenOf("hssc")).directions).toHaveLength(2);
+  });
+
+  it("builds the HSSC and schedule groups without reading a route line", async () => {
+    // Arrange
+    routePathRepository.failWith = new Error("must not be read");
+    service = await freshService();
+
+    // Act
+    await Promise.all(["hssc", "campus", "commute", "fasttrack"].map((id) => service.getGroupById(id, "ko")));
+
+    // Assert
+    expect(routePathRepository.listCount).toBe(0);
+  });
+
+  it("changes the config and the route's ETags when a synced line changes a direction, and keeps the others", async () => {
+    // Arrange
+    const routePaths = new FakeBusRoutePathService();
+    routePaths.routePaths = await storedBusRoutePathService().listRoutePaths();
+    const registry = new BusRegistryService(asReal<BusRegistryRepository>(registryRepository), clock);
+    const config = new BusConfigService(storedBusStopsService(), registry, storedRouteAttributesService(attributesRepository, clock), asReal<BusRoutePathService>(routePaths));
+    const etags = async () => Promise.all([config.computeEtag("ko"), config.computeGroupEtag("jongro07", "ko"), config.computeGroupEtag("jongro08", "ko"), config.computeGroupEtag("hssc", "ko")]);
+    const before = await etags();
+    const line07 = routePaths.routePaths.routePaths.find((routePath) => routePath.routeId === "jongro07")!;
+    line07.stations = line07.stations.map((station) => (station.direction === "이화사거리" ? { ...station, direction: "이화장" } : station));
+
+    // Act
+    const after = await etags();
+
+    // Assert
+    expect(after[0]).not.toBe(before[0]);
+    expect(after[1]).not.toBe(before[1]);
+    expect(after.slice(2)).toEqual(before.slice(2));
+    expect(((await config.getGroupById("jongro07", "ko"))!.screen as unknown as Screen).directions[0]!.label).toBe("이화장 방면");
+  });
+});
+
+// WHY: the stop page names each live entry's direction through this door (ADR 0019, D16), the index's stations version in hand.
+describe("BusConfigService.findStationDirection", () => {
+  const versionOf = (routeId: string) => registryRepository.routes.get(routeId)!.stationsVersion;
+
+  it("names the direction a Jongno station lies on for the stations version it was placed by, in the request language", async () => {
+    // Act
+    const [ko, en] = [await service.findStationDirection("jongro07", { stationIndex: 16, stationsVersion: versionOf("jongro07") }, "ko"), await service.findStationDirection("jongro07", { stationIndex: 1, stationsVersion: versionOf("jongro07") }, "en")];
+
+    // Assert
+    expect(ko).toEqual({ id: "100900220", label: "성균관대운동장 방면" });
+    expect(en).toEqual({ id: "100900043", label: "To 이화사거리" });
+  });
+
+  it("names the HSSC line's direction for no stations version", async () => {
+    // Act & Assert
+    expect(await service.findStationDirection("hssc", { stationIndex: 3, stationsVersion: null }, "ko")).toEqual({ id: "fromCampus", label: "하교" });
+    expect(await service.findStationDirection("hssc", { stationIndex: 6, stationsVersion: null }, "zh")).toEqual({ id: "toCampus", label: "上学" });
+  });
+
+  it("names none for another stations version, a route with no stored line, and a schedule or unknown group", async () => {
+    // Arrange
+    const placedElsewhere = await service.findStationDirection("jongro07", { stationIndex: 16, stationsVersion: "synced-since" }, "ko");
+    routePathRepository.routePaths.delete("jongro07");
+    service = await freshService();
+
+    // Act
+    const noLine = await service.findStationDirection("jongro07", { stationIndex: 16, stationsVersion: versionOf("jongro07") }, "ko");
+
+    // Assert
+    expect([placedElsewhere, noLine, await service.findStationDirection("campus", { stationIndex: 0, stationsVersion: null }, "ko"), await service.findStationDirection("nope", { stationIndex: 0, stationsVersion: null }, "ko")]).toEqual([null, null, null, null]);
+  });
+
+  it("names none, rather than failing, when the group cannot be built for another route's missing registry", async () => {
+    // Arrange
+    const version08 = versionOf("jongro08");
+    registryRepository.routes.delete("jongro07");
+    service = await freshService();
+
+    // Act & Assert
+    await expect(service.getGroupById("jongro08", "ko")).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE" });
+    expect(await service.findStationDirection("jongro08", { stationIndex: 22, stationsVersion: version08 }, "ko")).toBeNull();
   });
 });

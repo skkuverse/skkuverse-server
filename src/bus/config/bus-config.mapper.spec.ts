@@ -21,6 +21,13 @@
  *
  * `isAlightOnly` is the stored HSSC position's flag (drop-off only), false where
  * the data leaves it out and on every Jongno station.
+ *
+ * A realtime screen serves its line's directions right after `stations`, the
+ * HSSC line's fromCampus and toCampus in the request language and a Jongno route's as the
+ * service joined them, and each station its `directionId` right after
+ * `stationNumber`, so the pinned tails (`stopId` last, the live fields last) hold.
+ * The station pins above gained the field on purpose when it shipped, and the
+ * Jongro test routes carry the directions their stored lines give.
  */
 import { storedBusRegistryService } from "../../../__tests__/helpers/bus/bus-registry";
 import { busStopsFixture } from "../../../__tests__/helpers/bus/bus-stops";
@@ -32,10 +39,13 @@ import type { BusStopsData } from "../stops/bus-stops.document";
 import type { AttributedJongroRoute } from "./bus-config.types";
 import { HSSC_STOP_IDS } from "../../../__tests__/helpers/bus/station-stop-ids";
 import { WEBVIEW_ORIGIN } from "../../infra/origins";
+import { capturedRoutePathOf } from "../../../__tests__/helpers/bus/bus-route-path";
 import { mapStations, toBusGroupIds, toBusGroups } from "./bus-config.mapper";
+import { toHsscDirections, toJongroDirections } from "./bus-config.rules";
 
 const NO_STOPS = { sequences: {}, stops: [] };
 const NO_ALIASES = new Map<string, string>();
+const HSSC_DIRECTION_IDS = toHsscDirections("ko").directionIds;
 
 // WHY: the HSSC line of the stored bus-stops revision 1, which the HSSC group serves.
 const HSSC_LINE = (busStopsFixture() as unknown as BusStopsData).hssc.stations;
@@ -45,7 +55,11 @@ let jongroRoutes: AttributedJongroRoute[] = [];
 
 beforeAll(async () => {
   const { routes } = routeAttributesFixture();
-  jongroRoutes = (await storedBusRegistryService().listRoutes()).map((route) => ({ route, attributes: routes[route.id]! }));
+  jongroRoutes = (await storedBusRegistryService().listRoutes()).map((route) => ({
+    route,
+    attributes: routes[route.id]!,
+    directions: toJongroDirections(route.registryStations, capturedRoutePathOf(route.id).stations, "ko"),
+  }));
 });
 
 const jongroGroupOf = (routes: AttributedJongroRoute[], id: string) =>
@@ -64,7 +78,7 @@ function scheduleServicesById(): Map<string, ScheduleService> {
 describe("mapStations", () => {
   it("lists the stored HSSC line's 혜화역 1번출구 position with its subway line, no stop number and its stop id last", () => {
     // Act
-    const mapped = mapStations(HSSC_LINE);
+    const mapped = mapStations(HSSC_LINE, HSSC_DIRECTION_IDS);
 
     // Assert
     expect(mapped).toHaveLength(11);
@@ -73,6 +87,7 @@ describe("mapStations", () => {
       name: "혜화역 1번출구",
       subtitle: "Hyehwa Station (Shuttle Bus Stop)",
       stationNumber: null,
+      directionId: "toCampus",
       isFirstStation: false,
       isLastStation: false,
       isRotationStation: false,
@@ -85,7 +100,7 @@ describe("mapStations", () => {
 
   it("lists an HSSC station with its English subtitle", () => {
     // Act
-    const [first] = mapStations(HSSC_LINE);
+    const [first] = mapStations(HSSC_LINE, HSSC_DIRECTION_IDS);
 
     // Assert
     expect(first).toEqual({
@@ -93,6 +108,7 @@ describe("mapStations", () => {
       name: "농구장",
       subtitle: "Basketball Court (Shuttle Bus Stop)",
       stationNumber: null,
+      directionId: "fromCampus",
       isFirstStation: true,
       isLastStation: false,
       isRotationStation: false,
@@ -109,15 +125,15 @@ describe("mapStations", () => {
     const station = { ...jongroRoutes[0]!.route.stations[0]!, stationNumber: "01881", transferLines: [] };
 
     // Act
-    const [mapped] = mapStations([station]);
+    const [mapped] = mapStations([station], [null]);
 
     // Assert
     expect(mapped).toMatchObject({ subtitle: null, stationNumber: "01881" });
-    expect(mapStations([{ ...station, stationNumber: null }])[0]).toMatchObject({ subtitle: null, stationNumber: null });
+    expect(mapStations([{ ...station, stationNumber: null }], [null])[0]).toMatchObject({ subtitle: null, stationNumber: null });
   });
   it("gives each HSSC position its stored stop id as its last field, and the two non-stop positions no key", () => {
     // Act
-    const mapped = mapStations(HSSC_LINE);
+    const mapped = mapStations(HSSC_LINE, HSSC_DIRECTION_IDS);
 
     // Assert
     expect(mapped.map((station) => station.stopId ?? null)).toEqual(HSSC_STOP_IDS);
@@ -229,7 +245,7 @@ describe("toBusGroups for a Jongro route", () => {
     const attributes: JongroRouteAttributes = { ...jongroRoutes[1]!.attributes, transferLinesByArsId: { "01589": [{ line: "1", color: "0052A4" }] } };
 
     // Act
-    const group = jongroGroupOf([{ route: moved, attributes }], "jongro07");
+    const group = jongroGroupOf([{ ...jongroRoutes[1]!, route: moved, attributes }], "jongro07");
 
     // Assert
     expect((group.screen as unknown as JongroScreen).stations.map((s) => s.transferLines)).toEqual([[], [{ line: "1", color: "0052A4" }]]);
@@ -241,7 +257,7 @@ describe("toBusGroups for a Jongro route", () => {
     const odd = { ...route, stations: [{ ...route.stations[0]!, stationNumber: "constructor" }] };
 
     // Act
-    const group = jongroGroupOf([{ route: odd, attributes }], "jongro07");
+    const group = jongroGroupOf([{ ...jongroRoutes[1]!, route: odd, attributes }], "jongro07");
 
     // Assert
     expect((group.screen as unknown as JongroScreen).stations[0]!.transferLines).toEqual([]);
@@ -315,7 +331,7 @@ describe("toBusGroups stop ids on a Jongro route's stations", () => {
     const virtual = { ...route, stations: [{ ...route.stations[0]!, stationNumber: arsId }, route.stations[1]!] };
 
     // Act
-    const stations = stationsOf([{ route: virtual, attributes }], "jongro07");
+    const stations = stationsOf([{ ...jongroRoutes[1]!, route: virtual, attributes }], "jongro07");
 
     // Assert
     expect(stations[0]).not.toHaveProperty("stopId");
@@ -345,7 +361,7 @@ describe("toBusGroups pass-through stations", () => {
     const virtual = { ...route, stations: [{ ...route.stations[0]!, stationNumber: "0" }, ...route.stations.slice(1)] };
 
     // Act
-    const byRoute = [...["jongro02", "jongro07", "jongro08"].map((id) => stationsOf(jongroRoutes, id)), stationsOf([{ route: virtual, attributes }], "jongro07")];
+    const byRoute = [...["jongro02", "jongro07", "jongro08"].map((id) => stationsOf(jongroRoutes, id)), stationsOf([{ ...jongroRoutes[1]!, route: virtual, attributes }], "jongro07")];
 
     // Assert
     expect(byRoute.at(-1)![0]).not.toHaveProperty("stopId");
@@ -401,5 +417,75 @@ describe("toBusGroups drop-off-only stations", () => {
     // Assert
     expect(Object.keys(olympicHall).slice(-4)).toEqual(["isPassThrough", "isAlightOnly", "transferLines", "stopId"]);
     expect(Object.keys(stop).slice(-4)).toEqual(["isPassThrough", "isAlightOnly", "transferLines", "stopId"]);
+  });
+});
+
+// WHY: NAVER Map shows a line's directions as tabs; the owner asked for the same per realtime line (2026-10-23).
+describe("toBusGroups directions", () => {
+  type Station = Record<string, unknown> & { directionId?: unknown };
+  type Screen = Record<string, unknown> & { stations: Station[]; directions?: unknown };
+  const screenOf = (id: string, lang: "ko" | "en" | "zh" = "ko", routes = jongroRoutes) =>
+    toBusGroups({ lang, stops: { campus: NO_STOPS, commute: NO_STOPS }, hsscStations: HSSC_LINE, stopIdByArsId: NO_ALIASES, jongroRoutes: routes, webviewOrigin: WEBVIEW_ORIGIN }).find((g) => g.id === id)!
+      .screen as unknown as Screen;
+
+  it("serves the HSSC line's 하교 (positions 0 to 5) and 등교 (6 to 10), each station on its own", () => {
+    // Act
+    const screen = screenOf("hssc");
+
+    // Assert
+    expect(screen.directions).toEqual([
+      { id: "fromCampus", label: "하교", fromIndex: 0, toIndex: 5 },
+      { id: "toCampus", label: "등교", fromIndex: 6, toIndex: 10 },
+    ]);
+    expect(screen.stations.map((station) => station.directionId)).toEqual([...Array(6).fill("fromCampus"), ...Array(5).fill("toCampus")]);
+  });
+
+  it("labels the HSSC directions in the request language", () => {
+    // Act
+    const [en, zh] = [screenOf("hssc", "en"), screenOf("hssc", "zh")];
+
+    // Assert
+    expect(en.directions).toEqual([expect.objectContaining({ id: "fromCampus", label: "From campus" }), expect.objectContaining({ id: "toCampus", label: "To campus" })]);
+    expect(zh.directions).toEqual([expect.objectContaining({ label: "放学" }), expect.objectContaining({ label: "上学" })]);
+  });
+
+  it("serves a Jongno route's joined directions, 종로07 split after its turnaround", () => {
+    // Act
+    const screen = screenOf("jongro07");
+
+    // Assert
+    expect(screen.directions).toEqual([
+      { id: "100900043", label: "이화사거리 방면", fromIndex: 0, toIndex: 12 },
+      { id: "100900220", label: "성균관대운동장 방면", fromIndex: 13, toIndex: 21 },
+    ]);
+    expect(screen.stations.map((station) => station.directionId)).toEqual([...Array(13).fill("100900043"), ...Array(9).fill("100900220")]);
+  });
+
+  it("serves none and every station null for a route whose directions did not join", () => {
+    // Arrange
+    const unjoined = jongroRoutes.map((jongroRoute) => ({ ...jongroRoute, directions: toJongroDirections(jongroRoute.route.registryStations, undefined, "ko") }));
+
+    // Act
+    const screen = screenOf("jongro07", "ko", unjoined);
+
+    // Assert
+    expect(screen.directions).toEqual([]);
+    expect(screen.stations.map((station) => station.directionId)).toEqual(Array(22).fill(null));
+  });
+
+  it("puts directions right after stations and directionId right after stationNumber, every other field in place", () => {
+    // Act
+    const [hssc, jongro] = [screenOf("hssc"), screenOf("jongro07")];
+
+    // Assert
+    expect(Object.keys(hssc).slice(0, 6)).toEqual(["dataEndpoint", "refreshInterval", "lastStationIndex", "stations", "directions", "features"]);
+    expect(Object.keys(jongro).slice(0, 6)).toEqual(["dataEndpoint", "refreshInterval", "lastStationIndex", "stations", "directions", "features"]);
+    expect(Object.keys(jongro.stations[0]!).slice(0, 6)).toEqual(["index", "name", "subtitle", "stationNumber", "directionId", "isFirstStation"]);
+    expect(Object.keys(hssc.stations[5]!).slice(0, 6)).toEqual(["index", "name", "subtitle", "stationNumber", "directionId", "isFirstStation"]);
+  });
+
+  it("leaves the schedule groups without directions", () => {
+    // Act & Assert
+    for (const id of ["campus", "fasttrack", "commute"]) expect(screenOf(id)).not.toHaveProperty("directions");
   });
 });

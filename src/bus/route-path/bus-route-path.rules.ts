@@ -13,7 +13,7 @@ export function toPathShape(path: readonly Position[]): PathShape {
 }
 
 export function toPathVersion(fetched: FetchedRoutePath): string {
-  const stations = fetched.stations.map((s) => [s.topisId, s.arsId, s.stationName, s.sequence, s.lng, s.lat, s.isTurnaround]);
+  const stations = fetched.stations.map((s) => [s.topisId, s.arsId, s.stationName, s.sequence, s.lng, s.lat, s.isTurnaround, s.direction ?? null]);
   const canonical = JSON.stringify([fetched.path, stations]);
   return crypto.createHash("sha256").update(canonical).digest("hex").slice(0, PATH_VERSION_LENGTH);
 }

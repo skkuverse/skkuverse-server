@@ -1,11 +1,13 @@
 /**
  * BusLiveGroupService: the live route of a realtime group, the HSSC line's or a Jongno route's, with the server's
  * clock in meta; a schedule group has none (404 GROUP_NOT_LIVE) and an unknown group is not found (404 GROUP_NOT_FOUND).
+ * The stop page reads a station's direction through it, as /bus/config names it.
  */
 import { FakeBusLiveHsscService } from "../../../../__tests__/helpers/fakes/bus/bus-live-hssc.service.fake";
 import { FakeBusLiveJongroService } from "../../../../__tests__/helpers/fakes/bus/bus-live-jongro.service.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import { storedBusRegistryService } from "../../../../__tests__/helpers/bus/bus-registry";
+import { storedBusRoutePathService } from "../../../../__tests__/helpers/bus/bus-route-path";
 import { storedRouteAttributesService } from "../../../../__tests__/helpers/bus/route-attributes";
 import { storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
 import { AppError } from "../../../http/app.error";
@@ -26,7 +28,7 @@ let service: BusLiveGroupService;
 beforeEach(() => {
   jongro = new FakeBusLiveJongroService();
   hssc = new FakeBusLiveHsscService();
-  const config = new BusConfigService(storedBusStopsService(), storedBusRegistryService(), storedRouteAttributesService());
+  const config = new BusConfigService(storedBusStopsService(), storedBusRegistryService(), storedRouteAttributesService(), storedBusRoutePathService());
   service = new BusLiveGroupService(asReal<BusLiveJongroService>(jongro), asReal<BusLiveHsscService>(hssc), config, clock);
 });
 
@@ -55,5 +57,21 @@ describe("BusLiveGroupService.getLiveGroup", () => {
     // Assert
     expect(failure).toBeInstanceOf(AppError);
     expect(failure).toMatchObject({ code, httpStatus: 404 });
+  });
+});
+
+describe("BusLiveGroupService.findStationDirection", () => {
+  it("answers the direction /bus/config names at the station, for the stations version given", async () => {
+    // Act
+    const [route07, hsscStation, elsewhere] = [
+      await service.findStationDirection("jongro07", { stationIndex: 16, stationsVersion: jongro07.stationsVersion }, "ko"),
+      await service.findStationDirection("hssc", { stationIndex: 6, stationsVersion: null }, "en"),
+      await service.findStationDirection("jongro07", { stationIndex: 16, stationsVersion: "synced-since" }, "ko"),
+    ];
+
+    // Assert
+    expect(route07).toEqual({ id: "100900220", label: "성균관대운동장 방면" });
+    expect(hsscStation).toEqual({ id: "toCampus", label: "To campus" });
+    expect(elsewhere).toBeNull();
   });
 });

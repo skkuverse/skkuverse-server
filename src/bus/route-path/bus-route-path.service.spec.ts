@@ -8,7 +8,10 @@
  * no-store stop page reads the lines per request; the daily sync writes a route's
  * first line on the absolute checks alone, writes nothing for unchanged
  * content, holds a suspicious change with a warning, and writes a plausible
- * one, guarded by the version it read. No boot writes a line.
+ * one, guarded by the version it read. No boot writes a line. A line stored
+ * before stations carried their direction (production's, 2026-10-18) is
+ * rewritten by the first sync after the deploy, which runs when the poller
+ * starts, with the same points and stations gaining their directions.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
@@ -331,6 +334,45 @@ describe("BusRoutePathService.sync", () => {
 });
 
 // WHY: a fresh database gets its lines from the daily sync, not a snapshot (ADR 0012, D3).
+describe("BusRoutePathService.sync of a line stored before directions", () => {
+  // EVIDENCE: production's Jongno 07 document on 2026-10-23: this content without directions, under eb9ffab88fbdad95.
+  const storedBeforeDirections = () => {
+    const doc = storedJongroRoutePathDocuments(NOW).find((each) => each._id === "jongro07")!;
+    return { ...doc, stations: doc.stations.map(({ direction: _direction, ...rest }) => rest), pathVersion: "eb9ffab88fbdad95" };
+  };
+
+  it("rewrites it at the first sync with TOPIS's directions, though no point or station moved", async () => {
+    // Arrange
+    repository.routePaths.set("jongro07", storedBeforeDirections());
+    client.answers.set("100900004", seedOf("jongro07"));
+
+    // Act
+    await service.sync(route07);
+
+    // Assert
+    const written = repository.routePaths.get("jongro07")!;
+    expect(written.pathVersion).toBe(toPathVersion(seedOf("jongro07")));
+    expect(written.stations.map((station) => station.direction)).toEqual([...Array(13).fill("이화사거리"), ...Array(9).fill("성균관대운동장")]);
+    expect(written.path).toEqual(seedOf("jongro07").path);
+    expect(callsOf("warn", "bus.jongro.path_synced")).toEqual([expect.objectContaining({ routeId: "jongro07", fromVersion: "eb9ffab88fbdad95" })]);
+  });
+
+  it("then writes nothing for the same answer", async () => {
+    // Arrange
+    repository.routePaths.set("jongro07", storedBeforeDirections());
+    client.answers.set("100900004", seedOf("jongro07"));
+    await service.sync(route07);
+    const written = structuredClone(repository.routePaths.get("jongro07"));
+
+    // Act
+    await service.sync(route07);
+
+    // Assert
+    expect(repository.routePaths.get("jongro07")).toEqual(written);
+    expect(callsOf("warn", "bus.jongro.path_synced")).toHaveLength(1);
+  });
+});
+
 describe("BusRoutePathService.sync on an empty store", () => {
   it("writes the first line, and the read then serves it", async () => {
     // Arrange

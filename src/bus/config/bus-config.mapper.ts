@@ -16,7 +16,8 @@ import {
   SKKU_GREEN,
 } from "./bus-config.constants";
 import { COMMUTE_VISIBILITY, FASTTRACK_VISIBILITY } from "./bus-config.config";
-import type { AnyStation, AttributedJongroRoute, AttributedJongroStation, BusGroupSources, BusGroupVisibility, MappedStation } from "./bus-config.types";
+import { toHsscDirections } from "./bus-config.rules";
+import type { AnyStation, AttributedJongroRoute, AttributedJongroStation, BusGroupSources, BusGroupVisibility, LineDirections, MappedStation } from "./bus-config.types";
 
 const always = (): BusGroupVisibility => ({ type: "always" });
 
@@ -29,12 +30,15 @@ const shuttleCard = (lang: SupportedLang, subtitleKey: string) => ({
 
 const routeBadge = (id: string, color: string, lang: SupportedLang) => ({ id, label: t(`busconfig.badge.${id}`, lang), color });
 
-export function mapStations(stations: ReadonlyArray<AnyStation>): MappedStation[] {
+const directionIdAt = (directionIds: ReadonlyArray<string | null>, index: number): string | null => directionIds[index] ?? null;
+
+export function mapStations(stations: ReadonlyArray<AnyStation>, directionIds: ReadonlyArray<string | null>): MappedStation[] {
   return stations.map((station, index) => ({
     index,
     name: "stationName" in station ? station.stationName : station.name,
     subtitle: ("subtitle" in station ? station.subtitle : null) || null,
     stationNumber: ("stationNumber" in station && station.stationNumber) || null,
+    directionId: directionIdAt(directionIds, index),
     ...{ isFirstStation: station.isFirstStation, isLastStation: station.isLastStation, isRotationStation: station.isRotationStation },
     // WHY: only an HSSC position (no stationName) passes through; a Jongno virtual stop also has a null stop id.
     isPassThrough: !("stationName" in station) && station.stopId === null,
@@ -54,7 +58,7 @@ const withStopId = (station: AttributedJongroStation, stopIdByArsId: ReadonlyMap
 
 // WHY: the field order is the ETag's input (md5 of the JSON), so it never changes for an unchanged group; the live
 // route's fields come last, after stationsVersion, for the same reason.
-function toJongroGroup({ route, attributes }: AttributedJongroRoute, stopIdByArsId: ReadonlyMap<string, string>, lang: SupportedLang) {
+function toJongroGroup({ route, attributes, directions }: AttributedJongroRoute, stopIdByArsId: ReadonlyMap<string, string>, lang: SupportedLang) {
   return {
     id: route.id,
     screenType: "realtime" as const,
@@ -70,7 +74,8 @@ function toJongroGroup({ route, attributes }: AttributedJongroRoute, stopIdByArs
       dataEndpoint: `/bus/realtime/data/${route.id}`,
       refreshInterval: attributes.refreshInterval,
       lastStationIndex: route.stations.length - 1,
-      stations: mapStations(route.stations.map((station) => withStopId(withTransferLines(station, attributes), stopIdByArsId))),
+      stations: mapStations(route.stations.map((station) => withStopId(withTransferLines(station, attributes), stopIdByArsId)), directions.directionIds),
+      directions: directions.directions,
       features: [],
       stationsVersion: route.stationsVersion,
       ...{ liveEndpoint: `/bus/live/${route.id}`, ...JONGRO_LIVE_SCREEN },
@@ -93,6 +98,8 @@ function scheduleServices(serviceIds: readonly string[], lang: SupportedLang, se
   }));
 }
 
+const toHsscScreenLine = (stations: BusGroupSources["hsscStations"], { directions, directionIds }: LineDirections) => ({ stations: mapStations(stations, directionIds), directions });
+
 function toHsscGroup(lang: SupportedLang, stations: BusGroupSources["hsscStations"], webviewOrigin: string) {
   return {
     id: "hssc",
@@ -104,7 +111,7 @@ function toHsscGroup(lang: SupportedLang, stations: BusGroupSources["hsscStation
       dataEndpoint: "/bus/realtime/data/hssc",
       refreshInterval: 10,
       lastStationIndex: HSSC_POSITION_COUNT - 1,
-      stations: mapStations(stations),
+      ...toHsscScreenLine(stations, toHsscDirections(lang)),
       features: [{ type: "info", url: `${webviewOrigin}/bus/hssc/info` }],
       ...{ liveEndpoint: "/bus/live/hssc", ...HSSC_LIVE_SCREEN },
     },

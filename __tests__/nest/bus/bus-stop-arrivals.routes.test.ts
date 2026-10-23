@@ -5,7 +5,8 @@
  * D12), a Jongno route left out, the HSSC buses' estimates, the next three shuttle runs at a stop as scheduled
  * arrivals (14:10 KST, and 01:30 KST when the UTC date is the day before), continued into the following week after
  * Friday's last run, a suspended service, a live entry's `action` (alight at an HSSC position the data flags drop-off
- * only, board elsewhere) and its `towards` named as the next stop's own page names it, the
+ * only, board elsewhere) and its `towards` named as the next stop's own page names it, its `direction` (the 방면 its
+ * /bus/config station lies on: 종로07's and 종로08's TOPIS terminals at a shared pole, the HSSC line's 하교), the
  * 503 with the stops never read, no-store, and no outbound request. Every `stopId` a
  * realtime station of `/bus/config` serves opens a page that lists that group at the station's first index, an
  * aliased pole's included.
@@ -376,6 +377,7 @@ describe("GET /bus/stops/:stopId/arrivals: Jongno entries", () => {
       label: "종로 07",
       stationIndex: 16,
       towards: "혜화동로터리",
+      direction: { id: "100900220", label: "성균관대운동장 방면" },
       action: "board",
       stationsVersion: live.body.data.stationsVersion,
       updatedAt: live.body.data.updatedAt,
@@ -763,5 +765,25 @@ describe("GET /bus/stops/:stopId/arrivals from a realtime station's stopId", () 
     expectWire(busStopArrivals, res.body.data);
     expect(routesOf(res.body).map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
     expect(routesOf(res.body).find((route) => route.groupId === "jongro07")!.stationIndex).toBe(1);
+  });
+});
+
+// WHY: a stop page stands alone (ADR 0019, D5), so it names the 방면 of each line it lists, as NAVER Map does.
+describe("GET /bus/stops/:stopId/arrivals: directions", () => {
+  it("names each live entry's direction as its /bus/config station does, in the request language", async () => {
+    // Arrange
+    const server = await boot(freshStores());
+
+    // Act
+    const [pole, olympicHall] = [await request(server).get("/bus/stops/seoul-01592/arrivals").set("Accept-Language", "en"), await request(server).get("/bus/stops/hssc-olympic-hall/arrivals")];
+
+    // Assert
+    expect(routesOf(pole.body).map((route) => [route.groupId, route.direction])).toEqual([
+      ["jongro07", { id: "100900220", label: "To 성균관대운동장" }],
+      ["jongro08", { id: "100900040", label: "To 명륜3가" }],
+    ]);
+    expect(routesOf(olympicHall.body)).toEqual([expect.objectContaining({ groupId: "hssc", stationIndex: 3, direction: { id: "fromCampus", label: "하교" } })]);
+    expectWire(busStopArrivals, pole.body.data);
+    expectWire(busStopArrivals, olympicHall.body.data);
   });
 });

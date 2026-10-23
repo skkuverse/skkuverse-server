@@ -11,6 +11,9 @@ export interface RoutePathStation {
   lat: number;
   /** QUIRK(topis): `transYn` "Y", the stop where the route turns back. */
   isTurnaround: boolean;
+  /** QUIRK(topis): getStaionByRoute's `direction`, the terminal the bus heads to; null when TOPIS sent none, absent on
+   * a line synced before 2026-10-23, which its first sync after then rewrites (toPathVersion hashes the field). */
+  direction?: string | null;
 }
 
 export interface JongroRoutePathDocument {

@@ -69,6 +69,7 @@ import { APP_BOOT_TIMEOUT_MS, MONGOD_START_TIMEOUT_MS, assertConfigReaches, clea
 import { appModulesUnder } from "../../helpers/nest/app-modules";
 import { md5EtagOf, withStationStopIds, withoutStationStopIds } from "../../helpers/bus/station-stop-ids";
 import { withLiveScreen, withoutLiveScreen } from "../../helpers/bus/live-screen";
+import { withLineDirections, withoutLineDirections } from "../../helpers/bus/line-directions";
 import captured from "./fixtures/bus-stops-production.capture.json";
 import storedRoutes from "./fixtures/jongro-registry-routes.json";
 
@@ -313,10 +314,10 @@ function expectCaptured(res: request.Response, capture: Captured): void {
   expect(originEtagOf(res.headers.etag)).toBe(originEtagOf(capture.etag));
 }
 
-/** The capture with every realtime station's stop id and each realtime screen's live fields (ADR 0019) appended, as served after it, and its ETag. */
+/** The capture with every realtime station's stop id and each realtime screen's live fields (ADR 0019) appended and its directions inserted (D16), as served after it, and its ETag. */
 function configFromWave4(lang: Lang): Captured {
   const capture = configCapture(lang);
-  const groups = capture.body.data.groups.map((group) => withLiveScreen(withStationStopIds(group)));
+  const groups = capture.body.data.groups.map((group) => withLineDirections(withLiveScreen(withStationStopIds(group)), lang));
   return { ...capture, etag: md5EtagOf(groups), body: { ...capture.body, data: { ...capture.body.data, groups } } };
 }
 
@@ -327,7 +328,7 @@ describe("GET /bus/config", () => {
 
     // Assert
     expectCaptured(res, configFromWave4(lang));
-    expect(withoutStationStopIds(withoutLiveScreen(res.body.data))).toEqual(configCapture(lang).body.data);
+    expect(withoutLineDirections(withoutStationStopIds(withoutLiveScreen(res.body.data)))).toEqual(configCapture(lang).body.data);
     expect(originEtagOf(res.headers.etag)).not.toBe(originEtagOf(configCapture(lang).etag));
   });
 
@@ -349,7 +350,7 @@ describe("GET /bus/config/:groupId", () => {
     async (lang, groupId) => {
       // Arrange
       const capture = configCapture(lang);
-      const group = withLiveScreen(withStationStopIds(groupOf(lang, groupId)));
+      const group = withLineDirections(withLiveScreen(withStationStopIds(groupOf(lang, groupId))), lang);
       const expected = { status: 200, etag: md5EtagOf(group), cacheControl: capture.cacheControl, vary: capture.vary, body: { meta: { lang }, data: group } };
 
       // Act
@@ -357,7 +358,7 @@ describe("GET /bus/config/:groupId", () => {
 
       // Assert
       expectCaptured(res, expected);
-      expect(withoutStationStopIds(withoutLiveScreen(res.body.data))).toEqual(groupOf(lang, groupId));
+      expect(withoutLineDirections(withoutStationStopIds(withoutLiveScreen(res.body.data)))).toEqual(groupOf(lang, groupId));
       expect(originEtagOf(res.headers.etag)).not.toBe(originEtagOf(capture.groupEtags[groupId]));
     },
   );

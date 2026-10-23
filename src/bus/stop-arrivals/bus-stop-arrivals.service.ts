@@ -65,16 +65,16 @@ export class BusStopArrivalsService {
   // WHY: the index and the live route read the registry apart, so a sync between them would place another station's
   // arrivals at this index; that poll leaves the entry out, and the next one serves it.
   private async toJongroEntry(route: JongroStopRoute, reads: PageReads): Promise<StopArrivalsRoute | null> {
-    const group = await this.groupOf(route.groupId, reads);
+    const [group, direction] = await Promise.all([this.groupOf(route.groupId, reads), this.live.findStationDirection(route.groupId, route, reads.lang)]);
     if (group.stationsVersion !== route.stationsVersion) return null;
-    return toLiveEntry(route, group, { label: t(`busconfig.label.${route.groupId}`, reads.lang), towards: route.towards, action: "board" });
+    return toLiveEntry(route, group, { label: t(`busconfig.label.${route.groupId}`, reads.lang), towards: route.towards, direction, action: "board" });
   }
 
   private async toHsscEntry(route: HsscStopRoute, reads: PageReads): Promise<StopArrivalsRoute> {
-    const group = await this.groupOf(route.groupId, reads);
+    const [group, direction] = await Promise.all([this.groupOf(route.groupId, reads), this.live.findStationDirection(route.groupId, { stationIndex: route.stationIndex, stationsVersion: null }, reads.lang)]);
     const towards = toTowards(toCatalogNamedLine(reads.hsscLine, reads.catalogStops, reads.lang), route.stationIndex);
     const action = toStationAction(reads.hsscLine[route.stationIndex]);
-    return toLiveEntry(route, group, { label: t(`busconfig.label.${route.groupId}`, reads.lang), towards, action });
+    return toLiveEntry(route, group, { label: t(`busconfig.label.${route.groupId}`, reads.lang), towards, direction, action });
   }
 
   private async toShuttleEntry(route: ShuttleStopRoute, reads: PageReads): Promise<StopArrivalsRoute> {

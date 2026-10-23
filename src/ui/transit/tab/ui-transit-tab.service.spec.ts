@@ -32,6 +32,7 @@ import { FakeBusConfigService } from "../../../../__tests__/helpers/fakes/bus/bu
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
 import { FakeUiTransitRepository } from "../../../../__tests__/helpers/fakes/ui/ui-transit.repository.fake";
 import { storedBusRegistryService } from "../../../../__tests__/helpers/bus/bus-registry";
+import { storedBusRoutePathService } from "../../../../__tests__/helpers/bus/bus-route-path";
 import { storedRouteAttributesService } from "../../../../__tests__/helpers/bus/route-attributes";
 import { BusConfigService } from "../../../bus/config/bus-config.service";
 import type { BusGroupVisibility } from "../../../bus/config/bus-config.types";
@@ -65,7 +66,7 @@ let busConfig: FakeBusConfigService;
 let repository: FakeUiTransitRepository;
 
 beforeAll(async () => {
-  const realBusConfig = new BusConfigService(storedBusStopsService(), storedBusRegistryService(), storedRouteAttributesService());
+  const realBusConfig = new BusConfigService(storedBusStopsService(), storedBusRegistryService(), storedRouteAttributesService(), storedBusRoutePathService());
   for (const lang of LANGS) realGroupsByLang.set(lang, await realBusConfig.getBusGroups(lang));
 });
 

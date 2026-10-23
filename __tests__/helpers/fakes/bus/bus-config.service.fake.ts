@@ -1,8 +1,11 @@
 /**
  * In-memory BusConfigService: the bus groups each language reads, set by the
- * test. The ETags are a stand-in, not the real md5 of the groups.
+ * test. The ETags are a stand-in, not the real md5 of the groups. A station's
+ * direction is read from the set group by the real rule.
  */
+import { toStationDirection } from "../../../../src/bus/config/bus-config.rules";
 import type { BusConfigService } from "../../../../src/bus/config/bus-config.service";
+import type { PlacedStation, StationDirection } from "../../../../src/bus/config/bus-config.types";
 import type { BusGroup } from "../../../../src/bus/config/bus-config.wire";
 import type { SupportedLang } from "../../../../src/infra/types";
 import type { PublicOf } from "../public-of";
@@ -28,5 +31,9 @@ export class FakeBusConfigService implements PublicOf<BusConfigService> {
 
   async computeGroupEtag(id: string, lang: SupportedLang = "ko"): Promise<string | null> {
     return (await this.getGroupById(id, lang)) === null ? null : `"fake-${id}-${lang}"`;
+  }
+
+  async findStationDirection(id: string, { stationIndex, stationsVersion }: PlacedStation, lang: SupportedLang): Promise<StationDirection | null> {
+    return toStationDirection(await this.getGroupById(id, lang), stationIndex, stationsVersion);
   }
 }

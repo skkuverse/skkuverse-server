@@ -123,6 +123,12 @@
                             "null"
                           ]
                         },
+                        "directionId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
                         "isFirstStation": {
                           "type": "boolean"
                         },
@@ -165,12 +171,43 @@
                         "name",
                         "subtitle",
                         "stationNumber",
+                        "directionId",
                         "isFirstStation",
                         "isLastStation",
                         "isRotationStation",
                         "isPassThrough",
                         "isAlightOnly",
                         "transferLines"
+                      ]
+                    }
+                  },
+                  "directions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "fromIndex": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "toIndex": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "label",
+                        "fromIndex",
+                        "toIndex"
                       ]
                     }
                   },
@@ -234,6 +271,7 @@
                   "refreshInterval",
                   "lastStationIndex",
                   "stations",
+                  "directions",
                   "features",
                   "liveEndpoint",
                   "isLoop",

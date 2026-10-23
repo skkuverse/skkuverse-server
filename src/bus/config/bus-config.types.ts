@@ -5,8 +5,22 @@ import type { JongroStation, RegistryRoute } from "../registry/bus-registry.type
 import type { HsscLineStation } from "../stops/bus-stops.document";
 import type { ResolvedStops } from "../stops/bus-stops.types";
 import type { busGroupVisibility } from "./bus-config.schema";
+import type { BusGroup } from "./bus-config.wire";
 
 export type BusGroupVisibility = z.output<typeof busGroupVisibility>;
+
+export type LineDirection = Extract<BusGroup["screen"], { directions: unknown }>["directions"][number];
+
+export type StationDirection = Pick<LineDirection, "id" | "label">;
+
+/** WHY: a station by its index and the stations version that placed it, null on the HSSC line, which has none. */
+export type PlacedStation = { stationIndex: number; stationsVersion: string | null };
+
+/** WHY: a realtime line's directions in line order, and each station's direction id by index, null where none joins. */
+export interface LineDirections {
+  directions: LineDirection[];
+  directionIds: Array<string | null>;
+}
 
 /**
  * WHY: a Jongro station with its transfer lines, joined by ARS number from the route's stored attributes, and the stop
@@ -19,6 +33,7 @@ export type AnyStation = HsscLineStation | AttributedJongroStation;
 export interface AttributedJongroRoute {
   route: RegistryRoute;
   attributes: JongroRouteAttributes;
+  directions: LineDirections;
 }
 
 export interface MappedStation {
@@ -26,6 +41,7 @@ export interface MappedStation {
   name: string;
   subtitle: string | null;
   stationNumber: string | null;
+  directionId: string | null;
   isFirstStation: boolean;
   isLastStation: boolean;
   isRotationStation: boolean;

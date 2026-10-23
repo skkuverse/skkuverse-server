@@ -1,5 +1,5 @@
 {
-  "_about": "generated 2026-10-18 from GET /bus/config on a local build of feat/stop-subway-link (NODE_ENV=development, ROLE=api, _dev databases), Accept-Language ko, because production does not serve stops[].subwayStation yet; apart from that field the untrimmed body equals production's /bus/config the same day. Re-capture from production after the deploy; every group kept, its stations, services, route badges and stops cut to the first two, each service to its first route type's stop sequence, cut to two stops, guide markers and walks cut to one, the walk to its first two points Each commute stop's map is removed by hand since 2026-10-18, which serves no commute stop a map; nothing else changed. The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23. Each realtime station's isAlightOnly (false everywhere until bus-stops flags a drop-off-only position) is added by hand after isPassThrough, as the server serves it since 2026-10-23.",
+  "_about": "generated 2026-10-18 from GET /bus/config on a local build of feat/stop-subway-link (NODE_ENV=development, ROLE=api, _dev databases), Accept-Language ko, because production does not serve stops[].subwayStation yet; apart from that field the untrimmed body equals production's /bus/config the same day. Re-capture from production after the deploy; every group kept, its stations, services, route badges and stops cut to the first two, each service to its first route type's stop sequence, cut to two stops, guide markers and walks cut to one, the walk to its first two points Each commute stop's map is removed by hand since 2026-10-18, which serves no commute stop a map; nothing else changed. The realtime screens' liveEndpoint, isLoop and capabilities (ADR 0019) are appended by hand, as the server now serves them. Each realtime station's isPassThrough (true only at the non-stop 혜화동로터리 positions) is added by hand after isRotationStation, as the server serves it since 2026-10-23. Each realtime station's isAlightOnly (false everywhere until bus-stops flags a drop-off-only position) is added by hand after isPassThrough, as the server serves it since 2026-10-23. Each realtime screen's directions (right after stations) and each station's directionId (right after stationNumber) are added by hand, as the server serves them since 2026-10-23 (ADR 0019, D16).",
   "data": {
     "groups": [
       {
@@ -25,6 +25,7 @@
               "name": "농구장",
               "subtitle": "Basketball Court (Shuttle Bus Stop)",
               "stationNumber": null,
+              "directionId": "fromCampus",
               "isFirstStation": true,
               "isLastStation": false,
               "isRotationStation": false,
@@ -37,12 +38,27 @@
               "name": "학생회관",
               "subtitle": "Student Center",
               "stationNumber": null,
+              "directionId": "fromCampus",
               "isFirstStation": false,
               "isLastStation": false,
               "isRotationStation": false,
               "isPassThrough": false,
               "isAlightOnly": false,
               "transferLines": []
+            }
+          ],
+          "directions": [
+            {
+              "id": "fromCampus",
+              "label": "하교",
+              "fromIndex": 0,
+              "toIndex": 5
+            },
+            {
+              "id": "toCampus",
+              "label": "등교",
+              "fromIndex": 6,
+              "toIndex": 10
             }
           ],
           "features": [
@@ -378,6 +394,7 @@
               "name": "성균관대학교",
               "subtitle": null,
               "stationNumber": "01881",
+              "directionId": "100900116",
               "isFirstStation": true,
               "isLastStation": false,
               "isRotationStation": false,
@@ -390,12 +407,27 @@
               "name": "서울성곽.성대후문",
               "subtitle": null,
               "stationNumber": "01515",
+              "directionId": "100900116",
               "isFirstStation": false,
               "isLastStation": false,
               "isRotationStation": false,
               "isPassThrough": false,
               "isAlightOnly": false,
               "transferLines": []
+            }
+          ],
+          "directions": [
+            {
+              "id": "100900116",
+              "label": "종각역YMCA 방면",
+              "fromIndex": 0,
+              "toIndex": 12
+            },
+            {
+              "id": "100900204",
+              "label": "성균관대학교 방면",
+              "fromIndex": 13,
+              "toIndex": 26
             }
           ],
           "features": [],
@@ -434,6 +466,7 @@
               "name": "성균관대운동장",
               "subtitle": null,
               "stationNumber": "01617",
+              "directionId": "100900043",
               "isFirstStation": true,
               "isLastStation": false,
               "isRotationStation": false,
@@ -446,12 +479,27 @@
               "name": "학생회관",
               "subtitle": null,
               "stationNumber": "01618",
+              "directionId": "100900043",
               "isFirstStation": false,
               "isLastStation": false,
               "isRotationStation": false,
               "isPassThrough": false,
               "isAlightOnly": false,
               "transferLines": []
+            }
+          ],
+          "directions": [
+            {
+              "id": "100900043",
+              "label": "이화사거리 방면",
+              "fromIndex": 0,
+              "toIndex": 12
+            },
+            {
+              "id": "100900220",
+              "label": "성균관대운동장 방면",
+              "fromIndex": 13,
+              "toIndex": 21
             }
           ],
           "features": [],
@@ -490,6 +538,7 @@
               "name": "명륜3가종점",
               "subtitle": null,
               "stationNumber": "01503",
+              "directionId": "100900191",
               "isFirstStation": true,
               "isLastStation": false,
               "isRotationStation": false,
@@ -502,12 +551,27 @@
               "name": "샘미용실.종로구청소년상담복지센터",
               "subtitle": null,
               "stationNumber": "01511",
+              "directionId": "100900191",
               "isFirstStation": false,
               "isLastStation": false,
               "isRotationStation": false,
               "isPassThrough": false,
               "isAlightOnly": false,
               "transferLines": []
+            }
+          ],
+          "directions": [
+            {
+              "id": "100900191",
+              "label": "종로5가 방면",
+              "fromIndex": 0,
+              "toIndex": 15
+            },
+            {
+              "id": "100900040",
+              "label": "명륜3가 방면",
+              "fromIndex": 16,
+              "toIndex": 30
             }
           ],
           "features": [],

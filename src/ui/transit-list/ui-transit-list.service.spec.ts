@@ -38,6 +38,7 @@ function busGroup(id: string, visibility: BusGroupVisibility, label = id): BusGr
       refreshInterval: 10,
       lastStationIndex: 0,
       stations: [],
+      directions: [],
       features: [],
       liveEndpoint: `/bus/live/${id}`,
       isLoop: false,

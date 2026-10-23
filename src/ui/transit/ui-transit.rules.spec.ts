@@ -216,7 +216,7 @@ describe("toTransitLayoutIssues", () => {
     // Arrange
     const real: TransitLayoutReferences = {
       // BusConfigService.listGroupIds reads neither of its providers.
-      busGroupIds: new BusConfigService(null as never, null as never, null as never).listGroupIds(),
+      busGroupIds: new BusConfigService(null as never, null as never, null as never, null as never).listGroupIds(),
       stationIds: new SubwayStationsService().listStations().map((station) => station.id),
       registry,
     };

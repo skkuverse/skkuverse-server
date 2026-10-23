@@ -13,6 +13,7 @@ import { BusConfigService } from "../../../src/bus/config/bus-config.service";
 import { COMMUTE_SERVICE_IDS } from "../../../src/bus/config/bus-config.constants";
 import type { BusGroup } from "../../../src/bus/config/bus-config.wire";
 import { storedBusRegistryRepository, storedBusRegistryService } from "../../helpers/bus/bus-registry";
+import { storedBusRoutePathService } from "../../helpers/bus/bus-route-path";
 import { storedRouteAttributesRepository, storedRouteAttributesService } from "../../helpers/bus/route-attributes";
 import { storedBusStopsService, storedBusStopsRepository } from "../../helpers/bus/bus-stops";
 import { haversineM } from "../../../src/shared/distance.util";
@@ -31,6 +32,8 @@ import { busGroup } from "../../../src/bus/config/bus-config.wire";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
 import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
+import { BusRoutePathRepository } from "../../../src/bus/route-path/bus-route-path.repository";
+import { storedBusRoutePathRepository } from "../../helpers/bus/bus-route-path";
 import { UiModule } from "../../../src/ui/ui.module";
 import { UiTransitTabModule } from "../../../src/ui/transit/tab/ui-transit-tab.module";
 import { UiTransitModule } from "../../../src/ui/transit/ui-transit.module";
@@ -58,7 +61,7 @@ let busConfig: BusConfigService;
 const groupsByLang = new Map<SupportedLang, BusGroup[]>();
 // WHY: the stations come from the registry, holding the routes stored on 2026-10-17; the groups are read once.
 beforeAll(async () => {
-  busConfig = new BusConfigService(storedBusStopsService(), storedBusRegistryService(), storedRouteAttributesService());
+  busConfig = new BusConfigService(storedBusStopsService(), storedBusRegistryService(), storedRouteAttributesService(), storedBusRoutePathService());
   for (const lang of ["ko", "en", "zh"] as const) groupsByLang.set(lang, await busConfig.getBusGroups(lang));
 });
 const getBusGroups = (lang: SupportedLang = "ko"): BusGroup[] => groupsByLang.get(lang)!;
@@ -486,6 +489,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
+        { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
         { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
         { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
         { provide: SubwayStationCoordsRepository, useValue: storedStationCoordsRepository() },
