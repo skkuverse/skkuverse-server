@@ -8,3 +8,8 @@ export const DEGRADED_TRANSIT_CACHE_CONTROL = "public, max-age=60";
 export const ROUTE_NAME_PREFIX = { ko: "종로", en: "Jongno ", zh: "钟路" } as const;
 
 export const ROUTE_LAYER_SUFFIX = "_route";
+
+export const HSSC_ROUTE_ID = "hssc";
+
+// WHY: the line's name on /bus/config, so the map and the transit tab name it alike.
+export const HSSC_ROUTE_NAME_KEY = "busconfig.label.hssc";
