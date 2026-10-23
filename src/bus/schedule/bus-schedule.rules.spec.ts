@@ -1,52 +1,33 @@
 /**
- * The timetable rules: the non-operating-day label (the SKKU list first, then
- * the public-holiday name it is given, null on an ordinary day, and a
- * RangeError on a date the holiday lookup cannot take), the rest-day lookup,
- * the week-start parameter, which pattern a date resolves to, the
- * suspension window, and a day the smart view shows inside it. Which dates are public holidays is HolidaysService's
- * (src/holidays/holidays.service.spec.ts).
+ * The timetable rules: the non-operating-day label (the school rest day
+ * first, then the public holiday, null on an ordinary day), the week-start
+ * parameter, which pattern a date resolves to, the suspension window, and a
+ * day the smart view shows inside it. Which dates are public holidays and
+ * school rest days, and the RangeError on a date the holiday lookup cannot
+ * take, are CalendarService's (src/calendar/calendar.service.spec.ts).
  */
 
-import fs from "fs";
-import path from "path";
 import moment from "moment-timezone";
-import type { RestDays } from "../schedule-content/bus-schedule-content.types";
 import type { BusScheduleDoc } from "./bus-schedule.document";
-import { isWeekStartInRange, lookupRestDay, pickPattern, toNonOperatingDayLabel, toSuspendedDay, toSuspendWindow } from "./bus-schedule.rules";
+import { isWeekStartInRange, pickPattern, toNonOperatingDayLabel, toSuspendedDay, toSuspendWindow } from "./bus-schedule.rules";
 import type { ScheduleDay } from "./bus-schedule.wire";
-
-// Revision 1 of the skku-rest-days dataset (its fixture), built into RestDays as the dataset schema reads it.
-const STORED_REST_DAYS: RestDays = {
-  exact: new Map(),
-  annual: new Map(
-    Object.entries(JSON.parse(fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/bus/fixtures/skku-rest-days.dataset.json"), "utf8")) as Record<string, string>).filter(
-      ([key]) => key !== "_about",
-    ),
-  ),
-};
+import type { SchoolRestDay } from "../../calendar/calendar.types";
 
 describe("toNonOperatingDayLabel", () => {
+  const dataset = (label: string): SchoolRestDay => ({ label, source: "dataset" });
+  const crawled = (label: string): SchoolRestDay => ({ label, source: "crawled" });
+
   it.each([
-    ["the calendar's name passes through", "2026-03-02", "대체공휴일(삼일절)", "대체공휴일(삼일절)"],
-    ["an election day passes through", "2026-06-03", "전국동시지방선거", "전국동시지방선거"],
-    ["a SKKU rest day beats a calendar name", "2026-09-28", "임시공휴일", "공자탄신일"],
-    ["a SKKU rest day with no calendar name", "2026-09-25", null, "건학기념일"],
-    ["null on an ordinary day", "2026-03-03", null, null],
-  ])("%s: %s with %s → %s", (_label, date, publicHoliday, label) => {
+    ["the calendar's name passes through", "2026-03-02", "대체공휴일(삼일절)", null, "대체공휴일(삼일절)"],
+    ["an election day passes through", "2026-06-03", "전국동시지방선거", null, "전국동시지방선거"],
+    ["a SKKU rest day beats a calendar name", "2026-09-28", "임시공휴일", dataset("공자탄신일"), "공자탄신일"],
+    ["a SKKU rest day with no calendar name", "2026-09-25", null, dataset("건학기념일"), "건학기념일"],
+    ["a crawled rest day yields to a calendar name", "2026-09-25", "추석", crawled("건학기념일"), "추석"],
+    ["a crawled rest day with no calendar name", "2026-09-28", null, crawled("공부자탄강일"), "공부자탄강일"],
+    ["null on an ordinary day", "2026-03-03", null, null, null],
+  ] as Array<[string, string, string | null, SchoolRestDay | null, string | null]>)("%s: %s with %s and %o → %s", (_label, _date, publicHoliday, schoolRestDay, label) => {
     // Act & Assert
-    expect(toNonOperatingDayLabel(STORED_REST_DAYS, date, publicHoliday)).toBe(label);
-  });
-});
-
-describe("lookupRestDay", () => {
-  it("prefers an exact date over the annual rule", () => {
-    // Arrange
-    const days: RestDays = { exact: new Map([["2030-09-28", "공자탄신일 (특별)"]]), annual: new Map([["09-28", "공자탄신일"]]) };
-
-    // Act & Assert
-    expect(lookupRestDay(days, "2030-09-28")).toBe("공자탄신일 (특별)");
-    expect(lookupRestDay(days, "2031-09-28")).toBe("공자탄신일");
-    expect(lookupRestDay(days, "2031-09-27")).toBeNull();
+    expect(toNonOperatingDayLabel({ publicHoliday, schoolRestDay })).toBe(label);
   });
 });
 
@@ -145,31 +126,5 @@ describe("isWeekStartInRange", () => {
   ])("%s → %s", (from, expected) => {
     // Act & Assert
     expect(isWeekStartInRange(from, NOW)).toBe(expected);
-  });
-});
-
-// QUIRK(date-holidays): isHoliday never returns for an Invalid Date or a year-0 or year-1 day, and reads an
-// impossible day (2026-02-29) as the next real one, so the label refuses those before asking it.
-describe("toNonOperatingDayLabel on a date the holiday lookup cannot take", () => {
-  it.each(["2026-13-01", "2026-02-31", "2026-02-29", "2026-04-31", "0000-01-03", "0001-01-01", "1899-12-31", "3000-01-01", "10000-01-01", "2026-1-01", "Invalid date"])(
-    "throws on %s",
-    (date) => {
-      // Act & Assert
-      expect(() => toNonOperatingDayLabel(STORED_REST_DAYS, date, null)).toThrow(`${date} is not a date from 1900 to 2999`);
-    },
-  );
-
-  it.each([
-    ["1900-01-01", null],
-    ["2999-12-31", null],
-    ["2028-02-29", null],
-  ])("answers %s", (date, label) => {
-    // Act & Assert
-    expect(toNonOperatingDayLabel(STORED_REST_DAYS, date, null)).toBe(label);
-  });
-
-  it("refuses a year out of range even on a day the SKKU list names", () => {
-    // Act & Assert
-    expect(() => toNonOperatingDayLabel(STORED_REST_DAYS, "0001-09-28", null)).toThrow("0001-09-28 is not a date from 1900 to 2999");
   });
 });

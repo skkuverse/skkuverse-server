@@ -69,6 +69,7 @@ type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTes
 type BusRegistryHelpers = typeof import("../../helpers/bus/bus-registry");
 type BusStopsHelpers = typeof import("../../helpers/bus/bus-stops");
 type ScheduleContentHelpers = typeof import("../../helpers/bus/schedule-content");
+type RestDaysHelpers = typeof import("../../helpers/calendar/rest-days");
 type RouteAttributesHelpers = typeof import("../../helpers/bus/route-attributes");
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
@@ -178,7 +179,8 @@ beforeAll(async () => {
   const estimates = SERVICE_IDS.flatMap((serviceId) => estimatesOf(serviceId, (captured.smart[serviceId].ko.body.data as { days: CapturedDay[] }).days));
   await busDb.collection("shuttle_eta").insertMany(estimates);
   content = db.getClient().db(config.content.dbName);
-  const { restDaysFixture, serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
+  const { serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
+  const { restDaysFixture } = require("../../helpers/calendar/rest-days") as RestDaysHelpers;
   await store.create(content, "bus-service-notices", serviceNoticesFixture(), STORED_BY);
   await store.create(content, "skku-rest-days", restDaysFixture(), STORED_BY);
   const { routeAttributesFixture } = require("../../helpers/bus/route-attributes") as RouteAttributesHelpers;

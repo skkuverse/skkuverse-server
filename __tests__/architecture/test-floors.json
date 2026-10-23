@@ -15,6 +15,10 @@
     "tests": 1081,
     "expects": 1972
   },
+  "calendar": {
+    "tests": 62,
+    "expects": 118
+  },
   "config": {
     "tests": 9,
     "expects": 13
@@ -30,10 +34,6 @@
   "health": {
     "tests": 5,
     "expects": 13
-  },
-  "holidays": {
-    "tests": 62,
-    "expects": 118
   },
   "http": {
     "tests": 42,

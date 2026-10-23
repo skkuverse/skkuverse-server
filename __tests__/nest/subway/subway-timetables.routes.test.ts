@@ -23,8 +23,8 @@
 import { Global, Module } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { HolidaysModule } from "../../../src/holidays/holidays.module";
-import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { CalendarModule } from "../../../src/calendar/calendar.module";
+import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { Clock } from "../../../src/infra/clock";
 import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
 import { DATASET_CACHE_TTL_MS } from "../../../src/shared/dataset.constants";
@@ -48,7 +48,7 @@ import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-to
 import { SubwayStationCoordsRepository } from "../../../src/subway/station-coords/subway-station-coords.repository";
 import { storedStationCoordsRepository } from "../../helpers/subway/station-coords";
 import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracking.module";
-import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
 import { FakeSubwaySeoulApiClient } from "../../helpers/fakes/subway/subway-seoul-api.client.fake";
 import { FakeSubwaySeoulTrainmapClient } from "../../helpers/fakes/subway/subway-seoul-trainmap.client.fake";
 import type { FakeSubwayTimetableRepository } from "../../helpers/fakes/subway/subway-timetable.repository.fake";
@@ -103,7 +103,7 @@ async function boot(stores: Stores): Promise<NestExpressApplication> {
   const app = await buildTestApp({
     imports: [
       SchedulingStubModule,
-      HolidaysModule,
+      CalendarModule,
       SubwayModule,
       SubwayTopologyModule,
       SubwayTimetableModule,
@@ -116,7 +116,7 @@ async function boot(stores: Stores): Promise<NestExpressApplication> {
       SubwayArrivalsModule,
     ],
     overrides: [
-      { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+      { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
       { provide: SubwayRepository, useValue: stores.state },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
       { provide: SubwayStationCoordsRepository, useValue: storedStationCoordsRepository() },

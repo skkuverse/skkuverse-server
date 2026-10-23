@@ -166,13 +166,14 @@ function loadCatalog(load) {
   const { transitLayoutFile } = load("ui/transit/ui-transit.schema");
   const { toTransitLayoutIssues, transitLayoutReferences } = load("ui/transit/ui-transit.rules");
   const { layerSetsDataset } = load("map/layer-set/map-layer-set.schema");
-  const { busServiceNoticesDataset, skkuRestDaysDataset } = load("bus/schedule-content/bus-schedule-content.schema");
+  const { busServiceNoticesDataset } = load("bus/schedule-content/bus-schedule-content.schema");
   const { serviceNoticesReferences } = load("bus/schedule-content/bus-schedule-content.rules");
   const { laneCorridorDataset } = load("bus/eta/lane/bus-eta-lane.schema");
   const { corridorIssues } = load("bus/eta/lane/bus-eta-lane.rules");
   const { jongroRouteAttributesDataset } = load("bus/route-attributes/bus-route-attributes.schema");
   const { hsscRouteLineDataset } = load("bus/hssc-route-line/bus-hssc-route-line.schema");
   const { toRouteLineIssues } = load("bus/hssc-route-line/bus-hssc-route-line.rules");
+  const { skkuRestDaysDataset } = load("calendar/calendar.schema");
   const { toRouteAttributesIssues } = load("bus/route-attributes/bus-route-attributes.rules");
   const { busStopsDataset } = load("bus/stops/bus-stops.schema");
   const { busStopsReferences, etaOptIns, toBusStopsIssues } = load("bus/stops/bus-stops.rules");
@@ -321,7 +322,7 @@ function loadCatalog(load) {
       },
       // MM-DD recurs yearly, YYYY-MM-DD applies once; every key must be on the calendar.
       "skku-rest-days": {
-        owner: "src/bus/schedule-content",
+        owner: "src/calendar",
         schema: skkuRestDaysDataset,
         referencesOf: () => [],
       },

@@ -52,7 +52,7 @@ beforeAll(async () => {
     .SubwayHistoryRepository;
   await clearCollections(db.getClient().db(config.mongo.dbName));
   app = await buildTestApp({
-    imports: appModulesUnder("src/scheduling/", "src/holidays/", "src/subway/"),
+    imports: appModulesUnder("src/scheduling/", "src/calendar/", "src/subway/"),
     overrides: [{ provide: Clock, useValue: CLOCK }],
     role: "api",
   });
@@ -208,7 +208,7 @@ describe("SubwayHistoryRepository at boot", () => {
     const { PollerRegistryService } = require("../../../src/scheduling/poller-registry.service") as { PollerRegistryService: Registry };
     const registered = jest.spyOn(PollerRegistryService.prototype, "registerPoller").mockImplementation(() => undefined);
     const pollerApp = await buildTestApp({
-      imports: appModulesUnder("src/scheduling/", "src/holidays/", "src/subway/"),
+      imports: appModulesUnder("src/scheduling/", "src/calendar/", "src/subway/"),
       overrides: [{ provide: Clock, useValue: CLOCK }],
       role: "poller",
     });

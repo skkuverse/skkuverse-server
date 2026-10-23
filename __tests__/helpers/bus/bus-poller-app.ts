@@ -16,7 +16,7 @@ import { BusEtaTravelClient } from "../../../src/bus/eta/travel/bus-eta-travel.c
 import { BusRealtimeHsscClient } from "../../../src/bus/realtime/hssc/bus-realtime-hssc.client";
 import { BusRealtimeJongroClient } from "../../../src/bus/realtime/jongro/bus-realtime-jongro.client";
 import { BusRoutePathClient } from "../../../src/bus/route-path/bus-route-path.client";
-import { HolidaysSyncClient } from "../../../src/holidays/sync/holidays-sync.client";
+import { CalendarHolidaySyncClient } from "../../../src/calendar/holiday-sync/calendar-holiday-sync.client";
 import { Clock } from "../../../src/infra/clock";
 import { FakeBusEtaForecastClient } from "../fakes/bus/bus-eta-forecast.client.fake";
 import type { FakeBusEtaProbeClient } from "../fakes/bus/bus-eta-probe.client.fake";
@@ -24,7 +24,7 @@ import type { FakeBusEtaTravelClient } from "../fakes/bus/bus-eta-travel.client.
 import { FakeBusRealtimeHsscClient } from "../fakes/bus/bus-realtime-hssc.client.fake";
 import { FakeBusRealtimeJongroClient } from "../fakes/bus/bus-realtime-jongro.client.fake";
 import { FakeBusRoutePathClient } from "../fakes/bus/bus-route-path.client.fake";
-import { FakeHolidaysSyncClient } from "../fakes/holidays/holidays-sync.client.fake";
+import { FakeCalendarHolidaySyncClient } from "../fakes/calendar/calendar-holiday-sync.client.fake";
 import { appModulesUnder } from "../nest/app-modules";
 import { buildTestApp } from "../nest/build-test-app";
 
@@ -45,7 +45,7 @@ export function buildBusPollerApp({ naver, topis, tmap = new FakeBusEtaForecastC
       { provide: BusRealtimeHsscClient, useValue: new FakeBusRealtimeHsscClient() },
       { provide: BusRealtimeJongroClient, useValue: new FakeBusRealtimeJongroClient() },
       { provide: BusRoutePathClient, useValue: new FakeBusRoutePathClient() },
-      { provide: HolidaysSyncClient, useValue: new FakeHolidaysSyncClient() },
+      { provide: CalendarHolidaySyncClient, useValue: new FakeCalendarHolidaySyncClient() },
       { provide: Clock, useValue: clock },
     ],
     role: "poller",

@@ -52,6 +52,7 @@ type Registry = typeof import("../../../src/scheduling/poller-registry.service")
 type BusLaneCorridorHelpers = typeof import("../../helpers/bus/bus-lane-corridor");
 type BusStopsHelpers = typeof import("../../helpers/bus/bus-stops");
 type ScheduleContentHelpers = typeof import("../../helpers/bus/schedule-content");
+type RestDaysHelpers = typeof import("../../helpers/calendar/rest-days");
 
 const at = (hhmm: string, seconds = 0): Date => new Date(new Date(`2026-10-23T${hhmm}:00+09:00`).getTime() + seconds * 1000);
 
@@ -139,7 +140,8 @@ beforeAll(async () => {
   busDb = db.getClient().db(config.mongo.dbName);
   await busDb.collection("bus_schedules").insertMany(buildDocuments(parseTimetableFile(TIMETABLE)));
   content = db.getClient().db(config.content.dbName);
-  const { restDaysFixture, serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
+  const { serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
+  const { restDaysFixture } = require("../../helpers/calendar/rest-days") as RestDaysHelpers;
   const storedBy = { by: "characterization@example.com", now: at("00:00") };
   await store.create(content, "bus-service-notices", serviceNoticesFixture(), storedBy);
   await store.create(content, "skku-rest-days", restDaysFixture(), storedBy);

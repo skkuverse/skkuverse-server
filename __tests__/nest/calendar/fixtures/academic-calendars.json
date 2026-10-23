@@ -1,0 +1,138 @@
+{
+  "_about": "The academic_calendars documents skkuverse-crawler writes (AcademicYearDoc.of in py/src/skkuverse_crawler/modules/schedule/models.py, crawler PR #84), generated on 2026-10-23 by running its own parse_year over its captured pages py/tests/fixtures/schedule/calendar_2024.html, calendar_2025.html and calendar_2026.html (captured from the SKKU academic calendar page on 2026-10-23), _id and fields as its snapshot sink stores them. Trimmed: each document's entries keep their first three rows (the server never reads entries; contentHash is the crawler's over the untrimmed payload), and the sink's _updatedAt is left out. Production's skku_notices.academic_calendars holds the 2026 document since 2026-10-23 12:39 UTC; these are generated from the crawler's fixtures, not copied from it.",
+  "2024": {
+    "_id": "2024",
+    "year": 2024,
+    "sourceUrl": "https://www.skku.edu/skku/edu/bachelor/ca_de_schedule.do?mode=view&srBachelorYear=2024",
+    "contentHash": "sha256:c6f46323c147cda502a47b411881ff5e8b5a3c43179edbe4d5f4e8852dfcee80",
+    "semesters": [
+      {
+        "term": 1,
+        "start": "2024-03-04",
+        "end": "2024-06-21"
+      },
+      {
+        "term": 2,
+        "start": "2024-09-02",
+        "end": "2024-12-20"
+      }
+    ],
+    "restDays": [
+      {
+        "date": "2024-09-25",
+        "title": "건학기념일"
+      },
+      {
+        "date": "2024-09-28",
+        "title": "공부자탄강일"
+      }
+    ],
+    "entries": [
+      {
+        "start": "2024-01-02",
+        "end": "2024-01-02",
+        "title": "2학기 성적 확정"
+      },
+      {
+        "start": "2024-01-05",
+        "end": "2024-01-05",
+        "title": "2024년 2월 학위취득예정 대학원과정 학위논문 인쇄본 제출 기한"
+      },
+      {
+        "start": "2024-01-08",
+        "end": "2024-01-12",
+        "title": "학사과정 복수전공, 융합트랙, 마이크로디그리 2차 신청(교직복수전공 포함)"
+      }
+    ]
+  },
+  "2025": {
+    "_id": "2025",
+    "year": 2025,
+    "sourceUrl": "https://www.skku.edu/skku/edu/bachelor/ca_de_schedule.do?mode=view&srBachelorYear=2025",
+    "contentHash": "sha256:8cd6bc13f89383250d608bc9e7bf1658c39e687ac2ac362e3500afced86d331d",
+    "semesters": [
+      {
+        "term": 1,
+        "start": "2025-03-04",
+        "end": "2025-06-23"
+      },
+      {
+        "term": 2,
+        "start": "2025-09-01",
+        "end": "2025-12-19"
+      }
+    ],
+    "restDays": [
+      {
+        "date": "2025-09-25",
+        "title": "건학기념일"
+      },
+      {
+        "date": "2025-09-28",
+        "title": "공부자탄강일(수업일수 1/4)"
+      }
+    ],
+    "entries": [
+      {
+        "start": "2025-03-01",
+        "end": "2025-03-01",
+        "title": "2025학년도 및 1학기 개시일"
+      },
+      {
+        "start": "2025-03-04",
+        "end": "2025-03-04",
+        "title": "1학기 개강"
+      },
+      {
+        "start": "2025-03-04",
+        "end": "2025-03-07",
+        "title": "2025학년도 1학기 추가 등록(분할납부자 포함)"
+      }
+    ]
+  },
+  "2026": {
+    "_id": "2026",
+    "year": 2026,
+    "sourceUrl": "https://www.skku.edu/skku/edu/bachelor/ca_de_schedule.do?mode=view&srBachelorYear=2026",
+    "contentHash": "sha256:4ce717b6b5fc09114c365b93594d6b45686e6c0870e691009ea84603d01dc8cb",
+    "semesters": [
+      {
+        "term": 1,
+        "start": "2026-03-02",
+        "end": "2026-06-19"
+      },
+      {
+        "term": 2,
+        "start": "2026-08-31",
+        "end": "2026-12-18"
+      }
+    ],
+    "restDays": [
+      {
+        "date": "2026-09-25",
+        "title": "건학기념일"
+      },
+      {
+        "date": "2026-09-28",
+        "title": "공부자탄강일"
+      }
+    ],
+    "entries": [
+      {
+        "start": "2026-03-01",
+        "end": "2026-03-01",
+        "title": "2026학년도 및 1학기 개시일"
+      },
+      {
+        "start": "2026-03-02",
+        "end": "2026-03-02",
+        "title": "1학기 개강"
+      },
+      {
+        "start": "2026-03-03",
+        "end": "2026-03-06",
+        "title": "2026학년도 1학기 추가 등록(분할납부자 포함)"
+      }
+    ]
+  }
+}
