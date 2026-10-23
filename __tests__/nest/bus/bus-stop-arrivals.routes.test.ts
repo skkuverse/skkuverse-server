@@ -53,7 +53,7 @@ import { busStopArrivals, busStopArrivalsMeta } from "../../../src/bus/stop-arri
 import { BusStopIndexModule } from "../../../src/bus/stop-index/bus-stop-index.module";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
-import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { hsscBusDoc, jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc } from "../../helpers/bus/bus-cache-docs";
@@ -71,7 +71,7 @@ import { FakeBusRouteAttributesRepository } from "../../helpers/fakes/bus/bus-ro
 import { FakeBusRoutePathClient } from "../../helpers/fakes/bus/bus-route-path.client.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeBusStopsRepository } from "../../helpers/fakes/bus/bus-stops.repository.fake";
-import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { takeBlockedConnections } from "../../helpers/network-guard";
 
@@ -159,7 +159,7 @@ async function boot(stores: Stores, now = AT_14_10_KST): Promise<import("http").
       { provide: BusScheduleRepository, useValue: stores.timetable },
       { provide: BusScheduleContentRepository, useValue: stores.content },
       { provide: BusEtaRepository, useValue: stores.estimates },
-      { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+      { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
       { provide: Clock, useValue: { now: () => new Date(now) } },
     ],
     role: "api",

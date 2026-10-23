@@ -5,7 +5,7 @@
  * stored year is young enough that an hourly sync skips it: under 24 hours
  * since its fetchedAt, checked one millisecond either side of the bound.
  */
-import { isStoredYearFresh, toSyncYears } from "./holidays-sync.rules";
+import { isStoredYearFresh, toSyncYears } from "./calendar-holiday-sync.rules";
 
 describe("toSyncYears", () => {
   it.each([

@@ -1,6 +1,6 @@
 /**
  * SubwayPlatformArrivalsService over FakeSubwayRepository, the real tracker's
- * timetable-only document (on the real timetable door, FakeHolidaysService and
+ * timetable-only document (on the real timetable door, FakeCalendarService and
  * the trimmed fixture of revision 1, stored in a fake) and a fixed Clock: the
  * arrivals document each platform is served from, in the order asked. A
  * platform's stored state at most 2 minutes old is served as the tracker

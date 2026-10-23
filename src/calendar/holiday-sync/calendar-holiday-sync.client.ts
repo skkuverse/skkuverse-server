@@ -3,9 +3,9 @@ import axios from "axios";
 import type { z } from "zod";
 import config from "../../infra/config";
 import { issuePaths } from "../../shared/zod-list.util";
-import { HolidaysSyncCalendarError } from "./holidays-sync.error";
-import { gatewayError, restDeBody, restDeEnvelope, type restDeRow } from "./holidays-sync.schema";
-import type { PublicHoliday } from "../holidays.types";
+import { CalendarHolidaySyncError } from "./calendar-holiday-sync.error";
+import { gatewayError, restDeBody, restDeEnvelope, type restDeRow } from "./calendar-holiday-sync.schema";
+import type { PublicHoliday } from "../calendar.types";
 
 const REST_DE_INFO_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -19,7 +19,7 @@ type RestDeRow = z.infer<typeof restDeRow>;
 type GatewayRefusal = z.infer<typeof gatewayError>["OpenAPI_ServiceResponse"]["cmmMsgHeader"];
 
 @Injectable()
-export class HolidaysSyncClient {
+export class CalendarHolidaySyncClient {
   // QUIRK(data-go-kr): the service key travels in the query string, so a failure keeps only its status and code.
   async fetchYear(year: number): Promise<PublicHoliday[]> {
     let data: unknown;
@@ -34,14 +34,14 @@ export class HolidaysSyncClient {
     return this.toHolidays(year, this.rowsOf(year, data));
   }
 
-  private toCalendarError(year: number, err: unknown): HolidaysSyncCalendarError {
-    if (!axios.isAxiosError(err)) return new HolidaysSyncCalendarError(`${year}: request failed`);
+  private toCalendarError(year: number, err: unknown): CalendarHolidaySyncError {
+    if (!axios.isAxiosError(err)) return new CalendarHolidaySyncError(`${year}: request failed`);
     const status = err.response?.status;
     const refused = gatewayError.safeParse(err.response?.data);
     const refusal = refused.success ? refused.data.OpenAPI_ServiceResponse.cmmMsgHeader : undefined;
     const code = refusal ? refusal.errMsg : err.code;
-    if (status === undefined) return new HolidaysSyncCalendarError(`${year}: request failed (${code ?? "no code"})`, status, code);
-    return new HolidaysSyncCalendarError(`${year}: HTTP ${status}${refusal ? ` ${this.toRefusalText(refusal)}` : ""}`, status, code);
+    if (status === undefined) return new CalendarHolidaySyncError(`${year}: request failed (${code ?? "no code"})`, status, code);
+    return new CalendarHolidaySyncError(`${year}: HTTP ${status}${refusal ? ` ${this.toRefusalText(refusal)}` : ""}`, status, code);
   }
 
   private toRefusalText({ errMsg, returnReasonCode }: GatewayRefusal): string {
@@ -52,13 +52,13 @@ export class HolidaysSyncClient {
     const refused = gatewayError.safeParse(data);
     if (refused.success) {
       const { errMsg } = refused.data.OpenAPI_ServiceResponse.cmmMsgHeader;
-      throw new HolidaysSyncCalendarError(`${year}: refused (${errMsg})`, OK_STATUS, errMsg);
+      throw new CalendarHolidaySyncError(`${year}: refused (${errMsg})`, OK_STATUS, errMsg);
     }
     const envelope = restDeEnvelope.safeParse(data);
     if (!envelope.success) throw this.shapeError(year, `not the expected envelope: ${issuePaths(envelope.error)}`);
     const { header, body } = envelope.data.response;
     if (header.resultCode !== SUCCESS_RESULT_CODE) {
-      throw new HolidaysSyncCalendarError(`${year}: result code ${header.resultCode} (${header.resultMsg ?? "no message"})`, OK_STATUS, header.resultCode);
+      throw new CalendarHolidaySyncError(`${year}: result code ${header.resultCode} (${header.resultMsg ?? "no message"})`, OK_STATUS, header.resultCode);
     }
     const parsedBody = restDeBody.safeParse(body);
     if (!parsedBody.success) throw this.shapeError(year, `not the expected body: ${issuePaths(parsedBody.error)}`);
@@ -82,7 +82,7 @@ export class HolidaysSyncClient {
     return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
   }
 
-  private shapeError(year: number, detail: string): HolidaysSyncCalendarError {
-    return new HolidaysSyncCalendarError(`${year}: ${detail}`, OK_STATUS, UNEXPECTED_SHAPE);
+  private shapeError(year: number, detail: string): CalendarHolidaySyncError {
+    return new CalendarHolidaySyncError(`${year}: ${detail}`, OK_STATUS, UNEXPECTED_SHAPE);
   }
 }

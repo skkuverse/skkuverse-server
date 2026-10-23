@@ -1,12 +1,12 @@
 import { Module } from "@nestjs/common";
-import { HolidaysModule } from "../../holidays/holidays.module";
+import { CalendarModule } from "../../calendar/calendar.module";
 import { Clock } from "../../infra/clock";
 import { SubwayModule } from "../subway.module";
 import { SubwayTimetableRepository } from "./subway-timetable.repository";
 import { SubwayTimetableService } from "./subway-timetable.service";
 
 @Module({
-  imports: [SubwayModule, HolidaysModule],
+  imports: [SubwayModule, CalendarModule],
   providers: [SubwayTimetableService, SubwayTimetableRepository, Clock],
   exports: [SubwayTimetableService],
 })

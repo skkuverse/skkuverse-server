@@ -3,7 +3,7 @@
   "explorer.fileNesting.expand": false,
   "explorer.fileNesting.patterns": {
     "building.module.ts": "building.*, *.json",
-    "holidays.module.ts": "holidays.*, *.json",
+    "calendar.module.ts": "calendar.*, *.json",
     "bus.module.ts": "bus.*, *.json",
     "bus-eta.module.ts": "bus-eta.*, *.json",
     "bus-realtime.module.ts": "bus-realtime.*, *.json",

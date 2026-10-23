@@ -24,8 +24,8 @@ import { UiTransitListService } from "../../../src/ui/transit-list/ui-transit-li
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
-import { HolidaysModule } from "../../../src/holidays/holidays.module";
-import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { CalendarModule } from "../../../src/calendar/calendar.module";
+import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { BusModule } from "../../../src/bus/bus.module";
 import { BusConfigModule } from "../../../src/bus/config/bus-config.module";
 import { busGroup } from "../../../src/bus/config/bus-config.wire";
@@ -51,7 +51,7 @@ import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracki
 import { SubwayMatchingModule } from "../../../src/subway/matching/subway-matching.module";
 import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
-import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
 import { storedSubwayTopologyRepository } from "../../helpers/subway/topology";
 import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
@@ -470,7 +470,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
     app = await buildTestApp({
       imports: [
         SchedulingModule,
-        HolidaysModule,
+        CalendarModule,
         BusModule,
         BusConfigModule,
         UiModule,
@@ -485,7 +485,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
       ],
       overrides: [
         { provide: Clock, useValue: PILOT_NOON },
-        { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+        { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
         { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository() },

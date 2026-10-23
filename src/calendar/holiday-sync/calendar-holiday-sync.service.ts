@@ -1,17 +1,17 @@
 import { Injectable } from "@nestjs/common";
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
-import { HolidaysRepository } from "../holidays.repository";
-import { HolidaysSyncClient } from "./holidays-sync.client";
-import { HolidaysSyncRepository } from "./holidays-sync.repository";
-import { isStoredYearFresh, toSyncYears } from "./holidays-sync.rules";
+import { CalendarRepository } from "../calendar.repository";
+import { CalendarHolidaySyncClient } from "./calendar-holiday-sync.client";
+import { CalendarHolidaySyncRepository } from "./calendar-holiday-sync.repository";
+import { isStoredYearFresh, toSyncYears } from "./calendar-holiday-sync.rules";
 
 @Injectable()
-export class HolidaysSyncService {
+export class CalendarHolidaySyncService {
   constructor(
-    private readonly client: HolidaysSyncClient,
-    private readonly repository: HolidaysSyncRepository,
-    private readonly holidays: HolidaysRepository,
+    private readonly client: CalendarHolidaySyncClient,
+    private readonly repository: CalendarHolidaySyncRepository,
+    private readonly holidays: CalendarRepository,
     private readonly clock: Clock,
   ) {}
 

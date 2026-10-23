@@ -38,7 +38,7 @@ import { BusScheduleService } from "../../../src/bus/schedule/bus-schedule.servi
 import { BusScheduleContentRepository } from "../../../src/bus/schedule-content/bus-schedule-content.repository";
 import { scheduleWeek, smartSchedule } from "../../../src/bus/schedule/bus-schedule.wire";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
-import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
@@ -49,7 +49,7 @@ import { serviceNoticesFixture, serviceNoticesWithNotices, serviceNoticesWithSus
 import { FakeBusEtaRepository } from "../../helpers/fakes/bus/bus-eta.repository.fake";
 import { FakeBusScheduleContentRepository } from "../../helpers/fakes/bus/bus-schedule-content.repository.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
-import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
 const DO_NOT_FAKE = ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "setImmediate", "clearImmediate", "queueMicrotask", "nextTick", "performance"] as const;
@@ -60,7 +60,7 @@ interface TestApp {
   app: NestExpressApplication;
   timetable: FakeBusScheduleRepository;
   estimates: FakeBusEtaRepository;
-  holidays: FakeHolidaysRepository;
+  holidays: FakeCalendarRepository;
   content: FakeBusScheduleContentRepository;
 }
 
@@ -68,7 +68,7 @@ interface TestApp {
 async function bootApp(content = storedScheduleContentRepository()): Promise<TestApp> {
   const timetable = new FakeBusScheduleRepository();
   const estimates = new FakeBusEtaRepository();
-  const holidays = new FakeHolidaysRepository();
+  const holidays = new FakeCalendarRepository();
   const app = await buildTestApp({
     imports: [SchedulingModule, BusModule, BusStopsModule, BusScheduleModule, BusEtaModule, BusEtaSmartModule],
     overrides: [
@@ -77,7 +77,7 @@ async function bootApp(content = storedScheduleContentRepository()): Promise<Tes
       { provide: BusEtaRepository, useValue: estimates },
       { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
       { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
-      { provide: HolidaysRepository, useValue: holidays },
+      { provide: CalendarRepository, useValue: holidays },
       { provide: Clock, useValue: { now: () => new Date() } },
     ],
     role: "api",
@@ -87,7 +87,7 @@ async function bootApp(content = storedScheduleContentRepository()): Promise<Tes
 
 let app: NestExpressApplication;
 let timetable: FakeBusScheduleRepository;
-let holidays: FakeHolidaysRepository;
+let holidays: FakeCalendarRepository;
 let content: FakeBusScheduleContentRepository;
 let httpServer: import("http").Server;
 let resolveWeek: jest.SpyInstance;
@@ -667,7 +667,7 @@ describe("GET /bus/schedule/data/:serviceId/week and /smart bodies", () => {
   });
 });
 
-// The calendar's 2026 rows as getRestDeInfo lists them (__tests__/nest/holidays/fixtures/getrestdeinfo-2026.json).
+// The calendar's 2026 rows as getRestDeInfo lists them (__tests__/nest/calendar/fixtures/getrestdeinfo-2026.json).
 const CALENDAR_2026 = [
   { date: "2026-03-01", name: "삼일절" },
   { date: "2026-03-02", name: "대체공휴일(삼일절)" },
@@ -811,7 +811,7 @@ describe("GET /bus/config across a content push", () => {
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
         { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
-        { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+        { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
         { provide: Clock, useValue: { now: () => new Date() } },
       ],
       role: "api",

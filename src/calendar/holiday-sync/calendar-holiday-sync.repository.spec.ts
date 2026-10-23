@@ -1,8 +1,8 @@
 /**
- * HolidaysSyncRepository's write to `public_holidays`, one document per year:
+ * CalendarHolidaySyncRepository's write to `public_holidays`, one document per year:
  * the upsert that replaces one year's holidays and its fetch time, keyed by the
  * year so a rerun converges, and a failed write rejecting so the sync reports
- * it. The read is holidays.repository.spec.ts's.
+ * it. The read is calendar.repository.spec.ts's.
  */
 const updateOne = jest.fn();
 const mongoCollection = jest.fn(() => ({ updateOne }));
@@ -13,7 +13,7 @@ jest.mock("../../infra/mongo", () => ({
 }));
 
 import config from "../../infra/config";
-import { HolidaysSyncRepository } from "./holidays-sync.repository";
+import { CalendarHolidaySyncRepository } from "./calendar-holiday-sync.repository";
 
 const FETCHED_AT = new Date("2026-10-16T03:00:00Z");
 const HOLIDAYS = [
@@ -26,10 +26,10 @@ beforeEach(() => {
   updateOne.mockResolvedValue({ acknowledged: true, matchedCount: 0, upsertedCount: 1 });
 });
 
-describe("HolidaysSyncRepository.upsertYear", () => {
+describe("CalendarHolidaySyncRepository.upsertYear", () => {
   it("replaces one year's holidays and fetch time, keyed by the year, inserting the year when it is new", async () => {
     // Act
-    await new HolidaysSyncRepository().upsertYear(2026, HOLIDAYS, FETCHED_AT);
+    await new CalendarHolidaySyncRepository().upsertYear(2026, HOLIDAYS, FETCHED_AT);
 
     // Assert
     expect(mongoCollection).toHaveBeenCalledWith(config.mongo.dbName, "public_holidays");
@@ -42,6 +42,6 @@ describe("HolidaysSyncRepository.upsertYear", () => {
     updateOne.mockRejectedValue(new Error("write concern timeout"));
 
     // Act & Assert
-    await expect(new HolidaysSyncRepository().upsertYear(2026, HOLIDAYS, FETCHED_AT)).rejects.toThrow("write concern timeout");
+    await expect(new CalendarHolidaySyncRepository().upsertYear(2026, HOLIDAYS, FETCHED_AT)).rejects.toThrow("write concern timeout");
   });
 });

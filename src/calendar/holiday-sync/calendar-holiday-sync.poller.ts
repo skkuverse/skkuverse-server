@@ -1,13 +1,13 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import config from "../../infra/config";
 import { PollerRegistryService } from "../../scheduling/poller-registry.service";
-import { HolidaysSyncService } from "./holidays-sync.service";
+import { CalendarHolidaySyncService } from "./calendar-holiday-sync.service";
 
 @Injectable()
-export class HolidaysSyncPoller implements OnModuleInit {
+export class CalendarHolidaySyncPoller implements OnModuleInit {
   constructor(
     private readonly registry: PollerRegistryService,
-    private readonly sync: HolidaysSyncService,
+    private readonly sync: CalendarHolidaySyncService,
   ) {}
 
   onModuleInit(): void {

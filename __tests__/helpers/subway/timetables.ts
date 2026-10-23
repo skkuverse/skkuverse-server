@@ -15,12 +15,12 @@
 import fs from "fs";
 import path from "path";
 import type { Db as MongoDb } from "mongodb";
-import type { HolidaysService } from "../../../src/holidays/holidays.service";
+import type { CalendarService } from "../../../src/calendar/calendar.service";
 import type { Clock } from "../../../src/infra/clock";
 import type { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-timetable.repository";
 import type { SubwayTimetableService } from "../../../src/subway/timetable/subway-timetable.service";
 import type { Timetable } from "../../../src/subway/timetable/subway-timetable.types";
-import { FakeHolidaysService } from "../fakes/holidays/holidays.service.fake";
+import { FakeCalendarService } from "../fakes/calendar/calendar.service.fake";
 import { asReal } from "../fakes/public-of";
 import { FakeSubwayTimetableRepository } from "../fakes/subway/subway-timetable.repository.fake";
 
@@ -58,11 +58,11 @@ export function storedSubwayTimetableRepository(tables: readonly Timetable[] = s
 /** A SubwayTimetableService over a stored repository, a holiday calendar (none by default) and a clock. */
 export function storedSubwayTimetableService({
   repository = storedSubwayTimetableRepository(),
-  holidays = new FakeHolidaysService(),
+  holidays = new FakeCalendarService(),
   clock = STORED_AT,
-}: { repository?: FakeSubwayTimetableRepository; holidays?: FakeHolidaysService; clock?: Clock } = {}): SubwayTimetableService {
+}: { repository?: FakeSubwayTimetableRepository; holidays?: FakeCalendarService; clock?: Clock } = {}): SubwayTimetableService {
   const { SubwayTimetableService: Service } = require("../../../src/subway/timetable/subway-timetable.service") as ServiceModule;
-  return new Service(asReal<HolidaysService>(holidays), asReal<SubwayTimetableRepository>(repository), clock);
+  return new Service(asReal<CalendarService>(holidays), asReal<SubwayTimetableRepository>(repository), clock);
 }
 
 /**

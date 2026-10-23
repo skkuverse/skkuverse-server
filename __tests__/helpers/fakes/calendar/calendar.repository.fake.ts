@@ -1,16 +1,16 @@
 /**
- * In-memory HolidaysRepository: `years` holds one document per year, keyed by
+ * In-memory CalendarRepository: `years` holds one document per year, keyed by
  * the year as the sync's upsert keys it, and listYears returns them all as the
- * real read does (pinned in holidays.repository.spec.ts). It does not cache:
+ * real read does (pinned in calendar.repository.spec.ts). It does not cache:
  * `reads` counts the reads and `clears` the clearCache() calls; `failWith`
  * makes every read reject.
  */
-import type { PublicHolidaysDoc } from "../../../../src/holidays/holidays.document";
-import type { HolidaysRepository } from "../../../../src/holidays/holidays.repository";
-import type { PublicHoliday } from "../../../../src/holidays/holidays.types";
+import type { PublicHolidaysDoc } from "../../../../src/calendar/calendar.document";
+import type { CalendarRepository } from "../../../../src/calendar/calendar.repository";
+import type { PublicHoliday } from "../../../../src/calendar/calendar.types";
 import type { PublicOf } from "../public-of";
 
-export class FakeHolidaysRepository implements PublicOf<HolidaysRepository> {
+export class FakeCalendarRepository implements PublicOf<CalendarRepository> {
   years = new Map<number, PublicHolidaysDoc>();
   reads = 0;
   clears = 0;

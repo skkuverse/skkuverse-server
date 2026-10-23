@@ -16,7 +16,7 @@ import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.re
 import { BusRouteAttributesRepository } from "../../../src/bus/route-attributes/bus-route-attributes.repository";
 import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
 import { BusRoutePathRepository } from "../../../src/bus/route-path/bus-route-path.repository";
-import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { Clock } from "../../../src/infra/clock";
 import { MapRepository } from "../../../src/map/map.repository";
 import { MiniappsManifestClient } from "../../../src/miniapps/manifest/miniapps-manifest.client";
@@ -32,7 +32,7 @@ import { storedRouteAttributesRepository } from "../bus/route-attributes";
 import { storedBusRoutePathRepository } from "../bus/bus-route-path";
 import { storedHsscRouteLineRepository } from "../bus/hssc-route-line";
 import { FakeBusCacheRepository } from "../fakes/bus/bus-cache.repository.fake";
-import { FakeHolidaysRepository } from "../fakes/holidays/holidays.repository.fake";
+import { FakeCalendarRepository } from "../fakes/calendar/calendar.repository.fake";
 import { FakeMapRepository } from "../fakes/map/map.repository.fake";
 import { FakeMiniappsManifestClient } from "../fakes/miniapps/miniapps-manifest.client.fake";
 import { FakeMiniappsManifestRepository } from "../fakes/miniapps/miniapps-manifest.repository.fake";
@@ -54,7 +54,7 @@ export function buildApiReplicaApp(): Promise<NestExpressApplication> {
       { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
       { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
       { provide: BusHsscRouteLineRepository, useValue: storedHsscRouteLineRepository() },
-      { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+      { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
       { provide: MapRepository, useValue: new FakeMapRepository() },
       { provide: MiniappsManifestClient, useValue: new FakeMiniappsManifestClient() },
       { provide: MiniappsManifestRepository, useValue: new FakeMiniappsManifestRepository() },

@@ -1,7 +1,7 @@
 /**
  * GET /subway/stations/:stationId/arrivals through the real controller, the
  * arrivals service, the tracker and its run matcher, the timetable and
- * estimate doors and the trimmed fixture of revision 1 stored in FakeSubwayTimetableRepository, with FakeSubwayRepository, FakeHolidaysRepository,
+ * estimate doors and the trimmed fixture of revision 1 stored in FakeSubwayTimetableRepository, with FakeSubwayRepository, FakeCalendarRepository,
  * the stored topology's revision 1 in FakeSubwayTopologyRepository
  * and a scripted Clock. The tracker is fed one upstream's observations per
  * tick, as the pollers feed it. What it guards: a station is requested by its
@@ -26,8 +26,8 @@
  */
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { HolidaysModule } from "../../../src/holidays/holidays.module";
-import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { CalendarModule } from "../../../src/calendar/calendar.module";
+import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
 import { subwayStationArrivals } from "../../../src/subway/arrivals/subway-arrivals.wire";
@@ -48,7 +48,7 @@ import { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-
 import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
 import { SubwayStationCoordsRepository } from "../../../src/subway/station-coords/subway-station-coords.repository";
 import { expectWire } from "../../helpers/contracts/expect-wire";
-import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { storedSubwayTopologyRepository, subwayRegistryFixture } from "../../helpers/subway/topology";
@@ -68,9 +68,9 @@ beforeAll(async () => {
   subwayRepository = new FakeSubwayRepository();
   stationCoordsRepository = storedStationCoordsRepository();
   app = await buildTestApp({
-    imports: [HolidaysModule, SubwayModule, SubwayTimetableModule, SubwayEstimateModule, SubwayTrackingModule, SubwayMatchingModule, SubwayArrivalsModule],
+    imports: [CalendarModule, SubwayModule, SubwayTimetableModule, SubwayEstimateModule, SubwayTrackingModule, SubwayMatchingModule, SubwayArrivalsModule],
     overrides: [
-      { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+      { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
       { provide: SubwayRepository, useValue: subwayRepository },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
       { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },
@@ -409,9 +409,9 @@ describe("GET /subway/stations/:stationId/arrivals with stored coords that lack 
     const lacking = stationCoordsFixture();
     delete lacking.stations.dogok;
     lackingApp = await buildTestApp({
-      imports: [HolidaysModule, SubwayModule, SubwayTimetableModule, SubwayEstimateModule, SubwayTrackingModule, SubwayMatchingModule, SubwayArrivalsModule],
+      imports: [CalendarModule, SubwayModule, SubwayTimetableModule, SubwayEstimateModule, SubwayTrackingModule, SubwayMatchingModule, SubwayArrivalsModule],
       overrides: [
-        { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+        { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
         { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
         { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
         { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },

@@ -1,13 +1,13 @@
 /**
- * HolidaysSyncClient against getRestDeInfo as it answered on 2026-10-16 and 17 (captured
- * fixtures in __tests__/nest/holidays/fixtures/, see each file's `_about`).
+ * CalendarHolidaySyncClient against getRestDeInfo as it answered on 2026-10-16 and 17 (captured
+ * fixtures in __tests__/nest/calendar/fixtures/, see each file's `_about`).
  * What it guards: one request per year with the service key as a query
  * parameter; the translation of each `isHoliday` `Y` row into a dated,
  * named holiday, substitute, temporary and election-day holidays included;
  * the payload's quirks (one row as an object, no rows as an empty string);
  * and every failure (an HTTP status, a timeout, a non-`00` result code, the
  * gateway's error envelope, a body of another shape) rejecting with a
- * HolidaysSyncCalendarError that names the source, status and code and carries
+ * CalendarHolidaySyncError that names the source, status and code and carries
  * neither the URL nor the key.
  */
 import fs from "fs";
@@ -21,14 +21,14 @@ jest.mock("axios", () => {
 const mockedGet = axios.get as jest.Mock;
 
 import config from "../../infra/config";
-import { HolidaysSyncCalendarError } from "./holidays-sync.error";
-import { HolidaysSyncClient } from "./holidays-sync.client";
+import { CalendarHolidaySyncError } from "./calendar-holiday-sync.error";
+import { CalendarHolidaySyncClient } from "./calendar-holiday-sync.client";
 
 type Payload = Record<string, unknown>;
 
 const ENDPOINT = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
 const fixture = (name: string): Payload =>
-  JSON.parse(fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/holidays/fixtures", name), "utf8"));
+  JSON.parse(fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/calendar/fixtures", name), "utf8"));
 const YEAR_2024 = fixture("getrestdeinfo-2024.json");
 const YEAR_2026 = fixture("getrestdeinfo-2026.json");
 const ONE_ROW = fixture("getrestdeinfo-2026-07.json");
@@ -36,7 +36,7 @@ const NO_ROWS = fixture("getrestdeinfo-2026-04.json");
 const UNREGISTERED_KEY = fixture("getrestdeinfo-unregistered-key.json");
 const REFUSED_HEADER = fixture("getrestdeinfo-refused-header.json");
 
-const client = new HolidaysSyncClient();
+const client = new CalendarHolidaySyncClient();
 const respond = (data: unknown) => mockedGet.mockResolvedValue({ status: 200, data });
 
 /** An axios error as axios builds one: its config holds the request URL and the key. */
@@ -46,8 +46,8 @@ function axiosError(fields: { status?: number; code?: string; data?: unknown }):
   return new axios.AxiosError("boom", fields.code, requestConfig as never, {}, response as never);
 }
 
-async function failureOf(year: number): Promise<HolidaysSyncCalendarError> {
-  return (await client.fetchYear(year).catch((err: unknown) => err)) as HolidaysSyncCalendarError;
+async function failureOf(year: number): Promise<CalendarHolidaySyncError> {
+  return (await client.fetchYear(year).catch((err: unknown) => err)) as CalendarHolidaySyncError;
 }
 
 function leaksNothing(err: Error): void {
@@ -69,7 +69,7 @@ beforeEach(() => {
   mockedGet.mockReset();
 });
 
-describe("HolidaysSyncClient.fetchYear", () => {
+describe("CalendarHolidaySyncClient.fetchYear", () => {
   it("asks getRestDeInfo for one year as JSON, with the service key as a query parameter", async () => {
     // Arrange
     respond(YEAR_2026);
@@ -145,7 +145,7 @@ describe("HolidaysSyncClient.fetchYear", () => {
   });
 });
 
-describe("HolidaysSyncClient.fetchYear on a failure", () => {
+describe("CalendarHolidaySyncClient.fetchYear on a failure", () => {
   it("Calendar error: a 500 names the source and status, and serializes without the URL or the key", async () => {
     // Arrange
     mockedGet.mockRejectedValue(axiosError({ status: 500, code: "ERR_BAD_RESPONSE", data: "<html>error</html>" }));
@@ -154,7 +154,7 @@ describe("HolidaysSyncClient.fetchYear on a failure", () => {
     const err = await failureOf(2026);
 
     // Assert
-    expect(err).toBeInstanceOf(HolidaysSyncCalendarError);
+    expect(err).toBeInstanceOf(CalendarHolidaySyncError);
     expect(err).toMatchObject({ source: "getRestDeInfo", status: 500, code: "ERR_BAD_RESPONSE" });
     expect(err.cause).toBeUndefined();
     leaksNothing(err);
@@ -168,7 +168,7 @@ describe("HolidaysSyncClient.fetchYear on a failure", () => {
     const err = await failureOf(2026);
 
     // Assert
-    expect(err).toBeInstanceOf(HolidaysSyncCalendarError);
+    expect(err).toBeInstanceOf(CalendarHolidaySyncError);
     expect(err).toMatchObject({ source: "getRestDeInfo", code: "ECONNABORTED" });
     expect(err.status).toBeUndefined();
     leaksNothing(err);
@@ -194,7 +194,7 @@ describe("HolidaysSyncClient.fetchYear on a failure", () => {
     const err = await failureOf(2026);
 
     // Assert
-    expect(err).toBeInstanceOf(HolidaysSyncCalendarError);
+    expect(err).toBeInstanceOf(CalendarHolidaySyncError);
     expect(err).toMatchObject({ source: "getRestDeInfo", status: 400, code: "INVALID_REQUEST_PARAMETER_ERROR" });
     expect(err.message).toBe("getRestDeInfo: 2026: HTTP 400 INVALID_REQUEST_PARAMETER_ERROR (10)");
     leaksNothing(err);
@@ -219,7 +219,7 @@ describe("HolidaysSyncClient.fetchYear on a failure", () => {
     const err = await failureOf(2026);
 
     // Assert
-    expect(err).toBeInstanceOf(HolidaysSyncCalendarError);
+    expect(err).toBeInstanceOf(CalendarHolidaySyncError);
     expect(err).toMatchObject({ status: 200, code: "SERVICE_KEY_IS_NOT_REGISTERED_ERROR" });
   });
 
@@ -231,7 +231,7 @@ describe("HolidaysSyncClient.fetchYear on a failure", () => {
     const err = await failureOf(2026);
 
     // Assert
-    expect(err).toBeInstanceOf(HolidaysSyncCalendarError);
+    expect(err).toBeInstanceOf(CalendarHolidaySyncError);
     expect(err).toMatchObject({ status: 200, code: "22" });
   });
 
@@ -248,7 +248,7 @@ describe("HolidaysSyncClient.fetchYear on a failure", () => {
     const err = await failureOf(2026);
 
     // Assert
-    expect(err).toBeInstanceOf(HolidaysSyncCalendarError);
+    expect(err).toBeInstanceOf(CalendarHolidaySyncError);
     expect(err).toMatchObject({ status: 200, code: "unexpected_shape" });
   });
 

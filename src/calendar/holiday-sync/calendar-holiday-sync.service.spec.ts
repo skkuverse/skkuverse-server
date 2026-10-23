@@ -1,6 +1,6 @@
 /**
- * HolidaysSyncService.run() over a scripted client, in-memory repositories
- * (the typed fakes in __tests__/helpers/fakes/holidays/) and a fixed Clock.
+ * CalendarHolidaySyncService.run() over a scripted client, in-memory repositories
+ * (the typed fakes in __tests__/helpers/fakes/calendar/) and a fixed Clock.
  * What it guards: a run fetches the KST year and the next, skipping a year
  * stored under 24 hours ago (the poller ticks hourly, so a failed year is
  * retried within the hour and a stored one refetched once a day), stores each
@@ -8,22 +8,22 @@
  * keeps the stored years and still stores the other year when one fails, then
  * rejects so the poller reports failing; every run clears the read side's
  * cache, so a lookup in this process sees what it wrote. The payload
- * translation is holidays-sync.client.spec.ts's and the exact MongoDB write
- * holidays-sync.repository.spec.ts's.
+ * translation is calendar-holiday-sync.client.spec.ts's and the exact MongoDB write
+ * calendar-holiday-sync.repository.spec.ts's.
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../infra/logger", () => mockLogger);
 
-import { FakeHolidaysRepository } from "../../../__tests__/helpers/fakes/holidays/holidays.repository.fake";
-import { FakeHolidaysSyncClient } from "../../../__tests__/helpers/fakes/holidays/holidays-sync.client.fake";
-import { FakeHolidaysSyncRepository } from "../../../__tests__/helpers/fakes/holidays/holidays-sync.repository.fake";
+import { FakeCalendarRepository } from "../../../__tests__/helpers/fakes/calendar/calendar.repository.fake";
+import { FakeCalendarHolidaySyncClient } from "../../../__tests__/helpers/fakes/calendar/calendar-holiday-sync.client.fake";
+import { FakeCalendarHolidaySyncRepository } from "../../../__tests__/helpers/fakes/calendar/calendar-holiday-sync.repository.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import type { Clock } from "../../infra/clock";
-import type { HolidaysRepository } from "../holidays.repository";
-import type { PublicHoliday } from "../holidays.types";
-import type { HolidaysSyncClient } from "./holidays-sync.client";
-import type { HolidaysSyncRepository } from "./holidays-sync.repository";
-import { HolidaysSyncService } from "./holidays-sync.service";
+import type { CalendarRepository } from "../calendar.repository";
+import type { PublicHoliday } from "../calendar.types";
+import type { CalendarHolidaySyncClient } from "./calendar-holiday-sync.client";
+import type { CalendarHolidaySyncRepository } from "./calendar-holiday-sync.repository";
+import { CalendarHolidaySyncService } from "./calendar-holiday-sync.service";
 
 // 01:30 KST on 2026-10-17, still the 16th in UTC.
 const NOW = new Date("2026-10-16T16:30:00Z");
@@ -37,14 +37,14 @@ const CALENDAR_2026: PublicHoliday[] = [
 const CALENDAR_2027: PublicHoliday[] = [{ date: "2027-01-01", name: "1월1일" }];
 
 function setup() {
-  const client = new FakeHolidaysSyncClient();
-  const repository = new FakeHolidaysSyncRepository();
-  const holidays = new FakeHolidaysRepository();
+  const client = new FakeCalendarHolidaySyncClient();
+  const repository = new FakeCalendarHolidaySyncRepository();
+  const holidays = new FakeCalendarRepository();
   const clock = { now: () => NOW } as Clock;
-  const service = new HolidaysSyncService(
-    asReal<HolidaysSyncClient>(client),
-    asReal<HolidaysSyncRepository>(repository),
-    asReal<HolidaysRepository>(holidays),
+  const service = new CalendarHolidaySyncService(
+    asReal<CalendarHolidaySyncClient>(client),
+    asReal<CalendarHolidaySyncRepository>(repository),
+    asReal<CalendarRepository>(holidays),
     clock,
   );
   return { service, client, repository, holidays };
@@ -54,7 +54,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe("HolidaysSyncService.run", () => {
+describe("CalendarHolidaySyncService.run", () => {
   it("fetches this KST year and the next, and stores each with the Clock's time", async () => {
     // Arrange
     const { service, client, repository } = setup();
@@ -128,7 +128,7 @@ describe("HolidaysSyncService.run", () => {
   });
 });
 
-describe("HolidaysSyncService.run on the hourly tick", () => {
+describe("CalendarHolidaySyncService.run on the hourly tick", () => {
   it("fetches nothing and resolves when every sync year was stored under 24 hours ago", async () => {
     // Arrange
     const { service, client, repository, holidays } = setup();

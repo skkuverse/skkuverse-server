@@ -1,5 +1,5 @@
 /**
- * HolidaysSyncPoller registers HolidaysSyncService.run() with the poller registry
+ * CalendarHolidaySyncPoller registers CalendarHolidaySyncService.run() with the poller registry
  * under name "holidays-sync" at config.holidays.syncIntervalMs (hourly, so a
  * failed sync retries within the hour; the service skips a year stored under
  * 24 hours ago, and the registry's warm-up run syncs at startup), and a
@@ -11,11 +11,11 @@
  */
 import config from "../../infra/config";
 import type { PollerRegistryService } from "../../scheduling/poller-registry.service";
-import { HolidaysSyncPoller } from "./holidays-sync.poller";
-import type { HolidaysSyncService } from "./holidays-sync.service";
+import { CalendarHolidaySyncPoller } from "./calendar-holiday-sync.poller";
+import type { CalendarHolidaySyncService } from "./calendar-holiday-sync.service";
 
 const mockedSync = jest.fn<Promise<void>, []>();
-const sync = { run: mockedSync } as unknown as HolidaysSyncService;
+const sync = { run: mockedSync } as unknown as CalendarHolidaySyncService;
 const registerPoller = jest.fn<void, Parameters<PollerRegistryService["registerPoller"]>>();
 const registry = { registerPoller } as unknown as PollerRegistryService;
 
@@ -23,10 +23,10 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe("HolidaysSyncPoller.onModuleInit", () => {
+describe("CalendarHolidaySyncPoller.onModuleInit", () => {
   it("registers a 'holidays-sync' poller once an hour", () => {
     // Act
-    new HolidaysSyncPoller(registry, sync).onModuleInit();
+    new CalendarHolidaySyncPoller(registry, sync).onModuleInit();
 
     // Assert
     expect(registerPoller).toHaveBeenCalledTimes(1);
@@ -39,7 +39,7 @@ describe("HolidaysSyncPoller.onModuleInit", () => {
 
   it("registered fn passes a sync rejection to the registry unchanged", async () => {
     // Arrange
-    new HolidaysSyncPoller(registry, sync).onModuleInit();
+    new CalendarHolidaySyncPoller(registry, sync).onModuleInit();
     const fn = registerPoller.mock.calls[0]![0];
     const syncError = new Error("getRestDeInfo: 2026: HTTP 500");
     mockedSync.mockRejectedValueOnce(syncError);
@@ -54,7 +54,7 @@ describe("HolidaysSyncPoller.onModuleInit", () => {
 
   it("registered fn resolves on sync success", async () => {
     // Arrange
-    new HolidaysSyncPoller(registry, sync).onModuleInit();
+    new CalendarHolidaySyncPoller(registry, sync).onModuleInit();
     const fn = registerPoller.mock.calls[0]![0];
     mockedSync.mockResolvedValueOnce(undefined);
 
