@@ -127,6 +127,9 @@
                   "isRotationStation": {
                     "type": "boolean"
                   },
+                  "isPassThrough": {
+                    "type": "boolean"
+                  },
                   "transferLines": {
                     "type": "array",
                     "items": {
@@ -157,6 +160,7 @@
                   "isFirstStation",
                   "isLastStation",
                   "isRotationStation",
+                  "isPassThrough",
                   "transferLines"
                 ]
               }

@@ -29,6 +29,7 @@ export interface MappedStation {
   isFirstStation: boolean;
   isLastStation: boolean;
   isRotationStation: boolean;
+  isPassThrough: boolean;
   transferLines: AnyStation["transferLines"];
   stopId?: string;
 }
