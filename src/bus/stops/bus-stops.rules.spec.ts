@@ -32,7 +32,7 @@ import { SERVICE_CONFIG as serviceConfig } from "../bus.constants";
 import type { LaneStrategies } from "../eta/lane/bus-eta-lane.types";
 import { SubwayStationsService } from "../../subway/stations/subway-stations.service";
 import type { BusStopsData } from "./bus-stops.document";
-import { etaOptIns, subwayStationErrors, toBusStopsIssues, validateStopCatalog } from "./bus-stops.rules";
+import { etaOptIns, storedLineAndAliasErrors, subwayStationErrors, toBusStopsIssues, validateStopCatalog } from "./bus-stops.rules";
 import type { ScheduleStopCatalog } from "./bus-stops.types";
 
 const SERVED_STATIONS = new Set(new SubwayStationsService().listStations().map((station) => station.id));
@@ -816,5 +816,31 @@ describe("toBusStopsIssues", () => {
 
     // Act & Assert
     expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([{ path: ["topis", "01876", "subwayStationId"], message: '"hyehwa4" is not a served subway station' }]);
+  });
+});
+
+describe("storedLineAndAliasErrors", () => {
+  const fixture = (): Record<string, any> => busStopsFixture();
+
+  it("finds none in revision 1, whose overlay and lane fit are not its checks", () => {
+    // Arrange
+    const data: Record<string, any> = { ...fixture(), topis: { "01876": { subwayStationId: "hyehwa4" } } };
+
+    // Act & Assert
+    expect(storedLineAndAliasErrors(data as BusStopsData)).toEqual([]);
+  });
+
+  it("names each HSSC line and alias issue at its path", () => {
+    // Arrange
+    const data = fixture();
+    data.hssc.stations[0].stopId = "hssc-nowhere";
+    data.stops[0].arsIds = ["01618"];
+    data.stops[1].arsIds = ["01618"];
+
+    // Act & Assert
+    expect(storedLineAndAliasErrors(data as BusStopsData)).toEqual([
+      'hssc.stations.0.stopId: names the stop "hssc-nowhere", which the dataset\'s stops do not hold',
+      "stops.1.arsIds.0: ARS number 01618 is aliased by stops.0.arsIds.0 too",
+    ]);
   });
 });
