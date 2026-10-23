@@ -335,3 +335,116 @@ describe("BusStopIndexService.findStop while the registry cannot be read", () =>
     expect(await service.findStop("hssc-nowhere")).toBeNull();
   });
 });
+
+describe("BusStopIndexService.listStops", () => {
+  const HSSC_LINE_STOP_IDS = [
+    "hssc-basketball-court",
+    "hssc-student-center",
+    "hssc-main-gate-out",
+    "hssc-olympic-hall",
+    "hssc-hyehwa-post-office",
+    "hssc-hyehwa-exit1",
+    "hssc-skku-junction",
+    "hssc-main-gate-in",
+    "hssc-600th-hall",
+  ];
+  const idsOf = (list: { stops: Array<{ id: string }> }) => list.stops.map((stop) => stop.id);
+
+  it("lists every stop once, in the index's order: the HSSC line, the shuttle sequences, then each Jongno route's new poles", async () => {
+    // Arrange
+    const { service } = setup();
+
+    // Act
+    const list = await service.listStops();
+
+    // Assert
+    const ids = idsOf(list);
+    expect(ids.slice(0, HSSC_LINE_STOP_IDS.length)).toEqual(HSSC_LINE_STOP_IDS);
+    expect(ids[HSSC_LINE_STOP_IDS.length]).toBe("hssc-bus-lot");
+    expect(new Set(ids).size).toBe(ids.length);
+    // WHY: 02's loop lists its terminal 01881 twice; 07 and 08 share 01592, which 07 reaches first.
+    expect(ids.filter((id) => id === "seoul-01881")).toHaveLength(1);
+    expect(ids.indexOf("seoul-01881")).toBeLessThan(ids.indexOf("seoul-01592"));
+    expect(list.stops.find((stop) => stop.id === "seoul-01592")!.routes.map((route) => route.groupId)).toEqual(["jongro07", "jongro08"]);
+    expect(list.snapshot.revision).toBe(1);
+  });
+
+  it("lists an aliased pole once, under the local stop that aliases it", async () => {
+    // Arrange
+    const { service } = setup({ aliases: { "hssc-bus-lot": ["01618"] } });
+
+    // Act
+    const list = await service.listStops();
+
+    // Assert
+    expect(idsOf(list)).not.toContain("seoul-01618");
+    expect(list.stops.find((stop) => stop.id === "hssc-bus-lot")!.routes.map((route) => route.groupId)).toEqual(["campus", "campus", "jongro07"]);
+  });
+
+  it("locates each stop: its own coordinates, else its pole's on the stored route line, else none", async () => {
+    // Arrange
+    const { service } = setup({ aliases: { "hssc-student-center": ["01618"] } });
+
+    // Act
+    const list = await service.listStops();
+
+    // Assert
+    const coordsOf = (stopId: string) => list.stops.find((stop) => stop.id === stopId)!.coords;
+    expect(coordsOf("jeongja-exit3")).toEqual({ lat: 37.365499, lng: 127.107906 });
+    expect(coordsOf("seoul-01592")).toEqual({ lat: 37.5834729904, lng: 127.0017632862 });
+    expect(coordsOf("hssc-student-center")).toEqual({ lat: 37.5874203934, lng: 126.9936746328 });
+    expect(coordsOf("hssc-hyehwa-exit1")).toBeNull();
+    expect(list.isPartial).toBe(false);
+  });
+
+  it("leaves out a missing registry route's poles and marks the list partial", async () => {
+    // Arrange
+    const { service, registryRepository } = setup();
+    registryRepository.routes.delete("jongro07");
+
+    // Act
+    const list = await service.listStops();
+
+    // Assert
+    expect(idsOf(list)).not.toContain("seoul-01616");
+    expect(list.stops.find((stop) => stop.id === "seoul-01592")!.routes.map((route) => route.groupId)).toEqual(["jongro08"]);
+    expect(list.isPartial).toBe(true);
+  });
+
+  it("lists poles without coordinates, logged once, and marks the list partial when the route lines cannot be read", async () => {
+    // Arrange
+    const { service, routePaths } = setup();
+    routePaths.failWith = new Error("unreadable");
+
+    // Act
+    const list = await service.listStops();
+
+    // Assert
+    expect(list.stops.find((stop) => stop.id === "seoul-01592")!.coords).toBeNull();
+    expect(list.stops.find((stop) => stop.id === "jeongja-exit3")!.coords).toEqual({ lat: 37.365499, lng: 127.107906 });
+    expect(list.isPartial).toBe(true);
+    expect(jest.mocked(logger.warn).mock.calls.filter((call) => (call[0] as { event?: string }).event === "bus.stop_index.coords_unavailable")).toHaveLength(1);
+  });
+
+  it("marks the list partial when a route has no stored line", async () => {
+    // Arrange
+    const { service, routePaths } = setup();
+    routePaths.routePaths = { routePaths: routePaths.routePaths.routePaths.filter((routePath) => routePath.routeId !== "jongro02"), hasMissingRoutes: true };
+
+    // Act
+    const list = await service.listStops();
+
+    // Assert
+    expect(list.isPartial).toBe(true);
+    expect(list.stops.find((stop) => stop.id === "seoul-01592")!.coords).toEqual({ lat: 37.5834729904, lng: 127.0017632862 });
+  });
+
+  it("answers the stops' 503 when they were never read", async () => {
+    // Arrange
+    const { service, stopsRepository } = setup();
+    stopsRepository.stored = null;
+
+    // Act & Assert
+    await expect(service.listStops()).rejects.toMatchObject({ code: "BUS_STOPS_UNAVAILABLE", httpStatus: 503 });
+  });
+});
