@@ -96,6 +96,14 @@
       "required": [
         "origins"
       ]
+    },
+    "features": {
+      "type": "object",
+      "properties": {
+        "sharedMapShell": {
+          "type": "boolean"
+        }
+      }
     }
   },
   "required": [

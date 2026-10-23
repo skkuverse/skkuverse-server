@@ -13,7 +13,7 @@ export class AppConfigController {
 
   @Get("config")
   @CacheControl(APP_CONFIG_CACHE_CONTROL)
-  getConfig(): AppClientConfig {
+  getConfig(): Promise<AppClientConfig> {
     return this.appConfig.getConfig();
   }
 }
