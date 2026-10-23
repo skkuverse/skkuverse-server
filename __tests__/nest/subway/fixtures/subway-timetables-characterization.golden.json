@@ -1,5 +1,5 @@
 {
- "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh, timetable only (no arrival state stored), at a weekday 08:00 (Wednesday 2026-10-21), a Saturday 14:00 (2026-10-24), a public holiday 11:00 (Friday 2026-12-25) and a weekday 00:20 (Wednesday 2026-10-21, service day Tuesday 2026-10-20) KST, each with its status, Cache-Control, Vary, ETag and body (its bytes are JSON.stringify of it); and the subway_arrivals documents one SubwayTrackingService tick wrote at the weekday 08:00 over the characterization's fixed observations. Generated from the committed timetables at commit 2198cf04, before the timetables moved to the subway-timetables dataset.",
+ "_about": "Hand-written from today's code, never captured: what GET /subway/stations/<id>/arrivals answered in ko, en and zh, timetable only (no arrival state stored), at a weekday 08:00 (Wednesday 2026-10-21), a Saturday 14:00 (2026-10-24), a public holiday 11:00 (Friday 2026-12-25) and a weekday 00:20 (Wednesday 2026-10-21, service day Tuesday 2026-10-20) KST, each with its status, Cache-Control, Vary, ETag and body (its bytes are JSON.stringify of it); and the subway_arrivals documents one SubwayTrackingService tick wrote at the weekday 08:00 over the characterization's fixed observations. Generated from the committed timetables at commit 2198cf04, before the timetables moved to the subway-timetables dataset. Changed 2026-10-23 with the behavior it pins, no other value changed: each station gained its coords from revision 1 of subway-station-coords, and each ETag was recomputed from the new bytes.",
  "instants": {
   "2026-10-20T23:00:00.000Z": {
    "sungkyunkwan": {
@@ -7,7 +7,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"581-Hs2TOJZkhgsHSeBJkM/or/f92Pk\"",
+     "etag": "W/\"5ac-zxBccHzyhcBe7/NuwjQWzdBylLg\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -15,7 +15,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "성균관대"
+        "name": "성균관대",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -117,7 +121,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"588-5qjY2E91V7dLAkEK6qyC7B2i6EA\"",
+     "etag": "W/\"5b3-2sptMVj0UJ7PZfMySqF4LH8sOcw\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -125,7 +129,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "Sungkyunkwan Univ."
+        "name": "Sungkyunkwan Univ.",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -227,7 +235,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"582-LGwD6RghIoBvc09vMJ/GnuuszX4\"",
+     "etag": "W/\"5ad-u4t/aSa1gp8V79xagT/V6OTjYwM\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -235,7 +243,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "成均馆大学"
+        "name": "成均馆大学",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -339,7 +351,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"594-JxPN3y+ZXoACgtMd5JJy0Wut2yA\"",
+     "etag": "W/\"5c0-EDRRwhWBGH2mhvze8W1M/P9fFTc\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -347,7 +359,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "혜화"
+        "name": "혜화",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -449,7 +465,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"58d-a1L0g34NAE3288evydRYS0msHYo\"",
+     "etag": "W/\"5b9-6bjxQRwF0jeWT2+T8bSdSbCqUp0\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -457,7 +473,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "Hyehwa"
+        "name": "Hyehwa",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -559,7 +579,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"592-CB44ap/6bq5UONY3FoQ7Al34svA\"",
+     "etag": "W/\"5be-MFy7hw+acsg5Jmx9Z+45aN/YcA8\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -567,7 +587,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "惠化"
+        "name": "惠化",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -671,7 +695,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a9d-eTkJyoUmGf3B8IKLdmQPq/WLrJE\"",
+     "etag": "W/\"ac9-Y5UWZOTskqp+0RMr19eTvU4j+JM\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -679,7 +703,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "정자"
+        "name": "정자",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -872,7 +900,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aaa-oJWZ5yCK3BW/D9LZKiuHI+cuXdw\"",
+     "etag": "W/\"ad6-ub7LJB4VMPF5CknXwJmLI7BQ3vc\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -880,7 +908,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "Jeongja"
+        "name": "Jeongja",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -1073,7 +1105,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a9b-fwUphIfYgJcCXMmII1VveSAWf5c\"",
+     "etag": "W/\"ac7-Ug1HBQB+re+Z6AEFeg61T7lq3ZE\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -1081,7 +1113,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "亭子"
+        "name": "亭子",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -1276,7 +1312,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"ab8-JCLzq4Cav1pelH4SpS8qTL/0hHQ\"",
+     "etag": "W/\"ae4-WeGJhJTxr4cK4vtZ6LavmgXPOZA\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -1284,7 +1320,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "잠실"
+        "name": "잠실",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -1477,7 +1517,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"abd-oekAvQzGLFrzvo+Dq+SmJXXZlpM\"",
+     "etag": "W/\"ae9-pGvUkMRaUjPPMqNS7Hw4cRMCZRk\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -1485,7 +1525,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "Jamsil"
+        "name": "Jamsil",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -1678,7 +1722,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aaa-YNib3c3egWTUNq1KI65EfOvKyw4\"",
+     "etag": "W/\"ad6-3V9etYXu+G1rIDjOJlJgrQW21xw\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -1686,7 +1730,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "蚕室"
+        "name": "蚕室",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -1881,7 +1929,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a92-wjKhj5T+37zU7B7aUmGeqg3OVFg\"",
+     "etag": "W/\"abe-9sS5VHURwBi04bS7bBxTB71zxHk\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -1889,7 +1937,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "도곡"
+        "name": "도곡",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -2082,7 +2134,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a9a-eDFvyxR3T1ENT8pCVbu1Y8Qp5Dg\"",
+     "etag": "W/\"ac6-vR6XgHqspL6mHMAA+owhNr5/u8s\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -2090,7 +2142,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "Dogok"
+        "name": "Dogok",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -2283,7 +2339,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a90-NqS82iahXu4rHypOld3SjkRBl98\"",
+     "etag": "W/\"abc-rd1b8vVP6CM30gSbMXWGyJkrI+A\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -2291,7 +2347,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "道谷"
+        "name": "道谷",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -2486,7 +2546,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aa8-dfmXh540QX5Dw0EMwab5OKtybPY\"",
+     "etag": "W/\"ad4-KDjpenDQvSXMuuUGCMy6HZPU9nQ\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -2494,7 +2554,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "강남"
+        "name": "강남",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -2687,7 +2751,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"ae5-KHoKKLswk7X71ceoF9JxbO/r+Cg\"",
+     "etag": "W/\"b11-vRwkk/4SPPr4eSPk+ndYqA57bt4\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -2695,7 +2759,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "Gangnam"
+        "name": "Gangnam",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -2888,7 +2956,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a9a-urvyRY1OaM3sZRwYkM2epn0WdN4\"",
+     "etag": "W/\"ac6-r9tExLW6KCO2P6QRgmlEhGTpvYE\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -2896,7 +2964,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "江南"
+        "name": "江南",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -3091,7 +3163,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aad-UTH5073lM6nJtoFE6kPqVcIpkMk\"",
+     "etag": "W/\"ad9-A+uaAuo4qNB9x8LBg3PikkEFIW0\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -3099,7 +3171,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "양재"
+        "name": "양재",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -3292,7 +3368,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"ac7-4G4OFJ5ptpp6vzvdLvYvAFYyRSE\"",
+     "etag": "W/\"af3-AfOLhjnvib4lkPi4n4sI/mk7/Fg\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -3300,7 +3376,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "Yangjae"
+        "name": "Yangjae",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -3493,7 +3573,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aa9-O00vtvffOcMBmNeXH+1eEAGDwkU\"",
+     "etag": "W/\"ad5-0i3yU6XBVl+hnFFMAfbLIijuiCg\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -3501,7 +3581,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "良才"
+        "name": "良才",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -3696,7 +3780,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"582-t0oQhXL2u9YBMCd7Wspt7+mjmDc\"",
+     "etag": "W/\"5ae-JY7yekBvrowaiWmJTXNML4yTZTs\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -3704,7 +3788,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "광교중앙"
+        "name": "광교중앙",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {
@@ -3806,7 +3894,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"594-6KG66BLEzoswM8Bk6XA66sEkttU\"",
+     "etag": "W/\"5c0-YwDJaVBYrXkBiq138ThnyWYgtzY\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -3814,7 +3902,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "Gwanggyojungang"
+        "name": "Gwanggyojungang",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {
@@ -3916,7 +4008,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"580-bzFznfWlsqw+bwFREEMrzL8+U9s\"",
+     "etag": "W/\"5ac-WNYWNAujLOEdFOp1XN4q5K/bLGk\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -3924,7 +4016,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "光教中央"
+        "name": "光教中央",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {
@@ -4030,7 +4126,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"586-4UFI8/dtYaDIOjhbYeyUxSKF1F4\"",
+     "etag": "W/\"5b1-UI/9PL4vmJn9707cIm/hOgf+MzA\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -4038,7 +4134,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "성균관대"
+        "name": "성균관대",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -4140,7 +4240,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"58d-dzMd1lVO3Pv/LzoEKZh2iW30Z/I\"",
+     "etag": "W/\"5b8-NsBEh9zZcaxr7rZJGXBKluqkjJE\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -4148,7 +4248,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "Sungkyunkwan Univ."
+        "name": "Sungkyunkwan Univ.",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -4250,7 +4354,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"587-fbW+yfnn0PYOx7b8b2tc+jkwDEw\"",
+     "etag": "W/\"5b2-y4JBLkOEz81K2atR1+NCst58PyM\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -4258,7 +4362,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "成均馆大学"
+        "name": "成均馆大学",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -4362,7 +4470,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"59a-AgTrkfJs5AgGZ4vAId5ocEHucyc\"",
+     "etag": "W/\"5c6-BjBKg+ZurmCYeRqcifHW/ZEV3WM\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -4370,7 +4478,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "혜화"
+        "name": "혜화",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -4472,7 +4584,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"593-0cf8SWpfVrPEylVChPrpSpKPQIc\"",
+     "etag": "W/\"5bf-JzamlK8SAu/G9AjQNFd0YcC2hAM\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -4480,7 +4592,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "Hyehwa"
+        "name": "Hyehwa",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -4582,7 +4698,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"598-ewv3shJp3aLbOivY/ZLP4ZiUYBc\"",
+     "etag": "W/\"5c4-v3ahiFOWvMrLsKMHQ4bjBNnoHAc\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -4590,7 +4706,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "惠化"
+        "name": "惠化",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -4694,7 +4814,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a9f-A63/XpqpHqgQ0nummcp0bM6Q3+E\"",
+     "etag": "W/\"acb-02SvGk2erLINcxc4e5UylyoVpTQ\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -4702,7 +4822,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "정자"
+        "name": "정자",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -4895,7 +5019,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aac-U0z6ShtY2ZEDrxBuHpj4n2eRzvE\"",
+     "etag": "W/\"ad8-Eg4Ur5QhnW0bT5mIUGy2XCMOOQw\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -4903,7 +5027,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "Jeongja"
+        "name": "Jeongja",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -5096,7 +5224,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a9d-tq6yiVjNgJaNa+AFYlP7t4czScM\"",
+     "etag": "W/\"ac9-bleJGR0d15aJmr0lyUdrnYBson4\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -5104,7 +5232,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "亭子"
+        "name": "亭子",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -5299,7 +5431,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"ab8-eIRdl7wbhbnqMgDhgKPd7Vqnn9g\"",
+     "etag": "W/\"ae4-cuN+jrAKFl5Ki7o+kOSW6oOGS58\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -5307,7 +5439,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "잠실"
+        "name": "잠실",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -5500,7 +5636,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"abd-7WdJ/1VxAB7j41AM1hAyX3HY1rA\"",
+     "etag": "W/\"ae9-jq1LMgh/2DQEp/+qsHX5EkXee6I\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -5508,7 +5644,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "Jamsil"
+        "name": "Jamsil",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -5701,7 +5841,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aaa-Uj4ue3Yr/EvusDPr1tcGL7O22bE\"",
+     "etag": "W/\"ad6-fL9X81Qym8Z0e9VssnXg8P8CM0k\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -5709,7 +5849,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "蚕室"
+        "name": "蚕室",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -5904,7 +6048,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a90-RlJlNV3dhtrmkDWLeeBJCIMj5AY\"",
+     "etag": "W/\"abc-2k5HMtex91pmvBmbL1K9Vuw/0uQ\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -5912,7 +6056,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "도곡"
+        "name": "도곡",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -6105,7 +6253,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a98-m5XMQtrcGERNJTZCanUuDdZjWl4\"",
+     "etag": "W/\"ac4-nYbXb3HC1CmbCwoWmQLf3c59rfs\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -6113,7 +6261,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "Dogok"
+        "name": "Dogok",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -6306,7 +6458,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a8e-WqR997OsJEXTkDY4l2LWlhSRK48\"",
+     "etag": "W/\"aba-U1HrvUOPYyKFRwagqnU+/btD1Ro\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -6314,7 +6466,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "道谷"
+        "name": "道谷",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -6509,7 +6665,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aa8-NlwVrAF2oCy4m9jQxsptWDIUKx4\"",
+     "etag": "W/\"ad4-Of45MBhbTnVWb5ded+suHa6CWVY\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -6517,7 +6673,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "강남"
+        "name": "강남",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -6710,7 +6870,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"ae5-YewBzrbn+yOR4WN1tJT+lFWJVwg\"",
+     "etag": "W/\"b11-PxmK4VSXLLjHxkJL1wdDVHDGsM4\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -6718,7 +6878,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "Gangnam"
+        "name": "Gangnam",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -6911,7 +7075,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a9a-+MrwsbST5z6Nl3jZc3E0bZapP+w\"",
+     "etag": "W/\"ac6-tNo2d2tpqyPn/FVTSrxzMm7V5u0\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -6919,7 +7083,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "江南"
+        "name": "江南",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -7114,7 +7282,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"ab0-FarifUJ5vMjXLsxrL9ly66NPUd4\"",
+     "etag": "W/\"adc-QLeJp/qFvNJq5PNGemOPhv5pRTo\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -7122,7 +7290,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "양재"
+        "name": "양재",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -7315,7 +7487,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aca-AK4wPsPgLDdDMskcDo1GEqUBlPw\"",
+     "etag": "W/\"af6-s88+KRlmhspEOJnI+G2Kxb1ieTo\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -7323,7 +7495,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "Yangjae"
+        "name": "Yangjae",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -7516,7 +7692,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aac-g34owjQGVcPdLEyCFmqKXHqLXeE\"",
+     "etag": "W/\"ad8-iRtMnunBYpbUmSwZFDbEBfpF5FY\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -7524,7 +7700,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "良才"
+        "name": "良才",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -7719,7 +7899,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"582-ZF48rfnjfUJ6wiSSnAhCBugieUo\"",
+     "etag": "W/\"5ae-cMXLNZ5iNDZORQyQv2v1W16TFJI\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -7727,7 +7907,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "광교중앙"
+        "name": "광교중앙",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {
@@ -7829,7 +8013,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"594-SF9VRArLH+I9hcQlwvNOrbhCWaA\"",
+     "etag": "W/\"5c0-hqZp8SYqnCr+uShyetTOovcrPbM\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -7837,7 +8021,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "Gwanggyojungang"
+        "name": "Gwanggyojungang",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {
@@ -7939,7 +8127,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"580-7X/sWushaEewxd6QW52Qiz30eeM\"",
+     "etag": "W/\"5ac-IMSAqWWrh9S/IkCyFhxPhyUYBt4\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -7947,7 +8135,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "光教中央"
+        "name": "光教中央",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {
@@ -8053,7 +8245,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"588-CoSuME5Oo6dXTcejxgTwHWKowFY\"",
+     "etag": "W/\"5b3-QWbOJKb4pcoqdVjRk84U8VJxDeg\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -8061,7 +8253,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "성균관대"
+        "name": "성균관대",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -8163,7 +8359,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"58f-1Kryl7J49sIxgKgWYWKBTGhZg8Y\"",
+     "etag": "W/\"5ba-E9DMgLnTbsUCeBfOnrNJr39ufkw\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -8171,7 +8367,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "Sungkyunkwan Univ."
+        "name": "Sungkyunkwan Univ.",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -8273,7 +8473,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"589-Qpg1FmIU/ChzPkwiaK1ZZQAdDdY\"",
+     "etag": "W/\"5b4-xEa9f/gFNdN68w7BDUSuxiIie6g\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -8281,7 +8481,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "成均馆大学"
+        "name": "成均馆大学",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -8385,7 +8589,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"594-jFA1YPw+s/Raxm45kPawI1iMcPY\"",
+     "etag": "W/\"5c0-wuqEwnMEWchcz8OIomp4yRC7MKc\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -8393,7 +8597,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "혜화"
+        "name": "혜화",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -8495,7 +8703,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"58d-Ustg+wJiC0Egh6Ao4ye58zokmQQ\"",
+     "etag": "W/\"5b9-rusdXZnVGgWlriCTzAgd4UFvPBg\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -8503,7 +8711,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "Hyehwa"
+        "name": "Hyehwa",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -8605,7 +8817,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"592-sfjU15gPb46MJByOO8y8gRM42Fc\"",
+     "etag": "W/\"5be-6Q5aigdK24VeCgC2ZeGIv9GtZNk\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -8613,7 +8825,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "惠化"
+        "name": "惠化",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -8717,7 +8933,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a9f-jq7dnPRyzC6ToiNLeobBSNMPMVw\"",
+     "etag": "W/\"acb-3FJFTdf7jVLwuciCjDQM/xxWhmU\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -8725,7 +8941,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "정자"
+        "name": "정자",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -8918,7 +9138,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aac-oPyFyAFcpO1zS5UzGfyAtUHwKbk\"",
+     "etag": "W/\"ad8-k7eUheoDiJuXrczkNaJbPcpNpQw\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -8926,7 +9146,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "Jeongja"
+        "name": "Jeongja",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -9119,7 +9343,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a9d-+B/i3ZinGipEvNzJyc3EY/8f/ow\"",
+     "etag": "W/\"ac9-jUnNJZmUf4Zyl+PRG0HSsng0s9M\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -9127,7 +9351,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "亭子"
+        "name": "亭子",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -9322,7 +9550,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"ab8-/sNcUDGxsxKQ6dV4vjESkBOcKww\"",
+     "etag": "W/\"ae4-mnAuGvd7lseu1iSclZKcuq6OP9o\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -9330,7 +9558,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "잠실"
+        "name": "잠실",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -9523,7 +9755,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"abd-9QHSW9DnYxCxU/zBAWI6k7w0Ro0\"",
+     "etag": "W/\"ae9-mB2J49Jna3KsTrYReiJ5DtA4w18\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -9531,7 +9763,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "Jamsil"
+        "name": "Jamsil",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -9724,7 +9960,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aaa-ZVXujsskwxIUbCsbr/FnPKIFO8Y\"",
+     "etag": "W/\"ad6-UClrL2fOY//inZEdGKM1X3lFJno\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -9732,7 +9968,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "蚕室"
+        "name": "蚕室",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -9927,7 +10167,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a90-dqT88XFLC1zqQU17bJ40JdR+/Uk\"",
+     "etag": "W/\"abc-1cZcaOPkmulvSe3ZH8A0jjlwPak\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -9935,7 +10175,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "도곡"
+        "name": "도곡",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -10128,7 +10372,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a98-DUt6v0jiyJkJ3Fe6VhXhbYTmK18\"",
+     "etag": "W/\"ac4-46SFPpRLqcezfksFJ3Tw1E2Obdg\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -10136,7 +10380,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "Dogok"
+        "name": "Dogok",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -10329,7 +10577,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a8e-+9loIztjeA+ARTcAcXkPcPHx9/U\"",
+     "etag": "W/\"aba-Etup8S1oHxxru97dq3fF1hYdvmE\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -10337,7 +10585,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "道谷"
+        "name": "道谷",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -10532,7 +10784,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aa8-sEFWEDunvv7bITegFJtWUjrNmAo\"",
+     "etag": "W/\"ad4-SPgpGGN1TAgTPzUYpdQHGlSE7Rc\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -10540,7 +10792,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "강남"
+        "name": "강남",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -10733,7 +10989,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"ae5-/94Bxv9qwyXs0QyUymPL+VM/o1k\"",
+     "etag": "W/\"b11-6XxoOpNBa7mekw+RmiSi3Z7++0U\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -10741,7 +10997,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "Gangnam"
+        "name": "Gangnam",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -10934,7 +11194,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a9a-6Q+lV/mzMdXc5ltzX8SNK0kc2o8\"",
+     "etag": "W/\"ac6-Z9rf2mN+0ElVDWqfiI0GCcaRLe4\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -10942,7 +11202,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "江南"
+        "name": "江南",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -11137,7 +11401,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aad-WPwqTFIGkEZmu1TgVFE+s0eDp8w\"",
+     "etag": "W/\"ad9-5tWRVhW7R6SALp96d230rE0S3pQ\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -11145,7 +11409,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "양재"
+        "name": "양재",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -11338,7 +11606,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"ac7-UlYVQ8lyvtwvr+eKk5ozRp3vzv0\"",
+     "etag": "W/\"af3-f07fyrCdGHucFzUG2oNKMsB2Qz8\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -11346,7 +11614,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "Yangjae"
+        "name": "Yangjae",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -11539,7 +11811,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"aa9-PyD4QzUuwVRZhNRqdCDkL18rvo8\"",
+     "etag": "W/\"ad5-yrqkVQYOptLekPACRtRs4KDShSo\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -11547,7 +11819,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "良才"
+        "name": "良才",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -11742,7 +12018,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"582-q6Kjoyx2cty5YKB03hhoKHzv5xc\"",
+     "etag": "W/\"5ae-h43+/06AsxT06r3gFwi4CTDlUHI\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -11750,7 +12026,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "광교중앙"
+        "name": "광교중앙",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {
@@ -11852,7 +12132,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"594-/rkrBom9/SjDlc7kJ0zbicQoS40\"",
+     "etag": "W/\"5c0-fdaiQhSKnYBz8q2yaeXOhyNIRGE\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -11860,7 +12140,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "Gwanggyojungang"
+        "name": "Gwanggyojungang",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {
@@ -11962,7 +12246,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"580-9rAaQKdtRkpDN3qxeqoJxteDGIE\"",
+     "etag": "W/\"5ac-Q9bEI0/Au7n9vh1fGWPT2jO5Lco\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -11970,7 +12254,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "光教中央"
+        "name": "光教中央",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {
@@ -12076,7 +12364,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"254-uiOuUzKXnu/MxcGNdte0c3wV4NM\"",
+     "etag": "W/\"27f-28s0mPzm5TsZD9Or6NHkJ5sgtMk\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -12084,7 +12372,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "성균관대"
+        "name": "성균관대",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -12136,7 +12428,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"25b-kEHLiNiqZFtfEUX4vAvmyH2ObuM\"",
+     "etag": "W/\"286-6ltg28/SjbQXvaMLr/ShfBUACxE\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -12144,7 +12436,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "Sungkyunkwan Univ."
+        "name": "Sungkyunkwan Univ.",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -12196,7 +12492,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"255-apCpl8KcNtg9Wo1d/2PhlGTcx/o\"",
+     "etag": "W/\"280-/C8eRZw9wrk/CfQ4xNIFI1GnA08\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -12204,7 +12500,11 @@
       "data": {
        "station": {
         "id": "sungkyunkwan",
-        "name": "成均馆大学"
+        "name": "成均馆大学",
+        "coords": {
+         "lat": 37.300349,
+         "lng": 126.97075
+        }
        },
        "lines": [
         {
@@ -12258,7 +12558,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"519-ujDUw7zQLPFEWgk1oxFTkGTFwio\"",
+     "etag": "W/\"545-DNmBJZ06RWEFZP7/oQAEMw1uXF0\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -12266,7 +12566,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "혜화"
+        "name": "혜화",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -12360,7 +12664,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"512-xtYyyKTqjtUa0+viKijEwr1HZq0\"",
+     "etag": "W/\"53e-Hjh89tAgl/8apMQX5SjBNbmUoJ0\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -12368,7 +12672,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "Hyehwa"
+        "name": "Hyehwa",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -12462,7 +12770,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"517-lGeqjq0vwpVl3T3blToBhbwh58Q\"",
+     "etag": "W/\"543-Gvl2y0+b7oM7DnYL6/DGR3TihXY\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -12470,7 +12778,11 @@
       "data": {
        "station": {
         "id": "hyehwa",
-        "name": "惠化"
+        "name": "惠化",
+        "coords": {
+         "lat": 37.582336,
+         "lng": 127.001844
+        }
        },
        "lines": [
         {
@@ -12566,7 +12878,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"660-TPD6YCmYbwyUQ8xcYcEID7io/tY\"",
+     "etag": "W/\"68c-evqHMOcSY1Ljj75/Y0SE/cFZlJU\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -12574,7 +12886,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "정자"
+        "name": "정자",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -12701,7 +13017,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"66d-NTTokceC20zCFJu2VYoSlbs599c\"",
+     "etag": "W/\"699-Ng8+6KOyIU4xcMs+DlbI+uqIszk\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -12709,7 +13025,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "Jeongja"
+        "name": "Jeongja",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -12836,7 +13156,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"65e-geFVkoKPUtVxeACIE/Mx+4R+Yx4\"",
+     "etag": "W/\"68a-qSx1QZdTUI1an1v7U0FxsymAwCA\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -12844,7 +13164,11 @@
       "data": {
        "station": {
         "id": "jeongja",
-        "name": "亭子"
+        "name": "亭子",
+        "coords": {
+         "lat": 37.366546,
+         "lng": 127.108237
+        }
        },
        "lines": [
         {
@@ -12973,7 +13297,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a31-qZh4G4wfhAPakKbdfSS03s+BngE\"",
+     "etag": "W/\"a5d-QdWODsxsevkzDDSSqAFrZ/+YpIg\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -12981,7 +13305,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "잠실"
+        "name": "잠실",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -13166,7 +13494,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a36-KUoKLajH5dM0PH5RWnViu2yUUn4\"",
+     "etag": "W/\"a62-XlkJ2IWB5o8G7jImUDjJYiQ3rms\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -13174,7 +13502,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "Jamsil"
+        "name": "Jamsil",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -13359,7 +13691,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"a23-qLcm1Jz8FCBkZqYsONem8EIF8oY\"",
+     "etag": "W/\"a4f-Dr9Xt9AZzsArx2b0yi6ZjRC9vA0\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -13367,7 +13699,11 @@
       "data": {
        "station": {
         "id": "jamsil",
-        "name": "蚕室"
+        "name": "蚕室",
+        "coords": {
+         "lat": 37.513977,
+         "lng": 127.102249
+        }
        },
        "lines": [
         {
@@ -13554,7 +13890,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"6db-IesWsg16x0dR6kqFE3OmooHAmm8\"",
+     "etag": "W/\"707-wVoWAIM+sXMK5IT9+u15qGBucGQ\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -13562,7 +13898,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "도곡"
+        "name": "도곡",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -13697,7 +14037,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"6e3-h/UFpA+3+iAHLAMfdW7gYZPR4hg\"",
+     "etag": "W/\"70f-QNw4W+GnW4EMqzvE0y6N0su9pLY\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -13705,7 +14045,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "Dogok"
+        "name": "Dogok",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -13840,7 +14184,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"6d9-7jghOGa7YB/5EG5HbwL4s/6EjDU\"",
+     "etag": "W/\"705-+qvzIIJRi0Bjyrm3tbEmFAN4A3k\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -13848,7 +14192,11 @@
       "data": {
        "station": {
         "id": "dogok",
-        "name": "道谷"
+        "name": "道谷",
+        "coords": {
+         "lat": 37.491073,
+         "lng": 127.055319
+        }
        },
        "lines": [
         {
@@ -13985,7 +14333,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"90d-YKqOw2DkIXuP7KZk5orzuk7/Hog\"",
+     "etag": "W/\"939-x70o6S3IseBXNeGtI6+5N8vEuRQ\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -13993,7 +14341,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "강남"
+        "name": "강남",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -14162,7 +14514,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"94a-kOBVMfdxbdb/WFtIrCkondpXnuE\"",
+     "etag": "W/\"976-RhgQAk6oK/nO+kUfyvzHMbV3zQg\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -14170,7 +14522,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "Gangnam"
+        "name": "Gangnam",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -14339,7 +14695,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"8ff-xH+Eb3LxA4couPAYSamXSHmSzKk\"",
+     "etag": "W/\"92b-sMNPfiLSZ7UwkfvMdGCtn7PhPa4\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -14347,7 +14703,11 @@
       "data": {
        "station": {
         "id": "gangnam",
-        "name": "江南"
+        "name": "江南",
+        "coords": {
+         "lat": 37.497414,
+         "lng": 127.028008
+        }
        },
        "lines": [
         {
@@ -14518,7 +14878,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"894-7PhP0lUdzGB+G5hLk72EVYVkKMU\"",
+     "etag": "W/\"8c0-5evJIXAPgL3V8Q+E5m8O5Fl46PI\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -14526,7 +14886,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "양재"
+        "name": "양재",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -14687,7 +15051,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"8ae-4cfpEsuXaKSUt7nc85rM7jGktwY\"",
+     "etag": "W/\"8da-EvcygxGYhd0YdW7FwbwFWnP4lJk\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -14695,7 +15059,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "Yangjae"
+        "name": "Yangjae",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -14856,7 +15224,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"890-y5nK9mrxteszyziOBjJSF4NNzlo\"",
+     "etag": "W/\"8bc-kedDpsJsUN5m5JAriFD9lKlr668\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -14864,7 +15232,11 @@
       "data": {
        "station": {
         "id": "yangjae",
-        "name": "良才"
+        "name": "良才",
+        "coords": {
+         "lat": 37.484143,
+         "lng": 127.034278
+        }
        },
        "lines": [
         {
@@ -15027,7 +15399,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"367-hzAEPWiFZmbXXStFr8qWkQGr7/4\"",
+     "etag": "W/\"393-dB3YzlTMiJlBWInMwfpZq6C8/Gw\"",
      "body": {
       "meta": {
        "lang": "ko"
@@ -15035,7 +15407,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "광교중앙"
+        "name": "광교중앙",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {
@@ -15104,7 +15480,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"379-TdxJ1fcbvEsbPRX/YTaope3ATb0\"",
+     "etag": "W/\"3a5-8C6j4DEepOv3NrQVLCPUo9H147E\"",
      "body": {
       "meta": {
        "lang": "en"
@@ -15112,7 +15488,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "Gwanggyojungang"
+        "name": "Gwanggyojungang",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {
@@ -15181,7 +15561,7 @@
      "status": 200,
      "cacheControl": "private, max-age=5",
      "vary": "Accept-Language, Origin",
-     "etag": "W/\"365-SskuGlJMMD82NAz3zhA+3wy9hIk\"",
+     "etag": "W/\"391-qjSbVjjpt0dQOL++1pCsZXZ9iFQ\"",
      "body": {
       "meta": {
        "lang": "zh"
@@ -15189,7 +15569,11 @@
       "data": {
        "station": {
         "id": "gwanggyo-jungang",
-        "name": "光教中央"
+        "name": "光教中央",
+        "coords": {
+         "lat": 37.288617,
+         "lng": 127.051478
+        }
        },
        "lines": [
         {

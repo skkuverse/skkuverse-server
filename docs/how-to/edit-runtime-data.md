@@ -30,6 +30,7 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | `hssc-route-line` | `GET /map/overlays/transit`, as the `hssc_route` path | the Jongno lines without the HSSC line, 200, cached a minute | (A collector detail is left out of the public history.) |
 | `bus-lane-corridor` | the live shuttle estimate poller, for 인자셔틀 runs in the lane hours | each such run is estimated by car; the poller tick rejects after storing it | none; the geometry is checked: boundaries in order and the last at the centerline's end, each probe route listed once with direction ranges that do not overlap ([below](#rebuild-the-bus-lane-corridor)) |
 | `subway-topology` | `GET /subway/stations/:id/arrivals`, and the `subway-seoul` and `subway-trainmap` pollers | 503 `SUBWAY_TOPOLOGY_UNAVAILABLE`; each poller tick rejects before any upstream call | `subwayPlatforms`: exactly one entry per platform the checkout serves, and every named stop a served platform or a neighbor; each direction follows its platform's route in the stored `subway-timetables` ([below](#edit-subway-coverage)) |
+| `subway-station-coords` | `GET /subway/stations/:id/arrivals`, as `station.coords` | 200, each station's `coords` null | `subwayStations`: exactly one entry per station the checkout serves, each point inside South Korea ([below](#edit-a-subway-stations-coords)) |
 | `subway-timetables` (parted: one part per operator line and day type) | `GET /subway/stations/:id/arrivals` for a platform with no fresh arrival state, and the `subway-seoul` and `subway-trainmap` pollers | 503 `SUBWAY_TIMETABLES_UNAVAILABLE`, only for an answer that needs a table; a poller tick writes the platforms it could schedule, then rejects | none; each table parses with the server's schema, one per key, and every platform the checkout serves has one for each day type its source declares ([update-subway-timetables.md](update-subway-timetables.md)) |
 
 A never-read answer is what a replica that has no good value serves, with no `Cache-Control` for a 503; one that read a good value keeps serving it for 24 hours through failed reads. The poller reads the two schedule datasets, `bus-stops` and `subway-topology` too, so a push reaches the shuttle estimates and the subway pollers within the same minute. `busGroups`, `subwayStations`, `subwayPlatforms`, `busServices` and `jongroRoutes` are code-held lists, read from your checkout, not datasets ([configure-home.md](configure-home.md#transit-layout) for the order of a push and a deploy that changes a bus group or station).
@@ -235,6 +236,18 @@ npm run data -- push subway-topology --prod --note "watch 관악 for 성균관�
 ```
 
 A watched or upstream stop must also be a station the converter writes into its line's timetables (`scripts/subway-timetable/convert.py`), so a coverage change usually reruns it too ([update-subway-timetables.md](update-subway-timetables.md)). A change that adds a station or platform deploys first, then pushes its topology from that checkout. Until the push, the new platform is left out of its station's arrivals and logs `subway.topology.platform_missing`, while the stored neighbor entry still names it as a stop. Pushed before the deploy, the topology drops that neighbor entry while the running code does not serve the platform yet: each direction that names it as its previous or next station serves `null` there and logs `subway.topology.stop_unnamed`, and the pollers drop the rows written at its Seoul name.
+
+### Edit a subway station's coords
+
+`subway-station-coords` holds each served subway station's camera point, keyed by its slug: `{ "stations": { "hyehwa": { "lat": 37.582336, "lng": 127.001844 } } }`, WGS84 degrees, the point the app opens the station's sheet on. A point is the mean of the station's lines' platform points (`LAT`, `LOT`) in the Seoul Open Data station master, `http://openapi.seoul.go.kr:8088/<SEOUL_SUBWAY_API_KEY>/json/subwayStationMaster/1/1000/`, one row per line (`ROUTE`) at the station (`BLDN_NM`), rounded to six decimals: 정자 is the mean of its 분당선 and 신분당선 rows. The stations stay in code (`SUBWAY_STATIONS`). A push that leaves out a station the checkout serves, names one it does not, or places a point outside South Korea (lat 33 to 39, lng 124 to 132, so a swapped pair is refused) is refused at its path. A push reaches the arrivals route within a minute. A replica that never read the dataset, or whose revision lacks a station, serves that station with `coords: null` and logs it, at error for an unread dataset and at warn for a missing station.
+
+```bash
+npm run data -- pull subway-station-coords --prod
+# edit .data/prod/subway-station-coords.json
+npm run data -- push subway-station-coords --prod --note "move 정자 to the Shinbundang concourse"
+```
+
+A change that adds a station pushes its coords from that checkout before the deploy: the running code ignores a station it does not serve, logged at warn (`subway.station_coords.station_unknown`). A change that removes a station deploys first, then pushes coords without it.
 
 ### Check before a deploy
 

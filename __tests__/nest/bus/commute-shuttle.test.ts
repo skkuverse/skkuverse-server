@@ -39,6 +39,8 @@ import { FakeUiTransitRepository } from "../../helpers/fakes/ui/ui-transit.repos
 import { SubwayModule } from "../../../src/subway/subway.module";
 import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
+import { SubwayStationCoordsRepository } from "../../../src/subway/station-coords/subway-station-coords.repository";
+import { storedStationCoordsRepository } from "../../helpers/subway/station-coords";
 import { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-timetable.repository";
 import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
 import { SubwayEstimateModule } from "../../../src/subway/estimate/subway-estimate.module";
@@ -486,6 +488,7 @@ describe("commute stops and their subway stations (GET /bus/config/commute)", ()
         { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
         { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
         { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
+        { provide: SubwayStationCoordsRepository, useValue: storedStationCoordsRepository() },
         { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },
         { provide: UiTransitRepository, useValue: storedTransitLayout() },
       ],

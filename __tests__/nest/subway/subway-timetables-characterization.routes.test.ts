@@ -6,8 +6,9 @@
  * The app boots every module `src/app.module.ts` imports under
  * `src/scheduling/` and `src/subway/`, as an api replica, through the
  * production pipeline with only `Clock` overridden. It runs over a real
- * `mongod` whose content database holds revision 1 of `subway-topology`
- * (stored through the tool's own scripts/lib/datasets/store.js) and revision 1
+ * `mongod` whose content database holds revision 1 of `subway-topology` and
+ * of `subway-station-coords` (stored through the tool's own
+ * scripts/lib/datasets/store.js) and revision 1
  * of `subway-timetables`: the trimmed fixture, stored through scripts/lib/datasets/parts.js; whose
  * `public_holidays` holds 2026 with Christmas, and whose `subway_arrivals`
  * starts empty, so every platform is served from its timetable alone.
@@ -47,6 +48,7 @@ type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 type TopologyHelpers = typeof import("../../helpers/subway/topology");
 type TimetableHelpers = typeof import("../../helpers/subway/timetables");
+type StationCoordsHelpers = typeof import("../../helpers/subway/station-coords");
 type TrackingModule = typeof import("../../../src/subway/tracking/subway-tracking.service");
 
 type Lang = "ko" | "en" | "zh";
@@ -129,6 +131,8 @@ beforeAll(async () => {
   const { subwayTopologyFixture } = require("../../helpers/subway/topology") as TopologyHelpers;
   const content = db.getClient().db(config.content.dbName);
   await store.create(content, "subway-topology", subwayTopologyFixture(), { by: "characterization@example.com", now: SEEDED_AT });
+  const { stationCoordsFixture } = require("../../helpers/subway/station-coords") as StationCoordsHelpers;
+  await store.create(content, "subway-station-coords", stationCoordsFixture(), { by: "characterization@example.com", now: SEEDED_AT });
   const { storeSubwayTimetablesFixture } = require("../../helpers/subway/timetables") as TimetableHelpers;
   await storeSubwayTimetablesFixture(content, { by: "characterization@example.com", now: SEEDED_AT });
 }, MONGOD_START_TIMEOUT_MS);

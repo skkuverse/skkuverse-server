@@ -40,9 +40,15 @@ const lineArrivals = z.object({
   directions: z.array(directionArrivals),
 });
 
+/**
+ * WHY: WGS84 degrees, the mean of the station's lines' platform points: the camera point the app opens its sheet on;
+ * null while the server has none for the station, and the rest of the station still serves.
+ */
+const stationCoords = z.object({ lat: z.number(), lng: z.number() }).nullable();
+
 export const subwayStationArrivals = z.object({
   /** WHY: `id` is the physical station's slug, which the route takes. */
-  station: z.object({ id: z.string(), name: z.string() }),
+  station: z.object({ id: z.string(), name: z.string(), coords: stationCoords }),
   lines: z.array(lineArrivals),
 });
 

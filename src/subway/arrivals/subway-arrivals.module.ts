@@ -1,14 +1,13 @@
 import { Module } from "@nestjs/common";
-import { Clock } from "../../infra/clock";
-import { SubwayModule } from "../subway.module";
+import { SubwayStationCoordsModule } from "../station-coords/subway-station-coords.module";
+import { SubwayPlatformArrivalsModule } from "../platform-arrivals/subway-platform-arrivals.module";
 import { SubwayTopologyModule } from "../topology/subway-topology.module";
-import { SubwayTrackingModule } from "../tracking/subway-tracking.module";
 import { SubwayArrivalsController } from "./subway-arrivals.controller";
 import { SubwayArrivalsService } from "./subway-arrivals.service";
 
 @Module({
-  imports: [SubwayModule, SubwayTopologyModule, SubwayTrackingModule],
+  imports: [SubwayTopologyModule, SubwayStationCoordsModule, SubwayPlatformArrivalsModule],
   controllers: [SubwayArrivalsController],
-  providers: [SubwayArrivalsService, Clock],
+  providers: [SubwayArrivalsService],
 })
 export class SubwayArrivalsModule {}

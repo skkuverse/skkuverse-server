@@ -75,6 +75,7 @@ import { GamesModule } from "./games/games.module";
 import { SubwayModule } from "./subway/subway.module";
 import { SubwayStationsModule } from "./subway/stations/subway-stations.module";
 import { SubwayTopologyModule } from "./subway/topology/subway-topology.module";
+import { SubwayStationCoordsModule } from "./subway/station-coords/subway-station-coords.module";
 import { SubwayTimetableModule } from "./subway/timetable/subway-timetable.module";
 import { SubwayCountdownModule } from "./subway/countdown/subway-countdown.module";
 import { SubwayEstimateModule } from "./subway/estimate/subway-estimate.module";
@@ -84,6 +85,7 @@ import { SubwayStateModule } from "./subway/state/subway-state.module";
 import { SubwayTrackingModule } from "./subway/tracking/subway-tracking.module";
 import { SubwayMatchingModule } from "./subway/matching/subway-matching.module";
 import { SubwaySeoulModule } from "./subway/seoul/subway-seoul.module";
+import { SubwayPlatformArrivalsModule } from "./subway/platform-arrivals/subway-platform-arrivals.module";
 import { SubwayArrivalsModule } from "./subway/arrivals/subway-arrivals.module";
 import { SubwayHistoryModule } from "./subway/history/subway-history.module";
 
@@ -170,6 +172,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     SubwayModule,
     SubwayStationsModule,
     SubwayTopologyModule,
+    SubwayStationCoordsModule,
     SubwayTimetableModule,
     SubwayCountdownModule,
     SubwayEstimateModule,
@@ -179,6 +182,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     SubwayTrackingModule,
     SubwayMatchingModule,
     SubwaySeoulModule,
+    SubwayPlatformArrivalsModule,
     SubwayArrivalsModule,
     SubwayHistoryModule,
   ],
