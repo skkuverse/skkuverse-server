@@ -2,8 +2,9 @@
  * A Jongno arrival in the live shape (ADR 0019, D1): TOPIS's state becomes the status, its time an instant
  * from the row's mkTm (its travel time, else the time in its text, else unknown), and its end-of-service and no-information texts become
  * the station's operation instead of an arrival. Its stops away count the bus's next stop as 1 (ADR 0019, D4), one more
- * than TOPIS's staOrd − sectOrd, since an arrival row's sectOrd is the next stop's own staOrd, and a bus the positions
- * show standing at the station is 0 and at the stop. A vehicle's occupancy comes from the arrival row nearest ahead of it,
+ * than TOPIS's staOrd − sectOrd, since an arrival row's sectOrd is the next stop's own staOrd. A bus the positions show
+ * standing at the station comes first there, arriving and 0 stops away, whether or not TOPIS dropped it from the row, and
+ * the row's slots follow without it, two at most (ADR 0019, D14). A vehicle's occupancy comes from the arrival row nearest ahead of it,
  * its last-bus flag from any row that names it, carried by every arrival naming it, and its plate is TOPIS's full plate.
  * Its low-floor flag is read from TOPIS's bus type: true for a low-floor bus, false for a general one, null otherwise.
  */
@@ -19,6 +20,7 @@ import {
   toOlderInstant,
   toPlateNumber,
   toStationOperation,
+  toStationArrivals,
   toVehicleStates,
   withVehicleState,
 } from "./bus-live-jongro.rules";
@@ -115,26 +117,90 @@ const named = (extra: Partial<Arrival> = {}): Arrival => ({
   providerText: "곧 도착",
   ...extra,
 });
-const vehicleStatesOf = (standing: Array<[string, number]>, lastBusIds: string[]) => ({ standingStationIndexById: new Map(standing), lastBusIds: new Set(lastBusIds) });
+const vehicleStatesOf = (standing: Array<[string, number]>, lastBusIds: string[], namedVehicleIds: string[] = ["100000103"]) => ({
+  standingStationIndexById: new Map(standing),
+  lastBusIds: new Set(lastBusIds),
+  namedVehicleIds: new Set(namedVehicleIds),
+});
 
 describe("withVehicleState", () => {
   it.each([
-    ["standing at this station", vehicleStatesOf([["100000103", 4]], []), { status: "atStop", stopsAway: 0, isLastBus: false }],
-    ["standing at the station before", vehicleStatesOf([["100000103", 3]], []), { status: "arriving", stopsAway: 1, isLastBus: false }],
-    ["standing at the station after", vehicleStatesOf([["100000103", 5]], []), { status: "arriving", stopsAway: 1, isLastBus: false }],
+    ["not the last bus", vehicleStatesOf([], []), { status: "arriving", stopsAway: 1, isLastBus: false }],
     ["the last bus by another row", vehicleStatesOf([], ["100000103"]), { status: "arriving", stopsAway: 1, isLastBus: true }],
-  ] as const)("serves a bus %s at station 4 by its state", (_case, vehicleStates, expected) => {
+  ] as const)("serves a bus that is %s with the vehicle's flag, its status and stops away the row's", (_case, vehicleStates, expected) => {
     // Act & Assert
-    expect(withVehicleState(named(), 4, vehicleStates)).toMatchObject(expected);
+    expect(withVehicleState(named(), vehicleStates)).toMatchObject(expected);
   });
 
   it("keeps the slot's own flag on an arrival that names no vehicle", () => {
     // Act & Assert
-    expect(withVehicleState(named({ vehicleId: null, stopsAway: null, isLastBus: true, status: "waitingToDepart" }), 4, vehicleStatesOf([], []))).toMatchObject({
+    expect(withVehicleState(named({ vehicleId: null, stopsAway: null, isLastBus: true, status: "waitingToDepart" }), vehicleStatesOf([], []))).toMatchObject({
       status: "waitingToDepart",
       stopsAway: null,
       isLastBus: true,
     });
+  });
+});
+
+// WHY: Seoul BIS signage: a bus standing at a stop reads arriving until it leaves, and TOPIS drops it from that stop's row (ADR 0019, D14).
+describe("toStationArrivals", () => {
+  const standingArrival = { status: "arriving", expectedArrivalAt: null, expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null, basis: "provider", stopsAway: 0 };
+  const behind = named({ status: "enRoute", expectedArrivalAt: "2026-10-20T10:02:00+09:00", stopsAway: 3, vehicleId: "100000104", providerText: "3분후[2번째 전]" });
+  const waitingSlot = named({ status: "waitingToDepart", expectedArrivalAt: null, stopsAway: null, vehicleId: null, providerText: "출발대기" });
+
+  it("serves a bus standing here that the row dropped first, arriving and 0 stops away, then the row's first slot, two at most", () => {
+    // Act
+    const arrivals = toStationArrivals([behind, waitingSlot], 4, vehicleStatesOf([["100000103", 4]], [], ["100000104"]));
+
+    // Assert
+    expect(arrivals).toEqual([
+      { ...standingArrival, isLastBus: null, vehicleId: "100000103", providerText: null },
+      { ...behind, isLastBus: false },
+    ]);
+  });
+
+  it("serves the row's slot naming the bus standing here as that bus, arriving and 0 stops away, and lists it once", () => {
+    // Act
+    const arrivals = toStationArrivals([behind, named()], 4, vehicleStatesOf([["100000103", 4]], ["100000103"], ["100000103", "100000104"]));
+
+    // Assert
+    expect(arrivals).toEqual([
+      { ...standingArrival, isLastBus: true, vehicleId: "100000103", providerText: "곧 도착" },
+      { ...behind, isLastBus: false },
+    ]);
+  });
+
+  it.each([
+    ["the station before", 3],
+    ["the station after", 5],
+  ])("leaves the row as TOPIS sent it for a bus standing at %s", (_case, standingIndex) => {
+    // Act
+    const arrivals = toStationArrivals([named(), behind], 4, vehicleStatesOf([["100000103", standingIndex]], [], ["100000103", "100000104"]));
+
+    // Assert
+    expect(arrivals.map(({ status, stopsAway, vehicleId }) => [status, stopsAway, vehicleId])).toEqual([
+      ["arriving", 1, "100000103"],
+      ["enRoute", 3, "100000104"],
+    ]);
+  });
+
+  it("serves two buses standing here before the row, cut at two", () => {
+    // Act
+    const arrivals = toStationArrivals([behind], 4, vehicleStatesOf([["100000101", 4], ["100000102", 4]], [], ["100000104"]));
+
+    // Assert
+    expect(arrivals.map(({ status, stopsAway, vehicleId }) => [status, stopsAway, vehicleId])).toEqual([
+      ["arriving", 0, "100000101"],
+      ["arriving", 0, "100000102"],
+    ]);
+  });
+
+  it("cuts the row at two when no bus stands here", () => {
+    // Act
+    const arrivals = toStationArrivals([named(), behind, waitingSlot], 4, vehicleStatesOf([], [], ["100000103", "100000104"]));
+
+    // Assert
+    expect(arrivals.map(({ vehicleId }) => vehicleId)).toEqual(["100000103", "100000104"]);
   });
 });
 

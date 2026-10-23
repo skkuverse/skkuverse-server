@@ -331,7 +331,6 @@
                     "status": {
                       "type": "string",
                       "enum": [
-                        "atStop",
                         "arriving",
                         "enRoute",
                         "waitingToDepart",
@@ -704,7 +703,6 @@
                     "status": {
                       "type": "string",
                       "enum": [
-                        "atStop",
                         "arriving",
                         "enRoute",
                         "waitingToDepart",

@@ -278,7 +278,6 @@
                 "status": {
                   "type": "string",
                   "enum": [
-                    "atStop",
                     "arriving",
                     "enRoute",
                     "waitingToDepart",

@@ -5,20 +5,17 @@ import type { HsscLiveBus } from "./bus-live-hssc.types";
 
 type Knot = { atMs: number; s: number };
 
-function toInstants(eta: HsscEta): Pick<Arrival, "status" | "expectedArrivalAt" | "expectedDepartureAt"> {
-  if (eta.status === "enRoute") return { status: "enRoute", expectedArrivalAt: toKstInstant(eta.arrivesAt.getTime()), expectedDepartureAt: null };
-  if (eta.status === "arriving") return { status: "atStop", expectedArrivalAt: null, expectedDepartureAt: toKstInstant(eta.departsAt.getTime()) };
-  return { status: eta.status, expectedArrivalAt: null, expectedDepartureAt: null };
+// WHY: a bus standing at its stop is arriving with no departure instant (ADR 0019, D14): the dwell median is no departure time.
+function toExpectedArrivalAt(eta: HsscEta): string | null {
+  return eta.status === "enRoute" ? toKstInstant(eta.arrivesAt.getTime()) : null;
 }
 
 /** WHY: the engine's estimate from its measured medians, never a provider's (ADR 0019, D1). */
 export function toHsscArrival(eta: HsscEta): Arrival {
-  const { status, expectedArrivalAt, expectedDepartureAt } = toInstants(eta);
   return {
-    status,
-    expectedArrivalAt,
-    expectedDepartureAt,
-    ...{ scheduledArrivalAt: null, scheduledDepartureAt: null },
+    status: eta.status,
+    expectedArrivalAt: toExpectedArrivalAt(eta),
+    ...{ expectedDepartureAt: null, scheduledArrivalAt: null, scheduledDepartureAt: null },
     basis: "estimate",
     stopsAway: eta.stopsAway,
     isLastBus: null,
