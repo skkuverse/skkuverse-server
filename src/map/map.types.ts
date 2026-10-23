@@ -27,6 +27,8 @@ export type LayerVisibility =
   | { kind: "never" }
   | { kind: "scheduled"; windows: [DailyWindow, ...DailyWindow[]] };
 
+export type MapTab = "map" | "transit";
+
 export type MapLayerStyle = Partial<
   Record<"outlineWidth" | "fillOpacity" | "minZoom" | "maxZoom" | "width" | "height" | "size" | "captionTextSize" | "zIndex", number>
 > & { color?: string; outlineColor?: string };
@@ -40,12 +42,14 @@ export interface LayerSpec {
   endpoint: string;
   chipGroupId: string | null;
   style?: MapLayerStyle;
+  tabs?: readonly MapTab[];
 }
 
 export type MapChipActionSpec =
   | { kind: "webview"; url: string }
   | { kind: "focus"; camera: MapCamera; layerIds: readonly string[] }
-  | { kind: "link"; actionType: LinkActionType; actionValue: string };
+  | { kind: "link"; actionType: LinkActionType; actionValue: string }
+  | { kind: "layers"; layerIds: readonly string[]; camera: MapCamera | null };
 
 export type OverlayBase = Omit<Extract<MapOverlay, { kind: "polygon" }>, "kind" | "geometry">;
 export type MarkerPresentation = Pick<Extract<MapOverlay, { kind: "marker" }>, "pinPriority" | "locationAccuracy">;

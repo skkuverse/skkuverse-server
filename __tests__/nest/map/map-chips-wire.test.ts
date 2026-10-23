@@ -144,7 +144,40 @@ describe("GET /map/config (real map services)", () => {
         isReset: false,
         list: null,
       },
+      {
+        id: "shuttle_routes",
+        label: "셔틀 노선",
+        icon: { kind: "emoji", emoji: "🚌" },
+        action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
+        isReset: false,
+        list: null,
+        tabs: ["transit"],
+      },
     ]);
+  });
+
+  it("carries the transit tab lens through the envelope, as the wire declares", async () => {
+    // Act
+    const res = await request(httpServer).get("/map/config");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(mapConfig, res.body.data);
+    const shuttleRoutes = res.body.data.chips.find((c: { id: string }) => c.id === "shuttle_routes");
+    expect(shuttleRoutes).toEqual({
+      id: "shuttle_routes",
+      label: "셔틀 노선",
+      icon: { kind: "emoji", emoji: "🚌" },
+      action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
+      isReset: false,
+      list: null,
+      tabs: ["transit"],
+    });
+    // `camera: null` has to survive serialization: it means "do not move", which an absent key does not say.
+    expect(JSON.stringify(shuttleRoutes.action)).toContain('"camera":null');
+    const tabsById = new Map(res.body.data.layers.map((l: { id: string; tabs?: string[] }) => [l.id, l.tabs]));
+    expect(tabsById.get("building_numbers")).toEqual(["map", "transit"]);
+    expect(tabsById.get("hssc_route")).toEqual(["transit"]);
   });
 
   it("adds the festival chips while an activation is open", async () => {

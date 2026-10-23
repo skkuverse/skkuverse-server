@@ -479,6 +479,79 @@ describe("MapConfigService", () => {
     }
   });
 
+  it("draws the building layers on both tabs, the route lines on the transit tab only and a festival layer on the map tab only", async () => {
+    // Arrange
+    mockFindActiveActivation.mockResolvedValue({
+      _id: "eskara-2026",
+    } as Awaited<ReturnType<typeof findActiveActivation>>);
+
+    // Act
+    const ko = await svc.getMapConfig("ko");
+
+    // Assert
+    const tabsById = new Map(ko.layers.map((l) => [l.id, l.tabs]));
+    for (const id of ["building_numbers", "building_labels", "campus_geometry"]) {
+      expect(tabsById.get(id)).toEqual(["map", "transit"]);
+    }
+    for (const id of ["jongro02_route", "jongro07_route", "jongro08_route", "hssc_route"]) {
+      expect(tabsById.get(id)).toEqual(["transit"]);
+    }
+    // Absent, not ["map"]: an absent field is what installed builds already read as the map tab.
+    const festivalLayers = ko.layers.filter((l) => EVENT_LAYER_IDS.has(l.id));
+    expect(festivalLayers.length).toBeGreaterThan(0);
+    for (const layer of festivalLayers) expect(layer).not.toHaveProperty("tabs");
+  });
+
+  it("keeps chipGroupId null on every layer the transit tab draws", async () => {
+    // Act
+    const ko = await svc.getMapConfig("ko");
+
+    // Assert
+    // Installed builds treat any grouped layer as festival content and hide its toggle, so a
+    // grouped route line would take the Jongno route toggles away from every user on an old build.
+    const transitLayers = ko.layers.filter((l) => l.tabs?.includes("transit"));
+    expect(transitLayers.length).toBeGreaterThan(0);
+    for (const layer of transitLayers) expect(layer.chipGroupId).toBeNull();
+  });
+
+  it.each([
+    ["ko", "셔틀 노선"],
+    ["en", "Shuttle Routes"],
+    ["zh", "班车路线"],
+  ] as const)("serves the shuttle routes chip to the transit tab in %s, turning the four route lines on without a camera move", async (lang, label) => {
+    // Act
+    const served = await svc.getMapConfig(lang);
+
+    // Assert
+    expect(served.chips.find((c) => c.id === "shuttle_routes")).toEqual({
+      id: "shuttle_routes",
+      label,
+      icon: { kind: "emoji", emoji: "🚌" },
+      action: { kind: "layers", layerIds: ["jongro02_route", "jongro08_route", "jongro07_route", "hssc_route"], camera: null },
+      isReset: false,
+      list: null,
+      tabs: ["transit"],
+    });
+  });
+
+  it("keeps every other chip on the map tab, stating neither tabs nor opensIn", async () => {
+    // Arrange
+    mockFindActiveActivation.mockResolvedValue({
+      _id: "eskara-2026",
+    } as Awaited<ReturnType<typeof findActiveActivation>>);
+
+    // Act
+    const ko = await svc.getMapConfig("ko");
+
+    // Assert
+    const others = ko.chips.filter((c) => c.id !== "shuttle_routes");
+    expect(others).toHaveLength(ko.chips.length - 1);
+    for (const chip of others) {
+      expect(chip).not.toHaveProperty("tabs");
+      expect(chip).not.toHaveProperty("opensIn");
+    }
+  });
+
   // The three legacy /map/overlays tests that stood here are gone with their
   // methods: getOverlaysByCategory and computeEtag served a hardcoded building
   // table that the v2 migration orphaned, and getOverlayById served a jongro

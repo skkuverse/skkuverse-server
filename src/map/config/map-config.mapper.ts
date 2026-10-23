@@ -15,6 +15,9 @@ function toChipAction(action: MapChipActionSpec): MapChip["action"] {
   if (action.kind === "link") {
     return { kind: "link", actionType: action.actionType, actionValue: toServedActionValue(action.actionType, action.actionValue) };
   }
+  if (action.kind === "layers") {
+    return { kind: "layers", layerIds: [...action.layerIds], camera: action.camera ? { ...action.camera } : null };
+  }
   return { kind: "focus", camera: { ...action.camera }, layerIds: [...action.layerIds] };
 }
 
@@ -43,12 +46,20 @@ export function toMapChips(specs: readonly MapChipSpec[], lang: SupportedLang): 
     action: toChipAction(spec.action),
     isReset: spec.isReset,
     list: toChipList(spec.list, lang),
+    ...(spec.tabs && { tabs: [...spec.tabs] }),
+    ...(spec.opensIn && { opensIn: spec.opensIn }),
   }));
 }
 
 // WHY: `label` is taken out and put back resolved; left in `rest`, the `{ko, en, zh}` object would reach the wire.
 export function toMapLayers(specs: readonly LayerSpec[], lang: SupportedLang): MapConfig["layers"] {
-  return specs.map(({ id, markerStyle, label, ...rest }) => ({ id, markerStyle, label: pick(label, lang) ?? id, ...rest }));
+  return specs.map(({ id, markerStyle, label, tabs, ...rest }) => ({
+    id,
+    markerStyle,
+    label: pick(label, lang) ?? id,
+    ...rest,
+    ...(tabs && { tabs: [...tabs] }),
+  }));
 }
 
 export function toMapConfig({ lang, styleId, layers, chips }: MapConfigSource): MapConfig {

@@ -36,7 +36,7 @@
     "reason": "ADR 0010 D9, no domain seam: the push checks `toBusStopsIssues` and `busStopsReferences` that scripts/lib/datasets/catalog.js runs, and the read check `BusStopsService` applies to every stored revision (`validateStopCatalog`, `subwayStationErrors`, `storedLineAndAliasErrors`), are one validator of the `bus-stops` dataset: `toBusStopsIssues` reads the labels of `validateStopCatalog`'s messages back into dataset paths, so a sub-module holding the push half would be a Nest module with no provider, imported by nothing in src/, holding rules alone. The catalog checks list every issue in the words bus-stops.rules.spec.ts pins, so they stay hand-written beside the structural schema `busStopsDataset` (docs/plans/private-file)."
   },
   "src/map/layer-set/map-layer-set.rules.ts": {
-    "max": 158,
+    "max": 163,
     "reason": "ADR 0010 D9, no domain seam: one operator-edited layer set reads every check here, `layerSetFile` the leaf checks (`optionIssues`, `chipLabelIssue`, `listSortIssue`), `checkedLayerSet` the cross-reference and served-chip checks at push and at read, and `MapLayerSetService` the base chips' checks (`assertValidChipSpecs`, `assertValidLinkChips`) when Nest builds it; the checks are not flows, so a sub-module would hold rules and nothing else."
   },
   "src/map/layer-set/map-layer-set.schema.ts": {
@@ -44,8 +44,8 @@
     "reason": "ADR 0010 D9, no domain seam: `layerSetFile` is one zod composite over one operator-edited layer set, `checkedLayerSet` runs its cross-reference and served-chip checks, `layerSetsDataset` is the `map-layer-sets` dataset a push checks and `storedLayerSets` the envelope MapLayerSetRepository parses, set by set; all four describe the one dataset, and its leaves (camera, i18n text, nullable defaults) are not flows, so a sub-module would hold schema pieces and nothing else."
   },
   "src/map/map.constants.ts": {
-    "max": 58,
-    "reason": "ADR 0010 D9, no domain seam: `BASE_LAYERS` is the one ordered layer catalogue /map/config serves, typed `as const` so `BaseLayerId` names its ids; the campus rules, the layer-set loader and service and the config flow all read it, so it stays at the map root, which holds one `.constants` file, beside the event cache constants several flows share. The Jongno route layers and then the HSSC route layer took it past the role cap."
+    "max": 63,
+    "reason": "ADR 0010 D9, no domain seam: `BASE_LAYERS` is the one ordered layer catalogue /map/config serves, typed `as const` so `BaseLayerId` names its ids; the campus rules, the layer-set loader and service and the config flow all read it, so it stays at the map root, which holds one `.constants` file, beside the event cache constants several flows share. The Jongno route layers, then the HSSC route layer and then the `tabs` each base layer states took it past the role cap."
   },
   "src/notices/list/notices-list.rules.ts": {
     "max": 182,

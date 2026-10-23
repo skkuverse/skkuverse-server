@@ -10,9 +10,12 @@ export const EVENT_STALE_WINDOW_MS = 10 * 60_000;
 const CAMPUS_OVERLAYS_ENDPOINT = "/map/overlays/campus";
 const TRANSIT_OVERLAYS_ENDPOINT = "/map/overlays/transit";
 
-// WHY: opt-in, so installed apps draw no line until a user turns one on; one green for every
-// route, never its stored card color, with a dark edge that stays legible over green parks.
-const ROUTE_LINE_LAYER = { defaultVisibleWhen: { kind: "never" }, userConfigurable: true, endpoint: TRANSIT_OVERLAYS_ENDPOINT, chipGroupId: null, style: { color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20", minZoom: 13 } } as const;
+// WHY: opt-in, so installed apps draw no line until a user turns one on; one green for every route, never its stored
+// card color, with a dark edge that stays legible over green parks. chipGroupId stays null on the transit tab too:
+// an installed build reads a grouped layer as festival content and hides its toggle.
+const ROUTE_LINE_LAYER = { defaultVisibleWhen: { kind: "never" }, userConfigurable: true, endpoint: TRANSIT_OVERLAYS_ENDPOINT, chipGroupId: null, style: { color: "4CAF50", width: 5, outlineWidth: 1.5, outlineColor: "1B5E20", minZoom: 13 }, tabs: ["transit"] } as const;
+
+const MAP_AND_TRANSIT_TABS = ["map", "transit"] as const;
 
 export const LOCATION_ACCURACIES = ["exact", "area"] as const;
 
@@ -30,6 +33,7 @@ export const BASE_LAYERS = [
     chipGroupId: null,
     // WHY: numbers drop out before names when zooming out; both show at the campuses' defaultZoom.
     style: { size: 16, minZoom: 15.3 },
+    tabs: MAP_AND_TRANSIT_TABS,
   },
   {
     id: "building_labels",
@@ -41,6 +45,7 @@ export const BASE_LAYERS = [
     chipGroupId: null,
     // WHY: above every other overlay, so a booth pin never hides a building name.
     style: { captionTextSize: 7, zIndex: 100000, minZoom: 14.8 },
+    tabs: MAP_AND_TRANSIT_TABS,
   },
   {
     id: "campus_geometry",
@@ -52,6 +57,7 @@ export const BASE_LAYERS = [
     chipGroupId: null,
     // QUIRK(naver-map): the polygon overlay draws no outline unless outlineWidth is sent; no colour: a theme token.
     style: { fillOpacity: 0.12, outlineWidth: 1.5, minZoom: 16 },
+    tabs: MAP_AND_TRANSIT_TABS,
   },
   { id: "jongro02_route", label: { ko: "종로02 노선", en: "Jongno 02 Route", zh: "钟路02路线" }, ...ROUTE_LINE_LAYER },
   // QUIRK(naver-map): the app adds the lines in this order and the later lies on top: 07 over 08 where they share a road.

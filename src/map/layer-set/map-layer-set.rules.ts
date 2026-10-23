@@ -121,8 +121,15 @@ function focusErrors(id: string, layerIds: readonly string[], catalogue: readonl
   return errors;
 }
 
+// WHY: no chip group asked: a `layers` chip turns base layers on, which no focus chip may reach.
+function layersErrors(id: string, layerIds: readonly string[], catalogue: readonly LayerSpec[]): string[] {
+  if (layerIds.length === 0) return [`chip "${id}": layerIds must not be empty`];
+  return layerIds.filter((layerId) => chipGroupOf(catalogue, layerId) === undefined).map((layerId) => `chip "${id}": "${layerId}" is not a layer`);
+}
+
 function actionErrors(id: string, action: MapChipActionSpec, catalogue: readonly LayerSpec[]): string[] {
   if (action.kind === "focus") return focusErrors(id, action.layerIds, catalogue);
+  if (action.kind === "layers") return layersErrors(id, action.layerIds, catalogue);
   // WHY: a link chip is checked apart, by assertValidLinkChips, so its refusal names its action value.
   if (action.kind === "link") return [];
   return toWebviewUrl(action.url) === null ? [`chip "${id}": "${action.url}" is not a usable web view URL`] : [];
