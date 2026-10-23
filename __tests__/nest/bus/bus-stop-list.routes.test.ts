@@ -165,7 +165,9 @@ function stopIdsIn(value: unknown): string[] {
 describe("GET /bus/stops", () => {
   it("Every stop: 200, public for five minutes with an ETag, no meta.lang, a pole, an HSSC stop and a shuttle stop", async () => {
     // Arrange
-    const server = await boot(freshStores());
+    const data = busStopsFixture() as { stops: Array<Record<string, unknown>> };
+    delete data.stops.find((stop) => stop.id === "hssc-hyehwa-exit1")!.coords;
+    const server = await boot({ ...freshStores(), stops: storedBusStopsRepository(data) });
 
     // Act
     const res = await request(server).get("/bus/stops");

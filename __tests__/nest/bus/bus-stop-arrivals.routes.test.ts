@@ -273,7 +273,9 @@ describe("GET /bus/stops/:stopId/arrivals: the stop block", () => {
 
   it("an HSSC stop: its name in the request language and no coordinates", async () => {
     // Arrange
-    const server = await boot(freshStores());
+    const data = busStopsFixture() as { stops: Array<Record<string, unknown>> };
+    delete data.stops.find((stop) => stop.id === "hssc-hyehwa-exit1")!.coords;
+    const server = await boot({ ...freshStores(), stops: storedBusStopsRepository(data) });
 
     // Act
     const res = await request(server).get("/bus/stops/hssc-hyehwa-exit1/arrivals").set("Accept-Language", "en");

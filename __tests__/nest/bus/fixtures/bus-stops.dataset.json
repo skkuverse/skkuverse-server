@@ -1,5 +1,5 @@
 {
-  "_about": "Synthetic, never captured: revision 1 of the bus-stops dataset, built from src/bus/stops/schedule-stops.json at commit 50f3405c and HSSC_STATIONS (src/bus/config/bus-config.constants.ts) at commit 98a4992b, both unchanged at 099bbbb9: the catalog's stops and sequences as they are, then the nine HSSC stops named from their positions with the trailing bracketed note removed, and the HSSC line with those stops' ids. No arsIds and no topis. Not trimmed.",
+  "_about": "Synthetic, never captured: revision 1 of the bus-stops dataset, built from src/bus/stops/schedule-stops.json at commit 50f3405c and HSSC_STATIONS (src/bus/config/bus-config.constants.ts) at commit 98a4992b, both unchanged at 099bbbb9: the catalog's stops and sequences as they are, then the nine HSSC stops named from their positions with the trailing bracketed note removed, and the HSSC line with those stops' ids. No arsIds and no topis. Not trimmed. Since 2026-10-23 each of the nine HSSC stops carries the coords production's revision 6 stores (skku_content datasets, bus-stops), which a push requires of a served stop; no other field changed.",
   "stops": [
     {
       "id": "jeongja-exit3",
@@ -722,6 +722,10 @@
       "name": {
         "ko": "농구장",
         "en": "Basketball Court (Shuttle Bus Stop)"
+      },
+      "coords": {
+        "lat": 37.5878487,
+        "lng": 126.9923859
       }
     },
     {
@@ -729,6 +733,10 @@
       "name": {
         "ko": "학생회관",
         "en": "Student Center"
+      },
+      "coords": {
+        "lat": 37.58719,
+        "lng": 126.99393
       }
     },
     {
@@ -736,6 +744,10 @@
       "name": {
         "ko": "정문",
         "en": "Main Gate of SKKU"
+      },
+      "coords": {
+        "lat": 37.5848389,
+        "lng": 126.996727
       }
     },
     {
@@ -743,6 +755,10 @@
       "name": {
         "ko": "올림픽기념국민생활관",
         "en": "Olympic Hall"
+      },
+      "coords": {
+        "lat": 37.589635,
+        "lng": 126.99918
       }
     },
     {
@@ -750,6 +766,10 @@
       "name": {
         "ko": "혜화동우체국",
         "en": "Hyehwa Postoffice"
+      },
+      "coords": {
+        "lat": 37.5859,
+        "lng": 127.00085
       }
     },
     {
@@ -757,6 +777,10 @@
       "name": {
         "ko": "혜화역 1번출구",
         "en": "Hyehwa Station (Shuttle Bus Stop)"
+      },
+      "coords": {
+        "lat": 37.5836601,
+        "lng": 127.0018387
       }
     },
     {
@@ -764,6 +788,10 @@
       "name": {
         "ko": "성균관대입구사거리",
         "en": "SKKU Junction"
+      },
+      "coords": {
+        "lat": 37.5833015,
+        "lng": 126.9988861
       }
     },
     {
@@ -771,6 +799,10 @@
       "name": {
         "ko": "정문",
         "en": "Main Gate of SKKU"
+      },
+      "coords": {
+        "lat": 37.5849915,
+        "lng": 126.9966659
       }
     },
     {
@@ -778,6 +810,10 @@
       "name": {
         "ko": "600주년기념관",
         "en": "600th Anniversary Hall"
+      },
+      "coords": {
+        "lat": 37.5874214,
+        "lng": 126.9938431
       }
     }
   ],
