@@ -3,7 +3,10 @@
  * Revision 1 (the fixture) passes as it is; a copy that is not the catalog's
  * structure fails at its path, a stop id outside the stop id grammar or under
  * the TOPIS prefix fails, the HSSC line holds exactly HSSC_POSITION_COUNT
- * positions, and every alias and overlay key is a five-digit ARS number. The
+ * positions, an HSSC position's subtitle may be left out but is never empty
+ * (the owner dropped the HSSC subtitles on 2026-10-23, so "fails an HSSC
+ * position without subtitle" is gone on purpose), and every alias and overlay
+ * key is a five-digit ARS number. The
  * catalog's own checks run at push (toBusStopsIssues, bus-stops.rules.spec.ts).
  * storedBusStops, the stored document as the repository reads it, needs its
  * revision and data.
@@ -132,13 +135,36 @@ describe("busStopsDataset", () => {
     expect(messagesOf(data)).toEqual([`hssc.stations: must list exactly ${HSSC_POSITION_COUNT} positions, the count the HSSC realtime view fills`]);
   });
 
-  it.each(["stopId", "name", "subtitle", "isFirstStation", "isLastStation", "isRotationStation", "transferLines"])("fails an HSSC position without %s, naming it", (field) => {
+  it.each(["stopId", "name", "isFirstStation", "isLastStation", "isRotationStation", "transferLines"])("fails an HSSC position without %s, naming it", (field) => {
     // Arrange
     const data = fixture();
     delete data.hssc.stations[2][field];
 
     // Act & Assert
     expect(messagesOf(data)).toEqual([expect.stringMatching(new RegExp(`^hssc\\.stations\\.2\\.${field}: `))]);
+  });
+
+  it("passes a copy whose HSSC positions leave out the subtitle, keeping every other field", () => {
+    // Arrange
+    const data = fixture();
+    for (const station of data.hssc.stations) delete station.subtitle;
+
+    // Act
+    const parsed = busStopsDataset.safeParse(data);
+
+    // Assert
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.hssc.stations).toEqual(data.hssc.stations);
+    expect(parsed.data?.hssc.stations.some((station) => "subtitle" in station)).toBe(false);
+  });
+
+  it("fails an HSSC position with an empty subtitle, naming it", () => {
+    // Arrange
+    const data = fixture();
+    data.hssc.stations[2].subtitle = "";
+
+    // Act & Assert
+    expect(messagesOf(data)).toEqual([expect.stringMatching(/^hssc\.stations\.2\.subtitle: /)]);
   });
 
   it("fails an HSSC position with a field the line does not hold, naming it", () => {
