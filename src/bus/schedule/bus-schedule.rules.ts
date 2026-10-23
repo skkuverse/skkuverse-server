@@ -16,7 +16,7 @@ export function isWeekStartInRange(from: string, now: Date): boolean {
 }
 
 // WHY: the SKKU list wins over the public calendar, and holds the rest days that calendar does not list.
-export function toNonOperatingDayLabel({ schoolRestDay, publicHoliday }: CalendarDay): string | null {
+export function toNonOperatingDayLabel({ schoolRestDay, publicHoliday }: Pick<CalendarDay, "schoolRestDay" | "publicHoliday">): string | null {
   return schoolRestDay || publicHoliday;
 }
 

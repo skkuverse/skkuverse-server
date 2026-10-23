@@ -4,26 +4,27 @@ import { createDatasetLoader, type DatasetLoader } from "../infra/dataset-loader
 import { createLogThrottle, type LogThrottle } from "../infra/log-throttle";
 import logger from "../infra/logger";
 import { lookupKoreanPublicHoliday, toHolidayYear } from "../shared/korean-public-holiday.util";
-import { REST_DAYS_LOG_INTERVAL_MS } from "./calendar.constants";
+import { REST_DAYS_LOG_INTERVAL_MS, RULE_FALLBACK_LOG_INTERVAL_MS } from "./calendar.constants";
 import { CalendarReadError, CalendarUnavailableError } from "./calendar.error";
+import { toSchoolRestDayLabel } from "./calendar.mapper";
 import { CalendarRepository } from "./calendar.repository";
-import { lookupRestDay } from "./calendar.rules";
-import type { CalendarDay, RestDaysRevision } from "./calendar.types";
-
-const RULES_FALLBACK_LOG_INTERVAL_MS = 60 * 60_000;
+import { lookupRestDay, toAcademicPeriod, toAcademicYear, toRuleSemesters } from "./calendar.rules";
+import type { AcademicPeriod, CalendarDay, RestDaysRevision } from "./calendar.types";
 
 // SEE: docs/decisions/0010-server-architecture.md (D1): the door for other features, which import only a
 // .module or a .service.
 @Injectable()
 export class CalendarService {
   private readonly rulesFallbackThrottle: LogThrottle;
+  private readonly academicFallbackThrottle: LogThrottle;
   private readonly restDays: DatasetLoader<RestDaysRevision>;
 
   constructor(
     private readonly repository: CalendarRepository,
     private readonly clock: Clock,
   ) {
-    this.rulesFallbackThrottle = createLogThrottle(RULES_FALLBACK_LOG_INTERVAL_MS, () => this.clock.now().getTime());
+    this.rulesFallbackThrottle = createLogThrottle(RULE_FALLBACK_LOG_INTERVAL_MS, () => this.clock.now().getTime());
+    this.academicFallbackThrottle = createLogThrottle(RULE_FALLBACK_LOG_INTERVAL_MS, () => this.clock.now().getTime());
     this.restDays = createDatasetLoader({
       name: "calendar.rest_days",
       load: () => repository.findRestDays(),
@@ -36,29 +37,58 @@ export class CalendarService {
   }
 
   async publicHolidayName(dateStr: string): Promise<string | null> {
-    const year = toHolidayYear(dateStr);
-    const stored = (await this.repository.listPublicHolidayYears()).find((doc) => doc._id === year);
-    if (stored) return stored.holidays.find((holiday) => holiday.date === dateStr)?.name ?? null;
-    const ticket = this.rulesFallbackThrottle.take(String(year));
-    if (ticket) {
-      logger.warn(
-        { event: "holidays.lookup.rules_fallback", year, suppressed: ticket.suppressed },
-        "No stored calendar for the year, answering holidays from rules",
-      );
-    }
-    return lookupKoreanPublicHoliday(dateStr);
+    const publicHolidayOn = await this.publicHolidaysOf(toHolidayYear(dateStr));
+    return publicHolidayOn(dateStr);
   }
 
-  // WHY: the public holiday is asked first, so a date it cannot take throws its RangeError even on a rest day.
+  // WHY: the public holiday is asked first, so a date it cannot take throws its RangeError even on a rest day. The
+  // dataset's rest day wins over the crawled one, so an operator can correct or add one.
   async dayOf(dateStr: string): Promise<CalendarDay> {
     const publicHoliday = await this.publicHolidayName(dateStr);
-    const { restDays } = await this.restDays.get();
-    return { date: dateStr, publicHoliday, schoolRestDay: lookupRestDay(restDays, dateStr) };
+    const [{ restDays }, academicYears] = await Promise.all([this.restDays.get(), this.repository.listAcademicYears()]);
+    const academicYear = toAcademicYear(dateStr);
+    const crawled = academicYears.find((doc) => doc.year === academicYear);
+    const crawledRestDay = crawled?.restDays.find((row) => row.date === dateStr);
+    return {
+      date: dateStr,
+      publicHoliday,
+      schoolRestDay: lookupRestDay(restDays, dateStr) ?? (crawledRestDay ? toSchoolRestDayLabel(crawledRestDay.title) : null),
+      academicPeriod: crawled ? toAcademicPeriod(dateStr, crawled.semesters, "crawled") : await this.ruleAcademicPeriod(dateStr, academicYear),
+    };
   }
 
   // WHY: changes whenever an answer of dayOf may change but a public holiday, so a cache built from it can key on it.
   async revisionKey(): Promise<string> {
-    const { revision } = await this.restDays.get();
-    return String(revision);
+    const [{ revision }, academicYears] = await Promise.all([this.restDays.get(), this.repository.listAcademicYears()]);
+    const crawledVersions = [...academicYears].sort((a, b) => a.year - b.year).map((doc) => `${doc.year}@${doc.contentHash}`);
+    return [String(revision), ...crawledVersions].join("|");
+  }
+
+  private async ruleAcademicPeriod(dateStr: string, academicYear: number): Promise<AcademicPeriod> {
+    const ticket = this.academicFallbackThrottle.take(String(academicYear));
+    if (ticket) {
+      logger.warn(
+        { event: "academic_calendar.rule_fallback", academicYear, suppressed: ticket.suppressed },
+        "No crawled academic calendar for the year, answering its semesters from the rule",
+      );
+    }
+    const publicHolidayOn = await this.publicHolidaysOf(academicYear);
+    return toAcademicPeriod(dateStr, toRuleSemesters(academicYear, (day) => publicHolidayOn(day) !== null), "rule");
+  }
+
+  // WHY: a year with no stored calendar warns only when a date of it is asked, so the rule never warns for a day it skips.
+  private async publicHolidaysOf(year: number): Promise<(dateStr: string) => string | null> {
+    const stored = (await this.repository.listPublicHolidayYears()).find((doc) => doc._id === year);
+    if (stored) return (dateStr) => stored.holidays.find((holiday) => holiday.date === dateStr)?.name ?? null;
+    return (dateStr) => {
+      const ticket = this.rulesFallbackThrottle.take(String(year));
+      if (ticket) {
+        logger.warn(
+          { event: "holidays.lookup.rules_fallback", year, suppressed: ticket.suppressed },
+          "No stored calendar for the year, answering holidays from rules",
+        );
+      }
+      return lookupKoreanPublicHoliday(dateStr);
+    };
   }
 }

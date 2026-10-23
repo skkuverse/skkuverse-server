@@ -195,7 +195,7 @@ On 2026-12-22 the smart view answers `suspended` with `resumeDate: "2027-03-01"`
 - `MM-DD` recurs every year (`"09-28": "공자탄신일"`); `02-29` is allowed, `02-30` is refused.
 - `YYYY-MM-DD` applies once (`"2027-03-02": "학사휴교"`), from 1900 to 2999.
 
-A one-off date wins over a yearly one on the same day, either wins over a public holiday, and a `bus_overrides` document for that service and date wins over all three. Public holidays never go here: the server reads them from the official calendar. Use an override instead when the closure must carry a notice.
+A one-off date wins over a yearly one on the same day, either wins over a rest day of the crawled academic calendar ([ADR 0021](../decisions/0021-academic-calendar.md)) and over a public holiday, and a `bus_overrides` document for that service and date wins over all of them. So a key here corrects or adds to what SKKU's calendar lists. Public holidays never go here: the server reads them from the official calendar. Use an override instead when the closure must carry a notice.
 
 ### Edit a Jongro route's card or seat count
 
