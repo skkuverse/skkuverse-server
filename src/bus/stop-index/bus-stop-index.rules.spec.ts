@@ -14,7 +14,7 @@ import { storedBusRegistryRepository, storedBusRegistryService } from "../../../
 import { busStopsFixture, storedBusStopsRepository, storedBusStopsService } from "../../../__tests__/helpers/bus/bus-stops";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import type { BusStopsSnapshot } from "../stops/bus-stops.types";
-import { toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
+import { hasPoleAliases, toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
 
 type FixtureStop = { id: string; arsIds?: string[] };
 
@@ -43,6 +43,23 @@ describe("toPoleArsId", () => {
   ])("reads %s as %s", (stopId, arsId) => {
     // Act & Assert
     expect(toPoleArsId(stopId)).toBe(arsId);
+  });
+});
+
+describe("hasPoleAliases", () => {
+  it.each([
+    ["hssc-bus-lot", ["01618"], true],
+    ["hssc-bus-lot", [], false],
+    ["hssc-bus-lot", undefined, false],
+    ["hssc-nowhere", ["01618"], false],
+  ])("reads %s with arsIds %j as %s", async (stopId, arsIds, expected) => {
+    // Arrange
+    const snapshot = await snapshotOf((data) => {
+      if (arsIds !== undefined) data.stops.find((stop) => stop.id === "hssc-bus-lot")!.arsIds = arsIds;
+    });
+
+    // Act & Assert
+    expect(hasPoleAliases(snapshot, stopId)).toBe(expected);
   });
 });
 
