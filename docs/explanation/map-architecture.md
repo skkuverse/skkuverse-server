@@ -41,6 +41,8 @@ Map owns two things: the base map's layer catalogue, and the festival structure 
 | chip (`MapChipSpec`) | One pill above the map: a camera, the layers it turns on, and the list it opens; or a link it opens | `eventChipSpecs`, `BASE_CHIPS` | `filterButton` |
 | base chip | A permanent chip, served whether or not a festival is live and ahead of the festival's row | `BASE_CHIPS` | — |
 | link chip | A chip whose action is the shared link shape (`actionType`, `actionValue`) and changes no layer | `BASE_CHIPS` | — |
+| layers chip | A chip whose action turns the layers it names on, any layer, base ones included, and moves the camera only when it carries one | `BASE_CHIPS` | — |
+| tab (`MapTab`) | An app tab that shares the one map (`map`, `transit`); a layer's or chip's `tabs` are the tabs whose lens shows it, absent meaning the map tab | `LayerSpec.tabs`, `MapChipSpec.tabs` | — |
 | chip group | A layer's `chipGroupId`: the layers a chip may switch off; `null` means none ever | `LayerSpec.chipGroupId` | `exclusiveGroup` |
 | reset chip | The synthesised chip that goes back to the festival's default view | `resetChip` | — |
 | presentation (`ItemPresentation`) | A category's layer, pin priority, tap and location accuracy | `presentationFor` | `categoryStyle` |
@@ -81,8 +83,8 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 | Field | App use |
 | --- | --- |
 | `/map/config` `campuses` | The campus toggle, each campus's camera, and `radiusM` to tell which campus the camera is on |
-| `/map/config` `layers` | The layer list and filter sheet; `defaultVisibleWhen`, `userConfigurable` and `style` decide what is on and how it draws |
-| `/map/config` `chips` | The chip row; a `focus` tap moves the camera, swaps layers within the chip group and opens the chip's list, a `webview` tap opens its page; a chip of another action kind, `link` included, is dropped by builds that do not list it in `CHIP_ACTION_KINDS` |
+| `/map/config` `layers` | The layer list and filter sheet; `defaultVisibleWhen`, `userConfigurable` and `style` decide what is on and how it draws; `tabs` names the tabs whose lens draws it, and installed builds ignore it, so they treat every layer as the map tab's |
+| `/map/config` `chips` | The chip row; a `focus` tap moves the camera, swaps layers within the chip group and opens the chip's list, a `webview` tap opens its page; `tabs` and `opensIn` place a chip on a tab; a chip of another action kind, `link` and `layers` included, is dropped by builds that do not list it in `CHIP_ACTION_KINDS` |
 | `/map/config` `cameraDefaults` | The camera for a marker tap, a search result and a campus switch |
 | overlay `kind`, `geometry`, `layerId` | The renderer and the layer that draws it; an unknown `kind` is skipped |
 | overlay `tap` | A building sheet, a place sheet, or a chip run; `null` draws a backdrop |
@@ -99,6 +101,7 @@ What the app reads, from `skkuverse-app/packages/shared/src/map/parser.ts` and `
 - A push reaches `/map/config` within `DATASET_CACHE_TTL_MS`, a minute, and the event routes, which cache their answer for `EVENT_CACHE_TTL_MS` on top, within that plus five seconds. The `/map/config` ETag is the hash of the body, so it changes with a revision exactly when the served body does.
 - A bad base chip stops the boot: `assertValidChipSpecs` against the base layers, and `assertValidLinkChips`, which refuses any `miniapp` link chip since a code-held chip may not name data, when Nest builds `MapLayerSetService`. A bad layer set, place, button, block or facet value is dropped and logged, never thrown into a request. With no mini-app registry ever read, every `miniapp` button is dropped as unresolved and `map.event_overlays.registry_unavailable` logs at error once a minute; the places still serve.
 - A link chip's `webview` value is served absolute (`toServedActionValue`); its other values are served as written. A layer set authors only `focus` chips.
+- A layer the transit tab draws keeps `chipGroupId: null`: installed builds read any grouped layer as festival content and hide its toggle, so a grouped route line would take the Jongno route toggles away from them. A `layers` chip therefore asks no chip group, only that each layer it names exists.
 - The activation read is cached for `EVENT_CACHE_TTL_MS` with an `EVENT_STALE_WINDOW_MS` stale window, and a cached activation is still checked against the clock, so its window closes on time. `/map/config` answers with the base layers when the lookup fails.
 - Both event routes cache their whole projection on the same TTL, and both overlay collections are one response per data source, pins and shapes together.
 - A stored geometry is served as stored: points and lines by reference, polygon rings rewound (`toWirePolygon`); the only rebuilt pair is a building's, from its `location`.

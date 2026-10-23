@@ -178,6 +178,16 @@
                 "type": "number"
               }
             }
+          },
+          "tabs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "map",
+                "transit"
+              ]
+            }
           }
         },
         "required": [
@@ -318,6 +328,64 @@
                   "actionType",
                   "actionValue"
                 ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "layers"
+                  },
+                  "layerIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "camera": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "zoom": {
+                            "type": "number"
+                          },
+                          "tilt": {
+                            "type": "number"
+                          },
+                          "bearing": {
+                            "type": "number"
+                          },
+                          "durationMs": {
+                            "type": "number"
+                          },
+                          "lat": {
+                            "type": "number"
+                          },
+                          "lng": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "zoom",
+                          "tilt",
+                          "bearing",
+                          "durationMs",
+                          "lat",
+                          "lng"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "layerIds",
+                  "camera"
+                ]
               }
             ]
           },
@@ -432,6 +500,23 @@
               {
                 "type": "null"
               }
+            ]
+          },
+          "tabs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "map",
+                "transit"
+              ]
+            }
+          },
+          "opensIn": {
+            "type": "string",
+            "enum": [
+              "map",
+              "transit"
             ]
           }
         },

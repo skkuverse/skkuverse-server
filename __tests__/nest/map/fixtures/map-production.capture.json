@@ -1,5 +1,5 @@
 {
-  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9. No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed. The hssc_route layer was added to each /map/config body after jongro07_route on 2026-10-23, and its ETag recomputed from the new body, when the HSSC route line joined the transit overlays on purpose.",
+  "_about": "GET https://api.skkuverse.com/map/config with Accept-Language ko, en and zh, GET /map/overlays/event and GET /map/overlays/event/details, captured from production on 2026-10-19 at 15:30:47-49 UTC (00:30 KST on the 20th), source commit 5c0ee5a9. No eventmap activation was live, so each is the base map only. Each entry is the status, the parsed body and the weak ETag production sent. /map/config sent no Cache-Control; both event routes sent public, max-age=60; all five sent Vary Accept-Language, Origin (Cloudflare added a second Vary, accept-encoding). Nothing trimmed. The hssc_route layer was added to each /map/config body after jongro07_route on 2026-10-23, and its ETag recomputed from the new body, when the HSSC route line joined the transit overlays on purpose. On 2026-10-23 each /map/config body gained the tab lens on purpose (tabs on the building and route line layers, and the transit tab's shuttle_routes chip after inquiry), and its ETag was recomputed from the new body.",
   "config": {
     "ko": {
       "status": 200,
@@ -47,7 +47,11 @@
               "style": {
                 "size": 16,
                 "minZoom": 15.3
-              }
+              },
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "building_labels",
@@ -63,7 +67,11 @@
                 "captionTextSize": 7,
                 "zIndex": 100000,
                 "minZoom": 14.8
-              }
+              },
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "campus_geometry",
@@ -78,7 +86,11 @@
                 "fillOpacity": 0.12,
                 "outlineWidth": 1.5,
                 "minZoom": 16
-              }
+              },
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "jongro02_route",
@@ -95,7 +107,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             },
             {
               "id": "jongro08_route",
@@ -112,7 +127,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             },
             {
               "id": "jongro07_route",
@@ -129,7 +147,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             },
             {
               "id": "hssc_route",
@@ -146,7 +167,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "FFFFFF",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             }
           ],
           "chips": [
@@ -209,6 +233,29 @@
               },
               "isReset": false,
               "list": null
+            },
+            {
+              "id": "shuttle_routes",
+              "label": "셔틀 노선",
+              "icon": {
+                "kind": "emoji",
+                "emoji": "🚌"
+              },
+              "action": {
+                "kind": "layers",
+                "layerIds": [
+                  "jongro02_route",
+                  "jongro08_route",
+                  "jongro07_route",
+                  "hssc_route"
+                ],
+                "camera": null
+              },
+              "isReset": false,
+              "list": null,
+              "tabs": [
+                "transit"
+              ]
             }
           ],
           "cameraDefaults": {
@@ -224,7 +271,7 @@
           }
         }
       },
-      "etag": "W/\"c09-aJP0Da4ak3It/VEdxklZoMMS9qw\""
+      "etag": "W/\"d9c-xEG74BdMBxU/cUFH8mdADKEPUuE\""
     },
     "en": {
       "status": 200,
@@ -272,7 +319,11 @@
               "style": {
                 "size": 16,
                 "minZoom": 15.3
-              }
+              },
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "building_labels",
@@ -288,7 +339,11 @@
                 "captionTextSize": 7,
                 "zIndex": 100000,
                 "minZoom": 14.8
-              }
+              },
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "campus_geometry",
@@ -303,7 +358,11 @@
                 "fillOpacity": 0.12,
                 "outlineWidth": 1.5,
                 "minZoom": 16
-              }
+              },
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "jongro02_route",
@@ -320,7 +379,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             },
             {
               "id": "jongro08_route",
@@ -337,7 +399,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             },
             {
               "id": "jongro07_route",
@@ -354,7 +419,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             },
             {
               "id": "hssc_route",
@@ -371,7 +439,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "FFFFFF",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             }
           ],
           "chips": [
@@ -434,6 +505,29 @@
               },
               "isReset": false,
               "list": null
+            },
+            {
+              "id": "shuttle_routes",
+              "label": "Shuttle Routes",
+              "icon": {
+                "kind": "emoji",
+                "emoji": "🚌"
+              },
+              "action": {
+                "kind": "layers",
+                "layerIds": [
+                  "jongro02_route",
+                  "jongro08_route",
+                  "jongro07_route",
+                  "hssc_route"
+                ],
+                "camera": null
+              },
+              "isReset": false,
+              "list": null,
+              "tabs": [
+                "transit"
+              ]
             }
           ],
           "cameraDefaults": {
@@ -449,7 +543,7 @@
           }
         }
       },
-      "etag": "W/\"c00-vjUYRtZNUjZhnbXiCyGUT9jEf1Q\""
+      "etag": "W/\"d94-u21OtPL6Ppxae0PIKd5fm0wB7mk\""
     },
     "zh": {
       "status": 200,
@@ -497,7 +591,11 @@
               "style": {
                 "size": 16,
                 "minZoom": 15.3
-              }
+              },
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "building_labels",
@@ -513,7 +611,11 @@
                 "captionTextSize": 7,
                 "zIndex": 100000,
                 "minZoom": 14.8
-              }
+              },
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "campus_geometry",
@@ -528,7 +630,11 @@
                 "fillOpacity": 0.12,
                 "outlineWidth": 1.5,
                 "minZoom": 16
-              }
+              },
+              "tabs": [
+                "map",
+                "transit"
+              ]
             },
             {
               "id": "jongro02_route",
@@ -545,7 +651,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             },
             {
               "id": "jongro08_route",
@@ -562,7 +671,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             },
             {
               "id": "jongro07_route",
@@ -579,7 +691,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "1B5E20",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             },
             {
               "id": "hssc_route",
@@ -596,7 +711,10 @@
                 "outlineWidth": 1.5,
                 "outlineColor": "FFFFFF",
                 "minZoom": 13
-              }
+              },
+              "tabs": [
+                "transit"
+              ]
             }
           ],
           "chips": [
@@ -659,6 +777,29 @@
               },
               "isReset": false,
               "list": null
+            },
+            {
+              "id": "shuttle_routes",
+              "label": "班车路线",
+              "icon": {
+                "kind": "emoji",
+                "emoji": "🚌"
+              },
+              "action": {
+                "kind": "layers",
+                "layerIds": [
+                  "jongro02_route",
+                  "jongro08_route",
+                  "jongro07_route",
+                  "hssc_route"
+                ],
+                "camera": null
+              },
+              "isReset": false,
+              "list": null,
+              "tabs": [
+                "transit"
+              ]
             }
           ],
           "cameraDefaults": {
@@ -674,7 +815,7 @@
           }
         }
       },
-      "etag": "W/\"c03-/FMiZZFL+8aMZcsW8EikYz+snBc\""
+      "etag": "W/\"d95-WdK7UQluo1RmIawVUz+hhrYBzTU\""
     }
   },
   "event": {
