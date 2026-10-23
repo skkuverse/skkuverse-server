@@ -19,6 +19,7 @@ Runtime data the server serves lives in MongoDB as datasets ([ADR 0013](../decis
 | --- | --- | --- | --- |
 | `miniapps` | `GET /miniapps`, `GET /miniapps/:id`, the feed and send routes, and every dataset below that names a mini app | 503 `MINIAPP_REGISTRY_UNAVAILABLE` | none; each first-party origin's owner is the one `src/infra/origins.ts` names. Named by the three ui datasets, so a push may not drop an id they name ([register-a-miniapp.md](register-a-miniapp.md)) |
 | `games` | `GET /games`, `GET /games/:id` | 503 `GAME_REGISTRY_UNAVAILABLE` | none; each entry URL is on the origin `src/infra/origins.ts` maps to its id, and no id is one the stored `miniapps` holds, nor a mini app's id one it lists. Named by home layout game tiles, so a push may not drop an id a stored layout names ([games-api.md](../reference/games-api.md)) |
+| `app-features` | `GET /app/config`, as `features` | 200, every switch off, logged at error | none; a boolean per switch, no other key ([below](#flip-an-app-kill-switch)) |
 | `home-layout` | `GET /ui/home` | 503 `HOME_LAYOUT_UNAVAILABLE` | `miniapps`: each `miniapp` tile, feed and `miniapp` action; `games`: each `game` tile but the bundled games (`BUNDLED_GAME_IDS`) |
 | `campus-banners` | `GET /ui/home/campus` | 503 `CAMPUS_BANNERS_UNAVAILABLE` | `miniapps`: each banner's `miniapp` action |
 | `transit-layout` | `GET /ui/home/transit` | 503 `TRANSIT_LAYOUT_UNAVAILABLE` | `busGroups` and `subwayStations`: every one the checkout serves, each placed exactly once; `miniapps`: each `miniapp` link |
@@ -248,6 +249,18 @@ npm run data -- push subway-station-coords --prod --note "move 정자 to the Shi
 ```
 
 A change that adds a station pushes its coords from that checkout before the deploy: the running code ignores a station it does not serve, logged at warn (`subway.station_coords.station_unknown`). A change that removes a station deploys first, then pushes coords without it.
+
+### Flip an app kill switch
+
+`app-features` holds the app's kill switches, served on `GET /app/config` as `features`: `{ "sharedMapShell": false }`. `sharedMapShell` picks the app's shared-map shell (`true`) or its NativeTabs shell (`false`); skkuverse-app ADR 0023, decision 4, is the switch's reason. To switch every install back to the old shell:
+
+```bash
+npm run data -- pull app-features --prod
+# set "sharedMapShell": false in .data/prod/app-features.json
+npm run data -- push app-features --prod --note "back to the NativeTabs shell: <why>"
+```
+
+Every replica serves the push within a minute; the edge and the devices' HTTP caches hold the old body for up to the `/app/config` `Cache-Control` after that, and the app applies what it cached at its next cold start. A replica that never read a good revision serves every switch off and logs the cause at error (`app_config.features.missing`, `app_config.features.invalid` or `app_config.features.read_failed`), so push the dataset before the deploy that first reads it. A value that is not a boolean, or a key the schema does not hold, is refused at push.
 
 ### Check before a deploy
 

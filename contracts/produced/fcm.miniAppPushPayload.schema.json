@@ -41,6 +41,12 @@
     },
     "actionValue": {
       "type": "string"
+    },
+    "chipId": {
+      "type": "string"
+    },
+    "placeId": {
+      "type": "string"
     }
   },
   "required": [

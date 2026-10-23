@@ -101,6 +101,7 @@ export function toTransitSection(section: TransitLayoutRaw["sections"][number], 
     type: "item_list",
     id: section.id,
     title: section.title === undefined ? null : toLocalizedText(section.title, context.lang),
+    ...(section.campus === undefined ? {} : { campus: section.campus }),
     items: section.items.flatMap((item) => toTransitItems(item, context)),
   };
 }

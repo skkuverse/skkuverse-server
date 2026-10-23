@@ -15,23 +15,25 @@
  * every key production served keeps its bytes and its place, and the weak ETag
  * is the appended body's.
  *
+ * `features` (the kill switches, skkuverse-app ADR 0023 decision 4) is appended
+ * after `games` the same way, read from revision 1 of the `app-features`
+ * dataset (the shared-map shell off) through an in-memory repository, on a
+ * fixed clock.
+ *
  * The version gates are read from the environment when src/infra/config.ts
- * loads, so the production values are set before anything loads it and
- * restored once it has.
+ * loads, so the production values are set by the first import, before any
+ * import reaches src/, and restored once config has loaded.
  */
+import { restoreProductionGates } from "../../helpers/app-config/production-gates";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
+import { AppConfigRepository } from "../../../src/app-config/app-config.repository";
+import { Clock } from "../../../src/infra/clock";
+import { storedAppFeaturesRepository } from "../../helpers/app-config/app-features";
 import { appModulesUnder } from "../../helpers/nest/app-modules";
+import { buildTestApp } from "../../helpers/nest/build-test-app";
 
-type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
-
-/** The version gates production's Doppler config held at the capture. */
-const PRODUCTION_GATES: Readonly<Record<string, string>> = {
-  APP_IOS_MIN_VERSION: "3.5.0",
-  APP_IOS_UPDATE_URL: "https://apps.apple.com/app/id6446813434",
-  APP_ANDROID_MIN_VERSION: "3.5.0",
-  APP_ANDROID_UPDATE_URL: "https://play.google.com/store/apps/details?id=com.zoyoong.skkubus",
-};
+restoreProductionGates();
 
 /** What production served at 2026-10-19T20:12:40Z: the body text and its weak ETag. */
 const CAPTURED = {
@@ -43,27 +45,26 @@ const CAPTURED = {
 const GAMES_KEY =
   '"games":{"origins":{"https://apple-game.game.skkuverse.com":"apple-game","https://suika-game.game.skkuverse.com":"suika-game","https://wave-run.game.skkuverse.com":"wave-run","https://subway-typing.game.skkuverse.com":"subway-typing"}}';
 
-/** The captured body with `games` appended as the last key of `data`, and its weak ETag. */
+/** The key appended after `games`: the kill switches as revision 1 of `app-features` stores them. */
+const FEATURES_KEY = '"features":{"sharedMapShell":false}';
+
+/** The captured body with `games`, then `features`, appended as the last keys of `data`, and its weak ETag. */
 const SERVED = {
-  text: `${CAPTURED.text.slice(0, -2)},${GAMES_KEY}}}`,
-  etag: 'W/"444-eOL1wRWGvxbyBKTlMw9gEm9agBs"',
+  text: `${CAPTURED.text.slice(0, -2)},${GAMES_KEY},${FEATURES_KEY}}}`,
+  etag: 'W/"468-ZVHN2xsctwO1lb8IBRE3NaCpeTg"',
 };
 
 let app: NestExpressApplication;
 
 beforeAll(async () => {
-  const saved = Object.fromEntries(Object.keys(PRODUCTION_GATES).map((name) => [name, process.env[name]]));
-  try {
-    Object.assign(process.env, PRODUCTION_GATES);
-    require("../../../src/infra/config");
-  } finally {
-    for (const [name, value] of Object.entries(saved)) {
-      if (value === undefined) delete process.env[name];
-      else process.env[name] = value;
-    }
-  }
-  const { buildTestApp } = require("../../helpers/nest/build-test-app") as { buildTestApp: BuildTestApp };
-  app = await buildTestApp({ imports: appModulesUnder("src/config/", "src/app-config/"), role: "api" });
+  app = await buildTestApp({
+    imports: appModulesUnder("src/config/", "src/app-config/"),
+    overrides: [
+      { provide: AppConfigRepository, useValue: storedAppFeaturesRepository() },
+      { provide: Clock, useValue: { now: () => new Date("2026-10-23T03:00:00.000Z") } },
+    ],
+    role: "api",
+  });
 });
 
 afterAll(async () => {
@@ -78,7 +79,7 @@ describe("GET /app/config at the production capture", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.text).toBe(SERVED.text);
-    expect(res.headers["cache-control"]).toBe("public, max-age=300");
+    expect(res.headers["cache-control"]).toBe("public, max-age=60");
     expect(res.headers.vary).toBe("Accept-Language, Origin");
     expect(res.headers.etag).toBe(SERVED.etag);
   });
@@ -88,8 +89,9 @@ describe("GET /app/config at the production capture", () => {
     const res = await request(app.getHttpServer()).get("/app/config");
 
     // Assert
-    const { games, ...captured } = res.body.data as Record<string, unknown>;
+    const { games, features, ...captured } = res.body.data as Record<string, unknown>;
     expect(games).toBeDefined();
+    expect(features).toBeDefined();
     expect(JSON.stringify({ meta: res.body.meta, data: captured })).toBe(CAPTURED.text);
   });
 

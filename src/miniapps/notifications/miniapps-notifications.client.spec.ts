@@ -91,3 +91,23 @@ describe("MiniappsNotificationsClient.sendPush", () => {
     await expect(new MiniappsNotificationsClient().sendPush(ROW)).rejects.toBe(refused);
   });
 });
+
+/** The map target rides on the payload after the action, so a Cloud Function that forwards it can put it on the device. */
+describe("MiniappsNotificationsClient.sendPush with a map target", () => {
+  it("sends chipId and placeId after the action, and neither for a row without them", async () => {
+    // Arrange
+    postToFcmFunction.mockResolvedValue({ sent: 1 });
+    const targeted: SentNotificationDoc = { ...ROW, actionType: "route", actionValue: "/campus", chipId: "day1", placeId: "bus_stop:hssc-600th" };
+
+    // Act
+    await new MiniappsNotificationsClient().sendPush(targeted);
+    await new MiniappsNotificationsClient().sendPush(ROW);
+
+    // Assert
+    expect(JSON.stringify(postToFcmFunction.mock.calls[0][0])).toBe(
+      '{"type":"miniapp","miniAppId":"eskara-2026","notificationId":"n1","title_ko":"제목","body_ko":"본문","title_en":null,"body_en":null,"actionType":"route","actionValue":"/campus","chipId":"day1","placeId":"bus_stop:hssc-600th"}',
+    );
+    expect(postToFcmFunction.mock.calls[1][0]).not.toHaveProperty("chipId");
+    expect(postToFcmFunction.mock.calls[1][0]).not.toHaveProperty("placeId");
+  });
+});

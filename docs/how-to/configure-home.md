@@ -3,7 +3,7 @@ title: Configure the Home Screen
 type: how-to
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-23
 audience: internal
 ---
 
@@ -118,6 +118,8 @@ The app only draws this section while its festival gate is open (`isFestivalUnlo
 `GET /ui/home/transit` serves the transit tab's sections in the order of the `transit-layout` dataset: which bus groups, subway stations, links and groups each section holds. The texts of a bus group or station still come from the code; the layout only places them. Edit it with `npm run data -- pull/push transit-layout`, as above. Its rules are in `src/ui/transit/ui-transit.schema.ts` and `src/ui/transit/ui-transit.rules.ts`.
 
 A push is checked against your checkout's bus groups and served stations: it must place each exactly once, a group's children counted, and name no other. A group meant to be hidden keeps its place and uses its visibility in the bus config.
+
+A section may carry `"campus": "hssc"` or `"campus": "nsc"`; one without it belongs to both campuses. The app uses the tag only to order the sections for the user's campus. The tag is new in the schema, and the schema refuses a key it does not know: deploy the code that knows it before you push a layout that sets it, or every running replica reads the pushed revision as invalid and keeps serving the last good one.
 
 Bus groups and stations come from the code, so a deploy can change them while the stored layout stays. The order matters:
 
