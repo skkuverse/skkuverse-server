@@ -10,7 +10,9 @@
  * `withoutStationStopIds` removes every station's `stopId`, so a test asserts
  * both the new body and that nothing else changed. Both handle `isPassThrough`
  * the same way, served since 2026-10-23 right after `isRotationStation`: true at
- * a position with no stop id (the non-stop 혜화동로터리), false elsewhere. A body's ETag is the md5 of
+ * a position with no stop id (the non-stop 혜화동로터리), false elsewhere; and `isAlightOnly`, served since
+ * 2026-10-23 right after `isPassThrough`: false on every station, since revision 1 flags no position drop-off only.
+ * A body's ETag is the md5 of
  * its JSON (`BusConfigService`), so `md5EtagOf` derives the new ETag too.
  */
 import crypto from "crypto";
@@ -50,7 +52,7 @@ type Station = Record<string, unknown>;
 type Group = { id: string; screen: { stations?: Station[] } & Record<string, unknown> } & Record<string, unknown>;
 
 function withPassThrough(station: Station, isPassThrough: boolean): Station {
-  return Object.fromEntries(Object.entries(station).flatMap((entry) => (entry[0] === "isRotationStation" ? [entry, ["isPassThrough", isPassThrough]] : [entry])));
+  return Object.fromEntries(Object.entries(station).flatMap((entry) => (entry[0] === "isRotationStation" ? [entry, ["isPassThrough", isPassThrough], ["isAlightOnly", false]] : [entry])));
 }
 
 /** A pinned group with its stations' stop ids appended, each last; a schedule group as it was. */
@@ -67,13 +69,13 @@ export function withStationStopIds<T>(pinned: T): T {
   return group as unknown as T;
 }
 
-/** A body (a group or `{ groups }`) with every station's `stopId` and `isPassThrough` removed. */
+/** A body (a group or `{ groups }`) with every station's `stopId`, `isPassThrough` and `isAlightOnly` removed. */
 export function withoutStationStopIds<T>(body: T): T {
   const copy = structuredClone(body) as unknown as { groups?: Group[] } & Partial<Group>;
   const groups = copy.groups ?? [copy as Group];
   for (const group of groups) {
     const stations = group.screen?.stations;
-    if (stations) group.screen.stations = stations.map(({ stopId: _stopId, isPassThrough: _isPassThrough, ...station }) => station);
+    if (stations) group.screen.stations = stations.map(({ stopId: _stopId, isPassThrough: _isPassThrough, isAlightOnly: _isAlightOnly, ...station }) => station);
   }
   return copy as unknown as T;
 }

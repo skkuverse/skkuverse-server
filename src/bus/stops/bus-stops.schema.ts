@@ -21,7 +21,11 @@ const hsscStation = z.strictObject({
   isFirstStation: z.boolean(),
   isLastStation: z.boolean(),
   isRotationStation: z.boolean(),
+  isAlightOnly: z.boolean().optional(),
   transferLines: z.array(z.strictObject({ line: z.string().min(1), color: z.string().min(1) })),
+}).refine((station) => !(station.stopId === null && station.isAlightOnly), {
+  path: ["isAlightOnly"],
+  message: "a position with no stop is passed without stopping, so it cannot be drop-off only",
 });
 
 const topisOverlay = z.strictObject({

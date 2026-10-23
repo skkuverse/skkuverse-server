@@ -6,7 +6,10 @@
  * and each service's smart schedule once, and the week after it only when the shown week holds fewer than three runs
  * (review F2); a run at a drop-off is listed until the arrival of its latest estimate, read once per service, while
  * the page shows only the served one (ADR 0019, D12); and a route whose read fails is left out of the page, logged at
- * error at most once a minute per route, while the rest is served.
+ * error at most once a minute per route, while the rest is served. A live entry's action is alight at an HSSC
+ * position the data flags drop-off only and board elsewhere, and an HSSC entry's towards is the next stop's catalog
+ * name in the request language, as that stop's own page names it, never the line row's name with its marker; the
+ * HSSC entry served in zh therefore heads towards "SKKU Junction", the stop's English name, since it has no Chinese one.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 import { storedBusRegistryService, storedJongroRouteDocuments } from "../../../__tests__/helpers/bus/bus-registry";
@@ -31,11 +34,12 @@ import type { TimetableEntry } from "./bus-stop-arrivals.types";
 const AT_14_10_KST = new Date("2026-10-20T05:10:00.000Z");
 const versionOf = (routeId: string) => storedJongroRouteDocuments().find((doc) => doc._id === routeId)!.stationsVersion;
 
-function setup({ aliases = {} as Record<string, string[]> } = {}) {
+function setup({ aliases = {} as Record<string, string[]>, alightOnlyIndexes = [] as number[] } = {}) {
   let now = AT_14_10_KST;
   const clock: Clock = { now: () => now };
-  const data = busStopsFixture() as { stops: Array<{ id: string; arsIds?: string[] }> };
+  const data = busStopsFixture() as { stops: Array<{ id: string; arsIds?: string[] }>; hssc: { stations: Array<{ isAlightOnly?: boolean }> } };
   for (const [stopId, arsIds] of Object.entries(aliases)) data.stops.find((stop) => stop.id === stopId)!.arsIds = arsIds;
+  for (const index of alightOnlyIndexes) data.hssc.stations[index]!.isAlightOnly = true;
   const stops = storedBusStopsService(storedBusStopsRepository(data), clock);
   const index = new BusStopIndexService(stops, storedBusRegistryService(), asReal<BusRoutePathService>(new FakeBusRoutePathService()), clock);
   const live = new FakeBusLiveGroupService();
@@ -122,7 +126,7 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
         arrivals: [expect.objectContaining({ status: "scheduled", scheduledDepartureAt: "2026-10-20T14:30:00+09:00", runDepartureAt: "2026-10-20T14:30:00+09:00", isLastBus: true })],
       }),
       expect.objectContaining({ kind: "timetable", groupId: "campus", label: "HSSC → NSC", routeType: "hakbu" }),
-      { kind: "live", groupId: "jongro07", label: "Jongro 07", stationIndex: 1, towards: "비천당", stationsVersion: versionOf("jongro07"), updatedAt: null, operation: "noData", vehicles: [], arrivals: [] },
+      { kind: "live", groupId: "jongro07", label: "Jongro 07", stationIndex: 1, towards: "비천당", action: "board", stationsVersion: versionOf("jongro07"), updatedAt: null, operation: "noData", vehicles: [], arrivals: [] },
     ]);
   });
 
@@ -166,8 +170,36 @@ describe("BusStopArrivalsService.findStopArrivals", () => {
 
     // Assert
     expect(page?.data.routes).toEqual([
-      { kind: "live", groupId: "hssc", label: "人文校区班车", stationIndex: 6, towards: "성균관대입구사거리", stationsVersion: null, updatedAt: null, operation: "running", vehicles: [bus], arrivals: [arrival] },
+      { kind: "live", groupId: "hssc", label: "人文校区班车", stationIndex: 6, towards: "SKKU Junction", action: "board", stationsVersion: null, updatedAt: null, operation: "running", vehicles: [bus], arrivals: [arrival] },
     ]);
+  });
+
+  it("serves the HSSC entry at a position the data flags drop-off only with action alight", async () => {
+    // Arrange
+    const { service, live } = setup({ alightOnlyIndexes: [3, 4] });
+    live.groups.set("hssc", liveGroup("hssc"));
+
+    // Act
+    const [olympicHall, postOffice, gate] = await Promise.all(["hssc-olympic-hall", "hssc-hyehwa-post-office", "hssc-main-gate-out"].map((id) => service.findStopArrivals(id, "ko")));
+
+    // Assert
+    expect(olympicHall?.data.routes).toEqual([expect.objectContaining({ kind: "live", stationIndex: 3, action: "alight" })]);
+    expect(postOffice?.data.routes).toEqual([expect.objectContaining({ kind: "live", stationIndex: 4, action: "alight" })]);
+    expect(gate?.data.routes).toEqual([expect.objectContaining({ kind: "live", stationIndex: 2, action: "board" })]);
+  });
+
+  it("names an HSSC entry's next stop as its catalog stop in the request language, not by the line row's 하차전용 marker", async () => {
+    // Arrange
+    const { service, live } = setup();
+    live.groups.set("hssc", liveGroup("hssc"));
+
+    // Act
+    const [ko, en, zh] = await Promise.all((["ko", "en", "zh"] as const).map((lang) => service.findStopArrivals("hssc-main-gate-out", lang)));
+
+    // Assert
+    expect(ko?.data.routes).toEqual([expect.objectContaining({ stationIndex: 2, towards: "올림픽기념국민생활관" })]);
+    expect(en?.data.routes).toEqual([expect.objectContaining({ towards: "Olympic Hall" })]);
+    expect(zh?.data.routes).toEqual([expect.objectContaining({ towards: "Olympic Hall" })]);
   });
 
   it("continues into the following week when the shown week holds fewer than three runs", async () => {

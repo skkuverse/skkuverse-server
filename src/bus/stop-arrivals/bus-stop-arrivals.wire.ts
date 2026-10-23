@@ -17,6 +17,8 @@ const liveEntry = z.object({
   stationIndex: z.int().min(0),
   /** WHY: the next station with a stop, so a client tells a loop's two directions apart; null at a line's last index. */
   towards: z.string().nullable(),
+  /** WHY: alight where riders may only get off (an HSSC drop-off-only stop), so a client never shows boarding there. */
+  action: z.enum(["board", "alight"]),
   /** WHY: the stations version the index was placed by, the same as the live route's; null for HSSC. */
   stationsVersion: z.string().nullable(),
   updatedAt: instant.nullable(),

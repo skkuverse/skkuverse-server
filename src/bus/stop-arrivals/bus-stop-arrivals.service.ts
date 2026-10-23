@@ -12,10 +12,11 @@ import { BusLiveGroupService } from "../live/group/bus-live-group.service";
 import type { LiveGroup } from "../live/bus-live.wire";
 import type { SmartSchedule } from "../schedule/bus-schedule.wire";
 import type { HsscLineStation } from "../stops/bus-stops.document";
+import type { ScheduleStop } from "../stops/bus-stops.types";
 import { BusStopIndexService } from "../stop-index/bus-stop-index.service";
 import type { HsscStopRoute, JongroStopRoute, ShuttleStopRoute, StopRoute } from "../stop-index/bus-stop-index.types";
 import { LEFT_OUT_LOG_INTERVAL_MS, NEXT_RUN_COUNT, OPERATION_BY_SCHEDULE_STATUS } from "./bus-stop-arrivals.constants";
-import { toLiveEntry, toStopBlock, toTimetableEntry } from "./bus-stop-arrivals.mapper";
+import { toCatalogNamedLine, toLiveEntry, toStopBlock, toTimetableEntry } from "./bus-stop-arrivals.mapper";
 import { toTimetableArrivals, toTowards } from "./bus-stop-arrivals.rules";
 import type { StopArrivalsRoute, TimetableArrival } from "./bus-stop-arrivals.types";
 import type { BusStopArrivals, BusStopArrivalsMeta } from "./bus-stop-arrivals.wire";
@@ -25,6 +26,7 @@ interface PageReads {
   lang: SupportedLang;
   now: Date;
   hsscLine: readonly HsscLineStation[];
+  catalogStops: readonly ScheduleStop[];
   groups: Map<string, Promise<LiveGroup>>;
   schedules: Map<string, Promise<SmartSchedule>>;
   latestSchedules: Map<string, Promise<SmartSchedule>>;
@@ -47,7 +49,7 @@ export class BusStopArrivalsService {
     const stop = await this.index.findStop(stopId);
     if (!stop) return null;
     const now = this.clock.now();
-    const reads: PageReads = { lang, now, hsscLine: stop.snapshot.hssc, groups: new Map(), schedules: new Map(), latestSchedules: new Map(), followingWeeks: new Map() };
+    const reads: PageReads = { lang, now, hsscLine: stop.snapshot.hssc, catalogStops: stop.snapshot.catalog.stops, groups: new Map(), schedules: new Map(), latestSchedules: new Map(), followingWeeks: new Map() };
     const entries = await Promise.all(stop.routes.map((route) => this.toEntry(route, reads).catch((err: unknown) => this.leaveOut(stop.id, route, err))));
     const page = { stop: toStopBlock(stop, this.index.servedRecordOf(stop, lang)), routes: entries.flatMap((entry) => (entry ? [entry] : [])) };
     return withMeta(page, { serverNow: toKstInstant(now.getTime()) });
@@ -64,12 +66,14 @@ export class BusStopArrivalsService {
   private async toJongroEntry(route: JongroStopRoute, reads: PageReads): Promise<StopArrivalsRoute | null> {
     const group = await this.groupOf(route.groupId, reads);
     if (group.stationsVersion !== route.stationsVersion) return null;
-    return toLiveEntry(route, group, { label: t(`busconfig.label.${route.groupId}`, reads.lang), towards: route.towards });
+    return toLiveEntry(route, group, { label: t(`busconfig.label.${route.groupId}`, reads.lang), towards: route.towards, action: "board" });
   }
 
   private async toHsscEntry(route: HsscStopRoute, reads: PageReads): Promise<StopArrivalsRoute> {
     const group = await this.groupOf(route.groupId, reads);
-    return toLiveEntry(route, group, { label: t(`busconfig.label.${route.groupId}`, reads.lang), towards: toTowards(reads.hsscLine, route.stationIndex) });
+    const towards = toTowards(toCatalogNamedLine(reads.hsscLine, reads.catalogStops, reads.lang), route.stationIndex);
+    const action = reads.hsscLine[route.stationIndex]?.isAlightOnly ? "alight" : "board";
+    return toLiveEntry(route, group, { label: t(`busconfig.label.${route.groupId}`, reads.lang), towards, action });
   }
 
   private async toShuttleEntry(route: ShuttleStopRoute, reads: PageReads): Promise<StopArrivalsRoute> {

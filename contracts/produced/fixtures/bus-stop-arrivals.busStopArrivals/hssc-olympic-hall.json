@@ -1,0 +1,89 @@
+{
+  "_about": "Synthetic, never captured: GET /bus/stops/hssc-olympic-hall/arrivals at 14:10 KST on Tuesday 2026-10-20, Accept-Language ko, over the stores of __tests__/nest/bus/bus-stop-arrivals.routes.test.ts with bus-stops revision 1 flagging 올림픽기념국민생활관 and 혜화동우체국 isAlightOnly (\"drop-off-only HSSC stops\"): a drop-off-only stop, so its live entry's action is alight, heading towards 혜화동우체국 by its stop's name, with one bus behind the layover; untrimmed.",
+  "data": {
+    "stop": {
+      "id": "hssc-olympic-hall",
+      "name": "올림픽기념국민생활관"
+    },
+    "routes": [
+      {
+        "kind": "live",
+        "groupId": "hssc",
+        "label": "인사캠 셔틀버스",
+        "stationIndex": 3,
+        "towards": "혜화동우체국",
+        "action": "alight",
+        "stationsVersion": null,
+        "updatedAt": "2026-10-20T10:00:00+09:00",
+        "operation": "running",
+        "vehicles": [
+          {
+            "id": "32149",
+            "plateNumber": null,
+            "occupancy": null,
+            "isLastBus": null,
+            "isLowFloor": null,
+            "position": {
+              "stationIndex": 7,
+              "status": "inTransit",
+              "progress": null,
+              "sectionMeters": null,
+              "coords": null,
+              "nextStationAt": "2026-10-20T14:10:40+09:00",
+              "positionAt": "2026-10-20T14:09:30+09:00",
+              "checkedAt": "2026-10-20T10:00:00+09:00"
+            },
+            "trajectory": [
+              {
+                "at": "2026-10-20T14:09:30+09:00",
+                "s": 7
+              },
+              {
+                "at": "2026-10-20T14:10:40+09:00",
+                "s": 8
+              },
+              {
+                "at": "2026-10-20T14:11:43+09:00",
+                "s": 8
+              },
+              {
+                "at": "2026-10-20T14:12:11+09:00",
+                "s": 9
+              },
+              {
+                "at": "2026-10-20T14:12:41+09:00",
+                "s": 9
+              },
+              {
+                "at": "2026-10-20T14:13:38+09:00",
+                "s": 10
+              },
+              {
+                "at": "2026-10-20T14:14:11+09:00",
+                "s": 10
+              },
+              {
+                "at": "2026-10-20T14:14:41+09:00",
+                "s": 11
+              }
+            ]
+          }
+        ],
+        "arrivals": [
+          {
+            "status": "waitingToDepart",
+            "expectedArrivalAt": null,
+            "expectedDepartureAt": null,
+            "scheduledArrivalAt": null,
+            "scheduledDepartureAt": null,
+            "basis": "estimate",
+            "stopsAway": 7,
+            "isLastBus": null,
+            "vehicleId": "32149",
+            "providerText": null
+          }
+        ]
+      }
+    ]
+  }
+}
