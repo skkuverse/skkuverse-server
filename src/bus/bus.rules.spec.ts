@@ -9,8 +9,12 @@
  * The TOPIS key's format check is src/infra/required-env.spec.ts's. The HSSC
  * line passes through the Hyehwa Rotary at positions 5 and 7, the stored line's
  * null stops and the positions the HSSC estimates skip.
+ * Where an HSSC station heads (the next position with a stop, round the loop)
+ * and whether riders board or only get off there, which the stop page and the
+ * stop list both serve: toTowards moved here unchanged from
+ * src/bus/stop-arrivals/bus-stop-arrivals.rules.spec.ts.
  */
-import { deepFreeze, isHsscPassThrough, serviceConfigOf, toPoleStopId, toServedArsId } from "./bus.rules";
+import { deepFreeze, isHsscPassThrough, serviceConfigOf, toPoleStopId, toServedArsId, toStationAction, toTowards } from "./bus.rules";
 
 describe("deepFreeze", () => {
   it("freezes every nested object and array, and returns the same value", () => {
@@ -158,5 +162,36 @@ describe("toPoleStopId", () => {
 
     // Act & Assert
     expect(toPoleStopId("00000", aliases)).toBeNull();
+  });
+});
+
+describe("toTowards", () => {
+  const station = (name: string, stopId: string | null) => ({ name, stopId });
+  const line = [station("농구장", "a"), station("600주년(하교)", "b"), station("혜화동로터리", null), station("혜화역", "c")];
+
+  it.each([
+    [0, "600주년(하교)"],
+    [1, "혜화역"],
+    [3, "농구장"],
+  ])("station %i heads towards %s, the next with a stop round the loop", (stationIndex, expected) => {
+    // Act & Assert
+    expect(toTowards(line, stationIndex)).toBe(expected);
+  });
+
+  it("answers null on a line with no other stop", () => {
+    // Act & Assert
+    expect(toTowards([station("농구장", "a"), station("로터리", null)], 0)).toBeNull();
+  });
+});
+
+describe("toStationAction", () => {
+  it.each([
+    ["a drop-off-only station", { isAlightOnly: true }, "alight"],
+    ["a station flagged false", { isAlightOnly: false }, "board"],
+    ["a station stored without the flag", {}, "board"],
+    ["no station, as on a Jongno route", undefined, "board"],
+  ])("riders at %s: %s", (_case, station, expected) => {
+    // Act & Assert
+    expect(toStationAction(station)).toBe(expected);
   });
 });

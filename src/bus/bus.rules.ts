@@ -54,3 +54,17 @@ export function toPoleStopId(arsId: string | null, stopIdByArsId: ReadonlyMap<st
   if (poleArsId === null) return null;
   return stopIdByArsId.get(poleArsId) ?? `${TOPIS_STOP_ID_PREFIX}${poleArsId}`;
 }
+
+/** WHY: the next station of the HSSC loop a rider can get off at; its next position can be a rotary pass. */
+export function toTowards(line: ReadonlyArray<{ name: string; stopId: string | null }>, stationIndex: number): string | null {
+  for (let ahead = 1; ahead < line.length; ahead++) {
+    const station = line[(stationIndex + ahead) % line.length];
+    if (station?.stopId) return station.name;
+  }
+  return null;
+}
+
+// WHY: riders may only get off at an HSSC drop-off-only station; they board at every other, and on every Jongno route.
+export function toStationAction(station: { isAlightOnly?: boolean } | undefined): "board" | "alight" {
+  return station?.isAlightOnly ? "alight" : "board";
+}

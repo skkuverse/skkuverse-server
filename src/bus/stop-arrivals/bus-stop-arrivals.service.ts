@@ -6,7 +6,8 @@ import { t } from "../../infra/i18n";
 import { createLogThrottle } from "../../infra/log-throttle";
 import logger from "../../infra/logger";
 import type { SupportedLang } from "../../infra/types";
-import { toKstInstant } from "../bus.mapper";
+import { toCatalogNamedLine, toKstInstant } from "../bus.mapper";
+import { toStationAction, toTowards } from "../bus.rules";
 import { BusEtaSmartService } from "../eta/smart/bus-eta-smart.service";
 import { BusLiveGroupService } from "../live/group/bus-live-group.service";
 import type { LiveGroup } from "../live/bus-live.wire";
@@ -16,8 +17,8 @@ import type { ScheduleStop } from "../stops/bus-stops.types";
 import { BusStopIndexService } from "../stop-index/bus-stop-index.service";
 import type { HsscStopRoute, JongroStopRoute, ShuttleStopRoute, StopRoute } from "../stop-index/bus-stop-index.types";
 import { LEFT_OUT_LOG_INTERVAL_MS, NEXT_RUN_COUNT, OPERATION_BY_SCHEDULE_STATUS } from "./bus-stop-arrivals.constants";
-import { toCatalogNamedLine, toLiveEntry, toStopBlock, toTimetableEntry } from "./bus-stop-arrivals.mapper";
-import { toTimetableArrivals, toTowards } from "./bus-stop-arrivals.rules";
+import { toLiveEntry, toStopBlock, toTimetableEntry } from "./bus-stop-arrivals.mapper";
+import { toTimetableArrivals } from "./bus-stop-arrivals.rules";
 import type { StopArrivalsRoute, TimetableArrival } from "./bus-stop-arrivals.types";
 import type { BusStopArrivals, BusStopArrivalsMeta } from "./bus-stop-arrivals.wire";
 
@@ -72,7 +73,7 @@ export class BusStopArrivalsService {
   private async toHsscEntry(route: HsscStopRoute, reads: PageReads): Promise<StopArrivalsRoute> {
     const group = await this.groupOf(route.groupId, reads);
     const towards = toTowards(toCatalogNamedLine(reads.hsscLine, reads.catalogStops, reads.lang), route.stationIndex);
-    const action = reads.hsscLine[route.stationIndex]?.isAlightOnly ? "alight" : "board";
+    const action = toStationAction(reads.hsscLine[route.stationIndex]);
     return toLiveEntry(route, group, { label: t(`busconfig.label.${route.groupId}`, reads.lang), towards, action });
   }
 
