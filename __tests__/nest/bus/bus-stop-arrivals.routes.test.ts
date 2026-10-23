@@ -410,6 +410,26 @@ describe("GET /bus/stops/:stopId/arrivals: Jongno entries", () => {
     expectWire(busStopArrivals, res.body.data);
   });
 
+  it("Registry route missing: 503 for a local stop only its aliased pole's route serves, by its id and its pole's", async () => {
+    // Arrange
+    const stores = freshStores();
+    const data = busStopsFixture() as { stops: Array<Record<string, unknown>> };
+    data.stops.push({ id: "hssc-jongro-only", name: { ko: "종로 전용", en: "Jongno only", zh: "钟路专用" }, arsIds: ["01616"] });
+    stores.stops.storeStops(data);
+    stores.registry.routes.delete("jongro07");
+    const server = await boot(stores);
+
+    // Act
+    const byId = await request(server).get("/bus/stops/hssc-jongro-only/arrivals");
+    const byPole = await request(server).get("/bus/stops/seoul-01616/arrivals");
+
+    // Assert
+    for (const res of [byId, byPole]) {
+      expect(res.status).toBe(503);
+      expect(res.body.error.code).toBe("JONGRO_REGISTRY_UNAVAILABLE");
+    }
+  });
+
   it("Attributes never read: 200 with the stop block and no Jongno entry", async () => {
     // Arrange
     const stores = { ...freshStores(), attributes: new FakeBusRouteAttributesRepository() };

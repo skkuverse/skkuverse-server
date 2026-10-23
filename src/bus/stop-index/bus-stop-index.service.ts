@@ -13,7 +13,7 @@ import { BusRoutePathService } from "../route-path/bus-route-path.service";
 import { BusStopsService } from "../stops/bus-stops.service";
 import { REGISTRY_RETRY_MS, STOP_INDEX_LOG_INTERVAL_MS } from "./bus-stop-index.constants";
 import { toPoleCoords } from "./bus-stop-index.mapper";
-import { toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
+import { hasPoleAliases, toPoleArsId, toStopIndex } from "./bus-stop-index.rules";
 import type { FoundStop, IndexedStop, StopIndex } from "./bus-stop-index.types";
 
 interface BuiltIndex {
@@ -45,7 +45,7 @@ export class BusStopIndexService {
     const canonicalId = arsId === null ? stopId : (index.stopIdByArsId.get(arsId) ?? this.aliasOwnerWhileUnread(index, arsId));
     const stop = canonicalId === undefined ? undefined : index.stopById.get(canonicalId);
     if (stop) return { ...stop, snapshot: index.snapshot, coords: stop.localStop?.coords ?? (await this.poleCoordsOf(stop)) };
-    if (arsId !== null && index.registryFailure !== undefined) throw this.toRegistryUnavailable(index.registryFailure);
+    if (index.registryFailure !== undefined && this.isPoleOrAliasing(index, stopId, arsId)) throw this.toRegistryUnavailable(index.registryFailure);
     return null;
   }
 
@@ -78,6 +78,11 @@ export class BusStopIndexService {
   // WHY: an aliased pole is the dataset's, so its local stop still serves while the registry that lists it cannot be read.
   private aliasOwnerWhileUnread(index: StopIndex, arsId: string): string | undefined {
     return index.registryFailure === undefined ? undefined : index.snapshot.stopIdByArsId.get(arsId);
+  }
+
+  // WHY: only a pole, or a local stop standing for one, may be served by a route the index left out; any other id is gone.
+  private isPoleOrAliasing(index: StopIndex, stopId: string, arsId: string | null): boolean {
+    return arsId !== null || hasPoleAliases(index.snapshot, stopId);
   }
 
   private toRegistryUnavailable(failure: unknown): AppError {

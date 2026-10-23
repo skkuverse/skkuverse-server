@@ -136,7 +136,7 @@ A run is listed while its time at this stop is not before the current minute in 
 | --- | --- | --- |
 | `404` | `BUS_STOP_NOT_FOUND` | The id is malformed, or no served route stops at it (`seoul-99999`, a pole TOPIS removed) |
 | `503` | `BUS_STOPS_UNAVAILABLE` | This replica has never read a good `bus-stops` value; no `Cache-Control` |
-| `503` | `JONGRO_REGISTRY_UNAVAILABLE` | A `seoul-` pole is asked for while a Jongno route's stored registry cannot be read, and neither a readable route nor an alias names the pole |
+| `503` | `JONGRO_REGISTRY_UNAVAILABLE` | While a Jongno route's stored registry cannot be read: a `seoul-` pole that neither a readable route nor an alias names, or a local stop that aliases a pole (`arsIds`) and that no readable route serves |
 
 A Jongno route whose stored registry cannot be read is left out of the stop index, logged at error as `bus.stop_index.registry_unread` at most once a minute, and read again at most every `REGISTRY_RETRY_MS`; an aliased pole on it still answers its local stop's page. A route whose other source cannot be read (its attributes for a Jongno entry, the timetable for a shuttle entry) is left out of `routes` and logged at error as `bus.stop_arrivals.route_left_out`, at most once a minute per route. Either way the rest of the page is served with `200`. A Jongno entry whose live answer was placed by another stations version than the index (a TOPIS sync between the two reads) is left out of that one response.
 

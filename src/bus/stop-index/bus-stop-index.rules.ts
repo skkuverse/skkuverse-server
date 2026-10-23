@@ -12,6 +12,10 @@ export function toPoleArsId(stopId: string): string | null {
   return ARS_ID_PATTERN.test(arsId) ? arsId : null;
 }
 
+export function hasPoleAliases(snapshot: BusStopsSnapshot, stopId: string): boolean {
+  return (snapshot.catalog.stops.find((stop) => stop.id === stopId)?.arsIds?.length ?? 0) > 0;
+}
+
 class StopIndexBuilder {
   readonly stopById = new Map<string, IndexedStop>();
   readonly stopIdByArsId = new Map<string, string>();

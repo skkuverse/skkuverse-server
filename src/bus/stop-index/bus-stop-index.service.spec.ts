@@ -4,7 +4,7 @@
  * revision and every stations version stay, and rebuilt when one changes. An alias no stored station has is warned
  * once per revision. `findStop` resolves a stop id, an aliased pole's to its local stop, with the stop's own
  * coordinates or its pole's on the stored route line; an unread registry route is left out, and a pole only it
- * could name is that route's 503, not a 404. With the stops never read, the index is the stops' 503.
+ * could name, or a local stop aliasing a pole that no readable route serves, is that route's 503, not a 404. With the stops never read, the index is the stops' 503.
  *
  * The registry's cached loader reads `Date.now()`, so its TTL is crossed with Jest's fake system time.
  */
@@ -306,5 +306,32 @@ describe("BusStopIndexService.findStop while the registry cannot be read", () =>
     // Assert
     expect(stop?.id).toBe("hssc-bus-lot");
     expect(stop?.routes.map((route) => route.groupId)).toEqual(["campus", "campus"]);
+  });
+
+  // WHY: 404 tells a client the stop is gone; a local stop only an unread route serves is that route's 503, as its pole is.
+  it("answers the 503 for a local stop only its aliased pole's unread route serves, by its id and by its pole's", async () => {
+    // Arrange
+    const { service, stopsRepository, registryRepository, data } = setup();
+    data.stops.push({ id: "hssc-jongro-only", name: { ko: "종로 전용", en: "Jongno only", zh: "钟路专用" }, arsIds: ["01616"] } as FixtureStop);
+    stopsRepository.storeStops(data);
+    registryRepository.routes.delete("jongro07");
+
+    // Act & Assert
+    await expect(service.findStop("hssc-jongro-only")).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE", httpStatus: 503 });
+    await expect(service.findStop("seoul-01616")).rejects.toMatchObject({ code: "JONGRO_REGISTRY_UNAVAILABLE", httpStatus: 503 });
+  });
+
+  it("finds that local stop once its route can be read, and answers null for a local stop that aliases nothing", async () => {
+    // Arrange
+    const { service, stopsRepository, data } = setup();
+    data.stops.push({ id: "hssc-jongro-only", name: { ko: "종로 전용", en: "Jongno only", zh: "钟路专용" }, arsIds: ["01616"] } as FixtureStop);
+    stopsRepository.storeStops(data);
+
+    // Act
+    const stop = await service.findStop("hssc-jongro-only");
+
+    // Assert
+    expect(stop?.routes.map((route) => route.groupId)).toEqual(["jongro07"]);
+    expect(await service.findStop("hssc-nowhere")).toBeNull();
   });
 });
