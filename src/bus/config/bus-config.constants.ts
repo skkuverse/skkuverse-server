@@ -15,10 +15,10 @@ export const COMMUTE_SERVICE_IDS = STOP_SERVICE_IDS_BY_GROUP_ID.commute;
 // is a loop whose trajectories pass the last index, and Jongno 02 repeats its terminal instead (D7).
 export const HSSC_LIVE_SCREEN = {
   isLoop: true,
-  capabilities: { positionSource: "stopEvents", occupancy: false, plateNumber: false, lastBus: false },
+  capabilities: { positionSource: "stopEvents", occupancy: false, plateNumber: false, lastBus: false, lowFloor: false },
 } as const;
 
 export const JONGRO_LIVE_SCREEN = {
   isLoop: false,
-  capabilities: { positionSource: "gps", occupancy: true, plateNumber: true, lastBus: true },
+  capabilities: { positionSource: "gps", occupancy: true, plateNumber: true, lastBus: true, lowFloor: true },
 } as const;

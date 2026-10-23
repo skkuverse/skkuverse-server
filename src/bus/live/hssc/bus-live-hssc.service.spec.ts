@@ -1,7 +1,8 @@
 /**
  * BusLiveHsscService over the HSSC buses cached in an in-memory bus_cache, the engine and the stored stops: each
  * cached bus anchored on its latest event and estimated at every stop of the line, the rotary passes never listed,
- * a bus standing at a stop leaving after the rest of its dwell, and the line without data when no bus is cached.
+ * a bus standing at a stop arriving there with no departure instant until it leaves (ADR 0019, D14), its marker held there
+ * for the rest of its dwell, and the line without data when no bus is cached.
  * A bus whose feed said it left the turnaround (seq 5) stays there, waiting to depart, until its next stop's event (ADR 0018, D7), and
  * a bus the poller holds on an earlier row is served there, a cache entry without that row read as the feed's (D8).
  */
@@ -42,7 +43,7 @@ describe("BusLiveHsscService.findLiveGroup", () => {
     // Assert
     expect(group.stations.map(({ stationIndex }) => stationIndex)).toEqual([0, 1, 2, 3, 4, 6, 8, 9, 10]);
     expect(group.stations.find(({ stationIndex }) => stationIndex === 6)!.arrivals).toMatchObject([
-      { status: "atStop", stopsAway: 0, expectedDepartureAt: "2026-10-20T10:01:14+09:00", vehicleId: "32149" },
+      { status: "arriving", stopsAway: 0, expectedArrivalAt: null, expectedDepartureAt: null, vehicleId: "32149" },
     ]);
     expect(group.vehicles).toMatchObject([{ id: "32149", position: { stationIndex: 6, status: "atStop" } }]);
     expect(group.vehicles[0]!.trajectory!.slice(0, 2)).toEqual([
@@ -54,6 +55,57 @@ describe("BusLiveHsscService.findLiveGroup", () => {
   it("serves no data and no station when no bus is cached", async () => {
     // Act & Assert
     expect(await service(new FakeBusCacheRepository()).findLiveGroup()).toMatchObject({ operation: "noData", stations: [], vehicles: [], updatedAt: null });
+  });
+});
+
+// WHY: Seoul BIS signage: a bus standing at a stop reads arriving until it leaves, then the next bus takes the stop (ADR 0019, D14).
+describe("BusLiveHsscService.findLiveGroup with a bus standing at a stop", () => {
+  // Hyehwa Station exit 1 (seq 0) is the line's station 6; 32150 left the Hyehwa-dong post office stop (seq 9) 10 s ago, on its way there.
+  const comingUp = hsscBusDoc({ line_no: "32150", seq: "9", inout: "LEFT", sequence: "5", get_date: "2026-10-20 오전 9:59:50", eventDate: "2026-10-20 09:59:50" });
+  const atHyehwa = (inout: string, getDate: string) => hsscBusDoc({ line_no: "32149", seq: "0", inout, sequence: "7", get_date: `2026-10-20 오전 ${getDate}`, eventDate: "2026-10-20 09:58:20" });
+  const liveArrivals = (group: Awaited<ReturnType<BusLiveHsscService["findLiveGroup"]>>) => group.stations.flatMap(({ arrivals }) => arrivals);
+
+  it("serves it first at its stop as arriving, 0 stops away, with no departure instant, the bus behind it next", async () => {
+    // Arrange
+    const busCache = new FakeBusCacheRepository();
+    busCache.values.set("hssc", [comingUp, atHyehwa("ENTERED", "9:58:20")]);
+
+    // Act
+    const group = await service(busCache).findLiveGroup();
+
+    // Assert
+    expect(group.stations.find(({ stationIndex }) => stationIndex === 6)!.arrivals.map(({ status, stopsAway, vehicleId, expectedArrivalAt, expectedDepartureAt }) => [status, stopsAway, vehicleId, expectedArrivalAt, expectedDepartureAt])).toEqual([
+      ["arriving", 0, "32149", null, null],
+      ["enRoute", 1, "32150", expect.any(String), null],
+    ]);
+    expect(liveArrivals(group).map(({ expectedDepartureAt }) => expectedDepartureAt)).toEqual(liveArrivals(group).map(() => null));
+  });
+
+  it("hands its stop to the next bus once it left, itself a lap away behind the layover", async () => {
+    // Arrange
+    const busCache = new FakeBusCacheRepository();
+    busCache.values.set("hssc", [comingUp, atHyehwa("LEFT", "9:59:40")]);
+
+    // Act
+    const group = await service(busCache).findLiveGroup();
+
+    // Assert
+    expect(group.stations.find(({ stationIndex }) => stationIndex === 6)!.arrivals.map(({ status, stopsAway, vehicleId }) => [status, stopsAway, vehicleId])).toEqual([
+      ["enRoute", 1, "32150"],
+      ["waitingToDepart", 9, "32149"],
+    ]);
+  });
+
+  it("keeps a bus laying over at 농구장 waiting to depart there, never arriving", async () => {
+    // Arrange
+    const busCache = new FakeBusCacheRepository();
+    busCache.values.set("hssc", [hsscBusDoc({ line_no: "32151", seq: "5", inout: "ENTERED", sequence: "1", get_date: "2026-10-20 오전 9:57:00", eventDate: "2026-10-20 09:57:00" })]);
+
+    // Act
+    const group = await service(busCache).findLiveGroup();
+
+    // Assert
+    expect(group.stations[0]).toMatchObject({ stationIndex: 0, arrivals: [{ status: "waitingToDepart", stopsAway: 0, vehicleId: "32151", expectedArrivalAt: null, expectedDepartureAt: null }] });
   });
 });
 

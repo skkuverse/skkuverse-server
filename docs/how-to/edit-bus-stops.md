@@ -35,7 +35,7 @@ Every stop of a sequence or the HSSC line, and every Jongno pole, has a stop pag
 | A shuttle entry's next runs | The stored timetable and estimates, through the smart schedule; boarding and drop-off stops alike |
 | An HSSC entry's buses | `bus_cache`, as the HSSC realtime route serves them |
 
-Every realtime station of `/bus/config` names its stop page as `stopId`, its last field: an HSSC position its `stopId` here, a Jongno station `seoul-<ARS number>` or the local stop aliasing it, and a position with none (the two non-stop 혜화동로터리 rows) no key ([bus-stops-api.md](../reference/bus-stops-api.md#stop-ids-on-the-realtime-stations)).
+Every realtime station of `/bus/config` names its stop page as `stopId`, its last field: an HSSC position its `stopId` here, a Jongno station `seoul-<ARS number>` or the local stop aliasing it, and a position with none (the two non-stop 혜화동로터리 rows) no key ([bus-stops-api.md](../reference/bus-stops-api.md#stop-ids-on-the-realtime-stations)). A position with none is a pass-through: `/bus/config` serves it `isPassThrough: true` and the app shows "미정차" there, so set a position's `stopId` to `null` only where the bus never stops.
 
 A push that changes a stop, a sequence or an alias reaches its page within a minute, and an alias the `stopId` of its pole's stations in each Jongro group, whose ETag changes with it. A slug renamed or removed answers `404` on its page, so never rename a served one: the app may hold it.
 

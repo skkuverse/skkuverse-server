@@ -35,7 +35,7 @@ audience: internal
     "updatedAt": "2026-10-20T09:59:55+09:00",
     "operation": "running",
     "vehicles": [{
-      "id": "32149", "plateNumber": null, "occupancy": null, "isLastBus": null,
+      "id": "32149", "plateNumber": null, "occupancy": null, "isLastBus": null, "isLowFloor": null,
       "position": {
         "stationIndex": 6, "status": "inTransit", "progress": null, "sectionMeters": null, "coords": null,
         "nextStationAt": "2026-10-20T10:00:20+09:00", "positionAt": "2026-10-20T09:59:50+09:00", "checkedAt": "2026-10-20T09:59:55+09:00"
@@ -87,18 +87,17 @@ One bus at one station. Every key is always present; null means unknown.
 | --- | --- | --- |
 | `status` | enum | Below |
 | `expectedArrivalAt` | instant \| null | When it reaches this station |
-| `expectedDepartureAt` | instant \| null | When it leaves it: a bus standing here |
+| `expectedDepartureAt` | instant \| null | Always null on a live line: a standing bus is `arriving` with no departure countdown ([ADR 0019, D14](../decisions/0019-bus-live-api.md)). Only a stop page's timetable run carries one |
 | `scheduledArrivalAt`, `scheduledDepartureAt` | instant \| null | The timetable's; null on a live line |
 | `basis` | enum | `provider` (TOPIS predicted it), `estimate` (this server did, from the HSSC engine) or `timetable` |
-| `stopsAway` | int \| null | The stations with a stop the bus reaches first, plus one: `1` its next stop, `0` standing here. A bus that just left is a lap away on a loop. On Jongno it is one more than TOPIS's own count (the `N` of `[N번째 전]` in `providerText`, so 곧 도착 is `1`), and `0` only where a row still names a bus its position shows standing at that station: TOPIS drops a bus from its station's row once it stands there, so a standing Jongno bus usually shows only as its vehicle's `atStop` position. Null when TOPIS names no vehicle |
+| `stopsAway` | int \| null | The stations with a stop the bus reaches first, plus one: `1` its next stop, `0` standing here. A bus that just left is a lap away on a loop. On Jongno it is one more than TOPIS's own count (the `N` of `[N번째 전]` in `providerText`, so 곧 도착 is `1`), and `0` for a bus its position shows standing at the station, which is served there first even though TOPIS drops a standing bus from its station's row. Null when TOPIS names no vehicle |
 | `isLastBus` | boolean \| null | The named vehicle's own `isLastBus`, the same on every arrival naming it; for a slot that names no vehicle, that slot's flag. Null on the HSSC line |
 | `vehicleId` | string \| null | A key of `vehicles`; null when the source names no vehicle (TOPIS's 출발대기 slot) |
 | `providerText` | string \| null | The upstream's own text as received (TOPIS `arrmsg`, Korean); null on the HSSC line |
 
 | `status` | Meaning | Instants |
 | --- | --- | --- |
-| `atStop` | Standing at this station | `expectedDepartureAt` |
-| `arriving` | The source says it is about to arrive (TOPIS 곧 도착); never set from the server's clock | `expectedArrivalAt` when TOPIS gives a time |
+| `arriving` | At or standing at this station (`stopsAway: 0`), from the moment it is there until it leaves, or the source says it is about to arrive (TOPIS 곧 도착); never set from the server's clock | `expectedArrivalAt` when TOPIS gives a time for a bus about to arrive; null for a standing bus |
 | `enRoute` | On its way | `expectedArrivalAt` |
 | `waitingToDepart` | Must still leave its origin or turnaround first (TOPIS 출발대기, the HSSC 농구장 layover, including an HSSC bus whose feed said it left 농구장 while no later stop has reported it: it may be laying over just past the stop) | none |
 | `scheduled` | A timetable run with no live vehicle (the stop page only) | the scheduled pair, the estimate when one exists |
@@ -106,7 +105,11 @@ One bus at one station. Every key is always present; null means unknown.
 
 A Jongno instant is TOPIS's own: when it made the row (`mkTm`) plus its travel time, else plus the time in its text. An HSSC instant is the engine's, from the measured medians ([ADR 0018](../decisions/0018-hssc-arrival-estimates.md)); it never crosses the layover, so a bus that must lay over first is `waitingToDepart`. A late HSSC bus is due at `serverNow` until its next stop event is more than 120 s past the travel median, never in the past; past it the bus is `unknown` at every station, its position kept as last seen, and its `trajectory` and `nextStationAt` are null (ADR 0018, D6). An HSSC bus whose feed says it left 농구장 stays there, `waitingToDepart` at every station with its position `waitingToDepart` and no `trajectory` or `nextStationAt`, until the feed reports a later stop of its lap, with no bound but the layover's 15 minutes (ADR 0018, D7).
 
-Order: a bus at the station first (standing there, or laying over at its own turnaround, the one a rider boards there), then `arriving` and `enRoute` by instant, then `waitingToDepart` by `stopsAway`, then `unknown`. On Jongno the order is TOPIS's first and second bus.
+Order: a bus at the station first (standing there, or laying over at its own turnaround, the one a rider boards there), then `arriving` and `enRoute` by instant, then `waitingToDepart` by `stopsAway`, then `unknown`. On Jongno a bus whose position stands at the station comes first, `arriving` and `0`, its `providerText` the row's text when a row still names it there and null otherwise; then TOPIS's first and second bus without it, two arrivals at most.
+
+A standing bus has no departure instant (ADR 0019, D14): an HSSC dwell estimate is a median, so a bus leaves before half the times it would show. Once the bus leaves (an HSSC `LEFT`, a Jongno position past the station), the station's next arrival takes over; an HSSC bus that just left is a lap away, behind the layover.
+
+The arrival `status` lost `atStop` on 2026-10-23: a standing bus is `arriving`. A client that still knows `atStop` never receives it.
 
 ## Vehicles
 
@@ -116,6 +119,7 @@ Order: a bus at the station first (standing there, or laying over at its own tur
 | `plateNumber` | string \| null | The full plate (`서울74사5537`); shorten it on the client if the design wants the last four digits |
 | `occupancy` | object \| null | `{ level: "relaxed" \| "normal" \| "crowded", passengerCount: int \| null }`, from the TOPIS row nearest ahead of the bus |
 | `isLastBus` | boolean \| null | True when any TOPIS row naming the bus says 막차 (TOPIS flags it per row, and a 곧 도착 row carries no [막차] text); every arrival naming the bus carries this value. Null when no row names the bus |
+| `isLowFloor` | boolean \| null | True for a low-floor bus (저상버스), false for a general one, from TOPIS's bus type: its position row's when it has a position, else the arrival row its plate comes from, never a mix ([ADR 0019, D13](../decisions/0019-bus-live-api.md)). Null when that row names no type (an articulated bus, a row written before the field shipped) and always on the HSSC line |
 | `position` | object \| null | Null for a bus an arrival names but no position row has |
 | `trajectory` | array \| null | Knots `{ at, s }`, ascending; null when the bus is not moving or has no position |
 
@@ -144,11 +148,27 @@ Every enum may gain a value. A client that meets one it does not know:
 
 Parse each station and each vehicle on its own: one that fails to parse is skipped, never the whole answer.
 
+## States a client can show
+
+| Level | State | Shown as | From |
+| --- | --- | --- | --- |
+| A bus at a station | `enRoute` | Minutes until `expectedArrivalAt`, and `stopsAway` | arrival `status` |
+| A bus at a station | `arriving` | 곧 도착: about to arrive, or standing there until it leaves | arrival `status` |
+| A bus at a station | `waitingToDepart` | 출발대기 (the HSSC 회차 대기): a layover of minutes, never 곧 도착 | arrival `status` |
+| A bus at a station | `unknown` | Its `providerText`, or skip it when that is null | arrival `status` |
+| A run at a stop (stop page) | `scheduled` | The run's time at the stop, scheduled or estimated, departure at a boarding stop | arrival `status` on a timetable entry |
+| A station or line | `running`, `ended`, `noData` | The arrivals; 운행종료; no information | station and group `operation` |
+| A station | 미정차 | The line passes it without stopping | `/bus/config` station `isPassThrough` |
+| A bus | 막차 | Last-bus badge | `isLastBus` on the vehicle and every arrival naming it |
+| A bus | 저상 | Low-floor badge | the vehicle's `isLowFloor` when `true` (see Low floor below) |
+
 ## What the client computes
 
 - **Clock.** `offset` is the largest `serverNow − receipt` over the last five responses (the app's `server-clock.rules.ts`).
-- **Minutes.** `remaining = expectedArrivalAt − (deviceNow + offset)`. Show `max(1, round(remaining / 60))` minutes; show 곧 도착 when `status` is `arriving` or `remaining ≤ 60 s`, and keep showing it while the arrival is overdue by up to two minutes; past that, drop the arrival until the next poll replaces it.
+- **Minutes.** `remaining = expectedArrivalAt − (deviceNow + offset)`. Show `max(1, round(remaining / 60))` minutes; show 곧 도착 when `status` is `arriving` or `remaining ≤ 60 s`, and keep showing it while the arrival is overdue by up to two minutes; past that, drop the arrival until the next poll replaces it. An `arriving` arrival with a null `expectedArrivalAt` (a standing bus) shows 곧 도착 until a poll stops serving it.
+- **No departure countdown.** A live arrival's `expectedDepartureAt` is always null: never show 출발 or a time until the bus leaves. A standing bus is `arriving`.
 - **Markers.** Dim a marker when `checkedAt` is more than 120 s old and freeze it past 180 s, whatever `positionAt` says: a stop-event source repeats its last event until the next stop, so a minutes-old `positionAt` is normal. Move a marker along `trajectory` between knots, linearly, against `serverNow`, and hold it at the last knot. A poll can take a bus back: an estimate that ran ahead of the feed is withdrawn, so a bus is served at an earlier station than before. On the HSSC line the turnaround no longer does (a bus leaves 농구장 only once a later stop reports it, ADR 0018, D7) and a feed row that puts a bus back in its lap is held off (D8), but the rule holds for every line. A client that never moves a driving marker backward still places a standing one (`waitingToDepart`, or `atStop` with no trajectory) on its served station.
+- **Low floor.** Show a 저상 badge on a vehicle whose `isLowFloor` is `true`, and nothing for `false` or `null`. Where `capabilities.lowFloor` is `false` (the HSSC line) hide the badge and any legend for it, since the source never says. A client that wants it on an arrival reads the vehicle its `vehicleId` names; arrivals carry no copy.
 - **Loops.** On a group whose `/bus/config` `isLoop` is true, `s` may pass the last index: place the marker at `s mod stationCount`, the section after the last station leading back to station 0. Jongno 02, whose station list repeats its terminal, is not a loop. The wrap matters only to a client that extrapolates without a cap; one that holds a marker at `stationIndex + 0.95` until a poll confirms the next stop wraps when a poll moves the bus to station 0, and both are valid.
 
 ## Stations version
@@ -168,9 +188,17 @@ Each realtime group's `screen` in `GET /bus/config` and `GET /bus/config/:groupI
 | `liveEndpoint` | `/bus/live/hssc` | `/bus/live/<groupId>` | This route, which the app moves to by OTA |
 | `isLoop` | `true` | `false` | Whether a trajectory's `s` may pass the last index |
 | `capabilities.positionSource` | `stopEvents` | `gps` | Open enum: `gps` brings coordinates and progress |
-| `capabilities.occupancy`, `.plateNumber`, `.lastBus` | `false` | `true` | Whether the source can ever supply them: `false` means always null, `true` that a null is unknown right now |
+| `capabilities.occupancy`, `.plateNumber`, `.lastBus`, `.lowFloor` | `false` | `true` | Whether the source can ever supply them: `false` means always null, `true` that a null is unknown right now |
 
-Each realtime group's ETag and the all-groups ETag changed once, in every language, when the fields shipped.
+Each realtime group's ETag and the all-groups ETag changed once, in every language, when the fields shipped, and once more when `lowFloor` did (2026-10-23).
+
+Each station of a realtime screen also carries `isPassThrough`, right after `isRotationStation`:
+
+| Field | `hssc` | `jongro02`, `jongro07`, `jongro08` | Meaning |
+| --- | --- | --- | --- |
+| `isPassThrough` | `true` at the two non-stop 혜화동로터리 positions (indexes 5 and 7), `false` elsewhere | always `false` | The bus passes without stopping, so this route never serves an arrival there |
+
+A client shows "미정차" instead of an arrival on such a row. It never infers this from a missing `stopId`: a Jongno virtual stop has none either and is still a stop. The realtime ETags changed once more when the field shipped (2026-10-23).
 
 ## The deprecated realtime route
 

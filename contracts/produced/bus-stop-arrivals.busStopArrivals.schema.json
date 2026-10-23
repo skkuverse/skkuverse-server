@@ -173,6 +173,12 @@
                         "null"
                       ]
                     },
+                    "isLowFloor": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
                     "position": {
                       "anyOf": [
                         {
@@ -311,6 +317,7 @@
                     "plateNumber",
                     "occupancy",
                     "isLastBus",
+                    "isLowFloor",
                     "position",
                     "trajectory"
                   ]
@@ -324,7 +331,6 @@
                     "status": {
                       "type": "string",
                       "enum": [
-                        "atStop",
                         "arriving",
                         "enRoute",
                         "waitingToDepart",
@@ -539,6 +545,12 @@
                         "null"
                       ]
                     },
+                    "isLowFloor": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
                     "position": {
                       "anyOf": [
                         {
@@ -677,6 +689,7 @@
                     "plateNumber",
                     "occupancy",
                     "isLastBus",
+                    "isLowFloor",
                     "position",
                     "trajectory"
                   ]
@@ -690,7 +703,6 @@
                     "status": {
                       "type": "string",
                       "enum": [
-                        "atStop",
                         "arriving",
                         "enRoute",
                         "waitingToDepart",

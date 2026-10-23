@@ -123,6 +123,7 @@
               "passengerCount": 9
             },
             "isLastBus": false,
+            "isLowFloor": true,
             "position": {
               "stationIndex": 0,
               "status": "inTransit",

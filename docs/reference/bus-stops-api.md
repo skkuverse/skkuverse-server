@@ -46,7 +46,7 @@ Each station of a realtime group (`hssc`, `jongro02`, `jongro07`, `jongro08`) in
 | A Jongno station | `seoul-<stationNumber>`, or the local stop aliasing that ARS number; no key for a virtual stop (ARS number empty or `0`). A pole a route lists twice (종로02's `01881`) carries its id at both indexes |
 
 ```json
-{ "index": 16, "name": "혜화역1번출구", "subtitle": null, "stationNumber": "01592", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "transferLines": [{ "line": "4", "color": "00A5DE" }], "stopId": "seoul-01592" }
+{ "index": 16, "name": "혜화역1번출구", "subtitle": null, "stationNumber": "01592", "isFirstStation": false, "isLastStation": false, "isRotationStation": false, "isPassThrough": false, "transferLines": [{ "line": "4", "color": "00A5DE" }], "stopId": "seoul-01592" }
 ```
 
 Every other field keeps its value and order, and the schedule groups and `stationEtas[]` gain nothing: removing every `stopId` key leaves the body served before the field, which is what installed apps parse (`parseRealtimeStation` reads named fields only). The field is `stopId` in `busGroup` (`src/bus/config/bus-config.wire.ts`), optional in `contracts/produced/bus-config.busGroup.schema.json`, with the fixtures `realtime-hssc-stop-ids.json` and `realtime-jongro07-stop-ids.json`.
@@ -106,7 +106,7 @@ The published schema (`contracts/produced/bus-stop-arrivals.busStopArrivals.sche
 
 | Entry | Fields |
 | --- | --- |
-| A realtime line, `kind: "live"` | `groupId` (`hssc`, `jongro07`), `label`, `stationIndex` (its index in the group's `/bus/config` stations), `towards` (the next station with a stop: on a Jongno route the next station's name, `null` at the last index; on the HSSC loop the next station past the rotary passes), `stationsVersion` (a Jongno route's, `null` for HSSC), `updatedAt` and `operation` (the station's, `noData` where the live route states nothing), `vehicles` (those its arrivals name) and `arrivals`: exactly the live route's station entry at that index for the same stored state |
+| A realtime line, `kind: "live"` | `groupId` (`hssc`, `jongro07`), `label`, `stationIndex` (its index in the group's `/bus/config` stations), `towards` (the next station with a stop: on a Jongno route the next station's name, `null` at the last index; on the HSSC loop the next station past the rotary passes), `stationsVersion` (a Jongno route's, `null` for HSSC), `updatedAt` and `operation` (the station's, `noData` where the live route states nothing), `vehicles` (those its arrivals name) and `arrivals`: exactly the live route's station entry at that index for the same stored state, so a bus standing at the stop is first, `arriving` with `stopsAway: 0` and no departure instant ([ADR 0019, D14](../decisions/0019-bus-live-api.md)) |
 | A shuttle, `kind: "timetable"` | `groupId` (`campus`, `commute`), `label` (the service's label), `serviceId`, `routeType`, `action` (`board` or `alight`), `operation` (the smart schedule's status: `running` when active, `suspended` or `noData`), `vehicles` (always empty) and `arrivals`, empty unless `operation` is `running` |
 
 A timetable entry lists up to three runs, each an arrival ([bus-live-api.md](bus-live-api.md)) with `status: "scheduled"`, `stopsAway`, `vehicleId` and `providerText` null, and one more field:
@@ -114,7 +114,7 @@ A timetable entry lists up to three runs, each an arrival ([bus-live-api.md](bus
 | Field | Meaning |
 | --- | --- |
 | `runDepartureAt` | The run's departure from its first stop: its identity, so a run with no time at this stop still sorts and labels |
-| `scheduledDepartureAt`, `expectedDepartureAt` | At a boarding stop: the timetable's time here, or the smart schedule's estimate when one was applied at an estimated stop |
+| `scheduledDepartureAt`, `expectedDepartureAt` | At a boarding stop: the timetable's time here, or the smart schedule's estimate when one was applied at an estimated stop. Timetable data, so a run keeps them; a live arrival's are always null |
 | `scheduledArrivalAt`, `expectedArrivalAt` | The same at an alighting stop |
 | `basis` | `estimate` when the time here is an estimate, else `timetable` |
 | `isLastBus` | `true` for the day's last run of the route type |

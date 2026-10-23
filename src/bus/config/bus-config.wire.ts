@@ -14,6 +14,8 @@ const station = z.object({
   subtitle: z.string().nullable(),
   stationNumber: z.string().nullable(),
   ...{ isFirstStation: z.boolean(), isLastStation: z.boolean(), isRotationStation: z.boolean() },
+  /** WHY: the bus passes here without stopping, so no arrival is ever served; a Jongno virtual stop also lacks a stopId. */
+  isPassThrough: z.boolean(),
   transferLines: z.array(z.object({ line: z.string(), color: z.string() })),
   stopId: z.string().optional(),
 });
@@ -44,7 +46,7 @@ const realtimeScreen = z.object({
   /** WHY: on a loop a trajectory's s may pass the last index; place a marker at s mod the station count (ADR 0019, D7). */
   isLoop: z.boolean(),
   /** WHY: what the group's source can never supply; positionSource is an open enum, gps or stopEvents (ADR 0019, D2). */
-  capabilities: z.object({ positionSource: z.string(), occupancy: z.boolean(), plateNumber: z.boolean(), lastBus: z.boolean() }),
+  capabilities: z.object({ positionSource: z.string(), occupancy: z.boolean(), plateNumber: z.boolean(), lastBus: z.boolean(), lowFloor: z.boolean() }),
 });
 
 const scheduleScreen = z.object({

@@ -11,12 +11,13 @@ function toStation({ stationIndex, stopId, etas }: HsscLiveStation): LiveStation
   return { stationIndex, stopId, arsId: null, operation: "running", arrivals: etas.slice(0, MAX_STATION_ARRIVALS).map(toHsscArrival) };
 }
 
-// WHY: a stop-event feed has no coordinates, section or progress (capabilities.positionSource "stopEvents"), nor plates.
+// WHY: a stop-event feed has no coordinates, section or progress (capabilities.positionSource "stopEvents"), nor plates
+// or vehicle types.
 function toVehicle(bus: HsscLiveBus, checkedAt: Date): Vehicle {
   const [next] = bus.lapTimes;
   return {
     id: bus.anchor.vehicleId,
-    ...{ plateNumber: null, occupancy: null, isLastBus: null },
+    ...{ plateNumber: null, occupancy: null, isLastBus: null, isLowFloor: null },
     position: {
       stationIndex: bus.stationIndex,
       status: toHsscPositionStatus(bus),

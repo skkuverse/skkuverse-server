@@ -1,9 +1,9 @@
 {
-  "_about": "Synthetic, never captured, as the live route has no production traffic yet: taken from bus-live.liveGroup/hssc-running.json: the bus standing at its stop.",
+  "_about": "Synthetic, never captured, as the live route has no production traffic yet: taken from bus-live.liveGroup/hssc-running.json: the bus standing at its stop, arriving with no departure instant (ADR 0019, D13).",
   "data": {
-    "status": "atStop",
+    "status": "arriving",
     "expectedArrivalAt": null,
-    "expectedDepartureAt": "2026-10-20T10:00:04+09:00",
+    "expectedDepartureAt": null,
     "scheduledArrivalAt": null,
     "scheduledDepartureAt": null,
     "basis": "estimate",

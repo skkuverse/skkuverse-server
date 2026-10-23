@@ -2,7 +2,9 @@
  * A Jongno group's reading in the live shape (ADR 0019, D1, D5, D6, D8): one vehicle per bus, a
  * position from its tracked state with TOPIS's observation as positionAt and the poller's write as checkedAt, a
  * vehicle an arrival names without a position, each placed row a station with its stop id (aliases resolved), its
- * pole's number, its operation and at most two arrivals, and the group fresh as its staler key.
+ * pole's number, its operation and at most two arrivals, a bus standing at the station first and arriving (D14), and the
+ * group fresh as its staler key. A vehicle is low-floor by one row: its position's bus type when it has a position, else
+ * the arrival row its plate comes from.
  */
 import { jongroArrivalBus, jongroPositionDoc, noArrivalBus } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 import type { RealtimeArrival } from "../../realtime/group/bus-realtime-group.wire";
@@ -89,6 +91,7 @@ describe("toLiveJongroGroup", () => {
           plateNumber: "서울74사5537",
           occupancy: { level: "relaxed", passengerCount: 9 },
           isLastBus: false,
+          isLowFloor: null,
           position: {
             stationIndex: 0,
             status: "inTransit",
@@ -146,7 +149,7 @@ describe("toLiveJongroGroup", () => {
     const group = toLiveJongroGroup("jongro07", reading({ rows: [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [unseen] }], positions: [] }), new Map());
 
     // Assert
-    expect(group.vehicles).toEqual([{ id: "100000200", plateNumber: "서울74사5600", occupancy: null, isLastBus: true, position: null, trajectory: null }]);
+    expect(group.vehicles).toEqual([{ id: "100000200", plateNumber: "서울74사5600", occupancy: null, isLastBus: true, isLowFloor: null, position: null, trajectory: null }]);
   });
 
   it("serves a bus's last-bus flag once: true on the vehicle and on every arrival naming it when any of its rows says so", () => {
@@ -181,7 +184,29 @@ describe("toLiveJongroGroup", () => {
     const group = toLiveJongroGroup("jongro07", reading({ rows: [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [slot] }], positions }), new Map());
 
     // Assert
-    expect(group.stations[0]?.arrivals).toMatchObject([{ status: "atStop", stopsAway: 0, vehicleId: "100000103", providerText: "곧 도착" }]);
+    expect(group.stations[0]?.arrivals).toMatchObject([{ status: "arriving", stopsAway: 0, expectedArrivalAt: null, expectedDepartureAt: null, vehicleId: "100000103", providerText: "곧 도착" }]);
+  });
+
+  it("serves a bus standing at a station TOPIS dropped from its row first there, arriving, then the row's first slot, each vehicle once", () => {
+    // Arrange
+    // QUIRK(topis): a row stops naming a bus once it stands at the row's station, so this row names only the bus behind it.
+    const atStop = { ...tracking, status: "atStop" as const, progress: 0, nextStopInSec: null };
+    const positions = [{ position: jongroPositionDoc({ sequence: "2", isAtStop: true }), tracking: atStop, checkedAt: POSITIONS_AT }];
+    const behind = { bus: jongroArrivalBus({ vehId: "100000104", plainNo: "서울74사5600", staOrd: 2, sectOrd: 1, traTime: 180, arrmsg: "3분후[1번째 전]" }), arrival: running(), travelSeconds: 180 };
+    const rows = [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [behind, noBus("waiting", "출발대기")] }];
+
+    // Act
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions }), new Map());
+
+    // Assert
+    expect(group.stations[0]?.arrivals.map(({ status, stopsAway, vehicleId, expectedDepartureAt, providerText }) => [status, stopsAway, vehicleId, expectedDepartureAt, providerText])).toEqual([
+      ["arriving", 0, "100000103", null, null],
+      ["enRoute", 2, "100000104", null, "3분후[1번째 전]"],
+    ]);
+    expect(group.vehicles.map(({ id, isLastBus }) => [id, isLastBus])).toEqual([
+      ["100000103", null],
+      ["100000104", false],
+    ]);
   });
 
   it("serves a waiting bus's position with no trajectory", () => {
@@ -227,5 +252,74 @@ describe("toLiveJongroGroup", () => {
 
     // Assert
     expect(group).toMatchObject({ operation: "noData", updatedAt: null, vehicles: [], stations: [] });
+  });
+});
+
+// WHY: low-floor is the vehicle's, so one row decides it and the vehicle never carries two answers (ADR 0019, D6).
+describe("toLiveJongroGroup low floor", () => {
+  const slotOf = (bus: Parameters<typeof jongroArrivalBus>[0], extra: Partial<RealtimeArrival> = {}) => ({ bus: jongroArrivalBus({ staOrd: 2, ...bus }), arrival: running(extra), travelSeconds: 180 });
+  const rowsOf = (...slots: ReturnType<typeof slotOf>[]) => [{ stationIndex: 1, madeAtMs: MADE_AT_MS, slots }];
+  const positionsOf = (busType?: "lowFloor" | "general") => [{ position: jongroPositionDoc({ sequence: "1", ...(busType && { busType }) }), tracking, checkedAt: POSITIONS_AT }];
+
+  it.each([
+    ["lowFloor", true],
+    ["general", false],
+  ] as const)("serves a tracked bus whose position reads %s as low-floor %s", (busType, expected) => {
+    // Act
+    const group = toLiveJongroGroup("jongro07", reading({ positions: positionsOf(busType) }), new Map());
+
+    // Assert
+    expect(group.vehicles.map(({ id, isLowFloor }) => [id, isLowFloor])).toEqual([["100000103", expected]]);
+  });
+
+  it("serves a tracked bus by its position when its arrival rows disagree", () => {
+    // Arrange
+    const rows = rowsOf(slotOf({ busType: "general" }));
+
+    // Act
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: positionsOf("lowFloor") }), new Map());
+
+    // Assert
+    expect(group.vehicles.map(({ id, isLowFloor }) => [id, isLowFloor])).toEqual([["100000103", true]]);
+  });
+
+  it("serves a tracked bus whose position names no type as unknown, whatever its arrival rows say", () => {
+    // Arrange
+    const rows = rowsOf(slotOf({ busType: "lowFloor" }));
+
+    // Act
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: positionsOf() }), new Map());
+
+    // Assert
+    expect(group.vehicles.map(({ id, isLowFloor }) => [id, isLowFloor])).toEqual([["100000103", null]]);
+  });
+
+  it("serves a bus only an arrival names by the row its plate comes from", () => {
+    // Arrange
+    const unseen = (staOrd: number, busType: "lowFloor" | "general") => slotOf({ vehId: "100000200", plainNo: "서울75사2010", staOrd, busType });
+    const rows = [
+      { stationIndex: 2, madeAtMs: MADE_AT_MS, slots: [unseen(3, "general")] },
+      { stationIndex: 1, madeAtMs: MADE_AT_MS, slots: [unseen(2, "lowFloor")] },
+    ];
+
+    // Act
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: [] }), new Map());
+
+    // Assert
+    expect(group.vehicles.map(({ id, plateNumber, isLowFloor }) => [id, plateNumber, isLowFloor])).toEqual([["100000200", "서울75사2010", true]]);
+  });
+
+  it("serves every bus as unknown from rows a poller older than the bus type wrote", () => {
+    // Arrange
+    const rows = rowsOf(slotOf({}), slotOf({ vehId: "100000200", plainNo: "서울75사2010" }));
+
+    // Act
+    const group = toLiveJongroGroup("jongro07", reading({ rows, positions: positionsOf() }), new Map());
+
+    // Assert
+    expect(group.vehicles.map(({ id, isLowFloor }) => [id, isLowFloor])).toEqual([
+      ["100000103", null],
+      ["100000200", null],
+    ]);
   });
 });

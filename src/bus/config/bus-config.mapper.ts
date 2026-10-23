@@ -38,6 +38,8 @@ export function mapStations(stations: ReadonlyArray<AnyStation>): MappedStation[
     isFirstStation: station.isFirstStation,
     isLastStation: station.isLastStation,
     isRotationStation: station.isRotationStation,
+    // WHY: only an HSSC position (no stationName) passes through; a Jongno virtual stop also has a null stop id.
+    isPassThrough: !("stationName" in station) && station.stopId === null,
     transferLines: station.transferLines,
     ...(station.stopId ? { stopId: station.stopId } : {}),
   }));

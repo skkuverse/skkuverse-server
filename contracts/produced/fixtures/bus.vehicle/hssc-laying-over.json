@@ -5,6 +5,7 @@
     "plateNumber": null,
     "occupancy": null,
     "isLastBus": null,
+    "isLowFloor": null,
     "position": {
       "stationIndex": 0,
       "status": "waitingToDepart",

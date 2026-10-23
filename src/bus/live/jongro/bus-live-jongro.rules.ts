@@ -1,9 +1,11 @@
 import { toKstInstant } from "../../bus.mapper";
 import type { Arrival, Operation, Vehicle } from "../../bus.wire";
+import type { JongroBusType } from "../../cache/bus-cache.document";
 import type { TimedArrival } from "../../realtime/arrival/bus-realtime-arrival.types";
 import type { JongroReading } from "../../realtime/group/bus-realtime-group.types";
 import type { RealtimeArrival } from "../../realtime/group/bus-realtime-group.wire";
-import { STATUS_BY_STATE } from "./bus-live-jongro.constants";
+import { MAX_STATION_ARRIVALS } from "../bus-live.constants";
+import { STANDING_ARRIVAL, STATUS_BY_STATE } from "./bus-live-jongro.constants";
 import type { JongroVehicleStates } from "./bus-live-jongro.types";
 
 const SECOND_MS = 1000;
@@ -43,20 +45,31 @@ export function toJongroArrival(slot: TimedArrival, madeAtMs: number | null): Ar
 // rows carried no last-bus text beside its other rows'), so a bus is the last one when any row naming it says so.
 export function toVehicleStates({ rows, positions }: Pick<JongroReading, "rows" | "positions">): JongroVehicleStates {
   const standing = positions.filter(({ tracking }) => tracking.status === "atStop");
-  const lastBusSlots = rows.flatMap(({ slots }) => slots).filter(({ arrival }) => arrival.stopsAway !== null && arrival.isLastBus);
+  const namedSlots = rows.flatMap(({ slots }) => slots).filter(({ arrival }) => arrival.stopsAway !== null);
   return {
     standingStationIndexById: new Map(standing.map(({ position }) => [position.vehicleId, Number(position.sequence) - 1])),
-    lastBusIds: new Set(lastBusSlots.map(({ bus }) => bus.vehId)),
+    lastBusIds: new Set(namedSlots.filter(({ arrival }) => arrival.isLastBus).map(({ bus }) => bus.vehId)),
+    namedVehicleIds: new Set(namedSlots.map(({ bus }) => bus.vehId)),
   };
 }
 
-// WHY: TOPIS moves a bus's rows past a stop it stands at, so a row naming it there is one its newer position outran;
-// the last bus is the bus's, so every arrival naming it carries the vehicle's flag (ADR 0019, D6).
-export function withVehicleState(arrival: Arrival, stationIndex: number, { standingStationIndexById, lastBusIds }: JongroVehicleStates): Arrival {
-  const { vehicleId } = arrival;
-  if (vehicleId === null) return arrival;
-  const standingHere = standingStationIndexById.get(vehicleId) === stationIndex ? { status: "atStop" as const, stopsAway: 0, expectedArrivalAt: null } : {};
-  return { ...arrival, ...standingHere, isLastBus: lastBusIds.has(vehicleId) };
+// WHY: the last bus is the bus's, so every arrival naming it carries the vehicle's flag (ADR 0019, D6).
+export function withVehicleState(arrival: Arrival, { lastBusIds }: JongroVehicleStates): Arrival {
+  return arrival.vehicleId === null ? arrival : { ...arrival, isLastBus: lastBusIds.has(arrival.vehicleId) };
+}
+
+function toStandingArrival(vehicleId: string, named: Arrival | undefined, { lastBusIds, namedVehicleIds }: JongroVehicleStates): Arrival {
+  const isLastBus = namedVehicleIds.has(vehicleId) ? lastBusIds.has(vehicleId) : null;
+  return { ...STANDING_ARRIVAL, vehicleId, isLastBus, providerText: named?.providerText ?? null };
+}
+
+// WHY: a bus standing at the station is the one a rider boards, arriving until it leaves (ADR 0019, D14); TOPIS drops it
+// from that station's row, and a row still naming it there is one its newer position outran, so it comes first, listed once.
+export function toStationArrivals(rowArrivals: readonly Arrival[], stationIndex: number, states: JongroVehicleStates): Arrival[] {
+  const standingIds = [...states.standingStationIndexById].filter(([, standingIndex]) => standingIndex === stationIndex).map(([vehicleId]) => vehicleId);
+  const standing = standingIds.map((vehicleId) => toStandingArrival(vehicleId, rowArrivals.find((arrival) => arrival.vehicleId === vehicleId), states));
+  const rest = rowArrivals.filter(({ vehicleId }) => vehicleId === null || !standingIds.includes(vehicleId)).map((arrival) => withVehicleState(arrival, states));
+  return [...standing, ...rest].slice(0, MAX_STATION_ARRIVALS);
 }
 
 // WHY: ended only when every slot says the service ended (ADR 0019, D8); a slot with a bus, waiting or not, is a running station.
@@ -78,6 +91,12 @@ export function toOccupancy({ crowding, passengerCount }: Pick<RealtimeArrival, 
 // QUIRK(topis): a plate comes padded with spaces, and a single space when there is none.
 export function toPlateNumber(plainNo: string): string | null {
   return plainNo.trim() || null;
+}
+
+// WHY: an articulated bus's type says nothing of its floor, and no type is unknown rather than general.
+export function toLowFloor(busType: JongroBusType | undefined): boolean | null {
+  if (busType === "lowFloor") return true;
+  return busType === "general" ? false : null;
 }
 
 /** WHY: a group is as fresh as its staler key, so a stopped writer of either shows (ADR 0019, D6). */
