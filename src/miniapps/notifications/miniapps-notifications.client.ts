@@ -13,7 +13,7 @@ export class MiniappsNotificationsClient {
 
   // WHY: no `topics`: the Cloud Function targets `miniapp:<miniAppId>` itself, so a sender cannot reach another topic.
   private toPayload(doc: SentNotificationDoc): MiniAppPushPayload {
-    const { miniAppId, _id: notificationId, title_ko, body_ko, title_en, body_en, actionType, actionValue } = doc;
+    const { miniAppId, _id: notificationId, title_ko, body_ko, title_en, body_en, actionType, actionValue, chipId, placeId } = doc;
     return {
       type: "miniapp",
       miniAppId,
@@ -24,6 +24,8 @@ export class MiniappsNotificationsClient {
       body_en,
       ...(actionType ? { actionType } : {}),
       ...(actionValue ? { actionValue } : {}),
+      ...(chipId ? { chipId } : {}),
+      ...(placeId ? { placeId } : {}),
     };
   }
 }

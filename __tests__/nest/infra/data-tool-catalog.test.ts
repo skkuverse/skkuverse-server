@@ -56,6 +56,10 @@
  * committed timetable routes (`toRouteIssues`): upstream, watched and next
  * platforms in route order, and every stop the tracker follows named.
  *
+ * The `app-features` dataset (skkuverse-app ADR 0023, decision 4) is checked
+ * with the server's schema alone: a boolean per kill switch, no unknown key,
+ * and it names no other dataset.
+ *
  * The `subway-station-coords` dataset (ADR 0013, D2) is checked with the
  * server's coords schema (each point inside South Korea) and against the
  * `subwayStations` code-held source: one entry per station the checkout
@@ -72,6 +76,7 @@
  * first, and the topology push stays the gate that refuses.
  */
 import path from "node:path";
+import { appFeaturesDataset } from "../../../src/app-config/app-config.schema";
 import { JONGRO_ROUTES, SERVICE_CONFIG } from "../../../src/bus/bus.constants";
 import { corridorIssues } from "../../../src/bus/eta/lane/bus-eta-lane.rules";
 import { laneCorridorDataset } from "../../../src/bus/eta/lane/bus-eta-lane.schema";
@@ -824,6 +829,36 @@ describe("loadCatalog jongro-route-attributes", () => {
 
     // Assert
     expect(lines).toEqual(['jongro-route-attributes: routes.jongro13: "jongro13" is not a route the checked-out code serves']);
+  });
+});
+
+describe("loadCatalog app-features", () => {
+  const features = () => datasetFixture("../app-config/fixtures/app-features.dataset.json");
+
+  it("is owned by src/app-config, takes appFeaturesDataset, and accepts revision 1 with no issue and no reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["app-features"];
+
+    // Act
+    const issues = checkData(catalog, "app-features", features(), {});
+
+    // Assert
+    expect(entry.owner).toBe("src/app-config");
+    expect(entry.schema).toBe(appFeaturesDataset);
+    expect(issues).toEqual([]);
+    expect(entry.referencesOf(entry.schema.parse(features()))).toEqual([]);
+  });
+
+  it("refuses a switch given as a string, naming it", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+
+    // Act
+    const lines = issueLines(checkData(catalog, "app-features", { sharedMapShell: "true" }, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^app-features: sharedMapShell: .*expected boolean/)]);
   });
 });
 

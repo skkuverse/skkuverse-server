@@ -3,9 +3,9 @@ import { CacheControl } from "../http/cache-control.decorator";
 import { AppConfigService } from "./app-config.service";
 import type { AppClientConfig } from "./app-config.wire";
 
-// WHY: the body is read at boot and the same for every client; five minutes bounds how long a raised
-// minimum version takes to reach a cold start once the replicas restart with it.
-const APP_CONFIG_CACHE_CONTROL = "public, max-age=300";
+// WHY: the same body for every client, so a shared cache may keep it. EVIDENCE: Cloudflare's edge serves it from
+// cache (cf-cache-status HIT, 2026-10-23); a minute keeps a flipped kill switch near the dataset's own minute.
+const APP_CONFIG_CACHE_CONTROL = "public, max-age=60";
 
 @Controller("app")
 export class AppConfigController {
@@ -13,7 +13,7 @@ export class AppConfigController {
 
   @Get("config")
   @CacheControl(APP_CONFIG_CACHE_CONTROL)
-  getConfig(): AppClientConfig {
+  getConfig(): Promise<AppClientConfig> {
     return this.appConfig.getConfig();
   }
 }
