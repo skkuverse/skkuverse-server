@@ -19,6 +19,11 @@ export const appClientConfig = z.object({
   miniapps: z.object({ origins: z.record(z.string(), z.string()) }),
   /** WHY: optional for a reader: a body cached before the key was served has none, which means no hosted game. */
   games: z.object({ origins: z.record(z.string(), z.string()) }).optional(),
+  /**
+   * WHY: kill switches the app caches and reads when its modules load; a missing key, or no `features`, means off.
+   * `sharedMapShell` picks the shared-map shell over the NativeTabs one (skkuverse-app ADR 0023, decision 4).
+   */
+  features: z.object({ sharedMapShell: z.boolean().optional() }).optional(),
 });
 
 export type AppClientConfig = z.input<typeof appClientConfig>;

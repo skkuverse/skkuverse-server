@@ -14,12 +14,28 @@ import { AppConfigModule } from "../../../src/app-config/app-config.module";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { appClientConfig } from "../../../src/app-config/app-config.wire";
+import { AppConfigRepository } from "../../../src/app-config/app-config.repository";
+import { Clock } from "../../../src/infra/clock";
+import { storedAppFeaturesRepository } from "../../helpers/app-config/app-features";
+import { FakeAppConfigRepository } from "../../helpers/fakes/app-config/app-config.repository.fake";
+
+const CLOCK: Clock = { now: () => new Date("2026-10-23T03:00:00.000Z") };
+
+function bootAppConfig(repository: FakeAppConfigRepository = storedAppFeaturesRepository()): Promise<NestExpressApplication> {
+  return buildTestApp({
+    imports: [ConfigModule, AppConfigModule],
+    overrides: [
+      { provide: AppConfigRepository, useValue: repository },
+      { provide: Clock, useValue: CLOCK },
+    ],
+  });
+}
 
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 
 beforeAll(async () => {
-  app = await buildTestApp({ imports: [ConfigModule, AppConfigModule] });
+  app = await bootAppConfig();
   httpServer = app.getHttpServer();
 });
 
@@ -205,6 +221,56 @@ describe("/app/config body against its wire schema", () => {
 
     // Assert
     expect(res.status).toBe(200);
+    expectWire(appClientConfig, res.body.data);
+  });
+});
+
+/**
+ * The `features` kill switches, read from the stored `app-features` dataset: served as stored, and
+ * off when nothing good was ever read, never a 503, since the app reads this route at boot for its
+ * force-update gate.
+ */
+describe("GET /app/config features", () => {
+  let other: NestExpressApplication | undefined;
+
+  afterEach(async () => {
+    await other?.close();
+    other = undefined;
+  });
+
+  it("serves features.sharedMapShell as stored, in the body the wire declares", async () => {
+    // Arrange
+    other = await bootAppConfig(storedAppFeaturesRepository({ sharedMapShell: true }));
+
+    // Act
+    const res = await request(other.getHttpServer()).get("/app/config");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.features).toEqual({ sharedMapShell: true });
+    expectWire(appClientConfig, res.body.data);
+  });
+
+  it("serves revision 1 of the dataset with the shared-map shell off", async () => {
+    // Act
+    const res = await request(httpServer).get("/app/config");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.features).toEqual({ sharedMapShell: false });
+  });
+
+  it("Dataset never pushed: answers 200 with the shared-map shell off and the gates intact", async () => {
+    // Arrange
+    other = await bootAppConfig(new FakeAppConfigRepository());
+
+    // Act
+    const res = await request(other.getHttpServer()).get("/app/config");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.features).toEqual({ sharedMapShell: false });
+    expect(res.body.data.ios).toHaveProperty("minVersion");
     expectWire(appClientConfig, res.body.data);
   });
 });
