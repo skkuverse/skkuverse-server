@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { HolidaysService } from "../../holidays/holidays.service";
+import { CalendarService } from "../../calendar/calendar.service";
 import { Clock } from "../../infra/clock";
 import { createDatasetLoader, type DatasetLoader } from "../../infra/dataset-loader";
 import { createLogThrottle } from "../../infra/log-throttle";
@@ -52,7 +52,7 @@ export class SubwayTimetableService {
   private readonly readFailedThrottle = createLogThrottle(TIMETABLES_LOG_INTERVAL_MS, () => this.clock.now().getTime());
 
   constructor(
-    private readonly holidays: HolidaysService,
+    private readonly holidays: CalendarService,
     private readonly repository: SubwayTimetableRepository,
     private readonly clock: Clock,
   ) {
@@ -212,6 +212,6 @@ export class SubwayTimetableService {
   }
 
   private async isPublicHoliday(serviceDate: string): Promise<boolean> {
-    return (await this.holidays.holidayName(serviceDate)) !== null;
+    return (await this.holidays.publicHolidayName(serviceDate)) !== null;
   }
 }

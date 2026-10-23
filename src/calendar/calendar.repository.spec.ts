@@ -1,11 +1,11 @@
 /**
- * HolidaysRepository's read of `public_holidays`, one document per year keyed
+ * CalendarRepository's read of `public_holidays`, one document per year keyed
  * by the year: every stored year, projected and bounded (which
- * FakeHolidaysRepository follows), read at most once every ten minutes and
+ * FakeCalendarRepository follows), read at most once every ten minutes and
  * waiting for that read once the ten minutes pass, served stale for a day when
  * a reload fails, and read again after clearCache(), which the
  * holiday sync calls after writing. The writes are
- * holidays-sync.repository.spec.ts's.
+ * calendar-holiday-sync.repository.spec.ts's.
  */
 const toArray = jest.fn();
 const find = jest.fn(() => ({ toArray }));
@@ -19,7 +19,7 @@ jest.mock("../infra/mongo", () => ({
 
 import config from "../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
-import { HolidaysRepository } from "./holidays.repository";
+import { CalendarRepository } from "./calendar.repository";
 
 const HOUR_MS = 60 * 60_000;
 const TEN_MINUTES_MS = 10 * 60_000;
@@ -33,21 +33,21 @@ const YEAR_2026 = {
   fetchedAt: new Date("2026-10-16T03:00:00Z"),
 };
 
-let repository: HolidaysRepository;
+let repository: CalendarRepository;
 
 beforeEach(() => {
   jest.clearAllMocks();
   // The cached loader reads Date.now; only the clock is faked, never the promise queue.
   jest.useFakeTimers({ now: NOW, doNotFake: ["nextTick", "queueMicrotask", "setImmediate"] });
   toArray.mockResolvedValue([YEAR_2026]);
-  repository = new HolidaysRepository();
+  repository = new CalendarRepository();
 });
 
 afterEach(() => {
   jest.useRealTimers();
 });
 
-describe("HolidaysRepository.listYears", () => {
+describe("CalendarRepository.listYears", () => {
   it("reads every stored year from public_holidays, projected and bounded", async () => {
     // Act
     const years = await repository.listYears();
@@ -107,7 +107,7 @@ describe("HolidaysRepository.listYears", () => {
   });
 });
 
-describe("HolidaysRepository.clearCache", () => {
+describe("CalendarRepository.clearCache", () => {
   it("makes the next listYears read again within the hour, as after a sync", async () => {
     // Arrange
     await repository.listYears();

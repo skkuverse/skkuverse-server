@@ -22,11 +22,11 @@ jest.mock("./bus-schedule.rules", () => ({
 }));
 
 import { FakeBusScheduleRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
-import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
+import { FakeCalendarService } from "../../../__tests__/helpers/fakes/calendar/calendar.service.fake";
 import { FakeBusScheduleContentRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule-content.repository.fake";
 import { restDaysFixture, serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../../__tests__/helpers/bus/schedule-content";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import type { HolidaysService } from "../../holidays/holidays.service";
+import type { CalendarService } from "../../calendar/calendar.service";
 import type { Clock } from "../../infra/clock";
 import type { BusScheduleContentRepository } from "../schedule-content/bus-schedule-content.repository";
 import { BusScheduleContentService } from "../schedule-content/bus-schedule-content.service";
@@ -48,7 +48,7 @@ const SUSPENSION = { from: "2026-06-21", until: "2026-08-31" };
 
 function scheduleServiceOver(timetable: FakeBusScheduleRepository, stored: FakeBusScheduleContentRepository): BusScheduleService {
   const contentService = new BusScheduleContentService(asReal<BusScheduleContentRepository>(stored), clock);
-  return new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), contentService, clock);
+  return new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<CalendarService>(new FakeCalendarService()), contentService, clock);
 }
 
 beforeEach(() => {

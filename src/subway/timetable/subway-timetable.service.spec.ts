@@ -1,7 +1,7 @@
 /**
  * SubwayTimetableService, the timetable door the tracking and arrivals flows
- * read, over a scripted HolidaysService (the fake in
- * __tests__/helpers/fakes/holidays/) and an in-memory `subway-timetables`
+ * read, over a scripted CalendarService (the fake in
+ * __tests__/helpers/fakes/calendar/) and an in-memory `subway-timetables`
  * store. What it guards: each platform's schedule
  * is its own source's table for the service day (the Korail holiday table and
  * the Seoul Saturday table on a Saturday, both holiday tables on a public
@@ -34,7 +34,7 @@
  * so the TTL is crossed with Jest's fake system time.
  */
 jest.mock("../../infra/logger", () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
-import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
+import { FakeCalendarService } from "../../../__tests__/helpers/fakes/calendar/calendar.service.fake";
 import { subwayTopologyFixture } from "../../../__tests__/helpers/subway/topology";
 import { subwayTimetablesFixture, storedSubwayTimetableRepository, storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
 import type { Clock } from "../../infra/clock";
@@ -48,7 +48,7 @@ const TOPOLOGY = subwayTopologyFixture();
 const mockedLogger = logger as unknown as Record<"error" | "warn", jest.Mock>;
 
 function setup() {
-  const holidays = new FakeHolidaysService();
+  const holidays = new FakeCalendarService();
   return { holidays, service: storedSubwayTimetableService({ holidays }) };
 }
 
@@ -341,7 +341,7 @@ describe("SubwayTimetableService over the stored subway-timetables", () => {
     let now = NIGHT;
     const clock: Clock = { now: () => now };
     const repository = storedSubwayTimetableRepository(tables);
-    const holidays = new FakeHolidaysService();
+    const holidays = new FakeCalendarService();
     const service = storedSubwayTimetableService({ repository, holidays, clock });
     // The clock and Date.now() move together: the service reads the one, the manifest's cached loader the other.
     const advanceTo = (instant: Date | string): Date => {

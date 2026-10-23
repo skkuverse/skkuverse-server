@@ -4,7 +4,7 @@ import { createCachedLoader } from "../infra/cached-loader";
 import config from "../infra/config";
 import { HOT_READ_MAX_TIME_MS } from "../infra/db";
 import { mongoCollection } from "../infra/mongo";
-import type { PublicHolidaysDoc } from "./holidays.document";
+import type { PublicHolidaysDoc } from "./calendar.document";
 
 const HOUR_MS = 60 * 60_000;
 // WHY: a holiday the poller stores reaches every replica within ten minutes (ADR 0012, D6); a failed read
@@ -13,7 +13,7 @@ const STORED_YEARS_TTL_MS = 10 * 60_000;
 const STORED_YEARS_STALE_WINDOW_MS = 24 * HOUR_MS;
 
 @Injectable()
-export class HolidaysRepository {
+export class CalendarRepository {
   private readonly storedYears = createCachedLoader({
     name: "holidays.public_holidays",
     ttlMs: STORED_YEARS_TTL_MS,

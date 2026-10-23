@@ -1,22 +1,22 @@
 /**
- * The schemas HolidaysSyncClient reads getRestDeInfo through, checked against the
- * 2026-10-16 and 17 captures (__tests__/nest/holidays/fixtures/, see each file's
+ * The schemas CalendarHolidaySyncClient reads getRestDeInfo through, checked against the
+ * 2026-10-16 and 17 captures (__tests__/nest/calendar/fixtures/, see each file's
  * `_about`). What it guards: every captured envelope, body and row passes;
  * a row or body missing any field of its shape fails at that field's path;
  * the body takes `items` as "" (no rows), as one row object or as an array;
  * a row's name is not empty, its isHoliday is Y or N, and its locdate is an
  * eight-digit date; the gateway's refusal keeps its errMsg, reason code and
  * message. How the client turns a failed parse into an error is
- * holidays-sync.client.spec.ts's.
+ * calendar-holiday-sync.client.spec.ts's.
  */
 import fs from "fs";
 import path from "path";
-import { gatewayError, restDeBody, restDeEnvelope, restDeRow } from "./holidays-sync.schema";
+import { gatewayError, restDeBody, restDeEnvelope, restDeRow } from "./calendar-holiday-sync.schema";
 
 type Payload = Record<string, unknown>;
 
 const fixture = (name: string): Payload =>
-  JSON.parse(fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/holidays/fixtures", name), "utf8"));
+  JSON.parse(fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/calendar/fixtures", name), "utf8"));
 const bodyOf = (payload: Payload): Payload => (payload.response as { body: Payload }).body;
 const YEAR_2026 = fixture("getrestdeinfo-2026.json");
 const ONE_ROW = fixture("getrestdeinfo-2026-07.json");

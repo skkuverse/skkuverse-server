@@ -3,8 +3,8 @@
  * the public-holiday name it is given, null on an ordinary day, and a
  * RangeError on a date the holiday lookup cannot take), the rest-day lookup,
  * the week-start parameter, which pattern a date resolves to, the
- * suspension window, and a day the smart view shows inside it. Which dates are public holidays is HolidaysService's
- * (src/holidays/holidays.service.spec.ts).
+ * suspension window, and a day the smart view shows inside it. Which dates are public holidays is CalendarService's
+ * (src/calendar/calendar.service.spec.ts).
  */
 
 import fs from "fs";

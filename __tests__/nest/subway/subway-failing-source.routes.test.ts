@@ -8,7 +8,7 @@
  * FakeSubwaySeoulTrainmapClient (the line 1 and 4 positions and the line 4
  * page captured on 2026-10-16 22:27 KST, joined with the line 1 page as the one
  * page of every line the crawl reads; the line 1 page dates from 20:45, so
- * its trains are too far from their timetable rows to count), FakeSubwayRepository, FakeHolidaysRepository and a
+ * its trains are too far from their timetable rows to count), FakeSubwayRepository, FakeCalendarRepository and a
  * scripted Clock. Each test is a scenario of "Serving survives a failing
  * source": a train map that cannot be parsed fails its own
  * job while the API's arrivals keep being served; a failing API leaves the
@@ -20,8 +20,8 @@ import path from "path";
 import { Global, Module } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { HolidaysModule } from "../../../src/holidays/holidays.module";
-import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { CalendarModule } from "../../../src/calendar/calendar.module";
+import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { Clock } from "../../../src/infra/clock";
 import { PollerRegistryService } from "../../../src/scheduling/poller-registry.service";
 import { SubwayArrivalsModule } from "../../../src/subway/arrivals/subway-arrivals.module";
@@ -41,7 +41,7 @@ import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-to
 import { SubwayStationCoordsRepository } from "../../../src/subway/station-coords/subway-station-coords.repository";
 import { storedStationCoordsRepository } from "../../helpers/subway/station-coords";
 import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracking.module";
-import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
 import { FakeSubwaySeoulApiClient } from "../../helpers/fakes/subway/subway-seoul-api.client.fake";
 import { FakeSubwaySeoulTrainmapClient } from "../../helpers/fakes/subway/subway-seoul-trainmap.client.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
@@ -82,7 +82,7 @@ beforeEach(async () => {
   app = await buildTestApp({
     imports: [
       SchedulingStubModule,
-      HolidaysModule,
+      CalendarModule,
       SubwayModule,
       SubwayTimetableModule,
       SubwayEstimateModule,
@@ -94,7 +94,7 @@ beforeEach(async () => {
       SubwayArrivalsModule,
     ],
     overrides: [
-      { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+      { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
       { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
       { provide: SubwayStationCoordsRepository, useValue: storedStationCoordsRepository() },

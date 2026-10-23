@@ -36,7 +36,7 @@ import { BusScheduleContentRepository } from "../../../src/bus/schedule-content/
 import { BusScheduleModule } from "../../../src/bus/schedule/bus-schedule.module";
 import { BusScheduleRepository } from "../../../src/bus/schedule/bus-schedule.repository";
 import { BusStopArrivalsModule } from "../../../src/bus/stop-arrivals/bus-stop-arrivals.module";
-import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { BusRegistryModule } from "../../../src/bus/registry/bus-registry.module";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesModule } from "../../../src/bus/route-attributes/bus-route-attributes.module";
@@ -64,7 +64,7 @@ import { FakeBusRealtimeJongroClient } from "../../helpers/fakes/bus/bus-realtim
 import { FakeBusRoutePathClient } from "../../helpers/fakes/bus/bus-route-path.client.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeBusStopsRepository } from "../../helpers/fakes/bus/bus-stops.repository.fake";
-import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { takeBlockedConnections } from "../../helpers/network-guard";
 
@@ -138,7 +138,7 @@ async function bootWithStopPage(stores: Stores): Promise<import("http").Server> 
       { provide: BusScheduleRepository, useValue: new FakeBusScheduleRepository() },
       { provide: BusScheduleContentRepository, useValue: storedScheduleContentRepository() },
       { provide: BusEtaRepository, useValue: new FakeBusEtaRepository() },
-      { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+      { provide: CalendarRepository, useValue: new FakeCalendarRepository() },
       { provide: Clock, useValue: { now: () => new Date(NOW) } },
     ],
     role: "api",

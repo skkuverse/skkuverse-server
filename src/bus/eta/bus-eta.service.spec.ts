@@ -18,9 +18,9 @@ import { FakeBusEtaRepository } from "../../../__tests__/helpers/fakes/bus/bus-e
 import { restDaysFixture, serviceNoticesWithSuspension, storedScheduleContentRepository, storedScheduleContentService } from "../../../__tests__/helpers/bus/schedule-content";
 import { FakeBusScheduleContentRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule-content.repository.fake";
 import { FakeBusScheduleRepository } from "../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
-import { FakeHolidaysService } from "../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
+import { FakeCalendarService } from "../../../__tests__/helpers/fakes/calendar/calendar.service.fake";
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
-import type { HolidaysService } from "../../holidays/holidays.service";
+import type { CalendarService } from "../../calendar/calendar.service";
 import type { BusScheduleRepository } from "../schedule/bus-schedule.repository";
 import { BusScheduleService } from "../schedule/bus-schedule.service";
 import type { ScheduleDay, ScheduleEntry } from "../schedule/bus-schedule.wire";
@@ -244,7 +244,7 @@ describe("BusEtaService runs over the stored timetable", () => {
     const pattern = (time: string) => [{ serviceId: "campus-inja", patternId: "weekday", days: [1, 2, 3, 4], entries: [{ index: 1, time, routeType: "regular", busCount: 1, notes: null, stopTimes: [time, null, null] }] }];
     stored.patterns = pattern("08:00");
     const clock = { now: () => new Date() };
-    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(stored), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock), clock);
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(stored), asReal<CalendarService>(new FakeCalendarService()), storedScheduleContentService(clock), clock);
     const eta = build(schedule);
     await eta.runsOn(SEQUENCE, "2026-03-09");
     stored.patterns = pattern("09:30");
@@ -271,7 +271,7 @@ describe("BusEtaService runs over the stored schedule content", () => {
   function etaOver(content: FakeBusScheduleContentRepository): BusEtaService {
     const timetable = new FakeBusScheduleRepository();
     timetable.patterns = WEEKDAYS;
-    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<CalendarService>(new FakeCalendarService()), storedScheduleContentService(clock, content), clock);
     return build(schedule);
   }
 
@@ -341,7 +341,7 @@ describe("BusEtaService.upcomingRuns before a stored suspension", () => {
   function etaOver(content: FakeBusScheduleContentRepository): BusEtaService {
     const timetable = new FakeBusScheduleRepository();
     timetable.patterns = [weekdays("campus-inja"), weekdays("campus-jain")];
-    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<CalendarService>(new FakeCalendarService()), storedScheduleContentService(clock, content), clock);
     return build(schedule);
   }
 
@@ -390,7 +390,7 @@ describe("BusEtaService.upcomingRuns before a suspension that starts mid-week", 
     ];
     const content = storedScheduleContentRepository();
     content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-12-17", until: "2026-12-18" }));
-    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<CalendarService>(new FakeCalendarService()), storedScheduleContentService(clock, content), clock);
 
     // Act
     const runs = await build(schedule).upcomingRuns(SEQUENCE, MONDAY);
@@ -417,7 +417,7 @@ describe("BusEtaService.upcomingRuns around a suspension that starts on the next
     timetable.patterns = [weekdays];
     const content = storedScheduleContentRepository();
     content.storeServiceNotices(serviceNoticesWithSuspension("campus-inja", { from: "2026-12-21", until: "2026-12-22" }));
-    return build(new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock));
+    return build(new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<CalendarService>(new FakeCalendarService()), storedScheduleContentService(clock, content), clock));
   }
 
   it("plans nothing on the Saturday before, and the rest of the week once the smart view leaves suspended", async () => {
