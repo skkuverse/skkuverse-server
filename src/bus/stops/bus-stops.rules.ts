@@ -454,9 +454,18 @@ function overlayIssues({ topis = {} }: BusStopsData, { stationIds }: BusStopsChe
   });
 }
 
+// WHY: the app opens only a stop it can place on its map; push only, since a stop list serves `coords: null`.
+function servedCoordsIssues({ stops, sequences, hssc }: BusStopsData): BusStopsIssue[] {
+  const sequenceStopIds = Object.values(sequences).flatMap((byRouteType) => Object.values(byRouteType).flat().filter(isRecord).map((entry) => entry.stopId));
+  const namedIds = new Set([...hssc.stations.map((station) => station.stopId), ...sequenceStopIds]);
+  const isServed = (stop: BusStopsData["stops"][number]): boolean => namedIds.has(stop.id) || (stop.arsIds?.length ?? 0) > 0;
+  const message = (stopId: string): string => `stop ${stopId}: has no coords, but the HSSC line, a sequence or its arsIds serve it, and the app opens only a stop it can place on its map`;
+  return stops.flatMap((stop, index) => (stop.coords === undefined && isServed(stop) ? [{ path: ["stops", index, "coords"], message: message(stop.id) }] : []));
+}
+
 /** WHY: every check a bus-stops push runs after its schema, each issue at its path. */
 export function toBusStopsIssues(data: BusStopsData, context: BusStopsCheckContext): BusStopsIssue[] {
-  return [...catalogIssues(data, context), ...laneStrategyIssues(data, context), ...hsscLineIssues(data), ...aliasIssues(data), ...overlayIssues(data, context)];
+  return [...catalogIssues(data, context), ...laneStrategyIssues(data, context), ...hsscLineIssues(data), ...aliasIssues(data), ...servedCoordsIssues(data), ...overlayIssues(data, context)];
 }
 
 /** WHY: what the dataset names in the code-held sources: each stop's and overlay entry's subway station, each sequence's service. */

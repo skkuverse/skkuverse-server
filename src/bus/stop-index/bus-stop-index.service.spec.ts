@@ -153,7 +153,10 @@ describe("BusStopIndexService.findStop", () => {
 
   it("finds an HSSC stop with no coordinates", async () => {
     // Arrange
-    const { service } = setup();
+    const { service, data, stopsRepository } = setup();
+    const withoutCoords: Record<string, unknown> = data.stops.find((stop) => stop.id === "hssc-hyehwa-exit1")!;
+    delete withoutCoords.coords;
+    stopsRepository.storeStops(data);
 
     // Act
     const stop = await service.findStop("hssc-hyehwa-exit1");
@@ -178,7 +181,10 @@ describe("BusStopIndexService.findStop", () => {
 
   it("draws an aliased local stop with no coordinates at its pole", async () => {
     // Arrange
-    const { service } = setup({ aliases: { "hssc-student-center": ["01618"] } });
+    const { service, data, stopsRepository } = setup({ aliases: { "hssc-student-center": ["01618"] } });
+    const withoutCoords: Record<string, unknown> = data.stops.find((stop) => stop.id === "hssc-student-center")!;
+    delete withoutCoords.coords;
+    stopsRepository.storeStops(data);
 
     // Act
     const stop = await service.findStop("hssc-student-center");
@@ -383,7 +389,12 @@ describe("BusStopIndexService.listStops", () => {
 
   it("locates each stop: its own coordinates, else its pole's on the stored route line, else none", async () => {
     // Arrange
-    const { service } = setup({ aliases: { "hssc-student-center": ["01618"] } });
+    const { service, data, stopsRepository } = setup({ aliases: { "hssc-student-center": ["01618"] } });
+    for (const stopId of ["hssc-student-center", "hssc-hyehwa-exit1"]) {
+      const withoutCoords: Record<string, unknown> = data.stops.find((stop) => stop.id === stopId)!;
+      delete withoutCoords.coords;
+    }
+    stopsRepository.storeStops(data);
 
     // Act
     const list = await service.listStops();
