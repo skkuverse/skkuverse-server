@@ -3,7 +3,7 @@ title: Runtime Data Lives in MongoDB
 type: adr
 status: accepted
 owner: zoyoong124@gmail.com
-last-updated: 2026-10-22
+last-updated: 2026-10-23
 audience: internal
 ---
 
@@ -41,6 +41,7 @@ What the code branches on stays in code: route ids, service ids, enums, the orig
 - Jongno: route ids stay in code; each route's attributes (color, icon, refresh interval, seat count, transfer lines) are `jongro-route-attributes`.
 - Bus lanes: the strategies and lane hours stay in code, since they decide which estimate model a run gets; the corridor geometry is `bus-lane-corridor`.
 - Stops: a Seoul TOPIS pole's id (`seoul-<arsId>`) is derived from the stored Jongno registry at read and never stored. The local stops, the shuttle sequences and the HSSC line's labels and stop ids are `bus-stops`. The HSSC line's position count, upstream name matching and turnaround stay in code, since the HSSC poller places buses by them, and the dataset's line must match the count.
+- HSSC route line: the loop measured from GPS, which the map draws, is `hssc-route-line`, apart from `bus-stops` ([ADR 0018, D9](0018-hssc-arrival-estimates.md)); it names no identity, and its layer, color and name stay in code.
 
 ### D3. The tool is the only writer
 
