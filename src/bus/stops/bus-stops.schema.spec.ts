@@ -247,6 +247,32 @@ describe("busStopsDataset isAlightOnly on an HSSC position", () => {
   });
 });
 
+describe("busStopsDataset: a stop's campus", () => {
+  it.each(["hssc", "nsc"])("keeps campus %s", (campus) => {
+    // Arrange
+    const data = withStop(0, { campus });
+
+    // Act
+    const parsed = busStopsDataset.parse(data);
+
+    // Assert
+    expect(parsed.stops[0]!.campus).toBe(campus);
+  });
+
+  it("passes a stop without campus, which the stored revision has none of", () => {
+    // Act
+    const parsed = busStopsDataset.parse(fixture());
+
+    // Assert
+    expect(parsed.stops.some((stop) => "campus" in stop)).toBe(false);
+  });
+
+  it.each(["seoul", "HSSC", 1])("fails campus %s, naming it", (campus) => {
+    // Act & Assert
+    expect(messagesOf(withStop(0, { campus }))).toEqual([expect.stringMatching(/^stops\.0\.campus: /)]);
+  });
+});
+
 describe("storedBusStops", () => {
   it("passes the stored document of revision 1", () => {
     // Act
