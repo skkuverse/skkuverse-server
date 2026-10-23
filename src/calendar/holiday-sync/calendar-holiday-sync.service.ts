@@ -1,0 +1,54 @@
+import { Injectable } from "@nestjs/common";
+import { Clock } from "../../infra/clock";
+import logger from "../../infra/logger";
+import { CalendarRepository } from "../calendar.repository";
+import { CalendarHolidaySyncClient } from "./calendar-holiday-sync.client";
+import { CalendarHolidaySyncRepository } from "./calendar-holiday-sync.repository";
+import { isStoredYearFresh, toSyncYears } from "./calendar-holiday-sync.rules";
+
+@Injectable()
+export class CalendarHolidaySyncService {
+  constructor(
+    private readonly client: CalendarHolidaySyncClient,
+    private readonly repository: CalendarHolidaySyncRepository,
+    private readonly holidays: CalendarRepository,
+    private readonly clock: Clock,
+  ) {}
+
+  // WHY: logs no failure itself; the poller registry reports the rejection. One year failing still stores
+  // the other, and a year with no rows is not published yet, so it keeps what answers it now.
+  async run(): Promise<void> {
+    const fetchedAt = this.clock.now();
+    const staleYears = await this.listStaleSyncYears(fetchedAt);
+    const failures: unknown[] = [];
+    for (const year of staleYears) {
+      try {
+        await this.syncYear(year, fetchedAt);
+      } catch (err) {
+        failures.push(err);
+      }
+    }
+    this.holidays.clearPublicHolidaysCache();
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) throw new AggregateError(failures, "Holiday calendar sync failed for every year");
+  }
+
+  private async listStaleSyncYears(now: Date): Promise<number[]> {
+    const storedYears = await this.holidays.listPublicHolidayYears();
+    const fetchedAtByYear = new Map(storedYears.map((stored) => [stored._id, stored.fetchedAt]));
+    return toSyncYears(now).filter((year) => {
+      const storedAt = fetchedAtByYear.get(year);
+      return storedAt === undefined || !isStoredYearFresh(storedAt, now);
+    });
+  }
+
+  private async syncYear(year: number, fetchedAt: Date): Promise<void> {
+    const holidays = await this.client.fetchYear(year);
+    if (holidays.length === 0) {
+      logger.info({ event: "holidays.sync.year_unpublished", year }, "Holiday calendar lists no days for the year yet");
+      return;
+    }
+    await this.repository.upsertYear(year, holidays, fetchedAt);
+    logger.info({ event: "holidays.sync.year_stored", year, holidays: holidays.length }, "Holiday calendar year stored");
+  }
+}

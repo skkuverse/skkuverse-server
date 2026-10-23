@@ -53,7 +53,7 @@ import { busStopArrivals, busStopArrivalsMeta } from "../../../src/bus/stop-arri
 import { BusStopIndexModule } from "../../../src/bus/stop-index/bus-stop-index.module";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
 import { BusStopsRepository } from "../../../src/bus/stops/bus-stops.repository";
-import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { hsscBusDoc, jongroArrivalBus, jongroArrivalDoc, jongroPositionDoc } from "../../helpers/bus/bus-cache-docs";
@@ -71,7 +71,7 @@ import { FakeBusRouteAttributesRepository } from "../../helpers/fakes/bus/bus-ro
 import { FakeBusRoutePathClient } from "../../helpers/fakes/bus/bus-route-path.client.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeBusStopsRepository } from "../../helpers/fakes/bus/bus-stops.repository.fake";
-import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { storedCalendarRepository } from "../../helpers/calendar/rest-days";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { takeBlockedConnections } from "../../helpers/network-guard";
 
@@ -159,7 +159,7 @@ async function boot(stores: Stores, now = AT_14_10_KST): Promise<import("http").
       { provide: BusScheduleRepository, useValue: stores.timetable },
       { provide: BusScheduleContentRepository, useValue: stores.content },
       { provide: BusEtaRepository, useValue: stores.estimates },
-      { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+      { provide: CalendarRepository, useValue: storedCalendarRepository() },
       { provide: Clock, useValue: { now: () => new Date(now) } },
     ],
     role: "api",
@@ -273,7 +273,9 @@ describe("GET /bus/stops/:stopId/arrivals: the stop block", () => {
 
   it("an HSSC stop: its name in the request language and no coordinates", async () => {
     // Arrange
-    const server = await boot(freshStores());
+    const data = busStopsFixture() as { stops: Array<Record<string, unknown>> };
+    delete data.stops.find((stop) => stop.id === "hssc-hyehwa-exit1")!.coords;
+    const server = await boot({ ...freshStores(), stops: storedBusStopsRepository(data) });
 
     // Act
     const res = await request(server).get("/bus/stops/hssc-hyehwa-exit1/arrivals").set("Accept-Language", "en");

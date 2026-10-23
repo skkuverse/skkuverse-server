@@ -1,4 +1,7 @@
 import { Injectable } from "@nestjs/common";
+import { CalendarService } from "../../calendar/calendar.service";
+import type { CalendarSnapshot } from "../../calendar/calendar.types";
+import { AppError } from "../../http/app.error";
 import { Clock } from "../../infra/clock";
 import { createDatasetLoader, type DatasetLoader } from "../../infra/dataset-loader";
 import logger from "../../infra/logger";
@@ -6,17 +9,17 @@ import { serviceConfigOf } from "../bus.rules";
 import { BUS_SCHEDULE_CONTENT_LOG_INTERVAL_MS } from "./bus-schedule-content.constants";
 import { BusScheduleContentReadError, BusScheduleContentUnavailableError } from "./bus-schedule-content.error";
 import { BusScheduleContentRepository } from "./bus-schedule-content.repository";
-import type { RestDaysRevision, ScheduleContent, ServiceNoticesRevision } from "./bus-schedule-content.types";
+import type { ScheduleContent, ServiceNoticesRevision } from "./bus-schedule-content.types";
 
 @Injectable()
 export class BusScheduleContentService {
   // WHY: a reload every TTL re-finds the same stale ids; each is logged once per revision this process loads.
   private loggedNoticesRevision: number | null = null;
   private readonly serviceNotices: DatasetLoader<ServiceNoticesRevision>;
-  private readonly restDays: DatasetLoader<RestDaysRevision>;
 
   constructor(
     private readonly repository: BusScheduleContentRepository,
+    private readonly calendar: CalendarService,
     clock: Clock,
   ) {
     this.serviceNotices = createDatasetLoader({
@@ -28,26 +31,27 @@ export class BusScheduleContentService {
       readFailedEvent: "bus.service_notices.read_failed",
       logIntervalMs: BUS_SCHEDULE_CONTENT_LOG_INTERVAL_MS,
     });
-    this.restDays = createDatasetLoader({
-      name: "bus.rest_days",
-      load: () => repository.findRestDays(),
-      clock,
-      isReadError: (err): err is BusScheduleContentReadError => err instanceof BusScheduleContentReadError,
-      toUnavailable: () => new BusScheduleContentUnavailableError(),
-      readFailedEvent: "bus.rest_days.read_failed",
-      logIntervalMs: BUS_SCHEDULE_CONTENT_LOG_INTERVAL_MS,
-    });
   }
 
   async current(): Promise<ScheduleContent> {
-    const [{ revision, services }, restDays] = await Promise.all([this.serviceNotices.get(), this.restDays.get()]);
+    const [{ revision, services }, calendar] = await Promise.all([this.serviceNotices.get(), this.currentCalendar()]);
     const contentOf = (serviceId: string) => (Object.hasOwn(services, serviceId) ? services[serviceId] : undefined);
     return {
-      revisionKey: `${revision}.${restDays.revision}`,
-      restDays: restDays.restDays,
+      revisionKey: `${revision}.${calendar.revisionKey}`,
+      dayOf: (dateStr) => calendar.dayOf(dateStr),
       noticesOf: (serviceId) => contentOf(serviceId)?.notices ?? [],
       suspendOf: (serviceId) => contentOf(serviceId)?.suspend ?? null,
     };
+  }
+
+  // WHY: the calendar answers 503 while it holds no school rest days; riders keep the schedule's own 503 for it.
+  private async currentCalendar(): Promise<CalendarSnapshot> {
+    try {
+      return await this.calendar.current();
+    } catch (err) {
+      if (err instanceof AppError && err.httpStatus === 503) throw new BusScheduleContentUnavailableError();
+      throw err;
+    }
   }
 
   // WHY: a service the code no longer defines (a revision older than the deploy) is ignored, so it serves nothing.

@@ -36,7 +36,7 @@ import { BusScheduleContentRepository } from "../../../src/bus/schedule-content/
 import { BusScheduleModule } from "../../../src/bus/schedule/bus-schedule.module";
 import { BusScheduleRepository } from "../../../src/bus/schedule/bus-schedule.repository";
 import { BusStopArrivalsModule } from "../../../src/bus/stop-arrivals/bus-stop-arrivals.module";
-import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { BusRegistryModule } from "../../../src/bus/registry/bus-registry.module";
 import { BusRegistryRepository } from "../../../src/bus/registry/bus-registry.repository";
 import { BusRouteAttributesModule } from "../../../src/bus/route-attributes/bus-route-attributes.module";
@@ -64,7 +64,7 @@ import { FakeBusRealtimeJongroClient } from "../../helpers/fakes/bus/bus-realtim
 import { FakeBusRoutePathClient } from "../../helpers/fakes/bus/bus-route-path.client.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
 import { FakeBusStopsRepository } from "../../helpers/fakes/bus/bus-stops.repository.fake";
-import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { storedCalendarRepository } from "../../helpers/calendar/rest-days";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { takeBlockedConnections } from "../../helpers/network-guard";
 
@@ -138,7 +138,7 @@ async function bootWithStopPage(stores: Stores): Promise<import("http").Server> 
       { provide: BusScheduleRepository, useValue: new FakeBusScheduleRepository() },
       { provide: BusScheduleContentRepository, useValue: storedScheduleContentRepository() },
       { provide: BusEtaRepository, useValue: new FakeBusEtaRepository() },
-      { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+      { provide: CalendarRepository, useValue: storedCalendarRepository() },
       { provide: Clock, useValue: { now: () => new Date(NOW) } },
     ],
     role: "api",
@@ -165,7 +165,9 @@ function stopIdsIn(value: unknown): string[] {
 describe("GET /bus/stops", () => {
   it("Every stop: 200, public for five minutes with an ETag, no meta.lang, a pole, an HSSC stop and a shuttle stop", async () => {
     // Arrange
-    const server = await boot(freshStores());
+    const data = busStopsFixture() as { stops: Array<Record<string, unknown>> };
+    delete data.stops.find((stop) => stop.id === "hssc-hyehwa-exit1")!.coords;
+    const server = await boot({ ...freshStores(), stops: storedBusStopsRepository(data) });
 
     // Act
     const res = await request(server).get("/bus/stops");

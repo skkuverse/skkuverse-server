@@ -844,6 +844,62 @@ describe("toBusStopsIssues", () => {
     // Act & Assert
     expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([{ path: ["topis", "01876", "subwayStationId"], message: '"hyehwa4" is not a served subway station' }]);
   });
+
+  describe("a served stop needs coordinates", () => {
+    const servedWithoutCoords = (stopId: string) =>
+      `stop ${stopId}: has no coords, but the HSSC line, a sequence or its arsIds serve it, and the app opens only a stop it can place on its map`;
+
+    it("Served HSSC stop without coordinates: names its coords path", () => {
+      // Arrange
+      const data = fixture();
+      const index = indexOfStop(data, "hssc-olympic-hall");
+      delete data.stops[index].coords;
+
+      // Act & Assert
+      expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([{ path: ["stops", index, "coords"], message: servedWithoutCoords("hssc-olympic-hall") }]);
+    });
+
+    it("Served sequence stop without coordinates: names its coords path beside the estimate issue", () => {
+      // Arrange
+      const data = fixture();
+      const index = indexOfStop(data, "gangnam-median");
+      delete data.stops[index].coords;
+      delete data.stops[index].guide;
+
+      // Act
+      const issues = toBusStopsIssues(data as BusStopsData, context);
+
+      // Assert
+      expect(issues.filter((issue) => issue.path.at(-1) === "coords")).toEqual([{ path: ["stops", index, "coords"], message: servedWithoutCoords("gangnam-median") }]);
+    });
+
+    it("Aliasing stop without coordinates: names its coords path, though no line or sequence names it", () => {
+      // Arrange
+      const data = fixture();
+      data.stops.push({ id: "hssc-new-pole", name: { ko: "새 정류장" }, arsIds: ["01618"] });
+
+      // Act & Assert
+      expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([{ path: ["stops", data.stops.length - 1, "coords"], message: servedWithoutCoords("hssc-new-pole") }]);
+    });
+
+    it("accepts the same aliasing stop with coordinates", () => {
+      // Arrange
+      const data = fixture();
+      data.stops.push({ id: "hssc-new-pole", name: { ko: "새 정류장" }, arsIds: ["01618"], coords: { lat: 37.587, lng: 126.993 } });
+
+      // Act & Assert
+      expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([]);
+    });
+
+    it("accepts a stop nothing serves without coordinates: no line, no sequence and an empty arsIds", () => {
+      // Arrange
+      const data = fixture();
+      data.stops.push({ id: "hssc-spare", name: { ko: "예비 정류장" } }, { id: "hssc-spare-alias", name: { ko: "예비 별칭" }, arsIds: [] });
+
+      // Act & Assert
+      expect(toBusStopsIssues(data as BusStopsData, context)).toEqual([]);
+    });
+  });
 });
 
 describe("storedLineAndAliasErrors", () => {
@@ -869,5 +925,14 @@ describe("storedLineAndAliasErrors", () => {
       'hssc.stations.0.stopId: names the stop "hssc-nowhere", which the dataset\'s stops do not hold',
       "stops.1.arsIds.0: ARS number 01618 is aliased by stops.0.arsIds.0 too",
     ]);
+  });
+
+  it("leaves a served stop without coordinates to the push, since a stop list serves it with coords null", () => {
+    // Arrange
+    const data = fixture();
+    delete data.stops.find((stop: { id: string }) => stop.id === "hssc-olympic-hall").coords;
+
+    // Act & Assert
+    expect(storedLineAndAliasErrors(data as BusStopsData)).toEqual([]);
   });
 });

@@ -1,8 +1,7 @@
 import moment from "moment-timezone";
-import { toHolidayYear } from "../../shared/korean-public-holiday.util";
+import type { CalendarDay } from "../../calendar/calendar.types";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import type { BusOverrideDoc, BusScheduleDoc } from "./bus-schedule.document";
-import type { RestDays } from "../schedule-content/bus-schedule-content.types";
 import type { DaySources, PickedPattern, SuspendWindow } from "./bus-schedule.types";
 import type { ScheduleDay, ScheduleNotice } from "./bus-schedule.wire";
 
@@ -16,16 +15,11 @@ export function isWeekStartInRange(from: string, now: Date): boolean {
   return day.isValid() && !day.isBefore(today.clone().subtract(1, "year")) && !day.isAfter(today.clone().add(1, "year"));
 }
 
-/** WHY: exact date first, then the yearly MM-DD rule. */
-export function lookupRestDay(restDays: RestDays, dateStr: string): string | null {
-  return restDays.exact.get(dateStr) ?? restDays.annual.get(dateStr.slice(5)) ?? null;
-}
-
-// WHY: the SKKU list wins over the public calendar, and holds the rest days that calendar does not list. The
-// year check runs first, so a date the holiday lookup cannot take throws even on an SKKU rest day.
-export function toNonOperatingDayLabel(restDays: RestDays, dateStr: string, publicHoliday: string | null): string | null {
-  toHolidayYear(dateStr);
-  return lookupRestDay(restDays, dateStr) || publicHoliday;
+// SEE: docs/decisions/0021-academic-calendar.md ("D4. The dataset overrides the crawl"): the dataset's rest day, then
+// the public holiday, then the crawled rest day.
+export function toNonOperatingDayLabel({ schoolRestDay, publicHoliday }: Pick<CalendarDay, "schoolRestDay" | "publicHoliday">): string | null {
+  if (schoolRestDay?.source === "dataset") return schoolRestDay.label;
+  return publicHoliday || schoolRestDay?.label || null;
 }
 
 /** WHY: a day the smart view may open on: one with a timetable, or a no-service day that carries notices. */

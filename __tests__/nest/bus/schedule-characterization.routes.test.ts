@@ -31,6 +31,7 @@ const store = require("../../../scripts/lib/datasets/store");
 
 type BuildTestApp = typeof import("../../helpers/nest/build-test-app")["buildTestApp"];
 type ScheduleContentHelpers = typeof import("../../helpers/bus/schedule-content");
+type RestDaysHelpers = typeof import("../../helpers/calendar/rest-days");
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
 
@@ -68,7 +69,8 @@ beforeAll(async () => {
   const busDb = db.getClient().db(config.mongo.dbName);
   schedules = busDb.collection("bus_schedules");
   overrides = busDb.collection("bus_overrides");
-  const { restDaysFixture, serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
+  const { serviceNoticesFixture } = require("../../helpers/bus/schedule-content") as ScheduleContentHelpers;
+  const { restDaysFixture } = require("../../helpers/calendar/rest-days") as RestDaysHelpers;
   const content = db.getClient().db(config.content.dbName);
   const storedBy = { by: "characterization@example.com", now: NOW };
   await store.create(content, "bus-service-notices", serviceNoticesFixture(), storedBy);

@@ -78,7 +78,7 @@ The stop list: every stop a served route stops at, once, with where it is and wh
       {
         "id": "hssc-hyehwa-exit1",
         "name": { "ko": "혜화역 1번출구", "en": "Hyehwa Station (Shuttle Bus Stop)", "zh": "Hyehwa Station (Shuttle Bus Stop)" },
-        "coords": null, "arsIds": null, "campus": null,
+        "coords": { "lat": 37.5836601, "lng": 127.0018387 }, "arsIds": null, "campus": "hssc",
         "routes": [{ "kind": "live", "groupId": "hssc", "label": { "ko": "인사캠 셔틀버스", "en": "HSSC Shuttle Bus", "zh": "人文校区班车" }, "stationIndex": 6, "towards": { "ko": "성균관대입구사거리", "en": "SKKU Junction", "zh": "SKKU Junction" }, "action": "board" }]
       },
       {
@@ -107,9 +107,9 @@ The stop list: every stop a served route stops at, once, with where it is and wh
 | --- | --- | --- |
 | `id` | string | The stop id the stop page takes and a realtime station of `/bus/config` serves as `stopId`; a pole a local stop aliases is listed once, under the local stop's slug |
 | `name` | `{ ko, en, zh }` | Each is what a request in that language is served on the stop page: a local stop's name, falling back to English, then Korean; a Jongno pole's stored TOPIS name, Korean in all three |
-| `coords` | `{ lat, lng }` or `null` | The stop's own, else its pole's on the stored route line; `null` while it has neither (every HSSC stop until a `bus-stops` push gives it coordinates, a pole while the route lines cannot be read). A client draws no pin for `null`. A realtime station's coordinates are its stop's: join `/bus/config` `station.stopId` on `id` |
-| `arsIds` | string array or `null` | The ARS numbers of the TOPIS poles it stands for: a pole's own, or those a local stop aliases; `null` for a local stop that aliases none |
-| `campus` | `"hssc"`, `"nsc"` or `null` | A catalog stop's `campus` in `bus-stops`; without one, `hssc` for a Jongno pole or a local stop aliasing one, since all three Jongno routes serve the HSSC campus, else `null` |
+| `coords` | `{ lat, lng }` or `null` | The stop's own `coords` in `bus-stops`, else its pole's on the stored route line; `null` while it has neither: a pole while the route lines cannot be read, or a local stop stored without `coords` (a push refuses a served stop without them, [edit-bus-stops.md](../how-to/edit-bus-stops.md), but the read still serves a revision stored before that check). A client draws no pin for `null`. A realtime station's coordinates are its stop's: join `/bus/config` `station.stopId` on `id` |
+| `arsIds` | string array or `null` | The ARS numbers of the TOPIS poles it stands for: a pole's own, or those a local stop aliases, as stored; `null` for a local stop whose entry has no `arsIds`, where the stop page leaves `stop.arsIds` out. A local stop stored with an empty `arsIds` is served `[]`, as on its stop page |
+| `campus` | `"hssc"`, `"nsc"` or `null` | A catalog stop's `campus` in `bus-stops`: `hssc` for a stop on the HSSC campus, `nsc` for one on the NSC campus, left out for a commute station stop, which serves neither; without one, `hssc` for a Jongno pole or a local stop aliasing one, since all three Jongno routes serve the HSSC campus, else `null` |
 | `routes` | array | One entry per served route at the stop, in the stop page's order, without arrivals |
 
 | Entry | Fields |
@@ -168,9 +168,9 @@ The example is the fixture `contracts/produced/fixtures/bus-stop-arrivals.busSto
 | `stop.id` | string | The canonical stop id: the slug of an aliased pole's local stop, else the id asked for |
 | `stop.name` | string | A local stop's name in the request language, falling back to English, then Korean; a Jongno pole's stored TOPIS name, which is Korean in every language |
 | `stop.detail` | string, optional | A local stop's detail, as `/bus/config` serves it |
-| `stop.coords` | object, optional | `{ lat, lng }`: the stop's own, else its pole's on the stored route line; an HSSC stop has none |
+| `stop.coords` | object, optional | `{ lat, lng }`: the stop's own, else its pole's on the stored route line; left out while it has neither, where the stop list serves `coords: null` |
 | `stop.photoUrl`, `stop.streetViewUrl`, `stop.subwayStation` | optional | As the stop's `/bus/config` record serves them |
-| `stop.arsIds` | string array, optional | The ARS numbers of the TOPIS poles the stop stands for: a pole's own, or the ones a local stop aliases |
+| `stop.arsIds` | string array, optional | The ARS numbers of the TOPIS poles the stop stands for: a pole's own, or the ones a local stop aliases, as stored (an empty `arsIds` is served `[]`); left out for a local stop whose entry has none |
 
 A local stop's block is its `/bus/config` record (`screen.stops[]`) without `map`, which belongs to a group's screen: `/bus/stops/jeongja-exit3/arrivals` in `en` serves the same `stop` as `/bus/config/commute` in `en`.
 

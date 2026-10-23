@@ -8,7 +8,6 @@ import { createCachedLoader, type CachedLoader } from "../../infra/cached-loader
 import { Clock } from "../../infra/clock";
 import logger from "../../infra/logger";
 import { createLogThrottle } from "../../infra/log-throttle";
-import { HolidaysService } from "../../holidays/holidays.service";
 import { KST_TIME_ZONE } from "../../shared/time-zone.constants";
 import { serviceConfigOf } from "../bus.rules";
 import { BusScheduleContentService } from "../schedule-content/bus-schedule-content.service";
@@ -35,7 +34,6 @@ export class BusScheduleService {
 
   constructor(
     private readonly repository: BusScheduleRepository,
-    private readonly holidays: HolidaysService,
     private readonly content: BusScheduleContentService,
     private readonly clock: Clock,
   ) {}
@@ -165,7 +163,7 @@ export class BusScheduleService {
       const override = overrideByDate.get(dateStr);
       const restDayLabel =
         !override && serviceConfig.respectsKoreanHolidays
-          ? toNonOperatingDayLabel(content.restDays, dateStr, await this.holidays.holidayName(dateStr))
+          ? toNonOperatingDayLabel(await content.dayOf(dateStr))
           : null;
       const pattern = override || restDayLabel ? undefined : this.patternOn(serviceId, patterns, date);
       days.push(toDay(date, { override, restDayLabel, pattern, serviceNotices, config: serviceConfig }));

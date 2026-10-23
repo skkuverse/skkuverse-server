@@ -9,7 +9,7 @@ audience: internal
 
 # 0017. Subway Arrivals and Public Holidays — Sources, Budget and Accuracy Policy
 
-> The decisions behind `src/subway/` and `src/holidays/` that the code cannot show: what the upstreams measured, which sources we may lean on, the call budget, how accuracy may be improved, and where holidays come from. Read it before you change a subway source, a polling window, an estimate rule or how a holiday is decided. Accepted 2026-10-22, for what shipped from 2026-10-17; how it works is [subway architecture](../explanation/subway-architecture.md) and [holidays architecture](../explanation/holidays-architecture.md), the per-line quirks [subway-api.md](../reference/subway-api.md) ("Upstream data notes").
+> The decisions behind `src/subway/` and `src/calendar/` that the code cannot show: what the upstreams measured, which sources we may lean on, the call budget, how accuracy may be improved, and where holidays come from. Read it before you change a subway source, a polling window, an estimate rule or how a holiday is decided. Accepted 2026-10-22, for what shipped from 2026-10-17; how it works is [subway architecture](../explanation/subway-architecture.md) and [holidays architecture](../explanation/calendar-architecture.md), the per-line quirks [subway-api.md](../reference/subway-api.md) ("Upstream data notes").
 
 ## Context
 
@@ -21,7 +21,7 @@ audience: internal
 
 ### D1. Subway is its own top-level feature
 
-`src/subway/` is a top-level module, not a sub-module of `src/bus/` and not part of a new transit module (owner, 2026-10-15, umbrella issue 65). `src/holidays/` is top-level because bus and subway both read it.
+`src/subway/` is a top-level module, not a sub-module of `src/bus/` and not part of a new transit module (owner, 2026-10-15, umbrella issue 65). `src/calendar/` is top-level because bus and subway both read it.
 
 ### D2. The train map is a guest source
 
@@ -53,7 +53,7 @@ A service day's table is weekday, Saturday or holiday by the calendar (owner, 20
 
 ### D9. Public holidays come from the official calendar, never edited by hand
 
-`src/holidays/` mirrors 한국천문연구원 특일 정보 (`getRestDeInfo`); the owner ruled out manual updates (2026-10-16). Rejected: packaged calendars (`@hyunbinseo/holidays-kr`, `@kyungseopk1m/holidays-kr`), which need a bump and a deploy for each new holiday, and `date-holidays` alone, which misses temporary holidays and election days. Every calendar holiday is a no-service day for a holiday-respecting service: the owner confirmed that the 인자셔틀 and the commute shuttle do not run on substitute, temporary or election-day holidays.
+`src/calendar/` mirrors 한국천문연구원 특일 정보 (`getRestDeInfo`); the owner ruled out manual updates (2026-10-16). Rejected: packaged calendars (`@hyunbinseo/holidays-kr`, `@kyungseopk1m/holidays-kr`), which need a bump and a deploy for each new holiday, and `date-holidays` alone, which misses temporary holidays and election days. Every calendar holiday is a no-service day for a holiday-respecting service: the owner confirmed that the 인자셔틀 and the commute shuttle do not run on substitute, temporary or election-day holidays.
 
 ### D10. A line marker's color is for the light background
 

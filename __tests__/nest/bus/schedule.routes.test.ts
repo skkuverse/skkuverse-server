@@ -38,19 +38,21 @@ import { BusScheduleService } from "../../../src/bus/schedule/bus-schedule.servi
 import { BusScheduleContentRepository } from "../../../src/bus/schedule-content/bus-schedule-content.repository";
 import { scheduleWeek, smartSchedule } from "../../../src/bus/schedule/bus-schedule.wire";
 import { BusStopsModule } from "../../../src/bus/stops/bus-stops.module";
-import { HolidaysRepository } from "../../../src/holidays/holidays.repository";
+import { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { Clock } from "../../../src/infra/clock";
 import { SchedulingModule } from "../../../src/scheduling/scheduling.module";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
 import { storedBusStopsRepository } from "../../helpers/bus/bus-stops";
-import { serviceNoticesFixture, serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../helpers/bus/schedule-content";
+import { serviceNoticesWithNotices, serviceNoticesWithSuspension, storedScheduleContentRepository } from "../../helpers/bus/schedule-content";
 import { FakeBusEtaRepository } from "../../helpers/fakes/bus/bus-eta.repository.fake";
 import { FakeBusScheduleContentRepository } from "../../helpers/fakes/bus/bus-schedule-content.repository.fake";
 import { FakeBusScheduleRepository } from "../../helpers/fakes/bus/bus-schedule.repository.fake";
-import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
+import { FakeCalendarRepository } from "../../helpers/fakes/calendar/calendar.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
+import { storedCalendarRepository } from "../../helpers/calendar/rest-days";
+import logger from "../../../src/infra/logger";
 
 const DO_NOT_FAKE = ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "setImmediate", "clearImmediate", "queueMicrotask", "nextTick", "performance"] as const;
 const ENTRY = { index: 1, time: "08:00", routeType: "regular", busCount: 1, notes: null };
@@ -60,15 +62,14 @@ interface TestApp {
   app: NestExpressApplication;
   timetable: FakeBusScheduleRepository;
   estimates: FakeBusEtaRepository;
-  holidays: FakeHolidaysRepository;
+  holidays: FakeCalendarRepository;
   content: FakeBusScheduleContentRepository;
 }
 
 // WHY: the clock reads the (possibly fake-timer) Date, so a test fixes or advances the time with jest.
-async function bootApp(content = storedScheduleContentRepository()): Promise<TestApp> {
+async function bootApp(content = storedScheduleContentRepository(), holidays = storedCalendarRepository()): Promise<TestApp> {
   const timetable = new FakeBusScheduleRepository();
   const estimates = new FakeBusEtaRepository();
-  const holidays = new FakeHolidaysRepository();
   const app = await buildTestApp({
     imports: [SchedulingModule, BusModule, BusStopsModule, BusScheduleModule, BusEtaModule, BusEtaSmartModule],
     overrides: [
@@ -77,7 +78,7 @@ async function bootApp(content = storedScheduleContentRepository()): Promise<Tes
       { provide: BusEtaRepository, useValue: estimates },
       { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
       { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
-      { provide: HolidaysRepository, useValue: holidays },
+      { provide: CalendarRepository, useValue: holidays },
       { provide: Clock, useValue: { now: () => new Date() } },
     ],
     role: "api",
@@ -87,7 +88,7 @@ async function bootApp(content = storedScheduleContentRepository()): Promise<Tes
 
 let app: NestExpressApplication;
 let timetable: FakeBusScheduleRepository;
-let holidays: FakeHolidaysRepository;
+let holidays: FakeCalendarRepository;
 let content: FakeBusScheduleContentRepository;
 let httpServer: import("http").Server;
 let resolveWeek: jest.SpyInstance;
@@ -667,12 +668,67 @@ describe("GET /bus/schedule/data/:serviceId/week and /smart bodies", () => {
   });
 });
 
-// The calendar's 2026 rows as getRestDeInfo lists them (__tests__/nest/holidays/fixtures/getrestdeinfo-2026.json).
+// The calendar's 2026 rows as getRestDeInfo lists them (__tests__/nest/calendar/fixtures/getrestdeinfo-2026.json).
 const CALENDAR_2026 = [
   { date: "2026-03-01", name: "삼일절" },
   { date: "2026-03-02", name: "대체공휴일(삼일절)" },
   { date: "2026-06-03", name: "전국동시지방선거" },
 ];
+
+describe("GET /bus/schedule/data/:serviceId/smart and /week while the academic calendars cannot be read", () => {
+  it("serve the timetable over the rule's semesters, logging the failed read once", async () => {
+    // Arrange
+    const errorLog = jest.spyOn(logger, "error");
+    holidays.failAcademicWith = new Error("server selection timed out");
+
+    // Act
+    const smart = await request(httpServer).get("/bus/schedule/data/campus-inja/smart");
+    const week = await request(httpServer).get("/bus/schedule/data/campus-inja/week?from=2026-03-09");
+
+    // Assert
+    expect(smart.status).toBe(200);
+    expect(smart.body.data.status).toBe("active");
+    expectWire(smartSchedule, smart.body.data);
+    expect(week.status).toBe(200);
+    expectWire(scheduleWeek, week.body.data);
+    expect(errorLog.mock.calls.filter(([fields]) => (fields as { event?: string })?.event === "academic_calendar.read_failed")).toHaveLength(1);
+  });
+});
+
+describe("GET /bus/schedule/data/:serviceId/week on a rest day of the crawled academic calendar", () => {
+  // The crawler's own 2026 document (__tests__/nest/calendar/fixtures/academic-calendars.json): 건학기념일 on
+  // 09-25 and 공부자탄강일 on 09-28; 2026-09-25 is also 추석 on the official calendar.
+  const crawled2026 = (JSON.parse(fs.readFileSync(path.join(__dirname, "../calendar/fixtures/academic-calendars.json"), "utf8")) as Record<string, Record<string, unknown>>)["2026"]!;
+
+  it("labels a crawled rest day with the public holiday on its date, and with its own title on any other", async () => {
+    // Arrange
+    holidays.storeRestDays({});
+    holidays.storeAcademicYear(crawled2026);
+    holidays.store(2026, [{ date: "2026-09-25", name: "추석" }]);
+
+    // Act
+    const res = await request(httpServer).get("/bus/schedule/data/campus-inja/week?from=2026-09-21");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.days[4]).toMatchObject({ date: "2026-09-25", display: "noService", label: "추석" });
+    expectWire(scheduleWeek, res.body.data);
+  });
+
+  it("labels a crawled rest day on no public holiday with its title, less its class-day count", async () => {
+    // Arrange
+    holidays.storeRestDays({});
+    holidays.storeAcademicYear(crawled2026);
+    holidays.store(2026, []);
+
+    // Act
+    const res = await request(httpServer).get("/bus/schedule/data/campus-inja/week?from=2026-09-28");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(res.body.data.days[0]).toMatchObject({ date: "2026-09-28", display: "noService", label: "공부자탄강일" });
+  });
+});
 
 describe("GET /bus/schedule/data/:serviceId/week on a day the official calendar lists", () => {
   it.each([
@@ -727,9 +783,7 @@ describe("GET /bus/schedule/data/:serviceId/week and /smart with no schedule con
 
   it("answers smart with 503 BUS_SCHEDULE_UNAVAILABLE when only the rest days are missing", async () => {
     // Arrange
-    const noRestDays = new FakeBusScheduleContentRepository();
-    noRestDays.storeServiceNotices(serviceNoticesFixture());
-    const unread = await bootApp(noRestDays);
+    const unread = await bootApp(storedScheduleContentRepository(), new FakeCalendarRepository());
     unread.timetable.patterns = [pattern("campus-inja", [1, 2, 3, 4, 5])];
 
     try {
@@ -811,7 +865,7 @@ describe("GET /bus/config across a content push", () => {
         { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
         { provide: BusStopsRepository, useValue: storedBusStopsRepository() },
         { provide: BusRoutePathRepository, useValue: storedBusRoutePathRepository() },
-        { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+        { provide: CalendarRepository, useValue: storedCalendarRepository() },
         { provide: Clock, useValue: { now: () => new Date() } },
       ],
       role: "api",

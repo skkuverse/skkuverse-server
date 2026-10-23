@@ -39,9 +39,7 @@ import { serviceNoticesWithSuspension, storedScheduleContentRepository, storedSc
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
 import { FakeBusScheduleContentRepository } from "../../../../__tests__/helpers/fakes/bus/bus-schedule-content.repository.fake";
 import { FakeBusScheduleRepository } from "../../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
-import { FakeHolidaysService } from "../../../../__tests__/helpers/fakes/holidays/holidays.service.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
-import type { HolidaysService } from "../../../holidays/holidays.service";
 import type { BusScheduleRepository } from "../../schedule/bus-schedule.repository";
 import { BusScheduleService } from "../../schedule/bus-schedule.service";
 import { storedBusStopsService } from "../../../../__tests__/helpers/bus/bus-stops";
@@ -583,7 +581,7 @@ describe("BusEtaLiveService.tick over the stored schedule content", () => {
   function liveOver(content: FakeBusScheduleContentRepository, fetchOffsets: jest.Mock): BusEtaLiveService {
     const timetable = new FakeBusScheduleRepository();
     timetable.patterns = WEEKDAYS;
-    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), storedScheduleContentService(clock, content), clock);
     const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, storedBusStopsService());
     return new BusEtaLiveService({
       sequences: async () => [SEQ],
@@ -645,7 +643,7 @@ describe("BusEtaLiveService.tick after the schedule content recovers", () => {
     const content = new FakeBusScheduleContentRepository();
     const timetable = new FakeBusScheduleRepository();
     timetable.patterns = WEEKDAYS;
-    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<HolidaysService>(new FakeHolidaysService()), storedScheduleContentService(clock, content), clock);
+    const schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), storedScheduleContentService(clock, content), clock);
     const eta = new BusEtaService(asReal<BusEtaRepository>(new FakeBusEtaRepository()), schedule, storedBusStopsService());
     const fetchOffsets = jest.fn().mockResolvedValue(OFFSETS);
     const live = new BusEtaLiveService({

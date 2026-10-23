@@ -215,6 +215,14 @@ const config = {
     syncIntervalMs: 60 * 60 * 1000,
   },
 
+  // CONTRACT(skkuverse-crawler): skkuverse-crawler/py/src/skkuverse_crawler/modules/schedule/module.py writes it in its
+  // base database, which this server reads as notices.dbName.
+  calendar: {
+    collections: {
+      academicCalendars: "academic_calendars",
+    },
+  },
+
   // WHY: the literal "disabled" turns Sentry off where a DSN is required (docker-compose.local-verify.yml).
   sentry: {
     dsn: process.env.SENTRY_DSN,

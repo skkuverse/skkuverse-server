@@ -32,7 +32,7 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { Clock } from "../../../src/infra/clock";
-import type { PublicHolidaysDoc } from "../../../src/holidays/holidays.document";
+import type { PublicHolidaysDoc } from "../../../src/calendar/calendar.document";
 import type { SubwayArrivalsDoc } from "../../../src/subway/subway.document";
 import type { ProviderObservations, TrainEvent } from "../../../src/subway/subway.types";
 import type { SubwayTrackingService } from "../../../src/subway/tracking/subway-tracking.service";
