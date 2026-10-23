@@ -628,9 +628,9 @@ describe("loadCatalog bus-service-notices", () => {
 });
 
 describe("loadCatalog skku-rest-days", () => {
-  const restDays = () => datasetFixture("../bus/fixtures/skku-rest-days.dataset.json") as Record<string, string>;
+  const restDays = () => datasetFixture("../calendar/fixtures/skku-rest-days.dataset.json") as Record<string, string>;
 
-  it("is owned by src/bus/schedule-content and accepts revision 1 with no reference", () => {
+  it("is owned by src/calendar and accepts revision 1 with no reference", () => {
     // Arrange
     const catalog = loadCatalog(srcLoader);
     const entry = catalog.datasets["skku-rest-days"];
@@ -640,7 +640,7 @@ describe("loadCatalog skku-rest-days", () => {
 
     // Assert
     expect(issues).toEqual([]);
-    expect(entry.owner).toBe("src/bus/schedule-content");
+    expect(entry.owner).toBe("src/calendar");
     expect(entry.referencesOf(entry.schema.parse(restDays()))).toEqual([]);
   });
 

@@ -13,9 +13,7 @@ jest.mock("../../../infra/logger", () => mockLogger);
 import { FakeBusEtaRepository } from "../../../../__tests__/helpers/fakes/bus/bus-eta.repository.fake";
 import { storedScheduleContentService } from "../../../../__tests__/helpers/bus/schedule-content";
 import { FakeBusScheduleRepository } from "../../../../__tests__/helpers/fakes/bus/bus-schedule.repository.fake";
-import { FakeCalendarService } from "../../../../__tests__/helpers/fakes/calendar/calendar.service.fake";
 import { asReal } from "../../../../__tests__/helpers/fakes/public-of";
-import type { CalendarService } from "../../../calendar/calendar.service";
 import type { Clock } from "../../../infra/clock";
 import type { BusScheduleRepository } from "../../schedule/bus-schedule.repository";
 import { BusScheduleService } from "../../schedule/bus-schedule.service";
@@ -52,7 +50,7 @@ beforeEach(() => {
   ];
   estimates = new FakeBusEtaRepository();
   estimates.docs.set(LIVE._id, LIVE);
-  schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), asReal<CalendarService>(new FakeCalendarService()), storedScheduleContentService(clock), clock);
+  schedule = new BusScheduleService(asReal<BusScheduleRepository>(timetable), storedScheduleContentService(clock), clock);
   service = new BusEtaSmartService(schedule, asReal<BusEtaRepository>(estimates), storedBusStopsService(), clock);
 });
 

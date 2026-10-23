@@ -1,24 +1,36 @@
 /**
- * CalendarService.publicHolidayName over an in-memory repository (the typed fake in
+ * CalendarService over an in-memory repository (the typed fake in
  * __tests__/helpers/fakes/calendar/) and a fixed Clock. What it guards:
- *  - a stored year is answered from the calendar alone, its substitute,
- *    temporary and election-day holidays included;
- *  - a year with no stored document is answered by the rule-based lookup,
- *    with one warning naming the year per hour, not one per call;
- *  - a date the lookup cannot take (year 0) throws a RangeError, whether or
- *    not years are stored, and is not answered from rules.
+ *  - publicHolidayName: a stored year is answered from the calendar alone,
+ *    its substitute, temporary and election-day holidays included; a year
+ *    with no stored document is answered by the rule-based lookup, with one
+ *    warning naming the year per hour, not one per call; a date the lookup
+ *    cannot take (year 0) throws a RangeError, whether or not years are
+ *    stored, and is not answered from rules.
+ *  - dayOf: a date's public holiday and school rest day, the rest day from
+ *    the `skku-rest-days` dataset (an exact date before a yearly one), read
+ *    as every dataset is (ADR 0013, D6): cached for DATASET_CACHE_TTL_MS,
+ *    kept through an invalid reload, and CALENDAR_UNAVAILABLE (503) when no
+ *    good revision was ever read; the RangeError comes first, even on a rest
+ *    day.
+ *  - revisionKey: changes with the rest days' revision.
  * How often the stored years are read is calendar.repository.spec.ts's, and
  * how they are written is the sync's (src/calendar/holiday-sync/).
+ *
+ * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake
+ * system time.
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../infra/logger", () => mockLogger);
 
 import { FakeCalendarRepository } from "../../__tests__/helpers/fakes/calendar/calendar.repository.fake";
+import { restDaysFixture, storedCalendarRepository } from "../../__tests__/helpers/calendar/rest-days";
 import { asReal } from "../../__tests__/helpers/fakes/public-of";
 import { logText } from "../../__tests__/helpers/log-text";
 import type { Clock } from "../infra/clock";
 import type { CalendarRepository } from "./calendar.repository";
 import { CalendarService } from "./calendar.service";
+import { DATASET_CACHE_TTL_MS } from "../shared/dataset.constants";
 import type { PublicHoliday } from "./calendar.types";
 
 const HOUR_MS = 60 * 60_000;
@@ -46,6 +58,10 @@ const fallbackWarnings = () => mockLogger.warn.mock.calls.filter(([fields]) => f
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe("CalendarService.publicHolidayName for a stored year", () => {
@@ -133,5 +149,124 @@ describe("CalendarService.publicHolidayName on a date the lookup cannot take", (
 
     // Act & Assert
     await expect(service.publicHolidayName("2026-02-29")).rejects.toThrow(RangeError);
+  });
+});
+
+describe("CalendarService.dayOf", () => {
+  it("answers a date's public holiday and school rest day", async () => {
+    // Arrange
+    const { service } = setup(storedCalendarRepository().store(2026, [...CALENDAR_2026, { date: "2026-09-28", name: "임시공휴일" }]));
+
+    // Act & Assert
+    await expect(service.dayOf("2026-09-28")).resolves.toEqual({ date: "2026-09-28", publicHoliday: "임시공휴일", schoolRestDay: "공자탄신일" });
+    await expect(service.dayOf("2026-03-02")).resolves.toEqual({ date: "2026-03-02", publicHoliday: "대체공휴일(삼일절)", schoolRestDay: null });
+    await expect(service.dayOf("2026-03-03")).resolves.toEqual({ date: "2026-03-03", publicHoliday: null, schoolRestDay: null });
+  });
+
+  it("answers an exact rest day before the yearly one on its date", async () => {
+    // Arrange
+    const repository = new FakeCalendarRepository().store(2030, []);
+    repository.storeRestDays({ ...restDaysFixture(), "2030-09-28": "공자탄신일 (특별)" });
+    const { service } = setup(repository);
+
+    // Act & Assert
+    await expect(service.dayOf("2030-09-28")).resolves.toMatchObject({ schoolRestDay: "공자탄신일 (특별)" });
+    await expect(service.dayOf("2031-09-28")).resolves.toMatchObject({ schoolRestDay: "공자탄신일" });
+  });
+
+  it("answers CALENDAR_UNAVAILABLE (503) while no rest days were ever read", async () => {
+    // Arrange
+    const { service } = setup(new FakeCalendarRepository());
+
+    // Act & Assert
+    await expect(service.dayOf("2026-09-28")).rejects.toMatchObject({ code: "CALENDAR_UNAVAILABLE", httpStatus: 503 });
+    await expect(service.revisionKey()).rejects.toMatchObject({ code: "CALENDAR_UNAVAILABLE", httpStatus: 503 });
+  });
+
+  it("answers CALENDAR_UNAVAILABLE (503) on a first read that fails, logging the failure", async () => {
+    // Arrange
+    const repository = storedCalendarRepository();
+    const failure = new Error("server selection timed out");
+    repository.failRestDaysWith = failure;
+    const { service } = setup(repository);
+
+    // Act & Assert
+    await expect(service.dayOf("2026-09-28")).rejects.toMatchObject({ code: "CALENDAR_UNAVAILABLE", httpStatus: 503 });
+    expect(mockLogger.error.mock.calls.filter(([fields]) => fields?.event === "calendar.rest_days.read_failed")).toEqual([
+      [expect.objectContaining({ err: failure }), expect.any(String)],
+    ]);
+  });
+
+  it("serves a rest days push once the TTL has passed, and keeps the last good one through an invalid push", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    const repository = storedCalendarRepository().store(2027, []);
+    const { service } = setup(repository);
+    const before = await service.dayOf("2027-03-02");
+    repository.storeRestDays({ ...restDaysFixture(), "2027-03-02": "학사휴교" });
+
+    // Act
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS - 1);
+    const beforeTtl = await service.dayOf("2027-03-02");
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    const atTtl = await service.dayOf("2027-03-02");
+    repository.storeRestDays({ ...restDaysFixture(), "02-30": "휴일" });
+    jest.setSystemTime(NOW.getTime() + 2 * DATASET_CACHE_TTL_MS);
+    const afterInvalid = await service.dayOf("2027-03-02");
+
+    // Assert
+    expect(before.schoolRestDay).toBeNull();
+    expect(beforeTtl.schoolRestDay).toBeNull();
+    expect(atTtl.schoolRestDay).toBe("학사휴교");
+    expect(afterInvalid.schoolRestDay).toBe("학사휴교");
+  });
+});
+
+// QUIRK(date-holidays): isHoliday never returns for an Invalid Date or a year-0 or year-1 day, and reads an
+// impossible day (2026-02-29) as the next real one, so the day refuses those before asking it.
+describe("CalendarService.dayOf on a date the holiday lookup cannot take", () => {
+  it.each(["2026-13-01", "2026-02-31", "2026-02-29", "2026-04-31", "0000-01-03", "0001-01-01", "1899-12-31", "3000-01-01", "10000-01-01", "2026-1-01", "Invalid date"])(
+    "throws on %s",
+    async (date) => {
+      // Arrange
+      const { service } = setup(storedCalendarRepository());
+
+      // Act & Assert
+      await expect(service.dayOf(date)).rejects.toThrow(`${date} is not a date from 1900 to 2999`);
+    },
+  );
+
+  it.each(["1900-01-01", "2999-12-31", "2028-02-29"])("answers %s", async (date) => {
+    // Arrange
+    const { service } = setup(storedCalendarRepository());
+
+    // Act & Assert
+    await expect(service.dayOf(date)).resolves.toMatchObject({ date, schoolRestDay: null });
+  });
+
+  it("refuses a year out of range even on a day the SKKU list names", async () => {
+    // Arrange
+    const { service } = setup(storedCalendarRepository());
+
+    // Act & Assert
+    await expect(service.dayOf("0001-09-28")).rejects.toThrow("0001-09-28 is not a date from 1900 to 2999");
+  });
+});
+
+describe("CalendarService.revisionKey", () => {
+  it("changes with the rest days' revision once the TTL has passed", async () => {
+    // Arrange
+    jest.useFakeTimers({ now: NOW });
+    const repository = storedCalendarRepository();
+    const { service } = setup(repository);
+    const before = await service.revisionKey();
+    repository.storeRestDays(restDaysFixture());
+
+    // Act
+    jest.setSystemTime(NOW.getTime() + DATASET_CACHE_TTL_MS);
+    const after = await service.revisionKey();
+
+    // Assert
+    expect(after).not.toBe(before);
   });
 });

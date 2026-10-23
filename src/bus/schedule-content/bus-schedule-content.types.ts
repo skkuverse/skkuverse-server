@@ -1,3 +1,4 @@
+import type { CalendarDay } from "../../calendar/calendar.types";
 import type { ServiceContent } from "./bus-schedule-content.schema";
 
 export interface ServiceNoticesRevision {
@@ -15,10 +16,11 @@ export type StoredServiceNotice = ServiceContent["notices"][number];
 
 export type SuspendDates = NonNullable<ServiceContent["suspend"]>;
 
-/** WHY: one snapshot of every dataset a timetable folds in; a cache built from it is keyed by `revisionKey`. */
+/** WHY: one snapshot of every dataset a timetable folds in, and the calendar it asks per date; a cache built from it
+ * is keyed by `revisionKey`, which folds in the calendar's. */
 export interface ScheduleContent {
   revisionKey: string;
-  restDays: RestDays;
+  dayOf(dateStr: string): Promise<CalendarDay>;
   noticesOf(serviceId: string): readonly StoredServiceNotice[];
   suspendOf(serviceId: string): SuspendDates | null;
 }
@@ -29,12 +31,3 @@ export interface BusServiceReference {
   path: Array<string | number>;
 }
 
-export interface RestDays {
-  exact: Map<string, string>;
-  annual: Map<string, string>;
-}
-
-export interface RestDaysRevision {
-  revision: number;
-  restDays: RestDays;
-}

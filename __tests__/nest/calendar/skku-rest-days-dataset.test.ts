@@ -1,7 +1,7 @@
 /**
  * SKKU's rest days' round trip between their one writer and their reader,
  * over a real `mongod` (ADR 0013, D3 and D6): what `npm run data` stores through scripts/lib/datasets/store.js,
- * BusScheduleContentRepository reads back at the stored revision, each MM-DD
+ * CalendarRepository reads back at the stored revision, each MM-DD
  * key as a yearly rest day and each YYYY-MM-DD key as a one-off one. A stored
  * document the schema refuses, or none at all, reads as `null`, so it is never
  * served.
@@ -15,7 +15,7 @@ import fs from "fs";
 import path from "path";
 import type { Db as MongoDb } from "mongodb";
 import { Test } from "@nestjs/testing";
-import type { BusScheduleContentRepository } from "../../../src/bus/schedule-content/bus-schedule-content.repository";
+import type { CalendarRepository } from "../../../src/calendar/calendar.repository";
 import { MONGOD_START_TIMEOUT_MS, assertConfigReaches, clearCollections, startMongod, type TestMongod } from "../../helpers/mongod";
 
 // scripts/ is plain CommonJS outside tsconfig, so require rather than import.
@@ -23,7 +23,7 @@ const store = require("../../../scripts/lib/datasets/store");
 
 type Config = typeof import("../../../src/infra/config");
 type Db = typeof import("../../../src/infra/db");
-type RepositoryModule = typeof import("../../../src/bus/schedule-content/bus-schedule-content.repository");
+type RepositoryModule = typeof import("../../../src/calendar/calendar.repository");
 
 const NOW = new Date("2026-10-20T03:00:00.000Z");
 const AUTHOR = "alice@example.com";
@@ -37,7 +37,7 @@ function fixtureRestDays(): Record<string, string> {
 let mongod: TestMongod;
 let db: Db;
 let content: MongoDb;
-let repository: BusScheduleContentRepository;
+let repository: CalendarRepository;
 
 beforeAll(async () => {
   mongod = await startMongod();
@@ -45,7 +45,7 @@ beforeAll(async () => {
   const config = require("../../../src/infra/config") as Config;
   assertConfigReaches(mongod, config.mongo.url);
   content = db.getClient().db(config.content.dbName);
-  const { BusScheduleContentRepository: Repository } = require("../../../src/bus/schedule-content/bus-schedule-content.repository") as RepositoryModule;
+  const { CalendarRepository: Repository } = require("../../../src/calendar/calendar.repository") as RepositoryModule;
   const testingModule = await Test.createTestingModule({ providers: [Repository] }).compile();
   repository = testingModule.get(Repository);
 }, MONGOD_START_TIMEOUT_MS);
@@ -62,7 +62,7 @@ beforeEach(async () => {
   await clearCollections(content);
 });
 
-describe("rest days stored by npm run data, read by BusScheduleContentRepository", () => {
+describe("rest days stored by npm run data, read by CalendarRepository", () => {
   it("reads back revision 1 as its two yearly rest days", async () => {
     // Arrange
     await store.create(content, "skku-rest-days", fixtureRestDays(), { by: AUTHOR, now: NOW });

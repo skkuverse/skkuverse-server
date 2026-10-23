@@ -28,13 +28,13 @@ export class CalendarHolidaySyncService {
         failures.push(err);
       }
     }
-    this.holidays.clearCache();
+    this.holidays.clearPublicHolidaysCache();
     if (failures.length === 1) throw failures[0];
     if (failures.length > 1) throw new AggregateError(failures, "Holiday calendar sync failed for every year");
   }
 
   private async listStaleSyncYears(now: Date): Promise<number[]> {
-    const storedYears = await this.holidays.listYears();
+    const storedYears = await this.holidays.listPublicHolidayYears();
     const fetchedAtByYear = new Map(storedYears.map((stored) => [stored._id, stored.fetchedAt]));
     return toSyncYears(now).filter((year) => {
       const storedAt = fetchedAtByYear.get(year);
