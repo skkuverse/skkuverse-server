@@ -1,4 +1,4 @@
-import type { PublicHoliday, RestDays } from "./calendar.types";
+import type { PublicHoliday, RestDays, Semester } from "./calendar.types";
 
 export interface PublicHolidaysDoc {
   _id: number;
@@ -17,3 +17,13 @@ export interface SkkuRestDaysDatasetDoc {
 }
 
 export type StoredRestDays = Pick<SkkuRestDaysDatasetDoc, "revision"> & { data: RestDays };
+
+// CONTRACT(skkuverse-crawler): `AcademicYearDoc` of skkuverse-crawler/py/src/skkuverse_crawler/modules/schedule/models.py, one
+// document per academic year in `academic_calendars`, keyed by the year as a string; the fields this server reads.
+export interface AcademicCalendarDoc {
+  _id: string;
+  year: number;
+  contentHash: string;
+  semesters: Semester[];
+  restDays: Array<{ date: string; title: string }>;
+}

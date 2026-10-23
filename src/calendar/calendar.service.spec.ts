@@ -12,10 +12,18 @@
  *    as every dataset is (ADR 0013, D6): cached for DATASET_CACHE_TTL_MS,
  *    kept through an invalid reload, and CALENDAR_UNAVAILABLE (503) when no
  *    good revision was ever read; the RangeError comes first, even on a rest
- *    day.
- *  - revisionKey: changes with the rest days' revision.
+ *    day. A date the dataset does not name takes the crawled year's rest day
+ *    on it, less its class-day count. The academic period: the crawled
+ *    document of the date's academic year answers it (`source: "crawled"`);
+ *    with no valid one the default rule does, over the stored or rule-based
+ *    public holidays, warning `academic_calendar.rule_fallback` once an hour
+ *    per academic year.
+ *  - revisionKey: changes with the rest days' revision and with any crawled
+ *    year's content hash.
  * How often the stored years are read is calendar.repository.spec.ts's, and
- * how they are written is the sync's (src/calendar/holiday-sync/).
+ * how they are written is the sync's (src/calendar/holiday-sync/). The
+ * crawled documents are the crawler's own output (fixtures/academic-calendars.json
+ * of calendar).
  *
  * The cached loader reads `Date.now()`, so the TTL is crossed with Jest's fake
  * system time.
@@ -23,6 +31,8 @@
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../infra/logger", () => mockLogger);
 
+import fs from "fs";
+import path from "path";
 import { FakeCalendarRepository } from "../../__tests__/helpers/fakes/calendar/calendar.repository.fake";
 import { restDaysFixture, storedCalendarRepository } from "../../__tests__/helpers/calendar/rest-days";
 import { asReal } from "../../__tests__/helpers/fakes/public-of";
@@ -41,6 +51,12 @@ const CALENDAR_2026: PublicHoliday[] = [
   { date: "2026-03-02", name: "대체공휴일(삼일절)" },
   { date: "2026-06-03", name: "전국동시지방선거" },
 ];
+const ACADEMIC_FIXTURE = path.join(__dirname, "../../__tests__/nest/calendar/fixtures/academic-calendars.json");
+
+/** A fresh copy of the crawler's `academic_calendars` document for `year`. */
+function crawledYear(year: string): Record<string, any> {
+  return (JSON.parse(fs.readFileSync(ACADEMIC_FIXTURE, "utf8")) as Record<string, Record<string, any>>)[year]!;
+}
 
 interface Setup {
   service: CalendarService;
@@ -158,9 +174,9 @@ describe("CalendarService.dayOf", () => {
     const { service } = setup(storedCalendarRepository().store(2026, [...CALENDAR_2026, { date: "2026-09-28", name: "임시공휴일" }]));
 
     // Act & Assert
-    await expect(service.dayOf("2026-09-28")).resolves.toEqual({ date: "2026-09-28", publicHoliday: "임시공휴일", schoolRestDay: "공자탄신일" });
-    await expect(service.dayOf("2026-03-02")).resolves.toEqual({ date: "2026-03-02", publicHoliday: "대체공휴일(삼일절)", schoolRestDay: null });
-    await expect(service.dayOf("2026-03-03")).resolves.toEqual({ date: "2026-03-03", publicHoliday: null, schoolRestDay: null });
+    await expect(service.dayOf("2026-09-28")).resolves.toMatchObject({ date: "2026-09-28", publicHoliday: "임시공휴일", schoolRestDay: "공자탄신일" });
+    await expect(service.dayOf("2026-03-02")).resolves.toMatchObject({ date: "2026-03-02", publicHoliday: "대체공휴일(삼일절)", schoolRestDay: null });
+    await expect(service.dayOf("2026-03-03")).resolves.toMatchObject({ date: "2026-03-03", publicHoliday: null, schoolRestDay: null });
   });
 
   it("answers an exact rest day before the yearly one on its date", async () => {
@@ -268,5 +284,176 @@ describe("CalendarService.revisionKey", () => {
 
     // Assert
     expect(after).not.toBe(before);
+  });
+
+  it("changes when a crawled year's content hash changes, and not when nothing does", async () => {
+    // Arrange
+    const repository = storedCalendarRepository().storeAcademicYear(crawledYear("2026"));
+    const { service } = setup(repository);
+    const first = await service.revisionKey();
+    const unchanged = await service.revisionKey();
+
+    // Act
+    repository.storeAcademicYear({ ...crawledYear("2026"), contentHash: "sha256:changed" });
+    const recrawled = await service.revisionKey();
+
+    // Assert
+    expect(unchanged).toBe(first);
+    expect(recrawled).not.toBe(first);
+  });
+
+  it("changes when a crawled year is added", async () => {
+    // Arrange
+    const repository = storedCalendarRepository().storeAcademicYear(crawledYear("2026"));
+    const { service } = setup(repository);
+    const before = await service.revisionKey();
+
+    // Act
+    repository.storeAcademicYear(crawledYear("2025"));
+    const after = await service.revisionKey();
+
+    // Assert
+    expect(after).not.toBe(before);
+  });
+});
+
+const academicWarnings = () => mockLogger.warn.mock.calls.filter(([fields]) => fields?.event === "academic_calendar.rule_fallback");
+
+describe("CalendarService.dayOf academic period from a crawled year", () => {
+  it.each([
+    ["2026-03-01", { kind: "vacation", term: null }],
+    ["2026-03-02", { kind: "semester", term: 1 }],
+    ["2026-06-19", { kind: "semester", term: 1 }],
+    ["2026-06-20", { kind: "vacation", term: null }],
+    ["2026-08-31", { kind: "semester", term: 2 }],
+    ["2026-12-18", { kind: "semester", term: 2 }],
+    ["2026-12-19", { kind: "vacation", term: null }],
+    ["2027-02-28", { kind: "vacation", term: null }],
+  ])("answers %s from the crawled 2026 calendar as %o", async (date, period) => {
+    // Arrange
+    const { service } = setup(storedCalendarRepository().storeAcademicYear(crawledYear("2026")));
+
+    // Act
+    const day = await service.dayOf(date);
+
+    // Assert
+    expect(day.academicPeriod).toEqual({ ...period, source: "crawled" });
+    expect(academicWarnings()).toHaveLength(0);
+  });
+
+  it("answers a crawled year's own boundaries over the rule's", async () => {
+    // Arrange
+    const moved = crawledYear("2026");
+    moved.semesters[0].start = "2026-03-03";
+    const { service } = setup(storedCalendarRepository().storeAcademicYear(moved));
+
+    // Act
+    const day = await service.dayOf("2026-03-02");
+
+    // Assert
+    expect(day.academicPeriod).toEqual({ kind: "vacation", term: null, source: "crawled" });
+  });
+
+  it("answers January and February from the academic year that began the March before", async () => {
+    // Arrange
+    const { service } = setup(storedCalendarRepository().storeAcademicYear(crawledYear("2025")));
+
+    // Act
+    const day = await service.dayOf("2026-02-27");
+
+    // Assert
+    expect(day.academicPeriod).toEqual({ kind: "vacation", term: null, source: "crawled" });
+    expect(academicWarnings()).toHaveLength(0);
+  });
+});
+
+describe("CalendarService.dayOf academic period with no valid crawled year", () => {
+  it("answers from the rule, warning once an hour per academic year", async () => {
+    // Arrange
+    const { service, advance } = setup(storedCalendarRepository().store(2026, CALENDAR_2026).store(2027, []));
+    const opening = await service.dayOf("2026-03-02");
+    await service.dayOf("2026-12-18");
+    await service.dayOf("2027-03-02");
+    advance(HOUR_MS - 1);
+    await service.dayOf("2026-12-19");
+    const warnedYears = academicWarnings().map(([fields]) => fields.academicYear);
+
+    // Act
+    advance(1);
+    await service.dayOf("2026-12-19");
+
+    // Assert
+    expect(opening.academicPeriod).toEqual({ kind: "semester", term: 1, source: "rule" });
+    expect(warnedYears).toEqual([2026, 2027]);
+    expect(academicWarnings().map(([fields]) => fields.academicYear)).toEqual([2026, 2027, 2026]);
+    expect(logText(academicWarnings()[0])).toContain("2026");
+  });
+
+  it("answers from the rule a year whose crawled document is invalid", async () => {
+    // Arrange
+    const { service } = setup(storedCalendarRepository().store(2026, CALENDAR_2026).storeAcademicYear({ ...crawledYear("2026"), _id: "2025" }));
+
+    // Act
+    const day = await service.dayOf("2026-08-31");
+
+    // Assert
+    expect(day.academicPeriod).toEqual({ kind: "semester", term: 2, source: "rule" });
+    expect(academicWarnings()).toHaveLength(1);
+  });
+
+  it("opens term 1 after the stored calendar's substitute holiday", async () => {
+    // Arrange
+    const { service } = setup(storedCalendarRepository().store(2025, [{ date: "2025-03-03", name: "대체공휴일(삼일절)" }]));
+
+    // Act
+    const holiday = await service.dayOf("2025-03-03");
+    const opening = await service.dayOf("2025-03-04");
+
+    // Assert
+    expect(holiday.academicPeriod).toEqual({ kind: "vacation", term: null, source: "rule" });
+    expect(opening.academicPeriod).toEqual({ kind: "semester", term: 1, source: "rule" });
+  });
+
+  it("opens term 1 on the first weekday when the stored calendar lists no holiday there", async () => {
+    // Arrange
+    const { service } = setup(storedCalendarRepository().store(2025, []));
+
+    // Act
+    const day = await service.dayOf("2025-03-03");
+
+    // Assert
+    expect(day.academicPeriod).toEqual({ kind: "semester", term: 1, source: "rule" });
+  });
+});
+
+describe("CalendarService.dayOf school rest day from a crawled year", () => {
+  it("answers a crawled rest day the dataset does not hold, without its class-day count", async () => {
+    // Arrange
+    const repository = new FakeCalendarRepository().store(2025, []).storeAcademicYear(crawledYear("2025"));
+    repository.storeRestDays({});
+    const { service } = setup(repository);
+
+    // Act & Assert
+    await expect(service.dayOf("2025-09-28")).resolves.toMatchObject({ schoolRestDay: "공부자탄강일" });
+    await expect(service.dayOf("2025-09-25")).resolves.toMatchObject({ schoolRestDay: "건학기념일" });
+    await expect(service.dayOf("2025-09-26")).resolves.toMatchObject({ schoolRestDay: null });
+  });
+
+  it("answers the dataset's label over the crawled one on the same date", async () => {
+    // Arrange
+    const { service } = setup(storedCalendarRepository().store(2026, CALENDAR_2026).storeAcademicYear(crawledYear("2026")));
+
+    // Act & Assert
+    await expect(service.dayOf("2026-09-28")).resolves.toMatchObject({ schoolRestDay: "공자탄신일" });
+  });
+
+  it("answers no crawled rest day for a year it has no document of", async () => {
+    // Arrange
+    const repository = new FakeCalendarRepository().store(2027, []).storeAcademicYear(crawledYear("2026"));
+    repository.storeRestDays({});
+    const { service } = setup(repository);
+
+    // Act & Assert
+    await expect(service.dayOf("2027-09-28")).resolves.toMatchObject({ schoolRestDay: null });
   });
 });

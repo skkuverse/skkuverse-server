@@ -15,6 +15,13 @@
  * `null`, each logged at error so a person looks, at most once a minute (an
  * invalid one once a minute per revision): the service then serves its last
  * good rest days or a 503. A failed read rejects as CalendarReadError.
+ *
+ * `academic_calendars`, which skkuverse-crawler writes in its base database
+ * (the notices database here) and the server only reads: every document,
+ * projected to the fields the calendar uses and bounded, each parsed with
+ * `academicCalendarDoc`; one that fails is left out and logged, so its year
+ * falls back to the rule. Cached like the stored years. The documents are the
+ * crawler's own output (fixtures/academic-calendars.json of calendar).
  */
 import fs from "fs";
 import path from "path";
@@ -231,5 +238,59 @@ describe("CalendarRepository.findRestDays", () => {
 
     // Act & Assert
     await expect(repository.findRestDays()).rejects.toMatchObject({ name: "CalendarReadError", cause: failure });
+  });
+});
+
+describe("CalendarRepository.listAcademicYears", () => {
+  const ACADEMIC = JSON.parse(fs.readFileSync(path.join(__dirname, "../../__tests__/nest/calendar/fixtures/academic-calendars.json"), "utf8")) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  const { _id, year, contentHash, semesters, restDays } = ACADEMIC["2026"]!;
+  const YEAR_2026_READ = { _id, year, contentHash, semesters, restDays };
+
+  beforeEach(() => {
+    toArray.mockResolvedValue([YEAR_2026_READ]);
+  });
+
+  it("reads every crawled year from academic_calendars in the crawler's database, projected and bounded", async () => {
+    // Act
+    const years = await repository.listAcademicYears();
+
+    // Assert
+    expect(years).toEqual([YEAR_2026_READ]);
+    expect(mongoCollection).toHaveBeenCalledWith(config.notices.dbName, "academic_calendars");
+    expect(find).toHaveBeenCalledWith({}, { projection: { _id: 1, year: 1, contentHash: 1, semesters: 1, restDays: 1 }, maxTimeMS: HOT_READ_MAX_TIME_MS });
+  });
+
+  it("leaves out and logs a document that is not the shape the crawler writes, keeping the others", async () => {
+    // Arrange
+    toArray.mockResolvedValue([{ ...YEAR_2026_READ, _id: "2025" }, YEAR_2026_READ]);
+
+    // Act
+    const years = await repository.listAcademicYears();
+
+    // Assert
+    expect(years).toEqual([YEAR_2026_READ]);
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+    expect(mockLogger.error.mock.calls[0][0]).toMatchObject({ event: "academic_calendar.invalid_document", invalid: ["2025: _id"] });
+  });
+
+  it("reads once every ten minutes, and serves the last good years when a reload fails within the day", async () => {
+    // Arrange
+    await repository.listAcademicYears();
+    jest.advanceTimersByTime(TEN_MINUTES_MS - 1);
+    await repository.listAcademicYears();
+    const readsWithinTenMinutes = find.mock.calls.length;
+    toArray.mockRejectedValue(new Error("cluster unreachable"));
+
+    // Act
+    jest.advanceTimersByTime(HOUR_MS);
+    const years = await repository.listAcademicYears();
+
+    // Assert
+    expect(readsWithinTenMinutes).toBe(1);
+    expect(find).toHaveBeenCalledTimes(2);
+    expect(years).toEqual([YEAR_2026_READ]);
   });
 });

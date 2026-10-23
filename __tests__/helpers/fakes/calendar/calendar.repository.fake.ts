@@ -14,11 +14,16 @@
  * reads as `null`. `failRestDaysWith` makes the next reads reject, wrapped in
  * CalendarReadError as the real read wraps a driver error; `restDaysReadCount`
  * counts the reads that reached the store.
+ *
+ * `storeAcademicYear` stores one `academic_calendars` document as the crawler
+ * would, unchecked and replacing the one with its `_id`, and
+ * listAcademicYears reads them as the real read does: the projected fields
+ * only, each parsed with the same schema, an invalid one left out.
  */
 import { CalendarReadError } from "../../../../src/calendar/calendar.error";
-import type { PublicHolidaysDoc } from "../../../../src/calendar/calendar.document";
+import type { AcademicCalendarDoc, PublicHolidaysDoc } from "../../../../src/calendar/calendar.document";
 import type { CalendarRepository } from "../../../../src/calendar/calendar.repository";
-import { storedRestDays } from "../../../../src/calendar/calendar.schema";
+import { academicCalendarDoc, storedRestDays } from "../../../../src/calendar/calendar.schema";
 import type { PublicHoliday, RestDaysRevision } from "../../../../src/calendar/calendar.types";
 import type { PublicOf } from "../public-of";
 
@@ -32,6 +37,7 @@ export class FakeCalendarRepository implements PublicOf<CalendarRepository> {
   restDaysDataset: { revision: unknown; data: unknown } | null = null;
   failRestDaysWith: Error | null = null;
   restDaysReadCount = 0;
+  academicCalendars = new Map<string, Record<string, unknown>>();
 
   /** Stores `holidays` as the synced document of `year`. */
   store(year: number, holidays: PublicHoliday[], fetchedAt = new Date("2026-10-16T00:00:00Z")): this {
@@ -63,5 +69,19 @@ export class FakeCalendarRepository implements PublicOf<CalendarRepository> {
     if (this.restDaysDataset === null) return null;
     const parsed = storedRestDays.safeParse(structuredClone(this.restDaysDataset));
     return parsed.success ? { revision: parsed.data.revision, restDays: parsed.data.data } : null;
+  }
+
+  /** Stores `doc` in `academic_calendars` under its `_id`, unchecked, as the crawler's upsert would. */
+  storeAcademicYear(doc: Record<string, unknown>): this {
+    this.academicCalendars.set(String(doc._id), structuredClone(doc));
+    return this;
+  }
+
+  async listAcademicYears(): Promise<readonly AcademicCalendarDoc[]> {
+    return [...this.academicCalendars.values()].flatMap((doc) => {
+      const { _id, year, contentHash, semesters, restDays } = structuredClone(doc);
+      const parsed = academicCalendarDoc.safeParse({ _id, year, contentHash, semesters, restDays });
+      return parsed.success ? [parsed.data] : [];
+    });
   }
 }

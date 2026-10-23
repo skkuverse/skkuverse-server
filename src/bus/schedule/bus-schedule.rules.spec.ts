@@ -19,9 +19,9 @@ describe("toNonOperatingDayLabel", () => {
     ["a SKKU rest day beats a calendar name", "2026-09-28", "임시공휴일", "공자탄신일", "공자탄신일"],
     ["a SKKU rest day with no calendar name", "2026-09-25", null, "건학기념일", "건학기념일"],
     ["null on an ordinary day", "2026-03-03", null, null, null],
-  ])("%s: %s with %s and %s → %s", (_label, date, publicHoliday, schoolRestDay, label) => {
+  ])("%s: %s with %s and %s → %s", (_label, _date, publicHoliday, schoolRestDay, label) => {
     // Act & Assert
-    expect(toNonOperatingDayLabel({ date, publicHoliday, schoolRestDay })).toBe(label);
+    expect(toNonOperatingDayLabel({ publicHoliday, schoolRestDay })).toBe(label);
   });
 });
 
