@@ -3,12 +3,15 @@
  * keeps a bus's first sighting at a stop, and the stale windows (3 minutes at
  * the turnaround, 10 elsewhere) at each threshold, and a feed event's key and
  * its strictly parsed stop index and time, and a feed none of whose rows
- * parse.
+ * parse. A row that would put a fresh bus 1 to 5 positions back in its lap,
+ * such as the feed's seq 10 for a bus that already passed seq 1, the same
+ * Hyehwa Rotary, is held off by the bus's previous anchor row while that row is
+ * fresh (ADR 0018, D8); the live route anchors on the held row.
  */
 import "moment/locale/ko";
 import moment from "moment-timezone";
 import type { HsscBusDoc } from "../../cache/bus-cache.document";
-import { isFresh, isLiveFresh, isUnparsedFeed, toDwellSeconds, toFeedEventKey, toFeedEventTiming, toFirstSeenAt, toHsscStopEvent, toLinearSequence } from "./bus-realtime-hssc.rules";
+import { isFresh, isLiveFresh, isUnparsedFeed, toDwellSeconds, toFeedEventKey, toFeedEventTiming, toFirstSeenAt, toHeldAnchorRow, toHsscStopEvent, toLinearSequence } from "./bus-realtime-hssc.rules";
 import { hsscBusDoc } from "../../../../__tests__/helpers/bus/bus-cache-docs";
 
 const NOW = new Date("2026-10-20T01:00:00Z");
@@ -175,6 +178,78 @@ describe("toHsscStopEvent", () => {
   ])("is null for %s", (_shape, extra) => {
     // Act & Assert
     expect(toHsscStopEvent(hsscBusDoc(extra))).toBeNull();
+  });
+});
+
+describe("toHsscStopEvent with a held anchor row", () => {
+  it("reads the held row's stop, event and instants, never the feed's own row", () => {
+    // Arrange
+    const anchorRow = { seq: "1", inout: "LEFT", get_date: "2026-10-20 오전 9:58:40", stationName: "혜화동로터리 [미정차]", eventDate: "2026-10-20 09:58:30" };
+    const bus = hsscBusDoc({ line_no: "32149", seq: "10", inout: "LEFT_LAST", get_date: "2026-10-20 오전 9:59:30", eventDate: "2026-10-20 09:59:30", anchorRow });
+
+    // Act & Assert
+    expect(toHsscStopEvent(bus)).toEqual({
+      vehicleId: "32149",
+      seq: 1,
+      inout: "LEFT",
+      eventAt: new Date("2026-10-20T00:58:40.000Z"),
+      firstSeenAt: new Date("2026-10-20T00:58:30.000Z"),
+    });
+  });
+});
+
+// WHY: past seq 1 the feed reports seq 10, the same rotary, on about 27% of passes (ADR 0018, D8).
+describe("toHeldAnchorRow", () => {
+  const ROTARY = "혜화동로터리 [미정차]";
+  const TURNAROUND = "농구장 (셔틀버스정류소)";
+  const previousRow = (seq: string, stationName: string, minutesAgo = 1) =>
+    hsscBusDoc({ line_no: "32149", seq, inout: "LEFT", get_date: "2026-10-20 오전 9:58:00", stationName, eventDate: kst(minutesAgo) });
+  const feedRow = (seq: string, stationName: string) => hsscBusDoc({ line_no: "32149", seq, inout: "ENTERED", stationName, eventDate: kst(0) });
+
+  it.each([
+    ["seq 1 → seq 10, the rotary confusion, 2 back", previousRow("1", ROTARY), feedRow("10", ROTARY), "1"],
+    ["seq 0 → seq 9, 1 back", previousRow("0", "혜화역 1번출구 (셔틀버스정류소)"), feedRow("9", "혜화동우체국 [하차전용]"), "0"],
+    ["seq 4 → seq 10, 5 back", previousRow("4", "600주년기념관"), feedRow("10", ROTARY), "4"],
+    ["seq 5 laying over → seq 4, 1 back", previousRow("5", TURNAROUND, 14), feedRow("4", "600주년기념관"), "5"],
+  ])("holds the previous row for %s within its freshness", (_case, previous, row, heldSeq) => {
+    // Act & Assert
+    expect(toHeldAnchorRow(row, [previous], NOW)).toEqual({ seq: heldSeq, inout: "LEFT", get_date: "2026-10-20 오전 9:58:00", stationName: previous.stationName, eventDate: previous.eventDate });
+  });
+
+  it.each([
+    ["seq 10 → seq 0, forward", previousRow("10", ROTARY), feedRow("0", "혜화역 1번출구 (셔틀버스정류소)")],
+    ["seq 4 → seq 5, the lap's wrap at the turnaround", previousRow("4", "600주년기념관"), feedRow("5", TURNAROUND)],
+    ["seq 6 → seq 5, back to the turnaround, which is never held off", previousRow("6", "600주년기념관"), feedRow("5", TURNAROUND)],
+    ["seq 5 → seq 10, 6 back, that is 5 forward", previousRow("5", TURNAROUND), feedRow("10", ROTARY)],
+    ["seq 1 → seq 1, the same stop", previousRow("1", ROTARY), feedRow("1", ROTARY)],
+    ["seq 1 → seq 10 with the previous row seen 11 minutes ago, stale", previousRow("1", ROTARY, 11), feedRow("10", ROTARY)],
+    ["seq 5 → seq 4 with the layover seen 16 minutes ago, stale", previousRow("5", TURNAROUND, 16), feedRow("4", "600주년기념관")],
+  ])("anchors on the feed's row for %s", (_case, previous, row) => {
+    // Act & Assert
+    expect(toHeldAnchorRow(row, [previous], NOW)).toBeNull();
+  });
+
+  it("holds at the edge of the previous row's freshness, 10 minutes", () => {
+    // Act & Assert
+    expect(toHeldAnchorRow(feedRow("10", ROTARY), [previousRow("1", ROTARY, 10)], NOW)).toMatchObject({ seq: "1" });
+  });
+
+  it("anchors on the feed's row for a bus with no previous row, or another line's", () => {
+    // Arrange
+    const otherLine = { ...previousRow("1", ROTARY), line_no: "32150" };
+
+    // Act & Assert
+    expect(toHeldAnchorRow(feedRow("10", ROTARY), [], NOW)).toBeNull();
+    expect(toHeldAnchorRow(feedRow("10", ROTARY), [otherLine], NOW)).toBeNull();
+  });
+
+  it("keeps holding the row it held on the previous tick, still fresh, while the feed stays backward", () => {
+    // Arrange
+    const held = { seq: "1", inout: "LEFT", get_date: "2026-10-20 오전 9:58:00", stationName: ROTARY, eventDate: kst(2) };
+    const previous = hsscBusDoc({ line_no: "32149", seq: "10", inout: "ENTERED", stationName: ROTARY, eventDate: kst(1), anchorRow: held });
+
+    // Act & Assert
+    expect(toHeldAnchorRow(feedRow("10", ROTARY), [previous], NOW)).toEqual(held);
   });
 });
 

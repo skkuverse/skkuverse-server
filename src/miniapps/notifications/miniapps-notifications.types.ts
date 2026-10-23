@@ -1,5 +1,6 @@
 import type { LinkActionType } from "../../shared/link-action.wire";
 import type { DeliveryCounts, DeliveryError } from "../miniapps.document";
+import type { MiniAppRegistry } from "../miniapps.types";
 
 export interface NotificationDraft {
   title_ko?: unknown;
@@ -18,6 +19,12 @@ export interface NotificationContent {
   actionType?: LinkActionType;
   actionValue?: string;
 }
+
+/** WHY: the snapshot the sender was authorized against, so its link is checked against the same revision. */
+export type PushSender = { miniAppId: string; registry: Pick<MiniAppRegistry, "isKnownMiniAppTarget"> };
+
+/** WHY: the first-party game ids no target may name, held in code: only a production push checks the registry against the stored games. */
+export type PushLinkScope = PushSender & { gameIds: readonly string[] };
 
 export type DraftCheck = { problems: string[] } | { content: NotificationContent };
 

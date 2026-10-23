@@ -47,16 +47,17 @@ describe("BusRealtimeHsscEtaService.toStationIndex", () => {
   });
 });
 
+// WHY: a LEFT at the turnaround anchors the bus there (ADR 0018, D7), so it lays over with no bound.
 describe("BusRealtimeHsscEtaService.isLayingOver", () => {
   it.each([
-    ["still off the turnaround past the bound", 10 * 60_000, true],
-    ["just left the turnaround", 0, false],
-  ])("answers whether a bus that left the turnaround is %s", (_case, sinceMsAgo, expected) => {
+    ["at the turnaround, 10 min after its feed said it left", 5, 10 * 60_000, true],
+    ["at 600주년(하교), just left the turnaround", 6, 0, false],
+  ])("answers whether a bus %s is laying over", (_case, seq, sinceMsAgo, expected) => {
     // Arrange
     const since = new Date(NOW.getTime() - sinceMsAgo);
-    const anchor = { vehicleId: "32149", seq: 5, isDeparted: true, since, observedAt: since };
+    const [anchor] = service.toAnchors([{ vehicleId: "32149", seq, inout: "LEFT", eventAt: since, firstSeenAt: since }]);
 
     // Act & Assert
-    expect(service.isLayingOver(anchor, NOW)).toBe(expected);
+    expect(service.isLayingOver(anchor!)).toBe(expected);
   });
 });

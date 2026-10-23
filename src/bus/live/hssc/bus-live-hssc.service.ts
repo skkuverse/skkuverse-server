@@ -39,7 +39,7 @@ export class BusLiveHsscService {
       anchor,
       stationIndex,
       isAtStopPosition: (line[stationIndex]?.stopId ?? null) !== null,
-      isLayingOver: this.eta.isLayingOver(anchor, now),
+      isLayingOver: this.eta.isLayingOver(anchor),
       departsAt: here?.status === "arriving" ? here.departsAt : null,
       lapTimes: this.eta.toLapTimes(anchor, now),
     };

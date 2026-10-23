@@ -18,7 +18,13 @@ export interface HsscBusDoc extends HsscApiBus {
   eventDate: string;
   estimatedTime: number;
   isLastBus: boolean;
+  /** WHY: the earlier row the live route anchors on while the feed's row puts the bus back in its lap (ADR 0018, D8);
+   * absent when the feed's row anchors, and in an entry a poller older than the filter wrote. */
+  anchorRow?: HsscAnchorRow;
 }
+
+/** WHY: a bus's row as the live route anchors on it, with its first sighting, which keeps it fresh. */
+export type HsscAnchorRow = Pick<HsscBusDoc, "seq" | "inout" | "get_date" | "stationName" | "eventDate">;
 
 export interface JongroArrivalBus {
   /** QUIRK(topis): seconds to the stop, although TOPIS's guide says minutes; 0 when it has none. */

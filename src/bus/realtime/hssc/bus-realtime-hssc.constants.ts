@@ -14,6 +14,10 @@ export const LIVE_STALE_MINUTES_AT_TURNAROUND = 15;
 
 export const STALE_MINUTES = 10;
 
+// EVIDENCE: past seq 1 the feed reports seq 10, the same Hyehwa Rotary, on 36 passes in 35 h (2026-10-20 to 10-23),
+// two positions back; a bus cannot drive backward, and half the 11-position loop tells back from a skip ahead.
+export const MAX_BACKWARD_POSITIONS = 5;
+
 // QUIRK(hssc): the API's stop names, mapped to the names the app shows.
 export const STATION_NAME_BY_HSSC_NAME: ReadonlyMap<string, string> = new Map([
   ["혜화역 1번출구 셔틀버스 정류소", "혜화역 1번출구 (셔틀버스정류소)"],

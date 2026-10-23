@@ -13,7 +13,7 @@ export interface HsscLiveBus {
   stationIndex: number;
   /** WHY: false at a rotary pass, where the bus stops for no one. */
   isAtStopPosition: boolean;
-  /** WHY: at the turnaround, or overdue after the feed said it left it (ADR 0018, D6). */
+  /** WHY: at the turnaround, whatever the feed said, until its next stop's event (ADR 0018, D7). */
   isLayingOver: boolean;
   /** WHY: when a bus standing at a stop leaves it; null once it left, or laying over. */
   departsAt: Date | null;

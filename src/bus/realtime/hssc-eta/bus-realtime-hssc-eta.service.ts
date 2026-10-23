@@ -19,8 +19,8 @@ export class BusRealtimeHsscEtaService {
     return toLapTimes(anchor, now).map(({ seq, arrivesAt, departsAt }) => ({ stationIndex: toStationIndex(seq), arrivesAt, departsAt }));
   }
 
-  isLayingOver(anchor: HsscBusAnchor, now: Date): boolean {
-    return isLayingOver(anchor, now);
+  isLayingOver(anchor: HsscBusAnchor): boolean {
+    return isLayingOver(anchor);
   }
 
   toStationIndex(seq: number): number {

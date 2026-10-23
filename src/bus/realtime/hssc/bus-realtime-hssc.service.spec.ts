@@ -5,7 +5,9 @@
  * rejects so the poller registry counts it, leaving the served list as it was.
  * Each tick also appends the feed's events to the event log once each, every
  * row the feed sends including the ones too stale to serve, after bus_cache,
- * and warns once when the feed's rows stop parsing, a format change.
+ * and warns once when the feed's rows stop parsing, a format change. A row that
+ * puts a fresh bus back in its lap is stored as the feed sent it, beside the
+ * bus's previous anchor row, which the live route reads instead (ADR 0018, D8).
  */
 const mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
 jest.mock("../../../infra/logger", () => mockLogger);
@@ -328,6 +330,57 @@ describe("BusRealtimeHsscService.refresh", () => {
       // Assert
       expect(busCache.values.get("hssc")).toEqual([expect.objectContaining({ stationName: "혜화동로터리 [미정차]" })]);
     });
+  });
+});
+
+// WHY: the deprecated route reads the feed's own row and the live route the held one (ADR 0018, D8; ADR 0019, D11).
+describe("BusRealtimeHsscService.refresh with a row that goes back in the lap", () => {
+  const atRotary = (seq: string, inout: string, get_date: string) => ({ line_no: "32149", inout, stop_no: `2842${seq}`, seq, stop_name: "혜화동로터리", get_date });
+
+  it("stores the feed's row for the deprecated route and holds the previous anchor row for the live route", async () => {
+    // Arrange
+    client.buses = [atRotary("1", "LEFT", koreanNow(1))];
+    await service.refresh();
+    client.buses = [atRotary("10", "LEFT_LAST", koreanNow())];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(busCache.values.get("hssc")).toEqual([
+      expect.objectContaining({ seq: "10", inout: "LEFT_LAST", sequence: "6", anchorRow: { seq: "1", inout: "LEFT", get_date: koreanNow(1), stationName: "혜화동로터리 [미정차]", eventDate: moment(NOW).tz("Asia/Seoul").subtract(1, "minutes").format("YYYY-MM-DD HH:mm:ss") } }),
+    ]);
+    expect((await service.listBuses()).map(({ sequence, estimatedTime }) => [sequence, estimatedTime])).toEqual([["6", 0]]);
+    expect((await service.findStopEvents()).events.map(({ seq, inout }) => [seq, inout])).toEqual([[1, "LEFT"]]);
+  });
+
+  it("anchors on the feed's row again once it moves forward, storing no anchor row", async () => {
+    // Arrange
+    client.buses = [atRotary("1", "LEFT", koreanNow(2))];
+    await service.refresh();
+    client.buses = [atRotary("10", "LEFT_LAST", koreanNow(1))];
+    await service.refresh();
+    client.buses = [{ line_no: "32149", inout: "EMERGENCY", stop_no: "284002", seq: "2", stop_name: "성균관대입구사거리", get_date: koreanNow() }];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(busCache.values.get("hssc")![0]).not.toHaveProperty("anchorRow");
+    expect((await service.findStopEvents()).events.map(({ seq, inout }) => [seq, inout])).toEqual([[2, "EMERGENCY"]]);
+  });
+
+  it("stores no anchor row key for a bus moving forward, so the cached document keeps its shape", async () => {
+    // Arrange
+    client.buses = [atRotary("10", "LEFT_LAST", koreanNow(1))];
+    await service.refresh();
+    client.buses = [{ line_no: "32149", inout: "ENTERED", stop_no: "285693", seq: "0", stop_name: "혜화역 1번출구 셔틀버스 정류소", get_date: koreanNow() }];
+
+    // Act
+    await service.refresh();
+
+    // Assert
+    expect(Object.keys(busCache.values.get("hssc")![0]!)).not.toContain("anchorRow");
   });
 });
 
