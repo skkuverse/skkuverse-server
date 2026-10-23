@@ -189,6 +189,8 @@ function loadCatalog(load) {
   const { SUBWAY_NETWORK, SUBWAY_STATIONS } = load("subway/subway.constants");
   const { toNetworkIssues } = load("subway/subway.rules");
   const { subwayTopologyDataset } = load("subway/topology/subway-topology.schema");
+  const { subwayStationCoordsDataset } = load("subway/station-coords/subway-station-coords.schema");
+  const { toStationCoordsIssues } = load("subway/station-coords/subway-station-coords.rules");
   const { toRouteIssues, toTopologyIssues } = load("subway/topology/subway-topology.rules");
   const { TIMETABLE_DAY_TYPES } = load("subway/timetable/subway-timetable.constants");
   const { findTimetable, toLineRoutes, toServiceWindowIssues, toTimetableCoverageIssues, toTimetableKey, toTrackedStopIssues } = load("subway/timetable/subway-timetable.rules");
@@ -362,6 +364,13 @@ function loadCatalog(load) {
         schema: subwayTopologyDataset,
         reads: ["subway-timetables"],
         issuesOf: topologyIssues,
+        referencesOf: () => [],
+      },
+      // Each served station's camera point, inside South Korea; the stations stay in code (ADR 0013, D2).
+      "subway-station-coords": {
+        owner: "src/subway/station-coords",
+        schema: subwayStationCoordsDataset,
+        issuesOf: (coords) => toStationCoordsIssues(coords, subwayStations.ids()),
         referencesOf: () => [],
       },
       // One table per operator line and day type, a part each; every served platform needs one per day type its source declares (docs/how-to/update-subway-timetables.md).

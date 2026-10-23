@@ -1,9 +1,13 @@
 {
-  "_about": "GET https://api.skkuverse.com/subway/stations/jeongja/arrivals captured from production 2026-10-18 17:02 KST (a Sunday), Accept-Language ko; untrimmed: two lines (D1, K1), both directions, three trains each (11 estimated, 1 scheduled), including a train at the platform whose arrivalAt is 70 s before generatedAt; converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color })",
+  "_about": "GET https://api.skkuverse.com/subway/stations/jeongja/arrivals captured from production 2026-10-18 17:02 KST (a Sunday), Accept-Language ko; untrimmed: two lines (D1, K1), both directions, three trains each (11 estimated, 1 scheduled), including a train at the platform whose arrivalAt is 70 s before generatedAt; converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); extended 2026-10-23 for the station coords, no other value changed: the station's coords from revision 1 of subway-station-coords",
   "data": {
     "station": {
       "id": "jeongja",
-      "name": "정자"
+      "name": "정자",
+      "coords": {
+        "lat": 37.366546,
+        "lng": 127.108237
+      }
     },
     "lines": [
       {

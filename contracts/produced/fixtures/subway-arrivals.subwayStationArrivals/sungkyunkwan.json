@@ -1,9 +1,13 @@
 {
-  "_about": "GET /subway/stations/KR-1-0153/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction; reshaped the same day, no value changed, into the per-station wire (GET /subway/stations/sungkyunkwan/arrivals, its one line entry carrying the line display data from the registry); converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color })",
+  "_about": "GET /subway/stations/KR-1-0153/arrivals captured from a local development run (SUBWAY=on, _dev databases, push suppressed) 2026-10-17 11:39 KST, Accept-Language ko; trimmed to one train per direction; reshaped the same day, no value changed, into the per-station wire (GET /subway/stations/sungkyunkwan/arrivals, its one line entry carrying the line display data from the registry); converted 2026-10-18 for the line-marker wire, no other value changed: each line's `badge` replaced by its registry `marker` ({ text in the request language, color }); extended 2026-10-23 for the station coords, no other value changed: the station's coords from revision 1 of subway-station-coords",
   "data": {
     "station": {
       "id": "sungkyunkwan",
-      "name": "성균관대"
+      "name": "성균관대",
+      "coords": {
+        "lat": 37.300349,
+        "lng": 126.97075
+      }
     },
     "lines": [
       {

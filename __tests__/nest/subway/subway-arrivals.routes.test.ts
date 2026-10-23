@@ -18,7 +18,9 @@
  * no countdown beside its live 2호선 ones; a 수인분당 train seen arrived, whose
  * departure no source reports, is listed until 90 s past its estimated
  * departure; every one of the eight stations answers with its platforms in
- * order, 정자's 신분당 line named in Korean; a 신분당 trainset seen leaving 광교
+ * order, 정자's 신분당 line named in Korean; each station carries its camera
+ * point from the stored `subway-station-coords`, and a station the stored
+ * coords lack still answers 200, its `coords` null, as the wire publishes it; a 신분당 trainset seen leaving 광교
  * is served at 광교중앙 as the run it is matched to; and the station, direction
  * and neighbor station names follow the request language.
  */
@@ -44,12 +46,15 @@ import type { SeoulArrivalRow } from "../../../src/subway/seoul-api/subway-seoul
 import { toSeoulStations } from "../../../src/subway/seoul/subway-seoul.rules";
 import { SubwayTimetableRepository } from "../../../src/subway/timetable/subway-timetable.repository";
 import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
+import { SubwayStationCoordsRepository } from "../../../src/subway/station-coords/subway-station-coords.repository";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
 import { FakeSubwayRepository } from "../../helpers/fakes/subway/subway.repository.fake";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 import { storedSubwayTopologyRepository, subwayRegistryFixture } from "../../helpers/subway/topology";
 import { storedSubwayTimetableRepository } from "../../helpers/subway/timetables";
+import { stationCoordsFixture, storedStationCoordsRepository } from "../../helpers/subway/station-coords";
+import type { FakeSubwayStationCoordsRepository } from "../../helpers/fakes/subway/subway-station-coords.repository.fake";
 
 const at = (kst: string): Date => new Date(`2026-10-16T${kst}+09:00`);
 const clock = { current: at("20:41:00"), now(): Date { return this.current; } };
@@ -57,9 +62,11 @@ const clock = { current: at("20:41:00"), now(): Date { return this.current; } };
 let app: NestExpressApplication;
 let httpServer: import("http").Server;
 let subwayRepository: FakeSubwayRepository;
+let stationCoordsRepository: FakeSubwayStationCoordsRepository;
 
 beforeAll(async () => {
   subwayRepository = new FakeSubwayRepository();
+  stationCoordsRepository = storedStationCoordsRepository();
   app = await buildTestApp({
     imports: [HolidaysModule, SubwayModule, SubwayTimetableModule, SubwayEstimateModule, SubwayTrackingModule, SubwayMatchingModule, SubwayArrivalsModule],
     overrides: [
@@ -67,6 +74,7 @@ beforeAll(async () => {
       { provide: SubwayRepository, useValue: subwayRepository },
       { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
       { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },
+      { provide: SubwayStationCoordsRepository, useValue: stationCoordsRepository },
       { provide: Clock, useValue: clock },
     ],
   });
@@ -109,7 +117,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     // Assert
     expect(res.status).toBe(200);
     expect(res.body.meta).toEqual({ lang: "ko" });
-    expect(res.body.data.station).toEqual({ id: "hyehwa", name: "혜화" });
+    expect(res.body.data.station).toEqual({ id: "hyehwa", name: "혜화", coords: { lat: 37.582336, lng: 127.001844 } });
     expect(res.body.data.lines).toHaveLength(1);
     expect(res.body.data.lines[0]).toMatchObject({
       line: { code: "4", name: "4호선", color: "00A5DE", marker: { text: "4", color: "007FAB" } },
@@ -129,7 +137,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.station).toEqual({ id: "sungkyunkwan", name: "성균관대" });
+    expect(res.body.data.station).toEqual({ id: "sungkyunkwan", name: "성균관대", coords: { lat: 37.300349, lng: 126.97075 } });
     expect(res.body.data.lines.map((l: { line: unknown; platformId: string }) => [l.line, l.platformId])).toEqual([
       [{ code: "1", name: "1호선", color: "0052A4", marker: { text: "1", color: "0052A4" } }, "KR-1-0153"],
     ]);
@@ -145,7 +153,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(res.body.data.station).toEqual({ id: "gangnam", name: "강남" });
+    expect(res.body.data.station).toEqual({ id: "gangnam", name: "강남", coords: { lat: 37.497414, lng: 127.028008 } });
     expect(res.body.data.lines.map((l: { line: unknown; platformId: string }) => [l.line, l.platformId])).toEqual([
       [{ code: "2", name: "2호선", color: "00A84D", marker: { text: "2", color: "00893F" } }, "S1-2-222"],
       [{ code: "D1", name: "신분당선", color: "D4003B", marker: { text: "신", color: "D4003B" } }, "DX-D1-4307"],
@@ -220,7 +228,7 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     const res = await getAt("20:41:02", "/subway/stations/jeongja/arrivals").set("Accept-Language", "ko");
 
     // Assert
-    expect(res.body.data.station).toEqual({ id: "jeongja", name: "정자" });
+    expect(res.body.data.station).toEqual({ id: "jeongja", name: "정자", coords: { lat: 37.366546, lng: 127.108237 } });
     expect(res.body.data.lines.map((l: { line: unknown }) => l.line)).toEqual([
       { code: "D1", name: "신분당선", color: "D4003B", marker: { text: "신", color: "D4003B" } },
       { code: "K1", name: "수인분당선", color: "F5A200", marker: { text: "수", color: "A26B00" } },
@@ -391,5 +399,57 @@ describe("GET /subway/stations/:stationId/arrivals", () => {
     expect(res.status).toBe(200);
     const neighbors = directionsOf(res.body).map((d: { previousStation: unknown; nextStation: unknown }) => [d.previousStation, d.nextStation]);
     expect(neighbors).toEqual([up, down]);
+  });
+});
+
+describe("GET /subway/stations/:stationId/arrivals with stored coords that lack a station", () => {
+  let lackingApp: NestExpressApplication;
+
+  beforeAll(async () => {
+    const lacking = stationCoordsFixture();
+    delete lacking.stations.dogok;
+    lackingApp = await buildTestApp({
+      imports: [HolidaysModule, SubwayModule, SubwayTimetableModule, SubwayEstimateModule, SubwayTrackingModule, SubwayMatchingModule, SubwayArrivalsModule],
+      overrides: [
+        { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
+        { provide: SubwayRepository, useValue: new FakeSubwayRepository() },
+        { provide: SubwayTopologyRepository, useValue: storedSubwayTopologyRepository() },
+        { provide: SubwayTimetableRepository, useValue: storedSubwayTimetableRepository() },
+        { provide: SubwayStationCoordsRepository, useValue: storedStationCoordsRepository(lacking) },
+        { provide: Clock, useValue: clock },
+      ],
+    });
+  });
+
+  afterAll(async () => {
+    await lackingApp.close();
+  });
+
+  it("Deploy adds a station before its coords: answers 200 for it with null coords, its lines and its Cache-Control, as the wire publishes it", async () => {
+    // Arrange
+    clock.current = at("20:41:02");
+
+    // Act
+    const dogok = await request(lackingApp.getHttpServer()).get("/subway/stations/dogok/arrivals");
+
+    // Assert
+    expect(dogok.status).toBe(200);
+    expect(dogok.headers["cache-control"]).toBe("private, max-age=5");
+    expect(dogok.body.data.station).toEqual({ id: "dogok", name: "도곡", coords: null });
+    expect(dogok.body.data.lines.map((line: { platformId: string }) => line.platformId)).toEqual(["S1-3-334", "KR-K1-K217"]);
+    expectWire(subwayStationArrivals, dogok.body.data);
+  });
+
+  it("serves the coords the same revision holds for the other stations", async () => {
+    // Arrange
+    clock.current = at("20:41:02");
+
+    // Act
+    const yangjae = await request(lackingApp.getHttpServer()).get("/subway/stations/yangjae/arrivals");
+
+    // Assert
+    expect(yangjae.status).toBe(200);
+    expect(yangjae.body.data.station).toEqual({ id: "yangjae", name: "양재", coords: { lat: 37.484143, lng: 127.034278 } });
+    expectWire(subwayStationArrivals, yangjae.body.data);
   });
 });

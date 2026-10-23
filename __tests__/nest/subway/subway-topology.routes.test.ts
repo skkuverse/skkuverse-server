@@ -47,6 +47,8 @@ import { SubwayRepository } from "../../../src/subway/subway.repository";
 import { SubwayTimetableModule } from "../../../src/subway/timetable/subway-timetable.module";
 import { SubwayTopologyModule } from "../../../src/subway/topology/subway-topology.module";
 import { SubwayTopologyRepository } from "../../../src/subway/topology/subway-topology.repository";
+import { SubwayStationCoordsRepository } from "../../../src/subway/station-coords/subway-station-coords.repository";
+import { storedStationCoordsRepository } from "../../helpers/subway/station-coords";
 import type { SubwayTopologyData } from "../../../src/subway/topology/subway-topology.types";
 import { SubwayTrackingModule } from "../../../src/subway/tracking/subway-tracking.module";
 import { FakeHolidaysRepository } from "../../helpers/fakes/holidays/holidays.repository.fake";
@@ -118,6 +120,7 @@ async function boot(stores: Stores): Promise<NestExpressApplication> {
       { provide: HolidaysRepository, useValue: new FakeHolidaysRepository() },
       { provide: SubwayRepository, useValue: freshState() },
       { provide: SubwayTopologyRepository, useValue: stores.topology },
+      { provide: SubwayStationCoordsRepository, useValue: storedStationCoordsRepository() },
       { provide: SubwaySeoulApiClient, useValue: stores.apiClient },
       { provide: SubwaySeoulTrainmapClient, useValue: stores.trainmapClient },
       { provide: Clock, useValue: CLOCK },

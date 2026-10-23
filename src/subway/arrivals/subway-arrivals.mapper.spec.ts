@@ -1,7 +1,8 @@
 /**
  * toSubwayStationArrivals: a physical station and each of its platforms'
  * `subway_arrivals` documents become the arrivals response. The station
- * carries its slug and its name in the request language; each platform, in
+ * carries its slug, its name in the request language and the coords it is
+ * handed, the camera point the app opens its sheet on, or null with none; each platform, in
  * the station's order, a line entry with the line's code, name, color and
  * marker (its one-character text in the request language and its color),
  * its KRIC id, its own document's generatedAt and each of its two
@@ -24,6 +25,7 @@ const REGISTRY = subwayRegistryFixture();
 const HYEHWA = findSubwayStation("hyehwa", REGISTRY) as SubwayStation;
 const SUNGKYUNKWAN = findSubwayStation("sungkyunkwan", REGISTRY) as SubwayStation;
 const HYEHWA_PLATFORM = HYEHWA.platforms[0] as SubwayPlatform;
+const HYEHWA_COORDS = { lat: 37.582336, lng: 127.001844 };
 const GENERATED_AT = new Date("2026-10-16T11:41:00Z");
 const DOC: SubwayArrivalsDoc = {
   _id: "S1-4-420",
@@ -73,11 +75,11 @@ const DOC: SubwayArrivalsDoc = {
 describe("toSubwayStationArrivals", () => {
   it("names the station by its slug, its line, each direction and its neighbors in Korean, and counts each train's stops away", () => {
     // Act
-    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], { lang: "ko", registry: REGISTRY });
+    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], { lang: "ko", registry: REGISTRY, coords: HYEHWA_COORDS });
 
     // Assert
     expect(response).toEqual({
-      station: { id: "hyehwa", name: "혜화" },
+      station: { id: "hyehwa", name: "혜화", coords: { lat: 37.582336, lng: 127.001844 } },
       lines: [
         {
           line: { code: "4", name: "4호선", color: "00A5DE", marker: { text: "4", color: "007FAB" } },
@@ -116,11 +118,32 @@ describe("toSubwayStationArrivals", () => {
     ["zh", "惠化", "4号线", ["佛岩山·榛接方向", "乌耳岛·安山方向"]],
   ] as const)("labels the station, its line and its directions in %s", (lang, stationName, lineName, directionNames) => {
     // Act
-    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], { lang, registry: REGISTRY });
+    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], { lang, registry: REGISTRY, coords: HYEHWA_COORDS });
 
     // Assert
     const [line] = response.lines;
     expect([response.station.name, line?.line.name, line?.directions.map((d) => d.name)]).toEqual([stationName, lineName, directionNames]);
+  });
+
+  it.each(["ko", "en", "zh"] as const)("serves the station's coords as it is handed them, the same in %s", (lang) => {
+    // Arrange
+    const coords = { lat: 37.300349, lng: 126.97075 };
+    const platform = SUNGKYUNKWAN.platforms[0] as SubwayPlatform;
+
+    // Act
+    const response = toSubwayStationArrivals(SUNGKYUNKWAN, [{ platform, doc: { ...DOC, _id: platform.id } }], { lang, registry: REGISTRY, coords });
+
+    // Assert
+    expect(response.station).toEqual({ id: "sungkyunkwan", name: { ko: "성균관대", en: "Sungkyunkwan Univ.", zh: "成均馆大学" }[lang], coords });
+  });
+
+  it("serves null coords when it is handed none, and the rest of the station as before", () => {
+    // Act
+    const response = toSubwayStationArrivals(HYEHWA, [{ platform: HYEHWA_PLATFORM, doc: DOC }], { lang: "ko", registry: REGISTRY, coords: null });
+
+    // Assert
+    expect(response.station).toEqual({ id: "hyehwa", name: "혜화", coords: null });
+    expect(response.lines.map((line) => line.platformId)).toEqual(["S1-4-420"]);
   });
 
   it.each([
@@ -135,7 +158,7 @@ describe("toSubwayStationArrivals", () => {
     const platform = station.platforms[0] as SubwayPlatform;
 
     // Act
-    const response = toSubwayStationArrivals(station, [{ platform, doc: { ...DOC, _id: platform.id } }], { lang, registry: REGISTRY });
+    const response = toSubwayStationArrivals(station, [{ platform, doc: { ...DOC, _id: platform.id } }], { lang, registry: REGISTRY, coords: HYEHWA_COORDS });
 
     // Assert
     expect(response.lines[0]?.directions.map((d) => [d.previousStation?.name, d.nextStation?.name])).toEqual(neighborNames);
@@ -147,7 +170,7 @@ describe("toSubwayStationArrivals", () => {
     const stale = { ...DOC, _id: "KR-1-0153", generatedAt: new Date("2026-10-16T11:30:00Z"), directions: { up: [], down: [] } };
 
     // Act
-    const response = toSubwayStationArrivals(transfer, transfer.platforms.map((platform, i) => ({ platform, doc: i === 0 ? DOC : stale })), { lang: "en", registry: REGISTRY });
+    const response = toSubwayStationArrivals(transfer, transfer.platforms.map((platform, i) => ({ platform, doc: i === 0 ? DOC : stale })), { lang: "en", registry: REGISTRY, coords: HYEHWA_COORDS });
 
     // Assert
     expect(response.lines.map((l) => [l.line.code, l.line.marker.text, l.line.color, l.platformId, l.generatedAt])).toEqual([
@@ -166,7 +189,7 @@ describe("toSubwayStationArrivals", () => {
     const platform = jeongja.platforms[0] as SubwayPlatform;
 
     // Act
-    const response = toSubwayStationArrivals(jeongja, [{ platform, doc: { ...DOC, _id: platform.id } }], { lang, registry: REGISTRY });
+    const response = toSubwayStationArrivals(jeongja, [{ platform, doc: { ...DOC, _id: platform.id } }], { lang, registry: REGISTRY, coords: HYEHWA_COORDS });
 
     // Assert
     expect(response.lines[0]?.line).toEqual({ code: "D1", name, color: "D4003B", marker: { text, color: "D4003B" } });
@@ -178,7 +201,7 @@ describe("toSubwayStationArrivals", () => {
     const platform: SubwayPlatform = { ...HYEHWA_PLATFORM, directions: { ...HYEHWA_PLATFORM.directions, up } };
 
     // Act
-    const response = toSubwayStationArrivals(HYEHWA, [{ platform, doc: DOC }], { lang: "ko", registry: REGISTRY });
+    const response = toSubwayStationArrivals(HYEHWA, [{ platform, doc: DOC }], { lang: "ko", registry: REGISTRY, coords: HYEHWA_COORDS });
 
     // Assert
     const [upDirection, downDirection] = response.lines[0]?.directions ?? [];

@@ -8,12 +8,16 @@
  * state serves that platform's timetable alone at the request's time, every
  * train `scheduled`; and at a station of two platforms
  * each is judged on its own ("One line stale"), on Gangnam's line 2 and Shinbundang
- * platforms.
+ * platforms. A served station carries its stored coords; with none stored for
+ * it, or none read at all, it serves the station with null coords, never a
+ * 503, while an unserved slug still finds nothing.
  */
 import { asReal } from "../../../__tests__/helpers/fakes/public-of";
 import { storedSubwayTimetableService } from "../../../__tests__/helpers/subway/timetables";
 import { FakeSubwayRepository } from "../../../__tests__/helpers/fakes/subway/subway.repository.fake";
 import { storedSubwayTopologyService } from "../../../__tests__/helpers/subway/topology";
+import { stationCoordsFixture, storedStationCoordsRepository, storedStationCoordsService } from "../../../__tests__/helpers/subway/station-coords";
+import { FakeSubwayStationCoordsRepository } from "../../../__tests__/helpers/fakes/subway/subway-station-coords.repository.fake";
 import type { Clock } from "../../infra/clock";
 import config from "../../infra/config";
 import { SubwayCountdownService } from "../countdown/subway-countdown.service";
@@ -21,18 +25,20 @@ import { SubwayEstimateService } from "../estimate/subway-estimate.service";
 import type { SubwayArrivalsDoc } from "../subway.document";
 import { SubwayStateService } from "../state/subway-state.service";
 import type { SubwayRepository } from "../subway.repository";
+import { SubwayPlatformArrivalsService } from "../platform-arrivals/subway-platform-arrivals.service";
 import { SubwayTrackingService } from "../tracking/subway-tracking.service";
 import { SubwayArrivalsService } from "./subway-arrivals.service";
 
 const NOW = new Date("2026-10-16T11:41:00Z");
 const subway = config.subway as { enabled: boolean };
 
-function setup() {
+function setup(stationCoords = storedStationCoordsRepository()) {
   const repository = new FakeSubwayRepository();
   const clock = { now: () => NOW } as Clock;
   const timetable = storedSubwayTimetableService({ clock });
   const tracking = new SubwayTrackingService(new SubwayStateService(asReal<SubwayRepository>(repository)), timetable, new SubwayEstimateService(new SubwayCountdownService()), clock);
-  return { repository, service: new SubwayArrivalsService(asReal<SubwayRepository>(repository), tracking, clock, storedSubwayTopologyService()) };
+  const platformArrivals = new SubwayPlatformArrivalsService(asReal<SubwayRepository>(repository), tracking, clock);
+  return { repository, service: new SubwayArrivalsService(storedSubwayTopologyService(), storedStationCoordsService(stationCoords, clock), platformArrivals) };
 }
 
 function storedAgo(ageMs: number, platformId = "S1-4-420"): SubwayArrivalsDoc {
@@ -135,5 +141,55 @@ describe("SubwayArrivalsService.findStationArrivals", () => {
     ]);
     expect(sourcesOf(arrivals, 0)).toEqual(["live"]);
     expect(sourcesOf(arrivals, 1)).toEqual(Array(6).fill("scheduled"));
+  });
+
+  it("serves the station's stored coords beside its name", async () => {
+    // Arrange
+    const { service } = setup();
+
+    // Act
+    const arrivals = await service.findStationArrivals("jamsil", "en");
+
+    // Assert
+    expect(arrivals?.station).toEqual({ id: "jamsil", name: "Jamsil", coords: { lat: 37.513977, lng: 127.102249 } });
+  });
+
+  it("Coords never read: serves a served station with null coords and its lines", async () => {
+    // Arrange
+    const { service } = setup(new FakeSubwayStationCoordsRepository());
+
+    // Act
+    const arrivals = await service.findStationArrivals("hyehwa", "ko");
+
+    // Assert
+    expect(arrivals?.station).toEqual({ id: "hyehwa", name: "혜화", coords: null });
+    expect(arrivals?.lines.map((line) => line.platformId)).toEqual(["S1-4-420"]);
+  });
+
+  it("Deploy adds a station before its coords: serves null coords for the station the revision lacks only", async () => {
+    // Arrange
+    const lacking = stationCoordsFixture();
+    delete lacking.stations.dogok;
+    const { service } = setup(storedStationCoordsRepository(lacking));
+
+    // Act
+    const dogok = await service.findStationArrivals("dogok", "ko");
+    const yangjae = await service.findStationArrivals("yangjae", "ko");
+
+    // Assert
+    expect(dogok?.station.coords).toBeNull();
+    expect(dogok?.lines.map((line) => line.platformId)).toEqual(["S1-3-334", "KR-K1-K217"]);
+    expect(yangjae?.station.coords).toEqual({ lat: 37.484143, lng: 127.034278 });
+  });
+
+  it("finds nothing for an unserved slug even with no coords read", async () => {
+    // Arrange
+    const { service } = setup(new FakeSubwayStationCoordsRepository());
+
+    // Act
+    const arrivals = await service.findStationArrivals("seoul", "ko");
+
+    // Assert
+    expect(arrivals).toBeNull();
   });
 });
