@@ -4,7 +4,7 @@ import logger from "../../../infra/logger";
 import type { HsscApiBus, HsscBusDoc } from "../../cache/bus-cache.document";
 import { BusCacheService } from "../../cache/bus-cache.service";
 import { BusRealtimeHsscClient } from "./bus-realtime-hssc.client";
-import { toHsscBus, toHsscFeedEventDoc } from "./bus-realtime-hssc.mapper";
+import { toHsscBus, toHsscFeedEventDoc, withAnchorRow } from "./bus-realtime-hssc.mapper";
 import { BusRealtimeHsscRepository } from "./bus-realtime-hssc.repository";
 import {
   isFresh,
@@ -14,6 +14,7 @@ import {
   toFeedEventKey,
   toFeedEventTiming,
   toFirstSeenAt,
+  toHeldAnchorRow,
   toHsscStopEvent,
   toLinearSequence,
 } from "./bus-realtime-hssc.rules";
@@ -43,7 +44,8 @@ export class BusRealtimeHsscService {
         const sequence = toLinearSequence(parseInt(item.seq, 10));
         return toHsscBus(item, { sequence, firstSeenAt, dwellSeconds: toDwellSeconds(firstSeenAt, now) });
       })
-      .filter((bus) => isLiveFresh(bus, now));
+      .filter((bus) => isLiveFresh(bus, now))
+      .map((bus) => withAnchorRow(bus, toHeldAnchorRow(bus, this.buses, now)));
     await this.cache.write("hssc", this.buses);
     await this.recordFeedEvents(items, now);
   }
