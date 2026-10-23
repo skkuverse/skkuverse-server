@@ -18,7 +18,7 @@ The `bus-stops` dataset holds every local stop the server serves ([bus architect
 ```text
 { "stops":     [ { "id", "name", "detail"?, "coords"?, "photo"?, "panorama"?, "guide"?, "subwayStationId"?, "arsIds"? } ],
   "sequences": { "<serviceId>": { "<routeType>": [ { "stopId" | "label", "action", "timing", "note"?, "detail"? } ] } },
-  "hssc":      { "stations": [ { "stopId", "name", "subtitle", "isFirstStation", "isLastStation", "isRotationStation", "transferLines" } ] },
+  "hssc":      { "stations": [ { "stopId", "name", "subtitle"?, "isFirstStation", "isLastStation", "isRotationStation", "transferLines" } ] },
   "topis"?:    { "<ARS number>": { "name"?: { "en"?, "zh"? }, "subwayStationId"? } } }
 ```
 
@@ -77,7 +77,7 @@ A sequence and its timetable are written by two tools, and each refuses a length
    { "id": "jeongja-exit3", "name": { "ko": "정자역 3번 출구" }, "photo": { "original": "https://media.skkuverse.com/stops/jeongja-exit3-v2.jpg" } }
    ```
 
-   An HSSC station's label is its `name` (Korean) and `subtitle` (English, served in every language); its stop's own `name` is what a stop page will show.
+   An HSSC station's label is its `name` (Korean); its stop's own `name` is what a stop page will show. Leave `subtitle` out of HSSC stations: the realtime screen fills the line under the name with the arrival, as it does for a Jongno station, and `/bus/config` serves `subtitle: null`. A `subtitle` you do store (English, served in every language) shows before the arrival on that line, and an empty one is refused at push.
 
 2. Preview, push to `_dev`, and check the stored revision:
 

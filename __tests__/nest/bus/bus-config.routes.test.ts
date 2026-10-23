@@ -20,7 +20,7 @@ import appConfig from "../../../src/infra/config";
 import { expectWire } from "../../helpers/contracts/expect-wire";
 import { storedBusRegistryRepository } from "../../helpers/bus/bus-registry";
 import { storedRouteAttributesRepository } from "../../helpers/bus/route-attributes";
-import { storedBusStopsRepository } from "../../helpers/bus/bus-stops";
+import { busStopsFixture, storedBusStopsRepository } from "../../helpers/bus/bus-stops";
 import { HSSC_STOP_IDS } from "../../helpers/bus/station-stop-ids";
 import { buildTestApp } from "../../helpers/nest/build-test-app";
 
@@ -444,5 +444,43 @@ describe("GET /bus/config realtime station stop ids", () => {
       expect(group.screen.stations.filter((station) => station.stopId !== undefined).length).toBeGreaterThan(0);
       expect((config.body.data.groups as Group[]).find((candidate) => candidate.id === group.id)!.screen.stations).toEqual(group.screen.stations);
     }
+  });
+});
+
+describe("GET /bus/config/hssc for a bus-stops revision without HSSC subtitles", () => {
+  type Station = { name: string; subtitle: string | null };
+
+  let bareApp: NestExpressApplication;
+
+  beforeAll(async () => {
+    const data = busStopsFixture() as { hssc: { stations: Array<Record<string, unknown>> } };
+    for (const station of data.hssc.stations) delete station.subtitle;
+    bareApp = await buildTestApp({
+      imports: [BusStopsModule, BusConfigModule],
+      overrides: [
+        { provide: BusRegistryRepository, useValue: storedBusRegistryRepository() },
+        { provide: BusRouteAttributesRepository, useValue: storedRouteAttributesRepository() },
+        { provide: BusStopsRepository, useValue: storedBusStopsRepository(data) },
+        { provide: Clock, useValue: { now: () => new Date("2026-10-20T03:00:00Z") } },
+      ],
+      role: "api",
+    });
+  });
+
+  afterAll(async () => {
+    await bareApp.close();
+  });
+
+  it("serves every HSSC station with subtitle null, keeping its Korean name", async () => {
+    // Act
+    const res = await request(bareApp.getHttpServer()).get("/bus/config/hssc");
+
+    // Assert
+    expect(res.status).toBe(200);
+    expectWire(busGroup, res.body.data);
+    const stations = (res.body.data as { screen: { stations: Station[] } }).screen.stations;
+    expect(stations).toHaveLength(11);
+    expect(stations.map((station) => station.subtitle)).toEqual(Array(11).fill(null));
+    expect(stations[0]!.name).toBe("농구장");
   });
 });
