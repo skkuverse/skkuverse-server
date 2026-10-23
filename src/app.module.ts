@@ -9,6 +9,7 @@ import { BusCacheModule } from "./bus/cache/bus-cache.module";
 import { BusRegistryModule } from "./bus/registry/bus-registry.module";
 import { BusRouteAttributesModule } from "./bus/route-attributes/bus-route-attributes.module";
 import { BusRoutePathModule } from "./bus/route-path/bus-route-path.module";
+import { BusHsscRouteLineModule } from "./bus/hssc-route-line/bus-hssc-route-line.module";
 import { BusRealtimeModule } from "./bus/realtime/bus-realtime.module";
 import { BusRealtimeHsscModule } from "./bus/realtime/hssc/bus-realtime-hssc.module";
 import { BusRealtimeJongroModule } from "./bus/realtime/jongro/bus-realtime-jongro.module";
@@ -100,6 +101,7 @@ import { SubwayHistoryModule } from "./subway/history/subway-history.module";
     BusRegistryModule,
     BusRouteAttributesModule,
     BusRoutePathModule,
+    BusHsscRouteLineModule,
     BusRealtimeModule,
     BusRealtimeHsscModule,
     BusRealtimeJongroModule,

@@ -171,6 +171,8 @@ function loadCatalog(load) {
   const { laneCorridorDataset } = load("bus/eta/lane/bus-eta-lane.schema");
   const { corridorIssues } = load("bus/eta/lane/bus-eta-lane.rules");
   const { jongroRouteAttributesDataset } = load("bus/route-attributes/bus-route-attributes.schema");
+  const { hsscRouteLineDataset } = load("bus/hssc-route-line/bus-hssc-route-line.schema");
+  const { toRouteLineIssues } = load("bus/hssc-route-line/bus-hssc-route-line.rules");
   const { toRouteAttributesIssues } = load("bus/route-attributes/bus-route-attributes.rules");
   const { busStopsDataset } = load("bus/stops/bus-stops.schema");
   const { busStopsReferences, etaOptIns, toBusStopsIssues } = load("bus/stops/bus-stops.rules");
@@ -326,6 +328,13 @@ function loadCatalog(load) {
         owner: "src/bus/route-attributes",
         schema: jongroRouteAttributesDataset,
         issuesOf: (attributes) => toRouteAttributesIssues(attributes, jongroRoutes.ids()),
+        referencesOf: () => [],
+      },
+      // The HSSC loop as measured from GPS, which the map draws; it has no upstream, so it is data, not a sync (ADR 0018, D9).
+      "hssc-route-line": {
+        owner: "src/bus/hssc-route-line",
+        schema: hsscRouteLineDataset,
+        issuesOf: toRouteLineIssues,
         referencesOf: () => [],
       },
       // The local stops, the shuttle sequences and the HSSC line; the service ids, estimate opt-ins, travel strategies and

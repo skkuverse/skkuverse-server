@@ -35,6 +35,10 @@
  * code-held source, the route ids JONGRO_ROUTES holds: one entry per route the
  * checkout serves, no more.
  *
+ * The `hssc-route-line` dataset (ADR 0013, D2; ADR 0018, D9) is checked with
+ * the server's line schema and `toRouteLineIssues`: a closed loop with no
+ * segment past MAX_ROUTE_LINE_SEGMENT_M. It names no identity.
+ *
  * The `bus-stops` dataset is checked with the server's
  * stops schema and `toBusStopsIssues` against the checkout's services, their
  * estimate opt-ins, the served subway stations and the lane strategies; it
@@ -66,6 +70,8 @@ import path from "node:path";
 import { JONGRO_ROUTES, SERVICE_CONFIG } from "../../../src/bus/bus.constants";
 import { corridorIssues } from "../../../src/bus/eta/lane/bus-eta-lane.rules";
 import { laneCorridorDataset } from "../../../src/bus/eta/lane/bus-eta-lane.schema";
+import { toRouteLineIssues } from "../../../src/bus/hssc-route-line/bus-hssc-route-line.rules";
+import { hsscRouteLineDataset } from "../../../src/bus/hssc-route-line/bus-hssc-route-line.schema";
 import { jongroRouteAttributesDataset } from "../../../src/bus/route-attributes/bus-route-attributes.schema";
 import { busStopsDataset } from "../../../src/bus/stops/bus-stops.schema";
 import { BusConfigService } from "../../../src/bus/config/bus-config.service";
@@ -693,6 +699,53 @@ describe("loadCatalog bus-lane-corridor", () => {
 
     // Assert
     expect(lines).toEqual([expect.stringMatching(/^bus-lane-corridor: : .*laneHours/)]);
+  });
+});
+
+describe("loadCatalog hssc-route-line", () => {
+  type Line = { path: number[][] };
+  const routeLine = () => datasetFixture("../bus/fixtures/hssc-route-line.dataset.json") as Line;
+
+  it("is owned by src/bus/hssc-route-line, takes hsscRouteLineDataset and toRouteLineIssues, and accepts revision 1 with no issue and no reference", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const entry = catalog.datasets["hssc-route-line"];
+
+    // Act
+    const issues = checkData(catalog, "hssc-route-line", routeLine(), {});
+
+    // Assert
+    expect(entry.owner).toBe("src/bus/hssc-route-line");
+    expect(entry.schema).toBe(hsscRouteLineDataset);
+    expect(entry.issuesOf).toBe(toRouteLineIssues);
+    expect(issues).toEqual([]);
+    expect(entry.referencesOf(entry.schema.parse(routeLine()))).toEqual([]);
+  });
+
+  it("Open loop: refuses the line without its closing point, naming the last point", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = routeLine();
+    data.path.pop();
+
+    // Act
+    const lines = issueLines(checkData(catalog, "hssc-route-line", data, {}));
+
+    // Assert
+    expect(lines).toEqual(["hssc-route-line: path.233: the line is a loop: its last point must repeat its first, [126.992374, 37.587807]"]);
+  });
+
+  it("Swapped pair: refuses a point given as [lat, lng], naming it", () => {
+    // Arrange
+    const catalog = loadCatalog(srcLoader);
+    const data = routeLine();
+    data.path[5] = [data.path[5]![1]!, data.path[5]![0]!];
+
+    // Act
+    const lines = issueLines(checkData(catalog, "hssc-route-line", data, {}));
+
+    // Assert
+    expect(lines).toEqual([expect.stringMatching(/^hssc-route-line: path\.5\.1: /)]);
   });
 });
 
