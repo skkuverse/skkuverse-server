@@ -10,7 +10,7 @@ import { BUS_STOPS_LOG_INTERVAL_MS } from "./bus-stops.constants";
 import { BusStopsReadError, BusStopsUnavailableError } from "./bus-stops.error";
 import { resolveStopSequences, toBusStopsSnapshot, toStopRecord } from "./bus-stops.mapper";
 import { BusStopsRepository } from "./bus-stops.repository";
-import { etaOptIns, subwayStationErrors, validateStopCatalog } from "./bus-stops.rules";
+import { etaOptIns, storedLineAndAliasErrors, subwayStationErrors, validateStopCatalog } from "./bus-stops.rules";
 import type { BusStopsSnapshot, EtaOptIns, ResolvedStops, ScheduleStop } from "./bus-stops.types";
 import type { ServedStop } from "../bus.wire";
 
@@ -64,7 +64,11 @@ export class BusStopsService {
     if (stored === null) return null;
     if (stored.revision === this.built?.revision) return this.built;
     if (stored.revision === this.refusedRevision) return null;
-    const issues = [...validateStopCatalog(stored.data, new Set(Object.keys(SERVICE_CONFIG)), this.etaOptIns()), ...subwayStationErrors(stored.data, this.stationIds)];
+    const issues = [
+      ...validateStopCatalog(stored.data, new Set(Object.keys(SERVICE_CONFIG)), this.etaOptIns()),
+      ...subwayStationErrors(stored.data, this.stationIds),
+      ...storedLineAndAliasErrors(stored.data),
+    ];
     if (issues.length > 0) return this.refuse(stored.revision, issues);
     this.built = toBusStopsSnapshot(stored);
     return this.built;

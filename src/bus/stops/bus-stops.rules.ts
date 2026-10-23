@@ -432,6 +432,11 @@ function aliasIssues({ stops }: BusStopsData): BusStopsIssue[] {
   );
 }
 
+// WHY: push checks the snapshot cannot serve past; the read skips the timetable cross-check, which needs another database.
+export function storedLineAndAliasErrors(data: BusStopsData): string[] {
+  return [...hsscLineIssues(data), ...aliasIssues(data)].map(({ path, message }) => `${path.join(".")}: ${message}`);
+}
+
 function overlayIssues({ topis = {} }: BusStopsData, { stationIds }: BusStopsCheckContext): BusStopsIssue[] {
   return Object.entries(topis).flatMap(([arsId, overlay]) => {
     const { subwayStationId } = overlay;
