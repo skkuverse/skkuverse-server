@@ -20,14 +20,14 @@ export function toStopBlock(stop: FoundStop, record: ServedStop | null): StopBlo
 export function toLiveEntry(
   { groupId, stationIndex }: Pick<StopRoute, "groupId"> & { stationIndex: number },
   group: LiveGroup,
-  { label, towards, action }: Pick<LiveEntry, "label" | "towards" | "action">,
+  { label, towards, direction, action }: Pick<LiveEntry, "label" | "towards" | "direction" | "action">,
 ): LiveEntry {
   const station = group.stations.find((candidate) => candidate.stationIndex === stationIndex);
   const arrivals = station?.arrivals ?? [];
   const namedIds = new Set(arrivals.map(({ vehicleId }) => vehicleId));
   return {
     kind: "live",
-    ...{ groupId, label, stationIndex, towards, action },
+    ...{ groupId, label, stationIndex, towards, direction, action },
     ...{ stationsVersion: group.stationsVersion, updatedAt: group.updatedAt },
     operation: station?.operation ?? "noData",
     vehicles: group.vehicles.filter(({ id }) => namedIds.has(id)),

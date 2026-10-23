@@ -2,8 +2,9 @@
  * How a stop page is assembled: the stop block, from its
  * config record for a local stop (coordinates from its pole when it has none, aliases as arsIds) or from its pole
  * for a TOPIS one; a live entry carrying the live route's station entry at its index and the vehicles it names
- * (ADR 0019, D12) with the action given (board, or alight at a drop-off-only station); and a timetable entry carrying
- * its runs. The HSSC line named by its catalog stops moved with toCatalogNamedLine to src/bus/bus.mapper.spec.ts.
+ * (ADR 0019, D12) with the direction (right after towards) and the action given (board, or alight at a drop-off-only
+ * station); and a timetable entry carrying its runs. The HSSC line named by its catalog stops moved with
+ * toCatalogNamedLine to src/bus/bus.mapper.spec.ts.
  */
 import type { BusStopsSnapshot } from "../stops/bus-stops.types";
 import type { FoundStop } from "../stop-index/bus-stop-index.types";
@@ -82,12 +83,13 @@ describe("toLiveEntry", () => {
 
   it("carries the live route's station entry at its index and only the vehicles its arrivals name", () => {
     // Act & Assert
-    expect(toLiveEntry({ groupId: "jongro07", stationIndex: 16 }, group, { label: "종로 07", towards: "혜화동로터리", action: "board" })).toEqual({
+    expect(toLiveEntry({ groupId: "jongro07", stationIndex: 16 }, group, { label: "종로 07", towards: "혜화동로터리", direction: null, action: "board" })).toEqual({
       kind: "live",
       groupId: "jongro07",
       label: "종로 07",
       stationIndex: 16,
       towards: "혜화동로터리",
+      direction: null,
       action: "board",
       stationsVersion: "abc",
       updatedAt: "2026-10-20T14:09:55+09:00",
@@ -99,16 +101,17 @@ describe("toLiveEntry", () => {
 
   it("serves no data and no arrival at a station the live route states nothing for", () => {
     // Act & Assert
-    expect(toLiveEntry({ groupId: "jongro07", stationIndex: 3 }, group, { label: "종로 07", towards: null, action: "board" })).toMatchObject({ operation: "noData", vehicles: [], arrivals: [] });
+    expect(toLiveEntry({ groupId: "jongro07", stationIndex: 3 }, group, { label: "종로 07", towards: null, direction: null, action: "board" })).toMatchObject({ operation: "noData", vehicles: [], arrivals: [] });
   });
 
-  it("serves the action it is given, alight at a drop-off-only station, after towards", () => {
+  it("serves the action it is given, alight at a drop-off-only station, after towards and the direction", () => {
     // Act
-    const entry = toLiveEntry({ groupId: "hssc", stationIndex: 3 }, { ...group, groupId: "hssc", stationsVersion: null }, { label: "인사캠 셔틀버스", towards: "혜화동우체국", action: "alight" });
+    const entry = toLiveEntry({ groupId: "hssc", stationIndex: 3 }, { ...group, groupId: "hssc", stationsVersion: null }, { label: "인사캠 셔틀버스", towards: "혜화동우체국", direction: { id: "fromCampus", label: "하교" }, action: "alight" });
 
     // Assert
     expect(entry.action).toBe("alight");
-    expect(Object.keys(entry).slice(0, 6)).toEqual(["kind", "groupId", "label", "stationIndex", "towards", "action"]);
+    expect(entry.direction).toEqual({ id: "fromCampus", label: "하교" });
+    expect(Object.keys(entry).slice(0, 7)).toEqual(["kind", "groupId", "label", "stationIndex", "towards", "direction", "action"]);
   });
 });
 

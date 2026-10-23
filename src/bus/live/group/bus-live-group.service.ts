@@ -3,8 +3,10 @@ import { AppError } from "../../../http/app.error";
 import { withMeta } from "../../../http/response.interceptor";
 import type { WithMeta } from "../../../http/response.types";
 import { Clock } from "../../../infra/clock";
+import type { SupportedLang } from "../../../infra/types";
 import { toKstInstant } from "../../bus.mapper";
 import { BusConfigService } from "../../config/bus-config.service";
+import type { PlacedStation, StationDirection } from "../../config/bus-config.types";
 import { BusLiveHsscService } from "../hssc/bus-live-hssc.service";
 import { BusLiveJongroService } from "../jongro/bus-live-jongro.service";
 import { HSSC_GROUP_ID } from "../bus-live.constants";
@@ -30,5 +32,11 @@ export class BusLiveGroupService {
     if (group) return group;
     if (this.config.listGroupIds().includes(groupId)) throw new AppError("GROUP_NOT_LIVE", `Group ${groupId} has a timetable, not a live route`, 404);
     throw new AppError("GROUP_NOT_FOUND", `Unknown groupId: ${groupId}`, 404);
+  }
+
+  // WHY: the stop page names each live entry's direction, a /bus/config attribute the live route never repeats
+  // (ADR 0019, D15), through this door, which already holds the config.
+  async findStationDirection(groupId: string, station: PlacedStation, lang: SupportedLang): Promise<StationDirection | null> {
+    return this.config.findStationDirection(groupId, station, lang);
   }
 }

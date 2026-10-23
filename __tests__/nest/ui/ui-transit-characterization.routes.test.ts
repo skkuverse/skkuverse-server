@@ -166,7 +166,7 @@ beforeAll(async () => {
     apps.set(
       name,
       await buildTestApp({
-        imports: appModulesUnder("src/ui/transit/"),
+        imports: appModulesUnder("src/scheduling/", "src/ui/transit/"),
         overrides: [{ provide: Clock, useValue: clock }],
         role: "api",
       }),

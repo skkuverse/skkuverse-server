@@ -1,0 +1,115 @@
+{
+  "_about": "Synthetic, never captured: GET /bus/config/jongro07 (Accept-Language ko) as the server serves it since 2026-10-23 over the stores of __tests__/nest/bus/bus-config.routes.test.ts (the registry stored 2026-10-17, revision 1 of bus-stops and jongro-route-attributes, and the route lines stored 2026-10-18 with the directions TOPIS getStaionByRoute named on 2026-10-23); stations cut to indexes 11 to 14 around the turnaround 방송통신대앞 (index 12, still 이화사거리 방면), so the split after it shows (ADR 0019, D16).",
+  "data": {
+    "id": "jongro07",
+    "screenType": "realtime",
+    "label": "종로 07",
+    "visibility": {
+      "type": "always"
+    },
+    "card": {
+      "themeColor": "4CAF50",
+      "iconType": "village",
+      "busTypeText": "마을",
+      "subtitle": "성균관대운동장 ↔ 600주년기념관"
+    },
+    "screen": {
+      "dataEndpoint": "/bus/realtime/data/jongro07",
+      "refreshInterval": 25,
+      "lastStationIndex": 21,
+      "stations": [
+        {
+          "index": 11,
+          "name": "혜화역3번출구.서울대병원입구",
+          "subtitle": null,
+          "stationNumber": "01221",
+          "directionId": "100900043",
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "isPassThrough": false,
+          "isAlightOnly": false,
+          "transferLines": [
+            {
+              "line": "4",
+              "color": "00A5DE"
+            }
+          ],
+          "stopId": "seoul-01221"
+        },
+        {
+          "index": 12,
+          "name": "방송통신대앞",
+          "subtitle": null,
+          "stationNumber": "01877",
+          "directionId": "100900043",
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": true,
+          "isPassThrough": false,
+          "isAlightOnly": false,
+          "transferLines": [
+            {
+              "line": "4",
+              "color": "00A5DE"
+            }
+          ],
+          "stopId": "seoul-01877"
+        },
+        {
+          "index": 13,
+          "name": "이화사거리",
+          "subtitle": null,
+          "stationNumber": "01886",
+          "directionId": "100900220",
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "isPassThrough": false,
+          "isAlightOnly": false,
+          "transferLines": [],
+          "stopId": "seoul-01886"
+        },
+        {
+          "index": 14,
+          "name": "방송통신대.이화장",
+          "subtitle": null,
+          "stationNumber": "01219",
+          "directionId": "100900220",
+          "isFirstStation": false,
+          "isLastStation": false,
+          "isRotationStation": false,
+          "isPassThrough": false,
+          "isAlightOnly": false,
+          "transferLines": [],
+          "stopId": "seoul-01219"
+        }
+      ],
+      "directions": [
+        {
+          "id": "100900043",
+          "label": "이화사거리 방면",
+          "fromIndex": 0,
+          "toIndex": 12
+        },
+        {
+          "id": "100900220",
+          "label": "성균관대운동장 방면",
+          "fromIndex": 13,
+          "toIndex": 21
+        }
+      ],
+      "features": [],
+      "stationsVersion": "0346768f2b776f45",
+      "liveEndpoint": "/bus/live/jongro07",
+      "isLoop": false,
+      "capabilities": {
+        "positionSource": "gps",
+        "occupancy": true,
+        "plateNumber": true,
+        "lastBus": true,
+        "lowFloor": true
+      }
+    }
+  }
+}

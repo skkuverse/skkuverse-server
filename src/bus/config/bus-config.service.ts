@@ -8,24 +8,29 @@ import { BusRegistryService } from "../registry/bus-registry.service";
 import type { RegistryRoute } from "../registry/bus-registry.types";
 import { BusRouteAttributesService } from "../route-attributes/bus-route-attributes.service";
 import type { RouteAttributesSnapshot } from "../route-attributes/bus-route-attributes.types";
+import type { RoutePathStation } from "../route-path/bus-route-path.document";
+import { BusRoutePathService } from "../route-path/bus-route-path.service";
 import { BusStopsService } from "../stops/bus-stops.service";
 import type { BusStopsSnapshot } from "../stops/bus-stops.types";
 import { HAS_STOP_MAPS_BY_GROUP } from "./bus-config.config";
 import { CAMPUS_SERVICE_IDS, COMMUTE_SERVICE_IDS, STOP_GROUP_IDS } from "./bus-config.constants";
 import { toBusGroupIds, toBusGroups } from "./bus-config.mapper";
-import type { AttributedJongroRoute } from "./bus-config.types";
+import { toJongroDirections, toStationDirection } from "./bus-config.rules";
+import type { AttributedJongroRoute, PlacedStation, StationDirection } from "./bus-config.types";
 import type { BusGroup } from "./bus-config.wire";
 
 interface GroupSources {
   routes: RegistryRoute[];
   attributes: RouteAttributesSnapshot | null;
   stops: BusStopsSnapshot;
+  /** WHY: each stored route line's stations by route id, which carry TOPIS's direction; none for a route without one. */
+  pathStationsByRouteId: ReadonlyMap<string, readonly RoutePathStation[]>;
 }
 
 type JongroSources = Omit<GroupSources, "stops">;
 
 // WHY: with no attributes read, no Jongro group is built, so the registry is not read either (ADR 0013, D6).
-const NO_JONGRO_SOURCES: JongroSources = { routes: [], attributes: null };
+const NO_JONGRO_SOURCES: JongroSources = { routes: [], attributes: null, pathStationsByRouteId: new Map() };
 
 // WHY: a group that reads no stops is built beside shuttle groups from none, which its lookup by id drops.
 const NO_STOPS: BusStopsSnapshot = { revision: 0, catalog: { stops: [], sequences: {} }, hssc: [], stopIdByArsId: new Map() };
@@ -39,6 +44,7 @@ export class BusConfigService {
     private readonly stops: BusStopsService,
     private readonly registry: BusRegistryService,
     private readonly routeAttributes: BusRouteAttributesService,
+    private readonly routePaths: BusRoutePathService,
   ) {}
 
   // WHY: route ids never change at runtime, so the ids need no registry read and serve a boot-time check.
@@ -50,10 +56,11 @@ export class BusConfigService {
     return this.toGroups(lang, await this.readSources());
   }
 
-  // WHY: keyed by both datasets' revisions and every route's stations version, so a push or a sync changes the ETag.
+  // WHY: keyed by both datasets' revisions, every route's stations version and its directions, so a push or either
+  // sync changes the ETag.
   async computeEtag(lang: SupportedLang = "ko"): Promise<string> {
     const sources = await this.readSources();
-    const cacheKey = [lang, sources.attributes?.revision ?? "none", sources.stops.revision, ...sources.routes.map((route) => route.stationsVersion)].join(":");
+    const cacheKey = [lang, sources.attributes?.revision ?? "none", sources.stops.revision, ...this.routeKeysOf(sources, lang)].join(":");
     const cached = this.etagCache.get(cacheKey);
     if (cached) return cached;
     const etag = this.md5Etag(this.toGroups(lang, sources));
@@ -65,9 +72,16 @@ export class BusConfigService {
     return this.toGroups(lang, await this.readGroupSources(id)).find((g) => g.id === id) || null;
   }
 
+  // WHY: a direction adds to a stop page entry, so a group that cannot be built (another route's registry missing)
+  // names none; the registry and the attributes log their own failures.
+  async findStationDirection(id: string, { stationIndex, stationsVersion }: PlacedStation, lang: SupportedLang): Promise<StationDirection | null> {
+    const group = await this.getGroupById(id, lang).catch(() => null);
+    return toStationDirection(group, stationIndex, stationsVersion);
+  }
+
   async computeGroupEtag(id: string, lang: SupportedLang = "ko"): Promise<string | null> {
     const sources = await this.readGroupSources(id);
-    const cacheKey = [id, lang, sources.attributes?.revision ?? "none", sources.stops.revision, ...sources.routes.map((route) => route.stationsVersion)].join(":");
+    const cacheKey = [id, lang, sources.attributes?.revision ?? "none", sources.stops.revision, ...this.routeKeysOf(sources, lang)].join(":");
     const cached = this.etagCache.get(cacheKey);
     if (cached) return cached;
     const group = this.toGroups(lang, sources).find((g) => g.id === id);
@@ -80,7 +94,8 @@ export class BusConfigService {
   private async readSources(): Promise<GroupSources> {
     const stops = await this.stops.current();
     const attributes = await this.routeAttributes.findCurrent();
-    return attributes === null ? { ...NO_JONGRO_SOURCES, stops } : { attributes, routes: await this.registry.listRoutes(), stops };
+    if (attributes === null) return { ...NO_JONGRO_SOURCES, stops };
+    return { attributes, routes: await this.registry.listRoutes(), stops, pathStationsByRouteId: await this.readPathStations() };
   }
 
   // WHY: a Jongro group answers its realtime route's 503 when the attributes were never read or lack its route
@@ -90,20 +105,34 @@ export class BusConfigService {
     const stops = isJongroGroup || STOP_GROUP_IDS.includes(id) ? await this.stops.current() : NO_STOPS;
     if (!isJongroGroup) return { ...NO_JONGRO_SOURCES, stops };
     await this.routeAttributes.attributesOf(id);
-    return { attributes: await this.routeAttributes.current(), routes: await this.registry.listRoutes(), stops };
+    return { attributes: await this.routeAttributes.current(), routes: await this.registry.listRoutes(), stops, pathStationsByRouteId: await this.readPathStations() };
   }
 
-  private toGroups(lang: SupportedLang, { routes, attributes, stops }: GroupSources): BusGroup[] {
+  // WHY: directions add to a line, so lines that cannot be read serve none rather than fail the config;
+  // BusRoutePathService logs every failed read and each missing line before it answers.
+  private async readPathStations(): Promise<Map<string, readonly RoutePathStation[]>> {
+    const routePaths = await this.routePaths.listRoutePaths().catch(() => null);
+    return new Map(routePaths?.routePaths.map((routePath) => [routePath.routeId, routePath.stations]));
+  }
+
+  private routeKeysOf({ routes, pathStationsByRouteId }: GroupSources, lang: SupportedLang): string[] {
+    return routes.map((route) => `${route.stationsVersion}/${JSON.stringify(toJongroDirections(route.registryStations, pathStationsByRouteId.get(route.id), lang))}`);
+  }
+
+  private toGroups(lang: SupportedLang, { routes, attributes, stops, pathStationsByRouteId }: GroupSources): BusGroup[] {
     const served = {
       campus: this.stops.servedSequences(stops, CAMPUS_SERVICE_IDS, { lang, hasStopMaps: HAS_STOP_MAPS_BY_GROUP.campus }),
       commute: this.stops.servedSequences(stops, COMMUTE_SERVICE_IDS, { lang, hasStopMaps: HAS_STOP_MAPS_BY_GROUP.commute }),
     };
-    const jongroRoutes = this.toAttributedRoutes(routes, attributes);
+    const jongroRoutes = this.toAttributedRoutes(routes, attributes).map((jongroRoute) => ({
+      ...jongroRoute,
+      directions: toJongroDirections(jongroRoute.route.registryStations, pathStationsByRouteId.get(jongroRoute.route.id), lang),
+    }));
     return toBusGroups({ lang, stops: served, hsscStations: stops.hssc, stopIdByArsId: stops.stopIdByArsId, jongroRoutes, webviewOrigin: WEBVIEW_ORIGIN });
   }
 
   // WHY: a route without stored attributes is left out (BusRouteAttributesService logs the gap once per revision).
-  private toAttributedRoutes(routes: readonly RegistryRoute[], snapshot: RouteAttributesSnapshot | null): AttributedJongroRoute[] {
+  private toAttributedRoutes(routes: readonly RegistryRoute[], snapshot: RouteAttributesSnapshot | null): Array<Omit<AttributedJongroRoute, "directions">> {
     if (snapshot === null) return [];
     return routes.flatMap((route) => {
       const attributes = snapshot.attributesOf(route.id);
@@ -114,7 +143,7 @@ export class BusConfigService {
   }
 
   // WHY: stations change at runtime, so an entry no stored station has is a warning once per revision, not a refusal.
-  private warnUnmatchedTransferLines({ route, attributes }: AttributedJongroRoute, revision: number): void {
+  private warnUnmatchedTransferLines({ route, attributes }: Omit<AttributedJongroRoute, "directions">, revision: number): void {
     const arsIds = new Set(route.stations.map((station) => station.stationNumber));
     const isNew = (arsId: string) => !arsIds.has(arsId) && !this.warnedTransferKeys.has(`${revision}:${route.id}:${arsId}`);
     const unmatched = Object.keys(attributes.transferLinesByArsId).filter(isNew);

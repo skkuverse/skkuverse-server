@@ -3,11 +3,14 @@
  * captured answers and each captured point and station pass with numbers
  * parsed from strings, a row missing any field fails at that field, a
  * non-decimal coordinate or a fractional `no` fails, and the answer envelope
- * reads the header and a null list (TOPIS's "4").
+ * reads the header and a null list (TOPIS's "4"). A station row also keeps its
+ * `direction`, the terminal TOPIS says the bus heads to there, which flips at the
+ * station after the turnaround; a row without one, or a blank one, says nothing
+ * (null), and one that is not text fails the row.
  */
 import fs from "fs";
 import path from "path";
-import { topisRouteInfoAnswer, topisRoutePoint, topisRouteStation } from "./bus-route-path.schema";
+import { topisRouteInfoAnswer, topisRoutePoint, topisRouteStation, topisRouteStationRow } from "./bus-route-path.schema";
 
 type Answer = { msgBody: { itemList: Array<Record<string, unknown>> } };
 const read = (name: string): Answer => JSON.parse(fs.readFileSync(path.join(__dirname, "../../../__tests__/nest/bus/fixtures", name), "utf8"));
@@ -68,6 +71,48 @@ describe("topisRouteStation", () => {
 
     // Act & Assert
     expect(topisRouteStation.safeParse(station).error?.issues.map((issue) => issue.path)).toEqual([[field]]);
+  });
+});
+
+describe("topisRouteStationRow", () => {
+  it("keeps each captured station's direction: the outbound terminal up to the turnaround, the inbound one after it", () => {
+    // Act
+    const directions = STATIONS_ANSWER.msgBody.itemList.map((row) => [topisRouteStationRow.parse(row).seq, topisRouteStationRow.parse(row).direction]);
+
+    // Assert
+    expect(directions).toEqual([
+      [1, "이화사거리"],
+      [2, "이화사거리"],
+      [13, "이화사거리"],
+      [22, "성균관대운동장"],
+    ]);
+  });
+
+  it.each([
+    ["without the field", undefined],
+    ["with null", null],
+    ["with an empty one", ""],
+    ["with a blank one", "  "],
+  ])("reads a row %s as no direction, keeping the station", (_label, direction) => {
+    // Arrange
+    const row: Record<string, unknown> = { ...STATIONS_ANSWER.msgBody.itemList[0]!, direction };
+    if (direction === undefined) delete row.direction;
+
+    // Act
+    const parsed = topisRouteStationRow.safeParse(row);
+
+    // Assert
+    expect(parsed.data).toMatchObject({ station: "100900220", direction: null });
+  });
+
+  it("trims the direction and fails a row whose direction is not text", () => {
+    // Act
+    const padded = topisRouteStationRow.parse({ ...STATIONS_ANSWER.msgBody.itemList[0], direction: " 이화사거리 " });
+    const numeric = topisRouteStationRow.safeParse({ ...STATIONS_ANSWER.msgBody.itemList[0], direction: 7 });
+
+    // Assert
+    expect(padded.direction).toBe("이화사거리");
+    expect(numeric.error?.issues.map((issue) => issue.path)).toEqual([["direction"]]);
   });
 });
 

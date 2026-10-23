@@ -182,7 +182,7 @@ describe("loadCatalog", () => {
 
 describe("loadCatalog code-held sources", () => {
   // BusConfigService.listGroupIds reads neither of its providers.
-  const busConfig = new BusConfigService(null as never, null as never, null as never);
+  const busConfig = new BusConfigService(null as never, null as never, null as never, null as never);
   const servedIds = {
     busGroups: () => busConfig.listGroupIds(),
     subwayStations: () => new SubwayStationsService().listStations().map((station) => station.id),

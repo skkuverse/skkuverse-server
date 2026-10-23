@@ -16,6 +16,10 @@ export const topisRouteStation = z.object({
   transYn: z.enum(["Y", "N"]),
 });
 
+// QUIRK(topis): `direction` names the terminal the bus heads to, flipping at the station after the turnaround; a row
+// without one, or a blank one, says nothing, so it stays out of the fields every station needs.
+export const topisRouteStationRow = topisRouteStation.extend({ direction: z.string().nullish().transform((direction) => direction?.trim() || null) });
+
 // QUIRK(topis): `msgHeader.itemCount` reads 0 on a full answer, so only the list counts; `itemList` is null on "4".
 export const topisRouteInfoAnswer = z.object({
   msgHeader: z.object({ headerCd: z.string(), headerMsg: z.string().nullish() }),
@@ -23,4 +27,4 @@ export const topisRouteInfoAnswer = z.object({
 });
 
 export type TopisRoutePoint = z.output<typeof topisRoutePoint>;
-export type TopisRouteStation = z.output<typeof topisRouteStation>;
+export type TopisRouteStation = z.output<typeof topisRouteStationRow>;

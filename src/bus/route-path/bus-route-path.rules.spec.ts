@@ -1,11 +1,14 @@
 /**
  * The route path rules: a line's length in
  * meters over its points, a version that changes with any point or station,
+ * a station's direction included, and so differs from every version stored
+ * before directions were (production's Jongno 07, 2026-10-18),
  * and the sync decision: unchanged content writes nothing, and a line of too
  * few points, no station, or a point count or length more than 30% off the
  * stored line is held, each at its threshold. With no stored line, only the
  * point and station checks hold a first line (ADR 0012, D3).
  */
+import { capturedRoutePathOf } from "../../../__tests__/helpers/bus/bus-route-path";
 import type { Position } from "../../shared/geojson.types";
 import type { RoutePathStation } from "./bus-route-path.document";
 import { toPathShape, toPathSyncDecision, toPathVersion } from "./bus-route-path.rules";
@@ -62,6 +65,34 @@ describe("toPathVersion", () => {
 
     // Assert
     expect(new Set([version, moved, reversed, renamed]).size).toBe(4);
+  });
+});
+
+describe("toPathVersion with directions", () => {
+  const fetched = { path: [[126.99, 37.58], [126.99, 37.59]] as Position[], stations: [{ ...station, direction: "이화사거리" }] };
+
+  it("changes when a station's direction changes, appears or goes", () => {
+    // Act
+    const versions = [fetched, { ...fetched, stations: [{ ...station, direction: "성균관대운동장" }] }, { ...fetched, stations: [{ ...station, direction: null }] }].map(toPathVersion);
+
+    // Assert
+    expect(new Set(versions).size).toBe(3);
+  });
+
+  // EVIDENCE: jongro_route_paths in production held eb9ffab88fbdad95 for Jongno 07 on 2026-10-23, synced 2026-10-18 from
+  // the content of fixtures/jongro-route-paths.json without its directions; every document stored then has no direction.
+  it("differs from the version production stored for the same line before directions, with or without them", () => {
+    // Arrange
+    const line = capturedRoutePathOf("jongro07");
+    const withoutDirections = { ...line, stations: line.stations.map(({ direction: _direction, ...rest }) => rest) };
+    const noneSent = { ...line, stations: line.stations.map((each) => ({ ...each, direction: null })) };
+
+    // Act
+    const versions = [line, noneSent].map(toPathVersion);
+
+    // Assert
+    expect(toPathVersion(withoutDirections)).not.toBe("eb9ffab88fbdad95");
+    expect(versions).not.toContain("eb9ffab88fbdad95");
   });
 });
 
